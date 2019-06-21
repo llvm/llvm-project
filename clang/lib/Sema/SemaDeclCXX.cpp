@@ -8232,12 +8232,19 @@ QualType Sema::CheckConstructorDeclarator(Declarator &D, QualType R,
 
   DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
   if (FTI.hasMethodTypeQualifiers()) {
+    bool DiagOccured = false;
     FTI.MethodQualifiers->forEachQualifier(
         [&](DeclSpec::TQ TypeQual, StringRef QualName, SourceLocation SL) {
+          // This diagnostic should be emitted on any qualifier except an addr
+          // space qualifier. However, forEachQualifier currently doesn't visit
+          // addr space qualifiers, so there's no way to write this condition
+          // right now; we just diagnose on everything.
           Diag(SL, diag::err_invalid_qualified_constructor)
               << QualName << SourceRange(SL);
+          DiagOccured = true;
         });
-    D.setInvalidType();
+    if (DiagOccured)
+      D.setInvalidType();
   }
 
   // C++0x [class.ctor]p4:

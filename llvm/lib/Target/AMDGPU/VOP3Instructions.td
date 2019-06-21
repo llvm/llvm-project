@@ -183,7 +183,7 @@ class VOP3b_Profile<ValueType vt> : VOPProfile<[vt, vt, vt, vt]> {
   let HasModifiers = 0;
   let HasClamp = 0;
   let HasOMod = 0;
-  let Outs64 = (outs DstRC:$vdst, SReg_64:$sdst);
+  let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
   let Asm64 = " $vdst, $sdst, $src0, $src1, $src2";
 }
 
@@ -203,7 +203,7 @@ def VOP3b_I64_I1_I32_I32_I64 : VOPProfile<[i64, i32, i32, i64]> {
   // FIXME: Hack to stop printing _e64
   let DstRC = RegisterOperand<VReg_64>;
 
-  let Outs64 = (outs DstRC:$vdst, SReg_64:$sdst);
+  let Outs64 = (outs DstRC:$vdst, VOPDstS64orS32:$sdst);
   let Asm64 = " $vdst, $sdst, $src0, $src1, $src2$clamp";
 }
 

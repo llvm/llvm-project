@@ -193,6 +193,7 @@ public:
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
+  RelType getDynRel(RelType Type) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
@@ -608,6 +609,12 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   default:
     return R_ABS;
   }
+}
+
+RelType PPC64::getDynRel(RelType Type) const {
+  if (Type == R_PPC64_ADDR64 || Type == R_PPC64_TOC)
+    return R_PPC64_ADDR64;
+  return R_PPC64_NONE;
 }
 
 void PPC64::writeGotHeader(uint8_t *Buf) const {

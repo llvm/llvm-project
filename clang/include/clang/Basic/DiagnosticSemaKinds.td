@@ -3683,6 +3683,9 @@ def note_ovl_candidate_inherited_constructor_slice : Note<
 def note_ovl_candidate_illegal_constructor : Note<
     "candidate %select{constructor|template}0 ignored: "
     "instantiation %select{takes|would take}0 its own class type by value">;
+def note_ovl_candidate_illegal_constructor_adrspace_mismatch : Note<
+    "candidate constructor ignored: cannot be used to construct an object "
+    "in address space %0">;
 def note_ovl_candidate_bad_deduction : Note<
     "candidate template ignored: failed template argument deduction">;
 def note_ovl_candidate_incomplete_deduction : Note<"candidate template ignored: "
@@ -4672,7 +4675,8 @@ def warn_missing_prototype : Warning<
   "no previous prototype for function %0">,
   InGroup<DiagGroup<"missing-prototypes">>, DefaultIgnore;
 def note_declaration_not_a_prototype : Note<
-  "this declaration is not a prototype; add 'void' to make it a prototype for a zero-parameter function">;
+  "this declaration is not a prototype; add %select{'void'|parameter declarations}0 "
+  "to make it %select{a prototype for a zero-parameter function|one}0">;
 def warn_strict_prototypes : Warning<
   "this %select{function declaration is not|block declaration is not|"
   "old-style function definition is not preceded by}0 a prototype">,
@@ -4680,6 +4684,9 @@ def warn_strict_prototypes : Warning<
 def warn_missing_variable_declarations : Warning<
   "no previous extern declaration for non-static variable %0">,
   InGroup<DiagGroup<"missing-variable-declarations">>, DefaultIgnore;
+def note_static_for_internal_linkage : Note<
+  "declare 'static' if the %select{variable|function}0 is not intended to be "
+  "used outside of this translation unit">;
 def err_static_data_member_reinitialization :
   Error<"static data member %0 already has an initializer">;
 def err_redefinition : Error<"redefinition of %0">;
@@ -9428,9 +9435,9 @@ def err_coroutine_outside_function : Error<
   "'%0' cannot be used outside a function">;
 def err_coroutine_invalid_func_context : Error<
   "'%1' cannot be used in %select{a constructor|a destructor"
-  "|a copy assignment operator|a move assignment operator|the 'main' function"
-  "|a constexpr function|a function with a deduced return type"
-  "|a varargs function|a consteval function}0">;
+  "|the 'main' function|a constexpr function"
+  "|a function with a deduced return type|a varargs function"
+  "|a consteval function}0">;
 def err_implied_coroutine_type_not_found : Error<
   "%0 type was not found; include <experimental/coroutine> before defining "
   "a coroutine">;

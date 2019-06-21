@@ -907,22 +907,17 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
       return 'b';
     if (Flags & ELF::SHF_ALLOC)
       return Flags & ELF::SHF_WRITE ? 'd' : 'r';
-  }
 
-  if (SymI->getELFType() == ELF::STT_SECTION) {
-    Expected<StringRef> Name = SymI->getName();
-    if (!Name) {
-      consumeError(Name.takeError());
+    StringRef SecName;
+    if (SecI->getName(SecName))
       return '?';
-    }
-    return StringSwitch<char>(*Name)
-        .StartsWith(".debug", 'N')
-        .StartsWith(".note", 'n')
-        .StartsWith(".comment", 'n')
-        .Default('?');
+    if (SecName.startswith(".debug"))
+      return 'N';
+    if (!(Flags & ELF::SHF_WRITE))
+      return 'n';
   }
 
-  return 'n';
+  return '?';
 }
 
 static char getSymbolNMTypeChar(COFFObjectFile &Obj, symbol_iterator I) {

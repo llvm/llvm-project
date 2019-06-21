@@ -23,6 +23,9 @@ namespace {
 class PPC final : public TargetInfo {
 public:
   PPC();
+  RelExpr getRelExpr(RelType Type, const Symbol &S,
+                     const uint8_t *Loc) const override;
+  RelType getDynRel(RelType Type) const override;
   void writeGotHeader(uint8_t *Buf) const override;
   void writePltHeader(uint8_t *Buf) const override {
     llvm_unreachable("should call writePPC32GlinkSection() instead");
@@ -36,8 +39,6 @@ public:
                   uint64_t BranchAddr, const Symbol &S) const override;
   uint32_t getThunkSectionSpacing() const override;
   bool inBranchRange(RelType Type, uint64_t Src, uint64_t Dst) const override;
-  RelExpr getRelExpr(RelType Type, const Symbol &S,
-                     const uint8_t *Loc) const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   RelExpr adjustRelaxExpr(RelType Type, const uint8_t *Data,
                           RelExpr Expr) const override;
@@ -228,6 +229,12 @@ RelExpr PPC::getRelExpr(RelType Type, const Symbol &S,
   default:
     return R_ABS;
   }
+}
+
+RelType PPC::getDynRel(RelType Type) const {
+  if (Type == R_PPC_ADDR32)
+    return Type;
+  return R_PPC_NONE;
 }
 
 static std::pair<RelType, uint64_t> fromDTPREL(RelType Type, uint64_t Val) {

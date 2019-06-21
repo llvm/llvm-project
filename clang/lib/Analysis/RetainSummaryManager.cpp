@@ -152,6 +152,10 @@ static bool isOSObjectDynamicCast(StringRef S) {
   return S == "safeMetaCast";
 }
 
+static bool isOSObjectRequiredCast(StringRef S) {
+  return S == "requiredMetaCast";
+}
+
 static bool isOSObjectThisCast(StringRef S) {
   return S == "metaCast";
 }
@@ -234,7 +238,8 @@ RetainSummaryManager::getSummaryForOSObject(const FunctionDecl *FD,
   if (RetTy->isPointerType()) {
     const CXXRecordDecl *PD = RetTy->getPointeeType()->getAsCXXRecordDecl();
     if (PD && isOSObjectSubclass(PD)) {
-      if (isOSObjectDynamicCast(FName) || isOSObjectThisCast(FName))
+      if (isOSObjectDynamicCast(FName) || isOSObjectRequiredCast(FName) ||
+          isOSObjectThisCast(FName))
         return getDefaultSummary();
 
       // TODO: Add support for the slightly common *Matching(table) idiom.
@@ -745,6 +750,8 @@ RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
     if (TrackOSObjects) {
       if (isOSObjectDynamicCast(FName) && FD->param_size() >= 1) {
         return BehaviorSummary::IdentityOrZero;
+      } else if (isOSObjectRequiredCast(FName) && FD->param_size() >= 1) {
+        return BehaviorSummary::Identity;
       } else if (isOSObjectThisCast(FName) && isa<CXXMethodDecl>(FD) &&
                  !cast<CXXMethodDecl>(FD)->isStatic()) {
         return BehaviorSummary::IdentityThis;

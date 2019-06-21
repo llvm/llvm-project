@@ -1390,7 +1390,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestUnaryExpressions",
-// CHECK-NEXT:  "templateParams": [
+// CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "TemplateTypeParmDecl",
@@ -1417,9 +1417,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:    "depth": 0,
 // CHECK-NEXT:    "index": 0,
 // CHECK-NEXT:    "isParameterPack": true
-// CHECK-NEXT:   }
-// CHECK-NEXT:  ],
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionDecl",
@@ -3505,7 +3503,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestPrimaryExpressions",
-// CHECK-NEXT:  "templateParams": [
+// CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "TemplateTypeParmDecl",
@@ -3532,9 +3530,7 @@ void TestNonADLCall3() {
 // CHECK-NEXT:    "depth": 0,
 // CHECK-NEXT:    "index": 0,
 // CHECK-NEXT:    "isParameterPack": true
-// CHECK-NEXT:   }
-// CHECK-NEXT:  ],
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionDecl",
@@ -3926,46 +3922,46 @@ void TestNonADLCall3() {
 // CHECK-NEXT:                  ]
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 {
-// CHECK-NEXT:                   "id": "0x{{.*}}",
-// CHECK-NEXT:                   "kind": "ParenListExpr",
-// CHECK-NEXT:                   "range": {
+// CHECK-NEXT:                  "id": "0x{{.*}}",
+// CHECK-NEXT:                  "kind": "ParenListExpr",
+// CHECK-NEXT:                  "range": {
+// CHECK-NEXT:                   "begin": {
+// CHECK-NEXT:                    "col": 8,
+// CHECK-NEXT:                    "file": "{{.*}}",
+// CHECK-NEXT:                    "line": 98
+// CHECK-NEXT:                   },
+// CHECK-NEXT:                   "end": {
+// CHECK-NEXT:                    "col": 8,
+// CHECK-NEXT:                    "file": "{{.*}}",
+// CHECK-NEXT:                    "line": 98
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                  },
+// CHECK-NEXT:                  "type": {
+// CHECK-NEXT:                   "qualType": "NULL TYPE"
+// CHECK-NEXT:                  },
+// CHECK-NEXT:                  "valueCategory": "rvalue",
+// CHECK-NEXT:                  "inner": [
+// CHECK-NEXT:                   {
+// CHECK-NEXT:                    "id": "0x{{.*}}",
+// CHECK-NEXT:                    "kind": "CXXThisExpr",
+// CHECK-NEXT:                    "range": {
 // CHECK-NEXT:                     "begin": {
-// CHECK-NEXT:                       "col": 8,
-// CHECK-NEXT:                       "file": "{{.*}}",
-// CHECK-NEXT:                       "line": 98
+// CHECK-NEXT:                      "col": 8,
+// CHECK-NEXT:                      "file": "{{.*}}",
+// CHECK-NEXT:                      "line": 98
 // CHECK-NEXT:                     },
 // CHECK-NEXT:                     "end": {
-// CHECK-NEXT:                       "col": 8,
-// CHECK-NEXT:                       "file": "{{.*}}",
-// CHECK-NEXT:                       "line": 98
+// CHECK-NEXT:                      "col": 8,
+// CHECK-NEXT:                      "file": "{{.*}}",
+// CHECK-NEXT:                      "line": 98
 // CHECK-NEXT:                     }
-// CHECK-NEXT:                   },
-// CHECK-NEXT:                   "type": {
-// CHECK-NEXT:                     "qualType": "NULL TYPE"
-// CHECK-NEXT:                   },
-// CHECK-NEXT:                   "valueCategory": "rvalue",
-// CHECK-NEXT:                   "inner": [
-// CHECK-NEXT:                     {
-// CHECK-NEXT:                       "id": "0x{{.*}}",
-// CHECK-NEXT:                       "kind": "CXXThisExpr",
-// CHECK-NEXT:                       "range": {
-// CHECK-NEXT:                         "begin": {
-// CHECK-NEXT:                           "col": 8,
-// CHECK-NEXT:                           "file": "{{.*}}",
-// CHECK-NEXT:                           "line": 98
-// CHECK-NEXT:                         },
-// CHECK-NEXT:                         "end": {
-// CHECK-NEXT:                           "col": 8,
-// CHECK-NEXT:                           "file": "{{.*}}",
-// CHECK-NEXT:                           "line": 98
-// CHECK-NEXT:                         }
-// CHECK-NEXT:                       },
-// CHECK-NEXT:                       "type": {
-// CHECK-NEXT:                         "qualType": "V *"
-// CHECK-NEXT:                       },
-// CHECK-NEXT:                       "valueCategory": "rvalue"
-// CHECK-NEXT:                     }
-// CHECK-NEXT:                   ]
+// CHECK-NEXT:                    },
+// CHECK-NEXT:                    "type": {
+// CHECK-NEXT:                     "qualType": "V *"
+// CHECK-NEXT:                    },
+// CHECK-NEXT:                    "valueCategory": "rvalue"
+// CHECK-NEXT:                   }
+// CHECK-NEXT:                  ]
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 {
 // CHECK-NEXT:                  "id": "0x{{.*}}",
@@ -7742,7 +7738,12 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           "desugaredQualType": "NS::X",
 // CHECK-NEXT:           "qualType": "NS::X"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue"
+// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "ctorType": {
+// CHECK-NEXT:           "qualType": "void () noexcept"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "hadMultipleCandidates": true,
+// CHECK-NEXT:          "constructionKind": "complete"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       }
@@ -7839,6 +7840,11 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "NS::X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "ctorType": {
+// CHECK-NEXT:         "qualType": "void (const NS::X &) noexcept"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "hadMultipleCandidates": true,
+// CHECK-NEXT:        "constructionKind": "complete",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -7990,6 +7996,11 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "NS::X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "ctorType": {
+// CHECK-NEXT:         "qualType": "void (const NS::X &) noexcept"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "hadMultipleCandidates": true,
+// CHECK-NEXT:        "constructionKind": "complete",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -8157,7 +8168,12 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           "desugaredQualType": "NS::X",
 // CHECK-NEXT:           "qualType": "NS::X"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue"
+// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "ctorType": {
+// CHECK-NEXT:           "qualType": "void () noexcept"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "hadMultipleCandidates": true,
+// CHECK-NEXT:          "constructionKind": "complete"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       }
@@ -8253,6 +8269,11 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "NS::X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "ctorType": {
+// CHECK-NEXT:         "qualType": "void (const NS::X &) noexcept"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "hadMultipleCandidates": true,
+// CHECK-NEXT:        "constructionKind": "complete",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -8420,7 +8441,12 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           "desugaredQualType": "NS::X",
 // CHECK-NEXT:           "qualType": "NS::X"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue"
+// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "ctorType": {
+// CHECK-NEXT:           "qualType": "void () noexcept"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "hadMultipleCandidates": true,
+// CHECK-NEXT:          "constructionKind": "complete"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       }
@@ -8561,6 +8587,11 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "NS::X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "ctorType": {
+// CHECK-NEXT:         "qualType": "void (const NS::X &) noexcept"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "hadMultipleCandidates": true,
+// CHECK-NEXT:        "constructionKind": "complete",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -8712,6 +8743,11 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "NS::X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "ctorType": {
+// CHECK-NEXT:         "qualType": "void (const NS::X &) noexcept"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "hadMultipleCandidates": true,
+// CHECK-NEXT:        "constructionKind": "complete",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -8877,7 +8913,12 @@ void TestNonADLCall3() {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "NS::X"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue"
+// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "ctorType": {
+// CHECK-NEXT:           "qualType": "void () noexcept"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "hadMultipleCandidates": true,
+// CHECK-NEXT:          "constructionKind": "complete"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       }
@@ -8973,6 +9014,11 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "NS::X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "ctorType": {
+// CHECK-NEXT:         "qualType": "void (const NS::X &) noexcept"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "hadMultipleCandidates": true,
+// CHECK-NEXT:        "constructionKind": "complete",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",

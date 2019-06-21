@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 // Tests for unique_copy
 #include "support/pstl_test_config.h"
 
@@ -43,7 +45,7 @@ struct run_unique_copy
               typename Predicate, typename T>
     void
     operator()(Policy&& exec, InputIterator first, InputIterator last, OutputIterator out_first,
-               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2 expected_last, Size n,
+               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2, Size n,
                Predicate pred, T trash)
     {
         // Cleaning
@@ -114,7 +116,7 @@ struct test_non_const
 };
 
 int32_t
-main(int32_t argc, char* argv[])
+main()
 {
     test<Number>(Number(42, OddTag()), std::equal_to<Number>(),
                  [](int32_t j) { return Number(3 * j / 13 ^ (j & 8), OddTag()); });
@@ -122,7 +124,7 @@ main(int32_t argc, char* argv[])
     test<float32_t>(float32_t(42), std::equal_to<float32_t>(),
                     [](int32_t j) { return float32_t(5 * j / 23 ^ (j / 7)); });
 #if !_PSTL_ICC_16_17_TEST_REDUCTION_RELEASE_BROKEN
-    test<float32_t>(float32_t(42), [](float32_t x, float32_t y) { return false; },
+    test<float32_t>(float32_t(42), [](float32_t, float32_t) { return false; },
                     [](int32_t j) { return float32_t(j); }, false);
 #endif
 

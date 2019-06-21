@@ -522,7 +522,7 @@ int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
   WaitStatesNeeded = checkSoftClauseHazards(SMRD);
 
   // This SMRD hazard only affects SI.
-  if (ST.getGeneration() != AMDGPUSubtarget::SOUTHERN_ISLANDS)
+  if (!ST.hasSMRDReadVALUDefHazard())
     return WaitStatesNeeded;
 
   // A read of an SGPR by SMRD instruction requires 4 wait states when the
@@ -561,7 +561,7 @@ int GCNHazardRecognizer::checkSMRDHazards(MachineInstr *SMRD) {
 }
 
 int GCNHazardRecognizer::checkVMEMHazards(MachineInstr* VMEM) {
-  if (ST.getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
+  if (!ST.hasVMEMReadSGPRVALUDefHazard())
     return 0;
 
   int WaitStatesNeeded = checkSoftClauseHazards(VMEM);
@@ -640,8 +640,7 @@ int GCNHazardRecognizer::checkSetRegHazards(MachineInstr *SetRegInstr) {
   const SIInstrInfo *TII = ST.getInstrInfo();
   unsigned HWReg = getHWReg(TII, *SetRegInstr);
 
-  const int SetRegWaitStates =
-      ST.getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS ? 1 : 2;
+  const int SetRegWaitStates = ST.getSetRegWaitStates();
   auto IsHazardFn = [TII, HWReg] (MachineInstr *MI) {
     return HWReg == getHWReg(TII, *MI);
   };
@@ -787,7 +786,7 @@ int GCNHazardRecognizer::checkRWLaneHazards(MachineInstr *RWLane) {
 }
 
 int GCNHazardRecognizer::checkRFEHazards(MachineInstr *RFE) {
-  if (ST.getGeneration() < AMDGPUSubtarget::VOLCANIC_ISLANDS)
+  if (!ST.hasRFEHazards())
     return 0;
 
   const SIInstrInfo *TII = ST.getInstrInfo();

@@ -983,6 +983,7 @@ public:
     const unsigned MinDensity = getMinimumJumpTableDensity(OptForSize);
     const unsigned MaxJumpTableSize =
         OptForSize ? UINT_MAX : getMaximumJumpTableSize();
+
     // Check whether a range of clusters is dense enough for a jump table.
     if (Range <= MaxJumpTableSize &&
         (NumCases * 100 >= Range * MinDensity)) {

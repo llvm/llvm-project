@@ -17,9 +17,9 @@
 
 using namespace lldb_private;
 
-DIERef DWARFBaseDIE::GetDIERef() const {
+llvm::Optional<DIERef> DWARFBaseDIE::GetDIERef() const {
   if (!IsValid())
-    return DIERef();
+    return llvm::None;
 
   dw_offset_t cu_offset = m_cu->GetOffset();
   if (m_cu->GetBaseObjOffset() != DW_INVALID_OFFSET)

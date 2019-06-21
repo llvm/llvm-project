@@ -906,7 +906,7 @@ int main() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "Test12",
-// CHECK-NEXT:  "templateParams": [
+// CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "TemplateTypeParmDecl",
@@ -932,9 +932,7 @@ int main() {
 // CHECK-NEXT:    "tagUsed": "typename",
 // CHECK-NEXT:    "depth": 0,
 // CHECK-NEXT:    "index": 0
-// CHECK-NEXT:   }
-// CHECK-NEXT:  ],
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionDecl",

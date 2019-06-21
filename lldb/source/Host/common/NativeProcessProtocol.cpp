@@ -16,6 +16,8 @@
 #include "lldb/Utility/State.h"
 #include "lldb/lldb-enumerations.h"
 
+#include "llvm/Support/Process.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -657,6 +659,58 @@ Status NativeProcessProtocol::ReadMemoryWithoutTrap(lldb::addr_t addr,
                 bp_data.begin());
   }
   return Status();
+}
+
+llvm::Expected<llvm::StringRef>
+NativeProcessProtocol::ReadCStringFromMemory(lldb::addr_t addr, char *buffer,
+                                             size_t max_size,
+                                             size_t &total_bytes_read) {
+  static const size_t cache_line_size =
+      llvm::sys::Process::getPageSizeEstimate();
+  size_t bytes_read = 0;
+  size_t bytes_left = max_size;
+  addr_t curr_addr = addr;
+  size_t string_size;
+  char *curr_buffer = buffer;
+  total_bytes_read = 0;
+  Status status;
+
+  while (bytes_left > 0 && status.Success()) {
+    addr_t cache_line_bytes_left =
+        cache_line_size - (curr_addr % cache_line_size);
+    addr_t bytes_to_read = std::min<addr_t>(bytes_left, cache_line_bytes_left);
+    status = ReadMemory(curr_addr, reinterpret_cast<void *>(curr_buffer),
+                        bytes_to_read, bytes_read);
+
+    if (bytes_read == 0)
+      break;
+
+    void *str_end = std::memchr(curr_buffer, '\0', bytes_read);
+    if (str_end != nullptr) {
+      total_bytes_read =
+          (size_t)(reinterpret_cast<char *>(str_end) - buffer + 1);
+      status.Clear();
+      break;
+    }
+
+    total_bytes_read += bytes_read;
+    curr_buffer += bytes_read;
+    curr_addr += bytes_read;
+    bytes_left -= bytes_read;
+  }
+
+  string_size = total_bytes_read - 1;
+
+  // Make sure we return a null terminated string.
+  if (bytes_left == 0 && max_size > 0 && buffer[max_size - 1] != '\0') {
+    buffer[max_size - 1] = '\0';
+    total_bytes_read--;
+  }
+
+  if (!status.Success())
+    return status.ToError();
+
+  return llvm::StringRef(buffer, string_size);
 }
 
 lldb::StateType NativeProcessProtocol::GetState() const {

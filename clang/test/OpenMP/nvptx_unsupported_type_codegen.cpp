@@ -8,13 +8,15 @@
 // CHECK-DAG: [[T:%.+]] = type {{.+}}, fp128,
 // CHECK-DAG: [[T1:%.+]] = type {{.+}}, i128, i128,
 
+#ifndef _ARCH_PPC
+typedef __float128 BIGTYPE;
+#else
+typedef long double BIGTYPE;
+#endif
+
 struct T {
   char a;
-#ifndef _ARCH_PPC
-  __float128 f;
-#else
-  long double f;
-#endif
+  BIGTYPE f;
   char c;
   T() : a(12), f(15) {}
   T &operator+(T &b) { f += b.a; return *this;}
@@ -68,3 +70,12 @@ void baz1() {
   T1 t = bar1();
 }
 #pragma omp end declare target
+
+BIGTYPE foo(BIGTYPE f) {
+#pragma omp target map(f)
+  f = 1;
+  return f;
+}
+
+// CHECK: define weak void @__omp_offloading_{{.+}}foo{{.+}}_l75([[BIGTYPE:.+]]*
+// CHECK: store [[BIGTYPE]] 0xL00000000000000003FFF000000000000, [[BIGTYPE]]* %

@@ -51,6 +51,7 @@ template <typename T>
 void TestDependentScopeMemberExpr() {
   DependentScopeMemberExprWrapper<T> obj;
   obj.member = T();
+  obj.member = T{};
   (&obj)->member = T();
 }
 
@@ -101,6 +102,12 @@ void TestIteration() {
 
   for (int a; int v : vals)
     ;
+}
+
+template <typename Ty>
+void TestDependentGenericSelectionExpr(Ty T) {
+  _Generic(T, int : 1, default : 0);
+  _Generic(T, default : 0);
 }
 
 
@@ -1731,7 +1738,7 @@ void TestIteration() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestDependentAllocationExpr",
-// CHECK-NEXT:  "templateParams": [
+// CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "TemplateTypeParmDecl",
@@ -1757,9 +1764,7 @@ void TestIteration() {
 // CHECK-NEXT:    "tagUsed": "typename",
 // CHECK-NEXT:    "depth": 0,
 // CHECK-NEXT:    "index": 0
-// CHECK-NEXT:   }
-// CHECK-NEXT:  ],
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionDecl",
@@ -1941,11 +1946,11 @@ void TestIteration() {
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 55
+// CHECK-NEXT:    "line": 56
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestDependentScopeMemberExpr",
-// CHECK-NEXT:  "templateParams": [
+// CHECK-NEXT:  "inner": [
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "TemplateTypeParmDecl",
@@ -1971,9 +1976,7 @@ void TestIteration() {
 // CHECK-NEXT:    "tagUsed": "typename",
 // CHECK-NEXT:    "depth": 0,
 // CHECK-NEXT:    "index": 0
-// CHECK-NEXT:   }
-// CHECK-NEXT:  ],
-// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:   },
 // CHECK-NEXT:   {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionDecl",
@@ -1991,7 +1994,7 @@ void TestIteration() {
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 55
+// CHECK-NEXT:      "line": 56
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "TestDependentScopeMemberExpr",
@@ -2011,7 +2014,7 @@ void TestIteration() {
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 1,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 55
+// CHECK-NEXT:        "line": 56
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -2162,7 +2165,7 @@ void TestIteration() {
 // CHECK-NEXT:          "line": 54
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
-// CHECK-NEXT:          "col": 22,
+// CHECK-NEXT:          "col": 18,
 // CHECK-NEXT:          "file": "{{.*}}",
 // CHECK-NEXT:          "line": 54
 // CHECK-NEXT:         }
@@ -2183,9 +2186,125 @@ void TestIteration() {
 // CHECK-NEXT:            "line": 54
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
-// CHECK-NEXT:            "col": 11,
+// CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "file": "{{.*}}",
 // CHECK-NEXT:            "line": 54
+// CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "<dependent type>"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "valueCategory": "lvalue",
+// CHECK-NEXT:          "inner": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "DeclRefExpr",
+// CHECK-NEXT:            "range": {
+// CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "col": 3,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 54
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "col": 3,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 54
+// CHECK-NEXT:             }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "DependentScopeMemberExprWrapper<T>"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "valueCategory": "lvalue",
+// CHECK-NEXT:            "referencedDecl": {
+// CHECK-NEXT:             "id": "0x{{.*}}",
+// CHECK-NEXT:             "kind": "VarDecl",
+// CHECK-NEXT:             "name": "obj",
+// CHECK-NEXT:             "type": {
+// CHECK-NEXT:              "qualType": "DependentScopeMemberExprWrapper<T>"
+// CHECK-NEXT:             }
+// CHECK-NEXT:            }
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "CXXUnresolvedConstructExpr",
+// CHECK-NEXT:          "range": {
+// CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "col": 16,
+// CHECK-NEXT:            "file": "{{.*}}",
+// CHECK-NEXT:            "line": 54
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "col": 18,
+// CHECK-NEXT:            "file": "{{.*}}",
+// CHECK-NEXT:            "line": 54
+// CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "T"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "list": true,
+// CHECK-NEXT:          "inner": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "InitListExpr",
+// CHECK-NEXT:            "range": {
+// CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "col": 17,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 54
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "col": 18,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 54
+// CHECK-NEXT:             }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "void"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "valueCategory": "rvalue"
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "BinaryOperator",
+// CHECK-NEXT:        "range": {
+// CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "col": 3,
+// CHECK-NEXT:          "file": "{{.*}}",
+// CHECK-NEXT:          "line": 55
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "col": 22,
+// CHECK-NEXT:          "file": "{{.*}}",
+// CHECK-NEXT:          "line": 55
+// CHECK-NEXT:         }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "<dependent type>"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "opcode": "=",
+// CHECK-NEXT:        "inner": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "CXXDependentScopeMemberExpr",
+// CHECK-NEXT:          "range": {
+// CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "col": 3,
+// CHECK-NEXT:            "file": "{{.*}}",
+// CHECK-NEXT:            "line": 55
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "col": 11,
+// CHECK-NEXT:            "file": "{{.*}}",
+// CHECK-NEXT:            "line": 55
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2200,12 +2319,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 3,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 54
+// CHECK-NEXT:              "line": 55
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 8,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 54
+// CHECK-NEXT:              "line": 55
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2220,12 +2339,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 4,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 54
+// CHECK-NEXT:                "line": 55
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 5,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 54
+// CHECK-NEXT:                "line": 55
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -2243,12 +2362,12 @@ void TestIteration() {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 5,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 54
+// CHECK-NEXT:                  "line": 55
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 5,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 54
+// CHECK-NEXT:                  "line": 55
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -2277,12 +2396,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 20,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 54
+// CHECK-NEXT:            "line": 55
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 22,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 54
+// CHECK-NEXT:            "line": 55
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2304,18 +2423,18 @@ void TestIteration() {
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "col": 6,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 62
+// CHECK-NEXT:   "line": 63
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 62
+// CHECK-NEXT:    "line": 63
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 65
+// CHECK-NEXT:    "line": 66
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestUnionInitList",
@@ -2330,12 +2449,12 @@ void TestIteration() {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 63
+// CHECK-NEXT:      "line": 64
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 65
+// CHECK-NEXT:      "line": 66
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -2346,12 +2465,12 @@ void TestIteration() {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 64
+// CHECK-NEXT:        "line": 65
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 16,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 64
+// CHECK-NEXT:        "line": 65
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -2361,18 +2480,18 @@ void TestIteration() {
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 5,
 // CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 64
+// CHECK-NEXT:         "line": 65
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 64
+// CHECK-NEXT:          "line": 65
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 15,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 64
+// CHECK-NEXT:          "line": 65
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "name": "us",
@@ -2388,12 +2507,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 13,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 64
+// CHECK-NEXT:            "line": 65
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 15,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 64
+// CHECK-NEXT:            "line": 65
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2408,18 +2527,26 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 15,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 64
+// CHECK-NEXT:              "line": 65
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 15,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 64
+// CHECK-NEXT:              "line": 65
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "U"
 // CHECK-NEXT:            },
-// CHECK-NEXT:            "valueCategory": "rvalue"
+// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "field": {
+// CHECK-NEXT:             "id": "0x{{.*}}",
+// CHECK-NEXT:             "kind": "FieldDecl",
+// CHECK-NEXT:             "name": "i",
+// CHECK-NEXT:             "type": {
+// CHECK-NEXT:              "qualType": "int"
+// CHECK-NEXT:             }
+// CHECK-NEXT:            }
 // CHECK-NEXT:           },
 // CHECK-NEXT:           {
 // CHECK-NEXT:            "id": "0x{{.*}}",
@@ -2428,18 +2555,26 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 64
+// CHECK-NEXT:              "line": 65
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 64
+// CHECK-NEXT:              "line": 65
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
 // CHECK-NEXT:             "qualType": "U"
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "field": {
+// CHECK-NEXT:             "id": "0x{{.*}}",
+// CHECK-NEXT:             "kind": "FieldDecl",
+// CHECK-NEXT:             "name": "i",
+// CHECK-NEXT:             "type": {
+// CHECK-NEXT:              "qualType": "int"
+// CHECK-NEXT:             }
+// CHECK-NEXT:            },
 // CHECK-NEXT:            "inner": [
 // CHECK-NEXT:             {
 // CHECK-NEXT:              "id": "0x{{.*}}",
@@ -2448,12 +2583,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 64
+// CHECK-NEXT:                "line": 65
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 64
+// CHECK-NEXT:                "line": 65
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -2480,18 +2615,18 @@ void TestIteration() {
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "col": 6,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 67
+// CHECK-NEXT:   "line": 68
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 67
+// CHECK-NEXT:    "line": 68
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 70
+// CHECK-NEXT:    "line": 71
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestSwitch",
@@ -2505,18 +2640,18 @@ void TestIteration() {
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 21,
 // CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 67
+// CHECK-NEXT:     "line": 68
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 17,
 // CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 67
+// CHECK-NEXT:      "line": 68
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 21,
 // CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 67
+// CHECK-NEXT:      "line": 68
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
@@ -2532,12 +2667,12 @@ void TestIteration() {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 24,
 // CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 67
+// CHECK-NEXT:      "line": 68
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 70
+// CHECK-NEXT:      "line": 71
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -2548,12 +2683,12 @@ void TestIteration() {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 68
+// CHECK-NEXT:        "line": 69
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 69
+// CHECK-NEXT:        "line": 70
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "hasInit": true,
@@ -2565,12 +2700,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 11,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 68
+// CHECK-NEXT:          "line": 69
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 16,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 68
+// CHECK-NEXT:          "line": 69
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -2580,18 +2715,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 15,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 68
+// CHECK-NEXT:           "line": 69
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 11,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 68
+// CHECK-NEXT:            "line": 69
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 15,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 68
+// CHECK-NEXT:            "line": 69
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "a",
@@ -2608,12 +2743,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 18,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 68
+// CHECK-NEXT:          "line": 69
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 18,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 68
+// CHECK-NEXT:          "line": 69
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2629,12 +2764,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 18,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 68
+// CHECK-NEXT:            "line": 69
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 18,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 68
+// CHECK-NEXT:            "line": 69
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2659,12 +2794,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 69
+// CHECK-NEXT:          "line": 70
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 69
+// CHECK-NEXT:          "line": 70
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -2680,18 +2815,18 @@ void TestIteration() {
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "col": 6,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 72
+// CHECK-NEXT:   "line": 73
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 72
+// CHECK-NEXT:    "line": 73
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 83
+// CHECK-NEXT:    "line": 84
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestIf",
@@ -2705,18 +2840,18 @@ void TestIteration() {
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 18,
 // CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 72
+// CHECK-NEXT:     "line": 73
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 13,
 // CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 72
+// CHECK-NEXT:      "line": 73
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 18,
 // CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 72
+// CHECK-NEXT:      "line": 73
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isReferenced": true,
@@ -2732,12 +2867,12 @@ void TestIteration() {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 21,
 // CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 72
+// CHECK-NEXT:      "line": 73
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 83
+// CHECK-NEXT:      "line": 84
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -2748,12 +2883,12 @@ void TestIteration() {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 73
+// CHECK-NEXT:        "line": 74
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 74
+// CHECK-NEXT:        "line": 75
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "hasInit": true,
@@ -2765,12 +2900,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 73
+// CHECK-NEXT:          "line": 74
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 23,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 73
+// CHECK-NEXT:          "line": 74
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -2780,18 +2915,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 17,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 73
+// CHECK-NEXT:           "line": 74
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 7,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 73
+// CHECK-NEXT:            "line": 74
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 21,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 73
+// CHECK-NEXT:            "line": 74
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isReferenced": true,
@@ -2808,12 +2943,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 73
+// CHECK-NEXT:              "line": 74
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 73
+// CHECK-NEXT:              "line": 74
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2833,12 +2968,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 25,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 73
+// CHECK-NEXT:          "line": 74
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 25,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 73
+// CHECK-NEXT:          "line": 74
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2854,12 +2989,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 25,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 73
+// CHECK-NEXT:            "line": 74
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 25,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 73
+// CHECK-NEXT:            "line": 74
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2875,12 +3010,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 25,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 73
+// CHECK-NEXT:              "line": 74
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 25,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 73
+// CHECK-NEXT:              "line": 74
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2908,12 +3043,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 74
+// CHECK-NEXT:          "line": 75
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 74
+// CHECK-NEXT:          "line": 75
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -2926,12 +3061,12 @@ void TestIteration() {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 76
+// CHECK-NEXT:        "line": 77
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 77
+// CHECK-NEXT:        "line": 78
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isConstexpr": true,
@@ -2943,18 +3078,19 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 17,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 76
+// CHECK-NEXT:          "line": 77
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 30,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 76
+// CHECK-NEXT:          "line": 77
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "value": "true",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -2963,12 +3099,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 17,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 76
+// CHECK-NEXT:            "line": 77
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 30,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 76
+// CHECK-NEXT:            "line": 77
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2984,12 +3120,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 17,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 76
+// CHECK-NEXT:              "line": 77
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 25,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 76
+// CHECK-NEXT:              "line": 77
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3005,12 +3141,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 23,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 76
+// CHECK-NEXT:                "line": 77
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 25,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 76
+// CHECK-NEXT:                "line": 77
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -3025,12 +3161,12 @@ void TestIteration() {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 24,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 76
+// CHECK-NEXT:                  "line": 77
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 24,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 76
+// CHECK-NEXT:                  "line": 77
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -3058,12 +3194,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 30,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 76
+// CHECK-NEXT:              "line": 77
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 30,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 76
+// CHECK-NEXT:              "line": 77
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3079,12 +3215,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 30,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 76
+// CHECK-NEXT:                "line": 77
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 30,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 76
+// CHECK-NEXT:                "line": 77
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -3106,12 +3242,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 77
+// CHECK-NEXT:          "line": 78
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 77
+// CHECK-NEXT:          "line": 78
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -3124,12 +3260,12 @@ void TestIteration() {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 79
+// CHECK-NEXT:        "line": 80
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 82
+// CHECK-NEXT:        "line": 83
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "hasElse": true,
@@ -3142,18 +3278,19 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 17,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 79
+// CHECK-NEXT:          "line": 80
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 30,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 79
+// CHECK-NEXT:          "line": 80
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
 // CHECK-NEXT:         "qualType": "bool"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "value": "true",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -3162,12 +3299,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 17,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 79
+// CHECK-NEXT:            "line": 80
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 30,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 79
+// CHECK-NEXT:            "line": 80
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3183,12 +3320,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 17,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 79
+// CHECK-NEXT:              "line": 80
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 25,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 79
+// CHECK-NEXT:              "line": 80
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3204,12 +3341,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 23,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 79
+// CHECK-NEXT:                "line": 80
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 25,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 79
+// CHECK-NEXT:                "line": 80
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -3224,12 +3361,12 @@ void TestIteration() {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 24,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 79
+// CHECK-NEXT:                  "line": 80
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 24,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 79
+// CHECK-NEXT:                  "line": 80
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -3257,12 +3394,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 30,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 79
+// CHECK-NEXT:              "line": 80
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 30,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 79
+// CHECK-NEXT:              "line": 80
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3278,12 +3415,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 30,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 79
+// CHECK-NEXT:                "line": 80
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 30,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 79
+// CHECK-NEXT:                "line": 80
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -3305,12 +3442,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 80
+// CHECK-NEXT:          "line": 81
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 80
+// CHECK-NEXT:          "line": 81
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       },
@@ -3321,12 +3458,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 82
+// CHECK-NEXT:          "line": 83
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 82
+// CHECK-NEXT:          "line": 83
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -3342,18 +3479,18 @@ void TestIteration() {
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "col": 6,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 90
+// CHECK-NEXT:   "line": 91
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 90
+// CHECK-NEXT:    "line": 91
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 104
+// CHECK-NEXT:    "line": 105
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestIteration",
@@ -3368,12 +3505,12 @@ void TestIteration() {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 22,
 // CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 90
+// CHECK-NEXT:      "line": 91
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 104
+// CHECK-NEXT:      "line": 105
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -3384,12 +3521,12 @@ void TestIteration() {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 91
+// CHECK-NEXT:        "line": 92
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 92
+// CHECK-NEXT:        "line": 93
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -3400,12 +3537,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 91
+// CHECK-NEXT:          "line": 92
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 17,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 91
+// CHECK-NEXT:          "line": 92
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -3415,18 +3552,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 12,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 91
+// CHECK-NEXT:           "line": 92
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 91
+// CHECK-NEXT:            "line": 92
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 16,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 91
+// CHECK-NEXT:            "line": 92
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isUsed": true,
@@ -3443,12 +3580,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 16,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 91
+// CHECK-NEXT:              "line": 92
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 16,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 91
+// CHECK-NEXT:              "line": 92
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3468,12 +3605,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 19,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 91
+// CHECK-NEXT:          "line": 92
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 27,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 91
+// CHECK-NEXT:          "line": 92
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -3483,18 +3620,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 23,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 91
+// CHECK-NEXT:           "line": 92
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 19,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 91
+// CHECK-NEXT:            "line": 92
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 27,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 91
+// CHECK-NEXT:            "line": 92
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isUsed": true,
@@ -3511,12 +3648,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 27,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 91
+// CHECK-NEXT:              "line": 92
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 27,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 91
+// CHECK-NEXT:              "line": 92
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3532,12 +3669,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 27,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 91
+// CHECK-NEXT:                "line": 92
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 27,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 91
+// CHECK-NEXT:                "line": 92
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -3566,12 +3703,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 23,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 91
+// CHECK-NEXT:          "line": 92
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 23,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 91
+// CHECK-NEXT:          "line": 92
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3587,12 +3724,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 23,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 91
+// CHECK-NEXT:            "line": 92
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 23,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 91
+// CHECK-NEXT:            "line": 92
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3608,12 +3745,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 23,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 91
+// CHECK-NEXT:              "line": 92
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 23,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 91
+// CHECK-NEXT:              "line": 92
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3640,12 +3777,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 30,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 91
+// CHECK-NEXT:          "line": 92
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 32,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 91
+// CHECK-NEXT:          "line": 92
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3662,12 +3799,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 32,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 91
+// CHECK-NEXT:            "line": 92
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 32,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 91
+// CHECK-NEXT:            "line": 92
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3692,12 +3829,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 92
+// CHECK-NEXT:          "line": 93
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 92
+// CHECK-NEXT:          "line": 93
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -3710,12 +3847,12 @@ void TestIteration() {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 94
+// CHECK-NEXT:        "line": 95
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 15,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 94
+// CHECK-NEXT:        "line": 95
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -3725,18 +3862,18 @@ void TestIteration() {
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 7,
 // CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 94
+// CHECK-NEXT:         "line": 95
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 94
+// CHECK-NEXT:          "line": 95
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 94
+// CHECK-NEXT:          "line": 95
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isUsed": true,
@@ -3754,12 +3891,12 @@ void TestIteration() {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 95
+// CHECK-NEXT:        "line": 96
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 96
+// CHECK-NEXT:        "line": 97
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -3771,12 +3908,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 16,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "line": 96
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 16,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "line": 96
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -3786,18 +3923,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 16,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 95
+// CHECK-NEXT:           "line": 96
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 16,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 16,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -3815,12 +3952,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 16,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 95
+// CHECK-NEXT:              "line": 96
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 16,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 95
+// CHECK-NEXT:              "line": 96
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3847,12 +3984,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "line": 96
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "line": 96
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -3862,18 +3999,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 14,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 95
+// CHECK-NEXT:           "line": 96
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -3892,12 +4029,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 95
+// CHECK-NEXT:              "line": 96
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 95
+// CHECK-NEXT:              "line": 96
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3913,12 +4050,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 95
+// CHECK-NEXT:                "line": 96
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 95
+// CHECK-NEXT:                "line": 96
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -3947,12 +4084,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "line": 96
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "line": 96
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -3962,18 +4099,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 14,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 95
+// CHECK-NEXT:           "line": 96
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 16,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -3992,12 +4129,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 95
+// CHECK-NEXT:              "line": 96
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 16,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 95
+// CHECK-NEXT:              "line": 96
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4013,12 +4150,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 95
+// CHECK-NEXT:                "line": 96
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 95
+// CHECK-NEXT:                "line": 96
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -4034,12 +4171,12 @@ void TestIteration() {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 14,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 95
+// CHECK-NEXT:                  "line": 96
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 14,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 95
+// CHECK-NEXT:                  "line": 96
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -4064,12 +4201,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 16,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 95
+// CHECK-NEXT:                "line": 96
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 16,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 95
+// CHECK-NEXT:                "line": 96
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -4091,12 +4228,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "line": 96
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "line": 96
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4112,12 +4249,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4134,12 +4271,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 95
+// CHECK-NEXT:              "line": 96
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 95
+// CHECK-NEXT:              "line": 96
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4166,12 +4303,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4188,12 +4325,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 95
+// CHECK-NEXT:              "line": 96
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 95
+// CHECK-NEXT:              "line": 96
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4222,12 +4359,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "line": 96
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "line": 96
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4245,12 +4382,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4277,12 +4414,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "line": 96
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 20,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "line": 96
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -4292,18 +4429,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 12,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 95
+// CHECK-NEXT:           "line": 96
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 95
+// CHECK-NEXT:            "line": 96
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "v",
@@ -4319,12 +4456,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 95
+// CHECK-NEXT:              "line": 96
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 95
+// CHECK-NEXT:              "line": 96
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4340,12 +4477,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 95
+// CHECK-NEXT:                "line": 96
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 95
+// CHECK-NEXT:                "line": 96
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -4363,12 +4500,12 @@ void TestIteration() {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 14,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 95
+// CHECK-NEXT:                  "line": 96
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 14,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 95
+// CHECK-NEXT:                  "line": 96
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -4385,12 +4522,12 @@ void TestIteration() {
 // CHECK-NEXT:                   "begin": {
 // CHECK-NEXT:                    "col": 14,
 // CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 95
+// CHECK-NEXT:                    "line": 96
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "end": {
 // CHECK-NEXT:                    "col": 14,
 // CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 95
+// CHECK-NEXT:                    "line": 96
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
@@ -4425,12 +4562,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 96
+// CHECK-NEXT:          "line": 97
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 96
+// CHECK-NEXT:          "line": 97
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -4443,12 +4580,12 @@ void TestIteration() {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 98
+// CHECK-NEXT:        "line": 99
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 14,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 98
+// CHECK-NEXT:        "line": 99
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -4458,18 +4595,18 @@ void TestIteration() {
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 13,
 // CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 98
+// CHECK-NEXT:         "line": 99
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 98
+// CHECK-NEXT:          "line": 99
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 13,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 98
+// CHECK-NEXT:          "line": 99
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isUsed": true,
@@ -4486,18 +4623,23 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 13,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 98
+// CHECK-NEXT:            "line": 99
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 13,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 98
+// CHECK-NEXT:            "line": 99
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "Container"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue"
+// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "ctorType": {
+// CHECK-NEXT:           "qualType": "void () noexcept"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "hadMultipleCandidates": true,
+// CHECK-NEXT:          "constructionKind": "complete"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       }
@@ -4510,12 +4652,12 @@ void TestIteration() {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 99
+// CHECK-NEXT:        "line": 100
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 100
+// CHECK-NEXT:        "line": 101
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -4527,12 +4669,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 16,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "line": 100
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 16,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "line": 100
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -4542,18 +4684,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 16,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 99
+// CHECK-NEXT:           "line": 100
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 16,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 16,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -4571,12 +4713,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 16,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 99
+// CHECK-NEXT:              "line": 100
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 16,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 99
+// CHECK-NEXT:              "line": 100
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4603,12 +4745,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "line": 100
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "line": 100
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -4618,18 +4760,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 14,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 99
+// CHECK-NEXT:           "line": 100
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -4648,12 +4790,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 99
+// CHECK-NEXT:              "line": 100
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 99
+// CHECK-NEXT:              "line": 100
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4668,12 +4810,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 99
+// CHECK-NEXT:                "line": 100
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 99
+// CHECK-NEXT:                "line": 100
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -4691,12 +4833,12 @@ void TestIteration() {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 14,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 99
+// CHECK-NEXT:                  "line": 100
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 14,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 99
+// CHECK-NEXT:                  "line": 100
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -4712,12 +4854,12 @@ void TestIteration() {
 // CHECK-NEXT:                   "begin": {
 // CHECK-NEXT:                    "col": 14,
 // CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 99
+// CHECK-NEXT:                    "line": 100
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "end": {
 // CHECK-NEXT:                    "col": 14,
 // CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 99
+// CHECK-NEXT:                    "line": 100
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
@@ -4750,12 +4892,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "line": 100
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "line": 100
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -4765,18 +4907,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 14,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 99
+// CHECK-NEXT:           "line": 100
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -4795,12 +4937,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 99
+// CHECK-NEXT:              "line": 100
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 99
+// CHECK-NEXT:              "line": 100
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4815,12 +4957,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 99
+// CHECK-NEXT:                "line": 100
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 99
+// CHECK-NEXT:                "line": 100
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -4838,12 +4980,12 @@ void TestIteration() {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 14,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 99
+// CHECK-NEXT:                  "line": 100
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 14,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 99
+// CHECK-NEXT:                  "line": 100
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -4859,12 +5001,12 @@ void TestIteration() {
 // CHECK-NEXT:                   "begin": {
 // CHECK-NEXT:                    "col": 14,
 // CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 99
+// CHECK-NEXT:                    "line": 100
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "end": {
 // CHECK-NEXT:                    "col": 14,
 // CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 99
+// CHECK-NEXT:                    "line": 100
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
@@ -4897,12 +5039,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "line": 100
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "line": 100
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4918,12 +5060,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4940,12 +5082,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 99
+// CHECK-NEXT:              "line": 100
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 99
+// CHECK-NEXT:              "line": 100
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4972,12 +5114,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4994,12 +5136,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 99
+// CHECK-NEXT:              "line": 100
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 99
+// CHECK-NEXT:              "line": 100
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5028,12 +5170,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "line": 100
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "line": 100
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -5051,12 +5193,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -5083,12 +5225,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "line": 100
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 17,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "line": 100
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -5098,18 +5240,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 12,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 99
+// CHECK-NEXT:           "line": 100
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 99
+// CHECK-NEXT:            "line": 100
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "v",
@@ -5125,12 +5267,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 99
+// CHECK-NEXT:              "line": 100
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 99
+// CHECK-NEXT:              "line": 100
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5146,12 +5288,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 99
+// CHECK-NEXT:                "line": 100
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 99
+// CHECK-NEXT:                "line": 100
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -5169,12 +5311,12 @@ void TestIteration() {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 14,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 99
+// CHECK-NEXT:                  "line": 100
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 14,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 99
+// CHECK-NEXT:                  "line": 100
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -5191,12 +5333,12 @@ void TestIteration() {
 // CHECK-NEXT:                   "begin": {
 // CHECK-NEXT:                    "col": 14,
 // CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 99
+// CHECK-NEXT:                    "line": 100
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "end": {
 // CHECK-NEXT:                    "col": 14,
 // CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 99
+// CHECK-NEXT:                    "line": 100
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
@@ -5231,12 +5373,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 100
+// CHECK-NEXT:          "line": 101
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 100
+// CHECK-NEXT:          "line": 101
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -5249,12 +5391,12 @@ void TestIteration() {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 102
+// CHECK-NEXT:        "line": 103
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
 // CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 103
+// CHECK-NEXT:        "line": 104
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -5265,12 +5407,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 13,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -5280,18 +5422,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 12,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 102
+// CHECK-NEXT:           "line": 103
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 12,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "a",
@@ -5308,12 +5450,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 23,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 23,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -5323,18 +5465,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 23,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 102
+// CHECK-NEXT:           "line": 103
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 23,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 23,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -5352,12 +5494,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 23,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 102
+// CHECK-NEXT:              "line": 103
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 23,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 102
+// CHECK-NEXT:              "line": 103
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5384,12 +5526,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -5399,18 +5541,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 21,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 102
+// CHECK-NEXT:           "line": 103
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 21,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 21,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -5429,12 +5571,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 102
+// CHECK-NEXT:              "line": 103
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 102
+// CHECK-NEXT:              "line": 103
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5450,12 +5592,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 21,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 102
+// CHECK-NEXT:                "line": 103
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 21,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 102
+// CHECK-NEXT:                "line": 103
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -5484,12 +5626,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -5499,18 +5641,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 21,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 102
+// CHECK-NEXT:           "line": 103
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 21,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 23,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -5529,12 +5671,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 102
+// CHECK-NEXT:              "line": 103
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 23,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 102
+// CHECK-NEXT:              "line": 103
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5550,12 +5692,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 21,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 102
+// CHECK-NEXT:                "line": 103
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 21,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 102
+// CHECK-NEXT:                "line": 103
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -5571,12 +5713,12 @@ void TestIteration() {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 21,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 102
+// CHECK-NEXT:                  "line": 103
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 21,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 102
+// CHECK-NEXT:                  "line": 103
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -5601,12 +5743,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 23,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 102
+// CHECK-NEXT:                "line": 103
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 23,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 102
+// CHECK-NEXT:                "line": 103
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -5628,12 +5770,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -5649,12 +5791,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 21,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 21,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -5671,12 +5813,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 102
+// CHECK-NEXT:              "line": 103
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 102
+// CHECK-NEXT:              "line": 103
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5703,12 +5845,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 21,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 21,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -5725,12 +5867,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 102
+// CHECK-NEXT:              "line": 103
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 102
+// CHECK-NEXT:              "line": 103
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5759,12 +5901,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -5782,12 +5924,12 @@ void TestIteration() {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 21,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 21,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -5814,12 +5956,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 15,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 27,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 102
+// CHECK-NEXT:          "line": 103
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -5829,18 +5971,18 @@ void TestIteration() {
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 19,
 // CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 102
+// CHECK-NEXT:           "line": 103
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 15,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 21,
 // CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 102
+// CHECK-NEXT:            "line": 103
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "v",
@@ -5856,12 +5998,12 @@ void TestIteration() {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 102
+// CHECK-NEXT:              "line": 103
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 21,
 // CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 102
+// CHECK-NEXT:              "line": 103
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5877,12 +6019,12 @@ void TestIteration() {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 21,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 102
+// CHECK-NEXT:                "line": 103
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 21,
 // CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 102
+// CHECK-NEXT:                "line": 103
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -5900,12 +6042,12 @@ void TestIteration() {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 21,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 102
+// CHECK-NEXT:                  "line": 103
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 21,
 // CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 102
+// CHECK-NEXT:                  "line": 103
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -5922,12 +6064,12 @@ void TestIteration() {
 // CHECK-NEXT:                   "begin": {
 // CHECK-NEXT:                    "col": 21,
 // CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 102
+// CHECK-NEXT:                    "line": 103
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "end": {
 // CHECK-NEXT:                    "col": 21,
 // CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 102
+// CHECK-NEXT:                    "line": 103
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
@@ -5962,12 +6104,12 @@ void TestIteration() {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 103
+// CHECK-NEXT:          "line": 104
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
 // CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 103
+// CHECK-NEXT:          "line": 104
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -5978,3 +6120,330 @@ void TestIteration() {
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
 
+
+// CHECK:  "kind": "FunctionTemplateDecl",
+// CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "col": 6,
+// CHECK-NEXT:   "file": "{{.*}}",
+// CHECK-NEXT:   "line": 108
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "range": {
+// CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "col": 1,
+// CHECK-NEXT:    "file": "{{.*}}",
+// CHECK-NEXT:    "line": 107
+// CHECK-NEXT:   },
+// CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "col": 1,
+// CHECK-NEXT:    "file": "{{.*}}",
+// CHECK-NEXT:    "line": 111
+// CHECK-NEXT:   }
+// CHECK-NEXT:  },
+// CHECK-NEXT:  "name": "TestDependentGenericSelectionExpr",
+// CHECK-NEXT:  "inner": [
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "TemplateTypeParmDecl",
+// CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "col": 20,
+// CHECK-NEXT:     "file": "{{.*}}",
+// CHECK-NEXT:     "line": 107
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "col": 11,
+// CHECK-NEXT:      "file": "{{.*}}",
+// CHECK-NEXT:      "line": 107
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "col": 20,
+// CHECK-NEXT:      "file": "{{.*}}",
+// CHECK-NEXT:      "line": 107
+// CHECK-NEXT:     }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "isReferenced": true,
+// CHECK-NEXT:    "name": "Ty",
+// CHECK-NEXT:    "tagUsed": "typename",
+// CHECK-NEXT:    "depth": 0,
+// CHECK-NEXT:    "index": 0
+// CHECK-NEXT:   },
+// CHECK-NEXT:   {
+// CHECK-NEXT:    "id": "0x{{.*}}",
+// CHECK-NEXT:    "kind": "FunctionDecl",
+// CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "col": 6,
+// CHECK-NEXT:     "file": "{{.*}}",
+// CHECK-NEXT:     "line": 108
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "range": {
+// CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "col": 1,
+// CHECK-NEXT:      "file": "{{.*}}",
+// CHECK-NEXT:      "line": 108
+// CHECK-NEXT:     },
+// CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "col": 1,
+// CHECK-NEXT:      "file": "{{.*}}",
+// CHECK-NEXT:      "line": 111
+// CHECK-NEXT:     }
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "name": "TestDependentGenericSelectionExpr",
+// CHECK-NEXT:    "type": {
+// CHECK-NEXT:     "qualType": "void (Ty)"
+// CHECK-NEXT:    },
+// CHECK-NEXT:    "inner": [
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "ParmVarDecl",
+// CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "col": 43,
+// CHECK-NEXT:       "file": "{{.*}}",
+// CHECK-NEXT:       "line": 108
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "col": 40,
+// CHECK-NEXT:        "file": "{{.*}}",
+// CHECK-NEXT:        "line": 108
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "col": 43,
+// CHECK-NEXT:        "file": "{{.*}}",
+// CHECK-NEXT:        "line": 108
+// CHECK-NEXT:       }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "isReferenced": true,
+// CHECK-NEXT:      "name": "T",
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "Ty"
+// CHECK-NEXT:      }
+// CHECK-NEXT:     },
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "CompoundStmt",
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "col": 46,
+// CHECK-NEXT:        "file": "{{.*}}",
+// CHECK-NEXT:        "line": 108
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "col": 1,
+// CHECK-NEXT:        "file": "{{.*}}",
+// CHECK-NEXT:        "line": 111
+// CHECK-NEXT:       }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "inner": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "GenericSelectionExpr",
+// CHECK-NEXT:        "range": {
+// CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "col": 3,
+// CHECK-NEXT:          "file": "{{.*}}",
+// CHECK-NEXT:          "line": 109
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "col": 35,
+// CHECK-NEXT:          "file": "{{.*}}",
+// CHECK-NEXT:          "line": 109
+// CHECK-NEXT:         }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "<dependent type>"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "resultDependent": true,
+// CHECK-NEXT:        "inner": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "DeclRefExpr",
+// CHECK-NEXT:          "range": {
+// CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "col": 12,
+// CHECK-NEXT:            "file": "{{.*}}",
+// CHECK-NEXT:            "line": 109
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "col": 12,
+// CHECK-NEXT:            "file": "{{.*}}",
+// CHECK-NEXT:            "line": 109
+// CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "Ty"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "valueCategory": "lvalue",
+// CHECK-NEXT:          "referencedDecl": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "ParmVarDecl",
+// CHECK-NEXT:           "name": "T",
+// CHECK-NEXT:           "type": {
+// CHECK-NEXT:            "qualType": "Ty"
+// CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "nonOdrUseReason": "unevaluated"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "TemplateTypeParmType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "Ty"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "isDependent": true,
+// CHECK-NEXT:          "isInstantiationDependent": true
+// CHECK-NEXT:         },
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "associationKind": "case",
+// CHECK-NEXT:          "inner": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "BuiltinType",
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "int"
+// CHECK-NEXT:            }
+// CHECK-NEXT:           },
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "IntegerLiteral",
+// CHECK-NEXT:            "range": {
+// CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "col": 21,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 109
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "col": 21,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 109
+// CHECK-NEXT:             }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "int"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "value": "1"
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         },
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "associationKind": "default",
+// CHECK-NEXT:          "inner": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "IntegerLiteral",
+// CHECK-NEXT:            "range": {
+// CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "col": 34,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 109
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "col": 34,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 109
+// CHECK-NEXT:             }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "int"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "value": "0"
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       },
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}",
+// CHECK-NEXT:        "kind": "GenericSelectionExpr",
+// CHECK-NEXT:        "range": {
+// CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "col": 3,
+// CHECK-NEXT:          "file": "{{.*}}",
+// CHECK-NEXT:          "line": 110
+// CHECK-NEXT:         },
+// CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "col": 26,
+// CHECK-NEXT:          "file": "{{.*}}",
+// CHECK-NEXT:          "line": 110
+// CHECK-NEXT:         }
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "type": {
+// CHECK-NEXT:         "qualType": "<dependent type>"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "resultDependent": true,
+// CHECK-NEXT:        "inner": [
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "DeclRefExpr",
+// CHECK-NEXT:          "range": {
+// CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "col": 12,
+// CHECK-NEXT:            "file": "{{.*}}",
+// CHECK-NEXT:            "line": 110
+// CHECK-NEXT:           },
+// CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "col": 12,
+// CHECK-NEXT:            "file": "{{.*}}",
+// CHECK-NEXT:            "line": 110
+// CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "Ty"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "valueCategory": "lvalue",
+// CHECK-NEXT:          "referencedDecl": {
+// CHECK-NEXT:           "id": "0x{{.*}}",
+// CHECK-NEXT:           "kind": "ParmVarDecl",
+// CHECK-NEXT:           "name": "T",
+// CHECK-NEXT:           "type": {
+// CHECK-NEXT:            "qualType": "Ty"
+// CHECK-NEXT:           }
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "nonOdrUseReason": "unevaluated"
+// CHECK-NEXT:         },
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "id": "0x{{.*}}",
+// CHECK-NEXT:          "kind": "TemplateTypeParmType",
+// CHECK-NEXT:          "type": {
+// CHECK-NEXT:           "qualType": "Ty"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "isDependent": true,
+// CHECK-NEXT:          "isInstantiationDependent": true
+// CHECK-NEXT:         },
+// CHECK-NEXT:         {
+// CHECK-NEXT:          "associationKind": "default",
+// CHECK-NEXT:          "inner": [
+// CHECK-NEXT:           {
+// CHECK-NEXT:            "id": "0x{{.*}}",
+// CHECK-NEXT:            "kind": "IntegerLiteral",
+// CHECK-NEXT:            "range": {
+// CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "col": 25,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 110
+// CHECK-NEXT:             },
+// CHECK-NEXT:             "end": {
+// CHECK-NEXT:              "col": 25,
+// CHECK-NEXT:              "file": "{{.*}}",
+// CHECK-NEXT:              "line": 110
+// CHECK-NEXT:             }
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "type": {
+// CHECK-NEXT:             "qualType": "int"
+// CHECK-NEXT:            },
+// CHECK-NEXT:            "valueCategory": "rvalue",
+// CHECK-NEXT:            "value": "0"
+// CHECK-NEXT:           }
+// CHECK-NEXT:          ]
+// CHECK-NEXT:         }
+// CHECK-NEXT:        ]
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ]
+// CHECK-NEXT:     }
+// CHECK-NEXT:    ]
+// CHECK-NEXT:   }
+// CHECK-NEXT:  ]
+// CHECK-NEXT: }

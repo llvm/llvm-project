@@ -1,4 +1,4 @@
-; RUN: llc -start-after=codegenprepare -stop-before=expand-isel-pseudos -o - < %s | FileCheck %s
+; RUN: llc -start-after=codegenprepare -stop-before=finalize-isel -o - < %s | FileCheck %s
 ; Test for correct placement of DBG_VALUE, which in PR40427 is placed before
 ; the load instruction it refers to. The circumstance replicated here is where
 ; two instructions in a row, trunc and add, begin with no-op Copy{To,From}Reg

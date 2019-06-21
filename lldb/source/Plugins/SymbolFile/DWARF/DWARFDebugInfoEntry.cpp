@@ -234,7 +234,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
 
   dw_addr_t lo_pc = LLDB_INVALID_ADDRESS;
   dw_addr_t hi_pc = LLDB_INVALID_ADDRESS;
-  std::vector<DIERef> die_refs;
+  std::vector<DWARFDIE> dies;
   bool set_frame_base_loclist_addr = false;
 
   auto abbrevDecl = GetAbbreviationDeclarationPtr(cu);
@@ -302,11 +302,11 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
           break;
 
         case DW_AT_abstract_origin:
-          die_refs.emplace_back(form_value);
+          dies.push_back(form_value.Reference());
           break;
 
         case DW_AT_specification:
-          die_refs.emplace_back(form_value);
+          dies.push_back(form_value.Reference());
           break;
 
         case DW_AT_decl_file:
@@ -392,13 +392,11 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   }
 
   if (ranges.IsEmpty() || name == nullptr || mangled == nullptr) {
-    for (const DIERef &die_ref : die_refs) {
-      if (die_ref.die_offset != DW_INVALID_OFFSET) {
-        DWARFDIE die = dwarf.GetDIE(die_ref);
-        if (die)
-          die.GetDIE()->GetDIENamesAndRanges(die.GetCU(), name, mangled, ranges,
-                                             decl_file, decl_line, decl_column,
-                                             call_file, call_line, call_column);
+    for (const DWARFDIE &die : dies) {
+      if (die) {
+        die.GetDIE()->GetDIENamesAndRanges(die.GetCU(), name, mangled, ranges,
+                                           decl_file, decl_line, decl_column,
+                                           call_file, call_line, call_column);
       }
     }
   }

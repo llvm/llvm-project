@@ -3779,20 +3779,9 @@ _mm512_mask_cvtpd_pslo (__m512 __W, __mmask8 __U,__m512d __A)
                                             (__v16hi)_mm256_setzero_si256(), \
                                             (__mmask16)(W))
 
-#define _mm512_cvtps_ph(A, I) \
-  (__m256i)__builtin_ia32_vcvtps2ph512_mask((__v16sf)(__m512)(A), (int)(I), \
-                                            (__v16hi)_mm256_setzero_si256(), \
-                                            (__mmask16)-1)
-
-#define _mm512_mask_cvtps_ph(U, W, A, I) \
-  (__m256i)__builtin_ia32_vcvtps2ph512_mask((__v16sf)(__m512)(A), (int)(I), \
-                                            (__v16hi)(__m256i)(U), \
-                                            (__mmask16)(W))
-
-#define _mm512_maskz_cvtps_ph(W, A, I) \
-  (__m256i)__builtin_ia32_vcvtps2ph512_mask((__v16sf)(__m512)(A), (int)(I), \
-                                            (__v16hi)_mm256_setzero_si256(), \
-                                            (__mmask16)(W))
+#define _mm512_cvtps_ph       _mm512_cvt_roundps_ph
+#define _mm512_mask_cvtps_ph  _mm512_mask_cvt_roundps_ph
+#define _mm512_maskz_cvtps_ph _mm512_maskz_cvt_roundps_ph
 
 #define _mm512_cvt_roundph_ps(A, R) \
   (__m512)__builtin_ia32_vcvtph2ps512_mask((__v16hi)(__m256i)(A), \

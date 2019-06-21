@@ -136,8 +136,7 @@ static void CreateHistoryThreadFromValueObject(ProcessSP process_sp,
     pcs.push_back(pc);
   }
 
-  HistoryThread *history_thread =
-      new HistoryThread(*process_sp, tid, pcs, 0, false);
+  HistoryThread *history_thread = new HistoryThread(*process_sp, tid, pcs);
   ThreadSP new_thread_sp(history_thread);
   std::ostringstream thread_name_with_number;
   thread_name_with_number << thread_name << " Thread " << tid;

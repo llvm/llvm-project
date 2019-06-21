@@ -20,10 +20,10 @@
 // CHECK-DAG: weak constant %struct.__tgt_offload_entry { i8* bitcast (i32* @bbb to i8*),
 // CHECK-DAG: @ccc = external global i32,
 // CHECK-DAG: @ddd ={{ dso_local | }}global i32 0,
-// CHECK-DAG: @hhh_decl_tgt_link_ptr = common global i32* null
-// CHECK-DAG: @ggg_decl_tgt_link_ptr = common global i32* null
-// CHECK-DAG: @fff_decl_tgt_link_ptr = common global i32* null
-// CHECK-DAG: @eee_decl_tgt_link_ptr = common global i32* null
+// CHECK-DAG: @hhh_decl_tgt_ref_ptr = common global i32* null
+// CHECK-DAG: @ggg_decl_tgt_ref_ptr = common global i32* null
+// CHECK-DAG: @fff_decl_tgt_ref_ptr = common global i32* null
+// CHECK-DAG: @eee_decl_tgt_ref_ptr = common global i32* null
 // CHECK-DAG: @{{.*}}maini1{{.*}}aaa = internal global i64 23,
 // CHECK-DAG: @b ={{ dso_local | }}global i32 15,
 // CHECK-DAG: @d ={{ dso_local | }}global i32 0,

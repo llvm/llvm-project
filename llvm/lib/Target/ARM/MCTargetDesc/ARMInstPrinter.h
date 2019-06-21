@@ -252,6 +252,8 @@ public:
                                 raw_ostream &O);
   void printVPTMask(const MCInst *MI, unsigned OpNum,
                     const MCSubtargetInfo &STI, raw_ostream &O);
+  void printExpandedImmOperand(const MCInst *MI, unsigned OpNum,
+                               const MCSubtargetInfo &STI, raw_ostream &O);
 
 private:
   unsigned DefaultAltIdx = ARM::NoRegAltName;

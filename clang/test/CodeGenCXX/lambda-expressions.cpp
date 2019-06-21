@@ -195,7 +195,6 @@ namespace pr28595 {
 // CHECK-NEXT: ret i32
 
 // CHECK-LABEL: define internal void @"_ZZ1hvEN4$_118__invokeEv"(%struct.A* noalias sret %agg.result) {{.*}} {
-// CHECK-NOT: =
 // CHECK: call void @"_ZZ1hvENK4$_11clEv"(%struct.A* sret %agg.result,
 // CHECK-NEXT: ret void
 struct A { ~A(); };

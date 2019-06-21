@@ -3733,6 +3733,7 @@ ResolveConstructorOverload(Sema &S, SourceLocation DeclLoc,
                            bool OnlyListConstructors, bool IsListInit,
                            bool SecondStepOfCopyInit = false) {
   CandidateSet.clear(OverloadCandidateSet::CSK_InitByConstructor);
+  CandidateSet.setDestAS(DestType.getQualifiers().getAddressSpace());
 
   for (NamedDecl *D : Ctors) {
     auto Info = getConstructorInfo(D);
@@ -4985,6 +4986,7 @@ static void TryUserDefinedConversion(Sema &S,
   // structure, so that it will persist if we fail.
   OverloadCandidateSet &CandidateSet = Sequence.getFailedCandidateSet();
   CandidateSet.clear(OverloadCandidateSet::CSK_InitByUserDefinedConversion);
+  CandidateSet.setDestAS(DestType.getQualifiers().getAddressSpace());
 
   // Determine whether we are allowed to call explicit constructors or
   // explicit conversion operators.

@@ -518,24 +518,25 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ;
 ; THUMB8-LABEL: scalar_i64_lowestbit_eq:
 ; THUMB8:       @ %bb.0:
-; THUMB8-NEXT:    .save {r7, lr}
-; THUMB8-NEXT:    push {r7, lr}
-; THUMB8-NEXT:    rsb.w r3, r2, #32
-; THUMB8-NEXT:    sub.w lr, r2, #32
+; THUMB8-NEXT:    .save {r4, lr}
+; THUMB8-NEXT:    push {r4, lr}
+; THUMB8-NEXT:    rsb.w r4, r2, #32
+; THUMB8-NEXT:    sub.w r3, r2, #32
 ; THUMB8-NEXT:    mov.w r12, #1
-; THUMB8-NEXT:    cmp.w lr, #0
-; THUMB8-NEXT:    lsr.w r3, r12, r3
+; THUMB8-NEXT:    cmp r3, #0
+; THUMB8-NEXT:    lsr.w r4, r12, r4
 ; THUMB8-NEXT:    lsl.w r2, r12, r2
+; THUMB8-NEXT:    lsl.w lr, r12, r3
 ; THUMB8-NEXT:    it ge
-; THUMB8-NEXT:    lslge.w r3, r12, lr
+; THUMB8-NEXT:    movge r4, lr
 ; THUMB8-NEXT:    it ge
 ; THUMB8-NEXT:    movge r2, #0
-; THUMB8-NEXT:    ands r1, r3
+; THUMB8-NEXT:    ands r1, r4
 ; THUMB8-NEXT:    ands r0, r2
 ; THUMB8-NEXT:    orrs r0, r1
 ; THUMB8-NEXT:    clz r0, r0
 ; THUMB8-NEXT:    lsrs r0, r0, #5
-; THUMB8-NEXT:    pop {r7, pc}
+; THUMB8-NEXT:    pop {r4, pc}
   %t0 = shl i64 1, %y
   %t1 = and i64 %t0, %x
   %res = icmp eq i64 %t1, 0
@@ -635,28 +636,29 @@ define i1 @scalar_i64_bitsinmiddle_eq(i64 %x, i64 %y) nounwind {
 ;
 ; THUMB8-LABEL: scalar_i64_bitsinmiddle_eq:
 ; THUMB8:       @ %bb.0:
-; THUMB8-NEXT:    .save {r7, lr}
-; THUMB8-NEXT:    push {r7, lr}
+; THUMB8-NEXT:    .save {r4, lr}
+; THUMB8-NEXT:    push {r4, lr}
 ; THUMB8-NEXT:    movw r3, #65535
 ; THUMB8-NEXT:    movw lr, #0
 ; THUMB8-NEXT:    lsl.w r12, r3, r2
 ; THUMB8-NEXT:    rsb.w r3, r2, #32
 ; THUMB8-NEXT:    movt lr, #65535
 ; THUMB8-NEXT:    lsr.w r3, lr, r3
-; THUMB8-NEXT:    orr.w r3, r3, r12
-; THUMB8-NEXT:    sub.w r12, r2, #32
-; THUMB8-NEXT:    cmp.w r12, #0
+; THUMB8-NEXT:    orr.w r12, r12, r3
+; THUMB8-NEXT:    sub.w r3, r2, #32
 ; THUMB8-NEXT:    lsl.w r2, lr, r2
-; THUMB8-NEXT:    it ge
-; THUMB8-NEXT:    lslge.w r3, lr, r12
+; THUMB8-NEXT:    cmp r3, #0
+; THUMB8-NEXT:    lsl.w r4, lr, r3
+; THUMB8-NEXT:    it lt
+; THUMB8-NEXT:    movlt r4, r12
 ; THUMB8-NEXT:    it ge
 ; THUMB8-NEXT:    movge r2, #0
-; THUMB8-NEXT:    ands r1, r3
+; THUMB8-NEXT:    ands r1, r4
 ; THUMB8-NEXT:    ands r0, r2
 ; THUMB8-NEXT:    orrs r0, r1
 ; THUMB8-NEXT:    clz r0, r0
 ; THUMB8-NEXT:    lsrs r0, r0, #5
-; THUMB8-NEXT:    pop {r7, pc}
+; THUMB8-NEXT:    pop {r4, pc}
   %t0 = shl i64 281474976645120, %y
   %t1 = and i64 %t0, %x
   %res = icmp eq i64 %t1, 0

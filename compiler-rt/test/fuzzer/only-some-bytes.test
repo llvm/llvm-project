@@ -15,7 +15,11 @@ RUN: cat  %t/IN/8 %t/IN/8 %t/IN/8 %t/IN/8 > %t/IN/10
 RUN: cat  %t/IN/10 %t/IN/10 %t/IN/10 %t/IN/10 > %t/IN/12
 # %t/IN/12 is 4096 bytes-long.
 
+RUN: %t-Fuzz -focus_function='fB(unsigned char const*)' -runs=0 %t/IN 2>&1 | FileCheck %s --check-prefix=FOCUS_fB
+FOCUS_fB: Focus function is set to 'fB(unsigned char const*)'
+
 RUN: %t-Fuzz -focus_function=f0 -runs=0 %t/IN 2>&1 | FileCheck %s --check-prefix=NO_FOCUSED_INPUT
+NO_FOCUSED_INPUT: Focus function is set to 'f0'
 NO_FOCUSED_INPUT: INFO: 0/2 inputs touch the focus function
 
 RUN: (echo -n ABC; cat %t/IN/12) > %t/IN/ABC
@@ -36,9 +40,12 @@ RUN: rm -rf %t/C_DFT && %t-Fuzz -collect_data_flow=%t-DFT %t/C -data_flow_trace=
 RUN: not %t-Fuzz -focus_function=f0 -data_flow_trace=%t/C_DFT -seed=1 -runs=1000000 -use_value_profile=1 %t/C1 %t/C 2> %t/log
 RUN: grep BINGO %t/log
 
-# Test -focus_function=auto: run 50 times and verify that 'f0' is the most frequent focus function.
-RUN: %t-Fuzz -focus_function=auto -data_flow_trace=%t/C_DFT -runs=0 %t/C -jobs=50 2>&1 | grep AUTOFOCUS  | sort | uniq -c | sort -g -r | head -n 1 | FileCheck %s --check-prefix=AUTOFOCUS
+# Test -focus_function=auto: run 100 times and verify that
+#  * 'f0' is the most frequent focus function.
+#  * the second most frequent is one of fA/fB/fC in a de-mangled form.
+RUN: %t-Fuzz -focus_function=auto -data_flow_trace=%t/C_DFT -runs=0 %t/C -jobs=100 2>&1 | grep AUTOFOCUS  | sort | uniq -c | sort -g -r | head -n 2 | FileCheck %s --check-prefix=AUTOFOCUS
 AUTOFOCUS: INFO: AUTOFOCUS: {{.*}} f0
+AUTOFOCUS: INFO: AUTOFOCUS: {{.*f[ABC]}}(unsigned char const*)
 
 # Actually execute 50 fuzzing processes with a small number of runs, to test  -focus_function=auto for real.
 # We can not test data_flow_trace=auto in just a single run, because it may choose to focus on a wrong function.

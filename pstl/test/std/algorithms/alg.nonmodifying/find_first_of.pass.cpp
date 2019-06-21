@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <execution>
@@ -56,8 +58,8 @@ test(Predicate pred)
 
     const std::size_t max_n1 = 1000;
     const std::size_t max_n2 = (max_n1 * 10) / 8;
-    Sequence<T> in1(max_n1, [](std::size_t k) { return T(1); });
-    Sequence<T> in2(max_n2, [](std::size_t k) { return T(0); });
+    Sequence<T> in1(max_n1, [](std::size_t) { return T(1); });
+    Sequence<T> in2(max_n2, [](std::size_t) { return T(0); });
     for (std::size_t n1 = 0; n1 <= max_n1; n1 = n1 <= 16 ? n1 + 1 : size_t(3.1415 * n1))
     {
         std::size_t sub_n[] = {0, 1, n1 / 3, n1, (n1 * 10) / 8};

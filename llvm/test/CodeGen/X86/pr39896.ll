@@ -1,4 +1,4 @@
-; RUN: llc %s -start-after=codegenprepare -stop-after=expand-isel-pseudos -o - | FileCheck %s
+; RUN: llc %s -start-after=codegenprepare -stop-after=finalize-isel -o - | FileCheck %s
 
 ; PR39896: When code such as %conv below is dropped by SelectionDAG for having
 ; no users, don't just drop the dbg.value record associated with it. Instead,

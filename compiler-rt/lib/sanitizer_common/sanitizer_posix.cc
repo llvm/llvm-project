@@ -367,8 +367,7 @@ int GetNamedMappingFd(const char *name, uptr size, int *flags) {
 void DecorateMapping(uptr addr, uptr size, const char *name) {
   if (!common_flags()->decorate_proc_maps || !name)
     return;
-  CHECK(internal_prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, addr, size,
-                       (uptr)name) == 0);
+  internal_prctl(PR_SET_VMA, PR_SET_VMA_ANON_NAME, addr, size, (uptr)name);
 }
 #else
 void DecorateMapping(uptr addr, uptr size, const char *name) {

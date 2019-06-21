@@ -150,6 +150,10 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
 
 void ClangdServer::removeDocument(PathRef File) { WorkScheduler.remove(File); }
 
+llvm::StringRef ClangdServer::getDocument(PathRef File) const {
+  return WorkScheduler.getContents(File);
+}
+
 void ClangdServer::codeComplete(PathRef File, Position Pos,
                                 const clangd::CodeCompleteOptions &Opts,
                                 Callback<CodeCompleteResult> CB) {
@@ -281,6 +285,15 @@ void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
     auto Changes = renameWithinFile(InpAST->AST, File, Pos, NewName);
     if (!Changes)
       return CB(Changes.takeError());
+
+    auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
+                                       InpAST->Inputs.FS.get());
+    if (auto Formatted =
+            cleanupAndFormat(InpAST->Inputs.Contents, *Changes, Style))
+      *Changes = std::move(*Formatted);
+    else
+      elog("Failed to format replacements: {0}", Formatted.takeError());
+
     std::vector<TextEdit> Edits;
     for (const auto &Rep : *Changes)
       Edits.push_back(replacementToEdit(InpAST->Inputs.Contents, Rep));
@@ -325,7 +338,7 @@ void ClangdServer::enumerateTweaks(PathRef File, Range Sel,
 }
 
 void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
-                              Callback<ResolvedEffect> CB) {
+                              Callback<Tweak::Effect> CB) {
   auto Action = [Sel](decltype(CB) CB, std::string File, std::string TweakID,
                       Expected<InputsAndAST> InpAST) {
     if (!InpAST)
@@ -347,14 +360,10 @@ void ClangdServer::applyTweak(PathRef File, Range Sel, StringRef TweakID,
       if (auto Formatted = cleanupAndFormat(InpAST->Inputs.Contents,
                                             *Effect->ApplyEdit, Style))
         Effect->ApplyEdit = std::move(*Formatted);
+      else
+        elog("Failed to format replacements: {0}", Formatted.takeError());
     }
-
-    ResolvedEffect R;
-    R.ShowMessage = std::move(Effect->ShowMessage);
-    if (Effect->ApplyEdit)
-      R.ApplyEdit =
-          replacementsToEdits(InpAST->Inputs.Contents, *Effect->ApplyEdit);
-    return CB(std::move(R));
+    return CB(std::move(*Effect));
   };
   WorkScheduler.runWithAST(
       "ApplyTweak", File,

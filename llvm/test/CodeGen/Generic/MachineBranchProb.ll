@@ -1,4 +1,4 @@
-; RUN: llc < %s -print-machineinstrs=expand-isel-pseudos -o /dev/null 2>&1 | FileCheck %s
+; RUN: llc < %s -print-after=finalize-isel -o /dev/null 2>&1 | FileCheck %s
 
 ; Hexagon runs passes that renumber the basic blocks, causing this test
 ; to fail.
@@ -63,7 +63,7 @@ bb5: tail call void @g(i32 5) br label %return
 return: ret void
 
 ; Check that we set branch weights on the pivot cmp instruction correctly.
-; Cases {0,10,20,30} go on the left with weight 13; cases {40,50} go on the
+; Cases {0,100,200,300} go on the left with weight 13; cases {400,500} go on the
 ; right with weight 20.
 ;
 ; CHECK-LABEL: Machine code for function left_leaning_weight_balanced_tree:

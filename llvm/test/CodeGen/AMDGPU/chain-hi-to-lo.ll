@@ -181,7 +181,7 @@ entry:
 ; GCN-LABEL: {{^}}chain_hi_to_lo_group_other_dep:
 ; GFX900: ds_read_u16_d16_hi v1, v0
 ; GFX900-NEXT: s_waitcnt lgkmcnt(0)
-; GFX900-NEXT: v_pk_add_u16 v1, v1, 12 op_sel_hi:[1,0]
+; GFX900-NEXT: v_pk_sub_u16 v1, v1, -12 op_sel_hi:[1,0]
 ; GFX900-NEXT: ds_read_u16_d16 v1, v0 offset:2
 ; GFX900-NEXT: s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT: v_mov_b32_e32 v0, v1
@@ -204,7 +204,7 @@ bb:
 ; GFX900-NEXT: ds_read_u16_d16_hi v0, v0
 ; GFX900-NEXT: v_mov_b32_e32 [[MASK:v[0-9]+]], 0xffff
 ; GFX900-NEXT: s_waitcnt lgkmcnt(0)
-; GFX900-NEXT: v_pk_add_u16 v0, v0, 12 op_sel_hi:[1,0]
+; GFX900-NEXT: v_pk_sub_u16 v0, v0, -12 op_sel_hi:[1,0]
 ; GFX900-NEXT: v_bfi_b32 v0, [[MASK]], v1, v0
 ; GFX900-NEXT: s_setpc_b64
 define <2 x i16> @chain_hi_to_lo_group_other_dep_multi_chain(i16 addrspace(3)* %ptr) {
@@ -222,7 +222,7 @@ bb:
 ; GCN-LABEL: {{^}}chain_hi_to_lo_private_other_dep:
 ; GFX900: buffer_load_short_d16_hi v1, v0, s[0:3], s4 offen
 ; GFX900-NEXT: s_waitcnt vmcnt(0)
-; GFX900-NEXT: v_pk_add_u16 v1, v1, 12 op_sel_hi:[1,0]
+; GFX900-NEXT: v_pk_sub_u16 v1, v1, -12 op_sel_hi:[1,0]
 ; GFX900-NEXT: buffer_load_short_d16 v1, v0, s[0:3], s4 offen offset:2
 ; GFX900-NEXT: s_waitcnt vmcnt(0)
 ; GFX900-NEXT: v_mov_b32_e32 v0, v1
@@ -244,7 +244,7 @@ bb:
 ; GFX900-NEXT: global_load_short_d16_hi v0, v[0:1], off
 ; GFX900-NEXT: v_mov_b32_e32 [[MASK:v[0-9]+]], 0xffff
 ; GFX900-NEXT: s_waitcnt vmcnt(0)
-; GFX900-NEXT: v_pk_add_u16 v0, v0, 12 op_sel_hi:[1,0]
+; GFX900-NEXT: v_pk_sub_u16 v0, v0, -12 op_sel_hi:[1,0]
 ; GFX900-NEXT: v_bfi_b32 v0, [[MASK]], v2, v0
 ; GFX900-NEXT: s_setpc_b64
 define <2 x i16> @chain_hi_to_lo_global_other_dep(i16 addrspace(1)* %ptr) {
@@ -264,7 +264,7 @@ bb:
 ; GFX900-NEXT: flat_load_short_d16_hi v0, v[0:1]
 ; GFX900-NEXT: v_mov_b32_e32 [[MASK:v[0-9]+]], 0xffff
 ; GFX900-NEXT: s_waitcnt vmcnt(0) lgkmcnt(0)
-; GFX900-NEXT: v_pk_add_u16 v0, v0, 12 op_sel_hi:[1,0]
+; GFX900-NEXT: v_pk_sub_u16 v0, v0, -12 op_sel_hi:[1,0]
 ; GFX900-NEXT: v_bfi_b32 v0, v1, v2, v0
 ; GFX900-NEXT: s_setpc_b64
 define <2 x i16> @chain_hi_to_lo_flat_other_dep(i16 addrspace(0)* %ptr) {

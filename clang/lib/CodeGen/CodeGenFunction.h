@@ -327,6 +327,10 @@ public:
   /// value. This is invalid iff the function has no return value.
   Address ReturnValue = Address::invalid();
 
+  /// ReturnValuePointer - The temporary alloca to hold a pointer to sret.
+  /// This is invalid if sret is not in use.
+  Address ReturnValuePointer = Address::invalid();
+
   /// Return true if a label was seen in the current scope.
   bool hasLabelBeenSeenInCurrentScope() const {
     if (CurLexicalScope)

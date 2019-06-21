@@ -64,6 +64,12 @@ private:
   bool expandLoadAddress(MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI,
                          MachineBasicBlock::iterator &NextMBBI);
+  bool expandLoadTLSIEAddress(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI,
+                              MachineBasicBlock::iterator &NextMBBI);
+  bool expandLoadTLSGDAddress(MachineBasicBlock &MBB,
+                              MachineBasicBlock::iterator MBBI,
+                              MachineBasicBlock::iterator &NextMBBI);
 };
 
 char RISCVExpandPseudo::ID = 0;
@@ -131,6 +137,10 @@ bool RISCVExpandPseudo::expandMI(MachineBasicBlock &MBB,
     return expandLoadLocalAddress(MBB, MBBI, NextMBBI);
   case RISCV::PseudoLA:
     return expandLoadAddress(MBB, MBBI, NextMBBI);
+  case RISCV::PseudoLA_TLS_IE:
+    return expandLoadTLSIEAddress(MBB, MBBI, NextMBBI);
+  case RISCV::PseudoLA_TLS_GD:
+    return expandLoadTLSGDAddress(MBB, MBBI, NextMBBI);
   }
 
   return false;
@@ -675,6 +685,24 @@ bool RISCVExpandPseudo::expandLoadAddress(
     FlagsHi = RISCVII::MO_PCREL_HI;
   }
   return expandAuipcInstPair(MBB, MBBI, NextMBBI, FlagsHi, SecondOpcode);
+}
+
+bool RISCVExpandPseudo::expandLoadTLSIEAddress(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  MachineFunction *MF = MBB.getParent();
+
+  const auto &STI = MF->getSubtarget<RISCVSubtarget>();
+  unsigned SecondOpcode = STI.is64Bit() ? RISCV::LD : RISCV::LW;
+  return expandAuipcInstPair(MBB, MBBI, NextMBBI, RISCVII::MO_TLS_GOT_HI,
+                             SecondOpcode);
+}
+
+bool RISCVExpandPseudo::expandLoadTLSGDAddress(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  return expandAuipcInstPair(MBB, MBBI, NextMBBI, RISCVII::MO_TLS_GD_HI,
+                             RISCV::ADDI);
 }
 
 } // end of anonymous namespace

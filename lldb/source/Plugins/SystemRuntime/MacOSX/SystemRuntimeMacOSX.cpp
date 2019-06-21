@@ -485,12 +485,8 @@ ThreadSP SystemRuntimeMacOSX::GetExtendedBacktraceThread(ThreadSP real_thread,
                                   m_process->GetByteOrder(),
                                   m_process->GetAddressByteSize());
           ItemInfo item = ExtractItemInfoFromBuffer(extractor);
-          bool stop_id_is_valid = true;
-          if (item.stop_id == 0)
-            stop_id_is_valid = false;
           originating_thread_sp = std::make_shared<HistoryThread>(
-              *m_process, item.enqueuing_thread_id, item.enqueuing_callstack,
-              item.stop_id, stop_id_is_valid);
+              *m_process, item.enqueuing_thread_id, item.enqueuing_callstack);
           originating_thread_sp->SetExtendedBacktraceToken(
               item.item_that_enqueued_this);
           originating_thread_sp->SetQueueName(
@@ -530,12 +526,8 @@ SystemRuntimeMacOSX::GetExtendedBacktraceFromItemRef(lldb::addr_t item_ref) {
                               m_process->GetByteOrder(),
                               m_process->GetAddressByteSize());
       ItemInfo item = ExtractItemInfoFromBuffer(extractor);
-      bool stop_id_is_valid = true;
-      if (item.stop_id == 0)
-        stop_id_is_valid = false;
       return_thread_sp = std::make_shared<HistoryThread>(
-          *m_process, item.enqueuing_thread_id, item.enqueuing_callstack,
-          item.stop_id, stop_id_is_valid);
+          *m_process, item.enqueuing_thread_id, item.enqueuing_callstack);
       return_thread_sp->SetExtendedBacktraceToken(item.item_that_enqueued_this);
       return_thread_sp->SetQueueName(item.enqueuing_queue_label.c_str());
       return_thread_sp->SetQueueID(item.enqueuing_queue_serialnum);
@@ -556,14 +548,9 @@ SystemRuntimeMacOSX::GetExtendedBacktraceForQueueItem(QueueItemSP queue_item_sp,
   if (type != "libdispatch")
     return extended_thread_sp;
 
-  bool stop_id_is_valid = true;
-  if (queue_item_sp->GetStopID() == 0)
-    stop_id_is_valid = false;
-
   extended_thread_sp = std::make_shared<HistoryThread>(
       *m_process, queue_item_sp->GetEnqueueingThreadID(),
-      queue_item_sp->GetEnqueueingBacktrace(), queue_item_sp->GetStopID(),
-      stop_id_is_valid);
+      queue_item_sp->GetEnqueueingBacktrace());
   extended_thread_sp->SetExtendedBacktraceToken(
       queue_item_sp->GetItemThatEnqueuedThis());
   extended_thread_sp->SetQueueName(queue_item_sp->GetQueueLabel().c_str());

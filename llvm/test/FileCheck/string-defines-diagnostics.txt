@@ -28,7 +28,7 @@ ERRCLIVAR2: Missing variable name in command-line definition '-D='
 RUN: not FileCheck -D10VALUE=10 --input-file %s %s 2>&1 \
 RUN:   | FileCheck %s --strict-whitespace --check-prefix ERRCLIFMT
 
-ERRCLIFMT: Global defines:1:19: error: invalid name in string variable definition '10VALUE'
+ERRCLIFMT: Global defines:1:19: error: invalid variable name
 ERRCLIFMT-NEXT: Global define #1: 10VALUE=10
 ERRCLIFMT-NEXT: {{^                  \^$}}
 

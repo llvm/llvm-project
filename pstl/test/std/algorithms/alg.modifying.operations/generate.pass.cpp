@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <atomic>
@@ -54,11 +56,11 @@ struct test_generate
         {
             Generator_count<T> g;
             const auto m = n / 2;
-            auto last = generate_n(exec, first, m, g);
-            Size count = std::count(first, last, g.default_value());
-            EXPECT_TRUE(count == m && last == std::next(first, m),
+            auto actual_last = generate_n(exec, first, m, g);
+            Size count = std::count(first, actual_last, g.default_value());
+            EXPECT_TRUE(count == m && actual_last == std::next(first, m),
                         "generate_n wrong result for generate_n");
-            std::fill(first, last, T(0));
+            std::fill(first, actual_last, T(0));
         }
     }
 };
@@ -69,7 +71,7 @@ test_generate_by_type()
 {
     for (size_t n = 0; n <= 100000; n = n < 16 ? n + 1 : size_t(3.1415 * n))
     {
-        Sequence<T> in(n, [](size_t v) -> T { return T(0); }); //fill by zero
+        Sequence<T> in(n, [](size_t) -> T { return T(0); }); //fill by zero
 
         invoke_on_all_policies(test_generate(), in.begin(), in.end(), in.size());
     }

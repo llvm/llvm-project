@@ -25,7 +25,7 @@
 ; DISABLED-NOT: IRTranslator
 
 ; DISABLED: AArch64 Instruction Selection
-; DISABLED: Expand ISel Pseudo-instructions
+; DISABLED: Finalize ISel and expand pseudo-instructions
 
 ; FASTISEL: Enabling fast-isel
 ; NOFASTISEL-NOT: Enabling fast-isel

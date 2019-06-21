@@ -160,7 +160,7 @@ void AppleDWARFIndex::ReportInvalidDIERef(const DIERef &ref,
   m_module.ReportErrorIfModifyDetected(
       "the DWARF debug information has been modified (accelerator table had "
       "bad die 0x%8.8x for '%s')\n",
-      ref.die_offset, name.str().c_str());
+      ref.die_offset(), name.str().c_str());
 }
 
 void AppleDWARFIndex::Dump(Stream &s) {

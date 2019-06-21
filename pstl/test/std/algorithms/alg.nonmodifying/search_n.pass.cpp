@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <execution>
@@ -67,7 +69,7 @@ test()
             }
             for (auto r : res)
             {
-                Sequence<T> in(n1, [](std::size_t k) { return T(0); });
+                Sequence<T> in(n1, [](std::size_t) { return T(0); });
                 std::size_t i = r, isub = 0;
                 for (; i < n1 & isub < n2; ++i, ++isub)
                     in[i] = value;

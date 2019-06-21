@@ -1,9 +1,13 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wmissing-prototypes -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -Wmissing-prototypes -fdiagnostics-parseable-fixits %s 2>&1 | FileCheck %s
 
 void f() { } // expected-warning {{no previous prototype for function 'f'}}
+// expected-note@-1{{declare 'static' if the function is not intended to be used outside of this translation unit}}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-2]]:1-[[@LINE-2]]:1}:"static "
 
 namespace NS {
   void f() { } // expected-warning {{no previous prototype for function 'f'}}
+  // expected-note@-1{{declare 'static' if the function is not intended to be used outside of this translation unit}}
 }
 
 namespace {
@@ -32,3 +36,7 @@ class I {
 
 // Don't warn on explicitly deleted functions.
 void j() = delete;
+
+extern void k() {} // expected-warning {{no previous prototype for function 'k'}}
+// expected-note@-1{{declare 'static' if the function is not intended to be used outside of this translation unit}}
+// CHECK-NOT: fix-it:"{{.*}}":{[[@LINE-2]]:{{.*}}-[[@LINE-2]]:{{.*}}}:"{{.*}}"

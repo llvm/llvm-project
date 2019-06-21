@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 // Tests for uninitialized_copy, uninitialized_copy_n, uninitialized_move, uninitialized_move_n
 
 #include "support/pstl_test_config.h"
@@ -91,8 +93,6 @@ struct test_uninitialized_copy_move
     operator()(Policy&& exec, InputIterator first, InputIterator last, OutputIterator out_first, size_t n,
                /*is_trivial<T>=*/std::true_type)
     {
-        typedef typename std::iterator_traits<InputIterator>::value_type T;
-
         std::uninitialized_copy(exec, first, last, out_first);
         EXPECT_TRUE(IsCheckValueCorrectness(first, out_first, n), "wrong uninitialized_copy");
         std::destroy_n(exec, out_first, n);

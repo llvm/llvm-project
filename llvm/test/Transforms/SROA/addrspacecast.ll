@@ -299,6 +299,21 @@ define void @select_addrspacecast_gv(i1 %a, i1 %b) {
   ret void
 }
 
+; CHECK-LABEL: @select_addrspacecast_i8(
+; CHECK: [[SEL:%.*]] = select i1 undef, i8 undef, i8 undef
+; CHECK-NEXT: ret i8 [[SEL]]
+define i8 @select_addrspacecast_i8() {
+  %a = alloca i8
+  %b = alloca i8
+
+  %a.ptr = addrspacecast i8* %a to i8 addrspace(1)*
+  %b.ptr = addrspacecast i8* %b to i8 addrspace(1)*
+
+  %ptr = select i1 undef, i8 addrspace(1)* %a.ptr, i8 addrspace(1)* %b.ptr
+  %ret = load i8, i8 addrspace(1)* %ptr
+  ret i8 %ret
+}
+
 !0 = !{!1, !1, i64 0, i64 1}
 !1 = !{!2, i64 1, !"type_0"}
 !2 = !{!"root"}

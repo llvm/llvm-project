@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=x86_64-apple-unknown -stop-before=expand-isel-pseudos %s -o - -simplify-mir | FileCheck %s
+; RUN: llc -mtriple=x86_64-apple-unknown -stop-before=finalize-isel %s -o - -simplify-mir | FileCheck %s
 ; The byval argument of the function will be allocated a fixed stack slot. Test
 ; that we serialize the fixed slot correctly.
 

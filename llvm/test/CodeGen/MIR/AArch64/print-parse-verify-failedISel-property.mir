@@ -2,7 +2,7 @@
 # RUN:     -verify-machineinstrs %s -o - | FileCheck %s
 #
 # RUN: llc -mtriple aarch64-- -global-isel=true -global-isel-abort=2 \
-# RUN:     -start-after=regbankselect -stop-before=expand-isel-pseudos \
+# RUN:     -start-after=regbankselect -stop-before=finalize-isel \
 # RUN:     -simplify-mir -verify-machineinstrs %s -o - 2>&1 \
 # RUN:    | FileCheck %s --check-prefix=FALLBACK
 

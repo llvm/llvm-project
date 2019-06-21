@@ -88,6 +88,10 @@ enum ActionKind {
   /// Generate pre-compiled header.
   GeneratePCH,
 
+  /// Generate Interface Stub Files.
+  GenerateInterfaceYAMLExpV1,
+  GenerateInterfaceTBEExpV1,
+
   /// Only execute frontend initialization.
   InitOnly,
 

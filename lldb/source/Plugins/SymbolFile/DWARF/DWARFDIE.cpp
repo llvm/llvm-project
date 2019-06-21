@@ -313,12 +313,10 @@ lldb_private::Type *DWARFDIE::ResolveType() const {
     return nullptr;
 }
 
-lldb_private::Type *DWARFDIE::ResolveTypeUID(const DIERef &die_ref) const {
-  SymbolFileDWARF *dwarf = GetDWARF();
-  if (dwarf)
-    return dwarf->ResolveTypeUID(dwarf->GetDIE(die_ref), true);
-  else
-    return nullptr;
+lldb_private::Type *DWARFDIE::ResolveTypeUID(const DWARFDIE &die) const {
+  if (SymbolFileDWARF *dwarf = GetDWARF())
+    return dwarf->ResolveTypeUID(die, true);
+  return nullptr;
 }
 
 std::vector<DWARFDIE> DWARFDIE::GetDeclContextDIEs() const {

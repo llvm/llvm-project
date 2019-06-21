@@ -98,7 +98,9 @@ static int PrintFunctions() {
   FILE *Pipe = popen("sed 's/(+/ /g; s/).*//g' "
                      "| llvm-symbolizer "
                      "| grep 'dfs\\$' "
-                     "| sed 's/dfs\\$//g'", "w");
+                     "| sed 's/dfs\\$//g' "
+                     "| c++filt",
+                     "w");
   for (size_t I = 0; I < NumGuards; I++) {
     uintptr_t PC = PCsBeg[I * 2];
     if (!BlockIsEntry(I)) continue;

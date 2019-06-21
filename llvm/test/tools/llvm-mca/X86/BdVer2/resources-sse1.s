@@ -230,7 +230,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      14    4.50    *                   divps	(%rax), %xmm2
 # CHECK-NEXT:  1      9     4.50                        divss	%xmm0, %xmm2
 # CHECK-NEXT:  1      14    4.50    *                   divss	(%rax), %xmm2
-# CHECK-NEXT:  1      5     0.50    *      *      U     ldmxcsr	(%rax)
+# CHECK-NEXT:  1      5     0.50    *             U     ldmxcsr	(%rax)
 # CHECK-NEXT:  1      2     1.00    *      *      U     maskmovq	%mm0, %mm1
 # CHECK-NEXT:  1      2     1.00                        maxps	%xmm0, %xmm2
 # CHECK-NEXT:  1      7     1.50    *                   maxps	(%rax), %xmm2
@@ -305,7 +305,7 @@ xorps       (%rax), %xmm2
 # CHECK-NEXT:  1      14    4.50    *                   sqrtps	(%rax), %xmm2
 # CHECK-NEXT:  1      9     4.50                        sqrtss	%xmm0, %xmm2
 # CHECK-NEXT:  1      14    4.50    *                   sqrtss	(%rax), %xmm2
-# CHECK-NEXT:  2      1     18.00   *      *      U     stmxcsr	(%rax)
+# CHECK-NEXT:  2      1     18.00          *      U     stmxcsr	(%rax)
 # CHECK-NEXT:  1      5     1.00                        subps	%xmm0, %xmm2
 # CHECK-NEXT:  1      10    1.50    *                   subps	(%rax), %xmm2
 # CHECK-NEXT:  1      5     1.00                        subss	%xmm0, %xmm2

@@ -1,4 +1,4 @@
-; RUN: llc -mtriple thumbv7-windows-itanium -filetype asm -o /dev/null %s -print-machineinstrs=expand-isel-pseudos 2>&1 | FileCheck %s
+; RUN: llc -mtriple thumbv7-windows-itanium -filetype asm -o /dev/null %s -print-after=finalize-isel 2>&1 | FileCheck %s
 
 declare arm_aapcs_vfpcc void @g(i8*) local_unnamed_addr
 

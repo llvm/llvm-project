@@ -367,6 +367,34 @@ bool MipsInstructionSelector::select(MachineInstr &I,
              .add(I.getOperand(1));
     break;
   }
+  case G_FPTOSI: {
+    unsigned FromSize = MRI.getType(I.getOperand(1).getReg()).getSizeInBits();
+    unsigned ToSize = MRI.getType(I.getOperand(0).getReg()).getSizeInBits();
+    assert((ToSize == 32) && "Unsupported integer size for G_FPTOSI");
+    assert((FromSize == 32 || FromSize == 64) &&
+           "Unsupported floating point size for G_FPTOSI");
+
+    unsigned Opcode;
+    if (FromSize == 32)
+      Opcode = Mips::TRUNC_W_S;
+    else
+      Opcode = STI.isFP64bit() ? Mips::TRUNC_W_D64 : Mips::TRUNC_W_D32;
+    unsigned ResultInFPR = MRI.createVirtualRegister(&Mips::FGR32RegClass);
+    MachineInstr *Trunc = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode))
+                .addDef(ResultInFPR)
+                .addUse(I.getOperand(1).getReg());
+    if (!constrainSelectedInstRegOperands(*Trunc, TII, TRI, RBI))
+      return false;
+
+    MachineInstr *Move = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::MFC1))
+                             .addDef(I.getOperand(0).getReg())
+                             .addUse(ResultInFPR);
+    if (!constrainSelectedInstRegOperands(*Move, TII, TRI, RBI))
+      return false;
+
+    I.eraseFromParent();
+    return true;
+  }
   case G_GLOBAL_VALUE: {
     const llvm::GlobalValue *GVal = I.getOperand(1).getGlobal();
     if (MF.getTarget().isPositionIndependent()) {

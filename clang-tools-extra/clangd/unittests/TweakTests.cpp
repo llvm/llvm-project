@@ -239,10 +239,13 @@ TEST(TweakTest, DumpAST) {
   checkNotAvailable(ID, "/*c^omment*/ int foo() return 2 ^ + 2; }");
 
   const char *Input = "int x = 2 ^+ 2;";
-  const char *Output = R"(BinaryOperator.*'\+'.*
-.*IntegerLiteral.*'int' 2.*
-.*IntegerLiteral.*'int' 2.*)";
-  EXPECT_THAT(getMessage(ID, Input), ::testing::MatchesRegex(Output));
+  auto result = getMessage(ID, Input);
+  EXPECT_THAT(result, ::testing::HasSubstr("BinaryOperator"));
+  EXPECT_THAT(result, ::testing::HasSubstr("'+'"));
+  EXPECT_THAT(result, ::testing::HasSubstr("|-IntegerLiteral"));
+  EXPECT_THAT(result,
+              ::testing::HasSubstr("<col:9> 'int' 2\n`-IntegerLiteral"));
+  EXPECT_THAT(result, ::testing::HasSubstr("<col:13> 'int' 2"));
 }
 
 TEST(TweakTest, ShowSelectionTree) {

@@ -49,6 +49,24 @@ body: |
     S_ENDPGM 0
 ...
 
+# GCN-LABEL: s11_vs_vcc{{$}}
+# GCN: $vgpr0, $vcc_lo = V_ADDC_U32_e64 killed $sgpr14, killed $vgpr0, killed $vcc_lo, 0
+---
+name:            s11_vs_vcc
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: sgpr_32, preferred-register: '$sgpr11' }
+  - { id: 1, class: vgpr_32 }
+  - { id: 2, class: vgpr_32 }
+body: |
+  bb.0:
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    $vcc_lo = IMPLICIT_DEF
+    %2, $vcc_lo = V_ADDC_U32_e64 killed %0, killed %1, killed $vcc_lo, 0, implicit $exec
+    S_ENDPGM 0
+...
+
 # GCN-LABEL: s0_vs_s16{{$}}
 # GCN: S_AND_B32 killed renamable $sgpr14, $sgpr0,
 ---

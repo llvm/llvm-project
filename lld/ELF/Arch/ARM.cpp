@@ -395,9 +395,6 @@ void ARM::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_ARM_TLS_DTPOFF32:
     write32le(Loc, Val);
     break;
-  case R_ARM_TLS_DTPMOD32:
-    write32le(Loc, 1);
-    break;
   case R_ARM_PREL31:
     checkInt(Loc, Val, 31, Type);
     write32le(Loc, (read32le(Loc) & 0x80000000) | (Val & ~0x80000000));

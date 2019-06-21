@@ -884,6 +884,15 @@ void TUScheduler::remove(PathRef File) {
          File);
 }
 
+llvm::StringRef TUScheduler::getContents(PathRef File) const {
+  auto It = Files.find(File);
+  if (It == Files.end()) {
+    elog("getContents() for untracked file: {0}", File);
+    return "";
+  }
+  return It->second->Contents;
+}
+
 void TUScheduler::run(llvm::StringRef Name,
                       llvm::unique_function<void()> Action) {
   if (!PreambleTasks)

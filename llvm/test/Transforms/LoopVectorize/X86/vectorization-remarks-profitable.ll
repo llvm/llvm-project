@@ -3,8 +3,8 @@
 ; Verify analysis remarks are generated when interleaving is not beneficial.
 ; CHECK: remark: vectorization-remarks-profitable.c:5:17: the cost-model indicates that vectorization is not beneficial
 ; CHECK: remark: vectorization-remarks-profitable.c:5:17: the cost-model indicates that interleaving is not beneficial and is explicitly disabled or interleave count is set to 1
-; CHECK: remark: vectorization-remarks-profitable.c:12:17: the cost-model indicates that vectorization is not beneficial
-; CHECK: remark: vectorization-remarks-profitable.c:12:17: the cost-model indicates that interleaving is not beneficial
+; CHECK: remark: vectorization-remarks-profitable.c:11:3: the cost-model indicates that vectorization is not beneficial
+; CHECK: remark: vectorization-remarks-profitable.c:11:3: the cost-model indicates that interleaving is not beneficial
 
 ; First loop.
 ;  #pragma clang loop interleave(disable) unroll(disable)

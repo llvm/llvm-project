@@ -126,7 +126,6 @@ a:
         lapc    $4, 100          # CHECK: lapc $4, 100     # encoding: [0xec,0x80,0x00,0x19]
         lsa     $2, $3, $4, 3    # CHECK: lsa  $2, $3, $4, 3 # encoding: [0x00,0x64,0x10,0x85]
         lwpc    $2,268           # CHECK: lwpc $2, 268     # encoding: [0xec,0x48,0x00,0x43]
-        lwupc   $2,268           # CHECK: lwupc $2, 268    # encoding: [0xec,0x50,0x00,0x43]
         mfc0    $8,$15,1         # CHECK: mfc0 $8, $15, 1  # encoding: [0x40,0x08,0x78,0x01]
         mod     $2,$3,$4         # CHECK: mod $2, $3, $4   # encoding: [0x00,0x64,0x10,0xda]
         modu    $2,$3,$4         # CHECK: modu $2, $3, $4  # encoding: [0x00,0x64,0x10,0xdb]

@@ -5,7 +5,7 @@
 ; Test v16i8 stores.
 define void @f1(<16 x i8> %val, <16 x i8> *%ptr) {
 ; CHECK-LABEL: f1:
-; CHECK: vst %v24, 0(%r2)
+; CHECK: vst %v24, 0(%r2), 3
 ; CHECK: br %r14
   store <16 x i8> %val, <16 x i8> *%ptr
   ret void
@@ -14,7 +14,7 @@ define void @f1(<16 x i8> %val, <16 x i8> *%ptr) {
 ; Test v8i16 stores.
 define void @f2(<8 x i16> %val, <8 x i16> *%ptr) {
 ; CHECK-LABEL: f2:
-; CHECK: vst %v24, 0(%r2)
+; CHECK: vst %v24, 0(%r2), 3
 ; CHECK: br %r14
   store <8 x i16> %val, <8 x i16> *%ptr
   ret void
@@ -23,7 +23,7 @@ define void @f2(<8 x i16> %val, <8 x i16> *%ptr) {
 ; Test v4i32 stores.
 define void @f3(<4 x i32> %val, <4 x i32> *%ptr) {
 ; CHECK-LABEL: f3:
-; CHECK: vst %v24, 0(%r2)
+; CHECK: vst %v24, 0(%r2), 3
 ; CHECK: br %r14
   store <4 x i32> %val, <4 x i32> *%ptr
   ret void
@@ -32,7 +32,7 @@ define void @f3(<4 x i32> %val, <4 x i32> *%ptr) {
 ; Test v2i64 stores.
 define void @f4(<2 x i64> %val, <2 x i64> *%ptr) {
 ; CHECK-LABEL: f4:
-; CHECK: vst %v24, 0(%r2)
+; CHECK: vst %v24, 0(%r2), 3
 ; CHECK: br %r14
   store <2 x i64> %val, <2 x i64> *%ptr
   ret void
@@ -41,7 +41,7 @@ define void @f4(<2 x i64> %val, <2 x i64> *%ptr) {
 ; Test v4f32 stores.
 define void @f5(<4 x float> %val, <4 x float> *%ptr) {
 ; CHECK-LABEL: f5:
-; CHECK: vst %v24, 0(%r2)
+; CHECK: vst %v24, 0(%r2), 3
 ; CHECK: br %r14
   store <4 x float> %val, <4 x float> *%ptr
   ret void
@@ -50,7 +50,7 @@ define void @f5(<4 x float> %val, <4 x float> *%ptr) {
 ; Test v2f64 stores.
 define void @f6(<2 x double> %val, <2 x double> *%ptr) {
 ; CHECK-LABEL: f6:
-; CHECK: vst %v24, 0(%r2)
+; CHECK: vst %v24, 0(%r2), 3
 ; CHECK: br %r14
   store <2 x double> %val, <2 x double> *%ptr
   ret void
@@ -59,7 +59,7 @@ define void @f6(<2 x double> %val, <2 x double> *%ptr) {
 ; Test the highest aligned in-range offset.
 define void @f7(<16 x i8> %val, <16 x i8> *%base) {
 ; CHECK-LABEL: f7:
-; CHECK: vst %v24, 4080(%r2)
+; CHECK: vst %v24, 4080(%r2), 3
 ; CHECK: br %r14
   %ptr = getelementptr <16 x i8>, <16 x i8> *%base, i64 255
   store <16 x i8> %val, <16 x i8> *%ptr
@@ -81,7 +81,7 @@ define void @f8(<16 x i8> %val, i8 *%base) {
 define void @f9(<16 x i8> %val, <16 x i8> *%base) {
 ; CHECK-LABEL: f9:
 ; CHECK: aghi %r2, 4096
-; CHECK: vst %v24, 0(%r2)
+; CHECK: vst %v24, 0(%r2), 3
 ; CHECK: br %r14
   %ptr = getelementptr <16 x i8>, <16 x i8> *%base, i64 256
   store <16 x i8> %val, <16 x i8> *%ptr
@@ -92,7 +92,7 @@ define void @f9(<16 x i8> %val, <16 x i8> *%base) {
 define void @f10(<16 x i8> %val, <16 x i8> *%base) {
 ; CHECK-LABEL: f10:
 ; CHECK: aghi %r2, -16
-; CHECK: vst %v24, 0(%r2)
+; CHECK: vst %v24, 0(%r2), 3
 ; CHECK: br %r14
   %ptr = getelementptr <16 x i8>, <16 x i8> *%base, i64 -1
   store <16 x i8> %val, <16 x i8> *%ptr
@@ -172,3 +172,13 @@ define void @f18(<2 x float> %val, <2 x float> *%ptr) {
   store <2 x float> %val, <2 x float> *%ptr
   ret void
 }
+
+; Test quadword-aligned stores.
+define void @f19(<16 x i8> %val, <16 x i8> *%ptr) {
+; CHECK-LABEL: f19:
+; CHECK: vst %v24, 0(%r2), 4
+; CHECK: br %r14
+  store <16 x i8> %val, <16 x i8> *%ptr, align 16
+  ret void
+}
+
