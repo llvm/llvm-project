@@ -53,7 +53,7 @@ public:
   }
 
   size_t blockToIndex(BasicBlock *BB) const {
-    auto *I = std::lower_bound(V.begin(), V.end(), BB);
+    auto *I = llvm::lower_bound(V, BB);
     assert(I != V.end() && *I == BB && "BasicBlockNumberng: Unknown block");
     return I - V.begin();
   }

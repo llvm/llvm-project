@@ -436,7 +436,7 @@ namespace {
 } // end anonymous namespace
 
 void OrderedRegisterList::insert(unsigned VR) {
-  iterator L = std::lower_bound(Seq.begin(), Seq.end(), VR, Ord);
+  iterator L = llvm::lower_bound(Seq, VR, Ord);
   if (L == Seq.end())
     Seq.push_back(VR);
   else
@@ -449,7 +449,7 @@ void OrderedRegisterList::insert(unsigned VR) {
 }
 
 void OrderedRegisterList::remove(unsigned VR) {
-  iterator L = std::lower_bound(Seq.begin(), Seq.end(), VR, Ord);
+  iterator L = llvm::lower_bound(Seq, VR, Ord);
   if (L != Seq.end())
     Seq.erase(L);
 }

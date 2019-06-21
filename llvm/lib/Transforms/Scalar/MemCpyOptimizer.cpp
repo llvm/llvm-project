@@ -278,8 +278,8 @@ void MemsetRanges::addRange(int64_t Start, int64_t Size, Value *Ptr,
                             unsigned Alignment, Instruction *Inst) {
   int64_t End = Start+Size;
 
-  range_iterator I = std::lower_bound(Ranges.begin(), Ranges.end(), Start,
-    [](const MemsetRange &LHS, int64_t RHS) { return LHS.End < RHS; });
+  range_iterator I = llvm::bsearch(
+      Ranges, [=](const MemsetRange &O) { return Start <= O.End; });
 
   // We now know that I == E, in which case we didn't find anything to merge
   // with, or that Start <= I->End.  If End < I->Start or I == E, then we need

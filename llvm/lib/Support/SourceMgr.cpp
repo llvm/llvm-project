@@ -95,14 +95,9 @@ unsigned SourceMgr::SrcBuffer::getLineNumber(const char *Ptr) const {
   assert(PtrDiff >= 0 && static_cast<size_t>(PtrDiff) <= std::numeric_limits<T>::max());
   T PtrOffset = static_cast<T>(PtrDiff);
 
-  // std::lower_bound returns the first EOL offset that's not-less-than
-  // PtrOffset, meaning the EOL that _ends the line_ that PtrOffset is on
-  // (including if PtrOffset refers to the EOL itself). If there's no such
-  // EOL, returns end().
-  auto EOL = std::lower_bound(Offsets->begin(), Offsets->end(), PtrOffset);
-
-  // Lines count from 1, so add 1 to the distance from the 0th line.
-  return (1 + (EOL - Offsets->begin()));
+  // llvm::lower_bound gives the number of EOL before PtrOffset. Add 1 to get
+  // the line number.
+  return llvm::lower_bound(*Offsets, PtrOffset) - Offsets->begin() + 1;
 }
 
 SourceMgr::SrcBuffer::SrcBuffer(SourceMgr::SrcBuffer &&Other)
