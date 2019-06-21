@@ -81,9 +81,7 @@ int main(int, char**)
     test_is_convertible<Function, Function*> ();
     test_is_convertible<Function, Function*const> ();
 
-#if TEST_STD_VER >= 11
     static_assert(( std::is_convertible<Function, Function&&>::value), "");
-#endif
 
     test_is_not_convertible<Function, Array> ();
     test_is_not_convertible<Function, Array&> ();
@@ -119,9 +117,7 @@ int main(int, char**)
     static_assert((!std::is_convertible<ConstFunction, Function>::value), "");
     static_assert((!std::is_convertible<ConstFunction, Function*>::value), "");
     static_assert((!std::is_convertible<ConstFunction, Function&>::value), "");
-#if TEST_STD_VER >= 11
     static_assert((!std::is_convertible<ConstFunction, Function&&>::value), "");
-#endif
     static_assert((!std::is_convertible<Function*, ConstFunction>::value), "");
     static_assert((!std::is_convertible<Function&, ConstFunction>::value), "");
     static_assert((!std::is_convertible<ConstFunction, ConstFunction>::value), "");
@@ -143,7 +139,6 @@ int main(int, char**)
     static_assert((!std::is_convertible<Array, volatile Array&>::value), "");
     static_assert((!std::is_convertible<Array, const volatile Array&>::value), "");
 
-#if TEST_STD_VER >= 11
     static_assert(( std::is_convertible<Array, Array&&>::value), "");
     static_assert(( std::is_convertible<Array, const Array&&>::value), "");
     static_assert(( std::is_convertible<Array, volatile Array&&>::value), "");
@@ -151,7 +146,6 @@ int main(int, char**)
     static_assert(( std::is_convertible<const Array, const Array&&>::value), "");
     static_assert((!std::is_convertible<Array&, Array&&>::value), "");
     static_assert((!std::is_convertible<Array&&, Array&>::value), "");
-#endif
 
     test_is_not_convertible<Array, char> ();
     test_is_not_convertible<Array, char&> ();
@@ -252,9 +246,8 @@ int main(int, char**)
     static_assert((!std::is_convertible<const NonCopyable&, NonCopyable&>::value), "");
 // This test requires Access control SFINAE which we only have in C++11 or when
 // we are using the compiler builtin for is_convertible.
-#if TEST_STD_VER >= 11 || !defined(_LIBCPP_USE_IS_CONVERTIBLE_FALLBACK)
     test_is_not_convertible<NonCopyable&, NonCopyable>();
-#endif
+
 
     // Ensure that CannotInstantiate is not instantiated by is_convertible when it is not needed.
     // For example CannotInstantiate is instatiated as a part of ADL lookup for arguments of type CannotInstantiate*.
