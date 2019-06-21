@@ -160,10 +160,11 @@ public:
   //------------------------------------------------------------------
   // LanguageRuntime
   //------------------------------------------------------------------
-  static bool
-  RegisterPlugin(ConstString name, const char *description,
-                 LanguageRuntimeCreateInstance create_callback,
-                 LanguageRuntimeGetCommandObject command_callback = nullptr);
+  static bool RegisterPlugin(
+      ConstString name, const char *description,
+      LanguageRuntimeCreateInstance create_callback,
+      LanguageRuntimeGetCommandObject command_callback = nullptr,
+      LanguageRuntimeGetExceptionPrecondition precondition_callback = nullptr);
 
   static bool UnregisterPlugin(LanguageRuntimeCreateInstance create_callback);
 
@@ -172,6 +173,9 @@ public:
 
   static LanguageRuntimeGetCommandObject
   GetLanguageRuntimeGetCommandObjectAtIndex(uint32_t idx);
+
+  static LanguageRuntimeGetExceptionPrecondition
+  GetLanguageRuntimeGetExceptionPreconditionAtIndex(uint32_t idx);
 
   static LanguageRuntimeCreateInstance
   GetLanguageRuntimeCreateCallbackForPluginName(ConstString name);

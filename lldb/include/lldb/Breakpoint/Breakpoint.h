@@ -146,19 +146,6 @@ public:
     DISALLOW_COPY_AND_ASSIGN(BreakpointEventData);
   };
 
-  class BreakpointPrecondition {
-  public:
-    virtual ~BreakpointPrecondition() = default;
-
-    virtual bool EvaluatePrecondition(StoppointCallbackContext &context);
-
-    virtual Status ConfigurePrecondition(Args &options);
-
-    virtual void GetDescription(Stream &stream, lldb::DescriptionLevel level);
-  };
-
-  typedef std::shared_ptr<BreakpointPrecondition> BreakpointPreconditionSP;
-
   // Saving & restoring breakpoints:
   static lldb::BreakpointSP CreateFromStructuredData(
       Target &target, StructuredData::ObjectSP &data_object_sp, Status &error);
@@ -656,14 +643,14 @@ public:
   /// if the condition says to stop and false otherwise.
   ///
   //------------------------------------------------------------------
-  void SetPrecondition(BreakpointPreconditionSP precondition_sp) {
+  void SetPrecondition(lldb::BreakpointPreconditionSP precondition_sp) {
     m_precondition_sp = precondition_sp;
   }
 
   bool EvaluatePrecondition(StoppointCallbackContext &context);
 
-  BreakpointPreconditionSP GetPrecondition() { return m_precondition_sp; }
-  
+  lldb::BreakpointPreconditionSP GetPrecondition() { return m_precondition_sp; }
+
   // Produces the OR'ed values for all the names assigned to this breakpoint.
   const BreakpointName::Permissions &GetPermissions() const { 
       return m_permissions; 
@@ -763,9 +750,9 @@ private:
       m_filter_sp; // The filter that constrains the breakpoint's domain.
   lldb::BreakpointResolverSP
       m_resolver_sp; // The resolver that defines this breakpoint.
-  BreakpointPreconditionSP m_precondition_sp; // The precondition is a
-                                              // breakpoint-level hit filter
-                                              // that can be used
+  lldb::BreakpointPreconditionSP m_precondition_sp; // The precondition is a
+                                                    // breakpoint-level hit
+                                                    // filter that can be used
   // to skip certain breakpoint hits.  For instance, exception breakpoints use
   // this to limit the stop to certain exception classes, while leaving the
   // condition & callback free for user specification.
