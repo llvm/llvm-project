@@ -2630,9 +2630,10 @@ swift::CompilerInvocation &SwiftASTContext::GetCompilerInvocation() {
 }
 
 swift::SourceManager &SwiftASTContext::GetSourceManager() {
-  if (m_source_manager_ap.get() == NULL)
-    m_source_manager_ap.reset(new swift::SourceManager());
-  return *m_source_manager_ap;
+  if (!m_source_manager_up)
+    m_source_manager_up = llvm::make_unique<swift::SourceManager>(
+        FileSystem::Instance().GetVirtualFileSystem());
+  return *m_source_manager_up;
 }
 
 swift::LangOptions &SwiftASTContext::GetLanguageOptions() {

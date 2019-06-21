@@ -1,0 +1,27 @@
+# UNSUPPORTED: system-windows, system-freebsd
+
+# This tests replaying a simple reproducer.
+
+# RUN: rm -rf %t && mkdir %t && cd %t
+# RUN: %target-swiftc -g \
+# RUN:          -module-cache-path %t/cache %S/Inputs/Simple.swift \
+# RUN:          -module-name main -o %t.out
+# RUN: %lldb -x -b -s %S/Inputs/Simple.in \
+# RUN:          --capture \
+# RUN:          --capture-path %t.repro \
+# RUN:          %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+
+# CHECK: Breakpoint 1
+# CHECK: Process {{.*}} stopped
+# CHECK: Process {{.*}} launched
+# CHECK: thread {{.*}} stop reason = breakpoint
+# CHECK: frame {{.*}} Simple.swift
+
+# CAPTURE: testing
+# REPLAY-NOT: testing
+
+# CHECK: Process {{.*}} resuming
+# CHECK: Process {{.*}} exited
+
+# CAPTURE: Reproducer is in capture mode.
+# CAPTURE: Reproducer written
