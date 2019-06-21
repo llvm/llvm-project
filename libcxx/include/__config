@@ -523,9 +523,7 @@ typedef __char32_t char32_t;
 #define _LIBCPP_IS_LITERAL(T) __is_literal_type(T)
 #define _LIBCPP_HAS_IS_FINAL
 
-#if defined(__GNUC__)
 #define _LIBCPP_HAS_IS_BASE_OF
-#endif
 
 #if !__EXCEPTIONS && !defined(_LIBCPP_NO_EXCEPTIONS)
 #define _LIBCPP_NO_EXCEPTIONS
@@ -540,18 +538,6 @@ typedef __char32_t char32_t;
 #if !defined(__cpp_variable_templates) || __cpp_variable_templates < 201304L
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 #endif
-
-#ifndef __GXX_EXPERIMENTAL_CXX0X__
-
-#define _LIBCPP_HAS_NO_CONSTEXPR
-#define _LIBCPP_HAS_NO_NULLPTR
-#define _LIBCPP_HAS_NO_UNICODE_CHARS
-#define _LIBCPP_HAS_NO_VARIADICS
-#define _LIBCPP_HAS_NO_RVALUE_REFERENCES
-#define _LIBCPP_HAS_NO_STRONG_ENUMS
-#define _LIBCPP_HAS_NO_NOEXCEPT
-
-#endif  // __GXX_EXPERIMENTAL_CXX0X__
 
 #if !defined(_LIBCPP_HAS_NO_ASAN) && !defined(__SANITIZE_ADDRESS__)
 #define _LIBCPP_HAS_NO_ASAN
@@ -604,8 +590,6 @@ typedef __char32_t char32_t;
 #define _LIBCPP_NORETURN __attribute__((noreturn))
 
 #define _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-#define _LIBCPP_HAS_NO_NOEXCEPT
-#define _LIBCPP_HAS_NO_NULLPTR
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
 #define _LIBCPP_HAS_IS_BASE_OF
 #define _LIBCPP_HAS_IS_FINAL
