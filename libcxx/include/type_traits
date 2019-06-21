@@ -1424,15 +1424,10 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_abstract_v
 
 // is_final
 
-#if defined(_LIBCPP_HAS_IS_FINAL)
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS
 __libcpp_is_final : public integral_constant<bool, __is_final(_Tp)> {};
-#else
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS
-__libcpp_is_final : public false_type {};
-#endif
 
-#if defined(_LIBCPP_HAS_IS_FINAL) && _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER > 11
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS
 is_final : public integral_constant<bool, __is_final(_Tp)> {};
 #endif
@@ -1459,38 +1454,9 @@ _LIBCPP_INLINE_VAR constexpr bool is_aggregate_v
 
 // is_base_of
 
-#ifdef _LIBCPP_HAS_IS_BASE_OF
-
 template <class _Bp, class _Dp>
 struct _LIBCPP_TEMPLATE_VIS is_base_of
     : public integral_constant<bool, __is_base_of(_Bp, _Dp)> {};
-
-#else  // _LIBCPP_HAS_IS_BASE_OF
-
-namespace __is_base_of_imp
-{
-template <class _Tp>
-struct _Dst
-{
-    _Dst(const volatile _Tp &);
-};
-template <class _Tp>
-struct _Src
-{
-    operator const volatile _Tp &();
-    template <class _Up> operator const _Dst<_Up> &();
-};
-template <size_t> struct __one { typedef char type; };
-template <class _Bp, class _Dp> typename __one<sizeof(_Dst<_Bp>(declval<_Src<_Dp> >()))>::type __test(int);
-template <class _Bp, class _Dp> __two __test(...);
-}
-
-template <class _Bp, class _Dp>
-struct _LIBCPP_TEMPLATE_VIS is_base_of
-    : public integral_constant<bool, is_class<_Bp>::value &&
-                                     sizeof(__is_base_of_imp::__test<_Bp, _Dp>(0)) == 2> {};
-
-#endif  // _LIBCPP_HAS_IS_BASE_OF
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Bp, class _Dp>
@@ -4182,12 +4148,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_pod_v
 // is_literal_type;
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_literal_type
-#ifdef _LIBCPP_IS_LITERAL
-    : public integral_constant<bool, _LIBCPP_IS_LITERAL(_Tp)>
-#else
-    : integral_constant<bool, is_scalar<typename remove_all_extents<_Tp>::type>::value ||
-                              is_reference<typename remove_all_extents<_Tp>::type>::value>
-#endif
+    : public integral_constant<bool, __is_literal_type(_Tp)>
     {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
@@ -4724,29 +4685,15 @@ _LIBCPP_INLINE_VAR constexpr bool is_nothrow_swappable_v
 
 #endif // _LIBCPP_STD_VER > 14
 
-#ifdef _LIBCPP_UNDERLYING_TYPE
-
 template <class _Tp>
 struct underlying_type
 {
-    typedef _LIBCPP_UNDERLYING_TYPE(_Tp) type;
+    typedef __underlying_type(_Tp) type;
 };
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using underlying_type_t = typename underlying_type<_Tp>::type;
 #endif
-
-#else  // _LIBCPP_UNDERLYING_TYPE
-
-template <class _Tp, bool _Support = false>
-struct underlying_type
-{
-    static_assert(_Support, "The underyling_type trait requires compiler "
-                            "support. Either no such support exists or "
-                            "libc++ does not know how to use it.");
-};
-
-#endif // _LIBCPP_UNDERLYING_TYPE
 
 
 template <class _Tp, bool = is_enum<_Tp>::value>

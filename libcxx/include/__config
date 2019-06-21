@@ -443,18 +443,6 @@ typedef __char32_t char32_t;
 #define _LIBCPP_HAS_NO_VARIADICS
 #endif
 
-#if !(__has_feature(cxx_generalized_initializers))
-#define _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
-#endif
-
-#if __has_feature(is_base_of)
-#define _LIBCPP_HAS_IS_BASE_OF
-#endif
-
-#if __has_feature(is_final)
-#define _LIBCPP_HAS_IS_FINAL
-#endif
-
 // Objective-C++ features (opt-in)
 #if __has_feature(objc_arc)
 #define _LIBCPP_HAS_OBJC_ARC
@@ -462,10 +450,6 @@ typedef __char32_t char32_t;
 
 #if __has_feature(objc_arc_weak)
 #define _LIBCPP_HAS_OBJC_ARC_WEAK
-#endif
-
-#if !(__has_feature(cxx_constexpr))
-#define _LIBCPP_HAS_NO_CONSTEXPR
 #endif
 
 #if !(__has_feature(cxx_relaxed_constexpr))
@@ -478,14 +462,6 @@ typedef __char32_t char32_t;
 
 #if !(__has_feature(cxx_noexcept))
 #define _LIBCPP_HAS_NO_NOEXCEPT
-#endif
-
-#if __has_feature(underlying_type)
-#define _LIBCPP_UNDERLYING_TYPE(T) __underlying_type(T)
-#endif
-
-#if __has_feature(is_literal)
-#define _LIBCPP_IS_LITERAL(T) __is_literal(T)
 #endif
 
 #if !defined(_LIBCPP_HAS_NO_ASAN) && !__has_feature(address_sanitizer)
@@ -518,12 +494,6 @@ typedef __char32_t char32_t;
 #define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
 
 #define _LIBCPP_NORETURN __attribute__((noreturn))
-
-#define _LIBCPP_UNDERLYING_TYPE(T) __underlying_type(T)
-#define _LIBCPP_IS_LITERAL(T) __is_literal_type(T)
-#define _LIBCPP_HAS_IS_FINAL
-
-#define _LIBCPP_HAS_IS_BASE_OF
 
 #if !__EXCEPTIONS && !defined(_LIBCPP_NO_EXCEPTIONS)
 #define _LIBCPP_NO_EXCEPTIONS
@@ -563,8 +533,6 @@ typedef __char32_t char32_t;
 #error "MSVC versions prior to Visual Studio 2015 are not supported"
 #endif
 
-#define _LIBCPP_HAS_IS_BASE_OF
-#define _LIBCPP_HAS_NO_CONSTEXPR
 #define _LIBCPP_HAS_NO_CXX14_CONSTEXPR
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 #define _LIBCPP_HAS_NO_NOEXCEPT
@@ -589,10 +557,7 @@ typedef __char32_t char32_t;
 #define _ATTRIBUTE(x) __attribute__((x))
 #define _LIBCPP_NORETURN __attribute__((noreturn))
 
-#define _LIBCPP_HAS_NO_GENERALIZED_INITIALIZERS
 #define _LIBCPP_HAS_NO_UNICODE_CHARS
-#define _LIBCPP_HAS_IS_BASE_OF
-#define _LIBCPP_HAS_IS_FINAL
 #define _LIBCPP_HAS_NO_VARIABLE_TEMPLATES
 
 #if defined(_AIX)
@@ -836,7 +801,7 @@ typedef unsigned int   char32_t;
 # define decltype(...) __decltype(__VA_ARGS__)
 #endif  // _LIBCPP_CXX03_LANG
 
-#ifdef _LIBCPP_HAS_NO_CONSTEXPR
+#ifdef _LIBCPP_CXX03_LANG
 #  define _LIBCPP_CONSTEXPR
 #else
 #  define _LIBCPP_CONSTEXPR constexpr
