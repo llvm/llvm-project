@@ -220,6 +220,8 @@ def err_module_header_file_not_found :
 def err_module_header_file_invalid :
   Error<"unexpected module header file input '%0'">, DefaultFatal;
 
+def err_interface_stubs : Error<"clang-ifs (-emit-iterface-stubs): %0">;
+
 def err_test_module_file_extension_version : Error<
   "test module file extension '%0' has different version (%1.%2) than expected "
   "(%3.%4)">;

@@ -569,17 +569,36 @@ TEST(TargetParserTest, ARMFPURestriction) {
 }
 
 TEST(TargetParserTest, ARMExtensionFeatures) {
-  std::vector<StringRef> Features;
-  unsigned Extensions = ARM::AEK_CRC | ARM::AEK_CRYPTO | ARM::AEK_DSP |
-                        ARM::AEK_HWDIVARM | ARM::AEK_HWDIVTHUMB | ARM::AEK_MP |
-                        ARM::AEK_SEC | ARM::AEK_VIRT | ARM::AEK_RAS | ARM::AEK_FP16 |
-                        ARM::AEK_FP16FML | ARM::AEK_FP_DP;
+  std::map<unsigned, std::vector<StringRef>> Extensions;
 
-  for (unsigned i = 0; i <= Extensions; i++) {
+  Extensions[ARM::AEK_CRC]        = { "+crc",       "-crc" };
+  Extensions[ARM::AEK_DSP]        = { "+dsp",       "-dsp" };
+  Extensions[ARM::AEK_HWDIVARM]   = { "+hwdiv-arm", "-hwdiv-arm" };
+  Extensions[ARM::AEK_HWDIVTHUMB] = { "+hwdiv",     "-hwdiv" };
+  Extensions[ARM::AEK_RAS]        = { "+ras",       "-ras" };
+  Extensions[ARM::AEK_FP16FML]    = { "+fp16fml",   "-fp16fml" };
+  Extensions[ARM::AEK_DOTPROD]    = { "+dotprod",   "-dotprod" };
+
+  std::vector<StringRef> Features;
+
+  EXPECT_FALSE(AArch64::getExtensionFeatures(ARM::AEK_INVALID, Features));
+
+  for (auto &E : Extensions) {
+    // test +extension
     Features.clear();
-    EXPECT_TRUE(i == 0 ? !ARM::getExtensionFeatures(i, Features)
-                       : ARM::getExtensionFeatures(i, Features));
-  }
+    ARM::getExtensionFeatures(E.first, Features);
+    auto Found =
+        std::find(std::begin(Features), std::end(Features), E.second.at(0));
+    EXPECT_TRUE(Found != std::end(Features));
+    EXPECT_TRUE(Extensions.size() == Features.size());
+
+    // test -extension
+    Features.clear();
+    ARM::getExtensionFeatures(~E.first, Features);
+    Found = std::find(std::begin(Features), std::end(Features), E.second.at(1));
+    EXPECT_TRUE(Found != std::end(Features));
+    EXPECT_TRUE(Extensions.size() == Features.size());
+   }
 }
 
 TEST(TargetParserTest, ARMFPUFeatures) {
@@ -1020,20 +1039,48 @@ TEST(TargetParserTest, testAArch64Extension) {
 }
 
 TEST(TargetParserTest, AArch64ExtensionFeatures) {
-  std::vector<StringRef> Features;
-  unsigned Extensions = AArch64::AEK_CRC | AArch64::AEK_CRYPTO |
-                        AArch64::AEK_FP | AArch64::AEK_SIMD |
-                        AArch64::AEK_FP16 | AArch64::AEK_PROFILE |
-                        AArch64::AEK_RAS | AArch64::AEK_LSE |
-                        AArch64::AEK_RDM | AArch64::AEK_SVE |
-                        AArch64::AEK_SVE2 | AArch64::AEK_DOTPROD |
-                        AArch64::AEK_RCPC | AArch64::AEK_FP16FML;
+  std::vector<unsigned> Extensions = {
+    AArch64::AEK_CRC,      AArch64::AEK_CRYPTO,
+    AArch64::AEK_FP,       AArch64::AEK_SIMD,
+    AArch64::AEK_FP16,     AArch64::AEK_PROFILE,
+    AArch64::AEK_RAS,      AArch64::AEK_LSE,
+    AArch64::AEK_RDM,      AArch64::AEK_DOTPROD,
+    AArch64::AEK_SVE,      AArch64::AEK_SVE2,
+    AArch64::AEK_SVE2AES,  AArch64::AEK_SVE2SM4,
+    AArch64::AEK_SVE2SHA3, AArch64::AEK_BITPERM,
+    AArch64::AEK_RCPC,     AArch64::AEK_FP16FML };
 
-  for (unsigned i = 0; i <= Extensions; i++) {
-    Features.clear();
-    EXPECT_TRUE(i == 0 ? !AArch64::getExtensionFeatures(i, Features)
-                       : AArch64::getExtensionFeatures(i, Features));
-  }
+  std::vector<StringRef> Features;
+
+  unsigned ExtVal = 0;
+  for (auto E : Extensions)
+    ExtVal |= E;
+
+  AArch64::getExtensionFeatures(ExtVal, Features);
+  auto B = std::begin(Features);
+  auto E = std::end(Features);
+
+  EXPECT_FALSE(AArch64::getExtensionFeatures(AArch64::AEK_INVALID, Features));
+  EXPECT_TRUE(Extensions.size() == Features.size());
+
+  EXPECT_TRUE(std::find(B, E, "+crc") != E);
+  EXPECT_TRUE(std::find(B, E, "+crypto") != E);
+  EXPECT_TRUE(std::find(B, E, "+fp-armv8") != E);
+  EXPECT_TRUE(std::find(B, E, "+neon") != E);
+  EXPECT_TRUE(std::find(B, E, "+fullfp16") != E);
+  EXPECT_TRUE(std::find(B, E, "+spe") != E);
+  EXPECT_TRUE(std::find(B, E, "+ras") != E);
+  EXPECT_TRUE(std::find(B, E, "+lse") != E);
+  EXPECT_TRUE(std::find(B, E, "+rdm") != E);
+  EXPECT_TRUE(std::find(B, E, "+dotprod") != E);
+  EXPECT_TRUE(std::find(B, E, "+rcpc") != E);
+  EXPECT_TRUE(std::find(B, E, "+fp16fml") != E);
+  EXPECT_TRUE(std::find(B, E, "+sve") != E);
+  EXPECT_TRUE(std::find(B, E, "+sve2") != E);
+  EXPECT_TRUE(std::find(B, E, "+sve2-aes") != E);
+  EXPECT_TRUE(std::find(B, E, "+sve2-sm4") != E);
+  EXPECT_TRUE(std::find(B, E, "+sve2-sha3") != E);
+  EXPECT_TRUE(std::find(B, E, "+bitperm") != E);
 }
 
 TEST(TargetParserTest, AArch64ArchFeatures) {

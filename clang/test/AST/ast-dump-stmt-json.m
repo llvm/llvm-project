@@ -104,6 +104,13 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:       "qualType": "void (^)(void)"
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "valueCategory": "rvalue", 
+// CHECK-NEXT:      "cleanupsHaveSideEffects": true, 
+// CHECK-NEXT:      "cleanups": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}", 
+// CHECK-NEXT:        "kind": "BlockDecl"
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ], 
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}", 
@@ -322,6 +329,13 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:       "qualType": "void (^)(void)"
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "valueCategory": "rvalue", 
+// CHECK-NEXT:      "cleanupsHaveSideEffects": true, 
+// CHECK-NEXT:      "cleanups": [
+// CHECK-NEXT:       {
+// CHECK-NEXT:        "id": "0x{{.*}}", 
+// CHECK-NEXT:        "kind": "BlockDecl"
+// CHECK-NEXT:       }
+// CHECK-NEXT:      ], 
 // CHECK-NEXT:      "inner": [
 // CHECK-NEXT:       {
 // CHECK-NEXT:        "id": "0x{{.*}}", 
@@ -716,4 +730,3 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:   }
 // CHECK-NEXT:  ]
 // CHECK-NEXT: }
-

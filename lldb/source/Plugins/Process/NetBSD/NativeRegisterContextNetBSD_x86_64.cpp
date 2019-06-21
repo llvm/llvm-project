@@ -20,6 +20,7 @@
 
 // clang-format off
 #include <sys/types.h>
+#include <sys/ptrace.h>
 #include <sys/sysctl.h>
 #include <x86/cpu.h>
 #include <elf.h>
@@ -161,11 +162,11 @@ int NativeRegisterContextNetBSD_x86_64::GetSetForNativeRegNum(
 Status NativeRegisterContextNetBSD_x86_64::ReadRegisterSet(uint32_t set) {
   switch (set) {
   case GPRegSet:
-    return ReadGPR();
+    return DoRegisterSet(PT_GETREGS, &m_gpr_x86_64);
   case FPRegSet:
-    return ReadFPR();
+    return DoRegisterSet(PT_GETFPREGS, &m_fpr_x86_64);
   case DBRegSet:
-    return ReadDBR();
+    return DoRegisterSet(PT_GETDBREGS, &m_dbr_x86_64);
   }
   llvm_unreachable("NativeRegisterContextNetBSD_x86_64::ReadRegisterSet");
 }
@@ -173,11 +174,11 @@ Status NativeRegisterContextNetBSD_x86_64::ReadRegisterSet(uint32_t set) {
 Status NativeRegisterContextNetBSD_x86_64::WriteRegisterSet(uint32_t set) {
   switch (set) {
   case GPRegSet:
-    return WriteGPR();
+    return DoRegisterSet(PT_SETREGS, &m_gpr_x86_64);
   case FPRegSet:
-    return WriteFPR();
+    return DoRegisterSet(PT_SETFPREGS, &m_fpr_x86_64);
   case DBRegSet:
-    return WriteDBR();
+    return DoRegisterSet(PT_SETDBREGS, &m_dbr_x86_64);
   }
   llvm_unreachable("NativeRegisterContextNetBSD_x86_64::WriteRegisterSet");
 }
@@ -578,7 +579,7 @@ Status NativeRegisterContextNetBSD_x86_64::ReadAllRegisterValues(
     return error;
   }
 
-  error = ReadGPR();
+  error = ReadRegisterSet(GPRegSet);
   if (error.Fail())
     return error;
 
@@ -630,7 +631,7 @@ Status NativeRegisterContextNetBSD_x86_64::WriteAllRegisterValues(
   }
   ::memcpy(&m_gpr_x86_64, src, GetRegisterInfoInterface().GetGPRSize());
 
-  error = WriteGPR();
+  error = WriteRegisterSet(GPRegSet);
   if (error.Fail())
     return error;
   src += GetRegisterInfoInterface().GetGPRSize();

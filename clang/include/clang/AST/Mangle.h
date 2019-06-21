@@ -17,7 +17,6 @@
 #include "clang/AST/Type.h"
 #include "clang/Basic/ABI.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
 
 namespace llvm {
@@ -246,21 +245,16 @@ public:
 };
 
 class ASTNameGenerator {
-  std::unique_ptr<MangleContext> MC;
-  llvm::DataLayout DL;
-
 public:
   explicit ASTNameGenerator(ASTContext &Ctx);
+  ~ASTNameGenerator();
   bool writeName(const Decl *D, raw_ostream &OS);
   std::string getName(const Decl *D);
   std::vector<std::string> getAllManglings(const Decl *D);
 
 private:
-  std::vector<std::string> getAllManglings(const ObjCContainerDecl *OCD);
-  bool writeFuncOrVarName(const NamedDecl *D, raw_ostream &OS);
-  void writeObjCClassName(const ObjCInterfaceDecl *D, raw_ostream &OS);
-  std::string getMangledStructor(const NamedDecl *ND, unsigned StructorType);
-  std::string getMangledThunk(const CXXMethodDecl *MD, const ThunkInfo &T);
+  class Implementation;
+  std::unique_ptr<Implementation> Impl;
 };
 }
 

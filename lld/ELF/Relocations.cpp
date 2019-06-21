@@ -147,63 +147,12 @@ static unsigned handleMipsTlsRelocation(RelType Type, Symbol &Sym,
   return 0;
 }
 
-// This function is similar to the `handleMipsTlsRelocation`. ARM also does not
-// support any relaxations for TLS relocations. ARM is logically similar to Mips
-// in how it handles TLS, but Mips uses its own custom GOT which handles some
-// of the cases that ARM uses GOT relocations for.
+// Notes about General Dynamic and Local Dynamic TLS models below. They may
+// require the generation of a pair of GOT entries that have associated dynamic
+// relocations. The pair of GOT entries created are of the form GOT[e0] Module
+// Index (Used to find pointer to TLS block at run-time) GOT[e1] Offset of
+// symbol in TLS block.
 //
-// We look for TLS global dynamic and local dynamic relocations, these may
-// require the generation of a pair of GOT entries that have associated
-// dynamic relocations. When the results of the dynamic relocations can be
-// resolved at static link time we do so. This is necessary for static linking
-// as there will be no dynamic loader to resolve them at load-time.
-//
-// The pair of GOT entries created are of the form
-// GOT[e0] Module Index (Used to find pointer to TLS block at run-time)
-// GOT[e1] Offset of symbol in TLS block
-static unsigned handleARMTlsRelocation(RelType Type, Symbol &Sym,
-                                       InputSectionBase &C, uint64_t Offset,
-                                       int64_t Addend, RelExpr Expr) {
-  // The Dynamic TLS Module Index Relocation for a symbol defined in an
-  // executable is always 1. If the target Symbol is not preemptible then
-  // we know the offset into the TLS block at static link time.
-  bool NeedDynId = Sym.IsPreemptible || Config->Shared;
-  bool NeedDynOff = Sym.IsPreemptible;
-
-  auto AddTlsReloc = [&](uint64_t Off, RelType Type, Symbol *Dest, bool Dyn) {
-    if (Dyn)
-      Main->RelaDyn->addReloc(Type, In.Got, Off, Dest);
-    else
-      In.Got->Relocations.push_back({R_ABS, Type, Off, 0, Dest});
-  };
-
-  // Local Dynamic is for access to module local TLS variables, while still
-  // being suitable for being dynamically loaded via dlopen.
-  // GOT[e0] is the module index, with a special value of 0 for the current
-  // module. GOT[e1] is unused. There only needs to be one module index entry.
-  if (Expr == R_TLSLD_PC && In.Got->addTlsIndex()) {
-    AddTlsReloc(In.Got->getTlsIndexOff(), Target->TlsModuleIndexRel,
-                NeedDynId ? nullptr : &Sym, NeedDynId);
-    C.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
-    return 1;
-  }
-
-  // Global Dynamic is the most general purpose access model. When we know
-  // the module index and offset of symbol in TLS block we can fill these in
-  // using static GOT relocations.
-  if (Expr == R_TLSGD_PC) {
-    if (In.Got->addDynTlsEntry(Sym)) {
-      uint64_t Off = In.Got->getGlobalDynOffset(Sym);
-      AddTlsReloc(Off, Target->TlsModuleIndexRel, &Sym, NeedDynId);
-      AddTlsReloc(Off + Config->Wordsize, Target->TlsOffsetRel, &Sym,
-                  NeedDynOff);
-    }
-    C.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
-    return 1;
-  }
-  return 0;
-}
-
 // Returns the number of relocations processed.
 template <class ELFT>
 static unsigned
@@ -212,8 +161,6 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
   if (!Sym.isTls())
     return 0;
 
-  if (Config->EMachine == EM_ARM)
-    return handleARMTlsRelocation(Type, Sym, C, Offset, Addend, Expr);
   if (Config->EMachine == EM_MIPS)
     return handleMipsTlsRelocation(Type, Sym, C, Offset, Addend, Expr);
 
@@ -230,10 +177,25 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     return 1;
   }
 
+  bool CanRelax = Config->EMachine != EM_ARM;
+
+  // If we are producing an executable and the symbol is non-preemptable, it
+  // must be defined and the code sequence can be relaxed to use Local-Exec.
+  //
+  // ARM and RISC-V do not support any relaxations for TLS relocations, however,
+  // we can omit the DTPMOD dynamic relocations and resolve them at link time
+  // because them are always 1. This may be necessary for static linking as
+  // DTPMOD may not be expected at load time.
+  bool IsLocalInExecutable = !Sym.IsPreemptible && !Config->Shared;
+
+  // Local Dynamic is for access to module local TLS variables, while still
+  // being suitable for being dynamically loaded via dlopen. GOT[e0] is the
+  // module index, with a special value of 0 for the current module. GOT[e1] is
+  // unused. There only needs to be one module index entry.
   if (oneof<R_TLSLD_GOT, R_TLSLD_GOTPLT, R_TLSLD_PC, R_TLSLD_HINT>(
           Expr)) {
     // Local-Dynamic relocs can be relaxed to Local-Exec.
-    if (!Config->Shared) {
+    if (CanRelax && !Config->Shared) {
       C.Relocations.push_back(
           {Target->adjustRelaxExpr(Type, nullptr, R_RELAX_TLS_LD_TO_LE), Type,
            Offset, Addend, &Sym});
@@ -241,9 +203,14 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
     }
     if (Expr == R_TLSLD_HINT)
       return 1;
-    if (In.Got->addTlsIndex())
-      Main->RelaDyn->addReloc(Target->TlsModuleIndexRel, In.Got,
-                              In.Got->getTlsIndexOff(), nullptr);
+    if (In.Got->addTlsIndex()) {
+      if (IsLocalInExecutable)
+        In.Got->Relocations.push_back(
+            {R_ADDEND, Target->SymbolicRel, In.Got->getTlsIndexOff(), 1, &Sym});
+      else
+        Main->RelaDyn->addReloc(Target->TlsModuleIndexRel, In.Got,
+                                In.Got->getTlsIndexOff(), nullptr);
+    }
     C.Relocations.push_back({Expr, Type, Offset, Addend, &Sym});
     return 1;
   }
@@ -271,10 +238,16 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
 
   if (oneof<R_AARCH64_TLSDESC_PAGE, R_TLSDESC, R_TLSDESC_CALL, R_TLSDESC_PC,
             R_TLSGD_GOT, R_TLSGD_GOTPLT, R_TLSGD_PC>(Expr)) {
-    if (Config->Shared) {
+    if (!CanRelax || Config->Shared) {
       if (In.Got->addDynTlsEntry(Sym)) {
         uint64_t Off = In.Got->getGlobalDynOffset(Sym);
-        Main->RelaDyn->addReloc(Target->TlsModuleIndexRel, In.Got, Off, &Sym);
+
+        if (IsLocalInExecutable)
+          // Write one to the GOT slot.
+          In.Got->Relocations.push_back(
+              {R_ADDEND, Target->SymbolicRel, Off, 1, &Sym});
+        else
+          Main->RelaDyn->addReloc(Target->TlsModuleIndexRel, In.Got, Off, &Sym);
 
         // If the symbol is preemptible we need the dynamic linker to write
         // the offset too.
@@ -313,7 +286,7 @@ handleTlsRelocation(RelType Type, Symbol &Sym, InputSectionBase &C,
   // defined.
   if (oneof<R_GOT, R_GOTPLT, R_GOT_PC, R_AARCH64_GOT_PAGE_PC, R_GOT_OFF,
             R_TLSIE_HINT>(Expr) &&
-      !Config->Shared && !Sym.IsPreemptible) {
+      CanRelax && IsLocalInExecutable) {
     C.Relocations.push_back({R_RELAX_TLS_IE_TO_LE, Type, Offset, Addend, &Sym});
     return 1;
   }
@@ -705,8 +678,94 @@ static std::string maybeReportDiscarded(Undefined &Sym) {
   return Msg;
 }
 
+// Undefined diagnostics are collected in a vector and emitted once all of
+// them are known, so that some postprocessing on the list of undefined symbols
+// can happen before lld emits diagnostics.
+struct UndefinedDiag {
+  Symbol *Sym;
+  struct Loc {
+    InputSectionBase *Sec;
+    uint64_t Offset;
+  };
+  std::vector<Loc> Locs;
+  bool IsWarning;
+};
+
+static std::vector<UndefinedDiag> Undefs;
+
+template <class ELFT>
+static void reportUndefinedSymbol(const UndefinedDiag &Undef) {
+  Symbol &Sym = *Undef.Sym;
+
+  auto Visibility = [&]() -> std::string {
+    switch (Sym.Visibility) {
+    case STV_INTERNAL:
+      return "internal ";
+    case STV_HIDDEN:
+      return "hidden ";
+    case STV_PROTECTED:
+      return "protected ";
+    default:
+      return "";
+    }
+  };
+
+  std::string Msg = maybeReportDiscarded<ELFT>(cast<Undefined>(Sym));
+  if (Msg.empty())
+    Msg = "undefined " + Visibility() + "symbol: " + toString(Sym);
+
+  const size_t MaxUndefReferences = 10;
+  size_t I = 0;
+  for (UndefinedDiag::Loc L : Undef.Locs) {
+    if (I >= MaxUndefReferences)
+      break;
+    InputSectionBase &Sec = *L.Sec;
+    uint64_t Offset = L.Offset;
+
+    Msg += "\n>>> referenced by ";
+    std::string Src = Sec.getSrcMsg(Sym, Offset);
+    if (!Src.empty())
+      Msg += Src + "\n>>>               ";
+    Msg += Sec.getObjMsg(Offset);
+    I++;
+  }
+
+  if (I < Undef.Locs.size())
+    Msg += ("\n>>> referenced " + Twine(Undef.Locs.size() - I) + " more times")
+               .str();
+
+  if (Sym.getName().startswith("_ZTV"))
+    Msg += "\nthe vtable symbol may be undefined because the class is missing "
+           "its key function (see https://lld.llvm.org/missingkeyfunction)";
+
+  if (Undef.IsWarning)
+    warn(Msg);
+  else
+    error(Msg);
+}
+
+template <class ELFT> void elf::reportUndefinedSymbols() {
+  // Find the first "undefined symbol" diagnostic for each diagnostic, and
+  // collect all "referenced from" lines at the first diagnostic.
+  DenseMap<Symbol *, UndefinedDiag *> FirstRef;
+  for (UndefinedDiag &Undef : Undefs) {
+    assert(Undef.Locs.size() == 1);
+    if (UndefinedDiag *Canon = FirstRef.lookup(Undef.Sym)) {
+      Canon->Locs.push_back(Undef.Locs[0]);
+      Undef.Locs.clear();
+    } else
+      FirstRef[Undef.Sym] = &Undef;
+  }
+
+  for (const UndefinedDiag &Undef : Undefs) {
+    if (!Undef.Locs.empty())
+      reportUndefinedSymbol<ELFT>(Undef);
+  }
+  Undefs.clear();
+}
+
 // Report an undefined symbol if necessary.
-// Returns true if this function printed out an error message.
+// Returns true if the undefined symbol will produce an error message.
 template <class ELFT>
 static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
                                  uint64_t Offset) {
@@ -727,41 +786,11 @@ static bool maybeReportUndefined(Symbol &Sym, InputSectionBase &Sec,
       cast<Undefined>(Sym).DiscardedSecIdx != 0 && Sec.Name == ".toc")
     return false;
 
-  auto Visibility = [&]() -> std::string {
-    switch (Sym.Visibility) {
-    case STV_INTERNAL:
-      return "internal ";
-    case STV_HIDDEN:
-      return "hidden ";
-    case STV_PROTECTED:
-      return "protected ";
-    default:
-      return "";
-    }
-  };
-
-  std::string Msg = maybeReportDiscarded<ELFT>(cast<Undefined>(Sym));
-  if (Msg.empty())
-    Msg = "undefined " + Visibility() + "symbol: " + toString(Sym);
-
-  Msg += "\n>>> referenced by ";
-  std::string Src = Sec.getSrcMsg(Sym, Offset);
-  if (!Src.empty())
-    Msg += Src + "\n>>>               ";
-  Msg += Sec.getObjMsg(Offset);
-
-  if (Sym.getName().startswith("_ZTV"))
-    Msg += "\nthe vtable symbol may be undefined because the class is missing "
-           "its key function (see https://lld.llvm.org/missingkeyfunction)";
-
-  if ((Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal) ||
-      Config->NoinhibitExec) {
-    warn(Msg);
-    return false;
-  }
-
-  error(Msg);
-  return true;
+  bool IsWarning =
+      (Config->UnresolvedSymbols == UnresolvedPolicy::Warn && CanBeExternal) ||
+      Config->NoinhibitExec;
+  Undefs.push_back({&Sym, {{&Sec, Offset}}, IsWarning});
+  return !IsWarning;
 }
 
 // MIPS N32 ABI treats series of successive relocations with the same offset
@@ -937,19 +966,13 @@ static void processRelocAux(InputSectionBase &Sec, RelExpr Expr, RelType Type,
 
   bool CanWrite = (Sec.Flags & SHF_WRITE) || !Config->ZText;
   if (CanWrite) {
-    // FIXME Improve the way we handle absolute relocation types that will
-    // change to relative relocations. ARM has a relocation type R_ARM_TARGET1
-    // that is similar to SymbolicRel. PPC64 may have similar relocation types.
-    if ((!Sym.IsPreemptible &&
-         (Config->EMachine == EM_ARM || Config->EMachine == EM_PPC64 ||
-          Type == Target->SymbolicRel)) ||
-        Expr == R_GOT) {
-      // If this is a symbolic relocation to a non-preemptable symbol, or an
-      // R_GOT, its address is its link-time value plus load address. Represent
-      // it with a relative relocation.
+    RelType Rel = Target->getDynRel(Type);
+    if (Expr == R_GOT || (Rel == Target->SymbolicRel && !Sym.IsPreemptible)) {
       addRelativeReloc(&Sec, Offset, &Sym, Addend, Expr, Type);
       return;
-    } else if (RelType Rel = Target->getDynRel(Type)) {
+    } else if (Rel != 0) {
+      if (Config->EMachine == EM_MIPS && Rel == Target->SymbolicRel)
+        Rel = Target->RelativeRel;
       Sec.getPartition().RelaDyn->addReloc(Rel, &Sec, Offset, &Sym, Addend,
                                            R_ADDEND, Type);
 
@@ -1767,7 +1790,8 @@ bool ThunkCreator::createThunks(ArrayRef<OutputSection *> OutputSections) {
             Rel.Sym = T->getThunkTargetSym();
             Rel.Expr = fromPlt(Rel.Expr);
 
-            // Addend of R_PPC_PLTREL24 should be ignored after changing to R_PC.
+            // The addend of R_PPC_PLTREL24 should be ignored after changing to
+            // R_PC.
             if (Config->EMachine == EM_PPC && Rel.Type == R_PPC_PLTREL24)
               Rel.Addend = 0;
           }
@@ -1789,3 +1813,7 @@ template void elf::scanRelocations<ELF32LE>(InputSectionBase &);
 template void elf::scanRelocations<ELF32BE>(InputSectionBase &);
 template void elf::scanRelocations<ELF64LE>(InputSectionBase &);
 template void elf::scanRelocations<ELF64BE>(InputSectionBase &);
+template void elf::reportUndefinedSymbols<ELF32LE>();
+template void elf::reportUndefinedSymbols<ELF32BE>();
+template void elf::reportUndefinedSymbols<ELF64LE>();
+template void elf::reportUndefinedSymbols<ELF64BE>();

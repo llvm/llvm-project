@@ -56,7 +56,7 @@ class VOPC_Profile<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt
   let Asm32 = "$src0, $src1";
   // The destination for 32-bit encoding is implicit.
   let HasDst32 = 0;
-  let Outs64 = (outs VOPDstS64:$sdst);
+  let Outs64 = (outs VOPDstS64orS32:$sdst);
   list<SchedReadWrite> Schedule = sched;
 }
 

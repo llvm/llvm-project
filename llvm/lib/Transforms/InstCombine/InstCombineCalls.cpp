@@ -1194,6 +1194,12 @@ static Instruction *foldCttzCtlz(IntrinsicInst &II, InstCombiner &IC) {
     return CallInst::Create(F, {X, II.getArgOperand(1)});
   }
 
+  // cttz(-x) -> cttz(x)
+  if (IsTZ && match(Op0, m_Neg(m_Value(X)))) {
+    II.setOperand(0, X);
+    return &II;
+  }
+
   KnownBits Known = IC.computeKnownBits(Op0, 0, &II);
 
   // Create a mask for bits above (ctlz) or below (cttz) the first known one.

@@ -18521,12 +18521,15 @@ X86TargetLowering::FP_TO_INTHelper(SDValue Op, SelectionDAG &DAG,
 
 static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
                               const X86Subtarget &Subtarget) {
-  MVT VT = Op->getSimpleValueType(0);
-  SDValue In = Op->getOperand(0);
+  MVT VT = Op.getSimpleValueType();
+  SDValue In = Op.getOperand(0);
   MVT InVT = In.getSimpleValueType();
   SDLoc dl(Op);
+  unsigned Opc = Op.getOpcode();
 
   assert(VT.isVector() && InVT.isVector() && "Expected vector type");
+  assert((Opc == ISD::ANY_EXTEND || Opc == ISD::ZERO_EXTEND) &&
+         "Unexpected extension opcode");
   assert(VT.getVectorNumElements() == VT.getVectorNumElements() &&
          "Expected same number of elements");
   assert((VT.getVectorElementType() == MVT::i16 ||
@@ -18538,6 +18541,8 @@ static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
           InVT.getVectorElementType() == MVT::i32) &&
          "Unexpected element type");
 
+  unsigned ExtendInVecOpc = getOpcode_EXTEND_VECTOR_INREG(Opc);
+
   // Custom legalize v8i8->v8i64 on CPUs without avx512bw.
   if (InVT == MVT::v8i8) {
     if (!ExperimentalVectorWideningLegalization || VT != MVT::v8i64)
@@ -18545,8 +18550,7 @@ static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
 
     In = DAG.getNode(ISD::CONCAT_VECTORS, SDLoc(Op),
                      MVT::v16i8, In, DAG.getUNDEF(MVT::v8i8));
-    // FIXME: This should be ANY_EXTEND_VECTOR_INREG for ANY_EXTEND input.
-    return DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, dl, VT, In);
+    return DAG.getNode(ExtendInVecOpc, dl, VT, In);
   }
 
   if (Subtarget.hasInt256())
@@ -18568,7 +18572,7 @@ static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
   MVT HalfVT = MVT::getVectorVT(VT.getVectorElementType(),
                                 VT.getVectorNumElements() / 2);
 
-  SDValue OpLo = DAG.getNode(ISD::ZERO_EXTEND_VECTOR_INREG, dl, HalfVT, In);
+  SDValue OpLo = DAG.getNode(ExtendInVecOpc, dl, HalfVT, In);
 
   // Short-circuit if we can determine that each 128-bit half is the same value.
   // Otherwise, this is difficult to match and optimize.
@@ -18578,7 +18582,7 @@ static SDValue LowerAVXExtend(SDValue Op, SelectionDAG &DAG,
 
   SDValue ZeroVec = DAG.getConstant(0, dl, InVT);
   SDValue Undef = DAG.getUNDEF(InVT);
-  bool NeedZero = Op.getOpcode() == ISD::ZERO_EXTEND;
+  bool NeedZero = Opc == ISD::ZERO_EXTEND;
   SDValue OpHi = getUnpackh(DAG, dl, InVT, In, NeedZero ? ZeroVec : Undef);
   OpHi = DAG.getBitcast(HalfVT, OpHi);
 

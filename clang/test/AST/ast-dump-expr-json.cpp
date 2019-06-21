@@ -7738,7 +7738,12 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           "desugaredQualType": "NS::X",
 // CHECK-NEXT:           "qualType": "NS::X"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue"
+// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "ctorType": {
+// CHECK-NEXT:           "qualType": "void () noexcept"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "hadMultipleCandidates": true,
+// CHECK-NEXT:          "constructionKind": "complete"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       }
@@ -7835,6 +7840,11 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "NS::X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "ctorType": {
+// CHECK-NEXT:         "qualType": "void (const NS::X &) noexcept"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "hadMultipleCandidates": true,
+// CHECK-NEXT:        "constructionKind": "complete",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -7986,6 +7996,11 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "NS::X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "ctorType": {
+// CHECK-NEXT:         "qualType": "void (const NS::X &) noexcept"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "hadMultipleCandidates": true,
+// CHECK-NEXT:        "constructionKind": "complete",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -8153,7 +8168,12 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           "desugaredQualType": "NS::X",
 // CHECK-NEXT:           "qualType": "NS::X"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue"
+// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "ctorType": {
+// CHECK-NEXT:           "qualType": "void () noexcept"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "hadMultipleCandidates": true,
+// CHECK-NEXT:          "constructionKind": "complete"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       }
@@ -8249,6 +8269,11 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "NS::X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "ctorType": {
+// CHECK-NEXT:         "qualType": "void (const NS::X &) noexcept"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "hadMultipleCandidates": true,
+// CHECK-NEXT:        "constructionKind": "complete",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -8416,7 +8441,12 @@ void TestNonADLCall3() {
 // CHECK-NEXT:           "desugaredQualType": "NS::X",
 // CHECK-NEXT:           "qualType": "NS::X"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue"
+// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "ctorType": {
+// CHECK-NEXT:           "qualType": "void () noexcept"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "hadMultipleCandidates": true,
+// CHECK-NEXT:          "constructionKind": "complete"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       }
@@ -8557,6 +8587,11 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "NS::X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "ctorType": {
+// CHECK-NEXT:         "qualType": "void (const NS::X &) noexcept"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "hadMultipleCandidates": true,
+// CHECK-NEXT:        "constructionKind": "complete",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -8708,6 +8743,11 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "NS::X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "ctorType": {
+// CHECK-NEXT:         "qualType": "void (const NS::X &) noexcept"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "hadMultipleCandidates": true,
+// CHECK-NEXT:        "constructionKind": "complete",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",
@@ -8873,7 +8913,12 @@ void TestNonADLCall3() {
 // CHECK-NEXT:          "type": {
 // CHECK-NEXT:           "qualType": "NS::X"
 // CHECK-NEXT:          },
-// CHECK-NEXT:          "valueCategory": "rvalue"
+// CHECK-NEXT:          "valueCategory": "rvalue",
+// CHECK-NEXT:          "ctorType": {
+// CHECK-NEXT:           "qualType": "void () noexcept"
+// CHECK-NEXT:          },
+// CHECK-NEXT:          "hadMultipleCandidates": true,
+// CHECK-NEXT:          "constructionKind": "complete"
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       }
@@ -8969,6 +9014,11 @@ void TestNonADLCall3() {
 // CHECK-NEXT:         "qualType": "NS::X"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
+// CHECK-NEXT:        "ctorType": {
+// CHECK-NEXT:         "qualType": "void (const NS::X &) noexcept"
+// CHECK-NEXT:        },
+// CHECK-NEXT:        "hadMultipleCandidates": true,
+// CHECK-NEXT:        "constructionKind": "complete",
 // CHECK-NEXT:        "inner": [
 // CHECK-NEXT:         {
 // CHECK-NEXT:          "id": "0x{{.*}}",

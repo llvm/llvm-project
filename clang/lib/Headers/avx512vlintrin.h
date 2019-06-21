@@ -8411,22 +8411,6 @@ _mm256_maskz_cvtph_ps (__mmask8 __U, __m128i __A)
                 (__mmask8) __U);
 }
 
-static __inline __m128i __DEFAULT_FN_ATTRS128
-_mm_mask_cvtps_ph (__m128i __W, __mmask8 __U, __m128 __A)
-{
-  return (__m128i) __builtin_ia32_vcvtps2ph_mask ((__v4sf) __A, _MM_FROUND_CUR_DIRECTION,
-                                                  (__v8hi) __W,
-                                                  (__mmask8) __U);
-}
-
-static __inline __m128i __DEFAULT_FN_ATTRS128
-_mm_maskz_cvtps_ph (__mmask8 __U, __m128 __A)
-{
-  return (__m128i) __builtin_ia32_vcvtps2ph_mask ((__v4sf) __A, _MM_FROUND_CUR_DIRECTION,
-                                                  (__v8hi) _mm_setzero_si128 (),
-                                                  (__mmask8) __U);
-}
-
 #define _mm_mask_cvt_roundps_ph(W, U, A, I) \
   (__m128i)__builtin_ia32_vcvtps2ph_mask((__v4sf)(__m128)(A), (int)(I), \
                                          (__v8hi)(__m128i)(W), \
@@ -8437,21 +8421,9 @@ _mm_maskz_cvtps_ph (__mmask8 __U, __m128 __A)
                                          (__v8hi)_mm_setzero_si128(), \
                                          (__mmask8)(U))
 
-static __inline __m128i __DEFAULT_FN_ATTRS256
-_mm256_mask_cvtps_ph (__m128i __W, __mmask8 __U, __m256 __A)
-{
-  return (__m128i) __builtin_ia32_vcvtps2ph256_mask ((__v8sf) __A, _MM_FROUND_CUR_DIRECTION,
-                                                      (__v8hi) __W,
-                                                      (__mmask8) __U);
-}
+#define _mm_mask_cvtps_ph  _mm_mask_cvt_roundps_ph
+#define _mm_maskz_cvtps_ph _mm_maskz_cvt_roundps_ph
 
-static __inline __m128i __DEFAULT_FN_ATTRS256
-_mm256_maskz_cvtps_ph ( __mmask8 __U, __m256 __A)
-{
-  return (__m128i) __builtin_ia32_vcvtps2ph256_mask ((__v8sf) __A, _MM_FROUND_CUR_DIRECTION,
-                                                      (__v8hi) _mm_setzero_si128(),
-                                                      (__mmask8) __U);
-}
 #define _mm256_mask_cvt_roundps_ph(W, U, A, I) \
   (__m128i)__builtin_ia32_vcvtps2ph256_mask((__v8sf)(__m256)(A), (int)(I), \
                                             (__v8hi)(__m128i)(W), \
@@ -8461,6 +8433,9 @@ _mm256_maskz_cvtps_ph ( __mmask8 __U, __m256 __A)
   (__m128i)__builtin_ia32_vcvtps2ph256_mask((__v8sf)(__m256)(A), (int)(I), \
                                             (__v8hi)_mm_setzero_si128(), \
                                             (__mmask8)(U))
+
+#define _mm256_mask_cvtps_ph  _mm256_mask_cvt_roundps_ph
+#define _mm256_maskz_cvtps_ph _mm256_maskz_cvt_roundps_ph
 
 
 #undef __DEFAULT_FN_ATTRS128

@@ -74,7 +74,7 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
   // bails even if the attribute is not present.
   if (D.isNoDestroy(CGF.getContext()))
     return;
-  
+
   CodeGenModule &CGM = CGF.CGM;
 
   // FIXME:  __attribute__((cleanup)) ?

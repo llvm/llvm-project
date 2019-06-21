@@ -43,7 +43,7 @@ S3 f3() {
 // Pass and return aggregate (of size < 16 bytes) with non-trivial destructor.
 // Passed directly but returned indirectly.
 // CHECK: define {{.*}} void {{.*}}f4{{.*}}(%struct.S4* inreg noalias sret %agg.result)
-// CHECK: call void {{.*}}func4{{.*}}(%struct.S4* inreg sret %agg.result, [2 x i64] %4)
+// CHECK: call void {{.*}}func4{{.*}}(%struct.S4* inreg sret %agg.result, [2 x i64] %5)
 struct S4 {
   int a[3];
   ~S4();
@@ -57,7 +57,7 @@ S4 f4() {
 
 // Pass and return from instance method called from instance method.
 // CHECK: define {{.*}} void @{{.*}}bar@Q1{{.*}}(%class.Q1* %this, %class.P1* inreg noalias sret %agg.result)
-// CHECK: call void {{.*}}foo@P1{{.*}}(%class.P1* %ref.tmp, %class.P1* inreg sret %agg.result, i8 %0)
+// CHECK: call void {{.*}}foo@P1{{.*}}(%class.P1* %ref.tmp, %class.P1* inreg sret %agg.result, i8 %1)
 
 class P1 {
 public:

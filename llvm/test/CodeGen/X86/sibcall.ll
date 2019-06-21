@@ -662,6 +662,332 @@ define fastcc void @t21_sret_to_sret(%struct.foo* noalias sret %agg.result) noun
   ret void
 }
 
+define fastcc void @t21_sret_to_sret_alloca(%struct.foo* noalias sret %agg.result) nounwind  {
+; X86-LABEL: t21_sret_to_sret_alloca:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $24, %esp
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    leal {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    calll t21_f_sret
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $24, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: t21_sret_to_sret_alloca:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    subq $16, %rsp
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    movq %rsp, %rdi
+; X64-NEXT:    callq t21_f_sret
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    addq $16, %rsp
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+;
+; X32-LABEL: t21_sret_to_sret_alloca:
+; X32:       # %bb.0:
+; X32-NEXT:    pushq %rbx
+; X32-NEXT:    subl $16, %esp
+; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    movl %esp, %edi
+; X32-NEXT:    callq t21_f_sret
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    addl $16, %esp
+; X32-NEXT:    popq %rbx
+; X32-NEXT:    retq
+  %a = alloca %struct.foo, align 8
+  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %a) nounwind
+  ret void
+}
+
+define fastcc void @t21_sret_to_sret_more_args(%struct.foo* noalias sret %agg.result, i32 %a, i32 %b) nounwind  {
+; X86-LABEL: t21_sret_to_sret_more_args:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %eax, (%esp)
+; X86-NEXT:    calll f_sret
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: t21_sret_to_sret_more_args:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    callq f_sret
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+;
+; X32-LABEL: t21_sret_to_sret_more_args:
+; X32:       # %bb.0:
+; X32-NEXT:    pushq %rbx
+; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    callq f_sret
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    popq %rbx
+; X32-NEXT:    retq
+  tail call fastcc void @f_sret(%struct.foo* noalias sret %agg.result, i32 %a, i32 %b) nounwind
+  ret void
+}
+
+define fastcc void @t21_sret_to_sret_second_arg_sret(%struct.foo* noalias %agg.result, %struct.foo* noalias sret %ret) nounwind  {
+; X86-LABEL: t21_sret_to_sret_second_arg_sret:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    calll t21_f_sret
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: t21_sret_to_sret_second_arg_sret:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movq %rsi, %rbx
+; X64-NEXT:    movq %rsi, %rdi
+; X64-NEXT:    callq t21_f_sret
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+;
+; X32-LABEL: t21_sret_to_sret_second_arg_sret:
+; X32:       # %bb.0:
+; X32-NEXT:    pushq %rbx
+; X32-NEXT:    movl %esi, %ebx
+; X32-NEXT:    movl %esi, %edi
+; X32-NEXT:    callq t21_f_sret
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    popq %rbx
+; X32-NEXT:    retq
+  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %ret) nounwind
+  ret void
+}
+
+define fastcc void @t21_sret_to_sret_more_args2(%struct.foo* noalias sret %agg.result, i32 %a, i32 %b) nounwind  {
+; X86-LABEL: t21_sret_to_sret_more_args2:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl %edx, (%esp)
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    calll f_sret
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: t21_sret_to_sret_more_args2:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movl %esi, %eax
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    movl %edx, %esi
+; X64-NEXT:    movl %eax, %edx
+; X64-NEXT:    callq f_sret
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+;
+; X32-LABEL: t21_sret_to_sret_more_args2:
+; X32:       # %bb.0:
+; X32-NEXT:    pushq %rbx
+; X32-NEXT:    movl %esi, %eax
+; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    movl %edx, %esi
+; X32-NEXT:    movl %eax, %edx
+; X32-NEXT:    callq f_sret
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    popq %rbx
+; X32-NEXT:    retq
+  tail call fastcc void @f_sret(%struct.foo* noalias sret %agg.result, i32 %b, i32 %a) nounwind
+  ret void
+}
+
+
+define fastcc void @t21_sret_to_sret_args_mismatch(%struct.foo* noalias sret %agg.result, %struct.foo* noalias %ret) nounwind  {
+; X86-LABEL: t21_sret_to_sret_args_mismatch:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    calll t21_f_sret
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: t21_sret_to_sret_args_mismatch:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    movq %rsi, %rdi
+; X64-NEXT:    callq t21_f_sret
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+;
+; X32-LABEL: t21_sret_to_sret_args_mismatch:
+; X32:       # %bb.0:
+; X32-NEXT:    pushq %rbx
+; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    movl %esi, %edi
+; X32-NEXT:    callq t21_f_sret
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    popq %rbx
+; X32-NEXT:    retq
+  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %ret) nounwind
+  ret void
+}
+
+define fastcc void @t21_sret_to_sret_args_mismatch2(%struct.foo* noalias sret %agg.result, %struct.foo* noalias %ret) nounwind  {
+; X86-LABEL: t21_sret_to_sret_args_mismatch2:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    movl %edx, %ecx
+; X86-NEXT:    calll t21_f_sret
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: t21_sret_to_sret_args_mismatch2:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    movq %rsi, %rdi
+; X64-NEXT:    callq t21_f_sret
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+;
+; X32-LABEL: t21_sret_to_sret_args_mismatch2:
+; X32:       # %bb.0:
+; X32-NEXT:    pushq %rbx
+; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    movl %esi, %edi
+; X32-NEXT:    callq t21_f_sret
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    popq %rbx
+; X32-NEXT:    retq
+  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %ret) nounwind
+  ret void
+}
+
+define fastcc void @t21_sret_to_sret_arg_mismatch(%struct.foo* noalias sret %agg.result) nounwind  {
+; X86-LABEL: t21_sret_to_sret_arg_mismatch:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    subl $8, %esp
+; X86-NEXT:    movl %ecx, %esi
+; X86-NEXT:    calll ret_struct
+; X86-NEXT:    movl %eax, %ecx
+; X86-NEXT:    calll t21_f_sret
+; X86-NEXT:    movl %esi, %eax
+; X86-NEXT:    addl $8, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    retl
+;
+; X64-LABEL: t21_sret_to_sret_arg_mismatch:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    movq %rdi, %rbx
+; X64-NEXT:    callq ret_struct
+; X64-NEXT:    movq %rax, %rdi
+; X64-NEXT:    callq t21_f_sret
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    retq
+;
+; X32-LABEL: t21_sret_to_sret_arg_mismatch:
+; X32:       # %bb.0:
+; X32-NEXT:    pushq %rbx
+; X32-NEXT:    movl %edi, %ebx
+; X32-NEXT:    callq ret_struct
+; X32-NEXT:    movl %eax, %edi
+; X32-NEXT:    callq t21_f_sret
+; X32-NEXT:    movl %ebx, %eax
+; X32-NEXT:    popq %rbx
+; X32-NEXT:    retq
+  %a = call fastcc %struct.foo* @ret_struct()
+  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %a) nounwind
+  ret void
+}
+
+define fastcc void @t21_sret_to_sret_structs_mismatch(%struct.foo* noalias sret %agg.result, %struct.foo* noalias %a) nounwind  {
+; X86-LABEL: t21_sret_to_sret_structs_mismatch:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    pushl %eax
+; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movl %ecx, %edi
+; X86-NEXT:    calll ret_struct
+; X86-NEXT:    movl %esi, %ecx
+; X86-NEXT:    movl %eax, %edx
+; X86-NEXT:    calll t21_f_sret2
+; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    addl $4, %esp
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl
+;
+; X64-LABEL: t21_sret_to_sret_structs_mismatch:
+; X64:       # %bb.0:
+; X64-NEXT:    pushq %r14
+; X64-NEXT:    pushq %rbx
+; X64-NEXT:    pushq %rax
+; X64-NEXT:    movq %rsi, %rbx
+; X64-NEXT:    movq %rdi, %r14
+; X64-NEXT:    callq ret_struct
+; X64-NEXT:    movq %rbx, %rdi
+; X64-NEXT:    movq %rax, %rsi
+; X64-NEXT:    callq t21_f_sret2
+; X64-NEXT:    movq %r14, %rax
+; X64-NEXT:    addq $8, %rsp
+; X64-NEXT:    popq %rbx
+; X64-NEXT:    popq %r14
+; X64-NEXT:    retq
+;
+; X32-LABEL: t21_sret_to_sret_structs_mismatch:
+; X32:       # %bb.0:
+; X32-NEXT:    pushq %rbp
+; X32-NEXT:    pushq %rbx
+; X32-NEXT:    pushq %rax
+; X32-NEXT:    movl %esi, %ebx
+; X32-NEXT:    movl %edi, %ebp
+; X32-NEXT:    callq ret_struct
+; X32-NEXT:    movl %ebx, %edi
+; X32-NEXT:    movl %eax, %esi
+; X32-NEXT:    callq t21_f_sret2
+; X32-NEXT:    movl %ebp, %eax
+; X32-NEXT:    addl $8, %esp
+; X32-NEXT:    popq %rbx
+; X32-NEXT:    popq %rbp
+; X32-NEXT:    retq
+  %b = call fastcc %struct.foo* @ret_struct()
+  tail call fastcc void @t21_f_sret2(%struct.foo* noalias sret %a, %struct.foo* noalias %b) nounwind
+  ret void
+}
+
+declare ccc %struct.foo* @ret_struct() nounwind
+
+
 define fastcc void @t21_sret_to_non_sret(%struct.foo* noalias sret %agg.result) nounwind  {
 ; X86-LABEL: t21_sret_to_non_sret:
 ; X86:       # %bb.0:
@@ -695,33 +1021,6 @@ define fastcc void @t21_sret_to_non_sret(%struct.foo* noalias sret %agg.result) 
   ret void
 }
 
-define fastcc void @t21_non_sret_to_sret(%struct.foo* %agg.result) nounwind  {
-; X86-LABEL: t21_non_sret_to_sret:
-; X86:       # %bb.0:
-; X86-NEXT:    subl $12, %esp
-; X86-NEXT:    calll t21_f_sret
-; X86-NEXT:    addl $12, %esp
-; X86-NEXT:    retl
-;
-; X64-LABEL: t21_non_sret_to_sret:
-; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    callq t21_f_sret
-; X64-NEXT:    popq %rax
-; X64-NEXT:    retq
-;
-; X32-LABEL: t21_non_sret_to_sret:
-; X32:       # %bb.0:
-; X32-NEXT:    pushq %rax
-; X32-NEXT:    callq t21_f_sret
-; X32-NEXT:    popq %rax
-; X32-NEXT:    retq
-  tail call fastcc void @t21_f_sret(%struct.foo* noalias sret %agg.result) nounwind
-  ret void
-}
-
-declare fastcc void @t21_f_sret(%struct.foo* noalias sret) nounwind
-declare fastcc void @t21_f_non_sret(%struct.foo*) nounwind
 
 define ccc void @t22_non_sret_to_sret(%struct.foo* %agg.result) nounwind  {
 ; X86-LABEL: t22_non_sret_to_sret:
@@ -750,4 +1049,10 @@ define ccc void @t22_non_sret_to_sret(%struct.foo* %agg.result) nounwind  {
   ret void
 }
 
+declare fastcc void @t21_f_sret(%struct.foo* noalias sret) nounwind
+declare fastcc void @t21_f_sret2(%struct.foo* noalias sret, %struct.foo* noalias) nounwind
+declare fastcc void @t21_f_non_sret(%struct.foo*) nounwind
+
 declare ccc void @t22_f_sret(%struct.foo* noalias sret) nounwind
+
+declare ccc void @f_sret(%struct.foo* noalias sret, i32, i32) nounwind

@@ -733,8 +733,6 @@ def SSrcOrLds_b32 : RegisterOperand<SRegOrLds_32> {
 
 defm SCSrc : RegInlineOperand<"SReg", "SCSrc"> ;
 
-def SCSrc_i1 : RegisterOperand<SReg_64_XEXEC>;
-
 //===----------------------------------------------------------------------===//
 //  VSrc_* Operands with an SGPR, VGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//

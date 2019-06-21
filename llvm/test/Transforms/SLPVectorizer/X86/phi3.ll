@@ -51,4 +51,45 @@ if.end7:                                          ; preds = %if.then6, %if.then,
   ret void
 }
 
+define void @Rf_GReset_unary_fneg() {
+; CHECK-LABEL: @Rf_GReset_unary_fneg(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = fneg double undef
+; CHECK-NEXT:    [[TMP0:%.*]] = load double, double* @d, align 8
+; CHECK-NEXT:    [[SUB1:%.*]] = fneg double [[TMP0]]
+; CHECK-NEXT:    br i1 icmp eq (%struct.GPar.0.16.26* (...)* inttoptr (i64 115 to %struct.GPar.0.16.26* (...)*), %struct.GPar.0.16.26* (...)* @Rf_gpptr), label [[IF_THEN:%.*]], label [[IF_END7:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> undef, double [[SUB]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x double> [[TMP1]], double [[SUB1]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = fsub <2 x double> [[TMP2]], undef
+; CHECK-NEXT:    [[TMP4:%.*]] = fdiv <2 x double> [[TMP3]], undef
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt double [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN6:%.*]], label [[IF_END7]]
+; CHECK:       if.then6:
+; CHECK-NEXT:    br label [[IF_END7]]
+; CHECK:       if.end7:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %sub = fneg double undef
+  %0 = load double, double* @d, align 8
+  %sub1 = fneg double %0
+  br i1 icmp eq (%struct.GPar.0.16.26* (...)* inttoptr (i64 115 to %struct.GPar.0.16.26* (...)*), %struct.GPar.0.16.26* (...)* @Rf_gpptr), label %if.then, label %if.end7
 
+if.then:                                          ; preds = %entry
+  %sub2 = fsub double %sub, undef
+  %div.i = fdiv double %sub2, undef
+  %sub4 = fsub double %sub1, undef
+  %div.i16 = fdiv double %sub4, undef
+  %cmp = fcmp ogt double %div.i, %div.i16
+  br i1 %cmp, label %if.then6, label %if.end7
+
+if.then6:                                         ; preds = %if.then
+  br label %if.end7
+
+if.end7:                                          ; preds = %if.then6, %if.then, %entry
+  %g.0 = phi double [ 0.000000e+00, %if.then6 ], [ %sub, %if.then ], [ %sub, %entry ]
+  ret void
+}

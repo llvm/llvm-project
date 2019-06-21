@@ -3369,6 +3369,10 @@ static X86::CondCode isUseDefConvertible(const MachineInstr &MI) {
   case X86::BSR32rr:
   case X86::BSR64rr:
     return X86::COND_E;
+  case X86::BLSI32rr:
+  case X86::BLSI64rr:
+    return X86::COND_AE;
+  // TODO: BLSR, BLSMSK, and TBM instructions.
   }
 }
 

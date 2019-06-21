@@ -1362,12 +1362,6 @@ llvm::Expected<Args> Options::Parse(const Args &args,
     int long_options_index = -1;
     val = OptionParser::Parse(argv.size(), &*argv.begin(), sstr.GetString(),
                               long_options, &long_options_index);
-
-    if ((size_t)OptionParser::GetOptionIndex() > argv.size()) {
-      error.SetErrorStringWithFormat("option requires an argument");
-      break;
-    }
-
     if (val == -1)
       break;
 

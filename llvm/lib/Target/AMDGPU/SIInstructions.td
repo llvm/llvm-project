@@ -121,14 +121,14 @@ def WWM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
 
-def ENTER_WWM : SPseudoInstSI <(outs SReg_64:$sdst), (ins i64imm:$src0)> {
+def ENTER_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
   let Defs = [EXEC];
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
 }
 
-def EXIT_WWM : SPseudoInstSI <(outs SReg_64:$sdst), (ins SReg_64:$src0)> {
+def EXIT_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins SReg_1:$src0)> {
   let hasSideEffects = 0;
   let mayLoad = 0;
   let mayStore = 0;
@@ -161,11 +161,11 @@ def S_SUB_U64_PSEUDO : SPseudoInstSI <
 >;
 
 def S_ADD_U64_CO_PSEUDO : SPseudoInstSI <
-  (outs SReg_64:$vdst, VOPDstS64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+  (outs SReg_64:$vdst, VOPDstS64orS32:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
 >;
 
 def S_SUB_U64_CO_PSEUDO : SPseudoInstSI <
-  (outs SReg_64:$vdst, VOPDstS64:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
+  (outs SReg_64:$vdst, VOPDstS64orS32:$sdst), (ins SSrc_b64:$src0, SSrc_b64:$src1)
 >;
 } // End usesCustomInserter = 1, Defs = [SCC]
 
@@ -233,30 +233,30 @@ let isTerminator = 1 in {
 let OtherPredicates = [EnableLateCFGStructurize] in {
  def SI_NON_UNIFORM_BRCOND_PSEUDO : CFPseudoInstSI <
   (outs),
-  (ins SReg_64:$vcc, brtarget:$target),
+  (ins SReg_1:$vcc, brtarget:$target),
   [(brcond i1:$vcc, bb:$target)]> {
     let Size = 12;
 }
 }
 
 def SI_IF: CFPseudoInstSI <
-  (outs SReg_64:$dst), (ins SReg_64:$vcc, brtarget:$target),
-  [(set i64:$dst, (AMDGPUif i1:$vcc, bb:$target))], 1, 1> {
+  (outs SReg_1:$dst), (ins SReg_1:$vcc, brtarget:$target),
+  [(set i1:$dst, (AMDGPUif i1:$vcc, bb:$target))], 1, 1> {
   let Constraints = "";
   let Size = 12;
   let hasSideEffects = 1;
 }
 
 def SI_ELSE : CFPseudoInstSI <
-  (outs SReg_64:$dst),
-  (ins SReg_64:$src, brtarget:$target, i1imm:$execfix), [], 1, 1> {
+  (outs SReg_1:$dst),
+  (ins SReg_1:$src, brtarget:$target, i1imm:$execfix), [], 1, 1> {
   let Size = 12;
   let hasSideEffects = 1;
 }
 
 def SI_LOOP : CFPseudoInstSI <
-  (outs), (ins SReg_64:$saved, brtarget:$target),
-  [(AMDGPUloop i64:$saved, bb:$target)], 1, 1> {
+  (outs), (ins SReg_1:$saved, brtarget:$target),
+  [(AMDGPUloop i1:$saved, bb:$target)], 1, 1> {
   let Size = 8;
   let isBranch = 1;
   let hasSideEffects = 1;
@@ -265,8 +265,7 @@ def SI_LOOP : CFPseudoInstSI <
 } // End isTerminator = 1
 
 def SI_END_CF : CFPseudoInstSI <
-  (outs), (ins SReg_64:$saved),
-  [(int_amdgcn_end_cf i64:$saved)], 1, 1> {
+  (outs), (ins SReg_1:$saved), [], 1, 1> {
   let Size = 4;
   let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
@@ -276,8 +275,7 @@ def SI_END_CF : CFPseudoInstSI <
 }
 
 def SI_IF_BREAK : CFPseudoInstSI <
-  (outs SReg_64:$dst), (ins SReg_64:$vcc, SReg_64:$src),
-  [(set i64:$dst, (int_amdgcn_if_break i1:$vcc, i64:$src))]> {
+  (outs SReg_1:$dst), (ins SReg_1:$vcc, SReg_1:$src), []> {
   let Size = 4;
   let isAsCheapAsAMove = 1;
   let isReMaterializable = 1;
@@ -303,7 +301,7 @@ multiclass PseudoInstKill <dag ins> {
   }
 }
 
-defm SI_KILL_I1 : PseudoInstKill <(ins SSrc_b64:$src, i1imm:$killvalue)>;
+defm SI_KILL_I1 : PseudoInstKill <(ins SCSrc_i1:$src, i1imm:$killvalue)>;
 defm SI_KILL_F32_COND_IMM : PseudoInstKill <(ins VSrc_b32:$src0, i32imm:$src1, i32imm:$cond)>;
 
 let Defs = [EXEC,VCC] in
@@ -322,7 +320,7 @@ def SI_BR_UNDEF : SPseudoInstSI <(outs), (ins sopp_brtarget:$simm16)> {
 }
 
 def SI_PS_LIVE : PseudoInstSI <
-  (outs SReg_64:$dst), (ins),
+  (outs SReg_1:$dst), (ins),
   [(set i1:$dst, (int_amdgcn_ps_live))]> {
   let SALU = 1;
 }
@@ -584,7 +582,7 @@ def : GCNPat<
 >;
 
 def : GCNPat<
-  (AMDGPUelse i64:$src, bb:$target),
+  (AMDGPUelse i1:$src, bb:$target),
   (SI_ELSE $src, $target, 0)
 >;
 

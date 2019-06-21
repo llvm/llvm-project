@@ -228,7 +228,15 @@ ARMRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 
   switch (Opc) {
   case G_ADD:
-  case G_SUB:
+  case G_SUB: {
+    // Integer operations where the source and destination are in the
+    // same register class.
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OperandsMapping = Ty.getSizeInBits() == 64
+                          ? &ARM::ValueMappings[ARM::DPR3OpsIdx]
+                          : &ARM::ValueMappings[ARM::GPR3OpsIdx];
+    break;
+  }
   case G_MUL:
   case G_AND:
   case G_OR:

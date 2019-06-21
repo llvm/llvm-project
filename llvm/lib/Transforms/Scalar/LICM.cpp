@@ -376,10 +376,12 @@ bool LoopInvariantCodeMotion::runOnLoop(
   // us to sink instructions in one pass, without iteration.  After sinking
   // instructions, we perform another pass to hoist them out of the loop.
   SinkAndHoistLICMFlags Flags = {NoOfMemAccTooLarge, LicmMssaOptCounter,
-                                 LicmMssaOptCap, LicmMssaNoAccForPromotionCap};
+                                 LicmMssaOptCap, LicmMssaNoAccForPromotionCap,
+                                 /*IsSink=*/true};
   if (L->hasDedicatedExits())
     Changed |= sinkRegion(DT->getNode(L->getHeader()), AA, LI, DT, TLI, TTI, L,
                           CurAST.get(), MSSAU.get(), &SafetyInfo, Flags, ORE);
+  Flags.IsSink = false;
   if (Preheader)
     Changed |= hoistRegion(DT->getNode(L->getHeader()), AA, LI, DT, TLI, L,
                            CurAST.get(), MSSAU.get(), &SafetyInfo, Flags, ORE);
@@ -1224,6 +1226,7 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
       // Could do better here, but this is conservatively correct.
       // TODO: Cache set of Uses on the first walk in runOnLoop, update when
       // moving accesses. Can also extend to dominating uses.
+      auto *SIMD = MSSA->getMemoryAccess(SI);
       for (auto *BB : CurLoop->getBlocks())
         if (auto *Accesses = MSSA->getBlockAccesses(BB)) {
           for (const auto &MA : *Accesses)
@@ -1231,6 +1234,12 @@ bool llvm::canSinkOrHoistInst(Instruction &I, AAResults *AA, DominatorTree *DT,
               auto *MD = MU->getDefiningAccess();
               if (!MSSA->isLiveOnEntryDef(MD) &&
                   CurLoop->contains(MD->getBlock()))
+                return false;
+              // Disable hoisting past potentially interfering loads. Optimized
+              // Uses may point to an access outside the loop, as getClobbering
+              // checks the previous iteration when walking the backedge.
+              // FIXME: More precise: no Uses that alias SI.
+              if (!Flags->IsSink && !MSSA->dominates(SIMD, MU))
                 return false;
             } else if (const auto *MD = dyn_cast<MemoryDef>(&MA))
               if (auto *LI = dyn_cast<LoadInst>(MD->getMemoryInst())) {
@@ -2257,16 +2266,47 @@ static bool pointerInvalidatedByLoop(MemoryLocation MemLoc,
 static bool pointerInvalidatedByLoopWithMSSA(MemorySSA *MSSA, MemoryUse *MU,
                                              Loop *CurLoop,
                                              SinkAndHoistLICMFlags &Flags) {
-  MemoryAccess *Source;
-  // See declaration of SetLicmMssaOptCap for usage details.
-  if (Flags.LicmMssaOptCounter >= Flags.LicmMssaOptCap)
-    Source = MU->getDefiningAccess();
-  else {
-    Source = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(MU);
-    Flags.LicmMssaOptCounter++;
+  // For hoisting, use the walker to determine safety
+  if (!Flags.IsSink) {
+    MemoryAccess *Source;
+    // See declaration of SetLicmMssaOptCap for usage details.
+    if (Flags.LicmMssaOptCounter >= Flags.LicmMssaOptCap)
+      Source = MU->getDefiningAccess();
+    else {
+      Source = MSSA->getSkipSelfWalker()->getClobberingMemoryAccess(MU);
+      Flags.LicmMssaOptCounter++;
+    }
+    return !MSSA->isLiveOnEntryDef(Source) &&
+           CurLoop->contains(Source->getBlock());
   }
-  return !MSSA->isLiveOnEntryDef(Source) &&
-         CurLoop->contains(Source->getBlock());
+
+  // For sinking, we'd need to check all Defs below this use. The getClobbering
+  // call will look on the backedge of the loop, but will check aliasing with
+  // the instructions on the previous iteration.
+  // For example:
+  // for (i ... )
+  //   load a[i] ( Use (LoE)
+  //   store a[i] ( 1 = Def (2), with 2 = Phi for the loop.
+  //   i++;
+  // The load sees no clobbering inside the loop, as the backedge alias check
+  // does phi translation, and will check aliasing against store a[i-1].
+  // However sinking the load outside the loop, below the store is incorrect.
+
+  // For now, only sink if there are no Defs in the loop, and the existing ones
+  // precede the use and are in the same block.
+  // FIXME: Increase precision: Safe to sink if Use post dominates the Def;
+  // needs PostDominatorTreeAnalysis.
+  // FIXME: More precise: no Defs that alias this Use.
+  if (Flags.NoOfMemAccTooLarge)
+    return true;
+  for (auto *BB : CurLoop->getBlocks())
+    if (auto *Accesses = MSSA->getBlockDefs(BB))
+      for (const auto &MA : *Accesses)
+        if (const auto *MD = dyn_cast<MemoryDef>(&MA))
+          if (MU->getBlock() != MD->getBlock() ||
+              !MSSA->locallyDominates(MD, MU))
+            return true;
+  return false;
 }
 
 /// Little predicate that returns true if the specified basic block is in

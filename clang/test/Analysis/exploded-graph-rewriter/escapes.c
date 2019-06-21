@@ -3,6 +3,7 @@
 // RUN:                     -analyzer-checker=core \
 // RUN:                     -analyzer-dump-egraph=%t.dot %s
 // RUN: %exploded_graph_rewriter %t.dot | FileCheck %s
+// REQUIRES: asserts
 
 // FIXME: Substitution doesn't seem to work on Windows.
 // UNSUPPORTED: system-windows

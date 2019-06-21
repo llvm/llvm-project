@@ -2710,6 +2710,12 @@ bool IndVarSimplify::run(Loop *L) {
       // Can't rewrite non-branch yet.
       if (!isa<BranchInst>(ExitingBB->getTerminator()))
         continue;
+
+      // If our exitting block exits multiple loops, we can only rewrite the
+      // innermost one.  Otherwise, we're changing how many times the innermost
+      // loop runs before it exits. 
+      if (LI->getLoopFor(ExitingBB) != L)
+        continue;
       
       if (!needsLFTR(L, ExitingBB))
         continue;

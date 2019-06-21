@@ -3835,7 +3835,8 @@ CGDebugInfo::EmitTypeForVarWithBlocksAttr(const VarDecl *VD,
 llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
                                                 llvm::Value *Storage,
                                                 llvm::Optional<unsigned> ArgNo,
-                                                CGBuilderTy &Builder) {
+                                                CGBuilderTy &Builder,
+                                                const bool UsePointerValue) {
   assert(DebugKind >= codegenoptions::LimitedDebugInfo);
   assert(!LexicalBlockStack.empty() && "Region stack mismatch, stack empty!");
   if (VD->hasAttr<NoDebugAttr>())
@@ -3940,6 +3941,16 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
     }
   }
 
+  // Clang stores the sret pointer provided by the caller in a static alloca.
+  // Use DW_OP_deref to tell the debugger to load the pointer and treat it as
+  // the address of the variable.
+  if (UsePointerValue) {
+    assert(std::find(Expr.begin(), Expr.end(), llvm::dwarf::DW_OP_deref) ==
+               Expr.end() &&
+           "Debug info already contains DW_OP_deref.");
+    Expr.push_back(llvm::dwarf::DW_OP_deref);
+  }
+
   // Create the descriptor for the variable.
   auto *D = ArgNo ? DBuilder.createParameterVariable(
                         Scope, Name, *ArgNo, Unit, Line, Ty,
@@ -3958,9 +3969,10 @@ llvm::DILocalVariable *CGDebugInfo::EmitDeclare(const VarDecl *VD,
 
 llvm::DILocalVariable *
 CGDebugInfo::EmitDeclareOfAutoVariable(const VarDecl *VD, llvm::Value *Storage,
-                                       CGBuilderTy &Builder) {
+                                       CGBuilderTy &Builder,
+                                       const bool UsePointerValue) {
   assert(DebugKind >= codegenoptions::LimitedDebugInfo);
-  return EmitDeclare(VD, Storage, llvm::None, Builder);
+  return EmitDeclare(VD, Storage, llvm::None, Builder, UsePointerValue);
 }
 
 void CGDebugInfo::EmitLabel(const LabelDecl *D, CGBuilderTy &Builder) {

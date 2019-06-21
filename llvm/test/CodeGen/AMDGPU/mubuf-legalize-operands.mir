@@ -1,6 +1,7 @@
 # RUN: llc -march=amdgcn -mcpu=gfx700 -verify-machineinstrs -verify-machine-dom-info --run-pass=si-fix-sgpr-copies -o - %s | FileCheck %s --check-prefixes=W64,ADDR64
 # RUN: llc -march=amdgcn -mcpu=gfx900 -verify-machineinstrs -verify-machine-dom-info --run-pass=si-fix-sgpr-copies -o - %s | FileCheck %s --check-prefixes=W64,W64-NO-ADDR64
 # RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs -verify-machine-dom-info --run-pass=si-fix-sgpr-copies -o - %s | FileCheck %s --check-prefixes=W64,W64-NO-ADDR64
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=+wavefrontsize32,-wavefrontsize64 -verify-machineinstrs -verify-machine-dom-info --run-pass=si-fix-sgpr-copies -o - %s | FileCheck %s --check-prefixes=W32
 
 # Test that we correctly legalize VGPR Rsrc operands in MUBUF instructions.
 #

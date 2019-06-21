@@ -5962,7 +5962,9 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       !(hasMVE() &&
         (Mnemonic == "vmine" ||
          Mnemonic == "vshle" || Mnemonic == "vshlt" || Mnemonic == "vshllt" ||
-         Mnemonic == "vmvne" || Mnemonic == "vorne"))) {
+         Mnemonic == "vmvne" || Mnemonic == "vorne" ||
+         Mnemonic == "vnege" || Mnemonic == "vnegt" ||
+         Mnemonic.startswith("vq")))) {
     unsigned CC = ARMCondCodeFromString(Mnemonic.substr(Mnemonic.size()-2));
     if (CC != ~0U) {
       Mnemonic = Mnemonic.slice(0, Mnemonic.size() - 2);

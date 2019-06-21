@@ -146,7 +146,7 @@ bool AArch64::usesOnlyLowPageBits(RelType Type) const {
 }
 
 RelType AArch64::getDynRel(RelType Type) const {
-  if (Type == R_AARCH64_ABS32 || Type == R_AARCH64_ABS64)
+  if (Type == R_AARCH64_ABS64)
     return Type;
   return R_AARCH64_NONE;
 }

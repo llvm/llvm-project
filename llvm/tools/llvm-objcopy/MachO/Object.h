@@ -12,6 +12,7 @@
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/MachO.h"
+#include "llvm/MC/StringTableBuilder.h"
 #include "llvm/ObjectYAML/DWARFYAML.h"
 #include "llvm/Support/YAMLTraits.h"
 #include <cstdint>
@@ -33,6 +34,7 @@ struct MachHeader {
   uint32_t Reserved = 0;
 };
 
+struct RelocationInfo;
 struct Section {
   std::string Sectname;
   std::string Segname;
@@ -48,7 +50,7 @@ struct Section {
   uint32_t Reserved3;
 
   StringRef Content;
-  std::vector<MachO::any_relocation_info> Relocations;
+  std::vector<RelocationInfo> Relocations;
 
   MachO::SectionType getType() const {
     return static_cast<MachO::SectionType>(Flags & MachO::SECTION_TYPE);
@@ -79,8 +81,11 @@ struct LoadCommand {
   std::vector<Section> Sections;
 };
 
-struct NListEntry {
-  uint32_t n_strx;
+// A symbol information. Fields which starts with "n_" are same as them in the
+// nlist.
+struct SymbolEntry {
+  std::string Name;
+  uint32_t Index;
   uint8_t n_type;
   uint8_t n_sect;
   uint16_t n_desc;
@@ -90,13 +95,22 @@ struct NListEntry {
 /// The location of the symbol table inside the binary is described by LC_SYMTAB
 /// load command.
 struct SymbolTable {
-  std::vector<NListEntry> NameList;
+  std::vector<std::unique_ptr<SymbolEntry>> Symbols;
+
+  const SymbolEntry *getSymbolByIndex(uint32_t Index) const;
 };
 
 /// The location of the string table inside the binary is described by LC_SYMTAB
 /// load command.
 struct StringTable {
   std::vector<std::string> Strings;
+};
+
+struct RelocationInfo {
+  const SymbolEntry *Symbol;
+  // True if Info is a scattered_relocation_info.
+  bool Scattered;
+  MachO::any_relocation_info Info;
 };
 
 /// The location of the rebase info inside the binary is described by

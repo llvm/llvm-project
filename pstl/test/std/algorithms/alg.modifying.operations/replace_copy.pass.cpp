@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 // Tests for replace_copy and replace_copy_if
 
 #include "support/pstl_test_config.h"

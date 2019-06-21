@@ -1121,8 +1121,8 @@ public:
                                          SourceLocation Loc);
 
   /// Returns the address of the variable marked as declare target with link
-  /// clause.
-  virtual Address getAddrOfDeclareTargetLink(const VarDecl *VD);
+  /// clause OR as declare target with to clause and unified memory.
+  virtual Address getAddrOfDeclareTargetVar(const VarDecl *VD);
 
   /// Emit a code for initialization of threadprivate variable. It emits
   /// a call to runtime library which adds initial value to the newly created

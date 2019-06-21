@@ -50,19 +50,19 @@ def AMDGPUFmasOp : SDTypeProfile<1, 4,
 def AMDGPUKillSDT : SDTypeProfile<0, 1, [SDTCisInt<0>]>;
 
 def AMDGPUIfOp : SDTypeProfile<1, 2,
-  [SDTCisVT<0, i64>, SDTCisVT<1, i1>, SDTCisVT<2, OtherVT>]
+  [SDTCisVT<0, i1>, SDTCisVT<1, i1>, SDTCisVT<2, OtherVT>]
 >;
 
 def AMDGPUElseOp : SDTypeProfile<1, 2,
-  [SDTCisVT<0, i64>, SDTCisVT<1, i64>, SDTCisVT<2, OtherVT>]
+  [SDTCisVT<0, i1>, SDTCisVT<1, i1>, SDTCisVT<2, OtherVT>]
 >;
 
 def AMDGPULoopOp : SDTypeProfile<0, 2,
-  [SDTCisVT<0, i64>, SDTCisVT<1, OtherVT>]
+  [SDTCisVT<0, i1>, SDTCisVT<1, OtherVT>]
 >;
 
 def AMDGPUIfBreakOp : SDTypeProfile<1, 2,
-  [SDTCisVT<0, i64>, SDTCisVT<1, i1>, SDTCisVT<2, i64>]
+  [SDTCisVT<0, i1>, SDTCisVT<1, i1>, SDTCisVT<2, i1>]
 >;
 
 //===----------------------------------------------------------------------===//

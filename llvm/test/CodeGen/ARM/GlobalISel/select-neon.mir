@@ -1,0 +1,66 @@
+# RUN: llc -O0 -mtriple arm-- -mattr=+neon -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s
+
+--- |
+  define void @test_add_s64() { ret void }
+  define void @test_sub_s64() { ret void }
+...
+---
+name:            test_add_s64
+# CHECK-LABEL: name: test_add_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: fprb }
+body:             |
+  bb.0:
+    liveins: $d0, $d1
+
+    %0(s64) = COPY $d0
+    ; CHECK: [[VREGX:%[0-9]+]]:dpr = COPY $d0
+
+    %1(s64) = COPY $d1
+    ; CHECK: [[VREGY:%[0-9]+]]:dpr = COPY $d1
+
+    %2(s64) = G_ADD %0, %1
+    ; CHECK: [[VREGSUM:%[0-9]+]]:dpr = VADDv1i64 [[VREGX]], [[VREGY]], 14, $noreg
+
+    $d0 = COPY %2(s64)
+    ; CHECK: $d0 = COPY [[VREGSUM]]
+
+    BX_RET 14, $noreg, implicit $d0
+    ; CHECK: BX_RET 14, $noreg, implicit $d0
+...
+---
+name:            test_sub_s64
+# CHECK-LABEL: name: test_sub_s64
+legalized:       true
+regBankSelected: true
+selected:        false
+# CHECK: selected: true
+registers:
+  - { id: 0, class: fprb }
+  - { id: 1, class: fprb }
+  - { id: 2, class: fprb }
+body:             |
+  bb.0:
+    liveins: $d0, $d1
+
+    %0(s64) = COPY $d0
+    ; CHECK: [[VREGX:%[0-9]+]]:dpr = COPY $d0
+
+    %1(s64) = COPY $d1
+    ; CHECK: [[VREGY:%[0-9]+]]:dpr = COPY $d1
+
+    %2(s64) = G_SUB %0, %1
+    ; CHECK: [[VREGSUM:%[0-9]+]]:dpr = VSUBv1i64 [[VREGX]], [[VREGY]], 14, $noreg
+
+    $d0 = COPY %2(s64)
+    ; CHECK: $d0 = COPY [[VREGSUM]]
+
+    BX_RET 14, $noreg, implicit $d0
+    ; CHECK: BX_RET 14, $noreg, implicit $d0
+

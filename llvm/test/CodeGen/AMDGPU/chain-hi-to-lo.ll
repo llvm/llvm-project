@@ -220,10 +220,10 @@ bb:
 }
 
 ; GCN-LABEL: {{^}}chain_hi_to_lo_private_other_dep:
-; GFX900: buffer_load_short_d16_hi v1, v0, s[0:3], s4 offen
+; GFX900: buffer_load_short_d16_hi v1, v0, s[0:3], s33 offen
 ; GFX900-NEXT: s_waitcnt vmcnt(0)
 ; GFX900-NEXT: v_pk_sub_u16 v1, v1, -12 op_sel_hi:[1,0]
-; GFX900-NEXT: buffer_load_short_d16 v1, v0, s[0:3], s4 offen offset:2
+; GFX900-NEXT: buffer_load_short_d16 v1, v0, s[0:3], s33 offen offset:2
 ; GFX900-NEXT: s_waitcnt vmcnt(0)
 ; GFX900-NEXT: v_mov_b32_e32 v0, v1
 ; GFX900-NEXT: s_setpc_b64

@@ -1403,12 +1403,11 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       getLangOpts().OpenMP
           ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
           : Address::invalid();
+  bool NRVO = getLangOpts().ElideConstructors && D.isNRVOVariable();
+
   if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {
     address = OpenMPLocalAddr;
   } else if (Ty->isConstantSizeType()) {
-    bool NRVO = getLangOpts().ElideConstructors &&
-      D.isNRVOVariable();
-
     // If this value is an array or struct with a statically determinable
     // constant initializer, there are optimizations we can do.
     //
@@ -1561,8 +1560,16 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
 
   // Emit debug info for local var declaration.
   if (EmitDebugInfo && HaveInsertPoint()) {
+    Address DebugAddr = address;
+    bool UsePointerValue = NRVO && ReturnValuePointer.isValid();
     DI->setLocation(D.getLocation());
-    (void)DI->EmitDeclareOfAutoVariable(&D, address.getPointer(), Builder);
+
+    // If NRVO, use a pointer to the return address.
+    if (UsePointerValue)
+      DebugAddr = ReturnValuePointer;
+
+    (void)DI->EmitDeclareOfAutoVariable(&D, DebugAddr.getPointer(), Builder,
+                                        UsePointerValue);
   }
 
   if (D.hasAttr<AnnotateAttr>() && HaveInsertPoint())
@@ -1887,7 +1894,7 @@ void CodeGenFunction::EmitExprAsInit(const Expr *init, const ValueDecl *D,
       if (isa<VarDecl>(D))
         Overlap = AggValueSlot::DoesNotOverlap;
       else if (auto *FD = dyn_cast<FieldDecl>(D))
-        Overlap = overlapForFieldInit(FD);
+        Overlap = getOverlapForFieldInit(FD);
       // TODO: how can we delay here if D is captured by its initializer?
       EmitAggExpr(init, AggValueSlot::forLValue(lvalue,
                                               AggValueSlot::IsDestructed,
