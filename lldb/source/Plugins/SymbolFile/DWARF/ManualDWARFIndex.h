@@ -13,6 +13,8 @@
 #include "Plugins/SymbolFile/DWARF/NameToDIE.h"
 #include "llvm/ADT/DenseSet.h"
 
+class DWARFDebugInfo;
+
 namespace lldb_private {
 class ManualDWARFIndex : public DWARFIndex {
 public:
@@ -26,14 +28,14 @@ public:
   void GetGlobalVariables(ConstString basename, DIEArray &offsets) override;
   void GetGlobalVariables(const RegularExpression &regex,
                           DIEArray &offsets) override;
-  void GetGlobalVariables(const DWARFUnit &cu, DIEArray &offsets) override;
+  void GetGlobalVariables(const DWARFUnit &unit, DIEArray &offsets) override;
   void GetObjCMethods(ConstString class_name, DIEArray &offsets) override;
   void GetCompleteObjCClass(ConstString class_name, bool must_be_implementation,
                             DIEArray &offsets) override;
   void GetTypes(ConstString name, DIEArray &offsets) override;
   void GetTypes(const DWARFDeclContext &context, DIEArray &offsets) override;
   void GetNamespaces(ConstString name, DIEArray &offsets) override;
-  void GetFunctions(ConstString name, DWARFDebugInfo &info,
+  void GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                     const CompilerDeclContext &parent_decl_ctx,
                     uint32_t name_type_mask,
                     std::vector<DWARFDIE> &dies) override;
@@ -56,9 +58,9 @@ private:
   void Index();
   void IndexUnit(DWARFUnit &unit, IndexSet &set);
 
-  static void
-  IndexUnitImpl(DWARFUnit &unit, const lldb::LanguageType cu_language,
-                const dw_offset_t cu_offset, IndexSet &set);
+  static void IndexUnitImpl(DWARFUnit &unit,
+                            const lldb::LanguageType cu_language,
+                            IndexSet &set);
 
   /// Non-null value means we haven't built the index yet.
   DWARFDebugInfo *m_debug_info;

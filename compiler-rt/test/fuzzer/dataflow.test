@@ -3,8 +3,9 @@ REQUIRES: linux, x86_64
 
 # Build the tracer and the test.
 RUN: %no_fuzzer_cpp_compiler -c -fno-sanitize=all -fsanitize=dataflow  %S/../../lib/fuzzer/dataflow/DataFlow.cpp -o  %t-DataFlow.o
-RUN: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow -fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp   %S/ThreeFunctionsTest.cpp     %t-DataFlow.o -o %t-ThreeFunctionsTestDF
-RUN: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow -fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp   %S/Labels20Test.cpp     %t-DataFlow.o -o %t-Labels20TestDF
+RUN: %no_fuzzer_cpp_compiler -c -fno-sanitize=all -fPIC                %S/../../lib/fuzzer/dataflow/DataFlowCallbacks.cpp -o  %t-DataFlowCallbacks.o
+RUN: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow -fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp   %S/ThreeFunctionsTest.cpp     %t-DataFlow*.o -o %t-ThreeFunctionsTestDF
+RUN: %no_fuzzer_cpp_compiler    -fno-sanitize=all -fsanitize=dataflow -fsanitize-coverage=trace-pc-guard,pc-table,bb,trace-cmp   %S/Labels20Test.cpp     %t-DataFlow*.o -o %t-Labels20TestDF
 RUN: %cpp_compiler %S/ThreeFunctionsTest.cpp -o %t-ThreeFunctionsTest
 
 # Dump the function list.

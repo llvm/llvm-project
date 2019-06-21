@@ -723,8 +723,8 @@ define float @missing_truncate_promote_bswap(i32 %arg) {
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SI-NEXT:    v_alignbit_b32 v1, v0, v0, 8
 ; SI-NEXT:    v_alignbit_b32 v0, v0, v0, 24
-; SI-NEXT:    s_mov_b32 s6, 0xff00ff
-; SI-NEXT:    v_bfi_b32 v0, s6, v0, v1
+; SI-NEXT:    s_mov_b32 s4, 0xff00ff
+; SI-NEXT:    v_bfi_b32 v0, s4, v0, v1
 ; SI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
@@ -735,8 +735,8 @@ define float @missing_truncate_promote_bswap(i32 %arg) {
 ; VI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; VI-NEXT:    v_alignbit_b32 v1, v0, v0, 8
 ; VI-NEXT:    v_alignbit_b32 v0, v0, v0, 24
-; VI-NEXT:    s_mov_b32 s6, 0xff00ff
-; VI-NEXT:    v_bfi_b32 v0, s6, v0, v1
+; VI-NEXT:    s_mov_b32 s4, 0xff00ff
+; VI-NEXT:    v_bfi_b32 v0, s4, v0, v1
 ; VI-NEXT:    v_cvt_f32_f16_sdwa v0, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_1
 ; VI-NEXT:    s_setpc_b64 s[30:31]
 bb:

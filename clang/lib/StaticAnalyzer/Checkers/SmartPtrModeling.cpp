@@ -26,32 +26,30 @@ using namespace ento;
 
 namespace {
 class SmartPtrModeling : public Checker<eval::Call> {
-  bool isNullAfterMoveMethod(const CXXInstanceCall *Call) const;
+  bool isNullAfterMoveMethod(const CallEvent &Call) const;
 
 public:
-  bool evalCall(const CallExpr *CE, CheckerContext &C) const;
+  bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 };
 } // end of anonymous namespace
 
-bool SmartPtrModeling::isNullAfterMoveMethod(
-    const CXXInstanceCall *Call) const {
+bool SmartPtrModeling::isNullAfterMoveMethod(const CallEvent &Call) const {
   // TODO: Update CallDescription to support anonymous calls?
   // TODO: Handle other methods, such as .get() or .release().
   // But once we do, we'd need a visitor to explain null dereferences
   // that are found via such modeling.
-  const auto *CD = dyn_cast_or_null<CXXConversionDecl>(Call->getDecl());
+  const auto *CD = dyn_cast_or_null<CXXConversionDecl>(Call.getDecl());
   return CD && CD->getConversionType()->isBooleanType();
 }
 
-bool SmartPtrModeling::evalCall(const CallExpr *CE, CheckerContext &C) const {
-  CallEventRef<> CallRef = C.getStateManager().getCallEventManager().getCall(
-      CE, C.getState(), C.getLocationContext());
-  const auto *Call = dyn_cast_or_null<CXXInstanceCall>(CallRef);
-  if (!Call || !isNullAfterMoveMethod(Call))
+bool SmartPtrModeling::evalCall(const CallEvent &Call,
+                                CheckerContext &C) const {
+  if (!isNullAfterMoveMethod(Call))
     return false;
 
   ProgramStateRef State = C.getState();
-  const MemRegion *ThisR = Call->getCXXThisVal().getAsRegion();
+  const MemRegion *ThisR =
+      cast<CXXInstanceCall>(&Call)->getCXXThisVal().getAsRegion();
 
   if (!move::isMovedFrom(State, ThisR)) {
     // TODO: Model this case as well. At least, avoid invalidation of globals.
@@ -60,8 +58,8 @@ bool SmartPtrModeling::evalCall(const CallExpr *CE, CheckerContext &C) const {
 
   // TODO: Add a note to bug reports describing this decision.
   C.addTransition(
-      State->BindExpr(CE, C.getLocationContext(),
-                      C.getSValBuilder().makeZeroVal(CE->getType())));
+      State->BindExpr(Call.getOriginExpr(), C.getLocationContext(),
+                      C.getSValBuilder().makeZeroVal(Call.getResultType())));
   return true;
 }
 

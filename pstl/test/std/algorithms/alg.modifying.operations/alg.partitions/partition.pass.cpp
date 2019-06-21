@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 // Tests for stable_partition and partition
 #include "support/pstl_test_config.h"
 
@@ -55,7 +57,7 @@ is_equal(Iterator first, Iterator last, Iterator d_first)
 
 template <typename Iterator>
 typename std::enable_if<!std::is_trivial<typename std::iterator_traits<Iterator>::value_type>::value, bool>::type
-is_equal(Iterator first, Iterator last, Iterator d_first)
+is_equal(Iterator, Iterator, Iterator)
 {
     return true;
 }
@@ -95,7 +97,7 @@ struct test_one_policy
 
     template <typename Policy, typename BiDirIt, typename Size, typename UnaryOp, typename Generator>
     typename std::enable_if<!is_same_iterator_category<BiDirIt, std::forward_iterator_tag>::value, void>::type
-    operator()(Policy&& exec, BiDirIt first, BiDirIt last, BiDirIt exp_first, BiDirIt exp_last, Size n,
+    operator()(Policy&& exec, BiDirIt first, BiDirIt last, BiDirIt exp_first, BiDirIt exp_last, Size,
                UnaryOp unary_op, Generator generator)
     {
         // partition
@@ -119,8 +121,8 @@ struct test_one_policy
     }
     template <typename Policy, typename BiDirIt, typename Size, typename UnaryOp, typename Generator>
     typename std::enable_if<is_same_iterator_category<BiDirIt, std::forward_iterator_tag>::value, void>::type
-    operator()(Policy&& exec, BiDirIt first, BiDirIt last, BiDirIt exp_first, BiDirIt exp_last, Size n,
-               UnaryOp unary_op, Generator generator)
+    operator()(Policy&&, BiDirIt, BiDirIt, BiDirIt, BiDirIt, Size,
+               UnaryOp, Generator)
     {
     }
 };

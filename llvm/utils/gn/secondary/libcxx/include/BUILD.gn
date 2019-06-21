@@ -130,8 +130,6 @@ copy("include") {
     "experimental/__config",
     "experimental/__memory",
     "experimental/algorithm",
-    "experimental/any",
-    "experimental/chrono",
     "experimental/coroutine",
     "experimental/deque",
     "experimental/filesystem",
@@ -141,17 +139,11 @@ copy("include") {
     "experimental/list",
     "experimental/map",
     "experimental/memory_resource",
-    "experimental/numeric",
-    "experimental/optional",
     "experimental/propagate_const",
-    "experimental/ratio",
     "experimental/regex",
     "experimental/set",
     "experimental/simd",
     "experimental/string",
-    "experimental/string_view",
-    "experimental/system_error",
-    "experimental/tuple",
     "experimental/type_traits",
     "experimental/unordered_map",
     "experimental/unordered_set",
@@ -261,6 +253,6 @@ copy("include") {
     }
   }
   outputs = [
-    "$clang_resource_dir/include/c++/v1/{{source_target_relative}}",
+    "$root_build_dir/include/c++/v1/{{source_target_relative}}",
   ]
 }

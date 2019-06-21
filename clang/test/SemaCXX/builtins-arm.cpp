@@ -2,5 +2,5 @@
 
 // va_list on ARM AAPCS is struct { void* __ap }.
 int test1(const __builtin_va_list &ap) {
-  return __builtin_va_arg(ap, int); // expected-error {{binding value of type 'const __builtin_va_list' to reference to type '__builtin_va_list' drops 'const' qualifier}}
+  return __builtin_va_arg(ap, int); // expected-error {{binding reference of type '__builtin_va_list' to value of type 'const __builtin_va_list' drops 'const' qualifier}}
 }

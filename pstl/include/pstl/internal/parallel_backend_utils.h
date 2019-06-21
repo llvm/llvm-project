@@ -79,8 +79,8 @@ struct __serial_move_merge
                         }
                         else if (__n == 0)
                         {
-                            const auto __i = __zs - __zs_beg;
-                            if (__same_move_seq || __i < __nx)
+                            const auto __j = __zs - __zs_beg;
+                            if (__same_move_seq || __j < __nx)
                                 __zs = __move_sequence_x(__ys, __ye, __zs);
                             else
                                 __zs = __move_sequence_y(__ys, __ye, __zs);
@@ -97,8 +97,8 @@ struct __serial_move_merge
                         ++__zs, --__n;
                         if (++__xs == __xe)
                         {
-                            const auto __i = __zs - __zs_beg;
-                            if (__same_move_seq || __i < __nx)
+                            const auto __j = __zs - __zs_beg;
+                            if (__same_move_seq || __j < __nx)
                                 __move_sequence_x(__ys, __ye, __zs);
                             else
                                 __move_sequence_y(__ys, __ye, __zs);
@@ -106,8 +106,8 @@ struct __serial_move_merge
                         }
                         else if (__n == 0)
                         {
-                            const auto i = __zs - __zs_beg;
-                            if (__same_move_seq || __i < __nx)
+                            const auto __j = __zs - __zs_beg;
+                            if (__same_move_seq || __j < __nx)
                             {
                                 __zs = __move_sequence_x(__xs, __xe, __zs);
                                 __move_sequence_x(__ys, __ye, __zs);

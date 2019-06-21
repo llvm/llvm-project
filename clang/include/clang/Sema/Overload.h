@@ -723,6 +723,11 @@ class Sema;
     /// This candidate was not viable because it is a non-default multiversioned
     /// function.
     ovl_non_default_multiversion_function,
+
+    /// This constructor/conversion candidate fail due to an address space
+    /// mismatch between the object being constructed and the overload
+    /// candidate.
+    ovl_fail_object_addrspace_mismatch
   };
 
   /// A list of implicit conversion sequences for the arguments of an
@@ -878,6 +883,9 @@ class Sema;
     unsigned NumInlineBytesUsed = 0;
     llvm::AlignedCharArray<alignof(void *), NumInlineBytes> InlineSpace;
 
+    // Address space of the object being constructed.
+    LangAS DestAS = LangAS::Default;
+
     /// If we have space, allocates from inline storage. Otherwise, allocates
     /// from the slab allocator.
     /// FIXME: It would probably be nice to have a SmallBumpPtrAllocator
@@ -983,6 +991,17 @@ class Sema;
                         ArrayRef<OverloadCandidate *> Cands,
                         StringRef Opc = "",
                         SourceLocation OpLoc = SourceLocation());
+
+    LangAS getDestAS() { return DestAS; }
+
+    void setDestAS(LangAS AS) {
+      assert((Kind == CSK_InitByConstructor ||
+              Kind == CSK_InitByUserDefinedConversion) &&
+             "can't set the destination address space when not constructing an "
+             "object");
+      DestAS = AS;
+    }
+
   };
 
   bool isBetterOverloadCandidate(Sema &S,

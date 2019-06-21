@@ -169,6 +169,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(cxxConstructorDecl);
   REGISTER_MATCHER(cxxConversionDecl);
   REGISTER_MATCHER(cxxCtorInitializer);
+  REGISTER_MATCHER(cxxDeductionGuideDecl);
   REGISTER_MATCHER(cxxDefaultArgExpr);
   REGISTER_MATCHER(cxxDeleteExpr);
   REGISTER_MATCHER(cxxDependentScopeMemberExpr);
@@ -267,6 +268,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(hasEitherOperand);
   REGISTER_MATCHER(hasElementType);
   REGISTER_MATCHER(hasElse);
+  REGISTER_MATCHER(hasExplicitSpecifier);
   REGISTER_MATCHER(hasExternalFormalLinkage);
   REGISTER_MATCHER(hasFalseExpression);
   REGISTER_MATCHER(hasGlobalStorage);

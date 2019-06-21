@@ -20,6 +20,9 @@ class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase
         self.prep_debug_monitor_and_inferior(inferior_env=env)
         self.continue_process_and_wait_for_stop()
 
+    def get_expected_libs(self):
+        return ["libsvr4lib_a.so", 'libsvr4lib_b".so']
+
     def has_libraries_svr4_support(self):
         self.add_qSupported_packets()
         context = self.expect_gdbremote_sequence()
@@ -80,7 +83,8 @@ class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase
         xml_root = self.get_libraries_svr4_xml()
         for child in xml_root:
             name = child.attrib.get("name")
-            if not name:
+            base_name = os.path.basename(name)
+            if os.path.basename(name) not in self.get_expected_libs():
                 continue
             load_addr = int(child.attrib.get("l_addr"), 16)
             self.reset_test_sequence()
@@ -98,8 +102,7 @@ class TestGdbRemoteLibrariesSvr4Support(gdbremote_testcase.GdbRemoteTestCaseBase
         for child in xml_root:
             name = child.attrib.get("name")
             libraries_svr4_names.append(os.path.realpath(name))
-        expected_libs = ["libsvr4lib_a.so", 'libsvr4lib_b".so']
-        for lib in expected_libs:
+        for lib in self.get_expected_libs():
             self.assertIn(self.getBuildDir() + "/" + lib, libraries_svr4_names)
 
     @llgs_test

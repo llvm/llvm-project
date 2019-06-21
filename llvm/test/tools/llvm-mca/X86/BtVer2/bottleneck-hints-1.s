@@ -23,6 +23,22 @@ add %edx, %eax
 # CHECK-NEXT:   - Register Dependencies [ 94.04% ]
 # CHECK-NEXT:   - Memory Dependencies   [ 0.00% ]
 
+# CHECK:      Critical sequence based on the simulation:
+
+# CHECK:                    Instruction                                 Dependency Information
+# CHECK-NEXT:  +----< 3.    addl	%edx, %eax
+# CHECK-NEXT:  |
+# CHECK-NEXT:  |    < loop carried >
+# CHECK-NEXT:  |
+# CHECK-NEXT:  +----> 0.    addl	%eax, %ebx                        ## REGISTER dependency:  %eax
+# CHECK-NEXT:  +----> 1.    addl	%ebx, %ecx                        ## REGISTER dependency:  %ebx
+# CHECK-NEXT:  +----> 2.    addl	%ecx, %edx                        ## REGISTER dependency:  %ecx
+# CHECK-NEXT:  +----> 3.    addl	%edx, %eax                        ## REGISTER dependency:  %edx
+# CHECK-NEXT:  |
+# CHECK-NEXT:  |    < loop carried >
+# CHECK-NEXT:  |
+# CHECK-NEXT:  +----> 0.    addl	%eax, %ebx                        ## REGISTER dependency:  %eax
+
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
 # CHECK-NEXT: [2]: Latency

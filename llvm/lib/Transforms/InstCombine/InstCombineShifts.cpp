@@ -582,6 +582,8 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   Type *Ty = I.getType();
+  unsigned BitWidth = Ty->getScalarSizeInBits();
+
   const APInt *ShAmtAPInt;
   if (match(Op1, m_APInt(ShAmtAPInt))) {
     unsigned ShAmt = ShAmtAPInt->getZExtValue();
@@ -669,6 +671,12 @@ Instruction *InstCombiner::visitShl(BinaryOperator &I) {
     if (match(Op0, m_Mul(m_Value(X), m_Constant(C2))))
       return BinaryOperator::CreateMul(X, ConstantExpr::getShl(C2, C1));
   }
+
+  // (1 << (C - x)) -> ((1 << C) >> x) if C is bitwidth - 1
+  if (match(Op0, m_One()) &&
+      match(Op1, m_Sub(m_SpecificInt(BitWidth - 1), m_Value(X))))
+    return BinaryOperator::CreateLShr(
+        ConstantInt::get(Ty, APInt::getSignMask(BitWidth)), X);
 
   return nullptr;
 }

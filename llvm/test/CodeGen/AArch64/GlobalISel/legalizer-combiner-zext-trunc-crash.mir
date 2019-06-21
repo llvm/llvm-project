@@ -10,42 +10,37 @@ body:             |
   ; CHECK-LABEL: name: zext_trunc_dead_inst_crash
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 46
-  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 -33
-  ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -65
-  ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 26
+  ; CHECK:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 46
+  ; CHECK:   [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 26
   ; CHECK:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   [[PHI:%[0-9]+]]:_(s16) = G_PHI %33(s16), %bb.2, [[DEF]](s16), %bb.0
-  ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+  ; CHECK:   [[PHI:%[0-9]+]]:_(s16) = G_PHI %32(s16), %bb.2, [[DEF]](s16), %bb.0
+  ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI]](s16)
-  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C4]]
-  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-  ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C4]]
-  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[AND]](s32), [[AND1]]
-  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
+  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C2]]
+  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[C]](s8)
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[AND]](s32), [[ZEXT]]
+  ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
   ; CHECK:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK:   [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY1]], [[DEF1]]
-  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
-  ; CHECK:   [[AND2:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[COPY2]]
-  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[AND2]](s32)
-  ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[C2]](s32)
-  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY3]], [[COPY4]]
-  ; CHECK:   [[COPY5:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
-  ; CHECK:   [[AND3:%[0-9]+]]:_(s32) = G_AND [[COPY5]], [[C4]]
-  ; CHECK:   [[COPY6:%[0-9]+]]:_(s32) = COPY [[C3]](s32)
-  ; CHECK:   [[AND4:%[0-9]+]]:_(s32) = G_AND [[COPY6]], [[C4]]
-  ; CHECK:   [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[AND3]](s32), [[AND4]]
-  ; CHECK:   [[COPY7:%[0-9]+]]:_(s32) = COPY [[ICMP1]](s32)
-  ; CHECK:   [[COPY8:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
-  ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[COPY7]], [[COPY8]]
+  ; CHECK:   [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY]], [[DEF1]]
+  ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -33
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C3]]
+  ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[AND1]](s32)
+  ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 -65
+  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY1]], [[C4]]
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+  ; CHECK:   [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C2]]
+  ; CHECK:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[C1]](s8)
+  ; CHECK:   [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[AND2]](s32), [[ZEXT1]]
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[ICMP1]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
+  ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[COPY3]], [[COPY4]]
   ; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[OR1]](s32)
   ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.2
   ; CHECK: bb.2:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[C5:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[C5]](s32)
+  ; CHECK:   [[C5:%[0-9]+]]:_(s16) = G_CONSTANT i16 64
   ; CHECK:   G_BR %bb.1
   bb.1:
     %1:_(s8) = G_CONSTANT i8 46

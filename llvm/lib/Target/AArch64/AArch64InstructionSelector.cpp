@@ -1200,6 +1200,8 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_CONSTANT: {
     const bool isFP = Opcode == TargetOpcode::G_FCONSTANT;
 
+    const LLT s8 = LLT::scalar(8);
+    const LLT s16 = LLT::scalar(16);
     const LLT s32 = LLT::scalar(32);
     const LLT s64 = LLT::scalar(64);
     const LLT p0 = LLT::pointer(0, 64);
@@ -1231,7 +1233,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
         return false;
     } else {
       // s32 and s64 are covered by tablegen.
-      if (Ty != p0) {
+      if (Ty != p0 && Ty != s8 && Ty != s16) {
         LLVM_DEBUG(dbgs() << "Unable to materialize integer " << Ty
                           << " constant, expected: " << s32 << ", " << s64
                           << ", or " << p0 << '\n');
@@ -1246,8 +1248,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       }
     }
 
+    // We allow G_CONSTANT of types < 32b.
     const unsigned MovOpc =
-        DefSize == 32 ? AArch64::MOVi32imm : AArch64::MOVi64imm;
+        DefSize == 64 ? AArch64::MOVi64imm : AArch64::MOVi32imm;
 
     if (isFP) {
       // Either emit a FMOV, or emit a copy to emit a normal mov.

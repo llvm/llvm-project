@@ -586,12 +586,10 @@ define float @test18(float %a, float %b, float %z) {
   ret float %f
 }
 
-; FIXME: This reassociation is not working.
 define float @test18_unary_fneg(float %a, float %b, float %z) {
 ; CHECK-LABEL: @test18_unary_fneg(
-; CHECK-NEXT:    [[C:%.*]] = fmul fast float [[Z:%.*]], -4.000000e+01
-; CHECK-NEXT:    [[E:%.*]] = fmul fast float [[C]], [[A:%.*]]
-; CHECK-NEXT:    [[F:%.*]] = fneg fast float [[E]]
+; CHECK-NEXT:    [[E:%.*]] = fmul fast float [[A:%.*]], 4.000000e+01
+; CHECK-NEXT:    [[F:%.*]] = fmul fast float [[E]], [[Z:%.*]]
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %d = fmul fast float %z, 4.000000e+01
@@ -613,6 +611,21 @@ define float @test18_reassoc(float %a, float %b, float %z) {
   %c = fsub reassoc float 0.000000e+00, %d
   %e = fmul reassoc float %a, %c
   %f = fsub reassoc float 0.000000e+00, %e
+  ret float %f
+}
+
+; It is not safe to reassociate unary fneg without nnan.
+define float @test18_reassoc_unary_fneg(float %a, float %b, float %z) {
+; CHECK-LABEL: @test18_reassoc_unary_fneg(
+; CHECK-NEXT:    [[C:%.*]] = fmul reassoc float [[Z:%.*]], -4.000000e+01
+; CHECK-NEXT:    [[E:%.*]] = fmul reassoc float [[C]], [[A:%.*]]
+; CHECK-NEXT:    [[F:%.*]] = fneg reassoc float [[E]]
+; CHECK-NEXT:    ret float [[F]]
+;
+  %d = fmul reassoc float %z, 4.000000e+01
+  %c = fneg reassoc float %d
+  %e = fmul reassoc float %a, %c
+  %f = fneg reassoc float %e
   ret float %f
 }
 

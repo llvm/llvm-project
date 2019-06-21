@@ -1,5 +1,6 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefix=SI --check-prefix=ALL %s
-; RUN: opt -S -mcpu=tonga -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefix=CI --check-prefix=ALL %s
+; RUN: opt -S -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=SI,SICI,ALL %s
+; RUN: opt -S -mcpu=tonga -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=CI,SICI,ALL %s
+; RUN: opt -S -mcpu=gfx1010 -mtriple=amdgcn-unknown-unknown -amdgpu-promote-alloca -disable-promote-alloca-to-vector < %s | FileCheck --check-prefixes=GFX10,ALL %s
 
 ; SI-NOT: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] undef, align 4
 ; CI: @promote_alloca_size_63.stack = internal unnamed_addr addrspace(3) global [63 x [5 x i32]] undef, align 4
@@ -46,7 +47,8 @@ entry:
   ret void
 }
 
-; ALL: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1600 x [5 x i32]] undef, align 4
+; SICI: @promote_alloca_size_1600.stack = internal unnamed_addr addrspace(3) global [1600 x [5 x i32]] undef, align 4
+; GFX10: alloca [5 x i32]
 
 define amdgpu_kernel void @promote_alloca_size_1600(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #2 {
 entry:
@@ -141,7 +143,9 @@ entry:
 }
 
 ; ALL-LABEL: @occupancy_6_over(
-; ALL: alloca [43 x i8]
+; SICI: alloca [43 x i8]
+; GFX10-NOT: alloca
+
 define amdgpu_kernel void @occupancy_6_over(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #5 {
 entry:
   %stack = alloca [43 x i8], align 4
@@ -191,7 +195,9 @@ entry:
 }
 
 ; ALL-LABEL: @occupancy_8_over(
-; ALL: alloca [33 x i8]
+; SICI: alloca [33 x i8]
+; GFX10-NOT: alloca
+
 define amdgpu_kernel void @occupancy_8_over(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #6 {
 entry:
   %stack = alloca [33 x i8], align 4
@@ -241,7 +247,9 @@ entry:
 }
 
 ; ALL-LABEL: @occupancy_9_over(
-; ALL: alloca [29 x i8]
+; SICI: alloca [29 x i8]
+; GFX10-NOT: alloca
+
 define amdgpu_kernel void @occupancy_9_over(i8 addrspace(1)* nocapture %out, i8 addrspace(1)* nocapture %in) #7 {
 entry:
   %stack = alloca [29 x i8], align 4

@@ -148,7 +148,6 @@ public:
   dw_addr_t GetStrOffsetsBase() const { return m_str_offsets_base; }
   void SetAddrBase(dw_addr_t addr_base);
   void SetRangesBase(dw_addr_t ranges_base);
-  void SetBaseObjOffset(dw_offset_t base_obj_offset);
   void SetStrOffsetsBase(dw_offset_t str_offsets_base);
   virtual void BuildAddressRangeTable(DWARFDebugAranges *debug_aranges) = 0;
 
@@ -165,6 +164,8 @@ public:
   DWARFDIE DIE() { return DWARFDIE(this, DIEPtr()); }
 
   DWARFDIE GetDIE(dw_offset_t die_offset);
+
+  DWARFUnit &GetNonSkeletonUnit();
 
   static uint8_t GetAddressByteSize(const DWARFUnit *cu);
 
@@ -202,8 +203,6 @@ public:
   lldb_private::FileSpec::Style GetPathStyle();
 
   SymbolFileDWARFDwo *GetDwoSymbolFile() const;
-
-  dw_offset_t GetBaseObjOffset() const;
 
   die_iterator_range dies() {
     ExtractDIEsIfNeeded();
@@ -284,9 +283,6 @@ protected:
   llvm::Optional<lldb_private::FileSpec> m_file_spec;
   dw_addr_t m_addr_base = 0;   // Value of DW_AT_addr_base
   dw_addr_t m_ranges_base = 0; // Value of DW_AT_ranges_base
-  // If this is a dwo compile unit this is the offset of the base compile unit
-  // in the main object file
-  dw_offset_t m_base_obj_offset = DW_INVALID_OFFSET;
 
   /// Value of DW_AT_stmt_list.
   dw_offset_t m_line_table_offset = DW_INVALID_OFFSET;

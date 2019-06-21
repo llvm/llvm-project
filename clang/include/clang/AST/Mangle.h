@@ -243,6 +243,19 @@ public:
   static MicrosoftMangleContext *create(ASTContext &Context,
                                         DiagnosticsEngine &Diags);
 };
+
+class ASTNameGenerator {
+public:
+  explicit ASTNameGenerator(ASTContext &Ctx);
+  ~ASTNameGenerator();
+  bool writeName(const Decl *D, raw_ostream &OS);
+  std::string getName(const Decl *D);
+  std::vector<std::string> getAllManglings(const Decl *D);
+
+private:
+  class Implementation;
+  std::unique_ptr<Implementation> Impl;
+};
 }
 
 #endif

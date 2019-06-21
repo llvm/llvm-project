@@ -28,9 +28,7 @@ class A
 public:
 
     A() {}
-#if TEST_STD_VER >= 11
     A(A&&) {}
-#endif
 };
 
 struct legacy
@@ -55,9 +53,7 @@ int main(int, char**)
     static_assert((std::is_same<decltype(std::move_if_noexcept(ca)), const A&&>::value), "");
     static_assert((std::is_same<decltype(std::move_if_noexcept(l)), const legacy&>::value), "");
 #else  // C++ < 11
-    // In C++03 libc++ #define's decltype to be __decltype on clang and
-    // __typeof__ for other compilers. __typeof__ does not deduce the reference
-    // qualifiers and will cause this test to fail.
+    // In C++03 we don't have noexcept so we can never move :-(
     static_assert((std::is_same<decltype(std::move_if_noexcept(i)), const int&>::value), "");
     static_assert((std::is_same<decltype(std::move_if_noexcept(ci)), const int&>::value), "");
     static_assert((std::is_same<decltype(std::move_if_noexcept(a)), const A&>::value), "");

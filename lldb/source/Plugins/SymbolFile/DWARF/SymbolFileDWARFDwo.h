@@ -44,6 +44,8 @@ public:
 
   DWARFCompileUnit *GetBaseCompileUnit() override { return &m_base_dwarf_cu; }
 
+  llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
+
 protected:
   void LoadSectionData(lldb::SectionType sect_type,
                        lldb_private::DWARFDataExtractor &data) override;

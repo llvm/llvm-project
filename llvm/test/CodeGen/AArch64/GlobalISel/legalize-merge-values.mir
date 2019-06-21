@@ -7,21 +7,19 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: test_merge_s4
     ; CHECK: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 4
-    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[C1]](s32)
-    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C2]]
-    ; CHECK: [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
+    ; CHECK: [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 4
+    ; CHECK: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[C1]](s8)
+    ; CHECK: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 15
     ; CHECK: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
-    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C3]]
-    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND1]], [[AND]](s32)
+    ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[TRUNC]], [[C2]]
+    ; CHECK: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[AND]], [[ZEXT]](s32)
     ; CHECK: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[C]](s64)
-    ; CHECK: [[AND2:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C3]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[SHL]](s32)
-    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND2]], [[COPY1]]
+    ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[TRUNC1]], [[C2]]
+    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY [[SHL]](s32)
+    ; CHECK: [[OR:%[0-9]+]]:_(s32) = G_OR [[AND1]], [[COPY]]
     ; CHECK: [[TRUNC2:%[0-9]+]]:_(s8) = G_TRUNC [[OR]](s32)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s8) = COPY [[TRUNC2]](s8)
-    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY2]](s8)
+    ; CHECK: [[COPY1:%[0-9]+]]:_(s8) = COPY [[TRUNC2]](s8)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[COPY1]](s8)
     ; CHECK: $x0 = COPY [[ANYEXT]](s64)
     %0:_(s64) = G_CONSTANT i64 0
     %1:_(s4) = G_TRUNC %0

@@ -107,12 +107,14 @@ TEST_F(TUSchedulerTests, MissingFiles) {
                 ASTRetentionPolicy());
 
   auto Added = testPath("added.cpp");
-  Files[Added] = "";
+  Files[Added] = "x";
 
   auto Missing = testPath("missing.cpp");
   Files[Missing] = "";
 
-  S.update(Added, getInputs(Added, ""), WantDiagnostics::No);
+  EXPECT_EQ(S.getContents(Added), "");
+  S.update(Added, getInputs(Added, "x"), WantDiagnostics::No);
+  EXPECT_EQ(S.getContents(Added), "x");
 
   // Assert each operation for missing file is an error (even if it's available
   // in VFS).
@@ -131,7 +133,9 @@ TEST_F(TUSchedulerTests, MissingFiles) {
                     [&](Expected<InputsAndPreamble> Preamble) {
                       EXPECT_TRUE(bool(Preamble));
                     });
+  EXPECT_EQ(S.getContents(Added), "x");
   S.remove(Added);
+  EXPECT_EQ(S.getContents(Added), "");
 
   // Assert that all operations fail after removing the file.
   S.runWithAST("", Added,

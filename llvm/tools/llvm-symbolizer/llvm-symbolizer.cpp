@@ -154,6 +154,9 @@ static cl::opt<DIPrinter::OutputStyle>
                              clEnumValN(DIPrinter::OutputStyle::GNU, "GNU",
                                         "GNU addr2line style")));
 
+static cl::extrahelp
+    HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
+
 template<typename T>
 static bool error(Expected<T> &ResOrErr) {
   if (ResOrErr)

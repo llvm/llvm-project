@@ -442,7 +442,8 @@ ELFDumper<ELFT>::dumpContentSection(const Elf_Shdr *Shdr) {
   ArrayRef<uint8_t> Content = *ContentOrErr;
   if (!Content.empty())
     S->Content = yaml::BinaryRef(Content);
-  S->Info = Shdr->sh_info;
+  if (Shdr->sh_info)
+    S->Info = static_cast<llvm::yaml::Hex64>(Shdr->sh_info);
   return S.release();
 }
 

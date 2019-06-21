@@ -808,7 +808,6 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void clear() _NOEXCEPT {base::clear();}
 
-#ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     void splice_after(const_iterator __p, forward_list&& __x);
     _LIBCPP_INLINE_VISIBILITY
@@ -816,7 +815,6 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     void splice_after(const_iterator __p, forward_list&& __x,
                       const_iterator __f, const_iterator __l);
-#endif  // _LIBCPP_CXX03_LANG
     void splice_after(const_iterator __p, forward_list& __x);
     void splice_after(const_iterator __p, forward_list& __x, const_iterator __i);
     void splice_after(const_iterator __p, forward_list& __x,
@@ -1468,8 +1466,6 @@ forward_list<_Tp, _Alloc>::splice_after(const_iterator __p,
     }
 }
 
-#ifndef _LIBCPP_CXX03_LANG
-
 template <class _Tp, class _Alloc>
 inline _LIBCPP_INLINE_VISIBILITY
 void
@@ -1498,8 +1494,6 @@ forward_list<_Tp, _Alloc>::splice_after(const_iterator __p,
 {
     splice_after(__p, __x, __f, __l);
 }
-
-#endif  // _LIBCPP_CXX03_LANG
 
 template <class _Tp, class _Alloc>
 void

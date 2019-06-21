@@ -556,7 +556,7 @@ static void EmitBaseInitializer(CodeGenFunction &CGF,
           AggValueSlot::IsDestructed,
           AggValueSlot::DoesNotNeedGCBarriers,
           AggValueSlot::IsNotAliased,
-          CGF.overlapForBaseInit(ClassDecl, BaseClassDecl, isBaseVirtual));
+          CGF.getOverlapForBaseInit(ClassDecl, BaseClassDecl, isBaseVirtual));
 
   CGF.EmitAggExpr(BaseInit->getInit(), AggSlot);
 
@@ -645,7 +645,7 @@ static void EmitMemberInitializer(CodeGenFunction &CGF,
       LValue Src = CGF.EmitLValueForFieldInitialization(ThisRHSLV, Field);
 
       // Copy the aggregate.
-      CGF.EmitAggregateCopy(LHS, Src, FieldType, CGF.overlapForFieldInit(Field),
+      CGF.EmitAggregateCopy(LHS, Src, FieldType, CGF.getOverlapForFieldInit(Field),
                             LHS.isVolatileQualified());
       // Ensure that we destroy the objects if an exception is thrown later in
       // the constructor.
@@ -681,7 +681,7 @@ void CodeGenFunction::EmitInitializerForField(FieldDecl *Field, LValue LHS,
             AggValueSlot::IsDestructed,
             AggValueSlot::DoesNotNeedGCBarriers,
             AggValueSlot::IsNotAliased,
-            overlapForFieldInit(Field),
+            getOverlapForFieldInit(Field),
             AggValueSlot::IsNotZeroed,
             // Checks are made by the code that calls constructor.
             AggValueSlot::IsSanitizerChecked);

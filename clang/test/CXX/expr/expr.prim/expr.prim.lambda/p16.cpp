@@ -21,20 +21,20 @@ void test_capture(X x) {
     }();
   }();
 
-  int a; 
-  [=]{ 
-    [&] { 
-      int &x = a;  // expected-error{{binding value of type 'const int' to reference to type 'int' drops 'const' qualifier}}
-      int &x2 = a;  // expected-error{{binding value of type 'const int' to reference to type 'int' drops 'const' qualifier}}
-    }(); 
-  }(); 
+  int a;
+  [=] {
+    [&] {
+      int &x = a;  // expected-error{{binding reference of type 'int' to value of type 'const int' drops 'const' qualifier}}
+      int &x2 = a; // expected-error{{binding reference of type 'int' to value of type 'const int' drops 'const' qualifier}}
+    }();
+  }();
 
-  [=]{ 
-    [&a] { 
-      [&] { 
-        int &x = a;  // expected-error{{binding value of type 'const int' to reference to type 'int' drops 'const' qualifier}}
-        int &x2 = a;  // expected-error{{binding value of type 'const int' to reference to type 'int' drops 'const' qualifier}}
+  [=] {
+    [&a] {
+      [&] {
+        int &x = a;  // expected-error{{binding reference of type 'int' to value of type 'const int' drops 'const' qualifier}}
+        int &x2 = a; // expected-error{{binding reference of type 'int' to value of type 'const int' drops 'const' qualifier}}
       }();
-    }(); 
-  }(); 
+    }();
+  }();
 }

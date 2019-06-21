@@ -297,18 +297,13 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
                                      .addImm(0)
                                      .addImm(0),
                                  *STI);
-    OutStreamer->EmitInstruction(MCInstBuilder(AArch64::UBFMXri)
-                                     .addReg(AArch64::X17)
-                                     .addReg(Reg)
-                                     .addImm(56)
-                                     .addImm(63),
-                                 *STI);
-    OutStreamer->EmitInstruction(MCInstBuilder(AArch64::SUBSWrs)
-                                     .addReg(AArch64::WZR)
-                                     .addReg(AArch64::W16)
-                                     .addReg(AArch64::W17)
-                                     .addImm(0),
-                                 *STI);
+    OutStreamer->EmitInstruction(
+        MCInstBuilder(AArch64::SUBSXrs)
+            .addReg(AArch64::XZR)
+            .addReg(AArch64::X16)
+            .addReg(Reg)
+            .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSR, 56)),
+        *STI);
     MCSymbol *HandleMismatchSym = OutContext.createTempSymbol();
     OutStreamer->EmitInstruction(
         MCInstBuilder(AArch64::Bcc)

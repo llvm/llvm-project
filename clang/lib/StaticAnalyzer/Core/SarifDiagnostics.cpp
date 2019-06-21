@@ -345,5 +345,5 @@ void SarifDiagnostics::FlushDiagnosticsImpl(
        "http://json.schemastore.org/sarif-2.0.0-csd.2.beta.2018-11-28"},
       {"version", "2.0.0-csd.2.beta.2018-11-28"},
       {"runs", json::Array{createRun(Diags)}}};
-  OS << llvm::formatv("{0:2}", json::Value(std::move(Sarif)));
+  OS << llvm::formatv("{0:2}\n", json::Value(std::move(Sarif)));
 }

@@ -239,8 +239,8 @@ int main() {
     vec[0] = t_var;
     s_arr[0] = var;
   }
-#pragma omp parallel copyin(t_var)
-  {}
+#pragma omp parallel copyin(t_var) default(none)
+  ++t_var;
   return tmain<int>();
 #endif
 }
@@ -363,6 +363,7 @@ int main() {
 // TLS-CHECK: [[DONE]]
 
 // CHECK: call {{.*}}void @__kmpc_barrier(%{{.+}}* [[IMPLICIT_BARRIER_LOC]], i32 [[GTID]])
+// CHECK: add nsw i32 %{{.+}}, 1
 // CHECK: ret void
 
 // TLS-CHECK: [[GTID_ADDR:%.+]] = load i32*, i32** [[GTID_ADDR_ADDR]],

@@ -12,7 +12,7 @@ function(install_symlink name target outdir)
 
   set(bindir "${DESTDIR}${CMAKE_INSTALL_PREFIX}/${outdir}/")
 
-  message("Creating ${name}")
+  message(STATUS "Creating ${name}")
 
   execute_process(
     COMMAND "${CMAKE_COMMAND}" -E ${LINK_OR_COPY} "${target}" "${name}"

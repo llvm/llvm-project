@@ -9,8 +9,8 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
     ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[C]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[C]](s8)
     ; CHECK: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY]], [[COPY2]], [[TRUNC]]
     ; CHECK: [[UADDE2:%[0-9]+]]:_(s64), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY3]], [[UADDE1]]
     ; CHECK: $x0 = COPY [[UADDE]](s64)
@@ -36,8 +36,8 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
     ; CHECK: [[COPY2:%[0-9]+]]:_(s64) = COPY $x2
     ; CHECK: [[COPY3:%[0-9]+]]:_(s64) = COPY $x3
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[C]](s32)
+    ; CHECK: [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[C]](s8)
     ; CHECK: [[UADDE:%[0-9]+]]:_(s64), [[UADDE1:%[0-9]+]]:_(s1) = G_UADDE [[COPY]], [[COPY1]], [[TRUNC]]
     ; CHECK: [[UADDE2:%[0-9]+]]:_(s64), [[UADDE3:%[0-9]+]]:_(s1) = G_UADDE [[COPY1]], [[COPY2]], [[UADDE1]]
     ; CHECK: [[UADDE4:%[0-9]+]]:_(s64), [[UADDE5:%[0-9]+]]:_(s1) = G_UADDE [[COPY2]], [[COPY3]], [[UADDE3]]

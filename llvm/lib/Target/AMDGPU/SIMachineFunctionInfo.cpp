@@ -69,7 +69,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     // Non-entry functions have no special inputs for now, other registers
     // required for scratch access.
     ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
-    ScratchWaveOffsetReg = AMDGPU::SGPR4;
+    ScratchWaveOffsetReg = AMDGPU::SGPR33;
     FrameOffsetReg = AMDGPU::SGPR5;
     StackPtrOffsetReg = AMDGPU::SGPR32;
 

@@ -24,7 +24,7 @@ stmxcsr (%rsp)
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    Instructions:
 # CHECK-NEXT:  1      100   0.50    *      *      U     int3
-# CHECK-NEXT:  2      1     18.00   *      *      U     stmxcsr	(%rsp)
+# CHECK-NEXT:  2      1     18.00          *      U     stmxcsr	(%rsp)
 
 # CHECK:      Timeline view:
 # CHECK-NEXT:                     0123456789          0123456789          0123456789          0123456789          0123456789
@@ -40,5 +40,5 @@ stmxcsr (%rsp)
 # CHECK-NEXT: [3]: Average time elapsed from WB until retire stage
 
 # CHECK:            [0]    [1]    [2]    [3]
-# CHECK-NEXT: 0.     2     1.0    0.5    0.0       int3
-# CHECK-NEXT: 1.     2     100.5  0.0    0.0       stmxcsr	(%rsp)
+# CHECK-NEXT: 0.     2     51.5   0.5    0.0       int3
+# CHECK-NEXT: 1.     2     151.0  0.0    0.0       stmxcsr	(%rsp)

@@ -62,3 +62,13 @@ define i8 @udiv(i8 %a, i8 %b) {
   %c = udiv i8 %a, %b
   ret i8 %c
 }
+
+define double @fneg(double %a) {
+  ; CHECK: @"dfs$fneg"
+  ; CHECK: load{{.*}}__dfsan_arg_tls
+  ; CHECK: fneg double
+  ; CHECK: store{{.*}}__dfsan_retval_tls
+  ; CHECK: ret double
+  %c = fneg double %a
+  ret double %c
+}

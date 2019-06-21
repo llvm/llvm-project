@@ -40,9 +40,6 @@
 # CHECK-FIXUP: lwpc    $2, bar  # encoding: [0xec,0b01001AAA,A,A]
 # CHECK-FIXUP:                  #   fixup A - offset: 0,
 # CHECK-FIXUP:                      value: bar, kind: fixup_MIPS_PC19_S2
-# CHECK-FIXUP: lwupc   $2, bar  # encoding: [0xec,0b01010AAA,A,A]
-# CHECK-FIXUP:                  #   fixup A - offset: 0,
-# CHECK-FIXUP:                      value: bar, kind: fixup_MIPS_PC19_S2
 #------------------------------------------------------------------------------
 # Check that the appropriate relocations were created.
 #------------------------------------------------------------------------------
@@ -58,7 +55,6 @@
 # CHECK-ELF:     0x20 R_MIPS_PCLO16 bar 0x0
 # CHECK-ELF:     0x24 R_MIPS_PC19_S2 bar 0x0
 # CHECK-ELF:     0x28 R_MIPS_PC19_S2 bar 0x0
-# CHECK-ELF:     0x2C R_MIPS_PC19_S2 bar 0x0
 # CHECK-ELF: ]
 
   addiupc   $2,bar
@@ -72,4 +68,3 @@
   addiu  $2, $2, %pcrel_lo(bar)
   lapc      $2,bar
   lwpc      $2,bar
-  lwupc     $2,bar

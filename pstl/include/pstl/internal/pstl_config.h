@@ -17,7 +17,9 @@
 #define _PSTL_VERSION_PATCH (_PSTL_VERSION % 10)
 
 #if !defined(_PSTL_PAR_BACKEND_SERIAL) && !defined(_PSTL_PAR_BACKEND_TBB)
-#    error "The parallel backend is neither serial nor TBB"
+// TODO: In the future, we need to handle this setting using a configure-time
+//       option and something like a __config_site header.
+#    define _PSTL_PAR_BACKEND_SERIAL
 #endif
 
 // Check the user-defined macro for warnings

@@ -10,11 +10,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "RISCV.h"
 #include "RISCVTargetMachine.h"
+#include "RISCV.h"
 #include "RISCVTargetObjectFile.h"
+#include "RISCVTargetTransformInfo.h"
 #include "TargetInfo/RISCVTargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -59,6 +61,11 @@ RISCVTargetMachine::RISCVTargetMachine(const Target &T, const Triple &TT,
       TLOF(make_unique<RISCVELFTargetObjectFile>()),
       Subtarget(TT, CPU, FS, Options.MCOptions.getABIName(), *this) {
   initAsmInfo();
+}
+
+TargetTransformInfo
+RISCVTargetMachine::getTargetTransformInfo(const Function &F) {
+  return TargetTransformInfo(RISCVTTIImpl(this, F));
 }
 
 namespace {

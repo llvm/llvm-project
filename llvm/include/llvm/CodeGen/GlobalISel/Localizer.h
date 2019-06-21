@@ -21,6 +21,7 @@
 #ifndef LLVM_CODEGEN_GLOBALISEL_LOCALIZER_H
 #define LLVM_CODEGEN_GLOBALISEL_LOCALIZER_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 
@@ -60,12 +61,14 @@ private:
   /// Initialize the field members using \p MF.
   void init(MachineFunction &MF);
 
+  typedef SmallSetVector<MachineInstr *, 32> LocalizedSetVecT;
+
   /// Do inter-block localization from the entry block.
   bool localizeInterBlock(MachineFunction &MF,
-                          SmallPtrSetImpl<MachineInstr *> &LocalizedInstrs);
+                          LocalizedSetVecT &LocalizedInstrs);
 
   /// Do intra-block localization of already localized instructions.
-  bool localizeIntraBlock(SmallPtrSetImpl<MachineInstr *> &LocalizedInstrs);
+  bool localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs);
 
 public:
   Localizer();

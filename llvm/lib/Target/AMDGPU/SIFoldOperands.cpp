@@ -436,9 +436,11 @@ void SIFoldOperands::foldOperand(
     unsigned RegSeqDstReg = UseMI->getOperand(0).getReg();
     unsigned RegSeqDstSubReg = UseMI->getOperand(UseOpIdx + 1).getImm();
 
+    MachineRegisterInfo::use_iterator Next;
     for (MachineRegisterInfo::use_iterator
            RSUse = MRI->use_begin(RegSeqDstReg), RSE = MRI->use_end();
-         RSUse != RSE; ++RSUse) {
+         RSUse != RSE; RSUse = Next) {
+      Next = std::next(RSUse);
 
       MachineInstr *RSUseMI = RSUse->getParent();
       if (RSUse->getSubReg() != RegSeqDstSubReg)
@@ -523,6 +525,9 @@ void SIFoldOperands::foldOperand(
           return;
 
         UseMI->setDesc(TII->get(AMDGPU::S_MOV_B32));
+
+        // FIXME: ChangeToImmediate should clear subreg
+        UseMI->getOperand(1).setSubReg(0);
         UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
         UseMI->RemoveOperand(2); // Remove exec read (or src1 for readlane)
         return;

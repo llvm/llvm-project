@@ -334,6 +334,15 @@
     extern void __KAI_KMPC_CONVENTION omp_display_affinity(char const *);
     extern size_t __KAI_KMPC_CONVENTION omp_capture_affinity(char *, size_t, char const *);
 
+    /* OpenMP 5.0 events */
+#   if defined(_WIN32)
+    // On Windows cl and icl do not support 64-bit enum, let's use integer then.
+    typedef omp_uintptr_t omp_event_handle_t;
+#   else
+    typedef enum omp_event_handle_t { KMP_EVENT_MAX_HANDLE = UINTPTR_MAX } omp_event_handle_t;
+#   endif
+    extern void __KAI_KMPC_CONVENTION omp_fulfill_event ( omp_event_handle_t event );
+
     /* OpenMP 5.0 Pause Resources */
     typedef enum omp_pause_resource_t {
       omp_pause_resume = 0,

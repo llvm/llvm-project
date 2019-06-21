@@ -363,6 +363,9 @@ namespace opts {
              cl::values(clEnumVal(LLVM, "LLVM default style"),
                         clEnumVal(GNU, "GNU readelf style")),
              cl::init(LLVM));
+
+  cl::extrahelp
+      HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 } // namespace opts
 
 namespace llvm {

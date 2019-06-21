@@ -23,6 +23,7 @@ llvm_canonicalize_cmake_booleans(
   CLANG_ENABLE_ARCMT
   CLANG_ENABLE_STATIC_ANALYZER
   ENABLE_BACKTRACES
+  ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER
   HAVE_LIBZ
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
   LLVM_ENABLE_PLUGINS)
@@ -105,6 +106,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-cat
     llvm-cxxfilt
     llvm-dis
+    llvm-dwarfdump
     llvm-lto2
     llvm-modextract
     llvm-nm

@@ -64,6 +64,10 @@ CreateFrontendBaseAction(CompilerInstance &CI) {
   case GenerateHeaderModule:
     return llvm::make_unique<GenerateHeaderModuleAction>();
   case GeneratePCH:            return llvm::make_unique<GeneratePCHAction>();
+  case GenerateInterfaceYAMLExpV1:
+    return llvm::make_unique<GenerateInterfaceYAMLExpV1Action>();
+  case GenerateInterfaceTBEExpV1:
+    return llvm::make_unique<GenerateInterfaceTBEExpV1Action>();
   case InitOnly:               return llvm::make_unique<InitOnlyAction>();
   case ParseSyntaxOnly:        return llvm::make_unique<SyntaxOnlyAction>();
   case ModuleFileInfo:         return llvm::make_unique<DumpModuleInfoAction>();

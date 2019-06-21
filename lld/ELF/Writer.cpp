@@ -1737,8 +1737,10 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
-  if (!Config->Relocatable)
+  if (!Config->Relocatable) {
     forEachRelSec(scanRelocations<ELFT>);
+    reportUndefinedSymbols<ELFT>();
+  }
 
   addIRelativeRelocs();
 

@@ -1686,10 +1686,16 @@
 #CHECK: vl	%v0, 4096
 #CHECK: error: invalid use of vector addressing
 #CHECK: vl	%v0, 0(%v1,%r2)
+#CHECK: error: invalid operand
+#CHECK: vl	%v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vl	%v0, 0, 16
 
 	vl	%v0, -1
 	vl	%v0, 4096
 	vl	%v0, 0(%v1,%r2)
+	vl	%v0, 0, -1
+	vl	%v0, 0, 16
 
 #CHECK: error: invalid operand
 #CHECK: vlbb	%v0, 0, -1
@@ -2013,9 +2019,15 @@
 #CHECK: vlm	%v0, %v0, -1
 #CHECK: error: invalid operand
 #CHECK: vlm	%v0, %v0, 4096
+#CHECK: error: invalid operand
+#CHECK: vlm	%v0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vlm	%v0, %v0, 0, 16
 
 	vlm	%v0, %v0, -1
 	vlm	%v0, %v0, 4096
+	vlm	%v0, %v0, 0, -1
+	vlm	%v0, %v0, 0, 16
 
 #CHECK: error: invalid operand
 #CHECK: vlrep	%v0, 0, -1
@@ -2380,10 +2392,16 @@
 #CHECK: vst	%v0, 4096
 #CHECK: error: invalid use of vector addressing
 #CHECK: vst	%v0, 0(%v1,%r2)
+#CHECK: error: invalid operand
+#CHECK: vst	%v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vst	%v0, 0, 16
 
 	vst	%v0, -1
 	vst	%v0, 4096
 	vst	%v0, 0(%v1,%r2)
+	vst	%v0, 0, -1
+	vst	%v0, 0, 16
 
 #CHECK: error: invalid operand
 #CHECK: vsteb	%v0, 0, -1
@@ -2468,9 +2486,15 @@
 #CHECK: vstm	%v0, %v0, -1
 #CHECK: error: invalid operand
 #CHECK: vstm	%v0, %v0, 4096
+#CHECK: error: invalid operand
+#CHECK: vstm	%v0, %v0, 0, -1
+#CHECK: error: invalid operand
+#CHECK: vstm	%v0, %v0, 0, 16
 
 	vstm	%v0, %v0, -1
 	vstm	%v0, %v0, 4096
+	vstm	%v0, %v0, 0, -1
+	vstm	%v0, %v0, 0, 16
 
 #CHECK: error: invalid operand
 #CHECK: vstrc    %v0, %v0, %v0, %v0, 0, -1

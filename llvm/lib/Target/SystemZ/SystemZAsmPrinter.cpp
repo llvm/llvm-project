@@ -80,6 +80,27 @@ static const MCSymbolRefExpr *getGlobalOffsetTable(MCContext &Context) {
                                  Context);
 }
 
+// MI is an instruction that accepts an optional alignment hint,
+// and which was already lowered to LoweredMI.  If the alignment
+// of the original memory operand is known, update LoweredMI to
+// an instruction with the corresponding hint set.
+static void lowerAlignmentHint(const MachineInstr *MI, MCInst &LoweredMI,
+                               unsigned Opcode) {
+  if (!MI->hasOneMemOperand())
+    return;
+  const MachineMemOperand *MMO = *MI->memoperands_begin();
+  unsigned AlignmentHint = 0;
+  if (MMO->getAlignment() >= 16)
+    AlignmentHint = 4;
+  else if (MMO->getAlignment() >= 8)
+    AlignmentHint = 3;
+  if (AlignmentHint == 0)
+    return;
+
+  LoweredMI.setOpcode(Opcode);
+  LoweredMI.addOperand(MCOperand::createImm(AlignmentHint));
+}
+
 // MI loads the high part of a vector from memory.  Return an instruction
 // that uses replicating vector load Opcode to do the same thing.
 static MCInst lowerSubvectorLoad(const MachineInstr *MI, unsigned Opcode) {
@@ -349,6 +370,26 @@ void SystemZAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     LoweredMI = MCInstBuilder(SystemZ::VLR)
       .addReg(SystemZMC::getRegAsVR128(MI->getOperand(0).getReg()))
       .addReg(SystemZMC::getRegAsVR128(MI->getOperand(1).getReg()));
+    break;
+
+  case SystemZ::VL:
+    Lower.lower(MI, LoweredMI);
+    lowerAlignmentHint(MI, LoweredMI, SystemZ::VLAlign);
+    break;
+
+  case SystemZ::VST:
+    Lower.lower(MI, LoweredMI);
+    lowerAlignmentHint(MI, LoweredMI, SystemZ::VSTAlign);
+    break;
+
+  case SystemZ::VLM:
+    Lower.lower(MI, LoweredMI);
+    lowerAlignmentHint(MI, LoweredMI, SystemZ::VLMAlign);
+    break;
+
+  case SystemZ::VSTM:
+    Lower.lower(MI, LoweredMI);
+    lowerAlignmentHint(MI, LoweredMI, SystemZ::VSTMAlign);
     break;
 
   case SystemZ::VL32:
