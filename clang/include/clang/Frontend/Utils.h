@@ -132,6 +132,9 @@ public:
   bool sawDependency(StringRef Filename, bool FromModule, bool IsSystem,
                      bool IsModuleFile, bool IsMissing) final override;
 
+protected:
+  void outputDependencyFile(llvm::raw_ostream &OS);
+
 private:
   void outputDependencyFile(DiagnosticsEngine &Diags);
 
