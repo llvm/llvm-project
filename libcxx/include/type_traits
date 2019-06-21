@@ -427,6 +427,93 @@ template <class _T1, class _T2> struct _LIBCPP_TEMPLATE_VIS pair;
 template <class _Tp> class _LIBCPP_TEMPLATE_VIS reference_wrapper;
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS hash;
 
+
+template <class _Tp, _Tp __v>
+struct _LIBCPP_TEMPLATE_VIS integral_constant
+{
+  static _LIBCPP_CONSTEXPR const _Tp      value = __v;
+  typedef _Tp               value_type;
+  typedef integral_constant type;
+  _LIBCPP_INLINE_VISIBILITY
+  _LIBCPP_CONSTEXPR operator value_type() const _NOEXCEPT {return value;}
+#if _LIBCPP_STD_VER > 11
+  _LIBCPP_INLINE_VISIBILITY
+  constexpr value_type operator ()() const _NOEXCEPT {return value;}
+#endif
+};
+
+template <class _Tp, _Tp __v>
+_LIBCPP_CONSTEXPR const _Tp integral_constant<_Tp, __v>::value;
+
+#if _LIBCPP_STD_VER > 14
+template <bool __b>
+using bool_constant = integral_constant<bool, __b>;
+#define _LIBCPP_BOOL_CONSTANT(__b) bool_constant<(__b)>
+#else
+#define _LIBCPP_BOOL_CONSTANT(__b) integral_constant<bool,(__b)>
+#endif
+
+typedef _LIBCPP_BOOL_CONSTANT(true)  true_type;
+typedef _LIBCPP_BOOL_CONSTANT(false) false_type;
+
+template <bool _Val>
+using _BoolConstant _LIBCPP_NODEBUG_TYPE = integral_constant<bool, _Val>;
+
+template <bool> struct _MetaBase;
+template <>
+struct _MetaBase<true> {
+  template <class _Tp, class _Up>
+  using _SelectImpl _LIBCPP_NODEBUG_TYPE = _Tp;
+  template <template <class...> class _FirstFn, template <class...> class, class ..._Args>
+  using _SelectApplyImpl _LIBCPP_NODEBUG_TYPE = _FirstFn<_Args...>;
+  template <class _First, class...>
+  using _FirstImpl _LIBCPP_NODEBUG_TYPE = _First;
+  template <class, class _Second, class...>
+  using _SecondImpl _LIBCPP_NODEBUG_TYPE = _Second;
+  template <class _Tp = void>
+  using _EnableIfImpl _LIBCPP_NODEBUG_TYPE = _Tp;
+  template <class _Result, class _First, class ..._Rest>
+  using _OrImpl _LIBCPP_NODEBUG_TYPE = typename _MetaBase<_First::type::value != true && sizeof...(_Rest) != 0>::template _OrImpl<_First, _Rest...>;
+  template <class _Result, class _First, class ..._Rest>
+  using _AndImpl _LIBCPP_NODEBUG_TYPE = typename _MetaBase<_First::type::value == true && sizeof...(_Rest) != 0>::template _AndImpl<_First, _Rest...>;
+};
+
+template <>
+struct _MetaBase<false> {
+  template <class _Tp, class _Up>
+  using _SelectImpl _LIBCPP_NODEBUG_TYPE = _Up;
+  template <template <class...> class, template <class...> class _SecondFn, class ..._Args>
+  using _SelectApplyImpl _LIBCPP_NODEBUG_TYPE = _SecondFn<_Args...>;
+  template <class _Result, class ...>
+  using _OrImpl _LIBCPP_NODEBUG_TYPE = _Result;
+  template <class _Result, class ...>
+  using _AndImpl _LIBCPP_NODEBUG_TYPE = _Result;
+};
+template <bool _Cond, class _Ret = void>
+using _EnableIf _LIBCPP_NODEBUG_TYPE = typename _MetaBase<_Cond>::template _EnableIfImpl<_Ret>;
+template <bool _Cond, class _IfRes, class _ElseRes>
+using _If _LIBCPP_NODEBUG_TYPE = typename _MetaBase<_Cond>::template _SelectImpl<_IfRes, _ElseRes>;
+template <class ..._Rest>
+using _Or _LIBCPP_NODEBUG_TYPE = typename _MetaBase< sizeof...(_Rest) != 0 >::template _OrImpl<false_type, _Rest...>;
+template <class ..._Rest>
+using _And _LIBCPP_NODEBUG_TYPE = typename _MetaBase< sizeof...(_Rest) != 0 >::template _AndImpl<true_type, _Rest...>;
+template <class _Pred>
+struct _Not : _BoolConstant<!_Pred::type::value> {};
+template <class ..._Args>
+using _FirstType _LIBCPP_NODEBUG_TYPE = typename _MetaBase<(sizeof...(_Args) >= 1)>::template _FirstImpl<_Args...>;
+template <class ..._Args>
+using _SecondType _LIBCPP_NODEBUG_TYPE = typename _MetaBase<(sizeof...(_Args) >= 2)>::template _SecondImpl<_Args...>;
+
+// Member detector base
+
+template <template <class...> class _Templ, class ..._Args>
+true_type __sfinae_test_impl(_FirstType<int, _Templ<_Args...> >);
+template <template <class...> class, class ...>
+false_type __sfinae_test_impl(...);
+
+template <template <class ...> class _Templ, class ..._Args>
+using _IsValidExpansion _LIBCPP_NODEBUG_TYPE = decltype(std::__sfinae_test_impl<_Templ, _Args...>(0));
+
 template <class>
 struct __void_t { typedef void type; };
 
@@ -527,34 +614,6 @@ template <class _Tp> _Tp* addressof(const _Tp&&) noexcept = delete;
 struct __two {char __lx[2];};
 
 // helper class:
-
-template <class _Tp, _Tp __v>
-struct _LIBCPP_TEMPLATE_VIS integral_constant
-{
-    static _LIBCPP_CONSTEXPR const _Tp      value = __v;
-    typedef _Tp               value_type;
-    typedef integral_constant type;
-    _LIBCPP_INLINE_VISIBILITY
-        _LIBCPP_CONSTEXPR operator value_type() const _NOEXCEPT {return value;}
-#if _LIBCPP_STD_VER > 11
-    _LIBCPP_INLINE_VISIBILITY
-         constexpr value_type operator ()() const _NOEXCEPT {return value;}
-#endif
-};
-
-template <class _Tp, _Tp __v>
-_LIBCPP_CONSTEXPR const _Tp integral_constant<_Tp, __v>::value;
-
-#if _LIBCPP_STD_VER > 14
-template <bool __b>
-using bool_constant = integral_constant<bool, __b>;
-#define _LIBCPP_BOOL_CONSTANT(__b) bool_constant<(__b)>
-#else
-#define _LIBCPP_BOOL_CONSTANT(__b) integral_constant<bool,(__b)>
-#endif
-
-typedef _LIBCPP_BOOL_CONSTANT(true)  true_type;
-typedef _LIBCPP_BOOL_CONSTANT(false) false_type;
 
 #if !defined(_LIBCPP_CXX03_LANG)
 
