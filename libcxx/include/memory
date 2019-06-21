@@ -2561,14 +2561,9 @@ public:
   }
 
   _LIBCPP_INLINE_VISIBILITY
-  operator __rv<unique_ptr>() {
-    return __rv<unique_ptr>(*this);
-  }
-
-  _LIBCPP_INLINE_VISIBILITY
-  unique_ptr(__rv<unique_ptr> __u)
-      : __ptr_(__u->release(),
-               _VSTD::forward<deleter_type>(__u->get_deleter())) {}
+  unique_ptr(unique_ptr&& __u)
+      : __ptr_(__u.release(),
+               _VSTD::forward<deleter_type>(__u.get_deleter())) {}
 
   template <class _Up, class _Ep>
   _LIBCPP_INLINE_VISIBILITY
@@ -2586,7 +2581,7 @@ public:
 
   _LIBCPP_INLINE_VISIBILITY
   unique_ptr(pointer __p, deleter_type __d)
-      : __ptr_(_VSTD::move(__p), _VSTD::move(__d)) {}
+      : __ptr_(__p, _VSTD::forward<deleter_type>(__d)) {}
 #endif // _LIBCPP_CXX03_LANG
 
 #if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
@@ -2863,19 +2858,14 @@ public:
       : __ptr_(pointer(), _VSTD::forward<deleter_type>(__d)) {}
 
   _LIBCPP_INLINE_VISIBILITY
-  operator __rv<unique_ptr>() {
-    return __rv<unique_ptr>(*this);
-  }
+  unique_ptr(unique_ptr&& __u)
+      : __ptr_(__u.release(),
+               _VSTD::forward<deleter_type>(__u.get_deleter())) {}
 
   _LIBCPP_INLINE_VISIBILITY
-  unique_ptr(__rv<unique_ptr> __u)
-      : __ptr_(__u->release(),
-               _VSTD::forward<deleter_type>(__u->get_deleter())) {}
-
-  _LIBCPP_INLINE_VISIBILITY
-  unique_ptr& operator=(__rv<unique_ptr> __u) {
-    reset(__u->release());
-    __ptr_.second() = _VSTD::forward<deleter_type>(__u->get_deleter());
+  unique_ptr& operator=(unique_ptr&& __u) {
+    reset(__u.release());
+    __ptr_.second() = _VSTD::forward<deleter_type>(__u.get_deleter());
     return *this;
   }
 
@@ -3090,18 +3080,6 @@ operator>=(nullptr_t, const unique_ptr<_T1, _D1>& __x)
 {
     return !(nullptr < __x);
 }
-
-#ifdef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-template <class _Tp, class _Dp>
-inline _LIBCPP_INLINE_VISIBILITY
-unique_ptr<_Tp, _Dp>
-move(unique_ptr<_Tp, _Dp>& __t)
-{
-    return unique_ptr<_Tp, _Dp>(__rv<unique_ptr<_Tp, _Dp> >(__t));
-}
-
-#endif
 
 #if _LIBCPP_STD_VER > 11
 

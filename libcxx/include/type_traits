@@ -2277,8 +2277,6 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_destructible_v
 
 // move
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
 typename remove_reference<_Tp>::type&&
@@ -2305,47 +2303,6 @@ forward(typename remove_reference<_Tp>::type&& __t) _NOEXCEPT
                   "can not forward an rvalue as an lvalue");
     return static_cast<_Tp&&>(__t);
 }
-
-#else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
-_Tp&
-move(_Tp& __t)
-{
-    return __t;
-}
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
-const _Tp&
-move(const _Tp& __t)
-{
-    return __t;
-}
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
-_Tp&
-forward(typename remove_reference<_Tp>::type& __t) _NOEXCEPT
-{
-    return __t;
-}
-
-
-template <class _Tp>
-class __rv
-{
-    typedef typename remove_reference<_Tp>::type _Trr;
-    _Trr& t_;
-public:
-    _LIBCPP_INLINE_VISIBILITY
-    _Trr* operator->() {return &t_;}
-    _LIBCPP_INLINE_VISIBILITY
-    explicit __rv(_Trr& __t) : t_(__t) {}
-};
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 #ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
