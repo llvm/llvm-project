@@ -33,7 +33,7 @@ using namespace lldb;
 using namespace lldb_private;
 
 SwiftPersistentExpressionState::SwiftPersistentExpressionState()
-    : lldb_private::PersistentExpressionState(LLVMCastKind::eKindClang),
+    : lldb_private::PersistentExpressionState(LLVMCastKind::eKindSwift),
       m_next_persistent_variable_id(0), m_next_persistent_error_id(0) {}
 
 ExpressionVariableSP SwiftPersistentExpressionState::CreatePersistentVariable(
