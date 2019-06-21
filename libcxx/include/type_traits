@@ -808,15 +808,11 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_lvalue_reference       : pub
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_lvalue_reference<_Tp&> : public true_type {};
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_rvalue_reference        : public false_type {};
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_rvalue_reference<_Tp&&> : public true_type {};
-#endif
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_reference        : public false_type {};
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_reference<_Tp&>  : public true_type {};
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_reference<_Tp&&> : public true_type {};
-#endif
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
@@ -1130,9 +1126,7 @@ template <class _Tp> using add_cv_t = typename add_cv<_Tp>::type;
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_reference        {typedef _LIBCPP_NODEBUG_TYPE _Tp type;};
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_reference<_Tp&>  {typedef _LIBCPP_NODEBUG_TYPE _Tp type;};
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS remove_reference<_Tp&&> {typedef _LIBCPP_NODEBUG_TYPE _Tp type;};
-#endif
 
 #if _LIBCPP_STD_VER > 11
 template <class _Tp> using remove_reference_t = typename remove_reference<_Tp>::type;
@@ -1150,8 +1144,6 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_lvalue_reference
 template <class _Tp> using add_lvalue_reference_t = typename add_lvalue_reference<_Tp>::type;
 #endif
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 template <class _Tp, bool = __is_referenceable<_Tp>::value> struct __add_rvalue_reference_impl            { typedef _LIBCPP_NODEBUG_TYPE  _Tp   type; };
 template <class _Tp                                       > struct __add_rvalue_reference_impl<_Tp, true> { typedef _LIBCPP_NODEBUG_TYPE  _Tp&& type; };
 
@@ -1162,24 +1154,12 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_rvalue_reference
 template <class _Tp> using add_rvalue_reference_t = typename add_rvalue_reference<_Tp>::type;
 #endif
 
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 template <class _Tp> _Tp&& __declval(int);
 template <class _Tp> _Tp   __declval(long);
 
 template <class _Tp>
 decltype(_VSTD::__declval<_Tp>(0))
 declval() _NOEXCEPT;
-
-#else  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-template <class _Tp>
-typename add_lvalue_reference<_Tp>::type
-declval();
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 // __uncvref
 

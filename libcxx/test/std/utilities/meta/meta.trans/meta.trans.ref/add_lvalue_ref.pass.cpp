@@ -58,23 +58,19 @@ int main(int, char**)
 //  LWG 2101 specifically talks about add_lvalue_reference and functions.
 //  The term of art is "a referenceable type", which a cv- or ref-qualified function is not.
     test_function0<void()>();
-#if TEST_STD_VER >= 11
     test_function1<void() const>();
     test_function1<void() &>();
     test_function1<void() &&>();
     test_function1<void() const &>();
     test_function1<void() const &&>();
-#endif
 
 //  But a cv- or ref-qualified member function *is* "a referenceable type"
     test_function0<void (Foo::*)()>();
-#if TEST_STD_VER >= 11
     test_function0<void (Foo::*)() const>();
     test_function0<void (Foo::*)() &>();
     test_function0<void (Foo::*)() &&>();
     test_function0<void (Foo::*)() const &>();
     test_function0<void (Foo::*)() const &&>();
-#endif
 
   return 0;
 }
