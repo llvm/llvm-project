@@ -2198,12 +2198,8 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_copy_assignable_v
 // is_move_assignable
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_move_assignable
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     : public is_assignable<typename add_lvalue_reference<_Tp>::type,
                            typename add_rvalue_reference<_Tp>::type> {};
-#else
-    : public is_copy_assignable<_Tp> {};
-#endif
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
 template <class _Tp>
@@ -2304,8 +2300,6 @@ forward(typename remove_reference<_Tp>::type&& __t) _NOEXCEPT
     return static_cast<_Tp&&>(__t);
 }
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 template <class _Tp>
 inline _LIBCPP_INLINE_VISIBILITY
 typename decay<_Tp>::type
@@ -2313,18 +2307,6 @@ __decay_copy(_Tp&& __t)
 {
     return _VSTD::forward<_Tp>(__t);
 }
-
-#else
-
-template <class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY
-typename decay<_Tp>::type
-__decay_copy(const _Tp& __t)
-{
-    return _VSTD::forward<_Tp>(__t);
-}
-
-#endif
 
 template <class _Rp, class _Class, class ..._Param>
 struct __member_pointer_traits_imp<_Rp (_Class::*)(_Param...), true, false>
@@ -2872,11 +2854,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_copy_constructible_v
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_move_constructible
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     : public is_constructible<_Tp, typename add_rvalue_reference<_Tp>::type>
-#else
-    : public is_copy_constructible<_Tp>
-#endif
     {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
@@ -2914,11 +2892,7 @@ struct _LIBCPP_TEMPLATE_VIS is_trivially_constructible<_Tp>
 };
 
 template <class _Tp>
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
 struct _LIBCPP_TEMPLATE_VIS is_trivially_constructible<_Tp, _Tp&&>
-#else
-struct _LIBCPP_TEMPLATE_VIS is_trivially_constructible<_Tp, _Tp>
-#endif
     : integral_constant<bool, is_scalar<_Tp>::value>
 {
 };
@@ -2971,11 +2945,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_trivially_copy_constructible_v
 // is_trivially_move_constructible
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivially_move_constructible
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     : public is_trivially_constructible<_Tp, typename add_rvalue_reference<_Tp>::type>
-#else
-    : public is_trivially_copy_constructible<_Tp>
-#endif
     {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
@@ -3012,13 +2982,9 @@ template <class _Tp>
 struct is_trivially_assignable<_Tp&, const _Tp&>
     : integral_constant<bool, is_scalar<_Tp>::value> {};
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 template <class _Tp>
 struct is_trivially_assignable<_Tp&, _Tp&&>
     : integral_constant<bool, is_scalar<_Tp>::value> {};
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 #endif  // !__has_feature(is_trivially_assignable)
 
@@ -3044,11 +3010,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_trivially_copy_assignable_v
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_trivially_move_assignable
     : public is_trivially_assignable<typename add_lvalue_reference<_Tp>::type,
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
                                      typename add_rvalue_reference<_Tp>::type>
-#else
-                                     typename add_lvalue_reference<_Tp>::type>
-#endif
     {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
@@ -3097,7 +3059,7 @@ template <class _Tp, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
     : public integral_constant<bool, __is_nothrow_constructible(_Tp, _Args...)> {};
 
-#elif !defined(_LIBCPP_HAS_NO_NOEXCEPT)
+#else
 
 template <bool, bool, class _Tp, class... _Args> struct __libcpp_is_nothrow_constructible;
 
@@ -3131,58 +3093,6 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
 template <class _Tp, size_t _Ns>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp[_Ns]>
     : __libcpp_is_nothrow_constructible<is_constructible<_Tp>::value, is_reference<_Tp>::value, _Tp>
-{
-};
-
-#else  // __has_keyword(__is_nothrow_constructible) || !defined(_LIBCPP_HAS_NO_NOEXCEPT)
-
-template <class _Tp, class... _Args>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible
-    : false_type
-{
-};
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp>
-#if __has_feature(has_nothrow_constructor) || defined(_LIBCPP_COMPILER_GCC)
-    : integral_constant<bool, __has_nothrow_constructor(_Tp)>
-#else
-    : integral_constant<bool, is_scalar<_Tp>::value>
-#endif
-{
-};
-
-template <class _Tp>
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _Tp&&>
-#else
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _Tp>
-#endif
-#if __has_feature(has_nothrow_copy) || defined(_LIBCPP_COMPILER_GCC)
-    : integral_constant<bool, __has_nothrow_copy(_Tp)>
-#else
-    : integral_constant<bool, is_scalar<_Tp>::value>
-#endif
-{
-};
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, const _Tp&>
-#if __has_feature(has_nothrow_copy) || defined(_LIBCPP_COMPILER_GCC)
-    : integral_constant<bool, __has_nothrow_copy(_Tp)>
-#else
-    : integral_constant<bool, is_scalar<_Tp>::value>
-#endif
-{
-};
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_constructible<_Tp, _Tp&>
-#if __has_feature(has_nothrow_copy) || defined(_LIBCPP_COMPILER_GCC)
-    : integral_constant<bool, __has_nothrow_copy(_Tp)>
-#else
-    : integral_constant<bool, is_scalar<_Tp>::value>
-#endif
 {
 };
 
@@ -3222,11 +3132,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_nothrow_copy_constructible_v
 // is_nothrow_move_constructible
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_nothrow_move_constructible
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
     : public is_nothrow_constructible<_Tp, typename add_rvalue_reference<_Tp>::type>
-#else
-    : public is_nothrow_copy_constructible<_Tp>
-#endif
     {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
@@ -3243,7 +3149,7 @@ template <class _Tp, class _Arg>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable
     : public integral_constant<bool, __is_nothrow_assignable(_Tp, _Arg)> {};
 
-#elif !defined(_LIBCPP_HAS_NO_NOEXCEPT)
+#else
 
 template <bool, class _Tp, class _Arg> struct __libcpp_is_nothrow_assignable;
 
@@ -3264,48 +3170,6 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable
     : public __libcpp_is_nothrow_assignable<is_assignable<_Tp, _Arg>::value, _Tp, _Arg>
 {
 };
-
-#else  // __has_keyword(__is_nothrow_assignable) || !defined(_LIBCPP_HAS_NO_NOEXCEPT)
-
-template <class _Tp, class _Arg>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable
-    : public false_type {};
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable<_Tp&, _Tp>
-#if __has_feature(has_nothrow_assign) || defined(_LIBCPP_COMPILER_GCC)
-    : integral_constant<bool, __has_nothrow_assign(_Tp)> {};
-#else
-    : integral_constant<bool, is_scalar<_Tp>::value> {};
-#endif
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable<_Tp&, _Tp&>
-#if __has_feature(has_nothrow_assign) || defined(_LIBCPP_COMPILER_GCC)
-    : integral_constant<bool, __has_nothrow_assign(_Tp)> {};
-#else
-    : integral_constant<bool, is_scalar<_Tp>::value> {};
-#endif
-
-template <class _Tp>
-struct _LIBCPP_TEMPLATE_VIS is_nothrow_assignable<_Tp&, const _Tp&>
-#if __has_feature(has_nothrow_assign) || defined(_LIBCPP_COMPILER_GCC)
-    : integral_constant<bool, __has_nothrow_assign(_Tp)> {};
-#else
-    : integral_constant<bool, is_scalar<_Tp>::value> {};
-#endif
-
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
-template <class _Tp>
-struct is_nothrow_assignable<_Tp&, _Tp&&>
-#if __has_feature(has_nothrow_assign) || defined(_LIBCPP_COMPILER_GCC)
-    : integral_constant<bool, __has_nothrow_assign(_Tp)> {};
-#else
-    : integral_constant<bool, is_scalar<_Tp>::value> {};
-#endif
-
-#endif  // _LIBCPP_HAS_NO_RVALUE_REFERENCES
 
 #endif  // _LIBCPP_HAS_NO_NOEXCEPT
 
@@ -3331,11 +3195,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_nothrow_copy_assignable_v
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_nothrow_move_assignable
     : public is_nothrow_assignable<typename add_lvalue_reference<_Tp>::type,
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
                                      typename add_rvalue_reference<_Tp>::type>
-#else
-                                     typename add_lvalue_reference<_Tp>::type>
-#endif
     {};
 
 #if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
@@ -3346,7 +3206,7 @@ _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_nothrow_move_assignable_v
 
 // is_nothrow_destructible
 
-#if !defined(_LIBCPP_HAS_NO_NOEXCEPT)
+#if !defined(_LIBCPP_CXX03_LANG)
 
 template <bool, class _Tp> struct __libcpp_is_nothrow_destructible;
 
@@ -3380,15 +3240,11 @@ struct _LIBCPP_TEMPLATE_VIS is_nothrow_destructible<_Tp&>
 {
 };
 
-#ifndef _LIBCPP_HAS_NO_RVALUE_REFERENCES
-
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_nothrow_destructible<_Tp&&>
     : public true_type
 {
 };
-
-#endif
 
 #else
 
