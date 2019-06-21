@@ -1797,7 +1797,6 @@ _CREATE_ALIGNED_STORAGE_SPECIALIZATION(0x4000);
 
 #undef _CREATE_ALIGNED_STORAGE_SPECIALIZATION
 
-#ifndef _LIBCPP_HAS_NO_VARIADICS
 
 // aligned_union
 
@@ -1830,8 +1829,6 @@ struct aligned_union
 #if _LIBCPP_STD_VER > 11
 template <size_t _Len, class ..._Types> using aligned_union_t = typename aligned_union<_Len, _Types...>::type;
 #endif
-
-#endif  // _LIBCPP_HAS_NO_VARIADICS
 
 template <class _Tp>
 struct __numeric_type
