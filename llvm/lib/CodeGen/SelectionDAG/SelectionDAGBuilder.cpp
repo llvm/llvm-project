@@ -6325,9 +6325,8 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   }
   case Intrinsic::stacksave: {
     SDValue Op = getRoot();
-    Res = DAG.getNode(
-        ISD::STACKSAVE, sdl,
-        DAG.getVTList(TLI.getPointerTy(DAG.getDataLayout()), MVT::Other), Op);
+    EVT VT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+    Res = DAG.getNode(ISD::STACKSAVE, sdl, DAG.getVTList(VT, MVT::Other), Op);
     setValue(&I, Res);
     DAG.setRoot(Res.getValue(1));
     return;
@@ -6338,7 +6337,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   case Intrinsic::get_dynamic_area_offset: {
     SDValue Op = getRoot();
-    EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
+    EVT PtrTy = TLI.getFrameIndexTy(DAG.getDataLayout());
     EVT ResTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
     // Result type for @llvm.get.dynamic.area.offset should match PtrTy for
     // target.
@@ -6352,13 +6351,13 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
   case Intrinsic::stackguard: {
-    EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
     MachineFunction &MF = DAG.getMachineFunction();
     const Module &M = *MF.getFunction().getParent();
     SDValue Chain = getRoot();
     if (TLI.useLoadStackGuardNode()) {
       Res = getLoadStackGuard(DAG, sdl, Chain);
     } else {
+      EVT PtrTy = TLI.getValueType(DAG.getDataLayout(), I.getType());
       const Value *Global = TLI.getSDagStackGuard(M);
       unsigned Align = DL->getPrefTypeAlignment(Global->getType());
       Res = DAG.getLoad(PtrTy, sdl, Chain, getValue(Global),
@@ -6375,7 +6374,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // Emit code into the DAG to store the stack guard onto the stack.
     MachineFunction &MF = DAG.getMachineFunction();
     MachineFrameInfo &MFI = MF.getFrameInfo();
-    EVT PtrTy = TLI.getPointerTy(DAG.getDataLayout());
     SDValue Src, Chain = getRoot();
 
     if (TLI.useLoadStackGuardNode())
@@ -6387,6 +6385,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
     int FI = FuncInfo.StaticAllocaMap[Slot];
     MFI.setStackProtectorIndex(FI);
+    EVT PtrTy = Src.getValueType();
 
     SDValue FIN = DAG.getFrameIndex(FI, PtrTy);
 
@@ -6653,7 +6652,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::localrecover: {
     // i8* @llvm.localrecover(i8* %fn, i8* %fp, i32 %idx)
     MachineFunction &MF = DAG.getMachineFunction();
-    MVT PtrVT = TLI.getPointerTy(DAG.getDataLayout(), 0);
 
     // Get the symbol that defines the frame offset.
     auto *Fn = cast<Function>(I.getArgOperand(0)->stripPointerCasts());
@@ -6664,6 +6662,10 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         MF.getMMI().getContext().getOrCreateFrameAllocSymbol(
             GlobalValue::dropLLVMManglingEscape(Fn->getName()), IdxVal);
 
+    Value *FP = I.getArgOperand(1);
+    SDValue FPVal = getValue(FP);
+    EVT PtrVT = FPVal.getValueType();
+
     // Create a MCSymbol for the label to avoid any target lowering
     // that would make this PC relative.
     SDValue OffsetSym = DAG.getMCSymbol(FrameAllocSym, PtrVT);
@@ -6671,8 +6673,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
         DAG.getNode(ISD::LOCAL_RECOVER, sdl, PtrVT, OffsetSym);
 
     // Add the offset to the FP.
-    Value *FP = I.getArgOperand(1);
-    SDValue FPVal = getValue(FP);
     SDValue Add = DAG.getMemBasePlusOffset(FPVal, OffsetVal, sdl);
     setValue(&I, Add);
 
@@ -7721,7 +7721,7 @@ public:
     if (!CallOperandVal) return MVT::Other;
 
     if (isa<BasicBlock>(CallOperandVal))
-      return TLI.getPointerTy(DL);
+      return TLI.getProgramPointerTy(DL);
 
     llvm::Type *OpTy = CallOperandVal->getType();
 
@@ -8148,7 +8148,7 @@ void SelectionDAGBuilder::visitInlineAsm(ImmutableCallSite CS) {
   std::vector<SDValue> AsmNodeOperands;
   AsmNodeOperands.push_back(SDValue());  // reserve space for input chain
   AsmNodeOperands.push_back(DAG.getTargetExternalSymbol(
-      IA->getAsmString().c_str(), TLI.getPointerTy(DAG.getDataLayout())));
+      IA->getAsmString().c_str(), TLI.getProgramPointerTy(DAG.getDataLayout())));
 
   // If we have a !srcloc metadata node associated with it, we want to attach
   // this to the ultimately generated inline asm machineinstr.  To do this, we
