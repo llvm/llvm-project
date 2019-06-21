@@ -18,4 +18,4 @@ Examples:
   int result = absl::ToUnixSeconds(t) + x;
 
   // Suggestion - Addition in the absl::Time domain
-  int result = absl::TounixSeconds(t + absl::Seconds(x));
+  int result = absl::ToUnixSeconds(t + absl::Seconds(x));
