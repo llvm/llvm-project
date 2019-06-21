@@ -542,11 +542,6 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       // export.)
       if (AddrOpIdx != -1) {
         setExpScore(&Inst, TII, TRI, MRI, AddrOpIdx, CurrScore);
-      } else {
-        assert(Inst.getOpcode() == AMDGPU::DS_APPEND ||
-               Inst.getOpcode() == AMDGPU::DS_CONSUME ||
-               Inst.getOpcode() == AMDGPU::DS_GWS_INIT ||
-               Inst.getOpcode() == AMDGPU::DS_GWS_BARRIER);
       }
 
       if (Inst.mayStore()) {

@@ -650,13 +650,13 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_lo_v2i16_reglo_vreg_nooff:
 ; GCN: s_waitcnt
-; GFX900-NEXT: buffer_load_short_d16 v1, off, s[0:3], s4 offset:4094{{$}}
+; GFX900-NEXT: buffer_load_short_d16 v1, off, s[0:3], s33 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
-; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s4 offset:4094{{$}}
+; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s33 offset:4094{{$}}
 define void @load_private_lo_v2i16_reglo_vreg_nooff(i16 addrspace(5)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -668,13 +668,13 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_lo_v2i16_reghi_vreg_nooff:
 ; GCN: s_waitcnt
-; GFX900-NEXT: buffer_load_short_d16 v1, off, s[0:3], s4 offset:4094{{$}}
+; GFX900-NEXT: buffer_load_short_d16 v1, off, s[0:3], s33 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
-; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s4 offset:4094{{$}}
+; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s33 offset:4094{{$}}
 define void @load_private_lo_v2i16_reghi_vreg_nooff(i16 addrspace(5)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -686,13 +686,13 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_lo_v2f16_reglo_vreg_nooff:
 ; GCN: s_waitcnt
-; GFX900-NEXT: buffer_load_short_d16 v1, off, s[0:3], s4 offset:4094{{$}}
+; GFX900-NEXT: buffer_load_short_d16 v1, off, s[0:3], s33 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
-; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s4 offset:4094{{$}}
+; NO-D16-HI: buffer_load_ushort v{{[0-9]+}}, off, s[0:3], s33 offset:4094{{$}}
 define void @load_private_lo_v2f16_reglo_vreg_nooff(half addrspace(5)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>
@@ -744,13 +744,13 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_lo_v2i16_reglo_vreg_nooff_zexti8:
 ; GCN: s_waitcnt
-; GFX900-NEXT: buffer_load_ubyte_d16 v1, off, s[0:3], s4 offset:4094{{$}}
+; GFX900-NEXT: buffer_load_ubyte_d16 v1, off, s[0:3], s33 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
-; NO-D16-HI: buffer_load_ubyte v0, off, s[0:3], s4 offset:4094{{$}}
+; NO-D16-HI: buffer_load_ubyte v0, off, s[0:3], s33 offset:4094{{$}}
 define void @load_private_lo_v2i16_reglo_vreg_nooff_zexti8(i8 addrspace(5)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -763,13 +763,13 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_lo_v2i16_reglo_vreg_nooff_sexti8:
 ; GCN: s_waitcnt
-; GFX900-NEXT: buffer_load_sbyte_d16 v1, off, s[0:3], s4 offset:4094{{$}}
+; GFX900-NEXT: buffer_load_sbyte_d16 v1, off, s[0:3], s33 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
-; NO-D16-HI: buffer_load_sbyte v0, off, s[0:3], s4 offset:4094{{$}}
+; NO-D16-HI: buffer_load_sbyte v0, off, s[0:3], s33 offset:4094{{$}}
 define void @load_private_lo_v2i16_reglo_vreg_nooff_sexti8(i8 addrspace(5)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x i16>
@@ -782,13 +782,13 @@ entry:
 
 ; GCN-LABEL: {{^}}load_private_lo_v2f16_reglo_vreg_nooff_zexti8:
 ; GCN: s_waitcnt
-; GFX900-NEXT: buffer_load_ubyte_d16 v1, off, s[0:3], s4 offset:4094{{$}}
+; GFX900-NEXT: buffer_load_ubyte_d16 v1, off, s[0:3], s33 offset:4094{{$}}
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: global_store_dword v{{\[[0-9]+:[0-9]+\]}}, v1
 ; GFX900-NEXT: s_waitcnt
 ; GFX900-NEXT: s_setpc_b64
 
-; NO-D16-HI: buffer_load_ubyte v0, off, s[0:3], s4 offset:4094{{$}}
+; NO-D16-HI: buffer_load_ubyte v0, off, s[0:3], s33 offset:4094{{$}}
 define void @load_private_lo_v2f16_reglo_vreg_nooff_zexti8(i8 addrspace(5)* %in, i32 %reg) #0 {
 entry:
   %reg.bc = bitcast i32 %reg to <2 x half>

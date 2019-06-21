@@ -313,6 +313,9 @@ public:
   MachineBasicBlock *splitKillBlock(MachineInstr &MI,
                                     MachineBasicBlock *BB) const;
 
+  MachineBasicBlock *emitGWSMemViolTestLoop(MachineInstr &MI,
+                                            MachineBasicBlock *BB) const;
+
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;

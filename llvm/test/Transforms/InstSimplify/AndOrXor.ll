@@ -89,6 +89,28 @@ define i64 @pow2b(i32 %x) {
   ret i64 %e2
 }
 
+; Power-of-2-or-zero value has no bits in common with its decrement.
+
+define i32 @pow2_decrement(i32 %p) {
+; CHECK-LABEL: @pow2_decrement(
+; CHECK-NEXT:    ret i32 0
+;
+  %x = shl i32 1, %p
+  %a = add i32 %x, -1
+  %r = and i32 %a, %x
+  ret i32 %r
+}
+
+define <2 x i32> @pow2_decrement_commute_vec(<2 x i32> %p) {
+; CHECK-LABEL: @pow2_decrement_commute_vec(
+; CHECK-NEXT:    ret <2 x i32> zeroinitializer
+;
+  %x = and <2 x i32> %p, <i32 2048, i32 2048>
+  %a = add <2 x i32> %x, <i32 -1, i32 -1>
+  %r = and <2 x i32> %x, %a
+  ret <2 x i32> %r
+}
+
 define i1 @and_of_icmps0(i32 %b) {
 ; CHECK-LABEL: @and_of_icmps0(
 ; CHECK-NEXT:    ret i1 false

@@ -1506,6 +1506,9 @@ namespace detail {
 template <typename R> class enumerator_iter;
 
 template <typename R> struct result_pair {
+  using value_reference =
+      typename std::iterator_traits<IterOfRange<R>>::reference;
+
   friend class enumerator_iter<R>;
 
   result_pair() = default;
@@ -1519,8 +1522,8 @@ template <typename R> struct result_pair {
   }
 
   std::size_t index() const { return Index; }
-  const ValueOfRange<R> &value() const { return *Iter; }
-  ValueOfRange<R> &value() { return *Iter; }
+  const value_reference value() const { return *Iter; }
+  value_reference value() { return *Iter; }
 
 private:
   std::size_t Index = std::numeric_limits<std::size_t>::max();

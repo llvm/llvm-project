@@ -234,7 +234,7 @@ entry:
 ; W64-O0-LABEL: mubuf_vgpr_outside_entry
 
 ; W64-O0-DAG: s_mov_b32 [[IDX_S:s[0-9]+]], s4
-; W64-O0-DAG: v_mov_b32_e32 [[IDX_V:v[0-9]+]], [[IDX_S]]
+; W64-O0-DAG: v_mov_b32_e32 [[IDX_V:v[0-9]+]], s4
 ; W64-O0-DAG: s_mov_b64 [[SAVEEXEC:s\[[0-9]+:[0-9]+\]]], exec
 ; W64-O0-DAG: buffer_store_dword [[IDX_V]], off, s[0:3], s32 offset:[[IDX_OFF:[0-9]+]] ; 4-byte Folded Spill
 

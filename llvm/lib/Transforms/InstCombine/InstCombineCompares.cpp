@@ -3835,7 +3835,7 @@ Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
   // (-A & A) == A --> (A & (A - 1)) == 0
   // A == (A & -A) --> (A & (A - 1)) == 0
   // A == (-A & A) --> (A & (A - 1)) == 0
-  // TODO: This could be reduced by using the popct intrinsic.
+  // TODO: This could be reduced by using the ctpop intrinsic.
   A = nullptr;
   if (match(Op0, m_OneUse(m_c_And(m_OneUse(m_Neg(m_Specific(Op1))),
                                   m_Specific(Op1)))))

@@ -42,19 +42,16 @@ declare void @llvm.instrprof.increment(i8*, i64, i32, i32)
 ; MACHO-NOT: define internal void @__llvm_profile_register_functions
 ; LINUX-NOT: define internal void @__llvm_profile_register_functions
 ; FREEBSD-NOT: define internal void @__llvm_profile_register_functions
+; SOLARIS-NOT: define internal void @__llvm_profile_register_functions
 ; PS4-NOT: define internal void @__llvm_profile_register_functions
 ; WINDOWS-NOT: define internal void @__llvm_profile_register_functions
 
 ;; PR38340: When dynamic registration is used, we had a bug where we'd register
 ;; something that's not a __profd_* variable.
 
-; SOLARIS: define internal void @__llvm_profile_register_functions
-; SOLARIS-NOT: __llvm_profile_runtime_user
-; SOLARIS: ret void
-
 ; MACHO-NOT: define internal void @__llvm_profile_init
 ; LINUX-NOT: define internal void @__llvm_profile_init
 ; FREEBSD-NOT: define internal void @__llvm_profile_init
+; SOLARIS-NOT: define internal void @__llvm_profile_init
 ; PS4-NOT: define internal void @__llvm_profile_init
 ; WINDOWS-NOT: define internal void @__llvm_profile_init
-; SOLARIS: define internal void @__llvm_profile_init

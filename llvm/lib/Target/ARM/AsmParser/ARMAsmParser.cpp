@@ -5964,6 +5964,8 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
          Mnemonic == "vshle" || Mnemonic == "vshlt" || Mnemonic == "vshllt" ||
          Mnemonic == "vmvne" || Mnemonic == "vorne" ||
          Mnemonic == "vnege" || Mnemonic == "vnegt" ||
+         Mnemonic == "vmule" || Mnemonic == "vmult" ||
+         Mnemonic == "vrintne" ||
          Mnemonic.startswith("vq")))) {
     unsigned CC = ARMCondCodeFromString(Mnemonic.substr(Mnemonic.size()-2));
     if (CC != ~0U) {
@@ -6008,7 +6010,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
   if (isMnemonicVPTPredicable(Mnemonic, ExtraToken) && Mnemonic != "vmovlt" &&
       Mnemonic != "vshllt" && Mnemonic != "vrshrnt" && Mnemonic != "vshrnt" &&
       Mnemonic != "vqrshrunt" && Mnemonic != "vqshrunt" &&
-      Mnemonic != "vqrshrnt" && Mnemonic != "vqshrnt") {
+      Mnemonic != "vqrshrnt" && Mnemonic != "vqshrnt" && Mnemonic != "vcvt") {
     unsigned CC = ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size()-1));
     if (CC != ~0U) {
       Mnemonic = Mnemonic.slice(0, Mnemonic.size()-1);
@@ -6315,7 +6317,8 @@ bool ARMAsmParser::shouldOmitPredicateOperand(StringRef Mnemonic,
                                               OperandVector &Operands) {
   // VRINT{Z, X} have a predicate operand in VFP, but not in NEON
   unsigned RegIdx = 3;
-  if ((Mnemonic == "vrintz" || Mnemonic == "vrintx") &&
+  if ((((Mnemonic == "vrintz" || Mnemonic == "vrintx") && !hasMVE()) ||
+      Mnemonic == "vrintr") &&
       (static_cast<ARMOperand &>(*Operands[2]).getToken() == ".f32" ||
        static_cast<ARMOperand &>(*Operands[2]).getToken() == ".f16")) {
     if (static_cast<ARMOperand &>(*Operands[3]).isToken() &&
@@ -6564,7 +6567,9 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // definition in tblgen.  Since these instructions may also have the
   // scalar predication operand we do not add the vector one and leave until
   // now to fix it up.
-  if (CanAcceptVPTPredicationCode && Mnemonic != "vmov") {
+  if (CanAcceptVPTPredicationCode && Mnemonic != "vmov" &&
+      !(Mnemonic.startswith("vcvt") && Mnemonic != "vcvta" &&
+        Mnemonic != "vcvtn" && Mnemonic != "vcvtp" && Mnemonic != "vcvtm")) {
     SMLoc Loc = SMLoc::getFromPointer(NameLoc.getPointer() + Mnemonic.size() +
                                       CarrySetting);
     Operands.push_back(ARMOperand::CreateVPTPred(
@@ -6662,14 +6667,52 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                       ARMOperand::CreateVPTPred(ARMVCC::None, PLoc));
       Operands.insert(Operands.begin(),
                       ARMOperand::CreateToken(StringRef("vmovlt"), MLoc));
+    } else if (Mnemonic == "vcvt" && PredicationCode == ARMCC::NE &&
+               !shouldOmitVectorPredicateOperand(Mnemonic, Operands)) {
+      // Another nasty hack to deal with the ambiguity between vcvt with scalar
+      // predication 'ne' and vcvtn with vector predication 'e'.  As above we
+      // can only distinguish between the two after we have parsed their
+      // operands.
+      Operands.erase(Operands.begin() + 1);
+      Operands.erase(Operands.begin());
+      SMLoc MLoc = SMLoc::getFromPointer(NameLoc.getPointer());
+      SMLoc PLoc = SMLoc::getFromPointer(NameLoc.getPointer() +
+                                         Mnemonic.size() - 1 + CarrySetting);
+      Operands.insert(Operands.begin(),
+                      ARMOperand::CreateVPTPred(ARMVCC::Else, PLoc));
+      Operands.insert(Operands.begin(),
+                      ARMOperand::CreateToken(StringRef("vcvtn"), MLoc));
     }
     // For vmov instructions, as mentioned earlier, we did not add the vector
     // predication code, since these may contain operands that require
     // special parsing.  So now we have to see if they require vector
     // predication and replace the scalar one with the vector predication
     // operand if that is the case.
-    else if (Mnemonic == "vmov") {
+    else if (Mnemonic == "vmov" ||
+             (Mnemonic.startswith("vcvt") && !Mnemonic.startswith("vcvta") &&
+              !Mnemonic.startswith("vcvtn") && !Mnemonic.startswith("vcvtp") &&
+              !Mnemonic.startswith("vcvtm"))) {
       if (!shouldOmitVectorPredicateOperand(Mnemonic, Operands)) {
+        // We could not split the vector predicate off vcvt because it might
+        // have been the scalar vcvtt instruction.  Now we know its a vector
+        // instruction, we still need to check whether its the vector
+        // predicated vcvt with 'Then' predication or the vector vcvtt.  We can
+        // distinguish the two based on the suffixes, if it is any of
+        // ".f16.f32", ".f32.f16", ".f16.f64" or ".f64.f16" then it is the vcvtt.
+        if (Mnemonic.startswith("vcvtt") && Operands.size() >= 4) {
+          auto Sz1 = static_cast<ARMOperand &>(*Operands[2]);
+          auto Sz2 = static_cast<ARMOperand &>(*Operands[3]);
+          if (!(Sz1.isToken() && Sz1.getToken().startswith(".f") &&
+              Sz2.isToken() && Sz2.getToken().startswith(".f"))) {
+            Operands.erase(Operands.begin());
+            SMLoc MLoc = SMLoc::getFromPointer(NameLoc.getPointer());
+            VPTPredicationCode = ARMVCC::Then;
+
+            Mnemonic = Mnemonic.substr(0, 4);
+            Operands.insert(Operands.begin(),
+                            ARMOperand::CreateToken(Mnemonic, MLoc));
+          }
+        }
         Operands.erase(Operands.begin() + 1);
         SMLoc PLoc = SMLoc::getFromPointer(NameLoc.getPointer() +
                                           Mnemonic.size() + CarrySetting);
