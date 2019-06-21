@@ -803,7 +803,7 @@ protected:
   /// Data members.
   /// @{
   std::unique_ptr<swift::CompilerInvocation> m_compiler_invocation_ap;
-  std::unique_ptr<swift::SourceManager> m_source_manager_ap;
+  std::unique_ptr<swift::SourceManager> m_source_manager_up;
   std::unique_ptr<swift::DiagnosticEngine> m_diagnostic_engine_ap;
   // CompilerInvocation, SourceMgr, and DiagEngine must come
   // before the ASTContext, so they get deallocated *after* the
