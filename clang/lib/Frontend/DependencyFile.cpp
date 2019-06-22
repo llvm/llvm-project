@@ -358,6 +358,10 @@ void DependencyFileGenerator::outputDependencyFile(DiagnosticsEngine &Diags) {
     return;
   }
 
+  outputDependencyFile(OS);
+}
+
+void DependencyFileGenerator::outputDependencyFile(llvm::raw_ostream &OS) {
   // Write out the dependency targets, trying to avoid overly long
   // lines when possible. We try our best to emit exactly the same
   // dependency file as GCC (4.2), assuming the included files are the

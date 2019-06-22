@@ -268,6 +268,8 @@ def err_opt_not_valid_on_target : Error<
 def err_cannot_open_file : Error<"cannot open file '%0': %1">, DefaultFatal;
 def err_file_modified : Error<
   "file '%0' modified since it was first processed">, DefaultFatal;
+def err_file_too_large : Error<
+  "sorry, unsupported: file '%0' is too large for Clang to process">;
 def err_unsupported_bom : Error<"%0 byte order mark detected in '%1', but "
   "encoding is not supported">, DefaultFatal;
 def err_unable_to_rename_temp : Error<

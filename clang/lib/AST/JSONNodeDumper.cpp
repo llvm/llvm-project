@@ -78,6 +78,7 @@ void JSONNodeDumper::Visit(const Type *T) {
 
 void JSONNodeDumper::Visit(QualType T) {
   JOS.attribute("id", createPointerRepresentation(T.getAsOpaquePtr()));
+  JOS.attribute("kind", "QualType");
   JOS.attribute("type", createQualType(T));
   JOS.attribute("qualifiers", T.split().Quals.getAsString());
 }
@@ -490,6 +491,145 @@ void JSONNodeDumper::VisitFunctionProtoType(const FunctionProtoType *T) {
   case EST_None: break;
   }
   VisitFunctionType(T);
+}
+
+void JSONNodeDumper::VisitRValueReferenceType(const ReferenceType *RT) {
+  attributeOnlyIfTrue("spelledAsLValue", RT->isSpelledAsLValue());
+}
+
+void JSONNodeDumper::VisitArrayType(const ArrayType *AT) {
+  switch (AT->getSizeModifier()) {
+  case ArrayType::Star:
+    JOS.attribute("sizeModifier", "*");
+    break;
+  case ArrayType::Static:
+    JOS.attribute("sizeModifier", "static");
+    break;
+  case ArrayType::Normal:
+    break;
+  }
+
+  std::string Str = AT->getIndexTypeQualifiers().getAsString();
+  if (!Str.empty())
+    JOS.attribute("indexTypeQualifiers", Str);
+}
+
+void JSONNodeDumper::VisitConstantArrayType(const ConstantArrayType *CAT) {
+  // FIXME: this should use ZExt instead of SExt, but JSON doesn't allow a
+  // narrowing conversion to int64_t so it cannot be expressed.
+  JOS.attribute("size", CAT->getSize().getSExtValue());
+  VisitArrayType(CAT);
+}
+
+void JSONNodeDumper::VisitDependentSizedExtVectorType(
+    const DependentSizedExtVectorType *VT) {
+  JOS.attribute("attrLoc", createSourceLocation(VT->getAttributeLoc()));
+}
+
+void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
+  JOS.attribute("numElements", VT->getNumElements());
+  switch (VT->getVectorKind()) {
+  case VectorType::GenericVector:
+    break;
+  case VectorType::AltiVecVector:
+    JOS.attribute("vectorKind", "altivec");
+    break;
+  case VectorType::AltiVecPixel:
+    JOS.attribute("vectorKind", "altivec pixel");
+    break;
+  case VectorType::AltiVecBool:
+    JOS.attribute("vectorKind", "altivec bool");
+    break;
+  case VectorType::NeonVector:
+    JOS.attribute("vectorKind", "neon");
+    break;
+  case VectorType::NeonPolyVector:
+    JOS.attribute("vectorKind", "neon poly");
+    break;
+  }
+}
+
+void JSONNodeDumper::VisitUnresolvedUsingType(const UnresolvedUsingType *UUT) {
+  JOS.attribute("decl", createBareDeclRef(UUT->getDecl()));
+}
+
+void JSONNodeDumper::VisitUnaryTransformType(const UnaryTransformType *UTT) {
+  switch (UTT->getUTTKind()) {
+  case UnaryTransformType::EnumUnderlyingType:
+    JOS.attribute("transformKind", "underlying_type");
+    break;
+  }
+}
+
+void JSONNodeDumper::VisitTagType(const TagType *TT) {
+  JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
+}
+
+void JSONNodeDumper::VisitTemplateTypeParmType(
+    const TemplateTypeParmType *TTPT) {
+  JOS.attribute("depth", TTPT->getDepth());
+  JOS.attribute("index", TTPT->getIndex());
+  attributeOnlyIfTrue("isPack", TTPT->isParameterPack());
+  JOS.attribute("decl", createBareDeclRef(TTPT->getDecl()));
+}
+
+void JSONNodeDumper::VisitAutoType(const AutoType *AT) {
+  JOS.attribute("undeduced", !AT->isDeduced());
+  switch (AT->getKeyword()) {
+  case AutoTypeKeyword::Auto:
+    JOS.attribute("typeKeyword", "auto");
+    break;
+  case AutoTypeKeyword::DecltypeAuto:
+    JOS.attribute("typeKeyword", "decltype(auto)");
+    break;
+  case AutoTypeKeyword::GNUAutoType:
+    JOS.attribute("typeKeyword", "__auto_type");
+    break;
+  }
+}
+
+void JSONNodeDumper::VisitTemplateSpecializationType(
+    const TemplateSpecializationType *TST) {
+  attributeOnlyIfTrue("isAlias", TST->isTypeAlias());
+
+  std::string Str;
+  llvm::raw_string_ostream OS(Str);
+  TST->getTemplateName().print(OS, PrintPolicy);
+  JOS.attribute("templateName", OS.str());
+}
+
+void JSONNodeDumper::VisitInjectedClassNameType(
+    const InjectedClassNameType *ICNT) {
+  JOS.attribute("decl", createBareDeclRef(ICNT->getDecl()));
+}
+
+void JSONNodeDumper::VisitObjCInterfaceType(const ObjCInterfaceType *OIT) {
+  JOS.attribute("decl", createBareDeclRef(OIT->getDecl()));
+}
+
+void JSONNodeDumper::VisitPackExpansionType(const PackExpansionType *PET) {
+  if (llvm::Optional<unsigned> N = PET->getNumExpansions())
+    JOS.attribute("numExpansions", *N);
+}
+
+void JSONNodeDumper::VisitElaboratedType(const ElaboratedType *ET) {
+  if (const NestedNameSpecifier *NNS = ET->getQualifier()) {
+    std::string Str;
+    llvm::raw_string_ostream OS(Str);
+    NNS->print(OS, PrintPolicy, /*ResolveTemplateArgs*/ true);
+    JOS.attribute("qualifier", OS.str());
+  }
+  if (const TagDecl *TD = ET->getOwnedTagDecl())
+    JOS.attribute("ownedTagDecl", createBareDeclRef(TD));
+}
+
+void JSONNodeDumper::VisitMacroQualifiedType(const MacroQualifiedType *MQT) {
+  JOS.attribute("macroName", MQT->getMacroIdentifier()->getName());
+}
+
+void JSONNodeDumper::VisitMemberPointerType(const MemberPointerType *MPT) {
+  attributeOnlyIfTrue("isData", MPT->isMemberDataPointer());
+  attributeOnlyIfTrue("isFunction", MPT->isMemberFunctionPointer());
 }
 
 void JSONNodeDumper::VisitNamedDecl(const NamedDecl *ND) {
