@@ -25,7 +25,7 @@ pass.
 
 .. important::
    Type records form a topologically sorted DAG (directed acyclic graph).
-   
+
 .. _tpi_ipi:
 
 TPI vs IPI Stream
@@ -188,23 +188,21 @@ bitmask which can be decomposed as follows:
     NearPointer64 = 6, // 64 bit near pointer
     NearPointer128 = 7 // 128 bit near pointer
   };
-  
+
 Note that for pointers, the bitness is represented in the mode.  So a ``void*``
-would have a type index with ``Mode=NearPointer32, Kind=Void`` if built for 32-bits
-but a type index with ``Mode=NearPointer64, Kind=Void`` if built for 64-bits.
+would have a type index with ``Mode=NearPointer32, Kind=Void`` if built for
+32-bits but a type index with ``Mode=NearPointer64, Kind=Void`` if built for
+64-bits.
 
-By convention, the type index for ``std::nullptr_t`` is constructed the same way
-as the type index for ``void*``, but using the bitless enumeration value
+By convention, the type index for ``std::nullptr_t`` is constructed the same
+way as the type index for ``void*``, but using the bitless enumeration value
 ``NearPointer``.
-
-
 
 .. _tpi_header:
 
 Stream Header
 =============
 At offset 0 of the TPI Stream is a header with the following layout:
-
 
 .. code-block:: c++
 
@@ -222,14 +220,14 @@ At offset 0 of the TPI Stream is a header with the following layout:
 
     int32_t HashValueBufferOffset;
     uint32_t HashValueBufferLength;
-    
+
     int32_t IndexOffsetBufferOffset;
     uint32_t IndexOffsetBufferLength;
 
     int32_t HashAdjBufferOffset;
     uint32_t HashAdjBufferLength;
   };
-  
+
 - **Version** - A value from the following enum.
 
 .. code-block:: c++
@@ -248,46 +246,49 @@ another value be observed, the layout described by this document may not be
 accurate.
 
 - **HeaderSize** - ``sizeof(TpiStreamHeader)``
-  
+
 - **TypeIndexBegin** - The numeric value of the type index representing the
-  first type record in the TPI stream.  This is usually the value 0x1000 as type
-  indices lower than this are reserved (see :ref:`Type Indices <type_indices>` for
+  first type record in the TPI stream.  This is usually the value 0x1000 as
+  type indices lower than this are reserved (see :ref:`Type Indices
+  <type_indices>` for
   a discussion of reserved type indices).
-  
+
 - **TypeIndexEnd** - One greater than the numeric value of the type index
-  representing the last type record in the TPI stream.  The total number of type
-  records in the TPI stream can be computed as ``TypeIndexEnd - TypeIndexBegin``.
-  
-- **TypeRecordBytes** - The number of bytes of type record data following the header.
-  
-- **HashStreamIndex** - The index of a stream which contains a list of hashes for
-  every type record.  This value may be -1, indicating that hash information is not
-  present.  In practice a valid stream index is always observed, so any producer
-  implementation should be prepared to emit this stream to ensure compatibility with
-  tools which may expect it to be present.
-  
-- **HashAuxStreamIndex** - Presumably the index of a stream which contains a separate
-  hash table, although this has not been observed in practice and it's unclear what it
-  might be used for.
-  
+  representing the last type record in the TPI stream.  The total number of
+  type records in the TPI stream can be computed as ``TypeIndexEnd -
+  TypeIndexBegin``.
+
+- **TypeRecordBytes** - The number of bytes of type record data following the
+  header.
+
+- **HashStreamIndex** - The index of a stream which contains a list of hashes
+  for every type record.  This value may be -1, indicating that hash
+  information is not present.  In practice a valid stream index is always
+  observed, so any producer implementation should be prepared to emit this
+  stream to ensure compatibility with tools which may expect it to be present.
+
+- **HashAuxStreamIndex** - Presumably the index of a stream which contains a
+  separate hash table, although this has not been observed in practice and it's
+  unclear what it might be used for.
+
 - **HashKeySize** - The size of a hash value (usually 4 bytes).
 
-- **NumHashBuckets** - The number of buckets used to generate the hash values in the
-  aforementioned hash streams.
+- **NumHashBuckets** - The number of buckets used to generate the hash values
+  in the aforementioned hash streams.
 
 - **HashValueBufferOffset / HashValueBufferLength** - The offset and size within
-  the TPI Hash Stream of the list of hash values.  It should be assumed that there
-  are either 0 hash values, or a number equal to the number of type records in the
-  TPI stream (``TypeIndexEnd - TypeEndBegin``).  Thus, if ``HashBufferLength`` is
-  not equal to ``(TypeIndexEnd - TypeEndBegin) * HashKeySize`` we can consider the
-  PDB malformed.
+  the TPI Hash Stream of the list of hash values.  It should be assumed that
+  there are either 0 hash values, or a number equal to the number of type
+  records in the TPI stream (``TypeIndexEnd - TypeEndBegin``).  Thus, if
+  ``HashBufferLength`` is not equal to ``(TypeIndexEnd - TypeEndBegin) *
+  HashKeySize`` we can consider the PDB malformed.
 
 - **IndexOffsetBufferOffset / IndexOffsetBufferLength** - The offset and size
-  within the TPI Hash Stream of the Type Index Offsets Buffer.  This is a list of
-  pairs of uint32_t's where the first value is a :ref:`Type Index <type_indices>`
-  and the second value is the offset in the type record data of the type with this
-  index.  This can be used to do a binary search followed by a linear search to
-  get O(log n) lookup by type index.
+  within the TPI Hash Stream of the Type Index Offsets Buffer.  This is a list
+  of pairs of uint32_t's where the first value is a :ref:`Type Index
+  <type_indices>` and the second value is the offset in the type record data of
+  the type with this index.  This can be used to do a binary search followed by
+  a linear search to get O(log n) lookup by type index.
 
 - **HashAdjBufferOffset / HashAdjBufferLength** - The offset and size within
   the TPI hash stream of a serialized hash table whose keys are the hash values
@@ -303,10 +304,11 @@ accurate.
 
 CodeView Type Record List
 =========================
-Following the header, there are ``TypeRecordBytes`` bytes of data that represent a
-variable length array of :doc:`CodeView type records <CodeViewTypes>`.  The number
-of such records (e.g. the length of the array) can be determined by computing the
-value ``Header.TypeIndexEnd - Header.TypeIndexBegin``.
+Following the header, there are ``TypeRecordBytes`` bytes of data that
+represent a variable length array of :doc:`CodeView type records
+<CodeViewTypes>`.  The number of such records (e.g. the length of the array)
+can be determined by computing the value ``Header.TypeIndexEnd -
+Header.TypeIndexBegin``.
 
 O(log(n)) access is provided by way of the Type Index Offsets array (if
 present) described previously.
