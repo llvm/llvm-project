@@ -24,6 +24,19 @@ add %eax, %eax
 # ALL-NEXT:          - Register Dependencies [ 76.70% ]
 # ALL-NEXT:          - Memory Dependencies   [ 0.00% ]
 
+# ALL:             Critical sequence based on the simulation:
+
+# ALL:                           Instruction                                 Dependency Information
+# ALL-NEXT:         +----< 0.    addl	%eax, %eax
+# ALL-NEXT:         |
+# ALL-NEXT:         |    < loop carried >
+# ALL-NEXT:         |
+# ALL-NEXT:         +----> 0.    addl	%eax, %eax                        ## REGISTER dependency:  %eax
+# ALL-NEXT:         |
+# ALL-NEXT:         |    < loop carried >
+# ALL-NEXT:         |
+# ALL-NEXT:         +----> 0.    addl	%eax, %eax                        ## REGISTER dependency:  %eax
+
 # ALL:             Instruction Info:
 # ALL-NEXT:        [1]: #uOps
 # ALL-NEXT:        [2]: Latency

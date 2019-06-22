@@ -261,6 +261,14 @@ public:
     HasSource = Source.hasValue();
   }
 
+  void resetFileTable() {
+    MCDwarfDirs.clear();
+    MCDwarfFiles.clear();
+    RootFile.Name.clear();
+    resetMD5Usage();
+    HasSource = false;
+  }
+
 private:
   void emitV2FileDirTables(MCStreamer *MCOS) const;
   void emitV5FileDirTables(MCStreamer *MCOS, Optional<MCDwarfLineStr> &LineStr) const;
@@ -326,12 +334,7 @@ public:
     Header.HasSource = Source.hasValue();
   }
 
-  void resetRootFile() {
-    assert(Header.MCDwarfFiles.empty());
-    Header.RootFile.Name.clear();
-    Header.resetMD5Usage();
-    Header.HasSource = false;
-  }
+  void resetFileTable() { Header.resetFileTable(); }
 
   bool hasRootFile() const { return !Header.RootFile.Name.empty(); }
 

@@ -143,7 +143,9 @@ static cl::alias DisassembleAllShort("D",
 
 static cl::list<std::string>
     DisassembleFunctions("disassemble-functions", cl::CommaSeparated,
-                         cl::desc("List of functions to disassemble"),
+                         cl::desc("List of functions to disassemble. "
+                                  "Accept demangled names when --demangle is "
+                                  "specified, otherwise accept mangled names"),
                          cl::cat(ObjdumpCat));
 
 static cl::opt<bool> DisassembleZeroes(
@@ -329,6 +331,9 @@ static cl::opt<bool>
     Wide("wide", cl::desc("Ignored for compatibility with GNU objdump"),
          cl::cat(ObjdumpCat));
 static cl::alias WideShort("w", cl::Grouping, cl::aliasopt(Wide));
+
+static cl::extrahelp
+    HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
 
 static StringSet<> DisasmFuncsSet;
 static StringRef ToolName;
@@ -1204,17 +1209,20 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
     std::vector<RelocationRef>::const_iterator RelEnd = Rels.end();
     // Disassemble symbol by symbol.
     for (unsigned SI = 0, SE = Symbols.size(); SI != SE; ++SI) {
+      std::string SymbolName = std::get<1>(Symbols[SI]).str();
+      if (Demangle)
+        SymbolName = demangle(SymbolName);
+
       // Skip if --disassemble-functions is not empty and the symbol is not in
       // the list.
-      if (!DisasmFuncsSet.empty() &&
-          !DisasmFuncsSet.count(std::get<1>(Symbols[SI])))
+      if (!DisasmFuncsSet.empty() && !DisasmFuncsSet.count(SymbolName))
         continue;
 
       uint64_t Start = std::get<0>(Symbols[SI]);
       if (Start < SectionAddr || StopAddress <= Start)
         continue;
       else
-        FoundDisasmFuncsSet.insert(std::get<1>(Symbols[SI]));
+        FoundDisasmFuncsSet.insert(SymbolName);
 
       // The end is the section end, the beginning of the next symbol, or
       // --stop-address.
@@ -1256,11 +1264,7 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
         outs() << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
                          SectionAddr + Start + VMAAdjustment);
 
-      StringRef SymbolName = std::get<1>(Symbols[SI]);
-      if (Demangle)
-        outs() << demangle(SymbolName) << ":\n";
-      else
-        outs() << SymbolName << ":\n";
+      outs() << SymbolName << ":\n";
 
       // Don't print raw contents of a virtual section. A virtual section
       // doesn't have any contents in the file.
@@ -1450,9 +1454,6 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
 }
 
 static void disassembleObject(const ObjectFile *Obj, bool InlineRelocs) {
-  if (StartAddress >= StopAddress)
-    error("start address should be less than stop address");
-
   const Target *TheTarget = getTarget(Obj);
 
   // Package up features to be passed to target/subtarget
@@ -2112,6 +2113,9 @@ int main(int argc, char **argv) {
   cl::AddExtraVersionPrinter(TargetRegistry::printRegisteredTargetsForVersion);
 
   cl::ParseCommandLineOptions(argc, argv, "llvm object file dumper\n");
+
+  if (StartAddress >= StopAddress)
+    error("start address should be less than stop address");
 
   ToolName = argv[0];
 

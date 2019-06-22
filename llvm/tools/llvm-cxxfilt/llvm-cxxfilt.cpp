@@ -52,6 +52,9 @@ static cl::alias TypesShort("t", cl::desc("alias for --types"),
 static cl::list<std::string>
 Decorated(cl::Positional, cl::desc("<mangled>"), cl::ZeroOrMore);
 
+static cl::extrahelp
+    HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
+
 static std::string demangle(llvm::raw_ostream &OS, const std::string &Mangled) {
   int Status;
 

@@ -3,10 +3,7 @@
 
 define i32 @cttz_abs(i32 %x) {
 ; CHECK-LABEL: @cttz_abs(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[S:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i32 [[S]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[D]], i1 true), !range !0
+; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true), !range !0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp slt i32 %x, 0
@@ -18,10 +15,7 @@ define i32 @cttz_abs(i32 %x) {
 
 define <2 x i64> @cttz_abs_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @cttz_abs_vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i64> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[S:%.*]] = sub <2 x i64> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[D:%.*]] = select <2 x i1> [[C]], <2 x i64> [[S]], <2 x i64> [[X]]
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[D]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %c = icmp slt <2 x i64> %x, zeroinitializer
@@ -35,9 +29,7 @@ define i32 @cttz_abs2(i32 %x) {
 ; CHECK-LABEL: @cttz_abs2(
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X:%.*]], 0
 ; CHECK-NEXT:    call void @use_cond(i1 [[C]])
-; CHECK-NEXT:    [[S:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i32 [[X]], i32 [[S]]
-; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[D]], i1 true), !range !0
+; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 true), !range !0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp sgt i32 %x, 0
@@ -52,9 +44,7 @@ define i32 @cttz_abs3(i32 %x) {
 ; CHECK-LABEL: @cttz_abs3(
 ; CHECK-NEXT:    [[C:%.*]] = icmp sgt i32 [[X:%.*]], -1
 ; CHECK-NEXT:    call void @use_cond(i1 [[C]])
-; CHECK-NEXT:    [[S:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i32 [[X]], i32 [[S]]
-; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[D]], i1 true), !range !0
+; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 true), !range !0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp sgt i32 %x, -1
@@ -67,10 +57,7 @@ define i32 @cttz_abs3(i32 %x) {
 
 define i32 @cttz_abs4(i32 %x) {
 ; CHECK-LABEL: @cttz_abs4(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[S:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i32 [[S]], i32 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[D]], i1 true), !range !0
+; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true), !range !0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp slt i32 %x, 1
@@ -82,10 +69,7 @@ define i32 @cttz_abs4(i32 %x) {
 
 define i32 @cttz_nabs(i32 %x) {
 ; CHECK-LABEL: @cttz_nabs(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i32 [[X:%.*]], 0
-; CHECK-NEXT:    [[S:%.*]] = sub i32 0, [[X]]
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i32 [[X]], i32 [[S]]
-; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[D]], i1 false), !range !0
+; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false), !range !0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp slt i32 %x, 0
@@ -97,10 +81,7 @@ define i32 @cttz_nabs(i32 %x) {
 
 define <2 x i64> @cttz_nabs_vec(<2 x i64> %x) {
 ; CHECK-LABEL: @cttz_nabs_vec(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt <2 x i64> [[X:%.*]], zeroinitializer
-; CHECK-NEXT:    [[S:%.*]] = sub <2 x i64> zeroinitializer, [[X]]
-; CHECK-NEXT:    [[D:%.*]] = select <2 x i1> [[C]], <2 x i64> [[X]], <2 x i64> [[S]]
-; CHECK-NEXT:    [[R:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[D]], i1 false)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X:%.*]], i1 false)
 ; CHECK-NEXT:    ret <2 x i64> [[R]]
 ;
   %c = icmp slt <2 x i64> %x, zeroinitializer
@@ -112,10 +93,7 @@ define <2 x i64> @cttz_nabs_vec(<2 x i64> %x) {
 
 define i64 @cttz_abs_64(i64 %x) {
 ; CHECK-LABEL: @cttz_abs_64(
-; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[X:%.*]], 0
-; CHECK-NEXT:    [[S:%.*]] = sub i64 0, [[X]]
-; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i64 [[S]], i64 [[X]]
-; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.cttz.i64(i64 [[D]], i1 false), !range !1
+; CHECK-NEXT:    [[R:%.*]] = call i64 @llvm.cttz.i64(i64 [[X:%.*]], i1 false), !range !1
 ; CHECK-NEXT:    ret i64 [[R]]
 ;
   %c = icmp slt i64 %x, 0
@@ -131,7 +109,7 @@ define i32 @cttz_abs_multiuse(i32 %x) {
 ; CHECK-NEXT:    [[S:%.*]] = sub i32 0, [[X]]
 ; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i32 [[S]], i32 [[X]]
 ; CHECK-NEXT:    call void @use_abs(i32 [[D]])
-; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[D]], i1 true), !range !0
+; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 true), !range !0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp slt i32 %x, 1
@@ -148,7 +126,7 @@ define i32 @cttz_nabs_multiuse(i32 %x) {
 ; CHECK-NEXT:    [[S:%.*]] = sub i32 0, [[X]]
 ; CHECK-NEXT:    [[D:%.*]] = select i1 [[C]], i32 [[X]], i32 [[S]]
 ; CHECK-NEXT:    call void @use_abs(i32 [[D]])
-; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[D]], i1 true), !range !0
+; CHECK-NEXT:    [[R:%.*]] = tail call i32 @llvm.cttz.i32(i32 [[X]], i1 true), !range !0
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %c = icmp slt i32 %x, 1

@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/GlobalISel/Types.h"
 #include "llvm/CodeGen/SwiftErrorValueTracking.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/SwitchLoweringUtils.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/Allocator.h"
 #include <memory>
@@ -37,6 +38,7 @@ class CallInst;
 class CallLowering;
 class Constant;
 class DataLayout;
+class FunctionLoweringInfo;
 class Instruction;
 class MachineBasicBlock;
 class MachineFunction;
@@ -293,7 +295,42 @@ private:
   /// \pre \p U is a branch instruction.
   bool translateBr(const User &U, MachineIRBuilder &MIRBuilder);
 
+  // Begin switch lowering functions.
+  bool emitJumpTableHeader(SwitchCG::JumpTable &JT,
+                           SwitchCG::JumpTableHeader &JTH,
+                           MachineBasicBlock *SwitchBB,
+                           MachineIRBuilder &MIB);
+  void emitJumpTable(SwitchCG::JumpTable &JT, MachineBasicBlock *MBB);
+
+  void emitSwitchCase(SwitchCG::CaseBlock &CB, MachineBasicBlock *SwitchBB,
+                      MachineIRBuilder &MIB);
+
+  bool lowerJumpTableWorkItem(SwitchCG::SwitchWorkListItem W,
+                              MachineBasicBlock *SwitchMBB,
+                              MachineBasicBlock *DefaultMBB,
+                              MachineIRBuilder &MIB,
+                              MachineFunction::iterator BBI,
+                              BranchProbability UnhandledProbs,
+                              SwitchCG::CaseClusterIt I,
+                              MachineBasicBlock *Fallthrough,
+                              bool FallthroughUnreachable);
+
+  bool lowerSwitchRangeWorkItem(SwitchCG::CaseClusterIt I,
+                                Value *Cond,
+                                MachineBasicBlock *Fallthrough,
+                                bool FallthroughUnreachable,
+                                BranchProbability UnhandledProbs,
+                                MachineBasicBlock *CurMBB,
+                                MachineIRBuilder &MIB,
+                                MachineBasicBlock *SwitchMBB);
+
+  bool lowerSwitchWorkItem(SwitchCG::SwitchWorkListItem W, Value *Cond,
+                           MachineBasicBlock *SwitchMBB,
+                           MachineBasicBlock *DefaultMBB,
+                           MachineIRBuilder &MIB);
+
   bool translateSwitch(const User &U, MachineIRBuilder &MIRBuilder);
+  // End switch lowering section.
 
   bool translateIndirectBr(const User &U, MachineIRBuilder &MIRBuilder);
 
@@ -481,11 +518,42 @@ private:
   /// Current optimization remark emitter. Used to report failures.
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
+  FunctionLoweringInfo FuncInfo;
+
+  // True when either the Target Machine specifies no optimizations or the
+  // function has the optnone attribute.
+  bool EnableOpts = false;
+
+  /// Switch analysis and optimization.
+  class GISelSwitchLowering : public SwitchCG::SwitchLowering {
+  public:
+    GISelSwitchLowering(IRTranslator *irt, FunctionLoweringInfo &funcinfo)
+        : SwitchLowering(funcinfo), IRT(irt) {
+      assert(irt && "irt is null!");
+    }
+
+    virtual void addSuccessorWithProb(
+        MachineBasicBlock *Src, MachineBasicBlock *Dst,
+        BranchProbability Prob = BranchProbability::getUnknown()) override {
+      IRT->addSuccessorWithProb(Src, Dst, Prob);
+    }
+
+    virtual ~GISelSwitchLowering() = default;
+
+  private:
+    IRTranslator *IRT;
+  };
+
+  std::unique_ptr<GISelSwitchLowering> SL;
+
   // * Insert all the code needed to materialize the constants
   // at the proper place. E.g., Entry block or dominator block
   // of each constant depending on how fancy we want to be.
   // * Clear the different maps.
   void finalizeFunction();
+
+  // Handle emitting jump tables for each basic block.
+  void finalizeBasicBlock();
 
   /// Get the VRegs that represent \p Val.
   /// Non-aggregate types have just one corresponding VReg and the list can be
@@ -536,6 +604,14 @@ private:
       return RemappedEdge->second;
     return SmallVector<MachineBasicBlock *, 4>(1, &getMBB(*Edge.first));
   }
+
+  /// Return branch probability calculated by BranchProbabilityInfo for IR
+  /// blocks.
+  BranchProbability getEdgeProbability(const MachineBasicBlock *Src,
+                                       const MachineBasicBlock *Dst) const;
+
+  void addSuccessorWithProb(MachineBasicBlock *Src, MachineBasicBlock *Dst,
+                            BranchProbability Prob);
 
 public:
   // Ctor, nothing fancy.

@@ -145,6 +145,9 @@ GCNHazardRecognizer::getHazardType(SUnit *SU, int Stalls) {
   if (ST.hasNSAtoVMEMBug() && checkNSAtoVMEMHazard(MI) > 0)
     return NoopHazard;
 
+  if (checkFPAtomicToDenormModeHazard(MI) > 0)
+    return NoopHazard;
+
   if (ST.hasNoDataDepHazard())
     return NoHazard;
 
@@ -246,6 +249,8 @@ unsigned GCNHazardRecognizer::PreEmitNoopsCommon(MachineInstr *MI) {
 
   if (ST.hasNSAtoVMEMBug())
     WaitStates = std::max(WaitStates, checkNSAtoVMEMHazard(MI));
+
+  WaitStates = std::max(WaitStates, checkFPAtomicToDenormModeHazard(MI));
 
   if (ST.hasNoDataDepHazard())
     return WaitStates;
@@ -1137,4 +1142,40 @@ int GCNHazardRecognizer::checkNSAtoVMEMHazard(MachineInstr *MI) {
   };
 
   return NSAtoVMEMWaitStates - getWaitStatesSince(IsHazardFn, 1);
+}
+
+int GCNHazardRecognizer::checkFPAtomicToDenormModeHazard(MachineInstr *MI) {
+  int FPAtomicToDenormModeWaitStates = 3;
+
+  if (MI->getOpcode() != AMDGPU::S_DENORM_MODE)
+    return 0;
+
+  auto IsHazardFn = [] (MachineInstr *I) {
+    if (!SIInstrInfo::isVMEM(*I) && !SIInstrInfo::isFLAT(*I))
+      return false;
+    return SIInstrInfo::isFPAtomic(*I);
+  };
+
+  auto IsExpiredFn = [] (MachineInstr *MI, int WaitStates) {
+    if (WaitStates >= 3 || SIInstrInfo::isVALU(*MI))
+      return true;
+
+    switch (MI->getOpcode()) {
+    case AMDGPU::S_WAITCNT:
+    case AMDGPU::S_WAITCNT_VSCNT:
+    case AMDGPU::S_WAITCNT_VMCNT:
+    case AMDGPU::S_WAITCNT_EXPCNT:
+    case AMDGPU::S_WAITCNT_LGKMCNT:
+    case AMDGPU::S_WAITCNT_IDLE:
+      return true;
+    default:
+      break;
+    }
+
+    return false;
+  };
+
+
+  return FPAtomicToDenormModeWaitStates -
+         ::getWaitStatesSince(IsHazardFn, MI, IsExpiredFn);
 }

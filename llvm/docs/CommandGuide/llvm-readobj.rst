@@ -88,6 +88,10 @@ input. Otherwise, it will read from the specified ``filenames``.
 
  Print demangled symbol names in the output.
 
+.. option:: @<FILE>
+
+ Read command-line options from response file `<FILE>`.
+
 EXIT STATUS
 -----------
 

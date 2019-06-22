@@ -101,10 +101,19 @@ using CaseBitsVector = std::vector<CaseBits>;
 /// SDISel for the code generation of additional basic blocks needed by
 /// multi-case switch statements.
 struct CaseBlock {
-  // The condition code to use for the case block's setcc node.
-  // Besides the integer condition codes, this can also be SETTRUE, in which
-  // case no comparison gets emitted.
-  ISD::CondCode CC;
+  // For the GISel interface.
+  struct PredInfoPair {
+    CmpInst::Predicate Pred;
+    // Set when no comparison should be emitted.
+    bool NoCmp;
+  };
+  union {
+    // The condition code to use for the case block's setcc node.
+    // Besides the integer condition codes, this can also be SETTRUE, in which
+    // case no comparison gets emitted.
+    ISD::CondCode CC;
+    struct PredInfoPair PredInfo;
+  };
 
   // The LHS/MHS/RHS of the comparison to emit.
   // Emit by default LHS op RHS. MHS is used for range comparisons:
@@ -120,10 +129,12 @@ struct CaseBlock {
   /// The debug location of the instruction this CaseBlock was
   /// produced from.
   SDLoc DL;
+  DebugLoc DbgLoc;
 
   // Branch weights.
   BranchProbability TrueProb, FalseProb;
 
+  // Constructor for SelectionDAG.
   CaseBlock(ISD::CondCode cc, const Value *cmplhs, const Value *cmprhs,
             const Value *cmpmiddle, MachineBasicBlock *truebb,
             MachineBasicBlock *falsebb, MachineBasicBlock *me, SDLoc dl,
@@ -132,6 +143,17 @@ struct CaseBlock {
       : CC(cc), CmpLHS(cmplhs), CmpMHS(cmpmiddle), CmpRHS(cmprhs),
         TrueBB(truebb), FalseBB(falsebb), ThisBB(me), DL(dl),
         TrueProb(trueprob), FalseProb(falseprob) {}
+
+  // Constructor for GISel.
+  CaseBlock(CmpInst::Predicate pred, bool nocmp, const Value *cmplhs,
+            const Value *cmprhs, const Value *cmpmiddle,
+            MachineBasicBlock *truebb, MachineBasicBlock *falsebb,
+            MachineBasicBlock *me, DebugLoc dl,
+            BranchProbability trueprob = BranchProbability::getUnknown(),
+            BranchProbability falseprob = BranchProbability::getUnknown())
+      : PredInfo({pred, nocmp}), CmpLHS(cmplhs), CmpMHS(cmpmiddle),
+        CmpRHS(cmprhs), TrueBB(truebb), FalseBB(falsebb), ThisBB(me),
+        DbgLoc(dl), TrueProb(trueprob), FalseProb(falseprob) {}
 };
 
 struct JumpTable {
