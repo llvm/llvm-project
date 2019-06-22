@@ -4737,6 +4737,33 @@ Sema::CreateBuiltinArraySubscriptExpr(Expr *Base, SourceLocation LLoc,
   assert(VK == VK_RValue || LangOpts.CPlusPlus ||
          !ResultType.isCForbiddenLValueType());
 
+  if (LHSExp->IgnoreParenImpCasts()->getType()->isVariablyModifiedType() &&
+      FunctionScopes.size() > 1) {
+    if (auto *TT =
+            LHSExp->IgnoreParenImpCasts()->getType()->getAs<TypedefType>()) {
+      for (auto I = FunctionScopes.rbegin(),
+                E = std::prev(FunctionScopes.rend());
+           I != E; ++I) {
+        auto *CSI = dyn_cast<CapturingScopeInfo>(*I);
+        if (CSI == nullptr)
+          break;
+        DeclContext *DC = nullptr;
+        if (auto *LSI = dyn_cast<LambdaScopeInfo>(CSI))
+          DC = LSI->CallOperator;
+        else if (auto *CRSI = dyn_cast<CapturedRegionScopeInfo>(CSI))
+          DC = CRSI->TheCapturedDecl;
+        else if (auto *BSI = dyn_cast<BlockScopeInfo>(CSI))
+          DC = BSI->TheDecl;
+        if (DC) {
+          if (DC->containsDecl(TT->getDecl()))
+            break;
+          captureVariablyModifiedType(
+              Context, LHSExp->IgnoreParenImpCasts()->getType(), CSI);
+        }
+      }
+    }
+  }
+
   return new (Context)
       ArraySubscriptExpr(LHSExp, RHSExp, ResultType, VK, OK, RLoc);
 }
@@ -5767,28 +5794,29 @@ ExprResult Sema::BuildResolvedCallExpr(Expr *Fn, NamedDecl *NDecl,
   // CheckBuiltinFunctionCall below just after creation of the call expression.
   const FunctionType *FuncT = nullptr;
   if (!BuiltinID || !Context.BuiltinInfo.hasCustomTypechecking(BuiltinID)) {
-   retry:
+  retry:
     if (const PointerType *PT = Fn->getType()->getAs<PointerType>()) {
       // C99 6.5.2.2p1 - "The expression that denotes the called function shall
       // have type pointer to function".
       FuncT = PT->getPointeeType()->getAs<FunctionType>();
       if (!FuncT)
         return ExprError(Diag(LParenLoc, diag::err_typecheck_call_not_function)
-                           << Fn->getType() << Fn->getSourceRange());
+                         << Fn->getType() << Fn->getSourceRange());
     } else if (const BlockPointerType *BPT =
-                 Fn->getType()->getAs<BlockPointerType>()) {
+                   Fn->getType()->getAs<BlockPointerType>()) {
       FuncT = BPT->getPointeeType()->castAs<FunctionType>();
     } else {
       // Handle calls to expressions of unknown-any type.
       if (Fn->getType() == Context.UnknownAnyTy) {
         ExprResult rewrite = rebuildUnknownAnyFunction(*this, Fn);
-        if (rewrite.isInvalid()) return ExprError();
+        if (rewrite.isInvalid())
+          return ExprError();
         Fn = rewrite.get();
         goto retry;
       }
 
-    return ExprError(Diag(LParenLoc, diag::err_typecheck_call_not_function)
-      << Fn->getType() << Fn->getSourceRange());
+      return ExprError(Diag(LParenLoc, diag::err_typecheck_call_not_function)
+                       << Fn->getType() << Fn->getSourceRange());
     }
   }
 

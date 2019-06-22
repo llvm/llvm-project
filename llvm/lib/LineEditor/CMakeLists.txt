@@ -9,6 +9,5 @@ add_llvm_library(LLVMLineEditor
   ${LLVM_MAIN_INCLUDE_DIR}/llvm/LineEditor
 
   LINK_LIBS
-  LLVMSupport
   ${link_libs}
   )

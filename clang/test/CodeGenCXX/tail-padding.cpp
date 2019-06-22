@@ -44,21 +44,21 @@ namespace NoUniqueAddr {
   static_assert(sizeof(E) == sizeof(void*) + 8 + alignof(void*));
 
   // CHECK: define {{.*}} @_ZN12NoUniqueAddr1CC1EOS0_
-  // CHECK: call void @_ZN12NoUniqueAddr1AC2ERKS0_(
+  // CHECK: call {{.*}} @_ZN12NoUniqueAddr1AC2ERKS0_(
   // CHECK: store i32 {{.*}} @_ZTVN12NoUniqueAddr1CE
   // Copy the full size of B.
   // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* {{.*}}, i64 8, i1 false)
   C f(C c) { return c; }
 
   // CHECK: define {{.*}} @_ZN12NoUniqueAddr1DC1EOS0_
-  // CHECK: call void @_ZN12NoUniqueAddr1AC2ERKS0_(
+  // CHECK: call {{.*}} @_ZN12NoUniqueAddr1AC2ERKS0_(
   // CHECK: store i32 {{.*}} @_ZTVN12NoUniqueAddr1DE
   // Copy just the data size of B, to avoid overwriting the A base class.
   // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* {{.*}}, i64 7, i1 false)
   D f(D d) { return d; }
 
   // CHECK: define {{.*}} @_ZN12NoUniqueAddr1EC1EOS0_
-  // CHECK: call void @_ZN12NoUniqueAddr1AC2ERKS0_(
+  // CHECK: call {{.*}} @_ZN12NoUniqueAddr1AC2ERKS0_(
   // CHECK: store i32 {{.*}} @_ZTVN12NoUniqueAddr1EE
   // We can copy the full size of B here. (As it happens, we fold the copy of 'x' into
   // this memcpy, so we're copying 8 bytes either way.)
@@ -71,7 +71,7 @@ namespace NoUniqueAddr {
   };
 
   // CHECK: define {{.*}} @_ZN12NoUniqueAddr1FC1ERKS0_
-  // CHECK: call void @_ZN12NoUniqueAddr1AC2ERKS0_(
+  // CHECK: call {{.*}} @_ZN12NoUniqueAddr1AC2ERKS0_(
   // CHECK: store i32 {{.*}} @_ZTVN12NoUniqueAddr1FE
   // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* {{.*}}, i8* {{.*}}, i64 7, i1 false)
   F f(F x) { return x; }

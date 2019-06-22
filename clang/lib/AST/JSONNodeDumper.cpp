@@ -78,6 +78,7 @@ void JSONNodeDumper::Visit(const Type *T) {
 
 void JSONNodeDumper::Visit(QualType T) {
   JOS.attribute("id", createPointerRepresentation(T.getAsOpaquePtr()));
+  JOS.attribute("kind", "QualType");
   JOS.attribute("type", createQualType(T));
   JOS.attribute("qualifiers", T.split().Quals.getAsString());
 }

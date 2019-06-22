@@ -115,9 +115,8 @@ public:
                             bool catch_bp, bool throw_bp,
                             bool is_internal = false);
 
-  static Breakpoint::BreakpointPreconditionSP
-  CreateExceptionPrecondition(lldb::LanguageType language, bool catch_bp,
-                              bool throw_bp);
+  static lldb::BreakpointPreconditionSP
+  GetExceptionPrecondition(lldb::LanguageType language, bool throw_bp);
 
   virtual lldb::ValueObjectSP GetExceptionObjectForThread(
       lldb::ThreadSP thread_sp) {

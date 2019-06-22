@@ -144,18 +144,14 @@ define void @legal_vzmovl_2i64_4i64(<2 x i64>* %in, <4 x i64>* %out) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    vmovups (%ecx), %xmm0
-; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X32-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    vmovaps %ymm0, (%eax)
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: legal_vzmovl_2i64_4i64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovups (%rdi), %xmm0
-; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    vmovaps %ymm0, (%rsi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq
@@ -198,18 +194,14 @@ define void @legal_vzmovl_2f64_4f64(<2 x double>* %in, <4 x double>* %out) {
 ; X32:       # %bb.0:
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X32-NEXT:    vmovups (%ecx), %xmm0
-; X32-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X32-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; X32-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X32-NEXT:    vmovaps %ymm0, (%eax)
 ; X32-NEXT:    vzeroupper
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: legal_vzmovl_2f64_4f64:
 ; X64:       # %bb.0:
-; X64-NEXT:    vmovups (%rdi), %xmm0
-; X64-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; X64-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; X64-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; X64-NEXT:    vmovaps %ymm0, (%rsi)
 ; X64-NEXT:    vzeroupper
 ; X64-NEXT:    retq

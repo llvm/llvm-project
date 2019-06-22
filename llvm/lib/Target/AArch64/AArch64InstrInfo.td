@@ -135,6 +135,7 @@ def HasMTE           : Predicate<"Subtarget->hasMTE()">,
                        AssemblerPredicate<"FeatureMTE", "mte">;
 def IsLE             : Predicate<"Subtarget->isLittleEndian()">;
 def IsBE             : Predicate<"!Subtarget->isLittleEndian()">;
+def IsWindows        : Predicate<"Subtarget->isTargetWindows()">;
 def UseAlternateSExtLoadCVTF32
     : Predicate<"Subtarget->useAlternateSExtLoadCVTF32Pattern()">;
 
@@ -6116,6 +6117,7 @@ def : Pat<(i32 (trunc GPR64sp:$src)),
 
 // __builtin_trap() uses the BRK instruction on AArch64.
 def : Pat<(trap), (BRK 1)>;
+def : Pat<(debugtrap), (BRK 0xF000)>, Requires<[IsWindows]>;
 
 // Multiply high patterns which multiply the lower subvector using smull/umull
 // and the upper subvector with smull2/umull2. Then shuffle the high the high

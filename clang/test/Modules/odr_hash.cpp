@@ -4621,8 +4621,69 @@ struct S2 {
 #else
 S2 s2;
 #endif
-
 }
+
+namespace TypedefStruct {
+#if defined(FIRST)
+struct T1;
+class S1 {
+  T1* t;
+};
+#elif defined(SECOND)
+typedef struct T1 {} T1;
+class S1 {
+  T1* t;
+};
+#else
+S1 s1;
+#endif
+
+#if defined(FIRST)
+struct T2;
+class S2 {
+  const T2* t = nullptr;
+};
+#elif defined(SECOND)
+typedef struct T2 {} T2;
+class S2 {
+  const T2* t = nullptr;
+};
+#else
+S2 s2;
+#endif
+
+#if defined(FIRST)
+struct T3;
+class S3 {
+  T3* const t = nullptr;
+};
+#elif defined(SECOND)
+typedef struct T3 {} T3;
+class S3 {
+  T3* const t = nullptr;
+};
+#else
+S3 s3;
+#endif
+
+#if defined(FIRST)
+namespace NS4 {
+struct T4;
+} // namespace NS4
+class S4 {
+  NS4::T4* t = 0;
+};
+#elif defined(SECOND)
+namespace NS4 {
+typedef struct T4 {} T4;
+} // namespace NS4
+class S4 {
+  NS4::T4* t = 0;
+};
+#else
+S4 s4;
+#endif
+} // namespace TypedefStruct
 
 // Keep macros contained to one file.
 #ifdef FIRST
