@@ -118,21 +118,31 @@ if platform.system() not in ['Windows']:
 if config.clang_staticanalyzer:
     config.available_features.add('static-analyzer')
 
+# Get shlex.quote if available (added in 3.3), and fall back to pipes.quote if
+# it's not available.
+try:
+    import shlex
+    sh_quote = shlex.quote
+except:
+    import pipes
+    sh_quote = pipes.quote
+python_exec = sh_quote(config.python_executable)
+
 check_clang_tidy = os.path.join(
     config.test_source_root, "clang-tidy", "check_clang_tidy.py")
 config.substitutions.append(
     ('%check_clang_tidy',
-     '%s %s' % (config.python_executable, check_clang_tidy)) )
+     '%s %s' % (python_exec, check_clang_tidy)) )
 clang_tidy_diff = os.path.join(
     config.test_source_root, "..", "clang-tidy", "tool", "clang-tidy-diff.py")
 config.substitutions.append(
     ('%clang_tidy_diff',
-     '%s %s' % (config.python_executable, clang_tidy_diff)) )
+     '%s %s' % (python_exec, clang_tidy_diff)) )
 run_clang_tidy = os.path.join(
     config.test_source_root, "..", "clang-tidy", "tool", "run-clang-tidy.py")
 config.substitutions.append(
     ('%run_clang_tidy',
-     '%s %s' % (config.python_executable, run_clang_tidy)) )
+     '%s %s' % (python_exec, run_clang_tidy)) )
 
 clangd_benchmarks_dir = os.path.join(os.path.dirname(config.clang_tools_dir),
                                      "tools", "clang", "tools", "extra",
