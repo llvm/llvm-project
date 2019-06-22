@@ -1829,11 +1829,8 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
     Info.setScratchRSrcReg(ReservedBufferReg);
   }
 
-  // This should be accurate for kernels even before the frame is finalized.
-  const bool HasFP = ST.getFrameLowering()->hasFP(MF);
-  if (HasFP) {
-    unsigned ReservedOffsetReg =
-        TRI.reservedPrivateSegmentWaveByteOffsetReg(MF);
+  // hasFP should be accurate for kernels even before the frame is finalized.
+  if (ST.getFrameLowering()->hasFP(MF)) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
 
     // Try to use s32 as the SP, but move it if it would interfere with input
@@ -1860,8 +1857,15 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
         report_fatal_error("failed to find register for SP");
     }
 
-    Info.setScratchWaveOffsetReg(ReservedOffsetReg);
-    Info.setFrameOffsetReg(ReservedOffsetReg);
+    if (MFI.hasCalls()) {
+      Info.setScratchWaveOffsetReg(AMDGPU::SGPR33);
+      Info.setFrameOffsetReg(AMDGPU::SGPR33);
+    } else {
+      unsigned ReservedOffsetReg =
+        TRI.reservedPrivateSegmentWaveByteOffsetReg(MF);
+      Info.setScratchWaveOffsetReg(ReservedOffsetReg);
+      Info.setFrameOffsetReg(ReservedOffsetReg);
+    }
   } else if (RequiresStackAccess) {
     assert(!MFI.hasCalls());
     // We know there are accesses and they will be done relative to SP, so just

@@ -105,6 +105,9 @@ private:
   bool selectVectorICmp(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectIntrinsicTrunc(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool selectIntrinsicRound(MachineInstr &I, MachineRegisterInfo &MRI) const;
+  bool selectJumpTable(MachineInstr &I, MachineRegisterInfo &MRI) const;
+  bool selectBrJT(MachineInstr &I, MachineRegisterInfo &MRI) const;
+
   unsigned emitConstantPoolEntry(Constant *CPVal, MachineFunction &MF) const;
   MachineInstr *emitLoadFromConstantPool(Constant *CPVal,
                                          MachineIRBuilder &MIRBuilder) const;
@@ -1159,6 +1162,9 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
+  case TargetOpcode::G_BRJT:
+    return selectBrJT(I, MRI);
+
   case TargetOpcode::G_BSWAP: {
     // Handle vector types for G_BSWAP directly.
     unsigned DstReg = I.getOperand(0).getReg();
@@ -2011,9 +2017,48 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     return selectInsertElt(I, MRI);
   case TargetOpcode::G_CONCAT_VECTORS:
     return selectConcatVectors(I, MRI);
+  case TargetOpcode::G_JUMP_TABLE:
+    return selectJumpTable(I, MRI);
   }
 
   return false;
+}
+
+bool AArch64InstructionSelector::selectBrJT(MachineInstr &I,
+                                            MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_BRJT && "Expected G_BRJT");
+  unsigned JTAddr = I.getOperand(0).getReg();
+  unsigned JTI = I.getOperand(1).getIndex();
+  unsigned Index = I.getOperand(2).getReg();
+  MachineIRBuilder MIB(I);
+
+  unsigned TargetReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+  unsigned ScratchReg = MRI.createVirtualRegister(&AArch64::GPR64spRegClass);
+  MIB.buildInstr(AArch64::JumpTableDest32, {TargetReg, ScratchReg},
+                 {JTAddr, Index})
+      .addJumpTableIndex(JTI);
+
+  // Build the indirect branch.
+  MIB.buildInstr(AArch64::BR, {}, {TargetReg});
+  I.eraseFromParent();
+  return true;
+}
+
+bool AArch64InstructionSelector::selectJumpTable(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_JUMP_TABLE && "Expected jump table");
+  assert(I.getOperand(1).isJTI() && "Jump table op should have a JTI!");
+
+  unsigned DstReg = I.getOperand(0).getReg();
+  unsigned JTI = I.getOperand(1).getIndex();
+  // We generate a MOVaddrJT which will get expanded to an ADRP + ADD later.
+  MachineIRBuilder MIB(I);
+  auto MovMI =
+    MIB.buildInstr(AArch64::MOVaddrJT, {DstReg}, {})
+          .addJumpTableIndex(JTI, AArch64II::MO_PAGE)
+          .addJumpTableIndex(JTI, AArch64II::MO_NC | AArch64II::MO_PAGEOFF);
+  I.eraseFromParent();
+  return constrainSelectedInstRegOperands(*MovMI, TII, TRI, RBI);
 }
 
 bool AArch64InstructionSelector::selectIntrinsicTrunc(
@@ -3479,6 +3524,11 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     return false;
   case Intrinsic::trap:
     MIRBuilder.buildInstr(AArch64::BRK, {}, {}).addImm(1);
+    break;
+  case Intrinsic::debugtrap:
+    if (!STI.isTargetWindows())
+      return false;
+    MIRBuilder.buildInstr(AArch64::BRK, {}, {}).addImm(0xF000);
     break;
   case Intrinsic::aarch64_stlxr:
     unsigned StatReg = I.getOperand(0).getReg();

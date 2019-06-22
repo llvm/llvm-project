@@ -91,7 +91,8 @@ define void @force_realign4(i32 %idx) #1 {
 }
 
 ; GCN-LABEL: {{^}}kernel_call_align16_from_8:
-; GCN: s_add_u32 s32, s8, 0x400{{$}}
+; GCN: s_mov_b32 s33, s7{{$}}
+; GCN-NEXT: s_add_u32 s32, s33, 0x400{{$}}
 ; GCN-NOT: s32
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kernel_call_align16_from_8() #0 {
@@ -103,7 +104,8 @@ define amdgpu_kernel void @kernel_call_align16_from_8() #0 {
 
 ; The call sequence should keep the stack on call aligned to 4
 ; GCN-LABEL: {{^}}kernel_call_align16_from_5:
-; GCN: s_add_u32 s32, s8, 0x400
+; GCN: s_mov_b32 s33, s7{{$}}
+; GCN-NEXT: s_add_u32 s32, s33, 0x400
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kernel_call_align16_from_5() {
   %alloca0 = alloca i8, align 1, addrspace(5)
@@ -114,7 +116,8 @@ define amdgpu_kernel void @kernel_call_align16_from_5() {
 }
 
 ; GCN-LABEL: {{^}}kernel_call_align4_from_5:
-; GCN: s_add_u32 s32, s8, 0x400
+; GCN: s_mov_b32 s33, s7{{$}}
+; GCN: s_add_u32 s32, s33, 0x400
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kernel_call_align4_from_5() {
   %alloca0 = alloca i8, align 1, addrspace(5)

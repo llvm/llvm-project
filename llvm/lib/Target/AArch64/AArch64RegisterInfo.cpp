@@ -453,7 +453,8 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (MI.isDebugValue() || MI.getOpcode() == TargetOpcode::STACKMAP ||
       MI.getOpcode() == TargetOpcode::PATCHPOINT) {
     Offset = TFI->resolveFrameIndexReference(MF, FrameIndex, FrameReg,
-                                             /*PreferFP=*/true);
+                                             /*PreferFP=*/true,
+                                             /*ForSimm=*/false);
     Offset += MI.getOperand(FIOperandNum + 1).getImm();
     MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false /*isDef*/);
     MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
@@ -468,7 +469,8 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
 
   // Modify MI as necessary to handle as much of 'Offset' as possible
-  Offset = TFI->getFrameIndexReference(MF, FrameIndex, FrameReg);
+  Offset = TFI->resolveFrameIndexReference(
+      MF, FrameIndex, FrameReg, /*PreferFP=*/false, /*ForSimm=*/true);
 
   if (rewriteAArch64FrameIndex(MI, FIOperandNum, FrameReg, Offset, TII))
     return;

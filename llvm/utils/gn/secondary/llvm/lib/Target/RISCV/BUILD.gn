@@ -57,6 +57,7 @@ static_library("LLVMRISCVCodeGen") {
     "RISCVSubtarget.cpp",
     "RISCVTargetMachine.cpp",
     "RISCVTargetObjectFile.cpp",
+    "RISCVTargetTransformInfo.cpp",
   ]
 }
 

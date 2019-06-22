@@ -2179,6 +2179,13 @@ static bool hasRequiredFeatures(const SmallVectorImpl<StringRef> &ReqFeatures,
 // called function.
 void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
                                           const FunctionDecl *TargetDecl) {
+  return checkTargetFeatures(E->getBeginLoc(), TargetDecl);
+}
+
+// Emits an error if we don't have a valid set of target features for the
+// called function.
+void CodeGenFunction::checkTargetFeatures(SourceLocation Loc,
+                                          const FunctionDecl *TargetDecl) {
   // Early exit if this is an indirect call.
   if (!TargetDecl)
     return;
@@ -2203,7 +2210,7 @@ void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
       return;
     StringRef(FeatureList).split(ReqFeatures, ',');
     if (!hasRequiredFeatures(ReqFeatures, CGM, FD, MissingFeature))
-      CGM.getDiags().Report(E->getBeginLoc(), diag::err_builtin_needs_feature)
+      CGM.getDiags().Report(Loc, diag::err_builtin_needs_feature)
           << TargetDecl->getDeclName()
           << CGM.getContext().BuiltinInfo.getRequiredFeatures(BuiltinID);
 
@@ -2229,7 +2236,7 @@ void CodeGenFunction::checkTargetFeatures(const CallExpr *E,
         ReqFeatures.push_back(F.getKey());
     }
     if (!hasRequiredFeatures(ReqFeatures, CGM, FD, MissingFeature))
-      CGM.getDiags().Report(E->getBeginLoc(), diag::err_function_needs_feature)
+      CGM.getDiags().Report(Loc, diag::err_function_needs_feature)
           << FD->getDeclName() << TargetDecl->getDeclName() << MissingFeature;
   }
 }

@@ -108,6 +108,31 @@ const llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
     return Buffer.getPointer();
   }
 
+  // Check that the file's size fits in an 'unsigned' (with room for a
+  // past-the-end value). This is deeply regrettable, but various parts of
+  // Clang (including elsewhere in this file!) use 'unsigned' to represent file
+  // offsets, line numbers, string literal lengths, and so on, and fail
+  // miserably on large source files.
+  if (ContentsEntry->getSize() >= std::numeric_limits<unsigned>::max()) {
+    // We can't make a memory buffer of the required size, so just make a small
+    // one. We should never hit a situation where we've already parsed to a
+    // later offset of the file, so it shouldn't matter that the buffer is
+    // smaller than the file.
+    Buffer.setPointer(
+        llvm::MemoryBuffer::getMemBuffer("", ContentsEntry->getName())
+            .release());
+    if (Diag.isDiagnosticInFlight())
+      Diag.SetDelayedDiagnostic(diag::err_file_too_large,
+                                ContentsEntry->getName());
+    else
+      Diag.Report(Loc, diag::err_file_too_large)
+        << ContentsEntry->getName();
+
+    Buffer.setInt(Buffer.getInt() | InvalidFlag);
+    if (Invalid) *Invalid = true;
+    return Buffer.getPointer();
+  }
+
   bool isVolatile = SM.userFilesAreVolatile() && !IsSystemFile;
   auto BufferOrError =
       SM.getFileManager().getBufferForFile(ContentsEntry, isVolatile);
