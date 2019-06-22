@@ -95,68 +95,68 @@ public:
     return AsmPrinter::doInitialization(M);
   }
 
-    void EmitInstruction(const MachineInstr *MI) override;
+  void EmitInstruction(const MachineInstr *MI) override;
 
-    /// This function is for PrintAsmOperand and PrintAsmMemoryOperand,
-    /// invoked by EmitMSInlineAsmStr and EmitGCCInlineAsmStr only.
-    /// The \p MI would be INLINEASM ONLY.
-    void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
+  /// This function is for PrintAsmOperand and PrintAsmMemoryOperand,
+  /// invoked by EmitMSInlineAsmStr and EmitGCCInlineAsmStr only.
+  /// The \p MI would be INLINEASM ONLY.
+  void printOperand(const MachineInstr *MI, unsigned OpNo, raw_ostream &O);
 
-    void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
-    bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
-                         const char *ExtraCode, raw_ostream &O) override;
-    bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
-                               const char *ExtraCode, raw_ostream &O) override;
+  void PrintSymbolOperand(const MachineOperand &MO, raw_ostream &O) override;
+  bool PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
+                       const char *ExtraCode, raw_ostream &O) override;
+  bool PrintAsmMemoryOperand(const MachineInstr *MI, unsigned OpNo,
+                             const char *ExtraCode, raw_ostream &O) override;
 
-    void EmitEndOfAsmFile(Module &M) override;
+  void EmitEndOfAsmFile(Module &M) override;
 
-    void LowerSTACKMAP(StackMaps &SM, const MachineInstr &MI);
-    void LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI);
-    void EmitTlsCall(const MachineInstr *MI, MCSymbolRefExpr::VariantKind VK);
-    bool runOnMachineFunction(MachineFunction &MF) override {
-      Subtarget = &MF.getSubtarget<PPCSubtarget>();
-      bool Changed = AsmPrinter::runOnMachineFunction(MF);
-      emitXRayTable();
-      return Changed;
-    }
-  };
+  void LowerSTACKMAP(StackMaps &SM, const MachineInstr &MI);
+  void LowerPATCHPOINT(StackMaps &SM, const MachineInstr &MI);
+  void EmitTlsCall(const MachineInstr *MI, MCSymbolRefExpr::VariantKind VK);
+  bool runOnMachineFunction(MachineFunction &MF) override {
+    Subtarget = &MF.getSubtarget<PPCSubtarget>();
+    bool Changed = AsmPrinter::runOnMachineFunction(MF);
+    emitXRayTable();
+    return Changed;
+  }
+};
 
-  /// PPCLinuxAsmPrinter - PowerPC assembly printer, customized for Linux
-  class PPCLinuxAsmPrinter : public PPCAsmPrinter {
-  public:
-    explicit PPCLinuxAsmPrinter(TargetMachine &TM,
-                                std::unique_ptr<MCStreamer> Streamer)
-        : PPCAsmPrinter(TM, std::move(Streamer)) {}
+/// PPCLinuxAsmPrinter - PowerPC assembly printer, customized for Linux
+class PPCLinuxAsmPrinter : public PPCAsmPrinter {
+public:
+  explicit PPCLinuxAsmPrinter(TargetMachine &TM,
+                              std::unique_ptr<MCStreamer> Streamer)
+      : PPCAsmPrinter(TM, std::move(Streamer)) {}
 
-    StringRef getPassName() const override {
-      return "Linux PPC Assembly Printer";
-    }
+  StringRef getPassName() const override {
+    return "Linux PPC Assembly Printer";
+  }
 
-    bool doFinalization(Module &M) override;
-    void EmitStartOfAsmFile(Module &M) override;
+  bool doFinalization(Module &M) override;
+  void EmitStartOfAsmFile(Module &M) override;
 
-    void EmitFunctionEntryLabel() override;
+  void EmitFunctionEntryLabel() override;
 
-    void EmitFunctionBodyStart() override;
-    void EmitFunctionBodyEnd() override;
-    void EmitInstruction(const MachineInstr *MI) override;
-  };
+  void EmitFunctionBodyStart() override;
+  void EmitFunctionBodyEnd() override;
+  void EmitInstruction(const MachineInstr *MI) override;
+};
 
-  /// PPCDarwinAsmPrinter - PowerPC assembly printer, customized for Darwin/Mac
-  /// OS X
-  class PPCDarwinAsmPrinter : public PPCAsmPrinter {
-  public:
-    explicit PPCDarwinAsmPrinter(TargetMachine &TM,
-                                 std::unique_ptr<MCStreamer> Streamer)
-        : PPCAsmPrinter(TM, std::move(Streamer)) {}
+/// PPCDarwinAsmPrinter - PowerPC assembly printer, customized for Darwin/Mac
+/// OS X
+class PPCDarwinAsmPrinter : public PPCAsmPrinter {
+public:
+  explicit PPCDarwinAsmPrinter(TargetMachine &TM,
+                               std::unique_ptr<MCStreamer> Streamer)
+      : PPCAsmPrinter(TM, std::move(Streamer)) {}
 
-    StringRef getPassName() const override {
-      return "Darwin PPC Assembly Printer";
-    }
+  StringRef getPassName() const override {
+    return "Darwin PPC Assembly Printer";
+  }
 
-    bool doFinalization(Module &M) override;
-    void EmitStartOfAsmFile(Module &M) override;
-  };
+  bool doFinalization(Module &M) override;
+  void EmitStartOfAsmFile(Module &M) override;
+};
 
 } // end anonymous namespace
 

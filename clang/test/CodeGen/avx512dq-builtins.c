@@ -692,19 +692,19 @@ __m512i test_mm512_maskz_cvttpd_epi64(__mmask8 __U, __m512d __A) {
 __m512i test_mm512_cvtt_roundpd_epi64(__m512d __A) {
   // CHECK-LABEL: @test_mm512_cvtt_roundpd_epi64
   // CHECK: @llvm.x86.avx512.mask.cvttpd2qq.512
-  return _mm512_cvtt_roundpd_epi64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm512_cvtt_roundpd_epi64(__A, _MM_FROUND_NO_EXC);
 }
 
 __m512i test_mm512_mask_cvtt_roundpd_epi64(__m512i __W, __mmask8 __U, __m512d __A) {
   // CHECK-LABEL: @test_mm512_mask_cvtt_roundpd_epi64
   // CHECK: @llvm.x86.avx512.mask.cvttpd2qq.512
-  return _mm512_mask_cvtt_roundpd_epi64(__W, __U, __A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm512_mask_cvtt_roundpd_epi64(__W, __U, __A, _MM_FROUND_NO_EXC);
 }
 
 __m512i test_mm512_maskz_cvtt_roundpd_epi64(__mmask8 __U, __m512d __A) {
   // CHECK-LABEL: @test_mm512_maskz_cvtt_roundpd_epi64
   // CHECK: @llvm.x86.avx512.mask.cvttpd2qq.512
-  return _mm512_maskz_cvtt_roundpd_epi64(__U, __A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm512_maskz_cvtt_roundpd_epi64(__U, __A, _MM_FROUND_NO_EXC);
 }
 
 __m512i test_mm512_cvttpd_epu64(__m512d __A) {
@@ -728,19 +728,19 @@ __m512i test_mm512_maskz_cvttpd_epu64(__mmask8 __U, __m512d __A) {
 __m512i test_mm512_cvtt_roundpd_epu64(__m512d __A) {
   // CHECK-LABEL: @test_mm512_cvtt_roundpd_epu64
   // CHECK: @llvm.x86.avx512.mask.cvttpd2uqq.512
-  return _mm512_cvtt_roundpd_epu64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm512_cvtt_roundpd_epu64(__A, _MM_FROUND_NO_EXC);
 }
 
 __m512i test_mm512_mask_cvtt_roundpd_epu64(__m512i __W, __mmask8 __U, __m512d __A) {
   // CHECK-LABEL: @test_mm512_mask_cvtt_roundpd_epu64
   // CHECK: @llvm.x86.avx512.mask.cvttpd2uqq.512
-  return _mm512_mask_cvtt_roundpd_epu64(__W, __U, __A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm512_mask_cvtt_roundpd_epu64(__W, __U, __A, _MM_FROUND_NO_EXC);
 }
 
 __m512i test_mm512_maskz_cvtt_roundpd_epu64(__mmask8 __U, __m512d __A) {
   // CHECK-LABEL: @test_mm512_maskz_cvtt_roundpd_epu64
   // CHECK: @llvm.x86.avx512.mask.cvttpd2uqq.512
-  return _mm512_maskz_cvtt_roundpd_epu64(__U, __A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm512_maskz_cvtt_roundpd_epu64(__U, __A, _MM_FROUND_NO_EXC);
 }
 
 __m512i test_mm512_cvttps_epi64(__m256 __A) {
@@ -764,19 +764,19 @@ __m512i test_mm512_maskz_cvttps_epi64(__mmask8 __U, __m256 __A) {
 __m512i test_mm512_cvtt_roundps_epi64(__m256 __A) {
   // CHECK-LABEL: @test_mm512_cvtt_roundps_epi64
   // CHECK: @llvm.x86.avx512.mask.cvttps2qq.512
-  return _mm512_cvtt_roundps_epi64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm512_cvtt_roundps_epi64(__A, _MM_FROUND_NO_EXC);
 }
 
 __m512i test_mm512_mask_cvtt_roundps_epi64(__m512i __W, __mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm512_mask_cvtt_roundps_epi64
   // CHECK: @llvm.x86.avx512.mask.cvttps2qq.512
-  return _mm512_mask_cvtt_roundps_epi64(__W, __U, __A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm512_mask_cvtt_roundps_epi64(__W, __U, __A, _MM_FROUND_NO_EXC);
 }
 
 __m512i test_mm512_maskz_cvtt_roundps_epi64(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm512_maskz_cvtt_roundps_epi64
   // CHECK: @llvm.x86.avx512.mask.cvttps2qq.512
-  return _mm512_maskz_cvtt_roundps_epi64(__U, __A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm512_maskz_cvtt_roundps_epi64(__U, __A, _MM_FROUND_NO_EXC);
 }
 
 __m512i test_mm512_cvttps_epu64(__m256 __A) {
@@ -800,19 +800,19 @@ __m512i test_mm512_maskz_cvttps_epu64(__mmask8 __U, __m256 __A) {
 __m512i test_mm512_cvtt_roundps_epu64(__m256 __A) {
   // CHECK-LABEL: @test_mm512_cvtt_roundps_epu64
   // CHECK: @llvm.x86.avx512.mask.cvttps2uqq.512
-  return _mm512_cvtt_roundps_epu64(__A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm512_cvtt_roundps_epu64(__A, _MM_FROUND_NO_EXC);
 }
 
 __m512i test_mm512_mask_cvtt_roundps_epu64(__m512i __W, __mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm512_mask_cvtt_roundps_epu64
   // CHECK: @llvm.x86.avx512.mask.cvttps2uqq.512
-  return _mm512_mask_cvtt_roundps_epu64(__W, __U, __A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm512_mask_cvtt_roundps_epu64(__W, __U, __A, _MM_FROUND_NO_EXC);
 }
 
 __m512i test_mm512_maskz_cvtt_roundps_epu64(__mmask8 __U, __m256 __A) {
   // CHECK-LABEL: @test_mm512_maskz_cvtt_roundps_epu64
   // CHECK: @llvm.x86.avx512.mask.cvttps2uqq.512
-  return _mm512_maskz_cvtt_roundps_epu64(__U, __A, _MM_FROUND_CUR_DIRECTION); 
+  return _mm512_maskz_cvtt_roundps_epu64(__U, __A, _MM_FROUND_NO_EXC);
 }
 
 __m512d test_mm512_cvtepu64_pd(__m512i __A) {
