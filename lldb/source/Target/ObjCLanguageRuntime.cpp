@@ -375,6 +375,18 @@ bool ObjCLanguageRuntime::GetTypeBitSize(const CompilerType &compiler_type,
   return found;
 }
 
+lldb::BreakpointPreconditionSP
+ObjCLanguageRuntime::GetBreakpointExceptionPrecondition(LanguageType language,
+                                                        bool throw_bp) {
+  if (language != eLanguageTypeObjC)
+    return lldb::BreakpointPreconditionSP();
+  if (!throw_bp)
+    return lldb::BreakpointPreconditionSP();
+  BreakpointPreconditionSP precondition_sp(
+      new ObjCLanguageRuntime::ObjCExceptionPrecondition());
+  return precondition_sp;
+}
+
 // Exception breakpoint Precondition class for ObjC:
 void ObjCLanguageRuntime::ObjCExceptionPrecondition::AddClassName(
     const char *class_name) {

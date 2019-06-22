@@ -1027,11 +1027,11 @@ define <16 x i8> @var_shuffle_v16i8_from_v32i8_v16i8(<32 x i8> %v, <16 x i8> %in
 ; AVX2-LABEL: var_shuffle_v16i8_from_v32i8_v16i8:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX2-NEXT:    vpshufb %xmm1, %xmm2, %xmm2
+; AVX2-NEXT:    vpshufb %xmm1, %xmm0, %xmm2
+; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX2-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
 ; AVX2-NEXT:    vpcmpgtb {{.*}}(%rip), %ymm1, %ymm1
-; AVX2-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpblendvb %ymm1, %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
@@ -1039,11 +1039,11 @@ define <16 x i8> @var_shuffle_v16i8_from_v32i8_v16i8(<32 x i8> %v, <16 x i8> %in
 ; AVX512-LABEL: var_shuffle_v16i8_from_v32i8_v16i8:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; AVX512-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX512-NEXT:    vpshufb %xmm1, %xmm2, %xmm2
+; AVX512-NEXT:    vpshufb %xmm1, %xmm0, %xmm2
+; AVX512-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX512-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpcmpgtb {{.*}}(%rip), %ymm1, %ymm1
-; AVX512-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
+; AVX512-NEXT:    vpblendvb %ymm1, %ymm0, %ymm2, %ymm0
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
@@ -1051,12 +1051,12 @@ define <16 x i8> @var_shuffle_v16i8_from_v32i8_v16i8(<32 x i8> %v, <16 x i8> %in
 ; AVX512VLBW-LABEL: var_shuffle_v16i8_from_v32i8_v16i8:
 ; AVX512VLBW:       # %bb.0:
 ; AVX512VLBW-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; AVX512VLBW-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX512VLBW-NEXT:    vpshufb %xmm1, %xmm2, %xmm2
+; AVX512VLBW-NEXT:    vpshufb %xmm1, %xmm0, %xmm2
+; AVX512VLBW-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
 ; AVX512VLBW-NEXT:    vpshufb %xmm1, %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    vpcmpgtb {{.*}}(%rip), %ymm1, %k1
-; AVX512VLBW-NEXT:    vmovdqu8 %ymm2, %ymm0 {%k1}
-; AVX512VLBW-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512VLBW-NEXT:    vmovdqu8 %ymm0, %ymm2 {%k1}
+; AVX512VLBW-NEXT:    vmovdqa %xmm2, %xmm0
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
 ;

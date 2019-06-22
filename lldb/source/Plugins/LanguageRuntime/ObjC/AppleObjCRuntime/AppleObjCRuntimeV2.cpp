@@ -806,7 +806,8 @@ void AppleObjCRuntimeV2::Initialize() {
       CreateInstance,
       [](CommandInterpreter &interpreter) -> lldb::CommandObjectSP {
         return CommandObjectSP(new CommandObjectMultiwordObjC(interpreter));
-      });
+      },
+      GetBreakpointExceptionPrecondition);
 }
 
 void AppleObjCRuntimeV2::Terminate() {

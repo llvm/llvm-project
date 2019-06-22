@@ -380,8 +380,7 @@ define <4 x i64> @combine_pshufb_as_zext128(<32 x i8> %a0) {
 define <4 x double> @combine_pshufb_as_vzmovl_64(<4 x double> %a0) {
 ; CHECK-LABEL: combine_pshufb_as_vzmovl_64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; CHECK-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; CHECK-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = bitcast <4 x double> %a0 to <32 x i8>
   %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %1, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 4, i8 5, i8 6, i8 7, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>)

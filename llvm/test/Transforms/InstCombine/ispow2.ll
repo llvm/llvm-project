@@ -183,3 +183,120 @@ define i1 @is_pow2or0_negate_op_extra_use2(i32 %x) {
   %cmp = icmp eq i32 %and, %x
   ret i1 %cmp
 }
+
+declare i32 @llvm.ctpop.i32(i32)
+declare <2 x i8> @llvm.ctpop.v2i8(<2 x i8>)
+
+define i1 @is_pow2_ctpop(i32 %x) {
+; CHECK-LABEL: @is_pow2_ctpop(
+; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range !0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 2
+; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ult i32 %t0, 2
+  %notzero = icmp ne i32 %x, 0
+  %r = and i1 %notzero, %cmp
+  ret i1 %r
+}
+
+; Extra uses don't change the fold.
+declare void @use_i1(i1)
+
+define i1 @is_pow2_ctpop_extra_uses(i32 %x) {
+; CHECK-LABEL: @is_pow2_ctpop_extra_uses(
+; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range !0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 2
+; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
+; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
+; CHECK-NEXT:    call void @use_i1(i1 [[NOTZERO]])
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ult i32 %t0, 2
+  call void @use_i1(i1 %cmp)
+  %notzero = icmp ne i32 %x, 0
+  call void @use_i1(i1 %notzero)
+  %r = and i1 %notzero, %cmp
+  ret i1 %r
+}
+
+; Test vector type and commuted 'and' operands.
+
+define <2 x i1> @is_pow2_ctpop_commute_vec(<2 x i8> %x) {
+; CHECK-LABEL: @is_pow2_ctpop_commute_vec(
+; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[T0]], <i8 2, i8 2>
+; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne <2 x i8> [[X]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[CMP]], [[NOTZERO]]
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %t0 = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> %x)
+  %cmp = icmp ult <2 x i8> %t0, <i8 2, i8 2>
+  %notzero = icmp ne <2 x i8> %x, zeroinitializer
+  %r = and <2 x i1> %cmp, %notzero
+  ret <2 x i1> %r
+}
+
+define i1 @is_pow2_ctpop_wrong_cmp_op1(i32 %x) {
+; CHECK-LABEL: @is_pow2_ctpop_wrong_cmp_op1(
+; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range !0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 3
+; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ult i32 %t0, 3
+  %notzero = icmp ne i32 %x, 0
+  %r = and i1 %notzero, %cmp
+  ret i1 %r
+}
+
+define i1 @is_pow2_ctpop_wrong_cmp_op2(i32 %x) {
+; CHECK-LABEL: @is_pow2_ctpop_wrong_cmp_op2(
+; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range !0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 2
+; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 1
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ult i32 %t0, 2
+  %notzero = icmp ne i32 %x, 1
+  %r = and i1 %notzero, %cmp
+  ret i1 %r
+}
+
+define i1 @is_pow2_ctpop_wrong_pred1(i32 %x) {
+; CHECK-LABEL: @is_pow2_ctpop_wrong_pred1(
+; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range !0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[T0]], 2
+; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ugt i32 %t0, 2
+  %notzero = icmp ne i32 %x, 0
+  %r = and i1 %notzero, %cmp
+  ret i1 %r
+}
+
+define i1 @is_pow2_ctpop_wrong_pred2(i32 %x) {
+; CHECK-LABEL: @is_pow2_ctpop_wrong_pred2(
+; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range !0
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 2
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[X]], 0
+; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP2]], [[CMP]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ult i32 %t0, 2
+  %cmp2 = icmp sgt i32 %x, 0
+  %r = and i1 %cmp2, %cmp
+  ret i1 %r
+}

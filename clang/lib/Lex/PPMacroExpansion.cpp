@@ -1330,9 +1330,13 @@ already_lexed:
 
         // The last ')' has been reached; return the value if one found or
         // a diagnostic and a dummy value.
-        if (Result.hasValue())
+        if (Result.hasValue()) {
           OS << Result.getValue();
-        else {
+          // For strict conformance to __has_cpp_attribute rules, use 'L'
+          // suffix for dated literals.
+          if (Result.getValue() > 1)
+            OS << 'L';
+        } else {
           OS << 0;
           if (!SuppressDiagnostic)
             PP.Diag(Tok.getLocation(), diag::err_too_few_args_in_macro_invoc);
@@ -1454,6 +1458,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
   // Set up the return result.
   Tok.setIdentifierInfo(nullptr);
   Tok.clearFlag(Token::NeedsCleaning);
+  bool IsAtStartOfLine = Tok.isAtStartOfLine();
+  bool HasLeadingSpace = Tok.hasLeadingSpace();
 
   if (II == Ident__LINE__) {
     // C99 6.10.8: "__LINE__: The presumed line number (within the current
@@ -1807,6 +1813,8 @@ void Preprocessor::ExpandBuiltinMacro(Token &Tok) {
     llvm_unreachable("Unknown identifier!");
   }
   CreateString(OS.str(), Tok, Tok.getLocation(), Tok.getLocation());
+  Tok.setFlagValue(Token::StartOfLine, IsAtStartOfLine);
+  Tok.setFlagValue(Token::LeadingSpace, HasLeadingSpace);
 }
 
 void Preprocessor::markMacroAsUsed(MacroInfo *MI) {
