@@ -2732,10 +2732,12 @@ bool IndVarSimplify::run(Loop *L) {
       if (ExitCount->isZero()) {
         auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
         bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
-        auto *NewCond = ExitIfTrue ?
-          ConstantInt::getTrue(BI->getCondition()->getType()) :
-          ConstantInt::getFalse(BI->getCondition()->getType());
+        auto *OldCond = BI->getCondition();
+        auto *NewCond = ExitIfTrue ? ConstantInt::getTrue(OldCond->getType()) :
+          ConstantInt::getFalse(OldCond->getType());
         BI->setCondition(NewCond);
+        if (OldCond->use_empty())
+          DeadInsts.push_back(OldCond);
         Changed = true;
         continue;
       }

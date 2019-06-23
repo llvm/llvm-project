@@ -170,10 +170,6 @@ define void @test_06(i32 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -2147483649, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[NARROW_IV:%.*]] = trunc i64 [[IV]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[NARROW_IV]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
@@ -350,10 +346,6 @@ define void @test_06_unsigned(i32 %n) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ -1, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[NARROW_IV:%.*]] = trunc i64 [[IV]] to i32
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[NARROW_IV]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 false, label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void

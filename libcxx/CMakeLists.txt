@@ -565,7 +565,9 @@ add_compile_flags_if_supported(
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
     add_compile_flags_if_supported(
         -Wno-user-defined-literals
-        -Wno-covered-switch-default)
+        -Wno-covered-switch-default
+        -Wno-ignored-attributes # FIXME: Caused by _LIBCPP_NODEBUG_TYPE not being supported on older clangs
+        )
     if (LIBCXX_TARGETING_CLANG_CL)
       add_compile_flags_if_supported(
         -Wno-c++98-compat
@@ -582,7 +584,6 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         -Wno-deprecated # FIXME: Remove this and fix all occurrences.
         -Wno-shift-sign-overflow # FIXME: Why do we need this with clang-cl but not clang?
         -Wno-double-promotion # FIXME: remove me
-        -Wno-ignored-attributes # FIXME: Caused by _LIBCPP_NODEBUG_TYPE not being supported on older clangs
       )
     endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")
