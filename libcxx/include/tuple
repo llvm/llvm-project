@@ -209,12 +209,12 @@ public:
               "Attempted to default construct a reference element in a tuple");}
 
     template <class _Tp,
-              class = typename enable_if<
-                  __lazy_and<
-                      __lazy_not<is_same<typename __uncvref<_Tp>::type, __tuple_leaf>>
-                    , is_constructible<_Hp, _Tp>
+              class = _EnableIf<
+                  _And<
+                      _IsNotSame<__uncvref_t<_Tp>, __tuple_leaf>,
+                      is_constructible<_Hp, _Tp>
                     >::value
-                >::type
+                >
             >
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
         explicit __tuple_leaf(_Tp&& __t) _NOEXCEPT_((is_nothrow_constructible<_Hp, _Tp>::value))
@@ -291,12 +291,12 @@ public:
             : _Hp(__a) {}
 
     template <class _Tp,
-              class = typename enable_if<
-                  __lazy_and<
-                        __lazy_not<is_same<typename __uncvref<_Tp>::type, __tuple_leaf>>
-                      , is_constructible<_Hp, _Tp>
-                    >::value
-                >::type
+              class = _EnableIf<
+                  _And<
+                    _IsNotSame<__uncvref_t<_Tp>, __tuple_leaf>,
+                    is_constructible<_Hp, _Tp>
+                  >::value
+                >
             >
         _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
         explicit __tuple_leaf(_Tp&& __t) _NOEXCEPT_((is_nothrow_constructible<_Hp, _Tp>::value))
@@ -344,9 +344,6 @@ public:
 template <class ..._Tp>
 _LIBCPP_INLINE_VISIBILITY
 void __swallow(_Tp&&...) _NOEXCEPT {}
-
-template <class ..._Tp>
-struct __lazy_all : __all<_Tp::value...> {};
 
 template <class _Tp>
 struct __all_default_constructible;
@@ -567,19 +564,19 @@ class _LIBCPP_TEMPLATE_VIS tuple
         // the UTypes... constructor should be selected instead.
         // See LWG issue #2549.
         template <class _Tuple>
-        using _PreferTupleLikeConstructor = __lazy_or<
+        using _PreferTupleLikeConstructor = _Or<
             // Don't attempt the two checks below if the tuple we are given
             // has the same type as this tuple.
-            is_same<typename __uncvref<_Tuple>::type, tuple>,
-            __lazy_and<
-                __lazy_not<is_constructible<_Tp..., _Tuple>>,
-                __lazy_not<is_convertible<_Tuple, _Tp...>>
+            _IsSame<__uncvref_t<_Tuple>, tuple>,
+            _Lazy<_And,
+                _Not<is_constructible<_Tp..., _Tuple>>,
+                _Not<is_convertible<_Tuple, _Tp...>>
             >
         >;
 
         template <class _Tuple>
         static constexpr bool __enable_implicit() {
-            return __lazy_and<
+            return _And<
                 __tuple_convertible<_Tuple, tuple>,
                 _PreferTupleLikeConstructor<_Tuple>
             >::value;
@@ -587,10 +584,10 @@ class _LIBCPP_TEMPLATE_VIS tuple
 
         template <class _Tuple>
         static constexpr bool __enable_explicit() {
-            return __lazy_and<
+            return _And<
                 __tuple_constructible<_Tuple, tuple>,
                 _PreferTupleLikeConstructor<_Tuple>,
-                __lazy_not<__tuple_convertible<_Tuple, tuple>>
+                _Not<__tuple_convertible<_Tuple, tuple>>
             >::value;
         }
     };
@@ -615,12 +612,13 @@ public:
     tuple(tuple const&) = default;
     tuple(tuple&&) = default;
 
-    template <class _AllocArgT, class _Alloc, bool _Dummy = true, class = typename enable_if<
-        __lazy_and<
-            is_same<allocator_arg_t, _AllocArgT>,
-            __lazy_all<__dependent_type<is_default_constructible<_Tp>, _Dummy>...>
+    template <class _AllocArgT, class _Alloc, bool _Dummy = true, class = _EnableIf<
+        _And<
+            _IsSame<allocator_arg_t, _AllocArgT>,
+           __dependent_type<is_default_constructible<_Tp>, _Dummy>...
        >::value
-    >::type>
+      >
+    >
     _LIBCPP_INLINE_VISIBILITY
     tuple(_AllocArgT, _Alloc const& __a)
       : __base_(allocator_arg_t(), __a,
