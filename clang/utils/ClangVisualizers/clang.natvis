@@ -515,7 +515,8 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredIdentifier">{{Identifier ({*(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)})}}</DisplayString>
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredObjCZeroArgSelector">{{ObjC Zero Arg Selector (*{(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)})}}</DisplayString>
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredObjCOneArgSelector">{{ObjC One Arg Selector (*{(clang::IdentifierInfo *)(Ptr &amp; ~PtrMask)})}}</DisplayString>
-    <DisplayString Condition="(Ptr &amp; PtrMask) == StoredCXXConstructorName">C++ Constructor {{*(clang::detail::CXXSpecialNameExtra *)(Ptr &amp; ~PtrMask)}}</DisplayString>
+    <DisplayString Condition="(Ptr &amp; PtrMask) == StoredCXXConstructorName" IncludeView="cpp">{(clang::detail::CXXSpecialNameExtra *)(Ptr &amp; ~PtrMask),view(cpp)na}</DisplayString>
+    <DisplayString Condition="(Ptr &amp; PtrMask) == StoredCXXConstructorName">C++ Constructor {{{(clang::detail::CXXSpecialNameExtra *)(Ptr &amp; ~PtrMask),view(cpp)na}}}</DisplayString>
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredCXXDestructorName">C++ Destructor {{*(clang::detail::CXXSpecialNameExtra *)(Ptr &amp; ~PtrMask)}}</DisplayString>
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredCXXConversionFunctionName">C++ Conversion function {{*(clang::detail::CXXSpecialNameExtra *)(Ptr &amp; ~PtrMask)}}</DisplayString>
     <DisplayString Condition="(Ptr &amp; PtrMask) == StoredCXXOperatorName">C++ Operator {{*(clang::detail::CXXOperatorIdName *)(Ptr &amp; ~PtrMask)}}</DisplayString>    
@@ -539,6 +540,10 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString Condition="ExtraKindOrNumArgs == CXXLiteralOperatorName">C++ Literal operator</DisplayString>
     <DisplayString Condition="ExtraKindOrNumArgs == CXXUsingDirective">C++ Using directive</DisplayString>  
     <DisplayString>{(clang::detail::DeclarationNameExtra::ExtraKind)ExtraKindOrNumArgs,en}{"  ",sb}{*this,view(cpp)}</DisplayString>
+  </Type>
+  <Type Name="clang::detail::CXXSpecialNameExtra">
+    <DisplayString IncludeView="cpp">{Type,view(cpp)}</DisplayString>
+    <DisplayString>{Type}</DisplayString>
   </Type>
   <Type Name="clang::Token">
     <DisplayString Condition="Kind != clang::tok::identifier">{(clang::tok::TokenKind)Kind,en}</DisplayString>

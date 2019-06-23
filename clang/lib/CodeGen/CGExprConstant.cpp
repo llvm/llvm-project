@@ -187,7 +187,8 @@ bool ConstantAggregateBuilder::addBits(llvm::APInt Bits, uint64_t OffsetInBits,
 
   // We split bit-fields up into individual bytes. Walk over the bytes and
   // update them.
-  for (CharUnits OffsetInChars = Context.toCharUnitsFromBits(OffsetInBits);
+  for (CharUnits OffsetInChars =
+           Context.toCharUnitsFromBits(OffsetInBits - OffsetWithinChar);
        /**/; ++OffsetInChars) {
     // Number of bits we want to fill in this char.
     unsigned WantedBits =

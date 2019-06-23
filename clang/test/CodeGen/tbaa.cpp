@@ -272,9 +272,9 @@ uint32_t g15(StructS *S, StructS3 *S3, uint64_t count) {
 // OLD-PATH: [[TAG_D_b_a_f32]] = !{[[TYPE_D:!.*]], [[TYPE_INT]], i64 12}
 // OLD-PATH: [[TYPE_D]] = !{!"_ZTS7StructD", [[TYPE_SHORT]], i64 0, [[TYPE_B]], i64 4, [[TYPE_INT]], i64 28, [[TYPE_CHAR]], i64 32}
 // OLD-PATH: [[TAG_five_b]] = !{[[TYPE_five:!.*]], [[TYPE_CHAR]], i64 1}
-// OLD-PATH: [[TYPE_five]] = !{!"_ZTS4five", [[TYPE_CHAR]], i64 0, [[TYPE_INT]], i64 1, [[TYPE_CHAR]], i64 1, [[TYPE_CHAR]], i64 2}
+// OLD-PATH: [[TYPE_five]] = !{!"_ZTS4five", [[TYPE_CHAR]], i64 0, [[TYPE_CHAR]], i64 1, [[TYPE_CHAR]], i64 2}
 // OLD-PATH: [[TAG_six_b]] = !{[[TYPE_six:!.*]], [[TYPE_CHAR]], i64 4}
-// OLD-PATH: [[TYPE_six]] = !{!"_ZTS3six", [[TYPE_CHAR]], i64 0, [[TYPE_INT]], i64 4, [[TYPE_CHAR]], i64 4, [[TYPE_CHAR]], i64 5}
+// OLD-PATH: [[TYPE_six]] = !{!"_ZTS3six", [[TYPE_CHAR]], i64 0, [[TYPE_CHAR]], i64 4, [[TYPE_CHAR]], i64 5}
 
 // NEW-PATH-DAG: [[ROOT:!.*]] = !{!"Simple C++ TBAA"}
 // NEW-PATH-DAG: [[TYPE_char:!.*]] = !{[[ROOT]], i64 1, !"omnipotent char"}
@@ -299,7 +299,7 @@ uint32_t g15(StructS *S, StructS3 *S3, uint64_t count) {
 // NEW-PATH-DAG: [[TAG_C_b_a_f32]] = !{[[TYPE_C]], [[TYPE_int]], i64 12, i64 4}
 // NEW-PATH-DAG: [[TYPE_D:!.*]] = !{[[TYPE_char]], i64 36, !"_ZTS7StructD", [[TYPE_short]], i64 0, i64 2, [[TYPE_B]], i64 4, i64 24, [[TYPE_int]], i64 28, i64 4, [[TYPE_char]], i64 32, i64 1}
 // NEW-PATH-DAG: [[TAG_D_b_a_f32]] = !{[[TYPE_D]], [[TYPE_int]], i64 12, i64 4}
-// NEW-PATH-DAG: [[TYPE_five:!.*]] = !{[[TYPE_char]], i64 3, !"_ZTS4five", [[TYPE_char]], i64 0, i64 1, [[TYPE_int]], i64 1, i64 4, [[TYPE_char]], i64 1, i64 1, [[TYPE_char]], i64 2, i64 1}
+// NEW-PATH-DAG: [[TYPE_five:!.*]] = !{[[TYPE_char]], i64 3, !"_ZTS4five", [[TYPE_char]], i64 0, i64 1, [[TYPE_char]], i64 1, i64 1, [[TYPE_char]], i64 2, i64 1}
 // NEW-PATH-DAG: [[TAG_five_b]] = !{[[TYPE_five]], [[TYPE_char]], i64 1, i64 1}
-// NEW-PATH-DAG: [[TYPE_six:!.*]] = !{[[TYPE_char]], i64 6, !"_ZTS3six", [[TYPE_char]], i64 0, i64 1, [[TYPE_int]], i64 4, i64 4, [[TYPE_char]], i64 4, i64 1, [[TYPE_char]], i64 5, i64 1}
+// NEW-PATH-DAG: [[TYPE_six:!.*]] = !{[[TYPE_char]], i64 6, !"_ZTS3six", [[TYPE_char]], i64 0, i64 1, [[TYPE_char]], i64 4, i64 1, [[TYPE_char]], i64 5, i64 1}
 // NEW-PATH-DAG: [[TAG_six_b]] = !{[[TYPE_six]], [[TYPE_char]], i64 4, i64 1}
