@@ -43623,6 +43623,16 @@ static SDValue combineExtractSubvector(SDNode *N, SelectionDAG &DAG,
       unsigned ExtOp = getOpcode_EXTEND_VECTOR_INREG(InOpcode);
       return DAG.getNode(ExtOp, SDLoc(N), VT, InVec.getOperand(0));
     }
+    if (InOpcode == ISD::VSELECT &&
+        InVec.getOperand(0).getValueType().is256BitVector() &&
+        InVec.getOperand(1).getValueType().is256BitVector() &&
+        InVec.getOperand(2).getValueType().is256BitVector()) {
+      SDLoc DL(N);
+      SDValue Ext0 = extractSubVector(InVec.getOperand(0), 0, DAG, DL, 128);
+      SDValue Ext1 = extractSubVector(InVec.getOperand(1), 0, DAG, DL, 128);
+      SDValue Ext2 = extractSubVector(InVec.getOperand(2), 0, DAG, DL, 128);
+      return DAG.getNode(InOpcode, DL, VT, Ext0, Ext1, Ext2);
+    }
   }
 
   return SDValue();

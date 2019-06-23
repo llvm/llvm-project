@@ -2724,9 +2724,21 @@ bool IndVarSimplify::run(Loop *L) {
       if (isa<SCEVCouldNotCompute>(ExitCount))
         continue;
 
-      // Better to fold to true (TODO: do so!)
-      if (ExitCount->isZero())
+      // If we know we'd exit on the first iteration, rewrite the exit to
+      // reflect this.  This does not imply the loop must exit through this
+      // exit; there may be an earlier one taken on the first iteration.
+      // TODO: Given we know the backedge can't be taken, we should go ahead
+      // and break it.  Or at least, kill all the header phis and simplify.
+      if (ExitCount->isZero()) {
+        auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+        bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
+        auto *NewCond = ExitIfTrue ?
+          ConstantInt::getTrue(BI->getCondition()->getType()) :
+          ConstantInt::getFalse(BI->getCondition()->getType());
+        BI->setCondition(NewCond);
+        Changed = true;
         continue;
+      }
       
       PHINode *IndVar = FindLoopCounter(L, ExitingBB, ExitCount, SE, DT);
       if (!IndVar)

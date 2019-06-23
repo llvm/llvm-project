@@ -111,8 +111,8 @@ void copy7(A *a1, AA *a2) {
 // CHECK-OLD: [[TS2]] = !{i64 0, i64 1, !{{.*}}, i64 4, i64 2, !{{.*}}, i64 8, i64 4, !{{.*}}, i64 12, i64 1, !{{.*}}, i64 16, i64 4, {{.*}}, i64 20, i64 4, {{.*}}}
 // (offset, size) = (0,8) char; (0,2) char; (4,8) char
 // CHECK-OLD: [[TS3]] = !{i64 0, i64 8, !{{.*}}, i64 0, i64 2, !{{.*}}, i64 4, i64 8, !{{.*}}}
-// CHECK-OLD: [[TS4]] = !{i64 0, i64 1, [[TAG_CHAR]], i64 1, i64 4, [[TAG_INT]], i64 1, i64 1, [[TAG_CHAR]], i64 2, i64 1, [[TAG_CHAR]]}
-// CHECK-OLD: [[TS5]] = !{i64 0, i64 1, [[TAG_CHAR]], i64 4, i64 4, [[TAG_INT]], i64 4, i64 1, [[TAG_CHAR]], i64 5, i64 1, [[TAG_CHAR]]}
+// CHECK-OLD: [[TS4]] = !{i64 0, i64 1, [[TAG_CHAR]], i64 1, i64 1, [[TAG_CHAR]], i64 2, i64 1, [[TAG_CHAR]]}
+// CHECK-OLD: [[TS5]] = !{i64 0, i64 1, [[TAG_CHAR]], i64 4, i64 1, [[TAG_CHAR]], i64 5, i64 1, [[TAG_CHAR]]}
 
 // CHECK-NEW-DAG: [[TYPE_char:!.*]] = !{{{.*}}, i64 1, !"omnipotent char"}
 // CHECK-NEW-DAG: [[TAG_char]] = !{[[TYPE_char]], [[TYPE_char]], i64 0, i64 0}
@@ -123,7 +123,7 @@ void copy7(A *a1, AA *a2) {
 // CHECK-NEW-DAG: [[TYPE_B:!.*]] = !{[[TYPE_char]], i64 24, !"_ZTS1B", [[TYPE_char]], i64 0, i64 1, [[TYPE_A]], i64 4, i64 16, [[TYPE_int]], i64 20, i64 4}
 // CHECK-NEW-DAG: [[TAG_B]] = !{[[TYPE_B]], [[TYPE_B]], i64 0, i64 24}
 // CHECK-NEW-DAG: [[TAG_U]] = !{[[TYPE_char]], [[TYPE_char]], i64 0, i64 12}
-// CHECK-NEW-DAG: [[TYPE_C:!.*]] = !{[[TYPE_char]], i64 3, !"_ZTS1C", [[TYPE_char]], i64 0, i64 1, [[TYPE_int]], i64 1, i64 4, [[TYPE_char]], i64 1, i64 1, [[TYPE_char]], i64 2, i64 1}
+// CHECK-NEW-DAG: [[TYPE_C:!.*]] = !{[[TYPE_char]], i64 3, !"_ZTS1C", [[TYPE_char]], i64 0, i64 1, [[TYPE_char]], i64 1, i64 1, [[TYPE_char]], i64 2, i64 1}
 // CHECK-NEW-DAG: [[TAG_C]] = !{[[TYPE_C]], [[TYPE_C]], i64 0, i64 3}
-// CHECK-NEW-DAG: [[TYPE_D:!.*]] = !{[[TYPE_char]], i64 6, !"_ZTS1D", [[TYPE_char]], i64 0, i64 1, [[TYPE_int]], i64 4, i64 4, [[TYPE_char]], i64 4, i64 1, [[TYPE_char]], i64 5, i64 1}
+// CHECK-NEW-DAG: [[TYPE_D:!.*]] = !{[[TYPE_char]], i64 6, !"_ZTS1D", [[TYPE_char]], i64 0, i64 1, [[TYPE_char]], i64 4, i64 1, [[TYPE_char]], i64 5, i64 1}
 // CHECK-NEW-DAG: [[TAG_D]] = !{[[TYPE_D]], [[TYPE_D]], i64 0, i64 6}
