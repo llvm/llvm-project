@@ -3376,15 +3376,15 @@ multiclass avx512_alignedload_vl<bits<8> opc, string OpcodeStr,
                                  string EVEX2VEXOvrd, bit NoRMPattern = 0> {
   let Predicates = [prd] in
   defm Z : avx512_load<opc, OpcodeStr, NAME, _.info512,
-                       _.info512.AlignedLdFrag, masked_load_aligned512,
+                       _.info512.AlignedLdFrag, masked_load_aligned,
                        Sched.ZMM, "", NoRMPattern>, EVEX_V512;
 
   let Predicates = [prd, HasVLX] in {
   defm Z256 : avx512_load<opc, OpcodeStr, NAME, _.info256,
-                          _.info256.AlignedLdFrag, masked_load_aligned256,
+                          _.info256.AlignedLdFrag, masked_load_aligned,
                           Sched.YMM, EVEX2VEXOvrd#"Y", NoRMPattern>, EVEX_V256;
   defm Z128 : avx512_load<opc, OpcodeStr, NAME, _.info128,
-                          _.info128.AlignedLdFrag, masked_load_aligned128,
+                          _.info128.AlignedLdFrag, masked_load_aligned,
                           Sched.XMM, EVEX2VEXOvrd, NoRMPattern>, EVEX_V128;
   }
 }
@@ -3396,15 +3396,15 @@ multiclass avx512_load_vl<bits<8> opc, string OpcodeStr,
                           SDPatternOperator SelectOprr = vselect> {
   let Predicates = [prd] in
   defm Z : avx512_load<opc, OpcodeStr, NAME, _.info512, _.info512.LdFrag,
-                       masked_load_unaligned, Sched.ZMM, "",
+                       masked_load, Sched.ZMM, "",
                        NoRMPattern, SelectOprr>, EVEX_V512;
 
   let Predicates = [prd, HasVLX] in {
   defm Z256 : avx512_load<opc, OpcodeStr, NAME, _.info256, _.info256.LdFrag,
-                         masked_load_unaligned, Sched.YMM, EVEX2VEXOvrd#"Y",
+                         masked_load, Sched.YMM, EVEX2VEXOvrd#"Y",
                          NoRMPattern, SelectOprr>, EVEX_V256;
   defm Z128 : avx512_load<opc, OpcodeStr, NAME, _.info128, _.info128.LdFrag,
-                         masked_load_unaligned, Sched.XMM, EVEX2VEXOvrd,
+                         masked_load, Sched.XMM, EVEX2VEXOvrd,
                          NoRMPattern, SelectOprr>, EVEX_V128;
   }
 }
@@ -3470,14 +3470,14 @@ multiclass avx512_store_vl< bits<8> opc, string OpcodeStr,
                             string EVEX2VEXOvrd, bit NoMRPattern = 0> {
   let Predicates = [prd] in
   defm Z : avx512_store<opc, OpcodeStr, NAME, _.info512, store,
-                        masked_store_unaligned, Sched.ZMM, "",
+                        masked_store, Sched.ZMM, "",
                         NoMRPattern>, EVEX_V512;
   let Predicates = [prd, HasVLX] in {
     defm Z256 : avx512_store<opc, OpcodeStr, NAME, _.info256, store,
-                             masked_store_unaligned, Sched.YMM,
+                             masked_store, Sched.YMM,
                              EVEX2VEXOvrd#"Y", NoMRPattern>, EVEX_V256;
     defm Z128 : avx512_store<opc, OpcodeStr, NAME, _.info128, store,
-                             masked_store_unaligned, Sched.XMM, EVEX2VEXOvrd,
+                             masked_store, Sched.XMM, EVEX2VEXOvrd,
                              NoMRPattern>, EVEX_V128;
   }
 }
@@ -3488,15 +3488,15 @@ multiclass avx512_alignedstore_vl<bits<8> opc, string OpcodeStr,
                                   string EVEX2VEXOvrd, bit NoMRPattern = 0> {
   let Predicates = [prd] in
   defm Z : avx512_store<opc, OpcodeStr, NAME, _.info512, alignedstore,
-                        masked_store_aligned512, Sched.ZMM, "",
+                        masked_store_aligned, Sched.ZMM, "",
                         NoMRPattern>, EVEX_V512;
 
   let Predicates = [prd, HasVLX] in {
     defm Z256 : avx512_store<opc, OpcodeStr, NAME, _.info256, alignedstore,
-                             masked_store_aligned256, Sched.YMM,
+                             masked_store_aligned, Sched.YMM,
                              EVEX2VEXOvrd#"Y", NoMRPattern>, EVEX_V256;
     defm Z128 : avx512_store<opc, OpcodeStr, NAME, _.info128, alignedstore,
-                             masked_store_aligned128, Sched.XMM, EVEX2VEXOvrd,
+                             masked_store_aligned, Sched.XMM, EVEX2VEXOvrd,
                              NoMRPattern>, EVEX_V128;
   }
 }

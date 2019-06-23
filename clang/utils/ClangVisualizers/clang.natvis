@@ -33,6 +33,8 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::IncompleteArray" IncludeView="poly">{(clang::IncompleteArrayType *)this,na}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::IncompleteArray" IncludeView="left">{(clang::IncompleteArrayType *)this,view(left)na}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::IncompleteArray" IncludeView="right">{(clang::IncompleteArrayType *)this,view(right)na}</DisplayString>
+    <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Typedef" IncludeView="poly">{(clang::TypedefType *)this,na}</DisplayString>
+    <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Typedef" IncludeView="cpp">{(clang::TypedefType *)this,view(cpp)na}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Attributed" IncludeView="poly">{*(clang::AttributedType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Decayed" IncludeView="poly">{(clang::DecayedType *)this,na}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::Decayed" IncludeView="left">{(clang::DecayedType *)this,view(left)na}</DisplayString>
@@ -48,6 +50,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::TemplateSpecialization" IncludeView="poly">{*(clang::TemplateSpecializationType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::DeducedTemplateSpecialization" IncludeView="poly">{*(clang::DeducedTemplateSpecializationType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::InjectedClassName" IncludeView="poly">{*(clang::InjectedClassNameType *)this}</DisplayString>
+    <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::DependentName" IncludeView="poly">{*(clang::DependentNameType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::Type::TypeClass::PackExpansion" IncludeView="poly">{*(clang::PackExpansionType *)this}</DisplayString>
     <DisplayString Condition="TypeBits.TC==clang::LocInfoType::LocInfo" IncludeView="poly">{*(clang::LocInfoType *)this}</DisplayString>
     <DisplayString IncludeView="cpp">{*this,view(poly)}</DisplayString>
@@ -93,6 +96,7 @@ For later versions of Visual Studio, no setup is required-->
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::TemplateSpecialization">(clang::TemplateSpecializationType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::DeducedTemplateSpecialization">(clang::DeducedTemplateSpecializationType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::InjectedClassName">(clang::InjectedClassNameType *)this</ExpandedItem>
+      <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::DependentName">(clang::DependentNameType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::Type::TypeClass::PackExpansion">(clang::PackExpansionType *)this</ExpandedItem>
       <ExpandedItem ExcludeView="cmn" Condition="TypeBits.TC==clang::LocInfoType::LocInfo">(clang::LocInfoType *)this</ExpandedItem>
     </Expand>
@@ -117,6 +121,14 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>{ElementType,view(cpp)}[]</DisplayString>
     <Expand>
       <ExpandedItem>(clang::ArrayType *)this</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="clang::TypedefType">
+    <DisplayString IncludeView="cpp">{Decl,view(name)nd}</DisplayString>
+    <DisplayString>{Decl}</DisplayString>
+    <Expand>
+      <Item Name="Decl">Decl</Item>
+      <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
     </Expand>
   </Type>
   <Type Name="clang::PointerType">
@@ -192,6 +204,24 @@ For later versions of Visual Studio, no setup is required-->
       <Item Name="TemplatedDecl">TemplatedDecl,na</Item>
     </Expand>
   </Type>
+  <!-- Unfortunately, visualization of PointerIntPair<PointerUnion> doesn't work due to limitations in natvis, so we will barehad it-->
+  <Type Name="clang::TypedefNameDecl">
+    <DisplayString Condition="(MaybeModedTInfo.Value &amp; 4)==0" IncludeView="type">{(clang::TypeSourceInfo *)(MaybeModedTInfo.Value &amp; ~7LL),view(cpp)na}</DisplayString>
+    <DisplayString Condition="(MaybeModedTInfo.Value &amp; 4)!=0" IncludeView="type">{(clang::TypedefNameDecl::ModedTInfo *)(MaybeModedTInfo.Value &amp; ~7LL),view(cpp)na}</DisplayString>
+    <DisplayString IncludeView="name">{(TypeDecl *)this,view(cpp)nand}</DisplayString>
+    <DisplayString>typedef {this,view(type)na} {this,view(name)};</DisplayString>
+    <Expand>
+      <Item Name="IsTransparent" Condition="(MaybeModedTInfo.Value &amp; 1)==0">"Not yet calculated",sb</Item>
+      <Item Name="IsTransparent" Condition="(MaybeModedTInfo.Value &amp; 1)!=0">(bool)(MaybeModedTInfo.Value &amp; 2)</Item>
+      <Item Name="TypeSourceInfo" Condition="(MaybeModedTInfo.Value &amp; 4)==0">(clang::TypeSourceInfo *)(MaybeModedTInfo.Value &amp; ~7LL)</Item>
+      <Item Name="ModedTInfo" Condition="(MaybeModedTInfo.Value &amp; 4)!=0">(clang::TypedefNameDecl::ModedTInfo *)(MaybeModedTInfo.Value &amp; ~7LL)</Item>
+      <ExpandedItem>(TypeDecl *)this,nd</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="clang::TypeAliasDecl">
+    <DisplayString>using {(TypedefNameDecl *)this,view(name)nand} = {(TypedefNameDecl *)this,view(type)nand}</DisplayString>
+  </Type>
+
   <Type Name="clang::TemplateName">
     <DisplayString>{Storage,na}</DisplayString>
     <Expand>
@@ -303,6 +333,23 @@ For later versions of Visual Studio, no setup is required-->
       <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
     </Expand>
   </Type>
+  <Type Name="clang::DependentNameType">
+    <DisplayString>{NNS}{Name,view(cpp)na}</DisplayString>
+    <Expand>
+      <Item Name="NNS">NNS</Item>
+      <Item Name="Name">Name</Item>
+      <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
+    </Expand>
+  </Type>
+  <Type Name="clang::NestedNameSpecifier">
+    <DisplayString Condition="!Specifier"></DisplayString>
+    <DisplayString Condition="((Prefix.Value&gt;&gt;1)&amp;3) == 0">{(IdentifierInfo*)Specifier,view(cpp)na}::</DisplayString>
+    <DisplayString Condition="((Prefix.Value&gt;&gt;1)&amp;3) == 1">{(NamedDecl*)Specifier,view(cpp)na}::</DisplayString>
+    <DisplayString Condition="((Prefix.Value&gt;&gt;1)&amp;2) == 2">{(Type*)Specifier,view(cpp)na}::</DisplayString>
+    <Expand>
+      <Item Name="Kind">(NestedNameSpecifier::StoredSpecifierKind)((Prefix.Value&gt;&gt;1)&amp;3)</Item>
+    </Expand>
+  </Type>
   <Type Name="clang::PackExpansionType">
     <DisplayString>{Pattern}</DisplayString>
     <Expand>
@@ -343,7 +390,11 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::TypeSourceInfo">
+    <DisplayString IncludeView="cpp">{Ty,view(cpp)}</DisplayString>
     <DisplayString>{Ty}</DisplayString>
+    <Expand>
+      <ExpandedItem>Ty</ExpandedItem>
+    </Expand>
   </Type>
   <Type Name="clang::TemplateArgumentLoc">
     <DisplayString>{Argument}</DisplayString>

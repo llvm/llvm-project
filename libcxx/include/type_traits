@@ -542,6 +542,26 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS enable_if<true, _Tp> {typedef _
 template <bool _Bp, class _Tp = void> using enable_if_t = typename enable_if<_Bp, _Tp>::type;
 #endif
 
+// is_same
+
+template <class _Tp, class _Up> struct _LIBCPP_TEMPLATE_VIS is_same           : public false_type {};
+template <class _Tp>            struct _LIBCPP_TEMPLATE_VIS is_same<_Tp, _Tp> : public true_type {};
+
+#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
+template <class _Tp, class _Up>
+_LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_same_v
+    = is_same<_Tp, _Up>::value;
+#endif
+
+template <class _Tp, class _Up>
+using _IsSame = _BoolConstant<
+#ifdef __clang__
+    __is_same(_Tp, _Up)
+#else
+    _VSTD::is_same<_Tp, _Up>::value
+#endif
+>;
+
 // addressof
 #ifndef _LIBCPP_HAS_NO_BUILTIN_ADDRESSOF
 
@@ -931,17 +951,6 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_class
 template <class _Tp>
 _LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_class_v
     = is_class<_Tp>::value;
-#endif
-
-// is_same
-
-template <class _Tp, class _Up> struct _LIBCPP_TEMPLATE_VIS is_same           : public false_type {};
-template <class _Tp>            struct _LIBCPP_TEMPLATE_VIS is_same<_Tp, _Tp> : public true_type {};
-
-#if _LIBCPP_STD_VER > 14 && !defined(_LIBCPP_HAS_NO_VARIABLE_TEMPLATES)
-template <class _Tp, class _Up>
-_LIBCPP_INLINE_VAR _LIBCPP_CONSTEXPR bool is_same_v
-    = is_same<_Tp, _Up>::value;
 #endif
 
 // is_function
