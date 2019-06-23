@@ -34,7 +34,7 @@ A modi stream is laid out as follows:
     uint8_t Symbols[SymbolSize-4];
     uint8_t C11LineInfo[C11Size];
     uint8_t C13LineInfo[C13Size];
-    
+
     uint32_t GlobalRefsSize;
     uint8_t GlobalRefs[GlobalRefsSize];
   };
@@ -45,11 +45,11 @@ A modi stream is laid out as follows:
   meaning that this module has C13 line information (as opposed to C11 line
   information).  A corollary of this is that we expect to only ever see
   C13 line info, and that we do not understand the format of C11 line info.
-  
+
 - **Symbols** - The :ref:`CodeView Symbol Substream <modi_symbol_substream>`.
   ``SymbolSize`` is equal to the value of ``SymByteSize`` for the
-  corresponding module's entry in the :ref:`Module Info Substream <dbi_mod_info_substream>`
-  of the :doc:`DBI Stream <DbiStream>`.
+  corresponding module's entry in the :ref:`Module Info Substream
+  <dbi_mod_info_substream>` of the :doc:`DBI Stream <DbiStream>`.
 
 - **C11LineInfo** - A block containing CodeView line information in C11
   format.  ``C11Size`` is equal to the value of ``C11ByteSize`` from the
@@ -58,13 +58,13 @@ A modi stream is laid out as follows:
   information is not present.  As mentioned previously, the format of
   C11 line info is not understood and we assume all line in modern PDBs
   to be in C13 format.
-  
+
 - **C13LineInfo** - A block containing CodeView line information in C13
   format.  ``C13Size`` is equal to the value of ``C13ByteSize`` from the
   :ref:`Module Info Substream <dbi_mod_info_substream>` of the
   :doc:`DBI Stream <DbiStream>`.  If this value is ``0``, then C13 line
   information is not present.
-  
+
 - **GlobalRefs** - The meaning of this substream is not understood.
 
 .. _modi_symbol_substream:

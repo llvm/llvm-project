@@ -48,9 +48,9 @@ using namespace llvm;
 #define GET_REGINFO_MC_DESC
 #include "PPCGenRegisterInfo.inc"
 
-// Pin the vtable to this file.
 PPCTargetStreamer::PPCTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
+// Pin the vtable to this file.
 PPCTargetStreamer::~PPCTargetStreamer() = default;
 
 static MCInstrInfo *createPPCMCInstrInfo() {

@@ -47,16 +47,16 @@ On-Disk Format
   .--------------------.                       ─╯
 
 - **Size** - The number of values contained in the hash table.
-  
+
 - **Capacity** - The number of buckets in the hash table.  Producers should
   maintain a load factor of no greater than ``2/3*Capacity+1``.
-  
+
 - **Present Bit Vector** - A serialized bit vector which contains information
   about which buckets have valid values.  If the bucket has a value, the
   corresponding bit will be set, and if the bucket doesn't have a value (either
   because the bucket is empty or because the value is a tombstone value) the bit
   will be unset.
-  
+
 - **Deleted Bit Vector** - A serialized bit vector which contains information
   about which buckets have tombstone values.  If the entry in this bucket is
   deleted, the bit will be set, otherwise it will be unset.
@@ -88,8 +88,8 @@ The bit vectors indicating the status of each bucket are serialized as follows:
   |       Word_N       |         │
   .--------------------.        ─╯
 
-The words, when viewed as a contiguous block of bytes, represent a bit vector with
-the following layout:
+The words, when viewed as a contiguous block of bytes, represent a bit vector
+with the following layout:
 
 .. code-block:: none
 

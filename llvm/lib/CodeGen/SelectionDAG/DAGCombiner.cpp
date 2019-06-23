@@ -8437,11 +8437,6 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
     EVT MemoryVT = MST->getMemoryVT();
     unsigned Alignment = MST->getOriginalAlignment();
 
-    // if Alignment is equal to the vector size,
-    // take the half of it for the second part
-    unsigned SecondHalfAlignment =
-      (Alignment == VT.getSizeInBits() / 8) ? Alignment / 2 : Alignment;
-
     EVT LoMemVT, HiMemVT;
     std::tie(LoMemVT, HiMemVT) = DAG.GetSplitDestVTs(MemoryVT);
 
@@ -8463,7 +8458,7 @@ SDValue DAGCombiner::visitMSTORE(SDNode *N) {
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
         MST->getPointerInfo().getWithOffset(HiOffset),
-        MachineMemOperand::MOStore, HiMemVT.getStoreSize(), SecondHalfAlignment,
+        MachineMemOperand::MOStore, HiMemVT.getStoreSize(), Alignment,
         MST->getAAInfo(), MST->getRanges());
 
     Hi = DAG.getMaskedStore(Chain, DL, DataHi, Ptr, MaskHi, HiMemVT, MMO,
@@ -8598,12 +8593,6 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
     EVT MemoryVT = MLD->getMemoryVT();
     unsigned Alignment = MLD->getOriginalAlignment();
 
-    // if Alignment is equal to the vector size,
-    // take the half of it for the second part
-    unsigned SecondHalfAlignment =
-      (Alignment == MLD->getValueType(0).getSizeInBits()/8) ?
-         Alignment/2 : Alignment;
-
     EVT LoMemVT, HiMemVT;
     std::tie(LoMemVT, HiMemVT) = DAG.GetSplitDestVTs(MemoryVT);
 
@@ -8621,7 +8610,7 @@ SDValue DAGCombiner::visitMLOAD(SDNode *N) {
 
     MMO = DAG.getMachineFunction().getMachineMemOperand(
         MLD->getPointerInfo().getWithOffset(HiOffset),
-        MachineMemOperand::MOLoad, HiMemVT.getStoreSize(), SecondHalfAlignment,
+        MachineMemOperand::MOLoad, HiMemVT.getStoreSize(), Alignment,
         MLD->getAAInfo(), MLD->getRanges());
 
     Hi = DAG.getMaskedLoad(HiVT, DL, Chain, Ptr, MaskHi, PassThruHi, HiMemVT,
