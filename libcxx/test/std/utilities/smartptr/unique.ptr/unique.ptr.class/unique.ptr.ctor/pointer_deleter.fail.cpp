@@ -6,10 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Without rvalue references it is impossible to detect when a rvalue deleter
-// is given.
-// XFAIL: c++98, c++03
-
 // <memory>
 
 // unique_ptr
