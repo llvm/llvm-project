@@ -284,7 +284,7 @@ define i32 @func_12() nounwind uwtable {
 ; CHECK-NEXT:    [[SEXT21:%.*]] = shl i32 [[TMP57]], 16
 ; CHECK-NEXT:    [[TMP76:%.*]] = icmp ne i32 [[SEXT34]], [[SEXT21]]
 ; CHECK-NEXT:    [[TMP81]] = add nuw nsw i32 [[__KEY8_0]], 1
-; CHECK-NEXT:    br i1 [[TMP76]], label [[FORCOND38]], label [[ASSERT77:%.*]]
+; CHECK-NEXT:    br i1 false, label [[FORCOND38]], label [[ASSERT77:%.*]]
 ; CHECK:       assert77:
 ; CHECK-NEXT:    tail call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
@@ -896,6 +896,5 @@ be:
 leave:
   ret void
 }
-
 
 !0 = !{i32 0, i32 2147483647}

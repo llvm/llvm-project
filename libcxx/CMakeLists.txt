@@ -582,6 +582,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
         -Wno-deprecated # FIXME: Remove this and fix all occurrences.
         -Wno-shift-sign-overflow # FIXME: Why do we need this with clang-cl but not clang?
         -Wno-double-promotion # FIXME: remove me
+        -Wno-ignored-attributes # FIXME: Caused by _LIBCPP_NODEBUG_TYPE not being supported on older clangs
       )
     endif()
 elseif("${CMAKE_CXX_COMPILER_ID}" MATCHES "GNU")

@@ -257,6 +257,8 @@ CodeGenTBAA::CollectFields(uint64_t BaseOffset,
     unsigned idx = 0;
     for (RecordDecl::field_iterator i = RD->field_begin(),
          e = RD->field_end(); i != e; ++i, ++idx) {
+      if ((*i)->isZeroSize(Context) || (*i)->isUnnamedBitfield())
+        continue;
       uint64_t Offset = BaseOffset +
                         Layout.getFieldOffset(idx) / Context.getCharWidth();
       QualType FieldQTy = i->getType();
@@ -297,6 +299,8 @@ llvm::MDNode *CodeGenTBAA::getBaseTypeInfoHelper(const Type *Ty) {
     const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
     SmallVector<llvm::MDBuilder::TBAAStructField, 4> Fields;
     for (FieldDecl *Field : RD->fields()) {
+      if (Field->isZeroSize(Context) || Field->isUnnamedBitfield())
+        continue;
       QualType FieldQTy = Field->getType();
       llvm::MDNode *TypeNode = isValidBaseType(FieldQTy) ?
           getBaseTypeInfo(FieldQTy) : getTypeInfo(FieldQTy);

@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu | FileCheck %s
+// RUN: %clang_cc1 -std=c++2a %s -emit-llvm -o - -triple x86_64-linux-gnu -O2 -disable-llvm-passes | FileCheck %s --check-prefix=CHECK-OPT
 
 struct A { ~A(); int n; char c[3]; };
 struct B { [[no_unique_address]] A a; char k; };
@@ -77,3 +78,18 @@ Empty1 &accessE1(FieldOverlap &fo) { return fo.e1; }
 // CHECK: %[[RET:.*]] = bitcast i8* %[[ADJUSTED]] to %[[E1]]*
 // CHECK: ret %[[E1]]* %[[RET]]
 Empty1 &accessE2(FieldOverlap &fo) { return fo.e2; }
+
+struct LaterDeclaredFieldHasLowerOffset {
+  int a;
+  int b;
+  [[no_unique_address]] Empty1 e;
+};
+// CHECK-OPT-LABEL: @_Z41loadWhereLaterDeclaredFieldHasLowerOffset
+int loadWhereLaterDeclaredFieldHasLowerOffset(LaterDeclaredFieldHasLowerOffset &a) {
+  // CHECK-OPT: getelementptr
+  // CHECK-OPT: load {{.*}}, !tbaa ![[TBAA_AB:[0-9]*]]
+  return a.b;
+}
+// Note, never emit TBAA for zero-size fields.
+// CHECK-OPT: ![[TBAA_AB]] = !{![[TBAA_A:[0-9]*]], ![[TBAA_INT:[0-9]*]], i64 4}
+// CHECK-OPT: ![[TBAA_A]] = !{!"_ZTS32LaterDeclaredFieldHasLowerOffset", ![[TBAA_INT]], i64 0, ![[TBAA_INT]], i64 4}
