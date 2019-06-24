@@ -80,6 +80,10 @@ void test_atomics(__generic volatile unsigned int* a) {
 }
 #endif
 
+// Verify that ATOMIC_VAR_INIT is defined.
+#if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_2_0)
+global atomic_int z = ATOMIC_VAR_INIT(99);
+#endif //__OPENCL_C_VERSION__
 
 // Verify that non-builtin cl_intel_planar_yuv extension is defined from
 // OpenCL 1.2 onwards.
