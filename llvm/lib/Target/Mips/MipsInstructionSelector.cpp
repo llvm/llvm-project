@@ -370,6 +370,7 @@ bool MipsInstructionSelector::select(MachineInstr &I,
   case G_FPTOSI: {
     unsigned FromSize = MRI.getType(I.getOperand(1).getReg()).getSizeInBits();
     unsigned ToSize = MRI.getType(I.getOperand(0).getReg()).getSizeInBits();
+    (void)ToSize;
     assert((ToSize == 32) && "Unsupported integer size for G_FPTOSI");
     assert((FromSize == 32 || FromSize == 64) &&
            "Unsupported floating point size for G_FPTOSI");

@@ -1,0 +1,7 @@
+RUN: llvm-size -h | FileCheck %s
+RUN: llvm-size --help | FileCheck %s
+
+CHECK: OVERVIEW: llvm object size dumper
+CHECK: USAGE: llvm-size{{(.exe)?}} [options] <input files>{{$}}
+CHECK: OPTIONS:
+CHECK: @FILE

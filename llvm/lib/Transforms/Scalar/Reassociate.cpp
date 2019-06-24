@@ -268,11 +268,7 @@ static BinaryOperator *CreateNeg(Value *S1, const Twine &Name,
 static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
   assert((isa<UnaryOperator>(Neg) || isa<BinaryOperator>(Neg)) &&
          "Expected a Negate!");
-  // It's not safe to lower a unary FNeg into a FMul by -1.0. However,
-  // we can only reach this function with fast flags set, so it's
-  // safe to do with nnan.
-  assert((!isa<FPMathOperator>(Neg) || Neg->isFast()) &&
-          "Expecting FastMathFlags!");
+  // FIXME: It's not safe to lower a unary FNeg into a FMul by -1.0.
   unsigned OpNo = isa<BinaryOperator>(Neg) ? 1 : 0;
   Type *Ty = Neg->getType();
   Constant *NegOne = Ty->isIntOrIntVectorTy() ?
@@ -1830,7 +1826,7 @@ Value *ReassociatePass::OptimizeMul(BinaryOperator *I,
     return V;
 
   ValueEntry NewEntry = ValueEntry(getRank(V), V);
-  Ops.insert(std::lower_bound(Ops.begin(), Ops.end(), NewEntry), NewEntry);
+  Ops.insert(llvm::lower_bound(Ops, NewEntry), NewEntry);
   return nullptr;
 }
 

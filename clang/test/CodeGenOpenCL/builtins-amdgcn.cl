@@ -560,6 +560,24 @@ kernel void test_gws_barrier(uint value, uint id) {
   __builtin_amdgcn_ds_gws_barrier(value, id);
 }
 
+// CHECK-LABEL: @test_gws_sema_v(
+// CHECK: call void @llvm.amdgcn.ds.gws.sema.v(i32 %id)
+kernel void test_gws_sema_v(uint id) {
+  __builtin_amdgcn_ds_gws_sema_v(id);
+}
+
+// CHECK-LABEL: @test_gws_sema_br(
+// CHECK: call void @llvm.amdgcn.ds.gws.sema.br(i32 %value, i32 %id)
+kernel void test_gws_sema_br(uint value, uint id) {
+  __builtin_amdgcn_ds_gws_sema_br(value, id);
+}
+
+// CHECK-LABEL: @test_gws_sema_p(
+// CHECK: call void @llvm.amdgcn.ds.gws.sema.p(i32 %id)
+kernel void test_gws_sema_p(uint id) {
+  __builtin_amdgcn_ds_gws_sema_p(id);
+}
+
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}
 // CHECK-DAG: attributes #[[$NOUNWIND_READONLY:[0-9]+]] = { nounwind readonly }
 // CHECK-DAG: attributes #[[$READ_EXEC_ATTRS]] = { convergent }

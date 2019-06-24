@@ -220,8 +220,8 @@ entry:
 
   %aptr = getelementptr i32, i32 addrspace(5)* %buf, i32 1
   ; 0x40000 / 64 = 4096 (for wave64)
-  ; CHECK: s_add_u32 s6, s32, 0x40000
-  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 ; 4-byte Folded Spill
+  ; CHECK: s_add_u32 s4, s32, 0x40000
+  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s4 ; 4-byte Folded Spill
   %a = load volatile i32, i32 addrspace(5)* %aptr
 
   ; Force %a to spill
@@ -272,9 +272,9 @@ entry:
   %bufv2 = bitcast i8 addrspace(5)* %alloca to <2 x i32> addrspace(5)*
 
   ; 0x3ff00 / 64 = 4092 (for wave64)
-  ; CHECK: s_add_u32 s6, s32, 0x3ff00
-  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 ; 4-byte Folded Spill
-  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s6 offset:4 ; 4-byte Folded Spill
+  ; CHECK: s_add_u32 s4, s32, 0x3ff00
+  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s4 ; 4-byte Folded Spill
+  ; CHECK: buffer_store_dword v{{[0-9]+}}, off, s[{{[0-9]+:[0-9]+}}], s4 offset:4 ; 4-byte Folded Spill
   %aptr = getelementptr <2 x i32>, <2 x i32> addrspace(5)* %bufv2, i32 1
   %a = load volatile <2 x i32>, <2 x i32> addrspace(5)* %aptr
 
@@ -293,4 +293,4 @@ entry:
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "amdgpu-num-sgpr"="18" "amdgpu-num-vgpr"="8" }
-attributes #2 = { nounwind "amdgpu-num-sgpr"="16" "amdgpu-num-vgpr"="8" }
+attributes #2 = { nounwind "amdgpu-num-sgpr"="15" "amdgpu-num-vgpr"="8" }

@@ -127,9 +127,10 @@ class EmptySubobjectMap {
                                  CharUnits Offset, bool PlacingEmptyBase);
 
   void UpdateEmptyFieldSubobjects(const CXXRecordDecl *RD,
-                                  const CXXRecordDecl *Class,
-                                  CharUnits Offset);
-  void UpdateEmptyFieldSubobjects(const FieldDecl *FD, CharUnits Offset);
+                                  const CXXRecordDecl *Class, CharUnits Offset,
+                                  bool PlacingOverlappingField);
+  void UpdateEmptyFieldSubobjects(const FieldDecl *FD, CharUnits Offset,
+                                  bool PlacingOverlappingField);
 
   /// AnyEmptySubobjectsBeyondOffset - Returns whether there are any empty
   /// subobjects beyond the given offset.
@@ -351,7 +352,7 @@ void EmptySubobjectMap::UpdateEmptyBaseSubobjects(const BaseSubobjectInfo *Info,
       continue;
 
     CharUnits FieldOffset = Offset + getFieldOffset(Layout, FieldNo);
-    UpdateEmptyFieldSubobjects(*I, FieldOffset);
+    UpdateEmptyFieldSubobjects(*I, FieldOffset, PlacingEmptyBase);
   }
 }
 
@@ -471,20 +472,25 @@ EmptySubobjectMap::CanPlaceFieldAtOffset(const FieldDecl *FD,
     return false;
 
   // We are able to place the member variable at this offset.
-  // Make sure to update the empty base subobject map.
-  UpdateEmptyFieldSubobjects(FD, Offset);
+  // Make sure to update the empty field subobject map.
+  UpdateEmptyFieldSubobjects(FD, Offset, FD->hasAttr<NoUniqueAddressAttr>());
   return true;
 }
 
-void EmptySubobjectMap::UpdateEmptyFieldSubobjects(const CXXRecordDecl *RD,
-                                                   const CXXRecordDecl *Class,
-                                                   CharUnits Offset) {
+void EmptySubobjectMap::UpdateEmptyFieldSubobjects(
+    const CXXRecordDecl *RD, const CXXRecordDecl *Class, CharUnits Offset,
+    bool PlacingOverlappingField) {
   // We know that the only empty subobjects that can conflict with empty
-  // field subobjects are subobjects of empty bases that can be placed at offset
-  // zero. Because of this, we only need to keep track of empty field
-  // subobjects with offsets less than the size of the largest empty
-  // subobject for our class.
-  if (Offset >= SizeOfLargestEmptySubobject)
+  // field subobjects are subobjects of empty bases and potentially-overlapping
+  // fields that can be placed at offset zero. Because of this, we only need to
+  // keep track of empty field subobjects with offsets less than the size of
+  // the largest empty subobject for our class.
+  //
+  // (Proof: we will only consider placing a subobject at offset zero or at
+  // >= the current dsize. The only cases where the earlier subobject can be
+  // placed beyond the end of dsize is if it's an empty base or a
+  // potentially-overlapping field.)
+  if (!PlacingOverlappingField && Offset >= SizeOfLargestEmptySubobject)
     return;
 
   AddSubobjectAtOffset(RD, Offset);
@@ -499,7 +505,8 @@ void EmptySubobjectMap::UpdateEmptyFieldSubobjects(const CXXRecordDecl *RD,
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
 
     CharUnits BaseOffset = Offset + Layout.getBaseClassOffset(BaseDecl);
-    UpdateEmptyFieldSubobjects(BaseDecl, Class, BaseOffset);
+    UpdateEmptyFieldSubobjects(BaseDecl, Class, BaseOffset,
+                               PlacingOverlappingField);
   }
 
   if (RD == Class) {
@@ -508,7 +515,8 @@ void EmptySubobjectMap::UpdateEmptyFieldSubobjects(const CXXRecordDecl *RD,
       const CXXRecordDecl *VBaseDecl = Base.getType()->getAsCXXRecordDecl();
 
       CharUnits VBaseOffset = Offset + Layout.getVBaseClassOffset(VBaseDecl);
-      UpdateEmptyFieldSubobjects(VBaseDecl, Class, VBaseOffset);
+      UpdateEmptyFieldSubobjects(VBaseDecl, Class, VBaseOffset,
+                                 PlacingOverlappingField);
     }
   }
 
@@ -521,15 +529,15 @@ void EmptySubobjectMap::UpdateEmptyFieldSubobjects(const CXXRecordDecl *RD,
 
     CharUnits FieldOffset = Offset + getFieldOffset(Layout, FieldNo);
 
-    UpdateEmptyFieldSubobjects(*I, FieldOffset);
+    UpdateEmptyFieldSubobjects(*I, FieldOffset, PlacingOverlappingField);
   }
 }
 
-void EmptySubobjectMap::UpdateEmptyFieldSubobjects(const FieldDecl *FD,
-                                                   CharUnits Offset) {
+void EmptySubobjectMap::UpdateEmptyFieldSubobjects(
+    const FieldDecl *FD, CharUnits Offset, bool PlacingOverlappingField) {
   QualType T = FD->getType();
   if (const CXXRecordDecl *RD = T->getAsCXXRecordDecl()) {
-    UpdateEmptyFieldSubobjects(RD, RD, Offset);
+    UpdateEmptyFieldSubobjects(RD, RD, Offset, PlacingOverlappingField);
     return;
   }
 
@@ -552,10 +560,12 @@ void EmptySubobjectMap::UpdateEmptyFieldSubobjects(const FieldDecl *FD,
       // offset zero. Because of this, we only need to keep track of empty field
       // subobjects with offsets less than the size of the largest empty
       // subobject for our class.
-      if (ElementOffset >= SizeOfLargestEmptySubobject)
+      if (!PlacingOverlappingField &&
+          ElementOffset >= SizeOfLargestEmptySubobject)
         return;
 
-      UpdateEmptyFieldSubobjects(RD, RD, ElementOffset);
+      UpdateEmptyFieldSubobjects(RD, RD, ElementOffset,
+                                 PlacingOverlappingField);
       ElementOffset += Layout.getSize();
     }
   }
@@ -622,6 +632,10 @@ protected:
   CharUnits NonVirtualSize;
   CharUnits NonVirtualAlignment;
 
+  /// If we've laid out a field but not included its tail padding in Size yet,
+  /// this is the size up to the end of that field.
+  CharUnits PaddedFieldSize;
+
   /// PrimaryBase - the primary base class (if one exists) of the class
   /// we're laying out.
   const CXXRecordDecl *PrimaryBase;
@@ -670,7 +684,8 @@ protected:
         UnfilledBitsInLastUnit(0), LastBitfieldTypeSize(0),
         MaxFieldAlignment(CharUnits::Zero()), DataSize(0),
         NonVirtualSize(CharUnits::Zero()),
-        NonVirtualAlignment(CharUnits::One()), PrimaryBase(nullptr),
+        NonVirtualAlignment(CharUnits::One()),
+        PaddedFieldSize(CharUnits::Zero()), PrimaryBase(nullptr),
         PrimaryBaseIsVirtual(false), HasOwnVFPtr(false),
         HasPackedField(false), FirstNearlyEmptyVBase(nullptr) {}
 
@@ -980,7 +995,6 @@ void ItaniumRecordLayoutBuilder::EnsureVTablePointerAlignment(
 
   // Round up the current record size to pointer alignment.
   setSize(getSize().alignTo(BaseAlign));
-  setDataSize(getSize());
 
   // Update the alignment.
   UpdateAlignment(BaseAlign, UnpackedBaseAlign);
@@ -1172,6 +1186,7 @@ ItaniumRecordLayoutBuilder::LayoutBase(const BaseSubobjectInfo *Base) {
   // Query the external layout to see if it provides an offset.
   bool HasExternalLayout = false;
   if (UseExternalLayout) {
+    // FIXME: This appears to be reversed.
     if (Base->IsVirtual)
       HasExternalLayout = External.getExternalNVBaseOffset(Base->Class, Offset);
     else
@@ -1342,8 +1357,8 @@ void ItaniumRecordLayoutBuilder::Layout(const ObjCInterfaceDecl *D) {
 
     // We start laying out ivars not at the end of the superclass
     // structure, but at the next byte following the last field.
-    setSize(SL.getDataSize());
-    setDataSize(getSize());
+    setDataSize(SL.getDataSize());
+    setSize(getDataSize());
   }
 
   InitializeLayout(D);
@@ -1729,31 +1744,48 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
   UnfilledBitsInLastUnit = 0;
   LastBitfieldTypeSize = 0;
 
+  auto *FieldClass = D->getType()->getAsCXXRecordDecl();
+  bool PotentiallyOverlapping = D->hasAttr<NoUniqueAddressAttr>() && FieldClass;
+  bool IsOverlappingEmptyField = PotentiallyOverlapping && FieldClass->isEmpty();
   bool FieldPacked = Packed || D->hasAttr<PackedAttr>();
-  CharUnits FieldOffset =
-    IsUnion ? CharUnits::Zero() : getDataSize();
+
+  CharUnits FieldOffset = (IsUnion || IsOverlappingEmptyField)
+                              ? CharUnits::Zero()
+                              : getDataSize();
   CharUnits FieldSize;
   CharUnits FieldAlign;
+  // The amount of this class's dsize occupied by the field.
+  // This is equal to FieldSize unless we're permitted to pack
+  // into the field's tail padding.
+  CharUnits EffectiveFieldSize;
 
   if (D->getType()->isIncompleteArrayType()) {
     // This is a flexible array member; we can't directly
     // query getTypeInfo about these, so we figure it out here.
     // Flexible array members don't have any size, but they
     // have to be aligned appropriately for their element type.
-    FieldSize = CharUnits::Zero();
+    EffectiveFieldSize = FieldSize = CharUnits::Zero();
     const ArrayType* ATy = Context.getAsArrayType(D->getType());
     FieldAlign = Context.getTypeAlignInChars(ATy->getElementType());
   } else if (const ReferenceType *RT = D->getType()->getAs<ReferenceType>()) {
     unsigned AS = Context.getTargetAddressSpace(RT->getPointeeType());
-    FieldSize =
+    EffectiveFieldSize = FieldSize =
       Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerWidth(AS));
     FieldAlign =
       Context.toCharUnitsFromBits(Context.getTargetInfo().getPointerAlign(AS));
   } else {
     std::pair<CharUnits, CharUnits> FieldInfo =
       Context.getTypeInfoInChars(D->getType());
-    FieldSize = FieldInfo.first;
+    EffectiveFieldSize = FieldSize = FieldInfo.first;
     FieldAlign = FieldInfo.second;
+
+    // A potentially-overlapping field occupies its dsize or nvsize, whichever
+    // is larger.
+    if (PotentiallyOverlapping) {
+      const ASTRecordLayout &Layout = Context.getASTRecordLayout(FieldClass);
+      EffectiveFieldSize =
+          std::max(Layout.getNonVirtualSize(), Layout.getDataSize());
+    }
 
     if (IsMsStruct) {
       // If MS bitfield layout is required, figure out what type is being
@@ -1834,7 +1866,12 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
       // Check if we can place the field at this offset.
       while (!EmptySubobjects->CanPlaceFieldAtOffset(D, FieldOffset)) {
         // We couldn't place the field at the offset. Try again at a new offset.
-        FieldOffset += FieldAlign;
+        // We try offset 0 (for an empty field) and then dsize(C) onwards.
+        if (FieldOffset == CharUnits::Zero() &&
+            getDataSize() != CharUnits::Zero())
+          FieldOffset = getDataSize().alignTo(FieldAlign);
+        else
+          FieldOffset += FieldAlign;
       }
     }
   }
@@ -1853,18 +1890,23 @@ void ItaniumRecordLayoutBuilder::LayoutField(const FieldDecl *D,
     if (FieldSize % ASanAlignment)
       ExtraSizeForAsan +=
           ASanAlignment - CharUnits::fromQuantity(FieldSize % ASanAlignment);
-    FieldSize += ExtraSizeForAsan;
+    EffectiveFieldSize = FieldSize = FieldSize + ExtraSizeForAsan;
   }
 
   // Reserve space for this field.
-  uint64_t FieldSizeInBits = Context.toBits(FieldSize);
-  if (IsUnion)
-    setDataSize(std::max(getDataSizeInBits(), FieldSizeInBits));
-  else
-    setDataSize(FieldOffset + FieldSize);
+  if (!IsOverlappingEmptyField) {
+    uint64_t EffectiveFieldSizeInBits = Context.toBits(EffectiveFieldSize);
+    if (IsUnion)
+      setDataSize(std::max(getDataSizeInBits(), EffectiveFieldSizeInBits));
+    else
+      setDataSize(FieldOffset + EffectiveFieldSize);
 
-  // Update the size.
-  setSize(std::max(getSizeInBits(), getDataSizeInBits()));
+    PaddedFieldSize = std::max(PaddedFieldSize, FieldOffset + FieldSize);
+    setSize(std::max(getSizeInBits(), getDataSizeInBits()));
+  } else {
+    setSize(std::max(getSizeInBits(),
+                     (uint64_t)Context.toBits(FieldOffset + FieldSize)));
+  }
 
   // Remember max struct/class alignment.
   UnadjustedAlignment = std::max(UnadjustedAlignment, FieldAlign);
@@ -1884,6 +1926,10 @@ void ItaniumRecordLayoutBuilder::FinishLayout(const NamedDecl *D) {
     else
       setSize(CharUnits::One());
   }
+
+  // If we have any remaining field tail padding, include that in the overall
+  // size.
+  setSize(std::max(getSizeInBits(), (uint64_t)Context.toBits(PaddedFieldSize)));
 
   // Finally, round the size of the record up to the alignment of the
   // record itself.

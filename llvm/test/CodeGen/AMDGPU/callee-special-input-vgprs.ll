@@ -290,7 +290,6 @@ define void @too_many_args_use_workitem_id_x(
 ; GCN: s_mov_b32 s33, s7
 ; GCN: s_mov_b32 s32, s33
 ; GCN: buffer_store_dword v0, off, s[0:3], s32{{$}}
-; GCN: s_mov_b32 s4, s33
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_call_too_many_args_use_workitem_id_x() #1 {
   call void @too_many_args_use_workitem_id_x(

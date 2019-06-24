@@ -21,10 +21,8 @@ llvm::Optional<DIERef> DWARFBaseDIE::GetDIERef() const {
   if (!IsValid())
     return llvm::None;
 
-  dw_offset_t cu_offset = m_cu->GetOffset();
-  if (m_cu->GetBaseObjOffset() != DW_INVALID_OFFSET)
-    cu_offset = m_cu->GetBaseObjOffset();
-  return DIERef(m_cu->GetDebugSection(), cu_offset, m_die->GetOffset());
+  return DIERef(m_cu->GetSymbolFileDWARF().GetDwoNum(), m_cu->GetDebugSection(),
+                m_die->GetOffset());
 }
 
 dw_tag_t DWARFBaseDIE::Tag() const {

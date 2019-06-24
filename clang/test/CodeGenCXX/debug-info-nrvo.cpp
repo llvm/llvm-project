@@ -1,5 +1,10 @@
-// RUN: %clangxx -target x86_64-unknown-unknown -g %s -emit-llvm -S -o - | FileCheck %s
-// RUN: %clangxx -target x86_64-unknown-unknown -g -fno-elide-constructors %s -emit-llvm -S -o - | FileCheck %s -check-prefix=NOELIDE
+// RUN: %clangxx -target x86_64-unknown-unknown -g \
+// RUN:   %s -emit-llvm -S -o - | FileCheck %s
+
+// RUN: %clangxx -target x86_64-unknown-unknown -g \
+// RUN:   -fno-elide-constructors %s -emit-llvm -S -o - | \
+// RUN:   FileCheck %s -check-prefix=NOELIDE
+
 struct Foo {
   Foo() = default;
   Foo(Foo &&other) { x = other.x; }
@@ -21,8 +26,10 @@ int main() {
 // Check that NRVO variables are stored as a pointer with deref if they are
 // stored in the return register.
 
-// CHECK: %result.ptr = alloca i8*, align 8
-// CHECK: call void @llvm.dbg.declare(metadata i8** %result.ptr,
+// CHECK: %[[RESULT:.*]] = alloca i8*, align 8
+// CHECK: call void @llvm.dbg.declare(metadata i8** %[[RESULT]],
 // CHECK-SAME: metadata !DIExpression(DW_OP_deref)
-// NOELIDE: call void @llvm.dbg.declare(metadata %struct.Foo* %foo,
+
+// NOELIDE: %[[FOO:.*]] = alloca %struct.Foo, align 4
+// NOELIDE: call void @llvm.dbg.declare(metadata %struct.Foo* %[[FOO]],
 // NOELIDE-SAME:                        metadata !DIExpression()

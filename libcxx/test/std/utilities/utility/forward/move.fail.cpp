@@ -6,7 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++98, c++03
+// This test should pass in C++03 with Clang extensions because Clang does
+// not implicitly delete the copy constructor when move constructors are
+// defaulted using extensions.
+
+// XFAIL: c++98, c++03
 
 // test move
 
@@ -26,10 +30,9 @@ void test(move_only) {}
 
 int main(int, char**)
 {
-    move_only a;
-    const move_only ca = move_only();
-
-    test(std::move(ca)); // c
+  const move_only ca = move_only();
+  // expected-error@+1 {{call to implicitly-deleted copy constructor of 'move_only'}}
+  test(std::move(ca));
 
   return 0;
 }

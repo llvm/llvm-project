@@ -84,9 +84,18 @@ ARMLegalizerInfo::ARMLegalizerInfo(const ARMSubtarget &ST) {
   getActionDefinitionsBuilder({G_SEXT, G_ZEXT, G_ANYEXT})
       .legalForCartesianProduct({s8, s16, s32}, {s1, s8, s16});
 
-  getActionDefinitionsBuilder({G_ADD, G_SUB, G_MUL, G_AND, G_OR, G_XOR})
+  getActionDefinitionsBuilder({G_MUL, G_AND, G_OR, G_XOR})
       .legalFor({s32})
       .minScalar(0, s32);
+
+  if (ST.hasNEON())
+    getActionDefinitionsBuilder({G_ADD, G_SUB})
+        .legalFor({s32, s64})
+        .minScalar(0, s32);
+  else
+    getActionDefinitionsBuilder({G_ADD, G_SUB})
+        .legalFor({s32})
+        .minScalar(0, s32);
 
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
     .legalFor({{s32, s32}})

@@ -28,8 +28,8 @@ void test(A &a, B &b) {
   A &&ar6 = static_cast<A&&>(xvalue<D>());
   A &&ar7 = static_cast<A&&>(prvalue<D>());
 
-  A &&ar8 = static_cast<A&&>(prvalue<const A>()); // expected-error {{binding value of type 'const A' to reference to type 'A' drops 'const' qualifier}}
-  A &&ar9 = static_cast<A&&>(lvalue<const A>()); // expected-error {{cannot cast from lvalue of type 'const A'}}
+  A &&ar8 = static_cast<A&&>(prvalue<const A>()); // expected-error {{binding reference of type 'A' to value of type 'const A' drops 'const' qualifier}}
+  A &&ar9 = static_cast<A&&>(lvalue<const A>());  // expected-error {{cannot cast from lvalue of type 'const A'}}
   A &&ar10 = static_cast<A&&>(xvalue<const A>()); // expected-error {{cannot cast from rvalue of type 'const A'}}
 
   const A &&ar11 = static_cast<const A&&>(prvalue<A>());
@@ -39,5 +39,5 @@ void test(A &a, B &b) {
   const A &&ar15 = static_cast<const A&&>(prvalue<C>());
   const A &&ar16 = static_cast<const A&&>(lvalue<D>());
 
-  const A &&ar17 = static_cast<const A&&>(prvalue<A const volatile>()); // expected-error {{binding value of type 'const volatile A' to reference to type 'const A' drops 'volatile' qualifier}}
+  const A &&ar17 = static_cast<const A&&>(prvalue<A const volatile>()); // expected-error {{binding reference of type 'const A' to value of type 'const volatile A' drops 'volatile' qualifier}}
 }

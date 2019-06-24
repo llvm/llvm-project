@@ -2678,6 +2678,14 @@ bool AArch64DAGToDAGISel::tryReadRegister(SDNode *N) {
     return true;
   }
 
+  if (RegString->getString() == "pc") {
+    ReplaceNode(N, CurDAG->getMachineNode(
+                       AArch64::ADR, DL, N->getSimpleValueType(0), MVT::Other,
+                       CurDAG->getTargetConstant(0, DL, MVT::i32),
+                       N->getOperand(0)));
+    return true;
+  }
+
   return false;
 }
 

@@ -2222,8 +2222,8 @@ public:
 /// WinX86_64ABIInfo - The Windows X86_64 ABI information.
 class WinX86_64ABIInfo : public SwiftABIInfo {
 public:
-  WinX86_64ABIInfo(CodeGen::CodeGenTypes &CGT)
-      : SwiftABIInfo(CGT),
+  WinX86_64ABIInfo(CodeGen::CodeGenTypes &CGT, X86AVXABILevel AVXLevel)
+      : SwiftABIInfo(CGT), AVXLevel(AVXLevel),
         IsMingw64(getTarget().getTriple().isWindowsGNUEnvironment()) {}
 
   void computeInfo(CGFunctionInfo &FI) const override;
@@ -2259,7 +2259,9 @@ private:
   void computeVectorCallArgs(CGFunctionInfo &FI, unsigned FreeSSERegs,
                              bool IsVectorCall, bool IsRegCall) const;
 
-    bool IsMingw64;
+  X86AVXABILevel AVXLevel;
+
+  bool IsMingw64;
 };
 
 class X86_64TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -2409,7 +2411,7 @@ class WinX86_64TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   WinX86_64TargetCodeGenInfo(CodeGen::CodeGenTypes &CGT,
                              X86AVXABILevel AVXLevel)
-      : TargetCodeGenInfo(new WinX86_64ABIInfo(CGT)) {}
+      : TargetCodeGenInfo(new WinX86_64ABIInfo(CGT, AVXLevel)) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override;
@@ -3562,7 +3564,7 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   // using __attribute__((ms_abi)). In such case to correctly emit Win64
   // compatible code delegate this call to WinX86_64ABIInfo::computeInfo.
   if (CallingConv == llvm::CallingConv::Win64) {
-    WinX86_64ABIInfo Win64ABIInfo(CGT);
+    WinX86_64ABIInfo Win64ABIInfo(CGT, AVXLevel);
     Win64ABIInfo.computeInfo(FI);
     return;
   }
@@ -4016,9 +4018,17 @@ void WinX86_64ABIInfo::computeVectorCallArgs(CGFunctionInfo &FI,
 }
 
 void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
-  bool IsVectorCall =
-      FI.getCallingConvention() == llvm::CallingConv::X86_VectorCall;
-  bool IsRegCall = FI.getCallingConvention() == llvm::CallingConv::X86_RegCall;
+  const unsigned CC = FI.getCallingConvention();
+  bool IsVectorCall = CC == llvm::CallingConv::X86_VectorCall;
+  bool IsRegCall = CC == llvm::CallingConv::X86_RegCall;
+
+  // If __attribute__((sysv_abi)) is in use, use the SysV argument
+  // classification rules.
+  if (CC == llvm::CallingConv::X86_64_SysV) {
+    X86_64ABIInfo SysVABIInfo(CGT, AVXLevel);
+    SysVABIInfo.computeInfo(FI);
+    return;
+  }
 
   unsigned FreeSSERegs = 0;
   if (IsVectorCall) {

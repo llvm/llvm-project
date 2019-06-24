@@ -295,10 +295,9 @@ def getNonRecordFormOpcode : InstrMapping {
 
 def getAltVSXFMAOpcode : InstrMapping {
   let FilterClass = "AltVSXFMARel";
-  // Instructions with the same BaseName and Interpretation64Bit values
-  // form a row.
+  // Instructions with the same BaseName value form a row.
   let RowFields = ["BaseName"];
-  // Instructions with the same RC value form a column.
+  // Instructions with the same IsVSXFMAAlt value form a column.
   let ColFields = ["IsVSXFMAAlt"];
   // The key column are the (default) addend-killing instructions.
   let KeyCol = ["0"];

@@ -64,10 +64,11 @@ DebugNamesDWARFIndex::ToDIERef(const DebugNames::Entry &entry) {
   // GetDwoSymbolFile to call this automatically because of mutual recursion
   // between this and DWARFDebugInfoEntry::GetAttributeValue.
   cu->ExtractUnitDIEIfNeeded();
-  uint64_t die_bias = cu->GetDwoSymbolFile() ? 0 : *cu_offset;
+  cu = &cu->GetNonSkeletonUnit();
 
   if (llvm::Optional<uint64_t> die_offset = entry.getDIEUnitOffset())
-    return DIERef(DIERef::Section::DebugInfo, *cu_offset, die_bias + *die_offset);
+    return DIERef(cu->GetSymbolFileDWARF().GetDwoNum(),
+                  DIERef::Section::DebugInfo, cu->GetOffset() + *die_offset);
 
   return llvm::None;
 }
@@ -165,8 +166,7 @@ void DebugNamesDWARFIndex::GetCompleteObjCClass(ConstString class_name,
     if (!ref)
       continue;
 
-    DWARFUnit *cu = m_debug_info.GetUnitAtOffset(DIERef::Section::DebugInfo,
-                                                 *ref->unit_offset());
+    DWARFUnit *cu = m_debug_info.GetUnit(*ref);
     if (!cu || !cu->Supports_DW_AT_APPLE_objc_complete_type()) {
       incomplete_types.push_back(*ref);
       continue;
@@ -222,12 +222,12 @@ void DebugNamesDWARFIndex::GetNamespaces(ConstString name, DIEArray &offsets) {
 }
 
 void DebugNamesDWARFIndex::GetFunctions(
-    ConstString name, DWARFDebugInfo &info,
+    ConstString name, SymbolFileDWARF &dwarf,
     const CompilerDeclContext &parent_decl_ctx, uint32_t name_type_mask,
     std::vector<DWARFDIE> &dies) {
 
   std::vector<DWARFDIE> v;
-  m_fallback.GetFunctions(name, info, parent_decl_ctx, name_type_mask, v);
+  m_fallback.GetFunctions(name, dwarf, parent_decl_ctx, name_type_mask, v);
 
   for (const DebugNames::Entry &entry :
        m_debug_names_up->equal_range(name.GetStringRef())) {
@@ -236,7 +236,7 @@ void DebugNamesDWARFIndex::GetFunctions(
       continue;
 
     if (llvm::Optional<DIERef> ref = ToDIERef(entry))
-      ProcessFunctionDIE(name.GetStringRef(), *ref, info, parent_decl_ctx,
+      ProcessFunctionDIE(name.GetStringRef(), *ref, dwarf, parent_decl_ctx,
                          name_type_mask, v);
   }
 

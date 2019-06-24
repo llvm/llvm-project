@@ -11,6 +11,7 @@
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
 #include "Plugins/ExpressionParser/Clang/ClangPersistentVariables.h"
 #include "lldb/Breakpoint/BreakpointIDList.h"
+#include "lldb/Breakpoint/BreakpointPrecondition.h"
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Breakpoint/BreakpointResolverAddress.h"
 #include "lldb/Breakpoint/BreakpointResolverFileLine.h"
@@ -573,8 +574,7 @@ Target::CreateExceptionBreakpoint(enum lldb::LanguageType language,
   BreakpointSP exc_bkpt_sp = LanguageRuntime::CreateExceptionBreakpoint(
       *this, language, catch_bp, throw_bp, internal);
   if (exc_bkpt_sp && additional_args) {
-    Breakpoint::BreakpointPreconditionSP precondition_sp =
-        exc_bkpt_sp->GetPrecondition();
+    BreakpointPreconditionSP precondition_sp = exc_bkpt_sp->GetPrecondition();
     if (precondition_sp && additional_args) {
       if (error)
         *error = precondition_sp->ConfigurePrecondition(*additional_args);

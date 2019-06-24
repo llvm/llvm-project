@@ -962,7 +962,11 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     return true;
   }
   case Intrinsic::amdgcn_ds_gws_init:
-  case Intrinsic::amdgcn_ds_gws_barrier: {
+  case Intrinsic::amdgcn_ds_gws_barrier:
+  case Intrinsic::amdgcn_ds_gws_sema_v:
+  case Intrinsic::amdgcn_ds_gws_sema_br:
+  case Intrinsic::amdgcn_ds_gws_sema_p:
+  case Intrinsic::amdgcn_ds_gws_sema_release_all: {
     Info.opc = ISD::INTRINSIC_VOID;
 
     SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
@@ -1825,11 +1829,8 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
     Info.setScratchRSrcReg(ReservedBufferReg);
   }
 
-  // This should be accurate for kernels even before the frame is finalized.
-  const bool HasFP = ST.getFrameLowering()->hasFP(MF);
-  if (HasFP) {
-    unsigned ReservedOffsetReg =
-        TRI.reservedPrivateSegmentWaveByteOffsetReg(MF);
+  // hasFP should be accurate for kernels even before the frame is finalized.
+  if (ST.getFrameLowering()->hasFP(MF)) {
     MachineRegisterInfo &MRI = MF.getRegInfo();
 
     // Try to use s32 as the SP, but move it if it would interfere with input
@@ -1856,8 +1857,15 @@ static void reservePrivateMemoryRegs(const TargetMachine &TM,
         report_fatal_error("failed to find register for SP");
     }
 
-    Info.setScratchWaveOffsetReg(ReservedOffsetReg);
-    Info.setFrameOffsetReg(ReservedOffsetReg);
+    if (MFI.hasCalls()) {
+      Info.setScratchWaveOffsetReg(AMDGPU::SGPR33);
+      Info.setFrameOffsetReg(AMDGPU::SGPR33);
+    } else {
+      unsigned ReservedOffsetReg =
+        TRI.reservedPrivateSegmentWaveByteOffsetReg(MF);
+      Info.setScratchWaveOffsetReg(ReservedOffsetReg);
+      Info.setFrameOffsetReg(ReservedOffsetReg);
+    }
   } else if (RequiresStackAccess) {
     assert(!MFI.hasCalls());
     // We know there are accesses and they will be done relative to SP, so just
@@ -2617,19 +2625,11 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
     SmallVector<SDValue, 4> CopyFromChains;
 
-    unsigned OffsetReg = Info->getScratchWaveOffsetReg();
-
     // In the HSA case, this should be an identity copy.
     SDValue ScratchRSrcReg
       = DAG.getCopyFromReg(Chain, DL, Info->getScratchRSrcReg(), MVT::v4i32);
     RegsToPass.emplace_back(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3, ScratchRSrcReg);
     CopyFromChains.push_back(ScratchRSrcReg.getValue(1));
-
-    // TODO: Don't hardcode these registers and get from the callee function.
-    SDValue ScratchWaveOffsetReg
-      = DAG.getCopyFromReg(Chain, DL, OffsetReg, MVT::i32);
-    RegsToPass.emplace_back(AMDGPU::SGPR4, ScratchWaveOffsetReg);
-    CopyFromChains.push_back(ScratchWaveOffsetReg.getValue(1));
 
     if (!Info->isEntryFunction()) {
       // Avoid clobbering this function's FP value. In the current convention
@@ -2922,6 +2922,107 @@ MachineBasicBlock *SITargetLowering::splitKillBlock(MachineInstr &MI,
   return SplitBB;
 }
 
+// Split block \p MBB at \p MI, as to insert a loop. If \p InstInLoop is true,
+// \p MI will be the only instruction in the loop body block. Otherwise, it will
+// be the first instruction in the remainder block.
+//
+/// \returns { LoopBody, Remainder }
+static std::pair<MachineBasicBlock *, MachineBasicBlock *>
+splitBlockForLoop(MachineInstr &MI, MachineBasicBlock &MBB, bool InstInLoop) {
+  MachineFunction *MF = MBB.getParent();
+  MachineBasicBlock::iterator I(&MI);
+
+  // To insert the loop we need to split the block. Move everything after this
+  // point to a new block, and insert a new empty block between the two.
+  MachineBasicBlock *LoopBB = MF->CreateMachineBasicBlock();
+  MachineBasicBlock *RemainderBB = MF->CreateMachineBasicBlock();
+  MachineFunction::iterator MBBI(MBB);
+  ++MBBI;
+
+  MF->insert(MBBI, LoopBB);
+  MF->insert(MBBI, RemainderBB);
+
+  LoopBB->addSuccessor(LoopBB);
+  LoopBB->addSuccessor(RemainderBB);
+
+  // Move the rest of the block into a new block.
+  RemainderBB->transferSuccessorsAndUpdatePHIs(&MBB);
+
+  if (InstInLoop) {
+    auto Next = std::next(I);
+
+    // Move instruction to loop body.
+    LoopBB->splice(LoopBB->begin(), &MBB, I, Next);
+
+    // Move the rest of the block.
+    RemainderBB->splice(RemainderBB->begin(), &MBB, Next, MBB.end());
+  } else {
+    RemainderBB->splice(RemainderBB->begin(), &MBB, I, MBB.end());
+  }
+
+  MBB.addSuccessor(LoopBB);
+
+  return std::make_pair(LoopBB, RemainderBB);
+}
+
+MachineBasicBlock *
+SITargetLowering::emitGWSMemViolTestLoop(MachineInstr &MI,
+                                         MachineBasicBlock *BB) const {
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  MachineRegisterInfo &MRI = BB->getParent()->getRegInfo();
+
+  MachineBasicBlock *LoopBB;
+  MachineBasicBlock *RemainderBB;
+  const SIInstrInfo *TII = getSubtarget()->getInstrInfo();
+
+  MachineBasicBlock::iterator Prev = std::prev(MI.getIterator());
+
+  std::tie(LoopBB, RemainderBB) = splitBlockForLoop(MI, *BB, true);
+
+  MachineBasicBlock::iterator I = LoopBB->end();
+  MachineOperand *Src = TII->getNamedOperand(MI, AMDGPU::OpName::data0);
+
+  const unsigned EncodedReg = AMDGPU::Hwreg::encodeHwreg(
+    AMDGPU::Hwreg::ID_TRAPSTS, AMDGPU::Hwreg::OFFSET_MEM_VIOL, 1);
+
+  // Clear TRAP_STS.MEM_VIOL
+  BuildMI(*LoopBB, LoopBB->begin(), DL, TII->get(AMDGPU::S_SETREG_IMM32_B32))
+    .addImm(0)
+    .addImm(EncodedReg);
+
+  // This is a pain, but we're not allowed to have physical register live-ins
+  // yet. Insert a pair of copies if the VGPR0 hack is necessary.
+  if (Src && TargetRegisterInfo::isPhysicalRegister(Src->getReg())) {
+    unsigned Data0 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    BuildMI(*BB, std::next(Prev), DL, TII->get(AMDGPU::COPY), Data0)
+      .add(*Src);
+
+    BuildMI(*LoopBB, LoopBB->begin(), DL, TII->get(AMDGPU::COPY), Src->getReg())
+      .addReg(Data0);
+
+    MRI.setSimpleHint(Data0, Src->getReg());
+  }
+
+  BuildMI(*LoopBB, I, DL, TII->get(AMDGPU::S_WAITCNT))
+    .addImm(0);
+
+  unsigned Reg = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+
+  // Load and check TRAP_STS.MEM_VIOL
+  BuildMI(*LoopBB, I, DL, TII->get(AMDGPU::S_GETREG_B32), Reg)
+    .addImm(EncodedReg);
+
+  // FIXME: Do we need to use an isel pseudo that may clobber scc?
+  BuildMI(*LoopBB, I, DL, TII->get(AMDGPU::S_CMP_LG_U32))
+    .addReg(Reg, RegState::Kill)
+    .addImm(0);
+  BuildMI(*LoopBB, I, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
+    .addMBB(LoopBB);
+
+  return RemainderBB;
+}
+
 // Do a v_movrels_b32 or v_movreld_b32 for each unique value of \p IdxReg in the
 // wavefront. If the value is uniform and just happens to be in a VGPR, this
 // will only do one iteration. In the worst case, this will loop 64 times.
@@ -3061,24 +3162,9 @@ static MachineBasicBlock::iterator loadM0FromVGPR(const SIInstrInfo *TII,
   BuildMI(MBB, I, DL, TII->get(MovExecOpc), SaveExec)
     .addReg(Exec);
 
-  // To insert the loop we need to split the block. Move everything after this
-  // point to a new block, and insert a new empty block between the two.
-  MachineBasicBlock *LoopBB = MF->CreateMachineBasicBlock();
-  MachineBasicBlock *RemainderBB = MF->CreateMachineBasicBlock();
-  MachineFunction::iterator MBBI(MBB);
-  ++MBBI;
-
-  MF->insert(MBBI, LoopBB);
-  MF->insert(MBBI, RemainderBB);
-
-  LoopBB->addSuccessor(LoopBB);
-  LoopBB->addSuccessor(RemainderBB);
-
-  // Move the rest of the block into a new block.
-  RemainderBB->transferSuccessorsAndUpdatePHIs(&MBB);
-  RemainderBB->splice(RemainderBB->begin(), &MBB, I, MBB.end());
-
-  MBB.addSuccessor(LoopBB);
+  MachineBasicBlock *LoopBB;
+  MachineBasicBlock *RemainderBB;
+  std::tie(LoopBB, RemainderBB) = splitBlockForLoop(MI, MBB, false);
 
   const MachineOperand *Idx = TII->getNamedOperand(MI, AMDGPU::OpName::idx);
 
@@ -3630,6 +3716,15 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
     MI.eraseFromParent();
     return BB;
   }
+  case AMDGPU::DS_GWS_INIT:
+  case AMDGPU::DS_GWS_SEMA_V:
+  case AMDGPU::DS_GWS_SEMA_BR:
+  case AMDGPU::DS_GWS_SEMA_P:
+  case AMDGPU::DS_GWS_SEMA_RELEASE_ALL:
+  case AMDGPU::DS_GWS_BARRIER:
+    if (getSubtarget()->hasGWSAutoReplay())
+      return BB;
+    return emitGWSMemViolTestLoop(MI, BB);
   default:
     return AMDGPUTargetLowering::EmitInstrWithCustomInserter(MI, BB);
   }

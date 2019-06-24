@@ -240,6 +240,7 @@ define void @f_f() nounwind {
 ; CHECK_O0-NEXT:  .LBB9_3: # %cif_mixed_test_all
 ; CHECK_O0-NEXT:    movl $-1, %eax
 ; CHECK_O0-NEXT:    vmovd %eax, %xmm0
+; CHECK_O0-NEXT:    vmovdqa %xmm0, %xmm0
 ; CHECK_O0-NEXT:    vmovaps %xmm0, %xmm1
 ; CHECK_O0-NEXT:    # implicit-def: $rcx
 ; CHECK_O0-NEXT:    # implicit-def: $ymm2

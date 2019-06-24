@@ -26,7 +26,7 @@ vabav.u32 r0, q1, q3
 # CHECK: vaddv.s16 lr, q0  @ encoding: [0xf5,0xee,0x00,0xef]
 vaddv.s16 lr, q0
 
-# ERROR: [[@LINE+1]]:11: {{error|note}}: invalid operand for instruction
+# ERROR: [[@LINE+1]]:11: {{error|note}}: operand must be an even-numbered register
 vaddv.s16 r1, q0
 
 # CHECK: vpte.i8 eq, q0, q0
@@ -49,10 +49,10 @@ vaddvae.s16 lr, q0
 # CHECK: vaddlv.s32 r0, r9, q2  @ encoding: [0xc9,0xee,0x04,0x0f]
 vaddlv.s32 r0, r9, q2
 
-# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: operand must be an odd-numbered register in range [r1,r11]
 vaddlv.s32 r0, r2, q2
 
-# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: operand must be an even-numbered register
 vaddlv.s32 r1, r3, q2
 
 # CHECK: vaddlv.u32 r0, r1, q1  @ encoding: [0x89,0xfe,0x02,0x0f]
@@ -145,10 +145,10 @@ vrmlaldavh.u32 lr, r1, q5, q2
 # CHECK: vrmlalvh.u32 lr, r1, q5, q2  @ encoding: [0x8a,0xfe,0x04,0xef]
 vrmlaldavh.u32 lr, r1, q5, q2
 
-# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: operand must be an even-numbered register
 vrmlaldavh.u32 r1, r3, q5, q2
 
-# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: invalid operand for instruction
+# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: operand must be an odd-numbered register in range [r1,r11]
 vrmlaldavh.u32 r2, r4, q5, q2
 
 # CHECK: vrmlaldavhax.s32 lr, r1, q3, q0  @ encoding: [0x86,0xee,0x20,0xff]

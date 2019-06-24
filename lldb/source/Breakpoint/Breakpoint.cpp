@@ -11,6 +11,7 @@
 #include "lldb/Breakpoint/Breakpoint.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/BreakpointLocationCollection.h"
+#include "lldb/Breakpoint/BreakpointPrecondition.h"
 #include "lldb/Breakpoint/BreakpointResolver.h"
 #include "lldb/Breakpoint/BreakpointResolverFileLine.h"
 #include "lldb/Core/Address.h"
@@ -993,21 +994,6 @@ bool Breakpoint::EvaluatePrecondition(StoppointCallbackContext &context) {
     return true;
 
   return m_precondition_sp->EvaluatePrecondition(context);
-}
-
-bool Breakpoint::BreakpointPrecondition::EvaluatePrecondition(
-    StoppointCallbackContext &context) {
-  return true;
-}
-
-void Breakpoint::BreakpointPrecondition::GetDescription(
-    Stream &stream, lldb::DescriptionLevel level) {}
-
-Status
-Breakpoint::BreakpointPrecondition::ConfigurePrecondition(Args &options) {
-  Status error;
-  error.SetErrorString("Base breakpoint precondition has no options.");
-  return error;
 }
 
 void Breakpoint::SendBreakpointChangedEvent(

@@ -2089,10 +2089,39 @@ void AMDGPUDAGToDAGISel::SelectDSAppendConsume(SDNode *N, unsigned IntrID) {
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
 }
 
+static unsigned gwsIntrinToOpcode(unsigned IntrID) {
+  switch (IntrID) {
+  case Intrinsic::amdgcn_ds_gws_init:
+    return AMDGPU::DS_GWS_INIT;
+  case Intrinsic::amdgcn_ds_gws_barrier:
+    return AMDGPU::DS_GWS_BARRIER;
+  case Intrinsic::amdgcn_ds_gws_sema_v:
+    return AMDGPU::DS_GWS_SEMA_V;
+  case Intrinsic::amdgcn_ds_gws_sema_br:
+    return AMDGPU::DS_GWS_SEMA_BR;
+  case Intrinsic::amdgcn_ds_gws_sema_p:
+    return AMDGPU::DS_GWS_SEMA_P;
+  case Intrinsic::amdgcn_ds_gws_sema_release_all:
+    return AMDGPU::DS_GWS_SEMA_RELEASE_ALL;
+  default:
+    llvm_unreachable("not a gws intrinsic");
+  }
+}
+
 void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
+  if (IntrID == Intrinsic::amdgcn_ds_gws_sema_release_all &&
+      !Subtarget->hasGWSSemaReleaseAll()) {
+    // Let this error.
+    SelectCode(N);
+    return;
+  }
+
+  // Chain, intrinsic ID, vsrc, offset
+  const bool HasVSrc = N->getNumOperands() == 4;
+  assert(HasVSrc || N->getNumOperands() == 3);
+
   SDLoc SL(N);
-  SDValue VSrc0 = N->getOperand(2);
-  SDValue BaseOffset = N->getOperand(3);
+  SDValue BaseOffset = N->getOperand(HasVSrc ? 3 : 2);
   int ImmOffset = 0;
   MemIntrinsicSDNode *M = cast<MemIntrinsicSDNode>(N);
   MachineMemOperand *MMO = M->getMemOperand();
@@ -2128,28 +2157,37 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
     glueCopyToM0(N, SDValue(M0Base, 0));
   }
 
-  // The manual doesn't mention this, but it seems only v0 works.
-  SDValue V0 = CurDAG->getRegister(AMDGPU::VGPR0, MVT::i32);
+  SDValue V0;
+  SDValue Chain = N->getOperand(0);
+  SDValue Glue;
+  if (HasVSrc) {
+    SDValue VSrc0 = N->getOperand(2);
 
-  SDValue CopyToV0 = CurDAG->getCopyToReg(
-    N->getOperand(0), SL, V0, VSrc0,
-    N->getOperand(N->getNumOperands() - 1));
+    // The manual doesn't mention this, but it seems only v0 works.
+    V0 = CurDAG->getRegister(AMDGPU::VGPR0, MVT::i32);
+
+    SDValue CopyToV0 = CurDAG->getCopyToReg(
+      N->getOperand(0), SL, V0, VSrc0,
+      N->getOperand(N->getNumOperands() - 1));
+    Chain = CopyToV0;
+    Glue = CopyToV0.getValue(1);
+  }
 
   SDValue OffsetField = CurDAG->getTargetConstant(ImmOffset, SL, MVT::i32);
 
   // TODO: Can this just be removed from the instruction?
   SDValue GDS = CurDAG->getTargetConstant(1, SL, MVT::i1);
 
-  unsigned Opc = IntrID == Intrinsic::amdgcn_ds_gws_init ?
-    AMDGPU::DS_GWS_INIT : AMDGPU::DS_GWS_BARRIER;
+  const unsigned Opc = gwsIntrinToOpcode(IntrID);
+  SmallVector<SDValue, 5> Ops;
+  if (HasVSrc)
+    Ops.push_back(V0);
+  Ops.push_back(OffsetField);
+  Ops.push_back(GDS);
+  Ops.push_back(Chain);
 
-  SDValue Ops[] = {
-    V0,
-    OffsetField,
-    GDS,
-    CopyToV0, // Chain
-    CopyToV0.getValue(1) // Glue
-  };
+  if (HasVSrc)
+    Ops.push_back(Glue);
 
   SDNode *Selected = CurDAG->SelectNodeTo(N, Opc, N->getVTList(), Ops);
   CurDAG->setNodeMemRefs(cast<MachineSDNode>(Selected), {MMO});
@@ -2175,6 +2213,10 @@ void AMDGPUDAGToDAGISel::SelectINTRINSIC_VOID(SDNode *N) {
   switch (IntrID) {
   case Intrinsic::amdgcn_ds_gws_init:
   case Intrinsic::amdgcn_ds_gws_barrier:
+  case Intrinsic::amdgcn_ds_gws_sema_v:
+  case Intrinsic::amdgcn_ds_gws_sema_br:
+  case Intrinsic::amdgcn_ds_gws_sema_p:
+  case Intrinsic::amdgcn_ds_gws_sema_release_all:
     SelectDS_GWS(N, IntrID);
     return;
   default:

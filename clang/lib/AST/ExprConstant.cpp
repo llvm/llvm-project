@@ -8963,6 +8963,8 @@ static bool tryEvaluateBuiltinObjectSize(const Expr *E, unsigned Type,
 
 bool IntExprEvaluator::VisitConstantExpr(const ConstantExpr *E) {
   llvm::SaveAndRestore<bool> InConstantContext(Info.InConstantContext, true);
+  if (E->getResultAPValueKind() != APValue::None)
+    return Success(E->getAPValueResult(), E);
   return ExprEvaluatorBaseTy::VisitConstantExpr(E);
 }
 

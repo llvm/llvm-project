@@ -106,7 +106,7 @@ define amdgpu_kernel void @kern_indirect_use_dispatch_id() #1 {
 
 ; GCN-LABEL: {{^}}use_workgroup_id_x:
 ; GCN: s_waitcnt
-; GCN: ; use s6
+; GCN: ; use s4
 define hidden void @use_workgroup_id_x() #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.x()
   call void asm sideeffect "; use $0", "s"(i32 %val)
@@ -117,7 +117,7 @@ define hidden void @use_workgroup_id_x() #1 {
 ; GCN: s_waitcnt
 ; GCN-NOT: s32
 ; GCN: buffer_store_dword v0, off, s[0:3], s32{{$}}
-; GCN: ; use s6
+; GCN: ; use s4
 ; GCN: s_setpc_b64
 define hidden void @use_stack_workgroup_id_x() #1 {
   %alloca = alloca i32, addrspace(5)
@@ -129,7 +129,7 @@ define hidden void @use_stack_workgroup_id_x() #1 {
 
 ; GCN-LABEL: {{^}}use_workgroup_id_y:
 ; GCN: s_waitcnt
-; GCN: ; use s6
+; GCN: ; use s4
 define hidden void @use_workgroup_id_y() #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.y()
   call void asm sideeffect "; use $0", "s"(i32 %val)
@@ -138,7 +138,7 @@ define hidden void @use_workgroup_id_y() #1 {
 
 ; GCN-LABEL: {{^}}use_workgroup_id_z:
 ; GCN: s_waitcnt
-; GCN: ; use s6
+; GCN: ; use s4
 define hidden void @use_workgroup_id_z() #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.z()
   call void asm sideeffect "; use $0", "s"(i32 %val)
@@ -146,8 +146,8 @@ define hidden void @use_workgroup_id_z() #1 {
 }
 
 ; GCN-LABEL: {{^}}use_workgroup_id_xy:
+; GCN: ; use s4
 ; GCN: ; use s6
-; GCN: ; use s7
 define hidden void @use_workgroup_id_xy() #1 {
   %val0 = call i32 @llvm.amdgcn.workgroup.id.x()
   %val1 = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -157,9 +157,9 @@ define hidden void @use_workgroup_id_xy() #1 {
 }
 
 ; GCN-LABEL: {{^}}use_workgroup_id_xyz:
+; GCN: ; use s4
 ; GCN: ; use s6
 ; GCN: ; use s7
-; GCN: ; use s8
 define hidden void @use_workgroup_id_xyz() #1 {
   %val0 = call i32 @llvm.amdgcn.workgroup.id.x()
   %val1 = call i32 @llvm.amdgcn.workgroup.id.y()
@@ -171,8 +171,8 @@ define hidden void @use_workgroup_id_xyz() #1 {
 }
 
 ; GCN-LABEL: {{^}}use_workgroup_id_xz:
+; GCN: ; use s4
 ; GCN: ; use s6
-; GCN: ; use s7
 define hidden void @use_workgroup_id_xz() #1 {
   %val0 = call i32 @llvm.amdgcn.workgroup.id.x()
   %val1 = call i32 @llvm.amdgcn.workgroup.id.z()
@@ -182,8 +182,8 @@ define hidden void @use_workgroup_id_xz() #1 {
 }
 
 ; GCN-LABEL: {{^}}use_workgroup_id_yz:
+; GCN: ; use s4
 ; GCN: ; use s6
-; GCN: ; use s7
 define hidden void @use_workgroup_id_yz() #1 {
   %val0 = call i32 @llvm.amdgcn.workgroup.id.y()
   %val1 = call i32 @llvm.amdgcn.workgroup.id.z()
@@ -198,12 +198,13 @@ define hidden void @use_workgroup_id_yz() #1 {
 ; GCN: enable_sgpr_workgroup_id_z = 0
 
 ; GCN-NOT: s6
-; GCN: s_mov_b32 s33, s7
-; GCN-NOT: s6
-; GCN: s_mov_b32 s4, s33
-; GCN-NOT: s6
+; GCN: s_mov_b32 s4, s6
+; GCN-NEXT: s_getpc_b64 s[6:7]
+; GCN-NEXT: s_add_u32 s6, s6, use_workgroup_id_x@rel32@lo+4
+; GCN-NEXT: s_addc_u32 s7, s7, use_workgroup_id_x@rel32@hi+4
 ; GCN: s_mov_b32 s32, s33
 ; GCN: s_swappc_b64
+; GCN-NEXT: s_endpgm
 define amdgpu_kernel void @kern_indirect_use_workgroup_id_x() #1 {
   call void @use_workgroup_id_x()
   ret void
@@ -215,8 +216,7 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_x() #1 {
 ; GCN: enable_sgpr_workgroup_id_z = 0
 
 ; GCN: s_mov_b32 s33, s8
-; GCN-DAG: s_mov_b32 s4, s33
-; GCN-DAG: s_mov_b32 s6, s7
+; GCN-DAG: s_mov_b32 s4, s7
 ; GCN: s_mov_b32 s32, s33
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workgroup_id_y() #1 {
@@ -228,10 +228,9 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_y() #1 {
 ; GCN: enable_sgpr_workgroup_id_x = 1
 ; GCN: enable_sgpr_workgroup_id_y = 0
 ; GCN: enable_sgpr_workgroup_id_z = 1
-
 ; GCN: s_mov_b32 s33, s8
-; GCN-DAG: s_mov_b32 s4, s33
-; GCN-DAG: s_mov_b32 s6, s7
+; GCN: s_mov_b32 s4, s7
+
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workgroup_id_z() #1 {
   call void @use_workgroup_id_z()
@@ -244,14 +243,10 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_z() #1 {
 ; GCN: enable_sgpr_workgroup_id_z = 0
 
 ; GCN: s_mov_b32 s33, s8
-; GCN-NOT: s6
-; GCN-NOT: s7
-; GCN: s_mov_b32 s4, s33
-; GCN-NOT: s6
-; GCN-NOT: s7
+
+; GCN: s_mov_b32 s4, s6
+; GCN: s_mov_b32 s6, s7
 ; GCN: s_mov_b32 s32, s33
-; GCN-NOT: s6
-; GCN-NOT: s7
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workgroup_id_xy() #1 {
   call void @use_workgroup_id_xy()
@@ -265,22 +260,11 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_xy() #1 {
 
 ; GCN: s_mov_b32 s33, s9
 
-; GCN-NOT: s6
-; GCN-NOT: s7
-; GCN-NOT: s8
-
-; GCN: s_mov_b32 s4, s33
-
-; GCN-NOT: s6
-; GCN-NOT: s7
-; GCN-NOT: s8
+; GCN: s_mov_b32 s4, s6
+; GCN: s_mov_b32 s6, s7
+; GCN: s_mov_b32 s7, s8
 
 ; GCN: s_mov_b32 s32, s33
-
-; GCN-NOT: s6
-; GCN-NOT: s7
-; GCN-NOT: s8
-
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workgroup_id_xyz() #1 {
   call void @use_workgroup_id_xyz()
@@ -293,16 +277,10 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_xyz() #1 {
 ; GCN: enable_sgpr_workgroup_id_z = 1
 
 ; GCN: s_mov_b32 s33, s8
-; GCN-NOT: s6
-; GCN-NOT: s7
-
-; GCN: s_mov_b32 s4, s33
-; GCN-NOT: s6
-; GCN-NOT: s7
+; GCN: s_mov_b32 s4, s6
+; GCN: s_mov_b32 s6, s7
 
 ; GCN: s_mov_b32 s32, s33
-; GCN-NOT: s6
-; GCN-NOT: s7
 
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workgroup_id_xz() #1 {
@@ -316,9 +294,8 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_xz() #1 {
 ; GCN: enable_sgpr_workgroup_id_z = 1
 
 ; GCN: s_mov_b32 s33, s9
-; GCN: s_mov_b32 s6, s7
-; GCN: s_mov_b32 s4, s33
-; GCN: s_mov_b32 s7, s8
+; GCN: s_mov_b32 s6, s8
+; GCN: s_mov_b32 s4, s7
 ; GCN: s_mov_b32 s32, s33
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_workgroup_id_yz() #1 {
@@ -328,21 +305,21 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_yz() #1 {
 
 ; Argument is in right place already
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_x:
-; GCN-NOT: s6
+; GCN-NOT: s4
 define hidden void @func_indirect_use_workgroup_id_x() #1 {
   call void @use_workgroup_id_x()
   ret void
 }
 
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_y:
-; GCN-NOT: s6
+; GCN-NOT: s4
 define hidden void @func_indirect_use_workgroup_id_y() #1 {
   call void @use_workgroup_id_y()
   ret void
 }
 
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_z:
-; GCN-NOT: s6
+; GCN-NOT: s4
 define hidden void @func_indirect_use_workgroup_id_z() #1 {
   call void @use_workgroup_id_z()
   ret void
@@ -350,7 +327,7 @@ define hidden void @func_indirect_use_workgroup_id_z() #1 {
 
 ; GCN-LABEL: {{^}}other_arg_use_workgroup_id_x:
 ; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
-; GCN: ; use s6
+; GCN: ; use s4
 define hidden void @other_arg_use_workgroup_id_x(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.x()
   store volatile i32 %arg0, i32 addrspace(1)* undef
@@ -360,7 +337,7 @@ define hidden void @other_arg_use_workgroup_id_x(i32 %arg0) #1 {
 
 ; GCN-LABEL: {{^}}other_arg_use_workgroup_id_y:
 ; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
-; GCN: ; use s6
+; GCN: ; use s4
 define hidden void @other_arg_use_workgroup_id_y(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.y()
   store volatile i32 %arg0, i32 addrspace(1)* undef
@@ -370,7 +347,7 @@ define hidden void @other_arg_use_workgroup_id_y(i32 %arg0) #1 {
 
 ; GCN-LABEL: {{^}}other_arg_use_workgroup_id_z:
 ; GCN: {{flat|global}}_store_dword v{{\[[0-9]+:[0-9]+\]}}, v0
-; GCN: ; use s6
+; GCN: ; use s4
 define hidden void @other_arg_use_workgroup_id_z(i32 %arg0) #1 {
   %val = call i32 @llvm.amdgcn.workgroup.id.z()
   store volatile i32 %arg0, i32 addrspace(1)* undef
@@ -383,12 +360,11 @@ define hidden void @other_arg_use_workgroup_id_z(i32 %arg0) #1 {
 ; GCN: enable_sgpr_workgroup_id_y = 0
 ; GCN: enable_sgpr_workgroup_id_z = 0
 
-; GCN-NOT: s6
 ; GCN-DAG: s_mov_b32 s33, s7
 ; GCN-DAG: v_mov_b32_e32 v0, 0x22b
-; GCN-DAG: s_mov_b32 s4, s33
+; GCN-DAG: s_mov_b32 s4, s6
 ; GCN-DAG: s_mov_b32 s32, s33
-; GCN-NOT: s6
+; GCN-NOT: s4
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_x() #1 {
   call void @other_arg_use_workgroup_id_x(i32 555)
@@ -402,8 +378,8 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_x() #1 {
 
 ; GCN-DAG: s_mov_b32 s33, s8
 ; GCN-DAG: v_mov_b32_e32 v0, 0x22b
-; GCN-DAG: s_mov_b32 s4, s33
-; GCN-DAG: s_mov_b32 s6, s7
+; GCN-DAG: s_mov_b32 s4, s7
+
 ; GCN-DAG: s_mov_b32 s32, s33
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_y() #1 {
@@ -416,10 +392,8 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_y() #1 {
 ; GCN: enable_sgpr_workgroup_id_y = 0
 ; GCN: enable_sgpr_workgroup_id_z = 1
 
-; GCN: s_mov_b32 s33, s8
+; GCN-DAG: s_mov_b32 s33, s8
 ; GCN-DAG: v_mov_b32_e32 v0, 0x22b
-; GCN-DAG: s_mov_b32 s4, s33
-; GCN-DAG: s_mov_b32 s6, s7
 
 ; GCN: s_mov_b32 s32, s33
 ; GCN: s_swappc_b64
@@ -440,9 +414,9 @@ define amdgpu_kernel void @kern_indirect_other_arg_use_workgroup_id_z() #1 {
 ; GCN: v_mov_b32_e32 v[[HI:[0-9]+]], s11
 ; GCN: {{flat|global}}_load_dword v{{[0-9]+}}, v{{\[}}[[LO]]:[[HI]]{{\]}}
 ; GCN: ; use s[12:13]
+; GCN: ; use s4
 ; GCN: ; use s14
 ; GCN: ; use s15
-; GCN: ; use s16
 define hidden void @use_every_sgpr_input() #1 {
   %alloca = alloca i32, align 4, addrspace(5)
   store volatile i32 0, i32 addrspace(5)* %alloca
@@ -492,7 +466,9 @@ define hidden void @use_every_sgpr_input() #1 {
 ; GCN: s_mov_b64 s[10:11], s[8:9]
 ; GCN: s_mov_b64 s[8:9], s[6:7]
 ; GCN: s_mov_b64 s[6:7], s[4:5]
-; GCN: s_mov_b32 s4, s33
+; GCN: s_mov_b32 s4, s14
+; GCN: s_mov_b32 s14, s15
+; GCN: s_mov_b32 s15, s16
 ; GCN: s_mov_b32 s32, s33
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kern_indirect_use_every_sgpr_input() #1 {
@@ -519,9 +495,11 @@ define hidden void @func_indirect_use_every_sgpr_input() #1 {
 }
 
 ; GCN-LABEL: {{^}}func_use_every_sgpr_input_call_use_workgroup_id_xyz:
-; GCN-DAG: s_mov_b32 s6, s14
-; GCN-DAG: s_mov_b32 s7, s15
-; GCN-DAG: s_mov_b32 s8, s16
+; GCN-NOT: s_mov_b32 s4
+; GCN: s_mov_b32 s6, s14
+; GCN-NEXT: s_mov_b32 s7, s15
+; GCN-NOT: s_mov_b32 s4
+
 ; GCN: s_swappc_b64
 define hidden void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
   %alloca = alloca i32, align 4, addrspace(5)
@@ -560,20 +538,18 @@ define hidden void @func_use_every_sgpr_input_call_use_workgroup_id_xyz() #1 {
 
 ; GCN-DAG: s_add_u32 s32, s32, 0x400
 
-; GCN-DAG: s_mov_b32 [[SAVE_X:s[0-57-9][0-9]*]], s14
-; GCN-DAG: s_mov_b32 [[SAVE_Y:s[0-68-9][0-9]*]], s15
-; GCN-DAG: s_mov_b32 [[SAVE_Z:s[0-79][0-9]*]], s16
-; GCN-DAG: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, s[6:7]
-; GCN-DAG: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, s[8:9]
-; GCN-DAG: s_mov_b64 {{s\[[0-9]+:[0-9]+\]}}, s[10:11]
-
+; GCN: s_mov_b64 s{{\[}}[[LO_X:[0-9]+]]{{\:}}[[HI_X:[0-9]+]]{{\]}}, s[6:7]
+; GCN-NOT: s_mov_b32 s4,
 ; GCN-DAG: s_mov_b32 s6, s14
 ; GCN-DAG: s_mov_b32 s7, s15
-; GCN-DAG: s_mov_b32 s8, s16
 
-; GCN-DAG: s_mov_b64 s{{\[}}[[LO_X:[0-9]+]]{{\:}}[[HI_X:[0-9]+]]{{\]}}, s[6:7]
-; GCN-DAG: s_mov_b64 s{{\[}}[[LO_Y:[0-9]+]]{{\:}}[[HI_Y:[0-9]+]]{{\]}}, s[8:9]
-; GCN-DAG: s_mov_b64 s{{\[}}[[LO_Z:[0-9]+]]{{\:}}[[HI_Z:[0-9]+]]{{\]}}, s[10:11]
+; GCN: s_mov_b64 s{{\[}}[[LO_Y:[0-9]+]]{{\:}}[[HI_Y:[0-9]+]]{{\]}}, s[8:9]
+
+; GCN-DAG: s_mov_b32 [[SAVE_X:s[0-57-9][0-9]*]], s4
+; GCN-DAG: s_mov_b32 [[SAVE_Y:s[0-57-9][0-9]*]], s14
+; GCN-DAG: s_mov_b32 [[SAVE_Z:s[0-68-9][0-9]*]], s15
+
+; GCN: s_mov_b64 s{{\[}}[[LO_Z:[0-9]+]]{{\:}}[[HI_Z:[0-9]+]]{{\]}}, s[10:11]
 
 ; GCN: s_swappc_b64
 

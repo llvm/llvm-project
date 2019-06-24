@@ -197,6 +197,23 @@ public:
   void VisitTypedefType(const TypedefType *TT);
   void VisitFunctionType(const FunctionType *T);
   void VisitFunctionProtoType(const FunctionProtoType *T);
+  void VisitRValueReferenceType(const ReferenceType *RT);
+  void VisitArrayType(const ArrayType *AT);
+  void VisitConstantArrayType(const ConstantArrayType *CAT);
+  void VisitDependentSizedExtVectorType(const DependentSizedExtVectorType *VT);
+  void VisitVectorType(const VectorType *VT);
+  void VisitUnresolvedUsingType(const UnresolvedUsingType *UUT);
+  void VisitUnaryTransformType(const UnaryTransformType *UTT);
+  void VisitTagType(const TagType *TT);
+  void VisitTemplateTypeParmType(const TemplateTypeParmType *TTPT);
+  void VisitAutoType(const AutoType *AT);
+  void VisitTemplateSpecializationType(const TemplateSpecializationType *TST);
+  void VisitInjectedClassNameType(const InjectedClassNameType *ICNT);
+  void VisitObjCInterfaceType(const ObjCInterfaceType *OIT);
+  void VisitPackExpansionType(const PackExpansionType *PET);
+  void VisitElaboratedType(const ElaboratedType *ET);
+  void VisitMacroQualifiedType(const MacroQualifiedType *MQT);
+  void VisitMemberPointerType(const MemberPointerType *MPT);
 
   void VisitNamedDecl(const NamedDecl *ND);
   void VisitTypedefDecl(const TypedefDecl *TD);
@@ -258,6 +275,17 @@ public:
   void VisitExprWithCleanups(const ExprWithCleanups *EWC);
   void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *BTE);
   void VisitMaterializeTemporaryExpr(const MaterializeTemporaryExpr *MTE);
+  void VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *ME);
+
+  void VisitObjCEncodeExpr(const ObjCEncodeExpr *OEE);
+  void VisitObjCMessageExpr(const ObjCMessageExpr *OME);
+  void VisitObjCBoxedExpr(const ObjCBoxedExpr *OBE);
+  void VisitObjCSelectorExpr(const ObjCSelectorExpr *OSE);
+  void VisitObjCProtocolExpr(const ObjCProtocolExpr *OPE);
+  void VisitObjCPropertyRefExpr(const ObjCPropertyRefExpr *OPRE);
+  void VisitObjCSubscriptRefExpr(const ObjCSubscriptRefExpr *OSRE);
+  void VisitObjCIvarRefExpr(const ObjCIvarRefExpr *OIRE);
+  void VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *OBLE);
 
   void VisitIntegerLiteral(const IntegerLiteral *IL);
   void VisitCharacterLiteral(const CharacterLiteral *CL);

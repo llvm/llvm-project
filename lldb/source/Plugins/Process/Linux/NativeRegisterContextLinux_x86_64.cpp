@@ -903,26 +903,13 @@ bool NativeRegisterContextLinux_x86_64::CopyXSTATEtoYMM(
     return false;
 
   if (byte_order == lldb::eByteOrderLittle) {
-    ::memcpy(m_ymm_set.ymm[reg_index - m_reg_info.first_ymm].bytes,
-             m_xstate->fxsave.xmm[reg_index - m_reg_info.first_ymm].bytes,
-             sizeof(XMMReg));
-    ::memcpy(m_ymm_set.ymm[reg_index - m_reg_info.first_ymm].bytes +
-                 sizeof(XMMReg),
-             m_xstate->xsave.ymmh[reg_index - m_reg_info.first_ymm].bytes,
-             sizeof(YMMHReg));
+    uint32_t reg_no = reg_index - m_reg_info.first_ymm;
+    m_ymm_set.ymm[reg_no] = XStateToYMM(
+        m_xstate->fxsave.xmm[reg_no].bytes,
+        m_xstate->xsave.ymmh[reg_no].bytes);
     return true;
   }
 
-  if (byte_order == lldb::eByteOrderBig) {
-    ::memcpy(m_ymm_set.ymm[reg_index - m_reg_info.first_ymm].bytes +
-                 sizeof(XMMReg),
-             m_xstate->fxsave.xmm[reg_index - m_reg_info.first_ymm].bytes,
-             sizeof(XMMReg));
-    ::memcpy(m_ymm_set.ymm[reg_index - m_reg_info.first_ymm].bytes,
-             m_xstate->xsave.ymmh[reg_index - m_reg_info.first_ymm].bytes,
-             sizeof(YMMHReg));
-    return true;
-  }
   return false; // unsupported or invalid byte order
 }
 
@@ -932,22 +919,13 @@ bool NativeRegisterContextLinux_x86_64::CopyYMMtoXSTATE(
     return false;
 
   if (byte_order == lldb::eByteOrderLittle) {
-    ::memcpy(m_xstate->fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
-             m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes, sizeof(XMMReg));
-    ::memcpy(m_xstate->xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
-             m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes + sizeof(XMMReg),
-             sizeof(YMMHReg));
+    uint32_t reg_no = reg - m_reg_info.first_ymm;
+    YMMToXState(m_ymm_set.ymm[reg_no],
+        m_xstate->fxsave.xmm[reg_no].bytes,
+        m_xstate->xsave.ymmh[reg_no].bytes);
     return true;
   }
 
-  if (byte_order == lldb::eByteOrderBig) {
-    ::memcpy(m_xstate->fxsave.xmm[reg - m_reg_info.first_ymm].bytes,
-             m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes + sizeof(XMMReg),
-             sizeof(XMMReg));
-    ::memcpy(m_xstate->xsave.ymmh[reg - m_reg_info.first_ymm].bytes,
-             m_ymm_set.ymm[reg - m_reg_info.first_ymm].bytes, sizeof(YMMHReg));
-    return true;
-  }
   return false; // unsupported or invalid byte order
 }
 

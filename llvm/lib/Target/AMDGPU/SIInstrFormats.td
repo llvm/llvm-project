@@ -118,6 +118,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // rounding mode flags
   field bit FPDPRounding = 0;
 
+  // Instruction is FP atomic.
+  field bit FPAtomic = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
   let TSFlags{1} = VALU;
@@ -178,6 +181,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{51} = IsNonFlatSeg;
 
   let TSFlags{52} = FPDPRounding;
+
+  let TSFlags{53} = FPAtomic;
 
   let SchedRW = [Write32Bit];
 

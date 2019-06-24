@@ -2246,8 +2246,8 @@ class _LIBCPP_TEMPLATE_VIS function<_Rp(_ArgTypes...)>
 
     __func __f_;
 
-    template <class _Fp, bool = __lazy_and<
-        integral_constant<bool, !is_same<__uncvref_t<_Fp>, function>::value>,
+    template <class _Fp, bool = _And<
+        _IsNotSame<__uncvref_t<_Fp>, function>,
         __invokable<_Fp&, _ArgTypes...>
     >::value>
     struct __callable;
@@ -2556,7 +2556,7 @@ __mu_expand(_Ti& __ti, tuple<_Uj...>& __uj, __tuple_indices<_Indx...>)
 
 template <class _Ti, class ..._Uj>
 inline _LIBCPP_INLINE_VISIBILITY
-typename __lazy_enable_if
+typename _EnableIf
 <
     is_bind_expression<_Ti>::value,
     __invoke_of<_Ti&, _Uj...>

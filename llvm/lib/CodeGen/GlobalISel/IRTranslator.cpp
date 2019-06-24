@@ -15,9 +15,11 @@
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/Analysis.h"
+#include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
 #include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/LowLevelType.h"
@@ -402,48 +404,423 @@ bool IRTranslator::translateBr(const User &U, MachineIRBuilder &MIRBuilder) {
   return true;
 }
 
-bool IRTranslator::translateSwitch(const User &U,
-                                   MachineIRBuilder &MIRBuilder) {
-  // For now, just translate as a chain of conditional branches.
-  // FIXME: could we share most of the logic/code in
-  // SelectionDAGBuilder::visitSwitch between SelectionDAG and GlobalISel?
-  // At first sight, it seems most of the logic in there is independent of
-  // SelectionDAG-specifics and a lot of work went in to optimize switch
-  // lowering in there.
-
-  const SwitchInst &SwInst = cast<SwitchInst>(U);
-  const unsigned SwCondValue = getOrCreateVReg(*SwInst.getCondition());
-  const BasicBlock *OrigBB = SwInst.getParent();
-
-  LLT LLTi1 = getLLTForType(*Type::getInt1Ty(U.getContext()), *DL);
-  for (auto &CaseIt : SwInst.cases()) {
-    const unsigned CaseValueReg = getOrCreateVReg(*CaseIt.getCaseValue());
-    const unsigned Tst = MRI->createGenericVirtualRegister(LLTi1);
-    MIRBuilder.buildICmp(CmpInst::ICMP_EQ, Tst, CaseValueReg, SwCondValue);
-    MachineBasicBlock &CurMBB = MIRBuilder.getMBB();
-    const BasicBlock *TrueBB = CaseIt.getCaseSuccessor();
-    MachineBasicBlock &TrueMBB = getMBB(*TrueBB);
-
-    MIRBuilder.buildBrCond(Tst, TrueMBB);
-    CurMBB.addSuccessor(&TrueMBB);
-    addMachineCFGPred({OrigBB, TrueBB}, &CurMBB);
-
-    MachineBasicBlock *FalseMBB =
-        MF->CreateMachineBasicBlock(SwInst.getParent());
-    // Insert the comparison blocks one after the other.
-    MF->insert(std::next(CurMBB.getIterator()), FalseMBB);
-    MIRBuilder.buildBr(*FalseMBB);
-    CurMBB.addSuccessor(FalseMBB);
-
-    MIRBuilder.setMBB(*FalseMBB);
+void IRTranslator::addSuccessorWithProb(MachineBasicBlock *Src,
+                                        MachineBasicBlock *Dst,
+                                        BranchProbability Prob) {
+  if (!FuncInfo.BPI) {
+    Src->addSuccessorWithoutProb(Dst);
+    return;
   }
-  // handle default case
-  const BasicBlock *DefaultBB = SwInst.getDefaultDest();
-  MachineBasicBlock &DefaultMBB = getMBB(*DefaultBB);
-  MIRBuilder.buildBr(DefaultMBB);
-  MachineBasicBlock &CurMBB = MIRBuilder.getMBB();
-  CurMBB.addSuccessor(&DefaultMBB);
-  addMachineCFGPred({OrigBB, DefaultBB}, &CurMBB);
+  if (Prob.isUnknown())
+    Prob = getEdgeProbability(Src, Dst);
+  Src->addSuccessor(Dst, Prob);
+}
+
+BranchProbability
+IRTranslator::getEdgeProbability(const MachineBasicBlock *Src,
+                                 const MachineBasicBlock *Dst) const {
+  const BasicBlock *SrcBB = Src->getBasicBlock();
+  const BasicBlock *DstBB = Dst->getBasicBlock();
+  if (!FuncInfo.BPI) {
+    // If BPI is not available, set the default probability as 1 / N, where N is
+    // the number of successors.
+    auto SuccSize = std::max<uint32_t>(succ_size(SrcBB), 1);
+    return BranchProbability(1, SuccSize);
+  }
+  return FuncInfo.BPI->getEdgeProbability(SrcBB, DstBB);
+}
+
+bool IRTranslator::translateSwitch(const User &U, MachineIRBuilder &MIB) {
+  using namespace SwitchCG;
+  // Extract cases from the switch.
+  const SwitchInst &SI = cast<SwitchInst>(U);
+  BranchProbabilityInfo *BPI = FuncInfo.BPI;
+  CaseClusterVector Clusters;
+  Clusters.reserve(SI.getNumCases());
+  for (auto &I : SI.cases()) {
+    MachineBasicBlock *Succ = &getMBB(*I.getCaseSuccessor());
+    assert(Succ && "Could not find successor mbb in mapping");
+    const ConstantInt *CaseVal = I.getCaseValue();
+    BranchProbability Prob =
+        BPI ? BPI->getEdgeProbability(SI.getParent(), I.getSuccessorIndex())
+            : BranchProbability(1, SI.getNumCases() + 1);
+    Clusters.push_back(CaseCluster::range(CaseVal, CaseVal, Succ, Prob));
+  }
+
+  MachineBasicBlock *DefaultMBB = &getMBB(*SI.getDefaultDest());
+
+  // Cluster adjacent cases with the same destination. We do this at all
+  // optimization levels because it's cheap to do and will make codegen faster
+  // if there are many clusters.
+  sortAndRangeify(Clusters);
+
+  MachineBasicBlock *SwitchMBB = &getMBB(*SI.getParent());
+
+  // If there is only the default destination, jump there directly.
+  if (Clusters.empty()) {
+    SwitchMBB->addSuccessor(DefaultMBB);
+    if (DefaultMBB != SwitchMBB->getNextNode())
+      MIB.buildBr(*DefaultMBB);
+    return true;
+  }
+
+  SL->findJumpTables(Clusters, &SI, DefaultMBB);
+
+  LLVM_DEBUG({
+    dbgs() << "Case clusters: ";
+    for (const CaseCluster &C : Clusters) {
+      if (C.Kind == CC_JumpTable)
+        dbgs() << "JT:";
+      if (C.Kind == CC_BitTests)
+        dbgs() << "BT:";
+
+      C.Low->getValue().print(dbgs(), true);
+      if (C.Low != C.High) {
+        dbgs() << '-';
+        C.High->getValue().print(dbgs(), true);
+      }
+      dbgs() << ' ';
+    }
+    dbgs() << '\n';
+  });
+
+  assert(!Clusters.empty());
+  SwitchWorkList WorkList;
+  CaseClusterIt First = Clusters.begin();
+  CaseClusterIt Last = Clusters.end() - 1;
+  auto DefaultProb = getEdgeProbability(SwitchMBB, DefaultMBB);
+  WorkList.push_back({SwitchMBB, First, Last, nullptr, nullptr, DefaultProb});
+
+  // FIXME: At the moment we don't do any splitting optimizations here like
+  // SelectionDAG does, so this worklist only has one entry.
+  while (!WorkList.empty()) {
+    SwitchWorkListItem W = WorkList.back();
+    WorkList.pop_back();
+    if (!lowerSwitchWorkItem(W, SI.getCondition(), SwitchMBB, DefaultMBB, MIB))
+      return false;
+  }
+  return true;
+}
+
+void IRTranslator::emitJumpTable(SwitchCG::JumpTable &JT,
+                                 MachineBasicBlock *MBB) {
+  // Emit the code for the jump table
+  assert(JT.Reg != -1U && "Should lower JT Header first!");
+  MachineIRBuilder MIB(*MBB->getParent());
+  MIB.setMBB(*MBB);
+  MIB.setDebugLoc(CurBuilder->getDebugLoc());
+
+  Type *PtrIRTy = Type::getInt8PtrTy(MF->getFunction().getContext());
+  const LLT PtrTy = getLLTForType(*PtrIRTy, *DL);
+
+  auto Table = MIB.buildJumpTable(PtrTy, JT.JTI);
+  MIB.buildBrJT(Table.getReg(0), JT.JTI, JT.Reg);
+}
+
+bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
+                                       SwitchCG::JumpTableHeader &JTH,
+                                       MachineBasicBlock *SwitchBB,
+                                       MachineIRBuilder &MIB) {
+  DebugLoc dl = MIB.getDebugLoc();
+
+  const Value &SValue = *JTH.SValue;
+  // Subtract the lowest switch case value from the value being switched on.
+  const LLT SwitchTy = getLLTForType(*SValue.getType(), *DL);
+  unsigned SwitchOpReg = getOrCreateVReg(SValue);
+  auto FirstCst = MIB.buildConstant(SwitchTy, JTH.First);
+  auto Sub = MIB.buildSub({SwitchTy}, SwitchOpReg, FirstCst);
+
+  // This value may be smaller or larger than the target's pointer type, and
+  // therefore require extension or truncating.
+  Type *PtrIRTy = SValue.getType()->getPointerTo();
+  const LLT PtrScalarTy = LLT::scalar(DL->getTypeSizeInBits(PtrIRTy));
+  Sub = MIB.buildZExtOrTrunc(PtrScalarTy, Sub);
+
+  JT.Reg = Sub.getReg(0);
+
+  if (JTH.OmitRangeCheck) {
+    if (JT.MBB != SwitchBB->getNextNode())
+      MIB.buildBr(*JT.MBB);
+    return true;
+  }
+
+  // Emit the range check for the jump table, and branch to the default block
+  // for the switch statement if the value being switched on exceeds the
+  // largest case in the switch.
+  auto Cst = getOrCreateVReg(
+      *ConstantInt::get(SValue.getType(), JTH.Last - JTH.First));
+  Cst = MIB.buildZExtOrTrunc(PtrScalarTy, Cst).getReg(0);
+  auto Cmp = MIB.buildICmp(CmpInst::ICMP_UGT, LLT::scalar(1), Sub, Cst);
+
+  auto BrCond = MIB.buildBrCond(Cmp.getReg(0), *JT.Default);
+
+  // Avoid emitting unnecessary branches to the next block.
+  if (JT.MBB != SwitchBB->getNextNode())
+    BrCond = MIB.buildBr(*JT.MBB);
+  return true;
+}
+
+void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
+                                  MachineBasicBlock *SwitchBB,
+                                  MachineIRBuilder &MIB) {
+  unsigned CondLHS = getOrCreateVReg(*CB.CmpLHS);
+  unsigned Cond = 0;
+  DebugLoc OldDbgLoc = MIB.getDebugLoc();
+  MIB.setDebugLoc(CB.DbgLoc);
+  MIB.setMBB(*CB.ThisBB);
+
+  if (CB.PredInfo.NoCmp) {
+    // Branch or fall through to TrueBB.
+    addSuccessorWithProb(CB.ThisBB, CB.TrueBB, CB.TrueProb);
+    addMachineCFGPred({SwitchBB->getBasicBlock(), CB.TrueBB->getBasicBlock()},
+                      CB.ThisBB);
+    CB.ThisBB->normalizeSuccProbs();
+    if (CB.TrueBB != CB.ThisBB->getNextNode())
+      MIB.buildBr(*CB.TrueBB);
+    MIB.setDebugLoc(OldDbgLoc);
+    return;
+  }
+
+  const LLT i1Ty = LLT::scalar(1);
+  // Build the compare.
+  if (!CB.CmpMHS) {
+    unsigned CondRHS = getOrCreateVReg(*CB.CmpRHS);
+    Cond = MIB.buildICmp(CB.PredInfo.Pred, i1Ty, CondLHS, CondRHS).getReg(0);
+  } else {
+    assert(CB.PredInfo.Pred == CmpInst::ICMP_ULE &&
+           "Can only handle ULE ranges");
+
+    const APInt& Low = cast<ConstantInt>(CB.CmpLHS)->getValue();
+    const APInt& High = cast<ConstantInt>(CB.CmpRHS)->getValue();
+
+    unsigned CmpOpReg = getOrCreateVReg(*CB.CmpMHS);
+    if (cast<ConstantInt>(CB.CmpLHS)->isMinValue(true)) {
+      unsigned CondRHS = getOrCreateVReg(*CB.CmpRHS);
+      Cond =
+          MIB.buildICmp(CmpInst::ICMP_ULE, i1Ty, CmpOpReg, CondRHS).getReg(0);
+    } else {
+      const LLT &CmpTy = MRI->getType(CmpOpReg);
+      auto Sub = MIB.buildSub({CmpTy}, CmpOpReg, CondLHS);
+      auto Diff = MIB.buildConstant(CmpTy, High - Low);
+      Cond = MIB.buildICmp(CmpInst::ICMP_ULE, i1Ty, Sub, Diff).getReg(0);
+    }
+  }
+
+  // Update successor info
+  addSuccessorWithProb(CB.ThisBB, CB.TrueBB, CB.TrueProb);
+
+  addMachineCFGPred({SwitchBB->getBasicBlock(), CB.TrueBB->getBasicBlock()},
+                    CB.ThisBB);
+
+  // TrueBB and FalseBB are always different unless the incoming IR is
+  // degenerate. This only happens when running llc on weird IR.
+  if (CB.TrueBB != CB.FalseBB)
+    addSuccessorWithProb(CB.ThisBB, CB.FalseBB, CB.FalseProb);
+  CB.ThisBB->normalizeSuccProbs();
+
+  addMachineCFGPred({SwitchBB->getBasicBlock(), CB.FalseBB->getBasicBlock()},
+                    CB.ThisBB);
+  // If the lhs block is the next block, invert the condition so that we can
+  // fall through to the lhs instead of the rhs block.
+  if (CB.TrueBB == CB.ThisBB->getNextNode()) {
+    std::swap(CB.TrueBB, CB.FalseBB);
+    auto True = MIB.buildConstant(i1Ty, 1);
+    Cond = MIB.buildInstr(TargetOpcode::G_XOR, {i1Ty}, {Cond, True}, None)
+               .getReg(0);
+  }
+
+  MIB.buildBrCond(Cond, *CB.TrueBB);
+  MIB.buildBr(*CB.FalseBB);
+  MIB.setDebugLoc(OldDbgLoc);
+}
+
+bool IRTranslator::lowerJumpTableWorkItem(SwitchCG::SwitchWorkListItem W,
+                                          MachineBasicBlock *SwitchMBB,
+                                          MachineBasicBlock *DefaultMBB,
+                                          MachineIRBuilder &MIB,
+                                          MachineFunction::iterator BBI,
+                                          BranchProbability UnhandledProbs,
+                                          SwitchCG::CaseClusterIt I,
+                                          MachineBasicBlock *Fallthrough,
+                                          bool FallthroughUnreachable) {
+  using namespace SwitchCG;
+  MachineFunction *CurMF = SwitchMBB->getParent();
+  // FIXME: Optimize away range check based on pivot comparisons.
+  JumpTableHeader *JTH = &SL->JTCases[I->JTCasesIndex].first;
+  SwitchCG::JumpTable *JT = &SL->JTCases[I->JTCasesIndex].second;
+  BranchProbability DefaultProb = W.DefaultProb;
+  MachineBasicBlock *CurMBB = W.MBB;
+
+  // The jump block hasn't been inserted yet; insert it here.
+  MachineBasicBlock *JumpMBB = JT->MBB;
+  CurMF->insert(BBI, JumpMBB);
+
+  // Since the jump table block is separate from the switch block, we need
+  // to keep track of it as a machine predecessor to the default block,
+  // otherwise we lose the phi edges.
+  addMachineCFGPred({SwitchMBB->getBasicBlock(), DefaultMBB->getBasicBlock()},
+                    SwitchMBB);
+  addMachineCFGPred({SwitchMBB->getBasicBlock(), DefaultMBB->getBasicBlock()},
+                    JumpMBB);
+
+  auto JumpProb = I->Prob;
+  auto FallthroughProb = UnhandledProbs;
+
+  // If the default statement is a target of the jump table, we evenly
+  // distribute the default probability to successors of CurMBB. Also
+  // update the probability on the edge from JumpMBB to Fallthrough.
+  for (MachineBasicBlock::succ_iterator SI = JumpMBB->succ_begin(),
+                                        SE = JumpMBB->succ_end();
+       SI != SE; ++SI) {
+    if (*SI == DefaultMBB) {
+      JumpProb += DefaultProb / 2;
+      FallthroughProb -= DefaultProb / 2;
+      JumpMBB->setSuccProbability(SI, DefaultProb / 2);
+      JumpMBB->normalizeSuccProbs();
+      break;
+    }
+  }
+
+  // Skip the range check if the fallthrough block is unreachable.
+  if (FallthroughUnreachable)
+    JTH->OmitRangeCheck = true;
+
+  if (!JTH->OmitRangeCheck)
+    addSuccessorWithProb(CurMBB, Fallthrough, FallthroughProb);
+  addSuccessorWithProb(CurMBB, JumpMBB, JumpProb);
+  CurMBB->normalizeSuccProbs();
+
+  // The jump table header will be inserted in our current block, do the
+  // range check, and fall through to our fallthrough block.
+  JTH->HeaderBB = CurMBB;
+  JT->Default = Fallthrough; // FIXME: Move Default to JumpTableHeader.
+
+  // If we're in the right place, emit the jump table header right now.
+  if (CurMBB == SwitchMBB) {
+    if (!emitJumpTableHeader(*JT, *JTH, SwitchMBB, MIB))
+      return false;
+    JTH->Emitted = true;
+  }
+  return true;
+}
+bool IRTranslator::lowerSwitchRangeWorkItem(SwitchCG::CaseClusterIt I,
+                                            Value *Cond,
+                                            MachineBasicBlock *Fallthrough,
+                                            bool FallthroughUnreachable,
+                                            BranchProbability UnhandledProbs,
+                                            MachineBasicBlock *CurMBB,
+                                            MachineIRBuilder &MIB,
+                                            MachineBasicBlock *SwitchMBB) {
+  using namespace SwitchCG;
+  const Value *RHS, *LHS, *MHS;
+  CmpInst::Predicate Pred;
+  if (I->Low == I->High) {
+    // Check Cond == I->Low.
+    Pred = CmpInst::ICMP_EQ;
+    LHS = Cond;
+    RHS = I->Low;
+    MHS = nullptr;
+  } else {
+    // Check I->Low <= Cond <= I->High.
+    Pred = CmpInst::ICMP_ULE;
+    LHS = I->Low;
+    MHS = Cond;
+    RHS = I->High;
+  }
+
+  // If Fallthrough is unreachable, fold away the comparison.
+  // The false probability is the sum of all unhandled cases.
+  CaseBlock CB(Pred, FallthroughUnreachable, LHS, RHS, MHS, I->MBB, Fallthrough,
+               CurMBB, MIB.getDebugLoc(), I->Prob, UnhandledProbs);
+
+  emitSwitchCase(CB, SwitchMBB, MIB);
+  return true;
+}
+
+bool IRTranslator::lowerSwitchWorkItem(SwitchCG::SwitchWorkListItem W,
+                                       Value *Cond,
+                                       MachineBasicBlock *SwitchMBB,
+                                       MachineBasicBlock *DefaultMBB,
+                                       MachineIRBuilder &MIB) {
+  using namespace SwitchCG;
+  MachineFunction *CurMF = FuncInfo.MF;
+  MachineBasicBlock *NextMBB = nullptr;
+  MachineFunction::iterator BBI(W.MBB);
+  if (++BBI != FuncInfo.MF->end())
+    NextMBB = &*BBI;
+
+  if (EnableOpts) {
+    // Here, we order cases by probability so the most likely case will be
+    // checked first. However, two clusters can have the same probability in
+    // which case their relative ordering is non-deterministic. So we use Low
+    // as a tie-breaker as clusters are guaranteed to never overlap.
+    llvm::sort(W.FirstCluster, W.LastCluster + 1,
+               [](const CaseCluster &a, const CaseCluster &b) {
+                 return a.Prob != b.Prob
+                            ? a.Prob > b.Prob
+                            : a.Low->getValue().slt(b.Low->getValue());
+               });
+
+    // Rearrange the case blocks so that the last one falls through if possible
+    // without changing the order of probabilities.
+    for (CaseClusterIt I = W.LastCluster; I > W.FirstCluster;) {
+      --I;
+      if (I->Prob > W.LastCluster->Prob)
+        break;
+      if (I->Kind == CC_Range && I->MBB == NextMBB) {
+        std::swap(*I, *W.LastCluster);
+        break;
+      }
+    }
+  }
+
+  // Compute total probability.
+  BranchProbability DefaultProb = W.DefaultProb;
+  BranchProbability UnhandledProbs = DefaultProb;
+  for (CaseClusterIt I = W.FirstCluster; I <= W.LastCluster; ++I)
+    UnhandledProbs += I->Prob;
+
+  MachineBasicBlock *CurMBB = W.MBB;
+  for (CaseClusterIt I = W.FirstCluster, E = W.LastCluster; I <= E; ++I) {
+    bool FallthroughUnreachable = false;
+    MachineBasicBlock *Fallthrough;
+    if (I == W.LastCluster) {
+      // For the last cluster, fall through to the default destination.
+      Fallthrough = DefaultMBB;
+      FallthroughUnreachable = isa<UnreachableInst>(
+          DefaultMBB->getBasicBlock()->getFirstNonPHIOrDbg());
+    } else {
+      Fallthrough = CurMF->CreateMachineBasicBlock(CurMBB->getBasicBlock());
+      CurMF->insert(BBI, Fallthrough);
+    }
+    UnhandledProbs -= I->Prob;
+
+    switch (I->Kind) {
+    case CC_BitTests: {
+      LLVM_DEBUG(dbgs() << "Switch to bit test optimization unimplemented");
+      return false; // Bit tests currently unimplemented.
+    }
+    case CC_JumpTable: {
+      if (!lowerJumpTableWorkItem(W, SwitchMBB, DefaultMBB, MIB, BBI,
+                                  UnhandledProbs, I, Fallthrough,
+                                  FallthroughUnreachable)) {
+        LLVM_DEBUG(dbgs() << "Failed to lower jump table");
+        return false;
+      }
+      break;
+    }
+    case CC_Range: {
+      if (!lowerSwitchRangeWorkItem(I, Cond, Fallthrough,
+                                    FallthroughUnreachable, UnhandledProbs,
+                                    CurMBB, MIB, SwitchMBB)) {
+        LLVM_DEBUG(dbgs() << "Failed to lower switch range");
+        return false;
+      }
+      break;
+    }
+    }
+    CurMBB = Fallthrough;
+  }
 
   return true;
 }
@@ -1689,22 +2066,14 @@ void IRTranslator::finishPendingPhis() {
     Verifier.setCurrentInst(PI);
 #endif // ifndef NDEBUG
 
-    // All MachineBasicBlocks exist, add them to the PHI. We assume IRTranslator
-    // won't create extra control flow here, otherwise we need to find the
-    // dominating predecessor here (or perhaps force the weirder IRTranslators
-    // to provide a simple boundary).
-    SmallSet<const BasicBlock *, 4> HandledPreds;
-
+    SmallSet<const MachineBasicBlock *, 16> SeenPreds;
     for (unsigned i = 0; i < PI->getNumIncomingValues(); ++i) {
       auto IRPred = PI->getIncomingBlock(i);
-      if (HandledPreds.count(IRPred))
-        continue;
-
-      HandledPreds.insert(IRPred);
       ArrayRef<unsigned> ValRegs = getOrCreateVRegs(*PI->getIncomingValue(i));
       for (auto Pred : getMachinePredBBs({IRPred, PI->getParent()})) {
-        assert(Pred->isSuccessor(ComponentPHIs[0]->getParent()) &&
-               "incorrect CFG at MachineBasicBlock level");
+        if (SeenPreds.count(Pred))
+          continue;
+        SeenPreds.insert(Pred);
         for (unsigned j = 0; j < ValRegs.size(); ++j) {
           MachineInstrBuilder MIB(*MF, ComponentPHIs[j]);
           MIB.addUse(ValRegs[j]);
@@ -1808,6 +2177,12 @@ bool IRTranslator::translate(const Constant &C, unsigned Reg) {
   return true;
 }
 
+void IRTranslator::finalizeBasicBlock() {
+  for (auto &JTCase : SL->JTCases)
+    emitJumpTable(JTCase.second, JTCase.second.MBB);
+  SL->JTCases.clear();
+}
+
 void IRTranslator::finalizeFunction() {
   // Release the memory used by the different maps we
   // needed during the translation.
@@ -1820,6 +2195,7 @@ void IRTranslator::finalizeFunction() {
   // destroying it twice (in ~IRTranslator() and ~LLVMContext())
   EntryBuilder.reset();
   CurBuilder.reset();
+  FuncInfo.clear();
 }
 
 bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
@@ -1852,6 +2228,14 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MRI = &MF->getRegInfo();
   DL = &F.getParent()->getDataLayout();
   ORE = llvm::make_unique<OptimizationRemarkEmitter>(&F);
+  FuncInfo.MF = MF;
+  FuncInfo.BPI = nullptr;
+  const auto &TLI = *MF->getSubtarget().getTargetLowering();
+  const TargetMachine &TM = MF->getTarget();
+  SL = make_unique<GISelSwitchLowering>(this, FuncInfo);
+  SL->init(TLI, TM, *DL);
+
+  EnableOpts = TM.getOptLevel() != CodeGenOpt::None && !skipFunction(F);
 
   assert(PendingPHIs.empty() && "stale PHIs");
 
@@ -1975,6 +2359,8 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
         reportTranslationError(*MF, *TPC, *ORE, R);
         return false;
       }
+
+      finalizeBasicBlock();
     }
 #ifndef NDEBUG
     WrapperObserver.removeObserver(&Verifier);

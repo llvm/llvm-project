@@ -7,7 +7,7 @@
 #
 #===------------------------------------------------------------------------===#
 
-from gen_std import ParseSymbolPage, ParseIndexPage
+from cppreference_parser import _ParseSymbolPage, _ParseIndexPage
 
 import unittest
 
@@ -22,7 +22,7 @@ class TestStdGen(unittest.TestCase):
  <a href="as_bytes.html" title="as bytes"><tt>as_bytes&lt;&gt;()</tt></a> <span class="t-mark-rev t-since-cxx20">(since C++20)</span> <br>
  """
 
-    actual = ParseIndexPage(html)
+    actual = _ParseIndexPage(html)
     expected = [
       ("abs", "abs.html", True),
       ("abs", "complex/abs.html", True),
@@ -53,7 +53,7 @@ class TestStdGen(unittest.TestCase):
   </tr>
 </tbody></table>
 """
-    self.assertEqual(ParseSymbolPage(html, 'foo'), set(['<cmath>']))
+    self.assertEqual(_ParseSymbolPage(html, 'foo'), set(['<cmath>']))
 
 
   def testParseSymbolPage_MulHeaders(self):
@@ -94,7 +94,7 @@ class TestStdGen(unittest.TestCase):
   </tr>
 </tbody></table>
 """
-    self.assertEqual(ParseSymbolPage(html, "foo"),
+    self.assertEqual(_ParseSymbolPage(html, "foo"),
                      set(['<cstdio>', '<cstdlib>']))
 
 
@@ -121,7 +121,7 @@ class TestStdGen(unittest.TestCase):
 </tr>
 </tbody></table>
 """
-    self.assertEqual(ParseSymbolPage(html, "foo"),
+    self.assertEqual(_ParseSymbolPage(html, "foo"),
                      set(['<algorithm>', '<utility>']))
 
   def testParseSymbolPage_MulSymbolsInSameTd(self):
@@ -145,9 +145,9 @@ class TestStdGen(unittest.TestCase):
 </tr>
 </tbody></table>
 """
-    self.assertEqual(ParseSymbolPage(html, "int8_t"),
+    self.assertEqual(_ParseSymbolPage(html, "int8_t"),
                      set(['<cstdint>']))
-    self.assertEqual(ParseSymbolPage(html, "int16_t"),
+    self.assertEqual(_ParseSymbolPage(html, "int16_t"),
                      set(['<cstdint>']))
 
 

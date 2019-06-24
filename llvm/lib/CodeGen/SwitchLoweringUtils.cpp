@@ -52,6 +52,7 @@ void SwitchCG::SwitchLowering::findJumpTables(CaseClusterVector &Clusters,
     assert(Clusters[i - 1].High->getValue().slt(Clusters[i].Low->getValue()));
 #endif
 
+  assert(TLI && "TLI not set!");
   if (!TLI->areJTsAllowed(SI->getParent()->getParent()))
     return;
 

@@ -106,6 +106,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-cat
     llvm-cxxfilt
     llvm-dis
+    llvm-dwarfdump
     llvm-lto2
     llvm-modextract
     llvm-nm

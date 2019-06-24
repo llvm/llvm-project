@@ -1312,7 +1312,7 @@ WidenIV::WidenedRecTy WidenIV::getWideRecurrence(NarrowIVDefUse DU) {
   return {AddRec, ExtKind};
 }
 
-/// This IV user cannot be widen. Replace this use of the original narrow IV
+/// This IV user cannot be widened. Replace this use of the original narrow IV
 /// with a truncation of the new wide IV to isolate and eliminate the narrow IV.
 static void truncateIVUse(NarrowIVDefUse DU, DominatorTree *DT, LoopInfo *LI) {
   auto *InsertPt = getInsertPointForUses(DU.NarrowUse, DU.NarrowDef, DT, LI);
@@ -2710,6 +2710,12 @@ bool IndVarSimplify::run(Loop *L) {
       // Can't rewrite non-branch yet.
       if (!isa<BranchInst>(ExitingBB->getTerminator()))
         continue;
+
+      // If our exitting block exits multiple loops, we can only rewrite the
+      // innermost one.  Otherwise, we're changing how many times the innermost
+      // loop runs before it exits. 
+      if (LI->getLoopFor(ExitingBB) != L)
+        continue;
       
       if (!needsLFTR(L, ExitingBB))
         continue;
@@ -2718,9 +2724,23 @@ bool IndVarSimplify::run(Loop *L) {
       if (isa<SCEVCouldNotCompute>(ExitCount))
         continue;
 
-      // Better to fold to true (TODO: do so!)
-      if (ExitCount->isZero())
+      // If we know we'd exit on the first iteration, rewrite the exit to
+      // reflect this.  This does not imply the loop must exit through this
+      // exit; there may be an earlier one taken on the first iteration.
+      // TODO: Given we know the backedge can't be taken, we should go ahead
+      // and break it.  Or at least, kill all the header phis and simplify.
+      if (ExitCount->isZero()) {
+        auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
+        bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
+        auto *OldCond = BI->getCondition();
+        auto *NewCond = ExitIfTrue ? ConstantInt::getTrue(OldCond->getType()) :
+          ConstantInt::getFalse(OldCond->getType());
+        BI->setCondition(NewCond);
+        if (OldCond->use_empty())
+          DeadInsts.push_back(OldCond);
+        Changed = true;
         continue;
+      }
       
       PHINode *IndVar = FindLoopCounter(L, ExitingBB, ExitCount, SE, DT);
       if (!IndVar)

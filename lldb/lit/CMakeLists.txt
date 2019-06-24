@@ -81,6 +81,10 @@ configure_lit_site_cfg(
   ${CMAKE_CURRENT_SOURCE_DIR}/Suite/lit.site.cfg.in
   ${CMAKE_CURRENT_BINARY_DIR}/Suite/lit.site.cfg)
 
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/lit-lldb-init.in
+  ${CMAKE_CURRENT_BINARY_DIR}/lit-lldb-init)
+
 if(NOT LLDB_BUILT_STANDALONE)
   list(APPEND LLDB_TEST_DEPS
     FileCheck

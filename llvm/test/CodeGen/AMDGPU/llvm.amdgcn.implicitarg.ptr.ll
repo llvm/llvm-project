@@ -217,9 +217,10 @@ define void @opencl_func_kernarg_implicitarg_ptr() #0 {
 }
 
 ; GCN-LABEL: {{^}}kernel_call_kernarg_implicitarg_ptr_func:
+; GCN: s_add_u32 s8, s4, 0x70
+; GCN: s_addc_u32 s9, s5, 0
+
 ; GCN: s_mov_b64 s[6:7], s[4:5]
-; GCN: s_add_u32 s8, s6, 0x70
-; GCN: s_addc_u32 s9, s7, 0
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kernel_call_kernarg_implicitarg_ptr_func([112 x i8]) #0 {
   call void @func_kernarg_implicitarg_ptr()

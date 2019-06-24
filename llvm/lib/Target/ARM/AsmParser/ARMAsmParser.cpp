@@ -577,6 +577,7 @@ class ARMAsmParser : public MCTargetAsmParser {
   // Asm Match Converter Methods
   void cvtThumbMultiply(MCInst &Inst, const OperandVector &);
   void cvtThumbBranches(MCInst &Inst, const OperandVector &);
+  void cvtMVEVMOVQtoDReg(MCInst &Inst, const OperandVector &);
 
   bool validateInstruction(MCInst &Inst, const OperandVector &Ops);
   bool processInstruction(MCInst &Inst, const OperandVector &Ops, MCStreamer &Out);
@@ -1276,6 +1277,16 @@ public:
                RegShiftedImm.SrcReg);
   }
   bool isRotImm() const { return Kind == k_RotateImmediate; }
+
+  template<unsigned Min, unsigned Max>
+  bool isPowerTwoInRange() const {
+    if (!isImm()) return false;
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    if (!CE) return false;
+    int64_t Value = CE->getValue();
+    return Value > 0 && countPopulation((uint64_t)Value) == 1 &&
+           Value >= Min && Value <= Max;
+  }
   bool isModImm() const { return Kind == k_ModifiedImmediate; }
 
   bool isModImmNot() const {
@@ -1935,6 +1946,13 @@ public:
   bool isVectorIndex16() const { return isVectorIndexInRange<4>(); }
   bool isVectorIndex32() const { return isVectorIndexInRange<2>(); }
   bool isVectorIndex64() const { return isVectorIndexInRange<1>(); }
+
+  template<int PermittedValue, int OtherPermittedValue>
+  bool isMVEPairVectorIndex() const {
+    if (Kind != k_VectorIndex) return false;
+    return VectorIndex.Val == PermittedValue ||
+           VectorIndex.Val == OtherPermittedValue;
+  }
 
   bool isNEONi8splat() const {
     if (!isImm()) return false;
@@ -2982,6 +3000,11 @@ public:
   }
 
   void addMVEVectorIndexOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(getVectorIndex()));
+  }
+
+  void addMVEPairVectorIndexOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createImm(getVectorIndex()));
   }
@@ -5351,6 +5374,21 @@ void ARMAsmParser::cvtThumbBranches(MCInst &Inst,
   ((ARMOperand &)*Operands[CondOp]).addCondCodeOperands(Inst, 2);
 }
 
+void ARMAsmParser::cvtMVEVMOVQtoDReg(
+  MCInst &Inst, const OperandVector &Operands) {
+
+  // mnemonic, condition code, Rt, Rt2, Qd, idx, Qd again, idx2
+  assert(Operands.size() == 8);
+
+  ((ARMOperand &)*Operands[2]).addRegOperands(Inst, 1); // Rt
+  ((ARMOperand &)*Operands[3]).addRegOperands(Inst, 1); // Rt2
+  ((ARMOperand &)*Operands[4]).addRegOperands(Inst, 1); // Qd
+  ((ARMOperand &)*Operands[5]).addMVEPairVectorIndexOperands(Inst, 1); // idx
+  // skip second copy of Qd in Operands[6]
+  ((ARMOperand &)*Operands[7]).addMVEPairVectorIndexOperands(Inst, 1); // idx2
+  ((ARMOperand &)*Operands[1]).addCondCodeOperands(Inst, 2); // condition code
+}
+
 /// Parse an ARM memory expression, return false if successful else return true
 /// or an error.  The first token must be a '[' when called.
 bool ARMAsmParser::parseMemory(OperandVector &Operands) {
@@ -5962,8 +6000,12 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       !(hasMVE() &&
         (Mnemonic == "vmine" ||
          Mnemonic == "vshle" || Mnemonic == "vshlt" || Mnemonic == "vshllt" ||
+         Mnemonic == "vrshle" || Mnemonic == "vrshlt" ||
          Mnemonic == "vmvne" || Mnemonic == "vorne" ||
          Mnemonic == "vnege" || Mnemonic == "vnegt" ||
+         Mnemonic == "vmule" || Mnemonic == "vmult" ||
+         Mnemonic == "vrintne" ||
+         Mnemonic == "vcmult" || Mnemonic == "vcmule" ||
          Mnemonic.startswith("vq")))) {
     unsigned CC = ARMCondCodeFromString(Mnemonic.substr(Mnemonic.size()-2));
     if (CC != ~0U) {
@@ -5984,7 +6026,8 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
         Mnemonic == "fsts" || Mnemonic == "fcpys" || Mnemonic == "fdivs" ||
         Mnemonic == "fmuls" || Mnemonic == "fcmps" || Mnemonic == "fcmpzs" ||
         Mnemonic == "vfms" || Mnemonic == "vfnms" || Mnemonic == "fconsts" ||
-        Mnemonic == "bxns" || Mnemonic == "blxns" ||
+        Mnemonic == "bxns" || Mnemonic == "blxns" || Mnemonic == "vfmas" ||
+        Mnemonic == "vmlas" ||
         (Mnemonic == "movs" && isThumb()))) {
     Mnemonic = Mnemonic.slice(0, Mnemonic.size() - 1);
     CarrySetting = true;
@@ -6008,7 +6051,10 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
   if (isMnemonicVPTPredicable(Mnemonic, ExtraToken) && Mnemonic != "vmovlt" &&
       Mnemonic != "vshllt" && Mnemonic != "vrshrnt" && Mnemonic != "vshrnt" &&
       Mnemonic != "vqrshrunt" && Mnemonic != "vqshrunt" &&
-      Mnemonic != "vqrshrnt" && Mnemonic != "vqshrnt") {
+      Mnemonic != "vqrshrnt" && Mnemonic != "vqshrnt" && Mnemonic != "vmullt" &&
+      Mnemonic != "vqmovnt" && Mnemonic != "vqmovunt" &&
+      Mnemonic != "vqmovnt" && Mnemonic != "vmovnt" && Mnemonic != "vqdmullt" &&
+      Mnemonic != "vcvtt" && Mnemonic != "vcvt") {
     unsigned CC = ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size()-1));
     if (CC != ~0U) {
       Mnemonic = Mnemonic.slice(0, Mnemonic.size()-1);
@@ -6315,7 +6361,8 @@ bool ARMAsmParser::shouldOmitPredicateOperand(StringRef Mnemonic,
                                               OperandVector &Operands) {
   // VRINT{Z, X} have a predicate operand in VFP, but not in NEON
   unsigned RegIdx = 3;
-  if ((Mnemonic == "vrintz" || Mnemonic == "vrintx") &&
+  if ((((Mnemonic == "vrintz" || Mnemonic == "vrintx") && !hasMVE()) ||
+      Mnemonic == "vrintr") &&
       (static_cast<ARMOperand &>(*Operands[2]).getToken() == ".f32" ||
        static_cast<ARMOperand &>(*Operands[2]).getToken() == ".f16")) {
     if (static_cast<ARMOperand &>(*Operands[3]).isToken() &&
@@ -6337,6 +6384,9 @@ bool ARMAsmParser::shouldOmitVectorPredicateOperand(StringRef Mnemonic,
                                                     OperandVector &Operands) {
   if (!hasMVE() || Operands.size() < 3)
     return true;
+
+  if (Mnemonic.startswith("vctp"))
+    return false;
 
   if (Mnemonic.startswith("vmov") &&
       !(Mnemonic.startswith("vmovl") || Mnemonic.startswith("vmovn") ||
@@ -6564,7 +6614,10 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   // definition in tblgen.  Since these instructions may also have the
   // scalar predication operand we do not add the vector one and leave until
   // now to fix it up.
-  if (CanAcceptVPTPredicationCode && Mnemonic != "vmov") {
+  if (CanAcceptVPTPredicationCode && Mnemonic != "vmov" &&
+      !Mnemonic.startswith("vcmp") &&
+      !(Mnemonic.startswith("vcvt") && Mnemonic != "vcvta" &&
+        Mnemonic != "vcvtn" && Mnemonic != "vcvtp" && Mnemonic != "vcvtm")) {
     SMLoc Loc = SMLoc::getFromPointer(NameLoc.getPointer() + Mnemonic.size() +
                                       CarrySetting);
     Operands.push_back(ARMOperand::CreateVPTPred(
@@ -6662,14 +6715,62 @@ bool ARMAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                       ARMOperand::CreateVPTPred(ARMVCC::None, PLoc));
       Operands.insert(Operands.begin(),
                       ARMOperand::CreateToken(StringRef("vmovlt"), MLoc));
+    } else if (Mnemonic == "vcvt" && PredicationCode == ARMCC::NE &&
+               !shouldOmitVectorPredicateOperand(Mnemonic, Operands)) {
+      // Another nasty hack to deal with the ambiguity between vcvt with scalar
+      // predication 'ne' and vcvtn with vector predication 'e'.  As above we
+      // can only distinguish between the two after we have parsed their
+      // operands.
+      Operands.erase(Operands.begin() + 1);
+      Operands.erase(Operands.begin());
+      SMLoc MLoc = SMLoc::getFromPointer(NameLoc.getPointer());
+      SMLoc PLoc = SMLoc::getFromPointer(NameLoc.getPointer() +
+                                         Mnemonic.size() - 1 + CarrySetting);
+      Operands.insert(Operands.begin(),
+                      ARMOperand::CreateVPTPred(ARMVCC::Else, PLoc));
+      Operands.insert(Operands.begin(),
+                      ARMOperand::CreateToken(StringRef("vcvtn"), MLoc));
+    } else if (Mnemonic == "vmul" && PredicationCode == ARMCC::LT &&
+               !shouldOmitVectorPredicateOperand(Mnemonic, Operands)) {
+      // Another hack, this time to distinguish between scalar predicated vmul
+      // with 'lt' predication code and the vector instruction vmullt with
+      // vector predication code "none"
+      Operands.erase(Operands.begin() + 1);
+      Operands.erase(Operands.begin());
+      SMLoc MLoc = SMLoc::getFromPointer(NameLoc.getPointer());
+      Operands.insert(Operands.begin(),
+                      ARMOperand::CreateToken(StringRef("vmullt"), MLoc));
     }
-    // For vmov instructions, as mentioned earlier, we did not add the vector
+    // For vmov and vcmp, as mentioned earlier, we did not add the vector
     // predication code, since these may contain operands that require
     // special parsing.  So now we have to see if they require vector
     // predication and replace the scalar one with the vector predication
     // operand if that is the case.
-    else if (Mnemonic == "vmov") {
+    else if (Mnemonic == "vmov" || Mnemonic.startswith("vcmp") ||
+             (Mnemonic.startswith("vcvt") && !Mnemonic.startswith("vcvta") &&
+              !Mnemonic.startswith("vcvtn") && !Mnemonic.startswith("vcvtp") &&
+              !Mnemonic.startswith("vcvtm"))) {
       if (!shouldOmitVectorPredicateOperand(Mnemonic, Operands)) {
+        // We could not split the vector predicate off vcvt because it might
+        // have been the scalar vcvtt instruction.  Now we know its a vector
+        // instruction, we still need to check whether its the vector
+        // predicated vcvt with 'Then' predication or the vector vcvtt.  We can
+        // distinguish the two based on the suffixes, if it is any of
+        // ".f16.f32", ".f32.f16", ".f16.f64" or ".f64.f16" then it is the vcvtt.
+        if (Mnemonic.startswith("vcvtt") && Operands.size() >= 4) {
+          auto Sz1 = static_cast<ARMOperand &>(*Operands[2]);
+          auto Sz2 = static_cast<ARMOperand &>(*Operands[3]);
+          if (!(Sz1.isToken() && Sz1.getToken().startswith(".f") &&
+              Sz2.isToken() && Sz2.getToken().startswith(".f"))) {
+            Operands.erase(Operands.begin());
+            SMLoc MLoc = SMLoc::getFromPointer(NameLoc.getPointer());
+            VPTPredicationCode = ARMVCC::Then;
+
+            Mnemonic = Mnemonic.substr(0, 4);
+            Operands.insert(Operands.begin(),
+                            ARMOperand::CreateToken(Mnemonic, MLoc));
+          }
+        }
         Operands.erase(Operands.begin() + 1);
         SMLoc PLoc = SMLoc::getFromPointer(NameLoc.getPointer() +
                                           Mnemonic.size() + CarrySetting);
@@ -7495,6 +7596,47 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
     if (RegList.size() < 1 || RegList.size() > 16)
       return Error(Operands[3]->getStartLoc(),
                    "list of registers must be at least 1 and at most 16");
+    break;
+  }
+  case ARM::MVE_VQDMULLs32bh:
+  case ARM::MVE_VQDMULLs32th:
+  case ARM::MVE_VCMULf32:
+  case ARM::MVE_VMULLs32bh:
+  case ARM::MVE_VMULLs32th:
+  case ARM::MVE_VMULLu32bh:
+  case ARM::MVE_VMULLu32th:
+  case ARM::MVE_VQDMLADHs32:
+  case ARM::MVE_VQDMLADHXs32:
+  case ARM::MVE_VQRDMLADHs32:
+  case ARM::MVE_VQRDMLADHXs32:
+  case ARM::MVE_VQDMLSDHs32:
+  case ARM::MVE_VQDMLSDHXs32:
+  case ARM::MVE_VQRDMLSDHs32:
+  case ARM::MVE_VQRDMLSDHXs32: {
+    if (Operands[3]->getReg() == Operands[4]->getReg()) {
+      return Error (Operands[3]->getStartLoc(),
+                    "Qd register and Qn register can't be identical");
+    }
+    if (Operands[3]->getReg() == Operands[5]->getReg()) {
+      return Error (Operands[3]->getStartLoc(),
+                    "Qd register and Qm register can't be identical");
+    }
+    break;
+  }
+  case ARM::MVE_VMOV_rr_q: {
+    if (Operands[4]->getReg() != Operands[6]->getReg())
+      return Error (Operands[4]->getStartLoc(), "Q-registers must be the same");
+    if (static_cast<ARMOperand &>(*Operands[5]).getVectorIndex() !=
+        static_cast<ARMOperand &>(*Operands[7]).getVectorIndex() + 2)
+      return Error (Operands[5]->getStartLoc(), "Q-register indexes must be 2 and 0 or 3 and 1");
+    break;
+  }
+  case ARM::MVE_VMOV_q_rr: {
+    if (Operands[2]->getReg() != Operands[4]->getReg())
+      return Error (Operands[2]->getStartLoc(), "Q-registers must be the same");
+    if (static_cast<ARMOperand &>(*Operands[3]).getVectorIndex() !=
+        static_cast<ARMOperand &>(*Operands[5]).getVectorIndex() + 2)
+      return Error (Operands[3]->getStartLoc(), "Q-register indexes must be 2 and 0 or 3 and 1");
     break;
   }
   }

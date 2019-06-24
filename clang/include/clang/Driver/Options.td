@@ -2130,6 +2130,10 @@ def mrelax : Flag<["-"], "mrelax">, Group<m_riscv_Features_Group>,
   HelpText<"Enable linker relaxation">;
 def mno_relax : Flag<["-"], "mno-relax">, Group<m_riscv_Features_Group>,
   HelpText<"Disable linker relaxation">;
+def msave_restore : Flag<["-"], "msave-restore">, Group<m_riscv_Features_Group>,
+  HelpText<"Enable using library calls for save and restore">;
+def mno_save_restore : Flag<["-"], "mno-save-restore">, Group<m_riscv_Features_Group>,
+  HelpText<"Disable using library calls for save and restore">;
 
 def munaligned_access : Flag<["-"], "munaligned-access">, Group<m_arm_Features_Group>,
   HelpText<"Allow memory accesses to be unaligned (AArch32/AArch64 only)">;

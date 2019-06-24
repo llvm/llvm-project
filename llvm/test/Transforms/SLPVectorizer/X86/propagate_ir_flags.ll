@@ -552,6 +552,45 @@ define void @fcmp_fast(double* %x) #1 {
   ret void
 }
 
+define void @fcmp_fast_unary_fneg(double* %x) #1 {
+; CHECK-LABEL: @fcmp_fast_unary_fneg(
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, double* [[X:%.*]], i64 0
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, double* [[X]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[IDX1]] to <2 x double>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp fast oge <2 x double> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
+; CHECK-NEXT:    [[SUB1:%.*]] = fneg fast double [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
+; CHECK-NEXT:    [[SUB2:%.*]] = fneg fast double [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> undef, double [[SUB1]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[SUB2]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP3]], <2 x double> [[TMP2]], <2 x double> [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast double* [[IDX1]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[TMP9]], align 8
+; CHECK-NEXT:    ret void
+;
+  %idx1 = getelementptr inbounds double, double* %x, i64 0
+  %idx2 = getelementptr inbounds double, double* %x, i64 1
+
+  %load1 = load double, double* %idx1, align 8
+  %load2 = load double, double* %idx2, align 8
+
+  %cmp1 = fcmp fast oge double %load1, 0.000000e+00
+  %cmp2 = fcmp fast oge double %load2, 0.000000e+00
+
+  %sub1 = fneg fast double %load1
+  %sub2 = fneg fast double %load2
+
+  %sel1 = select i1 %cmp1, double %load1, double %sub1
+  %sel2 = select i1 %cmp2, double %load2, double %sub2
+
+  store double %sel1, double* %idx1, align 8
+  store double %sel2, double* %idx2, align 8
+
+  ret void
+}
+
 define void @fcmp_no_fast(double* %x) #1 {
 ; CHECK-LABEL: @fcmp_no_fast(
 ; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, double* [[X:%.*]], i64 0
@@ -576,6 +615,45 @@ define void @fcmp_no_fast(double* %x) #1 {
 
   %sub1 = fsub fast double -0.000000e+00, %load1
   %sub2 = fsub double -0.000000e+00, %load2
+
+  %sel1 = select i1 %cmp1, double %load1, double %sub1
+  %sel2 = select i1 %cmp2, double %load2, double %sub2
+
+  store double %sel1, double* %idx1, align 8
+  store double %sel2, double* %idx2, align 8
+
+  ret void
+}
+
+define void @fcmp_no_fast_unary_fneg(double* %x) #1 {
+; CHECK-LABEL: @fcmp_no_fast_unary_fneg(
+; CHECK-NEXT:    [[IDX1:%.*]] = getelementptr inbounds double, double* [[X:%.*]], i64 0
+; CHECK-NEXT:    [[IDX2:%.*]] = getelementptr inbounds double, double* [[X]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[IDX1]] to <2 x double>*
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = fcmp oge <2 x double> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
+; CHECK-NEXT:    [[SUB1:%.*]] = fneg double [[TMP4]]
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
+; CHECK-NEXT:    [[SUB2:%.*]] = fneg double [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> undef, double [[SUB1]], i32 0
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[SUB2]], i32 1
+; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP3]], <2 x double> [[TMP2]], <2 x double> [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = bitcast double* [[IDX1]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[TMP9]], align 8
+; CHECK-NEXT:    ret void
+;
+  %idx1 = getelementptr inbounds double, double* %x, i64 0
+  %idx2 = getelementptr inbounds double, double* %x, i64 1
+
+  %load1 = load double, double* %idx1, align 8
+  %load2 = load double, double* %idx2, align 8
+
+  %cmp1 = fcmp fast oge double %load1, 0.000000e+00
+  %cmp2 = fcmp oge double %load2, 0.000000e+00
+
+  %sub1 = fneg double %load1
+  %sub2 = fneg double %load2
 
   %sel1 = select i1 %cmp1, double %load1, double %sub1
   %sel2 = select i1 %cmp2, double %load2, double %sub2

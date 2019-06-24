@@ -159,7 +159,7 @@ static_library("builtins") {
 
   if (target_os != "fuchsia") {
     sources += [
-      "emutls.c ",
+      "emutls.c",
       "enable_execute_stack.c",
       "eprintf.c",
     ]

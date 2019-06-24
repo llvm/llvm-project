@@ -130,7 +130,6 @@ class CppFilePreambleCallbacks : public PreambleCallbacks {
 public:
   CppFilePreambleCallbacks(PathRef File, PreambleParsedCallback ParsedCallback)
       : File(File), ParsedCallback(ParsedCallback) {
-    addSystemHeadersMapping(&CanonIncludes);
   }
 
   IncludeStructure takeIncludes() { return std::move(Includes); }
@@ -149,6 +148,7 @@ public:
   }
 
   void BeforeExecute(CompilerInstance &CI) override {
+    addSystemHeadersMapping(&CanonIncludes, CI.getLangOpts());
     SourceMgr = &CI.getSourceManager();
   }
 
@@ -414,7 +414,7 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
   if (Preamble)
     CanonIncludes = Preamble->CanonIncludes;
   else
-    addSystemHeadersMapping(&CanonIncludes);
+    addSystemHeadersMapping(&CanonIncludes, Clang->getLangOpts());
   std::unique_ptr<CommentHandler> IWYUHandler =
       collectIWYUHeaderMaps(&CanonIncludes);
   Clang->getPreprocessor().addCommentHandler(IWYUHandler.get());

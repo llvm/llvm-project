@@ -34,7 +34,7 @@ public:
   void GetTypes(ConstString name, DIEArray &offsets) override;
   void GetTypes(const DWARFDeclContext &context, DIEArray &offsets) override;
   void GetNamespaces(ConstString name, DIEArray &offsets) override;
-  void GetFunctions(ConstString name, DWARFDebugInfo &info,
+  void GetFunctions(ConstString name, SymbolFileDWARF &dwarf,
                     const CompilerDeclContext &parent_decl_ctx,
                     uint32_t name_type_mask,
                     std::vector<DWARFDIE> &dies) override;
