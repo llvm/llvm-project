@@ -1,8 +1,0 @@
-RUN: llvm-readobj -p .text %p/Inputs/elf-groups.x86_64 \
-RUN:     | FileCheck %s
-
-CHECK: [     0]  UH..H....E.
-CHECK: [     f]  .E.x.E..
-CHECK: [    1a]  ..}..
-CHECK: [    23]  .}..
-CHECK: [    2b]  1.H...].
