@@ -1252,7 +1252,7 @@ private:
     /// \return the single \p OpIdx operand.
     Value *getSingleOperand(unsigned OpIdx) const {
       assert(OpIdx < Operands.size() && "Off bounds");
-      assert(!Operands[OpIdx].empty() && "No operand availabe");
+      assert(!Operands[OpIdx].empty() && "No operand available");
       return Operands[OpIdx][0];
     }
 

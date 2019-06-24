@@ -172,7 +172,7 @@ define void @test3(i64 %trip, i64 %add) {
 ; PROLOG:  loop_exiting_bb1.7:
 ; PROLOG-NEXT:     switch i64 %sum.next.6, label %loop_latch.7
 ; PROLOG:  loop_latch.7:
-; PROLOG-NEXT:     %iv_next.7 = add nsw i64 %iv, 8
+; PROLOG-NEXT:     %iv_next.7 = add nuw nsw i64 %iv, 8
 ; PROLOG-NEXT:     %sum.next.7 = add i64 %sum.next.6, %add
 ; PROLOG-NEXT:     %cmp.7 = icmp eq i64 %iv_next.7, %trip
 ; PROLOG-NEXT:     br i1 %cmp.7, label %exit2.loopexit.unr-lcssa, label %loop_header
@@ -426,7 +426,7 @@ define i64 @test5(i64 %trip, i64 %add, i1 %cond) {
 ; PROLOG-NEXT:      %result = phi i64 [ %result.ph, %exit1.loopexit ], [ %ivy.prol, %exit1.loopexit1 ]
 ; PROLOG-NEXT:      ret i64 %result
 ; PROLOG:   loop_latch.7:
-; PROLOG:      %iv_next.7 = add nsw i64 %iv, 8
+; PROLOG:      %iv_next.7 = add nuw nsw i64 %iv, 8
 entry:
   br label %loop_header
 
@@ -560,7 +560,7 @@ loopexit1:                                             ; preds = %header
 }
 
 ; Nested loop and inner loop is unrolled
-; FIXME: we cannot unroll with epilog remainder currently, because 
+; FIXME: we cannot unroll with epilog remainder currently, because
 ; the outer loop does not contain the epilog preheader and epilog exit (while
 ; infact it should). This causes us to choke up on LCSSA form being incorrect in
 ; outer loop. However, the exit block where LCSSA fails, is infact still within
@@ -578,7 +578,7 @@ define void @test8() {
 ; PROLOG:      %lcmp.mod = icmp eq i64
 ; PROLOG-NEXT: br i1 %lcmp.mod, label %innerH.prol.loopexit, label %innerH.prol.preheader
 ; PROLOG: latch.6:
-; PROLOG-NEXT: %tmp4.7 = add nsw i64 %tmp3, 8
+; PROLOG-NEXT: %tmp4.7 = add nuw nsw i64 %tmp3, 8
 ; PROLOG-NEXT: br i1 false, label %outerloop.loopexit.loopexit, label %latch.7
 ; PROLOG: latch.7
 ; PROLOG-NEXT: %tmp6.7 = icmp ult i64 %tmp4.7, 100
