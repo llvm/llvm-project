@@ -21,6 +21,7 @@
 // Other libraries and framework includes
 // Project includes
 #include "Plugins/LanguageRuntime/ObjC/AppleObjCRuntime/AppleObjCRuntimeV2.h"
+#include "lldb/Breakpoint/BreakpointPrecondition.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
@@ -91,6 +92,9 @@ public:
     return llvm::cast_or_null<SwiftLanguageRuntime>(
         process.GetLanguageRuntime(lldb::eLanguageTypeSwift));
   }
+
+  static lldb::BreakpointPreconditionSP
+  GetBreakpointExceptionPrecondition(lldb::LanguageType language, bool throw_bp);
 
   //------------------------------------------------------------------
   // PluginInterface protocol
@@ -182,7 +186,7 @@ public:
     bool IsStaticallyDetermined();
   };
 
-  class SwiftExceptionPrecondition : public Breakpoint::BreakpointPrecondition {
+  class SwiftExceptionPrecondition : public BreakpointPrecondition {
   public:
     SwiftExceptionPrecondition();
 

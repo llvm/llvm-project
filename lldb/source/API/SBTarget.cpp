@@ -30,6 +30,7 @@
 #include "lldb/Breakpoint/BreakpointIDList.h"
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Breakpoint/BreakpointPrecondition.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/AddressResolver.h"
 #include "lldb/Core/AddressResolverName.h"
@@ -1110,7 +1111,7 @@ SBTarget::BreakpointCreateForException(lldb::LanguageType language,
           args.AppendArgument(extra_args.GetStringAtIndex(i + 1));
         }
         BreakpointSP bkpt = sb_bp.GetSP();
-        Breakpoint::BreakpointPreconditionSP pre_condition_sp =
+        BreakpointPreconditionSP pre_condition_sp =
             bkpt->GetPrecondition();
         if (pre_condition_sp)
           pre_condition_sp->ConfigurePrecondition(args);
