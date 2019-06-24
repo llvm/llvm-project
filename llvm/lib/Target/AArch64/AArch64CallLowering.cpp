@@ -57,18 +57,18 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
                      CCAssignFn *AssignFn)
       : ValueHandler(MIRBuilder, MRI, AssignFn), StackUsed(0) {}
 
-  unsigned getStackAddress(uint64_t Size, int64_t Offset,
+  Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
     auto &MFI = MIRBuilder.getMF().getFrameInfo();
     int FI = MFI.CreateFixedObject(Size, Offset, true);
     MPO = MachinePointerInfo::getFixedStack(MIRBuilder.getMF(), FI);
-    unsigned AddrReg = MRI.createGenericVirtualRegister(LLT::pointer(0, 64));
+    Register AddrReg = MRI.createGenericVirtualRegister(LLT::pointer(0, 64));
     MIRBuilder.buildFrameIndex(AddrReg, FI);
     StackUsed = std::max(StackUsed, Size + Offset);
     return AddrReg;
   }
 
-  void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
+  void assignValueToReg(Register ValVReg, Register PhysReg,
                         CCValAssign &VA) override {
     markPhysRegUsed(PhysReg);
     switch (VA.getLocInfo()) {
@@ -85,7 +85,7 @@ struct IncomingArgHandler : public CallLowering::ValueHandler {
     }
   }
 
-  void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
+  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     // FIXME: Get alignment
     auto MMO = MIRBuilder.getMF().getMachineMemOperand(
@@ -133,31 +133,31 @@ struct OutgoingArgHandler : public CallLowering::ValueHandler {
       : ValueHandler(MIRBuilder, MRI, AssignFn), MIB(MIB),
         AssignFnVarArg(AssignFnVarArg), StackSize(0) {}
 
-  unsigned getStackAddress(uint64_t Size, int64_t Offset,
+  Register getStackAddress(uint64_t Size, int64_t Offset,
                            MachinePointerInfo &MPO) override {
     LLT p0 = LLT::pointer(0, 64);
     LLT s64 = LLT::scalar(64);
-    unsigned SPReg = MRI.createGenericVirtualRegister(p0);
-    MIRBuilder.buildCopy(SPReg, AArch64::SP);
+    Register SPReg = MRI.createGenericVirtualRegister(p0);
+    MIRBuilder.buildCopy(SPReg, Register(AArch64::SP));
 
-    unsigned OffsetReg = MRI.createGenericVirtualRegister(s64);
+    Register OffsetReg = MRI.createGenericVirtualRegister(s64);
     MIRBuilder.buildConstant(OffsetReg, Offset);
 
-    unsigned AddrReg = MRI.createGenericVirtualRegister(p0);
+    Register AddrReg = MRI.createGenericVirtualRegister(p0);
     MIRBuilder.buildGEP(AddrReg, SPReg, OffsetReg);
 
     MPO = MachinePointerInfo::getStack(MIRBuilder.getMF(), Offset);
     return AddrReg;
   }
 
-  void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
+  void assignValueToReg(Register ValVReg, Register PhysReg,
                         CCValAssign &VA) override {
     MIB.addUse(PhysReg, RegState::Implicit);
-    unsigned ExtReg = extendRegister(ValVReg, VA);
+    Register ExtReg = extendRegister(ValVReg, VA);
     MIRBuilder.buildCopy(PhysReg, ExtReg);
   }
 
-  void assignValueToAddress(unsigned ValVReg, unsigned Addr, uint64_t Size,
+  void assignValueToAddress(Register ValVReg, Register Addr, uint64_t Size,
                             MachinePointerInfo &MPO, CCValAssign &VA) override {
     if (VA.getLocInfo() == CCValAssign::LocInfo::AExt) {
       Size = VA.getLocVT().getSizeInBits() / 8;
@@ -232,8 +232,8 @@ void AArch64CallLowering::splitToValueTypes(
 
 bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
                                       const Value *Val,
-                                      ArrayRef<unsigned> VRegs,
-                                      unsigned SwiftErrorVReg) const {
+                                      ArrayRef<Register> VRegs,
+                                      Register SwiftErrorVReg) const {
   auto MIB = MIRBuilder.buildInstrNoInsert(AArch64::RET_ReallyLR);
   assert(((Val && !VRegs.empty()) || (!Val && VRegs.empty())) &&
          "Return value without a vreg");
@@ -263,7 +263,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
         return false;
       }
 
-      unsigned CurVReg = VRegs[i];
+      Register CurVReg = VRegs[i];
       ArgInfo CurArgInfo = ArgInfo{CurVReg, SplitEVTs[i].getTypeForEVT(Ctx)};
       setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, F);
 
@@ -352,7 +352,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
 
 bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                                const Function &F,
-                                               ArrayRef<unsigned> VRegs) const {
+                                               ArrayRef<Register> VRegs) const {
   MachineFunction &MF = MIRBuilder.getMF();
   MachineBasicBlock &MBB = MIRBuilder.getMBB();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -367,7 +367,7 @@ bool AArch64CallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
     setArgFlags(OrigArg, i + AttributeList::FirstArgIndex, DL, F);
     bool Split = false;
     LLT Ty = MRI.getType(VRegs[i]);
-    unsigned Dst = VRegs[i];
+    Register Dst = VRegs[i];
 
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI, F.getCallingConv(),
                       [&](unsigned Reg, uint64_t Offset) {
@@ -427,7 +427,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
                                     const MachineOperand &Callee,
                                     const ArgInfo &OrigRet,
                                     ArrayRef<ArgInfo> OrigArgs,
-                                    unsigned SwiftErrorVReg) const {
+                                    Register SwiftErrorVReg) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
   MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -436,7 +436,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
   SmallVector<ArgInfo, 8> SplitArgs;
   for (auto &OrigArg : OrigArgs) {
     splitToValueTypes(OrigArg, SplitArgs, DL, MRI, CallConv,
-                      [&](unsigned Reg, uint64_t Offset) {
+                      [&](Register Reg, uint64_t Offset) {
                         MIRBuilder.buildExtract(Reg, OrigArg.Reg, Offset);
                       });
     // AAPCS requires that we zero-extend i1 to 8 bits by the caller.
@@ -495,7 +495,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     SplitArgs.clear();
 
     SmallVector<uint64_t, 8> RegOffsets;
-    SmallVector<unsigned, 8> SplitRegs;
+    SmallVector<Register, 8> SplitRegs;
     splitToValueTypes(OrigRet, SplitArgs, DL, MRI, F.getCallingConv(),
                       [&](unsigned Reg, uint64_t Offset) {
                         RegOffsets.push_back(Offset);
@@ -512,7 +512,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
 
   if (SwiftErrorVReg) {
     MIB.addDef(AArch64::X21, RegState::Implicit);
-    MIRBuilder.buildCopy(SwiftErrorVReg, AArch64::X21);
+    MIRBuilder.buildCopy(SwiftErrorVReg, Register(AArch64::X21));
   }
 
   CallSeqStart.addImm(Handler.StackSize).addImm(0);

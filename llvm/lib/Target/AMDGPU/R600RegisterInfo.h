@@ -26,7 +26,7 @@ struct R600RegisterInfo final : public R600GenRegisterInfo {
 
   BitVector getReservedRegs(const MachineFunction &MF) const override;
   const MCPhysReg *getCalleeSavedRegs(const MachineFunction *MF) const override;
-  unsigned getFrameRegister(const MachineFunction &MF) const override;
+  Register getFrameRegister(const MachineFunction &MF) const override;
 
   /// get the HW encoding for a register's channel.
   unsigned getHWRegChan(unsigned reg) const;

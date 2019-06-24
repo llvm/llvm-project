@@ -34,39 +34,39 @@ public:
                 ArrayRef<CallLowering::ArgInfo> Args);
 
   protected:
-    bool assignVRegs(ArrayRef<unsigned> VRegs, ArrayRef<CCValAssign> ArgLocs,
+    bool assignVRegs(ArrayRef<Register> VRegs, ArrayRef<CCValAssign> ArgLocs,
                      unsigned ArgLocsStartIndex, const EVT &VT);
 
-    void setLeastSignificantFirst(SmallVectorImpl<unsigned> &VRegs);
+    void setLeastSignificantFirst(SmallVectorImpl<Register> &VRegs);
 
     MachineIRBuilder &MIRBuilder;
     MachineRegisterInfo &MRI;
 
   private:
-    bool assign(unsigned VReg, const CCValAssign &VA, const EVT &VT);
+    bool assign(Register VReg, const CCValAssign &VA, const EVT &VT);
 
-    virtual unsigned getStackAddress(const CCValAssign &VA,
+    virtual Register getStackAddress(const CCValAssign &VA,
                                      MachineMemOperand *&MMO) = 0;
 
-    virtual void assignValueToReg(unsigned ValVReg, const CCValAssign &VA,
+    virtual void assignValueToReg(Register ValVReg, const CCValAssign &VA,
                                   const EVT &VT) = 0;
 
-    virtual void assignValueToAddress(unsigned ValVReg,
+    virtual void assignValueToAddress(Register ValVReg,
                                       const CCValAssign &VA) = 0;
 
-    virtual bool handleSplit(SmallVectorImpl<unsigned> &VRegs,
+    virtual bool handleSplit(SmallVectorImpl<Register> &VRegs,
                              ArrayRef<CCValAssign> ArgLocs,
-                             unsigned ArgLocsStartIndex, unsigned ArgsReg,
+                             unsigned ArgLocsStartIndex, Register ArgsReg,
                              const EVT &VT) = 0;
   };
 
   MipsCallLowering(const MipsTargetLowering &TLI);
 
   bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
-                   ArrayRef<unsigned> VRegs) const override;
+                   ArrayRef<Register> VRegs) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
-                            ArrayRef<unsigned> VRegs) const override;
+                            ArrayRef<Register> VRegs) const override;
 
   bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                  const MachineOperand &Callee, const ArgInfo &OrigRet,

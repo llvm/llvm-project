@@ -283,7 +283,7 @@ XCoreRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   Offset += StackSize;
 
-  unsigned FrameReg = getFrameRegister(MF);
+  Register FrameReg = getFrameRegister(MF);
 
   // Special handling of DBG_VALUE instructions.
   if (MI.isDebugValue()) {
@@ -321,7 +321,7 @@ XCoreRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 }
 
 
-unsigned XCoreRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+Register XCoreRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const XCoreFrameLowering *TFI = getFrameLowering(MF);
 
   return TFI->hasFP(MF) ? XCore::R10 : XCore::SP;

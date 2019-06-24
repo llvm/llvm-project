@@ -584,23 +584,23 @@ void X86FrameLowering::emitStackProbeInline(MachineFunction &MF,
   // registers. For the prolog expansion we use RAX, RCX and RDX.
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterClass *RegClass = &X86::GR64RegClass;
-  const unsigned SizeReg = InProlog ? (unsigned)X86::RAX
+  const Register SizeReg = InProlog ? X86::RAX
                                     : MRI.createVirtualRegister(RegClass),
-                 ZeroReg = InProlog ? (unsigned)X86::RCX
+                 ZeroReg = InProlog ? X86::RCX
                                     : MRI.createVirtualRegister(RegClass),
-                 CopyReg = InProlog ? (unsigned)X86::RDX
+                 CopyReg = InProlog ? X86::RDX
                                     : MRI.createVirtualRegister(RegClass),
-                 TestReg = InProlog ? (unsigned)X86::RDX
+                 TestReg = InProlog ? X86::RDX
                                     : MRI.createVirtualRegister(RegClass),
-                 FinalReg = InProlog ? (unsigned)X86::RDX
+                 FinalReg = InProlog ? X86::RDX
                                      : MRI.createVirtualRegister(RegClass),
-                 RoundedReg = InProlog ? (unsigned)X86::RDX
+                 RoundedReg = InProlog ? X86::RDX
                                        : MRI.createVirtualRegister(RegClass),
-                 LimitReg = InProlog ? (unsigned)X86::RCX
+                 LimitReg = InProlog ? X86::RCX
                                      : MRI.createVirtualRegister(RegClass),
-                 JoinReg = InProlog ? (unsigned)X86::RCX
+                 JoinReg = InProlog ? X86::RCX
                                     : MRI.createVirtualRegister(RegClass),
-                 ProbeReg = InProlog ? (unsigned)X86::RCX
+                 ProbeReg = InProlog ? X86::RCX
                                      : MRI.createVirtualRegister(RegClass);
 
   // SP-relative offsets where we can save RCX and RDX.
@@ -874,7 +874,7 @@ void X86FrameLowering::BuildStackAlignAND(MachineBasicBlock &MBB,
 
 bool X86FrameLowering::has128ByteRedZone(const MachineFunction& MF) const {
   // x86-64 (non Win64) has a 128 byte red zone which is guaranteed not to be
-  // clobbered by any interrupt handler.   
+  // clobbered by any interrupt handler.
   assert(&STI == &MF.getSubtarget<X86Subtarget>() &&
          "MF used frame lowering for wrong subtarget");
   const Function &Fn = MF.getFunction();

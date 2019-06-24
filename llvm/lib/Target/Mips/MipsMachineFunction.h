@@ -32,8 +32,8 @@ public:
   void setSRetReturnReg(unsigned Reg) { SRetReturnReg = Reg; }
 
   bool globalBaseRegSet() const;
-  unsigned getGlobalBaseReg();
-  unsigned getGlobalBaseRegForGlobalISel();
+  Register getGlobalBaseReg();
+  Register getGlobalBaseRegForGlobalISel();
 
   // Insert instructions to initialize the global base register in the
   // first MBB of the function.

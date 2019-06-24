@@ -212,7 +212,7 @@ SparcRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
 }
 
-unsigned SparcRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+Register SparcRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return SP::I6;
 }
 

@@ -176,9 +176,9 @@ def MemNoOffsetT2NoSpAsmOperand
   : AsmOperandClass { let Name = "MemNoOffsetT2NoSp"; }
 def t2_nosp_addr_offset_none : MemOperand {
   let PrintMethod = "printAddrMode7Operand";
-  let DecoderMethod = "Decodet2rGPRRegisterClass";
+  let DecoderMethod = "DecoderGPRRegisterClass";
   let ParserMatchClass = MemNoOffsetT2NoSpAsmOperand;
-  let MIOperandInfo = (ops t2rGPR:$base);
+  let MIOperandInfo = (ops rGPR:$base);
 }
 
 // t2addrmode_imm12  := reg + imm12

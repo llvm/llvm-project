@@ -559,15 +559,10 @@ define void @fcmp_fast_unary_fneg(double* %x) #1 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[IDX1]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp fast oge <2 x double> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
-; CHECK-NEXT:    [[SUB1:%.*]] = fneg fast double [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
-; CHECK-NEXT:    [[SUB2:%.*]] = fneg fast double [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> undef, double [[SUB1]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[SUB2]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP3]], <2 x double> [[TMP2]], <2 x double> [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast double* [[IDX1]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg fast <2 x double> [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP3]], <2 x double> [[TMP2]], <2 x double> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[IDX1]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP5]], <2 x double>* [[TMP6]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %idx1 = getelementptr inbounds double, double* %x, i64 0
@@ -632,15 +627,10 @@ define void @fcmp_no_fast_unary_fneg(double* %x) #1 {
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast double* [[IDX1]] to <2 x double>*
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, <2 x double>* [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp oge <2 x double> [[TMP2]], zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP2]], i32 0
-; CHECK-NEXT:    [[SUB1:%.*]] = fneg double [[TMP4]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP2]], i32 1
-; CHECK-NEXT:    [[SUB2:%.*]] = fneg double [[TMP5]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x double> undef, double [[SUB1]], i32 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP6]], double [[SUB2]], i32 1
-; CHECK-NEXT:    [[TMP8:%.*]] = select <2 x i1> [[TMP3]], <2 x double> [[TMP2]], <2 x double> [[TMP7]]
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast double* [[IDX1]] to <2 x double>*
-; CHECK-NEXT:    store <2 x double> [[TMP8]], <2 x double>* [[TMP9]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fneg <2 x double> [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select <2 x i1> [[TMP3]], <2 x double> [[TMP2]], <2 x double> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = bitcast double* [[IDX1]] to <2 x double>*
+; CHECK-NEXT:    store <2 x double> [[TMP5]], <2 x double>* [[TMP6]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %idx1 = getelementptr inbounds double, double* %x, i64 0

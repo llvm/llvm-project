@@ -232,12 +232,17 @@ bool AMDGPUInstructionSelector::selectG_IMPLICIT_DEF(MachineInstr &I) const {
   MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const MachineOperand &MO = I.getOperand(0);
-  const TargetRegisterClass *RC =
-      TRI.getConstrainedRegClassForOperand(MO, MRI);
-  if (RC)
-    RBI.constrainGenericRegister(MO.getReg(), *RC, MRI);
-  I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
-  return true;
+
+  // FIXME: Interface for getConstrainedRegClassForOperand needs work. The
+  // regbank check here is to know why getConstrainedRegClassForOperand failed.
+  const TargetRegisterClass *RC = TRI.getConstrainedRegClassForOperand(MO, MRI);
+  if ((!RC && !MRI.getRegBankOrNull(MO.getReg())) ||
+      (RC && RBI.constrainGenericRegister(MO.getReg(), *RC, MRI))) {
+    I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
+    return true;
+  }
+
+  return false;
 }
 
 bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
@@ -550,6 +555,76 @@ bool AMDGPUInstructionSelector::selectG_STORE(MachineInstr &I) const {
   return Ret;
 }
 
+static int sizeToSubRegIndex(unsigned Size) {
+  switch (Size) {
+  case 32:
+    return AMDGPU::sub0;
+  case 64:
+    return AMDGPU::sub0_sub1;
+  case 96:
+    return AMDGPU::sub0_sub1_sub2;
+  case 128:
+    return AMDGPU::sub0_sub1_sub2_sub3;
+  case 256:
+    return AMDGPU::sub0_sub1_sub2_sub3_sub4_sub5_sub6_sub7;
+  default:
+    if (Size < 32)
+      return AMDGPU::sub0;
+    if (Size > 256)
+      return -1;
+    return sizeToSubRegIndex(PowerOf2Ceil(Size));
+  }
+}
+
+bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
+  MachineBasicBlock *BB = I.getParent();
+  MachineFunction *MF = BB->getParent();
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  unsigned DstReg = I.getOperand(0).getReg();
+  unsigned SrcReg = I.getOperand(1).getReg();
+  const LLT DstTy = MRI.getType(DstReg);
+  const LLT SrcTy = MRI.getType(SrcReg);
+  if (!DstTy.isScalar())
+    return false;
+
+  const RegisterBank *DstRB = RBI.getRegBank(DstReg, MRI, TRI);
+  const RegisterBank *SrcRB = RBI.getRegBank(SrcReg, MRI, TRI);
+  if (SrcRB != DstRB)
+    return false;
+
+  unsigned DstSize = DstTy.getSizeInBits();
+  unsigned SrcSize = SrcTy.getSizeInBits();
+
+  const TargetRegisterClass *SrcRC
+    = TRI.getRegClassForSizeOnBank(SrcSize, *SrcRB, MRI);
+  const TargetRegisterClass *DstRC
+    = TRI.getRegClassForSizeOnBank(DstSize, *DstRB, MRI);
+
+  if (SrcSize > 32) {
+    int SubRegIdx = sizeToSubRegIndex(DstSize);
+    if (SubRegIdx == -1)
+      return false;
+
+    // Deal with weird cases where the class only partially supports the subreg
+    // index.
+    SrcRC = TRI.getSubClassWithSubReg(SrcRC, SubRegIdx);
+    if (!SrcRC)
+      return false;
+
+    I.getOperand(1).setSubReg(SubRegIdx);
+  }
+
+  if (!RBI.constrainGenericRegister(SrcReg, *SrcRC, MRI) ||
+      !RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
+    LLVM_DEBUG(dbgs() << "Failed to constrain G_TRUNC\n");
+    return false;
+  }
+
+  I.setDesc(TII.get(TargetOpcode::COPY));
+  return true;
+}
+
 bool AMDGPUInstructionSelector::selectG_CONSTANT(MachineInstr &I) const {
   MachineBasicBlock *BB = I.getParent();
   MachineFunction *MF = BB->getParent();
@@ -765,6 +840,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
     return selectG_SELECT(I);
   case TargetOpcode::G_STORE:
     return selectG_STORE(I);
+  case TargetOpcode::G_TRUNC:
+    return selectG_TRUNC(I);
   }
   return false;
 }

@@ -721,7 +721,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
   if (SpillToSMEM && OnlyToVGPR)
     return false;
 
-  unsigned FrameReg = getFrameRegister(*MF);
+  Register FrameReg = getFrameRegister(*MF);
 
   assert(SpillToVGPR || (SuperReg != MFI->getStackPtrOffsetReg() &&
                          SuperReg != MFI->getFrameOffsetReg() &&
@@ -914,7 +914,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
   unsigned EltSize = 4;
   unsigned ScalarLoadOp;
 
-  unsigned FrameReg = getFrameRegister(*MF);
+  Register FrameReg = getFrameRegister(*MF);
 
   const TargetRegisterClass *RC = getPhysRegClass(SuperReg);
   if (SpillToSMEM && isSGPRClass(RC)) {
@@ -1063,7 +1063,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   MachineOperand &FIOp = MI->getOperand(FIOperandNum);
   int Index = MI->getOperand(FIOperandNum).getIndex();
 
-  unsigned FrameReg = getFrameRegister(*MF);
+  Register FrameReg = getFrameRegister(*MF);
 
   switch (MI->getOpcode()) {
     // SGPR register spill
@@ -1154,7 +1154,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
         bool IsCopy = MI->getOpcode() == AMDGPU::V_MOV_B32_e32;
-        unsigned ResultReg = IsCopy ?
+        Register ResultReg = IsCopy ?
           MI->getOperand(0).getReg() :
           MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
@@ -1679,44 +1679,63 @@ unsigned SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {
 }
 
 const TargetRegisterClass *
+SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
+                                         const RegisterBank &RB,
+                                         const MachineRegisterInfo &MRI) const {
+  switch (Size) {
+  case 1: {
+    switch (RB.getID()) {
+    case AMDGPU::VGPRRegBankID:
+      return &AMDGPU::VGPR_32RegClass;
+    case AMDGPU::VCCRegBankID:
+      // TODO: Check wavesize
+      return &AMDGPU::SReg_64_XEXECRegClass;
+    case AMDGPU::SGPRRegBankID:
+      return &AMDGPU::SReg_32_XM0RegClass;
+    case AMDGPU::SCCRegBankID:
+      // This needs to return an allocatable class, so don't bother returning
+      // the dummy SCC class.
+      return &AMDGPU::SReg_32_XM0RegClass;
+    default:
+      llvm_unreachable("unknown register bank");
+    }
+  }
+  case 32:
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VGPR_32RegClass :
+                                                 &AMDGPU::SReg_32_XM0RegClass;
+  case 64:
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_64RegClass :
+                                                  &AMDGPU::SReg_64_XEXECRegClass;
+  case 96:
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_96RegClass :
+                                                 &AMDGPU::SReg_96RegClass;
+  case 128:
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_128RegClass :
+                                                 &AMDGPU::SReg_128RegClass;
+  case 160:
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_160RegClass :
+                                                 &AMDGPU::SReg_160RegClass;
+  case 256:
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_256RegClass :
+                                                 &AMDGPU::SReg_256RegClass;
+  case 512:
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_512RegClass :
+                                                 &AMDGPU::SReg_512RegClass;
+  default:
+    if (Size < 32)
+      return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VGPR_32RegClass :
+                                                   &AMDGPU::SReg_32_XM0RegClass;
+    assert(Size < 512 && "unimplemented");
+    return getRegClassForSizeOnBank(PowerOf2Ceil(Size), RB, MRI);
+  }
+}
+
+const TargetRegisterClass *
 SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
                                          const MachineRegisterInfo &MRI) const {
-  unsigned Size = getRegSizeInBits(MO.getReg(), MRI);
-  const RegisterBank *RB = MRI.getRegBankOrNull(MO.getReg());
-  if (!RB)
-    return nullptr;
-
-  Size = PowerOf2Ceil(Size);
-  switch (Size) {
-  case 1:
-    if (RB->getID() == AMDGPU::SCCRegBankID)
-      return &AMDGPU::SReg_32_XM0RegClass;
-    break;
-  case 32:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VGPR_32RegClass :
-                                                  &AMDGPU::SReg_32_XM0RegClass;
-  case 64:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_64RegClass :
-                                                   &AMDGPU::SReg_64_XEXECRegClass;
-  case 96:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_96RegClass :
-                                                  &AMDGPU::SReg_96RegClass;
-  case 128:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_128RegClass :
-                                                  &AMDGPU::SReg_128RegClass;
-  case 160:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_160RegClass :
-                                                  &AMDGPU::SReg_160RegClass;
-  case 256:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_256RegClass :
-                                                  &AMDGPU::SReg_256RegClass;
-  case 512:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_512RegClass :
-                                                  &AMDGPU::SReg_512RegClass;
-  default:
-    break;
-  }
-  llvm_unreachable("not implemented");
+  if (const RegisterBank *RB = MRI.getRegBankOrNull(MO.getReg()))
+    return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB, MRI);
+  return nullptr;
 }
 
 unsigned SIRegisterInfo::getVCC() const {

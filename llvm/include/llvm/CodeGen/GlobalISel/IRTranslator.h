@@ -71,7 +71,7 @@ private:
   public:
     ValueToVRegInfo() = default;
 
-    using VRegListT = SmallVector<unsigned, 1>;
+    using VRegListT = SmallVector<Register, 1>;
     using OffsetListT = SmallVector<uint64_t, 1>;
 
     using const_vreg_iterator =
@@ -200,7 +200,7 @@ private:
   /// the function.
   ///
   /// \return true if the materialization succeeded.
-  bool translate(const Constant &C, unsigned Reg);
+  bool translate(const Constant &C, Register Reg);
 
   /// Translate an LLVM bitcast into generic IR. Either a COPY or a G_BITCAST is
   /// emitted.
@@ -216,7 +216,7 @@ private:
   bool translateMemfunc(const CallInst &CI, MachineIRBuilder &MIRBuilder,
                         unsigned ID);
 
-  void getStackGuard(unsigned DstReg, MachineIRBuilder &MIRBuilder);
+  void getStackGuard(Register DstReg, MachineIRBuilder &MIRBuilder);
 
   bool translateOverflowIntrinsic(const CallInst &CI, unsigned Op,
                                   MachineIRBuilder &MIRBuilder);
@@ -241,9 +241,9 @@ private:
   // until it is refactored.
   /// Combines all component registers of \p V into a single scalar with size
   /// "max(Offsets) + last size".
-  unsigned packRegs(const Value &V, MachineIRBuilder &MIRBuilder);
+  Register packRegs(const Value &V, MachineIRBuilder &MIRBuilder);
 
-  void unpackRegs(const Value &V, unsigned Src, MachineIRBuilder &MIRBuilder);
+  void unpackRegs(const Value &V, Register Src, MachineIRBuilder &MIRBuilder);
 
   /// Returns true if the value should be split into multiple LLTs.
   /// If \p Offsets is given then the split type's offsets will be stored in it.
@@ -559,9 +559,9 @@ private:
   /// Non-aggregate types have just one corresponding VReg and the list can be
   /// used as a single "unsigned". Aggregates get flattened. If such VRegs do
   /// not exist, they are created.
-  ArrayRef<unsigned> getOrCreateVRegs(const Value &Val);
+  ArrayRef<Register> getOrCreateVRegs(const Value &Val);
 
-  unsigned getOrCreateVReg(const Value &Val) {
+  Register getOrCreateVReg(const Value &Val) {
     auto Regs = getOrCreateVRegs(Val);
     if (Regs.empty())
       return 0;

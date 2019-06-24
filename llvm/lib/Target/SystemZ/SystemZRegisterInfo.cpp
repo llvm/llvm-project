@@ -164,8 +164,8 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
         continue;
 
       auto tryAddHint = [&](const MachineOperand *MO) -> void {
-        unsigned Reg = MO->getReg();
-        unsigned PhysReg = isPhysicalRegister(Reg) ? Reg : VRM->getPhys(Reg);
+        Register Reg = MO->getReg();
+        Register PhysReg = isPhysicalRegister(Reg) ? Reg : VRM->getPhys(Reg);
         if (PhysReg) {
           if (MO->getSubReg())
             PhysReg = getSubReg(PhysReg, MO->getSubReg());
@@ -399,7 +399,7 @@ bool SystemZRegisterInfo::shouldCoalesce(MachineInstr *MI,
   return true;
 }
 
-unsigned
+Register
 SystemZRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const SystemZFrameLowering *TFI = getFrameLowering(MF);
   return TFI->hasFP(MF) ? SystemZ::R11D : SystemZ::R15D;
