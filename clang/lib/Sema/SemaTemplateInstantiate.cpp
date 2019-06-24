@@ -1181,6 +1181,28 @@ TemplateInstantiator::TransformPredefinedExpr(PredefinedExpr *E) {
   if (!E->isTypeDependent())
     return E;
 
+  if (E->getIdentKind() == PredefinedExpr::UniqueStableNameExpr) {
+    EnterExpressionEvaluationContext Unevaluated(
+        SemaRef, Sema::ExpressionEvaluationContext::Unevaluated);
+
+    ExprResult SubExpr = getDerived().TransformExpr(E->getExpr());
+    if (SubExpr.isInvalid())
+      return ExprError();
+
+    if (!getDerived().AlwaysRebuild() && SubExpr.get() == E->getExpr())
+      return E;
+
+    return getSema().BuildUniqueStableName(E->getLocation(), SubExpr.get());
+  } else if (E->getIdentKind() == PredefinedExpr::UniqueStableNameType) {
+    TypeSourceInfo *Info = getDerived().TransformType(E->getTypeSourceInfo());
+    if (!Info)
+      return ExprError();
+
+    if (!getDerived().AlwaysRebuild() && Info == E->getTypeSourceInfo())
+      return E;
+    return getSema().BuildUniqueStableName(E->getLocation(), Info);
+  }
+
   return getSema().BuildPredefinedExpr(E->getLocation(), E->getIdentKind());
 }
 
