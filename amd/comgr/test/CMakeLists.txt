@@ -17,6 +17,7 @@ endmacro()
 
 add_test_input_binary(reloc1 reloc1.cl reloc1.o -c -mno-code-object-v3)
 add_test_input_binary(reloc2 reloc2.cl reloc2.o -c -mno-code-object-v3)
+add_test_input_binary(reloc-asm reloc-asm.s reloc-asm.o -c -mno-code-object-v3)
 add_test_input_binary(shared shared.cl shared.so -mno-code-object-v3)
 add_test_input_binary(shared-v3 shared.cl shared-v3.so -mcode-object-v3)
 configure_file("source1.cl" "source1.cl" COPYONLY)

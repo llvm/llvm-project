@@ -45,19 +45,19 @@ const char *expectedOut = "\n"
                           "Disassembly of section .text:\n"
                           "foo:\n"
                           "\ts_load_dwordx2 s[0:1], s[4:5], 0x0               "
-                          "          // 000000000100: C0060002 00000000 \n"
+                          "          // 000000000000: C0060002 00000000 \n"
                           "\tv_mov_b32_e32 v2, 42                             "
-                          "          // 000000000108: 7E0402AA \n"
+                          "          // 000000000008: 7E0402AA \n"
                           "\ts_waitcnt lgkmcnt(0)                             "
-                          "          // 00000000010C: BF8C007F \n"
+                          "          // 00000000000C: BF8C007F \n"
                           "\tv_mov_b32_e32 v0, s0                             "
-                          "          // 000000000110: 7E000200 \n"
+                          "          // 000000000010: 7E000200 \n"
                           "\tv_mov_b32_e32 v1, s1                             "
-                          "          // 000000000114: 7E020201 \n"
+                          "          // 000000000014: 7E020201 \n"
                           "\tflat_store_dword v[0:1], v2                      "
-                          "          // 000000000118: DC700000 00000200 \n"
+                          "          // 000000000018: DC700000 00000200 \n"
                           "\ts_endpgm                                         "
-                          "          // 000000000120: BF810000 \n";
+                          "          // 000000000020: BF810000 \n";
 
 // TODO: Fix Options
 const char *expectedLog =
@@ -105,7 +105,7 @@ int main(int argc, char *argv[]) {
   size_t disAsmOptionsCount = sizeof(disAsmOptions) / sizeof(disAsmOptions[0]);
 
   // Read input file
-  size = setBuf(TEST_OBJ_DIR "/reloc1.o", &buf);
+  size = setBuf(TEST_OBJ_DIR "/reloc-asm.o", &buf);
 
   status = amd_comgr_create_data_set(&dataSetIn);
   checkError(status, "amd_cogmr_create_data_set");
