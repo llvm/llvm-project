@@ -55,6 +55,9 @@ typedef LanguageRuntime *(*LanguageRuntimeCreateInstance)(
     Process *process, lldb::LanguageType language);
 typedef lldb::CommandObjectSP (*LanguageRuntimeGetCommandObject)(
     CommandInterpreter &interpreter);
+typedef lldb::BreakpointPreconditionSP (
+    *LanguageRuntimeGetExceptionPrecondition)(lldb::LanguageType language,
+                                              bool throw_bp);
 typedef lldb::StructuredDataPluginSP (*StructuredDataPluginCreateInstance)(
     Process &process);
 typedef Status (*StructuredDataFilterLaunchInfo)(ProcessLaunchInfo &launch_info,
