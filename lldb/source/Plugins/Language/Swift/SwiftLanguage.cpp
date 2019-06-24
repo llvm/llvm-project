@@ -524,7 +524,7 @@ static void LoadSwiftFormatters(lldb::TypeCategoryImplSP swift_category_sp) {
       ConstString("Swift.StridedRangeGenerator<.+>$"), summary_flags, true);
 
   TypeSummaryImpl::Flags simd_summary_flags;
-  simd_summary_flags.SetCascades(false)
+  simd_summary_flags.SetCascades(true)
       .SetDontShowChildren(true)
       .SetHideItemNames(true)
       .SetShowMembersOneLiner(false);
