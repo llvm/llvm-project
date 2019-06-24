@@ -154,6 +154,26 @@ COMPILER_RT_VISIBILITY int lprofUnlockFd(int fd) {
 #endif
 }
 
+COMPILER_RT_VISIBILITY int lprofLockFileHandle(FILE *F) {
+  int fd;
+#if defined(_WIN32)
+  fd = _fileno(F);
+#else
+  fd = fileno(F);
+#endif
+  return lprofLockFd(fd);
+}
+
+COMPILER_RT_VISIBILITY int lprofUnlockFileHandle(FILE *F) {
+  int fd;
+#if defined(_WIN32)
+  fd = _fileno(F);
+#else
+  fd = fileno(F);
+#endif
+  return lprofUnlockFd(fd);
+}
+
 COMPILER_RT_VISIBILITY FILE *lprofOpenFileEx(const char *ProfileName) {
   FILE *f;
   int fd;
