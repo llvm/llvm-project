@@ -220,6 +220,10 @@ static DecodeStatus DecodeQPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeMQPRRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
+static DecodeStatus DecodeQQQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                                   uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeDPairRegisterClass(MCInst &Inst, unsigned RegNo,
                                    uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeDPairSpacedRegisterClass(MCInst &Inst,
@@ -5936,6 +5940,38 @@ static DecodeStatus DecodeMQPRRegisterClass(MCInst &Inst, unsigned RegNo,
     return MCDisassembler::Fail;
 
   unsigned Register = QPRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Register));
+  return MCDisassembler::Success;
+}
+
+static const uint16_t QQPRDecoderTable[] = {
+     ARM::Q0_Q1,  ARM::Q1_Q2,  ARM::Q2_Q3,  ARM::Q3_Q4,
+     ARM::Q4_Q5,  ARM::Q5_Q6,  ARM::Q6_Q7
+};
+
+static DecodeStatus DecodeQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                              uint64_t Address,
+                              const void *Decoder) {
+  if (RegNo > 6)
+    return MCDisassembler::Fail;
+
+  unsigned Register = QQPRDecoderTable[RegNo];
+  Inst.addOperand(MCOperand::createReg(Register));
+  return MCDisassembler::Success;
+}
+
+static const uint16_t QQQQPRDecoderTable[] = {
+     ARM::Q0_Q1_Q2_Q3,  ARM::Q1_Q2_Q3_Q4,  ARM::Q2_Q3_Q4_Q5,
+     ARM::Q3_Q4_Q5_Q6,  ARM::Q4_Q5_Q6_Q7
+};
+
+static DecodeStatus DecodeQQQQPRRegisterClass(MCInst &Inst, unsigned RegNo,
+                              uint64_t Address,
+                              const void *Decoder) {
+  if (RegNo > 4)
+    return MCDisassembler::Fail;
+
+  unsigned Register = QQQQPRDecoderTable[RegNo];
   Inst.addOperand(MCOperand::createReg(Register));
   return MCDisassembler::Success;
 }

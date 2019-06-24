@@ -1004,6 +1004,11 @@ Instruction *InstCombiner::SliceUpIllegalIntegerPHI(PHINode &FirstPhi) {
           !isa<ConstantInt>(UserI->getOperand(1)))
         return nullptr;
 
+      // Bail on out of range shifts.
+      unsigned SizeInBits = UserI->getType()->getScalarSizeInBits();
+      if (cast<ConstantInt>(UserI->getOperand(1))->getValue().uge(SizeInBits))
+        return nullptr;
+
       unsigned Shift = cast<ConstantInt>(UserI->getOperand(1))->getZExtValue();
       PHIUsers.push_back(PHIUsageRecord(PHIId, Shift, UserI->user_back()));
     }

@@ -378,3 +378,18 @@ template <class T> struct M {
   }
 };
 }
+
+namespace PR42362 {
+  template<auto ...A> struct X { struct Y; void f(int...[A]); };
+  template<auto ...A> struct X<A...>::Y {};
+  template<auto ...A> void X<A...>::f(int...[A]) {}
+  void f() { X<1, 2>::Y y; X<1, 2>().f(0, 0); }
+
+  template<typename, auto...> struct Y;
+  template<auto ...A> struct Y<int, A...> {};
+  Y<int, 1, 2, 3> y;
+
+  template<auto (&...F)()> struct Z { struct Q; };
+  template<auto (&...F)()> struct Z<F...>::Q {};
+  Z<f, f, f>::Q q;
+}

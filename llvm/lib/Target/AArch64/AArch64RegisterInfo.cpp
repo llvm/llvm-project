@@ -279,7 +279,7 @@ bool AArch64RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   return false;
 }
 
-unsigned
+Register
 AArch64RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const AArch64FrameLowering *TFI = getFrameLowering(MF);
   return TFI->hasFP(MF) ? AArch64::FP : AArch64::SP;

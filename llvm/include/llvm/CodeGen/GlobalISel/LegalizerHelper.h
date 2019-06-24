@@ -141,14 +141,14 @@ private:
   /// Helper function to split a wide generic register into bitwise blocks with
   /// the given Type (which implies the number of blocks needed). The generic
   /// registers created are appended to Ops, starting at bit 0 of Reg.
-  void extractParts(unsigned Reg, LLT Ty, int NumParts,
-                    SmallVectorImpl<unsigned> &VRegs);
+  void extractParts(Register Reg, LLT Ty, int NumParts,
+                    SmallVectorImpl<Register> &VRegs);
 
   /// Version which handles irregular splits.
-  bool extractParts(unsigned Reg, LLT RegTy, LLT MainTy,
+  bool extractParts(Register Reg, LLT RegTy, LLT MainTy,
                     LLT &LeftoverTy,
-                    SmallVectorImpl<unsigned> &VRegs,
-                    SmallVectorImpl<unsigned> &LeftoverVRegs);
+                    SmallVectorImpl<Register> &VRegs,
+                    SmallVectorImpl<Register> &LeftoverVRegs);
 
   /// Helper function to build a wide generic register \p DstReg of type \p
   /// RegTy from smaller parts. This will produce a G_MERGE_VALUES,
@@ -159,16 +159,16 @@ private:
   ///
   /// If \p ResultTy does not evenly break into \p PartTy sized pieces, the
   /// remainder must be specified with \p LeftoverRegs of type \p LeftoverTy.
-  void insertParts(unsigned DstReg, LLT ResultTy,
-                   LLT PartTy, ArrayRef<unsigned> PartRegs,
-                   LLT LeftoverTy = LLT(), ArrayRef<unsigned> LeftoverRegs = {});
+  void insertParts(Register DstReg, LLT ResultTy,
+                   LLT PartTy, ArrayRef<Register> PartRegs,
+                   LLT LeftoverTy = LLT(), ArrayRef<Register> LeftoverRegs = {});
 
   /// Perform generic multiplication of values held in multiple registers.
   /// Generated instructions use only types NarrowTy and i1.
   /// Destination can be same or two times size of the source.
-  void multiplyRegisters(SmallVectorImpl<unsigned> &DstRegs,
-                         ArrayRef<unsigned> Src1Regs,
-                         ArrayRef<unsigned> Src2Regs, LLT NarrowTy);
+  void multiplyRegisters(SmallVectorImpl<Register> &DstRegs,
+                         ArrayRef<Register> Src1Regs,
+                         ArrayRef<Register> Src2Regs, LLT NarrowTy);
 
   LegalizeResult fewerElementsVectorImplicitDef(MachineInstr &MI,
                                                 unsigned TypeIdx, LLT NarrowTy);

@@ -66,7 +66,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
   assert(MFI.getObjectSize(FrameIndex) != 0 &&
          "We assume that variable-sized objects have already been lowered, "
          "and don't use FrameIndex operands.");
-  unsigned FrameRegister = getFrameRegister(MF);
+  Register FrameRegister = getFrameRegister(MF);
 
   // If this is the address operand of a load or store, make it relative to SP
   // and fold the frame offset directly in.
@@ -130,7 +130,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
   MI.getOperand(FIOperandNum).ChangeToRegister(FIRegOperand, /*IsDef=*/false);
 }
 
-unsigned
+Register
 WebAssemblyRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   static const unsigned Regs[2][2] = {
       /*            !isArch64Bit       isArch64Bit      */

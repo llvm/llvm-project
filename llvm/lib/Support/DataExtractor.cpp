@@ -157,12 +157,12 @@ uint64_t DataExtractor::getULEB128(uint32_t *offset_ptr) const {
     byte = Data[offset++];
     result |= uint64_t(byte & 0x7f) << shift;
     shift += 7;
-    if ((byte & 0x80) == 0)
-      break;
+    if ((byte & 0x80) == 0) {
+      *offset_ptr = offset;
+      return result;
+    }
   }
-
-  *offset_ptr = offset;
-  return result;
+  return 0;
 }
 
 int64_t DataExtractor::getSLEB128(uint32_t *offset_ptr) const {
@@ -178,14 +178,14 @@ int64_t DataExtractor::getSLEB128(uint32_t *offset_ptr) const {
     byte = Data[offset++];
     result |= uint64_t(byte & 0x7f) << shift;
     shift += 7;
-    if ((byte & 0x80) == 0)
-      break;
+    if ((byte & 0x80) == 0) {
+      // Sign bit of byte is 2nd high order bit (0x40)
+      if (shift < 64 && (byte & 0x40))
+        result |= -(1ULL << shift);
+
+      *offset_ptr = offset;
+      return result;
+    }
   }
-
-  // Sign bit of byte is 2nd high order bit (0x40)
-  if (shift < 64 && (byte & 0x40))
-    result |= -(1ULL << shift);
-
-  *offset_ptr = offset;
-  return result;
+  return 0;
 }

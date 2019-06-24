@@ -42,7 +42,7 @@ class CallLowering {
   virtual void anchor();
 public:
   struct ArgInfo {
-    unsigned Reg;
+    Register Reg;
     Type *Ty;
     ISD::ArgFlagsTy Flags;
     bool IsFixed;
@@ -77,19 +77,19 @@ public:
     /// direct SP manipulation, depending on the context. \p MPO
     /// should be initialized to an appropriate description of the
     /// address created.
-    virtual unsigned getStackAddress(uint64_t Size, int64_t Offset,
+    virtual Register getStackAddress(uint64_t Size, int64_t Offset,
                                      MachinePointerInfo &MPO) = 0;
 
     /// The specified value has been assigned to a physical register,
     /// handle the appropriate COPY (either to or from) and mark any
     /// relevant uses/defines as needed.
-    virtual void assignValueToReg(unsigned ValVReg, unsigned PhysReg,
+    virtual void assignValueToReg(Register ValVReg, Register PhysReg,
                                   CCValAssign &VA) = 0;
 
     /// The specified value has been assigned to a stack
     /// location. Load or store it there, with appropriate extension
     /// if necessary.
-    virtual void assignValueToAddress(unsigned ValVReg, unsigned Addr,
+    virtual void assignValueToAddress(Register ValVReg, Register Addr,
                                       uint64_t Size, MachinePointerInfo &MPO,
                                       CCValAssign &VA) = 0;
 
@@ -104,7 +104,7 @@ public:
       llvm_unreachable("Custom values not supported");
     }
 
-    unsigned extendRegister(unsigned ValReg, CCValAssign &VA);
+    Register extendRegister(Register ValReg, CCValAssign &VA);
 
     virtual bool assignArg(unsigned ValNo, MVT ValVT, MVT LocVT,
                            CCValAssign::LocInfo LocInfo, const ArgInfo &Info,
@@ -163,8 +163,8 @@ public:
   ///
   /// \return True if the lowering succeeds, false otherwise.
   virtual bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
-                           ArrayRef<unsigned> VRegs,
-                           unsigned SwiftErrorVReg) const {
+                           ArrayRef<Register> VRegs,
+                           Register SwiftErrorVReg) const {
     if (!supportSwiftError()) {
       assert(SwiftErrorVReg == 0 && "attempt to use unsupported swifterror");
       return lowerReturn(MIRBuilder, Val, VRegs);
@@ -175,7 +175,7 @@ public:
   /// This hook behaves as the extended lowerReturn function, but for targets
   /// that do not support swifterror value promotion.
   virtual bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
-                           ArrayRef<unsigned> VRegs) const {
+                           ArrayRef<Register> VRegs) const {
     return false;
   }
 
@@ -191,7 +191,7 @@ public:
   /// \return True if the lowering succeeded, false otherwise.
   virtual bool lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                     const Function &F,
-                                    ArrayRef<unsigned> VRegs) const {
+                                    ArrayRef<Register> VRegs) const {
     return false;
   }
 
@@ -216,7 +216,7 @@ public:
   virtual bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                          const MachineOperand &Callee, const ArgInfo &OrigRet,
                          ArrayRef<ArgInfo> OrigArgs,
-                         unsigned SwiftErrorVReg) const {
+                         Register SwiftErrorVReg) const {
     if (!supportSwiftError()) {
       assert(SwiftErrorVReg == 0 && "trying to use unsupported swifterror");
       return lowerCall(MIRBuilder, CallConv, Callee, OrigRet, OrigArgs);
@@ -254,8 +254,8 @@ public:
   ///
   /// \return true if the lowering succeeded, false otherwise.
   bool lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
-                 unsigned ResReg, ArrayRef<unsigned> ArgRegs,
-                 unsigned SwiftErrorVReg,
+                 Register ResReg, ArrayRef<Register> ArgRegs,
+                 Register SwiftErrorVReg,
                  std::function<unsigned()> GetCalleeReg) const;
 
 };

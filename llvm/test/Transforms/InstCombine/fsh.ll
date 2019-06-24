@@ -538,12 +538,13 @@ define i33 @expanded_fshr_multi_use(i33 %a) {
 
 declare i16 @llvm.fshl.i16(i16, i16, i16)
 declare i16 @llvm.fshr.i16(i16, i16, i16)
+declare <3 x i16> @llvm.fshl.v3i16(<3 x i16>, <3 x i16>, <3 x i16>)
 
 ; Special-case: rotate a 16-bit value left/right by 8-bits is bswap.
 
 define i16 @fshl_bswap(i16 %x) {
 ; CHECK-LABEL: @fshl_bswap(
-; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.fshl.i16(i16 [[X:%.*]], i16 [[X]], i16 8)
+; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.bswap.i16(i16 [[X:%.*]])
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %r = call i16 @llvm.fshl.i16(i16 %x, i16 %x, i16 8)
@@ -552,11 +553,53 @@ define i16 @fshl_bswap(i16 %x) {
 
 define i16 @fshr_bswap(i16 %x) {
 ; CHECK-LABEL: @fshr_bswap(
-; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.fshl.i16(i16 [[X:%.*]], i16 [[X]], i16 8)
+; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.bswap.i16(i16 [[X:%.*]])
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %r = call i16 @llvm.fshr.i16(i16 %x, i16 %x, i16 8)
   ret i16 %r
+}
+
+define <3 x i16> @fshl_bswap_vector(<3 x i16> %x) {
+; CHECK-LABEL: @fshl_bswap_vector(
+; CHECK-NEXT:    [[R:%.*]] = call <3 x i16> @llvm.bswap.v3i16(<3 x i16> [[X:%.*]])
+; CHECK-NEXT:    ret <3 x i16> [[R]]
+;
+  %r = call <3 x i16> @llvm.fshl.v3i16(<3 x i16> %x, <3 x i16> %x, <3 x i16> <i16 8, i16 8, i16 8>)
+  ret <3 x i16> %r
+}
+
+; Negative test
+
+define i16 @fshl_bswap_wrong_op(i16 %x, i16 %y) {
+; CHECK-LABEL: @fshl_bswap_wrong_op(
+; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.fshl.i16(i16 [[X:%.*]], i16 [[Y:%.*]], i16 8)
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %r = call i16 @llvm.fshl.i16(i16 %x, i16 %y, i16 8)
+  ret i16 %r
+}
+
+; Negative test
+
+define i16 @fshr_bswap_wrong_amount(i16 %x) {
+; CHECK-LABEL: @fshr_bswap_wrong_amount(
+; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.fshl.i16(i16 [[X:%.*]], i16 [[X]], i16 12)
+; CHECK-NEXT:    ret i16 [[R]]
+;
+  %r = call i16 @llvm.fshr.i16(i16 %x, i16 %x, i16 4)
+  ret i16 %r
+}
+
+; Negative test
+
+define i32 @fshl_bswap_wrong_width(i32 %x) {
+; CHECK-LABEL: @fshl_bswap_wrong_width(
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.fshl.i32(i32 [[X:%.*]], i32 [[X]], i32 8)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r = call i32 @llvm.fshl.i32(i32 %x, i32 %x, i32 8)
+  ret i32 %r
 }
 
 define i32 @fshl_mask_args_same1(i32 %a) {

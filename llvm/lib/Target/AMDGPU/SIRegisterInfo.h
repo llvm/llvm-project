@@ -70,7 +70,7 @@ public:
     return 100;
   }
 
-  unsigned getFrameRegister(const MachineFunction &MF) const override;
+  Register getFrameRegister(const MachineFunction &MF) const override;
 
   bool canRealignStack(const MachineFunction &MF) const override;
   bool requiresRegisterScavenging(const MachineFunction &Fn) const override;

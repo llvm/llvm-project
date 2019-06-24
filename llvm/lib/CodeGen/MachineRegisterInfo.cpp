@@ -154,7 +154,7 @@ unsigned MachineRegisterInfo::createIncompleteVirtualRegister(StringRef Name) {
 /// createVirtualRegister - Create and return a new virtual register in the
 /// function with the specified register class.
 ///
-unsigned
+Register
 MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass,
                                            StringRef Name) {
   assert(RegClass && "Cannot create register without RegClass!");
@@ -169,7 +169,7 @@ MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass,
   return Reg;
 }
 
-unsigned MachineRegisterInfo::cloneVirtualRegister(unsigned VReg,
+Register MachineRegisterInfo::cloneVirtualRegister(Register VReg,
                                                    StringRef Name) {
   unsigned Reg = createIncompleteVirtualRegister(Name);
   VRegInfo[Reg].first = VRegInfo[VReg].first;
@@ -184,7 +184,7 @@ void MachineRegisterInfo::setType(unsigned VReg, LLT Ty) {
   VRegToType[VReg] = Ty;
 }
 
-unsigned
+Register
 MachineRegisterInfo::createGenericVirtualRegister(LLT Ty, StringRef Name) {
   // New virtual register number.
   unsigned Reg = createIncompleteVirtualRegister(Name);

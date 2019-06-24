@@ -38,12 +38,12 @@ using EntryIndex = DbgValueHistoryMap::EntryIndex;
 // If @MI is a DBG_VALUE with debug value described by a
 // defined register, returns the number of this register.
 // In the other case, returns 0.
-static unsigned isDescribedByReg(const MachineInstr &MI) {
+static Register isDescribedByReg(const MachineInstr &MI) {
   assert(MI.isDebugValue());
   assert(MI.getNumOperands() == 4);
   // If location of variable is described using a register (directly or
   // indirectly), this register is always a first operand.
-  return MI.getOperand(0).isReg() ? MI.getOperand(0).getReg() : 0;
+  return MI.getOperand(0).isReg() ? MI.getOperand(0).getReg() : Register();
 }
 
 bool DbgValueHistoryMap::startDbgValue(InlinedEntity Var,

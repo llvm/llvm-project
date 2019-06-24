@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DebugLoc.h"
 #include <functional>
@@ -41,18 +42,18 @@ class SwiftErrorValueTracking {
 
   /// A map from swifterror value in a basic block to the virtual register it is
   /// currently represented by.
-  DenseMap<std::pair<const MachineBasicBlock *, const Value *>, unsigned>
+  DenseMap<std::pair<const MachineBasicBlock *, const Value *>, Register>
       VRegDefMap;
 
   /// A list of upward exposed vreg uses that need to be satisfied by either a
   /// copy def or a phi node at the beginning of the basic block representing
   /// the predecessor(s) swifterror value.
-  DenseMap<std::pair<const MachineBasicBlock *, const Value *>, unsigned>
+  DenseMap<std::pair<const MachineBasicBlock *, const Value *>, Register>
       VRegUpwardsUse;
 
   /// A map from instructions that define/use a swifterror value to the virtual
   /// register that represents that def/use.
-  llvm::DenseMap<PointerIntPair<const Instruction *, 1, bool>, unsigned>
+  llvm::DenseMap<PointerIntPair<const Instruction *, 1, bool>, Register>
       VRegDefUses;
 
   /// The swifterror argument of the current function.
@@ -76,20 +77,20 @@ public:
 
   /// Get or create the swifterror value virtual register in
   /// VRegDefMap for this basic block.
-  unsigned getOrCreateVReg(const MachineBasicBlock *, const Value *);
+  Register getOrCreateVReg(const MachineBasicBlock *, const Value *);
 
   /// Set the swifterror virtual register in the VRegDefMap for this
   /// basic block.
-  void setCurrentVReg(const MachineBasicBlock *MBB, const Value *, unsigned);
+  void setCurrentVReg(const MachineBasicBlock *MBB, const Value *, Register);
 
   /// Get or create the swifterror value virtual register for a def of a
   /// swifterror by an instruction.
-  unsigned getOrCreateVRegDefAt(const Instruction *, const MachineBasicBlock *,
+  Register getOrCreateVRegDefAt(const Instruction *, const MachineBasicBlock *,
                                 const Value *);
 
   /// Get or create the swifterror value virtual register for a use of a
   /// swifterror by an instruction.
-  unsigned getOrCreateVRegUseAt(const Instruction *, const MachineBasicBlock *,
+  Register getOrCreateVRegUseAt(const Instruction *, const MachineBasicBlock *,
                                 const Value *);
 
   /// Create initial definitions of swifterror values in the entry block of the

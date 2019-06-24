@@ -82,7 +82,7 @@ const uint32_t *SIRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
   }
 }
 
-unsigned SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const SIFrameLowering *TFI =
       MF.getSubtarget<GCNSubtarget>().getFrameLowering();
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();

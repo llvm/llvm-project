@@ -160,7 +160,7 @@ template <typename Class> struct bind_ty {
   }
 };
 
-inline bind_ty<unsigned> m_Reg(unsigned &R) { return R; }
+inline bind_ty<Register> m_Reg(Register &R) { return R; }
 inline bind_ty<MachineInstr *> m_MInstr(MachineInstr *&MI) { return MI; }
 inline bind_ty<LLT> m_Type(LLT &Ty) { return Ty; }
 

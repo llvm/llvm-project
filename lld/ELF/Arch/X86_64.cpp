@@ -349,7 +349,7 @@ void X86_64::relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
 void X86_64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_X86_64_8:
-    checkUInt(Loc, Val, 8, Type);
+    checkIntUInt(Loc, Val, 8, Type);
     *Loc = Val;
     break;
   case R_X86_64_PC8:
@@ -357,7 +357,7 @@ void X86_64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     *Loc = Val;
     break;
   case R_X86_64_16:
-    checkUInt(Loc, Val, 16, Type);
+    checkIntUInt(Loc, Val, 16, Type);
     write16le(Loc, Val);
     break;
   case R_X86_64_PC16:

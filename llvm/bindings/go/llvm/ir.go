@@ -89,6 +89,7 @@ func (c MemoryBuffer) IsNil() bool   { return c.C == nil }
 func (c PassManager) IsNil() bool    { return c.C == nil }
 func (c Use) IsNil() bool            { return c.C == nil }
 func (c Attribute) IsNil() bool      { return c.C == nil }
+func (c Metadata) IsNil() bool       { return c.C == nil }
 
 // helpers
 func llvmTypeRefPtr(t *Type) *C.LLVMTypeRef    { return (*C.LLVMTypeRef)(unsafe.Pointer(t)) }
@@ -1256,6 +1257,8 @@ func (bb BasicBlock) MoveAfter(pos BasicBlock)  { C.LLVMMoveBasicBlockAfter(bb.C
 // Operations on instructions
 func (v Value) EraseFromParentAsInstruction()      { C.LLVMInstructionEraseFromParent(v.C) }
 func (v Value) InstructionParent() (bb BasicBlock) { bb.C = C.LLVMGetInstructionParent(v.C); return }
+func (v Value) InstructionDebugLoc() (md Metadata) { md.C = C.LLVMInstructionGetDebugLoc(v.C); return }
+func (v Value) InstructionSetDebugLoc(md Metadata) { C.LLVMInstructionSetDebugLoc(v.C, md.C) }
 func (bb BasicBlock) FirstInstruction() (v Value)  { v.C = C.LLVMGetFirstInstruction(bb.C); return }
 func (bb BasicBlock) LastInstruction() (v Value)   { v.C = C.LLVMGetLastInstruction(bb.C); return }
 func NextInstruction(v Value) (rv Value)           { rv.C = C.LLVMGetNextInstruction(v.C); return }

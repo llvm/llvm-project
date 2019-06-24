@@ -126,6 +126,6 @@ void NVPTXRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
 }
 
-unsigned NVPTXRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+Register NVPTXRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return NVPTX::VRFrame;
 }

@@ -3009,7 +3009,7 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
 
     for (const auto &EQ : EQClasses) {
       for (const BugReport &Report : EQ) {
-        if (Report.getErrorNode() == N)
+        if (Report.getErrorNode()->getState() == N->getState())
           return true;
       }
     }
@@ -3109,11 +3109,7 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
       Indent(Out, Space, IsDot) << "\"program_state\": null";
     }
 
-    Out << "\\l}";
-    if (!N->succ_empty())
-      Out << ',';
-    Out << "\\l";
-
+    Out << "\\l}\\l";
     return Out.str();
   }
 };

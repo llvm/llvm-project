@@ -297,8 +297,11 @@ typedef enum memory_scope {
  * image memory.
  */
 #define CLK_IMAGE_MEM_FENCE  0x04
-#endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
+#ifndef ATOMIC_VAR_INIT
+#define ATOMIC_VAR_INIT(x) (x)
+#endif //ATOMIC_VAR_INIT
+#define ATOMIC_FLAG_INIT 0
 
 // enum values aligned with what clang uses in EmitAtomicExpr()
 typedef enum memory_order
@@ -309,6 +312,8 @@ typedef enum memory_order
   memory_order_acq_rel = __ATOMIC_ACQ_REL,
   memory_order_seq_cst = __ATOMIC_SEQ_CST
 } memory_order;
+
+#endif //__OPENCL_C_VERSION__ >= CL_VERSION_2_0
 
 // OpenCL v1.1 s6.11.3, v1.2 s6.12.14, v2.0 s6.13.14 - Image Read and Write Functions
 

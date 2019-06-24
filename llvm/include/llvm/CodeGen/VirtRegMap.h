@@ -97,8 +97,8 @@ class TargetInstrInfo;
 
     /// returns the physical register mapped to the specified
     /// virtual register
-    unsigned getPhys(unsigned virtReg) const {
-      assert(TargetRegisterInfo::isVirtualRegister(virtReg));
+    Register getPhys(Register virtReg) const {
+      assert(virtReg.isVirtual());
       return Virt2PhysMap[virtReg];
     }
 

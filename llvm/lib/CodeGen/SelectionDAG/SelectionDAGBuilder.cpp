@@ -7879,7 +7879,7 @@ static void GetRegistersForValue(SelectionDAG &DAG, const SDLoc &DL,
 
   for (; NumRegs; --NumRegs, ++I) {
     assert(I != RC->end() && "Ran out of registers to allocate!");
-    auto R = (AssignedReg) ? *I : RegInfo.createVirtualRegister(RC);
+    Register R = AssignedReg ? Register(*I) : RegInfo.createVirtualRegister(RC);
     Regs.push_back(R);
   }
 
