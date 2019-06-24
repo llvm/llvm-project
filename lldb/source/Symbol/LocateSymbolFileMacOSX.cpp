@@ -9,6 +9,7 @@
 #include "lldb/Symbol/LocateSymbolFile.h"
 
 #include <dirent.h>
+#include <dlfcn.h>
 #include <pwd.h>
 
 #include <CoreFoundation/CoreFoundation.h>
@@ -37,14 +38,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
-#if !defined(__arm__) && !defined(__arm64__) &&                                \
-    !defined(__aarch64__) // No DebugSymbols on the iOS devices
-extern "C" {
-
-CFURLRef DBGCopyFullDSYMURLForUUID(CFUUIDRef uuid, CFURLRef exec_url);
-CFDictionaryRef DBGCopyDSYMPropertyLists(CFURLRef dsym_url);
-}
-#endif
+static CFURLRef (*g_dlsym_DBGCopyFullDSYMURLForUUID)(CFUUIDRef uuid, CFURLRef exec_url) = nullptr;
+static CFDictionaryRef (*g_dlsym_DBGCopyDSYMPropertyLists)(CFURLRef dsym_url) = nullptr;
 
 int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
                                        ModuleSpec &return_module_spec) {
@@ -61,8 +56,19 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
 
   int items_found = 0;
 
-#if !defined(__arm__) && !defined(__arm64__) &&                                \
-    !defined(__aarch64__) // No DebugSymbols on the iOS devices
+  if (g_dlsym_DBGCopyFullDSYMURLForUUID == nullptr ||
+      g_dlsym_DBGCopyDSYMPropertyLists == nullptr) {
+    void *handle = dlopen ("/System/Library/PrivateFrameworks/DebugSymbols.framework/DebugSymbols", RTLD_LAZY | RTLD_LOCAL);
+    if (handle) {
+      g_dlsym_DBGCopyFullDSYMURLForUUID = (CFURLRef (*)(CFUUIDRef, CFURLRef)) dlsym (handle, "DBGCopyFullDSYMURLForUUID");
+      g_dlsym_DBGCopyDSYMPropertyLists = (CFDictionaryRef (*)(CFURLRef)) dlsym (handle, "DBGCopyDSYMPropertyLists");
+    }
+  }
+
+  if (g_dlsym_DBGCopyFullDSYMURLForUUID == nullptr ||
+      g_dlsym_DBGCopyDSYMPropertyLists == nullptr) {
+    return items_found;
+  }
 
   const UUID *uuid = module_spec.GetUUIDPtr();
   const ArchSpec *arch = module_spec.GetArchitecturePtr();
@@ -89,7 +95,7 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
         }
 
         CFCReleaser<CFURLRef> dsym_url(
-            ::DBGCopyFullDSYMURLForUUID(module_uuid_ref.get(), exec_url.get()));
+            g_dlsym_DBGCopyFullDSYMURLForUUID(module_uuid_ref.get(), exec_url.get()));
         char path[PATH_MAX];
 
         if (dsym_url.get()) {
@@ -125,7 +131,7 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
           }
 
           CFCReleaser<CFDictionaryRef> dict(
-              ::DBGCopyDSYMPropertyLists(dsym_url.get()));
+              g_dlsym_DBGCopyDSYMPropertyLists(dsym_url.get()));
           CFDictionaryRef uuid_dict = NULL;
           if (dict.get()) {
             CFCString uuid_cfstr(uuid->GetAsString().c_str());
@@ -236,8 +242,6 @@ int LocateMacOSXFilesUsingDebugSymbols(const ModuleSpec &module_spec,
       }
     }
   }
-#endif // #if !defined (__arm__) && !defined (__arm64__) && !defined
-       // (__aarch64__)
 
   return items_found;
 }

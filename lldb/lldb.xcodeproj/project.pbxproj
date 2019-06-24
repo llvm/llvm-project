@@ -1981,7 +1981,6 @@
 		6D0F613C1C80AA8900A4ECEE /* DebugMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DebugMacros.h; path = include/lldb/Symbol/DebugMacros.h; sourceTree = "<group>"; };
 		AF116BED20CF234B0071093F /* DebugNamesDWARFIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DebugNamesDWARFIndex.cpp; sourceTree = "<group>"; };
 		AF116BEE20CF234B0071093F /* DebugNamesDWARFIndex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DebugNamesDWARFIndex.h; sourceTree = "<group>"; };
-		265ABF6210F42EE900531910 /* DebugSymbols.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DebugSymbols.framework; path = /System/Library/PrivateFrameworks/DebugSymbols.framework; sourceTree = "<absolute>"; };
 		263664921140A4930075843B /* Debugger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = Debugger.cpp; path = source/Core/Debugger.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		263664941140A4C10075843B /* Debugger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = Debugger.h; path = include/lldb/Core/Debugger.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		4997E6811A3B74AE00733D2F /* DeclVendor.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DeclVendor.h; path = include/lldb/Symbol/DeclVendor.h; sourceTree = "<group>"; };
@@ -6191,7 +6190,6 @@
 			isa = PBXGroup;
 			children = (
 				26F5C39010F3FA26009D5894 /* CoreFoundation.framework */,
-				265ABF6210F42EE900531910 /* DebugSymbols.framework */,
 				260C876910F538E700BB2B04 /* Foundation.framework */,
 				26709E311964A34000B94724 /* LaunchServices.framework */,
 				26F5C32A10F3DFDD009D5894 /* libedit.dylib */,
@@ -9713,8 +9711,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -9753,8 +9749,6 @@
 					"$(LLVM_BUILD_DIR)/archives.txt",
 					"-framework",
 					Foundation,
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Security,
 					"-framework",
@@ -9827,6 +9821,15 @@
 					"-Wl,-rpath,@loader_path/../../System/Library/PrivateFrameworks",
 					"-filelist",
 					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-framework",
+					Foundation,
+					"-framework",
+					Security,
+					"-framework",
+					CoreServices,
+					"-framework",
+					ApplicationServices,
+					"$(LLDB_GTESTS_LDFLAGS)",
 				);
 				PRODUCT_NAME = lldb;
 				VERSIONING_SYSTEM = "apple-generic";
@@ -9899,8 +9902,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -9970,10 +9971,20 @@
 					"$(LLDB_GTESTS_CFLAGS)",
 					"-DGTEST_HAS_RTTI=0",
 				);
-				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = (
-					"-fno-rtti",
-					"-Wglobal-constructors",
-					"$(OTHER_CFLAGS)",
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-framework",
+					Foundation,
+					"-framework",
+					Security,
+					"-framework",
+					CoreServices,
+					"-framework",
+					ApplicationServices,
+					"$(LLDB_GTESTS_LDFLAGS)",
+					"$(LLDB_COMPRESSION_LDFLAGS)",
 				);
 				OTHER_LDFLAGS = "";
 				PATH = /opt/local/bin;
@@ -10006,8 +10017,6 @@
 				INFOPLIST_PREPROCESSOR_DEFINITIONS = (
 					"-lobjc",
 					"-lpython",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Carbon,
 					"-framework",
@@ -10051,7 +10060,6 @@
 					"-lpython2.7",
 					"-lxml2",
 					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -10244,8 +10252,6 @@
 					"-lpython2.7",
 					"-lxml2",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Foundation,
 					"-framework",
 					Carbon,
@@ -10297,8 +10303,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -10337,8 +10341,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -10376,8 +10378,6 @@
 					"$(LLVM_BUILD_DIR)/archives.txt",
 					"-framework",
 					Foundation,
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Security,
 					"-framework",
@@ -10431,8 +10431,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -10485,8 +10483,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -10533,8 +10529,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -10579,8 +10573,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -10617,8 +10609,6 @@
 					"$(LLVM_BUILD_DIR)/archives.txt",
 					"-framework",
 					Foundation,
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Security,
 					"-framework",
@@ -10681,8 +10671,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -10726,8 +10714,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -10767,8 +10753,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -10804,8 +10788,6 @@
 					"$(LLVM_BUILD_DIR)/archives.txt",
 					"-framework",
 					Foundation,
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Security,
 					"-framework",
@@ -10843,8 +10825,6 @@
 					"$(LLVM_BUILD_DIR)/archives.txt",
 					"-framework",
 					Foundation,
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Security,
 					"-framework",
@@ -10963,8 +10943,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -11045,8 +11023,6 @@
 					"$(LLVM_BUILD_DIR)/archives.txt",
 					"-framework",
 					Foundation,
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Security,
 					"-framework",
@@ -11701,8 +11677,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -11968,8 +11942,6 @@
 					"-lobjc",
 					"-lpython",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Carbon,
 					"-framework",
 					Foundation,
@@ -12017,8 +11989,6 @@
 					"-lpython2.7",
 					"-lxml2",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Foundation,
 					"-framework",
 					Carbon,
@@ -12054,8 +12024,6 @@
 				INFOPLIST_PREPROCESSOR_DEFINITIONS = (
 					"-lobjc",
 					"-lpython",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Carbon,
 					"-framework",
@@ -12103,8 +12071,6 @@
 					"-lpython2.7",
 					"-lxml2",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Foundation,
 					"-framework",
 					Carbon,
@@ -12135,8 +12101,6 @@
 				INFOPLIST_PREPROCESSOR_DEFINITIONS = (
 					"-lobjc",
 					"-lpython",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Carbon,
 					"-framework",
@@ -12184,8 +12148,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -12701,8 +12663,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -12802,8 +12762,6 @@
 					"-lobjc",
 					"-lpython",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Carbon,
 					"-framework",
 					Foundation,
@@ -12848,8 +12806,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -12935,8 +12891,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -12974,8 +12928,6 @@
 					"$(LLDB_PATH_TO_LLVM_BUILD)/archives.txt",
 					"-framework",
 					Foundation,
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Security,
 					"-framework",
@@ -13400,8 +13352,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -13504,8 +13454,6 @@
 					"-lobjc",
 					"-lpython",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Carbon,
 					"-framework",
 					Foundation,
@@ -13551,8 +13499,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -13815,8 +13761,6 @@
 					"-lpython2.7",
 					"-lxml2",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Foundation,
 					"-framework",
 					Carbon,
@@ -13923,8 +13867,6 @@
 					"-lpython2.7",
 					"-lxml2",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Foundation,
 					"-framework",
 					Carbon,
@@ -14000,8 +13942,6 @@
 					"-lpython2.7",
 					"-lxml2",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Foundation,
 					"-framework",
 					Carbon,
@@ -14071,8 +14011,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -14150,8 +14088,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -14387,7 +14323,20 @@
 				"LLVM_BUILD_DIR_ARCH[sdk=appletvos*]" = "llvm-appletvos-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=iphoneos*]" = "llvm-iphoneos-x86_64/";
 				"LLVM_BUILD_DIR_ARCH[sdk=watchos*]" = "llvm-watchos-x86_64/";
-				"OTHER_CFLAGS[sdk=iphoneos*]" = (
+				INFOPLIST_PREPROCESSOR_DEFINITIONS = (
+					"-lobjc",
+					"-lpython",
+					"-framework",
+					Carbon,
+					"-framework",
+					Foundation,
+					"-framework",
+					AppKit,
+					"-v",
+					"-Wl,-v",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
 					"$(inherited)",
 					"-Wparentheses",
 				);
@@ -14420,10 +14369,9 @@
 					"-lpython2.7",
 					"-filelist",
 					"$(LLDB_PATH_TO_LLVM_BUILD)/archives.txt",
+					"-lxml2",
 					"-framework",
 					Foundation,
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Security,
 					"-framework",
@@ -14469,6 +14417,34 @@
 					"$(inherited)",
 					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
 				);
+				GCC_ENABLE_CPP_RTTI = NO;
+				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
+				INFOPLIST_PREPROCESSOR_DEFINITIONS = (
+					"-lobjc",
+					"-lpython",
+					"-framework",
+					Carbon,
+					"-framework",
+					Foundation,
+					"-framework",
+					AppKit,
+					"-v",
+					"-Wl,-v",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
+					"$(inherited)",
+				);
+				MACH_O_TYPE = mh_execute;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-Wparentheses",
+				);
+				"OTHER_CFLAGS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					"-Wparentheses",
+				);
 				GCC_INLINES_ARE_PRIVATE_EXTERN = NO;
 				HEADER_SEARCH_PATHS = /usr/include/libxml2;
 				LLDB_COMPRESSION_LDFLAGS = "-lcompression";
@@ -14476,6 +14452,17 @@
 				OTHER_CFLAGS = (
 					"$(inherited)",
 					"-DSWIFT_ENABLE_OBJECT_LITERALS",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
+					"-lpython2.7",
+					"-lxml2",
+					"-framework",
+					Foundation,
+					"-framework",
+					Carbon,
+					"-framework",
+					Security,
 				);
 				OTHER_CPLUSPLUSFLAGS = (
 					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
@@ -14525,8 +14512,6 @@
 					"-lobjc",
 					"-lpython",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Carbon,
 					"-framework",
 					Foundation,
@@ -14565,8 +14550,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -14753,8 +14736,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -15036,8 +15017,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -15142,8 +15121,6 @@
 					"-lobjc",
 					"-lpython",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Carbon,
 					"-framework",
 					Foundation,
@@ -15182,8 +15159,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -15240,6 +15215,42 @@
 				LD_RUNPATH_SEARCH_PATHS = "${REPL_SWIFT_RPATH}";
 				OTHER_CFLAGS = "-Wparentheses";
 				OTHER_LDFLAGS = "$(inherited)";
+				LIBRARY_SEARCH_PATHS = (
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
+					"$(inherited)",
+				);
+				MTL_ENABLE_DEBUG_INFO = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-Wparentheses",
+				);
+				"OTHER_CFLAGS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					"-Wparentheses",
+				);
+				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
+					"-lpython2.7",
+					"-lxml2",
+					"-framework",
+					Foundation,
+					"-framework",
+					Carbon,
+					"-framework",
+					Security,
+				);
+				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-lxml2",
+					"-framework",
+					Foundation,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REPL_SWIFT_RPATH = "@executable_path/../../../../../Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift/macosx @executable_path/../../../../../../usr/lib/swift/macosx @executable_path/../../../../../../../usr/lib/swift/macosx @executable_path/LLDB.framework/Resources/Swift/macosx @executable_path/Swift/macosx";
 				SDKROOT = macosx;
@@ -15254,6 +15265,60 @@
 		94DF55EB1ADDBF2C0030B937 /* CustomSwift-Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				EXPORTED_SYMBOLS_FILE = tools/argdumper/argdumper.exports;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+				);
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				LIBRARY_SEARCH_PATHS = (
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
+					"$(inherited)",
+				);
+				MTL_ENABLE_DEBUG_INFO = YES;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-Wparentheses",
+				);
+				"OTHER_CFLAGS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					"-Wparentheses",
+				);
+				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
+					"-lpython2.7",
+					"-lxml2",
+					"-framework",
+					Foundation,
+					"-framework",
+					Carbon,
+					"-framework",
+					Security,
+				);
+				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-lxml2",
+					"-framework",
+					Foundation,
+				);
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -15279,6 +15344,47 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				OTHER_LDFLAGS = (
 					"$(inherited)",
+        );
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				EXPORTED_SYMBOLS_FILE = tools/argdumper/argdumper.exports;
+				FRAMEWORK_SEARCH_PATHS = (
+					"$(inherited)",
+					"\"$(SYSTEM_LIBRARY_DIR)/PrivateFrameworks\"",
+				);
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				LIBRARY_SEARCH_PATHS = (
+					"$(LLVM_BUILD_DIR)/$(LLVM_BUILD_DIR_ARCH)",
+					"$(inherited)",
+				);
+				MTL_ENABLE_DEBUG_INFO = NO;
+				OTHER_CFLAGS = (
+					"$(inherited)",
+					"-I/System/Library/Frameworks/Python.framework/Versions/2.7/include/python2.7",
+					"-Wparentheses",
+				);
+				"OTHER_CFLAGS[sdk=iphoneos*]" = (
+					"$(inherited)",
+					"-Wparentheses",
+				);
+				"OTHER_CPLUSPLUSFLAGS[sdk=iphoneos*]" = "$(OTHER_CFLAGS)";
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-filelist",
+					"$(LLVM_BUILD_DIR)/archives.txt",
+					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
+					"-lpython2.7",
+					"-lxml2",
+					"-framework",
+					Foundation,
+					"-framework",
+					Carbon,
+					"-framework",
+					Security,
+				);
+				"OTHER_LDFLAGS[sdk=iphoneos*][arch=*]" = (
 					"-filelist",
 					"$(LLDB_PATH_TO_LLVM_BUILD)/archives.txt",
 					"-sectcreate",
@@ -15337,8 +15443,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
