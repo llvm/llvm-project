@@ -241,6 +241,7 @@ struct RecordInfo : public SymbolInfo {
   TagTypeKind TagType = TagTypeKind::TTK_Struct; // Type of this record
                                                  // (struct, class, union,
                                                  // interface).
+  bool IsTypeDef = false; // Indicates if record was declared using typedef
   llvm::SmallVector<MemberTypeInfo, 4>
       Members;                             // List of info about record members.
   llvm::SmallVector<Reference, 4> Parents; // List of base/parent records

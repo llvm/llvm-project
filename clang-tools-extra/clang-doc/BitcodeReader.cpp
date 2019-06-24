@@ -167,6 +167,8 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
     return decodeRecord(R, I->Loc, Blob);
   case RECORD_TAG_TYPE:
     return decodeRecord(R, I->TagType, Blob);
+  case RECORD_IS_TYPE_DEF:
+    return decodeRecord(R, I->IsTypeDef, Blob);
   default:
     return llvm::make_error<llvm::StringError>(
         "Invalid field for RecordInfo.\n", llvm::inconvertibleErrorCode());
