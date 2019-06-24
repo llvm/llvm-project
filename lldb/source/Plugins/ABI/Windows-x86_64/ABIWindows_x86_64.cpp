@@ -1653,8 +1653,6 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
       uint32_t field_byte_width = (uint32_t) (*field_compiler_type.GetByteSize(&thread));
       uint32_t field_byte_offset = aggregate_field_offsets[idx];
 
-      uint32_t field_bit_width = field_byte_width * 8;
-
       // this is unlikely w/o the overall size being greater than 8 bytes
       // For now, return a nullptr return value object.
       if (used_bytes >= 8 || used_bytes + field_byte_width > 8) {
@@ -1663,8 +1661,6 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
 
       DataExtractor *copy_from_extractor = nullptr;
       uint32_t copy_from_offset = 0;
-      const uint32_t field_byte_flags = field_compiler_type.GetTypeInfo();
-
       if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
           field_compiler_type.IsPointerType() ||
           field_compiler_type.IsFloatingPointType(count, is_complex)) {
