@@ -170,11 +170,11 @@ int main(int argc, char *argv[]) {
                                        &count);
   checkError(status, "amd_comgr_action_data_count");
 
-  // Our 2 sources, plus 3 language libraries, plus 1 device library, plus 4
+  // Our 2 sources, plus 3 language libraries, plus 1 device library, plus 5
   // features libraries.
-  if (count != 10) {
+  if (count != 11) {
     printf("AMD_COMGR_ACTION_ADD_DEVICE_LIBRARIES Failed: "
-           "produced %zu BC objects (expected 10)\n",
+           "produced %zu BC objects (expected 11)\n",
            count);
     exit(1);
   }
