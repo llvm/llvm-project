@@ -7819,15 +7819,15 @@ defm VPMASKMOVQ : avx2_pmovmask<"vpmaskmovq",
 multiclass maskmov_lowering<string InstrStr, RegisterClass RC, ValueType VT,
                           ValueType MaskVT, string BlendStr, ValueType ZeroVT> {
     // masked store
-    def: Pat<(X86mstore (VT RC:$src), addr:$ptr, (MaskVT RC:$mask)),
+    def: Pat<(masked_store (VT RC:$src), addr:$ptr, (MaskVT RC:$mask)),
              (!cast<Instruction>(InstrStr#"mr") addr:$ptr, RC:$mask, RC:$src)>;
     // masked load
-    def: Pat<(VT (X86mload addr:$ptr, (MaskVT RC:$mask), undef)),
+    def: Pat<(VT (masked_load addr:$ptr, (MaskVT RC:$mask), undef)),
              (!cast<Instruction>(InstrStr#"rm") RC:$mask, addr:$ptr)>;
-    def: Pat<(VT (X86mload addr:$ptr, (MaskVT RC:$mask),
+    def: Pat<(VT (masked_load addr:$ptr, (MaskVT RC:$mask),
                               (VT immAllZerosV))),
              (!cast<Instruction>(InstrStr#"rm") RC:$mask, addr:$ptr)>;
-    def: Pat<(VT (X86mload addr:$ptr, (MaskVT RC:$mask), (VT RC:$src0))),
+    def: Pat<(VT (masked_load addr:$ptr, (MaskVT RC:$mask), (VT RC:$src0))),
              (!cast<Instruction>(BlendStr#"rr")
                  RC:$src0,
                  (VT (!cast<Instruction>(InstrStr#"rm") RC:$mask, addr:$ptr)),

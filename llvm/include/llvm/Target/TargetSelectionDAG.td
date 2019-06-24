@@ -580,9 +580,9 @@ def atomic_load      : SDNode<"ISD::ATOMIC_LOAD", SDTAtomicLoad,
 def atomic_store     : SDNode<"ISD::ATOMIC_STORE", SDTAtomicStore,
                     [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
-def masked_store : SDNode<"ISD::MSTORE",  SDTMaskedStore,
+def masked_st    : SDNode<"ISD::MSTORE",  SDTMaskedStore,
                        [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def masked_load  : SDNode<"ISD::MLOAD",  SDTMaskedLoad,
+def masked_ld    : SDNode<"ISD::MLOAD",  SDTMaskedLoad,
                        [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 
 // Do not use ld, st directly. Use load, extload, sextload, zextload, store,
