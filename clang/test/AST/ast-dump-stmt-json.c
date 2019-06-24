@@ -139,20 +139,19 @@ void TestMiscStmts(void) {
 
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 5,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 3
+// CHECK-NEXT:   "line": 3,
+// CHECK-NEXT:   "col": 5,
+// CHECK-NEXT:   "tokLen": 12
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 3
+// CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 20,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 3
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestLocation",
@@ -167,13 +166,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 20,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 3
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 20,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 3
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -188,20 +185,18 @@ void TestMiscStmts(void) {
 
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 4,
 // CHECK-NEXT:   "col": 5,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 4
+// CHECK-NEXT:   "tokLen": 10
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 4
+// CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 24,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 4
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestIndent",
@@ -216,13 +211,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 18,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 24,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -237,13 +230,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 18,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 18,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -258,13 +249,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 22,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 24,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -278,13 +267,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -304,14 +291,14 @@ void TestMiscStmts(void) {
 // CHECK:  "kind": "CompoundStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "line": 6,
 // CHECK-NEXT:    "col": 21,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 6
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 9,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 9
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -320,14 +307,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "DeclStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 7,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 7
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 12,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 7
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -336,19 +322,16 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "VarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 7,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 7
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 7
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 7
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "x",
@@ -363,13 +346,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 7
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 7
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -387,14 +368,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "DeclStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 8,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 8
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 8
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -403,19 +383,16 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "VarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 7,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 8
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "y",
@@ -428,19 +405,16 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "VarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 10,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 8
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "z",
@@ -456,20 +430,18 @@ void TestMiscStmts(void) {
 
 // CHECK:  "kind": "VarDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 11,
 // CHECK-NEXT:   "col": 5,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 11
+// CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 11
+// CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 32,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 11
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestOpaqueValueExpr",
@@ -484,13 +456,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 27,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 11
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 32,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 11
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -504,13 +474,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 27,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 27,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -525,13 +493,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 27,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 27,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -545,13 +511,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 27,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 11
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 27,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 11
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -568,13 +532,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 27,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 27,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -588,13 +550,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 27,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 11
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 27,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 11
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -611,13 +571,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 32,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 32,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -635,14 +593,14 @@ void TestMiscStmts(void) {
 // CHECK:  "kind": "CompoundStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "line": 13,
 // CHECK-NEXT:    "col": 34,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 13
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 25,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 25
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -651,14 +609,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "DeclStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 14,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 14
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 14,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 14
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -667,19 +624,16 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "VarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 14
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 14
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 13,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 14
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isUsed": true,
@@ -695,13 +649,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 13,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 14
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 13,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 14
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -716,13 +668,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 13,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 14
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 13,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 14
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -742,14 +692,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "DeclStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 15,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 13,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -758,19 +707,16 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "VarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 7,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 15
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 15
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 12,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 15
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isUsed": true,
@@ -786,13 +732,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 15
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 15
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -810,14 +754,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "UnaryOperator",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 17,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 17
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 17
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -834,13 +777,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 17
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 17
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -863,14 +804,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "UnaryOperator",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 18,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 18
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 18
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -886,13 +826,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 18
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 18
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -915,14 +853,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "UnaryOperator",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 20,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 20
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 20
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -939,13 +876,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 20
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 20
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -960,13 +895,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 20
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 20
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -981,13 +914,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 20
+// CHECK-NEXT:            "tokLen": 2
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 20
+// CHECK-NEXT:            "tokLen": 2
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1014,14 +945,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "UnaryOperator",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 21,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 21
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 21
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1037,13 +967,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 21
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 21
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1058,13 +986,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 21
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 21
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1089,14 +1015,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "UnaryOperator",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 23,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 23
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 23
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1113,13 +1038,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 23
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 23
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1134,13 +1057,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 23
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 23
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1155,13 +1076,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 23
+// CHECK-NEXT:            "tokLen": 2
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 23
+// CHECK-NEXT:            "tokLen": 2
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1188,14 +1107,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "UnaryOperator",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 24,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 24
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 24
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1212,13 +1130,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 24
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 24
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1233,13 +1149,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 24
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 24
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1267,13 +1181,12 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 45,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 27
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 34,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 34
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -1282,14 +1195,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "GenericSelectionExpr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 28,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 28
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 28
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1303,13 +1215,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 12,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 28
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 12,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 28
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1324,13 +1234,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 28
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 28
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1373,13 +1281,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 28
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 28
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1397,14 +1303,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "GenericSelectionExpr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 29,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 29
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 36,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 29
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1418,13 +1323,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 12,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 29
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 12,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 29
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1439,13 +1342,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 29
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 29
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1488,13 +1389,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 29
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 29
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1514,13 +1413,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 35,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 29
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 35,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 29
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1538,14 +1435,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "GenericSelectionExpr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 30,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 30
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 36,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 30
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1559,13 +1455,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 12,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 30
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 12,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 30
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1580,13 +1474,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 30
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 30
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1621,13 +1513,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 25,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 30
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 25,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 30
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1655,13 +1545,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 34,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 30
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 34,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 30
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1679,14 +1567,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "GenericSelectionExpr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 31,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 31
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 50,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 31
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1700,13 +1587,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 12,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 31
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 12,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 31
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1721,13 +1606,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 31
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 31
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1770,13 +1653,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 31
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 31
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1803,13 +1684,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 33,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 31
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 33,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 31
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1829,13 +1708,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 47,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 31
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 47,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 31
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1853,14 +1730,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "DeclStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 33,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 33
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 32,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 33
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -1869,19 +1745,16 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "VarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 7,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 33
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 33
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 31,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 33
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "j",
@@ -1896,13 +1769,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 33
+// CHECK-NEXT:          "tokLen": 8
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 31,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 33
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1916,13 +1787,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 20,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 33
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 20,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 33
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1937,13 +1806,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 20,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 33
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 20,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 33
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -1986,13 +1853,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 29,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 33
+// CHECK-NEXT:              "tokLen": 2
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 29,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 33
+// CHECK-NEXT:              "tokLen": 2
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2016,14 +1881,14 @@ void TestMiscStmts(void) {
 // CHECK:  "kind": "CompoundStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "line": 36,
 // CHECK-NEXT:    "col": 30,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 36
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 50,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 50
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -2032,14 +1897,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "LabelStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 39,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 39
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 40,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 40
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "label1",
@@ -2051,13 +1916,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 40
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 40
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -2068,14 +1931,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "GotoStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 42,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 42
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 42
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "targetLabelDeclId": "0x{{.*}}"
@@ -2085,14 +1947,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "LabelStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 44,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 44
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 45,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 45
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "label2",
@@ -2104,13 +1966,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 45
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 45
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2126,14 +1986,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "DeclStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 47,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 47
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 47
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -2142,19 +2001,16 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "VarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 9,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 47
+// CHECK-NEXT:       "tokLen": 3
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 47
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 17,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 47
+// CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isUsed": true,
@@ -2170,13 +2026,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 15,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 47
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 17,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 47
+// CHECK-NEXT:          "tokLen": 6
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2195,14 +2049,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "IndirectGotoStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 49,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 49
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 49
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -2212,13 +2065,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 49
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 49
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2233,13 +2084,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 9,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 49
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 9,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 49
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2254,13 +2103,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 9,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 49
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 9,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 49
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2290,13 +2137,12 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 24,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 52
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 64,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 64
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -2305,14 +2151,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "SwitchStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 53,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 53
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 63,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 63
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -2321,14 +2167,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 53,
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 53
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 53
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2343,13 +2188,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 53
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 53
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2373,13 +2216,12 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 14,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 53
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 63,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 63
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -2388,14 +2230,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "kind": "CaseStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 54,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 54
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "line": 55,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 55
+// CHECK-NEXT:          "tokLen": 5
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -2404,14 +2246,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "kind": "ConstantExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "line": 54,
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 54
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 54
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2425,13 +2266,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 8,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 54
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 8,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 54
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2447,14 +2286,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "kind": "BreakStmt",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "line": 55,
 // CHECK-NEXT:            "col": 5,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 55
+// CHECK-NEXT:            "tokLen": 5
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 5,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 55
+// CHECK-NEXT:            "tokLen": 5
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
@@ -2465,14 +2303,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "kind": "CaseStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 56,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 56
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "line": 58,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 58
+// CHECK-NEXT:          "tokLen": 5
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -2481,14 +2319,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "kind": "ConstantExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "line": 56,
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 56
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 56
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2502,13 +2339,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 8,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 56
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 8,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 56
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2524,14 +2359,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "kind": "CaseStmt",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "line": 57,
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 57
+// CHECK-NEXT:            "tokLen": 4
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "line": 58,
 // CHECK-NEXT:            "col": 5,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 58
+// CHECK-NEXT:            "tokLen": 5
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "inner": [
@@ -2540,14 +2375,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:            "kind": "ConstantExpr",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "line": 57,
 // CHECK-NEXT:              "col": 8,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 57
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 8,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 57
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2561,13 +2395,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 8,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 57
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 8,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 57
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -2583,14 +2415,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:            "kind": "BreakStmt",
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
+// CHECK-NEXT:              "line": 58,
 // CHECK-NEXT:              "col": 5,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 58
+// CHECK-NEXT:              "tokLen": 5
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 5,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 58
+// CHECK-NEXT:              "tokLen": 5
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }
 // CHECK-NEXT:           }
@@ -2603,14 +2434,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "kind": "DefaultStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 59,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 59
+// CHECK-NEXT:          "tokLen": 7
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "line": 60,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 60
+// CHECK-NEXT:          "tokLen": 5
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -2620,13 +2451,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 5,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 60
+// CHECK-NEXT:            "tokLen": 5
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 5,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 60
+// CHECK-NEXT:            "tokLen": 5
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
@@ -2637,14 +2466,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "kind": "CaseStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 61,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 61
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "line": 62,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 62
+// CHECK-NEXT:          "tokLen": 5
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isGNURange": true,
@@ -2654,14 +2483,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "kind": "ConstantExpr",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "line": 61,
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 61
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 61
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2675,13 +2503,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 8,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 61
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 8,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 61
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2698,13 +2524,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 61
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 61
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2718,13 +2542,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 61
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 61
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2740,14 +2562,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "kind": "BreakStmt",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "line": 62,
 // CHECK-NEXT:            "col": 5,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 62
+// CHECK-NEXT:            "tokLen": 5
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 5,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 62
+// CHECK-NEXT:            "tokLen": 5
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
@@ -2765,13 +2586,12 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 22,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 66
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 91,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 91
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -2780,14 +2600,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "IfStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 67,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 67
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 68,
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 68
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -2796,14 +2616,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 67,
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 67
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 67
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2818,13 +2637,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 67
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 67
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2847,14 +2664,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "NullStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 68,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 68
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 68
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -2865,14 +2681,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "IfStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 70,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 70
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 70
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -2882,13 +2697,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 70
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 70
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2903,13 +2716,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 70
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 70
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2933,13 +2744,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 70
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 70
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -2950,14 +2759,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "IfStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 72,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 72
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 75,
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 75
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "hasElse": true,
@@ -2967,14 +2776,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 72,
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 72
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 72
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2989,13 +2797,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 72
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 72
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3018,14 +2824,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "NullStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 73,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 73
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 73
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     },
@@ -3034,14 +2839,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "NullStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 75,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 75
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 75
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -3052,14 +2856,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "IfStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 77,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 77
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 78,
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 78
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "hasElse": true,
@@ -3069,14 +2873,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 77,
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 77
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 77
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3091,13 +2894,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 77
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 77
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3121,13 +2922,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 77
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 77
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     },
@@ -3136,14 +2935,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 78,
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 78
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 78
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -3154,14 +2952,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "IfStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 80,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 83,
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 83
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "hasElse": true,
@@ -3171,14 +2969,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 80,
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 80
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 80
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3193,13 +2990,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 80
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 80
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3222,14 +3017,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "NullStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 81,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 81
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 81
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     },
@@ -3238,14 +3032,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "IfStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 82,
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 82
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 83,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 83
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -3254,14 +3048,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 82,
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 82
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 82
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3276,13 +3069,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 82
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 82
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3305,14 +3096,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "kind": "NullStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 83,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 83
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 83
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -3325,14 +3115,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "IfStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 85,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 85
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 90,
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 90
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "hasElse": true,
@@ -3342,14 +3132,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 85,
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 85
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 85
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3364,13 +3153,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 85
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 85
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3393,14 +3180,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "NullStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 86,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 86
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 86
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     },
@@ -3409,14 +3195,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "IfStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 87,
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 87
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 90,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 90
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "hasElse": true,
@@ -3426,14 +3212,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "kind": "ImplicitCastExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 87,
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 87
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 87
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3448,13 +3233,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 87
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 87
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3477,14 +3260,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "kind": "NullStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 88,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 88
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 88
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       },
@@ -3493,14 +3275,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "kind": "NullStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 90,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 90
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 90
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -3516,13 +3297,12 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 29,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 93
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 118,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 118
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -3531,14 +3311,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "WhileStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 94,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 94
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 95,
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 95
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -3547,14 +3327,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 94,
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 94
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 94
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3569,13 +3348,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 94
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 94
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3598,14 +3375,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "NullStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 95,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 95
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 95
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -3616,14 +3392,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "DoStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 97,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 97
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 99,
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 99
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -3632,14 +3408,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "NullStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 98,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 98
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 98
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     },
@@ -3648,14 +3423,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 99,
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 99
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 99
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3670,13 +3444,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 99
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3701,14 +3473,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "ForStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 101,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 101
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 102,
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 102
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -3717,14 +3489,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "DeclStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 101,
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 101
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 17,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 101
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -3733,19 +3504,16 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "kind": "VarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 12,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 101
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 101
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 16,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 101
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isUsed": true,
@@ -3761,13 +3529,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 101
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 101
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3787,13 +3553,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 19,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 101
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 101
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3808,13 +3572,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 19,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 101
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 19,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 101
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3829,13 +3591,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 19,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 101
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 19,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 101
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3859,13 +3619,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 101
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 101
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3882,13 +3640,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 27,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 101
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 101
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3904,13 +3660,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 101
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 101
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3933,14 +3687,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "NullStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 102,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 102
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 102
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -3951,14 +3704,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "ForStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 104,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 104
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 105,
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 105
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -3967,14 +3720,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 104,
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 104
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 104
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3989,13 +3741,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4020,13 +3770,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 104
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 104
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4041,13 +3789,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4071,13 +3817,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 14,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 104
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 14,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 104
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4092,13 +3836,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4121,14 +3863,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "NullStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 105,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 105
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 105
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -4139,14 +3880,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "ForStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 107,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 107
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 108,
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 108
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -4157,14 +3898,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 107,
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 107
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 107
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4179,13 +3919,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 107
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 107
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4209,13 +3947,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 13,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 107
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 18,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 107
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4230,13 +3966,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 13,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 107
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 13,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 107
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4258,13 +3992,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 17,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 107
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 18,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 107
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4279,13 +4011,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 17,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 107
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 18,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 107
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4302,13 +4032,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 18,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 107
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 18,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 107
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4323,13 +4051,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 18,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 107
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 18,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 107
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -4358,14 +4084,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "NullStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 108,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 108
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 108
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -4376,14 +4101,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "ForStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 110,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 110
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 111,
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 111
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -4394,14 +4119,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 110,
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 110
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 110
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4416,13 +4140,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 110
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 110
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4446,14 +4168,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "NullStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 111,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 111
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 111
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -4464,14 +4185,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "ForStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 113,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 113
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 114,
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 114
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -4483,14 +4204,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 113,
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 113
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 16,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 113
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4505,13 +4225,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 113
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 113
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4533,13 +4251,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 15,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 113
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 16,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 113
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4554,13 +4270,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 15,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 113
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 113
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4577,13 +4291,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 16,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 113
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 16,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 113
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4598,13 +4310,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 16,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 113
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 16,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 113
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -4633,14 +4343,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "NullStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 114,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 114
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 114
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -4651,14 +4360,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "ForStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 116,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 116
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 117,
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 117
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -4672,13 +4381,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 117
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 117
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -4691,14 +4398,14 @@ void TestMiscStmts(void) {
 // CHECK:  "kind": "CompoundStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "line": 120,
 // CHECK-NEXT:    "col": 22,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 120
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 130,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 130
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -4707,14 +4414,14 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "WhileStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 123,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 123
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 126,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 126
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -4723,14 +4430,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "kind": "IntegerLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 123,
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 123
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 123
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4745,13 +4451,12 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 13,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 123
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 126,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 126
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -4760,14 +4465,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "kind": "ContinueStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 124,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 124
+// CHECK-NEXT:          "tokLen": 8
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 124
+// CHECK-NEXT:          "tokLen": 8
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       },
@@ -4776,14 +4480,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "kind": "BreakStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 125,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 125
+// CHECK-NEXT:          "tokLen": 5
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 125
+// CHECK-NEXT:          "tokLen": 5
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -4796,14 +4499,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "ReturnStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 127,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 127
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 127
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     }
 // CHECK-NEXT:    }
 // CHECK-NEXT:   },
@@ -4812,14 +4514,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "ReturnStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 129,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 129
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 22,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 129
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -4829,13 +4530,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 129
+// CHECK-NEXT:        "tokLen": 10
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 22,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 129
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4849,13 +4548,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 129
+// CHECK-NEXT:          "tokLen": 10
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 129
+// CHECK-NEXT:          "tokLen": 10
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4870,13 +4567,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 10,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 129
+// CHECK-NEXT:            "tokLen": 10
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 10,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 129
+// CHECK-NEXT:            "tokLen": 10
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4900,13 +4595,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 129
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 129
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4926,14 +4619,14 @@ void TestMiscStmts(void) {
 // CHECK:  "kind": "CompoundStmt",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "line": 132,
 // CHECK-NEXT:    "col": 26,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 132
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 134,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 134
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -4942,14 +4635,13 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:    "kind": "StmtExpr",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 133,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 133
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 20,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 133
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -4963,13 +4655,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 133
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 19,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 133
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -4979,13 +4669,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 133
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 15,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 133
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -4994,19 +4682,16 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 9,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 133
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 5,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 133
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 13,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 133
+// CHECK-NEXT:            "tokLen": 2
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isUsed": true,
@@ -5022,13 +4707,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 13,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 133
+// CHECK-NEXT:              "tokLen": 2
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 13,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 133
+// CHECK-NEXT:              "tokLen": 2
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5047,13 +4730,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 17,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 133
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 17,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 133
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -5068,13 +4749,11 @@ void TestMiscStmts(void) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 17,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 133
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 17,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 133
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {

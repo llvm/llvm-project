@@ -213,20 +213,21 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
-// CHECK-NEXT:     "col": 6,
 // CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 4
+// CHECK-NEXT:     "line": 4,
+// CHECK-NEXT:     "col": 6,
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 3,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 3
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 4,
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "a",
@@ -235,20 +236,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 3,
 // CHECK-NEXT:       "col": 20,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 3
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 3
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 20,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 3
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isReferenced": true,
@@ -261,20 +260,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FunctionDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 4,
 // CHECK-NEXT:       "col": 6,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 4
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "a",
@@ -287,19 +284,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "ParmVarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 10,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 4
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -314,20 +308,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 7,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 7
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 6,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 6
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 7,
 // CHECK-NEXT:      "col": 13,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 7
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "b",
@@ -336,20 +330,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 6,
 // CHECK-NEXT:       "col": 23,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 6
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 6
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 6
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isReferenced": true,
@@ -363,20 +355,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FunctionDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 7,
 // CHECK-NEXT:       "col": 6,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 7
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 7
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 13,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 7
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "b",
@@ -389,19 +379,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "ParmVarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 13,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 7
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 7
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 7
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -417,20 +404,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 10,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 10
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 9,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 9
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 10,
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 10
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "c",
@@ -439,20 +426,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 9,
 // CHECK-NEXT:       "col": 17,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 9
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 17,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isReferenced": true,
@@ -466,19 +451,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 30,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 9
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 21,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 30,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "Uy",
@@ -490,20 +472,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FunctionDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 10,
 // CHECK-NEXT:       "col": 6,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 10
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 10
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 10
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "c",
@@ -516,19 +496,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "ParmVarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 10,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 10
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 10
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 10
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -551,20 +528,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 13,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 13
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 12,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 13,
 // CHECK-NEXT:      "col": 25,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 13
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "previousDecl": "0x{{.*}}",
@@ -590,19 +567,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 25,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 13
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 20,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 13
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 20,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 13
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -615,20 +589,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 16,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 16
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 15,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 16,
 // CHECK-NEXT:      "col": 18,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 16
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "d",
@@ -637,20 +611,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 15,
 // CHECK-NEXT:       "col": 20,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 15
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 15
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 20,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 15
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isReferenced": true,
@@ -664,19 +636,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "kind": "TemplateTemplateParmDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 52,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 15
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 24,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 15
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 52,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 15
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "Uy",
@@ -688,19 +657,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 33,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 15
+// CHECK-NEXT:         "tokLen": 8
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 33,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 15
+// CHECK-NEXT:          "tokLen": 8
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 33,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 15
+// CHECK-NEXT:          "tokLen": 8
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "tagUsed": "typename",
@@ -713,20 +679,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FunctionDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 16,
 // CHECK-NEXT:       "col": 6,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 16
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 16
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 18,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 16
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "d",
@@ -739,19 +703,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "ParmVarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 10,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 16
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 16
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 16
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -763,19 +724,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "ParmVarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 18,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 16
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 16
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 17,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 16
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -790,20 +748,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 19,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 19
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 18,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 18
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 19,
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "e",
@@ -812,20 +770,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 18,
 // CHECK-NEXT:       "col": 17,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 18
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 18
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 17,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 18
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isReferenced": true,
@@ -838,20 +794,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FunctionDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 19,
 // CHECK-NEXT:       "col": 6,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 19
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 19
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 19
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "e",
@@ -864,19 +818,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "ParmVarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 10,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 19
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 19
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 19
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -891,20 +842,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 22,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 22
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 21,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 21
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 22,
 // CHECK-NEXT:      "col": 17,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 22
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "f",
@@ -913,20 +864,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "NonTypeTemplateParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 21,
 // CHECK-NEXT:       "col": 15,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 21
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 21
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 15,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 21
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isReferenced": true,
@@ -941,20 +890,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FunctionDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 22,
 // CHECK-NEXT:       "col": 6,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 22
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 22
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 17,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 22
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "f",
@@ -967,19 +914,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "ParmVarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 12,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 22
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 22
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 16,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 22
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "name": "i",
@@ -994,13 +938,11 @@ void V<Ty>::f() {}
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 22
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 22
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1026,20 +968,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 25,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 25
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 24,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 24
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 25,
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 25
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "g",
@@ -1048,20 +990,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 24,
 // CHECK-NEXT:       "col": 20,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 24
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 24
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 25,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 24
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isReferenced": true,
@@ -1088,20 +1028,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FunctionDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 25,
 // CHECK-NEXT:       "col": 6,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 25
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 25
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 25
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "g",
@@ -1114,19 +1052,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "ParmVarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 10,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 25
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 25
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 25
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1141,20 +1076,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 28,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 28
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 27,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 27
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 28,
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 28
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "h",
@@ -1163,20 +1098,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 27,
 // CHECK-NEXT:       "col": 11,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 27
+// CHECK-NEXT:       "tokLen": 8
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 27
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 22,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 27
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "tagUsed": "typename",
@@ -1201,20 +1134,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FunctionDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 28,
 // CHECK-NEXT:       "col": 6,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 28
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 28
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 28
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "h",
@@ -1228,20 +1159,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ClassTemplateDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 31,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 31
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 30,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 30
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 31,
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 31
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "R",
@@ -1250,20 +1181,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 30,
 // CHECK-NEXT:       "col": 20,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 30
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 30
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 20,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 30
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "Ty",
@@ -1275,20 +1204,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CXXRecordDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 31,
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 31
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 31
+// CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 31
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "R",
@@ -1349,19 +1276,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "CXXRecordDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 8,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 31
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 1,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 31
+// CHECK-NEXT:          "tokLen": 6
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 31
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isImplicit": true,
@@ -1381,20 +1305,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ClassTemplateSpecializationDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 34,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 34
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 33,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 33
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 34,
 // CHECK-NEXT:      "col": 16,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 34
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "R",
@@ -1462,19 +1386,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "kind": "CXXRecordDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 34
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
@@ -1487,20 +1408,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ClassTemplateDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 37,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 37
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 36,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 36
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 37,
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 37
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "S",
@@ -1509,20 +1430,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 36,
 // CHECK-NEXT:       "col": 20,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 36
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 36
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 20,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 36
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "Ty",
@@ -1535,19 +1454,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 30,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 36
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 24,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 36
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 30,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 36
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "Uy",
@@ -1559,20 +1475,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CXXRecordDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 37,
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 37
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 37
+// CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 37
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "S",
@@ -1633,19 +1547,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "CXXRecordDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 8,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 37
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 1,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 37
+// CHECK-NEXT:          "tokLen": 6
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 37
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isImplicit": true,
@@ -1660,20 +1571,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ClassTemplatePartialSpecializationDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 40,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 40
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 39,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 39
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 40,
 // CHECK-NEXT:      "col": 20,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 40
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "S",
@@ -1745,20 +1656,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 39,
 // CHECK-NEXT:       "col": 20,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 39
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 39
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 20,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 39
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isReferenced": true,
@@ -1771,20 +1680,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CXXRecordDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 40,
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 40
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 40
+// CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 40
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
@@ -1797,20 +1704,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ClassTemplateDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 43,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 43
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 42,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 42
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 43,
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 43
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "T",
@@ -1819,20 +1726,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "NonTypeTemplateParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 42,
 // CHECK-NEXT:       "col": 15,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 42
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 42
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 42
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1845,20 +1750,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CXXRecordDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 43,
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 43
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 43
+// CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 43
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "T",
@@ -1919,19 +1822,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "CXXRecordDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 8,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 43
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 1,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 43
+// CHECK-NEXT:          "tokLen": 6
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 43
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isImplicit": true,
@@ -1946,20 +1846,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ClassTemplateDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 46,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 46
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 45,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 45
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 46,
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 46
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "U",
@@ -1968,20 +1868,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "NonTypeTemplateParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 45,
 // CHECK-NEXT:       "col": 25,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 45
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 45
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 45
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1994,20 +1892,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CXXRecordDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 46,
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 46
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 46
+// CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 46
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "U",
@@ -2068,19 +1964,16 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "kind": "CXXRecordDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 8,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 46
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 1,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 46
+// CHECK-NEXT:          "tokLen": 6
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 46
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isImplicit": true,
@@ -2095,20 +1988,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ClassTemplateDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 49,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 49
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 48,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 48
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 52,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 52
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "V",
@@ -2117,20 +2010,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 48,
 // CHECK-NEXT:       "col": 20,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 48
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 48
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 20,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 48
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "Ty",
@@ -2142,20 +2033,19 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CXXRecordDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 49,
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 49
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 49
+// CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 52,
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 52
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "V",
@@ -2215,20 +2105,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "id": "0x{{.*}}",
 // CHECK-NEXT:        "kind": "CXXRecordDecl",
 // CHECK-NEXT:        "loc": {
+// CHECK-NEXT:         "line": 49,
 // CHECK-NEXT:         "col": 8,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 49
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 1,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 49
+// CHECK-NEXT:          "tokLen": 6
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 49
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isImplicit": true,
@@ -2239,20 +2127,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "id": "0x{{.*}}",
 // CHECK-NEXT:        "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:        "loc": {
+// CHECK-NEXT:         "line": 51,
 // CHECK-NEXT:         "col": 8,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 51
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 50,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 50
+// CHECK-NEXT:          "tokLen": 8
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "line": 51,
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 51
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "name": "f",
@@ -2261,20 +2149,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:          "id": "0x{{.*}}",
 // CHECK-NEXT:          "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:          "loc": {
+// CHECK-NEXT:           "line": 50,
 // CHECK-NEXT:           "col": 22,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 50
+// CHECK-NEXT:           "tokLen": 2
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 13,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 50
+// CHECK-NEXT:            "tokLen": 8
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 22,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 50
+// CHECK-NEXT:            "tokLen": 2
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "Uy",
@@ -2286,20 +2172,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:          "id": "0x{{.*}}",
 // CHECK-NEXT:          "kind": "CXXMethodDecl",
 // CHECK-NEXT:          "loc": {
+// CHECK-NEXT:           "line": 51,
 // CHECK-NEXT:           "col": 8,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 51
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 51
+// CHECK-NEXT:            "tokLen": 4
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 10,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 51
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "f",
@@ -2317,20 +2201,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 56,
 // CHECK-NEXT:     "col": 13,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 56
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 55,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 55
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 56,
 // CHECK-NEXT:      "col": 18,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 56
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "parentDeclContext": "0x{{.*}}",
@@ -2341,20 +2225,18 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 55,
 // CHECK-NEXT:       "col": 20,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 55
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 55
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 20,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 55
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "Uy",
@@ -2366,20 +2248,20 @@ void V<Ty>::f() {}
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "CXXMethodDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 56,
 // CHECK-NEXT:       "col": 13,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 56
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 54,
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 54
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 56,
 // CHECK-NEXT:        "col": 18,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 56
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "parentDeclContext": "0x{{.*}}",
@@ -2395,13 +2277,11 @@ void V<Ty>::f() {}
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 17,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 56
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 18,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 56
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }

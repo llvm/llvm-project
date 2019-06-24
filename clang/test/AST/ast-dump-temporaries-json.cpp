@@ -26,13 +26,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 16,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 11
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 18,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 11
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -47,13 +45,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 16,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 11
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 18,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 11
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -77,13 +73,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 16,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 18,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -98,13 +92,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 16,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 11
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 18,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 11
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -127,13 +119,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 11
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 18,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 11
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -160,13 +150,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 18,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 15
+// CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 18,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 15
+// CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -180,13 +168,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 18,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 18,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -210,13 +196,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 18,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 15
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 18,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 15
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -231,13 +215,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 18,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 15
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 18,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 15
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -257,14 +239,13 @@ void MaterializeTemp() {
 // CHECK:  "kind": "ExprWithCleanups",
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "line": 18,
 // CHECK-NEXT:    "col": 3,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 18
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 9,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 18
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -278,13 +259,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 18
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 18
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -298,13 +277,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 18
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 18
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -319,13 +296,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 18
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 18
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -349,13 +324,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 18
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 18
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -371,13 +344,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 18
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 18
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -392,13 +363,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 18
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 18
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -413,13 +382,11 @@ void MaterializeTemp() {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 8,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 18
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 8,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 18
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {

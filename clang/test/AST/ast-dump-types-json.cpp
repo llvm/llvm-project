@@ -25,20 +25,19 @@ typedef int TestQualTypePrinting(const char* c);
 
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 18,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 12
+// CHECK-NEXT:   "line": 12,
+// CHECK-NEXT:   "col": 18,
+// CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 12
+// CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 18,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 12
+// CHECK-NEXT:    "tokLen": 19
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestElaboratedType1",
@@ -74,20 +73,19 @@ typedef int TestQualTypePrinting(const char* c);
 
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 15,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 13
+// CHECK-NEXT:   "line": 13,
+// CHECK-NEXT:   "col": 15,
+// CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 13
+// CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 15,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 13
+// CHECK-NEXT:    "tokLen": 19
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestElaboratedType2",
@@ -124,20 +122,19 @@ typedef int TestQualTypePrinting(const char* c);
 
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 22,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 16
+// CHECK-NEXT:   "line": 16,
+// CHECK-NEXT:   "col": 22,
+// CHECK-NEXT:   "tokLen": 22
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 16
+// CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 22,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 16
+// CHECK-NEXT:    "tokLen": 22
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestMacroQualifiedType",
@@ -231,20 +228,19 @@ typedef int TestQualTypePrinting(const char* c);
 
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 20,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 18
+// CHECK-NEXT:   "line": 18,
+// CHECK-NEXT:   "col": 20,
+// CHECK-NEXT:   "tokLen": 29
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 18
+// CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 51,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 18
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestMemberFunctionPointerType",
@@ -306,20 +302,19 @@ typedef int TestQualTypePrinting(const char* c);
 
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 17,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 19
+// CHECK-NEXT:   "line": 19,
+// CHECK-NEXT:   "col": 17,
+// CHECK-NEXT:   "tokLen": 25
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 19
+// CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 17,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 19
+// CHECK-NEXT:    "tokLen": 25
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestMemberDataPointerType",
@@ -362,20 +357,19 @@ typedef int TestQualTypePrinting(const char* c);
 
 // CHECK:  "kind": "TypedefDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 13,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 21
+// CHECK-NEXT:   "line": 21,
+// CHECK-NEXT:   "col": 13,
+// CHECK-NEXT:   "tokLen": 20
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 21
+// CHECK-NEXT:    "tokLen": 7
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 47,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 21
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestQualTypePrinting",

@@ -128,20 +128,18 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 4,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 4
+// CHECK-NEXT:   "tokLen": 8
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 4
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 18,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 4
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "isUsed": true,
@@ -156,13 +154,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 17,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 18,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    }
 // CHECK-NEXT:   }
@@ -172,20 +168,18 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "UsingDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 7,
 // CHECK-NEXT:   "col": 10,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 7
+// CHECK-NEXT:   "tokLen": 8
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 7
+// CHECK-NEXT:    "tokLen": 5
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 7
+// CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "n::function"
@@ -195,19 +189,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK:  "kind": "UsingShadowDecl",
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "col": 10,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 7
+// CHECK-NEXT:   "tokLen": 8
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 7
+// CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 7
+// CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "isImplicit": true,
@@ -224,20 +215,18 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "UsingDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 8,
 // CHECK-NEXT:   "col": 10,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 8
+// CHECK-NEXT:   "tokLen": 8
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 8
+// CHECK-NEXT:    "tokLen": 5
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 8
+// CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "n::Variable"
@@ -247,19 +236,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK:  "kind": "UsingShadowDecl",
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "col": 10,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 8
+// CHECK-NEXT:   "tokLen": 8
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 8
+// CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 8
+// CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "isImplicit": true,
@@ -276,20 +262,19 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 9,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 9
+// CHECK-NEXT:   "tokLen": 12
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 9
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 12,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 12
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestFunction",
@@ -302,14 +287,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 9,
 // CHECK-NEXT:      "col": 21,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 9
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 12,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -318,14 +303,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "DeclStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 10,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 10
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 26,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 10
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -334,19 +318,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "VarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 10,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 10
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 10
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 18,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 10
+// CHECK-NEXT:          "tokLen": 8
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "name": "f",
@@ -361,13 +342,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 17,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 10
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 18,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 10
+// CHECK-NEXT:            "tokLen": 8
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -384,13 +363,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 18,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 10
+// CHECK-NEXT:              "tokLen": 8
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 18,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 10
+// CHECK-NEXT:              "tokLen": 8
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -422,14 +399,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 11,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 14,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -444,13 +420,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 11
+// CHECK-NEXT:          "tokLen": 8
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 11
+// CHECK-NEXT:          "tokLen": 8
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -477,13 +451,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 11
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 11
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -502,20 +474,19 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 14,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 14
+// CHECK-NEXT:   "tokLen": 10
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 14
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 19,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 19
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestCatch1",
@@ -528,14 +499,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 14,
 // CHECK-NEXT:      "col": 19,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 14
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 19,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -544,14 +515,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "CXXTryStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 15,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 15
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 18,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 18
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -560,14 +531,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "CompoundStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 15,
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 15
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "line": 16,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 16
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       },
@@ -576,14 +547,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "CXXCatchStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 17,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 17
+// CHECK-NEXT:          "tokLen": 5
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "line": 18,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 18
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -591,20 +562,18 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "id": "0x{{.*}}",
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
+// CHECK-NEXT:           "line": 17,
 // CHECK-NEXT:           "col": 14,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 17
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 10,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 17
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 17
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "x",
@@ -618,13 +587,12 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 17,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 17
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "line": 18,
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 18
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
@@ -640,20 +608,19 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 21,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 21
+// CHECK-NEXT:   "tokLen": 10
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 21
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 26,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 26
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestCatch2",
@@ -666,14 +633,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 21,
 // CHECK-NEXT:      "col": 19,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 21
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 26,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 26
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -682,14 +649,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "CXXTryStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 22,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 22
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 25,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 25
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -698,14 +665,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "CompoundStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 22,
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 22
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "line": 23,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 23
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       },
@@ -714,14 +681,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "CXXCatchStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 24,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 24
+// CHECK-NEXT:          "tokLen": 5
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "line": 25,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 25
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -733,14 +700,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "CompoundStmt",
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "line": 24,
 // CHECK-NEXT:            "col": 15,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 24
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "line": 25,
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 25
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
@@ -756,20 +723,19 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 28,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 28
+// CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 28
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 36,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 36
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestAllocationExprs",
@@ -782,14 +748,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 28,
 // CHECK-NEXT:      "col": 28,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 28
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 36,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 36
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -798,14 +764,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "DeclStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 29,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 29
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 29
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -814,19 +779,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "VarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 8,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 29
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 29
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 29
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isUsed": true,
@@ -842,14 +804,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 30,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 30
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 30
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -864,13 +825,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 30
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 30
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -892,13 +851,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 30
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 30
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -921,14 +878,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "CXXDeleteExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 31,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 31
+// CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 31
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -950,13 +906,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 31
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 31
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -971,13 +925,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 10,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 31
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 10,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 31
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1002,14 +954,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 32,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 32
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 16,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 32
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1024,13 +975,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 32
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 32
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1052,13 +1001,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 32
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 16,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 32
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1081,13 +1028,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 15,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 32
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 15,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 32
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1102,13 +1047,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 15,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 32
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 15,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 32
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -1128,14 +1071,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "CXXDeleteExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 33,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 33
+// CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 12,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 33
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1159,13 +1101,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 33
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 33
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1180,13 +1120,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 33
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 33
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1211,14 +1149,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 34,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 13,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1233,13 +1170,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1261,13 +1196,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 13,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1291,14 +1224,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "CXXDeleteExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 35,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 35
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 12,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 35
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1321,13 +1253,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 35
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 12,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 35
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1342,13 +1272,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 35
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 35
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1736,20 +1664,20 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 40,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 40
+// CHECK-NEXT:   "tokLen": 27
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "line": 39,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 39
+// CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 43,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 43
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestDependentAllocationExpr",
@@ -1758,20 +1686,18 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 39,
 // CHECK-NEXT:     "col": 20,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 39
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 39
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 20,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 39
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isReferenced": true,
@@ -1784,20 +1710,19 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 40,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 40
+// CHECK-NEXT:     "tokLen": 27
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 40
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 43,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 43
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "TestDependentAllocationExpr",
@@ -1810,14 +1735,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 40,
 // CHECK-NEXT:        "col": 36,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 40
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 43,
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 43
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -1826,14 +1751,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "DeclStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 41,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 41
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 15,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 41
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -1842,19 +1766,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 6,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 41
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 41
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 41
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isReferenced": true,
@@ -1870,13 +1791,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 10,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 41
+// CHECK-NEXT:              "tokLen": 3
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 41
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -1893,14 +1812,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "CXXDeleteExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 42,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 42
+// CHECK-NEXT:          "tokLen": 6
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 42
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1914,13 +1832,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 10,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 42
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 10,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 42
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1948,20 +1864,20 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 51,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 51
+// CHECK-NEXT:   "tokLen": 28
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "line": 50,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 50
+// CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 56,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 56
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestDependentScopeMemberExpr",
@@ -1970,20 +1886,18 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 50,
 // CHECK-NEXT:     "col": 20,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 50
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 50
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 20,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 50
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isReferenced": true,
@@ -1996,20 +1910,19 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 51,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 51
+// CHECK-NEXT:     "tokLen": 28
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 51
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 56,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 56
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "TestDependentScopeMemberExpr",
@@ -2022,14 +1935,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 51,
 // CHECK-NEXT:        "col": 37,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 51
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 56,
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 56
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -2038,14 +1951,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "DeclStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 52,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 52
+// CHECK-NEXT:          "tokLen": 31
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 41,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 52
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -2054,19 +1966,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 38,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 52
+// CHECK-NEXT:           "tokLen": 3
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 52
+// CHECK-NEXT:            "tokLen": 31
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 38,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 52
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isReferenced": true,
@@ -2082,14 +1991,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "BinaryOperator",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 53,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 53
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 18,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 53
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2104,13 +2012,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 53
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 53
+// CHECK-NEXT:            "tokLen": 6
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2126,13 +2032,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 53
+// CHECK-NEXT:              "tokLen": 3
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 53
+// CHECK-NEXT:              "tokLen": 3
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2156,13 +2060,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 53
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 18,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 53
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2177,14 +2079,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "BinaryOperator",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 54,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 54
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 18,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 54
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2199,13 +2100,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 54
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 54
+// CHECK-NEXT:            "tokLen": 6
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2221,13 +2120,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 54
+// CHECK-NEXT:              "tokLen": 3
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 54
+// CHECK-NEXT:              "tokLen": 3
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2251,13 +2148,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 54
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 18,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 54
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2272,13 +2167,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 17,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 54
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 18,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 54
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2295,14 +2188,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "BinaryOperator",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 55,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 55
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 22,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 55
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2317,13 +2209,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 55
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 11,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 55
+// CHECK-NEXT:            "tokLen": 6
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2339,13 +2229,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 55
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 8,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 55
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2359,13 +2247,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 4,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 55
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 5,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 55
+// CHECK-NEXT:                "tokLen": 3
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -2382,13 +2268,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                "range": {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 5,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 55
+// CHECK-NEXT:                  "tokLen": 3
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 5,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 55
+// CHECK-NEXT:                  "tokLen": 3
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -2416,13 +2300,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 20,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 55
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 22,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 55
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2442,20 +2324,20 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 65,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 65
+// CHECK-NEXT:   "tokLen": 36
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "line": 64,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 64
+// CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 68,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 68
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestDependentScopeTemplateMemberExpr",
@@ -2464,20 +2346,18 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 64,
 // CHECK-NEXT:     "col": 20,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 64
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 64
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 20,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 64
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isReferenced": true,
@@ -2490,20 +2370,19 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 65,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 65
+// CHECK-NEXT:     "tokLen": 36
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 65
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 68,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 68
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "TestDependentScopeTemplateMemberExpr",
@@ -2516,14 +2395,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "CompoundStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 65,
 // CHECK-NEXT:        "col": 45,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 65
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 68,
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 68
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -2532,14 +2411,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "DeclStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 66,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 66
+// CHECK-NEXT:          "tokLen": 36
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 46,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 66
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -2548,19 +2426,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 43,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 66
+// CHECK-NEXT:           "tokLen": 3
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 66
+// CHECK-NEXT:            "tokLen": 36
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 43,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 66
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isReferenced": true,
@@ -2576,14 +2451,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "BinaryOperator",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 67,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 67
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 34,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 67
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2598,13 +2472,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 67
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 26,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 67
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2621,13 +2493,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 23,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 67
+// CHECK-NEXT:              "tokLen": 3
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 23,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 67
+// CHECK-NEXT:              "tokLen": 3
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2642,13 +2512,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 67
+// CHECK-NEXT:              "tokLen": 3
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 67
+// CHECK-NEXT:              "tokLen": 3
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2672,13 +2540,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 30,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 67
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 34,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 67
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2698,20 +2564,19 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 75,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 75
+// CHECK-NEXT:   "tokLen": 17
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 75
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 78,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 78
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestUnionInitList",
@@ -2724,14 +2589,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 76,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 76
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 78,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 78
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -2740,14 +2605,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "DeclStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 77,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 77
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 16,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 77
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -2756,19 +2620,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "VarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 5,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 77
+// CHECK-NEXT:         "tokLen": 2
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 77
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 15,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 77
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "name": "us",
@@ -2783,13 +2644,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 13,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 77
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 15,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 77
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2803,13 +2662,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 15,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 77
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 15,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 77
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2831,13 +2688,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 77
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 77
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -2859,13 +2714,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 77
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 77
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -2890,20 +2743,19 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 80,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 80
+// CHECK-NEXT:   "tokLen": 10
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 80
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 83,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 83
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestSwitch",
@@ -2915,20 +2767,18 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 80,
 // CHECK-NEXT:     "col": 21,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 80
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 17,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 21,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
@@ -2943,13 +2793,12 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 24,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 83,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 83
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -2958,14 +2807,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "SwitchStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 81,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 81
+// CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 82,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 82
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "hasInit": true,
@@ -2975,14 +2824,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "DeclStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 81,
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 81
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 16,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 81
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -2991,19 +2839,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 15,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 81
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 11,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 81
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 15,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 81
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "a",
@@ -3019,13 +2864,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 18,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 81
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 18,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 81
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3040,13 +2883,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 18,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 81
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 18,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 81
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3069,14 +2910,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "NullStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 82,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 82
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 82
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -3090,20 +2930,19 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 85,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 85
+// CHECK-NEXT:   "tokLen": 6
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 85
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 96,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 96
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestIf",
@@ -3115,20 +2954,18 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 85,
 // CHECK-NEXT:     "col": 18,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 85
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 13,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 85
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 18,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 85
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isReferenced": true,
@@ -3143,13 +2980,12 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 21,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 85
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 96,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 96
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -3158,14 +2994,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "IfStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 86,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 86
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 87,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 87
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "hasInit": true,
@@ -3175,14 +3011,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "DeclStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 86,
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 86
+// CHECK-NEXT:          "tokLen": 5
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 86
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -3191,19 +3026,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 17,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 86
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 86
+// CHECK-NEXT:            "tokLen": 5
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 21,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 86
+// CHECK-NEXT:            "tokLen": 2
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isReferenced": true,
@@ -3219,13 +3051,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 21,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 86
+// CHECK-NEXT:              "tokLen": 2
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 21,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 86
+// CHECK-NEXT:              "tokLen": 2
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3244,13 +3074,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 25,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 86
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 25,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 86
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3265,13 +3093,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 25,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 86
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 25,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 86
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3286,13 +3112,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 25,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 86
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 25,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 86
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3318,14 +3142,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "NullStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 87,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 87
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 87
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -3336,14 +3159,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "IfStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 89,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 89
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 90,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 90
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isConstexpr": true,
@@ -3353,14 +3176,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "ConstantExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 89,
 // CHECK-NEXT:          "col": 17,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 89
+// CHECK-NEXT:          "tokLen": 6
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 30,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 89
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3375,13 +3197,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 17,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 89
+// CHECK-NEXT:            "tokLen": 6
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 30,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 89
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3396,13 +3216,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 17,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 89
+// CHECK-NEXT:              "tokLen": 6
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 25,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 89
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3417,13 +3235,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 23,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 89
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 25,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 89
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -3437,13 +3253,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                "range": {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 24,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 89
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 24,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 89
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -3470,13 +3284,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 30,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 89
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 30,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 89
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3491,13 +3303,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 30,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 89
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 30,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 89
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -3517,14 +3327,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "NullStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 90,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 90
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 90
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -3535,14 +3344,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "IfStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 92,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 92
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 95,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 95
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "hasElse": true,
@@ -3553,14 +3362,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "ConstantExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 92,
 // CHECK-NEXT:          "col": 17,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 92
+// CHECK-NEXT:          "tokLen": 6
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 30,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 92
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3575,13 +3383,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 17,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 92
+// CHECK-NEXT:            "tokLen": 6
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 30,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 92
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3596,13 +3402,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 17,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 92
+// CHECK-NEXT:              "tokLen": 6
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 25,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 92
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3617,13 +3421,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 23,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 92
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 25,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 92
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -3637,13 +3439,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                "range": {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 24,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 92
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 24,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 92
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -3670,13 +3470,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 30,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 92
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 30,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 92
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3691,13 +3489,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 30,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 92
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 30,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 92
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -3717,14 +3513,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "NullStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 93,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 93
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 93
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       },
@@ -3733,14 +3528,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "NullStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 95,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -3754,20 +3548,19 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 103,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 103
+// CHECK-NEXT:   "tokLen": 13
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 103
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 117,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 117
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestIteration",
@@ -3780,14 +3573,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 103,
 // CHECK-NEXT:      "col": 22,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 103
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 117,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 117
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -3796,14 +3589,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "ForStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 104,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 104
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 105,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 105
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -3812,14 +3605,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "DeclStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 104,
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 17,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -3828,19 +3620,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 12,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 104
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 104
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 104
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isUsed": true,
@@ -3856,13 +3645,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 16,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 104
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 16,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 104
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3881,13 +3668,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 19,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 27,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -3896,19 +3681,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 23,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 104
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 19,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 104
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 27,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 104
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isUsed": true,
@@ -3924,13 +3706,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 27,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 104
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 27,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 104
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3945,13 +3725,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 27,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 104
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 27,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 104
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -3979,13 +3757,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4000,13 +3776,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 23,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 104
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 23,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 104
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4021,13 +3795,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 23,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 104
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 23,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 104
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4053,13 +3825,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 30,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 32,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 104
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4075,13 +3845,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 32,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 104
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 32,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 104
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4104,14 +3872,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "NullStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 105,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 105
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 105
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -4122,14 +3889,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "DeclStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 107,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 107
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 15,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 107
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -4138,19 +3904,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "VarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 7,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 107
+// CHECK-NEXT:         "tokLen": 4
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 107
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 107
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isUsed": true,
@@ -4166,14 +3929,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "CXXForRangeStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 108,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 108
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 109,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 109
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -4183,14 +3946,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "DeclStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 108,
 // CHECK-NEXT:          "col": 16,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 16,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -4199,19 +3961,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 16,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 108
+// CHECK-NEXT:           "tokLen": 4
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 4
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 4
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -4228,13 +3987,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 16,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:              "tokLen": 4
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 16,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:              "tokLen": 4
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4260,13 +4017,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -4275,19 +4030,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 14,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 108
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -4305,13 +4057,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4326,13 +4076,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 108
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 108
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -4360,13 +4108,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -4375,19 +4121,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 14,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 108
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 4
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -4405,13 +4148,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 16,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:              "tokLen": 4
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4426,13 +4167,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 108
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 108
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -4447,13 +4186,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                "range": {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 14,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 108
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 14,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 108
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -4477,13 +4214,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 16,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 108
+// CHECK-NEXT:                "tokLen": 4
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 16,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 108
+// CHECK-NEXT:                "tokLen": 4
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -4504,13 +4239,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4525,13 +4258,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4547,13 +4278,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4579,13 +4308,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4601,13 +4328,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4635,13 +4360,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4658,13 +4381,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4690,13 +4411,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 20,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 108
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -4705,19 +4424,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 12,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 108
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 108
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "v",
@@ -4732,13 +4448,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 108
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4753,13 +4467,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 108
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 108
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -4776,13 +4488,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                "range": {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 14,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 108
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 14,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 108
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -4798,13 +4508,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                  "range": {
 // CHECK-NEXT:                   "begin": {
 // CHECK-NEXT:                    "col": 14,
-// CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 108
+// CHECK-NEXT:                    "tokLen": 1
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "end": {
 // CHECK-NEXT:                    "col": 14,
-// CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 108
+// CHECK-NEXT:                    "tokLen": 1
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
@@ -4837,14 +4545,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "NullStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 109,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 109
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 109
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -4855,14 +4562,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "DeclStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 111,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 111
+// CHECK-NEXT:        "tokLen": 9
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 14,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 111
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -4871,19 +4577,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "VarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 13,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 111
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 111
+// CHECK-NEXT:          "tokLen": 9
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 13,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 111
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "isUsed": true,
@@ -4899,13 +4602,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 13,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 111
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 13,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 111
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4927,14 +4628,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "CXXForRangeStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 112,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 112
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 113,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 113
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -4944,14 +4645,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "DeclStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 112,
 // CHECK-NEXT:          "col": 16,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 112
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 16,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 112
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -4960,19 +4660,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 16,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 112
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 16,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -4989,13 +4686,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 16,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 112
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 16,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 112
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5021,13 +4716,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 112
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 112
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -5036,19 +4729,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 14,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 112
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -5066,13 +4756,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 112
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 112
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5086,13 +4774,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 112
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 112
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -5109,13 +4795,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                "range": {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 14,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 112
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 14,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 112
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -5130,13 +4814,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                  "range": {
 // CHECK-NEXT:                   "begin": {
 // CHECK-NEXT:                    "col": 14,
-// CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 112
+// CHECK-NEXT:                    "tokLen": 1
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "end": {
 // CHECK-NEXT:                    "col": 14,
-// CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 112
+// CHECK-NEXT:                    "tokLen": 1
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
@@ -5168,13 +4850,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 112
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 112
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -5183,19 +4863,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 14,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 112
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -5213,13 +4890,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 112
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 112
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5233,13 +4908,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 112
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 112
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -5256,13 +4929,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                "range": {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 14,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 112
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 14,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 112
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -5277,13 +4948,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                  "range": {
 // CHECK-NEXT:                   "begin": {
 // CHECK-NEXT:                    "col": 14,
-// CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 112
+// CHECK-NEXT:                    "tokLen": 1
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "end": {
 // CHECK-NEXT:                    "col": 14,
-// CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 112
+// CHECK-NEXT:                    "tokLen": 1
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
@@ -5315,13 +4984,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 112
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 112
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -5336,13 +5003,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -5358,13 +5023,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 112
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 112
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5390,13 +5053,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -5412,13 +5073,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 112
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 112
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5446,13 +5105,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 112
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 112
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -5469,13 +5126,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -5501,13 +5156,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 112
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 17,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 112
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -5516,19 +5169,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 12,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 112
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 14,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 112
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "v",
@@ -5543,13 +5193,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 112
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 112
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5564,13 +5212,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 112
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 112
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -5587,13 +5233,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                "range": {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 14,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 112
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 14,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 112
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -5609,13 +5253,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                  "range": {
 // CHECK-NEXT:                   "begin": {
 // CHECK-NEXT:                    "col": 14,
-// CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 112
+// CHECK-NEXT:                    "tokLen": 1
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "end": {
 // CHECK-NEXT:                    "col": 14,
-// CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 112
+// CHECK-NEXT:                    "tokLen": 1
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
@@ -5648,14 +5290,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "NullStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 113,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 113
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 113
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -5666,14 +5307,14 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "kind": "CXXForRangeStmt",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 115,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 115
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 116,
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 116
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -5682,14 +5323,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "DeclStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 115,
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 13,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -5698,19 +5338,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 12,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 115
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "a",
@@ -5726,13 +5363,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -5741,19 +5376,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 23,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 115
+// CHECK-NEXT:           "tokLen": 4
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 23,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 4
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 23,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 4
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -5770,13 +5402,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 23,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 115
+// CHECK-NEXT:              "tokLen": 4
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 23,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 115
+// CHECK-NEXT:              "tokLen": 4
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5802,13 +5432,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -5817,19 +5445,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 21,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 115
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 21,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 21,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -5847,13 +5472,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 21,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 115
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 21,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 115
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5868,13 +5491,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 21,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 115
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 21,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 115
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -5902,13 +5523,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -5917,19 +5536,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 21,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 115
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 21,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 23,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 4
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "isImplicit": true,
@@ -5947,13 +5563,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 21,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 115
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 23,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 115
+// CHECK-NEXT:              "tokLen": 4
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -5968,13 +5582,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 21,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 115
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 21,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 115
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -5989,13 +5601,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                "range": {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 21,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 115
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 21,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 115
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -6019,13 +5629,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 23,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 115
+// CHECK-NEXT:                "tokLen": 4
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 23,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 115
+// CHECK-NEXT:                "tokLen": 4
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -6046,13 +5654,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -6067,13 +5673,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 21,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 21,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -6089,13 +5693,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 21,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 115
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 21,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 115
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -6121,13 +5723,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 21,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 21,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -6143,13 +5743,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 21,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 115
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 21,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 115
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -6177,13 +5775,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -6200,13 +5796,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 21,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 21,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -6232,13 +5826,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 15,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 27,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 115
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "inner": [
@@ -6247,19 +5839,16 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "kind": "VarDecl",
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 19,
-// CHECK-NEXT:           "file": "{{.*}}",
-// CHECK-NEXT:           "line": 115
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 15,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 3
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 21,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 115
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "name": "v",
@@ -6274,13 +5863,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 21,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 115
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 21,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 115
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -6295,13 +5882,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 21,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 115
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 21,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 115
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -6318,13 +5903,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                "range": {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 21,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 115
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 },
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 21,
-// CHECK-NEXT:                  "file": "{{.*}}",
-// CHECK-NEXT:                  "line": 115
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                },
 // CHECK-NEXT:                "type": {
@@ -6340,13 +5923,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:                  "range": {
 // CHECK-NEXT:                   "begin": {
 // CHECK-NEXT:                    "col": 21,
-// CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 115
+// CHECK-NEXT:                    "tokLen": 1
 // CHECK-NEXT:                   },
 // CHECK-NEXT:                   "end": {
 // CHECK-NEXT:                    "col": 21,
-// CHECK-NEXT:                    "file": "{{.*}}",
-// CHECK-NEXT:                    "line": 115
+// CHECK-NEXT:                    "tokLen": 1
 // CHECK-NEXT:                   }
 // CHECK-NEXT:                  },
 // CHECK-NEXT:                  "type": {
@@ -6379,14 +5960,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "NullStmt",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 116,
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 116
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 116
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -6400,20 +5980,20 @@ void TestDependentGenericSelectionExpr(Ty T) {
 
 // CHECK:  "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 120,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 120
+// CHECK-NEXT:   "tokLen": 33
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
+// CHECK-NEXT:    "line": 119,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 119
+// CHECK-NEXT:    "tokLen": 8
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 123,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 123
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "TestDependentGenericSelectionExpr",
@@ -6422,20 +6002,18 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 119,
 // CHECK-NEXT:     "col": 20,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 119
+// CHECK-NEXT:     "tokLen": 2
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 119
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 20,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 119
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isReferenced": true,
@@ -6448,20 +6026,19 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FunctionDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 120,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 120
+// CHECK-NEXT:     "tokLen": 33
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 120
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 123,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 123
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "TestDependentGenericSelectionExpr",
@@ -6473,20 +6050,18 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 120,
 // CHECK-NEXT:       "col": 43,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 120
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 40,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 120
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 43,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 120
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isReferenced": true,
@@ -6501,13 +6076,12 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 46,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 120
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 123,
 // CHECK-NEXT:        "col": 1,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 123
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -6516,14 +6090,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "GenericSelectionExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 121,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 121
+// CHECK-NEXT:          "tokLen": 8
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 35,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 121
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -6538,13 +6111,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 121
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 121
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -6593,13 +6164,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 21,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 121
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 21,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 121
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -6619,13 +6188,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 34,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 121
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 34,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 121
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -6643,14 +6210,13 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:        "kind": "GenericSelectionExpr",
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 122,
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 122
+// CHECK-NEXT:          "tokLen": 8
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 26,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 122
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -6665,13 +6231,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 122
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 122
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -6713,13 +6277,11 @@ void TestDependentGenericSelectionExpr(Ty T) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 25,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 122
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 25,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 122
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {

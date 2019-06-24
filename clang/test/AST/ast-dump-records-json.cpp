@@ -100,20 +100,19 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 8,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 3
+// CHECK-NEXT:   "line": 3,
+// CHECK-NEXT:   "col": 8,
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 3
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 8,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 3
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "A",
@@ -123,20 +122,18 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 4,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 4
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 4
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 8,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 4
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "isReferenced": true,
@@ -147,20 +144,19 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 6,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 6
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 6
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 13,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 13
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "previousDecl": "0x{{.*}}",
@@ -217,20 +213,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 6,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 6
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 6
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 6
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -241,20 +235,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 7,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 7
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 7
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 7
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "a",
@@ -266,20 +258,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 8,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 8
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 8
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 8
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "b",
@@ -292,19 +282,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 10,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 8
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 8
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 8
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "c",
@@ -316,20 +303,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 9,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 9
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 9
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 9
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "d",
@@ -344,13 +329,11 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -365,13 +348,11 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 9
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 9
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -388,20 +369,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 10,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 10
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 10
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 10
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -415,13 +394,11 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 10
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 10
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -436,13 +413,11 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 9,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 10
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 9,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 10
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -459,20 +434,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 11,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 11
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 11
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 11
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "e",
@@ -487,13 +460,11 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 11
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -508,13 +479,11 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 11
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 11
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -531,20 +500,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 12,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 12
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 6,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "f",
@@ -558,20 +525,19 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 15,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 15
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 15
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 28,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 28
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "C",
@@ -628,20 +594,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 15,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 15
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -652,20 +616,19 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 16,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 16
+// CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 16
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 18,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 18
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "tagUsed": "struct",
@@ -720,20 +683,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 17,
 // CHECK-NEXT:       "col": 9,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 17
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 17
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 17
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "a",
@@ -747,20 +708,20 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 18,
 // CHECK-NEXT:     "col": 5,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 18
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 16,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 16
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 18,
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 18
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "b",
@@ -773,20 +734,19 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 20,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 20
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 20
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 23,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 23
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "tagUsed": "union",
@@ -842,20 +802,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 21,
 // CHECK-NEXT:       "col": 9,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 21
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 21
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 21
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "c",
@@ -867,20 +825,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 22,
 // CHECK-NEXT:       "col": 11,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 22
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 22
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 22
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "d",
@@ -894,20 +850,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 20,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 20
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 20
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 20
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -919,20 +873,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "IndirectFieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 21,
 // CHECK-NEXT:     "col": 9,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 21
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 21
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 21
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -942,20 +894,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "IndirectFieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 22,
 // CHECK-NEXT:     "col": 11,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 22
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 22
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 22
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -965,20 +915,19 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 25,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 25
+// CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 25
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 27,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 27
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "tagUsed": "struct",
@@ -1033,20 +982,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 26,
 // CHECK-NEXT:       "col": 9,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 26
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 26
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 26
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "e",
@@ -1059,19 +1006,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 12,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 26
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 26
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 12,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 26
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "f",
@@ -1085,20 +1029,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 25,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 25
+// CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 25
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 25
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1110,20 +1052,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "IndirectFieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 26,
 // CHECK-NEXT:     "col": 9,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 26
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 26
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 26
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1134,19 +1074,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "IndirectFieldDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 12,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 26
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 12,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 26
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 12,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 26
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1158,20 +1095,19 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 30,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 30
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 30
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 34,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 34
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "D",
@@ -1227,20 +1163,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 30,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 30
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 30
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 30
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1251,20 +1185,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 31,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 31
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 31
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 31
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "a",
@@ -1276,20 +1208,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 32,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 32
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 32
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 32
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "b",
@@ -1301,20 +1231,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 33,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 33
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 33
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 33
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "c",
@@ -1328,20 +1256,18 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 36,
 // CHECK-NEXT:   "col": 7,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 36
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 36
+// CHECK-NEXT:    "tokLen": 5
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 7,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 36
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "E",
@@ -1351,20 +1277,18 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 38,
 // CHECK-NEXT:   "col": 7,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 38
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 38
+// CHECK-NEXT:    "tokLen": 5
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 7,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 38
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "F",
@@ -1374,20 +1298,19 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 40,
 // CHECK-NEXT:   "col": 7,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 40
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 40
+// CHECK-NEXT:    "tokLen": 5
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 47,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 47
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "previousDecl": "0x{{.*}}",
@@ -1445,20 +1368,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 40,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 40
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 40
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 40
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1469,20 +1390,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 41,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 41
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 41
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 41
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "a",
@@ -1494,20 +1413,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 42,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 42
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 42
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 42
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "b",
@@ -1520,19 +1437,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 10,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 42
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 42
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 42
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "c",
@@ -1544,20 +1458,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 43,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 43
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 43
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 43
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "d",
@@ -1572,13 +1484,11 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 43
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 43
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1593,13 +1503,11 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 43
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 43
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1616,20 +1524,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 44,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 44
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 44
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 44
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1643,13 +1549,11 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 44
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 44
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1664,13 +1568,11 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 9,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 44
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 9,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 44
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1687,20 +1589,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 45,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 45
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 45
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 45
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "e",
@@ -1715,13 +1615,11 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 45
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 45
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1736,13 +1634,11 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 45
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 45
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1759,20 +1655,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 46,
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 46
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 46
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 6,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 46
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "f",
@@ -1786,20 +1680,19 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 49,
 // CHECK-NEXT:   "col": 7,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 49
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 49
+// CHECK-NEXT:    "tokLen": 5
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 62,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 62
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "G",
@@ -1856,20 +1749,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 49,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 49
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 49
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 49
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1880,20 +1771,19 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 50,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 50
+// CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 50
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 52,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 52
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "tagUsed": "struct",
@@ -1948,20 +1838,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 51,
 // CHECK-NEXT:       "col": 9,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 51
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 51
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 51
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "a",
@@ -1975,20 +1863,20 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 52,
 // CHECK-NEXT:     "col": 5,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 52
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 50,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 50
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 52,
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 52
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "b",
@@ -2001,20 +1889,19 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 54,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 54
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 54
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 57,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 57
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "tagUsed": "union",
@@ -2070,20 +1957,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 55,
 // CHECK-NEXT:       "col": 9,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 55
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 55
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 55
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "c",
@@ -2095,20 +1980,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 56,
 // CHECK-NEXT:       "col": 11,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 56
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 56
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 56
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "d",
@@ -2122,20 +2005,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 54,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 54
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 54
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 54
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2147,20 +2028,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "IndirectFieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 55,
 // CHECK-NEXT:     "col": 9,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 55
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 55
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 55
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2170,20 +2049,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "IndirectFieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 56,
 // CHECK-NEXT:     "col": 11,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 56
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 56
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 56
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2193,20 +2070,19 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 59,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 59
+// CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 59
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 61,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 61
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "tagUsed": "struct",
@@ -2261,20 +2137,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 60,
 // CHECK-NEXT:       "col": 9,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 60
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 60
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 60
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "e",
@@ -2287,19 +2161,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 12,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 60
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 60
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 12,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 60
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "f",
@@ -2313,20 +2184,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 59,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 59
+// CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 59
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 59
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2338,20 +2207,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "IndirectFieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 60,
 // CHECK-NEXT:     "col": 9,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 60
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 60
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 60
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2362,19 +2229,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "IndirectFieldDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 12,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 60
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 12,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 60
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 12,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 60
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2386,20 +2250,18 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 64,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 64
+// CHECK-NEXT:   "tokLen": 5
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 64
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 15,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 64
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "isReferenced": true,
@@ -2459,19 +2321,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 64
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 64
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 64
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2483,19 +2342,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 64
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 64
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 64
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2512,19 +2368,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 64
+// CHECK-NEXT:       "tokLen": 5
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 64
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 64
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2538,19 +2391,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 64
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 64
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 64
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2567,19 +2417,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 64
+// CHECK-NEXT:       "tokLen": 5
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 64
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 64
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2593,19 +2440,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 64
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 64
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 64
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2622,20 +2466,18 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 65,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 65
+// CHECK-NEXT:   "tokLen": 5
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 65
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 15,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 65
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "isReferenced": true,
@@ -2695,19 +2537,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 65
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 65
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 65
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2719,19 +2558,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 65
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 65
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 65
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2748,19 +2584,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 65
+// CHECK-NEXT:       "tokLen": 5
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 65
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 65
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2774,19 +2607,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 65
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 65
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 65
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2803,19 +2633,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 65
+// CHECK-NEXT:       "tokLen": 5
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 65
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 65
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2829,19 +2656,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 65
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 65
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 65
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2858,20 +2682,18 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 66,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 66
+// CHECK-NEXT:   "tokLen": 5
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 66
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 15,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 66
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "isReferenced": true,
@@ -2931,19 +2753,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 66
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 66
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 66
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2955,19 +2774,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 66
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 66
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 66
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2984,19 +2800,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 66
+// CHECK-NEXT:       "tokLen": 5
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 66
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 66
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3010,19 +2823,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 66
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 66
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 66
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3039,19 +2849,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 66
+// CHECK-NEXT:       "tokLen": 5
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 66
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 66
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3065,19 +2872,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 66
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 66
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 66
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3094,20 +2898,19 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 68,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 68
+// CHECK-NEXT:   "tokLen": 8
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 68
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 69,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 69
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "Derived1",
@@ -3176,20 +2979,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 68,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 68
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 68
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 68
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3202,20 +3003,19 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 71,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 71
+// CHECK-NEXT:   "tokLen": 8
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 71
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 72,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 72
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "Derived2",
@@ -3283,20 +3083,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 71,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 71
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 71
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 71
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3309,20 +3107,19 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 74,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 74
+// CHECK-NEXT:   "tokLen": 8
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 74
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 75,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 75
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "Derived3",
@@ -3379,20 +3176,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 74,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 74
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 74
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 74
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3404,19 +3199,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 74
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 74
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 74
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3432,19 +3224,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 74
+// CHECK-NEXT:       "tokLen": 8
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 74
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 74
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3458,19 +3247,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 74
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 74
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 74
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3486,19 +3272,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 74
+// CHECK-NEXT:       "tokLen": 8
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 74
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 74
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3512,19 +3295,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 74
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 74
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 74
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3541,20 +3321,19 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 77,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 77
+// CHECK-NEXT:   "tokLen": 8
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 77
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 78,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 78
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "Derived4",
@@ -3625,20 +3404,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 77,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 77
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 77
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 77
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3650,19 +3427,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 77
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 77
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 77
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3678,19 +3452,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 77
+// CHECK-NEXT:       "tokLen": 8
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 77
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 77
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3704,19 +3475,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 77
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 77
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 77
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3732,19 +3500,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 77
+// CHECK-NEXT:       "tokLen": 8
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 77
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 77
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3758,19 +3523,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 77
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 77
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 77
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3787,20 +3549,19 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 80,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 80
+// CHECK-NEXT:   "tokLen": 8
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 80
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 81,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 81
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "Derived5",
@@ -3857,20 +3618,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 80,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 80
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3882,19 +3641,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 80
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3910,19 +3666,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 80
+// CHECK-NEXT:       "tokLen": 8
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 80
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 80
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3936,19 +3689,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 80
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3964,19 +3714,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 80
+// CHECK-NEXT:       "tokLen": 8
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 80
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 80
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3990,19 +3737,16 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 80
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -4019,20 +3763,19 @@ struct Derived6 : virtual public Bases... {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 84,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 84
+// CHECK-NEXT:   "tokLen": 8
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 84
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 85,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 85
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "Derived6",
@@ -4102,20 +3845,18 @@ struct Derived6 : virtual public Bases... {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 84,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 84
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 84
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 84
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,

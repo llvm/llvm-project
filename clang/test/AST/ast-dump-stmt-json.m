@@ -24,20 +24,20 @@ void TestObjCAtCatchStmt() {
 
 // CHECK:  "kind": "FunctionDecl", 
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 6, 
 // CHECK-NEXT:   "file": "{{.*}}", 
-// CHECK-NEXT:   "line": 3
+// CHECK-NEXT:   "line": 3, 
+// CHECK-NEXT:   "col": 6, 
+// CHECK-NEXT:   "tokLen": 13
 // CHECK-NEXT:  }, 
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1, 
-// CHECK-NEXT:    "file": "{{.*}}", 
-// CHECK-NEXT:    "line": 3
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   }, 
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 5, 
 // CHECK-NEXT:    "col": 1, 
-// CHECK-NEXT:    "file": "{{.*}}", 
-// CHECK-NEXT:    "line": 5
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  }, 
 // CHECK-NEXT:  "name": "TestBlockExpr", 
@@ -49,20 +49,18 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:    "id": "0x{{.*}}", 
 // CHECK-NEXT:    "kind": "ParmVarDecl", 
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 3, 
 // CHECK-NEXT:     "col": 24, 
-// CHECK-NEXT:     "file": "{{.*}}", 
-// CHECK-NEXT:     "line": 3
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    }, 
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 20, 
-// CHECK-NEXT:      "file": "{{.*}}", 
-// CHECK-NEXT:      "line": 3
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }, 
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 24, 
-// CHECK-NEXT:      "file": "{{.*}}", 
-// CHECK-NEXT:      "line": 3
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    }, 
 // CHECK-NEXT:    "isUsed": true, 
@@ -77,13 +75,12 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 27, 
-// CHECK-NEXT:      "file": "{{.*}}", 
-// CHECK-NEXT:      "line": 3
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }, 
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 5, 
 // CHECK-NEXT:      "col": 1, 
-// CHECK-NEXT:      "file": "{{.*}}", 
-// CHECK-NEXT:      "line": 5
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    }, 
 // CHECK-NEXT:    "inner": [
@@ -92,14 +89,13 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:      "kind": "ExprWithCleanups", 
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 4, 
 // CHECK-NEXT:        "col": 3, 
-// CHECK-NEXT:        "file": "{{.*}}", 
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }, 
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9, 
-// CHECK-NEXT:        "file": "{{.*}}", 
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "type": {
@@ -120,13 +116,11 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3, 
-// CHECK-NEXT:          "file": "{{.*}}", 
-// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }, 
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 9, 
-// CHECK-NEXT:          "file": "{{.*}}", 
-// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "type": {
@@ -139,19 +133,16 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:          "kind": "BlockDecl", 
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 3, 
-// CHECK-NEXT:           "file": "{{.*}}", 
-// CHECK-NEXT:           "line": 4
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3, 
-// CHECK-NEXT:            "file": "{{.*}}", 
-// CHECK-NEXT:            "line": 4
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }, 
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 9, 
-// CHECK-NEXT:            "file": "{{.*}}", 
-// CHECK-NEXT:            "line": 4
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "inner": [
@@ -172,13 +163,11 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 4, 
-// CHECK-NEXT:              "file": "{{.*}}", 
-// CHECK-NEXT:              "line": 4
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }, 
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 9, 
-// CHECK-NEXT:              "file": "{{.*}}", 
-// CHECK-NEXT:              "line": 4
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }, 
 // CHECK-NEXT:            "inner": [
@@ -188,13 +177,11 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 6, 
-// CHECK-NEXT:                "file": "{{.*}}", 
-// CHECK-NEXT:                "line": 4
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }, 
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 6, 
-// CHECK-NEXT:                "file": "{{.*}}", 
-// CHECK-NEXT:                "line": 4
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              }, 
 // CHECK-NEXT:              "type": {
@@ -209,13 +196,11 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:                "range": {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 6, 
-// CHECK-NEXT:                  "file": "{{.*}}", 
-// CHECK-NEXT:                  "line": 4
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }, 
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 6, 
-// CHECK-NEXT:                  "file": "{{.*}}", 
-// CHECK-NEXT:                  "line": 4
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                }, 
 // CHECK-NEXT:                "type": {
@@ -249,20 +234,20 @@ void TestObjCAtCatchStmt() {
 
 // CHECK:  "kind": "FunctionDecl", 
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 6, 
 // CHECK-NEXT:   "file": "{{.*}}", 
-// CHECK-NEXT:   "line": 7
+// CHECK-NEXT:   "line": 7, 
+// CHECK-NEXT:   "col": 6, 
+// CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  }, 
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1, 
-// CHECK-NEXT:    "file": "{{.*}}", 
-// CHECK-NEXT:    "line": 7
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   }, 
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 9, 
 // CHECK-NEXT:    "col": 1, 
-// CHECK-NEXT:    "file": "{{.*}}", 
-// CHECK-NEXT:    "line": 9
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  }, 
 // CHECK-NEXT:  "name": "TestExprWithCleanup", 
@@ -274,20 +259,18 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:    "id": "0x{{.*}}", 
 // CHECK-NEXT:    "kind": "ParmVarDecl", 
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 7, 
 // CHECK-NEXT:     "col": 30, 
-// CHECK-NEXT:     "file": "{{.*}}", 
-// CHECK-NEXT:     "line": 7
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    }, 
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 26, 
-// CHECK-NEXT:      "file": "{{.*}}", 
-// CHECK-NEXT:      "line": 7
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }, 
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 30, 
-// CHECK-NEXT:      "file": "{{.*}}", 
-// CHECK-NEXT:      "line": 7
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    }, 
 // CHECK-NEXT:    "isUsed": true, 
@@ -302,13 +285,12 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 33, 
-// CHECK-NEXT:      "file": "{{.*}}", 
-// CHECK-NEXT:      "line": 7
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }, 
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 9, 
 // CHECK-NEXT:      "col": 1, 
-// CHECK-NEXT:      "file": "{{.*}}", 
-// CHECK-NEXT:      "line": 9
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    }, 
 // CHECK-NEXT:    "inner": [
@@ -317,14 +299,13 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:      "kind": "ExprWithCleanups", 
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 8, 
 // CHECK-NEXT:        "col": 3, 
-// CHECK-NEXT:        "file": "{{.*}}", 
-// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }, 
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9, 
-// CHECK-NEXT:        "file": "{{.*}}", 
-// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "type": {
@@ -345,13 +326,11 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3, 
-// CHECK-NEXT:          "file": "{{.*}}", 
-// CHECK-NEXT:          "line": 8
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }, 
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 9, 
-// CHECK-NEXT:          "file": "{{.*}}", 
-// CHECK-NEXT:          "line": 8
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "type": {
@@ -364,19 +343,16 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:          "kind": "BlockDecl", 
 // CHECK-NEXT:          "loc": {
 // CHECK-NEXT:           "col": 3, 
-// CHECK-NEXT:           "file": "{{.*}}", 
-// CHECK-NEXT:           "line": 8
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3, 
-// CHECK-NEXT:            "file": "{{.*}}", 
-// CHECK-NEXT:            "line": 8
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }, 
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 9, 
-// CHECK-NEXT:            "file": "{{.*}}", 
-// CHECK-NEXT:            "line": 8
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "inner": [
@@ -397,13 +373,11 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 4, 
-// CHECK-NEXT:              "file": "{{.*}}", 
-// CHECK-NEXT:              "line": 8
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }, 
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 9, 
-// CHECK-NEXT:              "file": "{{.*}}", 
-// CHECK-NEXT:              "line": 8
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            }, 
 // CHECK-NEXT:            "inner": [
@@ -413,13 +387,11 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 6, 
-// CHECK-NEXT:                "file": "{{.*}}", 
-// CHECK-NEXT:                "line": 8
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }, 
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 6, 
-// CHECK-NEXT:                "file": "{{.*}}", 
-// CHECK-NEXT:                "line": 8
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              }, 
 // CHECK-NEXT:              "type": {
@@ -434,13 +406,11 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:                "range": {
 // CHECK-NEXT:                 "begin": {
 // CHECK-NEXT:                  "col": 6, 
-// CHECK-NEXT:                  "file": "{{.*}}", 
-// CHECK-NEXT:                  "line": 8
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }, 
 // CHECK-NEXT:                 "end": {
 // CHECK-NEXT:                  "col": 6, 
-// CHECK-NEXT:                  "file": "{{.*}}", 
-// CHECK-NEXT:                  "line": 8
+// CHECK-NEXT:                  "tokLen": 1
 // CHECK-NEXT:                 }
 // CHECK-NEXT:                }, 
 // CHECK-NEXT:                "type": {
@@ -474,20 +444,20 @@ void TestObjCAtCatchStmt() {
 
 // CHECK:  "kind": "FunctionDecl", 
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 6, 
 // CHECK-NEXT:   "file": "{{.*}}", 
-// CHECK-NEXT:   "line": 14
+// CHECK-NEXT:   "line": 14, 
+// CHECK-NEXT:   "col": 6, 
+// CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  }, 
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1, 
-// CHECK-NEXT:    "file": "{{.*}}", 
-// CHECK-NEXT:    "line": 14
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   }, 
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 20, 
 // CHECK-NEXT:    "col": 1, 
-// CHECK-NEXT:    "file": "{{.*}}", 
-// CHECK-NEXT:    "line": 20
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  }, 
 // CHECK-NEXT:  "name": "TestObjCAtCatchStmt", 
@@ -500,14 +470,14 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:    "kind": "CompoundStmt", 
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 14, 
 // CHECK-NEXT:      "col": 28, 
-// CHECK-NEXT:      "file": "{{.*}}", 
-// CHECK-NEXT:      "line": 14
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }, 
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 20, 
 // CHECK-NEXT:      "col": 1, 
-// CHECK-NEXT:      "file": "{{.*}}", 
-// CHECK-NEXT:      "line": 20
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    }, 
 // CHECK-NEXT:    "inner": [
@@ -516,14 +486,14 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:      "kind": "ObjCAtTryStmt", 
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 15, 
 // CHECK-NEXT:        "col": 3, 
-// CHECK-NEXT:        "file": "{{.*}}", 
-// CHECK-NEXT:        "line": 15
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }, 
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 19, 
 // CHECK-NEXT:        "col": 3, 
-// CHECK-NEXT:        "file": "{{.*}}", 
-// CHECK-NEXT:        "line": 19
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }, 
 // CHECK-NEXT:      "inner": [
@@ -532,14 +502,14 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:        "kind": "CompoundStmt", 
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
+// CHECK-NEXT:          "line": 15, 
 // CHECK-NEXT:          "col": 8, 
-// CHECK-NEXT:          "file": "{{.*}}", 
-// CHECK-NEXT:          "line": 15
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }, 
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "line": 16, 
 // CHECK-NEXT:          "col": 3, 
-// CHECK-NEXT:          "file": "{{.*}}", 
-// CHECK-NEXT:          "line": 16
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }, 
@@ -549,13 +519,12 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 5, 
-// CHECK-NEXT:          "file": "{{.*}}", 
-// CHECK-NEXT:          "line": 16
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }, 
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "line": 17, 
 // CHECK-NEXT:          "col": 3, 
-// CHECK-NEXT:          "file": "{{.*}}", 
-// CHECK-NEXT:          "line": 17
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "inner": [
@@ -563,20 +532,18 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:          "id": "0x{{.*}}", 
 // CHECK-NEXT:          "kind": "VarDecl", 
 // CHECK-NEXT:          "loc": {
+// CHECK-NEXT:           "line": 16, 
 // CHECK-NEXT:           "col": 15, 
-// CHECK-NEXT:           "file": "{{.*}}", 
-// CHECK-NEXT:           "line": 16
+// CHECK-NEXT:           "tokLen": 1
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 12, 
-// CHECK-NEXT:            "file": "{{.*}}", 
-// CHECK-NEXT:            "line": 16
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }, 
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 15, 
-// CHECK-NEXT:            "file": "{{.*}}", 
-// CHECK-NEXT:            "line": 16
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "name": "a", 
@@ -590,13 +557,12 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 18, 
-// CHECK-NEXT:            "file": "{{.*}}", 
-// CHECK-NEXT:            "line": 16
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }, 
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "line": 17, 
 // CHECK-NEXT:            "col": 3, 
-// CHECK-NEXT:            "file": "{{.*}}", 
-// CHECK-NEXT:            "line": 17
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
@@ -608,13 +574,12 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 5, 
-// CHECK-NEXT:          "file": "{{.*}}", 
-// CHECK-NEXT:          "line": 17
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }, 
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "line": 18, 
 // CHECK-NEXT:          "col": 3, 
-// CHECK-NEXT:          "file": "{{.*}}", 
-// CHECK-NEXT:          "line": 18
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "isCatchAll": true, 
@@ -624,14 +589,14 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:          "kind": "CompoundStmt", 
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "line": 17, 
 // CHECK-NEXT:            "col": 17, 
-// CHECK-NEXT:            "file": "{{.*}}", 
-// CHECK-NEXT:            "line": 17
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }, 
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "line": 18, 
 // CHECK-NEXT:            "col": 3, 
-// CHECK-NEXT:            "file": "{{.*}}", 
-// CHECK-NEXT:            "line": 18
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }
 // CHECK-NEXT:         }
@@ -643,13 +608,12 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 5, 
-// CHECK-NEXT:          "file": "{{.*}}", 
-// CHECK-NEXT:          "line": 18
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }, 
 // CHECK-NEXT:         "end": {
+// CHECK-NEXT:          "line": 19, 
 // CHECK-NEXT:          "col": 3, 
-// CHECK-NEXT:          "file": "{{.*}}", 
-// CHECK-NEXT:          "line": 19
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }, 
 // CHECK-NEXT:        "inner": [
@@ -658,14 +622,14 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:          "kind": "CapturedStmt", 
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
+// CHECK-NEXT:            "line": 18, 
 // CHECK-NEXT:            "col": 14, 
-// CHECK-NEXT:            "file": "{{.*}}", 
-// CHECK-NEXT:            "line": 18
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }, 
 // CHECK-NEXT:           "end": {
+// CHECK-NEXT:            "line": 19, 
 // CHECK-NEXT:            "col": 3, 
-// CHECK-NEXT:            "file": "{{.*}}", 
-// CHECK-NEXT:            "line": 19
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          }, 
 // CHECK-NEXT:          "inner": [
@@ -683,14 +647,14 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:              "kind": "CompoundStmt", 
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
+// CHECK-NEXT:                "line": 18, 
 // CHECK-NEXT:                "col": 14, 
-// CHECK-NEXT:                "file": "{{.*}}", 
-// CHECK-NEXT:                "line": 18
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }, 
 // CHECK-NEXT:               "end": {
+// CHECK-NEXT:                "line": 19, 
 // CHECK-NEXT:                "col": 3, 
-// CHECK-NEXT:                "file": "{{.*}}", 
-// CHECK-NEXT:                "line": 19
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              }
 // CHECK-NEXT:             }, 
@@ -698,20 +662,18 @@ void TestObjCAtCatchStmt() {
 // CHECK-NEXT:              "id": "0x{{.*}}", 
 // CHECK-NEXT:              "kind": "ImplicitParamDecl", 
 // CHECK-NEXT:              "loc": {
+// CHECK-NEXT:               "line": 18, 
 // CHECK-NEXT:               "col": 14, 
-// CHECK-NEXT:               "file": "{{.*}}", 
-// CHECK-NEXT:               "line": 18
+// CHECK-NEXT:               "tokLen": 1
 // CHECK-NEXT:              }, 
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 14, 
-// CHECK-NEXT:                "file": "{{.*}}", 
-// CHECK-NEXT:                "line": 18
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }, 
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 14, 
-// CHECK-NEXT:                "file": "{{.*}}", 
-// CHECK-NEXT:                "line": 18
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              }, 
 // CHECK-NEXT:              "isImplicit": true, 
