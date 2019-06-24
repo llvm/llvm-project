@@ -756,9 +756,12 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   }
   case R_PPC64_ADDR16:
-  case R_PPC64_TPREL16:
-    checkInt(Loc, Val, 16, OriginalType);
+    checkIntUInt(Loc, Val, 16, OriginalType);
     write16(Loc, Val);
+    break;
+  case R_PPC64_ADDR32:
+    checkIntUInt(Loc, Val, 32, OriginalType);
+    write32(Loc, Val);
     break;
   case R_PPC64_ADDR16_DS:
   case R_PPC64_TPREL16_DS: {
@@ -836,7 +839,10 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
       write16(Loc, (read16(Loc) & Mask) | lo(Val));
     }
   } break;
-  case R_PPC64_ADDR32:
+  case R_PPC64_TPREL16:
+    checkInt(Loc, Val, 16, OriginalType);
+    write16(Loc, Val);
+    break;
   case R_PPC64_REL32:
     checkInt(Loc, Val, 32, Type);
     write32(Loc, Val);
