@@ -529,7 +529,7 @@ inline _LIBCPP_INLINE_VISIBILITY long double hypot( long double x, long double y
 
 template <class _A1, class _A2, class _A3>
 inline _LIBCPP_INLINE_VISIBILITY
-typename __lazy_enable_if
+typename _EnableIf
 <
     is_arithmetic<_A1>::value &&
     is_arithmetic<_A2>::value &&
