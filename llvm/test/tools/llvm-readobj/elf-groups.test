@@ -1,56 +1,82 @@
-# Source file compiled:
-##include <iostream>
-# #include <typeinfo>
-#template <class A>
-#void foo(A variable) {
-#  std::cout << "foo is " << typeid(A).name() << "\n";
-#}
-#int main () {
-#  char x = 'x';
-#  int y = 1;
-#  foo(x);
-#  foo(y);
-#  return 0;
-#}
+## Check that llvm-readelf and llvm-readobj can
+## dump SHT_GROUP sections properly.
 
-RUN: llvm-readobj -g %p/Inputs/elf-groups.x86_64 \
-RUN:   | FileCheck %s
-RUN: llvm-readelf -g %p/Inputs/elf-groups.x86_64 \
-RUN:   | FileCheck --check-prefix="GNU" %s
-CHECK:         Groups {
-CHECK-NEXT:      Group {
-CHECK-NEXT:        Name: .group (92)
-CHECK-NEXT:        Index: 1
-CHECK-NEXT:        Link: 23
-CHECK-NEXT:        Info: 17
-CHECK-NEXT:        Type: COMDAT (0x1)
-CHECK-NEXT:        Signature: _Z3fooIcEvT_
-CHECK-NEXT:        Section(s) in group [
-CHECK-NEXT:          .text._Z3fooIcEvT_ (10)
-CHECK-NEXT:          .rela.text._Z3fooIcEvT_ (11)
-CHECK-NEXT:        ]
-CHECK-NEXT:      }
-CHECK-NEXT:      Group {
-CHECK-NEXT:        Name: .group (92)
-CHECK-NEXT:        Index: 2
-CHECK-NEXT:        Link: 23
-CHECK-NEXT:        Info: 18
-CHECK-NEXT:        Type: COMDAT (0x1)
-CHECK-NEXT:        Signature: _Z3fooIiEvT_
-CHECK-NEXT:        Section(s) in group [
-CHECK-NEXT:          .text._Z3fooIiEvT_ (12)
-CHECK-NEXT:          .rela.text._Z3fooIiEvT_ (13)
-CHECK-NEXT:        ]
-CHECK-NEXT:      }
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-readobj -g %t.o | FileCheck %s
+# RUN: llvm-readelf -g %t.o | FileCheck --check-prefix=GNU %s
 
-GNU:COMDAT group section [    1] `.group' [_Z3fooIcEvT_] contains 2 sections:
-GNU-NEXT:   [Index]    Name
-GNU-NEXT:   [   10]   .text._Z3fooIcEvT_
-GNU-NEXT:   [   11]   .rela.text._Z3fooIcEvT_
-GNU:COMDAT group section [    2] `.group' [_Z3fooIiEvT_] contains 2 sections:
-GNU-NEXT:   [Index]    Name
-GNU-NEXT:   [   12]   .text._Z3fooIiEvT_
-GNU-NEXT:   [   13]   .rela.text._Z3fooIiEvT_
-GNU:COMDAT group section [    3] `.group' [_ZNKSt9type_info4nameEv] contains 1 sections:
-GNU-NEXT:   [Index]    Name
-GNU-NEXT:   [   14]   .text._ZNKSt9type_info4nameEv
+# CHECK:      Groups {
+# CHECK-NEXT:   Group {
+# CHECK-NEXT:     Name: .group
+# CHECK-NEXT:     Index: 1
+# CHECK-NEXT:     Link: 7
+# CHECK-NEXT:     Info: 1
+# CHECK-NEXT:     Type: COMDAT
+# CHECK-NEXT:     Signature: foo
+# CHECK-NEXT:     Section(s) in group [
+# CHECK-NEXT:       .text.foo
+# CHECK-NEXT:       .rela.text.foo
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Group {
+# CHECK-NEXT:     Name: .group1
+# CHECK-NEXT:     Index: 2
+# CHECK-NEXT:     Link: 7
+# CHECK-NEXT:     Info: 2
+# CHECK-NEXT:     Type: COMDAT
+# CHECK-NEXT:     Signature: bar
+# CHECK-NEXT:     Section(s) in group [
+# CHECK-NEXT:       .text.bar
+# CHECK-NEXT:       .rela.text.bar
+# CHECK-NEXT:     ]
+# CHECK-NEXT:   }
+
+# GNU:      COMDAT group section [    1] `.group' [foo] contains 2 sections:
+# GNU-NEXT:  [Index]  Name
+# GNU-NEXT:  [    3] .text.foo
+# GNU-NEXT:  [    4] .rela.text.foo
+# GNU:      COMDAT group section [    2] `.group1' [bar] contains 2 sections:
+# GNU-NEXT:  [Index]  Name
+# GNU-NEXT:  [    5] .text.bar
+# GNU-NEXT:  [    6] .rela.text.bar
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .group
+    Type: SHT_GROUP
+    Link: .symtab
+    Info: foo
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .text.foo
+      - SectionOrType: .rela.text.foo
+  - Name: .group1
+    Type: SHT_GROUP
+    Link: .symtab
+    Info: bar
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .text.bar
+      - SectionOrType: .rela.text.bar
+  - Name:  .text.foo
+    Type:  SHT_PROGBITS
+  - Name: .rela.text.foo
+    Type: SHT_RELA
+    Link: .symtab
+    Info: .text.foo
+  - Name: .text.bar
+    Type: SHT_PROGBITS
+  - Name: .rela.text.bar
+    Type: SHT_RELA
+    Link: .symtab
+    Info: .text.bar
+Symbols:
+  - Name:    foo
+    Section: .text.foo
+  - Name:    bar
+    Section: .text.bar

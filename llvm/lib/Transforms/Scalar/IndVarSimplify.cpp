@@ -1312,7 +1312,7 @@ WidenIV::WidenedRecTy WidenIV::getWideRecurrence(NarrowIVDefUse DU) {
   return {AddRec, ExtKind};
 }
 
-/// This IV user cannot be widen. Replace this use of the original narrow IV
+/// This IV user cannot be widened. Replace this use of the original narrow IV
 /// with a truncation of the new wide IV to isolate and eliminate the narrow IV.
 static void truncateIVUse(NarrowIVDefUse DU, DominatorTree *DT, LoopInfo *LI) {
   auto *InsertPt = getInsertPointForUses(DU.NarrowUse, DU.NarrowDef, DT, LI);
@@ -2732,10 +2732,12 @@ bool IndVarSimplify::run(Loop *L) {
       if (ExitCount->isZero()) {
         auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
         bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
-        auto *NewCond = ExitIfTrue ?
-          ConstantInt::getTrue(BI->getCondition()->getType()) :
-          ConstantInt::getFalse(BI->getCondition()->getType());
+        auto *OldCond = BI->getCondition();
+        auto *NewCond = ExitIfTrue ? ConstantInt::getTrue(OldCond->getType()) :
+          ConstantInt::getFalse(OldCond->getType());
         BI->setCondition(NewCond);
+        if (OldCond->use_empty())
+          DeadInsts.push_back(OldCond);
         Changed = true;
         continue;
       }

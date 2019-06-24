@@ -39656,6 +39656,7 @@ static SDValue combineMaskedStore(SDNode *N, SelectionDAG &DAG,
 }
 
 static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
+                            TargetLowering::DAGCombinerInfo &DCI,
                             const X86Subtarget &Subtarget) {
   StoreSDNode *St = cast<StoreSDNode>(N);
   EVT VT = St->getValue().getValueType();
@@ -39765,6 +39766,18 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
                      : (TLI.isTypeLegal(MVT::i64) ? MVT::v2i64 : MVT::v4i32);
       return scalarizeVectorStore(St, NTVT, DAG);
     }
+  }
+
+  // Try to optimize v16i16->v16i8 truncating stores when BWI is not
+  // supported, but avx512f is by extending to v16i32 and truncating.
+  if (!St->isTruncatingStore() && VT == MVT::v16i8 && !Subtarget.hasBWI() &&
+      St->getValue().getOpcode() == ISD::TRUNCATE &&
+      St->getValue().getOperand(0).getValueType() == MVT::v16i16 &&
+      TLI.isTruncStoreLegalOrCustom(MVT::v16i32, MVT::v16i8) &&
+      !DCI.isBeforeLegalizeOps()) {
+    SDValue Ext = DAG.getNode(ISD::ANY_EXTEND, dl, MVT::v16i32, St->getValue());
+    return DAG.getTruncStore(St->getChain(), dl, Ext, St->getBasePtr(),
+                             MVT::v16i8, St->getMemOperand());
   }
 
   // Optimize trunc store (of multiple scalars) to shuffle and store.
@@ -43774,7 +43787,7 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case X86ISD::BEXTR:       return combineBEXTR(N, DAG, DCI, Subtarget);
   case ISD::LOAD:           return combineLoad(N, DAG, DCI, Subtarget);
   case ISD::MLOAD:          return combineMaskedLoad(N, DAG, DCI, Subtarget);
-  case ISD::STORE:          return combineStore(N, DAG, Subtarget);
+  case ISD::STORE:          return combineStore(N, DAG, DCI, Subtarget);
   case ISD::MSTORE:         return combineMaskedStore(N, DAG, DCI, Subtarget);
   case ISD::SINT_TO_FP:     return combineSIntToFP(N, DAG, Subtarget);
   case ISD::UINT_TO_FP:     return combineUIntToFP(N, DAG, Subtarget);

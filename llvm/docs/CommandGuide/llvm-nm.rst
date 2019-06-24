@@ -22,39 +22,94 @@ hexadecimal address, followed by a type code character, followed by a name, for
 each symbol.  One record is printed per line; fields are separated by spaces.
 When the address is omitted, it is replaced by 8 spaces.
 
-Type code characters currently supported, and their meanings, are as follows:
+Type code characters currently supported, and their meanings, are as follows.
+Where both lower and upper-case characters are listed for the same meaning, a
+lower-case character represents a local symbol, whilst an upper-case character
+represents a global (external) symbol:
 
-U
 
- Named object is referenced but undefined in this bitcode file
+a, A
+
+ Absolute symbol.
+
+b, B
+
+ Unitialized data (bss) object.
 
 C
 
- Common (multiple definitions link together into one def)
+ Common symbol. Multiple definitions link together into one definition.
+
+d, D
+
+ Writable data object.
+
+i, I
+
+ COFF: .idata symbol or symbol in a section with IMAGE_SCN_LNK_INFO set.
+
+n
+
+ ELF: local symbol from non-alloc section.
+
+ COFF: debug symbol.
+
+N
+
+ ELF: debug section symbol, or global symbol from non-alloc section.
+
+s, S
+
+ COFF: section symbol.
+
+ Mach-O: absolute symbol or symbol from a section other than __TEXT_EXEC __text,
+ __TEXT __text, __DATA __data, or __DATA __bss.
+
+r, R
+
+ Read-only data object.
+
+t, T
+
+ Code (text) object.
+
+u
+
+ ELF: GNU unique symbol.
+
+U
+
+ Named object is undefined in this file.
+
+v
+
+ ELF: Undefined weak object. It is not a link failure if the object is not
+ defined.
+
+V
+
+ ELF: Defined weak object symbol. This definition will only be used if no
+ regular definitions exist in a link. If multiple weak definitions and no
+ regular definitons exist, one of the weak definitions will be used.
+
+w
+
+ Undefined weak symbol other than an ELF object symbol. It is not a link failure
+ if the symbol is not defined.
 
 W
 
- Weak reference (multiple definitions link together into zero or one definitions)
+ Defined weak symbol other than an ELF object symbol. This definition will only
+ be used if no regular definitions exist in a link. If multiple weak definitions
+ and no regular definitons exist, one of the weak definitions will be used.
 
-t
+\-
 
- Local function (text) object
-
-T
-
- Global function (text) object
-
-d
-
- Local data object
-
-D
-
- Global data object
+ Mach-O: N_STAB symbol.
 
 ?
 
- Something unrecognizable
+ Something unrecognizable.
 
 Because LLVM bitcode files typically contain objects that are not considered to
 have addresses until they are linked into an executable image or dynamically
