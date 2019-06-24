@@ -10,6 +10,14 @@
 # RUN:          --capture \
 # RUN:          --capture-path %t.repro \
 # RUN:          %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+# RUN: %lldb -x -b -s %S/Inputs/Simple.in \
+# RUN:          --replay %t.repro | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
+# RUN: rm -rf %t.out
+# RUN: %lldb -x -b -s %S/Inputs/Simple.in \
+# RUN:          --replay %t.repro | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
+# RUN: mv %t.repro %t.repro.moved
+# RUN: %lldb -x -b -s %S/Inputs/Simple.in \
+# RUN:          --replay %t.repro.moved | FileCheck %s --check-prefix CHECK --check-prefix REPLAY
 
 # CHECK: Breakpoint 1
 # CHECK: Process {{.*}} stopped
