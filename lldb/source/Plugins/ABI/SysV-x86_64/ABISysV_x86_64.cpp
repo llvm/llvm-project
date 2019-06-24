@@ -220,8 +220,19 @@ size_t ABISysV_x86_64::GetRedZoneSize() const { return 128; }
 
 ABISP
 ABISysV_x86_64::CreateInstance(lldb::ProcessSP process_sp, const ArchSpec &arch) {
-  if (arch.GetTriple().getArch() == llvm::Triple::x86_64) {
-    return ABISP(new ABISysV_x86_64(process_sp));
+  const llvm::Triple::ArchType arch_type = arch.GetTriple().getArch();
+  const llvm::Triple::OSType os_type = arch.GetTriple().getOS();
+  if (arch_type == llvm::Triple::x86_64) {
+    switch(os_type) {
+      case llvm::Triple::OSType::MacOSX:
+      case llvm::Triple::OSType::Linux:
+      case llvm::Triple::OSType::FreeBSD:
+      case llvm::Triple::OSType::Solaris:
+      case llvm::Triple::OSType::UnknownOS:
+        return ABISP(new ABISysV_x86_64(process_sp));
+      default: 
+        return ABISP();
+    }
   }
   return ABISP();
 }
