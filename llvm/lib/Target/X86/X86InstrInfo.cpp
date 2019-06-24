@@ -4748,9 +4748,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     unsigned CommuteOpIdx1 = OpNum, CommuteOpIdx2 = CommuteAnyOperandIndex;
     if (findCommutedOpIndices(MI, CommuteOpIdx1, CommuteOpIdx2)) {
       bool HasDef = MI.getDesc().getNumDefs();
-      unsigned Reg0 = HasDef ? MI.getOperand(0).getReg() : 0;
-      unsigned Reg1 = MI.getOperand(CommuteOpIdx1).getReg();
-      unsigned Reg2 = MI.getOperand(CommuteOpIdx2).getReg();
+      Register Reg0 = HasDef ? MI.getOperand(0).getReg() : Register();
+      Register Reg1 = MI.getOperand(CommuteOpIdx1).getReg();
+      Register Reg2 = MI.getOperand(CommuteOpIdx2).getReg();
       bool Tied1 =
           0 == MI.getDesc().getOperandConstraint(CommuteOpIdx1, MCOI::TIED_TO);
       bool Tied2 =

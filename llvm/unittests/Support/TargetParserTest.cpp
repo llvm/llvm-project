@@ -1053,15 +1053,17 @@ TEST(TargetParserTest, AArch64ExtensionFeatures) {
   std::vector<StringRef> Features;
 
   unsigned ExtVal = 0;
-  for (auto E : Extensions)
-    ExtVal |= E;
-
-  AArch64::getExtensionFeatures(ExtVal, Features);
-  auto B = std::begin(Features);
-  auto E = std::end(Features);
+  for (auto Ext : Extensions)
+    ExtVal |= Ext;
 
   EXPECT_FALSE(AArch64::getExtensionFeatures(AArch64::AEK_INVALID, Features));
+  EXPECT_TRUE(!Features.size());
+
+  AArch64::getExtensionFeatures(ExtVal, Features);
   EXPECT_TRUE(Extensions.size() == Features.size());
+
+  auto B = std::begin(Features);
+  auto E = std::end(Features);
 
   EXPECT_TRUE(std::find(B, E, "+crc") != E);
   EXPECT_TRUE(std::find(B, E, "+crypto") != E);

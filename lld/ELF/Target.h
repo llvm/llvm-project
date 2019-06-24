@@ -221,7 +221,7 @@ inline void checkIntUInt(uint8_t *Loc, uint64_t V, int N, RelType Type) {
   // messages show a small negative value rather than an extremely large one
   if (V != (uint64_t)llvm::SignExtend64(V, N) && (V >> N) != 0)
     reportRangeError(Loc, Type, Twine((int64_t)V), llvm::minIntN(N),
-                     llvm::maxIntN(N));
+                     llvm::maxUIntN(N));
 }
 
 inline void checkAlignment(uint8_t *Loc, uint64_t V, int N, RelType Type) {

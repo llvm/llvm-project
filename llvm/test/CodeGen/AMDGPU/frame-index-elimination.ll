@@ -144,9 +144,6 @@ define void @void_func_byval_struct_i8_i32_ptr_value({ i8, i32 } addrspace(5)* b
   ret void
 }
 
-; FIXME: Should be able to see that this can use vaddr, but the
-; FrameIndex is hidden behind a CopyFromReg in the second block.
-
 ; GCN-LABEL: {{^}}void_func_byval_struct_i8_i32_ptr_nonentry_block:
 ; GCN: s_sub_u32 [[SUB_OFFSET:s[0-9]+]], s32, s33
 
@@ -156,13 +153,13 @@ define void @void_func_byval_struct_i8_i32_ptr_value({ i8, i32 } addrspace(5)* b
 
 ; GCN: s_and_saveexec_b64
 
-; CI: v_add_i32_e32 v0, vcc, 4, [[SHIFT]]
-; CI: buffer_load_dword v1, v1, s[0:3], s33 offen offset:4{{$}}
+; CI: v_add_i32_e32 [[GEP:v[0-9]+]], vcc, 4, [[SHIFT]]
+; CI: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:4{{$}}
 
-; GFX9: v_add_u32_e32 v0, 4, [[SHIFT]]
-; GFX9: buffer_load_dword v1, v{{[0-9]+}}, s[0:3], s33 offen offset:4{{$}}
+; GFX9: v_add_u32_e32 [[GEP:v[0-9]+]], 4, [[SHIFT]]
+; GFX9: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s32 offset:4{{$}}
 
-; GCN: ds_write_b32
+; GCN: ds_write_b32 v{{[0-9]+}}, [[GEP]]
 define void @void_func_byval_struct_i8_i32_ptr_nonentry_block({ i8, i32 } addrspace(5)* byval %arg0, i32 %arg2) #0 {
   %cmp = icmp eq i32 %arg2, 0
   br i1 %cmp, label %bb, label %ret

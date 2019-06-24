@@ -126,6 +126,33 @@ def pred_basic_fp : VCMPPredicateOperand {
   let EncoderMethod = "getRestrictedCondCodeOpValue";
 }
 
+// Register list operands for interleaving load/stores
+def VecList2QAsmOperand : AsmOperandClass {
+  let Name = "VecListTwoMQ";
+  let ParserMethod = "parseVectorList";
+  let RenderMethod = "addMVEVecListOperands";
+  let DiagnosticString = "operand must be a list of two consecutive "#
+                         "q-registers in range [q0,q7]";
+}
+
+def VecList2Q : RegisterOperand<QQPR, "printMVEVectorListTwoQ"> {
+  let ParserMatchClass = VecList2QAsmOperand;
+  let PrintMethod = "printMVEVectorList<2>";
+}
+
+def VecList4QAsmOperand : AsmOperandClass {
+  let Name = "VecListFourMQ";
+  let ParserMethod = "parseVectorList";
+  let RenderMethod = "addMVEVecListOperands";
+  let DiagnosticString = "operand must be a list of four consecutive "#
+                         "q-registers in range [q0,q7]";
+}
+
+def VecList4Q : RegisterOperand<QQQQPR, "printMVEVectorListFourQ"> {
+  let ParserMatchClass = VecList4QAsmOperand;
+  let PrintMethod = "printMVEVectorList<4>";
+}
+
 class MVE_MI<dag oops, dag iops, InstrItinClass itin, string asm,
              string ops, string cstr, list<dag> pattern>
   : Thumb2XI<oops, iops, AddrModeNone, 4, itin, !strconcat(asm, "\t", ops), cstr,
@@ -3110,6 +3137,113 @@ def MVE_VMOV_rr_q : MVE_VMOV_64bit<(outs rGPR:$Rt, rGPR:$Rt2), (ins MQPR:$Qd),
 }
 
 // end of coproc mov
+
+// start of MVE interleaving load/store
+
+// Base class for the family of interleaving/deinterleaving
+// load/stores with names like VLD20.8 and VST43.32.
+class MVE_vldst24_base<bit writeback, bit fourregs, bits<2> stage, bits<2> size,
+                       bit load, dag Oops, dag loadIops, dag wbIops,
+                       string iname, string ops,
+                       string cstr, list<dag> pattern=[]>
+  : MVE_MI<Oops, !con(loadIops, wbIops), NoItinerary, iname, ops, cstr, pattern> {
+  bits<4> VQd;
+  bits<4> Rn;
+
+  let Inst{31-22} = 0b1111110010;
+  let Inst{21} = writeback;
+  let Inst{20} = load;
+  let Inst{19-16} = Rn;
+  let Inst{15-13} = VQd{2-0};
+  let Inst{12-9} = 0b1111;
+  let Inst{8-7} = size;
+  let Inst{6-5} = stage;
+  let Inst{4-1} = 0b0000;
+  let Inst{0} = fourregs;
+
+  let mayLoad = load;
+  let mayStore = !eq(load,0);
+}
+
+// A parameter class used to encapsulate all the ways the writeback
+// variants of VLD20 and friends differ from the non-writeback ones.
+class MVE_vldst24_writeback<bit b, dag Oo, dag Io,
+                            string sy="", string c="", string n=""> {
+  bit writeback = b;
+  dag Oops = Oo;
+  dag Iops = Io;
+  string syntax = sy;
+  string cstr = c;
+  string id_suffix = n;
+}
+
+// Another parameter class that encapsulates the differences between VLD2x
+// and VLD4x.
+class MVE_vldst24_nvecs<int n, list<int> s, bit b, RegisterOperand vl> {
+  int nvecs = n;
+  list<int> stages = s;
+  bit bit0 = b;
+  RegisterOperand VecList = vl;
+}
+
+// A third parameter class that distinguishes VLDnn.8 from .16 from .32.
+class MVE_vldst24_lanesize<int i, bits<2> b> {
+  int lanesize = i;
+  bits<2> sizebits = b;
+}
+
+// A base class for each direction of transfer: one for load, one for
+// store. I can't make these a fourth independent parametric tuple
+// class, because they have to take the nvecs tuple class as a
+// parameter, in order to find the right VecList operand type.
+
+class MVE_vld24_base<MVE_vldst24_nvecs n, bits<2> pat, bits<2> size,
+                     MVE_vldst24_writeback wb, string iname,
+                     list<dag> pattern=[]>
+  : MVE_vldst24_base<wb.writeback, n.bit0, pat, size, 1,
+                     !con((outs n.VecList:$VQd), wb.Oops),
+                     (ins n.VecList:$VQdSrc), wb.Iops,
+                     iname, "$VQd, $Rn" # wb.syntax,
+                     wb.cstr # ",$VQdSrc = $VQd", pattern>;
+
+class MVE_vst24_base<MVE_vldst24_nvecs n, bits<2> pat, bits<2> size,
+                     MVE_vldst24_writeback wb, string iname,
+                     list<dag> pattern=[]>
+  : MVE_vldst24_base<wb.writeback, n.bit0, pat, size, 0,
+                     wb.Oops, (ins n.VecList:$VQd), wb.Iops,
+                     iname, "$VQd, $Rn" # wb.syntax,
+                     wb.cstr, pattern>;
+
+// Actually define all the interleaving loads and stores, by a series
+// of nested foreaches over number of vectors (VLD2/VLD4); stage
+// within one of those series (VLDx0/VLDx1/VLDx2/VLDx3); size of
+// vector lane; writeback or no writeback.
+foreach n = [MVE_vldst24_nvecs<2, [0,1],     0, VecList2Q>,
+             MVE_vldst24_nvecs<4, [0,1,2,3], 1, VecList4Q>] in
+foreach stage = n.stages in
+foreach s = [MVE_vldst24_lanesize< 8, 0b00>,
+             MVE_vldst24_lanesize<16, 0b01>,
+             MVE_vldst24_lanesize<32, 0b10>] in
+foreach wb = [MVE_vldst24_writeback<
+                1, (outs rGPR:$wb), (ins t2_nosp_addr_offset_none:$Rn),
+                "!", "$Rn.base = $wb", "_wb">,
+              MVE_vldst24_writeback<0, (outs), (ins t2_addr_offset_none:$Rn)>] in {
+
+  // For each case within all of those foreaches, define the actual
+  // instructions. The def names are made by gluing together pieces
+  // from all the parameter classes, and will end up being things like
+  // MVE_VLD20_8 and MVE_VST43_16_wb.
+
+  def "MVE_VLD" # n.nvecs # stage # "_" # s.lanesize # wb.id_suffix
+    : MVE_vld24_base<n, stage, s.sizebits, wb,
+                     "vld" # n.nvecs # stage # "." # s.lanesize>;
+
+  def "MVE_VST" # n.nvecs # stage # "_" # s.lanesize # wb.id_suffix
+    : MVE_vst24_base<n, stage, s.sizebits, wb,
+                     "vst" # n.nvecs # stage # "." # s.lanesize>;
+}
+
+// end of MVE interleaving load/store
 
 class MVE_VPT<string suffix, bits<2> size, dag iops, string asm, list<dag> pattern=[]>
   : MVE_MI<(outs ), iops, NoItinerary, !strconcat("vpt", "${Mk}", ".", suffix), asm, "", pattern> {

@@ -1759,6 +1759,12 @@ public:
     return VectorList.Count == 1;
   }
 
+  bool isVecListTwoMQ() const {
+    return isSingleSpacedVectorList() && VectorList.Count == 2 &&
+           ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(
+               VectorList.RegNum);
+  }
+
   bool isVecListDPair() const {
     if (!isSingleSpacedVectorList()) return false;
     return (ARMMCRegisterClasses[ARM::DPairRegClassID]
@@ -1790,6 +1796,12 @@ public:
   bool isVecListFourQ() const {
     if (!isDoubleSpacedVectorList()) return false;
     return VectorList.Count == 4;
+  }
+
+  bool isVecListFourMQ() const {
+    return isSingleSpacedVectorList() && VectorList.Count == 4 &&
+           ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(
+               VectorList.RegNum);
   }
 
   bool isSingleSpacedVectorAllLanes() const {
@@ -2550,6 +2562,11 @@ public:
     Inst.addOperand(MCOperand::createReg(Memory.BaseRegNum));
   }
 
+  void addMemNoOffsetT2NoSpOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(Memory.BaseRegNum));
+  }
+
   void addMemPCRelImm12Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     int32_t Imm = Memory.OffsetImm->getValue();
@@ -2971,6 +2988,37 @@ public:
   void addVecListOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(VectorList.RegNum));
+  }
+
+  void addMVEVecListOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+
+    // When we come here, the VectorList field will identify a range
+    // of q-registers by its base register and length, and it will
+    // have already been error-checked to be the expected length of
+    // range and contain only q-regs in the range q0-q7. So we can
+    // count on the base register being in the range q0-q6 (for 2
+    // regs) or q0-q4 (for 4)
+    //
+    // The MVE instructions taking a register range of this kind will
+    // need an operand in the QQPR or QQQQPR class, representing the
+    // entire range as a unit. So we must translate into that class,
+    // by finding the index of the base register in the MQPR reg
+    // class, and returning the super-register at the corresponding
+    // index in the target class.
+
+    const MCRegisterClass *RC_in = &ARMMCRegisterClasses[ARM::MQPRRegClassID];
+    const MCRegisterClass *RC_out = (VectorList.Count == 2) ?
+      &ARMMCRegisterClasses[ARM::QQPRRegClassID] :
+      &ARMMCRegisterClasses[ARM::QQQQPRRegClassID];
+
+    unsigned I, E = RC_out->getNumRegs();
+    for (I = 0; I < E; I++)
+      if (RC_in->getRegister(I) == VectorList.RegNum)
+        break;
+    assert(I < E && "Invalid vector list start register!");
+
+    Inst.addOperand(MCOperand::createReg(RC_out->getRegister(I)));
   }
 
   void addVecListIndexedOperands(MCInst &Inst, unsigned N) const {
@@ -4257,7 +4305,7 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
   // As an extension (to match gas), support a plain D register or Q register
   // (without encosing curly braces) as a single or double entry list,
   // respectively.
-  if (Parser.getTok().is(AsmToken::Identifier)) {
+  if (!hasMVE() && Parser.getTok().is(AsmToken::Identifier)) {
     SMLoc E = Parser.getTok().getEndLoc();
     int Reg = tryParseRegister();
     if (Reg == -1)
@@ -4325,9 +4373,14 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
   unsigned Count = 1;
   int Spacing = 0;
   unsigned FirstReg = Reg;
+
+  if (hasMVE() && !ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(Reg)) {
+      Error(Parser.getTok().getLoc(), "vector register in range Q0-Q7 expected");
+      return MatchOperand_ParseFail;
+  }
   // The list is of D registers, but we also allow Q regs and just interpret
   // them as the two D sub-registers.
-  if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
+  else if (!hasMVE() && ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
     FirstReg = Reg = getDRegFromQReg(Reg);
     Spacing = 1; // double-spacing requires explicit D registers, otherwise
                  // it's ambiguous with four-register single spaced.
@@ -4357,14 +4410,17 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
         return MatchOperand_ParseFail;
       }
       // Allow Q regs and just interpret them as the two D sub-registers.
-      if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(EndReg))
+      if (!hasMVE() && ARMMCRegisterClasses[ARM::QPRRegClassID].contains(EndReg))
         EndReg = getDRegFromQReg(EndReg) + 1;
       // If the register is the same as the start reg, there's nothing
       // more to do.
       if (Reg == EndReg)
         continue;
       // The register must be in the same register class as the first.
-      if (!ARMMCRegisterClasses[ARM::DPRRegClassID].contains(EndReg)) {
+      if ((hasMVE() &&
+           !ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(EndReg)) ||
+          (!hasMVE() &&
+           !ARMMCRegisterClasses[ARM::DPRRegClassID].contains(EndReg))) {
         Error(AfterMinusLoc, "invalid register in register list");
         return MatchOperand_ParseFail;
       }
@@ -4397,13 +4453,21 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
       Error(RegLoc, "register expected");
       return MatchOperand_ParseFail;
     }
+
+    if (hasMVE()) {
+      if (!ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(Reg)) {
+        Error(RegLoc, "vector register in range Q0-Q7 expected");
+        return MatchOperand_ParseFail;
+      }
+      Spacing = 1;
+    }
     // vector register lists must be contiguous.
     // It's OK to use the enumeration values directly here rather, as the
     // VFP register classes have the enum sorted properly.
     //
     // The list is of D registers, but we also allow Q regs and just interpret
     // them as the two D sub-registers.
-    if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
+    else if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
       if (!Spacing)
         Spacing = 1; // Register range implies a single spaced list.
       else if (Spacing == 2) {
@@ -4464,30 +4528,20 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
 
   switch (LaneKind) {
   case NoLanes:
+  case AllLanes: {
     // Two-register operands have been converted to the
     // composite register classes.
-    if (Count == 2) {
+    if (Count == 2 && !hasMVE()) {
       const MCRegisterClass *RC = (Spacing == 1) ?
         &ARMMCRegisterClasses[ARM::DPairRegClassID] :
         &ARMMCRegisterClasses[ARM::DPairSpcRegClassID];
       FirstReg = MRI->getMatchingSuperReg(FirstReg, ARM::dsub_0, RC);
     }
-    Operands.push_back(ARMOperand::CreateVectorList(FirstReg, Count,
-                                                    (Spacing == 2), S, E));
+    auto Create = (LaneKind == NoLanes ? ARMOperand::CreateVectorList :
+                   ARMOperand::CreateVectorListAllLanes);
+    Operands.push_back(Create(FirstReg, Count, (Spacing == 2), S, E));
     break;
-  case AllLanes:
-    // Two-register operands have been converted to the
-    // composite register classes.
-    if (Count == 2) {
-      const MCRegisterClass *RC = (Spacing == 1) ?
-        &ARMMCRegisterClasses[ARM::DPairRegClassID] :
-        &ARMMCRegisterClasses[ARM::DPairSpcRegClassID];
-      FirstReg = MRI->getMatchingSuperReg(FirstReg, ARM::dsub_0, RC);
-    }
-    Operands.push_back(ARMOperand::CreateVectorListAllLanes(FirstReg, Count,
-                                                            (Spacing == 2),
-                                                            S, E));
-    break;
+  }
   case IndexedLane:
     Operands.push_back(ARMOperand::CreateVectorListIndexed(FirstReg, Count,
                                                            LaneIndex,
@@ -6127,7 +6181,10 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic,
       Mnemonic == "csinc" || Mnemonic == "csinv" || Mnemonic == "csneg" ||
       Mnemonic == "cinc" || Mnemonic == "cinv" || Mnemonic == "cneg" ||
       Mnemonic == "cset" || Mnemonic == "csetm" ||
-      Mnemonic.startswith("vpt") || Mnemonic.startswith("vpst")) {
+      Mnemonic.startswith("vpt") || Mnemonic.startswith("vpst") ||
+      (hasMVE() &&
+       (Mnemonic.startswith("vst2") || Mnemonic.startswith("vld2") ||
+        Mnemonic.startswith("vst4") || Mnemonic.startswith("vld4")))) {
     // These mnemonics are never predicable
     CanAcceptPredicationCode = false;
   } else if (!isThumb()) {
@@ -6383,6 +6440,10 @@ bool ARMAsmParser::shouldOmitPredicateOperand(StringRef Mnemonic,
 bool ARMAsmParser::shouldOmitVectorPredicateOperand(StringRef Mnemonic,
                                                     OperandVector &Operands) {
   if (!hasMVE() || Operands.size() < 3)
+    return true;
+
+  if (Mnemonic.startswith("vld2") || Mnemonic.startswith("vld4") ||
+      Mnemonic.startswith("vst2") || Mnemonic.startswith("vst4"))
     return true;
 
   if (Mnemonic.startswith("vctp"))

@@ -423,7 +423,7 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
     auto *ArgTy = OpSize == 32 ? Type::getFloatTy(Ctx) : Type::getDoubleTy(Ctx);
     auto *RetTy = Type::getInt32Ty(Ctx);
 
-    SmallVector<unsigned, 2> Results;
+    SmallVector<Register, 2> Results;
     for (auto Libcall : Libcalls) {
       auto LibcallResult = MRI.createGenericVirtualRegister(LLT::scalar(32));
       auto Status =

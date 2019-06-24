@@ -303,8 +303,8 @@ bool HexagonGenMux::genMuxInBlock(MachineBasicBlock &B) {
     std::advance(It2, MaxX);
     MachineInstr &Def1 = *It1, &Def2 = *It2;
     MachineOperand *Src1 = &Def1.getOperand(2), *Src2 = &Def2.getOperand(2);
-    unsigned SR1 = Src1->isReg() ? Src1->getReg() : 0;
-    unsigned SR2 = Src2->isReg() ? Src2->getReg() : 0;
+    Register SR1 = Src1->isReg() ? Src1->getReg() : Register();
+    Register SR2 = Src2->isReg() ? Src2->getReg() : Register();
     bool Failure = false, CanUp = true, CanDown = true;
     for (unsigned X = MinX+1; X < MaxX; X++) {
       const DefUseInfo &DU = DUM.lookup(X);

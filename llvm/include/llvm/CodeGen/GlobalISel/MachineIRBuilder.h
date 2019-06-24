@@ -66,6 +66,7 @@ class DstOp {
 public:
   enum class DstType { Ty_LLT, Ty_Reg, Ty_RC };
   DstOp(unsigned R) : Reg(R), Ty(DstType::Ty_Reg) {}
+  DstOp(Register R) : Reg(R), Ty(DstType::Ty_Reg) {}
   DstOp(const MachineOperand &Op) : Reg(Op.getReg()), Ty(DstType::Ty_Reg) {}
   DstOp(const LLT &T) : LLTTy(T), Ty(DstType::Ty_LLT) {}
   DstOp(const TargetRegisterClass *TRC) : RC(TRC), Ty(DstType::Ty_RC) {}
@@ -125,7 +126,7 @@ class SrcOp {
 
 public:
   enum class SrcType { Ty_Reg, Ty_MIB, Ty_Predicate };
-  SrcOp(unsigned R) : Reg(R), Ty(SrcType::Ty_Reg) {}
+  SrcOp(Register R) : Reg(R), Ty(SrcType::Ty_Reg) {}
   SrcOp(const MachineOperand &Op) : Reg(Op.getReg()), Ty(SrcType::Ty_Reg) {}
   SrcOp(const MachineInstrBuilder &MIB) : SrcMIB(MIB), Ty(SrcType::Ty_MIB) {}
   SrcOp(const CmpInst::Predicate P) : Pred(P), Ty(SrcType::Ty_Predicate) {}
@@ -156,7 +157,7 @@ public:
     llvm_unreachable("Unrecognised SrcOp::SrcType enum");
   }
 
-  unsigned getReg() const {
+  Register getReg() const {
     switch (Ty) {
     case SrcType::Ty_Predicate:
       llvm_unreachable("Not a register operand");
@@ -401,7 +402,7 @@ public:
   ///       type as \p Op0 or \p Op0 itself.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  Optional<MachineInstrBuilder> materializeGEP(unsigned &Res, unsigned Op0,
+  Optional<MachineInstrBuilder> materializeGEP(Register &Res, Register Op0,
                                                const LLT &ValueTy,
                                                uint64_t Value);
 
@@ -717,7 +718,7 @@ public:
   /// \pre The bits defined by each Op (derived from index and scalar size) must
   ///      not overlap.
   /// \pre \p Indices must be in ascending order of bit position.
-  void buildSequence(unsigned Res, ArrayRef<unsigned> Ops,
+  void buildSequence(Register Res, ArrayRef<Register> Ops,
                      ArrayRef<uint64_t> Indices);
 
   /// Build and insert \p Res = G_MERGE_VALUES \p Op0, ...
@@ -731,7 +732,7 @@ public:
   /// \pre The type of all \p Ops registers must be identical.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildMerge(const DstOp &Res, ArrayRef<unsigned> Ops);
+  MachineInstrBuilder buildMerge(const DstOp &Res, ArrayRef<Register> Ops);
 
   /// Build and insert \p Res0, ... = G_UNMERGE_VALUES \p Op
   ///
@@ -744,7 +745,7 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildUnmerge(ArrayRef<LLT> Res, const SrcOp &Op);
-  MachineInstrBuilder buildUnmerge(ArrayRef<unsigned> Res, const SrcOp &Op);
+  MachineInstrBuilder buildUnmerge(ArrayRef<Register> Res, const SrcOp &Op);
 
   /// Build and insert an unmerge of \p Res sized pieces to cover \p Op
   MachineInstrBuilder buildUnmerge(LLT Res, const SrcOp &Op);
@@ -759,7 +760,7 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildBuildVector(const DstOp &Res,
-                                       ArrayRef<unsigned> Ops);
+                                       ArrayRef<Register> Ops);
 
   /// Build and insert \p Res = G_BUILD_VECTOR with \p Src replicated to fill
   /// the number of elements
@@ -780,7 +781,7 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildBuildVectorTrunc(const DstOp &Res,
-                                            ArrayRef<unsigned> Ops);
+                                            ArrayRef<Register> Ops);
 
   /// Build and insert \p Res = G_CONCAT_VECTORS \p Op0, ...
   ///
@@ -794,10 +795,10 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildConcatVectors(const DstOp &Res,
-                                         ArrayRef<unsigned> Ops);
+                                         ArrayRef<Register> Ops);
 
-  MachineInstrBuilder buildInsert(unsigned Res, unsigned Src,
-                                  unsigned Op, unsigned Index);
+  MachineInstrBuilder buildInsert(Register Res, Register Src,
+                                  Register Op, unsigned Index);
 
   /// Build and insert either a G_INTRINSIC (if \p HasSideEffects is false) or
   /// G_INTRINSIC_W_SIDE_EFFECTS instruction. Its first operand will be the
@@ -809,7 +810,7 @@ public:
   /// \pre setBasicBlock or setMI must have been called.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildIntrinsic(Intrinsic::ID ID, ArrayRef<unsigned> Res,
+  MachineInstrBuilder buildIntrinsic(Intrinsic::ID ID, ArrayRef<Register> Res,
                                      bool HasSideEffects);
   MachineInstrBuilder buildIntrinsic(Intrinsic::ID ID, ArrayRef<DstOp> Res,
                                      bool HasSideEffects);

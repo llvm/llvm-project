@@ -604,3 +604,93 @@ func (c Context) TemporaryMDNode(mds []Metadata) (md Metadata) {
 func (md Metadata) ReplaceAllUsesWith(new Metadata) {
 	C.LLVMMetadataReplaceAllUsesWith(md.C, new.C)
 }
+
+type MetadataKind C.LLVMMetadataKind
+
+const (
+	MDStringMetadataKind                     = C.LLVMMDStringMetadataKind
+	ConstantAsMetadataMetadataKind           = C.LLVMConstantAsMetadataMetadataKind
+	LocalAsMetadataMetadataKind              = C.LLVMLocalAsMetadataMetadataKind
+	DistinctMDOperandPlaceholderMetadataKind = C.LLVMDistinctMDOperandPlaceholderMetadataKind
+	MDTupleMetadataKind                      = C.LLVMMDTupleMetadataKind
+	DILocationMetadataKind                   = C.LLVMDILocationMetadataKind
+	DIExpressionMetadataKind                 = C.LLVMDIExpressionMetadataKind
+	DIGlobalVariableExpressionMetadataKind   = C.LLVMDIGlobalVariableExpressionMetadataKind
+	GenericDINodeMetadataKind                = C.LLVMGenericDINodeMetadataKind
+	DISubrangeMetadataKind                   = C.LLVMDISubrangeMetadataKind
+	DIEnumeratorMetadataKind                 = C.LLVMDIEnumeratorMetadataKind
+	DIBasicTypeMetadataKind                  = C.LLVMDIBasicTypeMetadataKind
+	DIDerivedTypeMetadataKind                = C.LLVMDIDerivedTypeMetadataKind
+	DICompositeTypeMetadataKind              = C.LLVMDICompositeTypeMetadataKind
+	DISubroutineTypeMetadataKind             = C.LLVMDISubroutineTypeMetadataKind
+	DIFileMetadataKind                       = C.LLVMDIFileMetadataKind
+	DICompileUnitMetadataKind                = C.LLVMDICompileUnitMetadataKind
+	DISubprogramMetadataKind                 = C.LLVMDISubprogramMetadataKind
+	DILexicalBlockMetadataKind               = C.LLVMDILexicalBlockMetadataKind
+	DILexicalBlockFileMetadataKind           = C.LLVMDILexicalBlockFileMetadataKind
+	DINamespaceMetadataKind                  = C.LLVMDINamespaceMetadataKind
+	DIModuleMetadataKind                     = C.LLVMDIModuleMetadataKind
+	DITemplateTypeParameterMetadataKind      = C.LLVMDITemplateTypeParameterMetadataKind
+	DITemplateValueParameterMetadataKind     = C.LLVMDITemplateValueParameterMetadataKind
+	DIGlobalVariableMetadataKind             = C.LLVMDIGlobalVariableMetadataKind
+	DILocalVariableMetadataKind              = C.LLVMDILocalVariableMetadataKind
+	DILabelMetadataKind                      = C.LLVMDILabelMetadataKind
+	DIObjCPropertyMetadataKind               = C.LLVMDIObjCPropertyMetadataKind
+	DIImportedEntityMetadataKind             = C.LLVMDIImportedEntityMetadataKind
+	DIMacroMetadataKind                      = C.LLVMDIMacroMetadataKind
+	DIMacroFileMetadataKind                  = C.LLVMDIMacroFileMetadataKind
+	DICommonBlockMetadataKind                = C.LLVMDICommonBlockMetadataKind
+)
+
+// Kind returns the metadata kind.
+func (md Metadata) Kind() MetadataKind {
+	return MetadataKind(C.LLVMGetMetadataKind(md.C))
+}
+
+// FileDirectory returns the directory of a DIFile metadata node.
+func (md Metadata) FileDirectory() string {
+	var length C.unsigned
+	ptr := C.LLVMDIFileGetDirectory(md.C, &length)
+	return string(((*[1 << 20]byte)(unsafe.Pointer(ptr)))[:length:length])
+}
+
+// FileFilename returns the filename of a DIFile metadata node.
+func (md Metadata) FileFilename() string {
+	var length C.unsigned
+	ptr := C.LLVMDIFileGetFilename(md.C, &length)
+	return string(((*[1 << 20]byte)(unsafe.Pointer(ptr)))[:length:length])
+}
+
+// FileSource returns the source of a DIFile metadata node.
+func (md Metadata) FileSource() string {
+	var length C.unsigned
+	ptr := C.LLVMDIFileGetSource(md.C, &length)
+	return string(((*[1 << 20]byte)(unsafe.Pointer(ptr)))[:length:length])
+}
+
+// LocationLine returns the line number of a DILocation.
+func (md Metadata) LocationLine() uint {
+	return uint(C.LLVMDILocationGetLine(md.C))
+}
+
+// LocationColumn returns the column (offset from the start of the line) of a
+// DILocation.
+func (md Metadata) LocationColumn() uint {
+	return uint(C.LLVMDILocationGetColumn(md.C))
+}
+
+// LocationScope returns the local scope associated with this debug location.
+func (md Metadata) LocationScope() Metadata {
+	return Metadata{C.LLVMDILocationGetScope(md.C)}
+}
+
+// LocationInlinedAt return the "inline at" location associated with this debug
+// location.
+func (md Metadata) LocationInlinedAt() Metadata {
+	return Metadata{C.LLVMDILocationGetInlinedAt(md.C)}
+}
+
+// ScopeFile returns the file (DIFile) of a given scope.
+func (md Metadata) ScopeFile() Metadata {
+	return Metadata{C.LLVMDIScopeGetFile(md.C)}
+}

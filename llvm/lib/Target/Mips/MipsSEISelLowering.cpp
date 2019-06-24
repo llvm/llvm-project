@@ -3763,8 +3763,8 @@ MipsSETargetLowering::emitFPEXTEND_PSEUDO(MachineInstr &MI,
 
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
-  unsigned Fd = MI.getOperand(0).getReg();
-  unsigned Ws = MI.getOperand(1).getReg();
+  Register Fd = MI.getOperand(0).getReg();
+  Register Ws = MI.getOperand(1).getReg();
 
   MachineRegisterInfo &RegInfo = BB->getParent()->getRegInfo();
   const TargetRegisterClass *GPRRC =
@@ -3772,10 +3772,10 @@ MipsSETargetLowering::emitFPEXTEND_PSEUDO(MachineInstr &MI,
   unsigned MTC1Opc = IsFGR64onMips64
                          ? Mips::DMTC1
                          : (IsFGR64onMips32 ? Mips::MTC1_D64 : Mips::MTC1);
-  unsigned COPYOpc = IsFGR64onMips64 ? Mips::COPY_S_D : Mips::COPY_S_W;
+  Register COPYOpc = IsFGR64onMips64 ? Mips::COPY_S_D : Mips::COPY_S_W;
 
-  unsigned Wtemp = RegInfo.createVirtualRegister(&Mips::MSA128WRegClass);
-  unsigned WPHI = Wtemp;
+  Register Wtemp = RegInfo.createVirtualRegister(&Mips::MSA128WRegClass);
+  Register WPHI = Wtemp;
 
   BuildMI(*BB, MI, DL, TII->get(Mips::FEXUPR_W), Wtemp).addReg(Ws);
   if (IsFGR64) {
@@ -3784,15 +3784,15 @@ MipsSETargetLowering::emitFPEXTEND_PSEUDO(MachineInstr &MI,
   }
 
   // Perform the safety regclass copy mentioned above.
-  unsigned Rtemp = RegInfo.createVirtualRegister(GPRRC);
-  unsigned FPRPHI = IsFGR64onMips32
+  Register Rtemp = RegInfo.createVirtualRegister(GPRRC);
+  Register FPRPHI = IsFGR64onMips32
                         ? RegInfo.createVirtualRegister(&Mips::FGR64RegClass)
                         : Fd;
   BuildMI(*BB, MI, DL, TII->get(COPYOpc), Rtemp).addReg(WPHI).addImm(0);
   BuildMI(*BB, MI, DL, TII->get(MTC1Opc), FPRPHI).addReg(Rtemp);
 
   if (IsFGR64onMips32) {
-    unsigned Rtemp2 = RegInfo.createVirtualRegister(GPRRC);
+    Register Rtemp2 = RegInfo.createVirtualRegister(GPRRC);
     BuildMI(*BB, MI, DL, TII->get(Mips::COPY_S_W), Rtemp2)
         .addReg(WPHI)
         .addImm(1);

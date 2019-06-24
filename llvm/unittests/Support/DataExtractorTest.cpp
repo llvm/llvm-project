@@ -116,4 +116,14 @@ TEST(DataExtractorTest, LEB128) {
   EXPECT_EQ(8U, offset);
 }
 
+TEST(DataExtractorTest, LEB128_error) {
+  DataExtractor DE(StringRef("\x81"), false, 8);
+  uint32_t Offset = 0;
+  EXPECT_EQ(0U, DE.getULEB128(&Offset));
+  EXPECT_EQ(0U, Offset);
+
+  Offset = 0;
+  EXPECT_EQ(0U, DE.getSLEB128(&Offset));
+  EXPECT_EQ(0U, Offset);
+}
 }

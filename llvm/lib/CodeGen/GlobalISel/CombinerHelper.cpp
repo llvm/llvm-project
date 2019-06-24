@@ -22,8 +22,8 @@ CombinerHelper::CombinerHelper(GISelChangeObserver &Observer,
                                MachineIRBuilder &B)
     : Builder(B), MRI(Builder.getMF().getRegInfo()), Observer(Observer) {}
 
-void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, unsigned FromReg,
-                                    unsigned ToReg) const {
+void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, Register FromReg,
+                                    Register ToReg) const {
   Observer.changingAllUsesOfReg(MRI, FromReg);
 
   if (MRI.constrainRegAttrs(ToReg, FromReg))
@@ -36,7 +36,7 @@ void CombinerHelper::replaceRegWith(MachineRegisterInfo &MRI, unsigned FromReg,
 
 void CombinerHelper::replaceRegOpWith(MachineRegisterInfo &MRI,
                                       MachineOperand &FromRegOp,
-                                      unsigned ToReg) const {
+                                      Register ToReg) const {
   assert(FromRegOp.getParent() && "Expected an operand in an MI");
   Observer.changingInstr(*FromRegOp.getParent());
 
@@ -235,7 +235,7 @@ bool CombinerHelper::matchCombineExtendingLoads(MachineInstr &MI,
 void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
                                                 PreferredTuple &Preferred) {
   // Rewrite the load to the chosen extending load.
-  unsigned ChosenDstReg = Preferred.MI->getOperand(0).getReg();
+  Register ChosenDstReg = Preferred.MI->getOperand(0).getReg();
 
   // Inserter to insert a truncate back to the original type at a given point
   // with some basic CSE to limit truncate duplication to one per BB.
@@ -252,7 +252,7 @@ void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
     }
 
     Builder.setInsertPt(*InsertIntoBB, InsertBefore);
-    unsigned NewDstReg = MRI.cloneVirtualRegister(MI.getOperand(0).getReg());
+    Register NewDstReg = MRI.cloneVirtualRegister(MI.getOperand(0).getReg());
     MachineInstr *NewMI = Builder.buildTrunc(NewDstReg, ChosenDstReg);
     EmittedInsns[InsertIntoBB] = NewMI;
     replaceRegOpWith(MRI, UseMO, NewDstReg);

@@ -75,7 +75,7 @@ TEST_F(GISelMITest, DstOpSrcOp) {
   if (!TM)
     return;
 
-  SmallVector<unsigned, 4> Copies;
+  SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
 
   LLT s64 = LLT::scalar(64);
@@ -100,7 +100,7 @@ TEST_F(GISelMITest, BuildUnmerge) {
   if (!TM)
     return;
 
-  SmallVector<unsigned, 4> Copies;
+  SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
   B.buildUnmerge(LLT::scalar(32), Copies[0]);
   B.buildUnmerge(LLT::scalar(16), Copies[1]);
@@ -120,7 +120,7 @@ TEST_F(GISelMITest, TestBuildFPInsts) {
   if (!TM)
     return;
 
-  SmallVector<unsigned, 4> Copies;
+  SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
 
   LLT S64 = LLT::scalar(64);
@@ -152,7 +152,7 @@ TEST_F(GISelMITest, BuildIntrinsic) {
     return;
 
   LLT S64 = LLT::scalar(64);
-  SmallVector<unsigned, 4> Copies;
+  SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
 
   // Make sure DstOp version works. sqrt is just a placeholder intrinsic.
@@ -160,7 +160,7 @@ TEST_F(GISelMITest, BuildIntrinsic) {
     .addUse(Copies[0]);
 
   // Make sure register version works
-  SmallVector<unsigned, 1> Results;
+  SmallVector<Register, 1> Results;
   Results.push_back(MRI->createGenericVirtualRegister(S64));
   B.buildIntrinsic(Intrinsic::sqrt, Results, false)
     .addUse(Copies[1]);
@@ -181,7 +181,7 @@ TEST_F(GISelMITest, BuildXor) {
 
   LLT S64 = LLT::scalar(64);
   LLT S128 = LLT::scalar(128);
-  SmallVector<unsigned, 4> Copies;
+  SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
   B.buildXor(S64, Copies[0], Copies[1]);
   B.buildNot(S64, Copies[0]);
@@ -208,7 +208,7 @@ TEST_F(GISelMITest, BuildBitCounts) {
     return;
 
   LLT S32 = LLT::scalar(32);
-  SmallVector<unsigned, 4> Copies;
+  SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
 
   B.buildCTPOP(S32, Copies[0]);
@@ -235,7 +235,7 @@ TEST_F(GISelMITest, BuildCasts) {
     return;
 
   LLT S32 = LLT::scalar(32);
-  SmallVector<unsigned, 4> Copies;
+  SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
 
   B.buildUITOFP(S32, Copies[0]);
@@ -259,7 +259,7 @@ TEST_F(GISelMITest, BuildMinMax) {
     return;
 
   LLT S64 = LLT::scalar(64);
-  SmallVector<unsigned, 4> Copies;
+  SmallVector<Register, 4> Copies;
   collectCopies(Copies, MF);
 
   B.buildSMin(S64, Copies[0], Copies[1]);

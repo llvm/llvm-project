@@ -163,9 +163,9 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   assert(MI.getOperand(Idx1).isReg() && MI.getOperand(Idx2).isReg() &&
          "This only knows how to commute register operands so far");
 
-  unsigned Reg0 = HasDef ? MI.getOperand(0).getReg() : 0;
-  unsigned Reg1 = MI.getOperand(Idx1).getReg();
-  unsigned Reg2 = MI.getOperand(Idx2).getReg();
+  Register Reg0 = HasDef ? MI.getOperand(0).getReg() : Register();
+  Register Reg1 = MI.getOperand(Idx1).getReg();
+  Register Reg2 = MI.getOperand(Idx2).getReg();
   unsigned SubReg0 = HasDef ? MI.getOperand(0).getSubReg() : 0;
   unsigned SubReg1 = MI.getOperand(Idx1).getSubReg();
   unsigned SubReg2 = MI.getOperand(Idx2).getSubReg();
