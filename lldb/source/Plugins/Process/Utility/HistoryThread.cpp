@@ -25,14 +25,12 @@ using namespace lldb_private;
 //  Constructor
 
 HistoryThread::HistoryThread(lldb_private::Process &process, lldb::tid_t tid,
-                             std::vector<lldb::addr_t> pcs, uint32_t stop_id,
-                             bool stop_id_is_valid)
+                             std::vector<lldb::addr_t> pcs)
     : Thread(process, tid, true), m_framelist_mutex(), m_framelist(),
-      m_pcs(pcs), m_stop_id(stop_id), m_stop_id_is_valid(stop_id_is_valid),
-      m_extended_unwind_token(LLDB_INVALID_ADDRESS), m_queue_name(),
+      m_pcs(pcs), m_extended_unwind_token(LLDB_INVALID_ADDRESS), m_queue_name(),
       m_thread_name(), m_originating_unique_thread_id(tid),
       m_queue_id(LLDB_INVALID_QUEUE_ID) {
-  m_unwinder_up.reset(new HistoryUnwind(*this, pcs, stop_id_is_valid));
+  m_unwinder_up.reset(new HistoryUnwind(*this, pcs));
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
   if (log)
     log->Printf("%p HistoryThread::HistoryThread", static_cast<void *>(this));
