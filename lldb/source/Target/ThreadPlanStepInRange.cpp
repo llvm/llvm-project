@@ -507,41 +507,25 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
   if (m_step_into_target) {
     SymbolContext sc = frame->GetSymbolContext(
         eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
-    if (sc.symbol != NULL) {
-      SymbolContext sc = frame->GetSymbolContext(
-          eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
-      if (sc.symbol != nullptr) {
-        // First try an exact match, since that's cheap with
-        // ConstStrings.  Then do a strstr compare.
-        if (m_step_into_target == sc.GetFunctionName()) {
-          should_step_out = false;
-        } else {
-          const char *target_name = m_step_into_target.AsCString();
-          const char *function_name = sc.GetFunctionName().AsCString();
-
-          if (function_name == nullptr)
-            should_step_out = true;
-          else if (strstr(function_name, target_name) == nullptr)
-            should_step_out = true;
-        }
-        if (log && should_step_out)
-          log->Printf("Stepping out of frame %s which did not match step into "
-                      "target %s.",
-                      sc.GetFunctionName().AsCString(),
-                      m_step_into_target.AsCString());
+    if (sc.symbol != nullptr) {
+      // First try an exact match, since that's cheap with
+      // ConstStrings.  Then do a strstr compare.
+      if (m_step_into_target == sc.GetFunctionName()) {
+        should_step_out = false;
       } else {
         const char *target_name = m_step_into_target.AsCString();
         const char *function_name = sc.GetFunctionName().AsCString();
 
-        if (function_name == NULL)
+        if (function_name == nullptr)
           should_step_out = true;
-        else if (strstr(function_name, target_name) == NULL)
+        else if (strstr(function_name, target_name) == nullptr)
           should_step_out = true;
       }
       if (log && should_step_out)
-        log->Printf(
-            "Stepping out of frame %s which did not match step into target %s.",
-            sc.GetFunctionName().AsCString(), m_step_into_target.AsCString());
+        log->Printf("Stepping out of frame %s which did not match step into "
+                    "target %s.",
+                    sc.GetFunctionName().AsCString(),
+                    m_step_into_target.AsCString());
     }
   }
 
