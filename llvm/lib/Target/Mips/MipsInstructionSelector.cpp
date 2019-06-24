@@ -38,7 +38,7 @@ public:
 
 private:
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
-  bool materialize32BitImm(unsigned DestReg, APInt Imm,
+  bool materialize32BitImm(Register DestReg, APInt Imm,
                            MachineIRBuilder &B) const;
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
@@ -80,7 +80,7 @@ MipsInstructionSelector::MipsInstructionSelector(
 
 bool MipsInstructionSelector::selectCopy(MachineInstr &I,
                                          MachineRegisterInfo &MRI) const {
-  unsigned DstReg = I.getOperand(0).getReg();
+  Register DstReg = I.getOperand(0).getReg();
   if (TargetRegisterInfo::isPhysicalRegister(DstReg))
     return true;
 
@@ -104,12 +104,12 @@ bool MipsInstructionSelector::selectCopy(MachineInstr &I,
   return true;
 }
 
-bool MipsInstructionSelector::materialize32BitImm(unsigned DestReg, APInt Imm,
+bool MipsInstructionSelector::materialize32BitImm(Register DestReg, APInt Imm,
                                                   MachineIRBuilder &B) const {
   assert(Imm.getBitWidth() == 32 && "Unsupported immediate size.");
   // Ori zero extends immediate. Used for values with zeros in high 16 bits.
   if (Imm.getHiBits(16).isNullValue()) {
-    MachineInstr *Inst = B.buildInstr(Mips::ORi, {DestReg}, {Mips::ZERO})
+    MachineInstr *Inst = B.buildInstr(Mips::ORi, {DestReg}, {Register(Mips::ZERO)})
                              .addImm(Imm.getLoBits(16).getLimitedValue());
     return constrainSelectedInstRegOperands(*Inst, TII, TRI, RBI);
   }
@@ -121,12 +121,12 @@ bool MipsInstructionSelector::materialize32BitImm(unsigned DestReg, APInt Imm,
   }
   // ADDiu sign extends immediate. Used for values with 1s in high 17 bits.
   if (Imm.isSignedIntN(16)) {
-    MachineInstr *Inst = B.buildInstr(Mips::ADDiu, {DestReg}, {Mips::ZERO})
+    MachineInstr *Inst = B.buildInstr(Mips::ADDiu, {DestReg}, {Register(Mips::ZERO)})
                              .addImm(Imm.getLoBits(16).getLimitedValue());
     return constrainSelectedInstRegOperands(*Inst, TII, TRI, RBI);
   }
   // Values that cannot be materialized with single immediate instruction.
-  unsigned LUiReg = B.getMRI()->createVirtualRegister(&Mips::GPR32RegClass);
+  Register LUiReg = B.getMRI()->createVirtualRegister(&Mips::GPR32RegClass);
   MachineInstr *LUi = B.buildInstr(Mips::LUi, {LUiReg}, {})
                           .addImm(Imm.getHiBits(16).getLimitedValue());
   MachineInstr *ORi = B.buildInstr(Mips::ORi, {DestReg}, {LUiReg})
@@ -201,7 +201,7 @@ bool MipsInstructionSelector::select(MachineInstr &I,
 
   switch (I.getOpcode()) {
   case G_UMULH: {
-    unsigned PseudoMULTuReg = MRI.createVirtualRegister(&Mips::ACC64RegClass);
+    Register PseudoMULTuReg = MRI.createVirtualRegister(&Mips::ACC64RegClass);
     MachineInstr *PseudoMULTu, *PseudoMove;
 
     PseudoMULTu = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::PseudoMULTu))
@@ -242,7 +242,7 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     break;
   }
   case G_PHI: {
-    const unsigned DestReg = I.getOperand(0).getReg();
+    const Register DestReg = I.getOperand(0).getReg();
     const unsigned DestRegBank = RBI.getRegBank(DestReg, MRI, TRI)->getID();
     const unsigned OpSize = MRI.getType(DestReg).getSizeInBits();
 
@@ -257,7 +257,7 @@ bool MipsInstructionSelector::select(MachineInstr &I,
   case G_LOAD:
   case G_ZEXTLOAD:
   case G_SEXTLOAD: {
-    const unsigned DestReg = I.getOperand(0).getReg();
+    const Register DestReg = I.getOperand(0).getReg();
     const unsigned DestRegBank = RBI.getRegBank(DestReg, MRI, TRI)->getID();
     const unsigned OpSize = MRI.getType(DestReg).getSizeInBits();
     const unsigned OpMemSizeInBytes = (*I.memoperands_begin())->getSize();
@@ -281,7 +281,7 @@ bool MipsInstructionSelector::select(MachineInstr &I,
   case G_UREM:
   case G_SDIV:
   case G_SREM: {
-    unsigned HILOReg = MRI.createVirtualRegister(&Mips::ACC64RegClass);
+    Register HILOReg = MRI.createVirtualRegister(&Mips::ACC64RegClass);
     bool IsSigned = I.getOpcode() == G_SREM || I.getOpcode() == G_SDIV;
     bool IsDiv = I.getOpcode() == G_UDIV || I.getOpcode() == G_SDIV;
 
@@ -328,7 +328,7 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     unsigned Size = MRI.getType(I.getOperand(0).getReg()).getSizeInBits();
 
     if (Size == 32) {
-      unsigned GPRReg = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      Register GPRReg = MRI.createVirtualRegister(&Mips::GPR32RegClass);
       MachineIRBuilder B(I);
       if (!materialize32BitImm(GPRReg, APImm, B))
         return false;
@@ -339,8 +339,8 @@ bool MipsInstructionSelector::select(MachineInstr &I,
         return false;
     }
     if (Size == 64) {
-      unsigned GPRRegHigh = MRI.createVirtualRegister(&Mips::GPR32RegClass);
-      unsigned GPRRegLow = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      Register GPRRegHigh = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      Register GPRRegLow = MRI.createVirtualRegister(&Mips::GPR32RegClass);
       MachineIRBuilder B(I);
       if (!materialize32BitImm(GPRRegHigh, APImm.getHiBits(32).trunc(32), B))
         return false;
@@ -419,7 +419,7 @@ bool MipsInstructionSelector::select(MachineInstr &I,
         return false;
 
       if (GVal->hasLocalLinkage()) {
-        unsigned LWGOTDef = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+        Register LWGOTDef = MRI.createVirtualRegister(&Mips::GPR32RegClass);
         LWGOT->getOperand(0).setReg(LWGOTDef);
 
         MachineInstr *ADDiu =
@@ -432,7 +432,7 @@ bool MipsInstructionSelector::select(MachineInstr &I,
           return false;
       }
     } else {
-      unsigned LUiReg = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+      Register LUiReg = MRI.createVirtualRegister(&Mips::GPR32RegClass);
 
       MachineInstr *LUi = BuildMI(MBB, I, I.getDebugLoc(), TII.get(Mips::LUi))
                               .addDef(LUiReg)
@@ -455,8 +455,9 @@ bool MipsInstructionSelector::select(MachineInstr &I,
   }
   case G_ICMP: {
     struct Instr {
-      unsigned Opcode, Def, LHS, RHS;
-      Instr(unsigned Opcode, unsigned Def, unsigned LHS, unsigned RHS)
+      unsigned Opcode;
+      Register Def, LHS, RHS;
+      Instr(unsigned Opcode, Register Def, Register LHS, Register RHS)
           : Opcode(Opcode), Def(Def), LHS(LHS), RHS(RHS){};
 
       bool hasImm() const {
@@ -467,10 +468,10 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     };
 
     SmallVector<struct Instr, 2> Instructions;
-    unsigned ICMPReg = I.getOperand(0).getReg();
-    unsigned Temp = MRI.createVirtualRegister(&Mips::GPR32RegClass);
-    unsigned LHS = I.getOperand(2).getReg();
-    unsigned RHS = I.getOperand(3).getReg();
+    Register ICMPReg = I.getOperand(0).getReg();
+    Register Temp = MRI.createVirtualRegister(&Mips::GPR32RegClass);
+    Register LHS = I.getOperand(2).getReg();
+    Register RHS = I.getOperand(3).getReg();
     CmpInst::Predicate Cond =
         static_cast<CmpInst::Predicate>(I.getOperand(1).getPredicate());
 

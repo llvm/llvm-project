@@ -440,6 +440,32 @@ main_body:
   ret float %val
 }
 
+; Make sure a frame index folding doessn't crash on a MUBUF not used
+; for stack access.
+
+; CHECK-LABEL: {{^}}no_fold_fi_imm_soffset:
+; CHECK: v_mov_b32_e32 [[FI:v[0-9]+]], 4{{$}}
+; CHECK-NEXT: buffer_load_dword v0, [[FI]], s{{\[[0-9]+:[0-9]+\]}}, 0 idxen
+define amdgpu_ps float @no_fold_fi_imm_soffset(<4 x i32> inreg %rsrc) {
+  %alloca = alloca i32, addrspace(5)
+  %alloca.cast = ptrtoint i32 addrspace(5)* %alloca to i32
+
+  %ret.val = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> %rsrc, i32 %alloca.cast, i32 0, i1 false, i1 false)
+  ret float %ret.val
+}
+
+; CHECK-LABEL: {{^}}no_fold_fi_reg_soffset:
+; CHECK-DAG: v_mov_b32_e32 v[[FI:[0-9]+]], 4{{$}}
+; CHECK-DAG: v_mov_b32_e32 v[[HI:[0-9]+]], s
+; CHECK: buffer_load_dword v0, v{{\[}}[[FI]]:[[HI]]
+define amdgpu_ps float @no_fold_fi_reg_soffset(<4 x i32> inreg %rsrc, i32 inreg %soffset) {
+  %alloca = alloca i32, addrspace(5)
+  %alloca.cast = ptrtoint i32 addrspace(5)* %alloca to i32
+
+  %ret.val = call float @llvm.amdgcn.buffer.load.f32(<4 x i32> %rsrc, i32 %alloca.cast, i32 %soffset, i1 false, i1 false)
+  ret float %ret.val
+}
+
 declare float @llvm.amdgcn.buffer.load.f32(<4 x i32>, i32, i32, i1, i1) #0
 declare <2 x float> @llvm.amdgcn.buffer.load.v2f32(<4 x i32>, i32, i32, i1, i1) #0
 declare <4 x float> @llvm.amdgcn.buffer.load.v4f32(<4 x i32>, i32, i32, i1, i1) #0

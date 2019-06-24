@@ -1158,7 +1158,7 @@ define void @trunc16i16_16i8_ashr(<16 x i16> %a) {
 ;
 ; AVX512F-LABEL: trunc16i16_16i8_ashr:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vpsraw $8, %ymm0, %ymm0
+; AVX512F-NEXT:    vpsrlw $8, %ymm0, %ymm0
 ; AVX512F-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512F-NEXT:    vpmovdb %zmm0, (%rax)
 ; AVX512F-NEXT:    vzeroupper
@@ -1166,7 +1166,7 @@ define void @trunc16i16_16i8_ashr(<16 x i16> %a) {
 ;
 ; AVX512VL-LABEL: trunc16i16_16i8_ashr:
 ; AVX512VL:       # %bb.0: # %entry
-; AVX512VL-NEXT:    vpsraw $8, %ymm0, %ymm0
+; AVX512VL-NEXT:    vpsrlw $8, %ymm0, %ymm0
 ; AVX512VL-NEXT:    vpmovzxwd {{.*#+}} zmm0 = ymm0[0],zero,ymm0[1],zero,ymm0[2],zero,ymm0[3],zero,ymm0[4],zero,ymm0[5],zero,ymm0[6],zero,ymm0[7],zero,ymm0[8],zero,ymm0[9],zero,ymm0[10],zero,ymm0[11],zero,ymm0[12],zero,ymm0[13],zero,ymm0[14],zero,ymm0[15],zero
 ; AVX512VL-NEXT:    vpmovdb %zmm0, (%rax)
 ; AVX512VL-NEXT:    vzeroupper

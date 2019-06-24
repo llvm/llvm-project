@@ -721,10 +721,13 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
   }
 }
 
-static bool allStackObjectsAreDead(const MachineFrameInfo &MFI) {
+// Note SGPRSpill stack IDs should only be used for SGPR spilling to VGPRs, not
+// memory.
+static bool allStackObjectsAreDeadOrSGPR(const MachineFrameInfo &MFI) {
   for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd();
        I != E; ++I) {
-    if (!MFI.isDeadObjectIndex(I))
+    if (!MFI.isDeadObjectIndex(I) &&
+        MFI.getStackID(I) != TargetStackID::SGPRSpill)
       return false;
   }
 
@@ -751,11 +754,8 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   const SIInstrInfo *TII = ST.getInstrInfo();
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-  bool AllSGPRSpilledToVGPRs = false;
 
   if (TRI.spillSGPRToVGPR() && FuncInfo->hasSpilledSGPRs()) {
-    AllSGPRSpilledToVGPRs = true;
-
     // Process all SGPR spills before frame offsets are finalized. Ideally SGPRs
     // are spilled to VGPRs, in which case we can eliminate the stack usage.
     //
@@ -777,8 +777,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
             bool Spilled = TRI.eliminateSGPRToVGPRSpillFrameIndex(MI, FI, RS);
             (void)Spilled;
             assert(Spilled && "failed to spill SGPR to VGPR when allocated");
-          } else
-            AllSGPRSpilledToVGPRs = false;
+          }
         }
       }
     }
@@ -786,11 +785,7 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
 
   FuncInfo->removeSGPRToVGPRFrameIndices(MFI);
 
-  // FIXME: The other checks should be redundant with allStackObjectsAreDead,
-  // but currently hasNonSpillStackObjects is set only from source
-  // allocas. Stack temps produced from legalization are not counted currently.
-  if (FuncInfo->hasNonSpillStackObjects() || FuncInfo->hasSpilledVGPRs() ||
-      !AllSGPRSpilledToVGPRs || !allStackObjectsAreDead(MFI)) {
+  if (!allStackObjectsAreDeadOrSGPR(MFI)) {
     assert(RS && "RegScavenger required if spilling");
 
     if (FuncInfo->isEntryFunction()) {

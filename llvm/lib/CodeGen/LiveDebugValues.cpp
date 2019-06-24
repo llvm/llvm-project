@@ -70,12 +70,12 @@ STATISTIC(NumInserted, "Number of DBG_VALUE instructions inserted");
 
 // If @MI is a DBG_VALUE with debug value described by a defined
 // register, returns the number of this register. In the other case, returns 0.
-static unsigned isDbgValueDescribedByReg(const MachineInstr &MI) {
+static Register isDbgValueDescribedByReg(const MachineInstr &MI) {
   assert(MI.isDebugValue() && "expected a DBG_VALUE");
   assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
   // If location of variable is described using a register (directly
   // or indirectly), this register is always a first operand.
-  return MI.getOperand(0).isReg() ? MI.getOperand(0).getReg() : 0;
+  return MI.getOperand(0).isReg() ? MI.getOperand(0).getReg() : Register();
 }
 
 namespace {

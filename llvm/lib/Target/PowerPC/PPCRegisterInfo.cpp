@@ -1114,7 +1114,7 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MI.getOperand(OperandBase + 1).ChangeToRegister(SReg, false, false, true);
 }
 
-unsigned PPCRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+Register PPCRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const PPCFrameLowering *TFI = getFrameLowering(MF);
 
   if (!TM.isPPC64())
@@ -1123,7 +1123,7 @@ unsigned PPCRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
     return TFI->hasFP(MF) ? PPC::X31 : PPC::X1;
 }
 
-unsigned PPCRegisterInfo::getBaseRegister(const MachineFunction &MF) const {
+Register PPCRegisterInfo::getBaseRegister(const MachineFunction &MF) const {
   const PPCSubtarget &Subtarget = MF.getSubtarget<PPCSubtarget>();
   if (!hasBasePointer(MF))
     return getFrameRegister(MF);

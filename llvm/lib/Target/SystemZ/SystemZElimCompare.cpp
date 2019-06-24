@@ -525,9 +525,9 @@ bool SystemZElimCompare::fuseCompareOperations(
   // SrcReg2 is the register if the source operand is a register,
   // 0 if the source operand is immediate, and the base register
   // if the source operand is memory (index is not supported).
-  unsigned SrcReg = Compare.getOperand(0).getReg();
-  unsigned SrcReg2 =
-      Compare.getOperand(1).isReg() ? Compare.getOperand(1).getReg() : 0;
+  Register SrcReg = Compare.getOperand(0).getReg();
+  Register SrcReg2 =
+    Compare.getOperand(1).isReg() ? Compare.getOperand(1).getReg() : Register();
   MachineBasicBlock::iterator MBBI = Compare, MBBE = Branch;
   for (++MBBI; MBBI != MBBE; ++MBBI)
     if (MBBI->modifiesRegister(SrcReg, TRI) ||

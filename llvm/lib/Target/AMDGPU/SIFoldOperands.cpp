@@ -87,10 +87,11 @@ public:
   const SIInstrInfo *TII;
   const SIRegisterInfo *TRI;
   const GCNSubtarget *ST;
+  const SIMachineFunctionInfo *MFI;
 
   void foldOperand(MachineOperand &OpToFold,
                    MachineInstr *UseMI,
-                   unsigned UseOpIdx,
+                   int UseOpIdx,
                    SmallVectorImpl<FoldCandidate> &FoldList,
                    SmallVectorImpl<MachineInstr *> &CopiesToReplace) const;
 
@@ -157,6 +158,17 @@ static bool isInlineConstantIfFolded(const SIInstrInfo *TII,
   default:
     return false;
   }
+}
+
+// TODO: Add heuristic that the frame index might not fit in the addressing mode
+// immediate offset to avoid materializing in loops.
+static bool frameIndexMayFold(const SIInstrInfo *TII,
+                              const MachineInstr &UseMI,
+                              int OpNo,
+                              const MachineOperand &OpToFold) {
+  return OpToFold.isFI() &&
+    (TII->isMUBUF(UseMI) || TII->isFLATScratch(UseMI)) &&
+    OpNo == AMDGPU::getNamedOperandIdx(UseMI.getOpcode(), AMDGPU::OpName::vaddr);
 }
 
 FunctionPass *llvm::createSIFoldOperandsPass() {
@@ -290,7 +302,6 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
                              MachineOperand *OpToFold,
                              const SIInstrInfo *TII) {
   if (!TII->isOperandLegal(*MI, OpNo, OpToFold)) {
-
     // Special case for v_mac_{f16, f32}_e64 if we are trying to fold into src2
     unsigned Opc = MI->getOpcode();
     if ((Opc == AMDGPU::V_MAC_F32_e64 || Opc == AMDGPU::V_MAC_F16_e64 ||
@@ -403,7 +414,7 @@ static bool isUseSafeToFold(const SIInstrInfo *TII,
 void SIFoldOperands::foldOperand(
   MachineOperand &OpToFold,
   MachineInstr *UseMI,
-  unsigned UseOpIdx,
+  int UseOpIdx,
   SmallVectorImpl<FoldCandidate> &FoldList,
   SmallVectorImpl<MachineInstr *> &CopiesToReplace) const {
   const MachineOperand &UseOp = UseMI->getOperand(UseOpIdx);
@@ -453,10 +464,28 @@ void SIFoldOperands::foldOperand(
     return;
   }
 
+  if (frameIndexMayFold(TII, *UseMI, UseOpIdx, OpToFold)) {
+    // Sanity check that this is a stack access.
+    // FIXME: Should probably use stack pseudos before frame lowering.
+    MachineOperand *SOff = TII->getNamedOperand(*UseMI, AMDGPU::OpName::soffset);
+    if (!SOff->isReg() || (SOff->getReg() != MFI->getScratchWaveOffsetReg() &&
+                           SOff->getReg() != MFI->getStackPtrOffsetReg()))
+      return;
 
-  bool FoldingImm = OpToFold.isImm();
+    if (TII->getNamedOperand(*UseMI, AMDGPU::OpName::srsrc)->getReg() !=
+        MFI->getScratchRSrcReg())
+      return;
 
-  if (FoldingImm && UseMI->isCopy()) {
+    // A frame index will resolve to a positive constant, so it should always be
+    // safe to fold the addressing mode, even pre-GFX9.
+    UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getIndex());
+    SOff->setReg(MFI->getStackPtrOffsetReg());
+    return;
+  }
+
+  bool FoldingImmLike = OpToFold.isImm() || OpToFold.isFI();
+
+  if (FoldingImmLike && UseMI->isCopy()) {
     unsigned DestReg = UseMI->getOperand(0).getReg();
     const TargetRegisterClass *DestRC
       = TargetRegisterInfo::isVirtualRegister(DestReg) ?
@@ -517,7 +546,7 @@ void SIFoldOperands::foldOperand(
       // %sgpr = V_READFIRSTLANE_B32 %vgpr
       // =>
       // %sgpr = S_MOV_B32 imm
-      if (FoldingImm) {
+      if (FoldingImmLike) {
         if (execMayBeModifiedBeforeUse(*MRI,
                                        UseMI->getOperand(UseOpIdx).getReg(),
                                        *OpToFold.getParent(),
@@ -528,7 +557,10 @@ void SIFoldOperands::foldOperand(
 
         // FIXME: ChangeToImmediate should clear subreg
         UseMI->getOperand(1).setSubReg(0);
-        UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
+        if (OpToFold.isImm())
+          UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
+        else
+          UseMI->getOperand(1).ChangeToFrameIndex(OpToFold.getIndex());
         UseMI->RemoveOperand(2); // Remove exec read (or src1 for readlane)
         return;
       }
@@ -560,7 +592,7 @@ void SIFoldOperands::foldOperand(
       return;
   }
 
-  if (!FoldingImm) {
+  if (!FoldingImmLike) {
     tryAddToFoldList(FoldList, UseMI, UseOpIdx, &OpToFold, TII);
 
     // FIXME: We could try to change the instruction from 64-bit to 32-bit
@@ -904,6 +936,9 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
       // in some cases. A better heuristic is needed.
       if (isInlineConstantIfFolded(TII, *UseMI, OpNo, OpToFold)) {
         foldOperand(OpToFold, UseMI, OpNo, FoldList, CopiesToReplace);
+      } else if (frameIndexMayFold(TII, *UseMI, OpNo, OpToFold)) {
+        foldOperand(OpToFold, UseMI, OpNo, FoldList,
+                    CopiesToReplace);
       } else {
         if (++NumLiteralUses == 1) {
           NonInlineUse = &*Use;
@@ -1170,8 +1205,7 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
   ST = &MF.getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
   TRI = &TII->getRegisterInfo();
-
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  MFI = MF.getInfo<SIMachineFunctionInfo>();
 
   // omod is ignored by hardware if IEEE bit is enabled. omod also does not
   // correctly handle signed zeros.

@@ -496,6 +496,11 @@ public:
     return (Flags & SIInstrFlags::FLAT) && !(Flags & SIInstrFlags::LGKM_CNT);
   }
 
+  // FIXME: Make this more precise
+  static bool isFLATScratch(const MachineInstr &MI) {
+    return isSegmentSpecificFLAT(MI);
+  }
+
   // Any FLAT encoded instruction, including global_* and scratch_*.
   bool isFLAT(uint16_t Opcode) const {
     return get(Opcode).TSFlags & SIInstrFlags::FLAT;

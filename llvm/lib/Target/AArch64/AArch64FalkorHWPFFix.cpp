@@ -212,8 +212,8 @@ private:
 struct LoadInfo {
   LoadInfo() = default;
 
-  unsigned DestReg = 0;
-  unsigned BaseReg = 0;
+  Register DestReg;
+  Register BaseReg;
   int BaseRegIdx = -1;
   const MachineOperand *OffsetOpnd = nullptr;
   bool IsPrePost = false;
@@ -647,7 +647,7 @@ static Optional<LoadInfo> getLoadInfo(const MachineInstr &MI) {
     return None;
 
   LoadInfo LI;
-  LI.DestReg = DestRegIdx == -1 ? 0 : MI.getOperand(DestRegIdx).getReg();
+  LI.DestReg = DestRegIdx == -1 ? Register() : MI.getOperand(DestRegIdx).getReg();
   LI.BaseReg = BaseReg;
   LI.BaseRegIdx = BaseRegIdx;
   LI.OffsetOpnd = OffsetIdx == -1 ? nullptr : &MI.getOperand(OffsetIdx);

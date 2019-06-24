@@ -38,7 +38,7 @@ struct SparcRegisterInfo : public SparcGenRegisterInfo {
                            int SPAdj, unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 
-  unsigned getFrameRegister(const MachineFunction &MF) const override;
+  Register getFrameRegister(const MachineFunction &MF) const override;
 
   bool canRealignStack(const MachineFunction &MF) const override;
 

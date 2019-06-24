@@ -22,7 +22,7 @@
 
 using namespace llvm;
 
-unsigned SwiftErrorValueTracking::getOrCreateVReg(const MachineBasicBlock *MBB,
+Register SwiftErrorValueTracking::getOrCreateVReg(const MachineBasicBlock *MBB,
                                                   const Value *Val) {
   auto Key = std::make_pair(MBB, Val);
   auto It = VRegDefMap.find(Key);
@@ -42,11 +42,11 @@ unsigned SwiftErrorValueTracking::getOrCreateVReg(const MachineBasicBlock *MBB,
 }
 
 void SwiftErrorValueTracking::setCurrentVReg(const MachineBasicBlock *MBB,
-                                             const Value *Val, unsigned VReg) {
+                                             const Value *Val, Register VReg) {
   VRegDefMap[std::make_pair(MBB, Val)] = VReg;
 }
 
-unsigned SwiftErrorValueTracking::getOrCreateVRegDefAt(
+Register SwiftErrorValueTracking::getOrCreateVRegDefAt(
     const Instruction *I, const MachineBasicBlock *MBB, const Value *Val) {
   auto Key = PointerIntPair<const Instruction *, 1, bool>(I, true);
   auto It = VRegDefUses.find(Key);
@@ -55,20 +55,20 @@ unsigned SwiftErrorValueTracking::getOrCreateVRegDefAt(
 
   auto &DL = MF->getDataLayout();
   const TargetRegisterClass *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
-  unsigned VReg = MF->getRegInfo().createVirtualRegister(RC);
+  Register VReg = MF->getRegInfo().createVirtualRegister(RC);
   VRegDefUses[Key] = VReg;
   setCurrentVReg(MBB, Val, VReg);
   return VReg;
 }
 
-unsigned SwiftErrorValueTracking::getOrCreateVRegUseAt(
+Register SwiftErrorValueTracking::getOrCreateVRegUseAt(
     const Instruction *I, const MachineBasicBlock *MBB, const Value *Val) {
   auto Key = PointerIntPair<const Instruction *, 1, bool>(I, false);
   auto It = VRegDefUses.find(Key);
   if (It != VRegDefUses.end())
     return It->second;
 
-  unsigned VReg = getOrCreateVReg(MBB, Val);
+  Register VReg = getOrCreateVReg(MBB, Val);
   VRegDefUses[Key] = VReg;
   return VReg;
 }
@@ -129,7 +129,7 @@ bool SwiftErrorValueTracking::createEntriesInEntryBlock(DebugLoc DbgLoc) {
     // least by the 'return' of the swifterror.
     if (SwiftErrorArg && SwiftErrorArg == SwiftErrorVal)
       continue;
-    unsigned VReg = MF->getRegInfo().createVirtualRegister(RC);
+    Register VReg = MF->getRegInfo().createVirtualRegister(RC);
     // Assign Undef to Vreg. We construct MI directly to make sure it works
     // with FastISel.
     BuildMI(*MBB, MBB->getFirstNonPHI(), DbgLoc,
@@ -161,7 +161,7 @@ void SwiftErrorValueTracking::propagateVRegs() {
       auto UUseIt = VRegUpwardsUse.find(Key);
       auto VRegDefIt = VRegDefMap.find(Key);
       bool UpwardsUse = UUseIt != VRegUpwardsUse.end();
-      unsigned UUseVReg = UpwardsUse ? UUseIt->second : 0;
+      Register UUseVReg = UpwardsUse ? UUseIt->second : Register();
       bool DownwardDef = VRegDefIt != VRegDefMap.end();
       assert(!(UpwardsUse && !DownwardDef) &&
              "We can't have an upwards use but no downwards def");
@@ -177,7 +177,7 @@ void SwiftErrorValueTracking::propagateVRegs() {
 
       // Check whether we have a single vreg def from all predecessors.
       // Otherwise we need a phi.
-      SmallVector<std::pair<MachineBasicBlock *, unsigned>, 4> VRegs;
+      SmallVector<std::pair<MachineBasicBlock *, Register>, 4> VRegs;
       SmallSet<const MachineBasicBlock *, 8> Visited;
       for (auto *Pred : MBB->predecessors()) {
         if (!Visited.insert(Pred).second)
@@ -203,7 +203,7 @@ void SwiftErrorValueTracking::propagateVRegs() {
           VRegs.size() >= 1 &&
           std::find_if(
               VRegs.begin(), VRegs.end(),
-              [&](const std::pair<const MachineBasicBlock *, unsigned> &V)
+              [&](const std::pair<const MachineBasicBlock *, Register> &V)
                   -> bool { return V.second != VRegs[0].second; }) !=
               VRegs.end();
 
@@ -227,7 +227,7 @@ void SwiftErrorValueTracking::propagateVRegs() {
         assert(UpwardsUse);
         assert(!VRegs.empty() &&
                "No predecessors?  Is the Calling Convention correct?");
-        unsigned DestReg = UUseVReg;
+        Register DestReg = UUseVReg;
         BuildMI(*MBB, MBB->getFirstNonPHI(), DLoc, TII->get(TargetOpcode::COPY),
                 DestReg)
             .addReg(VRegs[0].second);
@@ -238,7 +238,7 @@ void SwiftErrorValueTracking::propagateVRegs() {
       // destination virtual register number otherwise we generate a new one.
       auto &DL = MF->getDataLayout();
       auto const *RC = TLI->getRegClassFor(TLI->getPointerTy(DL));
-      unsigned PHIVReg =
+      Register PHIVReg =
           UpwardsUse ? UUseVReg : MF->getRegInfo().createVirtualRegister(RC);
       MachineInstrBuilder PHI =
           BuildMI(*MBB, MBB->getFirstNonPHI(), DLoc,

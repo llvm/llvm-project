@@ -260,6 +260,9 @@ void PPC::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   std::tie(NewType, Val) = fromDTPREL(Type, Val);
   switch (NewType) {
   case R_PPC_ADDR16:
+    checkIntUInt(Loc, Val, 16, Type);
+    write16(Loc, Val);
+    break;
   case R_PPC_GOT16:
   case R_PPC_GOT_TLSGD16:
   case R_PPC_GOT_TLSLD16:

@@ -990,7 +990,7 @@ public:
 
   /// getFrameRegister - This method should return the register used as a base
   /// for values allocated in the current stack frame.
-  virtual unsigned getFrameRegister(const MachineFunction &MF) const = 0;
+  virtual Register getFrameRegister(const MachineFunction &MF) const = 0;
 
   /// Mark a register and all its aliases as reserved in the given set.
   void markSuperRegs(BitVector &RegisterSet, unsigned Reg) const;

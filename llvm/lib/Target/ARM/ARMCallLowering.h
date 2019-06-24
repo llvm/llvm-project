@@ -33,10 +33,10 @@ public:
   ARMCallLowering(const ARMTargetLowering &TLI);
 
   bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
-                   ArrayRef<unsigned> VRegs) const override;
+                   ArrayRef<Register> VRegs) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
-                            ArrayRef<unsigned> VRegs) const override;
+                            ArrayRef<Register> VRegs) const override;
 
   bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                  const MachineOperand &Callee, const ArgInfo &OrigRet,
@@ -44,7 +44,7 @@ public:
 
 private:
   bool lowerReturnVal(MachineIRBuilder &MIRBuilder, const Value *Val,
-                      ArrayRef<unsigned> VRegs,
+                      ArrayRef<Register> VRegs,
                       MachineInstrBuilder &Ret) const;
 
   using SplitArgTy = std::function<void(unsigned Reg)>;

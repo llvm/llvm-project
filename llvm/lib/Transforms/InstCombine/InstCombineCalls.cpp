@@ -1983,6 +1983,13 @@ Instruction *InstCombiner::visitCallInst(CallInst &CI) {
       if (match(Op0, m_ZeroInt()) || match(Op0, m_Undef()))
         return BinaryOperator::CreateLShr(Op1,
                                           ConstantExpr::getSub(WidthC, ShAmtC));
+
+      // fshl i16 X, X, 8 --> bswap i16 X (reduce to more-specific form)
+      if (Op0 == Op1 && BitWidth == 16 && match(ShAmtC, m_SpecificInt(8))) {
+        Module *Mod = II->getModule();
+        Function *Bswap = Intrinsic::getDeclaration(Mod, Intrinsic::bswap, Ty);
+        return CallInst::Create(Bswap, { Op0 });
+      }
     }
 
     // Left or right might be masked.

@@ -296,15 +296,6 @@ def rGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, SP, PC)> {
   let DiagnosticType = "rGPR";
 }
 
-// t2rGPR : All Thumb 2 registers with the exception of SP and PC.
-def t2rGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, SP, PC)> {
-  let AltOrders = [(add LR, t2rGPR), (trunc t2rGPR, 8)];
-  let AltOrderSelect = [{
-      return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
-  }];
-  let DiagnosticType = "rGPR";
-}
-
 // Thumb registers are R0-R7 normally. Some instructions can still use
 // the general GPR register class above (MOV, e.g.)
 def tGPR : RegisterClass<"ARM", [i32], 32, (trunc GPR, 8)> {

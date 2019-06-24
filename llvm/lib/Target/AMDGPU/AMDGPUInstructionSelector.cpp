@@ -232,12 +232,17 @@ bool AMDGPUInstructionSelector::selectG_IMPLICIT_DEF(MachineInstr &I) const {
   MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   const MachineOperand &MO = I.getOperand(0);
-  const TargetRegisterClass *RC =
-      TRI.getConstrainedRegClassForOperand(MO, MRI);
-  if (RC)
-    RBI.constrainGenericRegister(MO.getReg(), *RC, MRI);
-  I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
-  return true;
+
+  // FIXME: Interface for getConstrainedRegClassForOperand needs work. The
+  // regbank check here is to know why getConstrainedRegClassForOperand failed.
+  const TargetRegisterClass *RC = TRI.getConstrainedRegClassForOperand(MO, MRI);
+  if ((!RC && !MRI.getRegBankOrNull(MO.getReg())) ||
+      (RC && RBI.constrainGenericRegister(MO.getReg(), *RC, MRI))) {
+    I.setDesc(TII.get(TargetOpcode::IMPLICIT_DEF));
+    return true;
+  }
+
+  return false;
 }
 
 bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {

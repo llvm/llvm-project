@@ -1588,6 +1588,20 @@ void ARMInstPrinter::printVectorListFourSpaced(const MCInst *MI, unsigned OpNum,
   O << "}";
 }
 
+template<unsigned NumRegs>
+void ARMInstPrinter::printMVEVectorList(const MCInst *MI, unsigned OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  unsigned Reg = MI->getOperand(OpNum).getReg();
+  const char *Prefix = "{";
+  for (unsigned i = 0; i < NumRegs; i++) {
+    O << Prefix;
+    printRegName(O, MRI.getSubReg(Reg, ARM::qsub_0 + i));
+    Prefix = ", ";
+  }
+  O << "}";
+}
+
 template<int64_t Angle, int64_t Remainder>
 void ARMInstPrinter::printComplexRotationOp(const MCInst *MI, unsigned OpNo,
                                             const MCSubtargetInfo &STI,

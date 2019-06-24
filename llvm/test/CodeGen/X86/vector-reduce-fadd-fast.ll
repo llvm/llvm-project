@@ -37,7 +37,7 @@ define float @test_v2f32(float %a0, <2 x float> %a1) {
 ; AVX1-FAST-LABEL: test_v2f32:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
-; AVX1-FAST-NEXT:    vaddss  %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    retq
 ;
 ; AVX2-LABEL: test_v2f32:
@@ -93,7 +93,7 @@ define float @test_v4f32(float %a0, <4 x float> %a1) {
 ; AVX1-FAST-NEXT:    vpermilpd {{.*#+}} xmm2 = xmm1[1,0]
 ; AVX1-FAST-NEXT:    vaddps %xmm2, %xmm1, %xmm1
 ; AVX1-FAST-NEXT:    vhaddps %xmm1, %xmm1, %xmm1
-; AVX1-FAST-NEXT:    vaddss  %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vaddss %xmm1, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    retq
 ;
 ; AVX2-LABEL: test_v4f32:

@@ -3,29 +3,233 @@
 # RUN: llc -march=amdgcn -mcpu=fiji -run-pass=regbankselect %s -verify-machineinstrs -o - -regbankselect-greedy | FileCheck %s
 
 ---
-name: anyext_i32_to_i64_s
+name: anyext_s32_to_s64_s
 legalized: true
 
 body: |
   bb.0:
     liveins: $sgpr0
-    ; CHECK-LABEL: name: anyext_i32_to_i64_s
+    ; CHECK-LABEL: name: anyext_s32_to_s64_s
     ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
-    ; CHECK: [[SEXT:%[0-9]+]]:sgpr(s64) = G_ANYEXT [[COPY]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s64) = G_ANYEXT [[COPY]](s32)
     %0:_(s32) = COPY $sgpr0
     %1:_(s64) = G_ANYEXT %0
 ...
 
 ---
-name: anyext_i32_to_i64_v
+name: anyext_s32_to_s64_v
 legalized: true
 
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1
-    ; CHECK-LABEL: name: anyext_i32_to_i64_v
+    ; CHECK-LABEL: name: anyext_s32_to_s64_v
     ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
-    ; CHECK: [[SEXT:%[0-9]+]]:vgpr(s64) = G_ANYEXT [[COPY]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:vgpr(s64) = G_ANYEXT [[COPY]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s64) = G_ANYEXT %0
+...
+
+---
+name: anyext_s1_to_s16_scc
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    ; CHECK-LABEL: name: anyext_s1_to_s16_scc
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s16) = G_ANYEXT [[ICMP]](s1)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    %3:_(s16) = G_ANYEXT %2
+...
+
+---
+name: anyext_s1_to_s32_scc
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    ; CHECK-LABEL: name: anyext_s1_to_s32_scc
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[ICMP]](s1)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    %3:_(s32) = G_ANYEXT %2
+...
+
+---
+name: anyext_s1_to_s64_scc
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0, $sgpr1
+    ; CHECK-LABEL: name: anyext_s1_to_s64_scc
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1
+    ; CHECK: [[ICMP:%[0-9]+]]:scc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s64) = G_ANYEXT [[ICMP]](s1)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s32) = COPY $sgpr1
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    %3:_(s64) = G_ANYEXT %2
+...
+
+---
+name: anyext_s1_to_s16_vcc
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: anyext_s1_to_s16_vcc
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+    ; CHECK: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:vgpr(s16) = G_ANYEXT [[ICMP]](s1)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    %3:_(s16) = G_ANYEXT %2
+...
+
+---
+name: anyext_s1_to_s32_vcc
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: anyext_s1_to_s32_vcc
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+    ; CHECK: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[ICMP]](s1)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    %3:_(s32) = G_ANYEXT %2
+...
+
+---
+name: anyext_s1_to_s64_vcc
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+    ; CHECK-LABEL: name: anyext_s1_to_s64_vcc
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK: [[COPY1:%[0-9]+]]:vgpr(s32) = COPY $vgpr1
+    ; CHECK: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY1]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:vgpr(s64) = G_ANYEXT [[ICMP]](s1)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s32) = COPY $vgpr1
+    %2:_(s1) = G_ICMP intpred(eq), %0, %1
+    %3:_(s64) = G_ANYEXT %2
+...
+
+---
+name: anyext_s1_to_s16_sgpr
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: anyext_s1_to_s16_sgpr
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s16) = G_ANYEXT [[TRUNC]](s1)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s1) = G_TRUNC %0
+    %2:_(s16) = G_ANYEXT %1
+...
+
+---
+name: anyext_s1_to_s32_sgpr
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: anyext_s1_to_s32_sgpr
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s32) = G_ANYEXT [[TRUNC]](s1)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s1) = G_TRUNC %0
+    %2:_(s32) = G_ANYEXT %1
+...
+
+---
+name: anyext_s1_to_s64_sgpr
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0
+    ; CHECK-LABEL: name: anyext_s1_to_s64_sgpr
+    ; CHECK: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
+    ; CHECK: [[TRUNC:%[0-9]+]]:sgpr(s1) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:sgpr(s64) = G_ANYEXT [[TRUNC]](s1)
+    %0:_(s32) = COPY $sgpr0
+    %1:_(s1) = G_TRUNC %0
+    %2:_(s64) = G_ANYEXT %1
+...
+
+---
+name: anyext_s1_to_s16_vgpr
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: anyext_s1_to_s16_vgpr
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:vgpr(s16) = G_ANYEXT [[TRUNC]](s1)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s1) = G_TRUNC %0
+    %2:_(s16) = G_ANYEXT %1
+...
+
+---
+name: anyext_s1_to_s32_vgpr
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: anyext_s1_to_s32_vgpr
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:vgpr(s32) = G_ANYEXT [[TRUNC]](s1)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s1) = G_TRUNC %0
+    %2:_(s32) = G_ANYEXT %1
+...
+
+---
+name: anyext_s1_to_s64_vgpr
+legalized: true
+
+body: |
+  bb.0:
+    liveins: $vgpr0
+    ; CHECK-LABEL: name: anyext_s1_to_s64_vgpr
+    ; CHECK: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
+    ; CHECK: [[TRUNC:%[0-9]+]]:vgpr(s1) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[ANYEXT:%[0-9]+]]:vgpr(s64) = G_ANYEXT [[TRUNC]](s1)
+    %0:_(s32) = COPY $vgpr0
+    %1:_(s1) = G_TRUNC %0
+    %2:_(s64) = G_ANYEXT %1
 ...

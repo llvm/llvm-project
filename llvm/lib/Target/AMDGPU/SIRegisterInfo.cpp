@@ -721,7 +721,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI,
   if (SpillToSMEM && OnlyToVGPR)
     return false;
 
-  unsigned FrameReg = getFrameRegister(*MF);
+  Register FrameReg = getFrameRegister(*MF);
 
   assert(SpillToVGPR || (SuperReg != MFI->getStackPtrOffsetReg() &&
                          SuperReg != MFI->getFrameOffsetReg() &&
@@ -914,7 +914,7 @@ bool SIRegisterInfo::restoreSGPR(MachineBasicBlock::iterator MI,
   unsigned EltSize = 4;
   unsigned ScalarLoadOp;
 
-  unsigned FrameReg = getFrameRegister(*MF);
+  Register FrameReg = getFrameRegister(*MF);
 
   const TargetRegisterClass *RC = getPhysRegClass(SuperReg);
   if (SpillToSMEM && isSGPRClass(RC)) {
@@ -1063,7 +1063,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
   MachineOperand &FIOp = MI->getOperand(FIOperandNum);
   int Index = MI->getOperand(FIOperandNum).getIndex();
 
-  unsigned FrameReg = getFrameRegister(*MF);
+  Register FrameReg = getFrameRegister(*MF);
 
   switch (MI->getOpcode()) {
     // SGPR register spill
@@ -1154,7 +1154,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
           = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
         bool IsCopy = MI->getOpcode() == AMDGPU::V_MOV_B32_e32;
-        unsigned ResultReg = IsCopy ?
+        Register ResultReg = IsCopy ?
           MI->getOperand(0).getReg() :
           MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
@@ -1688,10 +1688,23 @@ SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
 
   Size = PowerOf2Ceil(Size);
   switch (Size) {
-  case 1:
-    if (RB->getID() == AMDGPU::SCCRegBankID)
+  case 1: {
+    switch (RB->getID()) {
+    case AMDGPU::VGPRRegBankID:
+      return &AMDGPU::VGPR_32RegClass;
+    case AMDGPU::VCCRegBankID:
+      // TODO: Check wavesize
+      return &AMDGPU::SReg_64_XEXECRegClass;
+    case AMDGPU::SGPRRegBankID:
       return &AMDGPU::SReg_32_XM0RegClass;
-    break;
+    case AMDGPU::SCCRegBankID:
+      // This needs to return an allocatable class, so don't bother returning
+      // the dummy SCC class.
+      return &AMDGPU::SReg_32_XM0RegClass;
+    default:
+      llvm_unreachable("unknown register bank");
+    }
+  }
   case 32:
     return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VGPR_32RegClass :
                                                   &AMDGPU::SReg_32_XM0RegClass;
