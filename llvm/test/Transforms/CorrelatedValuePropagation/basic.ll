@@ -463,7 +463,7 @@ define i1 @clamp_low1(i32 %a) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[A_GUARD:%.*]], label [[OUT:%.*]]
 ; CHECK:       a_guard:
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp eq i32 [[A]], 5
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], -1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 5, i32 [[A]]
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 4
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
@@ -495,7 +495,7 @@ define i1 @clamp_low2(i32 %a) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[A_GUARD:%.*]], label [[OUT:%.*]]
 ; CHECK:       a_guard:
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ne i32 [[A]], 5
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], -1
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], -1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 5
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 4
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
@@ -527,7 +527,7 @@ define i1 @clamp_high1(i32 %a) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[A_GUARD:%.*]], label [[OUT:%.*]]
 ; CHECK:       a_guard:
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp eq i32 [[A]], 5
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 5, i32 [[A]]
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 6
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
@@ -559,7 +559,7 @@ define i1 @clamp_high2(i32 %a) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[A_GUARD:%.*]], label [[OUT:%.*]]
 ; CHECK:       a_guard:
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ne i32 [[A]], 5
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], 1
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 1
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 5
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 6
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
@@ -592,7 +592,7 @@ define i1 @clamp_high3(i32 %a) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[A_GUARD:%.*]], label [[OUT:%.*]]
 ; CHECK:       a_guard:
 ; CHECK-NEXT:    [[SEL_CMP:%.*]] = icmp ne i32 [[A]], 5
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[A]], 100
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[A]], 100
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[SEL_CMP]], i32 [[A]], i32 5
 ; CHECK-NEXT:    [[RES:%.*]] = icmp eq i32 [[SEL]], 105
 ; CHECK-NEXT:    br label [[NEXT:%.*]]
@@ -625,7 +625,7 @@ define void @abs1(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[GUARD:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guard:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[A]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], 0
 ; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[A]]
 ; CHECK-NEXT:    br label [[SPLIT:%.*]]
@@ -675,7 +675,7 @@ define void @abs2(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[GUARD:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guard:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[A]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[A]], 0
 ; CHECK-NEXT:    [[ABS:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[SUB]]
 ; CHECK-NEXT:    br label [[SPLIT:%.*]]
@@ -725,7 +725,7 @@ define void @nabs1(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[GUARD:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guard:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[A]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[A]], 0
 ; CHECK-NEXT:    [[NABS:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[A]]
 ; CHECK-NEXT:    br label [[SPLIT:%.*]]
@@ -775,7 +775,7 @@ define void @nabs2(i32 %a, i1* %p) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i1 [[CMP1]], [[CMP2]]
 ; CHECK-NEXT:    br i1 [[AND]], label [[GUARD:%.*]], label [[EXIT:%.*]]
 ; CHECK:       guard:
-; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A]]
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[A]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[A]], 0
 ; CHECK-NEXT:    [[NABS:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[SUB]]
 ; CHECK-NEXT:    br label [[SPLIT:%.*]]

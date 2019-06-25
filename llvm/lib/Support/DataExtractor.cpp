@@ -10,6 +10,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Host.h"
 #include "llvm/Support/SwapByteOrder.h"
+#include "llvm/Support/LEB128.h"
 using namespace llvm;
 
 template <typename T>
@@ -145,47 +146,29 @@ StringRef DataExtractor::getCStrRef(uint32_t *OffsetPtr) const {
 }
 
 uint64_t DataExtractor::getULEB128(uint32_t *offset_ptr) const {
-  uint64_t result = 0;
-  if (Data.empty())
+  assert(*offset_ptr <= Data.size());
+
+  const char *error;
+  unsigned bytes_read;
+  uint64_t result = decodeULEB128(
+      reinterpret_cast<const uint8_t *>(Data.data() + *offset_ptr), &bytes_read,
+      reinterpret_cast<const uint8_t *>(Data.data() + Data.size()), &error);
+  if (error)
     return 0;
-
-  unsigned shift = 0;
-  uint32_t offset = *offset_ptr;
-  uint8_t byte = 0;
-
-  while (isValidOffset(offset)) {
-    byte = Data[offset++];
-    result |= uint64_t(byte & 0x7f) << shift;
-    shift += 7;
-    if ((byte & 0x80) == 0)
-      break;
-  }
-
-  *offset_ptr = offset;
+  *offset_ptr += bytes_read;
   return result;
 }
 
 int64_t DataExtractor::getSLEB128(uint32_t *offset_ptr) const {
-  int64_t result = 0;
-  if (Data.empty())
+  assert(*offset_ptr <= Data.size());
+
+  const char *error;
+  unsigned bytes_read;
+  int64_t result = decodeSLEB128(
+      reinterpret_cast<const uint8_t *>(Data.data() + *offset_ptr), &bytes_read,
+      reinterpret_cast<const uint8_t *>(Data.data() + Data.size()), &error);
+  if (error)
     return 0;
-
-  unsigned shift = 0;
-  uint32_t offset = *offset_ptr;
-  uint8_t byte = 0;
-
-  while (isValidOffset(offset)) {
-    byte = Data[offset++];
-    result |= uint64_t(byte & 0x7f) << shift;
-    shift += 7;
-    if ((byte & 0x80) == 0)
-      break;
-  }
-
-  // Sign bit of byte is 2nd high order bit (0x40)
-  if (shift < 64 && (byte & 0x40))
-    result |= -(1ULL << shift);
-
-  *offset_ptr = offset;
+  *offset_ptr += bytes_read;
   return result;
 }

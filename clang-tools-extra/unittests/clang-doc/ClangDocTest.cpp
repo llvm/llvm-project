@@ -151,6 +151,8 @@ void CheckRecordInfo(RecordInfo *Expected, RecordInfo *Actual) {
 
   EXPECT_EQ(Expected->TagType, Actual->TagType);
 
+  EXPECT_EQ(Expected->IsTypeDef, Actual->IsTypeDef);
+
   ASSERT_EQ(Expected->Members.size(), Actual->Members.size());
   for (size_t Idx = 0; Idx < Actual->Members.size(); ++Idx)
     EXPECT_EQ(Expected->Members[Idx], Actual->Members[Idx]);

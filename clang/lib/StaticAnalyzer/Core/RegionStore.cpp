@@ -2640,7 +2640,7 @@ void RegionStoreManager::printJson(raw_ostream &Out, Store S, const char *NL,
     return;
   }
 
-  Out << '[' << NL;
-  Bindings.printJson(Out, NL, ++Space, IsDot);
-  Indent(Out, --Space, IsDot) << "]," << NL;
+  Out << "{ \"pointer\": \"" << Bindings.asStore() << "\", \"items\": [" << NL;
+  Bindings.printJson(Out, NL, Space + 1, IsDot);
+  Indent(Out, Space, IsDot) << "]}," << NL;
 }

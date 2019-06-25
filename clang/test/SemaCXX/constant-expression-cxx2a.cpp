@@ -532,3 +532,19 @@ namespace Union {
     s.n = 0;
   }
 }
+
+namespace TwosComplementShifts {
+  using uint32 = __UINT32_TYPE__;
+  using int32 = __INT32_TYPE__;
+  static_assert(uint32(int32(0x1234) << 16) == 0x12340000);
+  static_assert(uint32(int32(0x1234) << 19) == 0x91a00000);
+  static_assert(uint32(int32(0x1234) << 20) == 0x23400000); // expected-warning {{requires 34 bits}}
+  static_assert(uint32(int32(0x1234) << 24) == 0x34000000); // expected-warning {{requires 38 bits}}
+  static_assert(uint32(int32(-1) << 31) == 0x80000000);
+
+  static_assert(-1 >> 1 == -1);
+  static_assert(-1 >> 31 == -1);
+  static_assert(-2 >> 1 == -1);
+  static_assert(-3 >> 1 == -2);
+  static_assert(-4 >> 1 == -2);
+}

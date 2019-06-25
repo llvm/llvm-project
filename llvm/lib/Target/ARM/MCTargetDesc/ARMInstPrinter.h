@@ -243,6 +243,9 @@ public:
                                   const MCSubtargetInfo &STI, raw_ostream &O);
   void printVectorListFourSpaced(const MCInst *MI, unsigned OpNum,
                                  const MCSubtargetInfo &STI, raw_ostream &O);
+  template<unsigned NumRegs>
+  void printMVEVectorList(const MCInst *MI, unsigned OpNum,
+                          const MCSubtargetInfo &STI, raw_ostream &O);
   template<int64_t Angle, int64_t Remainder>
   void printComplexRotationOp(const MCInst *MI, unsigned OpNum,
                               const MCSubtargetInfo &STI, raw_ostream &O);
@@ -252,6 +255,11 @@ public:
                                 raw_ostream &O);
   void printVPTMask(const MCInst *MI, unsigned OpNum,
                     const MCSubtargetInfo &STI, raw_ostream &O);
+  template<int shift>
+  void printMveAddrModeRQOperand(const MCInst *MI, unsigned OpNum,
+                                 const MCSubtargetInfo &STI, raw_ostream &O);
+  void printMveAddrModeQOperand(const MCInst *MI, unsigned OpNum,
+                                const MCSubtargetInfo &STI, raw_ostream &O);
   void printExpandedImmOperand(const MCInst *MI, unsigned OpNum,
                                const MCSubtargetInfo &STI, raw_ostream &O);
 

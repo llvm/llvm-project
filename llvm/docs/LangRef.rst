@@ -421,7 +421,7 @@ added in the future:
 
     This calling convention aims to minimize overhead in the caller by
     preserving as many registers as possible (all the registers that are
-    perserved on the fast path, composed of the entry and exit blocks).
+    preserved on the fast path, composed of the entry and exit blocks).
 
     This calling convention behaves identical to the `C` calling convention on
     how arguments and return values are passed, but it uses a different set of

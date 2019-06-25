@@ -27,8 +27,8 @@ using namespace llvm;
 void CallLowering::anchor() {}
 
 bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
-                             unsigned ResReg, ArrayRef<unsigned> ArgRegs,
-                             unsigned SwiftErrorVReg,
+                             Register ResReg, ArrayRef<Register> ArgRegs,
+                             Register SwiftErrorVReg,
                              std::function<unsigned()> GetCalleeReg) const {
   auto &DL = CS.getParent()->getParent()->getParent()->getDataLayout();
 
@@ -131,7 +131,7 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
     if (Handler.assignArg(i, CurVT, CurVT, CCValAssign::Full, Args[i], CCInfo)) {
       // Try to use the register type if we couldn't assign the VT.
       if (!Handler.isArgumentHandler() || !CurVT.isValid())
-        return false; 
+        return false;
       CurVT = TLI->getRegisterTypeForCallingConv(
           F.getContext(), F.getCallingConv(), EVT(CurVT));
       if (Handler.assignArg(i, CurVT, CurVT, CCValAssign::Full, Args[i], CCInfo))
@@ -195,7 +195,7 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
   return true;
 }
 
-unsigned CallLowering::ValueHandler::extendRegister(unsigned ValReg,
+Register CallLowering::ValueHandler::extendRegister(Register ValReg,
                                                     CCValAssign &VA) {
   LLT LocTy{VA.getLocVT()};
   if (LocTy.getSizeInBits() == MRI.getType(ValReg).getSizeInBits())

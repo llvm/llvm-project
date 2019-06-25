@@ -118,8 +118,8 @@ define void @test4(i1 %c, i1 %c2) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C:%.*]], i64 0, i64 1
 ; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[C2:%.*]], i64 0, i64 1
-; CHECK-NEXT:    [[ADD1:%.*]] = add i64 0, [[SEL]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add i64 [[ADD1]], [[SEL2]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add nuw nsw i64 0, [[SEL]]
+; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i64 [[ADD1]], [[SEL2]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[ADD2]], 1
 ; CHECK-NEXT:    br i1 [[CMP]], label [[TAKEN:%.*]], label [[UNTAKEN:%.*]]
 ; CHECK:       taken:

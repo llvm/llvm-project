@@ -768,8 +768,18 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_TO_SINT, MVT::f64, Custom);
     setOperationAction(ISD::FP_TO_UINT, MVT::f64, Custom);
     setOperationAction(ISD::FP_ROUND,   MVT::f32, Custom);
-    setOperationAction(ISD::FP_EXTEND,  MVT::f64, Custom);
   }
+
+  if (!Subtarget->hasFP64() || !Subtarget->hasFPARMv8Base()){
+    setOperationAction(ISD::FP_EXTEND,  MVT::f64, Custom);
+    setOperationAction(ISD::FP_ROUND,  MVT::f16, Custom);
+  }
+
+  if (!Subtarget->hasFP16())
+    setOperationAction(ISD::FP_EXTEND,  MVT::f32, Custom);
+
+  if (!Subtarget->hasFP64())
+    setOperationAction(ISD::FP_ROUND,  MVT::f32, Custom);
 
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
@@ -14415,27 +14425,75 @@ ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const 
 }
 
 SDValue ARMTargetLowering::LowerFP_EXTEND(SDValue Op, SelectionDAG &DAG) const {
-  assert(Op.getValueType() == MVT::f64 && !Subtarget->hasFP64() &&
+  SDValue SrcVal = Op.getOperand(0);
+  const unsigned DstSz = Op.getValueType().getSizeInBits();
+  const unsigned SrcSz = SrcVal.getValueType().getSizeInBits();
+  assert(DstSz > SrcSz && DstSz <= 64 && SrcSz >= 16 &&
          "Unexpected type for custom-lowering FP_EXTEND");
 
-  RTLIB::Libcall LC;
-  LC = RTLIB::getFPEXT(Op.getOperand(0).getValueType(), Op.getValueType());
+  assert((!Subtarget->hasFP64() || !Subtarget->hasFPARMv8Base()) &&
+         "With both FP DP and 16, any FP conversion is legal!");
 
-  SDValue SrcVal = Op.getOperand(0);
-  return makeLibCall(DAG, LC, Op.getValueType(), SrcVal, /*isSigned*/ false,
-                     SDLoc(Op)).first;
+  assert(!(DstSz == 32 && Subtarget->hasFP16()) &&
+         "With FP16, 16 to 32 conversion is legal!");
+
+  // Either we are converting from 16 -> 64, without FP16 and/or
+  // FP.double-precision or without Armv8-fp. So we must do it in two
+  // steps.
+  // Or we are converting from 32 -> 64 without fp.double-precision or 16 -> 32
+  // without FP16. So we must do a function call.
+  SDLoc Loc(Op);
+  RTLIB::Libcall LC;
+  if (SrcSz == 16) {
+    // Instruction from 16 -> 32
+    if (Subtarget->hasFP16())
+      SrcVal = DAG.getNode(ISD::FP_EXTEND, Loc, MVT::f32, SrcVal);
+    // Lib call from 16 -> 32
+    else {
+      LC = RTLIB::getFPEXT(MVT::f16, MVT::f32);
+      assert(LC != RTLIB::UNKNOWN_LIBCALL &&
+             "Unexpected type for custom-lowering FP_EXTEND");
+      SrcVal =
+        makeLibCall(DAG, LC, MVT::f32, SrcVal, /*isSigned*/ false, Loc).first;
+    }
+  }
+
+  if (DstSz != 64)
+    return SrcVal;
+  // For sure now SrcVal is 32 bits
+  if (Subtarget->hasFP64()) // Instruction from 32 -> 64
+    return DAG.getNode(ISD::FP_EXTEND, Loc, MVT::f64, SrcVal);
+
+  LC = RTLIB::getFPEXT(MVT::f32, MVT::f64);
+  assert(LC != RTLIB::UNKNOWN_LIBCALL &&
+         "Unexpected type for custom-lowering FP_EXTEND");
+  return makeLibCall(DAG, LC, MVT::f64, SrcVal, /*isSigned*/ false, Loc).first;
 }
 
 SDValue ARMTargetLowering::LowerFP_ROUND(SDValue Op, SelectionDAG &DAG) const {
-  assert(Op.getOperand(0).getValueType() == MVT::f64 && !Subtarget->hasFP64() &&
+  SDValue SrcVal = Op.getOperand(0);
+  EVT SrcVT = SrcVal.getValueType();
+  EVT DstVT = Op.getValueType();
+  const unsigned DstSz = Op.getValueType().getSizeInBits();
+  const unsigned SrcSz = SrcVT.getSizeInBits();
+  (void)DstSz;
+  assert(DstSz < SrcSz && SrcSz <= 64 && DstSz >= 16 &&
          "Unexpected type for custom-lowering FP_ROUND");
 
-  RTLIB::Libcall LC;
-  LC = RTLIB::getFPROUND(Op.getOperand(0).getValueType(), Op.getValueType());
+  assert((!Subtarget->hasFP64() || !Subtarget->hasFPARMv8Base()) &&
+         "With both FP DP and 16, any FP conversion is legal!");
 
-  SDValue SrcVal = Op.getOperand(0);
-  return makeLibCall(DAG, LC, Op.getValueType(), SrcVal, /*isSigned*/ false,
-                     SDLoc(Op)).first;
+  SDLoc Loc(Op);
+
+  // Instruction from 32 -> 16 if hasFP16 is valid
+  if (SrcSz == 32 && Subtarget->hasFP16())
+    return Op;
+
+  // Lib call from 32 -> 16 / 64 -> [32, 16]
+  RTLIB::Libcall LC = RTLIB::getFPROUND(SrcVT, DstVT);
+  assert(LC != RTLIB::UNKNOWN_LIBCALL &&
+         "Unexpected type for custom-lowering FP_ROUND");
+  return makeLibCall(DAG, LC, DstVT, SrcVal, /*isSigned*/ false, Loc).first;
 }
 
 void ARMTargetLowering::lowerABS(SDNode *N, SmallVectorImpl<SDValue> &Results,

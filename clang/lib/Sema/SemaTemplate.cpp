@@ -6323,9 +6323,12 @@ ExprResult Sema::CheckTemplateArgument(NonTypeTemplateParmDecl *Param,
     // the type is dependent, in order to check the types of non-type template
     // arguments line up properly in partial ordering.
     Optional<unsigned> Depth = Param->getDepth() + 1;
+    Expr *DeductionArg = Arg;
+    if (auto *PE = dyn_cast<PackExpansionExpr>(DeductionArg))
+      DeductionArg = PE->getPattern();
     if (DeduceAutoType(
             Context.getTrivialTypeSourceInfo(ParamType, Param->getLocation()),
-            Arg, ParamType, Depth) == DAR_Failed) {
+            DeductionArg, ParamType, Depth) == DAR_Failed) {
       Diag(Arg->getExprLoc(),
            diag::err_non_type_template_parm_type_deduction_failure)
         << Param->getDeclName() << Param->getType() << Arg->getType()

@@ -1,6 +1,6 @@
-; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=amdgcn -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,NOHSA %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,HSA %s
+; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=fiji -verify-machineinstrs < %s | FileCheck -check-prefixes=CHECK,HSA %s
 
 @lds0 = addrspace(3) global [512 x float] undef, align 4
 @lds1 = addrspace(3) global [256 x float] undef, align 4
@@ -8,7 +8,8 @@
 @large = addrspace(3) global [4096 x i32] undef, align 4
 
 ; CHECK-LABEL: {{^}}groupstaticsize_test0:
-; CHECK: v_mov_b32_e32 v{{[0-9]+}}, 0x800{{$}}
+; NOHSA: v_mov_b32_e32 v{{[0-9]+}}, llvm.amdgcn.groupstaticsize@abs32@lo
+; HSA: v_mov_b32_e32 v{{[0-9]+}}, 0x800{{$}}
 define amdgpu_kernel void @groupstaticsize_test0(float addrspace(1)* %out, i32 addrspace(1)* %lds_size) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1
   %idx.0 = add nsw i32 %tid.x, 64
@@ -22,7 +23,8 @@ define amdgpu_kernel void @groupstaticsize_test0(float addrspace(1)* %out, i32 a
 }
 
 ; CHECK-LABEL: {{^}}groupstaticsize_test1:
-; CHECK: v_mov_b32_e32 v{{[0-9]+}}, 0xc00{{$}}
+; NOHSA: v_mov_b32_e32 v{{[0-9]+}}, llvm.amdgcn.groupstaticsize@abs32@lo
+; HSA: v_mov_b32_e32 v{{[0-9]+}}, 0xc00{{$}}
 define amdgpu_kernel void @groupstaticsize_test1(float addrspace(1)* %out, i32 %cond, i32 addrspace(1)* %lds_size) {
 entry:
   %static_lds_size = call i32 @llvm.amdgcn.groupstaticsize() #1
@@ -50,7 +52,8 @@ endif:                                            ; preds = %else, %if
 
 ; Exceeds 16-bit simm limit of s_movk_i32
 ; CHECK-LABEL: {{^}}large_groupstaticsize:
-; CHECK: v_mov_b32_e32 [[REG:v[0-9]+]], 0x4000{{$}}
+; NOHSA: v_mov_b32_e32 v{{[0-9]+}}, llvm.amdgcn.groupstaticsize@abs32@lo
+; HSA: v_mov_b32_e32 [[REG:v[0-9]+]], 0x4000{{$}}
 define amdgpu_kernel void @large_groupstaticsize(i32 addrspace(1)* %size, i32 %idx) #0 {
   %gep = getelementptr inbounds [4096 x i32], [4096 x i32] addrspace(3)* @large, i32 0, i32 %idx
   store volatile i32 0, i32 addrspace(3)* %gep

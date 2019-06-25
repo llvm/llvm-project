@@ -391,9 +391,9 @@ MachineInstr *PPCInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   // Swap op1/op2
   assert(((OpIdx1 == 1 && OpIdx2 == 2) || (OpIdx1 == 2 && OpIdx2 == 1)) &&
          "Only the operands 1 and 2 can be swapped in RLSIMI/RLWIMIo.");
-  unsigned Reg0 = MI.getOperand(0).getReg();
-  unsigned Reg1 = MI.getOperand(1).getReg();
-  unsigned Reg2 = MI.getOperand(2).getReg();
+  Register Reg0 = MI.getOperand(0).getReg();
+  Register Reg1 = MI.getOperand(1).getReg();
+  Register Reg2 = MI.getOperand(2).getReg();
   unsigned SubReg1 = MI.getOperand(1).getSubReg();
   unsigned SubReg2 = MI.getOperand(2).getSubReg();
   bool Reg1IsKill = MI.getOperand(1).isKill();
@@ -421,7 +421,7 @@ MachineInstr *PPCInstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
 
   if (NewMI) {
     // Create a new instruction.
-    unsigned Reg0 = ChangeReg0 ? Reg2 : MI.getOperand(0).getReg();
+    Register Reg0 = ChangeReg0 ? Reg2 : MI.getOperand(0).getReg();
     bool Reg0IsDead = MI.getOperand(0).isDead();
     return BuildMI(MF, MI.getDebugLoc(), MI.getDesc())
         .addReg(Reg0, RegState::Define | getDeadRegState(Reg0IsDead))
@@ -2400,7 +2400,7 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
               return &*It;
             }
             break;
-          } else if (It->readsRegister(Reg, &getRegisterInfo())) 
+          } else if (It->readsRegister(Reg, &getRegisterInfo()))
             // If we see another use of this reg between the def and the MI,
             // we want to flat it so the def isn't deleted.
             SeenIntermediateUse = true;
@@ -3218,7 +3218,7 @@ static void swapMIOperands(MachineInstr &MI, unsigned Op1, unsigned Op2) {
   }
 }
 
-// Check if the 'MI' that has the index OpNoForForwarding 
+// Check if the 'MI' that has the index OpNoForForwarding
 // meets the requirement described in the ImmInstrInfo.
 bool PPCInstrInfo::isUseMIElgibleForForwarding(MachineInstr &MI,
                                                const ImmInstrInfo &III,
@@ -3264,7 +3264,7 @@ bool PPCInstrInfo::isDefMIElgibleForForwarding(MachineInstr &DefMI,
                                                MachineOperand *&RegMO) const {
   unsigned Opc = DefMI.getOpcode();
   if (Opc != PPC::ADDItocL && Opc != PPC::ADDI && Opc != PPC::ADDI8)
-    return false; 
+    return false;
 
   assert(DefMI.getNumOperands() >= 3 &&
          "Add inst must have at least three operands");
@@ -3436,7 +3436,7 @@ bool PPCInstrInfo::transformToImmFormFedByAdd(
     // Otherwise, it is Constant Pool Index(CPI) or Global,
     // which is relocation in fact. We need to replace the special zero
     // register with ImmMO.
-    // Before that, we need to fixup the target flags for imm. 
+    // Before that, we need to fixup the target flags for imm.
     // For some reason, we miss to set the flag for the ImmMO if it is CPI.
     if (DefMI.getOpcode() == PPC::ADDItocL)
       ImmMO->setTargetFlags(PPCII::MO_TOC_LO);

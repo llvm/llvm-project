@@ -363,7 +363,10 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   else if (gnu_ranges_base)
     dwo_cu->SetRangesBase(*gnu_ranges_base);
 
-  SetDwoStrOffsetsBase(dwo_cu);
+  for (size_t i = 0; i < m_dwo_symbol_file->DebugInfo()->GetNumUnits(); ++i) {
+    DWARFUnit *unit = m_dwo_symbol_file->DebugInfo()->GetUnitAtIndex(i);
+    SetDwoStrOffsetsBase(unit);
+  }
 }
 
 DWARFDIE DWARFUnit::LookupAddress(const dw_addr_t address) {

@@ -2477,11 +2477,14 @@ bool llvm::rewriteARMFrameIndex(MachineInstr &MI, unsigned FrameRegIdx,
       NumBits = 8;
       Scale = 2;
       break;
+    case ARMII::AddrModeT2_i7:
+    case ARMII::AddrModeT2_i7s2:
     case ARMII::AddrModeT2_i7s4:
       ImmIdx = FrameRegIdx+1;
       InstrOffs = MI.getOperand(ImmIdx).getImm();
       NumBits = 7;
-      Scale = 4;
+      Scale = (AddrMode == ARMII::AddrModeT2_i7s2 ? 2 :
+               AddrMode == ARMII::AddrModeT2_i7s4 ? 4 : 1);
       break;
     default:
       llvm_unreachable("Unsupported addressing mode!");

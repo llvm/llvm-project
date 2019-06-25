@@ -3291,38 +3291,29 @@ bool X86TTIImpl::areFunctionArgsABICompatible(
          TM.getSubtarget<X86Subtarget>(*Callee).useAVX512Regs();
 }
 
-const X86TTIImpl::TTI::MemCmpExpansionOptions *
-X86TTIImpl::enableMemCmpExpansion(bool IsZeroCmp) const {
-  // Only enable vector loads for equality comparison.
-  // Right now the vector version is not as fast, see #33329.
-  static const auto ThreeWayOptions = [this]() {
-    TTI::MemCmpExpansionOptions Options;
-    if (ST->is64Bit()) {
-      Options.LoadSizes.push_back(8);
-    }
-    Options.LoadSizes.push_back(4);
-    Options.LoadSizes.push_back(2);
-    Options.LoadSizes.push_back(1);
-    return Options;
-  }();
-  static const auto EqZeroOptions = [this]() {
-    TTI::MemCmpExpansionOptions Options;
+X86TTIImpl::TTI::MemCmpExpansionOptions
+X86TTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  Options.NumLoadsPerBlock = 2;
+  if (IsZeroCmp) {
+    // Only enable vector loads for equality comparison. Right now the vector
+    // version is not as fast for three way compare (see #33329).
     // TODO: enable AVX512 when the DAG is ready.
     // if (ST->hasAVX512()) Options.LoadSizes.push_back(64);
     if (ST->hasAVX2()) Options.LoadSizes.push_back(32);
     if (ST->hasSSE2()) Options.LoadSizes.push_back(16);
-    if (ST->is64Bit()) {
-      Options.LoadSizes.push_back(8);
-    }
-    Options.LoadSizes.push_back(4);
-    Options.LoadSizes.push_back(2);
-    Options.LoadSizes.push_back(1);
     // All GPR and vector loads can be unaligned. SIMD compare requires integer
     // vectors (SSE2/AVX2).
     Options.AllowOverlappingLoads = true;
-    return Options;
-  }();
-  return IsZeroCmp ? &EqZeroOptions : &ThreeWayOptions;
+  }
+  if (ST->is64Bit()) {
+    Options.LoadSizes.push_back(8);
+  }
+  Options.LoadSizes.push_back(4);
+  Options.LoadSizes.push_back(2);
+  Options.LoadSizes.push_back(1);
+  return Options;
 }
 
 bool X86TTIImpl::enableInterleavedAccessVectorization() {

@@ -141,19 +141,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "col": 29,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 4
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 29,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 4
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 29,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 4
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "isImplicit": true,
@@ -202,19 +199,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 29,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 4
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 32,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 34,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "operator()",
@@ -230,13 +224,11 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 33,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 34,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -247,19 +239,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXConversionDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 29,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 4
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 29,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 34,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -275,19 +264,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 29,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 4
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 29,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 34,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -303,19 +289,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 29,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 4
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 29,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 29,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -334,19 +317,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "col": 26,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 5
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 26,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 5
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 26,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 5
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "isImplicit": true,
@@ -396,15 +376,13 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 26,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 5
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {},
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 35,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 5
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "operator()",
@@ -414,19 +392,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 29,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 5
+// CHECK-NEXT:       "tokLen": 4
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
@@ -439,19 +414,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "CXXMethodDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 26,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 5
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 33,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 35,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "operator()",
@@ -466,19 +438,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:        "kind": "ParmVarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 33,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 5
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 5
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 5
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -491,13 +460,11 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 34,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 5
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 35,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 5
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        }
 // CHECK-NEXT:       }
@@ -510,15 +477,13 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 26,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 5
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {},
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 35,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 5
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -529,19 +494,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 29,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 5
+// CHECK-NEXT:       "tokLen": 4
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
@@ -554,19 +516,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "CXXConversionDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 26,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 5
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 26,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 35,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
@@ -584,15 +543,13 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "FunctionTemplateDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 26,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 5
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {},
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 35,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 5
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -603,19 +560,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "TemplateTypeParmDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 29,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 5
+// CHECK-NEXT:       "tokLen": 4
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
@@ -628,19 +582,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "CXXMethodDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 26,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 5
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 26,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 35,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 5
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "isImplicit": true,
@@ -656,19 +607,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:        "kind": "ParmVarDecl",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 33,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 5
+// CHECK-NEXT:         "tokLen": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 5
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 5
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -684,19 +632,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 26,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 5
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 26,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 5
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 26,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 5
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -714,20 +659,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 8,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 8
+// CHECK-NEXT:   "tokLen": 18
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 8
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 10,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 10
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "CanPassInRegisters",
@@ -771,20 +715,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 8,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 8
+// CHECK-NEXT:     "tokLen": 18
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 8
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 8
+// CHECK-NEXT:      "tokLen": 18
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -796,20 +738,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 9,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 9
+// CHECK-NEXT:     "tokLen": 18
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 9
+// CHECK-NEXT:      "tokLen": 18
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 57,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 9
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "CanPassInRegisters",
@@ -824,19 +764,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 47,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 9
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 22,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 46,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -851,20 +788,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 12,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 12
+// CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 12
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 14,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 14
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "CantPassInRegisters",
@@ -907,20 +843,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 12,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 12
+// CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -932,20 +866,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 13,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 13
+// CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 13
+// CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 58,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 13
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "CantPassInRegisters",
@@ -959,19 +891,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 49,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 13
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 13
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 48,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 13
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -986,20 +915,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 16,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 16
+// CHECK-NEXT:   "tokLen": 7
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 16
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 17,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 17
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsEmpty",
@@ -1060,20 +988,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 16,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 16
+// CHECK-NEXT:     "tokLen": 7
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 16
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 16
+// CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1086,20 +1012,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 19,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 19
+// CHECK-NEXT:   "tokLen": 10
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 19
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 21,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 21
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsNotEmpty",
@@ -1155,20 +1080,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 19,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 19
+// CHECK-NEXT:     "tokLen": 10
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1179,20 +1102,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 20,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 20
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 20
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 20
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "a",
@@ -1206,20 +1127,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 23,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 23
+// CHECK-NEXT:   "tokLen": 11
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 23
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 25,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 25
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsAggregate",
@@ -1275,20 +1195,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 23,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 23
+// CHECK-NEXT:     "tokLen": 11
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 23
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 23
+// CHECK-NEXT:      "tokLen": 11
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1299,20 +1217,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 24,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 24
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 24
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 24
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "a",
@@ -1326,20 +1242,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 27,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 27
+// CHECK-NEXT:   "tokLen": 14
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 27
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 30,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 30
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsNotAggregate",
@@ -1393,20 +1308,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 27,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 27
+// CHECK-NEXT:     "tokLen": 14
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 27
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 27
+// CHECK-NEXT:      "tokLen": 14
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1417,20 +1330,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "AccessSpecDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 28,
 // CHECK-NEXT:     "col": 1,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 28
+// CHECK-NEXT:     "tokLen": 7
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 28
+// CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 28
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "access": "private"
@@ -1439,20 +1350,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 29,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 29
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 29
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 29
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "a",
@@ -1466,20 +1375,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 32,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 32
+// CHECK-NEXT:   "tokLen": 16
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 32
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 34,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 34
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsStandardLayout",
@@ -1540,20 +1448,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 32,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 32
+// CHECK-NEXT:     "tokLen": 16
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 32
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 32
+// CHECK-NEXT:      "tokLen": 16
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1564,20 +1470,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 33,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 33
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 33
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 33
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "f",
@@ -1591,20 +1495,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 36,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 36
+// CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 36
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 38,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 38
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsNotStandardLayout",
@@ -1656,20 +1559,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 36,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 36
+// CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 36
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 36
+// CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1680,20 +1581,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 37,
 // CHECK-NEXT:     "col": 16,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 37
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 37
+// CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 18,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 37
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "f",
@@ -1706,20 +1605,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 36,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 36
+// CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 36
+// CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 36
+// CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1736,19 +1633,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 36
+// CHECK-NEXT:       "tokLen": 19
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 36
+// CHECK-NEXT:        "tokLen": 19
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 36
+// CHECK-NEXT:        "tokLen": 19
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1762,19 +1656,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 36
+// CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 36
+// CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 36
+// CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1791,19 +1682,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 36
+// CHECK-NEXT:       "tokLen": 19
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 36
+// CHECK-NEXT:        "tokLen": 19
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 36
+// CHECK-NEXT:        "tokLen": 19
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1817,19 +1705,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 36
+// CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 36
+// CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 36
+// CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1846,20 +1731,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 40,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 40
+// CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 40
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 41,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 41
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsTriviallyCopyable",
@@ -1920,20 +1804,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 40,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 40
+// CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 40
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 40
+// CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -1946,20 +1828,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 43,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 43
+// CHECK-NEXT:   "tokLen": 22
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 43
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 45,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 45
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsNotTriviallyCopyable",
@@ -1999,20 +1880,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 43,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 43
+// CHECK-NEXT:     "tokLen": 22
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 43
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 43
+// CHECK-NEXT:      "tokLen": 22
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2024,20 +1903,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 44,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 44
+// CHECK-NEXT:     "tokLen": 22
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 44
+// CHECK-NEXT:      "tokLen": 22
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 58,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 44
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "IsNotTriviallyCopyable",
@@ -2050,19 +1927,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 55,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 44
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 26,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 44
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 54,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 44
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2075,13 +1949,11 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 57,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 44
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 58,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 44
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -2093,20 +1965,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 47,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 47
+// CHECK-NEXT:   "tokLen": 5
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 47
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 49,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 49
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsPOD",
@@ -2162,20 +2033,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 47,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 47
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 47
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 47
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2186,20 +2055,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 48,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 48
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 48
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 48
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "a",
@@ -2213,20 +2080,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 51,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 51
+// CHECK-NEXT:   "tokLen": 8
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 51
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 53,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 53
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsNotPOD",
@@ -2279,20 +2145,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 51,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 51
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 51
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 51
+// CHECK-NEXT:      "tokLen": 8
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2303,20 +2167,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 52,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 52
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 52
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 52
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "a",
@@ -2330,20 +2192,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 55,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 55
+// CHECK-NEXT:   "tokLen": 9
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 55
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 57,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 57
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsTrivial",
@@ -2403,20 +2264,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 55,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 55
+// CHECK-NEXT:     "tokLen": 9
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 55
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 55
+// CHECK-NEXT:      "tokLen": 9
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2428,20 +2287,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 56,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 56
+// CHECK-NEXT:     "tokLen": 9
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 56
+// CHECK-NEXT:      "tokLen": 9
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 56
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "IsTrivial",
@@ -2457,20 +2314,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 59,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 59
+// CHECK-NEXT:   "tokLen": 12
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 59
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 61,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 61
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsNotTrivial",
@@ -2526,20 +2382,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 59,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 59
+// CHECK-NEXT:     "tokLen": 12
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 59
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 59
+// CHECK-NEXT:      "tokLen": 12
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2551,20 +2405,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 60,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 60
+// CHECK-NEXT:     "tokLen": 12
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 60
+// CHECK-NEXT:      "tokLen": 12
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 19,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 60
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "IsNotTrivial",
@@ -2578,13 +2430,11 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 18,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 60
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 19,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 60
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -2596,20 +2446,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 63,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 63
+// CHECK-NEXT:   "tokLen": 13
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 63
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 65,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 65
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsPolymorphic",
@@ -2661,20 +2510,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 63,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 63
+// CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 63
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 63
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2685,20 +2532,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 64,
 // CHECK-NEXT:     "col": 16,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 64
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 64
+// CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 18,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 64
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "f",
@@ -2711,20 +2556,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 63,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 63
+// CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 63
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 63
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2741,19 +2584,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 63
+// CHECK-NEXT:       "tokLen": 13
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 63
+// CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 63
+// CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2767,19 +2607,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 63
+// CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 63
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 63
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2796,19 +2633,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 63
+// CHECK-NEXT:       "tokLen": 13
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 63
+// CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 63
+// CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2822,19 +2656,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 63
+// CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 63
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 63
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2851,20 +2682,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 67,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 67
+// CHECK-NEXT:   "tokLen": 16
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 67
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 69,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 69
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsNotPolymorphic",
@@ -2925,20 +2755,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 67,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 67
+// CHECK-NEXT:     "tokLen": 16
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 67
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 67
+// CHECK-NEXT:      "tokLen": 16
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -2949,20 +2777,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 68,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 68
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 68
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 68
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "f",
@@ -2976,20 +2802,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 71,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 71
+// CHECK-NEXT:   "tokLen": 10
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 71
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 73,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 73
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsAbstract",
@@ -3042,20 +2867,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 71,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 71
+// CHECK-NEXT:     "tokLen": 10
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 71
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 71
+// CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3066,20 +2889,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 72,
 // CHECK-NEXT:     "col": 16,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 72
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 72
+// CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 22,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 72
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "f",
@@ -3093,20 +2914,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 71,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 71
+// CHECK-NEXT:     "tokLen": 10
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 71
+// CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 71
+// CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3123,19 +2942,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 71
+// CHECK-NEXT:       "tokLen": 10
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 71
+// CHECK-NEXT:        "tokLen": 10
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 71
+// CHECK-NEXT:        "tokLen": 10
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3149,19 +2965,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 71
+// CHECK-NEXT:     "tokLen": 10
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 71
+// CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 71
+// CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3178,19 +2991,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 71
+// CHECK-NEXT:       "tokLen": 10
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 71
+// CHECK-NEXT:        "tokLen": 10
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 71
+// CHECK-NEXT:        "tokLen": 10
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3204,19 +3014,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 71
+// CHECK-NEXT:     "tokLen": 10
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 71
+// CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 71
+// CHECK-NEXT:      "tokLen": 10
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3233,20 +3040,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 75,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 75
+// CHECK-NEXT:   "tokLen": 13
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 75
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 77,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 77
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsNotAbstract",
@@ -3298,20 +3104,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 75,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 75
+// CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 75
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 75
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3322,20 +3126,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 76,
 // CHECK-NEXT:     "col": 16,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 76
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 76
+// CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 18,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 76
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "f",
@@ -3348,20 +3150,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 75,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 75
+// CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 75
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 75
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3378,19 +3178,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 75
+// CHECK-NEXT:       "tokLen": 13
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 75
+// CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 75
+// CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3404,19 +3201,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 75
+// CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 75
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 75
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3433,19 +3227,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 75
+// CHECK-NEXT:       "tokLen": 13
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 75
+// CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 75
+// CHECK-NEXT:        "tokLen": 13
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3459,19 +3250,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 75
+// CHECK-NEXT:     "tokLen": 13
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 75
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 75
+// CHECK-NEXT:      "tokLen": 13
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3488,20 +3276,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 79,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 79
+// CHECK-NEXT:   "tokLen": 9
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 79
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 81,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 81
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsLiteral",
@@ -3550,20 +3337,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 79,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 79
+// CHECK-NEXT:     "tokLen": 9
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 79
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 79
+// CHECK-NEXT:      "tokLen": 9
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3575,20 +3360,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 80,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 80
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 24,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 80
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "~IsLiteral",
@@ -3603,20 +3386,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 83,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 83
+// CHECK-NEXT:   "tokLen": 12
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 83
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 85,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 85
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "IsNotLiteral",
@@ -3660,20 +3442,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 83,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 83
+// CHECK-NEXT:     "tokLen": 12
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 83
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 83
+// CHECK-NEXT:      "tokLen": 12
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3685,20 +3465,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXDestructorDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 84,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 84
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 84
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 20,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 84
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "~IsNotLiteral",
@@ -3712,13 +3490,11 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 19,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 84
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 20,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 84
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -3730,20 +3506,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 87,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 87
+// CHECK-NEXT:   "tokLen": 26
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 87
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 89,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 89
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "HasUserDeclaredConstructor",
@@ -3799,20 +3574,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 87,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 87
+// CHECK-NEXT:     "tokLen": 26
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 87
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 87
+// CHECK-NEXT:      "tokLen": 26
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3824,20 +3597,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 88,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 88
+// CHECK-NEXT:     "tokLen": 26
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 88
+// CHECK-NEXT:      "tokLen": 26
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 33,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 88
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "HasUserDeclaredConstructor",
@@ -3851,13 +3622,11 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 32,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 88
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 33,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 88
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -3869,20 +3638,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 91,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 91
+// CHECK-NEXT:   "tokLen": 28
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 91
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 92,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 92
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "HasNoUserDeclaredConstructor",
@@ -3943,20 +3711,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 91,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 91
+// CHECK-NEXT:     "tokLen": 28
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 91
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 91
+// CHECK-NEXT:      "tokLen": 28
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -3969,20 +3735,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 94,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 94
+// CHECK-NEXT:   "tokLen": 34
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 94
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 96,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 96
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "HasConstexprNonCopyMoveConstructor",
@@ -4041,20 +3806,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 94,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 94
+// CHECK-NEXT:     "tokLen": 34
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 94
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 94
+// CHECK-NEXT:      "tokLen": 34
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -4066,20 +3829,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 95,
 // CHECK-NEXT:     "col": 13,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 95
+// CHECK-NEXT:     "tokLen": 34
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 95
+// CHECK-NEXT:      "tokLen": 9
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 51,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 95
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "HasConstexprNonCopyMoveConstructor",
@@ -4094,13 +3855,11 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 50,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 95
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 51,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 95
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -4112,20 +3871,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 98,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 98
+// CHECK-NEXT:   "tokLen": 36
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 98
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 100,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 100
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "HasNoConstexprNonCopyMoveConstructor",
@@ -4181,20 +3939,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 98,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 98
+// CHECK-NEXT:     "tokLen": 36
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 98
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 98
+// CHECK-NEXT:      "tokLen": 36
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -4206,20 +3962,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 99,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 99
+// CHECK-NEXT:     "tokLen": 36
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 99
+// CHECK-NEXT:      "tokLen": 36
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 43,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 99
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "HasNoConstexprNonCopyMoveConstructor",
@@ -4233,13 +3987,11 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 42,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 99
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 43,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 99
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      }
 // CHECK-NEXT:     }
@@ -4251,20 +4003,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 102,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 102
+// CHECK-NEXT:   "tokLen": 16
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 102
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 104,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 104
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "HasMutableFields",
@@ -4322,20 +4073,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 102,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 102
+// CHECK-NEXT:     "tokLen": 16
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 102
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 102
+// CHECK-NEXT:      "tokLen": 16
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -4346,20 +4095,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 103,
 // CHECK-NEXT:     "col": 15,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 103
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 103
+// CHECK-NEXT:      "tokLen": 7
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 15,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 103
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "i",
@@ -4372,20 +4119,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXConstructorDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 102,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 102
+// CHECK-NEXT:     "tokLen": 16
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 102
+// CHECK-NEXT:      "tokLen": 16
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 102
+// CHECK-NEXT:      "tokLen": 16
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -4402,19 +4147,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 102
+// CHECK-NEXT:       "tokLen": 16
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 102
+// CHECK-NEXT:        "tokLen": 16
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 102
+// CHECK-NEXT:        "tokLen": 16
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4428,19 +4170,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "kind": "CXXMethodDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 102
+// CHECK-NEXT:     "tokLen": 16
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 102
+// CHECK-NEXT:      "tokLen": 16
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 102
+// CHECK-NEXT:      "tokLen": 16
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -4457,19 +4196,16 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "kind": "ParmVarDecl",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 102
+// CHECK-NEXT:       "tokLen": 16
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 102
+// CHECK-NEXT:        "tokLen": 16
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 102
+// CHECK-NEXT:        "tokLen": 16
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4484,20 +4220,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 106,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 106
+// CHECK-NEXT:   "tokLen": 18
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 106
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 108,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 108
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "HasNoMutableFields",
@@ -4553,20 +4288,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 106,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 106
+// CHECK-NEXT:     "tokLen": 18
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 106
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 106
+// CHECK-NEXT:      "tokLen": 18
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -4577,20 +4310,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 107,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 107
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 107
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 107
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "i",
@@ -4604,20 +4335,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 110,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 110
+// CHECK-NEXT:   "tokLen": 17
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 110
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 114,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 114
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "HasVariantMembers",
@@ -4674,20 +4404,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 110,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 110
+// CHECK-NEXT:     "tokLen": 17
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 110
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 110
+// CHECK-NEXT:      "tokLen": 17
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -4698,20 +4426,19 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 111,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 111
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 111
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 113,
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 113
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "tagUsed": "union",
@@ -4767,20 +4494,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "FieldDecl",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 112,
 // CHECK-NEXT:       "col": 9,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 112
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 112
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 112
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "i",
@@ -4794,20 +4519,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 111,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 111
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 111
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 111
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -4819,20 +4542,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "IndirectFieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 112,
 // CHECK-NEXT:     "col": 9,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 112
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 112
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 9,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 112
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -4844,20 +4565,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 116,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 116
+// CHECK-NEXT:   "tokLen": 19
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 116
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 117,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 117
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "HasNoVariantMembers",
@@ -4918,20 +4638,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 116,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 116
+// CHECK-NEXT:     "tokLen": 19
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 116
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 116
+// CHECK-NEXT:      "tokLen": 19
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -4944,20 +4662,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 119,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 119
+// CHECK-NEXT:   "tokLen": 22
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 119
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 121,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 121
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "AllowsConstDefaultInit",
@@ -5015,20 +4732,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 119,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 119
+// CHECK-NEXT:     "tokLen": 22
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 119
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 119
+// CHECK-NEXT:      "tokLen": 22
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -5039,20 +4754,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 120,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 120
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 120
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 11,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 120
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "i",
@@ -5067,13 +4780,11 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 120
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 120
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5090,20 +4801,19 @@ struct DoesNotAllowConstDefaultInit {
 
 // CHECK:  "kind": "CXXRecordDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 123,
 // CHECK-NEXT:   "col": 8,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 123
+// CHECK-NEXT:   "tokLen": 28
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 123
+// CHECK-NEXT:    "tokLen": 6
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 125,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 125
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "DoesNotAllowConstDefaultInit",
@@ -5159,20 +4869,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "CXXRecordDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 123,
 // CHECK-NEXT:     "col": 8,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 123
+// CHECK-NEXT:     "tokLen": 28
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 123
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 123
+// CHECK-NEXT:      "tokLen": 28
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isImplicit": true,
@@ -5183,20 +4891,18 @@ struct DoesNotAllowConstDefaultInit {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "FieldDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 124,
 // CHECK-NEXT:     "col": 7,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 124
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 124
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 124
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "i",

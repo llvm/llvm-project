@@ -124,7 +124,7 @@ void RISCVRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
 }
 
-unsigned RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const TargetFrameLowering *TFI = getFrameLowering(MF);
   return TFI->hasFP(MF) ? RISCV::X8 : RISCV::X2;
 }

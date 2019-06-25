@@ -83,7 +83,7 @@ public:
                       const TargetRegisterClass *NewRC,
                       LiveIntervals &LIS) const override;
 
-  unsigned getFrameRegister(const MachineFunction &MF) const override;
+  Register getFrameRegister(const MachineFunction &MF) const override;
 };
 
 } // end namespace llvm

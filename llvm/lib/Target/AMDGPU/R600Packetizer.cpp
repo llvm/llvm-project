@@ -186,8 +186,8 @@ public:
     // Does MII and MIJ share the same pred_sel ?
     int OpI = TII->getOperandIdx(MII->getOpcode(), R600::OpName::pred_sel),
         OpJ = TII->getOperandIdx(MIJ->getOpcode(), R600::OpName::pred_sel);
-    unsigned PredI = (OpI > -1)?MII->getOperand(OpI).getReg():0,
-        PredJ = (OpJ > -1)?MIJ->getOperand(OpJ).getReg():0;
+    Register PredI = (OpI > -1)?MII->getOperand(OpI).getReg() : Register(),
+      PredJ = (OpJ > -1)?MIJ->getOperand(OpJ).getReg() : Register();
     if (PredI != PredJ)
       return false;
     if (SUJ->isSucc(SUI)) {

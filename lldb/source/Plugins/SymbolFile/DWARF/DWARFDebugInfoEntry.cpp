@@ -19,13 +19,14 @@
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Stream.h"
 
-#include "DWARFUnit.h"
+#include "DWARFCompileUnit.h"
 #include "DWARFDebugAbbrev.h"
 #include "DWARFDebugAranges.h"
 #include "DWARFDebugInfo.h"
 #include "DWARFDebugRanges.h"
 #include "DWARFDeclContext.h"
 #include "DWARFFormValue.h"
+#include "DWARFUnit.h"
 #include "SymbolFileDWARF.h"
 #include "SymbolFileDWARFDwo.h"
 
@@ -657,7 +658,7 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
   if (!dwo_symbol_file)
     return 0;
 
-  DWARFUnit *dwo_cu = dwo_symbol_file->GetCompileUnit();
+  DWARFCompileUnit *dwo_cu = dwo_symbol_file->GetCompileUnit();
   if (!dwo_cu)
     return 0;
 

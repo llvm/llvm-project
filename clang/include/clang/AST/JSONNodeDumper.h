@@ -124,6 +124,8 @@ class JSONNodeDumper
   ASTContext& Ctx;
   PrintingPolicy PrintPolicy;
   const comments::CommandTraits *Traits;
+  StringRef LastLocFilename;
+  unsigned LastLocLine;
 
   using InnerAttrVisitor = ConstAttrVisitor<JSONNodeDumper>;
   using InnerCommentVisitor =
@@ -139,14 +141,15 @@ class JSONNodeDumper
       JOS.attribute(Key, Value);
   }
 
-  // Creates a single SourceLocation JSON representation of the given location.
-  llvm::json::Object createBareSourceLocation(SourceLocation Loc);
-  // Creates a JSON representation of a SourceLocation based on its presumed
+  // Writes the attributes of a SourceLocation object without.
+  void writeBareSourceLocation(SourceLocation Loc);
+
+  // Writes the attributes of a SourceLocation to JSON based on its presumed
   // spelling location. If the given location represents a macro invocation,
   // this outputs two sub-objects: one for the spelling and one for the
   // expansion location.
-  llvm::json::Object createSourceLocation(SourceLocation Loc);
-  llvm::json::Object createSourceRange(SourceRange R);
+  void writeSourceLocation(SourceLocation Loc);
+  void writeSourceRange(SourceRange R);
   std::string createPointerRepresentation(const void *Ptr);
   llvm::json::Object createQualType(QualType QT, bool Desugar = true);
   llvm::json::Object createBareDeclRef(const Decl *D);
@@ -178,7 +181,7 @@ public:
                  const PrintingPolicy &PrintPolicy,
                  const comments::CommandTraits *Traits)
       : NodeStreamer(OS), SM(SrcMgr), Ctx(Ctx), PrintPolicy(PrintPolicy),
-        Traits(Traits) {}
+        Traits(Traits), LastLocLine(0) {}
 
   void Visit(const Attr *A);
   void Visit(const Stmt *Node);

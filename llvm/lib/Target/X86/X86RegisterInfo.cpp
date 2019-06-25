@@ -765,7 +765,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
 }
 
-unsigned X86RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+Register X86RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const X86FrameLowering *TFI = getFrameLowering(MF);
   return TFI->hasFP(MF) ? FramePtr : StackPtr;
 }

@@ -15,7 +15,7 @@
 
 int main(int, char**)
 {
-    (void) std::tuple_size<std::span<double>>::value; // expected-error-re {{implicit instantiation of undefined template 'std::__1::tuple_size<std::__1::span<double, {{.*}}}}
-    (void) std::tuple_size<std::span<int>>::value;    // expected-error-re {{implicit instantiation of undefined template 'std::__1::tuple_size<std::__1::span<int, {{.*}}}}
+    (void) std::tuple_size<std::span<double>>::value; // expected-error-re {{implicit instantiation of undefined template 'std:{{.*}}:tuple_size<std:{{.*}}:span<double, {{.*}}}}
+    (void) std::tuple_size<std::span<int>>::value;    // expected-error-re {{implicit instantiation of undefined template 'std:{{.*}}:tuple_size<std:{{.*}}:span<int, {{.*}}}}
     return 0;
 }

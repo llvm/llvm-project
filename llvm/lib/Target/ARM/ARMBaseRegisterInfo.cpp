@@ -426,7 +426,7 @@ cannotEliminateFrame(const MachineFunction &MF) const {
     || needsStackRealignment(MF);
 }
 
-unsigned
+Register
 ARMBaseRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
@@ -786,7 +786,7 @@ ARMBaseRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int PIdx = MI.findFirstPredOperandIdx();
   ARMCC::CondCodes Pred = (PIdx == -1)
     ? ARMCC::AL : (ARMCC::CondCodes)MI.getOperand(PIdx).getImm();
-  unsigned PredReg = (PIdx == -1) ? 0 : MI.getOperand(PIdx+1).getReg();
+  Register PredReg = (PIdx == -1) ? Register() : MI.getOperand(PIdx+1).getReg();
   if (Offset == 0)
     // Must be addrmode4/6.
     MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false, false, false);

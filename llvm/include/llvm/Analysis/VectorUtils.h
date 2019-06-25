@@ -36,13 +36,12 @@ enum ID : unsigned;
 }
 
 /// Identify if the intrinsic is trivially vectorizable.
-/// This method returns true if the intrinsic's argument types are all
-/// scalars for the scalar form of the intrinsic and all vectors for
-/// the vector form of the intrinsic.
+/// This method returns true if the intrinsic's argument types are all scalars
+/// for the scalar form of the intrinsic and all vectors (or scalars handled by
+/// hasVectorInstrinsicScalarOpd) for the vector form of the intrinsic.
 bool isTriviallyVectorizable(Intrinsic::ID ID);
 
-/// Identifies if the intrinsic has a scalar operand. It checks for
-/// ctlz,cttz and powi special intrinsics whose argument is scalar.
+/// Identifies if the vector form of the intrinsic has a scalar operand.
 bool hasVectorInstrinsicScalarOpd(Intrinsic::ID ID, unsigned ScalarOpdIdx);
 
 /// Returns intrinsic ID for call.

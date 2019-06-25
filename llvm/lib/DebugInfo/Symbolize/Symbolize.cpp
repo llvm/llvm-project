@@ -133,6 +133,29 @@ LLVMSymbolizer::symbolizeData(const std::string &ModuleName,
   return Global;
 }
 
+Expected<std::vector<DILocal>>
+LLVMSymbolizer::symbolizeFrame(const std::string &ModuleName,
+                               object::SectionedAddress ModuleOffset) {
+  SymbolizableModule *Info;
+  if (auto InfoOrErr = getOrCreateModuleInfo(ModuleName))
+    Info = InfoOrErr.get();
+  else
+    return InfoOrErr.takeError();
+
+  // A null module means an error has already been reported. Return an empty
+  // result.
+  if (!Info)
+    return std::vector<DILocal>();
+
+  // If the user is giving us relative addresses, add the preferred base of
+  // the object to the offset before we do the query. It's what DIContext
+  // expects.
+  if (Opts.RelativeAddresses)
+    ModuleOffset.Address += Info->getModulePreferredBase();
+
+  return Info->symbolizeFrame(ModuleOffset);
+}
+
 void LLVMSymbolizer::flush() {
   ObjectForUBPathAndArch.clear();
   BinaryForPath.clear();

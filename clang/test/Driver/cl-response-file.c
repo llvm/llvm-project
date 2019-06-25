@@ -4,7 +4,7 @@
 
 
 
-// RUN: echo '/I%S\Inputs\cl-response-file\ /DFOO=2' > %t.rsp
+// RUN: printf '%%s\n' '/I%S\Inputs\cl-response-file\ /DFOO=2' > %t.rsp
 // RUN: %clang_cl /c -### @%t.rsp -- %s 2>&1 | FileCheck %s
 
 // CHECK: "-I" "{{.*}}\\Inputs\\cl-response-file\\" "-D" "FOO=2"

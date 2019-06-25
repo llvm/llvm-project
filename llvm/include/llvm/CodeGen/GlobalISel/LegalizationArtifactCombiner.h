@@ -39,11 +39,11 @@ public:
       return false;
 
     Builder.setInstr(MI);
-    unsigned DstReg = MI.getOperand(0).getReg();
-    unsigned SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
 
     // aext(trunc x) - > aext/copy/trunc x
-    unsigned TruncSrc;
+    Register TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       Builder.buildAnyExtOrTrunc(DstReg, TruncSrc);
@@ -52,7 +52,7 @@ public:
     }
 
     // aext([asz]ext x) -> [asz]ext x
-    unsigned ExtSrc;
+    Register ExtSrc;
     MachineInstr *ExtMI;
     if (mi_match(SrcReg, MRI,
                  m_all_of(m_MInstr(ExtMI), m_any_of(m_GAnyExt(m_Reg(ExtSrc)),
@@ -89,11 +89,11 @@ public:
       return false;
 
     Builder.setInstr(MI);
-    unsigned DstReg = MI.getOperand(0).getReg();
-    unsigned SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
 
     // zext(trunc x) - > and (aext/copy/trunc x), mask
-    unsigned TruncSrc;
+    Register TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported({TargetOpcode::G_AND, {DstTy}}) ||
@@ -118,11 +118,11 @@ public:
       return false;
 
     Builder.setInstr(MI);
-    unsigned DstReg = MI.getOperand(0).getReg();
-    unsigned SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
+    Register DstReg = MI.getOperand(0).getReg();
+    Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
 
     // sext(trunc x) - > ashr (shl (aext/copy/trunc x), c), c
-    unsigned TruncSrc;
+    Register TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
       // Guess on the RHS shift amount type, which should be re-legalized if
@@ -156,7 +156,7 @@ public:
     if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF,
                                            MI.getOperand(1).getReg(), MRI)) {
       Builder.setInstr(MI);
-      unsigned DstReg = MI.getOperand(0).getReg();
+      Register DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
 
       if (Opcode == TargetOpcode::G_ANYEXT) {
@@ -224,7 +224,7 @@ public:
 
       const unsigned NewNumDefs = NumDefs / NumMergeRegs;
       for (unsigned Idx = 0; Idx < NumMergeRegs; ++Idx) {
-        SmallVector<unsigned, 2> DstRegs;
+        SmallVector<Register, 2> DstRegs;
         for (unsigned j = 0, DefIdx = Idx * NewNumDefs; j < NewNumDefs;
              ++j, ++DefIdx)
           DstRegs.push_back(MI.getOperand(DefIdx).getReg());
@@ -246,7 +246,7 @@ public:
 
       const unsigned NumRegs = NumMergeRegs / NumDefs;
       for (unsigned DefIdx = 0; DefIdx < NumDefs; ++DefIdx) {
-        SmallVector<unsigned, 2> Regs;
+        SmallVector<Register, 2> Regs;
         for (unsigned j = 0, Idx = NumRegs * DefIdx + 1; j < NumRegs;
              ++j, ++Idx)
           Regs.push_back(MergeI->getOperand(Idx).getReg());
@@ -457,8 +457,8 @@ private:
 
   /// Looks through copy instructions and returns the actual
   /// source register.
-  unsigned lookThroughCopyInstrs(unsigned Reg) {
-    unsigned TmpReg;
+  unsigned lookThroughCopyInstrs(Register Reg) {
+    Register TmpReg;
     while (mi_match(Reg, MRI, m_Copy(m_Reg(TmpReg)))) {
       if (MRI.getType(TmpReg).isValid())
         Reg = TmpReg;

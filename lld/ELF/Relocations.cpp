@@ -653,17 +653,9 @@ static std::string maybeReportDiscarded(Undefined &Sym) {
     return "";
   ArrayRef<Elf_Shdr_Impl<ELFT>> ObjSections =
       CHECK(File->getObj().sections(), File);
-
-  std::string Msg;
-  if (Sym.Type == ELF::STT_SECTION) {
-    Msg = "relocation refers to a discarded section: ";
-    Msg += CHECK(
-        File->getObj().getSectionName(&ObjSections[Sym.DiscardedSecIdx]), File);
-  } else {
-    Msg = "relocation refers to a symbol in a discarded section: " +
-          toString(Sym);
-  }
-  Msg += "\n>>> defined in " + toString(File);
+  std::string Msg =
+      "relocation refers to a symbol in a discarded section: " + toString(Sym) +
+      "\n>>> defined in " + toString(File);
 
   Elf_Shdr_Impl<ELFT> ELFSec = ObjSections[Sym.DiscardedSecIdx - 1];
   if (ELFSec.sh_type != SHT_GROUP)

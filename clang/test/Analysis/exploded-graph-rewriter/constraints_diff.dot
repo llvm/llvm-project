@@ -1,0 +1,65 @@
+// RUN: %exploded_graph_rewriter -d %s | FileCheck %s
+
+// FIXME: Substitution doesn't seem to work on Windows.
+// UNSUPPORTED: system-windows
+
+Node0x1 [shape=record,label=
+ "{
+    { "node_id": 1,
+      "pointer": "0x1",
+      "state_id": 2,
+      "program_points": [],
+      "program_state": {
+        "store": null,
+        "environment": null,
+        "constraints": [
+          { "symbol": "reg_$0<x>", "range": "{ [0, 10] }" }
+        ]
+      }
+    }
+\l}"];
+
+Node0x1 -> Node0x3;
+
+// CHECK: Node0x3 [
+// CHECK-SAME: <tr>
+// CHECK-SAME:   <td><font color="red">-</font></td>
+// CHECK-SAME:   <td align="left">reg_$0<x></td>
+// CHECK-SAME:   <td align="left">\{ [0, 10] \}</td>
+// CHECK-SAME: </tr>
+// CHECK-SAME: <tr>
+// CHECK-SAME:   <td><font color="forestgreen">+</font></td>
+// CHECK-SAME:   <td align="left">reg_$0<x></td>
+// CHECK-SAME:   <td align="left">\{ [0, 5] \}</td>
+// CHECK-SAME: </tr>
+Node0x3 [shape=record,label=
+ "{
+    { "node_id": 3,
+      "pointer": "0x3",
+      "state_id": 4,
+      "program_points": [],
+      "program_state": {
+        "store": null,
+        "environment": null,
+        "constraints": [
+          { "symbol": "reg_$0<x>", "range": "{ [0, 5] }" }
+        ]
+      }
+    }
+\l}"];
+
+Node0x3 -> Node0x5;
+
+Node0x5 [shape=record,label=
+ "{
+    { "node_id": 5,
+      "pointer": "0x5",
+      "state_id": 6,
+      "program_points": [],
+      "program_state": {
+        "store": null,
+        "environment": null,
+        "constraints": null
+      }
+    }
+\l}"];

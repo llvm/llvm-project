@@ -3588,6 +3588,8 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   }
 
   case AMDGPU::GET_GROUPSTATICSIZE: {
+    assert(getTargetMachine().getTargetTriple().getOS() == Triple::AMDHSA ||
+           getTargetMachine().getTargetTriple().getOS() == Triple::AMDPAL);
     DebugLoc DL = MI.getDebugLoc();
     BuildMI(*BB, MI, DL, TII->get(AMDGPU::S_MOV_B32))
         .add(MI.getOperand(0))
@@ -4776,7 +4778,10 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
                                              SelectionDAG &DAG) const {
   GlobalAddressSDNode *GSD = cast<GlobalAddressSDNode>(Op);
   const GlobalValue *GV = GSD->getGlobal();
-  if (GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS ||
+  if ((GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS &&
+       (!GV->hasExternalLinkage() ||
+        getTargetMachine().getTargetTriple().getOS() == Triple::AMDHSA ||
+        getTargetMachine().getTargetTriple().getOS() == Triple::AMDPAL)) ||
       GSD->getAddressSpace() == AMDGPUAS::REGION_ADDRESS ||
       GSD->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS)
     return AMDGPUTargetLowering::LowerGlobalAddress(MFI, Op, DAG);
@@ -4784,7 +4789,12 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunction *MFI,
   SDLoc DL(GSD);
   EVT PtrVT = Op.getValueType();
 
-  // FIXME: Should not make address space based decisions here.
+  if (GSD->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
+    SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, GSD->getOffset(),
+                                            SIInstrInfo::MO_ABS32_LO);
+    return DAG.getNode(AMDGPUISD::LDS, DL, MVT::i32, GA);
+  }
+
   if (shouldEmitFixup(GV))
     return buildPCRelGlobalAddress(DAG, GV, DL, GSD->getOffset(), PtrVT);
   else if (shouldEmitPCReloc(GV))
@@ -5773,6 +5783,18 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return SDValue(DAG.getMachineNode(AMDGPU::SI_IF_BREAK, DL, VT,
                                       Op->getOperand(1), Op->getOperand(2)), 0);
 
+  case Intrinsic::amdgcn_groupstaticsize: {
+    Triple::OSType OS = getTargetMachine().getTargetTriple().getOS();
+    if (OS == Triple::AMDHSA || OS == Triple::AMDPAL)
+      return Op;
+
+    const Module *M = MF.getFunction().getParent();
+    const GlobalValue *GV =
+        M->getNamedValue(Intrinsic::getName(Intrinsic::amdgcn_groupstaticsize));
+    SDValue GA = DAG.getTargetGlobalAddress(GV, DL, MVT::i32, 0,
+                                            SIInstrInfo::MO_ABS32_LO);
+    return {DAG.getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32, GA), 0};
+  }
   default:
     if (const AMDGPU::ImageDimIntrinsicInfo *ImageDimIntr =
             AMDGPU::getImageDimIntrinsicInfo(IntrinsicID))

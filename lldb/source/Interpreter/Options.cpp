@@ -1336,6 +1336,9 @@ llvm::Expected<Args> Options::Parse(const Args &args,
                                                llvm::inconvertibleErrorCode());
   }
 
+  // Leading : tells getopt to return a : for a missing option argument AND to
+  // suppress error messages.
+  sstr << ":";
   for (int i = 0; long_options[i].definition != nullptr; ++i) {
     if (long_options[i].flag == nullptr) {
       if (isprint8(long_options[i].val)) {
@@ -1355,13 +1358,22 @@ llvm::Expected<Args> Options::Parse(const Args &args,
     }
   }
   std::vector<char *> argv = GetArgvForParsing(args);
+  // If the last option requires an argument but doesn't have one,
+  // some implementations of getopt_long will still try to read it.
+  argv.push_back(nullptr);
   std::unique_lock<std::mutex> lock;
   OptionParser::Prepare(lock);
   int val;
   while (true) {
     int long_options_index = -1;
-    val = OptionParser::Parse(argv.size(), &*argv.begin(), sstr.GetString(),
+    val = OptionParser::Parse(argv.size() - 1, &*argv.begin(), sstr.GetString(),
                               long_options, &long_options_index);
+
+    if (val == ':') {
+      error.SetErrorStringWithFormat("last option requires an argument");
+      break;
+    }
+
     if (val == -1)
       break;
 
@@ -1439,6 +1451,7 @@ llvm::Expected<Args> Options::Parse(const Args &args,
   if (error.Fail())
     return error.ToError();
 
+  argv.pop_back();
   argv.erase(argv.begin(), argv.begin() + OptionParser::GetOptionIndex());
   return ReconstituteArgsAfterParsing(argv, args);
 }

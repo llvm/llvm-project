@@ -570,7 +570,7 @@ bool SelectionDAGISel::runOnMachineFunction(MachineFunction &mf) {
   for (unsigned i = 0, e = FuncInfo->ArgDbgValues.size(); i != e; ++i) {
     MachineInstr *MI = FuncInfo->ArgDbgValues[e-i-1];
     bool hasFI = MI->getOperand(0).isFI();
-    unsigned Reg =
+    Register Reg =
         hasFI ? TRI.getFrameRegister(*MF) : MI->getOperand(0).getReg();
     if (TargetRegisterInfo::isPhysicalRegister(Reg))
       EntryMBB->insert(EntryMBB->begin(), MI);

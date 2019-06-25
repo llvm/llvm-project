@@ -20,7 +20,6 @@
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
@@ -275,8 +274,6 @@ public:
   virtual ConstString GetActualTypeName(ObjCISA isa);
 
   virtual ObjCISA GetParentClass(ObjCISA isa);
-
-  virtual DeclVendor *GetDeclVendor() { return nullptr; }
 
   // Finds the byte offset of the child_type ivar in parent_type.  If it can't
   // find the offset, returns LLDB_INVALID_IVAR_OFFSET.

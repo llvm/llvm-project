@@ -1,0 +1,139 @@
+# RUN: llc -mtriple=thumbv8.1m.main %s -o - | FileCheck %s
+
+# CHECK: .LBB0_2:
+# CHECK:    sub.w  lr, lr, #1
+# CHECK:    str.w lr, [sp, #12]
+# CHECK:    ldr.w lr, [sp, #12]
+# CHECK:    cmp.w lr, #0
+# CHECK:    bne{{.*}} .LBB0_2
+
+--- |
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8.1m.main-arm-none-eabi"
+  
+  define i32 @skip_spill(i32 %n) #0 {
+  entry:
+    %cmp6 = icmp eq i32 %n, 0
+    br i1 %cmp6, label %while.end, label %while.body.preheader
+  
+  while.body.preheader:                             ; preds = %entry
+    call void @llvm.set.loop.iterations.i32(i32 %n)
+    br label %while.body
+  
+  while.body:                                       ; preds = %while.body, %while.body.preheader
+    %res.07 = phi i32 [ %add, %while.body ], [ 0, %while.body.preheader ]
+    %0 = phi i32 [ %n, %while.body.preheader ], [ %1, %while.body ]
+    %call = tail call i32 bitcast (i32 (...)* @bar to i32 ()*)()
+    %add = add nsw i32 %call, %res.07
+    %1 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+    %2 = icmp ne i32 %1, 0
+    br i1 %2, label %while.body, label %while.end
+  
+  while.end:                                        ; preds = %while.body, %entry
+    %res.0.lcssa = phi i32 [ 0, %entry ], [ %add, %while.body ]
+    ret i32 %res.0.lcssa
+  }
+  
+  declare i32 @bar(...) local_unnamed_addr #0
+  declare void @llvm.set.loop.iterations.i32(i32) #1
+  declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
+  declare void @llvm.stackprotector(i8*, i8**) #2
+  
+  attributes #0 = { "target-features"="+mve.fp" }
+  attributes #1 = { noduplicate nounwind }
+  attributes #2 = { nounwind }
+
+...
+---
+name:            skip_spill
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       false
+registers:       []
+liveins:         
+  - { reg: '$r0', virtual-reg: '' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       16
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r7', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -12, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r5', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 3, name: '', type: spill-slot, offset: -16, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r4', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x30000000), %bb.3(0x50000000)
+    liveins: $r0, $r4, $r5, $r7, $lr
+  
+    $sp = frame-setup t2STMDB_UPD $sp, 14, $noreg, killed $r4, killed $r5, killed $r7, killed $lr
+    frame-setup CFI_INSTRUCTION def_cfa_offset 16
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    frame-setup CFI_INSTRUCTION offset $r5, -12
+    frame-setup CFI_INSTRUCTION offset $r4, -16
+    t2CMPri $r0, 0, 14, $noreg, implicit-def $cpsr
+    t2Bcc %bb.1, 0, killed $cpsr
+  
+  bb.3.while.body.preheader:
+    successors: %bb.4(0x80000000)
+    liveins: $r0
+  
+    $lr = tMOVr $r0, 14, $noreg
+    renamable $r4 = t2MOVi 0, 14, $noreg, $noreg
+    t2DoLoopStart killed $r0
+  
+  bb.4.while.body:
+    successors: %bb.4(0x7c000000), %bb.2(0x04000000)
+    liveins: $lr, $r4
+  
+    renamable $lr = t2LoopDec killed renamable $lr, 1
+    t2STRi12 $lr, %stack.0, 0, 14, $noreg :: (store 4)
+    $lr = t2LDRi12 %stack.0, 0, 14, $noreg :: (load 4)
+    renamable $r4 = nsw t2ADDrr renamable $lr, killed renamable $r4, 14, $noreg, $noreg
+    t2LoopEnd renamable $lr, %bb.4
+    t2B %bb.2, 14, $noreg
+  
+  bb.2.while.end:
+    liveins: $r4
+  
+    $r0 = tMOVr killed $r4, 14, $noreg
+    $sp = t2LDMIA_RET $sp, 14, $noreg, def $r4, def $r5, def $r7, def $pc, implicit killed $r0
+  
+  bb.1:
+    renamable $r4 = t2MOVi 0, 14, $noreg, $noreg
+    $r0 = tMOVr killed $r4, 14, $noreg
+    $sp = t2LDMIA_RET $sp, 14, $noreg, def $r4, def $r5, def $r7, def $pc, implicit killed $r0
+
+...

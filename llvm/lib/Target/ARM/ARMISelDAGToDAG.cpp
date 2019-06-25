@@ -2986,6 +2986,36 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     unsigned CC = (unsigned) cast<ConstantSDNode>(N2)->getZExtValue();
 
     if (InFlag.getOpcode() == ARMISD::CMPZ) {
+      if (InFlag.getOperand(0).getOpcode() == ISD::INTRINSIC_W_CHAIN) {
+        SDValue Int = InFlag.getOperand(0);
+        uint64_t ID = cast<ConstantSDNode>(Int->getOperand(1))->getZExtValue();
+
+        // Handle low-overhead loops.
+        if (ID == Intrinsic::loop_decrement_reg) {
+          SDValue Elements = Int.getOperand(2);
+          SDValue Size = CurDAG->getTargetConstant(
+            cast<ConstantSDNode>(Int.getOperand(3))->getZExtValue(), dl,
+                                 MVT::i32);
+
+          SDValue Args[] = { Elements, Size, Int.getOperand(0) };
+          SDNode *LoopDec =
+            CurDAG->getMachineNode(ARM::t2LoopDec, dl,
+                                   CurDAG->getVTList(MVT::i32, MVT::Other),
+                                   Args);
+          ReplaceUses(Int.getNode(), LoopDec);
+
+          SDValue EndArgs[] = { SDValue(LoopDec, 0), N1, Chain };
+          SDNode *LoopEnd =
+            CurDAG->getMachineNode(ARM::t2LoopEnd, dl, MVT::Other, EndArgs);
+
+          ReplaceUses(N, LoopEnd);
+          CurDAG->RemoveDeadNode(N);
+          CurDAG->RemoveDeadNode(InFlag.getNode());
+          CurDAG->RemoveDeadNode(Int.getNode());
+          return;
+        }
+      }
+
       bool SwitchEQNEToPLMI;
       SelectCMPZ(InFlag.getNode(), SwitchEQNEToPLMI);
       InFlag = N->getOperand(4);

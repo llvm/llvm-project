@@ -39,7 +39,7 @@ public:
                            RegScavenger *RS = nullptr) const override;
 
   // Debug information queries.
-  unsigned getFrameRegister(const MachineFunction &MF) const override;
+  Register getFrameRegister(const MachineFunction &MF) const override;
 
   const TargetRegisterClass *
   getPointerRegClass(const MachineFunction &MF,

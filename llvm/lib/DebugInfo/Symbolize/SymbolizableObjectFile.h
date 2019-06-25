@@ -40,6 +40,8 @@ public:
                                       FunctionNameKind FNKind,
                                       bool UseSymbolTable) const override;
   DIGlobal symbolizeData(object::SectionedAddress ModuleOffset) const override;
+  std::vector<DILocal>
+  symbolizeFrame(object::SectionedAddress ModuleOffset) const override;
 
   // Return true if this is a 32-bit x86 PE COFF module.
   bool isWin32Module() const override;

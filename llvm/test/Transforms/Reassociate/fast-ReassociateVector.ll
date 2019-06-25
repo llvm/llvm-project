@@ -232,6 +232,19 @@ define <2 x double> @test9(<2 x double> %b, <2 x double> %a) {
   ret <2 x double> %4
 }
 
+define <2 x double> @test9_unary_fneg(<2 x double> %b, <2 x double> %a) {
+; CHECK-LABEL: @test9_unary_fneg(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg fast <2 x double> [[A:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd fast <2 x double> [[B:%.*]], <double 1.234000e+03, double 1.234000e+03>
+; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+;
+  %1 = fadd fast <2 x double> %a, <double 1.234000e+03, double 1.234000e+03>
+  %2 = fadd fast <2 x double> %b, %1
+  %3 = fneg fast <2 x double> %a
+  %4 = fadd fast <2 x double> %2, %3
+  ret <2 x double> %4
+}
+
 ; Check (b+(a+1234))+-a -> b+1234 - minimum FMF subset version
 
 define <2 x double> @test9_reassoc(<2 x double> %b, <2 x double> %a) {
@@ -245,6 +258,21 @@ define <2 x double> @test9_reassoc(<2 x double> %b, <2 x double> %a) {
   %1 = fadd reassoc <2 x double> %a, <double 1.234000e+03, double 1.234000e+03>
   %2 = fadd reassoc <2 x double> %b, %1
   %3 = fsub reassoc <2 x double> <double 0.000000e+00, double 0.000000e+00>, %a
+  %4 = fadd reassoc <2 x double> %2, %3
+  ret <2 x double> %4
+}
+
+define <2 x double> @test9_reassoc_unary_fneg(<2 x double> %b, <2 x double> %a) {
+; CHECK-LABEL: @test9_reassoc_unary_fneg(
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc <2 x double> [[A:%.*]], <double 1.234000e+03, double 1.234000e+03>
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd reassoc <2 x double> [[B:%.*]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = fneg reassoc <2 x double> [[A]]
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd reassoc <2 x double> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    ret <2 x double> [[TMP4]]
+;
+  %1 = fadd reassoc <2 x double> %a, <double 1.234000e+03, double 1.234000e+03>
+  %2 = fadd reassoc <2 x double> %b, %1
+  %3 = fneg reassoc <2 x double> %a
   %4 = fadd reassoc <2 x double> %2, %3
   ret <2 x double> %4
 }
@@ -265,6 +293,20 @@ define <2 x float> @test10(<2 x float> %a, <2 x float> %b, <2 x float> %z) {
   ret <2 x float> %f
 }
 
+define <2 x float> @test10_unary_fneg(<2 x float> %a, <2 x float> %b, <2 x float> %z) {
+; CHECK-LABEL: @test10_unary_fneg(
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg fast <2 x float> zeroinitializer
+; CHECK-NEXT:    [[E:%.*]] = fmul fast <2 x float> [[A:%.*]], <float 4.000000e+01, float 4.000000e+01>
+; CHECK-NEXT:    [[F:%.*]] = fmul fast <2 x float> [[E]], [[Z:%.*]]
+; CHECK-NEXT:    ret <2 x float> [[F]]
+;
+  %d = fmul fast <2 x float> %z, <float 4.000000e+01, float 4.000000e+01>
+  %c = fneg fast <2 x float> %d
+  %e = fmul fast <2 x float> %a, %c
+  %f = fneg fast <2 x float> %e
+  ret <2 x float> %f
+}
+
 ; Check -(-(z*40)*a) -> a*40*z - minimum FMF subset version
 
 define <2 x float> @test10_reassoc(<2 x float> %a, <2 x float> %b, <2 x float> %z) {
@@ -279,6 +321,21 @@ define <2 x float> @test10_reassoc(<2 x float> %a, <2 x float> %b, <2 x float> %
   %c = fsub reassoc <2 x float> <float 0.000000e+00, float 0.000000e+00>, %d
   %e = fmul reassoc <2 x float> %a, %c
   %f = fsub reassoc <2 x float> <float 0.000000e+00, float 0.000000e+00>, %e
+  ret <2 x float> %f
+}
+
+define <2 x float> @test10_reassoc_unary_fneg(<2 x float> %a, <2 x float> %b, <2 x float> %z) {
+; CHECK-LABEL: @test10_reassoc_unary_fneg(
+; CHECK-NEXT:    [[D:%.*]] = fmul reassoc <2 x float> [[Z:%.*]], <float 4.000000e+01, float 4.000000e+01>
+; CHECK-NEXT:    [[C:%.*]] = fneg reassoc <2 x float> [[D]]
+; CHECK-NEXT:    [[E:%.*]] = fmul reassoc <2 x float> [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[F:%.*]] = fneg reassoc <2 x float> [[E]]
+; CHECK-NEXT:    ret <2 x float> [[F]]
+;
+  %d = fmul reassoc <2 x float> %z, <float 4.000000e+01, float 4.000000e+01>
+  %c = fneg reassoc <2 x float> %d
+  %e = fmul reassoc <2 x float> %a, %c
+  %f = fneg reassoc <2 x float> %e
   ret <2 x float> %f
 }
 

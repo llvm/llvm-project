@@ -915,6 +915,7 @@ private:
   bool ParseDirectiveHSAMetadata();
   bool ParseDirectivePALMetadataBegin();
   bool ParseDirectivePALMetadata();
+  bool ParseDirectiveAMDGPULDS();
 
   /// Common code to parse out a block of text (typically YAML) between start and
   /// end directives.
@@ -3918,6 +3919,60 @@ bool AMDGPUAsmParser::ParseDirectivePALMetadata() {
   return false;
 }
 
+/// ParseDirectiveAMDGPULDS
+///  ::= .amdgpu_lds identifier ',' size_expression [',' align_expression]
+bool AMDGPUAsmParser::ParseDirectiveAMDGPULDS() {
+  if (getParser().checkForValidSection())
+    return true;
+
+  StringRef Name;
+  SMLoc NameLoc = getLexer().getLoc();
+  if (getParser().parseIdentifier(Name))
+    return TokError("expected identifier in directive");
+
+  MCSymbol *Symbol = getContext().getOrCreateSymbol(Name);
+  if (parseToken(AsmToken::Comma, "expected ','"))
+    return true;
+
+  unsigned LocalMemorySize = AMDGPU::IsaInfo::getLocalMemorySize(&getSTI());
+
+  int64_t Size;
+  SMLoc SizeLoc = getLexer().getLoc();
+  if (getParser().parseAbsoluteExpression(Size))
+    return true;
+  if (Size < 0)
+    return Error(SizeLoc, "size must be non-negative");
+  if (Size > LocalMemorySize)
+    return Error(SizeLoc, "size is too large");
+
+  int64_t Align = 4;
+  if (getLexer().is(AsmToken::Comma)) {
+    Lex();
+    SMLoc AlignLoc = getLexer().getLoc();
+    if (getParser().parseAbsoluteExpression(Align))
+      return true;
+    if (Align < 0 || !isPowerOf2_64(Align))
+      return Error(AlignLoc, "alignment must be a power of two");
+
+    // Alignment larger than the size of LDS is possible in theory, as long
+    // as the linker manages to place to symbol at address 0, but we do want
+    // to make sure the alignment fits nicely into a 32-bit integer.
+    if (Align >= 1u << 31)
+      return Error(AlignLoc, "alignment is too large");
+  }
+
+  if (parseToken(AsmToken::EndOfStatement,
+                 "unexpected token in '.amdgpu_lds' directive"))
+    return true;
+
+  Symbol->redefineIfPossible();
+  if (!Symbol->isUndefined())
+    return Error(NameLoc, "invalid symbol redefinition");
+
+  getTargetStreamer().emitAMDGPULDS(Symbol, Size, Align);
+  return false;
+}
+
 bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getString();
 
@@ -3950,6 +4005,9 @@ bool AMDGPUAsmParser::ParseDirective(AsmToken DirectiveID) {
     if (IDVal == AMDGPU::HSAMD::AssemblerDirectiveBegin)
       return ParseDirectiveHSAMetadata();
   }
+
+  if (IDVal == ".amdgpu_lds")
+    return ParseDirectiveAMDGPULDS();
 
   if (IDVal == PALMD::AssemblerDirectiveBegin)
     return ParseDirectivePALMetadataBegin();

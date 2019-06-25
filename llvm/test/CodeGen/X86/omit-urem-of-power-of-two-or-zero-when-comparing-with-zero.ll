@@ -14,14 +14,7 @@
 define i1 @p0_scalar_urem_by_const(i32 %x, i32 %y) {
 ; CHECK-LABEL: p0_scalar_urem_by_const:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
-; CHECK-NEXT:    andl $128, %edi
-; CHECK-NEXT:    movl $2863311531, %eax # imm = 0xAAAAAAAB
-; CHECK-NEXT:    imulq %rdi, %rax
-; CHECK-NEXT:    shrq $34, %rax
-; CHECK-NEXT:    addl %eax, %eax
-; CHECK-NEXT:    leal (%rax,%rax,2), %eax
-; CHECK-NEXT:    cmpl %eax, %edi
+; CHECK-NEXT:    testb $-128, %dil
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %t0 = and i32 %x, 128 ; clearly a power-of-two or zero
@@ -33,12 +26,7 @@ define i1 @p0_scalar_urem_by_const(i32 %x, i32 %y) {
 define i1 @p1_scalar_urem_by_nonconst(i32 %x, i32 %y) {
 ; CHECK-LABEL: p1_scalar_urem_by_nonconst:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl $128, %eax
-; CHECK-NEXT:    orl $6, %esi
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divl %esi
-; CHECK-NEXT:    testl %edx, %edx
+; CHECK-NEXT:    testb $-128, %dil
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
   %t0 = and i32 %x, 128 ; clearly a power-of-two or zero

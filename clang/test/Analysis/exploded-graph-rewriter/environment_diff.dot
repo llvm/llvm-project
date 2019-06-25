@@ -12,21 +12,25 @@ Node0x1 [shape=record,label=
       "program_points": [],
       "program_state": {
         "store": null,
-        "environment": [
-          {
-            "location_context": "#0 Call",
-            "lctx_id": 3,
-            "calling": "foo",
-            "call_line": 4,
-            "items": [
-              {
-                "stmt_id": 5,
-                "pretty": "bar()",
-                "value": "Unknown"
-              }
-            ]
-          }
-        ]
+        "constraints": null,
+        "environment": {
+          "pointer": "0x2",
+          "items": [
+            {
+              "location_context": "#0 Call",
+              "lctx_id": 3,
+              "calling": "foo",
+              "call_line": 4,
+              "items": [
+                {
+                  "stmt_id": 5,
+                  "pretty": "bar()",
+                  "value": "Unknown"
+                }
+              ]
+            }
+          ]
+        }
       }
     }
 \l}"];
@@ -54,21 +58,25 @@ Node0x6 [shape=record,label=
       "program_points": [],
       "program_state": {
         "store": null,
-        "environment": [
-          {
-            "location_context": "#0 Call",
-            "lctx_id": 3,
-            "calling": "foo",
-            "call_line": 4,
-            "items": [
-              {
-                "stmt_id": 9,
-                "pretty": "baz()",
-                "value": "Undefined"
-              }
-            ]
-          }
-        ]
+        "constraints": null,
+        "environment": {
+          "pointer": "0x2",
+          "items": [
+            {
+              "location_context": "#0 Call",
+              "lctx_id": 3,
+              "calling": "foo",
+              "call_line": 4,
+              "items": [
+                {
+                  "stmt_id": 9,
+                  "pretty": "baz()",
+                  "value": "Undefined"
+                }
+              ]
+            }
+          ]
+        }
       }
     }
 \l}"];
@@ -90,21 +98,25 @@ Node0x9 [shape=record,label=
       "program_points": [],
       "program_state": {
         "store": null,
-        "environment": [
-          {
-            "location_context": "#0 Call",
-            "lctx_id": 3,
-            "calling": "foo",
-            "call_line": 4,
-            "items": [
-              {
-                "stmt_id": 9,
-                "pretty": "baz()",
-                "value": "Undefined"
-              }
-            ]
-          }
-        ]
+        "constraints": null,
+        "environment": {
+          "pointer": "0x2",
+          "items": [
+            {
+              "location_context": "#0 Call",
+              "lctx_id": 3,
+              "calling": "foo",
+              "call_line": 4,
+              "items": [
+                {
+                  "stmt_id": 9,
+                  "pretty": "baz()",
+                  "value": "Undefined"
+                }
+              ]
+            }
+          ]
+        }
       }
     }
 \l}"];

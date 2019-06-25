@@ -11,19 +11,23 @@ Node0x1 [shape=record,label=
       "program_points": [],
       "program_state": {
         "environment": null,
-        "store": [
-          {
-            "cluster": "x",
-            "pointer": "0x3",
-            "items": [
-              {
-                "kind": "Default",
-                "offset": 0,
-                "value": "Undefined"
-              }
-            ]
-          }
-        ]
+        "constraints": null,
+        "store": {
+          "pointer": "0x2",
+          "items": [
+            {
+              "cluster": "x",
+              "pointer": "0x3",
+              "items": [
+                {
+                  "kind": "Default",
+                  "offset": 0,
+                  "value": "Undefined"
+                }
+              ]
+            }
+          ]
+        }
       }
     }
 \l}"];
@@ -52,19 +56,23 @@ Node0x4 [shape=record,label=
       "program_points": [],
       "program_state": {
         "environment": null,
-        "store": [
-          {
-            "cluster": "x",
-            "pointer": "0x3",
-            "items": [
-              {
-                "kind": "Default",
-                "offset": 0,
-                "value": "Unknown"
-              }
-            ]
-          }
-        ]
+        "constraints": null,
+        "store": {
+          "pointer": "0x5",
+          "items": [
+            {
+              "cluster": "x",
+              "pointer": "0x3",
+              "items": [
+                {
+                  "kind": "Default",
+                  "offset": 0,
+                  "value": "Unknown"
+                }
+              ]
+            }
+          ]
+        }
       }
     }
 \l}"];

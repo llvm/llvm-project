@@ -135,3 +135,28 @@ define i32 @ctpop_eq_one(i64 %x) nounwind readnone {
   %conv = zext i1 %cmp to i32
   ret i32 %conv
 }
+
+define i32 @ctpop_ne_one(i64 %x) nounwind readnone {
+; POPCOUNT-LABEL: ctpop_ne_one:
+; POPCOUNT:       # %bb.0:
+; POPCOUNT-NEXT:    popcntq %rdi, %rcx
+; POPCOUNT-NEXT:    xorl %eax, %eax
+; POPCOUNT-NEXT:    cmpq $1, %rcx
+; POPCOUNT-NEXT:    setne %al
+; POPCOUNT-NEXT:    retq
+;
+; NO-POPCOUNT-LABEL: ctpop_ne_one:
+; NO-POPCOUNT:       # %bb.0:
+; NO-POPCOUNT-NEXT:    leaq -1(%rdi), %rax
+; NO-POPCOUNT-NEXT:    testq %rax, %rdi
+; NO-POPCOUNT-NEXT:    setne %al
+; NO-POPCOUNT-NEXT:    testq %rdi, %rdi
+; NO-POPCOUNT-NEXT:    sete %cl
+; NO-POPCOUNT-NEXT:    orb %al, %cl
+; NO-POPCOUNT-NEXT:    movzbl %cl, %eax
+; NO-POPCOUNT-NEXT:    retq
+  %count = tail call i64 @llvm.ctpop.i64(i64 %x)
+  %cmp = icmp ne i64 %count, 1
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}

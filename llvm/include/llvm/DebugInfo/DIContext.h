@@ -112,6 +112,16 @@ struct DIGlobal {
   DIGlobal() : Name("<invalid>") {}
 };
 
+struct DILocal {
+  std::string FunctionName;
+  std::string Name;
+  std::string DeclFile;
+  uint64_t DeclLine = 0;
+  Optional<int64_t> FrameOffset;
+  Optional<uint64_t> Size;
+  Optional<uint64_t> TagOffset;
+};
+
 /// A DINameKind is passed to name search methods to specify a
 /// preference regarding the type of name resolution the caller wants.
 enum class DINameKind { None, ShortName, LinkageName };
@@ -215,6 +225,9 @@ public:
   virtual DIInliningInfo getInliningInfoForAddress(
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) = 0;
+
+  virtual std::vector<DILocal>
+  getLocalsForAddress(object::SectionedAddress Address) = 0;
 
 private:
   const DIContextKind Kind;

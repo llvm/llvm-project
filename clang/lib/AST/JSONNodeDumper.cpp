@@ -1,4 +1,5 @@
 #include "clang/AST/JSONNodeDumper.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace clang;
@@ -28,7 +29,7 @@ void JSONNodeDumper::Visit(const Attr *A) {
   }
   JOS.attribute("id", createPointerRepresentation(A));
   JOS.attribute("kind", AttrName);
-  JOS.attribute("range", createSourceRange(A->getRange()));
+  JOS.attributeObject("range", [A, this] { writeSourceRange(A->getRange()); });
   attributeOnlyIfTrue("inherited", A->isInherited());
   attributeOnlyIfTrue("implicit", A->isImplicit());
 
@@ -47,7 +48,8 @@ void JSONNodeDumper::Visit(const Stmt *S) {
 
   JOS.attribute("id", createPointerRepresentation(S));
   JOS.attribute("kind", S->getStmtClassName());
-  JOS.attribute("range", createSourceRange(S->getSourceRange()));
+  JOS.attributeObject("range",
+                      [S, this] { writeSourceRange(S->getSourceRange()); });
 
   if (const auto *E = dyn_cast<Expr>(S)) {
     JOS.attribute("type", createQualType(E->getType()));
@@ -90,8 +92,10 @@ void JSONNodeDumper::Visit(const Decl *D) {
     return;
 
   JOS.attribute("kind", (llvm::Twine(D->getDeclKindName()) + "Decl").str());
-  JOS.attribute("loc", createSourceLocation(D->getLocation()));
-  JOS.attribute("range", createSourceRange(D->getSourceRange()));
+  JOS.attributeObject("loc",
+                      [D, this] { writeSourceLocation(D->getLocation()); });
+  JOS.attributeObject("range",
+                      [D, this] { writeSourceRange(D->getSourceRange()); });
   attributeOnlyIfTrue("isImplicit", D->isImplicit());
   attributeOnlyIfTrue("isInvalid", D->isInvalidDecl());
 
@@ -118,8 +122,10 @@ void JSONNodeDumper::Visit(const comments::Comment *C,
 
   JOS.attribute("id", createPointerRepresentation(C));
   JOS.attribute("kind", C->getCommentKindName());
-  JOS.attribute("loc", createSourceLocation(C->getLocation()));
-  JOS.attribute("range", createSourceRange(C->getSourceRange()));
+  JOS.attributeObject("loc",
+                      [C, this] { writeSourceLocation(C->getLocation()); });
+  JOS.attributeObject("range",
+                      [C, this] { writeSourceRange(C->getSourceRange()); });
 
   InnerCommentVisitor::visit(C, FC);
 }
@@ -128,7 +134,7 @@ void JSONNodeDumper::Visit(const TemplateArgument &TA, SourceRange R,
                            const Decl *From, StringRef Label) {
   JOS.attribute("kind", "TemplateArgument");
   if (R.isValid())
-    JOS.attribute("range", createSourceRange(R));
+    JOS.attributeObject("range", [R, this] { writeSourceRange(R); });
 
   if (From)
     JOS.attribute(Label.empty() ? "fromDecl" : Label, createBareDeclRef(From));
@@ -165,43 +171,47 @@ void JSONNodeDumper::Visit(const GenericSelectionExpr::ConstAssociation &A) {
   attributeOnlyIfTrue("selected", A.isSelected());
 }
 
-llvm::json::Object
-JSONNodeDumper::createBareSourceLocation(SourceLocation Loc) {
+void JSONNodeDumper::writeBareSourceLocation(SourceLocation Loc) {
   PresumedLoc Presumed = SM.getPresumedLoc(Loc);
 
-  if (Presumed.isInvalid())
-    return llvm::json::Object{};
-
-  return llvm::json::Object{{"file", Presumed.getFilename()},
-                            {"line", Presumed.getLine()},
-                            {"col", Presumed.getColumn()}};
+  if (Presumed.isValid()) {
+    if (LastLocFilename != Presumed.getFilename()) {
+      JOS.attribute("file", Presumed.getFilename());
+      JOS.attribute("line", Presumed.getLine());
+    } else if (LastLocLine != Presumed.getLine())
+      JOS.attribute("line", Presumed.getLine());
+    JOS.attribute("col", Presumed.getColumn());
+    JOS.attribute("tokLen",
+                  Lexer::MeasureTokenLength(Loc, SM, Ctx.getLangOpts()));
+    LastLocFilename = Presumed.getFilename();
+    LastLocLine = Presumed.getLine();
+  }
 }
 
-llvm::json::Object JSONNodeDumper::createSourceLocation(SourceLocation Loc) {
+void JSONNodeDumper::writeSourceLocation(SourceLocation Loc) {
   SourceLocation Spelling = SM.getSpellingLoc(Loc);
   SourceLocation Expansion = SM.getExpansionLoc(Loc);
 
-  llvm::json::Object SLoc = createBareSourceLocation(Spelling);
   if (Expansion != Spelling) {
     // If the expansion and the spelling are different, output subobjects
     // describing both locations.
-    llvm::json::Object ELoc = createBareSourceLocation(Expansion);
-
-    // If there is a macro expansion, add extra information if the interesting
-    // bit is the macro arg expansion.
-    if (SM.isMacroArgExpansion(Loc))
-      ELoc["isMacroArgExpansion"] = true;
-
-    return llvm::json::Object{{"spellingLoc", std::move(SLoc)},
-                              {"expansionLoc", std::move(ELoc)}};
-  }
-
-  return SLoc;
+    JOS.attributeObject(
+        "spellingLoc", [Spelling, this] { writeBareSourceLocation(Spelling); });
+    JOS.attributeObject("expansionLoc", [Expansion, Loc, this] {
+      writeBareSourceLocation(Expansion);
+      // If there is a macro expansion, add extra information if the interesting
+      // bit is the macro arg expansion.
+      if (SM.isMacroArgExpansion(Loc))
+        JOS.attribute("isMacroArgExpansion", true);
+    });
+  } else
+    writeBareSourceLocation(Spelling);
 }
 
-llvm::json::Object JSONNodeDumper::createSourceRange(SourceRange R) {
-  return llvm::json::Object{{"begin", createSourceLocation(R.getBegin())},
-                            {"end", createSourceLocation(R.getEnd())}};
+void JSONNodeDumper::writeSourceRange(SourceRange R) {
+  JOS.attributeObject("begin",
+                      [R, this] { writeSourceLocation(R.getBegin()); });
+  JOS.attributeObject("end", [R, this] { writeSourceLocation(R.getEnd()); });
 }
 
 std::string JSONNodeDumper::createPointerRepresentation(const void *Ptr) {
@@ -523,7 +533,8 @@ void JSONNodeDumper::VisitConstantArrayType(const ConstantArrayType *CAT) {
 
 void JSONNodeDumper::VisitDependentSizedExtVectorType(
     const DependentSizedExtVectorType *VT) {
-  JOS.attribute("attrLoc", createSourceLocation(VT->getAttributeLoc()));
+  JOS.attributeObject(
+      "attrLoc", [VT, this] { writeSourceLocation(VT->getAttributeLoc()); });
 }
 
 void JSONNodeDumper::VisitVectorType(const VectorType *VT) {
