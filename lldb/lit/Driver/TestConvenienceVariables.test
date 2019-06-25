@@ -1,3 +1,4 @@
+REQUIRES: python
 RUN: %build %p/Inputs/hello.cpp -o %t
 RUN: %lldb %t -s %p/Inputs/convenience.in -o quit | FileCheck %s
 

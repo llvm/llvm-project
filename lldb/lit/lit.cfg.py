@@ -73,3 +73,6 @@ for i in ['module-cache-clang', 'module-cache-lldb']:
     if os.path.isdir(cachedir):
         print("Deleting module cache at %s."%cachedir)
         shutil.rmtree(cachedir)
+
+if not config.lldb_disable_python:
+    config.available_features.add('python')
