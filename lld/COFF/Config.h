@@ -180,6 +180,7 @@ struct Configuration {
   std::string MapFile;
 
   uint64_t ImageBase = -1;
+  uint64_t FileAlign = 512;
   uint64_t StackReserve = 1024 * 1024;
   uint64_t StackCommit = 4096;
   uint64_t HeapReserve = 1024 * 1024;

@@ -52,12 +52,11 @@ ARM::ARM() {
   GotRel = R_ARM_GLOB_DAT;
   NoneRel = R_ARM_NONE;
   PltRel = R_ARM_JUMP_SLOT;
+  SymbolicRel = R_ARM_ABS32;
   TlsGotRel = R_ARM_TLS_TPOFF32;
   TlsModuleIndexRel = R_ARM_TLS_DTPMOD32;
   TlsOffsetRel = R_ARM_TLS_DTPOFF32;
   GotBaseSymInGotPlt = false;
-  GotEntrySize = 4;
-  GotPltEntrySize = 4;
   PltEntrySize = 16;
   PltHeaderSize = 32;
   TrapInstr = {0xd4, 0xd4, 0xd4, 0xd4};
@@ -379,7 +378,6 @@ void ARM::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   switch (Type) {
   case R_ARM_ABS32:
   case R_ARM_BASE_PREL:
-  case R_ARM_GLOB_DAT:
   case R_ARM_GOTOFF32:
   case R_ARM_GOT_BREL:
   case R_ARM_GOT_PREL:
@@ -396,9 +394,6 @@ void ARM::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_ARM_TLS_TPOFF32:
   case R_ARM_TLS_DTPOFF32:
     write32le(Loc, Val);
-    break;
-  case R_ARM_TLS_DTPMOD32:
-    write32le(Loc, 1);
     break;
   case R_ARM_PREL31:
     checkInt(Loc, Val, 31, Type);
@@ -518,7 +513,7 @@ void ARM::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
                   (Val & 0x00ff));           // imm8
     break;
   default:
-    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized relocation " + toString(Type));
   }
 }
 

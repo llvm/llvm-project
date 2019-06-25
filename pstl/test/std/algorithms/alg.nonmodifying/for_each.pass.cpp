@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <execution>
@@ -52,7 +54,7 @@ struct test_one_policy
         EXPECT_EQ_N(expected_first, first, n, "wrong effect from for_each");
 
         // Try for_each_n
-        std::for_each_n(pstl::execution::seq, expected_first, n, Flip<T>(1));
+        std::for_each_n(std::execution::seq, expected_first, n, Flip<T>(1));
         for_each_n(exec, first, n, Flip<T>(1));
         EXPECT_EQ_N(expected_first, first, n, "wrong effect from for_each_n");
     }

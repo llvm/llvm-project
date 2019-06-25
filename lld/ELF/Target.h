@@ -26,7 +26,9 @@ class Symbol;
 class TargetInfo {
 public:
   virtual uint32_t calcEFlags() const { return 0; }
-  virtual RelType getDynRel(RelType Type) const { return Type; }
+  virtual RelExpr getRelExpr(RelType Type, const Symbol &S,
+                             const uint8_t *Loc) const = 0;
+  virtual RelType getDynRel(RelType Type) const { return 0; }
   virtual void writeGotPltHeader(uint8_t *Buf) const {}
   virtual void writeGotHeader(uint8_t *Buf) const {}
   virtual void writeGotPlt(uint8_t *Buf, const Symbol &S) const {};
@@ -74,8 +76,6 @@ public:
   // Return true if we can reach Dst from Src with Relocation RelocType
   virtual bool inBranchRange(RelType Type, uint64_t Src,
                              uint64_t Dst) const;
-  virtual RelExpr getRelExpr(RelType Type, const Symbol &S,
-                             const uint8_t *Loc) const = 0;
 
   virtual void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const = 0;
 
@@ -95,12 +95,11 @@ public:
   RelType PltRel;
   RelType RelativeRel;
   RelType IRelativeRel;
+  RelType SymbolicRel;
   RelType TlsDescRel;
   RelType TlsGotRel;
   RelType TlsModuleIndexRel;
   RelType TlsOffsetRel;
-  unsigned GotEntrySize = 0;
-  unsigned GotPltEntrySize = 0;
   unsigned PltEntrySize;
   unsigned PltHeaderSize;
 
@@ -164,8 +163,11 @@ static inline std::string getErrorLocation(const uint8_t *Loc) {
   return getErrorPlace(Loc).Loc;
 }
 
+void writePPC32GlinkSection(uint8_t *Buf, size_t NumEntries);
+
 bool tryRelaxPPC64TocIndirection(RelType Type, const Relocation &Rel,
                                  uint8_t *BufLoc);
+unsigned getPPCDFormOp(unsigned SecondaryOp);
 
 // In the PowerPC64 Elf V2 abi a function can have 2 entry points.  The first
 // is a global entry point (GEP) which typically is used to initialize the TOC
@@ -219,7 +221,7 @@ inline void checkIntUInt(uint8_t *Loc, uint64_t V, int N, RelType Type) {
   // messages show a small negative value rather than an extremely large one
   if (V != (uint64_t)llvm::SignExtend64(V, N) && (V >> N) != 0)
     reportRangeError(Loc, Type, Twine((int64_t)V), llvm::minIntN(N),
-                     llvm::maxIntN(N));
+                     llvm::maxUIntN(N));
 }
 
 inline void checkAlignment(uint8_t *Loc, uint64_t V, int N, RelType Type) {

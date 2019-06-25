@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 // Tests for stable_partition and partition_copy
 #include "support/pstl_test_config.h"
 
@@ -25,7 +27,7 @@ struct test_partition_copy
               typename UnaryOp>
     void
     operator()(Policy&& exec, InputIterator first, InputIterator last, OutputIterator true_first,
-               OutputIterator true_last, OutputIterator2 false_first, OutputIterator2 false_last, UnaryOp unary_op)
+               OutputIterator, OutputIterator2 false_first, OutputIterator2, UnaryOp unary_op)
     {
 
         auto actual_ret = std::partition_copy(exec, first, last, true_first, false_first, unary_op);
@@ -101,7 +103,7 @@ main()
     test<int32_t>([](const int32_t value) { return value % 2; });
 
 #if !_PSTL_ICC_16_17_TEST_REDUCTION_RELEASE_BROKEN
-    test<int32_t>([](const int32_t value) { return true; });
+    test<int32_t>([](const int32_t) { return true; });
 #endif
 
     test<float64_t>([](const float64_t value) { return value > 2 << 6; });

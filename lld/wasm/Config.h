@@ -27,6 +27,7 @@ struct Configuration {
   bool CompressRelocations;
   bool Demangle;
   bool DisableVerify;
+  bool EmitRelocs;
   bool ExportAll;
   bool ExportDynamic;
   bool ExportTable;
@@ -58,6 +59,7 @@ struct Configuration {
   llvm::StringRef ThinLTOCacheDir;
 
   llvm::StringSet<> AllowUndefinedSymbols;
+  llvm::StringSet<> ExportedSymbols;
   std::vector<llvm::StringRef> SearchPaths;
   llvm::CachePruningPolicy ThinLTOCachePolicy;
   llvm::Optional<std::vector<std::string>> Features;

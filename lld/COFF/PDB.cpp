@@ -175,11 +175,6 @@ private:
 
   llvm::SmallString<128> NativePath;
 
-  /// A list of other PDBs which are loaded during the linking process and which
-  /// we need to keep around since the linking operation may reference pointers
-  /// inside of these PDBs.
-  llvm::SmallVector<std::unique_ptr<pdb::NativeSession>, 2> LoadedPDBs;
-
   std::vector<pdb::SecMapEntry> SectionMap;
 
   /// Type index mappings of type server PDBs that we've loaded so far.
@@ -188,10 +183,6 @@ private:
   /// Type index mappings of precompiled objects type map that we've loaded so
   /// far.
   std::map<uint32_t, CVIndexMap> PrecompTypeIndexMappings;
-
-  /// List of TypeServer PDBs which cannot be loaded.
-  /// Cached to prevent repeated load attempts.
-  std::map<codeview::GUID, std::string> MissingTypeServerPDBs;
 
   // For statistics
   uint64_t GlobalSymbols = 0;
@@ -220,6 +211,10 @@ class DebugSHandler {
   /// PDB.
   DebugChecksumsSubsectionRef Checksums;
 
+  /// The DEBUG_S_INLINEELINES subsection. There can be only one of these per
+  /// object file.
+  DebugInlineeLinesSubsectionRef InlineeLines;
+
   /// The DEBUG_S_FRAMEDATA subsection(s).  There can be more than one of
   /// these and they need not appear in any specific order.  However, they
   /// contain string table references which need to be re-written, so we
@@ -240,6 +235,10 @@ public:
       : Linker(Linker), File(File), IndexMap(IndexMap) {}
 
   void handleDebugS(lld::coff::SectionChunk &DebugS);
+
+  std::shared_ptr<DebugInlineeLinesSubsection>
+  mergeInlineeLines(DebugChecksumsSubsection *NewChecksums);
+
   void finish();
 };
 }
@@ -338,7 +337,7 @@ PDBLinker::mergeDebugT(ObjFile *File, CVIndexMap *ObjectIndexMap) {
   ScopedTimer T(TypeMergingTimer);
 
   if (!File->DebugTypesObj)
-      return *ObjectIndexMap; // no Types stream
+    return *ObjectIndexMap; // no Types stream
 
   // Precompiled headers objects need to save the index map for further
   // reference by other objects which use the precompiled headers.
@@ -416,117 +415,32 @@ PDBLinker::mergeDebugT(ObjFile *File, CVIndexMap *ObjectIndexMap) {
   return *ObjectIndexMap;
 }
 
-static Expected<std::unique_ptr<pdb::NativeSession>>
-tryToLoadPDB(const codeview::GUID &GuidFromObj, StringRef TSPath) {
-  // Ensure the file exists before anything else. We want to return ENOENT,
-  // "file not found", even if the path points to a removable device (in which
-  // case the return message would be EAGAIN, "resource unavailable try again")
-  if (!llvm::sys::fs::exists(TSPath))
-    return errorCodeToError(std::error_code(ENOENT, std::generic_category()));
-
-  ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr = MemoryBuffer::getFile(
-      TSPath, /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
-  if (!MBOrErr)
-    return errorCodeToError(MBOrErr.getError());
-
-  std::unique_ptr<pdb::IPDBSession> ThisSession;
-  if (auto EC = pdb::NativeSession::createFromPdb(
-          MemoryBuffer::getMemBuffer(Driver->takeBuffer(std::move(*MBOrErr)),
-                                     /*RequiresNullTerminator=*/false),
-          ThisSession))
-    return std::move(EC);
-
-  std::unique_ptr<pdb::NativeSession> NS(
-      static_cast<pdb::NativeSession *>(ThisSession.release()));
-  pdb::PDBFile &File = NS->getPDBFile();
-  auto ExpectedInfo = File.getPDBInfoStream();
-  // All PDB Files should have an Info stream.
-  if (!ExpectedInfo)
-    return ExpectedInfo.takeError();
-
-  // Just because a file with a matching name was found and it was an actual
-  // PDB file doesn't mean it matches.  For it to match the InfoStream's GUID
-  // must match the GUID specified in the TypeServer2 record.
-  if (ExpectedInfo->getGuid() != GuidFromObj)
-    return make_error<pdb::PDBError>(pdb::pdb_error_code::signature_out_of_date);
-
-  return std::move(NS);
-}
-
 Expected<const CVIndexMap &> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File) {
-  const TypeServer2Record &TS =
-      retrieveDependencyInfo<TypeServer2Record>(File->DebugTypesObj);
+  Expected<llvm::pdb::NativeSession *> PDBSession = findTypeServerSource(File);
+  if (!PDBSession)
+    return PDBSession.takeError();
 
-  const codeview::GUID &TSId = TS.getGuid();
-  StringRef TSPath = TS.getName();
+  pdb::PDBFile &PDBFile = PDBSession.get()->getPDBFile();
+  pdb::InfoStream &Info = cantFail(PDBFile.getPDBInfoStream());
 
-  // First, check if the PDB has previously failed to load.
-  auto PrevErr = MissingTypeServerPDBs.find(TSId);
-  if (PrevErr != MissingTypeServerPDBs.end())
-    return createFileError(
-        TSPath,
-        make_error<StringError>(PrevErr->second, inconvertibleErrorCode()));
-
-  // Second, check if we already loaded a PDB with this GUID. Return the type
-  // index mapping if we have it.
-  auto Insertion = TypeServerIndexMappings.insert({TSId, CVIndexMap()});
-  CVIndexMap &IndexMap = Insertion.first->second;
-  if (!Insertion.second)
-    return IndexMap;
+  auto It = TypeServerIndexMappings.emplace(Info.getGuid(), CVIndexMap());
+  CVIndexMap &IndexMap = It.first->second;
+  if (!It.second)
+    return IndexMap; // already merged
 
   // Mark this map as a type server map.
   IndexMap.IsTypeServerMap = true;
 
-  // Check for a PDB at:
-  // 1. The given file path
-  // 2. Next to the object file or archive file
-  auto ExpectedSession = handleExpected(
-      tryToLoadPDB(TSId, TSPath),
-      [&]() {
-        StringRef LocalPath =
-            !File->ParentName.empty() ? File->ParentName : File->getName();
-        SmallString<128> Path = sys::path::parent_path(LocalPath);
-        // Currently, type server PDBs are only created by cl, which only runs
-        // on Windows, so we can assume type server paths are Windows style.
-        sys::path::append(
-            Path, sys::path::filename(TSPath, sys::path::Style::windows));
-        return tryToLoadPDB(TSId, Path);
-      },
-      [&](std::unique_ptr<ECError> EC) -> Error {
-        auto SysErr = EC->convertToErrorCode();
-        // Only re-try loading if the previous error was "No such file or
-        // directory"
-        if (SysErr.category() == std::generic_category() &&
-            SysErr.value() == ENOENT)
-          return Error::success();
-        return Error(std::move(EC));
-      });
-
-  if (auto E = ExpectedSession.takeError()) {
-    TypeServerIndexMappings.erase(TSId);
-
-    // Flatten the error to a string, for later display, if the error occurs
-    // again on the same PDB.
-    std::string ErrMsg;
-    raw_string_ostream S(ErrMsg);
-    S << E;
-    MissingTypeServerPDBs.emplace(TSId, S.str());
-
-    return createFileError(TSPath, std::move(E));
-  }
-
-  pdb::NativeSession *Session = ExpectedSession->get();
-
-  // Keep a strong reference to this PDB, so that it's safe to hold pointers
-  // into the file.
-  LoadedPDBs.push_back(std::move(*ExpectedSession));
-
-  auto ExpectedTpi = Session->getPDBFile().getPDBTpiStream();
+  Expected<pdb::TpiStream &> ExpectedTpi = PDBFile.getPDBTpiStream();
   if (auto E = ExpectedTpi.takeError())
     fatal("Type server does not have TPI stream: " + toString(std::move(E)));
-  auto ExpectedIpi = Session->getPDBFile().getPDBIpiStream();
-  if (auto E = ExpectedIpi.takeError())
-    fatal("Type server does not have TPI stream: " + toString(std::move(E)));
+  pdb::TpiStream *MaybeIpi = nullptr;
+  if (PDBFile.hasPDBIpiStream()) {
+    Expected<pdb::TpiStream &> ExpectedIpi = PDBFile.getPDBIpiStream();
+    if (auto E = ExpectedIpi.takeError())
+      fatal("Error getting type server IPI stream: " + toString(std::move(E)));
+    MaybeIpi = &*ExpectedIpi;
+  }
 
   if (Config->DebugGHashes) {
     // PDBs do not actually store global hashes, so when merging a type server
@@ -535,9 +449,6 @@ Expected<const CVIndexMap &> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File) {
     // synthesize hashes for the IPI stream, using the hashes for the TPI stream
     // as inputs.
     auto TpiHashes = GloballyHashedType::hashTypes(ExpectedTpi->typeArray());
-    auto IpiHashes =
-        GloballyHashedType::hashIds(ExpectedIpi->typeArray(), TpiHashes);
-
     Optional<uint32_t> EndPrecomp;
     // Merge TPI first, because the IPI stream will reference type indices.
     if (auto Err =
@@ -546,10 +457,14 @@ Expected<const CVIndexMap &> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File) {
       fatal("codeview::mergeTypeRecords failed: " + toString(std::move(Err)));
 
     // Merge IPI.
-    if (auto Err = mergeIdRecords(TMerger.GlobalIDTable, IndexMap.TPIMap,
-                                  IndexMap.IPIMap, ExpectedIpi->typeArray(),
-                                  IpiHashes))
-      fatal("codeview::mergeIdRecords failed: " + toString(std::move(Err)));
+    if (MaybeIpi) {
+      auto IpiHashes =
+          GloballyHashedType::hashIds(MaybeIpi->typeArray(), TpiHashes);
+      if (auto Err =
+              mergeIdRecords(TMerger.GlobalIDTable, IndexMap.TPIMap,
+                             IndexMap.IPIMap, MaybeIpi->typeArray(), IpiHashes))
+        fatal("codeview::mergeIdRecords failed: " + toString(std::move(Err)));
+    }
   } else {
     // Merge TPI first, because the IPI stream will reference type indices.
     if (auto Err = mergeTypeRecords(TMerger.TypeTable, IndexMap.TPIMap,
@@ -557,9 +472,11 @@ Expected<const CVIndexMap &> PDBLinker::maybeMergeTypeServerPDB(ObjFile *File) {
       fatal("codeview::mergeTypeRecords failed: " + toString(std::move(Err)));
 
     // Merge IPI.
-    if (auto Err = mergeIdRecords(TMerger.IDTable, IndexMap.TPIMap,
-                                  IndexMap.IPIMap, ExpectedIpi->typeArray()))
-      fatal("codeview::mergeIdRecords failed: " + toString(std::move(Err)));
+    if (MaybeIpi) {
+      if (auto Err = mergeIdRecords(TMerger.IDTable, IndexMap.TPIMap,
+                                    IndexMap.IPIMap, MaybeIpi->typeArray()))
+        fatal("codeview::mergeIdRecords failed: " + toString(std::move(Err)));
+    }
   }
 
   return IndexMap;
@@ -1030,7 +947,7 @@ void PDBLinker::mergeSymbolRecords(ObjFile *File, const CVIndexMap &IndexMap,
 static ArrayRef<uint8_t> relocateDebugChunk(BumpPtrAllocator &Alloc,
                                             SectionChunk &DebugChunk) {
   uint8_t *Buffer = Alloc.Allocate<uint8_t>(DebugChunk.getSize());
-  assert(DebugChunk.getOutputSection() == nullptr &&
+  assert(DebugChunk.getOutputSectionIdx() == 0 &&
          "debug sections should not be in output sections");
   DebugChunk.writeTo(Buffer);
   return makeArrayRef(Buffer, DebugChunk.getSize());
@@ -1085,6 +1002,11 @@ void DebugSHandler::handleDebugS(lld::coff::SectionChunk &DebugS) {
   ExitOnErr(Reader.readArray(Subsections, RelocatedDebugContents.size()));
 
   for (const DebugSubsectionRecord &SS : Subsections) {
+    // Ignore subsections with the 'ignore' bit. Some versions of the Visual C++
+    // runtime have subsections with this bit set.
+    if (uint32_t(SS.kind()) & codeview::SubsectionIgnoreFlag)
+      continue;
+
     switch (SS.kind()) {
     case DebugSubsectionKind::StringTable: {
       assert(!CVStrTab.valid() &&
@@ -1102,6 +1024,11 @@ void DebugSHandler::handleDebugS(lld::coff::SectionChunk &DebugS) {
       // modification because the file checksum offsets will stay the same.
       File.ModuleDBI->addDebugSubsection(SS);
       break;
+    case DebugSubsectionKind::InlineeLines:
+      assert(!InlineeLines.valid() &&
+             "Encountered multiple inlinee lines subsections!");
+      ExitOnErr(InlineeLines.initialize(SS.getRecordData()));
+      break;
     case DebugSubsectionKind::FrameData: {
       // We need to re-write string table indices here, so save off all
       // frame data subsections until we've processed the entire list of
@@ -1116,11 +1043,75 @@ void DebugSHandler::handleDebugS(lld::coff::SectionChunk &DebugS) {
                                 SS.getRecordData());
       break;
     }
+
+    case DebugSubsectionKind::CrossScopeImports:
+    case DebugSubsectionKind::CrossScopeExports:
+      // These appear to relate to cross-module optimization, so we might use
+      // these for ThinLTO.
+      break;
+
+    case DebugSubsectionKind::ILLines:
+    case DebugSubsectionKind::FuncMDTokenMap:
+    case DebugSubsectionKind::TypeMDTokenMap:
+    case DebugSubsectionKind::MergedAssemblyInput:
+      // These appear to relate to .Net assembly info.
+      break;
+
+    case DebugSubsectionKind::CoffSymbolRVA:
+      // Unclear what this is for.
+      break;
+
     default:
-      // FIXME: Process the rest of the subsections.
+      warn("ignoring unknown debug$S subsection kind 0x" +
+           utohexstr(uint32_t(SS.kind())) + " in file " + toString(&File));
       break;
     }
   }
+}
+
+static Expected<StringRef>
+getFileName(const DebugStringTableSubsectionRef &Strings,
+            const DebugChecksumsSubsectionRef &Checksums, uint32_t FileID) {
+  auto Iter = Checksums.getArray().at(FileID);
+  if (Iter == Checksums.getArray().end())
+    return make_error<CodeViewError>(cv_error_code::no_records);
+  uint32_t Offset = Iter->FileNameOffset;
+  return Strings.getString(Offset);
+}
+
+std::shared_ptr<DebugInlineeLinesSubsection>
+DebugSHandler::mergeInlineeLines(DebugChecksumsSubsection *NewChecksums) {
+  auto NewInlineeLines = std::make_shared<DebugInlineeLinesSubsection>(
+      *NewChecksums, InlineeLines.hasExtraFiles());
+
+  for (const InlineeSourceLine &Line : InlineeLines) {
+    TypeIndex Inlinee = Line.Header->Inlinee;
+    uint32_t FileID = Line.Header->FileID;
+    uint32_t SourceLine = Line.Header->SourceLineNum;
+
+    ArrayRef<TypeIndex> TypeOrItemMap =
+        IndexMap.IsTypeServerMap ? IndexMap.IPIMap : IndexMap.TPIMap;
+    if (!remapTypeIndex(Inlinee, TypeOrItemMap)) {
+      log("ignoring inlinee line record in " + File.getName() +
+          " with bad inlinee index 0x" + utohexstr(Inlinee.getIndex()));
+      continue;
+    }
+
+    SmallString<128> Filename =
+        ExitOnErr(getFileName(CVStrTab, Checksums, FileID));
+    pdbMakeAbsolute(Filename);
+    NewInlineeLines->addInlineSite(Inlinee, Filename, SourceLine);
+
+    if (InlineeLines.hasExtraFiles()) {
+      for (uint32_t ExtraFileId : Line.ExtraFiles) {
+        Filename = ExitOnErr(getFileName(CVStrTab, Checksums, ExtraFileId));
+        pdbMakeAbsolute(Filename);
+        NewInlineeLines->addExtraFile(Filename);
+      }
+    }
+  }
+
+  return NewInlineeLines;
 }
 
 void DebugSHandler::finish() {
@@ -1161,13 +1152,17 @@ void DebugSHandler::finish() {
   // subsections.
   auto NewChecksums = make_unique<DebugChecksumsSubsection>(Linker.PDBStrTab);
   for (FileChecksumEntry &FC : Checksums) {
-    SmallString<128> FileName =
+    SmallString<128> Filename =
         ExitOnErr(CVStrTab.getString(FC.FileNameOffset));
-    pdbMakeAbsolute(FileName);
-    ExitOnErr(Linker.Builder.getDbiBuilder().addModuleSourceFile(
-        *File.ModuleDBI, FileName));
-    NewChecksums->addChecksum(FileName, FC.Kind, FC.Checksum);
+    pdbMakeAbsolute(Filename);
+    ExitOnErr(DbiBuilder.addModuleSourceFile(*File.ModuleDBI, Filename));
+    NewChecksums->addChecksum(Filename, FC.Kind, FC.Checksum);
   }
+
+  // Rewrite inlinee item indices if present.
+  if (InlineeLines.valid())
+    File.ModuleDBI->addDebugSubsection(mergeInlineeLines(NewChecksums.get()));
+
   File.ModuleDBI->addDebugSubsection(std::move(NewChecksums));
 }
 
@@ -1700,16 +1695,6 @@ void PDBLinker::addSections(ArrayRef<OutputSection *> OutputSections,
 void PDBLinker::commit(codeview::GUID *Guid) {
   // Write to a file.
   ExitOnErr(Builder.commit(Config->PDBPath, Guid));
-}
-
-static Expected<StringRef>
-getFileName(const DebugStringTableSubsectionRef &Strings,
-            const DebugChecksumsSubsectionRef &Checksums, uint32_t FileID) {
-  auto Iter = Checksums.getArray().at(FileID);
-  if (Iter == Checksums.getArray().end())
-    return make_error<CodeViewError>(cv_error_code::no_records);
-  uint32_t Offset = Iter->FileNameOffset;
-  return Strings.getString(Offset);
 }
 
 static uint32_t getSecrelReloc() {

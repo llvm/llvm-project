@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 // Tests for copy_if and remove_copy_if
 #include "support/pstl_test_config.h"
 
@@ -42,7 +44,7 @@ struct run_copy_if
               typename Predicate, typename T>
     void
     operator()(Policy&& exec, InputIterator first, InputIterator last, OutputIterator out_first,
-               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2 expected_last, Size n,
+               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2, Size n,
                Predicate pred, T trash)
     {
         // Cleaning
@@ -135,7 +137,7 @@ main()
 #endif
 
 #if !_PSTL_ICC_16_17_TEST_REDUCTION_RELEASE_BROKEN
-    test<int32_t>(-666, [](const int32_t& x) { return true; }, [](size_t j) { return j; }, false);
+    test<int32_t>(-666, [](const int32_t&) { return true; }, [](size_t j) { return j; }, false);
 #endif
 
     test_algo_basic_double<int32_t>(run_for_rnd_fw<test_non_const>());

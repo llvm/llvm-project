@@ -72,34 +72,6 @@ private:
 
 } // anonymous namespace
 
-// Returns /machine's value.
-MachineTypes getMachineType(StringRef S) {
-  MachineTypes MT = StringSwitch<MachineTypes>(S.lower())
-                        .Cases("x64", "amd64", AMD64)
-                        .Cases("x86", "i386", I386)
-                        .Case("arm", ARMNT)
-                        .Case("arm64", ARM64)
-                        .Default(IMAGE_FILE_MACHINE_UNKNOWN);
-  if (MT != IMAGE_FILE_MACHINE_UNKNOWN)
-    return MT;
-  fatal("unknown /machine argument: " + S);
-}
-
-StringRef machineToStr(MachineTypes MT) {
-  switch (MT) {
-  case ARMNT:
-    return "arm";
-  case ARM64:
-    return "arm64";
-  case AMD64:
-    return "x64";
-  case I386:
-    return "x86";
-  default:
-    llvm_unreachable("unknown machine type");
-  }
-}
-
 // Parses a string in the form of "<integer>[,<integer>]".
 void parseNumbers(StringRef Arg, uint64_t *Addr, uint64_t *Size) {
   StringRef S1, S2;
@@ -142,9 +114,11 @@ void parseSubsystem(StringRef Arg, WindowsSubsystem *Sys, uint32_t *Major,
                     uint32_t *Minor) {
   StringRef SysStr, Ver;
   std::tie(SysStr, Ver) = Arg.split(',');
-  *Sys = StringSwitch<WindowsSubsystem>(SysStr.lower())
+  std::string SysStrLower = SysStr.lower();
+  *Sys = StringSwitch<WindowsSubsystem>(SysStrLower)
     .Case("boot_application", IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION)
     .Case("console", IMAGE_SUBSYSTEM_WINDOWS_CUI)
+    .Case("default", IMAGE_SUBSYSTEM_UNKNOWN)
     .Case("efi_application", IMAGE_SUBSYSTEM_EFI_APPLICATION)
     .Case("efi_boot_service_driver", IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER)
     .Case("efi_rom", IMAGE_SUBSYSTEM_EFI_ROM)
@@ -153,7 +127,7 @@ void parseSubsystem(StringRef Arg, WindowsSubsystem *Sys, uint32_t *Major,
     .Case("posix", IMAGE_SUBSYSTEM_POSIX_CUI)
     .Case("windows", IMAGE_SUBSYSTEM_WINDOWS_GUI)
     .Default(IMAGE_SUBSYSTEM_UNKNOWN);
-  if (*Sys == IMAGE_SUBSYSTEM_UNKNOWN)
+  if (*Sys == IMAGE_SUBSYSTEM_UNKNOWN && SysStrLower != "default")
     fatal("unknown subsystem: " + SysStr);
   if (!Ver.empty())
     parseVersion(Ver, Major, Minor);
@@ -655,18 +629,6 @@ void fixupExports() {
   }
 
   for (Export &E : Config->Exports) {
-    Symbol *Sym = E.Sym;
-    if (!E.ForwardTo.empty() || !Sym) {
-      E.SymbolName = E.Name;
-    } else {
-      if (auto *U = dyn_cast<Undefined>(Sym))
-        if (U->WeakAlias)
-          Sym = U->WeakAlias;
-      E.SymbolName = Sym->getName();
-    }
-  }
-
-  for (Export &E : Config->Exports) {
     if (!E.ForwardTo.empty()) {
       E.ExportName = undecorate(E.Name);
     } else {
@@ -737,6 +699,7 @@ void checkFailIfMismatch(StringRef Arg, InputFile *Source) {
 }
 
 // Convert Windows resource files (.res files) to a .obj file.
+// Does what cvtres.exe does, but in-process and cross-platform.
 MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs) {
   object::WindowsResourceParser Parser;
 
@@ -758,7 +721,8 @@ MemoryBufferRef convertResToCOFF(ArrayRef<MemoryBufferRef> MBs) {
   }
 
   Expected<std::unique_ptr<MemoryBuffer>> E =
-      llvm::object::writeWindowsResourceCOFF(Config->Machine, Parser);
+      llvm::object::writeWindowsResourceCOFF(Config->Machine, Parser,
+                                             Config->Timestamp);
   if (!E)
     fatal("failed to write .res to COFF: " + toString(E.takeError()));
 
@@ -833,7 +797,8 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> Argv) {
 
   // Expand response files (arguments in the form of @<filename>)
   // and then parse the argument again.
-  SmallVector<const char *, 256> ExpandedArgv(Argv.data(), Argv.data() + Argv.size());
+  SmallVector<const char *, 256> ExpandedArgv(Argv.data(),
+                                              Argv.data() + Argv.size());
   cl::ExpandResponseFiles(Saver, getQuotingStyle(Args), ExpandedArgv);
   Args = Table.ParseArgs(makeArrayRef(ExpandedArgv).drop_front(), MissingIndex,
                          MissingCount);

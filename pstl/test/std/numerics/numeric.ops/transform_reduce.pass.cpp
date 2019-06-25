@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <execution>
@@ -73,7 +75,7 @@ CheckResults(const T& expected, const T& in)
 // We need to check correctness only for "int" (for example) except cases
 // if we have "floating-point type"-specialization
 void
-CheckResults(const float32_t& expected, const float32_t& in)
+CheckResults(const float32_t&, const float32_t&)
 {
 }
 
@@ -83,7 +85,7 @@ struct test_transform_reduce
     template <typename Policy, typename InputIterator1, typename InputIterator2, typename T, typename BinaryOperation1,
               typename BinaryOperation2, typename UnaryOp>
     void
-    operator()(Policy&& exec, InputIterator1 first1, InputIterator1 last1, InputIterator2 first2, InputIterator2 last2,
+    operator()(Policy&& exec, InputIterator1 first1, InputIterator1 last1, InputIterator2 first2, InputIterator2,
                T init, BinaryOperation1 opB1, BinaryOperation2 opB2, UnaryOp opU)
     {
 
@@ -118,16 +120,16 @@ int32_t
 main()
 {
     test_by_type<int32_t>(42, std::plus<int32_t>(), std::multiplies<int32_t>(), std::negate<int32_t>(),
-                          [](std::size_t a) -> int32_t { return int32_t(rand() % 1000); });
+                          [](std::size_t) -> int32_t { return int32_t(rand() % 1000); });
     test_by_type<int64_t>(0, [](const int64_t& a, const int64_t& b) -> int64_t { return a | b; }, XOR(),
                           [](const int64_t& x) -> int64_t { return x * 2; },
-                          [](std::size_t a) -> int64_t { return int64_t(rand() % 1000); });
+                          [](std::size_t) -> int64_t { return int64_t(rand() % 1000); });
     test_by_type<float32_t>(1.0f, std::multiplies<float32_t>(),
                             [](const float32_t& a, const float32_t& b) -> float32_t { return a + b; },
                             [](const float32_t& x) -> float32_t { return x + 2; },
-                            [](std::size_t a) -> float32_t { return rand() % 1000; });
+                            [](std::size_t) -> float32_t { return rand() % 1000; });
     test_by_type<MyClass>(MyClass(), std::plus<MyClass>(), std::multiplies<MyClass>(), std::negate<MyClass>(),
-                          [](std::size_t a) -> MyClass { return MyClass(rand() % 1000); });
+                          [](std::size_t) -> MyClass { return MyClass(rand() % 1000); });
 
     std::cout << done() << std::endl;
     return 0;

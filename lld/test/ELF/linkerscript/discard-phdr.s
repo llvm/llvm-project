@@ -10,7 +10,7 @@
 # RUN:  /DISCARD/ : { *(.discard) } :NONE \
 # RUN: }" > %t.script
 # RUN: ld.lld -o %t --script %t.script %t.o
-# RUN: llvm-readelf -S -l %t | FileCheck %s
+# RUN: llvm-readelf -S -l %t | FileCheck --implicit-check-not=/DISCARD/ %s
 
 ## Check that /DISCARD/ does not interfere with the assignment of segments to
 ## sections.

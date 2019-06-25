@@ -63,6 +63,12 @@ InputChunk *Symbol::getChunk() const {
   return nullptr;
 }
 
+bool Symbol::isDiscarded() const {
+  if (InputChunk *C = getChunk())
+    return C->Discarded;
+  return false;
+}
+
 bool Symbol::isLive() const {
   if (auto *G = dyn_cast<DefinedGlobal>(this))
     return G->Global->Live;
@@ -74,6 +80,7 @@ bool Symbol::isLive() const {
 }
 
 void Symbol::markLive() {
+  assert(!isDiscarded());
   if (auto *G = dyn_cast<DefinedGlobal>(this))
     G->Global->Live = true;
   if (auto *E = dyn_cast<DefinedEvent>(this))
@@ -307,12 +314,19 @@ std::string lld::toString(wasm::Symbol::Kind Kind) {
   llvm_unreachable("invalid symbol kind");
 }
 
+
+void lld::wasm::printTraceSymbolUndefined(StringRef Name, const InputFile* File) {
+  message(toString(File) + ": reference to " + Name);
+}
+
 // Print out a log message for --trace-symbol.
 void lld::wasm::printTraceSymbol(Symbol *Sym) {
-  std::string S;
+  // Undefined symbols are traced via printTraceSymbolUndefined
   if (Sym->isUndefined())
-    S = ": reference to ";
-  else if (Sym->isLazy())
+    return;
+
+  std::string S;
+  if (Sym->isLazy())
     S = ": lazy definition of ";
   else
     S = ": definition of ";

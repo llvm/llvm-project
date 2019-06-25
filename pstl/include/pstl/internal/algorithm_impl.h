@@ -599,19 +599,18 @@ _RandomAccessIterator
 __find_subrange(_RandomAccessIterator __first, _RandomAccessIterator __last, _RandomAccessIterator __global_last,
                 _Size __count, const _Tp& __value, _BinaryPredicate __pred, _IsVector __is_vector) noexcept
 {
-    if (__global_last - __first < __count || __count < 1)
+    if (static_cast<_Size>(__global_last - __first) < __count || __count < 1)
     {
         return __last; // According to the standard last shall be returned when count < 1
     }
 
-    auto __n = __global_last - __first;
     auto __unary_pred = __equal_value_by_pred<_Tp, _BinaryPredicate>(__value, __pred);
-    while (__first != __last && (__global_last - __first >= __count))
+    while (__first != __last && (static_cast<_Size>(__global_last - __first) >= __count))
     {
         __first = __internal::__brick_find_if(__first, __last, __unary_pred, __is_vector);
 
         // check that all of elements in [first+1, first+count) equal to value
-        if (__first != __last && (__global_last - __first >= __count) &&
+        if (__first != __last && (static_cast<_Size>(__global_last - __first) >= __count) &&
             !__internal::__brick_any_of(__first + 1, __first + __count,
                                         __not_pred<decltype(__unary_pred)>(__unary_pred), __is_vector))
         {
@@ -821,7 +820,7 @@ __pattern_search_n(_ExecutionPolicy&& __exec, _RandomAccessIterator __first, _Ra
                    _Size __count, const _Tp& __value, _BinaryPredicate __pred, _IsVector __is_vector,
                    /*is_parallel=*/std::true_type) noexcept
 {
-    if (__last - __first == __count)
+    if (static_cast<_Size>(__last - __first) == __count)
     {
         const bool __result = !__internal::__pattern_any_of(
             std::forward<_ExecutionPolicy>(__exec), __first, __last,
@@ -2087,8 +2086,7 @@ __pattern_sort(_ExecutionPolicy&& __exec, _RandomAccessIterator __first, _Random
     __internal::__except_handler([&]() {
         __par_backend::__parallel_stable_sort(std::forward<_ExecutionPolicy>(__exec), __first, __last, __comp,
                                               [](_RandomAccessIterator __first, _RandomAccessIterator __last,
-                                                 _Compare __comp) { std::sort(__first, __last, __comp); },
-                                              __last - __first);
+                                                 _Compare __comp) { std::sort(__first, __last, __comp); });
     });
 }
 
@@ -2135,6 +2133,9 @@ __pattern_partial_sort(_ExecutionPolicy&& __exec, _RandomAccessIterator __first,
                        _RandomAccessIterator __last, _Compare __comp, _IsVector, /*is_parallel=*/std::true_type)
 {
     const auto __n = __middle - __first;
+    if(__n == 0)
+        return;
+
     __internal::__except_handler([&]() {
         __par_backend::__parallel_stable_sort(
             std::forward<_ExecutionPolicy>(__exec), __first, __last, __comp,
@@ -2244,7 +2245,7 @@ __brick_adjacent_find(_ForwardIterator __first, _ForwardIterator __last, _Binary
 template <class _ForwardIterator, class _BinaryPredicate>
 _ForwardIterator
 __brick_adjacent_find(_ForwardIterator __first, _ForwardIterator __last, _BinaryPredicate __pred,
-                      /* IsVector = */ std::false_type, bool __or_semantic) noexcept
+                      /* IsVector = */ std::false_type, bool) noexcept
 {
     return std::adjacent_find(__first, __last, __pred);
 }
@@ -2665,21 +2666,17 @@ __pattern_inplace_merge(_ExecutionPolicy&& __exec, _BidirectionalIterator __firs
             return __internal::__brick_uninitialized_move(__first1, __last1, __first2, _IsVector());
         };
 
-        __par_backend::__parallel_merge(
-            std::forward<_ExecutionPolicy>(__exec), __first, __middle, __middle, __last, __r, __comp,
-            [__n, __move_values, __move_sequences](_BidirectionalIterator __f1, _BidirectionalIterator __l1,
-                                                   _BidirectionalIterator __f2, _BidirectionalIterator __l2, _Tp* __f3,
-                                                   _Compare __comp) {
-                auto __func = __par_backend::__serial_move_merge<decltype(__move_values), decltype(__move_sequences)>(
-                    __n, __move_values, __move_sequences);
-                __func(__f1, __l1, __f2, __l2, __f3, __comp);
+        __par_backend::__parallel_merge(std::forward<_ExecutionPolicy>(__exec), __first, __middle, __middle, __last, __r,
+            __comp, [__n, __move_values, __move_sequences](_BidirectionalIterator __f1, _BidirectionalIterator __l1,
+            _BidirectionalIterator __f2, _BidirectionalIterator __l2, _Tp* __f3,_Compare __comp) {
+                (__par_backend::__serial_move_merge(__n))(__f1, __l1, __f2, __l2, __f3, __comp, __move_values, __move_values, __move_sequences,
+                __move_sequences);
                 return __f3 + (__l1 - __f1) + (__l2 - __f2);
             });
-
-        __par_backend::__parallel_for(std::forward<_ExecutionPolicy>(__exec), __r, __r + __n,
-                                      [__r, __first, __is_vector](_Tp* __i, _Tp* __j) {
-                                          __internal::__brick_move(__i, __j, __first + (__i - __r), __is_vector);
-                                      });
+            __par_backend::__parallel_for(std::forward<_ExecutionPolicy>(__exec), __r, __r + __n,
+                [__r, __first, __is_vector](_Tp* __i, _Tp* __j) {
+                    __internal::__brick_move(__i, __j, __first + (__i - __r), __is_vector);
+            });
     });
 }
 
@@ -2689,7 +2686,7 @@ __pattern_inplace_merge(_ExecutionPolicy&& __exec, _BidirectionalIterator __firs
 
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _Compare, class _IsVector>
 bool
-__pattern_includes(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
+__pattern_includes(_ExecutionPolicy&&, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
                    _ForwardIterator2 __first2, _ForwardIterator2 __last2, _Compare __comp, _IsVector,
                    /*is_parallel=*/std::false_type) noexcept
 {
@@ -2699,7 +2696,7 @@ __pattern_includes(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _Forwa
 template <class _ExecutionPolicy, class _ForwardIterator1, class _ForwardIterator2, class _Compare, class _IsVector>
 bool
 __pattern_includes(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _ForwardIterator1 __last1,
-                   _ForwardIterator2 __first2, _ForwardIterator2 __last2, _Compare __comp, _IsVector __is_vector,
+                   _ForwardIterator2 __first2, _ForwardIterator2 __last2, _Compare __comp, _IsVector,
                    /*is_parallel=*/std::true_type)
 {
     if (__first2 >= __last2)
@@ -2761,7 +2758,7 @@ __parallel_set_op(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _Forwar
                   _SizeFunction __size_func, _SetOP __set_op, _IsVector __is_vector)
 {
     typedef typename std::iterator_traits<_ForwardIterator1>::difference_type _DifferenceType;
-    typedef typename std::iterator_traits<_OutputIterator>::value_type _T;
+    typedef typename std::iterator_traits<_OutputIterator>::value_type _Tp;
 
     struct _SetRange
     {
@@ -2776,7 +2773,7 @@ __parallel_set_op(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _Forwar
     const _DifferenceType __n1 = __last1 - __first1;
     const _DifferenceType __n2 = __last2 - __first2;
 
-    __par_backend::__buffer<_T> __buf(__size_func(__n1, __n2));
+    __par_backend::__buffer<_Tp> __buf(__size_func(__n1, __n2));
 
     return __internal::__except_handler([&__exec, __n1, __first1, __last1, __first2, __last2, __result, __is_vector,
                                          __comp, __size_func, __set_op, &__buf]() {
@@ -3007,11 +3004,11 @@ __pattern_set_union(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, _Forw
     if (__n1 + __n2 <= __set_algo_cut_off)
         return std::set_union(__first1, __last1, __first2, __last2, __result, __comp);
 
-    typedef typename std::iterator_traits<_OutputIterator>::value_type _T;
+    typedef typename std::iterator_traits<_OutputIterator>::value_type _Tp;
     return __internal::__parallel_set_union_op(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __result, __comp,
         [](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2, _ForwardIterator2 __last2,
-           _T* __result,
+           _Tp* __result,
            _Compare __comp) { return std::set_union(__first1, __last1, __first2, __last2, __result, __comp); },
         __is_vector);
 }
@@ -3056,7 +3053,7 @@ __pattern_set_intersection(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1
                            _ForwardIterator2 __first2, _ForwardIterator2 __last2, _OutputIterator __result,
                            _Compare __comp, _IsVector __is_vector, /*is_parallel=*/std::true_type)
 {
-    typedef typename std::iterator_traits<_OutputIterator>::value_type _T;
+    typedef typename std::iterator_traits<_OutputIterator>::value_type _Tp;
     typedef typename std::iterator_traits<_ForwardIterator1>::difference_type _DifferenceType;
 
     const auto __n1 = __last1 - __first1;
@@ -3086,7 +3083,7 @@ __pattern_set_intersection(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1
             std::forward<_ExecutionPolicy>(__exec), __left_bound_seq_1, __last1, __first2, __last2, __result, __comp,
             [](_DifferenceType __n, _DifferenceType __m) { return std::min(__n, __m); },
             [](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
-               _ForwardIterator2 __last2, _T* __result, _Compare __comp) {
+               _ForwardIterator2 __last2, _Tp* __result, _Compare __comp) {
                 return std::set_intersection(__first1, __last1, __first2, __last2, __result, __comp);
             },
             __is_vector);
@@ -3100,7 +3097,7 @@ __pattern_set_intersection(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1
             std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __left_bound_seq_2, __last2, __result, __comp,
             [](_DifferenceType __n, _DifferenceType __m) { return std::min(__n, __m); },
             [](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
-               _ForwardIterator2 __last2, _T* __result, _Compare __comp) {
+               _ForwardIterator2 __last2, _Tp* __result, _Compare __comp) {
                 return std::set_intersection(__first2, __last2, __first1, __last1, __result, __comp);
             },
             __is_vector);
@@ -3151,7 +3148,7 @@ __pattern_set_difference(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, 
                          _ForwardIterator2 __first2, _ForwardIterator2 __last2, _OutputIterator __result,
                          _Compare __comp, _IsVector __is_vector, /*is_parallel=*/std::true_type)
 {
-    typedef typename std::iterator_traits<_OutputIterator>::value_type _T;
+    typedef typename std::iterator_traits<_OutputIterator>::value_type _Tp;
     typedef typename std::iterator_traits<_ForwardIterator1>::difference_type _DifferenceType;
 
     const auto __n1 = __last1 - __first1;
@@ -3195,9 +3192,9 @@ __pattern_set_difference(_ExecutionPolicy&& __exec, _ForwardIterator1 __first1, 
     if (__n1 + __n2 > __set_algo_cut_off)
         return __internal::__parallel_set_op(
             std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __result, __comp,
-            [](_DifferenceType __n, _DifferenceType __m) { return __n; },
+            [](_DifferenceType __n, _DifferenceType) { return __n; },
             [](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2,
-               _ForwardIterator2 __last2, _T* __result,
+               _ForwardIterator2 __last2, _Tp* __result,
                _Compare __comp) { return std::set_difference(__first1, __last1, __first2, __last2, __result, __comp); },
             __is_vector);
 
@@ -3254,11 +3251,11 @@ __pattern_set_symmetric_difference(_ExecutionPolicy&& __exec, _ForwardIterator1 
     if (__n1 + __n2 <= __set_algo_cut_off)
         return std::set_symmetric_difference(__first1, __last1, __first2, __last2, __result, __comp);
 
-    typedef typename std::iterator_traits<_OutputIterator>::value_type _T;
+    typedef typename std::iterator_traits<_OutputIterator>::value_type _Tp;
     return __internal::__parallel_set_union_op(
         std::forward<_ExecutionPolicy>(__exec), __first1, __last1, __first2, __last2, __result, __comp,
         [](_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIterator2 __first2, _ForwardIterator2 __last2,
-           _T* __result, _Compare __comp) {
+           _Tp* __result, _Compare __comp) {
             return std::set_symmetric_difference(__first1, __last1, __first2, __last2, __result, __comp);
         },
         __is_vector);

@@ -174,4 +174,5 @@ document soon.
    WebAssembly
    windows_support
    missingkeyfunction
+   Partitions
    ReleaseNotes

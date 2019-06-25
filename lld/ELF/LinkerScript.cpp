@@ -185,7 +185,7 @@ void LinkerScript::addSymbol(SymbolAssignment *Cmd) {
               0, Sec);
 
   Symbol *Sym = Symtab->insert(Cmd->Name);
-  mergeSymbolProperties(Sym, New);
+  Sym->mergeProperties(New);
   Sym->replace(New);
   Cmd->Sym = cast<Defined>(Sym);
 }
@@ -202,7 +202,7 @@ static void declareSymbol(SymbolAssignment *Cmd) {
 
   // We can't calculate final value right now.
   Symbol *Sym = Symtab->insert(Cmd->Name);
-  mergeSymbolProperties(Sym, New);
+  Sym->mergeProperties(New);
   Sym->replace(New);
 
   Cmd->Sym = cast<Defined>(Sym);
@@ -380,7 +380,7 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
     size_t SizeBefore = Ret.size();
 
     for (InputSectionBase *Sec : InputSections) {
-      if (!Sec->Live || Sec->Assigned)
+      if (!Sec->isLive() || Sec->Assigned)
         continue;
 
       // For -emit-relocs we have to ignore entries like
@@ -413,19 +413,19 @@ LinkerScript::computeInputSections(const InputSectionDescription *Cmd) {
 
 void LinkerScript::discard(ArrayRef<InputSection *> V) {
   for (InputSection *S : V) {
-    if (S == In.ShStrTab || S == In.RelaDyn || S == In.RelrDyn)
+    if (S == In.ShStrTab || S == Main->RelaDyn || S == Main->RelrDyn)
       error("discarding " + S->Name + " section is not allowed");
 
     // You can discard .hash and .gnu.hash sections by linker scripts. Since
     // they are synthesized sections, we need to handle them differently than
     // other regular sections.
-    if (S == In.GnuHashTab)
-      In.GnuHashTab = nullptr;
-    if (S == In.HashTab)
-      In.HashTab = nullptr;
+    if (S == Main->GnuHashTab)
+      Main->GnuHashTab = nullptr;
+    if (S == Main->HashTab)
+      Main->HashTab = nullptr;
 
     S->Assigned = false;
-    S->Live = false;
+    S->markDead();
     discard(S->DependentSections);
   }
 }
@@ -481,7 +481,6 @@ void LinkerScript::processSectionCommands() {
       if (Sec->Name == "/DISCARD/") {
         discard(V);
         Sec->SectionCommands.clear();
-        Sec->SectionIndex = 0; // Not an orphan.
         continue;
       }
 
@@ -544,8 +543,9 @@ static OutputSection *createSection(InputSectionBase *IS,
   return Sec;
 }
 
-static OutputSection *addInputSec(StringMap<OutputSection *> &Map,
-                                  InputSectionBase *IS, StringRef OutsecName) {
+static OutputSection *
+addInputSec(StringMap<TinyPtrVector<OutputSection *>> &Map,
+            InputSectionBase *IS, StringRef OutsecName) {
   // Sections with SHT_GROUP or SHF_GROUP attributes reach here only when the -r
   // option is given. A section with SHT_GROUP defines a "section group", and
   // its members have SHF_GROUP attribute. Usually these flags have already been
@@ -624,23 +624,26 @@ static OutputSection *addInputSec(StringMap<OutputSection *> &Map,
   //
   // Given the above issues, we instead merge sections by name and error on
   // incompatible types and flags.
-  OutputSection *&Sec = Map[OutsecName];
-  if (Sec) {
+  TinyPtrVector<OutputSection *> &V = Map[OutsecName];
+  for (OutputSection *Sec : V) {
+    if (Sec->Partition != IS->Partition)
+      continue;
     Sec->addSection(cast<InputSection>(IS));
     return nullptr;
   }
 
-  Sec = createSection(IS, OutsecName);
+  OutputSection *Sec = createSection(IS, OutsecName);
+  V.push_back(Sec);
   return Sec;
 }
 
 // Add sections that didn't match any sections command.
 void LinkerScript::addOrphanSections() {
-  StringMap<OutputSection *> Map;
+  StringMap<TinyPtrVector<OutputSection *>> Map;
   std::vector<OutputSection *> V;
 
   auto Add = [&](InputSectionBase *S) {
-    if (!S->Live || S->Parent)
+    if (!S->isLive() || S->Parent)
       return;
 
     StringRef Name = getOutputSectionName(S);
@@ -820,6 +823,9 @@ void LinkerScript::assignOffsets(OutputSection *Sec) {
 }
 
 static bool isDiscardable(OutputSection &Sec) {
+  if (Sec.Name == "/DISCARD/")
+    return true;
+
   // We do not remove empty sections that are explicitly
   // assigned to any segment.
   if (!Sec.Phdrs.empty())
@@ -883,10 +889,9 @@ void LinkerScript::adjustSectionsBeforeSorting() {
       Sec->Alignment =
           std::max<uint32_t>(Sec->Alignment, Sec->AlignExpr().getValue());
 
-    // A live output section means that some input section was added to it. It
-    // might have been removed (if it was empty synthetic section), but we at
-    // least know the flags.
-    if (Sec->Live)
+    // The input section might have been removed (if it was an empty synthetic
+    // section), but we at least know the flags.
+    if (Sec->HasInputSections)
       Flags = Sec->Flags;
 
     // We do not want to keep any special flags for output section
@@ -897,8 +902,10 @@ void LinkerScript::adjustSectionsBeforeSorting() {
                             SHF_WRITE | SHF_EXECINSTR);
 
     if (IsEmpty && isDiscardable(*Sec)) {
-      Sec->Live = false;
+      Sec->markDead();
       Cmd = nullptr;
+    } else if (!Sec->isLive()) {
+      Sec->markLive();
     }
   }
 

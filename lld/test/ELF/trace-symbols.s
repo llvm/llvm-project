@@ -28,10 +28,15 @@
 # OBJECTD1FOO: trace-symbols.s.tmp1: definition of foo
 # OBJECTD1FOO: trace-symbols.s.tmp2: definition of foo
 
+# RUN: ld.lld -y foo %t1 %t2 %t -o %t3 | FileCheck -check-prefix=REFLAST %s
+# REFLAST: trace-symbols.s.tmp1: definition of foo
+# REFLAST: trace-symbols.s.tmp2: definition of foo
+# REFLAST: trace-symbols.s.tmp: reference to foo
+
 # RUN: ld.lld -y foo -trace-symbol=common -trace-symbol=hsymbol \
 # RUN:   %t %t1 %t2 -o %t3 | FileCheck -check-prefix=OBJECTD2FOO %s
 # RUN: ld.lld -y foo -y common --trace-symbol=hsymbol \
-# RUN:   %t %t2 %t1 -o /dev/null | FileCheck -check-prefix=OBJECTD2FOO %s
+# RUN:   %t %t2 %t1 -o %t3 | FileCheck -check-prefix=OBJECTD2FOO %s
 # RUN: ld.lld -y foo -y common %t %t1.so %t2 -o %t3 | \
 # RUN:   FileCheck -check-prefix=OBJECTD2FOO %s
 # OBJECTD2FOO: trace-symbols.s.tmp2: definition of foo

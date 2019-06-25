@@ -28,6 +28,7 @@ public:
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
+  RelType getDynRel(RelType Type) const override;
 };
 } // namespace
 
@@ -35,7 +36,7 @@ AMDGPU::AMDGPU() {
   RelativeRel = R_AMDGPU_RELATIVE64;
   GotRel = R_AMDGPU_ABS64;
   NoneRel = R_AMDGPU_NONE;
-  GotEntrySize = 8;
+  SymbolicRel = R_AMDGPU_ABS64;
 }
 
 static uint32_t getEFlags(InputFile *File) {
@@ -98,6 +99,12 @@ RelExpr AMDGPU::getRelExpr(RelType Type, const Symbol &S,
           ") against symbol " + toString(S));
     return R_NONE;
   }
+}
+
+RelType AMDGPU::getDynRel(RelType Type) const {
+  if (Type == R_AMDGPU_ABS64)
+    return Type;
+  return R_AMDGPU_NONE;
 }
 
 TargetInfo *elf::getAMDGPUTargetInfo() {

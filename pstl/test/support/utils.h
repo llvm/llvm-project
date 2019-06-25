@@ -30,7 +30,7 @@ typedef float float32_t;
 
 template <class T, std::size_t N>
 constexpr size_t
-const_size(const T (&array)[N]) noexcept
+const_size(const T (&)[N]) noexcept
 {
     return N;
 }
@@ -119,7 +119,7 @@ expect_equal(Iterator1 expected_first, Iterator2 actual_first, Size n, const cha
              const char* message)
 {
     size_t error_count = 0;
-    for (size_t k = 0; k < n && error_count < 10; ++k, ++expected_first, ++actual_first)
+    for (Size k = 0; k < n && error_count < 10; ++k, ++expected_first, ++actual_first)
     {
         if (!(*expected_first == *actual_first))
         {
@@ -752,7 +752,7 @@ struct invoke_if_<std::false_type, std::false_type>
 {
     template <typename Op, typename... Rest>
     void
-    operator()(bool is_allow, Op op, Rest&&... rest)
+    operator()(bool, Op op, Rest&&... rest)
     {
         op(std::forward<Rest>(rest)...);
     }
@@ -787,14 +787,14 @@ struct non_const_wrapper_tagged : non_const_wrapper
 
     template <typename Policy, typename Iterator>
     typename std::enable_if<IsPositiveCondition != is_same_iterator_category<Iterator, IteratorTag>::value, void>::type
-    operator()(Policy&& exec, Iterator iter)
+    operator()(Policy&&, Iterator)
     {
     }
 
     template <typename Policy, typename InputIterator, typename OutputIterator>
     typename std::enable_if<IsPositiveCondition != is_same_iterator_category<OutputIterator, IteratorTag>::value,
                             void>::type
-    operator()(Policy&& exec, InputIterator input_iter, OutputIterator out_iter)
+    operator()(Policy&&, InputIterator, OutputIterator)
     {
     }
 };
@@ -999,7 +999,7 @@ struct iterator_invoker<std::forward_iterator_tag, /*isReverse=*/std::true_type>
 {
     template <typename... Rest>
     void
-    operator()(Rest&&... rest)
+    operator()(Rest&&...)
     {
     }
 };
@@ -1226,7 +1226,7 @@ test_algo_basic_double(F&& f)
 
 template <typename Policy, typename F>
 static void
-invoke_if(Policy&& p, F f)
+invoke_if(Policy&&, F f)
 {
 #if _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN || _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN
     __pstl::__internal::invoke_if_not(__pstl::__internal::allow_unsequenced<Policy>(), f);

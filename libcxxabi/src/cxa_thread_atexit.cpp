@@ -9,6 +9,12 @@
 #include "abort_message.h"
 #include "cxxabi.h"
 #include <__threading_support>
+#ifndef _LIBCXXABI_HAS_NO_THREADS
+#if defined(__unix__) &&  defined(__ELF__) && defined(_LIBCXXABI_HAS_COMMENT_LIB_PRAGMA)
+#pragma comment(lib, "pthread")
+#endif
+#endif
+
 #include <cstdlib>
 
 namespace __cxxabiv1 {

@@ -13,7 +13,7 @@ target triple = "wasm32-unknown-unknown"
 @local_struct = hidden global %struct.s zeroinitializer, align 4
 @local_struct_internal_ptr = hidden local_unnamed_addr global i32* getelementptr inbounds (%struct.s, %struct.s* @local_struct, i32 0, i32 1), align 4
 
-; RUN: wasm-ld -no-gc-sections --allow-undefined --no-entry -o %t.wasm %t.o %t.hello.o
+; RUN: wasm-ld -no-gc-sections --export=__data_end --export=__heap_base --allow-undefined --no-entry -o %t.wasm %t.o %t.hello.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
 ; CHECK:        - Type:            MEMORY
@@ -32,9 +32,15 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:         Mutable:         false
 ; CHECK-NEXT:         InitExpr:
 ; CHECK-NEXT:           Opcode:          I32_CONST
+; CHECK-NEXT:           Value:           1071
+; CHECK-NEXT:       - Index:           2
+; CHECK-NEXT:         Type:            I32
+; CHECK-NEXT:         Mutable:         false
+; CHECK-NEXT:         InitExpr:
+; CHECK-NEXT:           Opcode:          I32_CONST
 ; CHECK-NEXT:           Value:           66608
 
-; CHECK:         - Type:            DATA
+; CHECK:        - Type:            DATA
 ; CHECK-NEXT:     Segments:
 ; CHECK-NEXT:       - SectionOffset:   7
 ; CHECK-NEXT:         InitFlags:       0

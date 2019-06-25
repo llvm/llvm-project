@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <execution>
@@ -73,7 +75,7 @@ template <typename T>
 void
 test_fill_by_type(std::size_t n)
 {
-    Sequence<T> in(n, [](std::size_t v) -> T { return T(0); }); //fill with zeros
+    Sequence<T> in(n, [](std::size_t) -> T { return T(0); }); //fill with zeros
     T value = -1;
 
     invoke_on_all_policies(test_fill(), in.begin(), in.end(), value);

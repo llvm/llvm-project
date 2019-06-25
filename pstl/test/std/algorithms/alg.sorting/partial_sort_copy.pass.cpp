@@ -7,8 +7,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Tests for partial_sort_copy
+// UNSUPPORTED: c++98, c++03, c++11, c++14
 
+// Tests for partial_sort_copy
 #include "support/pstl_test_config.h"
 
 #include <cmath>

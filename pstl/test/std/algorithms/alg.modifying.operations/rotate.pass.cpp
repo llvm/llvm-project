@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <iterator>
@@ -112,10 +114,10 @@ struct test_one_policy
     template <typename ExecutionPolicy, typename Iterator, typename Size>
     typename std::enable_if<
         is_same_iterator_category<Iterator, std::random_access_iterator_tag>::value &&
-            !std::is_same<ExecutionPolicy, pstl::execution::sequenced_policy>::value &&
+            !std::is_same<ExecutionPolicy, std::execution::sequenced_policy>::value &&
             std::is_same<typename std::iterator_traits<Iterator>::value_type, wrapper<float32_t>>::value,
         bool>::type
-    check_move(ExecutionPolicy&& exec, Iterator b, Iterator e, Size shift)
+    check_move(ExecutionPolicy&&, Iterator b, Iterator e, Size shift)
     {
         bool result = all_of(b, e, [](wrapper<float32_t>& a) {
             bool temp = a.move_count > 0;
@@ -128,10 +130,10 @@ struct test_one_policy
     template <typename ExecutionPolicy, typename Iterator, typename Size>
     typename std::enable_if<
         !(is_same_iterator_category<Iterator, std::random_access_iterator_tag>::value &&
-          !std::is_same<ExecutionPolicy, pstl::execution::sequenced_policy>::value &&
+          !std::is_same<ExecutionPolicy, std::execution::sequenced_policy>::value &&
           std::is_same<typename std::iterator_traits<Iterator>::value_type, wrapper<float32_t>>::value),
         bool>::type
-    check_move(ExecutionPolicy&& exec, Iterator b, Iterator e, Size shift)
+    check_move(ExecutionPolicy&&, Iterator, Iterator, Size)
     {
         return true;
     }

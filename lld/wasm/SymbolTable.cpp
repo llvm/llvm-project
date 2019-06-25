@@ -28,17 +28,33 @@ SymbolTable *lld::wasm::Symtab;
 
 void SymbolTable::addFile(InputFile *File) {
   log("Processing: " + toString(File));
+
+  // .a file
+  if (auto *F = dyn_cast<ArchiveFile>(File)) {
+    F->parse();
+    return;
+  }
+
+  // .so file
+  if (auto *F = dyn_cast<SharedFile>(File)) {
+    SharedFiles.push_back(F);
+    return;
+  }
+
   if (Config->Trace)
     message(toString(File));
-  File->parse();
 
   // LLVM bitcode file
-  if (auto *F = dyn_cast<BitcodeFile>(File))
+  if (auto *F = dyn_cast<BitcodeFile>(File)) {
+    F->parse();
     BitcodeFiles.push_back(F);
-  else if (auto *F = dyn_cast<ObjFile>(File))
-    ObjectFiles.push_back(F);
-  else if (auto *F = dyn_cast<SharedFile>(File))
-    SharedFiles.push_back(F);
+    return;
+  }
+
+  // Regular object file
+  auto *F = cast<ObjFile>(File);
+  F->parse(false);
+  ObjectFiles.push_back(F);
 }
 
 // This function is where all the optimizations of link-time
@@ -65,7 +81,8 @@ void SymbolTable::addCombinedLTOObject() {
 }
 
 void SymbolTable::reportRemainingUndefines() {
-  for (Symbol *Sym : SymVector) {
+  for (const auto& Pair : SymMap) {
+    const Symbol *Sym = SymVector[Pair.second];
     if (!Sym->isUndefined() || Sym->isWeak())
       continue;
     if (Config->AllowUndefinedSymbols.count(Sym->getName()) != 0)
@@ -104,6 +121,7 @@ std::pair<Symbol *, bool> SymbolTable::insertName(StringRef Name) {
 
   Symbol *Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
   Sym->IsUsedInRegularObj = false;
+  Sym->CanInline = true;
   Sym->Traced = Trace;
   SymVector.emplace_back(Sym);
   return {Sym, true};
@@ -134,14 +152,13 @@ static void reportTypeError(const Symbol *Existing, const InputFile *File,
 // mismatch.
 static bool signatureMatches(FunctionSymbol *Existing,
                              const WasmSignature *NewSig) {
-  if (!NewSig)
-    return true;
-
   const WasmSignature *OldSig = Existing->Signature;
-  if (!OldSig) {
-    Existing->Signature = NewSig;
+
+  // If either function is missing a signature (this happend for bitcode
+  // symbols) then assume they match.  Any mismatch will be reported later
+  // when the LTO objects are added.
+  if (!NewSig || !OldSig)
     return true;
-  }
 
   return *NewSig == *OldSig;
 }
@@ -196,6 +213,22 @@ DefinedFunction *SymbolTable::addSyntheticFunction(StringRef Name,
   SyntheticFunctions.emplace_back(Function);
   return replaceSymbol<DefinedFunction>(insertName(Name).first, Name,
                                         Flags, nullptr, Function);
+}
+
+// Adds an optional, linker generated, data symbols.  The symbol will only be
+// added if there is an undefine reference to it, or if it is explictly exported
+// via the --export flag.  Otherwise we don't add the symbol and return nullptr.
+DefinedData *SymbolTable::addOptionalDataSymbol(StringRef Name, uint32_t Value,
+                                                uint32_t Flags) {
+  Symbol *S = find(Name);
+  if (!S && (Config->ExportAll || Config->ExportedSymbols.count(Name) != 0))
+    S = insertName(Name).first;
+  else if (!S || S->isDefined())
+    return nullptr;
+  LLVM_DEBUG(dbgs() << "addOptionalDataSymbol: " << Name << "\n");
+  auto *rtn = replaceSymbol<DefinedData>(S, Name, Flags);
+  rtn->setVirtualAddress(Value);
+  return rtn;
 }
 
 DefinedData *SymbolTable::addSyntheticDataSymbol(StringRef Name,
@@ -273,7 +306,11 @@ Symbol *SymbolTable::addDefinedFunction(StringRef Name, uint32_t Flags,
     return S;
   }
 
-  if (Function && !signatureMatches(ExistingFunction, &Function->Signature)) {
+  bool CheckSig = true;
+  if (auto UD = dyn_cast<UndefinedFunction>(ExistingFunction))
+    CheckSig = UD->IsCalledDirectly;
+
+  if (CheckSig && Function && !signatureMatches(ExistingFunction, &Function->Signature)) {
     Symbol* Variant;
     if (getFunctionVariant(S, &Function->Signature, File, &Variant))
       // New variant, always replace
@@ -371,17 +408,21 @@ Symbol *SymbolTable::addDefinedEvent(StringRef Name, uint32_t Flags,
 Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef ImportName,
                                           StringRef ImportModule,
                                           uint32_t Flags, InputFile *File,
-                                          const WasmSignature *Sig) {
-  LLVM_DEBUG(dbgs() << "addUndefinedFunction: " << Name <<
-             " [" << (Sig ? toString(*Sig) : "none") << "]\n");
+                                          const WasmSignature *Sig,
+                                          bool IsCalledDirectly) {
+  LLVM_DEBUG(dbgs() << "addUndefinedFunction: " << Name << " ["
+                    << (Sig ? toString(*Sig) : "none")
+                    << "] IsCalledDirectly:" << IsCalledDirectly << "\n");
 
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, File);
+  if (S->Traced)
+    printTraceSymbolUndefined(Name, File);
 
   auto Replace = [&]() {
     replaceSymbol<UndefinedFunction>(S, Name, ImportName, ImportModule, Flags,
-                                     File, Sig);
+                                     File, Sig, IsCalledDirectly);
   };
 
   if (WasInserted)
@@ -394,7 +435,9 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef ImportName,
       reportTypeError(S, File, WASM_SYMBOL_TYPE_FUNCTION);
       return S;
     }
-    if (!signatureMatches(ExistingFunction, Sig))
+    if (!ExistingFunction->Signature && Sig)
+      ExistingFunction->Signature = Sig;
+    if (IsCalledDirectly && !signatureMatches(ExistingFunction, Sig))
       if (getFunctionVariant(S, Sig, File, &S))
         Replace();
   }
@@ -409,6 +452,8 @@ Symbol *SymbolTable::addUndefinedData(StringRef Name, uint32_t Flags,
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, File);
+  if (S->Traced)
+    printTraceSymbolUndefined(Name, File);
 
   if (WasInserted)
     replaceSymbol<UndefinedData>(S, Name, Flags, File);
@@ -428,6 +473,8 @@ Symbol *SymbolTable::addUndefinedGlobal(StringRef Name, StringRef ImportName,
   Symbol *S;
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, File);
+  if (S->Traced)
+    printTraceSymbolUndefined(Name, File);
 
   if (WasInserted)
     replaceSymbol<UndefinedGlobal>(S, Name, ImportName, ImportModule, Flags,
@@ -520,6 +567,19 @@ bool SymbolTable::getFunctionVariant(Symbol* Sym, const WasmSignature *Sig,
 // if a new symbol with the same name is inserted into the symbol table.
 void SymbolTable::trace(StringRef Name) {
   SymMap.insert({CachedHashStringRef(Name), -1});
+}
+
+void SymbolTable::wrap(Symbol *Sym, Symbol *Real, Symbol *Wrap) {
+  // Swap symbols as instructed by -wrap.
+  int &OrigIdx = SymMap[CachedHashStringRef(Sym->getName())];
+  int &RealIdx= SymMap[CachedHashStringRef(Real->getName())];
+  int &WrapIdx = SymMap[CachedHashStringRef(Wrap->getName())];
+  LLVM_DEBUG(dbgs() << "wrap: " << Sym->getName() << "\n");
+
+  // Anyone looking up __real symbols should get the original
+  RealIdx = OrigIdx;
+  // Anyone looking up the original should get the __wrap symbol
+  OrigIdx = WrapIdx;
 }
 
 static const uint8_t UnreachableFn[] = {

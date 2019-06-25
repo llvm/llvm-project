@@ -193,6 +193,7 @@ public:
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
+  RelType getDynRel(RelType Type) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
@@ -274,12 +275,12 @@ static bool isInstructionUpdateForm(uint32_t Encoding) {
 // pointer is pointing into the middle of the word we want to extract, and on
 // little-endian it is pointing to the start of the word. These 2 helpers are to
 // simplify reading and writing in that context.
-static void writeInstrFromHalf16(uint8_t *Loc, uint32_t Instr) {
-  write32(Loc - (Config->EKind == ELF64BEKind ? 2 : 0), Instr);
+static void writeFromHalf16(uint8_t *Loc, uint32_t Insn) {
+  write32(Config->IsLE ? Loc : Loc - 2, Insn);
 }
 
-static uint32_t readInstrFromHalf16(const uint8_t *Loc) {
-  return read32(Loc - (Config->EKind == ELF64BEKind ? 2 : 0));
+static uint32_t readFromHalf16(const uint8_t *Loc) {
+  return read32(Config->IsLE ? Loc : Loc - 2);
 }
 
 PPC64::PPC64() {
@@ -288,9 +289,8 @@ PPC64::PPC64() {
   PltRel = R_PPC64_JMP_SLOT;
   RelativeRel = R_PPC64_RELATIVE;
   IRelativeRel = R_PPC64_IRELATIVE;
-  GotEntrySize = 8;
+  SymbolicRel = R_PPC64_ADDR64;
   PltEntrySize = 4;
-  GotPltEntrySize = 8;
   GotBaseSymInGotPlt = false;
   GotHeaderEntriesNum = 1;
   GotPltHeaderEntriesNum = 2;
@@ -363,10 +363,10 @@ void PPC64::relaxGot(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_PPC64_TOC16_LO_DS: {
     // Convert "ld reg, .LC0@toc@l(reg)" to "addi reg, reg, var@toc@l" or
     // "addi reg, 2, var@toc".
-    uint32_t Instr = readInstrFromHalf16(Loc);
-    if (getPrimaryOpCode(Instr) != LD)
+    uint32_t Insn = readFromHalf16(Loc);
+    if (getPrimaryOpCode(Insn) != LD)
       error("expected a 'ld' for got-indirect to toc-relative relaxing");
-    writeInstrFromHalf16(Loc, (Instr & 0x03FFFFFF) | 0x38000000);
+    writeFromHalf16(Loc, (Insn & 0x03ffffff) | 0x38000000);
     relocateOne(Loc, R_PPC64_TOC16_LO, Val);
     break;
   }
@@ -393,11 +393,11 @@ void PPC64::relaxTlsGdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
 
   switch (Type) {
   case R_PPC64_GOT_TLSGD16_HA:
-    writeInstrFromHalf16(Loc, 0x60000000); // nop
+    writeFromHalf16(Loc, 0x60000000); // nop
     break;
   case R_PPC64_GOT_TLSGD16:
   case R_PPC64_GOT_TLSGD16_LO:
-    writeInstrFromHalf16(Loc, 0x3c6d0000); // addis r3, r13
+    writeFromHalf16(Loc, 0x3c6d0000); // addis r3, r13
     relocateOne(Loc, R_PPC64_TPREL16_HA, Val);
     break;
   case R_PPC64_TLSGD:
@@ -432,10 +432,10 @@ void PPC64::relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
 
   switch (Type) {
   case R_PPC64_GOT_TLSLD16_HA:
-    writeInstrFromHalf16(Loc, 0x60000000); // nop
+    writeFromHalf16(Loc, 0x60000000); // nop
     break;
   case R_PPC64_GOT_TLSLD16_LO:
-    writeInstrFromHalf16(Loc, 0x3c6d0000); // addis r3, r13, 0
+    writeFromHalf16(Loc, 0x3c6d0000); // addis r3, r13, 0
     break;
   case R_PPC64_TLSLD:
     write32(Loc, 0x60000000);     // nop
@@ -447,10 +447,6 @@ void PPC64::relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_PPC64_DTPREL16_DS:
   case R_PPC64_DTPREL16_LO:
   case R_PPC64_DTPREL16_LO_DS:
-  case R_PPC64_GOT_DTPREL16_HA:
-  case R_PPC64_GOT_DTPREL16_LO_DS:
-  case R_PPC64_GOT_DTPREL16_DS:
-  case R_PPC64_GOT_DTPREL16_HI:
     relocateOne(Loc, Type, Val);
     break;
   default:
@@ -458,7 +454,7 @@ void PPC64::relaxTlsLdToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   }
 }
 
-static unsigned getDFormOp(unsigned SecondaryOp) {
+unsigned elf::getPPCDFormOp(unsigned SecondaryOp) {
   switch (SecondaryOp) {
   case LBZX:
     return LBZ;
@@ -479,7 +475,6 @@ static unsigned getDFormOp(unsigned SecondaryOp) {
   case ADD:
     return ADDI;
   default:
-    error("unrecognized instruction for IE to LE R_PPC64_TLS");
     return 0;
   }
 }
@@ -521,7 +516,9 @@ void PPC64::relaxTlsIeToLe(uint8_t *Loc, RelType Type, uint64_t Val) const {
     if (PrimaryOp != 31)
       error("unrecognized instruction for IE to LE R_PPC64_TLS");
     uint32_t SecondaryOp = (read32(Loc) & 0x000007FE) >> 1; // bits 21-30
-    uint32_t DFormOp = getDFormOp(SecondaryOp);
+    uint32_t DFormOp = getPPCDFormOp(SecondaryOp);
+    if (DFormOp == 0)
+      error("unrecognized instruction for IE to LE R_PPC64_TLS");
     write32(Loc, ((DFormOp << 26) | (read32(Loc) & 0x03FFFFFF)));
     relocateOne(Loc + Offset, R_PPC64_TPREL16_LO, Val);
     break;
@@ -551,10 +548,10 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   case R_PPC64_TOC16_LO_DS:
     return Config->TocOptimize ? R_PPC64_RELAX_TOC : R_GOTREL;
   case R_PPC64_TOC:
-    return R_PPC_TOC;
+    return R_PPC64_TOCBASE;
   case R_PPC64_REL14:
   case R_PPC64_REL24:
-    return R_PPC_CALL_PLT;
+    return R_PPC64_CALL_PLT;
   case R_PPC64_REL16_LO:
   case R_PPC64_REL16_HA:
   case R_PPC64_REL32:
@@ -612,6 +609,12 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   default:
     return R_ABS;
   }
+}
+
+RelType PPC64::getDynRel(RelType Type) const {
+  if (Type == R_PPC64_ADDR64 || Type == R_PPC64_TOC)
+    return R_PPC64_ADDR64;
+  return R_PPC64_NONE;
 }
 
 void PPC64::writeGotHeader(uint8_t *Buf) const {
@@ -753,16 +756,19 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   }
   case R_PPC64_ADDR16:
-  case R_PPC64_TPREL16:
-    checkInt(Loc, Val, 16, OriginalType);
+    checkIntUInt(Loc, Val, 16, OriginalType);
     write16(Loc, Val);
+    break;
+  case R_PPC64_ADDR32:
+    checkIntUInt(Loc, Val, 32, OriginalType);
+    write32(Loc, Val);
     break;
   case R_PPC64_ADDR16_DS:
   case R_PPC64_TPREL16_DS: {
     checkInt(Loc, Val, 16, OriginalType);
     // DQ-form instructions use bits 28-31 as part of the instruction encoding
     // DS-form instructions only use bits 30-31.
-    uint16_t Mask = isDQFormInstruction(readInstrFromHalf16(Loc)) ? 0xF : 0x3;
+    uint16_t Mask = isDQFormInstruction(readFromHalf16(Loc)) ? 0xf : 0x3;
     checkAlignment(Loc, lo(Val), Mask + 1, OriginalType);
     write16(Loc, (read16(Loc) & Mask) | lo(Val));
   } break;
@@ -770,7 +776,7 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_PPC64_REL16_HA:
   case R_PPC64_TPREL16_HA:
     if (Config->TocOptimize && ShouldTocOptimize && ha(Val) == 0)
-      writeInstrFromHalf16(Loc, 0x60000000);
+      writeFromHalf16(Loc, 0x60000000);
     else
       write16(Loc, ha(Val));
     break;
@@ -802,37 +808,41 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     // changed into a nop. The lo part then needs to be updated to use the
     // toc-pointer register r2, as the base register.
     if (Config->TocOptimize && ShouldTocOptimize && ha(Val) == 0) {
-      uint32_t Instr = readInstrFromHalf16(Loc);
-      if (isInstructionUpdateForm(Instr))
+      uint32_t Insn = readFromHalf16(Loc);
+      if (isInstructionUpdateForm(Insn))
         error(getErrorLocation(Loc) +
               "can't toc-optimize an update instruction: 0x" +
-              utohexstr(Instr));
-      Instr = (Instr & 0xFFE00000) | 0x00020000;
-      writeInstrFromHalf16(Loc, Instr);
+              utohexstr(Insn));
+      writeFromHalf16(Loc, (Insn & 0xffe00000) | 0x00020000 | lo(Val));
+    } else {
+      write16(Loc, lo(Val));
     }
-    write16(Loc, lo(Val));
     break;
   case R_PPC64_ADDR16_LO_DS:
   case R_PPC64_TPREL16_LO_DS: {
     // DQ-form instructions use bits 28-31 as part of the instruction encoding
     // DS-form instructions only use bits 30-31.
-    uint32_t Inst = readInstrFromHalf16(Loc);
-    uint16_t Mask = isDQFormInstruction(Inst) ? 0xF : 0x3;
+    uint32_t Insn = readFromHalf16(Loc);
+    uint16_t Mask = isDQFormInstruction(Insn) ? 0xf : 0x3;
     checkAlignment(Loc, lo(Val), Mask + 1, OriginalType);
     if (Config->TocOptimize && ShouldTocOptimize && ha(Val) == 0) {
       // When the high-adjusted part of a toc relocation evalutes to 0, it is
       // changed into a nop. The lo part then needs to be updated to use the toc
       // pointer register r2, as the base register.
-      if (isInstructionUpdateForm(Inst))
+      if (isInstructionUpdateForm(Insn))
         error(getErrorLocation(Loc) +
               "Can't toc-optimize an update instruction: 0x" +
-              Twine::utohexstr(Inst));
-      Inst = (Inst & 0xFFE0000F) | 0x00020000;
-      writeInstrFromHalf16(Loc, Inst);
+              Twine::utohexstr(Insn));
+      Insn &= 0xffe00000 | Mask;
+      writeFromHalf16(Loc, Insn | 0x00020000 | lo(Val));
+    } else {
+      write16(Loc, (read16(Loc) & Mask) | lo(Val));
     }
-    write16(Loc, (read16(Loc) & Mask) | lo(Val));
   } break;
-  case R_PPC64_ADDR32:
+  case R_PPC64_TPREL16:
+    checkInt(Loc, Val, 16, OriginalType);
+    write16(Loc, Val);
+    break;
   case R_PPC64_REL32:
     checkInt(Loc, Val, 32, Type);
     write32(Loc, Val);
@@ -860,7 +870,7 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     write64(Loc, Val - DynamicThreadPointerOffset);
     break;
   default:
-    error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
+    error(getErrorLocation(Loc) + "unrecognized relocation " + toString(Type));
   }
 }
 
@@ -939,8 +949,8 @@ void PPC64::relaxTlsGdToIe(uint8_t *Loc, RelType Type, uint64_t Val) const {
   case R_PPC64_GOT_TLSGD16_LO: {
     // Relax from addi  r3, rA, sym@got@tlsgd@l to
     //            ld r3, sym@got@tprel@l(rA)
-    uint32_t InputRegister = (readInstrFromHalf16(Loc) & (0x1f << 16));
-    writeInstrFromHalf16(Loc, 0xE8600000 | InputRegister);
+    uint32_t RA = (readFromHalf16(Loc) & (0x1f << 16));
+    writeFromHalf16(Loc, 0xe8600000 | RA);
     relocateOne(Loc, R_PPC64_GOT_TPREL16_LO_DS, Val);
     return;
   }

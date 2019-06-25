@@ -48,6 +48,8 @@
 #define TASK_IMPLICIT 0
 #define TASK_PROXY 1
 #define TASK_FULL 0
+#define TASK_DETACHABLE 1
+#define TASK_UNDETACHABLE 0
 
 #define KMP_CANCEL_THREADS
 #define KMP_THREAD_ATTR
@@ -95,6 +97,12 @@ class kmp_stats_list;
 #endif
 #ifndef HWLOC_OBJ_PACKAGE
 #define HWLOC_OBJ_PACKAGE HWLOC_OBJ_SOCKET
+#endif
+#if HWLOC_API_VERSION >= 0x00020000
+// hwloc 2.0 changed type of depth of object from unsigned to int
+typedef int kmp_hwloc_depth_t;
+#else
+typedef unsigned int kmp_hwloc_depth_t;
 #endif
 #endif
 
@@ -2263,6 +2271,19 @@ typedef struct kmp_task_affinity_info {
     kmp_int32 reserved : 30;
   } flags;
 } kmp_task_affinity_info_t;
+
+typedef enum kmp_event_type_t {
+  KMP_EVENT_UNINITIALIZED = 0,
+  KMP_EVENT_ALLOW_COMPLETION = 1
+} kmp_event_type_t;
+
+typedef struct {
+  kmp_event_type_t type;
+  kmp_tas_lock_t lock;
+  union {
+    kmp_task_t *task;
+  } ed;
+} kmp_event_t;
 #endif
 
 #endif
@@ -2298,7 +2319,8 @@ typedef struct kmp_tasking_flags { /* Total struct must be exactly 32 bits */
                          context of the RTL) */
   unsigned priority_specified : 1; /* set if the compiler provides priority
                                       setting for the task */
-  unsigned reserved : 10; /* reserved for compiler use */
+  unsigned detachable : 1; /* 1 == can detach */
+  unsigned reserved : 9; /* reserved for compiler use */
 #else
   unsigned reserved : 12; /* reserved for compiler use */
 #endif
@@ -2365,6 +2387,9 @@ struct kmp_taskdata { /* aligned during dynamic allocation       */
 #if defined(KMP_GOMP_COMPAT) && OMP_45_ENABLED
   // GOMP sends in a copy function for copy constructors
   void (*td_copy_func)(void *, void *);
+#endif
+#if OMP_50_ENABLED
+  kmp_event_t td_allow_completion_event;
 #endif
 #if OMPT_SUPPORT
   ompt_task_info_t ompt_task_info;
@@ -3257,6 +3282,7 @@ extern void __kmp_init_random(kmp_info_t *thread);
 
 extern kmp_r_sched_t __kmp_get_schedule_global(void);
 extern void __kmp_adjust_num_threads(int new_nproc);
+extern void __kmp_check_stksize(size_t *val);
 
 extern void *___kmp_allocate(size_t size KMP_SRC_LOC_DECL);
 extern void *___kmp_page_allocate(size_t size KMP_SRC_LOC_DECL);
@@ -3635,6 +3661,14 @@ extern void __kmp_init_implicit_task(ident_t *loc_ref, kmp_info_t *this_thr,
                                      int set_curr_task);
 extern void __kmp_finish_implicit_task(kmp_info_t *this_thr);
 extern void __kmp_free_implicit_task(kmp_info_t *this_thr);
+
+#ifdef OMP_50_ENABLED
+extern kmp_event_t *__kmpc_task_allow_completion_event(ident_t *loc_ref,
+                                                       int gtid,
+                                                       kmp_task_t *task);
+extern void __kmp_fulfill_event(kmp_event_t *event);
+#endif
+
 int __kmp_execute_tasks_32(kmp_info_t *thread, kmp_int32 gtid,
                            kmp_flag_32 *flag, int final_spin,
                            int *thread_finished,
@@ -3772,6 +3806,12 @@ KMP_EXPORT kmp_task_t *__kmpc_omp_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
                                              size_t sizeof_kmp_task_t,
                                              size_t sizeof_shareds,
                                              kmp_routine_entry_t task_entry);
+KMP_EXPORT kmp_task_t *__kmpc_omp_target_task_alloc(ident_t *loc_ref, kmp_int32 gtid,
+                                                    kmp_int32 flags,
+                                                    size_t sizeof_kmp_task_t,
+                                                    size_t sizeof_shareds,
+                                                    kmp_routine_entry_t task_entry,
+                                                    kmp_int64 device_id);
 KMP_EXPORT void __kmpc_omp_task_begin_if0(ident_t *loc_ref, kmp_int32 gtid,
                                           kmp_task_t *task);
 KMP_EXPORT void __kmpc_omp_task_complete_if0(ident_t *loc_ref, kmp_int32 gtid,

@@ -17,6 +17,9 @@
 #include <windows.h>
 #elif !defined(_LIBUNWIND_HAS_NO_THREADS)
 #include <pthread.h>
+#if defined(__unix__) &&  defined(__ELF__) && defined(_LIBUNWIND_HAS_COMMENT_LIB_PRAGMA)
+#pragma comment(lib, "pthread")
+#endif
 #endif
 
 namespace libunwind {

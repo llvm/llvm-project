@@ -35,14 +35,11 @@ class InputSegment;
 // There is one add* function per symbol type.
 class SymbolTable {
 public:
-  void addFile(InputFile *File);
-  void addCombinedLTOObject();
+  void wrap(Symbol *Sym, Symbol *Real, Symbol *Wrap);
 
-  std::vector<ObjFile *> ObjectFiles;
-  std::vector<SharedFile *> SharedFiles;
-  std::vector<BitcodeFile *> BitcodeFiles;
-  std::vector<InputFunction *> SyntheticFunctions;
-  std::vector<InputGlobal *> SyntheticGlobals;
+  void addFile(InputFile *File);
+
+  void addCombinedLTOObject();
 
   void reportRemainingUndefines();
 
@@ -66,7 +63,8 @@ public:
 
   Symbol *addUndefinedFunction(StringRef Name, StringRef ImportName,
                                StringRef ImportModule, uint32_t Flags,
-                               InputFile *File, const WasmSignature *Signature);
+                               InputFile *File, const WasmSignature *Signature,
+                               bool IsCalledDirectly);
   Symbol *addUndefinedData(StringRef Name, uint32_t Flags, InputFile *File);
   Symbol *addUndefinedGlobal(StringRef Name, StringRef ImportName,
                              StringRef ImportModule,  uint32_t Flags,
@@ -81,9 +79,17 @@ public:
                                     InputGlobal *Global);
   DefinedFunction *addSyntheticFunction(StringRef Name, uint32_t Flags,
                                         InputFunction *Function);
+  DefinedData *addOptionalDataSymbol(StringRef Name, uint32_t Value = 0,
+                                     uint32_t Flags = 0);
 
   void handleSymbolVariants();
   void handleWeakUndefines();
+
+  std::vector<ObjFile *> ObjectFiles;
+  std::vector<SharedFile *> SharedFiles;
+  std::vector<BitcodeFile *> BitcodeFiles;
+  std::vector<InputFunction *> SyntheticFunctions;
+  std::vector<InputGlobal *> SyntheticGlobals;
 
 private:
   std::pair<Symbol *, bool> insert(StringRef Name, const InputFile *File);

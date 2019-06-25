@@ -32,35 +32,6 @@ using namespace lld::elf;
 
 SymbolTable *elf::Symtab;
 
-// This function is where all the optimizations of link-time
-// optimization happens. When LTO is in use, some input files are
-// not in native object file format but in the LLVM bitcode format.
-// This function compiles bitcode files into a few big native files
-// using LLVM functions and replaces bitcode symbols with the results.
-// Because all bitcode files that the program consists of are passed
-// to the compiler at once, it can do whole-program optimization.
-template <class ELFT> void SymbolTable::addCombinedLTOObject() {
-  // Compile bitcode files and replace bitcode symbols.
-  LTO.reset(new BitcodeCompiler);
-  for (BitcodeFile *F : BitcodeFiles)
-    LTO->add(*F);
-
-  for (InputFile *File : LTO->compile()) {
-    DenseSet<CachedHashStringRef> DummyGroups;
-    auto *Obj = cast<ObjFile<ELFT>>(File);
-    Obj->parse(DummyGroups);
-    for (Symbol *Sym : Obj->getGlobalSymbols())
-      Sym->parseSymbolVersion();
-    ObjectFiles.push_back(File);
-  }
-}
-
-// Set a flag for --trace-symbol so that we can print out a log message
-// if a new symbol with the same name is inserted into the symbol table.
-void SymbolTable::trace(StringRef Name) {
-  SymMap.insert({CachedHashStringRef(Name), -1});
-}
-
 void SymbolTable::wrap(Symbol *Sym, Symbol *Real, Symbol *Wrap) {
   // Swap symbols as instructed by -wrap.
   int &Idx1 = SymMap[CachedHashStringRef(Sym->getName())];
@@ -78,14 +49,6 @@ void SymbolTable::wrap(Symbol *Sym, Symbol *Real, Symbol *Wrap) {
   Real->setName(S);
 }
 
-static uint8_t getMinVisibility(uint8_t VA, uint8_t VB) {
-  if (VA == STV_DEFAULT)
-    return VB;
-  if (VB == STV_DEFAULT)
-    return VA;
-  return std::min(VA, VB);
-}
-
 // Find an existing symbol or create a new one.
 Symbol *SymbolTable::insert(StringRef Name) {
   // <name>@@<version> means the symbol is the default version. In that
@@ -101,13 +64,6 @@ Symbol *SymbolTable::insert(StringRef Name) {
   auto P = SymMap.insert({CachedHashStringRef(Name), (int)SymVector.size()});
   int &SymIndex = P.first->second;
   bool IsNew = P.second;
-  bool Traced = false;
-
-  if (SymIndex == -1) {
-    SymIndex = SymVector.size();
-    IsNew = true;
-    Traced = true;
-  }
 
   if (!IsNew)
     return SymVector[SymIndex];
@@ -115,287 +71,32 @@ Symbol *SymbolTable::insert(StringRef Name) {
   Symbol *Sym = reinterpret_cast<Symbol *>(make<SymbolUnion>());
   SymVector.push_back(Sym);
 
+  Sym->setName(Name);
   Sym->SymbolKind = Symbol::PlaceholderKind;
   Sym->VersionId = Config->DefaultSymbolVersion;
   Sym->Visibility = STV_DEFAULT;
   Sym->IsUsedInRegularObj = false;
   Sym->ExportDynamic = false;
   Sym->CanInline = true;
-  Sym->Traced = Traced;
   Sym->ScriptDefined = false;
+  Sym->Partition = 1;
   return Sym;
 }
 
 Symbol *SymbolTable::addSymbol(const Symbol &New) {
-  Symbol *Old = Symtab->insert(New.getName());
-  resolveSymbol(Old, New);
-  return Old;
-}
-
-static void addUndefined(Symbol *Old, const Undefined &New) {
-  // An undefined symbol with non default visibility must be satisfied
-  // in the same DSO.
-  if (Old->isShared() && New.Visibility != STV_DEFAULT) {
-    Old->replace(New);
-    return;
-  }
-
-  if (Old->isShared() || Old->isLazy() ||
-      (Old->isUndefined() && New.Binding != STB_WEAK))
-    Old->Binding = New.Binding;
-
-  if (Old->isLazy()) {
-    // An undefined weak will not fetch archive members. See comment on Lazy in
-    // Symbols.h for the details.
-    if (New.Binding == STB_WEAK) {
-      Old->Type = New.Type;
-      return;
-    }
-
-    // Do extra check for --warn-backrefs.
-    //
-    // --warn-backrefs is an option to prevent an undefined reference from
-    // fetching an archive member written earlier in the command line. It can be
-    // used to keep compatibility with GNU linkers to some degree.
-    // I'll explain the feature and why you may find it useful in this comment.
-    //
-    // lld's symbol resolution semantics is more relaxed than traditional Unix
-    // linkers. For example,
-    //
-    //   ld.lld foo.a bar.o
-    //
-    // succeeds even if bar.o contains an undefined symbol that has to be
-    // resolved by some object file in foo.a. Traditional Unix linkers don't
-    // allow this kind of backward reference, as they visit each file only once
-    // from left to right in the command line while resolving all undefined
-    // symbols at the moment of visiting.
-    //
-    // In the above case, since there's no undefined symbol when a linker visits
-    // foo.a, no files are pulled out from foo.a, and because the linker forgets
-    // about foo.a after visiting, it can't resolve undefined symbols in bar.o
-    // that could have been resolved otherwise.
-    //
-    // That lld accepts more relaxed form means that (besides it'd make more
-    // sense) you can accidentally write a command line or a build file that
-    // works only with lld, even if you have a plan to distribute it to wider
-    // users who may be using GNU linkers. With --warn-backrefs, you can detect
-    // a library order that doesn't work with other Unix linkers.
-    //
-    // The option is also useful to detect cyclic dependencies between static
-    // archives. Again, lld accepts
-    //
-    //   ld.lld foo.a bar.a
-    //
-    // even if foo.a and bar.a depend on each other. With --warn-backrefs, it is
-    // handled as an error.
-    //
-    // Here is how the option works. We assign a group ID to each file. A file
-    // with a smaller group ID can pull out object files from an archive file
-    // with an equal or greater group ID. Otherwise, it is a reverse dependency
-    // and an error.
-    //
-    // A file outside --{start,end}-group gets a fresh ID when instantiated. All
-    // files within the same --{start,end}-group get the same group ID. E.g.
-    //
-    //   ld.lld A B --start-group C D --end-group E
-    //
-    // A forms group 0. B form group 1. C and D (including their member object
-    // files) form group 2. E forms group 3. I think that you can see how this
-    // group assignment rule simulates the traditional linker's semantics.
-    bool Backref = Config->WarnBackrefs && New.File &&
-                   Old->File->GroupId < New.File->GroupId;
-    Symtab->fetchLazy(Old);
-
-    // We don't report backward references to weak symbols as they can be
-    // overridden later.
-    if (Backref && !Old->isWeak())
-      warn("backward reference detected: " + New.getName() + " in " +
-           toString(New.File) + " refers to " + toString(Old->File));
-  }
-}
-
-// Using .symver foo,foo@@VER unfortunately creates two symbols: foo and
-// foo@@VER. We want to effectively ignore foo, so give precedence to
-// foo@@VER.
-// FIXME: If users can transition to using
-// .symver foo,foo@@@VER
-// we can delete this hack.
-static int compareVersion(StringRef OldName, StringRef NewName) {
-  bool A = OldName.contains("@@");
-  bool B = NewName.contains("@@");
-  if (!A && B)
-    return 1;
-  if (A && !B)
-    return -1;
-  return 0;
-}
-
-// Compare two symbols. Return 1 if the new symbol should win, -1 if
-// the new symbol should lose, or 0 if there is a conflict.
-static int compare(const Symbol *Old, const Symbol *New) {
-  assert(New->isDefined() || New->isCommon());
-
-  if (!Old->isDefined() && !Old->isCommon())
-    return 1;
-
-  if (int Cmp = compareVersion(Old->getName(), New->getName()))
-    return Cmp;
-
-  if (New->isWeak())
-    return -1;
-
-  if (Old->isWeak())
-    return 1;
-
-  if (Old->isCommon() && New->isCommon()) {
-    if (Config->WarnCommon)
-      warn("multiple common of " + Old->getName());
-    return 0;
-  }
-
-  if (Old->isCommon()) {
-    if (Config->WarnCommon)
-      warn("common " + Old->getName() + " is overridden");
-    return 1;
-  }
-
-  if (New->isCommon()) {
-    if (Config->WarnCommon)
-      warn("common " + Old->getName() + " is overridden");
-    return -1;
-  }
-
-  auto *OldSym = cast<Defined>(Old);
-  auto *NewSym = cast<Defined>(New);
-
-  if (New->File && isa<BitcodeFile>(New->File))
-    return 0;
-
-  if (!OldSym->Section && !NewSym->Section && OldSym->Value == NewSym->Value &&
-      NewSym->Binding == STB_GLOBAL)
-    return -1;
-
-  return 0;
-}
-
-static void addCommon(Symbol *Old, const CommonSymbol &New) {
-  int Cmp = compare(Old, &New);
-  if (Cmp < 0)
-    return;
-
-  if (Cmp > 0) {
-    Old->replace(New);
-    return;
-  }
-
-  CommonSymbol *OldSym = cast<CommonSymbol>(Old);
-
-  OldSym->Alignment = std::max(OldSym->Alignment, New.Alignment);
-  if (OldSym->Size < New.Size) {
-    OldSym->File = New.File;
-    OldSym->Size = New.Size;
-  }
-}
-
-static void reportDuplicate(Symbol *Sym, InputFile *NewFile,
-                            InputSectionBase *ErrSec, uint64_t ErrOffset) {
-  if (Config->AllowMultipleDefinition)
-    return;
-
-  Defined *D = cast<Defined>(Sym);
-  if (!D->Section || !ErrSec) {
-    error("duplicate symbol: " + toString(*Sym) + "\n>>> defined in " +
-          toString(Sym->File) + "\n>>> defined in " + toString(NewFile));
-    return;
-  }
-
-  // Construct and print an error message in the form of:
-  //
-  //   ld.lld: error: duplicate symbol: foo
-  //   >>> defined at bar.c:30
-  //   >>>            bar.o (/home/alice/src/bar.o)
-  //   >>> defined at baz.c:563
-  //   >>>            baz.o in archive libbaz.a
-  auto *Sec1 = cast<InputSectionBase>(D->Section);
-  std::string Src1 = Sec1->getSrcMsg(*Sym, D->Value);
-  std::string Obj1 = Sec1->getObjMsg(D->Value);
-  std::string Src2 = ErrSec->getSrcMsg(*Sym, ErrOffset);
-  std::string Obj2 = ErrSec->getObjMsg(ErrOffset);
-
-  std::string Msg = "duplicate symbol: " + toString(*Sym) + "\n>>> defined at ";
-  if (!Src1.empty())
-    Msg += Src1 + "\n>>>            ";
-  Msg += Obj1 + "\n>>> defined at ";
-  if (!Src2.empty())
-    Msg += Src2 + "\n>>>            ";
-  Msg += Obj2;
-  error(Msg);
-}
-
-static void addDefined(Symbol *Old, const Defined &New) {
-  int Cmp = compare(Old, &New);
-  if (Cmp > 0)
-    Old->replace(New);
-  else if (Cmp == 0)
-    reportDuplicate(Old, New.File,
-                    dyn_cast_or_null<InputSectionBase>(New.Section), New.Value);
-}
-
-static void addShared(Symbol *Old, const SharedSymbol &New) {
-  if (Old->Visibility == STV_DEFAULT && (Old->isUndefined() || Old->isLazy())) {
-    // An undefined symbol with non default visibility must be satisfied
-    // in the same DSO.
-    uint8_t Binding = Old->Binding;
-    Old->replace(New);
-    Old->Binding = Binding;
-  }
+  Symbol *Sym = Symtab->insert(New.getName());
+  Sym->resolve(New);
+  return Sym;
 }
 
 Symbol *SymbolTable::find(StringRef Name) {
   auto It = SymMap.find(CachedHashStringRef(Name));
   if (It == SymMap.end())
     return nullptr;
-  if (It->second == -1)
+  Symbol *Sym = SymVector[It->second];
+  if (Sym->isPlaceholder())
     return nullptr;
-  return SymVector[It->second];
-}
-
-template <class LazyT> static void addLazy(Symbol *Old, const LazyT &New) {
-  if (!Old->isUndefined())
-    return;
-
-  // An undefined weak will not fetch archive members. See comment on Lazy in
-  // Symbols.h for the details.
-  if (Old->isWeak()) {
-    uint8_t Type = Old->Type;
-    Old->replace(New);
-    Old->Type = Type;
-    Old->Binding = STB_WEAK;
-    return;
-  }
-
-  if (InputFile *F = New.fetch())
-    parseFile(F);
-}
-
-static void addLazyArchive(Symbol *Old, const LazyArchive &New) {
-  addLazy(Old, New);
-}
-
-static void addLazyObject(Symbol *Old, const LazyObject &New) {
-  addLazy(Old, New);
-}
-
-void SymbolTable::fetchLazy(Symbol *Sym) {
-  if (auto *S = dyn_cast<LazyArchive>(Sym)) {
-    if (InputFile *File = S->fetch())
-      parseFile(File);
-    return;
-  }
-
-  auto *S = cast<LazyObject>(Sym);
-  if (InputFile *File = cast<LazyObjFile>(S->File)->fetch())
-    parseFile(File);
+  return Sym;
 }
 
 // Initialize DemangledSyms with a map from demangled symbols to symbol
@@ -558,55 +259,3 @@ void SymbolTable::scanVersionScript() {
   for (Symbol *Sym : SymVector)
     Sym->parseSymbolVersion();
 }
-
-// Merge symbol properties.
-//
-// When we have many symbols of the same name, we choose one of them,
-// and that's the result of symbol resolution. However, symbols that
-// were not chosen still affect some symbol properties.
-void elf::mergeSymbolProperties(Symbol *Old, const Symbol &New) {
-  // Merge symbol properties.
-  Old->ExportDynamic = Old->ExportDynamic || New.ExportDynamic;
-  Old->IsUsedInRegularObj = Old->IsUsedInRegularObj || New.IsUsedInRegularObj;
-
-  // DSO symbols do not affect visibility in the output.
-  if (!New.isShared())
-    Old->Visibility = getMinVisibility(Old->Visibility, New.Visibility);
-}
-
-void elf::resolveSymbol(Symbol *Old, const Symbol &New) {
-  mergeSymbolProperties(Old, New);
-
-  if (Old->isPlaceholder()) {
-    Old->replace(New);
-    return;
-  }
-
-  switch (New.kind()) {
-  case Symbol::UndefinedKind:
-    addUndefined(Old, cast<Undefined>(New));
-    break;
-  case Symbol::CommonKind:
-    addCommon(Old, cast<CommonSymbol>(New));
-    break;
-  case Symbol::DefinedKind:
-    addDefined(Old, cast<Defined>(New));
-    break;
-  case Symbol::LazyArchiveKind:
-    addLazyArchive(Old, cast<LazyArchive>(New));
-    break;
-  case Symbol::LazyObjectKind:
-    addLazyObject(Old, cast<LazyObject>(New));
-    break;
-  case Symbol::SharedKind:
-    addShared(Old, cast<SharedSymbol>(New));
-    break;
-  case Symbol::PlaceholderKind:
-    llvm_unreachable("bad symbol kind");
-  }
-}
-
-template void SymbolTable::addCombinedLTOObject<ELF32LE>();
-template void SymbolTable::addCombinedLTOObject<ELF32BE>();
-template void SymbolTable::addCombinedLTOObject<ELF64LE>();
-template void SymbolTable::addCombinedLTOObject<ELF64BE>();

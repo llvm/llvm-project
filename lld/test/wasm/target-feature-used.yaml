@@ -53,7 +53,7 @@ Sections:
 # SPECIFIED-NEXT:         Name:            foo
 # SPECIFIED-NEXT: ...
 
-# UNSPECIFIED: Target feature 'foo' is not allowed.{{$}}
+# UNSPECIFIED: Target feature 'foo' used by {{.*}}target-feature-used.yaml.tmp1.o is not allowed.{{$}}
 
 # UNSPECIFIED-NOCHECK:        - Type:            CUSTOM
 # UNSPECIFIED-NOCHECK-NEXT:     Name:            target_features
@@ -80,7 +80,7 @@ Sections:
 # REQUIRED-NEXT:         Name:            foo
 # REQUIRED-NEXT: ...
 
-# DISALLOWED: Target feature 'foo' is disallowed. Use --no-check-features to suppress.{{$}}
+# DISALLOWED: Target feature 'foo' used in {{.*}}target-feature-used.yaml.tmp1.o is disallowed by {{.*}}target-feature-used.yaml.tmp.disallowed.o. Use --no-check-features to suppress.{{$}}
 
 # DISALLOWED-NOCHECK:        - Type:            CUSTOM
 # DISALLOWED-NOCHECK-NEXT:     Name:            target_features

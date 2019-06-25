@@ -17,7 +17,9 @@
 #define _PSTL_VERSION_PATCH (_PSTL_VERSION % 10)
 
 #if !defined(_PSTL_PAR_BACKEND_SERIAL) && !defined(_PSTL_PAR_BACKEND_TBB)
-#    error "The parallel backend is neither serial nor TBB"
+// TODO: In the future, we need to handle this setting using a configure-time
+//       option and something like a __config_site header.
+#    define _PSTL_PAR_BACKEND_SERIAL
 #endif
 
 // Check the user-defined macro for warnings
@@ -50,7 +52,7 @@
 #endif
 
 // Enable SIMD for compilers that support OpenMP 4.0
-#if (_OPENMP >= 201307) || (__INTEL_COMPILER >= 1600) || (!defined(__INTEL_COMPILER) && _PSTL_GCC_VERSION >= 40900)
+#if (_OPENMP >= 201307) || (__INTEL_COMPILER >= 1600) || (!defined(__INTEL_COMPILER) && _PSTL_GCC_VERSION >= 40900) || defined(__clang__)
 #    define _PSTL_PRAGMA_SIMD _PSTL_PRAGMA(omp simd)
 #    define _PSTL_PRAGMA_DECLARE_SIMD _PSTL_PRAGMA(omp declare simd)
 #    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM) _PSTL_PRAGMA(omp simd reduction(PRM))

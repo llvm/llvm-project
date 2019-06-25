@@ -32,6 +32,7 @@ def errorlimit : P<"errorlimit",
 def export  : P<"export", "Export a function">;
 // No help text because /failifmismatch is not intended to be used by the user.
 def failifmismatch : P<"failifmismatch", "">;
+def filealign : P<"filealign", "Section alignment in the output file">;
 def functionpadmin : F<"functionpadmin">;
 def functionpadmin_opt : P<"functionpadmin", "Prepares an image for hotpatching">;
 def guard   : P<"guard", "Control flow guard">;
@@ -166,6 +167,8 @@ def export_all_symbols : F<"export-all-symbols">;
 defm demangle : B<"demangle",
     "Demangle symbols in output (default)",
     "Do not demangle symbols in output">;
+def include_optional : Joined<["/", "-", "/?", "-?"], "includeoptional:">,
+    HelpText<"Add symbol as undefined, but allow it to remain undefined">;
 def kill_at : F<"kill-at">;
 def lldmingw : F<"lldmingw">;
 def output_def : Joined<["/", "-", "/?", "-?"], "output-def:">;

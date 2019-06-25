@@ -31,6 +31,8 @@ defm demangle: B<"demangle",
     "Demangle symbol names",
     "Do not demangle symbol names">;
 
+def emit_relocs: F<"emit-relocs">, HelpText<"Generate relocations in output">;
+
 defm export_dynamic: B<"export-dynamic",
     "Put symbols in the dynamic symbol table",
     "Do not put symbols in the dynamic symbol table (default)">;
@@ -109,6 +111,9 @@ def version: F<"version">, HelpText<"Display the version number and exit">;
 
 def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;
+
+defm wrap: Eq<"wrap", "Use wrapper functions for symbol">,
+  MetaVarName<"<symbol>=<symbol>">;
 
 // The follow flags are unique to wasm
 

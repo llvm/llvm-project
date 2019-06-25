@@ -46,8 +46,6 @@ public:
 template <class ELFT> MIPS<ELFT>::MIPS() {
   GotPltHeaderEntriesNum = 2;
   DefaultMaxPageSize = 65536;
-  GotEntrySize = sizeof(typename ELFT::uint);
-  GotPltEntrySize = sizeof(typename ELFT::uint);
   GotBaseSymInGotPlt = false;
   PltEntrySize = 16;
   PltHeaderSize = 32;
@@ -61,11 +59,13 @@ template <class ELFT> MIPS<ELFT>::MIPS() {
 
   if (ELFT::Is64Bits) {
     RelativeRel = (R_MIPS_64 << 8) | R_MIPS_REL32;
+    SymbolicRel = R_MIPS_64;
     TlsGotRel = R_MIPS_TLS_TPREL64;
     TlsModuleIndexRel = R_MIPS_TLS_DTPMOD64;
     TlsOffsetRel = R_MIPS_TLS_DTPREL64;
   } else {
     RelativeRel = R_MIPS_REL32;
+    SymbolicRel = R_MIPS_32;
     TlsGotRel = R_MIPS_TLS_TPREL32;
     TlsModuleIndexRel = R_MIPS_TLS_DTPMOD32;
     TlsOffsetRel = R_MIPS_TLS_DTPREL32;
@@ -182,8 +182,8 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType Type, const Symbol &S,
 }
 
 template <class ELFT> RelType MIPS<ELFT>::getDynRel(RelType Type) const {
-  if (Type == R_MIPS_32 || Type == R_MIPS_64)
-    return RelativeRel;
+  if (Type == SymbolicRel)
+    return Type;
   return R_MIPS_NONE;
 }
 

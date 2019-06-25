@@ -120,6 +120,20 @@ class ScopBuilder {
   void buildScop(Region &R, AssumptionCache &AC,
                  OptimizationRemarkEmitter &ORE);
 
+  /// Create equivalence classes for required invariant accesses.
+  ///
+  /// These classes will consolidate multiple required invariant loads from the
+  /// same address in order to keep the number of dimensions in the SCoP
+  /// description small. For each such class equivalence class only one
+  /// representing element, hence one required invariant load, will be chosen
+  /// and modeled as parameter. The method
+  /// Scop::getRepresentingInvariantLoadSCEV() will replace each element from an
+  /// equivalence class with the representing element that is modeled. As a
+  /// consequence Scop::getIdForParam() will only return an id for the
+  /// representing element of each equivalence class, thus for each required
+  /// invariant location.
+  void buildInvariantEquivalenceClasses();
+
   /// Try to build a multi-dimensional fixed sized MemoryAccess from the
   /// Load/Store instruction.
   ///
@@ -346,6 +360,65 @@ class ScopBuilder {
   /// potential reduction.
   void checkForReductions(ScopStmt &Stmt);
 
+  /// Verify that all required invariant loads have been hoisted.
+  ///
+  /// Invariant load hoisting is not guaranteed to hoist all loads that were
+  /// assumed to be scop invariant during scop detection. This function checks
+  /// for cases where the hoisting failed, but where it would have been
+  /// necessary for our scop modeling to be correct. In case of insufficient
+  /// hoisting the scop is marked as invalid.
+  ///
+  /// In the example below Bound[1] is required to be invariant:
+  ///
+  /// for (int i = 1; i < Bound[0]; i++)
+  ///   for (int j = 1; j < Bound[1]; j++)
+  ///     ...
+  void verifyInvariantLoads();
+
+  /// Hoist invariant memory loads and check for required ones.
+  ///
+  /// We first identify "common" invariant loads, thus loads that are invariant
+  /// and can be hoisted. Then we check if all required invariant loads have
+  /// been identified as (common) invariant. A load is a required invariant load
+  /// if it was assumed to be invariant during SCoP detection, e.g., to assume
+  /// loop bounds to be affine or runtime alias checks to be placeable. In case
+  /// a required invariant load was not identified as (common) invariant we will
+  /// drop this SCoP. An example for both "common" as well as required invariant
+  /// loads is given below:
+  ///
+  /// for (int i = 1; i < *LB[0]; i++)
+  ///   for (int j = 1; j < *LB[1]; j++)
+  ///     A[i][j] += A[0][0] + (*V);
+  ///
+  /// Common inv. loads: V, A[0][0], LB[0], LB[1]
+  /// Required inv. loads: LB[0], LB[1], (V, if it may alias with A or LB)
+  void hoistInvariantLoads();
+
+  /// Add invariant loads listed in @p InvMAs with the domain of @p Stmt.
+  void addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs);
+
+  /// Check if @p MA can always be hoisted without execution context.
+  bool canAlwaysBeHoisted(MemoryAccess *MA, bool StmtInvalidCtxIsEmpty,
+                          bool MAInvalidCtxIsEmpty,
+                          bool NonHoistableCtxIsEmpty);
+
+  /// Return true if and only if @p LI is a required invariant load.
+  bool isRequiredInvariantLoad(LoadInst *LI) const {
+    return scop->getRequiredInvariantLoads().count(LI);
+  }
+
+  /// Check if the base ptr of @p MA is in the SCoP but not hoistable.
+  bool hasNonHoistableBasePtrInScop(MemoryAccess *MA, isl::union_map Writes);
+
+  /// Return the context under which the access cannot be hoisted.
+  ///
+  /// @param Access The access to check.
+  /// @param Writes The set of all memory writes in the scop.
+  ///
+  /// @return Return the context under which the access cannot be hoisted or a
+  ///         nullptr if it cannot be hoisted at all.
+  isl::set getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes);
+
   /// Collect loads which might form a reduction chain with @p StoreMA.
   ///
   /// Check if the stored value for @p StoreMA is a binary operator with one or
@@ -361,6 +434,34 @@ class ScopBuilder {
 
   /// Build the access relation of all memory accesses of @p Stmt.
   void buildAccessRelations(ScopStmt &Stmt);
+
+  /// Canonicalize arrays with base pointers from the same equivalence class.
+  ///
+  /// Some context: in our normal model we assume that each base pointer is
+  /// related to a single specific memory region, where memory regions
+  /// associated with different base pointers are disjoint. Consequently we do
+  /// not need to compute additional data dependences that model possible
+  /// overlaps of these memory regions. To verify our assumption we compute
+  /// alias checks that verify that modeled arrays indeed do not overlap. In
+  /// case an overlap is detected the runtime check fails and we fall back to
+  /// the original code.
+  ///
+  /// In case of arrays where the base pointers are know to be identical,
+  /// because they are dynamically loaded by accesses that are in the same
+  /// invariant load equivalence class, such run-time alias check would always
+  /// be false.
+  ///
+  /// This function makes sure that we do not generate consistently failing
+  /// run-time checks for code that contains distinct arrays with known
+  /// equivalent base pointers. It identifies for each invariant load
+  /// equivalence class a single canonical array and canonicalizes all memory
+  /// accesses that reference arrays that have base pointers that are known to
+  /// be equal to the base pointer of such a canonical array to this canonical
+  /// array.
+  ///
+  /// We currently do not canonicalize arrays for which certain memory accesses
+  /// have been hoisted as loop invariant.
+  void canonicalizeDynamicBasePtrs();
 
 public:
   explicit ScopBuilder(Region *R, AssumptionCache &AC, AliasAnalysis &AA,

@@ -521,13 +521,7 @@ IslAst::~IslAst() {
 void IslAst::init(const Dependences &D) {
   bool PerformParallelTest = PollyParallel || DetectParallel ||
                              PollyVectorizerChoice != VECTORIZER_NONE;
-
-  // We can not perform the dependence analysis and, consequently,
-  // the parallel code generation in case the schedule tree contains
-  // extension nodes.
   auto ScheduleTree = S.getScheduleTree();
-  PerformParallelTest =
-      PerformParallelTest && !S.containsExtensionNode(ScheduleTree);
 
   // Skip AST and code generation if there was no benefit achieved.
   if (!benefitsFromPolly(S, PerformParallelTest))

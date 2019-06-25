@@ -171,6 +171,13 @@ defm fini: Eq<"fini", "Specify a finalizer function">, MetaVarName<"<symbol>">;
 def fix_cortex_a53_843419: F<"fix-cortex-a53-843419">,
   HelpText<"Apply fixes for AArch64 Cortex-A53 erratum 843419">;
 
+// This option is intentionally hidden from the user as the implementation
+// is not complete.
+def require_cet: F<"require-cet">;
+
+def force_bti: F<"force-bti">,
+  HelpText<"Force enable AArch64 BTI in PLT, warn if Input ELF file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property">;
+
 defm format: Eq<"format", "Change the input format of the inputs following this option">,
   MetaVarName<"[default,elf,binary]">;
 
@@ -265,6 +272,9 @@ defm pack_dyn_relocs:
   Eq<"pack-dyn-relocs", "Pack dynamic relocations in the given format">,
   MetaVarName<"[none,android,relr,android+relr]">;
 
+def pac_plt: F<"pac-plt">,
+  HelpText<"AArch64 only, use pointer authentication in PLT">;
+
 defm use_android_relr_tags: B<"use-android-relr-tags",
     "Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*",
     "Use SHT_RELR / DT_RELR* tags (default)">;
@@ -355,6 +365,9 @@ defm trace_symbol: Eq<"trace-symbol", "Trace references to symbols">;
 
 defm undefined: Eq<"undefined", "Force undefined symbol during linking">,
   MetaVarName<"<symbol>">;
+
+defm undefined_glob: Eq<"undefined-glob", "Force undefined symbol during linking">,
+  MetaVarName<"<pattern>">;
 
 defm unresolved_symbols:
   Eq<"unresolved-symbols", "Determine how to handle unresolved symbols">;
@@ -472,6 +485,8 @@ def opt_remarks_passes: Separate<["--"], "opt-remarks-passes">,
   HelpText<"Regex for the passes that need to be serialized to the output file">;
 def opt_remarks_with_hotness: Flag<["--"], "opt-remarks-with-hotness">,
   HelpText<"Include hotness information in the optimization remarks file">;
+def opt_remarks_format: Separate<["--"], "opt-remarks-format">,
+  HelpText<"The format used for serializing remarks (default: YAML)">;
 defm plugin_opt: Eq<"plugin-opt", "specifies LTO options for compatibility with GNU linkers">;
 def save_temps: F<"save-temps">;
 def thinlto_cache_dir: J<"thinlto-cache-dir=">,
@@ -533,6 +548,7 @@ def: F<"no-warn-mismatch">;
 def: Flag<["-"], "p">;
 def: Separate<["--", "-"], "rpath-link">;
 def: J<"rpath-link=">;
+def: F<"secure-plt">;
 def: F<"sort-common">;
 def: F<"stats">;
 def: F<"warn-execstack">;

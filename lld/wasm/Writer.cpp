@@ -73,6 +73,8 @@ private:
   void addSection(OutputSection *Sec);
 
   void addSections();
+  void addStartStopSymbols(const InputSegment *Seg);
+
   void createCustomSections();
   void createSyntheticSections();
   void finalizeSections();
@@ -127,7 +129,7 @@ void Writer::createCustomSections() {
     LLVM_DEBUG(dbgs() << "createCustomSection: " << Name << "\n");
 
     OutputSection *Sec = make<CustomSection>(Name, Pair.second);
-    if (Config->Relocatable) {
+    if (Config->Relocatable || Config->EmitRelocs) {
       auto *Sym = make<OutputSectionSymbol>(Sec);
       Out.LinkingSec->addToSymtab(Sym);
       Sec->SectionSym = Sym;
@@ -256,10 +258,9 @@ void Writer::layoutMemory() {
   // Set `__heap_base` to directly follow the end of the stack or global data.
   // The fact that this comes last means that a malloc/brk implementation
   // can grow the heap at runtime.
-  if (!Config->Relocatable) {
+  log("mem: heap base   = " + Twine(MemoryPtr));
+  if (WasmSym::HeapBase)
     WasmSym::HeapBase->setVirtualAddress(MemoryPtr);
-    log("mem: heap base   = " + Twine(MemoryPtr));
-  }
 
   if (Config->InitialMemory != 0) {
     if (Config->InitialMemory != alignTo(Config->InitialMemory, WasmPageSize))
@@ -293,6 +294,22 @@ void Writer::addSection(OutputSection *Sec) {
   OutputSections.push_back(Sec);
 }
 
+// If a section name is valid as a C identifier (which is rare because of
+// the leading '.'), linkers are expected to define __start_<secname> and
+// __stop_<secname> symbols. They are at beginning and end of the section,
+// respectively. This is not requested by the ELF standard, but GNU ld and
+// gold provide the feature, and used by many programs.
+void Writer::addStartStopSymbols(const InputSegment *Seg) {
+  StringRef S = Seg->getName();
+  LLVM_DEBUG(dbgs() << "addStartStopSymbols: " << S << "\n");
+  if (!isValidCIdentifier(S))
+    return;
+  uint32_t Start = Seg->OutputSeg->StartVA + Seg->OutputSegmentOffset;
+  uint32_t Stop = Start + Seg->getSize();
+  Symtab->addOptionalDataSymbol(Saver.save("__start_" + S), Start);
+  Symtab->addOptionalDataSymbol(Saver.save("__stop_" + S), Stop);
+}
+
 void Writer::addSections() {
   addSection(Out.DylinkSec);
   addSection(Out.TypeSec);
@@ -312,7 +329,7 @@ void Writer::addSections() {
   createCustomSections();
 
   addSection(Out.LinkingSec);
-  if (Config->Relocatable) {
+  if (Config->EmitRelocs || Config->Relocatable) {
     createRelocSections();
   }
 
@@ -330,9 +347,9 @@ void Writer::finalizeSections() {
 }
 
 void Writer::populateTargetFeatures() {
-  SmallSet<std::string, 8> Used;
-  SmallSet<std::string, 8> Required;
-  SmallSet<std::string, 8> Disallowed;
+  StringMap<std::string> Used;
+  StringMap<std::string> Required;
+  StringMap<std::string> Disallowed;
 
   // Only infer used features if user did not specify features
   bool InferFeatures = !Config->Features.hasValue();
@@ -347,17 +364,18 @@ void Writer::populateTargetFeatures() {
 
   // Find the sets of used, required, and disallowed features
   for (ObjFile *File : Symtab->ObjectFiles) {
+    StringRef FileName(File->getName());
     for (auto &Feature : File->getWasmObj()->getTargetFeatures()) {
       switch (Feature.Prefix) {
       case WASM_FEATURE_PREFIX_USED:
-        Used.insert(Feature.Name);
+        Used.insert({Feature.Name, FileName});
         break;
       case WASM_FEATURE_PREFIX_REQUIRED:
-        Used.insert(Feature.Name);
-        Required.insert(Feature.Name);
+        Used.insert({Feature.Name, FileName});
+        Required.insert({Feature.Name, FileName});
         break;
       case WASM_FEATURE_PREFIX_DISALLOWED:
-        Disallowed.insert(Feature.Name);
+        Disallowed.insert({Feature.Name, FileName});
         break;
       default:
         error("Unrecognized feature policy prefix " +
@@ -367,41 +385,52 @@ void Writer::populateTargetFeatures() {
   }
 
   if (InferFeatures)
-    Out.TargetFeaturesSec->Features.insert(Used.begin(), Used.end());
+    Out.TargetFeaturesSec->Features.insert(Used.keys().begin(),
+                                           Used.keys().end());
 
-  if (Out.TargetFeaturesSec->Features.count("atomics") && !Config->SharedMemory)
-    error("'atomics' feature is used, so --shared-memory must be used");
+  if (Out.TargetFeaturesSec->Features.count("atomics") &&
+      !Config->SharedMemory) {
+    if (InferFeatures)
+      error(Twine("'atomics' feature is used by ") + Used["atomics"] +
+            ", so --shared-memory must be used");
+    else
+      error("'atomics' feature is used, so --shared-memory must be used");
+  }
 
   if (!Config->CheckFeatures)
     return;
 
   if (Disallowed.count("atomics") && Config->SharedMemory)
-    error(
-        "'atomics' feature is disallowed, so --shared-memory must not be used");
+    error("'atomics' feature is disallowed by " + Disallowed["atomics"] +
+          ", so --shared-memory must not be used");
 
   // Validate that used features are allowed in output
   if (!InferFeatures) {
-    for (auto &Feature : Used) {
+    for (auto &Feature : Used.keys()) {
       if (!Out.TargetFeaturesSec->Features.count(Feature))
-        error(Twine("Target feature '") + Feature + "' is not allowed.");
+        error(Twine("Target feature '") + Feature + "' used by " +
+              Used[Feature] + " is not allowed.");
     }
   }
 
   // Validate the required and disallowed constraints for each file
   for (ObjFile *File : Symtab->ObjectFiles) {
+    StringRef FileName(File->getName());
     SmallSet<std::string, 8> ObjectFeatures;
     for (auto &Feature : File->getWasmObj()->getTargetFeatures()) {
       if (Feature.Prefix == WASM_FEATURE_PREFIX_DISALLOWED)
         continue;
       ObjectFeatures.insert(Feature.Name);
       if (Disallowed.count(Feature.Name))
-        error(Twine("Target feature '") + Feature.Name +
-              "' is disallowed. Use --no-check-features to suppress.");
+        error(Twine("Target feature '") + Feature.Name + "' used in " +
+              FileName + " is disallowed by " + Disallowed[Feature.Name] +
+              ". Use --no-check-features to suppress.");
     }
-    for (auto &Feature : Required) {
+    for (auto &Feature : Required.keys()) {
       if (!ObjectFeatures.count(Feature))
-        error(Twine("Missing required target feature '") + Feature +
-              "'. Use --no-check-features to suppress.");
+        error(Twine("Missing target feature '") + Feature + "' in " + FileName +
+              ", required by " + Required[Feature] +
+              ". Use --no-check-features to suppress.");
     }
   }
 }
@@ -439,7 +468,7 @@ void Writer::calculateExports() {
         WasmExport{FunctionTableName, WASM_EXTERNAL_TABLE, 0});
 
   unsigned FakeGlobalIndex =
-      Out.ImportSec->NumImportedGlobals + Out.GlobalSec->InputGlobals.size();
+      Out.ImportSec->numImportedGlobals() + Out.GlobalSec->InputGlobals.size();
 
   for (Symbol *Sym : Symtab->getSymbols()) {
     if (!Sym->isExported())
@@ -475,17 +504,17 @@ void Writer::calculateExports() {
 }
 
 void Writer::populateSymtab() {
-  if (!Config->Relocatable)
+  if (!Config->Relocatable && !Config->EmitRelocs)
     return;
 
   for (Symbol *Sym : Symtab->getSymbols())
-    if (Sym->IsUsedInRegularObj)
+    if (Sym->IsUsedInRegularObj && Sym->isLive())
       Out.LinkingSec->addToSymtab(Sym);
 
   for (ObjFile *File : Symtab->ObjectFiles) {
     LLVM_DEBUG(dbgs() << "Local symtab entries: " << File->getName() << "\n");
     for (Symbol *Sym : File->getSymbols())
-      if (Sym->isLocal() && !isa<SectionSymbol>(Sym))
+      if (Sym->isLocal() && !isa<SectionSymbol>(Sym) && Sym->isLive())
         Out.LinkingSec->addToSymtab(Sym);
   }
 }
@@ -532,7 +561,9 @@ static void scanRelocations() {
 }
 
 void Writer::assignIndexes() {
-  assert(Out.FunctionSec->InputFunctions.empty());
+  // Seal the import section, since other index spaces such as function and
+  // global are effected by the number of imports.
+  Out.ImportSec->seal();
 
   for (InputFunction *Func : Symtab->SyntheticFunctions)
     Out.FunctionSec->addFunction(Func);
@@ -542,8 +573,6 @@ void Writer::assignIndexes() {
     for (InputFunction *Func : File->Functions)
       Out.FunctionSec->addFunction(Func);
   }
-
-  scanRelocations();
 
   for (InputGlobal *Global : Symtab->SyntheticGlobals)
     Out.GlobalSec->addGlobal(Global);
@@ -672,6 +701,9 @@ void Writer::calculateInitFunctions() {
     const WasmLinkingData &L = File->getWasmObj()->linkingData();
     for (const WasmInitFunc &F : L.InitFunctions) {
       FunctionSymbol *Sym = File->getFunctionSymbol(F.Symbol);
+      // comdat exclusions can cause init functions be discarded.
+      if (Sym->isDiscarded())
+        continue;
       assert(Sym->isLive());
       if (*Sym->Signature != WasmSignature{{}, {}})
         error("invalid signature for init func: " + toString(*Sym));
@@ -724,19 +756,40 @@ void Writer::run() {
   populateTargetFeatures();
   log("-- calculateImports");
   calculateImports();
+  log("-- layoutMemory");
+  layoutMemory();
+
+  if (!Config->Relocatable) {
+    // Create linker synthesized __start_SECNAME/__stop_SECNAME symbols
+    // This has to be done after memory layout is performed.
+    for (const OutputSegment *Seg : Segments)
+      for (const InputSegment *S : Seg->InputSegments)
+        addStartStopSymbols(S);
+  }
+
+  log("-- scanRelocations");
+  scanRelocations();
   log("-- assignIndexes");
   assignIndexes();
   log("-- calculateInitFunctions");
   calculateInitFunctions();
-  log("-- calculateTypes");
-  calculateTypes();
-  log("-- layoutMemory");
-  layoutMemory();
+
   if (!Config->Relocatable) {
+    // Create linker synthesized functions
     if (Config->Pic)
       createApplyRelocationsFunction();
     createCallCtorsFunction();
+
+    // Make sure we have resolved all symbols.
+    if (!Config->AllowUndefined)
+      Symtab->reportRemainingUndefines();
+
+    if (errorCount())
+      return;
   }
+
+  log("-- calculateTypes");
+  calculateTypes();
   log("-- calculateExports");
   calculateExports();
   log("-- calculateCustomSections");
@@ -750,9 +803,9 @@ void Writer::run() {
     log("Defined Functions: " + Twine(Out.FunctionSec->InputFunctions.size()));
     log("Defined Globals  : " + Twine(Out.GlobalSec->InputGlobals.size()));
     log("Defined Events   : " + Twine(Out.EventSec->InputEvents.size()));
-    log("Function Imports : " + Twine(Out.ImportSec->NumImportedFunctions));
-    log("Global Imports   : " + Twine(Out.ImportSec->NumImportedGlobals));
-    log("Event Imports    : " + Twine(Out.ImportSec->NumImportedEvents));
+    log("Function Imports : " + Twine(Out.ImportSec->numImportedFunctions()));
+    log("Global Imports   : " + Twine(Out.ImportSec->numImportedGlobals()));
+    log("Event Imports    : " + Twine(Out.ImportSec->numImportedEvents()));
     for (ObjFile *File : Symtab->ObjectFiles)
       File->dumpInfo();
   }

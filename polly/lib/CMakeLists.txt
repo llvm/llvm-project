@@ -58,6 +58,7 @@ add_library(PollyCore OBJECT
   Transform/CodePreparation.cpp
   Transform/DeadCodeElimination.cpp
   Transform/ScheduleOptimizer.cpp
+  Transform/ScheduleTreeTransform.cpp
   Transform/FlattenSchedule.cpp
   Transform/FlattenAlgo.cpp
   Transform/ForwardOpTree.cpp

@@ -67,9 +67,11 @@ static ompt_set_callback_t ompt_set_callback;
 static ompt_get_callback_t ompt_get_callback;
 static ompt_get_state_t ompt_get_state;
 static ompt_get_task_info_t ompt_get_task_info;
+static ompt_get_task_memory_t ompt_get_task_memory;
 static ompt_get_thread_data_t ompt_get_thread_data;
 static ompt_get_parallel_info_t ompt_get_parallel_info;
 static ompt_get_unique_id_t ompt_get_unique_id;
+static ompt_finalize_tool_t ompt_finalize_tool;
 static ompt_get_num_procs_t ompt_get_num_procs;
 static ompt_get_num_places_t ompt_get_num_places;
 static ompt_get_place_proc_ids_t ompt_get_place_proc_ids;
@@ -196,6 +198,16 @@ ompt_label_##id:
          ((uint64_t)addr) / FUZZY_ADDRESS_DISCARD_BYTES + 1,                   \
          ((uint64_t)addr) / FUZZY_ADDRESS_DISCARD_BYTES + 2, addr)
 
+#define register_callback_t(name, type)                                        \
+  do {                                                                         \
+    type f_##name = &on_##name;                                                \
+    if (ompt_set_callback(name, (ompt_callback_t)f_##name) == ompt_set_never)  \
+      printf("0: Could not register callback '" #name "'\n");                  \
+  } while (0)
+
+#define register_callback(name) register_callback_t(name, name##_t)
+
+#ifndef USE_PRIVATE_TOOL
 static void
 on_ompt_callback_mutex_acquire(
   ompt_mutex_t kind,
@@ -711,16 +723,6 @@ on_ompt_callback_control_tool(
   return 0; //success
 }
 
-#define register_callback_t(name, type)                       \
-do{                                                           \
-  type f_##name = &on_##name;                                 \
-  if (ompt_set_callback(name, (ompt_callback_t)f_##name) ==   \
-      ompt_set_never)                                         \
-    printf("0: Could not register callback '" #name "'\n");   \
-}while(0)
-
-#define register_callback(name) register_callback_t(name, name##_t)
-
 int ompt_initialize(
   ompt_function_lookup_t lookup,
   int initial_device_num,
@@ -730,9 +732,11 @@ int ompt_initialize(
   ompt_get_callback = (ompt_get_callback_t) lookup("ompt_get_callback");
   ompt_get_state = (ompt_get_state_t) lookup("ompt_get_state");
   ompt_get_task_info = (ompt_get_task_info_t) lookup("ompt_get_task_info");
+  ompt_get_task_memory = (ompt_get_task_memory_t)lookup("ompt_get_task_memory");
   ompt_get_thread_data = (ompt_get_thread_data_t) lookup("ompt_get_thread_data");
   ompt_get_parallel_info = (ompt_get_parallel_info_t) lookup("ompt_get_parallel_info");
   ompt_get_unique_id = (ompt_get_unique_id_t) lookup("ompt_get_unique_id");
+  ompt_finalize_tool = (ompt_finalize_tool_t)lookup("ompt_finalize_tool");
 
   ompt_get_num_procs = (ompt_get_num_procs_t) lookup("ompt_get_num_procs");
   ompt_get_num_places = (ompt_get_num_places_t) lookup("ompt_get_num_places");
@@ -787,3 +791,4 @@ ompt_start_tool_result_t* ompt_start_tool(
 #ifdef __cplusplus
 }
 #endif
+#endif // ifndef USE_PRIVATE_TOOL

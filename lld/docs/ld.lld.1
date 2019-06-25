@@ -182,6 +182,8 @@ Set the
 field to the specified value.
 .It Fl -fini Ns = Ns Ar symbol
 Specify a finalizer function.
+.It Fl -force-bti
+Force enable AArch64 BTI instruction in PLT, warn if Input ELF file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property.
 .It Fl -format Ns = Ns Ar input-format , Fl b Ar input-format
 Specify the format of the inputs following this option.
 .Ar input-format
@@ -279,9 +281,9 @@ Disable garbage collection of unused sections.
 Disable STB_GNU_UNIQUE symbol binding.
 .It Fl -no-merge-exidx-entries
 Disable merging .ARM.exidx entries.
-.It F1 -no-nmagic
+.It Fl -no-nmagic
 Page align sections.
-.It F1 -no-omagic
+.It Fl -no-omagic
 Do not set the text data sections to be writable, page align sections.
 .It Fl -no-rosegment
 Do not put read-only non-executable sections in their own segment.
@@ -382,6 +384,8 @@ is the default. If
 .Fl -use-android-relr-tags
 is specified, use SHT_ANDROID_RELR instead of SHT_RELR.
 .Pp
+.It Fl -pac-plt
+AArch64 only, use pointer authentication in PLT.
 .It Fl -pic-veneer
 Always generate position independent thunks.
 .It Fl -pie , Fl -pic-executable
@@ -429,6 +433,8 @@ Set
 .Dv DT_SONAME
 to
 .Ar value .
+.It Fl -sort-common
+This option is ignored for GNU compatibility.
 .It Fl -sort-section Ns = Ns Ar value
 Specifies sections sorting rule when linkerscript is used.
 .It Fl -start-lib
@@ -498,9 +504,23 @@ Print the names of the input files.
 Trace references to
 .Ar symbol .
 .It Fl -undefined Ns = Ns Ar symbol , Fl u Ar symbol
-Force
+If
 .Ar symbol
-to be an undefined symbol during linking.
+is not defined after symbol resolution, and there's a static library
+that contains an object file defining the symbol, load the member
+to include the object file in the output file.
+.It Fl -undefined-glob Ns = Ns Ar pattern
+Synonym for
+.Fl -undefined ,
+except that it takes a glob pattern. In a glob pattern,
+.Cm *
+matches zero or more characters,
+.Cm ?
+matches any single character, and
+.Cm [...]
+matches the characters within brackets. All symbols that match
+a given pattern are handled as if they were given as arguments of
+.Fl -undefined .
 .It Fl -unresolved-symbols Ns = Ns Ar value
 Determine how to handle unresolved symbols.
 .It Fl -use-android-relr-tags

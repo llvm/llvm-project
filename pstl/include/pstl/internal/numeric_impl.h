@@ -284,7 +284,7 @@ __pattern_transform_scan(_ExecutionPolicy&& __exec, _RandomAccessIterator __firs
                                         }) -
                          1);
             },
-            [](_Tp __res) {});
+            [](_Tp) {});
         return __result + (__last - __first);
     });
 }

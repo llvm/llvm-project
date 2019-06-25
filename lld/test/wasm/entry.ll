@@ -17,12 +17,6 @@ entry:
 ; CHECK-NEXT:       - Name:            memory
 ; CHECK-NEXT:         Kind:            MEMORY
 ; CHECK-NEXT:         Index:           0
-; CHECK-NEXT:       - Name:            __heap_base
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           1
-; CHECK-NEXT:       - Name:            __data_end
-; CHECK-NEXT:         Kind:            GLOBAL
-; CHECK-NEXT:         Index:           2
 ; CHECK-NEXT:       - Name:            entry
 ; CHECK-NEXT:         Kind:            FUNCTION
 ; CHECK-NEXT:         Index:           0
@@ -41,10 +35,4 @@ entry:
 ; CHECK-CTOR-NEXT:       - Name:            __wasm_call_ctors
 ; CHECK-CTOR-NEXT:         Kind:            FUNCTION
 ; CHECK-CTOR-NEXT:         Index:           0
-; CHECK-CTOR-NEXT:       - Name:            __heap_base
-; CHECK-CTOR-NEXT:         Kind:            GLOBAL
-; CHECK-CTOR-NEXT:         Index:           1
-; CHECK-CTOR-NEXT:       - Name:            __data_end
-; CHECK-CTOR-NEXT:         Kind:            GLOBAL
-; CHECK-CTOR-NEXT:         Index:           2
 ; CHECK-CTOR-NEXT:   - Type:

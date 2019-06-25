@@ -61,13 +61,13 @@ private:
   void checkExecuteOnly();
   void setReservedSymbolSections();
 
-  std::vector<PhdrEntry *> createPhdrs();
-  void removeEmptyPTLoad();
-  void addPhdrForSection(std::vector<PhdrEntry *> &Phdrs, unsigned ShType,
-                         unsigned PType, unsigned PFlags);
+  std::vector<PhdrEntry *> createPhdrs(Partition &Part);
+  void removeEmptyPTLoad(std::vector<PhdrEntry *> &PhdrEntry);
+  void addPhdrForSection(Partition &Part, unsigned ShType, unsigned PType,
+                         unsigned PFlags);
   void assignFileOffsets();
   void assignFileOffsetsBinary();
-  void setPhdrs();
+  void setPhdrs(Partition &Part);
   void checkSections();
   void fixSectionAlignments();
   void openFile();
@@ -82,8 +82,6 @@ private:
   void addRelIpltSymbols();
   void addStartEndSymbols();
   void addStartStopSymbols(OutputSection *Sec);
-
-  std::vector<PhdrEntry *> Phdrs;
 
   uint64_t FileSize;
   uint64_t SectionHeaderOff;
@@ -144,7 +142,8 @@ static bool needsInterpSection() {
 
 template <class ELFT> void elf::writeResult() { Writer<ELFT>().run(); }
 
-template <class ELFT> void Writer<ELFT>::removeEmptyPTLoad() {
+template <class ELFT>
+void Writer<ELFT>::removeEmptyPTLoad(std::vector<PhdrEntry *> &Phdrs) {
   llvm::erase_if(Phdrs, [&](const PhdrEntry *P) {
     if (P->p_type != PT_LOAD)
       return false;
@@ -155,16 +154,41 @@ template <class ELFT> void Writer<ELFT>::removeEmptyPTLoad() {
   });
 }
 
+template <class ELFT> static void copySectionsIntoPartitions() {
+  std::vector<InputSectionBase *> NewSections;
+  for (unsigned Part = 2; Part != Partitions.size() + 1; ++Part) {
+    for (InputSectionBase *S : InputSections) {
+      if (!(S->Flags & SHF_ALLOC) || !S->isLive())
+        continue;
+      InputSectionBase *Copy;
+      if (S->Type == SHT_NOTE)
+        Copy = make<InputSection>(cast<InputSection>(*S));
+      else if (auto *ES = dyn_cast<EhInputSection>(S))
+        Copy = make<EhInputSection>(*ES);
+      else
+        continue;
+      Copy->Partition = Part;
+      NewSections.push_back(Copy);
+    }
+  }
+
+  InputSections.insert(InputSections.end(), NewSections.begin(),
+                       NewSections.end());
+}
+
 template <class ELFT> static void combineEhSections() {
   for (InputSectionBase *&S : InputSections) {
-    if (!S->Live)
+    // Ignore dead sections and the partition end marker (.part.end),
+    // whose partition number is out of bounds.
+    if (!S->isLive() || S->Partition == 255)
       continue;
 
+    Partition &Part = S->getPartition();
     if (auto *ES = dyn_cast<EhInputSection>(S)) {
-      In.EhFrame->addSection<ELFT>(ES);
+      Part.EhFrame->addSection<ELFT>(ES);
       S = nullptr;
-    } else if (S->kind() == SectionBase::Regular && In.ARMExidx &&
-               In.ARMExidx->addSection(cast<InputSection>(S))) {
+    } else if (S->kind() == SectionBase::Regular && Part.ARMExidx &&
+               Part.ARMExidx->addSection(cast<InputSection>(S))) {
       S = nullptr;
     }
   }
@@ -180,16 +204,14 @@ static Defined *addOptionalRegular(StringRef Name, SectionBase *Sec,
   if (!S || S->isDefined())
     return nullptr;
 
-  return cast<Defined>(Symtab->addSymbol(
-      Defined{/*File=*/nullptr, Name, Binding, StOther, STT_NOTYPE, Val,
-              /*Size=*/0, Sec}));
+  S->resolve(Defined{/*File=*/nullptr, Name, Binding, StOther, STT_NOTYPE, Val,
+                     /*Size=*/0, Sec});
+  return cast<Defined>(S);
 }
 
 static Defined *addAbsolute(StringRef Name) {
   Symbol *Sym = Symtab->addSymbol(Defined{nullptr, Name, STB_GLOBAL, STV_HIDDEN,
                                           STT_NOTYPE, 0, 0, nullptr});
-  if (!Sym->isDefined())
-    error("duplicate symbol: " + toString(*Sym));
   return cast<Defined>(Sym);
 }
 
@@ -215,6 +237,10 @@ void elf::addReservedSymbols() {
     // https://sourceware.org/ml/binutils/2004-12/msg00094.html
     if (Symtab->find("__gnu_local_gp"))
       ElfSym::MipsLocalGp = addAbsolute("__gnu_local_gp");
+  } else if (Config->EMachine == EM_PPC) {
+    // glibc *crt1.o has a undefined reference to _SDA_BASE_. Since we don't
+    // support Small Data Area, define it arbitrarily as 0.
+    addOptionalRegular("_SDA_BASE_", nullptr, 0, STV_HIDDEN);
   }
 
   // The Power Architecture 64-bit v2 ABI defines a TableOfContents (TOC) which
@@ -236,12 +262,11 @@ void elf::addReservedSymbols() {
     }
 
     uint64_t GotOff = 0;
-    if (Config->EMachine == EM_PPC || Config->EMachine == EM_PPC64)
+    if (Config->EMachine == EM_PPC64)
       GotOff = 0x8000;
 
-    Symtab->addSymbol(Defined{/*File=*/nullptr, GotSymName, STB_GLOBAL,
-                              STV_HIDDEN, STT_NOTYPE, GotOff, /*Size=*/0,
-                              Out::ElfHeader});
+    S->resolve(Defined{/*File=*/nullptr, GotSymName, STB_GLOBAL, STV_HIDDEN,
+                       STT_NOTYPE, GotOff, /*Size=*/0, Out::ElfHeader});
     ElfSym::GlobalOffsetTable = cast<Defined>(S);
   }
 
@@ -277,10 +302,10 @@ void elf::addReservedSymbols() {
   ElfSym::Edata2 = Add("_edata", -1);
 }
 
-static OutputSection *findSection(StringRef Name) {
+static OutputSection *findSection(StringRef Name, unsigned Partition = 1) {
   for (BaseCommand *Base : Script->SectionCommands)
     if (auto *Sec = dyn_cast<OutputSection>(Base))
-      if (Sec->Name == Name)
+      if (Sec->Name == Name && Sec->Partition == Partition)
         return Sec;
   return nullptr;
 }
@@ -293,32 +318,15 @@ template <class ELFT> static void createSyntheticSections() {
 
   auto Add = [](InputSectionBase *Sec) { InputSections.push_back(Sec); };
 
-  In.DynStrTab = make<StringTableSection>(".dynstr", true);
-  In.Dynamic = make<DynamicSection<ELFT>>();
-  if (Config->AndroidPackDynRelocs) {
-    In.RelaDyn = make<AndroidPackedRelocationSection<ELFT>>(
-        Config->IsRela ? ".rela.dyn" : ".rel.dyn");
-  } else {
-    In.RelaDyn = make<RelocationSection<ELFT>>(
-        Config->IsRela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
-  }
   In.ShStrTab = make<StringTableSection>(".shstrtab", false);
 
   Out::ProgramHeaders = make<OutputSection>("", 0, SHF_ALLOC);
   Out::ProgramHeaders->Alignment = Config->Wordsize;
 
-  if (needsInterpSection())
-    Add(createInterpSection());
-
   if (Config->Strip != StripPolicy::All) {
     In.StrTab = make<StringTableSection>(".strtab", false);
     In.SymTab = make<SymbolTableSection<ELFT>>(*In.StrTab);
     In.SymTabShndx = make<SymtabShndxSection>();
-  }
-
-  if (Config->BuildId != BuildIdKind::None) {
-    In.BuildId = make<BuildIdSection>();
-    Add(In.BuildId);
   }
 
   In.Bss = make<BssSection>(".bss", 0, 1);
@@ -327,7 +335,8 @@ template <class ELFT> static void createSyntheticSections() {
   // If there is a SECTIONS command and a .data.rel.ro section name use name
   // .data.rel.ro.bss so that we match in the .data.rel.ro output section.
   // This makes sure our relro is contiguous.
-  bool HasDataRelRo = Script->HasSectionsCommand && findSection(".data.rel.ro");
+  bool HasDataRelRo =
+      Script->HasSectionsCommand && findSection(".data.rel.ro", 0);
   In.BssRelRo =
       make<BssSection>(HasDataRelRo ? ".data.rel.ro.bss" : ".bss.rel.ro", 0, 1);
   Add(In.BssRelRo);
@@ -346,39 +355,105 @@ template <class ELFT> static void createSyntheticSections() {
       Add(Sec);
   }
 
-  if (Config->HasDynSymTab) {
-    In.DynSymTab = make<SymbolTableSection<ELFT>>(*In.DynStrTab);
-    Add(In.DynSymTab);
+  for (Partition &Part : Partitions) {
+    auto Add = [&](InputSectionBase *Sec) {
+      Sec->Partition = Part.getNumber();
+      InputSections.push_back(Sec);
+    };
 
-    In.VerSym = make<VersionTableSection>();
-    Add(In.VerSym);
+    if (!Part.Name.empty()) {
+      Part.ElfHeader = make<PartitionElfHeaderSection<ELFT>>();
+      Part.ElfHeader->Name = Part.Name;
+      Add(Part.ElfHeader);
 
-    if (!Config->VersionDefinitions.empty()) {
-      In.VerDef = make<VersionDefinitionSection>();
-      Add(In.VerDef);
+      Part.ProgramHeaders = make<PartitionProgramHeadersSection<ELFT>>();
+      Add(Part.ProgramHeaders);
     }
 
-    In.VerNeed = make<VersionNeedSection<ELFT>>();
-    Add(In.VerNeed);
-
-    if (Config->GnuHash) {
-      In.GnuHashTab = make<GnuHashTableSection>();
-      Add(In.GnuHashTab);
+    if (Config->BuildId != BuildIdKind::None) {
+      Part.BuildId = make<BuildIdSection>();
+      Add(Part.BuildId);
     }
 
-    if (Config->SysvHash) {
-      In.HashTab = make<HashTableSection>();
-      Add(In.HashTab);
+    Part.DynStrTab = make<StringTableSection>(".dynstr", true);
+    Part.DynSymTab = make<SymbolTableSection<ELFT>>(*Part.DynStrTab);
+    Part.Dynamic = make<DynamicSection<ELFT>>();
+    if (Config->AndroidPackDynRelocs) {
+      Part.RelaDyn = make<AndroidPackedRelocationSection<ELFT>>(
+          Config->IsRela ? ".rela.dyn" : ".rel.dyn");
+    } else {
+      Part.RelaDyn = make<RelocationSection<ELFT>>(
+          Config->IsRela ? ".rela.dyn" : ".rel.dyn", Config->ZCombreloc);
     }
 
-    Add(In.Dynamic);
-    Add(In.DynStrTab);
-    Add(In.RelaDyn);
+    if (needsInterpSection())
+      Add(createInterpSection());
+
+    if (Config->HasDynSymTab) {
+      Part.DynSymTab = make<SymbolTableSection<ELFT>>(*Part.DynStrTab);
+      Add(Part.DynSymTab);
+
+      Part.VerSym = make<VersionTableSection>();
+      Add(Part.VerSym);
+
+      if (!Config->VersionDefinitions.empty()) {
+        Part.VerDef = make<VersionDefinitionSection>();
+        Add(Part.VerDef);
+      }
+
+      Part.VerNeed = make<VersionNeedSection<ELFT>>();
+      Add(Part.VerNeed);
+
+      if (Config->GnuHash) {
+        Part.GnuHashTab = make<GnuHashTableSection>();
+        Add(Part.GnuHashTab);
+      }
+
+      if (Config->SysvHash) {
+        Part.HashTab = make<HashTableSection>();
+        Add(Part.HashTab);
+      }
+
+      Add(Part.Dynamic);
+      Add(Part.DynStrTab);
+      Add(Part.RelaDyn);
+    }
+
+    if (Config->RelrPackDynRelocs) {
+      Part.RelrDyn = make<RelrSection<ELFT>>();
+      Add(Part.RelrDyn);
+    }
+
+    if (!Config->Relocatable) {
+      if (Config->EhFrameHdr) {
+        Part.EhFrameHdr = make<EhFrameHeader>();
+        Add(Part.EhFrameHdr);
+      }
+      Part.EhFrame = make<EhFrameSection>();
+      Add(Part.EhFrame);
+    }
+
+    if (Config->EMachine == EM_ARM && !Config->Relocatable) {
+      // The ARMExidxsyntheticsection replaces all the individual .ARM.exidx
+      // InputSections.
+      Part.ARMExidx = make<ARMExidxSyntheticSection>();
+      Add(Part.ARMExidx);
+    }
   }
 
-  if (Config->RelrPackDynRelocs) {
-    In.RelrDyn = make<RelrSection<ELFT>>();
-    Add(In.RelrDyn);
+  if (Partitions.size() != 1) {
+    // Create the partition end marker. This needs to be in partition number 255
+    // so that it is sorted after all other partitions. It also has other
+    // special handling (see createPhdrs() and combineEhSections()).
+    In.PartEnd = make<BssSection>(".part.end", Config->MaxPageSize, 1);
+    In.PartEnd->Partition = 255;
+    Add(In.PartEnd);
+
+    In.PartIndex = make<PartitionIndexSection>();
+    addOptionalRegular("__part_index_begin", In.PartIndex, 0);
+    addOptionalRegular("__part_index_end", In.PartIndex,
+                       In.PartIndex->getSize());
+    Add(In.PartIndex);
   }
 
   // Add .got. MIPS' .got is so different from the other archs,
@@ -391,9 +466,19 @@ template <class ELFT> static void createSyntheticSections() {
     Add(In.Got);
   }
 
+  if (Config->EMachine == EM_PPC) {
+    In.PPC32Got2 = make<PPC32Got2Section>();
+    Add(In.PPC32Got2);
+  }
+
   if (Config->EMachine == EM_PPC64) {
     In.PPC64LongBranchTarget = make<PPC64LongBranchTargetSection>();
     Add(In.PPC64LongBranchTarget);
+  }
+
+  if (Config->EMachine == EM_RISCV) {
+    In.RISCVSdata = make<RISCVSdataSection>();
+    Add(In.RISCVSdata);
   }
 
   In.GotPlt = make<GotPltSection>();
@@ -437,6 +522,9 @@ template <class ELFT> static void createSyntheticSections() {
   In.Iplt = make<PltSection>(true);
   Add(In.Iplt);
 
+  if (Config->AndFeatures)
+    Add(make<GnuPropertySection>());
+
   // .note.GNU-stack is always added when we are creating a re-linkable
   // object file. Other linkers are using the presence of this marker
   // section to control the executable-ness of the stack area, but that
@@ -445,15 +533,6 @@ template <class ELFT> static void createSyntheticSections() {
   if (Config->Relocatable)
     Add(make<GnuStackSection>());
 
-  if (!Config->Relocatable) {
-    if (Config->EhFrameHdr) {
-      In.EhFrameHdr = make<EhFrameHeader>();
-      Add(In.EhFrameHdr);
-    }
-    In.EhFrame = make<EhFrameSection>();
-    Add(In.EhFrame);
-  }
-
   if (In.SymTab)
     Add(In.SymTab);
   if (In.SymTabShndx)
@@ -461,17 +540,14 @@ template <class ELFT> static void createSyntheticSections() {
   Add(In.ShStrTab);
   if (In.StrTab)
     Add(In.StrTab);
-
-  if (Config->EMachine == EM_ARM && !Config->Relocatable) {
-    // The ARMExidxsyntheticsection replaces all the individual .ARM.exidx
-    // InputSections.
-    In.ARMExidx = make<ARMExidxSyntheticSection>();
-    Add(In.ARMExidx);
-  }
 }
 
 // The main function of the writer.
 template <class ELFT> void Writer<ELFT>::run() {
+  // Make copies of any input sections that need to be copied into each
+  // partition.
+  copySectionsIntoPartitions<ELFT>();
+
   // Create linker-synthesized sections such as .got or .plt.
   // Such sections are of type input section.
   createSyntheticSections<ELFT>();
@@ -514,19 +590,21 @@ template <class ELFT> void Writer<ELFT>::run() {
   for (OutputSection *Sec : OutputSections)
     Sec->maybeCompress<ELFT>();
 
-  Script->allocateHeaders(Phdrs);
+  Script->allocateHeaders(Main->Phdrs);
 
   // Remove empty PT_LOAD to avoid causing the dynamic linker to try to mmap a
   // 0 sized region. This has to be done late since only after assignAddresses
   // we know the size of the sections.
-  removeEmptyPTLoad();
+  for (Partition &Part : Partitions)
+    removeEmptyPTLoad(Part.Phdrs);
 
   if (!Config->OFormatBinary)
     assignFileOffsets();
   else
     assignFileOffsetsBinary();
 
-  setPhdrs();
+  for (Partition &Part : Partitions)
+    setPhdrs(Part);
 
   if (Config->Relocatable)
     for (OutputSection *Sec : OutputSections)
@@ -608,7 +686,7 @@ static bool includeInSymtab(const Symbol &B) {
     Sec = Sec->Repl;
 
     // Exclude symbols pointing to garbage-collected sections.
-    if (isa<InputSectionBase>(Sec) && !Sec->Live)
+    if (isa<InputSectionBase>(Sec) && !Sec->isLive())
       return false;
 
     if (auto *S = dyn_cast<MergeInputSection>(Sec))
@@ -741,7 +819,7 @@ static bool isRelroSection(const OutputSection *Sec) {
   // .dynamic section contains data for the dynamic linker, and
   // there's no need to write to it at runtime, so it's better to put
   // it into RELRO.
-  if (Sec == In.Dynamic->getParent())
+  if (Sec->Name == ".dynamic")
     return true;
 
   // Sections with some special names are put into RELRO. This is a
@@ -762,8 +840,11 @@ static bool isRelroSection(const OutputSection *Sec) {
 // * It is easy to check if a give branch was taken.
 // * It is easy two see how similar two ranks are (see getRankProximity).
 enum RankFlags {
-  RF_NOT_ADDR_SET = 1 << 17,
-  RF_NOT_ALLOC = 1 << 16,
+  RF_NOT_ADDR_SET = 1 << 27,
+  RF_NOT_ALLOC = 1 << 26,
+  RF_PARTITION = 1 << 18, // Partition number (8 bits)
+  RF_NOT_PART_EHDR = 1 << 17,
+  RF_NOT_PART_PHDR = 1 << 16,
   RF_NOT_INTERP = 1 << 15,
   RF_NOT_NOTE = 1 << 14,
   RF_WRITE = 1 << 13,
@@ -783,7 +864,7 @@ enum RankFlags {
 };
 
 static unsigned getSectionRank(const OutputSection *Sec) {
-  unsigned Rank = 0;
+  unsigned Rank = Sec->Partition * RF_PARTITION;
 
   // We want to put section specified by -T option first, so we
   // can start assigning VA starting from them later.
@@ -795,6 +876,14 @@ static unsigned getSectionRank(const OutputSection *Sec) {
   // so debug info doesn't change addresses in actual code.
   if (!(Sec->Flags & SHF_ALLOC))
     return Rank | RF_NOT_ALLOC;
+
+  if (Sec->Type == SHT_LLVM_PART_EHDR)
+    return Rank;
+  Rank |= RF_NOT_PART_EHDR;
+
+  if (Sec->Type == SHT_LLVM_PART_PHDR)
+    return Rank;
+  Rank |= RF_NOT_PART_PHDR;
 
   // Put .interp first because some loaders want to see that section
   // on the first page of the executable file when loaded into memory.
@@ -954,13 +1043,15 @@ void Writer<ELFT>::forEachRelSec(
   // Note that relocations for non-alloc sections are directly
   // processed by InputSection::relocateNonAlloc.
   for (InputSectionBase *IS : InputSections)
-    if (IS->Live && isa<InputSection>(IS) && (IS->Flags & SHF_ALLOC))
+    if (IS->isLive() && isa<InputSection>(IS) && (IS->Flags & SHF_ALLOC))
       Fn(*IS);
-  for (EhInputSection *ES : In.EhFrame->Sections)
-    Fn(*ES);
-  if (In.ARMExidx && In.ARMExidx->Live)
-    for (InputSection *Ex : In.ARMExidx->ExidxSections)
-      Fn(*Ex);
+  for (Partition &Part : Partitions) {
+    for (EhInputSection *ES : Part.EhFrame->Sections)
+      Fn(*ES);
+    if (Part.ARMExidx && Part.ARMExidx->isLive())
+      for (InputSection *Ex : Part.ARMExidx->ExidxSections)
+        Fn(*Ex);
+  }
 }
 
 // This function generates assignments for predefined symbols (e.g. _end or
@@ -989,12 +1080,14 @@ template <class ELFT> void Writer<ELFT>::setReservedSymbolSections() {
   PhdrEntry *Last = nullptr;
   PhdrEntry *LastRO = nullptr;
 
-  for (PhdrEntry *P : Phdrs) {
-    if (P->p_type != PT_LOAD)
-      continue;
-    Last = P;
-    if (!(P->p_flags & PF_W))
-      LastRO = P;
+  for (Partition &Part : Partitions) {
+    for (PhdrEntry *P : Part.Phdrs) {
+      if (P->p_type != PT_LOAD)
+        continue;
+      Last = P;
+      if (!(P->p_flags & PF_W))
+        LastRO = P;
+    }
   }
 
   if (LastRO) {
@@ -1055,7 +1148,7 @@ static int getRankProximityAux(OutputSection *A, OutputSection *B) {
 
 static int getRankProximity(OutputSection *A, BaseCommand *B) {
   auto *Sec = dyn_cast<OutputSection>(B);
-  return (Sec && Sec->Live) ? getRankProximityAux(A, Sec) : -1;
+  return (Sec && Sec->HasInputSections) ? getRankProximityAux(A, Sec) : -1;
 }
 
 // When placing orphan sections, we want to place them after symbol assignments
@@ -1097,19 +1190,20 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
   int Proximity = getRankProximity(Sec, *I);
   for (; I != E; ++I) {
     auto *CurSec = dyn_cast<OutputSection>(*I);
-    if (!CurSec || !CurSec->Live)
+    if (!CurSec || !CurSec->HasInputSections)
       continue;
     if (getRankProximity(Sec, CurSec) != Proximity ||
         Sec->SortRank < CurSec->SortRank)
       break;
   }
 
-  auto IsLiveOutputSec = [](BaseCommand *Cmd) {
+  auto IsOutputSecWithInputSections = [](BaseCommand *Cmd) {
     auto *OS = dyn_cast<OutputSection>(Cmd);
-    return OS && OS->Live;
+    return OS && OS->HasInputSections;
   };
   auto J = std::find_if(llvm::make_reverse_iterator(I),
-                        llvm::make_reverse_iterator(B), IsLiveOutputSec);
+                        llvm::make_reverse_iterator(B),
+                        IsOutputSecWithInputSections);
   I = J.base();
 
   // As a special case, if the orphan section is the last section, put
@@ -1117,7 +1211,7 @@ findOrphanPos(std::vector<BaseCommand *>::iterator B,
   // This matches bfd's behavior and is convenient when the linker script fully
   // specifies the start of the file, but doesn't care about the end (the non
   // alloc sections for example).
-  auto NextSec = std::find_if(I, E, IsLiveOutputSec);
+  auto NextSec = std::find_if(I, E, IsOutputSecWithInputSections);
   if (NextSec == E)
     return E;
 
@@ -1169,9 +1263,11 @@ static DenseMap<const InputSectionBase *, int> buildSectionOrder() {
 
   // We want both global and local symbols. We get the global ones from the
   // symbol table and iterate the object files for the local ones.
-  for (Symbol *Sym : Symtab->getSymbols())
+  Symtab->forEachSymbol([&](Symbol *Sym) {
     if (!Sym->isLazy())
       AddSym(*Sym);
+  });
+
   for (InputFile *File : ObjectFiles)
     for (Symbol *Sym : File->getSymbols())
       if (Sym->isLocal())
@@ -1492,10 +1588,11 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
     if (In.MipsGot)
       In.MipsGot->updateAllocSize();
 
-    Changed |= In.RelaDyn->updateAllocSize();
-
-    if (In.RelrDyn)
-      Changed |= In.RelrDyn->updateAllocSize();
+    for (Partition &Part : Partitions) {
+      Changed |= Part.RelaDyn->updateAllocSize();
+      if (Part.RelrDyn)
+        Changed |= Part.RelrDyn->updateAllocSize();
+    }
 
     if (!Changed)
       return;
@@ -1591,32 +1688,59 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // It should be okay as no one seems to care about the type.
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
-  if (In.Dynamic->Parent)
+  if (Main->Dynamic->Parent)
     Symtab->addSymbol(Defined{/*File=*/nullptr, "_DYNAMIC", STB_WEAK,
                               STV_HIDDEN, STT_NOTYPE,
-                              /*Value=*/0, /*Size=*/0, In.Dynamic});
+                              /*Value=*/0, /*Size=*/0, Main->Dynamic});
 
   // Define __rel[a]_iplt_{start,end} symbols if needed.
   addRelIpltSymbols();
 
   // RISC-V's gp can address +/- 2 KiB, set it to .sdata + 0x800 if not defined.
-  if (Config->EMachine == EM_RISCV)
-    if (!dyn_cast_or_null<Defined>(Symtab->find("__global_pointer$")))
-      addOptionalRegular("__global_pointer$", findSection(".sdata"), 0x800);
+  // This symbol should only be defined in an executable.
+  if (Config->EMachine == EM_RISCV && !Config->Shared)
+    ElfSym::RISCVGlobalPointer =
+        addOptionalRegular("__global_pointer$", findSection(".sdata"), 0x800,
+                           STV_DEFAULT, STB_GLOBAL);
+
+  if (Config->EMachine == EM_X86_64) {
+    // On targets that support TLSDESC, _TLS_MODULE_BASE_ is defined in such a
+    // way that:
+    //
+    // 1) Without relaxation: it produces a dynamic TLSDESC relocation that
+    // computes 0.
+    // 2) With LD->LE relaxation: _TLS_MODULE_BASE_@tpoff = 0 (lowest address in
+    // the TLS block).
+    //
+    // 2) is special cased in @tpoff computation. To satisfy 1), we define it as
+    // an absolute symbol of zero. This is different from GNU linkers which
+    // define _TLS_MODULE_BASE_ relative to the first TLS section.
+    Symbol *S = Symtab->find("_TLS_MODULE_BASE_");
+    if (S && S->isUndefined()) {
+      S->resolve(Defined{/*File=*/nullptr, S->getName(), STB_GLOBAL, STV_HIDDEN,
+                         STT_TLS, /*Value=*/0, 0,
+                         /*Section=*/nullptr});
+      ElfSym::TlsModuleBase = cast<Defined>(S);
+    }
+  }
 
   // This responsible for splitting up .eh_frame section into
   // pieces. The relocation scan uses those pieces, so this has to be
   // earlier.
-  finalizeSynthetic(In.EhFrame);
+  for (Partition &Part : Partitions)
+    finalizeSynthetic(Part.EhFrame);
 
-  for (Symbol *S : Symtab->getSymbols())
+  Symtab->forEachSymbol([](Symbol *S) {
     if (!S->IsPreemptible)
       S->IsPreemptible = computeIsPreemptible(*S);
+  });
 
   // Scan relocations. This must be done after every symbol is declared so that
   // we can correctly decide if a dynamic relocation is needed.
-  if (!Config->Relocatable)
+  if (!Config->Relocatable) {
     forEachRelSec(scanRelocations<ELFT>);
+    reportUndefinedSymbols<ELFT>();
+  }
 
   addIRelativeRelocs();
 
@@ -1638,27 +1762,40 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
           llvm::all_of(File->DtNeeded, [&](StringRef Needed) {
             return Symtab->SoNames.count(Needed);
           });
-    for (Symbol *Sym : Symtab->getSymbols())
+
+    Symtab->forEachSymbol([](Symbol *Sym) {
       if (Sym->isUndefined() && !Sym->isWeak())
         if (auto *F = dyn_cast_or_null<SharedFile>(Sym->File))
           if (F->AllNeededIsKnown)
             error(toString(F) + ": undefined reference to " + toString(*Sym));
+    });
   }
 
   // Now that we have defined all possible global symbols including linker-
   // synthesized ones. Visit all symbols to give the finishing touches.
-  for (Symbol *Sym : Symtab->getSymbols()) {
+  Symtab->forEachSymbol([](Symbol *Sym) {
     if (!includeInSymtab(*Sym))
-      continue;
+      return;
     if (In.SymTab)
       In.SymTab->addSymbol(Sym);
 
     if (Sym->includeInDynsym()) {
-      In.DynSymTab->addSymbol(Sym);
+      Partitions[Sym->Partition - 1].DynSymTab->addSymbol(Sym);
       if (auto *File = dyn_cast_or_null<SharedFile>(Sym->File))
         if (File->IsNeeded && !Sym->isUndefined())
           addVerneed(Sym);
     }
+  });
+
+  // We also need to scan the dynamic relocation tables of the other partitions
+  // and add any referenced symbols to the partition's dynsym.
+  for (Partition &Part : MutableArrayRef<Partition>(Partitions).slice(1)) {
+    DenseSet<Symbol *> Syms;
+    for (const SymbolTableEntry &E : Part.DynSymTab->getSymbols())
+      Syms.insert(E.Sym);
+    for (DynamicReloc &Reloc : Part.RelaDyn->Relocs)
+      if (Reloc.Sym && !Reloc.UseSymVA && Syms.insert(Reloc.Sym).second)
+        Part.DynSymTab->addSymbol(Reloc.Sym);
   }
 
   // Do not proceed if there was an undefined symbol.
@@ -1700,22 +1837,27 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // The headers have to be created before finalize as that can influence the
   // image base and the dynamic section on mips includes the image base.
   if (!Config->Relocatable && !Config->OFormatBinary) {
-    Phdrs = Script->hasPhdrsCommands() ? Script->createPhdrs() : createPhdrs();
-    if (Config->EMachine == EM_ARM) {
-      // PT_ARM_EXIDX is the ARM EHABI equivalent of PT_GNU_EH_FRAME
-      addPhdrForSection(Phdrs, SHT_ARM_EXIDX, PT_ARM_EXIDX, PF_R);
+    for (Partition &Part : Partitions) {
+      Part.Phdrs = Script->hasPhdrsCommands() ? Script->createPhdrs()
+                                              : createPhdrs(Part);
+      if (Config->EMachine == EM_ARM) {
+        // PT_ARM_EXIDX is the ARM EHABI equivalent of PT_GNU_EH_FRAME
+        addPhdrForSection(Part, SHT_ARM_EXIDX, PT_ARM_EXIDX, PF_R);
+      }
+      if (Config->EMachine == EM_MIPS) {
+        // Add separate segments for MIPS-specific sections.
+        addPhdrForSection(Part, SHT_MIPS_REGINFO, PT_MIPS_REGINFO, PF_R);
+        addPhdrForSection(Part, SHT_MIPS_OPTIONS, PT_MIPS_OPTIONS, PF_R);
+        addPhdrForSection(Part, SHT_MIPS_ABIFLAGS, PT_MIPS_ABIFLAGS, PF_R);
+      }
     }
-    if (Config->EMachine == EM_MIPS) {
-      // Add separate segments for MIPS-specific sections.
-      addPhdrForSection(Phdrs, SHT_MIPS_REGINFO, PT_MIPS_REGINFO, PF_R);
-      addPhdrForSection(Phdrs, SHT_MIPS_OPTIONS, PT_MIPS_OPTIONS, PF_R);
-      addPhdrForSection(Phdrs, SHT_MIPS_ABIFLAGS, PT_MIPS_ABIFLAGS, PF_R);
-    }
-    Out::ProgramHeaders->Size = sizeof(Elf_Phdr) * Phdrs.size();
+    Out::ProgramHeaders->Size = sizeof(Elf_Phdr) * Main->Phdrs.size();
 
     // Find the TLS segment. This happens before the section layout loop so that
-    // Android relocation packing can look up TLS symbol addresses.
-    for (PhdrEntry *P : Phdrs)
+    // Android relocation packing can look up TLS symbol addresses. We only need
+    // to care about the main partition here because all TLS symbols were moved
+    // to the main partition (see MarkLive.cpp).
+    for (PhdrEntry *P : Main->Phdrs)
       if (P->p_type == PT_TLS)
         Out::TlsPhdr = P;
   }
@@ -1724,32 +1866,38 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // have the headers, we can find out which sections they point to.
   setReservedSymbolSections();
 
-  // Dynamic section must be the last one in this list and dynamic
-  // symbol table section (DynSymTab) must be the first one.
-  finalizeSynthetic(In.DynSymTab);
-  finalizeSynthetic(In.ARMExidx);
   finalizeSynthetic(In.Bss);
   finalizeSynthetic(In.BssRelRo);
-  finalizeSynthetic(In.GnuHashTab);
-  finalizeSynthetic(In.HashTab);
   finalizeSynthetic(In.SymTabShndx);
   finalizeSynthetic(In.ShStrTab);
   finalizeSynthetic(In.StrTab);
-  finalizeSynthetic(In.VerDef);
   finalizeSynthetic(In.Got);
   finalizeSynthetic(In.MipsGot);
   finalizeSynthetic(In.IgotPlt);
   finalizeSynthetic(In.GotPlt);
-  finalizeSynthetic(In.RelaDyn);
-  finalizeSynthetic(In.RelrDyn);
   finalizeSynthetic(In.RelaIplt);
   finalizeSynthetic(In.RelaPlt);
   finalizeSynthetic(In.Plt);
   finalizeSynthetic(In.Iplt);
-  finalizeSynthetic(In.EhFrameHdr);
-  finalizeSynthetic(In.VerSym);
-  finalizeSynthetic(In.VerNeed);
-  finalizeSynthetic(In.Dynamic);
+  finalizeSynthetic(In.PPC32Got2);
+  finalizeSynthetic(In.RISCVSdata);
+  finalizeSynthetic(In.PartIndex);
+
+  // Dynamic section must be the last one in this list and dynamic
+  // symbol table section (DynSymTab) must be the first one.
+  for (Partition &Part : Partitions) {
+    finalizeSynthetic(Part.ARMExidx);
+    finalizeSynthetic(Part.DynSymTab);
+    finalizeSynthetic(Part.GnuHashTab);
+    finalizeSynthetic(Part.HashTab);
+    finalizeSynthetic(Part.VerDef);
+    finalizeSynthetic(Part.RelaDyn);
+    finalizeSynthetic(Part.RelrDyn);
+    finalizeSynthetic(Part.EhFrameHdr);
+    finalizeSynthetic(Part.VerSym);
+    finalizeSynthetic(Part.VerNeed);
+    finalizeSynthetic(Part.Dynamic);
+  }
 
   if (!Script->HasSectionsCommand && !Config->Relocatable)
     fixSectionAlignments();
@@ -1890,27 +2038,39 @@ static uint64_t computeFlags(uint64_t Flags) {
 
 // Decide which program headers to create and which sections to include in each
 // one.
-template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
+template <class ELFT>
+std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs(Partition &Part) {
   std::vector<PhdrEntry *> Ret;
   auto AddHdr = [&](unsigned Type, unsigned Flags) -> PhdrEntry * {
     Ret.push_back(make<PhdrEntry>(Type, Flags));
     return Ret.back();
   };
 
+  unsigned PartNo = Part.getNumber();
+  bool IsMain = PartNo == 1;
+
   // The first phdr entry is PT_PHDR which describes the program header itself.
-  AddHdr(PT_PHDR, PF_R)->add(Out::ProgramHeaders);
+  if (IsMain)
+    AddHdr(PT_PHDR, PF_R)->add(Out::ProgramHeaders);
+  else
+    AddHdr(PT_PHDR, PF_R)->add(Part.ProgramHeaders->getParent());
 
   // PT_INTERP must be the second entry if exists.
-  if (OutputSection *Cmd = findSection(".interp"))
+  if (OutputSection *Cmd = findSection(".interp", PartNo))
     AddHdr(PT_INTERP, Cmd->getPhdrFlags())->add(Cmd);
 
   // Add the first PT_LOAD segment for regular output sections.
   uint64_t Flags = computeFlags(PF_R);
-  PhdrEntry *Load = AddHdr(PT_LOAD, Flags);
+  PhdrEntry *Load = nullptr;
 
   // Add the headers. We will remove them if they don't fit.
-  Load->add(Out::ElfHeader);
-  Load->add(Out::ProgramHeaders);
+  // In the other partitions the headers are ordinary sections, so they don't
+  // need to be added here.
+  if (IsMain) {
+    Load = AddHdr(PT_LOAD, Flags);
+    Load->add(Out::ElfHeader);
+    Load->add(Out::ProgramHeaders);
+  }
 
   // PT_GNU_RELRO includes all sections that should be marked as
   // read-only by dynamic linker after proccessing relocations.
@@ -1920,7 +2080,7 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
   bool InRelroPhdr = false;
   OutputSection *RelroEnd = nullptr;
   for (OutputSection *Sec : OutputSections) {
-    if (!needsPtLoad(Sec))
+    if (Sec->Partition != PartNo || !needsPtLoad(Sec))
       continue;
     if (isRelroSection(Sec)) {
       InRelroPhdr = true;
@@ -1941,6 +2101,18 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
     if (!needsPtLoad(Sec))
       continue;
 
+    // Normally, sections in partitions other than the current partition are
+    // ignored. But partition number 255 is a special case: it contains the
+    // partition end marker (.part.end). It needs to be added to the main
+    // partition so that a segment is created for it in the main partition,
+    // which will cause the dynamic loader to reserve space for the other
+    // partitions.
+    if (Sec->Partition != PartNo) {
+      if (IsMain && Sec->Partition == 255)
+        AddHdr(PT_LOAD, computeFlags(Sec->getPhdrFlags()))->add(Sec);
+      continue;
+    }
+
     // Segments are contiguous memory regions that has the same attributes
     // (e.g. executable or writable). There is one phdr for each segment.
     // Therefore, we need to create a new phdr when the next section has
@@ -1949,7 +2121,8 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
     // time, we don't want to create a separate load segment for the headers,
     // even if the first output section has an AT or AT> attribute.
     uint64_t NewFlags = computeFlags(Sec->getPhdrFlags());
-    if (((Sec->LMAExpr ||
+    if (!Load ||
+        ((Sec->LMAExpr ||
           (Sec->LMARegion && (Sec->LMARegion != Load->FirstSec->LMARegion))) &&
          Load->LastSec != Out::ProgramHeaders) ||
         Sec->MemRegion != Load->FirstSec->MemRegion || Flags != NewFlags ||
@@ -1964,27 +2137,27 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
   // Add a TLS segment if any.
   PhdrEntry *TlsHdr = make<PhdrEntry>(PT_TLS, PF_R);
   for (OutputSection *Sec : OutputSections)
-    if (Sec->Flags & SHF_TLS)
+    if (Sec->Partition == PartNo && Sec->Flags & SHF_TLS)
       TlsHdr->add(Sec);
   if (TlsHdr->FirstSec)
     Ret.push_back(TlsHdr);
 
   // Add an entry for .dynamic.
-  if (OutputSection *Sec = In.Dynamic->getParent())
+  if (OutputSection *Sec = Part.Dynamic->getParent())
     AddHdr(PT_DYNAMIC, Sec->getPhdrFlags())->add(Sec);
 
   if (RelRo->FirstSec)
     Ret.push_back(RelRo);
 
   // PT_GNU_EH_FRAME is a special section pointing on .eh_frame_hdr.
-  if (In.EhFrame->isNeeded() && In.EhFrameHdr && In.EhFrame->getParent() &&
-      In.EhFrameHdr->getParent())
-    AddHdr(PT_GNU_EH_FRAME, In.EhFrameHdr->getParent()->getPhdrFlags())
-        ->add(In.EhFrameHdr->getParent());
+  if (Part.EhFrame->isNeeded() && Part.EhFrameHdr &&
+      Part.EhFrame->getParent() && Part.EhFrameHdr->getParent())
+    AddHdr(PT_GNU_EH_FRAME, Part.EhFrameHdr->getParent()->getPhdrFlags())
+        ->add(Part.EhFrameHdr->getParent());
 
   // PT_OPENBSD_RANDOMIZE is an OpenBSD-specific feature. That makes
   // the dynamic linker fill the segment with random data.
-  if (OutputSection *Cmd = findSection(".openbsd.randomdata"))
+  if (OutputSection *Cmd = findSection(".openbsd.randomdata", PartNo))
     AddHdr(PT_OPENBSD_RANDOMIZE, Cmd->getPhdrFlags())->add(Cmd);
 
   // PT_GNU_STACK is a special section to tell the loader to make the
@@ -2007,6 +2180,8 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
   // same alignment.
   PhdrEntry *Note = nullptr;
   for (OutputSection *Sec : OutputSections) {
+    if (Sec->Partition != PartNo)
+      continue;
     if (Sec->Type == SHT_NOTE && (Sec->Flags & SHF_ALLOC)) {
       if (!Note || Sec->LMAExpr || Note->LastSec->Alignment != Sec->Alignment)
         Note = AddHdr(PT_NOTE, PF_R);
@@ -2019,17 +2194,18 @@ template <class ELFT> std::vector<PhdrEntry *> Writer<ELFT>::createPhdrs() {
 }
 
 template <class ELFT>
-void Writer<ELFT>::addPhdrForSection(std::vector<PhdrEntry *> &Phdrs,
-                                     unsigned ShType, unsigned PType,
-                                     unsigned PFlags) {
-  auto I = llvm::find_if(
-      OutputSections, [=](OutputSection *Cmd) { return Cmd->Type == ShType; });
+void Writer<ELFT>::addPhdrForSection(Partition &Part, unsigned ShType,
+                                     unsigned PType, unsigned PFlags) {
+  unsigned PartNo = Part.getNumber();
+  auto I = llvm::find_if(OutputSections, [=](OutputSection *Cmd) {
+    return Cmd->Partition == PartNo && Cmd->Type == ShType;
+  });
   if (I == OutputSections.end())
     return;
 
   PhdrEntry *Entry = make<PhdrEntry>(PType, PFlags);
   Entry->add(*I);
-  Phdrs.push_back(Entry);
+  Part.Phdrs.push_back(Entry);
 }
 
 // The first section of each PT_LOAD, the first section in PT_GNU_RELRO and the
@@ -2043,27 +2219,29 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
       };
   };
 
-  for (const PhdrEntry *P : Phdrs)
-    if (P->p_type == PT_LOAD && P->FirstSec)
-      PageAlign(P->FirstSec);
+  for (Partition &Part : Partitions) {
+    for (const PhdrEntry *P : Part.Phdrs)
+      if (P->p_type == PT_LOAD && P->FirstSec)
+        PageAlign(P->FirstSec);
 
-  for (const PhdrEntry *P : Phdrs) {
-    if (P->p_type != PT_GNU_RELRO)
-      continue;
+    for (const PhdrEntry *P : Part.Phdrs) {
+      if (P->p_type != PT_GNU_RELRO)
+        continue;
 
-    if (P->FirstSec)
-      PageAlign(P->FirstSec);
+      if (P->FirstSec)
+        PageAlign(P->FirstSec);
 
-    // Find the first section after PT_GNU_RELRO. If it is in a PT_LOAD we
-    // have to align it to a page.
-    auto End = OutputSections.end();
-    auto I = llvm::find(OutputSections, P->LastSec);
-    if (I == End || (I + 1) == End)
-      continue;
+      // Find the first section after PT_GNU_RELRO. If it is in a PT_LOAD we
+      // have to align it to a page.
+      auto End = OutputSections.end();
+      auto I = llvm::find(OutputSections, P->LastSec);
+      if (I == End || (I + 1) == End)
+        continue;
 
-    OutputSection *Cmd = (*(I + 1));
-    if (needsPtLoad(Cmd))
-      PageAlign(Cmd);
+      OutputSection *Cmd = (*(I + 1));
+      if (needsPtLoad(Cmd))
+        PageAlign(Cmd);
+    }
   }
 }
 
@@ -2123,9 +2301,10 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
   Off = setFileOffset(Out::ProgramHeaders, Off);
 
   PhdrEntry *LastRX = nullptr;
-  for (PhdrEntry *P : Phdrs)
-    if (P->p_type == PT_LOAD && (P->p_flags & PF_X))
-      LastRX = P;
+  for (Partition &Part : Partitions)
+    for (PhdrEntry *P : Part.Phdrs)
+      if (P->p_type == PT_LOAD && (P->p_flags & PF_X))
+        LastRX = P;
 
   for (OutputSection *Sec : OutputSections) {
     Off = setFileOffset(Sec, Off);
@@ -2163,8 +2342,8 @@ template <class ELFT> void Writer<ELFT>::assignFileOffsets() {
 
 // Finalize the program headers. We call this function after we assign
 // file offsets and VAs to all sections.
-template <class ELFT> void Writer<ELFT>::setPhdrs() {
-  for (PhdrEntry *P : Phdrs) {
+template <class ELFT> void Writer<ELFT>::setPhdrs(Partition &Part) {
+  for (PhdrEntry *P : Part.Phdrs) {
     OutputSection *First = P->FirstSec;
     OutputSection *Last = P->LastSec;
 
@@ -2176,6 +2355,11 @@ template <class ELFT> void Writer<ELFT>::setPhdrs() {
       P->p_memsz = Last->Addr + Last->Size - First->Addr;
       P->p_offset = First->Offset;
       P->p_vaddr = First->Addr;
+
+      // File offsets in partitions other than the main partition are relative
+      // to the offset of the ELF headers. Perform that adjustment now.
+      if (Part.ElfHeader)
+        P->p_offset -= Part.ElfHeader->getParent()->Offset;
 
       if (!P->HasLMA)
         P->p_paddr = First->getLMA();
@@ -2324,68 +2508,14 @@ static uint16_t getELFType() {
   return ET_EXEC;
 }
 
-static uint8_t getAbiVersion() {
-  // MIPS non-PIC executable gets ABI version 1.
-  if (Config->EMachine == EM_MIPS) {
-    if (getELFType() == ET_EXEC &&
-        (Config->EFlags & (EF_MIPS_PIC | EF_MIPS_CPIC)) == EF_MIPS_CPIC)
-      return 1;
-    return 0;
-  }
-
-  if (Config->EMachine == EM_AMDGPU) {
-    uint8_t Ver = ObjectFiles[0]->ABIVersion;
-    for (InputFile *File : makeArrayRef(ObjectFiles).slice(1))
-      if (File->ABIVersion != Ver)
-        error("incompatible ABI version: " + toString(File));
-    return Ver;
-  }
-
-  return 0;
-}
-
 template <class ELFT> void Writer<ELFT>::writeHeader() {
-  // For executable segments, the trap instructions are written before writing
-  // the header. Setting Elf header bytes to zero ensures that any unused bytes
-  // in header are zero-cleared, instead of having trap instructions.
-  memset(Out::BufferStart, 0, sizeof(Elf_Ehdr));
-  memcpy(Out::BufferStart, "\177ELF", 4);
+  writeEhdr<ELFT>(Out::BufferStart, *Main);
+  writePhdrs<ELFT>(Out::BufferStart + sizeof(Elf_Ehdr), *Main);
 
-  // Write the ELF header.
   auto *EHdr = reinterpret_cast<Elf_Ehdr *>(Out::BufferStart);
-  EHdr->e_ident[EI_CLASS] = Config->Is64 ? ELFCLASS64 : ELFCLASS32;
-  EHdr->e_ident[EI_DATA] = Config->IsLE ? ELFDATA2LSB : ELFDATA2MSB;
-  EHdr->e_ident[EI_VERSION] = EV_CURRENT;
-  EHdr->e_ident[EI_OSABI] = Config->OSABI;
-  EHdr->e_ident[EI_ABIVERSION] = getAbiVersion();
   EHdr->e_type = getELFType();
-  EHdr->e_machine = Config->EMachine;
-  EHdr->e_version = EV_CURRENT;
   EHdr->e_entry = getEntryAddr();
   EHdr->e_shoff = SectionHeaderOff;
-  EHdr->e_flags = Config->EFlags;
-  EHdr->e_ehsize = sizeof(Elf_Ehdr);
-  EHdr->e_phnum = Phdrs.size();
-  EHdr->e_shentsize = sizeof(Elf_Shdr);
-
-  if (!Config->Relocatable) {
-    EHdr->e_phoff = sizeof(Elf_Ehdr);
-    EHdr->e_phentsize = sizeof(Elf_Phdr);
-  }
-
-  // Write the program header table.
-  auto *HBuf = reinterpret_cast<Elf_Phdr *>(Out::BufferStart + EHdr->e_phoff);
-  for (PhdrEntry *P : Phdrs) {
-    HBuf->p_type = P->p_type;
-    HBuf->p_flags = P->p_flags;
-    HBuf->p_offset = P->p_offset;
-    HBuf->p_vaddr = P->p_vaddr;
-    HBuf->p_paddr = P->p_paddr;
-    HBuf->p_filesz = P->p_filesz;
-    HBuf->p_memsz = P->p_memsz;
-    HBuf->p_align = P->p_align;
-    ++HBuf;
-  }
 
   // Write the section header table.
   //
@@ -2460,25 +2590,27 @@ template <class ELFT> void Writer<ELFT>::writeTrapInstr() {
   if (Script->HasSectionsCommand)
     return;
 
-  // Fill the last page.
-  for (PhdrEntry *P : Phdrs)
-    if (P->p_type == PT_LOAD && (P->p_flags & PF_X))
-      fillTrap(Out::BufferStart + alignDown(P->p_offset + P->p_filesz,
-                                            Config->CommonPageSize),
-               Out::BufferStart +
-                   alignTo(P->p_offset + P->p_filesz, Config->CommonPageSize));
+  for (Partition &Part : Partitions) {
+    // Fill the last page.
+    for (PhdrEntry *P : Part.Phdrs)
+      if (P->p_type == PT_LOAD && (P->p_flags & PF_X))
+        fillTrap(Out::BufferStart + alignDown(P->FirstSec->Offset + P->p_filesz,
+                                              Config->CommonPageSize),
+                 Out::BufferStart + alignTo(P->FirstSec->Offset + P->p_filesz,
+                                            Config->CommonPageSize));
 
-  // Round up the file size of the last segment to the page boundary iff it is
-  // an executable segment to ensure that other tools don't accidentally
-  // trim the instruction padding (e.g. when stripping the file).
-  PhdrEntry *Last = nullptr;
-  for (PhdrEntry *P : Phdrs)
-    if (P->p_type == PT_LOAD)
-      Last = P;
+    // Round up the file size of the last segment to the page boundary iff it is
+    // an executable segment to ensure that other tools don't accidentally
+    // trim the instruction padding (e.g. when stripping the file).
+    PhdrEntry *Last = nullptr;
+    for (PhdrEntry *P : Part.Phdrs)
+      if (P->p_type == PT_LOAD)
+        Last = P;
 
-  if (Last && (Last->p_flags & PF_X))
-    Last->p_memsz = Last->p_filesz =
-        alignTo(Last->p_filesz, Config->CommonPageSize);
+    if (Last && (Last->p_flags & PF_X))
+      Last->p_memsz = Last->p_filesz =
+          alignTo(Last->p_filesz, Config->CommonPageSize);
+  }
 }
 
 // Write section contents to a mmap'ed file.
@@ -2529,16 +2661,18 @@ computeHash(llvm::MutableArrayRef<uint8_t> HashBuf,
 }
 
 template <class ELFT> void Writer<ELFT>::writeBuildId() {
-  if (!In.BuildId || !In.BuildId->getParent())
+  if (!Main->BuildId || !Main->BuildId->getParent())
     return;
 
   if (Config->BuildId == BuildIdKind::Hexstring) {
-    In.BuildId->writeBuildId(Config->BuildIdVector);
+    for (Partition &Part : Partitions)
+      Part.BuildId->writeBuildId(Config->BuildIdVector);
     return;
   }
 
   // Compute a hash of all sections of the output file.
-  std::vector<uint8_t> BuildId(In.BuildId->HashSize);
+  size_t HashSize = Main->BuildId->HashSize;
+  std::vector<uint8_t> BuildId(HashSize);
   llvm::ArrayRef<uint8_t> Buf{Out::BufferStart, size_t(FileSize)};
 
   switch (Config->BuildId) {
@@ -2549,22 +2683,23 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
     break;
   case BuildIdKind::Md5:
     computeHash(BuildId, Buf, [&](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      memcpy(Dest, MD5::hash(Arr).data(), In.BuildId->HashSize);
+      memcpy(Dest, MD5::hash(Arr).data(), HashSize);
     });
     break;
   case BuildIdKind::Sha1:
     computeHash(BuildId, Buf, [&](uint8_t *Dest, ArrayRef<uint8_t> Arr) {
-      memcpy(Dest, SHA1::hash(Arr).data(), In.BuildId->HashSize);
+      memcpy(Dest, SHA1::hash(Arr).data(), HashSize);
     });
     break;
   case BuildIdKind::Uuid:
-    if (auto EC = llvm::getRandomBytes(BuildId.data(), In.BuildId->HashSize))
+    if (auto EC = llvm::getRandomBytes(BuildId.data(), HashSize))
       error("entropy source failure: " + EC.message());
     break;
   default:
     llvm_unreachable("unknown BuildIdKind");
   }
-  In.BuildId->writeBuildId(BuildId);
+  for (Partition &Part : Partitions)
+    Part.BuildId->writeBuildId(BuildId);
 }
 
 template void elf::writeResult<ELF32LE>();

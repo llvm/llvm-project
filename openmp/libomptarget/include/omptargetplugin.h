@@ -31,6 +31,9 @@ int32_t __tgt_rtl_number_of_devices(void);
 // having to load the library, which can be expensive.
 int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image);
 
+// Initialize the requires flags for the device.
+int64_t __tgt_rtl_init_requires(int64_t RequiresFlags);
+
 // Initialize the specified device. In case of success return 0; otherwise
 // return an error code.
 int32_t __tgt_rtl_init_device(int32_t ID);

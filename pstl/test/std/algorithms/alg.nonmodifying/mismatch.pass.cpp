@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <execution>
@@ -39,7 +41,7 @@ struct test_mismatch
         using namespace std;
         typedef typename iterator_traits<Iterator1>::value_type T;
         {
-            const auto expected = mismatch(pstl::execution::seq, first1, last1, first2, last2, std::equal_to<T>());
+            const auto expected = mismatch(std::execution::seq, first1, last1, first2, last2, std::equal_to<T>());
             const auto res1 = mismatch(exec, first1, last1, first2, last2, std::equal_to<T>());
             EXPECT_TRUE(expected == res1, "wrong return result from mismatch");
             const auto res2 = mismatch(exec, first1, last1, first2, last2);

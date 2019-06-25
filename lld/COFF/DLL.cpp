@@ -35,7 +35,7 @@ namespace {
 // Import table
 
 // A chunk for the import descriptor table.
-class HintNameChunk : public Chunk {
+class HintNameChunk : public NonSectionChunk {
 public:
   HintNameChunk(StringRef N, uint16_t H) : Name(N), Hint(H) {}
 
@@ -57,9 +57,11 @@ private:
 };
 
 // A chunk for the import descriptor table.
-class LookupChunk : public Chunk {
+class LookupChunk : public NonSectionChunk {
 public:
-  explicit LookupChunk(Chunk *C) : HintName(C) { Alignment = Config->Wordsize; }
+  explicit LookupChunk(Chunk *C) : HintName(C) {
+    setAlignment(Config->Wordsize);
+  }
   size_t getSize() const override { return Config->Wordsize; }
 
   void writeTo(uint8_t *Buf) const override {
@@ -75,10 +77,10 @@ public:
 // A chunk for the import descriptor table.
 // This chunk represent import-by-ordinal symbols.
 // See Microsoft PE/COFF spec 7.1. Import Header for details.
-class OrdinalOnlyChunk : public Chunk {
+class OrdinalOnlyChunk : public NonSectionChunk {
 public:
   explicit OrdinalOnlyChunk(uint16_t V) : Ordinal(V) {
-    Alignment = Config->Wordsize;
+    setAlignment(Config->Wordsize);
   }
   size_t getSize() const override { return Config->Wordsize; }
 
@@ -96,7 +98,7 @@ public:
 };
 
 // A chunk for the import descriptor table.
-class ImportDirectoryChunk : public Chunk {
+class ImportDirectoryChunk : public NonSectionChunk {
 public:
   explicit ImportDirectoryChunk(Chunk *N) : DLLName(N) {}
   size_t getSize() const override { return sizeof(ImportDirectoryTableEntry); }
@@ -117,10 +119,9 @@ public:
 
 // A chunk representing null terminator in the import table.
 // Contents of this chunk is always null bytes.
-class NullChunk : public Chunk {
+class NullChunk : public NonSectionChunk {
 public:
-  explicit NullChunk(size_t N) : Size(N) {}
-  bool hasData() const override { return false; }
+  explicit NullChunk(size_t N) : Size(N) { HasData = false; }
   size_t getSize() const override { return Size; }
 
   void writeTo(uint8_t *Buf) const override {
@@ -160,7 +161,7 @@ binImports(const std::vector<DefinedImportData *> &Imports) {
 // See Microsoft PE/COFF spec 4.3 for details.
 
 // A chunk for the delay import descriptor table etnry.
-class DelayDirectoryChunk : public Chunk {
+class DelayDirectoryChunk : public NonSectionChunk {
 public:
   explicit DelayDirectoryChunk(Chunk *N) : DLLName(N) {}
 
@@ -272,7 +273,7 @@ static const uint8_t ThunkARM64[] = {
 };
 
 // A chunk for the delay import thunk.
-class ThunkChunkX64 : public Chunk {
+class ThunkChunkX64 : public NonSectionChunk {
 public:
   ThunkChunkX64(Defined *I, Chunk *D, Defined *H)
       : Imp(I), Desc(D), Helper(H) {}
@@ -291,7 +292,7 @@ public:
   Defined *Helper = nullptr;
 };
 
-class ThunkChunkX86 : public Chunk {
+class ThunkChunkX86 : public NonSectionChunk {
 public:
   ThunkChunkX86(Defined *I, Chunk *D, Defined *H)
       : Imp(I), Desc(D), Helper(H) {}
@@ -315,7 +316,7 @@ public:
   Defined *Helper = nullptr;
 };
 
-class ThunkChunkARM : public Chunk {
+class ThunkChunkARM : public NonSectionChunk {
 public:
   ThunkChunkARM(Defined *I, Chunk *D, Defined *H)
       : Imp(I), Desc(D), Helper(H) {}
@@ -339,7 +340,7 @@ public:
   Defined *Helper = nullptr;
 };
 
-class ThunkChunkARM64 : public Chunk {
+class ThunkChunkARM64 : public NonSectionChunk {
 public:
   ThunkChunkARM64(Defined *I, Chunk *D, Defined *H)
       : Imp(I), Desc(D), Helper(H) {}
@@ -361,10 +362,10 @@ public:
 };
 
 // A chunk for the import descriptor table.
-class DelayAddressChunk : public Chunk {
+class DelayAddressChunk : public NonSectionChunk {
 public:
   explicit DelayAddressChunk(Chunk *C) : Thunk(C) {
-    Alignment = Config->Wordsize;
+    setAlignment(Config->Wordsize);
   }
   size_t getSize() const override { return Config->Wordsize; }
 
@@ -391,7 +392,7 @@ public:
 // Read Microsoft PE/COFF spec 5.3 for details.
 
 // A chunk for the export descriptor table.
-class ExportDirectoryChunk : public Chunk {
+class ExportDirectoryChunk : public NonSectionChunk {
 public:
   ExportDirectoryChunk(int I, int J, Chunk *D, Chunk *A, Chunk *N, Chunk *O)
       : MaxOrdinal(I), NameTabSize(J), DLLName(D), AddressTab(A), NameTab(N),
@@ -422,7 +423,7 @@ public:
   Chunk *OrdinalTab;
 };
 
-class AddressTableChunk : public Chunk {
+class AddressTableChunk : public NonSectionChunk {
 public:
   explicit AddressTableChunk(size_t MaxOrdinal) : Size(MaxOrdinal + 1) {}
   size_t getSize() const override { return Size * 4; }
@@ -448,7 +449,7 @@ private:
   size_t Size;
 };
 
-class NamePointersChunk : public Chunk {
+class NamePointersChunk : public NonSectionChunk {
 public:
   explicit NamePointersChunk(std::vector<Chunk *> &V) : Chunks(V) {}
   size_t getSize() const override { return Chunks.size() * 4; }
@@ -464,7 +465,7 @@ private:
   std::vector<Chunk *> Chunks;
 };
 
-class ExportOrdinalChunk : public Chunk {
+class ExportOrdinalChunk : public NonSectionChunk {
 public:
   explicit ExportOrdinalChunk(size_t I) : Size(I) {}
   size_t getSize() const override { return Size * 2; }
@@ -576,7 +577,7 @@ void DelayLoadContents::create(Defined *H) {
     for (int I = 0, E = Syms.size(); I < E; ++I)
       Syms[I]->setLocation(Addresses[Base + I]);
     auto *MH = make<NullChunk>(8);
-    MH->Alignment = 8;
+    MH->setAlignment(8);
     ModuleHandles.push_back(MH);
 
     // Fill the delay import table header fields.

@@ -57,4 +57,4 @@ Sections:
 # NO-SHARED-NEXT:     - Initial:         0x00000002
 # NO-SHARED-NOT:        Maximum:
 
-# SHARED: 'atomics' feature is disallowed, so --shared-memory must not be used{{$}}
+# SHARED: 'atomics' feature is disallowed by {{.*}}shared-memory-no-atomics.yaml.tmp1.o, so --shared-memory must not be used{{$}}

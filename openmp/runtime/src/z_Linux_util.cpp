@@ -1833,6 +1833,17 @@ void __kmp_runtime_initialize(void) {
 
   __kmp_xproc = __kmp_get_xproc();
 
+#if ! KMP_32_BIT_ARCH
+  struct rlimit rlim;
+  // read stack size of calling thread, save it as default for worker threads;
+  // this should be done before reading environment variables
+  status = getrlimit(RLIMIT_STACK, &rlim);
+  if (status == 0) { // success?
+    __kmp_stksize = rlim.rlim_cur;
+    __kmp_check_stksize(&__kmp_stksize); // check value and adjust if needed
+  }
+#endif /* KMP_32_BIT_ARCH */
+
   if (sysconf(_SC_THREADS)) {
 
     /* Query the maximum number of threads */

@@ -73,7 +73,6 @@ struct VersionDefinition {
   llvm::StringRef Name;
   uint16_t Id = 0;
   std::vector<SymbolVersion> Globals;
-  size_t NameOff = 0; // Offset in the string table
 };
 
 // This struct contains the global configuration for the linker.
@@ -82,6 +81,7 @@ struct VersionDefinition {
 // Most fields are initialized by the driver.
 struct Configuration {
   uint8_t OSABI = 0;
+  uint32_t AndFeatures = 0;
   llvm::CachePruningPolicy ThinLTOCachePolicy;
   llvm::StringMap<uint64_t> SectionStartMap;
   llvm::StringRef Chroot;
@@ -100,6 +100,7 @@ struct Configuration {
   llvm::StringRef OutputFile;
   llvm::StringRef OptRemarksFilename;
   llvm::StringRef OptRemarksPasses;
+  llvm::StringRef OptRemarksFormat;
   llvm::StringRef ProgName;
   llvm::StringRef PrintSymbolOrder;
   llvm::StringRef SoName;
@@ -146,7 +147,9 @@ struct Configuration {
   bool ExecuteOnly;
   bool ExportDynamic;
   bool FixCortexA53Errata843419;
+  bool ForceBTI;
   bool FormatBinary = false;
+  bool RequireCET;
   bool GcSections;
   bool GdbIndex;
   bool GnuHash = false;
@@ -166,6 +169,7 @@ struct Configuration {
   bool OFormatBinary;
   bool Omagic;
   bool OptRemarksWithHotness;
+  bool PacPlt;
   bool PicThunk;
   bool Pie;
   bool PrintGcSections;

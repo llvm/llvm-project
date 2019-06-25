@@ -408,75 +408,435 @@ __parallel_transform_scan(_ExecutionPolicy&&, _Index __n, _Up __u, _Tp __init, _
 //
 // These are used by parallel implementations but do not depend on them.
 //------------------------------------------------------------------------
-
-template <typename _RandomAccessIterator1, typename _RandomAccessIterator2, typename _RandomAccessIterator3,
-          typename _Compare, typename _Cleanup, typename _LeafMerge>
-class __merge_task : public tbb::task
-{
-    /*override*/ tbb::task*
-    execute();
-    _RandomAccessIterator1 _M_xs, _M_xe;
-    _RandomAccessIterator2 _M_ys, _M_ye;
-    _RandomAccessIterator3 _M_zs;
-    _Compare _M_comp;
-    _Cleanup _M_cleanup;
-    _LeafMerge _M_leaf_merge;
-
-  public:
-    __merge_task(_RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe, _RandomAccessIterator2 __ys,
-                 _RandomAccessIterator2 __ye, _RandomAccessIterator3 __zs, _Compare __comp, _Cleanup __cleanup,
-                 _LeafMerge __leaf_merge)
-        : _M_xs(__xs), _M_xe(__xe), _M_ys(__ys), _M_ye(__ye), _M_zs(__zs), _M_comp(__comp), _M_cleanup(__cleanup),
-          _M_leaf_merge(__leaf_merge)
-    {
-    }
-};
-
 #define _PSTL_MERGE_CUT_OFF 2000
 
-template <typename _RandomAccessIterator1, typename _RandomAccessIterator2, typename _RandomAccessIterator3,
-          typename __M_Compare, typename _Cleanup, typename _LeafMerge>
-tbb::task*
-__merge_task<_RandomAccessIterator1, _RandomAccessIterator2, _RandomAccessIterator3, __M_Compare, _Cleanup,
-             _LeafMerge>::execute()
+template <typename _RandomAccessIterator1, typename _RandomAccessIterator2, typename _Compare, typename _Cleanup,
+          typename _LeafMerge>
+class __merge_task : public tbb::task
 {
     typedef typename std::iterator_traits<_RandomAccessIterator1>::difference_type _DifferenceType1;
     typedef typename std::iterator_traits<_RandomAccessIterator2>::difference_type _DifferenceType2;
     typedef typename std::common_type<_DifferenceType1, _DifferenceType2>::type _SizeType;
-    const _SizeType __n = (_M_xe - _M_xs) + (_M_ye - _M_ys);
-    const _SizeType __merge_cut_off = _PSTL_MERGE_CUT_OFF;
-    if (__n <= __merge_cut_off)
-    {
-        _M_leaf_merge(_M_xs, _M_xe, _M_ys, _M_ye, _M_zs, _M_comp);
+    typedef typename std::iterator_traits<_RandomAccessIterator1>::value_type _ValueType;
 
-        //we clean the buffer one time on last step of the sort
-        _M_cleanup(_M_xs, _M_xe);
-        _M_cleanup(_M_ys, _M_ye);
-        return nullptr;
-    }
-    else
+    /*override*/ tbb::task*
+    execute();
+    _RandomAccessIterator1 _M_x_beg;
+    _RandomAccessIterator2 _M_z_beg;
+
+    _SizeType _M_xs, _M_xe;
+    _SizeType _M_ys, _M_ye;
+    _SizeType _M_zs;
+    _Compare _M_comp;
+    _Cleanup _M_cleanup;
+    _LeafMerge _M_leaf_merge;
+    _SizeType _M_nsort; //number of elements to be sorted for partial_sort alforithm
+
+    static const _SizeType __merge_cut_off = _PSTL_MERGE_CUT_OFF;
+
+    bool _root;   //means a task is merging root task
+    bool _x_orig; //"true" means X(or left ) subrange is in the original container; false - in the buffer
+    bool _y_orig; //"true" means Y(or right) subrange is in the original container; false - in the buffer
+    bool _x_first_move, _y_first_move; //"true" means X and Y subranges are merging into the buffer and move constructor
+    //should be called instead of just moving.
+    bool _split; //"true" means a merge task is a split task for parallel merging, the execution logic differs
+
+    bool
+    is_partial() const
     {
-        _RandomAccessIterator1 __xm;
-        _RandomAccessIterator2 __ym;
-        if (_M_xe - _M_xs < _M_ye - _M_ys)
+        return _M_nsort > 0;
+    }
+
+    struct move_value
+    {
+        template <typename Iterator1, typename Iterator2>
+        void
+        operator()(Iterator1 __x, Iterator2 __z)
         {
-            __ym = _M_ys + (_M_ye - _M_ys) / 2;
-            __xm = std::upper_bound(_M_xs, _M_xe, *__ym, _M_comp);
+            *__z = std::move(*__x);
+        }
+    };
+
+    struct move_value_construct
+    {
+        template <typename Iterator1, typename Iterator2>
+        void
+        operator()(Iterator1 __x, Iterator2 __z)
+        {
+            ::new (std::addressof(*__z)) _ValueType(std::move(*__x));
+        }
+    };
+
+    struct move_range
+    {
+        template <typename Iterator1, typename Iterator2>
+        Iterator2
+        operator()(Iterator1 __first1, Iterator1 __last1, Iterator2 __first2)
+        {
+            if (__last1 - __first1 < __merge_cut_off)
+                return std::move(__first1, __last1, __first2);
+
+            auto __n = __last1 - __first1;
+            tbb::parallel_for(tbb::blocked_range<_SizeType>(0, __n, __merge_cut_off),
+                              [__first1, __first2](const tbb::blocked_range<_SizeType>& __range) {
+                                  std::move(__first1 + __range.begin(), __first1 + __range.end(),
+                                            __first2 + __range.begin());
+                              });
+            return __first2 + __n;
+        }
+    };
+
+    struct move_range_construct
+    {
+        template <typename Iterator1, typename Iterator2>
+        Iterator2
+        operator()(Iterator1 __first1, Iterator1 __last1, Iterator2 __first2)
+        {
+            if (__last1 - __first1 < __merge_cut_off)
+            {
+                for (; __first1 != __last1; ++__first1, ++__first2)
+                    move_value_construct()(__first1, __first2);
+                return __first2;
+            }
+
+            auto __n = __last1 - __first1;
+            tbb::parallel_for(tbb::blocked_range<_SizeType>(0, __n, __merge_cut_off),
+                              [__first1, __first2](const tbb::blocked_range<_SizeType>& __range) {
+                                  for (auto i = __range.begin(); i != __range.end(); ++i)
+                                      move_value_construct()(__first1 + i, __first2 + i);
+                              });
+            return __first2 + __n;
+        }
+    };
+
+  public:
+    __merge_task(_SizeType __xs, _SizeType __xe, _SizeType __ys, _SizeType __ye, _SizeType __zs, _Compare __comp,
+               _Cleanup __cleanup, _LeafMerge __leaf_merge, _SizeType __nsort, _RandomAccessIterator1 __x_beg,
+               _RandomAccessIterator2 __z_beg, bool __x_orig, bool __y_orig, bool __root)
+        : _M_xs(__xs), _M_xe(__xe), _M_ys(__ys), _M_ye(__ye), _M_zs(__zs), _M_x_beg(__x_beg), _M_z_beg(__z_beg),
+          _M_comp(__comp), _M_cleanup(__cleanup), _M_leaf_merge(__leaf_merge), _M_nsort(__nsort), _root(__root),
+          _x_orig(__x_orig), _y_orig(__y_orig), _x_first_move(false), _y_first_move(false), _split(false)
+    {
+    }
+
+    bool
+    is_left(_SizeType __idx) const
+    {
+        return _M_xs == __idx;
+    }
+
+    template <typename IndexType>
+    void
+    set_first_move(IndexType __idx, bool __on_off)
+    {
+        if (is_left(__idx))
+            _x_first_move = __on_off;
+        else
+            _y_first_move = __on_off;
+    }
+
+    template <typename IndexType>
+    void
+    set_odd(IndexType __idx, bool __on_off)
+    {
+        if (is_left(__idx))
+            _x_orig = __on_off;
+        else
+            _y_orig = __on_off;
+    }
+
+  private:
+    __merge_task*
+    parent_merge() const
+    {
+        tbb::task* p = (_root ? nullptr : parent());
+        return static_cast<__merge_task*>(p);
+    }
+    bool
+    x_less_y()
+    {
+        const auto __nx = (_M_xe - _M_xs);
+        const auto __ny = (_M_ye - _M_ys);
+        assert(__nx > 0 && __ny > 0);
+
+        assert(_x_orig == _y_orig);
+        assert(!is_partial());
+
+        if (_x_orig)
+        {
+            assert(std::is_sorted(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_comp));
+            assert(std::is_sorted(_M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_comp));
+            return !_M_comp(*(_M_x_beg + _M_ys), *(_M_x_beg + _M_xe - 1));
+        }
+
+        assert(std::is_sorted(_M_z_beg + _M_xs, _M_z_beg + _M_xe, _M_comp));
+        assert(std::is_sorted(_M_z_beg + _M_ys, _M_z_beg + _M_ye, _M_comp));
+        return !_M_comp(*(_M_z_beg + _M_zs + __nx), *(_M_z_beg + _M_zs + __nx - 1));
+    }
+    void
+    move_x_range()
+    {
+        const auto __nx = (_M_xe - _M_xs);
+        const auto __ny = (_M_ye - _M_ys);
+        assert(__nx > 0 && __ny > 0);
+
+        if (_x_orig)
+        {
+            if (_x_first_move)
+            {
+                move_range_construct()(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_z_beg + _M_zs);
+                _x_first_move = false;
+            }
+            else
+                move_range()(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_z_beg + _M_zs);
         }
         else
         {
-            __xm = _M_xs + (_M_xe - _M_xs) / 2;
-            __ym = std::lower_bound(_M_ys, _M_ye, *__xm, _M_comp);
+            assert(!_x_first_move);
+            move_range()(_M_z_beg + _M_zs, _M_z_beg + _M_zs + __nx, _M_x_beg + _M_xs);
         }
-        const _RandomAccessIterator3 __zm = _M_zs + ((__xm - _M_xs) + (__ym - _M_ys));
-        tbb::task* __right = new (tbb::task::allocate_additional_child_of(*parent()))
-            __merge_task(__xm, _M_xe, __ym, _M_ye, __zm, _M_comp, _M_cleanup, _M_leaf_merge);
+
+        _x_orig = !_x_orig;
+    }
+    void
+    move_y_range()
+    {
+        const auto __nx = (_M_xe - _M_xs);
+        const auto __ny = (_M_ye - _M_ys);
+
+        if (_y_orig)
+        {
+            if (_y_first_move)
+            {
+                move_range_construct()(_M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs + __nx);
+                _y_first_move = false;
+            }
+            else
+                move_range()(_M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs + __nx);
+        }
+        else
+        {
+            assert(!_y_first_move);
+            move_range()(_M_z_beg + _M_zs + __nx, _M_z_beg + _M_zs + __nx + __ny, _M_x_beg + _M_ys);
+        }
+
+        _y_orig = !_y_orig;
+    }
+    tbb::task*
+    merge_ranges()
+    {
+        assert(_x_orig == _y_orig); //two merged subrange must be lie into the same buffer
+
+        const auto __nx = (_M_xe - _M_xs);
+        const auto __ny = (_M_ye - _M_ys);
+        const auto __n = __nx + __ny;
+
+        // need to merge {x} and {y}
+        if (__n > __merge_cut_off)
+            return split_merging();
+
+        //merge to buffer
+        if (_x_orig)
+        {
+            assert(is_partial() || std::is_sorted(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_comp));
+            assert(is_partial() || std::is_sorted(_M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_comp));
+
+            if (_x_first_move && _y_first_move)
+            {
+                _M_leaf_merge(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs,
+                              _M_comp, move_value_construct(), move_value_construct(), move_range_construct(),
+                              move_range_construct());
+                _x_first_move = false, _y_first_move = false;
+            }
+            else if (_x_first_move && !_y_first_move)
+            {
+                _M_leaf_merge(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs,
+                              _M_comp, move_value_construct(), move_value(), move_range_construct(), move_range());
+                _x_first_move = false;
+            }
+            else if (!_x_first_move && _y_first_move)
+            {
+                _M_leaf_merge(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs,
+                              _M_comp, move_value(), move_value_construct(), move_range(), move_range_construct());
+                _y_first_move = false;
+            }
+            else
+                _M_leaf_merge(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs,
+                              _M_comp, move_value(), move_value(), move_range(), move_range());
+
+            assert(is_partial() || std::is_sorted(_M_z_beg + _M_zs, _M_z_beg + _M_zs + __nx + __ny, _M_comp));
+            assert(parent_merge()); //not root merging task
+        }
+        //merge to "origin"
+        else
+        {
+            assert(_x_orig == _y_orig);
+            assert(!_x_first_move);
+            assert(!_y_first_move);
+
+            assert(is_partial() || std::is_sorted(_M_z_beg + _M_xs, _M_z_beg + _M_xe, _M_comp));
+            assert(is_partial() || std::is_sorted(_M_z_beg + _M_ys, _M_z_beg + _M_ye, _M_comp));
+
+            const auto __nx = (_M_xe - _M_xs);
+            const auto __ny = (_M_ye - _M_ys);
+
+            _M_leaf_merge(_M_z_beg + _M_xs, _M_z_beg + _M_xe, _M_z_beg + _M_ys, _M_z_beg + _M_ye, _M_x_beg + _M_zs,
+                          _M_comp, move_value(), move_value(), move_range(), move_range());
+
+            assert(is_partial() || std::is_sorted(_M_x_beg + _M_zs, _M_x_beg + _M_zs + __nx + __ny, _M_comp));
+
+            //in case of the root merge task - clean the buffer
+            if (!parent_merge())
+            {
+                _M_cleanup(_M_z_beg + _M_xs, _M_z_beg + _M_xe);
+                _M_cleanup(_M_z_beg + _M_ys, _M_z_beg + _M_ye);
+            }
+        }
+        return nullptr;
+    }
+    tbb::task*
+    process_ranges()
+    {
+        assert(_x_orig == _y_orig);
+        assert(!_split);
+
+        auto p = parent_merge();
+
+        //optimization, just for sort algorithm, not for partial_sort
+        //{x} <= {y}
+        if (!is_partial() && x_less_y())
+        {
+            if (p)
+            {
+                const auto id_range = _M_zs;
+                p->set_odd(id_range, _x_orig);
+                p->set_first_move(id_range, _x_first_move);
+            }
+            else
+            { //root task
+
+                //clean the buffer
+                if (!_x_first_move)
+                    _M_cleanup(_M_z_beg + _M_xs, _M_z_beg + _M_xe);
+
+                if (!_y_first_move)
+                    _M_cleanup(_M_z_beg + _M_ys, _M_z_beg + _M_ye);
+            }
+            return nullptr;
+        }
+
+        //in case of the root merge task - move to the buffer firstly
+        //the root merging task
+        if (!p && _x_orig)
+        {
+            assert(_y_orig);
+
+            move_x_range();
+            move_y_range();
+        }
+
+        //we have to revert "_x(y)_orig" flag of the parent merging task
+        if (p)
+        {
+            const auto id_range = _M_zs;
+            p->set_odd(id_range, !_x_orig);
+        }
+
+        const _SizeType __n = (_M_xe - _M_xs) + (_M_ye - _M_ys);
+
+        // need to merge {x} and {y}
+        return merge_ranges();
+    }
+
+    //splitting as merge task into 2 of the same level
+    tbb::task*
+    split_merging()
+    {
+        assert(_x_orig == _y_orig);
+        const auto __nx = (_M_xe - _M_xs);
+        const auto __ny = (_M_ye - _M_ys);
+
+        _SizeType __xm{};
+        _SizeType __ym{};
+        if (__nx < __ny)
+        {
+            __ym = _M_ys + __ny / 2;
+
+            if (_x_orig)
+                __xm = std::upper_bound(_M_x_beg + _M_xs, _M_x_beg + _M_xe, *(_M_x_beg + __ym), _M_comp) - _M_x_beg;
+            else
+                __xm = std::upper_bound(_M_z_beg + _M_xs, _M_z_beg + _M_xe, *(_M_z_beg + __ym), _M_comp) - _M_z_beg;
+        }
+        else
+        {
+            __xm = _M_xs + __nx / 2;
+
+            if (_y_orig)
+                __ym = std::lower_bound(_M_x_beg + _M_ys, _M_x_beg + _M_ye, *(_M_x_beg + __xm), _M_comp) - _M_x_beg;
+            else
+                __ym = std::lower_bound(_M_z_beg + _M_ys, _M_z_beg + _M_ye, *(_M_z_beg + __xm), _M_comp) - _M_z_beg;
+        }
+
+        auto __zm = _M_zs + ((__xm - _M_xs) + (__ym - _M_ys));
+
+        __merge_task* __right = new (tbb::task::allocate_additional_child_of(*parent()))
+            __merge_task(__xm, _M_xe, __ym, _M_ye, __zm, _M_comp, _M_cleanup, _M_leaf_merge, _M_nsort, _M_x_beg, _M_z_beg,
+                       _x_orig, _y_orig, _root);
+
+        __right->_x_first_move = _x_first_move;
+        __right->_y_first_move = _y_first_move;
+        __right->_split = true;
+
         tbb::task::spawn(*__right);
         tbb::task::recycle_as_continuation();
         _M_xe = __xm;
         _M_ye = __ym;
+        _split = true;
+
+        return this;
     }
-    return this;
+};
+
+template <typename _RandomAccessIterator1, typename _RandomAccessIterator2, typename __M_Compare, typename _Cleanup,
+          typename _LeafMerge>
+tbb::task*
+__merge_task<_RandomAccessIterator1, _RandomAccessIterator2, __M_Compare, _Cleanup, _LeafMerge>::execute()
+{
+    //a. split merge task into 2 of the same level; the special logic,
+    //without processing(process_ranges) adjacent sub-ranges x and y
+    if (_split)
+        return merge_ranges();
+
+    //b. General merging of adjacent sub-ranges x and y (with optimization in case of {x} <= {y} )
+
+    //1. x and y are in the even buffer
+    //2. x and y are in the odd buffer
+    if (_x_orig == _y_orig)
+        return process_ranges();
+
+    //3. x is in even buffer, y is in the odd buffer
+    //4. x is in odd buffer, y is in the even buffer
+    if (!parent_merge())
+    { //root merge task
+        if (_x_orig)
+            move_x_range();
+        else
+            move_y_range();
+    }
+    else
+    {
+        const _SizeType __nx = (_M_xe - _M_xs);
+        const _SizeType __ny = (_M_ye - _M_ys);
+        assert(__nx > 0);
+        assert(__nx > 0);
+
+        if (__nx < __ny)
+            move_x_range();
+        else
+            move_y_range();
+    }
+
+    return process_ranges();
 }
 
 template <typename _RandomAccessIterator1, typename _RandomAccessIterator2, typename _Compare, typename _LeafSort>
@@ -490,27 +850,19 @@ class __stable_sort_task : public tbb::task
   private:
     /*override*/ tbb::task*
     execute();
-    _RandomAccessIterator1 _M_xs, _M_xe;
-    _RandomAccessIterator2 _M_zs;
+    _RandomAccessIterator1 _M_xs, _M_xe, _M_x_beg;
+    _RandomAccessIterator2 _M_zs, _M_z_beg;
     _Compare _M_comp;
     _LeafSort _M_leaf_sort;
-    int32_t _M_inplace;
-    _SizeType _M_nsort;
+    bool _M_root;
+    _SizeType _M_nsort; //zero or number of elements to be sorted for partial_sort alforithm
 
   public:
-    __stable_sort_task(_RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe, _RandomAccessIterator2 __zs,
-                       int32_t __inplace, _Compare __comp, _LeafSort __leaf_sort, _SizeType __n)
-        : _M_xs(__xs), _M_xe(__xe), _M_zs(__zs), _M_comp(__comp), _M_leaf_sort(__leaf_sort), _M_inplace(__inplace),
-          _M_nsort(__n)
-    {
-    }
-};
-
-//! Binary operator that does nothing
-struct __binary_no_op
-{
-    template <typename _T>
-    void operator()(_T, _T)
+    __stable_sort_task(_RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe, _RandomAccessIterator2 __zs, bool __root,
+                     _Compare __comp, _LeafSort __leaf_sort, _SizeType __nsort, _RandomAccessIterator1 __x_beg,
+                     _RandomAccessIterator2 __z_beg)
+        : _M_xs(__xs), _M_xe(__xe), _M_x_beg(__x_beg), _M_zs(__zs), _M_z_beg(__z_beg), _M_root(__root), _M_comp(__comp),
+          _M_leaf_sort(__leaf_sort), _M_nsort(__nsort)
     {
     }
 };
@@ -521,64 +873,43 @@ template <typename _RandomAccessIterator1, typename _RandomAccessIterator2, type
 tbb::task*
 __stable_sort_task<_RandomAccessIterator1, _RandomAccessIterator2, _Compare, _LeafSort>::execute()
 {
+    typedef __merge_task<_RandomAccessIterator1, _RandomAccessIterator2, _Compare, __serial_destroy, __serial_move_merge>
+        _MergeTaskType;
+
     const _SizeType __n = _M_xe - _M_xs;
     const _SizeType __nmerge = _M_nsort > 0 ? _M_nsort : __n;
     const _SizeType __sort_cut_off = _PSTL_STABLE_SORT_CUT_OFF;
     if (__n <= __sort_cut_off)
     {
         _M_leaf_sort(_M_xs, _M_xe, _M_comp);
-        if (_M_inplace != 2)
-            __par_backend::__init_buf(_M_xs, _M_xe, _M_zs, _M_inplace == 0);
-        return NULL;
+
+        assert(!_M_root);
+
+        tbb::task* p = parent();
+        const auto id_range = _M_xs - _M_x_beg;
+        static_cast<_MergeTaskType*>(p)->set_first_move(id_range, true);
+
+        return nullptr;
     }
-    else
-    {
-        const _RandomAccessIterator1 __xm = _M_xs + __n / 2;
-        const _RandomAccessIterator2 __zm = _M_zs + (__xm - _M_xs);
-        const _RandomAccessIterator2 __ze = _M_zs + __n;
-        task* __m;
-        auto __move_values = [](_RandomAccessIterator2 __x, _RandomAccessIterator1 __z) { *__z = std::move(*__x); };
-        auto __move_sequences = [](_RandomAccessIterator2 __first1, _RandomAccessIterator2 __last1,
-                                   _RandomAccessIterator1 __first2) { return std::move(__first1, __last1, __first2); };
-        if (_M_inplace == 2)
-            __m = new (tbb::task::allocate_continuation())
-                __merge_task<_RandomAccessIterator2, _RandomAccessIterator2, _RandomAccessIterator1, _Compare,
-                             __serial_destroy,
-                             __par_backend::__serial_move_merge<decltype(__move_values), decltype(__move_sequences)>>(
-                    _M_zs, __zm, __zm, __ze, _M_xs, _M_comp, __serial_destroy(),
-                    __par_backend::__serial_move_merge<decltype(__move_values), decltype(__move_sequences)>(
-                        __nmerge, __move_values, __move_sequences));
-        else if (_M_inplace)
-            __m = new (tbb::task::allocate_continuation())
-                __merge_task<_RandomAccessIterator2, _RandomAccessIterator2, _RandomAccessIterator1, _Compare,
-                             __par_backend::__binary_no_op,
-                             __par_backend::__serial_move_merge<decltype(__move_values), decltype(__move_sequences)>>(
-                    _M_zs, __zm, __zm, __ze, _M_xs, _M_comp, __par_backend::__binary_no_op(),
-                    __par_backend::__serial_move_merge<decltype(__move_values), decltype(__move_sequences)>(
-                        __nmerge, __move_values, __move_sequences));
-        else
-        {
-            auto __move_values = [](_RandomAccessIterator1 __x, _RandomAccessIterator2 __z) { *__z = std::move(*__x); };
-            auto __move_sequences = [](_RandomAccessIterator1 __first1, _RandomAccessIterator1 __last1,
-                                       _RandomAccessIterator2 __first2) {
-                return std::move(__first1, __last1, __first2);
-            };
-            __m = new (tbb::task::allocate_continuation())
-                __merge_task<_RandomAccessIterator1, _RandomAccessIterator1, _RandomAccessIterator2, _Compare,
-                             __par_backend::__binary_no_op,
-                             __par_backend::__serial_move_merge<decltype(__move_values), decltype(__move_sequences)>>(
-                    _M_xs, __xm, __xm, _M_xe, _M_zs, _M_comp, __par_backend::__binary_no_op(),
-                    __par_backend::__serial_move_merge<decltype(__move_values), decltype(__move_sequences)>(
-                        __nmerge, __move_values, __move_sequences));
-        }
-        __m->set_ref_count(2);
-        task* __right = new (__m->allocate_child())
-            __stable_sort_task(__xm, _M_xe, __zm, !_M_inplace, _M_comp, _M_leaf_sort, __nmerge);
-        tbb::task::spawn(*__right);
-        tbb::task::recycle_as_child_of(*__m);
-        _M_xe = __xm;
-        _M_inplace = !_M_inplace;
-    }
+
+    const _RandomAccessIterator1 __xm = _M_xs + __n / 2;
+    const _RandomAccessIterator2 __zm = _M_zs + (__xm - _M_xs);
+    const _RandomAccessIterator2 __ze = _M_zs + __n;
+    _MergeTaskType* __m = new (allocate_continuation())
+        _MergeTaskType(_M_xs - _M_x_beg, __xm - _M_x_beg, __xm - _M_x_beg, _M_xe - _M_x_beg, _M_zs - _M_z_beg,
+                       _M_comp, __serial_destroy(), __serial_move_merge(__nmerge), _M_nsort, _M_x_beg, _M_z_beg,
+                       /*x_orig*/ true, /*y_orig*/ true, /*root*/ _M_root);
+
+    _M_root = false;
+
+    __m->set_ref_count(2);
+    auto __right = new (__m->allocate_child())
+        __stable_sort_task(__xm, _M_xe, __zm, _M_root, _M_comp, _M_leaf_sort, _M_nsort, _M_x_beg, _M_z_beg);
+
+    spawn(*__right);
+    recycle_as_child_of(*__m);
+    _M_xe = __xm;
+
     return this;
 }
 
@@ -592,18 +923,18 @@ __parallel_stable_sort(_ExecutionPolicy&&, _RandomAccessIterator __xs, _RandomAc
         typedef typename std::iterator_traits<_RandomAccessIterator>::value_type _ValueType;
         typedef typename std::iterator_traits<_RandomAccessIterator>::difference_type _DifferenceType;
         const _DifferenceType __n = __xe - __xs;
-        if (__nsort == 0)
-            __nsort = __n;
+        if (__nsort == __n)
+            __nsort = 0; // 'partial_sort' becames 'sort'
 
         const _DifferenceType __sort_cut_off = _PSTL_STABLE_SORT_CUT_OFF;
         if (__n > __sort_cut_off)
         {
-            assert(__nsort > 0 && __nsort <= __n);
             __buffer<_ValueType> __buf(__n);
-            using tbb::task;
-            task::spawn_root_and_wait(*new (task::allocate_root())
-                                          __stable_sort_task<_RandomAccessIterator, _ValueType*, _Compare, _LeafSort>(
-                                              __xs, __xe, (_ValueType*)__buf.get(), 2, __comp, __leaf_sort, __nsort));
+            tbb::task* root = new (tbb::task::allocate_root())
+                __stable_sort_task<_RandomAccessIterator, _ValueType*, _Compare, _LeafSort>(
+                    __xs, __xe, __buf.get(), true, __comp, __leaf_sort, __nsort, __xs, __buf.get());
+            tbb::task::spawn_root_and_wait(*root);
+
             return;
         }
         //serial sort
@@ -614,6 +945,67 @@ __parallel_stable_sort(_ExecutionPolicy&&, _RandomAccessIterator __xs, _RandomAc
 //------------------------------------------------------------------------
 // parallel_merge
 //------------------------------------------------------------------------
+template <typename _RandomAccessIterator1, typename _RandomAccessIterator2, typename _RandomAccessIterator3,
+          typename _Compare, typename _LeafMerge>
+class __merge_task_static : public tbb::task
+{
+    /*override*/ tbb::task*
+    execute();
+    _RandomAccessIterator1 _M_xs, _M_xe;
+    _RandomAccessIterator2 _M_ys, _M_ye;
+    _RandomAccessIterator3 _M_zs;
+    _Compare _M_comp;
+    _LeafMerge _M_leaf_merge;
+
+  public:
+    __merge_task_static(_RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe, _RandomAccessIterator2 __ys,
+                      _RandomAccessIterator2 __ye, _RandomAccessIterator3 __zs, _Compare __comp,
+                      _LeafMerge __leaf_merge)
+        : _M_xs(__xs), _M_xe(__xe), _M_ys(__ys), _M_ye(__ye), _M_zs(__zs), _M_comp(__comp), _M_leaf_merge(__leaf_merge)
+    {
+    }
+};
+
+//TODO: consider usage of parallel_for with a custom blocked_range
+template <typename _RandomAccessIterator1, typename _RandomAccessIterator2, typename _RandomAccessIterator3,
+          typename __M_Compare, typename _LeafMerge>
+tbb::task*
+__merge_task_static<_RandomAccessIterator1, _RandomAccessIterator2, _RandomAccessIterator3, __M_Compare,
+                  _LeafMerge>::execute()
+{
+    typedef typename std::iterator_traits<_RandomAccessIterator1>::difference_type _DifferenceType1;
+    typedef typename std::iterator_traits<_RandomAccessIterator2>::difference_type _DifferenceType2;
+    typedef typename std::common_type<_DifferenceType1, _DifferenceType2>::type _SizeType;
+    const _SizeType __n = (_M_xe - _M_xs) + (_M_ye - _M_ys);
+    const _SizeType __merge_cut_off = _PSTL_MERGE_CUT_OFF;
+    if (__n <= __merge_cut_off)
+    {
+        _M_leaf_merge(_M_xs, _M_xe, _M_ys, _M_ye, _M_zs, _M_comp);
+        return nullptr;
+    }
+
+    _RandomAccessIterator1 __xm;
+    _RandomAccessIterator2 __ym;
+    if (_M_xe - _M_xs < _M_ye - _M_ys)
+    {
+        __ym = _M_ys + (_M_ye - _M_ys) / 2;
+        __xm = std::upper_bound(_M_xs, _M_xe, *__ym, _M_comp);
+    }
+    else
+    {
+        __xm = _M_xs + (_M_xe - _M_xs) / 2;
+        __ym = std::lower_bound(_M_ys, _M_ye, *__xm, _M_comp);
+    }
+    const _RandomAccessIterator3 __zm = _M_zs + ((__xm - _M_xs) + (__ym - _M_ys));
+    tbb::task* __right = new (tbb::task::allocate_additional_child_of(*parent()))
+        __merge_task_static(__xm, _M_xe, __ym, _M_ye, __zm, _M_comp, _M_leaf_merge);
+    tbb::task::spawn(*__right);
+    tbb::task::recycle_as_continuation();
+    _M_xe = __xm;
+    _M_ye = __ym;
+
+    return this;
+}
 
 template <class _ExecutionPolicy, typename _RandomAccessIterator1, typename _RandomAccessIterator2,
           typename _RandomAccessIterator3, typename _Compare, typename _LeafMerge>
@@ -635,11 +1027,11 @@ __parallel_merge(_ExecutionPolicy&&, _RandomAccessIterator1 __xs, _RandomAccessI
     else
     {
         tbb::this_task_arena::isolate([=]() {
-            typedef __merge_task<_RandomAccessIterator1, _RandomAccessIterator2, _RandomAccessIterator3, _Compare,
-                                 __par_backend::__binary_no_op, _LeafMerge>
+            typedef __merge_task_static<_RandomAccessIterator1, _RandomAccessIterator2, _RandomAccessIterator3, _Compare,
+                                      _LeafMerge>
                 _TaskType;
-            tbb::task::spawn_root_and_wait(*new (tbb::task::allocate_root()) _TaskType(
-                __xs, __xe, __ys, __ye, __zs, __comp, __par_backend::__binary_no_op(), __leaf_merge));
+            tbb::task::spawn_root_and_wait(*new (tbb::task::allocate_root())
+                                               _TaskType(__xs, __xe, __ys, __ye, __zs, __comp, __leaf_merge));
         });
     }
 }

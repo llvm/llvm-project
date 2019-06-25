@@ -26,9 +26,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "lld/Common/Driver.h"
+#include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
 #include <cstdlib>
@@ -59,12 +63,30 @@ static Flavor getFlavor(StringRef S) {
       .Default(Invalid);
 }
 
-static bool isPETarget(const std::vector<const char *> &V) {
+static cl::TokenizerCallback getDefaultQuotingStyle() {
+  if (Triple(sys::getProcessTriple()).getOS() == Triple::Win32)
+    return cl::TokenizeWindowsCommandLine;
+  return cl::TokenizeGNUCommandLine;
+}
+
+static bool isPETargetName(StringRef S) {
+  return S == "i386pe" || S == "i386pep" || S == "thumb2pe" || S == "arm64pe";
+}
+
+static bool isPETarget(std::vector<const char *> &V) {
   for (auto It = V.begin(); It + 1 != V.end(); ++It) {
     if (StringRef(*It) != "-m")
       continue;
-    StringRef S = *(It + 1);
-    return S == "i386pe" || S == "i386pep" || S == "thumb2pe" || S == "arm64pe";
+    return isPETargetName(*(It + 1));
+  }
+  // Expand response files (arguments in the form of @<filename>)
+  // to allow detecting the -m argument from arguments in them.
+  SmallVector<const char *, 256> ExpandedArgs(V.data(), V.data() + V.size());
+  cl::ExpandResponseFiles(Saver, getDefaultQuotingStyle(), ExpandedArgs);
+  for (auto It = ExpandedArgs.begin(); It + 1 != ExpandedArgs.end(); ++It) {
+    if (StringRef(*It) != "-m")
+      continue;
+    return isPETargetName(*(It + 1));
   }
   return false;
 }

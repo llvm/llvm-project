@@ -110,21 +110,12 @@ STATISTIC(NumSingletonWrites, "Number of singleton writes after ScopInfo");
 STATISTIC(NumSingletonWritesInLoops,
           "Number of singleton writes nested in affine loops after ScopInfo");
 
-// The maximal number of basic sets we allow during domain construction to
-// be created. More complex scops will result in very high compile time and
-// are also unlikely to result in good code
-static int const MaxDisjunctsInDomain = 20;
+int const polly::MaxDisjunctsInDomain = 20;
 
 // The number of disjunct in the context after which we stop to add more
 // disjuncts. This parameter is there to avoid exponential growth in the
 // number of disjunct when adding non-convex sets to the context.
 static int const MaxDisjunctsInContext = 4;
-
-// The maximal number of dimensions we allow during invariant load construction.
-// More complex access ranges will result in very high compile time and are also
-// unlikely to result in good code. This value is very high and should only
-// trigger for corner cases (e.g., the "dct_luma" function in h264, SPEC2006).
-static int const MaxDimensionsInAccessRange = 9;
 
 static cl::opt<int>
     OptComputeOut("polly-analysis-computeout",
@@ -178,16 +169,6 @@ static cl::opt<bool> PollyIgnoreParamBounds(
     "polly-ignore-parameter-bounds",
     cl::desc(
         "Do not add parameter bounds and do no gist simplify sets accordingly"),
-    cl::Hidden, cl::init(false), cl::cat(PollyCategory));
-
-static cl::opt<bool> PollyAllowDereferenceOfAllFunctionParams(
-    "polly-allow-dereference-of-all-function-parameters",
-    cl::desc(
-        "Treat all parameters to functions that are pointers as dereferencible."
-        " This is useful for invariant load hoisting, since we can generate"
-        " less runtime checks. This is only valid if all pointers to functions"
-        " are always initialized, so that Polly can choose to hoist"
-        " their loads. "),
     cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
 static cl::opt<bool> PollyPreciseFoldAccesses(
@@ -2102,26 +2083,6 @@ void Scop::addUserContext() {
   Context = Context.intersect(UserContext);
 }
 
-void Scop::buildInvariantEquivalenceClasses() {
-  DenseMap<std::pair<const SCEV *, Type *>, LoadInst *> EquivClasses;
-
-  const InvariantLoadsSetTy &RIL = getRequiredInvariantLoads();
-  for (LoadInst *LInst : RIL) {
-    const SCEV *PointerSCEV = SE->getSCEV(LInst->getPointerOperand());
-
-    Type *Ty = LInst->getType();
-    LoadInst *&ClassRep = EquivClasses[std::make_pair(PointerSCEV, Ty)];
-    if (ClassRep) {
-      InvEquivClassVMap[LInst] = ClassRep;
-      continue;
-    }
-
-    ClassRep = LInst;
-    InvariantEquivClasses.emplace_back(
-        InvariantEquivClassTy{PointerSCEV, MemoryAccessList(), nullptr, Ty});
-  }
-}
-
 void Scop::buildContext() {
   isl::space Space = isl::space::params_alloc(getIslCtx(), 0);
   Context = isl::set::universe(Space);
@@ -3013,20 +2974,6 @@ MemoryAccess *Scop::lookupBasePtrAccess(MemoryAccess *MA) {
   return BasePtrStmt->getArrayAccessOrNULLFor(PointerBaseInst);
 }
 
-bool Scop::hasNonHoistableBasePtrInScop(MemoryAccess *MA,
-                                        isl::union_map Writes) {
-  if (auto *BasePtrMA = lookupBasePtrAccess(MA)) {
-    return getNonHoistableCtx(BasePtrMA, Writes).is_null();
-  }
-
-  Value *BaseAddr = MA->getOriginalBaseAddr();
-  if (auto *BasePtrInst = dyn_cast<Instruction>(BaseAddr))
-    if (!isa<LoadInst>(BasePtrInst))
-      return contains(BasePtrInst);
-
-  return false;
-}
-
 bool Scop::buildAliasChecks(AliasAnalysis &AA) {
   if (!PollyUseRuntimeAliasChecks)
     return true;
@@ -3541,364 +3488,6 @@ InvariantEquivClassTy *Scop::lookupInvariantEquivClass(Value *Val) {
   }
 
   return nullptr;
-}
-
-bool isAParameter(llvm::Value *maybeParam, const Function &F) {
-  for (const llvm::Argument &Arg : F.args())
-    if (&Arg == maybeParam)
-      return true;
-
-  return false;
-}
-
-bool Scop::canAlwaysBeHoisted(MemoryAccess *MA, bool StmtInvalidCtxIsEmpty,
-                              bool MAInvalidCtxIsEmpty,
-                              bool NonHoistableCtxIsEmpty) {
-  LoadInst *LInst = cast<LoadInst>(MA->getAccessInstruction());
-  const DataLayout &DL = LInst->getParent()->getModule()->getDataLayout();
-  if (PollyAllowDereferenceOfAllFunctionParams &&
-      isAParameter(LInst->getPointerOperand(), getFunction()))
-    return true;
-
-  // TODO: We can provide more information for better but more expensive
-  //       results.
-  if (!isDereferenceableAndAlignedPointer(LInst->getPointerOperand(),
-                                          LInst->getAlignment(), DL))
-    return false;
-
-  // If the location might be overwritten we do not hoist it unconditionally.
-  //
-  // TODO: This is probably too conservative.
-  if (!NonHoistableCtxIsEmpty)
-    return false;
-
-  // If a dereferenceable load is in a statement that is modeled precisely we
-  // can hoist it.
-  if (StmtInvalidCtxIsEmpty && MAInvalidCtxIsEmpty)
-    return true;
-
-  // Even if the statement is not modeled precisely we can hoist the load if it
-  // does not involve any parameters that might have been specialized by the
-  // statement domain.
-  for (unsigned u = 0, e = MA->getNumSubscripts(); u < e; u++)
-    if (!isa<SCEVConstant>(MA->getSubscript(u)))
-      return false;
-  return true;
-}
-
-void Scop::addInvariantLoads(ScopStmt &Stmt, InvariantAccessesTy &InvMAs) {
-  if (InvMAs.empty())
-    return;
-
-  isl::set StmtInvalidCtx = Stmt.getInvalidContext();
-  bool StmtInvalidCtxIsEmpty = StmtInvalidCtx.is_empty();
-
-  // Get the context under which the statement is executed but remove the error
-  // context under which this statement is reached.
-  isl::set DomainCtx = Stmt.getDomain().params();
-  DomainCtx = DomainCtx.subtract(StmtInvalidCtx);
-
-  if (DomainCtx.n_basic_set() >= MaxDisjunctsInDomain) {
-    auto *AccInst = InvMAs.front().MA->getAccessInstruction();
-    invalidate(COMPLEXITY, AccInst->getDebugLoc(), AccInst->getParent());
-    return;
-  }
-
-  // Project out all parameters that relate to loads in the statement. Otherwise
-  // we could have cyclic dependences on the constraints under which the
-  // hoisted loads are executed and we could not determine an order in which to
-  // pre-load them. This happens because not only lower bounds are part of the
-  // domain but also upper bounds.
-  for (auto &InvMA : InvMAs) {
-    auto *MA = InvMA.MA;
-    Instruction *AccInst = MA->getAccessInstruction();
-    if (SE->isSCEVable(AccInst->getType())) {
-      SetVector<Value *> Values;
-      for (const SCEV *Parameter : Parameters) {
-        Values.clear();
-        findValues(Parameter, *SE, Values);
-        if (!Values.count(AccInst))
-          continue;
-
-        if (isl::id ParamId = getIdForParam(Parameter)) {
-          int Dim = DomainCtx.find_dim_by_id(isl::dim::param, ParamId);
-          if (Dim >= 0)
-            DomainCtx = DomainCtx.eliminate(isl::dim::param, Dim, 1);
-        }
-      }
-    }
-  }
-
-  for (auto &InvMA : InvMAs) {
-    auto *MA = InvMA.MA;
-    isl::set NHCtx = InvMA.NonHoistableCtx;
-
-    // Check for another invariant access that accesses the same location as
-    // MA and if found consolidate them. Otherwise create a new equivalence
-    // class at the end of InvariantEquivClasses.
-    LoadInst *LInst = cast<LoadInst>(MA->getAccessInstruction());
-    Type *Ty = LInst->getType();
-    const SCEV *PointerSCEV = SE->getSCEV(LInst->getPointerOperand());
-
-    isl::set MAInvalidCtx = MA->getInvalidContext();
-    bool NonHoistableCtxIsEmpty = NHCtx.is_empty();
-    bool MAInvalidCtxIsEmpty = MAInvalidCtx.is_empty();
-
-    isl::set MACtx;
-    // Check if we know that this pointer can be speculatively accessed.
-    if (canAlwaysBeHoisted(MA, StmtInvalidCtxIsEmpty, MAInvalidCtxIsEmpty,
-                           NonHoistableCtxIsEmpty)) {
-      MACtx = isl::set::universe(DomainCtx.get_space());
-    } else {
-      MACtx = DomainCtx;
-      MACtx = MACtx.subtract(MAInvalidCtx.unite(NHCtx));
-      MACtx = MACtx.gist_params(getContext());
-    }
-
-    bool Consolidated = false;
-    for (auto &IAClass : InvariantEquivClasses) {
-      if (PointerSCEV != IAClass.IdentifyingPointer || Ty != IAClass.AccessType)
-        continue;
-
-      // If the pointer and the type is equal check if the access function wrt.
-      // to the domain is equal too. It can happen that the domain fixes
-      // parameter values and these can be different for distinct part of the
-      // SCoP. If this happens we cannot consolidate the loads but need to
-      // create a new invariant load equivalence class.
-      auto &MAs = IAClass.InvariantAccesses;
-      if (!MAs.empty()) {
-        auto *LastMA = MAs.front();
-
-        isl::set AR = MA->getAccessRelation().range();
-        isl::set LastAR = LastMA->getAccessRelation().range();
-        bool SameAR = AR.is_equal(LastAR);
-
-        if (!SameAR)
-          continue;
-      }
-
-      // Add MA to the list of accesses that are in this class.
-      MAs.push_front(MA);
-
-      Consolidated = true;
-
-      // Unify the execution context of the class and this statement.
-      isl::set IAClassDomainCtx = IAClass.ExecutionContext;
-      if (IAClassDomainCtx)
-        IAClassDomainCtx = IAClassDomainCtx.unite(MACtx).coalesce();
-      else
-        IAClassDomainCtx = MACtx;
-      IAClass.ExecutionContext = IAClassDomainCtx;
-      break;
-    }
-
-    if (Consolidated)
-      continue;
-
-    MACtx = MACtx.coalesce();
-
-    // If we did not consolidate MA, thus did not find an equivalence class
-    // for it, we create a new one.
-    InvariantEquivClasses.emplace_back(
-        InvariantEquivClassTy{PointerSCEV, MemoryAccessList{MA}, MACtx, Ty});
-  }
-}
-
-/// Check if an access range is too complex.
-///
-/// An access range is too complex, if it contains either many disjuncts or
-/// very complex expressions. As a simple heuristic, we assume if a set to
-/// be too complex if the sum of existentially quantified dimensions and
-/// set dimensions is larger than a threshold. This reliably detects both
-/// sets with many disjuncts as well as sets with many divisions as they
-/// arise in h264.
-///
-/// @param AccessRange The range to check for complexity.
-///
-/// @returns True if the access range is too complex.
-static bool isAccessRangeTooComplex(isl::set AccessRange) {
-  unsigned NumTotalDims = 0;
-
-  for (isl::basic_set BSet : AccessRange.get_basic_set_list()) {
-    NumTotalDims += BSet.dim(isl::dim::div);
-    NumTotalDims += BSet.dim(isl::dim::set);
-  }
-
-  if (NumTotalDims > MaxDimensionsInAccessRange)
-    return true;
-
-  return false;
-}
-
-isl::set Scop::getNonHoistableCtx(MemoryAccess *Access, isl::union_map Writes) {
-  // TODO: Loads that are not loop carried, hence are in a statement with
-  //       zero iterators, are by construction invariant, though we
-  //       currently "hoist" them anyway. This is necessary because we allow
-  //       them to be treated as parameters (e.g., in conditions) and our code
-  //       generation would otherwise use the old value.
-
-  auto &Stmt = *Access->getStatement();
-  BasicBlock *BB = Stmt.getEntryBlock();
-
-  if (Access->isScalarKind() || Access->isWrite() || !Access->isAffine() ||
-      Access->isMemoryIntrinsic())
-    return nullptr;
-
-  // Skip accesses that have an invariant base pointer which is defined but
-  // not loaded inside the SCoP. This can happened e.g., if a readnone call
-  // returns a pointer that is used as a base address. However, as we want
-  // to hoist indirect pointers, we allow the base pointer to be defined in
-  // the region if it is also a memory access. Each ScopArrayInfo object
-  // that has a base pointer origin has a base pointer that is loaded and
-  // that it is invariant, thus it will be hoisted too. However, if there is
-  // no base pointer origin we check that the base pointer is defined
-  // outside the region.
-  auto *LI = cast<LoadInst>(Access->getAccessInstruction());
-  if (hasNonHoistableBasePtrInScop(Access, Writes))
-    return nullptr;
-
-  isl::map AccessRelation = Access->getAccessRelation();
-  assert(!AccessRelation.is_empty());
-
-  if (AccessRelation.involves_dims(isl::dim::in, 0, Stmt.getNumIterators()))
-    return nullptr;
-
-  AccessRelation = AccessRelation.intersect_domain(Stmt.getDomain());
-  isl::set SafeToLoad;
-
-  auto &DL = getFunction().getParent()->getDataLayout();
-  if (isSafeToLoadUnconditionally(LI->getPointerOperand(), LI->getAlignment(),
-                                  DL)) {
-    SafeToLoad = isl::set::universe(AccessRelation.get_space().range());
-  } else if (BB != LI->getParent()) {
-    // Skip accesses in non-affine subregions as they might not be executed
-    // under the same condition as the entry of the non-affine subregion.
-    return nullptr;
-  } else {
-    SafeToLoad = AccessRelation.range();
-  }
-
-  if (isAccessRangeTooComplex(AccessRelation.range()))
-    return nullptr;
-
-  isl::union_map Written = Writes.intersect_range(SafeToLoad);
-  isl::set WrittenCtx = Written.params();
-  bool IsWritten = !WrittenCtx.is_empty();
-
-  if (!IsWritten)
-    return WrittenCtx;
-
-  WrittenCtx = WrittenCtx.remove_divs();
-  bool TooComplex = WrittenCtx.n_basic_set() >= MaxDisjunctsInDomain;
-  if (TooComplex || !isRequiredInvariantLoad(LI))
-    return nullptr;
-
-  addAssumption(INVARIANTLOAD, WrittenCtx, LI->getDebugLoc(), AS_RESTRICTION,
-                LI->getParent());
-  return WrittenCtx;
-}
-
-void Scop::verifyInvariantLoads() {
-  auto &RIL = getRequiredInvariantLoads();
-  for (LoadInst *LI : RIL) {
-    assert(LI && contains(LI));
-    // If there exists a statement in the scop which has a memory access for
-    // @p LI, then mark this scop as infeasible for optimization.
-    for (ScopStmt &Stmt : Stmts)
-      if (Stmt.getArrayAccessOrNULLFor(LI)) {
-        invalidate(INVARIANTLOAD, LI->getDebugLoc(), LI->getParent());
-        return;
-      }
-  }
-}
-
-void Scop::hoistInvariantLoads() {
-  if (!PollyInvariantLoadHoisting)
-    return;
-
-  isl::union_map Writes = getWrites();
-  for (ScopStmt &Stmt : *this) {
-    InvariantAccessesTy InvariantAccesses;
-
-    for (MemoryAccess *Access : Stmt)
-      if (isl::set NHCtx = getNonHoistableCtx(Access, Writes))
-        InvariantAccesses.push_back({Access, NHCtx});
-
-    // Transfer the memory access from the statement to the SCoP.
-    for (auto InvMA : InvariantAccesses)
-      Stmt.removeMemoryAccess(InvMA.MA);
-    addInvariantLoads(Stmt, InvariantAccesses);
-  }
-}
-
-/// Find the canonical scop array info object for a set of invariant load
-/// hoisted loads. The canonical array is the one that corresponds to the
-/// first load in the list of accesses which is used as base pointer of a
-/// scop array.
-static const ScopArrayInfo *findCanonicalArray(Scop *S,
-                                               MemoryAccessList &Accesses) {
-  for (MemoryAccess *Access : Accesses) {
-    const ScopArrayInfo *CanonicalArray = S->getScopArrayInfoOrNull(
-        Access->getAccessInstruction(), MemoryKind::Array);
-    if (CanonicalArray)
-      return CanonicalArray;
-  }
-  return nullptr;
-}
-
-/// Check if @p Array severs as base array in an invariant load.
-static bool isUsedForIndirectHoistedLoad(Scop *S, const ScopArrayInfo *Array) {
-  for (InvariantEquivClassTy &EqClass2 : S->getInvariantAccesses())
-    for (MemoryAccess *Access2 : EqClass2.InvariantAccesses)
-      if (Access2->getScopArrayInfo() == Array)
-        return true;
-  return false;
-}
-
-/// Replace the base pointer arrays in all memory accesses referencing @p Old,
-/// with a reference to @p New.
-static void replaceBasePtrArrays(Scop *S, const ScopArrayInfo *Old,
-                                 const ScopArrayInfo *New) {
-  for (ScopStmt &Stmt : *S)
-    for (MemoryAccess *Access : Stmt) {
-      if (Access->getLatestScopArrayInfo() != Old)
-        continue;
-
-      isl::id Id = New->getBasePtrId();
-      isl::map Map = Access->getAccessRelation();
-      Map = Map.set_tuple_id(isl::dim::out, Id);
-      Access->setAccessRelation(Map);
-    }
-}
-
-void Scop::canonicalizeDynamicBasePtrs() {
-  for (InvariantEquivClassTy &EqClass : InvariantEquivClasses) {
-    MemoryAccessList &BasePtrAccesses = EqClass.InvariantAccesses;
-
-    const ScopArrayInfo *CanonicalBasePtrSAI =
-        findCanonicalArray(this, BasePtrAccesses);
-
-    if (!CanonicalBasePtrSAI)
-      continue;
-
-    for (MemoryAccess *BasePtrAccess : BasePtrAccesses) {
-      const ScopArrayInfo *BasePtrSAI = getScopArrayInfoOrNull(
-          BasePtrAccess->getAccessInstruction(), MemoryKind::Array);
-      if (!BasePtrSAI || BasePtrSAI == CanonicalBasePtrSAI ||
-          !BasePtrSAI->isCompatibleWith(CanonicalBasePtrSAI))
-        continue;
-
-      // we currently do not canonicalize arrays where some accesses are
-      // hoisted as invariant loads. If we would, we need to update the access
-      // function of the invariant loads as well. However, as this is not a
-      // very common situation, we leave this for now to avoid further
-      // complexity increases.
-      if (isUsedForIndirectHoistedLoad(this, BasePtrSAI))
-        continue;
-
-      replaceBasePtrArrays(this, BasePtrSAI, CanonicalBasePtrSAI);
-    }
-  }
 }
 
 ScopArrayInfo *Scop::getOrCreateScopArrayInfo(Value *BasePtr, Type *ElementType,
@@ -4422,26 +4011,8 @@ isl::union_map Scop::getAccesses(ScopArrayInfo *Array) {
       [Array](MemoryAccess &MA) { return MA.getScopArrayInfo() == Array; });
 }
 
-// Check whether @p Node is an extension node.
-//
-// @return true if @p Node is an extension node.
-isl_bool isNotExtNode(__isl_keep isl_schedule_node *Node, void *User) {
-  if (isl_schedule_node_get_type(Node) == isl_schedule_node_extension)
-    return isl_bool_error;
-  else
-    return isl_bool_true;
-}
-
-bool Scop::containsExtensionNode(isl::schedule Schedule) {
-  return isl_schedule_foreach_schedule_node_top_down(
-             Schedule.get(), isNotExtNode, nullptr) == isl_stat_error;
-}
-
 isl::union_map Scop::getSchedule() const {
   auto Tree = getScheduleTree();
-  if (containsExtensionNode(Tree))
-    return nullptr;
-
   return Tree.get_map();
 }
 

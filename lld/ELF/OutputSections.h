@@ -93,6 +93,11 @@ public:
   bool UsedInExpression = false;
   bool InOverlay = false;
 
+  // Tracks whether the section has ever had an input section added to it, even
+  // if the section was later removed (e.g. because it is a synthetic section
+  // that wasn't needed). This is needed for orphan placement.
+  bool HasInputSections = false;
+
   void finalize();
   template <class ELFT> void writeTo(uint8_t *Buf);
   template <class ELFT> void maybeCompress();

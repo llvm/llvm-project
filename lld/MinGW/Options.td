@@ -25,8 +25,24 @@ def kill_at: F<"kill-at">, HelpText<"Remove @n from exported symbols">;
 def l: JoinedOrSeparate<["-"], "l">, MetaVarName<"<libName>">,
   HelpText<"Root name of library to use">;
 def m: JoinedOrSeparate<["-"], "m">, HelpText<"Set target emulation">;
+def major_os_version: Separate<["--"], "major-os-version">,
+    HelpText<"Set the OS and subsystem major version">;
+def major_os_version_eq: Joined<["--"], "major-os-version=">,
+    Alias<major_os_version>;
+def major_subsystem_version: Separate<["--"], "major-subsystem-version">,
+    HelpText<"Set the OS and subsystem major version">;
+def major_subsystem_version_eq: Joined<["--"], "major-subsystem-version=">,
+    Alias<major_subsystem_version>;
 def map: S<"Map">, HelpText<"Output a linker map">;
 def map_eq: J<"Map=">, Alias<map>;
+def minor_os_version: Separate<["--"], "minor-os-version">,
+    HelpText<"Set the OS and subsystem minor version">;
+def minor_os_version_eq: Joined<["--"], "minor-os-version=">,
+    Alias<minor_os_version>;
+def minor_subsystem_version: Separate<["--"], "minor-subsystem-version">,
+    HelpText<"Set the OS and subsystem minor version">;
+def minor_subsystem_version_eq: Joined<["--"], "minor-subsystem-version=">,
+    Alias<minor_subsystem_version>;
 def no_insert_timestamp: F<"no-insert-timestamp">,
     HelpText<"Don't include PE header timestamp">;
 def no_whole_archive: F<"no-whole-archive">,
@@ -41,11 +57,16 @@ def out_implib_eq: Joined<["--"], "out-implib=">, Alias<out_implib>;
 def output_def: S<"output-def">, HelpText<"Output def file">;
 def shared: F<"shared">, HelpText<"Build a shared object">;
 def subs: S<"subsystem">, HelpText<"Specify subsystem">;
+def subs_eq: J<"subsystem=">, Alias<subs>;
 def stack: S<"stack">;
 def strip_all: F<"strip-all">,
     HelpText<"Omit all symbol information from the output binary">;
 def strip_debug: F<"strip-debug">,
     HelpText<"Omit all debug information, but keep symbol information">;
+def undefined: S<"u">,
+    HelpText<"Include symbol in the link, if available">;
+def undefined_long: S<"undefined">, Alias<undefined>;
+def undefined_eq: J<"undefined=">, Alias<undefined>;
 def whole_archive: F<"whole-archive">,
     HelpText<"Include all object files for following archives">;
 def v: Flag<["-"], "v">, HelpText<"Display the version number">;

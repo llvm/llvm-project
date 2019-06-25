@@ -50,7 +50,7 @@ FreeBSD      i386, x86_64, ARM64      Clang        DWARF CFI
 iOS          ARM                      Clang        SjLj
 Linux        ARM                      Clang, GCC   EHABI
 Linux        i386, x86_64, ARM64      Clang, GCC   DWARF CFI
-Mac OS X     i386, x86_64             Clang, GCC   DWARF CFI
+macOS        i386, x86_64             Clang, GCC   DWARF CFI
 NetBSD       x86_64                   Clang, GCC   DWARF CFI
 Windows      i386, x86_64, ARM, ARM64 Clang        DWARF CFI
 ============ ======================== ============ ========================

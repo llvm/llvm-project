@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <cmath>
@@ -95,8 +97,8 @@ struct test_one_policy
 
     template <typename Policy, typename InputIterator1, typename InputIterator2, typename Compare>
     typename std::enable_if<TestUtils::isReverse<InputIterator1>::value, void>::type
-    operator()(Policy&& exec, InputIterator1 first1, InputIterator1 last1, InputIterator2 first2, InputIterator2 last2,
-               Compare comp)
+    operator()(Policy&&, InputIterator1, InputIterator1, InputIterator2, InputIterator2,
+               Compare)
     {
     }
 };
@@ -116,7 +118,7 @@ test_set(Compare compare)
         for (std::size_t m = 0; m < n_max; m = m <= 16 ? m + 1 : size_t(2.71828 * m))
         {
             //prepare the input ranges
-            Sequence<T1> in1(n, [n](std::size_t k) { return rand() % (2 * k + 1); });
+            Sequence<T1> in1(n, [](std::size_t k) { return rand() % (2 * k + 1); });
             Sequence<T2> in2(m, [m](std::size_t k) { return (m % 2) * rand() + rand() % (k + 1); });
 
             std::sort(in1.begin(), in1.end(), compare);

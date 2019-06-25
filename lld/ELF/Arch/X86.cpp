@@ -52,11 +52,10 @@ X86::X86() {
   PltRel = R_386_JUMP_SLOT;
   IRelativeRel = R_386_IRELATIVE;
   RelativeRel = R_386_RELATIVE;
+  SymbolicRel = R_386_32;
   TlsGotRel = R_386_TLS_TPOFF;
   TlsModuleIndexRel = R_386_TLS_DTPMOD32;
   TlsOffsetRel = R_386_TLS_DTPOFF32;
-  GotEntrySize = 4;
-  GotPltEntrySize = 4;
   PltEntrySize = 16;
   PltHeaderSize = 16;
   TrapInstr = {0xcc, 0xcc, 0xcc, 0xcc}; // 0xcc = INT3
@@ -169,7 +168,7 @@ RelExpr X86::adjustRelaxExpr(RelType Type, const uint8_t *Data,
 }
 
 void X86::writeGotPltHeader(uint8_t *Buf) const {
-  write32le(Buf, In.Dynamic->getVA());
+  write32le(Buf, Main->Dynamic->getVA());
 }
 
 void X86::writeGotPlt(uint8_t *Buf, const Symbol &S) const {
@@ -293,7 +292,6 @@ void X86::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     write16le(Loc, Val);
     break;
   case R_386_32:
-  case R_386_GLOB_DAT:
   case R_386_GOT32:
   case R_386_GOT32X:
   case R_386_GOTOFF:

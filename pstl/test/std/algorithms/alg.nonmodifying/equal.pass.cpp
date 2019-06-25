@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <execution>
@@ -20,10 +22,10 @@ using namespace TestUtils;
 
 struct UserType
 {
+    size_t key;
     float32_t f;
     float64_t d;
     int32_t i;
-    size_t key;
 
     bool
     operator()(UserType a, UserType b)

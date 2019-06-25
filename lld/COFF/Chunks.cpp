@@ -41,7 +41,9 @@ SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
   SectionNameData = SectionName.data();
   SectionNameSize = SectionName.size();
 
-  Alignment = Header->getAlignment();
+  setAlignment(Header->getAlignment());
+
+  HasData = !(Header->Characteristics & IMAGE_SCN_CNT_UNINITIALIZED_DATA);
 
   // If linker GC is disabled, every chunk starts out alive.  If linker GC is
   // enabled, treat non-comdat sections as roots. Generally optimized object
@@ -53,7 +55,7 @@ SectionChunk::SectionChunk(ObjFile *F, const coff_section *H)
 // SectionChunk is one of the most frequently allocated classes, so it is
 // important to keep it as compact as possible. As of this writing, the number
 // below is the size of this class on x64 platforms.
-static_assert(sizeof(SectionChunk) <= 112, "SectionChunk grew unexpectedly");
+static_assert(sizeof(SectionChunk) <= 88, "SectionChunk grew unexpectedly");
 
 static void add16(uint8_t *P, int16_t V) { write16le(P, read16le(P) + V); }
 static void add32(uint8_t *P, int32_t V) { write32le(P, read32le(P) + V); }
@@ -334,8 +336,15 @@ static void maybeReportRelocationToDiscarded(const SectionChunk *FromChunk,
     File->getCOFFObj()->getSymbolName(COFFSym, Name);
   }
 
-  error("relocation against symbol in discarded section: " + Name +
-        getSymbolLocations(File, Rel.SymbolTableIndex));
+  std::vector<std::string> SymbolLocations =
+      getSymbolLocations(File, Rel.SymbolTableIndex);
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << "relocation against symbol in discarded section: " + Name;
+  for (const std::string &S : SymbolLocations)
+    OS << S;
+  error(OS.str());
 }
 
 void SectionChunk::writeTo(uint8_t *Buf) const {
@@ -559,14 +568,6 @@ void SectionChunk::getRuntimePseudoRelocs(
   }
 }
 
-bool SectionChunk::hasData() const {
-  return !(Header->Characteristics & IMAGE_SCN_CNT_UNINITIALIZED_DATA);
-}
-
-uint32_t SectionChunk::getOutputCharacteristics() const {
-  return Header->Characteristics & (PermMask | TypeMask);
-}
-
 bool SectionChunk::isCOMDAT() const {
   return Header->Characteristics & IMAGE_SCN_LNK_COMDAT;
 }
@@ -578,7 +579,7 @@ void SectionChunk::printDiscardedMessage() const {
     message("Discarded " + Sym->getName());
 }
 
-StringRef SectionChunk::getDebugName() {
+StringRef SectionChunk::getDebugName() const {
   if (Sym)
     return Sym->getName();
   return "";
@@ -607,12 +608,15 @@ ArrayRef<uint8_t> SectionChunk::consumeDebugMagic(ArrayRef<uint8_t> Data,
   if (!SectionName.startswith(".debug$"))
     fatal("invalid section: " + SectionName);
 
-  unsigned Magic = support::endian::read32le(Data.data());
-  unsigned ExpectedMagic = SectionName == ".debug$H"
+  uint32_t Magic = support::endian::read32le(Data.data());
+  uint32_t ExpectedMagic = SectionName == ".debug$H"
                                ? DEBUG_HASHES_SECTION_MAGIC
                                : DEBUG_SECTION_MAGIC;
-  if (Magic != ExpectedMagic)
-    fatal("section: " + SectionName + " has an invalid magic: " + Twine(Magic));
+  if (Magic != ExpectedMagic) {
+    warn("ignoring section " + SectionName + " with unrecognized magic 0x" +
+         utohexstr(Magic));
+    return {};
+  }
   return Data.slice(4);
 }
 
@@ -625,7 +629,7 @@ SectionChunk *SectionChunk::findByName(ArrayRef<SectionChunk *> Sections,
 }
 
 void SectionChunk::replace(SectionChunk *Other) {
-  Alignment = std::max(Alignment, Other->Alignment);
+  P2Align = std::max(P2Align, Other->P2Align);
   Other->Repl = Repl;
   Other->Live = false;
 }
@@ -638,9 +642,11 @@ uint32_t SectionChunk::getSectionNumber() const {
 }
 
 CommonChunk::CommonChunk(const COFFSymbolRef S) : Sym(S) {
-  // Common symbols are aligned on natural boundaries up to 32 bytes.
+  // The value of a common symbol is its size. Align all common symbols smaller
+  // than 32 bytes naturally, i.e. round the size up to the next power of two.
   // This is what MSVC link.exe does.
-  Alignment = std::min(uint64_t(32), PowerOf2Ceil(Sym.getValue()));
+  setAlignment(std::min(32U, uint32_t(PowerOf2Ceil(Sym.getValue()))));
+  HasData = false;
 }
 
 uint32_t CommonChunk::getOutputCharacteristics() const {
@@ -653,10 +659,10 @@ void StringChunk::writeTo(uint8_t *Buf) const {
   Buf[Str.size()] = '\0';
 }
 
-ImportThunkChunkX64::ImportThunkChunkX64(Defined *S) : ImpSymbol(S) {
+ImportThunkChunkX64::ImportThunkChunkX64(Defined *S) : ImportThunkChunk(S) {
   // Intel Optimization Manual says that all branch targets
   // should be 16-byte aligned. MSVC linker does this too.
-  Alignment = 16;
+  setAlignment(16);
 }
 
 void ImportThunkChunkX64::writeTo(uint8_t *Buf) const {
@@ -854,34 +860,37 @@ uint8_t Baserel::getDefaultType() {
   }
 }
 
-std::map<uint32_t, MergeChunk *> MergeChunk::Instances;
+MergeChunk *MergeChunk::Instances[Log2MaxSectionAlignment + 1] = {};
 
 MergeChunk::MergeChunk(uint32_t Alignment)
     : Builder(StringTableBuilder::RAW, Alignment) {
-  this->Alignment = Alignment;
+  setAlignment(Alignment);
 }
 
 void MergeChunk::addSection(SectionChunk *C) {
-  auto *&MC = Instances[C->Alignment];
+  assert(isPowerOf2_32(C->getAlignment()));
+  uint8_t P2Align = llvm::Log2_32(C->getAlignment());
+  assert(P2Align < array_lengthof(Instances));
+  auto *&MC = Instances[P2Align];
   if (!MC)
-    MC = make<MergeChunk>(C->Alignment);
+    MC = make<MergeChunk>(C->getAlignment());
   MC->Sections.push_back(C);
 }
 
 void MergeChunk::finalizeContents() {
-  if (!Finalized) {
-    for (SectionChunk *C : Sections)
-      if (C->Live)
-        Builder.add(toStringRef(C->getContents()));
-    Builder.finalize();
-    Finalized = true;
-  }
+  assert(!Finalized && "should only finalize once");
+  for (SectionChunk *C : Sections)
+    if (C->Live)
+      Builder.add(toStringRef(C->getContents()));
+  Builder.finalize();
+  Finalized = true;
+}
 
+void MergeChunk::assignSubsectionRVAs() {
   for (SectionChunk *C : Sections) {
     if (!C->Live)
       continue;
     size_t Off = Builder.getOffset(toStringRef(C->getContents()));
-    C->setOutputSection(Out);
     C->setRVA(RVA + Off);
   }
 }

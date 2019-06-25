@@ -99,6 +99,7 @@ static lto::Config createConfig() {
   C.RemarksFilename = Config->OptRemarksFilename;
   C.RemarksPasses = Config->OptRemarksPasses;
   C.RemarksWithHotness = Config->OptRemarksWithHotness;
+  C.RemarksFormat = Config->OptRemarksFormat;
 
   C.SampleProfile = Config->LTOSampleProfile;
   C.UseNewPM = Config->LTONewPassManager;
@@ -142,12 +143,12 @@ BitcodeCompiler::BitcodeCompiler() {
                                        Config->LTOPartitions);
 
   // Initialize UsedStartStop.
-  for (Symbol *Sym : Symtab->getSymbols()) {
+  Symtab->forEachSymbol([&](Symbol *Sym) {
     StringRef S = Sym->getName();
     for (StringRef Prefix : {"__start_", "__stop_"})
       if (S.startswith(Prefix))
         UsedStartStop.insert(S.substr(Prefix.size()));
-  }
+  });
 }
 
 BitcodeCompiler::~BitcodeCompiler() = default;
@@ -212,7 +213,7 @@ void BitcodeCompiler::add(BitcodeFile &F) {
 // distributed build system that depends on that behavior.
 static void thinLTOCreateEmptyIndexFiles() {
   for (LazyObjFile *F : LazyObjFiles) {
-    if (F->AddedToLink || !isBitcode(F->MB))
+    if (!isBitcode(F->MB))
       continue;
     std::string Path = replaceThinLTOSuffix(getThinLTOOutputFile(F->getName()));
     std::unique_ptr<raw_fd_ostream> OS = openFile(Path + ".thinlto.bc");
