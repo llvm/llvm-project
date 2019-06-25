@@ -154,5 +154,4 @@ module _Builtin_stddef_max_align_t [system] [extern_c] {
 module opencl_c {
   requires opencl
   header "opencl-c.h"
-  header "opencl-c-base.h"
 }
