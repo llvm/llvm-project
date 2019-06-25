@@ -275,13 +275,13 @@ bool Symbol::includeInDynsym() const {
     return false;
   if (computeBinding() == STB_LOCAL)
     return false;
+
   // If a PIE binary was not linked against any shared libraries, then we can
   // safely drop weak undef symbols from .dynsym.
   if (isUndefWeak() && Config->Pie && SharedFiles.empty())
     return false;
-  if (!isDefined())
-    return true;
-  return ExportDynamic;
+
+  return isUndefined() || isShared() || ExportDynamic;
 }
 
 // Print out a log message for --trace-symbol.
