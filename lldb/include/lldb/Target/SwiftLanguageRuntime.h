@@ -236,7 +236,7 @@ public:
   
   static bool IsSwiftClassName(const char *name);
 
-  static bool IsSymbolARuntimeThunk(const Symbol &symbol);
+  bool IsSymbolARuntimeThunk(const Symbol &symbol) override;
 
   static const std::string GetCurrentMangledName(const char *mangled_name);
 
