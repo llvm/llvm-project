@@ -483,7 +483,7 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
     ThreadPlanStepInRange *step_in_range_plan =
         static_cast<ThreadPlanStepInRange *>(current_plan);
     should_stop_here =
-        step_in_range_plan->DefaultShouldStopHereImpl(flags, !should_stop_here);
+        step_in_range_plan->DefaultShouldStopHereImpl(flags, should_stop_here);
 
     //        if (should_stop_here)
     //        {
@@ -500,7 +500,7 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
 }
 
 bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
-                                                      bool should_step_out) {
+                                                      bool should_stop_here) {
   StackFrame *frame = GetThread().GetStackFrameAtIndex(0).get();
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
@@ -511,17 +511,17 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
       // First try an exact match, since that's cheap with
       // ConstStrings.  Then do a strstr compare.
       if (m_step_into_target == sc.GetFunctionName()) {
-        should_step_out = false;
+        should_stop_here = true;
       } else {
         const char *target_name = m_step_into_target.AsCString();
         const char *function_name = sc.GetFunctionName().AsCString();
 
         if (function_name == nullptr)
-          should_step_out = true;
+          should_stop_here = false;
         else if (strstr(function_name, target_name) == nullptr)
-          should_step_out = true;
+          should_stop_here = false;
       }
-      if (log && should_step_out)
+      if (log && !should_stop_here)
         log->Printf("Stepping out of frame %s which did not match step into "
                     "target %s.",
                     sc.GetFunctionName().AsCString(),
@@ -529,13 +529,13 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
     }
   }
 
-  if (!should_step_out) {
-    // Don't log the should_step_out here, it's easier to do it in
+  if (should_stop_here) {
+    // Don't log the should_stop_here here, it's easier to do it in
     // FrameMatchesAvoidRegexp.
-    should_step_out = FrameMatchesAvoidCriteria();
+    should_stop_here = !FrameMatchesAvoidCriteria();
   }
 
-  if (should_step_out) {
+  if (!should_stop_here) {
     // We are going to step out, but first let's examine the function we are
     // stepping past to see if it tells us
     // about any interesting places we could stop while running it.  For
@@ -582,9 +582,7 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
       }
     }
   }
-  // We're returning an answer to "Should Stop Here" which is the opposite of
-  // "should_step_out".
-  return !should_step_out;
+  return should_stop_here;
 }
 
 bool ThreadPlanStepInRange::DoPlanExplainsStop(Event *event_ptr) {
