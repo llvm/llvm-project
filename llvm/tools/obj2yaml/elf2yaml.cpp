@@ -28,15 +28,18 @@ class ELFDumper {
   typedef typename ELFT::Rela Elf_Rela;
 
   ArrayRef<Elf_Shdr> Sections;
+  ArrayRef<Elf_Sym> SymTable;
 
-  // If the file has multiple sections with the same name, we add a
-  // suffix to make them unique.
-  unsigned Suffix = 0;
-  DenseSet<StringRef> UsedSectionNames;
+  DenseMap<StringRef, uint32_t> UsedSectionNames;
   std::vector<std::string> SectionNames;
+
+  DenseMap<StringRef, uint32_t> UsedSymbolNames;
+  std::vector<std::string> SymbolNames;
+
   Expected<StringRef> getUniquedSectionName(const Elf_Shdr *Sec);
-  Expected<StringRef> getSymbolName(const Elf_Sym *Sym, StringRef StrTable,
-                                    const Elf_Shdr *SymTab);
+  Expected<StringRef> getUniquedSymbolName(const Elf_Sym *Sym,
+                                           StringRef StrTable,
+                                           const Elf_Shdr *SymTab);
 
   const object::ELFFile<ELFT> &Obj;
   ArrayRef<Elf_Word> ShndxTable;
@@ -87,16 +90,19 @@ ELFDumper<ELFT>::getUniquedSectionName(const Elf_Shdr *Sec) {
     return NameOrErr;
   StringRef Name = *NameOrErr;
   std::string &Ret = SectionNames[SecIndex];
-  Ret = Name;
-  while (!UsedSectionNames.insert(Ret).second)
-    Ret = (Name + to_string(++Suffix)).str();
+
+  auto It = UsedSectionNames.insert({Name, 0});
+  if (!It.second)
+    Ret = (Name + " [" + Twine(++It.first->second) + "]").str();
+  else
+    Ret = Name;
   return Ret;
 }
 
 template <class ELFT>
-Expected<StringRef> ELFDumper<ELFT>::getSymbolName(const Elf_Sym *Sym,
-                                                   StringRef StrTable,
-                                                   const Elf_Shdr *SymTab) {
+Expected<StringRef>
+ELFDumper<ELFT>::getUniquedSymbolName(const Elf_Sym *Sym, StringRef StrTable,
+                                      const Elf_Shdr *SymTab) {
   Expected<StringRef> SymbolNameOrErr = Sym->getName(StrTable);
   if (!SymbolNameOrErr)
     return SymbolNameOrErr;
@@ -107,6 +113,24 @@ Expected<StringRef> ELFDumper<ELFT>::getSymbolName(const Elf_Sym *Sym,
       return ShdrOrErr.takeError();
     return getUniquedSectionName(*ShdrOrErr);
   }
+
+  // Symbols in .symtab can have duplicate names. For example, it is a common
+  // situation for local symbols in a relocatable object. Here we assign unique
+  // suffixes for such symbols so that we can differentiate them.
+  if (SymTab->sh_type == ELF::SHT_SYMTAB) {
+    unsigned Index = Sym - SymTable.data();
+    if (!SymbolNames[Index].empty())
+      return SymbolNames[Index];
+
+    auto It = UsedSymbolNames.insert({Name, 0});
+    if (!It.second)
+      SymbolNames[Index] =
+          (Name + " [" + Twine(++It.first->second) + "]").str();
+    else
+      SymbolNames[Index] = Name;
+    return SymbolNames[Index];
+  }
+
   return Name;
 }
 
@@ -123,15 +147,24 @@ template <class ELFT> ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   Y->Header.Flags = Obj.getHeader()->e_flags;
   Y->Header.Entry = Obj.getHeader()->e_entry;
 
-  const Elf_Shdr *Symtab = nullptr;
-  const Elf_Shdr *DynSymtab = nullptr;
-
   // Dump sections
   auto SectionsOrErr = Obj.sections();
   if (!SectionsOrErr)
     return errorToErrorCode(SectionsOrErr.takeError());
   Sections = *SectionsOrErr;
   SectionNames.resize(Sections.size());
+
+  // Dump symbols. We need to do this early because other sections might want
+  // to access the deduplicated symbol names that we also create here.
+  for (const Elf_Shdr &Sec : Sections) {
+    if (Sec.sh_type == ELF::SHT_SYMTAB)
+      if (auto EC = dumpSymbols(&Sec, Y->Symbols))
+        return EC;
+    if (Sec.sh_type == ELF::SHT_DYNSYM)
+      if (auto EC = dumpSymbols(&Sec, Y->DynamicSymbols))
+        return EC;
+  }
+
   for (const Elf_Shdr &Sec : Sections) {
     switch (Sec.sh_type) {
     case ELF::SHT_DYNAMIC: {
@@ -143,13 +176,9 @@ template <class ELFT> ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     }
     case ELF::SHT_NULL:
     case ELF::SHT_STRTAB:
-      // Do not dump these sections.
-      break;
     case ELF::SHT_SYMTAB:
-      Symtab = &Sec;
-      break;
     case ELF::SHT_DYNSYM:
-      DynSymtab = &Sec;
+      // Do not dump these sections.
       break;
     case ELF::SHT_SYMTAB_SHNDX: {
       auto TableOrErr = Obj.getSHNDXTable(Sec);
@@ -217,11 +246,6 @@ template <class ELFT> ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
     }
   }
 
-  if (auto EC = dumpSymbols(Symtab, Y->Symbols))
-    return EC;
-  if (auto EC = dumpSymbols(DynSymtab, Y->DynamicSymbols))
-    return EC;
-
   return Y.release();
 }
 
@@ -240,6 +264,11 @@ ELFDumper<ELFT>::dumpSymbols(const Elf_Shdr *Symtab,
   auto SymtabOrErr = Obj.symbols(Symtab);
   if (!SymtabOrErr)
     return errorToErrorCode(SymtabOrErr.takeError());
+
+  if (Symtab->sh_type == ELF::SHT_SYMTAB) {
+    SymTable = *SymtabOrErr;
+    SymbolNames.resize(SymTable.size());
+  }
 
   for (const auto &Sym : (*SymtabOrErr).drop_front()) {
     ELFYAML::Symbol S;
@@ -261,7 +290,8 @@ ELFDumper<ELFT>::dumpSymbol(const Elf_Sym *Sym, const Elf_Shdr *SymTab,
   S.Other = Sym->st_other;
   S.Binding = Sym->getBinding();
 
-  Expected<StringRef> SymbolNameOrErr = getSymbolName(Sym, StrTable, SymTab);
+  Expected<StringRef> SymbolNameOrErr =
+      getUniquedSymbolName(Sym, StrTable, SymTab);
   if (!SymbolNameOrErr)
     return errorToErrorCode(SymbolNameOrErr.takeError());
   S.Name = SymbolNameOrErr.get();
@@ -310,7 +340,7 @@ std::error_code ELFDumper<ELFT>::dumpRelocation(const RelT *Rel,
   StringRef StrTab = *StrTabOrErr;
 
   if (Sym) {
-    Expected<StringRef> NameOrErr = getSymbolName(Sym, StrTab, SymTab);
+    Expected<StringRef> NameOrErr = getUniquedSymbolName(Sym, StrTab, SymTab);
     if (!NameOrErr)
       return errorToErrorCode(NameOrErr.takeError());
     R.Symbol = NameOrErr.get();
@@ -603,7 +633,7 @@ ErrorOr<ELFYAML::Group *> ELFDumper<ELFT>::dumpGroup(const Elf_Shdr *Shdr) {
     return errorToErrorCode(StrTabOrErr.takeError());
 
   Expected<StringRef> SymbolName =
-      getSymbolName(*SymOrErr, *StrTabOrErr, Symtab);
+      getUniquedSymbolName(*SymOrErr, *StrTabOrErr, Symtab);
   if (!SymbolName)
     return errorToErrorCode(SymbolName.takeError());
   S->Signature = *SymbolName;

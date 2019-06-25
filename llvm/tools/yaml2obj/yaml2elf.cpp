@@ -266,6 +266,13 @@ bool ELFState<ELFT>::initImplicitHeader(ELFState<ELFT> &State,
   return true;
 }
 
+static StringRef dropUniqueSuffix(StringRef S) {
+  size_t SuffixPos = S.rfind(" [");
+  if (SuffixPos == StringRef::npos)
+    return S;
+  return S.substr(0, SuffixPos);
+}
+
 template <class ELFT>
 bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
                                         std::vector<Elf_Shdr> &SHeaders,
@@ -299,7 +306,7 @@ bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
     assert(Sec && "It can't be null unless it is an implicit section. But all "
                   "implicit sections should already have been handled above.");
 
-    SHeader.sh_name = DotShStrtab.getOffset(SecName);
+    SHeader.sh_name = DotShStrtab.getOffset(dropUniqueSuffix(SecName));
     SHeader.sh_type = Sec->Type;
     if (Sec->Flags)
       SHeader.sh_flags = *Sec->Flags;
@@ -391,7 +398,7 @@ toELFSymbols(NameToIdxMap &SN2I, ArrayRef<ELFYAML::Symbol> Symbols,
     if (Sym.NameIndex)
       Symbol.st_name = *Sym.NameIndex;
     else if (!Sym.Name.empty())
-      Symbol.st_name = Strtab.getOffset(Sym.Name);
+      Symbol.st_name = Strtab.getOffset(dropUniqueSuffix(Sym.Name));
 
     Symbol.setBindingAndType(Sym.Binding, Sym.Type);
     if (!Sym.Section.empty()) {
@@ -901,7 +908,7 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
   for (unsigned i = 0, e = Doc.Sections.size(); i != e; ++i) {
     StringRef Name = Doc.Sections[i]->Name;
-    DotShStrtab.add(Name);
+    DotShStrtab.add(dropUniqueSuffix(Name));
     // "+ 1" to take into account the SHT_NULL entry.
     if (!SN2I.addName(Name, i + 1)) {
       WithColor::error() << "Repeated section name: '" << Name
@@ -950,12 +957,12 @@ bool ELFState<ELFT>::buildSymbolIndex(ArrayRef<ELFYAML::Symbol> Symbols) {
 template <class ELFT> void ELFState<ELFT>::finalizeStrings() {
   // Add the regular symbol names to .strtab section.
   for (const ELFYAML::Symbol &Sym : Doc.Symbols)
-    DotStrtab.add(Sym.Name);
+    DotStrtab.add(dropUniqueSuffix(Sym.Name));
   DotStrtab.finalize();
 
   // Add the dynamic symbol names to .dynstr section.
   for (const ELFYAML::Symbol &Sym : Doc.DynamicSymbols)
-    DotDynstr.add(Sym.Name);
+    DotDynstr.add(dropUniqueSuffix(Sym.Name));
 
   // SHT_GNU_verdef and SHT_GNU_verneed sections might also
   // add strings to .dynstr section.
