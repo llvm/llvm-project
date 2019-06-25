@@ -164,27 +164,14 @@ ThreadPlanStepOut::ThreadPlanStepOut(
   // step out.  That's more than I have time to do right now.
 
   if (frame_idx == 0) {
-    bool stepping_from_swift = false;
     StackFrameSP frame_sp = m_thread.GetStackFrameAtIndex(0);
-    Symbol *symbol = frame_sp->GetSymbolContext(eSymbolContextSymbol).symbol;
-    if (symbol) {
-      Mangled symbol_mangled = symbol->GetMangled();
-      if (symbol_mangled.GuessLanguage() == eLanguageTypeSwift)
-        stepping_from_swift = true;
-    } else {
-      CompileUnit *comp_unit =
-          frame_sp->GetSymbolContext(eSymbolContextCompUnit).comp_unit;
-      if (comp_unit && comp_unit->GetLanguage() == eLanguageTypeSwift)
-        stepping_from_swift = true;
-    }
-
-    if (stepping_from_swift) {
+    if (frame_sp->GuessLanguage() == eLanguageTypeSwift) {
       SwiftLanguageRuntime *swift_runtime =
           SwiftLanguageRuntime::Get(*m_thread.GetProcess());
       if (swift_runtime) {
         m_swift_error_return =
-            swift_runtime->GetErrorReturnLocationBeforeReturn(frame_sp,
-                                                              m_swift_error_check_after_return);
+            swift_runtime->GetErrorReturnLocationBeforeReturn(
+                frame_sp, m_swift_error_check_after_return);
       }
     }
   }
