@@ -12,9 +12,9 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -532,41 +532,30 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
     // instance, if we can tell from the signature
     // that we're being passed a function pointer that points to user code,
     // we'll prospectively stop there.
+
     // We only know how to do this for Swift at present.
     // FIXME: We could probably do this for C++ mangled names as well, if we
     // could come up with some
     // good heuristic to identify function pointers in the mangled function
     // arguments.
-
-    SymbolContext sc = frame->GetSymbolContext(eSymbolContextSymbol);
-    if (sc.symbol) {
-      Mangled mangled_name = sc.symbol->GetMangled();
-      if (mangled_name.GuessLanguage() == lldb::eLanguageTypeSwift) {
-        ProcessSP process_sp(GetThread().GetProcess());
-        SwiftLanguageRuntime *swift_runtime =
-            SwiftLanguageRuntime::Get(*process_sp);
-        if (swift_runtime) {
-          std::vector<Address> interesting_addresses;
-          swift_runtime->FindFunctionPointersInCall(*frame,
-                                                    interesting_addresses);
-          size_t num_addresses = interesting_addresses.size();
-          if (num_addresses) {
-            // Run through the addresses we found, make sure they have debug
-            // info, and if so set breakpoints
-            // on all these addresses.
-            for (size_t i = 0; i < num_addresses; i++) {
-              LineEntry line_entry;
-              if (interesting_addresses[i].CalculateSymbolContextLineEntry(
-                      line_entry)) {
-                // It has debug information, use it:
-                const bool internal = true;
-                const bool hardware = false;
-                BreakpointSP bkpt_sp = GetTarget().CreateBreakpoint(
-                    interesting_addresses[i], internal, hardware);
-                bkpt_sp->SetThreadID(GetThread().GetID());
-                m_step_in_deep_bps.push_back(bkpt_sp->GetID());
-              }
-            }
+    auto frame_language = frame->GuessLanguage();
+    if (auto *runtime =
+            GetThread().GetProcess()->GetLanguageRuntime(frame_language)) {
+      std::vector<Address> interesting_addresses;
+      runtime->FindFunctionPointersInCall(*frame, interesting_addresses);
+      if (!interesting_addresses.empty()) {
+        // Run through the addresses we found, make sure they have debug info,
+        // and if so set breakpoints on all these addresses.
+        for (const auto &address : interesting_addresses) {
+          LineEntry line_entry;
+          if (address.CalculateSymbolContextLineEntry(line_entry)) {
+            // It has debug information, use it:
+            const bool internal = true;
+            const bool hardware = false;
+            BreakpointSP bkpt_sp =
+                GetTarget().CreateBreakpoint(address, internal, hardware);
+            bkpt_sp->SetThreadID(GetThread().GetID());
+            m_step_in_deep_bps.push_back(bkpt_sp->GetID());
           }
         }
       }

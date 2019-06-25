@@ -273,7 +273,7 @@ public:
   void FindFunctionPointersInCall(StackFrame &frame,
                                   std::vector<Address> &addresses,
                                   bool debug_only = true,
-                                  bool resolve_thunks = true);
+                                  bool resolve_thunks = true) override;
 
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                   bool stop_others) override;

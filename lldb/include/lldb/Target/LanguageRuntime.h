@@ -202,6 +202,11 @@ public:
   virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
   static char ID;
 
+  virtual void FindFunctionPointersInCall(StackFrame &frame,
+                                          std::vector<Address> &addresses,
+                                          bool debug_only = true,
+                                          bool resolve_thunks = true){};
+
 protected:
   //------------------------------------------------------------------
   // Classes that inherit from LanguageRuntime can see and modify these
