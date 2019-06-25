@@ -1,5 +1,3 @@
-// FIXME: Crashes after r357394
-// XFAIL: *
 // RUN: %clang_cc1 -emit-pch -std=c++1z -o %t.1.ast %S/Inputs/class-template-partial-spec1.cpp
 // RUN: %clang_cc1 -emit-pch -std=c++1z -o %t.2.ast %S/Inputs/class-template-partial-spec2.cpp
 // RUN: %clang_cc1 -std=c++1z -ast-merge %t.1.ast -ast-merge %t.2.ast -fsyntax-only %s 2>&1 | FileCheck %s
