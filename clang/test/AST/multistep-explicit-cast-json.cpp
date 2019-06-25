@@ -83,13 +83,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 4
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 4
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -104,13 +102,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -125,13 +121,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -157,13 +151,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 8
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 8
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -178,13 +170,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 8
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 8
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -199,13 +189,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -231,13 +219,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 12
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 12
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -252,13 +238,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -273,13 +257,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 12
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 12
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -305,13 +287,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 16
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 16
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -326,13 +306,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 16
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 16
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -347,13 +325,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 16
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 16
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -379,13 +355,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 22
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 25,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 22
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -400,13 +374,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 25,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 22
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 25,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 22
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -422,13 +394,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 25,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 22
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 25,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 22
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -444,13 +414,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 25,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 22
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 25,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 22
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -478,13 +446,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 26
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 23,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 26
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -499,13 +465,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 26
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 26
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -521,13 +485,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 26
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 26
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -543,13 +505,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 26
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 26
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -577,13 +537,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 30
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 25,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 30
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -598,13 +556,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 25,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 30
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 25,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 30
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -620,13 +576,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 25,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 30
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 25,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 30
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -642,13 +596,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 25,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 30
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 25,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 30
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -676,13 +628,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 34
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 23,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 34
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -697,13 +647,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 34
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 34
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -719,13 +667,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -741,13 +687,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -775,13 +719,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 40
+// CHECK-NEXT:    "tokLen": 11
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 38,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 40
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -796,13 +738,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 37,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 40
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 37,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 40
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -818,13 +758,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 37,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 40
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 37,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 40
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -840,13 +778,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 37,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 40
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 37,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 40
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -874,13 +810,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 44
+// CHECK-NEXT:    "tokLen": 11
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 36,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 44
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -895,13 +829,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 35,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 44
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 35,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 44
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -917,13 +849,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 35,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 44
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 35,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 44
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -939,13 +869,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 35,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 44
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 35,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 44
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -973,13 +901,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 48
+// CHECK-NEXT:    "tokLen": 11
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 38,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 48
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -994,13 +920,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 37,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 48
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 37,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 48
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1016,13 +940,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 37,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 48
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 37,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 48
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1038,13 +960,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 37,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 48
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 37,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 48
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1072,13 +992,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 52
+// CHECK-NEXT:    "tokLen": 11
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 36,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 52
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -1093,13 +1011,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 35,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 52
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 35,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 52
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1115,13 +1031,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 35,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 52
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 35,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 52
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1137,13 +1051,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 35,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 52
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 35,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 52
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1171,13 +1083,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 63
+// CHECK-NEXT:    "tokLen": 12
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 24,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 63
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -1193,13 +1103,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 63
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 63
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1216,13 +1124,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 63
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 63
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1239,13 +1145,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 63
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 63
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1275,13 +1179,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 67
+// CHECK-NEXT:    "tokLen": 10
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 22,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 67
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -1297,13 +1199,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 21,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 67
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 21,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 67
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1320,13 +1220,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 21,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 67
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 21,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 67
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1343,13 +1241,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 67
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 67
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1379,13 +1275,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 71
+// CHECK-NEXT:    "tokLen": 12
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 24,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 71
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -1401,13 +1295,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 71
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 71
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1424,13 +1316,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 71
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 71
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1447,13 +1337,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 71
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 23,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 71
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1483,13 +1371,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 75
+// CHECK-NEXT:    "tokLen": 10
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 22,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 75
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -1505,13 +1391,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 21,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 75
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 21,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 75
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -1528,13 +1412,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 21,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 75
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 21,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 75
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1551,13 +1433,11 @@ SignedChar cxxfunctionalcast_3(SignedInt x) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 75
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 21,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 75
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {

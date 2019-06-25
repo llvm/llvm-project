@@ -1,6 +1,7 @@
 set(PROC_WINDOWS_COMMON_SOURCES
   DebuggerThread.cpp
   LocalDebugDelegate.cpp
+  ProcessDebugger.cpp
   ProcessWindows.cpp
   ProcessWindowsLog.cpp
   RegisterContextWindows.cpp

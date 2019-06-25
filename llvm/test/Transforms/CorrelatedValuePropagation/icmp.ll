@@ -93,7 +93,7 @@ define i1 @test3(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[Y:%.*]], 10
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[CONT2:%.*]], label [[OUT]]
 ; CHECK:       cont2:
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br label [[CONT3:%.*]]
 ; CHECK:       cont3:
 ; CHECK-NEXT:    br label [[OUT]]
@@ -132,7 +132,7 @@ define i1 @test4(i32 %x, i32 %y) #0 {
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[Y:%.*]], 10
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[CONT2:%.*]], label [[OUT]]
 ; CHECK:       cont2:
-; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[X]], [[Y]]
 ; CHECK-NEXT:    br label [[CONT3:%.*]]
 ; CHECK:       cont3:
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ult i32 [[ADD]], 15

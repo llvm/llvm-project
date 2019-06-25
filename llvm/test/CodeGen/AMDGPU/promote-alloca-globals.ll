@@ -8,7 +8,8 @@
 ; IR-LABEL: define amdgpu_kernel void @promote_alloca_size_256(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
 ; IR: alloca [10 x i32]
 ; ASM-LABEL: {{^}}promote_alloca_size_256:
-; ASM: ; LDSByteSize: 60000 bytes/workgroup (compile time only)
+; ASM: .amdgpu_lds global_array0, 30000, 4
+; ASM: .amdgpu_lds global_array1, 30000, 4
 
 define amdgpu_kernel void @promote_alloca_size_256(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) {
 entry:

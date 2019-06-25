@@ -59,6 +59,9 @@ public:
                        object::SectionedAddress ModuleOffset);
   Expected<DIGlobal> symbolizeData(const std::string &ModuleName,
                                    object::SectionedAddress ModuleOffset);
+  Expected<std::vector<DILocal>>
+  symbolizeFrame(const std::string &ModuleName,
+                 object::SectionedAddress ModuleOffset);
   void flush();
 
   static std::string

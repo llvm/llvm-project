@@ -31,7 +31,26 @@ inline std::string JsonFormat(StringRef RawSR, bool AddQuotes) {
   std::string Str = RawSR.trim().str();
   size_t Pos = 0;
 
+  // Escape backslashes.
+  while (true) {
+    Pos = Str.find('\\', Pos);
+    if (Pos == std::string::npos)
+      break;
+
+    // Prevent bad conversions.
+    size_t TempPos = (Pos != 0) ? Pos - 1 : 0;
+
+    // See whether the current backslash is not escaped.
+    if (TempPos != Str.find("\\\\", Pos)) {
+      Str.insert(Pos, "\\");
+      ++Pos; // As we insert the backslash move plus one.
+    }
+
+    ++Pos;
+  }
+
   // Escape double quotes.
+  Pos = 0;
   while (true) {
     Pos = Str.find('\"', Pos);
     if (Pos == std::string::npos)
@@ -40,8 +59,8 @@ inline std::string JsonFormat(StringRef RawSR, bool AddQuotes) {
     // Prevent bad conversions.
     size_t TempPos = (Pos != 0) ? Pos - 1 : 0;
 
-    // See whether the current double quote is escaped.
-    if (TempPos != Str.find("\\\"", TempPos)) {
+    // See whether the current double quote is not escaped.
+    if (TempPos != Str.find("\\\"", Pos)) {
       Str.insert(Pos, "\\");
       ++Pos; // As we insert the escape-character move plus one.
     }

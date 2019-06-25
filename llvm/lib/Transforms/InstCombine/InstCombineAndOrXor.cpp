@@ -1022,21 +1022,31 @@ static Value *foldSignedTruncationCheck(ICmpInst *ICmp0, ICmpInst *ICmp1,
 }
 
 /// Reduce a pair of compares that check if a value has exactly 1 bit set.
-static Value *foldIsPowerOf2(ICmpInst *Cmp0, ICmpInst *Cmp1,
+static Value *foldIsPowerOf2(ICmpInst *Cmp0, ICmpInst *Cmp1, bool JoinedByAnd,
                              InstCombiner::BuilderTy &Builder) {
-  // Handle 'and' commutation: make the not-equal compare the first operand.
-  if (Cmp1->getPredicate() == ICmpInst::ICMP_NE)
+  // Handle 'and' / 'or' commutation: make the equality check the first operand.
+  if (JoinedByAnd && Cmp1->getPredicate() == ICmpInst::ICMP_NE)
+    std::swap(Cmp0, Cmp1);
+  else if (!JoinedByAnd && Cmp1->getPredicate() == ICmpInst::ICMP_EQ)
     std::swap(Cmp0, Cmp1);
 
   // (X != 0) && (ctpop(X) u< 2) --> ctpop(X) == 1
   CmpInst::Predicate Pred0, Pred1;
   Value *X;
-  if (match(Cmp0, m_ICmp(Pred0, m_Value(X), m_ZeroInt())) &&
+  if (JoinedByAnd && match(Cmp0, m_ICmp(Pred0, m_Value(X), m_ZeroInt())) &&
       match(Cmp1, m_ICmp(Pred1, m_Intrinsic<Intrinsic::ctpop>(m_Specific(X)),
                          m_SpecificInt(2))) &&
       Pred0 == ICmpInst::ICMP_NE && Pred1 == ICmpInst::ICMP_ULT) {
     Value *CtPop = Cmp1->getOperand(0);
     return Builder.CreateICmpEQ(CtPop, ConstantInt::get(CtPop->getType(), 1));
+  }
+  // (X == 0) || (ctpop(X) u> 1) --> ctpop(X) != 1
+  if (!JoinedByAnd && match(Cmp0, m_ICmp(Pred0, m_Value(X), m_ZeroInt())) &&
+      match(Cmp1, m_ICmp(Pred1, m_Intrinsic<Intrinsic::ctpop>(m_Specific(X)),
+                         m_SpecificInt(1))) &&
+      Pred0 == ICmpInst::ICMP_EQ && Pred1 == ICmpInst::ICMP_UGT) {
+    Value *CtPop = Cmp1->getOperand(0);
+    return Builder.CreateICmpNE(CtPop, ConstantInt::get(CtPop->getType(), 1));
   }
   return nullptr;
 }
@@ -1083,7 +1093,7 @@ Value *InstCombiner::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
   if (Value *V = foldSignedTruncationCheck(LHS, RHS, CxtI, Builder))
     return V;
 
-  if (Value *V = foldIsPowerOf2(LHS, RHS, Builder))
+  if (Value *V = foldIsPowerOf2(LHS, RHS, true /* JoinedByAnd */, Builder))
     return V;
 
   // This only handles icmp of constants: (icmp1 A, C1) & (icmp2 B, C2).
@@ -2167,6 +2177,9 @@ Value *InstCombiner::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     return V;
 
   if (Value *V = foldAndOrOfEqualityCmpsWithConstants(LHS, RHS, false, Builder))
+    return V;
+
+  if (Value *V = foldIsPowerOf2(LHS, RHS, false /* JoinedByAnd */, Builder))
     return V;
 
   // This only handles icmp of constants: (icmp1 A, C1) | (icmp2 B, C2).

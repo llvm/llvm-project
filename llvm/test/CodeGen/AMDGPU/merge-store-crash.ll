@@ -7,7 +7,8 @@
 @tess_lds = external addrspace(3) global [8192 x i32]
 
 ; CHECK-LABEL: {{^}}main:
-; CHECK: ds_write2_b32
+; CHECK: ds_write_b32
+; CHECK: ds_write_b32
 ; CHECK: v_mov_b32_e32 v1, v0
 ; CHECK: tbuffer_store_format_xyzw v[0:3],
 define amdgpu_vs void @main(i32 inreg %arg) {

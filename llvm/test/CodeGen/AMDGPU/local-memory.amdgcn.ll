@@ -3,12 +3,6 @@
 
 @local_memory.local_mem = internal unnamed_addr addrspace(3) global [128 x i32] undef, align 4
 
-; Check that the LDS size emitted correctly
-; SI: .long 47180
-; SI-NEXT: .long 65668
-; CI: .long 47180
-; CI-NEXT: .long 32900
-
 ; GCN-LABEL: {{^}}local_memory:
 
 ; GCN-NOT: s_wqm_b64
@@ -57,6 +51,7 @@ entry:
 
 ; CI: v_sub_i32_e32 [[SUB:v[0-9]+]], vcc, 0, [[ADDRW]]
 ; CI: ds_read2_b32 {{v\[[0-9]+:[0-9]+\]}}, [[SUB]] offset0:3 offset1:7
+
 define amdgpu_kernel void @local_memory_two_objects(i32 addrspace(1)* %out) #0 {
 entry:
   %x.i = call i32 @llvm.amdgcn.workitem.id.x()

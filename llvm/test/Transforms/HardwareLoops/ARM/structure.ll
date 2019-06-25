@@ -1,4 +1,6 @@
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi -disable-arm-loloops=false %s -o - | FileCheck %s --check-prefix=CHECK-LLC
+; RUN: opt -mtriple=thumbv8.1m.main -loop-unroll -unroll-remainder=false -S < %s | llc -mtriple=thumbv8.1m.main -disable-arm-loloops=false | FileCheck %s --check-prefix=CHECK-UNROLL
 
 ; CHECK-LABEL: early_exit
 ; CHECK-NOT: llvm.set.loop.iterations
@@ -43,6 +45,16 @@ do.end:
 
 ; CHECK-NOT: [[LOOP_DEC1:%[^ ]+]] = call i1 @llvm.loop.decrement.i32(i32 1)
 ; CHECK-NOT: br i1 [[LOOP_DEC1]], label %while.cond1.preheader.us, label %while.end7
+
+; CHECK-LLC:      nested:
+; CHECK-LLC-NOT:    mov lr, r1
+; CHECK-LLC:        dls lr, r1
+; CHECK-LLC-NOT:    mov lr, r1
+; CHECK-LLC:      [[LOOP_HEADER:\.LBB[0-9._]+]]:
+; CHECK-LLC:        le lr, [[LOOP_HEADER]]
+; CHECK-LLC-NOT:    b [[LOOP_EXIT:\.LBB[0-9._]+]]
+; CHECK-LLC:      [[LOOP_EXIT:\.LBB[0-9._]+]]:
+
 define void @nested(i32* nocapture %A, i32 %N) {
 entry:
   %cmp20 = icmp eq i32 %N, 0
@@ -210,6 +222,171 @@ exit:
   ret void
 }
 
+; CHECK-LABEL: search
+; CHECK: for.body.preheader:
+; CHECK: call void @llvm.set.loop.iterations.i32(i32 %N)
+; CHECK: br label %for.body
+; CHECK: for.body:
+; CHECK: for.inc:
+; CHECK: [[LOOP_DEC:%[^ ]+]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32
+; CHECK: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
+; CHECK: br i1 [[CMP]], label %for.body, label %for.cond.cleanup
+define i32 @search(i8* nocapture readonly %c, i32 %N) {
+entry:
+  %cmp11 = icmp eq i32 %N, 0
+  br i1 %cmp11, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  %found.0.lcssa = phi i32 [ 0, %entry ], [ %found.1, %for.inc ]
+  %spaces.0.lcssa = phi i32 [ 0, %entry ], [ %spaces.1, %for.inc ]
+  %sub = sub nsw i32 %found.0.lcssa, %spaces.0.lcssa
+  ret i32 %sub
+
+for.body:
+  %i.014 = phi i32 [ %inc3, %for.inc ], [ 0, %entry ]
+  %spaces.013 = phi i32 [ %spaces.1, %for.inc ], [ 0, %entry ]
+  %found.012 = phi i32 [ %found.1, %for.inc ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i8, i8* %c, i32 %i.014
+  %0 = load i8, i8* %arrayidx, align 1
+  switch i8 %0, label %for.inc [
+    i8 108, label %sw.bb
+    i8 111, label %sw.bb
+    i8 112, label %sw.bb
+    i8 32, label %sw.bb1
+  ]
+
+sw.bb:                                            ; preds = %for.body, %for.body, %for.body
+  %inc = add nsw i32 %found.012, 1
+  br label %for.inc
+
+sw.bb1:                                           ; preds = %for.body
+  %inc2 = add nsw i32 %spaces.013, 1
+  br label %for.inc
+
+for.inc:                                          ; preds = %sw.bb, %sw.bb1, %for.body
+  %found.1 = phi i32 [ %found.012, %for.body ], [ %found.012, %sw.bb1 ], [ %inc, %sw.bb ]
+  %spaces.1 = phi i32 [ %spaces.013, %for.body ], [ %inc2, %sw.bb1 ], [ %spaces.013, %sw.bb ]
+  %inc3 = add nuw i32 %i.014, 1
+  %exitcond = icmp eq i32 %inc3, %N
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: unroll_inc_int
+; CHECK: call void @llvm.set.loop.iterations.i32(i32 %N)
+; CHECK: call i32 @llvm.loop.decrement.reg.i32.i32.i32(
+
+; TODO: We should be able to support the unrolled loop body.
+; CHECK-UNROLL-LABEL: unroll_inc_int:
+; CHECK-UNROLL:     [[PREHEADER:.LBB[0-9_]+]]: @ %for.body.preheader
+; CHECK-UNROLL-NOT: dls
+; CHECK-UNROLL:     [[LOOP:.LBB[0-9_]+]]: @ %for.body
+; CHECK-UNROLL-NOT: le lr, [[LOOP]]
+; CHECK-UNROLL:     bne [[LOOP]]
+; CHECK-UNROLL:     %for.body.epil.preheader
+; CHECK-UNROLL:     dls
+; CHECK-UNROLL:     %for.body.epil
+; CHECK-UNROLL:     le
+
+define void @unroll_inc_int(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
+entry:
+  %cmp8 = icmp sgt i32 %N, 0
+  br i1 %cmp8, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.09 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %b, i32 %i.09
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, i32* %c, i32 %i.09
+  %1 = load i32, i32* %arrayidx1, align 4
+  %mul = mul nsw i32 %1, %0
+  %arrayidx2 = getelementptr inbounds i32, i32* %a, i32 %i.09
+  store i32 %mul, i32* %arrayidx2, align 4
+  %inc = add nuw nsw i32 %i.09, 1
+  %exitcond = icmp eq i32 %inc, %N
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: unroll_inc_unsigned
+; CHECK: call void @llvm.set.loop.iterations.i32(i32 %N)
+; CHECK: call i32 @llvm.loop.decrement.reg.i32.i32.i32(
+
+; CHECK-LLC-LABEL: unroll_inc_unsigned:
+; CHECK-LLC: dls lr, [[COUNT:r[0-9]+]]
+; CHECK-LLC: le  lr
+
+; TODO: We should be able to support the unrolled loop body.
+; CHECK-UNROLL-LABEL: unroll_inc_unsigned:
+; CHECK-UNROLL:     [[PREHEADER:.LBB[0-9_]+]]: @ %for.body.preheader
+; CHECK-UNROLL-NOT: dls
+; CHECK-UNROLL:     [[LOOP:.LBB[0-9_]+]]: @ %for.body
+; CHECK-UNROLL-NOT: le lr, [[LOOP]]
+; CHECK-UNROLL:     bne [[LOOP]]
+; CHECK-UNROLL:     %for.body.epil.preheader
+; CHECK-UNROLL:     dls
+; CHECK-UNROLL:     %for.body.epil
+; CHECK-UNROLL:     le
+define void @unroll_inc_unsigned(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
+entry:
+  %cmp8 = icmp eq i32 %N, 0
+  br i1 %cmp8, label %for.cond.cleanup, label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.09 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %b, i32 %i.09
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, i32* %c, i32 %i.09
+  %1 = load i32, i32* %arrayidx1, align 4
+  %mul = mul nsw i32 %1, %0
+  %arrayidx2 = getelementptr inbounds i32, i32* %a, i32 %i.09
+  store i32 %mul, i32* %arrayidx2, align 4
+  %inc = add nuw i32 %i.09, 1
+  %exitcond = icmp eq i32 %inc, %N
+  br i1 %exitcond, label %for.cond.cleanup, label %for.body
+}
+
+; CHECK-LABEL: unroll_dec_int
+; CHECK: call void @llvm.set.loop.iterations.i32(i32 %N)
+; CHECK: call i32 @llvm.loop.decrement.reg.i32.i32.i32(
+
+; TODO: An unnecessary register is being held to hold COUNT, lr should just
+; be used instead.
+; CHECK-LLC-LABEL: unroll_dec_int:
+; CHECK-LLC: dls lr, [[COUNT:r[0-9]+]]
+; CHECK-LLC: subs  [[COUNT]], #1
+; CHECK-LLC: le  lr
+
+; CHECK-UNROLL-LABEL: unroll_dec_int
+; CHECK-UNROLL: dls lr
+; CHECK-UNROLL: le lr
+; CHECK-UNROLL: dls lr
+; CHECK-UNROLL: le lr
+define void @unroll_dec_int(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
+entry:
+  %cmp8 = icmp sgt i32 %N, 0
+  br i1 %cmp8, label %for.body, label %for.cond.cleanup
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.09 = phi i32 [ %dec, %for.body ], [ %N, %entry ]
+  %arrayidx = getelementptr inbounds i32, i32* %b, i32 %i.09
+  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, i32* %c, i32 %i.09
+  %1 = load i32, i32* %arrayidx1, align 4
+  %mul = mul nsw i32 %1, %0
+  %arrayidx2 = getelementptr inbounds i32, i32* %a, i32 %i.09
+  store i32 %mul, i32* %arrayidx2, align 4
+  %dec = add nsw i32 %i.09, -1
+  %cmp = icmp sgt i32 %dec, 0
+  br i1 %cmp, label %for.body, label %for.cond.cleanup
+}
 
 declare void @llvm.set.loop.iterations.i32(i32) #0
 declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #0

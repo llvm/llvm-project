@@ -16,6 +16,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Expression/LLVMUserExpression.h"
+#include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Target/ExecutionContextScope.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
@@ -131,6 +132,8 @@ public:
   Process *GetProcess() { return m_process; }
 
   Target &GetTargetRef() { return m_process->GetTarget(); }
+
+  virtual DeclVendor *GetDeclVendor() { return nullptr; }
 
   virtual lldb::BreakpointResolverSP
   CreateExceptionResolver(Breakpoint *bkpt, bool catch_bp, bool throw_bp) = 0;

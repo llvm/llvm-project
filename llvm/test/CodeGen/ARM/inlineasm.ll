@@ -48,3 +48,27 @@ entry:
 	%0 = tail call <4 x float> asm "vadd.f32 $0, $1, $2", "=t,t,t"(<4 x float> %a, <4 x float> %b)
 	ret <4 x float> %0
 }
+
+define i32 @even-GPR-constraint() {
+entry:
+	; CHECK-LABEL: even-GPR-constraint
+	; CHECK: add [[REG:r1*[0, 2, 4, 6, 8]]], [[REG]], #1
+	; CHECK: add [[REG:r1*[0, 2, 4, 6, 8]]], [[REG]], #2
+	; CHECK: add [[REG:r1*[0, 2, 4, 6, 8]]], [[REG]], #3
+	; CHECK: add [[REG:r1*[0, 2, 4, 6, 8]]], [[REG]], #4
+	%0 = tail call { i32, i32, i32, i32 } asm "add $0, #1\0Aadd $1, #2\0Aadd $2, #3\0Aadd $3, #4\0A", "=^Te,=^Te,=^Te,=^Te,0,1,2,3"(i32 0, i32 0, i32 0, i32 0)
+	%asmresult = extractvalue { i32, i32, i32, i32 } %0, 0
+	ret i32 %asmresult
+}
+
+define i32 @odd-GPR-constraint() {
+entry:
+	; CHECK-LABEL: odd-GPR-constraint
+	; CHECK: add [[REG:r1*[1, 3, 5, 7, 9]]], [[REG]], #1
+	; CHECK: add [[REG:r1*[1, 3, 5, 7, 9]]], [[REG]], #2
+	; CHECK: add [[REG:r1*[1, 3, 5, 7, 9]]], [[REG]], #3
+	; CHECK: add [[REG:r1*[1, 3, 5, 7, 9]]], [[REG]], #4
+	%0 = tail call { i32, i32, i32, i32 } asm "add $0, #1\0Aadd $1, #2\0Aadd $2, #3\0Aadd $3, #4\0A", "=^To,=^To,=^To,=^To,0,1,2,3"(i32 0, i32 0, i32 0, i32 0)
+	%asmresult = extractvalue { i32, i32, i32, i32 } %0, 0
+	ret i32 %asmresult
+}

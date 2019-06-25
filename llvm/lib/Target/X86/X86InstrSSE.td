@@ -267,16 +267,12 @@ let Predicates = [UseAVX] in {
   // with SUBREG_TO_REG. The AVX versions also write: DST[255:128] <- 0
   def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (loadf32 addr:$src))))),
             (VMOVSSrm addr:$src)>;
-  def : Pat<(v4f32 (X86vzmovl (loadv4f32 addr:$src))),
-            (VMOVSSrm addr:$src)>;
   def : Pat<(v4f32 (X86vzload addr:$src)),
             (VMOVSSrm addr:$src)>;
 
   // MOVSDrm zeros the high parts of the register; represent this
   // with SUBREG_TO_REG. The AVX versions also write: DST[255:128] <- 0
   def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (loadf64 addr:$src))))),
-            (VMOVSDrm addr:$src)>;
-  def : Pat<(v2f64 (X86vzmovl (loadv2f64 addr:$src))),
             (VMOVSDrm addr:$src)>;
   def : Pat<(v2f64 (X86vzload addr:$src)),
             (VMOVSDrm addr:$src)>;
@@ -321,15 +317,11 @@ let Predicates = [UseSSE1] in {
   // MOVSSrm already zeros the high parts of the register.
   def : Pat<(v4f32 (X86vzmovl (v4f32 (scalar_to_vector (loadf32 addr:$src))))),
             (MOVSSrm addr:$src)>;
-  def : Pat<(v4f32 (X86vzmovl (loadv4f32 addr:$src))),
-            (MOVSSrm addr:$src)>;
 }
 
 let Predicates = [UseSSE2] in {
   // MOVSDrm already zeros the high parts of the register.
   def : Pat<(v2f64 (X86vzmovl (v2f64 (scalar_to_vector (loadf64 addr:$src))))),
-            (MOVSDrm addr:$src)>;
-  def : Pat<(v2f64 (X86vzmovl (loadv2f64 addr:$src))),
             (MOVSDrm addr:$src)>;
 }
 
@@ -4145,8 +4137,6 @@ let Predicates = [UseAVX] in {
             (VMOVDI2PDIrm addr:$src)>;
   def : Pat<(v4i32 (X86vzmovl (v4i32 (scalar_to_vector (loadi32 addr:$src))))),
             (VMOVDI2PDIrm addr:$src)>;
-  def : Pat<(v4i32 (X86vzmovl (loadv4i32 addr:$src))),
-            (VMOVDI2PDIrm addr:$src)>;
   def : Pat<(v4i32 (X86vzload addr:$src)),
             (VMOVDI2PDIrm addr:$src)>;
   def : Pat<(v8i32 (X86vzload addr:$src)),
@@ -4162,8 +4152,6 @@ let Predicates = [UseSSE2] in {
   def : Pat<(v2i64 (X86vzmovl (v2i64 (scalar_to_vector (zextloadi64i32 addr:$src))))),
             (MOVDI2PDIrm addr:$src)>;
   def : Pat<(v4i32 (X86vzmovl (v4i32 (scalar_to_vector (loadi32 addr:$src))))),
-            (MOVDI2PDIrm addr:$src)>;
-  def : Pat<(v4i32 (X86vzmovl (loadv4i32 addr:$src))),
             (MOVDI2PDIrm addr:$src)>;
   def : Pat<(v4i32 (X86vzload addr:$src)),
             (MOVDI2PDIrm addr:$src)>;
@@ -4233,8 +4221,6 @@ def : InstAlias<"movq.s\t{$src, $dst|$dst, $src}",
                 (MOVPQI2QIrr VR128:$dst, VR128:$src), 0>;
 
 let Predicates = [UseAVX] in {
-  def : Pat<(v2i64 (X86vzmovl (loadv2i64 addr:$src))),
-            (VMOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzload addr:$src)),
             (VMOVQI2PQIrm addr:$src)>;
   def : Pat<(v4i64 (X86vzload addr:$src)),
@@ -4245,8 +4231,6 @@ let Predicates = [UseAVX] in {
 }
 
 let Predicates = [UseSSE2] in {
-  def : Pat<(v2i64 (X86vzmovl (loadv2i64 addr:$src))),
-            (MOVQI2PQIrm addr:$src)>;
   def : Pat<(v2i64 (X86vzload addr:$src)), (MOVQI2PQIrm addr:$src)>;
 
   def : Pat<(X86vextractstore (v2i64 VR128:$src), addr:$dst),

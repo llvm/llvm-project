@@ -14,7 +14,7 @@ class VOP1e <bits<8> op, VOPProfile P> : Enc32 {
   bits<8> vdst;
   bits<9> src0;
 
-  let Inst{8-0}   = !if(P.HasSrc0, src0{8-0}, 0);
+  let Inst{8-0}   = !if(P.HasSrc0, src0{8-0}, ?);
   let Inst{16-9}  = op;
   let Inst{24-17} = !if(P.EmitDst, vdst{7-0}, 0);
   let Inst{31-25} = 0x3f; //encoding

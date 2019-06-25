@@ -582,17 +582,12 @@ bool PPCTTIImpl::enableAggressiveInterleaving(bool LoopHasReductions) {
   return LoopHasReductions;
 }
 
-const PPCTTIImpl::TTI::MemCmpExpansionOptions *
-PPCTTIImpl::enableMemCmpExpansion(bool IsZeroCmp) const {
-  static const auto Options = []() {
-    TTI::MemCmpExpansionOptions Options;
-    Options.LoadSizes.push_back(8);
-    Options.LoadSizes.push_back(4);
-    Options.LoadSizes.push_back(2);
-    Options.LoadSizes.push_back(1);
-    return Options;
-  }();
-  return &Options;
+PPCTTIImpl::TTI::MemCmpExpansionOptions
+PPCTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
+  TTI::MemCmpExpansionOptions Options;
+  Options.LoadSizes = {8, 4, 2, 1};
+  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
+  return Options;
 }
 
 bool PPCTTIImpl::enableInterleavedAccessVectorization() {

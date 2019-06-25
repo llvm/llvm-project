@@ -23,20 +23,20 @@ namespace quux::inline frobble {
 
 // CHECK:  "kind": "NamespaceDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 11,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 3
+// CHECK-NEXT:   "line": 3,
+// CHECK-NEXT:   "col": 11,
+// CHECK-NEXT:   "tokLen": 3
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 3
+// CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 4,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 4
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "foo"
@@ -45,20 +45,19 @@ namespace quux::inline frobble {
 
 // CHECK:  "kind": "NamespaceDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 6,
 // CHECK-NEXT:   "col": 11,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 6
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 6
+// CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 7,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 7
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  }
 // CHECK-NEXT: }
@@ -71,20 +70,19 @@ namespace quux::inline frobble {
 
 // CHECK:  "kind": "NamespaceDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 9,
 // CHECK-NEXT:   "col": 11,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 9
+// CHECK-NEXT:   "tokLen": 3
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 9
+// CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 12,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 12
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "bar",
@@ -93,20 +91,19 @@ namespace quux::inline frobble {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "NamespaceDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 10,
 // CHECK-NEXT:     "col": 18,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 10
+// CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 10
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 11,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 11
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "__1",
@@ -118,20 +115,19 @@ namespace quux::inline frobble {
 
 // CHECK:  "kind": "NamespaceDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 14,
 // CHECK-NEXT:   "col": 11,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 14
+// CHECK-NEXT:   "tokLen": 3
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 14
+// CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 15,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 15
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "baz",
@@ -140,20 +136,19 @@ namespace quux::inline frobble {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "NamespaceDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 14,
 // CHECK-NEXT:     "col": 16,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 14
+// CHECK-NEXT:     "tokLen": 4
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 14,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 14
+// CHECK-NEXT:      "tokLen": 2
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 15,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "quux"
@@ -164,20 +159,19 @@ namespace quux::inline frobble {
 
 // CHECK:  "kind": "NamespaceDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 17,
 // CHECK-NEXT:   "col": 11,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 17
+// CHECK-NEXT:   "tokLen": 4
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 17
+// CHECK-NEXT:    "tokLen": 9
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 18,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 18
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "quux",
@@ -186,20 +180,19 @@ namespace quux::inline frobble {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "NamespaceDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 17,
 // CHECK-NEXT:     "col": 24,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 17
+// CHECK-NEXT:     "tokLen": 7
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 17,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 17
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 18,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 18
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "frobble",

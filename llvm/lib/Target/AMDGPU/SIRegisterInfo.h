@@ -229,6 +229,18 @@ public:
   unsigned getReturnAddressReg(const MachineFunction &MF) const;
 
   const TargetRegisterClass *
+  getRegClassForSizeOnBank(unsigned Size,
+                           const RegisterBank &Bank,
+                           const MachineRegisterInfo &MRI) const;
+
+  const TargetRegisterClass *
+  getRegClassForTypeOnBank(LLT Ty,
+                           const RegisterBank &Bank,
+                           const MachineRegisterInfo &MRI) const {
+    return getRegClassForSizeOnBank(Ty.getSizeInBits(), Bank, MRI);
+  }
+
+  const TargetRegisterClass *
   getConstrainedRegClassForOperand(const MachineOperand &MO,
                                  const MachineRegisterInfo &MRI) const override;
 

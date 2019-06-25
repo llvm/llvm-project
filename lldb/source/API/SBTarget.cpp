@@ -53,7 +53,6 @@
 #include "lldb/Target/ABI.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -1847,25 +1846,18 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
       }
     }
 
-    // Didn't find the type in the symbols; try the Objective-C runtime if one
-    // is installed
-
-    ProcessSP process_sp(target_sp->GetProcessSP());
-
-    if (process_sp) {
-      ObjCLanguageRuntime *objc_language_runtime =
-          ObjCLanguageRuntime::Get(*process_sp);
-
-      if (objc_language_runtime) {
-        DeclVendor *objc_decl_vendor = objc_language_runtime->GetDeclVendor();
-
-        if (objc_decl_vendor) {
+    // Didn't find the type in the symbols; Try the loaded language runtimes
+    // FIXME: This depends on clang, but should be able to support any
+    // TypeSystem/compiler.
+    if (auto process_sp = target_sp->GetProcessSP()) {
+      for (auto *runtime : process_sp->GetLanguageRuntimes()) {
+        if (auto vendor = runtime->GetDeclVendor()) {
           std::vector<clang::NamedDecl *> decls;
-
-          if (objc_decl_vendor->FindDecls(const_typename, true, 1, decls) > 0) {
-            if (CompilerType type = ClangASTContext::GetTypeForDecl(decls[0])) {
+          if (vendor->FindDecls(const_typename, /*append*/ true,
+                                /*max_matches*/ 1, decls) > 0) {
+            if (CompilerType type =
+                    ClangASTContext::GetTypeForDecl(decls.front()))
               return LLDB_RECORD_RESULT(SBType(type));
-            }
           }
         }
       }
@@ -1918,25 +1910,18 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
       }
     }
 
-    // Try the Objective-C runtime if one is installed
-
-    ProcessSP process_sp(target_sp->GetProcessSP());
-
-    if (process_sp) {
-      ObjCLanguageRuntime *objc_language_runtime =
-          ObjCLanguageRuntime::Get(*process_sp);
-
-      if (objc_language_runtime) {
-        DeclVendor *objc_decl_vendor = objc_language_runtime->GetDeclVendor();
-
-        if (objc_decl_vendor) {
+    // Try the loaded language runtimes
+    // FIXME: This depends on clang, but should be able to support any
+    // TypeSystem/compiler.
+    if (auto process_sp = target_sp->GetProcessSP()) {
+      for (auto *runtime : process_sp->GetLanguageRuntimes()) {
+        if (auto *vendor = runtime->GetDeclVendor()) {
           std::vector<clang::NamedDecl *> decls;
-
-          if (objc_decl_vendor->FindDecls(const_typename, true, 1, decls) > 0) {
-            for (clang::NamedDecl *decl : decls) {
-              if (CompilerType type = ClangASTContext::GetTypeForDecl(decl)) {
+          if (vendor->FindDecls(const_typename, /*append*/ true,
+                                /*max_matches*/ 1, decls) > 0) {
+            for (auto *decl : decls) {
+              if (CompilerType type = ClangASTContext::GetTypeForDecl(decl))
                 sb_type_list.Append(SBType(type));
-              }
             }
           }
         }

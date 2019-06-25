@@ -331,6 +331,9 @@ public:
       object::SectionedAddress Address,
       DILineInfoSpecifier Specifier = DILineInfoSpecifier()) override;
 
+  std::vector<DILocal>
+  getLocalsForAddress(object::SectionedAddress Address) override;
+
   bool isLittleEndian() const { return DObj->isLittleEndian(); }
   static bool isSupportedVersion(unsigned version) {
     return version == 2 || version == 3 || version == 4 || version == 5;
@@ -374,6 +377,8 @@ private:
   /// TODO: change input parameter from "uint64_t Address"
   ///       into "SectionedAddress Address"
   DWARFCompileUnit *getCompileUnitForAddress(uint64_t Address);
+  void addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram, DWARFDie Die,
+                       std::vector<DILocal> &Result);
 };
 
 } // end namespace llvm

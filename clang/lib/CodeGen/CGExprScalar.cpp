@@ -3640,7 +3640,8 @@ Value *ScalarExprEmitter::EmitShl(const BinOpInfo &Ops) {
 
   bool SanitizeBase = CGF.SanOpts.has(SanitizerKind::ShiftBase) &&
                       Ops.Ty->hasSignedIntegerRepresentation() &&
-                      !CGF.getLangOpts().isSignedOverflowDefined();
+                      !CGF.getLangOpts().isSignedOverflowDefined() &&
+                      !CGF.getLangOpts().CPlusPlus2a;
   bool SanitizeExponent = CGF.SanOpts.has(SanitizerKind::ShiftExponent);
   // OpenCL 6.3j: shift values are effectively % word size of LHS.
   if (CGF.getLangOpts().OpenCL)

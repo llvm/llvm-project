@@ -92,6 +92,13 @@ TEST(SelectionTest, CommonAncestor) {
   Case Cases[] = {
       {
           R"cpp(
+            template <typename T>
+            int x = [[T::^U::]]ccc();
+          )cpp",
+          "NestedNameSpecifierLoc",
+      },
+      {
+          R"cpp(
             struct AAA { struct BBB { static int ccc(); };};
             int x = AAA::[[B^B^B]]::ccc();
           )cpp",
@@ -184,8 +191,7 @@ TEST(SelectionTest, CommonAncestor) {
             template <[[template<class> class /*cursor here*/^U]]>
              struct Foo<U<int>*> {};
           )cpp",
-          "TemplateTemplateParmDecl"
-      },
+          "TemplateTemplateParmDecl"},
   };
   for (const Case &C : Cases) {
     Annotations Test(C.Code);

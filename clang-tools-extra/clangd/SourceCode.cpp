@@ -196,6 +196,17 @@ Position sourceLocToPosition(const SourceManager &SM, SourceLocation Loc) {
   return P;
 }
 
+llvm::Optional<Range> getTokenRange(const SourceManager &SM,
+                                    const LangOptions &LangOpts,
+                                    SourceLocation TokLoc) {
+  if (!TokLoc.isValid())
+    return llvm::None;
+  SourceLocation End = Lexer::getLocForEndOfToken(TokLoc, 0, SM, LangOpts);
+  if (!End.isValid())
+    return llvm::None;
+  return halfOpenToRange(SM, CharSourceRange::getCharRange(TokLoc, End));
+}
+
 bool isValidFileRange(const SourceManager &Mgr, SourceRange R) {
   if (!R.getBegin().isValid() || !R.getEnd().isValid())
     return false;

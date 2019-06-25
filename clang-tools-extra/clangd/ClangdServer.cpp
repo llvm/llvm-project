@@ -277,12 +277,12 @@ ClangdServer::formatOnType(llvm::StringRef Code, PathRef File, Position Pos,
 
 void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
                           Callback<std::vector<TextEdit>> CB) {
-  auto Action = [Pos](Path File, std::string NewName,
-                      Callback<std::vector<TextEdit>> CB,
-                      llvm::Expected<InputsAndAST> InpAST) {
+  auto Action = [Pos, this](Path File, std::string NewName,
+                            Callback<std::vector<TextEdit>> CB,
+                            llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
-    auto Changes = renameWithinFile(InpAST->AST, File, Pos, NewName);
+    auto Changes = renameWithinFile(InpAST->AST, File, Pos, NewName, Index);
     if (!Changes)
       return CB(Changes.takeError());
 

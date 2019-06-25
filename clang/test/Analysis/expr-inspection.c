@@ -24,16 +24,16 @@ void foo(int x) {
 }
 
 // CHECK:      "program_state": {
-// CHECK-NEXT:   "store": [
+// CHECK-NEXT:   "store": { "pointer": "{{0x[0-9a-f]+}}", "items": [
 // CHECK-NEXT:     { "cluster": "y", "pointer": "{{0x[0-9a-f]+}}", "items": [
 // CHECK-NEXT:       { "kind": "Direct", "offset": 0, "value": "2 S32b" }
 // CHECK-NEXT:     ]}
-// CHECK-NEXT:   ],
-// CHECK-NEXT:   "environment": [
+// CHECK-NEXT:   ]},
+// CHECK-NEXT:   "environment": { "pointer": "{{0x[0-9a-f]+}}", "items": [
 // CHECK-NEXT:     { "lctx_id": 1, "location_context": "#0 Call", "calling": "foo", "call_line": null, "items": [
 // CHECK-NEXT:       { "stmt_id": {{[0-9]+}}, "pretty": "clang_analyzer_printState", "value": "&code{clang_analyzer_printState}" }
 // CHECK-NEXT:     ]}
-// CHECK-NEXT:   ],
+// CHECK-NEXT:   ]},
 // CHECK-NEXT:   "constraints": [
 // CHECK-NEXT:     { "symbol": "reg_$0<int x>", "range": "{ [-2147483648, 13] }" }
 // CHECK-NEXT:   ],

@@ -25,6 +25,19 @@ def diff_dicts(curr, prev):
     return (removed, added)
 
 
+# Represents any program state trait that is a dictionary of key-value pairs.
+class GenericMap(object):
+    def __init__(self, generic_map):
+        self.generic_map = generic_map
+
+    def diff(self, prev):
+        return diff_dicts(self.generic_map, prev.generic_map)
+
+    def is_different(self, prev):
+        removed, added = self.diff(prev)
+        return len(removed) != 0 or len(added) != 0
+
+
 # A deserialized source location.
 class SourceLocation(object):
     def __init__(self, json_loc):
@@ -113,7 +126,8 @@ class EnvironmentFrame(object):
 class Environment(object):
     def __init__(self, json_e):
         super(Environment, self).__init__()
-        self.frames = [EnvironmentFrame(f) for f in json_e]
+        self.ptr = json_e['pointer']
+        self.frames = [EnvironmentFrame(f) for f in json_e['items']]
 
     def diff_frames(self, prev):
         # TODO: It's difficult to display a good diff when frame numbers shift.
@@ -177,8 +191,9 @@ class StoreCluster(object):
 class Store(object):
     def __init__(self, json_s):
         super(Store, self).__init__()
+        self.ptr = json_s['pointer']
         self.clusters = collections.OrderedDict(
-            [(c['pointer'], StoreCluster(c)) for c in json_s])
+            [(c['pointer'], StoreCluster(c)) for c in json_s['items']])
 
     def diff_clusters(self, prev):
         removed = [k for k in prev.clusters if k not in self.clusters]
@@ -203,8 +218,10 @@ class ProgramState(object):
             if json_ps['store'] is not None else None
         self.environment = Environment(json_ps['environment']) \
             if json_ps['environment'] is not None else None
+        self.constraints = GenericMap(collections.OrderedDict([
+            (c['symbol'], c['range']) for c in json_ps['constraints']
+        ])) if json_ps['constraints'] is not None else None
         # TODO: Objects under construction.
-        # TODO: Constraint ranges.
         # TODO: Dynamic types of objects.
         # TODO: Checker messages.
 
@@ -285,6 +302,7 @@ class ExplodedGraph(object):
                                         .replace('\\{', '{') \
                                         .replace('\\}', '}') \
                                         .replace('\\\\', '\\') \
+                                        .replace('\\|', '|') \
                                         .replace('\\<', '\\\\<') \
                                         .replace('\\>', '\\\\>') \
                                         .rstrip(',')
@@ -314,7 +332,7 @@ class DotDumpVisitor(object):
                .replace('\\<', '&lt;')
                .replace('\\>', '&gt;')
                .replace('\\l', '<br />')
-               .replace('|', ''), end='')
+               .replace('|', '\\|'), end='')
 
     @staticmethod
     def _diff_plus_minus(is_added):
@@ -409,6 +427,24 @@ class DotDumpVisitor(object):
 
         self._dump('</table>')
 
+    def visit_environment_in_state(self, s, prev_s=None):
+        self._dump('<tr><td align="left">'
+                   '<b>Environment: </b>')
+        if s.environment is None:
+            self._dump('<i> Nothing!</i>')
+        else:
+            if prev_s is not None and prev_s.environment is not None:
+                if s.environment.is_different(prev_s.environment):
+                    self._dump('</td></tr><tr><td align="left">')
+                    self.visit_environment(s.environment, prev_s.environment)
+                else:
+                    self._dump('<i> No changes!</i>')
+            else:
+                self._dump('</td></tr><tr><td align="left">')
+                self.visit_environment(s.environment)
+
+        self._dump('</td></tr>')
+
     def visit_store(self, s, prev_s=None):
         self._dump('<table border="0">')
 
@@ -447,8 +483,7 @@ class DotDumpVisitor(object):
 
         self._dump('</table>')
 
-    def visit_state(self, s, prev_s):
-        # == Store ==
+    def visit_store_in_state(self, s, prev_s=None):
         self._dump('<tr><td align="left"><b>Store: </b>')
         if s.store is None:
             self._dump('<i> Nothing!</i>')
@@ -462,25 +497,57 @@ class DotDumpVisitor(object):
             else:
                 self._dump('</td></tr><tr><td align="left">')
                 self.visit_store(s.store)
-        self._dump('</td></tr><hr />')
+        self._dump('</td></tr>')
 
-        # == Environment ==
+    def visit_generic_map(self, m, prev_m=None):
+        self._dump('<table border="0">')
+
+        def dump_pair(m, k, is_added=None):
+            self._dump('<tr><td>%s</td>'
+                       '<td align="left">%s</td>'
+                       '<td align="left">%s</td></tr>'
+                       % (self._diff_plus_minus(is_added),
+                          k, m.generic_map[k]))
+
+        if prev_m is not None:
+            removed, added = m.diff(prev_m)
+            for k in removed:
+                dump_pair(prev_m, k, False)
+            for k in added:
+                dump_pair(m, k, True)
+        else:
+            for k in m.generic_map:
+                dump_pair(m, k, None)
+
+        self._dump('</table>')
+
+    def visit_generic_map_in_state(self, selector, s, prev_s=None):
         self._dump('<tr><td align="left">'
-                   '<b>Environment: </b>')
-        if s.environment is None:
+                   '<b>Ranges: </b>')
+        m = getattr(s, selector)
+        if m is None:
             self._dump('<i> Nothing!</i>')
         else:
-            if prev_s is not None and prev_s.environment is not None:
-                if s.environment.is_different(prev_s.environment):
-                    self._dump('</td></tr><tr><td align="left">')
-                    self.visit_environment(s.environment, prev_s.environment)
-                else:
-                    self._dump('<i> No changes!</i>')
-            else:
+            prev_m = None
+            if prev_s is not None:
+                prev_m = getattr(prev_s, selector)
+                if prev_m is not None:
+                    if m.is_different(prev_m):
+                        self._dump('</td></tr><tr><td align="left">')
+                        self.visit_generic_map(m, prev_m)
+                    else:
+                        self._dump('<i> No changes!</i>')
+            if prev_m is None:
                 self._dump('</td></tr><tr><td align="left">')
-                self.visit_environment(s.environment)
-
+                self.visit_generic_map(m)
         self._dump('</td></tr>')
+
+    def visit_state(self, s, prev_s):
+        self.visit_store_in_state(s, prev_s)
+        self._dump('<hr />')
+        self.visit_environment_in_state(s, prev_s)
+        self._dump('<hr />')
+        self.visit_generic_map_in_state('constraints', s, prev_s)
 
     def visit_node(self, node):
         self._dump('%s [shape=record,label=<<table border="0">'

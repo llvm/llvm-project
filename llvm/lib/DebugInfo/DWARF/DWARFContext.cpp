@@ -41,6 +41,7 @@
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/Format.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetRegistry.h"
@@ -970,6 +971,124 @@ static bool getFunctionNameAndStartLineForAddress(DWARFCompileUnit *CU,
   }
 
   return FoundResult;
+}
+
+static Optional<uint64_t> getTypeSize(DWARFDie Type, uint64_t PointerSize) {
+  if (auto SizeAttr = Type.find(DW_AT_byte_size))
+    if (Optional<uint64_t> Size = SizeAttr->getAsUnsignedConstant())
+      return Size;
+
+  switch (Type.getTag()) {
+  case DW_TAG_pointer_type:
+  case DW_TAG_reference_type:
+  case DW_TAG_rvalue_reference_type:
+    return PointerSize;
+  case DW_TAG_ptr_to_member_type: {
+    if (DWARFDie BaseType = Type.getAttributeValueAsReferencedDie(DW_AT_type))
+      if (BaseType.getTag() == DW_TAG_subroutine_type)
+        return 2 * PointerSize;
+    return PointerSize;
+  }
+  case DW_TAG_const_type:
+  case DW_TAG_volatile_type:
+  case DW_TAG_restrict_type:
+  case DW_TAG_typedef: {
+    if (DWARFDie BaseType = Type.getAttributeValueAsReferencedDie(DW_AT_type))
+      return getTypeSize(BaseType, PointerSize);
+    break;
+  }
+  case DW_TAG_array_type: {
+    DWARFDie BaseType = Type.getAttributeValueAsReferencedDie(DW_AT_type);
+    if (!BaseType)
+      return Optional<uint64_t>();
+    Optional<uint64_t> BaseSize = getTypeSize(BaseType, PointerSize);
+    if (!BaseSize)
+      return Optional<uint64_t>();
+    uint64_t Size = *BaseSize;
+    for (DWARFDie Child : Type) {
+      if (Child.getTag() != DW_TAG_subrange_type)
+        continue;
+
+      if (auto ElemCountAttr = Child.find(DW_AT_count))
+        if (Optional<uint64_t> ElemCount =
+                ElemCountAttr->getAsUnsignedConstant())
+          Size *= *ElemCount;
+      if (auto UpperBoundAttr = Child.find(DW_AT_upper_bound))
+        if (Optional<int64_t> UpperBound =
+                UpperBoundAttr->getAsSignedConstant()) {
+          int64_t LowerBound = 0;
+          if (auto LowerBoundAttr = Child.find(DW_AT_lower_bound))
+            LowerBound = LowerBoundAttr->getAsSignedConstant().getValueOr(0);
+          Size *= *UpperBound - LowerBound + 1;
+        }
+    }
+    return Size;
+  }
+  default:
+    break;
+  }
+  return Optional<uint64_t>();
+}
+
+void DWARFContext::addLocalsForDie(DWARFCompileUnit *CU, DWARFDie Subprogram,
+                                   DWARFDie Die, std::vector<DILocal> &Result) {
+  if (Die.getTag() == DW_TAG_variable ||
+      Die.getTag() == DW_TAG_formal_parameter) {
+    DILocal Local;
+    if (auto NameAttr = Subprogram.find(DW_AT_name))
+      if (Optional<const char *> Name = NameAttr->getAsCString())
+        Local.FunctionName = *Name;
+    if (auto LocationAttr = Die.find(DW_AT_location))
+      if (Optional<ArrayRef<uint8_t>> Location = LocationAttr->getAsBlock())
+        if (!Location->empty() && (*Location)[0] == DW_OP_fbreg)
+          Local.FrameOffset =
+              decodeSLEB128(Location->data() + 1, nullptr, Location->end());
+    if (auto TagOffsetAttr = Die.find(DW_AT_LLVM_tag_offset))
+      Local.TagOffset = TagOffsetAttr->getAsUnsignedConstant();
+
+    if (auto Origin =
+            Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin))
+      Die = Origin;
+    if (auto NameAttr = Die.find(DW_AT_name))
+      if (Optional<const char *> Name = NameAttr->getAsCString())
+        Local.Name = *Name;
+    if (auto Type = Die.getAttributeValueAsReferencedDie(DW_AT_type))
+      Local.Size = getTypeSize(Type, getCUAddrSize());
+    if (auto DeclFileAttr = Die.find(DW_AT_decl_file)) {
+      if (const auto *LT = CU->getContext().getLineTableForUnit(CU))
+        LT->getFileNameByIndex(
+            DeclFileAttr->getAsUnsignedConstant().getValue(),
+            CU->getCompilationDir(),
+            DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+            Local.DeclFile);
+    }
+    if (auto DeclLineAttr = Die.find(DW_AT_decl_line))
+      Local.DeclLine = DeclLineAttr->getAsUnsignedConstant().getValue();
+
+    Result.push_back(Local);
+    return;
+  }
+
+  if (Die.getTag() == DW_TAG_inlined_subroutine)
+    if (auto Origin =
+            Die.getAttributeValueAsReferencedDie(DW_AT_abstract_origin))
+      Subprogram = Origin;
+
+  for (auto Child : Die)
+    addLocalsForDie(CU, Subprogram, Child, Result);
+}
+
+std::vector<DILocal>
+DWARFContext::getLocalsForAddress(object::SectionedAddress Address) {
+  std::vector<DILocal> Result;
+  DWARFCompileUnit *CU = getCompileUnitForAddress(Address.Address);
+  if (!CU)
+    return Result;
+
+  DWARFDie Subprogram = CU->getSubroutineForAddress(Address.Address);
+  if (Subprogram.isValid())
+    addLocalsForDie(CU, Subprogram, Subprogram, Result);
+  return Result;
 }
 
 DILineInfo DWARFContext::getLineInfoForAddress(object::SectionedAddress Address,

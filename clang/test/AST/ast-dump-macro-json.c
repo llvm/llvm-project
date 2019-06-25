@@ -22,27 +22,26 @@ void BLAP(foo, __COUNTER__)(void);
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "expansionLoc": {
-// CHECK-NEXT:    "col": 6,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 6
-// CHECK-NEXT:   },
 // CHECK-NEXT:   "spellingLoc": {
-// CHECK-NEXT:    "col": 13,
 // CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 3
+// CHECK-NEXT:    "line": 3,
+// CHECK-NEXT:    "col": 13,
+// CHECK-NEXT:    "tokLen": 7
+// CHECK-NEXT:   },
+// CHECK-NEXT:   "expansionLoc": {
+// CHECK-NEXT:    "line": 6,
+// CHECK-NEXT:    "col": 6,
+// CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 6
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 14,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 6
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "frobble",
@@ -54,27 +53,25 @@ void BLAP(foo, __COUNTER__)(void);
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "expansionLoc": {
-// CHECK-NEXT:    "col": 6,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 7
-// CHECK-NEXT:   },
 // CHECK-NEXT:   "spellingLoc": {
+// CHECK-NEXT:    "line": 3,
 // CHECK-NEXT:    "col": 13,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 3
+// CHECK-NEXT:    "tokLen": 7
+// CHECK-NEXT:   },
+// CHECK-NEXT:   "expansionLoc": {
+// CHECK-NEXT:    "line": 7,
+// CHECK-NEXT:    "col": 6,
+// CHECK-NEXT:    "tokLen": 3
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 7
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 14,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 7
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "previousDecl": "0x{{.*}}",
@@ -87,28 +84,25 @@ void BLAP(foo, __COUNTER__)(void);
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "spellingLoc": {
+// CHECK-NEXT:    "line": 11,
+// CHECK-NEXT:    "col": 11,
+// CHECK-NEXT:    "tokLen": 4
+// CHECK-NEXT:   },
 // CHECK-NEXT:   "expansionLoc": {
 // CHECK-NEXT:    "col": 6,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "isMacroArgExpansion": true,
-// CHECK-NEXT:    "line": 11
-// CHECK-NEXT:   },
-// CHECK-NEXT:   "spellingLoc": {
-// CHECK-NEXT:    "col": 11,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 11
+// CHECK-NEXT:    "tokLen": 4,
+// CHECK-NEXT:    "isMacroArgExpansion": true
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 11
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 21,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 11
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "quux",
@@ -120,27 +114,27 @@ void BLAP(foo, __COUNTER__)(void);
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "expansionLoc": {
-// CHECK-NEXT:    "col": 6,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 16
-// CHECK-NEXT:   },
 // CHECK-NEXT:   "spellingLoc": {
-// CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "file": "<scratch space>",
-// CHECK-NEXT:    "line": 3
+// CHECK-NEXT:    "line": 3,
+// CHECK-NEXT:    "col": 1,
+// CHECK-NEXT:    "tokLen": 4
+// CHECK-NEXT:   },
+// CHECK-NEXT:   "expansionLoc": {
+// CHECK-NEXT:    "file": "{{.*}}",
+// CHECK-NEXT:    "line": 16,
+// CHECK-NEXT:    "col": 6,
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 16
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 33,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 16
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "foo0",
@@ -152,27 +146,27 @@ void BLAP(foo, __COUNTER__)(void);
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "expansionLoc": {
-// CHECK-NEXT:    "col": 6,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 17
-// CHECK-NEXT:   },
 // CHECK-NEXT:   "spellingLoc": {
-// CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "file": "<scratch space>",
-// CHECK-NEXT:    "line": 5
+// CHECK-NEXT:    "line": 5,
+// CHECK-NEXT:    "col": 1,
+// CHECK-NEXT:    "tokLen": 4
+// CHECK-NEXT:   },
+// CHECK-NEXT:   "expansionLoc": {
+// CHECK-NEXT:    "file": "{{.*}}",
+// CHECK-NEXT:    "line": 17,
+// CHECK-NEXT:    "col": 6,
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 17
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 33,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 17
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "foo1",

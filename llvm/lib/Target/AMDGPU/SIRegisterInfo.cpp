@@ -1679,17 +1679,12 @@ unsigned SIRegisterInfo::getReturnAddressReg(const MachineFunction &MF) const {
 }
 
 const TargetRegisterClass *
-SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
+SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
+                                         const RegisterBank &RB,
                                          const MachineRegisterInfo &MRI) const {
-  unsigned Size = getRegSizeInBits(MO.getReg(), MRI);
-  const RegisterBank *RB = MRI.getRegBankOrNull(MO.getReg());
-  if (!RB)
-    return nullptr;
-
-  Size = PowerOf2Ceil(Size);
   switch (Size) {
   case 1: {
-    switch (RB->getID()) {
+    switch (RB.getID()) {
     case AMDGPU::VGPRRegBankID:
       return &AMDGPU::VGPR_32RegClass;
     case AMDGPU::VCCRegBankID:
@@ -1706,30 +1701,41 @@ SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
     }
   }
   case 32:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VGPR_32RegClass :
-                                                  &AMDGPU::SReg_32_XM0RegClass;
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VGPR_32RegClass :
+                                                 &AMDGPU::SReg_32_XM0RegClass;
   case 64:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_64RegClass :
-                                                   &AMDGPU::SReg_64_XEXECRegClass;
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_64RegClass :
+                                                  &AMDGPU::SReg_64_XEXECRegClass;
   case 96:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_96RegClass :
-                                                  &AMDGPU::SReg_96RegClass;
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_96RegClass :
+                                                 &AMDGPU::SReg_96RegClass;
   case 128:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_128RegClass :
-                                                  &AMDGPU::SReg_128RegClass;
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_128RegClass :
+                                                 &AMDGPU::SReg_128RegClass;
   case 160:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_160RegClass :
-                                                  &AMDGPU::SReg_160RegClass;
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_160RegClass :
+                                                 &AMDGPU::SReg_160RegClass;
   case 256:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_256RegClass :
-                                                  &AMDGPU::SReg_256RegClass;
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_256RegClass :
+                                                 &AMDGPU::SReg_256RegClass;
   case 512:
-    return RB->getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_512RegClass :
-                                                  &AMDGPU::SReg_512RegClass;
+    return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_512RegClass :
+                                                 &AMDGPU::SReg_512RegClass;
   default:
-    break;
+    if (Size < 32)
+      return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VGPR_32RegClass :
+                                                   &AMDGPU::SReg_32_XM0RegClass;
+    assert(Size < 512 && "unimplemented");
+    return getRegClassForSizeOnBank(PowerOf2Ceil(Size), RB, MRI);
   }
-  llvm_unreachable("not implemented");
+}
+
+const TargetRegisterClass *
+SIRegisterInfo::getConstrainedRegClassForOperand(const MachineOperand &MO,
+                                         const MachineRegisterInfo &MRI) const {
+  if (const RegisterBank *RB = MRI.getRegBankOrNull(MO.getReg()))
+    return getRegClassForTypeOnBank(MRI.getType(MO.getReg()), *RB, MRI);
+  return nullptr;
 }
 
 unsigned SIRegisterInfo::getVCC() const {

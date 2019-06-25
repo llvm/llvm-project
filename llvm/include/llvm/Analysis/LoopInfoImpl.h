@@ -587,16 +587,9 @@ SmallVector<LoopT *, 4> LoopInfoBase<BlockT, LoopT>::getLoopsInPreorder() {
   // FIXME: If we change the order of LoopInfo we will want to remove the
   // reverse here.
   for (LoopT *RootL : reverse(*this)) {
-    assert(PreOrderWorklist.empty() &&
-           "Must start with an empty preorder walk worklist.");
-    PreOrderWorklist.push_back(RootL);
-    do {
-      LoopT *L = PreOrderWorklist.pop_back_val();
-      // Sub-loops are stored in forward program order, but will process the
-      // worklist backwards so append them in reverse order.
-      PreOrderWorklist.append(L->rbegin(), L->rend());
-      PreOrderLoops.push_back(L);
-    } while (!PreOrderWorklist.empty());
+    auto PreOrderLoopsInRootL = RootL->getLoopsInPreorder();
+    PreOrderLoops.append(PreOrderLoopsInRootL.begin(),
+                         PreOrderLoopsInRootL.end());
   }
 
   return PreOrderLoops;
