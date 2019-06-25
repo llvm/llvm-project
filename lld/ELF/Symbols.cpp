@@ -48,11 +48,17 @@ static uint64_t getSymVA(const Symbol &Sym, int64_t &Addend) {
     auto &D = cast<Defined>(Sym);
     SectionBase *IS = D.Section;
 
+    // According to the ELF spec reference to a local symbol from outside
+    // the group are not allowed. Unfortunately .eh_frame breaks that rule
+    // and must be treated specially. For now we just replace the symbol with
+    // 0.
+    if (IS == &InputSection::Discarded)
+      return 0;
+
     // This is an absolute symbol.
     if (!IS)
       return D.Value;
 
-    assert(IS != &InputSection::Discarded);
     IS = IS->Repl;
 
     uint64_t Offset = D.Value;
