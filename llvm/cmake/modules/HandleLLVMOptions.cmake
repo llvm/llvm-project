@@ -361,10 +361,6 @@ if( MSVC )
 
   include(ChooseMSVCCRT)
 
-  if( MSVC11 )
-    add_definitions(-D_VARIADIC_MAX=10)
-  endif()
-
   # Add definitions that make MSVC much less annoying.
   add_definitions(
     # For some reason MS wants to deprecate a bunch of standard functions...

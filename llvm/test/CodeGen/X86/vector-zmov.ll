@@ -37,16 +37,33 @@ entry:
   ret <2 x i64>%Y
 }
 
-; FIXME: We shouldn't shrink the load to movss here since it is volatile.
 define <4 x i32> @load_zmov_4i32_to_0zzz_volatile(<4 x i32> *%ptr) {
-; SSE-LABEL: load_zmov_4i32_to_0zzz_volatile:
-; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; SSE-NEXT:    retq
+; SSE2-LABEL: load_zmov_4i32_to_0zzz_volatile:
+; SSE2:       # %bb.0: # %entry
+; SSE2-NEXT:    movaps (%rdi), %xmm1
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: load_zmov_4i32_to_0zzz_volatile:
+; SSSE3:       # %bb.0: # %entry
+; SSSE3-NEXT:    movaps (%rdi), %xmm1
+; SSSE3-NEXT:    xorps %xmm0, %xmm0
+; SSSE3-NEXT:    movss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: load_zmov_4i32_to_0zzz_volatile:
+; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    movaps (%rdi), %xmm1
+; SSE41-NEXT:    xorps %xmm0, %xmm0
+; SSE41-NEXT:    blendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: load_zmov_4i32_to_0zzz_volatile:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; AVX-NEXT:    vmovaps (%rdi), %xmm0
+; AVX-NEXT:    vxorps %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1,2,3]
 ; AVX-NEXT:    retq
 entry:
   %X = load volatile <4 x i32>, <4 x i32>* %ptr
@@ -54,16 +71,17 @@ entry:
   ret <4 x i32>%Y
 }
 
-; FIXME: We shouldn't shrink the load to movsd here since it is volatile.
 define <2 x i64> @load_zmov_2i64_to_0z_volatile(<2 x i64> *%ptr) {
 ; SSE-LABEL: load_zmov_2i64_to_0z_volatile:
 ; SSE:       # %bb.0: # %entry
-; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE-NEXT:    movdqa (%rdi), %xmm0
+; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm0[0],zero
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_zmov_2i64_to_0z_volatile:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovdqa (%rdi), %xmm0
+; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX-NEXT:    retq
 entry:
   %X = load volatile <2 x i64>, <2 x i64>* %ptr

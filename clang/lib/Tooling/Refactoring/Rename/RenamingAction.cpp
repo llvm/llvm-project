@@ -74,6 +74,8 @@ RenameOccurrences::initiate(RefactoringRuleContext &Context,
                            std::move(NewName));
 }
 
+const NamedDecl *RenameOccurrences::getRenameDecl() const { return ND; }
+
 Expected<AtomicChanges>
 RenameOccurrences::createSourceReplacements(RefactoringRuleContext &Context) {
   Expected<SymbolOccurrences> Occurrences = findSymbolOccurrences(ND, Context);

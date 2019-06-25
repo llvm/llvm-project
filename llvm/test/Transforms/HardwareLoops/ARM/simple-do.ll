@@ -1,6 +1,7 @@
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -hardware-loops -disable-arm-loloops=true %s -S -o - | FileCheck %s --check-prefix=DISABLED
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=-lob -hardware-loops %s -S -o - | FileCheck %s --check-prefix=DISABLED
+; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi -disable-arm-loloops=false %s -o - | FileCheck %s --check-prefix=CHECK-LLC
 
 ; DISABLED-NOT: llvm.set.loop.iterations
 ; DISABLED-NOT: llvm.loop.decrement
@@ -15,6 +16,15 @@
 ; CHECK: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[REM]], i32 1)
 ; CHECK: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK: br i1 [[CMP]], label %while.body, label %while.end
+
+; CHECK-LLC-LABEL:do_copy:
+; CHECK-LLC-NOT:    mov lr, r0
+; CHECK-LLC:        dls lr, r0
+; CHECK-LLC-NOT:    mov lr, r0
+; CHECK-LLC:      [[LOOP_HEADER:\.LBB[0-9_]+]]:
+; CHECK-LLC:        le lr, [[LOOP_HEADER]]
+; CHECK-LLC-NOT:    b [[LOOP_EXIT:\.LBB[0-9._]+]]
+; CHECK-LLC:      @ %while.end
 define i32 @do_copy(i32 %n, i32* nocapture %p, i32* nocapture readonly %q) {
 entry:
   br label %while.body
@@ -44,6 +54,14 @@ while.end:
 ; CHECK: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[REM]], i32 1)
 ; CHECK: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK: br i1 [[CMP]], label %while.body, label %while.end.loopexit
+
+; CHECK-LLC-LABEL:do_inc1:
+; CHECK-LLC:        dls lr,
+; CHECK-LLC-NOT:    mov lr,
+; CHECK-LLC:      [[LOOP_HEADER:\.LBB[0-9_]+]]:
+; CHECK-LLC:        le lr, [[LOOP_HEADER]]
+; CHECK-LLC-NOT:    b [[LOOP_EXIT:\.LBB[0-9_]+]]
+; CHECK-LLC:      [[LOOP_EXIT:\.LBB[0-9_]+]]:
 
 define i32 @do_inc1(i32 %n) {
 entry:
@@ -84,6 +102,16 @@ while.end:
 ; CHECK: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[REM]], i32 1)
 ; CHECK: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK: br i1 [[CMP]], label %while.body, label %while.end.loopexit
+
+; CHECK-LLC:      do_inc2:
+; CHECK-LLC-NOT:    mov lr,
+; CHECK-LLC:        dls lr,
+; CHECK-LLC-NOT:    mov lr,
+; CHECK-LLC:      [[LOOP_HEADER:\.LBB[0-9._]+]]:
+; CHECK-LLC:        le lr, [[LOOP_HEADER]]
+; CHECK-LLC-NOT:    b [[LOOP_EXIT:\.LBB[0-9._]+]]
+; CHECK-LLC:      [[LOOP_EXIT:\.LBB[0-9_]+]]:
+
 define i32 @do_inc2(i32 %n) {
 entry:
   %cmp7 = icmp sgt i32 %n, 0
@@ -127,6 +155,15 @@ while.end:
 ; CHECK: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[REM]], i32 1)
 ; CHECK: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK: br i1 [[CMP]], label %while.body, label %while.end.loopexit
+
+; CHECK-LLC:      do_dec2
+; CHECK-LLC-NOT:    mov lr,
+; CHECK-LLC:        dls lr,
+; CHECK-LLC-NOT:    mov lr,
+; CHECK-LLC:      [[LOOP_HEADER:\.LBB[0-9_]+]]:
+; CHECK-LLC:        le lr, [[LOOP_HEADER]]
+; CHECK-LLC-NOT:    b .
+; CHECK-LLC:      @ %while.end
 define i32 @do_dec2(i32 %n) {
 entry:
   %cmp6 = icmp sgt i32 %n, 0

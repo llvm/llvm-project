@@ -81,6 +81,14 @@ be properly handled.::
 
   lib/CodeGen/SelectionDAG/SelectionDAG.cpp
 
+However, the mutation may not happen if the new node has not been registered
+in TargetLoweringBase::initActions(). If the corresponding non-STRICT node
+is Legal but a target does not know about STRICT nodes then the STRICT
+node will default to Legal and mutation will be bypassed with a "Cannot
+select" error. Register the new STRICT node as Expand to avoid this bug.::
+
+  lib/CodeGen/TargetLoweringBase.cpp
+
 To make debug logs readable it is helpful to update the SelectionDAG's
 debug logger:::
 

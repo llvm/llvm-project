@@ -111,20 +111,20 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 6,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 3
+// CHECK-NEXT:   "line": 3,
+// CHECK-NEXT:   "col": 6,
+// CHECK-NEXT:   "tokLen": 5
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 3
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 5,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 5
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "Comma",
@@ -137,14 +137,14 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "kind": "CompoundStmt",
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
+// CHECK-NEXT:      "line": 3,
 // CHECK-NEXT:      "col": 18,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 3
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 5,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 5
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -153,14 +153,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 4,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 9,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -175,13 +174,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 6,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -196,13 +193,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 4
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 4
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -217,13 +212,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 6,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 4
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 6,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 4
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -240,13 +233,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 9,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 9,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -265,20 +256,19 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 7,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 7
+// CHECK-NEXT:   "tokLen": 10
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 7
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 10,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 10
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "Assignment",
@@ -290,20 +280,18 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 7,
 // CHECK-NEXT:     "col": 21,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 7
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 17,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 7
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 21,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 7
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
@@ -318,13 +306,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 24,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 7
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 10,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 10
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -333,14 +320,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 8,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -355,13 +341,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 8
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 8
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -383,13 +367,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 8
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 8
+// CHECK-NEXT:          "tokLen": 2
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -405,14 +387,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "CompoundAssignOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 9,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -433,13 +414,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 9
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 9
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -461,13 +440,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 9
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 9
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -482,13 +459,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 9
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 9
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -516,20 +491,19 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 12,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 12
+// CHECK-NEXT:   "tokLen": 12
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 12
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 15,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 15
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "Conditionals",
@@ -541,20 +515,18 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 12,
 // CHECK-NEXT:     "col": 23,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 12
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 19,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
@@ -569,13 +541,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 26,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 15,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -584,14 +555,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ConditionalOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 13,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 13
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 13
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -605,13 +575,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 13
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 13
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -626,13 +594,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 13
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 13
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -656,13 +622,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 13
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 13
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -677,13 +641,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 13
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 13
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -699,14 +661,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryConditionalOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 14,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 14
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 14
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -720,13 +681,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 14
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 14
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -741,13 +700,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 14
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 14
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -771,13 +728,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 14
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 14
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -791,13 +746,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 14
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 14
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -812,13 +765,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 14
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 14
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -844,13 +795,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 14
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 14
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -864,13 +813,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 14
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 14
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -885,13 +832,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 14
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 14
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -917,13 +862,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 14
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 14
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -942,20 +885,19 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 17,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 17
+// CHECK-NEXT:   "tokLen": 15
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 17
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 49,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 49
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "BinaryOperators",
@@ -967,20 +909,18 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 17,
 // CHECK-NEXT:     "col": 26,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 17
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 22,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 17
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 26,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 17
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
@@ -994,19 +934,16 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 33,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 17
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 29,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 17
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 33,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 17
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
@@ -1021,13 +958,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 36,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 17
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 49,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 49
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -1036,14 +972,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 19,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 19
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 19
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1058,13 +993,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 19
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 19
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1079,13 +1012,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 19
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 19
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1109,13 +1040,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 19
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 19
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1130,13 +1059,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 19
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 19
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1161,14 +1088,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 20,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 20
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 20
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1183,13 +1109,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 20
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 20
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1204,13 +1128,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 20
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 20
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1234,13 +1156,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 20
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 20
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1255,13 +1175,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 20
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 20
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1286,14 +1204,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 23,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 23
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 23
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1308,13 +1225,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 23
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 23
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1329,13 +1244,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 23
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 23
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1359,13 +1272,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 23
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 23
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1380,13 +1291,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 23
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 23
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1411,14 +1320,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 24,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 24
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 24
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1433,13 +1341,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 24
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 24
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1454,13 +1360,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 24
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 24
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1484,13 +1388,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 24
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 24
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1505,13 +1407,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 24
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 24
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1536,14 +1436,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 25,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 25
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 25
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1558,13 +1457,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 25
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 25
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1579,13 +1476,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 25
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 25
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1609,13 +1504,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 25
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 25
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1630,13 +1523,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 25
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 25
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1661,14 +1552,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 28,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 28
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 28
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1683,13 +1573,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 28
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 28
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1704,13 +1592,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 28
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 28
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1734,13 +1620,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 28
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 28
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1755,13 +1639,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 28
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 28
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1786,14 +1668,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 29,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 29
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 29
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1808,13 +1689,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 29
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 29
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1829,13 +1708,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 29
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 29
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1859,13 +1736,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 29
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 29
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1880,13 +1755,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 29
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 29
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1911,14 +1784,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 32,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 32
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 32
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -1933,13 +1805,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 32
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 32
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -1954,13 +1824,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 32
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 32
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -1984,13 +1852,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 32
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 32
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2005,13 +1871,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 32
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 32
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2036,14 +1900,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 33,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 33
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 33
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2058,13 +1921,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 33
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 33
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2079,13 +1940,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 33
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 33
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2109,13 +1968,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 33
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 33
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2130,13 +1987,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 33
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 33
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2161,14 +2016,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 34,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2183,13 +2037,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2204,13 +2056,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 34
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 34
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2234,13 +2084,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2255,13 +2103,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 34
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 34
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2286,14 +2132,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 35,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 35
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 35
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2308,13 +2153,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 35
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 35
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2329,13 +2172,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 35
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 35
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2359,13 +2200,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 35
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 35
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2380,13 +2219,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 35
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 35
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2411,14 +2248,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 38,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 38
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 38
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2433,13 +2269,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 38
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 38
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2454,13 +2288,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 38
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 38
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2484,13 +2316,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 38
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 38
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2505,13 +2335,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 38
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 38
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2536,14 +2364,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 39,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 39
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 39
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2558,13 +2385,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 39
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 39
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2579,13 +2404,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 39
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 39
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2609,13 +2432,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 39
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 8,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 39
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2630,13 +2451,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 39
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 8,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 39
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2661,14 +2480,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 42,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 42
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 42
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2683,13 +2501,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 42
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 42
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2704,13 +2520,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 42
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 42
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2734,13 +2548,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 42
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 42
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2755,13 +2567,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 42
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 42
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2786,14 +2596,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 43,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 43
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 43
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2808,13 +2617,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 43
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 43
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2829,13 +2636,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 43
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 43
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2859,13 +2664,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 43
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 43
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2880,13 +2683,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 43
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 43
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2911,14 +2712,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 46,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 46
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 46
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -2933,13 +2733,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 46
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 46
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -2954,13 +2752,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 46
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 46
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -2984,13 +2780,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 46
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 46
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3005,13 +2799,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 46
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 46
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3036,14 +2828,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 47,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 47
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 47
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3058,13 +2849,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 47
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 47
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3079,13 +2868,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 47
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 47
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3109,13 +2896,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 47
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 47
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3130,13 +2915,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 47
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 47
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3161,14 +2944,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "BinaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 48,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 48
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 48
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3183,13 +2965,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 48
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 48
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3204,13 +2984,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 48
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 48
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3234,13 +3012,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 48
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 7,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 48
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3255,13 +3031,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 48
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 7,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 48
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3289,20 +3063,19 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 51,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 51
+// CHECK-NEXT:   "tokLen": 14
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 51
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 66,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 66
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "isUsed": true,
@@ -3315,20 +3088,18 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 51,
 // CHECK-NEXT:     "col": 25,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 51
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 21,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 51
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 25,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 51
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
@@ -3342,19 +3113,16 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 33,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 51
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 28,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 51
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 33,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 51
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
@@ -3369,13 +3137,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 36,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 51
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 66,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 66
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -3384,14 +3151,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "CStyleCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 53,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 53
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 53
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3406,13 +3172,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 53
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 53
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3428,13 +3192,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 10,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 53
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 10,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 53
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3459,14 +3221,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 57,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 57
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 57
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3482,13 +3243,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 57
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 57
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3503,13 +3262,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 57
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 57
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3534,14 +3291,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 58,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 58
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 58
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3558,13 +3314,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 58
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 58
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3579,13 +3333,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 58
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 58
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3610,14 +3362,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 59,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 59
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 59
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3634,13 +3385,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 59
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 59
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3663,14 +3412,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 60,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 60
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 60
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3685,13 +3433,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 60
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 60
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3708,13 +3454,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 60
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 60
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3729,13 +3473,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 4,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 60
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 4,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 60
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -3762,14 +3504,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryOperator",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 61,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 61
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 61
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3786,13 +3527,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 61
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 61
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3807,13 +3546,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 61
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 61
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -3838,14 +3575,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryExprOrTypeTraitExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 63,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 63
+// CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 63
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3860,13 +3596,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 63
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 10,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 63
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -3890,14 +3624,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryExprOrTypeTraitExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 64,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 64
+// CHECK-NEXT:        "tokLen": 6
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 13,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 64
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3914,14 +3647,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "UnaryExprOrTypeTraitExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 65,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 65
+// CHECK-NEXT:        "tokLen": 8
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 15,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 65
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -3941,20 +3673,19 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 72,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 72
+// CHECK-NEXT:   "tokLen": 16
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 72
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 83,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 83
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "PostfixOperators",
@@ -3966,20 +3697,18 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 72,
 // CHECK-NEXT:     "col": 28,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 72
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 72
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 28,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 72
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
@@ -3993,19 +3722,16 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 40,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 72
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 31,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 72
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 40,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 72
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
@@ -4020,19 +3746,16 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 53,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 72
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 43,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 72
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 53,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 72
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
@@ -4047,13 +3770,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 56,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 72
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 83,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 83
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -4062,14 +3784,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 73,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 73
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 6,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 73
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4084,13 +3805,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 73
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 6,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 73
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4104,13 +3823,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 73
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 73
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4125,13 +3842,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 73
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 73
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4155,13 +3870,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 5,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 73
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 5,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 73
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4179,14 +3892,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "CallExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 74,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 74
+// CHECK-NEXT:        "tokLen": 14
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 74
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4200,13 +3912,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 74
+// CHECK-NEXT:          "tokLen": 14
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 74
+// CHECK-NEXT:          "tokLen": 14
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4221,13 +3931,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 74
+// CHECK-NEXT:            "tokLen": 14
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 74
+// CHECK-NEXT:            "tokLen": 14
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4251,13 +3959,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 18,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 74
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 19,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 74
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4272,13 +3978,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 18,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 74
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 19,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 74
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4295,13 +3999,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 19,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 74
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 19,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 74
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4316,13 +4018,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:              "range": {
 // CHECK-NEXT:               "begin": {
 // CHECK-NEXT:                "col": 19,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 74
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               },
 // CHECK-NEXT:               "end": {
 // CHECK-NEXT:                "col": 19,
-// CHECK-NEXT:                "file": "{{.*}}",
-// CHECK-NEXT:                "line": 74
+// CHECK-NEXT:                "tokLen": 1
 // CHECK-NEXT:               }
 // CHECK-NEXT:              },
 // CHECK-NEXT:              "type": {
@@ -4350,13 +4050,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 22,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 74
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 22,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 74
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4371,13 +4069,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 22,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 74
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 22,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 74
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4402,14 +4098,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 76,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 76
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 76
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4424,13 +4119,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 76
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 76
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4447,13 +4140,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 76
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 76
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4480,14 +4171,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 77,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 77
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 6,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 77
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4502,13 +4192,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 77
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 6,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 77
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4525,13 +4213,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 77
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 3,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 77
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4546,13 +4232,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 77
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 3,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 77
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4579,14 +4263,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 81,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 81
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 25,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 81
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4601,13 +4284,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 81
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 25,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 81
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4621,13 +4302,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 12,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 81
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 25,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 81
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4641,13 +4320,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 13,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 81
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 13,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 81
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4662,13 +4339,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 16,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 81
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 16,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 81
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4683,13 +4358,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 19,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 81
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 19,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 81
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4704,13 +4377,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 22,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 81
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 22,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 81
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4730,14 +4401,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 82,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 82
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 15,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 82
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4753,13 +4423,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 82
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 15,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 82
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4774,13 +4442,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 13,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 82
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 15,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 82
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {
@@ -4795,13 +4461,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:            "range": {
 // CHECK-NEXT:             "begin": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 82
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             },
 // CHECK-NEXT:             "end": {
 // CHECK-NEXT:              "col": 14,
-// CHECK-NEXT:              "file": "{{.*}}",
-// CHECK-NEXT:              "line": 82
+// CHECK-NEXT:              "tokLen": 1
 // CHECK-NEXT:             }
 // CHECK-NEXT:            },
 // CHECK-NEXT:            "type": {
@@ -4824,20 +4488,19 @@ void PrimaryExpressions(int a) {
 
 // CHECK:  "kind": "FunctionDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 87,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 87
+// CHECK-NEXT:   "tokLen": 18
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 87
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 106,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 106
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "PrimaryExpressions",
@@ -4849,20 +4512,18 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParmVarDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 87,
 // CHECK-NEXT:     "col": 29,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 87
+// CHECK-NEXT:     "tokLen": 1
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 25,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 87
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 29,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 87
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "isUsed": true,
@@ -4877,13 +4538,12 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 32,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 87
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 106,
 // CHECK-NEXT:      "col": 1,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 106
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -4892,14 +4552,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 88,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 88
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 88
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4914,13 +4573,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 88
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 88
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -4943,14 +4600,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "CharacterLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 89,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 89
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 89
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4964,14 +4620,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "CharacterLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 90,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 90
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 90
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -4985,14 +4640,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 91,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 91
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 91
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5007,13 +4661,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 91
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 91
+// CHECK-NEXT:          "tokLen": 3
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -5029,14 +4681,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 92,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 92
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 92
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5051,13 +4702,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 92
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 92
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -5073,14 +4722,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 93,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 93
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 93
+// CHECK-NEXT:        "tokLen": 5
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5095,13 +4743,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 93
+// CHECK-NEXT:          "tokLen": 5
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 93
+// CHECK-NEXT:          "tokLen": 5
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -5117,14 +4763,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 94,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 94
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 94
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5139,13 +4784,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 94
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 94
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -5161,14 +4804,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 95,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 95
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 95
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5183,13 +4825,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 95
+// CHECK-NEXT:          "tokLen": 4
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -5205,14 +4845,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "IntegerLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 97,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 97
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 97
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5226,14 +4865,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "IntegerLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 98,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 98
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 98
+// CHECK-NEXT:        "tokLen": 2
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5247,14 +4885,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "IntegerLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 99,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 99
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 99
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5268,14 +4905,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "FloatingLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 100,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 100
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 100
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5289,14 +4925,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "FloatingLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 101,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 101
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 101
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5310,14 +4945,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "FloatingLiteral",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 102,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 102
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 102
+// CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5331,14 +4965,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "DeclRefExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 103,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 103
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 103
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5359,14 +4992,13 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 105,
 // CHECK-NEXT:        "col": 3,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 105
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 105
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -5381,13 +5013,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 3,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 105
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 5,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 105
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "type": {
@@ -5401,13 +5031,11 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:          "range": {
 // CHECK-NEXT:           "begin": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 105
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           },
 // CHECK-NEXT:           "end": {
 // CHECK-NEXT:            "col": 4,
-// CHECK-NEXT:            "file": "{{.*}}",
-// CHECK-NEXT:            "line": 105
+// CHECK-NEXT:            "tokLen": 1
 // CHECK-NEXT:           }
 // CHECK-NEXT:          },
 // CHECK-NEXT:          "type": {

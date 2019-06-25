@@ -1234,6 +1234,15 @@ def addr_offset_none : MemOperand,
   let MIOperandInfo = (ops GPR:$base);
 }
 
+// t_addr_offset_none := reg [r0-r7]
+def MemNoOffsetTAsmOperand : AsmOperandClass { let Name = "MemNoOffsetT"; }
+def t_addr_offset_none : MemOperand {
+  let PrintMethod = "printAddrMode7Operand";
+  let DecoderMethod = "DecodetGPRRegisterClass";
+  let ParserMatchClass = MemNoOffsetTAsmOperand;
+  let MIOperandInfo = (ops tGPR:$base);
+}
+
 def nohash_imm : Operand<i32> {
   let PrintMethod = "printNoHashImmediate";
 }

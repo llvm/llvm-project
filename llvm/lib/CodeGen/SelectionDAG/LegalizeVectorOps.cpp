@@ -949,6 +949,19 @@ SDValue VectorLegalizer::ExpandANY_EXTEND_VECTOR_INREG(SDValue Op) {
   EVT SrcVT = Src.getValueType();
   int NumSrcElements = SrcVT.getVectorNumElements();
 
+  // *_EXTEND_VECTOR_INREG SrcVT can be smaller than VT - so insert the vector
+  // into a larger vector type.
+  if (SrcVT.bitsLE(VT)) {
+    assert((VT.getSizeInBits() % SrcVT.getScalarSizeInBits()) == 0 &&
+           "ANY_EXTEND_VECTOR_INREG vector size mismatch");
+    NumSrcElements = VT.getSizeInBits() / SrcVT.getScalarSizeInBits();
+    SrcVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getScalarType(),
+                             NumSrcElements);
+    Src = DAG.getNode(
+        ISD::INSERT_SUBVECTOR, DL, SrcVT, DAG.getUNDEF(SrcVT), Src,
+        DAG.getConstant(0, DL, TLI.getVectorIdxTy(DAG.getDataLayout())));
+  }
+
   // Build a base mask of undef shuffles.
   SmallVector<int, 16> ShuffleMask;
   ShuffleMask.resize(NumSrcElements, -1);
@@ -995,6 +1008,19 @@ SDValue VectorLegalizer::ExpandZERO_EXTEND_VECTOR_INREG(SDValue Op) {
   SDValue Src = Op.getOperand(0);
   EVT SrcVT = Src.getValueType();
   int NumSrcElements = SrcVT.getVectorNumElements();
+
+  // *_EXTEND_VECTOR_INREG SrcVT can be smaller than VT - so insert the vector
+  // into a larger vector type.
+  if (SrcVT.bitsLE(VT)) {
+    assert((VT.getSizeInBits() % SrcVT.getScalarSizeInBits()) == 0 &&
+           "ZERO_EXTEND_VECTOR_INREG vector size mismatch");
+    NumSrcElements = VT.getSizeInBits() / SrcVT.getScalarSizeInBits();
+    SrcVT = EVT::getVectorVT(*DAG.getContext(), SrcVT.getScalarType(),
+                             NumSrcElements);
+    Src = DAG.getNode(
+        ISD::INSERT_SUBVECTOR, DL, SrcVT, DAG.getUNDEF(SrcVT), Src,
+        DAG.getConstant(0, DL, TLI.getVectorIdxTy(DAG.getDataLayout())));
+  }
 
   // Build up a zero vector to blend into this one.
   SDValue Zero = DAG.getConstant(0, DL, SrcVT);

@@ -26,7 +26,6 @@ class RegistersIteratorTestCase(TestBase):
             'main.cpp', '// Set break point at this line.')
 
     @add_test_categories(['pyapi'])
-    @expectedFailureAll(oslist=["windows"])
     def test_iter_registers(self):
         """Test iterator works correctly for lldbutil.iter_registers()."""
         self.build()

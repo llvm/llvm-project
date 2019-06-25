@@ -42,13 +42,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 4
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 4
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -63,13 +61,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -84,13 +80,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 4
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -116,13 +110,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 8
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 8
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -137,13 +129,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 8
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 8
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -158,13 +148,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 8
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -190,13 +178,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 12
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 12
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -211,13 +197,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -232,13 +216,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 12
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 12
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -264,13 +246,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 16
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 16
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -285,13 +265,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 16
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 10,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 16
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -306,13 +284,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 16
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 16
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -338,13 +314,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 22
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 25,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 22
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -359,13 +333,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 25,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 22
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 25,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 22
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -381,13 +353,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 25,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 22
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 25,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 22
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -413,13 +383,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 26
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 23,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 26
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -434,13 +402,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 26
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 26
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -456,13 +422,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 26
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 26
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -488,13 +452,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 30
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 25,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 30
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -509,13 +471,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 25,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 30
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 25,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 30
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -531,13 +491,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 25,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 30
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 25,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 30
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {
@@ -563,13 +521,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 10,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 34
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 23,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 34
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "type": {
@@ -584,13 +540,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 34
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 23,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 34
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "type": {
@@ -606,13 +560,11 @@ signed char cstylecast_3(signed int x) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 23,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "type": {

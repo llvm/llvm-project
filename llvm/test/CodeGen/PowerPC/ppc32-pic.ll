@@ -1,4 +1,7 @@
-; RUN: llc < %s -mtriple=powerpc-unknown-linux-gnu -relocation-model=pic | FileCheck -check-prefix=SMALL-BSS %s
+; RUN: llc < %s -mtriple=powerpc -relocation-model=pic | \
+; RUN:    FileCheck -check-prefixes=SMALL,SMALL-BSS %s
+; RUN: llc < %s -mtriple=powerpc -relocation-model=pic -mattr=+secure-plt | \
+; RUN:    FileCheck -check-prefixes=SMALL,SMALL-SECUREPLT %s
 @bar = common global i32 0, align 4
 
 declare i32 @call_foo(i32, ...)
@@ -12,13 +15,16 @@ entry:
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"PIC Level", i32 1}
-; SMALL-BSS-LABEL:foo:
-; SMALL-BSS:         stwu 1, -32(1)
-; SMALL-BSS:         stw 30, 24(1)
-; SMALL-BSS:         bl _GLOBAL_OFFSET_TABLE_@local-4
-; SMALL-BSS:         mflr 30
-; SMALL-BSS-DAG:     stw {{[0-9]+}}, 8(1)
-; SMALL-BSS-DAG:     lwz [[VREG:[0-9]+]], bar@GOT(30)
-; SMALL-BSS-DAG:     lwz {{[0-9]+}}, 0([[VREG]])
-; SMALL-BSS:         bl call_foo@PLT
-; SMALL-BSS:         lwz 30, 24(1)
+; SMALL-LABEL: foo:
+; SMALL:         stwu 1, -32(1)
+; SMALL:         stw 30, 24(1)
+; SMALL-BSS:     bl _GLOBAL_OFFSET_TABLE_@local-4
+; SMALL-SECURE:  bl .L0$pb
+; SMALL:         mflr 30
+; SMALL-SECURE:  addis 30, 30, _GLOBAL_OFFSET_TABLE_-.Lo$pb@ha
+; SMALL-SECURE:  addi 30, 30, _GLOBAL_OFFSET_TABLE_-.Lo$pb@l
+; SMALL-DAG:     stw {{[0-9]+}}, 8(1)
+; SMALL-DAG:     lwz [[VREG:[0-9]+]], bar@GOT(30)
+; SMALL-DAG:     lwz {{[0-9]+}}, 0([[VREG]])
+; SMALL:         bl call_foo@PLT{{$}}
+; SMALL:         lwz 30, 24(1)

@@ -15,6 +15,11 @@
 
 #include <limits.h> // for PTHREAD_DESTRUCTOR_ITERATIONS
 
+// With some build setups, this might still not be defined.
+#ifndef PTHREAD_DESTRUCTOR_ITERATIONS
+#define PTHREAD_DESTRUCTOR_ITERATIONS 4
+#endif
+
 namespace scudo {
 
 template <class Allocator> struct ALIGNED(SCUDO_CACHE_LINE_SIZE) TSD {

@@ -311,6 +311,40 @@ public:
         LoopLatches.push_back(Pred);
   }
 
+  /// Return all inner loops in the loop nest rooted by the loop in preorder,
+  /// with siblings in forward program order.
+  template <class Type>
+  static void getInnerLoopsInPreorder(const LoopT &L,
+                                      SmallVectorImpl<Type> &PreOrderLoops) {
+    SmallVector<LoopT *, 4> PreOrderWorklist;
+    PreOrderWorklist.append(L.rbegin(), L.rend());
+
+    while (!PreOrderWorklist.empty()) {
+      LoopT *L = PreOrderWorklist.pop_back_val();
+      // Sub-loops are stored in forward program order, but will process the
+      // worklist backwards so append them in reverse order.
+      PreOrderWorklist.append(L->rbegin(), L->rend());
+      PreOrderLoops.push_back(L);
+    }
+  }
+
+  /// Return all loops in the loop nest rooted by the loop in preorder, with
+  /// siblings in forward program order.
+  SmallVector<const LoopT *, 4> getLoopsInPreorder() const {
+    SmallVector<const LoopT *, 4> PreOrderLoops;
+    const LoopT *CurLoop = static_cast<const LoopT *>(this);
+    PreOrderLoops.push_back(CurLoop);
+    getInnerLoopsInPreorder(*CurLoop, PreOrderLoops);
+    return PreOrderLoops;
+  }
+  SmallVector<LoopT *, 4> getLoopsInPreorder() {
+    SmallVector<LoopT *, 4> PreOrderLoops;
+    LoopT *CurLoop = static_cast<LoopT *>(this);
+    PreOrderLoops.push_back(CurLoop);
+    getInnerLoopsInPreorder(*CurLoop, PreOrderLoops);
+    return PreOrderLoops;
+  }
+
   //===--------------------------------------------------------------------===//
   // APIs for updating loop information after changing the CFG
   //

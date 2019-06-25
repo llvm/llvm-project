@@ -1424,6 +1424,11 @@ enum : unsigned {
   GNU_PROPERTY_X86_FEATURE_2_XSAVEC = 1 << 9,
 };
 
+// AMDGPU-specific section indices.
+enum {
+  SHN_AMDGPU_LDS = 0xff00, // Variable in LDS; symbol encoded like SHN_COMMON
+};
+
 // AMD specific notes. (Code Object V2)
 enum {
   // Note types with values between 0 and 9 (inclusive) are reserved.

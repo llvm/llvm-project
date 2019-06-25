@@ -2686,7 +2686,7 @@ bool SIInstrInfo::isImmOperandLegal(const MachineInstr &MI, unsigned OpNo,
   const MCInstrDesc &InstDesc = MI.getDesc();
   const MCOperandInfo &OpInfo = InstDesc.OpInfo[OpNo];
 
-  assert(MO.isImm() || MO.isTargetIndex() || MO.isFI());
+  assert(MO.isImm() || MO.isTargetIndex() || MO.isFI() || MO.isGlobal());
 
   if (OpInfo.OperandType == MCOI::OPERAND_IMMEDIATE)
     return true;
@@ -2995,7 +2995,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
 
     switch (Desc.OpInfo[i].OperandType) {
     case MCOI::OPERAND_REGISTER:
-      if (MI.getOperand(i).isImm()) {
+      if (MI.getOperand(i).isImm() || MI.getOperand(i).isGlobal()) {
         ErrInfo = "Illegal immediate value for operand.";
         return false;
       }
@@ -3665,7 +3665,7 @@ bool SIInstrInfo::isLegalVSrcOperand(const MachineRegisterInfo &MRI,
     return isLegalRegOperand(MRI, OpInfo, MO);
 
   // Handle non-register types that are treated like immediates.
-  assert(MO.isImm() || MO.isTargetIndex() || MO.isFI());
+  assert(MO.isImm() || MO.isTargetIndex() || MO.isFI() || MO.isGlobal());
   return true;
 }
 
@@ -3722,7 +3722,7 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
   }
 
   // Handle non-register types that are treated like immediates.
-  assert(MO->isImm() || MO->isTargetIndex() || MO->isFI());
+  assert(MO->isImm() || MO->isTargetIndex() || MO->isFI() || MO->isGlobal());
 
   if (!DefinedRC) {
     // This operand expects an immediate.

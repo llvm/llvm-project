@@ -32,7 +32,7 @@ well-known :program:`clang-tidy` integrations in detail.
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+
 |KDevelop IDE                          |         \-\            |               \+\               |           \+\            |                 \+\                     |           \+\            |
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+
-|Qt Creator IDE                        |         \+\            |               \+\               |           \-\            |                 \-\                     |           \+\            |
+|Qt Creator IDE                        |         \+\            |               \+\               |           \-\            |                 \+\                     |           \+\            |
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+
 |ReSharper C++ for Visual Studio       |         \+\            |               \+\               |           \-\            |                 \+\                     |           \+\            |
 +--------------------------------------+------------------------+---------------------------------+--------------------------+-----------------------------------------+--------------------------+
@@ -65,11 +65,13 @@ output to provide a list of issues.
 
 .. _QtCreator: https://www.qt.io/
 .. _Clang Code Model: https://doc.qt.io/qtcreator/creator-clang-codemodel.html
+.. _Clang Tools: https://doc.qt.io/qtcreator/creator-clang-tools.html
 
 QtCreator_ 4.6 integrates :program:`clang-tidy` warnings into the editor
 diagnostics under the `Clang Code Model`_. To employ :program:`clang-tidy`
 inspection in QtCreator, you need to create a copy of one of the presets and
-choose the checks to be performed in the Clang Code Model Warnings menu.
+choose the checks to be performed. Since QtCreator 4.7 project-wide analysis is
+possible with the `Clang Tools`_ analyzer.
 
 .. _MS Visual Studio: https://visualstudio.microsoft.com/
 .. _ReSharper C++: https://www.jetbrains.com/help/resharper/Clang_Tidy_Integration.html

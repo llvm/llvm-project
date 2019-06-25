@@ -18,10 +18,11 @@ namespace clangd {
 
 /// Renames all occurrences of the symbol at \p Pos to \p NewName.
 /// Occurrences outside the current file are not modified.
-llvm::Expected<tooling::Replacements> renameWithinFile(ParsedAST &AST,
-                                                       llvm::StringRef File,
-                                                       Position Pos,
-                                                       llvm::StringRef NewName);
+/// Returns an error if rename a symbol that's used in another file (per the
+/// index).
+llvm::Expected<tooling::Replacements>
+renameWithinFile(ParsedAST &AST, llvm::StringRef File, Position Pos,
+                 llvm::StringRef NewName, const SymbolIndex *Index = nullptr);
 
 } // namespace clangd
 } // namespace clang

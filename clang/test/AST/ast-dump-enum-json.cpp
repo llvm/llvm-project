@@ -36,20 +36,20 @@ enum class I : int {
 
 // CHECK:  "kind": "EnumDecl",
 // CHECK-NEXT:  "loc": {
-// CHECK-NEXT:   "col": 1,
 // CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 3
+// CHECK-NEXT:   "line": 3,
+// CHECK-NEXT:   "col": 1,
+// CHECK-NEXT:   "tokLen": 4
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 3
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 6,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 6
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -57,20 +57,18 @@ enum class I : int {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumConstantDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 4,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 4
+// CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 4
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "One",
@@ -82,20 +80,18 @@ enum class I : int {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumConstantDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 5,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 5
+// CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 5
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 5
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "Two",
@@ -109,20 +105,19 @@ enum class I : int {
 
 // CHECK:  "kind": "EnumDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 8,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 8
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 8
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 11,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 11
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "E",
@@ -131,20 +126,18 @@ enum class I : int {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumConstantDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 9,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 9
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 9
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 9
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "Three",
@@ -156,20 +149,18 @@ enum class I : int {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumConstantDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 10,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 10
+// CHECK-NEXT:     "tokLen": 4
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 10
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 10
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "Four",
@@ -183,20 +174,19 @@ enum class I : int {
 
 // CHECK:  "kind": "EnumDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 13,
 // CHECK-NEXT:   "col": 6,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 13
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 13
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 16,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 16
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "F",
@@ -208,20 +198,18 @@ enum class I : int {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumConstantDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 14,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 14
+// CHECK-NEXT:     "tokLen": 4
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 14
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 14
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "Five",
@@ -233,20 +221,18 @@ enum class I : int {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumConstantDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 15,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 15
+// CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "Six",
@@ -260,20 +246,19 @@ enum class I : int {
 
 // CHECK:  "kind": "EnumDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 18,
 // CHECK-NEXT:   "col": 13,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 18
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 18
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 21,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 21
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "G",
@@ -286,20 +271,18 @@ enum class I : int {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumConstantDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 19,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 19
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "Seven",
@@ -311,20 +294,18 @@ enum class I : int {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumConstantDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 20,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 20
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 20
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 20
+// CHECK-NEXT:      "tokLen": 5
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "Eight",
@@ -338,20 +319,19 @@ enum class I : int {
 
 // CHECK:  "kind": "EnumDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 23,
 // CHECK-NEXT:   "col": 12,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 23
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 23
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 26,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 26
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "H",
@@ -364,20 +344,18 @@ enum class I : int {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumConstantDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 24,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 24
+// CHECK-NEXT:     "tokLen": 4
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 24
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 24
+// CHECK-NEXT:      "tokLen": 4
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "Nine",
@@ -389,20 +367,18 @@ enum class I : int {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumConstantDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 25,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 25
+// CHECK-NEXT:     "tokLen": 3
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 25
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 25
+// CHECK-NEXT:      "tokLen": 3
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "Ten",
@@ -416,20 +392,19 @@ enum class I : int {
 
 // CHECK:  "kind": "EnumDecl",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 28,
 // CHECK-NEXT:   "col": 12,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 28
+// CHECK-NEXT:   "tokLen": 1
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 28
+// CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 31,
 // CHECK-NEXT:    "col": 1,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 31
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "name": "I",
@@ -442,20 +417,18 @@ enum class I : int {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumConstantDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 29,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 29
+// CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 29
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 29
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "Eleven",
@@ -467,20 +440,18 @@ enum class I : int {
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "EnumConstantDecl",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 30,
 // CHECK-NEXT:     "col": 3,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 30
+// CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 30
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 3,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 30
+// CHECK-NEXT:      "tokLen": 6
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "Twelve",

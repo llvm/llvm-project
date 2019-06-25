@@ -91,6 +91,7 @@
 		267F684A1CC02DED0086832B /* ABISysV_s390x.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 267F68471CC02DED0086832B /* ABISysV_s390x.cpp */; };
 		267F684B1CC02DED0086832B /* ABISysV_s390x.h in Headers */ = {isa = PBXBuildFile; fileRef = 267F68481CC02DED0086832B /* ABISysV_s390x.h */; };
 		26DB3E1F1379E7AD0080DC73 /* ABISysV_x86_64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26DB3E131379E7AD0080DC73 /* ABISysV_x86_64.cpp */; };
+		AF352EDE22C17BD800D058B6 /* ABIWindows_x86_64.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF352EDB22C17BD700D058B6 /* ABIWindows_x86_64.cpp */; };
 		2689006713353E0E00698AC0 /* ASTDumper.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4906FD4012F2255300A2A77C /* ASTDumper.cpp */; };
 		2689006813353E0E00698AC0 /* ASTResultSynthesizer.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49A8A39F11D568A300AD3B68 /* ASTResultSynthesizer.cpp */; };
 		2689006913353E0E00698AC0 /* ASTStructExtractor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 491193501226386000578B7F /* ASTStructExtractor.cpp */; };
@@ -145,6 +146,7 @@
 		2689FFFB13353DB600698AC0 /* BreakpointLocationList.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E1010F1B83100F91463 /* BreakpointLocationList.cpp */; };
 		4CAA19E61F5A40040099E692 /* BreakpointName.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4C7D48281F509CCD005314B4 /* BreakpointName.cpp */; };
 		2689FFFD13353DB600698AC0 /* BreakpointOptions.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E1110F1B83100F91463 /* BreakpointOptions.cpp */; };
+		AF352EE122C17C0D00D058B6 /* BreakpointPrecondition.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF352EE022C17C0C00D058B6 /* BreakpointPrecondition.cpp */; };
 		2689FFFF13353DB600698AC0 /* BreakpointResolver.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E1210F1B83100F91463 /* BreakpointResolver.cpp */; };
 		2689000113353DB600698AC0 /* BreakpointResolverAddress.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26D0DD5310FE555900271C65 /* BreakpointResolverAddress.cpp */; };
 		2689000313353DB600698AC0 /* BreakpointResolverFileLine.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26D0DD5410FE555900271C65 /* BreakpointResolverFileLine.cpp */; };
@@ -1419,6 +1421,8 @@
 		267F68481CC02DED0086832B /* ABISysV_s390x.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ABISysV_s390x.h; sourceTree = "<group>"; };
 		26DB3E131379E7AD0080DC73 /* ABISysV_x86_64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ABISysV_x86_64.cpp; sourceTree = "<group>"; };
 		26DB3E141379E7AD0080DC73 /* ABISysV_x86_64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ABISysV_x86_64.h; sourceTree = "<group>"; };
+		AF352EDB22C17BD700D058B6 /* ABIWindows_x86_64.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ABIWindows_x86_64.cpp; sourceTree = "<group>"; };
+		AF352EDC22C17BD700D058B6 /* ABIWindows_x86_64.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ABIWindows_x86_64.h; sourceTree = "<group>"; };
 		264A12FF137252C700875C42 /* ARM64_DWARF_Registers.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ARM64_DWARF_Registers.h; path = source/Utility/ARM64_DWARF_Registers.h; sourceTree = "<group>"; };
 		B287E63E12EFAE2C00C9BEFE /* ARMDefines.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ARMDefines.h; path = Utility/ARMDefines.h; sourceTree = "<group>"; };
 		B23DD24F12EDFAC1000C3894 /* ARMUtils.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ARMUtils.h; path = Utility/ARMUtils.h; sourceTree = "<group>"; };
@@ -1523,6 +1527,7 @@
 		4C7D482B1F509CF5005314B4 /* BreakpointName.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BreakpointName.h; path = include/lldb/Breakpoint/BreakpointName.h; sourceTree = "<group>"; };
 		26BC7E1110F1B83100F91463 /* BreakpointOptions.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointOptions.cpp; path = source/Breakpoint/BreakpointOptions.cpp; sourceTree = "<group>"; };
 		26BC7CF510F1B71400F91463 /* BreakpointOptions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BreakpointOptions.h; path = include/lldb/Breakpoint/BreakpointOptions.h; sourceTree = "<group>"; };
+		AF352EE022C17C0C00D058B6 /* BreakpointPrecondition.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointPrecondition.cpp; path = source/Breakpoint/BreakpointPrecondition.cpp; sourceTree = "<group>"; };
 		26BC7E1210F1B83100F91463 /* BreakpointResolver.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointResolver.cpp; path = source/Breakpoint/BreakpointResolver.cpp; sourceTree = "<group>"; };
 		26BC7CF610F1B71400F91463 /* BreakpointResolver.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = BreakpointResolver.h; path = include/lldb/Breakpoint/BreakpointResolver.h; sourceTree = "<group>"; };
 		26D0DD5310FE555900271C65 /* BreakpointResolverAddress.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = BreakpointResolverAddress.cpp; path = source/Breakpoint/BreakpointResolverAddress.cpp; sourceTree = "<group>"; };
@@ -1580,6 +1585,7 @@
 		2669415B1A6DC2AB0063BE93 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = CMakeLists.txt; path = "tools/lldb-mi/CMakeLists.txt"; sourceTree = SOURCE_ROOT; };
 		26792617211CA3E100EE1D10 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = CMakeLists.txt; path = "tools/lldb-vscode/CMakeLists.txt"; sourceTree = "<group>"; };
 		9A1890311F47D5D400394BCA /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = CMakeLists.txt; path = TestingSupport/CMakeLists.txt; sourceTree = "<group>"; };
+		AF352EDD22C17BD700D058B6 /* CMakeLists.txt */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = CMakeLists.txt; sourceTree = "<group>"; };
 		4CB443BC1249920C00C13DC2 /* CPPLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = CPPLanguageRuntime.cpp; path = source/Target/CPPLanguageRuntime.cpp; sourceTree = "<group>"; };
 		4CB443BB1249920C00C13DC2 /* CPPLanguageRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = CPPLanguageRuntime.h; path = include/lldb/Target/CPPLanguageRuntime.h; sourceTree = "<group>"; };
 		94B6385B1B8FB174004FE1E4 /* CPlusPlusLanguage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = CPlusPlusLanguage.cpp; path = Language/CPlusPlus/CPlusPlusLanguage.cpp; sourceTree = "<group>"; };
@@ -1818,7 +1824,6 @@
 		6D0F613C1C80AA8900A4ECEE /* DebugMacros.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = DebugMacros.h; path = include/lldb/Symbol/DebugMacros.h; sourceTree = "<group>"; };
 		AF116BED20CF234B0071093F /* DebugNamesDWARFIndex.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = DebugNamesDWARFIndex.cpp; sourceTree = "<group>"; };
 		AF116BEE20CF234B0071093F /* DebugNamesDWARFIndex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DebugNamesDWARFIndex.h; sourceTree = "<group>"; };
-		265ABF6210F42EE900531910 /* DebugSymbols.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DebugSymbols.framework; path = /System/Library/PrivateFrameworks/DebugSymbols.framework; sourceTree = "<absolute>"; };
 		263664921140A4930075843B /* Debugger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = Debugger.cpp; path = source/Core/Debugger.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		263664941140A4C10075843B /* Debugger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = Debugger.h; path = include/lldb/Core/Debugger.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
 		49B01A2D15F67B1700666829 /* DeclVendor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = DeclVendor.h; path = include/lldb/Symbol/DeclVendor.h; sourceTree = "<group>"; };
@@ -5392,6 +5397,7 @@
 				4C7D482B1F509CF5005314B4 /* BreakpointName.h */,
 				26BC7CF510F1B71400F91463 /* BreakpointOptions.h */,
 				26BC7E1110F1B83100F91463 /* BreakpointOptions.cpp */,
+				AF352EE022C17C0C00D058B6 /* BreakpointPrecondition.cpp */,
 				26BC7CF610F1B71400F91463 /* BreakpointResolver.h */,
 				26BC7E1210F1B83100F91463 /* BreakpointResolver.cpp */,
 				26D0DD5010FE554D00271C65 /* BreakpointResolverAddress.h */,
@@ -5939,6 +5945,7 @@
 				AF77E08C1A033C4B0096C0EA /* SysV-ppc64 */,
 				267F68461CC02DED0086832B /* SysV-s390x */,
 				26DB3E121379E7AD0080DC73 /* SysV-x86_64 */,
+				AF352EDA22C17BD700D058B6 /* Windows-x86_64 */,
 			);
 			path = ABI;
 			sourceTree = "<group>";
@@ -6048,7 +6055,6 @@
 			isa = PBXGroup;
 			children = (
 				26F5C39010F3FA26009D5894 /* CoreFoundation.framework */,
-				265ABF6210F42EE900531910 /* DebugSymbols.framework */,
 				260C876910F538E700BB2B04 /* Foundation.framework */,
 				26709E311964A34000B94724 /* LaunchServices.framework */,
 				26F5C32A10F3DFDD009D5894 /* libedit.dylib */,
@@ -6850,6 +6856,16 @@
 				AF2E02A21FA2CEAF00A86C34 /* ArchitectureArm.h */,
 			);
 			path = Arm;
+			sourceTree = "<group>";
+		};
+		AF352EDA22C17BD700D058B6 /* Windows-x86_64 */ = {
+			isa = PBXGroup;
+			children = (
+				AF352EDB22C17BD700D058B6 /* ABIWindows_x86_64.cpp */,
+				AF352EDC22C17BD700D058B6 /* ABIWindows_x86_64.h */,
+				AF352EDD22C17BD700D058B6 /* CMakeLists.txt */,
+			);
+			path = "Windows-x86_64";
 			sourceTree = "<group>";
 		};
 		AF6335DF1C87B20A00F7D554 /* PDB */ = {
@@ -7981,6 +7997,7 @@
 				2689FFF513353DB600698AC0 /* BreakpointList.cpp in Sources */,
 				4CDB8D6E1DBA91B6006C5B13 /* LibStdcppTuple.cpp in Sources */,
 				AF77E08F1A033C700096C0EA /* ABISysV_ppc.cpp in Sources */,
+				AF352EE122C17C0D00D058B6 /* BreakpointPrecondition.cpp in Sources */,
 				2689FFF713353DB600698AC0 /* BreakpointLocation.cpp in Sources */,
 				2654A68D1E552D1500DA1013 /* PseudoTerminal.cpp in Sources */,
 				2689FFF913353DB600698AC0 /* BreakpointLocationCollection.cpp in Sources */,
@@ -8020,6 +8037,7 @@
 				2689001613353DDE00698AC0 /* CommandObjectCommands.cpp in Sources */,
 				AFEC3362194A8ABA00FF05C6 /* StructuredData.cpp in Sources */,
 				6D55B2901A8A806200A70529 /* GDBRemoteCommunicationServerCommon.cpp in Sources */,
+				AF352EDE22C17BD800D058B6 /* ABIWindows_x86_64.cpp in Sources */,
 				26474CAC18D0CB070073DEBA /* RegisterContextFreeBSD_x86_64.cpp in Sources */,
 				9441816E1C8F5EC900E5A8D9 /* CommandAlias.cpp in Sources */,
 				2689001713353DDE00698AC0 /* CommandObjectDisassemble.cpp in Sources */,
@@ -9153,8 +9171,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -9192,8 +9208,6 @@
 					"$(LLVM_BUILD_DIR)/archives.txt",
 					"-framework",
 					Foundation,
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Security,
 					"-framework",
@@ -9233,8 +9247,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -9273,8 +9285,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -9312,8 +9322,6 @@
 					"$(LLVM_BUILD_DIR)/archives.txt",
 					"-framework",
 					Foundation,
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Security,
 					"-framework",
@@ -9354,8 +9362,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -9395,8 +9401,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -9435,8 +9439,6 @@
 					"$(LLVM_BUILD_DIR)/archives.txt",
 					"-framework",
 					Foundation,
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Security,
 					"-framework",
@@ -9537,8 +9539,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -9604,8 +9604,6 @@
 					"$(LLVM_BUILD_DIR)/archives.txt",
 					"-framework",
 					Foundation,
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Security,
 					"-framework",
@@ -10236,8 +10234,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -10503,8 +10499,6 @@
 					"-lobjc",
 					"-lpython",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Carbon,
 					"-framework",
 					Foundation,
@@ -10535,8 +10529,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -10574,8 +10566,6 @@
 					"-lobjc",
 					"-lpython",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Carbon,
 					"-framework",
 					Foundation,
@@ -10606,8 +10596,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -10644,8 +10632,6 @@
 					"-lobjc",
 					"-lpython",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Carbon,
 					"-framework",
 					Foundation,
@@ -10677,8 +10663,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -10978,8 +10962,6 @@
 					"-framework",
 					Foundation,
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Security,
 					"-framework",
 					CoreServices,
@@ -11082,8 +11064,6 @@
 					"-lobjc",
 					"-lpython",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Carbon,
 					"-framework",
 					Foundation,
@@ -11114,8 +11094,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -11204,8 +11182,6 @@
 					"-lpython2.7",
 					"-lxml2",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Foundation,
 					"-framework",
 					Carbon,
@@ -11270,8 +11246,6 @@
 					"-lpython2.7",
 					"-lxml2",
 					"-framework",
-					DebugSymbols,
-					"-framework",
 					Foundation,
 					"-framework",
 					Carbon,
@@ -11332,8 +11306,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",
@@ -11397,8 +11369,6 @@
 					"-L/System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/config",
 					"-lpython2.7",
 					"-lxml2",
-					"-framework",
-					DebugSymbols,
 					"-framework",
 					Foundation,
 					"-framework",

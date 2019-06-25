@@ -65,7 +65,7 @@ define void @pr26232(i64 %a, <16 x i1> %b) {
 ; KNL-32-NEXT:    pushl %esi
 ; KNL-32-NEXT:    .cfi_def_cfa_offset 8
 ; KNL-32-NEXT:    .cfi_offset %esi, -8
-; KNL-32-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; KNL-32-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-32-NEXT:    vpslld $31, %zmm0, %zmm0
 ; KNL-32-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-32-NEXT:    movl {{[0-9]+}}(%esp), %eax

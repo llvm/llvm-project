@@ -223,6 +223,11 @@ static bool MaintainNoSignedWrap(BinaryOperator &I, Value *B, Value *C) {
   return !Overflow;
 }
 
+static bool hasNoUnsignedWrap(BinaryOperator &I) {
+  OverflowingBinaryOperator *OBO = dyn_cast<OverflowingBinaryOperator>(&I);
+  return OBO && OBO->hasNoUnsignedWrap();
+}
+
 /// Conservatively clears subclassOptionalData after a reassociation or
 /// commutation. We preserve fast-math flags when applicable as they can be
 /// preserved.
@@ -329,14 +334,19 @@ bool InstCombiner::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
           I.setOperand(1, V);
           // Conservatively clear the optional flags, since they may not be
           // preserved by the reassociation.
-          if (MaintainNoSignedWrap(I, B, C) &&
+          bool IsNUW = hasNoUnsignedWrap(I) && hasNoUnsignedWrap(*Op0);
+          bool IsNSW = MaintainNoSignedWrap(I, B, C);
+
+          ClearSubclassDataAfterReassociation(I);
+
+          if (IsNUW)
+            I.setHasNoUnsignedWrap(true);
+
+          if (IsNSW &&
               (!Op0 || (isa<BinaryOperator>(Op0) && Op0->hasNoSignedWrap()))) {
             // Note: this is only valid because SimplifyBinOp doesn't look at
             // the operands to Op0.
-            I.clearSubclassOptionalData();
             I.setHasNoSignedWrap(true);
-          } else {
-            ClearSubclassDataAfterReassociation(I);
           }
 
           Changed = true;
@@ -421,8 +431,14 @@ bool InstCombiner::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
           Op0->getOpcode() == Opcode && Op1->getOpcode() == Opcode &&
           match(Op0, m_OneUse(m_BinOp(m_Value(A), m_Constant(C1)))) &&
           match(Op1, m_OneUse(m_BinOp(m_Value(B), m_Constant(C2))))) {
-        BinaryOperator *NewBO = BinaryOperator::Create(Opcode, A, B);
-        if (isa<FPMathOperator>(NewBO)) {
+        bool IsNUW = hasNoUnsignedWrap(I) &&
+           hasNoUnsignedWrap(*Op0) &&
+           hasNoUnsignedWrap(*Op1);
+         BinaryOperator *NewBO = (IsNUW && Opcode == Instruction::Add) ?
+           BinaryOperator::CreateNUW(Opcode, A, B) :
+           BinaryOperator::Create(Opcode, A, B);
+
+         if (isa<FPMathOperator>(NewBO)) {
           FastMathFlags Flags = I.getFastMathFlags();
           Flags &= Op0->getFastMathFlags();
           Flags &= Op1->getFastMathFlags();
@@ -435,6 +451,8 @@ bool InstCombiner::SimplifyAssociativeOrCommutative(BinaryOperator &I) {
         // Conservatively clear the optional flags, since they may not be
         // preserved by the reassociation.
         ClearSubclassDataAfterReassociation(I);
+        if (IsNUW)
+          I.setHasNoUnsignedWrap(true);
 
         Changed = true;
         continue;
@@ -572,32 +590,44 @@ Value *InstCombiner::tryFactorization(BinaryOperator &I,
     ++NumFactor;
     SimplifiedInst->takeName(&I);
 
-    // Check if we can add NSW flag to SimplifiedInst. If so, set NSW flag.
-    // TODO: Check for NUW.
+    // Check if we can add NSW/NUW flags to SimplifiedInst. If so, set them.
     if (BinaryOperator *BO = dyn_cast<BinaryOperator>(SimplifiedInst)) {
       if (isa<OverflowingBinaryOperator>(SimplifiedInst)) {
         bool HasNSW = false;
-        if (isa<OverflowingBinaryOperator>(&I))
+        bool HasNUW = false;
+        if (isa<OverflowingBinaryOperator>(&I)) {
           HasNSW = I.hasNoSignedWrap();
+          HasNUW = I.hasNoUnsignedWrap();
+        }
 
-        if (auto *LOBO = dyn_cast<OverflowingBinaryOperator>(LHS))
+        if (auto *LOBO = dyn_cast<OverflowingBinaryOperator>(LHS)) {
           HasNSW &= LOBO->hasNoSignedWrap();
+          HasNUW &= LOBO->hasNoUnsignedWrap();
+        }
 
-        if (auto *ROBO = dyn_cast<OverflowingBinaryOperator>(RHS))
+        if (auto *ROBO = dyn_cast<OverflowingBinaryOperator>(RHS)) {
           HasNSW &= ROBO->hasNoSignedWrap();
+          HasNUW &= ROBO->hasNoUnsignedWrap();
+        }
 
-        // We can propagate 'nsw' if we know that
-        //  %Y = mul nsw i16 %X, C
-        //  %Z = add nsw i16 %Y, %X
-        // =>
-        //  %Z = mul nsw i16 %X, C+1
-        //
-        // iff C+1 isn't INT_MIN
         const APInt *CInt;
         if (TopLevelOpcode == Instruction::Add &&
-            InnerOpcode == Instruction::Mul)
-          if (match(V, m_APInt(CInt)) && !CInt->isMinSignedValue())
-            BO->setHasNoSignedWrap(HasNSW);
+            InnerOpcode == Instruction::Mul) {
+          // We can propagate 'nsw' if we know that
+          //  %Y = mul nsw i16 %X, C
+          //  %Z = add nsw i16 %Y, %X
+          // =>
+          //  %Z = mul nsw i16 %X, C+1
+          //
+          // iff C+1 isn't INT_MIN
+          if (match(V, m_APInt(CInt))) {
+            if (!CInt->isMinSignedValue())
+              BO->setHasNoSignedWrap(HasNSW);
+          }
+
+          // nuw can be propagated with any constant or nuw value.
+          BO->setHasNoUnsignedWrap(HasNUW);
+        }
       }
     }
   }

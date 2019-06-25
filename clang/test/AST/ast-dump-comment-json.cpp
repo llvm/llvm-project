@@ -41,20 +41,18 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 
 // CHECK:  "kind": "FullComment",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 3,
 // CHECK-NEXT:   "col": 4,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 3
+// CHECK-NEXT:   "tokLen": 0
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 4,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 3
+// CHECK-NEXT:    "tokLen": 0
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 7,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 3
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -63,19 +61,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "ParagraphComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 4,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 3
+// CHECK-NEXT:     "tokLen": 0
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 3
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 3
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -84,19 +79,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "TextComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 4,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 3
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 3
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 3
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": " Aaa"
@@ -118,20 +110,18 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 
 // CHECK:  "kind": "FullComment",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 9,
 // CHECK-NEXT:   "col": 4,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 9
+// CHECK-NEXT:   "tokLen": 0
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 4,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 9
+// CHECK-NEXT:    "tokLen": 0
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 7,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 9
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -140,19 +130,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "ParagraphComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 4,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 9
+// CHECK-NEXT:     "tokLen": 0
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 9
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 7,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 9
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -161,19 +148,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "TextComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 4,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 9
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 9
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": " Aaa"
@@ -186,20 +170,18 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 
 // CHECK:  "kind": "FullComment",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 12,
 // CHECK-NEXT:   "col": 4,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 12
+// CHECK-NEXT:   "tokLen": 0
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 4,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 12
+// CHECK-NEXT:    "tokLen": 0
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 14,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 12
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -208,19 +190,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "ParagraphComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 4,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 12
+// CHECK-NEXT:     "tokLen": 0
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -229,19 +208,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "TextComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 4,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 12
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 12
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 12
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": " "
@@ -253,19 +229,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "BlockCommandComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 12
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 14,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 12
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "brief",
@@ -275,19 +248,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "ParagraphComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 11,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 12
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 12
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 14,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 12
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -296,19 +266,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:        "kind": "TextComment",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 11,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 12
+// CHECK-NEXT:         "tokLen": 0
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 11,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 12
+// CHECK-NEXT:          "tokLen": 0
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 14,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 12
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "text": " Aaa"
@@ -323,20 +290,19 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 
 // CHECK:  "kind": "FullComment",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 15,
 // CHECK-NEXT:   "col": 4,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 15
+// CHECK-NEXT:   "tokLen": 0
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 4,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 15
+// CHECK-NEXT:    "tokLen": 0
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 16,
 // CHECK-NEXT:    "col": 27,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 16
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -344,20 +310,18 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParagraphComment",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 15,
 // CHECK-NEXT:     "col": 4,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 15
+// CHECK-NEXT:     "tokLen": 0
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -366,19 +330,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "TextComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 4,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 15
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 15
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 15
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": " "
@@ -390,19 +351,17 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "ParamCommandComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 15
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 15
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 16,
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 16
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "direction": "in",
@@ -413,20 +372,19 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "ParagraphComment",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 15,
 // CHECK-NEXT:       "col": 15,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 15
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 15,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 15
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "line": 16,
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 16
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -434,20 +392,18 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:        "id": "0x{{.*}}",
 // CHECK-NEXT:        "kind": "TextComment",
 // CHECK-NEXT:        "loc": {
+// CHECK-NEXT:         "line": 15,
 // CHECK-NEXT:         "col": 15,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 15
+// CHECK-NEXT:         "tokLen": 0
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 15,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 15
+// CHECK-NEXT:          "tokLen": 0
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 18,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 15
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "text": " xxx"
@@ -456,20 +412,18 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:        "id": "0x{{.*}}",
 // CHECK-NEXT:        "kind": "TextComment",
 // CHECK-NEXT:        "loc": {
+// CHECK-NEXT:         "line": 16,
 // CHECK-NEXT:         "col": 4,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 16
+// CHECK-NEXT:         "tokLen": 0
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 16
+// CHECK-NEXT:          "tokLen": 0
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 4,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 16
+// CHECK-NEXT:          "tokLen": 0
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "text": " "
@@ -483,19 +437,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "ParamCommandComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 16
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 16
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 27,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 16
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "direction": "in,out",
@@ -508,19 +459,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "ParagraphComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 24,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 16
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 24,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 16
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 27,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 16
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -529,19 +477,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:        "kind": "TextComment",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 24,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 16
+// CHECK-NEXT:         "tokLen": 0
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 24,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 16
+// CHECK-NEXT:          "tokLen": 0
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 27,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 16
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "text": " yyy"
@@ -556,20 +501,18 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 
 // CHECK:  "kind": "FullComment",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 19,
 // CHECK-NEXT:   "col": 4,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 19
+// CHECK-NEXT:   "tokLen": 0
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 4,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 19
+// CHECK-NEXT:    "tokLen": 0
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 19,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 19
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -578,19 +521,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "ParagraphComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 4,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 19
+// CHECK-NEXT:     "tokLen": 0
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -599,19 +539,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "TextComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 4,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 19
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 19
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 19
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": " "
@@ -623,19 +560,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "TParamCommandComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 19
+// CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 19,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "param": "Aaa",
@@ -645,19 +579,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "ParagraphComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 16,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 19
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 16,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 19
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 19,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 19
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -666,19 +597,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:        "kind": "TextComment",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 16,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 19
+// CHECK-NEXT:         "tokLen": 0
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 16,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 19
+// CHECK-NEXT:          "tokLen": 0
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 19,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 19
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "text": " xxx"
@@ -694,19 +622,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK:  "kind": "FullComment",
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "col": 4,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 19
+// CHECK-NEXT:   "tokLen": 0
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 4,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 19
+// CHECK-NEXT:    "tokLen": 0
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 19,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 19
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -715,19 +640,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "ParagraphComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 4,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 19
+// CHECK-NEXT:     "tokLen": 0
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -736,19 +658,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "TextComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 4,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 19
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 19
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 19
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": " "
@@ -760,19 +679,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "TParamCommandComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 19
+// CHECK-NEXT:     "tokLen": 6
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 19,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 19
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "param": "Aaa",
@@ -785,19 +701,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "ParagraphComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 16,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 19
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 16,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 19
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 19,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 19
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -806,19 +719,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:        "kind": "TextComment",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 16,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 19
+// CHECK-NEXT:         "tokLen": 0
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 16,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 19
+// CHECK-NEXT:          "tokLen": 0
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 19,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 19
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "text": " xxx"
@@ -833,20 +743,18 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 
 // CHECK:  "kind": "FullComment",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 22,
 // CHECK-NEXT:   "col": 4,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 22
+// CHECK-NEXT:   "tokLen": 0
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 4,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 22
+// CHECK-NEXT:    "tokLen": 0
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 6,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 22
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -855,19 +763,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "ParagraphComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 4,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 22
+// CHECK-NEXT:     "tokLen": 0
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 22
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 6,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 22
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -876,19 +781,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "TextComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 4,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 22
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 22
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 22
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": " "
@@ -898,19 +800,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "InlineCommandComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 5,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 22
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 22
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 6,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 22
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "c",
@@ -927,20 +826,19 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 
 // CHECK:  "kind": "FullComment",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 25,
 // CHECK-NEXT:   "col": 4,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 25
+// CHECK-NEXT:   "tokLen": 0
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 4,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 25
+// CHECK-NEXT:    "tokLen": 0
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
+// CHECK-NEXT:    "line": 26,
 // CHECK-NEXT:    "col": 8,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 26
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -948,20 +846,19 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "id": "0x{{.*}}",
 // CHECK-NEXT:    "kind": "ParagraphComment",
 // CHECK-NEXT:    "loc": {
+// CHECK-NEXT:     "line": 25,
 // CHECK-NEXT:     "col": 4,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 25
+// CHECK-NEXT:     "tokLen": 0
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 25
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
+// CHECK-NEXT:      "line": 26,
 // CHECK-NEXT:      "col": 8,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 26
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -969,20 +866,18 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TextComment",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 25,
 // CHECK-NEXT:       "col": 4,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 25
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 25
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 25
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": " "
@@ -992,19 +887,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "HTMLStartTagComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 6,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 25
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 25
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 7,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 25
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "a"
@@ -1014,19 +906,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "TextComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 8,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 25
+// CHECK-NEXT:       "tokLen": 3
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 25
+// CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 10,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 25
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": "Aaa"
@@ -1036,19 +925,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "HTMLEndTagComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 13,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 25
+// CHECK-NEXT:       "tokLen": 1
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 11,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 25
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 14,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 25
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "a"
@@ -1057,20 +943,18 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "TextComment",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 26,
 // CHECK-NEXT:       "col": 4,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 26
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 26
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 26
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": " "
@@ -1080,19 +964,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "HTMLStartTagComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 6,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 26
+// CHECK-NEXT:       "tokLen": 2
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 5,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 26
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 26
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "name": "br",
@@ -1106,20 +987,18 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 
 // CHECK:  "kind": "FullComment",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 29,
 // CHECK-NEXT:   "col": 4,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 29
+// CHECK-NEXT:   "tokLen": 0
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 4,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 29
+// CHECK-NEXT:    "tokLen": 0
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 14,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 29
+// CHECK-NEXT:    "tokLen": 0
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -1128,19 +1007,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "ParagraphComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 4,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 29
+// CHECK-NEXT:     "tokLen": 0
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 29
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 29
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -1149,19 +1025,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "TextComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 4,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 29
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 29
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 29
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": " "
@@ -1173,19 +1046,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "VerbatimBlockComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 29
+// CHECK-NEXT:     "tokLen": 8
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 29
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 14,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 29
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "name": "verbatim",
@@ -1195,20 +1065,18 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "VerbatimBlockLineComment",
 // CHECK-NEXT:      "loc": {
+// CHECK-NEXT:       "line": 30,
 // CHECK-NEXT:       "col": 4,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 30
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 30
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 8,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 30
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": " Aaa"
@@ -1221,20 +1089,18 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 
 // CHECK:  "kind": "FullComment",
 // CHECK-NEXT:  "loc": {
+// CHECK-NEXT:   "line": 34,
 // CHECK-NEXT:   "col": 4,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 34
+// CHECK-NEXT:   "tokLen": 0
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 4,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 34
+// CHECK-NEXT:    "tokLen": 0
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 29,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 34
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -1243,19 +1109,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "ParagraphComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 4,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 34
+// CHECK-NEXT:     "tokLen": 0
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 34
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 34
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -1264,19 +1127,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "TextComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 4,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 34
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": " "
@@ -1288,19 +1148,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "ParamCommandComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 34
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 34
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 29,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 34
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "direction": "in",
@@ -1311,19 +1168,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "ParagraphComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 15,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 34
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 15,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -1332,19 +1186,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:        "kind": "TextComment",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 15,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 34
+// CHECK-NEXT:         "tokLen": 0
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 15,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 0
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "text": " More arguments"
@@ -1360,19 +1211,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK:  "kind": "FullComment",
 // CHECK-NEXT:  "loc": {
 // CHECK-NEXT:   "col": 4,
-// CHECK-NEXT:   "file": "{{.*}}",
-// CHECK-NEXT:   "line": 34
+// CHECK-NEXT:   "tokLen": 0
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "range": {
 // CHECK-NEXT:   "begin": {
 // CHECK-NEXT:    "col": 4,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 34
+// CHECK-NEXT:    "tokLen": 0
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
 // CHECK-NEXT:    "col": 29,
-// CHECK-NEXT:    "file": "{{.*}}",
-// CHECK-NEXT:    "line": 34
+// CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
 // CHECK-NEXT:  },
 // CHECK-NEXT:  "inner": [
@@ -1381,19 +1229,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "ParagraphComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 4,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 34
+// CHECK-NEXT:     "tokLen": 0
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 34
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 4,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 34
+// CHECK-NEXT:      "tokLen": 0
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "inner": [
@@ -1402,19 +1247,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "TextComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 4,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 34
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 4,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "text": " "
@@ -1426,19 +1268,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:    "kind": "ParamCommandComment",
 // CHECK-NEXT:    "loc": {
 // CHECK-NEXT:     "col": 6,
-// CHECK-NEXT:     "file": "{{.*}}",
-// CHECK-NEXT:     "line": 34
+// CHECK-NEXT:     "tokLen": 5
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "range": {
 // CHECK-NEXT:     "begin": {
 // CHECK-NEXT:      "col": 5,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 34
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
 // CHECK-NEXT:      "col": 29,
-// CHECK-NEXT:      "file": "{{.*}}",
-// CHECK-NEXT:      "line": 34
+// CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
 // CHECK-NEXT:    },
 // CHECK-NEXT:    "direction": "in",
@@ -1449,19 +1288,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:      "kind": "ParagraphComment",
 // CHECK-NEXT:      "loc": {
 // CHECK-NEXT:       "col": 15,
-// CHECK-NEXT:       "file": "{{.*}}",
-// CHECK-NEXT:       "line": 34
+// CHECK-NEXT:       "tokLen": 0
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "col": 15,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 0
 // CHECK-NEXT:       },
 // CHECK-NEXT:       "end": {
 // CHECK-NEXT:        "col": 29,
-// CHECK-NEXT:        "file": "{{.*}}",
-// CHECK-NEXT:        "line": 34
+// CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "inner": [
@@ -1470,19 +1306,16 @@ void Test_TemplatedFunctionVariadic(int arg, ...);
 // CHECK-NEXT:        "kind": "TextComment",
 // CHECK-NEXT:        "loc": {
 // CHECK-NEXT:         "col": 15,
-// CHECK-NEXT:         "file": "{{.*}}",
-// CHECK-NEXT:         "line": 34
+// CHECK-NEXT:         "tokLen": 0
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "range": {
 // CHECK-NEXT:         "begin": {
 // CHECK-NEXT:          "col": 15,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 0
 // CHECK-NEXT:         },
 // CHECK-NEXT:         "end": {
 // CHECK-NEXT:          "col": 29,
-// CHECK-NEXT:          "file": "{{.*}}",
-// CHECK-NEXT:          "line": 34
+// CHECK-NEXT:          "tokLen": 1
 // CHECK-NEXT:         }
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "text": " More arguments"

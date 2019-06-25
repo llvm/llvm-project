@@ -66,8 +66,8 @@ public:
   /// @{
   bool useColdCCForColdCall(Function &F);
   bool enableAggressiveInterleaving(bool LoopHasReductions);
-  const TTI::MemCmpExpansionOptions *enableMemCmpExpansion(
-      bool IsZeroCmp) const;
+  TTI::MemCmpExpansionOptions enableMemCmpExpansion(bool OptSize,
+                                                    bool IsZeroCmp) const;
   bool enableInterleavedAccessVectorization();
   unsigned getNumberOfRegisters(bool Vector);
   unsigned getRegisterBitWidth(bool Vector) const;

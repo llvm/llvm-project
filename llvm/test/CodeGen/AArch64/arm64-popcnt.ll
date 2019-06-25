@@ -199,6 +199,40 @@ define i32 @ctpop_eq_one(i64 %x) nounwind readnone {
   ret i32 %conv
 }
 
+define i32 @ctpop_ne_one(i64 %x) nounwind readnone {
+; CHECK-LABEL: ctpop_ne_one:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, x0
+; CHECK-NEXT:    cnt.8b v0, v0
+; CHECK-NEXT:    uaddlv.8b h0, v0
+; CHECK-NEXT:    fmov w8, s0
+; CHECK-NEXT:    cmp x8, #1 // =1
+; CHECK-NEXT:    cset w0, ne
+; CHECK-NEXT:    ret
+;
+; CHECK-NONEON-LABEL: ctpop_ne_one:
+; CHECK-NONEON:       // %bb.0:
+; CHECK-NONEON-NEXT:    lsr x8, x0, #1
+; CHECK-NONEON-NEXT:    and x8, x8, #0x5555555555555555
+; CHECK-NONEON-NEXT:    sub x8, x0, x8
+; CHECK-NONEON-NEXT:    and x9, x8, #0x3333333333333333
+; CHECK-NONEON-NEXT:    lsr x8, x8, #2
+; CHECK-NONEON-NEXT:    and x8, x8, #0x3333333333333333
+; CHECK-NONEON-NEXT:    add x8, x9, x8
+; CHECK-NONEON-NEXT:    add x8, x8, x8, lsr #4
+; CHECK-NONEON-NEXT:    and x8, x8, #0xf0f0f0f0f0f0f0f
+; CHECK-NONEON-NEXT:    mov x9, #72340172838076673
+; CHECK-NONEON-NEXT:    mul x8, x8, x9
+; CHECK-NONEON-NEXT:    lsr x8, x8, #56
+; CHECK-NONEON-NEXT:    cmp x8, #1 // =1
+; CHECK-NONEON-NEXT:    cset w0, ne
+; CHECK-NONEON-NEXT:    ret
+  %count = tail call i64 @llvm.ctpop.i64(i64 %x)
+  %cmp = icmp ne i64 %count, 1
+  %conv = zext i1 %cmp to i32
+  ret i32 %conv
+}
+
 
 declare i32 @llvm.ctpop.i32(i32) nounwind readnone
 declare i64 @llvm.ctpop.i64(i64) nounwind readnone
