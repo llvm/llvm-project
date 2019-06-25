@@ -412,8 +412,7 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
 
   for (const RelTy &Rel : Rels) {
     RelType Type = Rel.getType(Config->IsMips64EL);
-    const ObjFile<ELFT> *File = getFile<ELFT>();
-    Symbol &Sym = File->getRelocTargetSym(Rel);
+    Symbol &Sym = getFile<ELFT>()->getRelocTargetSym(Rel);
 
     auto *P = reinterpret_cast<typename ELFT::Rela *>(Buf);
     Buf += sizeof(RelTy);
@@ -436,23 +435,10 @@ void InputSection::copyRelocations(uint8_t *Buf, ArrayRef<RelTy> Rels) {
       // .eh_frame is horribly special and can reference discarded sections. To
       // avoid having to parse and recreate .eh_frame, we just replace any
       // relocation in it pointing to discarded sections with R_*_NONE, which
-      // hopefully creates a frame that is ignored at runtime. Also, don't warn
-      // on .gcc_except_table and debug sections.
-      //
-      // See the comment in maybeReportUndefined for PPC64 .toc .
+      // hopefully creates a frame that is ignored at runtime.
       auto *D = dyn_cast<Defined>(&Sym);
       if (!D) {
-        if (!Sec->Name.startswith(".debug") &&
-            !Sec->Name.startswith(".zdebug") && Sec->Name != ".eh_frame" &&
-            Sec->Name != ".gcc_except_table" && Sec->Name != ".toc") {
-          uint32_t SecIdx = cast<Undefined>(Sym).DiscardedSecIdx;
-          Elf_Shdr_Impl<ELFT> Sec =
-              CHECK(File->getObj().sections(), File)[SecIdx];
-          warn("relocation refers to a discarded section: " +
-               CHECK(File->getObj().getSectionName(&Sec), File) +
-               "\n>>> referenced by " + getObjMsg(P->r_offset));
-        }
-        P->setSymbolAndType(0, 0, false);
+        error("STT_SECTION symbol should be defined");
         continue;
       }
       SectionBase *Section = D->Section->Repl;

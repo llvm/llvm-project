@@ -21,7 +21,7 @@
 using namespace lldb;
 using namespace lldb_private;
 
-const DWORD kWinContextFlags = CONTEXT_CONTROL | CONTEXT_INTEGER;
+const DWORD kWinContextFlags = CONTEXT_ALL;
 
 // Constructors and Destructors
 RegisterContextWindows::RegisterContextWindows(Thread &thread,
@@ -114,8 +114,18 @@ bool RegisterContextWindows::CacheAllRegisterValues() {
     return true;
 
   TargetThreadWindows &wthread = static_cast<TargetThreadWindows &>(m_thread);
-  memset(&m_context, 0, sizeof(m_context));
-  m_context.ContextFlags = kWinContextFlags;
+  uint8_t buffer[2048];
+  memset(buffer, 0, sizeof(buffer));
+  PCONTEXT tmpContext = NULL;
+  DWORD contextLength = (DWORD)sizeof(buffer);
+  if (!::InitializeContext(buffer, kWinContextFlags, &tmpContext,
+                           &contextLength)) {
+    return false;
+  }
+  memcpy(&m_context, tmpContext, sizeof(m_context));
+  if (!::SuspendThread(wthread.GetHostThread().GetNativeThread().GetSystemHandle())) {
+    return false;
+  }
   if (!::GetThreadContext(
           wthread.GetHostThread().GetNativeThread().GetSystemHandle(),
           &m_context)) {
@@ -123,6 +133,9 @@ bool RegisterContextWindows::CacheAllRegisterValues() {
         log,
         "GetThreadContext failed with error {0} while caching register values.",
         ::GetLastError());
+    return false;
+  }
+  if (!::ResumeThread(wthread.GetHostThread().GetNativeThread().GetSystemHandle())) {
     return false;
   }
   LLDB_LOG(log, "successfully updated the register values.");

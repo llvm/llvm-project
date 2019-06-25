@@ -336,8 +336,15 @@ static void maybeReportRelocationToDiscarded(const SectionChunk *FromChunk,
     File->getCOFFObj()->getSymbolName(COFFSym, Name);
   }
 
-  error("relocation against symbol in discarded section: " + Name +
-        getSymbolLocations(File, Rel.SymbolTableIndex));
+  std::vector<std::string> SymbolLocations =
+      getSymbolLocations(File, Rel.SymbolTableIndex);
+
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << "relocation against symbol in discarded section: " + Name;
+  for (const std::string &S : SymbolLocations)
+    OS << S;
+  error(OS.str());
 }
 
 void SectionChunk::writeTo(uint8_t *Buf) const {

@@ -193,6 +193,7 @@ public:
   uint32_t calcEFlags() const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
+  RelType getDynRel(RelType Type) const override;
   void writePltHeader(uint8_t *Buf) const override;
   void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
                 int32_t Index, unsigned RelOff) const override;
@@ -610,6 +611,12 @@ RelExpr PPC64::getRelExpr(RelType Type, const Symbol &S,
   }
 }
 
+RelType PPC64::getDynRel(RelType Type) const {
+  if (Type == R_PPC64_ADDR64 || Type == R_PPC64_TOC)
+    return R_PPC64_ADDR64;
+  return R_PPC64_NONE;
+}
+
 void PPC64::writeGotHeader(uint8_t *Buf) const {
   write64(Buf, getPPC64TocBase());
 }
@@ -749,9 +756,12 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
     break;
   }
   case R_PPC64_ADDR16:
-  case R_PPC64_TPREL16:
-    checkInt(Loc, Val, 16, OriginalType);
+    checkIntUInt(Loc, Val, 16, OriginalType);
     write16(Loc, Val);
+    break;
+  case R_PPC64_ADDR32:
+    checkIntUInt(Loc, Val, 32, OriginalType);
+    write32(Loc, Val);
     break;
   case R_PPC64_ADDR16_DS:
   case R_PPC64_TPREL16_DS: {
@@ -829,7 +839,10 @@ void PPC64::relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const {
       write16(Loc, (read16(Loc) & Mask) | lo(Val));
     }
   } break;
-  case R_PPC64_ADDR32:
+  case R_PPC64_TPREL16:
+    checkInt(Loc, Val, 16, OriginalType);
+    write16(Loc, Val);
+    break;
   case R_PPC64_REL32:
     checkInt(Loc, Val, 32, Type);
     write32(Loc, Val);

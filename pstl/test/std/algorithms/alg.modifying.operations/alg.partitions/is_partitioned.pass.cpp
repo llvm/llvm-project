@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <execution>
@@ -89,7 +91,7 @@ main()
     test<int32_t>([](const int32_t x) { return x > 1000; });
     test<uint16_t>([](const uint16_t x) { return x % 5 < 3; });
 #if !_PSTL_ICC_18_TEST_EARLY_EXIT_MONOTONIC_RELEASE_BROKEN && !_PSTL_ICC_19_TEST_IS_PARTITIONED_RELEASE_BROKEN
-    test<LocalWrapper<float64_t>>([](const LocalWrapper<float64_t>& x) { return true; });
+    test<LocalWrapper<float64_t>>([](const LocalWrapper<float64_t>&) { return true; });
 #endif
 
     test_algo_basic_single<int32_t>(run_for_rnd_fw<test_non_const>());

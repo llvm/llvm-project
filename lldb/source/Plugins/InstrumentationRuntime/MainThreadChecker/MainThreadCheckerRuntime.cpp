@@ -261,11 +261,8 @@ MainThreadCheckerRuntime::GetBacktracesFromExtendedStopInfo(
   StructuredData::ObjectSP thread_id_obj =
       info->GetObjectForDotSeparatedPath("tid");
   tid_t tid = thread_id_obj ? thread_id_obj->GetIntegerValue() : 0;
-  
-  uint32_t stop_id = 0;
-  bool stop_id_is_valid = false;
-  HistoryThread *history_thread =
-      new HistoryThread(*process_sp, tid, PCs, stop_id, stop_id_is_valid);
+
+  HistoryThread *history_thread = new HistoryThread(*process_sp, tid, PCs);
   ThreadSP new_thread_sp(history_thread);
   
   // Save this in the Process' ExtendedThreadList so a strong pointer retains

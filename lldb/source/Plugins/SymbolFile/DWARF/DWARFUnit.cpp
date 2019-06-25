@@ -363,8 +363,10 @@ void DWARFUnit::AddUnitDIE(const DWARFDebugInfoEntry &cu_die) {
   else if (gnu_ranges_base)
     dwo_cu->SetRangesBase(*gnu_ranges_base);
 
-  dwo_cu->SetBaseObjOffset(GetOffset());
-  SetDwoStrOffsetsBase(dwo_cu);
+  for (size_t i = 0; i < m_dwo_symbol_file->DebugInfo()->GetNumUnits(); ++i) {
+    DWARFUnit *unit = m_dwo_symbol_file->DebugInfo()->GetUnitAtIndex(i);
+    SetDwoStrOffsetsBase(unit);
+  }
 }
 
 DWARFDIE DWARFUnit::LookupAddress(const dw_addr_t address) {
@@ -417,10 +419,6 @@ void DWARFUnit::SetAddrBase(dw_addr_t addr_base) { m_addr_base = addr_base; }
 
 void DWARFUnit::SetRangesBase(dw_addr_t ranges_base) {
   m_ranges_base = ranges_base;
-}
-
-void DWARFUnit::SetBaseObjOffset(dw_offset_t base_obj_offset) {
-  m_base_obj_offset = base_obj_offset;
 }
 
 void DWARFUnit::SetStrOffsetsBase(dw_offset_t str_offsets_base) {
@@ -478,6 +476,12 @@ DWARFUnit::GetDIE(dw_offset_t die_offset) {
           die_offset, GetOffset());
   }
   return DWARFDIE(); // Not found
+}
+
+DWARFUnit &DWARFUnit::GetNonSkeletonUnit() {
+  if (SymbolFileDWARFDwo *dwo = GetDwoSymbolFile())
+    return *dwo->GetCompileUnit();
+  return *this;
 }
 
 uint8_t DWARFUnit::GetAddressByteSize(const DWARFUnit *cu) {
@@ -718,8 +722,6 @@ void DWARFUnit::ComputeAbsolutePath() {
 SymbolFileDWARFDwo *DWARFUnit::GetDwoSymbolFile() const {
   return m_dwo_symbol_file.get();
 }
-
-dw_offset_t DWARFUnit::GetBaseObjOffset() const { return m_base_obj_offset; }
 
 const DWARFDebugAranges &DWARFUnit::GetFunctionAranges() {
   if (m_func_aranges_up == nullptr) {

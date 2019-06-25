@@ -12,6 +12,7 @@
 #include "lldb/Expression/DWARFExpression.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "llvm/Support/Casting.h"
 
 #include "DWARFCompileUnit.h"
 #include "DWARFDebugInfo.h"
@@ -54,12 +55,34 @@ SymbolFileDWARFDwo::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
   return GetBaseSymbolFile().ParseCompileUnit(m_base_dwarf_cu);
 }
 
-DWARFUnit *SymbolFileDWARFDwo::GetCompileUnit() {
-  // Only dwo files with 1 compile unit is supported
-  if (GetNumCompileUnits() == 1)
-    return DebugInfo()->GetUnitAtIndex(0);
-  else
+DWARFCompileUnit *SymbolFileDWARFDwo::GetCompileUnit() {
+  if (!m_cu)
+    m_cu = ComputeCompileUnit();
+  return m_cu;
+}
+
+DWARFCompileUnit *SymbolFileDWARFDwo::ComputeCompileUnit() {
+  DWARFDebugInfo *debug_info = DebugInfo();
+  if (!debug_info)
     return nullptr;
+
+  // Right now we only support dwo files with one compile unit. If we don't have
+  // type units, we can just check for the unit count.
+  if (!debug_info->ContainsTypeUnits() && debug_info->GetNumUnits() == 1)
+    return llvm::cast<DWARFCompileUnit>(debug_info->GetUnitAtIndex(0));
+
+  // Otherwise, we have to run through all units, and find the compile unit that
+  // way.
+  DWARFCompileUnit *cu = nullptr;
+  for (size_t i = 0; i < debug_info->GetNumUnits(); ++i) {
+    if (auto *candidate =
+            llvm::dyn_cast<DWARFCompileUnit>(debug_info->GetUnitAtIndex(i))) {
+      if (cu)
+        return nullptr; // More that one CU found.
+      cu = candidate;
+    }
+  }
+  return cu;
 }
 
 DWARFUnit *
@@ -124,7 +147,7 @@ SymbolFileDWARFDwo::GetTypeSystemForLanguage(LanguageType language) {
 
 DWARFDIE
 SymbolFileDWARFDwo::GetDIE(const DIERef &die_ref) {
-  lldbassert(die_ref.cu_offset == m_base_dwarf_cu.GetOffset() ||
-             die_ref.cu_offset == DW_INVALID_OFFSET);
-  return DebugInfo()->GetDIEForDIEOffset(die_ref.section, die_ref.die_offset);
+  if (*die_ref.dwo_num() == GetDwoNum())
+    return DebugInfo()->GetDIE(die_ref);
+  return GetBaseSymbolFile().GetDIE(die_ref);
 }

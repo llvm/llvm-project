@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <iterator>
@@ -21,19 +23,19 @@ template <typename T>
 struct wrapper
 {
     T t;
-    explicit wrapper(T t_) : t(t_) {}
+    constexpr explicit wrapper(T t_) : t(t_) {}
     template <typename T2>
-    wrapper(const wrapper<T2>& a)
+    constexpr wrapper(const wrapper<T2>& a)
     {
         t = a.t;
     }
     template <typename T2>
-    void
+    constexpr void
     operator=(const wrapper<T2>& a)
     {
         t = a.t;
     }
-    wrapper<T>
+    constexpr wrapper<T>
     operator-(const wrapper<T>& a) const
     {
         return wrapper<T>(t - a.t);
@@ -63,9 +65,11 @@ compute_and_check(Iterator1 first, Iterator1 last, Iterator2 d_first, T, Functio
     if (first == last)
         return true;
 
-    T2 temp(*first);
-    if (!compare(temp, *d_first))
-        return false;
+    {
+        T2 temp(*first);
+        if (!compare(temp, *d_first))
+            return false;
+    }
     Iterator1 second = std::next(first);
 
     ++d_first;
@@ -83,7 +87,7 @@ compute_and_check(Iterator1 first, Iterator1 last, Iterator2 d_first, T, Functio
 // because we can't be sure it will be strictly equal for floating point types
 template <typename Iterator1, typename Iterator2, typename T, typename Function>
 typename std::enable_if<std::is_floating_point<T>::value, bool>::type
-compute_and_check(Iterator1 first, Iterator1 last, Iterator2 d_first, T, Function)
+compute_and_check(Iterator1, Iterator1, Iterator2, T, Function)
 {
     return true;
 }
@@ -134,16 +138,14 @@ template <typename T1, typename T2, typename Pred>
 void
 test(Pred pred)
 {
-    typedef typename Sequence<T2>::iterator iterator_type;
-
     const std::size_t max_len = 100000;
 
-    const T2 value = T2(77);
-    const T1 trash = T1(31);
+    static constexpr T2 value = T2(77);
+    static constexpr T1 trash = T1(31);
 
     Sequence<T1> actual(max_len, [](std::size_t i) { return T1(i); });
 
-    Sequence<T2> data(max_len, [&value](std::size_t i) { return i % 3 == 2 ? T2(i * i) : value; });
+    Sequence<T2> data(max_len, [](std::size_t i) { return i % 3 == 2 ? T2(i * i) : value; });
 
     for (std::size_t len = 0; len < max_len; len = len <= 16 ? len + 1 : std::size_t(3.1415 * len))
     {

@@ -16,10 +16,10 @@
 
 #include "llvm/Support/Casting.h"
 
+#include "lldb/Breakpoint/BreakpointPrecondition.h"
 #include "lldb/Core/PluginInterface.h"
 #include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Symbol/DeclVendor.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
@@ -154,7 +154,7 @@ public:
     std::unique_ptr<ClangASTContext> m_scratch_ast_ctx_up;
   };
 
-  class ObjCExceptionPrecondition : public Breakpoint::BreakpointPrecondition {
+  class ObjCExceptionPrecondition : public BreakpointPrecondition {
   public:
     ObjCExceptionPrecondition();
 
@@ -170,6 +170,10 @@ public:
   private:
     std::unordered_set<std::string> m_class_names;
   };
+
+  static lldb::BreakpointPreconditionSP
+  GetBreakpointExceptionPrecondition(lldb::LanguageType language,
+                                     bool throw_bp);
 
   class TaggedPointerVendor {
   public:
@@ -270,8 +274,6 @@ public:
   virtual ConstString GetActualTypeName(ObjCISA isa);
 
   virtual ObjCISA GetParentClass(ObjCISA isa);
-
-  virtual DeclVendor *GetDeclVendor() { return nullptr; }
 
   // Finds the byte offset of the child_type ivar in parent_type.  If it can't
   // find the offset, returns LLDB_INVALID_IVAR_OFFSET.

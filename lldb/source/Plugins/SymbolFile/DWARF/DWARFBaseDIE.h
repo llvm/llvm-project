@@ -12,14 +12,13 @@
 #include "lldb/Core/dwarf.h"
 #include "lldb/lldb-types.h"
 
-struct DIERef;
+class DIERef;
 class DWARFASTParser;
 class DWARFAttributes;
 class DWARFUnit;
 class DWARFDebugInfoEntry;
 class DWARFDeclContext;
 class SymbolFileDWARF;
-class DWARFDIE;
 
 class DWARFBaseDIE {
 public:

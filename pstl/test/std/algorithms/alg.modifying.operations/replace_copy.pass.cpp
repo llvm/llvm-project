@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 // Tests for replace_copy and replace_copy_if
 
 #include "support/pstl_test_config.h"
@@ -24,7 +26,7 @@ struct test_replace_copy
               typename Predicate, typename T>
     void
     operator()(Policy&& exec, InputIterator first, InputIterator last, OutputIterator out_first,
-               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2 expected_last, Size n,
+               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2, Size n,
                Predicate pred, const T& old_value, const T& new_value, T trash)
     {
         // Cleaning

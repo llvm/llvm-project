@@ -7,6 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+// UNSUPPORTED: c++98, c++03, c++11, c++14
+
 #include "support/pstl_test_config.h"
 
 #include <execution>
@@ -21,9 +23,9 @@ struct copy_int
 {
     int32_t value;
     int32_t copied_times = 0;
-    explicit copy_int(int32_t val = 0) { value = val; }
+    constexpr explicit copy_int(int32_t val = 0) : value(val) { }
 
-    copy_int&
+    constexpr copy_int&
     operator=(const copy_int& other)
     {
         if (&other == this)
@@ -36,7 +38,7 @@ struct copy_int
         return *this;
     }
 
-    bool
+    constexpr bool
     operator==(const copy_int& other) const
     {
         return (value == other.value);
@@ -81,7 +83,7 @@ struct test_one_policy
 
     template <typename T, typename Iterator1>
     bool
-    check(Iterator1 b, Iterator1 e)
+    check(Iterator1, Iterator1)
     {
         return true;
     }
@@ -102,13 +104,13 @@ test(Pred pred)
 
     const std::size_t max_len = 100000;
 
-    const T1 value = T1(0);
-    const T1 new_value = T1(666);
+    static constexpr T1 value = T1(0);
+    static constexpr T1 new_value = T1(666);
 
     Sequence<T2> expected(max_len);
     Sequence<T2> actual(max_len);
 
-    Sequence<T2> data(max_len, [&value](std::size_t i) {
+    Sequence<T2> data(max_len, [](std::size_t i) {
         if (i % 3 == 2)
         {
             return T1(i);

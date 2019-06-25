@@ -149,10 +149,7 @@ DWARFUnit *DWARFDebugInfo::GetUnitAtOffset(DIERef::Section section,
 }
 
 DWARFUnit *DWARFDebugInfo::GetUnit(const DIERef &die_ref) {
-  if (die_ref.cu_offset == DW_INVALID_OFFSET)
-    return GetUnitContainingDIEOffset(die_ref.section, die_ref.die_offset);
-  else
-    return GetUnitAtOffset(die_ref.section, die_ref.cu_offset);
+  return GetUnitContainingDIEOffset(die_ref.section(), die_ref.die_offset());
 }
 
 DWARFUnit *
@@ -194,7 +191,7 @@ DWARFDIE
 DWARFDebugInfo::GetDIE(const DIERef &die_ref) {
   DWARFUnit *cu = GetUnit(die_ref);
   if (cu)
-    return cu->GetDIE(die_ref.die_offset);
+    return cu->GetDIE(die_ref.die_offset());
   return DWARFDIE(); // Not found
 }
 

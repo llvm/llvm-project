@@ -19,7 +19,7 @@ public:
 
   lldb::CompUnitSP ParseCompileUnit(DWARFCompileUnit &dwarf_cu) override;
 
-  DWARFUnit *GetCompileUnit();
+  DWARFCompileUnit *GetCompileUnit();
 
   DWARFUnit *
   GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit) override;
@@ -44,6 +44,8 @@ public:
 
   DWARFCompileUnit *GetBaseCompileUnit() override { return &m_base_dwarf_cu; }
 
+  llvm::Optional<uint32_t> GetDwoNum() override { return GetID() >> 32; }
+
 protected:
   void LoadSectionData(lldb::SectionType sect_type,
                        lldb_private::DWARFDataExtractor &data) override;
@@ -67,8 +69,11 @@ protected:
 
   SymbolFileDWARF &GetBaseSymbolFile();
 
+  DWARFCompileUnit *ComputeCompileUnit();
+
   lldb::ObjectFileSP m_obj_file_sp;
   DWARFCompileUnit &m_base_dwarf_cu;
+  DWARFCompileUnit *m_cu = nullptr;
 };
 
 #endif // SymbolFileDWARFDwo_SymbolFileDWARFDwo_h_
