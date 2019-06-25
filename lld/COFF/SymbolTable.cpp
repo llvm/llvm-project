@@ -79,7 +79,11 @@ static Symbol *getSymbol(SectionChunk *SC, uint32_t Addr) {
   return Candidate;
 }
 
-std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
+// Given a file and the index of a symbol in that file, returns a description
+// of all references to that symbol from that file. If no debug information is
+// available, returns just the name of the file, else one string per actual
+// reference as described in the debug info.
+std::vector<std::string> getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
   struct Location {
     Symbol *Sym;
     std::pair<StringRef, uint32_t> FileLine;
@@ -102,11 +106,12 @@ std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
   }
 
   if (Locations.empty())
-    return "\n>>> referenced by " + toString(File);
+    return std::vector<std::string>({"\n>>> referenced by " + toString(File)});
 
-  std::string Out;
-  llvm::raw_string_ostream OS(Out);
+  std::vector<std::string> SymbolLocations(Locations.size());
+  size_t I = 0;
   for (Location Loc : Locations) {
+    llvm::raw_string_ostream OS(SymbolLocations[I++]);
     OS << "\n>>> referenced by ";
     if (!Loc.FileLine.first.empty())
       OS << Loc.FileLine.first << ":" << Loc.FileLine.second
@@ -115,7 +120,41 @@ std::string getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
     if (Loc.Sym)
       OS << ":(" << toString(*Loc.Sym) << ')';
   }
-  return OS.str();
+  return SymbolLocations;
+}
+
+// For an undefined symbol, stores all files referencing it and the index of
+// the undefined symbol in each file.
+struct UndefinedDiag {
+  Symbol *Sym;
+  struct File {
+    ObjFile *File;
+    uint64_t SymIndex;
+  };
+  std::vector<File> Files;
+};
+
+static void reportUndefinedSymbol(const UndefinedDiag &UndefDiag) {
+  std::string Out;
+  llvm::raw_string_ostream OS(Out);
+  OS << "undefined symbol: " << toString(*UndefDiag.Sym);
+
+  const size_t MaxUndefReferences = 10;
+  size_t I = 0, NumRefs = 0;
+  for (const UndefinedDiag::File &Ref : UndefDiag.Files) {
+    std::vector<std::string> SymbolLocations =
+        getSymbolLocations(Ref.File, Ref.SymIndex);
+    NumRefs += SymbolLocations.size();
+    for (const std::string &S : SymbolLocations) {
+      if (I >= MaxUndefReferences)
+        break;
+      OS << S;
+      I++;
+    }
+  }
+  if (I < NumRefs)
+    OS << "\n>>> referenced " << NumRefs - I << " more times";
+  errorOrWarn(OS.str());
 }
 
 void SymbolTable::loadMinGWAutomaticImports() {
@@ -263,15 +302,24 @@ void SymbolTable::reportRemainingUndefines() {
              " (defined in " + toString(Imp->getFile()) + ") [LNK4217]");
   }
 
+  std::vector<UndefinedDiag> UndefDiags;
+  DenseMap<Symbol *, int> FirstDiag;
+
   for (ObjFile *File : ObjFile::Instances) {
     size_t SymIndex = (size_t)-1;
     for (Symbol *Sym : File->getSymbols()) {
       ++SymIndex;
       if (!Sym)
         continue;
-      if (Undefs.count(Sym))
-        errorOrWarn("undefined symbol: " + toString(*Sym) +
-                    getSymbolLocations(File, SymIndex));
+      if (Undefs.count(Sym)) {
+        auto it = FirstDiag.find(Sym);
+        if (it == FirstDiag.end()) {
+          FirstDiag[Sym] = UndefDiags.size();
+          UndefDiags.push_back({Sym, {{File, SymIndex}}});
+        } else {
+          UndefDiags[it->second].Files.push_back({File, SymIndex});
+        }
+      }
       if (Config->WarnLocallyDefinedImported)
         if (Symbol *Imp = LocalImports.lookup(Sym))
           warn(toString(File) +
@@ -279,6 +327,9 @@ void SymbolTable::reportRemainingUndefines() {
                " (defined in " + toString(Imp->getFile()) + ") [LNK4217]");
     }
   }
+
+  for (const UndefinedDiag& UndefDiag : UndefDiags)
+    reportUndefinedSymbol(UndefDiag);
 }
 
 std::pair<Symbol *, bool> SymbolTable::insert(StringRef Name) {
