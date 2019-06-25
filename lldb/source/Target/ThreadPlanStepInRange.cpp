@@ -484,16 +484,6 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
         static_cast<ThreadPlanStepInRange *>(current_plan);
     should_stop_here =
         step_in_range_plan->DefaultShouldStopHereImpl(flags, should_stop_here);
-
-    //        if (should_stop_here)
-    //        {
-    //            ThreadPlanStepInRange *step_in_range_plan =
-    //            static_cast<ThreadPlanStepInRange *> (current_plan);
-    //            // Don't log the should_step_out here, it's easier to do it in
-    //            FrameMatchesAvoidCriteria.
-    //            should_stop_here =
-    //            !step_in_range_plan->FrameMatchesAvoidCriteria ();
-    //        }
   }
 
   return should_stop_here;
