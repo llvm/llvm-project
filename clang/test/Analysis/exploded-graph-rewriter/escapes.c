@@ -7,7 +7,7 @@
 // FIXME: Substitution doesn't seem to work on Windows.
 // UNSUPPORTED: system-windows
 
-void string_region_escapes() {
+void escapes() {
   // CHECK: <td align="left"><b>Store: </b></td>
   // CHECK-SAME: <td align="left">foo</td><td align="left">0</td>
   // CHECK-SAME: <td align="left">&amp;Element\{"foo",0 S64b,char\}</td>
@@ -15,4 +15,9 @@ void string_region_escapes() {
   // CHECK-SAME: <td align="left">"foo"</td>
   // CHECK-SAME: <td align="left">&amp;Element\{"foo",0 S64b,char\}</td>
   const char *const foo = "foo";
+
+  // CHECK: <font color="cyan3">BinaryOperator</font>
+  // CHECK-SAME: <td align="left">1 \| 2</td>
+  // CHECK-SAME: <td align="left">3 S32b</td>
+  int x = 1 | 2;
 }

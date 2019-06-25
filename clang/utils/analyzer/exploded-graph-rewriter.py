@@ -300,6 +300,7 @@ class ExplodedGraph(object):
                                         .replace('\\{', '{') \
                                         .replace('\\}', '}') \
                                         .replace('\\\\', '\\') \
+                                        .replace('\\|', '|') \
                                         .replace('\\<', '\\\\<') \
                                         .replace('\\>', '\\\\>') \
                                         .rstrip(',')
@@ -329,7 +330,7 @@ class DotDumpVisitor(object):
                .replace('\\<', '&lt;')
                .replace('\\>', '&gt;')
                .replace('\\l', '<br />')
-               .replace('|', ''), end='')
+               .replace('|', '\\|'), end='')
 
     @staticmethod
     def _diff_plus_minus(is_added):
