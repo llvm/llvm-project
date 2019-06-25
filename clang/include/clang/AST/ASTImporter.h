@@ -116,6 +116,14 @@ class TypeSourceInfo;
     /// context to the corresponding declarations in the "to" context.
     llvm::DenseMap<Decl *, Decl *> ImportedDecls;
 
+    /// Mapping from the already-imported declarations in the "from"
+    /// context to the error status of the import of that declaration.
+    /// This map contains only the declarations that were not correctly
+    /// imported. The same declaration may or may not be included in
+    /// ImportedDecls. This map is updated continuously during imports and never
+    /// cleared (like ImportedDecls).
+    llvm::DenseMap<Decl *, ImportError> ImportDeclErrors;
+
     /// Mapping from the already-imported declarations in the "to"
     /// context to the corresponding declarations in the "from" context.
     llvm::DenseMap<Decl *, Decl *> ImportedFromDecls;
@@ -147,6 +155,9 @@ class TypeSourceInfo;
     /// The overwritten method should call this method if it didn't import the
     /// decl on its own.
     virtual Expected<Decl *> ImportImpl(Decl *From);
+
+    /// Used only in unittests to verify the behaviour of the error handling.
+    virtual bool returnWithErrorInTest() { return false; };
 
   public:
 
@@ -394,6 +405,8 @@ class TypeSourceInfo;
     void RegisterImportedDecl(Decl *FromD, Decl *ToD);
 
     /// Store and assign the imported declaration to its counterpart.
+    /// It may happen that several decls from the 'from' context are mapped to
+    /// the same decl in the 'to' context.
     Decl *MapImported(Decl *From, Decl *To);
 
     /// Called by StructuralEquivalenceContext.  If a RecordDecl is
@@ -403,6 +416,14 @@ class TypeSourceInfo;
     /// RecordDecl can be found, we can complete it without the need for
     /// importation, eliminating this loop.
     virtual Decl *GetOriginalDecl(Decl *To) { return nullptr; }
+
+    /// Return if import of the given declaration has failed and if yes
+    /// the kind of the problem. This gives the first error encountered with
+    /// the node.
+    llvm::Optional<ImportError> getImportDeclErrorIfAny(Decl *FromD) const;
+
+    /// Mark (newly) imported declaration with error.
+    void setImportDeclError(Decl *From, ImportError Error);
 
     /// Determine whether the given types are structurally
     /// equivalent.
@@ -414,7 +435,6 @@ class TypeSourceInfo;
     /// \returns The index of the field in its parent context (starting from 0).
     /// On error `None` is returned (parent context is non-record).
     static llvm::Optional<unsigned> getFieldIndex(Decl *F);
-
   };
 
 } // namespace clang
