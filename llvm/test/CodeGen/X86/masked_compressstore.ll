@@ -194,7 +194,7 @@ define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %
 ;
 ; AVX512F-LABEL: compressstore_v8f64_v8i1:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
 ; AVX512F-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; AVX512F-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
@@ -203,7 +203,7 @@ define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %
 ;
 ; AVX512VLDQ-LABEL: compressstore_v8f64_v8i1:
 ; AVX512VLDQ:       ## %bb.0:
-; AVX512VLDQ-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm1, %ymm1
 ; AVX512VLDQ-NEXT:    vpslld $31, %ymm1, %ymm1
 ; AVX512VLDQ-NEXT:    vpmovd2m %ymm1, %k1
 ; AVX512VLDQ-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
@@ -579,7 +579,7 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ;
 ; AVX512F-LABEL: compressstore_v16f64_v16i1:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
+; AVX512F-NEXT:    vpmovsxbd %xmm2, %zmm2
 ; AVX512F-NEXT:    vpslld $31, %zmm2, %zmm2
 ; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k1
 ; AVX512F-NEXT:    kshiftrw $8, %k1, %k2
@@ -607,7 +607,7 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ;
 ; AVX512VLDQ-LABEL: compressstore_v16f64_v16i1:
 ; AVX512VLDQ:       ## %bb.0:
-; AVX512VLDQ-NEXT:    vpmovzxbd {{.*#+}} zmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero,xmm2[8],zero,zero,zero,xmm2[9],zero,zero,zero,xmm2[10],zero,zero,zero,xmm2[11],zero,zero,zero,xmm2[12],zero,zero,zero,xmm2[13],zero,zero,zero,xmm2[14],zero,zero,zero,xmm2[15],zero,zero,zero
+; AVX512VLDQ-NEXT:    vpmovsxbd %xmm2, %zmm2
 ; AVX512VLDQ-NEXT:    vpslld $31, %zmm2, %zmm2
 ; AVX512VLDQ-NEXT:    vpmovd2m %zmm2, %k1
 ; AVX512VLDQ-NEXT:    kmovb %k1, %eax
@@ -1094,7 +1094,7 @@ define void @compressstore_v8f32_v8i1(float* %base, <8 x float> %V, <8 x i1> %ma
 ; AVX512F-LABEL: compressstore_v8f32_v8i1:
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $ymm0 killed $ymm0 def $zmm0
-; AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
 ; AVX512F-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; AVX512F-NEXT:    vcompressps %zmm0, (%rdi) {%k1}
@@ -1103,7 +1103,7 @@ define void @compressstore_v8f32_v8i1(float* %base, <8 x float> %V, <8 x i1> %ma
 ;
 ; AVX512VLDQ-LABEL: compressstore_v8f32_v8i1:
 ; AVX512VLDQ:       ## %bb.0:
-; AVX512VLDQ-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm1, %ymm1
 ; AVX512VLDQ-NEXT:    vpslld $31, %ymm1, %ymm1
 ; AVX512VLDQ-NEXT:    vpmovd2m %ymm1, %k1
 ; AVX512VLDQ-NEXT:    vcompressps %ymm0, (%rdi) {%k1}
@@ -2997,7 +2997,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ;
 ; AVX512F-LABEL: compressstore_v8i64_v8i1:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
 ; AVX512F-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; AVX512F-NEXT:    vpcompressq %zmm0, (%rdi) {%k1}
@@ -3006,7 +3006,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ;
 ; AVX512VLDQ-LABEL: compressstore_v8i64_v8i1:
 ; AVX512VLDQ:       ## %bb.0:
-; AVX512VLDQ-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm1, %ymm1
 ; AVX512VLDQ-NEXT:    vpslld $31, %ymm1, %ymm1
 ; AVX512VLDQ-NEXT:    vpmovd2m %ymm1, %k1
 ; AVX512VLDQ-NEXT:    vpcompressq %zmm0, (%rdi) {%k1}

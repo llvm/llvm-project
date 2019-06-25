@@ -54,6 +54,8 @@ public:
 
   static const RefactoringDescriptor &describe();
 
+  const NamedDecl *getRenameDecl() const;
+
 private:
   RenameOccurrences(const NamedDecl *ND, std::string NewName)
       : ND(ND), NewName(std::move(NewName)) {}

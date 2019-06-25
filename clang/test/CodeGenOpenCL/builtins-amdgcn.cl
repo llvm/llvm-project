@@ -578,6 +578,18 @@ kernel void test_gws_sema_p(uint id) {
   __builtin_amdgcn_ds_gws_sema_p(id);
 }
 
+// CHECK-LABEL: @test_mbcnt_lo(
+// CHECK: call i32 @llvm.amdgcn.mbcnt.lo(i32 %src0, i32 %src1)
+kernel void test_mbcnt_lo(global uint* out, uint src0, uint src1) {
+  *out = __builtin_amdgcn_mbcnt_lo(src0, src1);
+}
+
+// CHECK-LABEL: @test_mbcnt_hi(
+// CHECK: call i32 @llvm.amdgcn.mbcnt.hi(i32 %src0, i32 %src1)
+kernel void test_mbcnt_hi(global uint* out, uint src0, uint src1) {
+  *out = __builtin_amdgcn_mbcnt_hi(src0, src1);
+}
+
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}
 // CHECK-DAG: attributes #[[$NOUNWIND_READONLY:[0-9]+]] = { nounwind readonly }
 // CHECK-DAG: attributes #[[$READ_EXEC_ATTRS]] = { convergent }

@@ -555,6 +555,7 @@ void ScalarEnumerationTraits<ELFYAML::ELF_SHN>::enumeration(
   ECase(SHN_COMMON);
   ECase(SHN_XINDEX);
   ECase(SHN_HIRESERVE);
+  ECase(SHN_AMDGPU_LDS);
   ECase(SHN_HEXAGON_SCOMMON);
   ECase(SHN_HEXAGON_SCOMMON_1);
   ECase(SHN_HEXAGON_SCOMMON_2);

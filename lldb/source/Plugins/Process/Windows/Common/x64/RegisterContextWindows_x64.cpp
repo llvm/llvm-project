@@ -24,6 +24,11 @@ using namespace lldb_private;
 
 #define DEFINE_GPR(reg, alt) #reg, alt, 8, 0, eEncodingUint, eFormatHexUppercase
 #define DEFINE_GPR_BIN(reg, alt) #reg, alt, 8, 0, eEncodingUint, eFormatBinary
+#define DEFINE_FPU_XMM(reg)                                                    \
+  #reg, NULL, 16, 0, eEncodingUint, eFormatVectorOfUInt64,                     \
+  {dwarf_##reg##_x86_64, dwarf_##reg##_x86_64, LLDB_INVALID_REGNUM,            \
+   LLDB_INVALID_REGNUM, lldb_##reg##_x86_64},                                  \
+  nullptr, nullptr, nullptr, 0
 
 namespace {
 
@@ -51,7 +56,24 @@ enum RegisterIndex {
   eRegisterIndexR14,
   eRegisterIndexR15,
   eRegisterIndexRip,
-  eRegisterIndexRflags
+  eRegisterIndexRflags,
+
+  eRegisterIndexXmm0,
+  eRegisterIndexXmm1,
+  eRegisterIndexXmm2,
+  eRegisterIndexXmm3,
+  eRegisterIndexXmm4,
+  eRegisterIndexXmm5,
+  eRegisterIndexXmm6,
+  eRegisterIndexXmm7,
+  eRegisterIndexXmm8,
+  eRegisterIndexXmm9,
+  eRegisterIndexXmm10,
+  eRegisterIndexXmm11,
+  eRegisterIndexXmm12,
+  eRegisterIndexXmm13,
+  eRegisterIndexXmm14,
+  eRegisterIndexXmm15
 };
 
 // Array of all register information supported by Windows x86
@@ -133,14 +155,14 @@ RegisterInfo g_register_infos[] = {
      nullptr,
      0},
     {DEFINE_GPR(r10, nullptr),
-     {dwarf_r10_x86_64, dwarf_r10_x86_64, LLDB_REGNUM_GENERIC_ARG5,
+     {dwarf_r10_x86_64, dwarf_r10_x86_64, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, lldb_r10_x86_64},
      nullptr,
      nullptr,
      nullptr,
      0},
     {DEFINE_GPR(r11, nullptr),
-     {dwarf_r11_x86_64, dwarf_r11_x86_64, LLDB_REGNUM_GENERIC_ARG6,
+     {dwarf_r11_x86_64, dwarf_r11_x86_64, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, lldb_r11_x86_64},
      nullptr,
      nullptr,
@@ -188,6 +210,22 @@ RegisterInfo g_register_infos[] = {
      nullptr,
      nullptr,
      0},
+    {DEFINE_FPU_XMM(xmm0)},
+    {DEFINE_FPU_XMM(xmm1)},
+    {DEFINE_FPU_XMM(xmm2)},
+    {DEFINE_FPU_XMM(xmm3)},
+    {DEFINE_FPU_XMM(xmm4)},
+    {DEFINE_FPU_XMM(xmm5)},
+    {DEFINE_FPU_XMM(xmm6)},
+    {DEFINE_FPU_XMM(xmm7)},
+    {DEFINE_FPU_XMM(xmm8)},
+    {DEFINE_FPU_XMM(xmm9)},
+    {DEFINE_FPU_XMM(xmm10)},
+    {DEFINE_FPU_XMM(xmm11)},
+    {DEFINE_FPU_XMM(xmm12)},
+    {DEFINE_FPU_XMM(xmm13)},
+    {DEFINE_FPU_XMM(xmm14)},
+    {DEFINE_FPU_XMM(xmm15)}
 };
 
 static size_t k_num_register_infos = llvm::array_lengthof(g_register_infos);
@@ -202,10 +240,20 @@ uint32_t g_gpr_reg_indices[] = {
     eRegisterIndexR12, eRegisterIndexR13, eRegisterIndexR14,
     eRegisterIndexR15, eRegisterIndexRip, eRegisterIndexRflags};
 
+uint32_t g_fpu_reg_indices[] = {
+    eRegisterIndexXmm0,  eRegisterIndexXmm1,  eRegisterIndexXmm2,
+    eRegisterIndexXmm3,  eRegisterIndexXmm4,  eRegisterIndexXmm5,
+    eRegisterIndexXmm6,  eRegisterIndexXmm7,  eRegisterIndexXmm8,
+    eRegisterIndexXmm9,  eRegisterIndexXmm10, eRegisterIndexXmm11,
+    eRegisterIndexXmm12, eRegisterIndexXmm13, eRegisterIndexXmm14,
+    eRegisterIndexXmm15
+};
+
 RegisterSet g_register_sets[] = {
     {"General Purpose Registers", "gpr",
      llvm::array_lengthof(g_gpr_reg_indices), g_gpr_reg_indices},
-};
+    {"Floating Point Registers", "fpu",
+     llvm::array_lengthof(g_fpu_reg_indices), g_fpu_reg_indices}};
 }
 
 // Constructors and Destructors
@@ -242,7 +290,9 @@ bool RegisterContextWindows_x64::ReadRegister(const RegisterInfo *reg_info,
   if (reg_info == nullptr)
     return false;
 
-  switch (reg_info->kinds[eRegisterKindLLDB]) {
+  const uint32_t reg = reg_info->kinds[eRegisterKindLLDB];
+
+  switch (reg) {
   case lldb_rax_x86_64:
     reg_value.SetUInt64(m_context.Rax);
     break;
@@ -296,6 +346,70 @@ bool RegisterContextWindows_x64::ReadRegister(const RegisterInfo *reg_info,
     break;
   case lldb_rflags_x86_64:
     reg_value.SetUInt64(m_context.EFlags);
+    break;
+  case lldb_xmm0_x86_64:
+    reg_value.SetBytes(&m_context.Xmm0,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm1_x86_64:
+    reg_value.SetBytes(&m_context.Xmm1,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm2_x86_64:
+    reg_value.SetBytes(&m_context.Xmm2,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm3_x86_64:
+    reg_value.SetBytes(&m_context.Xmm3,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm4_x86_64:
+    reg_value.SetBytes(&m_context.Xmm4,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm5_x86_64:
+    reg_value.SetBytes(&m_context.Xmm5,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm6_x86_64:
+    reg_value.SetBytes(&m_context.Xmm6,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm7_x86_64:
+    reg_value.SetBytes(&m_context.Xmm7,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm8_x86_64:
+    reg_value.SetBytes(&m_context.Xmm8,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm9_x86_64:
+    reg_value.SetBytes(&m_context.Xmm9,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm10_x86_64:
+    reg_value.SetBytes(&m_context.Xmm10,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm11_x86_64:
+    reg_value.SetBytes(&m_context.Xmm11,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm12_x86_64:
+    reg_value.SetBytes(&m_context.Xmm12,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm13_x86_64:
+    reg_value.SetBytes(&m_context.Xmm13,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm14_x86_64:
+    reg_value.SetBytes(&m_context.Xmm14,
+                       reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_xmm15_x86_64:
+    reg_value.SetBytes(&m_context.Xmm15,
+                       reg_info->byte_size, endian::InlHostByteOrder());
     break;
   }
   return true;
@@ -364,6 +478,54 @@ bool RegisterContextWindows_x64::WriteRegister(const RegisterInfo *reg_info,
     break;
   case lldb_rflags_x86_64:
     m_context.EFlags = reg_value.GetAsUInt64();
+    break;
+  case lldb_xmm0_x86_64:
+    memcpy(&m_context.Xmm0, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm1_x86_64:
+    memcpy(&m_context.Xmm1, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm2_x86_64:
+    memcpy(&m_context.Xmm2, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm3_x86_64:
+    memcpy(&m_context.Xmm3, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm4_x86_64:
+    memcpy(&m_context.Xmm4, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm5_x86_64:
+    memcpy(&m_context.Xmm5, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm6_x86_64:
+    memcpy(&m_context.Xmm6, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm7_x86_64:
+    memcpy(&m_context.Xmm7, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm8_x86_64:
+    memcpy(&m_context.Xmm8, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm9_x86_64:
+    memcpy(&m_context.Xmm9, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm10_x86_64:
+    memcpy(&m_context.Xmm10, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm11_x86_64:
+    memcpy(&m_context.Xmm11, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm12_x86_64:
+    memcpy(&m_context.Xmm12, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm13_x86_64:
+    memcpy(&m_context.Xmm13, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm14_x86_64:
+    memcpy(&m_context.Xmm14, reg_value.GetBytes(), 16);
+    break;
+  case lldb_xmm15_x86_64:
+    memcpy(&m_context.Xmm15, reg_value.GetBytes(), 16);
     break;
   }
 

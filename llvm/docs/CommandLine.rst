@@ -1294,7 +1294,7 @@ it cannot be guaranteed that all options will have been initialised. Hence it
 should be called from ``main``.
 
 This function can be used to gain access to options declared in libraries that
-the tool writter may not have direct access to.
+the tool writer may not have direct access to.
 
 The function retrieves a :ref:`StringMap <dss_stringmap>` that maps the option
 string (e.g. ``-help``) to an ``Option*``.

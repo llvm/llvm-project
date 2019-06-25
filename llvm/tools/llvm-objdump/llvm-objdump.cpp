@@ -857,10 +857,15 @@ addDynamicElfSymbols(const ELFObjectFile<ELFT> *Obj,
                      std::map<SectionRef, SectionSymbolsTy> &AllSymbols) {
   for (auto Symbol : Obj->getDynamicSymbolIterators()) {
     uint8_t SymbolType = Symbol.getELFType();
-    if (SymbolType != ELF::STT_FUNC || Symbol.getSize() == 0)
+    if (SymbolType == ELF::STT_SECTION)
       continue;
 
     uint64_t Address = unwrapOrError(Symbol.getAddress(), Obj->getFileName());
+    // ELFSymbolRef::getAddress() returns size instead of value for common
+    // symbols which is not desirable for disassembly output. Overriding.
+    if (SymbolType == ELF::STT_COMMON)
+      Address = Obj->getSymbol(Symbol.getRawDataRefImpl())->st_value;
+
     StringRef Name = unwrapOrError(Symbol.getName(), Obj->getFileName());
     if (Name.empty())
       continue;
@@ -1289,13 +1294,15 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       if (SectionAddr < StartAddress)
         Index = std::max<uint64_t>(Index, StartAddress - SectionAddr);
 
-      // If there is a data symbol inside an ELF text section and we are
+      // If there is a data/common symbol inside an ELF text section and we are
       // only disassembling text (applicable all architectures), we are in a
       // situation where we must print the data and not disassemble it.
-      if (Obj->isELF() && std::get<2>(Symbols[SI]) == ELF::STT_OBJECT &&
-          !DisassembleAll && Section.isText()) {
-        dumpELFData(SectionAddr, Index, End, Bytes);
-        Index = End;
+      if (Obj->isELF() && !DisassembleAll && Section.isText()) {
+        uint8_t SymTy = std::get<2>(Symbols[SI]);
+        if (SymTy == ELF::STT_OBJECT || SymTy == ELF::STT_COMMON) {
+          dumpELFData(SectionAddr, Index, End, Bytes);
+          Index = End;
+        }
       }
 
       bool CheckARMELFData = hasMappingSymbols(Obj) &&

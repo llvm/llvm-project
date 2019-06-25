@@ -466,7 +466,7 @@ define <8 x double> @expandload_v8f64_v8i1(double* %base, <8 x double> %src0, <8
 ;
 ; AVX512F-LABEL: expandload_v8f64_v8i1:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; AVX512F-NEXT:    vpmovsxwq %xmm1, %zmm1
 ; AVX512F-NEXT:    vpsllq $63, %zmm1, %zmm1
 ; AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
 ; AVX512F-NEXT:    vexpandpd (%rdi), %zmm0 {%k1}
@@ -474,7 +474,7 @@ define <8 x double> @expandload_v8f64_v8i1(double* %base, <8 x double> %src0, <8
 ;
 ; AVX512VLDQ-LABEL: expandload_v8f64_v8i1:
 ; AVX512VLDQ:       ## %bb.0:
-; AVX512VLDQ-NEXT:    vpmovzxwd {{.*#+}} ymm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm1, %ymm1
 ; AVX512VLDQ-NEXT:    vpslld $31, %ymm1, %ymm1
 ; AVX512VLDQ-NEXT:    vpmovd2m %ymm1, %k1
 ; AVX512VLDQ-NEXT:    vexpandpd (%rdi), %zmm0 {%k1}

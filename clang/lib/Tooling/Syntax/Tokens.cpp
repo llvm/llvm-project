@@ -14,6 +14,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -70,8 +71,8 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, const Token &T) {
 
 FileRange::FileRange(FileID File, unsigned BeginOffset, unsigned EndOffset)
     : File(File), Begin(BeginOffset), End(EndOffset) {
-      assert(File.isValid());
-      assert(BeginOffset <= EndOffset);
+  assert(File.isValid());
+  assert(BeginOffset <= EndOffset);
 }
 
 FileRange::FileRange(const SourceManager &SM, SourceLocation BeginLoc,
@@ -252,6 +253,39 @@ std::vector<syntax::Token> syntax::tokenize(FileID FID, const SourceManager &SM,
   return Tokens;
 }
 
+/// Records information reqired to construct mappings for the token buffer that
+/// we are collecting.
+class TokenCollector::CollectPPExpansions : public PPCallbacks {
+public:
+  CollectPPExpansions(TokenCollector &C) : Collector(&C) {}
+
+  /// Disabled instance will stop reporting anything to TokenCollector.
+  /// This ensures that uses of the preprocessor after TokenCollector::consume()
+  /// is called do not access the (possibly invalid) collector instance.
+  void disable() { Collector = nullptr; }
+
+  void MacroExpands(const clang::Token &MacroNameTok, const MacroDefinition &MD,
+                    SourceRange Range, const MacroArgs *Args) override {
+    if (!Collector)
+      return;
+    // Only record top-level expansions, not those where:
+    //   - the macro use is inside a macro body,
+    //   - the macro appears in an argument to another macro.
+    if (!MacroNameTok.getLocation().isFileID() ||
+        (LastExpansionEnd.isValid() &&
+         Collector->PP.getSourceManager().isBeforeInTranslationUnit(
+             Range.getBegin(), LastExpansionEnd)))
+      return;
+    Collector->Expansions[Range.getBegin().getRawEncoding()] = Range.getEnd();
+    LastExpansionEnd = Range.getEnd();
+  }
+  // FIXME: handle directives like #pragma, #include, etc.
+private:
+  TokenCollector *Collector;
+  /// Used to detect recursive macro expansions.
+  SourceLocation LastExpansionEnd;
+};
+
 /// Fills in the TokenBuffer by tracing the run of a preprocessor. The
 /// implementation tracks the tokens, macro expansions and directives coming
 /// from the preprocessor and:
@@ -279,15 +313,21 @@ TokenCollector::TokenCollector(Preprocessor &PP) : PP(PP) {
     );
     Expanded.push_back(syntax::Token(T));
   });
+  // And locations of macro calls, to properly recover boundaries of those in
+  // case of empty expansions.
+  auto CB = llvm::make_unique<CollectPPExpansions>(*this);
+  this->Collector = CB.get();
+  PP.addPPCallbacks(std::move(CB));
 }
 
 /// Builds mappings and spelled tokens in the TokenBuffer based on the expanded
 /// token stream.
 class TokenCollector::Builder {
 public:
-  Builder(std::vector<syntax::Token> Expanded, const SourceManager &SM,
-          const LangOptions &LangOpts)
-      : Result(SM), SM(SM), LangOpts(LangOpts) {
+  Builder(std::vector<syntax::Token> Expanded, PPExpansions CollectedExpansions,
+          const SourceManager &SM, const LangOptions &LangOpts)
+      : Result(SM), CollectedExpansions(std::move(CollectedExpansions)), SM(SM),
+        LangOpts(LangOpts) {
     Result.ExpandedTokens = std::move(Expanded);
   }
 
@@ -296,6 +336,9 @@ public:
 
     // Walk over expanded tokens and spelled tokens in parallel, building the
     // mappings between those using source locations.
+    // To correctly recover empty macro expansions, we also take locations
+    // reported to PPCallbacks::MacroExpands into account as we do not have any
+    // expanded tokens with source locations to guide us.
 
     // The 'eof' token is special, it is not part of spelled token stream. We
     // handle it separately at the end.
@@ -356,22 +399,17 @@ private:
 
     fillGapUntil(File, SpelledRange.getBegin(), I);
 
-    TokenBuffer::Mapping M;
-    // Skip the spelled macro tokens.
-    std::tie(M.BeginSpelled, M.EndSpelled) =
-        consumeSpelledUntil(File, SpelledRange.getEnd().getLocWithOffset(1));
     // Skip all expanded tokens from the same macro expansion.
-    M.BeginExpanded = I;
+    unsigned BeginExpanded = I;
     for (; I + 1 < Result.ExpandedTokens.size(); ++I) {
       auto NextL = Result.ExpandedTokens[I + 1].location();
       if (!NextL.isMacroID() ||
           SM.getExpansionLoc(NextL) != SpelledRange.getBegin())
         break;
     }
-    M.EndExpanded = I + 1;
-
-    // Add a resulting mapping.
-    File.Mappings.push_back(M);
+    unsigned EndExpanded = I + 1;
+    consumeMapping(File, SM.getFileOffset(SpelledRange.getEnd()), BeginExpanded,
+                   EndExpanded, NextSpelled[FID]);
   }
 
   /// Initializes TokenBuffer::Files and fills spelled tokens and expanded
@@ -393,69 +431,108 @@ private:
     }
   }
 
-  /// Consumed spelled tokens until location L is reached (token starting at L
-  /// is not included). Returns the indicies of the consumed range.
-  std::pair</*Begin*/ unsigned, /*End*/ unsigned>
-  consumeSpelledUntil(TokenBuffer::MarkedFile &File, SourceLocation L) {
-    assert(L.isFileID());
-    FileID FID;
-    unsigned Offset;
-    std::tie(FID, Offset) = SM.getDecomposedLoc(L);
+  void consumeEmptyMapping(TokenBuffer::MarkedFile &File, unsigned EndOffset,
+                           unsigned ExpandedIndex, unsigned &SpelledIndex) {
+    consumeMapping(File, EndOffset, ExpandedIndex, ExpandedIndex, SpelledIndex);
+  }
 
-    // (!) we update the index in-place.
-    unsigned &SpelledI = NextSpelled[FID];
-    unsigned Before = SpelledI;
-    for (; SpelledI < File.SpelledTokens.size() &&
-           SM.getFileOffset(File.SpelledTokens[SpelledI].location()) < Offset;
-         ++SpelledI) {
-    }
-    return std::make_pair(Before, /*After*/ SpelledI);
-  };
+  /// Consumes spelled tokens that form a macro expansion and adds a entry to
+  /// the resulting token buffer.
+  /// (!) SpelledIndex is updated in-place.
+  void consumeMapping(TokenBuffer::MarkedFile &File, unsigned EndOffset,
+                      unsigned BeginExpanded, unsigned EndExpanded,
+                      unsigned &SpelledIndex) {
+    // We need to record this mapping before continuing.
+    unsigned MappingBegin = SpelledIndex;
+    ++SpelledIndex;
+
+    bool HitMapping =
+        tryConsumeSpelledUntil(File, EndOffset + 1, SpelledIndex).hasValue();
+    (void)HitMapping;
+    assert(!HitMapping && "recursive macro expansion?");
+
+    TokenBuffer::Mapping M;
+    M.BeginExpanded = BeginExpanded;
+    M.EndExpanded = EndExpanded;
+    M.BeginSpelled = MappingBegin;
+    M.EndSpelled = SpelledIndex;
+
+    File.Mappings.push_back(M);
+  }
 
   /// Consumes spelled tokens until location \p L is reached and adds a mapping
   /// covering the consumed tokens. The mapping will point to an empty expanded
   /// range at position \p ExpandedIndex.
   void fillGapUntil(TokenBuffer::MarkedFile &File, SourceLocation L,
                     unsigned ExpandedIndex) {
-    unsigned BeginSpelledGap, EndSpelledGap;
-    std::tie(BeginSpelledGap, EndSpelledGap) = consumeSpelledUntil(File, L);
-    if (BeginSpelledGap == EndSpelledGap)
-      return; // No gap.
-    TokenBuffer::Mapping M;
-    M.BeginSpelled = BeginSpelledGap;
-    M.EndSpelled = EndSpelledGap;
-    M.BeginExpanded = M.EndExpanded = ExpandedIndex;
-    File.Mappings.push_back(M);
+    assert(L.isFileID());
+    FileID FID;
+    unsigned Offset;
+    std::tie(FID, Offset) = SM.getDecomposedLoc(L);
+
+    unsigned &SpelledIndex = NextSpelled[FID];
+    unsigned MappingBegin = SpelledIndex;
+    while (true) {
+      auto EndLoc = tryConsumeSpelledUntil(File, Offset, SpelledIndex);
+      if (SpelledIndex != MappingBegin) {
+        TokenBuffer::Mapping M;
+        M.BeginSpelled = MappingBegin;
+        M.EndSpelled = SpelledIndex;
+        M.BeginExpanded = M.EndExpanded = ExpandedIndex;
+        File.Mappings.push_back(M);
+      }
+      if (!EndLoc)
+        break;
+      consumeEmptyMapping(File, SM.getFileOffset(*EndLoc), ExpandedIndex,
+                          SpelledIndex);
+
+      MappingBegin = SpelledIndex;
+    }
   };
+
+  /// Consumes spelled tokens until it reaches Offset or a mapping boundary,
+  /// i.e. a name of a macro expansion or the start '#' token of a PP directive.
+  /// (!) NextSpelled is updated in place.
+  ///
+  /// returns None if \p Offset was reached, otherwise returns the end location
+  /// of a mapping that starts at \p NextSpelled.
+  llvm::Optional<SourceLocation>
+  tryConsumeSpelledUntil(TokenBuffer::MarkedFile &File, unsigned Offset,
+                         unsigned &NextSpelled) {
+    for (; NextSpelled < File.SpelledTokens.size(); ++NextSpelled) {
+      auto L = File.SpelledTokens[NextSpelled].location();
+      if (Offset <= SM.getFileOffset(L))
+        return llvm::None; // reached the offset we are looking for.
+      auto Mapping = CollectedExpansions.find(L.getRawEncoding());
+      if (Mapping != CollectedExpansions.end())
+        return Mapping->second; // found a mapping before the offset.
+    }
+    return llvm::None; // no more tokens, we "reached" the offset.
+  }
 
   /// Adds empty mappings for unconsumed spelled tokens at the end of each file.
   void fillGapsAtEndOfFiles() {
     for (auto &F : Result.Files) {
-      unsigned Next = NextSpelled[F.first];
-      if (F.second.SpelledTokens.size() == Next)
-        continue; // All spelled tokens are accounted for.
-
-      // Record a mapping for the gap at the end of the spelled tokens.
-      TokenBuffer::Mapping M;
-      M.BeginSpelled = Next;
-      M.EndSpelled = F.second.SpelledTokens.size();
-      M.BeginExpanded = F.second.EndExpanded;
-      M.EndExpanded = F.second.EndExpanded;
-
-      F.second.Mappings.push_back(M);
+      if (F.second.SpelledTokens.empty())
+        continue;
+      fillGapUntil(F.second, F.second.SpelledTokens.back().endLocation(),
+                   F.second.EndExpanded);
     }
   }
 
   TokenBuffer Result;
   /// For each file, a position of the next spelled token we will consume.
   llvm::DenseMap<FileID, unsigned> NextSpelled;
+  PPExpansions CollectedExpansions;
   const SourceManager &SM;
   const LangOptions &LangOpts;
 };
 
 TokenBuffer TokenCollector::consume() && {
   PP.setTokenWatcher(nullptr);
-  return Builder(std::move(Expanded), PP.getSourceManager(), PP.getLangOpts())
+  Collector->disable();
+  return Builder(std::move(Expanded), std::move(Expansions),
+                 PP.getSourceManager(), PP.getLangOpts())
       .build();
 }
 

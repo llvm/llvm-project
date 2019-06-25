@@ -179,10 +179,9 @@ static SymbolID getUSRForDecl(const Decl *D) {
 }
 
 static RecordDecl *getDeclForType(const QualType &T) {
-  auto *Ty = T->getAs<RecordType>();
-  if (!Ty)
-    return nullptr;
-  return Ty->getDecl()->getDefinition();
+  if (const RecordDecl *D = T->getAsRecordDecl())
+    return D->getDefinition();
+  return nullptr;
 }
 
 static bool isPublic(const clang::AccessSpecifier AS,
@@ -249,7 +248,11 @@ static void parseBases(RecordInfo &I, const CXXRecordDecl *D) {
   for (const CXXBaseSpecifier &B : D->bases()) {
     if (B.isVirtual())
       continue;
-    if (const auto *P = getDeclForType(B.getType()))
+    if (const auto *Ty = B.getType()->getAs<TemplateSpecializationType>()) {
+      const TemplateDecl *D = Ty->getTemplateName().getAsTemplateDecl();
+      I.Parents.emplace_back(getUSRForDecl(D), B.getType().getAsString(),
+                             InfoType::IT_record);
+    } else if (const RecordDecl *P = getDeclForType(B.getType()))
       I.Parents.emplace_back(getUSRForDecl(P), P->getNameAsString(),
                              InfoType::IT_record);
     else
@@ -343,8 +346,13 @@ std::unique_ptr<Info> emitInfo(const RecordDecl *D, const FullComment *FC,
   populateSymbolInfo(*I, D, FC, LineNumber, File);
   I->TagType = D->getTagKind();
   parseFields(*I, D, PublicOnly);
-  if (const auto *C = dyn_cast<CXXRecordDecl>(D))
+  if (const auto *C = dyn_cast<CXXRecordDecl>(D)) {
+    if (const TypedefNameDecl *TD = C->getTypedefNameForAnonDecl()) {
+      I->Name = TD->getNameAsString();
+      I->IsTypeDef = true;
+    }
     parseBases(*I, C);
+  }
   return std::unique_ptr<Info>{std::move(I)};
 }
 
@@ -376,9 +384,16 @@ std::unique_ptr<Info> emitInfo(const CXXMethodDecl *D, const FullComment *FC,
   populateFunctionInfo(Func, D, FC, LineNumber, File);
   Func.IsMethod = true;
 
-  SymbolID ParentUSR = getUSRForDecl(D->getParent());
-  Func.Parent = Reference{ParentUSR, D->getParent()->getNameAsString(),
-                          InfoType::IT_record};
+  const NamedDecl *Parent = nullptr;
+  if (const auto *SD =
+          dyn_cast<ClassTemplateSpecializationDecl>(D->getParent()))
+    Parent = SD->getSpecializedTemplate();
+  else
+    Parent = D->getParent();
+
+  SymbolID ParentUSR = getUSRForDecl(Parent);
+  Func.Parent =
+      Reference{ParentUSR, Parent->getNameAsString(), InfoType::IT_record};
   Func.Access = D->getAccess();
 
   // Wrap in enclosing scope

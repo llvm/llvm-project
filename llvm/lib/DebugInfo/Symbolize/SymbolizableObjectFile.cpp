@@ -298,6 +298,14 @@ DIGlobal SymbolizableObjectFile::symbolizeData(
   return Res;
 }
 
+std::vector<DILocal> SymbolizableObjectFile::symbolizeFrame(
+    object::SectionedAddress ModuleOffset) const {
+  if (ModuleOffset.SectionIndex == object::SectionedAddress::UndefSection)
+    ModuleOffset.SectionIndex =
+        getModuleSectionIndexForAddress(ModuleOffset.Address);
+  return DebugInfoContext->getLocalsForAddress(ModuleOffset);
+}
+
 /// Search for the first occurence of specified Address in ObjectFile.
 uint64_t SymbolizableObjectFile::getModuleSectionIndexForAddress(
     uint64_t Address) const {

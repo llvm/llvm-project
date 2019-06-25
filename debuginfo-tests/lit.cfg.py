@@ -89,7 +89,7 @@ lit.util.usePlatformSdkOnDarwin(config, lit_config)
 
 if platform.system() == 'Darwin':
     import subprocess
-    xcode_lldb_vers = subprocess.check_output(['xcrun', 'lldb', '--version'])
+    xcode_lldb_vers = subprocess.check_output(['xcrun', 'lldb', '--version']).decode("utf-8")
     match = re.search('lldb-(\d+)', xcode_lldb_vers)
     if match:
         apple_lldb_vers = int(match.group(1))

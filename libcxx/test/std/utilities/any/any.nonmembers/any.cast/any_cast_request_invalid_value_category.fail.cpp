@@ -26,12 +26,12 @@ void test_const_lvalue_cast_request_non_const_lvalue()
 {
     const any a;
     // expected-error-re@any:* {{static_assert failed{{.*}} "ValueType is required to be a const lvalue reference or a CopyConstructible type"}}
-    // expected-error@any:* {{binding value of type 'const TestType' to reference to type 'TestType' drops 'const' qualifier}}
+    // expected-error@any:* {{drops 'const' qualifier}}
     any_cast<TestType &>(a); // expected-note {{requested here}}
 
     const any a2(42);
     // expected-error-re@any:* {{static_assert failed{{.*}} "ValueType is required to be a const lvalue reference or a CopyConstructible type"}}
-    // expected-error@any:* {{binding value of type 'const int' to reference to type 'int' drops 'const' qualifier}}
+    // expected-error@any:* {{drops 'const' qualifier}}
     any_cast<int&>(a2); // expected-note {{requested here}}
 }
 

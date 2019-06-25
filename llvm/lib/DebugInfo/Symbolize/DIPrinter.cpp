@@ -122,5 +122,28 @@ DIPrinter &DIPrinter::operator<<(const DIGlobal &Global) {
   return *this;
 }
 
+DIPrinter &DIPrinter::operator<<(const DILocal &Local) {
+  OS << Local.FunctionName << '\n';
+  OS << Local.Name << '\n';
+  if (Local.DeclFile.empty())
+    OS << "??";
+  else
+    OS << Local.DeclFile;
+  OS << ':' << Local.DeclLine << '\n';
+  if (Local.FrameOffset)
+    OS << *Local.FrameOffset << ' ';
+  else
+    OS << "?? ";
+  if (Local.Size)
+    OS << *Local.Size << ' ';
+  else
+    OS << "?? ";
+  if (Local.TagOffset)
+    OS << *Local.TagOffset << '\n';
+  else
+    OS << "??\n";
+  return *this;
+}
+
 } // end namespace symbolize
 } // end namespace llvm

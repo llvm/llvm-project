@@ -971,6 +971,10 @@ let AddedComplexity = 400 in { // Prefer VSX patterns over non-VSX patterns.
 
 def : Pat<(v4i32 (vnot_ppc v4i32:$A)),
           (v4i32 (XXLNOR $A, $A))>;
+def : Pat<(v4i32 (or (and (vnot_ppc v4i32:$C), v4i32:$A),
+                     (and v4i32:$B, v4i32:$C))),
+          (v4i32 (XXSEL $A, $B, $C))>;
+
 let Predicates = [IsBigEndian] in {
 def : Pat<(v2f64 (scalar_to_vector f64:$A)),
           (v2f64 (SUBREG_TO_REG (i64 1), $A, sub_64))>;

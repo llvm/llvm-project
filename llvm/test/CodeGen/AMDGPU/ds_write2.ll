@@ -103,10 +103,17 @@ define amdgpu_kernel void @simple_write2_two_val_f32_volatile_1(float addrspace(
 ; CI: buffer_load_dwordx2 v{{\[[0-9]+}}:[[VAL1:[0-9]+]]{{\]}}
 ; CI-DAG: s_mov_b32 m0
 
-; GCN-DAG: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 2, v{{[0-9]+}}
+; CI-DAG: v_lshlrev_b32_e32 [[VOFS:v[0-9]+]], 2, v{{[0-9]+}}
+; CI-DAG: v_add_i32_e32 [[VPTR:v[0-9]+]], vcc, lds@abs32@lo, [[VOFS]]
+;
+; TODO: This should be an s_mov_b32. The v_mov_b32 gets introduced by an
+;       early legalization of the constant bus constraint on the v_lshl_add_u32,
+;       and then SIFoldOperands folds in an unlucky order.
+; GFX9-DAG: v_mov_b32_e32 [[VBASE:v[0-9]+]], lds@abs32@lo
+; GFX9-DAG: v_lshl_add_u32 [[VPTR:v[0-9]+]], {{v[0-9]+}}, 2, [[VBASE]]
 
-; GFX9: global_load_dwordx2 v{{\[}}[[VAL0:[0-9]+]]:{{[0-9]+\]}}
-; GFX9: global_load_dwordx2 v{{\[[0-9]+}}:[[VAL1:[0-9]+]]{{\]}}
+; GFX9-DAG: global_load_dwordx2 v{{\[}}[[VAL0:[0-9]+]]:{{[0-9]+\]}}
+; GFX9-DAG: global_load_dwordx2 v{{\[[0-9]+}}:[[VAL1:[0-9]+]]{{\]}}
 
 ; GCN: ds_write2_b32 [[VPTR]], v[[VAL0]], v[[VAL1]] offset1:8
 ; GCN: s_endpgm
@@ -131,7 +138,12 @@ define amdgpu_kernel void @simple_write2_two_val_subreg2_mixed_f32(float addrspa
 ; GFX9-NOT: m0
 
 ; GCN-DAG: {{buffer|global}}_load_dwordx2 v{{\[}}[[VAL0:[0-9]+]]:[[VAL1:[0-9]+]]{{\]}}
-; GCN-DAG: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 2, v{{[0-9]+}}
+
+; CI-DAG: v_lshlrev_b32_e32 [[VOFS:v[0-9]+]], 2, v{{[0-9]+}}
+; CI-DAG: v_add_i32_e32 [[VPTR:v[0-9]+]], vcc, lds@abs32@lo, [[VOFS]]
+; GFX9-DAG: v_mov_b32_e32 [[VBASE:v[0-9]+]], lds@abs32@lo
+; GFX9-DAG: v_lshl_add_u32 [[VPTR:v[0-9]+]], v{{[0-9]+}}, 2, [[VBASE]]
+
 ; GCN: ds_write2_b32 [[VPTR]], v[[VAL0]], v[[VAL1]] offset1:8
 ; GCN: s_endpgm
 define amdgpu_kernel void @simple_write2_two_val_subreg2_f32(float addrspace(1)* %C, <2 x float> addrspace(1)* %in) #0 {
@@ -153,7 +165,12 @@ define amdgpu_kernel void @simple_write2_two_val_subreg2_f32(float addrspace(1)*
 ; GFX9-NOT: m0
 
 ; GCN-DAG: {{buffer|global}}_load_dwordx4 v{{\[}}[[VAL0:[0-9]+]]:[[VAL1:[0-9]+]]{{\]}}
-; GCN-DAG: v_lshlrev_b32_e32 [[VPTR:v[0-9]+]], 2, v{{[0-9]+}}
+
+; CI-DAG: v_lshlrev_b32_e32 [[VOFS:v[0-9]+]], 2, v{{[0-9]+}}
+; CI-DAG: v_add_i32_e32 [[VPTR:v[0-9]+]], vcc, lds@abs32@lo, [[VOFS]]
+; GFX9-DAG: v_mov_b32_e32 [[VBASE:v[0-9]+]], lds@abs32@lo
+; GFX9-DAG: v_lshl_add_u32 [[VPTR:v[0-9]+]], v{{[0-9]+}}, 2, [[VBASE]]
+
 ; GCN: ds_write2_b32 [[VPTR]], v[[VAL0]], v[[VAL1]] offset1:8
 ; GCN: s_endpgm
 define amdgpu_kernel void @simple_write2_two_val_subreg4_f32(float addrspace(1)* %C, <4 x float> addrspace(1)* %in) #0 {
@@ -389,8 +406,8 @@ define amdgpu_kernel void @simple_write2_two_val_f64(double addrspace(1)* %C, do
 ; CI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
-; GCN: ds_write2_b32 [[ZERO]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
+; GCN-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], foo@abs32@lo{{$}}
+; GCN: ds_write2_b32 [[PTR]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
 define amdgpu_kernel void @store_constant_adjacent_offsets() {
   store i32 123, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 0), align 4
   store i32 123, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 1), align 4
@@ -402,8 +419,8 @@ define amdgpu_kernel void @store_constant_adjacent_offsets() {
 ; GFX9-NOT: m0
 
 ; GCN-DAG: v_mov_b32_e32 [[VAL:v[0-9]+]], 0x7b{{$}}
-; GCN-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
-; GCN: ds_write2_b32 [[ZERO]], [[VAL]], [[VAL]] offset1:2
+; GCN-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], foo@abs32@lo{{$}}
+; GCN: ds_write2_b32 [[PTR]], [[VAL]], [[VAL]] offset1:2
 define amdgpu_kernel void @store_constant_disjoint_offsets() {
   store i32 123, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 0), align 4
   store i32 123, i32 addrspace(3)* getelementptr inbounds ([4 x i32], [4 x i32] addrspace(3)* @foo, i32 0, i32 2), align 4
@@ -416,9 +433,9 @@ define amdgpu_kernel void @store_constant_disjoint_offsets() {
 ; CI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-DAG: v_mov_b32_e32 [[ZERO:v[0-9]+]], 0{{$}}
-; GCN-DAG: ds_write2_b32 [[ZERO]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
-; GCN-DAG: ds_write2_b32 [[ZERO]], v{{[0-9]+}}, v{{[0-9]+}} offset0:2 offset1:3
+; GCN-DAG: v_mov_b32_e32 [[PTR:v[0-9]+]], bar@abs32@lo{{$}}
+; GCN-DAG: ds_write2_b32 [[PTR]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
+; GCN-DAG: ds_write2_b32 [[PTR]], v{{[0-9]+}}, v{{[0-9]+}} offset0:2 offset1:3
 ; GCN: s_endpgm
 define amdgpu_kernel void @store_misaligned64_constant_offsets() {
   store i64 123, i64 addrspace(3)* getelementptr inbounds ([4 x i64], [4 x i64] addrspace(3)* @bar, i32 0, i32 0), align 4
@@ -432,10 +449,13 @@ define amdgpu_kernel void @store_misaligned64_constant_offsets() {
 ; CI-DAG: s_mov_b32 m0
 ; GFX9-NOT: m0
 
-; GCN-DAG: v_mov_b32_e32 [[BASE0:v[0-9]+]], 0x7ff8{{$}}
-; GCN-DAG: v_mov_b32_e32 [[BASE1:v[0-9]+]], 0x4000{{$}}
-; GCN-DAG: ds_write2_b32 [[BASE0]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
-; GCN-DAG: ds_write2_b32 [[BASE1]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
+; GCN-DAG: s_mov_b32 [[SBASE0:s[0-9]+]], bar.large@abs32@lo
+; GCN-DAG: s_add_i32 [[SBASE1:s[0-9]+]], [[SBASE0]], 0x4000{{$}}
+; GCN-DAG: s_addk_i32 [[SBASE0]], 0x7ff8{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VBASE0:v[0-9]+]], [[SBASE0]]{{$}}
+; GCN-DAG: v_mov_b32_e32 [[VBASE1:v[0-9]+]], [[SBASE1]]{{$}}
+; GCN-DAG: ds_write2_b32 [[VBASE0]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
+; GCN-DAG: ds_write2_b32 [[VBASE1]], v{{[0-9]+}}, v{{[0-9]+}} offset1:1
 ; GCN: s_endpgm
 define amdgpu_kernel void @store_misaligned64_constant_large_offsets() {
   store i64 123, i64 addrspace(3)* getelementptr inbounds ([4096 x i64], [4096 x i64] addrspace(3)* @bar.large, i32 0, i32 2048), align 4

@@ -1013,6 +1013,18 @@ public:
     return false;
   }
 
+  // checks whether this operand is an offset suitable for the LE /
+  // LETP instructions in Arm v8.1M
+  bool isLEOffset() const {
+    if (!isImm()) return false;
+    if (isa<MCSymbolRefExpr>(Imm.Val)) return true;
+    if (const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Imm.Val)) {
+      int64_t Val = CE->getValue();
+      return Val < 0 && Val >= -4094 && (Val & 1) == 0;
+    }
+    return false;
+  }
+
   // checks whether this operand is a memory operand computed as an offset
   // applied to PC. the offset may have 8 bits of magnitude and is represented
   // with two bits of shift. textually it may be either [pc, #imm], #imm or
@@ -1025,7 +1037,7 @@ public:
       if (!CE) return false;
       Val = CE->getValue();
     }
-    else if (isMem()) {
+    else if (isGPRMem()) {
       if(!Memory.OffsetImm || Memory.OffsetRegNum) return false;
       if(Memory.BaseRegNum != ARM::PC) return false;
       Val = Memory.OffsetImm->getValue();
@@ -1059,7 +1071,14 @@ public:
     int64_t Value = CE->getValue();
     return ((Value & 3) == 0) && Value >= N && Value <= M;
   }
-
+  template<int64_t N, int64_t M>
+  bool isImmediateS2() const {
+    if (!isImm()) return false;
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    if (!CE) return false;
+    int64_t Value = CE->getValue();
+    return ((Value & 1) == 0) && Value >= N && Value <= M;
+  }
   bool isFBits16() const {
     return isImmediate<0, 17>();
   }
@@ -1071,6 +1090,18 @@ public:
   }
   bool isImm7s4() const {
     return isImmediateS4<-508, 508>();
+  }
+  bool isImm7Shift0() const {
+    return isImmediate<-127, 127>();
+  }
+  bool isImm7Shift1() const {
+    return isImmediateS2<-255, 255>();
+  }
+  bool isImm7Shift2() const {
+    return isImmediateS4<-511, 511>();
+  }
+  bool isImm7() const {
+    return isImmediate<-127, 127>();
   }
   bool isImm0_1020s4() const {
     return isImmediateS4<0, 1020>();
@@ -1253,6 +1284,22 @@ public:
   bool isInstSyncBarrierOpt() const { return Kind == k_InstSyncBarrierOpt; }
   bool isTraceSyncBarrierOpt() const { return Kind == k_TraceSyncBarrierOpt; }
   bool isMem() const override {
+      return isGPRMem() || isMVEMem();
+  }
+  bool isMVEMem() const {
+    if (Kind != k_Memory)
+      return false;
+    if (Memory.BaseRegNum &&
+        !ARMMCRegisterClasses[ARM::GPRRegClassID].contains(Memory.BaseRegNum) &&
+        !ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(Memory.BaseRegNum))
+      return false;
+    if (Memory.OffsetRegNum &&
+        !ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(
+            Memory.OffsetRegNum))
+      return false;
+    return true;
+  }
+  bool isGPRMem() const {
     if (Kind != k_Memory)
       return false;
     if (Memory.BaseRegNum &&
@@ -1332,14 +1379,14 @@ public:
     return isPostIdxRegShifted() && PostIdxReg.ShiftTy == ARM_AM::no_shift;
   }
   bool isMemNoOffset(bool alignOK = false, unsigned Alignment = 0) const {
-    if (!isMem())
+    if (!isGPRMem())
       return false;
     // No offset of any kind.
     return Memory.OffsetRegNum == 0 && Memory.OffsetImm == nullptr &&
      (alignOK || Memory.Alignment == Alignment);
   }
   bool isMemNoOffsetT2(bool alignOK = false, unsigned Alignment = 0) const {
-    if (!isMem())
+    if (!isGPRMem())
       return false;
 
     if (!ARMMCRegisterClasses[ARM::GPRnopcRegClassID].contains(
@@ -1351,7 +1398,7 @@ public:
      (alignOK || Memory.Alignment == Alignment);
   }
   bool isMemNoOffsetT2NoSp(bool alignOK = false, unsigned Alignment = 0) const {
-    if (!isMem())
+    if (!isGPRMem())
       return false;
 
     if (!ARMMCRegisterClasses[ARM::rGPRRegClassID].contains(
@@ -1362,8 +1409,20 @@ public:
     return Memory.OffsetRegNum == 0 && Memory.OffsetImm == nullptr &&
      (alignOK || Memory.Alignment == Alignment);
   }
+  bool isMemNoOffsetT(bool alignOK = false, unsigned Alignment = 0) const {
+    if (!isGPRMem())
+      return false;
+
+    if (!ARMMCRegisterClasses[ARM::tGPRRegClassID].contains(
+            Memory.BaseRegNum))
+      return false;
+
+    // No offset of any kind.
+    return Memory.OffsetRegNum == 0 && Memory.OffsetImm == nullptr &&
+     (alignOK || Memory.Alignment == Alignment);
+  }
   bool isMemPCRelImm12() const {
-    if (!isMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
       return false;
     // Base register must be PC.
     if (Memory.BaseRegNum != ARM::PC)
@@ -1450,7 +1509,7 @@ public:
   }
 
   bool isAddrMode2() const {
-    if (!isMem() || Memory.Alignment != 0) return false;
+    if (!isGPRMem() || Memory.Alignment != 0) return false;
     // Check for register offset.
     if (Memory.OffsetRegNum) return true;
     // Immediate offset in range [-4095, 4095].
@@ -1475,7 +1534,7 @@ public:
     // and we reject it.
     if (isImm() && !isa<MCConstantExpr>(getImm()))
       return true;
-    if (!isMem() || Memory.Alignment != 0) return false;
+    if (!isGPRMem() || Memory.Alignment != 0) return false;
     // No shifts are legal for AM3.
     if (Memory.ShiftType != ARM_AM::no_shift) return false;
     // Check for register offset.
@@ -1509,7 +1568,7 @@ public:
     // and we reject it.
     if (isImm() && !isa<MCConstantExpr>(getImm()))
       return true;
-    if (!isMem() || Memory.Alignment != 0) return false;
+    if (!isGPRMem() || Memory.Alignment != 0) return false;
     // Check for register offset.
     if (Memory.OffsetRegNum) return false;
     // Immediate offset in range [-1020, 1020] and a multiple of 4.
@@ -1525,7 +1584,7 @@ public:
     // and we reject it.
     if (isImm() && !isa<MCConstantExpr>(getImm()))
       return true;
-    if (!isMem() || Memory.Alignment != 0) return false;
+    if (!isGPRMem() || Memory.Alignment != 0) return false;
     // Check for register offset.
     if (Memory.OffsetRegNum) return false;
     // Immediate offset in range [-510, 510] and a multiple of 2.
@@ -1536,14 +1595,14 @@ public:
   }
 
   bool isMemTBB() const {
-    if (!isMem() || !Memory.OffsetRegNum || Memory.isNegative ||
+    if (!isGPRMem() || !Memory.OffsetRegNum || Memory.isNegative ||
         Memory.ShiftType != ARM_AM::no_shift || Memory.Alignment != 0)
       return false;
     return true;
   }
 
   bool isMemTBH() const {
-    if (!isMem() || !Memory.OffsetRegNum || Memory.isNegative ||
+    if (!isGPRMem() || !Memory.OffsetRegNum || Memory.isNegative ||
         Memory.ShiftType != ARM_AM::lsl || Memory.ShiftImm != 1 ||
         Memory.Alignment != 0 )
       return false;
@@ -1551,13 +1610,13 @@ public:
   }
 
   bool isMemRegOffset() const {
-    if (!isMem() || !Memory.OffsetRegNum || Memory.Alignment != 0)
+    if (!isGPRMem() || !Memory.OffsetRegNum || Memory.Alignment != 0)
       return false;
     return true;
   }
 
   bool isT2MemRegOffset() const {
-    if (!isMem() || !Memory.OffsetRegNum || Memory.isNegative ||
+    if (!isGPRMem() || !Memory.OffsetRegNum || Memory.isNegative ||
         Memory.Alignment != 0 || Memory.BaseRegNum == ARM::PC)
       return false;
     // Only lsl #{0, 1, 2, 3} allowed.
@@ -1571,7 +1630,7 @@ public:
   bool isMemThumbRR() const {
     // Thumb reg+reg addressing is simple. Just two registers, a base and
     // an offset. No shifts, negations or any other complicating factors.
-    if (!isMem() || !Memory.OffsetRegNum || Memory.isNegative ||
+    if (!isGPRMem() || !Memory.OffsetRegNum || Memory.isNegative ||
         Memory.ShiftType != ARM_AM::no_shift || Memory.Alignment != 0)
       return false;
     return isARMLowRegister(Memory.BaseRegNum) &&
@@ -1579,7 +1638,7 @@ public:
   }
 
   bool isMemThumbRIs4() const {
-    if (!isMem() || Memory.OffsetRegNum != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 ||
         !isARMLowRegister(Memory.BaseRegNum) || Memory.Alignment != 0)
       return false;
     // Immediate offset, multiple of 4 in range [0, 124].
@@ -1589,7 +1648,7 @@ public:
   }
 
   bool isMemThumbRIs2() const {
-    if (!isMem() || Memory.OffsetRegNum != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 ||
         !isARMLowRegister(Memory.BaseRegNum) || Memory.Alignment != 0)
       return false;
     // Immediate offset, multiple of 4 in range [0, 62].
@@ -1599,7 +1658,7 @@ public:
   }
 
   bool isMemThumbRIs1() const {
-    if (!isMem() || Memory.OffsetRegNum != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 ||
         !isARMLowRegister(Memory.BaseRegNum) || Memory.Alignment != 0)
       return false;
     // Immediate offset in range [0, 31].
@@ -1609,7 +1668,7 @@ public:
   }
 
   bool isMemThumbSPI() const {
-    if (!isMem() || Memory.OffsetRegNum != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 ||
         Memory.BaseRegNum != ARM::SP || Memory.Alignment != 0)
       return false;
     // Immediate offset, multiple of 4 in range [0, 1020].
@@ -1624,7 +1683,7 @@ public:
     // and we reject it.
     if (isImm() && !isa<MCConstantExpr>(getImm()))
       return true;
-    if (!isMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
       return false;
     // Immediate offset a multiple of 4 in range [-1020, 1020].
     if (!Memory.OffsetImm) return true;
@@ -1639,7 +1698,7 @@ public:
     // and we reject it.
     if (isImm() && !isa<MCConstantExpr>(getImm()))
       return true;
-    if (!isMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0 ||
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0 ||
         !ARMMCRegisterClasses[ARM::GPRnopcRegClassID].contains(
             Memory.BaseRegNum))
       return false;
@@ -1650,7 +1709,7 @@ public:
     return (Val >= -508 && Val <= 508 && (Val & 3) == 0) || Val == INT32_MIN;
   }
   bool isMemImm0_1020s4Offset() const {
-    if (!isMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
       return false;
     // Immediate offset a multiple of 4 in range [0, 1020].
     if (!Memory.OffsetImm) return true;
@@ -1659,7 +1718,7 @@ public:
   }
 
   bool isMemImm8Offset() const {
-    if (!isMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
       return false;
     // Base reg of PC isn't allowed for these encodings.
     if (Memory.BaseRegNum == ARM::PC) return false;
@@ -1670,8 +1729,81 @@ public:
            (Val > -256 && Val < 256);
   }
 
+  template<unsigned Bits, unsigned RegClassID>
+  bool isMemImm7ShiftedOffset() const {
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0 ||
+        !ARMMCRegisterClasses[RegClassID].contains(Memory.BaseRegNum))
+      return false;
+
+    // Expect an immediate offset equal to an element of the range
+    // [-127, 127], shifted left by Bits.
+
+    if (!Memory.OffsetImm) return true;
+    int64_t Val = Memory.OffsetImm->getValue();
+
+    // INT32_MIN is a special-case value (indicating the encoding with
+    // zero offset and the subtract bit set)
+    if (Val == INT32_MIN)
+      return true;
+
+    unsigned Divisor = 1U << Bits;
+
+    // Check that the low bits are zero
+    if (Val % Divisor != 0)
+      return false;
+
+    // Check that the remaining offset is within range.
+    Val /= Divisor;
+    return (Val >= -127 && Val <= 127);
+  }
+
+  template <int shift> bool isMemRegRQOffset() const {
+    if (!isMVEMem() || Memory.OffsetImm != 0 || Memory.Alignment != 0)
+      return false;
+
+    if (!ARMMCRegisterClasses[ARM::GPRnopcRegClassID].contains(
+            Memory.BaseRegNum))
+      return false;
+    if (!ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(
+            Memory.OffsetRegNum))
+      return false;
+
+    if (shift == 0 && Memory.ShiftType != ARM_AM::no_shift)
+      return false;
+
+    if (shift > 0 &&
+        (Memory.ShiftType != ARM_AM::uxtw || Memory.ShiftImm != shift))
+      return false;
+
+    return true;
+  }
+
+  template <int shift> bool isMemRegQOffset() const {
+    if (!isMVEMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+      return false;
+
+    if (!ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(
+            Memory.BaseRegNum))
+      return false;
+
+    if(!Memory.OffsetImm) return true;
+    static_assert(shift < 56,
+                  "Such that we dont shift by a value higher than 62");
+    int64_t Val = Memory.OffsetImm->getValue();
+
+    // The value must be a multiple of (1 << shift)
+    if ((Val & ((1U << shift) - 1)) != 0)
+      return false;
+
+    // And be in the right range, depending on the amount that it is shifted
+    // by.  Shift 0, is equal to 7 unsigned bits, the sign bit is set
+    // separately.
+    int64_t Range = (1U << (7+shift)) - 1;
+    return (Val == INT32_MIN) || (Val > -Range && Val < Range);
+  }
+
   bool isMemPosImm8Offset() const {
-    if (!isMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
       return false;
     // Immediate offset in range [0, 255].
     if (!Memory.OffsetImm) return true;
@@ -1680,7 +1812,7 @@ public:
   }
 
   bool isMemNegImm8Offset() const {
-    if (!isMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
       return false;
     // Base reg of PC isn't allowed for these encodings.
     if (Memory.BaseRegNum == ARM::PC) return false;
@@ -1692,7 +1824,7 @@ public:
   }
 
   bool isMemUImm12Offset() const {
-    if (!isMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
       return false;
     // Immediate offset in range [0, 4095].
     if (!Memory.OffsetImm) return true;
@@ -1708,7 +1840,7 @@ public:
     if (isImm() && !isa<MCConstantExpr>(getImm()))
       return true;
 
-    if (!isMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
+    if (!isGPRMem() || Memory.OffsetRegNum != 0 || Memory.Alignment != 0)
       return false;
     // Immediate offset in range [-4095, 4095].
     if (!Memory.OffsetImm) return true;
@@ -2423,6 +2555,34 @@ public:
     Inst.addOperand(MCOperand::createImm(CE->getValue()));
   }
 
+  void addImm7Shift0Operands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    assert(CE != nullptr && "Invalid operand type!");
+    Inst.addOperand(MCOperand::createImm(CE->getValue()));
+  }
+
+  void addImm7Shift1Operands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    assert(CE != nullptr && "Invalid operand type!");
+    Inst.addOperand(MCOperand::createImm(CE->getValue()));
+  }
+
+  void addImm7Shift2Operands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    assert(CE != nullptr && "Invalid operand type!");
+    Inst.addOperand(MCOperand::createImm(CE->getValue()));
+  }
+
+  void addImm7Operands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    assert(CE != nullptr && "Invalid operand type!");
+    Inst.addOperand(MCOperand::createImm(CE->getValue()));
+  }
+
   void addImm0_1020s4Operands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     // The immediate is scaled by four in the encoding and is stored
@@ -2532,7 +2692,7 @@ public:
       return;
     }
 
-    assert(isMem()  && "Unknown value type!");
+    assert(isGPRMem()  && "Unknown value type!");
     assert(isa<MCConstantExpr>(Memory.OffsetImm) && "Unknown value type!");
     Inst.addOperand(MCOperand::createImm(Memory.OffsetImm->getValue()));
   }
@@ -2563,6 +2723,11 @@ public:
   }
 
   void addMemNoOffsetT2NoSpOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(Memory.BaseRegNum));
+  }
+
+  void addMemNoOffsetTOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
     Inst.addOperand(MCOperand::createReg(Memory.BaseRegNum));
   }
@@ -2808,19 +2973,17 @@ public:
     Inst.addOperand(MCOperand::createImm(Val));
   }
 
-  void addMemImm8OffsetOperands(MCInst &Inst, unsigned N) const {
+  void addMemImmOffsetOperands(MCInst &Inst, unsigned N) const {
     assert(N == 2 && "Invalid number of operands!");
     int64_t Val = Memory.OffsetImm ? Memory.OffsetImm->getValue() : 0;
     Inst.addOperand(MCOperand::createReg(Memory.BaseRegNum));
     Inst.addOperand(MCOperand::createImm(Val));
   }
 
-  void addMemPosImm8OffsetOperands(MCInst &Inst, unsigned N) const {
-    addMemImm8OffsetOperands(Inst, N);
-  }
-
-  void addMemNegImm8OffsetOperands(MCInst &Inst, unsigned N) const {
-    addMemImm8OffsetOperands(Inst, N);
+  void addMemRegRQOffsetOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 2 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createReg(Memory.BaseRegNum));
+    Inst.addOperand(MCOperand::createReg(Memory.OffsetRegNum));
   }
 
   void addMemUImm12OffsetOperands(MCInst &Inst, unsigned N) const {
@@ -5657,6 +5820,8 @@ bool ARMAsmParser::parseMemRegOffsetShift(ARM_AM::ShiftOpc &St,
     St = ARM_AM::ror;
   else if (ShiftName == "rrx" || ShiftName == "RRX")
     St = ARM_AM::rrx;
+  else if (ShiftName == "uxtw" || ShiftName == "UXTW")
+    St = ARM_AM::uxtw;
   else
     return Error(Loc, "illegal shift operator");
   Parser.Lex(); // Eat shift type token.
@@ -6060,6 +6225,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
          Mnemonic == "vmule" || Mnemonic == "vmult" ||
          Mnemonic == "vrintne" ||
          Mnemonic == "vcmult" || Mnemonic == "vcmule" ||
+         Mnemonic == "vpsele" || Mnemonic == "vpselt" ||
          Mnemonic.startswith("vq")))) {
     unsigned CC = ARMCondCodeFromString(Mnemonic.substr(Mnemonic.size()-2));
     if (CC != ~0U) {
@@ -6108,7 +6274,7 @@ StringRef ARMAsmParser::splitMnemonic(StringRef Mnemonic,
       Mnemonic != "vqrshrnt" && Mnemonic != "vqshrnt" && Mnemonic != "vmullt" &&
       Mnemonic != "vqmovnt" && Mnemonic != "vqmovunt" &&
       Mnemonic != "vqmovnt" && Mnemonic != "vmovnt" && Mnemonic != "vqdmullt" &&
-      Mnemonic != "vcvtt" && Mnemonic != "vcvt") {
+      Mnemonic != "vpnot" && Mnemonic != "vcvtt" && Mnemonic != "vcvt") {
     unsigned CC = ARMVectorCondCodeFromString(Mnemonic.substr(Mnemonic.size()-1));
     if (CC != ~0U) {
       Mnemonic = Mnemonic.slice(0, Mnemonic.size()-1);
@@ -6184,7 +6350,9 @@ void ARMAsmParser::getMnemonicAcceptInfo(StringRef Mnemonic,
       Mnemonic.startswith("vpt") || Mnemonic.startswith("vpst") ||
       (hasMVE() &&
        (Mnemonic.startswith("vst2") || Mnemonic.startswith("vld2") ||
-        Mnemonic.startswith("vst4") || Mnemonic.startswith("vld4")))) {
+        Mnemonic.startswith("vst4") || Mnemonic.startswith("vld4") ||
+        Mnemonic.startswith("wlstp") || Mnemonic.startswith("dlstp") ||
+        Mnemonic.startswith("letp")))) {
     // These mnemonics are never predicable
     CanAcceptPredicationCode = false;
   } else if (!isThumb()) {
@@ -6446,7 +6614,7 @@ bool ARMAsmParser::shouldOmitVectorPredicateOperand(StringRef Mnemonic,
       Mnemonic.startswith("vst2") || Mnemonic.startswith("vst4"))
     return true;
 
-  if (Mnemonic.startswith("vctp"))
+  if (Mnemonic.startswith("vctp") || Mnemonic.startswith("vpnot"))
     return false;
 
   if (Mnemonic.startswith("vmov") &&
@@ -6518,7 +6686,7 @@ void ARMAsmParser::fixupGNULDRDAlias(StringRef Mnemonic,
 
   if (!Op2.isReg())
     return;
-  if (!Op3.isMem())
+  if (!Op3.isGPRMem())
     return;
 
   const MCRegisterClass &GPR = MRI->getRegClass(ARM::GPRRegClassID);
@@ -7291,6 +7459,54 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
                    "destination register and base register can't be identical");
     return false;
   }
+
+  case ARM::MVE_VLDRBU8_rq:
+  case ARM::MVE_VLDRBU16_rq:
+  case ARM::MVE_VLDRBS16_rq:
+  case ARM::MVE_VLDRBU32_rq:
+  case ARM::MVE_VLDRBS32_rq:
+  case ARM::MVE_VLDRHU16_rq:
+  case ARM::MVE_VLDRHU16_rq_u:
+  case ARM::MVE_VLDRHU32_rq:
+  case ARM::MVE_VLDRHU32_rq_u:
+  case ARM::MVE_VLDRHS32_rq:
+  case ARM::MVE_VLDRHS32_rq_u:
+  case ARM::MVE_VLDRWU32_rq:
+  case ARM::MVE_VLDRWU32_rq_u:
+  case ARM::MVE_VLDRDU64_rq:
+  case ARM::MVE_VLDRDU64_rq_u:
+  case ARM::MVE_VLDRWU32_qi:
+  case ARM::MVE_VLDRWU32_qi_pre:
+  case ARM::MVE_VLDRDU64_qi:
+  case ARM::MVE_VLDRDU64_qi_pre: {
+    // Qd must be different from Qm.
+    unsigned QdIdx = 0, QmIdx = 2;
+    bool QmIsPointer = false;
+    switch (Opcode) {
+    case ARM::MVE_VLDRWU32_qi:
+    case ARM::MVE_VLDRDU64_qi:
+      QmIdx = 1;
+      QmIsPointer = true;
+      break;
+    case ARM::MVE_VLDRWU32_qi_pre:
+    case ARM::MVE_VLDRDU64_qi_pre:
+      QdIdx = 1;
+      QmIsPointer = true;
+      break;
+    }
+
+    const unsigned Qd = MRI->getEncodingValue(Inst.getOperand(QdIdx).getReg());
+    const unsigned Qm = MRI->getEncodingValue(Inst.getOperand(QmIdx).getReg());
+
+    if (Qd == Qm) {
+      return Error(Operands[3]->getStartLoc(),
+                   Twine("destination vector register and vector ") +
+                   (QmIsPointer ? "pointer" : "offset") +
+                   " register can't be identical");
+    }
+    return false;
+  }
+
   case ARM::SBFX:
   case ARM::t2SBFX:
   case ARM::UBFX:
@@ -7539,22 +7755,6 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return Error(Operands[1]->getStartLoc(), "instruction 'csdb' is not "
                                                "predicable, but condition "
                                                "code specified");
-    break;
-  }
-  case ARM::t2WLS: {
-    int idx = Opcode == ARM::t2WLS ? 3 : 4;
-    if (!static_cast<ARMOperand &>(*Operands[idx]).isUnsignedOffset<11, 1>())
-      return Error(Operands[idx]->getStartLoc(),
-                   "loop end is out of range or not a positive multiple of 2");
-    break;
-  }
-  case ARM::t2LEUpdate: {
-    if (Inst.getOperand(2).isImm() &&
-        !(Inst.getOperand(2).getImm() < 0 &&
-          Inst.getOperand(2).getImm() >= -4094 &&
-          (Inst.getOperand(2).getImm() & 1) == 0))
-      return Error(Operands[2]->getStartLoc(),
-                   "loop start is out of range or not a negative multiple of 2");
     break;
   }
   case ARM::t2BFi:
@@ -10042,9 +10242,23 @@ unsigned ARMAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
   for (unsigned I = 0; I < MCID.NumOperands; ++I)
     if (MCID.OpInfo[I].RegClass == ARM::rGPRRegClassID) {
       // rGPRRegClass excludes PC, and also excluded SP before ARMv8
-      if ((Inst.getOperand(I).getReg() == ARM::SP) && !hasV8Ops())
+      const auto &Op = Inst.getOperand(I);
+      if (!Op.isReg()) {
+        // This can happen in awkward cases with tied operands, e.g. a
+        // writeback load/store with a complex addressing mode in
+        // which there's an output operand corresponding to the
+        // updated written-back base register: the Tablegen-generated
+        // AsmMatcher will have written a placeholder operand to that
+        // slot in the form of an immediate 0, because it can't
+        // generate the register part of the complex addressing-mode
+        // operand ahead of time.
+        continue;
+      }
+
+      unsigned Reg = Op.getReg();
+      if ((Reg == ARM::SP) && !hasV8Ops())
         return Match_RequiresV8;
-      else if (Inst.getOperand(I).getReg() == ARM::PC)
+      else if (Reg == ARM::PC)
         return Match_InvalidOperand;
     }
 

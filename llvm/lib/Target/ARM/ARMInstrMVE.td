@@ -153,6 +153,127 @@ def VecList4Q : RegisterOperand<QQQQPR, "printMVEVectorListFourQ"> {
   let PrintMethod = "printMVEVectorList<4>";
 }
 
+// taddrmode_imm7  := reg[r0-r7] +/- (imm7 << shift)
+class TMemImm7ShiftOffsetAsmOperand<int shift> : AsmOperandClass {
+  let Name = "TMemImm7Shift"#shift#"Offset";
+  let PredicateMethod = "isMemImm7ShiftedOffset<"#shift#",ARM::tGPRRegClassID>";
+  let RenderMethod = "addMemImmOffsetOperands";
+}
+
+class taddrmode_imm7<int shift> : MemOperand {
+  let ParserMatchClass = TMemImm7ShiftOffsetAsmOperand<shift>;
+  // They are printed the same way as the T2 imm8 version
+  let PrintMethod = "printT2AddrModeImm8Operand<false>";
+  // This can also be the same as the T2 version.
+  let EncoderMethod = "getT2AddrModeImmOpValue<7,"#shift#">";
+  let DecoderMethod = "DecodeTAddrModeImm7<"#shift#">";
+  let MIOperandInfo = (ops tGPR:$base, i32imm:$offsimm);
+}
+
+// t2addrmode_imm7  := reg +/- (imm7)
+class MemImm7ShiftOffsetAsmOperand<int shift> : AsmOperandClass {
+  let Name = "MemImm7Shift"#shift#"Offset";
+  let PredicateMethod = "isMemImm7ShiftedOffset<" # shift #
+                        ",ARM::GPRnopcRegClassID>";
+  let RenderMethod = "addMemImmOffsetOperands";
+}
+
+def MemImm7Shift0OffsetAsmOperand : MemImm7ShiftOffsetAsmOperand<0>;
+def MemImm7Shift1OffsetAsmOperand : MemImm7ShiftOffsetAsmOperand<1>;
+def MemImm7Shift2OffsetAsmOperand : MemImm7ShiftOffsetAsmOperand<2>;
+class T2AddrMode_Imm7<int shift> : MemOperand,
+      ComplexPattern<i32, 2, "SelectT2AddrModeImm7<"#shift#">", []> {
+  let EncoderMethod = "getT2AddrModeImmOpValue<7,"#shift#">";
+  let DecoderMethod = "DecodeT2AddrModeImm7<"#shift#", 0>";
+  let ParserMatchClass =
+    !cast<AsmOperandClass>("MemImm7Shift"#shift#"OffsetAsmOperand");
+  let MIOperandInfo = (ops GPRnopc:$base, i32imm:$offsimm);
+}
+
+class t2addrmode_imm7<int shift> : T2AddrMode_Imm7<shift> {
+  // They are printed the same way as the imm8 version
+  let PrintMethod = "printT2AddrModeImm8Operand<false>";
+}
+
+class MemImm7ShiftOffsetWBAsmOperand<int shift> : AsmOperandClass {
+  let Name = "MemImm7Shift"#shift#"OffsetWB";
+  let PredicateMethod = "isMemImm7ShiftedOffset<" # shift #
+                        ",ARM::rGPRRegClassID>";
+  let RenderMethod = "addMemImmOffsetOperands";
+}
+
+def MemImm7Shift0OffsetWBAsmOperand : MemImm7ShiftOffsetWBAsmOperand<0>;
+def MemImm7Shift1OffsetWBAsmOperand : MemImm7ShiftOffsetWBAsmOperand<1>;
+def MemImm7Shift2OffsetWBAsmOperand : MemImm7ShiftOffsetWBAsmOperand<2>;
+
+class t2addrmode_imm7_pre<int shift> : T2AddrMode_Imm7<shift> {
+  // They are printed the same way as the imm8 version
+  let PrintMethod = "printT2AddrModeImm8Operand<true>";
+  let ParserMatchClass =
+    !cast<AsmOperandClass>("MemImm7Shift"#shift#"OffsetWBAsmOperand");
+  let DecoderMethod = "DecodeT2AddrModeImm7<"#shift#", 1>";
+  let MIOperandInfo = (ops rGPR:$base, i32imm:$offsim);
+}
+
+class t2am_imm7shiftOffsetAsmOperand<int shift>
+  : AsmOperandClass { let Name = "Imm7Shift"#shift; }
+def t2am_imm7shift0OffsetAsmOperand : t2am_imm7shiftOffsetAsmOperand<0>;
+def t2am_imm7shift1OffsetAsmOperand : t2am_imm7shiftOffsetAsmOperand<1>;
+def t2am_imm7shift2OffsetAsmOperand : t2am_imm7shiftOffsetAsmOperand<2>;
+
+class t2am_imm7_offset<int shift> : MemOperand {
+  // They are printed the same way as the imm8 version
+  let PrintMethod = "printT2AddrModeImm8OffsetOperand";
+  let ParserMatchClass =
+    !cast<AsmOperandClass>("t2am_imm7shift"#shift#"OffsetAsmOperand");
+  let EncoderMethod = "getT2ScaledImmOpValue<7,"#shift#">";
+  let DecoderMethod = "DecodeT2Imm7<"#shift#">";
+}
+
+// Operands for gather/scatter loads of the form [Rbase, Qoffsets]
+class MemRegRQOffsetAsmOperand<int shift> : AsmOperandClass {
+  let Name = "MemRegRQS"#shift#"Offset";
+  let PredicateMethod = "isMemRegRQOffset<"#shift#">";
+  let RenderMethod = "addMemRegRQOffsetOperands";
+}
+
+def MemRegRQS0OffsetAsmOperand : MemRegRQOffsetAsmOperand<0>;
+def MemRegRQS1OffsetAsmOperand : MemRegRQOffsetAsmOperand<1>;
+def MemRegRQS2OffsetAsmOperand : MemRegRQOffsetAsmOperand<2>;
+def MemRegRQS3OffsetAsmOperand : MemRegRQOffsetAsmOperand<3>;
+
+// mve_addr_rq_shift  := reg + vreg{ << UXTW #shift}
+class mve_addr_rq_shift<int shift> : MemOperand {
+  let EncoderMethod = "getMveAddrModeRQOpValue";
+  let PrintMethod = "printMveAddrModeRQOperand<"#shift#">";
+  let ParserMatchClass =
+    !cast<AsmOperandClass>("MemRegRQS"#shift#"OffsetAsmOperand");
+  let DecoderMethod = "DecodeMveAddrModeRQ";
+  let MIOperandInfo = (ops GPRnopc:$base, MQPR:$offsreg);
+}
+
+class MemRegQOffsetAsmOperand<int shift> : AsmOperandClass {
+  let Name = "MemRegQS"#shift#"Offset";
+  let PredicateMethod = "isMemRegQOffset<"#shift#">";
+  let RenderMethod = "addMemImmOffsetOperands";
+}
+
+def MemRegQS2OffsetAsmOperand : MemRegQOffsetAsmOperand<2>;
+def MemRegQS3OffsetAsmOperand : MemRegQOffsetAsmOperand<3>;
+
+// mve_addr_q_shift  := vreg {+ #imm7s2/4}
+class mve_addr_q_shift<int shift> : MemOperand {
+  let EncoderMethod = "getMveAddrModeQOpValue<"#shift#">";
+  // Can be printed same way as other reg + imm operands
+  let PrintMethod = "printT2AddrModeImm8Operand<false>";
+  let ParserMatchClass =
+    !cast<AsmOperandClass>("MemRegQS"#shift#"OffsetAsmOperand");
+  let DecoderMethod = "DecodeMveAddrModeQ<"#shift#">";
+  let MIOperandInfo = (ops MQPR:$base, i32imm:$imm);
+}
+
+// --------- Start of base classes for the instructions themselves
+
 class MVE_MI<dag oops, dag iops, InstrItinClass itin, string asm,
              string ops, string cstr, list<dag> pattern>
   : Thumb2XI<oops, iops, AddrModeNone, 4, itin, !strconcat(asm, "\t", ops), cstr,
@@ -3245,6 +3366,359 @@ foreach wb = [MVE_vldst24_writeback<
 
 // end of MVE interleaving load/store
 
+// start of MVE predicable load/store
+
+// A parameter class for the direction of transfer.
+class MVE_ldst_direction<bit b, dag Oo, dag Io, string c=""> {
+  bit load = b;
+  dag Oops = Oo;
+  dag Iops = Io;
+  string cstr = c;
+}
+def MVE_ld: MVE_ldst_direction<1, (outs MQPR:$Qd), (ins), ",@earlyclobber $Qd">;
+def MVE_st: MVE_ldst_direction<0, (outs), (ins MQPR:$Qd)>;
+
+// A parameter class for the size of memory access in a load.
+class MVE_memsz<bits<2> e, int s, AddrMode m, string mn, list<string> types> {
+  bits<2> encoding = e;         // opcode bit(s) for encoding
+  int shift = s;                // shift applied to immediate load offset
+  AddrMode AM = m;
+
+  // For instruction aliases: define the complete list of type
+  // suffixes at this size, and the canonical ones for loads and
+  // stores.
+  string MnemonicLetter = mn;
+  int TypeBits = !shl(8, s);
+  string CanonLoadSuffix = ".u" # TypeBits;
+  string CanonStoreSuffix = "." # TypeBits;
+  list<string> suffixes = !foreach(letter, types, "." # letter # TypeBits);
+}
+
+// Instances of MVE_memsz.
+//
+// (memD doesn't need an AddrMode, because those are only for
+// contiguous loads, and memD is only used by gather/scatters.)
+def MVE_memB: MVE_memsz<0b00, 0, AddrModeT2_i7,   "b", ["", "u", "s"]>;
+def MVE_memH: MVE_memsz<0b01, 1, AddrModeT2_i7s2, "h", ["", "u", "s", "f"]>;
+def MVE_memW: MVE_memsz<0b10, 2, AddrModeT2_i7s4, "w", ["", "u", "s", "f"]>;
+def MVE_memD: MVE_memsz<0b11, 3, ?,               "d", ["", "u", "s", "f"]>;
+
+// This is the base class for all the MVE loads and stores other than
+// the interleaving ones. All the non-interleaving loads/stores share
+// the characteristic that they operate on just one vector register,
+// so they are VPT-predicable.
+//
+// The predication operand is vpred_n, for both loads and stores. For
+// store instructions, the reason is obvious: if there is no output
+// register, there can't be a need for an input parameter giving the
+// output register's previous value. Load instructions also don't need
+// that input parameter, because unlike MVE data processing
+// instructions, predicated loads are defined to set the inactive
+// lanes of the output register to zero, instead of preserving their
+// input values.
+class MVE_VLDRSTR_base<MVE_ldst_direction dir, bit U, bit P, bit W, bit opc,
+                       dag oops, dag iops, string asm, string suffix,
+                       string ops, string cstr, list<dag> pattern=[]>
+ : MVE_p<oops, iops, NoItinerary, asm, suffix, ops, vpred_n, cstr, pattern> {
+  bits<3> Qd;
+
+  let Inst{28} = U;
+  let Inst{25} = 0b0;
+  let Inst{24} = P;
+  let Inst{22} = 0b0;
+  let Inst{21} = W;
+  let Inst{20} = dir.load;
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12} = opc;
+  let Inst{11-9} = 0b111;
+
+  let mayLoad = dir.load;
+  let mayStore = !eq(dir.load,0);
+}
+
+// Contiguous load and store instructions. These come in two main
+// categories: same-size loads/stores in which 128 bits of vector
+// register is transferred to or from 128 bits of memory in the most
+// obvious way, and widening loads / narrowing stores, in which the
+// size of memory accessed is less than the size of a vector register,
+// so the load instructions sign- or zero-extend each memory value
+// into a wider vector lane, and the store instructions truncate
+// correspondingly.
+//
+// The instruction mnemonics for these two classes look reasonably
+// similar, but the actual encodings are different enough to need two
+// separate base classes.
+
+// Contiguous, same size
+class MVE_VLDRSTR_cs<MVE_ldst_direction dir, MVE_memsz memsz, bit P, bit W,
+                     dag oops, dag iops, string asm, string suffix,
+                     IndexMode im, string ops, string cstr>
+  : MVE_VLDRSTR_base<dir, 0, P, W, 1, oops, iops, asm, suffix, ops, cstr> {
+  bits<12> addr;
+  let Inst{23} = addr{7};
+  let Inst{19-16} = addr{11-8};
+  let Inst{8-7} = memsz.encoding;
+  let Inst{6-0} = addr{6-0};
+}
+
+// Contiguous, widening/narrowing
+class MVE_VLDRSTR_cw<MVE_ldst_direction dir, MVE_memsz memsz, bit U,
+                     bit P, bit W, bits<2> size, dag oops, dag iops,
+                     string asm, string suffix, IndexMode im,
+                     string ops, string cstr>
+  : MVE_VLDRSTR_base<dir, U, P, W, 0, oops, iops, asm, suffix, ops, cstr> {
+  bits<11> addr;
+  let Inst{23} = addr{7};
+  let Inst{19} = memsz.encoding{0}; // enough to tell 16- from 32-bit
+  let Inst{18-16} = addr{10-8};
+  let Inst{8-7} = size;
+  let Inst{6-0} = addr{6-0};
+
+  let IM = im;
+}
+
+// Multiclass wrapper on each of the _cw and _cs base classes, to
+// generate three writeback modes (none, preindex, postindex).
+
+multiclass MVE_VLDRSTR_cw_m<MVE_ldst_direction dir, MVE_memsz memsz,
+                            string asm, string suffix, bit U, bits<2> size> {
+  let AM = memsz.AM in {
+    def "" : MVE_VLDRSTR_cw<
+        dir, memsz, U, 1, 0, size,
+        dir.Oops, !con(dir.Iops, (ins taddrmode_imm7<memsz.shift>:$addr)),
+        asm, suffix, IndexModeNone, "$Qd, $addr", "">;
+
+    def _pre : MVE_VLDRSTR_cw<
+        dir, memsz, U, 1, 1, size,
+        !con((outs tGPR:$wb), dir.Oops),
+        !con(dir.Iops, (ins taddrmode_imm7<memsz.shift>:$addr)),
+        asm, suffix, IndexModePre, "$Qd, $addr!", "$addr.base = $wb"> {
+      let DecoderMethod = "DecodeMVE_MEM_1_pre<"#memsz.shift#">";
+    }
+
+    def _post : MVE_VLDRSTR_cw<
+        dir, memsz, U, 0, 1, size,
+        !con((outs tGPR:$wb), dir.Oops),
+        !con(dir.Iops, (ins t_addr_offset_none:$Rn,
+                            t2am_imm7_offset<memsz.shift>:$addr)),
+        asm, suffix, IndexModePost, "$Qd, $Rn$addr", "$Rn.base = $wb"> {
+      bits<4> Rn;
+      let Inst{18-16} = Rn{2-0};
+    }
+  }
+}
+
+multiclass MVE_VLDRSTR_cs_m<MVE_ldst_direction dir, MVE_memsz memsz,
+                            string asm, string suffix> {
+  let AM = memsz.AM in {
+    def "" : MVE_VLDRSTR_cs<
+        dir, memsz, 1, 0,
+        dir.Oops, !con(dir.Iops, (ins t2addrmode_imm7<memsz.shift>:$addr)),
+        asm, suffix, IndexModeNone, "$Qd, $addr", "">;
+
+    def _pre : MVE_VLDRSTR_cs<
+        dir, memsz, 1, 1,
+        !con((outs rGPR:$wb), dir.Oops),
+        !con(dir.Iops, (ins t2addrmode_imm7_pre<memsz.shift>:$addr)),
+        asm, suffix, IndexModePre, "$Qd, $addr!", "$addr.base = $wb"> {
+      let DecoderMethod = "DecodeMVE_MEM_2_pre<"#memsz.shift#">";
+    }
+
+    def _post : MVE_VLDRSTR_cs<
+        dir, memsz, 0, 1,
+        !con((outs rGPR:$wb), dir.Oops),
+        // We need an !if here to select the base register class,
+        // because it's legal to write back to SP in a load of this
+        // type, but not in a store.
+        !con(dir.Iops, (ins !if(dir.load, t2_addr_offset_none,
+                                          t2_nosp_addr_offset_none):$Rn,
+                            t2am_imm7_offset<memsz.shift>:$addr)),
+        asm, suffix, IndexModePost, "$Qd, $Rn$addr", "$Rn.base = $wb"> {
+      bits<4> Rn;
+      let Inst{19-16} = Rn{3-0};
+    }
+  }
+}
+
+// Now actually declare all the contiguous load/stores, via those
+// multiclasses. The instruction ids coming out of this are the bare
+// names shown in the defm, with _pre or _post appended for writeback,
+// e.g. MVE_VLDRBS16, MVE_VSTRB16_pre, MVE_VSTRHU16_post.
+
+defm MVE_VLDRBS16: MVE_VLDRSTR_cw_m<MVE_ld, MVE_memB, "vldrb", "s16", 0, 0b01>;
+defm MVE_VLDRBS32: MVE_VLDRSTR_cw_m<MVE_ld, MVE_memB, "vldrb", "s32", 0, 0b10>;
+defm MVE_VLDRBU16: MVE_VLDRSTR_cw_m<MVE_ld, MVE_memB, "vldrb", "u16", 1, 0b01>;
+defm MVE_VLDRBU32: MVE_VLDRSTR_cw_m<MVE_ld, MVE_memB, "vldrb", "u32", 1, 0b10>;
+defm MVE_VLDRHS32: MVE_VLDRSTR_cw_m<MVE_ld, MVE_memH, "vldrh", "s32", 0, 0b10>;
+defm MVE_VLDRHU32: MVE_VLDRSTR_cw_m<MVE_ld, MVE_memH, "vldrh", "u32", 1, 0b10>;
+
+defm MVE_VLDRBU8:  MVE_VLDRSTR_cs_m<MVE_ld, MVE_memB, "vldrb", "u8">;
+defm MVE_VLDRHU16: MVE_VLDRSTR_cs_m<MVE_ld, MVE_memH, "vldrh", "u16">;
+defm MVE_VLDRWU32: MVE_VLDRSTR_cs_m<MVE_ld, MVE_memW, "vldrw", "u32">;
+
+defm MVE_VSTRB16:  MVE_VLDRSTR_cw_m<MVE_st, MVE_memB, "vstrb", "16",  0, 0b01>;
+defm MVE_VSTRB32:  MVE_VLDRSTR_cw_m<MVE_st, MVE_memB, "vstrb", "32",  0, 0b10>;
+defm MVE_VSTRH32:  MVE_VLDRSTR_cw_m<MVE_st, MVE_memH, "vstrh", "32",  0, 0b10>;
+
+defm MVE_VSTRBU8 : MVE_VLDRSTR_cs_m<MVE_st, MVE_memB, "vstrb", "8">;
+defm MVE_VSTRHU16: MVE_VLDRSTR_cs_m<MVE_st, MVE_memH, "vstrh", "16">;
+defm MVE_VSTRWU32: MVE_VLDRSTR_cs_m<MVE_st, MVE_memW, "vstrw", "32">;
+
+// Gather loads / scatter stores whose address operand is of the form
+// [Rn,Qm], i.e. a single GPR as the common base address, plus a
+// vector of offset from it. ('Load/store this sequence of elements of
+// the same array.')
+//
+// Like the contiguous family, these loads and stores can widen the
+// loaded values / truncate the stored ones, or they can just
+// load/store the same size of memory and vector lane. But unlike the
+// contiguous family, there's no particular difference in encoding
+// between those two cases.
+//
+// This family also comes with the option to scale the offset values
+// in Qm by the size of the loaded memory (i.e. to treat them as array
+// indices), or not to scale them (to treat them as plain byte offsets
+// in memory, so that perhaps the loaded values are unaligned). The
+// scaled instructions' address operand in assembly looks like
+// [Rn,Qm,UXTW #2] or similar.
+
+// Base class.
+class MVE_VLDRSTR_rq<MVE_ldst_direction dir, MVE_memsz memsz, bit U,
+                     bits<2> size, bit os, string asm, string suffix, int shift>
+  : MVE_VLDRSTR_base<dir, U, 0b0, 0b0, 0, dir.Oops,
+                     !con(dir.Iops, (ins mve_addr_rq_shift<shift>:$addr)),
+                     asm, suffix, "$Qd, $addr", dir.cstr> {
+  bits<7> addr;
+  let Inst{23} = 0b1;
+  let Inst{19-16} = addr{6-3};
+  let Inst{8-7} = size;
+  let Inst{6} = memsz.encoding{1};
+  let Inst{5} = 0;
+  let Inst{4} = memsz.encoding{0};
+  let Inst{3-1} = addr{2-0};
+  let Inst{0} = os;
+}
+
+// Multiclass that defines the scaled and unscaled versions of an
+// instruction, when the memory size is wider than a byte. The scaled
+// version gets the default name like MVE_VLDRBU16_rq; the unscaled /
+// potentially unaligned version gets a "_u" suffix, e.g.
+// MVE_VLDRBU16_rq_u.
+multiclass MVE_VLDRSTR_rq_w<MVE_ldst_direction dir, MVE_memsz memsz,
+                            string asm, string suffix, bit U, bits<2> size> {
+  def _u : MVE_VLDRSTR_rq<dir, memsz, U, size, 0, asm, suffix, 0>;
+  def "" : MVE_VLDRSTR_rq<dir, memsz, U, size, 1, asm, suffix, memsz.shift>;
+}
+
+// Subclass of MVE_VLDRSTR_rq with the same API as that multiclass,
+// for use when the memory size is one byte, so there's no 'scaled'
+// version of the instruction at all. (This is encoded as if it were
+// unscaled, but named in the default way with no _u suffix.)
+class MVE_VLDRSTR_rq_b<MVE_ldst_direction dir, MVE_memsz memsz,
+                       string asm, string suffix, bit U, bits<2> size>
+  : MVE_VLDRSTR_rq<dir, memsz, U, size, 0, asm, suffix, 0>;
+
+// Actually define all the loads and stores in this family.
+
+def  MVE_VLDRBU8_rq : MVE_VLDRSTR_rq_b<MVE_ld, MVE_memB, "vldrb","u8",  1,0b00>;
+def  MVE_VLDRBU16_rq: MVE_VLDRSTR_rq_b<MVE_ld, MVE_memB, "vldrb","u16", 1,0b01>;
+def  MVE_VLDRBS16_rq: MVE_VLDRSTR_rq_b<MVE_ld, MVE_memB, "vldrb","s16", 0,0b01>;
+def  MVE_VLDRBU32_rq: MVE_VLDRSTR_rq_b<MVE_ld, MVE_memB, "vldrb","u32", 1,0b10>;
+def  MVE_VLDRBS32_rq: MVE_VLDRSTR_rq_b<MVE_ld, MVE_memB, "vldrb","s32", 0,0b10>;
+
+defm MVE_VLDRHU16_rq: MVE_VLDRSTR_rq_w<MVE_ld, MVE_memH, "vldrh","u16", 1,0b01>;
+defm MVE_VLDRHU32_rq: MVE_VLDRSTR_rq_w<MVE_ld, MVE_memH, "vldrh","u32", 1,0b10>;
+defm MVE_VLDRHS32_rq: MVE_VLDRSTR_rq_w<MVE_ld, MVE_memH, "vldrh","s32", 0,0b10>;
+defm MVE_VLDRWU32_rq: MVE_VLDRSTR_rq_w<MVE_ld, MVE_memW, "vldrw","u32", 1,0b10>;
+defm MVE_VLDRDU64_rq: MVE_VLDRSTR_rq_w<MVE_ld, MVE_memD, "vldrd","u64", 1,0b11>;
+
+def  MVE_VSTRB8_rq  : MVE_VLDRSTR_rq_b<MVE_st, MVE_memB, "vstrb","8",   0,0b00>;
+def  MVE_VSTRB16_rq : MVE_VLDRSTR_rq_b<MVE_st, MVE_memB, "vstrb","16",  0,0b01>;
+def  MVE_VSTRB32_rq : MVE_VLDRSTR_rq_b<MVE_st, MVE_memB, "vstrb","32",  0,0b10>;
+
+defm MVE_VSTRH16_rq : MVE_VLDRSTR_rq_w<MVE_st, MVE_memH, "vstrh","16",  0,0b01>;
+defm MVE_VSTRH32_rq : MVE_VLDRSTR_rq_w<MVE_st, MVE_memH, "vstrh","32",  0,0b10>;
+defm MVE_VSTRW32_rq : MVE_VLDRSTR_rq_w<MVE_st, MVE_memW, "vstrw","32",  0,0b10>;
+defm MVE_VSTRD64_rq : MVE_VLDRSTR_rq_w<MVE_st, MVE_memD, "vstrd","64",  0,0b11>;
+
+// Gather loads / scatter stores whose address operand is of the form
+// [Qm,#imm], i.e. a vector containing a full base address for each
+// loaded item, plus an immediate offset applied consistently to all
+// of them. ('Load/store the same field from this vector of pointers
+// to a structure type.')
+//
+// This family requires the vector lane size to be at least 32 bits
+// (so there's room for an address in each lane at all). It has no
+// widening/narrowing variants. But it does support preindex
+// writeback, in which the address vector is updated to hold the
+// addresses actually loaded from.
+
+// Base class.
+class MVE_VLDRSTR_qi<MVE_ldst_direction dir, MVE_memsz memsz, bit W, dag wbops,
+                     string asm, string wbAsm, string suffix, string cstr = "">
+  : MVE_VLDRSTR_base<dir, 1, 1, W, 1, !con(wbops, dir.Oops),
+                     !con(dir.Iops, (ins mve_addr_q_shift<memsz.shift>:$addr)),
+                     asm, suffix, "$Qd, $addr" # wbAsm, cstr # dir.cstr> {
+  bits<11> addr;
+  let Inst{23} = addr{7};
+  let Inst{19-17} = addr{10-8};
+  let Inst{16} = 0;
+  let Inst{8} = memsz.encoding{0}; // enough to distinguish 32- from 64-bit
+  let Inst{7} = 0;
+  let Inst{6-0} = addr{6-0};
+}
+
+// Multiclass that generates the non-writeback and writeback variants.
+multiclass MVE_VLDRSTR_qi_m<MVE_ldst_direction dir, MVE_memsz memsz,
+                            string asm, string suffix> {
+  def ""   : MVE_VLDRSTR_qi<dir, memsz, 0, (outs),          asm, "",  suffix>;
+  def _pre : MVE_VLDRSTR_qi<dir, memsz, 1, (outs MQPR:$wb), asm, "!", suffix,
+                            "$addr.base = $wb"> {
+    let DecoderMethod="DecodeMVE_MEM_3_pre<"#memsz.shift#">";
+  }
+}
+
+// Actual instruction definitions.
+defm MVE_VLDRWU32_qi: MVE_VLDRSTR_qi_m<MVE_ld, MVE_memW, "vldrw", "u32">;
+defm MVE_VLDRDU64_qi: MVE_VLDRSTR_qi_m<MVE_ld, MVE_memD, "vldrd", "u64">;
+defm MVE_VSTRW32_qi:  MVE_VLDRSTR_qi_m<MVE_st, MVE_memW, "vstrw", "32">;
+defm MVE_VSTRD64_qi:  MVE_VLDRSTR_qi_m<MVE_st, MVE_memD, "vstrd", "64">;
+
+// Define aliases for all the instructions where memory size and
+// vector lane size are the same. These are mnemonic aliases, so they
+// apply consistently across all of the above families - contiguous
+// loads, and both the rq and qi types of gather/scatter.
+//
+// Rationale: As long as you're loading (for example) 16-bit memory
+// values into 16-bit vector lanes, you can think of them as signed or
+// unsigned integers, fp16 or just raw 16-bit blobs and it makes no
+// difference. So we permit all of vldrh.16, vldrh.u16, vldrh.s16,
+// vldrh.f16 and treat them all as equivalent to the canonical
+// spelling (which happens to be .u16 for loads, and just .16 for
+// stores).
+
+foreach vpt_cond = ["", "t", "e"] in
+foreach memsz = [MVE_memB, MVE_memH, MVE_memW, MVE_memD] in
+foreach suffix = memsz.suffixes in {
+
+  // These foreaches are conceptually ifs, implemented by iterating a
+  // dummy variable over a list with 0 or 1 elements depending on the
+  // condition. The idea is to iterate over _nearly_ all the suffixes
+  // in memsz.suffixes, but omit the one we want all the others to alias.
+
+  foreach _ = !if(!ne(suffix, memsz.CanonLoadSuffix), [1], []<int>) in
+  def : MnemonicAlias<
+    "vldr" # memsz.MnemonicLetter # vpt_cond # suffix,
+    "vldr" # memsz.MnemonicLetter # vpt_cond # memsz.CanonLoadSuffix>;
+
+  foreach _ = !if(!ne(suffix, memsz.CanonStoreSuffix), [1], []<int>) in
+  def : MnemonicAlias<
+    "vstr" # memsz.MnemonicLetter # vpt_cond # suffix,
+    "vstr" # memsz.MnemonicLetter # vpt_cond # memsz.CanonStoreSuffix>;
+}
+
+// end of MVE predicable load/store
+
 class MVE_VPT<string suffix, bits<2> size, dag iops, string asm, list<dag> pattern=[]>
   : MVE_MI<(outs ), iops, NoItinerary, !strconcat("vpt", "${Mk}", ".", suffix), asm, "", pattern> {
   bits<3> fc;
@@ -3420,4 +3894,230 @@ def MVE_VPST : MVE_MI<(outs ), (ins vpt_mask:$Mk), NoItinerary,
   let Unpredictable{5} = 0b1;
 
   let Defs = [P0];
+}
+
+def MVE_VPSEL : MVE_p<(outs MQPR:$Qd), (ins MQPR:$Qn, MQPR:$Qm), NoItinerary,
+                      "vpsel", "", "$Qd, $Qn, $Qm", vpred_n, "", []> {
+  bits<4> Qn;
+  bits<4> Qd;
+  bits<4> Qm;
+
+  let Inst{28} = 0b1;
+  let Inst{25-23} = 0b100;
+  let Inst{22} = Qd{3};
+  let Inst{21-20} = 0b11;
+  let Inst{19-17} = Qn{2-0};
+  let Inst{16} = 0b1;
+  let Inst{15-13} = Qd{2-0};
+  let Inst{12-9} = 0b0111;
+  let Inst{8} = 0b1;
+  let Inst{7} = Qn{3};
+  let Inst{6} = 0b0;
+  let Inst{5} = Qm{3};
+  let Inst{4} = 0b0;
+  let Inst{3-1} = Qm{2-0};
+  let Inst{0} = 0b1;
+}
+
+foreach suffix = ["s8", "s16", "s32", "u8", "u16", "u32",
+                  "i8", "i16", "i32",       "f16", "f32"] in
+def : MVEInstAlias<"vpsel${vp}." # suffix # "\t$Qd, $Qn, $Qm",
+                   (MVE_VPSEL MQPR:$Qd, MQPR:$Qn, MQPR:$Qm, vpred_n:$vp)>;
+
+def MVE_VPNOT : MVE_p<(outs), (ins), NoItinerary,
+                      "vpnot", "", "", vpred_n, "", []> {
+  let Inst{31-0} = 0b11111110001100010000111101001101;
+  let Unpredictable{19-17} = 0b111;
+  let Unpredictable{12} = 0b1;
+  let Unpredictable{7} = 0b1;
+  let Unpredictable{5} = 0b1;
+  let Defs = [P0];
+  let Uses = [P0];
+
+  let Constraints = "";
+}
+
+class MVE_loltp_start<dag iops, string asm, string ops, bits<2> size>
+  : t2LOL<(outs GPRlr:$LR), iops, asm, ops> {
+  bits<4> Rn;
+  let Predicates = [HasMVEInt];
+  let Inst{22} = 0b0;
+  let Inst{21-20} = size;
+  let Inst{19-16} = Rn{3-0};
+  let Inst{12} = 0b0;
+}
+
+class MVE_DLSTP<string asm, bits<2> size>
+  : MVE_loltp_start<(ins rGPR:$Rn), asm, "$LR, $Rn", size> {
+  let Inst{13} = 0b1;
+  let Inst{11-1} = 0b00000000000;
+  let Unpredictable{10-1} = 0b1111111111;
+}
+
+class MVE_WLSTP<string asm, bits<2> size>
+  : MVE_loltp_start<(ins rGPR:$Rn, wlslabel_u11:$label),
+                    asm, "$LR, $Rn, $label", size> {
+  bits<11> label;
+  let Inst{13} = 0b0;
+  let Inst{11} = label{0};
+  let Inst{10-1} = label{10-1};
+}
+
+def MVE_DLSTP_8  : MVE_DLSTP<"dlstp.8",  0b00>;
+def MVE_DLSTP_16 : MVE_DLSTP<"dlstp.16", 0b01>;
+def MVE_DLSTP_32 : MVE_DLSTP<"dlstp.32", 0b10>;
+def MVE_DLSTP_64 : MVE_DLSTP<"dlstp.64", 0b11>;
+
+def MVE_WLSTP_8  : MVE_WLSTP<"wlstp.8",  0b00>;
+def MVE_WLSTP_16 : MVE_WLSTP<"wlstp.16", 0b01>;
+def MVE_WLSTP_32 : MVE_WLSTP<"wlstp.32", 0b10>;
+def MVE_WLSTP_64 : MVE_WLSTP<"wlstp.64", 0b11>;
+
+class MVE_loltp_end<dag oops, dag iops, string asm, string ops>
+  : t2LOL<oops, iops, asm, ops> {
+  let Predicates = [HasMVEInt];
+  let Inst{22-21} = 0b00;
+  let Inst{19-16} = 0b1111;
+  let Inst{12} = 0b0;
+}
+
+def MVE_LETP : MVE_loltp_end<(outs GPRlr:$LRout),
+                             (ins GPRlr:$LRin, lelabel_u11:$label),
+                             "letp", "$LRin, $label"> {
+  bits<11> label;
+  let Inst{20} = 0b1;
+  let Inst{13} = 0b0;
+  let Inst{11} = label{0};
+  let Inst{10-1} = label{10-1};
+}
+
+def MVE_LCTP : MVE_loltp_end<(outs), (ins pred:$p), "lctp${p}", ""> {
+  let Inst{20} = 0b0;
+  let Inst{13} = 0b1;
+  let Inst{11-1} = 0b00000000000;
+  let Unpredictable{21-20} = 0b11;
+  let Unpredictable{11-1} = 0b11111111111;
+}
+
+
+//===----------------------------------------------------------------------===//
+// Patterns
+//===----------------------------------------------------------------------===//
+
+class MVE_unpred_vector_store_typed<ValueType Ty, Instruction RegImmInst,
+                                    PatFrag StoreKind, int shift>
+      : Pat<(StoreKind (Ty MQPR:$val), t2addrmode_imm7<shift>:$addr),
+           (RegImmInst (Ty MQPR:$val), t2addrmode_imm7<shift>:$addr)>;
+
+multiclass MVE_unpred_vector_store<Instruction RegImmInst, PatFrag StoreKind,
+                                   int shift> {
+  def : MVE_unpred_vector_store_typed<v16i8, RegImmInst, StoreKind, shift>;
+  def : MVE_unpred_vector_store_typed<v8i16, RegImmInst, StoreKind, shift>;
+  def : MVE_unpred_vector_store_typed<v8f16, RegImmInst, StoreKind, shift>;
+  def : MVE_unpred_vector_store_typed<v4i32, RegImmInst, StoreKind, shift>;
+  def : MVE_unpred_vector_store_typed<v4f32, RegImmInst, StoreKind, shift>;
+  def : MVE_unpred_vector_store_typed<v2i64, RegImmInst, StoreKind, shift>;
+}
+
+class MVE_unpred_vector_load_typed<ValueType Ty, Instruction RegImmInst,
+                                   PatFrag LoadKind, int shift>
+      : Pat<(Ty (LoadKind t2addrmode_imm7<shift>:$addr)),
+          (Ty (RegImmInst t2addrmode_imm7<shift>:$addr))>;
+multiclass MVE_unpred_vector_load<Instruction RegImmInst, PatFrag LoadKind,
+                                  int shift> {
+  def : MVE_unpred_vector_load_typed<v16i8, RegImmInst, LoadKind, shift>;
+  def : MVE_unpred_vector_load_typed<v8i16, RegImmInst, LoadKind, shift>;
+  def : MVE_unpred_vector_load_typed<v8f16, RegImmInst, LoadKind, shift>;
+  def : MVE_unpred_vector_load_typed<v4i32, RegImmInst, LoadKind, shift>;
+  def : MVE_unpred_vector_load_typed<v4f32, RegImmInst, LoadKind, shift>;
+  def : MVE_unpred_vector_load_typed<v2i64, RegImmInst, LoadKind, shift>;
+}
+
+let Predicates = [HasMVEInt, IsLE] in {
+  defm : MVE_unpred_vector_store<MVE_VSTRBU8, byte_alignedstore, 0>;
+  defm : MVE_unpred_vector_store<MVE_VSTRHU16, hword_alignedstore, 1>;
+  defm : MVE_unpred_vector_store<MVE_VSTRWU32, alignedstore32, 2>;
+
+  defm : MVE_unpred_vector_load<MVE_VLDRBU8, byte_alignedload, 0>;
+  defm : MVE_unpred_vector_load<MVE_VLDRHU16, hword_alignedload, 1>;
+  defm : MVE_unpred_vector_load<MVE_VLDRWU32, alignedload32, 2>;
+
+  def  : Pat<(v16i1 (load t2addrmode_imm7<2>:$addr)),
+             (v16i1 (VLDR_P0_off t2addrmode_imm7<2>:$addr))>;
+  def  : Pat<(v8i1 (load t2addrmode_imm7<2>:$addr)),
+             (v8i1 (VLDR_P0_off t2addrmode_imm7<2>:$addr))>;
+  def  : Pat<(v4i1 (load t2addrmode_imm7<2>:$addr)),
+             (v4i1 (VLDR_P0_off t2addrmode_imm7<2>:$addr))>;
+}
+
+let Predicates = [HasMVEInt, IsBE] in {
+  def : MVE_unpred_vector_store_typed<v16i8, MVE_VSTRBU8, store, 0>;
+  def : MVE_unpred_vector_store_typed<v8i16, MVE_VSTRHU16, alignedstore16, 1>;
+  def : MVE_unpred_vector_store_typed<v8f16, MVE_VSTRHU16, alignedstore16, 1>;
+  def : MVE_unpred_vector_store_typed<v4i32, MVE_VSTRWU32, alignedstore32, 2>;
+  def : MVE_unpred_vector_store_typed<v4f32, MVE_VSTRWU32, alignedstore32, 2>;
+
+  def : MVE_unpred_vector_load_typed<v16i8, MVE_VLDRBU8, load, 0>;
+  def : MVE_unpred_vector_load_typed<v8i16, MVE_VLDRHU16, alignedload16, 1>;
+  def : MVE_unpred_vector_load_typed<v8f16, MVE_VLDRHU16, alignedload16, 1>;
+  def : MVE_unpred_vector_load_typed<v4i32, MVE_VLDRWU32, alignedload32, 2>;
+  def : MVE_unpred_vector_load_typed<v4f32, MVE_VLDRWU32, alignedload32, 2>;
+}
+
+// Bit convert patterns
+
+let Predicates = [HasMVEInt] in {
+  def : Pat<(v2f64 (bitconvert (v2i64 QPR:$src))), (v2f64 QPR:$src)>;
+  def : Pat<(v2i64 (bitconvert (v2f64 QPR:$src))), (v2i64 QPR:$src)>;
+
+  def : Pat<(v4i32 (bitconvert (v4f32 QPR:$src))), (v4i32 QPR:$src)>;
+  def : Pat<(v4f32 (bitconvert (v4i32 QPR:$src))), (v4f32 QPR:$src)>;
+
+  def : Pat<(v8i16 (bitconvert (v8f16 QPR:$src))), (v8i16  QPR:$src)>;
+  def : Pat<(v8f16 (bitconvert (v8i16 QPR:$src))), (v8f16  QPR:$src)>;
+}
+
+let Predicates = [IsLE,HasMVEInt] in {
+  def : Pat<(v2f64 (bitconvert (v4f32 QPR:$src))), (v2f64 QPR:$src)>;
+  def : Pat<(v2f64 (bitconvert (v4i32 QPR:$src))), (v2f64 QPR:$src)>;
+  def : Pat<(v2f64 (bitconvert (v8f16 QPR:$src))), (v2f64 QPR:$src)>;
+  def : Pat<(v2f64 (bitconvert (v8i16 QPR:$src))), (v2f64 QPR:$src)>;
+  def : Pat<(v2f64 (bitconvert (v16i8 QPR:$src))), (v2f64 QPR:$src)>;
+
+  def : Pat<(v2i64 (bitconvert (v4f32 QPR:$src))), (v2i64 QPR:$src)>;
+  def : Pat<(v2i64 (bitconvert (v4i32 QPR:$src))), (v2i64 QPR:$src)>;
+  def : Pat<(v2i64 (bitconvert (v8f16 QPR:$src))), (v2i64 QPR:$src)>;
+  def : Pat<(v2i64 (bitconvert (v8i16 QPR:$src))), (v2i64 QPR:$src)>;
+  def : Pat<(v2i64 (bitconvert (v16i8 QPR:$src))), (v2i64 QPR:$src)>;
+
+  def : Pat<(v4f32 (bitconvert (v2f64 QPR:$src))), (v4f32 QPR:$src)>;
+  def : Pat<(v4f32 (bitconvert (v2i64 QPR:$src))), (v4f32 QPR:$src)>;
+  def : Pat<(v4f32 (bitconvert (v8f16 QPR:$src))), (v4f32 QPR:$src)>;
+  def : Pat<(v4f32 (bitconvert (v8i16 QPR:$src))), (v4f32 QPR:$src)>;
+  def : Pat<(v4f32 (bitconvert (v16i8 QPR:$src))), (v4f32 QPR:$src)>;
+
+  def : Pat<(v4i32 (bitconvert (v2f64 QPR:$src))), (v4i32 QPR:$src)>;
+  def : Pat<(v4i32 (bitconvert (v2i64 QPR:$src))), (v4i32 QPR:$src)>;
+  def : Pat<(v4i32 (bitconvert (v8f16 QPR:$src))), (v4i32 QPR:$src)>;
+  def : Pat<(v4i32 (bitconvert (v8i16 QPR:$src))), (v4i32 QPR:$src)>;
+  def : Pat<(v4i32 (bitconvert (v16i8 QPR:$src))), (v4i32 QPR:$src)>;
+
+  def : Pat<(v8f16 (bitconvert (v2f64 QPR:$src))), (v8f16 QPR:$src)>;
+  def : Pat<(v8f16 (bitconvert (v2i64 QPR:$src))), (v8f16 QPR:$src)>;
+  def : Pat<(v8f16 (bitconvert (v4f32 QPR:$src))), (v8f16 QPR:$src)>;
+  def : Pat<(v8f16 (bitconvert (v4i32 QPR:$src))), (v8f16 QPR:$src)>;
+  def : Pat<(v8f16 (bitconvert (v16i8 QPR:$src))), (v8f16 QPR:$src)>;
+
+  def : Pat<(v8i16 (bitconvert (v2f64 QPR:$src))), (v8i16 QPR:$src)>;
+  def : Pat<(v8i16 (bitconvert (v2i64 QPR:$src))), (v8i16 QPR:$src)>;
+  def : Pat<(v8i16 (bitconvert (v4f32 QPR:$src))), (v8i16 QPR:$src)>;
+  def : Pat<(v8i16 (bitconvert (v4i32 QPR:$src))), (v8i16 QPR:$src)>;
+  def : Pat<(v8i16 (bitconvert (v16i8 QPR:$src))), (v8i16 QPR:$src)>;
+
+  def : Pat<(v16i8 (bitconvert (v2f64 QPR:$src))), (v16i8 QPR:$src)>;
+  def : Pat<(v16i8 (bitconvert (v2i64 QPR:$src))), (v16i8 QPR:$src)>;
+  def : Pat<(v16i8 (bitconvert (v4f32 QPR:$src))), (v16i8 QPR:$src)>;
+  def : Pat<(v16i8 (bitconvert (v4i32 QPR:$src))), (v16i8 QPR:$src)>;
+  def : Pat<(v16i8 (bitconvert (v8f16 QPR:$src))), (v16i8 QPR:$src)>;
+  def : Pat<(v16i8 (bitconvert (v8i16 QPR:$src))), (v16i8 QPR:$src)>;
 }

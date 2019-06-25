@@ -158,10 +158,13 @@ int foo(int n, double *ptr) {
   // CHECK:  store i{{[0-9]+}} [[A2VAL]], i{{[0-9]+}}* [[A2CASTCONV]],
   // CHECK:  [[A2CAST_VAL:%.+]] = load i{{[0-9]+}}, i{{[0-9]+}}* [[A2CAST]],
   // CHECK-64:  [[BN_SIZE:%.+]] = mul{{.+}} i{{[0-9]+}} [[N_EXT]], 4
-  // CHECK-32:  [[BN_SIZE:%.+]] = mul{{.+}} i{{[0-9]+}} [[N_ADDR_VAL]], 4
+  // CHECK-32:  [[BN_SZ_SIZE:%.+]] = mul{{.+}} i{{[0-9]+}} [[N_ADDR_VAL]], 4
+  // CHECK-32:  [[BN_SIZE:%.+]] = sext i32 [[BN_SZ_SIZE]] to i64
   // CHECK-64:  [[CN_SIZE_1:%.+]] = mul{{.+}} i{{[0-9]+}} 5, [[N_EXT2]]
   // CHECK-32:  [[CN_SIZE_1:%.+]] = mul{{.+}} i{{[0-9]+}} 5, [[N_ADDR_VAL2]]
-  // CHECK:  [[CN_SIZE_2:%.+]] = mul{{.+}} i{{[0-9]+}} [[CN_SIZE_1]], 8
+  // CHECK-64:  [[CN_SIZE_2:%.+]] = mul{{.+}} i{{[0-9]+}} [[CN_SIZE_1]], 8
+  // CHECK-32:  [[CN_SZ_SIZE_2:%.+]] = mul{{.+}} i{{[0-9]+}} [[CN_SIZE_1]], 8
+  // CHECK-32:  [[CN_SIZE_2:%.+]] = sext i32 [[CN_SZ_SIZE_2]] to i64
 
   // firstprivate(aa) --> base_ptr = aa, ptr = aa, size = 2 (short)
   // CHECK:  [[BASE_PTR_GEP2_0:%.+]] = getelementptr inbounds [9 x i8*], [9 x i8*]* [[BASE_PTR_ARR2]], i{{[0-9]+}} 0, i{{[0-9]+}} 0

@@ -142,7 +142,15 @@ public:
   E() {}
 protected:
   void ProtectedMethod();
-};)raw", 3, /*Public=*/false, Infos);
+};
+template <typename T>
+struct F {
+  void TemplateMethod();
+};
+template <>
+void F<int>::TemplateMethod();
+typedef struct {} G;)raw",
+                       7, /*Public=*/false, Infos);
 
   RecordInfo *E = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedE(EmptySID, "E");
@@ -176,6 +184,51 @@ protected:
   Method.IsMethod = true;
   ExpectedRecordWithMethod.ChildFunctions.emplace_back(std::move(Method));
   CheckRecordInfo(&ExpectedRecordWithMethod, RecordWithMethod);
+
+  RecordInfo *F = InfoAsRecord(Infos[3].get());
+  RecordInfo ExpectedF(EmptySID, "F");
+  ExpectedF.TagType = TagTypeKind::TTK_Struct;
+  ExpectedF.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
+  CheckRecordInfo(&ExpectedF, F);
+
+  RecordInfo *RecordWithTemplateMethod = InfoAsRecord(Infos[4].get());
+  RecordInfo ExpectedRecordWithTemplateMethod(EmptySID);
+  FunctionInfo TemplateMethod;
+  TemplateMethod.Name = "TemplateMethod";
+  TemplateMethod.Parent = Reference(EmptySID, "F", InfoType::IT_record);
+  TemplateMethod.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
+  TemplateMethod.Loc.emplace_back(0, llvm::SmallString<16>{"test.cpp"});
+  TemplateMethod.Namespace.emplace_back(EmptySID, "F", InfoType::IT_record);
+  TemplateMethod.Access = AccessSpecifier::AS_public;
+  TemplateMethod.IsMethod = true;
+  ExpectedRecordWithTemplateMethod.ChildFunctions.emplace_back(
+      std::move(TemplateMethod));
+  CheckRecordInfo(&ExpectedRecordWithTemplateMethod, RecordWithTemplateMethod);
+
+  RecordInfo *TemplatedRecord = InfoAsRecord(Infos[5].get());
+  RecordInfo ExpectedTemplatedRecord(EmptySID);
+  FunctionInfo SpecializedTemplateMethod;
+  SpecializedTemplateMethod.Name = "TemplateMethod";
+  SpecializedTemplateMethod.Parent =
+      Reference(EmptySID, "F", InfoType::IT_record);
+  SpecializedTemplateMethod.ReturnType =
+      TypeInfo(EmptySID, "void", InfoType::IT_default);
+  SpecializedTemplateMethod.Loc.emplace_back(0,
+                                             llvm::SmallString<16>{"test.cpp"});
+  SpecializedTemplateMethod.Namespace.emplace_back(EmptySID, "F",
+                                                   InfoType::IT_record);
+  SpecializedTemplateMethod.Access = AccessSpecifier::AS_public;
+  SpecializedTemplateMethod.IsMethod = true;
+  ExpectedTemplatedRecord.ChildFunctions.emplace_back(
+      std::move(SpecializedTemplateMethod));
+  CheckRecordInfo(&ExpectedTemplatedRecord, TemplatedRecord);
+
+  RecordInfo *G = InfoAsRecord(Infos[6].get());
+  RecordInfo ExpectedG(EmptySID, "G");
+  ExpectedG.TagType = TagTypeKind::TTK_Struct;
+  ExpectedG.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
+  ExpectedG.IsTypeDef = true;
+  CheckRecordInfo(&ExpectedG, G);
 }
 
 // Test serialization of enum declarations.
@@ -284,9 +337,13 @@ TEST(SerializeTest, emitInlinedFunctionInfo) {
 
 TEST(SerializeTest, emitInheritedRecordInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode(
-      "class F {}; class G{} ; class E : public F, virtual private G {};", 3,
-      /*Public=*/false, Infos);
+  ExtractInfosFromCode(R"raw(class F {};
+class G {} ;
+class E : public F, virtual private G {};
+template <typename T>
+class H {} ;
+class I : public H<int> {} ;)raw",
+                       5, /*Public=*/false, Infos);
 
   RecordInfo *F = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedF(EmptySID, "F");
@@ -307,6 +364,19 @@ TEST(SerializeTest, emitInheritedRecordInfo) {
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedE.TagType = TagTypeKind::TTK_Class;
   CheckRecordInfo(&ExpectedE, E);
+
+  RecordInfo *H = InfoAsRecord(Infos[3].get());
+  RecordInfo ExpectedH(EmptySID, "H");
+  ExpectedH.TagType = TagTypeKind::TTK_Class;
+  ExpectedH.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
+  CheckRecordInfo(&ExpectedH, H);
+
+  RecordInfo *I = InfoAsRecord(Infos[4].get());
+  RecordInfo ExpectedI(EmptySID, "I");
+  ExpectedI.Parents.emplace_back(EmptySID, "H<int>", InfoType::IT_record);
+  ExpectedI.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
+  ExpectedI.TagType = TagTypeKind::TTK_Class;
+  CheckRecordInfo(&ExpectedI, I);
 }
 
 TEST(SerializeTest, emitModulePublicLFunctions) {

@@ -22,9 +22,25 @@
 # STATIC-EMPTY:
 # STATIC-NEXT: 0000000000001002 only_static:
 # CHECK-NEXT:      1002:
+# DYN-EMPTY:
+# DYN-NEXT:    0000000000001003 object:
 # CHECK-NEXT:      1003:
+# DYN-EMPTY:
+# DYN-NEXT:    0000000000001004 zero_sized:
 # CHECK-NEXT:      1004:
-# CHECK-NEXT:      1005:{{.*}}
+# DYN-EMPTY:
+# DYN-NEXT:    0000000000001005 common:
+# CHECK-NEXT:      1005:
+# DYN-EMPTY:
+# DYN-NEXT:    0000000000001006 loos:
+# CHECK-NEXT:      1006:
+# DYN-EMPTY:
+# DYN-NEXT:    0000000000001007 loproc:
+# CHECK-NEXT:      1007:
+# CHECK-NEXT:      1008:
+# CHECK-NEXT:      1009:
+# CHECK-NEXT:      100a:
+# CHECK-NEXT:      100b:{{.*}}
 # CHECK-NOT:   {{.}}
 
 --- !ELF
@@ -38,7 +54,7 @@ Sections:
     Type:    SHT_PROGBITS
     Flags:   [SHF_ALLOC, SHF_EXECINSTR]
     Address: 0x1000
-    Content: 909090909090
+    Content: 909090909090909090909090
 ProgramHeaders:
   - Type: PT_LOAD
     VAddr: 0x1000
@@ -64,14 +80,12 @@ DynamicSymbols:
     Value:   0x1001
     Section: .text
     Size:    1
-    Type:    STT_FUNC
+    Type:    STT_NOTYPE
     Binding: STB_GLOBAL
-  ## The rest of the dynamic symbols won't be used for various reasons.
-  ## FIXME: the first two symbols here should be dumped.
-  ##        See https://bugs.llvm.org/show_bug.cgi?id=41947
-  - Name:    not_func
+  - Name:    object
     Value:   0x1003
     Section: .text
+    Size:    1
     Type:    STT_OBJECT
     Binding: STB_GLOBAL
   - Name:    zero_sized
@@ -79,20 +93,45 @@ DynamicSymbols:
     Section: .text
     Type:    STT_FUNC
     Binding: STB_GLOBAL
-  - Name:    '' # No name
+  - Name:    common
     Value:   0x1005
+    Section: .text
+    Size:    1
+    Type:    STT_COMMON
+    Binding: STB_GLOBAL
+  - Name:    loos
+    Value:   0x1006
+    Section: .text
+    Size:    1
+    Type:    10
+    Binding: STB_GLOBAL
+  - Name:    loproc
+    Value:   0x1007
+    Section: .text
+    Size:    1
+    Type:    13
+    Binding: STB_GLOBAL
+  ## The rest of the dynamic symbols won't be used for various reasons.
+  - Name:    section
+    Value:   0x1008
+    Section: .text
+    Size:    1
+    Type:    STT_SECTION
+    Binding: STB_GLOBAL
+  - Name:    '' # No name
+    Value:   0x1009
     Section: .text
     Size:    1
     Type:    STT_FUNC
     Binding: STB_GLOBAL
   - Name:    absolute
-    Value:   0x1005
+    Value:   0x100a
     Index:   SHN_ABS
     Size:    1
     Type:    STT_FUNC
     Binding: STB_GLOBAL
   - Name:    undefined
-    Value:   0x1005
+    Value:   0x100b
     Index:   SHN_UNDEF
     Size:    1
     Type:    STT_FUNC

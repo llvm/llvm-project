@@ -2388,9 +2388,11 @@ static bool handleIntIntBinOp(EvalInfo &Info, const Expr *E, const APSInt &LHS,
     if (SA != RHS) {
       Info.CCEDiag(E, diag::note_constexpr_large_shift)
         << RHS << E->getType() << LHS.getBitWidth();
-    } else if (LHS.isSigned()) {
+    } else if (LHS.isSigned() && !Info.getLangOpts().CPlusPlus2a) {
       // C++11 [expr.shift]p2: A signed left shift must have a non-negative
       // operand, and must not overflow the corresponding unsigned type.
+      // C++2a [expr.shift]p2: E1 << E2 is the unique value congruent to
+      // E1 x 2^E2 module 2^N.
       if (LHS.isNegative())
         Info.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS;
       else if (LHS.countLeadingZeros() < SA)

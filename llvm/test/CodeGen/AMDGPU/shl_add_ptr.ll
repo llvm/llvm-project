@@ -33,7 +33,11 @@ define amdgpu_kernel void @load_shl_base_lds_0(float addrspace(1)* %out, i32 add
 ; remaining add use goes through the normal shl + add constant fold.
 
 ; GCN-LABEL: {{^}}load_shl_base_lds_1:
-; GCN: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
+; GCN: v_lshlrev_b32_e32 [[OFS:v[0-9]+]], 2, {{v[0-9]+}}
+
+; TODO: integrate into the ds_read_b32 offset using a 16-bit relocation
+; GCN: v_add_{{[iu]}}32_e32 [[PTR:v[0-9]+]], vcc, lds0@abs32@lo, [[OFS]]
+
 ; GCN: ds_read_b32 [[RESULT:v[0-9]+]], [[PTR]] offset:8
 ; GCN: v_add_{{[iu]}}32_e32 [[ADDUSE:v[0-9]+]], vcc, 8, v{{[0-9]+}}
 ; GCN-DAG: buffer_store_dword [[RESULT]]
@@ -68,10 +72,18 @@ define amdgpu_kernel void @load_shl_base_lds_max_offset(i8 addrspace(1)* %out, i
 ; The two globals are placed adjacent in memory, so the same base
 ; pointer can be used with an offset into the second one.
 
+; TODO: Recover the optimization of using ds_read2st64_b32 using alignment hints
+
 ; GCN-LABEL: {{^}}load_shl_base_lds_2:
-; GCN: v_lshlrev_b32_e32 [[PTR:v[0-9]+]], 2, {{v[0-9]+}}
+; GCN: v_lshlrev_b32_e32 [[OFS:v[0-9]+]], 2, {{v[0-9]+}}
+; GCN-DAG: v_add_{{[iu]}}32_e32 [[PTR0:v[0-9]+]], vcc, lds0@abs32@lo, [[OFS]]
+; GCN-DAG: v_add_{{[iu]}}32_e32 [[PTR1:v[0-9]+]], vcc, lds1@abs32@lo, [[OFS]]
 ; GCN: s_mov_b32 m0, -1
-; GCN-NEXT: ds_read2st64_b32 {{v\[[0-9]+:[0-9]+\]}}, [[PTR]] offset0:1 offset1:9
+
+; GCN-DAG: ds_read_b32 {{v[0-9]+}}, [[PTR0]] offset:256
+; GCN-DAG: ds_read_b32 {{v[0-9]+}}, [[PTR1]] offset:256
+; TODO: ds_read2st64_b32 {{v\[[0-9]+:[0-9]+\]}}, [[PTR]] offset0:1 offset1:9
+
 ; GCN: s_endpgm
 define amdgpu_kernel void @load_shl_base_lds_2(float addrspace(1)* %out) #0 {
   %tid.x = tail call i32 @llvm.amdgcn.workitem.id.x() #1

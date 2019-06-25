@@ -50,7 +50,7 @@ struct FoldCandidate {
     } else if (FoldOp->isFI()) {
       FrameIndexToFold = FoldOp->getIndex();
     } else {
-      assert(FoldOp->isReg());
+      assert(FoldOp->isReg() || FoldOp->isGlobal());
       OpToFold = FoldOp;
     }
   }
@@ -66,6 +66,8 @@ struct FoldCandidate {
   bool isReg() const {
     return Kind == MachineOperand::MO_Register;
   }
+
+  bool isGlobal() const { return Kind == MachineOperand::MO_GlobalAddress; }
 
   bool isCommuted() const {
     return Commuted;
@@ -230,7 +232,7 @@ static bool updateOperand(FoldCandidate &Fold,
     }
   }
 
-  if ((Fold.isImm() || Fold.isFI()) && Fold.needsShrink()) {
+  if ((Fold.isImm() || Fold.isFI() || Fold.isGlobal()) && Fold.needsShrink()) {
     MachineBasicBlock *MBB = MI->getParent();
     auto Liveness = MBB->computeRegisterLiveness(&TRI, AMDGPU::VCC, MI);
     if (Liveness != MachineBasicBlock::LQR_Dead)
@@ -274,6 +276,12 @@ static bool updateOperand(FoldCandidate &Fold,
 
   if (Fold.isImm()) {
     Old.ChangeToImmediate(Fold.ImmToFold);
+    return true;
+  }
+
+  if (Fold.isGlobal()) {
+    Old.ChangeToGA(Fold.OpToFold->getGlobal(), Fold.OpToFold->getOffset(),
+                   Fold.OpToFold->getTargetFlags());
     return true;
   }
 
@@ -368,7 +376,7 @@ static bool tryAddToFoldList(SmallVectorImpl<FoldCandidate> &FoldList,
       if ((Opc == AMDGPU::V_ADD_I32_e64 ||
            Opc == AMDGPU::V_SUB_I32_e64 ||
            Opc == AMDGPU::V_SUBREV_I32_e64) && // FIXME
-          (OpToFold->isImm() || OpToFold->isFI())) {
+          (OpToFold->isImm() || OpToFold->isFI() || OpToFold->isGlobal())) {
         MachineRegisterInfo &MRI = MI->getParent()->getParent()->getRegInfo();
 
         // Verify the other operand is a VGPR, otherwise we would violate the
@@ -483,7 +491,8 @@ void SIFoldOperands::foldOperand(
     return;
   }
 
-  bool FoldingImmLike = OpToFold.isImm() || OpToFold.isFI();
+  bool FoldingImmLike =
+      OpToFold.isImm() || OpToFold.isFI() || OpToFold.isGlobal();
 
   if (FoldingImmLike && UseMI->isCopy()) {
     unsigned DestReg = UseMI->getOperand(0).getReg();
@@ -884,7 +893,7 @@ void SIFoldOperands::foldInstOperand(MachineInstr &MI,
   SmallVector<FoldCandidate, 4> FoldList;
   MachineOperand &Dst = MI.getOperand(0);
 
-  bool FoldingImm = OpToFold.isImm() || OpToFold.isFI();
+  bool FoldingImm = OpToFold.isImm() || OpToFold.isFI() || OpToFold.isGlobal();
   if (FoldingImm) {
     unsigned NumLiteralUses = 0;
     MachineOperand *NonInlineUse = nullptr;
@@ -1232,7 +1241,8 @@ bool SIFoldOperands::runOnMachineFunction(MachineFunction &MF) {
       }
 
       MachineOperand &OpToFold = MI.getOperand(1);
-      bool FoldingImm = OpToFold.isImm() || OpToFold.isFI();
+      bool FoldingImm =
+          OpToFold.isImm() || OpToFold.isFI() || OpToFold.isGlobal();
 
       // FIXME: We could also be folding things like TargetIndexes.
       if (!FoldingImm && !OpToFold.isReg())

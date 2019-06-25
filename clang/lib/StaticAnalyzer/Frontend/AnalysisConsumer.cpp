@@ -196,7 +196,9 @@ public:
 
   /// Time the analyzes time of each translation unit.
   std::unique_ptr<llvm::TimerGroup> AnalyzerTimers;
-  std::unique_ptr<llvm::Timer> TUTotalTimer;
+  std::unique_ptr<llvm::Timer> SyntaxCheckTimer;
+  std::unique_ptr<llvm::Timer> ExprEngineTimer;
+  std::unique_ptr<llvm::Timer> BugReporterTimer;
 
   /// The information about analyzed functions shared throughout the
   /// translation unit.
@@ -212,8 +214,13 @@ public:
     if (Opts->PrintStats || Opts->ShouldSerializeStats) {
       AnalyzerTimers = llvm::make_unique<llvm::TimerGroup>(
           "analyzer", "Analyzer timers");
-      TUTotalTimer = llvm::make_unique<llvm::Timer>(
-          "time", "Analyzer total time", *AnalyzerTimers);
+      SyntaxCheckTimer = llvm::make_unique<llvm::Timer>(
+          "syntaxchecks", "Syntax-based analysis time", *AnalyzerTimers);
+      ExprEngineTimer = llvm::make_unique<llvm::Timer>(
+          "exprengine", "Path exploration time", *AnalyzerTimers);
+      BugReporterTimer = llvm::make_unique<llvm::Timer>(
+          "bugreporter", "Path-sensitive report post-processing time",
+          *AnalyzerTimers);
       llvm::EnableStatistics(/* PrintOnExit= */ false);
     }
   }
@@ -346,8 +353,13 @@ public:
   /// Handle callbacks for arbitrary Decls.
   bool VisitDecl(Decl *D) {
     AnalysisMode Mode = getModeForDecl(D, RecVisitorMode);
-    if (Mode & AM_Syntax)
+    if (Mode & AM_Syntax) {
+      if (SyntaxCheckTimer)
+        SyntaxCheckTimer->startTimer();
       checkerMgr->runCheckersOnASTDecl(D, *Mgr, *RecVisitorBR);
+      if (SyntaxCheckTimer)
+        SyntaxCheckTimer->stopTimer();
+    }
     return true;
   }
 
@@ -566,7 +578,11 @@ static bool isBisonFile(ASTContext &C) {
 void AnalysisConsumer::runAnalysisOnTranslationUnit(ASTContext &C) {
   BugReporter BR(*Mgr);
   TranslationUnitDecl *TU = C.getTranslationUnitDecl();
+  if (SyntaxCheckTimer)
+    SyntaxCheckTimer->startTimer();
   checkerMgr->runCheckersOnASTDecl(TU, *Mgr, BR);
+  if (SyntaxCheckTimer)
+    SyntaxCheckTimer->stopTimer();
 
   // Run the AST-only checks using the order in which functions are defined.
   // If inlining is not turned on, use the simplest function order for path
@@ -608,8 +624,6 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
   if (Diags.hasErrorOccurred() || Diags.hasFatalErrorOccurred())
     return;
 
-  if (TUTotalTimer) TUTotalTimer->startTimer();
-
   if (isBisonFile(C)) {
     reportAnalyzerProgress("Skipping bison-generated file\n");
   } else if (Opts->DisableAllChecks) {
@@ -621,8 +635,6 @@ void AnalysisConsumer::HandleTranslationUnit(ASTContext &C) {
     // Otherwise, just run the analysis.
     runAnalysisOnTranslationUnit(C);
   }
-
-  if (TUTotalTimer) TUTotalTimer->stopTimer();
 
   // Count how many basic blocks we have not covered.
   NumBlocksInAnalyzedFunctions = FunctionSummaries.getTotalNumBasicBlocks();
@@ -747,8 +759,13 @@ void AnalysisConsumer::HandleCode(Decl *D, AnalysisMode Mode,
 
   BugReporter BR(*Mgr);
 
-  if (Mode & AM_Syntax)
+  if (Mode & AM_Syntax) {
+    if (SyntaxCheckTimer)
+      SyntaxCheckTimer->startTimer();
     checkerMgr->runCheckersOnASTBody(D, *Mgr, BR);
+    if (SyntaxCheckTimer)
+      SyntaxCheckTimer->stopTimer();
+  }
   if ((Mode & AM_Path) && checkerMgr->hasPathSensitiveCheckers()) {
     RunPathSensitiveChecks(D, IMode, VisitedCallees);
     if (IMode != ExprEngine::Inline_Minimal)
@@ -775,8 +792,12 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
   ExprEngine Eng(CTU, *Mgr, VisitedCallees, &FunctionSummaries, IMode);
 
   // Execute the worklist algorithm.
+  if (ExprEngineTimer)
+    ExprEngineTimer->startTimer();
   Eng.ExecuteWorkList(Mgr->getAnalysisDeclContextManager().getStackFrame(D),
                       Mgr->options.MaxNodesPerTopLevelFunction);
+  if (ExprEngineTimer)
+    ExprEngineTimer->stopTimer();
 
   if (!Mgr->options.DumpExplodedGraphTo.empty())
     Eng.DumpGraph(Mgr->options.TrimGraph, Mgr->options.DumpExplodedGraphTo);
@@ -786,7 +807,11 @@ void AnalysisConsumer::RunPathSensitiveChecks(Decl *D,
     Eng.ViewGraph(Mgr->options.TrimGraph);
 
   // Display warnings.
+  if (BugReporterTimer)
+    BugReporterTimer->startTimer();
   Eng.getBugReporter().FlushReports();
+  if (BugReporterTimer)
+    BugReporterTimer->stopTimer();
 }
 
 //===----------------------------------------------------------------------===//

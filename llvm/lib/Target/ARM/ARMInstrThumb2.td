@@ -212,31 +212,40 @@ def t2adrlabel : Operand<i32> {
 }
 
 // t2addrmode_posimm8  := reg + imm8
-def MemPosImm8OffsetAsmOperand : AsmOperandClass {let Name="MemPosImm8Offset";}
+def MemPosImm8OffsetAsmOperand : AsmOperandClass {
+  let Name="MemPosImm8Offset";
+  let RenderMethod = "addMemImmOffsetOperands";
+}
 def t2addrmode_posimm8 : MemOperand {
   let PrintMethod = "printT2AddrModeImm8Operand<false>";
-  let EncoderMethod = "getT2AddrModeImm8OpValue";
+  let EncoderMethod = "getT2AddrModeImmOpValue<8,0>";
   let DecoderMethod = "DecodeT2AddrModeImm8";
   let ParserMatchClass = MemPosImm8OffsetAsmOperand;
   let MIOperandInfo = (ops GPR:$base, i32imm:$offsimm);
 }
 
 // t2addrmode_negimm8  := reg - imm8
-def MemNegImm8OffsetAsmOperand : AsmOperandClass {let Name="MemNegImm8Offset";}
+def MemNegImm8OffsetAsmOperand : AsmOperandClass {
+  let Name="MemNegImm8Offset";
+  let RenderMethod = "addMemImmOffsetOperands";
+}
 def t2addrmode_negimm8 : MemOperand,
                       ComplexPattern<i32, 2, "SelectT2AddrModeImm8", []> {
   let PrintMethod = "printT2AddrModeImm8Operand<false>";
-  let EncoderMethod = "getT2AddrModeImm8OpValue";
+  let EncoderMethod = "getT2AddrModeImmOpValue<8,0>";
   let DecoderMethod = "DecodeT2AddrModeImm8";
   let ParserMatchClass = MemNegImm8OffsetAsmOperand;
   let MIOperandInfo = (ops GPR:$base, i32imm:$offsimm);
 }
 
 // t2addrmode_imm8  := reg +/- imm8
-def MemImm8OffsetAsmOperand : AsmOperandClass { let Name = "MemImm8Offset"; }
+def MemImm8OffsetAsmOperand : AsmOperandClass {
+  let Name = "MemImm8Offset";
+  let RenderMethod = "addMemImmOffsetOperands";
+}
 class T2AddrMode_Imm8 : MemOperand,
                         ComplexPattern<i32, 2, "SelectT2AddrModeImm8", []> {
-  let EncoderMethod = "getT2AddrModeImm8OpValue";
+  let EncoderMethod = "getT2AddrModeImmOpValue<8,0>";
   let DecoderMethod = "DecodeT2AddrModeImm8";
   let ParserMatchClass = MemImm8OffsetAsmOperand;
   let MIOperandInfo = (ops GPR:$base, i32imm:$offsimm);
@@ -363,8 +372,27 @@ def bflabel_u4  : BFLabelOp<"false", "false", "4",  "ARM::fixup_bf_branch">;
 def bflabel_s12 : BFLabelOp<"true",  "false", "12", "ARM::fixup_bfc_target">;
 def bflabel_s16 : BFLabelOp<"true",  "false", "16", "ARM::fixup_bf_target">;
 def bflabel_s18 : BFLabelOp<"true",  "false", "18", "ARM::fixup_bfl_target">;
-def wlslabel_u11 : BFLabelOp<"false", "false", "11", "ARM::fixup_wls">;
-def lelabel_u11 : BFLabelOp<"false", "true",  "11", "ARM::fixup_le">;
+
+def wlslabel_u11_asmoperand : AsmOperandClass {
+  let Name = "WLSLabel";
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isUnsignedOffset<11, 1>";
+  let DiagnosticString =
+    "loop end is out of range or not a positive multiple of 2";
+}
+def wlslabel_u11 : BFLabelOp<"false", "false", "11", "ARM::fixup_wls"> {
+  let ParserMatchClass = wlslabel_u11_asmoperand;
+}
+def lelabel_u11_asmoperand : AsmOperandClass {
+  let Name = "LELabel";
+  let RenderMethod = "addImmOperands";
+  let PredicateMethod = "isLEOffset";
+  let DiagnosticString =
+    "loop start is out of range or not a negative multiple of 2";
+}
+def lelabel_u11 : BFLabelOp<"false", "true",  "11", "ARM::fixup_le"> {
+  let ParserMatchClass = lelabel_u11_asmoperand;
+}
 
 def bfafter_target : Operand<OtherVT> {
     let EncoderMethod = "getBFAfterTargetOpValue";
@@ -5135,6 +5163,7 @@ class t2LOL<dag oops, dag iops, string asm, string ops>
   let Predicates = [IsThumb2, HasV8_1MMainline, HasLOB];
 }
 
+let isNotDuplicable = 1 in {
 def t2WLS : t2LOL<(outs GPRlr:$LR),
                   (ins rGPR:$Rn, wlslabel_u11:$label),
                   "wls", "$LR, $Rn, $label"> {
@@ -5177,6 +5206,21 @@ def t2LE : t2LOL<(outs ), (ins lelabel_u11:$label), "le", "$label"> {
   let Inst{11} = label{0};
   let Inst{10-1} = label{10-1};
 }
+
+def t2DoLoopStart :
+  t2PseudoInst<(outs), (ins rGPR:$elts), 4, IIC_Br,
+  [(int_set_loop_iterations rGPR:$elts)]>, Sched<[WriteBr]>;
+
+def t2LoopDec :
+  t2PseudoInst<(outs GPRlr:$Rm), (ins GPRlr:$Rn, imm0_7:$size),
+               4, IIC_Br, []>, Sched<[WriteBr]>;
+
+let isBranch = 1, isTerminator = 1, hasSideEffects = 1 in
+def t2LoopEnd :
+  t2PseudoInst<(outs), (ins GPRlr:$elts, brtarget:$target),
+  8, IIC_Br, []>, Sched<[WriteBr]>;
+
+} // end isNotDuplicable
 
 class CS<string iname, bits<4> opcode, list<dag> pattern=[]>
   : V8_1MI<(outs rGPR:$Rd), (ins GPRwithZR:$Rn, GPRwithZR:$Rm, pred_noal:$fcond),
