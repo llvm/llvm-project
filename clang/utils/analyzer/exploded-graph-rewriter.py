@@ -409,6 +409,24 @@ class DotDumpVisitor(object):
 
         self._dump('</table>')
 
+    def visit_environment_in_state(self, s, prev_s=None):
+        self._dump('<tr><td align="left">'
+                   '<b>Environment: </b>')
+        if s.environment is None:
+            self._dump('<i> Nothing!</i>')
+        else:
+            if prev_s is not None and prev_s.environment is not None:
+                if s.environment.is_different(prev_s.environment):
+                    self._dump('</td></tr><tr><td align="left">')
+                    self.visit_environment(s.environment, prev_s.environment)
+                else:
+                    self._dump('<i> No changes!</i>')
+            else:
+                self._dump('</td></tr><tr><td align="left">')
+                self.visit_environment(s.environment)
+
+        self._dump('</td></tr>')
+
     def visit_store(self, s, prev_s=None):
         self._dump('<table border="0">')
 
@@ -447,8 +465,7 @@ class DotDumpVisitor(object):
 
         self._dump('</table>')
 
-    def visit_state(self, s, prev_s):
-        # == Store ==
+    def visit_store_in_state(self, s, prev_s=None):
         self._dump('<tr><td align="left"><b>Store: </b>')
         if s.store is None:
             self._dump('<i> Nothing!</i>')
@@ -464,23 +481,9 @@ class DotDumpVisitor(object):
                 self.visit_store(s.store)
         self._dump('</td></tr><hr />')
 
-        # == Environment ==
-        self._dump('<tr><td align="left">'
-                   '<b>Environment: </b>')
-        if s.environment is None:
-            self._dump('<i> Nothing!</i>')
-        else:
-            if prev_s is not None and prev_s.environment is not None:
-                if s.environment.is_different(prev_s.environment):
-                    self._dump('</td></tr><tr><td align="left">')
-                    self.visit_environment(s.environment, prev_s.environment)
-                else:
-                    self._dump('<i> No changes!</i>')
-            else:
-                self._dump('</td></tr><tr><td align="left">')
-                self.visit_environment(s.environment)
-
-        self._dump('</td></tr>')
+    def visit_state(self, s, prev_s):
+        self.visit_store_in_state(s, prev_s)
+        self.visit_environment_in_state(s, prev_s)
 
     def visit_node(self, node):
         self._dump('%s [shape=record,label=<<table border="0">'
