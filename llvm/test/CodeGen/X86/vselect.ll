@@ -640,3 +640,51 @@ define void @vselect_allzeros_LHS_multiple_use_setcc(<4 x i32> %x, <4 x i32> %y,
   store <4 x i32> %sel2, <4 x i32>* %p2
   ret void
 }
+
+; This test case previously crashed after r363802, r363850, and r363856 due
+; any_extend_vector_inreg not being handled by the X86 backend.
+define i64 @vselect_any_extend_vector_inreg_crash(<8 x i8>* %x) {
+; SSE2-LABEL: vselect_any_extend_vector_inreg_crash:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE2-NEXT:    pcmpeqw {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,0,3]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,6,7]
+; SSE2-NEXT:    psllq $56, %xmm0
+; SSE2-NEXT:    psrad $24, %xmm0
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    movq %xmm0, %rax
+; SSE2-NEXT:    andl $32768, %eax # imm = 0x8000
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: vselect_any_extend_vector_inreg_crash:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; SSE41-NEXT:    pcmpeqw {{.*}}(%rip), %xmm0
+; SSE41-NEXT:    pmovzxwq {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; SSE41-NEXT:    psllq $56, %xmm0
+; SSE41-NEXT:    movl $32768, %eax # imm = 0x8000
+; SSE41-NEXT:    movq %rax, %xmm1
+; SSE41-NEXT:    xorpd %xmm2, %xmm2
+; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
+; SSE41-NEXT:    movq %xmm2, %rax
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: vselect_any_extend_vector_inreg_crash:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovzxbw {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX-NEXT:    vpcmpeqw {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpmovsxwq %xmm0, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    andl $32768, %eax # imm = 0x8000
+; AVX-NEXT:    retq
+0:
+  %1 = load <8 x i8>, <8 x i8>* %x
+  %2 = icmp eq <8 x i8> %1, <i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49>
+  %3 = select <8 x i1> %2, <8 x i64> <i64 32768, i64 16384, i64 8192, i64 4096, i64 2048, i64 1024, i64 512, i64 256>, <8 x i64> zeroinitializer
+  %4 = extractelement <8 x i64> %3, i32 0
+  ret i64 %4
+}
+

@@ -1106,15 +1106,15 @@ public:
     assert(Access && "Tried to access past the end of our iterator");
     // Go to the first argument for phis, and the defining access for everything
     // else.
-    if (MemoryPhi *MP = dyn_cast<MemoryPhi>(Access))
+    if (const MemoryPhi *MP = dyn_cast<MemoryPhi>(Access))
       return MP->getIncomingValue(ArgNo);
     return cast<MemoryUseOrDef>(Access)->getDefiningAccess();
   }
 
   using BaseT::operator++;
-  memoryaccess_def_iterator &operator++() {
+  memoryaccess_def_iterator_base &operator++() {
     assert(Access && "Hit end of iterator");
-    if (MemoryPhi *MP = dyn_cast<MemoryPhi>(Access)) {
+    if (const MemoryPhi *MP = dyn_cast<MemoryPhi>(Access)) {
       if (++ArgNo >= MP->getNumIncomingValues()) {
         ArgNo = 0;
         Access = nullptr;

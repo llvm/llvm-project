@@ -5,51 +5,51 @@
 
 // CHECK: f
 // CHECK-NEXT: a
-// CHECK-NEXT: /tmp/frame-types.cpp:4
+// CHECK-NEXT: /tmp{{/|\\}}frame-types.cpp:4
 // CHECK-NEXT: -1 1 ??
 // CHECK-NEXT: f
 // CHECK-NEXT: b
-// CHECK-NEXT: /tmp/frame-types.cpp:5
+// CHECK-NEXT: /tmp{{/|\\}}frame-types.cpp:5
 // CHECK-NEXT: -8 4 ??
 // CHECK-NEXT: f
 // CHECK-NEXT: c
-// CHECK-NEXT: /tmp/frame-types.cpp:6
+// CHECK-NEXT: /tmp{{/|\\}}frame-types.cpp:6
 // CHECK-NEXT: -12 4 ??
 // CHECK-NEXT: f
 // CHECK-NEXT: d
-// CHECK-NEXT: /tmp/frame-types.cpp:7
+// CHECK-NEXT: /tmp{{/|\\}}frame-types.cpp:7
 // CHECK-NEXT: -16 4 ??
 // CHECK-NEXT: f
 // CHECK-NEXT: e
-// CHECK-NEXT: /tmp/frame-types.cpp:8
+// CHECK-NEXT: /tmp{{/|\\}}frame-types.cpp:8
 // CHECK-NEXT: -32 8 ??
 // CHECK-NEXT: f
 // CHECK-NEXT: f
-// CHECK-NEXT: /tmp/frame-types.cpp:9
+// CHECK-NEXT: /tmp{{/|\\}}frame-types.cpp:9
 // CHECK-NEXT: -36 4 ??
 // CHECK-NEXT: f
 // CHECK-NEXT: g
-// CHECK-NEXT: /tmp/frame-types.cpp:10
+// CHECK-NEXT: /tmp{{/|\\}}frame-types.cpp:10
 // CHECK-NEXT: -37 1 ??
 // CHECK-NEXT: f
 // CHECK-NEXT: h
-// CHECK-NEXT: /tmp/frame-types.cpp:11
+// CHECK-NEXT: /tmp{{/|\\}}frame-types.cpp:11
 // CHECK-NEXT: -38 1 ??
 // CHECK-NEXT: f
 // CHECK-NEXT: i
-// CHECK-NEXT: /tmp/frame-types.cpp:12
+// CHECK-NEXT: /tmp{{/|\\}}frame-types.cpp:12
 // CHECK-NEXT: -44 4 ??
 // CHECK-NEXT: f
 // CHECK-NEXT: j
-// CHECK-NEXT: /tmp/frame-types.cpp:14
+// CHECK-NEXT: /tmp{{/|\\}}frame-types.cpp:14
 // CHECK-NEXT: -45 1 ??
 // CHECK-NEXT: f
 // CHECK-NEXT: k
-// CHECK-NEXT: /tmp/frame-types.cpp:15
+// CHECK-NEXT: /tmp{{/|\\}}frame-types.cpp:15
 // CHECK-NEXT: -57 12 ??
 // CHECK-NEXT: f
 // CHECK-NEXT: l
-// CHECK-NEXT: /tmp/frame-types.cpp:16
+// CHECK-NEXT: /tmp{{/|\\}}frame-types.cpp:16
 // CHECK-NEXT: -345 288 ??
 
 // Generated from:

@@ -9,9 +9,8 @@
 
 define i1 @scalar_i8_shl_and_negC_eq(i8 %x, i8 %y) {
 ; CHECK-LABEL: @scalar_i8_shl_and_negC_eq(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i8 -4, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i8 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP2]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[SHL]], 4
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i8 %x, %y
@@ -22,9 +21,8 @@ define i1 @scalar_i8_shl_and_negC_eq(i8 %x, i8 %y) {
 
 define i1 @scalar_i16_shl_and_negC_eq(i16 %x, i16 %y) {
 ; CHECK-LABEL: @scalar_i16_shl_and_negC_eq(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i16 -128, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i16 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[TMP2]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i16 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i16 [[SHL]], 128
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i16 %x, %y
@@ -35,9 +33,8 @@ define i1 @scalar_i16_shl_and_negC_eq(i16 %x, i16 %y) {
 
 define i1 @scalar_i32_shl_and_negC_eq(i32 %x, i32 %y) {
 ; CHECK-LABEL: @scalar_i32_shl_and_negC_eq(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 -262144, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP2]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[SHL]], 262144
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i32 %x, %y
@@ -48,9 +45,8 @@ define i1 @scalar_i32_shl_and_negC_eq(i32 %x, i32 %y) {
 
 define i1 @scalar_i64_shl_and_negC_eq(i64 %x, i64 %y) {
 ; CHECK-LABEL: @scalar_i64_shl_and_negC_eq(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i64 -8589934592, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i64 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i64 [[TMP2]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i64 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i64 [[SHL]], 8589934592
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i64 %x, %y
@@ -61,9 +57,8 @@ define i1 @scalar_i64_shl_and_negC_eq(i64 %x, i64 %y) {
 
 define i1 @scalar_i32_shl_and_negC_ne(i32 %x, i32 %y) {
 ; CHECK-LABEL: @scalar_i32_shl_and_negC_ne(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 -262144, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP2]], 0
+; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[SHL]], 262143
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %shl = shl i32 %x, %y
@@ -76,9 +71,8 @@ define i1 @scalar_i32_shl_and_negC_ne(i32 %x, i32 %y) {
 
 define <4 x i1> @vec_4xi32_shl_and_negC_eq(<4 x i32> %x, <4 x i32> %y) {
 ; CHECK-LABEL: @vec_4xi32_shl_and_negC_eq(
-; CHECK-NEXT:    [[TMP1:%.*]] = lshr <4 x i32> <i32 -8, i32 -8, i32 -8, i32 -8>, [[Y:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = and <4 x i32> [[TMP1]], [[X:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq <4 x i32> [[TMP2]], zeroinitializer
+; CHECK-NEXT:    [[SHL:%.*]] = shl <4 x i32> [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <4 x i32> [[SHL]], <i32 8, i32 8, i32 8, i32 8>
 ; CHECK-NEXT:    ret <4 x i1> [[R]]
 ;
   %shl = shl <4 x i32> %x, %y

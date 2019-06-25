@@ -101,9 +101,7 @@ extractSections(const object::MachOObjectFile::LoadCommandInfo &LoadCmd,
       RelocationInfo R;
       R.Symbol = nullptr; // We'll fill this field later.
       R.Info = MachOObj.getRelocation(RI->getRawDataRefImpl());
-      R.Scattered =
-          reinterpret_cast<MachO::scattered_relocation_info *>(&R.Info)
-              ->r_scattered;
+      R.Scattered = MachOObj.isRelocationScattered(R.Info);
       S.Relocations.push_back(R);
     }
 

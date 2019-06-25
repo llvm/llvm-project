@@ -1652,6 +1652,15 @@ Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
       auto NewPred = isICMP_NE ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_SGE;
       return new ICmpInst(NewPred, X, Zero);
     }
+
+    // Restrict this fold only for single-use 'and' (PR10267).
+    // ((%x & C) == 0) --> %x u< (-C)  iff (-C) is power of two.
+    if ((~(*C2) + 1).isPowerOf2()) {
+      Constant *NegBOC =
+          ConstantExpr::getNeg(cast<Constant>(And->getOperand(1)));
+      auto NewPred = isICMP_NE ? ICmpInst::ICMP_UGE : ICmpInst::ICMP_ULT;
+      return new ICmpInst(NewPred, X, NegBOC);
+    }
   }
 
   // If the LHS is an 'and' of a truncate and we can widen the and/compare to
@@ -2797,17 +2806,6 @@ Instruction *InstCombiner::foldICmpBinOpEqualityWithConstant(ICmpInst &Cmp,
       if (C == *BOC && C.isPowerOf2())
         return new ICmpInst(isICMP_NE ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE,
                             BO, Constant::getNullValue(RHS->getType()));
-
-      // Don't perform the following transforms if the AND has multiple uses
-      if (!BO->hasOneUse())
-        break;
-
-      // ((X & ~7) == 0) --> X < 8
-      if (C.isNullValue() && (~(*BOC) + 1).isPowerOf2()) {
-        Constant *NegBOC = ConstantExpr::getNeg(cast<Constant>(BOp1));
-        auto NewPred = isICMP_NE ? ICmpInst::ICMP_UGE : ICmpInst::ICMP_ULT;
-        return new ICmpInst(NewPred, BOp0, NegBOC);
-      }
     }
     break;
   }
