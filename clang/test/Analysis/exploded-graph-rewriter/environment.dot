@@ -34,21 +34,24 @@ Node0x1 [shape=record,label=
       "program_state": {
         "store": null,
         "constraints": null,
-        "environment": [
-          {
-            "location_context": "#0 Call",
-            "lctx_id": 3,
-            "calling": "foo",
-            "call_line": 4,
-            "items": [
-              {
-                "stmt_id": 5,
-                "pretty": "bar()",
-                "value": "Unknown"
-              }
-            ]
-          }
-        ]
+        "environment": {
+          "pointer": "0x2",
+          "items": [
+            {
+              "location_context": "#0 Call",
+              "lctx_id": 3,
+              "calling": "foo",
+              "call_line": 4,
+              "items": [
+                {
+                  "stmt_id": 5,
+                  "pretty": "bar()",
+                  "value": "Unknown"
+                }
+              ]
+            }
+          ]
+        }
       }
     }
 \l}"];

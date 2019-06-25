@@ -126,7 +126,8 @@ class EnvironmentFrame(object):
 class Environment(object):
     def __init__(self, json_e):
         super(Environment, self).__init__()
-        self.frames = [EnvironmentFrame(f) for f in json_e]
+        self.ptr = json_e['pointer']
+        self.frames = [EnvironmentFrame(f) for f in json_e['items']]
 
     def diff_frames(self, prev):
         # TODO: It's difficult to display a good diff when frame numbers shift.
@@ -190,8 +191,9 @@ class StoreCluster(object):
 class Store(object):
     def __init__(self, json_s):
         super(Store, self).__init__()
+        self.ptr = json_s['pointer']
         self.clusters = collections.OrderedDict(
-            [(c['pointer'], StoreCluster(c)) for c in json_s])
+            [(c['pointer'], StoreCluster(c)) for c in json_s['items']])
 
     def diff_clusters(self, prev):
         removed = [k for k in prev.clusters if k not in self.clusters]
