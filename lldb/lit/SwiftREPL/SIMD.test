@@ -179,3 +179,8 @@ let patatino = SIMD4<Double>(1.5, 2.5, 3.5, 4.5)
 // Make sure we don't print the padding for SIMD3
 let claude = SIMD3(1, 2, 3)
 // CHECK: {{claude}}: SIMD3<Int> = (1, 2, 3)
+
+// Make sure we handle typealiasing correctly.
+typealias Tinky = SIMD3<Int>
+let winky = Tinky()
+// CHECK: {{winky}}: Tinky = (0, 0, 0)
