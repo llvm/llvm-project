@@ -100,6 +100,10 @@ void ExprEngine::VisitBinaryOperator(const BinaryOperator* B,
       SVal Result = evalBinOp(state, Op, LeftV, RightV, B->getType());
       if (!Result.isUnknown()) {
         state = state->BindExpr(B, LCtx, Result);
+      } else {
+        // If we cannot evaluate the operation escape the operands.
+        state = escapeValue(state, LeftV, PSK_EscapeOther);
+        state = escapeValue(state, RightV, PSK_EscapeOther);
       }
 
       Bldr.generateNode(B, *it, state);
