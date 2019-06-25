@@ -11,7 +11,6 @@
 #include "lldb/Core/SearchFilter.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 
@@ -225,25 +224,24 @@ LanguageRuntime::LanguageRuntime(Process *process) : m_process(process) {}
 
 LanguageRuntime::~LanguageRuntime() = default;
 
-Breakpoint::BreakpointPreconditionSP
-LanguageRuntime::CreateExceptionPrecondition(lldb::LanguageType language,
-                                             bool catch_bp, bool throw_bp) {
-  // Currently only Swift has one of these gadgets:
-  switch (language) {
-  case eLanguageTypeSwift:
-    if (throw_bp)
-      return Breakpoint::BreakpointPreconditionSP(
-          new SwiftLanguageRuntime::SwiftExceptionPrecondition());
-    break;
-  case eLanguageTypeObjC:
-    if (throw_bp)
-      return Breakpoint::BreakpointPreconditionSP(
-          new ObjCLanguageRuntime::ObjCExceptionPrecondition());
-    break;
-  default:
-    break;
+BreakpointPreconditionSP
+LanguageRuntime::GetExceptionPrecondition(LanguageType language,
+                                          bool throw_bp) {
+  LanguageRuntimeCreateInstance create_callback;
+  for (uint32_t idx = 0;
+       (create_callback =
+            PluginManager::GetLanguageRuntimeCreateCallbackAtIndex(idx)) !=
+       nullptr;
+       idx++) {
+    if (auto precondition_callback =
+            PluginManager::GetLanguageRuntimeGetExceptionPreconditionAtIndex(
+                idx)) {
+      if (BreakpointPreconditionSP precond =
+              precondition_callback(language, throw_bp))
+        return precond;
+    }
   }
-  return Breakpoint::BreakpointPreconditionSP();
+  return BreakpointPreconditionSP();
 }
 
 BreakpointSP LanguageRuntime::CreateExceptionBreakpoint(
@@ -259,10 +257,8 @@ BreakpointSP LanguageRuntime::CreateExceptionBreakpoint(
       target.CreateBreakpoint(filter_sp, resolver_sp, is_internal, hardware,
                               resolve_indirect_functions));
   if (exc_breakpt_sp) {
-    Breakpoint::BreakpointPreconditionSP precondition_sp =
-        CreateExceptionPrecondition(language, catch_bp, throw_bp);
-    if (precondition_sp)
-      exc_breakpt_sp->SetPrecondition(precondition_sp);
+    if (auto precond = GetExceptionPrecondition(language, throw_bp))
+      exc_breakpt_sp->SetPrecondition(precond);
 
     if (is_internal)
       exc_breakpt_sp->SetBreakpointKind("exception");
