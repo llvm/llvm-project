@@ -161,7 +161,7 @@ public:
              SetOfConstDecls *VisitedCalleesIn,
              FunctionSummariesTy *FS, InliningModes HowToInlineIn);
 
-  ~ExprEngine() override;
+  ~ExprEngine() override = default;
 
   /// Returns true if there is still simulation state on the worklist.
   bool ExecuteWorkList(const LocationContext *L, unsigned Steps = 150000) {

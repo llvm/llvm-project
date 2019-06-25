@@ -225,10 +225,6 @@ ExprEngine::ExprEngine(cross_tu::CrossTranslationUnitContext &CTU,
   }
 }
 
-ExprEngine::~ExprEngine() {
-  BR.FlushReports();
-}
-
 //===----------------------------------------------------------------------===//
 // Utility methods.
 //===----------------------------------------------------------------------===//
