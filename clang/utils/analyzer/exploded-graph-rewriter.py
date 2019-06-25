@@ -25,6 +25,19 @@ def diff_dicts(curr, prev):
     return (removed, added)
 
 
+# Represents any program state trait that is a dictionary of key-value pairs.
+class GenericMap(object):
+    def __init__(self, generic_map):
+        self.generic_map = generic_map
+
+    def diff(self, prev):
+        return diff_dicts(self.generic_map, prev.generic_map)
+
+    def is_different(self, prev):
+        removed, added = self.diff(prev)
+        return len(removed) != 0 or len(added) != 0
+
+
 # A deserialized source location.
 class SourceLocation(object):
     def __init__(self, json_loc):
@@ -203,8 +216,10 @@ class ProgramState(object):
             if json_ps['store'] is not None else None
         self.environment = Environment(json_ps['environment']) \
             if json_ps['environment'] is not None else None
+        self.constraints = GenericMap(collections.OrderedDict([
+            (c['symbol'], c['range']) for c in json_ps['constraints']
+        ])) if json_ps['constraints'] is not None else None
         # TODO: Objects under construction.
-        # TODO: Constraint ranges.
         # TODO: Dynamic types of objects.
         # TODO: Checker messages.
 
@@ -479,11 +494,57 @@ class DotDumpVisitor(object):
             else:
                 self._dump('</td></tr><tr><td align="left">')
                 self.visit_store(s.store)
-        self._dump('</td></tr><hr />')
+        self._dump('</td></tr>')
+
+    def visit_generic_map(self, m, prev_m=None):
+        self._dump('<table border="0">')
+
+        def dump_pair(m, k, is_added=None):
+            self._dump('<tr><td>%s</td>'
+                       '<td align="left">%s</td>'
+                       '<td align="left">%s</td></tr>'
+                       % (self._diff_plus_minus(is_added),
+                          k, m.generic_map[k]))
+
+        if prev_m is not None:
+            removed, added = m.diff(prev_m)
+            for k in removed:
+                dump_pair(prev_m, k, False)
+            for k in added:
+                dump_pair(m, k, True)
+        else:
+            for k in m.generic_map:
+                dump_pair(m, k, None)
+
+        self._dump('</table>')
+
+    def visit_generic_map_in_state(self, selector, s, prev_s=None):
+        self._dump('<tr><td align="left">'
+                   '<b>Ranges: </b>')
+        m = getattr(s, selector)
+        if m is None:
+            self._dump('<i> Nothing!</i>')
+        else:
+            prev_m = None
+            if prev_s is not None:
+                prev_m = getattr(prev_s, selector)
+                if prev_m is not None:
+                    if m.is_different(prev_m):
+                        self._dump('</td></tr><tr><td align="left">')
+                        self.visit_generic_map(m, prev_m)
+                    else:
+                        self._dump('<i> No changes!</i>')
+            if prev_m is None:
+                self._dump('</td></tr><tr><td align="left">')
+                self.visit_generic_map(m)
+        self._dump('</td></tr>')
 
     def visit_state(self, s, prev_s):
         self.visit_store_in_state(s, prev_s)
+        self._dump('<hr />')
         self.visit_environment_in_state(s, prev_s)
+        self._dump('<hr />')
+        self.visit_generic_map_in_state('constraints', s, prev_s)
 
     def visit_node(self, node):
         self._dump('%s [shape=record,label=<<table border="0">'

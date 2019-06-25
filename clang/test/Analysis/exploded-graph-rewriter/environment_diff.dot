@@ -12,6 +12,7 @@ Node0x1 [shape=record,label=
       "program_points": [],
       "program_state": {
         "store": null,
+        "constraints": null,
         "environment": [
           {
             "location_context": "#0 Call",
@@ -54,6 +55,7 @@ Node0x6 [shape=record,label=
       "program_points": [],
       "program_state": {
         "store": null,
+        "constraints": null,
         "environment": [
           {
             "location_context": "#0 Call",
@@ -90,6 +92,7 @@ Node0x9 [shape=record,label=
       "program_points": [],
       "program_state": {
         "store": null,
+        "constraints": null,
         "environment": [
           {
             "location_context": "#0 Call",

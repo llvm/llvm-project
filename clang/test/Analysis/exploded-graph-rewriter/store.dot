@@ -28,6 +28,7 @@ Node0x1 [shape=record,label=
       "program_points": [],
       "program_state": {
         "environment": null,
+        "constraints": null,
         "store": [
           {
             "cluster": "x",
