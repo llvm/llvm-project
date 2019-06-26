@@ -14,7 +14,9 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/CompilationDatabasePluginRegistry.h"
+#include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -165,7 +167,9 @@ class JSONCompilationDatabasePlugin : public CompilationDatabasePlugin {
     llvm::sys::path::append(JSONDatabasePath, "compile_commands.json");
     auto Base = JSONCompilationDatabase::loadFromFile(
         JSONDatabasePath, ErrorMessage, JSONCommandLineSyntax::AutoDetect);
-    return Base ? inferMissingCompileCommands(std::move(Base)) : nullptr;
+    return Base ? inferTargetAndDriverMode(
+                      inferMissingCompileCommands(std::move(Base)))
+                : nullptr;
   }
 };
 

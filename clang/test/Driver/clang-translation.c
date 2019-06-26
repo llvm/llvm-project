@@ -318,6 +318,7 @@
 // ANDROID-X86_64: "-target-cpu" "x86-64"
 // ANDROID-X86_64: "-target-feature" "+sse4.2"
 // ANDROID-X86_64: "-target-feature" "+popcnt"
+// ANDROID-X86_64: "-target-feature" "+mcx16"
 
 // RUN: %clang -target mips-linux-gnu -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=MIPS %s
