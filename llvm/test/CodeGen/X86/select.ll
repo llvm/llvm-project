@@ -55,9 +55,8 @@ define i32 @test2() nounwind {
 ; GENERIC-NEXT:    callq _return_false
 ; GENERIC-NEXT:    xorl %ecx, %ecx
 ; GENERIC-NEXT:    testb $1, %al
-; GENERIC-NEXT:    movl $-480, %eax ## imm = 0xFE20
+; GENERIC-NEXT:    movl $-3840, %eax ## imm = 0xF100
 ; GENERIC-NEXT:    cmovnel %ecx, %eax
-; GENERIC-NEXT:    shll $3, %eax
 ; GENERIC-NEXT:    cmpl $32768, %eax ## imm = 0x8000
 ; GENERIC-NEXT:    jge LBB1_1
 ; GENERIC-NEXT:  ## %bb.2: ## %bb91
@@ -72,10 +71,9 @@ define i32 @test2() nounwind {
 ; ATOM-NEXT:    pushq %rax
 ; ATOM-NEXT:    callq _return_false
 ; ATOM-NEXT:    xorl %ecx, %ecx
-; ATOM-NEXT:    movl $-480, %edx ## imm = 0xFE20
+; ATOM-NEXT:    movl $-3840, %edx ## imm = 0xF100
 ; ATOM-NEXT:    testb $1, %al
 ; ATOM-NEXT:    cmovnel %ecx, %edx
-; ATOM-NEXT:    shll $3, %edx
 ; ATOM-NEXT:    cmpl $32768, %edx ## imm = 0x8000
 ; ATOM-NEXT:    jge LBB1_1
 ; ATOM-NEXT:  ## %bb.2: ## %bb91
@@ -91,9 +89,8 @@ define i32 @test2() nounwind {
 ; ATHLON-NEXT:    calll _return_false
 ; ATHLON-NEXT:    xorl %ecx, %ecx
 ; ATHLON-NEXT:    testb $1, %al
-; ATHLON-NEXT:    movl $-480, %eax ## imm = 0xFE20
+; ATHLON-NEXT:    movl $-3840, %eax ## imm = 0xF100
 ; ATHLON-NEXT:    cmovnel %ecx, %eax
-; ATHLON-NEXT:    shll $3, %eax
 ; ATHLON-NEXT:    cmpl $32768, %eax ## imm = 0x8000
 ; ATHLON-NEXT:    jge LBB1_1
 ; ATHLON-NEXT:  ## %bb.2: ## %bb91
@@ -110,9 +107,8 @@ define i32 @test2() nounwind {
 ; MCU-NEXT:    testb $1, %al
 ; MCU-NEXT:    jne .LBB1_2
 ; MCU-NEXT:  # %bb.1: # %entry
-; MCU-NEXT:    movl $-480, %ecx # imm = 0xFE20
+; MCU-NEXT:    movl $-3840, %ecx # imm = 0xF100
 ; MCU-NEXT:  .LBB1_2: # %entry
-; MCU-NEXT:    shll $3, %ecx
 ; MCU-NEXT:    cmpl $32768, %ecx # imm = 0x8000
 ; MCU-NEXT:    jge .LBB1_3
 ; MCU-NEXT:  # %bb.4: # %bb91

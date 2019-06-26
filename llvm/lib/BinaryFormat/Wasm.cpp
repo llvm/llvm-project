@@ -35,3 +35,17 @@ std::string llvm::wasm::relocTypetoString(uint32_t Type) {
     llvm_unreachable("unknown reloc type");
   }
 }
+
+bool llvm::wasm::relocTypeHasAddend(uint32_t Type) {
+  switch (Type) {
+  case R_WASM_MEMORY_ADDR_LEB:
+  case R_WASM_MEMORY_ADDR_SLEB:
+  case R_WASM_MEMORY_ADDR_REL_SLEB:
+  case R_WASM_MEMORY_ADDR_I32:
+  case R_WASM_FUNCTION_OFFSET_I32:
+  case R_WASM_SECTION_OFFSET_I32:
+    return true;
+  default:
+    return false;
+  }
+}

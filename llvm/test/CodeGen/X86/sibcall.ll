@@ -264,8 +264,7 @@ declare i32 @foo4()
 define i32 @t11(i32 %x, i32 %y, i32 %z.0, i32 %z.1, i32 %z.2) nounwind ssp {
 ; X86-LABEL: t11:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB11_1
 ; X86-NEXT:  # %bb.2: # %bb
 ; X86-NEXT:    jmp foo5 # TAILCALL
@@ -311,8 +310,7 @@ declare i32 @foo5(i32, i32, i32, i32, i32)
 define i32 @t12(i32 %x, i32 %y, %struct.t* byval align 4 %z) nounwind ssp {
 ; X86-LABEL: t12:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    testl %eax, %eax
+; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB12_1
 ; X86-NEXT:  # %bb.2: # %bb
 ; X86-NEXT:    jmp foo6 # TAILCALL

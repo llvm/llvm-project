@@ -393,7 +393,8 @@ class DotDumpVisitor(object):
         def dump_location_context(lc, is_added=None):
             self._dump('<tr><td>%s</td>'
                        '<td align="left"><b>%s</b></td>'
-                       '<td align="left"><font color="grey60">%s </font>'
+                       '<td align="left" colspan="2">'
+                       '<font color="grey60">%s </font>'
                        '%s</td></tr>'
                        % (self._diff_plus_minus(is_added),
                           lc.caption, lc.decl,

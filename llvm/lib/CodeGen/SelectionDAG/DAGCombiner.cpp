@@ -8902,6 +8902,7 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const TargetLowering &TLI,
   unsigned Opcode = N->getOpcode();
   SDValue N0 = N->getOperand(0);
   EVT VT = N->getValueType(0);
+  SDLoc DL(N);
 
   assert((Opcode == ISD::SIGN_EXTEND || Opcode == ISD::ZERO_EXTEND ||
          Opcode == ISD::ANY_EXTEND || Opcode == ISD::SIGN_EXTEND_VECTOR_INREG ||
@@ -8912,7 +8913,33 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const TargetLowering &TLI,
   // fold (zext c1) -> c1
   // fold (aext c1) -> c1
   if (isa<ConstantSDNode>(N0))
-    return DAG.getNode(Opcode, SDLoc(N), VT, N0);
+    return DAG.getNode(Opcode, DL, VT, N0);
+
+  // fold (sext (select cond, c1, c2)) -> (select cond, sext c1, sext c2)
+  // fold (zext (select cond, c1, c2)) -> (select cond, zext c1, zext c2)
+  // fold (aext (select cond, c1, c2)) -> (select cond, sext c1, sext c2)
+  if (N0->getOpcode() == ISD::SELECT) {
+    SDValue Op1 = N0->getOperand(1);
+    SDValue Op2 = N0->getOperand(2);
+    if (isa<ConstantSDNode>(Op1) && isa<ConstantSDNode>(Op2) &&
+        (Opcode != ISD::ZERO_EXTEND || !TLI.isZExtFree(N0.getValueType(), VT))) {
+      // For any_extend, choose sign extension of the constants to allow a
+      // possible further transform to sign_extend_inreg.i.e.
+      //
+      // t1: i8 = select t0, Constant:i8<-1>, Constant:i8<0>
+      // t2: i64 = any_extend t1
+      // -->
+      // t3: i64 = select t0, Constant:i64<-1>, Constant:i64<0>
+      // -->
+      // t4: i64 = sign_extend_inreg t3
+      unsigned FoldOpc = Opcode;
+      if (FoldOpc == ISD::ANY_EXTEND)
+        FoldOpc = ISD::SIGN_EXTEND;
+      return DAG.getSelect(DL, VT, N0->getOperand(0),
+                           DAG.getNode(FoldOpc, DL, VT, Op1),
+                           DAG.getNode(FoldOpc, DL, VT, Op2));
+    }
+  }
 
   // fold (sext (build_vector AllConstants) -> (build_vector AllConstants)
   // fold (zext (build_vector AllConstants) -> (build_vector AllConstants)
@@ -8927,7 +8954,6 @@ static SDValue tryToFoldExtendOfConstant(SDNode *N, const TargetLowering &TLI,
   unsigned EVTBits = N0->getValueType(0).getScalarSizeInBits();
   SmallVector<SDValue, 8> Elts;
   unsigned NumElts = VT.getVectorNumElements();
-  SDLoc DL(N);
 
   // For zero-extensions, UNDEF elements still guarantee to have the upper
   // bits set to zero.

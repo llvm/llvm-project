@@ -119,7 +119,7 @@ define i16 @low_bit_select_constants_bigger_false_narrower_result(i32 %x) {
 define i8 @low_bit_select_constants_bigger_true_same_size_result(i8 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_true_same_size_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 3, 3, 0, 31, 31
+; CHECK-NEXT:    clrldi 3, 3, 63
 ; CHECK-NEXT:    subfic 3, 3, -29
 ; CHECK-NEXT:    blr
   %a = and i8 %x, 1
@@ -143,7 +143,7 @@ define i32 @low_bit_select_constants_bigger_true_wider_result(i8 %x) {
 define i8 @low_bit_select_constants_bigger_true_narrower_result(i16 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_true_narrower_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rlwinm 3, 3, 0, 31, 31
+; CHECK-NEXT:    clrldi 3, 3, 63
 ; CHECK-NEXT:    subfic 3, 3, 41
 ; CHECK-NEXT:    blr
   %a = and i16 %x, 1

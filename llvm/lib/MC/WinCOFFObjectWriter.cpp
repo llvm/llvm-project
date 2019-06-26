@@ -387,7 +387,7 @@ void WinCOFFObjectWriter::DefineSymbol(const MCSymbol &MCSym,
     Sym->Aux[0].AuxType = ATWeakExternal;
     Sym->Aux[0].Aux.WeakExternal.TagIndex = 0;
     Sym->Aux[0].Aux.WeakExternal.Characteristics =
-        COFF::IMAGE_WEAK_EXTERN_SEARCH_LIBRARY;
+        COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS;
   } else {
     if (!Base)
       Sym->Data.SectionNumber = COFF::IMAGE_SYM_ABSOLUTE;

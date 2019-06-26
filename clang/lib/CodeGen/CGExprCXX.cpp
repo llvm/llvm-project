@@ -1865,33 +1865,9 @@ static void EmitObjectDelete(CodeGenFunction &CGF,
       Dtor = RD->getDestructor();
 
       if (Dtor->isVirtual()) {
-        bool UseVirtualCall = true;
-        const Expr *Base = DE->getArgument();
-        if (auto *DevirtualizedDtor =
-                dyn_cast_or_null<const CXXDestructorDecl>(
-                    Dtor->getDevirtualizedMethod(
-                        Base, CGF.CGM.getLangOpts().AppleKext))) {
-          UseVirtualCall = false;
-          const CXXRecordDecl *DevirtualizedClass =
-              DevirtualizedDtor->getParent();
-          if (declaresSameEntity(getCXXRecord(Base), DevirtualizedClass)) {
-            // Devirtualized to the class of the base type (the type of the
-            // whole expression).
-            Dtor = DevirtualizedDtor;
-          } else {
-            // Devirtualized to some other type. Would need to cast the this
-            // pointer to that type but we don't have support for that yet, so
-            // do a virtual call. FIXME: handle the case where it is
-            // devirtualized to the derived type (the type of the inner
-            // expression) as in EmitCXXMemberOrOperatorMemberCallExpr.
-            UseVirtualCall = true;
-          }
-        }
-        if (UseVirtualCall) {
-          CGF.CGM.getCXXABI().emitVirtualObjectDelete(CGF, DE, Ptr, ElementType,
-                                                      Dtor);
-          return;
-        }
+        CGF.CGM.getCXXABI().emitVirtualObjectDelete(CGF, DE, Ptr, ElementType,
+                                                    Dtor);
+        return;
       }
     }
   }
