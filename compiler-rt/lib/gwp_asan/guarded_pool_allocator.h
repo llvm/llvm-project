@@ -96,14 +96,11 @@ public:
   ALWAYS_INLINE bool shouldSample() {
     // NextSampleCounter == 0 means we "should regenerate the counter".
     //                   == 1 means we "should sample this allocation".
-    if (UNLIKELY(NextSampleCounter == 0)) {
-      // GuardedPagePoolEnd == 0 if GWP-ASan is disabled.
-      if (UNLIKELY(GuardedPagePoolEnd == 0))
-        return false;
-      NextSampleCounter = (getRandomUnsigned32() % AdjustedSampleRate) + 1;
-    }
+    if (UNLIKELY(ThreadLocals.NextSampleCounter == 0))
+      ThreadLocals.NextSampleCounter =
+          (getRandomUnsigned32() % AdjustedSampleRate) + 1;
 
-    return UNLIKELY(--NextSampleCounter == 0);
+    return UNLIKELY(--ThreadLocals.NextSampleCounter == 0);
   }
 
   // Returns whether the provided pointer is a current sampled allocation that
@@ -245,9 +242,23 @@ private:
   // GWP-ASan is disabled, we wish to never spend wasted cycles recalculating
   // the sample rate.
   uint32_t AdjustedSampleRate = UINT32_MAX;
-  // Thread-local decrementing counter that indicates that a given allocation
-  // should be sampled when it reaches zero.
-  static TLS_INITIAL_EXEC uint64_t NextSampleCounter;
+
+  // Pack the thread local variables into a struct to ensure that they're in
+  // the same cache line for performance reasons. These are the most touched
+  // variables in GWP-ASan.
+  struct alignas(8) ThreadLocalPackedVariables {
+    constexpr ThreadLocalPackedVariables() {}
+    // Thread-local decrementing counter that indicates that a given allocation
+    // should be sampled when it reaches zero.
+    uint32_t NextSampleCounter = 0;
+    // Guard against recursivity. Unwinders often contain complex behaviour that
+    // may not be safe for the allocator (i.e. the unwinder calls dlopen(),
+    // which calls malloc()). When recursive behaviour is detected, we will
+    // automatically fall back to the supporting allocator to supply the
+    // allocation.
+    bool RecursiveGuard = false;
+  };
+  static TLS_INITIAL_EXEC ThreadLocalPackedVariables ThreadLocals;
 };
 } // namespace gwp_asan
 
