@@ -250,7 +250,7 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
 
   int NumLanes = Size / 4;
 
-  const MCPhysReg *CSRegs = TRI->getCalleeSavedRegs(&MF);
+  const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
 
   // Make sure to handle the case where a wide SGPR spill may span between two
   // VGPRs.

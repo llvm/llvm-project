@@ -526,15 +526,12 @@ void SIFrameLowering::emitEntryFunctionScratchSetup(const GCNSubtarget &ST,
 static unsigned findScratchNonCalleeSaveRegister(MachineFunction &MF,
                                                  LivePhysRegs &LiveRegs,
                                                  const TargetRegisterClass &RC) {
-  const GCNSubtarget &Subtarget = MF.getSubtarget<GCNSubtarget>();
-  const SIRegisterInfo &TRI = *Subtarget.getRegisterInfo();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
 
   // Mark callee saved registers as used so we will not choose them.
-  const MCPhysReg *CSRegs = TRI.getCalleeSavedRegs(&MF);
+  const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
   for (unsigned i = 0; CSRegs[i]; ++i)
     LiveRegs.addReg(CSRegs[i]);
-
-  MachineRegisterInfo &MRI = MF.getRegInfo();
 
   for (unsigned Reg : RC) {
     if (LiveRegs.available(MRI, Reg))
@@ -681,7 +678,8 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     if (ScratchExecCopy == AMDGPU::NoRegister) {
       // See emitPrologue
       LivePhysRegs LiveRegs(*ST.getRegisterInfo());
-      LiveRegs.addLiveIns(MBB);
+      LiveRegs.addLiveOuts(MBB);
+      LiveRegs.stepBackward(*MBBI);
 
       ScratchExecCopy
         = findScratchNonCalleeSaveRegister(MF, LiveRegs,

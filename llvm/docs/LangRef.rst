@@ -4764,6 +4764,18 @@ valid debug intrinsic.
     !4 = !DIExpression(DW_OP_constu, 2, DW_OP_swap, DW_OP_xderef)
     !5 = !DIExpression(DW_OP_constu, 42, DW_OP_stack_value)
 
+DIFlags
+"""""""""""""""
+
+These flags encode various properties of DINodes.
+
+The `ArgumentNotModified` flag marks a function argument whose value
+is not modified throughout of a function. This flag is used to decide
+whether a DW_OP_entry_value can be used in a location description
+after the function prologue. The language frontend is expected to compute
+this property for each DILocalVariable. The flag should be used
+only in optimized code.
+
 DIObjCProperty
 """"""""""""""
 

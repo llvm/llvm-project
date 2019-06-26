@@ -42,6 +42,16 @@ struct NoTTIImpl : TargetTransformInfoImplCRTPBase<NoTTIImpl> {
 };
 }
 
+bool HardwareLoopInfo::canAnalyze(LoopInfo &LI) {
+  // If the loop has irreducible control flow, it can not be converted to
+  // Hardware loop.
+  LoopBlocksRPO RPOT(L);  
+  RPOT.perform(&LI);
+  if (containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
+    return false;
+  return true;
+}
+
 bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
                                                LoopInfo &LI, DominatorTree &DT,
                                                bool ForceNestedLoop,
@@ -218,14 +228,8 @@ bool TargetTransformInfo::isLoweredToCall(const Function *F) const {
 }
 
 bool TargetTransformInfo::isHardwareLoopProfitable(
-  Loop *L, LoopInfo &LI, ScalarEvolution &SE, AssumptionCache &AC,
+  Loop *L, ScalarEvolution &SE, AssumptionCache &AC,
   TargetLibraryInfo *LibInfo, HardwareLoopInfo &HWLoopInfo) const {
-  // If the loop has irreducible control flow, it can not be converted to
-  // Hardware loop.
-  LoopBlocksRPO RPOT(L);  
-  RPOT.perform(&LI);
-  if (containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
-    return false;
   return TTIImpl->isHardwareLoopProfitable(L, SE, AC, LibInfo, HWLoopInfo);
 }
 

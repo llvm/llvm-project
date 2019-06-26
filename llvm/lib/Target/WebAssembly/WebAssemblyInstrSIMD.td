@@ -579,10 +579,16 @@ defm SHL : SIMDShiftInt<shl, "shl", 84>;
 defm SHR_S : SIMDShiftInt<sra, "shr_s", 85>;
 defm SHR_U : SIMDShiftInt<srl, "shr_u", 86>;
 
-// Truncate i64 shift operands to i32s
-foreach shifts = [[shl, SHL_v2i64], [sra, SHR_S_v2i64], [srl, SHR_U_v2i64]] in
+// Truncate i64 shift operands to i32s, except if they are already i32s
+foreach shifts = [[shl, SHL_v2i64], [sra, SHR_S_v2i64], [srl, SHR_U_v2i64]] in {
+def : Pat<(v2i64 (shifts[0]
+            (v2i64 V128:$vec),
+            (v2i64 (splat2 (i64 (sext I32:$x))))
+          )),
+          (v2i64 (shifts[1] (v2i64 V128:$vec), (i32 I32:$x)))>;
 def : Pat<(v2i64 (shifts[0] (v2i64 V128:$vec), (v2i64 (splat2 I64:$x)))),
           (v2i64 (shifts[1] (v2i64 V128:$vec), (I32_WRAP_I64 I64:$x)))>;
+}
 
 // 2xi64 shifts with constant shift amounts are custom lowered to avoid wrapping
 def wasm_shift_t : SDTypeProfile<1, 2,

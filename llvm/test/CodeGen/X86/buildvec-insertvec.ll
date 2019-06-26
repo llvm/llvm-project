@@ -413,16 +413,13 @@ define <16 x i8> @test_buildvector_v16i8_register(i8 %a0, i8 %a1, i8 %a2, i8 %a3
 define <16 x i8> @test_buildvector_v16i8_partial(i8 %a2, i8 %a6, i8 %a8, i8 %a11, i8 %a12, i8 %a15) {
 ; SSE2-LABEL: test_buildvector_v16i8_partial:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movzbl %dil, %eax
-; SSE2-NEXT:    pinsrw $1, %eax, %xmm0
-; SSE2-NEXT:    movzbl %sil, %eax
-; SSE2-NEXT:    pinsrw $3, %eax, %xmm0
-; SSE2-NEXT:    movzbl %dl, %eax
-; SSE2-NEXT:    pinsrw $4, %eax, %xmm0
+; SSE2-NEXT:    pxor %xmm0, %xmm0
+; SSE2-NEXT:    pinsrw $1, %edi, %xmm0
+; SSE2-NEXT:    pinsrw $3, %esi, %xmm0
+; SSE2-NEXT:    pinsrw $4, %edx, %xmm0
 ; SSE2-NEXT:    shll $8, %ecx
 ; SSE2-NEXT:    pinsrw $5, %ecx, %xmm0
-; SSE2-NEXT:    movzbl %r8b, %eax
-; SSE2-NEXT:    pinsrw $6, %eax, %xmm0
+; SSE2-NEXT:    pinsrw $6, %r8d, %xmm0
 ; SSE2-NEXT:    shll $8, %r9d
 ; SSE2-NEXT:    pinsrw $7, %r9d, %xmm0
 ; SSE2-NEXT:    retq

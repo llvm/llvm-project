@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
+#include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -541,9 +542,16 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
     for (const CalleeSavedInfo &CS : CSI) {
       // Insert the spill to the stack frame.
       unsigned Reg = CS.getReg();
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-      TII.storeRegToStackSlot(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,
-                              TRI);
+
+      if (CS.isSpilledToReg()) {
+        BuildMI(SaveBlock, I, DebugLoc(),
+                TII.get(TargetOpcode::COPY), CS.getDstReg())
+          .addReg(Reg, getKillRegState(true));
+      } else {
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+        TII.storeRegToStackSlot(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,
+                                TRI);
+      }
     }
   }
 }
@@ -563,12 +571,17 @@ static void insertCSRRestores(MachineBasicBlock &RestoreBlock,
   if (!TFI->restoreCalleeSavedRegisters(RestoreBlock, I, CSI, TRI)) {
     for (const CalleeSavedInfo &CI : reverse(CSI)) {
       unsigned Reg = CI.getReg();
-      const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
-      TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC, TRI);
-      assert(I != RestoreBlock.begin() &&
-             "loadRegFromStackSlot didn't insert any code!");
-      // Insert in reverse order.  loadRegFromStackSlot can insert
-      // multiple instructions.
+      if (CI.isSpilledToReg()) {
+        BuildMI(RestoreBlock, I, DebugLoc(), TII.get(TargetOpcode::COPY), Reg)
+          .addReg(CI.getDstReg(), getKillRegState(true));
+      } else {
+        const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
+        TII.loadRegFromStackSlot(RestoreBlock, I, Reg, CI.getFrameIdx(), RC, TRI);
+        assert(I != RestoreBlock.begin() &&
+               "loadRegFromStackSlot didn't insert any code!");
+        // Insert in reverse order.  loadRegFromStackSlot can insert
+        // multiple instructions.
+      }
     }
   }
 }

@@ -33,17 +33,17 @@ entry:
 ; CHECK0-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.5 %bb.6 %bb.7 %bb.8 %bb.9 %bb.10 %bb.11 %bb.12 %bb.13 %bb.14 %bb.15 %bb.16 %bb.17
 ; CHECK0-NOT:   %jump-table.1:
 ; CHECK4-NEXT:  %jump-table.0: %bb.2 %bb.3 %bb.4 %bb.5
-; CHECK4-SAME:  %jump-table.1: %bb.6 %bb.7 %bb.8 %bb.9
-; CHECK4-SAME:  %jump-table.2: %bb.10 %bb.11 %bb.12 %bb.13
-; CHECK4-SAME:  %jump-table.3: %bb.14 %bb.15 %bb.16 %bb.17
+; CHECK4-NEXT:  %jump-table.1: %bb.6 %bb.7 %bb.8 %bb.9
+; CHECK4-NEXT:  %jump-table.2: %bb.10 %bb.11 %bb.12 %bb.13
+; CHECK4-NEXT:  %jump-table.3: %bb.14 %bb.15 %bb.16 %bb.17
 ; CHECK4-NOT:   %jump-table.4:
 ; CHECK8-NEXT:  %jump-table.0: %bb.2 %bb.3 %bb.4 %bb.5 %bb.6 %bb.7 %bb.8 %bb.9
-; CHECK8-SAME:  %jump-table.1: %bb.10 %bb.11 %bb.12 %bb.13 %bb.14 %bb.15 %bb.16 %bb.17
+; CHECK8-NEXT:  %jump-table.1: %bb.10 %bb.11 %bb.12 %bb.13 %bb.14 %bb.15 %bb.16 %bb.17
 ; CHECK8-NOT:   %jump-table.2:
 ; CHECK16-NEXT: %jump-table.0: %bb.2 %bb.3 %bb.4 %bb.5 %bb.6 %bb.7 %bb.8 %bb.9 %bb.10 %bb.11 %bb.12 %bb.13 %bb.14 %bb.15 %bb.16 %bb.17
 ; CHECK16-NOT:  %jump-table.1:
 ; CHECKM1-NEXT: %jump-table.0: %bb.2 %bb.3 %bb.4 %bb.5 %bb.6 %bb.7 %bb.8 %bb.9
-; CHECKM1-SAME: %jump-table.1: %bb.10 %bb.11 %bb.12 %bb.13 %bb.14 %bb.15 %bb.16 %bb.17
+; CHECKM1-NEXT: %jump-table.1: %bb.10 %bb.11 %bb.12 %bb.13 %bb.14 %bb.15 %bb.16 %bb.17
 ; CHECKM1-NOT:  %jump-table.2:
 ; CHECKM3-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.5 %bb.6 %bb.7 %bb.8 %bb.9 %bb.10 %bb.11 %bb.12 %bb.13 %bb.14 %bb.15 %bb.16 %bb.17
 ; CHECKM3-NOT:  %jump-table.1:
@@ -83,17 +83,17 @@ entry:
 ; CHECK-LABEL: function jt2:
 ; CHECK-NEXT: Jump Tables:
 ; CHECK0-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.5 %bb.6{{$}}
-; CHECK0-NOT:   %jump-table.1
+; CHECK0-NOT:   %jump-table.1:
 ; CHECK4-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4{{$}}
-; CHECK4-NOT:   %jump-table.1
+; CHECK4-NOT:   %jump-table.1:
 ; CHECK8-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4{{$}}
-; CHECK8-NOT:   %jump-table.1
+; CHECK8-NOT:   %jump-table.1:
 ; CHECK16-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.5 %bb.6{{$}}
 ; CHECK16-NOT:  %jump-table.1:
 ; CHECKM1-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4{{$}}
-; CHECKM1-NOT:  %jump-table.1
+; CHECKM1-NOT:  %jump-table.1:
 ; CHECKM3-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.7 %bb.5 %bb.6{{$}}
-; CHECKM3-NOT:  %jump-table.1
+; CHECKM3-NOT:  %jump-table.1:
 ; CHECK-DAG: End machine code for function jt2.
 
 bb1: tail call void @ext(i32 6, i32 1) br label %return
@@ -127,21 +127,21 @@ entry:
 ; CHECK-LABEL: function jt3:
 ; CHECK-NEXT: Jump Tables:
 ; CHECK0-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
-; CHECK0-NOT:   %jump-table.1
+; CHECK0-NOT:   %jump-table.1:
 ; CHECK4-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
-; CHECK4-SAME:  %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8
-; CHECK4-NOT:   %jump-table.2
+; CHECK4-NEXT:  %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8
+; CHECK4-NOT:   %jump-table.2:
 ; CHECK8-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
-; CHECK8-SAME:  %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
-; CHECK8-NOT:   %jump-table.2
+; CHECK8-NEXT:  %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
+; CHECK8-NOT:   %jump-table.2:
 ; CHECK16-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7
-; CHECK16-SAME: %jump-table.1: %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
-; CHECK16-NOT:  %jump-table.2
+; CHECK16-NEXT: %jump-table.1: %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
+; CHECK16-NOT:  %jump-table.2:
 ; CHECKM1-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
-; CHECKM1-SAME: %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
-; CHECKM1-NOT:  %jump-table.2
+; CHECKM1-NEXT: %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
+; CHECKM1-NOT:  %jump-table.2:
 ; CHECKM3-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
-; CHECKM3-NOT:  %jump-table.1
+; CHECKM3-NOT:  %jump-table.1:
 ; CHECK-DAG: End machine code for function jt3.
 
 bb1:  tail call void @ext(i32 1,  i32 12) br label %return
@@ -182,21 +182,21 @@ entry:
 ; CHECK-LABEL: function jt4:
 ; CHECK-NEXT: Jump Tables:
 ; CHECK0-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
-; CHECK0-NOT:   %jump-table.1
+; CHECK0-NOT:   %jump-table.1:
 ; CHECK4-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
-; CHECK4-SAME:  %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8
-; CHECK4-NOT:   %jump-table.2
+; CHECK4-NEXT:  %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8
+; CHECK4-NOT:   %jump-table.2:
 ; CHECK8-NEXT:  %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
-; CHECK8-SAME:  %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
-; CHECK8-NOT:   %jump-table.2
+; CHECK8-NEXT:  %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
+; CHECK8-NOT:   %jump-table.2:
 ; CHECK16-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7
-; CHECK16-SAME: %jump-table.1: %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
-; CHECK16-NOT:  %jump-table.2
+; CHECK16-NEXT: %jump-table.1: %bb.8 %bb.13 %bb.9 %bb.10 %bb.13 %bb.11 %bb.12
+; CHECK16-NOT:  %jump-table.2:
 ; CHECKM1-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4
-; CHECKM1-SAME: %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
-; CHECKM1-NOT:  %jump-table.2
+; CHECKM1-NEXT: %jump-table.1: %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
+; CHECKM1-NOT:  %jump-table.2:
 ; CHECKM3-NEXT: %jump-table.0: %bb.1 %bb.2 %bb.3 %bb.4 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.13 %bb.5 %bb.6 %bb.7 %bb.8 %bb.13 %bb.9 %bb.10
-; CHECKM3-NOT:  %jump-table.1
+; CHECKM3-NOT:  %jump-table.1:
 ; CHECK-DAG: End machine code for function jt4.
 
 bb1:  tail call void @ext(i32 1,  i32 12) br label %return

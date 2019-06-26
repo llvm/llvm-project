@@ -96,6 +96,7 @@ struct HardwareLoopInfo {
   bool isHardwareLoopCandidate(ScalarEvolution &SE, LoopInfo &LI,
                                DominatorTree &DT, bool ForceNestedLoop = false,
                                bool ForceHardwareLoopPHI = false);
+  bool canAnalyze(LoopInfo &LI);
 };
 
 /// This pass provides access to the codegen interfaces that are needed
@@ -473,8 +474,7 @@ public:
 
   /// Query the target whether it would be profitable to convert the given loop
   /// into a hardware loop.
-  bool isHardwareLoopProfitable(Loop *L, LoopInfo &LI,
-                                ScalarEvolution &SE,
+  bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
                                 AssumptionCache &AC,
                                 TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const;

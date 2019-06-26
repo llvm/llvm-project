@@ -301,10 +301,12 @@ public:
   bool hasFlag(OptSpecifier Pos, OptSpecifier PosAlias, OptSpecifier Neg,
                bool Default = true) const;
 
-  /// AddLastArg - Render only the last argument match \p Id0, if present.
-  void AddLastArg(ArgStringList &Output, OptSpecifier Id0) const;
-  void AddLastArg(ArgStringList &Output, OptSpecifier Id0,
-                  OptSpecifier Id1) const;
+  /// Render only the last argument match \p Id0, if present.
+  template<typename ...OptSpecifiers>
+  void AddLastArg(ArgStringList &Output, OptSpecifiers ...Ids) const {
+    if (Arg *A = getLastArg(Ids...)) // Calls claim() on all Ids's Args.
+      A->render(*this, Output);
+  }
 
   /// AddAllArgsExcept - Render all arguments matching any of the given ids
   /// and not matching any of the excluded ids.

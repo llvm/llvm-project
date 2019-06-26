@@ -198,7 +198,10 @@ bool HardwareLoops::TryConvertLoop(Loop *L) {
       return true; // Stop search.
 
   HardwareLoopInfo HWLoopInfo(L);
-  if (TTI->isHardwareLoopProfitable(L, *LI, *SE, *AC, LibInfo, HWLoopInfo) ||
+  if (!HWLoopInfo.canAnalyze(*LI))
+    return false;
+
+  if (TTI->isHardwareLoopProfitable(L, *SE, *AC, LibInfo, HWLoopInfo) ||
       ForceHardwareLoops) {
 
     // Allow overriding of the counter width and loop decrement value.
