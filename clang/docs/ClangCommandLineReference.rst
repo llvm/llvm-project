@@ -2168,6 +2168,8 @@ Link stack frames through backchain on System Z
 
 .. option:: -mcpu=<arg>, -mv5 (equivalent to -mcpu=hexagonv5), -mv55 (equivalent to -mcpu=hexagonv55), -mv60 (equivalent to -mcpu=hexagonv60), -mv62 (equivalent to -mcpu=hexagonv62), -mv65 (equivalent to -mcpu=hexagonv65)
 
+Use -mcpu=? to see a list of supported cpu models.
+
 .. option:: -mcrc, -mno-crc
 
 Allow use of CRC instructions (ARM/Mips only)
@@ -2301,6 +2303,8 @@ The thread model to use, e.g. posix, single (posix by default)
 .. option:: -mthumb, -mno-thumb
 
 .. option:: -mtune=<arg>
+
+Use -mtune=? to see a list of supported cpu models.
 
 .. option:: -mtvos-version-min=<arg>, -mappletvos-version-min=<arg>
 

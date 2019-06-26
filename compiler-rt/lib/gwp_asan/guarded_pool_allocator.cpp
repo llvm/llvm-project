@@ -49,7 +49,9 @@ void GuardedPoolAllocator::AllocationMetadata::RecordAllocation(
 
 void GuardedPoolAllocator::AllocationMetadata::RecordDeallocation() {
   IsDeallocated = true;
-  // TODO(hctim): Implement stack trace collection.
+  // TODO(hctim): Implement stack trace collection. Ensure that the unwinder is
+  // not called if we have our recursive flag called, otherwise non-reentrant
+  // unwinders may deadlock.
   DeallocationTrace.ThreadID = getThreadID();
 }
 
@@ -124,7 +126,28 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
     installSignalHandlers();
 }
 
+namespace {
+class ScopedBoolean {
+public:
+  ScopedBoolean(bool &B) : Bool(B) { Bool = true; }
+  ~ScopedBoolean() { Bool = false; }
+
+private:
+  bool &Bool;
+};
+} // anonymous namespace
+
 void *GuardedPoolAllocator::allocate(size_t Size) {
+  // GuardedPagePoolEnd == 0 when GWP-ASan is disabled. If we are disabled, fall
+  // back to the supporting allocator.
+  if (GuardedPagePoolEnd == 0)
+    return nullptr;
+
+  // Protect against recursivity.
+  if (ThreadLocals.RecursiveGuard)
+    return nullptr;
+  ScopedBoolean SB(ThreadLocals.RecursiveGuard);
+
   if (Size == 0 || Size > maximumAllocationSize())
     return nullptr;
 
@@ -385,8 +408,7 @@ struct ScopedEndOfReportDecorator {
   options::Printf_t Printf;
 };
 
-void GuardedPoolAllocator::reportErrorInternal(uintptr_t AccessPtr,
-                                               Error E) {
+void GuardedPoolAllocator::reportErrorInternal(uintptr_t AccessPtr, Error E) {
   if (!pointerIsMine(reinterpret_cast<void *>(AccessPtr))) {
     return;
   }
@@ -395,6 +417,7 @@ void GuardedPoolAllocator::reportErrorInternal(uintptr_t AccessPtr,
   // This does not guarantee that there are no races, because another thread can
   // take the locks during the time that the signal handler is being called.
   PoolMutex.tryLock();
+  ThreadLocals.RecursiveGuard = true;
 
   Printf("*** GWP-ASan detected a memory error ***\n");
   ScopedEndOfReportDecorator Decorator(Printf);
@@ -429,5 +452,7 @@ void GuardedPoolAllocator::reportErrorInternal(uintptr_t AccessPtr,
   // TODO(hctim): Implement dumping here of allocation/deallocation traces.
 }
 
-TLS_INITIAL_EXEC uint64_t GuardedPoolAllocator::NextSampleCounter = 0;
+TLS_INITIAL_EXEC
+GuardedPoolAllocator::ThreadLocalPackedVariables
+    GuardedPoolAllocator::ThreadLocals;
 } // namespace gwp_asan

@@ -900,6 +900,16 @@ bool ARMTargetInfo::validateAsmConstraint(
   case 'Q': // A memory address that is a single base register.
     Info.setAllowsMemory();
     return true;
+  case 'T':
+    switch (Name[1]) {
+    default:
+      break;
+    case 'e': // Even general-purpose register
+    case 'o': // Odd general-purpose register
+      Info.setAllowsRegister();
+      Name++;
+      return true;
+    }
   case 'U': // a memory reference...
     switch (Name[1]) {
     case 'q': // ...ARMV4 ldrsb
@@ -923,6 +933,7 @@ std::string ARMTargetInfo::convertConstraint(const char *&Constraint) const {
   std::string R;
   switch (*Constraint) {
   case 'U': // Two-character constraint; add "^" hint for later parsing.
+  case 'T':
     R = std::string("^") + std::string(Constraint, 2);
     Constraint++;
     break;

@@ -66,8 +66,8 @@ define <2 x i1> @test_shift_and_cmp_changed1_vec(<2 x i8> %p, <2 x i8> %q) {
 ; Unsigned compare allows a transformation to compare against 0.
 define i1 @test_shift_and_cmp_changed2(i8 %p) {
 ; CHECK-LABEL: @test_shift_and_cmp_changed2(
-; CHECK-NEXT:    [[SHLP:%.*]] = shl i8 [[P:%.*]], 5
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[SHLP]], 64
+; CHECK-NEXT:    [[TMP1:%.*]] = and i8 [[P:%.*]], 6
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %shlp = shl i8 %p, 5
@@ -78,8 +78,8 @@ define i1 @test_shift_and_cmp_changed2(i8 %p) {
 
 define <2 x i1> @test_shift_and_cmp_changed2_vec(<2 x i8> %p) {
 ; CHECK-LABEL: @test_shift_and_cmp_changed2_vec(
-; CHECK-NEXT:    [[SHLP:%.*]] = shl <2 x i8> [[P:%.*]], <i8 5, i8 5>
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[SHLP]], <i8 64, i8 64>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i8> [[P:%.*]], <i8 6, i8 6>
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %shlp = shl <2 x i8> %p, <i8 5, i8 5>

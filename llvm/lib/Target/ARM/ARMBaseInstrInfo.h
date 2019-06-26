@@ -591,6 +591,13 @@ bool registerDefinedBetween(unsigned Reg, MachineBasicBlock::iterator From,
 MachineInstr *findCMPToFoldIntoCBZ(MachineInstr *Br,
                                    const TargetRegisterInfo *TRI);
 
+void addUnpredicatedMveVpredNOp(MachineInstrBuilder &MIB);
+void addUnpredicatedMveVpredROp(MachineInstrBuilder &MIB, unsigned DestReg);
+
+void addPredicatedMveVpredNOp(MachineInstrBuilder &MIB, unsigned Cond);
+void addPredicatedMveVpredROp(MachineInstrBuilder &MIB, unsigned Cond,
+                              unsigned Inactive);
+
 } // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_ARM_ARMBASEINSTRINFO_H

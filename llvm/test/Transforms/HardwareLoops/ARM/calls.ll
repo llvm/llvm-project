@@ -333,7 +333,7 @@ exit:
 ; CHECK-MVE: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[COUNT]], i32 1)
 ; CHECK-MVE: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-MVE: br i1 [[CMP]], label %loop, label %exit
-define void @test_masked_i32(<4 x i1> %mask, <4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c, <4 x i32> %passthru) {
+define arm_aapcs_vfpcc void @test_masked_i32(<4 x i1> %mask, <4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c, <4 x i32> %passthru) {
 entry:
   br label %loop
 loop:
@@ -360,7 +360,7 @@ exit:
 ; CHECK-MVE: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[COUNT]], i32 1)
 ; CHECK-MVE: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-MVE: br i1 [[CMP]], label %loop, label %exit
-define void @test_masked_f32(<4 x i1> %mask, <4 x float>* %a, <4 x float>* %b, <4 x float>* %c, <4 x float> %passthru) {
+define arm_aapcs_vfpcc void @test_masked_f32(<4 x i1> %mask, <4 x float>* %a, <4 x float>* %b, <4 x float>* %c, <4 x float> %passthru) {
 entry:
   br label %loop
 loop:
@@ -387,7 +387,7 @@ exit:
 ; CHECK-MVE: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[COUNT]], i32 1)
 ; CHECK-MVE: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-MVE: br i1 [[CMP]], label %loop, label %exit
-define void @test_gather_scatter(<4 x i1> %mask, <4 x float*> %a, <4 x float*> %b, <4 x float*> %c, <4 x float> %passthru) {
+define arm_aapcs_vfpcc void @test_gather_scatter(<4 x i1> %mask, <4 x float*> %a, <4 x float*> %b, <4 x float*> %c, <4 x float> %passthru) {
 entry:
   br label %loop
 loop:

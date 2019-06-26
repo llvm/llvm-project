@@ -74,8 +74,8 @@ INITIALIZE_PASS(ARMLowOverheadLoops, DEBUG_TYPE, ARM_LOW_OVERHEAD_LOOPS_NAME,
                 false, false)
 
 bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &MF) {
-  //if (!static_cast<const ARMSubtarget&>(MF.getSubtarget()).hasLOB())
-    //return false;
+  if (!static_cast<const ARMSubtarget&>(MF.getSubtarget()).hasLOB())
+    return false;
 
   LLVM_DEBUG(dbgs() << "ARM Loops on " << MF.getName() << " ------------- \n");
 
@@ -133,15 +133,14 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
         Dec = &MI;
       else if (MI.getOpcode() == ARM::t2LoopEnd)
         End = &MI;
+      else if (MI.getDesc().isCall())
+        // TODO: Though the call will require LE to execute again, does this
+        // mean we should revert? Always executing LE hopefully should be
+        // faster than performing a sub,cmp,br or even subs,br.
+        Revert = true;
 
       if (!Dec)
         continue;
-
-      // TODO: Though the call will require LE to execute again, does this
-      // mean we should revert? Always executing LE hopefully should be faster
-      // than performing a sub,cmp,br or even subs,br.
-      if (MI.getDesc().isCall())
-        Revert = true;
 
       // If we find that we load/store LR between LoopDec and LoopEnd, expect
       // that the decremented value has been spilled to the stack. Because
@@ -272,11 +271,13 @@ void ARMLowOverheadLoops::Expand(MachineLoop *ML, MachineInstr *Start,
     MIB.addReg(ARM::LR);
     MIB.addImm(0);
     MIB.addImm(ARMCC::AL);
+    MIB.addReg(ARM::CPSR);
 
     // Create bne
     MIB = BuildMI(*MBB, End, End->getDebugLoc(), TII->get(ARM::t2Bcc));
     MIB.add(End->getOperand(1));  // branch target
     MIB.addImm(ARMCC::NE);        // condition code
+    MIB.addReg(ARM::CPSR);
     End->eraseFromParent();
     Dec->eraseFromParent();
   };

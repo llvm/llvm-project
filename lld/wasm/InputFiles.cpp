@@ -52,7 +52,8 @@ InputFile *lld::wasm::createObjectFile(MemoryBufferRef MB,
                                        StringRef ArchiveName) {
   file_magic Magic = identify_magic(MB.getBuffer());
   if (Magic == file_magic::wasm_object) {
-    std::unique_ptr<Binary> Bin = check(createBinary(MB));
+    std::unique_ptr<Binary> Bin =
+        CHECK(createBinary(MB), MB.getBufferIdentifier());
     auto *Obj = cast<WasmObjectFile>(Bin.get());
     if (Obj->isSharedObject())
       return make<SharedFile>(MB);
@@ -93,6 +94,7 @@ uint32_t ObjFile::calcNewAddend(const WasmRelocation &Reloc) const {
   switch (Reloc.Type) {
   case R_WASM_MEMORY_ADDR_LEB:
   case R_WASM_MEMORY_ADDR_SLEB:
+  case R_WASM_MEMORY_ADDR_REL_SLEB:
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_FUNCTION_OFFSET_I32:
     return Reloc.Addend;

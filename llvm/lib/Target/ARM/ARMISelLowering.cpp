@@ -221,6 +221,26 @@ void ARMTargetLowering::addQRTypeForNEON(MVT VT) {
   addTypeForNEON(VT, MVT::v2f64, MVT::v4i32);
 }
 
+void ARMTargetLowering::addMVEVectorTypes() {
+  // We 'support' these types up to bitcast/load/store level, regardless of
+  // MVE integer-only / float support. Only doing FP data processing on the FP
+  // vector types is inhibited at integer-only level.
+
+  const MVT VecTypes[] = {
+      MVT::v2i64, MVT::v4i32, MVT::v8i16, MVT::v16i8,
+      MVT::v2f64, MVT::v4f32, MVT::v8f16,
+  };
+
+  for (auto VT : VecTypes) {
+    addRegisterClass(VT, &ARM::QPRRegClass);
+    for (unsigned Opc = 0; Opc < ISD::BUILTIN_OP_END; ++Opc)
+      setOperationAction(Opc, VT, Expand);
+    setOperationAction(ISD::BITCAST, VT, Legal);
+    setOperationAction(ISD::LOAD, VT, Legal);
+    setOperationAction(ISD::STORE, VT, Legal);
+  }
+}
+
 ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
                                      const ARMSubtarget &STI)
     : TargetLowering(TM), Subtarget(&STI) {
@@ -510,7 +530,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   else
     addRegisterClass(MVT::i32, &ARM::GPRRegClass);
 
-  if (!Subtarget->useSoftFloat() && Subtarget->hasVFP2Base() &&
+  if (!Subtarget->useSoftFloat() && Subtarget->hasFPRegs() &&
       !Subtarget->isThumb1Only()) {
     addRegisterClass(MVT::f32, &ARM::SPRRegClass);
     addRegisterClass(MVT::f64, &ARM::DPRRegClass);
@@ -548,6 +568,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::READ_REGISTER, MVT::i64, Custom);
   setOperationAction(ISD::WRITE_REGISTER, MVT::i64, Custom);
 
+  if (Subtarget->hasMVEIntegerOps())
+    addMVEVectorTypes();
+
   if (Subtarget->hasNEON()) {
     addDRTypeForNEON(MVT::v2f32);
     addDRTypeForNEON(MVT::v8i8);
@@ -566,11 +589,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
       addQRTypeForNEON(MVT::v8f16);
       addDRTypeForNEON(MVT::v4f16);
     }
+  }
 
+  if (Subtarget->hasMVEIntegerOps() || Subtarget->hasNEON()) {
     // v2f64 is legal so that QR subregs can be extracted as f64 elements, but
-    // neither Neon nor VFP support any arithmetic operations on it.
-    // The same with v4f32. But keep in mind that vadd, vsub, vmul are natively
-    // supported for v4f32.
+    // none of Neon, MVE or VFP supports any arithmetic operations on it.
     setOperationAction(ISD::FADD, MVT::v2f64, Expand);
     setOperationAction(ISD::FSUB, MVT::v2f64, Expand);
     setOperationAction(ISD::FMUL, MVT::v2f64, Expand);
@@ -604,7 +627,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FNEARBYINT, MVT::v2f64, Expand);
     setOperationAction(ISD::FFLOOR, MVT::v2f64, Expand);
     setOperationAction(ISD::FMA, MVT::v2f64, Expand);
+  }
 
+  if (Subtarget->hasNEON()) {
+    // The same with v4f32. But keep in mind that vadd, vsub, vmul are natively
+    // supported for v4f32.
     setOperationAction(ISD::FSQRT, MVT::v4f32, Expand);
     setOperationAction(ISD::FSIN, MVT::v4f32, Expand);
     setOperationAction(ISD::FCOS, MVT::v4f32, Expand);
@@ -1040,7 +1067,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   }
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
 
-  if (!Subtarget->useSoftFloat() && Subtarget->hasVFP2Base() &&
+  if (!Subtarget->useSoftFloat() && Subtarget->hasFPRegs() &&
       !Subtarget->isThumb1Only()) {
     // Turn f64->i64 into VMOVRRD, i64 -> f64 to VMOVDRR
     // iff target supports vfp2.
@@ -13975,6 +14002,7 @@ ARMTargetLowering::getConstraintType(StringRef Constraint) const {
   } else if (Constraint.size() == 2) {
     switch (Constraint[0]) {
     default: break;
+    case 'T': return C_RegisterClass;
     // All 'U+' constraints are addresses.
     case 'U': return C_Memory;
     }
@@ -14020,7 +14048,8 @@ using RCPair = std::pair<unsigned, const TargetRegisterClass *>;
 
 RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
     const TargetRegisterInfo *TRI, StringRef Constraint, MVT VT) const {
-  if (Constraint.size() == 1) {
+  switch (Constraint.size()) {
+  case 1:
     // GCC ARM Constraint Letters
     switch (Constraint[0]) {
     case 'l': // Low regs or general regs.
@@ -14066,7 +14095,26 @@ RCPair ARMTargetLowering::getRegForInlineAsmConstraint(
         return RCPair(0U, &ARM::QPR_VFP2RegClass);
       break;
     }
+
+  case 2:
+    switch (Constraint[0]) {
+    case 'T':
+      switch (Constraint[1]) {
+      default:
+        break;
+      case 'e':
+        return RCPair(0U, &ARM::tGPREvenRegClass);
+      case 'o':
+        return RCPair(0U, &ARM::tGPROddRegClass);
+      }
+    default:
+      break;
+    }
+
+  default:
+    break;
   }
+
   if (StringRef("{cc}").equals_lower(Constraint))
     return std::make_pair(unsigned(ARM::CPSR), &ARM::CCRRegClass);
 
