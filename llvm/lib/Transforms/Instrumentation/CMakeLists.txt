@@ -14,6 +14,7 @@ add_llvm_library(LLVMInstrumentation
   PGOMemOPSizeOpt.cpp
   PoisonChecking.cpp
   SanitizerCoverage.cpp
+  SoftPointerAuth.cpp
   ValueProfileCollector.cpp
   ThreadSanitizer.cpp
   HWAddressSanitizer.cpp
