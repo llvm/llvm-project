@@ -11,6 +11,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/Process.h"
 
 using namespace lldb_private;
 using namespace llvm;
@@ -104,6 +105,27 @@ void FileCollector::AddFileImpl(StringRef src_path) {
   AddFileToMapping(virtual_path, dst_path);
 }
 
+/// Set the access and modification time for the given file from the given
+/// status object.
+static std::error_code
+CopyAccessAndModificationTime(StringRef filename,
+                              const sys::fs::file_status &stat) {
+  int fd;
+
+  if (auto ec =
+          sys::fs::openFileForWrite(filename, fd, sys::fs::CD_OpenExisting))
+    return ec;
+
+  if (auto ec = sys::fs::setLastAccessAndModificationTime(
+          fd, stat.getLastAccessedTime(), stat.getLastModificationTime()))
+    return ec;
+
+  if (auto ec = sys::Process::SafelyCloseFileDescriptor(fd))
+    return ec;
+
+  return {};
+}
+
 std::error_code FileCollector::CopyFiles(bool stop_on_error) {
   for (auto &entry : m_vfs_writer.getMappings()) {
     // Create directory tree.
@@ -127,6 +149,15 @@ std::error_code FileCollector::CopyFiles(bool stop_on_error) {
           return ec;
       }
     }
+
+    // Copy over modification time.
+    sys::fs::file_status stat;
+    if (std::error_code ec = sys::fs::status(entry.VPath, stat)) {
+      if (stop_on_error)
+        return ec;
+      continue;
+    }
+    CopyAccessAndModificationTime(entry.RPath, stat);
   }
   return {};
 }
