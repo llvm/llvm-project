@@ -1,3 +1,4 @@
+# REQUIRES: x86-registered-target
 # Mock 'compile_commands.json' to contain a driver name targeting fuchsia OS.
 # Afterwards check that correct target is passed into clang.
 

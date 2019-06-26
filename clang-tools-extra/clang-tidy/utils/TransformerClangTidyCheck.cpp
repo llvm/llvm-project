@@ -14,20 +14,40 @@ namespace tidy {
 namespace utils {
 using tooling::RewriteRule;
 
+static bool hasExplanation(const RewriteRule::Case &C) {
+  return C.Explanation != nullptr;
+}
+
+// This constructor cannot dispatch to the simpler one (below), because, in
+// order to get meaningful results from `getLangOpts` and `Options`, we need the
+// `ClangTidyCheck()` constructor to have been called. If we were to dispatch,
+// we would be accessing `getLangOpts` and `Options` before the underlying
+// `ClangTidyCheck` instance was properly initialized.
+TransformerClangTidyCheck::TransformerClangTidyCheck(
+    std::function<Optional<RewriteRule>(const LangOptions &,
+                                        const OptionsView &)>
+        MakeRule,
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context), Rule(MakeRule(getLangOpts(), Options)) {
+  if (Rule)
+    assert(llvm::all_of(Rule->Cases, hasExplanation) &&
+           "clang-tidy checks must have an explanation by default;"
+           " explicitly provide an empty explanation if none is desired");
+}
+
 TransformerClangTidyCheck::TransformerClangTidyCheck(RewriteRule R,
                                                      StringRef Name,
                                                      ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), Rule(std::move(R)) {
-  assert(llvm::all_of(Rule.Cases, [](const RewriteRule::Case &C) {
-                       return C.Explanation != nullptr;
-                     }) &&
+  assert(llvm::all_of(Rule->Cases, hasExplanation) &&
          "clang-tidy checks must have an explanation by default;"
          " explicitly provide an empty explanation if none is desired");
 }
 
 void TransformerClangTidyCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
-  Finder->addDynamicMatcher(tooling::detail::buildMatcher(Rule), this);
+  if (Rule)
+    Finder->addDynamicMatcher(tooling::detail::buildMatcher(*Rule), this);
 }
 
 void TransformerClangTidyCheck::check(
@@ -43,7 +63,8 @@ void TransformerClangTidyCheck::check(
       Root->second.getSourceRange().getBegin());
   assert(RootLoc.isValid() && "Invalid location for Root node of match.");
 
-  RewriteRule::Case Case = tooling::detail::findSelectedCase(Result, Rule);
+  assert(Rule && "check() should not fire if Rule is None");
+  RewriteRule::Case Case = tooling::detail::findSelectedCase(Result, *Rule);
   Expected<SmallVector<tooling::detail::Transformation, 1>> Transformations =
       tooling::detail::translateEdits(Result, Case.Edits);
   if (!Transformations) {

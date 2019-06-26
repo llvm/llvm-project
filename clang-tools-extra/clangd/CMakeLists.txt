@@ -63,6 +63,7 @@ add_clang_library(clangDaemon
   Quality.cpp
   RIFF.cpp
   Selection.cpp
+  SemanticHighlighting.cpp
   SourceCode.cpp
   QueryDriverDatabase.cpp
   Threading.cpp

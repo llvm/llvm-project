@@ -456,9 +456,9 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
   if (!Action->BeginSourceFile(*Clang, Input))
     return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                    "BeginSourceFile() failed");
-  if (!Action->Execute())
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Execute() failed");
+  if (llvm::Error Err = Action->Execute())
+    return Err;
+
   Action->EndSourceFile();
   if (Clang->hasDiagnostics() &&
       Clang->getDiagnostics().hasUncompilableErrorOccurred()) {
