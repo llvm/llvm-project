@@ -280,7 +280,7 @@ CPPLanguageRuntime::FindLibCppStdFunctionCallableInfo(
   }
 
   // Case 4 or 5
-  if (!symbol->GetName().GetStringRef().startswith("vtable for")) {
+  if (symbol && !symbol->GetName().GetStringRef().startswith("vtable for")) {
     optional_info.callable_case =
         LibCppStdFunctionCallableCase::FreeOrMemberFunction;
     optional_info.callable_address = function_address_resolved;

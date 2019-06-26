@@ -561,9 +561,14 @@ public:
   }
 
   /// hasOneNonDBGUse - Return true if there is exactly one non-Debug
-  /// instruction using the specified register.
+  /// use of the specified register.
   bool hasOneNonDBGUse(unsigned RegNo) const;
 
+  /// hasOneNonDBGUse - Return true if there is exactly one non-Debug
+  /// instruction using the specified register. Said instruction may have
+  /// multiple uses.
+  bool hasOneNonDBGUser(unsigned RegNo) const;
+  
   /// replaceRegWith - Replace all instances of FromReg with ToReg in the
   /// machine function.  This is like llvm-level X->replaceAllUsesWith(Y),
   /// except that it also changes any definitions of the register as well.

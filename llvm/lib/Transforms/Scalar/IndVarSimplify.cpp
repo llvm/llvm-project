@@ -2463,13 +2463,6 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
   else
     P = ICmpInst::ICMP_EQ;
 
-  LLVM_DEBUG(dbgs() << "INDVARS: Rewriting loop exit condition to:\n"
-                    << "      LHS:" << *CmpIndVar << '\n'
-                    << "       op:\t" << (P == ICmpInst::ICMP_NE ? "!=" : "==")
-                    << "\n"
-                    << "      RHS:\t" << *ExitCnt << "\n"
-                    << "  IVCount:\t" << *IVCount << "\n");
-
   IRBuilder<> Builder(BI);
 
   // The new loop exit condition should reuse the debug location of the
@@ -2538,6 +2531,14 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
                                         "lftr.wideiv");
     }
   }
+  LLVM_DEBUG(dbgs() << "INDVARS: Rewriting loop exit condition to:\n"
+                    << "      LHS:" << *CmpIndVar << '\n'
+                    << "       op:\t" << (P == ICmpInst::ICMP_NE ? "!=" : "==")
+                    << "\n"
+                    << "      RHS:\t" << *ExitCnt << "\n"
+                    << "  IVCount:\t" << *IVCount << "\n"
+                    << "  was: " << *BI->getCondition() << "\n");
+
   Value *Cond = Builder.CreateICmp(P, CmpIndVar, ExitCnt, "exitcond");
   Value *OrigCond = BI->getCondition();
   // It's tempting to use replaceAllUsesWith here to fully replace the old

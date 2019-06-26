@@ -225,6 +225,11 @@ void LinkerDriver::addFile(StringRef Path) {
 
   switch (identify_magic(MBRef.getBuffer())) {
   case file_magic::archive: {
+    SmallString<128> ImportFile = Path;
+    path::replace_extension(ImportFile, ".imports");
+    if (fs::exists(ImportFile))
+      readImportFile(ImportFile.str());
+
     // Handle -whole-archive.
     if (InWholeArchive) {
       for (MemoryBufferRef &M : getArchiveMembers(MBRef))
@@ -232,10 +237,13 @@ void LinkerDriver::addFile(StringRef Path) {
       return;
     }
 
-    SmallString<128> ImportFile = Path;
-    path::replace_extension(ImportFile, ".imports");
-    if (fs::exists(ImportFile))
-      readImportFile(ImportFile.str());
+    std::unique_ptr<Archive> File =
+        CHECK(Archive::create(MBRef), Path + ": failed to parse archive");
+
+    if (!File->isEmpty() && !File->hasSymbolTable()) {
+      error(MBRef.getBufferIdentifier() +
+            ": archive has no index; run ranlib to add one");
+    }
 
     Files.push_back(make<ArchiveFile>(MBRef));
     return;

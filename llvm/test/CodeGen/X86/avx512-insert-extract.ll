@@ -908,22 +908,20 @@ define zeroext i8 @test_extractelement_v2i1(<2 x i64> %a, <2 x i64> %b) {
 ; KNL-NEXT:    ## kill: def $xmm1 killed $xmm1 def $zmm1
 ; KNL-NEXT:    ## kill: def $xmm0 killed $xmm0 def $zmm0
 ; KNL-NEXT:    vpcmpnleuq %zmm1, %zmm0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    movb $4, %cl
-; KNL-NEXT:    subb %al, %cl
-; KNL-NEXT:    movzbl %cl, %eax
+; KNL-NEXT:    kmovw %k0, %ecx
+; KNL-NEXT:    andl $1, %ecx
+; KNL-NEXT:    movl $4, %eax
+; KNL-NEXT:    subl %ecx, %eax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
 ; SKX-LABEL: test_extractelement_v2i1:
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpnleuq %xmm1, %xmm0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    andb $1, %al
-; SKX-NEXT:    movb $4, %cl
-; SKX-NEXT:    subb %al, %cl
-; SKX-NEXT:    movzbl %cl, %eax
+; SKX-NEXT:    kmovd %k0, %ecx
+; SKX-NEXT:    andl $1, %ecx
+; SKX-NEXT:    movl $4, %eax
+; SKX-NEXT:    subl %ecx, %eax
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <2 x i64> %a, %b
   %t2 = extractelement <2 x i1> %t1, i32 0
@@ -1024,11 +1022,10 @@ define zeroext i8 @test_extractelement_v64i1(<64 x i8> %a, <64 x i8> %b) {
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
 ; KNL-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; KNL-NEXT:    kshiftrw $15, %k0, %k0
-; KNL-NEXT:    kmovw %k0, %eax
-; KNL-NEXT:    andb $1, %al
-; KNL-NEXT:    movb $4, %cl
-; KNL-NEXT:    subb %al, %cl
-; KNL-NEXT:    movzbl %cl, %eax
+; KNL-NEXT:    kmovw %k0, %ecx
+; KNL-NEXT:    andl $1, %ecx
+; KNL-NEXT:    movl $4, %eax
+; KNL-NEXT:    subl %ecx, %eax
 ; KNL-NEXT:    vzeroupper
 ; KNL-NEXT:    retq
 ;
@@ -1036,11 +1033,10 @@ define zeroext i8 @test_extractelement_v64i1(<64 x i8> %a, <64 x i8> %b) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    vpcmpnleub %zmm1, %zmm0, %k0
 ; SKX-NEXT:    kshiftrq $63, %k0, %k0
-; SKX-NEXT:    kmovd %k0, %eax
-; SKX-NEXT:    andb $1, %al
-; SKX-NEXT:    movb $4, %cl
-; SKX-NEXT:    subb %al, %cl
-; SKX-NEXT:    movzbl %cl, %eax
+; SKX-NEXT:    kmovd %k0, %ecx
+; SKX-NEXT:    andl $1, %ecx
+; SKX-NEXT:    movl $4, %eax
+; SKX-NEXT:    subl %ecx, %eax
 ; SKX-NEXT:    vzeroupper
 ; SKX-NEXT:    retq
   %t1 = icmp ugt <64 x i8> %a, %b

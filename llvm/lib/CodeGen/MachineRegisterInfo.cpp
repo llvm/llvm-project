@@ -423,6 +423,13 @@ bool MachineRegisterInfo::hasOneNonDBGUse(unsigned RegNo) const {
   return ++UI == use_nodbg_end();
 }
 
+bool MachineRegisterInfo::hasOneNonDBGUser(unsigned RegNo) const {
+  use_instr_nodbg_iterator UI = use_instr_nodbg_begin(RegNo);
+  if (UI == use_instr_nodbg_end())
+    return false;
+  return ++UI == use_instr_nodbg_end();
+}
+
 /// clearKillFlags - Iterate over all the uses of the given register and
 /// clear the kill flag from the MachineOperand. This function is used by
 /// optimization passes which extend register lifetimes and need only

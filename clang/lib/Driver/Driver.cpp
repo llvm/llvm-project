@@ -3377,15 +3377,21 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     Args.ClaimAllArgs(options::OPT_cl_compile_Group);
   }
 
-  // If the use specify --print-supported-cpus, clang will only print out
-  // supported cpu names without doing compilation.
+  // if the user specify --print-supported-cpus, or use -mcpu=?, or use
+  // -mtune=? (aliases), clang will only print out supported cpu names
+  // without doing compilation.
   if (Arg *A = Args.getLastArg(options::OPT__print_supported_cpus)) {
-    Actions.clear();
     // the compilation now has only two phases: Input and Compile
     // use the --prints-supported-cpus flag as the dummy input to cc1
+    Actions.clear();
     Action *InputAc = C.MakeAction<InputAction>(*A, types::TY_C);
     Actions.push_back(
         C.MakeAction<PrecompileJobAction>(InputAc, types::TY_Nothing));
+    // claim all the input files to prevent argument unused warnings
+    for (auto &I : Inputs) {
+      const Arg *InputArg = I.second;
+      InputArg->claim();
+    }
   }
 
   // Claim ignored clang-cl options.

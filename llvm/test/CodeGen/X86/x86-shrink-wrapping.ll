@@ -1386,8 +1386,7 @@ define i32 @irreducibleCFG() #4 {
 ; ENABLE-NEXT:    jmp LBB16_1
 ; ENABLE-NEXT:  LBB16_2: ## %split
 ; ENABLE-NEXT:    movq _irreducibleCFGb@{{.*}}(%rip), %rax
-; ENABLE-NEXT:    movl (%rax), %eax
-; ENABLE-NEXT:    testl %eax, %eax
+; ENABLE-NEXT:    cmpl $0, (%rax)
 ; ENABLE-NEXT:    je LBB16_3
 ; ENABLE-NEXT:  ## %bb.4: ## %for.body4.i
 ; ENABLE-NEXT:    movq _irreducibleCFGa@{{.*}}(%rip), %rax
@@ -1430,8 +1429,7 @@ define i32 @irreducibleCFG() #4 {
 ; DISABLE-NEXT:    jmp LBB16_1
 ; DISABLE-NEXT:  LBB16_2: ## %split
 ; DISABLE-NEXT:    movq _irreducibleCFGb@{{.*}}(%rip), %rax
-; DISABLE-NEXT:    movl (%rax), %eax
-; DISABLE-NEXT:    testl %eax, %eax
+; DISABLE-NEXT:    cmpl $0, (%rax)
 ; DISABLE-NEXT:    je LBB16_3
 ; DISABLE-NEXT:  ## %bb.4: ## %for.body4.i
 ; DISABLE-NEXT:    movq _irreducibleCFGa@{{.*}}(%rip), %rax

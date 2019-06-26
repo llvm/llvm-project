@@ -84,31 +84,6 @@ public:
   Status ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf, size_t size,
                                size_t &bytes_read);
 
-  /// Reads a null terminated string from memory.
-  ///
-  /// Reads up to \p max_size bytes of memory until it finds a '\0'.
-  /// If a '\0' is not found then it reads max_size-1 bytes as a string and a
-  /// '\0' is added as the last character of the \p buffer.
-  ///
-  /// \param[in] addr
-  ///     The address in memory to read from.
-  ///
-  /// \param[in] buffer
-  ///     An allocated buffer with at least \p max_size size.
-  ///
-  /// \param[in] max_size
-  ///     The maximum number of bytes to read from memory until it reads the
-  ///     string.
-  ///
-  /// \param[out] total_bytes_read
-  ///     The number of bytes read from memory into \p buffer.
-  ///
-  /// \return
-  ///     Returns a StringRef backed up by the \p buffer passed in.
-  llvm::Expected<llvm::StringRef>
-  ReadCStringFromMemory(lldb::addr_t addr, char *buffer, size_t max_size,
-                        size_t &total_bytes_read);
-
   virtual Status WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
                              size_t &bytes_written) = 0;
 

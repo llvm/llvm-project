@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++2a -verify %s
-// expected-no-diagnostics
 
 template<typename ...T, typename ...Lambda> void check_sizes(Lambda ...L) {
   static_assert(((sizeof(T) == sizeof(Lambda)) && ...));
@@ -15,3 +14,12 @@ template<typename ...T> void f(T ...v) {
 }
 
 template void f(int, char, double);
+
+namespace PR41576 {
+  template <class... Xs> constexpr int f(Xs ...xs) {
+    return [&](auto ...ys) { // expected-note {{instantiation}}
+      return ((xs + ys), ...); // expected-warning {{unused}}
+    }(1, 2);
+  }
+  static_assert(f(3, 4) == 6); // expected-note {{instantiation}}
+}

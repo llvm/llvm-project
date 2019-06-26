@@ -118,13 +118,14 @@ NativeProcessELF::ReadSVR4LibraryInfo(lldb::addr_t link_map_addr) {
     return error.ToError();
 
   char name_buffer[PATH_MAX];
-  llvm::Expected<llvm::StringRef> string_or_error = ReadCStringFromMemory(
-      link_map.l_name, &name_buffer[0], sizeof(name_buffer), bytes_read);
-  if (!string_or_error)
-    return string_or_error.takeError();
+  error = ReadMemory(link_map.l_name, &name_buffer, sizeof(name_buffer),
+                     bytes_read);
+  if (!error.Success())
+    return error.ToError();
+  name_buffer[PATH_MAX - 1] = '\0';
 
   SVR4LibraryInfo info;
-  info.name = string_or_error->str();
+  info.name = std::string(name_buffer);
   info.link_map = link_map_addr;
   info.base_addr = link_map.l_addr;
   info.ld_addr = link_map.l_ld;

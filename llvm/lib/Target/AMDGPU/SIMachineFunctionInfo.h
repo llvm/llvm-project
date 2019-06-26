@@ -675,9 +675,6 @@ public:
     llvm_unreachable("unexpected dimension");
   }
 
-  /// \returns VGPR used for \p Dim' work item ID.
-  unsigned getWorkItemIDVGPR(unsigned Dim) const;
-
   unsigned getLDSWaveSpillSize() const {
     return LDSWaveSpillSize;
   }

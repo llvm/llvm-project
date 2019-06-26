@@ -8,8 +8,7 @@ define void @foo(i32 %X, i32 %Y, i32 %Z) nounwind {
 ; JUMP2-NEXT:    cmpl $5, {{[0-9]+}}(%esp)
 ; JUMP2-NEXT:    jl .LBB0_3
 ; JUMP2-NEXT:  # %bb.1: # %entry
-; JUMP2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; JUMP2-NEXT:    testl %eax, %eax
+; JUMP2-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; JUMP2-NEXT:    je .LBB0_3
 ; JUMP2-NEXT:  # %bb.2: # %UnifiedReturnBlock
 ; JUMP2-NEXT:    retl

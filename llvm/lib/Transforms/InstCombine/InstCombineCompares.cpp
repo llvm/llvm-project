@@ -2028,6 +2028,27 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
                         And, Constant::getNullValue(ShType));
   }
 
+  // Simplify 'shl' inequality test into 'and' equality test.
+  if (Cmp.isUnsigned() && Shl->hasOneUse()) {
+    // (X l<< C2) u<=/u> C1 iff C1+1 is power of two -> X & (~C1 l>> C2) ==/!= 0
+    if ((C + 1).isPowerOf2() &&
+        (Pred == ICmpInst::ICMP_ULE || Pred == ICmpInst::ICMP_UGT)) {
+      Value *And = Builder.CreateAnd(X, (~C).lshr(ShiftAmt->getZExtValue()));
+      return new ICmpInst(Pred == ICmpInst::ICMP_ULE ? ICmpInst::ICMP_EQ
+                                                     : ICmpInst::ICMP_NE,
+                          And, Constant::getNullValue(ShType));
+    }
+    // (X l<< C2) u</u>= C1 iff C1 is power of two -> X & (-C1 l>> C2) ==/!= 0
+    if (C.isPowerOf2() &&
+        (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE)) {
+      Value *And =
+          Builder.CreateAnd(X, (~(C - 1)).lshr(ShiftAmt->getZExtValue()));
+      return new ICmpInst(Pred == ICmpInst::ICMP_ULT ? ICmpInst::ICMP_EQ
+                                                     : ICmpInst::ICMP_NE,
+                          And, Constant::getNullValue(ShType));
+    }
+  }
+
   // Transform (icmp pred iM (shl iM %v, N), C)
   // -> (icmp pred i(M-N) (trunc %v iM to i(M-N)), (trunc (C>>N))
   // Transform the shl to a trunc if (trunc (C>>N)) has no loss and M-N.
@@ -3829,23 +3850,21 @@ Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
     return new ICmpInst(Pred, A, B);
 
   // Canonicalize checking for a power-of-2-or-zero value:
-  // (A & -A) == A --> (A & (A - 1)) == 0
-  // (-A & A) == A --> (A & (A - 1)) == 0
-  // A == (A & -A) --> (A & (A - 1)) == 0
-  // A == (-A & A) --> (A & (A - 1)) == 0
-  // TODO: This could be reduced by using the ctpop intrinsic.
+  // (A & -A) == A --> ctpop(A) < 2 (four commuted variants)
+  // (-A & A) != A --> ctpop(A) > 1 (four commuted variants)
   A = nullptr;
-  if (match(Op0, m_OneUse(m_c_And(m_OneUse(m_Neg(m_Specific(Op1))),
-                                  m_Specific(Op1)))))
+  if (match(Op0, m_OneUse(m_c_And(m_Neg(m_Specific(Op1)), m_Specific(Op1)))))
     A = Op1;
-  else if (match(Op1, m_OneUse(m_c_And(m_OneUse(m_Neg(m_Specific(Op0))),
-                                       m_Specific(Op0)))))
+  else if (match(Op1,
+                 m_OneUse(m_c_And(m_Neg(m_Specific(Op0)), m_Specific(Op0)))))
     A = Op0;
+
   if (A) {
     Type *Ty = A->getType();
-    Value *Dec = Builder.CreateAdd(A, ConstantInt::getAllOnesValue(Ty));
-    Value *And = Builder.CreateAnd(A, Dec);
-    return new ICmpInst(Pred, And, ConstantInt::getNullValue(Ty));
+    CallInst *CtPop = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, A);
+    return Pred == ICmpInst::ICMP_EQ
+        ? new ICmpInst(ICmpInst::ICMP_ULT, CtPop, ConstantInt::get(Ty, 2))
+        : new ICmpInst(ICmpInst::ICMP_UGT, CtPop, ConstantInt::get(Ty, 1));
   }
 
   return nullptr;
