@@ -16,15 +16,15 @@
 // RUN:     -implicit-check-not=DISubprogram -implicit-check-not=DIFlagAllCallsDescribed
 
 // Supported: DWARF4 + GDB tuning by using '-femit-debug-entry-values'
-// RUN: %clang_cc1 -femit-debug-entry-values -emit-llvm %s -o - \
-// RUN:   -O1 -disable-llvm-passes -debugger-tuning=gdb \
+// RUN: %clang_cc1 -femit-debug-entry-values -emit-llvm -triple x86_64-linux-gnu \
+// RUN:   %s -o - -O1 -disable-llvm-passes -debugger-tuning=gdb \
 // RUN:   -debug-info-kind=standalone -dwarf-version=4 \
 // RUN: | FileCheck %s -check-prefix=HAS-ATTR \
 // RUN:     -implicit-check-not=DIFlagAllCallsDescribed
 
 // Unsupported: -O0 + '-femit-debug-entry-values'
-// RUN: %clang_cc1 -femit-debug-entry-values -emit-llvm %s -o - \
-// RUN:   -O0 -disable-llvm-passes -debugger-tuning=gdb \
+// RUN: %clang_cc1 -femit-debug-entry-values -emit-llvm -triple x86_64-linux-gnu \
+// RUN:   %s -o - -O0 -disable-llvm-passes -debugger-tuning=gdb \
 // RUN:   -debug-info-kind=standalone -dwarf-version=4 \
 // RUN: | FileCheck %s -check-prefix=NO-ATTR
 

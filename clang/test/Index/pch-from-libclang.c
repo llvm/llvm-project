@@ -7,6 +7,7 @@
 // - a/../b/ and b/ are not considered the same
 // - on Windows, c:\ and C:\ (only different in case) are not the same
 
+// RUN: rm -rf %t.mcp %t.h.pch
 // RUN: %clang_cc1 -fsyntax-only %s -verify
 // RUN: c-index-test -write-pch %t.h.pch %s -fmodules -fmodules-cache-path=%t.mcp -Xclang -triple -Xclang x86_64-apple-darwin
 // RUN: %clang -fsyntax-only -include %t.h %s -Xclang -verify -fmodules -fmodules-cache-path=%t.mcp -Xclang -detailed-preprocessing-record -Xclang -triple -Xclang x86_64-apple-darwin -Xclang -fallow-pch-with-compiler-errors
