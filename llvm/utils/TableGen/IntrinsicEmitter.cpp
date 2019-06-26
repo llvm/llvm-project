@@ -372,6 +372,9 @@ static void UpdateArgCodes(Record *R, std::vector<unsigned char> &ArgCodes,
   unsigned Tmp = 0;
   switch (getValueType(R->getValueAsDef("VT"))) {
   default: break;
+  case MVT::iPTR:
+    UpdateArgCodes(R->getValueAsDef("ElTy"), ArgCodes, NumInserted, Mapping);
+    break;
   case MVT::iPTRAny:
     ++Tmp;
     LLVM_FALLTHROUGH;

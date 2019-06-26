@@ -135,6 +135,7 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
     if (ArchType == llvm::Triple::x86_64) {
       Features.push_back("+sse4.2");
       Features.push_back("+popcnt");
+      Features.push_back("+mcx16");
     } else
       Features.push_back("+ssse3");
   }

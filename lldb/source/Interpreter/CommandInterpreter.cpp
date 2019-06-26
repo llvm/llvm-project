@@ -821,7 +821,7 @@ void CommandInterpreter::LoadCommandDictionary() {
           *this, "_regexp-env",
           "Shorthand for viewing and setting environment variables.",
           "\n"
-          "_regexp-env                  // Show enrivonment\n"
+          "_regexp-env                  // Show environment\n"
           "_regexp-env <name>=<value>   // Set an environment variable",
           2, 0, false));
   if (env_regex_cmd_up) {

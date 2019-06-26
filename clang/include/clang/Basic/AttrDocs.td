@@ -4183,3 +4183,15 @@ This attribute does not affect optimizations in any way, unlike GCC's
 ``__attribute__((malloc))``.
 }];
 }
+
+def HIPPinnedShadowDocs : Documentation {
+  let Category = DocCatType;
+  let Content = [{
+The GNU style attribute __attribute__((hip_pinned_shadow)) or MSVC style attribute
+__declspec(hip_pinned_shadow) can be added to the definition of a global variable
+to indicate it is a HIP pinned shadow variable. A HIP pinned shadow variable can
+be accessed on both device side and host side. It has external linkage and is
+not initialized on device side. It has internal linkage and is initialized by
+the initializer on host side.
+  }];
+}

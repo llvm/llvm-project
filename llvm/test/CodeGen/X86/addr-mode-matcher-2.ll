@@ -24,8 +24,7 @@
 define void @foo(i1 zeroext, i32) nounwind {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    testb %al, %al
+; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB0_1
 ; X86-NEXT:  # %bb.3:
 ; X86-NEXT:    retl

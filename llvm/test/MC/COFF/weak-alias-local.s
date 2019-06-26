@@ -29,7 +29,7 @@ a=b
 // CHECK-NEXT:   AuxSymbolCount: 1
 // CHECK-NEXT:   AuxWeakExternal {
 // CHECK-NEXT:     Linked: .weak.a.default (9)
-// CHECK-NEXT:     Search: Library (0x2)
+// CHECK-NEXT:     Search: Alias (0x3)
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 // CHECK-NEXT: Symbol {

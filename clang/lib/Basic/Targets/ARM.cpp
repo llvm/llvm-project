@@ -910,6 +910,7 @@ bool ARMTargetInfo::validateAsmConstraint(
       Name++;
       return true;
     }
+    break;
   case 'U': // a memory reference...
     switch (Name[1]) {
     case 'q': // ...ARMV4 ldrsb
@@ -925,6 +926,7 @@ bool ARMTargetInfo::validateAsmConstraint(
       Name++;
       return true;
     }
+    break;
   }
   return false;
 }
