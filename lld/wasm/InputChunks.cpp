@@ -154,15 +154,8 @@ void InputChunk::writeRelocations(raw_ostream &OS) const {
     writeUleb128(OS, Rel.Offset + Off, "reloc offset");
     writeUleb128(OS, File->calcNewIndex(Rel), "reloc index");
 
-    switch (Rel.Type) {
-    case R_WASM_MEMORY_ADDR_LEB:
-    case R_WASM_MEMORY_ADDR_SLEB:
-    case R_WASM_MEMORY_ADDR_I32:
-    case R_WASM_FUNCTION_OFFSET_I32:
-    case R_WASM_SECTION_OFFSET_I32:
+    if (relocTypeHasAddend(Rel.Type))
       writeSleb128(OS, File->calcNewAddend(Rel), "reloc addend");
-      break;
-    }
   }
 }
 
