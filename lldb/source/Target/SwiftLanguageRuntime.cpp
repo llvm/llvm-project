@@ -3320,6 +3320,18 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
   }
 }
 
+lldb::BreakpointPreconditionSP
+SwiftLanguageRuntime::GetBreakpointExceptionPrecondition(LanguageType language,
+                                                         bool throw_bp) {
+  if (language != eLanguageTypeSwift)
+    return lldb::BreakpointPreconditionSP();
+  if (!throw_bp)
+    return lldb::BreakpointPreconditionSP();
+  BreakpointPreconditionSP precondition_sp(
+      new SwiftLanguageRuntime::SwiftExceptionPrecondition());
+  return precondition_sp;
+}
+
 bool SwiftLanguageRuntime::SwiftExceptionPrecondition::EvaluatePrecondition(
     StoppointCallbackContext &context) {
   if (!m_type_names.empty()) {
@@ -4263,7 +4275,8 @@ void SwiftLanguageRuntime::Initialize() {
       CreateInstance,
       [](CommandInterpreter &interpreter) -> lldb::CommandObjectSP {
         return CommandObjectSP(new CommandObjectMultiwordSwift(interpreter));
-      });
+      },
+      GetBreakpointExceptionPrecondition);
 }
 
 void SwiftLanguageRuntime::Terminate() {

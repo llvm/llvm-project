@@ -1224,7 +1224,10 @@ bool SBFrame::IsSwiftThunk() const {
   sc = frame->GetSymbolContext(eSymbolContextSymbol);
   if (!sc.symbol)
     return false;
-  return SwiftLanguageRuntime::IsSymbolARuntimeThunk(*sc.symbol);
+  auto *runtime = process->GetLanguageRuntime(eLanguageTypeSwift);
+  if (!runtime)
+    return false;
+  return runtime->IsSymbolARuntimeThunk(*sc.symbol);
 }
 
 const char *SBFrame::GetFunctionName() const {

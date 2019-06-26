@@ -189,7 +189,10 @@ public:
     return false;
   }
 
-  static bool IsSymbolAnyRuntimeThunk(Symbol &symbol);
+  // FIXME: This should be upstreamed into llvm.org, but only
+  // SwiftLanguageRuntime overrides this. That means that upstreaming in its
+  // current form would be introducing dead code into llvm.org
+  virtual bool IsSymbolARuntimeThunk(const Symbol &symbol) { return false; }
 
   // Given the name of a runtime symbol (e.g. in Objective-C, an ivar offset
   // symbol), try to determine from the runtime what the value of that symbol
@@ -200,6 +203,11 @@ public:
 
   virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
   static char ID;
+
+  virtual void FindFunctionPointersInCall(StackFrame &frame,
+                                          std::vector<Address> &addresses,
+                                          bool debug_only = true,
+                                          bool resolve_thunks = true){};
 
 protected:
   // Classes that inherit from LanguageRuntime can see and modify these

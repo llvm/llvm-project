@@ -12,9 +12,9 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
-#include "lldb/Target/SwiftLanguageRuntime.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
@@ -481,124 +481,85 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereCallback(
     ThreadPlanStepInRange *step_in_range_plan =
         static_cast<ThreadPlanStepInRange *>(current_plan);
     should_stop_here =
-        step_in_range_plan->DefaultShouldStopHereImpl(flags, !should_stop_here);
-
-    //        if (should_stop_here)
-    //        {
-    //            ThreadPlanStepInRange *step_in_range_plan =
-    //            static_cast<ThreadPlanStepInRange *> (current_plan);
-    //            // Don't log the should_step_out here, it's easier to do it in
-    //            FrameMatchesAvoidCriteria.
-    //            should_stop_here =
-    //            !step_in_range_plan->FrameMatchesAvoidCriteria ();
-    //        }
+        step_in_range_plan->DefaultShouldStopHereImpl(flags, should_stop_here);
   }
 
   return should_stop_here;
 }
 
 bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
-                                                      bool should_step_out) {
+                                                      bool should_stop_here) {
   StackFrame *frame = GetThread().GetStackFrameAtIndex(0).get();
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
 
   if (m_step_into_target) {
     SymbolContext sc = frame->GetSymbolContext(
         eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
-    if (sc.symbol != NULL) {
-      SymbolContext sc = frame->GetSymbolContext(
-          eSymbolContextFunction | eSymbolContextBlock | eSymbolContextSymbol);
-      if (sc.symbol != nullptr) {
-        // First try an exact match, since that's cheap with
-        // ConstStrings.  Then do a strstr compare.
-        if (m_step_into_target == sc.GetFunctionName()) {
-          should_step_out = false;
-        } else {
-          const char *target_name = m_step_into_target.AsCString();
-          const char *function_name = sc.GetFunctionName().AsCString();
-
-          if (function_name == nullptr)
-            should_step_out = true;
-          else if (strstr(function_name, target_name) == nullptr)
-            should_step_out = true;
-        }
-        if (log && should_step_out)
-          log->Printf("Stepping out of frame %s which did not match step into "
-                      "target %s.",
-                      sc.GetFunctionName().AsCString(),
-                      m_step_into_target.AsCString());
+    if (sc.symbol != nullptr) {
+      // First try an exact match, since that's cheap with
+      // ConstStrings.  Then do a strstr compare.
+      if (m_step_into_target == sc.GetFunctionName()) {
+        should_stop_here = true;
       } else {
         const char *target_name = m_step_into_target.AsCString();
         const char *function_name = sc.GetFunctionName().AsCString();
 
-        if (function_name == NULL)
-          should_step_out = true;
-        else if (strstr(function_name, target_name) == NULL)
-          should_step_out = true;
+        if (function_name == nullptr)
+          should_stop_here = false;
+        else if (strstr(function_name, target_name) == nullptr)
+          should_stop_here = false;
       }
-      if (log && should_step_out)
-        log->Printf(
-            "Stepping out of frame %s which did not match step into target %s.",
-            sc.GetFunctionName().AsCString(), m_step_into_target.AsCString());
+      if (log && !should_stop_here)
+        log->Printf("Stepping out of frame %s which did not match step into "
+                    "target %s.",
+                    sc.GetFunctionName().AsCString(),
+                    m_step_into_target.AsCString());
     }
   }
 
-  if (!should_step_out) {
-    // Don't log the should_step_out here, it's easier to do it in
+  if (should_stop_here) {
+    // Don't log the should_stop_here here, it's easier to do it in
     // FrameMatchesAvoidRegexp.
-    should_step_out = FrameMatchesAvoidCriteria();
+    should_stop_here = !FrameMatchesAvoidCriteria();
   }
 
-  if (should_step_out) {
+  if (!should_stop_here) {
     // We are going to step out, but first let's examine the function we are
     // stepping past to see if it tells us
     // about any interesting places we could stop while running it.  For
     // instance, if we can tell from the signature
     // that we're being passed a function pointer that points to user code,
     // we'll prospectively stop there.
+
     // We only know how to do this for Swift at present.
     // FIXME: We could probably do this for C++ mangled names as well, if we
     // could come up with some
     // good heuristic to identify function pointers in the mangled function
     // arguments.
-
-    SymbolContext sc = frame->GetSymbolContext(eSymbolContextSymbol);
-    if (sc.symbol) {
-      Mangled mangled_name = sc.symbol->GetMangled();
-      if (mangled_name.GuessLanguage() == lldb::eLanguageTypeSwift) {
-        ProcessSP process_sp(GetThread().GetProcess());
-        SwiftLanguageRuntime *swift_runtime =
-            SwiftLanguageRuntime::Get(*process_sp);
-        if (swift_runtime) {
-          std::vector<Address> interesting_addresses;
-          swift_runtime->FindFunctionPointersInCall(*frame,
-                                                    interesting_addresses);
-          size_t num_addresses = interesting_addresses.size();
-          if (num_addresses) {
-            // Run through the addresses we found, make sure they have debug
-            // info, and if so set breakpoints
-            // on all these addresses.
-            for (size_t i = 0; i < num_addresses; i++) {
-              LineEntry line_entry;
-              if (interesting_addresses[i].CalculateSymbolContextLineEntry(
-                      line_entry)) {
-                // It has debug information, use it:
-                const bool internal = true;
-                const bool hardware = false;
-                BreakpointSP bkpt_sp = GetTarget().CreateBreakpoint(
-                    interesting_addresses[i], internal, hardware);
-                bkpt_sp->SetThreadID(GetThread().GetID());
-                m_step_in_deep_bps.push_back(bkpt_sp->GetID());
-              }
-            }
+    auto frame_language = frame->GuessLanguage();
+    if (auto *runtime =
+            GetThread().GetProcess()->GetLanguageRuntime(frame_language)) {
+      std::vector<Address> interesting_addresses;
+      runtime->FindFunctionPointersInCall(*frame, interesting_addresses);
+      if (!interesting_addresses.empty()) {
+        // Run through the addresses we found, make sure they have debug info,
+        // and if so set breakpoints on all these addresses.
+        for (const auto &address : interesting_addresses) {
+          LineEntry line_entry;
+          if (address.CalculateSymbolContextLineEntry(line_entry)) {
+            // It has debug information, use it:
+            const bool internal = true;
+            const bool hardware = false;
+            BreakpointSP bkpt_sp =
+                GetTarget().CreateBreakpoint(address, internal, hardware);
+            bkpt_sp->SetThreadID(GetThread().GetID());
+            m_step_in_deep_bps.push_back(bkpt_sp->GetID());
           }
         }
       }
     }
   }
-  // We're returning an answer to "Should Stop Here" which is the opposite of
-  // "should_step_out".
-  return !should_step_out;
+  return should_stop_here;
 }
 
 bool ThreadPlanStepInRange::DoPlanExplainsStop(Event *event_ptr) {

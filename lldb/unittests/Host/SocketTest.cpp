@@ -19,6 +19,7 @@ public:
   }
 
   void TearDown() override { Socket::Terminate(); }
+
 };
 
 TEST_F(SocketTest, DecodeHostAndPort) {
