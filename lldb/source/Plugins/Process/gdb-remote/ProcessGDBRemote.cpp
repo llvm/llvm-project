@@ -4490,8 +4490,15 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
         // Only update the register set name if we didn't get a "reg_set"
         // attribute. "set_name" will be empty if we didn't have a "reg_set"
         // attribute.
-        if (!set_name && !gdb_group.empty())
-          set_name.SetCString(gdb_group.c_str());
+        if (!set_name) {
+          if (!gdb_group.empty()) {
+            set_name.SetCString(gdb_group.c_str());
+          } else {
+            // If no register group name provided anywhere,
+            // we'll create a 'general' register set
+            set_name.SetCString("general");
+          }
+        }
 
         reg_info.byte_offset = reg_offset;
         assert(reg_info.byte_size != 0);
@@ -4516,38 +4523,33 @@ bool ParseRegisters(XMLNode feature_node, GdbServerTargetInfo &target_info,
 
 } // namespace
 
-// query the target of gdb-remote for extended target information return:
-// 'true'  on success
-//          'false' on failure
-bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
-  // Make sure LLDB has an XML parser it can use first
-  if (!XMLDocument::XMLEnabled())
-    return false;
-
-  // redirect libxml2's error handler since the default prints to stdout
-
-  GDBRemoteCommunicationClient &comm = m_gdb_comm;
-
-  // check that we have extended feature read support
-  if (!comm.GetQXferFeaturesReadSupported())
-    return false;
-
+// This method fetches a register description feature xml file from
+// the remote stub and adds registers/register groupsets/architecture
+// information to the current process.  It will call itself recursively
+// for nested register definition files.  It returns true if it was able
+// to fetch and parse an xml file.
+bool ProcessGDBRemote::GetGDBServerRegisterInfoXMLAndProcess(ArchSpec &arch_to_use, 
+                                                             std::string xml_filename,
+                                                             uint32_t &cur_reg_num,
+                                                             uint32_t &reg_offset) {
   // request the target xml file
   std::string raw;
   lldb_private::Status lldberr;
-  if (!comm.ReadExtFeature(ConstString("features"), ConstString("target.xml"),
+  if (!m_gdb_comm.ReadExtFeature(ConstString("features"), 
+                           ConstString(xml_filename.c_str()), 
                            raw, lldberr)) {
     return false;
   }
 
   XMLDocument xml_document;
 
-  if (xml_document.ParseMemory(raw.c_str(), raw.size(), "target.xml")) {
+  if (xml_document.ParseMemory(raw.c_str(), raw.size(), xml_filename.c_str())) {
     GdbServerTargetInfo target_info;
+    std::vector<XMLNode> feature_nodes;
 
+    // The top level feature XML file will start with a <target> tag.
     XMLNode target_node = xml_document.GetRootElement("target");
     if (target_node) {
-      std::vector<XMLNode> feature_nodes;
       target_node.ForEachChildElement([&target_info, &feature_nodes](
                                           const XMLNode &node) -> bool {
         llvm::StringRef name = node.GetName();
@@ -4585,32 +4587,48 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
         }
         return true; // Keep iterating through all children of the target_node
       });
+    } else {
+      // In an included XML feature file, we're already "inside" the <target>
+      // tag of the initial XML file; this included file will likely only have
+      // a <feature> tag.  Need to check for any more included files in this
+      // <feature> element.
+      XMLNode feature_node = xml_document.GetRootElement("feature");
+      if (feature_node) {
+        feature_nodes.push_back(feature_node);
+        feature_node.ForEachChildElement([&target_info](
+                                        const XMLNode &node) -> bool {
+          llvm::StringRef name = node.GetName();
+          if (name == "xi:include" || name == "include") {
+            llvm::StringRef href = node.GetAttributeValue("href");
+            if (!href.empty())
+              target_info.includes.push_back(href.str());
+            }
+            return true;
+          });
+      }
+    }
 
-      // If the target.xml includes an architecture entry like
-      //   <architecture>i386:x86-64</architecture> (seen from VMWare ESXi)
-      //   <architecture>arm</architecture> (seen from Segger JLink on unspecified arm board)
-      // use that if we don't have anything better.
-      if (!arch_to_use.IsValid() && !target_info.arch.empty()) {
-        if (target_info.arch == "i386:x86-64") {
-          // We don't have any information about vendor or OS.
-          arch_to_use.SetTriple("x86_64--");
-          GetTarget().MergeArchitecture(arch_to_use);
-        }
-
-        // SEGGER J-Link jtag boards send this very-generic arch name,
-        // we'll need to use this if we have absolutely nothing better
-        // to work with or the register definitions won't be accepted.
-        if (target_info.arch == "arm") {
-          arch_to_use.SetTriple("arm--");
-          GetTarget().MergeArchitecture(arch_to_use);
-        }
+    // If the target.xml includes an architecture entry like
+    //   <architecture>i386:x86-64</architecture> (seen from VMWare ESXi)
+    //   <architecture>arm</architecture> (seen from Segger JLink on unspecified arm board)
+    // use that if we don't have anything better.
+    if (!arch_to_use.IsValid() && !target_info.arch.empty()) {
+      if (target_info.arch == "i386:x86-64") {
+        // We don't have any information about vendor or OS.
+        arch_to_use.SetTriple("x86_64--");
+        GetTarget().MergeArchitecture(arch_to_use);
       }
 
-      // Initialize these outside of ParseRegisters, since they should not be
-      // reset inside each include feature
-      uint32_t cur_reg_num = 0;
-      uint32_t reg_offset = 0;
+      // SEGGER J-Link jtag boards send this very-generic arch name,
+      // we'll need to use this if we have absolutely nothing better
+      // to work with or the register definitions won't be accepted.
+      if (target_info.arch == "arm") {
+        arch_to_use.SetTriple("arm--");
+        GetTarget().MergeArchitecture(arch_to_use);
+      }
+    }
 
+    if (arch_to_use.IsValid()) {
       // Don't use Process::GetABI, this code gets called from DidAttach, and
       // in that context we haven't set the Target's architecture yet, so the
       // ABI is also potentially incorrect.
@@ -4621,26 +4639,31 @@ bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
       }
 
       for (const auto &include : target_info.includes) {
-        // request register file
-        std::string xml_data;
-        if (!comm.ReadExtFeature(ConstString("features"), ConstString(include),
-                                 xml_data, lldberr))
-          continue;
-
-        XMLDocument include_xml_document;
-        include_xml_document.ParseMemory(xml_data.data(), xml_data.size(),
-                                         include.c_str());
-        XMLNode include_feature_node =
-            include_xml_document.GetRootElement("feature");
-        if (include_feature_node) {
-          ParseRegisters(include_feature_node, target_info,
-                         this->m_register_info, abi_to_use_sp, cur_reg_num,
-                         reg_offset);
-        }
+        GetGDBServerRegisterInfoXMLAndProcess(arch_to_use, include, 
+                                              cur_reg_num, reg_offset);
       }
-      this->m_register_info.Finalize(arch_to_use);
     }
+  } else {
+    return false;
   }
+  return true;
+}
+
+// query the target of gdb-remote for extended target information returns
+// true on success (got register definitions), false on failure (did not).
+bool ProcessGDBRemote::GetGDBServerRegisterInfo(ArchSpec &arch_to_use) {
+  // Make sure LLDB has an XML parser it can use first
+  if (!XMLDocument::XMLEnabled())
+    return false;
+
+  // check that we have extended feature read support
+  if (!m_gdb_comm.GetQXferFeaturesReadSupported())
+    return false;
+
+  uint32_t cur_reg_num = 0;
+  uint32_t reg_offset = 0;
+  if (GetGDBServerRegisterInfoXMLAndProcess (arch_to_use, "target.xml", cur_reg_num, reg_offset))
+    this->m_register_info.Finalize(arch_to_use);
 
   return m_register_info.GetNumRegisters() > 0;
 }
