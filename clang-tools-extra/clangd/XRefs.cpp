@@ -707,6 +707,21 @@ static HoverInfo getHoverContents(const Decl *D) {
     VD->getType().print(OS, Policy);
   }
 
+  // Fill in value with evaluated initializer if possible.
+  // FIXME(kadircet): Also set Value field for expressions like "sizeof" and
+  // function calls.
+  if (const auto *Var = dyn_cast<VarDecl>(D)) {
+    if (const Expr *Init = Var->getInit()) {
+      Expr::EvalResult Result;
+      if (!Init->isValueDependent() && Init->EvaluateAsRValue(Result, Ctx)) {
+        HI.Value.emplace();
+        llvm::raw_string_ostream ValueOS(*HI.Value);
+        Result.Val.printPretty(ValueOS, const_cast<ASTContext &>(Ctx),
+                               Var->getType());
+      }
+    }
+  }
+
   HI.Definition = printDefinition(D);
   return HI;
 }

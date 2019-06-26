@@ -1468,6 +1468,11 @@ public:
   bool MaskedValueIsZero(SDValue Op, const APInt &Mask,
                          const APInt &DemandedElts, unsigned Depth = 0) const;
 
+  /// Return true if '(Op & Mask) == Mask'.
+  /// Op and Mask are known to be the same type.
+  bool MaskedValueIsAllOnes(SDValue Op, const APInt &Mask,
+                            unsigned Depth = 0) const;
+
   /// Determine which bits of Op are known to be either zero or one and return
   /// them in Known. For vectors, the known bits are those that are shared by
   /// every vector element.

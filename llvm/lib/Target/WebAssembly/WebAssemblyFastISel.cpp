@@ -741,6 +741,7 @@ bool WebAssemblyFastISel::fastLowerArguments() {
 bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   const auto *Call = cast<CallInst>(I);
 
+  // TODO: Support tail calls in FastISel
   if (Call->isMustTailCall() || Call->isInlineAsm() ||
       Call->getFunctionType()->isVarArg())
     return false;
@@ -769,19 +770,19 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
     case MVT::i8:
     case MVT::i16:
     case MVT::i32:
-      Opc = IsDirect ? WebAssembly::CALL_I32 : WebAssembly::PCALL_INDIRECT_I32;
+      Opc = IsDirect ? WebAssembly::CALL_i32 : WebAssembly::PCALL_INDIRECT_i32;
       ResultReg = createResultReg(&WebAssembly::I32RegClass);
       break;
     case MVT::i64:
-      Opc = IsDirect ? WebAssembly::CALL_I64 : WebAssembly::PCALL_INDIRECT_I64;
+      Opc = IsDirect ? WebAssembly::CALL_i64 : WebAssembly::PCALL_INDIRECT_i64;
       ResultReg = createResultReg(&WebAssembly::I64RegClass);
       break;
     case MVT::f32:
-      Opc = IsDirect ? WebAssembly::CALL_F32 : WebAssembly::PCALL_INDIRECT_F32;
+      Opc = IsDirect ? WebAssembly::CALL_f32 : WebAssembly::PCALL_INDIRECT_f32;
       ResultReg = createResultReg(&WebAssembly::F32RegClass);
       break;
     case MVT::f64:
-      Opc = IsDirect ? WebAssembly::CALL_F64 : WebAssembly::PCALL_INDIRECT_F64;
+      Opc = IsDirect ? WebAssembly::CALL_f64 : WebAssembly::PCALL_INDIRECT_f64;
       ResultReg = createResultReg(&WebAssembly::F64RegClass);
       break;
     case MVT::v16i8:
@@ -815,8 +816,8 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
       ResultReg = createResultReg(&WebAssembly::V128RegClass);
       break;
     case MVT::ExceptRef:
-      Opc = IsDirect ? WebAssembly::CALL_EXCEPT_REF
-                     : WebAssembly::PCALL_INDIRECT_EXCEPT_REF;
+      Opc = IsDirect ? WebAssembly::CALL_ExceptRef
+                     : WebAssembly::PCALL_INDIRECT_ExceptRef;
       ResultReg = createResultReg(&WebAssembly::EXCEPT_REFRegClass);
       break;
     default:

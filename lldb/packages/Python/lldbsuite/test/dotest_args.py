@@ -210,6 +210,12 @@ def create_parser():
         metavar='variable',
         action='append',
         help='Specify an environment variable to set to the given value before running the test cases e.g.: --env CXXFLAGS=-O3 --env DYLD_INSERT_LIBRARIES')
+    group.add_argument(
+        '--inferior-env',
+        dest='set_inferior_env_vars',
+        metavar='variable',
+        action='append',
+        help='Specify an environment variable to set to the given value for the inferior.')
     X('-v', 'Do verbose mode of unittest framework (print out each test case invocation)')
     group.add_argument(
         '--enable-crash-dialog',

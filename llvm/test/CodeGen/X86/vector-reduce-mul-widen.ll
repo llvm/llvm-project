@@ -144,14 +144,14 @@ define i64 @test_v4i64(<4 x i64> %a0) {
 ; AVX2-LABEL: test_v4i64:
 ; AVX2:       # %bb.0:
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpsrlq $32, %ymm0, %ymm2
-; AVX2-NEXT:    vpmuludq %ymm1, %ymm2, %ymm2
-; AVX2-NEXT:    vpsrlq $32, %ymm1, %ymm3
-; AVX2-NEXT:    vpmuludq %ymm3, %ymm0, %ymm3
-; AVX2-NEXT:    vpaddq %ymm2, %ymm3, %ymm2
-; AVX2-NEXT:    vpsllq $32, %ymm2, %ymm2
-; AVX2-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm2
+; AVX2-NEXT:    vpmuludq %xmm1, %xmm2, %xmm2
+; AVX2-NEXT:    vpsrlq $32, %xmm1, %xmm3
+; AVX2-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
+; AVX2-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vpsllq $32, %xmm2, %xmm2
+; AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm2
 ; AVX2-NEXT:    vpmuludq %xmm1, %xmm2, %xmm2
@@ -168,14 +168,14 @@ define i64 @test_v4i64(<4 x i64> %a0) {
 ; AVX512BW-LABEL: test_v4i64:
 ; AVX512BW:       # %bb.0:
 ; AVX512BW-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX512BW-NEXT:    vpsrlq $32, %ymm0, %ymm2
-; AVX512BW-NEXT:    vpmuludq %ymm1, %ymm2, %ymm2
-; AVX512BW-NEXT:    vpsrlq $32, %ymm1, %ymm3
-; AVX512BW-NEXT:    vpmuludq %ymm3, %ymm0, %ymm3
-; AVX512BW-NEXT:    vpaddq %ymm2, %ymm3, %ymm2
-; AVX512BW-NEXT:    vpsllq $32, %ymm2, %ymm2
-; AVX512BW-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
-; AVX512BW-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; AVX512BW-NEXT:    vpsrlq $32, %xmm0, %xmm2
+; AVX512BW-NEXT:    vpmuludq %xmm1, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpsrlq $32, %xmm1, %xmm3
+; AVX512BW-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
+; AVX512BW-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
+; AVX512BW-NEXT:    vpsllq $32, %xmm2, %xmm2
+; AVX512BW-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; AVX512BW-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX512BW-NEXT:    vpsrlq $32, %xmm0, %xmm2
 ; AVX512BW-NEXT:    vpmuludq %xmm1, %xmm2, %xmm2
@@ -336,14 +336,14 @@ define i64 @test_v8i64(<8 x i64> %a0) {
 ; AVX2-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpsrlq $32, %ymm0, %ymm2
-; AVX2-NEXT:    vpmuludq %ymm1, %ymm2, %ymm2
-; AVX2-NEXT:    vpsrlq $32, %ymm1, %ymm3
-; AVX2-NEXT:    vpmuludq %ymm3, %ymm0, %ymm3
-; AVX2-NEXT:    vpaddq %ymm2, %ymm3, %ymm2
-; AVX2-NEXT:    vpsllq $32, %ymm2, %ymm2
-; AVX2-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm2
+; AVX2-NEXT:    vpmuludq %xmm1, %xmm2, %xmm2
+; AVX2-NEXT:    vpsrlq $32, %xmm1, %xmm3
+; AVX2-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
+; AVX2-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vpsllq $32, %xmm2, %xmm2
+; AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm2
 ; AVX2-NEXT:    vpmuludq %xmm1, %xmm2, %xmm2
@@ -639,14 +639,14 @@ define i64 @test_v16i64(<16 x i64> %a0) {
 ; AVX2-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
 ; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
-; AVX2-NEXT:    vpsrlq $32, %ymm0, %ymm2
-; AVX2-NEXT:    vpmuludq %ymm1, %ymm2, %ymm2
-; AVX2-NEXT:    vpsrlq $32, %ymm1, %ymm3
-; AVX2-NEXT:    vpmuludq %ymm3, %ymm0, %ymm3
-; AVX2-NEXT:    vpaddq %ymm2, %ymm3, %ymm2
-; AVX2-NEXT:    vpsllq $32, %ymm2, %ymm2
-; AVX2-NEXT:    vpmuludq %ymm1, %ymm0, %ymm0
-; AVX2-NEXT:    vpaddq %ymm2, %ymm0, %ymm0
+; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm2
+; AVX2-NEXT:    vpmuludq %xmm1, %xmm2, %xmm2
+; AVX2-NEXT:    vpsrlq $32, %xmm1, %xmm3
+; AVX2-NEXT:    vpmuludq %xmm3, %xmm0, %xmm3
+; AVX2-NEXT:    vpaddq %xmm2, %xmm3, %xmm2
+; AVX2-NEXT:    vpsllq $32, %xmm2, %xmm2
+; AVX2-NEXT:    vpmuludq %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
 ; AVX2-NEXT:    vpsrlq $32, %xmm0, %xmm2
 ; AVX2-NEXT:    vpmuludq %xmm1, %xmm2, %xmm2

@@ -31,7 +31,7 @@ ParsedAST TestTU::build() const {
   Files[FullHeaderName] = HeaderCode;
   Files[ImportThunk] = ThunkContents;
 
-  std::vector<const char *> Cmd = {"clang", FullFilename.c_str()};
+  std::vector<const char *> Cmd = {"clang"};
   // FIXME: this shouldn't need to be conditional, but it breaks a
   // GoToDefinition test for some reason (getMacroArgExpandedLocation fails).
   if (!HeaderCode.empty()) {
@@ -40,6 +40,9 @@ ParsedAST TestTU::build() const {
                                       : FullHeaderName.c_str());
   }
   Cmd.insert(Cmd.end(), ExtraArgs.begin(), ExtraArgs.end());
+  // Put the file name at the end -- this allows the extra arg (-xc++) to
+  // override the language setting.
+  Cmd.push_back(FullFilename.c_str());
   ParseInputs Inputs;
   Inputs.CompileCommand.Filename = FullFilename;
   Inputs.CompileCommand.CommandLine = {Cmd.begin(), Cmd.end()};
