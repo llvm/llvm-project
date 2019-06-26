@@ -21,7 +21,7 @@ class B {
 void test_default_new_delete(void *buffer, A **pa) {
   A *a = new A;         // expected-error {{'default new' is not supported in OpenCL C++}}
   delete a;             // expected-error {{'default delete' is not supported in OpenCL C++}}
-  *pa = new (buffer) A; // expected-error {{'default new' is not supported in OpenCL C++}}
+  *pa = new (buffer) A; // expected-error {{use of placement new requires explicit declaration}}
 }
 
 // expected-note@+1 {{candidate function not viable: requires 2 arguments, but 1 was provided}}

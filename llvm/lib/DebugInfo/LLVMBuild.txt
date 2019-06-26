@@ -15,7 +15,7 @@
 ;===------------------------------------------------------------------------===;
 
 [common]
-subdirectories = DWARF MSF CodeView PDB Symbolize
+subdirectories = DWARF GSYM MSF CodeView PDB Symbolize
 
 [component_0]
 type = Group

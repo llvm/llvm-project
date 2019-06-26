@@ -386,6 +386,8 @@ def flto_unit: Flag<["-"], "flto-unit">,
 def fno_lto_unit: Flag<["-"], "fno-lto-unit">;
 def fthin_link_bitcode_EQ : Joined<["-"], "fthin-link-bitcode=">,
     HelpText<"Write minimized bitcode to <file> for the ThinLTO thin link only">;
+def femit_debug_entry_values : Flag<["-"], "femit-debug-entry-values">,
+    HelpText<"Enables debug info about call site parameter's entry values">;
 def fdebug_pass_manager : Flag<["-"], "fdebug-pass-manager">,
     HelpText<"Prints debug information for the new pass manager">;
 def fno_debug_pass_manager : Flag<["-"], "fno-debug-pass-manager">,

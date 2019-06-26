@@ -97,6 +97,9 @@ def WebAssemblycall0 : SDNode<"WebAssemblyISD::CALL0",
 def WebAssemblycall1 : SDNode<"WebAssemblyISD::CALL1",
                               SDT_WebAssemblyCall1,
                               [SDNPHasChain, SDNPVariadic]>;
+def WebAssemblyretcall : SDNode<"WebAssemblyISD::RET_CALL",
+                                SDT_WebAssemblyCall0,
+                                [SDNPHasChain, SDNPVariadic]>;
 def WebAssemblybr_table : SDNode<"WebAssemblyISD::BR_TABLE",
                                  SDT_WebAssemblyBrTable,
                                  [SDNPHasChain, SDNPVariadic]>;

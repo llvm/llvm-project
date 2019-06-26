@@ -93,12 +93,15 @@ enum ReasonToReject {
   NoIndexProvided,
   NonIndexable,
   UsedOutsideFile,
+  UnsupportedSymbol,
 };
 
 // Check the symbol Decl is renameable (per the index) within the file.
 llvm::Optional<ReasonToReject> renamableWithinFile(const NamedDecl &Decl,
                                                    StringRef MainFile,
                                                    const SymbolIndex *Index) {
+  if (llvm::isa<NamespaceDecl>(&Decl))
+    return ReasonToReject::UnsupportedSymbol;
   auto &ASTCtx = Decl.getASTContext();
   const auto &SM = ASTCtx.getSourceManager();
   bool MainFileIsHeader = ASTCtx.getLangOpts().IsHeaderFile;
@@ -160,6 +163,8 @@ renameWithinFile(ParsedAST &AST, llvm::StringRef File, Position Pos,
         return "the symbol is used outside main file";
       case NonIndexable:
         return "symbol may be used in other files (not eligible for indexing)";
+      case UnsupportedSymbol:
+        return "symbol is not a supported kind (e.g. namespace)";
       }
       llvm_unreachable("unhandled reason kind");
     };

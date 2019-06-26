@@ -1,5 +1,7 @@
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -mattr=+sign-ext,+simd128 | FileCheck %s
-; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -fast-isel -fast-isel-abort=1 -mattr=+sign-ext,+simd128 | FileCheck %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -mattr=+sign-ext,+simd128 | FileCheck --check-prefixes=CHECK,NO-TAIL,SLOW-NO-TAIL %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -fast-isel -fast-isel-abort=1 -mattr=+sign-ext,+simd128 | FileCheck --check-prefixes=CHECK,NO-TAIL,FAST,FAST-NO-TAIL %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -mattr=+sign-ext,+simd128,+tail-call | FileCheck --check-prefixes=CHECK,TAIL,SLOW-TAIL %s
+; RUN: llc < %s -asm-verbose=false -disable-wasm-fallthrough-return-opt -wasm-keep-registers -fast-isel -fast-isel-abort=1 -mattr=+sign-ext,+simd128,+tail-call | FileCheck --check-prefixes=CHECK,TAIL,FAST-TAIL %s
 
 ; Test that basic call operations assemble as expected.
 
@@ -176,8 +178,11 @@ define void @call_indirect_arg_2(i32 (i32, i32)* %callee, i32 %arg, i32 %arg2) {
 
 ; CHECK-LABEL: tail_call_void_nullary:
 ; CHECK-NEXT: .functype tail_call_void_nullary () -> (){{$}}
-; CHECK-NEXT: {{^}} call void_nullary{{$}}
-; CHECK-NEXT: return{{$}}
+; NO-TAIL-NEXT: {{^}} call void_nullary{{$}}
+; NO-TAIL-NEXT: return{{$}}
+; SLOW-TAIL-NEXT: {{^}} return_call void_nullary{{$}}
+; FAST-TAIL-NEXT: {{^}} call void_nullary{{$}}
+; FAST-TAIL-NEXT: return{{$}}
 define void @tail_call_void_nullary() {
   tail call void @void_nullary()
   ret void
@@ -185,8 +190,11 @@ define void @tail_call_void_nullary() {
 
 ; CHECK-LABEL: fastcc_tail_call_void_nullary:
 ; CHECK-NEXT: .functype fastcc_tail_call_void_nullary () -> (){{$}}
-; CHECK-NEXT: {{^}} call void_nullary{{$}}
-; CHECK-NEXT: return{{$}}
+; NO-TAIL-NEXT: {{^}} call void_nullary{{$}}
+; NO-TAIL-NEXT: return{{$}}
+; SLOW-TAIL-NEXT: {{^}} return_call void_nullary{{$}}
+; FAST-TAIL-NEXT: {{^}} call void_nullary{{$}}
+; FAST-TAIL-NEXT: return{{$}}
 define void @fastcc_tail_call_void_nullary() {
   tail call fastcc void @void_nullary()
   ret void
@@ -194,8 +202,11 @@ define void @fastcc_tail_call_void_nullary() {
 
 ; CHECK-LABEL: coldcc_tail_call_void_nullary:
 ; CHECK-NEXT: .functype coldcc_tail_call_void_nullary () -> (){{$}}
-; CHECK-NEXT: {{^}} call void_nullary{{$}}
-; CHECK-NEXT: return{{$}}
+; NO-TAIL-NEXT: {{^}} call void_nullary{{$}}
+; NO-TAIL-NEXT: return{{$}}
+; SLOW-TAIL-NEXT: {{^}} return_call void_nullary{{$}}
+; FAST-TAIL-NEXT: {{^}} call void_nullary{{$}}
+; FAST-TAIL-NEXT: return{{$}}
 define void @coldcc_tail_call_void_nullary() {
   tail call coldcc void @void_nullary()
   ret void

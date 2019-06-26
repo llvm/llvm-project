@@ -28,12 +28,11 @@ namespace xray {
 class LatencyAccountant {
 public:
   typedef std::map<int32_t, std::vector<uint64_t>> FunctionLatencyMap;
-  typedef std::map<llvm::sys::procid_t, std::pair<uint64_t, uint64_t>>
+  typedef std::map<uint32_t, std::pair<uint64_t, uint64_t>>
       PerThreadMinMaxTSCMap;
   typedef std::map<uint8_t, std::pair<uint64_t, uint64_t>> PerCPUMinMaxTSCMap;
   typedef std::vector<std::pair<int32_t, uint64_t>> FunctionStack;
-  typedef std::map<llvm::sys::procid_t, FunctionStack>
-      PerThreadFunctionStackMap;
+  typedef std::map<uint32_t, FunctionStack> PerThreadFunctionStackMap;
 
 private:
   PerThreadFunctionStackMap PerThreadFunctionStack;
@@ -76,13 +75,6 @@ public:
   ///     recorded. We still record the TSC for the min-max.
   ///
   bool accountRecord(const XRayRecord &Record);
-
-  const FunctionStack *getThreadFunctionStack(llvm::sys::procid_t TId) const {
-    auto I = PerThreadFunctionStack.find(TId);
-    if (I == PerThreadFunctionStack.end())
-      return nullptr;
-    return &I->second;
-  }
 
   const PerThreadFunctionStackMap &getPerThreadFunctionStack() const {
     return PerThreadFunctionStack;

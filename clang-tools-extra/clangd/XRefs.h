@@ -103,6 +103,8 @@ struct HoverInfo {
   llvm::Optional<std::vector<Param>> Parameters;
   /// Set for all templates(function, class, variable).
   llvm::Optional<std::vector<Param>> TemplateParameters;
+  /// Contains the evaluated value of the symbol if available.
+  llvm::Optional<std::string> Value;
 
   /// Produce a user-readable information.
   FormattedString present() const;

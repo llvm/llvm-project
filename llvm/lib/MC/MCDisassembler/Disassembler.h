@@ -82,24 +82,22 @@ public:
   SmallString<128> CommentsToEmit;
   raw_svector_ostream CommentStream;
 
-  LLVMDisasmContext(std::string tripleName, void *disInfo, int tagType,
-                    LLVMOpInfoCallback getOpInfo,
-                    LLVMSymbolLookupCallback symbolLookUp,
-                    const Target *theTarget, const MCAsmInfo *mAI,
-                    const MCRegisterInfo *mRI, const MCSubtargetInfo *mSI,
-                    const MCInstrInfo *mII, llvm::MCContext *ctx,
-                    const MCDisassembler *disAsm, MCInstPrinter *iP)
-      : TripleName(std::move(tripleName)), DisInfo(disInfo), TagType(tagType),
-        GetOpInfo(getOpInfo), SymbolLookUp(symbolLookUp), TheTarget(theTarget),
-        Options(0), CommentStream(CommentsToEmit) {
-    MAI.reset(mAI);
-    MRI.reset(mRI);
-    MSI.reset(mSI);
-    MII.reset(mII);
-    Ctx.reset(ctx);
-    DisAsm.reset(disAsm);
-    IP.reset(iP);
-  }
+  LLVMDisasmContext(std::string TripleName, void *DisInfo, int TagType,
+                    LLVMOpInfoCallback GetOpInfo,
+                    LLVMSymbolLookupCallback SymbolLookUp,
+                    const Target *TheTarget,
+                    std::unique_ptr<const MCAsmInfo> &&MAI,
+                    std::unique_ptr<const MCRegisterInfo> &&MRI,
+                    std::unique_ptr<const MCSubtargetInfo> &&MSI,
+                    std::unique_ptr<const MCInstrInfo> &&MII,
+                    std::unique_ptr<const llvm::MCContext> &&Ctx,
+                    std::unique_ptr<const MCDisassembler> &&DisAsm,
+                    std::unique_ptr<MCInstPrinter> &&IP)
+      : TripleName(std::move(TripleName)), DisInfo(DisInfo), TagType(TagType),
+        GetOpInfo(GetOpInfo), SymbolLookUp(SymbolLookUp), TheTarget(TheTarget),
+        MAI(std::move(MAI)), MRI(std::move(MRI)), MSI(std::move(MSI)),
+        MII(std::move(MII)), Ctx(std::move(Ctx)), DisAsm(std::move(DisAsm)),
+        IP(std::move(IP)), Options(0), CommentStream(CommentsToEmit) {}
   const std::string &getTripleName() const { return TripleName; }
   void *getDisInfo() const { return DisInfo; }
   int getTagType() const { return TagType; }

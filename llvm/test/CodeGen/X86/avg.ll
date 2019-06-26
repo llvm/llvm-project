@@ -382,7 +382,7 @@ define void @avg_v48i8(<48 x i8>* %a, <48 x i8>* %b) nounwind {
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm0[2,3,0,1]
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
-; AVX2-NEXT:    vpbroadcastq 24(%rdi), %ymm3
+; AVX2-NEXT:    vpbroadcastq 24(%rdi), %xmm3
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero,xmm3[4],zero,zero,zero,xmm3[5],zero,zero,zero,xmm3[6],zero,zero,zero,xmm3[7],zero,zero,zero
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm4 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero
 ; AVX2-NEXT:    vpshufd {{.*#+}} xmm5 = xmm1[2,3,0,1]
@@ -395,7 +395,7 @@ define void @avg_v48i8(<48 x i8>* %a, <48 x i8>* %b) nounwind {
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm2 = xmm6[0],zero,zero,zero,xmm6[1],zero,zero,zero,xmm6[2],zero,zero,zero,xmm6[3],zero,zero,zero,xmm6[4],zero,zero,zero,xmm6[5],zero,zero,zero,xmm6[6],zero,zero,zero,xmm6[7],zero,zero,zero
 ; AVX2-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; AVX2-NEXT:    vpbroadcastq 24(%rsi), %ymm2
+; AVX2-NEXT:    vpbroadcastq 24(%rsi), %xmm2
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero,xmm2[4],zero,zero,zero,xmm2[5],zero,zero,zero,xmm2[6],zero,zero,zero,xmm2[7],zero,zero,zero
 ; AVX2-NEXT:    vpaddd %ymm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = mem[0],zero,zero,zero,mem[1],zero,zero,zero,mem[2],zero,zero,zero,mem[3],zero,zero,zero,mem[4],zero,zero,zero,mem[5],zero,zero,zero,mem[6],zero,zero,zero,mem[7],zero,zero,zero

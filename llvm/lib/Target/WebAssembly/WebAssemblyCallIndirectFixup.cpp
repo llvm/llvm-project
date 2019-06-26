@@ -65,14 +65,14 @@ static unsigned getNonPseudoCallIndirectOpcode(const MachineInstr &MI) {
     using namespace WebAssembly;
   case PCALL_INDIRECT_VOID:
     return CALL_INDIRECT_VOID;
-  case PCALL_INDIRECT_I32:
-    return CALL_INDIRECT_I32;
-  case PCALL_INDIRECT_I64:
-    return CALL_INDIRECT_I64;
-  case PCALL_INDIRECT_F32:
-    return CALL_INDIRECT_F32;
-  case PCALL_INDIRECT_F64:
-    return CALL_INDIRECT_F64;
+  case PCALL_INDIRECT_i32:
+    return CALL_INDIRECT_i32;
+  case PCALL_INDIRECT_i64:
+    return CALL_INDIRECT_i64;
+  case PCALL_INDIRECT_f32:
+    return CALL_INDIRECT_f32;
+  case PCALL_INDIRECT_f64:
+    return CALL_INDIRECT_f64;
   case PCALL_INDIRECT_v16i8:
     return CALL_INDIRECT_v16i8;
   case PCALL_INDIRECT_v8i16:
@@ -85,6 +85,10 @@ static unsigned getNonPseudoCallIndirectOpcode(const MachineInstr &MI) {
     return CALL_INDIRECT_v4f32;
   case PCALL_INDIRECT_v2f64:
     return CALL_INDIRECT_v2f64;
+  case PCALL_INDIRECT_ExceptRef:
+    return CALL_INDIRECT_ExceptRef;
+  case PRET_CALL_INDIRECT:
+    return RET_CALL_INDIRECT;
   default:
     return INSTRUCTION_LIST_END;
   }

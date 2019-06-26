@@ -107,14 +107,14 @@ bool WebAssembly::isCallDirect(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::CALL_VOID:
   case WebAssembly::CALL_VOID_S:
-  case WebAssembly::CALL_I32:
-  case WebAssembly::CALL_I32_S:
-  case WebAssembly::CALL_I64:
-  case WebAssembly::CALL_I64_S:
-  case WebAssembly::CALL_F32:
-  case WebAssembly::CALL_F32_S:
-  case WebAssembly::CALL_F64:
-  case WebAssembly::CALL_F64_S:
+  case WebAssembly::CALL_i32:
+  case WebAssembly::CALL_i32_S:
+  case WebAssembly::CALL_i64:
+  case WebAssembly::CALL_i64_S:
+  case WebAssembly::CALL_f32:
+  case WebAssembly::CALL_f32_S:
+  case WebAssembly::CALL_f64:
+  case WebAssembly::CALL_f64_S:
   case WebAssembly::CALL_v16i8:
   case WebAssembly::CALL_v16i8_S:
   case WebAssembly::CALL_v8i16:
@@ -127,8 +127,10 @@ bool WebAssembly::isCallDirect(const MachineInstr &MI) {
   case WebAssembly::CALL_v4f32_S:
   case WebAssembly::CALL_v2f64:
   case WebAssembly::CALL_v2f64_S:
-  case WebAssembly::CALL_EXCEPT_REF:
-  case WebAssembly::CALL_EXCEPT_REF_S:
+  case WebAssembly::CALL_ExceptRef:
+  case WebAssembly::CALL_ExceptRef_S:
+  case WebAssembly::RET_CALL:
+  case WebAssembly::RET_CALL_S:
     return true;
   default:
     return false;
@@ -139,14 +141,14 @@ bool WebAssembly::isCallIndirect(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   case WebAssembly::CALL_INDIRECT_VOID:
   case WebAssembly::CALL_INDIRECT_VOID_S:
-  case WebAssembly::CALL_INDIRECT_I32:
-  case WebAssembly::CALL_INDIRECT_I32_S:
-  case WebAssembly::CALL_INDIRECT_I64:
-  case WebAssembly::CALL_INDIRECT_I64_S:
-  case WebAssembly::CALL_INDIRECT_F32:
-  case WebAssembly::CALL_INDIRECT_F32_S:
-  case WebAssembly::CALL_INDIRECT_F64:
-  case WebAssembly::CALL_INDIRECT_F64_S:
+  case WebAssembly::CALL_INDIRECT_i32:
+  case WebAssembly::CALL_INDIRECT_i32_S:
+  case WebAssembly::CALL_INDIRECT_i64:
+  case WebAssembly::CALL_INDIRECT_i64_S:
+  case WebAssembly::CALL_INDIRECT_f32:
+  case WebAssembly::CALL_INDIRECT_f32_S:
+  case WebAssembly::CALL_INDIRECT_f64:
+  case WebAssembly::CALL_INDIRECT_f64_S:
   case WebAssembly::CALL_INDIRECT_v16i8:
   case WebAssembly::CALL_INDIRECT_v16i8_S:
   case WebAssembly::CALL_INDIRECT_v8i16:
@@ -159,8 +161,10 @@ bool WebAssembly::isCallIndirect(const MachineInstr &MI) {
   case WebAssembly::CALL_INDIRECT_v4f32_S:
   case WebAssembly::CALL_INDIRECT_v2f64:
   case WebAssembly::CALL_INDIRECT_v2f64_S:
-  case WebAssembly::CALL_INDIRECT_EXCEPT_REF:
-  case WebAssembly::CALL_INDIRECT_EXCEPT_REF_S:
+  case WebAssembly::CALL_INDIRECT_ExceptRef:
+  case WebAssembly::CALL_INDIRECT_ExceptRef_S:
+  case WebAssembly::RET_CALL_INDIRECT:
+  case WebAssembly::RET_CALL_INDIRECT_S:
     return true;
   default:
     return false;
@@ -173,15 +177,19 @@ unsigned WebAssembly::getCalleeOpNo(const MachineInstr &MI) {
   case WebAssembly::CALL_VOID_S:
   case WebAssembly::CALL_INDIRECT_VOID:
   case WebAssembly::CALL_INDIRECT_VOID_S:
+  case WebAssembly::RET_CALL:
+  case WebAssembly::RET_CALL_S:
+  case WebAssembly::RET_CALL_INDIRECT:
+  case WebAssembly::RET_CALL_INDIRECT_S:
     return 0;
-  case WebAssembly::CALL_I32:
-  case WebAssembly::CALL_I32_S:
-  case WebAssembly::CALL_I64:
-  case WebAssembly::CALL_I64_S:
-  case WebAssembly::CALL_F32:
-  case WebAssembly::CALL_F32_S:
-  case WebAssembly::CALL_F64:
-  case WebAssembly::CALL_F64_S:
+  case WebAssembly::CALL_i32:
+  case WebAssembly::CALL_i32_S:
+  case WebAssembly::CALL_i64:
+  case WebAssembly::CALL_i64_S:
+  case WebAssembly::CALL_f32:
+  case WebAssembly::CALL_f32_S:
+  case WebAssembly::CALL_f64:
+  case WebAssembly::CALL_f64_S:
   case WebAssembly::CALL_v16i8:
   case WebAssembly::CALL_v16i8_S:
   case WebAssembly::CALL_v8i16:
@@ -194,16 +202,16 @@ unsigned WebAssembly::getCalleeOpNo(const MachineInstr &MI) {
   case WebAssembly::CALL_v4f32_S:
   case WebAssembly::CALL_v2f64:
   case WebAssembly::CALL_v2f64_S:
-  case WebAssembly::CALL_EXCEPT_REF:
-  case WebAssembly::CALL_EXCEPT_REF_S:
-  case WebAssembly::CALL_INDIRECT_I32:
-  case WebAssembly::CALL_INDIRECT_I32_S:
-  case WebAssembly::CALL_INDIRECT_I64:
-  case WebAssembly::CALL_INDIRECT_I64_S:
-  case WebAssembly::CALL_INDIRECT_F32:
-  case WebAssembly::CALL_INDIRECT_F32_S:
-  case WebAssembly::CALL_INDIRECT_F64:
-  case WebAssembly::CALL_INDIRECT_F64_S:
+  case WebAssembly::CALL_ExceptRef:
+  case WebAssembly::CALL_ExceptRef_S:
+  case WebAssembly::CALL_INDIRECT_i32:
+  case WebAssembly::CALL_INDIRECT_i32_S:
+  case WebAssembly::CALL_INDIRECT_i64:
+  case WebAssembly::CALL_INDIRECT_i64_S:
+  case WebAssembly::CALL_INDIRECT_f32:
+  case WebAssembly::CALL_INDIRECT_f32_S:
+  case WebAssembly::CALL_INDIRECT_f64:
+  case WebAssembly::CALL_INDIRECT_f64_S:
   case WebAssembly::CALL_INDIRECT_v16i8:
   case WebAssembly::CALL_INDIRECT_v16i8_S:
   case WebAssembly::CALL_INDIRECT_v8i16:
@@ -216,8 +224,8 @@ unsigned WebAssembly::getCalleeOpNo(const MachineInstr &MI) {
   case WebAssembly::CALL_INDIRECT_v4f32_S:
   case WebAssembly::CALL_INDIRECT_v2f64:
   case WebAssembly::CALL_INDIRECT_v2f64_S:
-  case WebAssembly::CALL_INDIRECT_EXCEPT_REF:
-  case WebAssembly::CALL_INDIRECT_EXCEPT_REF_S:
+  case WebAssembly::CALL_INDIRECT_ExceptRef:
+  case WebAssembly::CALL_INDIRECT_ExceptRef_S:
     return 1;
   default:
     llvm_unreachable("Not a call instruction");
