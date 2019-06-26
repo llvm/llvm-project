@@ -11662,6 +11662,7 @@ static SDValue lowerShuffleAsSpecificZeroOrAnyExtend(
 
   // Found a valid zext mask! Try various lowering strategies based on the
   // input type and available ISA extensions.
+  // TODO: Add AnyExt support.
   if (Subtarget.hasSSE41()) {
     // Not worth offsetting 128-bit vectors if scale == 2, a pattern using
     // PUNPCK will catch this in a later shuffle match.
@@ -18765,8 +18766,11 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
 
     // 256-bit PACK(ARG0, ARG1) leaves us with ((LO0,LO1),(HI0,HI1)),
     // so we need to shuffle to get ((LO0,HI0),(LO1,HI1)).
-    Res = DAG.getBitcast(MVT::v4i64, Res);
-    Res = DAG.getVectorShuffle(MVT::v4i64, DL, Res, Res, {0, 2, 1, 3});
+    // Scale shuffle mask to avoid bitcasts and help ComputeNumSignBits.
+    SmallVector<int, 64> Mask;
+    int Scale = 64 / OutVT.getScalarSizeInBits();
+    scaleShuffleMask<int>(Scale, makeArrayRef<int>({ 0, 2, 1, 3 }), Mask);
+    Res = DAG.getVectorShuffle(OutVT, DL, Res, Res, Mask);
 
     if (DstVT.is256BitVector())
       return DAG.getBitcast(DstVT, Res);
@@ -33673,6 +33677,26 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
                        getZeroVector(VT.getSimpleVT(), Subtarget, DAG, dl),
                        Movl, N->getOperand(0).getOperand(2));
   }
+
+  // If this a vzmovl of a full vector load, replace it with a vzload, unless
+  // the load is volatile.
+  if (N->getOpcode() == X86ISD::VZEXT_MOVL && N->getOperand(0).hasOneUse() &&
+      ISD::isNormalLoad(N->getOperand(0).getNode())) {
+    LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
+    if (!LN->isVolatile()) {
+      SDVTList Tys = DAG.getVTList(VT, MVT::Other);
+      SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
+      SDValue VZLoad =
+          DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, dl, Tys, Ops,
+                                  VT.getVectorElementType(),
+                                  LN->getPointerInfo(),
+                                  LN->getAlignment(),
+                                  MachineMemOperand::MOLoad);
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 0), VZLoad.getValue(1));
+      return VZLoad;
+    }
+  }
+
 
   // Look for a truncating shuffle to v2i32 of a PMULUDQ where one of the
   // operands is an extend from v2i32 to v2i64. Turn it into a pmulld.

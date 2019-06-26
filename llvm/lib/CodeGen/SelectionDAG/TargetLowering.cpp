@@ -1381,7 +1381,6 @@ bool TargetLowering::SimplifyDemandedBits(
     bool IsVecInReg = Op.getOpcode() == ISD::ZERO_EXTEND_VECTOR_INREG;
 
     // If none of the top bits are demanded, convert this into an any_extend.
-    // TODO: Add ZERO_EXTEND_VECTOR_INREG - ANY_EXTEND_VECTOR_INREG fold.
     if (DemandedBits.getActiveBits() <= InBits) {
       // If we only need the non-extended bits of the bottom element
       // then we can just bitcast to the result.
@@ -1390,8 +1389,10 @@ bool TargetLowering::SimplifyDemandedBits(
           TLO.DAG.getDataLayout().isLittleEndian())
         return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
 
-      if (!IsVecInReg)
-        return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ANY_EXTEND, dl, VT, Src));
+      unsigned Opc =
+          IsVecInReg ? ISD::ANY_EXTEND_VECTOR_INREG : ISD::ANY_EXTEND;
+      if (!TLO.LegalOperations() || isOperationLegal(Opc, VT))
+        return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, dl, VT, Src));
     }
 
     APInt InDemandedBits = DemandedBits.trunc(InBits);
@@ -1413,9 +1414,19 @@ bool TargetLowering::SimplifyDemandedBits(
     bool IsVecInReg = Op.getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG;
 
     // If none of the top bits are demanded, convert this into an any_extend.
-    // TODO: Add SIGN_EXTEND_VECTOR_INREG - ANY_EXTEND_VECTOR_INREG fold.
-    if (DemandedBits.getActiveBits() <= InBits && !IsVecInReg)
-      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ANY_EXTEND, dl, VT, Src));
+    if (DemandedBits.getActiveBits() <= InBits) {
+      // If we only need the non-extended bits of the bottom element
+      // then we can just bitcast to the result.
+      if (IsVecInReg && DemandedElts == 1 &&
+          VT.getSizeInBits() == SrcVT.getSizeInBits() &&
+          TLO.DAG.getDataLayout().isLittleEndian())
+        return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
+
+      unsigned Opc =
+          IsVecInReg ? ISD::ANY_EXTEND_VECTOR_INREG : ISD::ANY_EXTEND;
+      if (!TLO.LegalOperations() || isOperationLegal(Opc, VT))
+        return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, dl, VT, Src));
+    }
 
     APInt InDemandedBits = DemandedBits.trunc(InBits);
     APInt InDemandedElts = DemandedElts.zextOrSelf(InElts);
@@ -1434,17 +1445,29 @@ bool TargetLowering::SimplifyDemandedBits(
     Known = Known.sext(BitWidth);
 
     // If the sign bit is known zero, convert this to a zero extend.
-    // TODO: Add SIGN_EXTEND_VECTOR_INREG - ZERO_EXTEND_VECTOR_INREG fold.
-    if (Known.isNonNegative() && !IsVecInReg)
-      return TLO.CombineTo(Op, TLO.DAG.getNode(ISD::ZERO_EXTEND, dl, VT, Src));
+    if (Known.isNonNegative()) {
+      unsigned Opc =
+          IsVecInReg ? ISD::ZERO_EXTEND_VECTOR_INREG : ISD::ZERO_EXTEND;
+      if (!TLO.LegalOperations() || isOperationLegal(Opc, VT))
+        return TLO.CombineTo(Op, TLO.DAG.getNode(Opc, dl, VT, Src));
+    }
     break;
   }
-  case ISD::ANY_EXTEND: {
-    // TODO: Add ISD::ANY_EXTEND_VECTOR_INREG support.
+  case ISD::ANY_EXTEND:
+  case ISD::ANY_EXTEND_VECTOR_INREG: {
     SDValue Src = Op.getOperand(0);
     EVT SrcVT = Src.getValueType();
     unsigned InBits = SrcVT.getScalarSizeInBits();
     unsigned InElts = SrcVT.isVector() ? SrcVT.getVectorNumElements() : 1;
+    bool IsVecInReg = Op.getOpcode() == ISD::ANY_EXTEND_VECTOR_INREG;
+
+    // If we only need the bottom element then we can just bitcast.
+    // TODO: Handle ANY_EXTEND?
+    if (IsVecInReg && DemandedElts == 1 &&
+        VT.getSizeInBits() == SrcVT.getSizeInBits() &&
+        TLO.DAG.getDataLayout().isLittleEndian())
+      return TLO.CombineTo(Op, TLO.DAG.getBitcast(VT, Src));
+
     APInt InDemandedBits = DemandedBits.trunc(InBits);
     APInt InDemandedElts = DemandedElts.zextOrSelf(InElts);
     if (SimplifyDemandedBits(Src, InDemandedBits, InDemandedElts, Known, TLO,
@@ -2691,17 +2714,20 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
         return DAG.getSetCC(dl, VT, And, DAG.getConstant(0, dl, CTVT), CC);
       }
 
-      // (ctpop x) == 1 -> x && (x & x-1) == 0 iff ctpop is illegal.
-      if (Cond == ISD::SETEQ && C1 == 1 &&
-          !isOperationLegalOrCustom(ISD::CTPOP, CTVT)) {
-        SDValue Sub =
-            DAG.getNode(ISD::SUB, dl, CTVT, CTOp, DAG.getConstant(1, dl, CTVT));
-        SDValue And = DAG.getNode(ISD::AND, dl, CTVT, CTOp, Sub);
-        SDValue LHS = DAG.getSetCC(dl, VT, CTOp, DAG.getConstant(0, dl, CTVT),
-                                   ISD::SETUGT);
-        SDValue RHS =
-            DAG.getSetCC(dl, VT, And, DAG.getConstant(0, dl, CTVT), ISD::SETEQ);
-        return DAG.getNode(ISD::AND, dl, VT, LHS, RHS);
+      // If ctpop is not supported, expand a power-of-2 comparison based on it.
+      if (C1 == 1 && !isOperationLegalOrCustom(ISD::CTPOP, CTVT) &&
+          (Cond == ISD::SETEQ || Cond == ISD::SETNE)) {
+        // (ctpop x) == 1 --> (x != 0) && ((x & x-1) == 0)
+        // (ctpop x) != 1 --> (x == 0) || ((x & x-1) != 0)
+        SDValue Zero = DAG.getConstant(0, dl, CTVT);
+        SDValue NegOne = DAG.getAllOnesConstant(dl, CTVT);
+        ISD::CondCode InvCond = ISD::getSetCCInverse(Cond, true);
+        SDValue Add = DAG.getNode(ISD::ADD, dl, CTVT, CTOp, NegOne);
+        SDValue And = DAG.getNode(ISD::AND, dl, CTVT, CTOp, Add);
+        SDValue LHS = DAG.getSetCC(dl, VT, CTOp, Zero, InvCond);
+        SDValue RHS = DAG.getSetCC(dl, VT, And, Zero, Cond);
+        unsigned LogicOpcode = Cond == ISD::SETEQ ? ISD::AND : ISD::OR;
+        return DAG.getNode(LogicOpcode, dl, VT, LHS, RHS);
       }
     }
 
@@ -3022,6 +3048,18 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                               DAG.getConstant(0, dl, Op0.getValueType()),
                               Cond == ISD::SETEQ ? ISD::SETNE : ISD::SETEQ);
       }
+    }
+
+    // Given:
+    //   icmp eq/ne (urem %x, %y), 0
+    // Iff %x has 0 or 1 bits set, and %y has at least 2 bits set, omit 'urem':
+    //   icmp eq/ne %x, 0
+    if (N0.getOpcode() == ISD::UREM && N1C->isNullValue() &&
+        (Cond == ISD::SETEQ || Cond == ISD::SETNE)) {
+      KnownBits XKnown = DAG.computeKnownBits(N0.getOperand(0));
+      KnownBits YKnown = DAG.computeKnownBits(N0.getOperand(1));
+      if (XKnown.countMaxPopulation() == 1 && YKnown.countMinPopulation() >= 2)
+        return DAG.getSetCC(dl, VT, N0.getOperand(0), N1, Cond);
     }
 
     if (SDValue V =

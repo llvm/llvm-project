@@ -208,6 +208,19 @@ public:
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
 
+  /// getMveAddrModeRQOpValue - Return encoding info for 'reg, vreg'
+  /// operand.
+  uint32_t getMveAddrModeRQOpValue(const MCInst &MI, unsigned OpIdx,
+                                   SmallVectorImpl<MCFixup> &Fixups,
+                                   const MCSubtargetInfo &STI) const;
+
+  /// getMveAddrModeQOpValue - Return encoding info for 'reg +/- imm7<<{shift}'
+  /// operand.
+  template<int shift>
+  uint32_t getMveAddrModeQOpValue(const MCInst &MI, unsigned OpIdx,
+                                  SmallVectorImpl<MCFixup> &Fixups,
+                                  const MCSubtargetInfo &STI) const;
+
   /// getLdStSORegOpValue - Return encoding info for 'reg +/- reg shop imm'
   /// operand as needed by load/store instructions.
   uint32_t getLdStSORegOpValue(const MCInst &MI, unsigned OpIdx,
@@ -238,8 +251,9 @@ public:
     case ARM_AM::asr: return 2;
     case ARM_AM::ror:
     case ARM_AM::rrx: return 3;
+    default:
+      llvm_unreachable("Invalid ShiftOpc!");
     }
-    llvm_unreachable("Invalid ShiftOpc!");
   }
 
   /// getAddrMode2OffsetOpValue - Return encoding for am2offset operands.
@@ -338,7 +352,8 @@ public:
   unsigned getT2AddrModeSORegOpValue(const MCInst &MI, unsigned OpNum,
     SmallVectorImpl<MCFixup> &Fixups,
     const MCSubtargetInfo &STI) const;
-  unsigned getT2AddrModeImm8OpValue(const MCInst &MI, unsigned OpNum,
+  template<unsigned Bits, unsigned Shift>
+  unsigned getT2AddrModeImmOpValue(const MCInst &MI, unsigned OpNum,
     SmallVectorImpl<MCFixup> &Fixups,
     const MCSubtargetInfo &STI) const;
   unsigned getT2AddrModeImm8OffsetOpValue(const MCInst &MI, unsigned OpNum,
@@ -1040,6 +1055,58 @@ getT2ScaledImmOpValue(const MCInst &MI, unsigned OpIdx,
     Binary |= (1U << Bits);
   return Binary;
 }
+
+/// getMveAddrModeRQOpValue - Return encoding info for 'reg, vreg'
+/// operand.
+uint32_t ARMMCCodeEmitter::
+getMveAddrModeRQOpValue(const MCInst &MI, unsigned OpIdx,
+                        SmallVectorImpl<MCFixup> &Fixups,
+                        const MCSubtargetInfo &STI) const {
+    // {6-3} Rn
+    // {2-0} Qm
+    const MCOperand &M0 = MI.getOperand(OpIdx);
+    const MCOperand &M1 = MI.getOperand(OpIdx + 1);
+
+    unsigned Rn = CTX.getRegisterInfo()->getEncodingValue(M0.getReg());
+    unsigned Qm = CTX.getRegisterInfo()->getEncodingValue(M1.getReg());
+
+    assert(Qm < 8 && "Qm is supposed to be encodable in 3 bits");
+
+    return (Rn << 3) | Qm;
+}
+
+/// getMveAddrModeRQOpValue - Return encoding info for 'reg, vreg'
+/// operand.
+template<int shift>
+uint32_t ARMMCCodeEmitter::
+getMveAddrModeQOpValue(const MCInst &MI, unsigned OpIdx,
+                        SmallVectorImpl<MCFixup> &Fixups,
+                        const MCSubtargetInfo &STI) const {
+    // {10-8} Qm
+    // {7-0} Imm
+    const MCOperand &M0 = MI.getOperand(OpIdx);
+    const MCOperand &M1 = MI.getOperand(OpIdx + 1);
+
+    unsigned Qm = CTX.getRegisterInfo()->getEncodingValue(M0.getReg());
+    int32_t Imm = M1.getImm();
+
+    bool isAdd = Imm >= 0;
+
+    Imm >>= shift;
+
+    if (!isAdd)
+      Imm = -(uint32_t)Imm;
+
+    Imm &= 0x7f;
+
+    if (isAdd)
+      Imm |= 0x80;
+
+    assert(Qm < 8 && "Qm is supposed to be encodable in 3 bits");
+
+    return (Qm << 8) | Imm;
+}
+
 /// getT2AddrModeImm8s4OpValue - Return encoding info for
 /// 'reg +/- imm8<<2' operand.
 uint32_t ARMMCCodeEmitter::
@@ -1540,25 +1607,26 @@ getT2AddrModeSORegOpValue(const MCInst &MI, unsigned OpNum,
   return Value;
 }
 
+template<unsigned Bits, unsigned Shift>
 unsigned ARMMCCodeEmitter::
-getT2AddrModeImm8OpValue(const MCInst &MI, unsigned OpNum,
-                         SmallVectorImpl<MCFixup> &Fixups,
-                         const MCSubtargetInfo &STI) const {
+getT2AddrModeImmOpValue(const MCInst &MI, unsigned OpNum,
+                        SmallVectorImpl<MCFixup> &Fixups,
+                        const MCSubtargetInfo &STI) const {
   const MCOperand &MO1 = MI.getOperand(OpNum);
   const MCOperand &MO2 = MI.getOperand(OpNum+1);
 
   // FIXME: Needs fixup support.
   unsigned Value = CTX.getRegisterInfo()->getEncodingValue(MO1.getReg());
 
-  // Even though the immediate is 8 bits long, we need 9 bits in order
+  // If the immediate is B bits long, we need B+1 bits in order
   // to represent the (inverse of the) sign bit.
-  Value <<= 9;
-  int32_t tmp = (int32_t)MO2.getImm();
+  Value <<= (Bits + 1);
+  int32_t tmp = (int32_t)MO2.getImm() >> Shift;
   if (tmp < 0)
     tmp = abs(tmp);
   else
-    Value |= 256; // Set the ADD bit
-  Value |= tmp & 255;
+    Value |= (1U << Bits); // Set the ADD bit
+  Value |= tmp & ((1U << Bits) - 1);
   return Value;
 }
 

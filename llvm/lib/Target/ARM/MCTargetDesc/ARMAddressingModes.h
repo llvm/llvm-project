@@ -30,7 +30,8 @@ namespace ARM_AM {
     lsl,
     lsr,
     ror,
-    rrx
+    rrx,
+    uxtw
   };
 
   enum AddrOpc {
@@ -48,6 +49,7 @@ namespace ARM_AM {
     case ARM_AM::lsr: return "lsr";
     case ARM_AM::ror: return "ror";
     case ARM_AM::rrx: return "rrx";
+    case ARM_AM::uxtw: return "uxtw";
     }
   }
 

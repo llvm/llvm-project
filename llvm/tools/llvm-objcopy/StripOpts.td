@@ -13,7 +13,7 @@ def h : Flag<["-"], "h">, Alias<help>;
 def allow_broken_links
     : Flag<["--"], "allow-broken-links">,
       HelpText<"Allow llvm-strip to remove sections even if it would leave "
-               "invalid section references. The appropriate sh_link fields"
+               "invalid section references. The appropriate sh_link fields "
                "will be set to zero.">;
 
 def enable_deterministic_archives

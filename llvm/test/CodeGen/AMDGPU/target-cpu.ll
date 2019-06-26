@@ -78,7 +78,6 @@ define amdgpu_kernel void @target_fiji() #4 {
 
 ; CHECK-LABEL: {{^}}promote_alloca_enabled:
 ; CHECK: ds_read_b32
-; CHECK: ; LDSByteSize: 5120
 define amdgpu_kernel void @promote_alloca_enabled(i32 addrspace(1)* nocapture %out, i32 addrspace(1)* nocapture %in) #5 {
 entry:
   %stack = alloca [5 x i32], align 4, addrspace(5)

@@ -1142,6 +1142,16 @@ def : GCNPat <
   (S_MOV_B32 imm:$imm)
 >;
 
+def : GCNPat <
+  (VGPRImm<(SIlds tglobaladdr:$ga)>),
+  (V_MOV_B32_e32 $ga)
+>;
+
+def : GCNPat <
+  (SIlds tglobaladdr:$ga),
+  (S_MOV_B32 $ga)
+>;
+
 // FIXME: Workaround for ordering issue with peephole optimizer where
 // a register class copy interferes with immediate folding.  Should
 // use s_mov_b32, which can be shrunk to s_movk_i32

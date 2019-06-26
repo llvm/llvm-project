@@ -439,7 +439,8 @@ SDNode *PPCDAGToDAGISel::getGlobalBaseReg() {
     if (PPCLowering->getPointerTy(CurDAG->getDataLayout()) == MVT::i32) {
       if (PPCSubTarget->isTargetELF()) {
         GlobalBaseReg = PPC::R30;
-        if (M->getPICLevel() == PICLevel::SmallPIC) {
+        if (!PPCSubTarget->isSecurePlt() &&
+            M->getPICLevel() == PICLevel::SmallPIC) {
           BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MoveGOTtoLR));
           BuildMI(FirstMBB, MBBI, dl, TII.get(PPC::MFLR), GlobalBaseReg);
           MF->getInfo<PPCFunctionInfo>()->setUsesPICBase(true);
@@ -4395,11 +4396,9 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
     getGlobalBaseReg();
   } break;
   case PPCISD::CALL: {
-    const Module *M = MF->getFunction().getParent();
-
     if (PPCLowering->getPointerTy(CurDAG->getDataLayout()) != MVT::i32 ||
-        (!TM.isPositionIndependent() || !PPCSubTarget->isSecurePlt()) ||
-        !PPCSubTarget->isTargetELF() || M->getPICLevel() == PICLevel::SmallPIC)
+        !TM.isPositionIndependent() || !PPCSubTarget->isSecurePlt() ||
+        !PPCSubTarget->isTargetELF())
       break;
 
     SDValue Op = N->getOperand(1);

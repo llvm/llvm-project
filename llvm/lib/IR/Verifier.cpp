@@ -1666,7 +1666,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
 
   if (Attrs.hasAttribute(Attribute::ByVal) && Attrs.getByValType()) {
     Assert(Attrs.getByValType() == cast<PointerType>(Ty)->getElementType(),
-           "Attribute 'byval' type does not match parameter!");
+           "Attribute 'byval' type does not match parameter!", V);
   }
 
   AttrBuilder IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);

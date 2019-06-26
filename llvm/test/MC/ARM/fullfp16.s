@@ -1,5 +1,7 @@
 @ RUN: llvm-mc -triple armv8a-none-eabi -mattr=+fullfp16 -show-encoding < %s | FileCheck %s --check-prefix=ARM
 @ RUN: llvm-mc -triple armv8a-none-eabi -mattr=+fullfp16,+thumb-mode -show-encoding < %s | FileCheck %s --check-prefix=THUMB
+@ RUN: llvm-mc -triple thumbv8.1m.main -mattr=+mve.fp,+fullfp16 -show-encoding < %s | FileCheck %s --check-prefix=THUMB
+@ RUN: llvm-mc -triple thumbv8.1m.main -mattr=+fullfp16 -show-encoding < %s | FileCheck %s --check-prefix=THUMB
 
          vadd.f16  s0, s1, s0
 @ ARM:    vadd.f16 s0, s1, s0        @ encoding: [0x80,0x09,0x30,0xee]

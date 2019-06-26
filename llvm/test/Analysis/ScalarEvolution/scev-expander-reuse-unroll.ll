@@ -1,7 +1,11 @@
 ; RUN: opt < %s -loop-unroll -unroll-runtime -unroll-count=2 -verify-scev-maps -S | FileCheck %s
 
 ; Check SCEV expansion uses existing value when unrolling an inner loop with runtime trip count in a loop nest.
+; The outer loop gets unrolled twice, so we see 2 selects in the outer loop blocks.
 ; CHECK-LABEL: @foo(
+; CHECK-LABEL: for.body.loopexit:
+; CHECK: select
+; CHECK-LABEL: for.body:
 ; CHECK: select
 ; CHECK-NOT: select
 ; CHECK: ret
@@ -14,7 +18,7 @@ for.body:                                         ; preds = %for.body5, %for.bod
   %xfL.addr.033 = phi i32 [ %xfL, %entry ], [ %add, %for.body5 ]
   %add = add nsw i32 %xfL.addr.033, %scaleL
   %shr = ashr i32 %add, 16
-  %cmp.i = icmp slt i32 0, %shr
+  %cmp.i = icmp slt i32 10, %shr
   %.sroa.speculated = select i1 %cmp.i, i32 0, i32 %shr
   %cmp425 = icmp slt i32 0, %.sroa.speculated
   br i1 %cmp425, label %for.body5.preheader, label %for.end

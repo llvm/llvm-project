@@ -5,43 +5,43 @@
 
 // CHECK: f
 // CHECK-NEXT: a
-// CHECK-NEXT: /tmp/stack.c:20
+// CHECK-NEXT: /tmp{{/|\\}}stack.c:20
 // CHECK-NEXT: -192 32 192
 // CHECK-NEXT: g
 // CHECK-NEXT: p
-// CHECK-NEXT: /tmp/stack.c:8
+// CHECK-NEXT: /tmp{{/|\\}}stack.c:8
 // CHECK-NEXT: ?? 8 ??
 // CHECK-NEXT: g
 // CHECK-NEXT: b
-// CHECK-NEXT: /tmp/stack.c:10
+// CHECK-NEXT: /tmp{{/|\\}}stack.c:10
 // CHECK-NEXT: -128 32 128
 // CHECK-NEXT: h
 // CHECK-NEXT: p1
-// CHECK-NEXT: /tmp/stack.c:3
+// CHECK-NEXT: /tmp{{/|\\}}stack.c:3
 // CHECK-NEXT: ?? 8 ??
 // CHECK-NEXT: h
 // CHECK-NEXT: p2
-// CHECK-NEXT: /tmp/stack.c:3
+// CHECK-NEXT: /tmp{{/|\\}}stack.c:3
 // CHECK-NEXT: ?? 8 ??
 // CHECK-NEXT: h
 // CHECK-NEXT: d
-// CHECK-NEXT: /tmp/stack.c:4
+// CHECK-NEXT: /tmp{{/|\\}}stack.c:4
 // CHECK-NEXT: -96 32 0
 // CHECK-NEXT: g
 // CHECK-NEXT: c
-// CHECK-NEXT: /tmp/stack.c:14
+// CHECK-NEXT: /tmp{{/|\\}}stack.c:14
 // CHECK-NEXT: -160 32 64
 // CHECK-NEXT: h
 // CHECK-NEXT: p1
-// CHECK-NEXT: /tmp/stack.c:3
+// CHECK-NEXT: /tmp{{/|\\}}stack.c:3
 // CHECK-NEXT: ?? 8 ??
 // CHECK-NEXT: h
 // CHECK-NEXT: p2
-// CHECK-NEXT: /tmp/stack.c:3
+// CHECK-NEXT: /tmp{{/|\\}}stack.c:3
 // CHECK-NEXT: ?? 8 ??
 // CHECK-NEXT: h
 // CHECK-NEXT: d
-// CHECK-NEXT: /tmp/stack.c:4
+// CHECK-NEXT: /tmp{{/|\\}}stack.c:4
 // CHECK-NEXT: -96 32 0
 
 // Generated from:

@@ -300,23 +300,6 @@ void SIMachineFunctionInfo::removeSGPRToVGPRFrameIndices(MachineFrameInfo &MFI) 
     MFI.setStackID(i, 0);
 }
 
-
-/// \returns VGPR used for \p Dim' work item ID.
-unsigned SIMachineFunctionInfo::getWorkItemIDVGPR(unsigned Dim) const {
-  switch (Dim) {
-  case 0:
-    assert(hasWorkItemIDX());
-    return AMDGPU::VGPR0;
-  case 1:
-    assert(hasWorkItemIDY());
-    return AMDGPU::VGPR1;
-  case 2:
-    assert(hasWorkItemIDZ());
-    return AMDGPU::VGPR2;
-  }
-  llvm_unreachable("unexpected dimension");
-}
-
 MCPhysReg SIMachineFunctionInfo::getNextUserSGPR() const {
   assert(NumSystemSGPRs == 0 && "System SGPRs must be added after user SGPRs");
   return AMDGPU::SGPR0 + NumUserSGPRs;

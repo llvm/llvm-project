@@ -4,15 +4,10 @@
 ; These tests check that the compiler won't crash when it needs to spill
 ; SGPRs.
 
-@ddxy_lds = external addrspace(3) global [64 x i32]
-
 ; GCN-LABEL: {{^}}main:
 ; GCN: s_wqm
 
 ; Make sure not emitting unused scratch resource descriptor setup
-; GCN-NOT: s_mov_b32
-; GCN-NOT: s_mov_b32
-; GCN-NOT: s_mov_b32
 ; GCN-NOT: s_mov_b32
 
 ; GCN: s_mov_b32 m0
@@ -26,6 +21,7 @@
 ; TOVGPR: ScratchSize: 0{{$}}
 define amdgpu_ps void @main([17 x <4 x i32>] addrspace(4)* byval %arg, [32 x <4 x i32>] addrspace(4)* byval %arg1, [16 x <8 x i32>] addrspace(4)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) {
 main_body:
+  %lds = inttoptr i32 0 to [64 x i32] addrspace(3)*
   %tmp = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(4)* %arg, i64 0, i32 0
   %tmp21 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, !tbaa !0
   %tmp22 = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> %tmp21, i32 96, i32 0)
@@ -203,18 +199,18 @@ main_body:
   %p2.i6 = call float @llvm.amdgcn.interp.p2(float %p1.i5, float %j.f.i4, i32 2, i32 5, i32 %arg4) #0
   %mbcnt.lo.0 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tmp109 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo.0)
-  %tmp110 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp109
+  %tmp110 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp109
   %tmp111 = bitcast float %p2.i to i32
   store i32 %tmp111, i32 addrspace(3)* %tmp110
   %tmp112 = bitcast float %p2.i96 to i32
   store i32 %tmp112, i32 addrspace(3)* %tmp110
   %mbcnt.lo.1 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tmp113 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo.1)
-  %tmp114 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp113
+  %tmp114 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp113
   %tmp115 = and i32 %tmp113, -4
-  %tmp116 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp115
+  %tmp116 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp115
   %tmp117 = add i32 %tmp115, 1
-  %tmp118 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp117
+  %tmp118 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp117
   %tmp119 = bitcast float %p2.i to i32
   store i32 %tmp119, i32 addrspace(3)* %tmp114
   %tmp120 = load i32, i32 addrspace(3)* %tmp116
@@ -241,7 +237,7 @@ main_body:
   %tmp140 = fmul float %tmp59, %p2.i96
   %mbcnt.lo.2 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tmp141 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo.2)
-  %tmp142 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp141
+  %tmp142 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp141
   %tmp143 = bitcast float %tmp137 to i32
   store i32 %tmp143, i32 addrspace(3)* %tmp142
   %tmp144 = bitcast float %tmp138 to i32
@@ -252,11 +248,11 @@ main_body:
   store i32 %tmp146, i32 addrspace(3)* %tmp142
   %mbcnt.lo.3 = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
   %tmp147 = call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 %mbcnt.lo.3)
-  %tmp148 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp147
+  %tmp148 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp147
   %tmp149 = and i32 %tmp147, -4
-  %tmp150 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp149
+  %tmp150 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp149
   %tmp151 = add i32 %tmp149, 2
-  %tmp152 = getelementptr [64 x i32], [64 x i32] addrspace(3)* @ddxy_lds, i32 0, i32 %tmp151
+  %tmp152 = getelementptr [64 x i32], [64 x i32] addrspace(3)* %lds, i32 0, i32 %tmp151
   %tmp153 = bitcast float %tmp137 to i32
   store i32 %tmp153, i32 addrspace(3)* %tmp148
   %tmp154 = load i32, i32 addrspace(3)* %tmp150

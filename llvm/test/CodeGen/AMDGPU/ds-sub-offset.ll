@@ -7,8 +7,7 @@ declare i32 @llvm.amdgcn.workitem.id.x() #0
 
 ; GCN-LABEL: {{^}}write_ds_sub0_offset0_global:
 ; GCN: v_lshlrev_b32_e32 [[SHL:v[0-9]+]], 2, v0
-; CI: v_sub_i32_e32 [[BASEPTR:v[0-9]+]], vcc, 0, [[SHL]]
-; GFX9: v_sub_u32_e32 [[BASEPTR:v[0-9]+]], 0, [[SHL]]
+; GCN: v_sub_{{[iu]}}32_e32 [[BASEPTR:v[0-9]+]], {{(vcc, )?}}lds.obj@abs32@lo, [[SHL]]
 ; GCN: v_mov_b32_e32 [[VAL:v[0-9]+]], 0x7b
 ; GCN: ds_write_b32 [[BASEPTR]], [[VAL]] offset:12
 define amdgpu_kernel void @write_ds_sub0_offset0_global() #0 {

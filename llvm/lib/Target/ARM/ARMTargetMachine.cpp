@@ -96,6 +96,7 @@ extern "C" void LLVMInitializeARMTarget() {
   initializeARMExpandPseudoPass(Registry);
   initializeThumb2SizeReducePass(Registry);
   initializeMVEVPTBlockPass(Registry);
+  initializeARMLowOverheadLoopsPass(Registry);
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
@@ -446,6 +447,9 @@ bool ARMPassConfig::addPreISel() {
                                   MergeExternalByDefault));
   }
 
+  if (TM->getOptLevel() != CodeGenOpt::None)
+    addPass(createHardwareLoopsPass());
+
   return false;
 }
 
@@ -526,4 +530,5 @@ void ARMPassConfig::addPreEmitPass() {
     addPass(createARMOptimizeBarriersPass());
 
   addPass(createARMConstantIslandPass());
+  addPass(createARMLowOverheadLoopsPass());
 }

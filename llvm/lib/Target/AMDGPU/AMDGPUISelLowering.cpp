@@ -4357,6 +4357,7 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BUILD_VERTICAL_VECTOR)
   NODE_NAME_CASE(CONST_DATA_PTR)
   NODE_NAME_CASE(PC_ADD_REL_OFFSET)
+  NODE_NAME_CASE(LDS)
   NODE_NAME_CASE(KILL)
   NODE_NAME_CASE(DUMMY_CHAIN)
   case AMDGPUISD::FIRST_MEM_OPCODE_NUMBER: break;
@@ -4569,6 +4570,15 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
   }
   case AMDGPUISD::BUFFER_LOAD_USHORT: {
     Known.Zero.setHighBits(16);
+    break;
+  }
+  case AMDGPUISD::LDS: {
+    auto GA = cast<GlobalAddressSDNode>(Op.getOperand(0).getNode());
+    unsigned Align = GA->getGlobal()->getAlignment();
+
+    Known.Zero.setHighBits(16);
+    if (Align)
+      Known.Zero.setLowBits(Log2_32(Align));
     break;
   }
   case ISD::INTRINSIC_WO_CHAIN: {

@@ -1256,7 +1256,7 @@ define <8 x float> @load_v8f32_v8i1_zero(<8 x i1> %mask, <8 x float>* %addr) {
 ;
 ; AVX512F-LABEL: load_v8f32_v8i1_zero:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vmovups (%rdi), %zmm0 {%k1} {z}
@@ -1265,7 +1265,7 @@ define <8 x float> @load_v8f32_v8i1_zero(<8 x i1> %mask, <8 x float>* %addr) {
 ;
 ; AVX512VLDQ-LABEL: load_v8f32_v8i1_zero:
 ; AVX512VLDQ:       ## %bb.0:
-; AVX512VLDQ-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512VLDQ-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512VLDQ-NEXT:    vpmovd2m %ymm0, %k1
 ; AVX512VLDQ-NEXT:    vmovaps (%rdi), %ymm0 {%k1} {z}
@@ -2442,7 +2442,7 @@ define <8 x i32> @load_v8i32_v8i1(<8 x i1> %mask, <8 x i32>* %addr, <8 x i32> %d
 ; AVX512F-LABEL: load_v8i32_v8i1:
 ; AVX512F:       ## %bb.0:
 ; AVX512F-NEXT:    ## kill: def $ymm1 killed $ymm1 def $zmm1
-; AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vpblendmd (%rdi), %zmm1, %zmm0 {%k1}
@@ -2451,7 +2451,7 @@ define <8 x i32> @load_v8i32_v8i1(<8 x i1> %mask, <8 x i32>* %addr, <8 x i32> %d
 ;
 ; AVX512VLDQ-LABEL: load_v8i32_v8i1:
 ; AVX512VLDQ:       ## %bb.0:
-; AVX512VLDQ-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512VLDQ-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512VLDQ-NEXT:    vpmovd2m %ymm0, %k1
 ; AVX512VLDQ-NEXT:    vpblendmd (%rdi), %ymm1, %ymm0 {%k1}
@@ -2617,7 +2617,7 @@ define <8 x i32> @load_v8i32_v8i1_zero(<8 x i1> %mask, <8 x i32>* %addr) {
 ;
 ; AVX512F-LABEL: load_v8i32_v8i1_zero:
 ; AVX512F:       ## %bb.0:
-; AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; AVX512F-NEXT:    vpmovsxwq %xmm0, %zmm0
 ; AVX512F-NEXT:    vpsllq $63, %zmm0, %zmm0
 ; AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k1
 ; AVX512F-NEXT:    vmovdqu32 (%rdi), %zmm0 {%k1} {z}
@@ -2626,7 +2626,7 @@ define <8 x i32> @load_v8i32_v8i1_zero(<8 x i1> %mask, <8 x i32>* %addr) {
 ;
 ; AVX512VLDQ-LABEL: load_v8i32_v8i1_zero:
 ; AVX512VLDQ:       ## %bb.0:
-; AVX512VLDQ-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512VLDQ-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512VLDQ-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX512VLDQ-NEXT:    vpmovd2m %ymm0, %k1
 ; AVX512VLDQ-NEXT:    vmovdqu32 (%rdi), %ymm0 {%k1} {z}

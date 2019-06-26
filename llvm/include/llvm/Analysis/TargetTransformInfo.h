@@ -473,7 +473,8 @@ public:
 
   /// Query the target whether it would be profitable to convert the given loop
   /// into a hardware loop.
-  bool isHardwareLoopProfitable(Loop *L, ScalarEvolution &SE,
+  bool isHardwareLoopProfitable(Loop *L, LoopInfo &LI,
+                                ScalarEvolution &SE,
                                 AssumptionCache &AC,
                                 TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo) const;

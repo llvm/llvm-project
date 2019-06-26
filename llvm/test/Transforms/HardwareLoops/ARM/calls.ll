@@ -3,7 +3,7 @@
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+fp-armv8,+fullfp16 -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-FP64
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+mve -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-MVE
 ; RUN: opt -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+mve.fp -hardware-loops -disable-arm-loloops=false %s -S -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-MVEFP
-
+; RUN: llc -mtriple=thumbv8.1m.main-arm-none-eabi -mattr=+lob,+mve.fp -disable-arm-loloops=false %s -o - | FileCheck %s --check-prefix=CHECK-LLC
 
 ; CHECK-LABEL: skip_call
 ; CHECK-NOT: call void @llvm.set.loop.iterations
@@ -40,6 +40,15 @@ while.end:
 ; CHECK: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[COUNT]], i32 1)
 ; CHECK: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK: br i1 [[CMP]], label %loop, label %exit
+
+; CHECK-LLC-LABEL: test_target_specific:
+; CHECK-LLC:        mov.w lr, #50
+; CHECK-LLC:        dls lr, lr
+; CHECK-LLC-NOT:    mov lr,
+; CHECK-LLC:      [[LOOP_HEADER:\.LBB[0-9_]+]]:
+; CHECK-LLC:        le lr, [[LOOP_HEADER]]
+; CHECK-LLC-NOT:    b .
+; CHECK-LLC:      @ %exit
 
 define i32 @test_target_specific(i32* %a, i32* %b) {
 entry:
@@ -86,6 +95,17 @@ exit:
 ; CHECK-MVE-NOT:  call void @llvm.set.loop.iterations
 ; CHECK-FP:       call void @llvm.set.loop.iterations.i32(i32 100)
 ; CHECK-MVEFP:    call void @llvm.set.loop.iterations.i32(i32 100)
+
+; CHECK-LLC-LABEL: test_fabs:
+; CHECK-LLC:        mov.w lr, #100
+; CHECK-LLC:        dls lr, lr
+; CHECK-LLC-NOT:    mov lr,
+; CHECK-LLC:      [[LOOP_HEADER:\.LBB[0-9_]+]]:
+; CHECK-LLC-NOT:    bl
+; CHECK-LLC:        le lr, [[LOOP_HEADER]]
+; CHECK-LLC-NOT:    b .
+; CHECK-LLC:      @ %exit
+
 define float @test_fabs(float* %a) {
 entry:
   br label %loop
@@ -313,7 +333,7 @@ exit:
 ; CHECK-MVE: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[COUNT]], i32 1)
 ; CHECK-MVE: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-MVE: br i1 [[CMP]], label %loop, label %exit
-define void @test_masked_i32(<4 x i1> %mask, <4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c, <4 x i32> %passthru) {
+define arm_aapcs_vfpcc void @test_masked_i32(<4 x i1> %mask, <4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c, <4 x i32> %passthru) {
 entry:
   br label %loop
 loop:
@@ -340,7 +360,7 @@ exit:
 ; CHECK-MVE: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[COUNT]], i32 1)
 ; CHECK-MVE: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-MVE: br i1 [[CMP]], label %loop, label %exit
-define void @test_masked_f32(<4 x i1> %mask, <4 x float>* %a, <4 x float>* %b, <4 x float>* %c, <4 x float> %passthru) {
+define arm_aapcs_vfpcc void @test_masked_f32(<4 x i1> %mask, <4 x float>* %a, <4 x float>* %b, <4 x float>* %c, <4 x float> %passthru) {
 entry:
   br label %loop
 loop:
@@ -367,7 +387,7 @@ exit:
 ; CHECK-MVE: [[LOOP_DEC]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 [[COUNT]], i32 1)
 ; CHECK-MVE: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
 ; CHECK-MVE: br i1 [[CMP]], label %loop, label %exit
-define void @test_gather_scatter(<4 x i1> %mask, <4 x float*> %a, <4 x float*> %b, <4 x float*> %c, <4 x float> %passthru) {
+define arm_aapcs_vfpcc void @test_gather_scatter(<4 x i1> %mask, <4 x float*> %a, <4 x float*> %b, <4 x float*> %c, <4 x float> %passthru) {
 entry:
   br label %loop
 loop:

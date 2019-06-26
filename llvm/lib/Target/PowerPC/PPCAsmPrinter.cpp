@@ -461,6 +461,7 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
   StringRef Name = "__tls_get_addr";
   MCSymbol *TlsGetAddr = OutContext.getOrCreateSymbol(Name);
   MCSymbolRefExpr::VariantKind Kind = MCSymbolRefExpr::VK_None;
+  const Module *M = MF->getFunction().getParent();
 
   assert(MI->getOperand(0).isReg() &&
          ((Subtarget->isPPC64() && MI->getOperand(0).getReg() == PPC::X3) ||
@@ -478,10 +479,10 @@ void PPCAsmPrinter::EmitTlsCall(const MachineInstr *MI,
     MCSymbolRefExpr::create(TlsGetAddr, Kind, OutContext);
 
   // Add 32768 offset to the symbol so we follow up the latest GOT/PLT ABI.
-  if (Kind == MCSymbolRefExpr::VK_PLT && Subtarget->isSecurePlt())
-    TlsRef = MCBinaryExpr::createAdd(TlsRef,
-                                     MCConstantExpr::create(32768, OutContext),
-                                     OutContext);
+  if (Kind == MCSymbolRefExpr::VK_PLT && Subtarget->isSecurePlt() &&
+      M->getPICLevel() == PICLevel::BigPIC)
+    TlsRef = MCBinaryExpr::createAdd(
+        TlsRef, MCConstantExpr::create(32768, OutContext), OutContext);
   const MachineOperand &MO = MI->getOperand(2);
   const GlobalValue *GValue = MO.getGlobal();
   MCSymbol *MOSymbol = getSymbol(GValue);
@@ -583,34 +584,30 @@ void PPCAsmPrinter::EmitInstruction(const MachineInstr *MI) {
     // Into: lwz %rt, .L0$poff - .L0$pb(%ri)
     //       add %rd, %rt, %ri
     // or into (if secure plt mode is on):
-    //       addis r30, r30, .LTOC - .L0$pb@ha
-    //       addi r30, r30, .LTOC - .L0$pb@l
+    //       addis r30, r30, {.LTOC,_GLOBAL_OFFSET_TABLE} - .L0$pb@ha
+    //       addi r30, r30, {.LTOC,_GLOBAL_OFFSET_TABLE} - .L0$pb@l
     // Get the offset from the GOT Base Register to the GOT
     LowerPPCMachineInstrToMCInst(MI, TmpInst, *this, isDarwin);
     if (Subtarget->isSecurePlt() && isPositionIndependent() ) {
       unsigned PICR = TmpInst.getOperand(0).getReg();
-      MCSymbol *LTOCSymbol = OutContext.getOrCreateSymbol(StringRef(".LTOC"));
+      MCSymbol *BaseSymbol = OutContext.getOrCreateSymbol(
+          M->getPICLevel() == PICLevel::SmallPIC ? "_GLOBAL_OFFSET_TABLE_"
+                                                 : ".LTOC");
       const MCExpr *PB =
-        MCSymbolRefExpr::create(MF->getPICBaseSymbol(),
-                                OutContext);
+          MCSymbolRefExpr::create(MF->getPICBaseSymbol(), OutContext);
 
-      const MCExpr *LTOCDeltaExpr =
-        MCBinaryExpr::createSub(MCSymbolRefExpr::create(LTOCSymbol, OutContext),
-                                PB, OutContext);
+      const MCExpr *DeltaExpr = MCBinaryExpr::createSub(
+          MCSymbolRefExpr::create(BaseSymbol, OutContext), PB, OutContext);
 
-      const MCExpr *LTOCDeltaHi =
-        PPCMCExpr::createHa(LTOCDeltaExpr, false, OutContext);
-      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDIS)
-                                   .addReg(PICR)
-                                   .addReg(PICR)
-                                   .addExpr(LTOCDeltaHi));
+      const MCExpr *DeltaHi = PPCMCExpr::createHa(DeltaExpr, false, OutContext);
+      EmitToStreamer(
+          *OutStreamer,
+          MCInstBuilder(PPC::ADDIS).addReg(PICR).addReg(PICR).addExpr(DeltaHi));
 
-      const MCExpr *LTOCDeltaLo =
-        PPCMCExpr::createLo(LTOCDeltaExpr, false, OutContext);
-      EmitToStreamer(*OutStreamer, MCInstBuilder(PPC::ADDI)
-                                   .addReg(PICR)
-                                   .addReg(PICR)
-                                   .addExpr(LTOCDeltaLo));
+      const MCExpr *DeltaLo = PPCMCExpr::createLo(DeltaExpr, false, OutContext);
+      EmitToStreamer(
+          *OutStreamer,
+          MCInstBuilder(PPC::ADDI).addReg(PICR).addReg(PICR).addExpr(DeltaLo));
       return;
     } else {
       MCSymbol *PICOffset =

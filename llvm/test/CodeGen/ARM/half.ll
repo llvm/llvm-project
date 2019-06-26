@@ -3,6 +3,10 @@
 ; RUN: llc < %s -mtriple=thumbv8-apple-ios7.0 | FileCheck %s --check-prefix=CHECK  --check-prefix=CHECK-V8
 ; RUN: llc < %s -mtriple=armv8r-none-none-eabi | FileCheck %s --check-prefix=CHECK  --check-prefix=CHECK-V8
 ; RUN: llc < %s -mtriple=armv8r-none-none-eabi -mattr=-fp64 | FileCheck %s --check-prefix=CHECK  --check-prefix=CHECK-V8-SP
+; RUN: llc < %s -mtriple=armv8.1m-none-none-eabi -mattr=+fp-armv8 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V8
+; RUN: llc < %s -mtriple=armv8.1m-none-none-eabi -mattr=+fp-armv8,-fp64 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-V8-SP
+; RUN: llc < %s -mtriple=armv8.1m-none-none-eabi -mattr=+mve.fp,+fp64 | FileCheck %s --check-prefix=CHECK-V8
+; RUN: llc < %s -mtriple=armv8.1m-none-none-eabi -mattr=+mve.fp | FileCheck %s --check-prefix=CHECK-V8-SP
 
 define void @test_load_store(half* %in, half* %out) {
 ; CHECK-LABEL: test_load_store:
