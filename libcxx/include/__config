@@ -34,6 +34,10 @@
 
 #define _LIBCPP_VERSION 9000
 
+#ifndef _LIBCPP_ABI_VERSION
+#  define _LIBCPP_ABI_VERSION 1
+#endif
+
 #ifndef __STDC_HOSTED__
 #  define _LIBCPP_FREESTANDING
 #endif
@@ -62,18 +66,7 @@
 #  error Unknown object file format
 #endif
 
-#if defined(_LIBCPP_ABI_UNSTABLE)
-# ifdef _LIBCPP_ABI_VERSION
-#   error _LIBCPP_ABI_VERSION cannot be defined with _LIBCPP_ABI_UNSTABLE
-# endif
-# define _LIBCPP_ABI_VERSION _LIBCPP_VERSION
-#endif
-
-#ifndef _LIBCPP_ABI_VERSION
-#  define _LIBCPP_ABI_VERSION 1
-#endif
-
-#if _LIBCPP_ABI_VERSION >= 2
+#if defined(_LIBCPP_ABI_UNSTABLE) || _LIBCPP_ABI_VERSION >= 2
 // Change short string representation so that string data starts at offset 0,
 // improving its alignment in some cases.
 #  define _LIBCPP_ABI_ALTERNATE_STRING_LAYOUT
