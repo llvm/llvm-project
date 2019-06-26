@@ -94,7 +94,7 @@ private:
   // Perform peepholes.
   bool eliminateRedundantCompare(void);
   bool eliminateRedundantTOCSaves(std::map<MachineInstr *, bool> &TOCSaves);
-  void emitRLDICWhenLoweringJumpTables(MachineInstr &MI);
+  bool emitRLDICWhenLoweringJumpTables(MachineInstr &MI);
   void UpdateTOCSaves(std::map<MachineInstr *, bool> &TOCSaves,
                       MachineInstr *MI);
 
@@ -761,7 +761,7 @@ bool PPCMIPeephole::simplifyCode(void) {
         break;
       }
       case PPC::RLDICR: {
-        emitRLDICWhenLoweringJumpTables(MI);
+        Simplified = emitRLDICWhenLoweringJumpTables(MI);
         break;
       }
       }
@@ -1284,17 +1284,17 @@ bool PPCMIPeephole::eliminateRedundantCompare(void) {
 // We miss the opportunity to emit an RLDIC when lowering jump tables
 // since ISEL sees only a single basic block. When selecting, the clear
 // and shift left will be in different blocks.
-void PPCMIPeephole::emitRLDICWhenLoweringJumpTables(MachineInstr &MI) {
+bool PPCMIPeephole::emitRLDICWhenLoweringJumpTables(MachineInstr &MI) {
   if (MI.getOpcode() != PPC::RLDICR)
-    return;
+    return false;
 
   unsigned SrcReg = MI.getOperand(1).getReg();
   if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
-    return;
+    return false;
 
   MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
   if (SrcMI->getOpcode() != PPC::RLDICL)
-    return;
+    return false;
 
   MachineOperand MOpSHSrc = SrcMI->getOperand(2);
   MachineOperand MOpMBSrc = SrcMI->getOperand(3);
@@ -1302,7 +1302,7 @@ void PPCMIPeephole::emitRLDICWhenLoweringJumpTables(MachineInstr &MI) {
   MachineOperand MOpMEMI = MI.getOperand(3);
   if (!(MOpSHSrc.isImm() && MOpMBSrc.isImm() && MOpSHMI.isImm() &&
         MOpMEMI.isImm()))
-    return;
+    return false;
 
   uint64_t SHSrc = MOpSHSrc.getImm();
   uint64_t MBSrc = MOpMBSrc.getImm();
@@ -1311,7 +1311,7 @@ void PPCMIPeephole::emitRLDICWhenLoweringJumpTables(MachineInstr &MI) {
   uint64_t NewSH = SHSrc + SHMI;
   uint64_t NewMB = MBSrc - SHMI;
   if (NewMB > 63 || NewSH > 63)
-    return;
+    return false;
 
   // The bits cleared with RLDICL are [0, MBSrc).
   // The bits cleared with RLDICR are (MEMI, 63].
@@ -1320,7 +1320,7 @@ void PPCMIPeephole::emitRLDICWhenLoweringJumpTables(MachineInstr &MI) {
   //
   // The bits cleared with RLDIC are [0, NewMB) and (63-NewSH, 63].
   if ((63 - NewSH) != MEMI)
-    return;
+    return false;
 
   LLVM_DEBUG(dbgs() << "Converting pair: ");
   LLVM_DEBUG(SrcMI->dump());
@@ -1334,6 +1334,7 @@ void PPCMIPeephole::emitRLDICWhenLoweringJumpTables(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "To: ");
   LLVM_DEBUG(MI.dump());
   NumRotatesCollapsed++;
+  return true;
 }
 
 } // end default namespace

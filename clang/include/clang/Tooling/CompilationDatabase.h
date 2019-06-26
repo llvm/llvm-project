@@ -213,6 +213,12 @@ private:
 std::unique_ptr<CompilationDatabase>
     inferMissingCompileCommands(std::unique_ptr<CompilationDatabase>);
 
+/// Returns a wrapped CompilationDatabase that will add -target and -mode flags
+/// to commandline when they can be deduced from argv[0] of commandline returned
+/// by underlying database.
+std::unique_ptr<CompilationDatabase>
+inferTargetAndDriverMode(std::unique_ptr<CompilationDatabase> Base);
+
 } // namespace tooling
 } // namespace clang
 

@@ -661,14 +661,14 @@ TEST(Hover, Structured) {
        }},
       // Variable with template type
       {R"cpp(
-          template <typename T, class... Ts> class Foo {};
-          Foo<int, char, bool> [[fo^o]];
+          template <typename T, class... Ts> class Foo { public: Foo(int); };
+          Foo<int, char, bool> [[fo^o]] = Foo<int, char, bool>(5);
           )cpp",
        [](HoverInfo &HI) {
          HI.NamespaceScope = "";
          HI.Name = "foo";
          HI.Kind = SymbolKind::Variable;
-         HI.Definition = "Foo<int, char, bool> foo";
+         HI.Definition = "Foo<int, char, bool> foo = Foo<int, char, bool>(5)";
          HI.Type = "Foo<int, char, bool>";
        }},
       // Implicit template instantiation
@@ -911,6 +911,72 @@ void foo())cpp";
          HI.Name = "MACRO", HI.Kind = SymbolKind::String,
          HI.Definition = "#define MACRO(x, y, z) void foo(x, y, z);";
        }},
+
+      // constexprs
+      {R"cpp(
+        constexpr int add(int a, int b) { return a + b; }
+        int [[b^ar]] = add(1, 2);
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "bar";
+         HI.Definition = "int bar = add(1, 2)";
+         HI.Kind = SymbolKind::Variable;
+         HI.Type = "int";
+         HI.NamespaceScope = "";
+         HI.Value = "3";
+       }},
+      {R"cpp(
+        int [[b^ar]] = sizeof(char);
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "bar";
+         HI.Definition = "int bar = sizeof(char)";
+         HI.Kind = SymbolKind::Variable;
+         HI.Type = "int";
+         HI.NamespaceScope = "";
+         HI.Value = "1";
+       }},
+      {R"cpp(
+        template<int a, int b> struct Add {
+          static constexpr int result = a + b;
+        };
+        int [[ba^r]] = Add<1, 2>::result;
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "bar";
+         HI.Definition = "int bar = Add<1, 2>::result";
+         HI.Kind = SymbolKind::Variable;
+         HI.Type = "int";
+         HI.NamespaceScope = "";
+         HI.Value = "3";
+       }},
+      // FIXME: We should use the Decl referenced, even if it comes from an
+      // implicit instantiation.
+      {R"cpp(
+        template<int a, int b> struct Add {
+          static constexpr int result = a + b;
+        };
+        int bar = Add<1, 2>::[[resu^lt]];
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "result";
+         HI.Definition = "static constexpr int result = a + b";
+         HI.Kind = SymbolKind::Property;
+         HI.Type = "const int";
+         HI.NamespaceScope = "";
+         HI.LocalScope = "Add::";
+       }},
+      {R"cpp(
+        const char *[[ba^r]] = "1234";
+        )cpp",
+       [](HoverInfo &HI) {
+         HI.Name = "bar";
+         HI.Definition = "const char *bar = \"1234\"";
+         HI.Kind = SymbolKind::Variable;
+         HI.Type = "const char *";
+         HI.NamespaceScope = "";
+         HI.Value = "&\"1234\"[0]";
+       }},
   };
   for (const auto &Case : Cases) {
     SCOPED_TRACE(Case.Code);
@@ -938,6 +1004,7 @@ void foo())cpp";
     EXPECT_EQ(H->Parameters, Expected.Parameters);
     EXPECT_EQ(H->TemplateParameters, Expected.TemplateParameters);
     EXPECT_EQ(H->SymRange, Expected.SymRange);
+    EXPECT_EQ(H->Value, Expected.Value);
   }
 } // namespace clang
 

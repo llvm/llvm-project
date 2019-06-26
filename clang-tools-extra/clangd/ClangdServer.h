@@ -127,6 +127,10 @@ public:
     /// Enable hidden features mostly useful to clangd developers.
     /// e.g. tweaks to dump the AST.
     bool HiddenFeatures = false;
+
+    /// Clangd will execute compiler drivers matching one of these globs to
+    /// fetch system include path.
+    std::vector<std::string> QueryDriverGlobs;
   };
   // Sensible default options for use in tests.
   // Features like indexing must be enabled if desired.

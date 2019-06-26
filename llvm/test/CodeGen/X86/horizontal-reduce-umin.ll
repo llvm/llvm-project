@@ -503,7 +503,7 @@ define i64 @test_reduce_v4i64(<4 x i64> %a0) {
 ; X86-AVX2-NEXT:    vxorpd %ymm2, %ymm0, %ymm3
 ; X86-AVX2-NEXT:    vxorpd %ymm2, %ymm1, %ymm2
 ; X86-AVX2-NEXT:    vpcmpgtq %ymm3, %ymm2, %ymm2
-; X86-AVX2-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
+; X86-AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; X86-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX2-NEXT:    vpextrd $1, %xmm0, %edx
 ; X86-AVX2-NEXT:    vzeroupper
@@ -1192,7 +1192,7 @@ define i64 @test_reduce_v8i64(<8 x i64> %a0) {
 ; X86-AVX2-NEXT:    vxorpd %ymm2, %ymm0, %ymm3
 ; X86-AVX2-NEXT:    vxorpd %ymm2, %ymm1, %ymm2
 ; X86-AVX2-NEXT:    vpcmpgtq %ymm3, %ymm2, %ymm2
-; X86-AVX2-NEXT:    vblendvpd %ymm2, %ymm0, %ymm1, %ymm0
+; X86-AVX2-NEXT:    vblendvpd %xmm2, %xmm0, %xmm1, %xmm0
 ; X86-AVX2-NEXT:    vmovd %xmm0, %eax
 ; X86-AVX2-NEXT:    vpextrd $1, %xmm0, %edx
 ; X86-AVX2-NEXT:    vzeroupper

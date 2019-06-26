@@ -1329,6 +1329,77 @@ define i1 @length32_eq(i8* %x, i8* %y) nounwind {
   ret i1 %cmp
 }
 
+define i1 @length32_eq_prefer128(i8* %x, i8* %y) nounwind "prefer-vector-width"="128" {
+; X86-NOSSE-LABEL: length32_eq_prefer128:
+; X86-NOSSE:       # %bb.0:
+; X86-NOSSE-NEXT:    pushl $0
+; X86-NOSSE-NEXT:    pushl $32
+; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-NOSSE-NEXT:    calll memcmp
+; X86-NOSSE-NEXT:    addl $16, %esp
+; X86-NOSSE-NEXT:    testl %eax, %eax
+; X86-NOSSE-NEXT:    sete %al
+; X86-NOSSE-NEXT:    retl
+;
+; X86-SSE1-LABEL: length32_eq_prefer128:
+; X86-SSE1:       # %bb.0:
+; X86-SSE1-NEXT:    pushl $0
+; X86-SSE1-NEXT:    pushl $32
+; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    pushl {{[0-9]+}}(%esp)
+; X86-SSE1-NEXT:    calll memcmp
+; X86-SSE1-NEXT:    addl $16, %esp
+; X86-SSE1-NEXT:    testl %eax, %eax
+; X86-SSE1-NEXT:    sete %al
+; X86-SSE1-NEXT:    retl
+;
+; X86-SSE2-LABEL: length32_eq_prefer128:
+; X86-SSE2:       # %bb.0:
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-SSE2-NEXT:    movdqu (%ecx), %xmm0
+; X86-SSE2-NEXT:    movdqu 16(%ecx), %xmm1
+; X86-SSE2-NEXT:    movdqu (%eax), %xmm2
+; X86-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
+; X86-SSE2-NEXT:    movdqu 16(%eax), %xmm0
+; X86-SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
+; X86-SSE2-NEXT:    pand %xmm2, %xmm0
+; X86-SSE2-NEXT:    pmovmskb %xmm0, %eax
+; X86-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; X86-SSE2-NEXT:    sete %al
+; X86-SSE2-NEXT:    retl
+;
+; X64-SSE2-LABEL: length32_eq_prefer128:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    movdqu (%rdi), %xmm0
+; X64-SSE2-NEXT:    movdqu 16(%rdi), %xmm1
+; X64-SSE2-NEXT:    movdqu (%rsi), %xmm2
+; X64-SSE2-NEXT:    pcmpeqb %xmm0, %xmm2
+; X64-SSE2-NEXT:    movdqu 16(%rsi), %xmm0
+; X64-SSE2-NEXT:    pcmpeqb %xmm1, %xmm0
+; X64-SSE2-NEXT:    pand %xmm2, %xmm0
+; X64-SSE2-NEXT:    pmovmskb %xmm0, %eax
+; X64-SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; X64-SSE2-NEXT:    sete %al
+; X64-SSE2-NEXT:    retq
+;
+; X64-AVX-LABEL: length32_eq_prefer128:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vmovdqu (%rdi), %xmm0
+; X64-AVX-NEXT:    vmovdqu 16(%rdi), %xmm1
+; X64-AVX-NEXT:    vpcmpeqb 16(%rsi), %xmm1, %xmm1
+; X64-AVX-NEXT:    vpcmpeqb (%rsi), %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpmovmskb %xmm0, %eax
+; X64-AVX-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; X64-AVX-NEXT:    sete %al
+; X64-AVX-NEXT:    retq
+  %call = tail call i32 @memcmp(i8* %x, i8* %y, i64 32) nounwind
+  %cmp = icmp eq i32 %call, 0
+  ret i1 %cmp
+}
+
 define i1 @length32_eq_const(i8* %X) nounwind {
 ; X86-NOSSE-LABEL: length32_eq_const:
 ; X86-NOSSE:       # %bb.0:

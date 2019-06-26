@@ -9,12 +9,14 @@
 #include "ClangdLSPServer.h"
 #include "Diagnostics.h"
 #include "FormattedString.h"
+#include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "Trace.h"
 #include "URI.h"
 #include "refactor/Tweak.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/Errc.h"
@@ -335,9 +337,13 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
                                             ErrorCode::InvalidRequest));
   if (const auto &Dir = Params.initializationOptions.compilationDatabasePath)
     CompileCommandsDir = Dir;
-  if (UseDirBasedCDB)
+  if (UseDirBasedCDB) {
     BaseCDB = llvm::make_unique<DirectoryBasedGlobalCompilationDatabase>(
         CompileCommandsDir);
+    BaseCDB = getQueryDriverDatabase(
+        llvm::makeArrayRef(ClangdServerOpts.QueryDriverGlobs),
+        std::move(BaseCDB));
+  }
   CDB.emplace(BaseCDB.get(), Params.initializationOptions.fallbackFlags,
               ClangdServerOpts.ResourceDir);
   Server.emplace(*CDB, FSProvider, static_cast<DiagnosticsConsumer &>(*this),

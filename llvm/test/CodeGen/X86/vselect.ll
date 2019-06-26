@@ -671,23 +671,13 @@ define i64 @vselect_any_extend_vector_inreg_crash(<8 x i8>* %x) {
 ; SSE41-NEXT:    movq %xmm2, %rax
 ; SSE41-NEXT:    retq
 ;
-; AVX1-LABEL: vselect_any_extend_vector_inreg_crash:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX1-NEXT:    vpcmpeqw {{.*}}(%rip), %xmm0, %xmm0
-; AVX1-NEXT:    vmovq %xmm0, %rax
-; AVX1-NEXT:    andl $32768, %eax # imm = 0x8000
-; AVX1-NEXT:    retq
-;
-; AVX2-LABEL: vselect_any_extend_vector_inreg_crash:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
-; AVX2-NEXT:    vpcmpeqw {{.*}}(%rip), %xmm0, %xmm0
-; AVX2-NEXT:    vpmovzxwq {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
-; AVX2-NEXT:    vmovq %xmm0, %rax
-; AVX2-NEXT:    andl $32768, %eax # imm = 0x8000
-; AVX2-NEXT:    vzeroupper
-; AVX2-NEXT:    retq
+; AVX-LABEL: vselect_any_extend_vector_inreg_crash:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovzxbw {{.*#+}} xmm0 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
+; AVX-NEXT:    vpcmpeqw {{.*}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vmovq %xmm0, %rax
+; AVX-NEXT:    andl $32768, %eax # imm = 0x8000
+; AVX-NEXT:    retq
 0:
   %1 = load <8 x i8>, <8 x i8>* %x
   %2 = icmp eq <8 x i8> %1, <i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49, i8 49>
