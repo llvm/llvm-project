@@ -624,9 +624,6 @@ define void @bitcast_8i64_store(i8* %p, <8 x i64> %a0) {
 ;
 ; AVX2-LABEL: bitcast_8i64_store:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
-; AVX2-NEXT:    vpcmpgtq %ymm1, %ymm2, %ymm1
-; AVX2-NEXT:    vpcmpgtq %ymm0, %ymm2, %ymm0
 ; AVX2-NEXT:    vpackssdw %ymm1, %ymm0, %ymm0
 ; AVX2-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
 ; AVX2-NEXT:    vmovmskps %ymm0, %eax

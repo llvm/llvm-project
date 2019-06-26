@@ -19,9 +19,9 @@
 ; YAML-NEXT:   - Caller:          main
 ; YAML-NEXT:   - String:          ' with '
 ; YAML-NEXT:   - String:          '(cost='
-; YAML-NEXT:   - Cost:            '-15000'
+; YAML-NEXT:   - Cost:            '0'
 ; YAML-NEXT:   - String:          ', threshold='
-; YAML-NEXT:   - Threshold:       '337'
+; YAML-NEXT:   - Threshold:       '15337'
 ; YAML-NEXT:   - String:          ')'
 ; YAML-NEXT: ...
 

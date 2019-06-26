@@ -9,3 +9,4 @@ call %hi(1234) # CHECK: :[[@LINE]]:6: error: operand must be a bare symbol name
 call %lo(1234) # CHECK: :[[@LINE]]:6: error: operand must be a bare symbol name
 call %hi(foo) # CHECK: :[[@LINE]]:6: error: operand must be a bare symbol name
 call %lo(foo) # CHECK: :[[@LINE]]:6: error: operand must be a bare symbol name
+call foo, bar # CHECK: :[[@LINE]]:6: error: operand must be a bare symbol name

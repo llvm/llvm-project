@@ -870,6 +870,17 @@ def : Pat<(brind GPR:$rs1), (PseudoBRIND GPR:$rs1, 0)>;
 def : Pat<(brind (add GPR:$rs1, simm12:$imm12)),
           (PseudoBRIND GPR:$rs1, simm12:$imm12)>;
 
+// PsuedoCALLReg is a generic pseudo instruction for calls which will eventually
+// expand to auipc and jalr while encoding, with any given register used as the
+// destination.
+// Define AsmString to print "call" when compile with -S flag.
+// Define isCodeGenOnly = 0 to support parsing assembly "call" instruction.
+let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, hasSideEffects = 0,
+    mayStore = 0, mayLoad = 0 in
+def PseudoCALLReg : Pseudo<(outs GPR:$rd), (ins call_symbol:$func), []> {
+  let AsmString = "call\t$rd, $func";
+}
+
 // PseudoCALL is a pseudo instruction which will eventually expand to auipc
 // and jalr while encoding. This is desirable, as an auipc+jalr pair with
 // R_RISCV_CALL and R_RISCV_RELAX relocations can be be relaxed by the linker

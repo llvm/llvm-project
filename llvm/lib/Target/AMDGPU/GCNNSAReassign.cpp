@@ -234,7 +234,7 @@ bool GCNNSAReassign::runOnMachineFunction(MachineFunction &MF) {
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
   MaxNumVGPRs = ST->getMaxNumVGPRs(MF);
   MaxNumVGPRs = std::min(ST->getMaxNumVGPRs(MFI->getOccupancy()), MaxNumVGPRs);
-  CSRegs = TRI->getCalleeSavedRegs(&MF);
+  CSRegs = MRI->getCalleeSavedRegs();
 
   using Candidate = std::pair<const MachineInstr*, bool>;
   SmallVector<Candidate, 32> Candidates;

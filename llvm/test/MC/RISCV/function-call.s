@@ -51,3 +51,17 @@ call foo@plt
 # INSTR: auipc ra, 0
 # INSTR: jalr  ra
 # FIXUP: fixup A - offset: 0, value: foo@plt, kind: fixup_riscv_call_plt
+
+# Ensure that an explicit register operand can be parsed.
+
+call a0, foo
+# RELOC: R_RISCV_CALL foo 0x0
+# INSTR: auipc a0, 0
+# INSTR: jalr  a0
+# FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_call
+
+call a0, foo@plt
+# RELOC: R_RISCV_CALL_PLT foo 0x0
+# INSTR: auipc a0, 0
+# INSTR: jalr  a0
+# FIXUP: fixup A - offset: 0, value: foo@plt, kind: fixup_riscv_call_plt

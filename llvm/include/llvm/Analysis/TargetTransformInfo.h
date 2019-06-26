@@ -96,6 +96,7 @@ struct HardwareLoopInfo {
   bool isHardwareLoopCandidate(ScalarEvolution &SE, LoopInfo &LI,
                                DominatorTree &DT, bool ForceNestedLoop = false,
                                bool ForceHardwareLoopPHI = false);
+  bool canAnalyze(LoopInfo &LI);
 };
 
 /// This pass provides access to the codegen interfaces that are needed

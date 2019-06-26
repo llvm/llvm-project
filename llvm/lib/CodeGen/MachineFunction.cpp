@@ -912,9 +912,11 @@ void MachineJumpTableInfo::print(raw_ostream &OS) const {
   OS << "Jump Tables:\n";
 
   for (unsigned i = 0, e = JumpTables.size(); i != e; ++i) {
-    OS << printJumpTableEntryReference(i) << ": ";
+    OS << printJumpTableEntryReference(i) << ':';
     for (unsigned j = 0, f = JumpTables[i].MBBs.size(); j != f; ++j)
       OS << ' ' << printMBBReference(*JumpTables[i].MBBs[j]);
+    if (i != e)
+      OS << '\n';
   }
 
   OS << '\n';
