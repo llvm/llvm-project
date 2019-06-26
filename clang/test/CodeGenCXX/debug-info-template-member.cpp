@@ -30,7 +30,7 @@ inline int add3(int x) {
 // CHECK: {{![0-9]+}} = distinct !DIGlobalVariable(
 // CHECK-SAME: name: "var"
 // CHECK-SAME: templateParams: {{![0-9]+}}
-// CHECK: !DITemplateTypeParameter(name: "P", type: {{![0-9]+}})
+// CHECK: !DITemplateTypeParameter(name: "T", type: {{![0-9]+}})
 // CHECK: {{![0-9]+}} = distinct !DIGlobalVariable(
 // CHECK-SAME: name: "varray"
 // CHECK-SAME: templateParams: {{![0-9]+}}
