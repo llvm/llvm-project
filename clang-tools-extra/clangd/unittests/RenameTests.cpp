@@ -93,28 +93,41 @@ TEST(RenameTest, SingleFile) {
 
 TEST(RenameTest, Renameable) {
   // Test cases where the symbol is declared in header.
-  const char *Headers[] = {
-      R"cpp(// allow -- function-local
+  struct Case {
+    const char* HeaderCode;
+    const char* ErrorMessage; // null if no error
+  };
+  Case Cases[] = {
+      {R"cpp(// allow -- function-local
         void f(int [[Lo^cal]]) {
           [[Local]] = 2;
         }
       )cpp",
+       nullptr},
 
-      R"cpp(// allow -- symbol is indexable and has no refs in index.
+      {R"cpp(// allow -- symbol is indexable and has no refs in index.
         void [[On^lyInThisFile]]();
       )cpp",
+       nullptr},
 
-      R"cpp(// disallow -- symbol is indexable and has other refs in index.
+      {R"cpp(// disallow -- symbol is indexable and has other refs in index.
         void f() {
           Out^side s;
         }
       )cpp",
+       "used outside main file"},
 
-      R"cpp(// disallow -- symbol is not indexable.
+      {R"cpp(// disallow -- symbol is not indexable.
         namespace {
         class Unin^dexable {};
         }
       )cpp",
+       "not eligible for indexing"},
+
+      {R"cpp(// disallow -- namespace symbol isn't supported
+        namespace fo^o {}
+      )cpp",
+       "not a supported kind"},
   };
   const char *CommonHeader = "class Outside {};";
   TestTU OtherFile = TestTU::withCode("Outside s;");
@@ -123,13 +136,14 @@ TEST(RenameTest, Renameable) {
   // The index has a "Outside" reference.
   auto OtherFileIndex = OtherFile.index();
 
-  for (const char *Header : Headers) {
-    Annotations T(Header);
+  for (const auto& Case : Cases) {
+    Annotations T(Case.HeaderCode);
     // We open the .h file as the main file.
     TestTU TU = TestTU::withCode(T.code());
     TU.Filename = "test.h";
     TU.HeaderCode = CommonHeader;
-    TU.ExtraArgs.push_back("-xc++");
+    // Parsing the .h file as C++ include.
+    TU.ExtraArgs.push_back("-xobjective-c++-header");
     auto AST = TU.build();
 
     auto Results = renameWithinFile(AST, testPath(TU.Filename), T.point(),
@@ -138,9 +152,11 @@ TEST(RenameTest, Renameable) {
     if (T.ranges().empty())
       WantRename = false;
     if (!WantRename) {
+      assert(Case.ErrorMessage && "Error message must be set!");
       EXPECT_FALSE(Results) << "expected renameWithinFile returned an error: "
                             << T.code();
-      llvm::consumeError(Results.takeError());
+      auto ActualMessage = llvm::toString(Results.takeError());
+      EXPECT_THAT(ActualMessage, testing::HasSubstr(Case.ErrorMessage));
     } else {
       EXPECT_TRUE(bool(Results)) << "renameWithinFile returned an error: "
                                  << llvm::toString(Results.takeError());

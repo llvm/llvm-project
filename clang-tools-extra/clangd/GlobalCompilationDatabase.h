@@ -91,6 +91,13 @@ private:
   llvm::Optional<Path> CompileCommandsDir;
 };
 
+/// Extracts system include search path from drivers matching QueryDriverGlobs
+/// and adds them to the compile flags. Base may not be nullptr.
+/// Returns Base when \p QueryDriverGlobs is empty.
+std::unique_ptr<GlobalCompilationDatabase>
+getQueryDriverDatabase(llvm::ArrayRef<std::string> QueryDriverGlobs,
+                       std::unique_ptr<GlobalCompilationDatabase> Base);
+
 /// Wraps another compilation database, and supports overriding the commands
 /// using an in-memory mapping.
 class OverlayCDB : public GlobalCompilationDatabase {

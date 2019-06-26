@@ -21,6 +21,7 @@ configure_file(
 
 set(LLVM_LINK_COMPONENTS
   Support
+  AllTargetsInfos
   )
 
 if(CLANG_BUILT_STANDALONE)
@@ -63,6 +64,7 @@ add_clang_library(clangDaemon
   RIFF.cpp
   Selection.cpp
   SourceCode.cpp
+  QueryDriverDatabase.cpp
   Threading.cpp
   Trace.cpp
   TUScheduler.cpp
