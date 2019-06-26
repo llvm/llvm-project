@@ -213,7 +213,7 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
 
 // AbbreviationMap
 
-constexpr char BitCodeConstants::Signature[];
+constexpr unsigned char BitCodeConstants::Signature[];
 
 void ClangDocBitcodeWriter::AbbreviationMap::add(RecordId RID,
                                                  unsigned AbbrevID) {

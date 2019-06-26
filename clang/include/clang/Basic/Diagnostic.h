@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/Error.h"
 #include <cassert>
 #include <cstdint>
 #include <limits>
@@ -1301,6 +1302,12 @@ inline DiagnosticBuilder DiagnosticsEngine::Report(SourceLocation Loc,
   CurDiagID = DiagID;
   FlagValue.clear();
   return DiagnosticBuilder(this);
+}
+
+inline const DiagnosticBuilder &operator<<(const DiagnosticBuilder &DB,
+                                           llvm::Error &&E) {
+  DB.AddString(toString(std::move(E)));
+  return DB;
 }
 
 inline DiagnosticBuilder DiagnosticsEngine::Report(unsigned DiagID) {

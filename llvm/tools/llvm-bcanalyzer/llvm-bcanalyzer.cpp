@@ -449,13 +449,15 @@ struct PerBlockIDStats {
 
 static std::map<unsigned, PerBlockIDStats> BlockIDStats;
 
-
-
-/// ReportError - All bitcode analysis errors go through this function, making this a
-/// good place to breakpoint if debugging.
+/// All bitcode analysis errors go through this function, making this a good
+/// place to breakpoint if debugging.
 static bool ReportError(const Twine &Err) {
   WithColor::error() << Err << "\n";
   return true;
+}
+
+static bool ReportError(Error &&Err) {
+  return ReportError(toString(std::move(Err)));
 }
 
 static bool decodeMetadataStringsBlob(StringRef Indent,
@@ -478,7 +480,10 @@ static bool decodeMetadataStringsBlob(StringRef Indent,
     if (R.AtEndOfStream())
       return ReportError("bad length");
 
-    unsigned Size = R.ReadVBR(6);
+    Expected<uint32_t> MaybeSize = R.ReadVBR(6);
+    if (!MaybeSize)
+      return ReportError(MaybeSize.takeError());
+    uint32_t Size = MaybeSize.get();
     if (Strings.size() < Size)
       return ReportError("truncated chars");
 
@@ -518,19 +523,24 @@ static bool ParseBlock(BitstreamCursor &Stream, BitstreamBlockInfo &BlockInfo,
   bool DumpRecords = Dump;
   if (BlockID == bitc::BLOCKINFO_BLOCK_ID) {
     if (Dump) outs() << Indent << "<BLOCKINFO_BLOCK/>\n";
-    Optional<BitstreamBlockInfo> NewBlockInfo =
+    Expected<Optional<BitstreamBlockInfo>> MaybeNewBlockInfo =
         Stream.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true);
+    if (!MaybeNewBlockInfo)
+      return ReportError(MaybeNewBlockInfo.takeError());
+    Optional<BitstreamBlockInfo> NewBlockInfo =
+        std::move(MaybeNewBlockInfo.get());
     if (!NewBlockInfo)
       return ReportError("Malformed BlockInfoBlock");
     BlockInfo = std::move(*NewBlockInfo);
-    Stream.JumpToBit(BlockBitStart);
+    if (Error Err = Stream.JumpToBit(BlockBitStart))
+      return ReportError(std::move(Err));
     // It's not really interesting to dump the contents of the blockinfo block.
     DumpRecords = false;
   }
 
   unsigned NumWords = 0;
-  if (Stream.EnterSubBlock(BlockID, &NumWords))
-    return ReportError("Malformed block record");
+  if (Error Err = Stream.EnterSubBlock(BlockID, &NumWords))
+    return ReportError(std::move(Err));
 
   // Keep it for later, when we see a MODULE_HASH record
   uint64_t BlockEntryPos = Stream.getCurrentByteNo();
@@ -562,9 +572,12 @@ static bool ParseBlock(BitstreamCursor &Stream, BitstreamBlockInfo &BlockInfo,
 
     uint64_t RecordStartBit = Stream.GetCurrentBitNo();
 
-    BitstreamEntry Entry =
-      Stream.advance(BitstreamCursor::AF_DontAutoprocessAbbrevs);
-    
+    Expected<BitstreamEntry> MaybeEntry =
+        Stream.advance(BitstreamCursor::AF_DontAutoprocessAbbrevs);
+    if (!MaybeEntry)
+      return ReportError(MaybeEntry.takeError());
+    BitstreamEntry Entry = MaybeEntry.get();
+
     switch (Entry.Kind) {
     case BitstreamEntry::Error:
       return ReportError("malformed bitcode file");
@@ -599,7 +612,8 @@ static bool ParseBlock(BitstreamCursor &Stream, BitstreamBlockInfo &BlockInfo,
     }
 
     if (Entry.ID == bitc::DEFINE_ABBREV) {
-      Stream.ReadAbbrevRecord();
+      if (Error Err = Stream.ReadAbbrevRecord())
+        return ReportError(std::move(Err));
       ++BlockStats.NumAbbrevs;
       continue;
     }
@@ -610,7 +624,10 @@ static bool ParseBlock(BitstreamCursor &Stream, BitstreamBlockInfo &BlockInfo,
 
     StringRef Blob;
     uint64_t CurrentRecordPos = Stream.GetCurrentBitNo();
-    unsigned Code = Stream.readRecord(Entry.ID, Record, &Blob);
+    Expected<unsigned> MaybeCode = Stream.readRecord(Entry.ID, Record, &Blob);
+    if (!MaybeCode)
+      return ReportError(MaybeCode.takeError());
+    unsigned Code = MaybeCode.get();
 
     // Increment the # occurrences of this code.
     if (BlockStats.CodeFreq.size() <= Code)
@@ -742,8 +759,12 @@ static bool ParseBlock(BitstreamCursor &Stream, BitstreamBlockInfo &BlockInfo,
     }
 
     // Make sure that we can skip the current record.
-    Stream.JumpToBit(CurrentRecordPos);
-    Stream.skipRecord(Entry.ID);
+    if (Error Err = Stream.JumpToBit(CurrentRecordPos))
+      return ReportError(std::move(Err));
+    if (Expected<unsigned> Skipped = Stream.skipRecord(Entry.ID))
+      ; // Do nothing.
+    else
+      return ReportError(Skipped.takeError());
   }
 }
 
@@ -755,27 +776,45 @@ static void PrintSize(uint64_t Bits) {
                    (double)Bits/8, (unsigned long)(Bits/32));
 }
 
-static CurStreamTypeType ReadSignature(BitstreamCursor &Stream) {
+static Expected<CurStreamTypeType> ReadSignature(BitstreamCursor &Stream) {
+  auto tryRead = [&Stream](char &Dest, size_t size) -> Error {
+    if (Expected<SimpleBitstreamCursor::word_t> MaybeWord = Stream.Read(size))
+      Dest = MaybeWord.get();
+    else
+      return MaybeWord.takeError();
+    return Error::success();
+  };
+
   char Signature[6];
-  Signature[0] = Stream.Read(8);
-  Signature[1] = Stream.Read(8);
+  if (Error Err = tryRead(Signature[0], 8))
+    return std::move(Err);
+  if (Error Err = tryRead(Signature[1], 8))
+    return std::move(Err);
 
   // Autodetect the file contents, if it is one we know.
   if (Signature[0] == 'C' && Signature[1] == 'P') {
-    Signature[2] = Stream.Read(8);
-    Signature[3] = Stream.Read(8);
+    if (Error Err = tryRead(Signature[2], 8))
+      return std::move(Err);
+    if (Error Err = tryRead(Signature[3], 8))
+      return std::move(Err);
     if (Signature[2] == 'C' && Signature[3] == 'H')
       return ClangSerializedASTBitstream;
   } else if (Signature[0] == 'D' && Signature[1] == 'I') {
-    Signature[2] = Stream.Read(8);
-    Signature[3] = Stream.Read(8);
+    if (Error Err = tryRead(Signature[2], 8))
+      return std::move(Err);
+    if (Error Err = tryRead(Signature[3], 8))
+      return std::move(Err);
     if (Signature[2] == 'A' && Signature[3] == 'G')
       return ClangSerializedDiagnosticsBitstream;
   } else {
-    Signature[2] = Stream.Read(4);
-    Signature[3] = Stream.Read(4);
-    Signature[4] = Stream.Read(4);
-    Signature[5] = Stream.Read(4);
+    if (Error Err = tryRead(Signature[2], 4))
+      return std::move(Err);
+    if (Error Err = tryRead(Signature[3], 4))
+      return std::move(Err);
+    if (Error Err = tryRead(Signature[4], 4))
+      return std::move(Err);
+    if (Error Err = tryRead(Signature[5], 4))
+      return std::move(Err);
     if (Signature[0] == 'B' && Signature[1] == 'C' &&
         Signature[2] == 0x0 && Signature[3] == 0xC &&
         Signature[4] == 0xE && Signature[5] == 0xD)
@@ -827,7 +866,10 @@ static bool openBitcodeFile(StringRef Path,
   }
 
   Stream = BitstreamCursor(ArrayRef<uint8_t>(BufPtr, EndBufPtr));
-  CurStreamType = ReadSignature(Stream);
+  Expected<CurStreamTypeType> MaybeSignature = ReadSignature(Stream);
+  if (!MaybeSignature)
+    return ReportError(MaybeSignature.takeError());
+  CurStreamType = std::move(MaybeSignature.get());
 
   return false;
 }
@@ -853,21 +895,30 @@ static int AnalyzeBitcode() {
       return true;
 
     while (!BlockInfoCursor.AtEndOfStream()) {
-      unsigned Code = BlockInfoCursor.ReadCode();
-      if (Code != bitc::ENTER_SUBBLOCK)
+      Expected<unsigned> MaybeCode = BlockInfoCursor.ReadCode();
+      if (!MaybeCode)
+        return ReportError(MaybeCode.takeError());
+      if (MaybeCode.get() != bitc::ENTER_SUBBLOCK)
         return ReportError("Invalid record at top-level in block info file");
 
-      unsigned BlockID = BlockInfoCursor.ReadSubBlockID();
-      if (BlockID == bitc::BLOCKINFO_BLOCK_ID) {
-        Optional<BitstreamBlockInfo> NewBlockInfo =
+      Expected<unsigned> MaybeBlockID = BlockInfoCursor.ReadSubBlockID();
+      if (!MaybeBlockID)
+        return ReportError(MaybeBlockID.takeError());
+      if (MaybeBlockID.get() == bitc::BLOCKINFO_BLOCK_ID) {
+        Expected<Optional<BitstreamBlockInfo>> MaybeNewBlockInfo =
             BlockInfoCursor.ReadBlockInfoBlock(/*ReadBlockInfoNames=*/true);
+        if (!MaybeNewBlockInfo)
+          return ReportError(MaybeNewBlockInfo.takeError());
+        Optional<BitstreamBlockInfo> NewBlockInfo =
+            std::move(MaybeNewBlockInfo.get());
         if (!NewBlockInfo)
           return ReportError("Malformed BlockInfoBlock in block info file");
         BlockInfo = std::move(*NewBlockInfo);
         break;
       }
 
-      BlockInfoCursor.SkipBlock();
+      if (Error Err = BlockInfoCursor.SkipBlock())
+        return ReportError(std::move(Err));
     }
   }
 
@@ -875,13 +926,17 @@ static int AnalyzeBitcode() {
 
   // Parse the top-level structure.  We only allow blocks at the top-level.
   while (!Stream.AtEndOfStream()) {
-    unsigned Code = Stream.ReadCode();
-    if (Code != bitc::ENTER_SUBBLOCK)
+    Expected<unsigned> MaybeCode = Stream.ReadCode();
+    if (!MaybeCode)
+      return ReportError(MaybeCode.takeError());
+    if (MaybeCode.get() != bitc::ENTER_SUBBLOCK)
       return ReportError("Invalid record at top-level");
 
-    unsigned BlockID = Stream.ReadSubBlockID();
+    Expected<unsigned> MaybeBlockID = Stream.ReadSubBlockID();
+    if (!MaybeBlockID)
+      return ReportError(MaybeBlockID.takeError());
 
-    if (ParseBlock(Stream, BlockInfo, BlockID, 0, CurStreamType))
+    if (ParseBlock(Stream, BlockInfo, MaybeBlockID.get(), 0, CurStreamType))
       return true;
     ++NumTopBlocks;
   }

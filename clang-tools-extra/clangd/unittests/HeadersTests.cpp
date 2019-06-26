@@ -68,7 +68,7 @@ protected:
     IncludeStructure Includes;
     Clang->getPreprocessor().addPPCallbacks(
         collectIncludeStructureCallback(Clang->getSourceManager(), &Includes));
-    EXPECT_TRUE(Action.Execute());
+    EXPECT_FALSE(Action.Execute());
     Action.EndSourceFile();
     return Includes;
   }

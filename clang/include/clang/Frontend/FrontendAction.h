@@ -23,6 +23,7 @@
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/FrontendOptions.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 #include <memory>
 #include <string>
 #include <vector>
@@ -229,7 +230,7 @@ public:
   bool BeginSourceFile(CompilerInstance &CI, const FrontendInputFile &Input);
 
   /// Set the source manager's main input file, and run the action.
-  bool Execute();
+  llvm::Error Execute();
 
   /// Perform any per-file post processing, deallocate per-file
   /// objects, and run statistics and output file cleanup code.

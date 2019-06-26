@@ -105,18 +105,25 @@ static Error error(const Twine &Message) {
       Message, make_error_code(BitcodeError::CorruptedBitcode));
 }
 
-/// Helper to read the header common to all bitcode files.
-static bool hasValidBitcodeHeader(BitstreamCursor &Stream) {
-  // Sniff for the signature.
-  if (!Stream.canSkipToPos(4) ||
-      Stream.Read(8) != 'B' ||
-      Stream.Read(8) != 'C' ||
-      Stream.Read(4) != 0x0 ||
-      Stream.Read(4) != 0xC ||
-      Stream.Read(4) != 0xE ||
-      Stream.Read(4) != 0xD)
-    return false;
-  return true;
+static Error hasInvalidBitcodeHeader(BitstreamCursor &Stream) {
+  if (!Stream.canSkipToPos(4))
+    return createStringError(std::errc::illegal_byte_sequence,
+                             "file too small to contain bitcode header");
+  for (unsigned C : {'B', 'C'})
+    if (Expected<SimpleBitstreamCursor::word_t> Res = Stream.Read(8)) {
+      if (Res.get() != C)
+        return createStringError(std::errc::illegal_byte_sequence,
+                                 "file doesn't start with bitcode header");
+    } else
+      return Res.takeError();
+  for (unsigned C : {0x0, 0xC, 0xE, 0xD})
+    if (Expected<SimpleBitstreamCursor::word_t> Res = Stream.Read(4)) {
+      if (Res.get() != C)
+        return createStringError(std::errc::illegal_byte_sequence,
+                                 "file doesn't start with bitcode header");
+    } else
+      return Res.takeError();
+  return Error::success();
 }
 
 static Expected<BitstreamCursor> initStream(MemoryBufferRef Buffer) {
@@ -133,8 +140,8 @@ static Expected<BitstreamCursor> initStream(MemoryBufferRef Buffer) {
       return error("Invalid bitcode wrapper header");
 
   BitstreamCursor Stream(ArrayRef<uint8_t>(BufPtr, BufEnd));
-  if (!hasValidBitcodeHeader(Stream))
-    return error("Invalid bitcode signature");
+  if (Error Err = hasInvalidBitcodeHeader(Stream))
+    return std::move(Err);
 
   return std::move(Stream);
 }
@@ -164,8 +171,8 @@ static void stripTBAA(Module *M) {
 /// Read the "IDENTIFICATION_BLOCK_ID" block, do some basic enforcement on the
 /// "epoch" encoded in the bitcode, and return the producer name if any.
 static Expected<std::string> readIdentificationBlock(BitstreamCursor &Stream) {
-  if (Stream.EnterSubBlock(bitc::IDENTIFICATION_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::IDENTIFICATION_BLOCK_ID))
+    return std::move(Err);
 
   // Read all the records.
   SmallVector<uint64_t, 64> Record;
@@ -173,7 +180,11 @@ static Expected<std::string> readIdentificationBlock(BitstreamCursor &Stream) {
   std::string ProducerIdentification;
 
   while (true) {
-    BitstreamEntry Entry = Stream.advance();
+    BitstreamEntry Entry;
+    if (Expected<BitstreamEntry> Res = Stream.advance())
+      Entry = Res.get();
+    else
+      return Res.takeError();
 
     switch (Entry.Kind) {
     default:
@@ -188,8 +199,10 @@ static Expected<std::string> readIdentificationBlock(BitstreamCursor &Stream) {
 
     // Read a record.
     Record.clear();
-    unsigned BitCode = Stream.readRecord(Entry.ID, Record);
-    switch (BitCode) {
+    Expected<unsigned> MaybeBitCode = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeBitCode)
+      return MaybeBitCode.takeError();
+    switch (unsigned BitCode = MaybeBitCode.get()) {
     default: // Default behavior: reject
       return error("Invalid value");
     case bitc::IDENTIFICATION_CODE_STRING: // IDENTIFICATION: [strchr x N]
@@ -214,7 +227,12 @@ static Expected<std::string> readIdentificationCode(BitstreamCursor &Stream) {
     if (Stream.AtEndOfStream())
       return "";
 
-    BitstreamEntry Entry = Stream.advance();
+    BitstreamEntry Entry;
+    if (Expected<BitstreamEntry> Res = Stream.advance())
+      Entry = std::move(Res.get());
+    else
+      return Res.takeError();
+
     switch (Entry.Kind) {
     case BitstreamEntry::EndBlock:
     case BitstreamEntry::Error:
@@ -225,25 +243,30 @@ static Expected<std::string> readIdentificationCode(BitstreamCursor &Stream) {
         return readIdentificationBlock(Stream);
 
       // Ignore other sub-blocks.
-      if (Stream.SkipBlock())
-        return error("Malformed block");
+      if (Error Err = Stream.SkipBlock())
+        return std::move(Err);
       continue;
     case BitstreamEntry::Record:
-      Stream.skipRecord(Entry.ID);
-      continue;
+      if (Expected<unsigned> Skipped = Stream.skipRecord(Entry.ID))
+        continue;
+      else
+        return Skipped.takeError();
     }
   }
 }
 
 static Expected<bool> hasObjCCategoryInModule(BitstreamCursor &Stream) {
-  if (Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
+    return std::move(Err);
 
   SmallVector<uint64_t, 64> Record;
   // Read all the records for this module.
 
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -257,7 +280,10 @@ static Expected<bool> hasObjCCategoryInModule(BitstreamCursor &Stream) {
     }
 
     // Read a record.
-    switch (Stream.readRecord(Entry.ID, Record)) {
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecord)
+      return MaybeRecord.takeError();
+    switch (MaybeRecord.get()) {
     default:
       break; // Default behavior, ignore unknown content.
     case bitc::MODULE_CODE_SECTIONNAME: { // SECTIONNAME: [strchr x N]
@@ -280,7 +306,11 @@ static Expected<bool> hasObjCCategory(BitstreamCursor &Stream) {
   // We expect a number of well-defined blocks, though we don't necessarily
   // need to understand them all.
   while (true) {
-    BitstreamEntry Entry = Stream.advance();
+    BitstreamEntry Entry;
+    if (Expected<BitstreamEntry> Res = Stream.advance())
+      Entry = std::move(Res.get());
+    else
+      return Res.takeError();
 
     switch (Entry.Kind) {
     case BitstreamEntry::Error:
@@ -293,20 +323,22 @@ static Expected<bool> hasObjCCategory(BitstreamCursor &Stream) {
         return hasObjCCategoryInModule(Stream);
 
       // Ignore other sub-blocks.
-      if (Stream.SkipBlock())
-        return error("Malformed block");
+      if (Error Err = Stream.SkipBlock())
+        return std::move(Err);
       continue;
 
     case BitstreamEntry::Record:
-      Stream.skipRecord(Entry.ID);
-      continue;
+      if (Expected<unsigned> Skipped = Stream.skipRecord(Entry.ID))
+        continue;
+      else
+        return Skipped.takeError();
     }
   }
 }
 
 static Expected<std::string> readModuleTriple(BitstreamCursor &Stream) {
-  if (Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
+    return std::move(Err);
 
   SmallVector<uint64_t, 64> Record;
 
@@ -314,7 +346,10 @@ static Expected<std::string> readModuleTriple(BitstreamCursor &Stream) {
 
   // Read all the records for this module.
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -328,7 +363,10 @@ static Expected<std::string> readModuleTriple(BitstreamCursor &Stream) {
     }
 
     // Read a record.
-    switch (Stream.readRecord(Entry.ID, Record)) {
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecord)
+      return MaybeRecord.takeError();
+    switch (MaybeRecord.get()) {
     default: break;  // Default behavior, ignore unknown content.
     case bitc::MODULE_CODE_TRIPLE: {  // TRIPLE: [strchr x N]
       std::string S;
@@ -347,7 +385,10 @@ static Expected<std::string> readTriple(BitstreamCursor &Stream) {
   // We expect a number of well-defined blocks, though we don't necessarily
   // need to understand them all.
   while (true) {
-    BitstreamEntry Entry = Stream.advance();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::Error:
@@ -360,13 +401,15 @@ static Expected<std::string> readTriple(BitstreamCursor &Stream) {
         return readModuleTriple(Stream);
 
       // Ignore other sub-blocks.
-      if (Stream.SkipBlock())
-        return error("Malformed block");
+      if (Error Err = Stream.SkipBlock())
+        return std::move(Err);
       continue;
 
     case BitstreamEntry::Record:
-      Stream.skipRecord(Entry.ID);
-      continue;
+      if (llvm::Expected<unsigned> Skipped = Stream.skipRecord(Entry.ID))
+        continue;
+      else
+        return Skipped.takeError();
     }
   }
 }
@@ -1253,8 +1296,8 @@ static void decodeLLVMAttributesForBitcode(AttrBuilder &B,
 }
 
 Error BitcodeReader::parseAttributeBlock() {
-  if (Stream.EnterSubBlock(bitc::PARAMATTR_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::PARAMATTR_BLOCK_ID))
+    return Err;
 
   if (!MAttributes.empty())
     return error("Invalid multiple blocks");
@@ -1265,7 +1308,10 @@ Error BitcodeReader::parseAttributeBlock() {
 
   // Read all the records.
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -1280,7 +1326,10 @@ Error BitcodeReader::parseAttributeBlock() {
 
     // Read a record.
     Record.clear();
-    switch (Stream.readRecord(Entry.ID, Record)) {
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecord)
+      return MaybeRecord.takeError();
+    switch (MaybeRecord.get()) {
     default:  // Default behavior: ignore.
       break;
     case bitc::PARAMATTR_CODE_ENTRY_OLD: // ENTRY: [paramidx0, attr0, ...]
@@ -1454,8 +1503,8 @@ Error BitcodeReader::parseAttrKind(uint64_t Code, Attribute::AttrKind *Kind) {
 }
 
 Error BitcodeReader::parseAttributeGroupBlock() {
-  if (Stream.EnterSubBlock(bitc::PARAMATTR_GROUP_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::PARAMATTR_GROUP_BLOCK_ID))
+    return Err;
 
   if (!MAttributeGroups.empty())
     return error("Invalid multiple blocks");
@@ -1464,7 +1513,10 @@ Error BitcodeReader::parseAttributeGroupBlock() {
 
   // Read all the records.
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -1479,7 +1531,10 @@ Error BitcodeReader::parseAttributeGroupBlock() {
 
     // Read a record.
     Record.clear();
-    switch (Stream.readRecord(Entry.ID, Record)) {
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecord)
+      return MaybeRecord.takeError();
+    switch (MaybeRecord.get()) {
     default:  // Default behavior: ignore.
       break;
     case bitc::PARAMATTR_GRP_CODE_ENTRY: { // ENTRY: [grpid, idx, a0, a1, ...]
@@ -1555,8 +1610,8 @@ Error BitcodeReader::parseAttributeGroupBlock() {
 }
 
 Error BitcodeReader::parseTypeTable() {
-  if (Stream.EnterSubBlock(bitc::TYPE_BLOCK_ID_NEW))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::TYPE_BLOCK_ID_NEW))
+    return Err;
 
   return parseTypeTableBody();
 }
@@ -1572,7 +1627,10 @@ Error BitcodeReader::parseTypeTableBody() {
 
   // Read all the records for this type table.
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -1590,7 +1648,10 @@ Error BitcodeReader::parseTypeTableBody() {
     // Read a record.
     Record.clear();
     Type *ResultTy = nullptr;
-    switch (Stream.readRecord(Entry.ID, Record)) {
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecord)
+      return MaybeRecord.takeError();
+    switch (MaybeRecord.get()) {
     default:
       return error("Invalid value");
     case bitc::TYPE_CODE_NUMENTRY: // TYPE_CODE_NUMENTRY: [numentries]
@@ -1800,8 +1861,8 @@ Error BitcodeReader::parseTypeTableBody() {
 }
 
 Error BitcodeReader::parseOperandBundleTags() {
-  if (Stream.EnterSubBlock(bitc::OPERAND_BUNDLE_TAGS_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::OPERAND_BUNDLE_TAGS_BLOCK_ID))
+    return Err;
 
   if (!BundleTags.empty())
     return error("Invalid multiple blocks");
@@ -1809,7 +1870,10 @@ Error BitcodeReader::parseOperandBundleTags() {
   SmallVector<uint64_t, 64> Record;
 
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -1824,7 +1888,10 @@ Error BitcodeReader::parseOperandBundleTags() {
 
     // Tags are implicitly mapped to integers by their order.
 
-    if (Stream.readRecord(Entry.ID, Record) != bitc::OPERAND_BUNDLE_TAG)
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecord)
+      return MaybeRecord.takeError();
+    if (MaybeRecord.get() != bitc::OPERAND_BUNDLE_TAG)
       return error("Invalid record");
 
     // OPERAND_BUNDLE_TAG: [strchr x N]
@@ -1836,15 +1903,19 @@ Error BitcodeReader::parseOperandBundleTags() {
 }
 
 Error BitcodeReader::parseSyncScopeNames() {
-  if (Stream.EnterSubBlock(bitc::SYNC_SCOPE_NAMES_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::SYNC_SCOPE_NAMES_BLOCK_ID))
+    return Err;
 
   if (!SSIDs.empty())
     return error("Invalid multiple synchronization scope names blocks");
 
   SmallVector<uint64_t, 64> Record;
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
+
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
     case BitstreamEntry::Error:
@@ -1861,7 +1932,10 @@ Error BitcodeReader::parseSyncScopeNames() {
     // Synchronization scope names are implicitly mapped to synchronization
     // scope IDs by their order.
 
-    if (Stream.readRecord(Entry.ID, Record) != bitc::SYNC_SCOPE_NAME)
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecord)
+      return MaybeRecord.takeError();
+    if (MaybeRecord.get() != bitc::SYNC_SCOPE_NAME)
       return error("Invalid record");
 
     SmallString<16> SSN;
@@ -1902,22 +1976,18 @@ Expected<Value *> BitcodeReader::recordValue(SmallVectorImpl<uint64_t> &Record,
 
 /// Helper to note and return the current location, and jump to the given
 /// offset.
-static uint64_t jumpToValueSymbolTable(uint64_t Offset,
-                                       BitstreamCursor &Stream) {
+static Expected<uint64_t> jumpToValueSymbolTable(uint64_t Offset,
+                                                 BitstreamCursor &Stream) {
   // Save the current parsing location so we can jump back at the end
   // of the VST read.
   uint64_t CurrentBit = Stream.GetCurrentBitNo();
-  Stream.JumpToBit(Offset * 32);
-#ifndef NDEBUG
-  // Do some checking if we are in debug mode.
-  BitstreamEntry Entry = Stream.advance();
-  assert(Entry.Kind == BitstreamEntry::SubBlock);
-  assert(Entry.ID == bitc::VALUE_SYMTAB_BLOCK_ID);
-#else
-  // In NDEBUG mode ignore the output so we don't get an unused variable
-  // warning.
-  Stream.advance();
-#endif
+  if (Error JumpFailed = Stream.JumpToBit(Offset * 32))
+    return std::move(JumpFailed);
+  Expected<BitstreamEntry> MaybeEntry = Stream.advance();
+  if (!MaybeEntry)
+    return MaybeEntry.takeError();
+  assert(MaybeEntry.get().Kind == BitstreamEntry::SubBlock);
+  assert(MaybeEntry.get().ID == bitc::VALUE_SYMTAB_BLOCK_ID);
   return CurrentBit;
 }
 
@@ -1942,12 +2012,15 @@ Error BitcodeReader::parseGlobalValueSymbolTable() {
   unsigned FuncBitcodeOffsetDelta =
       Stream.getAbbrevIDWidth() + bitc::BlockIDWidth;
 
-  if (Stream.EnterSubBlock(bitc::VALUE_SYMTAB_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::VALUE_SYMTAB_BLOCK_ID))
+    return Err;
 
   SmallVector<uint64_t, 64> Record;
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock:
@@ -1960,7 +2033,10 @@ Error BitcodeReader::parseGlobalValueSymbolTable() {
     }
 
     Record.clear();
-    switch (Stream.readRecord(Entry.ID, Record)) {
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecord)
+      return MaybeRecord.takeError();
+    switch (MaybeRecord.get()) {
     case bitc::VST_CODE_FNENTRY: // [valueid, offset]
       setDeferredFunctionInfo(FuncBitcodeOffsetDelta,
                               cast<Function>(ValueList[Record[0]]), Record);
@@ -1977,12 +2053,16 @@ Error BitcodeReader::parseValueSymbolTable(uint64_t Offset) {
   // VST (where we want to jump to the VST offset) and the function-level
   // VST (where we don't).
   if (Offset > 0) {
-    CurrentBit = jumpToValueSymbolTable(Offset, Stream);
+    Expected<uint64_t> MaybeCurrentBit = jumpToValueSymbolTable(Offset, Stream);
+    if (!MaybeCurrentBit)
+      return MaybeCurrentBit.takeError();
+    CurrentBit = MaybeCurrentBit.get();
     // If this module uses a string table, read this as a module-level VST.
     if (UseStrtab) {
       if (Error Err = parseGlobalValueSymbolTable())
         return Err;
-      Stream.JumpToBit(CurrentBit);
+      if (Error JumpFailed = Stream.JumpToBit(CurrentBit))
+        return JumpFailed;
       return Error::success();
     }
     // Otherwise, the VST will be in a similar format to a function-level VST,
@@ -2003,8 +2083,8 @@ Error BitcodeReader::parseValueSymbolTable(uint64_t Offset) {
   unsigned FuncBitcodeOffsetDelta =
       Stream.getAbbrevIDWidth() + bitc::BlockIDWidth;
 
-  if (Stream.EnterSubBlock(bitc::VALUE_SYMTAB_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::VALUE_SYMTAB_BLOCK_ID))
+    return Err;
 
   SmallVector<uint64_t, 64> Record;
 
@@ -2014,7 +2094,10 @@ Error BitcodeReader::parseValueSymbolTable(uint64_t Offset) {
   SmallString<128> ValueName;
 
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -2022,7 +2105,8 @@ Error BitcodeReader::parseValueSymbolTable(uint64_t Offset) {
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
       if (Offset > 0)
-        Stream.JumpToBit(CurrentBit);
+        if (Error JumpFailed = Stream.JumpToBit(CurrentBit))
+          return JumpFailed;
       return Error::success();
     case BitstreamEntry::Record:
       // The interesting case.
@@ -2031,7 +2115,10 @@ Error BitcodeReader::parseValueSymbolTable(uint64_t Offset) {
 
     // Read a record.
     Record.clear();
-    switch (Stream.readRecord(Entry.ID, Record)) {
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecord)
+      return MaybeRecord.takeError();
+    switch (MaybeRecord.get()) {
     default:  // Default behavior: unknown type.
       break;
     case bitc::VST_CODE_ENTRY: {  // VST_CODE_ENTRY: [valueid, namechar x N]
@@ -2176,8 +2263,8 @@ static APInt readWideAPInt(ArrayRef<uint64_t> Vals, unsigned TypeBits) {
 }
 
 Error BitcodeReader::parseConstants() {
-  if (Stream.EnterSubBlock(bitc::CONSTANTS_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::CONSTANTS_BLOCK_ID))
+    return Err;
 
   SmallVector<uint64_t, 64> Record;
 
@@ -2186,7 +2273,10 @@ Error BitcodeReader::parseConstants() {
   unsigned NextCstNo = ValueList.size();
 
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -2209,8 +2299,10 @@ Error BitcodeReader::parseConstants() {
     Record.clear();
     Type *VoidType = Type::getVoidTy(Context);
     Value *V = nullptr;
-    unsigned BitCode = Stream.readRecord(Entry.ID, Record);
-    switch (BitCode) {
+    Expected<unsigned> MaybeBitCode = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeBitCode)
+      return MaybeBitCode.takeError();
+    switch (unsigned BitCode = MaybeBitCode.get()) {
     default:  // Default behavior: unknown constant
     case bitc::CST_CODE_UNDEF:     // UNDEF
       V = UndefValue::get(CurTy);
@@ -2669,14 +2761,17 @@ Error BitcodeReader::parseConstants() {
 }
 
 Error BitcodeReader::parseUseLists() {
-  if (Stream.EnterSubBlock(bitc::USELIST_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::USELIST_BLOCK_ID))
+    return Err;
 
   // Read all the records.
   SmallVector<uint64_t, 64> Record;
 
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -2692,7 +2787,10 @@ Error BitcodeReader::parseUseLists() {
     // Read a use list record.
     Record.clear();
     bool IsBB = false;
-    switch (Stream.readRecord(Entry.ID, Record)) {
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecord)
+      return MaybeRecord.takeError();
+    switch (MaybeRecord.get()) {
     default:  // Default behavior: unknown type.
       break;
     case bitc::USELIST_CODE_BB:
@@ -2741,15 +2839,16 @@ Error BitcodeReader::rememberAndSkipMetadata() {
   DeferredMetadataInfo.push_back(CurBit);
 
   // Skip over the block for now.
-  if (Stream.SkipBlock())
-    return error("Invalid record");
+  if (Error Err = Stream.SkipBlock())
+    return Err;
   return Error::success();
 }
 
 Error BitcodeReader::materializeMetadata() {
   for (uint64_t BitPos : DeferredMetadataInfo) {
     // Move the bit stream to the saved position.
-    Stream.JumpToBit(BitPos);
+    if (Error JumpFailed = Stream.JumpToBit(BitPos))
+      return JumpFailed;
     if (Error Err = MDLoader->parseModuleMetadata())
       return Err;
   }
@@ -2787,8 +2886,8 @@ Error BitcodeReader::rememberAndSkipFunctionBody() {
   DeferredFunctionInfo[Fn] = CurBit;
 
   // Skip over the function block for now.
-  if (Stream.SkipBlock())
-    return error("Invalid record");
+  if (Error Err = Stream.SkipBlock())
+    return Err;
   return Error::success();
 }
 
@@ -2835,7 +2934,8 @@ Error BitcodeReader::globalCleanup() {
 /// or if we have an anonymous function being materialized, since anonymous
 /// functions do not have a name and are therefore not in the VST.
 Error BitcodeReader::rememberAndSkipFunctionBodies() {
-  Stream.JumpToBit(NextUnreadBit);
+  if (Error JumpFailed = Stream.JumpToBit(NextUnreadBit))
+    return JumpFailed;
 
   if (Stream.AtEndOfStream())
     return error("Could not find function in stream");
@@ -2850,7 +2950,11 @@ Error BitcodeReader::rememberAndSkipFunctionBodies() {
   SmallVector<uint64_t, 64> Record;
 
   while (true) {
-    BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
+
     switch (Entry.Kind) {
     default:
       return error("Expect SubBlock");
@@ -2869,7 +2973,12 @@ Error BitcodeReader::rememberAndSkipFunctionBodies() {
 }
 
 bool BitcodeReaderBase::readBlockInfo() {
-  Optional<BitstreamBlockInfo> NewBlockInfo = Stream.ReadBlockInfoBlock();
+  Expected<Optional<BitstreamBlockInfo>> MaybeNewBlockInfo =
+      Stream.ReadBlockInfoBlock();
+  if (!MaybeNewBlockInfo)
+    return true; // FIXME Handle the error.
+  Optional<BitstreamBlockInfo> NewBlockInfo =
+      std::move(MaybeNewBlockInfo.get());
   if (!NewBlockInfo)
     return true;
   BlockInfo = std::move(*NewBlockInfo);
@@ -3205,16 +3314,20 @@ Error BitcodeReader::parseGlobalIndirectSymbolRecord(
 
 Error BitcodeReader::parseModule(uint64_t ResumeBit,
                                  bool ShouldLazyLoadMetadata) {
-  if (ResumeBit)
-    Stream.JumpToBit(ResumeBit);
-  else if (Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
-    return error("Invalid record");
+  if (ResumeBit) {
+    if (Error JumpFailed = Stream.JumpToBit(ResumeBit))
+      return JumpFailed;
+  } else if (Error Err = Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
+    return Err;
 
   SmallVector<uint64_t, 64> Record;
 
   // Read all the records for this module.
   while (true) {
-    BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::Error:
@@ -3225,8 +3338,8 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
     case BitstreamEntry::SubBlock:
       switch (Entry.ID) {
       default:  // Skip unknown content.
-        if (Stream.SkipBlock())
-          return error("Invalid record");
+        if (Error Err = Stream.SkipBlock())
+          return Err;
         break;
       case bitc::BLOCKINFO_BLOCK_ID:
         if (readBlockInfo())
@@ -3259,8 +3372,8 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
           // We must have had a VST forward declaration record, which caused
           // the parser to jump to and parse the VST earlier.
           assert(VSTOffset > 0);
-          if (Stream.SkipBlock())
-            return error("Invalid record");
+          if (Error Err = Stream.SkipBlock())
+            return Err;
         }
         break;
       case bitc::CONSTANTS_BLOCK_ID:
@@ -3312,8 +3425,8 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
             // materializing functions. The ResumeBit points to the
             // start of the last function block recorded in the
             // DeferredFunctionInfo map. Skip it.
-            if (Stream.SkipBlock())
-              return error("Invalid record");
+            if (Error Err = Stream.SkipBlock())
+              return Err;
             continue;
           }
         }
@@ -3357,8 +3470,10 @@ Error BitcodeReader::parseModule(uint64_t ResumeBit,
     }
 
     // Read a record.
-    auto BitCode = Stream.readRecord(Entry.ID, Record);
-    switch (BitCode) {
+    Expected<unsigned> MaybeBitCode = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeBitCode)
+      return MaybeBitCode.takeError();
+    switch (unsigned BitCode = MaybeBitCode.get()) {
     default: break;  // Default behavior, ignore unknown content.
     case bitc::MODULE_CODE_VERSION: {
       Expected<unsigned> VersionOrErr = parseVersionRecord(Record);
@@ -3485,8 +3600,8 @@ void BitcodeReader::propagateByValTypes(CallBase *CB) {
 
 /// Lazily parse the specified function body block.
 Error BitcodeReader::parseFunctionBody(Function *F) {
-  if (Stream.EnterSubBlock(bitc::FUNCTION_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::FUNCTION_BLOCK_ID))
+    return Err;
 
   // Unexpected unresolved metadata when parsing function.
   if (MDLoader->hasFwdRefs())
@@ -3520,7 +3635,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
   SmallVector<uint64_t, 64> Record;
 
   while (true) {
-    BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::Error:
@@ -3531,8 +3649,8 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     case BitstreamEntry::SubBlock:
       switch (Entry.ID) {
       default:  // Skip unknown content.
-        if (Stream.SkipBlock())
-          return error("Invalid record");
+        if (Error Err = Stream.SkipBlock())
+          return Err;
         break;
       case bitc::CONSTANTS_BLOCK_ID:
         if (Error Err = parseConstants())
@@ -3568,8 +3686,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
     // Read a record.
     Record.clear();
     Instruction *I = nullptr;
-    unsigned BitCode = Stream.readRecord(Entry.ID, Record);
-    switch (BitCode) {
+    Expected<unsigned> MaybeBitCode = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeBitCode)
+      return MaybeBitCode.takeError();
+    switch (unsigned BitCode = MaybeBitCode.get()) {
     default: // Default behavior: reject
       return error("Invalid value");
     case bitc::FUNC_CODE_DECLAREBLOCKS: {   // DECLAREBLOCKS: [nblocks]
@@ -4922,8 +5042,8 @@ Error BitcodeReader::materialize(GlobalValue *GV) {
     return Err;
 
   // Move the bit stream to the saved position of the deferred function body.
-  Stream.JumpToBit(DFII->second);
-
+  if (Error JumpFailed = Stream.JumpToBit(DFII->second))
+    return JumpFailed;
   if (Error Err = parseFunctionBody(F))
     return Err;
   F->setIsMaterializable(false);
@@ -5086,10 +5206,13 @@ Error ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
     return Error::success();
 
   assert(Offset > 0 && "Expected non-zero VST offset");
-  uint64_t CurrentBit = jumpToValueSymbolTable(Offset, Stream);
+  Expected<uint64_t> MaybeCurrentBit = jumpToValueSymbolTable(Offset, Stream);
+  if (!MaybeCurrentBit)
+    return MaybeCurrentBit.takeError();
+  uint64_t CurrentBit = MaybeCurrentBit.get();
 
-  if (Stream.EnterSubBlock(bitc::VALUE_SYMTAB_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::VALUE_SYMTAB_BLOCK_ID))
+    return Err;
 
   SmallVector<uint64_t, 64> Record;
 
@@ -5097,7 +5220,10 @@ Error ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
   SmallString<128> ValueName;
 
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -5105,7 +5231,8 @@ Error ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
       return error("Malformed block");
     case BitstreamEntry::EndBlock:
       // Done parsing VST, jump back to wherever we came from.
-      Stream.JumpToBit(CurrentBit);
+      if (Error JumpFailed = Stream.JumpToBit(CurrentBit))
+        return JumpFailed;
       return Error::success();
     case BitstreamEntry::Record:
       // The interesting case.
@@ -5114,7 +5241,10 @@ Error ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
 
     // Read a record.
     Record.clear();
-    switch (Stream.readRecord(Entry.ID, Record)) {
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecord)
+      return MaybeRecord.takeError();
+    switch (MaybeRecord.get()) {
     default: // Default behavior: ignore (e.g. VST_CODE_BBENTRY records).
       break;
     case bitc::VST_CODE_ENTRY: { // VST_CODE_ENTRY: [valueid, namechar x N]
@@ -5162,8 +5292,8 @@ Error ModuleSummaryIndexBitcodeReader::parseValueSymbolTable(
 // At the end of this routine the module Index is populated with a map
 // from global value id to GlobalValueSummary objects.
 Error ModuleSummaryIndexBitcodeReader::parseModule() {
-  if (Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
+    return Err;
 
   SmallVector<uint64_t, 64> Record;
   DenseMap<unsigned, GlobalValue::LinkageTypes> ValueIdToLinkageMap;
@@ -5171,7 +5301,10 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
 
   // Read the index for this module.
   while (true) {
-    BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::Error:
@@ -5182,8 +5315,8 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
     case BitstreamEntry::SubBlock:
       switch (Entry.ID) {
       default: // Skip unknown content.
-        if (Stream.SkipBlock())
-          return error("Invalid record");
+        if (Error Err = Stream.SkipBlock())
+          return Err;
         break;
       case bitc::BLOCKINFO_BLOCK_ID:
         // Need to parse these to get abbrev ids (e.g. for VST)
@@ -5196,8 +5329,8 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
         assert(((SeenValueSymbolTable && VSTOffset > 0) ||
                 !SeenGlobalValSummary) &&
                "Expected early VST parse via VSTOffset record");
-        if (Stream.SkipBlock())
-          return error("Invalid record");
+        if (Error Err = Stream.SkipBlock())
+          return Err;
         break;
       case bitc::GLOBALVAL_SUMMARY_BLOCK_ID:
       case bitc::FULL_LTO_GLOBALVAL_SUMMARY_BLOCK_ID:
@@ -5228,8 +5361,10 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
 
     case BitstreamEntry::Record: {
         Record.clear();
-        auto BitCode = Stream.readRecord(Entry.ID, Record);
-        switch (BitCode) {
+        Expected<unsigned> MaybeBitCode = Stream.readRecord(Entry.ID, Record);
+        if (!MaybeBitCode)
+          return MaybeBitCode.takeError();
+        switch (unsigned BitCode = MaybeBitCode.get()) {
         default:
           break; // Default behavior, ignore unknown content.
         case bitc::MODULE_CODE_VERSION: {
@@ -5386,16 +5521,23 @@ static void setImmutableRefs(std::vector<ValueInfo> &Refs, unsigned Count) {
 // Eagerly parse the entire summary block. This populates the GlobalValueSummary
 // objects in the index.
 Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
-  if (Stream.EnterSubBlock(ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(ID))
+    return Err;
   SmallVector<uint64_t, 64> Record;
 
   // Parse version
   {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
+
     if (Entry.Kind != BitstreamEntry::Record)
       return error("Invalid Summary Block: record for version expected");
-    if (Stream.readRecord(Entry.ID, Record) != bitc::FS_VERSION)
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecord)
+      return MaybeRecord.takeError();
+    if (MaybeRecord.get() != bitc::FS_VERSION)
       return error("Invalid Summary Block: version expected");
   }
   const uint64_t Version = Record[0];
@@ -5420,7 +5562,10 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
       PendingTypeCheckedLoadConstVCalls;
 
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -5441,8 +5586,10 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
     // in the combined index VST entries). The records also contain
     // information used for ThinLTO renaming and importing.
     Record.clear();
-    auto BitCode = Stream.readRecord(Entry.ID, Record);
-    switch (BitCode) {
+    Expected<unsigned> MaybeBitCode = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeBitCode)
+      return MaybeBitCode.takeError();
+    switch (unsigned BitCode = MaybeBitCode.get()) {
     default: // Default behavior: ignore.
       break;
     case bitc::FS_FLAGS: {  // [flags]
@@ -5765,8 +5912,8 @@ Error ModuleSummaryIndexBitcodeReader::parseEntireSummary(unsigned ID) {
 // Parse the  module string table block into the Index.
 // This populates the ModulePathStringTable map in the index.
 Error ModuleSummaryIndexBitcodeReader::parseModuleStringTable() {
-  if (Stream.EnterSubBlock(bitc::MODULE_STRTAB_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::MODULE_STRTAB_BLOCK_ID))
+    return Err;
 
   SmallVector<uint64_t, 64> Record;
 
@@ -5774,7 +5921,10 @@ Error ModuleSummaryIndexBitcodeReader::parseModuleStringTable() {
   ModuleSummaryIndex::ModuleInfo *LastSeenModule = nullptr;
 
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -5788,7 +5938,10 @@ Error ModuleSummaryIndexBitcodeReader::parseModuleStringTable() {
     }
 
     Record.clear();
-    switch (Stream.readRecord(Entry.ID, Record)) {
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecord)
+      return MaybeRecord.takeError();
+    switch (MaybeRecord.get()) {
     default: // Default behavior: ignore.
       break;
     case bitc::MST_CODE_ENTRY: {
@@ -5854,12 +6007,16 @@ const std::error_category &llvm::BitcodeErrorCategory() {
 
 static Expected<StringRef> readBlobInRecord(BitstreamCursor &Stream,
                                             unsigned Block, unsigned RecordID) {
-  if (Stream.EnterSubBlock(Block))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(Block))
+    return std::move(Err);
 
   StringRef Strtab;
   while (true) {
-    BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
+
     switch (Entry.Kind) {
     case BitstreamEntry::EndBlock:
       return Strtab;
@@ -5868,14 +6025,18 @@ static Expected<StringRef> readBlobInRecord(BitstreamCursor &Stream,
       return error("Malformed block");
 
     case BitstreamEntry::SubBlock:
-      if (Stream.SkipBlock())
-        return error("Malformed block");
+      if (Error Err = Stream.SkipBlock())
+        return std::move(Err);
       break;
 
     case BitstreamEntry::Record:
       StringRef Blob;
       SmallVector<uint64_t, 1> Record;
-      if (Stream.readRecord(Entry.ID, Record, &Blob) == RecordID)
+      Expected<unsigned> MaybeRecord =
+          Stream.readRecord(Entry.ID, Record, &Blob);
+      if (!MaybeRecord)
+        return MaybeRecord.takeError();
+      if (MaybeRecord.get() == RecordID)
         Strtab = Blob;
       break;
     }
@@ -5911,7 +6072,11 @@ llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
     if (BCBegin + 8 >= Stream.getBitcodeBytes().size())
       return F;
 
-    BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
+
     switch (Entry.Kind) {
     case BitstreamEntry::EndBlock:
     case BitstreamEntry::Error:
@@ -5921,10 +6086,16 @@ llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
       uint64_t IdentificationBit = -1ull;
       if (Entry.ID == bitc::IDENTIFICATION_BLOCK_ID) {
         IdentificationBit = Stream.GetCurrentBitNo() - BCBegin * 8;
-        if (Stream.SkipBlock())
-          return error("Malformed block");
+        if (Error Err = Stream.SkipBlock())
+          return std::move(Err);
 
-        Entry = Stream.advance();
+        {
+          Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+          if (!MaybeEntry)
+            return MaybeEntry.takeError();
+          Entry = MaybeEntry.get();
+        }
+
         if (Entry.Kind != BitstreamEntry::SubBlock ||
             Entry.ID != bitc::MODULE_BLOCK_ID)
           return error("Malformed block");
@@ -5932,8 +6103,8 @@ llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
 
       if (Entry.ID == bitc::MODULE_BLOCK_ID) {
         uint64_t ModuleBit = Stream.GetCurrentBitNo() - BCBegin * 8;
-        if (Stream.SkipBlock())
-          return error("Malformed block");
+        if (Error Err = Stream.SkipBlock())
+          return std::move(Err);
 
         F.Mods.push_back({Stream.getBitcodeBytes().slice(
                               BCBegin, Stream.getCurrentByteNo() - BCBegin),
@@ -5981,13 +6152,15 @@ llvm::getBitcodeFileContents(MemoryBufferRef Buffer) {
         continue;
       }
 
-      if (Stream.SkipBlock())
-        return error("Malformed block");
+      if (Error Err = Stream.SkipBlock())
+        return std::move(Err);
       continue;
     }
     case BitstreamEntry::Record:
-      Stream.skipRecord(Entry.ID);
-      continue;
+      if (Expected<unsigned> StreamFailed = Stream.skipRecord(Entry.ID))
+        continue;
+      else
+        return StreamFailed.takeError();
     }
   }
 }
@@ -6007,7 +6180,8 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
 
   std::string ProducerIdentification;
   if (IdentificationBit != -1ull) {
-    Stream.JumpToBit(IdentificationBit);
+    if (Error JumpFailed = Stream.JumpToBit(IdentificationBit))
+      return std::move(JumpFailed);
     Expected<std::string> ProducerIdentificationOrErr =
         readIdentificationBlock(Stream);
     if (!ProducerIdentificationOrErr)
@@ -6016,7 +6190,8 @@ BitcodeModule::getModuleImpl(LLVMContext &Context, bool MaterializeAll,
     ProducerIdentification = *ProducerIdentificationOrErr;
   }
 
-  Stream.JumpToBit(ModuleBit);
+  if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
+    return std::move(JumpFailed);
   auto *R = new BitcodeReader(std::move(Stream), Strtab, ProducerIdentification,
                               Context);
 
@@ -6054,7 +6229,8 @@ BitcodeModule::getLazyModule(LLVMContext &Context, bool ShouldLazyLoadMetadata,
 Error BitcodeModule::readSummary(ModuleSummaryIndex &CombinedIndex,
                                  StringRef ModulePath, uint64_t ModuleId) {
   BitstreamCursor Stream(Buffer);
-  Stream.JumpToBit(ModuleBit);
+  if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
+    return JumpFailed;
 
   ModuleSummaryIndexBitcodeReader R(std::move(Stream), Strtab, CombinedIndex,
                                     ModulePath, ModuleId);
@@ -6064,7 +6240,8 @@ Error BitcodeModule::readSummary(ModuleSummaryIndex &CombinedIndex,
 // Parse the specified bitcode buffer, returning the function info index.
 Expected<std::unique_ptr<ModuleSummaryIndex>> BitcodeModule::getSummary() {
   BitstreamCursor Stream(Buffer);
-  Stream.JumpToBit(ModuleBit);
+  if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
+    return std::move(JumpFailed);
 
   auto Index = llvm::make_unique<ModuleSummaryIndex>(/*HaveGVs=*/false);
   ModuleSummaryIndexBitcodeReader R(std::move(Stream), Strtab, *Index,
@@ -6078,12 +6255,15 @@ Expected<std::unique_ptr<ModuleSummaryIndex>> BitcodeModule::getSummary() {
 
 static Expected<bool> getEnableSplitLTOUnitFlag(BitstreamCursor &Stream,
                                                 unsigned ID) {
-  if (Stream.EnterSubBlock(ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(ID))
+    return std::move(Err);
   SmallVector<uint64_t, 64> Record;
 
   while (true) {
-    BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<BitstreamEntry> MaybeEntry = Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::SubBlock: // Handled for us already.
@@ -6100,8 +6280,10 @@ static Expected<bool> getEnableSplitLTOUnitFlag(BitstreamCursor &Stream,
 
     // Look for the FS_FLAGS record.
     Record.clear();
-    auto BitCode = Stream.readRecord(Entry.ID, Record);
-    switch (BitCode) {
+    Expected<unsigned> MaybeBitCode = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeBitCode)
+      return MaybeBitCode.takeError();
+    switch (MaybeBitCode.get()) {
     default: // Default behavior: ignore.
       break;
     case bitc::FS_FLAGS: { // [flags]
@@ -6119,13 +6301,17 @@ static Expected<bool> getEnableSplitLTOUnitFlag(BitstreamCursor &Stream,
 // Check if the given bitcode buffer contains a global value summary block.
 Expected<BitcodeLTOInfo> BitcodeModule::getLTOInfo() {
   BitstreamCursor Stream(Buffer);
-  Stream.JumpToBit(ModuleBit);
+  if (Error JumpFailed = Stream.JumpToBit(ModuleBit))
+    return std::move(JumpFailed);
 
-  if (Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
-    return error("Invalid record");
+  if (Error Err = Stream.EnterSubBlock(bitc::MODULE_BLOCK_ID))
+    return std::move(Err);
 
   while (true) {
-    BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry)
+      return MaybeEntry.takeError();
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case BitstreamEntry::Error:
@@ -6154,13 +6340,15 @@ Expected<BitcodeLTOInfo> BitcodeModule::getLTOInfo() {
       }
 
       // Ignore other sub-blocks.
-      if (Stream.SkipBlock())
-        return error("Malformed block");
+      if (Error Err = Stream.SkipBlock())
+        return std::move(Err);
       continue;
 
     case BitstreamEntry::Record:
-      Stream.skipRecord(Entry.ID);
-      continue;
+      if (Expected<unsigned> StreamFailed = Stream.skipRecord(Entry.ID))
+        continue;
+      else
+        return StreamFailed.takeError();
     }
   }
 }
