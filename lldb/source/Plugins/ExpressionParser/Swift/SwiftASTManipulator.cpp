@@ -263,35 +263,31 @@ void SwiftASTManipulatorBase::DoInitialization() {
     FuncAndExtensionFinder(llvm::StringRef &wrapped_func_prefix)
         : m_wrapper_func_prefix(wrapped_func_prefix) {}
 
-    virtual bool walkToDeclPre(swift::Decl *D) {
-      swift::FuncDecl *func_decl = llvm::dyn_cast<swift::FuncDecl>(D);
+    bool walkToDeclPre(swift::Decl *D) override {
+      auto *FD = llvm::dyn_cast<swift::FuncDecl>(D);
+      if (!FD)
+        return true;
 
-      if (func_decl) {
-        if (func_decl->getAttrs()
-                .hasAttribute<swift::LLDBDebuggerFunctionAttr>()) {
-          m_function_decl = func_decl;
+      if (FD->getAttrs().hasAttribute<swift::LLDBDebuggerFunctionAttr>()) {
+        m_function_decl = FD;
 
-          // Now walk back up the containing DeclContexts, and if we find an
-          // extension Decl, that's our extension:
-          swift::DeclContext *cur_ctx = m_function_decl->getDeclContext();
-          while (cur_ctx) {
-            swift::ExtensionDecl *extension_decl =
-                llvm::dyn_cast<swift::ExtensionDecl>(cur_ctx);
-            if (extension_decl) {
-              m_extension_decl = extension_decl;
-              break;
-            }
-            cur_ctx = cur_ctx->getParent();
+        // Now walk back up the containing DeclContexts, and if we find an
+        // extension Decl, that's our extension:
+        for (swift::DeclContext *DC = m_function_decl->getDeclContext(); DC;
+             DC = DC->getParent()) {
+          if (auto *extension_decl = llvm::dyn_cast<swift::ExtensionDecl>(DC)) {
+            m_extension_decl = extension_decl;
+            break;
           }
-        } else if (func_decl->hasName() &&
-                   func_decl->getName().str().startswith(m_wrapper_func_prefix))
-          m_wrapper_decl = func_decl;
-
-        // There's nothing buried in a function that we need to find in this
-        // search.
-        return false;
+        }
+      } else if (FD->hasName() &&
+                 FD->getName().str().startswith(m_wrapper_func_prefix)) {
+        m_wrapper_decl = FD;
       }
-      return true;
+
+      // There's nothing buried in a function that we need to find in this
+      // search.
+      return false;
     }
   };
 
@@ -354,16 +350,15 @@ void SwiftASTManipulator::FindSpecialNames(
     SpecialNameFinder(NameVector &names, llvm::StringRef &prefix)
         : m_names(names), m_prefix(prefix) {}
 
-    virtual std::pair<bool, swift::Expr *> walkToExprPre(swift::Expr *expr) {
-      if (swift::UnresolvedDeclRefExpr *decl_ref_expr =
-              llvm::dyn_cast<swift::UnresolvedDeclRefExpr>(expr)) {
-        swift::Identifier name = decl_ref_expr->getName().getBaseIdentifier();
+    std::pair<bool, swift::Expr *> walkToExprPre(swift::Expr *E) override {
+      if (auto *UDRE = llvm::dyn_cast<swift::UnresolvedDeclRefExpr>(E)) {
+        swift::Identifier name = UDRE->getName().getBaseIdentifier();
 
         if (m_prefix.empty() || name.str().startswith(m_prefix))
           m_names.push_back(name);
       }
 
-      return {true, expr};
+      return {true, E};
     }
 
   private:
@@ -493,49 +488,43 @@ bool SwiftASTManipulator::RewriteResult() {
       m_decl_context = decl_context;
     }
 
-    virtual bool walkToDeclPre(swift::Decl *decl) {
+    bool walkToDeclPre(swift::Decl *D) override {
+      switch (D->getKind()) {
+      default: return true;
+
       // Don't step into function declarations, they may have returns, but we
-      // don't want
-      // to instrument them.
-      swift::DeclKind kind = decl->getKind();
-      switch (kind) {
+      // don't want to instrument them.
       case swift::DeclKind::Func:
       case swift::DeclKind::Class:
       case swift::DeclKind::Struct:
         return false;
-      default:
-        return true;
       }
     }
 
-    virtual std::pair<bool, swift::Expr *> walkToExprPre(swift::Expr *expr) {
+    std::pair<bool, swift::Expr *> walkToExprPre(swift::Expr *expr) override {
+      switch (expr->getKind()) {
+      default: return {true, expr};
+
       // Don't step into closure definitions, they may have returns, but we
-      // don't want
-      // to instrument them either.
-      swift::ExprKind kind = expr->getKind();
-      if (kind == swift::ExprKind::Closure)
+      // don't want to instrument them either.
+      case swift::ExprKind::Closure:
         return {false, expr};
-      else
-        return {true, expr};
+      }
     }
 
-    virtual swift::Stmt *walkToStmtPost(swift::Stmt *stmt) {
-      swift::ReturnStmt *possible_return =
-          swift::dyn_cast<swift::ReturnStmt>(stmt);
-      if (possible_return && possible_return->hasResult()) {
-        swift::Expr *return_expr = possible_return->getResult();
-        if (return_expr) {
-          const bool add_return = true;
-          swift::Stmt *return_stmt;
+    swift::Stmt *walkToStmtPost(swift::Stmt *S) override {
+      auto *RS = swift::dyn_cast<swift::ReturnStmt>(S);
+      if (!RS || !RS->getResult())
+        return S;
 
-          return_stmt = m_manipulator.ConvertExpressionToTmpReturnVarAccess(
-              return_expr, possible_return->getStartLoc(), add_return,
-              m_decl_context);
-          if (return_stmt)
-            stmt = return_stmt;
-        }
+      if (swift::Expr *RE = RS->getResult()) {
+        if (swift::Stmt *S =
+                m_manipulator.ConvertExpressionToTmpReturnVarAccess(
+                    RE, RS->getStartLoc(), /*add_return=*/true, m_decl_context))
+          return S;
       }
-      return stmt;
+
+      return S;
     }
 
   private:
@@ -678,9 +667,8 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
     return;
 
   class Publicist : public swift::ASTWalker {
-    virtual bool walkToDeclPre(swift::Decl *decl) {
-      if (swift::ValueDecl *value_decl =
-              llvm::dyn_cast<swift::ValueDecl>(decl)) {
+    bool walkToDeclPre(swift::Decl *D) override {
+      if (auto *VD = llvm::dyn_cast<swift::ValueDecl>(D)) {
         auto access = swift::AccessLevel::Public;
 
         // We're making declarations 'public' so that they can be accessed from
@@ -688,16 +676,14 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
         // to subclass them, and override any overridable members. That is, we
         // should use 'open' when it is possible and correct to do so, rather
         // than just 'public'.
-        if (llvm::isa<swift::ClassDecl>(value_decl) ||
-            value_decl->isPotentiallyOverridable()) {
-          if (!value_decl->isFinal())
+        if (llvm::isa<swift::ClassDecl>(VD) || VD->isPotentiallyOverridable()) {
+          if (!VD->isFinal())
             access = swift::AccessLevel::Open;
         }
 
-        value_decl->overwriteAccess(access);
-        if (swift::AbstractStorageDecl *var_decl =
-                llvm::dyn_cast<swift::AbstractStorageDecl>(decl))
-          var_decl->overwriteSetterAccess(access);
+        VD->overwriteAccess(access);
+        if (auto *ASD = llvm::dyn_cast<swift::AbstractStorageDecl>(D))
+          ASD->overwriteSetterAccess(access);
       }
 
       return true;
