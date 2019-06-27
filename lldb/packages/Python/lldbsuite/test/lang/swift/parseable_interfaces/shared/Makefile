@@ -6,6 +6,8 @@ LD_EXTRAS = -L$(BUILDDIR) -lAA -lBB -lCC -Xlinker -rpath -Xlinker $(BUILDDIR)
 SWIFTFLAGS_EXTRAS = -I$(BUILDDIR)
 SWIFT_MODULE_CACHE_FLAGS = -module-cache-path MCP
 
+.PHONY: setup sharedA sharedB sharedC clear_modules
+
 # setup `all` to run each of the below before building the main executable
 all: setup sharedA sharedB sharedC clear_modules
 
@@ -18,6 +20,9 @@ setup:
 	cp $(SRCDIR)/libs/A.swift libs/AA.swift
 	cp $(SRCDIR)/libs/B.swift libs/BB.swift
 	cp $(SRCDIR)/libs/C.swift libs/CC.swift
+
+	# record the used SDKROOT, to use from the python test file
+	echo $(SWIFTSDKROOT) > $(BUILDDIR)/sdk-root.txt
 
 sharedA:
 	$(MAKE) MAKE_DSYM=NO CC=$(CC) SWIFTC=$(SWIFTC) \
@@ -50,3 +55,4 @@ clean::
 	$(MAKE) VPATH=$(BUILDDIR) SWIFTC=$(SWIFTC) BASENAME=CC -f $(SRCDIR)/libs/Makefile clean
 	rm -rf libs
 	rm -rf MCP
+	rm -f sdk-root.txt
