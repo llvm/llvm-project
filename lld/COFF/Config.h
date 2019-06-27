@@ -115,7 +115,7 @@ struct Configuration {
   // Symbols in this set are considered as live by the garbage collector.
   std::vector<Symbol *> GCRoot;
 
-  std::set<StringRef> NoDefaultLibs;
+  std::set<std::string> NoDefaultLibs;
   bool NoDefaultLibAll = false;
 
   // True if we are creating a DLL.

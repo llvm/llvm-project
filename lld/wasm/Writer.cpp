@@ -224,6 +224,9 @@ void Writer::layoutMemory() {
     log("mem: global base = " + Twine(Config->GlobalBase));
   }
 
+  if (WasmSym::GlobalBase)
+    WasmSym::GlobalBase->setVirtualAddress(Config->GlobalBase);
+
   uint32_t DataStart = MemoryPtr;
 
   // Arbitrarily set __dso_handle handle to point to the start of the data

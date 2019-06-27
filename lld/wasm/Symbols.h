@@ -415,6 +415,10 @@ private:
 
 // linker-generated symbols
 struct WasmSym {
+  // __global_base
+  // Symbol marking the start of the global section.
+  static DefinedData *GlobalBase;
+
   // __stack_pointer
   // Global that holds the address of the top of the explicit value stack in
   // linear memory.
