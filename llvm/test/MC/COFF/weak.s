@@ -54,7 +54,7 @@ LBB0_2:                                 # %return
 // CHECK-NEXT:   AuxSymbolCount: 1
 // CHECK-NEXT:   AuxWeakExternal {
 // CHECK-NEXT:     Linked: .weak._test_weak.default
-// CHECK-NEXT:      Search: Library
+// CHECK-NEXT:      Search: Alias
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
@@ -78,7 +78,7 @@ LBB0_2:                                 # %return
 // CHECK-NEXT:   AuxSymbolCount: 1
 // CHECK-NEXT:   AuxWeakExternal {
 // CHECK-NEXT:     Linked: .weak._test_weak_alias.default
-// CHECK-NEXT:      Search: Library
+// CHECK-NEXT:      Search: Alias
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
