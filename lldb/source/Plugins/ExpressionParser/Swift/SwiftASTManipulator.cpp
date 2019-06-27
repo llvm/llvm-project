@@ -669,7 +669,30 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
     return;
 
   class Publicist : public swift::ASTWalker {
+    static bool canMakePublic(swift::Decl *decl) {
+      // Properties within structs that have attached property wrappers
+      // shouldn't have their access reset; it impacts the implicit memberwise
+      // initializer.
+      if (llvm::isa<swift::StructDecl>(decl->getDeclContext())) {
+        if (auto var = llvm::dyn_cast<swift::VarDecl>(decl)) {
+          if (var->hasAttachedPropertyWrapper() ||
+              var->getOriginalWrappedProperty())
+            return false;
+
+          return true;
+        }
+
+        if (auto accessor = llvm::dyn_cast<swift::AccessorDecl>(decl)) {
+          return canMakePublic(accessor->getStorage());
+        }
+      }
+      return true;
+    }
+
     bool walkToDeclPre(swift::Decl *D) override {
+      if (!canMakePublic(D))
+        return true;
+
       if (auto *VD = llvm::dyn_cast<swift::ValueDecl>(D)) {
         auto access = swift::AccessLevel::Public;
 
