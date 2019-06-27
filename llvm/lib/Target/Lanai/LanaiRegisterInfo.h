@@ -42,8 +42,8 @@ struct LanaiRegisterInfo : public LanaiGenRegisterInfo {
 
   // Debug information queries.
   unsigned getRARegister() const;
-  Register getFrameRegister(const MachineFunction &MF) const override;
-  Register getBaseRegister() const;
+  unsigned getFrameRegister(const MachineFunction &MF) const override;
+  unsigned getBaseRegister() const;
   bool hasBasePointer(const MachineFunction &MF) const;
 
   int getDwarfRegNum(unsigned RegNum, bool IsEH) const;

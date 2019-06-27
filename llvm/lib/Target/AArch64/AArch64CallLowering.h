@@ -34,16 +34,16 @@ public:
   AArch64CallLowering(const AArch64TargetLowering &TLI);
 
   bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
-                   ArrayRef<Register> VRegs,
-                   Register SwiftErrorVReg) const override;
+                   ArrayRef<unsigned> VRegs,
+                   unsigned SwiftErrorVReg) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
-                            ArrayRef<ArrayRef<Register>> VRegs) const override;
+                            ArrayRef<unsigned> VRegs) const override;
 
   bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                  const MachineOperand &Callee, const ArgInfo &OrigRet,
                  ArrayRef<ArgInfo> OrigArgs,
-                 Register SwiftErrorVReg) const override;
+                 unsigned SwiftErrorVReg) const override;
 
   bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                  const MachineOperand &Callee, const ArgInfo &OrigRet,
@@ -60,10 +60,13 @@ private:
   using MemHandler =
       std::function<void(MachineIRBuilder &, int, CCValAssign &)>;
 
+  using SplitArgTy = std::function<void(unsigned, uint64_t)>;
+
   void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
                          const DataLayout &DL, MachineRegisterInfo &MRI,
-                         CallingConv::ID CallConv) const;
+                         CallingConv::ID CallConv,
+                         const SplitArgTy &SplitArg) const;
 };
 
 } // end namespace llvm

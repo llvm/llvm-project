@@ -1,16 +1,12 @@
-// RUN: %clang_cc1 %s -triple spir -verify -pedantic -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -DNO_HEADER
-// RUN: %clang_cc1 %s -triple spir -verify -pedantic -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins -finclude-default-header
+// RUN: %clang_cc1 %s -triple spir -verify -pedantic -fsyntax-only -cl-std=CL2.0 -fdeclare-opencl-builtins
 
 // Test the -fdeclare-opencl-builtins option.
 
-// Provide typedefs when invoking clang without -finclude-default-header.
-#ifdef NO_HEADER
 typedef float float4 __attribute__((ext_vector_type(4)));
 typedef int int4 __attribute__((ext_vector_type(4)));
 typedef int int2 __attribute__((ext_vector_type(2)));
 typedef unsigned int uint;
 typedef __SIZE_TYPE__ size_t;
-#endif
 
 kernel void basic_conversion(global float4 *buf, global int4 *res) {
   res[0] = convert_int4(buf[0]);

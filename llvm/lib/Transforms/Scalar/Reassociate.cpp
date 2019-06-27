@@ -266,16 +266,12 @@ static BinaryOperator *CreateNeg(Value *S1, const Twine &Name,
 
 /// Replace 0-X with X*-1.
 static BinaryOperator *LowerNegateToMultiply(Instruction *Neg) {
-  assert((isa<UnaryOperator>(Neg) || isa<BinaryOperator>(Neg)) &&
-         "Expected a Negate!");
-  // FIXME: It's not safe to lower a unary FNeg into a FMul by -1.0.
-  unsigned OpNo = isa<BinaryOperator>(Neg) ? 1 : 0;
   Type *Ty = Neg->getType();
   Constant *NegOne = Ty->isIntOrIntVectorTy() ?
     ConstantInt::getAllOnesValue(Ty) : ConstantFP::get(Ty, -1.0);
 
-  BinaryOperator *Res = CreateMul(Neg->getOperand(OpNo), NegOne, "", Neg, Neg);
-  Neg->setOperand(OpNo, Constant::getNullValue(Ty)); // Drop use of op.
+  BinaryOperator *Res = CreateMul(Neg->getOperand(1), NegOne, "", Neg, Neg);
+  Neg->setOperand(1, Constant::getNullValue(Ty)); // Drop use of op.
   Res->takeName(Neg);
   Neg->replaceAllUsesWith(Res);
   Res->setDebugLoc(Neg->getDebugLoc());
@@ -448,10 +444,8 @@ using RepeatedValue = std::pair<Value*, APInt>;
 /// that have all uses inside the expression (i.e. only used by non-leaf nodes
 /// of the expression) if it can turn them into binary operators of the right
 /// type and thus make the expression bigger.
-static bool LinearizeExprTree(Instruction *I,
+static bool LinearizeExprTree(BinaryOperator *I,
                               SmallVectorImpl<RepeatedValue> &Ops) {
-  assert((isa<UnaryOperator>(I) || isa<BinaryOperator>(I)) &&
-         "Expected a UnaryOperator or BinaryOperator!");
   LLVM_DEBUG(dbgs() << "LINEARIZE: " << *I << '\n');
   unsigned Bitwidth = I->getType()->getScalarType()->getPrimitiveSizeInBits();
   unsigned Opcode = I->getOpcode();
@@ -468,7 +462,7 @@ static bool LinearizeExprTree(Instruction *I,
   // with their weights, representing a certain number of paths to the operator.
   // If an operator occurs in the worklist multiple times then we found multiple
   // ways to get to it.
-  SmallVector<std::pair<Instruction*, APInt>, 8> Worklist; // (Op, Weight)
+  SmallVector<std::pair<BinaryOperator*, APInt>, 8> Worklist; // (Op, Weight)
   Worklist.push_back(std::make_pair(I, APInt(Bitwidth, 1)));
   bool Changed = false;
 
@@ -495,10 +489,10 @@ static bool LinearizeExprTree(Instruction *I,
   SmallPtrSet<Value *, 8> Visited; // For sanity checking the iteration scheme.
 #endif
   while (!Worklist.empty()) {
-    std::pair<Instruction*, APInt> P = Worklist.pop_back_val();
+    std::pair<BinaryOperator*, APInt> P = Worklist.pop_back_val();
     I = P.first; // We examine the operands of this binary operator.
 
-    for (unsigned OpIdx = 0; OpIdx < I->getNumOperands(); ++OpIdx) { // Visit operands.
+    for (unsigned OpIdx = 0; OpIdx < 2; ++OpIdx) { // Visit operands.
       Value *Op = I->getOperand(OpIdx);
       APInt Weight = P.second; // Number of paths to this operand.
       LLVM_DEBUG(dbgs() << "OPERAND: " << *Op << " (" << Weight << ")\n");
@@ -578,14 +572,14 @@ static bool LinearizeExprTree(Instruction *I,
 
       // If this is a multiply expression, turn any internal negations into
       // multiplies by -1 so they can be reassociated.
-      if (Instruction *Tmp = dyn_cast<Instruction>(Op))
-        if ((Opcode == Instruction::Mul && match(Tmp, m_Neg(m_Value()))) ||
-            (Opcode == Instruction::FMul && match(Tmp, m_FNeg(m_Value())))) {
+      if (BinaryOperator *BO = dyn_cast<BinaryOperator>(Op))
+        if ((Opcode == Instruction::Mul && match(BO, m_Neg(m_Value()))) ||
+            (Opcode == Instruction::FMul && match(BO, m_FNeg(m_Value())))) {
           LLVM_DEBUG(dbgs()
                      << "MORPH LEAF: " << *Op << " (" << Weight << ") TO ");
-          Tmp = LowerNegateToMultiply(Tmp);
-          LLVM_DEBUG(dbgs() << *Tmp << '\n');
-          Worklist.push_back(std::make_pair(Tmp, Weight));
+          BO = LowerNegateToMultiply(BO);
+          LLVM_DEBUG(dbgs() << *BO << '\n');
+          Worklist.push_back(std::make_pair(BO, Weight));
           Changed = true;
           continue;
         }
@@ -1826,7 +1820,7 @@ Value *ReassociatePass::OptimizeMul(BinaryOperator *I,
     return V;
 
   ValueEntry NewEntry = ValueEntry(getRank(V), V);
-  Ops.insert(llvm::lower_bound(Ops, NewEntry), NewEntry);
+  Ops.insert(std::lower_bound(Ops.begin(), Ops.end(), NewEntry), NewEntry);
   return nullptr;
 }
 
@@ -2026,7 +2020,7 @@ Instruction *ReassociatePass::canonicalizeNegConstExpr(Instruction *I) {
 /// instructions is not allowed.
 void ReassociatePass::OptimizeInst(Instruction *I) {
   // Only consider operations that we understand.
-  if (!isa<UnaryOperator>(I) && !isa<BinaryOperator>(I))
+  if (!isa<BinaryOperator>(I))
     return;
 
   if (I->getOpcode() == Instruction::Shl && isa<ConstantInt>(I->getOperand(1)))
@@ -2091,8 +2085,7 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
         I = NI;
       }
     }
-  } else if (I->getOpcode() == Instruction::FNeg ||
-             I->getOpcode() == Instruction::FSub) {
+  } else if (I->getOpcode() == Instruction::FSub) {
     if (ShouldBreakUpSubtract(I)) {
       Instruction *NI = BreakUpSubtract(I, RedoInsts);
       RedoInsts.insert(I);
@@ -2101,9 +2094,7 @@ void ReassociatePass::OptimizeInst(Instruction *I) {
     } else if (match(I, m_FNeg(m_Value()))) {
       // Otherwise, this is a negation.  See if the operand is a multiply tree
       // and if this is not an inner node of a multiply tree.
-      Value *Op = isa<BinaryOperator>(I) ? I->getOperand(1) :
-                                           I->getOperand(0);
-      if (isReassociableOp(Op, Instruction::FMul) &&
+      if (isReassociableOp(I->getOperand(1), Instruction::FMul) &&
           (!I->hasOneUse() ||
            !isReassociableOp(I->user_back(), Instruction::FMul))) {
         // If the negate was simplified, revisit the users to see if we can

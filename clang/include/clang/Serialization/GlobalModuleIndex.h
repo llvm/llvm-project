@@ -20,7 +20,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Error.h"
 #include <memory>
 #include <utility>
 
@@ -123,14 +122,27 @@ class GlobalModuleIndex {
 public:
   ~GlobalModuleIndex();
 
+  /// An error code returned when trying to read an index.
+  enum ErrorCode {
+    /// No error occurred.
+    EC_None,
+    /// No index was found.
+    EC_NotFound,
+    /// Some other process is currently building the index; it is not
+    /// available yet.
+    EC_Building,
+    /// There was an unspecified I/O error reading or writing the index.
+    EC_IOError
+  };
+
   /// Read a global index file for the given directory.
   ///
   /// \param Path The path to the specific module cache where the module files
   /// for the intended configuration reside.
   ///
   /// \returns A pair containing the global module index (if it exists) and
-  /// the error.
-  static std::pair<GlobalModuleIndex *, llvm::Error>
+  /// the error code.
+  static std::pair<GlobalModuleIndex *, ErrorCode>
   readIndex(llvm::StringRef Path);
 
   /// Returns an iterator for identifiers stored in the index table.
@@ -182,9 +194,9 @@ public:
   /// creating modules.
   /// \param Path The path to the directory containing module files, into
   /// which the global index will be written.
-  static llvm::Error writeIndex(FileManager &FileMgr,
-                                const PCHContainerReader &PCHContainerRdr,
-                                llvm::StringRef Path);
+  static ErrorCode writeIndex(FileManager &FileMgr,
+                              const PCHContainerReader &PCHContainerRdr,
+                              llvm::StringRef Path);
 };
 }
 

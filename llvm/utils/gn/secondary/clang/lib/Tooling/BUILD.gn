@@ -21,7 +21,6 @@ static_library("Tooling") {
     "Execution.cpp",
     "FileMatchTrie.cpp",
     "FixIt.cpp",
-    "GuessTargetAndModeCompilationDatabase.cpp",
     "InterpolatingCompilationDatabase.cpp",
     "JSONCompilationDatabase.cpp",
     "Refactoring.cpp",

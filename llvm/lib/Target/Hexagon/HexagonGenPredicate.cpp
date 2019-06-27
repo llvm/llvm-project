@@ -45,19 +45,17 @@ namespace llvm {
 
 namespace {
 
-  // FIXME: Use TargetInstrInfo::RegSubRegPair
-  struct RegisterSubReg {
+  struct Register {
     unsigned R, S;
 
-    RegisterSubReg(unsigned r = 0, unsigned s = 0) : R(r), S(s) {}
-    RegisterSubReg(const MachineOperand &MO) : R(MO.getReg()), S(MO.getSubReg()) {}
-    RegisterSubReg(const Register &Reg) : R(Reg), S(0) {}
+    Register(unsigned r = 0, unsigned s = 0) : R(r), S(s) {}
+    Register(const MachineOperand &MO) : R(MO.getReg()), S(MO.getSubReg()) {}
 
-    bool operator== (const RegisterSubReg &Reg) const {
+    bool operator== (const Register &Reg) const {
       return R == Reg.R && S == Reg.S;
     }
 
-    bool operator< (const RegisterSubReg &Reg) const {
+    bool operator< (const Register &Reg) const {
       return R < Reg.R || (R == Reg.R && S < Reg.S);
     }
   };
@@ -65,10 +63,10 @@ namespace {
   struct PrintRegister {
     friend raw_ostream &operator<< (raw_ostream &OS, const PrintRegister &PR);
 
-    PrintRegister(RegisterSubReg R, const TargetRegisterInfo &I) : Reg(R), TRI(I) {}
+    PrintRegister(Register R, const TargetRegisterInfo &I) : Reg(R), TRI(I) {}
 
   private:
-    RegisterSubReg Reg;
+    Register Reg;
     const TargetRegisterInfo &TRI;
   };
 
@@ -100,8 +98,8 @@ namespace {
 
   private:
     using VectOfInst = SetVector<MachineInstr *>;
-    using SetOfReg = std::set<RegisterSubReg>;
-    using RegToRegMap = std::map<RegisterSubReg, RegisterSubReg>;
+    using SetOfReg = std::set<Register>;
+    using RegToRegMap = std::map<Register, Register>;
 
     const HexagonInstrInfo *TII = nullptr;
     const HexagonRegisterInfo *TRI = nullptr;
@@ -112,12 +110,12 @@ namespace {
 
     bool isPredReg(unsigned R);
     void collectPredicateGPR(MachineFunction &MF);
-    void processPredicateGPR(const RegisterSubReg &Reg);
+    void processPredicateGPR(const Register &Reg);
     unsigned getPredForm(unsigned Opc);
     bool isConvertibleToPredForm(const MachineInstr *MI);
     bool isScalarCmp(unsigned Opc);
-    bool isScalarPred(RegisterSubReg PredReg);
-    RegisterSubReg getPredRegFor(const RegisterSubReg &Reg);
+    bool isScalarPred(Register PredReg);
+    Register getPredRegFor(const Register &Reg);
     bool convertToPredForm(MachineInstr *MI);
     bool eliminatePredCopies(MachineFunction &MF);
   };
@@ -212,7 +210,7 @@ void HexagonGenPredicate::collectPredicateGPR(MachineFunction &MF) {
         case Hexagon::C2_tfrpr:
         case TargetOpcode::COPY:
           if (isPredReg(MI->getOperand(1).getReg())) {
-            RegisterSubReg RD = MI->getOperand(0);
+            Register RD = MI->getOperand(0);
             if (TargetRegisterInfo::isVirtualRegister(RD.R))
               PredGPRs.insert(RD);
           }
@@ -222,7 +220,7 @@ void HexagonGenPredicate::collectPredicateGPR(MachineFunction &MF) {
   }
 }
 
-void HexagonGenPredicate::processPredicateGPR(const RegisterSubReg &Reg) {
+void HexagonGenPredicate::processPredicateGPR(const Register &Reg) {
   LLVM_DEBUG(dbgs() << __func__ << ": " << printReg(Reg.R, TRI, Reg.S) << "\n");
   using use_iterator = MachineRegisterInfo::use_iterator;
 
@@ -241,7 +239,7 @@ void HexagonGenPredicate::processPredicateGPR(const RegisterSubReg &Reg) {
   }
 }
 
-RegisterSubReg HexagonGenPredicate::getPredRegFor(const RegisterSubReg &Reg) {
+Register HexagonGenPredicate::getPredRegFor(const Register &Reg) {
   // Create a predicate register for a given Reg. The newly created register
   // will have its value copied from Reg, so that it can be later used as
   // an operand in other instructions.
@@ -256,7 +254,7 @@ RegisterSubReg HexagonGenPredicate::getPredRegFor(const RegisterSubReg &Reg) {
   unsigned Opc = DefI->getOpcode();
   if (Opc == Hexagon::C2_tfrpr || Opc == TargetOpcode::COPY) {
     assert(DefI->getOperand(0).isDef() && DefI->getOperand(1).isUse());
-    RegisterSubReg PR = DefI->getOperand(1);
+    Register PR = DefI->getOperand(1);
     G2P.insert(std::make_pair(Reg, PR));
     LLVM_DEBUG(dbgs() << " -> " << PrintRegister(PR, *TRI) << '\n');
     return PR;
@@ -273,10 +271,10 @@ RegisterSubReg HexagonGenPredicate::getPredRegFor(const RegisterSubReg &Reg) {
     MachineBasicBlock::iterator DefIt = DefI;
     BuildMI(B, std::next(DefIt), DL, TII->get(TargetOpcode::COPY), NewPR)
       .addReg(Reg.R, 0, Reg.S);
-    G2P.insert(std::make_pair(Reg, RegisterSubReg(NewPR)));
-    LLVM_DEBUG(dbgs() << " -> !" << PrintRegister(RegisterSubReg(NewPR), *TRI)
+    G2P.insert(std::make_pair(Reg, Register(NewPR)));
+    LLVM_DEBUG(dbgs() << " -> !" << PrintRegister(Register(NewPR), *TRI)
                       << '\n');
-    return RegisterSubReg(NewPR);
+    return Register(NewPR);
   }
 
   llvm_unreachable("Invalid argument");
@@ -318,12 +316,12 @@ bool HexagonGenPredicate::isScalarCmp(unsigned Opc) {
   return false;
 }
 
-bool HexagonGenPredicate::isScalarPred(RegisterSubReg PredReg) {
-  std::queue<RegisterSubReg> WorkQ;
+bool HexagonGenPredicate::isScalarPred(Register PredReg) {
+  std::queue<Register> WorkQ;
   WorkQ.push(PredReg);
 
   while (!WorkQ.empty()) {
-    RegisterSubReg PR = WorkQ.front();
+    Register PR = WorkQ.front();
     WorkQ.pop();
     const MachineInstr *DefI = MRI->getVRegDef(PR.R);
     if (!DefI)
@@ -352,7 +350,7 @@ bool HexagonGenPredicate::isScalarPred(RegisterSubReg PredReg) {
         // Add operands to the queue.
         for (const MachineOperand &MO : DefI->operands())
           if (MO.isReg() && MO.isUse())
-            WorkQ.push(RegisterSubReg(MO.getReg()));
+            WorkQ.push(Register(MO.getReg()));
         break;
 
       // All non-vector compares are ok, everything else is bad.
@@ -374,7 +372,7 @@ bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
     MachineOperand &MO = MI->getOperand(i);
     if (!MO.isReg() || !MO.isUse())
       continue;
-    RegisterSubReg Reg(MO);
+    Register Reg(MO);
     if (Reg.S && Reg.S != Hexagon::isub_lo)
       return false;
     if (!PredGPRs.count(Reg))
@@ -401,7 +399,7 @@ bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
     // If it's a scalar predicate register, then all bits in it are
     // the same. Otherwise, to determine whether all bits are 0 or not
     // we would need to use any8.
-    RegisterSubReg PR = getPredRegFor(MI->getOperand(1));
+    Register PR = getPredRegFor(MI->getOperand(1));
     if (!isScalarPred(PR))
       return false;
     // This will skip the immediate argument when creating the predicate
@@ -412,19 +410,19 @@ bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
   // Some sanity: check that def is in operand #0.
   MachineOperand &Op0 = MI->getOperand(0);
   assert(Op0.isDef());
-  RegisterSubReg OutR(Op0);
+  Register OutR(Op0);
 
   // Don't use getPredRegFor, since it will create an association between
   // the argument and a created predicate register (i.e. it will insert a
   // copy if a new predicate register is created).
   const TargetRegisterClass *PredRC = &Hexagon::PredRegsRegClass;
-  RegisterSubReg NewPR = MRI->createVirtualRegister(PredRC);
+  Register NewPR = MRI->createVirtualRegister(PredRC);
   MachineInstrBuilder MIB = BuildMI(B, MI, DL, TII->get(NewOpc), NewPR.R);
 
   // Add predicate counterparts of the GPRs.
   for (unsigned i = 1; i < NumOps; ++i) {
-    RegisterSubReg GPR = MI->getOperand(i);
-    RegisterSubReg Pred = getPredRegFor(GPR);
+    Register GPR = MI->getOperand(i);
+    Register Pred = getPredRegFor(GPR);
     MIB.addReg(Pred.R, 0, Pred.S);
   }
   LLVM_DEBUG(dbgs() << "generated: " << *MIB);
@@ -442,7 +440,7 @@ bool HexagonGenPredicate::convertToPredForm(MachineInstr *MI) {
   // then the output will be a predicate register.  Do not visit the
   // users of it.
   if (!isPredReg(NewOutR)) {
-    RegisterSubReg R(NewOutR);
+    Register R(NewOutR);
     PredGPRs.insert(R);
     processPredicateGPR(R);
   }
@@ -469,8 +467,8 @@ bool HexagonGenPredicate::eliminatePredCopies(MachineFunction &MF) {
     for (MachineInstr &MI : MBB) {
       if (MI.getOpcode() != TargetOpcode::COPY)
         continue;
-      RegisterSubReg DR = MI.getOperand(0);
-      RegisterSubReg SR = MI.getOperand(1);
+      Register DR = MI.getOperand(0);
+      Register SR = MI.getOperand(1);
       if (!TargetRegisterInfo::isVirtualRegister(DR.R))
         continue;
       if (!TargetRegisterInfo::isVirtualRegister(SR.R))

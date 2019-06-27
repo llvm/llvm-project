@@ -181,6 +181,10 @@ static void describeLibclangFailure(enum CXErrorCode Err) {
   case CXError_ASTReadError:
     fprintf(stderr, "Failure: AST deserialization error occurred\n");
     return;
+
+  default:
+    fprintf(stderr, "Failure (other)\n");
+    return;
   }
 }
 
@@ -1053,8 +1057,7 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
     if (Cursor.kind == CXCursor_InclusionDirective) {
       CXFile File = clang_getIncludedFile(Cursor);
       CXString Included = clang_getFileName(File);
-      const char *IncludedString = clang_getCString(Included);
-      printf(" (%s)", IncludedString ? IncludedString : "(null)");
+      printf(" (%s)", clang_getCString(Included));
       clang_disposeString(Included);
       
       if (clang_isFileMultipleIncludeGuarded(TU, File))
@@ -4645,19 +4648,18 @@ static void printDiagnosticSet(CXDiagnosticSet Diags, unsigned indent) {
     CXFile File;
     CXString FileName, DiagSpelling, DiagOption, DiagCat;
     unsigned line, column, offset;
-    const char *FileNameStr = 0, *DiagOptionStr = 0, *DiagCatStr = 0;
+    const char *DiagOptionStr = 0, *DiagCatStr = 0;
     
     D = clang_getDiagnosticInSet(Diags, i);
     DiagLoc = clang_getDiagnosticLocation(D);
     clang_getExpansionLocation(DiagLoc, &File, &line, &column, &offset);
     FileName = clang_getFileName(File);
-    FileNameStr = clang_getCString(FileName);
     DiagSpelling = clang_getDiagnosticSpelling(D);
-
+    
     printIndent(indent);
     
     fprintf(stderr, "%s:%d:%d: %s: %s",
-            FileNameStr ? FileNameStr : "(null)",
+            clang_getCString(FileName),
             line,
             column,
             getSeverityString(clang_getDiagnosticSeverity(D)),

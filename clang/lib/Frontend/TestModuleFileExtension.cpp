@@ -48,12 +48,7 @@ TestModuleFileExtension::Reader::Reader(ModuleFileExtension *Ext,
   // Read the extension block.
   SmallVector<uint64_t, 4> Record;
   while (true) {
-    llvm::Expected<llvm::BitstreamEntry> MaybeEntry =
-        Stream.advanceSkippingSubblocks();
-    if (!MaybeEntry)
-      (void)MaybeEntry.takeError();
-    llvm::BitstreamEntry Entry = MaybeEntry.get();
-
+    llvm::BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::SubBlock:
     case llvm::BitstreamEntry::EndBlock:
@@ -66,12 +61,8 @@ TestModuleFileExtension::Reader::Reader(ModuleFileExtension *Ext,
 
     Record.clear();
     StringRef Blob;
-    Expected<unsigned> MaybeRecCode =
-        Stream.readRecord(Entry.ID, Record, &Blob);
-    if (!MaybeRecCode)
-      fprintf(stderr, "Failed reading rec code: %s\n",
-              toString(MaybeRecCode.takeError()).c_str());
-    switch (MaybeRecCode.get()) {
+    unsigned RecCode = Stream.readRecord(Entry.ID, Record, &Blob);
+    switch (RecCode) {
     case FIRST_EXTENSION_RECORD_ID: {
       StringRef Message = Blob.substr(0, Record[0]);
       fprintf(stderr, "Read extension block message: %s\n",

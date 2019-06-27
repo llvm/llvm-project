@@ -1,7 +1,5 @@
 // RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple -fobjc-arc \
-// RUN:   -fexceptions -fcxx-exceptions -O1 -fno-experimental-new-pass-manager | FileCheck %s
-// RUN: %clang_cc1 %s -emit-llvm -o - -triple x86_64-darwin-apple -fobjc-arc \
-// RUN:   -fexceptions -fcxx-exceptions -O1 -fexperimental-new-pass-manager -fno-inline | FileCheck %s
+// RUN:   -fexceptions -fcxx-exceptions -O1 | FileCheck %s
 
 // Check that no EH cleanup is emitted around the call to __os_log_helper.
 namespace no_eh_cleanup {

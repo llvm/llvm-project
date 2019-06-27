@@ -853,20 +853,14 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
     if (Before == After)
       return nullptr;
 
-    MachineInstr *MI;
     if (Before == BB->end()) {
       // There were no prior instructions; the new ones must start at the
       // beginning of the block.
-      MI = &Emitter.getBlock()->instr_front();
+      return &Emitter.getBlock()->instr_front();
     } else {
       // Return first instruction after the pre-existing instructions.
-      MI = &*std::next(Before);
+      return &*std::next(Before);
     }
-
-    if (MI->isCall() && DAG->getTarget().Options.EnableDebugEntryValues)
-      MF.addCallArgsForwardingRegs(MI, DAG->getSDCallSiteInfo(Node));
-
-    return MI;
   };
 
   // If this is the first BB, emit byval parameter dbg_value's.

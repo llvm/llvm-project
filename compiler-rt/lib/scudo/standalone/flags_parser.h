@@ -13,6 +13,7 @@
 #include "string_utils.h"
 
 #include <stddef.h>
+#include <stdlib.h>
 
 namespace scudo {
 

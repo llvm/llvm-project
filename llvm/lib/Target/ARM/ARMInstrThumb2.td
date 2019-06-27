@@ -176,9 +176,9 @@ def MemNoOffsetT2NoSpAsmOperand
   : AsmOperandClass { let Name = "MemNoOffsetT2NoSp"; }
 def t2_nosp_addr_offset_none : MemOperand {
   let PrintMethod = "printAddrMode7Operand";
-  let DecoderMethod = "DecoderGPRRegisterClass";
+  let DecoderMethod = "Decodet2rGPRRegisterClass";
   let ParserMatchClass = MemNoOffsetT2NoSpAsmOperand;
-  let MIOperandInfo = (ops rGPR:$base);
+  let MIOperandInfo = (ops t2rGPR:$base);
 }
 
 // t2addrmode_imm12  := reg + imm12
@@ -212,40 +212,31 @@ def t2adrlabel : Operand<i32> {
 }
 
 // t2addrmode_posimm8  := reg + imm8
-def MemPosImm8OffsetAsmOperand : AsmOperandClass {
-  let Name="MemPosImm8Offset";
-  let RenderMethod = "addMemImmOffsetOperands";
-}
+def MemPosImm8OffsetAsmOperand : AsmOperandClass {let Name="MemPosImm8Offset";}
 def t2addrmode_posimm8 : MemOperand {
   let PrintMethod = "printT2AddrModeImm8Operand<false>";
-  let EncoderMethod = "getT2AddrModeImmOpValue<8,0>";
+  let EncoderMethod = "getT2AddrModeImm8OpValue";
   let DecoderMethod = "DecodeT2AddrModeImm8";
   let ParserMatchClass = MemPosImm8OffsetAsmOperand;
   let MIOperandInfo = (ops GPR:$base, i32imm:$offsimm);
 }
 
 // t2addrmode_negimm8  := reg - imm8
-def MemNegImm8OffsetAsmOperand : AsmOperandClass {
-  let Name="MemNegImm8Offset";
-  let RenderMethod = "addMemImmOffsetOperands";
-}
+def MemNegImm8OffsetAsmOperand : AsmOperandClass {let Name="MemNegImm8Offset";}
 def t2addrmode_negimm8 : MemOperand,
                       ComplexPattern<i32, 2, "SelectT2AddrModeImm8", []> {
   let PrintMethod = "printT2AddrModeImm8Operand<false>";
-  let EncoderMethod = "getT2AddrModeImmOpValue<8,0>";
+  let EncoderMethod = "getT2AddrModeImm8OpValue";
   let DecoderMethod = "DecodeT2AddrModeImm8";
   let ParserMatchClass = MemNegImm8OffsetAsmOperand;
   let MIOperandInfo = (ops GPR:$base, i32imm:$offsimm);
 }
 
 // t2addrmode_imm8  := reg +/- imm8
-def MemImm8OffsetAsmOperand : AsmOperandClass {
-  let Name = "MemImm8Offset";
-  let RenderMethod = "addMemImmOffsetOperands";
-}
+def MemImm8OffsetAsmOperand : AsmOperandClass { let Name = "MemImm8Offset"; }
 class T2AddrMode_Imm8 : MemOperand,
                         ComplexPattern<i32, 2, "SelectT2AddrModeImm8", []> {
-  let EncoderMethod = "getT2AddrModeImmOpValue<8,0>";
+  let EncoderMethod = "getT2AddrModeImm8OpValue";
   let DecoderMethod = "DecodeT2AddrModeImm8";
   let ParserMatchClass = MemImm8OffsetAsmOperand;
   let MIOperandInfo = (ops GPR:$base, i32imm:$offsimm);
@@ -360,40 +351,20 @@ def addrmode_tbh : MemOperand {
 // Define ARMv8.1-M specific addressing modes.
 
 // Label operands for BF/BFL/WLS/DLS/LE
-class BFLabelOp<string signed, string isNeg, string zeroPermitted, string size,
-                string fixup>
+class BFLabelOp<string signed, string isNeg, string size, string fixup>
   : Operand<OtherVT> {
   let EncoderMethod = !strconcat("getBFTargetOpValue<", isNeg, ", ",
                                  fixup, ">");
   let OperandType = "OPERAND_PCREL";
   let DecoderMethod = !strconcat("DecodeBFLabelOperand<", signed, ", ",
-                                 isNeg, ", ", zeroPermitted, ", ", size, ">");
+                                 isNeg, ", ", size, ">");
 }
-def bflabel_u4  : BFLabelOp<"false", "false", "false", "4",  "ARM::fixup_bf_branch">;
-def bflabel_s12 : BFLabelOp<"true",  "false", "true",  "12", "ARM::fixup_bfc_target">;
-def bflabel_s16 : BFLabelOp<"true",  "false", "true",  "16", "ARM::fixup_bf_target">;
-def bflabel_s18 : BFLabelOp<"true",  "false", "true",  "18", "ARM::fixup_bfl_target">;
-
-def wlslabel_u11_asmoperand : AsmOperandClass {
-  let Name = "WLSLabel";
-  let RenderMethod = "addImmOperands";
-  let PredicateMethod = "isUnsignedOffset<11, 1>";
-  let DiagnosticString =
-    "loop end is out of range or not a positive multiple of 2";
-}
-def wlslabel_u11 : BFLabelOp<"false", "false", "true",  "11", "ARM::fixup_wls"> {
-  let ParserMatchClass = wlslabel_u11_asmoperand;
-}
-def lelabel_u11_asmoperand : AsmOperandClass {
-  let Name = "LELabel";
-  let RenderMethod = "addImmOperands";
-  let PredicateMethod = "isLEOffset";
-  let DiagnosticString =
-    "loop start is out of range or not a negative multiple of 2";
-}
-def lelabel_u11 : BFLabelOp<"false", "true",  "true",  "11", "ARM::fixup_le"> {
-  let ParserMatchClass = lelabel_u11_asmoperand;
-}
+def bflabel_u4  : BFLabelOp<"false", "false", "4",  "ARM::fixup_bf_branch">;
+def bflabel_s12 : BFLabelOp<"true",  "false", "12", "ARM::fixup_bfc_target">;
+def bflabel_s16 : BFLabelOp<"true",  "false", "16", "ARM::fixup_bf_target">;
+def bflabel_s18 : BFLabelOp<"true",  "false", "18", "ARM::fixup_bfl_target">;
+def wlslabel_u11 : BFLabelOp<"false", "false", "11", "ARM::fixup_wls">;
+def lelabel_u11 : BFLabelOp<"false", "true",  "11", "ARM::fixup_le">;
 
 def bfafter_target : Operand<OtherVT> {
     let EncoderMethod = "getBFAfterTargetOpValue";
@@ -5164,7 +5135,6 @@ class t2LOL<dag oops, dag iops, string asm, string ops>
   let Predicates = [IsThumb2, HasV8_1MMainline, HasLOB];
 }
 
-let isNotDuplicable = 1 in {
 def t2WLS : t2LOL<(outs GPRlr:$LR),
                   (ins rGPR:$Rn, wlslabel_u11:$label),
                   "wls", "$LR, $Rn, $label"> {
@@ -5208,23 +5178,8 @@ def t2LE : t2LOL<(outs ), (ins lelabel_u11:$label), "le", "$label"> {
   let Inst{10-1} = label{10-1};
 }
 
-def t2DoLoopStart :
-  t2PseudoInst<(outs), (ins rGPR:$elts), 4, IIC_Br,
-  [(int_set_loop_iterations rGPR:$elts)]>, Sched<[WriteBr]>;
-
-def t2LoopDec :
-  t2PseudoInst<(outs GPRlr:$Rm), (ins GPRlr:$Rn, imm0_7:$size),
-               4, IIC_Br, []>, Sched<[WriteBr]>;
-
-let isBranch = 1, isTerminator = 1, hasSideEffects = 1 in
-def t2LoopEnd :
-  t2PseudoInst<(outs), (ins GPRlr:$elts, brtarget:$target),
-  8, IIC_Br, []>, Sched<[WriteBr]>;
-
-} // end isNotDuplicable
-
 class CS<string iname, bits<4> opcode, list<dag> pattern=[]>
-  : V8_1MI<(outs rGPR:$Rd), (ins GPRwithZR:$Rn, GPRwithZRnosp:$Rm, pred_noal:$fcond),
+  : V8_1MI<(outs rGPR:$Rd), (ins GPRwithZR:$Rn, GPRwithZR:$Rm, pred_noal:$fcond),
            AddrModeNone, NoItinerary, iname, "$Rd, $Rn, $Rm, $fcond", "", pattern> {
   bits<4> Rd;
   bits<4> Rm;
@@ -5256,11 +5211,11 @@ let Predicates = [HasV8_1MMainline] in {
                  (t2CSINC rGPR:$Rd, ZR, ZR, pred_noal_inv:$fcond)>;
 
   def : InstAlias<"cinc\t$Rd, $Rn, $fcond",
-                 (t2CSINC rGPR:$Rd, GPRwithZRnosp:$Rn, GPRwithZRnosp:$Rn, pred_noal_inv:$fcond)>;
+                 (t2CSINC rGPR:$Rd, GPRwithZR:$Rn, GPRwithZR:$Rn, pred_noal_inv:$fcond)>;
 
   def : InstAlias<"cinv\t$Rd, $Rn, $fcond",
-                 (t2CSINV rGPR:$Rd, GPRwithZRnosp:$Rn, GPRwithZRnosp:$Rn, pred_noal_inv:$fcond)>;
+                 (t2CSINV rGPR:$Rd, GPRwithZR:$Rn, GPRwithZR:$Rn, pred_noal_inv:$fcond)>;
 
   def : InstAlias<"cneg\t$Rd, $Rn, $fcond",
-                 (t2CSNEG rGPR:$Rd, GPRwithZRnosp:$Rn, GPRwithZRnosp:$Rn, pred_noal_inv:$fcond)>;
+                 (t2CSNEG rGPR:$Rd, GPRwithZR:$Rn, GPRwithZR:$Rn, pred_noal_inv:$fcond)>;
 }

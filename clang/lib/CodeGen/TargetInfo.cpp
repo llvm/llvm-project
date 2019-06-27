@@ -915,14 +915,6 @@ ABIArgInfo PNaClABIInfo::classifyReturnType(QualType RetTy) const {
                                            : ABIArgInfo::getDirect());
 }
 
-/// IsX86_MMXType - Return true if this is an MMX type.
-bool IsX86_MMXType(llvm::Type *IRType) {
-  // Return true if the type is an MMX type <2 x i32>, <4 x i16>, or <8 x i8>.
-  return IRType->isVectorTy() && IRType->getPrimitiveSizeInBits() == 64 &&
-    cast<llvm::VectorType>(IRType)->getElementType()->isIntegerTy() &&
-    IRType->getScalarSizeInBits() != 64;
-}
-
 static llvm::Type* X86AdjustInlineAsmType(CodeGen::CodeGenFunction &CGF,
                                           StringRef Constraint,
                                           llvm::Type* Ty) {
@@ -1011,6 +1003,7 @@ class X86_32ABIInfo : public SwiftABIInfo {
   bool IsSoftFloatABI;
   bool IsMCUABI;
   unsigned DefaultNumRegisterParameters;
+  bool IsMMXEnabled;
 
   static bool isRegisterSize(unsigned Size) {
     return (Size == 8 || Size == 16 || Size == 32 || Size == 64);
@@ -1070,13 +1063,15 @@ public:
 
   X86_32ABIInfo(CodeGen::CodeGenTypes &CGT, bool DarwinVectorABI,
                 bool RetSmallStructInRegABI, bool Win32StructABI,
-                unsigned NumRegisterParameters, bool SoftFloatABI)
+                unsigned NumRegisterParameters, bool SoftFloatABI,
+                bool MMXEnabled)
     : SwiftABIInfo(CGT), IsDarwinVectorABI(DarwinVectorABI),
       IsRetSmallStructInRegABI(RetSmallStructInRegABI),
       IsWin32StructABI(Win32StructABI),
       IsSoftFloatABI(SoftFloatABI),
       IsMCUABI(CGT.getTarget().getTriple().isOSIAMCU()),
-      DefaultNumRegisterParameters(NumRegisterParameters) {}
+      DefaultNumRegisterParameters(NumRegisterParameters),
+      IsMMXEnabled(MMXEnabled) {}
 
   bool shouldPassIndirectlyForSwift(ArrayRef<llvm::Type*> scalars,
                                     bool asReturnValue) const override {
@@ -1091,16 +1086,30 @@ public:
     // x86-32 lowering does not support passing swifterror in a register.
     return false;
   }
+
+  bool isPassInMMXRegABI() const {
+    // The System V i386 psABI requires __m64 to be passed in MMX registers.
+    // Clang historically had a bug where it failed to apply this rule, and
+    // some platforms (e.g. Darwin, PS4, and FreeBSD) have opted to maintain
+    // compatibility with the old Clang behavior, so we only apply it on
+    // platforms that have specifically requested it (currently just Linux and
+    // NetBSD).
+    const llvm::Triple &T = getTarget().getTriple();
+    if (IsMMXEnabled && (T.isOSLinux() || T.isOSNetBSD()))
+      return true;
+    return false;
+  }
 };
 
 class X86_32TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   X86_32TargetCodeGenInfo(CodeGen::CodeGenTypes &CGT, bool DarwinVectorABI,
                           bool RetSmallStructInRegABI, bool Win32StructABI,
-                          unsigned NumRegisterParameters, bool SoftFloatABI)
+                          unsigned NumRegisterParameters, bool SoftFloatABI,
+                          bool MMXEnabled = false)
       : TargetCodeGenInfo(new X86_32ABIInfo(
             CGT, DarwinVectorABI, RetSmallStructInRegABI, Win32StructABI,
-            NumRegisterParameters, SoftFloatABI)) {}
+            NumRegisterParameters, SoftFloatABI, MMXEnabled)) {}
 
   static bool isStructReturnInRegABI(
       const llvm::Triple &Triple, const CodeGenOptions &Opts);
@@ -1386,10 +1395,9 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
   }
 
   if (const VectorType *VT = RetTy->getAs<VectorType>()) {
+    uint64_t Size = getContext().getTypeSize(RetTy);
     // On Darwin, some vectors are returned in registers.
     if (IsDarwinVectorABI) {
-      uint64_t Size = getContext().getTypeSize(RetTy);
-
       // 128-bit vectors are a special case; they are returned in
       // registers and we need to make sure to pick a type the LLVM
       // backend will like.
@@ -1406,6 +1414,10 @@ ABIArgInfo X86_32ABIInfo::classifyReturnType(QualType RetTy,
 
       return getIndirectReturnResult(RetTy, State);
     }
+
+    if (VT->getElementType()->isIntegerType() && Size == 64 &&
+        isPassInMMXRegABI())
+      return ABIArgInfo::getDirect(llvm::Type::getX86_MMXTy(getVMContext()));
 
     return ABIArgInfo::getDirect();
   }
@@ -1701,22 +1713,25 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
   }
 
   if (const VectorType *VT = Ty->getAs<VectorType>()) {
+    uint64_t Size = getContext().getTypeSize(Ty);
     // On Darwin, some vectors are passed in memory, we handle this by passing
     // it as an i8/i16/i32/i64.
     if (IsDarwinVectorABI) {
-      uint64_t Size = getContext().getTypeSize(Ty);
       if ((Size == 8 || Size == 16 || Size == 32) ||
           (Size == 64 && VT->getNumElements() == 1))
         return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(),
                                                             Size));
     }
 
-    if (IsX86_MMXType(CGT.ConvertType(Ty)))
-      return ABIArgInfo::getDirect(llvm::IntegerType::get(getVMContext(), 64));
-
+    if (VT->getElementType()->isIntegerType() && Size == 64) {
+      if (isPassInMMXRegABI())
+        return ABIArgInfo::getDirect(llvm::Type::getX86_MMXTy(getVMContext()));
+      else
+        return ABIArgInfo::getDirect(
+          llvm::IntegerType::get(getVMContext(), 64));
+    }
     return ABIArgInfo::getDirect();
   }
-
 
   if (const EnumType *EnumTy = Ty->getAs<EnumType>())
     Ty = EnumTy->getDecl()->getIntegerType();
@@ -2222,8 +2237,8 @@ public:
 /// WinX86_64ABIInfo - The Windows X86_64 ABI information.
 class WinX86_64ABIInfo : public SwiftABIInfo {
 public:
-  WinX86_64ABIInfo(CodeGen::CodeGenTypes &CGT, X86AVXABILevel AVXLevel)
-      : SwiftABIInfo(CGT), AVXLevel(AVXLevel),
+  WinX86_64ABIInfo(CodeGen::CodeGenTypes &CGT)
+      : SwiftABIInfo(CGT),
         IsMingw64(getTarget().getTriple().isWindowsGNUEnvironment()) {}
 
   void computeInfo(CGFunctionInfo &FI) const override;
@@ -2259,9 +2274,7 @@ private:
   void computeVectorCallArgs(CGFunctionInfo &FI, unsigned FreeSSERegs,
                              bool IsVectorCall, bool IsRegCall) const;
 
-  X86AVXABILevel AVXLevel;
-
-  bool IsMingw64;
+    bool IsMingw64;
 };
 
 class X86_64TargetCodeGenInfo : public TargetCodeGenInfo {
@@ -2411,7 +2424,7 @@ class WinX86_64TargetCodeGenInfo : public TargetCodeGenInfo {
 public:
   WinX86_64TargetCodeGenInfo(CodeGen::CodeGenTypes &CGT,
                              X86AVXABILevel AVXLevel)
-      : TargetCodeGenInfo(new WinX86_64ABIInfo(CGT, AVXLevel)) {}
+      : TargetCodeGenInfo(new WinX86_64ABIInfo(CGT)) {}
 
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &CGM) const override;
@@ -3564,7 +3577,7 @@ void X86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
   // using __attribute__((ms_abi)). In such case to correctly emit Win64
   // compatible code delegate this call to WinX86_64ABIInfo::computeInfo.
   if (CallingConv == llvm::CallingConv::Win64) {
-    WinX86_64ABIInfo Win64ABIInfo(CGT, AVXLevel);
+    WinX86_64ABIInfo Win64ABIInfo(CGT);
     Win64ABIInfo.computeInfo(FI);
     return;
   }
@@ -4018,17 +4031,9 @@ void WinX86_64ABIInfo::computeVectorCallArgs(CGFunctionInfo &FI,
 }
 
 void WinX86_64ABIInfo::computeInfo(CGFunctionInfo &FI) const {
-  const unsigned CC = FI.getCallingConvention();
-  bool IsVectorCall = CC == llvm::CallingConv::X86_VectorCall;
-  bool IsRegCall = CC == llvm::CallingConv::X86_RegCall;
-
-  // If __attribute__((sysv_abi)) is in use, use the SysV argument
-  // classification rules.
-  if (CC == llvm::CallingConv::X86_64_SysV) {
-    X86_64ABIInfo SysVABIInfo(CGT, AVXLevel);
-    SysVABIInfo.computeInfo(FI);
-    return;
-  }
+  bool IsVectorCall =
+      FI.getCallingConvention() == llvm::CallingConv::X86_VectorCall;
+  bool IsRegCall = FI.getCallingConvention() == llvm::CallingConv::X86_RegCall;
 
   unsigned FreeSSERegs = 0;
   if (IsVectorCall) {
@@ -7874,24 +7879,12 @@ static bool requiresAMDGPUProtectedVisibility(const Decl *D,
   return D->hasAttr<OpenCLKernelAttr>() ||
          (isa<FunctionDecl>(D) && D->hasAttr<CUDAGlobalAttr>()) ||
          (isa<VarDecl>(D) &&
-          (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
-           D->hasAttr<HIPPinnedShadowAttr>()));
-}
-
-static bool requiresAMDGPUDefaultVisibility(const Decl *D,
-                                            llvm::GlobalValue *GV) {
-  if (GV->getVisibility() != llvm::GlobalValue::HiddenVisibility)
-    return false;
-
-  return isa<VarDecl>(D) && D->hasAttr<HIPPinnedShadowAttr>();
+          (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>()));
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-  if (requiresAMDGPUDefaultVisibility(D, GV)) {
-    GV->setVisibility(llvm::GlobalValue::DefaultVisibility);
-    GV->setDSOLocal(false);
-  } else if (requiresAMDGPUProtectedVisibility(D, GV)) {
+  if (requiresAMDGPUProtectedVisibility(D, GV)) {
     GV->setVisibility(llvm::GlobalValue::ProtectedVisibility);
     GV->setDSOLocal(true);
   }
@@ -9515,10 +9508,11 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
           Types, IsDarwinVectorABI, RetSmallStructInRegABI,
           IsWin32FloatStructABI, CodeGenOpts.NumRegisterParameters));
     } else {
+      bool EnableMMX = getContext().getTargetInfo().getABI() != "no-mmx";
       return SetCGInfo(new X86_32TargetCodeGenInfo(
           Types, IsDarwinVectorABI, RetSmallStructInRegABI,
           IsWin32FloatStructABI, CodeGenOpts.NumRegisterParameters,
-          CodeGenOpts.FloatABI == "soft"));
+          CodeGenOpts.FloatABI == "soft", EnableMMX));
     }
   }
 

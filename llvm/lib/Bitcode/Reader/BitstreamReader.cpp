@@ -17,8 +17,9 @@ using namespace llvm;
 //  BitstreamCursor implementation
 //===----------------------------------------------------------------------===//
 
-/// Having read the ENTER_SUBBLOCK abbrevid, enter the block.
-Error BitstreamCursor::EnterSubBlock(unsigned BlockID, unsigned *NumWordsP) {
+/// EnterSubBlock - Having read the ENTER_SUBBLOCK abbrevid, enter
+/// the block, and return true if the block has an error.
+bool BitstreamCursor::EnterSubBlock(unsigned BlockID, unsigned *NumWordsP) {
   // Save the current block's state on BlockScope.
   BlockScope.push_back(Block(CurCodeSize));
   BlockScope.back().PrevAbbrevs.swap(CurAbbrevs);
@@ -33,39 +34,21 @@ Error BitstreamCursor::EnterSubBlock(unsigned BlockID, unsigned *NumWordsP) {
   }
 
   // Get the codesize of this block.
-  Expected<uint32_t> MaybeVBR = ReadVBR(bitc::CodeLenWidth);
-  if (!MaybeVBR)
-    return MaybeVBR.takeError();
-  CurCodeSize = MaybeVBR.get();
-
+  CurCodeSize = ReadVBR(bitc::CodeLenWidth);
+  // We can't read more than MaxChunkSize at a time
   if (CurCodeSize > MaxChunkSize)
-    return llvm::createStringError(
-        std::errc::illegal_byte_sequence,
-        "can't read more than %zu at a time, trying to read %u", +MaxChunkSize,
-        CurCodeSize);
+    return true;
 
   SkipToFourByteBoundary();
-  Expected<word_t> MaybeNum = Read(bitc::BlockSizeWidth);
-  if (!MaybeNum)
-    return MaybeNum.takeError();
-  word_t NumWords = MaybeNum.get();
-  if (NumWordsP)
-    *NumWordsP = NumWords;
+  unsigned NumWords = Read(bitc::BlockSizeWidth);
+  if (NumWordsP) *NumWordsP = NumWords;
 
-  if (CurCodeSize == 0)
-    return llvm::createStringError(
-        std::errc::illegal_byte_sequence,
-        "can't enter sub-block: current code size is 0");
-  if (AtEndOfStream())
-    return llvm::createStringError(
-        std::errc::illegal_byte_sequence,
-        "can't enter sub block: already at end of stream");
-
-  return Error::success();
+  // Validate that this block is sane.
+  return CurCodeSize == 0 || AtEndOfStream();
 }
 
-static Expected<uint64_t> readAbbreviatedField(BitstreamCursor &Cursor,
-                                               const BitCodeAbbrevOp &Op) {
+static uint64_t readAbbreviatedField(BitstreamCursor &Cursor,
+                                     const BitCodeAbbrevOp &Op) {
   assert(!Op.isLiteral() && "Not to be used with literals!");
 
   // Decode the value as we are commanded.
@@ -80,16 +63,13 @@ static Expected<uint64_t> readAbbreviatedField(BitstreamCursor &Cursor,
     assert((unsigned)Op.getEncodingData() <= Cursor.MaxChunkSize);
     return Cursor.ReadVBR64((unsigned)Op.getEncodingData());
   case BitCodeAbbrevOp::Char6:
-    if (Expected<unsigned> Res = Cursor.Read(6))
-      return BitCodeAbbrevOp::DecodeChar6(Res.get());
-    else
-      return Res.takeError();
+    return BitCodeAbbrevOp::DecodeChar6(Cursor.Read(6));
   }
   llvm_unreachable("invalid abbreviation encoding");
 }
 
-static Error skipAbbreviatedField(BitstreamCursor &Cursor,
-                                  const BitCodeAbbrevOp &Op) {
+static void skipAbbreviatedField(BitstreamCursor &Cursor,
+                                 const BitCodeAbbrevOp &Op) {
   assert(!Op.isLiteral() && "Not to be used with literals!");
 
   // Decode the value as we are commanded.
@@ -99,43 +79,26 @@ static Error skipAbbreviatedField(BitstreamCursor &Cursor,
     llvm_unreachable("Should not reach here");
   case BitCodeAbbrevOp::Fixed:
     assert((unsigned)Op.getEncodingData() <= Cursor.MaxChunkSize);
-    if (Expected<unsigned> Res = Cursor.Read((unsigned)Op.getEncodingData()))
-      break;
-    else
-      return Res.takeError();
+    Cursor.Read((unsigned)Op.getEncodingData());
+    break;
   case BitCodeAbbrevOp::VBR:
     assert((unsigned)Op.getEncodingData() <= Cursor.MaxChunkSize);
-    if (Expected<uint64_t> Res =
-            Cursor.ReadVBR64((unsigned)Op.getEncodingData()))
-      break;
-    else
-      return Res.takeError();
+    Cursor.ReadVBR64((unsigned)Op.getEncodingData());
+    break;
   case BitCodeAbbrevOp::Char6:
-    if (Expected<unsigned> Res = Cursor.Read(6))
-      break;
-    else
-      return Res.takeError();
+    Cursor.Read(6);
+    break;
   }
-  return ErrorSuccess();
 }
 
 /// skipRecord - Read the current record and discard it.
-Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
+unsigned BitstreamCursor::skipRecord(unsigned AbbrevID) {
   // Skip unabbreviated records by reading past their entries.
   if (AbbrevID == bitc::UNABBREV_RECORD) {
-    Expected<uint32_t> MaybeCode = ReadVBR(6);
-    if (!MaybeCode)
-      return MaybeCode.takeError();
-    unsigned Code = MaybeCode.get();
-    Expected<uint32_t> MaybeVBR = ReadVBR(6);
-    if (!MaybeVBR)
-      return MaybeVBR.get();
-    unsigned NumElts = MaybeVBR.get();
+    unsigned Code = ReadVBR(6);
+    unsigned NumElts = ReadVBR(6);
     for (unsigned i = 0; i != NumElts; ++i)
-      if (Expected<uint64_t> Res = ReadVBR64(6))
-        ; // Skip!
-      else
-        return Res.takeError();
+      (void)ReadVBR64(6);
     return Code;
   }
 
@@ -147,13 +110,8 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
   else {
     if (CodeOp.getEncoding() == BitCodeAbbrevOp::Array ||
         CodeOp.getEncoding() == BitCodeAbbrevOp::Blob)
-      return llvm::createStringError(
-          std::errc::illegal_byte_sequence,
-          "Abbreviation starts with an Array or a Blob");
-    Expected<uint64_t> MaybeCode = readAbbreviatedField(*this, CodeOp);
-    if (!MaybeCode)
-      return MaybeCode.takeError();
-    Code = MaybeCode.get();
+      report_fatal_error("Abbreviation starts with an Array or a Blob");
+    Code = readAbbreviatedField(*this, CodeOp);
   }
 
   for (unsigned i = 1, e = Abbv->getNumOperandInfos(); i < e; ++i) {
@@ -163,17 +121,13 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
 
     if (Op.getEncoding() != BitCodeAbbrevOp::Array &&
         Op.getEncoding() != BitCodeAbbrevOp::Blob) {
-      if (Error Err = skipAbbreviatedField(*this, Op))
-        return std::move(Err);
+      skipAbbreviatedField(*this, Op);
       continue;
     }
 
     if (Op.getEncoding() == BitCodeAbbrevOp::Array) {
       // Array case.  Read the number of elements as a vbr6.
-      Expected<uint32_t> MaybeNum = ReadVBR(6);
-      if (!MaybeNum)
-        return MaybeNum.takeError();
-      unsigned NumElts = MaybeNum.get();
+      unsigned NumElts = ReadVBR(6);
 
       // Get the element encoding.
       assert(i+2 == e && "array op not second to last?");
@@ -186,22 +140,15 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
         report_fatal_error("Array element type can't be an Array or a Blob");
       case BitCodeAbbrevOp::Fixed:
         assert((unsigned)EltEnc.getEncodingData() <= MaxChunkSize);
-        if (Error Err = JumpToBit(GetCurrentBitNo() +
-                                  NumElts * EltEnc.getEncodingData()))
-          return std::move(Err);
+        JumpToBit(GetCurrentBitNo() + NumElts * EltEnc.getEncodingData());
         break;
       case BitCodeAbbrevOp::VBR:
         assert((unsigned)EltEnc.getEncodingData() <= MaxChunkSize);
         for (; NumElts; --NumElts)
-          if (Expected<uint64_t> Res =
-                  ReadVBR64((unsigned)EltEnc.getEncodingData()))
-            ; // Skip!
-          else
-            return Res.takeError();
+          ReadVBR64((unsigned)EltEnc.getEncodingData());
         break;
       case BitCodeAbbrevOp::Char6:
-        if (Error Err = JumpToBit(GetCurrentBitNo() + NumElts * 6))
-          return std::move(Err);
+        JumpToBit(GetCurrentBitNo() + NumElts * 6);
         break;
       }
       continue;
@@ -209,10 +156,7 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
 
     assert(Op.getEncoding() == BitCodeAbbrevOp::Blob);
     // Blob case.  Read the number of bytes as a vbr6.
-    Expected<uint32_t> MaybeNum = ReadVBR(6);
-    if (!MaybeNum)
-      return MaybeNum.takeError();
-    unsigned NumElts = MaybeNum.get();
+    unsigned NumElts = ReadVBR(6);
     SkipToFourByteBoundary();  // 32-bit alignment
 
     // Figure out where the end of this blob will be including tail padding.
@@ -226,30 +170,19 @@ Expected<unsigned> BitstreamCursor::skipRecord(unsigned AbbrevID) {
     }
 
     // Skip over the blob.
-    if (Error Err = JumpToBit(NewEnd))
-      return std::move(Err);
+    JumpToBit(NewEnd);
   }
   return Code;
 }
 
-Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
-                                               SmallVectorImpl<uint64_t> &Vals,
-                                               StringRef *Blob) {
+unsigned BitstreamCursor::readRecord(unsigned AbbrevID,
+                                     SmallVectorImpl<uint64_t> &Vals,
+                                     StringRef *Blob) {
   if (AbbrevID == bitc::UNABBREV_RECORD) {
-    Expected<uint32_t> MaybeCode = ReadVBR(6);
-    if (!MaybeCode)
-      return MaybeCode.takeError();
-    uint32_t Code = MaybeCode.get();
-    Expected<uint32_t> MaybeNumElts = ReadVBR(6);
-    if (!MaybeNumElts)
-      return MaybeNumElts.takeError();
-    uint32_t NumElts = MaybeNumElts.get();
-
+    unsigned Code = ReadVBR(6);
+    unsigned NumElts = ReadVBR(6);
     for (unsigned i = 0; i != NumElts; ++i)
-      if (Expected<uint64_t> MaybeVal = ReadVBR64(6))
-        Vals.push_back(MaybeVal.get());
-      else
-        return MaybeVal.takeError();
+      Vals.push_back(ReadVBR64(6));
     return Code;
   }
 
@@ -265,10 +198,7 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
     if (CodeOp.getEncoding() == BitCodeAbbrevOp::Array ||
         CodeOp.getEncoding() == BitCodeAbbrevOp::Blob)
       report_fatal_error("Abbreviation starts with an Array or a Blob");
-    if (Expected<uint64_t> MaybeCode = readAbbreviatedField(*this, CodeOp))
-      Code = MaybeCode.get();
-    else
-      return MaybeCode.takeError();
+    Code = readAbbreviatedField(*this, CodeOp);
   }
 
   for (unsigned i = 1, e = Abbv->getNumOperandInfos(); i != e; ++i) {
@@ -280,19 +210,13 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
 
     if (Op.getEncoding() != BitCodeAbbrevOp::Array &&
         Op.getEncoding() != BitCodeAbbrevOp::Blob) {
-      if (Expected<uint64_t> MaybeVal = readAbbreviatedField(*this, Op))
-        Vals.push_back(MaybeVal.get());
-      else
-        return MaybeVal.takeError();
+      Vals.push_back(readAbbreviatedField(*this, Op));
       continue;
     }
 
     if (Op.getEncoding() == BitCodeAbbrevOp::Array) {
       // Array case.  Read the number of elements as a vbr6.
-      Expected<uint32_t> MaybeNumElts = ReadVBR(6);
-      if (!MaybeNumElts)
-        return MaybeNumElts.takeError();
-      uint32_t NumElts = MaybeNumElts.get();
+      unsigned NumElts = ReadVBR(6);
 
       // Get the element encoding.
       if (i + 2 != e)
@@ -308,36 +232,22 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
         report_fatal_error("Array element type can't be an Array or a Blob");
       case BitCodeAbbrevOp::Fixed:
         for (; NumElts; --NumElts)
-          if (Expected<SimpleBitstreamCursor::word_t> MaybeVal =
-                  Read((unsigned)EltEnc.getEncodingData()))
-            Vals.push_back(MaybeVal.get());
-          else
-            return MaybeVal.takeError();
+          Vals.push_back(Read((unsigned)EltEnc.getEncodingData()));
         break;
       case BitCodeAbbrevOp::VBR:
         for (; NumElts; --NumElts)
-          if (Expected<uint64_t> MaybeVal =
-                  ReadVBR64((unsigned)EltEnc.getEncodingData()))
-            Vals.push_back(MaybeVal.get());
-          else
-            return MaybeVal.takeError();
+          Vals.push_back(ReadVBR64((unsigned)EltEnc.getEncodingData()));
         break;
       case BitCodeAbbrevOp::Char6:
         for (; NumElts; --NumElts)
-          if (Expected<SimpleBitstreamCursor::word_t> MaybeVal = Read(6))
-            Vals.push_back(BitCodeAbbrevOp::DecodeChar6(MaybeVal.get()));
-          else
-            return MaybeVal.takeError();
+          Vals.push_back(BitCodeAbbrevOp::DecodeChar6(Read(6)));
       }
       continue;
     }
 
     assert(Op.getEncoding() == BitCodeAbbrevOp::Blob);
     // Blob case.  Read the number of bytes as a vbr6.
-    Expected<uint32_t> MaybeNumElts = ReadVBR(6);
-    if (!MaybeNumElts)
-      return MaybeNumElts.takeError();
-    uint32_t NumElts = MaybeNumElts.get();
+    unsigned NumElts = ReadVBR(6);
     SkipToFourByteBoundary();  // 32-bit alignment
 
     // Figure out where the end of this blob will be including tail padding.
@@ -355,8 +265,7 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
     // Otherwise, inform the streamer that we need these bytes in memory.  Skip
     // over tail padding first, in case jumping to NewEnd invalidates the Blob
     // pointer.
-    if (Error Err = JumpToBit(NewEnd))
-      return std::move(Err);
+    JumpToBit(NewEnd);
     const char *Ptr = (const char *)getPointerToBit(CurBitPos, NumElts);
 
     // If we can return a reference to the data, do so to avoid copying it.
@@ -372,35 +281,19 @@ Expected<unsigned> BitstreamCursor::readRecord(unsigned AbbrevID,
   return Code;
 }
 
-Error BitstreamCursor::ReadAbbrevRecord() {
+void BitstreamCursor::ReadAbbrevRecord() {
   auto Abbv = std::make_shared<BitCodeAbbrev>();
-  Expected<uint32_t> MaybeNumOpInfo = ReadVBR(5);
-  if (!MaybeNumOpInfo)
-    return MaybeNumOpInfo.takeError();
-  unsigned NumOpInfo = MaybeNumOpInfo.get();
+  unsigned NumOpInfo = ReadVBR(5);
   for (unsigned i = 0; i != NumOpInfo; ++i) {
-    Expected<word_t> MaybeIsLiteral = Read(1);
-    if (!MaybeIsLiteral)
-      return MaybeIsLiteral.takeError();
-    bool IsLiteral = MaybeIsLiteral.get();
+    bool IsLiteral = Read(1);
     if (IsLiteral) {
-      Expected<uint64_t> MaybeOp = ReadVBR64(8);
-      if (!MaybeOp)
-        return MaybeOp.takeError();
-      Abbv->Add(BitCodeAbbrevOp(MaybeOp.get()));
+      Abbv->Add(BitCodeAbbrevOp(ReadVBR64(8)));
       continue;
     }
 
-    Expected<word_t> MaybeEncoding = Read(3);
-    if (!MaybeEncoding)
-      return MaybeEncoding.takeError();
-    BitCodeAbbrevOp::Encoding E =
-        (BitCodeAbbrevOp::Encoding)MaybeEncoding.get();
+    BitCodeAbbrevOp::Encoding E = (BitCodeAbbrevOp::Encoding)Read(3);
     if (BitCodeAbbrevOp::hasEncodingData(E)) {
-      Expected<uint64_t> MaybeData = ReadVBR64(5);
-      if (!MaybeData)
-        return MaybeData.takeError();
-      uint64_t Data = MaybeData.get();
+      uint64_t Data = ReadVBR64(5);
 
       // As a special case, handle fixed(0) (i.e., a fixed field with zero bits)
       // and vbr(0) as a literal zero.  This is decoded the same way, and avoids
@@ -424,14 +317,11 @@ Error BitstreamCursor::ReadAbbrevRecord() {
   if (Abbv->getNumOperandInfos() == 0)
     report_fatal_error("Abbrev record with no operands");
   CurAbbrevs.push_back(std::move(Abbv));
-
-  return Error::success();
 }
 
-Expected<Optional<BitstreamBlockInfo>>
+Optional<BitstreamBlockInfo>
 BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
-  if (llvm::Error Err = EnterSubBlock(bitc::BLOCKINFO_BLOCK_ID))
-    return std::move(Err);
+  if (EnterSubBlock(bitc::BLOCKINFO_BLOCK_ID)) return None;
 
   BitstreamBlockInfo NewBlockInfo;
 
@@ -440,11 +330,7 @@ BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
 
   // Read all the records for this module.
   while (true) {
-    Expected<BitstreamEntry> MaybeEntry =
-        advanceSkippingSubblocks(AF_DontAutoprocessAbbrevs);
-    if (!MaybeEntry)
-      return MaybeEntry.takeError();
-    BitstreamEntry Entry = MaybeEntry.get();
+    BitstreamEntry Entry = advanceSkippingSubblocks(AF_DontAutoprocessAbbrevs);
 
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::SubBlock: // Handled for us already.
@@ -460,8 +346,7 @@ BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
     // Read abbrev records, associate them with CurBID.
     if (Entry.ID == bitc::DEFINE_ABBREV) {
       if (!CurBlockInfo) return None;
-      if (Error Err = ReadAbbrevRecord())
-        return std::move(Err);
+      ReadAbbrevRecord();
 
       // ReadAbbrevRecord installs the abbrev in CurAbbrevs.  Move it to the
       // appropriate BlockInfo.
@@ -472,28 +357,22 @@ BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
 
     // Read a record.
     Record.clear();
-    Expected<unsigned> MaybeBlockInfo = readRecord(Entry.ID, Record);
-    if (!MaybeBlockInfo)
-      return MaybeBlockInfo.takeError();
-    switch (MaybeBlockInfo.get()) {
-    default:
-      break; // Default behavior, ignore unknown content.
-    case bitc::BLOCKINFO_CODE_SETBID:
-      if (Record.size() < 1)
-        return None;
-      CurBlockInfo = &NewBlockInfo.getOrCreateBlockInfo((unsigned)Record[0]);
-      break;
-    case bitc::BLOCKINFO_CODE_BLOCKNAME: {
-      if (!CurBlockInfo)
-        return None;
-      if (!ReadBlockInfoNames)
-        break; // Ignore name.
-      std::string Name;
-      for (unsigned i = 0, e = Record.size(); i != e; ++i)
-        Name += (char)Record[i];
-      CurBlockInfo->Name = Name;
-      break;
-    }
+    switch (readRecord(Entry.ID, Record)) {
+      default: break;  // Default behavior, ignore unknown content.
+      case bitc::BLOCKINFO_CODE_SETBID:
+        if (Record.size() < 1) return None;
+        CurBlockInfo = &NewBlockInfo.getOrCreateBlockInfo((unsigned)Record[0]);
+        break;
+      case bitc::BLOCKINFO_CODE_BLOCKNAME: {
+        if (!CurBlockInfo) return None;
+        if (!ReadBlockInfoNames)
+          break; // Ignore name.
+        std::string Name;
+        for (unsigned i = 0, e = Record.size(); i != e; ++i)
+          Name += (char)Record[i];
+        CurBlockInfo->Name = Name;
+        break;
+      }
       case bitc::BLOCKINFO_CODE_SETRECORDNAME: {
         if (!CurBlockInfo) return None;
         if (!ReadBlockInfoNames)
@@ -505,6 +384,6 @@ BitstreamCursor::ReadBlockInfoBlock(bool ReadBlockInfoNames) {
                                                            Name));
         break;
       }
-      }
+    }
   }
 }

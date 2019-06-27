@@ -258,12 +258,12 @@ bool LanaiRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
 
 unsigned LanaiRegisterInfo::getRARegister() const { return Lanai::RCA; }
 
-Register
+unsigned
 LanaiRegisterInfo::getFrameRegister(const MachineFunction & /*MF*/) const {
   return Lanai::FP;
 }
 
-Register LanaiRegisterInfo::getBaseRegister() const { return Lanai::R14; }
+unsigned LanaiRegisterInfo::getBaseRegister() const { return Lanai::R14; }
 
 const uint32_t *
 LanaiRegisterInfo::getCallPreservedMask(const MachineFunction & /*MF*/,

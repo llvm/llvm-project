@@ -998,9 +998,6 @@ public:
                                    EmptyShell Empty);
 
   static ResultStorageKind getStorageKind(const APValue &Value);
-  static ResultStorageKind getStorageKind(const Type *T,
-                                          const ASTContext &Context);
-
   SourceLocation getBeginLoc() const LLVM_READONLY {
     return SubExpr->getBeginLoc();
   }
@@ -1012,20 +1009,25 @@ public:
     return T->getStmtClass() == ConstantExprClass;
   }
 
-  void SetResult(APValue Value, const ASTContext &Context) {
-    MoveIntoResult(Value, Context);
-  }
-  void MoveIntoResult(APValue &Value, const ASTContext &Context);
+  void SetResult(APValue Value) { MoveIntoResult(Value); }
+  void MoveIntoResult(APValue &Value);
 
   APValue::ValueKind getResultAPValueKind() const {
-    return static_cast<APValue::ValueKind>(ConstantExprBits.APValueKind);
+    switch (ConstantExprBits.ResultKind) {
+    case ConstantExpr::RSK_APValue:
+      return APValueResult().getKind();
+    case ConstantExpr::RSK_Int64:
+      return APValue::Int;
+    case ConstantExpr::RSK_None:
+      return APValue::None;
+    }
+    llvm_unreachable("invalid ResultKind");
   }
   ResultStorageKind getResultStorageKind() const {
     return static_cast<ResultStorageKind>(ConstantExprBits.ResultKind);
   }
   APValue getAPValueResult() const;
-  const APValue &getResultAsAPValue() const { return APValueResult(); }
-  llvm::APSInt getResultAsAPSInt() const;
+
   // Iterators
   child_range children() { return child_range(&SubExpr, &SubExpr+1); }
   const_child_range children() const {

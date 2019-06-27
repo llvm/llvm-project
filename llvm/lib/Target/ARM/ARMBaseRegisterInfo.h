@@ -173,7 +173,7 @@ public:
   bool cannotEliminateFrame(const MachineFunction &MF) const;
 
   // Debug information queries.
-  Register getFrameRegister(const MachineFunction &MF) const override;
+  unsigned getFrameRegister(const MachineFunction &MF) const override;
   unsigned getBaseRegister() const { return BasePtr; }
 
   bool isLowRegister(unsigned Reg) const;

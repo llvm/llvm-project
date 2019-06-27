@@ -9,12 +9,10 @@
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/Frontend/FrontendAction.h"
-#include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/FileMatchTrie.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -634,7 +632,7 @@ struct MemCDB : public CompilationDatabase {
   }
 };
 
-class MemDBTest : public ::testing::Test {
+class InterpolateTest : public ::testing::Test {
 protected:
   // Adds an entry to the underlying compilation database.
   // A flag is injected: -D <File>, so the command used can be identified.
@@ -660,11 +658,6 @@ protected:
     return Result.str();
   }
 
-  MemCDB::EntryMap Entries;
-};
-
-class InterpolateTest : public MemDBTest {
-protected:
   // Look up the command from a relative path, and return it in string form.
   // The input file is not included in the returned command.
   std::string getCommand(llvm::StringRef F) {
@@ -700,6 +693,8 @@ protected:
     llvm::sys::path::native(Result, llvm::sys::path::Style::posix);
     return Result.str();
   }
+
+  MemCDB::EntryMap Entries;
 };
 
 TEST_F(InterpolateTest, Nearby) {
@@ -807,31 +802,6 @@ TEST(CompileCommandTest, EqualityOperator) {
   CCTest.Output = "bonjour.o";
   EXPECT_FALSE(CCRef == CCTest);
   EXPECT_TRUE(CCRef != CCTest);
-}
-
-class TargetAndModeTest : public MemDBTest {
-public:
-  TargetAndModeTest() { llvm::InitializeAllTargetInfos(); }
-
-protected:
-  // Look up the command from a relative path, and return it in string form.
-  std::string getCommand(llvm::StringRef F) {
-    auto Results = inferTargetAndDriverMode(llvm::make_unique<MemCDB>(Entries))
-                       ->getCompileCommands(path(F));
-    if (Results.empty())
-      return "none";
-    return llvm::join(Results[0].CommandLine, " ");
-  }
-};
-
-TEST_F(TargetAndModeTest, TargetAndMode) {
-  add("foo.cpp", "clang-cl", "");
-  add("bar.cpp", "clang++", "");
-
-  EXPECT_EQ(getCommand("foo.cpp"),
-            "clang-cl --driver-mode=cl foo.cpp -D foo.cpp");
-  EXPECT_EQ(getCommand("bar.cpp"),
-            "clang++ --driver-mode=g++ bar.cpp -D bar.cpp");
 }
 
 } // end namespace tooling

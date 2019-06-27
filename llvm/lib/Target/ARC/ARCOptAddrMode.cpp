@@ -424,7 +424,7 @@ bool ARCOptAddrMode::canSinkLoadStoreTo(MachineInstr *Ldst, MachineInstr *To) {
   bool IsStore = Ldst->mayStore();
   bool IsLoad = Ldst->mayLoad();
 
-  Register ValReg = IsLoad ? Ldst->getOperand(0).getReg() : Register();
+  unsigned ValReg = IsLoad ? Ldst->getOperand(0).getReg() : 0;
   for (; MI != ME && MI != End; ++MI) {
     if (MI->isDebugValue())
       continue;

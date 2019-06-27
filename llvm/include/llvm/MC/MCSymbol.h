@@ -58,7 +58,6 @@ protected:
     SymContentsOffset,
     SymContentsVariable,
     SymContentsCommon,
-    SymContentsTargetCommon, // Index stores the section index
   };
 
   // Special sentinal value for the absolute pseudo fragment.
@@ -109,7 +108,7 @@ protected:
 
   /// This is actually a Contents enumerator, but is unsigned to avoid sign
   /// extension and achieve better bitpacking with MSVC.
-  unsigned SymbolContents : 3;
+  unsigned SymbolContents : 2;
 
   /// The alignment of the symbol, if it is 'common', or -1.
   ///
@@ -345,11 +344,10 @@ public:
   ///
   /// \param Size - The size of the symbol.
   /// \param Align - The alignment of the symbol.
-  /// \param Target - Is the symbol a target-specific common-like symbol.
-  void setCommon(uint64_t Size, unsigned Align, bool Target = false) {
+  void setCommon(uint64_t Size, unsigned Align) {
     assert(getOffset() == 0);
     CommonSize = Size;
-    SymbolContents = Target ? SymContentsTargetCommon : SymContentsCommon;
+    SymbolContents = SymContentsCommon;
 
     assert((!Align || isPowerOf2_32(Align)) &&
            "Alignment must be a power of 2");
@@ -369,28 +367,20 @@ public:
   ///
   /// \param Size - The size of the symbol.
   /// \param Align - The alignment of the symbol.
-  /// \param Target - Is the symbol a target-specific common-like symbol.
   /// \return True if symbol was already declared as a different type
-  bool declareCommon(uint64_t Size, unsigned Align, bool Target = false) {
+  bool declareCommon(uint64_t Size, unsigned Align) {
     assert(isCommon() || getOffset() == 0);
     if(isCommon()) {
-      if (CommonSize != Size || getCommonAlignment() != Align ||
-          isTargetCommon() != Target)
-        return true;
+      if(CommonSize != Size || getCommonAlignment() != Align)
+       return true;
     } else
-      setCommon(Size, Align, Target);
+      setCommon(Size, Align);
     return false;
   }
 
   /// Is this a 'common' symbol.
   bool isCommon() const {
-    return SymbolContents == SymContentsCommon ||
-           SymbolContents == SymContentsTargetCommon;
-  }
-
-  /// Is this a target-specific common-like symbol.
-  bool isTargetCommon() const {
-    return SymbolContents == SymContentsTargetCommon;
+    return SymbolContents == SymContentsCommon;
   }
 
   MCFragment *getFragment(bool SetUsed = true) const {

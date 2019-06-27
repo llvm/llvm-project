@@ -461,55 +461,6 @@ def rot_imm : Operand<i32>, PatLeaf<(i32 imm), [{
   let ParserMatchClass = RotImmAsmOperand;
 }
 
-// Power-of-two operand for MVE VIDUP and friends, which encode
-// {1,2,4,8} as its log to base 2, i.e. as {0,1,2,3} respectively
-def MVE_VIDUP_imm_asmoperand : AsmOperandClass {
-  let Name = "VIDUP_imm";
-  let PredicateMethod = "isPowerTwoInRange<1,8>";
-  let RenderMethod = "addPowerTwoOperands";
-  let DiagnosticString = "vector increment immediate must be 1, 2, 4 or 8";
-}
-def MVE_VIDUP_imm : Operand<i32> {
-  let EncoderMethod = "getPowerTwoOpValue";
-  let DecoderMethod = "DecodePowerTwoOperand<0,3>";
-  let ParserMatchClass = MVE_VIDUP_imm_asmoperand;
-}
-
-// Pair vector indexing
-class MVEPairVectorIndexOperand<string start, string end> : AsmOperandClass {
-  let Name = "MVEPairVectorIndex"#start;
-  let RenderMethod = "addMVEPairVectorIndexOperands";
-  let PredicateMethod = "isMVEPairVectorIndex<"#start#", "#end#">";
-}
-
-class MVEPairVectorIndex<string opval> : Operand<i32> {
-  let PrintMethod = "printVectorIndex";
-  let EncoderMethod = "getMVEPairVectorIndexOpValue<"#opval#">";
-  let DecoderMethod = "DecodeMVEPairVectorIndexOperand<"#opval#">";
-  let MIOperandInfo = (ops i32imm);
-}
-
-def MVEPairVectorIndex0 : MVEPairVectorIndex<"0"> {
-  let ParserMatchClass = MVEPairVectorIndexOperand<"0", "1">;
-}
-
-def MVEPairVectorIndex2 : MVEPairVectorIndex<"2"> {
-  let ParserMatchClass = MVEPairVectorIndexOperand<"2", "3">;
-}
-
-// Vector indexing
-class MVEVectorIndexOperand<int NumLanes> : AsmOperandClass {
-  let Name = "MVEVectorIndex"#NumLanes;
-  let RenderMethod = "addMVEVectorIndexOperands";
-  let PredicateMethod = "isVectorIndexInRange<"#NumLanes#">";
-}
-
-class MVEVectorIndex<int NumLanes> : Operand<i32> {
-  let PrintMethod = "printVectorIndex";
-  let ParserMatchClass = MVEVectorIndexOperand<NumLanes>;
-  let MIOperandInfo = (ops i32imm);
-}
-
 // shift_imm: An integer that encodes a shift amount and the type of shift
 // (asr or lsl). The 6-bit immediate encodes as:
 //    {5}     0 ==> lsl
@@ -1232,15 +1183,6 @@ def addr_offset_none : MemOperand,
   let DecoderMethod = "DecodeAddrMode7Operand";
   let ParserMatchClass = MemNoOffsetAsmOperand;
   let MIOperandInfo = (ops GPR:$base);
-}
-
-// t_addr_offset_none := reg [r0-r7]
-def MemNoOffsetTAsmOperand : AsmOperandClass { let Name = "MemNoOffsetT"; }
-def t_addr_offset_none : MemOperand {
-  let PrintMethod = "printAddrMode7Operand";
-  let DecoderMethod = "DecodetGPRRegisterClass";
-  let ParserMatchClass = MemNoOffsetTAsmOperand;
-  let MIOperandInfo = (ops tGPR:$base);
 }
 
 def nohash_imm : Operand<i32> {

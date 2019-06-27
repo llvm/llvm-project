@@ -12,8 +12,7 @@ static_library("fuchsia") {
     "//llvm/lib/Support",
   ]
   sources = [
-    "DefaultArgumentsCallsCheck.cpp",
-    "DefaultArgumentsDeclarationsCheck.cpp",
+    "DefaultArgumentsCheck.cpp",
     "FuchsiaTidyModule.cpp",
     "MultipleInheritanceCheck.cpp",
     "OverloadedOperatorCheck.cpp",

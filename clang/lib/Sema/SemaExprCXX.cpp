@@ -2413,11 +2413,7 @@ bool Sema::FindAllocationFunctions(SourceLocation StartLoc, SourceRange Range,
     }
 
     if (getLangOpts().OpenCLCPlusPlus && R.empty()) {
-      if (PlaceArgs.empty()) {
-        Diag(StartLoc, diag::err_openclcxx_not_supported) << "default new";
-      } else {
-        Diag(StartLoc, diag::err_openclcxx_placement_new);
-      }
+      Diag(StartLoc, diag::err_openclcxx_not_supported) << "default new";
       return true;
     }
 

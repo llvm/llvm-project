@@ -38,6 +38,7 @@ struct PrintingPolicy {
   /// Create a default printing policy for the specified language.
   PrintingPolicy(const LangOptions &LO)
       : Indentation(2), SuppressSpecifiers(false),
+        SupressStorageClassSpecifiers(false),
         SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
         SuppressScope(false), SuppressUnwrittenScope(false),
         SuppressInitializers(false), ConstantArraySizeAsWritten(false),
@@ -49,8 +50,9 @@ struct PrintingPolicy {
         PolishForDeclaration(false), Half(LO.Half),
         MSWChar(LO.MicrosoftExt && !LO.WChar), IncludeNewlines(true),
         MSVCFormatting(false), ConstantsAsWritten(false),
-        SuppressImplicitBase(false), FullyQualifiedName(false),
-        RemapFilePaths(false), PrintCanonicalTypes(false) {}
+        SuppressImplicitBase(false), UseStdFunctionForLambda(false),
+        FullyQualifiedName(false), RemapFilePaths(false),
+        PrintCanonicalTypes(false) {}
 
   /// Adjust this printing policy for cases where it's known that we're
   /// printing C++ code (for instance, if AST dumping reaches a C++-only
@@ -80,6 +82,10 @@ struct PrintingPolicy {
   /// \c true when we print "y", so that we suppress printing the
   /// "const int" type specifier and instead only print the "*y".
   unsigned SuppressSpecifiers : 1;
+
+  /// \brief Whether we should supress the printing of the actual storage class
+  /// specifiers for the given declaration.
+  bool SupressStorageClassSpecifiers : 1;
 
   /// Whether type printing should skip printing the tag keyword.
   ///
@@ -219,6 +225,9 @@ struct PrintingPolicy {
 
   /// When true, don't print the implicit 'self' or 'this' expressions.
   unsigned SuppressImplicitBase : 1;
+
+  /// \brief Whether we should use std::function<...> for lambda record types.
+  bool UseStdFunctionForLambda : 1;
 
   /// When true, print the fully qualified name of function declarations.
   /// This is the opposite of SuppressScope and thus overrules it.

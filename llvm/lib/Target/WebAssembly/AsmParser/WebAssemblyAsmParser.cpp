@@ -433,6 +433,10 @@ public:
       if (pop(BaseName, Try))
         return true;
       push(Try);
+    } else if (BaseName == "catch_all") {
+      if (pop(BaseName, Try))
+        return true;
+      push(Try);
     } else if (BaseName == "end_if") {
       if (pop(BaseName, If, Else))
         return true;

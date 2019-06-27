@@ -179,11 +179,11 @@ public:
       // nothing to do.
       if (MF.size() < 2)
         return Changed;
-      
-      // We can't use a range-based for loop due to clobbering the iterator.
-      for (MachineFunction::iterator I = MF.begin(), E = MF.end(); I != E;) {
+
+      for (MachineFunction::iterator I = MF.begin(); I != MF.end();) {
         MachineBasicBlock &B = *I++;
-        Changed |= processBlock(B);
+        if (processBlock(B))
+          Changed = true;
       }
 
       return Changed;

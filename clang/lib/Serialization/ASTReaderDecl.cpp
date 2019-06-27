@@ -1254,6 +1254,8 @@ void ASTDeclReader::VisitObjCCategoryDecl(ObjCCategoryDecl *CD) {
 void ASTDeclReader::VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *CAD) {
   VisitNamedDecl(CAD);
   CAD->setClassInterface(ReadDeclAs<ObjCInterfaceDecl>());
+  CAD->setClassInterfaceLoc(ReadSourceLocation());
+  CAD->setAtLoc(ReadSourceLocation());
 }
 
 void ASTDeclReader::VisitObjCPropertyDecl(ObjCPropertyDecl *D) {
@@ -2740,6 +2742,8 @@ public:
 
   Expr *readExpr() { return Reader->ReadExpr(*F); }
 
+  Attr *readAttr() { return Reader->ReadAttr(*F, Record, Idx); }
+
   std::string readString() {
     return Reader->ReadString(Record, Idx);
   }
@@ -3679,28 +3683,14 @@ Decl *ASTReader::ReadDeclRecord(DeclID ID) {
   // Note that we are loading a declaration record.
   Deserializing ADecl(this);
 
-  auto Fail = [](const char *what, llvm::Error &&Err) {
-    llvm::report_fatal_error(Twine("ASTReader::ReadDeclRecord failed ") + what +
-                             ": " + toString(std::move(Err)));
-  };
-
-  if (llvm::Error JumpFailed = DeclsCursor.JumpToBit(Loc.Offset))
-    Fail("jumping", std::move(JumpFailed));
+  DeclsCursor.JumpToBit(Loc.Offset);
   ASTRecordReader Record(*this, *Loc.F);
   ASTDeclReader Reader(*this, Record, Loc, ID, DeclLoc);
-  Expected<unsigned> MaybeCode = DeclsCursor.ReadCode();
-  if (!MaybeCode)
-    Fail("reading code", MaybeCode.takeError());
-  unsigned Code = MaybeCode.get();
+  unsigned Code = DeclsCursor.ReadCode();
 
   ASTContext &Context = getContext();
   Decl *D = nullptr;
-  Expected<unsigned> MaybeDeclCode = Record.readRecord(DeclsCursor, Code);
-  if (!MaybeDeclCode)
-    llvm::report_fatal_error(
-        "ASTReader::ReadDeclRecord failed reading decl code: " +
-        toString(MaybeDeclCode.takeError()));
-  switch ((DeclCode)MaybeDeclCode.get()) {
+  switch ((DeclCode)Record.readRecord(DeclsCursor, Code)) {
   case DECL_CONTEXT_LEXICAL:
   case DECL_CONTEXT_VISIBLE:
     llvm_unreachable("Record cannot be de-serialized with ReadDeclRecord");
@@ -4039,25 +4029,12 @@ void ASTReader::loadDeclUpdateRecords(PendingUpdateRecord &Record) {
       uint64_t Offset = FileAndOffset.second;
       llvm::BitstreamCursor &Cursor = F->DeclsCursor;
       SavedStreamPosition SavedPosition(Cursor);
-      if (llvm::Error JumpFailed = Cursor.JumpToBit(Offset))
-        // FIXME don't do a fatal error.
-        llvm::report_fatal_error(
-            "ASTReader::loadDeclUpdateRecords failed jumping: " +
-            toString(std::move(JumpFailed)));
-      Expected<unsigned> MaybeCode = Cursor.ReadCode();
-      if (!MaybeCode)
-        llvm::report_fatal_error(
-            "ASTReader::loadDeclUpdateRecords failed reading code: " +
-            toString(MaybeCode.takeError()));
-      unsigned Code = MaybeCode.get();
+      Cursor.JumpToBit(Offset);
+      unsigned Code = Cursor.ReadCode();
       ASTRecordReader Record(*this, *F);
-      if (Expected<unsigned> MaybeRecCode = Record.readRecord(Cursor, Code))
-        assert(MaybeRecCode.get() == DECL_UPDATES &&
-               "Expected DECL_UPDATES record!");
-      else
-        llvm::report_fatal_error(
-            "ASTReader::loadDeclUpdateRecords failed reading rec code: " +
-            toString(MaybeCode.takeError()));
+      unsigned RecCode = Record.readRecord(Cursor, Code);
+      (void)RecCode;
+      assert(RecCode == DECL_UPDATES && "Expected DECL_UPDATES record!");
 
       ASTDeclReader Reader(*this, Record, RecordLocation(F, Offset), ID,
                            SourceLocation());
@@ -4121,25 +4098,13 @@ void ASTReader::loadPendingDeclChain(Decl *FirstLocal, uint64_t LocalOffset) {
 
   llvm::BitstreamCursor &Cursor = M->DeclsCursor;
   SavedStreamPosition SavedPosition(Cursor);
-  if (llvm::Error JumpFailed = Cursor.JumpToBit(LocalOffset))
-    llvm::report_fatal_error(
-        "ASTReader::loadPendingDeclChain failed jumping: " +
-        toString(std::move(JumpFailed)));
+  Cursor.JumpToBit(LocalOffset);
 
   RecordData Record;
-  Expected<unsigned> MaybeCode = Cursor.ReadCode();
-  if (!MaybeCode)
-    llvm::report_fatal_error(
-        "ASTReader::loadPendingDeclChain failed reading code: " +
-        toString(MaybeCode.takeError()));
-  unsigned Code = MaybeCode.get();
-  if (Expected<unsigned> MaybeRecCode = Cursor.readRecord(Code, Record))
-    assert(MaybeRecCode.get() == LOCAL_REDECLARATIONS &&
-           "expected LOCAL_REDECLARATIONS record!");
-  else
-    llvm::report_fatal_error(
-        "ASTReader::loadPendingDeclChain failed reading rec code: " +
-        toString(MaybeCode.takeError()));
+  unsigned Code = Cursor.ReadCode();
+  unsigned RecCode = Cursor.readRecord(Code, Record);
+  (void)RecCode;
+  assert(RecCode == LOCAL_REDECLARATIONS && "expected LOCAL_REDECLARATIONS record!");
 
   // FIXME: We have several different dispatches on decl kind here; maybe
   // we should instead generate one loop per kind and dispatch up-front?

@@ -150,8 +150,7 @@ struct TransferableCommand {
     // spelling of each argument; re-rendering is lossy for aliased flags.
     // E.g. in CL mode, /W4 maps to -Wall.
     auto OptTable = clang::driver::createDriverOptTable();
-    if (!OldArgs.empty())
-      Cmd.CommandLine.emplace_back(OldArgs.front());
+    Cmd.CommandLine.emplace_back(OldArgs.front());
     for (unsigned Pos = 1; Pos < OldArgs.size();) {
       using namespace driver::options;
 
@@ -244,8 +243,7 @@ private:
     }
 
     // Otherwise just check the clang executable file name.
-    return !CmdLine.empty() &&
-           llvm::sys::path::stem(CmdLine.front()).endswith_lower("cl");
+    return llvm::sys::path::stem(CmdLine.front()).endswith_lower("cl");
   }
 
   // Map the language from the --std flag to that of the -x flag.

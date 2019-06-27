@@ -474,9 +474,8 @@ public:
 
 class Call {
   template <typename CHECKER>
-  static bool _evalCall(void *checker, const CallEvent &Call,
-                        CheckerContext &C) {
-    return ((const CHECKER *)checker)->evalCall(Call, C);
+  static bool _evalCall(void *checker, const CallExpr *CE, CheckerContext &C) {
+    return ((const CHECKER *)checker)->evalCall(CE, C);
   }
 
 public:

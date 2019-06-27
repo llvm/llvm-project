@@ -185,7 +185,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
   assert(SaveExec.getSubReg() == AMDGPU::NoSubRegister &&
          Cond.getSubReg() == AMDGPU::NoSubRegister);
 
-  Register SaveExecReg = SaveExec.getReg();
+  unsigned SaveExecReg = SaveExec.getReg();
 
   MachineOperand &ImpDefSCC = MI.getOperand(4);
   assert(ImpDefSCC.getReg() == AMDGPU::SCC && ImpDefSCC.isDef());
@@ -197,7 +197,7 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
 
   // Add an implicit def of exec to discourage scheduling VALU after this which
   // will interfere with trying to form s_and_saveexec_b64 later.
-  Register CopyReg = SimpleIf ? SaveExecReg
+  unsigned CopyReg = SimpleIf ? SaveExecReg
                        : MRI->createVirtualRegister(BoolRC);
   MachineInstr *CopyExec =
     BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), CopyReg)
@@ -266,7 +266,7 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   MachineBasicBlock &MBB = *MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
 
-  Register DstReg = MI.getOperand(0).getReg();
+  unsigned DstReg = MI.getOperand(0).getReg();
   assert(MI.getOperand(0).getSubReg() == AMDGPU::NoSubRegister);
 
   bool ExecModified = MI.getOperand(3).getImm() != 0;
@@ -275,14 +275,14 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
   // We are running before TwoAddressInstructions, and si_else's operands are
   // tied. In order to correctly tie the registers, split this into a copy of
   // the src like it does.
-  Register CopyReg = MRI->createVirtualRegister(BoolRC);
+  unsigned CopyReg = MRI->createVirtualRegister(BoolRC);
   MachineInstr *CopyExec =
     BuildMI(MBB, Start, DL, TII->get(AMDGPU::COPY), CopyReg)
       .add(MI.getOperand(1)); // Saved EXEC
 
   // This must be inserted before phis and any spill code inserted before the
   // else.
-  Register SaveReg = ExecModified ?
+  unsigned SaveReg = ExecModified ?
     MRI->createVirtualRegister(BoolRC) : DstReg;
   MachineInstr *OrSaveExec =
     BuildMI(MBB, Start, DL, TII->get(OrSaveExecOpc), SaveReg)

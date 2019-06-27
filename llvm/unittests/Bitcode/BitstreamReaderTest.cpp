@@ -22,17 +22,15 @@ TEST(BitstreamReaderTest, AtEndOfStream) {
   BitstreamCursor Cursor(Bytes);
 
   EXPECT_FALSE(Cursor.AtEndOfStream());
-  Expected<SimpleBitstreamCursor::word_t> MaybeRead = Cursor.Read(8);
-  EXPECT_TRUE((bool)MaybeRead);
+  (void)Cursor.Read(8);
   EXPECT_FALSE(Cursor.AtEndOfStream());
-  MaybeRead = Cursor.Read(24);
-  EXPECT_TRUE((bool)MaybeRead);
+  (void)Cursor.Read(24);
   EXPECT_TRUE(Cursor.AtEndOfStream());
 
-  EXPECT_FALSE(Cursor.JumpToBit(0));
+  Cursor.JumpToBit(0);
   EXPECT_FALSE(Cursor.AtEndOfStream());
 
-  EXPECT_FALSE(Cursor.JumpToBit(32));
+  Cursor.JumpToBit(32);
   EXPECT_TRUE(Cursor.AtEndOfStream());
 }
 
@@ -42,7 +40,7 @@ TEST(BitstreamReaderTest, AtEndOfStreamJump) {
   };
   BitstreamCursor Cursor(Bytes);
 
-  EXPECT_FALSE(Cursor.JumpToBit(32));
+  Cursor.JumpToBit(32);
   EXPECT_TRUE(Cursor.AtEndOfStream());
 }
 
@@ -58,8 +56,7 @@ TEST(BitstreamReaderTest, getCurrentByteNo) {
 
   for (unsigned I = 0, E = 32; I != E; ++I) {
     EXPECT_EQ(I / 8, Cursor.getCurrentByteNo());
-    Expected<SimpleBitstreamCursor::word_t> MaybeRead = Cursor.Read(1);
-    EXPECT_TRUE((bool)MaybeRead);
+    (void)Cursor.Read(1);
   }
   EXPECT_EQ(4u, Cursor.getCurrentByteNo());
 }
@@ -119,33 +116,24 @@ TEST(BitstreamReaderTest, readRecordWithBlobWhileStreaming) {
 
     // Header.  Included in test so that we can run llvm-bcanalyzer to debug
     // when there are problems.
-    Expected<SimpleBitstreamCursor::word_t> MaybeRead = Stream.Read(32);
-    ASSERT_TRUE((bool)MaybeRead);
-    ASSERT_EQ(Magic, MaybeRead.get());
+    ASSERT_EQ(Magic, Stream.Read(32));
 
     // Block.
-    Expected<BitstreamEntry> MaybeEntry =
+    BitstreamEntry Entry =
         Stream.advance(BitstreamCursor::AF_DontAutoprocessAbbrevs);
-    ASSERT_TRUE((bool)MaybeEntry);
-    BitstreamEntry Entry = MaybeEntry.get();
     ASSERT_EQ(BitstreamEntry::SubBlock, Entry.Kind);
     ASSERT_EQ(BlockID, Entry.ID);
     ASSERT_FALSE(Stream.EnterSubBlock(BlockID));
 
     // Abbreviation.
-    MaybeEntry = Stream.advance();
-    ASSERT_TRUE((bool)MaybeEntry);
-    Entry = MaybeEntry.get();
+    Entry = Stream.advance();
     ASSERT_EQ(BitstreamEntry::Record, Entry.Kind);
     ASSERT_EQ(AbbrevID, Entry.ID);
 
     // Record.
     StringRef BlobOut;
     SmallVector<uint64_t, 1> Record;
-    Expected<unsigned> MaybeRecord =
-        Stream.readRecord(Entry.ID, Record, &BlobOut);
-    ASSERT_TRUE((bool)MaybeRecord);
-    ASSERT_EQ(RecordID, MaybeRecord.get());
+    ASSERT_EQ(RecordID, Stream.readRecord(Entry.ID, Record, &BlobOut));
     EXPECT_TRUE(Record.empty());
     EXPECT_EQ(BlobIn, BlobOut);
   }
@@ -155,9 +143,7 @@ TEST(BitstreamReaderTest, shortRead) {
   uint8_t Bytes[] = {8, 7, 6, 5, 4, 3, 2, 1};
   for (unsigned I = 1; I != 8; ++I) {
     SimpleBitstreamCursor Cursor(ArrayRef<uint8_t>(Bytes, I));
-    Expected<SimpleBitstreamCursor::word_t> MaybeRead = Cursor.Read(8);
-    ASSERT_TRUE((bool)MaybeRead);
-    EXPECT_EQ(8ull, MaybeRead.get());
+    EXPECT_EQ(8ull, Cursor.Read(8));
   }
 }
 

@@ -18,7 +18,6 @@
 #include "Function.h"
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
-#include "SemanticHighlighting.h"
 #include "TUScheduler.h"
 #include "XRefs.h"
 #include "index/Background.h"
@@ -50,11 +49,6 @@ public:
                                   std::vector<Diag> Diagnostics) = 0;
   /// Called whenever the file status is updated.
   virtual void onFileUpdated(PathRef File, const TUStatus &Status){};
-
-  /// Called by ClangdServer when some \p Highlightings for \p File are ready.
-  virtual void
-  onHighlightingsReady(PathRef File,
-                       std::vector<HighlightingToken> Highlightings) {}
 };
 
 /// When set, used by ClangdServer to get clang-tidy options for each particular
@@ -133,13 +127,6 @@ public:
     /// Enable hidden features mostly useful to clangd developers.
     /// e.g. tweaks to dump the AST.
     bool HiddenFeatures = false;
-
-    /// Clangd will execute compiler drivers matching one of these globs to
-    /// fetch system include path.
-    std::vector<std::string> QueryDriverGlobs;
-
-    /// Enable semantic highlighting features.
-    bool SemanticHighlighting = false;
   };
   // Sensible default options for use in tests.
   // Features like indexing must be enabled if desired.
@@ -313,7 +300,7 @@ private:
   // can be caused by missing includes (e.g. member access in incomplete type).
   bool SuggestMissingIncludes = false;
   bool EnableHiddenFeatures = false;
-  
+
   // GUARDED_BY(CachedCompletionFuzzyFindRequestMutex)
   llvm::StringMap<llvm::Optional<FuzzyFindRequest>>
       CachedCompletionFuzzyFindRequestByFile;

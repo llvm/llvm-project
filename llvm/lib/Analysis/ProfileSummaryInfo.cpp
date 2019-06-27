@@ -60,9 +60,10 @@ static cl::opt<int> ProfileSummaryColdCount(
 // Find the summary entry for a desired percentile of counts.
 static const ProfileSummaryEntry &getEntryForPercentile(SummaryEntryVector &DS,
                                                         uint64_t Percentile) {
-  auto It = llvm::bsearch(DS, [=](const ProfileSummaryEntry &Entry) {
-    return Percentile <= Entry.Cutoff;
-  });
+  auto Compare = [](const ProfileSummaryEntry &Entry, uint64_t Percentile) {
+    return Entry.Cutoff < Percentile;
+  };
+  auto It = std::lower_bound(DS.begin(), DS.end(), Percentile, Compare);
   // The required percentile has to be <= one of the percentiles in the
   // detailed summary.
   if (It == DS.end())

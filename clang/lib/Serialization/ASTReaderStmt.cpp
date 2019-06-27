@@ -2392,13 +2392,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
   Stmt::EmptyShell Empty;
 
   while (true) {
-    llvm::Expected<llvm::BitstreamEntry> MaybeEntry =
-        Cursor.advanceSkippingSubblocks();
-    if (!MaybeEntry) {
-      Error(toString(MaybeEntry.takeError()));
-      return nullptr;
-    }
-    llvm::BitstreamEntry Entry = MaybeEntry.get();
+    llvm::BitstreamEntry Entry = Cursor.advanceSkippingSubblocks();
 
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::SubBlock: // Handled for us already.
@@ -2416,12 +2410,7 @@ Stmt *ASTReader::ReadStmtFromStream(ModuleFile &F) {
     Stmt *S = nullptr;
     bool Finished = false;
     bool IsStmtReference = false;
-    Expected<unsigned> MaybeStmtCode = Record.readRecord(Cursor, Entry.ID);
-    if (!MaybeStmtCode) {
-      Error(toString(MaybeStmtCode.takeError()));
-      return nullptr;
-    }
-    switch ((StmtCode)MaybeStmtCode.get()) {
+    switch ((StmtCode)Record.readRecord(Cursor, Entry.ID)) {
     case STMT_STOP:
       Finished = true;
       break;

@@ -651,6 +651,7 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
                                             const ExplodedNodeSet &Src,
                                             const CallEvent &Call,
                                             ExprEngine &Eng) {
+  const CallExpr *CE = cast<CallExpr>(Call.getOriginExpr());
   for (const auto Pred : Src) {
     bool anyEvaluated = false;
 
@@ -659,19 +660,16 @@ void CheckerManager::runCheckersForEvalCall(ExplodedNodeSet &Dst,
 
     // Check if any of the EvalCall callbacks can evaluate the call.
     for (const auto EvalCallChecker : EvalCallCheckers) {
-      // TODO: Support the situation when the call doesn't correspond
-      // to any Expr.
-      ProgramPoint L = ProgramPoint::getProgramPoint(
-          cast<CallExpr>(Call.getOriginExpr()),
-          ProgramPoint::PostStmtKind,
-          Pred->getLocationContext(),
-          EvalCallChecker.Checker);
+      ProgramPoint::Kind K = ProgramPoint::PostStmtKind;
+      const ProgramPoint &L =
+          ProgramPoint::getProgramPoint(CE, K, Pred->getLocationContext(),
+                                        EvalCallChecker.Checker);
       bool evaluated = false;
       { // CheckerContext generates transitions(populates checkDest) on
         // destruction, so introduce the scope to make sure it gets properly
         // populated.
         CheckerContext C(B, Eng, Pred, L);
-        evaluated = EvalCallChecker(Call, C);
+        evaluated = EvalCallChecker(CE, C);
       }
       assert(!(evaluated && anyEvaluated)
              && "There are more than one checkers evaluating the call");

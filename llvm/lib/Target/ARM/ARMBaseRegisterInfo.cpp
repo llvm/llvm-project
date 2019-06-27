@@ -370,35 +370,29 @@ bool ARMBaseRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   const ARMFunctionInfo *AFI = MF.getInfo<ARMFunctionInfo>();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
 
-  // If we have stack realignment and VLAs, we have no pointer to use to
-  // access the stack. If we have stack realignment, and a large call frame,
-  // we have no place to allocate the emergency spill slot.
+  // When outgoing call frames are so large that we adjust the stack pointer
+  // around the call, we can no longer use the stack pointer to reach the
+  // emergency spill slot.
   if (needsStackRealignment(MF) && !TFI->hasReservedCallFrame(MF))
     return true;
 
   // Thumb has trouble with negative offsets from the FP. Thumb2 has a limited
   // negative range for ldr/str (255), and thumb1 is positive offsets only.
-  //
   // It's going to be better to use the SP or Base Pointer instead. When there
   // are variable sized objects, we can't reference off of the SP, so we
   // reserve a Base Pointer.
-  //
-  // For Thumb2, estimate whether a negative offset from the frame pointer
-  // will be sufficient to reach the whole stack frame. If a function has a
-  // smallish frame, it's less likely to have lots of spills and callee saved
-  // space, so it's all more likely to be within range of the frame pointer.
-  // If it's wrong, the scavenger will still enable access to work, it just
-  // won't be optimal.  (We should always be able to reach the emergency
-  // spill slot from the frame pointer.)
-  if (AFI->isThumb2Function() && MFI.hasVarSizedObjects() &&
-      MFI.getLocalFrameSize() >= 128)
+  if (AFI->isThumbFunction() && MFI.hasVarSizedObjects()) {
+    // Conservatively estimate whether the negative offset from the frame
+    // pointer will be sufficient to reach. If a function has a smallish
+    // frame, it's less likely to have lots of spills and callee saved
+    // space, so it's all more likely to be within range of the frame pointer.
+    // If it's wrong, the scavenger will still enable access to work, it just
+    // won't be optimal.
+    if (AFI->isThumb2Function() && MFI.getLocalFrameSize() < 128)
+      return false;
     return true;
-  // For Thumb1, if sp moves, nothing is in range, so force a base pointer.
-  // This is necessary for correctness in cases where we need an emergency
-  // spill slot. (In Thumb1, we can't use a negative offset from the frame
-  // pointer.)
-  if (AFI->isThumb1OnlyFunction() && !TFI->hasReservedCallFrame(MF))
-    return true;
+  }
+
   return false;
 }
 
@@ -432,7 +426,7 @@ cannotEliminateFrame(const MachineFunction &MF) const {
     || needsStackRealignment(MF);
 }
 
-Register
+unsigned
 ARMBaseRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   const ARMSubtarget &STI = MF.getSubtarget<ARMSubtarget>();
   const ARMFrameLowering *TFI = getFrameLowering(MF);
@@ -792,7 +786,7 @@ ARMBaseRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   int PIdx = MI.findFirstPredOperandIdx();
   ARMCC::CondCodes Pred = (PIdx == -1)
     ? ARMCC::AL : (ARMCC::CondCodes)MI.getOperand(PIdx).getImm();
-  Register PredReg = (PIdx == -1) ? Register() : MI.getOperand(PIdx+1).getReg();
+  unsigned PredReg = (PIdx == -1) ? 0 : MI.getOperand(PIdx+1).getReg();
   if (Offset == 0)
     // Must be addrmode4/6.
     MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false, false, false);

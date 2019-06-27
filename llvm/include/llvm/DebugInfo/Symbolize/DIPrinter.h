@@ -20,7 +20,6 @@ namespace llvm {
 struct DILineInfo;
 class DIInliningInfo;
 struct DIGlobal;
-struct DILocal;
 
 namespace symbolize {
 
@@ -52,7 +51,6 @@ public:
   DIPrinter &operator<<(const DILineInfo &Info);
   DIPrinter &operator<<(const DIInliningInfo &Info);
   DIPrinter &operator<<(const DIGlobal &Global);
-  DIPrinter &operator<<(const DILocal &Local);
 };
 }
 }

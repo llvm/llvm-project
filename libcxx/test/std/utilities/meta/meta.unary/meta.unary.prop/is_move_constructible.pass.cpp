@@ -61,7 +61,9 @@ struct A
 
 struct B
 {
+#if TEST_STD_VER >= 11
     B(B&&);
+#endif
 };
 
 int main(int, char**)

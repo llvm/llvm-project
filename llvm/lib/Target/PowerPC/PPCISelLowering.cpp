@@ -839,8 +839,6 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
       setOperationAction(ISD::FNEG, MVT::v2f64, Legal);
       setOperationAction(ISD::FABS, MVT::v4f32, Legal);
       setOperationAction(ISD::FABS, MVT::v2f64, Legal);
-      setOperationAction(ISD::FCOPYSIGN, MVT::v4f32, Legal);
-      setOperationAction(ISD::FCOPYSIGN, MVT::v2f64, Legal);
 
       if (Subtarget.hasDirectMove())
         setOperationAction(ISD::BUILD_VECTOR, MVT::v2i64, Custom);
@@ -2450,7 +2448,7 @@ bool PPCTargetLowering::SelectAddressRegRegOnly(SDValue N, SDValue &Base,
 /// Returns true if we should use a direct load into vector instruction
 /// (such as lxsd or lfd), instead of a load into gpr + direct move sequence.
 static bool usePartialVectorLoads(SDNode *N, const PPCSubtarget& ST) {
-
+  
   // If there are any other uses other than scalar to vector, then we should
   // keep it as a scalar load -> direct move pattern to prevent multiple
   // loads.
@@ -5111,7 +5109,7 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
     // We cannot add R2/X2 as an operand here for PATCHPOINT, because there is
     // no way to mark dependencies as implicit here.
     // We will add the R2/X2 dependency in EmitInstrWithCustomInserter.
-    if (!isPatchPoint)
+    if (!isPatchPoint) 
       Ops.push_back(DAG.getRegister(isPPC64 ? PPC::X2
                                             : PPC::R2, PtrVT));
   }
@@ -7089,7 +7087,7 @@ SDValue PPCTargetLowering::LowerTRUNCATEVector(SDValue Op,
   // undefined):
   //   < MSB1|LSB1, MSB2|LSB2, uu, uu, uu, uu, uu, uu> to
   //   < LSB1, LSB2, u, u, u, u, u, u, u, u, u, u, u, u, u, u>
-  //
+  // 
   // The same operation in little-endian ordering will be:
   //   <uu, uu, uu, uu, uu, uu, LSB2|MSB2, LSB1|MSB1> to
   //   <u, u, u, u, u, u, u, u, u, u, u, u, u, u, LSB2, LSB1>
@@ -9841,7 +9839,7 @@ SDValue PPCTargetLowering::LowerABS(SDValue Op, SelectionDAG &DAG) const {
     BifID = Intrinsic::ppc_altivec_vmaxsh;
   else if (VT == MVT::v16i8)
     BifID = Intrinsic::ppc_altivec_vmaxsb;
-
+  
   return BuildIntrinsicOp(BifID, X, Y, DAG, dl, VT);
 }
 
@@ -10121,10 +10119,10 @@ PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI, MachineBasicBlock *BB,
   MachineFunction *F = BB->getParent();
   MachineFunction::iterator It = ++BB->getIterator();
 
-  Register dest = MI.getOperand(0).getReg();
-  Register ptrA = MI.getOperand(1).getReg();
-  Register ptrB = MI.getOperand(2).getReg();
-  Register incr = MI.getOperand(3).getReg();
+  unsigned dest = MI.getOperand(0).getReg();
+  unsigned ptrA = MI.getOperand(1).getReg();
+  unsigned ptrB = MI.getOperand(2).getReg();
+  unsigned incr = MI.getOperand(3).getReg();
   DebugLoc dl = MI.getDebugLoc();
 
   MachineBasicBlock *loopMBB = F->CreateMachineBasicBlock(LLVM_BB);
@@ -10140,7 +10138,7 @@ PPCTargetLowering::EmitAtomicBinary(MachineInstr &MI, MachineBasicBlock *BB,
   exitMBB->transferSuccessorsAndUpdatePHIs(BB);
 
   MachineRegisterInfo &RegInfo = F->getRegInfo();
-  Register TmpReg = (!BinOpcode) ? incr :
+  unsigned TmpReg = (!BinOpcode) ? incr :
     RegInfo.createVirtualRegister( AtomicSize == 8 ? &PPC::G8RCRegClass
                                            : &PPC::GPRCRegClass);
 
@@ -10248,20 +10246,20 @@ MachineBasicBlock *PPCTargetLowering::EmitPartwordAtomicBinary(
       is64bit ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
   const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
 
-  Register PtrReg = RegInfo.createVirtualRegister(RC);
-  Register Shift1Reg = RegInfo.createVirtualRegister(GPRC);
-  Register ShiftReg =
+  unsigned PtrReg = RegInfo.createVirtualRegister(RC);
+  unsigned Shift1Reg = RegInfo.createVirtualRegister(GPRC);
+  unsigned ShiftReg =
       isLittleEndian ? Shift1Reg : RegInfo.createVirtualRegister(GPRC);
-  Register Incr2Reg = RegInfo.createVirtualRegister(GPRC);
-  Register MaskReg = RegInfo.createVirtualRegister(GPRC);
-  Register Mask2Reg = RegInfo.createVirtualRegister(GPRC);
-  Register Mask3Reg = RegInfo.createVirtualRegister(GPRC);
-  Register Tmp2Reg = RegInfo.createVirtualRegister(GPRC);
-  Register Tmp3Reg = RegInfo.createVirtualRegister(GPRC);
-  Register Tmp4Reg = RegInfo.createVirtualRegister(GPRC);
-  Register TmpDestReg = RegInfo.createVirtualRegister(GPRC);
-  Register Ptr1Reg;
-  Register TmpReg =
+  unsigned Incr2Reg = RegInfo.createVirtualRegister(GPRC);
+  unsigned MaskReg = RegInfo.createVirtualRegister(GPRC);
+  unsigned Mask2Reg = RegInfo.createVirtualRegister(GPRC);
+  unsigned Mask3Reg = RegInfo.createVirtualRegister(GPRC);
+  unsigned Tmp2Reg = RegInfo.createVirtualRegister(GPRC);
+  unsigned Tmp3Reg = RegInfo.createVirtualRegister(GPRC);
+  unsigned Tmp4Reg = RegInfo.createVirtualRegister(GPRC);
+  unsigned TmpDestReg = RegInfo.createVirtualRegister(GPRC);
+  unsigned Ptr1Reg;
+  unsigned TmpReg =
       (!BinOpcode) ? Incr2Reg : RegInfo.createVirtualRegister(GPRC);
 
   //  thisMBB:
@@ -11063,23 +11061,23 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         is64bit ? &PPC::G8RCRegClass : &PPC::GPRCRegClass;
     const TargetRegisterClass *GPRC = &PPC::GPRCRegClass;
 
-    Register PtrReg = RegInfo.createVirtualRegister(RC);
-    Register Shift1Reg = RegInfo.createVirtualRegister(GPRC);
-    Register ShiftReg =
+    unsigned PtrReg = RegInfo.createVirtualRegister(RC);
+    unsigned Shift1Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned ShiftReg =
         isLittleEndian ? Shift1Reg : RegInfo.createVirtualRegister(GPRC);
-    Register NewVal2Reg = RegInfo.createVirtualRegister(GPRC);
-    Register NewVal3Reg = RegInfo.createVirtualRegister(GPRC);
-    Register OldVal2Reg = RegInfo.createVirtualRegister(GPRC);
-    Register OldVal3Reg = RegInfo.createVirtualRegister(GPRC);
-    Register MaskReg = RegInfo.createVirtualRegister(GPRC);
-    Register Mask2Reg = RegInfo.createVirtualRegister(GPRC);
-    Register Mask3Reg = RegInfo.createVirtualRegister(GPRC);
-    Register Tmp2Reg = RegInfo.createVirtualRegister(GPRC);
-    Register Tmp4Reg = RegInfo.createVirtualRegister(GPRC);
-    Register TmpDestReg = RegInfo.createVirtualRegister(GPRC);
-    Register Ptr1Reg;
-    Register TmpReg = RegInfo.createVirtualRegister(GPRC);
-    Register ZeroReg = is64bit ? PPC::ZERO8 : PPC::ZERO;
+    unsigned NewVal2Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned NewVal3Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned OldVal2Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned OldVal3Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned MaskReg = RegInfo.createVirtualRegister(GPRC);
+    unsigned Mask2Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned Mask3Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned Tmp2Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned Tmp4Reg = RegInfo.createVirtualRegister(GPRC);
+    unsigned TmpDestReg = RegInfo.createVirtualRegister(GPRC);
+    unsigned Ptr1Reg;
+    unsigned TmpReg = RegInfo.createVirtualRegister(GPRC);
+    unsigned ZeroReg = is64bit ? PPC::ZERO8 : PPC::ZERO;
     //  thisMBB:
     //   ...
     //   fallthrough --> loopMBB
@@ -11267,16 +11265,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MachineRegisterInfo &RegInfo = F->getRegInfo();
     unsigned CRReg = RegInfo.createVirtualRegister(&PPC::CRRCRegClass);
     BuildMI(*BB, MI, Dl, TII->get(PPC::TCHECK), CRReg);
-    BuildMI(*BB, MI, Dl, TII->get(TargetOpcode::COPY),
-            MI.getOperand(0).getReg())
-        .addReg(CRReg);
-  } else if (MI.getOpcode() == PPC::TBEGIN_RET) {
-    DebugLoc Dl = MI.getDebugLoc();
-    unsigned Imm = MI.getOperand(1).getImm();
-    BuildMI(*BB, MI, Dl, TII->get(PPC::TBEGIN)).addImm(Imm);
-    BuildMI(*BB, MI, Dl, TII->get(TargetOpcode::COPY),
-            MI.getOperand(0).getReg())
-        .addReg(PPC::CR0EQ);
+    return BB;
   } else if (MI.getOpcode() == PPC::SETRNDi) {
     DebugLoc dl = MI.getDebugLoc();
     unsigned OldFPSCRReg = MI.getOperand(0).getReg();
@@ -11284,7 +11273,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // Save FPSCR value.
     BuildMI(*BB, MI, dl, TII->get(PPC::MFFS), OldFPSCRReg);
 
-    // The floating point rounding mode is in the bits 62:63 of FPCSR, and has
+    // The floating point rounding mode is in the bits 62:63 of FPCSR, and has 
     // the following settings:
     //   00 Round to nearest
     //   01 Round to 0
@@ -11304,7 +11293,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     // Copy register from F8RCRegClass::SrcReg to G8RCRegClass::DestReg
     // or copy register from G8RCRegClass::SrcReg to F8RCRegClass::DestReg.
-    // If the target doesn't have DirectMove, we should use stack to do the
+    // If the target doesn't have DirectMove, we should use stack to do the 
     // conversion, because the target doesn't have the instructions like mtvsrd
     // or mfvsrd to do this conversion directly.
     auto copyRegFromG8RCOrF8RC = [&] (unsigned DestReg, unsigned SrcReg) {
@@ -11350,8 +11339,8 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
           MachineMemOperand::MOLoad, MFI.getObjectSize(FrameIdx),
           MFI.getObjectAlignment(FrameIdx));
 
-        // Load from the stack where SrcReg is stored, and save to DestReg,
-        // so we have done the RegClass conversion from RegClass::SrcReg to
+        // Load from the stack where SrcReg is stored, and save to DestReg, 
+        // so we have done the RegClass conversion from RegClass::SrcReg to 
         // RegClass::DestReg.
         BuildMI(*BB, MI, dl, TII->get(LoadOp), DestReg)
           .addImm(0)
@@ -11361,14 +11350,14 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     };
 
     unsigned OldFPSCRReg = MI.getOperand(0).getReg();
-
+    
     // Save FPSCR value.
     BuildMI(*BB, MI, dl, TII->get(PPC::MFFS), OldFPSCRReg);
 
     // When the operand is gprc register, use two least significant bits of the
-    // register and mtfsf instruction to set the bits 62:63 of FPSCR.
-    //
-    // copy OldFPSCRTmpReg, OldFPSCRReg
+    // register and mtfsf instruction to set the bits 62:63 of FPSCR. 
+    // 
+    // copy OldFPSCRTmpReg, OldFPSCRReg 
     // (INSERT_SUBREG ExtSrcReg, (IMPLICIT_DEF ImDefReg), SrcOp, 1)
     // rldimi NewFPSCRTmpReg, ExtSrcReg, OldFPSCRReg, 0, 62
     // copy NewFPSCRReg, NewFPSCRTmpReg
@@ -11378,7 +11367,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     unsigned OldFPSCRTmpReg = RegInfo.createVirtualRegister(&PPC::G8RCRegClass);
 
     copyRegFromG8RCOrF8RC(OldFPSCRTmpReg, OldFPSCRReg);
-
+    
     unsigned ImDefReg = RegInfo.createVirtualRegister(&PPC::G8RCRegClass);
     unsigned ExtSrcReg = RegInfo.createVirtualRegister(&PPC::G8RCRegClass);
 
@@ -13802,9 +13791,9 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   }
   case ISD::BUILD_VECTOR:
     return DAGCombineBuildVector(N, DCI);
-  case ISD::ABS:
+  case ISD::ABS: 
     return combineABS(N, DCI);
-  case ISD::VSELECT:
+  case ISD::VSELECT: 
     return combineVSelect(N, DCI);
   }
 
@@ -13902,10 +13891,10 @@ unsigned PPCTargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
 
     if (!DisableInnermostLoopAlign32) {
       // If the nested loop is an innermost loop, prefer to a 32-byte alignment,
-      // so that we can decrease cache misses and branch-prediction misses.
+      // so that we can decrease cache misses and branch-prediction misses. 
       // Actual alignment of the loop will depend on the hotness check and other
       // logic in alignBlocks.
-      if (ML->getLoopDepth() > 1 && ML->getSubLoops().empty())
+      if (ML->getLoopDepth() > 1 && ML->getSubLoops().empty()) 
         return 5;
     }
 
@@ -14321,7 +14310,7 @@ bool PPCTargetLowering::isAccessedAsGotIndirect(SDValue GA) const {
   if (CModel == CodeModel::Small || CModel == CodeModel::Large)
     return true;
 
-  // JumpTable and BlockAddress are accessed as got-indirect.
+  // JumpTable and BlockAddress are accessed as got-indirect. 
   if (isa<JumpTableSDNode>(GA) || isa<BlockAddressSDNode>(GA))
     return true;
 

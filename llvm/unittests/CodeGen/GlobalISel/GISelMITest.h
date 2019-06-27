@@ -124,7 +124,7 @@ static MachineFunction *getMFFromMMI(const Module *M,
   return MF;
 }
 
-static void collectCopies(SmallVectorImpl<Register> &Copies,
+static void collectCopies(SmallVectorImpl<unsigned> &Copies,
                           MachineFunction *MF) {
   for (auto &MBB : *MF)
     for (MachineInstr &MI : MBB) {
@@ -152,7 +152,7 @@ protected:
   MachineFunction *MF;
   std::pair<std::unique_ptr<Module>, std::unique_ptr<MachineModuleInfo>>
       ModuleMMIPair;
-  SmallVector<Register, 4> Copies;
+  SmallVector<unsigned, 4> Copies;
   MachineBasicBlock *EntryMBB;
   MachineIRBuilder B;
   MachineRegisterInfo *MRI;

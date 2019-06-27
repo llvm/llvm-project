@@ -286,7 +286,7 @@ unsigned HexagonRegisterInfo::getRARegister() const {
 }
 
 
-Register HexagonRegisterInfo::getFrameRegister(const MachineFunction
+unsigned HexagonRegisterInfo::getFrameRegister(const MachineFunction
                                                &MF) const {
   const HexagonFrameLowering *TFI = getFrameLowering(MF);
   if (TFI->hasFP(MF))

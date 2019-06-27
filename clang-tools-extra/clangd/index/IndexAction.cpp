@@ -128,7 +128,6 @@ public:
   std::unique_ptr<ASTConsumer>
   CreateASTConsumer(CompilerInstance &CI, llvm::StringRef InFile) override {
     CI.getPreprocessor().addCommentHandler(PragmaHandler.get());
-    addSystemHeadersMapping(Includes.get(), CI.getLangOpts());
     if (IncludeGraphCallback != nullptr)
       CI.getPreprocessor().addPPCallbacks(
           llvm::make_unique<IncludeGraphCollector>(CI.getSourceManager(), IG));
@@ -201,6 +200,7 @@ std::unique_ptr<FrontendAction> createStaticIndexingAction(
     Opts.RefsInHeaders = true;
   }
   auto Includes = llvm::make_unique<CanonicalIncludes>();
+  addSystemHeadersMapping(Includes.get());
   Opts.Includes = Includes.get();
   return llvm::make_unique<IndexAction>(
       std::make_shared<SymbolCollector>(std::move(Opts)), std::move(Includes),

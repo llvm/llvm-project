@@ -13,7 +13,6 @@
 #ifndef LLVM_CLANG_INDEX_CODEGENNAMEGENERATOR_H
 #define LLVM_CLANG_INDEX_CODEGENNAMEGENERATOR_H
 
-#include "clang/AST/Mangle.h"
 #include "clang/Basic/LLVM.h"
 #include <memory>
 #include <string>
@@ -43,7 +42,7 @@ public:
 
 private:
   struct Implementation;
-  std::unique_ptr<ASTNameGenerator> Impl;
+  std::unique_ptr<Implementation> Impl;
 };
 
 } // namespace index

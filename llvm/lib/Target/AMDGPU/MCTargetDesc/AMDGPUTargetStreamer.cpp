@@ -206,12 +206,6 @@ void AMDGPUTargetAsmStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
   }
 }
 
-void AMDGPUTargetAsmStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
-                                            unsigned Align) {
-  OS << "\t.amdgpu_lds " << Symbol->getName() << ", " << Size << ", " << Align
-     << '\n';
-}
-
 bool AMDGPUTargetAsmStreamer::EmitISAVersion(StringRef IsaVersionString) {
   OS << "\t.amd_amdgpu_isa \"" << IsaVersionString << "\"\n";
   return true;
@@ -501,27 +495,6 @@ void AMDGPUTargetELFStreamer::EmitAMDGPUSymbolType(StringRef SymbolName,
   MCSymbolELF *Symbol = cast<MCSymbolELF>(
       getStreamer().getContext().getOrCreateSymbol(SymbolName));
   Symbol->setType(Type);
-}
-
-void AMDGPUTargetELFStreamer::emitAMDGPULDS(MCSymbol *Symbol, unsigned Size,
-                                            unsigned Align) {
-  assert(isPowerOf2_32(Align));
-
-  MCSymbolELF *SymbolELF = cast<MCSymbolELF>(Symbol);
-  SymbolELF->setType(ELF::STT_OBJECT);
-
-  if (!SymbolELF->isBindingSet()) {
-    SymbolELF->setBinding(ELF::STB_GLOBAL);
-    SymbolELF->setExternal(true);
-  }
-
-  if (SymbolELF->declareCommon(Size, Align, true)) {
-    report_fatal_error("Symbol: " + Symbol->getName() +
-                       " redeclared as different type");
-  }
-
-  SymbolELF->setIndex(ELF::SHN_AMDGPU_LDS);
-  SymbolELF->setSize(MCConstantExpr::create(Size, getContext()));
 }
 
 bool AMDGPUTargetELFStreamer::EmitISAVersion(StringRef IsaVersionString) {

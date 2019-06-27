@@ -77,7 +77,6 @@ set(files
   mwaitxintrin.h
   nmmintrin.h
   opencl-c.h
-  opencl-c-base.h
   pkuintrin.h
   pmmintrin.h
   pconfigintrin.h

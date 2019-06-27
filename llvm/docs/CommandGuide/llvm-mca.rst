@@ -1,8 +1,6 @@
 llvm-mca - LLVM Machine Code Analyzer
 =====================================
 
-.. program:: llvm-mca
-
 SYNOPSIS
 --------
 
@@ -40,17 +38,6 @@ Or for Intel syntax:
 
   $ clang foo.c -O2 -target x86_64-unknown-unknown -mllvm -x86-asm-syntax=intel -S -o - | llvm-mca -mcpu=btver2
 
-Scheduling models are not just used to compute instruction latencies and
-throughput, but also to understand what processor resources are available
-and how to simulate them.
-
-By design, the quality of the analysis conducted by :program:`llvm-mca` is
-inevitably affected by the quality of the scheduling models in LLVM.
-
-If you see that the performance report is not accurate for a processor,
-please `file a bug <https://bugs.llvm.org/enter_bug.cgi?product=libraries>`_
-against the appropriate backend.
-
 OPTIONS
 -------
 
@@ -65,11 +52,6 @@ option specifies "``-``", then the output will also be sent to standard output.
 .. option:: -help
 
  Print a summary of command line options.
-
-.. option:: -o <filename>
-
- Use ``<filename>`` as the output filename. See the summary above for more
- details.
 
 .. option:: -mtriple=<target triple>
 

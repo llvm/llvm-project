@@ -1366,6 +1366,12 @@ public:
                   Name);
   }
 
+  Value *CreateNot(Value *V, const Twine &Name = "") {
+    if (auto *VC = dyn_cast<Constant>(V))
+      return Insert(Folder.CreateNot(VC), Name);
+    return Insert(BinaryOperator::CreateNot(V), Name);
+  }
+
   /// Copy fast-math-flags from an instruction rather than using the builder's
   /// default FMF.
   Value *CreateFNegFMF(Value *V, Instruction *FMFSource,
@@ -1377,12 +1383,6 @@ public:
    return Insert(setFPAttrs(BinaryOperator::CreateFNeg(V), nullptr,
                             FMFSource->getFastMathFlags()),
                  Name);
-  }
-
-  Value *CreateNot(Value *V, const Twine &Name = "") {
-    if (auto *VC = dyn_cast<Constant>(V))
-      return Insert(Folder.CreateNot(VC), Name);
-    return Insert(BinaryOperator::CreateNot(V), Name);
   }
 
   Value *CreateUnOp(Instruction::UnaryOps Opc,

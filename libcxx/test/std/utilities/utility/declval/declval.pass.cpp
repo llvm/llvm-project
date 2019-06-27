@@ -23,7 +23,11 @@ class A
 
 int main(int, char**)
 {
+#if TEST_STD_VER >= 11
     static_assert((std::is_same<decltype(std::declval<A>()), A&&>::value), "");
+#else
+    static_assert((std::is_same<decltype(std::declval<A>()), A&>::value), "");
+#endif
 
   return 0;
 }

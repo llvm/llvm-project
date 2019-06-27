@@ -137,14 +137,8 @@ TargetInstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
   // Save off the debug loc before erasing the instruction.
   DebugLoc DL = Tail->getDebugLoc();
 
-  // Update call site info and remove all the dead instructions
-  // from the end of MBB.
-  while (Tail != MBB->end()) {
-    auto MI = Tail++;
-    if (MI->isCall())
-      MBB->getParent()->updateCallSiteInfo(&*MI);
-    MBB->erase(MI);
-  }
+  // Remove all the dead instructions from the end of MBB.
+  MBB->erase(Tail, MBB->end());
 
   // If MBB isn't immediately before MBB, insert a branch to it.
   if (++MachineFunction::iterator(MBB) != MachineFunction::iterator(NewDest))
@@ -169,9 +163,9 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   assert(MI.getOperand(Idx1).isReg() && MI.getOperand(Idx2).isReg() &&
          "This only knows how to commute register operands so far");
 
-  Register Reg0 = HasDef ? MI.getOperand(0).getReg() : Register();
-  Register Reg1 = MI.getOperand(Idx1).getReg();
-  Register Reg2 = MI.getOperand(Idx2).getReg();
+  unsigned Reg0 = HasDef ? MI.getOperand(0).getReg() : 0;
+  unsigned Reg1 = MI.getOperand(Idx1).getReg();
+  unsigned Reg2 = MI.getOperand(Idx2).getReg();
   unsigned SubReg0 = HasDef ? MI.getOperand(0).getSubReg() : 0;
   unsigned SubReg1 = MI.getOperand(Idx1).getSubReg();
   unsigned SubReg2 = MI.getOperand(Idx2).getSubReg();

@@ -59,7 +59,6 @@ executable("llvm-objcopy") {
     "MachO/MachOObjcopy.cpp",
     "MachO/MachOReader.cpp",
     "MachO/MachOWriter.cpp",
-    "MachO/Object.cpp",
     "llvm-objcopy.cpp",
   ]
 }

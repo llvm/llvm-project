@@ -5288,7 +5288,9 @@ lookupFoldTableImpl(ArrayRef<X86MemoryFoldTableEntry> Table, unsigned RegOp) {
   }
 #endif
 
-  const X86MemoryFoldTableEntry *Data = llvm::lower_bound(Table, RegOp);
+  const X86MemoryFoldTableEntry *Data = std::lower_bound(Table.begin(),
+                                                         Table.end(),
+                                                         RegOp);
   if (Data != Table.end() && Data->KeyOp == RegOp &&
       !(Data->Flags & TB_NO_FORWARD))
     return Data;
@@ -5375,7 +5377,7 @@ static ManagedStatic<X86MemUnfoldTable> MemUnfoldTable;
 const X86MemoryFoldTableEntry *
 llvm::lookupUnfoldTable(unsigned MemOp) {
   auto &Table = MemUnfoldTable->Table;
-  auto I = llvm::lower_bound(Table, MemOp);
+  auto I = std::lower_bound(Table.begin(), Table.end(), MemOp);
   if (I != Table.end() && I->KeyOp == MemOp)
     return &*I;
   return nullptr;

@@ -44,14 +44,14 @@ static const TargetRegisterClass &getGlobalBaseRegClass(MachineFunction &MF) {
   return Mips::GPR32RegClass;
 }
 
-Register MipsFunctionInfo::getGlobalBaseReg() {
+unsigned MipsFunctionInfo::getGlobalBaseReg() {
   if (!GlobalBaseReg)
     GlobalBaseReg =
         MF.getRegInfo().createVirtualRegister(&getGlobalBaseRegClass(MF));
   return GlobalBaseReg;
 }
 
-Register MipsFunctionInfo::getGlobalBaseRegForGlobalISel() {
+unsigned MipsFunctionInfo::getGlobalBaseRegForGlobalISel() {
   if (!GlobalBaseReg) {
     getGlobalBaseReg();
     initGlobalBaseReg();

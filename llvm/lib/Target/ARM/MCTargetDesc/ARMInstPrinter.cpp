@@ -603,40 +603,6 @@ void ARMInstPrinter::printPostIdxImm8s4Operand(const MCInst *MI, unsigned OpNum,
     << markup(">");
 }
 
-template<int shift>
-void ARMInstPrinter::printMveAddrModeRQOperand(const MCInst *MI, unsigned OpNum,
-                                               const MCSubtargetInfo &STI,
-                                               raw_ostream &O) {
-  const MCOperand &MO1 = MI->getOperand(OpNum);
-  const MCOperand &MO2 = MI->getOperand(OpNum + 1);
-
-  O << markup("<mem:") << "[";
-  printRegName(O, MO1.getReg());
-  O << ", ";
-  printRegName(O, MO2.getReg());
-
-  if (shift > 0)
-    printRegImmShift(O, ARM_AM::uxtw, shift, UseMarkup);
-
-  O << "]" << markup(">");
-}
-
-void ARMInstPrinter::printMveAddrModeQOperand(const MCInst *MI, unsigned OpNum,
-                                               const MCSubtargetInfo &STI,
-                                               raw_ostream &O) {
-  const MCOperand &MO1 = MI->getOperand(OpNum);
-  const MCOperand &MO2 = MI->getOperand(OpNum + 1);
-
-  O << markup("<mem:") << "[";
-  printRegName(O, MO1.getReg());
-
-  int64_t Imm = MO2.getImm();
-  if (Imm != 0)
-    O << ", " << markup("<imm:") << '#' << Imm << markup(">");
-
-  O << "]" << markup(">");
-}
-
 void ARMInstPrinter::printLdStmModeOperand(const MCInst *MI, unsigned OpNum,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
@@ -1622,20 +1588,6 @@ void ARMInstPrinter::printVectorListFourSpaced(const MCInst *MI, unsigned OpNum,
   O << "}";
 }
 
-template<unsigned NumRegs>
-void ARMInstPrinter::printMVEVectorList(const MCInst *MI, unsigned OpNum,
-                                        const MCSubtargetInfo &STI,
-                                        raw_ostream &O) {
-  unsigned Reg = MI->getOperand(OpNum).getReg();
-  const char *Prefix = "{";
-  for (unsigned i = 0; i < NumRegs; i++) {
-    O << Prefix;
-    printRegName(O, MRI.getSubReg(Reg, ARM::qsub_0 + i));
-    Prefix = ", ";
-  }
-  O << "}";
-}
-
 template<int64_t Angle, int64_t Remainder>
 void ARMInstPrinter::printComplexRotationOp(const MCInst *MI, unsigned OpNo,
                                             const MCSubtargetInfo &STI,
@@ -1668,11 +1620,3 @@ void ARMInstPrinter::printVPTMask(const MCInst *MI, unsigned OpNum,
   }
 }
 
-void ARMInstPrinter::printExpandedImmOperand(const MCInst *MI, unsigned OpNum,
-                                             const MCSubtargetInfo &STI,
-                                             raw_ostream &O) {
-  uint32_t Val = MI->getOperand(OpNum).getImm();
-  O << markup("<imm:") << "#0x";
-  O.write_hex(Val);
-  O << markup(">");
-}

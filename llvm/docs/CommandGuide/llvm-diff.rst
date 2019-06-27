@@ -1,7 +1,6 @@
 llvm-diff - LLVM structural 'diff'
 ==================================
 
-.. program:: llvm-diff
 
 SYNOPSIS
 --------

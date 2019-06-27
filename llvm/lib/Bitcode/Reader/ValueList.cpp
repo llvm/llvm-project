@@ -65,17 +65,14 @@ DEFINE_TRANSPARENT_OPERAND_ACCESSORS(ConstantPlaceHolder, Value)
 
 } // end namespace llvm
 
-void BitcodeReaderValueList::assignValue(Value *V, unsigned Idx, Type *FullTy) {
+void BitcodeReaderValueList::assignValue(Value *V, unsigned Idx) {
   if (Idx == size()) {
-    push_back(V, FullTy);
+    push_back(V);
     return;
   }
 
   if (Idx >= size())
     resize(Idx + 1);
-
-  assert(FullTypes[Idx] == nullptr || FullTypes[Idx] == FullTy);
-  FullTypes[Idx] = FullTy;
 
   WeakTrackingVH &OldV = ValuePtrs[Idx];
   if (!OldV) {
@@ -112,8 +109,7 @@ Constant *BitcodeReaderValueList::getConstantFwdRef(unsigned Idx, Type *Ty) {
   return C;
 }
 
-Value *BitcodeReaderValueList::getValueFwdRef(unsigned Idx, Type *Ty,
-                                              Type **FullTy) {
+Value *BitcodeReaderValueList::getValueFwdRef(unsigned Idx, Type *Ty) {
   // Bail out for a clearly invalid value. This would make us call resize(0)
   if (Idx == std::numeric_limits<unsigned>::max())
     return nullptr;
@@ -125,8 +121,6 @@ Value *BitcodeReaderValueList::getValueFwdRef(unsigned Idx, Type *Ty,
     // If the types don't match, it's invalid.
     if (Ty && Ty != V->getType())
       return nullptr;
-    if (FullTy)
-      *FullTy = FullTypes[Idx];
     return V;
   }
 

@@ -167,8 +167,6 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
     return decodeRecord(R, I->Loc, Blob);
   case RECORD_TAG_TYPE:
     return decodeRecord(R, I->TagType, Blob);
-  case RECORD_IS_TYPE_DEF:
-    return decodeRecord(R, I->IsTypeDef, Blob);
   default:
     return llvm::make_error<llvm::StringError>(
         "Invalid field for RecordInfo.\n", llvm::inconvertibleErrorCode());
@@ -491,27 +489,24 @@ template <typename T>
 llvm::Error ClangDocBitcodeReader::readRecord(unsigned ID, T I) {
   Record R;
   llvm::StringRef Blob;
-  llvm::Expected<unsigned> MaybeRecID = Stream.readRecord(ID, R, &Blob);
-  if (!MaybeRecID)
-    return MaybeRecID.takeError();
-  return parseRecord(R, MaybeRecID.get(), Blob, I);
+  unsigned RecID = Stream.readRecord(ID, R, &Blob);
+  return parseRecord(R, RecID, Blob, I);
 }
 
 template <>
 llvm::Error ClangDocBitcodeReader::readRecord(unsigned ID, Reference *I) {
   Record R;
   llvm::StringRef Blob;
-  llvm::Expected<unsigned> MaybeRecID = Stream.readRecord(ID, R, &Blob);
-  if (!MaybeRecID)
-    return MaybeRecID.takeError();
-  return parseRecord(R, MaybeRecID.get(), Blob, I, CurrentReferenceField);
+  unsigned RecID = Stream.readRecord(ID, R, &Blob);
+  return parseRecord(R, RecID, Blob, I, CurrentReferenceField);
 }
 
 // Read a block of records into a single info.
 template <typename T>
 llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, T I) {
-  if (llvm::Error Err = Stream.EnterSubBlock(ID))
-    return Err;
+  if (Stream.EnterSubBlock(ID))
+    return llvm::make_error<llvm::StringError>("Unable to enter subblock.\n",
+                                               llvm::inconvertibleErrorCode());
 
   while (true) {
     unsigned BlockOrCode = 0;
@@ -524,9 +519,9 @@ llvm::Error ClangDocBitcodeReader::readBlock(unsigned ID, T I) {
     case Cursor::BlockEnd:
       return llvm::Error::success();
     case Cursor::BlockBegin:
-      if (llvm::Error Err = readSubBlock(BlockOrCode, I)) {
-        if (llvm::Error Skipped = Stream.SkipBlock())
-          return joinErrors(std::move(Err), std::move(Skipped));
+      if (auto Err = readSubBlock(BlockOrCode, I)) {
+        if (!Stream.SkipBlock())
+          continue;
         return Err;
       }
       continue;
@@ -608,34 +603,18 @@ ClangDocBitcodeReader::skipUntilRecordOrBlock(unsigned &BlockOrRecordID) {
   BlockOrRecordID = 0;
 
   while (!Stream.AtEndOfStream()) {
-    Expected<unsigned> MaybeCode = Stream.ReadCode();
-    if (!MaybeCode) {
-      // FIXME this drops the error on the floor.
-      consumeError(MaybeCode.takeError());
-      return Cursor::BadBlock;
-    }
+    unsigned Code = Stream.ReadCode();
 
-    // FIXME check that the enum is in range.
-    auto Code = static_cast<llvm::bitc::FixedAbbrevIDs>(MaybeCode.get());
-
-    switch (Code) {
+    switch ((llvm::bitc::FixedAbbrevIDs)Code) {
     case llvm::bitc::ENTER_SUBBLOCK:
-      if (Expected<unsigned> MaybeID = Stream.ReadSubBlockID())
-        BlockOrRecordID = MaybeID.get();
-      else {
-        // FIXME this drops the error on the floor.
-        consumeError(MaybeID.takeError());
-      }
+      BlockOrRecordID = Stream.ReadSubBlockID();
       return Cursor::BlockBegin;
     case llvm::bitc::END_BLOCK:
       if (Stream.ReadBlockEnd())
         return Cursor::BadBlock;
       return Cursor::BlockEnd;
     case llvm::bitc::DEFINE_ABBREV:
-      if (llvm::Error Err = Stream.ReadAbbrevRecord()) {
-        // FIXME this drops the error on the floor.
-        consumeError(std::move(Err));
-      }
+      Stream.ReadAbbrevRecord();
       continue;
     case llvm::bitc::UNABBREV_RECORD:
       return Cursor::BadBlock;
@@ -653,24 +632,17 @@ llvm::Error ClangDocBitcodeReader::validateStream() {
                                                llvm::inconvertibleErrorCode());
 
   // Sniff for the signature.
-  for (int Idx = 0; Idx != 4; ++Idx) {
-    Expected<llvm::SimpleBitstreamCursor::word_t> MaybeRead = Stream.Read(8);
-    if (!MaybeRead)
-      return MaybeRead.takeError();
-    else if (MaybeRead.get() != BitCodeConstants::Signature[Idx])
-      return llvm::make_error<llvm::StringError>(
-          "Invalid bitcode signature.\n", llvm::inconvertibleErrorCode());
-  }
+  if (Stream.Read(8) != BitCodeConstants::Signature[0] ||
+      Stream.Read(8) != BitCodeConstants::Signature[1] ||
+      Stream.Read(8) != BitCodeConstants::Signature[2] ||
+      Stream.Read(8) != BitCodeConstants::Signature[3])
+    return llvm::make_error<llvm::StringError>("Invalid bitcode signature.\n",
+                                               llvm::inconvertibleErrorCode());
   return llvm::Error::success();
 }
 
 llvm::Error ClangDocBitcodeReader::readBlockInfoBlock() {
-  Expected<Optional<llvm::BitstreamBlockInfo>> MaybeBlockInfo =
-      Stream.ReadBlockInfoBlock();
-  if (!MaybeBlockInfo)
-    return MaybeBlockInfo.takeError();
-  else
-    BlockInfo = MaybeBlockInfo.get();
+  BlockInfo = Stream.ReadBlockInfoBlock();
   if (!BlockInfo)
     return llvm::make_error<llvm::StringError>(
         "Unable to parse BlockInfoBlock.\n", llvm::inconvertibleErrorCode());
@@ -713,16 +685,11 @@ ClangDocBitcodeReader::readBitcode() {
 
   // Read the top level blocks.
   while (!Stream.AtEndOfStream()) {
-    Expected<unsigned> MaybeCode = Stream.ReadCode();
-    if (!MaybeCode)
-      return MaybeCode.takeError();
-    if (MaybeCode.get() != llvm::bitc::ENTER_SUBBLOCK)
+    unsigned Code = Stream.ReadCode();
+    if (Code != llvm::bitc::ENTER_SUBBLOCK)
       return llvm::make_error<llvm::StringError>(
           "No blocks in input.\n", llvm::inconvertibleErrorCode());
-    Expected<unsigned> MaybeID = Stream.ReadSubBlockID();
-    if (!MaybeID)
-      return MaybeID.takeError();
-    unsigned ID = MaybeID.get();
+    unsigned ID = Stream.ReadSubBlockID();
     switch (ID) {
     // NamedType and Comment blocks should not appear at the top level
     case BI_TYPE_BLOCK_ID:
@@ -751,11 +718,8 @@ ClangDocBitcodeReader::readBitcode() {
         return std::move(Err);
       continue;
     default:
-      if (llvm::Error Err = Stream.SkipBlock()) {
-        // FIXME this drops the error on the floor.
-        consumeError(std::move(Err));
-      }
-      continue;
+      if (!Stream.SkipBlock())
+        continue;
     }
   }
   return std::move(Infos);

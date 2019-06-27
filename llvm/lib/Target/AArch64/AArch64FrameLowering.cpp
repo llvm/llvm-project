@@ -250,7 +250,8 @@ MachineBasicBlock::iterator AArch64FrameLowering::eliminateCallFramePseudoInstr(
   bool IsDestroy = Opc == TII->getCallFrameDestroyOpcode();
   uint64_t CalleePopAmount = IsDestroy ? I->getOperand(1).getImm() : 0;
 
-  if (!hasReservedCallFrame(MF)) {
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  if (!TFI->hasReservedCallFrame(MF)) {
     unsigned Align = getStackAlignment();
 
     int64_t Amount = I->getOperand(0).getImm();
@@ -1496,11 +1497,7 @@ void AArch64FrameLowering::emitEpilogue(MachineFunction &MF,
 int AArch64FrameLowering::getFrameIndexReference(const MachineFunction &MF,
                                                  int FI,
                                                  unsigned &FrameReg) const {
-  return resolveFrameIndexReference(
-      MF, FI, FrameReg,
-      /*PreferFP=*/
-      MF.getFunction().hasFnAttribute(Attribute::SanitizeHWAddress),
-      /*ForSimm=*/false);
+  return resolveFrameIndexReference(MF, FI, FrameReg);
 }
 
 int AArch64FrameLowering::getNonLocalFrameIndexReference(
@@ -1533,8 +1530,7 @@ int AArch64FrameLowering::getSEHFrameIndexOffset(const MachineFunction &MF,
 
 int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
                                                      int FI, unsigned &FrameReg,
-                                                     bool PreferFP,
-                                                     bool ForSimm) const {
+                                                     bool PreferFP) const {
   const auto &MFI = MF.getFrameInfo();
   const auto *RegInfo = static_cast<const AArch64RegisterInfo *>(
       MF.getSubtarget().getRegisterInfo());
@@ -1565,11 +1561,11 @@ int AArch64FrameLowering::resolveFrameIndexReference(const MachineFunction &MF,
       assert(hasFP(MF) && "Re-aligned stack must have frame pointer");
       UseFP = true;
     } else if (hasFP(MF) && !RegInfo->needsStackRealignment(MF)) {
-      // If the FPOffset is negative and we're producing a signed immediate, we
-      // have to keep in mind that the available offset range for negative
-      // offsets is smaller than for positive ones. If an offset is available
-      // via the FP and the SP, use whichever is closest.
-      bool FPOffsetFits = !ForSimm || FPOffset >= -256;
+      // If the FPOffset is negative, we have to keep in mind that the
+      // available offset range for negative offsets is smaller than for
+      // positive ones. If an offset is
+      // available via the FP and the SP, use whichever is closest.
+      bool FPOffsetFits = FPOffset >= -256;
       PreferFP |= Offset > -FPOffset;
 
       if (MFI.hasVarSizedObjects()) {

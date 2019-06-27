@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -hotcoldsplit -debug-only=hotcoldsplit -S < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt -hotcoldsplit -debug-only=hotcoldsplit -hotcoldsplit-threshold=2 -S < %s -o /dev/null 2>&1 | FileCheck %s
 
 declare void @sink() cold
 
@@ -9,7 +9,10 @@ entry:
   br i1 undef, label %cold1, label %exit
 
 cold1:
-  ; CHECK: Applying penalty for: 1 non-region successor
+  ; CHECK: Applying penalty for splitting: 2
+  ; CHECK-NEXT: Applying penalty for: 0 params
+  ; CHECK-NEXT: Applying penalty for: 0 outputs/split phis
+  ; CHECK-NEXT: penalty = 2
   call void @sink()
   br i1 undef, label %cold2, label %cold3
 
@@ -32,7 +35,11 @@ entry:
   br i1 undef, label %cold1, label %exit1
 
 cold1:
-  ; CHECK: Applying penalty for: 2 non-region successors
+  ; CHECK: Applying penalty for splitting: 2
+  ; CHECK-NEXT: Applying penalty for: 0 params
+  ; CHECK-NEXT: Applying penalty for: 0 outputs/split phis
+  ; CHECK-NEXT: Applying penalty for: 2 non-region successors
+  ; CHECK-NEXT: penalty = 3
   call void @sink()
   br i1 undef, label %cold2, label %cold3
 

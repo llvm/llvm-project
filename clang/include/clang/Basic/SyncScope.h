@@ -95,7 +95,7 @@ class AtomicScopeOpenCLModel : public AtomicScopeModel {
 public:
   /// The enum values match the pre-defined macros
   /// __OPENCL_MEMORY_SCOPE_*, which are used to define memory_scope_*
-  /// enums in opencl-c-base.h.
+  /// enums in opencl-c.h.
   enum ID {
     WorkGroup = 1,
     Device = 2,

@@ -1,7 +1,6 @@
 llvm-build - LLVM Project Build Utility
 =======================================
 
-.. program:: llvm-build
 
 SYNOPSIS
 --------

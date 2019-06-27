@@ -124,6 +124,9 @@ class CompilerInstance : public ModuleLoader {
   /// The module provider.
   std::shared_ptr<PCHContainerOperations> ThePCHContainerOperations;
 
+  /// The dependency file generator.
+  std::unique_ptr<DependencyFileGenerator> TheDependencyFileGenerator;
+
   std::vector<std::shared_ptr<DependencyCollector>> DependencyCollectors;
 
   /// The set of top-level modules that has already been loaded,
@@ -176,6 +179,12 @@ class CompilerInstance : public ModuleLoader {
 
   /// The list of active output files.
   std::list<OutputFile> OutputFiles;
+
+  /// \brief An optional callback function used to wrap all FrontendActions
+  /// produced to generate imported modules before they are executed.
+  std::function<std::unique_ptr<FrontendAction>
+    (const FrontendOptions &opts, std::unique_ptr<FrontendAction> action)>
+    GenModuleActionWrapper;
 
   /// Force an output buffer.
   std::unique_ptr<llvm::raw_pwrite_stream> OutputStream;
@@ -298,6 +307,13 @@ public:
   }
   std::shared_ptr<HeaderSearchOptions> getHeaderSearchOptsPtr() const {
     return Invocation->getHeaderSearchOptsPtr();
+  }
+
+  APINotesOptions &getAPINotesOpts() {
+    return Invocation->getAPINotesOpts();
+  }
+  const APINotesOptions &getAPINotesOpts() const {
+    return Invocation->getAPINotesOpts();
   }
 
   LangOptions &getLangOpts() {
@@ -658,6 +674,7 @@ public:
       InMemoryModuleCache &ModuleCache, ASTContext &Context,
       const PCHContainerReader &PCHContainerRdr,
       ArrayRef<std::shared_ptr<ModuleFileExtension>> Extensions,
+      DependencyFileGenerator *DependencyFile,
       ArrayRef<std::shared_ptr<DependencyCollector>> DependencyCollectors,
       void *DeserializationListener, bool OwnDeserializationListener,
       bool Preamble, bool UseGlobalModuleIndex);
@@ -789,6 +806,15 @@ public:
   GlobalModuleIndex *loadGlobalModuleIndex(SourceLocation TriggerLoc) override;
 
   bool lookupMissingImports(StringRef Name, SourceLocation TriggerLoc) override;
+
+  void setGenModuleActionWrapper(std::function<std::unique_ptr<FrontendAction>
+    (const FrontendOptions &Opts, std::unique_ptr<FrontendAction> Action)> Wrapper) {
+    GenModuleActionWrapper = Wrapper;
+  };
+
+  std::function<std::unique_ptr<FrontendAction>
+    (const FrontendOptions &Opts, std::unique_ptr<FrontendAction> Action)>
+  getGenModuleActionWrapper() const { return GenModuleActionWrapper; }
 
   void addDependencyCollector(std::shared_ptr<DependencyCollector> Listener) {
     DependencyCollectors.push_back(std::move(Listener));

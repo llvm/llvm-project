@@ -10,6 +10,8 @@
 
 // is_lvalue_reference
 
+// UNSUPPORTED: c++98, c++03
+
 #include <type_traits>
 #include <cstddef>        // for std::nullptr_t
 #include "test_macros.h"

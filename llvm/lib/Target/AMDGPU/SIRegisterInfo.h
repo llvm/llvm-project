@@ -70,7 +70,7 @@ public:
     return 100;
   }
 
-  Register getFrameRegister(const MachineFunction &MF) const override;
+  unsigned getFrameRegister(const MachineFunction &MF) const override;
 
   bool canRealignStack(const MachineFunction &MF) const override;
   bool requiresRegisterScavenging(const MachineFunction &Fn) const override;
@@ -227,18 +227,6 @@ public:
   const int *getRegUnitPressureSets(unsigned RegUnit) const override;
 
   unsigned getReturnAddressReg(const MachineFunction &MF) const;
-
-  const TargetRegisterClass *
-  getRegClassForSizeOnBank(unsigned Size,
-                           const RegisterBank &Bank,
-                           const MachineRegisterInfo &MRI) const;
-
-  const TargetRegisterClass *
-  getRegClassForTypeOnBank(LLT Ty,
-                           const RegisterBank &Bank,
-                           const MachineRegisterInfo &MRI) const {
-    return getRegClassForSizeOnBank(Ty.getSizeInBits(), Bank, MRI);
-  }
 
   const TargetRegisterClass *
   getConstrainedRegClassForOperand(const MachineOperand &MO,

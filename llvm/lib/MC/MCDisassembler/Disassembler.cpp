@@ -52,32 +52,31 @@ LLVMCreateDisasmCPUFeatures(const char *TT, const char *CPU,
   if (!TheTarget)
     return nullptr;
 
-  std::unique_ptr<const MCRegisterInfo> MRI(TheTarget->createMCRegInfo(TT));
+  const MCRegisterInfo *MRI = TheTarget->createMCRegInfo(TT);
   if (!MRI)
     return nullptr;
 
   // Get the assembler info needed to setup the MCContext.
-  std::unique_ptr<const MCAsmInfo> MAI(TheTarget->createMCAsmInfo(*MRI, TT));
+  const MCAsmInfo *MAI = TheTarget->createMCAsmInfo(*MRI, TT);
   if (!MAI)
     return nullptr;
 
-  std::unique_ptr<const MCInstrInfo> MII(TheTarget->createMCInstrInfo());
+  const MCInstrInfo *MII = TheTarget->createMCInstrInfo();
   if (!MII)
     return nullptr;
 
-  std::unique_ptr<const MCSubtargetInfo> STI(
-      TheTarget->createMCSubtargetInfo(TT, CPU, Features));
+  const MCSubtargetInfo *STI =
+      TheTarget->createMCSubtargetInfo(TT, CPU, Features);
   if (!STI)
     return nullptr;
 
   // Set up the MCContext for creating symbols and MCExpr's.
-  std::unique_ptr<MCContext> Ctx(new MCContext(MAI.get(), MRI.get(), nullptr));
+  MCContext *Ctx = new MCContext(MAI, MRI, nullptr);
   if (!Ctx)
     return nullptr;
 
   // Set up disassembler.
-  std::unique_ptr<MCDisassembler> DisAsm(
-      TheTarget->createMCDisassembler(*STI, *Ctx));
+  MCDisassembler *DisAsm = TheTarget->createMCDisassembler(*STI, *Ctx);
   if (!DisAsm)
     return nullptr;
 
@@ -87,20 +86,19 @@ LLVMCreateDisasmCPUFeatures(const char *TT, const char *CPU,
     return nullptr;
 
   std::unique_ptr<MCSymbolizer> Symbolizer(TheTarget->createMCSymbolizer(
-      TT, GetOpInfo, SymbolLookUp, DisInfo, Ctx.get(), std::move(RelInfo)));
+      TT, GetOpInfo, SymbolLookUp, DisInfo, Ctx, std::move(RelInfo)));
   DisAsm->setSymbolizer(std::move(Symbolizer));
 
   // Set up the instruction printer.
   int AsmPrinterVariant = MAI->getAssemblerDialect();
-  std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
-      Triple(TT), AsmPrinterVariant, *MAI, *MII, *MRI));
+  MCInstPrinter *IP = TheTarget->createMCInstPrinter(
+      Triple(TT), AsmPrinterVariant, *MAI, *MII, *MRI);
   if (!IP)
     return nullptr;
 
-  LLVMDisasmContext *DC = new LLVMDisasmContext(
-      TT, DisInfo, TagType, GetOpInfo, SymbolLookUp, TheTarget, std::move(MAI),
-      std::move(MRI), std::move(STI), std::move(MII), std::move(Ctx),
-      std::move(DisAsm), std::move(IP));
+  LLVMDisasmContext *DC =
+      new LLVMDisasmContext(TT, DisInfo, TagType, GetOpInfo, SymbolLookUp,
+                            TheTarget, MAI, MRI, STI, MII, Ctx, DisAsm, IP);
   if (!DC)
     return nullptr;
 

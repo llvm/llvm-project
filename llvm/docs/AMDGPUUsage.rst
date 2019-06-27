@@ -851,16 +851,15 @@ Symbols include the following:
   .. table:: AMDGPU ELF Symbols
      :name: amdgpu-elf-symbols-table
 
-     ===================== ================== ================ ==================
-     Name                  Type               Section          Description
-     ===================== ================== ================ ==================
-     *link-name*           ``STT_OBJECT``     - ``.data``      Global variable
-                                              - ``.rodata``
-					      - ``.bss``
-     *link-name*\ ``.kd``  ``STT_OBJECT``     - ``.rodata``    Kernel descriptor
-     *link-name*           ``STT_FUNC``       - ``.text``      Kernel entry point
-     *link-name*           ``STT_OBJECT``     - SHN_AMDGPU_LDS Global variable in LDS
-     ===================== ================== ================ ==================
+     ===================== ============== ============= ==================
+     Name                  Type           Section       Description
+     ===================== ============== ============= ==================
+     *link-name*           ``STT_OBJECT`` - ``.data``   Global variable
+                                          - ``.rodata``
+                                          - ``.bss``
+     *link-name*\ ``.kd``  ``STT_OBJECT`` - ``.rodata`` Kernel descriptor
+     *link-name*           ``STT_FUNC``   - ``.text``   Kernel entry point
+     ===================== ============== ============= ==================
 
 Global variable
   Global variables both used and defined by the compilation unit.
@@ -872,10 +871,10 @@ Global variable
   will resolve relocations using the definition provided by another code object
   or explicitly defined by the runtime.
 
-  If the symbol resides in local/group memory (LDS) then its section is the
-  special processor-specific section name ``SHN_AMDGPU_LDS``, and the
-  ``st_value`` field describes alignment requirements as it does for common
-  symbols.
+  All global symbols, whether defined in the compilation unit or external, are
+  accessed by the machine code indirectly through a GOT table entry. This
+  allows them to be preemptable. The GOT table is only supported when the target
+  triple OS is ``amdhsa`` (see :ref:`amdgpu-target-triples`).
 
   .. TODO
      Add description of linked shared object symbols. Seems undefined symbols

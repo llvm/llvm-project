@@ -597,11 +597,6 @@ static bool isValidReservedSectionIndex(uint16_t Index, uint16_t Machine) {
   case SHN_COMMON:
     return true;
   }
-
-  if (Machine == EM_AMDGPU) {
-    return Index == SHN_AMDGPU_LDS;
-  }
-
   if (Machine == EM_HEXAGON) {
     switch (Index) {
     case SHN_HEXAGON_SCOMMON:
@@ -623,17 +618,21 @@ uint16_t Symbol::getShndx() const {
       return SHN_XINDEX;
     return DefinedIn->Index;
   }
-
-  if (ShndxType == SYMBOL_SIMPLE_INDEX) {
-    // This means that we don't have a defined section but we do need to
-    // output a legitimate section index.
+  switch (ShndxType) {
+  // This means that we don't have a defined section but we do need to
+  // output a legitimate section index.
+  case SYMBOL_SIMPLE_INDEX:
     return SHN_UNDEF;
+  case SYMBOL_ABS:
+  case SYMBOL_COMMON:
+  case SYMBOL_HEXAGON_SCOMMON:
+  case SYMBOL_HEXAGON_SCOMMON_2:
+  case SYMBOL_HEXAGON_SCOMMON_4:
+  case SYMBOL_HEXAGON_SCOMMON_8:
+  case SYMBOL_XINDEX:
+    return static_cast<uint16_t>(ShndxType);
   }
-
-  assert(ShndxType == SYMBOL_ABS || ShndxType == SYMBOL_COMMON ||
-         (ShndxType >= SYMBOL_LOPROC && ShndxType <= SYMBOL_HIPROC) ||
-         (ShndxType >= SYMBOL_LOOS && ShndxType <= SYMBOL_HIOS));
-  return static_cast<uint16_t>(ShndxType);
+  llvm_unreachable("Symbol with invalid ShndxType encountered");
 }
 
 bool Symbol::isCommon() const { return getShndx() == SHN_COMMON; }

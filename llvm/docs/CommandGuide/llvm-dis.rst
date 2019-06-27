@@ -1,7 +1,6 @@
 llvm-dis - LLVM disassembler
 ============================
 
-.. program:: llvm-dis
 
 SYNOPSIS
 --------

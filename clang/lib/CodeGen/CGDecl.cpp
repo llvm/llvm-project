@@ -1145,10 +1145,6 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
                                   CGBuilderTy &Builder,
                                   llvm::Constant *constant) {
   auto *Ty = constant->getType();
-  uint64_t ConstantSize = CGM.getDataLayout().getTypeAllocSize(Ty);
-  if (!ConstantSize)
-    return;
-
   bool canDoSingleStore = Ty->isIntOrIntVectorTy() ||
                           Ty->isPtrOrPtrVectorTy() || Ty->isFPOrFPVectorTy();
   if (canDoSingleStore) {
@@ -1156,12 +1152,18 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
     return;
   }
 
-  auto *SizeVal = llvm::ConstantInt::get(CGM.IntPtrTy, ConstantSize);
+  auto *Int8Ty = llvm::IntegerType::getInt8Ty(CGM.getLLVMContext());
+  auto *IntPtrTy = CGM.getDataLayout().getIntPtrType(CGM.getLLVMContext());
+
+  uint64_t ConstantSize = CGM.getDataLayout().getTypeAllocSize(Ty);
+  if (!ConstantSize)
+    return;
+  auto *SizeVal = llvm::ConstantInt::get(IntPtrTy, ConstantSize);
 
   // If the initializer is all or mostly the same, codegen with bzero / memset
   // then do a few stores afterward.
   if (shouldUseBZeroPlusStoresToInitialize(constant, ConstantSize)) {
-    Builder.CreateMemSet(Loc, llvm::ConstantInt::get(CGM.Int8Ty, 0), SizeVal,
+    Builder.CreateMemSet(Loc, llvm::ConstantInt::get(Int8Ty, 0), SizeVal,
                          isVolatile);
 
     bool valueAlreadyCorrect =
@@ -1182,7 +1184,7 @@ static void emitStoresForConstant(CodeGenModule &CGM, const VarDecl &D,
       assert(AP.getBitWidth() <= 8);
       Value = AP.getLimitedValue();
     }
-    Builder.CreateMemSet(Loc, llvm::ConstantInt::get(CGM.Int8Ty, Value), SizeVal,
+    Builder.CreateMemSet(Loc, llvm::ConstantInt::get(Int8Ty, Value), SizeVal,
                          isVolatile);
     return;
   }
@@ -1401,11 +1403,12 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
       getLangOpts().OpenMP
           ? CGM.getOpenMPRuntime().getAddressOfLocalVariable(*this, &D)
           : Address::invalid();
-  bool NRVO = getLangOpts().ElideConstructors && D.isNRVOVariable();
-
   if (getLangOpts().OpenMP && OpenMPLocalAddr.isValid()) {
     address = OpenMPLocalAddr;
   } else if (Ty->isConstantSizeType()) {
+    bool NRVO = getLangOpts().ElideConstructors &&
+      D.isNRVOVariable();
+
     // If this value is an array or struct with a statically determinable
     // constant initializer, there are optimizations we can do.
     //
@@ -1558,16 +1561,8 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
 
   // Emit debug info for local var declaration.
   if (EmitDebugInfo && HaveInsertPoint()) {
-    Address DebugAddr = address;
-    bool UsePointerValue = NRVO && ReturnValuePointer.isValid();
     DI->setLocation(D.getLocation());
-
-    // If NRVO, use a pointer to the return address.
-    if (UsePointerValue)
-      DebugAddr = ReturnValuePointer;
-
-    (void)DI->EmitDeclareOfAutoVariable(&D, DebugAddr.getPointer(), Builder,
-                                        UsePointerValue);
+    (void)DI->EmitDeclareOfAutoVariable(&D, address.getPointer(), Builder);
   }
 
   if (D.hasAttr<AnnotateAttr>() && HaveInsertPoint())
@@ -1670,6 +1665,8 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   auto DL = ApplyDebugLocation::CreateDefaultArtificial(*this, D.getLocation());
   QualType type = D.getType();
 
+  bool isVolatile = type.isVolatileQualified();
+
   // If this local has an initializer, emit it now.
   const Expr *Init = D.getInit();
 
@@ -1724,7 +1721,6 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
     if (emission.IsEscapingByRef && !locIsByrefHeader)
       Loc = emitBlockByrefAddress(Loc, &D, /*follow=*/false);
 
-    bool isVolatile = type.isVolatileQualified();
     CharUnits Size = getContext().getTypeSizeInChars(type);
     if (!Size.isZero()) {
       switch (trivialAutoVarInit) {
@@ -1846,7 +1842,7 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
   llvm::Type *BP = CGM.Int8Ty->getPointerTo(Loc.getAddressSpace());
   emitStoresForConstant(
       CGM, D, (Loc.getType() == BP) ? Loc : Builder.CreateBitCast(Loc, BP),
-      type.isVolatileQualified(), Builder, constant);
+      isVolatile, Builder, constant);
 }
 
 /// Emit an expression as an initializer for an object (variable, field, etc.)
@@ -1891,7 +1887,7 @@ void CodeGenFunction::EmitExprAsInit(const Expr *init, const ValueDecl *D,
       if (isa<VarDecl>(D))
         Overlap = AggValueSlot::DoesNotOverlap;
       else if (auto *FD = dyn_cast<FieldDecl>(D))
-        Overlap = getOverlapForFieldInit(FD);
+        Overlap = overlapForFieldInit(FD);
       // TODO: how can we delay here if D is captured by its initializer?
       EmitAggExpr(init, AggValueSlot::forLValue(lvalue,
                                               AggValueSlot::IsDestructed,

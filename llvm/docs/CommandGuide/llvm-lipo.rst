@@ -1,8 +1,6 @@
 llvm-lipo - LLVM tool for manipulating universal binaries
 =========================================================
 
-.. program:: llvm-lipo
-
 SYNOPSIS
 --------
 

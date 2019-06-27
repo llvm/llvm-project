@@ -146,9 +146,6 @@ public:
                             SDValue &OffImm);
   bool SelectT2AddrModeImm8Offset(SDNode *Op, SDValue N,
                                  SDValue &OffImm);
-  template<unsigned Shift>
-  bool SelectT2AddrModeImm7(SDValue N, SDValue &Base,
-                            SDValue &OffImm);
   bool SelectT2AddrModeSoReg(SDValue N, SDValue &Base,
                              SDValue &OffReg, SDValue &ShImm);
   bool SelectT2AddrModeExclusive(SDValue N, SDValue &Base, SDValue &OffImm);
@@ -1150,22 +1147,15 @@ bool ARMDAGToDAGISel::SelectThumbAddrModeSP(SDValue N,
     if (isScaledConstantInRange(N.getOperand(1), /*Scale=*/4, 0, 256, RHSC)) {
       Base = N.getOperand(0);
       int FI = cast<FrameIndexSDNode>(Base)->getIndex();
-      // Make sure the offset is inside the object, or we might fail to
-      // allocate an emergency spill slot. (An out-of-range access is UB, but
-      // it could show up anyway.)
+      // For LHS+RHS to result in an offset that's a multiple of 4 the object
+      // indexed by the LHS must be 4-byte aligned.
       MachineFrameInfo &MFI = MF->getFrameInfo();
-      if (RHSC * 4 < MFI.getObjectSize(FI)) {
-        // For LHS+RHS to result in an offset that's a multiple of 4 the object
-        // indexed by the LHS must be 4-byte aligned.
-        if (!MFI.isFixedObjectIndex(FI) && MFI.getObjectAlignment(FI) < 4)
-          MFI.setObjectAlignment(FI, 4);
-        if (MFI.getObjectAlignment(FI) >= 4) {
-          Base = CurDAG->getTargetFrameIndex(
-              FI, TLI->getPointerTy(CurDAG->getDataLayout()));
-          OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
-          return true;
-        }
-      }
+      if (MFI.getObjectAlignment(FI) < 4)
+        MFI.setObjectAlignment(FI, 4);
+      Base = CurDAG->getTargetFrameIndex(
+          FI, TLI->getPointerTy(CurDAG->getDataLayout()));
+      OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
+      return true;
     }
   }
 
@@ -1276,35 +1266,6 @@ bool ARMDAGToDAGISel::SelectT2AddrModeImm8Offset(SDNode *Op, SDValue N,
   }
 
   return false;
-}
-
-template<unsigned Shift>
-bool ARMDAGToDAGISel::SelectT2AddrModeImm7(SDValue N,
-                                           SDValue &Base, SDValue &OffImm) {
-  if (N.getOpcode() == ISD::SUB ||
-      CurDAG->isBaseWithConstantOffset(N)) {
-    if (auto RHS = dyn_cast<ConstantSDNode>(N.getOperand(1))) {
-      int RHSC = (int)RHS->getZExtValue();
-      if (N.getOpcode() == ISD::SUB)
-        RHSC = -RHSC;
-
-      if (isShiftedInt<7, Shift>(RHSC)) {
-        Base = N.getOperand(0);
-        if (Base.getOpcode() == ISD::FrameIndex) {
-          int FI = cast<FrameIndexSDNode>(Base)->getIndex();
-          Base = CurDAG->getTargetFrameIndex(
-            FI, TLI->getPointerTy(CurDAG->getDataLayout()));
-        }
-        OffImm = CurDAG->getTargetConstant(RHSC, SDLoc(N), MVT::i32);
-        return true;
-      }
-    }
-  }
-
-  // Base only.
-  Base = N;
-  OffImm  = CurDAG->getTargetConstant(0, SDLoc(N), MVT::i32);
-  return true;
 }
 
 bool ARMDAGToDAGISel::SelectT2AddrModeSoReg(SDValue N,
@@ -3025,36 +2986,6 @@ void ARMDAGToDAGISel::Select(SDNode *N) {
     unsigned CC = (unsigned) cast<ConstantSDNode>(N2)->getZExtValue();
 
     if (InFlag.getOpcode() == ARMISD::CMPZ) {
-      if (InFlag.getOperand(0).getOpcode() == ISD::INTRINSIC_W_CHAIN) {
-        SDValue Int = InFlag.getOperand(0);
-        uint64_t ID = cast<ConstantSDNode>(Int->getOperand(1))->getZExtValue();
-
-        // Handle low-overhead loops.
-        if (ID == Intrinsic::loop_decrement_reg) {
-          SDValue Elements = Int.getOperand(2);
-          SDValue Size = CurDAG->getTargetConstant(
-            cast<ConstantSDNode>(Int.getOperand(3))->getZExtValue(), dl,
-                                 MVT::i32);
-
-          SDValue Args[] = { Elements, Size, Int.getOperand(0) };
-          SDNode *LoopDec =
-            CurDAG->getMachineNode(ARM::t2LoopDec, dl,
-                                   CurDAG->getVTList(MVT::i32, MVT::Other),
-                                   Args);
-          ReplaceUses(Int.getNode(), LoopDec);
-
-          SDValue EndArgs[] = { SDValue(LoopDec, 0), N1, Chain };
-          SDNode *LoopEnd =
-            CurDAG->getMachineNode(ARM::t2LoopEnd, dl, MVT::Other, EndArgs);
-
-          ReplaceUses(N, LoopEnd);
-          CurDAG->RemoveDeadNode(N);
-          CurDAG->RemoveDeadNode(InFlag.getNode());
-          CurDAG->RemoveDeadNode(Int.getNode());
-          return;
-        }
-      }
-
       bool SwitchEQNEToPLMI;
       SelectCMPZ(InFlag.getNode(), SwitchEQNEToPLMI);
       InFlag = N->getOperand(4);

@@ -4,8 +4,8 @@
 - (void) method;
 @end
 
-@protocol Q @end
-@protocol R @end
+@protocol Q;
+@protocol R;
 
 @interface I<P>
 @end

@@ -124,6 +124,7 @@ private:
   void lazyInitLookupTable(TranslationUnitDecl *ToTU);
 
   void lazyInitToAST(Language ToLang, StringRef ToSrcCode, StringRef FileName);
+  TU *findFromTU(Decl *From);
 
 protected:
   std::unique_ptr<ASTImporterLookupTable> LookupTablePtr;
@@ -131,9 +132,6 @@ protected:
 public:
   // We may have several From context but only one To context.
   std::unique_ptr<ASTUnit> ToAST;
-
-  // Returns with the TU associated with the given Decl.
-  TU *findFromTU(Decl *From);
 
   // Creates an AST both for the From and To source code and imports the Decl
   // of the identifier into the To context.

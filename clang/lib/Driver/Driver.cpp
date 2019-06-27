@@ -285,7 +285,6 @@ phases::ID Driver::getFinalPhase(const DerivedArgList &DAL,
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_objc)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_rewrite_legacy_objc)) ||
              (PhaseArg = DAL.getLastArg(options::OPT__migrate)) ||
-             (PhaseArg = DAL.getLastArg(options::OPT_emit_iterface_stubs)) ||
              (PhaseArg = DAL.getLastArg(options::OPT__analyze,
                                         options::OPT__analyze_auto)) ||
              (PhaseArg = DAL.getLastArg(options::OPT_emit_ast))) {
@@ -1374,7 +1373,9 @@ void Driver::generateCompilationDiagnostics(
   }
 
   // Assume associated files are based off of the first temporary file.
-  CrashReportInfo CrashInfo(TempFiles[0], VFS);
+  CrashReportInfo CrashInfo(
+      TempFiles[0], VFS,
+      C.getArgs().getLastArgValue(options::OPT_index_store_path));
 
   llvm::SmallString<128> Script(CrashInfo.Filename);
   llvm::sys::path::replace_extension(Script, "sh");
@@ -3377,21 +3378,15 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     Args.ClaimAllArgs(options::OPT_cl_compile_Group);
   }
 
-  // if the user specify --print-supported-cpus, or use -mcpu=?, or use
-  // -mtune=? (aliases), clang will only print out supported cpu names
-  // without doing compilation.
+  // If the use specify --print-supported-cpus, clang will only print out
+  // supported cpu names without doing compilation.
   if (Arg *A = Args.getLastArg(options::OPT__print_supported_cpus)) {
+    Actions.clear();
     // the compilation now has only two phases: Input and Compile
     // use the --prints-supported-cpus flag as the dummy input to cc1
-    Actions.clear();
     Action *InputAc = C.MakeAction<InputAction>(*A, types::TY_C);
     Actions.push_back(
         C.MakeAction<PrecompileJobAction>(InputAc, types::TY_Nothing));
-    // claim all the input files to prevent argument unused warnings
-    for (auto &I : Inputs) {
-      const Arg *InputArg = I.second;
-      InputArg->claim();
-    }
   }
 
   // Claim ignored clang-cl options.
@@ -3479,8 +3474,6 @@ Action *Driver::ConstructPhaseAction(
       return C.MakeAction<CompileJobAction>(Input, types::TY_ModuleFile);
     if (Args.hasArg(options::OPT_verify_pch))
       return C.MakeAction<VerifyPCHJobAction>(Input, types::TY_Nothing);
-    if (Args.hasArg(options::OPT_emit_iterface_stubs))
-      return C.MakeAction<CompileJobAction>(Input, types::TY_IFS);
     return C.MakeAction<CompileJobAction>(Input, types::TY_LLVM_BC);
   }
   case phases::Backend: {

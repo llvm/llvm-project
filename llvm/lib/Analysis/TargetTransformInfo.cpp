@@ -18,8 +18,6 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Analysis/CFG.h"
-#include "llvm/Analysis/LoopIterator.h"
 #include <utility>
 
 using namespace llvm;
@@ -40,16 +38,6 @@ struct NoTTIImpl : TargetTransformInfoImplCRTPBase<NoTTIImpl> {
   explicit NoTTIImpl(const DataLayout &DL)
       : TargetTransformInfoImplCRTPBase<NoTTIImpl>(DL) {}
 };
-}
-
-bool HardwareLoopInfo::canAnalyze(LoopInfo &LI) {
-  // If the loop has irreducible control flow, it can not be converted to
-  // Hardware loop.
-  LoopBlocksRPO RPOT(L);  
-  RPOT.perform(&LI);
-  if (containsIrreducibleCFG<const BasicBlock *>(RPOT, LI))
-    return false;
-  return true;
 }
 
 bool HardwareLoopInfo::isHardwareLoopCandidate(ScalarEvolution &SE,
@@ -386,9 +374,9 @@ bool TargetTransformInfo::enableAggressiveInterleaving(bool LoopHasReductions) c
   return TTIImpl->enableAggressiveInterleaving(LoopHasReductions);
 }
 
-TargetTransformInfo::MemCmpExpansionOptions
-TargetTransformInfo::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
-  return TTIImpl->enableMemCmpExpansion(OptSize, IsZeroCmp);
+const TargetTransformInfo::MemCmpExpansionOptions *
+TargetTransformInfo::enableMemCmpExpansion(bool IsZeroCmp) const {
+  return TTIImpl->enableMemCmpExpansion(IsZeroCmp);
 }
 
 bool TargetTransformInfo::enableInterleavedAccessVectorization() const {

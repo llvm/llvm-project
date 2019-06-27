@@ -22,8 +22,7 @@ void p(const char*, ...);
 -(int) conformsTo: (id) x;
 @end
 
-@protocol P0
-@end
+@protocol P0;
 
 @protocol P1
 +(void) classMethodReq0;

@@ -812,10 +812,8 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // available externally globals. Eventually they will be suppressed during
   // codegen, but eliminating here enables more opportunity for GlobalDCE as it
   // may make globals referenced by available external functions dead and saves
-  // running remaining passes on the eliminated functions. These should be
-  // preserved during prelinking for link-time inlining decisions.
-  if (!LTOPreLink)
-    MPM.addPass(EliminateAvailableExternallyPass());
+  // running remaining passes on the eliminated functions.
+  MPM.addPass(EliminateAvailableExternallyPass());
 
   if (EnableOrderFileInstrumentation)
     MPM.addPass(InstrOrderFilePass());
@@ -931,7 +929,7 @@ ModulePassManager PassBuilder::buildModuleOptimizationPipeline(
   // Split out cold code. Splitting is done late to avoid hiding context from
   // other optimizations and inadvertently regressing performance. The tradeoff
   // is that this has a higher code size cost than splitting early.
-  if (EnableHotColdSplit && !LTOPreLink)
+  if ((EnableHotColdSplit || SplitColdCode) && !LTOPreLink)
     MPM.addPass(HotColdSplittingPass());
 
   // LoopSink pass sinks instructions hoisted by LICM, which serves as a
@@ -1297,7 +1295,7 @@ PassBuilder::buildLTODefaultPipeline(OptimizationLevel Level, bool DebugLogging,
 
   // Enable splitting late in the FullLTO post-link pipeline. This is done in
   // the same stage in the old pass manager (\ref addLateLTOOptimizationPasses).
-  if (EnableHotColdSplit)
+  if (EnableHotColdSplit || SplitColdCode)
     MPM.addPass(HotColdSplittingPass());
 
   // Add late LTO optimization passes.
@@ -2296,4 +2294,8 @@ Error PassBuilder::parseAAPipeline(AAManager &AA, StringRef PipelineText) {
   }
 
   return Error::success();
+}
+
+void PassBuilder::setEnableHotColdSplitting(bool Enabled) {
+  SplitColdCode = Enabled;
 }

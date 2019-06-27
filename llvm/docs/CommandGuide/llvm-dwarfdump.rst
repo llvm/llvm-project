@@ -1,8 +1,6 @@
 llvm-dwarfdump - dump and verify DWARF debug information
 ========================================================
 
-.. program:: llvm-dwarfdump
-
 SYNOPSIS
 --------
 

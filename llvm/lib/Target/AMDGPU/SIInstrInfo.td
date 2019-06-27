@@ -205,10 +205,6 @@ def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
   SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>, SDTCisSameAs<0,2>]>
 >;
 
-def SIlds : SDNode<"AMDGPUISD::LDS",
-  SDTypeProfile<1, 1, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>]>
->;
-
 def SIload_d16_lo : SDNode<"AMDGPUISD::LOAD_D16_LO",
   SIload_d16,
   [SDNPMayLoad, SDNPMemOperand, SDNPHasChain]
@@ -610,22 +606,6 @@ def ShiftAmt32Imm : PatLeaf <(imm), [{
   return N->getZExtValue() < 32;
 }]>;
 
-def getNegV2I16Imm : SDNodeXForm<build_vector, [{
-  return SDValue(packNegConstantV2I16(N, *CurDAG), 0);
-}]>;
-
-def NegSubInlineConstV216 : PatLeaf<(build_vector), [{
-  assert(N->getNumOperands() == 2);
-  assert(N->getOperand(0).getValueType().getSizeInBits() == 16);
-  SDValue Src0 = N->getOperand(0);
-  SDValue Src1 = N->getOperand(1);
-  if (Src0 == Src1)
-    return isNegInlineImmediate(Src0.getNode());
-
-  return (isNullConstantOrUndef(Src0) && isNegInlineImmediate(Src1.getNode())) ||
-         (isNullConstantOrUndef(Src1) && isNegInlineImmediate(Src0.getNode()));
-}], getNegV2I16Imm>;
-
 //===----------------------------------------------------------------------===//
 // Custom Operands
 //===----------------------------------------------------------------------===//
@@ -768,15 +748,6 @@ def VOPDstS64orS32 : BoolRC {
   let PrintMethod = "printVOPDst";
 }
 
-// SCSrc_i1 is the operand for pseudo instructions only.
-// Boolean immeadiates shall not be exposed to codegen instructions.
-def SCSrc_i1 : RegisterOperand<SReg_1_XEXEC> {
-  let OperandNamespace = "AMDGPU";
-  let OperandType = "OPERAND_REG_IMM_INT32";
-  let ParserMatchClass = BoolReg;
-  let DecoderMethod = "decodeBoolReg";
-}
-
 // ===----------------------------------------------------------------------===//
 // ExpSrc* Special cases for exp src operands which are printed as
 // "off" depending on en operand.
@@ -815,12 +786,11 @@ def SDWASrc_i16 : SDWASrc<i16>;
 def SDWASrc_f32 : SDWASrc<f32>;
 def SDWASrc_f16 : SDWASrc<f16>;
 
-def SDWAVopcDst : BoolRC {
+def SDWAVopcDst : VOPDstOperand<SReg_64> {
   let OperandNamespace = "AMDGPU";
   let OperandType = "OPERAND_SDWA_VOPC_DST";
   let EncoderMethod = "getSDWAVopcDstEncoding";
   let DecoderMethod = "decodeSDWAVopcDst";
-  let PrintMethod = "printVOPDst";
 }
 
 class NamedMatchClass<string CName, bit Optional = 1> : AsmOperandClass {
@@ -951,6 +921,11 @@ def f32kimm : kimmOperand<i32>;
 // constant bus.
 def KImmFP16MatchClass : KImmMatchClass<16>;
 def f16kimm : kimmOperand<i16>;
+
+
+def VOPDstS64 : VOPDstOperand <SReg_64> {
+  let PrintMethod = "printVOPDst";
+}
 
 class FPInputModsMatchClass <int opSize> : AsmOperandClass {
   let Name = "RegOrImmWithFP"#opSize#"InputMods";
@@ -1244,18 +1219,7 @@ class getVALUDstForVT<ValueType VT> {
                           !if(!eq(VT.Size, 128), VOPDstOperand<VReg_128>,
                             !if(!eq(VT.Size, 64), VOPDstOperand<VReg_64>,
                               !if(!eq(VT.Size, 16), VOPDstOperand<VGPR_32>,
-                              VOPDstS64orS32)))); // else VT == i1
-}
-
-// Returns true if VT is floating point.
-class getIsFP<ValueType VT> {
-  bit ret = !if(!eq(VT.Value, f16.Value), 1,
-            !if(!eq(VT.Value, v2f16.Value), 1,
-            !if(!eq(VT.Value, f32.Value), 1,
-            !if(!eq(VT.Value, v2f32.Value), 1,
-            !if(!eq(VT.Value, f64.Value), 1,
-            !if(!eq(VT.Value, v2f64.Value), 1,
-            0))))));
+                              VOPDstOperand<SReg_64>)))); // else VT == i1
 }
 
 // Returns the register class to use for the destination of VOP[12C]
@@ -1269,7 +1233,11 @@ class getSDWADstForVT<ValueType VT> {
 // Returns the register class to use for source 0 of VOP[12C]
 // instructions for the given VT.
 class getVOPSrc0ForVT<ValueType VT> {
-  bit isFP = getIsFP<VT>.ret;
+  bit isFP = !if(!eq(VT.Value, f16.Value), 1,
+             !if(!eq(VT.Value, v2f16.Value), 1,
+             !if(!eq(VT.Value, f32.Value), 1,
+             !if(!eq(VT.Value, f64.Value), 1,
+             0))));
 
   RegisterOperand ret =
     !if(isFP,
@@ -1303,7 +1271,9 @@ class getVregSrcForVT<ValueType VT> {
 }
 
 class getSDWASrcForVT <ValueType VT> {
-  bit isFP = getIsFP<VT>.ret;
+  bit isFP = !if(!eq(VT.Value, f16.Value), 1,
+             !if(!eq(VT.Value, f32.Value), 1,
+             0));
   RegisterOperand retFlt = !if(!eq(VT.Size, 16), SDWASrc_f16, SDWASrc_f32);
   RegisterOperand retInt = !if(!eq(VT.Size, 16), SDWASrc_i16, SDWASrc_i32);
   RegisterOperand ret = !if(isFP, retFlt, retInt);
@@ -1312,7 +1282,11 @@ class getSDWASrcForVT <ValueType VT> {
 // Returns the register class to use for sources of VOP3 instructions for the
 // given VT.
 class getVOP3SrcForVT<ValueType VT> {
-  bit isFP = getIsFP<VT>.ret;
+  bit isFP = !if(!eq(VT.Value, f16.Value), 1,
+             !if(!eq(VT.Value, v2f16.Value), 1,
+             !if(!eq(VT.Value, f32.Value), 1,
+             !if(!eq(VT.Value, f64.Value), 1,
+             0))));
   RegisterOperand ret =
   !if(!eq(VT.Size, 128),
      VSrc_128,
@@ -1321,7 +1295,7 @@ class getVOP3SrcForVT<ValueType VT> {
            VSrc_f64,
            VSrc_b64),
         !if(!eq(VT.Value, i1.Value),
-           SSrc_i1,
+           SCSrc_i1,
            !if(isFP,
               !if(!eq(VT.Value, f16.Value),
                  VSrc_f16,
@@ -1356,7 +1330,10 @@ class isModifierType<ValueType SrcVT> {
 
 // Return type of input modifiers operand for specified input operand
 class getSrcMod <ValueType VT, bit EnableF32SrcMods> {
-  bit isFP = getIsFP<VT>.ret;
+  bit isFP = !if(!eq(VT.Value, f16.Value), 1,
+               !if(!eq(VT.Value, f32.Value), 1,
+               !if(!eq(VT.Value, f64.Value), 1,
+               0)));
   bit isPacked = isPackedType<VT>.ret;
   Operand ret =  !if(!eq(VT.Size, 64),
                      !if(isFP, FP64InputMods, Int64InputMods),
@@ -1375,7 +1352,10 @@ class getOpSelMod <ValueType VT> {
 
 // Return type of input modifiers operand specified input operand for DPP
 class getSrcModExt <ValueType VT> {
-  bit isFP = getIsFP<VT>.ret;
+    bit isFP = !if(!eq(VT.Value, f16.Value), 1,
+               !if(!eq(VT.Value, f32.Value), 1,
+               !if(!eq(VT.Value, f64.Value), 1,
+               0)));
   Operand ret = !if(isFP, FPVRegInputMods, IntVRegInputMods);
 }
 
@@ -2307,15 +2287,6 @@ def getVCMPXNoSDstOp : InstrMapping {
   let ColFields = ["HasSDst"];
   let KeyCol = ["1"];
   let ValueCols = [["0"]];
-}
-
-// Maps a SOPP to a SOPP with S_NOP
-def getSOPPWithRelaxation : InstrMapping {
-  let FilterClass = "Base_SOPP";
-  let RowFields = ["AsmString"];
-  let ColFields = ["Size"];
-  let KeyCol = ["4"];
-  let ValueCols = [["8"]];
 }
 
 include "SIInstructions.td"

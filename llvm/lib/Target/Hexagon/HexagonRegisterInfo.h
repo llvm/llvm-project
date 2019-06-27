@@ -66,7 +66,7 @@ public:
 
   // Debug information queries.
   unsigned getRARegister() const;
-  Register getFrameRegister(const MachineFunction &MF) const override;
+  unsigned getFrameRegister(const MachineFunction &MF) const override;
   unsigned getFrameRegister() const;
   unsigned getStackRegister() const;
 

@@ -524,28 +524,6 @@ static inline bool isPushOpcode(int Opc) {
          Opc == ARM::STMDB_UPD || Opc == ARM::VSTMDDB_UPD;
 }
 
-/// isValidCoprocessorNumber - decide whether an explicit coprocessor
-/// number is legal in generic instructions like CDP. The answer can
-/// vary with the subtarget.
-static inline bool isValidCoprocessorNumber(unsigned Num,
-                                            const FeatureBitset& featureBits) {
-  // Armv8-A disallows everything *other* than 111x (CP14 and CP15).
-  if (featureBits[ARM::HasV8Ops] && (Num & 0xE) != 0xE)
-    return false;
-
-  // Armv7 disallows 101x (CP10 and CP11), which clash with VFP/NEON.
-  if (featureBits[ARM::HasV7Ops] && (Num & 0xE) == 0xA)
-    return false;
-
-  // Armv8.1-M also disallows 100x (CP8,CP9) and 111x (CP14,CP15)
-  // which clash with MVE.
-  if (featureBits[ARM::HasV8_1MMainlineOps] &&
-      ((Num & 0xE) == 0x8 || (Num & 0xE) == 0xE))
-    return false;
-
-  return true;
-}
-
 /// getInstrPredicate - If instruction is predicated, returns its predicate
 /// condition, otherwise returns AL. It also returns the condition code
 /// register by reference.
@@ -612,13 +590,6 @@ bool registerDefinedBetween(unsigned Reg, MachineBasicBlock::iterator From,
 /// we can convert them to a tCBZ or tCBNZ. Return nullptr if not found.
 MachineInstr *findCMPToFoldIntoCBZ(MachineInstr *Br,
                                    const TargetRegisterInfo *TRI);
-
-void addUnpredicatedMveVpredNOp(MachineInstrBuilder &MIB);
-void addUnpredicatedMveVpredROp(MachineInstrBuilder &MIB, unsigned DestReg);
-
-void addPredicatedMveVpredNOp(MachineInstrBuilder &MIB, unsigned Cond);
-void addPredicatedMveVpredROp(MachineInstrBuilder &MIB, unsigned Cond,
-                              unsigned Inactive);
 
 } // end namespace llvm
 

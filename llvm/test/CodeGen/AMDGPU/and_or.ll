@@ -22,7 +22,6 @@ define amdgpu_ps float @and_or(i32 %a, i32 %b, i32 %c) {
 ; GFX10-LABEL: and_or:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_and_or_b32 v0, v0, v1, v2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = and i32 %a, %b
   %result = or i32 %x, %c
@@ -47,7 +46,6 @@ define amdgpu_ps float @and_or_vgpr_b(i32 inreg %a, i32 %b, i32 inreg %c) {
 ; GFX10-LABEL: and_or_vgpr_b:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_and_or_b32 v0, s2, v0, s3
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = and i32 %a, %b
   %result = or i32 %x, %c
@@ -70,7 +68,6 @@ define amdgpu_ps float @and_or_vgpr_ab(i32 %a, i32 %b, i32 inreg %c) {
 ; GFX10-LABEL: and_or_vgpr_ab:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_and_or_b32 v0, v0, v1, s2
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = and i32 %a, %b
   %result = or i32 %x, %c
@@ -93,7 +90,6 @@ define amdgpu_ps float @and_or_vgpr_const(i32 %a, i32 %b) {
 ; GFX10-LABEL: and_or_vgpr_const:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_and_or_b32 v0, v0, 4, v1
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = and i32 4, %a
   %result = or i32 %x, %b
@@ -117,7 +113,6 @@ define amdgpu_ps float @and_or_vgpr_const_inline_const(i32 %a) {
 ; GFX10-LABEL: and_or_vgpr_const_inline_const:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_and_or_b32 v0, v0, 20, 0x808
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = and i32 20, %a
   %result = or i32 %x, 2056
@@ -140,7 +135,6 @@ define amdgpu_ps float @and_or_vgpr_inline_const_x2(i32 %a) {
 ; GFX10-LABEL: and_or_vgpr_inline_const_x2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    v_and_or_b32 v0, v0, 4, 1
-; GFX10-NEXT:    ; implicit-def: $vcc_hi
 ; GFX10-NEXT:    ; return to shader part epilog
   %x = and i32 4, %a
   %result = or i32 %x, 1

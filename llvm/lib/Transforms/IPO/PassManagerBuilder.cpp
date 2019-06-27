@@ -165,6 +165,7 @@ PassManagerBuilder::PassManagerBuilder() {
     VerifyInput = false;
     VerifyOutput = false;
     MergeFunctions = false;
+    SplitColdCode = false;
     PrepareForLTO = false;
     EnablePGOInstrGen = false;
     EnablePGOCSInstrGen = false;
@@ -753,7 +754,8 @@ void PassManagerBuilder::populateModulePassManager(
 
   // See comment in the new PM for justification of scheduling splitting at
   // this stage (\ref buildModuleSimplificationPipeline).
-  if (EnableHotColdSplit && !(PrepareForLTO || PrepareForThinLTO))
+  if ((EnableHotColdSplit || SplitColdCode) &&
+      !(PrepareForLTO || PrepareForThinLTO))
     MPM.add(createHotColdSplittingPass());
 
   if (MergeFunctions)
@@ -958,7 +960,7 @@ void PassManagerBuilder::addLateLTOOptimizationPasses(
     legacy::PassManagerBase &PM) {
   // See comment in the new PM for justification of scheduling splitting at
   // this stage (\ref buildLTODefaultPipeline).
-  if (EnableHotColdSplit)
+  if (EnableHotColdSplit || SplitColdCode)
     PM.add(createHotColdSplittingPass());
 
   // Delete basic blocks, which optimization passes may have killed.

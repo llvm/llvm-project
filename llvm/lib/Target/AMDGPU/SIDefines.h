@@ -93,10 +93,7 @@ enum : uint64_t {
   IsNonFlatSeg = UINT64_C(1) << 51,
 
   // Uses floating point double precision rounding mode
-  FPDPRounding = UINT64_C(1) << 52,
-
-  // Instruction is FP atomic.
-  FPAtomic = UINT64_C(1) << 53
+  FPDPRounding = UINT64_C(1) << 52
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
@@ -325,8 +322,6 @@ enum Offset : unsigned { // Offset, (5) [10:6]
   OFFSET_SHIFT_ = 6,
   OFFSET_WIDTH_ = 5,
   OFFSET_MASK_ = (((1 << OFFSET_WIDTH_) - 1) << OFFSET_SHIFT_),
-
-  OFFSET_MEM_VIOL = 8,
 
   OFFSET_SRC_SHARED_BASE = 16,
   OFFSET_SRC_PRIVATE_BASE = 0

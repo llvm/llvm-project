@@ -6,13 +6,13 @@
 // RUN: %clang_tsan %s -o %t -framework Foundation
 
 // Check that without the flag, there are false positives.
-// RUN: %env_tsan_opts=ignore_noninstrumented_modules=0 %deflake %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-RACE
+// RUN: %env_tsan_opts=ignore_noninstrumented_modules=0 %deflake %run %t      2>&1 | FileCheck %s --check-prefix=CHECK-RACE
 
 // With ignore_noninstrumented_modules=1, no races are reported.
-// RUN: %env_tsan_opts=ignore_noninstrumented_modules=1 %run %t 2>&1 | FileCheck %s
+// RUN: %env_tsan_opts=ignore_noninstrumented_modules=1          %run %t      2>&1 | FileCheck %s --implicit-check-not='ThreadSanitizer'
 
 // With ignore_noninstrumented_modules=1, races in user's code are still reported.
-// RUN: %env_tsan_opts=ignore_noninstrumented_modules=1 %deflake %run %t race 2>&1 | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-RACE
+// RUN: %env_tsan_opts=ignore_noninstrumented_modules=1 %deflake %run %t race 2>&1 | FileCheck %s --check-prefix=CHECK-RACE
 
 #import <Foundation/Foundation.h>
 

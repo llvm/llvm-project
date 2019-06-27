@@ -361,12 +361,13 @@ MachineBasicBlock::iterator AVRFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MI) const {
   const AVRSubtarget &STI = MF.getSubtarget<AVRSubtarget>();
+  const TargetFrameLowering &TFI = *STI.getFrameLowering();
   const AVRInstrInfo &TII = *STI.getInstrInfo();
 
   // There is nothing to insert when the call frame memory is allocated during
   // function entry. Delete the call frame pseudo and replace all pseudo stores
   // with real store instructions.
-  if (hasReservedCallFrame(MF)) {
+  if (TFI.hasReservedCallFrame(MF)) {
     fixStackStores(MBB, MI, TII, false);
     return MBB.erase(MI);
   }

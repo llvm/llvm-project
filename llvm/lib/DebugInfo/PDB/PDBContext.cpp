@@ -91,11 +91,6 @@ PDBContext::getInliningInfoForAddress(object::SectionedAddress Address,
   return InlineInfo;
 }
 
-std::vector<DILocal>
-PDBContext::getLocalsForAddress(object::SectionedAddress Address) {
-  return std::vector<DILocal>();
-}
-
 std::string PDBContext::getFunctionName(uint64_t Address,
                                         DINameKind NameKind) const {
   if (NameKind == DINameKind::None)

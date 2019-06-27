@@ -1,8 +1,6 @@
 llc - LLVM static compiler
 ==========================
 
-.. program:: llc
-
 SYNOPSIS
 --------
 
@@ -42,11 +40,6 @@ End-user Options
 .. option:: -help
 
  Print a summary of command line options.
-
-.. option:: -o <filename>
-
- Use ``<filename>`` as the output filename. See the summary above for more
- details.
 
 .. option:: -O=uint
 

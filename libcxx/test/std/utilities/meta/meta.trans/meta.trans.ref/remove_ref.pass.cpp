@@ -36,11 +36,13 @@ int main(int, char**)
     test_remove_reference<int*&, int*>();
     test_remove_reference<const int*&, const int*>();
 
+#if TEST_STD_VER >= 11
     test_remove_reference<int&&, int>();
     test_remove_reference<const int&&, const int>();
     test_remove_reference<int(&&)[3], int[3]>();
     test_remove_reference<int*&&, int*>();
     test_remove_reference<const int*&&, const int*>();
+#endif
 
   return 0;
 }

@@ -253,10 +253,11 @@ namespace clang {
     LLVM_NODISCARD bool
     GetImportedOrCreateSpecialDecl(ToDeclT *&ToD, CreateFunT CreateFun,
                                    FromDeclT *FromD, Args &&... args) {
-      if (Importer.getImportDeclErrorIfAny(FromD)) {
-        ToD = nullptr;
-        return true; // Already imported but with error.
-      }
+      // FIXME: This code is needed later.
+      //if (Importer.getImportDeclErrorIfAny(FromD)) {
+      //  ToD = nullptr;
+      //  return true; // Already imported but with error.
+      //}
       ToD = cast_or_null<ToDeclT>(Importer.GetAlreadyImportedOrNull(FromD));
       if (ToD)
         return true; // Already imported.
@@ -5112,7 +5113,7 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateSpecializationDecl(
       }
     } else { // ODR violation.
       // FIXME HandleNameConflict
-      return make_error<ImportError>(ImportError::NameConflict);
+      return nullptr;
     }
   }
 
@@ -5554,8 +5555,6 @@ ExpectedStmt ASTNodeImporter::VisitStmt(Stmt *S) {
 
 
 ExpectedStmt ASTNodeImporter::VisitGCCAsmStmt(GCCAsmStmt *S) {
-  if (Importer.returnWithErrorInTest())
-    return make_error<ImportError>(ImportError::UnsupportedConstruct);
   SmallVector<IdentifierInfo *, 4> Names;
   for (unsigned I = 0, E = S->getNumOutputs(); I != E; I++) {
     IdentifierInfo *ToII = Importer.Import(S->getOutputIdentifier(I));
@@ -7750,6 +7749,7 @@ Expected<Decl *> ASTImporter::ImportImpl(Decl *FromD) {
 
 void ASTImporter::RegisterImportedDecl(Decl *FromD, Decl *ToD) {
   MapImported(FromD, ToD);
+  AddToLookupTable(ToD);
 }
 
 Expected<QualType> ASTImporter::Import(QualType FromT) {
@@ -7822,11 +7822,6 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
     return nullptr;
 
 
-  // Check whether there was a previous failed import.
-  // If yes return the existing error.
-  if (auto Error = getImportDeclErrorIfAny(FromD))
-    return make_error<ImportError>(*Error);
-
   // Check whether we've already imported this declaration.
   Decl *ToD = GetAlreadyImportedOrNull(FromD);
   if (ToD) {
@@ -7837,65 +7832,24 @@ Expected<Decl *> ASTImporter::Import(Decl *FromD) {
 
   // Import the declaration.
   ExpectedDecl ToDOrErr = ImportImpl(FromD);
-  if (!ToDOrErr) {
-    // Failed to import.
-
-    auto Pos = ImportedDecls.find(FromD);
-    if (Pos != ImportedDecls.end()) {
-      // Import failed after the object was created.
-      // Remove all references to it.
-      auto *ToD = Pos->second;
-      ImportedDecls.erase(Pos);
-
-      // ImportedDecls and ImportedFromDecls are not symmetric.  It may happen
-      // (e.g. with namespaces) that several decls from the 'from' context are
-      // mapped to the same decl in the 'to' context.  If we removed entries
-      // from the LookupTable here then we may end up removing them multiple
-      // times.
-
-      // The Lookuptable contains decls only which are in the 'to' context.
-      // Remove from the Lookuptable only if it is *imported* into the 'to'
-      // context (and do not remove it if it was added during the initial
-      // traverse of the 'to' context).
-      auto PosF = ImportedFromDecls.find(ToD);
-      if (PosF != ImportedFromDecls.end()) {
-        if (LookupTable)
-          if (auto *ToND = dyn_cast<NamedDecl>(ToD))
-            LookupTable->remove(ToND);
-        ImportedFromDecls.erase(PosF);
-      }
-
-      // FIXME: AST may contain remaining references to the failed object.
-    }
-
-    // Error encountered for the first time.
-    assert(!getImportDeclErrorIfAny(FromD) &&
-           "Import error already set for Decl.");
-
-    // After takeError the error is not usable any more in ToDOrErr.
-    // Get a copy of the error object (any more simple solution for this?).
-    ImportError ErrOut;
-    handleAllErrors(ToDOrErr.takeError(),
-                    [&ErrOut](const ImportError &E) { ErrOut = E; });
-    setImportDeclError(FromD, ErrOut);
-    // Do not return ToDOrErr, error was taken out of it.
-    return make_error<ImportError>(ErrOut);
-  }
-
+  if (!ToDOrErr)
+    return ToDOrErr;
   ToD = *ToDOrErr;
 
-  // FIXME: Handle the "already imported with error" case. We can get here
-  // nullptr only if GetImportedOrCreateDecl returned nullptr (after a
-  // previously failed create was requested).
-  // Later GetImportedOrCreateDecl can be updated to return the error.
+  // FIXME Use getImportDeclErrorIfAny() here (and return with the error) once
+  // the error handling is finished in GetImportedOrCreateSpecialDecl().
   if (!ToD) {
-    auto Err = getImportDeclErrorIfAny(FromD);
-    assert(Err);
-    return make_error<ImportError>(*Err);
+    return nullptr;
   }
 
   // Make sure that ImportImpl registered the imported decl.
   assert(ImportedDecls.count(FromD) != 0 && "Missing call to MapImported?");
+
+  // Once the decl is connected to the existing declarations, i.e. when the
+  // redecl chain is properly set then we populate the lookup again.
+  // This way the primary context will be able to find all decls.
+  AddToLookupTable(ToD);
+
   // Notify subclasses.
   Imported(FromD, ToD);
 
@@ -8606,23 +8560,7 @@ Decl *ASTImporter::MapImported(Decl *From, Decl *To) {
   // This mapping should be maintained only in this function. Therefore do not
   // check for additional consistency.
   ImportedFromDecls[To] = From;
-  AddToLookupTable(To);
   return To;
-}
-
-llvm::Optional<ImportError>
-ASTImporter::getImportDeclErrorIfAny(Decl *FromD) const {
-  auto Pos = ImportDeclErrors.find(FromD);
-  if (Pos != ImportDeclErrors.end())
-    return Pos->second;
-  else
-    return Optional<ImportError>();
-}
-
-void ASTImporter::setImportDeclError(Decl *From, ImportError Error) {
-  assert(ImportDeclErrors.find(From) == ImportDeclErrors.end() &&
-         "Setting import error allowed only once for a Decl.");
-  ImportDeclErrors[From] = Error;
 }
 
 bool ASTImporter::IsStructurallyEquivalent(QualType From, QualType To,

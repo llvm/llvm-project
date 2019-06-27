@@ -5,8 +5,9 @@
       "files": [      
         {
           "fileLocation": {
+            "uri": "file:sarif-multi-diagnostic-test.c"
           },
-          "length": 686,
+          "length": 667,
           "mimeType": "text/plain",
           "roles": [
             "resultFile"
@@ -62,6 +63,7 @@
                         "physicalLocation": {
                           "fileLocation": {
                             "fileIndex": 0,
+                            "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 5,
@@ -81,6 +83,7 @@
                         "physicalLocation": {
                           "fileLocation": {
                             "fileIndex": 0,
+                            "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 17,
@@ -101,6 +104,7 @@
               "physicalLocation": {
                 "fileLocation": {
                   "fileIndex": 0,
+                  "uri": "file:sarif-multi-diagnostic-test.c"
                 },
                 "region": {
                   "endColumn": 17,
@@ -132,6 +136,7 @@
                         "physicalLocation": {
                           "fileLocation": {
                             "fileIndex": 0,
+                            "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 5,
@@ -151,6 +156,7 @@
                         "physicalLocation": {
                           "fileLocation": {
                             "fileIndex": 0,
+                            "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 10,
@@ -170,6 +176,7 @@
                         "physicalLocation": {
                           "fileLocation": {
                             "fileIndex": 0,
+                            "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 8,
@@ -190,6 +197,7 @@
               "physicalLocation": {
                 "fileLocation": {
                   "fileIndex": 0,
+                  "uri": "file:sarif-multi-diagnostic-test.c"
                 },
                 "region": {
                   "endColumn": 8,
@@ -221,6 +229,7 @@
                         "physicalLocation": {
                           "fileLocation": {
                             "fileIndex": 0,
+                            "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 12,
@@ -240,6 +249,7 @@
                         "physicalLocation": {
                           "fileLocation": {
                             "fileIndex": 0,
+                            "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 3,
@@ -259,6 +269,7 @@
                         "physicalLocation": {
                           "fileLocation": {
                             "fileIndex": 0,
+                            "uri": "file:sarif-multi-diagnostic-test.c"
                           },
                           "region": {
                             "endColumn": 14,
@@ -279,6 +290,7 @@
               "physicalLocation": {
                 "fileLocation": {
                   "fileIndex": 0,
+                  "uri": "file:sarif-multi-diagnostic-test.c"
                 },
                 "region": {
                   "endColumn": 14,
@@ -300,7 +312,9 @@
         "fullName": "clang static analyzer",
         "language": "en-US",
         "name": "clang",
+        "version": "clang version 8.0.0 (trunk 345822) (llvm/trunk 345824)"
       }
     }
   ],
+  "version": "2.0.0-csd.2.beta.2018-11-28"
 }

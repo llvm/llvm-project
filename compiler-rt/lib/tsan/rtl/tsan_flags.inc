@@ -76,7 +76,7 @@ TSAN_FLAG(int, io_sync, 1,
 TSAN_FLAG(bool, die_after_fork, true,
           "Die after multi-threaded fork if the child creates new threads.")
 TSAN_FLAG(const char *, suppressions, "", "Suppressions file name.")
-TSAN_FLAG(bool, ignore_noninstrumented_modules, SANITIZER_MAC ? true : false,
+TSAN_FLAG(bool, ignore_noninstrumented_modules, true,
           "Interceptors should only detect races when called from instrumented "
           "modules.")
 TSAN_FLAG(bool, shared_ptr_interceptor, true,

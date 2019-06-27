@@ -149,6 +149,9 @@ public:
     if (!S)
       I = getItem().getCXXCtorInitializer();
 
+    // IDs
+    Out << "\"lctx_id\": " << getLocationContext()->getID() << ", ";
+
     if (S)
       Out << "\"stmt_id\": " << S->getID(getASTContext());
     else
@@ -223,6 +226,10 @@ ExprEngine::ExprEngine(cross_tu::CrossTranslationUnitContext &CTU,
     // Enable eager node reclamation when constructing the ExplodedGraph.
     G.enableNodeReclamation(TrimInterval);
   }
+}
+
+ExprEngine::~ExprEngine() {
+  BR.FlushReports();
 }
 
 //===----------------------------------------------------------------------===//
@@ -3005,7 +3012,7 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
 
     for (const auto &EQ : EQClasses) {
       for (const BugReport &Report : EQ) {
-        if (Report.getErrorNode()->getState() == N->getState())
+        if (Report.getErrorNode() == N)
           return true;
       }
     }
@@ -3105,7 +3112,11 @@ struct DOTGraphTraits<ExplodedGraph*> : public DefaultDOTGraphTraits {
       Indent(Out, Space, IsDot) << "\"program_state\": null";
     }
 
-    Out << "\\l}\\l";
+    Out << "\\l}";
+    if (!N->succ_empty())
+      Out << ',';
+    Out << "\\l";
+
     return Out.str();
   }
 };

@@ -9,7 +9,7 @@
 // CHECK-SAME:     <td align="left">
 // CHECK-SAME:       <b>#0 Call</b>
 // CHECK-SAME:     </td>
-// CHECK-SAME:     <td align="left" colspan="2">
+// CHECK-SAME:     <td align="left">
 // CHECK-SAME:       <font color="grey60">foo </font>(line 4)
 // CHECK-SAME:     </td>
 // CHECK-SAME:   </tr>
@@ -33,25 +33,21 @@ Node0x1 [shape=record,label=
       "program_points": [],
       "program_state": {
         "store": null,
-        "constraints": null,
-        "environment": {
-          "pointer": "0x2",
-          "items": [
-            {
-              "location_context": "#0 Call",
-              "lctx_id": 3,
-              "calling": "foo",
-              "call_line": 4,
-              "items": [
-                {
-                  "stmt_id": 5,
-                  "pretty": "bar()",
-                  "value": "Unknown"
-                }
-              ]
-            }
-          ]
-        }
+        "environment": [
+          {
+            "location_context": "#0 Call",
+            "lctx_id": 3,
+            "calling": "foo",
+            "call_line": 4,
+            "items": [
+              {
+                "stmt_id": 5,
+                "pretty": "bar()",
+                "value": "Unknown"
+              }
+            ]
+          }
+        ]
       }
     }
 \l}"];

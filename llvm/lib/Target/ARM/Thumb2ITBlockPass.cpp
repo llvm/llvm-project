@@ -388,22 +388,14 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
 
     MachineInstrBuilder MIBuilder =
         BuildMI(Block, MBIter, dl, TII->get(ARM::MVE_VPST));
+    MachineInstr *LastMI = MI;
+    MachineBasicBlock::iterator InsertPos = MIBuilder.getInstr();
+
     // The mask value for the VPST instruction is T = 0b1000 = 8
     MIBuilder.addImm(VPTMaskValue::T);
 
-    MachineBasicBlock::iterator VPSTInsertPos = MIBuilder.getInstr();
-    int VPTInstCnt = 1;
-    ARMVCC::VPTCodes NextPred;
-
-    do {
-      ++MBIter;
-      NextPred = getVPTInstrPredicate(*MBIter, PredReg);
-    } while (NextPred != ARMVCC::None && NextPred == Pred && ++VPTInstCnt < 4);
-
-    MachineInstr *LastMI = &*MBIter;
-    finalizeBundle(Block, VPSTInsertPos.getInstrIterator(),
+    finalizeBundle(Block, InsertPos.getInstrIterator(),
                    ++LastMI->getIterator());
-
     Modified = true;
     LLVM_DEBUG(dbgs() << "VPT block created for: "; MI->dump(););
 

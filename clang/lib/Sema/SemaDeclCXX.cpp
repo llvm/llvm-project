@@ -8232,19 +8232,12 @@ QualType Sema::CheckConstructorDeclarator(Declarator &D, QualType R,
 
   DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
   if (FTI.hasMethodTypeQualifiers()) {
-    bool DiagOccured = false;
     FTI.MethodQualifiers->forEachQualifier(
         [&](DeclSpec::TQ TypeQual, StringRef QualName, SourceLocation SL) {
-          // This diagnostic should be emitted on any qualifier except an addr
-          // space qualifier. However, forEachQualifier currently doesn't visit
-          // addr space qualifiers, so there's no way to write this condition
-          // right now; we just diagnose on everything.
           Diag(SL, diag::err_invalid_qualified_constructor)
               << QualName << SourceRange(SL);
-          DiagOccured = true;
         });
-    if (DiagOccured)
-      D.setInvalidType();
+    D.setInvalidType();
   }
 
   // C++0x [class.ctor]p4:
@@ -8975,6 +8968,7 @@ Decl *Sema::ActOnStartNamespaceDef(
 
   ProcessDeclAttributeList(DeclRegionScope, Namespc, AttrList);
   AddPragmaAttributes(DeclRegionScope, Namespc);
+  ProcessAPINotes(Namespc);
 
   // FIXME: Should we be merging attributes?
   if (const VisibilityAttr *Attr = Namespc->getAttr<VisibilityAttr>())
@@ -9499,6 +9493,7 @@ Decl *Sema::ActOnUsingDirective(Scope *S, SourceLocation UsingLoc,
 
   if (UDir)
     ProcessDeclAttributeList(S, UDir, AttrList);
+  ProcessAPINotes(UDir);
 
   return UDir;
 }
@@ -10604,6 +10599,7 @@ Decl *Sema::ActOnAliasDeclaration(Scope *S, AccessSpecifier AS,
 
   ProcessDeclAttributeList(S, NewTD, AttrList);
   AddPragmaAttributes(S, NewTD);
+  ProcessAPINotes(NewTD);
 
   CheckTypedefForVariablyModifiedType(S, NewTD);
   Invalid |= NewTD->isInvalidDecl();
@@ -14013,6 +14009,8 @@ Decl *Sema::BuildStaticAssertDeclaration(SourceLocation StaticAssertLoc,
     ExprResult Converted = PerformContextuallyConvertToBool(AssertExpr);
     if (Converted.isInvalid())
       Failed = true;
+    else
+      Converted = ConstantExpr::Create(Context, Converted.get());
 
     llvm::APSInt Cond;
     if (!Failed && VerifyIntegerConstantExpression(Converted.get(), &Cond,

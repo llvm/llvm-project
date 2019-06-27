@@ -1,8 +1,6 @@
 llvm-exegesis - LLVM Machine Instruction Benchmark
 ==================================================
 
-.. program:: llvm-exegesis
-
 SYNOPSIS
 --------
 

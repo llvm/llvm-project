@@ -231,6 +231,9 @@ BasicValueFactory::evalAPSInt(BinaryOperator::Opcode Op,
       // FIXME: This logic should probably go higher up, where we can
       // test these conditions symbolically.
 
+      if (V1.isSigned() && V1.isNegative())
+        return nullptr;
+
       if (V2.isSigned() && V2.isNegative())
         return nullptr;
 
@@ -239,13 +242,8 @@ BasicValueFactory::evalAPSInt(BinaryOperator::Opcode Op,
       if (Amt >= V1.getBitWidth())
         return nullptr;
 
-      if (!Ctx.getLangOpts().CPlusPlus2a) {
-        if (V1.isSigned() && V1.isNegative())
+      if (V1.isSigned() && Amt > V1.countLeadingZeros())
           return nullptr;
-
-        if (V1.isSigned() && Amt > V1.countLeadingZeros())
-          return nullptr;
-      }
 
       return &getValue( V1.operator<<( (unsigned) Amt ));
     }

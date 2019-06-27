@@ -23,7 +23,6 @@ llvm_canonicalize_cmake_booleans(
   CLANG_ENABLE_ARCMT
   CLANG_ENABLE_STATIC_ANALYZER
   ENABLE_BACKTRACES
-  ENABLE_EXPERIMENTAL_NEW_PASS_MANAGER
   HAVE_LIBZ
   LLVM_ENABLE_PER_TARGET_RUNTIME_DIR
   LLVM_ENABLE_PLUGINS)
@@ -54,6 +53,7 @@ list(APPEND CLANG_TEST_DEPS
   clang-format
   clang-tblgen
   clang-offload-bundler
+  clang-refactor-test
   clang-import-test
   clang-rename
   clang-refactor
@@ -62,7 +62,7 @@ list(APPEND CLANG_TEST_DEPS
   diagtool
   hmaptool
   )
-  
+
 if(CLANG_ENABLE_STATIC_ANALYZER)
   list(APPEND CLANG_TEST_DEPS
     clang-check
@@ -106,7 +106,6 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-cat
     llvm-cxxfilt
     llvm-dis
-    llvm-dwarfdump
     llvm-lto2
     llvm-modextract
     llvm-nm

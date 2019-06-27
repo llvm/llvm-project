@@ -88,10 +88,6 @@ enum ActionKind {
   /// Generate pre-compiled header.
   GeneratePCH,
 
-  /// Generate Interface Stub Files.
-  GenerateInterfaceYAMLExpV1,
-  GenerateInterfaceTBEExpV1,
-
   /// Only execute frontend initialization.
   InitOnly,
 
@@ -387,6 +383,10 @@ public:
   std::string MTMigrateDir;
   std::string ARCMTMigrateReportOut;
 
+  std::string IndexStorePath;
+  unsigned IndexIgnoreSystemSymbols : 1;
+  unsigned IndexRecordCodegenName : 1;
+
   /// The input files and their types.
   std::vector<FrontendInputFile> Inputs;
 
@@ -461,7 +461,8 @@ public:
         UseGlobalModuleIndex(true), GenerateGlobalModuleIndex(true),
         ASTDumpDecls(false), ASTDumpLookups(false),
         BuildingImplicitModule(false), ModulesEmbedAllFiles(false),
-        IncludeTimestamps(true) {}
+        IncludeTimestamps(true), IndexIgnoreSystemSymbols(false),
+        IndexRecordCodegenName(false) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return InputKind::C.

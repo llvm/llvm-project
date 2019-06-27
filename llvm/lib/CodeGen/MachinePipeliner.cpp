@@ -1012,13 +1012,17 @@ unsigned SwingSchedulerDAG::calculateResMII() {
     });
     for (unsigned C = 0; C < NumCycles; ++C)
       while (RI != RE) {
-        if ((*RI)->canReserveResources(*MI)) {
-          (*RI)->reserveResources(*MI);
+        if ((*RI++)->canReserveResources(*MI)) {
           ++ReservedCycles;
           break;
         }
-        RI++;
       }
+    // Start reserving resources using existing DFAs.
+    for (unsigned C = 0; C < ReservedCycles; ++C) {
+      --RI;
+      (*RI)->reserveResources(*MI);
+    }
+
     LLVM_DEBUG(dbgs() << "ReservedCycles:" << ReservedCycles
                       << ", NumCycles:" << NumCycles << "\n");
     // Add new DFAs, if needed, to reserve resources.
@@ -3722,8 +3726,9 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
 
     for (SDep &PredEdge : SU->Preds) {
       SUnit *PredSU = PredEdge.getSUnit();
-      unsigned PredIndex = std::get<1>(
-          *llvm::lower_bound(Indices, std::make_pair(PredSU, 0), CompareKey));
+      unsigned PredIndex =
+          std::get<1>(*std::lower_bound(Indices.begin(), Indices.end(),
+                                        std::make_pair(PredSU, 0), CompareKey));
       if (!PredSU->getInstr()->isPHI() && PredIndex < Index) {
         PredBefore = true;
         Pred = PredSU;
@@ -3738,8 +3743,9 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
       // return Indices.end().
       if (SuccSU->isBoundaryNode())
         continue;
-      unsigned SuccIndex = std::get<1>(
-          *llvm::lower_bound(Indices, std::make_pair(SuccSU, 0), CompareKey));
+      unsigned SuccIndex =
+          std::get<1>(*std::lower_bound(Indices.begin(), Indices.end(),
+                                        std::make_pair(SuccSU, 0), CompareKey));
       if (!SuccSU->getInstr()->isPHI() && SuccIndex < Index) {
         SuccBefore = true;
         Succ = SuccSU;
@@ -3750,8 +3756,9 @@ void SwingSchedulerDAG::checkValidNodeOrder(const NodeSetType &Circuits) const {
     if (PredBefore && SuccBefore && !SU->getInstr()->isPHI()) {
       // instructions in circuits are allowed to be scheduled
       // after both a successor and predecessor.
-      bool InCircuit = llvm::any_of(
-          Circuits, [SU](const NodeSet &Circuit) { return Circuit.count(SU); });
+      bool InCircuit = std::any_of(
+          Circuits.begin(), Circuits.end(),
+          [SU](const NodeSet &Circuit) { return Circuit.count(SU); });
       if (InCircuit)
         LLVM_DEBUG(dbgs() << "In a circuit, predecessor ";);
       else {

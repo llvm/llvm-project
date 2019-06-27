@@ -83,7 +83,9 @@ ScudoTSD *getTSDAndLockSlow(ScudoTSD *TSD) {
       }
       const uptr Precedence = TSDs[Index].getPrecedence();
       // A 0 precedence here means another thread just locked this TSD.
-      if (Precedence && Precedence < LowestPrecedence) {
+      if (UNLIKELY(Precedence == 0))
+        continue;
+      if (Precedence < LowestPrecedence) {
         CandidateTSD = &TSDs[Index];
         LowestPrecedence = Precedence;
       }

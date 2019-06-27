@@ -22,20 +22,20 @@ namespace llvm {
 class AMDGPUTargetLowering;
 
 class AMDGPUCallLowering: public CallLowering {
-  Register lowerParameterPtr(MachineIRBuilder &MIRBuilder, Type *ParamTy,
+  unsigned lowerParameterPtr(MachineIRBuilder &MIRBuilder, Type *ParamTy,
                              uint64_t Offset) const;
 
   void lowerParameter(MachineIRBuilder &MIRBuilder, Type *ParamTy,
                       uint64_t Offset, unsigned Align,
-                      Register DstReg) const;
+                      unsigned DstReg) const;
 
  public:
   AMDGPUCallLowering(const AMDGPUTargetLowering &TLI);
 
   bool lowerReturn(MachineIRBuilder &MIRBuilder, const Value *Val,
-                   ArrayRef<Register> VRegs) const override;
+                   ArrayRef<unsigned> VRegs) const override;
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
-                            ArrayRef<ArrayRef<Register>> VRegs) const override;
+                            ArrayRef<unsigned> VRegs) const override;
   static CCAssignFn *CCAssignFnForCall(CallingConv::ID CC, bool IsVarArg);
   static CCAssignFn *CCAssignFnForReturn(CallingConv::ID CC, bool IsVarArg);
 };

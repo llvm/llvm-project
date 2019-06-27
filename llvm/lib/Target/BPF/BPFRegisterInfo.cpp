@@ -121,6 +121,6 @@ void BPFRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   }
 }
 
-Register BPFRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+unsigned BPFRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return BPF::R10;
 }

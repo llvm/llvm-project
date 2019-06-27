@@ -945,9 +945,7 @@ TEST_F(SymbolCollectorTest, IncludeHeaderSameAsFileURI) {
 TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
   CollectorOpts.CollectIncludePath = true;
   CanonicalIncludes Includes;
-  auto Language = LangOptions();
-  Language.CPlusPlus = true;
-  addSystemHeadersMapping(&Includes, Language);
+  addSystemHeadersMapping(&Includes);
   CollectorOpts.Includes = &Includes;
   runSymbolCollector("namespace std { class string {}; }", /*Main=*/"");
   EXPECT_THAT(Symbols,

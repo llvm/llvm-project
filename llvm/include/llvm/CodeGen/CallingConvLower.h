@@ -145,7 +145,7 @@ public:
 
   bool needsCustom() const { return isCustom; }
 
-  Register getLocReg() const { assert(isRegLoc()); return Loc; }
+  unsigned getLocReg() const { assert(isRegLoc()); return Loc; }
   unsigned getLocMemOffset() const { assert(isMemLoc()); return Loc; }
   unsigned getExtraInfo() const { return Loc; }
   MVT getLocVT() const { return LocVT; }

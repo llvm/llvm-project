@@ -706,11 +706,6 @@ DwarfDebug::getOrCreateDwarfCompileUnit(const DICompileUnit *DIUnit) {
     NewCU.setSection(Asm->getObjFileLowering().getDwarfInfoSection());
   }
 
-  // Create DIEs for function declarations used for call site debug info.
-  for (auto Scope : DIUnit->getRetainedTypes())
-    if (auto *SP = dyn_cast_or_null<DISubprogram>(Scope))
-      NewCU.getOrCreateSubprogramDIE(SP);
-
   CUMap.insert({DIUnit, &NewCU});
   CUDieMap.insert({&NewCU.getUnitDie(), &NewCU});
   return NewCU;
@@ -1999,9 +1994,9 @@ void DwarfDebug::emitDebugLocEntry(ByteStreamer &Streamer,
   }
 }
 
-void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
-                                   const DbgValueLoc &Value,
-                                   DwarfExpression &DwarfExpr) {
+static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
+                              const DbgValueLoc &Value,
+                              DwarfExpression &DwarfExpr) {
   auto *DIExpr = Value.getExpression();
   DIExpressionCursor ExprCursor(DIExpr);
   DwarfExpr.addFragmentOffset(DIExpr);
@@ -2017,12 +2012,6 @@ void DwarfDebug::emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
     if (Location.isIndirect())
       DwarfExpr.setMemoryLocationKind();
     DIExpressionCursor Cursor(DIExpr);
-
-    if (DIExpr->isEntryValue()) {
-      DwarfExpr.setEntryValueFlag();
-      DwarfExpr.addEntryValueExpression(Cursor);
-    }
-
     const TargetRegisterInfo &TRI = *AP.MF->getSubtarget().getRegisterInfo();
     if (!DwarfExpr.addMachineRegExpression(TRI, Cursor, Location.getReg()))
       return;
@@ -2054,11 +2043,11 @@ void DebugLocEntry::finalize(const AsmPrinter &AP,
            "fragments are expected to be sorted");
 
     for (auto Fragment : Values)
-      DwarfDebug::emitDebugLocValue(AP, BT, Fragment, DwarfExpr);
+      emitDebugLocValue(AP, BT, Fragment, DwarfExpr);
 
   } else {
     assert(Values.size() == 1 && "only fragments may have >1 value");
-    DwarfDebug::emitDebugLocValue(AP, BT, Value, DwarfExpr);
+    emitDebugLocValue(AP, BT, Value, DwarfExpr);
   }
   DwarfExpr.finalize();
 }

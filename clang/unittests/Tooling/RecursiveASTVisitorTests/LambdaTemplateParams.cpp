@@ -21,19 +21,19 @@ public:
 
   bool VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     EXPECT_FALSE(D->isImplicit());
-    Match(D->getName(), D->getBeginLoc());
+    Match(D->getName(), D->getLocStart());
     return true;
   }
 
   bool VisitNonTypeTemplateParmDecl(NonTypeTemplateParmDecl *D) {
     EXPECT_FALSE(D->isImplicit());
-    Match(D->getName(), D->getBeginLoc());
+    Match(D->getName(), D->getLocStart());
     return true;
   }
 
   bool VisitTemplateTemplateParmDecl(TemplateTemplateParmDecl *D) {
     EXPECT_FALSE(D->isImplicit());
-    Match(D->getName(), D->getBeginLoc());
+    Match(D->getName(), D->getLocStart());
     return true;
   }
 };

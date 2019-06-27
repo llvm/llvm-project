@@ -42,6 +42,7 @@ add_clang_tool(clang
 target_link_libraries(clang
   PRIVATE
   clangBasic
+  clangAPINotes
   clangCodeGen
   clangDriver
   clangFrontend

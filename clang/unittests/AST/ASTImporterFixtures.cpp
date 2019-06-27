@@ -161,7 +161,7 @@ TranslationUnitDecl *ASTImporterTestBase::getTuDecl(StringRef SrcCode,
          }) == FromTUs.end());
 
   ArgVector Args = getArgVectorForLanguage(Lang);
-  FromTUs.emplace_back(SrcCode, FileName, Args, Creator);
+  FromTUs.emplace_back(SrcCode, FileName, Args);
   TU &Tu = FromTUs.back();
 
   return Tu.TUDecl;

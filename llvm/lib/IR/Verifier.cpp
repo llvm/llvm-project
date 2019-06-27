@@ -43,6 +43,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "LLVMContextImpl.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -318,6 +319,31 @@ public:
 
   bool hasBrokenDebugInfo() const { return BrokenDebugInfo; }
 
+  void verifyTypes() {
+    LLVMContext &Ctx = M.getContext();
+    for (auto &Entry : Ctx.pImpl->ArrayTypes) {
+      Type *EltTy = Entry.second->getElementType();
+      if (auto *VTy = dyn_cast<VectorType>(EltTy))
+        if (VTy->isScalable())
+          CheckFailed("Arrays cannot contain scalable vectors",
+                      Entry.second, &M);
+    }
+
+    for (StructType* STy : Ctx.pImpl->AnonStructTypes)
+      for (Type *EltTy : STy->elements())
+        if (auto *VTy = dyn_cast<VectorType>(EltTy))
+          if (VTy->isScalable())
+            CheckFailed("Structs cannot contain scalable vectors", STy, &M);
+
+    for (auto &Entry : Ctx.pImpl->NamedStructTypes) {
+      StructType *STy = Entry.second;
+      for (Type *EltTy : STy->elements())
+        if (auto *VTy = dyn_cast<VectorType>(EltTy))
+          if (VTy->isScalable())
+            CheckFailed("Structs cannot contain scalable vectors", STy, &M);
+    }
+  }
+
   bool verify(const Function &F) {
     assert(F.getParent() == &M &&
            "An instance of this class only works with a specific module!");
@@ -386,6 +412,8 @@ public:
     visitModuleCommandLines(M);
 
     verifyCompileUnits();
+
+    verifyTypes();
 
     verifyDeoptimizeCallingConvs();
     DISubprogramAttachments.clear();
@@ -690,6 +718,13 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
       AssertDI(false, "!dbg attachment of global variable must be a "
                       "DIGlobalVariableExpression");
   }
+
+  // Scalable vectors cannot be global variables, since we don't know
+  // the runtime size. If the global is a struct or an array containing
+  // scalable vectors, that will be caught be verifyTypes instead.
+  if (auto *VTy = dyn_cast<VectorType>(GV.getValueType()))
+    if (VTy->isScalable())
+      CheckFailed("Globals cannot contain scalable vectors", &GV);
 
   if (!GV.hasInitializer()) {
     visitGlobalValue(GV);
@@ -1486,7 +1521,6 @@ void Verifier::visitModuleFlagCGProfileEntry(const MDOperand &MDO) {
 static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   switch (Kind) {
   case Attribute::NoReturn:
-  case Attribute::WillReturn:
   case Attribute::NoCfCheck:
   case Attribute::NoUnwind:
   case Attribute::NoInline:
@@ -1632,7 +1666,7 @@ void Verifier::verifyParameterAttrs(AttributeSet Attrs, Type *Ty,
 
   if (Attrs.hasAttribute(Attribute::ByVal) && Attrs.getByValType()) {
     Assert(Attrs.getByValType() == cast<PointerType>(Ty)->getElementType(),
-           "Attribute 'byval' type does not match parameter!", V);
+           "Attribute 'byval' type does not match parameter!");
   }
 
   AttrBuilder IncompatibleAttrs = AttributeFuncs::typeIncompatible(Ty);
@@ -2229,11 +2263,8 @@ void Verifier::visitFunction(const Function &F) {
            MDs.empty() ? nullptr : MDs.front().second);
   } else if (F.isDeclaration()) {
     for (const auto &I : MDs) {
-      // This is used for call site debug information.
-      AssertDI(I.first != LLVMContext::MD_dbg ||
-                   !cast<DISubprogram>(I.second)->isDistinct(),
-               "function declaration may only have a unique !dbg attachment",
-               &F);
+      AssertDI(I.first != LLVMContext::MD_dbg,
+               "function declaration may not have a !dbg attachment", &F);
       Assert(I.first != LLVMContext::MD_prof,
              "function declaration may not have a !prof attachment", &F);
 

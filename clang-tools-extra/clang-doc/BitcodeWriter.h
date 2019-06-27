@@ -44,7 +44,7 @@ struct BitCodeConstants {
   static constexpr unsigned ReferenceTypeSize = 8U;
   static constexpr unsigned USRLengthSize = 6U;
   static constexpr unsigned USRBitLengthSize = 8U;
-  static constexpr unsigned char Signature[4] = {'D', 'O', 'C', 'S'};
+  static constexpr char Signature[4] = {'D', 'O', 'C', 'S'};
   static constexpr int USRHashSize = 20;
 };
 
@@ -102,7 +102,6 @@ enum RecordId {
   RECORD_DEFLOCATION,
   RECORD_LOCATION,
   RECORD_TAG_TYPE,
-  RECORD_IS_TYPE_DEF,
   REFERENCE_USR,
   REFERENCE_NAME,
   REFERENCE_TYPE,

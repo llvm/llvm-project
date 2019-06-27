@@ -239,7 +239,6 @@ ConstantExpr::ResultStorageKind
 ConstantExpr::getStorageKind(const APValue &Value) {
   switch (Value.getKind()) {
   case APValue::None:
-  case APValue::Indeterminate:
     return ConstantExpr::RSK_None;
   case APValue::Int:
     if (!Value.getInt().needsCleanup())
@@ -250,18 +249,9 @@ ConstantExpr::getStorageKind(const APValue &Value) {
   }
 }
 
-ConstantExpr::ResultStorageKind
-ConstantExpr::getStorageKind(const Type *T, const ASTContext &Context) {
-  if (T->isIntegralOrEnumerationType() && Context.getTypeInfo(T).Width <= 64)
-    return ConstantExpr::RSK_Int64;
-  return ConstantExpr::RSK_APValue;
-}
-
 void ConstantExpr::DefaultInit(ResultStorageKind StorageKind) {
   ConstantExprBits.ResultKind = StorageKind;
-  ConstantExprBits.APValueKind = APValue::None;
-  ConstantExprBits.HasCleanup = false;
-  if (StorageKind == ConstantExpr::RSK_APValue)
+  if (StorageKind == RSK_APValue)
     ::new (getTrailingObjects<APValue>()) APValue();
 }
 
@@ -279,6 +269,8 @@ ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
       StorageKind == ConstantExpr::RSK_Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
   ConstantExpr *Self = new (Mem) ConstantExpr(E, StorageKind);
+  if (StorageKind == ConstantExpr::RSK_APValue)
+    Context.AddAPValueCleanup(&Self->APValueResult());
   return Self;
 }
 
@@ -286,7 +278,7 @@ ConstantExpr *ConstantExpr::Create(const ASTContext &Context, Expr *E,
                                    const APValue &Result) {
   ResultStorageKind StorageKind = getStorageKind(Result);
   ConstantExpr *Self = Create(Context, E, StorageKind);
-  Self->SetResult(Result, Context);
+  Self->SetResult(Result);
   return Self;
 }
 
@@ -304,13 +296,14 @@ ConstantExpr *ConstantExpr::CreateEmpty(const ASTContext &Context,
       StorageKind == ConstantExpr::RSK_Int64);
   void *Mem = Context.Allocate(Size, alignof(ConstantExpr));
   ConstantExpr *Self = new (Mem) ConstantExpr(StorageKind, Empty);
+  if (StorageKind == ConstantExpr::RSK_APValue)
+    Context.AddAPValueCleanup(&Self->APValueResult());
   return Self;
 }
 
-void ConstantExpr::MoveIntoResult(APValue &Value, const ASTContext &Context) {
+void ConstantExpr::MoveIntoResult(APValue &Value) {
   assert(getStorageKind(Value) == ConstantExprBits.ResultKind &&
          "Invalid storage for this value kind");
-  ConstantExprBits.APValueKind = Value.getKind();
   switch (ConstantExprBits.ResultKind) {
   case RSK_None:
     return;
@@ -320,26 +313,10 @@ void ConstantExpr::MoveIntoResult(APValue &Value, const ASTContext &Context) {
     ConstantExprBits.IsUnsigned = Value.getInt().isUnsigned();
     return;
   case RSK_APValue:
-    if (!ConstantExprBits.HasCleanup && Value.needsCleanup()) {
-      ConstantExprBits.HasCleanup = true;
-      Context.addDestruction(&APValueResult());
-    }
     APValueResult() = std::move(Value);
     return;
   }
   llvm_unreachable("Invalid ResultKind Bits");
-}
-
-llvm::APSInt ConstantExpr::getResultAsAPSInt() const {
-  switch (ConstantExprBits.ResultKind) {
-  case ConstantExpr::RSK_APValue:
-    return APValueResult().getInt();
-  case ConstantExpr::RSK_Int64:
-    return llvm::APSInt(llvm::APInt(ConstantExprBits.BitWidth, Int64Result()),
-                        ConstantExprBits.IsUnsigned);
-  default:
-    llvm_unreachable("invalid Accessor");
-  }
 }
 
 APValue ConstantExpr::getAPValueResult() const {
@@ -2476,13 +2453,12 @@ bool Expr::isUnusedResultAWarning(const Expr *&WarnE, SourceLocation &Loc,
     // If only one of the LHS or RHS is a warning, the operator might
     // be being used for control flow. Only warn if both the LHS and
     // RHS are warnings.
-    const auto *Exp = cast<ConditionalOperator>(this);
-    return Exp->getLHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx) &&
-           Exp->getRHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
-  }
-  case BinaryConditionalOperatorClass: {
-    const auto *Exp = cast<BinaryConditionalOperator>(this);
-    return Exp->getFalseExpr()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
+    const ConditionalOperator *Exp = cast<ConditionalOperator>(this);
+    if (!Exp->getRHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx))
+      return false;
+    if (!Exp->getLHS())
+      return true;
+    return Exp->getLHS()->isUnusedResultAWarning(WarnE, Loc, R1, R2, Ctx);
   }
 
   case MemberExprClass:

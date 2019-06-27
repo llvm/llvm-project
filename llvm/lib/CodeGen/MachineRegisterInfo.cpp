@@ -154,7 +154,7 @@ unsigned MachineRegisterInfo::createIncompleteVirtualRegister(StringRef Name) {
 /// createVirtualRegister - Create and return a new virtual register in the
 /// function with the specified register class.
 ///
-Register
+unsigned
 MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass,
                                            StringRef Name) {
   assert(RegClass && "Cannot create register without RegClass!");
@@ -169,7 +169,7 @@ MachineRegisterInfo::createVirtualRegister(const TargetRegisterClass *RegClass,
   return Reg;
 }
 
-Register MachineRegisterInfo::cloneVirtualRegister(Register VReg,
+unsigned MachineRegisterInfo::cloneVirtualRegister(unsigned VReg,
                                                    StringRef Name) {
   unsigned Reg = createIncompleteVirtualRegister(Name);
   VRegInfo[Reg].first = VRegInfo[VReg].first;
@@ -184,7 +184,7 @@ void MachineRegisterInfo::setType(unsigned VReg, LLT Ty) {
   VRegToType[VReg] = Ty;
 }
 
-Register
+unsigned
 MachineRegisterInfo::createGenericVirtualRegister(LLT Ty, StringRef Name) {
   // New virtual register number.
   unsigned Reg = createIncompleteVirtualRegister(Name);
@@ -421,13 +421,6 @@ bool MachineRegisterInfo::hasOneNonDBGUse(unsigned RegNo) const {
   if (UI == use_nodbg_end())
     return false;
   return ++UI == use_nodbg_end();
-}
-
-bool MachineRegisterInfo::hasOneNonDBGUser(unsigned RegNo) const {
-  use_instr_nodbg_iterator UI = use_instr_nodbg_begin(RegNo);
-  if (UI == use_instr_nodbg_end())
-    return false;
-  return ++UI == use_instr_nodbg_end();
 }
 
 /// clearKillFlags - Iterate over all the uses of the given register and

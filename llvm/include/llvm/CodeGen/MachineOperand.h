@@ -14,7 +14,6 @@
 #define LLVM_CODEGEN_MACHINEOPERAND_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/CodeGen/Register.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/LowLevelTypeImpl.h"
@@ -346,9 +345,9 @@ public:
   //===--------------------------------------------------------------------===//
 
   /// getReg - Returns the register number.
-  Register getReg() const {
+  unsigned getReg() const {
     assert(isReg() && "This is not a register operand!");
-    return Register(SmallContents.RegNo);
+    return SmallContents.RegNo;
   }
 
   unsigned getSubReg() const {

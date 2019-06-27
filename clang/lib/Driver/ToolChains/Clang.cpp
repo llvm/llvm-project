@@ -1091,6 +1091,7 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     }
     CmdArgs.push_back("-dependency-file");
     CmdArgs.push_back(DepFile);
+    CmdArgs.push_back("-skip-unused-modulemap-deps");
 
     // Add a default target if one wasn't specified.
     if (!Args.hasArg(options::OPT_MT) && !Args.hasArg(options::OPT_MQ)) {
@@ -2914,7 +2915,9 @@ static void RenderCharacterOptions(const ArgList &Args, const llvm::Triple &T,
   }
 
   // The default depends on the language standard.
-  Args.AddLastArg(CmdArgs, options::OPT_fchar8__t, options::OPT_fno_char8__t);
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_fchar8__t, options::OPT_fno_char8__t))
+    A->render(Args, CmdArgs);
 
   if (const Arg *A = Args.getLastArg(options::OPT_fshort_wchar,
                                      options::OPT_fno_short_wchar)) {
@@ -3292,8 +3295,18 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
       }
     }
 
-  if (T.isOSBinFormatELF() && !SplitDWARFInlining)
-    CmdArgs.push_back("-fno-split-dwarf-inlining");
+  // -gsplit-dwarf enables the backend dwarf splitting and extraction.
+  if (T.isOSBinFormatELF()) {
+    if (!SplitDWARFInlining)
+      CmdArgs.push_back("-fno-split-dwarf-inlining");
+
+    if (DwarfFission != DwarfFissionKind::None) {
+      if (DwarfFission == DwarfFissionKind::Single)
+        CmdArgs.push_back("-enable-split-dwarf=single");
+      else
+        CmdArgs.push_back("-enable-split-dwarf");
+    }
+  }
 
   // After we've dealt with all combinations of things that could
   // make DebugInfoKind be other than None or DebugLineTablesOnly,
@@ -3601,25 +3614,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     } else if (JA.getType() == types::TY_LLVM_BC ||
                JA.getType() == types::TY_LTO_BC) {
       CmdArgs.push_back("-emit-llvm-bc");
-    } else if (JA.getType() == types::TY_IFS) {
-      StringRef StubFormat =
-          llvm::StringSwitch<StringRef>(
-              Args.hasArg(options::OPT_iterface_stub_version_EQ)
-                  ? Args.getLastArgValue(options::OPT_iterface_stub_version_EQ)
-                  : "")
-              .Case("experimental-yaml-elf-v1", "experimental-yaml-elf-v1")
-              .Case("experimental-tapi-elf-v1", "experimental-tapi-elf-v1")
-              .Default("");
-
-      if (StubFormat.empty())
-        D.Diag(diag::err_drv_invalid_value)
-            << "Must specify a valid interface stub format type using "
-            << "-interface-stub-version=<experimental-tapi-elf-v1 | "
-               "experimental-yaml-elf-v1>";
-
-      CmdArgs.push_back("-emit-interface-stubs");
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine("-interface-stub-version=") + StubFormat));
     } else if (JA.getType() == types::TY_PP_Asm) {
       CmdArgs.push_back("-S");
     } else if (JA.getType() == types::TY_AST) {
@@ -4192,9 +4186,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_unique_section_names, true))
     CmdArgs.push_back("-fno-unique-section-names");
 
-  Args.AddLastArg(CmdArgs, options::OPT_finstrument_functions,
-                  options::OPT_finstrument_functions_after_inlining,
-                  options::OPT_finstrument_function_entry_bare);
+  if (auto *A = Args.getLastArg(
+      options::OPT_finstrument_functions,
+      options::OPT_finstrument_functions_after_inlining,
+      options::OPT_finstrument_function_entry_bare))
+    A->render(Args, CmdArgs);
 
   // NVPTX doesn't support PGO or coverage. There's no runtime support for
   // sampling, overhead of call arc collection is way too high and there's no
@@ -4202,7 +4198,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Triple.isNVPTX())
     addPGOAndCoverageFlags(TC, C, D, Output, Args, CmdArgs);
 
-  Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);
+  if (auto *ABICompatArg = Args.getLastArg(options::OPT_fclang_abi_compat_EQ))
+    ABICompatArg->render(Args, CmdArgs);
 
   // Add runtime flag for PS4 when PGO, coverage, or sanitizers are enabled.
   if (RawTriple.isPS4CPU() &&
@@ -4229,6 +4226,26 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   Args.AddLastArg(CmdArgs, options::OPT_working_directory);
 
   RenderARCMigrateToolOptions(D, Args, CmdArgs);
+
+  if (Args.hasArg(options::OPT_index_store_path)) {
+    Args.AddLastArg(CmdArgs, options::OPT_index_store_path);
+    Args.AddLastArg(CmdArgs, options::OPT_index_ignore_system_symbols);
+    Args.AddLastArg(CmdArgs, options::OPT_index_record_codegen_name);
+
+    // If '-o' is passed along with '-fsyntax-only' pass it along the cc1
+    // invocation so that the index action knows what the out file is.
+    if (isa<CompileJobAction>(JA) && JA.getType() == types::TY_Nothing) {
+      Args.AddLastArg(CmdArgs, options::OPT_o);
+    }
+  }
+
+  if (const char *IdxStorePath = ::getenv("CLANG_PROJECT_INDEX_PATH")) {
+    CmdArgs.push_back("-index-store-path");
+    CmdArgs.push_back(IdxStorePath);
+    CmdArgs.push_back("-index-ignore-system-symbols");
+    CmdArgs.push_back("-index-record-codegen-name");
+  }
+
 
   // Add preprocessing options like -I, -D, etc. if we are using the
   // preprocessor.
@@ -4700,6 +4717,19 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_assume_sane_operator_new))
     CmdArgs.push_back("-fno-assume-sane-operator-new");
 
+  if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes, false) ||
+      Args.hasFlag(options::OPT_fapinotes_modules,
+                   options::OPT_fno_apinotes_modules, false) ||
+      Args.hasArg(options::OPT_iapinotes_modules)) {
+    if (Args.hasFlag(options::OPT_fapinotes, options::OPT_fno_apinotes, false))
+      CmdArgs.push_back("-fapinotes");
+    if (Args.hasFlag(options::OPT_fapinotes_modules,
+                     options::OPT_fno_apinotes_modules, false))
+      CmdArgs.push_back("-fapinotes-modules");
+
+    Args.AddLastArg(CmdArgs, options::OPT_fapinotes_swift_version);
+  }
+
   // -fblocks=0 is default.
   if (Args.hasFlag(options::OPT_fblocks, options::OPT_fno_blocks,
                    TC.IsBlocksDefault()) ||
@@ -4841,8 +4871,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fgnu-keywords default varies depending on language; only pass if
   // specified.
-  Args.AddLastArg(CmdArgs, options::OPT_fgnu_keywords,
-                  options::OPT_fno_gnu_keywords);
+  if (Arg *A = Args.getLastArg(options::OPT_fgnu_keywords,
+                               options::OPT_fno_gnu_keywords))
+    A->render(Args, CmdArgs);
 
   if (Args.hasFlag(options::OPT_fgnu89_inline, options::OPT_fno_gnu89_inline,
                    false))
@@ -4851,9 +4882,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_fno_inline))
     CmdArgs.push_back("-fno-inline");
 
-  Args.AddLastArg(CmdArgs, options::OPT_finline_functions,
-                  options::OPT_finline_hint_functions,
-                  options::OPT_fno_inline_functions);
+  if (Arg* InlineArg = Args.getLastArg(options::OPT_finline_functions,
+                                       options::OPT_finline_hint_functions,
+                                       options::OPT_fno_inline_functions))
+    InlineArg->render(Args, CmdArgs);
 
   // FIXME: Find a better way to determine whether the language has modules
   // support by default, or just assume that all languages do.
@@ -5048,9 +5080,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   ParseMPreferVectorWidth(D, Args, CmdArgs);
 
-  Args.AddLastArg(CmdArgs, options::OPT_fshow_overloads_EQ);
-  Args.AddLastArg(CmdArgs,
-                  options::OPT_fsanitize_undefined_strip_path_components_EQ);
+  if (Arg *A = Args.getLastArg(options::OPT_fshow_overloads_EQ))
+    A->render(Args, CmdArgs);
+
+  if (Arg *A = Args.getLastArg(
+          options::OPT_fsanitize_undefined_strip_path_components_EQ))
+    A->render(Args, CmdArgs);
 
   // -fdollars-in-identifiers default varies depending on platform and
   // language; only pass if specified.
@@ -5770,7 +5805,8 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     CmdArgs.push_back("--dependent-lib=oldnames");
   }
 
-  Args.AddLastArg(CmdArgs, options::OPT_show_includes);
+  if (Arg *A = Args.getLastArg(options::OPT_show_includes))
+    A->render(Args, CmdArgs);
 
   // This controls whether or not we emit RTTI data for polymorphic types.
   if (Args.hasFlag(options::OPT__SLASH_GR_, options::OPT__SLASH_GR,
@@ -5899,7 +5935,8 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
       CmdArgs.push_back(DCCFlag);
   }
 
-  Args.AddLastArg(CmdArgs, options::OPT_vtordisp_mode_EQ);
+  if (Arg *A = Args.getLastArg(options::OPT_vtordisp_mode_EQ))
+    A->render(Args, CmdArgs);
 
   if (!Args.hasArg(options::OPT_fdiagnostics_format_EQ)) {
     CmdArgs.push_back("-fdiagnostics-format");

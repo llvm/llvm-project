@@ -69,7 +69,7 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     // Non-entry functions have no special inputs for now, other registers
     // required for scratch access.
     ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
-    ScratchWaveOffsetReg = AMDGPU::SGPR33;
+    ScratchWaveOffsetReg = AMDGPU::SGPR4;
     FrameOffsetReg = AMDGPU::SGPR5;
     StackPtrOffsetReg = AMDGPU::SGPR32;
 
@@ -250,7 +250,7 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
 
   int NumLanes = Size / 4;
 
-  const MCPhysReg *CSRegs = MRI.getCalleeSavedRegs();
+  const MCPhysReg *CSRegs = TRI->getCalleeSavedRegs(&MF);
 
   // Make sure to handle the case where a wide SGPR spill may span between two
   // VGPRs.
@@ -298,6 +298,23 @@ void SIMachineFunctionInfo::removeSGPRToVGPRFrameIndices(MachineFrameInfo &MFI) 
   for (unsigned i = MFI.getObjectIndexBegin(), e = MFI.getObjectIndexEnd();
        i != e; ++i)
     MFI.setStackID(i, 0);
+}
+
+
+/// \returns VGPR used for \p Dim' work item ID.
+unsigned SIMachineFunctionInfo::getWorkItemIDVGPR(unsigned Dim) const {
+  switch (Dim) {
+  case 0:
+    assert(hasWorkItemIDX());
+    return AMDGPU::VGPR0;
+  case 1:
+    assert(hasWorkItemIDY());
+    return AMDGPU::VGPR1;
+  case 2:
+    assert(hasWorkItemIDZ());
+    return AMDGPU::VGPR2;
+  }
+  llvm_unreachable("unexpected dimension");
 }
 
 MCPhysReg SIMachineFunctionInfo::getNextUserSGPR() const {

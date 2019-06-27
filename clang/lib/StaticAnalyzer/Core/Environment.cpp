@@ -204,13 +204,13 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
                             const LocationContext *LCtx, const char *NL,
                             unsigned int Space, bool IsDot) const {
   Indent(Out, Space, IsDot) << "\"environment\": ";
+  ++Space;
 
   if (ExprBindings.isEmpty()) {
     Out << "null," << NL;
     return;
   }
 
-  ++Space;
   if (!LCtx) {
     // Find the freshest location context.
     llvm::SmallPtrSet<const LocationContext *, 16> FoundContexts;
@@ -227,8 +227,7 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
 
   assert(LCtx);
 
-  Out << "{ \"pointer\": \"" << (const void *)LCtx->getStackFrame()
-      << "\", \"items\": [" << NL;
+  Out << '[' << NL; // Start of Environment.
   PrintingPolicy PP = Ctx.getPrintingPolicy();
 
   LCtx->printJson(Out, NL, Space, IsDot, [&](const LocationContext *LC) {
@@ -262,7 +261,8 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
 
       const Stmt *S = I->first.getStmt();
       Indent(Out, InnerSpace, IsDot)
-          << "{ \"stmt_id\": " << S->getID(Ctx) << ", \"pretty\": ";
+          << "{ \"lctx_id\": " << LC->getID()
+          << ", \"stmt_id\": " << S->getID(Ctx) << ", \"pretty\": ";
       S->printJson(Out, nullptr, PP, /*AddQuotes=*/true);
 
       Out << ", \"value\": ";
@@ -281,5 +281,5 @@ void Environment::printJson(raw_ostream &Out, const ASTContext &Ctx,
       Out << "null ";
   });
 
-  Indent(Out, --Space, IsDot) << "]}," << NL;
+  Indent(Out, --Space, IsDot) << "]," << NL; // End of Environment.
 }

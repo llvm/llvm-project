@@ -568,6 +568,10 @@ def PPCRegCRRCAsmOperand : AsmOperandClass {
 def crrc : RegisterOperand<CRRC> {
   let ParserMatchClass = PPCRegCRRCAsmOperand;
 }
+def crrc0 : RegisterOperand<CRRC0> {
+  let ParserMatchClass = PPCRegCRRCAsmOperand;
+}
+
 def PPCRegSPERCAsmOperand : AsmOperandClass {
   let Name = "RegSPERC"; let PredicateMethod = "isRegNumber";
 }

@@ -37,9 +37,8 @@ static cl::opt<unsigned> MaxInterleaveGroupFactor(
     cl::init(8));
 
 /// Return true if all of the intrinsic's arguments and return type are scalars
-/// for the scalar form of the intrinsic, and vectors for the vector form of the
-/// intrinsic (except operands that are marked as always being scalar by
-/// hasVectorInstrinsicScalarOpd).
+/// for the scalar form of the intrinsic and vectors for the vector form of the
+/// intrinsic.
 bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   switch (ID) {
   case Intrinsic::bswap: // Begin integer bit-manipulation.
@@ -54,7 +53,6 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::uadd_sat:
   case Intrinsic::usub_sat:
   case Intrinsic::smul_fix:
-  case Intrinsic::smul_fix_sat:
   case Intrinsic::umul_fix:
   case Intrinsic::sqrt: // Begin floating-point.
   case Intrinsic::sin:
@@ -87,7 +85,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   }
 }
 
-/// Identifies if the vector form of the intrinsic has a scalar operand.
+/// Identifies if the intrinsic has a scalar operand. It check for
+/// ctlz,cttz and powi special intrinsics whose argument is scalar.
 bool llvm::hasVectorInstrinsicScalarOpd(Intrinsic::ID ID,
                                         unsigned ScalarOpdIdx) {
   switch (ID) {
@@ -96,7 +95,6 @@ bool llvm::hasVectorInstrinsicScalarOpd(Intrinsic::ID ID,
   case Intrinsic::powi:
     return (ScalarOpdIdx == 1);
   case Intrinsic::smul_fix:
-  case Intrinsic::smul_fix_sat:
   case Intrinsic::umul_fix:
     return (ScalarOpdIdx == 2);
   default:

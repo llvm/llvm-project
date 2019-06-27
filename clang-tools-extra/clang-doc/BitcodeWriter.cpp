@@ -159,7 +159,6 @@ static const llvm::IndexedMap<RecordIdDsc, RecordIdToIndexFunctor>
           {RECORD_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
           {RECORD_LOCATION, {"Location", &LocationAbbrev}},
           {RECORD_TAG_TYPE, {"TagType", &IntAbbrev}},
-          {RECORD_IS_TYPE_DEF, {"IsTypeDef", &BoolAbbrev}},
           {FUNCTION_USR, {"USR", &SymbolIDAbbrev}},
           {FUNCTION_NAME, {"Name", &StringAbbrev}},
           {FUNCTION_DEFLOCATION, {"DefLocation", &LocationAbbrev}},
@@ -203,7 +202,7 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
         // Record Block
         {BI_RECORD_BLOCK_ID,
          {RECORD_USR, RECORD_NAME, RECORD_DEFLOCATION, RECORD_LOCATION,
-          RECORD_TAG_TYPE, RECORD_IS_TYPE_DEF}},
+          RECORD_TAG_TYPE}},
         // Function Block
         {BI_FUNCTION_BLOCK_ID,
          {FUNCTION_USR, FUNCTION_NAME, FUNCTION_DEFLOCATION, FUNCTION_LOCATION,
@@ -214,7 +213,7 @@ static const std::vector<std::pair<BlockId, std::vector<RecordId>>>
 
 // AbbreviationMap
 
-constexpr unsigned char BitCodeConstants::Signature[];
+constexpr char BitCodeConstants::Signature[];
 
 void ClangDocBitcodeWriter::AbbreviationMap::add(RecordId RID,
                                                  unsigned AbbrevID) {
@@ -472,7 +471,6 @@ void ClangDocBitcodeWriter::emitBlock(const RecordInfo &I) {
   for (const auto &L : I.Loc)
     emitRecord(L, RECORD_LOCATION);
   emitRecord(I.TagType, RECORD_TAG_TYPE);
-  emitRecord(I.IsTypeDef, RECORD_IS_TYPE_DEF);
   for (const auto &N : I.Members)
     emitBlock(N);
   for (const auto &P : I.Parents)

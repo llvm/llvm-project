@@ -206,6 +206,18 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
 
   if (STM.isAmdHsaOS())
     HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
+
+  DumpCodeInstEmitter = nullptr;
+  if (STM.dumpCode()) {
+    // For -dumpcode, get the assembler out of the streamer, even if it does
+    // not really want to let us have it. This only works with -filetype=obj.
+    bool SaveFlag = OutStreamer->getUseAssemblerInfoForParsing();
+    OutStreamer->setUseAssemblerInfoForParsing(true);
+    MCAssembler *Assembler = OutStreamer->getAssemblerPtr();
+    OutStreamer->setUseAssemblerInfoForParsing(SaveFlag);
+    if (Assembler)
+      DumpCodeInstEmitter = Assembler->getEmitterPtr();
+  }
 }
 
 void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {
@@ -286,38 +298,10 @@ void AMDGPUAsmPrinter::EmitBasicBlockStart(const MachineBasicBlock &MBB) const {
 }
 
 void AMDGPUAsmPrinter::EmitGlobalVariable(const GlobalVariable *GV) {
-  if (GV->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS) {
-    if (GV->hasInitializer() && !isa<UndefValue>(GV->getInitializer())) {
-      OutContext.reportError({},
-                             Twine(GV->getName()) +
-                                 ": unsupported initializer for address space");
-      return;
-    }
 
-    // LDS variables aren't emitted in HSA or PAL yet.
-    const Triple::OSType OS = TM.getTargetTriple().getOS();
-    if (OS == Triple::AMDHSA || OS == Triple::AMDPAL)
-      return;
-
-    MCSymbol *GVSym = getSymbol(GV);
-
-    GVSym->redefineIfPossible();
-    if (GVSym->isDefined() || GVSym->isVariable())
-      report_fatal_error("symbol '" + Twine(GVSym->getName()) +
-                         "' is already defined");
-
-    const DataLayout &DL = GV->getParent()->getDataLayout();
-    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
-    unsigned Align = GV->getAlignment();
-    if (!Align)
-      Align = 4;
-
-    EmitVisibility(GVSym, GV->getVisibility(), !GV->isDeclaration());
-    EmitLinkage(GV, GVSym);
-    if (auto TS = getTargetStreamer())
-      TS->emitAMDGPULDS(GVSym, Size, Align);
+  // Group segment variables aren't emitted in HSA.
+  if (AMDGPU::isGroupSegment(GV))
     return;
-  }
 
   AsmPrinter::EmitGlobalVariable(GV);
 }
@@ -444,18 +428,6 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     EmitPALMetadata(MF, CurrentProgramInfo);
   else if (!STM.isAmdHsaOS()) {
     EmitProgramInfoSI(MF, CurrentProgramInfo);
-  }
-
-  DumpCodeInstEmitter = nullptr;
-  if (STM.dumpCode()) {
-    // For -dumpcode, get the assembler out of the streamer, even if it does
-    // not really want to let us have it. This only works with -filetype=obj.
-    bool SaveFlag = OutStreamer->getUseAssemblerInfoForParsing();
-    OutStreamer->setUseAssemblerInfoForParsing(true);
-    MCAssembler *Assembler = OutStreamer->getAssemblerPtr();
-    OutStreamer->setUseAssemblerInfoForParsing(SaveFlag);
-    if (Assembler)
-      DumpCodeInstEmitter = Assembler->getEmitterPtr();
   }
 
   DisasmLines.clear();

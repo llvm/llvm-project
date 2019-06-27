@@ -20,7 +20,9 @@
 #include "llvm/PassSupport.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/CFG.h"
 #include "llvm/Analysis/LoopInfo.h"
+#include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpander.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
@@ -197,10 +199,13 @@ bool HardwareLoops::TryConvertLoop(Loop *L) {
     if (TryConvertLoop(*I))
       return true; // Stop search.
 
-  HardwareLoopInfo HWLoopInfo(L);
-  if (!HWLoopInfo.canAnalyze(*LI))
+  // Bail out if the loop has irreducible control flow.
+  LoopBlocksRPO RPOT(L);
+  RPOT.perform(LI);
+  if (containsIrreducibleCFG<const BasicBlock *>(RPOT, *LI))
     return false;
 
+  HardwareLoopInfo HWLoopInfo(L);
   if (TTI->isHardwareLoopProfitable(L, *SE, *AC, LibInfo, HWLoopInfo) ||
       ForceHardwareLoops) {
 

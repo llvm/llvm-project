@@ -1,6 +1,0 @@
-RUN: llvm-objdump --help | FileCheck %s
-
-CHECK: OVERVIEW: llvm object file dumper
-CHECK: USAGE: llvm-objdump{{(.exe)?}} [options] <input object files>{{$}}
-CHECK: OPTIONS:
-CHECK: @FILE

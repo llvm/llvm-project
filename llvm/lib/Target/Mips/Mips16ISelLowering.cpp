@@ -459,7 +459,8 @@ getOpndList(SmallVectorImpl<SDValue> &Ops,
         }
         // one more look at list of intrinsics
         const Mips16IntrinsicHelperType *Helper =
-            llvm::lower_bound(Mips16IntrinsicHelper, IntrinsicFind);
+            std::lower_bound(std::begin(Mips16IntrinsicHelper),
+                             std::end(Mips16IntrinsicHelper), IntrinsicFind);
         if (Helper != std::end(Mips16IntrinsicHelper) &&
             *Helper == IntrinsicFind) {
           Mips16HelperFunction = Helper->Helper;

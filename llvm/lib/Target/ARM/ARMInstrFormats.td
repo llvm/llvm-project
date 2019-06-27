@@ -110,8 +110,6 @@ def AddrMode_i12    : AddrMode<16>;
 def AddrMode5FP16   : AddrMode<17>;
 def AddrModeT2_ldrex : AddrMode<18>;
 def AddrModeT2_i7s4 : AddrMode<19>;
-def AddrModeT2_i7s2 : AddrMode<20>;
-def AddrModeT2_i7   : AddrMode<21>;
 
 // Load / store index mode.
 class IndexMode<bits<2> val> {
@@ -467,8 +465,6 @@ class VFP2AsmPseudo<string asm, dag iops, dag oops = (outs)>
   : AsmPseudoInst<asm, iops, oops>, Requires<[HasVFP2]>;
 class NEONAsmPseudo<string asm, dag iops, dag oops = (outs)>
   : AsmPseudoInst<asm, iops, oops>, Requires<[HasNEON]>;
-class MVEAsmPseudo<string asm, dag iops, dag oops = (outs)>
-  : AsmPseudoInst<asm, iops, oops>, Requires<[HasMVEInt]>;
 
 // Pseudo instructions for the code generator.
 class PseudoInst<dag oops, dag iops, InstrItinClass itin, list<dag> pattern>

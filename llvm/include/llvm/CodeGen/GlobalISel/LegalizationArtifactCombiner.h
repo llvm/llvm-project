@@ -39,11 +39,11 @@ public:
       return false;
 
     Builder.setInstr(MI);
-    Register DstReg = MI.getOperand(0).getReg();
-    Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
 
     // aext(trunc x) - > aext/copy/trunc x
-    Register TruncSrc;
+    unsigned TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLVM_DEBUG(dbgs() << ".. Combine MI: " << MI;);
       Builder.buildAnyExtOrTrunc(DstReg, TruncSrc);
@@ -52,7 +52,7 @@ public:
     }
 
     // aext([asz]ext x) -> [asz]ext x
-    Register ExtSrc;
+    unsigned ExtSrc;
     MachineInstr *ExtMI;
     if (mi_match(SrcReg, MRI,
                  m_all_of(m_MInstr(ExtMI), m_any_of(m_GAnyExt(m_Reg(ExtSrc)),
@@ -61,23 +61,6 @@ public:
       Builder.buildInstr(ExtMI->getOpcode(), {DstReg}, {ExtSrc});
       markInstAndDefDead(MI, *ExtMI, DeadInsts);
       return true;
-    }
-
-    // Try to fold aext(g_constant) when the larger constant type is legal.
-    // Can't use MIPattern because we don't have a specific constant in mind.
-    auto *SrcMI = MRI.getVRegDef(SrcReg);
-    if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
-      const LLT &DstTy = MRI.getType(DstReg);
-      if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
-        auto CstVal = SrcMI->getOperand(1);
-        APInt Val = CstVal.isImm()
-                        ? APInt(DstTy.getSizeInBits(), CstVal.getImm())
-                        : CstVal.getCImm()->getValue();
-        Val = Val.sext(DstTy.getSizeInBits());
-        Builder.buildConstant(DstReg, Val);
-        markInstAndDefDead(MI, *SrcMI, DeadInsts);
-        return true;
-      }
     }
     return tryFoldImplicitDef(MI, DeadInsts);
   }
@@ -89,11 +72,11 @@ public:
       return false;
 
     Builder.setInstr(MI);
-    Register DstReg = MI.getOperand(0).getReg();
-    Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
 
     // zext(trunc x) - > and (aext/copy/trunc x), mask
-    Register TruncSrc;
+    unsigned TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
       if (isInstUnsupported({TargetOpcode::G_AND, {DstTy}}) ||
@@ -118,11 +101,11 @@ public:
       return false;
 
     Builder.setInstr(MI);
-    Register DstReg = MI.getOperand(0).getReg();
-    Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
+    unsigned DstReg = MI.getOperand(0).getReg();
+    unsigned SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
 
     // sext(trunc x) - > ashr (shl (aext/copy/trunc x), c), c
-    Register TruncSrc;
+    unsigned TruncSrc;
     if (mi_match(SrcReg, MRI, m_GTrunc(m_Reg(TruncSrc)))) {
       LLT DstTy = MRI.getType(DstReg);
       // Guess on the RHS shift amount type, which should be re-legalized if
@@ -156,7 +139,7 @@ public:
     if (MachineInstr *DefMI = getOpcodeDef(TargetOpcode::G_IMPLICIT_DEF,
                                            MI.getOperand(1).getReg(), MRI)) {
       Builder.setInstr(MI);
-      Register DstReg = MI.getOperand(0).getReg();
+      unsigned DstReg = MI.getOperand(0).getReg();
       LLT DstTy = MRI.getType(DstReg);
 
       if (Opcode == TargetOpcode::G_ANYEXT) {
@@ -224,7 +207,7 @@ public:
 
       const unsigned NewNumDefs = NumDefs / NumMergeRegs;
       for (unsigned Idx = 0; Idx < NumMergeRegs; ++Idx) {
-        SmallVector<Register, 2> DstRegs;
+        SmallVector<unsigned, 2> DstRegs;
         for (unsigned j = 0, DefIdx = Idx * NewNumDefs; j < NewNumDefs;
              ++j, ++DefIdx)
           DstRegs.push_back(MI.getOperand(DefIdx).getReg());
@@ -246,7 +229,7 @@ public:
 
       const unsigned NumRegs = NumMergeRegs / NumDefs;
       for (unsigned DefIdx = 0; DefIdx < NumDefs; ++DefIdx) {
-        SmallVector<Register, 2> Regs;
+        SmallVector<unsigned, 2> Regs;
         for (unsigned j = 0, Idx = NumRegs * DefIdx + 1; j < NumRegs;
              ++j, ++Idx)
           Regs.push_back(MergeI->getOperand(Idx).getReg());
@@ -442,10 +425,6 @@ private:
     return Step.Action == Unsupported || Step.Action == NotFound;
   }
 
-  bool isInstLegal(const LegalityQuery &Query) const {
-    return LI.getAction(Query).Action == LegalizeActions::Legal;
-  }
-
   bool isConstantUnsupported(LLT Ty) const {
     if (!Ty.isVector())
       return isInstUnsupported({TargetOpcode::G_CONSTANT, {Ty}});
@@ -457,8 +436,8 @@ private:
 
   /// Looks through copy instructions and returns the actual
   /// source register.
-  unsigned lookThroughCopyInstrs(Register Reg) {
-    Register TmpReg;
+  unsigned lookThroughCopyInstrs(unsigned Reg) {
+    unsigned TmpReg;
     while (mi_match(Reg, MRI, m_Copy(m_Reg(TmpReg)))) {
       if (MRI.getType(TmpReg).isValid())
         Reg = TmpReg;

@@ -3350,29 +3350,25 @@ inline static bool isDefConvertible(const MachineInstr &MI, bool &NoSignFlag) {
 static X86::CondCode isUseDefConvertible(const MachineInstr &MI) {
   switch (MI.getOpcode()) {
   default: return X86::COND_INVALID;
-  case X86::LZCNT16rr:
-  case X86::LZCNT32rr:
-  case X86::LZCNT64rr:
+  case X86::LZCNT16rr: case X86::LZCNT16rm:
+  case X86::LZCNT32rr: case X86::LZCNT32rm:
+  case X86::LZCNT64rr: case X86::LZCNT64rm:
     return X86::COND_B;
-  case X86::POPCNT16rr:
-  case X86::POPCNT32rr:
-  case X86::POPCNT64rr:
+  case X86::POPCNT16rr:case X86::POPCNT16rm:
+  case X86::POPCNT32rr:case X86::POPCNT32rm:
+  case X86::POPCNT64rr:case X86::POPCNT64rm:
     return X86::COND_E;
-  case X86::TZCNT16rr:
-  case X86::TZCNT32rr:
-  case X86::TZCNT64rr:
+  case X86::TZCNT16rr: case X86::TZCNT16rm:
+  case X86::TZCNT32rr: case X86::TZCNT32rm:
+  case X86::TZCNT64rr: case X86::TZCNT64rm:
     return X86::COND_B;
-  case X86::BSF16rr:
-  case X86::BSF32rr:
-  case X86::BSF64rr:
-  case X86::BSR16rr:
-  case X86::BSR32rr:
-  case X86::BSR64rr:
+  case X86::BSF16rr: case X86::BSF16rm:
+  case X86::BSF32rr: case X86::BSF32rm:
+  case X86::BSF64rr: case X86::BSF64rm:
+  case X86::BSR16rr: case X86::BSR16rm:
+  case X86::BSR32rr: case X86::BSR32rm:
+  case X86::BSR64rr: case X86::BSR64rm:
     return X86::COND_E;
-  case X86::BLSI32rr:
-  case X86::BLSI64rr:
-    return X86::COND_AE;
-  // TODO: BLSR, BLSMSK, and TBM instructions.
   }
 }
 
@@ -4748,9 +4744,9 @@ MachineInstr *X86InstrInfo::foldMemoryOperandImpl(
     unsigned CommuteOpIdx1 = OpNum, CommuteOpIdx2 = CommuteAnyOperandIndex;
     if (findCommutedOpIndices(MI, CommuteOpIdx1, CommuteOpIdx2)) {
       bool HasDef = MI.getDesc().getNumDefs();
-      Register Reg0 = HasDef ? MI.getOperand(0).getReg() : Register();
-      Register Reg1 = MI.getOperand(CommuteOpIdx1).getReg();
-      Register Reg2 = MI.getOperand(CommuteOpIdx2).getReg();
+      unsigned Reg0 = HasDef ? MI.getOperand(0).getReg() : 0;
+      unsigned Reg1 = MI.getOperand(CommuteOpIdx1).getReg();
+      unsigned Reg2 = MI.getOperand(CommuteOpIdx2).getReg();
       bool Tied1 =
           0 == MI.getDesc().getOperandConstraint(CommuteOpIdx1, MCOI::TIED_TO);
       bool Tied2 =

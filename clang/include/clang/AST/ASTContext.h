@@ -2751,11 +2751,12 @@ public:
   ///
   /// \param Data Pointer data that will be provided to the callback function
   /// when it is called.
-  void AddDeallocation(void (*Callback)(void *), void *Data) const;
+  void AddDeallocation(void (*Callback)(void*), void *Data);
 
   /// If T isn't trivially destructible, calls AddDeallocation to register it
   /// for destruction.
-  template <typename T> void addDestruction(T *Ptr) const {
+  template <typename T>
+  void addDestruction(T *Ptr) {
     if (!std::is_trivially_destructible<T>::value) {
       auto DestroyPtr = [](void *V) { static_cast<T *>(V)->~T(); };
       AddDeallocation(DestroyPtr, Ptr);
@@ -2817,6 +2818,10 @@ public:
   /// of static storage duration.
   APValue *getMaterializedTemporaryValue(const MaterializeTemporaryExpr *E,
                                          bool MayCreate);
+
+  /// Adds an APValue that will be destructed during the destruction of the
+  /// ASTContext.
+  void AddAPValueCleanup(APValue *Ptr) const { APValueCleanups.push_back(Ptr); }
 
   /// Return a string representing the human readable name for the specified
   /// function declaration or file name. Used by SourceLocExpr and
@@ -2984,7 +2989,7 @@ private:
   // in order to track and run destructors while we're tearing things down.
   using DeallocationFunctionsAndArguments =
       llvm::SmallVector<std::pair<void (*)(void *), void *>, 16>;
-  mutable DeallocationFunctionsAndArguments Deallocations;
+  DeallocationFunctionsAndArguments Deallocations;
 
   // FIXME: This currently contains the set of StoredDeclMaps used
   // by DeclContext objects.  This probably should not be in ASTContext,

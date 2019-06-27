@@ -542,6 +542,11 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
       // export.)
       if (AddrOpIdx != -1) {
         setExpScore(&Inst, TII, TRI, MRI, AddrOpIdx, CurrScore);
+      } else {
+        assert(Inst.getOpcode() == AMDGPU::DS_APPEND ||
+               Inst.getOpcode() == AMDGPU::DS_CONSUME ||
+               Inst.getOpcode() == AMDGPU::DS_GWS_INIT ||
+               Inst.getOpcode() == AMDGPU::DS_GWS_BARRIER);
       }
 
       if (Inst.mayStore()) {
@@ -1037,7 +1042,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   // TODO: Remove this work-around, enable the assert for Bug 457939
   //       after fixing the scheduler. Also, the Shader Compiler code is
   //       independent of target.
-  if (readsVCCZ(MI) && ST->hasReadVCCZBug()) {
+  if (readsVCCZ(MI) && ST->getGeneration() <= AMDGPUSubtarget::SEA_ISLANDS) {
     if (ScoreBrackets.getScoreLB(LGKM_CNT) <
             ScoreBrackets.getScoreUB(LGKM_CNT) &&
         ScoreBrackets.hasPendingEvent(SMEM_ACCESS)) {

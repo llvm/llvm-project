@@ -24,7 +24,7 @@ using namespace llvm;
 template <typename T>
 static const T *Find(StringRef S, ArrayRef<T> A) {
   // Binary search the array
-  auto F = llvm::lower_bound(A, S);
+  auto F = std::lower_bound(A.begin(), A.end(), S);
   // If not found then return NULL
   if (F == A.end() || StringRef(F->Key) != S) return nullptr;
   // Return the found array item

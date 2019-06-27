@@ -680,9 +680,7 @@ macro(add_llvm_library name)
   elseif(ARG_BUILDTREE_ONLY)
     set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS_BUILDTREE_ONLY ${name})
   else()
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR
-        ${name} STREQUAL "LTO" OR
-        ${name} STREQUAL "LLVM-C" OR
+    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "LTO" OR
         ${name} STREQUAL "Remarks" OR
         (LLVM_LINK_LLVM_DYLIB AND ${name} STREQUAL "LLVM"))
 
@@ -885,7 +883,6 @@ if(NOT LLVM_TOOLCHAIN_TOOLS)
     llvm-objdump
     llvm-rc
     llvm-profdata
-    llvm-symbolizer
     )
 endif()
 

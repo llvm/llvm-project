@@ -6905,9 +6905,8 @@ llvm::Constant *CGObjCNonFragileABIMac::GetOrEmitProtocol(
     return Entry;
 
   // Use the protocol definition, if there is one.
-  assert(PD->hasDefinition() &&
-         "emitting protocol metadata without definition");
-  PD = PD->getDefinition();
+  if (const ObjCProtocolDecl *Def = PD->getDefinition())
+    PD = Def;
 
   auto methodLists = ProtocolMethodLists::get(PD);
 
@@ -7275,7 +7274,12 @@ CGObjCNonFragileABIMac::GetClassGlobal(StringRef Name,
   }
 
   assert(GV->getLinkage() == L);
-  return GV;
+
+  if (IsForDefinition ||
+      GV->getValueType() == ObjCTypes.ClassnfABITy)
+    return GV;
+
+  return llvm::ConstantExpr::getBitCast(GV, ObjCTypes.ClassnfABIPtrTy);
 }
 
 llvm::Constant *
@@ -7408,7 +7412,8 @@ llvm::Value *CGObjCNonFragileABIMac::EmitMetaClassRef(CodeGenFunction &CGF,
 llvm::Value *CGObjCNonFragileABIMac::GetClass(CodeGenFunction &CGF,
                                               const ObjCInterfaceDecl *ID) {
   if (ID->isWeakImported()) {
-    auto ClassGV = GetClassGlobal(ID, /*metaclass*/ false, NotForDefinition);
+    llvm::Constant *ClassGV = GetClassGlobal(ID, /*metaclass*/ false,
+                                             NotForDefinition);
     (void)ClassGV;
     assert(!isa<llvm::GlobalVariable>(ClassGV) ||
            cast<llvm::GlobalVariable>(ClassGV)->hasExternalWeakLinkage());

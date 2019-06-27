@@ -1,8 +1,6 @@
 lit - LLVM Integrated Tester
 ============================
 
-.. program:: lit
-
 SYNOPSIS
 --------
 

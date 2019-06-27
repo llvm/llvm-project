@@ -1239,6 +1239,29 @@ namespace {
     }
   };
 
+  class AttrArgument : public SimpleArgument {
+  public:
+    AttrArgument(const Record &Arg, StringRef Attr)
+      : SimpleArgument(Arg, Attr, "Attr *")
+    {}
+
+    void writePCHReadDecls(raw_ostream &OS) const override {
+      OS << "    Attr *" << getLowerName() << " = Record.readAttr();";
+    }
+
+    void writePCHWrite(raw_ostream &OS) const override {
+      OS << "    AddAttr(SA->get" << getUpperName() << "());";
+    }
+
+    void writeDump(raw_ostream &OS) const override {}
+  
+    void writeDumpChildren(raw_ostream &OS) const override {
+      OS << "    Visit(SA->get" << getUpperName() << "());\n";
+    }
+
+    void writeHasChildren(raw_ostream &OS) const override { OS << "true"; }
+  };
+
 } // end anonymous namespace
 
 static std::unique_ptr<Argument>
@@ -1296,6 +1319,8 @@ createArgument(const Record &Arg, StringRef Attr,
     Ptr = llvm::make_unique<VariadicIdentifierArgument>(Arg, Attr);
   else if (ArgName == "VersionArgument")
     Ptr = llvm::make_unique<VersionArgument>(Arg, Attr);
+  else if (ArgName == "AttrArgument")
+    Ptr = llvm::make_unique<AttrArgument>(Arg, Attr);
 
   if (!Ptr) {
     // Search in reverse order so that the most-derived type is handled first.
@@ -2810,7 +2835,7 @@ void EmitClangAttrPCHWrite(RecordKeeper &Records, raw_ostream &OS) {
 
 // Helper function for GenerateTargetSpecificAttrChecks that alters the 'Test'
 // parameter with only a single check type, if applicable.
-static bool GenerateTargetSpecificAttrCheck(const Record *R, std::string &Test,
+static void GenerateTargetSpecificAttrCheck(const Record *R, std::string &Test,
                                             std::string *FnName,
                                             StringRef ListName,
                                             StringRef CheckAgainst,
@@ -2830,9 +2855,7 @@ static bool GenerateTargetSpecificAttrCheck(const Record *R, std::string &Test,
         *FnName += Part;
     }
     Test += ")";
-    return true;
   }
-  return false;
 }
 
 // Generate a conditional expression to check if the current target satisfies
@@ -2840,12 +2863,10 @@ static bool GenerateTargetSpecificAttrCheck(const Record *R, std::string &Test,
 // those checks to the Test string. If the FnName string pointer is non-null,
 // append a unique suffix to distinguish this set of target checks from other
 // TargetSpecificAttr records.
-static bool GenerateTargetSpecificAttrChecks(const Record *R,
+static void GenerateTargetSpecificAttrChecks(const Record *R,
                                              std::vector<StringRef> &Arches,
                                              std::string &Test,
                                              std::string *FnName) {
-  bool AnyTargetChecks = false;
-
   // It is assumed that there will be an llvm::Triple object
   // named "T" and a TargetInfo object named "Target" within
   // scope that can be used to determine whether the attribute exists in
@@ -2855,7 +2876,6 @@ static bool GenerateTargetSpecificAttrChecks(const Record *R,
   // differently because GenerateTargetRequirements needs to combine the list
   // with ParseKind.
   if (!Arches.empty()) {
-    AnyTargetChecks = true;
     Test += " && (";
     for (auto I = Arches.begin(), E = Arches.end(); I != E; ++I) {
       StringRef Part = *I;
@@ -2870,24 +2890,16 @@ static bool GenerateTargetSpecificAttrChecks(const Record *R,
   }
 
   // If the attribute is specific to particular OSes, check those.
-  AnyTargetChecks |= GenerateTargetSpecificAttrCheck(
-      R, Test, FnName, "OSes", "T.getOS()", "llvm::Triple::");
+  GenerateTargetSpecificAttrCheck(R, Test, FnName, "OSes", "T.getOS()",
+                                  "llvm::Triple::");
 
+  // If one or more CXX ABIs are specified, check those as well.
+  GenerateTargetSpecificAttrCheck(R, Test, FnName, "CXXABIs",
+                                  "Target.getCXXABI().getKind()",
+                                  "TargetCXXABI::");
   // If one or more object formats is specified, check those.
-  AnyTargetChecks |=
-      GenerateTargetSpecificAttrCheck(R, Test, FnName, "ObjectFormats",
-                                      "T.getObjectFormat()", "llvm::Triple::");
-
-  // If custom code is specified, emit it.
-  StringRef Code = R->getValueAsString("CustomCode");
-  if (!Code.empty()) {
-    AnyTargetChecks = true;
-    Test += " && (";
-    Test += Code;
-    Test += ")";
-  }
-
-  return AnyTargetChecks;
+  GenerateTargetSpecificAttrCheck(R, Test, FnName, "ObjectFormats",
+                                  "T.getObjectFormat()", "llvm::Triple::");
 }
 
 static void GenerateHasAttrSpellingStringSwitch(
@@ -3523,7 +3535,7 @@ static std::string GenerateTargetRequirements(const Record &Attr,
 
   std::string FnName = "isTarget";
   std::string Test;
-  bool UsesT = GenerateTargetSpecificAttrChecks(R, Arches, Test, &FnName);
+  GenerateTargetSpecificAttrChecks(R, Arches, Test, &FnName);
 
   // If this code has already been generated, simply return the previous
   // instance of it.
@@ -3533,8 +3545,7 @@ static std::string GenerateTargetRequirements(const Record &Attr,
     return *I;
 
   OS << "static bool " << FnName << "(const TargetInfo &Target) {\n";
-  if (UsesT)
-    OS << "  const llvm::Triple &T = Target.getTriple(); (void)T;\n";
+  OS << "  const llvm::Triple &T = Target.getTriple();\n";
   OS << "  return " << Test << ";\n";
   OS << "}\n\n";
 

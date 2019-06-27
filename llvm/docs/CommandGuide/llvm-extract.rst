@@ -1,8 +1,6 @@
 llvm-extract - extract a function from an LLVM module
 =====================================================
 
-.. program:: llvm-extract
-
 SYNOPSIS
 --------
 

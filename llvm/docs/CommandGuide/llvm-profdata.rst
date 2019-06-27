@@ -1,8 +1,6 @@
 llvm-profdata - Profile data tool
 =================================
 
-.. program:: llvm-profdata
-
 SYNOPSIS
 --------
 

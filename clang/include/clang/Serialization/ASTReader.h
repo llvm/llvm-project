@@ -751,13 +751,6 @@ private:
   /// added to the global preprocessing entity ID to produce a local ID.
   GlobalPreprocessedEntityMapType GlobalPreprocessedEntityMap;
 
-  using GlobalSkippedRangeMapType =
-      ContinuousRangeMap<unsigned, ModuleFile *, 4>;
-
-  /// Mapping from global skipped range base IDs to the module in which
-  /// the skipped ranges reside.
-  GlobalSkippedRangeMapType GlobalSkippedRangeMap;
-
   /// \name CodeGen-relevant special data
   /// Fields containing data that is relevant to CodeGen.
   //@{
@@ -1321,6 +1314,8 @@ private:
                                      ASTReaderListener &Listener);
   static bool ParseHeaderSearchOptions(const RecordData &Record, bool Complain,
                                        ASTReaderListener &Listener);
+  static bool ParseHeaderSearchPaths(const RecordData &Record, bool Complain,
+                                     ASTReaderListener &Listener);
   static bool ParsePreprocessorOptions(const RecordData &Record, bool Complain,
                                        ASTReaderListener &Listener,
                                        std::string &SuggestedPredefines);
@@ -1437,7 +1432,6 @@ private:
   void Error(StringRef Msg) const;
   void Error(unsigned DiagID, StringRef Arg1 = StringRef(),
              StringRef Arg2 = StringRef()) const;
-  void Error(llvm::Error &&Err) const;
 
 public:
   /// Load the AST file and validate its contents against the given
@@ -1712,9 +1706,6 @@ public:
   /// entity with index \p Index came from file \p FID.
   Optional<bool> isPreprocessedEntityInFileID(unsigned Index,
                                               FileID FID) override;
-
-  /// Read a preallocated skipped range from the external source.
-  SourceRange ReadSkippedRange(unsigned Index) override;
 
   /// Read the header file information for the given file entry.
   HeaderFileInfo GetHeaderFileInfo(const FileEntry *FE) override;
@@ -2380,8 +2371,7 @@ public:
 
   /// Reads a record with id AbbrevID from Cursor, resetting the
   /// internal state.
-  Expected<unsigned> readRecord(llvm::BitstreamCursor &Cursor,
-                                unsigned AbbrevID);
+  unsigned readRecord(llvm::BitstreamCursor &Cursor, unsigned AbbrevID);
 
   /// Is this a module file for a module (rather than a PCH or similar).
   bool isModule() const { return F->isModule(); }
@@ -2681,10 +2671,7 @@ struct SavedStreamPosition {
       : Cursor(Cursor), Offset(Cursor.GetCurrentBitNo()) {}
 
   ~SavedStreamPosition() {
-    if (llvm::Error Err = Cursor.JumpToBit(Offset))
-      llvm::report_fatal_error(
-          "Cursor should always be able to go back, failed: " +
-          toString(std::move(Err)));
+    Cursor.JumpToBit(Offset);
   }
 
 private:

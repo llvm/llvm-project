@@ -2096,7 +2096,7 @@ void NewGVN::addPredicateUsers(const PredicateBase *PB, Instruction *I) const {
 
   if (auto *PBranch = dyn_cast<PredicateBranch>(PB))
     PredicateToUsers[PBranch->Condition].insert(I);
-  else if (auto *PAssume = dyn_cast<PredicateAssume>(PB))
+  else if (auto *PAssume = dyn_cast<PredicateBranch>(PB))
     PredicateToUsers[PAssume->Condition].insert(I);
 }
 
@@ -2498,6 +2498,9 @@ void NewGVN::processOutgoingEdges(Instruction *TI, BasicBlock *B) {
     // For switches, propagate the case values into the case
     // destinations.
 
+    // Remember how many outgoing edges there are to every successor.
+    SmallDenseMap<BasicBlock *, unsigned, 16> SwitchEdges;
+
     Value *SwitchCond = SI->getCondition();
     Value *CondEvaluated = findConditionEquivalence(SwitchCond);
     // See if we were able to turn this switch statement into a constant.
@@ -2518,6 +2521,7 @@ void NewGVN::processOutgoingEdges(Instruction *TI, BasicBlock *B) {
     } else {
       for (unsigned i = 0, e = SI->getNumSuccessors(); i != e; ++i) {
         BasicBlock *TargetBlock = SI->getSuccessor(i);
+        ++SwitchEdges[TargetBlock];
         updateReachableEdge(B, TargetBlock);
       }
     }

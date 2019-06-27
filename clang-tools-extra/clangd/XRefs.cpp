@@ -260,6 +260,14 @@ IdentifiedSymbol getSymbolAtPosition(ParsedAST &AST, SourceLocation Pos) {
   return {DeclMacrosFinder.getFoundDecls(), DeclMacrosFinder.takeMacroInfos()};
 }
 
+Range getTokenRange(ASTContext &AST, SourceLocation TokLoc) {
+  const SourceManager &SourceMgr = AST.getSourceManager();
+  SourceLocation LocEnd =
+      Lexer::getLocForEndOfToken(TokLoc, 0, SourceMgr, AST.getLangOpts());
+  return {sourceLocToPosition(SourceMgr, TokLoc),
+          sourceLocToPosition(SourceMgr, LocEnd)};
+}
+
 llvm::Optional<Location> makeLocation(ASTContext &AST, SourceLocation TokLoc,
                                       llvm::StringRef TUPath) {
   const SourceManager &SourceMgr = AST.getSourceManager();
@@ -271,14 +279,10 @@ llvm::Optional<Location> makeLocation(ASTContext &AST, SourceLocation TokLoc,
     log("failed to get path!");
     return None;
   }
-  if (auto Range =
-          getTokenRange(AST.getSourceManager(), AST.getLangOpts(), TokLoc)) {
-    Location L;
-    L.uri = URIForFile::canonicalize(*FilePath, TUPath);
-    L.range = *Range;
-    return L;
-  }
-  return None;
+  Location L;
+  L.uri = URIForFile::canonicalize(*FilePath, TUPath);
+  L.range = getTokenRange(AST, TokLoc);
+  return L;
 }
 
 } // namespace
@@ -467,19 +471,15 @@ std::vector<DocumentHighlight> findDocumentHighlights(ParsedAST &AST,
 
   std::vector<DocumentHighlight> Result;
   for (const auto &Ref : References) {
-    if (auto Range =
-            getTokenRange(AST.getASTContext().getSourceManager(),
-                          AST.getASTContext().getLangOpts(), Ref.Loc)) {
-      DocumentHighlight DH;
-      DH.range = *Range;
-      if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Write))
-        DH.kind = DocumentHighlightKind::Write;
-      else if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Read))
-        DH.kind = DocumentHighlightKind::Read;
-      else
-        DH.kind = DocumentHighlightKind::Text;
-      Result.push_back(std::move(DH));
-    }
+    DocumentHighlight DH;
+    DH.range = getTokenRange(AST.getASTContext(), Ref.Loc);
+    if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Write))
+      DH.kind = DocumentHighlightKind::Write;
+    else if (Ref.Role & index::SymbolRoleSet(index::SymbolRole::Read))
+      DH.kind = DocumentHighlightKind::Read;
+    else
+      DH.kind = DocumentHighlightKind::Text;
+    Result.push_back(std::move(DH));
   }
   return Result;
 }
@@ -610,6 +610,18 @@ fetchTemplateParameters(const TemplateParameterList *Params,
   return TempParameters;
 }
 
+static llvm::Optional<Range> getTokenRange(SourceLocation Loc,
+                                           const ASTContext &Ctx) {
+  if (!Loc.isValid())
+    return llvm::None;
+  SourceLocation End = Lexer::getLocForEndOfToken(
+      Loc, 0, Ctx.getSourceManager(), Ctx.getLangOpts());
+  if (!End.isValid())
+    return llvm::None;
+  return halfOpenToRange(Ctx.getSourceManager(),
+                         CharSourceRange::getCharRange(Loc, End));
+}
+
 static const FunctionDecl *getUnderlyingFunction(const Decl *D) {
   // Extract lambda from variables.
   if (const VarDecl *VD = llvm::dyn_cast<VarDecl>(D)) {
@@ -705,21 +717,6 @@ static HoverInfo getHoverContents(const Decl *D) {
     HI.Type.emplace();
     llvm::raw_string_ostream OS(*HI.Type);
     VD->getType().print(OS, Policy);
-  }
-
-  // Fill in value with evaluated initializer if possible.
-  // FIXME(kadircet): Also set Value field for expressions like "sizeof" and
-  // function calls.
-  if (const auto *Var = dyn_cast<VarDecl>(D)) {
-    if (const Expr *Init = Var->getInit()) {
-      Expr::EvalResult Result;
-      if (!Init->isValueDependent() && Init->EvaluateAsRValue(Result, Ctx)) {
-        HI.Value.emplace();
-        llvm::raw_string_ostream ValueOS(*HI.Value);
-        Result.Val.printPretty(ValueOS, const_cast<ASTContext &>(Ctx),
-                               Var->getType());
-      }
-    }
   }
 
   HI.Definition = printDefinition(D);
@@ -913,9 +910,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
           tooling::applyAllReplacements(HI->Definition, Replacements))
     HI->Definition = *Formatted;
 
-  HI->SymRange =
-      getTokenRange(AST.getASTContext().getSourceManager(),
-                    AST.getASTContext().getLangOpts(), SourceLocationBeg);
+  HI->SymRange = getTokenRange(SourceLocationBeg, AST.getASTContext());
   return HI;
 }
 
@@ -938,14 +933,10 @@ std::vector<Location> findReferences(ParsedAST &AST, Position Pos,
   // TODO: should we handle macros, too?
   auto MainFileRefs = findRefs(Symbols.Decls, AST);
   for (const auto &Ref : MainFileRefs) {
-    if (auto Range =
-            getTokenRange(AST.getASTContext().getSourceManager(),
-                          AST.getASTContext().getLangOpts(), Ref.Loc)) {
-      Location Result;
-      Result.range = *Range;
-      Result.uri = URIForFile::canonicalize(*MainFilePath, *MainFilePath);
-      Results.push_back(std::move(Result));
-    }
+    Location Result;
+    Result.range = getTokenRange(AST.getASTContext(), Ref.Loc);
+    Result.uri = URIForFile::canonicalize(*MainFilePath, *MainFilePath);
+    Results.push_back(std::move(Result));
   }
 
   // Now query the index for references from other files.

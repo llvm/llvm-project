@@ -2193,10 +2193,6 @@ void MachineVerifier::visitMachineFunctionAfter() {
     verifyLiveVariables();
   if (LiveInts)
     verifyLiveIntervals();
-
-  for (auto CSInfo : MF->getCallSitesInfo())
-    if (!CSInfo.first->isCall())
-      report("Call site info referencing instruction that is not call", MF);
 }
 
 void MachineVerifier::verifyLiveVariables() {

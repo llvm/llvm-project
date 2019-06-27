@@ -132,10 +132,10 @@ public:
                           int64_t Offset) const override;
 
   // Debug information queries.
-  Register getFrameRegister(const MachineFunction &MF) const override;
+  unsigned getFrameRegister(const MachineFunction &MF) const override;
 
   // Base pointer (stack realignment) support.
-  Register getBaseRegister(const MachineFunction &MF) const;
+  unsigned getBaseRegister(const MachineFunction &MF) const;
   bool hasBasePointer(const MachineFunction &MF) const;
 
   /// stripRegisterPrefix - This method strips the character prefix from a

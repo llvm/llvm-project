@@ -1,4 +1,5 @@
 // RUN: %clangxx %s -o %t && %run %t
+// UNSUPPORTED: ios
 
 #include <assert.h>
 #include <grp.h>

@@ -1,7 +1,6 @@
 llvm-config - Print LLVM compilation options
 ============================================
 
-.. program:: llvm-config
 
 SYNOPSIS
 --------

@@ -1,8 +1,6 @@
 dsymutil - manipulate archived DWARF debug symbol files
 =======================================================
 
-.. program:: dsymutil
-
 SYNOPSIS
 --------
 

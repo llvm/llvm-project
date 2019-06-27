@@ -289,6 +289,7 @@ def get_triple_from_march(march):
 
 def build_function_body_dictionary_for_triple(args, raw_tool_output, triple, prefixes, func_dict):
   target_handlers = {
+      'x86_64': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'i686': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'x86': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
       'i386': (scrub_asm_x86, ASM_FUNCTION_X86_RE),
@@ -307,11 +308,13 @@ def build_function_body_dictionary_for_triple(args, raw_tool_output, triple, pre
       'thumbv7-apple-ios' : (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_IOS_RE),
       'mips': (scrub_asm_mips, ASM_FUNCTION_MIPS_RE),
       'ppc32': (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
-      'powerpc': (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
+      'powerpc64': (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
+      'powerpc64le': (scrub_asm_powerpc, ASM_FUNCTION_PPC_RE),
       'riscv32': (scrub_asm_riscv, ASM_FUNCTION_RISCV_RE),
       'riscv64': (scrub_asm_riscv, ASM_FUNCTION_RISCV_RE),
       'lanai': (scrub_asm_lanai, ASM_FUNCTION_LANAI_RE),
       'sparc': (scrub_asm_sparc, ASM_FUNCTION_SPARC_RE),
+      'sparcv9': (scrub_asm_sparc, ASM_FUNCTION_SPARC_RE),
       's390x': (scrub_asm_systemz, ASM_FUNCTION_SYSTEMZ_RE),
       'wasm32': (scrub_asm_wasm32, ASM_FUNCTION_WASM32_RE),
   }

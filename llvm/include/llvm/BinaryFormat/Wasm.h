@@ -364,7 +364,6 @@ inline bool operator!=(const WasmGlobalType &LHS, const WasmGlobalType &RHS) {
 
 std::string toString(WasmSymbolType type);
 std::string relocTypetoString(uint32_t type);
-bool relocTypeHasAddend(uint32_t type);
 
 } // end namespace wasm
 } // end namespace llvm

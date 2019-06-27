@@ -1626,42 +1626,19 @@ Instruction *InstCombiner::foldICmpAndShift(ICmpInst &Cmp, BinaryOperator *And,
 Instruction *InstCombiner::foldICmpAndConstConst(ICmpInst &Cmp,
                                                  BinaryOperator *And,
                                                  const APInt &C1) {
-  bool isICMP_NE = Cmp.getPredicate() == ICmpInst::ICMP_NE;
-
   // For vectors: icmp ne (and X, 1), 0 --> trunc X to N x i1
   // TODO: We canonicalize to the longer form for scalars because we have
   // better analysis/folds for icmp, and codegen may be better with icmp.
-  if (isICMP_NE && Cmp.getType()->isVectorTy() && C1.isNullValue() &&
-      match(And->getOperand(1), m_One()))
+  if (Cmp.getPredicate() == CmpInst::ICMP_NE && Cmp.getType()->isVectorTy() &&
+      C1.isNullValue() && match(And->getOperand(1), m_One()))
     return new TruncInst(And->getOperand(0), Cmp.getType());
 
   const APInt *C2;
-  Value *X;
-  if (!match(And, m_And(m_Value(X), m_APInt(C2))))
+  if (!match(And->getOperand(1), m_APInt(C2)))
     return nullptr;
 
-  // Don't perform the following transforms if the AND has multiple uses
   if (!And->hasOneUse())
     return nullptr;
-
-  if (Cmp.isEquality() && C1.isNullValue()) {
-    // Restrict this fold to single-use 'and' (PR10267).
-    // Replace (and X, (1 << size(X)-1) != 0) with X s< 0
-    if (C2->isSignMask()) {
-      Constant *Zero = Constant::getNullValue(X->getType());
-      auto NewPred = isICMP_NE ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_SGE;
-      return new ICmpInst(NewPred, X, Zero);
-    }
-
-    // Restrict this fold only for single-use 'and' (PR10267).
-    // ((%x & C) == 0) --> %x u< (-C)  iff (-C) is power of two.
-    if ((~(*C2) + 1).isPowerOf2()) {
-      Constant *NegBOC =
-          ConstantExpr::getNeg(cast<Constant>(And->getOperand(1)));
-      auto NewPred = isICMP_NE ? ICmpInst::ICMP_UGE : ICmpInst::ICMP_ULT;
-      return new ICmpInst(NewPred, X, NegBOC);
-    }
-  }
 
   // If the LHS is an 'and' of a truncate and we can widen the and/compare to
   // the input width without changing the value produced, eliminate the cast:
@@ -2026,27 +2003,6 @@ Instruction *InstCombiner::foldICmpShlConstant(ICmpInst &Cmp,
     Value *And = Builder.CreateAnd(X, Mask, Shl->getName() + ".mask");
     return new ICmpInst(TrueIfSigned ? ICmpInst::ICMP_NE : ICmpInst::ICMP_EQ,
                         And, Constant::getNullValue(ShType));
-  }
-
-  // Simplify 'shl' inequality test into 'and' equality test.
-  if (Cmp.isUnsigned() && Shl->hasOneUse()) {
-    // (X l<< C2) u<=/u> C1 iff C1+1 is power of two -> X & (~C1 l>> C2) ==/!= 0
-    if ((C + 1).isPowerOf2() &&
-        (Pred == ICmpInst::ICMP_ULE || Pred == ICmpInst::ICMP_UGT)) {
-      Value *And = Builder.CreateAnd(X, (~C).lshr(ShiftAmt->getZExtValue()));
-      return new ICmpInst(Pred == ICmpInst::ICMP_ULE ? ICmpInst::ICMP_EQ
-                                                     : ICmpInst::ICMP_NE,
-                          And, Constant::getNullValue(ShType));
-    }
-    // (X l<< C2) u</u>= C1 iff C1 is power of two -> X & (-C1 l>> C2) ==/!= 0
-    if (C.isPowerOf2() &&
-        (Pred == ICmpInst::ICMP_ULT || Pred == ICmpInst::ICMP_UGE)) {
-      Value *And =
-          Builder.CreateAnd(X, (~(C - 1)).lshr(ShiftAmt->getZExtValue()));
-      return new ICmpInst(Pred == ICmpInst::ICMP_ULT ? ICmpInst::ICMP_EQ
-                                                     : ICmpInst::ICMP_NE,
-                          And, Constant::getNullValue(ShType));
-    }
   }
 
   // Transform (icmp pred iM (shl iM %v, N), C)
@@ -2827,6 +2783,24 @@ Instruction *InstCombiner::foldICmpBinOpEqualityWithConstant(ICmpInst &Cmp,
       if (C == *BOC && C.isPowerOf2())
         return new ICmpInst(isICMP_NE ? ICmpInst::ICMP_EQ : ICmpInst::ICMP_NE,
                             BO, Constant::getNullValue(RHS->getType()));
+
+      // Don't perform the following transforms if the AND has multiple uses
+      if (!BO->hasOneUse())
+        break;
+
+      // Replace (and X, (1 << size(X)-1) != 0) with x s< 0
+      if (BOC->isSignMask()) {
+        Constant *Zero = Constant::getNullValue(BOp0->getType());
+        auto NewPred = isICMP_NE ? ICmpInst::ICMP_SLT : ICmpInst::ICMP_SGE;
+        return new ICmpInst(NewPred, BOp0, Zero);
+      }
+
+      // ((X & ~7) == 0) --> X < 8
+      if (C.isNullValue() && (~(*BOC) + 1).isPowerOf2()) {
+        Constant *NegBOC = ConstantExpr::getNeg(cast<Constant>(BOp1));
+        auto NewPred = isICMP_NE ? ICmpInst::ICMP_UGE : ICmpInst::ICMP_ULT;
+        return new ICmpInst(NewPred, BOp0, NegBOC);
+      }
     }
     break;
   }
@@ -3848,24 +3822,6 @@ Instruction *InstCombiner::foldICmpEquality(ICmpInst &I) {
       (match(Op0, m_BitReverse(m_Value(A))) &&
        match(Op1, m_BitReverse(m_Value(B)))))
     return new ICmpInst(Pred, A, B);
-
-  // Canonicalize checking for a power-of-2-or-zero value:
-  // (A & -A) == A --> ctpop(A) < 2 (four commuted variants)
-  // (-A & A) != A --> ctpop(A) > 1 (four commuted variants)
-  A = nullptr;
-  if (match(Op0, m_OneUse(m_c_And(m_Neg(m_Specific(Op1)), m_Specific(Op1)))))
-    A = Op1;
-  else if (match(Op1,
-                 m_OneUse(m_c_And(m_Neg(m_Specific(Op0)), m_Specific(Op0)))))
-    A = Op0;
-
-  if (A) {
-    Type *Ty = A->getType();
-    CallInst *CtPop = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, A);
-    return Pred == ICmpInst::ICMP_EQ
-        ? new ICmpInst(ICmpInst::ICMP_ULT, CtPop, ConstantInt::get(Ty, 2))
-        : new ICmpInst(ICmpInst::ICMP_UGT, CtPop, ConstantInt::get(Ty, 1));
-  }
 
   return nullptr;
 }

@@ -210,17 +210,14 @@ public:
   void printJson(raw_ostream &Out, const char *NL = "\n",
                  unsigned int Space = 0, bool IsDot = false) const {
     for (iterator I = begin(); I != end(); ++I) {
-      // TODO: We might need a .printJson for I.getKey() as well.
       Indent(Out, Space, IsDot)
-          << "{ \"cluster\": \"" << I.getKey() << "\", \"pointer\": \""
-          << (const void *)I.getKey() << "\", \"items\": [" << NL;
+          << "{ \"cluster\": \"" << I.getKey() << "\", \"items\": [" << NL;
 
       ++Space;
       const ClusterBindings &CB = I.getData();
       for (ClusterBindings::iterator CI = CB.begin(); CI != CB.end(); ++CI) {
-        Indent(Out, Space, IsDot) << "{ " << CI.getKey() << ", \"value\": ";
-        CI.getData().printJson(Out, /*AddQuotes=*/true);
-        Out << " }";
+        Indent(Out, Space, IsDot) << "{ " << CI.getKey() << ", \"value\": \""
+                                  << CI.getData() << "\" }";
         if (std::next(CI) != CB.end())
           Out << ',';
         Out << NL;
@@ -2640,7 +2637,7 @@ void RegionStoreManager::printJson(raw_ostream &Out, Store S, const char *NL,
     return;
   }
 
-  Out << "{ \"pointer\": \"" << Bindings.asStore() << "\", \"items\": [" << NL;
-  Bindings.printJson(Out, NL, Space + 1, IsDot);
-  Indent(Out, Space, IsDot) << "]}," << NL;
+  Out << '[' << NL;
+  Bindings.printJson(Out, NL, ++Space, IsDot);
+  Indent(Out, --Space, IsDot) << "]," << NL;
 }

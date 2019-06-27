@@ -1,0 +1,22 @@
+!COFF
+header: !Header
+  Machine: IMAGE_FILE_MACHINE_I386 # (0x14c)
+  Characteristics: [ IMAGE_FILE_DEBUG_STRIPPED ]
+sections:
+symbols:
+  - !Symbol
+    Name: .file
+    Value: 0
+    SectionNumber: -2
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_FILE
+    File: first-section-has-eighteen-characters.asm
+  - !Symbol
+    Name: '@comp.id'
+    Value: 13485607
+    SectionNumber: -1
+    SimpleType: IMAGE_SYM_TYPE_NULL
+    ComplexType: IMAGE_SYM_DTYPE_NULL
+    StorageClass: IMAGE_SYM_CLASS_STATIC
+

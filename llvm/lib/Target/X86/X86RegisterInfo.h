@@ -133,16 +133,16 @@ public:
                            RegScavenger *RS = nullptr) const override;
 
   // Debug information queries.
-  Register getFrameRegister(const MachineFunction &MF) const override;
+  unsigned getFrameRegister(const MachineFunction &MF) const override;
   unsigned getPtrSizedFrameRegister(const MachineFunction &MF) const;
   unsigned getPtrSizedStackRegister(const MachineFunction &MF) const;
-  Register getStackRegister() const { return StackPtr; }
-  Register getBaseRegister() const { return BasePtr; }
+  unsigned getStackRegister() const { return StackPtr; }
+  unsigned getBaseRegister() const { return BasePtr; }
   /// Returns physical register used as frame pointer.
   /// This will always returns the frame pointer register, contrary to
   /// getFrameRegister() which returns the "base pointer" in situations
   /// involving a stack, frame and base pointer.
-  Register getFramePtr() const { return FramePtr; }
+  unsigned getFramePtr() const { return FramePtr; }
   // FIXME: Move to FrameInfok
   unsigned getSlotSize() const { return SlotSize; }
 };

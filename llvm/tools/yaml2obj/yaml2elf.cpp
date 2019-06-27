@@ -151,6 +151,8 @@ class ELFState {
                                ELFYAML::Section *YAMLSec);
   void setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
                               std::vector<Elf_Shdr> &SHeaders);
+  void addSymbols(ArrayRef<ELFYAML::Symbol> Symbols, std::vector<Elf_Sym> &Syms,
+                  const StringTableBuilder &Strtab);
   bool writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::RawContentSection &Section,
                            ContiguousBlobAccumulator &CBA);
@@ -208,18 +210,12 @@ void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
   Header.e_ehsize = sizeof(Elf_Ehdr);
   Header.e_phentsize = sizeof(Elf_Phdr);
   Header.e_phnum = Doc.ProgramHeaders.size();
-
-  Header.e_shentsize =
-      Doc.Header.SHEntSize ? (uint16_t)*Doc.Header.SHEntSize : sizeof(Elf_Shdr);
+  Header.e_shentsize = sizeof(Elf_Shdr);
   // Immediately following the ELF header and program headers.
   Header.e_shoff =
-      Doc.Header.SHOffset
-          ? (uint16_t)*Doc.Header.SHOffset
-          : sizeof(Header) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
-  Header.e_shnum =
-      Doc.Header.SHNum ? (uint16_t)*Doc.Header.SHNum : SN2I.size() + 1;
-  Header.e_shstrndx = Doc.Header.SHStrNdx ? (uint16_t)*Doc.Header.SHStrNdx
-                                          : SN2I.get(".shstrtab");
+      sizeof(Header) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
+  Header.e_shnum = SN2I.size() + 1;
+  Header.e_shstrndx = SN2I.get(".shstrtab");
 }
 
 template <class ELFT>
@@ -272,13 +268,6 @@ bool ELFState<ELFT>::initImplicitHeader(ELFState<ELFT> &State,
   return true;
 }
 
-static StringRef dropUniqueSuffix(StringRef S) {
-  size_t SuffixPos = S.rfind(" [");
-  if (SuffixPos == StringRef::npos)
-    return S;
-  return S.substr(0, SuffixPos);
-}
-
 template <class ELFT>
 bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
                                         std::vector<Elf_Shdr> &SHeaders,
@@ -312,7 +301,7 @@ bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
     assert(Sec && "It can't be null unless it is an implicit section. But all "
                   "implicit sections should already have been handled above.");
 
-    SHeader.sh_name = DotShStrtab.getOffset(dropUniqueSuffix(SecName));
+    SHeader.sh_name = DotShStrtab.getOffset(SecName);
     SHeader.sh_type = Sec->Type;
     if (Sec->Flags)
       SHeader.sh_flags = *Sec->Flags;
@@ -383,48 +372,6 @@ static uint64_t writeRawSectionData(raw_ostream &OS,
 
   OS.write_zeros(*RawSec.Size - ContentSize);
   return *RawSec.Size;
-}
-
-template <class ELFT>
-static std::vector<typename ELFT::Sym>
-toELFSymbols(NameToIdxMap &SN2I, ArrayRef<ELFYAML::Symbol> Symbols,
-             const StringTableBuilder &Strtab) {
-  using Elf_Sym = typename ELFT::Sym;
-
-  std::vector<Elf_Sym> Ret;
-  Ret.resize(Symbols.size() + 1);
-
-  size_t I = 0;
-  for (const auto &Sym : Symbols) {
-    Elf_Sym &Symbol = Ret[++I];
-
-    // If NameIndex, which contains the name offset, is explicitly specified, we
-    // use it. This is useful for preparing broken objects. Otherwise, we add
-    // the specified Name to the string table builder to get its offset.
-    if (Sym.NameIndex)
-      Symbol.st_name = *Sym.NameIndex;
-    else if (!Sym.Name.empty())
-      Symbol.st_name = Strtab.getOffset(dropUniqueSuffix(Sym.Name));
-
-    Symbol.setBindingAndType(Sym.Binding, Sym.Type);
-    if (!Sym.Section.empty()) {
-      unsigned Index;
-      if (!SN2I.lookup(Sym.Section, Index)) {
-        WithColor::error() << "Unknown section referenced: '" << Sym.Section
-                           << "' by YAML symbol " << Sym.Name << ".\n";
-        exit(1);
-      }
-      Symbol.st_shndx = Index;
-    } else if (Sym.Index) {
-      Symbol.st_shndx = *Sym.Index;
-    }
-    // else Symbol.st_shndex == SHN_UNDEF (== 0), since it was zero'd earlier.
-    Symbol.st_value = Sym.Value;
-    Symbol.st_other = Sym.Other;
-    Symbol.st_size = Sym.Size;
-  }
-
-  return Ret;
 }
 
 template <class ELFT>
@@ -504,8 +451,15 @@ void ELFState<ELFT>::initSymtabSectionHeader(Elf_Shdr &SHeader,
     return;
   }
 
-  std::vector<Elf_Sym> Syms =
-      toELFSymbols<ELFT>(SN2I, Symbols, IsStatic ? DotStrtab : DotDynstr);
+  std::vector<Elf_Sym> Syms;
+  {
+    // Ensure STN_UNDEF is present
+    Elf_Sym Sym;
+    zero(Sym);
+    Syms.push_back(Sym);
+  }
+
+  addSymbols(Symbols, Syms, IsStatic ? DotStrtab : DotDynstr);
   writeArrayData(OS, makeArrayRef(Syms));
   SHeader.sh_size = arrayDataSize(makeArrayRef(Syms));
 }
@@ -620,6 +574,42 @@ void ELFState<ELFT>::setProgramHeaderLayout(std::vector<Elf_Phdr> &PHeaders,
         if (SHeader->sh_offset == PHeader.p_offset)
           PHeader.p_align = std::max(PHeader.p_align, SHeader->sh_addralign);
     }
+  }
+}
+
+template <class ELFT>
+void ELFState<ELFT>::addSymbols(ArrayRef<ELFYAML::Symbol> Symbols,
+                                std::vector<Elf_Sym> &Syms,
+                                const StringTableBuilder &Strtab) {
+  for (const auto &Sym : Symbols) {
+    Elf_Sym Symbol;
+    zero(Symbol);
+
+    // If NameIndex, which contains the name offset, is explicitly specified, we
+    // use it. This is useful for preparing broken objects. Otherwise, we add
+    // the specified Name to the string table builder to get its offset.
+    if (Sym.NameIndex)
+      Symbol.st_name = *Sym.NameIndex;
+    else if (!Sym.Name.empty())
+      Symbol.st_name = Strtab.getOffset(Sym.Name);
+
+    Symbol.setBindingAndType(Sym.Binding, Sym.Type);
+    if (!Sym.Section.empty()) {
+      unsigned Index;
+      if (!SN2I.lookup(Sym.Section, Index)) {
+        WithColor::error() << "Unknown section referenced: '" << Sym.Section
+                           << "' by YAML symbol " << Sym.Name << ".\n";
+        exit(1);
+      }
+      Symbol.st_shndx = Index;
+    } else if (Sym.Index) {
+      Symbol.st_shndx = *Sym.Index;
+    }
+    // else Symbol.st_shndex == SHN_UNDEF (== 0), since it was zero'd earlier.
+    Symbol.st_value = Sym.Value;
+    Symbol.st_other = Sym.Other;
+    Symbol.st_size = Sym.Size;
+    Syms.push_back(Symbol);
   }
 }
 
@@ -914,7 +904,7 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
   for (unsigned i = 0, e = Doc.Sections.size(); i != e; ++i) {
     StringRef Name = Doc.Sections[i]->Name;
-    DotShStrtab.add(dropUniqueSuffix(Name));
+    DotShStrtab.add(Name);
     // "+ 1" to take into account the SHT_NULL entry.
     if (!SN2I.addName(Name, i + 1)) {
       WithColor::error() << "Repeated section name: '" << Name
@@ -963,12 +953,12 @@ bool ELFState<ELFT>::buildSymbolIndex(ArrayRef<ELFYAML::Symbol> Symbols) {
 template <class ELFT> void ELFState<ELFT>::finalizeStrings() {
   // Add the regular symbol names to .strtab section.
   for (const ELFYAML::Symbol &Sym : Doc.Symbols)
-    DotStrtab.add(dropUniqueSuffix(Sym.Name));
+    DotStrtab.add(Sym.Name);
   DotStrtab.finalize();
 
   // Add the dynamic symbol names to .dynstr section.
   for (const ELFYAML::Symbol &Sym : Doc.DynamicSymbols)
-    DotDynstr.add(dropUniqueSuffix(Sym.Name));
+    DotDynstr.add(Sym.Name);
 
   // SHT_GNU_verdef and SHT_GNU_verneed sections might also
   // add strings to .dynstr section.

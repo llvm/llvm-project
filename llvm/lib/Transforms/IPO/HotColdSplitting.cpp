@@ -67,6 +67,7 @@
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 #include <algorithm>
+#include <limits>
 #include <cassert>
 
 #define DEBUG_TYPE "hotcoldsplit"
@@ -83,6 +84,10 @@ static cl::opt<int>
     SplittingThreshold("hotcoldsplit-threshold", cl::init(2), cl::Hidden,
                        cl::desc("Base penalty for splitting cold code (as a "
                                 "multiple of TCC_Basic)"));
+
+static cl::opt<int> MaxParametersForSplit(
+    "hotcoldsplit-max-params", cl::init(8), cl::Hidden,
+    cl::desc("Maximum number of parameters for a split function"));
 
 namespace {
 
@@ -271,18 +276,6 @@ static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
   if (SplittingThreshold <= 0)
     return Penalty;
 
-  // The typical code size cost for materializing an argument for the outlined
-  // call.
-  LLVM_DEBUG(dbgs() << "Applying penalty for: " << NumInputs << " inputs\n");
-  const int CostForArgMaterialization = TargetTransformInfo::TCC_Basic;
-  Penalty += CostForArgMaterialization * NumInputs;
-
-  // The typical code size cost for an output alloca, its associated store, and
-  // its associated reload.
-  LLVM_DEBUG(dbgs() << "Applying penalty for: " << NumOutputs << " outputs\n");
-  const int CostForRegionOutput = 3 * TargetTransformInfo::TCC_Basic;
-  Penalty += CostForRegionOutput * NumOutputs;
-
   // Find the number of distinct exit blocks for the region. Use a conservative
   // check to determine whether control returns from the region.
   bool NoBlocksReturn = true;
@@ -303,6 +296,48 @@ static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
     }
   }
 
+  // Count the number of phis in exit blocks with >= 2 incoming values from the
+  // outlining region. These phis are split (\ref severSplitPHINodesOfExits),
+  // and new outputs are created to supply the split phis. CodeExtractor can't
+  // report these new outputs until extraction begins, but it's important to
+  // factor the cost of the outputs into the cost calculation.
+  unsigned NumSplitExitPhis = 0;
+  for (BasicBlock *ExitBB : SuccsOutsideRegion) {
+    for (PHINode &PN : ExitBB->phis()) {
+      // Find all incoming values from the outlining region.
+      int NumIncomingVals = 0;
+      for (unsigned i = 0; i < PN.getNumIncomingValues(); ++i)
+        if (find(Region, PN.getIncomingBlock(i)) != Region.end()) {
+          ++NumIncomingVals;
+          if (NumIncomingVals > 1) {
+            ++NumSplitExitPhis;
+            break;
+          }
+        }
+    }
+  }
+
+  // Apply an penalty for calling the split function. Factor in the cost of
+  // materializing all of the parameters.
+  int NumOutputsAndSplitPhis = NumOutputs + NumSplitExitPhis;
+  int NumParams = NumInputs + NumOutputsAndSplitPhis;
+  if (NumParams > MaxParametersForSplit) {
+    LLVM_DEBUG(dbgs() << NumInputs << " inputs and " << NumOutputsAndSplitPhis
+                      << " outputs exceeds parameter limit ("
+                      << MaxParametersForSplit << ")\n");
+    return std::numeric_limits<int>::max();
+  }
+  const int CostForArgMaterialization = 2 * TargetTransformInfo::TCC_Basic;
+  LLVM_DEBUG(dbgs() << "Applying penalty for: " << NumParams << " params\n");
+  Penalty += CostForArgMaterialization * NumParams;
+
+  // Apply the typical code size cost for an output alloca and its associated
+  // reload in the caller. Also penalize the associated store in the callee.
+  LLVM_DEBUG(dbgs() << "Applying penalty for: " << NumOutputsAndSplitPhis
+                    << " outputs/split phis\n");
+  const int CostForRegionOutput = 3 * TargetTransformInfo::TCC_Basic;
+  Penalty += CostForRegionOutput * NumOutputsAndSplitPhis;
+
   // Apply a `noreturn` bonus.
   if (NoBlocksReturn) {
     LLVM_DEBUG(dbgs() << "Applying bonus for: " << Region.size()
@@ -312,7 +347,7 @@ static int getOutliningPenalty(ArrayRef<BasicBlock *> Region,
 
   // Apply a penalty for having more than one successor outside of the region.
   // This penalty accounts for the switch needed in the caller.
-  if (!SuccsOutsideRegion.empty()) {
+  if (SuccsOutsideRegion.size() > 1) {
     LLVM_DEBUG(dbgs() << "Applying penalty for: " << SuccsOutsideRegion.size()
                       << " non-region successors\n");
     Penalty += (SuccsOutsideRegion.size() - 1) * TargetTransformInfo::TCC_Basic;

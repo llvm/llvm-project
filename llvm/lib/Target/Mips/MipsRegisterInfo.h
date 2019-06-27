@@ -69,7 +69,7 @@ public:
   bool canRealignStack(const MachineFunction &MF) const override;
 
   /// Debug information queries.
-  Register getFrameRegister(const MachineFunction &MF) const override;
+  unsigned getFrameRegister(const MachineFunction &MF) const override;
 
   /// Return GPR register class.
   virtual const TargetRegisterClass *intRegClass(unsigned Size) const = 0;

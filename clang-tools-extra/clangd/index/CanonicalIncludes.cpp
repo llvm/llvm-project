@@ -86,25 +86,16 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
   return llvm::make_unique<PragmaCommentHandler>(Includes);
 }
 
-void addSystemHeadersMapping(CanonicalIncludes *Includes,
-                             const LangOptions &Language) {
+void addSystemHeadersMapping(CanonicalIncludes *Includes) {
   static const std::vector<std::pair<const char *, const char *>> SymbolMap = {
 #define SYMBOL(Name, NameSpace, Header) { #NameSpace#Name, #Header },
       #include "StdSymbolMap.inc"
 #undef SYMBOL
   };
-  static const std::vector<std::pair<const char *, const char *>> CSymbolMap = {
-#define SYMBOL(Name, NameSpace, Header) { #Name, #Header },
-      #include "CSymbolMap.inc"
-#undef SYMBOL
-  };
-  if (Language.CPlusPlus) {
-    for (const auto &Pair : SymbolMap)
-      Includes->addSymbolMapping(Pair.first, Pair.second);
-  } else if (Language.C11) {
-    for (const auto &Pair : CSymbolMap)
-      Includes->addSymbolMapping(Pair.first, Pair.second);
-  }
+
+  for (const auto &Pair : SymbolMap)
+    Includes->addSymbolMapping(Pair.first, Pair.second);
+
   // FIXME: remove the std header mapping once we support ambiguous symbols, now
   // it serves as a fallback to disambiguate:
   //   - symbols with mulitiple headers (e.g. std::move)

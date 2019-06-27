@@ -1,8 +1,6 @@
 llvm-link - LLVM bitcode linker
 ===============================
 
-.. program:: llvm-link
-
 SYNOPSIS
 --------
 

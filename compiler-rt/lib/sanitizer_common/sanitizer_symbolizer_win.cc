@@ -35,9 +35,6 @@ namespace {
 
 class WinSymbolizerTool : public SymbolizerTool {
  public:
-  // The constructor is provided to avoid synthesized memsets.
-  WinSymbolizerTool() {}
-
   bool SymbolizePC(uptr addr, SymbolizedStack *stack) override;
   bool SymbolizeData(uptr addr, DataInfo *info) override {
     return false;

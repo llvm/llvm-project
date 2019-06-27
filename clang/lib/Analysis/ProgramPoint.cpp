@@ -55,8 +55,7 @@ static void printLocJson(raw_ostream &Out, SourceLocation Loc,
   }
 
   Out << "{ \"line\": " << SM.getExpansionLineNumber(Loc)
-      << ", \"column\": " << SM.getExpansionColumnNumber(Loc)
-      << ", \"file\": \"" << SM.getFilename(Loc) << "\" }";
+      << ", \"column\": " << SM.getExpansionColumnNumber(Loc) << " }";
 }
 
 void ProgramPoint::printJson(llvm::raw_ostream &Out, const char *NL) const {

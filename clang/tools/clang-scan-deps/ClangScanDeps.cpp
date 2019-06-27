@@ -7,11 +7,18 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/PCHContainerOperations.h"
+#include "clang/FrontendTool/Utils.h"
 #include "clang/Tooling/CommonOptionsParser.h"
-#include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
+#include "clang/Tooling/Tooling.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/JSON.h"
 #include "llvm/Support/Options.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
@@ -19,22 +26,63 @@
 #include <thread>
 
 using namespace clang;
-using namespace tooling::dependencies;
 
 namespace {
 
-class SharedStream {
+/// A clang tool that runs the preprocessor only for the given compiler
+/// invocation.
+class PreprocessorOnlyTool : public tooling::ToolAction {
 public:
-  SharedStream(raw_ostream &OS) : OS(OS) {}
-  void applyLocked(llvm::function_ref<void(raw_ostream &OS)> Fn) {
-    std::unique_lock<std::mutex> LockGuard(Lock);
-    Fn(OS);
-    OS.flush();
+  PreprocessorOnlyTool(StringRef WorkingDirectory)
+      : WorkingDirectory(WorkingDirectory) {}
+
+  bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
+                     FileManager *FileMgr,
+                     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
+                     DiagnosticConsumer *DiagConsumer) override {
+    // Create a compiler instance to handle the actual work.
+    CompilerInstance Compiler(std::move(PCHContainerOps));
+    Compiler.setInvocation(std::move(Invocation));
+    FileMgr->getFileSystemOpts().WorkingDir = WorkingDirectory;
+    Compiler.setFileManager(FileMgr);
+
+    // Create the compiler's actual diagnostics engine.
+    Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
+    if (!Compiler.hasDiagnostics())
+      return false;
+
+    Compiler.createSourceManager(*FileMgr);
+
+    auto Action = llvm::make_unique<PreprocessOnlyAction>();
+    const bool Result = Compiler.ExecuteAction(*Action);
+    FileMgr->clearStatCache();
+    return Result;
   }
 
 private:
-  std::mutex Lock;
-  raw_ostream &OS;
+  StringRef WorkingDirectory;
+};
+
+/// A proxy file system that doesn't call `chdir` when changing the working
+/// directory of a clang tool.
+class ProxyFileSystemWithoutChdir : public llvm::vfs::ProxyFileSystem {
+public:
+  ProxyFileSystemWithoutChdir(
+      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
+      : ProxyFileSystem(std::move(FS)) {}
+
+  llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override {
+    assert(!CWD.empty() && "empty CWD");
+    return CWD;
+  }
+
+  std::error_code setCurrentWorkingDirectory(const Twine &Path) override {
+    CWD = Path.str();
+    return {};
+  }
+
+private:
+  std::string CWD;
 };
 
 /// The high-level implementation of the dependency discovery tool that runs on
@@ -45,34 +93,30 @@ public:
   ///
   /// \param Compilations     The reference to the compilation database that's
   /// used by the clang tool.
-  DependencyScanningTool(const tooling::CompilationDatabase &Compilations,
-                         SharedStream &OS, SharedStream &Errs)
-      : Compilations(Compilations), OS(OS), Errs(Errs) {}
+  DependencyScanningTool(const tooling::CompilationDatabase &Compilations)
+      : Compilations(Compilations) {
+    PCHContainerOps = std::make_shared<PCHContainerOperations>();
+    BaseFS = new ProxyFileSystemWithoutChdir(llvm::vfs::getRealFileSystem());
+  }
 
-  /// Computes the dependencies for the given file and prints them out.
+  /// Computes the dependencies for the given file.
   ///
   /// \returns True on error.
   bool runOnFile(const std::string &Input, StringRef CWD) {
-    auto MaybeFile = Worker.getDependencyFile(Input, CWD, Compilations);
-    if (!MaybeFile) {
-      llvm::handleAllErrors(
-          MaybeFile.takeError(), [this, &Input](llvm::StringError &Err) {
-            Errs.applyLocked([&](raw_ostream &OS) {
-              OS << "Error while scanning dependencies for " << Input << ":\n";
-              OS << Err.getMessage();
-            });
-          });
-      return true;
-    }
-    OS.applyLocked([&](raw_ostream &OS) { OS << *MaybeFile; });
-    return false;
+    BaseFS->setCurrentWorkingDirectory(CWD);
+    tooling::ClangTool Tool(Compilations, Input, PCHContainerOps, BaseFS);
+    Tool.clearArgumentsAdjusters();
+    Tool.setRestoreWorkingDir(false);
+    PreprocessorOnlyTool Action(CWD);
+    return Tool.run(&Action);
   }
 
 private:
-  DependencyScanningWorker Worker;
   const tooling::CompilationDatabase &Compilations;
-  SharedStream &OS;
-  SharedStream &Errs;
+  std::shared_ptr<PCHContainerOperations> PCHContainerOps;
+  /// The real filesystem used as a base for all the operations performed by the
+  /// tool.
+  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS;
 };
 
 llvm::cl::opt<bool> Help("h", llvm::cl::desc("Alias for -help"),
@@ -132,15 +176,12 @@ int main(int argc, const char **argv) {
         return AdjustedArgs;
       });
 
-  SharedStream Errs(llvm::errs());
-  // Print out the dependency results to STDOUT by default.
-  SharedStream DependencyOS(llvm::outs());
   unsigned NumWorkers =
       NumThreads == 0 ? llvm::hardware_concurrency() : NumThreads;
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
   for (unsigned I = 0; I < NumWorkers; ++I)
-    WorkerTools.push_back(llvm::make_unique<DependencyScanningTool>(
-        *AdjustingCompilations, DependencyOS, Errs));
+    WorkerTools.push_back(
+        llvm::make_unique<DependencyScanningTool>(*AdjustingCompilations));
 
   std::vector<std::thread> WorkerThreads;
   std::atomic<bool> HadErrors(false);

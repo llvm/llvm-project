@@ -1,8 +1,6 @@
 llvm-as - LLVM assembler
 ========================
 
-.. program:: llvm-as
-
 SYNOPSIS
 --------
 

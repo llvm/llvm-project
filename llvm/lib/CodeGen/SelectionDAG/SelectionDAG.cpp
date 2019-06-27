@@ -294,8 +294,8 @@ bool ISD::matchUnaryPredicate(SDValue Op,
 bool ISD::matchBinaryPredicate(
     SDValue LHS, SDValue RHS,
     std::function<bool(ConstantSDNode *, ConstantSDNode *)> Match,
-    bool AllowUndefs, bool AllowTypeMismatch) {
-  if (!AllowTypeMismatch && LHS.getValueType() != RHS.getValueType())
+    bool AllowUndefs) {
+  if (LHS.getValueType() != RHS.getValueType())
     return false;
 
   // TODO: Add support for scalar UNDEF cases?
@@ -318,8 +318,8 @@ bool ISD::matchBinaryPredicate(
     auto *RHSCst = dyn_cast<ConstantSDNode>(RHSOp);
     if ((!LHSCst && !LHSUndef) || (!RHSCst && !RHSUndef))
       return false;
-    if (!AllowTypeMismatch && (LHSOp.getValueType() != SVT ||
-                               LHSOp.getValueType() != RHSOp.getValueType()))
+    if (LHSOp.getValueType() != SVT ||
+        LHSOp.getValueType() != RHSOp.getValueType())
       return false;
     if (!Match(LHSCst, RHSCst))
       return false;
@@ -2242,12 +2242,6 @@ bool SelectionDAG::MaskedValueIsZero(SDValue V, const APInt &Mask,
                                      const APInt &DemandedElts,
                                      unsigned Depth) const {
   return Mask.isSubsetOf(computeKnownBits(V, DemandedElts, Depth).Zero);
-}
-
-/// MaskedValueIsAllOnes - Return true if '(Op & Mask) == Mask'.
-bool SelectionDAG::MaskedValueIsAllOnes(SDValue V, const APInt &Mask,
-                                        unsigned Depth) const {
-  return Mask.isSubsetOf(computeKnownBits(V, Depth).One);
 }
 
 /// isSplatValue - Return true if the vector V has the same value

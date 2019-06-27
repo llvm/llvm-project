@@ -14,7 +14,6 @@
 #include "clang/Basic/Builtins.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
-#include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 
 using namespace clang;
@@ -24,32 +23,30 @@ namespace {
 
 class BuiltinFunctionChecker : public Checker<eval::Call> {
 public:
-  bool evalCall(const CallEvent &Call, CheckerContext &C) const;
+  bool evalCall(const CallExpr *CE, CheckerContext &C) const;
 };
 
 }
 
-bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
+bool BuiltinFunctionChecker::evalCall(const CallExpr *CE,
                                       CheckerContext &C) const {
   ProgramStateRef state = C.getState();
-  const auto *FD = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
+  const FunctionDecl *FD = C.getCalleeDecl(CE);
+  const LocationContext *LCtx = C.getLocationContext();
   if (!FD)
     return false;
-
-  const LocationContext *LCtx = C.getLocationContext();
-  const Expr *CE = Call.getOriginExpr();
 
   switch (FD->getBuiltinID()) {
   default:
     return false;
 
   case Builtin::BI__builtin_assume: {
-    assert (Call.getNumArgs() > 0);
-    SVal Arg = Call.getArgSVal(0);
-    if (Arg.isUndef())
+    assert (CE->arg_begin() != CE->arg_end());
+    SVal ArgSVal = C.getSVal(CE->getArg(0));
+    if (ArgSVal.isUndef())
       return true; // Return true to model purity.
 
-    state = state->assume(Arg.castAs<DefinedOrUnknownSVal>(), true);
+    state = state->assume(ArgSVal.castAs<DefinedOrUnknownSVal>(), true);
     // FIXME: do we want to warn here? Not right now. The most reports might
     // come from infeasible paths, thus being false positives.
     if (!state) {
@@ -69,9 +66,9 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
     // __builtin_assume_aligned, just return the value of the subexpression.
     // __builtin_addressof is going from a reference to a pointer, but those
     // are represented the same way in the analyzer.
-    assert (Call.getNumArgs() > 0);
-    SVal Arg = Call.getArgSVal(0);
-    C.addTransition(state->BindExpr(CE, LCtx, Arg));
+    assert (CE->arg_begin() != CE->arg_end());
+    SVal X = C.getSVal(*(CE->arg_begin()));
+    C.addTransition(state->BindExpr(CE, LCtx, X));
     return true;
   }
 
@@ -85,14 +82,12 @@ bool BuiltinFunctionChecker::evalCall(const CallEvent &Call,
     // Set the extent of the region in bytes. This enables us to use the
     // SVal of the argument directly. If we save the extent in bits, we
     // cannot represent values like symbol*8.
-    auto Size = Call.getArgSVal(0);
-    if (Size.isUndef())
-      return true; // Return true to model purity.
+    auto Size = C.getSVal(*(CE->arg_begin())).castAs<DefinedOrUnknownSVal>();
 
     SValBuilder& svalBuilder = C.getSValBuilder();
     DefinedOrUnknownSVal Extent = R->getExtent(svalBuilder);
     DefinedOrUnknownSVal extentMatchesSizeArg =
-      svalBuilder.evalEQ(state, Extent, Size.castAs<DefinedOrUnknownSVal>());
+      svalBuilder.evalEQ(state, Extent, Size);
     state = state->assume(extentMatchesSizeArg, true);
     assert(state && "The region should not have any previous constraints");
 

@@ -45,13 +45,13 @@ add_clang_library(clangFrontend
   TextDiagnosticBuffer.cpp
   TextDiagnosticPrinter.cpp
   VerifyDiagnosticConsumer.cpp
-  InterfaceStubFunctionsConsumer.cpp
 
   DEPENDS
   ClangDriverOptions
   ${optional_deps}
 
   LINK_LIBS
+  clangAPINotes
   clangAST
   clangBasic
   clangDriver

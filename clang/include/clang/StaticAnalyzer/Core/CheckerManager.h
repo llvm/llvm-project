@@ -490,7 +490,7 @@ public:
       CheckerFn<ProgramStateRef (ProgramStateRef, const SVal &cond,
                                  bool assumption)>;
 
-  using EvalCallFunc = CheckerFn<bool (const CallEvent &, CheckerContext &)>;
+  using EvalCallFunc = CheckerFn<bool (const CallExpr *, CheckerContext &)>;
 
   using CheckEndOfTranslationUnit =
       CheckerFn<void (const TranslationUnitDecl *, AnalysisManager &,

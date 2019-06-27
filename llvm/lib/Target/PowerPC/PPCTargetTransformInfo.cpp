@@ -582,12 +582,17 @@ bool PPCTTIImpl::enableAggressiveInterleaving(bool LoopHasReductions) {
   return LoopHasReductions;
 }
 
-PPCTTIImpl::TTI::MemCmpExpansionOptions
-PPCTTIImpl::enableMemCmpExpansion(bool OptSize, bool IsZeroCmp) const {
-  TTI::MemCmpExpansionOptions Options;
-  Options.LoadSizes = {8, 4, 2, 1};
-  Options.MaxNumLoads = TLI->getMaxExpandSizeMemcmp(OptSize);
-  return Options;
+const PPCTTIImpl::TTI::MemCmpExpansionOptions *
+PPCTTIImpl::enableMemCmpExpansion(bool IsZeroCmp) const {
+  static const auto Options = []() {
+    TTI::MemCmpExpansionOptions Options;
+    Options.LoadSizes.push_back(8);
+    Options.LoadSizes.push_back(4);
+    Options.LoadSizes.push_back(2);
+    Options.LoadSizes.push_back(1);
+    return Options;
+  }();
+  return &Options;
 }
 
 bool PPCTTIImpl::enableInterleavedAccessVectorization() {
@@ -752,35 +757,6 @@ int PPCTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val, unsigned Index) {
       return 0;
 
     return Cost;
-
-  } else if (Val->getScalarType()->isIntegerTy() && Index != -1U) {
-    if (ST->hasP9Altivec()) {
-      if (ISD == ISD::INSERT_VECTOR_ELT)
-        // A move-to VSR and a permute/insert.  Assume vector operation cost
-        // for both (cost will be 2x on P9).
-        return vectorCostAdjustment(2, Opcode, Val, nullptr);
-
-      // It's an extract.  Maybe we can do a cheap move-from VSR.
-      unsigned EltSize = Val->getScalarSizeInBits();
-      if (EltSize == 64) {
-        unsigned MfvsrdIndex = ST->isLittleEndian() ? 1 : 0;
-        if (Index == MfvsrdIndex)
-          return 1;
-      } else if (EltSize == 32) {
-        unsigned MfvsrwzIndex = ST->isLittleEndian() ? 2 : 1;
-        if (Index == MfvsrwzIndex)
-          return 1;
-      }
-
-      // We need a vector extract (or mfvsrld).  Assume vector operation cost.
-      // The cost of the load constant for a vector extract is disregarded
-      // (invariant, easily schedulable).
-      return vectorCostAdjustment(1, Opcode, Val, nullptr);
-      
-    } else if (ST->hasDirectMove())
-      // Assume permute has standard cost.
-      // Assume move-to/move-from VSR have 2x standard cost.
-      return 3;
   }
 
   // Estimated cost of a load-hit-store delay.  This was obtained

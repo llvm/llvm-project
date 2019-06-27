@@ -997,24 +997,19 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
                                                    bool AllowParens) {
   SMLoc FirstS = getLoc();
   bool HadParens = false;
-  AsmToken LParen;
+  AsmToken Buf[2];
 
-  // If this is an LParen and a parenthesised register name is allowed, parse it
-  // atomically.
+  // If this a parenthesised register name is allowed, parse it atomically
   if (AllowParens && getLexer().is(AsmToken::LParen)) {
-    AsmToken Buf[2];
     size_t ReadCount = getLexer().peekTokens(Buf);
     if (ReadCount == 2 && Buf[1].getKind() == AsmToken::RParen) {
       HadParens = true;
-      LParen = getParser().getTok();
       getParser().Lex(); // Eat '('
     }
   }
 
   switch (getLexer().getKind()) {
   default:
-    if (HadParens)
-      getLexer().UnLex(LParen);
     return MatchOperand_NoMatch;
   case AsmToken::Identifier:
     StringRef Name = getLexer().getTok().getIdentifier();
@@ -1023,7 +1018,7 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
 
     if (RegNo == 0) {
       if (HadParens)
-        getLexer().UnLex(LParen);
+        getLexer().UnLex(Buf[0]);
       return MatchOperand_NoMatch;
     }
     if (HadParens)
@@ -1053,8 +1048,6 @@ RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
   case AsmToken::LParen:
   case AsmToken::Minus:
   case AsmToken::Plus:
-  case AsmToken::Exclaim:
-  case AsmToken::Tilde:
   case AsmToken::Integer:
   case AsmToken::String: {
     if (getParser().parseExpression(Res))
@@ -1121,8 +1114,6 @@ OperandMatchResultTy RISCVAsmParser::parseImmediate(OperandVector &Operands) {
   case AsmToken::LParen:
   case AsmToken::Minus:
   case AsmToken::Plus:
-  case AsmToken::Exclaim:
-  case AsmToken::Tilde:
   case AsmToken::Integer:
   case AsmToken::String:
   case AsmToken::Identifier:
@@ -1217,10 +1208,6 @@ OperandMatchResultTy RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
   const MCExpr *Res;
 
   if (getLexer().getKind() != AsmToken::Identifier)
-    return MatchOperand_NoMatch;
-
-  // Avoid parsing the register in `call rd, foo` as a call symbol.
-  if (getLexer().peekTok().getKind() != AsmToken::EndOfStatement)
     return MatchOperand_NoMatch;
 
   StringRef Identifier;

@@ -67,7 +67,7 @@ const MCPhysReg *R600RegisterInfo::getCalleeSavedRegs(
   return &CalleeSavedReg;
 }
 
-Register R600RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
+unsigned R600RegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return R600::NoRegister;
 }
 

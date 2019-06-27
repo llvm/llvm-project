@@ -443,7 +443,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
         unsigned MemSize = Query.MMODescrs[0].SizeInBits;
         return (MemSize == 96) &&
                Query.Types[0].isVector() &&
-               !ST.hasDwordx3LoadStores();
+               ST.getGeneration() < AMDGPUSubtarget::SEA_ISLANDS;
       },
       [=](const LegalityQuery &Query) {
         return std::make_pair(0, V2S32);
@@ -471,7 +471,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST,
           return true;
 
         case 96:
-          return ST.hasDwordx3LoadStores();
+          // XXX hasLoadX3
+          return (ST.getGeneration() >= AMDGPUSubtarget::SEA_ISLANDS);
 
         case 256:
         case 512:
@@ -791,8 +792,8 @@ unsigned AMDGPULegalizerInfo::getSegmentAperture(
     4,
     MinAlign(64, StructOffset));
 
-  Register LoadResult = MRI.createGenericVirtualRegister(S32);
-  Register LoadAddr;
+  unsigned LoadResult = MRI.createGenericVirtualRegister(S32);
+  unsigned LoadAddr = AMDGPU::NoRegister;
 
   MIRBuilder.materializeGEP(LoadAddr, QueuePtr, LLT::scalar(64), StructOffset);
   MIRBuilder.buildLoad(LoadResult, LoadAddr, *MMO);
@@ -806,8 +807,8 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
 
   MIRBuilder.setInstr(MI);
 
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
+  unsigned Dst = MI.getOperand(0).getReg();
+  unsigned Src = MI.getOperand(1).getReg();
 
   LLT DstTy = MRI.getType(Dst);
   LLT SrcTy = MRI.getType(Src);
@@ -835,12 +836,12 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
     auto SegmentNull = MIRBuilder.buildConstant(DstTy, NullVal);
     auto FlatNull = MIRBuilder.buildConstant(SrcTy, 0);
 
-    Register PtrLo32 = MRI.createGenericVirtualRegister(DstTy);
+    unsigned PtrLo32 = MRI.createGenericVirtualRegister(DstTy);
 
     // Extract low 32-bits of the pointer.
     MIRBuilder.buildExtract(PtrLo32, Src, 0);
 
-    Register CmpRes = MRI.createGenericVirtualRegister(LLT::scalar(1));
+    unsigned CmpRes = MRI.createGenericVirtualRegister(LLT::scalar(1));
     MIRBuilder.buildICmp(CmpInst::ICMP_NE, CmpRes, Src, FlatNull.getReg(0));
     MIRBuilder.buildSelect(Dst, CmpRes, PtrLo32, SegmentNull.getReg(0));
 
@@ -856,15 +857,15 @@ bool AMDGPULegalizerInfo::legalizeAddrSpaceCast(
   auto FlatNull =
       MIRBuilder.buildConstant(DstTy, TM.getNullPointerValue(DestAS));
 
-  Register ApertureReg = getSegmentAperture(DestAS, MRI, MIRBuilder);
+  unsigned ApertureReg = getSegmentAperture(DestAS, MRI, MIRBuilder);
 
-  Register CmpRes = MRI.createGenericVirtualRegister(LLT::scalar(1));
+  unsigned CmpRes = MRI.createGenericVirtualRegister(LLT::scalar(1));
   MIRBuilder.buildICmp(CmpInst::ICMP_NE, CmpRes, Src, SegmentNull.getReg(0));
 
-  Register BuildPtr = MRI.createGenericVirtualRegister(DstTy);
+  unsigned BuildPtr = MRI.createGenericVirtualRegister(DstTy);
 
   // Coerce the type of the low half of the result so we can use merge_values.
-  Register SrcAsInt = MRI.createGenericVirtualRegister(LLT::scalar(32));
+  unsigned SrcAsInt = MRI.createGenericVirtualRegister(LLT::scalar(32));
   MIRBuilder.buildInstr(TargetOpcode::G_PTRTOINT)
     .addDef(SrcAsInt)
     .addUse(Src);
@@ -883,7 +884,7 @@ bool AMDGPULegalizerInfo::legalizeFrint(
   MachineIRBuilder &MIRBuilder) const {
   MIRBuilder.setInstr(MI);
 
-  Register Src = MI.getOperand(1).getReg();
+  unsigned Src = MI.getOperand(1).getReg();
   LLT Ty = MRI.getType(Src);
   assert(Ty.isScalar() && Ty.getSizeInBits() == 64);
 
@@ -913,7 +914,7 @@ bool AMDGPULegalizerInfo::legalizeFceil(
   const LLT S1 = LLT::scalar(1);
   const LLT S64 = LLT::scalar(64);
 
-  Register Src = MI.getOperand(1).getReg();
+  unsigned Src = MI.getOperand(1).getReg();
   assert(MRI.getType(Src) == S64);
 
   // result = trunc(src)
@@ -959,12 +960,12 @@ bool AMDGPULegalizerInfo::legalizeIntrinsicTrunc(
   const LLT S32 = LLT::scalar(32);
   const LLT S64 = LLT::scalar(64);
 
-  Register Src = MI.getOperand(1).getReg();
+  unsigned Src = MI.getOperand(1).getReg();
   assert(MRI.getType(Src) == S64);
 
   // TODO: Should this use extract since the low half is unused?
   auto Unmerge = B.buildUnmerge({S32, S32}, Src);
-  Register Hi = Unmerge.getReg(1);
+  unsigned Hi = Unmerge.getReg(1);
 
   // Extract the upper half, since this is where we will find the sign and
   // exponent.
@@ -1001,8 +1002,8 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
   MachineIRBuilder &B, bool Signed) const {
   B.setInstr(MI);
 
-  Register Dst = MI.getOperand(0).getReg();
-  Register Src = MI.getOperand(1).getReg();
+  unsigned Dst = MI.getOperand(0).getReg();
+  unsigned Src = MI.getOperand(1).getReg();
 
   const LLT S64 = LLT::scalar(64);
   const LLT S32 = LLT::scalar(32);

@@ -103,6 +103,7 @@ namespace {
     unsigned Indentation;
     bool HasEmptyPlaceHolder = false;
     bool InsideCCAttribute = false;
+    bool IgnoreFunctionProtoTypeConstQual = false;
 
   public:
     explicit TypePrinter(const PrintingPolicy &Policy, unsigned Indentation = 0)
@@ -818,8 +819,11 @@ void TypePrinter::printFunctionProtoAfter(const FunctionProtoType *T,
 
   printFunctionAfter(Info, OS);
 
-  if (!T->getMethodQuals().empty())
-    OS << " " << T->getMethodQuals().getAsString();
+  Qualifiers quals = T->getMethodQuals();
+  if (IgnoreFunctionProtoTypeConstQual)
+    quals.removeConst();
+  if (!quals.empty())
+    OS << " " << quals.getAsString();
 
   switch (T->getRefQualifier()) {
   case RQ_None:
@@ -1165,6 +1169,13 @@ void TypePrinter::printTag(TagDecl *D, raw_ostream &OS) {
   else if (TypedefNameDecl *Typedef = D->getTypedefNameForAnonDecl()) {
     assert(Typedef->getIdentifier() && "Typedef without identifier?");
     OS << Typedef->getIdentifier()->getName();
+  } else if (Policy.UseStdFunctionForLambda && isa<CXXRecordDecl>(D) &&
+             cast<CXXRecordDecl>(D)->isLambda()) {
+    OS << "std::function<";
+    QualType T = cast<CXXRecordDecl>(D)->getLambdaCallOperator()->getType();
+    SaveAndRestore<bool> NoConst(IgnoreFunctionProtoTypeConstQual, true);
+    print(T, OS, "");
+    OS << '>';
   } else {
     // Make an unambiguous representation for anonymous types, e.g.
     //   (anonymous enum at /usr/include/string.h:120:9)

@@ -5,8 +5,9 @@
       "files": [
         {
           "fileLocation": {
+            "uri": "file:sarif-diagnostics-taint-test.c"
           },
-          "length": 434,
+          "length": 415,
           "mimeType": "text/plain",
           "roles": [
             "resultFile"
@@ -42,6 +43,7 @@
                         "physicalLocation": {
                           "fileLocation": {
                             "fileIndex": 0,
+                            "uri": "file:sarif-diagnostics-taint-test.c"
                           },
                           "region": {
                             "endColumn": 5,
@@ -61,6 +63,7 @@
                         "physicalLocation": {
                           "fileLocation": {
                             "fileIndex": 0,
+                            "uri": "file:sarif-diagnostics-taint-test.c"
                           },
                           "region": {
                             "endColumn": 17,
@@ -81,6 +84,7 @@
               "physicalLocation": {
                 "fileLocation": {
                   "fileIndex": 0,
+                  "uri": "file:sarif-diagnostics-taint-test.c"
                 },
                 "region": {
                   "endColumn": 17,
@@ -102,7 +106,9 @@
         "fullName": "clang static analyzer",
         "language": "en-US",
         "name": "clang",
+        "version": "clang version 8.0.0"
       }
     }
   ],
+  "version": "2.0.0-csd.2.beta.2018-11-28"
 }

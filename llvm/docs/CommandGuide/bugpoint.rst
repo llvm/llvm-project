@@ -1,8 +1,6 @@
 bugpoint - automatic test case reduction tool
 =============================================
 
-.. program:: bugpoint
-
 SYNOPSIS
 --------
 

@@ -267,10 +267,6 @@ class SelectionDAG {
   /// Tracks dbg_value and dbg_label information through SDISel.
   SDDbgInfo *DbgInfo;
 
-  using CallSiteInfo = MachineFunction::CallSiteInfo;
-  using CallSiteInfoImpl = MachineFunction::CallSiteInfoImpl;
-  DenseMap<const SDNode *, CallSiteInfo> SDCallSiteInfo;
-
   uint16_t NextPersistentId = 0;
 
 public:
@@ -1472,11 +1468,6 @@ public:
   bool MaskedValueIsZero(SDValue Op, const APInt &Mask,
                          const APInt &DemandedElts, unsigned Depth = 0) const;
 
-  /// Return true if '(Op & Mask) == Mask'.
-  /// Op and Mask are known to be the same type.
-  bool MaskedValueIsAllOnes(SDValue Op, const APInt &Mask,
-                            unsigned Depth = 0) const;
-
   /// Determine which bits of Op are known to be either zero or one and return
   /// them in Known. For vectors, the known bits are those that are shared by
   /// every vector element.
@@ -1660,17 +1651,6 @@ public:
   inline bool isConstantValueOfAnyType(SDValue N) {
     return isConstantIntBuildVectorOrConstantInt(N) ||
            isConstantFPBuildVectorOrConstantFP(N);
-  }
-
-  void addCallSiteInfo(const SDNode *CallNode, CallSiteInfoImpl &&CallInfo) {
-    SDCallSiteInfo[CallNode] = std::move(CallInfo);
-  }
-
-  CallSiteInfo getSDCallSiteInfo(const SDNode *CallNode) {
-    auto I = SDCallSiteInfo.find(CallNode);
-    if (I != SDCallSiteInfo.end())
-      return std::move(I->second);
-    return CallSiteInfo();
   }
 
 private:

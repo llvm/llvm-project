@@ -25,6 +25,19 @@
 static int32_t GlobalMajor, GlobalMinor, GlobalSubminor;
 static dispatch_once_t DispatchOnceCounter;
 
+// _availability_version_check darwin API support.
+typedef uint32_t dyld_platform_t;
+
+typedef struct {
+  dyld_platform_t platform;
+  uint32_t version;
+} dyld_build_version_t;
+
+typedef bool (*AvailabilityVersionCheckFuncTy)(uint32_t count,
+                                               dyld_build_version_t versions[]);
+
+static AvailabilityVersionCheckFuncTy AvailabilityVersionCheck;
+
 // We can't include <CoreFoundation/CoreFoundation.h> directly from here, so
 // just forward declare everything that we need from it.
 
@@ -73,8 +86,15 @@ typedef Boolean (*CFStringGetCStringFuncTy)(CFStringRef, char *, CFIndex,
 typedef void (*CFReleaseFuncTy)(CFTypeRef);
 
 // Find and parse the SystemVersion.plist file.
-static void parseSystemVersionPList(void *Unused) {
+static void initializeAvailabilityCheck(void *Unused) {
   (void)Unused;
+
+  // Use the new API if it's is available. Still load the PLIST to ensure that the
+  // existing calls to __isOSVersionAtLeast still work even with new
+  // compiler-rt and new OSes.
+  AvailabilityVersionCheck = (AvailabilityVersionCheckFuncTy)dlsym(
+      RTLD_DEFAULT, "_availability_version_check");
+
   // Load CoreFoundation dynamically
   const void *NullAllocator = dlsym(RTLD_DEFAULT, "kCFAllocatorNull");
   if (!NullAllocator)
@@ -201,9 +221,12 @@ Fail:
   fclose(PropertyList);
 }
 
+// This old API entry point is no longer used by Clang. We still need to keep it
+// around to ensure that object files that reference it are still usable when
+// linked with new compiler-rt.
 int32_t __isOSVersionAtLeast(int32_t Major, int32_t Minor, int32_t Subminor) {
   // Populate the global version variables, if they haven't already.
-  dispatch_once_f(&DispatchOnceCounter, NULL, parseSystemVersionPList);
+  dispatch_once_f(&DispatchOnceCounter, NULL, initializeAvailabilityCheck);
 
   if (Major < GlobalMajor)
     return 1;
@@ -214,6 +237,23 @@ int32_t __isOSVersionAtLeast(int32_t Major, int32_t Minor, int32_t Subminor) {
   if (Minor > GlobalMinor)
     return 0;
   return Subminor <= GlobalSubminor;
+}
+
+static inline uint32_t ConstructVersion(uint32_t Major, uint32_t Minor,
+                                        uint32_t Subminor) {
+  return ((Major & 0xffff) << 16) | ((Minor & 0xff) << 8) | (Subminor & 0xff);
+}
+
+int32_t __isPlatformVersionAtLeast(uint32_t Platform, uint32_t Major,
+                                   uint32_t Minor, uint32_t Subminor) {
+  dispatch_once_f(&DispatchOnceCounter, NULL, initializeAvailabilityCheck);
+
+  if (!AvailabilityVersionCheck) {
+    return __isOSVersionAtLeast(Major, Minor, Subminor);
+  }
+  dyld_build_version_t Versions[] = {
+      {Platform, ConstructVersion(Major, Minor, Subminor)}};
+  return AvailabilityVersionCheck(1, Versions);
 }
 
 #else

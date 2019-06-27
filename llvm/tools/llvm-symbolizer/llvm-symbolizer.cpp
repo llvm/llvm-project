@@ -154,9 +154,6 @@ static cl::opt<DIPrinter::OutputStyle>
                              clEnumValN(DIPrinter::OutputStyle::GNU, "GNU",
                                         "GNU addr2line style")));
 
-static cl::extrahelp
-    HelpResponse("\nPass @FILE as argument to read options from FILE.\n");
-
 template<typename T>
 static bool error(Expected<T> &ResOrErr) {
   if (ResOrErr)
@@ -166,25 +163,17 @@ static bool error(Expected<T> &ResOrErr) {
   return true;
 }
 
-enum class Command {
-  Code,
-  Data,
-  Frame,
-};
-
-static bool parseCommand(StringRef InputString, Command &Cmd,
+static bool parseCommand(StringRef InputString, bool &IsData,
                          std::string &ModuleName, uint64_t &ModuleOffset) {
   const char kDelimiters[] = " \n\r";
   ModuleName = "";
   if (InputString.consume_front("CODE ")) {
-    Cmd = Command::Code;
+    IsData = false;
   } else if (InputString.consume_front("DATA ")) {
-    Cmd = Command::Data;
-  } else if (InputString.consume_front("FRAME ")) {
-    Cmd = Command::Frame;
+    IsData = true;
   } else {
     // If no cmd, assume it's CODE.
-    Cmd = Command::Code;
+    IsData = false;
   }
   const char *pos = InputString.data();
   // Skip delimiters and parse input filename (if needed).
@@ -214,10 +203,10 @@ static bool parseCommand(StringRef InputString, Command &Cmd,
 
 static void symbolizeInput(StringRef InputString, LLVMSymbolizer &Symbolizer,
                            DIPrinter &Printer) {
-  Command Cmd;
+  bool IsData = false;
   std::string ModuleName;
   uint64_t Offset = 0;
-  if (!parseCommand(StringRef(InputString), Cmd, ModuleName, Offset)) {
+  if (!parseCommand(StringRef(InputString), IsData, ModuleName, Offset)) {
     outs() << InputString;
     return;
   }
@@ -229,19 +218,10 @@ static void symbolizeInput(StringRef InputString, LLVMSymbolizer &Symbolizer,
     outs() << Delimiter;
   }
   Offset -= ClAdjustVMA;
-  if (Cmd == Command::Data) {
+  if (IsData) {
     auto ResOrErr = Symbolizer.symbolizeData(
         ModuleName, {Offset, object::SectionedAddress::UndefSection});
     Printer << (error(ResOrErr) ? DIGlobal() : ResOrErr.get());
-  } else if (Cmd == Command::Frame) {
-    auto ResOrErr = Symbolizer.symbolizeFrame(
-        ModuleName, {Offset, object::SectionedAddress::UndefSection});
-    if (!error(ResOrErr)) {
-      for (DILocal Local : *ResOrErr)
-        Printer << Local;
-      if (ResOrErr->empty())
-        outs() << "??\n";
-    }
   } else if (ClPrintInlining) {
     auto ResOrErr = Symbolizer.symbolizeInlinedCode(
         ModuleName, {Offset, object::SectionedAddress::UndefSection});

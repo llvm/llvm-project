@@ -26,8 +26,16 @@ size_t MachOWriter::headerSize() const {
 size_t MachOWriter::loadCommandsSize() const { return O.Header.SizeOfCmds; }
 
 size_t MachOWriter::symTableSize() const {
-  return O.SymTable.Symbols.size() *
+  return O.SymTable.NameList.size() *
          (Is64Bit ? sizeof(MachO::nlist_64) : sizeof(MachO::nlist));
+}
+
+size_t MachOWriter::strTableSize() const {
+  size_t S = 0;
+  for (const auto &Str : O.StrTable.Strings)
+    S += Str.size();
+  S += (O.StrTable.Strings.empty() ? 0 : O.StrTable.Strings.size() - 1);
+  return S;
 }
 
 size_t MachOWriter::totalSize() const {
@@ -41,12 +49,12 @@ size_t MachOWriter::totalSize() const {
         O.LoadCommands[*O.SymTabCommandIndex]
             .MachOLoadCommand.symtab_command_data;
     if (SymTabCommand.symoff) {
-      assert((SymTabCommand.nsyms == O.SymTable.Symbols.size()) &&
+      assert((SymTabCommand.nsyms == O.SymTable.NameList.size()) &&
              "Incorrect number of symbols");
       Ends.push_back(SymTabCommand.symoff + symTableSize());
     }
     if (SymTabCommand.stroff) {
-      assert((SymTabCommand.strsize == StrTableBuilder.getSize()) &&
+      assert((SymTabCommand.strsize == strTableSize()) &&
              "Incorrect string table size");
       Ends.push_back(SymTabCommand.stroff + SymTabCommand.strsize);
     }
@@ -118,14 +126,6 @@ void MachOWriter::writeHeader() {
   auto HeaderSize =
       Is64Bit ? sizeof(MachO::mach_header_64) : sizeof(MachO::mach_header);
   memcpy(B.getBufferStart(), &Header, HeaderSize);
-}
-
-void MachOWriter::updateSymbolIndexes() {
-  uint32_t Index = 0;
-  for (auto &Symbol : O.SymTable.Symbols) {
-    Symbol->Index = Index;
-    Index++;
-  }
 }
 
 void MachOWriter::writeLoadCommands() {
@@ -220,32 +220,24 @@ void MachOWriter::writeSections() {
       memcpy(B.getBufferStart() + Sec.Offset, Sec.Content.data(),
              Sec.Content.size());
       for (size_t Index = 0; Index < Sec.Relocations.size(); ++Index) {
-        auto RelocInfo = Sec.Relocations[Index];
-        if (!RelocInfo.Scattered) {
-          auto *Info =
-              reinterpret_cast<MachO::relocation_info *>(&RelocInfo.Info);
-          Info->r_symbolnum = RelocInfo.Symbol->Index;
-        }
-
+        MachO::any_relocation_info R = Sec.Relocations[Index];
         if (IsLittleEndian != sys::IsLittleEndianHost)
-          MachO::swapStruct(
-              reinterpret_cast<MachO::any_relocation_info &>(RelocInfo.Info));
+          MachO::swapStruct(R);
         memcpy(B.getBufferStart() + Sec.RelOff +
                    Index * sizeof(MachO::any_relocation_info),
-               &RelocInfo.Info, sizeof(RelocInfo.Info));
+               &R, sizeof(R));
       }
     }
 }
 
 template <typename NListType>
-void writeNListEntry(const SymbolEntry &SE, bool IsLittleEndian, char *&Out,
-                     uint32_t Nstrx) {
+void writeNListEntry(const NListEntry &NLE, bool IsLittleEndian, char *&Out) {
   NListType ListEntry;
-  ListEntry.n_strx = Nstrx;
-  ListEntry.n_type = SE.n_type;
-  ListEntry.n_sect = SE.n_sect;
-  ListEntry.n_desc = SE.n_desc;
-  ListEntry.n_value = SE.n_value;
+  ListEntry.n_strx = NLE.n_strx;
+  ListEntry.n_type = NLE.n_type;
+  ListEntry.n_sect = NLE.n_sect;
+  ListEntry.n_desc = NLE.n_desc;
+  ListEntry.n_value = NLE.n_value;
 
   if (IsLittleEndian != sys::IsLittleEndianHost)
     MachO::swapStruct(ListEntry);
@@ -259,9 +251,15 @@ void MachOWriter::writeSymbolTable() {
   const MachO::symtab_command &SymTabCommand =
       O.LoadCommands[*O.SymTabCommandIndex]
           .MachOLoadCommand.symtab_command_data;
-
-  uint8_t *StrTable = (uint8_t *)B.getBufferStart() + SymTabCommand.stroff;
-  StrTableBuilder.write(StrTable);
+  assert((SymTabCommand.nsyms == O.SymTable.NameList.size()) &&
+         "Incorrect number of symbols");
+  char *Out = (char *)B.getBufferStart() + SymTabCommand.symoff;
+  for (auto NLE : O.SymTable.NameList) {
+    if (Is64Bit)
+      writeNListEntry<MachO::nlist_64>(NLE, IsLittleEndian, Out);
+    else
+      writeNListEntry<MachO::nlist>(NLE, IsLittleEndian, Out);
+  }
 }
 
 void MachOWriter::writeStringTable() {
@@ -270,17 +268,17 @@ void MachOWriter::writeStringTable() {
   const MachO::symtab_command &SymTabCommand =
       O.LoadCommands[*O.SymTabCommandIndex]
           .MachOLoadCommand.symtab_command_data;
-
-  char *SymTable = (char *)B.getBufferStart() + SymTabCommand.symoff;
-  for (auto Iter = O.SymTable.Symbols.begin(), End = O.SymTable.Symbols.end();
-       Iter != End; Iter++) {
-    SymbolEntry *Sym = Iter->get();
-    auto Nstrx = StrTableBuilder.getOffset(Sym->Name);
-
-    if (Is64Bit)
-      writeNListEntry<MachO::nlist_64>(*Sym, IsLittleEndian, SymTable, Nstrx);
-    else
-      writeNListEntry<MachO::nlist>(*Sym, IsLittleEndian, SymTable, Nstrx);
+  char *Out = (char *)B.getBufferStart() + SymTabCommand.stroff;
+  assert((SymTabCommand.strsize == strTableSize()) &&
+         "Incorrect string table size");
+  for (size_t Index = 0; Index < O.StrTable.Strings.size(); ++Index) {
+    memcpy(Out, O.StrTable.Strings[Index].data(),
+           O.StrTable.Strings[Index].size());
+    Out += O.StrTable.Strings[Index].size();
+    if (Index + 1 != O.StrTable.Strings.size()) {
+      memcpy(Out, "\0", 1);
+      Out += 1;
+    }
   }
 }
 
@@ -422,10 +420,10 @@ void MachOWriter::updateSizeOfCmds() {
 // are already sorted by the those types.
 void MachOWriter::updateDySymTab(MachO::macho_load_command &MLC) {
   uint32_t NumLocalSymbols = 0;
-  auto Iter = O.SymTable.Symbols.begin();
-  auto End = O.SymTable.Symbols.end();
+  auto Iter = O.SymTable.NameList.begin();
+  auto End = O.SymTable.NameList.end();
   for (; Iter != End; Iter++) {
-    if ((*Iter)->n_type & (MachO::N_EXT | MachO::N_PEXT))
+    if (Iter->n_type & (MachO::N_EXT | MachO::N_PEXT))
       break;
 
     NumLocalSymbols++;
@@ -433,7 +431,7 @@ void MachOWriter::updateDySymTab(MachO::macho_load_command &MLC) {
 
   uint32_t NumExtDefSymbols = 0;
   for (; Iter != End; Iter++) {
-    if (((*Iter)->n_type & MachO::N_TYPE) == MachO::N_UNDF)
+    if ((Iter->n_type & MachO::N_TYPE) == MachO::N_UNDF)
       break;
 
     NumExtDefSymbols++;
@@ -445,7 +443,7 @@ void MachOWriter::updateDySymTab(MachO::macho_load_command &MLC) {
   MLC.dysymtab_command_data.nextdefsym = NumExtDefSymbols;
   MLC.dysymtab_command_data.iundefsym = NumLocalSymbols + NumExtDefSymbols;
   MLC.dysymtab_command_data.nundefsym =
-      O.SymTable.Symbols.size() - (NumLocalSymbols + NumExtDefSymbols);
+      O.SymTable.NameList.size() - (NumLocalSymbols + NumExtDefSymbols);
 }
 
 // Recomputes and updates offset and size fields in load commands and sections
@@ -514,9 +512,8 @@ Error MachOWriter::layout() {
     auto cmd = MLC.load_command_data.cmd;
     switch (cmd) {
     case MachO::LC_SYMTAB:
-      MLC.symtab_command_data.nsyms = O.SymTable.Symbols.size();
-      MLC.symtab_command_data.strsize = StrTableBuilder.getSize();
       MLC.symtab_command_data.symoff = Offset;
+      MLC.symtab_command_data.nsyms = O.SymTable.NameList.size();
       Offset += NListSize * MLC.symtab_command_data.nsyms;
       MLC.symtab_command_data.stroff = Offset;
       Offset += MLC.symtab_command_data.strsize;
@@ -557,15 +554,8 @@ Error MachOWriter::layout() {
   return Error::success();
 }
 
-void MachOWriter::constructStringTable() {
-  for (std::unique_ptr<SymbolEntry> &Sym : O.SymTable.Symbols)
-    StrTableBuilder.add(Sym->Name);
-  StrTableBuilder.finalize();
-}
-
 Error MachOWriter::finalize() {
   updateSizeOfCmds();
-  constructStringTable();
 
   if (auto E = layout())
     return E;
@@ -578,7 +568,6 @@ Error MachOWriter::write() {
     return E;
   memset(B.getBufferStart(), 0, totalSize());
   writeHeader();
-  updateSymbolIndexes();
   writeLoadCommands();
   writeSections();
   writeTail();

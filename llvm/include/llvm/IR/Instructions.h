@@ -521,11 +521,9 @@ private:
 //                                AtomicCmpXchgInst Class
 //===----------------------------------------------------------------------===//
 
-/// An instruction that atomically checks whether a
+/// an instruction that atomically checks whether a
 /// specified value is in a memory location, and, if it is, stores a new value
-/// there. The value returned by this instruction is a pair containing the
-/// original value as first element, and an i1 indicating success (true) or
-/// failure (false) as second element.
+/// there.  Returns the value that was loaded.
 ///
 class AtomicCmpXchgInst : public Instruction {
   void Init(Value *Ptr, Value *Cmp, Value *NewVal,

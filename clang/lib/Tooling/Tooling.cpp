@@ -481,7 +481,7 @@ int ClangTool::run(ToolAction *Action) {
       if (OverlayFileSystem->setCurrentWorkingDirectory(
               CompileCommand.Directory))
         llvm::report_fatal_error("Cannot chdir into \"" +
-                                 Twine(CompileCommand.Directory) + "\"!");
+                                 Twine(CompileCommand.Directory) + "\n!");
 
       // Now fill the in-memory VFS with the relative file mappings so it will
       // have the correct relative paths. We never remove mappings but that
@@ -517,8 +517,7 @@ int ClangTool::run(ToolAction *Action) {
 
       if (!Invocation.run()) {
         // FIXME: Diagnostics should be used instead.
-        if (PrintErrorMessage)
-          llvm::errs() << "Error while processing " << File << ".\n";
+        llvm::errs() << "Error while processing " << File << ".\n";
         ProcessingFailed = true;
       }
     }
@@ -568,10 +567,6 @@ int ClangTool::buildASTs(std::vector<std::unique_ptr<ASTUnit>> &ASTs) {
 
 void ClangTool::setRestoreWorkingDir(bool RestoreCWD) {
   this->RestoreCWD = RestoreCWD;
-}
-
-void ClangTool::setPrintErrorMessage(bool PrintErrorMessage) {
-  this->PrintErrorMessage = PrintErrorMessage;
 }
 
 namespace clang {

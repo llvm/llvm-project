@@ -437,7 +437,6 @@ public:
   }
 
   void visitOperandShadowInst(Instruction &I);
-  void visitUnaryOperator(UnaryOperator &UO);
   void visitBinaryOperator(BinaryOperator &BO);
   void visitCastInst(CastInst &CI);
   void visitCmpInst(CmpInst &CI);
@@ -1397,10 +1396,6 @@ void DFSanVisitor::visitStoreInst(StoreInst &SI) {
     Shadow = DFSF.combineShadows(Shadow, PtrShadow, &SI);
   }
   DFSF.storeShadow(SI.getPointerOperand(), Size, Align, Shadow, &SI);
-}
-
-void DFSanVisitor::visitUnaryOperator(UnaryOperator &UO) {
-  visitOperandShadowInst(UO);
 }
 
 void DFSanVisitor::visitBinaryOperator(BinaryOperator &BO) {

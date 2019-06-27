@@ -2396,8 +2396,6 @@ public:
 
   bool doesDeclarationForceExternallyVisibleDefinition() const;
 
-  bool isStatic() const { return getStorageClass() == SC_Static; }
-
   /// Whether this function declaration represents an C++ overloaded
   /// operator, e.g., "operator+".
   bool isOverloadedOperator() const {
@@ -2730,11 +2728,6 @@ public:
   /// at all and instead act as a separator between contiguous runs of other
   /// bit-fields.
   bool isZeroLengthBitField(const ASTContext &Ctx) const;
-
-  /// Determine if this field is a subobject of zero size, that is, either a
-  /// zero-length bit-field or a field of empty class type with the
-  /// [[no_unique_address]] attribute.
-  bool isZeroSize(const ASTContext &Ctx) const;
 
   /// Get the kind of (C++11) default member initializer that this field has.
   InClassInitStyle getInClassInitStyle() const {

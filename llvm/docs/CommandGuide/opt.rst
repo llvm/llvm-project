@@ -1,8 +1,6 @@
 opt - LLVM optimizer
 ====================
 
-.. program:: opt
-
 SYNOPSIS
 --------
 

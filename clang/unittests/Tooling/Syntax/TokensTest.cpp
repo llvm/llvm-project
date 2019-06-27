@@ -290,14 +290,6 @@ file './input.cpp'
     # pragma GCC visibility push ( public ) # pragma GCC visibility pop
   mappings:
     ['#'_0, '<eof>'_13) => ['<eof>'_0, '<eof>'_0)
-)"},
-      // Empty files should not crash.
-      {R"cpp()cpp", R"(expanded tokens:
-  <empty>
-file './input.cpp'
-  spelled tokens:
-    <empty>
-  no mappings.
 )"}};
   for (auto &Test : TestCases)
     EXPECT_EQ(collectAndDump(Test.first), Test.second)
@@ -424,7 +416,6 @@ file './input.cpp'
        "    ['#'_0, 'int'_22) => ['int'_0, 'int'_0)\n"
        "    ['ADD'_25, ';'_46) => ['1'_3, ';'_12)\n"},
       // Empty macro replacement.
-      // FIXME: the #define directives should not be glued together.
       {R"cpp(
     #define EMPTY
     #define EMPTY_FUNC(X)
@@ -437,9 +428,7 @@ file './input.cpp'
   spelled tokens:
     # define EMPTY # define EMPTY_FUNC ( X ) EMPTY EMPTY_FUNC ( 1 + 2 + 3 )
   mappings:
-    ['#'_0, 'EMPTY'_9) => ['<eof>'_0, '<eof>'_0)
-    ['EMPTY'_9, 'EMPTY_FUNC'_10) => ['<eof>'_0, '<eof>'_0)
-    ['EMPTY_FUNC'_10, '<eof>'_18) => ['<eof>'_0, '<eof>'_0)
+    ['#'_0, '<eof>'_18) => ['<eof>'_0, '<eof>'_0)
 )"},
       // File ends with a macro replacement.
       {R"cpp(
