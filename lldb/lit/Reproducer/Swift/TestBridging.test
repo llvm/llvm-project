@@ -1,0 +1,32 @@
+# UNSUPPORTED: system-windows, system-freebsd
+
+# This tests replaying a Swift reproducer with bridging.
+
+# Start clean.
+# RUN: rm -rf %t.build && mkdir %t.build && cd %t.build
+# RUN: cp %S/Inputs/Bridging.swift %t.build/Bridging.swift
+# RUN: cp %S/Inputs/Foo.h %t.build/Foo.h
+
+# RUN: %target-swiftc -g \
+# RUN:          -module-cache-path %t.build/cache %t.build/Bridging.swift \
+# RUN:          -import-objc-header %t.build/Foo.h \
+# RUN:          -module-name main -o %t.out
+
+# Cleanup build directory.
+# RUN: rm -rf %t.build
+# RUN: rm -rf %t.run && mkdir %t.run && cd %t.run
+
+# Capture the reproducer.
+# RUN: %lldb -x -b -s %S/Inputs/Bridging.in \
+# RUN:          --capture \
+# RUN:          --capture-path %t.repro \
+# RUN:          %t.out | FileCheck %s --check-prefix CHECK --check-prefix CAPTURE
+
+# Replay the reproducer in place.
+# RUN: %lldb --replay %t.repro | FileCheck %s --check-prefix CHECK
+
+# CHECK: Breakpoint 1
+# CHECK: Process {{.*}} stopped
+# CHECK: thread {{.*}} stop reason = breakpoint
+# CHECK: frame {{.*}} Bridging.swift
+# CHECK: $R0 = 95126
