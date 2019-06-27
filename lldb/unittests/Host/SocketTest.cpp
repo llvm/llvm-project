@@ -93,6 +93,8 @@ TEST_F(SocketTest, DomainListenConnectAccept) {
   std::error_code EC = llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
   ASSERT_FALSE(EC);
   llvm::sys::path::append(Path, "test");
+  // If this fails, $TMPDIR is too long to hold a domain socket.
+  EXPECT_LE(Path.size(), 107u);
 
   std::unique_ptr<DomainSocket> socket_a_up;
   std::unique_ptr<DomainSocket> socket_b_up;
@@ -194,6 +196,8 @@ TEST_F(SocketTest, DomainGetConnectURI) {
       llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", domain_path);
   ASSERT_FALSE(EC);
   llvm::sys::path::append(domain_path, "test");
+  // If this fails, $TMPDIR is too long to hold a domain socket.
+  EXPECT_LE(domain_path.size(), 107u);
 
   std::unique_ptr<DomainSocket> socket_a_up;
   std::unique_ptr<DomainSocket> socket_b_up;
