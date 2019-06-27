@@ -168,6 +168,7 @@ TEST_F(SocketTest, DomainListenConnectAccept) {
   llvm::sys::path::append(Path, "test");
   // DEBUGGING for rdar://problem/52062631
   llvm::errs()<<"Path = \""<<Path<<"\", Length = "<<Path.size()<<"\n";
+  if (Path.size() < 108) {
   // END DEBUGGING for rdar://problem/52062631
 
   std::unique_ptr<DomainSocket> socket_a_up;
@@ -175,6 +176,7 @@ TEST_F(SocketTest, DomainListenConnectAccept) {
   CreateConnectedSockets<DomainSocket>(
       Path, [=](const DomainSocket &) { return Path.str().str(); },
       &socket_a_up, &socket_b_up);
+  }
 }
 #endif
 
