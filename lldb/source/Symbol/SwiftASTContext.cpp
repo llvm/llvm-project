@@ -1337,22 +1337,24 @@ static bool DeserializeCompilerFlags(swift::CompilerInvocation &invocation,
   return false;
 }
 
-static void printASTValidationInfo(
+static void printASTValidationError(
     llvm::raw_ostream &errs,
     const swift::serialization::ValidationInfo &ast_info,
     const swift::serialization::ExtendedValidationInfo &ext_ast_info,
-    const Module &module, StringRef module_buf, bool invalid_name,
+    Module &module, StringRef module_buf, bool invalid_name,
     bool invalid_size) {
   const char *error = getImportFailureString(ast_info.status);
-  errs << error;
-  if (invalid_name) {
-    error = "The module has an invalid name.";
-    errs << ' ' << error;
-  }
-  if (invalid_size) {
-    error = "The module has an invalid file size.";
-    errs << ' ' << error;
-  }
+  errs << "AST validation error";
+  if (!invalid_name)
+    errs << " in \"" << ast_info.name << '"';
+  errs << ": ";
+  // Instead of printing the generic Status::Malformed error, be specific.
+  if (invalid_size)
+    errs << "The serialized module is corrupted.";
+  else if (invalid_name)
+    errs << "The serialized module has an invalid name.";
+  else
+    errs << error;
 
   llvm::SmallString<1> m_description;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
@@ -1371,6 +1373,11 @@ static void printASTValidationInfo(
     LLDB_LOG(log, "  -- {0}", ExtraOpt);
 }
 
+void SwiftASTContext::DiagnoseWarnings(Process &process, Module &module) const {
+  for (const std::string &message : m_module_import_warnings)
+    process.PrintWarningCantLoadSwiftModule(module, message);
+}
+
 /// Retrieve the serialized AST data blobs and initialize the compiler
 /// invocation with the concatenated search paths from the blobs.
 /// \returns true if an error was encountered.
@@ -1380,6 +1387,7 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
                                         llvm::raw_ostream &error,
                                         bool &got_serialized_options) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TYPES));
+  bool found_validation_errors = false;
   std::string last_sdk_path;
   got_serialized_options = false;
   auto &invocation = swift_ast.GetCompilerInvocation();
@@ -1410,8 +1418,9 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
       bool invalid_name = info.name.empty();
       if (invalid_ast || invalid_size || invalid_name) {
         // Validation errors are diagnosed, but not fatal for the context.
-        printASTValidationInfo(error, info, extended_validation_info, module,
-                               buf, invalid_name, invalid_size);
+        found_validation_errors = true;
+        printASTValidationError(error, info, extended_validation_info, module,
+                                buf, invalid_name, invalid_size);
         // If there's a size error, quit the loop early, otherwise try the next.
         if (invalid_size)
           break;
@@ -1435,7 +1444,7 @@ static bool DeserializeAllCompilerFlags(SwiftASTContext &swift_ast,
   }
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "Picking SDK path \"%s\".",
              invocation.getSDKPath().str().c_str());
-  return false;
+  return found_validation_errors;
 }
 
 /// Return whether this module contains any serialized Swift ASTs.
@@ -1707,12 +1716,10 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
     bool got_serialized_options;
     llvm::SmallString<0> error;
     llvm::raw_svector_ostream errs(error);
-
     if (DeserializeAllCompilerFlags(*swift_ast_sp, module, m_description, errs,
                                     got_serialized_options)) {
-      swift_ast_sp->m_fatal_errors.SetErrorString(error.str());
-      assert(swift_ast_sp->HasFatalErrors() && "error string was empty");
-      return swift_ast_sp;
+      // Validation errors are not fatal for the context.
+      swift_ast_sp->m_module_import_warnings.push_back(error.str());
     }
 
     // Some of the bits in the compiler options we keep separately, so
@@ -1890,6 +1897,11 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   auto logError = [&](const char *message) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "Failed to create scratch context - %s",
                message);
+    // Avoid spamming the user with errors.
+    if (!target.UseScratchTypesystemPerModule()) {
+      StreamSP errs_sp = target.GetDebugger().GetAsyncErrorStream();
+      errs_sp->Printf("Cannot create Swift scratch context (%s)", message);
+    }
   };
 
   ArchSpec arch = target.GetArchitecture();
@@ -2001,15 +2013,16 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   if (exe_module_sp) {
     llvm::SmallString<0> error;
     llvm::raw_svector_ostream errs(error);
-    bool failed = DeserializeAllCompilerFlags(*swift_ast_sp, *exe_module_sp,
-                                              m_description, errs,
-                                              got_serialized_options);
-
-    if (failed)
+    if (DeserializeAllCompilerFlags(*swift_ast_sp, *exe_module_sp,
+                                    m_description, errs,
+                                    got_serialized_options)) {
+      if (Process *process = target.GetProcessSP().get())
+        process->PrintWarningCantLoadSwiftModule(*exe_module_sp, error.c_str());
       LOG_PRINTF(
           LIBLLDB_LOG_TYPES,
           "Attempt to load compiler options from serialized AST failed: %s",
           error.c_str());
+    }
   }
 
   // Now if the user fully specified the triple, let that override the one
@@ -2197,17 +2210,14 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
   swift_ast_sp->LogConfiguration();
 
   if (swift_ast_sp->HasFatalErrors()) {
-    const char *errors = swift_ast_sp->GetFatalErrors().AsCString();
-    swift_ast_sp->m_error.SetErrorStringWithFormat(
-        "Error creating target Swift AST context: %s", errors);
-    logError(errors);
-    return lldb::TypeSystemSP();
+    logError(swift_ast_sp->GetFatalErrors().AsCString());
+    return {};
   }
 
   const bool can_create = true;
   if (!swift_ast_sp->m_ast_context_ap->getStdlibModule(can_create)) {
     logError("couldn't load the Swift stdlib");
-    return lldb::TypeSystemSP();
+    return {};
   }
 
   return swift_ast_sp;
@@ -3395,9 +3405,6 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
                                    "context:\nAST context is in a fatal "
                                    "error state",
                                    module.path.front().GetCString());
-    printf("error in SwiftASTContext::GetModule(%s): AST context is in a "
-           "fatal error stat",
-           module.path.front().GetCString());
     return nullptr;
   }
 
@@ -3410,11 +3417,6 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
         "failed to get module \"%s\" from AST context:\n%s",
         module.path.front().GetCString(),
         diagnostic_manager.GetString().data());
-#ifdef LLDB_CONFIGURATION_DEBUG
-    printf("error in SwiftASTContext::GetModule(%s): \"%s\"",
-           module.path.front().GetCString(),
-           diagnostic_manager.GetString().data());
-#endif
 
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- error: %s",
                module.path.front().GetCString(),
