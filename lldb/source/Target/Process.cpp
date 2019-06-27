@@ -6086,6 +6086,13 @@ void Process::PrintWarningOptimization(const SymbolContext &sc) {
   }
 }
 
+void Process::PrintWarningCantLoadSwiftModule(const Module &module,
+                                              std::string details) {
+  PrintWarning(Process::Warnings::eWarningsSwiftImport, (void *)&module,
+               "%s: Cannot load Swift type information; %s\n",
+               module.GetFileSpec().GetCString(), details.c_str());
+}
+
 bool Process::GetProcessInfo(ProcessInstanceInfo &info) {
   info.Clear();
 

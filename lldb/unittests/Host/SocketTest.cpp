@@ -57,12 +57,13 @@ protected:
     std::unique_ptr<SocketType> listen_socket_up(
         new SocketType(true, child_processes_inherit));
     std::string empty;
-    const char *err = error.AsCString("");
-    EXPECT_EQ(empty, err ? std::string(err) : "");
     EXPECT_FALSE(error.Fail());
     error = listen_socket_up->Listen(listen_remote_address, 5);
-    err = error.AsCString("");
+    // DEBUGGING for rdar://problem/52062631
+    const char *err = error.AsCString("");
+    llvm::errs()<<"listen_remote_address"<<"\n";
     EXPECT_EQ(empty, err ? std::string(err) : "");
+    // END
     EXPECT_FALSE(error.Fail());
     EXPECT_TRUE(listen_socket_up->IsValid());
 
@@ -75,30 +76,18 @@ protected:
     std::string connect_remote_address = get_connect_addr(*listen_socket_up);
     std::unique_ptr<SocketType> connect_socket_up(
         new SocketType(true, child_processes_inherit));
-    err = error.AsCString("");
-    EXPECT_EQ(empty, err ? std::string(err) : "");
     EXPECT_FALSE(error.Fail());
     error = connect_socket_up->Connect(connect_remote_address);
-    err = error.AsCString("");
-    EXPECT_EQ(empty, err ? std::string(err) : "");
     EXPECT_FALSE(error.Fail());
     EXPECT_TRUE(connect_socket_up->IsValid());
 
     a_up->swap(connect_socket_up);
-    err = error.AsCString("");
-    EXPECT_EQ(empty, err ? std::string(err) : "");
     EXPECT_TRUE(error.Success());
-    err = error.AsCString("");
-    EXPECT_EQ(empty, err ? std::string(err) : "");
     EXPECT_TRUE((*a_up)->IsValid());
 
     accept_thread.join();
     b_up->reset(static_cast<SocketType *>(accept_socket));
-    err = error.AsCString("");
-    EXPECT_EQ(empty, err ? std::string(err) : "");
     EXPECT_TRUE(accept_error.Success());
-    err = error.AsCString("");
-    EXPECT_EQ(empty, err ? std::string(err) : "");
     EXPECT_TRUE((*b_up)->IsValid());
 
     listen_socket_up.reset();
@@ -177,12 +166,17 @@ TEST_F(SocketTest, DomainListenConnectAccept) {
   std::error_code EC = llvm::sys::fs::createUniqueDirectory("DomainListenConnectAccept", Path);
   ASSERT_FALSE(EC);
   llvm::sys::path::append(Path, "test");
+  // DEBUGGING for rdar://problem/52062631
+  llvm::errs()<<"Path = \""<<Path<<"\", Length = "<<Path.size()<<"\n";
+  if (Path.size() < 108) {
+  // END DEBUGGING for rdar://problem/52062631
 
   std::unique_ptr<DomainSocket> socket_a_up;
   std::unique_ptr<DomainSocket> socket_b_up;
   CreateConnectedSockets<DomainSocket>(
       Path, [=](const DomainSocket &) { return Path.str().str(); },
       &socket_a_up, &socket_b_up);
+  }
 }
 #endif
 

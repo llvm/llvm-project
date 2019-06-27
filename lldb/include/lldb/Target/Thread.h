@@ -1314,7 +1314,7 @@ protected:
     m_temporary_resume_state = new_state;
   }
 
-  void FunctionOptimizationWarning(lldb_private::StackFrame *frame);
+  void FrameSelectedCallback(lldb_private::StackFrame *frame);
 
   //------------------------------------------------------------------
   // Classes that inherit from Process can see and modify these
