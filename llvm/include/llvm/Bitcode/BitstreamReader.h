@@ -257,7 +257,7 @@ public:
   // Read a VBR that may have a value up to 64-bits in size. The chunk size of
   // the VBR must still be <= 32 bits though.
   Expected<uint64_t> ReadVBR64(unsigned NumBits) {
-    Expected<unsigned> MaybeRead = Read(NumBits);
+    Expected<uint64_t> MaybeRead = Read(NumBits);
     if (!MaybeRead)
       return MaybeRead;
     uint32_t Piece = MaybeRead.get();
