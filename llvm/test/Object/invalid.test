@@ -1,84 +1,308 @@
-RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-type.elf 2>&1 | FileCheck %s
-RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-size.elf 2>&1 | FileCheck %s
-RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-zero-size.elf 2>&1 | FileCheck %s
-CHECK: Invalid data was encountered while parsing the file
+## Check that llvm-objdump reports an error when
+## .shstrtab has an invalid type.
 
-RUN: not llvm-dwarfdump -debug-line %p/Inputs/invalid-bad-rel-type.elf 2>&1 | FileCheck --check-prefix=RELA %s
-RELA: Section is not SHT_RELA
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: not llvm-objdump -s %t1 2>&1 | FileCheck %s --check-prefix=INVALIDERR
 
-RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-non-null.elf 2>&1 | FileCheck --check-prefix=NON-NULL %s
-NON-NULL: Invalid data was encountered while parsing the file
+# INVALIDERR: Invalid data was encountered while parsing the file
 
-Test the sh_entsize are invalid
-RUN: llvm-readobj -S %p/Inputs/invalid-sh_entsize.elf | FileCheck --check-prefix=SECTION %s
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .shstrtab
+    Type: SHT_PROGBITS
 
-SECTION:         Name: .dynsym
-SECTION-NEXT:    Type: SHT_DYNSYM
-SECTION-NEXT:    Flags [
-SECTION-NEXT:      SHF_ALLOC
-SECTION-NEXT:    ]
-SECTION-NEXT:    Address:
-SECTION-NEXT:    Offset:
-SECTION-NEXT:    Size:
-SECTION-NEXT:    Link:
-SECTION-NEXT:    Info:
-SECTION-NEXT:    AddressAlignment:
-SECTION-NEXT:    EntrySize: 32
+## Check that llvm-objdump reports an error when
+## .shstrtab has an invalid zero-size.
 
-SECTION:         Name: .symtab
-SECTION-NEXT:    Type: SHT_SYMTAB
-SECTION-NEXT:    Flags [
-SECTION-NEXT:    ]
-SECTION-NEXT:    Address:
-SECTION-NEXT:    Offset:
-SECTION-NEXT:    Size:
-SECTION-NEXT:    Link:
-SECTION-NEXT:    Info:
-SECTION-NEXT:    AddressAlignment:
-SECTION-NEXT:    EntrySize: 32
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: not llvm-objdump -s %t2 2>&1 | FileCheck %s --check-prefix=INVALIDERR
 
-RUN: not llvm-readobj --symbols %p/Inputs/invalid-sh_entsize.elf 2>&1 | FileCheck --check-prefix=INVALID-SYM-SIZE %s
-INVALID-SYM-SIZE: invalid sh_entsize
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .shstrtab
+    Type: SHT_STRTAB
+    Size: 0
 
-RUN: not llvm-readobj --symbols %p/Inputs/invalid-section-index.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-INDEX %s
-INVALID-SECTION-INDEX: invalid section index
+## Check that llvm-objdump reports an error when .shstrtab has an invalid
+## size that goes past the end of the file.
 
-RUN: not llvm-readobj -S %p/Inputs/invalid-section-size.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-SIZE %s
-INVALID-SECTION-SIZE: invalid section header entry size (e_shentsize) in ELF header
+# RUN: not llvm-objdump -s %p/Inputs/invalid-strtab-size.elf 2>&1 \
+# RUN:   | FileCheck %s --check-prefix=INVALIDERR
 
+## Check that llvm-dwarfdump reports an error during relocation resolution
+## when instead of expected SHT_RELA section it locates a section of a different type.
 
-RUN: not llvm-readobj --symbols %p/Inputs/invalid-symbol-table-size.elf 2>&1 | FileCheck --check-prefix=INVALID-SYMTAB-SIZE %s
-INVALID-SYMTAB-SIZE: size is not a multiple of sh_entsize
+# RUN: yaml2obj %s --docnum=3 -o %t3
+# RUN: not llvm-dwarfdump -debug-line %t3 2>&1 | FileCheck --check-prefix=RELA %s
 
+# RELA: Section is not SHT_RELA
 
-RUN: not llvm-readobj --symbols %p/Inputs/invalid-xindex-size.elf 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
-INVALID-XINDEX-SIZE: invalid section contents size
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .debug_line
+    Type: SHT_PROGBITS
+## The exact content does not matter here. We can use any minimal valid debug section
+## which is a target for relocation. The idea is to trigger the code that reads the
+## relocation's addend during relocation resolution. It should fail if called on
+## a non-SHT_RELA section.
+    Content: 380000000200210000000101FB0E0D00010101010000000100000100676C6F62616C2E63707000000000000009020000000000000000130237000101
+  - Name: .rela.debug_line
+    Type: SHT_REL
+    Info: .debug_line
+    Relocations:
+      - Offset: 0x000000000000002E
+        Type:   R_X86_64_64
 
-RUN: not llvm-readobj --symbols %p/Inputs/invalid-e_shnum.elf 2>&1 | FileCheck --check-prefix=INVALID-SH-NUM %s
-INVALID-SH-NUM: invalid e_phentsize
+## Check that llvm-objdump reports an error when it tries to dump section names
+## and .shstrtab is not null-terminated.
 
-RUN: not llvm-readobj --symbols %p/Inputs/invalid-ext-symtab-index.elf-x86-64 2>&1 | \
-RUN:   FileCheck --check-prefix=INVALID-EXT-SYMTAB-INDEX %s
-INVALID-EXT-SYMTAB-INDEX: index past the end of the symbol table
+# RUN: yaml2obj %s --docnum=4 -o %t4
+# RUN: not llvm-objdump -s %t4 2>&1 | FileCheck --check-prefix=INVALIDERR %s
 
-RUN: not llvm-readobj -r %p/Inputs/invalid-relocation-sec-sh_offset.elf-i386 2>&1 | \
-RUN:   FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
-RUN: not llvm-readobj -r %p/Inputs/invalid-relocation-sec-sh_offset.elf-x86-64 2>&1 | \
-RUN:   FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
-INVALID-RELOC-SH-OFFSET: invalid section offset
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .shstrtab
+    Type: SHT_STRTAB
+    Content: "11"
 
-RUN: not llvm-readobj --symbols %p/Inputs/invalid-section-size2.elf 2>&1 | \
-RUN:   FileCheck --check-prefix=INVALID-SECTION-SIZE2 %s
-INVALID-SECTION-SIZE2: invalid section offset
+## Check that llvm-objdump reports an error when it tries to dump a symbol name and
+## .strtab is not null-terminated.
 
-RUN: not llvm-readobj --symbols %p/Inputs/invalid-sections-num.elf 2>&1 | FileCheck --check-prefix=INVALID-SECTION-NUM %s
-INVALID-SECTION-NUM: section table goes past the end of file
+# RUN: yaml2obj %s --docnum=5 -o %t5
+# RUN: not llvm-objdump -syms %t5 2>&1 | FileCheck --check-prefix=NONULL %s
 
-RUN: not llvm-readobj -r %p/Inputs/invalid-rel-sym.elf 2>&1 | FileCheck --check-prefix=INVALID-REL-SYM %s
-INVALID-REL-SYM: invalid section offset
+# NONULL: string table non-null terminated
 
-RUN: not llvm-readobj -r %p/Inputs/invalid-buffer.elf 2>&1 | FileCheck --check-prefix=INVALID-BUFFER %s
-INVALID-BUFFER: Invalid buffer
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .strtab
+    Type: SHT_STRTAB
+    Content: "11"
+Symbols:
+  - Name: foo
 
-RUN: not llvm-readobj %p/Inputs/invalid-coff-header-too-small 2>&1 | FileCheck --check-prefix=COFF-HEADER %s
-COFF-HEADER: The file was not recognized as a valid object file
+## Check that llvm-readobj reports an error if .symtab has an invalid sh_entsize.
+
+# RUN: yaml2obj %s --docnum=6 -o %t6
+# RUN: not llvm-readobj --symbols %t6 2>&1 | FileCheck --check-prefix=INVALID-SYM-SIZE %s
+
+# INVALID-SYM-SIZE: invalid sh_entsize
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .symtab
+    Type: SHT_SYMTAB
+    EntSize: 32
+Symbols:
+  - Name: foo
+
+## Check that llvm-readobj reports an error if .dynsym has an invalid sh_entsize.
+
+# RUN: yaml2obj %s --docnum=7 -o %t7
+# RUN: not llvm-readobj --dyn-symbols %t7 2>&1 | FileCheck --check-prefix=INVALID-DYNSYM-SIZE %s
+
+# INVALID-DYNSYM-SIZE: error: Invalid entity size
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynsym
+    Type: SHT_DYNSYM
+    EntSize: 32
+DynamicSymbols:
+  - Name: foo
+
+## Check that llvm-readobj reports an error if .symtab has an invalid sh_link value,
+## which is greater than number of sections.
+
+# RUN: yaml2obj %s --docnum=8 -o %t8
+# RUN: not llvm-readobj --symbols %t8 2>&1 | FileCheck --check-prefix=INVALID-SYMTAB-LINK %s
+
+# INVALID-SYMTAB-LINK: invalid section index
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .symtab
+    Type: SHT_SYMTAB
+    Link: 0xFF
+
+## Check that llvm-readobj reports an error when trying to dump sections
+## when the e_shentsize field is broken.
+
+# RUN: yaml2obj %s --docnum=9 -o %t9
+# RUN: not llvm-readobj -S %t9 2>&1 | FileCheck --check-prefix=INVALID-SH-ENTSIZE %s
+
+# INVALID-SH-ENTSIZE: invalid section header entry size (e_shentsize) in ELF header
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
+  SHEntSize: 1
+
+## Check that llvm-readobj reports an error if .symtab has sh_size
+## that is not a multiple of sh_entsize.
+
+# RUN: yaml2obj %s --docnum=10 -o %t10
+# RUN: not llvm-readobj --symbols %t10 2>&1 | FileCheck --check-prefix=INVALID-SYMTAB-SIZE %s
+
+# INVALID-SYMTAB-SIZE: size is not a multiple of sh_entsize
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .symtab
+    Type: SHT_SYMTAB
+    Size: 1
+
+## Test that llvm-readobj reports an error if SHT_SYMTAB_SHNDX section has
+## invalid sh_size which should be:
+## sizeof(.symtab_shndx) = (sizeof(.symtab) / entsize(.symtab)) * entsize(.symtab_shndx)
+
+# RUN: yaml2obj %s --docnum=11 -o %t11
+# RUN: not llvm-readobj --symbols %t11 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
+
+# INVALID-XINDEX-SIZE: invalid section contents size
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name: .symtab_shndx
+    Type: SHT_SYMTAB_SHNDX
+    Size: 0x18
+    EntSize: 4
+    Link: .symtab
+
+## Check that llvm-readobj reports an error if the e_phentsize field is broken.
+
+# RUN: not llvm-readobj --program-headers %p/Inputs/invalid-e_shnum.elf 2>&1 | \
+# RUN:  FileCheck --check-prefix=INVALID-PH-ENTSIZE %s
+
+# INVALID-PH-ENTSIZE: invalid e_phentsize
+
+## Check that llvm-readobj reports an error when we have no SHT_SYMTAB_SHNDX section,
+## but have a symbol referencing it.
+
+# RUN: not llvm-readobj --symbols %p/Inputs/invalid-ext-symtab-index.elf-x86-64 2>&1 | \
+# RUN:   FileCheck --check-prefix=INVALID-EXT-SYMTAB-INDEX %s
+
+# INVALID-EXT-SYMTAB-INDEX: index past the end of the symbol table
+
+## Check that llvm-readobj reports an error if a relocation section
+## has a broken sh_offset (past the end of the file).
+
+# RUN: not llvm-readobj -r %p/Inputs/invalid-relocation-sec-sh_offset.elf-i386 2>&1 | \
+# RUN:   FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
+# RUN: not llvm-readobj -r %p/Inputs/invalid-relocation-sec-sh_offset.elf-x86-64 2>&1 | \
+# RUN:   FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
+
+# INVALID-RELOC-SH-OFFSET: invalid section offset
+
+## Check that llvm-objdump reports an error when .shstrtab has a broken sh_offset
+## so large that sh_offset + sh_size overflows the platform address size type.
+
+# RUN: not llvm-readobj --symbols %p/Inputs/invalid-section-size2.elf 2>&1 | \
+# RUN:   FileCheck --check-prefix=INVALID-SECTION-SIZE2 %s
+
+# INVALID-SECTION-SIZE2: invalid section offset
+
+## Check that llvm-readobj reports an error when trying to dump sections
+## when the e_shnum field is broken (is greater than the actual number of sections).
+
+# RUN: yaml2obj %s --docnum=12 -o %t12
+# RUN: not llvm-readobj -S %t12 2>&1 | FileCheck --check-prefix=INVALID-SECTION-NUM %s
+
+# INVALID-SECTION-NUM: section table goes past the end of file
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+  SHNum:   0xFF
+
+## Check that llvm-readobj reports an error if a relocation contains an
+## incorrect (too large) symbol index.
+
+# RUN: yaml2obj %s --docnum=13 -o %t13
+# RUN: not llvm-readobj -r %t13 2>&1 | FileCheck --check-prefix=INVALID-REL-SYM %s
+
+# INVALID-REL-SYM: invalid section offset
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .rela.text
+    Type: SHT_RELA
+    Info: 0
+    Relocations:
+      - Offset: 0x0
+        Type:   R_X86_64_64
+        Symbol: 0xFFFFFF
+
+## Check llvm-readobj does not crash on a truncated ELF.
+
+## Create a truncated ELF object with ELFCLASSNONE class using echo.
+## 0x7f, 'E', 'L', 'F', ELFCLASS64(2), ELFDATA2LSB(1),
+## EV_CURRENT(1), ELFOSABI_LINUX(3), <padding zero bytes>, ET_REL(1), EM_NONE(0)
+# RUN: echo -e -n "\x7f\x45\x4c\x46\x02\x01\x01\x03\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00" > %t11
+# RUN: not llvm-readobj -r %t11 2>&1 | FileCheck --check-prefix=INVALID-BUFFER %s
+
+# INVALID-BUFFER: Invalid buffer
+
+# RUN: not llvm-readobj %p/Inputs/invalid-coff-header-too-small 2>&1 | FileCheck --check-prefix=COFF-HEADER %s
+# COFF-HEADER: The file was not recognized as a valid object file

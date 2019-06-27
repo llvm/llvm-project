@@ -347,6 +347,66 @@ template <> struct MappingTraits<FixedMachineStackObject> {
   static const bool flow = true;
 };
 
+
+/// Serializable representation of CallSiteInfo.
+struct CallSiteInfo {
+  // Representation of call argument and register which is used to
+  // transfer it.
+  struct ArgRegPair {
+    StringValue Reg;
+    uint16_t ArgNo;
+
+    bool operator==(const ArgRegPair &Other) const {
+      return Reg == Other.Reg && ArgNo == Other.ArgNo;
+    }
+  };
+
+  /// Identifies call instruction location in machine function.
+  struct MachineInstrLoc {
+    unsigned BlockNum;
+    unsigned Offset;
+
+    bool operator==(const MachineInstrLoc &Other) const {
+      return BlockNum == Other.BlockNum && Offset == Other.Offset;
+    }
+  };
+
+  MachineInstrLoc CallLocation;
+  std::vector<ArgRegPair> ArgForwardingRegs;
+
+  bool operator==(const CallSiteInfo &Other) const {
+    return CallLocation.BlockNum == Other.CallLocation.BlockNum &&
+           CallLocation.Offset == Other.CallLocation.Offset;
+  }
+};
+
+template <> struct MappingTraits<CallSiteInfo::ArgRegPair> {
+  static void mapping(IO &YamlIO, CallSiteInfo::ArgRegPair &ArgReg) {
+    YamlIO.mapRequired("arg", ArgReg.ArgNo);
+    YamlIO.mapRequired("reg", ArgReg.Reg);
+  }
+
+  static const bool flow = true;
+};
+}
+}
+
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::CallSiteInfo::ArgRegPair)
+
+namespace llvm {
+namespace yaml {
+
+template <> struct MappingTraits<CallSiteInfo> {
+  static void mapping(IO &YamlIO, CallSiteInfo &CSInfo) {
+    YamlIO.mapRequired("bb", CSInfo.CallLocation.BlockNum);
+    YamlIO.mapRequired("offset", CSInfo.CallLocation.Offset);
+    YamlIO.mapOptional("fwdArgRegs", CSInfo.ArgForwardingRegs,
+                       std::vector<CallSiteInfo::ArgRegPair>());
+  }
+
+  static const bool flow = true;
+};
+
 struct MachineConstantPoolValue {
   UnsignedValue ID;
   StringValue Value;
@@ -401,6 +461,7 @@ LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::MachineFunctionLiveIn)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::VirtualRegisterDefinition)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::MachineStackObject)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::FixedMachineStackObject)
+LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::CallSiteInfo)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::MachineConstantPoolValue)
 LLVM_YAML_IS_SEQUENCE_VECTOR(llvm::yaml::MachineJumpTable::Entry)
 
@@ -529,6 +590,7 @@ struct MachineFunction {
   std::vector<MachineStackObject> StackObjects;
   std::vector<MachineConstantPoolValue> Constants; /// Constant pool.
   std::unique_ptr<MachineFunctionInfo> MachineFuncInfo;
+  std::vector<CallSiteInfo> CallSitesInfo;
   MachineJumpTable JumpTableInfo;
   BlockStringValue Body;
 };
@@ -555,6 +617,8 @@ template <> struct MappingTraits<MachineFunction> {
                        std::vector<FixedMachineStackObject>());
     YamlIO.mapOptional("stack", MF.StackObjects,
                        std::vector<MachineStackObject>());
+    YamlIO.mapOptional("callSites", MF.CallSitesInfo,
+                       std::vector<CallSiteInfo>());
     YamlIO.mapOptional("constants", MF.Constants,
                        std::vector<MachineConstantPoolValue>());
     YamlIO.mapOptional("machineFunctionInfo", MF.MachineFuncInfo);

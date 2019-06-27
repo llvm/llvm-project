@@ -776,12 +776,12 @@ typedef basic_string_view<char32_t> u32string_view;
 typedef basic_string_view<wchar_t>  wstring_view;
 
 // [string.view.hash]
-template<class _CharT, class _Traits>
-struct _LIBCPP_TEMPLATE_VIS hash<basic_string_view<_CharT, _Traits> >
-    : public unary_function<basic_string_view<_CharT, _Traits>, size_t>
+template<class _CharT>
+struct _LIBCPP_TEMPLATE_VIS hash<basic_string_view<_CharT, char_traits<_CharT> > >
+    : public unary_function<basic_string_view<_CharT, char_traits<_CharT> >, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
-    size_t operator()(const basic_string_view<_CharT, _Traits> __val) const _NOEXCEPT {
+    size_t operator()(const basic_string_view<_CharT, char_traits<_CharT> > __val) const _NOEXCEPT {
         return __do_string_hash(__val.data(), __val.data() + __val.size());
     }
 };

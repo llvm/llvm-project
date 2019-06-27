@@ -675,9 +675,6 @@ an optional list of attached :ref:`metadata <metadata>`.
 Variables and aliases can have a
 :ref:`Thread Local Storage Model <tls_model>`.
 
-:ref:`Scalable vectors <t_vector>` cannot be global variables or members of
-structs or arrays because their size is unknown at compile time.
-
 Syntax::
 
       @<GlobalVarName> = [Linkage] [PreemptionSpecifier] [Visibility]
@@ -1478,6 +1475,13 @@ example:
     This function attribute indicates that the function does not call itself
     either directly or indirectly down any possible call path. This produces
     undefined behavior at runtime if the function ever does recurse.
+``willreturn``
+    This function attribute indicates that a call of this function will
+    either exhibit undefined behavior or comes back and continues execution
+    at a point in the existing call stack that includes the current invocation.
+    Annotated functions may still raise an exception, i.a., ``nounwind`` is not implied.
+    If an invocation of an annotated function does not return control back
+    to a point in the call stack, the behavior is undefined.
 ``nounwind``
     This function attribute indicates that the function never raises an
     exception. If the function does raise an exception, its runtime
@@ -2738,40 +2742,30 @@ Vector Type
 A vector type is a simple derived type that represents a vector of
 elements. Vector types are used when multiple primitive data are
 operated in parallel using a single instruction (SIMD). A vector type
-requires a size (number of elements), an underlying primitive data type,
-and a scalable property to represent vectors where the exact hardware
-vector length is unknown at compile time. Vector types are considered
-:ref:`first class <t_firstclass>`.
+requires a size (number of elements) and an underlying primitive data
+type. Vector types are considered :ref:`first class <t_firstclass>`.
 
 :Syntax:
 
 ::
 
-      < <# elements> x <elementtype> >          ; Fixed-length vector
-      < vscale x <# elements> x <elementtype> > ; Scalable vector
+      < <# elements> x <elementtype> >
 
 The number of elements is a constant integer value larger than 0;
 elementtype may be any integer, floating-point or pointer type. Vectors
-of size zero are not allowed. For scalable vectors, the total number of
-elements is a constant multiple (called vscale) of the specified number
-of elements; vscale is a positive integer that is unknown at compile time
-and the same hardware-dependent constant for all scalable vectors at run
-time. The size of a specific scalable vector type is thus constant within
-IR, even if the exact size in bytes cannot be determined until run time.
+of size zero are not allowed.
 
 :Examples:
 
-+------------------------+----------------------------------------------------+
-| ``<4 x i32>``          | Vector of 4 32-bit integer values.                 |
-+------------------------+----------------------------------------------------+
-| ``<8 x float>``        | Vector of 8 32-bit floating-point values.          |
-+------------------------+----------------------------------------------------+
-| ``<2 x i64>``          | Vector of 2 64-bit integer values.                 |
-+------------------------+----------------------------------------------------+
-| ``<4 x i64*>``         | Vector of 4 pointers to 64-bit integer values.     |
-+------------------------+----------------------------------------------------+
-| ``<vscale x 4 x i32>`` | Vector with a multiple of 4 32-bit integer values. |
-+------------------------+----------------------------------------------------+
++-------------------+--------------------------------------------------+
+| ``<4 x i32>``     | Vector of 4 32-bit integer values.               |
++-------------------+--------------------------------------------------+
+| ``<8 x float>``   | Vector of 8 32-bit floating-point values.        |
++-------------------+--------------------------------------------------+
+| ``<2 x i64>``     | Vector of 2 64-bit integer values.               |
++-------------------+--------------------------------------------------+
+| ``<4 x i64*>``    | Vector of 4 pointers to 64-bit integer values.   |
++-------------------+--------------------------------------------------+
 
 .. _t_label:
 
@@ -4597,10 +4591,12 @@ DISubprogram
 """"""""""""
 
 ``DISubprogram`` nodes represent functions from the source language. A
-``DISubprogram`` may be attached to a function definition using ``!dbg``
-metadata. The ``variables:`` field points at :ref:`variables <DILocalVariable>`
-that must be retained, even if their IR counterparts are optimized out of
-the IR. The ``type:`` field must point at an :ref:`DISubroutineType`.
+distinct ``DISubprogram`` may be attached to a function definition using
+``!dbg`` metadata. A unique ``DISubprogram`` may be attached to a function
+declaration used for call site debug info. The ``variables:`` field points at
+:ref:`variables <DILocalVariable>` that must be retained, even if their IR
+counterparts are optimized out of the IR. The ``type:`` field must point at an
+:ref:`DISubroutineType`.
 
 .. _DISubprogramDeclaration:
 
@@ -4727,6 +4723,17 @@ The current supported opcode vocabulary is limited:
   of the stack is treated as an address. The second stack entry is treated as an
   address space identifier.
 - ``DW_OP_stack_value`` marks a constant value.
+- If an expression is marked with ``DW_OP_entry_value`` all register and
+  memory read operations refer to the respective value at the function entry.
+  The first operand of ``DW_OP_entry_value`` is the size of following
+  DWARF expression.
+  ``DW_OP_entry_value`` may appear after the ``LiveDebugValues`` pass.
+  LLVM only supports entry values for function parameters
+  that are unmodified throughout a function and that are described as
+  simple register location descriptions.
+  ``DW_OP_entry_value`` may also appear after the ``AsmPrinter`` pass when
+  a call site parameter value (``DW_AT_call_site_parameter_value``)
+  is represented as entry value of the parameter.
 
 DWARF specifies three kinds of simple location descriptions: Register, memory,
 and implicit location descriptions.  Note that a location description is
@@ -8181,7 +8188,6 @@ Syntax:
 ::
 
       <result> = extractelement <n x <ty>> <val>, <ty2> <idx>  ; yields <ty>
-      <result> = extractelement <vscale x n x <ty>> <val>, <ty2> <idx> ; yields <ty>
 
 Overview:
 """""""""
@@ -8202,9 +8208,7 @@ Semantics:
 
 The result is a scalar of the same type as the element type of ``val``.
 Its value is the value at position ``idx`` of ``val``. If ``idx``
-exceeds the length of ``val`` for a fixed-length vector, the result is a
-:ref:`poison value <poisonvalues>`. For a scalable vector, if the value
-of ``idx`` exceeds the runtime length of the vector, the result is a
+exceeds the length of ``val``, the result is a
 :ref:`poison value <poisonvalues>`.
 
 Example:
@@ -8225,7 +8229,6 @@ Syntax:
 ::
 
       <result> = insertelement <n x <ty>> <val>, <ty> <elt>, <ty2> <idx>    ; yields <n x <ty>>
-      <result> = insertelement <vscale x n x <ty>> <val>, <ty> <elt>, <ty2> <idx> ; yields <vscale x n x <ty>>
 
 Overview:
 """""""""
@@ -8247,9 +8250,7 @@ Semantics:
 
 The result is a vector of the same type as ``val``. Its element values
 are those of ``val`` except at position ``idx``, where it gets the value
-``elt``. If ``idx`` exceeds the length of ``val`` for a fixed-length vector,
-the result is a :ref:`poison value <poisonvalues>`. For a scalable vector,
-if the value of ``idx`` exceeds the runtime length of the vector, the result
+``elt``. If ``idx`` exceeds the length of ``val``, the result
 is a :ref:`poison value <poisonvalues>`.
 
 Example:
@@ -8270,7 +8271,6 @@ Syntax:
 ::
 
       <result> = shufflevector <n x <ty>> <v1>, <n x <ty>> <v2>, <m x i32> <mask>    ; yields <m x <ty>>
-      <result> = shufflevector <vscale x n x <ty>> <v1>, <vscale x n x <ty>> v2, <vscale x m x i32> <mask>  ; yields <vscale x m x <ty>>
 
 Overview:
 """""""""
@@ -8301,10 +8301,6 @@ result element gets. If the shuffle mask is undef, the result vector is
 undef. If any element of the mask operand is undef, that element of the
 result is undef. If the shuffle mask selects an undef element from one
 of the input vectors, the resulting element is undef.
-
-For scalable vectors, the only valid mask values at present are
-``zeroinitializer`` and ``undef``, since we cannot write all indices as
-literals for a vector with a length unknown at compile time.
 
 Example:
 """"""""

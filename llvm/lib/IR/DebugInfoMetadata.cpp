@@ -836,6 +836,7 @@ unsigned DIExpression::ExprOperand::getSize() const {
   case dwarf::DW_OP_deref_size:
   case dwarf::DW_OP_plus_uconst:
   case dwarf::DW_OP_LLVM_tag_offset:
+  case dwarf::DW_OP_entry_value:
     return 2;
   default:
     return 1;
@@ -875,6 +876,13 @@ bool DIExpression::isValid() const {
       if (getNumElements() == 1)
         return false;
       break;
+    }
+    case dwarf::DW_OP_entry_value: {
+      // An entry value operator must appear at the begin and the size
+      // of following expression should be 1, because we support only
+      // entry values of a simple register location.
+      return I->get() == expr_op_begin()->get() && I->getArg(0) == 1 &&
+             getNumElements() == 2;
     }
     case dwarf::DW_OP_LLVM_convert:
     case dwarf::DW_OP_LLVM_tag_offset:
@@ -994,14 +1002,23 @@ DIExpression *DIExpression::prepend(const DIExpression *Expr, uint8_t Flags,
     Ops.push_back(dwarf::DW_OP_deref);
 
   bool StackValue = Flags & DIExpression::StackValue;
+  bool EntryValue = Flags & DIExpression::EntryValue;
 
-  return prependOpcodes(Expr, Ops, StackValue);
+  return prependOpcodes(Expr, Ops, StackValue, EntryValue);
 }
 
 DIExpression *DIExpression::prependOpcodes(const DIExpression *Expr,
                                            SmallVectorImpl<uint64_t> &Ops,
-                                           bool StackValue) {
+                                           bool StackValue,
+                                           bool EntryValue) {
   assert(Expr && "Can't prepend ops to this expression");
+
+  if (EntryValue) {
+    Ops.push_back(dwarf::DW_OP_entry_value);
+    // Add size info needed for entry value expression.
+    // Add plus one for target register operand.
+    Ops.push_back(Expr->getNumElements() + 1);
+  }
 
   // If there are no ops to prepend, do not even add the DW_OP_stack_value.
   if (Ops.empty())

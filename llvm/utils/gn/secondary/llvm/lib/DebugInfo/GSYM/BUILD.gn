@@ -1,9 +1,6 @@
 static_library("GSYM") {
   output_name = "LLVMDebugInfoGSYM"
   deps = [
-    "//llvm/lib/BinaryFormat",
-    "//llvm/lib/MC",
-    "//llvm/lib/Object",
     "//llvm/lib/Support",
   ]
   sources = [

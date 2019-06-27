@@ -102,6 +102,10 @@ wlstp.32     lr, r3, .Lendloop
 # ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
 wlstp.64     lr, r5, .Lendloop
 
+# CHECK: wlstp.64     lr, r5, #0  @ encoding: [0x35,0xf0,0x01,0xc0]
+# ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
+wlstp.64     lr, r5, #0
+
 # CHECK: dlstp.8     lr, r5  @ encoding: [0x05,0xf0,0x01,0xe0]
 # ERROR-NOMVE: [[@LINE+1]]:1: error: invalid instruction
 dlstp.8     lr, r5

@@ -1,6 +1,8 @@
 llvm-bcanalyzer - LLVM bitcode analyzer
 =======================================
 
+.. program:: llvm-bcanalyzer
+
 SYNOPSIS
 --------
 

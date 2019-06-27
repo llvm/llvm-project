@@ -206,18 +206,6 @@ void AMDGPUAsmPrinter::EmitFunctionBodyStart() {
 
   if (STM.isAmdHsaOS())
     HSAMetadataStream->emitKernel(*MF, CurrentProgramInfo);
-
-  DumpCodeInstEmitter = nullptr;
-  if (STM.dumpCode()) {
-    // For -dumpcode, get the assembler out of the streamer, even if it does
-    // not really want to let us have it. This only works with -filetype=obj.
-    bool SaveFlag = OutStreamer->getUseAssemblerInfoForParsing();
-    OutStreamer->setUseAssemblerInfoForParsing(true);
-    MCAssembler *Assembler = OutStreamer->getAssemblerPtr();
-    OutStreamer->setUseAssemblerInfoForParsing(SaveFlag);
-    if (Assembler)
-      DumpCodeInstEmitter = Assembler->getEmitterPtr();
-  }
 }
 
 void AMDGPUAsmPrinter::EmitFunctionBodyEnd() {
@@ -456,6 +444,18 @@ bool AMDGPUAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
     EmitPALMetadata(MF, CurrentProgramInfo);
   else if (!STM.isAmdHsaOS()) {
     EmitProgramInfoSI(MF, CurrentProgramInfo);
+  }
+
+  DumpCodeInstEmitter = nullptr;
+  if (STM.dumpCode()) {
+    // For -dumpcode, get the assembler out of the streamer, even if it does
+    // not really want to let us have it. This only works with -filetype=obj.
+    bool SaveFlag = OutStreamer->getUseAssemblerInfoForParsing();
+    OutStreamer->setUseAssemblerInfoForParsing(true);
+    MCAssembler *Assembler = OutStreamer->getAssemblerPtr();
+    OutStreamer->setUseAssemblerInfoForParsing(SaveFlag);
+    if (Assembler)
+      DumpCodeInstEmitter = Assembler->getEmitterPtr();
   }
 
   DisasmLines.clear();

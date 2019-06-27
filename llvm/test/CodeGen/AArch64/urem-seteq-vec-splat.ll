@@ -9,13 +9,9 @@ define <4 x i32> @test_urem_odd_vec_i32(<4 x i32> %X) nounwind readnone {
 ; CHECK-NEXT:    mov w8, #52429
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
 ; CHECK-NEXT:    dup v2.4s, w8
-; CHECK-NEXT:    umull2 v3.2d, v0.4s, v2.4s
-; CHECK-NEXT:    umull v2.2d, v0.2s, v2.2s
-; CHECK-NEXT:    uzp2 v2.4s, v2.4s, v3.4s
-; CHECK-NEXT:    movi v1.4s, #5
-; CHECK-NEXT:    ushr v2.4s, v2.4s, #2
-; CHECK-NEXT:    mls v0.4s, v2.4s, v1.4s
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.16b, #51
+; CHECK-NEXT:    mul v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    cmhs v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -31,13 +27,9 @@ define <8 x i16> @test_urem_odd_vec_i16(<8 x i16> %X) nounwind readnone {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #52429
 ; CHECK-NEXT:    dup v2.8h, w8
-; CHECK-NEXT:    umull2 v3.4s, v0.8h, v2.8h
-; CHECK-NEXT:    umull v2.4s, v0.4h, v2.4h
-; CHECK-NEXT:    uzp2 v2.8h, v2.8h, v3.8h
-; CHECK-NEXT:    movi v1.8h, #5
-; CHECK-NEXT:    ushr v2.8h, v2.8h, #2
-; CHECK-NEXT:    mls v0.8h, v2.8h, v1.8h
-; CHECK-NEXT:    cmeq v0.8h, v0.8h, #0
+; CHECK-NEXT:    movi v1.16b, #51
+; CHECK-NEXT:    mul v0.8h, v0.8h, v2.8h
+; CHECK-NEXT:    cmhs v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    movi v1.8h, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret

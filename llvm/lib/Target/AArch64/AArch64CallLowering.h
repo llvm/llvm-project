@@ -38,7 +38,7 @@ public:
                    Register SwiftErrorVReg) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
-                            ArrayRef<Register> VRegs) const override;
+                            ArrayRef<ArrayRef<Register>> VRegs) const override;
 
   bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                  const MachineOperand &Callee, const ArgInfo &OrigRet,
@@ -60,13 +60,10 @@ private:
   using MemHandler =
       std::function<void(MachineIRBuilder &, int, CCValAssign &)>;
 
-  using SplitArgTy = std::function<void(unsigned, uint64_t)>;
-
   void splitToValueTypes(const ArgInfo &OrigArgInfo,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
                          const DataLayout &DL, MachineRegisterInfo &MRI,
-                         CallingConv::ID CallConv,
-                         const SplitArgTy &SplitArg) const;
+                         CallingConv::ID CallConv) const;
 };
 
 } // end namespace llvm

@@ -179,6 +179,23 @@ define <4 x float> @sqrtss_full_size(<4 x float>* %a) optsize{
     ret <4 x float> %res
 }
 
+define <4 x float> @sqrtss_full_size_volatile(<4 x float>* %a) optsize{
+; SSE-LABEL: sqrtss_full_size_volatile:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movaps (%rdi), %xmm0
+; SSE-NEXT:    sqrtss %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sqrtss_full_size_volatile:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovaps (%rdi), %xmm0
+; AVX-NEXT:    vsqrtss %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+    %ld = load volatile <4 x float>, <4 x float>* %a
+    %res = tail call <4 x float> @llvm.x86.sse.sqrt.ss(<4 x float> %ld)
+    ret <4 x float> %res
+}
+
 define double @sqrtsd_size(double* %a) optsize {
 ; SSE-LABEL: sqrtsd_size:
 ; SSE:       # %bb.0:
@@ -209,6 +226,23 @@ define <2 x double> @sqrtsd_full_size(<2 x double>* %a) optsize {
 ; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    retq
     %ld = load <2 x double>, <2 x double>* %a
+    %res = tail call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> %ld)
+    ret <2 x double> %res
+}
+
+define <2 x double> @sqrtsd_full_size_volatile(<2 x double>* %a) optsize {
+; SSE-LABEL: sqrtsd_full_size_volatile:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movapd (%rdi), %xmm0
+; SSE-NEXT:    sqrtsd %xmm0, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: sqrtsd_full_size_volatile:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovapd (%rdi), %xmm0
+; AVX-NEXT:    vsqrtsd %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    retq
+    %ld = load volatile <2 x double>, <2 x double>* %a
     %res = tail call <2 x double> @llvm.x86.sse2.sqrt.sd(<2 x double> %ld)
     ret <2 x double> %res
 }

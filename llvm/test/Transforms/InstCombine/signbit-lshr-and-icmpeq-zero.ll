@@ -183,8 +183,6 @@ define i1 @scalar_i32_signbit_lshr_and_eq_extra_use_lshr_and(i32 %x, i32 %y, i32
   ret i1 %r
 }
 
-; Negative tests
-
 ; X is constant
 
 define i1 @scalar_i32_signbit_lshr_and_eq_X_is_constant1(i32 %y) {
@@ -210,6 +208,8 @@ define i1 @scalar_i32_signbit_lshr_and_eq_X_is_constant2(i32 %y) {
   %r = icmp eq i32 %and, 0
   ret i1 %r
 }
+
+; Negative tests
 
 ; Check 'slt' predicate
 

@@ -3619,7 +3619,7 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
 }
 
 void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
-                                   QualType FnType) {
+                                   QualType FnType, llvm::Function *Fn) {
   StringRef Name;
   StringRef LinkageName;
 
@@ -3629,7 +3629,9 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
 
   llvm::DINode::DIFlags Flags = llvm::DINode::FlagZero;
   llvm::DIFile *Unit = getOrCreateFile(Loc);
-  llvm::DIScope *FDContext = getDeclContextDescriptor(D);
+  bool IsDeclForCallSite = Fn ? true : false;
+  llvm::DIScope *FDContext =
+      IsDeclForCallSite ? Unit : getDeclContextDescriptor(D);
   llvm::DINodeArray TParamsArray;
   if (isa<FunctionDecl>(D)) {
     // If there is a DISubprogram for this function available then use it.
@@ -3656,10 +3658,38 @@ void CGDebugInfo::EmitFunctionDecl(GlobalDecl GD, SourceLocation Loc,
   if (CGM.getLangOpts().Optimize)
     SPFlags |= llvm::DISubprogram::SPFlagOptimized;
 
-  DBuilder.retainType(DBuilder.createFunction(
+  llvm::DISubprogram *SP = DBuilder.createFunction(
       FDContext, Name, LinkageName, Unit, LineNo,
       getOrCreateFunctionType(D, FnType, Unit), ScopeLine, Flags, SPFlags,
-      TParamsArray.get(), getFunctionDeclaration(D)));
+      TParamsArray.get(), getFunctionDeclaration(D));
+
+  if (IsDeclForCallSite)
+    Fn->setSubprogram(SP);
+
+  DBuilder.retainType(SP);
+}
+
+void CGDebugInfo::EmitFuncDeclForCallSite(llvm::CallBase *CallOrInvoke,
+                                          QualType CalleeType,
+                                          const FunctionDecl *CalleeDecl) {
+  auto &CGOpts = CGM.getCodeGenOpts();
+  if (!CGOpts.EnableDebugEntryValues || !CGM.getLangOpts().Optimize ||
+      !CallOrInvoke ||
+      CGM.getCodeGenOpts().getDebugInfo() < codegenoptions::LimitedDebugInfo)
+    return;
+
+  auto *Func = CallOrInvoke->getCalledFunction();
+  if (!Func)
+    return;
+
+  // If there is no DISubprogram attached to the function being called,
+  // create the one describing the function in order to have complete
+  // call site debug info.
+  if (Func->getSubprogram())
+    return;
+
+  if (!CalleeDecl->isStatic() && !CalleeDecl->isInlined())
+    EmitFunctionDecl(CalleeDecl, CalleeDecl->getLocation(), CalleeType, Func);
 }
 
 void CGDebugInfo::EmitInlineFunctionStart(CGBuilderTy &Builder, GlobalDecl GD) {

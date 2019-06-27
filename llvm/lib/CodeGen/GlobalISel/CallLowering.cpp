@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -27,7 +28,8 @@ using namespace llvm;
 void CallLowering::anchor() {}
 
 bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
-                             Register ResReg, ArrayRef<Register> ArgRegs,
+                             ArrayRef<Register> ResRegs,
+                             ArrayRef<ArrayRef<Register>> ArgRegs,
                              Register SwiftErrorVReg,
                              std::function<unsigned()> GetCalleeReg) const {
   auto &DL = CS.getParent()->getParent()->getParent()->getDataLayout();
@@ -55,7 +57,7 @@ bool CallLowering::lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
   else
     Callee = MachineOperand::CreateReg(GetCalleeReg(), false);
 
-  ArgInfo OrigRet{ResReg, CS.getType(), ISD::ArgFlagsTy{}};
+  ArgInfo OrigRet{ResRegs, CS.getType(), ISD::ArgFlagsTy{}};
   if (!OrigRet.Ty->isVoidTy())
     setArgFlags(OrigRet, AttributeList::ReturnIndex, DL, CS);
 
@@ -115,6 +117,47 @@ CallLowering::setArgFlags<CallInst>(CallLowering::ArgInfo &Arg, unsigned OpIdx,
                                     const DataLayout &DL,
                                     const CallInst &FuncInfo) const;
 
+Register CallLowering::packRegs(ArrayRef<Register> SrcRegs, Type *PackedTy,
+                                MachineIRBuilder &MIRBuilder) const {
+  assert(SrcRegs.size() > 1 && "Nothing to pack");
+
+  const DataLayout &DL = MIRBuilder.getMF().getDataLayout();
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+
+  LLT PackedLLT = getLLTForType(*PackedTy, DL);
+
+  SmallVector<LLT, 8> LLTs;
+  SmallVector<uint64_t, 8> Offsets;
+  computeValueLLTs(DL, *PackedTy, LLTs, &Offsets);
+  assert(LLTs.size() == SrcRegs.size() && "Regs / types mismatch");
+
+  Register Dst = MRI->createGenericVirtualRegister(PackedLLT);
+  MIRBuilder.buildUndef(Dst);
+  for (unsigned i = 0; i < SrcRegs.size(); ++i) {
+    Register NewDst = MRI->createGenericVirtualRegister(PackedLLT);
+    MIRBuilder.buildInsert(NewDst, Dst, SrcRegs[i], Offsets[i]);
+    Dst = NewDst;
+  }
+
+  return Dst;
+}
+
+void CallLowering::unpackRegs(ArrayRef<Register> DstRegs, Register SrcReg,
+                              Type *PackedTy,
+                              MachineIRBuilder &MIRBuilder) const {
+  assert(DstRegs.size() > 1 && "Nothing to unpack");
+
+  const DataLayout &DL = MIRBuilder.getMF().getDataLayout();
+
+  SmallVector<LLT, 8> LLTs;
+  SmallVector<uint64_t, 8> Offsets;
+  computeValueLLTs(DL, *PackedTy, LLTs, &Offsets);
+  assert(LLTs.size() == DstRegs.size() && "Regs / types mismatch");
+
+  for (unsigned i = 0; i < DstRegs.size(); ++i)
+    MIRBuilder.buildExtract(DstRegs[i], SrcReg, Offsets[i]);
+}
+
 bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                                      ArrayRef<ArgInfo> Args,
                                      ValueHandler &Handler) const {
@@ -150,6 +193,12 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
       continue;
     }
 
+    assert(Args[i].Regs.size() == 1 &&
+           "Can't handle multiple virtual regs yet");
+
+    // FIXME: Pack registers if we have more than one.
+    unsigned ArgReg = Args[i].Regs[0];
+
     if (VA.isRegLoc()) {
       MVT OrigVT = MVT::getVT(Args[i].Ty);
       MVT VAVT = VA.getValVT();
@@ -172,12 +221,12 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
             return false;
           }
           auto Unmerge = MIRBuilder.buildUnmerge({OrigTy, OrigTy}, {NewReg});
-          MIRBuilder.buildCopy(Args[i].Reg, Unmerge.getReg(0));
+          MIRBuilder.buildCopy(ArgReg, Unmerge.getReg(0));
         } else {
-          MIRBuilder.buildTrunc(Args[i].Reg, {NewReg}).getReg(0);
+          MIRBuilder.buildTrunc(ArgReg, {NewReg}).getReg(0);
         }
       } else {
-        Handler.assignValueToReg(Args[i].Reg, VA.getLocReg(), VA);
+        Handler.assignValueToReg(ArgReg, VA.getLocReg(), VA);
       }
     } else if (VA.isMemLoc()) {
       MVT VT = MVT::getVT(Args[i].Ty);
@@ -186,7 +235,7 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
       unsigned Offset = VA.getLocMemOffset();
       MachinePointerInfo MPO;
       unsigned StackAddr = Handler.getStackAddress(Size, Offset, MPO);
-      Handler.assignValueToAddress(Args[i].Reg, StackAddr, Size, MPO, VA);
+      Handler.assignValueToAddress(ArgReg, StackAddr, Size, MPO, VA);
     } else {
       // FIXME: Support byvals and other weirdness
       return false;

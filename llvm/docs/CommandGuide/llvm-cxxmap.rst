@@ -1,6 +1,8 @@
 llvm-cxxmap - Mangled name remapping tool
 =========================================
 
+.. program:: llvm-cxxmap
+
 SYNOPSIS
 --------
 

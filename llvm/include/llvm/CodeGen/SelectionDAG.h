@@ -267,6 +267,10 @@ class SelectionDAG {
   /// Tracks dbg_value and dbg_label information through SDISel.
   SDDbgInfo *DbgInfo;
 
+  using CallSiteInfo = MachineFunction::CallSiteInfo;
+  using CallSiteInfoImpl = MachineFunction::CallSiteInfoImpl;
+  DenseMap<const SDNode *, CallSiteInfo> SDCallSiteInfo;
+
   uint16_t NextPersistentId = 0;
 
 public:
@@ -1656,6 +1660,17 @@ public:
   inline bool isConstantValueOfAnyType(SDValue N) {
     return isConstantIntBuildVectorOrConstantInt(N) ||
            isConstantFPBuildVectorOrConstantFP(N);
+  }
+
+  void addCallSiteInfo(const SDNode *CallNode, CallSiteInfoImpl &&CallInfo) {
+    SDCallSiteInfo[CallNode] = std::move(CallInfo);
+  }
+
+  CallSiteInfo getSDCallSiteInfo(const SDNode *CallNode) {
+    auto I = SDCallSiteInfo.find(CallNode);
+    if (I != SDCallSiteInfo.end())
+      return std::move(I->second);
+    return CallSiteInfo();
   }
 
 private:
