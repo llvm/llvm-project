@@ -710,12 +710,6 @@ void SwiftASTManipulator::MakeDeclarationsPublic() {
         if (auto *ASD = llvm::dyn_cast<swift::AbstractStorageDecl>(D))
           ASD->overwriteSetterAccess(access);
       }
-
-      // FIXME: Remove this once LLDB has proper support for resilience.
-      if (swift::VarDecl *var_decl =
-              llvm::dyn_cast<swift::VarDecl>(decl)) {
-        var_decl->setREPLVar(true);
-      }
       return true;
     }
   };
