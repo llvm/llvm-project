@@ -30,6 +30,7 @@ using namespace lldb;
 using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 
+/// Check if the given expected packet matches the actual packet.
 static bool unexpected(llvm::StringRef expected, llvm::StringRef actual) {
   // The 'expected' string contains the raw data, including the leading $ and
   // trailing checksum. The 'actual' string contains only the packet's content.
@@ -46,6 +47,25 @@ static bool unexpected(llvm::StringRef expected, llvm::StringRef actual) {
     return false;
 
   return true;
+}
+
+/// Check if we should reply to the given packet.
+static bool skip(llvm::StringRef data) {
+  assert(!data.empty() && "Empty packet?");
+
+  // We've already acknowledge the '+' packet so we're done here.
+  if (data == "+")
+    return true;
+
+  /// Don't 't reply to ^C. We need this because of stop reply packets, which
+  /// are only returned when the target halts. Reproducers synchronize these
+  /// 'asynchronous' replies, by recording them as a regular replies to the
+  /// previous packet (e.g. vCont). As a result, we should ignore real
+  /// asynchronous requests.
+  if (data.data()[0] == 0x03)
+    return true;
+
+  return false;
 }
 
 GDBRemoteCommunicationReplayServer::GDBRemoteCommunicationReplayServer()
@@ -89,9 +109,8 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
 
   m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue);
 
-  // If m_send_acks is true, we're before the handshake phase. We've already
-  // acknowledge the '+' packet so we're done here.
-  if (m_send_acks && packet.GetStringRef() == "+")
+  // Check if we should reply to this packet.
+  if (skip(packet.GetStringRef()))
     return PacketResult::Success;
 
   // This completes the handshake. Since m_send_acks was true, we can unset it
@@ -102,9 +121,8 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
   // A QEnvironment packet is sent for every environment variable. If the
   // number of environment variables is different during replay, the replies
   // become out of sync.
-  if (packet.GetStringRef().find("QEnvironment") == 0) {
+  if (packet.GetStringRef().find("QEnvironment") == 0)
     return SendRawPacketNoLock("$OK#9a");
-  }
 
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
   while (!m_packet_history.empty()) {
@@ -112,7 +130,7 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
     GDBRemoteCommunicationHistory::Entry entry = m_packet_history.back();
     m_packet_history.pop_back();
 
-    // We're handled the handshake implicitly before. Skip the packet and move
+    // We've handled the handshake implicitly before. Skip the packet and move
     // on.
     if (entry.packet.data == "+")
       continue;
@@ -124,6 +142,7 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
                  entry.packet.data);
         LLDB_LOG(log, "GDBRemoteCommunicationReplayServer actual packet: '{0}'",
                  packet.GetStringRef());
+        return PacketResult::ErrorSendFailed;
       }
 
       // Ignore QEnvironment packets as they're handled earlier.
