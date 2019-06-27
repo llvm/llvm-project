@@ -270,6 +270,9 @@ def parseOptionsAndInitTestdirs():
             else:
                 os.environ[parts[0]] = parts[1]
 
+    if args.set_inferior_env_vars:
+        lldbtest_config.inferior_env = ' '.join(args.set_inferior_env_vars)
+
     # only print the args if being verbose (and parsable is off)
     if args.v and not args.q:
         print(sys.argv)

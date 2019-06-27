@@ -37,17 +37,13 @@ public:
                   const MCSubtargetInfo *STI) const override;
   bool fixupNeedsRelaxation(const MCFixup &Fixup, uint64_t Value,
                             const MCRelaxableFragment *DF,
-                            const MCAsmLayout &Layout) const override {
-    return false;
-  }
+                            const MCAsmLayout &Layout) const override;
+
   void relaxInstruction(const MCInst &Inst, const MCSubtargetInfo &STI,
-                        MCInst &Res) const override {
-    llvm_unreachable("Not implemented");
-  }
+                        MCInst &Res) const override;
+
   bool mayNeedRelaxation(const MCInst &Inst,
-                         const MCSubtargetInfo &STI) const override {
-    return false;
-  }
+                         const MCSubtargetInfo &STI) const override;
 
   unsigned getMinimumNopSize() const override;
   bool writeNopData(raw_ostream &OS, uint64_t Count) const override;
@@ -56,6 +52,36 @@ public:
 };
 
 } //End anonymous namespace
+
+void AMDGPUAsmBackend::relaxInstruction(const MCInst &Inst,
+                                        const MCSubtargetInfo &STI,
+                                        MCInst &Res) const {
+  unsigned RelaxedOpcode = AMDGPU::getSOPPWithRelaxation(Inst.getOpcode());
+  Res.setOpcode(RelaxedOpcode);
+  Res.addOperand(Inst.getOperand(0));
+  return;
+}
+
+bool AMDGPUAsmBackend::fixupNeedsRelaxation(const MCFixup &Fixup,
+                                            uint64_t Value,
+                                            const MCRelaxableFragment *DF,
+                                            const MCAsmLayout &Layout) const {
+  // if the branch target has an offset of x3f this needs to be relaxed to
+  // add a s_nop 0 immediately after branch to effectively increment offset
+  // for hardware workaround in gfx1010
+  return (((int64_t(Value)/4)-1) == 0x3f);
+}
+
+bool AMDGPUAsmBackend::mayNeedRelaxation(const MCInst &Inst,
+                       const MCSubtargetInfo &STI) const {
+  if (!STI.getFeatureBits()[AMDGPU::FeatureOffset3fBug])
+    return false;
+
+  if (AMDGPU::getSOPPWithRelaxation(Inst.getOpcode()) >= 0)
+    return true;
+
+  return false;
+}
 
 static unsigned getFixupKindNumBytes(unsigned Kind) {
   switch (Kind) {

@@ -2075,7 +2075,8 @@ Tail call optimization
 ----------------------
 
 Tail call optimization, callee reusing the stack of the caller, is currently
-supported on x86/x86-64 and PowerPC. It is performed if:
+supported on x86/x86-64, PowerPC, and WebAssembly. It is performed on x86/x86-64
+and PowerPC if:
 
 * Caller and callee have the calling convention ``fastcc``, ``cc 10`` (GHC
   calling convention) or ``cc 11`` (HiPE calling convention).
@@ -2102,6 +2103,10 @@ PowerPC constraints:
 
 * On ppc32/64 GOT/PIC only module-local calls (visibility = hidden or protected)
   are supported.
+
+On WebAssembly, tail calls are lowered to ``return_call`` and
+``return_call_indirect`` instructions whenever the 'tail-call' target attribute
+is enabled.
 
 Example:
 

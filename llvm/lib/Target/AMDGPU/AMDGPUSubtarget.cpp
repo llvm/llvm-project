@@ -261,6 +261,7 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     HasVcmpxExecWARHazard(false),
     HasLdsBranchVmemWARHazard(false),
     HasNSAtoVMEMBug(false),
+    HasOffset3fBug(false),
     HasFlatSegmentOffsetBug(false),
 
     FeatureDisable(false),

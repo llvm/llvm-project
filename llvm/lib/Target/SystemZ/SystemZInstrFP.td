@@ -208,14 +208,14 @@ let Predicates = [FeatureNoVectorEnhancements1] in {
 
 // Extend memory floating-point values to wider representations.
 let Uses = [FPC], mayRaiseFPException = 1 in {
-  def LDEB : UnaryRXE<"ldeb", 0xED04, extloadf32, FP64,  4>;
-  def LXEB : UnaryRXE<"lxeb", 0xED06, null_frag,  FP128, 4>;
-  def LXDB : UnaryRXE<"lxdb", 0xED05, null_frag,  FP128, 8>;
+  def LDEB : UnaryRXE<"ldeb", 0xED04, any_extloadf32, FP64, 4>;
+  def LXEB : UnaryRXE<"lxeb", 0xED06, null_frag, FP128, 4>;
+  def LXDB : UnaryRXE<"lxdb", 0xED05, null_frag, FP128, 8>;
 }
 let Predicates = [FeatureNoVectorEnhancements1] in {
-  def : Pat<(f128 (extloadf32 bdxaddr12only:$src)),
+  def : Pat<(f128 (any_extloadf32 bdxaddr12only:$src)),
             (LXEB bdxaddr12only:$src)>;
-  def : Pat<(f128 (extloadf64 bdxaddr12only:$src)),
+  def : Pat<(f128 (any_extloadf64 bdxaddr12only:$src)),
             (LXDB bdxaddr12only:$src)>;
 }
 

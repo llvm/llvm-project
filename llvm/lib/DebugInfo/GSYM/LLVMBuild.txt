@@ -1,4 +1,4 @@
-;===- ./lib/DebugInfo/LLVMBuild.txt ----------------------------*- Conf -*--===;
+;===- ./lib/DebugInfo/DWARF/LLVMBuild.txt ----------------------*- Conf -*--===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -14,10 +14,8 @@
 ;
 ;===------------------------------------------------------------------------===;
 
-[common]
-subdirectories = DWARF GSYM MSF CodeView PDB Symbolize
-
 [component_0]
-type = Group
-name = DebugInfo
-parent = $ROOT
+type = Library
+name = DebugInfoGSYM
+parent = DebugInfo
+required_libraries = Support

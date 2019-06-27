@@ -47,6 +47,9 @@ struct InlineInfo {
     Children.clear();
   }
   bool isValid() const { return !Ranges.empty(); }
+
+  typedef std::vector<const InlineInfo *> InlineArray;
+
   /// Lookup an address in the InlineInfo object
   ///
   /// This function is used to symbolicate an inline call stack and can 
@@ -59,7 +62,6 @@ struct InlineInfo {
   /// inline call stack for a given address.
   ///
   /// \returns true if successful, false otherwise
-  typedef std::vector<const InlineInfo *> InlineArray;
   llvm::Optional<InlineArray> getInlineStack(uint64_t Addr) const;
 };
 

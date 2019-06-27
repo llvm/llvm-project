@@ -2914,9 +2914,7 @@ static void RenderCharacterOptions(const ArgList &Args, const llvm::Triple &T,
   }
 
   // The default depends on the language standard.
-  if (const Arg *A =
-          Args.getLastArg(options::OPT_fchar8__t, options::OPT_fno_char8__t))
-    A->render(Args, CmdArgs);
+  Args.AddLastArg(CmdArgs, options::OPT_fchar8__t, options::OPT_fno_char8__t);
 
   if (const Arg *A = Args.getLastArg(options::OPT_fshort_wchar,
                                      options::OPT_fno_short_wchar)) {
@@ -4204,11 +4202,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                     options::OPT_fno_unique_section_names, true))
     CmdArgs.push_back("-fno-unique-section-names");
 
-  if (auto *A = Args.getLastArg(
-      options::OPT_finstrument_functions,
-      options::OPT_finstrument_functions_after_inlining,
-      options::OPT_finstrument_function_entry_bare))
-    A->render(Args, CmdArgs);
+  Args.AddLastArg(CmdArgs, options::OPT_finstrument_functions,
+                  options::OPT_finstrument_functions_after_inlining,
+                  options::OPT_finstrument_function_entry_bare);
 
   // NVPTX doesn't support PGO or coverage. There's no runtime support for
   // sampling, overhead of call arc collection is way too high and there's no
@@ -4216,8 +4212,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Triple.isNVPTX())
     addPGOAndCoverageFlags(TC, C, D, Output, Args, CmdArgs);
 
-  if (auto *ABICompatArg = Args.getLastArg(options::OPT_fclang_abi_compat_EQ))
-    ABICompatArg->render(Args, CmdArgs);
+  Args.AddLastArg(CmdArgs, options::OPT_fclang_abi_compat_EQ);
 
   // Add runtime flag for PS4 when PGO, coverage, or sanitizers are enabled.
   if (RawTriple.isPS4CPU() &&
@@ -4856,9 +4851,8 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // -fgnu-keywords default varies depending on language; only pass if
   // specified.
-  if (Arg *A = Args.getLastArg(options::OPT_fgnu_keywords,
-                               options::OPT_fno_gnu_keywords))
-    A->render(Args, CmdArgs);
+  Args.AddLastArg(CmdArgs, options::OPT_fgnu_keywords,
+                  options::OPT_fno_gnu_keywords);
 
   if (Args.hasFlag(options::OPT_fgnu89_inline, options::OPT_fno_gnu89_inline,
                    false))
@@ -4867,10 +4861,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_fno_inline))
     CmdArgs.push_back("-fno-inline");
 
-  if (Arg* InlineArg = Args.getLastArg(options::OPT_finline_functions,
-                                       options::OPT_finline_hint_functions,
-                                       options::OPT_fno_inline_functions))
-    InlineArg->render(Args, CmdArgs);
+  Args.AddLastArg(CmdArgs, options::OPT_finline_functions,
+                  options::OPT_finline_hint_functions,
+                  options::OPT_fno_inline_functions);
 
   // FIXME: Find a better way to determine whether the language has modules
   // support by default, or just assume that all languages do.
@@ -5065,12 +5058,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   ParseMPreferVectorWidth(D, Args, CmdArgs);
 
-  if (Arg *A = Args.getLastArg(options::OPT_fshow_overloads_EQ))
-    A->render(Args, CmdArgs);
-
-  if (Arg *A = Args.getLastArg(
-          options::OPT_fsanitize_undefined_strip_path_components_EQ))
-    A->render(Args, CmdArgs);
+  Args.AddLastArg(CmdArgs, options::OPT_fshow_overloads_EQ);
+  Args.AddLastArg(CmdArgs,
+                  options::OPT_fsanitize_undefined_strip_path_components_EQ);
 
   // -fdollars-in-identifiers default varies depending on platform and
   // language; only pass if specified.
@@ -5790,8 +5780,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
     CmdArgs.push_back("--dependent-lib=oldnames");
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_show_includes))
-    A->render(Args, CmdArgs);
+  Args.AddLastArg(CmdArgs, options::OPT_show_includes);
 
   // This controls whether or not we emit RTTI data for polymorphic types.
   if (Args.hasFlag(options::OPT__SLASH_GR_, options::OPT__SLASH_GR,
@@ -5920,8 +5909,7 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
       CmdArgs.push_back(DCCFlag);
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_vtordisp_mode_EQ))
-    A->render(Args, CmdArgs);
+  Args.AddLastArg(CmdArgs, options::OPT_vtordisp_mode_EQ);
 
   if (!Args.hasArg(options::OPT_fdiagnostics_format_EQ)) {
     CmdArgs.push_back("-fdiagnostics-format");
