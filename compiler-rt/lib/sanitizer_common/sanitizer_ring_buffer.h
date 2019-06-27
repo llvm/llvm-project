@@ -139,7 +139,7 @@ class CompactRingBuffer {
     SetNext(next);
   }
 
-  T operator[](uptr Idx) const {
+  const T &operator[](uptr Idx) const {
     CHECK_LT(Idx, size());
     const T *Begin = (const T *)StartOfStorage();
     sptr StorageIdx = Next() - Begin;
