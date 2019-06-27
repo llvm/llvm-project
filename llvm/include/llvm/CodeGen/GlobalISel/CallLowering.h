@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_CALLLOWERING_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/CallingConvLower.h"
 #include "llvm/CodeGen/TargetCallingConv.h"
 #include "llvm/IR/CallSite.h"
@@ -42,15 +43,17 @@ class CallLowering {
   virtual void anchor();
 public:
   struct ArgInfo {
-    Register Reg;
+    SmallVector<Register, 4> Regs;
     Type *Ty;
     ISD::ArgFlagsTy Flags;
     bool IsFixed;
 
-    ArgInfo(unsigned Reg, Type *Ty, ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy{},
-            bool IsFixed = true)
-      : Reg(Reg), Ty(Ty), Flags(Flags), IsFixed(IsFixed) {
-      assert((Ty->isVoidTy() == (Reg == 0)) &&
+    ArgInfo(ArrayRef<Register> Regs, Type *Ty,
+            ISD::ArgFlagsTy Flags = ISD::ArgFlagsTy{}, bool IsFixed = true)
+        : Regs(Regs.begin(), Regs.end()), Ty(Ty), Flags(Flags),
+          IsFixed(IsFixed) {
+      // FIXME: We should have just one way of saying "no register".
+      assert((Ty->isVoidTy() == (Regs.empty() || Regs[0] == 0)) &&
              "only void types should have no register");
     }
   };
@@ -136,6 +139,24 @@ protected:
   void setArgFlags(ArgInfo &Arg, unsigned OpIdx, const DataLayout &DL,
                    const FuncInfoTy &FuncInfo) const;
 
+  /// Generate instructions for packing \p SrcRegs into one big register
+  /// corresponding to the aggregate type \p PackedTy.
+  ///
+  /// \param SrcRegs should contain one virtual register for each base type in
+  ///                \p PackedTy, as returned by computeValueLLTs.
+  ///
+  /// \return The packed register.
+  Register packRegs(ArrayRef<Register> SrcRegs, Type *PackedTy,
+                    MachineIRBuilder &MIRBuilder) const;
+
+  /// Generate instructions for unpacking \p SrcReg into the \p DstRegs
+  /// corresponding to the aggregate type \p PackedTy.
+  ///
+  /// \param DstRegs should contain one virtual register for each base type in
+  ///        \p PackedTy, as returned by computeValueLLTs.
+  void unpackRegs(ArrayRef<Register> DstRegs, Register SrcReg, Type *PackedTy,
+                  MachineIRBuilder &MIRBuilder) const;
+
   /// Invoke Handler::assignArg on each of the given \p Args and then use
   /// \p Callback to move them to the assigned locations.
   ///
@@ -179,19 +200,19 @@ public:
     return false;
   }
 
-
   /// This hook must be implemented to lower the incoming (formal)
-  /// arguments, described by \p Args, for GlobalISel. Each argument
-  /// must end up in the related virtual register described by VRegs.
-  /// In other words, the first argument should end up in VRegs[0],
-  /// the second in VRegs[1], and so on.
+  /// arguments, described by \p VRegs, for GlobalISel. Each argument
+  /// must end up in the related virtual registers described by \p VRegs.
+  /// In other words, the first argument should end up in \c VRegs[0],
+  /// the second in \c VRegs[1], and so on. For each argument, there will be one
+  /// register for each non-aggregate type, as returned by \c computeValueLLTs.
   /// \p MIRBuilder is set to the proper insertion for the argument
   /// lowering.
   ///
   /// \return True if the lowering succeeded, false otherwise.
   virtual bool lowerFormalArguments(MachineIRBuilder &MIRBuilder,
                                     const Function &F,
-                                    ArrayRef<Register> VRegs) const {
+                                    ArrayRef<ArrayRef<Register>> VRegs) const {
     return false;
   }
 
@@ -237,11 +258,14 @@ public:
   ///
   /// \p CI is the call/invoke instruction.
   ///
-  /// \p ResReg is a register where the call's return value should be stored (or
-  /// 0 if there is no return value).
+  /// \p ResRegs are the registers where the call's return value should be
+  /// stored (or 0 if there is no return value). There will be one register for
+  /// each non-aggregate type, as returned by \c computeValueLLTs.
   ///
-  /// \p ArgRegs is a list of virtual registers containing each argument that
-  /// needs to be passed.
+  /// \p ArgRegs is a list of lists of virtual registers containing each
+  /// argument that needs to be passed (argument \c i should be placed in \c
+  /// ArgRegs[i]). For each argument, there will be one register for each
+  /// non-aggregate type, as returned by \c computeValueLLTs.
   ///
   /// \p SwiftErrorVReg is non-zero if the call has a swifterror inout
   /// parameter, and contains the vreg that the swifterror should be copied into
@@ -254,10 +278,9 @@ public:
   ///
   /// \return true if the lowering succeeded, false otherwise.
   bool lowerCall(MachineIRBuilder &MIRBuilder, ImmutableCallSite CS,
-                 Register ResReg, ArrayRef<Register> ArgRegs,
-                 Register SwiftErrorVReg,
+                 ArrayRef<Register> ResRegs,
+                 ArrayRef<ArrayRef<Register>> ArgRegs, Register SwiftErrorVReg,
                  std::function<unsigned()> GetCalleeReg) const;
-
 };
 
 } // end namespace llvm

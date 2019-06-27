@@ -6687,7 +6687,7 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
         for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt) {
           for (unsigned j = 0; j != NumBytesPerElt; ++j) {
             unsigned Ofs = (SelectMask[j] ? NumSizeInBytes : 0);
-            int Idx = (ZeroMask[j] ? SM_SentinelZero : (i + j + Ofs));
+            int Idx = (ZeroMask[j] ? (int)SM_SentinelZero : (i + j + Ofs));
             Mask.push_back(Idx);
           }
         }

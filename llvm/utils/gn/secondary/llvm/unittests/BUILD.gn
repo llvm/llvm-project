@@ -11,6 +11,7 @@ group("unittests") {
     "CodeGen/GlobalISel:GlobalISelTests",
     "DebugInfo/CodeView:DebugInfoCodeViewTests",
     "DebugInfo/DWARF:DebugInfoDWARFTests",
+    "DebugInfo/GSYM:DebugInfoGSYMTests",
     "DebugInfo/MSF:DebugInfoMSFTests",
     "DebugInfo/PDB:DebugInfoPDBTests",
     "Demangle:DemangleTests",

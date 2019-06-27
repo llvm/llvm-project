@@ -202,7 +202,7 @@ static Expected<std::string> readIdentificationBlock(BitstreamCursor &Stream) {
     Expected<unsigned> MaybeBitCode = Stream.readRecord(Entry.ID, Record);
     if (!MaybeBitCode)
       return MaybeBitCode.takeError();
-    switch (unsigned BitCode = MaybeBitCode.get()) {
+    switch (MaybeBitCode.get()) {
     default: // Default behavior: reject
       return error("Invalid value");
     case bitc::IDENTIFICATION_CODE_STRING: // IDENTIFICATION: [strchr x N]
@@ -5364,7 +5364,7 @@ Error ModuleSummaryIndexBitcodeReader::parseModule() {
         Expected<unsigned> MaybeBitCode = Stream.readRecord(Entry.ID, Record);
         if (!MaybeBitCode)
           return MaybeBitCode.takeError();
-        switch (unsigned BitCode = MaybeBitCode.get()) {
+        switch (MaybeBitCode.get()) {
         default:
           break; // Default behavior, ignore unknown content.
         case bitc::MODULE_CODE_VERSION: {
