@@ -4899,15 +4899,22 @@ bool X86TargetLowering::isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
 }
 
 bool X86TargetLowering::shouldScalarizeBinop(SDValue VecOp) const {
+  unsigned Opc = VecOp.getOpcode();
+
+  // Assume target opcodes can't be scalarized.
+  // TODO - do we have any exceptions?
+  if (Opc >= ISD::BUILTIN_OP_END)
+    return false;
+
   // If the vector op is not supported, try to convert to scalar.
   EVT VecVT = VecOp.getValueType();
-  if (!isOperationLegalOrCustomOrPromote(VecOp.getOpcode(), VecVT))
+  if (!isOperationLegalOrCustomOrPromote(Opc, VecVT))
     return true;
 
   // If the vector op is supported, but the scalar op is not, the transform may
   // not be worthwhile.
   EVT ScalarVT = VecVT.getScalarType();
-  return isOperationLegalOrCustomOrPromote(VecOp.getOpcode(), ScalarVT);
+  return isOperationLegalOrCustomOrPromote(Opc, ScalarVT);
 }
 
 bool X86TargetLowering::shouldFormOverflowOp(unsigned Opcode, EVT VT) const {
@@ -5519,19 +5526,6 @@ SDValue SplitOpsAndApply(SelectionDAG &DAG, const X86Subtarget &Subtarget,
     Subs.push_back(Builder(DAG, DL, SubOps));
   }
   return DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Subs);
-}
-
-// Return true if the instruction zeroes the unused upper part of the
-// destination and accepts mask.
-static bool isMaskedZeroUpperBitsvXi1(unsigned int Opcode) {
-  switch (Opcode) {
-  default:
-    return false;
-  case X86ISD::CMPM:
-  case X86ISD::CMPM_SAE:
-  case ISD::SETCC:
-    return true;
-  }
 }
 
 /// Insert i1-subvector to i1-vector.
@@ -6669,6 +6663,40 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
     return true;
   }
   case ISD::OR: {
+    // Inspect each operand at the byte level. We can merge these into a
+    // blend shuffle mask if for each byte at least one is masked out (zero).
+    KnownBits Known0 = DAG.computeKnownBits(N.getOperand(0));
+    KnownBits Known1 = DAG.computeKnownBits(N.getOperand(1));
+    if (Known0.One.isNullValue() && Known1.One.isNullValue()) {
+      bool IsByteMask = true;
+      unsigned NumSizeInBytes = NumSizeInBits / 8;
+      unsigned NumBytesPerElt = NumBitsPerElt / 8;
+      APInt ZeroMask = APInt::getNullValue(NumBytesPerElt);
+      APInt SelectMask = APInt::getNullValue(NumBytesPerElt);
+      for (unsigned i = 0; i != NumBytesPerElt && IsByteMask; ++i) {
+        unsigned LHS = Known0.Zero.extractBits(8, i * 8).getZExtValue();
+        unsigned RHS = Known1.Zero.extractBits(8, i * 8).getZExtValue();
+        if (LHS == 255 && RHS == 0)
+          SelectMask.setBit(i);
+        else if (LHS == 255 && RHS == 255)
+          ZeroMask.setBit(i);
+        else if (!(LHS == 0 && RHS == 255))
+          IsByteMask = false;
+      }
+      if (IsByteMask) {
+        for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt) {
+          for (unsigned j = 0; j != NumBytesPerElt; ++j) {
+            unsigned Ofs = (SelectMask[j] ? NumSizeInBytes : 0);
+            int Idx = (ZeroMask[j] ? SM_SentinelZero : (i + j + Ofs));
+            Mask.push_back(Idx);
+          }
+        }
+        Ops.push_back(N.getOperand(0));
+        Ops.push_back(N.getOperand(1));
+        return true;
+      }
+    }
+
     // Handle OR(SHUFFLE,SHUFFLE) case where one source is zero and the other
     // is a valid shuffle index.
     SDValue N0 = peekThroughOneUseBitcasts(N.getOperand(0));
@@ -7147,51 +7175,51 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
 
   SDLoc dl(Op);
   SDValue V;
-  bool First = true;
 
   // Pre-SSE4.1 - merge byte pairs and insert with PINSRW.
-  for (unsigned i = 0; i < 16; ++i) {
+  for (unsigned i = 0; i < 16; i += 2) {
     bool ThisIsNonZero = (NonZeros & (1 << i)) != 0;
-    if (ThisIsNonZero && First) {
-      if (NumZero)
-        V = getZeroVector(MVT::v8i16, Subtarget, DAG, dl);
+    bool NextIsNonZero = (NonZeros & (1 << (i + 1))) != 0;
+    if (!ThisIsNonZero && !NextIsNonZero)
+      continue;
+
+    // FIXME: Investigate combining the first 4 bytes as a i32 instead.
+    SDValue Elt;
+    if (ThisIsNonZero) {
+      if (NumZero || NextIsNonZero)
+        Elt = DAG.getZExtOrTrunc(Op.getOperand(i), dl, MVT::i32);
       else
-        V = DAG.getUNDEF(MVT::v8i16);
-      First = false;
+        Elt = DAG.getAnyExtOrTrunc(Op.getOperand(i), dl, MVT::i32);
     }
 
-    if ((i & 1) != 0) {
-      // FIXME: Investigate extending to i32 instead of just i16.
-      // FIXME: Investigate combining the first 4 bytes as a i32 instead.
-      SDValue ThisElt, LastElt;
-      bool LastIsNonZero = (NonZeros & (1 << (i - 1))) != 0;
-      if (LastIsNonZero) {
-        LastElt =
-            DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, Op.getOperand(i - 1));
-      }
-      if (ThisIsNonZero) {
-        ThisElt = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, Op.getOperand(i));
-        ThisElt = DAG.getNode(ISD::SHL, dl, MVT::i16, ThisElt,
-                              DAG.getConstant(8, dl, MVT::i8));
-        if (LastIsNonZero)
-          ThisElt = DAG.getNode(ISD::OR, dl, MVT::i16, ThisElt, LastElt);
-      } else
-        ThisElt = LastElt;
+    if (NextIsNonZero) {
+      SDValue NextElt;
+      if (i == 0 && NumZero)
+        NextElt = DAG.getZExtOrTrunc(Op.getOperand(i+1), dl, MVT::i32);
+      else
+        NextElt = DAG.getAnyExtOrTrunc(Op.getOperand(i+1), dl, MVT::i32);
+      NextElt = DAG.getNode(ISD::SHL, dl, MVT::i32, NextElt,
+                            DAG.getConstant(8, dl, MVT::i8));
+      if (ThisIsNonZero)
+        Elt = DAG.getNode(ISD::OR, dl, MVT::i32, NextElt, Elt);
+      else
+        Elt = NextElt;
+    }
 
-      if (ThisElt) {
-        if (1 == i) {
-          V = NumZero ? DAG.getZExtOrTrunc(ThisElt, dl, MVT::i32)
-                      : DAG.getAnyExtOrTrunc(ThisElt, dl, MVT::i32);
-          V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, V);
-          if (NumZero)
-            V = DAG.getNode(X86ISD::VZEXT_MOVL, dl, MVT::v4i32, V);
-          V = DAG.getBitcast(MVT::v8i16, V);
-        } else {
-          V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v8i16, V, ThisElt,
-                          DAG.getIntPtrConstant(i / 2, dl));
-        }
+    // If our first insertion is not the first index then insert into zero
+    // vector to break any register dependency else use SCALAR_TO_VECTOR.
+    if (!V) {
+      if (i != 0)
+        V = getZeroVector(MVT::v8i16, Subtarget, DAG, dl);
+      else {
+        V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, Elt);
+        V = DAG.getBitcast(MVT::v8i16, V);
+        continue;
       }
     }
+    Elt = DAG.getNode(ISD::TRUNCATE, dl, MVT::i16, Elt);
+    V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v8i16, V, Elt,
+                    DAG.getIntPtrConstant(i / 2, dl));
   }
 
   return DAG.getBitcast(MVT::v16i8, V);
@@ -9649,60 +9677,9 @@ static SDValue LowerAVXCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
   return Vec;
 }
 
-// Return true if all the operands of the given CONCAT_VECTORS node are zeros
-// except for the first one. (CONCAT_VECTORS Op, 0, 0,...,0)
-static bool isExpandWithZeros(const SDValue &Op) {
-  assert(Op.getOpcode() == ISD::CONCAT_VECTORS &&
-         "Expand with zeros only possible in CONCAT_VECTORS nodes!");
-
-  for (unsigned i = 1; i < Op.getNumOperands(); i++)
-    if (!ISD::isBuildVectorAllZeros(Op.getOperand(i).getNode()))
-      return false;
-
-  return true;
-}
-
 // Returns true if the given node is a type promotion (by concatenating i1
 // zeros) of the result of a node that already zeros all upper bits of
 // k-register.
-static SDValue isTypePromotionOfi1ZeroUpBits(SDValue Op) {
-  unsigned Opc = Op.getOpcode();
-
-  assert(Opc == ISD::CONCAT_VECTORS &&
-         Op.getSimpleValueType().getVectorElementType() == MVT::i1 &&
-         "Unexpected node to check for type promotion!");
-
-  // As long as we are concatenating zeros to the upper part of a previous node
-  // result, climb up the tree until a node with different opcode is
-  // encountered
-  while (Opc == ISD::INSERT_SUBVECTOR || Opc == ISD::CONCAT_VECTORS) {
-    if (Opc == ISD::INSERT_SUBVECTOR) {
-      if (ISD::isBuildVectorAllZeros(Op.getOperand(0).getNode()) &&
-          Op.getConstantOperandVal(2) == 0)
-        Op = Op.getOperand(1);
-      else
-        return SDValue();
-    } else { // Opc == ISD::CONCAT_VECTORS
-      if (isExpandWithZeros(Op))
-        Op = Op.getOperand(0);
-      else
-        return SDValue();
-    }
-    Opc = Op.getOpcode();
-  }
-
-  // Check if the first inserted node zeroes the upper bits, or an 'and' result
-  // of a node that zeros the upper bits (its masked version).
-  if (isMaskedZeroUpperBitsvXi1(Op.getOpcode()) ||
-      (Op.getOpcode() == ISD::AND &&
-       (isMaskedZeroUpperBitsvXi1(Op.getOperand(0).getOpcode()) ||
-        isMaskedZeroUpperBitsvXi1(Op.getOperand(1).getOpcode())))) {
-    return Op;
-  }
-
-  return SDValue();
-}
-
 // TODO: Merge this with LowerAVXCONCAT_VECTORS?
 static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
                                        const X86Subtarget &Subtarget,
@@ -9713,13 +9690,6 @@ static SDValue LowerCONCAT_VECTORSvXi1(SDValue Op,
 
   assert(NumOperands > 1 && isPowerOf2_32(NumOperands) &&
          "Unexpected number of operands in CONCAT_VECTORS");
-
-  // If this node promotes - by concatenating zeroes - the type of the result
-  // of a node with instruction that zeroes all upper (irrelevant) bits of the
-  // output register, mark it as legal and catch the pattern in instruction
-  // selection to avoid emitting extra instructions (for zeroing upper bits).
-  if (SDValue Promoted = isTypePromotionOfi1ZeroUpBits(Op))
-    return widenSubVector(ResVT, Promoted, true, Subtarget, DAG, dl);
 
   unsigned NumZero = 0;
   unsigned NumNonZero = 0;
@@ -28566,6 +28536,7 @@ bool X86TargetLowering::isBinOp(unsigned Opcode) const {
   // These are non-commutative binops.
   // TODO: Add more X86ISD opcodes once we have test coverage.
   case X86ISD::ANDNP:
+  case X86ISD::PCMPGT:
   case X86ISD::FMAX:
   case X86ISD::FMIN:
   case X86ISD::FANDN:
@@ -28578,6 +28549,8 @@ bool X86TargetLowering::isBinOp(unsigned Opcode) const {
 bool X86TargetLowering::isCommutativeBinOp(unsigned Opcode) const {
   switch (Opcode) {
   // TODO: Add more X86ISD opcodes once we have test coverage.
+  case X86ISD::PCMPEQ:
+  case X86ISD::PMULDQ:
   case X86ISD::PMULUDQ:
   case X86ISD::FMAXC:
   case X86ISD::FMINC:
@@ -33998,9 +33971,6 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
           insertSubVector(UndefVec, ExtOp, 0, TLO.DAG, DL, ExtSizeInBits);
       return TLO.CombineTo(Op, Insert);
     }
-      // Arithmetic Ops.
-    case X86ISD::PMULDQ:
-    case X86ISD::PMULUDQ:
       // Target Shuffles.
     case X86ISD::PSHUFB:
     case X86ISD::UNPCKL:

@@ -2496,8 +2496,6 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
       else
         NewLimit = Start + Count;
       ExitCnt = ConstantInt::get(CmpIndVar->getType(), NewLimit);
-
-      LLVM_DEBUG(dbgs() << "  Widen RHS:\t" << *ExitCnt << "\n");
     } else {
       // We try to extend trip count first. If that doesn't work we truncate IV.
       // Zext(trunc(IV)) == IV implies equivalence of the following two:

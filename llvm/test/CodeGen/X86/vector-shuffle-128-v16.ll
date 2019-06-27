@@ -2045,8 +2045,7 @@ define <16 x i8> @PR31364(i8* nocapture readonly %a, i8* nocapture readonly %b) 
 ; SSE2-NEXT:    movzbl (%rsi), %ecx
 ; SSE2-NEXT:    shll $8, %ecx
 ; SSE2-NEXT:    orl %eax, %ecx
-; SSE2-NEXT:    movzwl %cx, %eax
-; SSE2-NEXT:    movd %eax, %xmm1
+; SSE2-NEXT:    movd %ecx, %xmm1
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[1,1,1,3,4,5,6,7]

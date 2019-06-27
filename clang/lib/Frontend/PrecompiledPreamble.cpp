@@ -352,7 +352,8 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   if (auto CommentHandler = Callbacks.getCommentHandler())
     Clang->getPreprocessor().addCommentHandler(CommentHandler);
 
-  Act->Execute();
+  if (llvm::Error Err = Act->Execute())
+    return errorToErrorCode(std::move(Err));
 
   // Run the callbacks.
   Callbacks.AfterExecute(*Clang);

@@ -70,11 +70,10 @@ define <3 x i16> @zext_i8(<3 x i8>) {
 define <3 x i16> @sext_i8(<3 x i8>) {
 ; SSE3-LABEL: sext_i8:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; SSE3-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; SSE3-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; SSE3-NEXT:    movd %edx, %xmm0
-; SSE3-NEXT:    pinsrw $1, %ecx, %xmm0
+; SSE3-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE3-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; SSE3-NEXT:    pinsrw $1, %eax, %xmm0
+; SSE3-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; SSE3-NEXT:    pinsrw $2, %eax, %xmm0
 ; SSE3-NEXT:    psllw $8, %xmm0
 ; SSE3-NEXT:    psraw $8, %xmm0

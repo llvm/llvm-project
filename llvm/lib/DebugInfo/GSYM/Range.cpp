@@ -32,7 +32,7 @@ void AddressRanges::insert(const AddressRange &Range) {
       // Now check if the previous range intersects with the next range since
       // the previous range was combined. If so, combine them and remove the
       // next range.
-      if (PrevIter->intersect(*Iter))
+      if (Iter != End && PrevIter->intersect(*Iter))
         Ranges.erase(Iter);
       return;
     }

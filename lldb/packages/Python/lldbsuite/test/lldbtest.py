@@ -1856,6 +1856,9 @@ class TestBase(Base):
         # decorators.
         Base.setUp(self)
 
+        if lldbtest_config.inferior_env:
+            self.runCmd('settings set target.env-vars {}'.format(lldbtest_config.inferior_env))
+
         # Set the clang modules cache path used by LLDB.
         mod_cache = os.path.join(os.environ["LLDB_BUILD"], "module-cache-lldb")
         self.runCmd('settings set symbols.clang-modules-cache-path "%s"'

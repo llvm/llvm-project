@@ -128,8 +128,8 @@ bool WebAssemblyPeephole::runOnMachineFunction(MachineFunction &MF) {
       switch (MI.getOpcode()) {
       default:
         break;
-      case WebAssembly::CALL_I32:
-      case WebAssembly::CALL_I64: {
+      case WebAssembly::CALL_i32:
+      case WebAssembly::CALL_i64: {
         MachineOperand &Op1 = MI.getOperand(1);
         if (Op1.isSymbol()) {
           StringRef Name(Op1.getSymbolName());

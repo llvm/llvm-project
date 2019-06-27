@@ -51,14 +51,10 @@ public:
                          const ARMBaseInstrInfo &TII) const;
   void resolveFrameIndex(MachineInstr &MI, unsigned BaseReg,
                          int64_t Offset) const override;
-  bool saveScavengerRegister(MachineBasicBlock &MBB,
-                             MachineBasicBlock::iterator I,
-                             MachineBasicBlock::iterator &UseMI,
-                             const TargetRegisterClass *RC,
-                             unsigned Reg) const override;
   void eliminateFrameIndex(MachineBasicBlock::iterator II,
                            int SPAdj, unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
+  bool useFPForScavengingIndex(const MachineFunction &MF) const override;
 };
 }
 

@@ -729,23 +729,6 @@ static bool ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args, InputKind IK,
   Opts.SplitDwarfFile = Args.getLastArgValue(OPT_split_dwarf_file);
   Opts.SplitDwarfOutput = Args.getLastArgValue(OPT_split_dwarf_output);
   Opts.SplitDwarfInlining = !Args.hasArg(OPT_fno_split_dwarf_inlining);
-
-  if (Arg *A =
-          Args.getLastArg(OPT_enable_split_dwarf, OPT_enable_split_dwarf_EQ)) {
-    if (A->getOption().matches(options::OPT_enable_split_dwarf)) {
-      Opts.setSplitDwarfMode(CodeGenOptions::SplitFileFission);
-    } else {
-      StringRef Name = A->getValue();
-      if (Name == "single")
-        Opts.setSplitDwarfMode(CodeGenOptions::SingleFileFission);
-      else if (Name == "split")
-        Opts.setSplitDwarfMode(CodeGenOptions::SplitFileFission);
-      else
-        Diags.Report(diag::err_drv_invalid_value)
-            << A->getAsString(Args) << Name;
-    }
-  }
-
   Opts.DebugTypeExtRefs = Args.hasArg(OPT_dwarf_ext_refs);
   Opts.DebugExplicitImport = Args.hasArg(OPT_dwarf_explicit_import);
   Opts.DebugFwdTemplateParams = Args.hasArg(OPT_debug_forward_template_params);

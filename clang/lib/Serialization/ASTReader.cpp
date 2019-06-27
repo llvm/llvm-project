@@ -1148,12 +1148,26 @@ bool ASTReader::ReadLexicalDeclContextStorage(ModuleFile &M,
   assert(Offset != 0);
 
   SavedStreamPosition SavedPosition(Cursor);
-  Cursor.JumpToBit(Offset);
+  if (llvm::Error Err = Cursor.JumpToBit(Offset)) {
+    Error(std::move(Err));
+    return true;
+  }
 
   RecordData Record;
   StringRef Blob;
-  unsigned Code = Cursor.ReadCode();
-  unsigned RecCode = Cursor.readRecord(Code, Record, &Blob);
+  Expected<unsigned> MaybeCode = Cursor.ReadCode();
+  if (!MaybeCode) {
+    Error(MaybeCode.takeError());
+    return true;
+  }
+  unsigned Code = MaybeCode.get();
+
+  Expected<unsigned> MaybeRecCode = Cursor.readRecord(Code, Record, &Blob);
+  if (!MaybeRecCode) {
+    Error(MaybeRecCode.takeError());
+    return true;
+  }
+  unsigned RecCode = MaybeRecCode.get();
   if (RecCode != DECL_CONTEXT_LEXICAL) {
     Error("Expected lexical block");
     return true;
@@ -1184,12 +1198,26 @@ bool ASTReader::ReadVisibleDeclContextStorage(ModuleFile &M,
   assert(Offset != 0);
 
   SavedStreamPosition SavedPosition(Cursor);
-  Cursor.JumpToBit(Offset);
+  if (llvm::Error Err = Cursor.JumpToBit(Offset)) {
+    Error(std::move(Err));
+    return true;
+  }
 
   RecordData Record;
   StringRef Blob;
-  unsigned Code = Cursor.ReadCode();
-  unsigned RecCode = Cursor.readRecord(Code, Record, &Blob);
+  Expected<unsigned> MaybeCode = Cursor.ReadCode();
+  if (!MaybeCode) {
+    Error(MaybeCode.takeError());
+    return true;
+  }
+  unsigned Code = MaybeCode.get();
+
+  Expected<unsigned> MaybeRecCode = Cursor.readRecord(Code, Record, &Blob);
+  if (!MaybeRecCode) {
+    Error(MaybeRecCode.takeError());
+    return true;
+  }
+  unsigned RecCode = MaybeRecCode.get();
   if (RecCode != DECL_CONTEXT_VISIBLE) {
     Error("Expected visible lookup table block");
     return true;
@@ -1217,6 +1245,10 @@ void ASTReader::Error(unsigned DiagID,
     Diags.SetDelayedDiagnostic(DiagID, Arg1, Arg2);
   else
     Diag(DiagID) << Arg1 << Arg2;
+}
+
+void ASTReader::Error(llvm::Error &&Err) const {
+  Error(toString(std::move(Err)));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1282,20 +1314,27 @@ bool ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
   SLocEntryCursor = F.Stream;
 
   // The stream itself is going to skip over the source manager block.
-  if (F.Stream.SkipBlock()) {
-    Error("malformed block record in AST file");
+  if (llvm::Error Err = F.Stream.SkipBlock()) {
+    Error(std::move(Err));
     return true;
   }
 
   // Enter the source manager block.
-  if (SLocEntryCursor.EnterSubBlock(SOURCE_MANAGER_BLOCK_ID)) {
-    Error("malformed source manager block record in AST file");
+  if (llvm::Error Err =
+          SLocEntryCursor.EnterSubBlock(SOURCE_MANAGER_BLOCK_ID)) {
+    Error(std::move(Err));
     return true;
   }
 
   RecordData Record;
   while (true) {
-    llvm::BitstreamEntry E = SLocEntryCursor.advanceSkippingSubblocks();
+    Expected<llvm::BitstreamEntry> MaybeE =
+        SLocEntryCursor.advanceSkippingSubblocks();
+    if (!MaybeE) {
+      Error(MaybeE.takeError());
+      return true;
+    }
+    llvm::BitstreamEntry E = MaybeE.get();
 
     switch (E.Kind) {
     case llvm::BitstreamEntry::SubBlock: // Handled for us already.
@@ -1312,7 +1351,13 @@ bool ASTReader::ReadSourceManagerBlock(ModuleFile &F) {
     // Read a record.
     Record.clear();
     StringRef Blob;
-    switch (SLocEntryCursor.readRecord(E.ID, Record, &Blob)) {
+    Expected<unsigned> MaybeRecord =
+        SLocEntryCursor.readRecord(E.ID, Record, &Blob);
+    if (!MaybeRecord) {
+      Error(MaybeRecord.takeError());
+      return true;
+    }
+    switch (MaybeRecord.get()) {
     default:  // Default behavior: ignore.
       break;
 
@@ -1376,8 +1421,20 @@ bool ASTReader::ReadSLocEntry(int ID) {
       StringRef Name) -> std::unique_ptr<llvm::MemoryBuffer> {
     RecordData Record;
     StringRef Blob;
-    unsigned Code = SLocEntryCursor.ReadCode();
-    unsigned RecCode = SLocEntryCursor.readRecord(Code, Record, &Blob);
+    Expected<unsigned> MaybeCode = SLocEntryCursor.ReadCode();
+    if (!MaybeCode) {
+      Error(MaybeCode.takeError());
+      return nullptr;
+    }
+    unsigned Code = MaybeCode.get();
+
+    Expected<unsigned> MaybeRecCode =
+        SLocEntryCursor.readRecord(Code, Record, &Blob);
+    if (!MaybeRecCode) {
+      Error(MaybeRecCode.takeError());
+      return nullptr;
+    }
+    unsigned RecCode = MaybeRecCode.get();
 
     if (RecCode == SM_SLOC_BUFFER_BLOB_COMPRESSED) {
       if (!llvm::zlib::isAvailable()) {
@@ -1401,12 +1458,23 @@ bool ASTReader::ReadSLocEntry(int ID) {
   };
 
   ModuleFile *F = GlobalSLocEntryMap.find(-ID)->second;
-  F->SLocEntryCursor.JumpToBit(F->SLocEntryOffsets[ID - F->SLocEntryBaseID]);
+  if (llvm::Error Err = F->SLocEntryCursor.JumpToBit(
+          F->SLocEntryOffsets[ID - F->SLocEntryBaseID])) {
+    Error(std::move(Err));
+    return true;
+  }
+
   BitstreamCursor &SLocEntryCursor = F->SLocEntryCursor;
   unsigned BaseOffset = F->SLocEntryBaseOffset;
 
   ++NumSLocEntriesRead;
-  llvm::BitstreamEntry Entry = SLocEntryCursor.advance();
+  Expected<llvm::BitstreamEntry> MaybeEntry = SLocEntryCursor.advance();
+  if (!MaybeEntry) {
+    Error(MaybeEntry.takeError());
+    return true;
+  }
+  llvm::BitstreamEntry Entry = MaybeEntry.get();
+
   if (Entry.Kind != llvm::BitstreamEntry::Record) {
     Error("incorrectly-formatted source location entry in AST file");
     return true;
@@ -1414,7 +1482,13 @@ bool ASTReader::ReadSLocEntry(int ID) {
 
   RecordData Record;
   StringRef Blob;
-  switch (SLocEntryCursor.readRecord(Entry.ID, Record, &Blob)) {
+  Expected<unsigned> MaybeSLOC =
+      SLocEntryCursor.readRecord(Entry.ID, Record, &Blob);
+  if (!MaybeSLOC) {
+    Error(MaybeSLOC.takeError());
+    return true;
+  }
+  switch (MaybeSLOC.get()) {
   default:
     Error("incorrectly-formatted source location entry in AST file");
     return true;
@@ -1538,23 +1612,40 @@ SourceLocation ASTReader::getImportLocation(ModuleFile *F) {
   return F->ImportedBy[0]->FirstLoc;
 }
 
-/// ReadBlockAbbrevs - Enter a subblock of the specified BlockID with the
-/// specified cursor.  Read the abbreviations that are at the top of the block
-/// and then leave the cursor pointing into the block.
+/// Enter a subblock of the specified BlockID with the specified cursor. Read
+/// the abbreviations that are at the top of the block and then leave the cursor
+/// pointing into the block.
 bool ASTReader::ReadBlockAbbrevs(BitstreamCursor &Cursor, unsigned BlockID) {
-  if (Cursor.EnterSubBlock(BlockID))
+  if (llvm::Error Err = Cursor.EnterSubBlock(BlockID)) {
+    // FIXME this drops errors on the floor.
+    consumeError(std::move(Err));
     return true;
+  }
 
   while (true) {
     uint64_t Offset = Cursor.GetCurrentBitNo();
-    unsigned Code = Cursor.ReadCode();
+    Expected<unsigned> MaybeCode = Cursor.ReadCode();
+    if (!MaybeCode) {
+      // FIXME this drops errors on the floor.
+      consumeError(MaybeCode.takeError());
+      return true;
+    }
+    unsigned Code = MaybeCode.get();
 
     // We expect all abbrevs to be at the start of the block.
     if (Code != llvm::bitc::DEFINE_ABBREV) {
-      Cursor.JumpToBit(Offset);
+      if (llvm::Error Err = Cursor.JumpToBit(Offset)) {
+        // FIXME this drops errors on the floor.
+        consumeError(std::move(Err));
+        return true;
+      }
       return false;
     }
-    Cursor.ReadAbbrevRecord();
+    if (llvm::Error Err = Cursor.ReadAbbrevRecord()) {
+      // FIXME this drops errors on the floor.
+      consumeError(std::move(Err));
+      return true;
+    }
   }
 }
 
@@ -1578,7 +1669,11 @@ MacroInfo *ASTReader::ReadMacroRecord(ModuleFile &F, uint64_t Offset) {
   // after reading this macro.
   SavedStreamPosition SavedPosition(Stream);
 
-  Stream.JumpToBit(Offset);
+  if (llvm::Error Err = Stream.JumpToBit(Offset)) {
+    // FIXME this drops errors on the floor.
+    consumeError(std::move(Err));
+    return nullptr;
+  }
   RecordData Record;
   SmallVector<IdentifierInfo*, 16> MacroParams;
   MacroInfo *Macro = nullptr;
@@ -1588,7 +1683,13 @@ MacroInfo *ASTReader::ReadMacroRecord(ModuleFile &F, uint64_t Offset) {
     // pop it (removing all the abbreviations from the cursor) since we want to
     // be able to reseek within the block and read entries.
     unsigned Flags = BitstreamCursor::AF_DontPopBlockAtEnd;
-    llvm::BitstreamEntry Entry = Stream.advanceSkippingSubblocks(Flags);
+    Expected<llvm::BitstreamEntry> MaybeEntry =
+        Stream.advanceSkippingSubblocks(Flags);
+    if (!MaybeEntry) {
+      Error(MaybeEntry.takeError());
+      return Macro;
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::SubBlock: // Handled for us already.
@@ -1604,8 +1705,13 @@ MacroInfo *ASTReader::ReadMacroRecord(ModuleFile &F, uint64_t Offset) {
 
     // Read a record.
     Record.clear();
-    PreprocessorRecordTypes RecType =
-      (PreprocessorRecordTypes)Stream.readRecord(Entry.ID, Record);
+    PreprocessorRecordTypes RecType;
+    if (Expected<unsigned> MaybeRecType = Stream.readRecord(Entry.ID, Record))
+      RecType = (PreprocessorRecordTypes)MaybeRecType.get();
+    else {
+      Error(MaybeRecType.takeError());
+      return Macro;
+    }
     switch (RecType) {
     case PP_MODULE_MACRO:
     case PP_MACRO_DIRECTIVE_HISTORY:
@@ -1828,11 +1934,19 @@ void ASTReader::ReadDefinedMacros() {
       continue;
 
     BitstreamCursor Cursor = MacroCursor;
-    Cursor.JumpToBit(I.MacroStartOffset);
+    if (llvm::Error Err = Cursor.JumpToBit(I.MacroStartOffset)) {
+      Error(std::move(Err));
+      return;
+    }
 
     RecordData Record;
     while (true) {
-      llvm::BitstreamEntry E = Cursor.advanceSkippingSubblocks();
+      Expected<llvm::BitstreamEntry> MaybeE = Cursor.advanceSkippingSubblocks();
+      if (!MaybeE) {
+        Error(MaybeE.takeError());
+        return;
+      }
+      llvm::BitstreamEntry E = MaybeE.get();
 
       switch (E.Kind) {
       case llvm::BitstreamEntry::SubBlock: // Handled for us already.
@@ -1842,9 +1956,14 @@ void ASTReader::ReadDefinedMacros() {
       case llvm::BitstreamEntry::EndBlock:
         goto NextCursor;
 
-      case llvm::BitstreamEntry::Record:
+      case llvm::BitstreamEntry::Record: {
         Record.clear();
-        switch (Cursor.readRecord(E.ID, Record)) {
+        Expected<unsigned> MaybeRecord = Cursor.readRecord(E.ID, Record);
+        if (!MaybeRecord) {
+          Error(MaybeRecord.takeError());
+          return;
+        }
+        switch (MaybeRecord.get()) {
         default:  // Default behavior: ignore.
           break;
 
@@ -1861,6 +1980,7 @@ void ASTReader::ReadDefinedMacros() {
           break;
         }
         break;
+      }
       }
     }
     NextCursor:  ;
@@ -1962,7 +2082,10 @@ void ASTReader::resolvePendingMacro(IdentifierInfo *II,
 
   BitstreamCursor &Cursor = M.MacroCursor;
   SavedStreamPosition SavedPosition(Cursor);
-  Cursor.JumpToBit(PMInfo.MacroDirectivesOffset);
+  if (llvm::Error Err = Cursor.JumpToBit(PMInfo.MacroDirectivesOffset)) {
+    Error(std::move(Err));
+    return;
+  }
 
   struct ModuleMacroRecord {
     SubmoduleID SubModID;
@@ -1976,15 +2099,26 @@ void ASTReader::resolvePendingMacro(IdentifierInfo *II,
   // macro histroy.
   RecordData Record;
   while (true) {
-    llvm::BitstreamEntry Entry =
+    Expected<llvm::BitstreamEntry> MaybeEntry =
         Cursor.advance(BitstreamCursor::AF_DontPopBlockAtEnd);
+    if (!MaybeEntry) {
+      Error(MaybeEntry.takeError());
+      return;
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
+
     if (Entry.Kind != llvm::BitstreamEntry::Record) {
       Error("malformed block record in AST file");
       return;
     }
 
     Record.clear();
-    switch ((PreprocessorRecordTypes)Cursor.readRecord(Entry.ID, Record)) {
+    Expected<unsigned> MaybePP = Cursor.readRecord(Entry.ID, Record);
+    if (!MaybePP) {
+      Error(MaybePP.takeError());
+      return;
+    }
+    switch ((PreprocessorRecordTypes)MaybePP.get()) {
     case PP_MACRO_DIRECTIVE_HISTORY:
       break;
 
@@ -2070,16 +2204,27 @@ ASTReader::readInputFileInfo(ModuleFile &F, unsigned ID) {
   // Go find this input file.
   BitstreamCursor &Cursor = F.InputFilesCursor;
   SavedStreamPosition SavedPosition(Cursor);
-  Cursor.JumpToBit(F.InputFileOffsets[ID-1]);
+  if (llvm::Error Err = Cursor.JumpToBit(F.InputFileOffsets[ID - 1])) {
+    // FIXME this drops errors on the floor.
+    consumeError(std::move(Err));
+  }
 
-  unsigned Code = Cursor.ReadCode();
+  Expected<unsigned> MaybeCode = Cursor.ReadCode();
+  if (!MaybeCode) {
+    // FIXME this drops errors on the floor.
+    consumeError(MaybeCode.takeError());
+  }
+  unsigned Code = MaybeCode.get();
   RecordData Record;
   StringRef Blob;
 
-  unsigned Result = Cursor.readRecord(Code, Record, &Blob);
-  assert(static_cast<InputFileRecordTypes>(Result) == INPUT_FILE &&
-         "invalid record type for input file");
-  (void)Result;
+  if (Expected<unsigned> Maybe = Cursor.readRecord(Code, Record, &Blob))
+    assert(static_cast<InputFileRecordTypes>(Maybe.get()) == INPUT_FILE &&
+           "invalid record type for input file");
+  else {
+    // FIXME this drops errors on the floor.
+    consumeError(Maybe.takeError());
+  }
 
   assert(Record[0] == ID && "Bogus stored ID or offset");
   InputFileInfo R;
@@ -2109,7 +2254,10 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   // Go find this input file.
   BitstreamCursor &Cursor = F.InputFilesCursor;
   SavedStreamPosition SavedPosition(Cursor);
-  Cursor.JumpToBit(F.InputFileOffsets[ID-1]);
+  if (llvm::Error Err = Cursor.JumpToBit(F.InputFileOffsets[ID - 1])) {
+    // FIXME this drops errors on the floor.
+    consumeError(std::move(Err));
+  }
 
   InputFileInfo FI = readInputFileInfo(F, ID);
   off_t StoredSize = FI.StoredSize;
@@ -2258,14 +2406,23 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
     BitstreamCursor &Stream, unsigned ClientLoadCapabilities,
     bool AllowCompatibleConfigurationMismatch, ASTReaderListener &Listener,
     std::string &SuggestedPredefines) {
-  if (Stream.EnterSubBlock(OPTIONS_BLOCK_ID))
+  if (llvm::Error Err = Stream.EnterSubBlock(OPTIONS_BLOCK_ID)) {
+    // FIXME this drops errors on the floor.
+    consumeError(std::move(Err));
     return Failure;
+  }
 
   // Read all of the records in the options block.
   RecordData Record;
   ASTReadResult Result = Success;
   while (true) {
-    llvm::BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry) {
+      // FIXME this drops errors on the floor.
+      consumeError(MaybeEntry.takeError());
+      return Failure;
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::Error:
@@ -2282,7 +2439,13 @@ ASTReader::ASTReadResult ASTReader::ReadOptionsBlock(
 
     // Read and process a record.
     Record.clear();
-    switch ((OptionsRecordTypes)Stream.readRecord(Entry.ID, Record)) {
+    Expected<unsigned> MaybeRecordType = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecordType) {
+      // FIXME this drops errors on the floor.
+      consumeError(MaybeRecordType.takeError());
+      return Failure;
+    }
+    switch ((OptionsRecordTypes)MaybeRecordType.get()) {
     case LANGUAGE_OPTIONS: {
       bool Complain = (ClientLoadCapabilities & ARR_ConfigurationMismatch) == 0;
       if (ParseLanguageOptions(Record, Complain, Listener,
@@ -2334,8 +2497,8 @@ ASTReader::ReadControlBlock(ModuleFile &F,
   BitstreamCursor &Stream = F.Stream;
   ASTReadResult Result = Success;
 
-  if (Stream.EnterSubBlock(CONTROL_BLOCK_ID)) {
-    Error("malformed block record in AST file");
+  if (llvm::Error Err = Stream.EnterSubBlock(CONTROL_BLOCK_ID)) {
+    Error(std::move(Err));
     return Failure;
   }
 
@@ -2362,7 +2525,12 @@ ASTReader::ReadControlBlock(ModuleFile &F,
   unsigned NumUserInputs = 0;
   StringRef BaseDirectoryAsWritten;
   while (true) {
-    llvm::BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry) {
+      Error(MaybeEntry.takeError());
+      return Failure;
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::Error:
@@ -2425,9 +2593,11 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       switch (Entry.ID) {
       case INPUT_FILES_BLOCK_ID:
         F.InputFilesCursor = Stream;
-        if (Stream.SkipBlock() || // Skip with the main cursor
-            // Read the abbreviations
-            ReadBlockAbbrevs(F.InputFilesCursor, INPUT_FILES_BLOCK_ID)) {
+        if (llvm::Error Err = Stream.SkipBlock()) {
+          Error(std::move(Err));
+          return Failure;
+        }
+        if (ReadBlockAbbrevs(F.InputFilesCursor, INPUT_FILES_BLOCK_ID)) {
           Error("malformed block record in AST file");
           return Failure;
         }
@@ -2463,15 +2633,15 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           // middle of a block.
           if (Result != Success)
             return Result;
-        } else if (Stream.SkipBlock()) {
-          Error("malformed block record in AST file");
+        } else if (llvm::Error Err = Stream.SkipBlock()) {
+          Error(std::move(Err));
           return Failure;
         }
         continue;
 
       default:
-        if (Stream.SkipBlock()) {
-          Error("malformed block record in AST file");
+        if (llvm::Error Err = Stream.SkipBlock()) {
+          Error(std::move(Err));
           return Failure;
         }
         continue;
@@ -2485,7 +2655,13 @@ ASTReader::ReadControlBlock(ModuleFile &F,
     // Read and process a record.
     Record.clear();
     StringRef Blob;
-    switch ((ControlRecordTypes)Stream.readRecord(Entry.ID, Record, &Blob)) {
+    Expected<unsigned> MaybeRecordType =
+        Stream.readRecord(Entry.ID, Record, &Blob);
+    if (!MaybeRecordType) {
+      Error(MaybeRecordType.takeError());
+      return Failure;
+    }
+    switch ((ControlRecordTypes)MaybeRecordType.get()) {
     case METADATA: {
       if (Record[0] != VERSION_MAJOR && !DisableValidation) {
         if ((ClientLoadCapabilities & ARR_VersionMismatch) == 0)
@@ -2682,15 +2858,20 @@ ASTReader::ASTReadResult
 ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
   BitstreamCursor &Stream = F.Stream;
 
-  if (Stream.EnterSubBlock(AST_BLOCK_ID)) {
-    Error("malformed block record in AST file");
+  if (llvm::Error Err = Stream.EnterSubBlock(AST_BLOCK_ID)) {
+    Error(std::move(Err));
     return Failure;
   }
 
   // Read all of the records and blocks for the AST file.
   RecordData Record;
   while (true) {
-    llvm::BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry) {
+      Error(MaybeEntry.takeError());
+      return Failure;
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::Error:
@@ -2717,9 +2898,11 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         // cursor to it, enter the block and read the abbrevs in that block.
         // With the main cursor, we just skip over it.
         F.DeclsCursor = Stream;
-        if (Stream.SkipBlock() ||  // Skip with the main cursor.
-            // Read the abbrevs.
-            ReadBlockAbbrevs(F.DeclsCursor, DECLTYPES_BLOCK_ID)) {
+        if (llvm::Error Err = Stream.SkipBlock()) {
+          Error(std::move(Err));
+          return Failure;
+        }
+        if (ReadBlockAbbrevs(F.DeclsCursor, DECLTYPES_BLOCK_ID)) {
           Error("malformed block record in AST file");
           return Failure;
         }
@@ -2730,8 +2913,11 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
         if (!PP.getExternalSource())
           PP.setExternalSource(this);
 
-        if (Stream.SkipBlock() ||
-            ReadBlockAbbrevs(F.MacroCursor, PREPROCESSOR_BLOCK_ID)) {
+        if (llvm::Error Err = Stream.SkipBlock()) {
+          Error(std::move(Err));
+          return Failure;
+        }
+        if (ReadBlockAbbrevs(F.MacroCursor, PREPROCESSOR_BLOCK_ID)) {
           Error("malformed block record in AST file");
           return Failure;
         }
@@ -2740,12 +2926,16 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
 
       case PREPROCESSOR_DETAIL_BLOCK_ID:
         F.PreprocessorDetailCursor = Stream;
-        if (Stream.SkipBlock() ||
-            ReadBlockAbbrevs(F.PreprocessorDetailCursor,
+
+        if (llvm::Error Err = Stream.SkipBlock()) {
+          Error(std::move(Err));
+          return Failure;
+        }
+        if (ReadBlockAbbrevs(F.PreprocessorDetailCursor,
                              PREPROCESSOR_DETAIL_BLOCK_ID)) {
-              Error("malformed preprocessor detail record in AST file");
-              return Failure;
-            }
+          Error("malformed preprocessor detail record in AST file");
+          return Failure;
+        }
         F.PreprocessorDetailStartOffset
         = F.PreprocessorDetailCursor.GetCurrentBitNo();
 
@@ -2768,8 +2958,12 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
 
       case COMMENTS_BLOCK_ID: {
         BitstreamCursor C = Stream;
-        if (Stream.SkipBlock() ||
-            ReadBlockAbbrevs(C, COMMENTS_BLOCK_ID)) {
+
+        if (llvm::Error Err = Stream.SkipBlock()) {
+          Error(std::move(Err));
+          return Failure;
+        }
+        if (ReadBlockAbbrevs(C, COMMENTS_BLOCK_ID)) {
           Error("malformed comments block in AST file");
           return Failure;
         }
@@ -2778,8 +2972,8 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
       }
 
       default:
-        if (Stream.SkipBlock()) {
-          Error("malformed block record in AST file");
+        if (llvm::Error Err = Stream.SkipBlock()) {
+          Error(std::move(Err));
           return Failure;
         }
         break;
@@ -2794,8 +2988,13 @@ ASTReader::ReadASTBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
     // Read and process a record.
     Record.clear();
     StringRef Blob;
-    auto RecordType =
-        (ASTRecordTypes)Stream.readRecord(Entry.ID, Record, &Blob);
+    Expected<unsigned> MaybeRecordType =
+        Stream.readRecord(Entry.ID, Record, &Blob);
+    if (!MaybeRecordType) {
+      Error(MaybeRecordType.takeError());
+      return Failure;
+    }
+    ASTRecordTypes RecordType = (ASTRecordTypes)MaybeRecordType.get();
 
     // If we're not loading an AST context, we don't care about most records.
     if (!ContextObj) {
@@ -3814,10 +4013,13 @@ bool ASTReader::loadGlobalIndex() {
   TriedLoadingGlobalIndex = true;
   StringRef ModuleCachePath
     = getPreprocessor().getHeaderSearchInfo().getModuleCachePath();
-  std::pair<GlobalModuleIndex *, GlobalModuleIndex::ErrorCode> Result
-    = GlobalModuleIndex::readIndex(ModuleCachePath);
-  if (!Result.first)
+  std::pair<GlobalModuleIndex *, llvm::Error> Result =
+      GlobalModuleIndex::readIndex(ModuleCachePath);
+  if (llvm::Error Err = std::move(Result.second)) {
+    assert(!Result.first);
+    consumeError(std::move(Err)); // FIXME this drops errors on the floor.
     return true;
+  }
 
   GlobalIndex.reset(Result.first);
   ModuleMgr.setGlobalIndex(GlobalIndex.get());
@@ -3846,7 +4048,14 @@ static void updateModuleTimestamp(ModuleFile &MF) {
 /// true on failure.
 static bool SkipCursorToBlock(BitstreamCursor &Cursor, unsigned BlockID) {
   while (true) {
-    llvm::BitstreamEntry Entry = Cursor.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
+    if (!MaybeEntry) {
+      // FIXME this drops errors on the floor.
+      consumeError(MaybeEntry.takeError());
+      return true;
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
+
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::Error:
     case llvm::BitstreamEntry::EndBlock:
@@ -3854,19 +4063,30 @@ static bool SkipCursorToBlock(BitstreamCursor &Cursor, unsigned BlockID) {
 
     case llvm::BitstreamEntry::Record:
       // Ignore top-level records.
-      Cursor.skipRecord(Entry.ID);
-      break;
+      if (Expected<unsigned> Skipped = Cursor.skipRecord(Entry.ID))
+        break;
+      else {
+        // FIXME this drops errors on the floor.
+        consumeError(Skipped.takeError());
+        return true;
+      }
 
     case llvm::BitstreamEntry::SubBlock:
       if (Entry.ID == BlockID) {
-        if (Cursor.EnterSubBlock(BlockID))
+        if (llvm::Error Err = Cursor.EnterSubBlock(BlockID)) {
+          // FIXME this drops the error on the floor.
+          consumeError(std::move(Err));
           return true;
+        }
         // Found it!
         return false;
       }
 
-      if (Cursor.SkipBlock())
+      if (llvm::Error Err = Cursor.SkipBlock()) {
+        // FIXME this drops the error on the floor.
+        consumeError(std::move(Err));
         return true;
+      }
     }
   }
 }
@@ -4108,13 +4328,23 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
 
 static ASTFileSignature readASTFileSignature(StringRef PCH);
 
-/// Whether \p Stream starts with the AST/PCH file magic number 'CPCH'.
-static bool startsWithASTFileMagic(BitstreamCursor &Stream) {
-  return Stream.canSkipToPos(4) &&
-         Stream.Read(8) == 'C' &&
-         Stream.Read(8) == 'P' &&
-         Stream.Read(8) == 'C' &&
-         Stream.Read(8) == 'H';
+/// Whether \p Stream doesn't start with the AST/PCH file magic number 'CPCH'.
+static llvm::Error doesntStartWithASTFileMagic(BitstreamCursor &Stream) {
+  // FIXME checking magic headers is done in other places such as
+  // SerializedDiagnosticReader and GlobalModuleIndex, but error handling isn't
+  // always done the same. Unify it all with a helper.
+  if (!Stream.canSkipToPos(4))
+    return llvm::createStringError(std::errc::illegal_byte_sequence,
+                                   "file too small to contain AST file magic");
+  for (unsigned C : {'C', 'P', 'C', 'H'})
+    if (Expected<llvm::SimpleBitstreamCursor::word_t> Res = Stream.Read(8)) {
+      if (Res.get() != C)
+        return llvm::createStringError(
+            std::errc::illegal_byte_sequence,
+            "file doesn't start with AST file magic");
+    } else
+      return Res.takeError();
+  return llvm::Error::success();
 }
 
 static unsigned moduleKindForDiagnostic(ModuleKind Kind) {
@@ -4201,16 +4431,21 @@ ASTReader::ReadASTCore(StringRef FileName,
   F.SizeInBits = F.Buffer->getBufferSize() * 8;
 
   // Sniff for the signature.
-  if (!startsWithASTFileMagic(Stream)) {
-    Diag(diag::err_module_file_invalid) << moduleKindForDiagnostic(Type)
-                                        << FileName;
+  if (llvm::Error Err = doesntStartWithASTFileMagic(Stream)) {
+    Diag(diag::err_module_file_invalid)
+        << moduleKindForDiagnostic(Type) << FileName << std::move(Err);
     return Failure;
   }
 
   // This is used for compatibility with older PCH formats.
   bool HaveReadControlBlock = false;
   while (true) {
-    llvm::BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry) {
+      Error(MaybeEntry.takeError());
+      return Failure;
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::Error:
@@ -4271,8 +4506,8 @@ ASTReader::ReadASTCore(StringRef FileName,
       return Failure;
 
     default:
-      if (Stream.SkipBlock()) {
-        Error("malformed block record in AST file");
+      if (llvm::Error Err = Stream.SkipBlock()) {
+        Error(std::move(Err));
         return Failure;
       }
       break;
@@ -4342,8 +4577,11 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
   BitstreamCursor Stream(StreamData);
 
   // Sniff for the signature.
-  if (!startsWithASTFileMagic(Stream))
+  if (llvm::Error Err = doesntStartWithASTFileMagic(Stream)) {
+    // FIXME this drops the error on the floor.
+    consumeError(std::move(Err));
     return Failure;
+  }
 
   // Scan for the UNHASHED_CONTROL_BLOCK_ID block.
   if (SkipCursorToBlock(Stream, UNHASHED_CONTROL_BLOCK_ID))
@@ -4353,7 +4591,13 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
   RecordData Record;
   ASTReadResult Result = Success;
   while (true) {
-    llvm::BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry) {
+      // FIXME this drops the error on the floor.
+      consumeError(MaybeEntry.takeError());
+      return Failure;
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::Error:
@@ -4370,8 +4614,12 @@ ASTReader::ASTReadResult ASTReader::readUnhashedControlBlockImpl(
 
     // Read and process a record.
     Record.clear();
-    switch (
-        (UnhashedControlBlockRecordTypes)Stream.readRecord(Entry.ID, Record)) {
+    Expected<unsigned> MaybeRecordType = Stream.readRecord(Entry.ID, Record);
+    if (!MaybeRecordType) {
+      // FIXME this drops the error.
+      return Failure;
+    }
+    switch ((UnhashedControlBlockRecordTypes)MaybeRecordType.get()) {
     case SIGNATURE:
       if (F)
         std::copy(Record.begin(), Record.end(), F->Signature.data());
@@ -4423,12 +4671,19 @@ ASTReader::ASTReadResult ASTReader::ReadExtensionBlock(ModuleFile &F) {
 
   RecordData Record;
   while (true) {
-    llvm::BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry) {
+      Error(MaybeEntry.takeError());
+      return Failure;
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
+
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::SubBlock:
-      if (Stream.SkipBlock())
+      if (llvm::Error Err = Stream.SkipBlock()) {
+        Error(std::move(Err));
         return Failure;
-
+      }
       continue;
 
     case llvm::BitstreamEntry::EndBlock:
@@ -4443,8 +4698,13 @@ ASTReader::ASTReadResult ASTReader::ReadExtensionBlock(ModuleFile &F) {
 
     Record.clear();
     StringRef Blob;
-    unsigned RecCode = Stream.readRecord(Entry.ID, Record, &Blob);
-    switch (RecCode) {
+    Expected<unsigned> MaybeRecCode =
+        Stream.readRecord(Entry.ID, Record, &Blob);
+    if (!MaybeRecCode) {
+      Error(MaybeRecCode.takeError());
+      return Failure;
+    }
+    switch (MaybeRecCode.get()) {
     case EXTENSION_METADATA: {
       ModuleFileExtensionMetadata Metadata;
       if (parseModuleFileExtensionMetadata(Record, Blob, Metadata))
@@ -4615,8 +4875,11 @@ void ASTReader::finalizeForWriting() {
 /// else returns 0.
 static ASTFileSignature readASTFileSignature(StringRef PCH) {
   BitstreamCursor Stream(PCH);
-  if (!startsWithASTFileMagic(Stream))
+  if (llvm::Error Err = doesntStartWithASTFileMagic(Stream)) {
+    // FIXME this drops the error on the floor.
+    consumeError(std::move(Err));
     return ASTFileSignature();
+  }
 
   // Scan for the UNHASHED_CONTROL_BLOCK_ID block.
   if (SkipCursorToBlock(Stream, UNHASHED_CONTROL_BLOCK_ID))
@@ -4625,13 +4888,27 @@ static ASTFileSignature readASTFileSignature(StringRef PCH) {
   // Scan for SIGNATURE inside the diagnostic options block.
   ASTReader::RecordData Record;
   while (true) {
-    llvm::BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<llvm::BitstreamEntry> MaybeEntry =
+        Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry) {
+      // FIXME this drops the error on the floor.
+      consumeError(MaybeEntry.takeError());
+      return ASTFileSignature();
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
+
     if (Entry.Kind != llvm::BitstreamEntry::Record)
       return ASTFileSignature();
 
     Record.clear();
     StringRef Blob;
-    if (SIGNATURE == Stream.readRecord(Entry.ID, Record, &Blob))
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record, &Blob);
+    if (!MaybeRecord) {
+      // FIXME this drops the error on the floor.
+      consumeError(MaybeRecord.takeError());
+      return ASTFileSignature();
+    }
+    if (SIGNATURE == MaybeRecord.get())
       return {{{(uint32_t)Record[0], (uint32_t)Record[1], (uint32_t)Record[2],
                 (uint32_t)Record[3], (uint32_t)Record[4]}}};
   }
@@ -4655,8 +4932,8 @@ std::string ASTReader::getOriginalSourceFile(
   BitstreamCursor Stream(PCHContainerRdr.ExtractPCH(**Buffer));
 
   // Sniff for the signature.
-  if (!startsWithASTFileMagic(Stream)) {
-    Diags.Report(diag::err_fe_not_a_pch_file) << ASTFileName;
+  if (llvm::Error Err = doesntStartWithASTFileMagic(Stream)) {
+    Diags.Report(diag::err_fe_not_a_pch_file) << ASTFileName << std::move(Err);
     return std::string();
   }
 
@@ -4669,7 +4946,15 @@ std::string ASTReader::getOriginalSourceFile(
   // Scan for ORIGINAL_FILE inside the control block.
   RecordData Record;
   while (true) {
-    llvm::BitstreamEntry Entry = Stream.advanceSkippingSubblocks();
+    Expected<llvm::BitstreamEntry> MaybeEntry =
+        Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry) {
+      // FIXME this drops errors on the floor.
+      consumeError(MaybeEntry.takeError());
+      return std::string();
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
+
     if (Entry.Kind == llvm::BitstreamEntry::EndBlock)
       return std::string();
 
@@ -4680,7 +4965,13 @@ std::string ASTReader::getOriginalSourceFile(
 
     Record.clear();
     StringRef Blob;
-    if (Stream.readRecord(Entry.ID, Record, &Blob) == ORIGINAL_FILE)
+    Expected<unsigned> MaybeRecord = Stream.readRecord(Entry.ID, Record, &Blob);
+    if (!MaybeRecord) {
+      // FIXME this drops the errors on the floor.
+      consumeError(MaybeRecord.takeError());
+      return std::string();
+    }
+    if (ORIGINAL_FILE == MaybeRecord.get())
       return Blob.str();
   }
 }
@@ -4754,8 +5045,10 @@ bool ASTReader::readASTFileControlBlock(
   BitstreamCursor Stream(Bytes);
 
   // Sniff for the signature.
-  if (!startsWithASTFileMagic(Stream))
+  if (llvm::Error Err = doesntStartWithASTFileMagic(Stream)) {
+    consumeError(std::move(Err)); // FIXME this drops errors on the floor.
     return true;
+  }
 
   // Scan for the CONTROL_BLOCK_ID block.
   if (SkipCursorToBlock(Stream, CONTROL_BLOCK_ID))
@@ -4770,7 +5063,13 @@ bool ASTReader::readASTFileControlBlock(
   std::string ModuleDir;
   bool DoneWithControlBlock = false;
   while (!DoneWithControlBlock) {
-    llvm::BitstreamEntry Entry = Stream.advance();
+    Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+    if (!MaybeEntry) {
+      // FIXME this drops the error on the floor.
+      consumeError(MaybeEntry.takeError());
+      return true;
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::SubBlock: {
@@ -4786,15 +5085,22 @@ bool ASTReader::readASTFileControlBlock(
 
       case INPUT_FILES_BLOCK_ID:
         InputFilesCursor = Stream;
-        if (Stream.SkipBlock() ||
-            (NeedsInputFiles &&
-             ReadBlockAbbrevs(InputFilesCursor, INPUT_FILES_BLOCK_ID)))
+        if (llvm::Error Err = Stream.SkipBlock()) {
+          // FIXME this drops the error on the floor.
+          consumeError(std::move(Err));
+          return true;
+        }
+        if (NeedsInputFiles &&
+            ReadBlockAbbrevs(InputFilesCursor, INPUT_FILES_BLOCK_ID))
           return true;
         break;
 
       default:
-        if (Stream.SkipBlock())
+        if (llvm::Error Err = Stream.SkipBlock()) {
+          // FIXME this drops the error on the floor.
+          consumeError(std::move(Err));
           return true;
+        }
         break;
       }
 
@@ -4816,8 +5122,13 @@ bool ASTReader::readASTFileControlBlock(
 
     Record.clear();
     StringRef Blob;
-    unsigned RecCode = Stream.readRecord(Entry.ID, Record, &Blob);
-    switch ((ControlRecordTypes)RecCode) {
+    Expected<unsigned> MaybeRecCode =
+        Stream.readRecord(Entry.ID, Record, &Blob);
+    if (!MaybeRecCode) {
+      // FIXME this drops the error.
+      return Failure;
+    }
+    switch ((ControlRecordTypes)MaybeRecCode.get()) {
     case METADATA:
       if (Record[0] != VERSION_MAJOR)
         return true;
@@ -4854,13 +5165,28 @@ bool ASTReader::readASTFileControlBlock(
 
         BitstreamCursor &Cursor = InputFilesCursor;
         SavedStreamPosition SavedPosition(Cursor);
-        Cursor.JumpToBit(InputFileOffs[I]);
+        if (llvm::Error Err = Cursor.JumpToBit(InputFileOffs[I])) {
+          // FIXME this drops errors on the floor.
+          consumeError(std::move(Err));
+        }
 
-        unsigned Code = Cursor.ReadCode();
+        Expected<unsigned> MaybeCode = Cursor.ReadCode();
+        if (!MaybeCode) {
+          // FIXME this drops errors on the floor.
+          consumeError(MaybeCode.takeError());
+        }
+        unsigned Code = MaybeCode.get();
+
         RecordData Record;
         StringRef Blob;
         bool shouldContinue = false;
-        switch ((InputFileRecordTypes)Cursor.readRecord(Code, Record, &Blob)) {
+        Expected<unsigned> MaybeRecordType =
+            Cursor.readRecord(Code, Record, &Blob);
+        if (!MaybeRecordType) {
+          // FIXME this drops errors on the floor.
+          consumeError(MaybeRecordType.takeError());
+        }
+        switch ((InputFileRecordTypes)MaybeRecordType.get()) {
         case INPUT_FILE:
           bool Overridden = static_cast<bool>(Record[3]);
           std::string Filename = Blob;
@@ -4903,30 +5229,42 @@ bool ASTReader::readASTFileControlBlock(
     while (!SkipCursorToBlock(Stream, EXTENSION_BLOCK_ID)) {
       bool DoneWithExtensionBlock = false;
       while (!DoneWithExtensionBlock) {
-       llvm::BitstreamEntry Entry = Stream.advance();
+        Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance();
+        if (!MaybeEntry) {
+          // FIXME this drops the error.
+          return true;
+        }
+        llvm::BitstreamEntry Entry = MaybeEntry.get();
 
-       switch (Entry.Kind) {
-       case llvm::BitstreamEntry::SubBlock:
-         if (Stream.SkipBlock())
-           return true;
+        switch (Entry.Kind) {
+        case llvm::BitstreamEntry::SubBlock:
+          if (llvm::Error Err = Stream.SkipBlock()) {
+            // FIXME this drops the error on the floor.
+            consumeError(std::move(Err));
+            return true;
+          }
+          continue;
 
-         continue;
+        case llvm::BitstreamEntry::EndBlock:
+          DoneWithExtensionBlock = true;
+          continue;
 
-       case llvm::BitstreamEntry::EndBlock:
-         DoneWithExtensionBlock = true;
-         continue;
+        case llvm::BitstreamEntry::Error:
+          return true;
 
-       case llvm::BitstreamEntry::Error:
-         return true;
-
-       case llvm::BitstreamEntry::Record:
-         break;
-       }
+        case llvm::BitstreamEntry::Record:
+          break;
+        }
 
        Record.clear();
        StringRef Blob;
-       unsigned RecCode = Stream.readRecord(Entry.ID, Record, &Blob);
-       switch (RecCode) {
+       Expected<unsigned> MaybeRecCode =
+           Stream.readRecord(Entry.ID, Record, &Blob);
+       if (!MaybeRecCode) {
+         // FIXME this drops the error.
+         return true;
+       }
+       switch (MaybeRecCode.get()) {
        case EXTENSION_METADATA: {
          ModuleFileExtensionMetadata Metadata;
          if (parseModuleFileExtensionMetadata(Record, Blob, Metadata))
@@ -4968,8 +5306,8 @@ bool ASTReader::isAcceptableASTFile(StringRef Filename, FileManager &FileMgr,
 ASTReader::ASTReadResult
 ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
   // Enter the submodule block.
-  if (F.Stream.EnterSubBlock(SUBMODULE_BLOCK_ID)) {
-    Error("malformed submodule block record in AST file");
+  if (llvm::Error Err = F.Stream.EnterSubBlock(SUBMODULE_BLOCK_ID)) {
+    Error(std::move(Err));
     return Failure;
   }
 
@@ -4978,7 +5316,13 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
   Module *CurrentModule = nullptr;
   RecordData Record;
   while (true) {
-    llvm::BitstreamEntry Entry = F.Stream.advanceSkippingSubblocks();
+    Expected<llvm::BitstreamEntry> MaybeEntry =
+        F.Stream.advanceSkippingSubblocks();
+    if (!MaybeEntry) {
+      Error(MaybeEntry.takeError());
+      return Failure;
+    }
+    llvm::BitstreamEntry Entry = MaybeEntry.get();
 
     switch (Entry.Kind) {
     case llvm::BitstreamEntry::SubBlock: // Handled for us already.
@@ -4995,7 +5339,12 @@ ASTReader::ReadSubmoduleBlock(ModuleFile &F, unsigned ClientLoadCapabilities) {
     // Read a record.
     StringRef Blob;
     Record.clear();
-    auto Kind = F.Stream.readRecord(Entry.ID, Record, &Blob);
+    Expected<unsigned> MaybeKind = F.Stream.readRecord(Entry.ID, Record, &Blob);
+    if (!MaybeKind) {
+      Error(MaybeKind.takeError());
+      return Failure;
+    }
+    unsigned Kind = MaybeKind.get();
 
     if ((Kind == SUBMODULE_METADATA) != First) {
       Error("submodule metadata record should be at beginning of block");
@@ -5472,10 +5821,20 @@ PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
   }
 
   SavedStreamPosition SavedPosition(M.PreprocessorDetailCursor);
-  M.PreprocessorDetailCursor.JumpToBit(PPOffs.BitOffset);
+  if (llvm::Error Err =
+          M.PreprocessorDetailCursor.JumpToBit(PPOffs.BitOffset)) {
+    Error(std::move(Err));
+    return nullptr;
+  }
 
-  llvm::BitstreamEntry Entry =
-    M.PreprocessorDetailCursor.advance(BitstreamCursor::AF_DontPopBlockAtEnd);
+  Expected<llvm::BitstreamEntry> MaybeEntry =
+      M.PreprocessorDetailCursor.advance(BitstreamCursor::AF_DontPopBlockAtEnd);
+  if (!MaybeEntry) {
+    Error(MaybeEntry.takeError());
+    return nullptr;
+  }
+  llvm::BitstreamEntry Entry = MaybeEntry.get();
+
   if (Entry.Kind != llvm::BitstreamEntry::Record)
     return nullptr;
 
@@ -5485,10 +5844,13 @@ PreprocessedEntity *ASTReader::ReadPreprocessedEntity(unsigned Index) {
   PreprocessingRecord &PPRec = *PP.getPreprocessingRecord();
   StringRef Blob;
   RecordData Record;
-  PreprocessorDetailRecordTypes RecType =
-    (PreprocessorDetailRecordTypes)M.PreprocessorDetailCursor.readRecord(
-                                          Entry.ID, Record, &Blob);
-  switch (RecType) {
+  Expected<unsigned> MaybeRecType =
+      M.PreprocessorDetailCursor.readRecord(Entry.ID, Record, &Blob);
+  if (!MaybeRecType) {
+    Error(MaybeRecType.takeError());
+    return nullptr;
+  }
+  switch ((PreprocessorDetailRecordTypes)MaybeRecType.get()) {
   case PPD_MACRO_EXPANSION: {
     bool isBuiltin = Record[0];
     IdentifierInfo *Name = nullptr;
@@ -5897,10 +6259,24 @@ QualType ASTReader::readTypeRecord(unsigned Index) {
   Deserializing AType(this);
 
   unsigned Idx = 0;
-  DeclsCursor.JumpToBit(Loc.Offset);
+  if (llvm::Error Err = DeclsCursor.JumpToBit(Loc.Offset)) {
+    Error(std::move(Err));
+    return QualType();
+  }
   RecordData Record;
-  unsigned Code = DeclsCursor.ReadCode();
-  switch ((TypeCode)DeclsCursor.readRecord(Code, Record)) {
+  Expected<unsigned> MaybeCode = DeclsCursor.ReadCode();
+  if (!MaybeCode) {
+    Error(MaybeCode.takeError());
+    return QualType();
+  }
+  unsigned Code = MaybeCode.get();
+
+  Expected<unsigned> MaybeTypeCode = DeclsCursor.readRecord(Code, Record);
+  if (!MaybeTypeCode) {
+    Error(MaybeTypeCode.takeError());
+    return QualType();
+  }
+  switch ((TypeCode)MaybeTypeCode.get()) {
   case TYPE_EXT_QUAL: {
     if (Record.size() != 2) {
       Error("Incorrect encoding of extended qualifier type");
@@ -7205,13 +7581,26 @@ ASTReader::GetExternalCXXCtorInitializers(uint64_t Offset) {
   RecordLocation Loc = getLocalBitOffset(Offset);
   BitstreamCursor &Cursor = Loc.F->DeclsCursor;
   SavedStreamPosition SavedPosition(Cursor);
-  Cursor.JumpToBit(Loc.Offset);
+  if (llvm::Error Err = Cursor.JumpToBit(Loc.Offset)) {
+    Error(std::move(Err));
+    return nullptr;
+  }
   ReadingKindTracker ReadingKind(Read_Decl, *this);
 
   RecordData Record;
-  unsigned Code = Cursor.ReadCode();
-  unsigned RecCode = Cursor.readRecord(Code, Record);
-  if (RecCode != DECL_CXX_CTOR_INITIALIZERS) {
+  Expected<unsigned> MaybeCode = Cursor.ReadCode();
+  if (!MaybeCode) {
+    Error(MaybeCode.takeError());
+    return nullptr;
+  }
+  unsigned Code = MaybeCode.get();
+
+  Expected<unsigned> MaybeRecCode = Cursor.readRecord(Code, Record);
+  if (!MaybeRecCode) {
+    Error(MaybeRecCode.takeError());
+    return nullptr;
+  }
+  if (MaybeRecCode.get() != DECL_CXX_CTOR_INITIALIZERS) {
     Error("malformed AST file: missing C++ ctor initializers");
     return nullptr;
   }
@@ -7227,11 +7616,27 @@ CXXBaseSpecifier *ASTReader::GetExternalCXXBaseSpecifiers(uint64_t Offset) {
   RecordLocation Loc = getLocalBitOffset(Offset);
   BitstreamCursor &Cursor = Loc.F->DeclsCursor;
   SavedStreamPosition SavedPosition(Cursor);
-  Cursor.JumpToBit(Loc.Offset);
+  if (llvm::Error Err = Cursor.JumpToBit(Loc.Offset)) {
+    Error(std::move(Err));
+    return nullptr;
+  }
   ReadingKindTracker ReadingKind(Read_Decl, *this);
   RecordData Record;
-  unsigned Code = Cursor.ReadCode();
-  unsigned RecCode = Cursor.readRecord(Code, Record);
+
+  Expected<unsigned> MaybeCode = Cursor.ReadCode();
+  if (!MaybeCode) {
+    Error(MaybeCode.takeError());
+    return nullptr;
+  }
+  unsigned Code = MaybeCode.get();
+
+  Expected<unsigned> MaybeRecCode = Cursor.readRecord(Code, Record);
+  if (!MaybeRecCode) {
+    Error(MaybeCode.takeError());
+    return nullptr;
+  }
+  unsigned RecCode = MaybeRecCode.get();
+
   if (RecCode != DECL_CXX_BASE_SPECIFIERS) {
     Error("malformed AST file: missing C++ base specifiers");
     return nullptr;
@@ -7439,7 +7844,10 @@ Stmt *ASTReader::GetExternalDeclStmt(uint64_t Offset) {
 
   // Offset here is a global offset across the entire chain.
   RecordLocation Loc = getLocalBitOffset(Offset);
-  Loc.F->DeclsCursor.JumpToBit(Loc.Offset);
+  if (llvm::Error Err = Loc.F->DeclsCursor.JumpToBit(Loc.Offset)) {
+    Error(std::move(Err));
+    return nullptr;
+  }
   assert(NumCurrentElementsDeserializing == 0 &&
          "should not be called while already deserializing");
   Deserializing D(this);
@@ -9269,8 +9677,14 @@ void ASTReader::ReadComments() {
 
     RecordData Record;
     while (true) {
-      llvm::BitstreamEntry Entry =
-        Cursor.advanceSkippingSubblocks(BitstreamCursor::AF_DontPopBlockAtEnd);
+      Expected<llvm::BitstreamEntry> MaybeEntry =
+          Cursor.advanceSkippingSubblocks(
+              BitstreamCursor::AF_DontPopBlockAtEnd);
+      if (!MaybeEntry) {
+        Error(MaybeEntry.takeError());
+        return;
+      }
+      llvm::BitstreamEntry Entry = MaybeEntry.get();
 
       switch (Entry.Kind) {
       case llvm::BitstreamEntry::SubBlock: // Handled for us already.
@@ -9286,7 +9700,12 @@ void ASTReader::ReadComments() {
 
       // Read a record.
       Record.clear();
-      switch ((CommentRecordTypes)Cursor.readRecord(Entry.ID, Record)) {
+      Expected<unsigned> MaybeComment = Cursor.readRecord(Entry.ID, Record);
+      if (!MaybeComment) {
+        Error(MaybeComment.takeError());
+        return;
+      }
+      switch ((CommentRecordTypes)MaybeComment.get()) {
       case COMMENTS_RAW_COMMENT: {
         unsigned Idx = 0;
         SourceRange SR = ReadSourceRange(F, Record, Idx);
@@ -11756,8 +12175,8 @@ IdentifierResolver &ASTReader::getIdResolver() {
   return SemaObj ? SemaObj->IdResolver : DummyIdResolver;
 }
 
-unsigned ASTRecordReader::readRecord(llvm::BitstreamCursor &Cursor,
-                                     unsigned AbbrevID) {
+Expected<unsigned> ASTRecordReader::readRecord(llvm::BitstreamCursor &Cursor,
+                                               unsigned AbbrevID) {
   Idx = 0;
   Record.clear();
   return Cursor.readRecord(AbbrevID, Record);

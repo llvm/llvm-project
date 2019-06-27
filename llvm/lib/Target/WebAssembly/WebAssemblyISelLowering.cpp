@@ -644,13 +644,14 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
   if (CLI.IsPatchPoint)
     fail(DL, DAG, "WebAssembly doesn't support patch point yet");
 
-  // WebAssembly doesn't currently support explicit tail calls. If they are
-  // required, fail. Otherwise, just disable them.
-  if ((CallConv == CallingConv::Fast && CLI.IsTailCall &&
-       MF.getTarget().Options.GuaranteedTailCallOpt) ||
-      (CLI.CS && CLI.CS.isMustTailCall()))
-    fail(DL, DAG, "WebAssembly doesn't support tail call yet");
-  CLI.IsTailCall = false;
+  // Fail if tail calls are required but not enabled
+  if (!Subtarget->hasTailCall()) {
+    if ((CallConv == CallingConv::Fast && CLI.IsTailCall &&
+         MF.getTarget().Options.GuaranteedTailCallOpt) ||
+        (CLI.CS && CLI.CS.isMustTailCall()))
+      fail(DL, DAG, "WebAssembly 'tail-call' feature not enabled");
+    CLI.IsTailCall = false;
+  }
 
   SmallVectorImpl<ISD::InputArg> &Ins = CLI.Ins;
   if (Ins.size() > 1)
@@ -783,6 +784,13 @@ WebAssemblyTargetLowering::LowerCall(CallLoweringInfo &CLI,
     // registers.
     InTys.push_back(In.VT);
   }
+
+  if (CLI.IsTailCall) {
+    // ret_calls do not return values to the current frame
+    SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
+    return DAG.getNode(WebAssemblyISD::RET_CALL, DL, NodeTys, Ops);
+  }
+
   InTys.push_back(MVT::Other);
   SDVTList InTyList = DAG.getVTList(InTys);
   SDValue Res =
