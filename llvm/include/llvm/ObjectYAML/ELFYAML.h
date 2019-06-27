@@ -75,6 +75,11 @@ struct FileHeader {
   ELF_EM Machine;
   ELF_EF Flags;
   llvm::yaml::Hex64 Entry;
+
+  Optional<llvm::yaml::Hex16> SHEntSize;
+  Optional<llvm::yaml::Hex16> SHOffset;
+  Optional<llvm::yaml::Hex16> SHNum;
+  Optional<llvm::yaml::Hex16> SHStrNdx;
 };
 
 struct SectionName {

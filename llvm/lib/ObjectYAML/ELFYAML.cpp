@@ -841,6 +841,11 @@ void MappingTraits<ELFYAML::FileHeader>::mapping(IO &IO,
   IO.mapRequired("Machine", FileHdr.Machine);
   IO.mapOptional("Flags", FileHdr.Flags, ELFYAML::ELF_EF(0));
   IO.mapOptional("Entry", FileHdr.Entry, Hex64(0));
+
+  IO.mapOptional("SHEntSize", FileHdr.SHEntSize);
+  IO.mapOptional("SHOffset", FileHdr.SHOffset);
+  IO.mapOptional("SHNum", FileHdr.SHNum);
+  IO.mapOptional("SHStrNdx", FileHdr.SHStrNdx);
 }
 
 void MappingTraits<ELFYAML::ProgramHeader>::mapping(

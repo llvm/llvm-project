@@ -137,7 +137,9 @@ ELFDumper<ELFT>::getUniquedSymbolName(const Elf_Sym *Sym, StringRef StrTable,
 template <class ELFT> ErrorOr<ELFYAML::Object *> ELFDumper<ELFT>::dump() {
   auto Y = make_unique<ELFYAML::Object>();
 
-  // Dump header
+  // Dump header. We do not dump SHEntSize, SHOffset, SHNum and SHStrNdx field.
+  // When not explicitly set, the values are set by yaml2obj automatically
+  // and there is no need to dump them here.
   Y->Header.Class = ELFYAML::ELF_ELFCLASS(Obj.getHeader()->getFileClass());
   Y->Header.Data = ELFYAML::ELF_ELFDATA(Obj.getHeader()->getDataEncoding());
   Y->Header.OSABI = Obj.getHeader()->e_ident[ELF::EI_OSABI];

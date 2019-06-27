@@ -208,12 +208,18 @@ void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
   Header.e_ehsize = sizeof(Elf_Ehdr);
   Header.e_phentsize = sizeof(Elf_Phdr);
   Header.e_phnum = Doc.ProgramHeaders.size();
-  Header.e_shentsize = sizeof(Elf_Shdr);
+
+  Header.e_shentsize =
+      Doc.Header.SHEntSize ? (uint16_t)*Doc.Header.SHEntSize : sizeof(Elf_Shdr);
   // Immediately following the ELF header and program headers.
   Header.e_shoff =
-      sizeof(Header) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
-  Header.e_shnum = SN2I.size() + 1;
-  Header.e_shstrndx = SN2I.get(".shstrtab");
+      Doc.Header.SHOffset
+          ? (uint16_t)*Doc.Header.SHOffset
+          : sizeof(Header) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
+  Header.e_shnum =
+      Doc.Header.SHNum ? (uint16_t)*Doc.Header.SHNum : SN2I.size() + 1;
+  Header.e_shstrndx = Doc.Header.SHStrNdx ? (uint16_t)*Doc.Header.SHStrNdx
+                                          : SN2I.get(".shstrtab");
 }
 
 template <class ELFT>
