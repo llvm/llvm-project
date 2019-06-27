@@ -490,6 +490,7 @@ static void createSyntheticSymbols() {
     WasmSym::StackPointer = Symtab->addSyntheticGlobal(
         "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, StackPointer);
     WasmSym::DataEnd = Symtab->addOptionalDataSymbol("__data_end");
+    WasmSym::GlobalBase = Symtab->addOptionalDataSymbol("__global_base");
     WasmSym::HeapBase = Symtab->addOptionalDataSymbol("__heap_base");
   }
 

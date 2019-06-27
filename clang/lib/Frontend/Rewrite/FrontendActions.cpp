@@ -129,7 +129,11 @@ bool FixItRecompile::BeginInvocation(CompilerInstance &CI) {
       FixItOpts->FixOnlyWarnings = FEOpts.FixOnlyWarnings;
       FixItRewriter Rewriter(CI.getDiagnostics(), CI.getSourceManager(),
                              CI.getLangOpts(), FixItOpts.get());
-      FixAction->Execute();
+      if (llvm::Error Err = FixAction->Execute()) {
+        // FIXME this drops the error on the floor.
+        consumeError(std::move(Err));
+        return false;
+      }
 
       err = Rewriter.WriteFixedFiles(&RewrittenFiles);
 

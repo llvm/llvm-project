@@ -60,3 +60,7 @@
 // RUN:     --sysroot=/foo %s -pthread -mno-atomics 2>&1 \
 // RUN:   | FileCheck -check-prefix=PTHREAD_NO_ATOMICS %s
 // PTHREAD_NO_ATOMICS: invalid argument '-pthread' not allowed with '-mno-atomics'
+
+// RUN: %clang %s -### -fsanitize=address -target wasm32-unknown-emscripten 2>&1 | FileCheck -check-prefix=CHECK-ASAN-EMSCRIPTEN %s
+// CHECK-ASAN-EMSCRIPTEN: "-fsanitize=address"
+// CHECK-ASAN-EMSCRIPTEN: "-fsanitize-address-globals-dead-stripping"

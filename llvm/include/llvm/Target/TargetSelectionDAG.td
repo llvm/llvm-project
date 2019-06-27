@@ -1224,6 +1224,13 @@ def setle  : PatFrag<(ops node:$lhs, node:$rhs),
 def setne  : PatFrag<(ops node:$lhs, node:$rhs),
                      (setcc node:$lhs, node:$rhs, SETNE)>;
 
+// We don't have strict FP extended loads as single DAG nodes, but we can
+// still provide convenience fragments to match those operations.
+def strict_extloadf32 : PatFrag<(ops node:$ptr),
+                                (strict_fpextend (f32 (load node:$ptr)))>;
+def strict_extloadf64 : PatFrag<(ops node:$ptr),
+                                (strict_fpextend (f64 (load node:$ptr)))>;
+
 // Convenience fragments to match both strict and non-strict fp operations
 def any_fadd       : PatFrags<(ops node:$lhs, node:$rhs),
                               [(strict_fadd node:$lhs, node:$rhs),
@@ -1291,6 +1298,12 @@ def any_fpround    : PatFrags<(ops node:$src),
 def any_fpextend   : PatFrags<(ops node:$src),
                               [(strict_fpextend node:$src),
                                (fpextend node:$src)]>;
+def any_extloadf32 : PatFrags<(ops node:$ptr),
+                              [(strict_extloadf32 node:$ptr),
+                               (extloadf32 node:$ptr)]>;
+def any_extloadf64 : PatFrags<(ops node:$ptr),
+                              [(strict_extloadf64 node:$ptr),
+                               (extloadf64 node:$ptr)]>;
 
 multiclass binary_atomic_op_ord<SDNode atomic_op> {
   def #NAME#_monotonic : PatFrag<(ops node:$ptr, node:$val),

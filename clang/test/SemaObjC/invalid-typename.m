@@ -7,6 +7,6 @@
                    canBeginSyncingPlanWithId:(bycopy NSString *)planId
                    syncModes:(bycopy NSArray /* ISDSyncState */ *)syncModes
                    entities:(bycopy NSArray /* ISDEntity */ *)entities
-                   truthPullers:(bycopy NSDictionary /* NSString -> [NSString] */ *)truthPullers; // expected-error{{expected ')'}} expected-note {{to match this '('}}
+                   truthPullers:(bycopy NSDictionary /* NSString -> [NSString] */ *)truthPullers; // expected-error {{expected a type}}
 @end
 

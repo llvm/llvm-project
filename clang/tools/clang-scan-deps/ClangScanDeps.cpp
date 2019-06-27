@@ -7,18 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Frontend/CompilerInstance.h"
-#include "clang/Frontend/CompilerInvocation.h"
-#include "clang/Frontend/FrontendActions.h"
-#include "clang/Frontend/PCHContainerOperations.h"
-#include "clang/FrontendTool/Utils.h"
 #include "clang/Tooling/CommonOptionsParser.h"
+#include "clang/Tooling/DependencyScanning/DependencyScanningWorker.h"
 #include "clang/Tooling/JSONCompilationDatabase.h"
-#include "clang/Tooling/Tooling.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/JSON.h"
 #include "llvm/Support/Options.h"
-#include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/Threading.h"
@@ -26,6 +19,7 @@
 #include <thread>
 
 using namespace clang;
+using namespace tooling::dependencies;
 
 namespace {
 
@@ -43,95 +37,6 @@ private:
   raw_ostream &OS;
 };
 
-/// Prints out all of the gathered dependencies into one output stream instead
-/// of using the output dependency file.
-class DependencyPrinter : public DependencyFileGenerator {
-public:
-  DependencyPrinter(std::unique_ptr<DependencyOutputOptions> Opts,
-                    SharedStream &OS)
-      : DependencyFileGenerator(*Opts), Opts(std::move(Opts)), OS(OS) {}
-
-  void finishedMainFile(DiagnosticsEngine &Diags) override {
-    OS.applyLocked([this](raw_ostream &OS) { outputDependencyFile(OS); });
-  }
-
-private:
-  std::unique_ptr<DependencyOutputOptions> Opts;
-  SharedStream &OS;
-};
-
-/// A clang tool that runs the preprocessor only for the given compiler
-/// invocation.
-class PreprocessorOnlyTool : public tooling::ToolAction {
-public:
-  PreprocessorOnlyTool(StringRef WorkingDirectory, SharedStream &OS)
-      : WorkingDirectory(WorkingDirectory), OS(OS) {}
-
-  bool runInvocation(std::shared_ptr<CompilerInvocation> Invocation,
-                     FileManager *FileMgr,
-                     std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-                     DiagnosticConsumer *DiagConsumer) override {
-    // Create a compiler instance to handle the actual work.
-    CompilerInstance Compiler(std::move(PCHContainerOps));
-    Compiler.setInvocation(std::move(Invocation));
-    FileMgr->getFileSystemOpts().WorkingDir = WorkingDirectory;
-    Compiler.setFileManager(FileMgr);
-
-    // Create the compiler's actual diagnostics engine.
-    Compiler.createDiagnostics(DiagConsumer, /*ShouldOwnClient=*/false);
-    if (!Compiler.hasDiagnostics())
-      return false;
-
-    Compiler.createSourceManager(*FileMgr);
-
-    // Create the dependency collector that will collect the produced
-    // dependencies.
-    //
-    // This also moves the existing dependency output options from the
-    // invocation to the collector. The options in the invocation are reset,
-    // which ensures that the compiler won't create new dependency collectors,
-    // and thus won't write out the extra '.d' files to disk.
-    auto Opts = llvm::make_unique<DependencyOutputOptions>(
-        std::move(Compiler.getInvocation().getDependencyOutputOpts()));
-    // We need at least one -MT equivalent for the generator to work.
-    if (Opts->Targets.empty())
-      Opts->Targets = {"clang-scan-deps dependency"};
-    Compiler.addDependencyCollector(
-        std::make_shared<DependencyPrinter>(std::move(Opts), OS));
-
-    auto Action = llvm::make_unique<PreprocessOnlyAction>();
-    const bool Result = Compiler.ExecuteAction(*Action);
-    FileMgr->clearStatCache();
-    return Result;
-  }
-
-private:
-  StringRef WorkingDirectory;
-  SharedStream &OS;
-};
-
-/// A proxy file system that doesn't call `chdir` when changing the working
-/// directory of a clang tool.
-class ProxyFileSystemWithoutChdir : public llvm::vfs::ProxyFileSystem {
-public:
-  ProxyFileSystemWithoutChdir(
-      llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS)
-      : ProxyFileSystem(std::move(FS)) {}
-
-  llvm::ErrorOr<std::string> getCurrentWorkingDirectory() const override {
-    assert(!CWD.empty() && "empty CWD");
-    return CWD;
-  }
-
-  std::error_code setCurrentWorkingDirectory(const Twine &Path) override {
-    CWD = Path.str();
-    return {};
-  }
-
-private:
-  std::string CWD;
-};
-
 /// The high-level implementation of the dependency discovery tool that runs on
 /// an individual worker thread.
 class DependencyScanningTool {
@@ -141,31 +46,33 @@ public:
   /// \param Compilations     The reference to the compilation database that's
   /// used by the clang tool.
   DependencyScanningTool(const tooling::CompilationDatabase &Compilations,
-                         SharedStream &OS)
-      : Compilations(Compilations), OS(OS) {
-    PCHContainerOps = std::make_shared<PCHContainerOperations>();
-    BaseFS = new ProxyFileSystemWithoutChdir(llvm::vfs::getRealFileSystem());
-  }
+                         SharedStream &OS, SharedStream &Errs)
+      : Compilations(Compilations), OS(OS), Errs(Errs) {}
 
-  /// Computes the dependencies for the given file.
+  /// Computes the dependencies for the given file and prints them out.
   ///
   /// \returns True on error.
   bool runOnFile(const std::string &Input, StringRef CWD) {
-    BaseFS->setCurrentWorkingDirectory(CWD);
-    tooling::ClangTool Tool(Compilations, Input, PCHContainerOps, BaseFS);
-    Tool.clearArgumentsAdjusters();
-    Tool.setRestoreWorkingDir(false);
-    PreprocessorOnlyTool Action(CWD, OS);
-    return Tool.run(&Action);
+    auto MaybeFile = Worker.getDependencyFile(Input, CWD, Compilations);
+    if (!MaybeFile) {
+      llvm::handleAllErrors(
+          MaybeFile.takeError(), [this, &Input](llvm::StringError &Err) {
+            Errs.applyLocked([&](raw_ostream &OS) {
+              OS << "Error while scanning dependencies for " << Input << ":\n";
+              OS << Err.getMessage();
+            });
+          });
+      return true;
+    }
+    OS.applyLocked([&](raw_ostream &OS) { OS << *MaybeFile; });
+    return false;
   }
 
 private:
+  DependencyScanningWorker Worker;
   const tooling::CompilationDatabase &Compilations;
   SharedStream &OS;
-  std::shared_ptr<PCHContainerOperations> PCHContainerOps;
-  /// The real filesystem used as a base for all the operations performed by the
-  /// tool.
-  llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS;
+  SharedStream &Errs;
 };
 
 llvm::cl::opt<bool> Help("h", llvm::cl::desc("Alias for -help"),
@@ -225,6 +132,7 @@ int main(int argc, const char **argv) {
         return AdjustedArgs;
       });
 
+  SharedStream Errs(llvm::errs());
   // Print out the dependency results to STDOUT by default.
   SharedStream DependencyOS(llvm::outs());
   unsigned NumWorkers =
@@ -232,7 +140,7 @@ int main(int argc, const char **argv) {
   std::vector<std::unique_ptr<DependencyScanningTool>> WorkerTools;
   for (unsigned I = 0; I < NumWorkers; ++I)
     WorkerTools.push_back(llvm::make_unique<DependencyScanningTool>(
-        *AdjustingCompilations, DependencyOS));
+        *AdjustingCompilations, DependencyOS, Errs));
 
   std::vector<std::thread> WorkerThreads;
   std::atomic<bool> HadErrors(false);

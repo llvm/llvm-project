@@ -631,8 +631,8 @@ uint16_t Symbol::getShndx() const {
   }
 
   assert(ShndxType == SYMBOL_ABS || ShndxType == SYMBOL_COMMON ||
-         (ShndxType >= ELF::SHN_LOPROC && ShndxType <= ELF::SHN_HIPROC) ||
-         (ShndxType >= ELF::SHN_LOOS && ShndxType <= ELF::SHN_HIOS));
+         (ShndxType >= SYMBOL_LOPROC && ShndxType <= SYMBOL_HIPROC) ||
+         (ShndxType >= SYMBOL_LOOS && ShndxType <= SYMBOL_HIOS));
   return static_cast<uint16_t>(ShndxType);
 }
 

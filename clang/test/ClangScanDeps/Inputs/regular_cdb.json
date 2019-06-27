@@ -6,7 +6,7 @@
 },
 {
   "directory": "DIR",
-  "command": "clang -E -fsyntax-only DIR/regular_cdb.cpp -IInputs",
+  "command": "clang -E DIR/regular_cdb.cpp -IInputs",
   "file": "DIR/regular_cdb.cpp"
 }
 ]

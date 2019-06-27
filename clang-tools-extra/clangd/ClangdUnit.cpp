@@ -422,8 +422,9 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
   // Collect tokens of the main file.
   syntax::TokenCollector Tokens(Clang->getPreprocessor());
 
-  if (!Action->Execute())
-    log("Execute() failed when building AST for {0}", MainInput.getFile());
+  if (llvm::Error Err = Action->Execute())
+    log("Execute() failed when building AST for {0}: {1}", MainInput.getFile(),
+        toString(std::move(Err)));
 
   std::vector<Decl *> ParsedDecls = Action->takeTopLevelDecls();
   // AST traversals should exclude the preamble, to avoid performance cliffs.

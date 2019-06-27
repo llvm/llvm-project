@@ -941,7 +941,9 @@ bool CompilerInstance::ExecuteAction(FrontendAction &Act) {
       getSourceManager().clearIDTables();
 
     if (Act.BeginSourceFile(*this, FIF)) {
-      Act.Execute();
+      if (llvm::Error Err = Act.Execute()) {
+        consumeError(std::move(Err)); // FIXME this drops errors on the floor.
+      }
       Act.EndSourceFile();
     }
   }
@@ -2043,9 +2045,16 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
       hasPreprocessor()) {
     llvm::sys::fs::create_directories(
       getPreprocessor().getHeaderSearchInfo().getModuleCachePath());
-    GlobalModuleIndex::writeIndex(
-        getFileManager(), getPCHContainerReader(),
-        getPreprocessor().getHeaderSearchInfo().getModuleCachePath());
+    if (llvm::Error Err = GlobalModuleIndex::writeIndex(
+            getFileManager(), getPCHContainerReader(),
+            getPreprocessor().getHeaderSearchInfo().getModuleCachePath())) {
+      // FIXME this drops the error on the floor. This code is only used for
+      // typo correction and drops more than just this one source of errors
+      // (such as the directory creation failure above). It should handle the
+      // error.
+      consumeError(std::move(Err));
+      return nullptr;
+    }
     ModuleManager->resetForReload();
     ModuleManager->loadGlobalIndex();
     GlobalIndex = ModuleManager->getGlobalIndex();
@@ -2070,9 +2079,13 @@ GlobalModuleIndex *CompilerInstance::loadGlobalModuleIndex(
       }
     }
     if (RecreateIndex) {
-      GlobalModuleIndex::writeIndex(
-          getFileManager(), getPCHContainerReader(),
-          getPreprocessor().getHeaderSearchInfo().getModuleCachePath());
+      if (llvm::Error Err = GlobalModuleIndex::writeIndex(
+              getFileManager(), getPCHContainerReader(),
+              getPreprocessor().getHeaderSearchInfo().getModuleCachePath())) {
+        // FIXME As above, this drops the error on the floor.
+        consumeError(std::move(Err));
+        return nullptr;
+      }
       ModuleManager->resetForReload();
       ModuleManager->loadGlobalIndex();
       GlobalIndex = ModuleManager->getGlobalIndex();

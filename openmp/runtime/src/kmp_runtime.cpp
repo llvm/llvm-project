@@ -4196,6 +4196,17 @@ static void __kmp_initialize_info(kmp_info_t *this_thr, kmp_team_t *team,
       this_thr->th.th_cg_roots != master->th.th_cg_roots) { // CG root not set
     // Make new thread's CG root same as master's
     KMP_DEBUG_ASSERT(master->th.th_cg_roots);
+    kmp_cg_root_t *tmp = this_thr->th.th_cg_roots;
+    if (tmp) {
+      // worker changes CG, need to check if old CG should be freed
+      int i = tmp->cg_nthreads--;
+      KA_TRACE(100, ("__kmp_initialize_info: Thread %p decrement cg_nthreads"
+                     " on node %p of thread %p to %d\n",
+                     this_thr, tmp, tmp->cg_root, tmp->cg_nthreads));
+      if (i == 1) {
+        __kmp_free(tmp); // last thread left CG --> free it
+      }
+    }
     this_thr->th.th_cg_roots = master->th.th_cg_roots;
     // Increment new thread's CG root's counter to add the new thread
     this_thr->th.th_cg_roots->cg_nthreads++;
@@ -5594,7 +5605,10 @@ void __kmp_free_team(kmp_root_t *root,
         KA_TRACE(100, ("__kmp_free_team: Thread %p popping node %p and moving"
                        " up to node %p. cg_nthreads was %d\n",
                        thr, tmp, thr->th.th_cg_roots, tmp->cg_nthreads));
-        __kmp_free(tmp);
+        int i = tmp->cg_nthreads--;
+        if (i == 1) {
+          __kmp_free(tmp); // free CG if we are the last thread in it
+        }
         // Restore current task's thread_limit from CG root
         if (thr->th.th_cg_roots)
           thr->th.th_current_task->td_icvs.thread_limit =
@@ -5695,6 +5709,9 @@ void __kmp_free_thread(kmp_info_t *this_th) {
       this_th->th.th_cg_roots = tmp->up;
       __kmp_free(tmp);
     } else { // Worker thread
+      if (tmp->cg_nthreads == 0) { // last thread leaves contention group
+        __kmp_free(tmp);
+      }
       this_th->th.th_cg_roots = NULL;
       break;
     }
@@ -7223,7 +7240,7 @@ void __kmp_teams_master(int gtid) {
   tmp->cg_thread_limit = thr->th.th_current_task->td_icvs.thread_limit;
   tmp->cg_nthreads = 1; // Init counter to one active thread, this one
   KA_TRACE(100, ("__kmp_teams_master: Thread %p created node %p and init"
-                 " cg_threads to 1\n",
+                 " cg_nthreads to 1\n",
                  thr, tmp));
   tmp->up = thr->th.th_cg_roots;
   thr->th.th_cg_roots = tmp;

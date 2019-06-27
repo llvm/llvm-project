@@ -922,6 +922,10 @@ def S_SET_GPR_IDX_ON : SOPC <0x11,
 // SOPP Instructions
 //===----------------------------------------------------------------------===//
 
+class Base_SOPP <string asm> {
+  string AsmString = asm;
+}
+
 class SOPPe <bits<7> op> : Enc32 {
   bits <16> simm16;
 
@@ -931,7 +935,7 @@ class SOPPe <bits<7> op> : Enc32 {
 }
 
 class SOPP <bits<7> op, dag ins, string asm, list<dag> pattern = []> :
-  InstSI <(outs), ins, asm, pattern >, SOPPe <op> {
+  InstSI <(outs), ins, asm, pattern >, SOPPe <op>, Base_SOPP <asm> {
 
   let mayLoad = 0;
   let mayStore = 0;
@@ -944,8 +948,37 @@ class SOPP <bits<7> op, dag ins, string asm, list<dag> pattern = []> :
   let UseNamedOperandTable = 1;
 }
 
-
 def S_NOP : SOPP <0x00000000, (ins i16imm:$simm16), "s_nop $simm16">;
+
+class SOPP_w_nop_e <bits<7> op> : Enc64 {
+  bits <16> simm16;
+
+  let Inst{15-0} = simm16;
+  let Inst{22-16} = op;
+  let Inst{31-23} = 0x17f; // encoding
+  let Inst{47-32} = 0x0;
+  let Inst{54-48} = S_NOP.Inst{22-16}; // opcode
+  let Inst{63-55} = S_NOP.Inst{31-23}; // encoding
+}
+
+class SOPP_w_nop <bits<7> op, dag ins, string asm, list<dag> pattern = []> :
+  InstSI <(outs), ins, asm, pattern >, SOPP_w_nop_e <op>, Base_SOPP <asm> {
+
+  let mayLoad = 0;
+  let mayStore = 0;
+  let hasSideEffects = 0;
+  let SALU = 1;
+  let SOPP = 1;
+  let Size = 8;
+  let SchedRW = [WriteSALU];
+
+  let UseNamedOperandTable = 1;
+}
+
+multiclass SOPP_With_Relaxation <bits<7> op, dag ins, string asm, list<dag> pattern = []> {
+  def "" : SOPP <op, ins, asm, pattern>;
+  def _pad_s_nop : SOPP_w_nop <op, ins, asm, pattern>;
+}
 
 let isTerminator = 1 in {
 
@@ -976,61 +1009,61 @@ let SubtargetPredicate = isGFX10Plus in {
 } // End SubtargetPredicate = isGFX10Plus
 
 let isBranch = 1, SchedRW = [WriteBranch] in {
-def S_BRANCH : SOPP <
+let isBarrier = 1 in {
+defm S_BRANCH : SOPP_With_Relaxation <
   0x00000002, (ins sopp_brtarget:$simm16), "s_branch $simm16",
-  [(br bb:$simm16)]> {
-  let isBarrier = 1;
+  [(br bb:$simm16)]>;
 }
 
 let Uses = [SCC] in {
-def S_CBRANCH_SCC0 : SOPP <
+defm S_CBRANCH_SCC0 : SOPP_With_Relaxation <
   0x00000004, (ins sopp_brtarget:$simm16),
   "s_cbranch_scc0 $simm16"
 >;
-def S_CBRANCH_SCC1 : SOPP <
+defm S_CBRANCH_SCC1 : SOPP_With_Relaxation <
   0x00000005, (ins sopp_brtarget:$simm16),
   "s_cbranch_scc1 $simm16"
 >;
 } // End Uses = [SCC]
 
 let Uses = [VCC] in {
-def S_CBRANCH_VCCZ : SOPP <
+defm S_CBRANCH_VCCZ : SOPP_With_Relaxation <
   0x00000006, (ins sopp_brtarget:$simm16),
   "s_cbranch_vccz $simm16"
 >;
-def S_CBRANCH_VCCNZ : SOPP <
+defm S_CBRANCH_VCCNZ : SOPP_With_Relaxation <
   0x00000007, (ins sopp_brtarget:$simm16),
   "s_cbranch_vccnz $simm16"
 >;
 } // End Uses = [VCC]
 
 let Uses = [EXEC] in {
-def S_CBRANCH_EXECZ : SOPP <
+defm S_CBRANCH_EXECZ : SOPP_With_Relaxation <
   0x00000008, (ins sopp_brtarget:$simm16),
   "s_cbranch_execz $simm16"
 >;
-def S_CBRANCH_EXECNZ : SOPP <
+defm S_CBRANCH_EXECNZ : SOPP_With_Relaxation <
   0x00000009, (ins sopp_brtarget:$simm16),
   "s_cbranch_execnz $simm16"
 >;
 } // End Uses = [EXEC]
 
-def S_CBRANCH_CDBGSYS : SOPP <
+defm S_CBRANCH_CDBGSYS : SOPP_With_Relaxation <
   0x00000017, (ins sopp_brtarget:$simm16),
   "s_cbranch_cdbgsys $simm16"
 >;
 
-def S_CBRANCH_CDBGSYS_AND_USER : SOPP <
+defm S_CBRANCH_CDBGSYS_AND_USER : SOPP_With_Relaxation <
   0x0000001A, (ins sopp_brtarget:$simm16),
   "s_cbranch_cdbgsys_and_user $simm16"
 >;
 
-def S_CBRANCH_CDBGSYS_OR_USER : SOPP <
+defm S_CBRANCH_CDBGSYS_OR_USER : SOPP_With_Relaxation <
   0x00000019, (ins sopp_brtarget:$simm16),
   "s_cbranch_cdbgsys_or_user $simm16"
 >;
 
-def S_CBRANCH_CDBGUSER : SOPP <
+defm S_CBRANCH_CDBGUSER : SOPP_With_Relaxation <
   0x00000018, (ins sopp_brtarget:$simm16),
   "s_cbranch_cdbguser $simm16"
 >;

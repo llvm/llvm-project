@@ -191,6 +191,7 @@ group("test") {
     # dependencies to make sure the libaries exist on disk when llvm-config's
     # lit tests run.
     "//llvm/lib/LineEditor",
+    "//llvm/lib/DebugInfo/GSYM",
     "//llvm/lib/Testing/Support",
     "//llvm/tools/bugpoint",
     "//llvm/tools/dsymutil",

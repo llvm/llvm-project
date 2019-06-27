@@ -28,6 +28,7 @@ DefinedFunction *WasmSym::CallCtors;
 DefinedFunction *WasmSym::ApplyRelocs;
 DefinedData *WasmSym::DsoHandle;
 DefinedData *WasmSym::DataEnd;
+DefinedData *WasmSym::GlobalBase;
 DefinedData *WasmSym::HeapBase;
 GlobalSymbol *WasmSym::StackPointer;
 UndefinedGlobal *WasmSym::TableBase;
