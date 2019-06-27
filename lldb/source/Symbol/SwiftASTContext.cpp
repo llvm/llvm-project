@@ -819,16 +819,20 @@ static bool IsDeviceSupport(const char *path) {
 }
 } // namespace
 
+static std::string GetClangModulesCacheProperty() {
+  llvm::SmallString<128> path;
+  auto props = ModuleList::GetGlobalModuleListProperties();
+  props.GetClangModulesCachePath().GetPath(path);
+  return path.str();
+}
+
 SwiftASTContext::SwiftASTContext(std::string description, llvm::Triple triple,
                                  Target *target)
     : TypeSystem(TypeSystem::eKindSwift),
       m_compiler_invocation_ap(new swift::CompilerInvocation()),
       m_description(description) {
   // Set the clang modules cache path.
-  llvm::SmallString<128> path;
-  auto props = ModuleList::GetGlobalModuleListProperties();
-  props.GetClangModulesCachePath().GetPath(path);
-  m_compiler_invocation_ap->setClangModuleCachePath(path);
+  m_compiler_invocation_ap->setClangModuleCachePath(GetClangModulesCacheProperty());
 
   if (target)
     m_target_wp = target->shared_from_this();
@@ -3131,13 +3135,31 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     if (!clang_importer_options.OverrideResourceDir.empty()) {
       clang_importer_ap = swift::ClangImporter::create(*m_ast_context_ap,
                                                        clang_importer_options);
-      moduleCachePath = swift::getModuleCachePathFromClang(
-          clang_importer_ap->getClangInstance());
-      LOG_PRINTF(LIBLLDB_LOG_TYPES, "Using clang module cache path: %s",
-                 moduleCachePath.c_str());
+      if (clang_importer_ap)
+        moduleCachePath = swift::getModuleCachePathFromClang(
+            clang_importer_ap->getClangInstance());
+      else
+        LOG_PRINTF(LIBLLDB_LOG_TYPES, "Failed to initialize ClangImporter");
     }
   }
 
+  if (moduleCachePath.empty()) {
+    moduleCachePath = GetClangModulesCacheProperty();
+    // Even though it is initialized to the default Clang location at startup a
+    // user could have overwritten it with an empty path.
+    if (moduleCachePath.empty()) {
+      llvm::SmallString<0> path;
+      std::error_code ec =
+          llvm::sys::fs::createUniqueDirectory("ModuleCache", path);
+      if (!ec)
+        moduleCachePath = path.str();
+      else
+        moduleCachePath = "/tmp/lldb-ModuleCache";
+    }
+  }
+  LOG_PRINTF(LIBLLDB_LOG_TYPES, "Using Clang module cache path: %s",
+             moduleCachePath.c_str());
+  
   // Compute the prebuilt module cache path to use:
   // <resource-dir>/<platform>/prebuilt-modules
   llvm::Triple triple(GetTriple());
@@ -3145,7 +3167,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   StringRef platform = swift::getPlatformNameForTriple(triple);
   llvm::sys::path::append(prebuiltModuleCachePath, platform,
                           "prebuilt-modules");
-  LOG_PRINTF(LIBLLDB_LOG_TYPES, "Using prebuilt module cache path: %s",
+  LOG_PRINTF(LIBLLDB_LOG_TYPES, "Using prebuilt Swift module cache path: %s",
              prebuiltModuleCachePath.c_str());
 
   // Determine the Swift module loading mode to use.

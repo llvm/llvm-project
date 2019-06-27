@@ -64,7 +64,7 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
 
         # Check the prebuilt cache path in the log output
         found = False
-        prefix = 'Using prebuilt module cache path: '
+        prefix = 'Using prebuilt Swift module cache path: '
         logfile = open(log, "r")
         for line in logfile:
             if prefix in line:
