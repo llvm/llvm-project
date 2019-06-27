@@ -1,4 +1,4 @@
-//===--- SemanticHighlighting.cpp - -------------------------- ---*- C++ -*-===//
+//===--- SemanticHighlighting.cpp - ------------------------- ---*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -70,7 +70,6 @@ bool operator==(const HighlightingToken &Lhs, const HighlightingToken &Rhs) {
 }
 
 std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
-  AST.getASTContext().setTraversalScope(AST.getLocalTopLevelDecls());
   return HighlightingTokenCollector(AST).collectTokens();
 }
 
