@@ -3652,7 +3652,8 @@ void ARMTargetLowering::VarArgStyleRegisters(CCState &CCInfo, SelectionDAG &DAG,
   // argument passed via stack.
   int FrameIndex = StoreByValRegs(CCInfo, DAG, dl, Chain, nullptr,
                                   CCInfo.getInRegsParamsCount(),
-                                  CCInfo.getNextStackOffset(), 4);
+                                  CCInfo.getNextStackOffset(),
+                                  std::max(4U, TotalArgRegsSaveSize));
   AFI->setVarArgsFrameIndex(FrameIndex);
 }
 

@@ -378,8 +378,27 @@ public:
     virtual void MF_HandleRemoval(MachineInstr &MI) = 0;
   };
 
+  /// Structure used to represent pair of argument number after call lowering
+  /// and register used to transfer that argument.
+  /// For now we support only cases when argument is transferred through one
+  /// register.
+  struct ArgRegPair {
+    unsigned Reg;
+    uint16_t ArgNo;
+    ArgRegPair(unsigned R, unsigned Arg) : Reg(R), ArgNo(Arg) {
+      assert(Arg < (1 << 16) && "Arg out of range");
+    }
+  };
+  /// Vector of call argument and its forwarding register.
+  using CallSiteInfo = SmallVector<ArgRegPair, 1>;
+  using CallSiteInfoImpl = SmallVectorImpl<ArgRegPair>;
+
 private:
   Delegate *TheDelegate = nullptr;
+
+  using CallSiteInfoMap = DenseMap<const MachineInstr *, CallSiteInfo>;
+  /// Map a call instruction to call site arguments forwarding info.
+  CallSiteInfoMap CallSitesInfo;
 
   // Callbacks for insertion and removal.
   void handleInsertion(MachineInstr &MI);
@@ -946,6 +965,17 @@ public:
   const VariableDbgInfoMapTy &getVariableDbgInfo() const {
     return VariableDbgInfos;
   }
+
+  void addCallArgsForwardingRegs(const MachineInstr *CallI,
+                                 CallSiteInfoImpl &&CallInfo) {
+    assert(CallI->isCall());
+    CallSitesInfo[CallI] = std::move(CallInfo);
+  }
+
+  const CallSiteInfoMap &getCallSitesInfo() const {
+    return CallSitesInfo;
+  }
+
 };
 
 //===--------------------------------------------------------------------===//

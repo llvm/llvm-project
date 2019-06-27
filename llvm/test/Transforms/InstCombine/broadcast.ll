@@ -3,56 +3,56 @@
 
 define <4 x float> @good1(float %arg) {
 ; CHECK-LABEL: @good1(
-; CHECK-NEXT:    [[TMP:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP]], <4 x float> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    ret <4 x float> [[TMP6]]
+; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[T6:%.*]] = shufflevector <4 x float> [[T]], <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x float> [[T6]]
 ;
-  %tmp = insertelement <4 x float> undef, float %arg, i32 0
-  %tmp4 = insertelement <4 x float> %tmp, float %arg, i32 1
-  %tmp5 = insertelement <4 x float> %tmp4, float %arg, i32 2
-  %tmp6 = insertelement <4 x float> %tmp5, float %arg, i32 3
-  ret <4 x float> %tmp6
+  %t = insertelement <4 x float> undef, float %arg, i32 0
+  %t4 = insertelement <4 x float> %t, float %arg, i32 1
+  %t5 = insertelement <4 x float> %t4, float %arg, i32 2
+  %t6 = insertelement <4 x float> %t5, float %arg, i32 3
+  ret <4 x float> %t6
 }
 
 define <4 x float> @good2(float %arg) {
 ; CHECK-LABEL: @good2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    ret <4 x float> [[TMP6]]
+; CHECK-NEXT:    [[T6:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x float> [[T6]]
 ;
-  %tmp = insertelement <4 x float> undef, float %arg, i32 1
-  %tmp4 = insertelement <4 x float> %tmp, float %arg, i32 2
-  %tmp5 = insertelement <4 x float> %tmp4, float %arg, i32 0
-  %tmp6 = insertelement <4 x float> %tmp5, float %arg, i32 3
-  ret <4 x float> %tmp6
+  %t = insertelement <4 x float> undef, float %arg, i32 1
+  %t4 = insertelement <4 x float> %t, float %arg, i32 2
+  %t5 = insertelement <4 x float> %t4, float %arg, i32 0
+  %t6 = insertelement <4 x float> %t5, float %arg, i32 3
+  ret <4 x float> %t6
 }
 
 define <4 x float> @good3(float %arg) {
 ; CHECK-LABEL: @good3(
-; CHECK-NEXT:    [[TMP:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x float> [[TMP]], <4 x float> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    ret <4 x float> [[TMP6]]
+; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[T6:%.*]] = shufflevector <4 x float> [[T]], <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x float> [[T6]]
 ;
-  %tmp = insertelement <4 x float> zeroinitializer, float %arg, i32 0
-  %tmp4 = insertelement <4 x float> %tmp, float %arg, i32 1
-  %tmp5 = insertelement <4 x float> %tmp4, float %arg, i32 2
-  %tmp6 = insertelement <4 x float> %tmp5, float %arg, i32 3
-  ret <4 x float> %tmp6
+  %t = insertelement <4 x float> zeroinitializer, float %arg, i32 0
+  %t4 = insertelement <4 x float> %t, float %arg, i32 1
+  %t5 = insertelement <4 x float> %t4, float %arg, i32 2
+  %t6 = insertelement <4 x float> %t5, float %arg, i32 3
+  ret <4 x float> %t6
 }
 
 define <4 x float> @good4(float %arg) {
 ; CHECK-LABEL: @good4(
-; CHECK-NEXT:    [[TMP:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[TMP]], [[TMP]]
-; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> zeroinitializer
-; CHECK-NEXT:    ret <4 x float> [[TMP7]]
+; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[T]], [[T]]
+; CHECK-NEXT:    [[T7:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> zeroinitializer
+; CHECK-NEXT:    ret <4 x float> [[T7]]
 ;
-  %tmp = insertelement <4 x float> zeroinitializer, float %arg, i32 0
-  %tmp4 = insertelement <4 x float> %tmp, float %arg, i32 1
-  %tmp5 = insertelement <4 x float> %tmp4, float %arg, i32 2
-  %tmp6 = insertelement <4 x float> %tmp5, float %arg, i32 3
-  %tmp7 = fadd <4 x float> %tmp6, %tmp6
-  ret <4 x float> %tmp7
+  %t = insertelement <4 x float> zeroinitializer, float %arg, i32 0
+  %t4 = insertelement <4 x float> %t, float %arg, i32 1
+  %t5 = insertelement <4 x float> %t4, float %arg, i32 2
+  %t6 = insertelement <4 x float> %t5, float %arg, i32 3
+  %t7 = fadd <4 x float> %t6, %t6
+  ret <4 x float> %t7
 }
 
 define <4 x float> @good5(float %v) {
@@ -74,85 +74,85 @@ define <4 x float> @good5(float %v) {
 
 define <4 x float> @bad1(float %arg) {
 ; CHECK-LABEL: @bad1(
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[ARG]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[ARG]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[TMP6]]
+; CHECK-NEXT:    [[T4:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 1
+; CHECK-NEXT:    [[T5:%.*]] = insertelement <4 x float> [[T4]], float [[ARG]], i32 2
+; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x float> [[T5]], float [[ARG]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[T6]]
 ;
-  %tmp = insertelement <4 x float> undef, float %arg, i32 1
-  %tmp4 = insertelement <4 x float> %tmp, float %arg, i32 1
-  %tmp5 = insertelement <4 x float> %tmp4, float %arg, i32 2
-  %tmp6 = insertelement <4 x float> %tmp5, float %arg, i32 3
-  ret <4 x float> %tmp6
+  %t = insertelement <4 x float> undef, float %arg, i32 1
+  %t4 = insertelement <4 x float> %t, float %arg, i32 1
+  %t5 = insertelement <4 x float> %t4, float %arg, i32 2
+  %t6 = insertelement <4 x float> %t5, float %arg, i32 3
+  ret <4 x float> %t6
 }
 
 define <4 x float> @bad2(float %arg) {
 ; CHECK-LABEL: @bad2(
-; CHECK-NEXT:    [[TMP:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP]], float [[ARG]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[ARG]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[TMP6]]
+; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[T5:%.*]] = insertelement <4 x float> [[T]], float [[ARG]], i32 2
+; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x float> [[T5]], float [[ARG]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[T6]]
 ;
-  %tmp = insertelement <4 x float> undef, float %arg, i32 0
-  %tmp5 = insertelement <4 x float> %tmp, float %arg, i32 2
-  %tmp6 = insertelement <4 x float> %tmp5, float %arg, i32 3
-  ret <4 x float> %tmp6
+  %t = insertelement <4 x float> undef, float %arg, i32 0
+  %t5 = insertelement <4 x float> %t, float %arg, i32 2
+  %t6 = insertelement <4 x float> %t5, float %arg, i32 3
+  ret <4 x float> %t6
 }
 
 define <4 x float> @bad3(float %arg, float %arg2) {
 ; CHECK-LABEL: @bad3(
-; CHECK-NEXT:    [[TMP:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP]], float [[ARG2:%.*]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[ARG]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[ARG]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[TMP6]]
+; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[T4:%.*]] = insertelement <4 x float> [[T]], float [[ARG2:%.*]], i32 1
+; CHECK-NEXT:    [[T5:%.*]] = insertelement <4 x float> [[T4]], float [[ARG]], i32 2
+; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x float> [[T5]], float [[ARG]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[T6]]
 ;
-  %tmp = insertelement <4 x float> undef, float %arg, i32 0
-  %tmp4 = insertelement <4 x float> %tmp, float %arg2, i32 1
-  %tmp5 = insertelement <4 x float> %tmp4, float %arg, i32 2
-  %tmp6 = insertelement <4 x float> %tmp5, float %arg, i32 3
-  ret <4 x float> %tmp6
+  %t = insertelement <4 x float> undef, float %arg, i32 0
+  %t4 = insertelement <4 x float> %t, float %arg2, i32 1
+  %t5 = insertelement <4 x float> %t4, float %arg, i32 2
+  %t6 = insertelement <4 x float> %t5, float %arg, i32 3
+  ret <4 x float> %t6
 }
 
 define <1 x float> @bad4(float %arg) {
 ; CHECK-LABEL: @bad4(
-; CHECK-NEXT:    [[TMP:%.*]] = insertelement <1 x float> undef, float [[ARG:%.*]], i32 0
-; CHECK-NEXT:    ret <1 x float> [[TMP]]
+; CHECK-NEXT:    [[T:%.*]] = insertelement <1 x float> undef, float [[ARG:%.*]], i32 0
+; CHECK-NEXT:    ret <1 x float> [[T]]
 ;
-  %tmp = insertelement <1 x float> undef, float %arg, i32 0
-  ret <1 x float> %tmp
+  %t = insertelement <1 x float> undef, float %arg, i32 0
+  ret <1 x float> %t
 }
 
 define <4 x float> @bad5(float %arg) {
 ; CHECK-LABEL: @bad5(
-; CHECK-NEXT:    [[TMP:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP]], float [[ARG]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[ARG]], i32 2
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[ARG]], i32 3
-; CHECK-NEXT:    [[TMP7:%.*]] = fadd <4 x float> [[TMP6]], [[TMP4]]
-; CHECK-NEXT:    ret <4 x float> [[TMP7]]
+; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[T4:%.*]] = insertelement <4 x float> [[T]], float [[ARG]], i32 1
+; CHECK-NEXT:    [[T5:%.*]] = insertelement <4 x float> [[T4]], float [[ARG]], i32 2
+; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x float> [[T5]], float [[ARG]], i32 3
+; CHECK-NEXT:    [[T7:%.*]] = fadd <4 x float> [[T6]], [[T4]]
+; CHECK-NEXT:    ret <4 x float> [[T7]]
 ;
-  %tmp = insertelement <4 x float> undef, float %arg, i32 0
-  %tmp4 = insertelement <4 x float> %tmp, float %arg, i32 1
-  %tmp5 = insertelement <4 x float> %tmp4, float %arg, i32 2
-  %tmp6 = insertelement <4 x float> %tmp5, float %arg, i32 3
-  %tmp7 = fadd <4 x float> %tmp6, %tmp4
-  ret <4 x float> %tmp7
+  %t = insertelement <4 x float> undef, float %arg, i32 0
+  %t4 = insertelement <4 x float> %t, float %arg, i32 1
+  %t5 = insertelement <4 x float> %t4, float %arg, i32 2
+  %t6 = insertelement <4 x float> %t5, float %arg, i32 3
+  %t7 = fadd <4 x float> %t6, %t4
+  ret <4 x float> %t7
 }
 
 define <4 x float> @bad6(float %arg, i32 %k) {
 ; CHECK-LABEL: @bad6(
-; CHECK-NEXT:    [[TMP:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP]], float [[ARG]], i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> [[TMP4]], float [[ARG]], i32 [[K:%.*]]
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x float> [[TMP5]], float [[ARG]], i32 3
-; CHECK-NEXT:    ret <4 x float> [[TMP6]]
+; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[T4:%.*]] = insertelement <4 x float> [[T]], float [[ARG]], i32 1
+; CHECK-NEXT:    [[T5:%.*]] = insertelement <4 x float> [[T4]], float [[ARG]], i32 [[K:%.*]]
+; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x float> [[T5]], float [[ARG]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[T6]]
 ;
-  %tmp = insertelement <4 x float> undef, float %arg, i32 0
-  %tmp4 = insertelement <4 x float> %tmp, float %arg, i32 1
-  %tmp5 = insertelement <4 x float> %tmp4, float %arg, i32 %k
-  %tmp6 = insertelement <4 x float> %tmp5, float %arg, i32 3
-  ret <4 x float> %tmp6
+  %t = insertelement <4 x float> undef, float %arg, i32 0
+  %t4 = insertelement <4 x float> %t, float %arg, i32 1
+  %t5 = insertelement <4 x float> %t4, float %arg, i32 %k
+  %t6 = insertelement <4 x float> %t5, float %arg, i32 3
+  ret <4 x float> %t6
 }
 
 define <4 x float> @bad7(float %v) {

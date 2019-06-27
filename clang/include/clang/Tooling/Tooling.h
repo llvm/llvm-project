@@ -360,6 +360,10 @@ public:
   /// turn this off when running on multiple threads to avoid the raciness.
   void setRestoreWorkingDir(bool RestoreCWD);
 
+  /// Sets whether an error message should be printed out if an action fails. By
+  /// default, if an action fails, a message is printed out to stderr.
+  void setPrintErrorMessage(bool PrintErrorMessage);
+
   /// Returns the file manager used in the tool.
   ///
   /// The file manager is shared between all translation units.
@@ -386,6 +390,7 @@ private:
   DiagnosticConsumer *DiagConsumer = nullptr;
 
   bool RestoreCWD = true;
+  bool PrintErrorMessage = true;
 };
 
 template <typename T>

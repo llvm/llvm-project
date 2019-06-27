@@ -675,14 +675,14 @@ define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32,
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
   ; HSA-VI:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 16 from `{ i32, i64 } addrspace(4)* undef`, addrspace 4)
+  ; HSA-VI:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](s128), 0
+  ; HSA-VI:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD]](s128), 64
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
   ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 1 from `i8 addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
   ; HSA-VI:   [[GEP2:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C2]](s64)
   ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[GEP2]](p4) :: (non-temporal invariant load 16 from `{ i32, i64 } addrspace(4)* undef`, align 8, addrspace 4)
-  ; HSA-VI:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](s128), 0
-  ; HSA-VI:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD]](s128), 64
   ; HSA-VI:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD2]](s128), 0
   ; HSA-VI:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD2]](s128), 64
   ; HSA-VI:   S_ENDPGM
@@ -707,14 +707,14 @@ define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, 
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
   ; HSA-VI:   [[LOAD:%[0-9]+]]:_(s96) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 12 from `<{ i32, i64 }> addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](s96), 0
+  ; HSA-VI:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD]](s96), 32
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
   ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 1 from `i8 addrspace(4)* undef`, align 4, addrspace 4)
   ; HSA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 13
   ; HSA-VI:   [[GEP2:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C2]](s64)
   ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(s96) = G_LOAD [[GEP2]](p4) :: (non-temporal invariant load 12 from `<{ i32, i64 }> addrspace(4)* undef`, align 1, addrspace 4)
-  ; HSA-VI:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](s96), 0
-  ; HSA-VI:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD]](s96), 32
   ; HSA-VI:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD2]](s96), 0
   ; HSA-VI:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD2]](s96), 32
   ; HSA-VI:   S_ENDPGM

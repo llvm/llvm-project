@@ -191,6 +191,9 @@ of such YAML document:
      tracksRegLiveness: true
      liveins:
        - { reg: '$rdi' }
+     callSites:
+       - { bb: 0, offset: 3, fwdArgRegs:
+           - { arg: 0, reg: '$edi' } }
      body: |
        bb.0.entry:
          liveins: $rdi
@@ -198,6 +201,7 @@ of such YAML document:
          $eax = MOV32rm $rdi, 1, _, 0, _
          $eax = INC32r killed $eax, implicit-def dead $eflags
          MOV32mr killed $rdi, 1, _, 0, _, $eax
+         CALL64pcrel32 @foo <regmask...>
          RETQ $eax
      ...
 
@@ -209,6 +213,9 @@ name of a function that this machine function is based on.
 
 The attribute ``body`` is a `YAML block literal string`_. Its value represents
 the function's machine basic blocks and their machine instructions.
+
+The attribute ``callSites`` is a representation of call site information which
+keeps track of call instructions and registers used to transfer call arguments.
 
 Machine Instructions Format Reference
 =====================================

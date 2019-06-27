@@ -97,6 +97,7 @@ static_library("clangd") {
     "QueryDriverDatabase.cpp",
     "RIFF.cpp",
     "Selection.cpp",
+    "SemanticHighlighting.cpp",
     "SourceCode.cpp",
     "TUScheduler.cpp",
     "Threading.cpp",

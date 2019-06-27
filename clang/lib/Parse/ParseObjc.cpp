@@ -1247,11 +1247,11 @@ ParsedType Parser::ParseObjCTypeName(ObjCDeclSpec &DS,
   BalancedDelimiterTracker T(*this, tok::l_paren);
   T.consumeOpen();
 
-  SourceLocation TypeStartLoc = Tok.getLocation();
   ObjCDeclContextSwitch ObjCDC(*this);
 
   // Parse type qualifiers, in, inout, etc.
   ParseObjCTypeQualifierList(DS, context);
+  SourceLocation TypeStartLoc = Tok.getLocation();
 
   ParsedType Ty;
   if (isTypeSpecifierQualifier() || isObjCInstancetype()) {

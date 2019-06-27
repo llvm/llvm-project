@@ -3587,6 +3587,8 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   const Module *M = MF.getMMI().getModule();
   Metadata *IsCFProtectionSupported = M->getModuleFlag("cf-protection-branch");
 
+  MachineFunction::CallSiteInfo CSInfo;
+
   if (CallConv == CallingConv::X86_INTR)
     report_fatal_error("X86 interrupts may not be called directly");
 
@@ -3782,6 +3784,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
                          Subtarget);
     } else if (VA.isRegLoc()) {
       RegsToPass.push_back(std::make_pair(VA.getLocReg(), Arg));
+      const TargetOptions &Options = DAG.getTarget().Options;
+      if (Options.EnableDebugEntryValues)
+        CSInfo.emplace_back(VA.getLocReg(), I);
       if (isVarArg && IsWin64) {
         // Win64 ABI requires argument XMM reg to be copied to the corresponding
         // shadow reg if callee is a varargs function.
@@ -4049,7 +4054,9 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // should be computed from returns not tail calls.  Consider a void
     // function making a tail call to a function returning int.
     MF.getFrameInfo().setHasTailCall();
-    return DAG.getNode(X86ISD::TC_RETURN, dl, NodeTys, Ops);
+    SDValue Ret = DAG.getNode(X86ISD::TC_RETURN, dl, NodeTys, Ops);
+    DAG.addCallSiteInfo(Ret.getNode(), std::move(CSInfo));
+    return Ret;
   }
 
   if (HasNoCfCheck && IsCFProtectionSupported) {
@@ -4058,6 +4065,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     Chain = DAG.getNode(X86ISD::CALL, dl, NodeTys, Ops);
   }
   InFlag = Chain.getValue(1);
+  DAG.addCallSiteInfo(Chain.getNode(), std::move(CSInfo));
 
   // Create the CALLSEQ_END node.
   unsigned NumBytesForCalleeToPop;
@@ -6687,7 +6695,7 @@ static bool getFauxShuffleMask(SDValue N, SmallVectorImpl<int> &Mask,
         for (unsigned i = 0; i != NumSizeInBytes; i += NumBytesPerElt) {
           for (unsigned j = 0; j != NumBytesPerElt; ++j) {
             unsigned Ofs = (SelectMask[j] ? NumSizeInBytes : 0);
-            int Idx = (ZeroMask[j] ? SM_SentinelZero : (i + j + Ofs));
+            int Idx = (ZeroMask[j] ? (int)SM_SentinelZero : (i + j + Ofs));
             Mask.push_back(Idx);
           }
         }
@@ -7175,51 +7183,51 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
 
   SDLoc dl(Op);
   SDValue V;
-  bool First = true;
 
   // Pre-SSE4.1 - merge byte pairs and insert with PINSRW.
-  for (unsigned i = 0; i < 16; ++i) {
+  for (unsigned i = 0; i < 16; i += 2) {
     bool ThisIsNonZero = (NonZeros & (1 << i)) != 0;
-    if (ThisIsNonZero && First) {
-      if (NumZero)
-        V = getZeroVector(MVT::v8i16, Subtarget, DAG, dl);
+    bool NextIsNonZero = (NonZeros & (1 << (i + 1))) != 0;
+    if (!ThisIsNonZero && !NextIsNonZero)
+      continue;
+
+    // FIXME: Investigate combining the first 4 bytes as a i32 instead.
+    SDValue Elt;
+    if (ThisIsNonZero) {
+      if (NumZero || NextIsNonZero)
+        Elt = DAG.getZExtOrTrunc(Op.getOperand(i), dl, MVT::i32);
       else
-        V = DAG.getUNDEF(MVT::v8i16);
-      First = false;
+        Elt = DAG.getAnyExtOrTrunc(Op.getOperand(i), dl, MVT::i32);
     }
 
-    if ((i & 1) != 0) {
-      // FIXME: Investigate extending to i32 instead of just i16.
-      // FIXME: Investigate combining the first 4 bytes as a i32 instead.
-      SDValue ThisElt, LastElt;
-      bool LastIsNonZero = (NonZeros & (1 << (i - 1))) != 0;
-      if (LastIsNonZero) {
-        LastElt =
-            DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, Op.getOperand(i - 1));
-      }
-      if (ThisIsNonZero) {
-        ThisElt = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i16, Op.getOperand(i));
-        ThisElt = DAG.getNode(ISD::SHL, dl, MVT::i16, ThisElt,
-                              DAG.getConstant(8, dl, MVT::i8));
-        if (LastIsNonZero)
-          ThisElt = DAG.getNode(ISD::OR, dl, MVT::i16, ThisElt, LastElt);
-      } else
-        ThisElt = LastElt;
+    if (NextIsNonZero) {
+      SDValue NextElt;
+      if (i == 0 && NumZero)
+        NextElt = DAG.getZExtOrTrunc(Op.getOperand(i+1), dl, MVT::i32);
+      else
+        NextElt = DAG.getAnyExtOrTrunc(Op.getOperand(i+1), dl, MVT::i32);
+      NextElt = DAG.getNode(ISD::SHL, dl, MVT::i32, NextElt,
+                            DAG.getConstant(8, dl, MVT::i8));
+      if (ThisIsNonZero)
+        Elt = DAG.getNode(ISD::OR, dl, MVT::i32, NextElt, Elt);
+      else
+        Elt = NextElt;
+    }
 
-      if (ThisElt) {
-        if (1 == i) {
-          V = NumZero ? DAG.getZExtOrTrunc(ThisElt, dl, MVT::i32)
-                      : DAG.getAnyExtOrTrunc(ThisElt, dl, MVT::i32);
-          V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, V);
-          if (NumZero)
-            V = DAG.getNode(X86ISD::VZEXT_MOVL, dl, MVT::v4i32, V);
-          V = DAG.getBitcast(MVT::v8i16, V);
-        } else {
-          V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v8i16, V, ThisElt,
-                          DAG.getIntPtrConstant(i / 2, dl));
-        }
+    // If our first insertion is not the first index then insert into zero
+    // vector to break any register dependency else use SCALAR_TO_VECTOR.
+    if (!V) {
+      if (i != 0)
+        V = getZeroVector(MVT::v8i16, Subtarget, DAG, dl);
+      else {
+        V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, Elt);
+        V = DAG.getBitcast(MVT::v8i16, V);
+        continue;
       }
     }
+    Elt = DAG.getNode(ISD::TRUNCATE, dl, MVT::i16, Elt);
+    V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, MVT::v8i16, V, Elt,
+                    DAG.getIntPtrConstant(i / 2, dl));
   }
 
   return DAG.getBitcast(MVT::v16i8, V);
@@ -33970,6 +33978,22 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       SDValue Insert =
           insertSubVector(UndefVec, ExtOp, 0, TLO.DAG, DL, ExtSizeInBits);
       return TLO.CombineTo(Op, Insert);
+    }
+    case X86ISD::VPERMI: {
+      // Simplify PERMPD/PERMQ to extract_subvector.
+      // TODO: This should be done in shuffle combining.
+      if (VT == MVT::v4f64 || VT == MVT::v4i64) {
+        SmallVector<int, 4> Mask;
+        DecodeVPERMMask(NumElts, Op.getConstantOperandVal(1), Mask);
+        if (isUndefOrEqual(Mask[0], 2) && isUndefOrEqual(Mask[1], 3)) {
+          SDLoc DL(Op);
+          SDValue Ext = extractSubVector(Op.getOperand(0), 2, TLO.DAG, DL, 128);
+          SDValue UndefVec = TLO.DAG.getUNDEF(VT);
+          SDValue Insert = insertSubVector(UndefVec, Ext, 0, TLO.DAG, DL, 128);
+          return TLO.CombineTo(Op, Insert);
+        }
+      }
+      break;
     }
       // Target Shuffles.
     case X86ISD::PSHUFB:

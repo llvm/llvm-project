@@ -11,9 +11,9 @@
 define void @test_large_frame() {
 ; CHECK-LABEL: test_large_frame:
 ; CHECK: push
-; CHECK: sub.w sp, sp, #1004
+; CHECK: sub.w sp, sp, #1008
 
-  %ptr = alloca i32, i32 251
+  %ptr = alloca i32, i32 252
 
   %addr = getelementptr i32, i32* %ptr, i32 1
   call i32 @llvm.arm.ldrex.p0i32(i32* %addr)
@@ -24,9 +24,9 @@ define void @test_large_frame() {
 define void @test_small_frame() {
 ; CHECK-LABEL: test_small_frame:
 ; CHECK-NOT: push
-; CHECK: sub.w sp, sp, #1000
+; CHECK: sub.w sp, sp, #1004
 
-  %ptr = alloca i32, i32 250
+  %ptr = alloca i32, i32 251
 
   %addr = getelementptr i32, i32* %ptr, i32 1
   call i32 @llvm.arm.ldrex.p0i32(i32* %addr)

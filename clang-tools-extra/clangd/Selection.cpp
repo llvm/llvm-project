@@ -8,13 +8,53 @@
 
 #include "Selection.h"
 #include "ClangdUnit.h"
+#include "clang/AST/ASTTypeTraits.h"
+#include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/TypeLoc.h"
+#include "llvm/ADT/STLExtras.h"
+#include <algorithm>
 
 namespace clang {
 namespace clangd {
 namespace {
 using Node = SelectionTree::Node;
 using ast_type_traits::DynTypedNode;
+
+// Stores a collection of (possibly-overlapping) integer ranges.
+// When new ranges are added, hit-tests them against existing ones.
+class RangeSet {
+public:
+  // Returns true if any new offsets are covered.
+  // This is naive (linear in number of successful add() calls), but ok for now.
+  bool add(unsigned Begin, unsigned End) {
+    assert(std::is_sorted(Ranges.begin(), Ranges.end()));
+    assert(Begin < End);
+
+    if (covered(Begin, End))
+      return false;
+    auto Pair = std::make_pair(Begin, End);
+    Ranges.insert(llvm::upper_bound(Ranges, Pair), Pair);
+    return true;
+  }
+
+private:
+  bool covered(unsigned Begin, unsigned End) {
+    assert(Begin < End);
+    for (const auto &R : Ranges) {
+      if (Begin < R.first)
+        return false; // The prefix [Begin, R.first) is not covered.
+      if (Begin < R.second) {
+        Begin = R.second; // Prefix is covered, truncate the range.
+        if (Begin >= End)
+          return true;
+      }
+    }
+    return false;
+  }
+
+  std::vector<std::pair<unsigned, unsigned>> Ranges; // Always sorted.
+};
 
 // We find the selection by visiting written nodes in the AST, looking for nodes
 // that intersect with the selected character range.
@@ -86,6 +126,7 @@ public:
 
 private:
   using Base = RecursiveASTVisitor<SelectionVisitor>;
+
   SelectionVisitor(ASTContext &AST, unsigned SelBegin, unsigned SelEnd,
                    FileID SelFile)
       : SM(AST.getSourceManager()), LangOpts(AST.getLangOpts()),
@@ -112,6 +153,31 @@ private:
     return Ret;
   }
 
+  // HIT TESTING
+  //
+  // We do rough hit testing on the way down the tree to avoid traversing
+  // subtrees that don't touch the selection (canSafelySkipNode), but
+  // fine-grained hit-testing is mostly done on the way back up (in pop()).
+  // This means children get to claim parts of the selection first, and parents
+  // are only selected if they own tokens that no child owned.
+  //
+  // Nodes *usually* nest nicely: a child's getSourceRange() lies within the
+  // parent's, and a node (transitively) owns all tokens in its range.
+  //
+  // Exception 1: child range claims tokens that should be owned by the parent.
+  //              e.g. in `void foo(int);`, the FunctionTypeLoc should own
+  //              `void (int)` but the parent FunctionDecl should own `foo`.
+  // To handle this case, certain nodes claim small token ranges *before*
+  // their children are traversed. (see earlySourceRange).
+  //
+  // Exception 2: siblings both claim the same node.
+  //              e.g. `int x, y;` produces two sibling VarDecls.
+  //                    ~~~~~ x
+  //                    ~~~~~~~~ y
+  // Here the first ("leftmost") sibling claims the tokens it wants, and the
+  // other sibling gets what's left. So selecting "int" only includes the left
+  // VarDecl in the selection tree.
+
   // An optimization for a common case: nodes outside macro expansions that
   // don't intersect the selection may be recursively skipped.
   bool canSafelySkipNode(SourceRange S) {
@@ -123,18 +189,24 @@ private:
   }
 
   // Pushes a node onto the ancestor stack. Pairs with pop().
+  // Performs early hit detection for some nodes (on the earlySourceRange).
   void push(DynTypedNode Node) {
+    bool SelectedEarly = claimRange(earlySourceRange(Node));
     Nodes.emplace_back();
     Nodes.back().ASTNode = std::move(Node);
     Nodes.back().Parent = Stack.top();
-    Nodes.back().Selected = SelectionTree::Unselected;
+    // Early hit detection never selects the whole node.
+    Nodes.back().Selected =
+        SelectedEarly ? SelectionTree::Partial : SelectionTree::Unselected;
     Stack.push(&Nodes.back());
   }
 
   // Pops a node off the ancestor stack, and finalizes it. Pairs with push().
+  // Performs primary hit detection.
   void pop() {
     Node &N = *Stack.top();
-    N.Selected = computeSelection(N);
+    if (auto Sel = claimRange(N.ASTNode.getSourceRange()))
+      N.Selected = Sel;
     if (N.Selected || !N.Children.empty()) {
       // Attach to the tree.
       N.Parent->Children.push_back(&N);
@@ -146,11 +218,25 @@ private:
     Stack.pop();
   }
 
+  // Returns the range of tokens that this node will claim directly, and
+  // is not available to the node's children.
+  // Usually empty, but sometimes children cover tokens but shouldn't own them.
+  SourceRange earlySourceRange(const DynTypedNode &N) {
+    if (const Decl *D = N.get<Decl>()) {
+      // void [[foo]]();
+      if (auto *FD = llvm::dyn_cast<FunctionDecl>(D))
+        return FD->getNameInfo().getSourceRange();
+      // int (*[[s]])();
+      else if (auto *VD = llvm::dyn_cast<VarDecl>(D))
+        return VD->getLocation();
+    }
+    return SourceRange();
+  }
+
   // Perform hit-testing of a complete Node against the selection.
   // This runs for every node in the AST, and must be fast in common cases.
-  // This is called from pop(), so we can take children into account.
-  SelectionTree::Selection computeSelection(const Node &N) {
-    SourceRange S = N.ASTNode.getSourceRange();
+  // This is usually called from pop(), so we can take children into account.
+  SelectionTree::Selection claimRange(SourceRange S) {
     if (!S.isValid())
       return SelectionTree::Unselected;
     // getTopMacroCallerLoc() allows selection of constructs in macro args. e.g:
@@ -170,60 +256,30 @@ private:
     if (B.second >= SelEnd || E.second < SelBeginTokenStart)
       return SelectionTree::Unselected;
 
-    // We hit something, need some more precise checks.
+    // We may have hit something, need some more precise checks.
     // Adjust [B, E) to be a half-open character range.
     E.second += Lexer::MeasureTokenLength(S.getEnd(), SM, LangOpts);
-    // This node's own selected text is (this range ^ selection) - child ranges.
-    // If that's empty, then we've only collided with children.
-    if (nodesCoverRange(N.Children, std::max(SelBegin, B.second),
-                        std::min(SelEnd, E.second)))
-      return SelectionTree::Unselected; // Hit children only.
+    auto PreciseBounds = std::make_pair(B.second, E.second);
+    // Trim range using the selection, drop it if empty.
+    B.second = std::max(B.second, SelBegin);
+    E.second = std::min(E.second, SelEnd);
+    if (B.second >= E.second)
+      return SelectionTree::Unselected;
+    // Attempt to claim the remaining range. If there's nothing to claim, only
+    // children were selected.
+    if (!Claimed.add(B.second, E.second))
+      return SelectionTree::Unselected;
     // Some of our own characters are covered, this is a true hit.
-    return (B.second >= SelBegin && E.second <= SelEnd)
+    // Determine whether the node was completely covered.
+    return (PreciseBounds.first >= SelBegin && PreciseBounds.second <= SelEnd)
                ? SelectionTree::Complete
                : SelectionTree::Partial;
-  }
-
-  // Is the range [Begin, End) entirely covered by the union of the Nodes?
-  // (The range is a parent node's extent, and the covering nodes are children).
-  bool nodesCoverRange(llvm::ArrayRef<const Node *> Nodes, unsigned Begin,
-                       unsigned End) {
-    if (Begin >= End)
-      return true;
-    if (Nodes.empty())
-      return false;
-
-    // Collect all the expansion ranges, as offsets.
-    SmallVector<std::pair<unsigned, unsigned>, 8> ChildRanges;
-    for (const Node *N : Nodes) {
-      CharSourceRange R = SM.getExpansionRange(N->ASTNode.getSourceRange());
-      auto B = SM.getDecomposedLoc(R.getBegin());
-      auto E = SM.getDecomposedLoc(R.getEnd());
-      if (B.first != SelFile || E.first != SelFile)
-        continue;
-      // Try to cover up to the next token, spaces between children don't count.
-      if (auto Tok = Lexer::findNextToken(R.getEnd(), SM, LangOpts))
-        E.second = SM.getFileOffset(Tok->getLocation());
-      else if (R.isTokenRange())
-        E.second += Lexer::MeasureTokenLength(R.getEnd(), SM, LangOpts);
-      ChildRanges.push_back({B.second, E.second});
-    }
-    llvm::sort(ChildRanges);
-
-    // Scan through the child ranges, removing as we go.
-    for (const auto R : ChildRanges) {
-      if (R.first > Begin)
-        return false;   // [Begin, R.first) is not covered.
-      Begin = R.second; // Eliminate [R.first, R.second).
-      if (Begin >= End)
-        return true; // Remaining range is empty.
-    }
-    return false; // Went through all children, trailing characters remain.
   }
 
   SourceManager &SM;
   const LangOptions &LangOpts;
   std::stack<Node *> Stack;
+  RangeSet Claimed;
   std::deque<Node> Nodes; // Stable pointers as we add more nodes.
   // Half-open selection range.
   unsigned SelBegin;

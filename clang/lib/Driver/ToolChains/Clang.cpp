@@ -3292,18 +3292,8 @@ static void RenderDebugOptions(const ToolChain &TC, const Driver &D,
       }
     }
 
-  // -gsplit-dwarf enables the backend dwarf splitting and extraction.
-  if (T.isOSBinFormatELF()) {
-    if (!SplitDWARFInlining)
-      CmdArgs.push_back("-fno-split-dwarf-inlining");
-
-    if (DwarfFission != DwarfFissionKind::None) {
-      if (DwarfFission == DwarfFissionKind::Single)
-        CmdArgs.push_back("-enable-split-dwarf=single");
-      else
-        CmdArgs.push_back("-enable-split-dwarf");
-    }
-  }
+  if (T.isOSBinFormatELF() && !SplitDWARFInlining)
+    CmdArgs.push_back("-fno-split-dwarf-inlining");
 
   // After we've dealt with all combinations of things that could
   // make DebugInfoKind be other than None or DebugLineTablesOnly,

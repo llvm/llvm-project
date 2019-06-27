@@ -66,7 +66,7 @@ public:
                    ArrayRef<Register> VRegs) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
-                            ArrayRef<Register> VRegs) const override;
+                            ArrayRef<ArrayRef<Register>> VRegs) const override;
 
   bool lowerCall(MachineIRBuilder &MIRBuilder, CallingConv::ID CallConv,
                  const MachineOperand &Callee, const ArgInfo &OrigRet,

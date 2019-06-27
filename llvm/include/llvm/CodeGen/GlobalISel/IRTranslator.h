@@ -237,14 +237,6 @@ private:
 
   bool translateInlineAsm(const CallInst &CI, MachineIRBuilder &MIRBuilder);
 
-  // FIXME: temporary function to expose previous interface to call lowering
-  // until it is refactored.
-  /// Combines all component registers of \p V into a single scalar with size
-  /// "max(Offsets) + last size".
-  Register packRegs(const Value &V, MachineIRBuilder &MIRBuilder);
-
-  void unpackRegs(const Value &V, Register Src, MachineIRBuilder &MIRBuilder);
-
   /// Returns true if the value should be split into multiple LLTs.
   /// If \p Offsets is given then the split type's offsets will be stored in it.
   /// If \p Offsets is not empty it will be cleared first.
