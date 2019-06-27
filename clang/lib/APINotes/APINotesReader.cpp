@@ -702,7 +702,14 @@ bool APINotesReader::Implementation::readControlBlock(
 
   bool sawMetadata = false;
   
-  auto next = cursor.advance();
+  llvm::Expected<llvm::BitstreamEntry> maybeNext = cursor.advance();
+  if (!maybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(maybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry next = maybeNext.get();
+
   while (next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (next.Kind == llvm::BitstreamEntry::Error)
       return true;
@@ -713,13 +720,26 @@ bool APINotesReader::Implementation::readControlBlock(
       if (cursor.SkipBlock())
         return true;
       
-      next = cursor.advance();
+      maybeNext = cursor.advance();
+      if (!maybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(maybeNext.takeError());
+        return false;
+      }
+      next = maybeNext.get();
       continue;
     }
 
     scratch.clear();
     StringRef blobData;
-    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    llvm::Expected<unsigned> maybeKind = cursor.readRecord(next.ID, scratch, &blobData);
+    if (!maybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeKind.takeError());
+      return false;
+    }
+    unsigned kind = maybeKind.get();
+      
     switch (kind) {
     case control_block::METADATA:
       // Already saw metadata.
@@ -750,7 +770,13 @@ bool APINotesReader::Implementation::readControlBlock(
       break;
     }
 
-    next = cursor.advance();
+    maybeNext = cursor.advance();
+    if (!maybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeNext.takeError());
+      return false;
+    }
+    next = maybeNext.get();
   }
 
   return !sawMetadata;
@@ -762,7 +788,14 @@ bool APINotesReader::Implementation::readIdentifierBlock(
   if (cursor.EnterSubBlock(IDENTIFIER_BLOCK_ID))
     return true;
 
-  auto next = cursor.advance();
+  llvm::Expected<llvm::BitstreamEntry> maybeNext = cursor.advance();
+  if (!maybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(maybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry next = maybeNext.get();
+
   while (next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (next.Kind == llvm::BitstreamEntry::Error)
       return true;
@@ -773,13 +806,25 @@ bool APINotesReader::Implementation::readIdentifierBlock(
       if (cursor.SkipBlock())
         return true;
       
-      next = cursor.advance();
+      maybeNext = cursor.advance();
+      if (!maybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(maybeNext.takeError());
+        return false;
+      }
+      next = maybeNext.get();
       continue;
     }
 
     scratch.clear();
     StringRef blobData;
-    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    llvm::Expected<unsigned> maybeKind = cursor.readRecord(next.ID, scratch, &blobData);
+    if (!maybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeKind.takeError());
+      return false;
+    }
+    unsigned kind = maybeKind.get();
     switch (kind) {
     case identifier_block::IDENTIFIER_DATA: {
       // Already saw identifier table.
@@ -803,7 +848,13 @@ bool APINotesReader::Implementation::readIdentifierBlock(
       break;
     }
 
-    next = cursor.advance();
+    maybeNext = cursor.advance();
+    if (!maybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeNext.takeError());
+      return false;
+    }
+    next = maybeNext.get();
   }
 
   return false;
@@ -815,7 +866,14 @@ bool APINotesReader::Implementation::readObjCContextBlock(
   if (cursor.EnterSubBlock(OBJC_CONTEXT_BLOCK_ID))
     return true;
 
-  auto next = cursor.advance();
+  llvm::Expected<llvm::BitstreamEntry> maybeNext = cursor.advance();
+  if (!maybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(maybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry next = maybeNext.get();
+
   while (next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (next.Kind == llvm::BitstreamEntry::Error)
       return true;
@@ -826,13 +884,25 @@ bool APINotesReader::Implementation::readObjCContextBlock(
       if (cursor.SkipBlock())
         return true;
       
-      next = cursor.advance();
+      maybeNext = cursor.advance();
+      if (!maybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(maybeNext.takeError());
+        return false;
+      }
+      next = maybeNext.get();
       continue;
     }
 
     scratch.clear();
     StringRef blobData;
-    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    llvm::Expected<unsigned> maybeKind = cursor.readRecord(next.ID, scratch, &blobData);
+    if (!maybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeKind.takeError());
+      return false;
+    }
+    unsigned kind = maybeKind.get();
     switch (kind) {
     case objc_context_block::OBJC_CONTEXT_ID_DATA: {
       // Already saw Objective-C context ID table.
@@ -873,7 +943,13 @@ bool APINotesReader::Implementation::readObjCContextBlock(
       break;
     }
 
-    next = cursor.advance();
+    maybeNext = cursor.advance();
+    if (!maybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeNext.takeError());
+      return false;
+    }
+    next = maybeNext.get();
   }
 
   return false;
@@ -885,7 +961,14 @@ bool APINotesReader::Implementation::readObjCPropertyBlock(
   if (cursor.EnterSubBlock(OBJC_PROPERTY_BLOCK_ID))
     return true;
 
-  auto next = cursor.advance();
+  llvm::Expected<llvm::BitstreamEntry> maybeNext = cursor.advance();
+  if (!maybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(maybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry next = maybeNext.get();
+
   while (next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (next.Kind == llvm::BitstreamEntry::Error)
       return true;
@@ -896,13 +979,25 @@ bool APINotesReader::Implementation::readObjCPropertyBlock(
       if (cursor.SkipBlock())
         return true;
       
-      next = cursor.advance();
+      maybeNext = cursor.advance();
+      if (!maybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(maybeNext.takeError());
+        return false;
+      }
+      next = maybeNext.get();
       continue;
     }
 
     scratch.clear();
     StringRef blobData;
-    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    llvm::Expected<unsigned> maybeKind = cursor.readRecord(next.ID, scratch, &blobData);
+    if (!maybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeKind.takeError());
+      return false;
+    }
+    unsigned kind = maybeKind.get();
     switch (kind) {
     case objc_property_block::OBJC_PROPERTY_DATA: {
       // Already saw Objective-C property table.
@@ -927,7 +1022,13 @@ bool APINotesReader::Implementation::readObjCPropertyBlock(
       break;
     }
 
-    next = cursor.advance();
+    maybeNext = cursor.advance();
+    if (!maybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeNext.takeError());
+      return false;
+    }
+    next = maybeNext.get();
   }
 
   return false;
@@ -939,7 +1040,13 @@ bool APINotesReader::Implementation::readObjCMethodBlock(
   if (cursor.EnterSubBlock(OBJC_METHOD_BLOCK_ID))
     return true;
 
-  auto next = cursor.advance();
+  llvm::Expected<llvm::BitstreamEntry> maybeNext = cursor.advance();
+  if (!maybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(maybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry next = maybeNext.get();
   while (next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (next.Kind == llvm::BitstreamEntry::Error)
       return true;
@@ -950,13 +1057,25 @@ bool APINotesReader::Implementation::readObjCMethodBlock(
       if (cursor.SkipBlock())
         return true;
       
-      next = cursor.advance();
+      maybeNext = cursor.advance();
+      if (!maybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(maybeNext.takeError());
+        return false;
+      }
+      next = maybeNext.get();
       continue;
     }
 
     scratch.clear();
     StringRef blobData;
-    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    llvm::Expected<unsigned> maybeKind = cursor.readRecord(next.ID, scratch, &blobData);
+    if (!maybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeKind.takeError());
+      return false;
+    }
+    unsigned kind = maybeKind.get();
     switch (kind) {
     case objc_method_block::OBJC_METHOD_DATA: {
       // Already saw Objective-C method table.
@@ -980,7 +1099,13 @@ bool APINotesReader::Implementation::readObjCMethodBlock(
       break;
     }
 
-    next = cursor.advance();
+    maybeNext = cursor.advance();
+    if (!maybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeNext.takeError());
+      return false;
+    }
+    next = maybeNext.get();
   }
 
   return false;
@@ -992,7 +1117,13 @@ bool APINotesReader::Implementation::readObjCSelectorBlock(
   if (cursor.EnterSubBlock(OBJC_SELECTOR_BLOCK_ID))
     return true;
 
-  auto next = cursor.advance();
+  llvm::Expected<llvm::BitstreamEntry> maybeNext = cursor.advance();
+  if (!maybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(maybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry next = maybeNext.get();
   while (next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (next.Kind == llvm::BitstreamEntry::Error)
       return true;
@@ -1003,13 +1134,25 @@ bool APINotesReader::Implementation::readObjCSelectorBlock(
       if (cursor.SkipBlock())
         return true;
       
-      next = cursor.advance();
+      maybeNext = cursor.advance();
+      if (!maybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(maybeNext.takeError());
+        return false;
+      }
+      next = maybeNext.get();
       continue;
     }
 
     scratch.clear();
     StringRef blobData;
-    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    llvm::Expected<unsigned> maybeKind = cursor.readRecord(next.ID, scratch, &blobData);
+    if (!maybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeKind.takeError());
+      return false;
+    }
+    unsigned kind = maybeKind.get();
     switch (kind) {
     case objc_selector_block::OBJC_SELECTOR_DATA: {
       // Already saw Objective-C selector table.
@@ -1034,7 +1177,13 @@ bool APINotesReader::Implementation::readObjCSelectorBlock(
       break;
     }
 
-    next = cursor.advance();
+    maybeNext = cursor.advance();
+    if (!maybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeNext.takeError());
+      return false;
+    }
+    next = maybeNext.get();
   }
 
   return false;
@@ -1046,7 +1195,13 @@ bool APINotesReader::Implementation::readGlobalVariableBlock(
   if (cursor.EnterSubBlock(GLOBAL_VARIABLE_BLOCK_ID))
     return true;
 
-  auto next = cursor.advance();
+  llvm::Expected<llvm::BitstreamEntry> maybeNext = cursor.advance();
+  if (!maybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(maybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry next = maybeNext.get();
   while (next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (next.Kind == llvm::BitstreamEntry::Error)
       return true;
@@ -1057,13 +1212,25 @@ bool APINotesReader::Implementation::readGlobalVariableBlock(
       if (cursor.SkipBlock())
         return true;
       
-      next = cursor.advance();
+      maybeNext = cursor.advance();
+      if (!maybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(maybeNext.takeError());
+        return false;
+      }
+      next = maybeNext.get();
       continue;
     }
 
     scratch.clear();
     StringRef blobData;
-    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    llvm::Expected<unsigned> maybeKind = cursor.readRecord(next.ID, scratch, &blobData);
+    if (!maybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeKind.takeError());
+      return false;
+    }
+    unsigned kind = maybeKind.get();
     switch (kind) {
     case global_variable_block::GLOBAL_VARIABLE_DATA: {
       // Already saw global variable table.
@@ -1088,7 +1255,13 @@ bool APINotesReader::Implementation::readGlobalVariableBlock(
       break;
     }
 
-    next = cursor.advance();
+    maybeNext = cursor.advance();
+    if (!maybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeNext.takeError());
+      return false;
+    }
+    next = maybeNext.get();
   }
 
   return false;
@@ -1100,7 +1273,13 @@ bool APINotesReader::Implementation::readGlobalFunctionBlock(
   if (cursor.EnterSubBlock(GLOBAL_FUNCTION_BLOCK_ID))
     return true;
 
-  auto next = cursor.advance();
+  llvm::Expected<llvm::BitstreamEntry> maybeNext = cursor.advance();
+  if (!maybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(maybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry next = maybeNext.get();
   while (next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (next.Kind == llvm::BitstreamEntry::Error)
       return true;
@@ -1111,13 +1290,25 @@ bool APINotesReader::Implementation::readGlobalFunctionBlock(
       if (cursor.SkipBlock())
         return true;
       
-      next = cursor.advance();
+      maybeNext = cursor.advance();
+      if (!maybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(maybeNext.takeError());
+        return false;
+      }
+      next = maybeNext.get();
       continue;
     }
 
     scratch.clear();
     StringRef blobData;
-    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    llvm::Expected<unsigned> maybeKind = cursor.readRecord(next.ID, scratch, &blobData);
+    if (!maybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeKind.takeError());
+      return false;
+    }
+    unsigned kind = maybeKind.get();
     switch (kind) {
     case global_function_block::GLOBAL_FUNCTION_DATA: {
       // Already saw global function table.
@@ -1142,7 +1333,13 @@ bool APINotesReader::Implementation::readGlobalFunctionBlock(
       break;
     }
 
-    next = cursor.advance();
+    maybeNext = cursor.advance();
+    if (!maybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeNext.takeError());
+      return false;
+    }
+    next = maybeNext.get();
   }
 
   return false;
@@ -1154,7 +1351,13 @@ bool APINotesReader::Implementation::readEnumConstantBlock(
   if (cursor.EnterSubBlock(ENUM_CONSTANT_BLOCK_ID))
     return true;
 
-  auto next = cursor.advance();
+  llvm::Expected<llvm::BitstreamEntry> maybeNext = cursor.advance();
+  if (!maybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(maybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry next = maybeNext.get();
   while (next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (next.Kind == llvm::BitstreamEntry::Error)
       return true;
@@ -1165,13 +1368,25 @@ bool APINotesReader::Implementation::readEnumConstantBlock(
       if (cursor.SkipBlock())
         return true;
       
-      next = cursor.advance();
+      maybeNext = cursor.advance();
+      if (!maybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(maybeNext.takeError());
+        return false;
+      }
+      next = maybeNext.get();
       continue;
     }
 
     scratch.clear();
     StringRef blobData;
-    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    llvm::Expected<unsigned> maybeKind = cursor.readRecord(next.ID, scratch, &blobData);
+    if (!maybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeKind.takeError());
+      return false;
+    }
+    unsigned kind = maybeKind.get();
     switch (kind) {
     case enum_constant_block::ENUM_CONSTANT_DATA: {
       // Already saw enumerator table.
@@ -1196,7 +1411,13 @@ bool APINotesReader::Implementation::readEnumConstantBlock(
       break;
     }
 
-    next = cursor.advance();
+    maybeNext = cursor.advance();
+    if (!maybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeNext.takeError());
+      return false;
+    }
+    next = maybeNext.get();
   }
 
   return false;
@@ -1208,7 +1429,13 @@ bool APINotesReader::Implementation::readTagBlock(
   if (cursor.EnterSubBlock(TAG_BLOCK_ID))
     return true;
 
-  auto next = cursor.advance();
+  llvm::Expected<llvm::BitstreamEntry> maybeNext = cursor.advance();
+  if (!maybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(maybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry next = maybeNext.get();
   while (next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (next.Kind == llvm::BitstreamEntry::Error)
       return true;
@@ -1219,13 +1446,25 @@ bool APINotesReader::Implementation::readTagBlock(
       if (cursor.SkipBlock())
         return true;
       
-      next = cursor.advance();
+      maybeNext = cursor.advance();
+      if (!maybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(maybeNext.takeError());
+        return false;
+      }
+      next = maybeNext.get();
       continue;
     }
 
     scratch.clear();
     StringRef blobData;
-    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    llvm::Expected<unsigned> maybeKind = cursor.readRecord(next.ID, scratch, &blobData);
+    if (!maybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeKind.takeError());
+      return false;
+    }
+    unsigned kind = maybeKind.get();
     switch (kind) {
     case tag_block::TAG_DATA: {
       // Already saw tag table.
@@ -1249,7 +1488,13 @@ bool APINotesReader::Implementation::readTagBlock(
       break;
     }
 
-    next = cursor.advance();
+    maybeNext = cursor.advance();
+    if (!maybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeNext.takeError());
+      return false;
+    }
+    next = maybeNext.get();
   }
 
   return false;
@@ -1261,7 +1506,13 @@ bool APINotesReader::Implementation::readTypedefBlock(
   if (cursor.EnterSubBlock(TYPEDEF_BLOCK_ID))
     return true;
 
-  auto next = cursor.advance();
+  llvm::Expected<llvm::BitstreamEntry> maybeNext = cursor.advance();
+  if (!maybeNext) {
+    // FIXME this drops the error on the floor.
+    consumeError(maybeNext.takeError());
+    return false;
+  }
+  llvm::BitstreamEntry next = maybeNext.get();
   while (next.Kind != llvm::BitstreamEntry::EndBlock) {
     if (next.Kind == llvm::BitstreamEntry::Error)
       return true;
@@ -1272,13 +1523,25 @@ bool APINotesReader::Implementation::readTypedefBlock(
       if (cursor.SkipBlock())
         return true;
       
-      next = cursor.advance();
+      maybeNext = cursor.advance();
+      if (!maybeNext) {
+        // FIXME this drops the error on the floor.
+        consumeError(maybeNext.takeError());
+        return false;
+      }
+      next = maybeNext.get();
       continue;
     }
 
     scratch.clear();
     StringRef blobData;
-    unsigned kind = cursor.readRecord(next.ID, scratch, &blobData);
+    llvm::Expected<unsigned> maybeKind = cursor.readRecord(next.ID, scratch, &blobData);
+    if (!maybeKind) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeKind.takeError());
+      return false;
+    }
+    unsigned kind = maybeKind.get();
     switch (kind) {
     case typedef_block::TYPEDEF_DATA: {
       // Already saw typedef table.
@@ -1302,7 +1565,13 @@ bool APINotesReader::Implementation::readTypedefBlock(
       break;
     }
 
-    next = cursor.advance();
+    maybeNext = cursor.advance();
+    if (!maybeNext) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeNext.takeError());
+      return false;
+    }
+    next = maybeNext.get();
   }
 
   return false;
@@ -1324,7 +1593,18 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *inputBuffer,
 
   // Validate signature.
   for (auto byte : API_NOTES_SIGNATURE) {
-    if (cursor.AtEndOfStream() || cursor.Read(8) != byte) {
+    if (cursor.AtEndOfStream()) {
+      failed = true;
+      return;
+    }
+    if (Expected<llvm::SimpleBitstreamCursor::word_t> maybeRead = cursor.Read(8)) {
+      if (maybeRead.get() != byte) {
+        failed = true;
+        return;
+      }
+    } else {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeRead.takeError());
       failed = true;
       return;
     }
@@ -1334,7 +1614,15 @@ APINotesReader::APINotesReader(llvm::MemoryBuffer *inputBuffer,
   bool hasValidControlBlock = false;
   SmallVector<uint64_t, 64> scratch;
   while (!cursor.AtEndOfStream()) {
-    auto topLevelEntry = cursor.advance();
+    llvm::Expected<llvm::BitstreamEntry> maybeTopLevelEntry = cursor.advance();
+    if (!maybeTopLevelEntry) {
+      // FIXME this drops the error on the floor.
+      consumeError(maybeTopLevelEntry.takeError());
+      failed = true;
+      return;
+    }
+    llvm::BitstreamEntry topLevelEntry = maybeTopLevelEntry.get();
+
     if (topLevelEntry.Kind != llvm::BitstreamEntry::SubBlock)
       break;
 
