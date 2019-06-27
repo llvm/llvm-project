@@ -116,6 +116,9 @@ public:
   bool initializeFrameInfo(PerFunctionMIParsingState &PFS,
                            const yaml::MachineFunction &YamlMF);
 
+  bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
+                              const yaml::MachineFunction &YamlMF);
+
   bool parseCalleeSavedRegister(PerFunctionMIParsingState &PFS,
                                 std::vector<CalleeSavedInfo> &CSIInfo,
                                 const yaml::StringValue &RegisterSource,
@@ -337,6 +340,47 @@ void MIRParserImpl::computeFunctionProperties(MachineFunction &MF) {
     Properties.set(MachineFunctionProperties::Property::NoVRegs);
 }
 
+bool MIRParserImpl::initializeCallSiteInfo(
+    PerFunctionMIParsingState &PFS, const yaml::MachineFunction &YamlMF) {
+  MachineFunction &MF = PFS.MF;
+  SMDiagnostic Error;
+  const LLVMTargetMachine &TM = MF.getTarget();
+  for (auto YamlCSInfo : YamlMF.CallSitesInfo) {
+    yaml::CallSiteInfo::MachineInstrLoc MILoc = YamlCSInfo.CallLocation;
+    if (MILoc.BlockNum >= MF.size())
+      return error(Twine(MF.getName()) +
+                   Twine(" call instruction block out of range.") +
+                   " Unable to reference bb:" + Twine(MILoc.BlockNum));
+    auto CallB = std::next(MF.begin(), MILoc.BlockNum);
+    if (MILoc.Offset >= CallB->size())
+      return error(Twine(MF.getName()) +
+                   Twine(" call instruction offset out of range.") +
+                   "Unable to reference instruction at bb: " +
+                   Twine(MILoc.BlockNum) + " at offset:" + Twine(MILoc.Offset));
+    auto CallI = std::next(CallB->begin(), MILoc.Offset);
+    if (!CallI->isCall())
+      return error(Twine(MF.getName()) +
+                   Twine(" call site info should reference call "
+                         "instruction. Instruction at bb:") +
+                   Twine(MILoc.BlockNum) + " at offset:" + Twine(MILoc.Offset) +
+                   " is not a call instruction");
+    MachineFunction::CallSiteInfo CSInfo;
+    for (auto ArgRegPair : YamlCSInfo.ArgForwardingRegs) {
+      unsigned Reg = 0;
+      if (parseNamedRegisterReference(PFS, Reg, ArgRegPair.Reg.Value, Error))
+        return error(Error, ArgRegPair.Reg.SourceRange);
+      CSInfo.emplace_back(Reg, ArgRegPair.ArgNo);
+    }
+
+    if (TM.Options.EnableDebugEntryValues)
+      MF.addCallArgsForwardingRegs(&*CallI, std::move(CSInfo));
+  }
+
+  if (YamlMF.CallSitesInfo.size() && !TM.Options.EnableDebugEntryValues)
+    return error(Twine("Call site info provided but not used"));
+  return false;
+}
+
 bool
 MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
                                          MachineFunction &MF) {
@@ -436,6 +480,9 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   MRI.freezeReservedRegs(MF);
 
   computeFunctionProperties(MF);
+
+  if (initializeCallSiteInfo(PFS, YamlMF))
+    return false;
 
   MF.getSubtarget().mirFileLoaded(MF);
 

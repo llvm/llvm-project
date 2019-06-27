@@ -67,15 +67,14 @@ llvm::Optional<std::string> filePath(const SymbolLocation &Loc,
 }
 
 // Query the index to find some other files where the Decl is referenced.
-llvm::Optional<std::string> getOtherRefFile(const NamedDecl &Decl,
-                                            StringRef MainFile,
+llvm::Optional<std::string> getOtherRefFile(const Decl &D, StringRef MainFile,
                                             const SymbolIndex &Index) {
   RefsRequest Req;
   // We limit the number of results, this is a correctness/performance
   // tradeoff. We expect the number of symbol references in the current file
   // is smaller than the limit.
   Req.Limit = 100;
-  if (auto ID = getSymbolID(&Decl))
+  if (auto ID = getSymbolID(&D))
     Req.IDs.insert(*ID);
   llvm::Optional<std::string> OtherFile;
   Index.refs(Req, [&](const Ref &R) {
@@ -97,16 +96,16 @@ enum ReasonToReject {
 };
 
 // Check the symbol Decl is renameable (per the index) within the file.
-llvm::Optional<ReasonToReject> renamableWithinFile(const NamedDecl &Decl,
+llvm::Optional<ReasonToReject> renamableWithinFile(const Decl &RenameDecl,
                                                    StringRef MainFile,
                                                    const SymbolIndex *Index) {
-  if (llvm::isa<NamespaceDecl>(&Decl))
+  if (llvm::isa<NamespaceDecl>(&RenameDecl))
     return ReasonToReject::UnsupportedSymbol;
-  auto &ASTCtx = Decl.getASTContext();
+  auto &ASTCtx = RenameDecl.getASTContext();
   const auto &SM = ASTCtx.getSourceManager();
   bool MainFileIsHeader = ASTCtx.getLangOpts().IsHeaderFile;
   bool DeclaredInMainFile =
-      SM.isWrittenInMainFile(SM.getExpansionLoc(Decl.getLocation()));
+      SM.isWrittenInMainFile(SM.getExpansionLoc(RenameDecl.getLocation()));
 
   // If the symbol is declared in the main file (which is not a header), we
   // rename it.
@@ -115,18 +114,19 @@ llvm::Optional<ReasonToReject> renamableWithinFile(const NamedDecl &Decl,
 
   // Below are cases where the symbol is declared in the header.
   // If the symbol is function-local, we rename it.
-  if (Decl.getParentFunctionOrMethod())
+  if (RenameDecl.getParentFunctionOrMethod())
     return None;
 
   if (!Index)
     return ReasonToReject::NoIndexProvided;
 
-  bool IsIndexable =
-      SymbolCollector::shouldCollectSymbol(Decl, ASTCtx, {}, false);
+  bool IsIndexable = isa<NamedDecl>(RenameDecl) &&
+                     SymbolCollector::shouldCollectSymbol(
+                         cast<NamedDecl>(RenameDecl), ASTCtx, {}, false);
   // If the symbol is not indexable, we disallow rename.
   if (!IsIndexable)
     return ReasonToReject::NonIndexable;
-  auto OtherFile = getOtherRefFile(Decl, MainFile, *Index);
+  auto OtherFile = getOtherRefFile(RenameDecl, MainFile, *Index);
   // If the symbol is indexable and has no refs from other files in the index,
   // we rename it.
   if (!OtherFile)
@@ -154,7 +154,8 @@ renameWithinFile(ParsedAST &AST, llvm::StringRef File, Position Pos,
 
   const auto *RenameDecl = Rename->getRenameDecl();
   assert(RenameDecl && "symbol must be found at this point");
-  if (auto Reject = renamableWithinFile(*RenameDecl, File, Index)) {
+  if (auto Reject =
+          renamableWithinFile(*RenameDecl->getCanonicalDecl(), File, Index)) {
     auto Message = [](ReasonToReject Reason) {
       switch (Reason) {
       case NoIndexProvided:

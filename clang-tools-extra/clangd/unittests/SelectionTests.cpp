@@ -144,9 +144,9 @@ TEST(SelectionTest, CommonAncestor) {
           R"cpp(
             void foo();
             #define CALL_FUNCTION(X) X()
-            void bar() { CALL_FUNC^TION([[fo^o]]); }
+            void bar() [[{ CALL_FUNC^TION(fo^o); }]]
           )cpp",
-          "DeclRefExpr",
+          "CompoundStmt",
       },
       {
           R"cpp(
@@ -164,6 +164,50 @@ TEST(SelectionTest, CommonAncestor) {
           )cpp",
           nullptr,
       },
+      {
+          R"cpp(
+            struct S { S(const char*); };
+            S [[s ^= "foo"]];
+          )cpp",
+          "CXXConstructExpr",
+      },
+      {
+          R"cpp(
+            struct S { S(const char*); };
+            [[S ^s = "foo"]];
+          )cpp",
+          "VarDecl",
+      },
+      {
+          R"cpp(
+            [[^void]] (*S)(int) = nullptr;
+          )cpp",
+          "TypeLoc",
+      },
+      {
+          R"cpp(
+            [[void (*S)^(int)]] = nullptr;
+          )cpp",
+          "TypeLoc",
+      },
+      {
+          R"cpp(
+            [[void (^*S)(int)]] = nullptr;
+          )cpp",
+          "TypeLoc",
+      },
+      {
+          R"cpp(
+            [[void (*^S)(int) = nullptr]];
+          )cpp",
+          "VarDecl",
+      },
+      {
+          R"cpp(
+            [[void ^(*S)(int)]] = nullptr;
+          )cpp",
+          "TypeLoc",
+      },
 
       // Point selections.
       {"void foo() { [[^foo]](); }", "DeclRefExpr"},
@@ -172,7 +216,20 @@ TEST(SelectionTest, CommonAncestor) {
       {"void foo() { [[foo^()]]; }", "CallExpr"},
       {"void foo() { [[foo^]] (); }", "DeclRefExpr"},
       {"int bar; void foo() [[{ foo (); }]]^", "CompoundStmt"},
+
+      // Tricky case: FunctionTypeLoc in FunctionDecl has a hole in it.
       {"[[^void]] foo();", "TypeLoc"},
+      {"[[void foo^()]];", "TypeLoc"},
+      {"[[^void foo^()]];", "FunctionDecl"},
+      {"[[void ^foo()]];", "FunctionDecl"},
+      // Tricky case: two VarDecls share a specifier.
+      {"[[int ^a]], b;", "VarDecl"},
+      {"[[int a, ^b]];", "VarDecl"},
+      // Tricky case: anonymous struct is a sibling of the VarDecl.
+      {"[[st^ruct {int x;}]] y;", "CXXRecordDecl"},
+      {"[[struct {int x;} ^y]];", "VarDecl"},
+      {"struct {[[int ^x]];} y;", "FieldDecl"},
+
       {"^", nullptr},
       {"void foo() { [[foo^^]] (); }", "DeclRefExpr"},
 

@@ -390,10 +390,11 @@ define <4 x i32> @test_urem_one(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
 ; CHECK-SSE2-NEXT:    movdqa %xmm2, %xmm1
 ; CHECK-SSE2-NEXT:    psrld $2, %xmm1
+; CHECK-SSE2-NEXT:    psrld $3, %xmm2
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[3,0]
 ; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm3
 ; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,0],xmm1[0,0]
-; CHECK-SSE2-NEXT:    psrld $3, %xmm2
-; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[2,0],xmm2[2,3]
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[2,0],xmm2[0,2]
 ; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [6,1,12,14]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm3
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm3[0,2,2,3]

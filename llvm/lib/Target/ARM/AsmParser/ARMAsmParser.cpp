@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "ARMFeatures.h"
+#include "ARMBaseInstrInfo.h"
 #include "Utils/ARMBaseInfo.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
@@ -4167,8 +4168,7 @@ ARMAsmParser::parseCoprocNumOperand(OperandVector &Operands) {
   int Num = MatchCoprocessorOperandName(Tok.getString().lower(), 'p');
   if (Num == -1)
     return MatchOperand_NoMatch;
-  // ARMv7 and v8 don't allow cp10/cp11 due to VFP/NEON specific instructions
-  if ((hasV7Ops() || hasV8Ops()) && (Num == 10 || Num == 11))
+  if (!isValidCoprocessorNumber(Num, getSTI().getFeatureBits()))
     return MatchOperand_NoMatch;
 
   Parser.Lex(); // Eat identifier token.

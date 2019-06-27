@@ -2283,12 +2283,14 @@ bool X86DAGToDAGISel::selectScalarSSELoad(SDNode *Root, SDNode *Parent,
   if (!hasSingleUsesFromRoot(Root, Parent))
     return false;
 
-  // We can allow a full vector load here since narrowing a load is ok.
+  // We can allow a full vector load here since narrowing a load is ok unless
+  // it's volatile.
   if (ISD::isNON_EXTLoad(N.getNode())) {
-    PatternNodeWithChain = N;
-    if (IsProfitableToFold(PatternNodeWithChain, N.getNode(), Root) &&
-        IsLegalToFold(PatternNodeWithChain, Parent, Root, OptLevel)) {
-      LoadSDNode *LD = cast<LoadSDNode>(PatternNodeWithChain);
+    LoadSDNode *LD = cast<LoadSDNode>(N);
+    if (!LD->isVolatile() &&
+        IsProfitableToFold(N, LD, Root) &&
+        IsLegalToFold(N, Parent, Root, OptLevel)) {
+      PatternNodeWithChain = N;
       return selectAddr(LD, LD->getBasePtr(), Base, Scale, Index, Disp,
                         Segment);
     }
@@ -2313,23 +2315,6 @@ bool X86DAGToDAGISel::selectScalarSSELoad(SDNode *Root, SDNode *Parent,
     if (ISD::isNON_EXTLoad(PatternNodeWithChain.getNode()) &&
         IsProfitableToFold(PatternNodeWithChain, N.getNode(), Root) &&
         IsLegalToFold(PatternNodeWithChain, N.getNode(), Root, OptLevel)) {
-      LoadSDNode *LD = cast<LoadSDNode>(PatternNodeWithChain);
-      return selectAddr(LD, LD->getBasePtr(), Base, Scale, Index, Disp,
-                        Segment);
-    }
-  }
-
-  // Also handle the case where we explicitly require zeros in the top
-  // elements.  This is a vector shuffle from the zero vector.
-  if (N.getOpcode() == X86ISD::VZEXT_MOVL && N.getNode()->hasOneUse() &&
-      // Check to see if the top elements are all zeros (or bitcast of zeros).
-      N.getOperand(0).getOpcode() == ISD::SCALAR_TO_VECTOR &&
-      N.getOperand(0).getNode()->hasOneUse()) {
-    PatternNodeWithChain = N.getOperand(0).getOperand(0);
-    if (ISD::isNON_EXTLoad(PatternNodeWithChain.getNode()) &&
-        IsProfitableToFold(PatternNodeWithChain, N.getNode(), Root) &&
-        IsLegalToFold(PatternNodeWithChain, N.getNode(), Root, OptLevel)) {
-      // Okay, this is a zero extending load.  Fold it.
       LoadSDNode *LD = cast<LoadSDNode>(PatternNodeWithChain);
       return selectAddr(LD, LD->getBasePtr(), Base, Scale, Index, Disp,
                         Segment);

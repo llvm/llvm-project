@@ -1,6 +1,8 @@
 llvm-cxxfilt - LLVM symbol name demangler
 =========================================
 
+.. program:: llvm-cxxfilt
+
 SYNOPSIS
 --------
 

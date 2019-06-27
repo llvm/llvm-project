@@ -1,6 +1,8 @@
 tblgen - Target Description To C++ Code Generator
 =================================================
 
+.. program:: tblgen
+
 SYNOPSIS
 --------
 

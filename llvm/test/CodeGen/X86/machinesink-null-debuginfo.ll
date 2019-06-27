@@ -11,9 +11,10 @@ define double @_Z3fooddb(double %x, double %y, i1 zeroext %c) local_unnamed_addr
   tail call void @llvm.dbg.value(metadata double %y, metadata !14, metadata !DIExpression()), !dbg !17
   tail call void @llvm.dbg.value(metadata i1 %c, metadata !15, metadata !DIExpression()), !dbg !18
   %a = fdiv double %x, 3.000000e+00
+; CHECK: fdiv {{.*}} !dbg [[NO:![0-9]+]]
   %b = fdiv double %y, 5.000000e+00, !dbg !19
   %cond = select i1 %c,  double %a, double %b
-; CHECK-NOT: debug-location !19
+; CHECK-NOT: debug-location [[NO]]
   ret double %cond, !dbg !20
 }
 

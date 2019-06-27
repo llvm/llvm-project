@@ -270,6 +270,7 @@ bool X86ExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
 
     MachineInstr &NewMI = *std::prev(MBBI);
     NewMI.copyImplicitOps(*MBBI->getParent()->getParent(), *MBBI);
+    MBB.getParent()->updateCallSiteInfo(&*MBBI, &NewMI);
 
     // Delete the pseudo instruction TCRETURN.
     MBB.erase(MBBI);

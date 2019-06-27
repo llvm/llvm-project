@@ -1,6 +1,8 @@
 FileCheck - Flexible pattern matching file verifier
 ===================================================
 
+.. program:: FileCheck
+
 SYNOPSIS
 --------
 

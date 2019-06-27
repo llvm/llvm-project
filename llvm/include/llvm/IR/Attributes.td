@@ -196,6 +196,9 @@ def SwiftSelf : EnumAttr<"swiftself">;
 /// Function must be in a unwind table.
 def UWTable : EnumAttr<"uwtable">;
 
+/// Function always comes back to callsite.
+def WillReturn : EnumAttr<"willreturn">;
+
 /// Function only writes to memory.
 def WriteOnly : EnumAttr<"writeonly">;
 

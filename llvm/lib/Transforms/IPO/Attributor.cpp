@@ -42,6 +42,7 @@ STATISTIC(NumAttributesValidFixpoint,
           "Number of abstract attributes in a valid fixpoint state");
 STATISTIC(NumAttributesManifested,
           "Number of abstract attributes manifested in IR");
+STATISTIC(NumFnNoUnwind, "Number of functions marked nounwind");
 
 // TODO: Determine a good default value.
 //
@@ -86,10 +87,13 @@ static void bookkeeping(AbstractAttribute::ManifestPosition MP,
 
   if (!Attr.isEnumAttribute())
     return;
-  //switch (Attr.getKindAsEnum()) {
-  //default:
-  //  return;
-  //}
+  switch (Attr.getKindAsEnum()) {
+  case Attribute::NoUnwind:
+    NumFnNoUnwind++;
+    return;
+  default:
+    return;
+  }
 }
 
 /// Helper to identify the correct offset into an attribute list.
@@ -241,6 +245,64 @@ const Function &AbstractAttribute::getAnchorScope() const {
   return const_cast<AbstractAttribute *>(this)->getAnchorScope();
 }
 
+/// -----------------------NoUnwind Function Attribute--------------------------
+
+struct AANoUnwindFunction : AANoUnwind, BooleanState {
+
+  AANoUnwindFunction(Function &F, InformationCache &InfoCache)
+      : AANoUnwind(F, InfoCache) {}
+
+  /// See AbstractAttribute::getState()
+  /// {
+  AbstractState &getState() override { return *this; }
+  const AbstractState &getState() const override { return *this; }
+  /// }
+
+  /// See AbstractAttribute::getManifestPosition().
+  virtual ManifestPosition getManifestPosition() const override {
+    return MP_FUNCTION;
+  }
+
+  virtual const std::string getAsStr() const override {
+    return getAssumed() ? "nounwind" : "may-unwind";
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  virtual ChangeStatus updateImpl(Attributor &A) override;
+
+  /// See AANoUnwind::isAssumedNoUnwind().
+  virtual bool isAssumedNoUnwind() const override { return getAssumed(); }
+
+  /// See AANoUnwind::isKnownNoUnwind().
+  virtual bool isKnownNoUnwind() const override { return getKnown(); }
+};
+
+ChangeStatus AANoUnwindFunction::updateImpl(Attributor &A) {
+  Function &F = getAnchorScope();
+
+  // The map from instruction opcodes to those instructions in the function.
+  auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(F);
+  auto Opcodes = {
+      (unsigned)Instruction::Invoke,      (unsigned)Instruction::CallBr,
+      (unsigned)Instruction::Call,        (unsigned)Instruction::CleanupRet,
+      (unsigned)Instruction::CatchSwitch, (unsigned)Instruction::Resume};
+
+  for (unsigned Opcode : Opcodes) {
+    for (Instruction *I : OpcodeInstMap[Opcode]) {
+      if (!I->mayThrow())
+        continue;
+
+      auto *NoUnwindAA = A.getAAFor<AANoUnwind>(*this, *I);
+
+      if (!NoUnwindAA || !NoUnwindAA->isAssumedNoUnwind()) {
+        indicatePessimisticFixpoint();
+        return ChangeStatus::CHANGED;
+      }
+    }
+  }
+  return ChangeStatus::UNCHANGED;
+}
+
 /// ----------------------------------------------------------------------------
 ///                               Attributor
 /// ----------------------------------------------------------------------------
@@ -254,8 +316,8 @@ ChangeStatus Attributor::run() {
                     << AllAbstractAttributes.size()
                     << " abstract attributes.\n");
 
-  // Now that all abstract attributes are collected and initialized we start the
-  // abstract analysis.
+  // Now that all abstract attributes are collected and initialized we start
+  // the abstract analysis.
 
   unsigned IterationCounter = 1;
 
@@ -383,6 +445,9 @@ void Attributor::identifyDefaultAbstractAttributes(
     Function &F, InformationCache &InfoCache,
     DenseSet</* Attribute::AttrKind */ unsigned> *Whitelist) {
 
+  // Every function can be nounwind.
+  registerAA(*new AANoUnwindFunction(F, InfoCache));
+
   // Walk all instructions to find more attribute opportunities and also
   // interesting instructions that might be queried by abstract attributes
   // during their initialization or update.
@@ -397,10 +462,20 @@ void Attributor::identifyDefaultAbstractAttributes(
     // to concrete attributes we only cache the ones that are as identified in
     // the following switch.
     // Note: There are no concrete attributes now so this is initially empty.
-    //switch (I.getOpcode()) {
-    //default:
-    //  break;
-    //}
+    switch (I.getOpcode()) {
+    default:
+      assert((!ImmutableCallSite(&I)) && (!isa<CallBase>(&I)) &&
+             "New call site/base instruction type needs to be known int the "
+             "attributor.");
+      break;
+    case Instruction::Call:
+    case Instruction::CallBr:
+    case Instruction::Invoke:
+    case Instruction::CleanupRet:
+    case Instruction::CatchSwitch:
+    case Instruction::Resume:
+      IsInterestingOpcode = true;
+    }
     if (IsInterestingOpcode)
       InstOpcodeMap[I.getOpcode()].push_back(&I);
     if (I.mayReadOrWriteMemory())

@@ -1,6 +1,7 @@
 llvm-lib - LLVM lib.exe compatible library tool
 ===============================================
 
+.. program:: llvm-lib
 
 SYNOPSIS
 --------

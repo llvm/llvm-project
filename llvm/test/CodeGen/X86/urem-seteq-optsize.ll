@@ -47,15 +47,10 @@ define i32 @test_minsize(i32 %X) optsize minsize nounwind readnone {
 define i32 @test_optsize(i32 %X) optsize nounwind readnone {
 ; X86-LABEL: test_optsize:
 ; X86:       # %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl $-858993459, %edx # imm = 0xCCCCCCCD
-; X86-NEXT:    movl %ecx, %eax
-; X86-NEXT:    mull %edx
-; X86-NEXT:    shrl $2, %edx
-; X86-NEXT:    leal (%edx,%edx,4), %eax
-; X86-NEXT:    cmpl %eax, %ecx
+; X86-NEXT:    imull $-858993459, {{[0-9]+}}(%esp), %eax # imm = 0xCCCCCCCD
+; X86-NEXT:    cmpl $858993460, %eax # imm = 0x33333334
 ; X86-NEXT:    movl $42, %eax
-; X86-NEXT:    je .LBB1_2
+; X86-NEXT:    jb .LBB1_2
 ; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    movl $-10, %eax
 ; X86-NEXT:  .LBB1_2:
@@ -63,15 +58,11 @@ define i32 @test_optsize(i32 %X) optsize nounwind readnone {
 ;
 ; X64-LABEL: test_optsize:
 ; X64:       # %bb.0:
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    movl $3435973837, %ecx # imm = 0xCCCCCCCD
-; X64-NEXT:    imulq %rax, %rcx
-; X64-NEXT:    shrq $34, %rcx
-; X64-NEXT:    leal (%rcx,%rcx,4), %eax
-; X64-NEXT:    cmpl %eax, %edi
+; X64-NEXT:    imull $-858993459, %edi, %eax # imm = 0xCCCCCCCD
+; X64-NEXT:    cmpl $858993460, %eax # imm = 0x33333334
 ; X64-NEXT:    movl $42, %ecx
 ; X64-NEXT:    movl $-10, %eax
-; X64-NEXT:    cmovel %ecx, %eax
+; X64-NEXT:    cmovbl %ecx, %eax
 ; X64-NEXT:    retq
   %rem = urem i32 %X, 5
   %cmp = icmp eq i32 %rem, 0

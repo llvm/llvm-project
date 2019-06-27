@@ -5565,7 +5565,8 @@ static SDValue Expand64BitShift(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // If we are in thumb mode, we don't have RRX.
-  if (ST->isThumb1Only()) return SDValue();
+  if (ST->isThumb1Only())
+    return SDValue();
 
   // Okay, we have a 64-bit SRA or SRL of 1.  Lower this to an RRX expr.
   SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, N->getOperand(0),

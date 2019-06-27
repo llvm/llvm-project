@@ -2,6 +2,8 @@
 Writing an LLVM Pass
 ====================
 
+.. program:: opt
+
 .. contents::
     :local:
 
@@ -264,7 +266,7 @@ documentation to users of :program:`opt`.  Now that you have a working pass,
 you would go ahead and make it do the cool transformations you want.  Once you
 get it all working and tested, it may become useful to find out how fast your
 pass is.  The :ref:`PassManager <writing-an-llvm-pass-passmanager>` provides a
-nice command line option (:option:`--time-passes`) that allows you to get
+nice command line option (:option:`-time-passes`) that allows you to get
 information about the execution time of your pass along with the other passes
 you queue up.  For example:
 
