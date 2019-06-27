@@ -1704,3 +1704,8 @@ bool Module::GetIsDynamicLinkEditor() {
 
   return false;
 }
+
+void Module::ForEachTypeSystem(
+    std::function<bool(TypeSystem *)> const &callback) {
+  m_type_system_map.ForEach(callback);
+}

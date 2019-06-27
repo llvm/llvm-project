@@ -376,6 +376,7 @@ public:
   }
 
   Status GetFatalErrors();
+  void DiagnoseWarnings(Process &process, Module &module) const override;
 
   const swift::irgen::TypeInfo *GetSwiftTypeInfo(void *type);
 
@@ -824,8 +825,9 @@ protected:
   llvm::once_flag m_ir_gen_module_once;
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
   std::unique_ptr<DWARFASTParser> m_dwarf_ast_parser_ap;
-  /// Any errors that were found while creating or using the AST context.
-  Status m_error;
+  /// A collection of (not necessarily fatal) error messages that
+  /// should be printed by Process::PrintWarningCantLoadSwift().
+  std::vector<std::string> m_module_import_warnings;
   swift::ModuleDecl *m_scratch_module = nullptr;
   std::unique_ptr<swift::SILModule> m_sil_module_ap;
   /// Owned by the AST.

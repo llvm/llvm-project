@@ -919,6 +919,10 @@ public:
     m_type_system_map = type_system_map;
   }
 
+  /// Call \p callback for each \p TypeSystem in this \p Module.
+  /// Return true from callback to keep iterating, false to stop iterating.
+  void ForEachTypeSystem(std::function<bool(TypeSystem *)> const &callback);
+
   //----------------------------------------------------------------------
   /// \class LookupInfo Module.h "lldb/Core/Module.h"
   /// A class that encapsulates name lookup information.
