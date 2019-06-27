@@ -63,7 +63,7 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
            exe_name=self.getBuildArtifact("main"))
 
         # Check the prebuilt cache path in the log output
-        prefix = 'Using prebuilt module cache path: '
+        prefix = 'Using prebuilt Swift module cache path: '
         expected_suffix = os.path.join('macosx', 'prebuilt-modules')
         found = False
         with open(log, "r") as logfile:
