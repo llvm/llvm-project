@@ -241,6 +241,16 @@ enum MyEnum { Zero, One, Two, Three, FortyTwo = 42 };
 
 using Fn = void(*)();
 
+// https://bugs.llvm.org/show_bug.cgi?id=38638
+template <class T>
+constexpr T pr38638(T v)
+{
+  std::optional<T> o;
+  o = v;
+  return *o + 2;
+}
+
+
 int main(int, char**)
 {
     test_sfinae();
@@ -268,6 +278,8 @@ int main(int, char**)
         assert(**opt == 3);
     }
     test_throws();
+
+    static_assert(pr38638(3) == 5, "");
 
   return 0;
 }
