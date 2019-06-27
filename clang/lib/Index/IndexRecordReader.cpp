@@ -91,9 +91,22 @@ struct IndexRecordReader::Implementation {
   void readDecl(unsigned Index, IndexRecordDecl &RecD) {
     RecordData Record;
     StringRef Blob;
-    DeclCursor.JumpToBit(DeclOffsets[Index]);
-    unsigned Code = DeclCursor.ReadCode();
-    unsigned RecID = DeclCursor.readRecord(Code, Record, &Blob);
+    if (llvm::Error Err = DeclCursor.JumpToBit(DeclOffsets[Index])) {
+      // FIXME this drops the error on the floor.
+      consumeError(std::move(Err));
+    }
+    Expected<unsigned> MaybeCode = DeclCursor.ReadCode();
+    if (!MaybeCode) {
+      // FIXME this drops the error on the floor.
+      consumeError(MaybeCode.takeError());
+    }
+    unsigned Code = MaybeCode.get();
+    Expected<unsigned> MaybeRecID = DeclCursor.readRecord(Code, Record, &Blob);
+    if (!MaybeRecID) {
+      // FIXME this drops the error on the floor.
+      consumeError(MaybeRecID.takeError());
+    }
+    unsigned RecID = MaybeRecID.get();
     assert(RecID == REC_DECLINFO);
     (void)RecID;
 
@@ -273,7 +286,10 @@ public:
         *Error = "malformed block record";
         return StreamVisit::Abort;
       }
-      readBlockAbbrevs(Reader.DeclCursor);
+      if (llvm::Error Err = readBlockAbbrevs(Reader.DeclCursor)) {
+        *Error = toString(std::move(Err));
+        return StreamVisit::Abort;
+      }
       return StreamVisit::Skip;
 
     case REC_DECLOCCURRENCES_BLOCK_ID:
@@ -282,7 +298,10 @@ public:
         *Error = "malformed block record";
         return StreamVisit::Abort;
       }
-      readBlockAbbrevs(Reader.OccurCursor);
+      if (llvm::Error Err = readBlockAbbrevs(Reader.OccurCursor)) {
+        *Error = toString(std::move(Err));
+        return StreamVisit::Abort;
+      }
       return StreamVisit::Skip;
     }
 
@@ -358,10 +377,14 @@ IndexRecordReader::createWithBuffer(std::unique_ptr<llvm::MemoryBuffer> Buffer,
   }
 
   // Sniff for the signature.
-  if (Stream.Read(8) != 'I' ||
-      Stream.Read(8) != 'D' ||
-      Stream.Read(8) != 'X' ||
-      Stream.Read(8) != 'R') {
+  for (unsigned char C : {'I', 'D', 'X', 'R'}) {
+    if (Expected<llvm::SimpleBitstreamCursor::word_t> Res = Stream.Read(8)) {
+      if (Res.get() == C)
+        continue;
+    } else {
+      Error = toString(Res.takeError());
+      return nullptr;
+    }
     Error = "not a serialized index record file";
     return nullptr;
   }

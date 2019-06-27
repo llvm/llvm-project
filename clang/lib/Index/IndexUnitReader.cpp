@@ -123,7 +123,10 @@ public:
         *Error = "malformed unit dependencies block record";
         return StreamVisit::Abort;
       }
-      readBlockAbbrevs(Reader.DependCursor);
+      if (llvm::Error Err = readBlockAbbrevs(Reader.DependCursor)) {
+        *Error = toString(std::move(Err));
+        return StreamVisit::Abort;
+      }
       return StreamVisit::Skip;
     case UNIT_INCLUDES_BLOCK_ID:
       Reader.IncludeCursor = Stream;
@@ -131,7 +134,10 @@ public:
         *Error = "malformed unit includes block record";
         return StreamVisit::Abort;
       }
-      readBlockAbbrevs(Reader.IncludeCursor);
+      if (llvm::Error Err = readBlockAbbrevs(Reader.IncludeCursor)) {
+        *Error = toString(std::move(Err));
+        return StreamVisit::Abort;
+      }
       return StreamVisit::Skip;
     }
 
@@ -276,10 +282,14 @@ bool IndexUnitReaderImpl::init(std::unique_ptr<MemoryBuffer> Buf,
   }
 
   // Sniff for the signature.
-  if (Stream.Read(8) != 'I' ||
-      Stream.Read(8) != 'D' ||
-      Stream.Read(8) != 'X' ||
-      Stream.Read(8) != 'U') {
+  for (unsigned char C : {'I', 'D', 'X', 'U'}) {
+    if (Expected<llvm::SimpleBitstreamCursor::word_t> Res = Stream.Read(8)) {
+      if (Res.get() == C)
+        continue;
+    } else {
+      Error = toString(Res.takeError());
+      return true;
+    }
     Error = "not a serialized index unit file";
     return true;
   }

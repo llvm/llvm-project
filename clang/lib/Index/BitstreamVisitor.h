@@ -26,7 +26,9 @@ struct SavedStreamPosition {
     : Cursor(Cursor), Offset(Cursor.GetCurrentBitNo()) { }
 
   ~SavedStreamPosition() {
-    Cursor.JumpToBit(Offset);
+    if (llvm::Error Err = Cursor.JumpToBit(Offset))
+      llvm::report_fatal_error("SavedStreamPosition failed jumping: " +
+                               toString(std::move(Err)));
   }
 
 private:
@@ -62,7 +64,12 @@ public:
 
     ASTReader::RecordData Record;
     while (1) {
-      llvm::BitstreamEntry Entry = Stream.advance(llvm::BitstreamCursor::AF_DontPopBlockAtEnd);
+      Expected<llvm::BitstreamEntry> MaybeEntry = Stream.advance(llvm::BitstreamCursor::AF_DontPopBlockAtEnd);
+      if (!MaybeEntry) {
+        Error = toString(MaybeEntry.takeError());
+        return false;
+      }
+      llvm::BitstreamEntry Entry = MaybeEntry.get();
 
       switch (Entry.Kind) {
       case llvm::BitstreamEntry::Error:
@@ -83,7 +90,12 @@ public:
 
       case llvm::BitstreamEntry::SubBlock: {
         if (Entry.ID == llvm::bitc::BLOCKINFO_BLOCK_ID) {
-          BlockInfo = Stream.ReadBlockInfoBlock();
+          Expected<Optional<llvm::BitstreamBlockInfo>> MaybeBlockInfo = Stream.ReadBlockInfoBlock();
+          if (!MaybeBlockInfo) {
+            Error = toString(MaybeBlockInfo.takeError());
+            return false;
+          }
+          BlockInfo = MaybeBlockInfo.get();
           if (!BlockInfo) {
             Error = "malformed BlockInfoBlock";
             return false;
@@ -99,7 +111,10 @@ public:
             Error = "malformed block record";
             return false;
           }
-          readBlockAbbrevs(Stream);
+          if (llvm::Error Err = readBlockAbbrevs(Stream)) {
+            Error = toString(std::move(Err));
+            return false;
+          }
           BlockStack.push_back(Entry.ID);
           break;
 
@@ -121,7 +136,12 @@ public:
       case llvm::BitstreamEntry::Record: {
         Record.clear();
         StringRef Blob;
-        unsigned RecID = Stream.readRecord(Entry.ID, Record, &Blob);
+        Expected<unsigned> MaybeRecID = Stream.readRecord(Entry.ID, Record, &Blob);
+        if (!MaybeRecID) {
+          Error = toString(MaybeRecID.takeError());
+          return false;
+        }
+        unsigned RecID = MaybeRecID.get();
         unsigned BlockID = BlockStack.empty() ? 0 : BlockStack.back();
         StreamVisit Ret = static_cast<ImplClass*>(this)->visitRecord(BlockID, RecID, Record, Blob);
         switch (Ret) {
@@ -129,7 +149,10 @@ public:
           break;
 
         case StreamVisit::Skip: 
-          Stream.skipRecord(Entry.ID);
+          if (Expected<unsigned> Skipped = Stream.skipRecord(Entry.ID)) {
+            Error = toString(Skipped.takeError());
+            return false;
+          }
           break;
 
         case StreamVisit::Abort:
@@ -141,17 +164,22 @@ public:
     }
   }
 
-  static void readBlockAbbrevs(llvm::BitstreamCursor &Cursor) {
+  static llvm::Error readBlockAbbrevs(llvm::BitstreamCursor &Cursor) {
     while (true) {
       uint64_t Offset = Cursor.GetCurrentBitNo();
-      unsigned Code = Cursor.ReadCode();
+      Expected<unsigned> MaybeCode = Cursor.ReadCode();
+      if (!MaybeCode)
+        return MaybeCode.takeError();
+      unsigned Code = MaybeCode.get();
 
       // We expect all abbrevs to be at the start of the block.
       if (Code != llvm::bitc::DEFINE_ABBREV) {
-        Cursor.JumpToBit(Offset);
-        return;
+        if (llvm::Error Err = Cursor.JumpToBit(Offset))
+          return Err;
+        return llvm::Error::success();
       }
-      Cursor.ReadAbbrevRecord();
+      if (llvm::Error Err = Cursor.ReadAbbrevRecord())
+        return Err;
     }
   }
 };
