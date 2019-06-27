@@ -1,6 +1,8 @@
 llvm-objdump - LLVM's object file dumper
 ========================================
 
+.. program:: llvm-objdump
+
 SYNOPSIS
 --------
 

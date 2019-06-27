@@ -642,6 +642,23 @@ Pass *createAttributorLegacyPass();
 ///                       Abstract Attribute Classes
 /// ----------------------------------------------------------------------------
 
+struct AANoUnwind : public AbstractAttribute {
+    /// An abstract interface for all nosync attributes.
+    AANoUnwind(Value &V, InformationCache &InfoCache)
+        : AbstractAttribute(V, InfoCache) {}
+
+    /// See AbstractAttribute::getAttrKind()/
+    virtual Attribute::AttrKind getAttrKind() const override { return ID; }
+
+    static constexpr Attribute::AttrKind ID = Attribute::NoUnwind;
+
+    /// Returns true if nounwind is assumed.
+    virtual bool isAssumedNoUnwind() const = 0;
+
+    /// Returns true if nounwind is known.
+    virtual bool isKnownNoUnwind() const = 0;
+};
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H

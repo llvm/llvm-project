@@ -1,6 +1,8 @@
 llvm-readobj - LLVM Object Reader
 =================================
 
+.. program:: llvm-readobj
+
 SYNOPSIS
 --------
 

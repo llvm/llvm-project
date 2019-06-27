@@ -52,6 +52,7 @@ class ByteStreamer;
 class DebugLocEntry;
 class DIE;
 class DwarfCompileUnit;
+class DwarfExpression;
 class DwarfTypeUnit;
 class DwarfUnit;
 class LexicalScope;
@@ -735,6 +736,10 @@ public:
 
   void addSectionLabel(const MCSymbol *Sym);
   const MCSymbol *getSectionLabel(const MCSection *S);
+
+  static void emitDebugLocValue(const AsmPrinter &AP, const DIBasicType *BT,
+                                const DbgValueLoc &Value,
+                                DwarfExpression &DwarfExpr);
 };
 
 } // end namespace llvm

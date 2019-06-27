@@ -2393,8 +2393,7 @@ define <4 x i32> @non_splat_minus_one_divisor_2(<4 x i32> %A) {
 ;
 ; AVX2ORLATER-LABEL: non_splat_minus_one_divisor_2:
 ; AVX2ORLATER:       # %bb.0:
-; AVX2ORLATER-NEXT:    vpsrad $31, %xmm0, %xmm1
-; AVX2ORLATER-NEXT:    vpsrlvd {{.*}}(%rip), %xmm1, %xmm1
+; AVX2ORLATER-NEXT:    vpsrlvd {{.*}}(%rip), %xmm0, %xmm1
 ; AVX2ORLATER-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
 ; AVX2ORLATER-NEXT:    vpsravd {{.*}}(%rip), %xmm1, %xmm1
 ; AVX2ORLATER-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
@@ -2405,8 +2404,7 @@ define <4 x i32> @non_splat_minus_one_divisor_2(<4 x i32> %A) {
 ;
 ; XOP-LABEL: non_splat_minus_one_divisor_2:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vpsrad $31, %xmm0, %xmm1
-; XOP-NEXT:    vpshld {{.*}}(%rip), %xmm1, %xmm1
+; XOP-NEXT:    vpshld {{.*}}(%rip), %xmm0, %xmm1
 ; XOP-NEXT:    vpaddd %xmm1, %xmm0, %xmm1
 ; XOP-NEXT:    vpshad {{.*}}(%rip), %xmm1, %xmm1
 ; XOP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3],xmm1[4,5,6,7]

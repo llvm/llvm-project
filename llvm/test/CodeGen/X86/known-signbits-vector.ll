@@ -81,10 +81,7 @@ define float @signbits_ashr_extract_sitofp_1(<2 x i64> %a0) nounwind {
 ; X32-LABEL: signbits_ashr_extract_sitofp_1:
 ; X32:       # %bb.0:
 ; X32-NEXT:    pushl %eax
-; X32-NEXT:    vpsrlq $32, %xmm0, %xmm0
-; X32-NEXT:    vmovdqa {{.*#+}} xmm1 = [2147483648,0,1,0]
-; X32-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; X32-NEXT:    vpsubq %xmm1, %xmm0, %xmm0
+; X32-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[1,1,2,3]
 ; X32-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; X32-NEXT:    vmovss %xmm0, (%esp)
 ; X32-NEXT:    flds (%esp)

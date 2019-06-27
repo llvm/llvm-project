@@ -1,6 +1,8 @@
 llvm-cov - emit coverage information
 ====================================
 
+.. program:: llvm-cov
+
 SYNOPSIS
 --------
 

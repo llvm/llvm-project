@@ -66,6 +66,7 @@ public:
   const ConstantInt *getConstantInt() const { return Constant.CIP; }
   MachineLocation getLoc() const { return Loc; }
   bool isFragment() const { return getExpression()->isFragment(); }
+  bool isEntryVal() const { return getExpression()->isEntryValue(); }
   const DIExpression *getExpression() const { return Expression; }
   friend bool operator==(const DbgValueLoc &, const DbgValueLoc &);
   friend bool operator<(const DbgValueLoc &, const DbgValueLoc &);

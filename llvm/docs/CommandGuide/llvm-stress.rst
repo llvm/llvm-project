@@ -1,6 +1,8 @@
 llvm-stress - generate random .ll files
 =======================================
 
+.. program:: llvm-stress
+
 SYNOPSIS
 --------
 

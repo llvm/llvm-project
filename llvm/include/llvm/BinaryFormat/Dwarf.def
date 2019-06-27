@@ -633,6 +633,8 @@ HANDLE_DW_OP(0xa9, reinterpret, 5, DWARF)
 // Vendor extensions:
 // Extensions for GNU-style thread-local storage.
 HANDLE_DW_OP(0xe0, GNU_push_tls_address, 0, GNU)
+// The GNU entry value extension.
+HANDLE_DW_OP(0xf3, GNU_entry_value, 0, GNU)
 // Extensions for Fission proposal.
 HANDLE_DW_OP(0xfb, GNU_addr_index, 0, GNU)
 HANDLE_DW_OP(0xfc, GNU_const_index, 0, GNU)

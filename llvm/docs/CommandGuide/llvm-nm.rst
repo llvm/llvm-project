@@ -1,6 +1,8 @@
 llvm-nm - list LLVM bitcode and object file's symbol table
 ==========================================================
 
+.. program:: llvm-nm
+
 SYNOPSIS
 --------
 

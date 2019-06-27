@@ -137,8 +137,14 @@ TargetInstrInfo::ReplaceTailWithBranchTo(MachineBasicBlock::iterator Tail,
   // Save off the debug loc before erasing the instruction.
   DebugLoc DL = Tail->getDebugLoc();
 
-  // Remove all the dead instructions from the end of MBB.
-  MBB->erase(Tail, MBB->end());
+  // Update call site info and remove all the dead instructions
+  // from the end of MBB.
+  while (Tail != MBB->end()) {
+    auto MI = Tail++;
+    if (MI->isCall())
+      MBB->getParent()->updateCallSiteInfo(&*MI);
+    MBB->erase(MI);
+  }
 
   // If MBB isn't immediately before MBB, insert a branch to it.
   if (++MachineFunction::iterator(MBB) != MachineFunction::iterator(NewDest))

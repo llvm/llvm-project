@@ -1,6 +1,8 @@
 llvm-symbolizer - convert addresses into source code locations
 ==============================================================
 
+.. program:: llvm-symbolizer
+
 SYNOPSIS
 --------
 

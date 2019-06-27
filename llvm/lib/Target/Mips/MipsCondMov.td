@@ -109,11 +109,11 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
   let isCodeGenOnly = 1 in {
     def MOVZ_I_I64   : CMov_I_I_FT<"movz", GPR32Opnd, GPR64Opnd, II_MOVZ>,
-                       ADD_FM<0, 0xa>, INSN_MIPS4_32_NOT_32R6_64R6;
+                       ADD_FM<0, 0xa>, INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
     def MOVZ_I64_I   : CMov_I_I_FT<"movz", GPR64Opnd, GPR32Opnd, II_MOVZ>,
-                       ADD_FM<0, 0xa>, INSN_MIPS4_32_NOT_32R6_64R6;
+                       ADD_FM<0, 0xa>, INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
     def MOVZ_I64_I64 : CMov_I_I_FT<"movz", GPR64Opnd, GPR64Opnd, II_MOVZ>,
-                       ADD_FM<0, 0xa>, INSN_MIPS4_32_NOT_32R6_64R6;
+                       ADD_FM<0, 0xa>, INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
   }
 
   def MOVN_I_I       : MMRel, CMov_I_I_FT<"movn", GPR32Opnd, GPR32Opnd, II_MOVN>,
@@ -121,11 +121,11 @@ let AdditionalPredicates = [NotInMicroMips] in {
 
   let isCodeGenOnly = 1 in {
     def MOVN_I_I64   : CMov_I_I_FT<"movn", GPR32Opnd, GPR64Opnd, II_MOVN>,
-                       ADD_FM<0, 0xb>, INSN_MIPS4_32_NOT_32R6_64R6;
+                       ADD_FM<0, 0xb>, INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
     def MOVN_I64_I   : CMov_I_I_FT<"movn", GPR64Opnd, GPR32Opnd, II_MOVN>,
-                       ADD_FM<0, 0xb>, INSN_MIPS4_32_NOT_32R6_64R6;
+                       ADD_FM<0, 0xb>, INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
     def MOVN_I64_I64 : CMov_I_I_FT<"movn", GPR64Opnd, GPR64Opnd, II_MOVN>,
-                       ADD_FM<0, 0xb>, INSN_MIPS4_32_NOT_32R6_64R6;
+                       ADD_FM<0, 0xb>, INSN_MIPS4_32_NOT_32R6_64R6, GPR_64;
   }
   def MOVZ_I_S : MMRel, CMov_I_F_FT<"movz.s", GPR32Opnd, FGR32Opnd, II_MOVZ_S>,
                  CMov_I_F_FM<18, 16>, INSN_MIPS4_32_NOT_32R6_64R6;
@@ -155,9 +155,11 @@ let AdditionalPredicates = [NotInMicroMips] in {
                      CMov_I_F_FM<19, 17>, INSN_MIPS4_32_NOT_32R6_64R6, FGR_64;
     let isCodeGenOnly = 1 in {
       def MOVZ_I64_D64 : CMov_I_F_FT<"movz.d", GPR64Opnd, FGR64Opnd, II_MOVZ_D>,
-                         CMov_I_F_FM<18, 17>, INSN_MIPS4_32_NOT_32R6_64R6, FGR_64;
+                         CMov_I_F_FM<18, 17>,
+                         INSN_MIPS4_32_NOT_32R6_64R6, GPR_64, FGR_64;
       def MOVN_I64_D64 : CMov_I_F_FT<"movn.d", GPR64Opnd, FGR64Opnd, II_MOVN_D>,
-                         CMov_I_F_FM<19, 17>, INSN_MIPS4_32_NOT_32R6_64R6, FGR_64;
+                         CMov_I_F_FM<19, 17>,
+                         INSN_MIPS4_32_NOT_32R6_64R6, GPR_64, FGR_64;
     }
   }
 
@@ -261,7 +263,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
 }
 // For targets that don't have conditional-move instructions
 // we have to match SELECT nodes with pseudo instructions.
-let usesCustomInserter = 1 in {
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
   class Select_Pseudo<RegisterOperand RC> :
     PseudoSE<(outs RC:$dst), (ins GPR32Opnd:$cond, RC:$T, RC:$F),
             [(set RC:$dst, (select GPR32Opnd:$cond, RC:$T, RC:$F))]>,
@@ -296,7 +298,7 @@ def PseudoSELECTFP_F_S : SelectFP_Pseudo_F<FGR32Opnd>;
 def PseudoSELECTFP_F_D32 : SelectFP_Pseudo_F<AFGR64Opnd>, FGR_32;
 def PseudoSELECTFP_F_D64 : SelectFP_Pseudo_F<FGR64Opnd>, FGR_64;
 
-let usesCustomInserter = 1 in {
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
 class D_SELECT_CLASS<RegisterOperand RC> :
   PseudoSE<(outs RC:$dst1, RC:$dst2),
            (ins GPR32Opnd:$cond, RC:$a1, RC:$a2, RC:$b1, RC:$b2), []>,
