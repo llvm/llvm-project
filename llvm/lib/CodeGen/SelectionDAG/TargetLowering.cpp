@@ -2232,6 +2232,24 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownUndef = getKnownUndefForVectorBinop(Op, TLO.DAG, UndefLHS, UndefRHS);
     break;
   }
+  case ISD::SHL:
+  case ISD::SRL:
+  case ISD::SRA:
+  case ISD::ROTL:
+  case ISD::ROTR: {
+    APInt UndefRHS, ZeroRHS;
+    if (SimplifyDemandedVectorElts(Op.getOperand(1), DemandedElts, UndefRHS,
+                                   ZeroRHS, TLO, Depth + 1))
+      return true;
+    APInt UndefLHS, ZeroLHS;
+    if (SimplifyDemandedVectorElts(Op.getOperand(0), DemandedElts, UndefLHS,
+                                   ZeroLHS, TLO, Depth + 1))
+      return true;
+
+    KnownZero = ZeroLHS;
+    KnownUndef = UndefLHS & UndefRHS; // TODO: use getKnownUndefForVectorBinop?
+    break;
+  }
   case ISD::MUL:
   case ISD::AND: {
     APInt SrcUndef, SrcZero;

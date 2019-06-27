@@ -374,8 +374,6 @@ def CRBITRC : RegisterClass<"PPC", [i1], 32,
 def CRRC : RegisterClass<"PPC", [i32], 32, (add CR0, CR1, CR5, CR6,
                                                 CR7, CR2, CR3, CR4)>;
 
-def CRRC0 : RegisterClass<"PPC", [i32], 32, (add CR0)>;
-
 // The CTR registers are not allocatable because they're used by the
 // decrement-and-branch instructions, and thus need to stay live across
 // multiple basic blocks.

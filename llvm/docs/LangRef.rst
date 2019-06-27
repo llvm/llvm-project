@@ -675,9 +675,6 @@ an optional list of attached :ref:`metadata <metadata>`.
 Variables and aliases can have a
 :ref:`Thread Local Storage Model <tls_model>`.
 
-:ref:`Scalable vectors <t_vector>` cannot be global variables or members of
-structs or arrays because their size is unknown at compile time.
-
 Syntax::
 
       @<GlobalVarName> = [Linkage] [PreemptionSpecifier] [Visibility]
@@ -2738,40 +2735,30 @@ Vector Type
 A vector type is a simple derived type that represents a vector of
 elements. Vector types are used when multiple primitive data are
 operated in parallel using a single instruction (SIMD). A vector type
-requires a size (number of elements), an underlying primitive data type,
-and a scalable property to represent vectors where the exact hardware
-vector length is unknown at compile time. Vector types are considered
-:ref:`first class <t_firstclass>`.
+requires a size (number of elements) and an underlying primitive data
+type. Vector types are considered :ref:`first class <t_firstclass>`.
 
 :Syntax:
 
 ::
 
-      < <# elements> x <elementtype> >          ; Fixed-length vector
-      < vscale x <# elements> x <elementtype> > ; Scalable vector
+      < <# elements> x <elementtype> >
 
 The number of elements is a constant integer value larger than 0;
 elementtype may be any integer, floating-point or pointer type. Vectors
-of size zero are not allowed. For scalable vectors, the total number of
-elements is a constant multiple (called vscale) of the specified number
-of elements; vscale is a positive integer that is unknown at compile time
-and the same hardware-dependent constant for all scalable vectors at run
-time. The size of a specific scalable vector type is thus constant within
-IR, even if the exact size in bytes cannot be determined until run time.
+of size zero are not allowed.
 
 :Examples:
 
-+------------------------+----------------------------------------------------+
-| ``<4 x i32>``          | Vector of 4 32-bit integer values.                 |
-+------------------------+----------------------------------------------------+
-| ``<8 x float>``        | Vector of 8 32-bit floating-point values.          |
-+------------------------+----------------------------------------------------+
-| ``<2 x i64>``          | Vector of 2 64-bit integer values.                 |
-+------------------------+----------------------------------------------------+
-| ``<4 x i64*>``         | Vector of 4 pointers to 64-bit integer values.     |
-+------------------------+----------------------------------------------------+
-| ``<vscale x 4 x i32>`` | Vector with a multiple of 4 32-bit integer values. |
-+------------------------+----------------------------------------------------+
++-------------------+--------------------------------------------------+
+| ``<4 x i32>``     | Vector of 4 32-bit integer values.               |
++-------------------+--------------------------------------------------+
+| ``<8 x float>``   | Vector of 8 32-bit floating-point values.        |
++-------------------+--------------------------------------------------+
+| ``<2 x i64>``     | Vector of 2 64-bit integer values.               |
++-------------------+--------------------------------------------------+
+| ``<4 x i64*>``    | Vector of 4 pointers to 64-bit integer values.   |
++-------------------+--------------------------------------------------+
 
 .. _t_label:
 
@@ -8194,7 +8181,6 @@ Syntax:
 ::
 
       <result> = extractelement <n x <ty>> <val>, <ty2> <idx>  ; yields <ty>
-      <result> = extractelement <vscale x n x <ty>> <val>, <ty2> <idx> ; yields <ty>
 
 Overview:
 """""""""
@@ -8215,9 +8201,7 @@ Semantics:
 
 The result is a scalar of the same type as the element type of ``val``.
 Its value is the value at position ``idx`` of ``val``. If ``idx``
-exceeds the length of ``val`` for a fixed-length vector, the result is a
-:ref:`poison value <poisonvalues>`. For a scalable vector, if the value
-of ``idx`` exceeds the runtime length of the vector, the result is a
+exceeds the length of ``val``, the result is a
 :ref:`poison value <poisonvalues>`.
 
 Example:
@@ -8238,7 +8222,6 @@ Syntax:
 ::
 
       <result> = insertelement <n x <ty>> <val>, <ty> <elt>, <ty2> <idx>    ; yields <n x <ty>>
-      <result> = insertelement <vscale x n x <ty>> <val>, <ty> <elt>, <ty2> <idx> ; yields <vscale x n x <ty>>
 
 Overview:
 """""""""
@@ -8260,9 +8243,7 @@ Semantics:
 
 The result is a vector of the same type as ``val``. Its element values
 are those of ``val`` except at position ``idx``, where it gets the value
-``elt``. If ``idx`` exceeds the length of ``val`` for a fixed-length vector,
-the result is a :ref:`poison value <poisonvalues>`. For a scalable vector,
-if the value of ``idx`` exceeds the runtime length of the vector, the result
+``elt``. If ``idx`` exceeds the length of ``val``, the result
 is a :ref:`poison value <poisonvalues>`.
 
 Example:
@@ -8283,7 +8264,6 @@ Syntax:
 ::
 
       <result> = shufflevector <n x <ty>> <v1>, <n x <ty>> <v2>, <m x i32> <mask>    ; yields <m x <ty>>
-      <result> = shufflevector <vscale x n x <ty>> <v1>, <vscale x n x <ty>> v2, <vscale x m x i32> <mask>  ; yields <vscale x m x <ty>>
 
 Overview:
 """""""""
@@ -8314,10 +8294,6 @@ result element gets. If the shuffle mask is undef, the result vector is
 undef. If any element of the mask operand is undef, that element of the
 result is undef. If the shuffle mask selects an undef element from one
 of the input vectors, the resulting element is undef.
-
-For scalable vectors, the only valid mask values at present are
-``zeroinitializer`` and ``undef``, since we cannot write all indices as
-literals for a vector with a length unknown at compile time.
 
 Example:
 """"""""
