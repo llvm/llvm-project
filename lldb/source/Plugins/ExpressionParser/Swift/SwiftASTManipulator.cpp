@@ -1260,7 +1260,7 @@ static void AppendToCaptures(swift::ASTContext &ast_context,
   llvm::SmallVector<swift::CapturedValue, 2> captures(old_captures.begin(),
                                                       old_captures.end());
 
-  captures.push_back(swift::CapturedValue(capture_decl, 0));
+  captures.push_back(swift::CapturedValue(capture_decl, 0, swift::SourceLoc()));
 
   func_decl->getCaptureInfo().setCaptures(ast_context.AllocateCopy(captures));
 }
