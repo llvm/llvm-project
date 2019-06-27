@@ -440,7 +440,11 @@ void __kmpc_fork_teams(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
   KA_TRACE(100, ("__kmpc_fork_teams: Thread %p popping node %p and moving up"
                  " to node %p. cg_nthreads was %d\n",
                  this_thr, tmp, this_thr->th.th_cg_roots, tmp->cg_nthreads));
-  __kmp_free(tmp);
+  KMP_DEBUG_ASSERT(tmp->cg_nthreads);
+  int i = tmp->cg_nthreads--;
+  if (i == 1) { // check is we are the last thread in CG (not always the case)
+    __kmp_free(tmp);
+  }
   // Restore current task's thread_limit from CG root
   KMP_DEBUG_ASSERT(this_thr->th.th_cg_roots);
   this_thr->th.th_current_task->td_icvs.thread_limit =
