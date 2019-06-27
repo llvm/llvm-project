@@ -4597,10 +4597,12 @@ DISubprogram
 """"""""""""
 
 ``DISubprogram`` nodes represent functions from the source language. A
-``DISubprogram`` may be attached to a function definition using ``!dbg``
-metadata. The ``variables:`` field points at :ref:`variables <DILocalVariable>`
-that must be retained, even if their IR counterparts are optimized out of
-the IR. The ``type:`` field must point at an :ref:`DISubroutineType`.
+distinct ``DISubprogram`` may be attached to a function definition using
+``!dbg`` metadata. A unique ``DISubprogram`` may be attached to a function
+declaration used for call site debug info. The ``variables:`` field points at
+:ref:`variables <DILocalVariable>` that must be retained, even if their IR
+counterparts are optimized out of the IR. The ``type:`` field must point at an
+:ref:`DISubroutineType`.
 
 .. _DISubprogramDeclaration:
 

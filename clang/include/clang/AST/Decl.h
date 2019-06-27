@@ -2396,6 +2396,8 @@ public:
 
   bool doesDeclarationForceExternallyVisibleDefinition() const;
 
+  bool isStatic() const { return getStorageClass() == SC_Static; }
+
   /// Whether this function declaration represents an C++ overloaded
   /// operator, e.g., "operator+".
   bool isOverloadedOperator() const {

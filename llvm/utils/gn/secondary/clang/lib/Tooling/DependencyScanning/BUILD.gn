@@ -11,6 +11,7 @@ static_library("DependencyScanning") {
     "//clang/lib/Parse",
     "//clang/lib/Serialization",
     "//clang/lib/Tooling",
+    "//llvm/lib/IR",
     "//llvm/lib/Support",
   ]
   sources = [
