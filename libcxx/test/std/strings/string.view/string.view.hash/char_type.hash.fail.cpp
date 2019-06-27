@@ -10,9 +10,10 @@
 
 // <string>
 
-// Test that hash specializations for <string> require "char_traits<_CharT>" not just any "_Trait".
+// Test that hash specializations for <string_view> require "char_traits<_CharT>" not just any "_Trait".
 
-#include <string>
+#include <string_view>
+#include <string> // for 'mbstate_t'
 
 template <class _CharT>
 struct trait // copied from <__string>
@@ -51,9 +52,9 @@ struct trait // copied from <__string>
 
 template <class CharT>
 void test() {
-    typedef std::basic_string<CharT, trait<CharT> > str_t;
-    std::hash<str_t>
-        h; // expected-error-re 4 {{call to implicitly-deleted default constructor of 'std::hash<str_t>' {{.+}}}}}
+    typedef std::basic_string_view<CharT, trait<CharT> > strv_t;
+    std::hash<strv_t>
+        h; // expected-error-re 4 {{call to implicitly-deleted default constructor of 'std::hash<strv_t>' {{.+}}}}}}
 }
 
 int main(int, char**) {
