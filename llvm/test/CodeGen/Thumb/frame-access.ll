@@ -124,7 +124,7 @@ entry:
 ; CHECK-NEXT:  lsls r4, r4, #4
 ; CHECK-NEXT:  mov  sp, r4
 ; Incoming register varargs stored via FP
-; CHECK: mov	r0, r7
+; CHECK:      mov r0, r7
 ; CHECK-NEXT: adds r0, #8
 ; CHECK-NEXT: stm r0!, {r1, r2, r3}
 ; VLAs present, access via FP
@@ -199,11 +199,13 @@ entry:
 ; CHECK:       push {r4, r5, r6, r7, lr}
 ; 20 bytes locals
 ; CHECK:       sub sp, #20
+; Setup base pointer
+; CHECK:       mov r6, sp
 ; Allocate outgoing arguments space
 ; CHECK:       sub sp, #508
 ; CHECK:       sub sp, #4
-; Load `e` via SP, 552 = 512 + 20 + 20
-; CHECK:       ldr r3, [sp, #552]
+; Load `e` via BP, 40 = 20 + 20
+; CHECK:       ldr r3, [r6, #40]
 ; CHECK:       bl  f
 ; Stack restored before next call
 ; CHECK-NEXT:  add sp, #508
@@ -235,11 +237,12 @@ entry:
 ; Three incoming register varargs
 ; CHECK:       sub sp, #12
 ; 16 bytes callee-saves
-; CHECK:       push {r4, r5, r7, lr}
+; CHECK:       push {r4, r5, r6, lr}
 ; 20 bytes locals
 ; CHECK:       sub sp, #20
-; Incoming varargs stored via SP, 36 = 20 + 16
-; CHECK:       add r0, sp, #36
+; Incoming varargs stored via BP, 36 = 20 + 16
+; CHECK:       mov r0, r6
+; CHECK-NEXT:  adds r0, #36
 ; CHECK-NEXT:  stm r0!, {r1, r2, r3}
 
 ;
@@ -394,17 +397,19 @@ entry:
 ; CHECK-LABEL: test_local_moving_sp
 ; Locals area
 ; CHECK:      sub sp, #36
+; Setup BP
+; CHECK:      mov r6, sp
 ; Outoging arguments
 ; CHECK:      sub sp, #508
 ; CHECK-NEXT: sub sp, #508
 ; CHECK-NEXT: sub sp, #8
-; Argument addresses computed relative to SP
-; CHECK:      add  r4, sp, #1020
-; CHECK-NEXT: adds r4, #24
-; CHECK:      add  r1, sp, #1020
-; CHECK-NEXT: adds r1, #20
-; CHECK:      add  r5, sp, #1020
-; CHECK-NEXT: adds r5, #16
+; Argument addresses computed relative to BP
+; CHECK:      adds r0, r6, #7
+; CHECK-NEXT: adds r0, #13
+; CHECK:      adds r1, r6, #7
+; CHECK-NEXT: adds r1, #9
+; CHECK:      adds r5, r6, #7
+; CHECK-NEXT: adds r5, #5
 ; CHECK:      bl   u
 ; Stack restored before next call
 ; CHECK:      add  sp, #508

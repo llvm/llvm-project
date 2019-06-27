@@ -95,21 +95,6 @@ std::vector<std::string> ArgList::getAllArgValues(OptSpecifier Id) const {
   return std::vector<std::string>(Values.begin(), Values.end());
 }
 
-void ArgList::AddLastArg(ArgStringList &Output, OptSpecifier Id) const {
-  if (Arg *A = getLastArg(Id)) {
-    A->claim();
-    A->render(*this, Output);
-  }
-}
-
-void ArgList::AddLastArg(ArgStringList &Output, OptSpecifier Id0,
-                         OptSpecifier Id1) const {
-  if (Arg *A = getLastArg(Id0, Id1)) {
-    A->claim();
-    A->render(*this, Output);
-  }
-}
-
 void ArgList::AddAllArgsExcept(ArgStringList &Output,
                                ArrayRef<OptSpecifier> Ids,
                                ArrayRef<OptSpecifier> ExcludeIds) const {

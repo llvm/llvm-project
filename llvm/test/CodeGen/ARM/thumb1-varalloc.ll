@@ -34,9 +34,10 @@ bb2:
 	
 bb3:
 	%.0 = phi i8* [ %0, %entry ], [ %6, %bb2 ], [ %3, %bb1 ]
-; CHECK: subs    r4, #5
+; CHECK:      subs    r4, r7, #7
+; CHECK-NEXT: subs    r4, #1
 ; CHECK-NEXT: mov     sp, r4
-; CHECK-NEXT: pop     {r4, r5, r6, r7, pc}
+; CHECK-NEXT: pop     {r4, r6, r7, pc}
 	ret i8* %.0
 }
 

@@ -190,6 +190,9 @@ unsigned getNumVGPRBlocks(const MCSubtargetInfo *STI, unsigned NumSGPRs,
 LLVM_READONLY
 int16_t getNamedOperandIdx(uint16_t Opcode, uint16_t NamedIdx);
 
+LLVM_READONLY
+int getSOPPWithRelaxation(uint16_t Opcode);
+
 struct MIMGBaseOpcodeInfo {
   MIMGBaseOpcode BaseOpcode;
   bool Store;

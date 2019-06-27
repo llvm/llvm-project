@@ -924,7 +924,7 @@ failure:
   return false;
 }
 
-bool FrontendAction::Execute() {
+llvm::Error FrontendAction::Execute() {
   CompilerInstance &CI = getCompilerInstance();
 
   if (CI.hasFrontendTimer()) {
@@ -939,12 +939,18 @@ bool FrontendAction::Execute() {
       CI.hasPreprocessor()) {
     StringRef Cache =
         CI.getPreprocessor().getHeaderSearchInfo().getModuleCachePath();
-    if (!Cache.empty())
-      GlobalModuleIndex::writeIndex(CI.getFileManager(),
-                                    CI.getPCHContainerReader(), Cache);
+    if (!Cache.empty()) {
+      if (llvm::Error Err = GlobalModuleIndex::writeIndex(
+              CI.getFileManager(), CI.getPCHContainerReader(), Cache)) {
+        // FIXME this drops the error on the floor, but
+        // Index/pch-from-libclang.c seems to rely on dropping at least some of
+        // the error conditions!
+        consumeError(std::move(Err));
+      }
+    }
   }
 
-  return true;
+  return llvm::Error::success();
 }
 
 void FrontendAction::EndSourceFile() {

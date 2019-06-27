@@ -2858,3 +2858,31 @@ define <8 x i16> @PR39549(<16 x i8> %x) {
   %d = ashr <8 x i16> %c, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
   ret <8 x i16> %d
 }
+
+define <4 x i32> @PR41545(<4 x i32> %a0, <16 x i8> %a1) {
+; SSE-LABEL: PR41545:
+; SSE:       # %bb.0:
+; SSE-NEXT:    paddd %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: PR41545:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %1  = shufflevector <16 x i8> %a1, <16 x i8> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>
+  %2  = shufflevector <16 x i8> %a1, <16 x i8> undef, <4 x i32> <i32 1, i32 5, i32 9, i32 13>
+  %3  = shufflevector <16 x i8> %a1, <16 x i8> undef, <4 x i32> <i32 2, i32 6, i32 10, i32 14>
+  %4  = shufflevector <16 x i8> %a1, <16 x i8> undef, <4 x i32> <i32 3, i32 7, i32 11, i32 15>
+  %5  = zext <4 x i8> %1 to <4 x i32>
+  %6  = zext <4 x i8> %2 to <4 x i32>
+  %7  = zext <4 x i8> %3 to <4 x i32>
+  %8  = zext <4 x i8> %4 to <4 x i32>
+  %9  = shl <4 x i32> %6, <i32 8, i32 8, i32 8, i32 8>
+  %10 = shl <4 x i32> %7, <i32 16, i32 16, i32 16, i32 16>
+  %11 = shl <4 x i32> %8, <i32 24, i32 24, i32 24, i32 24>
+  %12 = or <4 x i32> %5, %9
+  %13 = or <4 x i32> %12, %10
+  %14 = or <4 x i32> %13, %11
+  %15 = add <4 x i32> %a0, %14
+  ret <4 x i32> %15
+}

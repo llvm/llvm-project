@@ -11,6 +11,7 @@ executable("clang-scan-deps") {
     "//clang/lib/Parse",
     "//clang/lib/Serialization",
     "//clang/lib/Tooling",
+    "//clang/lib/Tooling/DependencyScanning",
     "//llvm/lib/IR",
     "//llvm/lib/Support",
   ]

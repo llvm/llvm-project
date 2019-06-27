@@ -2312,6 +2312,15 @@ def getVCMPXNoSDstOp : InstrMapping {
   let ValueCols = [["0"]];
 }
 
+// Maps a SOPP to a SOPP with S_NOP
+def getSOPPWithRelaxation : InstrMapping {
+  let FilterClass = "Base_SOPP";
+  let RowFields = ["AsmString"];
+  let ColFields = ["Size"];
+  let KeyCol = ["4"];
+  let ValueCols = [["8"]];
+}
+
 include "SIInstructions.td"
 
 include "DSInstructions.td"

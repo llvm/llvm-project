@@ -614,12 +614,8 @@ void CGDebugInfo::CreateCompileUnit() {
   TheCU = DBuilder.createCompileUnit(
       LangTag, CUFile, CGOpts.EmitVersionIdentMetadata ? Producer : "",
       LO.Optimize || CGOpts.PrepareForLTO || CGOpts.PrepareForThinLTO,
-      CGOpts.DwarfDebugFlags, RuntimeVers,
-      (CGOpts.getSplitDwarfMode() != CodeGenOptions::NoFission)
-          ? ""
-          : CGOpts.SplitDwarfFile,
-      EmissionKind, DwoId, CGOpts.SplitDwarfInlining,
-      CGOpts.DebugInfoForProfiling,
+      CGOpts.DwarfDebugFlags, RuntimeVers, CGOpts.SplitDwarfFile, EmissionKind,
+      DwoId, CGOpts.SplitDwarfInlining, CGOpts.DebugInfoForProfiling,
       CGM.getTarget().getTriple().isNVPTX()
           ? llvm::DICompileUnit::DebugNameTableKind::None
           : static_cast<llvm::DICompileUnit::DebugNameTableKind>(

@@ -678,7 +678,8 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
     if (ScratchExecCopy == AMDGPU::NoRegister) {
       // See emitPrologue
       LivePhysRegs LiveRegs(*ST.getRegisterInfo());
-      LiveRegs.addLiveIns(MBB);
+      LiveRegs.addLiveOuts(MBB);
+      LiveRegs.stepBackward(*MBBI);
 
       ScratchExecCopy
         = findScratchNonCalleeSaveRegister(MF, LiveRegs,

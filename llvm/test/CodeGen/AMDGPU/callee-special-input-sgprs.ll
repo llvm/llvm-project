@@ -489,6 +489,7 @@ define amdgpu_kernel void @kern_indirect_use_every_sgpr_input() #1 {
 ; GCN-NOT: s[8:9]
 ; GCN-NOT: s[10:11]
 ; GCN-NOT: s[12:13]
+; GCN: s_or_saveexec_b64 s[6:7], -1
 define hidden void @func_indirect_use_every_sgpr_input() #1 {
   call void @use_every_sgpr_input()
   ret void
