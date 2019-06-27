@@ -63,15 +63,39 @@ class TestSwiftInterfaceNoDebugInfo(TestBase):
            exe_name=self.getBuildArtifact("main"))
 
         # Check the prebuilt cache path in the log output
-        found = False
         prefix = 'Using prebuilt Swift module cache path: '
-        logfile = open(log, "r")
-        for line in logfile:
-            if prefix in line:
-                self.assertTrue(line.endswith('/macosx/prebuilt-modules\n'), 'unexpected prebuilt cache path: ' + line)
-                found = True
+        expected_suffix = os.path.join('macosx', 'prebuilt-modules')
+        found = False
+        with open(log, "r") as logfile:
+            for line in logfile:
+                if prefix in line:
+                    self.assertTrue(line.rstrip().endswith(os.path.sep + expected_suffix), 'unexpected prebuilt cache path: ' + line)
+                    found = True
+                    break
         self.assertTrue(found, 'prebuilt cache path log entry not found')
 
+        # Check the host toolchain has a prebuilt cache in the same subdirectory of its swift resource directory
+        prebuilt_path = os.path.join(self.get_toolchain(), 'usr', 'lib', 'swift', expected_suffix)
+        self.assertTrue(len(os.listdir(prebuilt_path)) > 0)
+
+    def get_toolchain(self):
+        sdkroot = self.get_sdkroot()
+        # The SDK root is expected to be wihin the Xcode.app/Contents
+        # directory. Drop the last path component from the sdkroot until we get
+        # up to that level.
+        self.assertTrue('{0}Contents{0}'.format(os.path.sep) in sdkroot)
+        contents = os.path.abspath(sdkroot)
+        while os.path.split(contents)[1] != 'Contents':
+            (contents, _) =  os.path.split(contents)
+        # Construct the expected path to the default toolchain from there and
+        # check it exists.
+        toolchain = os.path.join(contents, 'Developer', 'Toolchains', 'XcodeDefault.xctoolchain')
+        self.assertTrue(os.path.exists(toolchain), 'no default toolchain?')
+        return toolchain
+
+    def get_sdkroot(self):
+        with open(self.getBuildArtifact("sdk-root.txt"), "r") as sdkroot:
+            return sdkroot.read().rstrip()
 
     def setUp(self):
         TestBase.setUp(self)

@@ -536,7 +536,7 @@ public:
   //------------------------------------------------------------------
   /// Process warning types.
   //------------------------------------------------------------------
-  enum Warnings { eWarningsOptimization = 1, eWarningsCantLoadSwift };
+  enum Warnings { eWarningsOptimization = 1, eWarningsSwiftImport };
 
   typedef Range<lldb::addr_t, lldb::addr_t> LoadRange;
   // We use a read/write lock to allow on or more clients to access the process
@@ -1590,19 +1590,15 @@ public:
   void PrintWarningOptimization(const SymbolContext &sc);
 
   //------------------------------------------------------------------
-  /// Print a user-visible warning about a module having Swift settings
-  /// incompatible with the current system
-  ///
-  /// Prints a async warning message to the user one time per Process for a
-  /// Module
-  /// whose Swift AST sections couldn't be loaded because they aren't buildable
-  /// on
-  /// the current machine.
+  /// Prints a async warning message to the user one time per Process
+  /// for a Module whose Swift AST sections couldn't be loaded because
+  /// they aren't buildable on the current machine.
   ///
   /// @param [in] module
   ///     The affected Module.
   //------------------------------------------------------------------
-  void PrintWarningCantLoadSwift(const Module &module);
+  void PrintWarningCantLoadSwiftModule(const Module &module,
+                                       std::string details);
 
   virtual bool GetProcessInfo(ProcessInstanceInfo &info);
 

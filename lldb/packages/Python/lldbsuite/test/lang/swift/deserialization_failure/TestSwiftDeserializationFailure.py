@@ -25,7 +25,8 @@ class TestSwiftDeserializationFailure(TestBase):
         dynamic_bkpt = target.BreakpointCreateByName('dynamicTypes')
         generic_bkpt = target.BreakpointCreateByName('genericTypes')
         lldbutil.continue_to_breakpoint(process, static_bkpt)
-        self.expect("fr var hello", substrs=["(String)", "world"])
+        self.expect("fr var i", substrs=["23"])
+        self.expect("fr var s", substrs=["(String)", "world"])
 
         # We should not be able to resolve the types defined in the module.
         lldbutil.continue_to_breakpoint(process, dynamic_bkpt)
@@ -50,5 +51,6 @@ class TestSwiftDeserializationFailure(TestBase):
         self.prepare()
         with open(self.getBuildArtifact("a.swiftmodule"), 'w') as mod:
             mod.write('I am damaged.\n')
+
         target, process, _, _ = lldbutil.run_to_name_breakpoint(self, 'main')
         self.run_tests(target, process)
