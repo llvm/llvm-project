@@ -4182,7 +4182,7 @@ static DecodeStatus DecodeT2Imm7(MCInst &Inst, unsigned Val,
   else if (!(Val & 0x80))
     imm *= -1;
   if (imm != INT32_MIN)
-    imm <<= shift;
+    imm *= (1U << shift);
   Inst.addOperand(MCOperand::createImm(imm));
 
   return MCDisassembler::Success;
@@ -4448,7 +4448,7 @@ static DecodeStatus DecodeMveAddrModeQ(MCInst &Inst, unsigned Insn,
       imm *= -1;
   }
   if (imm != INT32_MIN)
-    imm <<= shift;
+    imm *= (1U << shift);
   Inst.addOperand(MCOperand::createImm(imm));
 
   return S;

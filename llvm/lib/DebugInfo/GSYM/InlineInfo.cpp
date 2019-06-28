@@ -34,7 +34,7 @@ raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const InlineInfo &II) {
   return OS;
 }
 
-static bool getInlineStackHelper(const InlineInfo &II, uint64_t Addr, 
+static bool getInlineStackHelper(const InlineInfo &II, uint64_t Addr,
     std::vector<const InlineInfo *> &InlineStack) {
   if (II.Ranges.contains(Addr)) {
     // If this is the top level that represents the concrete function,

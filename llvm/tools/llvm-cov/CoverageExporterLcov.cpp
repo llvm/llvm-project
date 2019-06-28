@@ -82,7 +82,7 @@ void renderFile(raw_ostream &OS, const coverage::CoverageMapping &Coverage,
   OS << "SF:" << Filename << '\n';
 
   if (!ExportSummaryOnly) {
-    renderFunctions(OS, Coverage.getCoveredFunctions());
+    renderFunctions(OS, Coverage.getCoveredFunctions(Filename));
   }
   renderFunctionSummary(OS, FileReport);
 

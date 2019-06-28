@@ -56,6 +56,15 @@ public:
     addDirectiveHandler<&WasmAsmParser::parseSectionDirective>(".section");
     addDirectiveHandler<&WasmAsmParser::parseDirectiveSize>(".size");
     addDirectiveHandler<&WasmAsmParser::parseDirectiveType>(".type");
+    addDirectiveHandler<&WasmAsmParser::ParseDirectiveIdent>(".ident");
+    addDirectiveHandler<
+      &WasmAsmParser::ParseDirectiveSymbolAttribute>(".weak");
+    addDirectiveHandler<
+      &WasmAsmParser::ParseDirectiveSymbolAttribute>(".local");
+    addDirectiveHandler<
+      &WasmAsmParser::ParseDirectiveSymbolAttribute>(".internal");
+    addDirectiveHandler<
+      &WasmAsmParser::ParseDirectiveSymbolAttribute>(".hidden");
   }
 
   bool error(const StringRef &Msg, const AsmToken &Tok) {
@@ -197,6 +206,51 @@ public:
       return error("Unknown WASM symbol type: ", Lexer->getTok());
     Lex();
     return expect(AsmToken::EndOfStatement, "EOL");
+  }
+
+  // FIXME: Shared with ELF.
+  /// ParseDirectiveIdent
+  ///  ::= .ident string
+  bool ParseDirectiveIdent(StringRef, SMLoc) {
+    if (getLexer().isNot(AsmToken::String))
+      return TokError("unexpected token in '.ident' directive");
+    StringRef Data = getTok().getIdentifier();
+    Lex();
+    if (getLexer().isNot(AsmToken::EndOfStatement))
+      return TokError("unexpected token in '.ident' directive");
+    Lex();
+    getStreamer().EmitIdent(Data);
+    return false;
+  }
+
+  // FIXME: Shared with ELF.
+  /// ParseDirectiveSymbolAttribute
+  ///  ::= { ".local", ".weak", ... } [ identifier ( , identifier )* ]
+  bool ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
+    MCSymbolAttr Attr = StringSwitch<MCSymbolAttr>(Directive)
+      .Case(".weak", MCSA_Weak)
+      .Case(".local", MCSA_Local)
+      .Case(".hidden", MCSA_Hidden)
+      .Case(".internal", MCSA_Internal)
+      .Case(".protected", MCSA_Protected)
+      .Default(MCSA_Invalid);
+    assert(Attr != MCSA_Invalid && "unexpected symbol attribute directive!");
+    if (getLexer().isNot(AsmToken::EndOfStatement)) {
+      while (true) {
+        StringRef Name;
+        if (getParser().parseIdentifier(Name))
+          return TokError("expected identifier in directive");
+        MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+        getStreamer().EmitSymbolAttribute(Sym, Attr);
+        if (getLexer().is(AsmToken::EndOfStatement))
+          break;
+        if (getLexer().isNot(AsmToken::Comma))
+          return TokError("unexpected token in directive");
+        Lex();
+      }
+    }
+    Lex();
+    return false;
   }
 };
 
