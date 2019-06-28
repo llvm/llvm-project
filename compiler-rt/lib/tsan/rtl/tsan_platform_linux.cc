@@ -69,6 +69,7 @@ void *__libc_stack_end = 0;
 
 #if SANITIZER_LINUX && defined(__aarch64__)
 void InitializeGuardPtr() __attribute__((visibility("hidden")));
+extern "C" __tsan::uptr _tsan_pointer_chk_guard;
 #endif
 
 namespace __tsan {
@@ -332,6 +333,38 @@ int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
     }
   }
   return res;
+}
+
+// Reverse operation of libc stack pointer mangling
+uptr UnmangleLongJmpSp(uptr mangled_sp) {
+#if defined(__x86_64__)
+#if SANITIZER_FREEBSD || SANITIZER_NETBSD
+  return mangled_sp;
+#else  // Linux
+  // Reverse of:
+  //   xor  %fs:0x30, %rsi
+  //   rol  $0x11, %rsi
+  uptr sp;
+  asm("ror  $0x11,     %0 \n"
+      "xor  %%fs:0x30, %0 \n"
+      : "=r" (sp)
+      : "0" (mangled_sp));
+  return sp;
+#endif
+#elif defined(__aarch64__)
+  return mangled_sp ^ _tsan_pointer_chk_guard;
+#elif defined(__powerpc64__)
+  // Reverse of:
+  //  ld   r4, -28696(r13)
+  //  xor  r4, r3, r4
+  uptr xor_guard;
+  asm("ld  %0, -28696(%%r13) \n" : "=r" (xor_guard));
+  return mangled_sp ^ xor_guard;
+#elif defined(__mips__)
+  return mangled_sp;
+#else
+  #error "Unknown platform"
+#endif
 }
 
 void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
