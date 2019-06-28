@@ -37,7 +37,6 @@ enum Kind {
   bar,     // |
   colon,   // :
 
-  kw_vscale,
   kw_x,
   kw_true,
   kw_false,
@@ -226,6 +225,7 @@ enum Kind {
   kw_swifterror,
   kw_swiftself,
   kw_uwtable,
+  kw_willreturn,
   kw_writeonly,
   kw_zeroext,
   kw_immarg,

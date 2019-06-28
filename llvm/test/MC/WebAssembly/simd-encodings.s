@@ -3,10 +3,10 @@
 main:
     .functype main () -> ()
 
-    # CHECK: v128.load 48:p2align=0 # encoding: [0xfd,0x00,0x00,0x30]
+    # CHECK: v128.load 48 # encoding: [0xfd,0x00,0x04,0x30]
     v128.load 48
 
-    # CHECK: v128.store 48:p2align=0 # encoding: [0xfd,0x01,0x00,0x30]
+    # CHECK: v128.store 48 # encoding: [0xfd,0x01,0x04,0x30]
     v128.store 48
 
     # CHECK: v128.const 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15

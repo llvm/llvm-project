@@ -860,6 +860,17 @@ define void @test_extractvalue_agg(%struct.nested* %addr, {i8, i32}* %addr2) {
   ret void
 }
 
+; CHECK-LABEL: name: test_trivial_extract_ptr
+; CHECK: [[STRUCT:%[0-9]+]]:_(p0) = COPY $x0
+; CHECK: [[VAL32:%[0-9]+]]:_(s32) = COPY $w1
+; CHECK: [[VAL:%[0-9]+]]:_(s8) = G_TRUNC [[VAL32]]
+; CHECK: G_STORE [[VAL]](s8), [[STRUCT]](p0)
+define void @test_trivial_extract_ptr([1 x i8*] %s, i8 %val) {
+  %addr = extractvalue [1 x i8*] %s, 0
+  store i8 %val, i8* %addr
+  ret void
+}
+
 ; CHECK-LABEL: name: test_insertvalue
 ; CHECK: %0:_(p0) = COPY $x0
 ; CHECK: %1:_(s32) = COPY $w1
@@ -898,7 +909,7 @@ define [1 x i64] @test_trivial_insert([1 x i64] %s, i64 %val) {
 
 define [1 x i8*] @test_trivial_insert_ptr([1 x i8*] %s, i8* %val) {
 ; CHECK-LABEL: name: test_trivial_insert_ptr
-; CHECK: [[STRUCT:%[0-9]+]]:_(s64) = COPY $x0
+; CHECK: [[STRUCT:%[0-9]+]]:_(p0) = COPY $x0
 ; CHECK: [[VAL:%[0-9]+]]:_(p0) = COPY $x1
 ; CHECK: $x0 = COPY [[VAL]]
   %res = insertvalue [1 x i8*] %s, i8* %val, 0

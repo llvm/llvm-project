@@ -26,13 +26,13 @@ define i32 @test_optsize(i32 %X) optsize nounwind readnone {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #52429
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
-; CHECK-NEXT:    umull x8, w0, w8
-; CHECK-NEXT:    lsr x8, x8, #34
-; CHECK-NEXT:    add w8, w8, w8, lsl #2
-; CHECK-NEXT:    mov w9, #-10
-; CHECK-NEXT:    cmp w0, w8
+; CHECK-NEXT:    mov w9, #13108
+; CHECK-NEXT:    movk w9, #13107, lsl #16
+; CHECK-NEXT:    mul w8, w0, w8
+; CHECK-NEXT:    mov w10, #-10
+; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    mov w8, #42
-; CHECK-NEXT:    csel w0, w8, w9, eq
+; CHECK-NEXT:    csel w0, w8, w10, lo
 ; CHECK-NEXT:    ret
   %rem = urem i32 %X, 5
   %cmp = icmp eq i32 %rem, 0

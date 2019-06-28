@@ -60,12 +60,12 @@
 // CHECK-DAG: [[MAPT2:@.+]] = private unnamed_addr constant [3 x i64] [i64 800, i64 800, i64 800]
 // CHECK-DAG: [[SIZET3:@.+]] = private unnamed_addr constant [2 x i64] [i64 4, i64 2]
 // CHECK-DAG: [[MAPT3:@.+]] = private unnamed_addr constant [2 x i64] [i64 800, i64 800]
-// CHECK-DAG: [[MAPT4:@.+]] = private unnamed_addr constant [10 x i64] [i64 800, i64 547, i64 288, i64 547, i64 547, i64 288, i64 288, i64 547, i64 547, i64 800]
+// CHECK-DAG: [[MAPT4:@.+]] = private unnamed_addr constant [10 x i64] [i64 800, i64 547, i64 800, i64 547, i64 547, i64 800, i64 800, i64 547, i64 547, i64 800]
 // CHECK-DAG: [[SIZET5:@.+]] = private unnamed_addr constant [3 x i64] [i64 4, i64 2, i64 40]
 // CHECK-DAG: [[MAPT5:@.+]] = private unnamed_addr constant [3 x i64] [i64 800, i64 800, i64 547]
 // CHECK-DAG: [[SIZET6:@.+]] = private unnamed_addr constant [4 x i64] [i64 4, i64 2, i64 1, i64 40]
 // CHECK-DAG: [[MAPT6:@.+]] = private unnamed_addr constant [4 x i64] [i64 800, i64 800, i64 800, i64 547]
-// CHECK-DAG: [[MAPT7:@.+]] = private unnamed_addr constant [6 x i64] [i64 32, i64 281474976711171, i64 800, i64 288, i64 288, i64 547]
+// CHECK-DAG: [[MAPT7:@.+]] = private unnamed_addr constant [6 x i64] [i64 32, i64 281474976711171, i64 800, i64 800, i64 800, i64 547]
 // CHECK-DAG: @{{.*}} = weak constant i8 0
 // CHECK-DAG: @{{.*}} = weak constant i8 0
 // CHECK-DAG: @{{.*}} = weak constant i8 0

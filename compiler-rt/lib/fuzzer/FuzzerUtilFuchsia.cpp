@@ -30,7 +30,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
-#include <zircon/syscalls/port.h>
+#include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
 namespace fuzzer {
@@ -48,10 +48,6 @@ namespace fuzzer {
 void CrashTrampolineAsm() __asm__("CrashTrampolineAsm");
 
 namespace {
-
-// A magic value for the Zircon exception port, chosen to spell 'FUZZING'
-// when interpreted as a byte sequence on little-endian platforms.
-const uint64_t kFuzzingCrash = 0x474e495a5a5546;
 
 // Helper function to handle Zircon syscall failures.
 void ExitOnErr(zx_status_t Status, const char *Syscall) {
@@ -218,17 +214,15 @@ void CrashHandler(zx_handle_t *Event) {
     zx_handle_t Handle = ZX_HANDLE_INVALID;
   };
 
-  // Create and bind the exception port.  We need to claim to be a "debugger" so
-  // the kernel will allow us to modify and resume dying threads (see below).
-  // Once the port is set, we can signal the main thread to continue and wait
+  // Create the exception channel.  We need to claim to be a "debugger" so the
+  // kernel will allow us to modify and resume dying threads (see below). Once
+  // the channel is set, we can signal the main thread to continue and wait
   // for the exception to arrive.
-  ScopedHandle Port;
-  ExitOnErr(_zx_port_create(0, &Port.Handle), "_zx_port_create");
+  ScopedHandle Channel;
   zx_handle_t Self = _zx_process_self();
-
-  ExitOnErr(_zx_task_bind_exception_port(Self, Port.Handle, kFuzzingCrash,
-                                         ZX_EXCEPTION_PORT_DEBUGGER),
-            "_zx_task_bind_exception_port");
+  ExitOnErr(_zx_task_create_exception_channel(
+                Self, ZX_EXCEPTION_CHANNEL_DEBUGGER, &Channel.Handle),
+            "_zx_task_create_exception_channel");
 
   ExitOnErr(_zx_object_signal(*Event, 0, ZX_USER_SIGNAL_0),
             "_zx_object_signal");
@@ -237,15 +231,21 @@ void CrashHandler(zx_handle_t *Event) {
   // crashes.  In practice, the first crashed thread to reach the end of the
   // StaticCrashHandler will end the process.
   while (true) {
-    zx_port_packet_t Packet;
-    ExitOnErr(_zx_port_wait(Port.Handle, ZX_TIME_INFINITE, &Packet),
-              "_zx_port_wait");
+    ExitOnErr(_zx_object_wait_one(Channel.Handle, ZX_CHANNEL_READABLE,
+                                  ZX_TIME_INFINITE, nullptr),
+              "_zx_object_wait_one");
+
+    zx_exception_info_t ExceptionInfo;
+    ScopedHandle Exception;
+    ExitOnErr(_zx_channel_read(Channel.Handle, 0, &ExceptionInfo,
+                               &Exception.Handle, sizeof(ExceptionInfo), 1,
+                               nullptr, nullptr),
+              "_zx_channel_read");
 
     // Ignore informational synthetic exceptions.
-    assert(ZX_PKT_IS_EXCEPTION(Packet.type));
-    if (ZX_EXCP_THREAD_STARTING == Packet.type ||
-        ZX_EXCP_THREAD_EXITING == Packet.type ||
-        ZX_EXCP_PROCESS_STARTING == Packet.type) {
+    if (ZX_EXCP_THREAD_STARTING == ExceptionInfo.type ||
+        ZX_EXCP_THREAD_EXITING == ExceptionInfo.type ||
+        ZX_EXCP_PROCESS_STARTING == ExceptionInfo.type) {
       continue;
     }
 
@@ -256,9 +256,8 @@ void CrashHandler(zx_handle_t *Event) {
     // instruction pointer/program counter, provided we NEVER EVER return from
     // that function (since otherwise our stack will not be valid).
     ScopedHandle Thread;
-    ExitOnErr(_zx_object_get_child(Self, Packet.exception.tid,
-                                   ZX_RIGHT_SAME_RIGHTS, &Thread.Handle),
-              "_zx_object_get_child");
+    ExitOnErr(_zx_exception_get_thread(Exception.Handle, &Thread.Handle),
+              "_zx_exception_get_thread");
 
     zx_thread_state_general_regs_t GeneralRegisters;
     ExitOnErr(_zx_thread_read_state(Thread.Handle, ZX_THREAD_STATE_GENERAL_REGS,
@@ -296,8 +295,11 @@ void CrashHandler(zx_handle_t *Event) {
                                &GeneralRegisters, sizeof(GeneralRegisters)),
         "_zx_thread_write_state");
 
-    ExitOnErr(_zx_task_resume_from_exception(Thread.Handle, Port.Handle, 0),
-              "_zx_task_resume_from_exception");
+    // Set the exception to HANDLED so it resumes the thread on close.
+    uint32_t ExceptionState = ZX_EXCEPTION_STATE_HANDLED;
+    ExitOnErr(_zx_object_set_property(Exception.Handle, ZX_PROP_EXCEPTION_STATE,
+                                      &ExceptionState, sizeof(ExceptionState)),
+              "zx_object_set_property");
   }
 }
 

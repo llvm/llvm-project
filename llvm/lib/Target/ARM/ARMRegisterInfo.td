@@ -261,10 +261,16 @@ def GPRwithAPSRnosp : RegisterClass<"ARM", [i32], 32, (add (sequence "R%u", 0, 1
   let isAllocatable = 0;
 }
 
-def GPRwithZR : RegisterClass<"ARM", [i32], 32, (add (sequence "R%u", 0, 12),
-                                              LR, ZR)> {
-
+def GPRwithZR : RegisterClass<"ARM", [i32], 32, (add (sub GPR, PC), ZR)> {
   let AltOrders = [(add LR, GPRwithZR), (trunc GPRwithZR, 8)];
+  let AltOrderSelect = [{
+      return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+  }];
+  let DiagnosticString = "operand must be a register in range [r0, r14] or zr";
+}
+
+def GPRwithZRnosp : RegisterClass<"ARM", [i32], 32, (sub GPRwithZR, SP)> {
+  let AltOrders = [(add LR, GPRwithZRnosp), (trunc GPRwithZRnosp, 8)];
   let AltOrderSelect = [{
       return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
   }];

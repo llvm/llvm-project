@@ -134,7 +134,7 @@ HUGE-FWDREF: Invalid record
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-load-pointer-type.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=LOAD-BAD-TYPE %s
 
-LOAD-BAD-TYPE: Load/Store operand is not a pointer type
+LOAD-BAD-TYPE: Load operand is not a pointer type
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-GCTable-overflow.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=GCTABLE-OFLOW %s

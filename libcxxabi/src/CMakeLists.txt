@@ -147,6 +147,12 @@ if (LLVM_ENABLE_MODULES)
   string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 endif()
 
+if ("${CMAKE_OSX_ARCHITECTURES}" MATCHES "^(armv6|armv7|armv7s)$")
+  set(LIBCXXABI_USE_SJLJ_EXCEPTIONS ON)
+else()
+  set(LIBCXXABI_USE_SJLJ_EXCEPTIONS OFF)
+endif()
+
 # Build the shared library.
 if (LIBCXXABI_ENABLE_SHARED)
   add_library(cxxabi_shared SHARED ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
@@ -180,6 +186,21 @@ if (LIBCXXABI_ENABLE_SHARED)
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
   if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
     list(APPEND LIBCXXABI_INSTALL_TARGETS "cxxabi_shared")
+  endif()
+
+  # -exported_symbols_list is only available on Apple platforms
+  if (APPLE)
+    target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/itanium-base.exp")
+
+    if (LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS)
+      target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/new-delete.exp")
+    endif()
+
+    if (LIBCXXABI_USE_SJLJ_EXCEPTIONS)
+      target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-sjlj.exp")
+    else()
+      target_link_libraries(cxxabi_shared PRIVATE "-Wl,-exported_symbols_list,${CMAKE_CURRENT_SOURCE_DIR}/../lib/personality-v0.exp")
+    endif()
   endif()
 endif()
 

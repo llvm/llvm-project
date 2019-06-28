@@ -59,21 +59,16 @@ define void @take_128bit_struct([2 x i64]* %ptr, [2 x i64] %in) {
 ; CHECK: [[CST:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
 ; CHECK: [[GEP:%[0-9]+]]:_(p0) = G_GEP %0, [[CST]](s64)
 ; CHECK: [[LD2:%[0-9]+]]:_(s64) = G_LOAD %3(p0) :: (load 8 from %ir.ptr + 8)
-; CHECK: [[IMPDEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
-; CHECK: [[INS1:%[0-9]+]]:_(s128) = G_INSERT [[IMPDEF]], [[LD1]](s64), 0
-; CHECK: [[INS2:%[0-9]+]]:_(s128) = G_INSERT [[INS1]], [[LD2]](s64), 64
-; CHECK:  [[EXT1:%[0-9]+]]:_(s64) = G_EXTRACT [[INS2]](s128), 0
-; CHECK: [[EXT2:%[0-9]+]]:_(s64) = G_EXTRACT [[INS2]](s128), 64
 
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFF]](s64)
-; CHECK: G_STORE [[EXT1]](s64), [[ADDR]](p0) :: (store 8 into stack, align 1)
+; CHECK: G_STORE [[LD1]](s64), [[ADDR]](p0) :: (store 8 into stack, align 1)
 
 ; CHECK: [[SP:%[0-9]+]]:_(p0) = COPY $sp
 ; CHECK: [[OFF:%[0-9]+]]:_(s64) = COPY [[CST]]
 ; CHECK: [[ADDR:%[0-9]+]]:_(p0) = G_GEP [[SP]], [[OFF]]
-; CHECK: G_STORE [[EXT2]](s64), [[ADDR]](p0) :: (store 8 into stack + 8, align 1)
+; CHECK: G_STORE [[LD2]](s64), [[ADDR]](p0) :: (store 8 into stack + 8, align 1)
 define void @test_split_struct([2 x i64]* %ptr) {
   %struct = load [2 x i64], [2 x i64]* %ptr
   call void @take_split_struct([2 x i64]* null, i64 1, i64 2, i64 3,

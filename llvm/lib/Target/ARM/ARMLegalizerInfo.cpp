@@ -369,7 +369,7 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
     return false;
   case G_SREM:
   case G_UREM: {
-    unsigned OriginalResult = MI.getOperand(0).getReg();
+    Register OriginalResult = MI.getOperand(0).getReg();
     auto Size = MRI.getType(OriginalResult).getSizeInBits();
     if (Size != 32)
       return false;
@@ -378,24 +378,17 @@ bool ARMLegalizerInfo::legalizeCustom(MachineInstr &MI,
         MI.getOpcode() == G_SREM ? RTLIB::SDIVREM_I32 : RTLIB::UDIVREM_I32;
 
     // Our divmod libcalls return a struct containing the quotient and the
-    // remainder. We need to create a virtual register for it.
+    // remainder. Create a new, unused register for the quotient and use the
+    // destination of the original instruction for the remainder.
     Type *ArgTy = Type::getInt32Ty(Ctx);
     StructType *RetTy = StructType::get(Ctx, {ArgTy, ArgTy}, /* Packed */ true);
-    auto RetVal = MRI.createGenericVirtualRegister(
-        getLLTForType(*RetTy, MIRBuilder.getMF().getDataLayout()));
-
-    auto Status = createLibcall(MIRBuilder, Libcall, {RetVal, RetTy},
+    Register RetRegs[] = {MRI.createGenericVirtualRegister(LLT::scalar(32)),
+                          OriginalResult};
+    auto Status = createLibcall(MIRBuilder, Libcall, {RetRegs, RetTy},
                                 {{MI.getOperand(1).getReg(), ArgTy},
                                  {MI.getOperand(2).getReg(), ArgTy}});
     if (Status != LegalizerHelper::Legalized)
       return false;
-
-    // The remainder is the second result of divmod. Split the return value into
-    // a new, unused register for the quotient and the destination of the
-    // original instruction for the remainder.
-    MIRBuilder.buildUnmerge(
-        {MRI.createGenericVirtualRegister(LLT::scalar(32)), OriginalResult},
-        RetVal);
     break;
   }
   case G_FCMP: {

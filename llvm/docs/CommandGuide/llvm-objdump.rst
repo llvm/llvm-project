@@ -1,6 +1,8 @@
 llvm-objdump - LLVM's object file dumper
 ========================================
 
+.. program:: llvm-objdump
+
 SYNOPSIS
 --------
 
@@ -33,9 +35,11 @@ combined with other commands:
   Display assembler mnemonics for the machine instructions. Disassembles all
   sections found in the input file(s) by default.
   
-.. option:: --disassemble-functions=<func1[,func2,...]>
+.. option:: --disassemble-functions=<symbol1[,symbol2,...]>
 
-  Disassemble only the specified symbols. Implies :option:`--disassemble`.
+  Disassemble only the specified symbols. Takes demangled symbol names when
+  :option:`--demangle` is specified, otherwise takes mangled symbol names.
+  Implies :option:`--disassemble`.
 
 .. option:: --dwarf=<value>
 
@@ -109,7 +113,7 @@ OPTIONS
 
 .. option:: --arch-name=<string>
 
-  Specify the target architecture when disassembling. Use :option:``--version``
+  Specify the target architecture when disassembling. Use :option:`--version`
   for a list of available targets.
 
 .. option:: -C, --demangle
@@ -191,7 +195,7 @@ OPTIONS
 
 .. option:: --x86-asm-syntax=<style>
 
-  When used with the ``--disassemble`` option, choose style of code to emit from
+  When used with :option:`--disassemble`, choose style of code to emit from
   X86 backend. Supported values are:
 
    .. option:: att
@@ -328,4 +332,4 @@ To report bugs, please visit <http://llvm.org/bugs/>.
 SEE ALSO
 --------
 
-:manpage:`llvm-nm(1)`, :manpage:`llvm-readobj(1)`
+:manpage:`llvm-nm(1)`, :manpage:`llvm-readelf(1)`, :manpage:`llvm-readobj(1)`

@@ -127,10 +127,10 @@
         @ Out of range 4 and 3 bit immediates on CDP[2]
 
         @ Out of range immediates for CDP/CDP2
-        cdp  p7, #2, c1, c1, c1, #8
-        cdp  p7, #1, c1, c1, c1, #8
-        cdp2  p7, #2, c1, c1, c1, #8
-        cdp2  p7, #1, c1, c1, c1, #8
+        cdp  p14, #2, c1, c1, c1, #8
+        cdp  p14, #1, c1, c1, c1, #8
+        cdp2  p14, #2, c1, c1, c1, #8
+        cdp2  p14, #1, c1, c1, c1, #8
 
 @ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: error: operand must be an immediate in the range [0,7]
@@ -154,12 +154,12 @@
 @ CHECK-ERRORS:     ^
 
         @ Out of range immediate for MCR/MCR2/MCRR/MCRR2
-        mcr  p7, #8, r5, c1, c1, #4
-        mcr  p7, #2, r5, c1, c1, #8
-        mcr2  p7, #8, r5, c1, c1, #4
-        mcr2  p7, #1, r5, c1, c1, #8
-        mcrr  p7, #16, r5, r4, c1
-        mcrr2  p7, #16, r5, r4, c1
+        mcr  p14, #8, r5, c1, c1, #4
+        mcr  p14, #2, r5, c1, c1, #8
+        mcr2  p14, #8, r5, c1, c1, #4
+        mcr2  p14, #1, r5, c1, c1, #8
+        mcrr  p14, #16, r5, r4, c1
+        mcrr2  p14, #16, r5, r4, c1
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]
@@ -203,8 +203,8 @@
         mrc  p14, #1, r1, c1, c2, #8
         mrc2  p14, #8, r1, c1, c2, #4
         mrc2  p14, #0, r1, c1, c2, #9
-        mrrc  p7, #16, r5, r4, c1
-        mrrc2  p7, #17, r5, r4, c1
+        mrrc  p14, #16, r5, r4, c1
+        mrrc2  p14, #17, r5, r4, c1
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]

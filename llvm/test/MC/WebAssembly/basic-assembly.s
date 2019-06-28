@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+atomics,+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
 # Check that it converts to .o without errors, but don't check any output:
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling -o %t.o < %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+atomics,+unimplemented-simd128,+nontrapping-fptoint,+exception-handling -o %t.o < %s
 
 test0:
     # Test all types:
@@ -17,7 +17,8 @@ test0:
     v128.const  0, 1, 2, 3, 4, 5, 6, 7
     # Indirect addressing:
     local.get   0
-    f64.store   0
+    f64.store   1234:p2align=4
+    f64.store   1234     # Natural alignment (3)
     # Loops, conditionals, binary ops, calls etc:
     block       i32
     i32.const   1
@@ -67,6 +68,8 @@ test0:
     #i32x4.trunc_sat_f32x4_s
     i32.trunc_f32_s
     try         except_ref
+    i32.atomic.load 0
+    atomic.notify 0
 .LBB0_3:
     catch
     local.set 0
@@ -104,7 +107,8 @@ test0:
 # CHECK-NEXT:      v128.const  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
 # CHECK-NEXT:      v128.const  0, 1, 2, 3, 4, 5, 6, 7
 # CHECK-NEXT:      local.get   0
-# CHECK-NEXT:      f64.store   0:p2align=0
+# CHECK-NEXT:      f64.store   1234:p2align=4
+# CHECK-NEXT:      f64.store   1234
 # CHECK-NEXT:      block       i32
 # CHECK-NEXT:      i32.const   1
 # CHECK-NEXT:      local.get   0
@@ -151,6 +155,8 @@ test0:
 # CHECK-NEXT:      f32x4.add
 # CHECK-NEXT:      i32.trunc_f32_s
 # CHECK-NEXT:      try         except_ref
+# CHECK-NEXT:      i32.atomic.load 0
+# CHECK-NEXT:      atomic.notify 0
 # CHECK-NEXT:  .LBB0_3:
 # CHECK-NEXT:      catch
 # CHECK-NEXT:      local.set 0

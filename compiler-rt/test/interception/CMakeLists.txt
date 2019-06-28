@@ -5,8 +5,8 @@ set(INTERCEPTION_TESTSUITES)
 # Android targets.
 if(COMPILER_RT_INCLUDE_TESTS AND NOT ANDROID AND NOT APPLE)
   configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.in
-    ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg)
+    ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
   list(APPEND INTERCEPTION_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
   list(APPEND INTERCEPTION_TEST_DEPS InterceptionUnitTests)
 endif()

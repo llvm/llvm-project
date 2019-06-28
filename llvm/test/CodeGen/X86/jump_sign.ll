@@ -236,13 +236,11 @@ define void @func_o() nounwind uwtable {
 ; CHECK-NEXT:    jne .LBB12_8
 ; CHECK-NEXT:  # %bb.4: # %if.end29
 ; CHECK-NEXT:    movzwl (%eax), %eax
+; CHECK-NEXT:    imull $-13107, %eax, %eax # imm = 0xCCCD
+; CHECK-NEXT:    rorw %ax
 ; CHECK-NEXT:    movzwl %ax, %eax
-; CHECK-NEXT:    imull $52429, %eax, %ecx # imm = 0xCCCD
-; CHECK-NEXT:    shrl $18, %ecx
-; CHECK-NEXT:    andl $-2, %ecx
-; CHECK-NEXT:    leal (%ecx,%ecx,4), %ecx
-; CHECK-NEXT:    cmpw %cx, %ax
-; CHECK-NEXT:    jne .LBB12_5
+; CHECK-NEXT:    cmpl $6554, %eax # imm = 0x199A
+; CHECK-NEXT:    jae .LBB12_5
 ; CHECK-NEXT:  .LBB12_8: # %if.then44
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al

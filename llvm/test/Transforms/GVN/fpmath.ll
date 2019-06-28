@@ -41,5 +41,15 @@ define double @test4(double %x, double %y) {
   ret double %foo
 }
 
+define double @test5(double %x, double %y) {
+; CHECK: @test5(double %x, double %y)
+; CHECK: %neg1 = fneg double %x, !fpmath !1
+; CHECK: %foo = fadd double %neg1, %neg1
+  %neg1 = fneg double %x, !fpmath !0
+  %neg2 = fneg double %x, !fpmath !1
+  %foo = fadd double %neg1, %neg2
+  ret double %foo
+}
+
 !0 = !{ float 5.0 }
 !1 = !{ float 2.5 }

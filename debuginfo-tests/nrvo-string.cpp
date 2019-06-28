@@ -7,7 +7,8 @@
 // RUN: %test_debuginfo %s %t.out
 //
 // PR34513
-void __attribute__((noinline)) stop() {}
+volatile int sideeffect = 0;
+void __attribute__((noinline)) stop() { sideeffect++; }
 
 struct string {
   string() {}
@@ -18,7 +19,7 @@ struct string {
 string get_string() {
   string unused;
   string result = 3;
-  // DEBUGGER: break 22
+  // DEBUGGER: break 23
   stop();
   return result;
 }
@@ -34,7 +35,7 @@ string2 get_string2() {
   some_function(result.i);
   // Test that the debugger can get the value of result after another
   // function is called.
-  // DEBUGGER: break 38
+  // DEBUGGER: break 39
   stop();
   return result;
 }

@@ -18,8 +18,8 @@ macro(add_ubsan_testsuite test_mode sanitizer arch lld thinlto)
   set(UBSAN_TEST_USE_THINLTO ${thinlto})
   set(CONFIG_NAME ${CONFIG_NAME}-${arch})
   configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
-    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg)
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
   list(APPEND UBSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
   if(NOT COMPILER_RT_STANDALONE_BUILD)
     list(APPEND UBSAN_TEST_DEPS ${sanitizer})
@@ -75,8 +75,8 @@ macro(add_ubsan_device_testsuite test_mode sanitizer platform arch)
     unset(UBSAN_TEST_APPLE_PLATFORM)
   endif()
   configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
-    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg)
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
   #list(APPEND UBSAN_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
   if(NOT COMPILER_RT_STANDALONE_BUILD)
     list(APPEND UBSAN_TEST_DEPS ${sanitizer})

@@ -2505,4 +2505,21 @@ TEST(APIntTest, SolveQuadraticEquationWrap) {
     Iterate(i);
 }
 
+TEST(APIntTest, MultiplicativeInverseExaustive) {
+  for (unsigned BitWidth = 1; BitWidth <= 16; ++BitWidth) {
+    for (unsigned Value = 0; Value < (1 << BitWidth); ++Value) {
+      APInt V = APInt(BitWidth, Value);
+      APInt MulInv =
+          V.zext(BitWidth + 1)
+              .multiplicativeInverse(APInt::getSignedMinValue(BitWidth + 1))
+              .trunc(BitWidth);
+      APInt One = V * MulInv;
+      EXPECT_TRUE(MulInv.isNullValue() || One.isOneValue())
+          << " bitwidth = " << BitWidth << ", value = " << Value
+          << ", computed multiplicative inverse = " << MulInv
+          << ", value * multiplicative inverse = " << One << " (should be 1)";
+    }
+  }
+}
+
 } // end anonymous namespace

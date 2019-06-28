@@ -7155,7 +7155,9 @@ private:
   CodeGenFunction &CGF;
 
   /// Set of all first private variables in the current directive.
-  llvm::SmallPtrSet<const VarDecl *, 8> FirstPrivateDecls;
+  /// bool data is set to true if the variable is implicitly marked as
+  /// firstprivate, false otherwise.
+  llvm::DenseMap<CanonicalDeclPtr<const VarDecl>, bool> FirstPrivateDecls;
 
   /// Map between device pointer declarations and their expression components.
   /// The key value for declarations in 'this' is null.
@@ -7836,8 +7838,8 @@ public:
     // Extract firstprivate clause information.
     for (const auto *C : Dir.getClausesOfKind<OMPFirstprivateClause>())
       for (const auto *D : C->varlists())
-        FirstPrivateDecls.insert(
-            cast<VarDecl>(cast<DeclRefExpr>(D)->getDecl())->getCanonicalDecl());
+        FirstPrivateDecls.try_emplace(
+            cast<VarDecl>(cast<DeclRefExpr>(D)->getDecl()), C->isImplicit());
     // Extract device pointer clause information.
     for (const auto *C : Dir.getClausesOfKind<OMPIsDevicePtrClause>())
       for (auto L : C->component_lists())
@@ -8354,6 +8356,7 @@ public:
                               MapValuesArrayTy &CurPointers,
                               MapValuesArrayTy &CurSizes,
                               MapFlagsArrayTy &CurMapTypes) const {
+    bool IsImplicit = true;
     // Do the default mapping.
     if (CI.capturesThis()) {
       CurBasePointers.push_back(CV);
@@ -8379,6 +8382,10 @@ public:
         CurMapTypes.push_back(OMP_MAP_NONE);
         CurSizes.push_back(llvm::Constant::getNullValue(CGF.Int64Ty));
       }
+      const VarDecl *VD = CI.getCapturedVar();
+      auto I = FirstPrivateDecls.find(VD);
+      if (I != FirstPrivateDecls.end())
+        IsImplicit = I->getSecond();
     } else {
       assert(CI.capturesVariable() && "Expected captured reference.");
       const auto *PtrTy = cast<ReferenceType>(RI.getType().getTypePtr());
@@ -8390,7 +8397,8 @@ public:
       // type, the default is 'tofrom'.
       CurMapTypes.push_back(getMapModifiersForPrivateClauses(CI));
       const VarDecl *VD = CI.getCapturedVar();
-      if (FirstPrivateDecls.count(VD) &&
+      auto I = FirstPrivateDecls.find(VD);
+      if (I != FirstPrivateDecls.end() &&
           VD->getType().isConstant(CGF.getContext())) {
         llvm::Constant *Addr =
             CGF.CGM.getOpenMPRuntime().registerTargetFirstprivateCopy(CGF, VD);
@@ -8404,7 +8412,7 @@ public:
         CurPointers.push_back(Addr);
       } else {
         CurBasePointers.push_back(CV);
-        if (FirstPrivateDecls.count(VD) && ElementType->isAnyPointerType()) {
+        if (I != FirstPrivateDecls.end() && ElementType->isAnyPointerType()) {
           Address PtrAddr = CGF.EmitLoadOfReference(CGF.MakeAddrLValue(
               CV, ElementType, CGF.getContext().getDeclAlign(VD),
               AlignmentSource::Decl));
@@ -8413,12 +8421,15 @@ public:
           CurPointers.push_back(CV);
         }
       }
+      if (I != FirstPrivateDecls.end())
+        IsImplicit = I->getSecond();
     }
     // Every default map produces a single argument which is a target parameter.
     CurMapTypes.back() |= OMP_MAP_TARGET_PARAM;
 
     // Add flag stating this is an implicit map.
-    CurMapTypes.back() |= OMP_MAP_IMPLICIT;
+    if (IsImplicit)
+      CurMapTypes.back() |= OMP_MAP_IMPLICIT;
   }
 };
 } // anonymous namespace
@@ -8884,7 +8895,8 @@ void CGOpenMPRuntime::emitTargetCall(CodeGenFunction &CGF,
             CGF.getTypeSize(RI->getType()), CGF.Int64Ty, /*isSigned=*/true));
         // Copy to the device as an argument. No need to retrieve it.
         CurMapTypes.push_back(MappableExprsHandler::OMP_MAP_LITERAL |
-                              MappableExprsHandler::OMP_MAP_TARGET_PARAM);
+                              MappableExprsHandler::OMP_MAP_TARGET_PARAM |
+                              MappableExprsHandler::OMP_MAP_IMPLICIT);
       } else {
         // If we have any information in the map clause, we use it, otherwise we
         // just do a default mapping.

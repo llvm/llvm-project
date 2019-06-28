@@ -193,9 +193,9 @@ static void allocateSystemSGPRs(CCState &CCInfo,
   }
 }
 
-bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
-                                              const Function &F,
-                                              ArrayRef<Register> VRegs) const {
+bool AMDGPUCallLowering::lowerFormalArguments(
+    MachineIRBuilder &MIRBuilder, const Function &F,
+    ArrayRef<ArrayRef<Register>> VRegs) const {
   // AMDGPU_GS and AMDGP_HS are not supported yet.
   if (F.getCallingConv() == CallingConv::AMDGPU_GS ||
       F.getCallingConv() == CallingConv::AMDGPU_HS)
@@ -275,9 +275,16 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
       uint64_t ArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + BaseOffset;
       ExplicitArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + AllocSize;
 
+      ArrayRef<Register> OrigArgRegs = VRegs[i];
+      Register ArgReg =
+          OrigArgRegs.size() == 1
+              ? OrigArgRegs[0]
+              : MRI.createGenericVirtualRegister(getLLTForType(*ArgTy, DL));
       unsigned Align = MinAlign(KernArgBaseAlign, ArgOffset);
       ArgOffset = alignTo(ArgOffset, DL.getABITypeAlignment(ArgTy));
-      lowerParameter(MIRBuilder, ArgTy, ArgOffset, Align, VRegs[i]);
+      lowerParameter(MIRBuilder, ArgTy, ArgOffset, Align, ArgReg);
+      if (OrigArgRegs.size() > 1)
+        unpackRegs(OrigArgRegs, ArgReg, ArgTy, MIRBuilder);
       ++i;
     }
 
@@ -295,7 +302,8 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
 
     // We can only hanlde simple value types at the moment.
     ISD::ArgFlagsTy Flags;
-    ArgInfo OrigArg{VRegs[i], CurOrigArg->getType()};
+    assert(VRegs[i].size() == 1 && "Can't lower into more than one register");
+    ArgInfo OrigArg{VRegs[i][0], CurOrigArg->getType()};
     setArgFlags(OrigArg, i + 1, DL, F);
     Flags.setOrigAlign(DL.getABITypeAlignment(CurOrigArg->getType()));
 
@@ -348,10 +356,12 @@ bool AMDGPUCallLowering::lowerFormalArguments(MachineIRBuilder &MIRBuilder,
          OrigArgIdx != NumArgs && i != ArgLocs.size(); ++Arg, ++OrigArgIdx) {
        if (Skipped.test(OrigArgIdx))
           continue;
-      CCValAssign &VA = ArgLocs[i++];
-      MRI.addLiveIn(VA.getLocReg(), VRegs[OrigArgIdx]);
-      MIRBuilder.getMBB().addLiveIn(VA.getLocReg());
-      MIRBuilder.buildCopy(VRegs[OrigArgIdx], VA.getLocReg());
+       assert(VRegs[OrigArgIdx].size() == 1 &&
+              "Can't lower into more than 1 reg");
+       CCValAssign &VA = ArgLocs[i++];
+       MRI.addLiveIn(VA.getLocReg(), VRegs[OrigArgIdx][0]);
+       MIRBuilder.getMBB().addLiveIn(VA.getLocReg());
+       MIRBuilder.buildCopy(VRegs[OrigArgIdx][0], VA.getLocReg());
     }
 
     allocateSystemSGPRs(CCInfo, MF, *Info, F.getCallingConv(), IsShader);
