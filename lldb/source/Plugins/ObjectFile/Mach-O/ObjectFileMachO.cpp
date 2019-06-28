@@ -4575,6 +4575,8 @@ size_t ObjectFileMachO::ParseSymtab() {
             sym[sym_idx].GetAddressRef().SetOffset(symbol_value);
           }
           sym[sym_idx].SetFlags(nlist.n_type << 16 | nlist.n_desc);
+          if (nlist.n_desc & N_WEAK_REF)
+            sym[sym_idx].SetIsWeak(true);
 
           if (symbol_byte_size > 0)
             sym[sym_idx].SetByteSize(symbol_byte_size);

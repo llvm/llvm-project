@@ -28,7 +28,8 @@ Symbol::Symbol()
       m_is_external(false), m_size_is_sibling(false),
       m_size_is_synthesized(false), m_size_is_valid(false),
       m_demangled_is_synthesized(false), m_contains_linker_annotations(false),
-      m_type(eSymbolTypeInvalid), m_mangled(), m_addr_range(), m_flags() {}
+      m_is_weak(false), m_type(eSymbolTypeInvalid), m_mangled(), m_addr_range(),
+      m_flags() {}
 
 Symbol::Symbol(uint32_t symID, const char *name, bool name_is_mangled,
                SymbolType type, bool external, bool is_debug,
@@ -41,7 +42,8 @@ Symbol::Symbol(uint32_t symID, const char *name, bool name_is_mangled,
       m_is_debug(is_debug), m_is_external(external), m_size_is_sibling(false),
       m_size_is_synthesized(false), m_size_is_valid(size_is_valid || size > 0),
       m_demangled_is_synthesized(false),
-      m_contains_linker_annotations(contains_linker_annotations), m_type(type),
+      m_contains_linker_annotations(contains_linker_annotations), 
+      m_is_weak(false), m_type(type),
       m_mangled(ConstString(name), name_is_mangled),
       m_addr_range(section_sp, offset, size), m_flags(flags) {}
 
@@ -56,8 +58,9 @@ Symbol::Symbol(uint32_t symID, const Mangled &mangled, SymbolType type,
       m_size_is_synthesized(false),
       m_size_is_valid(size_is_valid || range.GetByteSize() > 0),
       m_demangled_is_synthesized(false),
-      m_contains_linker_annotations(contains_linker_annotations), m_type(type),
-      m_mangled(mangled), m_addr_range(range), m_flags(flags) {}
+      m_contains_linker_annotations(contains_linker_annotations), 
+      m_is_weak(false), m_type(type), m_mangled(mangled), m_addr_range(range), 
+      m_flags(flags) {}
 
 Symbol::Symbol(const Symbol &rhs)
     : SymbolContextScope(rhs), m_uid(rhs.m_uid), m_type_data(rhs.m_type_data),
@@ -68,7 +71,7 @@ Symbol::Symbol(const Symbol &rhs)
       m_size_is_valid(rhs.m_size_is_valid),
       m_demangled_is_synthesized(rhs.m_demangled_is_synthesized),
       m_contains_linker_annotations(rhs.m_contains_linker_annotations),
-      m_type(rhs.m_type), m_mangled(rhs.m_mangled),
+      m_is_weak(rhs.m_is_weak), m_type(rhs.m_type), m_mangled(rhs.m_mangled),
       m_addr_range(rhs.m_addr_range), m_flags(rhs.m_flags) {}
 
 const Symbol &Symbol::operator=(const Symbol &rhs) {
@@ -85,6 +88,7 @@ const Symbol &Symbol::operator=(const Symbol &rhs) {
     m_size_is_valid = rhs.m_size_is_valid;
     m_demangled_is_synthesized = rhs.m_demangled_is_synthesized;
     m_contains_linker_annotations = rhs.m_contains_linker_annotations;
+    m_is_weak = rhs.m_is_weak;
     m_type = rhs.m_type;
     m_mangled = rhs.m_mangled;
     m_addr_range = rhs.m_addr_range;
@@ -106,6 +110,7 @@ void Symbol::Clear() {
   m_size_is_valid = false;
   m_demangled_is_synthesized = false;
   m_contains_linker_annotations = false;
+  m_is_weak = false;
   m_type = eSymbolTypeInvalid;
   m_flags = 0;
   m_addr_range.Clear();

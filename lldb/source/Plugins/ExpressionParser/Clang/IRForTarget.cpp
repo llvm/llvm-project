@@ -433,9 +433,11 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
     static lldb_private::ConstString g_CFStringCreateWithBytes_str(
         "CFStringCreateWithBytes");
 
+    bool missing_weak = false;
     CFStringCreateWithBytes_addr =
-        m_execution_unit.FindSymbol(g_CFStringCreateWithBytes_str);
-    if (CFStringCreateWithBytes_addr == LLDB_INVALID_ADDRESS) {
+        m_execution_unit.FindSymbol(g_CFStringCreateWithBytes_str, 
+                                    missing_weak);
+    if (CFStringCreateWithBytes_addr == LLDB_INVALID_ADDRESS || missing_weak) {
       if (log)
         log->PutCString("Couldn't find CFStringCreateWithBytes in the target");
 
@@ -857,9 +859,11 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
   if (!m_sel_registerName) {
     lldb::addr_t sel_registerName_addr;
 
+    bool missing_weak = false;
     static lldb_private::ConstString g_sel_registerName_str("sel_registerName");
-    sel_registerName_addr = m_execution_unit.FindSymbol(g_sel_registerName_str);
-    if (sel_registerName_addr == LLDB_INVALID_ADDRESS)
+    sel_registerName_addr = m_execution_unit.FindSymbol(g_sel_registerName_str,
+                                                        missing_weak);
+    if (sel_registerName_addr == LLDB_INVALID_ADDRESS || missing_weak)
       return false;
 
     if (log)
@@ -1027,9 +1031,11 @@ bool IRForTarget::RewriteObjCClassReference(Instruction *class_load) {
   if (!m_objc_getClass) {
     lldb::addr_t objc_getClass_addr;
 
+    bool missing_weak = false;
     static lldb_private::ConstString g_objc_getClass_str("objc_getClass");
-    objc_getClass_addr = m_execution_unit.FindSymbol(g_objc_getClass_str);
-    if (objc_getClass_addr == LLDB_INVALID_ADDRESS)
+    objc_getClass_addr = m_execution_unit.FindSymbol(g_objc_getClass_str,
+                                                     missing_weak);
+    if (objc_getClass_addr == LLDB_INVALID_ADDRESS || missing_weak)
       return false;
 
     if (log)

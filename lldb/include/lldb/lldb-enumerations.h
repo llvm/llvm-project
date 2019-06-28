@@ -592,6 +592,8 @@ enum CommandArgumentType {
 };
 
 // Symbol types
+// Symbol holds the SymbolType in a 6-bit field (m_type), so if you get over 63 
+// entries you will have to resize that field.
 enum SymbolType {
   eSymbolTypeAny = 0,
   eSymbolTypeInvalid = 0,

@@ -165,6 +165,10 @@ public:
   bool IsTrampoline() const;
 
   bool IsIndirect() const;
+  
+  bool IsWeak() const { return m_is_weak; }
+  
+  void SetIsWeak (bool b) { m_is_weak = b; }
 
   bool GetByteSizeIsValid() const { return m_size_is_valid; }
 
@@ -250,7 +254,8 @@ protected:
       m_contains_linker_annotations : 1, // The symbol name contains linker
                                          // annotations, which are optional when
                                          // doing name lookups
-      m_type : 7;
+      m_is_weak : 1,
+      m_type : 6;            // Values from the lldb::SymbolType enum.
   Mangled m_mangled;         // uniqued symbol name/mangled name pair
   AddressRange m_addr_range; // Contains the value, or the section offset
                              // address when the value is an address in a
