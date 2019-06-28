@@ -54,15 +54,15 @@ struct TT {
 
 // CHECK-DAG:  [[FP_E:@__omp_offloading_firstprivate_.+_e_l76]] = internal global [[TTII]] zeroinitializer
 // CHECK-DAG:  [[SIZET:@.+]] = private unnamed_addr constant [2 x i{{32|64}}] [i[[SZ:32|64]] 4, i{{64|32}} {{8|4}}]
-// CHECK-DAG:  [[MAPT:@.+]] = private unnamed_addr constant [2 x i64] [i64 800, i64 561]
-// CHECK-DAG:  [[MAPT2:@.+]] = private unnamed_addr constant [9 x i64] [i64 800, i64 673, i64 288, i64 673, i64 673, i64 288, i64 288, i64 673, i64 673]
+// CHECK-DAG:  [[MAPT:@.+]] = private unnamed_addr constant [2 x i64] [i64 288, i64 49]
+// CHECK-DAG:  [[MAPT2:@.+]] = private unnamed_addr constant [9 x i64] [i64 288, i64 161, i64 800, i64 161, i64 161, i64 800, i64 800, i64 161, i64 161]
 // CHECK-DAG:  [[SIZET3:@.+]] = private unnamed_addr constant [2 x i{{32|64}}] [i{{32|64}} 0, i{{32|64}} 8]
-// CHECK-DAG:  [[MAPT3:@.+]] = private unnamed_addr constant [2 x i64] [i64 544, i64 549]
-// CHECK-DAG:  [[MAPT4:@.+]] = private unnamed_addr constant [6 x i64] [i64 32, i64 281474976711171, i64 800, i64 288, i64 288, i64 673]
+// CHECK-DAG:  [[MAPT3:@.+]] = private unnamed_addr constant [2 x i64] [i64 32, i64 37]
+// CHECK-DAG:  [[MAPT4:@.+]] = private unnamed_addr constant [6 x i64] [i64 32, i64 281474976711171, i64 288, i64 800, i64 800, i64 161]
 // CHECK-DAG:  [[SIZET5:@.+]] = private unnamed_addr constant [3 x i{{32|64}}] [i[[SZ]] 4, i[[SZ]] 1, i[[SZ]] 40]
-// CHECK-DAG:  [[MAPT5:@.+]] = private unnamed_addr constant [3 x i64] [i64 800, i64 800, i64 673]
+// CHECK-DAG:  [[MAPT5:@.+]] = private unnamed_addr constant [3 x i64] [i64 288, i64 288, i64 161]
 // CHECK-DAG:  [[SIZET6:@.+]] = private unnamed_addr constant [2 x i{{32|64}}] [i[[SZ]] 4, i[[SZ]] 40]
-// CHECK-DAG:  [[MAPT6:@.+]] = private unnamed_addr constant [2 x i64] [i64 800, i64 673]
+// CHECK-DAG:  [[MAPT6:@.+]] = private unnamed_addr constant [2 x i64] [i64 288, i64 161]
 
 // CHECK: define {{.*}}[[FOO:@.+]](
 int foo(int n, double *ptr) {

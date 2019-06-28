@@ -4285,6 +4285,11 @@ bool llvm::isGuaranteedToTransferExecutionToSuccessor(const Instruction *I) {
     if (!CS.doesNotThrow())
       return false;
 
+    // A function which doens't throw and has "willreturn" attribute will
+    // always return.
+    if (CS.hasFnAttr(Attribute::WillReturn))
+      return true;
+
     // Non-throwing call sites can loop infinitely, call exit/pthread_exit
     // etc. and thus not return.  However, LLVM already assumes that
     //

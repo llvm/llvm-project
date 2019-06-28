@@ -99,6 +99,13 @@ def SDT_LongMac  : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
                                         SDTCisSameAs<0, 4>,
                                         SDTCisSameAs<0, 5>]>;
 
+// ARMlsll, ARMlsrl, ARMasrl
+def SDT_ARMIntShiftParts : SDTypeProfile<2, 3, [SDTCisSameAs<0, 1>,
+                                              SDTCisSameAs<0, 2>,
+                                              SDTCisSameAs<0, 3>,
+                                              SDTCisInt<0>,
+                                              SDTCisInt<4>]>;
+
 def ARMSmlald        : SDNode<"ARMISD::SMLALD", SDT_LongMac>;
 def ARMSmlaldx       : SDNode<"ARMISD::SMLALDX", SDT_LongMac>;
 def ARMSmlsld        : SDNode<"ARMISD::SMLSLD", SDT_LongMac>;
@@ -171,6 +178,10 @@ def ARMcmpZ          : SDNode<"ARMISD::CMPZ", SDT_ARMCmp,
 
 def ARMpic_add       : SDNode<"ARMISD::PIC_ADD", SDT_ARMPICAdd>;
 
+def ARMasrl          : SDNode<"ARMISD::ASRL", SDT_ARMIntShiftParts, []>;
+def ARMlsrl          : SDNode<"ARMISD::LSRL", SDT_ARMIntShiftParts, []>;
+def ARMlsll          : SDNode<"ARMISD::LSLL", SDT_ARMIntShiftParts, []>;
+
 def ARMsrl_flag      : SDNode<"ARMISD::SRL_FLAG", SDTIntUnaryOp, [SDNPOutGlue]>;
 def ARMsra_flag      : SDNode<"ARMISD::SRA_FLAG", SDTIntUnaryOp, [SDNPOutGlue]>;
 def ARMrrx           : SDNode<"ARMISD::RRX"     , SDTIntUnaryOp, [SDNPInGlue ]>;
@@ -212,6 +223,26 @@ def ARMsmlalbb      : SDNode<"ARMISD::SMLALBB", SDT_LongMac, []>;
 def ARMsmlalbt      : SDNode<"ARMISD::SMLALBT", SDT_LongMac, []>;
 def ARMsmlaltb      : SDNode<"ARMISD::SMLALTB", SDT_LongMac, []>;
 def ARMsmlaltt      : SDNode<"ARMISD::SMLALTT", SDT_LongMac, []>;
+
+// Vector operations shared between NEON and MVE
+
+def ARMvdup      : SDNode<"ARMISD::VDUP", SDTypeProfile<1, 1, [SDTCisVec<0>]>>;
+
+// VDUPLANE can produce a quad-register result from a double-register source,
+// so the result is not constrained to match the source.
+def ARMvduplane  : SDNode<"ARMISD::VDUPLANE",
+                          SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisVec<1>,
+                                               SDTCisVT<2, i32>]>>;
+
+def SDTARMVSHUF   : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisSameAs<0, 1>]>;
+def ARMvrev64    : SDNode<"ARMISD::VREV64", SDTARMVSHUF>;
+def ARMvrev32    : SDNode<"ARMISD::VREV32", SDTARMVSHUF>;
+def ARMvrev16    : SDNode<"ARMISD::VREV16", SDTARMVSHUF>;
+
+def SDTARMVGETLN  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisInt<1>,
+                                         SDTCisVT<2, i32>]>;
+def ARMvgetlaneu : SDNode<"ARMISD::VGETLANEu", SDTARMVGETLN>;
+def ARMvgetlanes : SDNode<"ARMISD::VGETLANEs", SDTARMVGETLN>;
 
 //===----------------------------------------------------------------------===//
 // ARM Flag Definitions.

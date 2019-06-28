@@ -164,8 +164,6 @@ def FeatureHTM : SubtargetFeature<"htm", "HasHTM", "true",
                                   "Enable Hardware Transactional Memory instructions">;
 def FeatureMFTB   : SubtargetFeature<"", "FeatureMFTB", "true",
                                         "Implement mftb using the mfspr instruction">;
-def FeatureFusion : SubtargetFeature<"fusion", "HasFusion", "true",
-                                     "Target supports add/load integer fusion.">;
 def FeaturePPCPreRASched:
   SubtargetFeature<"ppc-prera-sched", "UsePPCPreRASchedStrategy", "true",
                    "Use PowerPC pre-RA scheduling strategy">;
@@ -233,8 +231,7 @@ def ProcessorFeatures {
        FeatureMFTB, DeprecatedDST, FeatureTwoConstNR];
   list<SubtargetFeature> Power8SpecificFeatures =
       [DirectivePwr8, FeatureP8Altivec, FeatureP8Vector, FeatureP8Crypto,
-       FeatureHTM, FeatureDirectMove, FeatureICBT, FeaturePartwordAtomic,
-       FeatureFusion];
+       FeatureHTM, FeatureDirectMove, FeatureICBT, FeaturePartwordAtomic];
   list<SubtargetFeature> Power8FeatureList =
       !listconcat(Power7FeatureList, Power8SpecificFeatures);
   list<SubtargetFeature> Power9SpecificFeatures =

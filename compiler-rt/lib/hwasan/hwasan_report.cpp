@@ -139,6 +139,75 @@ uptr FindHeapAllocation(HeapAllocationsRingBuffer *rb,
   return 0;
 }
 
+static void PrintStackAllocations(StackAllocationsRingBuffer *sa,
+                                  tag_t addr_tag, uptr untagged_addr) {
+  uptr frames = Min((uptr)flags()->stack_history_size, sa->size());
+  bool found_local = false;
+  for (uptr i = 0; i < frames; i++) {
+    const uptr *record_addr = &(*sa)[i];
+    uptr record = *record_addr;
+    if (!record)
+      break;
+    tag_t base_tag =
+        reinterpret_cast<uptr>(record_addr) >> kRecordAddrBaseTagShift;
+    uptr fp = (record >> kRecordFPShift) << kRecordFPLShift;
+    uptr pc_mask = (1ULL << kRecordFPShift) - 1;
+    uptr pc = record & pc_mask;
+    FrameInfo frame;
+    if (Symbolizer::GetOrInit()->SymbolizeFrame(pc, &frame)) {
+      for (LocalInfo &local : frame.locals) {
+        if (!local.has_frame_offset || !local.has_size || !local.has_tag_offset)
+          continue;
+        tag_t obj_tag = base_tag ^ local.tag_offset;
+        if (obj_tag != addr_tag)
+          continue;
+        // Calculate the offset from the object address to the faulting
+        // address. Because we only store bits 4-19 of FP (bits 0-3 are
+        // guaranteed to be zero), the calculation is performed mod 2^20 and may
+        // harmlessly underflow if the address mod 2^20 is below the object
+        // address.
+        uptr obj_offset =
+            (untagged_addr - fp - local.frame_offset) & (kRecordFPModulus - 1);
+        if (obj_offset >= local.size)
+          continue;
+        if (!found_local) {
+          Printf("Potentially referenced stack objects:\n");
+          found_local = true;
+        }
+        Printf("  %s in %s %s:%d\n", local.name, local.function_name,
+               local.decl_file, local.decl_line);
+      }
+      frame.Clear();
+    }
+  }
+
+  if (found_local)
+    return;
+
+  // We didn't find any locals. Most likely we don't have symbols, so dump
+  // the information that we have for offline analysis.
+  InternalScopedString frame_desc(GetPageSizeCached() * 2);
+  Printf("Previously allocated frames:\n");
+  for (uptr i = 0; i < frames; i++) {
+    const uptr *record_addr = &(*sa)[i];
+    uptr record = *record_addr;
+    if (!record)
+      break;
+    uptr pc_mask = (1ULL << 48) - 1;
+    uptr pc = record & pc_mask;
+    frame_desc.append("  record_addr:0x%zx record:0x%zx",
+                      reinterpret_cast<uptr>(record_addr), record);
+    if (SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc)) {
+      RenderFrame(&frame_desc, " %F %L\n", 0, frame->info,
+                  common_flags()->symbolize_vs_style,
+                  common_flags()->strip_path_prefix);
+      frame->ClearAll();
+    }
+    Printf("%s", frame_desc.data());
+    frame_desc.clear();
+  }
+}
+
 void PrintAddressDescription(
     uptr tagged_addr, uptr access_size,
     StackAllocationsRingBuffer *current_stack_allocations) {
@@ -238,33 +307,10 @@ void PrintAddressDescription(
       Printf("%s", d.Default());
       t->Announce();
 
-      // Temporary report section, needs to be improved.
-      Printf("Previously allocated frames:\n");
       auto *sa = (t == GetCurrentThread() && current_stack_allocations)
                      ? current_stack_allocations
                      : t->stack_allocations();
-      uptr frames = Min((uptr)flags()->stack_history_size, sa->size());
-      InternalScopedString frame_desc(GetPageSizeCached() * 2);
-      for (uptr i = 0; i < frames; i++) {
-        uptr record = (*sa)[i];
-        if (!record)
-          break;
-        uptr sp = (record >> 48) << 4;
-        uptr pc_mask = (1ULL << 48) - 1;
-        uptr pc = record & pc_mask;
-        if (SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc)) {
-          frame_desc.append(" sp: 0x%zx ", sp);
-          RenderFrame(&frame_desc, "#%n %p %F %L\n", 0, frame->info,
-                      common_flags()->symbolize_vs_style,
-                      common_flags()->strip_path_prefix);
-          frame->ClearAll();
-          if (auto Descr = GetStackFrameDescr(pc))
-            frame_desc.append("  %s\n", Descr);
-        }
-        Printf("%s", frame_desc.data());
-        frame_desc.clear();
-      }
-
+      PrintStackAllocations(sa, addr_tag, untagged_addr);
       num_descriptions_printed++;
     }
   });
@@ -289,7 +335,7 @@ static void PrintTagsAroundAddr(tag_t *tag_ptr) {
   tag_t *center_row_beg = reinterpret_cast<tag_t *>(
       RoundDownTo(reinterpret_cast<uptr>(tag_ptr), row_len));
   tag_t *beg_row = center_row_beg - row_len * (num_rows / 2);
-  tag_t *end_row = center_row_beg + row_len * (num_rows / 2);
+  tag_t *end_row = center_row_beg + row_len * ((num_rows + 1) / 2);
   InternalScopedString s(GetPageSizeCached() * 8);
   for (tag_t *row = beg_row; row < end_row; row += row_len) {
     s.append("%s", row == center_row_beg ? "=>" : "  ");

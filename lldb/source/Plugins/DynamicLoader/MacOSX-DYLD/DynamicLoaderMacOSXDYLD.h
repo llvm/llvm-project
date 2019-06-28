@@ -121,7 +121,7 @@ protected:
       dyldImageLoadAddress = LLDB_INVALID_ADDRESS;
     }
 
-    bool IsValid() const { return version >= 1 || version <= 6; }
+    bool IsValid() const { return version >= 1 && version <= 6; }
   };
 
   static lldb::ByteOrder GetByteOrderFromMagic(uint32_t magic);

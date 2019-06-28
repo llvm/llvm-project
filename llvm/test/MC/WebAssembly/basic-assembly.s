@@ -1,6 +1,6 @@
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -mattr=+atomics,+unimplemented-simd128,+nontrapping-fptoint,+exception-handling < %s | FileCheck %s
 # Check that it converts to .o without errors, but don't check any output:
-# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+unimplemented-simd128,+nontrapping-fptoint,+exception-handling -o %t.o < %s
+# RUN: llvm-mc -triple=wasm32-unknown-unknown -filetype=obj -mattr=+atomics,+unimplemented-simd128,+nontrapping-fptoint,+exception-handling -o %t.o < %s
 
 test0:
     # Test all types:
@@ -17,7 +17,8 @@ test0:
     v128.const  0, 1, 2, 3, 4, 5, 6, 7
     # Indirect addressing:
     local.get   0
-    f64.store   0
+    f64.store   1234:p2align=4
+    f64.store   1234     # Natural alignment (3)
     # Loops, conditionals, binary ops, calls etc:
     block       i32
     i32.const   1
@@ -49,14 +50,14 @@ test0:
     br_table {0, 1, 2}   # 2 entries, default
     end_block            # first entry jumps here.
     i32.const   1
-    br 2
+    br          2
     end_block            # second entry jumps here.
     i32.const   2
-    br 1
+    br          1
     end_block            # default jumps here.
     i32.const   3
     end_block            # "switch" exit.
-    if          # void
+    if                   # void
     if          i32
     end_if
     else
@@ -67,34 +68,38 @@ test0:
     #i32x4.trunc_sat_f32x4_s
     i32.trunc_f32_s
     try         except_ref
+    i32.atomic.load 0
+    atomic.notify 0
 .LBB0_3:
     catch
-    local.set 0
+    local.set   0
     block       i32
-    local.get 0
-    br_on_exn 0, __cpp_exception
+    local.get   0
+    br_on_exn   0, __cpp_exception
     rethrow
 .LBB0_4:
     end_block
     end_try
-    i32.const .L.str
+    i32.const   .L.str
     throw 0
 .LBB0_5:
     #i32.trunc_sat_f32_s
     global.get  __stack_pointer
     end_function
 
-    .section	.rodata..L.str,"",@
+    .section    .rodata..L.str,"",@
+    .hidden     .L.str
 .L.str:
-    .int8	'H'
-    .asciz	"ello, World!"
-    .size	.L.str, 14
+    .int8       'H'
+    .asciz      "ello, World!"
+    .size       .L.str, 14
 
-    .globaltype	__stack_pointer, i32
+    .ident      "clang version 9.0.0 (trunk 364502) (llvm/trunk 364571)"
+    .globaltype __stack_pointer, i32
 
 # CHECK:           .text
 # CHECK-LABEL: test0:
-# CHECK-NEXT:      .functype test0 (i32, i64) -> (i32)
+# CHECK-NEXT:      .functype   test0 (i32, i64) -> (i32)
 # CHECK-NEXT:      .eventtype  __cpp_exception i32
 # CHECK-NEXT:      .local      f32, f64
 # CHECK-NEXT:      local.get   2
@@ -104,14 +109,15 @@ test0:
 # CHECK-NEXT:      v128.const  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
 # CHECK-NEXT:      v128.const  0, 1, 2, 3, 4, 5, 6, 7
 # CHECK-NEXT:      local.get   0
-# CHECK-NEXT:      f64.store   0:p2align=0
+# CHECK-NEXT:      f64.store   1234:p2align=4
+# CHECK-NEXT:      f64.store   1234
 # CHECK-NEXT:      block       i32
 # CHECK-NEXT:      i32.const   1
 # CHECK-NEXT:      local.get   0
 # CHECK-NEXT:      i32.ge_s
-# CHECK-NEXT:      br_if 0            # 0: down to label0
+# CHECK-NEXT:      br_if       0       # 0: down to label0
 # CHECK-NEXT:  .LBB0_1:
-# CHECK-NEXT:      loop        i32         # label1:
+# CHECK-NEXT:      loop        i32     # label1:
 # CHECK-NEXT:      call        something1
 # CHECK-NEXT:      i64.const   1234
 # CHECK-NEXT:      i32.call    something2
@@ -122,10 +128,10 @@ test0:
 # CHECK-NEXT:      local.tee   0
 # CHECK-NEXT:      local.get   0
 # CHECK-NEXT:      i32.lt_s
-# CHECK-NEXT:      br_if 0            # 0: up to label1
+# CHECK-NEXT:      br_if       0       # 0: up to label1
 # CHECK-NEXT:  .LBB0_2:
 # CHECK-NEXT:      end_loop
-# CHECK-NEXT:      end_block                       # label0:
+# CHECK-NEXT:      end_block           # label0:
 # CHECK-NEXT:      local.get   4
 # CHECK-NEXT:      local.get   5
 # CHECK-NEXT:      block
@@ -135,13 +141,13 @@ test0:
 # CHECK-NEXT:      br_table {0, 1, 2}  # 1: down to label4
 # CHECK-NEXT:                          # 2: down to label3
 # CHECK-NEXT:      end_block           # label5:
-# CHECK-NEXT:      i32.const 1
-# CHECK-NEXT:      br 2                # 2: down to label2
+# CHECK-NEXT:      i32.const   1
+# CHECK-NEXT:      br          2       # 2: down to label2
 # CHECK-NEXT:      end_block           # label4:
-# CHECK-NEXT:      i32.const 2
-# CHECK-NEXT:      br 1                # 1: down to label2
+# CHECK-NEXT:      i32.const   2
+# CHECK-NEXT:      br          1       # 1: down to label2
 # CHECK-NEXT:      end_block           # label3:
-# CHECK-NEXT:      i32.const 3
+# CHECK-NEXT:      i32.const   3
 # CHECK-NEXT:      end_block           # label2:
 # CHECK-NEXT:      if
 # CHECK-NEXT:      if          i32
@@ -151,25 +157,28 @@ test0:
 # CHECK-NEXT:      f32x4.add
 # CHECK-NEXT:      i32.trunc_f32_s
 # CHECK-NEXT:      try         except_ref
+# CHECK-NEXT:      i32.atomic.load 0
+# CHECK-NEXT:      atomic.notify 0
 # CHECK-NEXT:  .LBB0_3:
 # CHECK-NEXT:      catch
-# CHECK-NEXT:      local.set 0
+# CHECK-NEXT:      local.set   0
 # CHECK-NEXT:      block       i32
-# CHECK-NEXT:      local.get 0
-# CHECK-NEXT:      br_on_exn 0, __cpp_exception
+# CHECK-NEXT:      local.get   0
+# CHECK-NEXT:      br_on_exn   0, __cpp_exception
 # CHECK-NEXT:      rethrow
 # CHECK-NEXT:  .LBB0_4:
 # CHECK-NEXT:      end_block
 # CHECK-NEXT:      end_try
-# CHECK-NEXT:      i32.const .L.str
-# CHECK-NEXT:      throw 0
+# CHECK-NEXT:      i32.const   .L.str
+# CHECK-NEXT:      throw       0
 # CHECK-NEXT:  .LBB0_5:
 # CHECK-NEXT:      global.get  __stack_pointer
 # CHECK-NEXT:      end_function
 
-# CHECK:	    .section	.rodata..L.str,"",@
-# CHECK-NEXT:.L.str:
-# CHECK-NEXT:	.int8	72
-# CHECK-NEXT:	.asciz	"ello, World!"
+# CHECK:           .section    .rodata..L.str,"",@
+# CHECK-NEXT:      .hidden     .L.str
+# CHECK-NEXT:  .L.str:
+# CHECK-NEXT:      .int8       72
+# CHECK-NEXT:      .asciz      "ello, World!"
 
-# CHECK:           .globaltype	__stack_pointer, i32
+# CHECK:           .globaltype __stack_pointer, i32

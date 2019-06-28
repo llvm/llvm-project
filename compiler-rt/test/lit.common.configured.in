@@ -66,4 +66,4 @@ if not os.path.exists(config.clang):
   lit_config.fatal("Can't find compiler on path %r" % config.clang)
 
 # Setup attributes common for all compiler-rt projects.
-lit_config.load_config(config, "@COMPILER_RT_SOURCE_DIR@/test/lit.common.cfg")
+lit_config.load_config(config, "@COMPILER_RT_SOURCE_DIR@/test/lit.common.cfg.py")

@@ -734,7 +734,12 @@ std::error_code status(int FD, file_status &Result) {
   return getStatus(FileHandle, Result);
 }
 
-std::error_code setPermissions(const Twine &Path, perms Permissions) {
+unsigned getUmask() {
+  return 0;
+}
+
+std::error_code setPermissions(const Twine &Path, perms Permissions,
+                               bool /*RespectUmask*/) {
   SmallVector<wchar_t, 128> PathUTF16;
   if (std::error_code EC = widenPath(Path, PathUTF16))
     return EC;

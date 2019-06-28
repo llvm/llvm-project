@@ -82,6 +82,8 @@ if.end:
 
 ; CHECK-LABEL: Determining loop execution counts for: @s32_max2_unpredictable_exit
 ; CHECK-NEXT: Loop %do.body: <multiple exits> backedge-taken count is (((-1 * %n) + ((2 + %n) smax %n)) umin ((-1 * %n) + %x))
+; CHECK-NEXT:   exit count for do.body: ((-1 * %n) + %x)
+; CHECK-NEXT:   exit count for if.end: ((-1 * %n) + ((2 + %n) smax %n))
 ; CHECK-NEXT: Loop %do.body: max backedge-taken count is 2{{$}}
 
 do.end:
@@ -170,6 +172,8 @@ if.end:
 
 ; CHECK-LABEL: Determining loop execution counts for: @u32_max2_unpredictable_exit
 ; CHECK-NEXT: Loop %do.body: <multiple exits> backedge-taken count is (((-1 * %n) + ((2 + %n) umax %n)) umin ((-1 * %n) + %x))
+; CHECK-NEXT:   exit count for do.body: ((-1 * %n) + %x)
+; CHECK-NEXT:   exit count for if.end: ((-1 * %n) + ((2 + %n) umax %n))
 ; CHECK-NEXT: Loop %do.body: max backedge-taken count is 2{{$}}
 
 do.end:

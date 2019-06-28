@@ -761,7 +761,7 @@ bool PPCMIPeephole::simplifyCode(void) {
         break;
       }
       case PPC::RLDICR: {
-        Simplified = emitRLDICWhenLoweringJumpTables(MI);
+        Simplified |= emitRLDICWhenLoweringJumpTables(MI);
         break;
       }
       }

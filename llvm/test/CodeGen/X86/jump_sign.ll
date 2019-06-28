@@ -239,7 +239,7 @@ define void @func_o() nounwind uwtable {
 ; CHECK-NEXT:    imull $-13107, %eax, %eax # imm = 0xCCCD
 ; CHECK-NEXT:    rorw %ax
 ; CHECK-NEXT:    movzwl %ax, %eax
-; CHECK-NEXT:    cmpl $13108, %eax # imm = 0x3334
+; CHECK-NEXT:    cmpl $6554, %eax # imm = 0x199A
 ; CHECK-NEXT:    jae .LBB12_5
 ; CHECK-NEXT:  .LBB12_8: # %if.then44
 ; CHECK-NEXT:    xorl %eax, %eax

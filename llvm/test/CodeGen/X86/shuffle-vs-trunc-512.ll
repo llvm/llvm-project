@@ -707,18 +707,14 @@ define <16 x i8> @trunc_shuffle_v64i8_01_05_09_13_17_21_25_29_33_37_41_45_49_53_
 ;
 ; AVX512VBMI-LABEL: trunc_shuffle_v64i8_01_05_09_13_17_21_25_29_33_37_41_45_49_53_57_61:
 ; AVX512VBMI:       # %bb.0:
-; AVX512VBMI-NEXT:    vextracti64x4 $1, %zmm0, %ymm1
-; AVX512VBMI-NEXT:    vextracti128 $1, %ymm1, %xmm2
-; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} xmm3 = <u,u,u,u,1,5,9,13,u,u,u,u,u,u,u,u>
-; AVX512VBMI-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX512VBMI-NEXT:    vpshufb %xmm3, %xmm1, %xmm1
-; AVX512VBMI-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; AVX512VBMI-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} xmm3 = <1,5,9,13,u,u,u,u,u,u,u,u,u,u,u,u>
-; AVX512VBMI-NEXT:    vpshufb %xmm3, %xmm2, %xmm2
-; AVX512VBMI-NEXT:    vpshufb %xmm3, %xmm0, %xmm0
-; AVX512VBMI-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; AVX512VBMI-NEXT:    vpblendd {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
+; AVX512VBMI-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX512VBMI-NEXT:    vmovdqa {{.*#+}} xmm2 = <1,5,9,13,u,u,u,u,u,u,u,u,u,u,u,u>
+; AVX512VBMI-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
+; AVX512VBMI-NEXT:    vpshufb %xmm2, %xmm0, %xmm2
+; AVX512VBMI-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; AVX512VBMI-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [4411615795313452321,4411615795313452321,4411615795313452321,4411615795313452321,4411615795313452321,4411615795313452321,4411615795313452321,4411615795313452321]
+; AVX512VBMI-NEXT:    vpermb %zmm0, %zmm2, %zmm0
+; AVX512VBMI-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq
 ;
@@ -804,11 +800,8 @@ define <16 x i8> @trunc_shuffle_v64i8_01_05_09_13_17_21_25_29_33_37_41_45_49_53_
 ; AVX512VBMI-NEXT:    vpshufb %xmm2, %xmm1, %xmm1
 ; AVX512VBMI-NEXT:    vpshufb %xmm2, %xmm0, %xmm2
 ; AVX512VBMI-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
-; AVX512VBMI-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; AVX512VBMI-NEXT:    vextracti128 $1, %ymm0, %xmm2
-; AVX512VBMI-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[u,u,u,u,1,5,9,14,u,u,u,u,u,u,u,u]
-; AVX512VBMI-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[u,u,u,u,1,5,9,13,u,u,u,u,u,u,u,u]
-; AVX512VBMI-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
+; AVX512VBMI-NEXT:    vpbroadcastq {{.*#+}} zmm2 = [4483673389351380257,4483673389351380257,4483673389351380257,4483673389351380257,4483673389351380257,4483673389351380257,4483673389351380257,4483673389351380257]
+; AVX512VBMI-NEXT:    vpermb %zmm0, %zmm2, %zmm0
 ; AVX512VBMI-NEXT:    vpblendd {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
 ; AVX512VBMI-NEXT:    vzeroupper
 ; AVX512VBMI-NEXT:    retq

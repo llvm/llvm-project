@@ -109,10 +109,10 @@ hidden_func:
 # CHECK-NEXT:     Functions:
 # CHECK-NEXT:       - Index:           1
 # CHECK-NEXT:         Locals:          []
-# CHECK-NEXT:         Body:            2380808080002800000B
+# CHECK-NEXT:         Body:            2380808080002802000B
 # CHECK-NEXT:       - Index:           2
 # CHECK-NEXT:         Locals:          []
-# CHECK-NEXT:         Body:            2381808080002800000B
+# CHECK-NEXT:         Body:            2381808080002802000B
 # CHECK-NEXT:       - Index:           3
 # CHECK-NEXT:         Locals:          []
 # CHECK-NEXT:         Body:            2380808080004180808080006A0B

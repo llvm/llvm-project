@@ -65,6 +65,7 @@ define amdgpu_kernel void @test_bitcast_argument_and_return_types() #0 {
 
 ; GCN-LABEL: {{^}}use_workitem_id_x:
 ; GCN: s_waitcnt
+; GCN-NEXT: v_and_b32_e32 v1, 0x3ff, v1
 ; GCN-NEXT: v_add_i32_e32 v0, vcc, v1, v0
 ; GCN-NEXT: s_setpc_b64
 define hidden i32 @use_workitem_id_x(i32 %arg0) #0 {

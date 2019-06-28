@@ -1142,11 +1142,17 @@ private:
   struct OperandInfoTy {
     int64_t Id;
     bool IsSymbolic = false;
+    bool IsDefined = false;
 
     OperandInfoTy(int64_t Id_) : Id(Id_) {}
   };
 
-  bool parseSendMsgConstruct(OperandInfoTy &Msg, OperandInfoTy &Operation, int64_t &StreamId);
+  bool parseSendMsgBody(OperandInfoTy &Msg, OperandInfoTy &Op, OperandInfoTy &Stream);
+  bool validateSendMsg(const OperandInfoTy &Msg,
+                       const OperandInfoTy &Op,
+                       const OperandInfoTy &Stream,
+                       const SMLoc Loc);
+
   bool parseHwregBody(OperandInfoTy &HwReg, int64_t &Offset, int64_t &Width);
   void validateHwreg(const OperandInfoTy &HwReg,
                      const int64_t Offset,
@@ -4705,106 +4711,104 @@ bool AMDGPUOperand::isHwreg() const {
 // sendmsg
 //===----------------------------------------------------------------------===//
 
-bool AMDGPUAsmParser::parseSendMsgConstruct(OperandInfoTy &Msg, OperandInfoTy &Operation, int64_t &StreamId) {
+bool
+AMDGPUAsmParser::parseSendMsgBody(OperandInfoTy &Msg,
+                                  OperandInfoTy &Op,
+                                  OperandInfoTy &Stream) {
   using namespace llvm::AMDGPU::SendMsg;
 
-  if (Parser.getTok().getString() != "sendmsg")
-    return true;
-  Parser.Lex();
-
-  if (getLexer().isNot(AsmToken::LParen))
-    return true;
-  Parser.Lex();
-
-  if (getLexer().is(AsmToken::Identifier)) {
+  if (isToken(AsmToken::Identifier) && (Msg.Id = getMsgId(getTokenStr())) >= 0) {
     Msg.IsSymbolic = true;
-    Msg.Id = ID_UNKNOWN_;
-    const std::string tok = Parser.getTok().getString();
-    for (int i = ID_GAPS_FIRST_; i < ID_GAPS_LAST_; ++i) {
-      switch(i) {
-        default: continue; // Omit gaps.
-        case ID_GS_ALLOC_REQ:
-          if (isSI() || isCI() || isVI())
-            continue;
-          break;
-        case ID_INTERRUPT: case ID_GS: case ID_GS_DONE:
-        case ID_SYSMSG: break;
-      }
-      if (tok == IdSymbolic[i]) {
-        Msg.Id = i;
-        break;
-      }
-    }
-    Parser.Lex();
-  } else {
-    Msg.IsSymbolic = false;
-    if (getLexer().isNot(AsmToken::Integer))
-      return true;
-    if (getParser().parseAbsoluteExpression(Msg.Id))
-      return true;
-    if (getLexer().is(AsmToken::Integer))
-      if (getParser().parseAbsoluteExpression(Msg.Id))
-        Msg.Id = ID_UNKNOWN_;
-  }
-  if (Msg.Id == ID_UNKNOWN_) // Don't know how to parse the rest.
-    return false;
-
-  if (!(Msg.Id == ID_GS || Msg.Id == ID_GS_DONE || Msg.Id == ID_SYSMSG)) {
-    if (getLexer().isNot(AsmToken::RParen))
-      return true;
-    Parser.Lex();
+    lex(); // skip message name
+  } else if (!parseExpr(Msg.Id)) {
     return false;
   }
 
-  if (getLexer().isNot(AsmToken::Comma))
-    return true;
-  Parser.Lex();
-
-  assert(Msg.Id == ID_GS || Msg.Id == ID_GS_DONE || Msg.Id == ID_SYSMSG);
-  Operation.Id = ID_UNKNOWN_;
-  if (getLexer().is(AsmToken::Identifier)) {
-    Operation.IsSymbolic = true;
-    const char* const *S = (Msg.Id == ID_SYSMSG) ? OpSysSymbolic : OpGsSymbolic;
-    const int F = (Msg.Id == ID_SYSMSG) ? OP_SYS_FIRST_ : OP_GS_FIRST_;
-    const int L = (Msg.Id == ID_SYSMSG) ? OP_SYS_LAST_ : OP_GS_LAST_;
-    const StringRef Tok = Parser.getTok().getString();
-    for (int i = F; i < L; ++i) {
-      if (Tok == S[i]) {
-        Operation.Id = i;
-        break;
-      }
-    }
-    Parser.Lex();
-  } else {
-    Operation.IsSymbolic = false;
-    if (getLexer().isNot(AsmToken::Integer))
-      return true;
-    if (getParser().parseAbsoluteExpression(Operation.Id))
-      return true;
-  }
-
-  if ((Msg.Id == ID_GS || Msg.Id == ID_GS_DONE) && Operation.Id != OP_GS_NOP) {
-    // Stream id is optional.
-    if (getLexer().is(AsmToken::RParen)) {
-      Parser.Lex();
+  if (trySkipToken(AsmToken::Comma)) {
+    Op.IsDefined = true;
+    if (isToken(AsmToken::Identifier) &&
+        (Op.Id = getMsgOpId(Msg.Id, getTokenStr())) >= 0) {
+      lex(); // skip operation name
+    } else if (!parseExpr(Op.Id)) {
       return false;
     }
 
-    if (getLexer().isNot(AsmToken::Comma))
-      return true;
-    Parser.Lex();
-
-    if (getLexer().isNot(AsmToken::Integer))
-      return true;
-    if (getParser().parseAbsoluteExpression(StreamId))
-      return true;
+    if (trySkipToken(AsmToken::Comma)) {
+      Stream.IsDefined = true;
+      if (!parseExpr(Stream.Id))
+        return false;
+    }
   }
 
-  if (getLexer().isNot(AsmToken::RParen))
-    return true;
-  Parser.Lex();
-  return false;
+  return skipToken(AsmToken::RParen, "expected a closing parenthesis");
 }
+
+bool
+AMDGPUAsmParser::validateSendMsg(const OperandInfoTy &Msg,
+                                 const OperandInfoTy &Op,
+                                 const OperandInfoTy &Stream,
+                                 const SMLoc S) {
+  using namespace llvm::AMDGPU::SendMsg;
+
+  // Validation strictness depends on whether message is specified
+  // in a symbolc or in a numeric form. In the latter case
+  // only encoding possibility is checked.
+  bool Strict = Msg.IsSymbolic;
+
+  if (!isValidMsgId(Msg.Id, getSTI(), Strict)) {
+    Error(S, "invalid message id");
+    return false;
+  } else if (Strict && (msgRequiresOp(Msg.Id) != Op.IsDefined)) {
+    Error(S, Op.IsDefined ?
+             "message does not support operations" :
+             "missing message operation");
+    return false;
+  } else if (!isValidMsgOp(Msg.Id, Op.Id, Strict)) {
+    Error(S, "invalid operation id");
+    return false;
+  } else if (Strict && !msgSupportsStream(Msg.Id, Op.Id) && Stream.IsDefined) {
+    Error(S, "message operation does not support streams");
+    return false;
+  } else if (!isValidMsgStream(Msg.Id, Op.Id, Stream.Id, Strict)) {
+    Error(S, "invalid message stream id");
+    return false;
+  }
+  return true;
+}
+
+OperandMatchResultTy
+AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
+  using namespace llvm::AMDGPU::SendMsg;
+
+  int64_t ImmVal = 0;
+  SMLoc Loc = getLoc();
+
+  // If parse failed, do not return error code
+  // to avoid excessive error messages.
+  if (trySkipId("sendmsg", AsmToken::LParen)) {
+    OperandInfoTy Msg(ID_UNKNOWN_);
+    OperandInfoTy Op(OP_NONE_);
+    OperandInfoTy Stream(STREAM_ID_NONE_);
+    if (parseSendMsgBody(Msg, Op, Stream) &&
+        validateSendMsg(Msg, Op, Stream, Loc)) {
+      ImmVal = encodeMsg(Msg.Id, Op.Id, Stream.Id);
+    }
+  } else if (parseExpr(ImmVal)) {
+    if (ImmVal < 0 || !isUInt<16>(ImmVal))
+      Error(Loc, "invalid immediate: only 16-bit values are legal");
+  }
+
+  Operands.push_back(AMDGPUOperand::CreateImm(this, ImmVal, Loc, AMDGPUOperand::ImmTySendMsg));
+  return MatchOperand_Success;
+}
+
+bool AMDGPUOperand::isSendMsg() const {
+  return isImmTy(ImmTySendMsg);
+}
+
+//===----------------------------------------------------------------------===//
+// v_interp
+//===----------------------------------------------------------------------===//
 
 OperandMatchResultTy AMDGPUAsmParser::parseInterpSlot(OperandVector &Operands) {
   if (getLexer().getKind() != AsmToken::Identifier)
@@ -4866,6 +4870,10 @@ OperandMatchResultTy AMDGPUAsmParser::parseInterpAttr(OperandVector &Operands) {
                                               AMDGPUOperand::ImmTyAttrChan));
   return MatchOperand_Success;
 }
+
+//===----------------------------------------------------------------------===//
+// exp
+//===----------------------------------------------------------------------===//
 
 void AMDGPUAsmParser::errorExpTgt() {
   Error(Parser.getTok().getLoc(), "invalid exp target");
@@ -4949,90 +4957,6 @@ OperandMatchResultTy AMDGPUAsmParser::parseExpTgt(OperandVector &Operands) {
   Operands.push_back(AMDGPUOperand::CreateImm(this, Val, S,
                                               AMDGPUOperand::ImmTyExpTgt));
   return MatchOperand_Success;
-}
-
-OperandMatchResultTy
-AMDGPUAsmParser::parseSendMsgOp(OperandVector &Operands) {
-  using namespace llvm::AMDGPU::SendMsg;
-
-  int64_t Imm16Val = 0;
-  SMLoc S = Parser.getTok().getLoc();
-
-  switch(getLexer().getKind()) {
-  default:
-    return MatchOperand_NoMatch;
-  case AsmToken::Integer:
-    // The operand can be an integer value.
-    if (getParser().parseAbsoluteExpression(Imm16Val))
-      return MatchOperand_NoMatch;
-    if (Imm16Val < 0 || !isUInt<16>(Imm16Val)) {
-      Error(S, "invalid immediate: only 16-bit values are legal");
-      // Do not return error code, but create an imm operand anyway and proceed
-      // to the next operand, if any. That avoids unneccessary error messages.
-    }
-    break;
-  case AsmToken::Identifier: {
-      OperandInfoTy Msg(ID_UNKNOWN_);
-      OperandInfoTy Operation(OP_UNKNOWN_);
-      int64_t StreamId = STREAM_ID_DEFAULT_;
-      if (parseSendMsgConstruct(Msg, Operation, StreamId))
-        return MatchOperand_ParseFail;
-      do {
-        // Validate and encode message ID.
-        if (! ((ID_INTERRUPT <= Msg.Id && Msg.Id <= ID_GS_DONE)
-                || (Msg.Id == ID_GS_ALLOC_REQ && !isSI() && !isCI() && !isVI())
-                || Msg.Id == ID_SYSMSG)) {
-          if (Msg.IsSymbolic)
-            Error(S, "invalid/unsupported symbolic name of message");
-          else
-            Error(S, "invalid/unsupported code of message");
-          break;
-        }
-        Imm16Val = (Msg.Id << ID_SHIFT_);
-        // Validate and encode operation ID.
-        if (Msg.Id == ID_GS || Msg.Id == ID_GS_DONE) {
-          if (! (OP_GS_FIRST_ <= Operation.Id && Operation.Id < OP_GS_LAST_)) {
-            if (Operation.IsSymbolic)
-              Error(S, "invalid symbolic name of GS_OP");
-            else
-              Error(S, "invalid code of GS_OP: only 2-bit values are legal");
-            break;
-          }
-          if (Operation.Id == OP_GS_NOP
-              && Msg.Id != ID_GS_DONE) {
-            Error(S, "invalid GS_OP: NOP is for GS_DONE only");
-            break;
-          }
-          Imm16Val |= (Operation.Id << OP_SHIFT_);
-        }
-        if (Msg.Id == ID_SYSMSG) {
-          if (! (OP_SYS_FIRST_ <= Operation.Id && Operation.Id < OP_SYS_LAST_)) {
-            if (Operation.IsSymbolic)
-              Error(S, "invalid/unsupported symbolic name of SYSMSG_OP");
-            else
-              Error(S, "invalid/unsupported code of SYSMSG_OP");
-            break;
-          }
-          Imm16Val |= (Operation.Id << OP_SHIFT_);
-        }
-        // Validate and encode stream ID.
-        if ((Msg.Id == ID_GS || Msg.Id == ID_GS_DONE) && Operation.Id != OP_GS_NOP) {
-          if (! (STREAM_ID_FIRST_ <= StreamId && StreamId < STREAM_ID_LAST_)) {
-            Error(S, "invalid stream id: only 2-bit values are legal");
-            break;
-          }
-          Imm16Val |= (StreamId << STREAM_ID_SHIFT_);
-        }
-      } while (false);
-    }
-    break;
-  }
-  Operands.push_back(AMDGPUOperand::CreateImm(this, Imm16Val, S, AMDGPUOperand::ImmTySendMsg));
-  return MatchOperand_Success;
-}
-
-bool AMDGPUOperand::isSendMsg() const {
-  return isImmTy(ImmTySendMsg);
 }
 
 //===----------------------------------------------------------------------===//
