@@ -260,27 +260,28 @@ enum Id { // Message ID, width(4) [3:0].
 enum Op { // Both GS and SYS operation IDs.
   OP_UNKNOWN_ = -1,
   OP_SHIFT_ = 4,
-  // width(2) [5:4]
+  OP_NONE_ = 0,
+  // Bits used for operation encoding
+  OP_WIDTH_ = 3,
+  OP_MASK_ = (((1 << OP_WIDTH_) - 1) << OP_SHIFT_),
+  // GS operations are encoded in bits 5:4
   OP_GS_NOP = 0,
   OP_GS_CUT,
   OP_GS_EMIT,
   OP_GS_EMIT_CUT,
   OP_GS_LAST_,
   OP_GS_FIRST_ = OP_GS_NOP,
-  OP_GS_WIDTH_ = 2,
-  OP_GS_MASK_ = (((1 << OP_GS_WIDTH_) - 1) << OP_SHIFT_),
-  // width(3) [6:4]
+  // SYS operations are encoded in bits 6:4
   OP_SYS_ECC_ERR_INTERRUPT = 1,
   OP_SYS_REG_RD,
   OP_SYS_HOST_TRAP_ACK,
   OP_SYS_TTRACE_PC,
   OP_SYS_LAST_,
   OP_SYS_FIRST_ = OP_SYS_ECC_ERR_INTERRUPT,
-  OP_SYS_WIDTH_ = 3,
-  OP_SYS_MASK_ = (((1 << OP_SYS_WIDTH_) - 1) << OP_SHIFT_)
 };
 
 enum StreamId : unsigned { // Stream ID, (2) [9:8].
+  STREAM_ID_NONE_ = 0,
   STREAM_ID_DEFAULT_ = 0,
   STREAM_ID_LAST_ = 4,
   STREAM_ID_FIRST_ = STREAM_ID_DEFAULT_,

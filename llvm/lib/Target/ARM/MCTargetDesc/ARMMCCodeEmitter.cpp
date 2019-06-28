@@ -1621,12 +1621,15 @@ getT2AddrModeImmOpValue(const MCInst &MI, unsigned OpNum,
   // If the immediate is B bits long, we need B+1 bits in order
   // to represent the (inverse of the) sign bit.
   Value <<= (Bits + 1);
-  int32_t tmp = (int32_t)MO2.getImm() >> Shift;
-  if (tmp < 0)
+  int32_t tmp = (int32_t)MO2.getImm();
+  if (tmp == INT32_MIN) { // represents subtracting zero rather than adding it
+    tmp = 0;
+  } else if (tmp < 0) {
     tmp = abs(tmp);
-  else
+  } else {
     Value |= (1U << Bits); // Set the ADD bit
-  Value |= tmp & ((1U << Bits) - 1);
+  }
+  Value |= (tmp >> Shift) & ((1U << Bits) - 1);
   return Value;
 }
 

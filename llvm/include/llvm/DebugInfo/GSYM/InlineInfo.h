@@ -23,8 +23,8 @@ namespace gsym {
 
 /// Inline information stores the name of the inline function along with
 /// an array of address ranges. It also stores the call file and call line
-/// that called this inline function. This allows us to unwind inline call 
-/// stacks back to the inline or concrete function that called this 
+/// that called this inline function. This allows us to unwind inline call
+/// stacks back to the inline or concrete function that called this
 /// function. Inlined functions contained in this function are stored in the
 /// "Children" variable. All address ranges must be sorted and all address
 /// ranges of all children must be contained in the ranges of this function.
@@ -48,13 +48,13 @@ struct InlineInfo {
   }
   bool isValid() const { return !Ranges.empty(); }
 
-  typedef std::vector<const InlineInfo *> InlineArray;
+  using InlineArray = std::vector<const InlineInfo *>;
 
   /// Lookup an address in the InlineInfo object
   ///
-  /// This function is used to symbolicate an inline call stack and can 
+  /// This function is used to symbolicate an inline call stack and can
   /// turn one address in the program into one or more inline call stacks
-  /// and have the stack trace show the original call site from 
+  /// and have the stack trace show the original call site from
   /// non-inlined code.
   ///
   /// \param Addr the address to lookup

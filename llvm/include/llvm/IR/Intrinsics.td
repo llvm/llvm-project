@@ -1190,6 +1190,12 @@ def int_experimental_vector_reduce_fmin : Intrinsic<[LLVMVectorElementType<0>],
 def int_set_loop_iterations :
   Intrinsic<[], [llvm_anyint_ty], [IntrNoDuplicate]>;
 
+// Specify that the value given is the number of iterations that the next loop
+// will execute. Also test that the given count is not zero, allowing it to
+// control entry to a 'while' loop.
+def int_test_set_loop_iterations :
+  Intrinsic<[llvm_i1_ty], [llvm_anyint_ty], [IntrNoDuplicate]>;
+
 // Decrement loop counter by the given argument. Return false if the loop
 // should exit.
 def int_loop_decrement :

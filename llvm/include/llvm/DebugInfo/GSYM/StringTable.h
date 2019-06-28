@@ -20,7 +20,7 @@
 namespace llvm {
 namespace gsym {
 
-/// String tables in GSYM files are required to start with an empty 
+/// String tables in GSYM files are required to start with an empty
 /// string at offset zero. Strings must be UTF8 NULL terminated strings.
 struct StringTable {
   StringRef Data;

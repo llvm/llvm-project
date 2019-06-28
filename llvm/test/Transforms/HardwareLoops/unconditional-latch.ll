@@ -1,46 +1,51 @@
 ; RUN: opt -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -hardware-loops -S %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ALLOW
+; RUN: opt -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -hardware-loops -force-hardware-loop-guard=true -S %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-ALLOW
 ; RUN: opt -force-hardware-loops=true -hardware-loop-decrement=1 -hardware-loop-counter-bitwidth=32 -force-hardware-loop-phi=true -hardware-loops -S %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LATCH
 
 ; CHECK-LABEL: not_rotated
 ; CHECK-LATCH-NOT: call void @llvm.set.loop.iterations
 ; CHECK-LATCH-NOT: call i1 @llvm.loop.decrement
 
-; CHECK-ALLOW: call void @llvm.set.loop.iterations.i32(i32 %4)
-; CHECK-ALLOW: br label %10
+; CHECK-ALLOW: bb:
+; CHECK-ALLOW:   [[COUNT:%[^ ]+]] = add i32 %arg, 1
+; CHECK-ALLOW:   br label %bb3
+; CHECK-ALLOW: bb5:
+; CHECK-ALLOW:   call void @llvm.set.loop.iterations.i32(i32 [[COUNT]])
+; CHECK-ALLOW:   br label %bb7
 
 ; CHECK-ALLOW: [[CMP:%[^ ]+]] = call i1 @llvm.loop.decrement.i32(i32 1)
-; CHECK-ALLOW: br i1 [[CMP]], label %13, label %19
+; CHECK-ALLOW: br i1 [[CMP]], label %bb10, label %bb16
+define void @not_rotated(i32 %arg, i16* nocapture %arg1, i16 signext %arg2) {
+bb:
+  br label %bb3
 
-define void @not_rotated(i32, i16* nocapture, i16 signext) {
-  br label %4
+bb3:                                              ; preds = %bb16, %bb
+  %tmp = phi i32 [ 0, %bb ], [ %tmp17, %bb16 ]
+  %tmp4 = icmp eq i32 %tmp, %arg
+  br i1 %tmp4, label %bb18, label %bb5
 
-4:
-  %5 = phi i32 [ 0, %3 ], [ %19, %18 ]
-  %6 = icmp eq i32 %5, %0
-  br i1 %6, label %20, label %7
+bb5:                                              ; preds = %bb3
+  %tmp6 = mul i32 %tmp, %arg
+  br label %bb7
 
-7:
-  %8 = mul i32 %5, %0
-  br label %9
+bb7:                                              ; preds = %bb10, %bb5
+  %tmp8 = phi i32 [ %tmp15, %bb10 ], [ 0, %bb5 ]
+  %tmp9 = icmp eq i32 %tmp8, %arg
+  br i1 %tmp9, label %bb16, label %bb10
 
-9:
-  %10 = phi i32 [ %17, %12 ], [ 0, %7 ]
-  %11 = icmp eq i32 %10, %0
-  br i1 %11, label %18, label %12
+bb10:                                             ; preds = %bb7
+  %tmp11 = add i32 %tmp8, %tmp6
+  %tmp12 = getelementptr inbounds i16, i16* %arg1, i32 %tmp11
+  %tmp13 = load i16, i16* %tmp12, align 2
+  %tmp14 = add i16 %tmp13, %arg2
+  store i16 %tmp14, i16* %tmp12, align 2
+  %tmp15 = add i32 %tmp8, 1
+  br label %bb7
 
-12:
-  %13 = add i32 %10, %8
-  %14 = getelementptr inbounds i16, i16* %1, i32 %13
-  %15 = load i16, i16* %14, align 2
-  %16 = add i16 %15, %2
-  store i16 %16, i16* %14, align 2
-  %17 = add i32 %10, 1
-  br label %9
+bb16:                                             ; preds = %bb7
+  %tmp17 = add i32 %tmp, 1
+  br label %bb3
 
-18:
-  %19 = add i32 %5, 1
-  br label %4
-
-20:
+bb18:                                             ; preds = %bb3
   ret void
 }

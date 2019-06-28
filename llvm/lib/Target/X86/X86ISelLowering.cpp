@@ -32042,16 +32042,26 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       [&](SDValue &NewRoot, SmallVectorImpl<int> &NewMask,
           SmallVectorImpl<SDValue> &NewInputs) -> bool {
     assert(NewMask.empty() && NewInputs.empty() && "Non-empty shuffle mask");
-    if (UnaryShuffle || V1.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-        V2.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
-        !isa<ConstantSDNode>(V1.getOperand(1)) ||
-        !isa<ConstantSDNode>(V2.getOperand(1)))
+    if (UnaryShuffle)
+      return false;
+
+    SDValue Src1 = V1, Src2 = V2;
+    unsigned Offset1 = 0, Offset2 = 0;
+    if (V1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        isa<ConstantSDNode>(V1.getOperand(1))) {
+      Src1 = V1.getOperand(0);
+      Offset1 = V1.getConstantOperandVal(1);
+    }
+    if (V2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        isa<ConstantSDNode>(V2.getOperand(1))) {
+      Src2 = V2.getOperand(0);
+      Offset2 = V2.getConstantOperandVal(1);
+    }
+    if (Offset1 == 0 && Offset2 == 0)
       return false;
 
     // If the src vector types aren't the same, see if we can extend
     // one to match the other.
-    SDValue Src1 = V1.getOperand(0);
-    SDValue Src2 = V2.getOperand(0);
     if ((Src1.getValueType().getScalarType() !=
          Src2.getValueType().getScalarType()) ||
         !DAG.getTargetLoweringInfo().isTypeLegal(Src1.getValueType()) ||
@@ -32075,8 +32085,6 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       }
     }
 
-    unsigned Offset1 = V1.getConstantOperandVal(1);
-    unsigned Offset2 = V2.getConstantOperandVal(1);
     assert(((Offset1 % VT1.getVectorNumElements()) == 0 &&
             (Offset2 % VT2.getVectorNumElements()) == 0 &&
             (Src1SizeInBits % RootSizeInBits) == 0 &&
@@ -33677,7 +33685,7 @@ static SDValue combineShuffle(SDNode *N, SelectionDAG &DAG,
                                   LN->getPointerInfo(),
                                   LN->getAlignment(),
                                   MachineMemOperand::MOLoad);
-      DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 0), VZLoad.getValue(1));
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
       return VZLoad;
     }
   }
