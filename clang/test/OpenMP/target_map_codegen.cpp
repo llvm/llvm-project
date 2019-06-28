@@ -779,10 +779,10 @@ void implicit_maps_float_complex (int a){
 
 // We don't have a constant map size for VLAs.
 // Map types:
-//  - OMP_MAP_PRIVATE_VAL + OMP_MAP_TARGET_PARAM = 288 (vla size)
-//  - OMP_MAP_PRIVATE_VAL + OMP_MAP_TARGET_PARAM = 288 (vla size)
+//  - OMP_MAP_PRIVATE_VAL + OMP_MAP_TARGET_PARAM + OMP_MAP_IMPLICIT = 800 (vla size)
+//  - OMP_MAP_PRIVATE_VAL + OMP_MAP_TARGET_PARAM + OMP_MAP_IMPLICIT = 800 (vla size)
 //  - OMP_MAP_TO + OMP_MAP_FROM + OMP_MAP_TARGET_PARAM | OMP_MAP_IMPLICIT = 547
-// CK13-DAG: [[TYPES:@.+]] = {{.+}}constant [3 x i64] [i64 288, i64 288, i64 547]
+// CK13-DAG: [[TYPES:@.+]] = {{.+}}constant [3 x i64] [i64 800, i64 800, i64 547]
 
 // CK13-LABEL: implicit_maps_variable_length_array{{.*}}(
 void implicit_maps_variable_length_array (int a){
@@ -1388,29 +1388,29 @@ void implicit_maps_template_type_capture (int a){
 // CK19: [[MTYPE15:@.+]] = private {{.*}}constant [1 x i64] [i64 34]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1883.region_id = weak constant i8 0
-// CK19: [[MTYPE16:@.+]] = private {{.*}}constant [2 x i64] [i64 288, i64 33]
+// CK19: [[MTYPE16:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 33]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1909.region_id = weak constant i8 0
 // CK19: [[SIZE17:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 240]
-// CK19: [[MTYPE17:@.+]] = private {{.*}}constant [2 x i64] [i64 288, i64 34]
+// CK19: [[MTYPE17:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 34]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1935.region_id = weak constant i8 0
 // CK19: [[SIZE18:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 240]
-// CK19: [[MTYPE18:@.+]] = private {{.*}}constant [2 x i64] [i64 288, i64 35]
+// CK19: [[MTYPE18:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 35]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1967.region_id = weak constant i8 0
-// CK19: [[MTYPE19:@.+]] = private {{.*}}constant [2 x i64] [i64 288, i64 32]
+// CK19: [[MTYPE19:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 32]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l1993.region_id = weak constant i8 0
 // CK19: [[SIZE20:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 4]
-// CK19: [[MTYPE20:@.+]] = private {{.*}}constant [2 x i64] [i64 288, i64 33]
+// CK19: [[MTYPE20:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 33]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2025.region_id = weak constant i8 0
-// CK19: [[MTYPE21:@.+]] = private {{.*}}constant [2 x i64] [i64 288, i64 35]
+// CK19: [[MTYPE21:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 35]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2051.region_id = weak constant i8 0
 // CK19: [[SIZE22:@.+]] = private {{.*}}constant [2 x i64] [i64 {{8|4}}, i64 4]
-// CK19: [[MTYPE22:@.+]] = private {{.*}}constant [2 x i64] [i64 288, i64 35]
+// CK19: [[MTYPE22:@.+]] = private {{.*}}constant [2 x i64] [i64 800, i64 35]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2070.region_id = weak constant i8 0
 // CK19: [[SIZE23:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
@@ -1441,11 +1441,11 @@ void implicit_maps_template_type_capture (int a){
 // CK19: [[MTYPE29:@.+]] = private {{.*}}constant [3 x i64] [i64 35, i64 16, i64 19]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2301.region_id = weak constant i8 0
-// CK19: [[MTYPE30:@.+]] = private {{.*}}constant [4 x i64] [i64 288, i64 288, i64 288, i64 35]
+// CK19: [[MTYPE30:@.+]] = private {{.*}}constant [4 x i64] [i64 800, i64 800, i64 800, i64 35]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2345.region_id = weak constant i8 0
 // CK19: [[SIZE31:@.+]] = private {{.*}}constant [4 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 {{8|4}}, i64 40]
-// CK19: [[MTYPE31:@.+]] = private {{.*}}constant [4 x i64] [i64 288, i64 288, i64 288, i64 35]
+// CK19: [[MTYPE31:@.+]] = private {{.*}}constant [4 x i64] [i64 800, i64 800, i64 800, i64 35]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2368.region_id = weak constant i8 0
 // CK19: [[SIZE32:@.+]] = private {{.*}}constant [1 x i64] [i64 13728]
@@ -1467,20 +1467,20 @@ void implicit_maps_template_type_capture (int a){
 // CK19: [[MTYPE36:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2492.region_id = weak constant i8 0
-// CK19: [[MTYPE37:@.+]] = private {{.*}}constant [3 x i64] [i64 288, i64 288, i64 35]
+// CK19: [[MTYPE37:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2534.region_id = weak constant i8 0
-// CK19: [[MTYPE38:@.+]] = private {{.*}}constant [3 x i64] [i64 288, i64 288, i64 35]
+// CK19: [[MTYPE38:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2576.region_id = weak constant i8 0
-// CK19: [[MTYPE39:@.+]] = private {{.*}}constant [3 x i64] [i64 288, i64 288, i64 35]
+// CK19: [[MTYPE39:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2618.region_id = weak constant i8 0
-// CK19: [[MTYPE40:@.+]] = private {{.*}}constant [3 x i64] [i64 288, i64 288, i64 35]
+// CK19: [[MTYPE40:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2653.region_id = weak constant i8 0
 // CK19: [[SIZE41:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 208]
-// CK19: [[MTYPE41:@.+]] = private {{.*}}constant [3 x i64] [i64 288, i64 288, i64 35]
+// CK19: [[MTYPE41:@.+]] = private {{.*}}constant [3 x i64] [i64 800, i64 800, i64 35]
 
 // CK19-LABEL: @.__omp_offloading_{{.*}}explicit_maps_single{{.*}}_l2698.region_id = weak constant i8 0
 // CK19: [[SIZE42:@.+]] = private {{.*}}constant [3 x i64] [i64 {{8|4}}, i64 {{8|4}}, i64 104]
@@ -4654,17 +4654,17 @@ int explicit_maps_with_private_class_members(){
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27: [[SIZE05:@.+]] = private {{.*}}constant [1 x i64] zeroinitializer
-// CK27: [[MTYPE05:@.+]] = private {{.*}}constant [1 x i64] [i64 544]
+// CK27: [[MTYPE05:@.+]] = private {{.*}}constant [1 x i64] [i64 32]
 
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27: [[SIZE07:@.+]] = private {{.*}}constant [1 x i64] [i64 4]
-// CK27: [[MTYPE07:@.+]] = private {{.*}}constant [1 x i64] [i64 800]
+// CK27: [[MTYPE07:@.+]] = private {{.*}}constant [1 x i64] [i64 288]
 
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27-LABEL: @.__omp_offloading_{{.*}}zero_size_section_and_private_maps{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
 // CK27: [[SIZE09:@.+]] = private {{.*}}constant [1 x i64] [i64 40]
-// CK27: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 673]
+// CK27: [[MTYPE09:@.+]] = private {{.*}}constant [1 x i64] [i64 161]
 
 // CK27-LABEL: zero_size_section_and_private_maps{{.*}}(
 void zero_size_section_and_private_maps (int ii){
