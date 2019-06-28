@@ -345,9 +345,9 @@ public:
   /// Determines wether \c variable is the "self" object.
   static bool IsSelf(Variable &variable);
 
-  void AddToLibraryNegativeCache(std::string library_name);
+  void AddToLibraryNegativeCache(const std::string &library_name);
 
-  bool IsInLibraryNegativeCache(std::string library_name);
+  bool IsInLibraryNegativeCache(const std::string &library_name);
 
   // Swift uses a few known-unused bits in ObjC pointers
   // to record useful-for-bridging information
