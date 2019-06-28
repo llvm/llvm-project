@@ -179,33 +179,33 @@ TEST(GSYMTest, TestInlineInfo) {
   EXPECT_FALSE(Root.getInlineStack(0x50));
 
   // Verify that we get no inline stacks for addresses out of [0x100-0x200)
-  EXPECT_FALSE(Root.getInlineStack(Root.Ranges[0].startAddress() - 1));
-  EXPECT_FALSE(Root.getInlineStack(Root.Ranges[0].endAddress()));
+  EXPECT_FALSE(Root.getInlineStack(Root.Ranges[0].Start - 1));
+  EXPECT_FALSE(Root.getInlineStack(Root.Ranges[0].End));
 
   // Verify we get no inline stack entries for addresses that are in
   // [0x100-0x200) but not in [0x150-0x160)
-  EXPECT_FALSE(Root.getInlineStack(Inline1.Ranges[0].startAddress() - 1));
-  EXPECT_FALSE(Root.getInlineStack(Inline1.Ranges[0].endAddress()));
+  EXPECT_FALSE(Root.getInlineStack(Inline1.Ranges[0].Start - 1));
+  EXPECT_FALSE(Root.getInlineStack(Inline1.Ranges[0].End));
 
   // Verify we get one inline stack entry for addresses that are in
   // [[0x150-0x160)) but not in [0x152-0x155) or [0x157-0x158)
-  auto InlineInfos = Root.getInlineStack(Inline1.Ranges[0].startAddress());
+  auto InlineInfos = Root.getInlineStack(Inline1.Ranges[0].Start);
   ASSERT_TRUE(InlineInfos);
   ASSERT_EQ(InlineInfos->size(), 1u);
   ASSERT_EQ(*InlineInfos->at(0), Inline1);
-  InlineInfos = Root.getInlineStack(Inline1.Ranges[0].endAddress() - 1);
+  InlineInfos = Root.getInlineStack(Inline1.Ranges[0].End - 1);
   EXPECT_TRUE(InlineInfos);
   ASSERT_EQ(InlineInfos->size(), 1u);
   ASSERT_EQ(*InlineInfos->at(0), Inline1);
 
   // Verify we get two inline stack entries for addresses that are in
   // [0x152-0x155)
-  InlineInfos = Root.getInlineStack(Inline1Sub1.Ranges[0].startAddress());
+  InlineInfos = Root.getInlineStack(Inline1Sub1.Ranges[0].Start);
   EXPECT_TRUE(InlineInfos);
   ASSERT_EQ(InlineInfos->size(), 2u);
   ASSERT_EQ(*InlineInfos->at(0), Inline1Sub1);
   ASSERT_EQ(*InlineInfos->at(1), Inline1);
-  InlineInfos = Root.getInlineStack(Inline1Sub1.Ranges[0].endAddress() - 1);
+  InlineInfos = Root.getInlineStack(Inline1Sub1.Ranges[0].End - 1);
   EXPECT_TRUE(InlineInfos);
   ASSERT_EQ(InlineInfos->size(), 2u);
   ASSERT_EQ(*InlineInfos->at(0), Inline1Sub1);
@@ -213,12 +213,12 @@ TEST(GSYMTest, TestInlineInfo) {
 
   // Verify we get two inline stack entries for addresses that are in
   // [0x157-0x158)
-  InlineInfos = Root.getInlineStack(Inline1Sub2.Ranges[0].startAddress());
+  InlineInfos = Root.getInlineStack(Inline1Sub2.Ranges[0].Start);
   EXPECT_TRUE(InlineInfos);
   ASSERT_EQ(InlineInfos->size(), 2u);
   ASSERT_EQ(*InlineInfos->at(0), Inline1Sub2);
   ASSERT_EQ(*InlineInfos->at(1), Inline1);
-  InlineInfos = Root.getInlineStack(Inline1Sub2.Ranges[0].endAddress() - 1);
+  InlineInfos = Root.getInlineStack(Inline1Sub2.Ranges[0].End - 1);
   EXPECT_TRUE(InlineInfos);
   ASSERT_EQ(InlineInfos->size(), 2u);
   ASSERT_EQ(*InlineInfos->at(0), Inline1Sub2);
@@ -257,8 +257,6 @@ TEST(GSYMTest, TestRanges) {
   const uint64_t EndAddr = 0x2000;
   // Verify constructor and API to ensure it takes start and end address.
   const AddressRange Range(StartAddr, EndAddr);
-  EXPECT_EQ(Range.startAddress(), StartAddr);
-  EXPECT_EQ(Range.endAddress(), EndAddr);
   EXPECT_EQ(Range.size(), EndAddr - StartAddr);
 
   // Verify llvm::gsym::AddressRange::contains().
@@ -291,9 +289,9 @@ TEST(GSYMTest, TestRanges) {
   EXPECT_LT(Range, RangeDifferentEnd);
   EXPECT_LT(Range, RangeDifferentStartEnd);
   // Test "bool operator<(const AddressRange &, uint64_t)"
-  EXPECT_LT(Range, StartAddr + 1);
+  EXPECT_LT(Range.Start, StartAddr + 1);
   // Test "bool operator<(uint64_t, const AddressRange &)"
-  EXPECT_LT(StartAddr - 1, Range);
+  EXPECT_LT(StartAddr - 1, Range.Start);
 
   // Verify llvm::gsym::AddressRange::isContiguousWith() and
   // llvm::gsym::AddressRange::intersects().
@@ -304,14 +302,6 @@ TEST(GSYMTest, TestRanges) {
   const AddressRange OverlapsRangeEnd(EndAddr - 1, EndAddr + 1);
   const AddressRange StartsAtRangeEnd(EndAddr, EndAddr + 0x100);
   const AddressRange StartsAfterRangeEnd(EndAddr + 1, EndAddr + 0x100);
-
-  EXPECT_FALSE(Range.isContiguousWith(EndsBeforeRangeStart));
-  EXPECT_TRUE(Range.isContiguousWith(EndsAtRangeStart));
-  EXPECT_TRUE(Range.isContiguousWith(OverlapsRangeStart));
-  EXPECT_TRUE(Range.isContiguousWith(InsideRange));
-  EXPECT_TRUE(Range.isContiguousWith(OverlapsRangeEnd));
-  EXPECT_TRUE(Range.isContiguousWith(StartsAtRangeEnd));
-  EXPECT_FALSE(Range.isContiguousWith(StartsAfterRangeEnd));
 
   EXPECT_FALSE(Range.intersects(EndsBeforeRangeStart));
   EXPECT_FALSE(Range.intersects(EndsAtRangeStart));
@@ -350,12 +340,12 @@ TEST(GSYMTest, TestRanges) {
   EXPECT_EQ(Ranges[0], AddressRange(0x1100, 0x1F00));
 
   // Verify a range that starts before and intersects gets combined.
-  Ranges.insert(AddressRange(0x1000, Ranges[0].startAddress() + 1));
+  Ranges.insert(AddressRange(0x1000, Ranges[0].Start + 1));
   EXPECT_EQ(Ranges.size(), 1u);
   EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x1F00));
 
   // Verify a range that starts inside and extends ranges gets combined.
-  Ranges.insert(AddressRange(Ranges[0].endAddress() - 1, 0x2000));
+  Ranges.insert(AddressRange(Ranges[0].End - 1, 0x2000));
   EXPECT_EQ(Ranges.size(), 1u);
   EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x2000));
 
@@ -366,10 +356,15 @@ TEST(GSYMTest, TestRanges) {
   EXPECT_EQ(Ranges[1], AddressRange(0x2000, 0x3000));
   // Verify if we add an address range that intersects two ranges
   // that they get combined
-  Ranges.insert(
-      AddressRange(Ranges[0].endAddress() - 1, Ranges[1].startAddress() + 1));
+  Ranges.insert(AddressRange(Ranges[0].End - 1, Ranges[1].Start + 1));
   EXPECT_EQ(Ranges.size(), 1u);
   EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x3000));
+
+  Ranges.insert(AddressRange(0x3000, 0x4000));
+  Ranges.insert(AddressRange(0x4000, 0x5000));
+  Ranges.insert(AddressRange(0x2000, 0x4500));
+  EXPECT_EQ(Ranges.size(), 1u);
+  EXPECT_EQ(Ranges[0], AddressRange(0x1000, 0x5000));
 }
 
 TEST(GSYMTest, TestStringTable) {

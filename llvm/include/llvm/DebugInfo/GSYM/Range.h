@@ -27,57 +27,27 @@ namespace gsym {
 
 /// A class that represents an address range. The range is specified using
 /// a start and an end address.
-class AddressRange {
+struct AddressRange {
   uint64_t Start;
   uint64_t End;
-public:
-  AddressRange(uint64_t S = 0, uint64_t E = 0) : Start(S), End(E) {}
-  /// Access to the size must use the size() accessor to ensure the correct
-  /// answer. This allows an AddressRange to be constructed with invalid
-  /// address ranges where the end address is less that the start address
-  /// either because it was not set, or because of incorrect data.
-  uint64_t size() const { return Start < End ? End - Start : 0; }
-  void setStartAddress(uint64_t Addr) { Start = Addr; }
-  void setEndAddress(uint64_t Addr) { End = Addr; }
-  void setSize(uint64_t Size) { End = Start + Size; }
-  uint64_t startAddress() const { return Start; }
-  /// Access to the end address must use the size() accessor to ensure the
-  /// correct answer. This allows an AddressRange to be constructed with
-  /// invalid address ranges where the end address is less that the start
-  /// address either because it was not set, or because of incorrect data.
-  uint64_t endAddress() const { return Start + size(); }
-  void clear() {
-    Start = 0;
-    End = 0;
-  }
-  bool contains(uint64_t Addr) const { return Start <= Addr && Addr < endAddress(); }
-  bool isContiguousWith(const AddressRange &R) const {
-    return (Start <= R.endAddress()) && (endAddress() >= R.Start);
-  }
+  AddressRange() : Start(0), End(0) {}
+  AddressRange(uint64_t S, uint64_t E) : Start(S), End(E) {}
+  uint64_t size() const { return End - Start; }
+  bool contains(uint64_t Addr) const { return Start <= Addr && Addr < End; }
   bool intersects(const AddressRange &R) const {
-    return (Start < R.endAddress()) && (endAddress() > R.Start);
+    return Start < R.End && R.Start < End;
   }
-  bool intersect(const AddressRange &R) {
-    if (intersects(R)) {
-      Start = std::min<uint64_t>(Start, R.Start);
-      End = std::max<uint64_t>(endAddress(), R.endAddress());
-      return true;
-    }
-    return false;
+
+  bool operator==(const AddressRange &R) const {
+    return Start == R.Start && End == R.End;
+  }
+  bool operator!=(const AddressRange &R) const {
+    return !(*this == R);
+  }
+  bool operator<(const AddressRange &R) const {
+    return std::make_pair(Start, End) < std::make_pair(R.Start, R.End);
   }
 };
-
-inline bool operator==(const AddressRange &LHS, const AddressRange &RHS) {
-  return LHS.startAddress() == RHS.startAddress() && LHS.endAddress() == RHS.endAddress();
-}
-inline bool operator!=(const AddressRange &LHS, const AddressRange &RHS) {
-  return LHS.startAddress() != RHS.startAddress() || LHS.endAddress() != RHS.endAddress();
-}
-inline bool operator<(const AddressRange &LHS, const AddressRange &RHS) {
-  if (LHS.startAddress() == RHS.startAddress())
-    return LHS.endAddress() < RHS.endAddress();
-  return LHS.startAddress() < RHS.startAddress();
-}
 
 raw_ostream &operator<<(raw_ostream &OS, const AddressRange &R);
 
@@ -96,7 +66,7 @@ public:
   void clear() { Ranges.clear(); }
   bool empty() const { return Ranges.empty(); }
   bool contains(uint64_t Addr) const;
-  void insert(const AddressRange &R);
+  void insert(AddressRange Range);
   size_t size() const { return Ranges.size(); }
   bool operator==(const AddressRanges &RHS) const {
     return Ranges == RHS.Ranges;

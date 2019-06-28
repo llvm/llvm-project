@@ -99,6 +99,13 @@ def SDT_LongMac  : SDTypeProfile<2, 4, [SDTCisVT<0, i32>,
                                         SDTCisSameAs<0, 4>,
                                         SDTCisSameAs<0, 5>]>;
 
+// ARMlsll, ARMlsrl, ARMasrl
+def SDT_ARMIntShiftParts : SDTypeProfile<2, 3, [SDTCisSameAs<0, 1>,
+                                              SDTCisSameAs<0, 2>,
+                                              SDTCisSameAs<0, 3>,
+                                              SDTCisInt<0>,
+                                              SDTCisInt<4>]>;
+
 def ARMSmlald        : SDNode<"ARMISD::SMLALD", SDT_LongMac>;
 def ARMSmlaldx       : SDNode<"ARMISD::SMLALDX", SDT_LongMac>;
 def ARMSmlsld        : SDNode<"ARMISD::SMLSLD", SDT_LongMac>;
@@ -170,6 +177,10 @@ def ARMcmpZ          : SDNode<"ARMISD::CMPZ", SDT_ARMCmp,
                               [SDNPOutGlue, SDNPCommutative]>;
 
 def ARMpic_add       : SDNode<"ARMISD::PIC_ADD", SDT_ARMPICAdd>;
+
+def ARMasrl          : SDNode<"ARMISD::ASRL", SDT_ARMIntShiftParts, []>;
+def ARMlsrl          : SDNode<"ARMISD::LSRL", SDT_ARMIntShiftParts, []>;
+def ARMlsll          : SDNode<"ARMISD::LSLL", SDT_ARMIntShiftParts, []>;
 
 def ARMsrl_flag      : SDNode<"ARMISD::SRL_FLAG", SDTIntUnaryOp, [SDNPOutGlue]>;
 def ARMsra_flag      : SDNode<"ARMISD::SRA_FLAG", SDTIntUnaryOp, [SDNPOutGlue]>;

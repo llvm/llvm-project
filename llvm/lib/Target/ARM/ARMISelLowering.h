@@ -76,6 +76,10 @@ class VectorType;
 
       PIC_ADD,      // Add with a PC operand and a PIC label.
 
+      ASRL,         // MVE long arithmetic shift right.
+      LSRL,         // MVE long shift right.
+      LSLL,         // MVE long shift left.
+
       CMP,          // ARM compare instructions.
       CMN,          // ARM CMN instructions.
       CMPZ,         // ARM compare that sets only Z flag.

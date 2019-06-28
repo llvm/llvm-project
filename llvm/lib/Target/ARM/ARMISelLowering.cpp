@@ -270,6 +270,15 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
       // No native support for these.
       setOperationAction(ISD::FDIV, VT, Expand);
       setOperationAction(ISD::FREM, VT, Expand);
+      setOperationAction(ISD::FSQRT, VT, Expand);
+      setOperationAction(ISD::FSIN, VT, Expand);
+      setOperationAction(ISD::FCOS, VT, Expand);
+      setOperationAction(ISD::FPOW, VT, Expand);
+      setOperationAction(ISD::FLOG, VT, Expand);
+      setOperationAction(ISD::FLOG2, VT, Expand);
+      setOperationAction(ISD::FLOG10, VT, Expand);
+      setOperationAction(ISD::FEXP, VT, Expand);
+      setOperationAction(ISD::FEXP2, VT, Expand);
     }
   }
 
@@ -923,6 +932,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SRA,       MVT::i64, Custom);
   setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i64, Custom);
 
+  // MVE lowers 64 bit shifts to lsll and lsrl
+  // assuming that ISD::SRL and SRA of i64 are already marked custom
+  if (Subtarget->hasMVEIntegerOps())
+    setOperationAction(ISD::SHL, MVT::i64, Custom);
+
   // Expand to __aeabi_l{lsl,lsr,asr} calls for Thumb1.
   if (Subtarget->isThumb1Only()) {
     setOperationAction(ISD::SHL_PARTS, MVT::i32, Expand);
@@ -1401,6 +1415,10 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
 
   case ARMISD::SSAT:          return "ARMISD::SSAT";
   case ARMISD::USAT:          return "ARMISD::USAT";
+
+  case ARMISD::ASRL:          return "ARMISD::ASRL";
+  case ARMISD::LSRL:          return "ARMISD::LSRL";
+  case ARMISD::LSLL:          return "ARMISD::LSLL";
 
   case ARMISD::SRL_FLAG:      return "ARMISD::SRL_FLAG";
   case ARMISD::SRA_FLAG:      return "ARMISD::SRA_FLAG";
@@ -5610,11 +5628,54 @@ static SDValue Expand64BitShift(SDNode *N, SelectionDAG &DAG,
   if (VT != MVT::i64)
     return SDValue();
 
-  assert((N->getOpcode() == ISD::SRL || N->getOpcode() == ISD::SRA) &&
+  assert((N->getOpcode() == ISD::SRL || N->getOpcode() == ISD::SRA ||
+          N->getOpcode() == ISD::SHL) &&
          "Unknown shift to lower!");
 
+  unsigned ShOpc = N->getOpcode();
+  if (ST->hasMVEIntegerOps()) {
+    SDValue ShAmt = N->getOperand(1);
+    unsigned ShPartsOpc = ARMISD::LSLL;
+    ConstantSDNode *Con = dyn_cast<ConstantSDNode>(ShAmt);
+
+    // If the shift amount is greater than 32 then do the default optimisation
+    if (Con && Con->getZExtValue() > 32)
+      return SDValue();
+
+    // Extract the lower 32 bits of the shift amount if it's an i64
+    if (ShAmt->getValueType(0) == MVT::i64)
+      ShAmt = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, ShAmt,
+                          DAG.getConstant(0, dl, MVT::i32));
+
+    if (ShOpc == ISD::SRL) {
+      if (!Con)
+        // There is no t2LSRLr instruction so negate and perform an lsll if the
+        // shift amount is in a register, emulating a right shift.
+        ShAmt = DAG.getNode(ISD::SUB, dl, MVT::i32,
+                            DAG.getConstant(0, dl, MVT::i32), ShAmt);
+      else
+        // Else generate an lsrl on the immediate shift amount
+        ShPartsOpc = ARMISD::LSRL;
+    } else if (ShOpc == ISD::SRA)
+      ShPartsOpc = ARMISD::ASRL;
+
+    // Lower 32 bits of the destination/source
+    SDValue Lo = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, N->getOperand(0),
+                             DAG.getConstant(0, dl, MVT::i32));
+    // Upper 32 bits of the destination/source
+    SDValue Hi = DAG.getNode(ISD::EXTRACT_ELEMENT, dl, MVT::i32, N->getOperand(0),
+                             DAG.getConstant(1, dl, MVT::i32));
+
+    // Generate the shift operation as computed above
+    Lo = DAG.getNode(ShPartsOpc, dl, DAG.getVTList(MVT::i32, MVT::i32), Lo, Hi,
+                     ShAmt);
+    // The upper 32 bits come from the second return value of lsll
+    Hi = SDValue(Lo.getNode(), 1);
+    return DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi);
+  }
+
   // We only lower SRA, SRL of 1 here, all others use generic lowering.
-  if (!isOneConstant(N->getOperand(1)))
+  if (!isOneConstant(N->getOperand(1)) || N->getOpcode() == ISD::SHL)
     return SDValue();
 
   // If we are in thumb mode, we don't have RRX.
@@ -8282,6 +8343,7 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
     break;
   case ISD::SRL:
   case ISD::SRA:
+  case ISD::SHL:
     Res = Expand64BitShift(N, DAG, Subtarget);
     break;
   case ISD::SREM:

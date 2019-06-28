@@ -56,6 +56,15 @@ public:
     addDirectiveHandler<&WasmAsmParser::parseSectionDirective>(".section");
     addDirectiveHandler<&WasmAsmParser::parseDirectiveSize>(".size");
     addDirectiveHandler<&WasmAsmParser::parseDirectiveType>(".type");
+    addDirectiveHandler<&WasmAsmParser::ParseDirectiveIdent>(".ident");
+    addDirectiveHandler<
+      &WasmAsmParser::ParseDirectiveSymbolAttribute>(".weak");
+    addDirectiveHandler<
+      &WasmAsmParser::ParseDirectiveSymbolAttribute>(".local");
+    addDirectiveHandler<
+      &WasmAsmParser::ParseDirectiveSymbolAttribute>(".internal");
+    addDirectiveHandler<
+      &WasmAsmParser::ParseDirectiveSymbolAttribute>(".hidden");
   }
 
   bool error(const StringRef &Msg, const AsmToken &Tok) {
@@ -105,13 +114,17 @@ public:
     if (Lexer->isNot(AsmToken::String))
       return error("expected string in directive, instead got: ", Lexer->getTok());
 
-    SectionKind Kind = StringSwitch<SectionKind>(Name)
-                       .StartsWith(".data", SectionKind::getData())
-                       .StartsWith(".rodata", SectionKind::getReadOnly())
-                       .StartsWith(".text", SectionKind::getText())
-                       .StartsWith(".custom_section", SectionKind::getMetadata());
+    auto Kind = StringSwitch<Optional<SectionKind>>(Name)
+                    .StartsWith(".data", SectionKind::getData())
+                    .StartsWith(".rodata", SectionKind::getReadOnly())
+                    .StartsWith(".text", SectionKind::getText())
+                    .StartsWith(".custom_section", SectionKind::getMetadata())
+                    .StartsWith(".bss", SectionKind::getBSS())
+                    .Default(Optional<SectionKind>());
+    if (!Kind.hasValue())
+      return Parser->Error(Lexer->getLoc(), "unknown section kind: " + Name);
 
-    MCSectionWasm* Section = getContext().getWasmSection(Name, Kind);
+    MCSectionWasm *Section = getContext().getWasmSection(Name, Kind.getValue());
 
     // Update section flags if present in this .section directive
     bool Passive = false;
@@ -130,28 +143,9 @@ public:
     if (expect(AsmToken::Comma, ",") || expect(AsmToken::At, "@") ||
         expect(AsmToken::EndOfStatement, "eol"))
       return true;
-    struct SectionType {
-      const char *Name;
-      SectionKind Kind;
-    };
-    static SectionType SectionTypes[] = {
-        {".text", SectionKind::getText()},
-        {".rodata", SectionKind::getReadOnly()},
-        {".data", SectionKind::getData()},
-        {".custom_section", SectionKind::getMetadata()},
-        // TODO: add more types.
-    };
-    for (size_t I = 0; I < sizeof(SectionTypes) / sizeof(SectionType); I++) {
-      if (Name.startswith(SectionTypes[I].Name)) {
-        auto WS = getContext().getWasmSection(Name, SectionTypes[I].Kind);
-        getStreamer().SwitchSection(WS);
-        return false;
-      }
-    }
-    // Not found, just ignore this section.
-    // For code in a text section WebAssemblyAsmParser automatically adds
-    // one section per function, so they're optional to be specified with
-    // this directive.
+
+    auto WS = getContext().getWasmSection(Name, Kind.getValue());
+    getStreamer().SwitchSection(WS);
     return false;
   }
 
@@ -193,10 +187,57 @@ public:
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
     else if (TypeName == "global")
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
+    else if (TypeName == "object")
+      WasmSym->setType(wasm::WASM_SYMBOL_TYPE_DATA);
     else
       return error("Unknown WASM symbol type: ", Lexer->getTok());
     Lex();
     return expect(AsmToken::EndOfStatement, "EOL");
+  }
+
+  // FIXME: Shared with ELF.
+  /// ParseDirectiveIdent
+  ///  ::= .ident string
+  bool ParseDirectiveIdent(StringRef, SMLoc) {
+    if (getLexer().isNot(AsmToken::String))
+      return TokError("unexpected token in '.ident' directive");
+    StringRef Data = getTok().getIdentifier();
+    Lex();
+    if (getLexer().isNot(AsmToken::EndOfStatement))
+      return TokError("unexpected token in '.ident' directive");
+    Lex();
+    getStreamer().EmitIdent(Data);
+    return false;
+  }
+
+  // FIXME: Shared with ELF.
+  /// ParseDirectiveSymbolAttribute
+  ///  ::= { ".local", ".weak", ... } [ identifier ( , identifier )* ]
+  bool ParseDirectiveSymbolAttribute(StringRef Directive, SMLoc) {
+    MCSymbolAttr Attr = StringSwitch<MCSymbolAttr>(Directive)
+      .Case(".weak", MCSA_Weak)
+      .Case(".local", MCSA_Local)
+      .Case(".hidden", MCSA_Hidden)
+      .Case(".internal", MCSA_Internal)
+      .Case(".protected", MCSA_Protected)
+      .Default(MCSA_Invalid);
+    assert(Attr != MCSA_Invalid && "unexpected symbol attribute directive!");
+    if (getLexer().isNot(AsmToken::EndOfStatement)) {
+      while (true) {
+        StringRef Name;
+        if (getParser().parseIdentifier(Name))
+          return TokError("expected identifier in directive");
+        MCSymbol *Sym = getContext().getOrCreateSymbol(Name);
+        getStreamer().EmitSymbolAttribute(Sym, Attr);
+        if (getLexer().is(AsmToken::EndOfStatement))
+          break;
+        if (getLexer().isNot(AsmToken::Comma))
+          return TokError("unexpected token in directive");
+        Lex();
+      }
+    }
+    Lex();
+    return false;
   }
 };
 

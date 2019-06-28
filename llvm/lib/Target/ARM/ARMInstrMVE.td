@@ -427,11 +427,21 @@ class MVE_ScalarShiftDRegReg<string iname, bit op5, bit op16,
   let DecoderMethod = "DecodeMVEOverlappingLongShift";
 }
 
-def MVE_ASRLr   : MVE_ScalarShiftDRegReg<"asrl",    0b1,  0b0>;
-def MVE_ASRLi   : MVE_ScalarShiftDRegImm<"asrl",    0b10, ?>;
-def MVE_LSLLr   : MVE_ScalarShiftDRegReg<"lsll",    0b0,  0b0>;
-def MVE_LSLLi   : MVE_ScalarShiftDRegImm<"lsll",    0b00, ?>;
-def MVE_LSRL    : MVE_ScalarShiftDRegImm<"lsrl",    0b01, ?>;
+def MVE_ASRLr   : MVE_ScalarShiftDRegReg<"asrl",    0b1,  0b0, [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
+                                        (ARMasrl tGPREven:$RdaLo_src,
+                                        tGPROdd:$RdaHi_src, rGPR:$Rm))]>;
+def MVE_ASRLi   : MVE_ScalarShiftDRegImm<"asrl",    0b10, ?, [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
+                                        (ARMasrl tGPREven:$RdaLo_src,
+                                        tGPROdd:$RdaHi_src, (i32 imm:$imm)))]>;
+def MVE_LSLLr   : MVE_ScalarShiftDRegReg<"lsll",    0b0,  0b0, [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
+                                        (ARMlsll tGPREven:$RdaLo_src,
+                                        tGPROdd:$RdaHi_src, rGPR:$Rm))]>;
+def MVE_LSLLi   : MVE_ScalarShiftDRegImm<"lsll",    0b00, ?, [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
+                                        (ARMlsll tGPREven:$RdaLo_src,
+                                        tGPROdd:$RdaHi_src, (i32 imm:$imm)))]>;
+def MVE_LSRL    : MVE_ScalarShiftDRegImm<"lsrl",    0b01, ?, [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
+                                        (ARMlsrl tGPREven:$RdaLo_src,
+                                        tGPROdd:$RdaHi_src, (i32 imm:$imm)))]>;
 
 def MVE_SQRSHRL : MVE_ScalarShiftDRegReg<"sqrshrl", 0b1,  0b1>;
 def MVE_SQSHLL  : MVE_ScalarShiftDRegImm<"sqshll",  0b11, 0b1>;
@@ -1793,6 +1803,15 @@ def MVE_VMULt1i8  : MVE_VMULt1<"i8", 0b00>;
 def MVE_VMULt1i16 : MVE_VMULt1<"i16", 0b01>;
 def MVE_VMULt1i32 : MVE_VMULt1<"i32", 0b10>;
 
+let Predicates = [HasMVEInt] in {
+  def : Pat<(v16i8 (mul (v16i8 MQPR:$val1), (v16i8 MQPR:$val2))),
+            (v16i8 (MVE_VMULt1i8 (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)))>;
+  def : Pat<(v8i16 (mul (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))),
+            (v8i16 (MVE_VMULt1i16 (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)))>;
+  def : Pat<(v4i32 (mul (v4i32 MQPR:$val1), (v4i32 MQPR:$val2))),
+            (v4i32 (MVE_VMULt1i32 (v4i32 MQPR:$val1), (v4i32 MQPR:$val2)))>;
+}
+
 class MVE_VQxDMULH<string iname, string suffix, bits<2> size, bit rounding,
                   list<dag> pattern=[]>
   : MVE_int<iname, suffix, size, pattern> {
@@ -2252,6 +2271,13 @@ class MVE_VMUL_fp<string suffix, bit size, list<dag> pattern=[]>
 def MVE_VMULf32 : MVE_VMUL_fp<"f32", 0b0>;
 def MVE_VMULf16 : MVE_VMUL_fp<"f16", 0b1>;
 
+let Predicates = [HasMVEFloat] in {
+  def : Pat<(v4f32 (fmul (v4f32 MQPR:$val1), (v4f32 MQPR:$val2))),
+            (v4f32 (MVE_VMULf32 (v4f32 MQPR:$val1), (v4f32 MQPR:$val2)))>;
+  def : Pat<(v8f16 (fmul (v8f16 MQPR:$val1), (v8f16 MQPR:$val2))),
+            (v8f16 (MVE_VMULf16 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2)))>;
+}
+
 class MVE_VCMLA<string suffix, bit size, list<dag> pattern=[]>
   : MVEFloatArithNeon<"vcmla", suffix, size, (outs MQPR:$Qd),
                          (ins MQPR:$Qd_src, MQPR:$Qn, MQPR:$Qm, complexrotateop:$rot),
@@ -2513,8 +2539,22 @@ class MVE_VABSNEG_fp<string iname, string suffix, bits<2> size, bit negate,
 def MVE_VABSf16 : MVE_VABSNEG_fp<"vabs", "f16", 0b01, 0b0>;
 def MVE_VABSf32 : MVE_VABSNEG_fp<"vabs", "f32", 0b10, 0b0>;
 
+let Predicates = [HasMVEFloat] in {
+  def : Pat<(v8f16 (fabs MQPR:$src)),
+            (MVE_VABSf16 MQPR:$src)>;
+  def : Pat<(v4f32 (fabs MQPR:$src)),
+            (MVE_VABSf32 MQPR:$src)>;
+}
+
 def MVE_VNEGf16 : MVE_VABSNEG_fp<"vneg", "f16", 0b01, 0b1>;
 def MVE_VNEGf32 : MVE_VABSNEG_fp<"vneg", "f32", 0b10, 0b1>;
+
+let Predicates = [HasMVEFloat] in {
+  def : Pat<(v8f16 (fneg MQPR:$src)),
+            (MVE_VNEGf16 MQPR:$src)>;
+  def : Pat<(v4f32 (fneg MQPR:$src)),
+            (MVE_VNEGf32 MQPR:$src)>;
+}
 
 class MVE_VMAXMINNMA<string iname, string suffix, bit size, bit bit_12,
                      list<dag> pattern=[]>

@@ -56,7 +56,7 @@ body:
 ; GCN: s_mov_b32 m0, s0
 ; GCN-NOT: s_mov_b32 m0
 ; VIPLUS-NEXT: s_nop 0
-; SIVI: s_sendmsg 9
+; SIVI: s_sendmsg sendmsg(9, 0, 0)
 ; GFX9: s_sendmsg sendmsg(MSG_GS_ALLOC_REQ)
 define amdgpu_kernel void @test_gs_alloc_req(i32 inreg %a) {
 body:

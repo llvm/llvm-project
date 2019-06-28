@@ -256,3 +256,130 @@ entry:
   %0 = fsub nnan ninf nsz <8 x half> %src2, %src1
   ret <8 x half> %0
 }
+
+define arm_aapcs_vfpcc <16 x i8> @mul_int8_t(<16 x i8> %src1, <16 x i8> %src2) {
+; CHECK-LABEL: mul_int8_t:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmul.i8 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = mul <16 x i8> %src1, %src2
+  ret <16 x i8> %0
+}
+
+define arm_aapcs_vfpcc <8 x i16> @mul_int16_t(<8 x i16> %src1, <8 x i16> %src2) {
+; CHECK-LABEL: mul_int16_t:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmul.i16 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = mul <8 x i16> %src1, %src2
+  ret <8 x i16> %0
+}
+
+define arm_aapcs_vfpcc <4 x i32> @mul_int32_t(<4 x i32> %src1, <4 x i32> %src2) {
+; CHECK-LABEL: mul_int32_t:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmul.i32 q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = mul nsw <4 x i32> %src1, %src2
+  ret <4 x i32> %0
+}
+
+define arm_aapcs_vfpcc <8 x half> @mul_float16_t(<8 x half> %src1, <8 x half> %src2) {
+; CHECK-MVE-LABEL: mul_float16_t:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    vmov.u16 r0, q0[0]
+; CHECK-MVE-NEXT:    vmov.u16 r1, q1[0]
+; CHECK-MVE-NEXT:    vmov s10, r1
+; CHECK-MVE-NEXT:    vmov.u16 r1, q0[1]
+; CHECK-MVE-NEXT:    vmov s8, r0
+; CHECK-MVE-NEXT:    movs r2, #0
+; CHECK-MVE-NEXT:    vmul.f16 s8, s10, s8
+; CHECK-MVE-NEXT:    vmov r0, s8
+; CHECK-MVE-NEXT:    vmov s8, r1
+; CHECK-MVE-NEXT:    vmov.u16 r1, q1[1]
+; CHECK-MVE-NEXT:    vmov s10, r1
+; CHECK-MVE-NEXT:    vmul.f16 s8, s10, s8
+; CHECK-MVE-NEXT:    vmov r1, s8
+; CHECK-MVE-NEXT:    vdup.16 q2, r2
+; CHECK-MVE-NEXT:    vmov.16 q2[0], r0
+; CHECK-MVE-NEXT:    vmov.u16 r0, q0[2]
+; CHECK-MVE-NEXT:    vmov s12, r0
+; CHECK-MVE-NEXT:    vmov.u16 r0, q1[2]
+; CHECK-MVE-NEXT:    vmov s14, r0
+; CHECK-MVE-NEXT:    vmov.16 q2[1], r1
+; CHECK-MVE-NEXT:    vmul.f16 s12, s14, s12
+; CHECK-MVE-NEXT:    vmov r0, s12
+; CHECK-MVE-NEXT:    vmov.16 q2[2], r0
+; CHECK-MVE-NEXT:    vmov.u16 r0, q0[3]
+; CHECK-MVE-NEXT:    vmov s12, r0
+; CHECK-MVE-NEXT:    vmov.u16 r0, q1[3]
+; CHECK-MVE-NEXT:    vmov s14, r0
+; CHECK-MVE-NEXT:    vmul.f16 s12, s14, s12
+; CHECK-MVE-NEXT:    vmov r0, s12
+; CHECK-MVE-NEXT:    vmov.16 q2[3], r0
+; CHECK-MVE-NEXT:    vmov.u16 r0, q0[4]
+; CHECK-MVE-NEXT:    vmov s12, r0
+; CHECK-MVE-NEXT:    vmov.u16 r0, q1[4]
+; CHECK-MVE-NEXT:    vmov s14, r0
+; CHECK-MVE-NEXT:    vmul.f16 s12, s14, s12
+; CHECK-MVE-NEXT:    vmov r0, s12
+; CHECK-MVE-NEXT:    vmov.16 q2[4], r0
+; CHECK-MVE-NEXT:    vmov.u16 r0, q0[5]
+; CHECK-MVE-NEXT:    vmov s12, r0
+; CHECK-MVE-NEXT:    vmov.u16 r0, q1[5]
+; CHECK-MVE-NEXT:    vmov s14, r0
+; CHECK-MVE-NEXT:    vmul.f16 s12, s14, s12
+; CHECK-MVE-NEXT:    vmov r0, s12
+; CHECK-MVE-NEXT:    vmov.16 q2[5], r0
+; CHECK-MVE-NEXT:    vmov.u16 r0, q0[6]
+; CHECK-MVE-NEXT:    vmov s12, r0
+; CHECK-MVE-NEXT:    vmov.u16 r0, q1[6]
+; CHECK-MVE-NEXT:    vmov s14, r0
+; CHECK-MVE-NEXT:    vmul.f16 s12, s14, s12
+; CHECK-MVE-NEXT:    vmov r0, s12
+; CHECK-MVE-NEXT:    vmov.16 q2[6], r0
+; CHECK-MVE-NEXT:    vmov.u16 r0, q0[7]
+; CHECK-MVE-NEXT:    vmov s0, r0
+; CHECK-MVE-NEXT:    vmov.u16 r0, q1[7]
+; CHECK-MVE-NEXT:    vmov s2, r0
+; CHECK-MVE-NEXT:    vmul.f16 s0, s2, s0
+; CHECK-MVE-NEXT:    vmov r0, s0
+; CHECK-MVE-NEXT:    vmov.16 q2[7], r0
+; CHECK-MVE-NEXT:    vmov q0, q2
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-MVEFP-LABEL: mul_float16_t:
+; CHECK-MVEFP:       @ %bb.0: @ %entry
+; CHECK-MVEFP-NEXT:    vmul.f16 q0, q1, q0
+; CHECK-MVEFP-NEXT:    bx lr
+entry:
+  %0 = fmul nnan ninf nsz <8 x half> %src2, %src1
+  ret <8 x half> %0
+}
+
+define arm_aapcs_vfpcc <4 x float> @mul_float32_t(<4 x float> %src1, <4 x float> %src2) {
+; CHECK-MVE-LABEL: mul_float32_t:
+; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    vmul.f32 s8, s4, s0
+; CHECK-MVE-NEXT:    movs r0, #0
+; CHECK-MVE-NEXT:    vmul.f32 s10, s5, s1
+; CHECK-MVE-NEXT:    vmul.f32 s12, s6, s2
+; CHECK-MVE-NEXT:    vmul.f32 s4, s7, s3
+; CHECK-MVE-NEXT:    vdup.32 q0, r0
+; CHECK-MVE-NEXT:    vmov.f32 s0, s8
+; CHECK-MVE-NEXT:    vmov.f32 s1, s10
+; CHECK-MVE-NEXT:    vmov.f32 s2, s12
+; CHECK-MVE-NEXT:    vmov.f32 s3, s4
+; CHECK-MVE-NEXT:    bx lr
+;
+; CHECK-MVEFP-LABEL: mul_float32_t:
+; CHECK-MVEFP:       @ %bb.0: @ %entry
+; CHECK-MVEFP-NEXT:    vmul.f32 q0, q1, q0
+; CHECK-MVEFP-NEXT:    bx lr
+entry:
+  %0 = fmul nnan ninf nsz <4 x float> %src2, %src1
+  ret <4 x float> %0
+}

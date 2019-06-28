@@ -56,15 +56,15 @@ struct FunctionInfo {
     return Name != 0;
   }
 
-  uint64_t startAddress() const { return Range.startAddress(); }
-  uint64_t endAddress() const { return Range.endAddress(); }
+  uint64_t startAddress() const { return Range.Start; }
+  uint64_t endAddress() const { return Range.End; }
   uint64_t size() const { return Range.size(); }
-  void setStartAddress(uint64_t Addr) { Range.setStartAddress(Addr); }
-  void setEndAddress(uint64_t Addr) { Range.setEndAddress(Addr); }
-  void setSize(uint64_t Size) { Range.setSize(Size); }
+  void setStartAddress(uint64_t Addr) { Range.Start = Addr; }
+  void setEndAddress(uint64_t Addr) { Range.End = Addr; }
+  void setSize(uint64_t Size) { Range.End = Range.Start + Size; }
 
   void clear() {
-    Range.clear();
+    Range = {0, 0};
     Name = 0;
     Lines.clear();
     Inline.clear();
