@@ -142,6 +142,9 @@ lpad6:                                            ; preds = %entry, %lpad1
 ; CHECK: {{^lpad6}}:
 ; CHECK-NEXT: landingpad { i8*, i32 }
 ; CHECK-NEXT: cleanup
+; CHECK-NEXT: extractvalue
+; CHECK-NEXT: call i8* @__cilk_catch_exception(%struct.__cilkrts_stack_frame* %[[CILKSF]]
+; CHECK-NEXT: insertvalue
 ; CHECK-NEXT: call void @__cilk_sync(%struct.__cilkrts_stack_frame* %[[CILKSF]])
 ; CHECK-NEXT: br label %[[EHRESUME:.+]]
 ; CHECK: [[EHRESUME]]:
@@ -231,6 +234,9 @@ lpad6:                                            ; preds = %entry, %lpad1.body
 ; CHECK: {{^lpad6}}:
 ; CHECK-NEXT: landingpad { i8*, i32 }
 ; CHECK-NEXT: cleanup
+; CHECK-NEXT: extractvalue
+; CHECK-NEXT: call i8* @__cilk_catch_exception(%struct.__cilkrts_stack_frame* %[[CILKSF]]
+; CHECK-NEXT: insertvalue
 ; CHECK-NEXT: call void @__cilk_sync(%struct.__cilkrts_stack_frame* %[[CILKSF]])
 ; CHECK-NEXT: br label %[[EHRESUME:.+]]
 ; CHECK: [[EHRESUME]]:
