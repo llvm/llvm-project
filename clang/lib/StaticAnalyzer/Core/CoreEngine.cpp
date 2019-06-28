@@ -396,6 +396,11 @@ void CoreEngine::HandleBlockExit(const CFGBlock * B, ExplodedNode *Pred) {
       case Stmt::WhileStmtClass:
         HandleBranch(cast<WhileStmt>(Term)->getCond(), Term, B, Pred);
         return;
+
+      case Stmt::GCCAsmStmtClass:
+        assert(cast<GCCAsmStmt>(Term)->isAsmGoto() && "Encountered GCCAsmStmt without labels");
+        // TODO: Handle jumping to labels
+        return;
     }
   }
 

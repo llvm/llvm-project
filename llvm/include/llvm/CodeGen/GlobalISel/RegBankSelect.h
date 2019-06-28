@@ -523,7 +523,7 @@ private:
   /// \p OnlyAssign == true means that \p Reg just needs to be assigned a
   /// register bank.  I.e., no repairing is necessary to have the
   /// assignment match.
-  bool assignmentMatch(unsigned Reg,
+  bool assignmentMatch(Register Reg,
                        const RegisterBankInfo::ValueMapping &ValMapping,
                        bool &OnlyAssign) const;
 
@@ -562,7 +562,7 @@ private:
   bool repairReg(MachineOperand &MO,
                  const RegisterBankInfo::ValueMapping &ValMapping,
                  RegBankSelect::RepairingPlacement &RepairPt,
-                 const iterator_range<SmallVectorImpl<unsigned>::const_iterator>
+                 const iterator_range<SmallVectorImpl<Register>::const_iterator>
                      &NewVRegs);
 
   /// Return the cost of the instruction needed to map \p MO to \p ValMapping.

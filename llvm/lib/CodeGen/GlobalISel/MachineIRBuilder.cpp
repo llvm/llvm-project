@@ -87,7 +87,7 @@ MachineInstrBuilder MachineIRBuilder::insertInstr(MachineInstrBuilder MIB) {
 }
 
 MachineInstrBuilder
-MachineIRBuilder::buildDirectDbgValue(unsigned Reg, const MDNode *Variable,
+MachineIRBuilder::buildDirectDbgValue(Register Reg, const MDNode *Variable,
                                       const MDNode *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
@@ -100,7 +100,7 @@ MachineIRBuilder::buildDirectDbgValue(unsigned Reg, const MDNode *Variable,
 }
 
 MachineInstrBuilder
-MachineIRBuilder::buildIndirectDbgValue(unsigned Reg, const MDNode *Variable,
+MachineIRBuilder::buildIndirectDbgValue(Register Reg, const MDNode *Variable,
                                         const MDNode *Expr) {
   assert(isa<DILocalVariable>(Variable) && "not a variable");
   assert(cast<DIExpression>(Expr)->isValid() && "not an expression");
@@ -160,14 +160,14 @@ MachineInstrBuilder MachineIRBuilder::buildDbgLabel(const MDNode *Label) {
   return MIB.addMetadata(Label);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildFrameIndex(unsigned Res, int Idx) {
+MachineInstrBuilder MachineIRBuilder::buildFrameIndex(Register Res, int Idx) {
   assert(getMRI()->getType(Res).isPointer() && "invalid operand type");
   return buildInstr(TargetOpcode::G_FRAME_INDEX)
       .addDef(Res)
       .addFrameIndex(Idx);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildGlobalValue(unsigned Res,
+MachineInstrBuilder MachineIRBuilder::buildGlobalValue(Register Res,
                                                        const GlobalValue *GV) {
   assert(getMRI()->getType(Res).isPointer() && "invalid operand type");
   assert(getMRI()->getType(Res).getAddressSpace() ==
@@ -197,8 +197,8 @@ void MachineIRBuilder::validateShiftOp(const LLT &Res, const LLT &Op0,
   assert((Res == Op0) && "type mismatch");
 }
 
-MachineInstrBuilder MachineIRBuilder::buildGEP(unsigned Res, unsigned Op0,
-                                               unsigned Op1) {
+MachineInstrBuilder MachineIRBuilder::buildGEP(Register Res, Register Op0,
+                                               Register Op1) {
   assert(getMRI()->getType(Res).isPointer() &&
          getMRI()->getType(Res) == getMRI()->getType(Op0) && "type mismatch");
   assert(getMRI()->getType(Op1).isScalar() && "invalid offset type");
@@ -225,7 +225,7 @@ MachineIRBuilder::materializeGEP(Register &Res, Register Op0,
   return buildGEP(Res, Op0, Cst.getReg(0));
 }
 
-MachineInstrBuilder MachineIRBuilder::buildPtrMask(unsigned Res, unsigned Op0,
+MachineInstrBuilder MachineIRBuilder::buildPtrMask(Register Res, Register Op0,
                                                    uint32_t NumBits) {
   assert(getMRI()->getType(Res).isPointer() &&
          getMRI()->getType(Res) == getMRI()->getType(Op0) && "type mismatch");
@@ -240,14 +240,14 @@ MachineInstrBuilder MachineIRBuilder::buildBr(MachineBasicBlock &Dest) {
   return buildInstr(TargetOpcode::G_BR).addMBB(&Dest);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildBrIndirect(unsigned Tgt) {
+MachineInstrBuilder MachineIRBuilder::buildBrIndirect(Register Tgt) {
   assert(getMRI()->getType(Tgt).isPointer() && "invalid branch destination");
   return buildInstr(TargetOpcode::G_BRINDIRECT).addUse(Tgt);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildBrJT(unsigned TablePtr,
+MachineInstrBuilder MachineIRBuilder::buildBrJT(Register TablePtr,
                                                 unsigned JTI,
-                                                unsigned IndexReg) {
+                                                Register IndexReg) {
   assert(getMRI()->getType(TablePtr).isPointer() &&
          "Table reg must be a pointer");
   return buildInstr(TargetOpcode::G_BRJT)
@@ -336,21 +336,21 @@ MachineInstrBuilder MachineIRBuilder::buildFConstant(const DstOp &Res,
   return buildFConstant(Res, *CFP);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildBrCond(unsigned Tst,
+MachineInstrBuilder MachineIRBuilder::buildBrCond(Register Tst,
                                                   MachineBasicBlock &Dest) {
   assert(getMRI()->getType(Tst).isScalar() && "invalid operand type");
 
   return buildInstr(TargetOpcode::G_BRCOND).addUse(Tst).addMBB(&Dest);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildLoad(unsigned Res, unsigned Addr,
+MachineInstrBuilder MachineIRBuilder::buildLoad(Register Res, Register Addr,
                                                 MachineMemOperand &MMO) {
   return buildLoadInstr(TargetOpcode::G_LOAD, Res, Addr, MMO);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildLoadInstr(unsigned Opcode,
-                                                     unsigned Res,
-                                                     unsigned Addr,
+                                                     Register Res,
+                                                     Register Addr,
                                                      MachineMemOperand &MMO) {
   assert(getMRI()->getType(Res).isValid() && "invalid operand type");
   assert(getMRI()->getType(Addr).isPointer() && "invalid operand type");
@@ -361,7 +361,7 @@ MachineInstrBuilder MachineIRBuilder::buildLoadInstr(unsigned Opcode,
       .addMemOperand(&MMO);
 }
 
-MachineInstrBuilder MachineIRBuilder::buildStore(unsigned Val, unsigned Addr,
+MachineInstrBuilder MachineIRBuilder::buildStore(Register Val, Register Addr,
                                                  MachineMemOperand &MMO) {
   assert(getMRI()->getType(Val).isValid() && "invalid operand type");
   assert(getMRI()->getType(Addr).isPointer() && "invalid operand type");
@@ -580,7 +580,7 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(LLT Res,
 
 MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<Register> Res,
                                                    const SrcOp &Op) {
-  // Unfortunately to convert from ArrayRef<unsigned> to ArrayRef<DstOp>,
+  // Unfortunately to convert from ArrayRef<Register> to ArrayRef<DstOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
   SmallVector<DstOp, 8> TmpVec(Res.begin(), Res.end());
@@ -589,7 +589,7 @@ MachineInstrBuilder MachineIRBuilder::buildUnmerge(ArrayRef<Register> Res,
 
 MachineInstrBuilder MachineIRBuilder::buildBuildVector(const DstOp &Res,
                                                        ArrayRef<Register> Ops) {
-  // Unfortunately to convert from ArrayRef<unsigned> to ArrayRef<SrcOp>,
+  // Unfortunately to convert from ArrayRef<Register> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
   SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
@@ -605,7 +605,7 @@ MachineInstrBuilder MachineIRBuilder::buildSplatVector(const DstOp &Res,
 MachineInstrBuilder
 MachineIRBuilder::buildBuildVectorTrunc(const DstOp &Res,
                                         ArrayRef<Register> Ops) {
-  // Unfortunately to convert from ArrayRef<unsigned> to ArrayRef<SrcOp>,
+  // Unfortunately to convert from ArrayRef<Register> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
   SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
@@ -614,7 +614,7 @@ MachineIRBuilder::buildBuildVectorTrunc(const DstOp &Res,
 
 MachineInstrBuilder
 MachineIRBuilder::buildConcatVectors(const DstOp &Res, ArrayRef<Register> Ops) {
-  // Unfortunately to convert from ArrayRef<unsigned> to ArrayRef<SrcOp>,
+  // Unfortunately to convert from ArrayRef<Register> to ArrayRef<SrcOp>,
   // we need some temporary storage for the DstOp objects. Here we use a
   // sufficiently large SmallVector to not go through the heap.
   SmallVector<SrcOp, 8> TmpVec(Ops.begin(), Ops.end());
@@ -709,8 +709,8 @@ MachineIRBuilder::buildExtractVectorElement(const DstOp &Res, const SrcOp &Val,
 }
 
 MachineInstrBuilder MachineIRBuilder::buildAtomicCmpXchgWithSuccess(
-    unsigned OldValRes, unsigned SuccessRes, unsigned Addr, unsigned CmpVal,
-    unsigned NewVal, MachineMemOperand &MMO) {
+    Register OldValRes, Register SuccessRes, Register Addr, Register CmpVal,
+    Register NewVal, MachineMemOperand &MMO) {
 #ifndef NDEBUG
   LLT OldValResTy = getMRI()->getType(OldValRes);
   LLT SuccessResTy = getMRI()->getType(SuccessRes);
@@ -736,8 +736,8 @@ MachineInstrBuilder MachineIRBuilder::buildAtomicCmpXchgWithSuccess(
 }
 
 MachineInstrBuilder
-MachineIRBuilder::buildAtomicCmpXchg(unsigned OldValRes, unsigned Addr,
-                                     unsigned CmpVal, unsigned NewVal,
+MachineIRBuilder::buildAtomicCmpXchg(Register OldValRes, Register Addr,
+                                     Register CmpVal, Register NewVal,
                                      MachineMemOperand &MMO) {
 #ifndef NDEBUG
   LLT OldValResTy = getMRI()->getType(OldValRes);
@@ -761,9 +761,9 @@ MachineIRBuilder::buildAtomicCmpXchg(unsigned OldValRes, unsigned Addr,
 }
 
 MachineInstrBuilder MachineIRBuilder::buildAtomicRMW(unsigned Opcode,
-                                                     unsigned OldValRes,
-                                                     unsigned Addr,
-                                                     unsigned Val,
+                                                     Register OldValRes,
+                                                     Register Addr,
+                                                     Register Val,
                                                      MachineMemOperand &MMO) {
 #ifndef NDEBUG
   LLT OldValResTy = getMRI()->getType(OldValRes);
@@ -783,75 +783,75 @@ MachineInstrBuilder MachineIRBuilder::buildAtomicRMW(unsigned Opcode,
 }
 
 MachineInstrBuilder
-MachineIRBuilder::buildAtomicRMWXchg(unsigned OldValRes, unsigned Addr,
-                                     unsigned Val, MachineMemOperand &MMO) {
+MachineIRBuilder::buildAtomicRMWXchg(Register OldValRes, Register Addr,
+                                     Register Val, MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_XCHG, OldValRes, Addr, Val,
                         MMO);
 }
 MachineInstrBuilder
-MachineIRBuilder::buildAtomicRMWAdd(unsigned OldValRes, unsigned Addr,
-                                    unsigned Val, MachineMemOperand &MMO) {
+MachineIRBuilder::buildAtomicRMWAdd(Register OldValRes, Register Addr,
+                                    Register Val, MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_ADD, OldValRes, Addr, Val,
                         MMO);
 }
 MachineInstrBuilder
-MachineIRBuilder::buildAtomicRMWSub(unsigned OldValRes, unsigned Addr,
-                                    unsigned Val, MachineMemOperand &MMO) {
+MachineIRBuilder::buildAtomicRMWSub(Register OldValRes, Register Addr,
+                                    Register Val, MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_SUB, OldValRes, Addr, Val,
                         MMO);
 }
 MachineInstrBuilder
-MachineIRBuilder::buildAtomicRMWAnd(unsigned OldValRes, unsigned Addr,
-                                    unsigned Val, MachineMemOperand &MMO) {
+MachineIRBuilder::buildAtomicRMWAnd(Register OldValRes, Register Addr,
+                                    Register Val, MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_AND, OldValRes, Addr, Val,
                         MMO);
 }
 MachineInstrBuilder
-MachineIRBuilder::buildAtomicRMWNand(unsigned OldValRes, unsigned Addr,
-                                     unsigned Val, MachineMemOperand &MMO) {
+MachineIRBuilder::buildAtomicRMWNand(Register OldValRes, Register Addr,
+                                     Register Val, MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_NAND, OldValRes, Addr, Val,
                         MMO);
 }
-MachineInstrBuilder MachineIRBuilder::buildAtomicRMWOr(unsigned OldValRes,
-                                                       unsigned Addr,
-                                                       unsigned Val,
+MachineInstrBuilder MachineIRBuilder::buildAtomicRMWOr(Register OldValRes,
+                                                       Register Addr,
+                                                       Register Val,
                                                        MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_OR, OldValRes, Addr, Val,
                         MMO);
 }
 MachineInstrBuilder
-MachineIRBuilder::buildAtomicRMWXor(unsigned OldValRes, unsigned Addr,
-                                    unsigned Val, MachineMemOperand &MMO) {
+MachineIRBuilder::buildAtomicRMWXor(Register OldValRes, Register Addr,
+                                    Register Val, MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_XOR, OldValRes, Addr, Val,
                         MMO);
 }
 MachineInstrBuilder
-MachineIRBuilder::buildAtomicRMWMax(unsigned OldValRes, unsigned Addr,
-                                    unsigned Val, MachineMemOperand &MMO) {
+MachineIRBuilder::buildAtomicRMWMax(Register OldValRes, Register Addr,
+                                    Register Val, MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_MAX, OldValRes, Addr, Val,
                         MMO);
 }
 MachineInstrBuilder
-MachineIRBuilder::buildAtomicRMWMin(unsigned OldValRes, unsigned Addr,
-                                    unsigned Val, MachineMemOperand &MMO) {
+MachineIRBuilder::buildAtomicRMWMin(Register OldValRes, Register Addr,
+                                    Register Val, MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_MIN, OldValRes, Addr, Val,
                         MMO);
 }
 MachineInstrBuilder
-MachineIRBuilder::buildAtomicRMWUmax(unsigned OldValRes, unsigned Addr,
-                                     unsigned Val, MachineMemOperand &MMO) {
+MachineIRBuilder::buildAtomicRMWUmax(Register OldValRes, Register Addr,
+                                     Register Val, MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_UMAX, OldValRes, Addr, Val,
                         MMO);
 }
 MachineInstrBuilder
-MachineIRBuilder::buildAtomicRMWUmin(unsigned OldValRes, unsigned Addr,
-                                     unsigned Val, MachineMemOperand &MMO) {
+MachineIRBuilder::buildAtomicRMWUmin(Register OldValRes, Register Addr,
+                                     Register Val, MachineMemOperand &MMO) {
   return buildAtomicRMW(TargetOpcode::G_ATOMICRMW_UMIN, OldValRes, Addr, Val,
                         MMO);
 }
 
 MachineInstrBuilder
-MachineIRBuilder::buildBlockAddress(unsigned Res, const BlockAddress *BA) {
+MachineIRBuilder::buildBlockAddress(Register Res, const BlockAddress *BA) {
 #ifndef NDEBUG
   assert(getMRI()->getType(Res).isPointer() && "invalid res type");
 #endif

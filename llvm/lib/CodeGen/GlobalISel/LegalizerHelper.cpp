@@ -190,12 +190,12 @@ void LegalizerHelper::insertParts(Register DstReg,
   unsigned PartSize = PartTy.getSizeInBits();
   unsigned LeftoverPartSize = LeftoverTy.getSizeInBits();
 
-  unsigned CurResultReg = MRI.createGenericVirtualRegister(ResultTy);
+  Register CurResultReg = MRI.createGenericVirtualRegister(ResultTy);
   MIRBuilder.buildUndef(CurResultReg);
 
   unsigned Offset = 0;
-  for (unsigned PartReg : PartRegs) {
-    unsigned NewResultReg = MRI.createGenericVirtualRegister(ResultTy);
+  for (Register PartReg : PartRegs) {
+    Register NewResultReg = MRI.createGenericVirtualRegister(ResultTy);
     MIRBuilder.buildInsert(NewResultReg, CurResultReg, PartReg, Offset);
     CurResultReg = NewResultReg;
     Offset += PartSize;
@@ -203,7 +203,7 @@ void LegalizerHelper::insertParts(Register DstReg,
 
   for (unsigned I = 0, E = LeftoverRegs.size(); I != E; ++I) {
     // Use the original output register for the final insert to avoid a copy.
-    unsigned NewResultReg = (I + 1 == E) ?
+    Register NewResultReg = (I + 1 == E) ?
       DstReg : MRI.createGenericVirtualRegister(ResultTy);
 
     MIRBuilder.buildInsert(NewResultReg, CurResultReg, LeftoverRegs[I], Offset);
@@ -474,7 +474,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       DstRegs.push_back(
           MIRBuilder.buildUndef(NarrowTy)->getOperand(0).getReg());
 
-    unsigned DstReg = MI.getOperand(0).getReg();
+    Register DstReg = MI.getOperand(0).getReg();
     if(MRI.getType(DstReg).isVector())
       MIRBuilder.buildBuildVector(DstReg, DstRegs);
     else
@@ -764,7 +764,7 @@ void LegalizerHelper::moreElementsVectorSrc(MachineInstr &MI, LLT MoreTy,
     SmallVector<Register, 8> Parts;
     Parts.push_back(MO.getReg());
 
-    unsigned ImpDef = MIRBuilder.buildUndef(OldTy).getReg(0);
+    Register ImpDef = MIRBuilder.buildUndef(OldTy).getReg(0);
     for (unsigned I = 1; I != NumParts; ++I)
       Parts.push_back(ImpDef);
 
@@ -1649,7 +1649,7 @@ LegalizerHelper::fewerElementsVectorBasic(MachineInstr &MI, unsigned TypeIdx,
   const unsigned Opc = MI.getOpcode();
   const unsigned NumOps = MI.getNumOperands() - 1;
   const unsigned NarrowSize = NarrowTy.getSizeInBits();
-  const unsigned DstReg = MI.getOperand(0).getReg();
+  const Register DstReg = MI.getOperand(0).getReg();
   const unsigned Flags = MI.getFlags();
   const LLT DstTy = MRI.getType(DstReg);
   const unsigned Size = DstTy.getSizeInBits();

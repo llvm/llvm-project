@@ -32,18 +32,27 @@ private:
     unsigned StackOffset;
   };
 
+  // Bitmask to locate argument within the register.
+  unsigned Mask;
+
   bool IsStack : 1;
   bool IsSet : 1;
 
-  ArgDescriptor(unsigned Val = 0, bool IsStack = false, bool IsSet = false)
-    : Register(Val), IsStack(IsStack), IsSet(IsSet) {}
 public:
-  static ArgDescriptor createRegister(unsigned Reg) {
-    return ArgDescriptor(Reg, false, true);
+  ArgDescriptor(unsigned Val = 0, unsigned Mask = ~0u,
+                bool IsStack = false, bool IsSet = false)
+    : Register(Val), Mask(Mask), IsStack(IsStack), IsSet(IsSet) {}
+
+  static ArgDescriptor createRegister(unsigned Reg, unsigned Mask = ~0u) {
+    return ArgDescriptor(Reg, Mask, false, true);
   }
 
-  static ArgDescriptor createStack(unsigned Reg) {
-    return ArgDescriptor(Reg, true, true);
+  static ArgDescriptor createStack(unsigned Reg, unsigned Mask = ~0u) {
+    return ArgDescriptor(Reg, Mask, true, true);
+  }
+
+  static ArgDescriptor createArg(const ArgDescriptor &Arg, unsigned Mask) {
+    return ArgDescriptor(Arg.Register, Mask, Arg.IsStack, Arg.IsSet);
   }
 
   bool isSet() const {
@@ -66,6 +75,14 @@ public:
   unsigned getStackOffset() const {
     assert(IsStack);
     return StackOffset;
+  }
+
+  unsigned getMask() const {
+    return Mask;
+  }
+
+  bool isMasked() const {
+    return Mask != ~0u;
   }
 
   void print(raw_ostream &OS, const TargetRegisterInfo *TRI = nullptr) const;

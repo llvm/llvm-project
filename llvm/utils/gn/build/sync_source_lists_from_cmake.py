@@ -15,6 +15,7 @@ from __future__ import print_function
 import os
 import re
 import subprocess
+import sys
 
 
 def sync_source_lists():
@@ -28,6 +29,7 @@ def sync_source_lists():
     cmake_cpp_re = re.compile(r'^\s*([A-Za-z_0-9./-]+\.(?:cpp|c|h|S))$',
                               re.MULTILINE)
 
+    changed = False
     for gn_file in gn_files:
         # The CMakeLists.txt for llvm/utils/gn/secondary/foo/BUILD.gn is
         # directly at foo/CMakeLists.txt.
@@ -47,6 +49,7 @@ def sync_source_lists():
         if gn_cpp == cmake_cpp:
             continue
 
+        changed = True
         print(gn_file)
         add = cmake_cpp - gn_cpp
         if add:
@@ -55,6 +58,7 @@ def sync_source_lists():
         if remove:
             print('remove:\n' + '\n'.join(remove))
         print()
+    return changed
 
 
 def sync_unittests():
@@ -62,6 +66,7 @@ def sync_unittests():
     unittest_re = re.compile(r'^add_\S+_unittest', re.MULTILINE)
 
     checked = [ 'clang', 'clang-tools-extra', 'lld', 'llvm' ]
+    changed = False
     for c in checked:
         for root, _, _ in os.walk(os.path.join(c, 'unittests')):
             cmake_file = os.path.join(root, 'CMakeLists.txt')
@@ -71,13 +76,18 @@ def sync_unittests():
                 continue  # Skip CMake files that just add subdirectories.
             gn_file = os.path.join('llvm/utils/gn/secondary', root, 'BUILD.gn')
             if not os.path.exists(gn_file):
+                changed = True
                 print('missing GN file %s for unittest CMake file %s' %
                       (gn_file, cmake_file))
+    return changed
 
 
 def main():
-    sync_source_lists()
-    sync_unittests()
+    src = sync_source_lists()
+    tests = sync_unittests()
+    if src or tests:
+        sys.exit(1)
+
 
 
 if __name__ == '__main__':

@@ -128,7 +128,7 @@ std::vector<std::string> getSymbolLocations(ObjFile *File, uint32_t SymIndex) {
 struct UndefinedDiag {
   Symbol *Sym;
   struct File {
-    ObjFile *File;
+    ObjFile *OFile;
     uint64_t SymIndex;
   };
   std::vector<File> Files;
@@ -143,7 +143,7 @@ static void reportUndefinedSymbol(const UndefinedDiag &UndefDiag) {
   size_t I = 0, NumRefs = 0;
   for (const UndefinedDiag::File &Ref : UndefDiag.Files) {
     std::vector<std::string> SymbolLocations =
-        getSymbolLocations(Ref.File, Ref.SymIndex);
+        getSymbolLocations(Ref.OFile, Ref.SymIndex);
     NumRefs += SymbolLocations.size();
     for (const std::string &S : SymbolLocations) {
       if (I >= MaxUndefReferences)

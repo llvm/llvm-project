@@ -464,6 +464,7 @@ TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
       "declare void @nounwind_argmemonly(i32*) nounwind argmemonly "
       "declare void @throws_but_readonly(i32*) readonly "
       "declare void @throws_but_argmemonly(i32*) argmemonly "
+      "declare void @nounwind_willreturn(i32*) nounwind willreturn"
       " "
       "declare void @unknown(i32*) "
       " "
@@ -476,6 +477,7 @@ TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
       "  call void @unknown(i32* %p) nounwind argmemonly "
       "  call void @unknown(i32* %p) readonly "
       "  call void @unknown(i32* %p) argmemonly "
+      "  call void @nounwind_willreturn(i32* %p)"
       "  ret void "
       "} ";
 
@@ -497,6 +499,7 @@ TEST(ValueTracking, GuaranteedToTransferExecutionToSuccessor) {
       true,  // call void @unknown(i32* %p) nounwind argmemonly
       false, // call void @unknown(i32* %p) readonly
       false, // call void @unknown(i32* %p) argmemonly
+      true,  // call void @nounwind_willreturn(i32* %p)
       false, // ret void
   };
 

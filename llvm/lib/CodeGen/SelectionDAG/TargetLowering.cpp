@@ -4519,11 +4519,13 @@ TargetLowering::prepareUREMEqFold(EVT VT, SDValue REMNode, SDValue CompNode,
   // 2^W requires W + 1 bits, so we have to extend and then truncate.
   unsigned W = D.getBitWidth();
   APInt P = D0.zext(W + 1)
-                .multiplicativeInverse(APInt::getHighBitsSet(W + 1, 1))
+                .multiplicativeInverse(APInt::getSignedMinValue(W + 1))
                 .trunc(W);
+  assert(!P.isNullValue() && "No multiplicative inverse!"); // unreachable
+  assert((D0 * P).isOneValue() && "Multiplicative inverse sanity check.");
 
-  // Q = floor((2^W - 1) / D0)
-  APInt Q = APInt::getAllOnesValue(W).udiv(D0);
+  // Q = floor((2^W - 1) / D)
+  APInt Q = APInt::getAllOnesValue(W).udiv(D);
 
   SelectionDAG &DAG = DCI.DAG;
 

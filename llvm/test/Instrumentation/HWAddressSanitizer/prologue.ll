@@ -60,6 +60,7 @@ define void @test_alloca() sanitize_hwaddress {
 
 ; CHECK-NOHISTORY-NOT: store i64
 
+; CHECK-HISTORY: call i64 @llvm.read_register.i64(metadata [[MD:![0-9]*]])
 ; CHECK-HISTORY: %[[PTR:[^ ]*]] = inttoptr i64 %[[D]] to i64*
 ; CHECK-HISTORY: store i64 %{{.*}}, i64* %[[PTR]]
 ; CHECK-HISTORY: %[[D1:[^ ]*]] = ashr i64 %[[D]], 56
@@ -82,3 +83,5 @@ entry:
   call void @use(i32* %x)
   ret void
 }
+
+; CHECK-HISTORY: [[MD]] = !{!"pc"}

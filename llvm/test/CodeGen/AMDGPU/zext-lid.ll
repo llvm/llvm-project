@@ -1,8 +1,9 @@
-; RUN: llc -march=amdgcn < %s | FileCheck %s
-; RUN: llc -O0 -march=amdgcn < %s | FileCheck %s
+; RUN: llc -march=amdgcn < %s | FileCheck -enable-var-scope -check-prefixes=GCN,O2 %s
+; RUN: llc -O0 -march=amdgcn < %s | FileCheck -enable-var-scope -check-prefix=GCN %s
 ; RUN: opt -S -mtriple=amdgcn-- -amdgpu-lower-intrinsics < %s | FileCheck -check-prefix=OPT %s
 
-; CHECK-NOT: and_b32
+; GCN-LABEL: {{^}}zext_grp_size_128:
+; GCN-NOT: and_b32
 
 ; OPT-LABEL: @zext_grp_size_128
 ; OPT: tail call i32 @llvm.amdgcn.workitem.id.x(), !range !0
@@ -24,6 +25,9 @@ bb:
   ret void
 }
 
+; GCN-LABEL: {{^}}zext_grp_size_32x4x1:
+; GCN-NOT: and_b32
+
 ; OPT-LABEL: @zext_grp_size_32x4x1
 ; OPT: tail call i32 @llvm.amdgcn.workitem.id.x(), !range !2
 ; OPT: tail call i32 @llvm.amdgcn.workitem.id.y(), !range !3
@@ -44,6 +48,9 @@ bb:
   ret void
 }
 
+; GCN-LABEL: {{^}}zext_grp_size_1x1x1:
+; GCN-NOT: and_b32
+
 ; When EarlyCSE is not run this call produces a range max with 0 active bits,
 ; which is a special case as an AssertZext from width 0 is invalid.
 ; OPT-LABEL: @zext_grp_size_1x1x1
@@ -54,6 +61,9 @@ define amdgpu_kernel void @zext_grp_size_1x1x1(i32 addrspace(1)* nocapture %arg)
   store i32 %tmp1, i32 addrspace(1)* %arg, align 4
   ret void
 }
+
+; GCN-LABEL: {{^}}zext_grp_size_512:
+; GCN-NOT: and_b32
 
 ; OPT-LABEL: @zext_grp_size_512
 ; OPT: tail call i32 @llvm.amdgcn.workitem.id.x(), !range !6
@@ -75,6 +85,11 @@ bb:
   ret void
 }
 
+; GCN-LABEL: {{^}}func_test_workitem_id_x_known_max_range:
+; O2-NOT: and_b32
+; O2: v_and_b32_e32 v{{[0-9]+}}, 0x3ff,
+; O2-NOT: and_b32
+
 ; OPT-LABEL: @func_test_workitem_id_x_known_max_range(
 ; OPT: tail call i32 @llvm.amdgcn.workitem.id.x(), !range !0
 define void @func_test_workitem_id_x_known_max_range(i32 addrspace(1)* nocapture %out) #0 {
@@ -84,6 +99,11 @@ entry:
   store i32 %and, i32 addrspace(1)* %out, align 4
   ret void
 }
+
+; GCN-LABEL: {{^}}func_test_workitem_id_x_default_range:
+; O2-NOT: and_b32
+; O2: v_and_b32_e32 v{{[0-9]+}}, 0x3ff,
+; O2-NOT: and_b32
 
 ; OPT-LABEL: @func_test_workitem_id_x_default_range(
 ; OPT: tail call i32 @llvm.amdgcn.workitem.id.x(), !range !7

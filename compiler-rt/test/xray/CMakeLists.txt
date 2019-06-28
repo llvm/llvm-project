@@ -21,8 +21,8 @@ if (COMPILER_RT_BUILD_XRAY AND COMPILER_RT_HAS_XRAY)
     set(CONFIG_NAME ${ARCH_UPPER_CASE}${OS_NAME}Config)
 
     configure_lit_site_cfg(
-      ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
-      ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg)
+      ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+      ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME}/lit.site.cfg.py)
     list(APPEND XRAY_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${CONFIG_NAME})
   endforeach()
 
@@ -30,8 +30,8 @@ if (COMPILER_RT_BUILD_XRAY AND COMPILER_RT_HAS_XRAY)
   if(COMPILER_RT_INCLUDE_TESTS)
     if(UNIX AND NOT APPLE)
       configure_lit_site_cfg(
-        ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.in
-        ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg)
+        ${CMAKE_CURRENT_SOURCE_DIR}/Unit/lit.site.cfg.py.in
+        ${CMAKE_CURRENT_BINARY_DIR}/Unit/lit.site.cfg.py)
       list(APPEND XRAY_TEST_DEPS XRayUnitTests)
       list(APPEND XRAY_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/Unit)
     endif()
