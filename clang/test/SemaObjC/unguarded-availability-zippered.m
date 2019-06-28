@@ -16,15 +16,15 @@ void bothCurrentlyAvailable() AVAILABLE_CURRENT_MAC AVAILABLE_CURRENT_IOS;
 void bothWillBeAvailable() AVAILABLE_NEXT_MAC AVAILABLE_NEXT_IOS;
 #ifndef INVERTED
 // expected-note@-2 3 {{'bothWillBeAvailable' has been marked as being introduced in macOS 10.15 here, but the deployment target is macOS 10.14.0}}
-// expected-note@-3 {{'bothWillBeAvailable' has been marked as being introduced in UIKit for macOS 14 here, but the deployment target is UIKit for macOS 13.0.0}}
+// expected-note@-3 {{'bothWillBeAvailable' has been marked as being introduced in macCatalyst 14 here, but the deployment target is macCatalyst 13.0.0}}
 #else
-// expected-note@-5 3 {{'bothWillBeAvailable' has been marked as being introduced in UIKit for macOS 14 here, but the deployment target is UIKit for macOS 13.0.0}}
+// expected-note@-5 3 {{'bothWillBeAvailable' has been marked as being introduced in macCatalyst 14 here, but the deployment target is macCatalyst 13.0.0}}
 // expected-note@-6 {{'bothWillBeAvailable' has been marked as being introduced in macOS 10.15 here, but the deployment target is macOS 10.14.0}}
 #endif
 
 void macOSCurrentlyAvailable() AVAILABLE_CURRENT_MAC AVAILABLE_NEXT_IOS;
 // #ifndef INVERTED
-// expected-note@-2 2 {{'macOSCurrentlyAvailable' has been marked as being introduced in UIKit for macOS 14 here, but the deployment target is UIKit for macOS 13.0.0}}
+// expected-note@-2 2 {{'macOSCurrentlyAvailable' has been marked as being introduced in macCatalyst 14 here, but the deployment target is macCatalyst 13.0.0}}
 // #else
 // #endif
 
@@ -37,13 +37,13 @@ void test() {
   bothCurrentlyAvailable();
   bothWillBeAvailable(); // expected-note{{enclose 'bothWillBeAvailable' in an @available check to silence this warning}}
 #ifndef INVERTED
-  // expected-warning@-2 {{'bothWillBeAvailable' is only available on macOS 10.15 and UIKit for macOS 13 or newer}}
+  // expected-warning@-2 {{'bothWillBeAvailable' is only available on macOS 10.15 and macCatalyst 13 or newer}}
 #else
-  // expected-warning@-4 {{'bothWillBeAvailable' is only available on UIKit for macOS 13 and macOS 10.15 or newer}}
+  // expected-warning@-4 {{'bothWillBeAvailable' is only available on macCatalyst 13 and macOS 10.15 or newer}}
 #endif
   
   
-  macOSCurrentlyAvailable(); // expected-warning {{'macOSCurrentlyAvailable' is only available on UIKit for macOS 13 or newer}}
+  macOSCurrentlyAvailable(); // expected-warning {{'macOSCurrentlyAvailable' is only available on macCatalyst 13 or newer}}
   // expected-note@-1 {{enclose 'macOSCurrentlyAvailable' in an @available check to silence this warning}}
 
   if (@available(ios 13, macos 10.15, *))
@@ -54,25 +54,25 @@ void test() {
   if (@available(ios 12, *))
     bothWillBeAvailable(); // expected-note {{enclose}}
 #ifndef INVERTED
-  // expected-warning@-2 {{'bothWillBeAvailable' is only available on macOS 10.15 and UIKit for macOS 13 or newer}}
+  // expected-warning@-2 {{'bothWillBeAvailable' is only available on macOS 10.15 and macCatalyst 13 or newer}}
 #else
-  // expected-warning@-4 {{'bothWillBeAvailable' is only available on UIKit for macOS 13 and macOS 10.15 or newer}}
+  // expected-warning@-4 {{'bothWillBeAvailable' is only available on macCatalyst 13 and macOS 10.15 or newer}}
 #endif
   if (@available(macos 10.15, *))
-    bothWillBeAvailable(); // expected-warning {{'bothWillBeAvailable' is only available on UIKit for macOS 13 or newer}}
+    bothWillBeAvailable(); // expected-warning {{'bothWillBeAvailable' is only available on macCatalyst 13 or newer}}
   // expected-note@-1 {{enclose}}
 
   if (@available(macos 10.15, *))
-    macOSCurrentlyAvailable(); // expected-warning {{'macOSCurrentlyAvailable' is only available on UIKit for macOS 13 or newer}}
+    macOSCurrentlyAvailable(); // expected-warning {{'macOSCurrentlyAvailable' is only available on macCatalyst 13 or newer}}
   // expected-note@-1 {{enclose}}
   if (@available(ios 13, *))
     macOSCurrentlyAvailable();
 
   macOSNextAvailableiOSNotAvailable();
-  // expected-error@-1 {{'macOSNextAvailableiOSNotAvailable' is unavailable: not available on UIKit for macOS}}
+  // expected-error@-1 {{'macOSNextAvailableiOSNotAvailable' is unavailable: not available on macCatalyst}}
   // expected-warning@-2 {{'macOSNextAvailableiOSNotAvailable' is only available on macOS 10.15 or newer}}
   // expected-note@-3 {{enclose}}
 
   if (@available(macos 10.15, *))
-    macOSNextAvailableiOSNotAvailable(); // expected-error {{'macOSNextAvailableiOSNotAvailable' is unavailable: not available on UIKit for macOS}}
+    macOSNextAvailableiOSNotAvailable(); // expected-error {{'macOSNextAvailableiOSNotAvailable' is unavailable: not available on macCatalyst}}
 }
