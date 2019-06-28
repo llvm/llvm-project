@@ -2423,6 +2423,15 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
 
   // Scope for the lock
   {
+    // Check to see if SetThreadStopInfo() filled in m_thread_ids?
+    if (m_thread_ids.empty()) {
+        // No, we need to fetch the thread list manually
+        UpdateThreadIDList();
+    }
+    // We might set some stop info's so make sure the thread list is up to
+    // date before we do that or we might overwrite what was computed here.
+    UpdateThreadListIfNeeded();
+
     // Lock the thread stack while we access it
     std::lock_guard<std::recursive_mutex> guard(m_last_stop_packet_mutex);
     // Get the number of stop packets on the stack
@@ -2437,13 +2446,7 @@ void ProcessGDBRemote::RefreshStateAfterStop() {
     // Clear the thread stop stack
     m_stop_packet_stack.clear();
   }
-
-  // Check to see if SetThreadStopInfo() filled in m_thread_ids?
-  if (m_thread_ids.empty()) {
-    // No, we need to fetch the thread list manually
-    UpdateThreadIDList();
-  }
-
+  
   // If we have queried for a default thread id
   if (m_initial_tid != LLDB_INVALID_THREAD_ID) {
     m_thread_list.SetSelectedThreadByID(m_initial_tid);
