@@ -3137,7 +3137,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     GetDiagnosticEngine().addConsumer(*new swift::PrintingDiagnosticConsumer());
   }
 
-  // Create the clang importer and determine the clang module cache path
+  // Create the ClangImporter and determine the Clang module cache path.
   std::string moduleCachePath = "";
   std::unique_ptr<swift::ClangImporter> clang_importer_ap;
   auto &clang_importer_options = GetClangImporterOptions();
@@ -3145,11 +3145,22 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
     if (!clang_importer_options.OverrideResourceDir.empty()) {
       clang_importer_ap = swift::ClangImporter::create(*m_ast_context_ap,
                                                        clang_importer_options);
+      if (!clang_importer_ap || HasErrors()) {
+        std::string message;
+        if (!HasErrors())
+          message = "failed to create ClangImporter.";
+        else {
+          DiagnosticManager diagnostic_manager;
+          PrintDiagnostics(diagnostic_manager);
+          message = "failed to initialize ClangImporter: ";
+          message += diagnostic_manager.GetString();
+        }
+        m_module_import_warnings.push_back(message);
+        LOG_PRINTF(LIBLLDB_LOG_TYPES, "%s", message.c_str());
+      }
       if (clang_importer_ap)
         moduleCachePath = swift::getModuleCachePathFromClang(
             clang_importer_ap->getClangInstance());
-      else
-        LOG_PRINTF(LIBLLDB_LOG_TYPES, "Failed to initialize ClangImporter");
     }
   }
 
