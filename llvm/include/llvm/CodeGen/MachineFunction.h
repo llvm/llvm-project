@@ -976,6 +976,12 @@ public:
     return CallSitesInfo;
   }
 
+  /// Update call sites info by deleting entry for \p Old call instruction.
+  /// If \p New is present then transfer \p Old call info to it. This function
+  /// should be called before removing call instruction or before replacing
+  /// call instruction with new one.
+  void updateCallSiteInfo(const MachineInstr *Old,
+                          const MachineInstr *New = nullptr);
 };
 
 //===--------------------------------------------------------------------===//

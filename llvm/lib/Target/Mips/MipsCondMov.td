@@ -263,7 +263,7 @@ let AdditionalPredicates = [NotInMicroMips] in {
 }
 // For targets that don't have conditional-move instructions
 // we have to match SELECT nodes with pseudo instructions.
-let usesCustomInserter = 1 in {
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
   class Select_Pseudo<RegisterOperand RC> :
     PseudoSE<(outs RC:$dst), (ins GPR32Opnd:$cond, RC:$T, RC:$F),
             [(set RC:$dst, (select GPR32Opnd:$cond, RC:$T, RC:$F))]>,
@@ -298,7 +298,7 @@ def PseudoSELECTFP_F_S : SelectFP_Pseudo_F<FGR32Opnd>;
 def PseudoSELECTFP_F_D32 : SelectFP_Pseudo_F<AFGR64Opnd>, FGR_32;
 def PseudoSELECTFP_F_D64 : SelectFP_Pseudo_F<FGR64Opnd>, FGR_64;
 
-let usesCustomInserter = 1 in {
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
 class D_SELECT_CLASS<RegisterOperand RC> :
   PseudoSE<(outs RC:$dst1, RC:$dst2),
            (ins GPR32Opnd:$cond, RC:$a1, RC:$a2, RC:$b1, RC:$b2), []>,

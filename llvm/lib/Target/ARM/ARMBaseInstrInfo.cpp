@@ -927,25 +927,25 @@ void ARMBaseInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     copyToCPSR(MBB, I, SrcReg, KillSrc, Subtarget);
     return;
   } else if (DestReg == ARM::VPR) {
-    assert(ARM::GPRPairRegClass.contains(SrcReg));
+    assert(ARM::GPRRegClass.contains(SrcReg));
     BuildMI(MBB, I, I->getDebugLoc(), get(ARM::VMSR_P0), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
         .add(predOps(ARMCC::AL));
     return;
   } else if (SrcReg == ARM::VPR) {
-    assert(ARM::GPRPairRegClass.contains(DestReg));
+    assert(ARM::GPRRegClass.contains(DestReg));
     BuildMI(MBB, I, I->getDebugLoc(), get(ARM::VMRS_P0), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
         .add(predOps(ARMCC::AL));
     return;
   } else if (DestReg == ARM::FPSCR_NZCV) {
-    assert(ARM::GPRPairRegClass.contains(SrcReg));
+    assert(ARM::GPRRegClass.contains(SrcReg));
     BuildMI(MBB, I, I->getDebugLoc(), get(ARM::VMSR_FPSCR_NZCVQC), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
         .add(predOps(ARMCC::AL));
     return;
   } else if (SrcReg == ARM::FPSCR_NZCV) {
-    assert(ARM::GPRPairRegClass.contains(DestReg));
+    assert(ARM::GPRRegClass.contains(DestReg));
     BuildMI(MBB, I, I->getDebugLoc(), get(ARM::VMRS_FPSCR_NZCVQC), DestReg)
         .addReg(SrcReg, getKillRegState(KillSrc))
         .add(predOps(ARMCC::AL));

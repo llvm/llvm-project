@@ -14,9 +14,11 @@ namespace tidy {
 namespace utils {
 using tooling::RewriteRule;
 
+#ifndef NDEBUG
 static bool hasExplanation(const RewriteRule::Case &C) {
   return C.Explanation != nullptr;
 }
+#endif
 
 // This constructor cannot dispatch to the simpler one (below), because, in
 // order to get meaningful results from `getLangOpts` and `Options`, we need the

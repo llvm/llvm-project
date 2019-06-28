@@ -37,8 +37,8 @@
         mrc  p14, #1, r1, c1, c2, #8
         mrc2  p14, #8, r1, c1, c2, #4
         mrc2  p14, #0, r1, c1, c2, #9
-        mrrc  p7, #16, r5, r4, c1
-        mrrc2  p7, #17, r5, r4, c1
+        mrrc  p14, #16, r5, r4, c1
+        mrrc2  p14, #17, r5, r4, c1
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS: operand must be an immediate in the range [0,7]
 @ CHECK-ERRORS-V7: operand must be an immediate in the range [0,7]

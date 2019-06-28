@@ -1,6 +1,8 @@
 lli - directly execute programs from LLVM bitcode
 =================================================
 
+.. program:: lli
+
 SYNOPSIS
 --------
 

@@ -1,6 +1,7 @@
 llvm-ar - LLVM archiver
 =======================
 
+.. program:: llvm-ar
 
 SYNOPSIS
 --------

@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "Annotations.h"
+#include "ClangdServer.h"
 #include "SemanticHighlighting.h"
+#include "TestFS.h"
 #include "TestTU.h"
 #include "gmock/gmock.h"
 
@@ -62,6 +64,30 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);
   }
+}
+
+TEST(ClangdSemanticHighlightingTest, GeneratesHighlightsWhenFileChange) {
+  class HighlightingsCounterDiagConsumer : public DiagnosticsConsumer {
+  public:
+    std::atomic<int> Count = {0};
+
+    void onDiagnosticsReady(PathRef, std::vector<Diag>) override {}
+    void onHighlightingsReady(
+        PathRef File, std::vector<HighlightingToken> Highlightings) override {
+      ++Count;
+    }
+  };
+
+  auto FooCpp = testPath("foo.cpp");
+  MockFSProvider FS;
+  FS.Files[FooCpp] = "";
+
+  MockCompilationDatabase MCD;
+  HighlightingsCounterDiagConsumer DiagConsumer;
+  ClangdServer Server(MCD, FS, DiagConsumer, ClangdServer::optsForTest());
+  Server.addDocument(FooCpp, "int a;");
+  ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for server";
+  ASSERT_EQ(DiagConsumer.Count, 1);
 }
 
 } // namespace

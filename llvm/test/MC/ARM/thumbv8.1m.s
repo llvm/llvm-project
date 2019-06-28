@@ -92,6 +92,11 @@ bf #4, #65536
 // ERROR-NOLOB: :[[@LINE+1]]:{{[0-9]+}}: error:
 bf #4, #-65538
 
+// CHECK: bf #4, #0
+// CHECK-FP: bf #4, #0
+// ERROR-NOLOB: :[[@LINE+1]]:{{[0-9]+}}: error:
+bf #4, #0
+
 // ERROR: :[[@LINE+3]]:{{[0-9]+}}: error: branch target out of range or not a multiple of 2
 // ERROR-FP: :[[@LINE+2]]:{{[0-9]+}}: error: branch target out of range or not a multiple of 2
 // ERROR-NOLOB: :[[@LINE+1]]:{{[0-9]+}}: error:
@@ -101,6 +106,11 @@ bfl #4, #262144
 // ERROR-FP: :[[@LINE+2]]:{{[0-9]+}}: error: branch target out of range or not a multiple of 2
 // ERROR-NOLOB: :[[@LINE+1]]:{{[0-9]+}}: error:
 bfl #4, #-262146
+
+// CHECK: bfl #4, #0
+// CHECK-FP: bfl #4, #0
+// ERROR-NOLOB: :[[@LINE+1]]:{{[0-9]+}}: error:
+bfl #4, #0
 
 // ERROR: :[[@LINE+3]]:{{[0-9]+}}: error: branch location out of range or not a multiple of 2
 // ERROR-FP: :[[@LINE+2]]:{{[0-9]+}}: error: branch location out of range or not a multiple of 2
@@ -132,6 +142,11 @@ bfcsel #4, #-65538, #8, eq
 // ERROR-NOLOB: :[[@LINE+1]]:{{[0-9]+}}: error:
 bfcsel #4, #65534, #10, eq
 
+// CHECK: bfcsel #4, #0, #8, eq
+// CHECK-FP: bfcsel #4, #0, #8, eq
+// ERROR-NOLOB: :[[@LINE+1]]:{{[0-9]+}}: error:
+bfcsel #4, #0, #8, eq
+
 // CHECK: bf  .Lbranch, .Ltarget      @ encoding: [0x40'B',0xf0'B',0x01'B',0xe0'B']
 // CHECK-FP: bf  .Lbranch, .Ltarget      @ encoding: [0x40'B',0xf0'B',0x01'B',0xe0'B']
 // ERROR-NOLOB: :[[@LINE+1]]:{{[0-9]+}}: error: instruction requires: lob
@@ -161,6 +176,11 @@ bflx .Lbranch, r7
 // CHECK-FP: wls lr, r2, .Lend           @ encoding: [0x42'A',0xf0'A',0x01'A',0xc0'A']
 // ERROR-NOLOB: :[[@LINE+1]]:{{[0-9]+}}: error: instruction requires: lob
 wls lr, r2, .Lend
+
+// CHECK: wls lr, r2, #0
+// CHECK-FP: wls lr, r2, #0
+// ERROR-NOLOB: :[[@LINE+1]]:{{[0-9]+}}: error: instruction requires: lob
+wls lr, r2, #0
 
 // CHECK: dls lr, r2                  @ encoding: [0x42,0xf0,0x01,0xe0]
 // CHECK-FP: dls lr, r2                  @ encoding: [0x42,0xf0,0x01,0xe0]

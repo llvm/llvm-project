@@ -78,7 +78,6 @@ TEST(RenameTest, SingleFile) {
   for (const Test &T : Tests) {
     Annotations Code(T.Before);
     auto TU = TestTU::withCode(Code.code());
-    TU.HeaderCode = "void foo();"; // outside main file, will not be touched.
     auto AST = TU.build();
     auto RenameResult =
         renameWithinFile(AST, testPath(TU.Filename), Code.point(), "abcde");
@@ -92,58 +91,68 @@ TEST(RenameTest, SingleFile) {
 }
 
 TEST(RenameTest, Renameable) {
-  // Test cases where the symbol is declared in header.
   struct Case {
-    const char* HeaderCode;
+    const char *Code;
     const char* ErrorMessage; // null if no error
+    bool IsHeaderFile;
   };
+  const bool HeaderFile = true;
   Case Cases[] = {
       {R"cpp(// allow -- function-local
         void f(int [[Lo^cal]]) {
           [[Local]] = 2;
         }
       )cpp",
-       nullptr},
+       nullptr, HeaderFile},
 
       {R"cpp(// allow -- symbol is indexable and has no refs in index.
         void [[On^lyInThisFile]]();
       )cpp",
-       nullptr},
+       nullptr, HeaderFile},
 
       {R"cpp(// disallow -- symbol is indexable and has other refs in index.
         void f() {
           Out^side s;
         }
       )cpp",
-       "used outside main file"},
+       "used outside main file", HeaderFile},
 
       {R"cpp(// disallow -- symbol is not indexable.
         namespace {
         class Unin^dexable {};
         }
       )cpp",
-       "not eligible for indexing"},
+       "not eligible for indexing", HeaderFile},
 
       {R"cpp(// disallow -- namespace symbol isn't supported
         namespace fo^o {}
       )cpp",
-       "not a supported kind"},
+       "not a supported kind", HeaderFile},
+
+      {R"cpp(// foo is declared outside the file.
+        void fo^o() {}
+      )cpp", "used outside main file", !HeaderFile/*cc file*/},
   };
-  const char *CommonHeader = "class Outside {};";
-  TestTU OtherFile = TestTU::withCode("Outside s;");
+  const char *CommonHeader = R"cpp(
+    class Outside {};
+    void foo();
+  )cpp";
+  TestTU OtherFile = TestTU::withCode("Outside s; auto ss = &foo;");
   OtherFile.HeaderCode = CommonHeader;
   OtherFile.Filename = "other.cc";
-  // The index has a "Outside" reference.
+  // The index has a "Outside" reference and a "foo" reference.
   auto OtherFileIndex = OtherFile.index();
 
   for (const auto& Case : Cases) {
-    Annotations T(Case.HeaderCode);
-    // We open the .h file as the main file.
+    Annotations T(Case.Code);
     TestTU TU = TestTU::withCode(T.code());
-    TU.Filename = "test.h";
     TU.HeaderCode = CommonHeader;
-    // Parsing the .h file as C++ include.
-    TU.ExtraArgs.push_back("-xobjective-c++-header");
+    if (Case.IsHeaderFile) {
+      // We open the .h file as the main file.
+      TU.Filename = "test.h";
+      // Parsing the .h file as C++ include.
+      TU.ExtraArgs.push_back("-xobjective-c++-header");
+    }
     auto AST = TU.build();
 
     auto Results = renameWithinFile(AST, testPath(TU.Filename), T.point(),

@@ -894,8 +894,13 @@ static char getSymbolNMTypeChar(ELFObjectFileBase &Obj,
     return '?';
   }
 
-  if (SymI->getBinding() == ELF::STB_GNU_UNIQUE)
+  uint8_t Binding = SymI->getBinding();
+  if (Binding == ELF::STB_GNU_UNIQUE)
     return 'u';
+
+  assert(Binding != ELF::STB_WEAK && "STB_WEAK not tested in calling function");
+  if (Binding != ELF::STB_GLOBAL && Binding != ELF::STB_LOCAL)
+    return '?';
 
   elf_section_iterator SecI = *SecIOrErr;
   if (SecI != Obj.section_end()) {
