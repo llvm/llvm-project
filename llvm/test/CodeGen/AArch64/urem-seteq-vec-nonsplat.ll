@@ -64,6 +64,7 @@ define <4 x i32> @test_urem_even_div(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
+; Can't fold due to last line
 define <4 x i32> @test_urem_pow2(<4 x i32> %X) nounwind readnone {
 ; CHECK-LABEL: test_urem_pow2:
 ; CHECK:       // %bb.0:
@@ -89,6 +90,7 @@ define <4 x i32> @test_urem_pow2(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
+; Can't fold due to second line
 define <4 x i32> @test_urem_one(<4 x i32> %X) nounwind readnone {
 ; CHECK-LABEL: test_urem_one:
 ; CHECK:       // %bb.0:
@@ -121,14 +123,43 @@ define <4 x i32> @test_urem_one(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
+define <4 x i32> @test_urem_nomulinv(<4 x i32> %X) nounwind readnone {
+; CHECK-LABEL: test_urem_nomulinv:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI4_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
+; CHECK-NEXT:    adrp x8, .LCPI4_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI4_1]
+; CHECK-NEXT:    adrp x8, .LCPI4_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI4_2]
+; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    adrp x8, .LCPI4_3
+; CHECK-NEXT:    ushl v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    umull2 v4.2d, v1.4s, v2.4s
+; CHECK-NEXT:    umull v1.2d, v1.2s, v2.2s
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI4_3]
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    neg v3.4s, v3.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    mls v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %urem = urem <4 x i32> %X, <i32 6, i32 100, i32 12, i32 14>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
 define <4 x i32> @test_urem_comp(<4 x i32> %X) nounwind readnone {
 ; CHECK-LABEL: test_urem_comp:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #52429
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
-; CHECK-NEXT:    adrp x9, .LCPI4_0
+; CHECK-NEXT:    adrp x9, .LCPI5_0
 ; CHECK-NEXT:    dup v2.4s, w8
-; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI4_0]
+; CHECK-NEXT:    ldr q3, [x9, :lo12:.LCPI5_0]
 ; CHECK-NEXT:    umull2 v4.2d, v0.4s, v2.4s
 ; CHECK-NEXT:    umull v2.2d, v0.2s, v2.2s
 ; CHECK-NEXT:    uzp2 v2.4s, v2.4s, v4.4s
@@ -148,12 +179,12 @@ define <4 x i32> @test_urem_comp(<4 x i32> %X) nounwind readnone {
 define <4 x i32> @test_urem_both(<4 x i32> %X) nounwind readnone {
 ; CHECK-LABEL: test_urem_both:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI5_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI5_0]
-; CHECK-NEXT:    adrp x8, .LCPI5_1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI5_1]
-; CHECK-NEXT:    adrp x8, .LCPI5_2
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI5_2]
+; CHECK-NEXT:    adrp x8, .LCPI6_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI6_0]
+; CHECK-NEXT:    adrp x8, .LCPI6_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI6_1]
+; CHECK-NEXT:    adrp x8, .LCPI6_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI6_2]
 ; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
 ; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
@@ -216,10 +247,10 @@ define <4 x i32> @test_urem_both_undef(<4 x i32> %X) nounwind readnone {
 define <4 x i32> @test_urem_div_even_odd(<4 x i32> %X) nounwind readnone {
 ; CHECK-LABEL: test_urem_div_even_odd:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI9_0
-; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI9_0]
-; CHECK-NEXT:    adrp x8, .LCPI9_1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI9_1]
+; CHECK-NEXT:    adrp x8, .LCPI10_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI10_0]
+; CHECK-NEXT:    adrp x8, .LCPI10_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI10_1]
 ; CHECK-NEXT:    umull2 v3.2d, v0.4s, v1.4s
 ; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v3.4s

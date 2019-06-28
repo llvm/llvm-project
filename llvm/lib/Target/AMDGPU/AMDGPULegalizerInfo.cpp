@@ -728,7 +728,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
   llvm_unreachable("expected switch to return");
 }
 
-unsigned AMDGPULegalizerInfo::getSegmentAperture(
+Register AMDGPULegalizerInfo::getSegmentAperture(
   unsigned AS,
   MachineRegisterInfo &MRI,
   MachineIRBuilder &MIRBuilder) const {
@@ -750,8 +750,8 @@ unsigned AMDGPULegalizerInfo::getSegmentAperture(
         Offset << AMDGPU::Hwreg::OFFSET_SHIFT_ |
         WidthM1 << AMDGPU::Hwreg::WIDTH_M1_SHIFT_;
 
-    unsigned ApertureReg = MRI.createGenericVirtualRegister(S32);
-    unsigned GetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    Register ApertureReg = MRI.createGenericVirtualRegister(S32);
+    Register GetReg = MRI.createVirtualRegister(&AMDGPU::SReg_32RegClass);
 
     MIRBuilder.buildInstr(AMDGPU::S_GETREG_B32)
       .addDef(GetReg)
@@ -767,7 +767,7 @@ unsigned AMDGPULegalizerInfo::getSegmentAperture(
     return ApertureReg;
   }
 
-  unsigned QueuePtr = MRI.createGenericVirtualRegister(
+  Register QueuePtr = MRI.createGenericVirtualRegister(
     LLT::pointer(AMDGPUAS::CONSTANT_ADDRESS, 64));
 
   // FIXME: Placeholder until we can track the input registers.

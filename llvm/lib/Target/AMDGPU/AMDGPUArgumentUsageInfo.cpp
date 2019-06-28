@@ -9,6 +9,7 @@
 #include "AMDGPU.h"
 #include "AMDGPUArgumentUsageInfo.h"
 #include "SIRegisterInfo.h"
+#include "llvm/Support/NativeFormatting.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -26,9 +27,16 @@ void ArgDescriptor::print(raw_ostream &OS,
   }
 
   if (isRegister())
-    OS << "Reg " << printReg(getRegister(), TRI) << '\n';
+    OS << "Reg " << printReg(getRegister(), TRI);
   else
-    OS << "Stack offset " << getStackOffset() << '\n';
+    OS << "Stack offset " << getStackOffset();
+
+  if (isMasked()) {
+    OS << " & ";
+    llvm::write_hex(OS, Mask, llvm::HexPrintStyle::PrefixLower);
+  }
+
+  OS << '\n';
 }
 
 char AMDGPUArgumentUsageInfo::ID = 0;

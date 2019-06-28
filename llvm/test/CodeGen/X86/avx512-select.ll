@@ -537,3 +537,61 @@ define <64 x i8> @pr42355_v64i8(i1 %c, <64 x i8> %x, <64 x i8> %y) {
   ret <64 x i8> %a
 }
 
+; This would crash because AVX512 has legal vector select
+; condition values that are not 256/512-bit vectors.
+
+define <16 x i64> @narrowExtractedVectorSelect_crash(<16 x i64> %arg, <16 x i16> %arg1) #0 {
+; X86-AVX512F-LABEL: narrowExtractedVectorSelect_crash:
+; X86-AVX512F:       # %bb.0:
+; X86-AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; X86-AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; X86-AVX512F-NEXT:    kunpckbw %k0, %k1, %k1
+; X86-AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; X86-AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
+; X86-AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm1
+; X86-AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X86-AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; X86-AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X86-AVX512F-NEXT:    retl
+;
+; X64-AVX512F-LABEL: narrowExtractedVectorSelect_crash:
+; X64-AVX512F:       # %bb.0:
+; X64-AVX512F-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; X64-AVX512F-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; X64-AVX512F-NEXT:    kunpckbw %k0, %k1, %k1
+; X64-AVX512F-NEXT:    vpternlogd $255, %zmm0, %zmm0, %zmm0 {%k1} {z}
+; X64-AVX512F-NEXT:    vpmovdw %zmm0, %ymm0
+; X64-AVX512F-NEXT:    vpand %ymm2, %ymm0, %ymm1
+; X64-AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X64-AVX512F-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; X64-AVX512F-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X64-AVX512F-NEXT:    retq
+;
+; X86-AVX512BW-LABEL: narrowExtractedVectorSelect_crash:
+; X86-AVX512BW:       # %bb.0:
+; X86-AVX512BW-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; X86-AVX512BW-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; X86-AVX512BW-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; X86-AVX512BW-NEXT:    kunpckbw %k0, %k1, %k1
+; X86-AVX512BW-NEXT:    vmovdqu16 %zmm2, %zmm1 {%k1} {z}
+; X86-AVX512BW-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X86-AVX512BW-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; X86-AVX512BW-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X86-AVX512BW-NEXT:    retl
+;
+; X64-AVX512BW-LABEL: narrowExtractedVectorSelect_crash:
+; X64-AVX512BW:       # %bb.0:
+; X64-AVX512BW-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
+; X64-AVX512BW-NEXT:    vptestmq %zmm0, %zmm0, %k0
+; X64-AVX512BW-NEXT:    vptestmq %zmm1, %zmm1, %k1
+; X64-AVX512BW-NEXT:    kunpckbw %k0, %k1, %k1
+; X64-AVX512BW-NEXT:    vmovdqu16 %zmm2, %zmm1 {%k1} {z}
+; X64-AVX512BW-NEXT:    vpmovzxwq {{.*#+}} zmm0 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X64-AVX512BW-NEXT:    vextracti128 $1, %ymm1, %xmm1
+; X64-AVX512BW-NEXT:    vpmovzxwq {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; X64-AVX512BW-NEXT:    retq
+  %tmp = icmp ne <16 x i64> %arg, zeroinitializer
+  %tmp2 = select <16 x i1> %tmp, <16 x i16> %arg1, <16 x i16> zeroinitializer
+  %tmp3 = zext <16 x i16> %tmp2 to <16 x i64>
+  ret <16 x i64> %tmp3
+}

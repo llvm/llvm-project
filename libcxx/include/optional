@@ -773,7 +773,7 @@ public:
                       _And<
                           _IsNotSame<__uncvref_t<_Up>, optional>,
                           _Or<
-                              _IsNotSame<_Up, value_type>,
+                              _IsNotSame<__uncvref_t<_Up>, value_type>,
                               _Not<is_scalar<value_type>>
                           >,
                           is_constructible<value_type, _Up>,

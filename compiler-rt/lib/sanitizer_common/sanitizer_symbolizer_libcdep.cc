@@ -58,6 +58,16 @@ const char *ExtractUptr(const char *str, const char *delims, uptr *result) {
   return ret;
 }
 
+const char *ExtractSptr(const char *str, const char *delims, sptr *result) {
+  char *buff;
+  const char *ret = ExtractToken(str, delims, &buff);
+  if (buff != 0) {
+    *result = (sptr)internal_atoll(buff);
+  }
+  InternalFree(buff);
+  return ret;
+}
+
 const char *ExtractTokenUpToDelimiter(const char *str, const char *delimiter,
                                       char **result) {
   const char *found_delimiter = internal_strstr(str, delimiter);
@@ -106,6 +116,22 @@ bool Symbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   for (auto &tool : tools_) {
     SymbolizerScope sym_scope(this);
     if (tool.SymbolizeData(addr, info)) {
+      return true;
+    }
+  }
+  return true;
+}
+
+bool Symbolizer::SymbolizeFrame(uptr addr, FrameInfo *info) {
+  BlockingMutexLock l(&mu_);
+  const char *module_name;
+  if (!FindModuleNameAndOffsetForAddress(
+          addr, &module_name, &info->module_offset, &info->module_arch))
+    return false;
+  info->module = internal_strdup(module_name);
+  for (auto &tool : tools_) {
+    SymbolizerScope sym_scope(this);
+    if (tool.SymbolizeFrame(addr, info)) {
       return true;
     }
   }
@@ -343,10 +369,38 @@ void ParseSymbolizeDataOutput(const char *str, DataInfo *info) {
   str = ExtractUptr(str, "\n", &info->size);
 }
 
+static void ParseSymbolizeFrameOutput(const char *str,
+                                      InternalMmapVector<LocalInfo> *locals) {
+  if (internal_strncmp(str, "??", 2) == 0)
+    return;
+
+  while (*str) {
+    LocalInfo local;
+    str = ExtractToken(str, "\n", &local.function_name);
+    str = ExtractToken(str, "\n", &local.name);
+
+    AddressInfo addr;
+    str = ParseFileLineInfo(&addr, str);
+    local.decl_file = addr.file;
+    local.decl_line = addr.line;
+
+    local.has_frame_offset = internal_strncmp(str, "??", 2) != 0;
+    str = ExtractSptr(str, " ", &local.frame_offset);
+
+    local.has_size = internal_strncmp(str, "??", 2) != 0;
+    str = ExtractUptr(str, " ", &local.size);
+
+    local.has_tag_offset = internal_strncmp(str, "??", 2) != 0;
+    str = ExtractUptr(str, "\n", &local.tag_offset);
+
+    locals->push_back(local);
+  }
+}
+
 bool LLVMSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
   AddressInfo *info = &stack->info;
   const char *buf = FormatAndSendCommand(
-      /*is_data*/ false, info->module, info->module_offset, info->module_arch);
+      "CODE", info->module, info->module_offset, info->module_arch);
   if (buf) {
     ParseSymbolizePCOutput(buf, stack);
     return true;
@@ -356,7 +410,7 @@ bool LLVMSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
 
 bool LLVMSymbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   const char *buf = FormatAndSendCommand(
-      /*is_data*/ true, info->module, info->module_offset, info->module_arch);
+      "DATA", info->module, info->module_offset, info->module_arch);
   if (buf) {
     ParseSymbolizeDataOutput(buf, info);
     info->start += (addr - info->module_offset); // Add the base address.
@@ -365,22 +419,31 @@ bool LLVMSymbolizer::SymbolizeData(uptr addr, DataInfo *info) {
   return false;
 }
 
-const char *LLVMSymbolizer::FormatAndSendCommand(bool is_data,
+bool LLVMSymbolizer::SymbolizeFrame(uptr addr, FrameInfo *info) {
+  const char *buf = FormatAndSendCommand(
+      "FRAME", info->module, info->module_offset, info->module_arch);
+  if (buf) {
+    ParseSymbolizeFrameOutput(buf, &info->locals);
+    return true;
+  }
+  return false;
+}
+
+const char *LLVMSymbolizer::FormatAndSendCommand(const char *command_prefix,
                                                  const char *module_name,
                                                  uptr module_offset,
                                                  ModuleArch arch) {
   CHECK(module_name);
-  const char *is_data_str = is_data ? "DATA " : "";
   if (arch == kModuleArchUnknown) {
-    if (internal_snprintf(buffer_, kBufferSize, "%s\"%s\" 0x%zx\n", is_data_str,
-                          module_name,
+    if (internal_snprintf(buffer_, kBufferSize, "%s \"%s\" 0x%zx\n",
+                          command_prefix, module_name,
                           module_offset) >= static_cast<int>(kBufferSize)) {
       Report("WARNING: Command buffer too small");
       return nullptr;
     }
   } else {
-    if (internal_snprintf(buffer_, kBufferSize, "%s\"%s:%s\" 0x%zx\n",
-                          is_data_str, module_name, ModuleArchToString(arch),
+    if (internal_snprintf(buffer_, kBufferSize, "%s \"%s:%s\" 0x%zx\n",
+                          command_prefix, module_name, ModuleArchToString(arch),
                           module_offset) >= static_cast<int>(kBufferSize)) {
       Report("WARNING: Command buffer too small");
       return nullptr;

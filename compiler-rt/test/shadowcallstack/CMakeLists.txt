@@ -10,8 +10,8 @@ foreach(arch ${SHADOWCALLSTACK_SUPPORTED_ARCH})
   get_test_cc_for_arch(${arch}
     SHADOWSTACK_TEST_TARGET_CC SHADOWSTACK_TEST_TARGET_CFLAGS)
   configure_lit_site_cfg(
-    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.in
-    ${CMAKE_CURRENT_BINARY_DIR}/${arch}/lit.site.cfg)
+    ${CMAKE_CURRENT_SOURCE_DIR}/lit.site.cfg.py.in
+    ${CMAKE_CURRENT_BINARY_DIR}/${arch}/lit.site.cfg.py)
   list(APPEND SHADOWCALLSTACK_TESTSUITES ${CMAKE_CURRENT_BINARY_DIR}/${arch})
 endforeach()
 

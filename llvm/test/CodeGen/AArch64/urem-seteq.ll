@@ -67,9 +67,9 @@ define i16 @test_urem_even(i16 %X) nounwind readnone {
 ; CHECK-NEXT:    and w8, w0, #0xffff
 ; CHECK-NEXT:    movk w9, #46811, lsl #16
 ; CHECK-NEXT:    mul w8, w8, w9
-; CHECK-NEXT:    mov w9, #18724
+; CHECK-NEXT:    mov w9, #9362
 ; CHECK-NEXT:    ror w8, w8, #1
-; CHECK-NEXT:    movk w9, #9362, lsl #16
+; CHECK-NEXT:    movk w9, #4681, lsl #16
 ; CHECK-NEXT:    cmp w8, w9
 ; CHECK-NEXT:    cset w0, hi
 ; CHECK-NEXT:    ret
@@ -87,7 +87,7 @@ define i32 @test_urem_even_bit30(i32 %X) nounwind readnone {
 ; CHECK-NEXT:    movk w8, #64748, lsl #16
 ; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    ror w8, w8, #3
-; CHECK-NEXT:    cmp w8, #32 // =32
+; CHECK-NEXT:    cmp w8, #4 // =4
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %urem = urem i32 %X, 1073741928
@@ -104,7 +104,7 @@ define i32 @test_urem_even_bit31(i32 %X) nounwind readnone {
 ; CHECK-NEXT:    movk w8, #47866, lsl #16
 ; CHECK-NEXT:    mul w8, w0, w8
 ; CHECK-NEXT:    ror w8, w8, #1
-; CHECK-NEXT:    cmp w8, #4 // =4
+; CHECK-NEXT:    cmp w8, #2 // =2
 ; CHECK-NEXT:    cset w0, lo
 ; CHECK-NEXT:    ret
   %urem = urem i32 %X, 2147483750
@@ -120,6 +120,24 @@ define i32 @test_urem_one(i32 %X) nounwind readnone {
 ; CHECK-NEXT:    mov w0, #1
 ; CHECK-NEXT:    ret
   %urem = urem i32 %X, 1
+  %cmp = icmp eq i32 %urem, 0
+  %ret = zext i1 %cmp to i32
+  ret i32 %ret
+}
+
+define i32 @test_urem_100(i32 %X) nounwind readnone {
+; CHECK-LABEL: test_urem_100:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov w8, #23593
+; CHECK-NEXT:    movk w8, #49807, lsl #16
+; CHECK-NEXT:    mul w8, w0, w8
+; CHECK-NEXT:    mov w9, #23593
+; CHECK-NEXT:    ror w8, w8, #2
+; CHECK-NEXT:    movk w9, #655, lsl #16
+; CHECK-NEXT:    cmp w8, w9
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    ret
+  %urem = urem i32 %X, 100
   %cmp = icmp eq i32 %urem, 0
   %ret = zext i1 %cmp to i32
   ret i32 %ret

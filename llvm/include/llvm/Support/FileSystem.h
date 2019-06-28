@@ -648,16 +648,27 @@ std::error_code status(const Twine &path, file_status &result,
 /// A version for when a file descriptor is already available.
 std::error_code status(int FD, file_status &Result);
 
+/// Get file creation mode mask of the process.
+///
+/// @returns Mask reported by umask(2)
+/// @note There is no umask on Windows. This function returns 0 always
+///       on Windows. This function does not return an error_code because
+///       umask(2) never fails. It is not thread safe.
+unsigned getUmask();
+
 /// Set file permissions.
 ///
 /// @param Path File to set permissions on.
 /// @param Permissions New file permissions.
+/// @param RespectUmask If true then Permissions will be changed to respect the
+///        umask of the current process.
 /// @returns errc::success if the permissions were successfully set, otherwise
 ///          a platform-specific error_code.
 /// @note On Windows, all permissions except *_write are ignored. Using any of
 ///       owner_write, group_write, or all_write will make the file writable.
 ///       Otherwise, the file will be marked as read-only.
-std::error_code setPermissions(const Twine &Path, perms Permissions);
+std::error_code setPermissions(const Twine &Path, perms Permissions,
+                               bool RespectUmask = false);
 
 /// Get file permissions.
 ///
