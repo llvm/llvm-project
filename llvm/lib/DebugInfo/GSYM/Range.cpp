@@ -44,14 +44,10 @@ void AddressRanges::insert(const AddressRange &Range) {
 }
 
 bool AddressRanges::contains(uint64_t Addr) const {
-  if (Ranges.empty())
-    return false;
-  auto Begin = Ranges.begin();
-  auto Pos = std::upper_bound(Begin, Ranges.end(), Addr);
-  if (Pos == Begin)
-    return false;
-  --Pos;
-  return Pos->contains(Addr);
+  auto It = std::partition_point(
+      Ranges.begin(), Ranges.end(),
+      [=](const AddressRange &R) { return R.startAddress() <= Addr; });
+  return It != Ranges.begin() && It[-1].contains(Addr);
 }
 
 raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const AddressRange &R) {

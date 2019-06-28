@@ -21,7 +21,7 @@ namespace llvm {
 class raw_ostream;
 namespace gsym {
 
-/// Function information in GSYM files encodes information for one 
+/// Function information in GSYM files encodes information for one
 /// contiguous address range. The name of the function is encoded as
 /// a string table offset and allows multiple functions with the same
 /// name to share the name string in the string table. Line tables are
@@ -41,7 +41,7 @@ struct FunctionInfo {
 
   bool hasRichInfo() const {
     /// Returns whether we have something else than range and name. When
-    /// converting information from a symbol table and from debug info, we 
+    /// converting information from a symbol table and from debug info, we
     /// might end up with multiple FunctionInfo objects for the same range
     /// and we need to be able to tell which one is the better object to use.
     return !Lines.empty() || Inline.isValid();
@@ -50,8 +50,8 @@ struct FunctionInfo {
   bool isValid() const {
     /// Address and size can be zero and there can be no line entries for a
     /// symbol so the only indication this entry is valid is if the name is
-    /// not zero. This can happen when extracting information from symbol 
-    /// tables that do not encode symbol sizes. In that case only the 
+    /// not zero. This can happen when extracting information from symbol
+    /// tables that do not encode symbol sizes. In that case only the
     /// address and name will be filled in.
     return Name != 0;
   }
@@ -82,7 +82,7 @@ inline bool operator!=(const FunctionInfo &LHS, const FunctionInfo &RHS) {
 /// followed by inlining being valid and line tables. We might end up with a
 /// FunctionInfo from debug info that will have the same range as one from the
 /// symbol table, but we want to quickly be able to sort and use the best version
-/// when creating the final GSYM file. 
+/// when creating the final GSYM file.
 inline bool operator<(const FunctionInfo &LHS, const FunctionInfo &RHS) {
   // First sort by address range
   if (LHS.Range != RHS.Range)

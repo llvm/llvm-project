@@ -281,4 +281,5 @@ EXIT STATUS
 SEE ALSO
 --------
 
-llvm-dis, ar(1), nm(1)
+:manpage:`llvm-ar(1)`, :manpage:`llvm-objdump(1)`, :manpage:`llvm-readelf(1)`,
+:manpage:`llvm-readobj(1)`

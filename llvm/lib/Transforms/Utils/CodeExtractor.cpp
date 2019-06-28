@@ -801,6 +801,7 @@ Function *CodeExtractor::constructFunction(const ValueSet &inputs,
       case Attribute::StructRet:
       case Attribute::SwiftError:
       case Attribute::SwiftSelf:
+      case Attribute::WillReturn:
       case Attribute::WriteOnly:
       case Attribute::ZExt:
       case Attribute::ImmArg:

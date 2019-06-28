@@ -59,7 +59,7 @@ struct MachineIRBuilderState {
 class DstOp {
   union {
     LLT LLTTy;
-    unsigned Reg;
+    Register Reg;
     const TargetRegisterClass *RC;
   };
 
@@ -97,7 +97,7 @@ public:
     llvm_unreachable("Unrecognised DstOp::DstType enum");
   }
 
-  unsigned getReg() const {
+  Register getReg() const {
     assert(Ty == DstType::Ty_Reg && "Not a register");
     return Reg;
   }
@@ -120,7 +120,7 @@ private:
 class SrcOp {
   union {
     MachineInstrBuilder SrcMIB;
-    unsigned Reg;
+    Register Reg;
     CmpInst::Predicate Pred;
   };
 
@@ -322,13 +322,13 @@ public:
 
   /// Build and insert a DBG_VALUE instruction expressing the fact that the
   /// associated \p Variable lives in \p Reg (suitably modified by \p Expr).
-  MachineInstrBuilder buildDirectDbgValue(unsigned Reg, const MDNode *Variable,
+  MachineInstrBuilder buildDirectDbgValue(Register Reg, const MDNode *Variable,
                                           const MDNode *Expr);
 
   /// Build and insert a DBG_VALUE instruction expressing the fact that the
   /// associated \p Variable lives in memory at \p Reg (suitably modified by \p
   /// Expr).
-  MachineInstrBuilder buildIndirectDbgValue(unsigned Reg,
+  MachineInstrBuilder buildIndirectDbgValue(Register Reg,
                                             const MDNode *Variable,
                                             const MDNode *Expr);
 
@@ -357,7 +357,7 @@ public:
   /// \pre \p Res must be a generic virtual register with pointer type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildFrameIndex(unsigned Res, int Idx);
+  MachineInstrBuilder buildFrameIndex(Register Res, int Idx);
 
   /// Build and insert \p Res = G_GLOBAL_VALUE \p GV
   ///
@@ -369,7 +369,7 @@ public:
   ///      in the same address space as \p GV.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildGlobalValue(unsigned Res, const GlobalValue *GV);
+  MachineInstrBuilder buildGlobalValue(Register Res, const GlobalValue *GV);
 
 
   /// Build and insert \p Res = G_GEP \p Op0, \p Op1
@@ -383,8 +383,8 @@ public:
   /// \pre \p Op1 must be a generic virtual register with scalar type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildGEP(unsigned Res, unsigned Op0,
-                               unsigned Op1);
+  MachineInstrBuilder buildGEP(Register Res, Register Op0,
+                               Register Op1);
 
   /// Materialize and insert \p Res = G_GEP \p Op0, (G_CONSTANT \p Value)
   ///
@@ -419,7 +419,7 @@ public:
   ///      be cleared in \p Op0.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildPtrMask(unsigned Res, unsigned Op0,
+  MachineInstrBuilder buildPtrMask(Register Res, Register Op0,
                                    uint32_t NumBits);
 
   /// Build and insert \p Res, \p CarryOut = G_UADDO \p Op0, \p Op1
@@ -584,7 +584,7 @@ public:
   ///      depend on bit 0 (for now).
   ///
   /// \return The newly created instruction.
-  MachineInstrBuilder buildBrCond(unsigned Tst, MachineBasicBlock &Dest);
+  MachineInstrBuilder buildBrCond(Register Tst, MachineBasicBlock &Dest);
 
   /// Build and insert G_BRINDIRECT \p Tgt
   ///
@@ -594,7 +594,7 @@ public:
   /// \pre \p Tgt must be a generic virtual register with pointer type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildBrIndirect(unsigned Tgt);
+  MachineInstrBuilder buildBrIndirect(Register Tgt);
 
   /// Build and insert G_BRJT \p TablePtr, \p JTI, \p IndexReg
   ///
@@ -607,8 +607,8 @@ public:
   /// \pre \p IndexReg must be a generic virtual register with pointer type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildBrJT(unsigned TablePtr, unsigned JTI,
-                                unsigned IndexReg);
+  MachineInstrBuilder buildBrJT(Register TablePtr, unsigned JTI,
+                                Register IndexReg);
 
   /// Build and insert \p Res = G_CONSTANT \p Val
   ///
@@ -667,7 +667,7 @@ public:
   /// \pre \p Addr must be a generic virtual register with pointer type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildLoad(unsigned Res, unsigned Addr,
+  MachineInstrBuilder buildLoad(Register Res, Register Addr,
                                 MachineMemOperand &MMO);
 
   /// Build and insert `Res = <opcode> Addr, MMO`.
@@ -679,8 +679,8 @@ public:
   /// \pre \p Addr must be a generic virtual register with pointer type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildLoadInstr(unsigned Opcode, unsigned Res,
-                                     unsigned Addr, MachineMemOperand &MMO);
+  MachineInstrBuilder buildLoadInstr(unsigned Opcode, Register Res,
+                                     Register Addr, MachineMemOperand &MMO);
 
   /// Build and insert `G_STORE Val, Addr, MMO`.
   ///
@@ -691,7 +691,7 @@ public:
   /// \pre \p Addr must be a generic virtual register with pointer type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildStore(unsigned Val, unsigned Addr,
+  MachineInstrBuilder buildStore(Register Val, Register Addr,
                                  MachineMemOperand &MMO);
 
   /// Build and insert `Res0, ... = G_EXTRACT Src, Idx0`.
@@ -927,8 +927,8 @@ public:
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder
-  buildAtomicCmpXchgWithSuccess(unsigned OldValRes, unsigned SuccessRes,
-                                unsigned Addr, unsigned CmpVal, unsigned NewVal,
+  buildAtomicCmpXchgWithSuccess(Register OldValRes, Register SuccessRes,
+                                Register Addr, Register CmpVal, Register NewVal,
                                 MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMIC_CMPXCHG Addr, CmpVal, NewVal,
@@ -945,8 +945,8 @@ public:
   ///      registers of the same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicCmpXchg(unsigned OldValRes, unsigned Addr,
-                                         unsigned CmpVal, unsigned NewVal,
+  MachineInstrBuilder buildAtomicCmpXchg(Register OldValRes, Register Addr,
+                                         Register CmpVal, Register NewVal,
                                          MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_<Opcode> Addr, Val, MMO`.
@@ -962,8 +962,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMW(unsigned Opcode, unsigned OldValRes,
-                                     unsigned Addr, unsigned Val,
+  MachineInstrBuilder buildAtomicRMW(unsigned Opcode, Register OldValRes,
+                                     Register Addr, Register Val,
                                      MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_XCHG Addr, Val, MMO`.
@@ -978,8 +978,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWXchg(unsigned OldValRes, unsigned Addr,
-                                         unsigned Val, MachineMemOperand &MMO);
+  MachineInstrBuilder buildAtomicRMWXchg(Register OldValRes, Register Addr,
+                                         Register Val, MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_ADD Addr, Val, MMO`.
   ///
@@ -993,8 +993,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWAdd(unsigned OldValRes, unsigned Addr,
-                                         unsigned Val, MachineMemOperand &MMO);
+  MachineInstrBuilder buildAtomicRMWAdd(Register OldValRes, Register Addr,
+                                        Register Val, MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_SUB Addr, Val, MMO`.
   ///
@@ -1008,8 +1008,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWSub(unsigned OldValRes, unsigned Addr,
-                                         unsigned Val, MachineMemOperand &MMO);
+  MachineInstrBuilder buildAtomicRMWSub(Register OldValRes, Register Addr,
+                                        Register Val, MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_AND Addr, Val, MMO`.
   ///
@@ -1023,8 +1023,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWAnd(unsigned OldValRes, unsigned Addr,
-                                         unsigned Val, MachineMemOperand &MMO);
+  MachineInstrBuilder buildAtomicRMWAnd(Register OldValRes, Register Addr,
+                                        Register Val, MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_NAND Addr, Val, MMO`.
   ///
@@ -1039,8 +1039,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWNand(unsigned OldValRes, unsigned Addr,
-                                         unsigned Val, MachineMemOperand &MMO);
+  MachineInstrBuilder buildAtomicRMWNand(Register OldValRes, Register Addr,
+                                         Register Val, MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_OR Addr, Val, MMO`.
   ///
@@ -1054,8 +1054,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWOr(unsigned OldValRes, unsigned Addr,
-                                       unsigned Val, MachineMemOperand &MMO);
+  MachineInstrBuilder buildAtomicRMWOr(Register OldValRes, Register Addr,
+                                       Register Val, MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_XOR Addr, Val, MMO`.
   ///
@@ -1069,8 +1069,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWXor(unsigned OldValRes, unsigned Addr,
-                                        unsigned Val, MachineMemOperand &MMO);
+  MachineInstrBuilder buildAtomicRMWXor(Register OldValRes, Register Addr,
+                                        Register Val, MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_MAX Addr, Val, MMO`.
   ///
@@ -1085,8 +1085,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWMax(unsigned OldValRes, unsigned Addr,
-                                        unsigned Val, MachineMemOperand &MMO);
+  MachineInstrBuilder buildAtomicRMWMax(Register OldValRes, Register Addr,
+                                        Register Val, MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_MIN Addr, Val, MMO`.
   ///
@@ -1101,8 +1101,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWMin(unsigned OldValRes, unsigned Addr,
-                                        unsigned Val, MachineMemOperand &MMO);
+  MachineInstrBuilder buildAtomicRMWMin(Register OldValRes, Register Addr,
+                                        Register Val, MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_UMAX Addr, Val, MMO`.
   ///
@@ -1117,8 +1117,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWUmax(unsigned OldValRes, unsigned Addr,
-                                         unsigned Val, MachineMemOperand &MMO);
+  MachineInstrBuilder buildAtomicRMWUmax(Register OldValRes, Register Addr,
+                                         Register Val, MachineMemOperand &MMO);
 
   /// Build and insert `OldValRes<def> = G_ATOMICRMW_UMIN Addr, Val, MMO`.
   ///
@@ -1133,8 +1133,8 @@ public:
   ///      same type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWUmin(unsigned OldValRes, unsigned Addr,
-                                         unsigned Val, MachineMemOperand &MMO);
+  MachineInstrBuilder buildAtomicRMWUmin(Register OldValRes, Register Addr,
+                                         Register Val, MachineMemOperand &MMO);
 
   /// Build and insert \p Res = G_BLOCK_ADDR \p BA
   ///
@@ -1144,7 +1144,7 @@ public:
   /// \pre \p Res must be a generic virtual register of a pointer type.
   ///
   /// \return The newly created instruction.
-  MachineInstrBuilder buildBlockAddress(unsigned Res, const BlockAddress *BA);
+  MachineInstrBuilder buildBlockAddress(Register Res, const BlockAddress *BA);
 
   /// Build and insert \p Res = G_ADD \p Op0, \p Op1
   ///

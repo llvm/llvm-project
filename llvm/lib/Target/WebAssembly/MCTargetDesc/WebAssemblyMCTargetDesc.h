@@ -123,7 +123,7 @@ namespace llvm {
 namespace WebAssembly {
 
 /// Return the default p2align value for a load or store with the given opcode.
-inline unsigned GetDefaultP2Align(unsigned Opcode) {
+inline unsigned GetDefaultP2AlignAny(unsigned Opcode) {
   switch (Opcode) {
   case WebAssembly::LOAD8_S_I32:
   case WebAssembly::LOAD8_S_I32_S:
@@ -333,8 +333,16 @@ inline unsigned GetDefaultP2Align(unsigned Opcode) {
   case WebAssembly::STORE_v2f64_S:
     return 4;
   default:
+    return -1;
+  }
+}
+
+inline unsigned GetDefaultP2Align(unsigned Opcode) {
+  auto Align = GetDefaultP2AlignAny(Opcode);
+  if (Align == -1U) {
     llvm_unreachable("Only loads and stores have p2align values");
   }
+  return Align;
 }
 
 /// This is used to indicate block signatures.

@@ -3460,6 +3460,18 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
       return V;
   }
 
+  // Fold remainder of division by a constant.
+  if (N0.getOpcode() == ISD::UREM && N0.hasOneUse() &&
+      (Cond == ISD::SETEQ || Cond == ISD::SETNE)) {
+    AttributeList Attr = DAG.getMachineFunction().getFunction().getAttributes();
+
+    // When division is cheap or optimizing for minimum size,
+    // fall through to DIVREM creation by skipping this fold.
+    if (!isIntDivCheap(VT, Attr) && !Attr.hasFnAttribute(Attribute::MinSize))
+      if (SDValue Folded = buildUREMEqFold(VT, N0, N1, Cond, DCI, dl))
+        return Folded;
+  }
+
   // Fold away ALL boolean setcc's.
   if (N0.getValueType().getScalarType() == MVT::i1 && foldBooleans) {
     SDValue Temp;
@@ -4443,6 +4455,103 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   SDValue One = DAG.getConstant(1, dl, VT);
   SDValue IsOne = DAG.getSetCC(dl, VT, N1, One, ISD::SETEQ);
   return DAG.getSelect(dl, VT, IsOne, N0, Q);
+}
+
+/// Given an ISD::UREM used only by an ISD::SETEQ or ISD::SETNE
+/// where the divisor is constant and the comparison target is zero,
+/// return a DAG expression that will generate the same comparison result
+/// using only multiplications, additions and shifts/rotations.
+/// Ref: "Hacker's Delight" 10-17.
+SDValue TargetLowering::buildUREMEqFold(EVT VT, SDValue REMNode,
+                                        SDValue CompNode, ISD::CondCode Cond,
+                                        DAGCombinerInfo &DCI,
+                                        const SDLoc &DL) const {
+  SmallVector<SDNode *, 2> Built;
+  if (SDValue Folded =
+          prepareUREMEqFold(VT, REMNode, CompNode, Cond, DCI, DL, Built)) {
+    for (SDNode *N : Built)
+      DCI.AddToWorklist(N);
+    return Folded;
+  }
+
+  return SDValue();
+}
+
+SDValue
+TargetLowering::prepareUREMEqFold(EVT VT, SDValue REMNode, SDValue CompNode,
+                                  ISD::CondCode Cond, DAGCombinerInfo &DCI,
+                                  const SDLoc &DL,
+                                  SmallVectorImpl<SDNode *> &Created) const {
+  // fold (seteq/ne (urem N, D), 0) -> (setule/ugt (rotr (mul N, P), K), Q)
+  // - D must be constant with D = D0 * 2^K where D0 is odd and D0 != 1
+  // - P is the multiplicative inverse of D0 modulo 2^W
+  // - Q = floor((2^W - 1) / D0)
+  // where W is the width of the common type of N and D.
+  assert((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
+         "Only applicable for (in)equality comparisons.");
+
+  EVT REMVT = REMNode->getValueType(0);
+
+  // If MUL is unavailable, we cannot proceed in any case.
+  if (!isOperationLegalOrCustom(ISD::MUL, REMVT))
+    return SDValue();
+
+  // TODO: Add non-uniform constant support.
+  ConstantSDNode *Divisor = isConstOrConstSplat(REMNode->getOperand(1));
+  ConstantSDNode *CompTarget = isConstOrConstSplat(CompNode);
+  if (!Divisor || !CompTarget || Divisor->isNullValue() ||
+      !CompTarget->isNullValue())
+    return SDValue();
+
+  const APInt &D = Divisor->getAPIntValue();
+
+  // Decompose D into D0 * 2^K
+  unsigned K = D.countTrailingZeros();
+  bool DivisorIsEven = (K != 0);
+  APInt D0 = D.lshr(K);
+
+  // The fold is invalid when D0 == 1.
+  // This is reachable because visitSetCC happens before visitREM.
+  if (D0.isOneValue())
+    return SDValue();
+
+  // P = inv(D0, 2^W)
+  // 2^W requires W + 1 bits, so we have to extend and then truncate.
+  unsigned W = D.getBitWidth();
+  APInt P = D0.zext(W + 1)
+                .multiplicativeInverse(APInt::getSignedMinValue(W + 1))
+                .trunc(W);
+  assert(!P.isNullValue() && "No multiplicative inverse!"); // unreachable
+  assert((D0 * P).isOneValue() && "Multiplicative inverse sanity check.");
+
+  // Q = floor((2^W - 1) / D)
+  APInt Q = APInt::getAllOnesValue(W).udiv(D);
+
+  SelectionDAG &DAG = DCI.DAG;
+
+  SDValue PVal = DAG.getConstant(P, DL, REMVT);
+  SDValue QVal = DAG.getConstant(Q, DL, REMVT);
+  // (mul N, P)
+  SDValue Op1 = DAG.getNode(ISD::MUL, DL, REMVT, REMNode->getOperand(0), PVal);
+  Created.push_back(Op1.getNode());
+
+  // Rotate right only if D was even.
+  if (DivisorIsEven) {
+    // We need ROTR to do this.
+    if (!isOperationLegalOrCustom(ISD::ROTR, REMVT))
+      return SDValue();
+    SDValue ShAmt =
+        DAG.getConstant(K, DL, getShiftAmountTy(REMVT, DAG.getDataLayout()));
+    SDNodeFlags Flags;
+    Flags.setExact(true);
+    // UREM: (rotr (mul N, P), K)
+    Op1 = DAG.getNode(ISD::ROTR, DL, REMVT, Op1, ShAmt, Flags);
+    Created.push_back(Op1.getNode());
+  }
+
+  // UREM: (setule/setugt (rotr (mul N, P), K), Q)
+  return DAG.getSetCC(DL, VT, Op1, QVal,
+                      ((Cond == ISD::SETEQ) ? ISD::SETULE : ISD::SETUGT));
 }
 
 bool TargetLowering::

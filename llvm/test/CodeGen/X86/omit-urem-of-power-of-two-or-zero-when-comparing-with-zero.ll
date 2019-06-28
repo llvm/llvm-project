@@ -40,16 +40,12 @@ define i1 @p2_scalar_shifted_urem_by_const(i32 %x, i32 %y) {
 ; CHECK-LABEL: p2_scalar_shifted_urem_by_const:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    andl $1, %edi
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %edi
-; CHECK-NEXT:    movl $2863311531, %eax # imm = 0xAAAAAAAB
-; CHECK-NEXT:    imulq %rdi, %rax
-; CHECK-NEXT:    shrq $33, %rax
-; CHECK-NEXT:    leal (%rax,%rax,2), %eax
-; CHECK-NEXT:    cmpl %eax, %edi
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    imull $-1431655765, %edi, %eax # imm = 0xAAAAAAAB
+; CHECK-NEXT:    cmpl $1431655766, %eax # imm = 0x55555556
+; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
   %t0 = and i32 %x, 1 ; clearly a power-of-two or zero
   %t1 = shl i32 %t0, %y ; will still be a power-of-two or zero with any %y
@@ -62,16 +58,12 @@ define i1 @p3_scalar_shifted2_urem_by_const(i32 %x, i32 %y) {
 ; CHECK-LABEL: p3_scalar_shifted2_urem_by_const:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl %esi, %ecx
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    andl $2, %edi
 ; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    shll %cl, %edi
-; CHECK-NEXT:    movl $2863311531, %eax # imm = 0xAAAAAAAB
-; CHECK-NEXT:    imulq %rdi, %rax
-; CHECK-NEXT:    shrq $33, %rax
-; CHECK-NEXT:    leal (%rax,%rax,2), %eax
-; CHECK-NEXT:    cmpl %eax, %edi
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    imull $-1431655765, %edi, %eax # imm = 0xAAAAAAAB
+; CHECK-NEXT:    cmpl $1431655766, %eax # imm = 0x55555556
+; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
   %t0 = and i32 %x, 2 ; clearly a power-of-two or zero
   %t1 = shl i32 %t0, %y ; will still be a power-of-two or zero with any %y
@@ -210,14 +202,10 @@ define <4 x i1> @p8_vector_urem_by_const__nonsplat_undef3(<4 x i32> %x, <4 x i32
 define i1 @n0_urem_of_maybe_not_power_of_two(i32 %x, i32 %y) {
 ; CHECK-LABEL: n0_urem_of_maybe_not_power_of_two:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
 ; CHECK-NEXT:    andl $3, %edi
-; CHECK-NEXT:    movl $2863311531, %eax # imm = 0xAAAAAAAB
-; CHECK-NEXT:    imulq %rdi, %rax
-; CHECK-NEXT:    shrq $33, %rax
-; CHECK-NEXT:    leal (%rax,%rax,2), %eax
-; CHECK-NEXT:    cmpl %eax, %edi
-; CHECK-NEXT:    sete %al
+; CHECK-NEXT:    imull $-1431655765, %edi, %eax # imm = 0xAAAAAAAB
+; CHECK-NEXT:    cmpl $1431655766, %eax # imm = 0x55555556
+; CHECK-NEXT:    setb %al
 ; CHECK-NEXT:    retq
   %t0 = and i32 %x, 3 ; up to two bits set, not power-of-two
   %t1 = urem i32 %t0, 3

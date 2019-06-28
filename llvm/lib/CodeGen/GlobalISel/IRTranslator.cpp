@@ -519,9 +519,10 @@ void IRTranslator::emitJumpTable(SwitchCG::JumpTable &JT,
 
 bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
                                        SwitchCG::JumpTableHeader &JTH,
-                                       MachineBasicBlock *SwitchBB,
-                                       MachineIRBuilder &MIB) {
-  DebugLoc dl = MIB.getDebugLoc();
+                                       MachineBasicBlock *HeaderBB) {
+  MachineIRBuilder MIB(*HeaderBB->getParent());
+  MIB.setMBB(*HeaderBB);
+  MIB.setDebugLoc(CurBuilder->getDebugLoc());
 
   const Value &SValue = *JTH.SValue;
   // Subtract the lowest switch case value from the value being switched on.
@@ -539,7 +540,7 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   JT.Reg = Sub.getReg(0);
 
   if (JTH.OmitRangeCheck) {
-    if (JT.MBB != SwitchBB->getNextNode())
+    if (JT.MBB != HeaderBB->getNextNode())
       MIB.buildBr(*JT.MBB);
     return true;
   }
@@ -555,7 +556,7 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   auto BrCond = MIB.buildBrCond(Cmp.getReg(0), *JT.Default);
 
   // Avoid emitting unnecessary branches to the next block.
-  if (JT.MBB != SwitchBB->getNextNode())
+  if (JT.MBB != HeaderBB->getNextNode())
     BrCond = MIB.buildBr(*JT.MBB);
   return true;
 }
@@ -618,8 +619,10 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
     addSuccessorWithProb(CB.ThisBB, CB.FalseBB, CB.FalseProb);
   CB.ThisBB->normalizeSuccProbs();
 
-  addMachineCFGPred({SwitchBB->getBasicBlock(), CB.FalseBB->getBasicBlock()},
-                    CB.ThisBB);
+  //  if (SwitchBB->getBasicBlock() != CB.FalseBB->getBasicBlock())
+    addMachineCFGPred({SwitchBB->getBasicBlock(), CB.FalseBB->getBasicBlock()},
+                      CB.ThisBB);
+
   // If the lhs block is the next block, invert the condition so that we can
   // fall through to the lhs instead of the rhs block.
   if (CB.TrueBB == CB.ThisBB->getNextNode()) {
@@ -636,6 +639,7 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
 
 bool IRTranslator::lowerJumpTableWorkItem(SwitchCG::SwitchWorkListItem W,
                                           MachineBasicBlock *SwitchMBB,
+                                          MachineBasicBlock *CurMBB,
                                           MachineBasicBlock *DefaultMBB,
                                           MachineIRBuilder &MIB,
                                           MachineFunction::iterator BBI,
@@ -649,7 +653,6 @@ bool IRTranslator::lowerJumpTableWorkItem(SwitchCG::SwitchWorkListItem W,
   JumpTableHeader *JTH = &SL->JTCases[I->JTCasesIndex].first;
   SwitchCG::JumpTable *JT = &SL->JTCases[I->JTCasesIndex].second;
   BranchProbability DefaultProb = W.DefaultProb;
-  MachineBasicBlock *CurMBB = W.MBB;
 
   // The jump block hasn't been inserted yet; insert it here.
   MachineBasicBlock *JumpMBB = JT->MBB;
@@ -659,7 +662,7 @@ bool IRTranslator::lowerJumpTableWorkItem(SwitchCG::SwitchWorkListItem W,
   // to keep track of it as a machine predecessor to the default block,
   // otherwise we lose the phi edges.
   addMachineCFGPred({SwitchMBB->getBasicBlock(), DefaultMBB->getBasicBlock()},
-                    SwitchMBB);
+                    CurMBB);
   addMachineCFGPred({SwitchMBB->getBasicBlock(), DefaultMBB->getBasicBlock()},
                     JumpMBB);
 
@@ -677,7 +680,10 @@ bool IRTranslator::lowerJumpTableWorkItem(SwitchCG::SwitchWorkListItem W,
       FallthroughProb -= DefaultProb / 2;
       JumpMBB->setSuccProbability(SI, DefaultProb / 2);
       JumpMBB->normalizeSuccProbs();
-      break;
+    } else {
+      // Also record edges from the jump table block to it's successors.
+      addMachineCFGPred({SwitchMBB->getBasicBlock(), (*SI)->getBasicBlock()},
+                        JumpMBB);
     }
   }
 
@@ -697,7 +703,7 @@ bool IRTranslator::lowerJumpTableWorkItem(SwitchCG::SwitchWorkListItem W,
 
   // If we're in the right place, emit the jump table header right now.
   if (CurMBB == SwitchMBB) {
-    if (!emitJumpTableHeader(*JT, *JTH, SwitchMBB, MIB))
+    if (!emitJumpTableHeader(*JT, *JTH, CurMBB))
       return false;
     JTH->Emitted = true;
   }
@@ -801,7 +807,7 @@ bool IRTranslator::lowerSwitchWorkItem(SwitchCG::SwitchWorkListItem W,
       return false; // Bit tests currently unimplemented.
     }
     case CC_JumpTable: {
-      if (!lowerJumpTableWorkItem(W, SwitchMBB, DefaultMBB, MIB, BBI,
+      if (!lowerJumpTableWorkItem(W, SwitchMBB, CurMBB, DefaultMBB, MIB, BBI,
                                   UnhandledProbs, I, Fallthrough,
                                   FallthroughUnreachable)) {
         LLVM_DEBUG(dbgs() << "Failed to lower jump table");
@@ -1560,14 +1566,16 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
     ArrayRef<Register> Res = getOrCreateVRegs(CI);
 
     SmallVector<ArrayRef<Register>, 8> Args;
+    SmallVector<Register, 8> InVRegs;
     Register SwiftErrorVReg = 0;
     for (auto &Arg: CI.arg_operands()) {
       if (CLI->supportSwiftError() && isSwiftError(Arg)) {
         LLT Ty = getLLTForType(*Arg->getType(), *DL);
-        Register InVReg = MRI->createGenericVirtualRegister(Ty);
-        MIRBuilder.buildCopy(InVReg, SwiftError.getOrCreateVRegUseAt(
-                                         &CI, &MIRBuilder.getMBB(), Arg));
-        Args.push_back(InVReg);
+        InVRegs.push_back(MRI->createGenericVirtualRegister(Ty));
+        MIRBuilder.buildCopy(
+            InVRegs.back(),
+            SwiftError.getOrCreateVRegUseAt(&CI, &MIRBuilder.getMBB(), Arg));
+        Args.emplace_back(llvm::makeArrayRef(InVRegs.back()));
         SwiftErrorVReg =
             SwiftError.getOrCreateVRegDefAt(&CI, &MIRBuilder.getMBB(), Arg);
         continue;
@@ -2028,6 +2036,7 @@ void IRTranslator::finishPendingPhis() {
   for (auto &Phi : PendingPHIs) {
     const PHINode *PI = Phi.first;
     ArrayRef<MachineInstr *> ComponentPHIs = Phi.second;
+    MachineBasicBlock *PhiMBB = ComponentPHIs[0]->getParent();
     EntryBuilder->setDebugLoc(PI->getDebugLoc());
 #ifndef NDEBUG
     Verifier.setCurrentInst(PI);
@@ -2038,7 +2047,7 @@ void IRTranslator::finishPendingPhis() {
       auto IRPred = PI->getIncomingBlock(i);
       ArrayRef<Register> ValRegs = getOrCreateVRegs(*PI->getIncomingValue(i));
       for (auto Pred : getMachinePredBBs({IRPred, PI->getParent()})) {
-        if (SeenPreds.count(Pred))
+        if (SeenPreds.count(Pred) || !PhiMBB->isPredecessor(Pred))
           continue;
         SeenPreds.insert(Pred);
         for (unsigned j = 0; j < ValRegs.size(); ++j) {
@@ -2145,8 +2154,13 @@ bool IRTranslator::translate(const Constant &C, Register Reg) {
 }
 
 void IRTranslator::finalizeBasicBlock() {
-  for (auto &JTCase : SL->JTCases)
+  for (auto &JTCase : SL->JTCases) {
+    // Emit header first, if it wasn't already emitted.
+    if (!JTCase.first.Emitted)
+      emitJumpTableHeader(JTCase.second, JTCase.first, JTCase.first.HeaderBB);
+
     emitJumpTable(JTCase.second, JTCase.second.MBB);
+  }
   SL->JTCases.clear();
 }
 

@@ -93,6 +93,9 @@ struct HardwareLoopInfo {
                                   // another hardware loop?
   bool CounterInReg = false;      // Should loop counter be updated in
                                   // the loop via a phi?
+  bool PerformEntryTest = false;  // Generate the intrinsic which also performs
+                                  // icmp ne zero on the loop counter value and
+                                  // produces an i1 to guard the loop entry.
   bool isHardwareLoopCandidate(ScalarEvolution &SE, LoopInfo &LI,
                                DominatorTree &DT, bool ForceNestedLoop = false,
                                bool ForceHardwareLoopPHI = false);

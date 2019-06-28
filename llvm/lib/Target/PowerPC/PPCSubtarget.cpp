@@ -108,7 +108,6 @@ void PPCSubtarget::initializeEnvironment() {
   HasDirectMove = false;
   IsQPXStackUnaligned = false;
   HasHTM = false;
-  HasFusion = false;
   HasFloat128 = false;
   IsISA3_0 = false;
   UseLongCalls = false;

@@ -26,7 +26,7 @@ class raw_ostream;
 namespace gsym {
 
 /// A class that represents an address range. The range is specified using
-/// a start and an end address. 
+/// a start and an end address.
 class AddressRange {
   uint64_t Start;
   uint64_t End;
@@ -43,7 +43,7 @@ public:
   uint64_t startAddress() const { return Start; }
   /// Access to the end address must use the size() accessor to ensure the
   /// correct answer. This allows an AddressRange to be constructed with
-  /// invalid address ranges where the end address is less that the start 
+  /// invalid address ranges where the end address is less that the start
   /// address either because it was not set, or because of incorrect data.
   uint64_t endAddress() const { return Start + size(); }
   void clear() {
@@ -78,12 +78,6 @@ inline bool operator<(const AddressRange &LHS, const AddressRange &RHS) {
     return LHS.endAddress() < RHS.endAddress();
   return LHS.startAddress() < RHS.startAddress();
 }
-inline bool operator<(const AddressRange &LHS, uint64_t Addr) {
-  return LHS.startAddress() < Addr;
-}
-inline bool operator<(uint64_t Addr, const AddressRange &RHS) {
-  return Addr < RHS.startAddress();
-}
 
 raw_ostream &operator<<(raw_ostream &OS, const AddressRange &R);
 
@@ -96,7 +90,7 @@ raw_ostream &operator<<(raw_ostream &OS, const AddressRange &R);
 /// representation for address ranges when writing to disk.
 class AddressRanges {
 protected:
-  typedef std::vector<AddressRange> Collection;
+  using Collection = std::vector<AddressRange>;
   Collection Ranges;
 public:
   void clear() { Ranges.clear(); }

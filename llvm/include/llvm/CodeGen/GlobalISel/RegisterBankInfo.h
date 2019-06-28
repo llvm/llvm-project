@@ -18,6 +18,7 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <initializer_list>
@@ -281,7 +282,7 @@ public:
     SmallVector<int, 8> OpToNewVRegIdx;
 
     /// Hold the registers that will be used to map MI with InstrMapping.
-    SmallVector<unsigned, 8> NewVRegs;
+    SmallVector<Register, 8> NewVRegs;
 
     /// Current MachineRegisterInfo, used to create new virtual registers.
     MachineRegisterInfo &MRI;
@@ -302,15 +303,15 @@ public:
     /// \return The iterator range for the space created.
     //
     /// \pre getMI().getOperand(OpIdx).isReg()
-    iterator_range<SmallVectorImpl<unsigned>::iterator>
+    iterator_range<SmallVectorImpl<Register>::iterator>
     getVRegsMem(unsigned OpIdx);
 
     /// Get the end iterator for a range starting at \p StartIdx and
     /// spannig \p NumVal in NewVRegs.
     /// \pre StartIdx + NumVal <= NewVRegs.size()
-    SmallVectorImpl<unsigned>::const_iterator
+    SmallVectorImpl<Register>::const_iterator
     getNewVRegsEnd(unsigned StartIdx, unsigned NumVal) const;
-    SmallVectorImpl<unsigned>::iterator getNewVRegsEnd(unsigned StartIdx,
+    SmallVectorImpl<Register>::iterator getNewVRegsEnd(unsigned StartIdx,
                                                        unsigned NumVal);
 
   public:
@@ -356,7 +357,7 @@ public:
     ///
     /// \post the \p PartialMapIdx-th register of the value mapping of the \p
     /// OpIdx-th operand has been set.
-    void setVRegs(unsigned OpIdx, unsigned PartialMapIdx, unsigned NewVReg);
+    void setVRegs(unsigned OpIdx, unsigned PartialMapIdx, Register NewVReg);
 
     /// Get all the virtual registers required to map the \p OpIdx-th operand of
     /// the instruction.
@@ -370,7 +371,7 @@ public:
     ///
     /// \pre getMI().getOperand(OpIdx).isReg()
     /// \pre ForDebug || All partial mappings have been set a register
-    iterator_range<SmallVectorImpl<unsigned>::const_iterator>
+    iterator_range<SmallVectorImpl<Register>::const_iterator>
     getVRegs(unsigned OpIdx, bool ForDebug = false) const;
 
     /// Print this operands mapper on dbgs() stream.
@@ -434,7 +435,7 @@ protected:
   /// Get the MinimalPhysRegClass for Reg.
   /// \pre Reg is a physical register.
   const TargetRegisterClass &
-  getMinimalPhysRegClass(unsigned Reg, const TargetRegisterInfo &TRI) const;
+  getMinimalPhysRegClass(Register Reg, const TargetRegisterInfo &TRI) const;
 
   /// Try to get the mapping of \p MI.
   /// See getInstrMapping for more details on what a mapping represents.
@@ -579,7 +580,7 @@ public:
   /// or a register bank, then this returns nullptr.
   ///
   /// \pre Reg != 0 (NoRegister)
-  const RegisterBank *getRegBank(unsigned Reg, const MachineRegisterInfo &MRI,
+  const RegisterBank *getRegBank(Register Reg, const MachineRegisterInfo &MRI,
                                  const TargetRegisterInfo &TRI) const;
 
   /// Get the total number of register banks.
@@ -640,7 +641,7 @@ public:
   /// \note Use MachineRegisterInfo::constrainRegAttrs instead for any non-isel
   /// purpose, including non-select passes of GlobalISel
   static const TargetRegisterClass *
-  constrainGenericRegister(unsigned Reg, const TargetRegisterClass &RC,
+  constrainGenericRegister(Register Reg, const TargetRegisterClass &RC,
                            MachineRegisterInfo &MRI);
 
   /// Identifier used when the related instruction mapping instance
@@ -725,7 +726,7 @@ public:
   /// virtual register.
   ///
   /// \pre \p Reg != 0 (NoRegister).
-  unsigned getSizeInBits(unsigned Reg, const MachineRegisterInfo &MRI,
+  unsigned getSizeInBits(Register Reg, const MachineRegisterInfo &MRI,
                          const TargetRegisterInfo &TRI) const;
 
   /// Check that information hold by this instance make sense for the

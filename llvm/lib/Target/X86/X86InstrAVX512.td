@@ -8420,14 +8420,10 @@ def : Pat<(v2f64 (X86VUintToFP (v4i32 VR128X:$src1))),
                                  VR128X:$src1, sub_xmm)))), sub_xmm)>;
 }
 
-let Predicates = [HasAVX512, HasVLX] in {
-  def : Pat<(v2f64 (X86VSintToFP (bc_v4i32 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
-            (VCVTDQ2PDZ128rm addr:$src)>;
+let Predicates = [HasVLX] in {
   def : Pat<(v2f64 (X86VSintToFP (bc_v4i32 (v2i64 (X86vzload addr:$src))))),
             (VCVTDQ2PDZ128rm addr:$src)>;
 
-  def : Pat<(v2f64 (X86VUintToFP (bc_v4i32 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
-            (VCVTUDQ2PDZ128rm addr:$src)>;
   def : Pat<(v2f64 (X86VUintToFP (bc_v4i32 (v2i64 (X86vzload addr:$src))))),
             (VCVTUDQ2PDZ128rm addr:$src)>;
 }
