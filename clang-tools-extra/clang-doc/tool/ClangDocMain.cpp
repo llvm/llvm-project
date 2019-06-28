@@ -132,9 +132,6 @@ getInfoOutputFile(StringRef Root,
   if (CreateDirectory(Path))
     return llvm::make_error<llvm::StringError>("Unable to create directory.\n",
                                                llvm::inconvertibleErrorCode());
-
-  if (Name.empty())
-    Name = "GlobalNamespace";
   llvm::sys::path::append(Path, Name + Ext);
   return Path;
 }
@@ -222,8 +219,8 @@ int main(int argc, const char **argv) {
 
     doc::Info *I = Reduced.get().get();
 
-    auto InfoPath =
-        getInfoOutputFile(OutDirectory, I->Namespace, I->Name, "." + Format);
+    auto InfoPath = getInfoOutputFile(OutDirectory, I->Namespace,
+                                      I->extractName(), "." + Format);
     if (!InfoPath) {
       llvm::errs() << toString(InfoPath.takeError()) << "\n";
       continue;

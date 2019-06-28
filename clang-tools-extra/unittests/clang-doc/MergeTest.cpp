@@ -159,14 +159,36 @@ TEST(MergeTest, mergeFunctionInfos) {
   One.IsMethod = true;
   One.Parent = Reference(EmptySID, "Parent", InfoType::IT_namespace);
 
+  One.Description.emplace_back();
+  auto OneFullComment = &One.Description.back();
+  OneFullComment->Kind = "FullComment";
+  auto OneParagraphComment = llvm::make_unique<CommentInfo>();
+  OneParagraphComment->Kind = "ParagraphComment";
+  auto OneTextComment = llvm::make_unique<CommentInfo>();
+  OneTextComment->Kind = "TextComment";
+  OneTextComment->Text = "This is a text comment.";
+  OneParagraphComment->Children.push_back(std::move(OneTextComment));
+  OneFullComment->Children.push_back(std::move(OneParagraphComment));
+
   FunctionInfo Two;
   Two.Name = "f";
   Two.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
-  Two.Loc.emplace_back(20, llvm::SmallString<16>{"test.cpp"});
+  Two.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
   Two.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
   Two.Params.emplace_back("int", "P");
+
+  Two.Description.emplace_back();
+  auto TwoFullComment = &Two.Description.back();
+  TwoFullComment->Kind = "FullComment";
+  auto TwoParagraphComment = llvm::make_unique<CommentInfo>();
+  TwoParagraphComment->Kind = "ParagraphComment";
+  auto TwoTextComment = llvm::make_unique<CommentInfo>();
+  TwoTextComment->Kind = "TextComment";
+  TwoTextComment->Text = "This is a text comment.";
+  TwoParagraphComment->Children.push_back(std::move(TwoTextComment));
+  TwoFullComment->Children.push_back(std::move(TwoParagraphComment));
 
   std::vector<std::unique_ptr<Info>> Infos;
   Infos.emplace_back(llvm::make_unique<FunctionInfo>(std::move(One)));
@@ -178,12 +200,22 @@ TEST(MergeTest, mergeFunctionInfos) {
 
   Expected->DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   Expected->Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
-  Expected->Loc.emplace_back(20, llvm::SmallString<16>{"test.cpp"});
 
   Expected->ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
   Expected->Params.emplace_back("int", "P");
   Expected->IsMethod = true;
   Expected->Parent = Reference(EmptySID, "Parent", InfoType::IT_namespace);
+
+  Expected->Description.emplace_back();
+  auto ExpectedFullComment = &Expected->Description.back();
+  ExpectedFullComment->Kind = "FullComment";
+  auto ExpectedParagraphComment = llvm::make_unique<CommentInfo>();
+  ExpectedParagraphComment->Kind = "ParagraphComment";
+  auto ExpectedTextComment = llvm::make_unique<CommentInfo>();
+  ExpectedTextComment->Kind = "TextComment";
+  ExpectedTextComment->Text = "This is a text comment.";
+  ExpectedParagraphComment->Children.push_back(std::move(ExpectedTextComment));
+  ExpectedFullComment->Children.push_back(std::move(ExpectedParagraphComment));
 
   auto Actual = mergeInfos(Infos);
   assert(Actual);

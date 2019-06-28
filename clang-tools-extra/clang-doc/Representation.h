@@ -46,6 +46,45 @@ struct CommentInfo {
   CommentInfo() = default;
   CommentInfo(CommentInfo &Other) = delete;
   CommentInfo(CommentInfo &&Other) = default;
+  CommentInfo &operator=(CommentInfo &&Other) = default;
+
+  bool operator==(const CommentInfo &Other) const {
+    auto FirstCI = std::tie(Kind, Text, Name, Direction, ParamName, CloseName,
+                            SelfClosing, Explicit, AttrKeys, AttrValues, Args);
+    auto SecondCI =
+        std::tie(Other.Kind, Other.Text, Other.Name, Other.Direction,
+                 Other.ParamName, Other.CloseName, Other.SelfClosing,
+                 Other.Explicit, Other.AttrKeys, Other.AttrValues, Other.Args);
+
+    if (FirstCI != SecondCI || Children.size() != Other.Children.size())
+      return false;
+
+    return std::equal(Children.begin(), Children.end(), Other.Children.begin(),
+                      llvm::deref<llvm::equal>{});
+  }
+
+  // This operator is used to sort a vector of CommentInfos.
+  // No specific order (attributes more important than others) is required. Any
+  // sort is enough, the order is only needed to call std::unique after sorting
+  // the vector.
+  bool operator<(const CommentInfo &Other) const {
+    auto FirstCI = std::tie(Kind, Text, Name, Direction, ParamName, CloseName,
+                            SelfClosing, Explicit, AttrKeys, AttrValues, Args);
+    auto SecondCI =
+        std::tie(Other.Kind, Other.Text, Other.Name, Other.Direction,
+                 Other.ParamName, Other.CloseName, Other.SelfClosing,
+                 Other.Explicit, Other.AttrKeys, Other.AttrValues, Other.Args);
+
+    if (FirstCI < SecondCI ||
+        (FirstCI == SecondCI && Children.size() < Other.Children.size()))
+      return true;
+
+    if (FirstCI > SecondCI || Children.size() > Other.Children.size())
+      return false;
+
+    return std::equal(Children.begin(), Children.end(), Other.Children.begin(),
+                      llvm::deref<llvm::less>{});
+  }
 
   SmallString<16>
       Kind; // Kind of comment (FullComment, ParagraphComment, TextComment,
@@ -148,6 +187,15 @@ struct Location {
            std::tie(Other.LineNumber, Other.Filename);
   }
 
+  // This operator is used to sort a vector of Locations.
+  // No specific order (attributes more important than others) is required. Any
+  // sort is enough, the order is only needed to call std::unique after sorting
+  // the vector.
+  bool operator<(const Location &Other) const {
+    return std::tie(LineNumber, Filename) <
+           std::tie(Other.LineNumber, Other.Filename);
+  }
+
   int LineNumber;           // Line number of this Location.
   SmallString<32> Filename; // File for this Location.
 };
@@ -174,6 +222,8 @@ struct Info {
 
   void mergeBase(Info &&I);
   bool mergeable(const Info &Other);
+
+  llvm::SmallString<16> extractName();
 
   // Returns a reference to the parent scope (that is, the immediate parent
   // namespace or class in which this decl resides).
