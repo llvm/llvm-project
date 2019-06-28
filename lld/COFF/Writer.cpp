@@ -219,6 +219,7 @@ private:
   void sortExceptionTable();
   void sortCRTSectionChunks(std::vector<Chunk *> &Chunks);
   void addSyntheticIdata();
+  void fixPartialSectionChars(StringRef Name, uint32_t Chars);
   bool fixGnuImportChunks();
   PartialSection *createPartialSection(StringRef Name, uint32_t OutChars);
   PartialSection *findPartialSection(StringRef Name, uint32_t OutChars);
@@ -652,6 +653,24 @@ static void sortBySectionOrder(std::vector<Chunk *> &Chunks) {
   });
 }
 
+// Change the characteristics of existing PartialSections that belong to the
+// section Name to Chars.
+void Writer::fixPartialSectionChars(StringRef Name, uint32_t Chars) {
+  for (auto It : PartialSections) {
+    PartialSection *PSec = It.second;
+    StringRef CurName = PSec->Name;
+    if (!CurName.consume_front(Name) ||
+        (!CurName.empty() && !CurName.startswith("$")))
+      continue;
+    if (PSec->Characteristics == Chars)
+      continue;
+    PartialSection *DestSec = createPartialSection(PSec->Name, Chars);
+    DestSec->Chunks.insert(DestSec->Chunks.end(), PSec->Chunks.begin(),
+                           PSec->Chunks.end());
+    PSec->Chunks.clear();
+  }
+}
+
 // Sort concrete section chunks from GNU import libraries.
 //
 // GNU binutils doesn't use short import files, but instead produces import
@@ -667,17 +686,7 @@ bool Writer::fixGnuImportChunks() {
 
   // Make sure all .idata$* section chunks are mapped as RDATA in order to
   // be sorted into the same sections as our own synthesized .idata chunks.
-  for (auto It : PartialSections) {
-    PartialSection *PSec = It.second;
-    if (!PSec->Name.startswith(".idata"))
-      continue;
-    if (PSec->Characteristics == RDATA)
-      continue;
-    PartialSection *RDataSec = createPartialSection(PSec->Name, RDATA);
-    RDataSec->Chunks.insert(RDataSec->Chunks.end(), PSec->Chunks.begin(),
-                            PSec->Chunks.end());
-    PSec->Chunks.clear();
-  }
+  fixPartialSectionChars(".idata", RDATA);
 
   bool HasIdata = false;
   // Sort all .idata$* chunks, grouping chunks from the same library,
@@ -808,6 +817,7 @@ void Writer::createSections() {
     PSec->Chunks.push_back(C);
   }
 
+  fixPartialSectionChars(".rsrc", DATA | R);
   // Even in non MinGW cases, we might need to link against GNU import
   // libraries.
   bool HasIdata = fixGnuImportChunks();
