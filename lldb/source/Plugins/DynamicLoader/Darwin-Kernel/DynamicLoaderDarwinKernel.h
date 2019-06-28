@@ -240,7 +240,7 @@ protected:
       image_infos_addr = LLDB_INVALID_ADDRESS;
     }
 
-    bool IsValid() const { return version >= 1 || version <= 2; }
+    bool IsValid() const { return version >= 1 && version <= 2; }
   };
 
   void RegisterNotificationCallbacks();
