@@ -394,7 +394,7 @@ public:
                Dump(m_nopayload_elems_bitmask).c_str());
 
     for (auto enum_case : elements_with_no_payload) {
-      ConstString case_name(enum_case.decl->getName().str().data());
+      ConstString case_name(enum_case.decl->getName().str());
       swift::ClusteredBitVector case_value =
           enum_impl_strategy.getBitPatternForNoPayloadElement(enum_case.decl);
 
@@ -524,7 +524,7 @@ public:
     auto module_ctx = enum_decl->getModuleContext();
     const bool has_payload = true;
     for (auto enum_case : elements_with_payload) {
-      ConstString case_name(enum_case.decl->getName().str().data());
+      ConstString case_name(enum_case.decl->getName().str());
 
       swift::EnumElementDecl *case_decl = enum_case.decl;
       assert(case_decl);
@@ -1743,8 +1743,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(lldb::LanguageType language,
       LOG_PRINTF(LIBLLDB_LOG_TYPES, "No serialized SDK path.");
     } else {
       LOG_PRINTF(LIBLLDB_LOG_TYPES, "Got serialized SDK path %s.",
-                 serialized_sdk_path.data());
-      FileSpec sdk_spec(serialized_sdk_path.data());
+                 serialized_sdk_path.str().c_str());
+      FileSpec sdk_spec(serialized_sdk_path.str().c_str());
       if (FileSystem::Instance().Exists(sdk_spec)) {
         swift_ast_sp->SetPlatformSDKPath(serialized_sdk_path);
       }
@@ -3042,7 +3042,7 @@ public:
                             .c_str());
 
             SwiftDiagnostic *new_diagnostic =
-                new SwiftDiagnostic(fixed_description.GetString().data(),
+                new SwiftDiagnostic(fixed_description.GetData(),
                                     severity, origin, bufferID);
             for (auto fixit : diagnostic.fixits)
               new_diagnostic->AddFixIt(fixit);
@@ -3435,11 +3435,11 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
     error.SetErrorStringWithFormat(
         "failed to get module \"%s\" from AST context:\n%s",
         module.path.front().GetCString(),
-        diagnostic_manager.GetString().data());
+        diagnostic_manager.GetString().c_str());
 
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- error: %s",
                module.path.front().GetCString(),
-               diagnostic_manager.GetString().data());
+               diagnostic_manager.GetString().c_str());
     return nullptr;
   }
 
@@ -3599,9 +3599,9 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
   auto addLinkLibrary = [&](swift::LinkLibrary link_lib) {
     Status load_image_error;
     StreamString all_dlopen_errors;
-    const char *library_name = link_lib.getName().data();
+    std::string library_name = link_lib.getName().str();
 
-    if (library_name == NULL || library_name[0] == '\0') {
+    if (library_name.empty()) {
       error.SetErrorString("Empty library name passed to addLinkLibrary");
       return;
     }
@@ -3614,7 +3614,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
     swift::LibraryKind library_kind = link_lib.getKind();
 
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "Loading link library \"%s\" of kind: %d.",
-               library_name, library_kind);
+               library_name.c_str(), library_kind);
 
     switch (library_kind) {
     case swift::LibraryKind::Framework: {
@@ -3727,7 +3727,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
       } else {
         all_dlopen_errors.Printf("Failed to find framework for \"%s\" looking"
                                  " along paths:\n",
-                                 library_name);
+                                 library_name.c_str());
         for (const std::string &path : uniqued_paths)
           all_dlopen_errors.Printf("  %s\n", path.c_str());
       }
@@ -3767,7 +3767,7 @@ void SwiftASTContext::LoadModule(swift::ModuleDecl *swift_module,
 
     current_error.SetErrorStringWithFormat(
         "Failed to load linked library %s of module %s - errors:\n%s\n",
-        library_name, swift_module->getName().str().str().c_str(),
+        library_name.c_str(), swift_module->getName().str().str().c_str(),
         all_dlopen_errors.GetData());
   };
 
@@ -3896,7 +3896,7 @@ void SwiftASTContext::LoadExtraDylibs(Process &process, Status &error) {
     // We don't have to do frameworks here, they actually record their link
     // libraries properly.
     if (link_lib.getKind() == swift::LibraryKind::Library) {
-      const char *library_name = link_lib.getName().data();
+      StringRef library_name = link_lib.getName();
       StreamString errors;
 
       std::vector<std::string> search_paths = GetLibrarySearchPaths(
@@ -4793,7 +4793,7 @@ void SwiftASTContext::PrintDiagnostics(DiagnosticManager &diagnostic_manager,
           ->PrintDiagnostics(fatal_diagnostics, bufferID, first_line,
                              last_line);
     if (fatal_diagnostics.Diagnostics().size())
-      m_fatal_errors.SetErrorString(fatal_diagnostics.GetString().data());
+      m_fatal_errors.SetErrorString(fatal_diagnostics.GetString().c_str());
     else
       m_fatal_errors.SetErrorString("Unknown fatal error occurred.");
 
