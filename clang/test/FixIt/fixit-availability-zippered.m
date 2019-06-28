@@ -6,7 +6,7 @@ int function(void);
 
 int use() {
   function();
-// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:3-[[@LINE-1]]:3}:"if (@available(macOS 10.15, uikitformac 13, *)) {\n      "
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:3-[[@LINE-1]]:3}:"if (@available(macOS 10.15, macCatalyst 13, *)) {\n      "
 // CHECK-NEXT: fix-it:{{.*}}:{[[@LINE-2]]:14-[[@LINE-2]]:14}:"\n  } else {\n      // Fallback on earlier versions\n  }"
 }
 
@@ -18,6 +18,6 @@ API_AVAILABLE(macos(10.15), ios(13))
 
 @interface OldButOfferFixit
 @property(copy) NewClass *prop;
-// CHECK: fix-it:{{.*}}:{[[@LINE-2]]:1-[[@LINE-2]]:1}:"API_AVAILABLE(macos(10.15), uikitformac(13))\n"
+// CHECK: fix-it:{{.*}}:{[[@LINE-2]]:1-[[@LINE-2]]:1}:"API_AVAILABLE(macos(10.15), maccatalyst(13))\n"
 
 @end
