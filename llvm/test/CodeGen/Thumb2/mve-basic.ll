@@ -29,3 +29,38 @@ define void @vector_add_by_reference(<4 x i32>* %resultp, <4 x i32>* %lhsp, <4 x
   store <4 x i32> %result, <4 x i32>* %resultp, align 16
   ret void
 }
+
+define void @vector_f64_copy(<2 x double>* %from, <2 x double>* %to) {
+; CHECK-LABEL: vector_f64_copy:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    vstrw.32 q0, [r1]
+; CHECK-NEXT:    bx lr
+  %v = load <2 x double>, <2 x double>* %from, align 16
+  store <2 x double> %v, <2 x double>* %to, align 16
+  ret void
+}
+
+define arm_aapcs_vfpcc <16 x i8> @stack_slot_handling(<16 x i8> %a) #0 {
+; CHECK-LABEL: stack_slot_handling:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    push {r4, r6, r7, lr}
+; CHECK-NEXT:    add r7, sp, #8
+; CHECK-NEXT:    sub sp, #16
+; CHECK-NEXT:    mov r4, sp
+; CHECK-NEXT:    bfc r4, #0, #4
+; CHECK-NEXT:    mov sp, r4
+; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    vstrw.32 q0, [r0]
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    sub.w r4, r7, #8
+; CHECK-NEXT:    mov sp, r4
+; CHECK-NEXT:    pop {r4, r6, r7, pc}
+entry:
+  %a.addr = alloca <16 x i8>, align 8
+  store <16 x i8> %a, <16 x i8>* %a.addr, align 8
+  %0 = load <16 x i8>, <16 x i8>* %a.addr, align 8
+  ret <16 x i8> %0
+}
+
+attributes #0 = { noinline optnone }

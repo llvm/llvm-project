@@ -713,6 +713,114 @@ void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width) 
 } // namespace Hwreg
 
 //===----------------------------------------------------------------------===//
+// SendMsg
+//===----------------------------------------------------------------------===//
+
+namespace SendMsg {
+
+int64_t getMsgId(const StringRef Name) {
+  for (int i = ID_GAPS_FIRST_; i < ID_GAPS_LAST_; ++i) {
+    if (IdSymbolic[i] && Name == IdSymbolic[i])
+      return i;
+  }
+  return ID_UNKNOWN_;
+}
+
+static bool isValidMsgId(int64_t MsgId) {
+  return (ID_GAPS_FIRST_ <= MsgId && MsgId < ID_GAPS_LAST_) && IdSymbolic[MsgId];
+}
+
+bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict) {
+  return Strict ?
+         isValidMsgId(MsgId) && (MsgId != ID_GS_ALLOC_REQ || isGFX9(STI) || isGFX10(STI)) :
+         0 <= MsgId && isUInt<ID_WIDTH_>(MsgId);
+}
+
+StringRef getMsgName(int64_t MsgId) {
+  return isValidMsgId(MsgId)? IdSymbolic[MsgId] : "";
+}
+
+int64_t getMsgOpId(int64_t MsgId, const StringRef Name) {
+  const char* const *S = (MsgId == ID_SYSMSG) ? OpSysSymbolic : OpGsSymbolic;
+  const int F = (MsgId == ID_SYSMSG) ? OP_SYS_FIRST_ : OP_GS_FIRST_;
+  const int L = (MsgId == ID_SYSMSG) ? OP_SYS_LAST_ : OP_GS_LAST_;
+  for (int i = F; i < L; ++i) {
+    if (Name == S[i]) {
+      return i;
+    }
+  }
+  return OP_UNKNOWN_;
+}
+
+bool isValidMsgOp(int64_t MsgId, int64_t OpId, bool Strict) {
+
+  if (!Strict)
+    return 0 <= OpId && isUInt<OP_WIDTH_>(OpId);
+
+  switch(MsgId)
+  {
+  case ID_GS:
+    return (OP_GS_FIRST_ <= OpId && OpId < OP_GS_LAST_) && OpId != OP_GS_NOP;
+  case ID_GS_DONE:
+    return OP_GS_FIRST_ <= OpId && OpId < OP_GS_LAST_;
+  case ID_SYSMSG:
+    return OP_SYS_FIRST_ <= OpId && OpId < OP_SYS_LAST_;
+  default:
+    return OpId == OP_NONE_;
+  }
+}
+
+StringRef getMsgOpName(int64_t MsgId, int64_t OpId) {
+  assert(msgRequiresOp(MsgId));
+  return (MsgId == ID_SYSMSG)? OpSysSymbolic[OpId] : OpGsSymbolic[OpId];
+}
+
+bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId, bool Strict) {
+
+  if (!Strict)
+    return 0 <= StreamId && isUInt<STREAM_ID_WIDTH_>(StreamId);
+
+  switch(MsgId)
+  {
+  case ID_GS:
+    return STREAM_ID_FIRST_ <= StreamId && StreamId < STREAM_ID_LAST_;
+  case ID_GS_DONE:
+    return (OpId == OP_GS_NOP)?
+           (StreamId == STREAM_ID_NONE_) :
+           (STREAM_ID_FIRST_ <= StreamId && StreamId < STREAM_ID_LAST_);
+  default:
+    return StreamId == STREAM_ID_NONE_;
+  }
+}
+
+bool msgRequiresOp(int64_t MsgId) {
+  return MsgId == ID_GS || MsgId == ID_GS_DONE || MsgId == ID_SYSMSG;
+}
+
+bool msgSupportsStream(int64_t MsgId, int64_t OpId) {
+  return (MsgId == ID_GS || MsgId == ID_GS_DONE) && OpId != OP_GS_NOP;
+}
+
+void decodeMsg(unsigned Val,
+               uint16_t &MsgId,
+               uint16_t &OpId,
+               uint16_t &StreamId) {
+  MsgId = Val & ID_MASK_;
+  OpId = (Val & OP_MASK_) >> OP_SHIFT_;
+  StreamId = (Val & STREAM_ID_MASK_) >> STREAM_ID_SHIFT_;
+}
+
+int64_t encodeMsg(int64_t MsgId,
+                  int64_t OpId,
+                  int64_t StreamId) {
+  return (MsgId << ID_SHIFT_) |
+         (OpId << OP_SHIFT_) |
+         (StreamId << STREAM_ID_SHIFT_);
+}
+
+} // namespace SendMsg
+
+//===----------------------------------------------------------------------===//
 //
 //===----------------------------------------------------------------------===//
 

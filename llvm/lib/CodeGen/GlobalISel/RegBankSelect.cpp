@@ -108,7 +108,7 @@ void RegBankSelect::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 bool RegBankSelect::assignmentMatch(
-    unsigned Reg, const RegisterBankInfo::ValueMapping &ValMapping,
+    Register Reg, const RegisterBankInfo::ValueMapping &ValMapping,
     bool &OnlyAssign) const {
   // By default we assume we will have to repair something.
   OnlyAssign = false;
@@ -133,7 +133,7 @@ bool RegBankSelect::assignmentMatch(
 bool RegBankSelect::repairReg(
     MachineOperand &MO, const RegisterBankInfo::ValueMapping &ValMapping,
     RegBankSelect::RepairingPlacement &RepairPt,
-    const iterator_range<SmallVectorImpl<unsigned>::const_iterator> &NewVRegs) {
+    const iterator_range<SmallVectorImpl<Register>::const_iterator> &NewVRegs) {
 
   assert(ValMapping.NumBreakDowns == (unsigned)size(NewVRegs) &&
          "need new vreg for each breakdown");
@@ -145,8 +145,8 @@ bool RegBankSelect::repairReg(
   if (ValMapping.NumBreakDowns == 1) {
     // Assume we are repairing a use and thus, the original reg will be
     // the source of the repairing.
-    unsigned Src = MO.getReg();
-    unsigned Dst = *NewVRegs.begin();
+    Register Src = MO.getReg();
+    Register Dst = *NewVRegs.begin();
 
     // If we repair a definition, swap the source and destination for
     // the repairing.
@@ -193,14 +193,14 @@ bool RegBankSelect::repairReg(
         MIRBuilder.buildInstrNoInsert(MergeOp)
         .addDef(MO.getReg());
 
-      for (unsigned SrcReg : NewVRegs)
+      for (Register SrcReg : NewVRegs)
         MergeBuilder.addUse(SrcReg);
 
       MI = MergeBuilder;
     } else {
       MachineInstrBuilder UnMergeBuilder =
         MIRBuilder.buildInstrNoInsert(TargetOpcode::G_UNMERGE_VALUES);
-      for (unsigned DefReg : NewVRegs)
+      for (Register DefReg : NewVRegs)
         UnMergeBuilder.addDef(DefReg);
 
       UnMergeBuilder.addUse(MO.getReg());
@@ -397,7 +397,7 @@ void RegBankSelect::tryAvoidingSplit(
   //   repairing.
 
   // Check if this is a physical or virtual register.
-  unsigned Reg = MO.getReg();
+  Register Reg = MO.getReg();
   if (TargetRegisterInfo::isPhysicalRegister(Reg)) {
     // We are going to split every outgoing edges.
     // Check that this is possible.
@@ -468,7 +468,7 @@ RegBankSelect::MappingCost RegBankSelect::computeMapping(
     const MachineOperand &MO = MI.getOperand(OpIdx);
     if (!MO.isReg())
       continue;
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     if (!Reg)
       continue;
     LLVM_DEBUG(dbgs() << "Opd" << OpIdx << '\n');
@@ -594,7 +594,7 @@ bool RegBankSelect::applyMapping(
     MachineOperand &MO = MI.getOperand(OpIdx);
     const RegisterBankInfo::ValueMapping &ValMapping =
         InstrMapping.getOperandMapping(OpIdx);
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
 
     switch (RepairPt.getKind()) {
     case RepairingPlacement::Reassign:
@@ -757,7 +757,7 @@ RegBankSelect::RepairingPlacement::RepairingPlacement(
     MachineBasicBlock &Pred = *MI.getOperand(OpIdx + 1).getMBB();
     // Check if we can move the insertion point prior to the
     // terminators of the predecessor.
-    unsigned Reg = MO.getReg();
+    Register Reg = MO.getReg();
     MachineBasicBlock::iterator It = Pred.getLastNonDebugInstr();
     for (auto Begin = Pred.begin(); It != Begin && It->isTerminator(); --It)
       if (It->modifiesRegister(Reg, &TRI)) {

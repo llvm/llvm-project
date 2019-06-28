@@ -6,6 +6,7 @@
 ; we should rewrite it as
 ;   x shiftopcode (Q+K)  iff (Q+K) u< bitwidth(x)
 ; This is valid for any shift, but they must be identical.
+; THIS FOLD DOES *NOT* REQUIRE ANY 'exact'/'nuw'/`nsw` FLAGS!
 
 ; Basic scalar test
 
@@ -14,13 +15,13 @@ define i32 @t0(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[Y:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], -2
-; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[T1]], [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = lshr exact i32 [[T1]], [[T2]]
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = sub i32 32, %y
   %t1 = lshr i32 %x, %t0
   %t2 = add i32 %y, -2
-  %t3 = lshr i32 %t1, %t2
+  %t3 = lshr exact i32 %t1, %t2 ; while there, test that we don't propagate partial 'exact' flag
   ret i32 %t3
 }
 
@@ -105,13 +106,13 @@ define <3 x i32> @t5_vec_nonsplat_undef1(<3 x i32> %x, <3 x i32> %y) {
 define i32 @t6_shl(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t6_shl(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw i32 [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], -2
 ; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[T1]], [[T2]]
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = sub i32 32, %y
-  %t1 = shl i32 %x, %t0
+  %t1 = shl nuw i32 %x, %t0 ; while there, test that we don't propagate partial 'nuw' flag
   %t2 = add i32 %y, -2
   %t3 = shl i32 %t1, %t2
   ret i32 %t3
@@ -119,15 +120,59 @@ define i32 @t6_shl(i32 %x, i32 %y) {
 define i32 @t7_ashr(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t7_ashr(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = ashr i32 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    [[T1:%.*]] = ashr exact i32 [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], -2
 ; CHECK-NEXT:    [[T3:%.*]] = ashr i32 [[T1]], [[T2]]
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = sub i32 32, %y
-  %t1 = ashr i32 %x, %t0
+  %t1 = ashr exact i32 %x, %t0 ; while there, test that we don't propagate partial 'exact' flag
   %t2 = add i32 %y, -2
   %t3 = ashr i32 %t1, %t2
+  ret i32 %t3
+}
+
+; If the same flag is present on both shifts, it can be kept.
+define i32 @t8_lshr_flag_preservation(i32 %x, i32 %y) {
+; CHECK-LABEL: @t8_lshr_flag_preservation(
+; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr exact i32 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], -2
+; CHECK-NEXT:    [[T3:%.*]] = lshr exact i32 [[T1]], [[T2]]
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t0 = sub i32 32, %y
+  %t1 = lshr exact i32 %x, %t0
+  %t2 = add i32 %y, -2
+  %t3 = lshr exact i32 %t1, %t2
+  ret i32 %t3
+}
+define i32 @t9_ashr_flag_preservation(i32 %x, i32 %y) {
+; CHECK-LABEL: @t9_ashr_flag_preservation(
+; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = ashr exact i32 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], -2
+; CHECK-NEXT:    [[T3:%.*]] = ashr exact i32 [[T1]], [[T2]]
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t0 = sub i32 32, %y
+  %t1 = ashr exact i32 %x, %t0
+  %t2 = add i32 %y, -2
+  %t3 = ashr exact i32 %t1, %t2
+  ret i32 %t3
+}
+define i32 @t10_shl_flag_preservation(i32 %x, i32 %y) {
+; CHECK-LABEL: @t10_shl_flag_preservation(
+; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[Y:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw i32 [[X:%.*]], [[T0]]
+; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], -2
+; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw i32 [[T1]], [[T2]]
+; CHECK-NEXT:    ret i32 [[T3]]
+;
+  %t0 = sub i32 32, %y
+  %t1 = shl nuw i32 %x, %t0
+  %t2 = add i32 %y, -2
+  %t3 = shl nuw nsw i32 %t1, %t2 ; only 'nuw' should be propagated.
   ret i32 %t3
 }
 
@@ -136,8 +181,8 @@ define i32 @t7_ashr(i32 %x, i32 %y) {
 ; Negative tests
 
 ; Can't fold, total shift would be 32
-define i32 @n8(i32 %x, i32 %y) {
-; CHECK-LABEL: @n8(
+define i32 @n11(i32 %x, i32 %y) {
+; CHECK-LABEL: @n11(
 ; CHECK-NEXT:    [[T0:%.*]] = sub i32 30, [[Y:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], 2
@@ -151,8 +196,8 @@ define i32 @n8(i32 %x, i32 %y) {
   ret i32 %t3
 }
 ; Can't fold, for second channel the shift would 32
-define <2 x i32> @t9_vec(<2 x i32> %x, <2 x i32> %y) {
-; CHECK-LABEL: @t9_vec(
+define <2 x i32> @t12_vec(<2 x i32> %x, <2 x i32> %y) {
+; CHECK-LABEL: @t12_vec(
 ; CHECK-NEXT:    [[T0:%.*]] = sub <2 x i32> <i32 32, i32 30>, [[Y:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[X:%.*]], [[T0]]
 ; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[Y]], <i32 -2, i32 2>

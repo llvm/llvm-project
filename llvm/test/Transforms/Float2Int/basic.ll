@@ -79,6 +79,22 @@ define i32 @simple5(i8 %a, i8 %b) {
   ret i32 %5
 }
 
+; CHECK-LABEL: @simple6
+; CHECK:  %1 = uitofp i8 %a to float
+; CHECK:  %2 = uitofp i8 %b to float
+; CHECK:  %3 = fneg float %1
+; CHECK:  %4 = fmul float %3, %2
+; CHECK:  %5 = fptoui float %4 to i32
+; CHECK:  ret i32 %5
+define i32 @simple6(i8 %a, i8 %b) {
+  %1 = uitofp i8 %a to float
+  %2 = uitofp i8 %b to float
+  %3 = fneg float %1
+  %4 = fmul float %3, %2
+  %5 = fptoui float %4 to i32
+  ret i32 %5
+}
+
 ; The two chains don't interact - failure of one shouldn't
 ; cause failure of the other.
 

@@ -32,7 +32,7 @@ public:
                       MachineIRBuilder &MIRBuilder,
                       GISelChangeObserver &Observer) const override;
 
-  unsigned getSegmentAperture(unsigned AddrSpace,
+  Register getSegmentAperture(unsigned AddrSpace,
                               MachineRegisterInfo &MRI,
                               MachineIRBuilder &MIRBuilder) const;
 

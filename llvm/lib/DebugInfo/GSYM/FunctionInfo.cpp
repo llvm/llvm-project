@@ -13,8 +13,7 @@ using namespace llvm;
 using namespace gsym;
 
 raw_ostream &llvm::gsym::operator<<(raw_ostream &OS, const FunctionInfo &FI) {
-  OS << '[' << HEX64(FI.Range.startAddress()) << '-'
-     << HEX64(FI.Range.endAddress()) << "): "
+  OS << '[' << HEX64(FI.Range.Start) << '-' << HEX64(FI.Range.End) << "): "
      << "Name=" << HEX32(FI.Name) << '\n';
   for (const auto &Line : FI.Lines)
     OS << Line << '\n';

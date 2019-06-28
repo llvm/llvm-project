@@ -4233,9 +4233,19 @@ SDValue AMDGPUTargetLowering::loadInputValue(SelectionDAG &DAG,
                                              const ArgDescriptor &Arg) const {
   assert(Arg && "Attempting to load missing argument");
 
-  if (Arg.isRegister())
-    return CreateLiveInRegister(DAG, RC, Arg.getRegister(), VT, SL);
-  return loadStackInputValue(DAG, VT, SL, Arg.getStackOffset());
+  SDValue V = Arg.isRegister() ?
+    CreateLiveInRegister(DAG, RC, Arg.getRegister(), VT, SL) :
+    loadStackInputValue(DAG, VT, SL, Arg.getStackOffset());
+
+  if (!Arg.isMasked())
+    return V;
+
+  unsigned Mask = Arg.getMask();
+  unsigned Shift = countTrailingZeros<unsigned>(Mask);
+  V = DAG.getNode(ISD::SRL, SL, VT, V,
+                  DAG.getShiftAmountConstant(Shift, VT, SL));
+  return DAG.getNode(ISD::AND, SL, VT, V,
+                     DAG.getConstant(Mask >> Shift, SL, VT));
 }
 
 uint32_t AMDGPUTargetLowering::getImplicitParameterOffset(

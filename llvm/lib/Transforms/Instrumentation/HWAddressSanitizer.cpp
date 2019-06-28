@@ -210,6 +210,7 @@ public:
       SmallVectorImpl<AllocaInst *> &Allocas,
       DenseMap<AllocaInst *, std::vector<DbgDeclareInst *>> &AllocaDeclareMap,
       SmallVectorImpl<Instruction *> &RetVec, Value *StackTag);
+  Value *readRegister(IRBuilder<> &IRB, StringRef Name);
   bool instrumentLandingPads(SmallVectorImpl<Instruction *> &RetVec);
   Value *getNextTagWithCall(IRBuilder<> &IRB);
   Value *getStackBaseTag(IRBuilder<> &IRB);
@@ -935,7 +936,11 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
     StackBaseTag = IRB.CreateAShr(ThreadLong, 3);
 
     // Prepare ring buffer data.
-    auto PC = IRB.CreatePtrToInt(F, IntptrTy);
+    Value *PC;
+    if (TargetTriple.getArch() == Triple::aarch64)
+      PC = readRegister(IRB, "pc");
+    else
+      PC = IRB.CreatePtrToInt(F, IntptrTy);
     auto GetStackPointerFn =
         Intrinsic::getDeclaration(F->getParent(), Intrinsic::frameaddress);
     Value *SP = IRB.CreatePtrToInt(
@@ -981,19 +986,23 @@ void HWAddressSanitizer::emitPrologue(IRBuilder<> &IRB, bool WithFrameRecord) {
   LocalDynamicShadow = IRB.CreateIntToPtr(LocalDynamicShadow, Int8PtrTy);
 }
 
-bool HWAddressSanitizer::instrumentLandingPads(
-    SmallVectorImpl<Instruction *> &LandingPadVec) {
-  Module *M = LandingPadVec[0]->getModule();
+Value *HWAddressSanitizer::readRegister(IRBuilder<> &IRB, StringRef Name) {
+  Module *M = IRB.GetInsertBlock()->getParent()->getParent();
   Function *ReadRegister =
       Intrinsic::getDeclaration(M, Intrinsic::read_register, IntptrTy);
-  const char *RegName =
-      (TargetTriple.getArch() == Triple::x86_64) ? "rsp" : "sp";
-  MDNode *MD = MDNode::get(*C, {MDString::get(*C, RegName)});
+  MDNode *MD = MDNode::get(*C, {MDString::get(*C, Name)});
   Value *Args[] = {MetadataAsValue::get(*C, MD)};
+  return IRB.CreateCall(ReadRegister, Args);
+}
 
+bool HWAddressSanitizer::instrumentLandingPads(
+    SmallVectorImpl<Instruction *> &LandingPadVec) {
   for (auto *LP : LandingPadVec) {
     IRBuilder<> IRB(LP->getNextNode());
-    IRB.CreateCall(HWAsanHandleVfork, {IRB.CreateCall(ReadRegister, Args)});
+    IRB.CreateCall(
+        HWAsanHandleVfork,
+        {readRegister(IRB, (TargetTriple.getArch() == Triple::x86_64) ? "rsp"
+                                                                      : "sp")});
   }
   return true;
 }

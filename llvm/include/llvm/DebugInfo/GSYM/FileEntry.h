@@ -19,8 +19,8 @@
 namespace llvm {
 namespace gsym {
 
-/// Files in GSYM are contained in FileEntry structs where we split the 
-/// directory and basename into two different strings in the string 
+/// Files in GSYM are contained in FileEntry structs where we split the
+/// directory and basename into two different strings in the string
 /// table. This allows paths to shared commont directory and filename
 /// strings and saves space.
 struct FileEntry {
@@ -48,12 +48,11 @@ struct FileEntry {
 
 template <> struct DenseMapInfo<gsym::FileEntry> {
   static inline gsym::FileEntry getEmptyKey() {
-    const auto key = DenseMapInfo<uint32_t>::getEmptyKey();
+    uint32_t key = DenseMapInfo<uint32_t>::getEmptyKey();
     return gsym::FileEntry(key, key);
-    
   }
   static inline gsym::FileEntry getTombstoneKey() {
-    const auto key = DenseMapInfo<uint32_t>::getTombstoneKey();
+    uint32_t key = DenseMapInfo<uint32_t>::getTombstoneKey();
     return gsym::FileEntry(key, key);
   }
   static unsigned getHashValue(const gsym::FileEntry &Val) {

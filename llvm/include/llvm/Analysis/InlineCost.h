@@ -67,10 +67,10 @@ class InlineCost {
   };
 
   /// The estimated cost of inlining this callsite.
-  const int Cost;
+  int Cost;
 
   /// The adjusted threshold against which this cost was computed.
-  const int Threshold;
+  int Threshold;
 
   /// Must be set for Always and Never instances.
   const char *Reason = nullptr;

@@ -290,8 +290,7 @@ private:
   // Begin switch lowering functions.
   bool emitJumpTableHeader(SwitchCG::JumpTable &JT,
                            SwitchCG::JumpTableHeader &JTH,
-                           MachineBasicBlock *SwitchBB,
-                           MachineIRBuilder &MIB);
+                           MachineBasicBlock *HeaderBB);
   void emitJumpTable(SwitchCG::JumpTable &JT, MachineBasicBlock *MBB);
 
   void emitSwitchCase(SwitchCG::CaseBlock &CB, MachineBasicBlock *SwitchBB,
@@ -299,6 +298,7 @@ private:
 
   bool lowerJumpTableWorkItem(SwitchCG::SwitchWorkListItem W,
                               MachineBasicBlock *SwitchMBB,
+                              MachineBasicBlock *CurMBB,
                               MachineBasicBlock *DefaultMBB,
                               MachineIRBuilder &MIB,
                               MachineFunction::iterator BBI,

@@ -448,6 +448,48 @@ void decodeHwreg(unsigned Val, unsigned &Id, unsigned &Offset, unsigned &Width);
 
 } // namespace Hwreg
 
+namespace SendMsg {
+
+LLVM_READONLY
+int64_t getMsgId(const StringRef Name);
+
+LLVM_READONLY
+int64_t getMsgOpId(int64_t MsgId, const StringRef Name);
+
+LLVM_READNONE
+StringRef getMsgName(int64_t MsgId);
+
+LLVM_READNONE
+StringRef getMsgOpName(int64_t MsgId, int64_t OpId);
+
+LLVM_READNONE
+bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict = true);
+
+LLVM_READNONE
+bool isValidMsgOp(int64_t MsgId, int64_t OpId, bool Strict = true);
+
+LLVM_READNONE
+bool isValidMsgStream(int64_t MsgId, int64_t OpId, int64_t StreamId, bool Strict = true);
+
+LLVM_READNONE
+bool msgRequiresOp(int64_t MsgId);
+
+LLVM_READNONE
+bool msgSupportsStream(int64_t MsgId, int64_t OpId);
+
+void decodeMsg(unsigned Val,
+               uint16_t &MsgId,
+               uint16_t &OpId,
+               uint16_t &StreamId);
+
+LLVM_READNONE
+int64_t encodeMsg(int64_t MsgId,
+                  int64_t OpId,
+                  int64_t StreamId);
+
+} // namespace SendMsg
+
+
 unsigned getInitialPSInputAddr(const Function &F);
 
 LLVM_READNONE

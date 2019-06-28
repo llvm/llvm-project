@@ -66,6 +66,16 @@ void DataInfo::Clear() {
   internal_memset(this, 0, sizeof(DataInfo));
 }
 
+void FrameInfo::Clear() {
+  InternalFree(module);
+  for (LocalInfo &local : locals) {
+    InternalFree(local.function_name);
+    InternalFree(local.name);
+    InternalFree(local.decl_file);
+  }
+  locals.clear();
+}
+
 Symbolizer *Symbolizer::symbolizer_;
 StaticSpinMutex Symbolizer::init_mu_;
 LowLevelAllocator Symbolizer::symbolizer_allocator_;

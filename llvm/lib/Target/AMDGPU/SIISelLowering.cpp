@@ -1585,7 +1585,13 @@ static void allocateSpecialEntryInputVGPRs(CCState &CCInfo,
 
 // Try to allocate a VGPR at the end of the argument list, or if no argument
 // VGPRs are left allocating a stack slot.
-static ArgDescriptor allocateVGPR32Input(CCState &CCInfo) {
+// If \p Mask is is given it indicates bitfield position in the register.
+// If \p Arg is given use it with new ]p Mask instead of allocating new.
+static ArgDescriptor allocateVGPR32Input(CCState &CCInfo, unsigned Mask = ~0u,
+                                         ArgDescriptor Arg = ArgDescriptor()) {
+  if (Arg.isSet())
+    return ArgDescriptor::createArg(Arg, Mask);
+
   ArrayRef<MCPhysReg> ArgVGPRs
     = makeArrayRef(AMDGPU::VGPR_32RegClass.begin(), 32);
   unsigned RegIdx = CCInfo.getFirstUnallocated(ArgVGPRs);
@@ -1593,7 +1599,7 @@ static ArgDescriptor allocateVGPR32Input(CCState &CCInfo) {
     // Spill to stack required.
     int64_t Offset = CCInfo.AllocateStack(4, 4);
 
-    return ArgDescriptor::createStack(Offset);
+    return ArgDescriptor::createStack(Offset, Mask);
   }
 
   unsigned Reg = ArgVGPRs[RegIdx];
@@ -1602,7 +1608,7 @@ static ArgDescriptor allocateVGPR32Input(CCState &CCInfo) {
 
   MachineFunction &MF = CCInfo.getMachineFunction();
   MF.addLiveIn(Reg, &AMDGPU::VGPR_32RegClass);
-  return ArgDescriptor::createRegister(Reg);
+  return ArgDescriptor::createRegister(Reg, Mask);
 }
 
 static ArgDescriptor allocateSGPR32InputImpl(CCState &CCInfo,
@@ -1634,14 +1640,21 @@ static void allocateSpecialInputVGPRs(CCState &CCInfo,
                                       MachineFunction &MF,
                                       const SIRegisterInfo &TRI,
                                       SIMachineFunctionInfo &Info) {
-  if (Info.hasWorkItemIDX())
-    Info.setWorkItemIDX(allocateVGPR32Input(CCInfo));
+  const unsigned Mask = 0x3ff;
+  ArgDescriptor Arg;
 
-  if (Info.hasWorkItemIDY())
-    Info.setWorkItemIDY(allocateVGPR32Input(CCInfo));
+  if (Info.hasWorkItemIDX()) {
+    Arg = allocateVGPR32Input(CCInfo, Mask);
+    Info.setWorkItemIDX(Arg);
+  }
+
+  if (Info.hasWorkItemIDY()) {
+    Arg = allocateVGPR32Input(CCInfo, Mask << 10, Arg);
+    Info.setWorkItemIDY(Arg);
+  }
 
   if (Info.hasWorkItemIDZ())
-    Info.setWorkItemIDZ(allocateVGPR32Input(CCInfo));
+    Info.setWorkItemIDZ(allocateVGPR32Input(CCInfo, Mask << 20, Arg));
 }
 
 static void allocateSpecialInputSGPRs(CCState &CCInfo,
@@ -2387,9 +2400,6 @@ void SITargetLowering::passSpecialInputs(
     AMDGPUFunctionArgInfo::WORKGROUP_ID_X,
     AMDGPUFunctionArgInfo::WORKGROUP_ID_Y,
     AMDGPUFunctionArgInfo::WORKGROUP_ID_Z,
-    AMDGPUFunctionArgInfo::WORKITEM_ID_X,
-    AMDGPUFunctionArgInfo::WORKITEM_ID_Y,
-    AMDGPUFunctionArgInfo::WORKITEM_ID_Z,
     AMDGPUFunctionArgInfo::IMPLICIT_ARG_PTR
   };
 
@@ -2428,6 +2438,71 @@ void SITargetLowering::passSpecialInputs(
                                               SpecialArgOffset);
       MemOpChains.push_back(ArgStore);
     }
+  }
+
+  // Pack workitem IDs into a single register or pass it as is if already
+  // packed.
+  const ArgDescriptor *OutgoingArg;
+  const TargetRegisterClass *ArgRC;
+
+  std::tie(OutgoingArg, ArgRC) =
+    CalleeArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_X);
+  if (!OutgoingArg)
+    std::tie(OutgoingArg, ArgRC) =
+      CalleeArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Y);
+  if (!OutgoingArg)
+    std::tie(OutgoingArg, ArgRC) =
+      CalleeArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Z);
+  if (!OutgoingArg)
+    return;
+
+  const ArgDescriptor *IncomingArgX
+    = CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_X).first;
+  const ArgDescriptor *IncomingArgY
+    = CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Y).first;
+  const ArgDescriptor *IncomingArgZ
+    = CallerArgInfo.getPreloadedValue(AMDGPUFunctionArgInfo::WORKITEM_ID_Z).first;
+
+  SDValue InputReg;
+  SDLoc SL;
+
+  // If incoming ids are not packed we need to pack them.
+  if (IncomingArgX && !IncomingArgX->isMasked() && CalleeArgInfo.WorkItemIDX)
+    InputReg = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgX);
+
+  if (IncomingArgY && !IncomingArgY->isMasked() && CalleeArgInfo.WorkItemIDY) {
+    SDValue Y = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgY);
+    Y = DAG.getNode(ISD::SHL, SL, MVT::i32, Y,
+                    DAG.getShiftAmountConstant(10, MVT::i32, SL));
+    InputReg = InputReg.getNode() ?
+                 DAG.getNode(ISD::OR, SL, MVT::i32, InputReg, Y) : Y;
+  }
+
+  if (IncomingArgZ && !IncomingArgZ->isMasked() && CalleeArgInfo.WorkItemIDZ) {
+    SDValue Z = loadInputValue(DAG, ArgRC, MVT::i32, DL, *IncomingArgZ);
+    Z = DAG.getNode(ISD::SHL, SL, MVT::i32, Z,
+                    DAG.getShiftAmountConstant(20, MVT::i32, SL));
+    InputReg = InputReg.getNode() ?
+                 DAG.getNode(ISD::OR, SL, MVT::i32, InputReg, Z) : Z;
+  }
+
+  if (!InputReg.getNode()) {
+    // Workitem ids are already packed, any of present incoming arguments
+    // will carry all required fields.
+    ArgDescriptor IncomingArg = ArgDescriptor::createArg(
+      IncomingArgX ? *IncomingArgX :
+      IncomingArgY ? *IncomingArgY :
+                     *IncomingArgZ, ~0u);
+    InputReg = loadInputValue(DAG, ArgRC, MVT::i32, DL, IncomingArg);
+  }
+
+  if (OutgoingArg->isRegister()) {
+    RegsToPass.emplace_back(OutgoingArg->getRegister(), InputReg);
+  } else {
+    unsigned SpecialArgOffset = CCInfo.AllocateStack(4, 4);
+    SDValue ArgStore = storeStackInputValue(DAG, DL, Chain, InputReg,
+                                            SpecialArgOffset);
+    MemOpChains.push_back(ArgStore);
   }
 }
 

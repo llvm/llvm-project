@@ -48,7 +48,7 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
   const RegisterBankInfo::InstructionMapping &
   getInstrMappingForLoad(const MachineInstr &MI) const;
 
-  unsigned getRegBankID(unsigned Reg, const MachineRegisterInfo &MRI,
+  unsigned getRegBankID(Register Reg, const MachineRegisterInfo &MRI,
                         const TargetRegisterInfo &TRI,
                         unsigned Default = AMDGPU::VGPRRegBankID) const;
 
@@ -57,7 +57,7 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
   void split64BitValueForMapping(MachineIRBuilder &B,
                                  SmallVector<Register, 2> &Regs,
                                  LLT HalfTy,
-                                 unsigned Reg) const;
+                                 Register Reg) const;
 
   template <unsigned NumOps>
   struct OpRegBankEntry {

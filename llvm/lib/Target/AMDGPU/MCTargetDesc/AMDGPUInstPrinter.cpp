@@ -1234,42 +1234,29 @@ void AMDGPUInstPrinter::printSendMsg(const MCInst *MI, unsigned OpNo,
                                      raw_ostream &O) {
   using namespace llvm::AMDGPU::SendMsg;
 
-  const unsigned SImm16 = MI->getOperand(OpNo).getImm();
-  const unsigned Id = SImm16 & ID_MASK_;
-  do {
-      if (Id == ID_INTERRUPT ||
-          (Id == ID_GS_ALLOC_REQ && !AMDGPU::isSI(STI) && !AMDGPU::isCI(STI) &&
-           !AMDGPU::isVI(STI))) {
-      if ((SImm16 & ~ID_MASK_) != 0) // Unused/unknown bits must be 0.
-        break;
-      O << "sendmsg(" << IdSymbolic[Id] << ')';
-      return;
+  const unsigned Imm16 = MI->getOperand(OpNo).getImm();
+
+  uint16_t MsgId;
+  uint16_t OpId;
+  uint16_t StreamId;
+  decodeMsg(Imm16, MsgId, OpId, StreamId);
+
+  if (isValidMsgId(MsgId, STI) &&
+      isValidMsgOp(MsgId, OpId) &&
+      isValidMsgStream(MsgId, OpId, StreamId)) {
+    O << "sendmsg(" << getMsgName(MsgId);
+    if (msgRequiresOp(MsgId)) {
+      O << ", " << getMsgOpName(MsgId, OpId);
+      if (msgSupportsStream(MsgId, OpId)) {
+        O << ", " << StreamId;
+      }
     }
-    if (Id == ID_GS || Id == ID_GS_DONE) {
-      if ((SImm16 & ~(ID_MASK_|OP_GS_MASK_|STREAM_ID_MASK_)) != 0) // Unused/unknown bits must be 0.
-        break;
-      const unsigned OpGs = (SImm16 & OP_GS_MASK_) >> OP_SHIFT_;
-      const unsigned StreamId = (SImm16 & STREAM_ID_MASK_) >> STREAM_ID_SHIFT_;
-      if (OpGs == OP_GS_NOP && Id != ID_GS_DONE) // NOP to be used for GS_DONE only.
-        break;
-      if (OpGs == OP_GS_NOP && StreamId != 0) // NOP does not use/define stream id bits.
-        break;
-      O << "sendmsg(" << IdSymbolic[Id] << ", " << OpGsSymbolic[OpGs];
-      if (OpGs != OP_GS_NOP) {  O << ", " << StreamId; }
-      O << ')';
-      return;
-    }
-    if (Id == ID_SYSMSG) {
-      if ((SImm16 & ~(ID_MASK_|OP_SYS_MASK_)) != 0) // Unused/unknown bits must be 0.
-        break;
-      const unsigned OpSys = (SImm16 & OP_SYS_MASK_) >> OP_SHIFT_;
-      if (! (OP_SYS_FIRST_ <= OpSys && OpSys < OP_SYS_LAST_)) // Unused/unknown.
-        break;
-      O << "sendmsg(" << IdSymbolic[Id] << ", " << OpSysSymbolic[OpSys] << ')';
-      return;
-    }
-  } while (false);
-  O << SImm16; // Unknown simm16 code.
+    O << ')';
+  } else if (encodeMsg(MsgId, OpId, StreamId) == Imm16) {
+    O << "sendmsg(" << MsgId << ", " << OpId << ", " << StreamId << ')';
+  } else {
+    O << Imm16; // Unknown imm16 code.
+  }
 }
 
 static void printSwizzleBitmask(const uint16_t AndMask,

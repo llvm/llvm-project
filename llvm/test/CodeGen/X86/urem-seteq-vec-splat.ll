@@ -5,12 +5,11 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+avx2 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-AVX,CHECK-AVX2
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -mattr=+avx512f,+avx512vl < %s | FileCheck %s --check-prefixes=CHECK,CHECK-AVX,CHECK-AVX512VL
 
-; Tests BuildUREMEqFold for 4 x i32 splat vectors with odd divisor.
-; See urem-seteq.ll for justification behind constants emitted.
-define <4 x i32> @test_urem_odd_vec_i32(<4 x i32> %X) nounwind readnone {
-; CHECK-SSE2-LABEL: test_urem_odd_vec_i32:
+; Odd divisor
+define <4 x i32> @test_urem_odd_25(<4 x i32> %X) nounwind {
+; CHECK-SSE2-LABEL: test_urem_odd_25:
 ; CHECK-SSE2:       # %bb.0:
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [3435973837,3435973837,3435973837,3435973837]
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [3264175145,3264175145,3264175145,3264175145]
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,3,3]
 ; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
@@ -22,16 +21,16 @@ define <4 x i32> @test_urem_odd_vec_i32(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE2-NEXT:    pandn {{.*}}(%rip), %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
-; CHECK-SSE41-LABEL: test_urem_odd_vec_i32:
+; CHECK-SSE41-LABEL: test_urem_odd_25:
 ; CHECK-SSE41:       # %bb.0:
 ; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm0
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [858993459,858993459,858993459,858993459]
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [171798691,171798691,171798691,171798691]
 ; CHECK-SSE41-NEXT:    pminud %xmm0, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE41-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: test_urem_odd_vec_i32:
+; CHECK-AVX1-LABEL: test_urem_odd_25:
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm1
@@ -39,121 +38,80 @@ define <4 x i32> @test_urem_odd_vec_i32(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: test_urem_odd_vec_i32:
+; CHECK-AVX2-LABEL: test_urem_odd_25:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3435973837,3435973837,3435973837,3435973837]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [3264175145,3264175145,3264175145,3264175145]
 ; CHECK-AVX2-NEXT:    vpmulld %xmm1, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [858993459,858993459,858993459,858993459]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [171798691,171798691,171798691,171798691]
 ; CHECK-AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm1
 ; CHECK-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-AVX512VL-LABEL: test_urem_odd_vec_i32:
+; CHECK-AVX512VL-LABEL: test_urem_odd_25:
 ; CHECK-AVX512VL:       # %bb.0:
 ; CHECK-AVX512VL-NEXT:    vpmulld {{.*}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpminud {{.*}}(%rip){1to4}, %xmm0, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    retq
-  %urem = urem <4 x i32> %X, <i32 5, i32 5, i32 5, i32 5>
+  %urem = urem <4 x i32> %X, <i32 25, i32 25, i32 25, i32 25>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
 
-; Like test_urem_odd_vec_i32, but with 8 x i16 vectors.
-define <8 x i16> @test_urem_odd_vec_i16(<8 x i16> %X) nounwind readnone {
-; CHECK-SSE2-LABEL: test_urem_odd_vec_i16:
+; Even divisors
+define <4 x i32> @test_urem_even_100(<4 x i32> %X) nounwind {
+; CHECK-SSE2-LABEL: test_urem_even_100:
 ; CHECK-SSE2:       # %bb.0:
-; CHECK-SSE2-NEXT:    pmullw {{.*}}(%rip), %xmm0
-; CHECK-SSE2-NEXT:    psubusw {{.*}}(%rip), %xmm0
-; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
-; CHECK-SSE2-NEXT:    pcmpeqw %xmm1, %xmm0
-; CHECK-SSE2-NEXT:    psrlw $15, %xmm0
-; CHECK-SSE2-NEXT:    retq
-;
-; CHECK-SSE41-LABEL: test_urem_odd_vec_i16:
-; CHECK-SSE41:       # %bb.0:
-; CHECK-SSE41-NEXT:    pmullw {{.*}}(%rip), %xmm0
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm1 = [13107,13107,13107,13107,13107,13107,13107,13107]
-; CHECK-SSE41-NEXT:    pminuw %xmm0, %xmm1
-; CHECK-SSE41-NEXT:    pcmpeqw %xmm1, %xmm0
-; CHECK-SSE41-NEXT:    psrlw $15, %xmm0
-; CHECK-SSE41-NEXT:    retq
-;
-; CHECK-AVX-LABEL: test_urem_odd_vec_i16:
-; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    vpmullw {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpminuw {{.*}}(%rip), %xmm0, %xmm1
-; CHECK-AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpsrlw $15, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    retq
-  %urem = urem <8 x i16> %X, <i16 5, i16 5, i16 5, i16 5,
-                              i16 5, i16 5, i16 5, i16 5>
-  %cmp = icmp eq <8 x i16> %urem, <i16 0, i16 0, i16 0, i16 0,
-                                   i16 0, i16 0, i16 0, i16 0>
-  %ret = zext <8 x i1> %cmp to <8 x i16>
-  ret <8 x i16> %ret
-}
-
-; Tests BuildUREMEqFold for 4 x i32 splat vectors with even divisor.
-; The expected behavior is that the fold is _not_ applied
-; because it requires a ROTR in the even case, which has to be expanded.
-define <4 x i32> @test_urem_even_vec_i32(<4 x i32> %X) nounwind readnone {
-; CHECK-SSE2-LABEL: test_urem_even_vec_i32:
-; CHECK-SSE2:       # %bb.0:
-; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-SSE2-NEXT:    psrld $1, %xmm1
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2454267027,2454267027,2454267027,2454267027]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm1
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,3,2,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[1,3,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-SSE2-NEXT:    psrld $2, %xmm1
-; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [14,14,14,14]
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[1,1,3,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm1
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; CHECK-SSE2-NEXT:    pmuludq %xmm2, %xmm3
-; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm3[0,2,2,3]
-; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; CHECK-SSE2-NEXT:    psubd %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    psrld $5, %xmm2
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [100,100,100,100]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[0,2,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE2-NEXT:    retq
 ;
-; CHECK-SSE41-LABEL: test_urem_even_vec_i32:
+; CHECK-SSE41-LABEL: test_urem_even_100:
 ; CHECK-SSE41:       # %bb.0:
-; CHECK-SSE41-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-SSE41-NEXT:    psrld $1, %xmm1
-; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [2454267027,2454267027,2454267027,2454267027]
-; CHECK-SSE41-NEXT:    pmuludq %xmm3, %xmm2
-; CHECK-SSE41-NEXT:    pmuludq %xmm3, %xmm1
-; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; CHECK-SSE41-NEXT:    psrld $2, %xmm1
-; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm1
-; CHECK-SSE41-NEXT:    psubd %xmm1, %xmm0
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-SSE41-NEXT:    pmuludq %xmm2, %xmm1
+; CHECK-SSE41-NEXT:    pmuludq %xmm0, %xmm2
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; CHECK-SSE41-NEXT:    psrld $5, %xmm2
+; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm2
+; CHECK-SSE41-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
 ; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-SSE41-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE41-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: test_urem_even_vec_i32:
+; CHECK-AVX1-LABEL: test_urem_even_100:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpsrld $1, %xmm0, %xmm1
-; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm3 = [2454267027,2454267027,2454267027,2454267027]
-; CHECK-AVX1-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
-; CHECK-AVX1-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0,1],xmm2[2,3],xmm1[4,5],xmm2[6,7]
-; CHECK-AVX1-NEXT:    vpsrld $2, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
+; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; CHECK-AVX1-NEXT:    vpsrld $5, %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
 ; CHECK-AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -161,17 +119,16 @@ define <4 x i32> @test_urem_even_vec_i32(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: test_urem_even_vec_i32:
+; CHECK-AVX2-LABEL: test_urem_even_100:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpsrld $1, %xmm0, %xmm1
-; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm1[1,1,3,3]
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [2454267027,2454267027,2454267027,2454267027]
-; CHECK-AVX2-NEXT:    vpmuludq %xmm3, %xmm2, %xmm2
-; CHECK-AVX2-NEXT:    vpmuludq %xmm3, %xmm1, %xmm1
-; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
-; CHECK-AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm1[0],xmm2[1],xmm1[2],xmm2[3]
-; CHECK-AVX2-NEXT:    vpsrld $2, %xmm1, %xmm1
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [14,14,14,14]
+; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX2-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; CHECK-AVX2-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
+; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3]
+; CHECK-AVX2-NEXT:    vpsrld $5, %xmm1, %xmm1
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [100,100,100,100]
 ; CHECK-AVX2-NEXT:    vpmulld %xmm2, %xmm1, %xmm1
 ; CHECK-AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -179,72 +136,236 @@ define <4 x i32> @test_urem_even_vec_i32(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-AVX512VL-LABEL: test_urem_even_vec_i32:
+; CHECK-AVX512VL-LABEL: test_urem_even_100:
 ; CHECK-AVX512VL:       # %bb.0:
 ; CHECK-AVX512VL-NEXT:    vpmulld {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-AVX512VL-NEXT:    vprord $1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vprord $2, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpminud {{.*}}(%rip){1to4}, %xmm0, %xmm1
 ; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    retq
-  %urem = urem <4 x i32> %X, <i32 14, i32 14, i32 14, i32 14>
+  %urem = urem <4 x i32> %X, <i32 100, i32 100, i32 100, i32 100>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
 
-; Like test_urem_even_vec_i32, but with 8 x i16 vectors.
-define <8 x i16> @test_urem_even_vec_i16(<8 x i16> %X) nounwind readnone {
-; CHECK-SSE-LABEL: test_urem_even_vec_i16:
-; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    movdqa %xmm0, %xmm1
-; CHECK-SSE-NEXT:    psrlw $1, %xmm1
-; CHECK-SSE-NEXT:    pmulhuw {{.*}}(%rip), %xmm1
-; CHECK-SSE-NEXT:    psrlw $1, %xmm1
-; CHECK-SSE-NEXT:    pmullw {{.*}}(%rip), %xmm1
-; CHECK-SSE-NEXT:    psubw %xmm1, %xmm0
-; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
-; CHECK-SSE-NEXT:    pcmpeqw %xmm1, %xmm0
-; CHECK-SSE-NEXT:    psrlw $15, %xmm0
-; CHECK-SSE-NEXT:    retq
+;------------------------------------------------------------------------------;
+; Comparison constant has undef elements.
+;------------------------------------------------------------------------------;
+
+define <4 x i32> @test_urem_odd_undef1(<4 x i32> %X) nounwind {
+; CHECK-SSE2-LABEL: test_urem_odd_undef1:
+; CHECK-SSE2:       # %bb.0:
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    psrld $3, %xmm2
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [25,25,25,25]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[0,2,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
+; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
+; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    psrld $31, %xmm0
+; CHECK-SSE2-NEXT:    retq
 ;
-; CHECK-AVX-LABEL: test_urem_even_vec_i16:
-; CHECK-AVX:       # %bb.0:
-; CHECK-AVX-NEXT:    vpsrlw $1, %xmm0, %xmm1
-; CHECK-AVX-NEXT:    vpmulhuw {{.*}}(%rip), %xmm1, %xmm1
-; CHECK-AVX-NEXT:    vpsrlw $1, %xmm1, %xmm1
-; CHECK-AVX-NEXT:    vpmullw {{.*}}(%rip), %xmm1, %xmm1
-; CHECK-AVX-NEXT:    vpsubw %xmm1, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-AVX-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    vpsrlw $15, %xmm0, %xmm0
-; CHECK-AVX-NEXT:    retq
-  %urem = urem <8 x i16> %X, <i16 14, i16 14, i16 14, i16 14,
-                              i16 14, i16 14, i16 14, i16 14>
-  %cmp = icmp eq <8 x i16> %urem, <i16 0, i16 0, i16 0, i16 0,
-                                   i16 0, i16 0, i16 0, i16 0>
-  %ret = zext <8 x i1> %cmp to <8 x i16>
-  ret <8 x i16> %ret
+; CHECK-SSE41-LABEL: test_urem_odd_undef1:
+; CHECK-SSE41:       # %bb.0:
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-SSE41-NEXT:    pmuludq %xmm2, %xmm1
+; CHECK-SSE41-NEXT:    pmuludq %xmm0, %xmm2
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; CHECK-SSE41-NEXT:    psrld $3, %xmm2
+; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm2
+; CHECK-SSE41-NEXT:    psubd %xmm2, %xmm0
+; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
+; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-SSE41-NEXT:    psrld $31, %xmm0
+; CHECK-SSE41-NEXT:    retq
+;
+; CHECK-AVX1-LABEL: test_urem_odd_undef1:
+; CHECK-AVX1:       # %bb.0:
+; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
+; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; CHECK-AVX1-NEXT:    vpsrld $3, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    retq
+;
+; CHECK-AVX2-LABEL: test_urem_odd_undef1:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX2-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; CHECK-AVX2-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
+; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3]
+; CHECK-AVX2-NEXT:    vpsrld $3, %xmm1, %xmm1
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [25,25,25,25]
+; CHECK-AVX2-NEXT:    vpmulld %xmm2, %xmm1, %xmm1
+; CHECK-AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-AVX512VL-LABEL: test_urem_odd_undef1:
+; CHECK-AVX512VL:       # %bb.0:
+; CHECK-AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX512VL-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
+; CHECK-AVX512VL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-AVX512VL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3]
+; CHECK-AVX512VL-NEXT:    vpsrld $3, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpmulld {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    retq
+  %urem = urem <4 x i32> %X, <i32 25, i32 25, i32 25, i32 25>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 undef, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
 }
 
-; We should not proceed with this fold if the divisor is 1 or -1
-define <4 x i32> @test_urem_one_vec(<4 x i32> %X) nounwind readnone {
-; CHECK-SSE-LABEL: test_urem_one_vec:
+define <4 x i32> @test_urem_even_undef1(<4 x i32> %X) nounwind {
+; CHECK-SSE2-LABEL: test_urem_even_undef1:
+; CHECK-SSE2:       # %bb.0:
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-SSE2-NEXT:    movdqa %xmm0, %xmm2
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,3,2,3]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[1,3,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    psrld $5, %xmm2
+; CHECK-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [100,100,100,100]
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm3 = xmm2[1,1,3,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm2
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; CHECK-SSE2-NEXT:    pmuludq %xmm1, %xmm3
+; CHECK-SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm3[0,2,2,3]
+; CHECK-SSE2-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; CHECK-SSE2-NEXT:    psubd %xmm2, %xmm0
+; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
+; CHECK-SSE2-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    psrld $31, %xmm0
+; CHECK-SSE2-NEXT:    retq
+;
+; CHECK-SSE41-LABEL: test_urem_even_undef1:
+; CHECK-SSE41:       # %bb.0:
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-SSE41-NEXT:    pmuludq %xmm2, %xmm1
+; CHECK-SSE41-NEXT:    pmuludq %xmm0, %xmm2
+; CHECK-SSE41-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-SSE41-NEXT:    pblendw {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; CHECK-SSE41-NEXT:    psrld $5, %xmm2
+; CHECK-SSE41-NEXT:    pmulld {{.*}}(%rip), %xmm2
+; CHECK-SSE41-NEXT:    psubd %xmm2, %xmm0
+; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
+; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-SSE41-NEXT:    psrld $31, %xmm0
+; CHECK-SSE41-NEXT:    retq
+;
+; CHECK-AVX1-LABEL: test_urem_even_undef1:
+; CHECK-AVX1:       # %bb.0:
+; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-AVX1-NEXT:    vmovdqa {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
+; CHECK-AVX1-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-AVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm2[0,1],xmm1[2,3],xmm2[4,5],xmm1[6,7]
+; CHECK-AVX1-NEXT:    vpsrld $5, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpmulld {{.*}}(%rip), %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    retq
+;
+; CHECK-AVX2-LABEL: test_urem_even_undef1:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX2-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; CHECK-AVX2-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
+; CHECK-AVX2-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-AVX2-NEXT:    vpblendd {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3]
+; CHECK-AVX2-NEXT:    vpsrld $5, %xmm1, %xmm1
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [100,100,100,100]
+; CHECK-AVX2-NEXT:    vpmulld %xmm2, %xmm1, %xmm1
+; CHECK-AVX2-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-AVX512VL-LABEL: test_urem_even_undef1:
+; CHECK-AVX512VL:       # %bb.0:
+; CHECK-AVX512VL-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; CHECK-AVX512VL-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1374389535,1374389535,1374389535,1374389535]
+; CHECK-AVX512VL-NEXT:    vpmuludq %xmm2, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpmuludq %xmm2, %xmm0, %xmm2
+; CHECK-AVX512VL-NEXT:    vpshufd {{.*#+}} xmm2 = xmm2[1,1,3,3]
+; CHECK-AVX512VL-NEXT:    vpblendd {{.*#+}} xmm1 = xmm2[0],xmm1[1],xmm2[2],xmm1[3]
+; CHECK-AVX512VL-NEXT:    vpsrld $5, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpmulld {{.*}}(%rip){1to4}, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpsubd %xmm1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    retq
+  %urem = urem <4 x i32> %X, <i32 100, i32 100, i32 100, i32 100>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 undef, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
+;------------------------------------------------------------------------------;
+; Negative tests
+;------------------------------------------------------------------------------;
+
+; The fold is invalid if divisor is 1.
+define <4 x i32> @test_urem_one(<4 x i32> %X) nounwind {
+; CHECK-SSE-LABEL: test_urem_one:
 ; CHECK-SSE:       # %bb.0:
 ; CHECK-SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: test_urem_one_vec:
+; CHECK-AVX1-LABEL: test_urem_one:
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
 ; CHECK-AVX1-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: test_urem_one_vec:
+; CHECK-AVX2-LABEL: test_urem_one:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-AVX512VL-LABEL: test_urem_one_vec:
+; CHECK-AVX512VL-LABEL: test_urem_one:
 ; CHECK-AVX512VL:       # %bb.0:
 ; CHECK-AVX512VL-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
 ; CHECK-AVX512VL-NEXT:    retq
@@ -254,10 +375,64 @@ define <4 x i32> @test_urem_one_vec(<4 x i32> %X) nounwind readnone {
   ret <4 x i32> %ret
 }
 
-; BuildUREMEqFold does not work when the only odd factor of the divisor is 1.
-; This ensures we don't touch powers of two.
-define <4 x i32> @test_urem_pow2_vec(<4 x i32> %X) nounwind readnone {
-; CHECK-SSE-LABEL: test_urem_pow2_vec:
+; We can lower remainder of division by all-ones much better elsewhere.
+define <4 x i32> @test_urem_allones(<4 x i32> %X) nounwind {
+; CHECK-SSE2-LABEL: test_urem_allones:
+; CHECK-SSE2:       # %bb.0:
+; CHECK-SSE2-NEXT:    pxor %xmm1, %xmm1
+; CHECK-SSE2-NEXT:    psubd %xmm0, %xmm1
+; CHECK-SSE2-NEXT:    pxor {{.*}}(%rip), %xmm1
+; CHECK-SSE2-NEXT:    pcmpgtd {{.*}}(%rip), %xmm1
+; CHECK-SSE2-NEXT:    pandn {{.*}}(%rip), %xmm1
+; CHECK-SSE2-NEXT:    movdqa %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    retq
+;
+; CHECK-SSE41-LABEL: test_urem_allones:
+; CHECK-SSE41:       # %bb.0:
+; CHECK-SSE41-NEXT:    pxor %xmm1, %xmm1
+; CHECK-SSE41-NEXT:    psubd %xmm0, %xmm1
+; CHECK-SSE41-NEXT:    movdqa {{.*#+}} xmm0 = [1,1,1,1]
+; CHECK-SSE41-NEXT:    pminud %xmm1, %xmm0
+; CHECK-SSE41-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-SSE41-NEXT:    psrld $31, %xmm0
+; CHECK-SSE41-NEXT:    retq
+;
+; CHECK-AVX1-LABEL: test_urem_allones:
+; CHECK-AVX1:       # %bb.0:
+; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; CHECK-AVX1-NEXT:    vpminud {{.*}}(%rip), %xmm0, %xmm1
+; CHECK-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    retq
+;
+; CHECK-AVX2-LABEL: test_urem_allones:
+; CHECK-AVX2:       # %bb.0:
+; CHECK-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX2-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
+; CHECK-AVX2-NEXT:    vpminud %xmm1, %xmm0, %xmm1
+; CHECK-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    retq
+;
+; CHECK-AVX512VL-LABEL: test_urem_allones:
+; CHECK-AVX512VL:       # %bb.0:
+; CHECK-AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; CHECK-AVX512VL-NEXT:    vpminud {{.*}}(%rip){1to4}, %xmm0, %xmm1
+; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    retq
+  %urem = urem <4 x i32> %X, <i32 4294967295, i32 4294967295, i32 4294967295, i32 4294967295>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
+; We can lower remainder of division by powers of two much better elsewhere.
+define <4 x i32> @test_urem_pow2(<4 x i32> %X) nounwind {
+; CHECK-SSE-LABEL: test_urem_pow2:
 ; CHECK-SSE:       # %bb.0:
 ; CHECK-SSE-NEXT:    pand {{.*}}(%rip), %xmm0
 ; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
@@ -265,7 +440,7 @@ define <4 x i32> @test_urem_pow2_vec(<4 x i32> %X) nounwind readnone {
 ; CHECK-SSE-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: test_urem_pow2_vec:
+; CHECK-AVX1-LABEL: test_urem_pow2:
 ; CHECK-AVX1:       # %bb.0:
 ; CHECK-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
@@ -273,7 +448,7 @@ define <4 x i32> @test_urem_pow2_vec(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: test_urem_pow2_vec:
+; CHECK-AVX2-LABEL: test_urem_pow2:
 ; CHECK-AVX2:       # %bb.0:
 ; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
 ; CHECK-AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
@@ -282,7 +457,7 @@ define <4 x i32> @test_urem_pow2_vec(<4 x i32> %X) nounwind readnone {
 ; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-AVX512VL-LABEL: test_urem_pow2_vec:
+; CHECK-AVX512VL-LABEL: test_urem_pow2:
 ; CHECK-AVX512VL:       # %bb.0:
 ; CHECK-AVX512VL-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1

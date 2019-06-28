@@ -68,6 +68,11 @@ static cl::opt<unsigned>
 CounterBitWidth("hardware-loop-counter-bitwidth", cl::Hidden, cl::init(32),
                 cl::desc("Set the loop counter bitwidth"));
 
+static cl::opt<bool>
+ForceGuardLoopEntry(
+  "force-hardware-loop-guard", cl::Hidden, cl::init(false),
+  cl::desc("Force generation of loop guard intrinsic"));
+
 STATISTIC(NumHWLoops, "Number of loops converted to hardware loops");
 
 namespace {
@@ -116,10 +121,10 @@ namespace {
 
   class HardwareLoop {
     // Expand the trip count scev into a value that we can use.
-    Value *InitLoopCount(BasicBlock *BB);
+    Value *InitLoopCount();
 
     // Insert the set_loop_iteration intrinsic.
-    void InsertIterationSetup(Value *LoopCountInit, BasicBlock *BB);
+    void InsertIterationSetup(Value *LoopCountInit);
 
     // Insert the loop_decrement intrinsic.
     void InsertLoopDec();
@@ -144,7 +149,8 @@ namespace {
       CountType(Info.CountType),
       ExitBranch(Info.ExitBranch),
       LoopDecrement(Info.LoopDecrement),
-      UsePHICounter(Info.CounterInReg) { }
+      UsePHICounter(Info.CounterInReg),
+      UseLoopGuard(Info.PerformEntryTest) { }
 
     void Create();
 
@@ -156,8 +162,10 @@ namespace {
     const SCEV *ExitCount   = nullptr;
     Type *CountType         = nullptr;
     BranchInst *ExitBranch  = nullptr;
-    Value *LoopDecrement      = nullptr;
+    Value *LoopDecrement    = nullptr;
     bool UsePHICounter      = false;
+    bool UseLoopGuard       = false;
+    BasicBlock *BeginBB     = nullptr;
   };
 }
 
@@ -249,12 +257,12 @@ bool HardwareLoops::TryConvertLoop(HardwareLoopInfo &HWLoopInfo) {
 
 void HardwareLoop::Create() {
   LLVM_DEBUG(dbgs() << "HWLoops: Converting loop..\n");
-  BasicBlock *BeginBB = L->getLoopPreheader();
-  Value *LoopCountInit = InitLoopCount(BeginBB);
+ 
+  Value *LoopCountInit = InitLoopCount();
   if (!LoopCountInit)
     return;
 
-  InsertIterationSetup(LoopCountInit, BeginBB);
+  InsertIterationSetup(LoopCountInit);
 
   if (UsePHICounter || ForceHardwareLoopPHI) {
     Instruction *LoopDec = InsertLoopRegDec(LoopCountInit);
@@ -270,7 +278,46 @@ void HardwareLoop::Create() {
     DeleteDeadPHIs(I);
 }
 
-Value *HardwareLoop::InitLoopCount(BasicBlock *BB) {
+static bool CanGenerateTest(Loop *L, Value *Count) {
+  BasicBlock *Preheader = L->getLoopPreheader();
+  if (!Preheader->getSinglePredecessor())
+    return false;
+
+  BasicBlock *Pred = Preheader->getSinglePredecessor();
+  if (!isa<BranchInst>(Pred->getTerminator()))
+    return false;
+
+  auto *BI = cast<BranchInst>(Pred->getTerminator());
+  if (BI->isUnconditional() || !isa<ICmpInst>(BI->getCondition()))
+    return false;
+
+  // Check that the icmp is checking for equality of Count and zero and that
+  // a non-zero value results in entering the loop.
+  auto ICmp = cast<ICmpInst>(BI->getCondition());
+  if (!ICmp->isEquality())
+    return false;
+
+  auto IsCompareZero = [](ICmpInst *ICmp, Value *Count, unsigned OpIdx) {
+    if (auto *Const = dyn_cast<ConstantInt>(ICmp->getOperand(OpIdx)))
+      return Const->isZero() && ICmp->getOperand(OpIdx ^ 1) == Count;
+    return false;
+  };
+
+  if (!IsCompareZero(ICmp, Count, 0) && !IsCompareZero(ICmp, Count, 1))
+    return false;
+
+  unsigned SuccIdx = ICmp->getPredicate() == ICmpInst::ICMP_NE ? 0 : 1;
+  if (BI->getSuccessor(SuccIdx) != Preheader)
+    return false;
+
+  return true;
+}
+
+Value *HardwareLoop::InitLoopCount() {
+  LLVM_DEBUG(dbgs() << "HWLoops: Initialising loop counter value:\n");
+  // Can we replace a conditional branch with an intrinsic that sets the
+  // loop counter and tests that is not zero?
+
   SCEVExpander SCEVE(SE, DL, "loopcnt");
   if (!ExitCount->getType()->isPointerTy() &&
       ExitCount->getType() != CountType)
@@ -278,25 +325,67 @@ Value *HardwareLoop::InitLoopCount(BasicBlock *BB) {
 
   ExitCount = SE.getAddExpr(ExitCount, SE.getOne(CountType));
 
+  // If we're trying to use the 'test and set' form of the intrinsic, we need
+  // to replace a conditional branch that is controlling entry to the loop. It
+  // is likely (guaranteed?) that the preheader has an unconditional branch to
+  // the loop header, so also check if it has a single predecessor.
+  if (SE.isLoopEntryGuardedByCond(L, ICmpInst::ICMP_NE, ExitCount,
+                                  SE.getZero(ExitCount->getType()))) {
+    LLVM_DEBUG(dbgs() << " - Attempting to use test.set counter.\n");
+    UseLoopGuard |= ForceGuardLoopEntry;
+  } else
+    UseLoopGuard = false;
+
+  BasicBlock *BB = L->getLoopPreheader();
+  if (UseLoopGuard && BB->getSinglePredecessor() &&
+      cast<BranchInst>(BB->getTerminator())->isUnconditional())
+    BB = BB->getSinglePredecessor();
+
   if (!isSafeToExpandAt(ExitCount, BB->getTerminator(), SE)) {
-    LLVM_DEBUG(dbgs() << "HWLoops: Bailing, unsafe to expand ExitCount "
+    LLVM_DEBUG(dbgs() << "- Bailing, unsafe to expand ExitCount "
                << *ExitCount << "\n");
     return nullptr;
   }
 
   Value *Count = SCEVE.expandCodeFor(ExitCount, CountType,
                                      BB->getTerminator());
-  LLVM_DEBUG(dbgs() << "HWLoops: Loop Count: " << *Count << "\n");
+
+  // FIXME: We've expanded Count where we hope to insert the counter setting
+  // intrinsic. But, in the case of the 'test and set' form, we may fallback to
+  // the just 'set' form and in which case the insertion block is most likely
+  // different. It means there will be instruction(s) in a block that possibly
+  // aren't needed. The isLoopEntryGuardedByCond is trying to avoid this issue,
+  // but it's doesn't appear to work in all cases.
+
+  UseLoopGuard = UseLoopGuard && CanGenerateTest(L, Count);
+  BeginBB = UseLoopGuard ? BB : L->getLoopPreheader();
+  LLVM_DEBUG(dbgs() << " - Loop Count: " << *Count << "\n"
+             << " - Expanded Count in " << BB->getName() << "\n"
+             << " - Will insert set counter intrinsic into: "
+             << BeginBB->getName() << "\n");
   return Count;
 }
 
-void HardwareLoop::InsertIterationSetup(Value *LoopCountInit,
-                                        BasicBlock *BB) {
-  IRBuilder<> Builder(BB->getTerminator());
+void HardwareLoop::InsertIterationSetup(Value *LoopCountInit) {
+  IRBuilder<> Builder(BeginBB->getTerminator());
   Type *Ty = LoopCountInit->getType();
-  Function *LoopIter =
-    Intrinsic::getDeclaration(M, Intrinsic::set_loop_iterations, Ty);
-  Builder.CreateCall(LoopIter, LoopCountInit);
+  Intrinsic::ID ID = UseLoopGuard ?
+    Intrinsic::test_set_loop_iterations : Intrinsic::set_loop_iterations;
+  Function *LoopIter = Intrinsic::getDeclaration(M, ID, Ty);
+  Value *SetCount = Builder.CreateCall(LoopIter, LoopCountInit);
+
+  // Use the return value of the intrinsic to control the entry of the loop.
+  if (UseLoopGuard) {
+    assert((isa<BranchInst>(BeginBB->getTerminator()) &&
+            cast<BranchInst>(BeginBB->getTerminator())->isConditional()) &&
+           "Expected conditional branch");
+    auto *LoopGuard = cast<BranchInst>(BeginBB->getTerminator());
+    LoopGuard->setCondition(SetCount);
+    if (LoopGuard->getSuccessor(0) != L->getLoopPreheader())
+      LoopGuard->swapSuccessors();
+  }
+  LLVM_DEBUG(dbgs() << "HWLoops: Inserted loop counter: "
+             << *SetCount << "\n");
 }
 
 void HardwareLoop::InsertLoopDec() {

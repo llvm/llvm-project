@@ -167,8 +167,9 @@ s_sleep 10
 s_setprio 1
 // GCN: s_setprio 1 ; encoding: [0x01,0x00,0x8f,0xbf]
 
-s_sendmsg 2
-// GCN: s_sendmsg 2 ; encoding: [0x02,0x00,0x90,0xbf]
+//===----------------------------------------------------------------------===//
+// s_sendmsg
+//===----------------------------------------------------------------------===//
 
 s_sendmsg 0x1
 // GCN: s_sendmsg sendmsg(MSG_INTERRUPT) ; encoding: [0x01,0x00,0x90,0xbf]
@@ -185,8 +186,20 @@ s_sendmsg 0x12
 s_sendmsg sendmsg(2, 1)
 // GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 0) ; encoding: [0x12,0x00,0x90,0xbf]
 
+s_sendmsg sendmsg(2, GS_OP_CUT)
+// GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 0) ; encoding: [0x12,0x00,0x90,0xbf]
+
+s_sendmsg sendmsg(MSG_GS, GS_OP_CUT)
+// GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 0) ; encoding: [0x12,0x00,0x90,0xbf]
+
 s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 0)
 // GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 0) ; encoding: [0x12,0x00,0x90,0xbf]
+
+s_sendmsg sendmsg(MSG_GS, 1)
+// GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 0) ; encoding: [0x12,0x00,0x90,0xbf]
+
+s_sendmsg sendmsg(MSG_GS, 1, 1)
+// GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 1) ; encoding: [0x12,0x01,0x90,0xbf]
 
 s_sendmsg 0x122
 // GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_EMIT, 1) ; encoding: [0x22,0x01,0x90,0xbf]
@@ -215,15 +228,6 @@ s_sendmsg sendmsg(3, 0)
 s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP)
 // GCN: s_sendmsg sendmsg(MSG_GS_DONE, GS_OP_NOP) ; encoding: [0x03,0x00,0x90,0xbf]
 
-s_sendmsg 0x4
-// GCN: s_sendmsg 4 ; encoding: [0x04,0x00,0x90,0xbf]
-
-s_sendmsg 9
-// GCN: s_sendmsg 9 ; encoding: [0x09,0x00,0x90,0xbf]
-
-s_sendmsg 11
-// GCN: s_sendmsg 11 ; encoding: [0x0b,0x00,0x90,0xbf]
-
 s_sendmsg 0x1f
 // GCN: s_sendmsg sendmsg(MSG_SYSMSG, SYSMSG_OP_ECC_ERR_INTERRUPT) ; encoding: [0x1f,0x00,0x90,0xbf]
 
@@ -233,14 +237,108 @@ s_sendmsg sendmsg(15, 1)
 s_sendmsg sendmsg(MSG_SYSMSG, SYSMSG_OP_ECC_ERR_INTERRUPT)
 // GCN: s_sendmsg sendmsg(MSG_SYSMSG, SYSMSG_OP_ECC_ERR_INTERRUPT) ; encoding: [0x1f,0x00,0x90,0xbf]
 
-s_sendmsg 0x6f
-// GCN: s_sendmsg 111 ; encoding: [0x6f,0x00,0x90,0xbf]
-
 s_sendmsghalt 3
 // GCN: s_sendmsghalt sendmsg(MSG_GS_DONE, GS_OP_NOP) ; encoding: [0x03,0x00,0x91,0xbf]
 
 s_sendmsghalt sendmsg(MSG_GS, GS_OP_EMIT, 1)
 // GCN: s_sendmsghalt sendmsg(MSG_GS, GS_OP_EMIT, 1) ; encoding: [0x22,0x01,0x91,0xbf]
+
+//===----------------------------------------------------------------------===//
+// s_sendmsg with a numeric message id (no validation)
+//===----------------------------------------------------------------------===//
+
+s_sendmsg 2
+// GCN: s_sendmsg sendmsg(2, 0, 0) ; encoding: [0x02,0x00,0x90,0xbf]
+
+s_sendmsg 0x4
+// GCN: s_sendmsg sendmsg(4, 0, 0) ; encoding: [0x04,0x00,0x90,0xbf]
+
+s_sendmsg 9
+// GCN: s_sendmsg sendmsg(9, 0, 0) ; encoding: [0x09,0x00,0x90,0xbf]
+
+s_sendmsg 11
+// GCN: s_sendmsg sendmsg(11, 0, 0) ; encoding: [0x0b,0x00,0x90,0xbf]
+
+s_sendmsg 0x6f
+// GCN: s_sendmsg sendmsg(15, 6, 0) ; encoding: [0x6f,0x00,0x90,0xbf]
+
+s_sendmsg sendmsg(1, 3)
+// GCN: s_sendmsg sendmsg(1, 3, 0)      ; encoding: [0x31,0x00,0x90,0xbf]
+
+s_sendmsg sendmsg(1, 3, 2)
+// GCN: s_sendmsg sendmsg(1, 3, 2)      ; encoding: [0x31,0x02,0x90,0xbf]
+
+s_sendmsg sendmsg(2, 0, 1)
+// GCN: s_sendmsg sendmsg(2, 0, 1)      ; encoding: [0x02,0x01,0x90,0xbf]
+
+s_sendmsg sendmsg(15, 7, 3)
+// GCN: s_sendmsg sendmsg(15, 7, 3)     ; encoding: [0x7f,0x03,0x90,0xbf]
+
+s_sendmsg 4567
+// GCN: s_sendmsg 4567                  ; encoding: [0xd7,0x11,0x90,0xbf]
+
+//===----------------------------------------------------------------------===//
+// s_sendmsg with expressions
+//===----------------------------------------------------------------------===//
+
+sendmsg=2
+s_sendmsg sendmsg
+// GCN: s_sendmsg sendmsg(2, 0, 0) ; encoding: [0x02,0x00,0x90,0xbf]
+
+sendmsg=1
+s_sendmsg sendmsg+1
+// GCN: s_sendmsg sendmsg(2, 0, 0) ; encoding: [0x02,0x00,0x90,0xbf]
+
+s_sendmsg 1+sendmsg
+// GCN: s_sendmsg sendmsg(2, 0, 0) ; encoding: [0x02,0x00,0x90,0xbf]
+
+msg=1
+s_sendmsg sendmsg(msg)
+// GCN: s_sendmsg sendmsg(MSG_INTERRUPT) ; encoding: [0x01,0x00,0x90,0xbf]
+
+msg=0
+s_sendmsg sendmsg(msg+1)
+// GCN: s_sendmsg sendmsg(MSG_INTERRUPT) ; encoding: [0x01,0x00,0x90,0xbf]
+
+msg=0
+s_sendmsg sendmsg(1+msg)
+// GCN: s_sendmsg sendmsg(MSG_INTERRUPT) ; encoding: [0x01,0x00,0x90,0xbf]
+
+msg=2
+op=1
+s_sendmsg sendmsg(msg, op)
+// GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 0) ; encoding: [0x12,0x00,0x90,0xbf]
+
+msg=1
+op=0
+s_sendmsg sendmsg(msg+1, op+1)
+// GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 0) ; encoding: [0x12,0x00,0x90,0xbf]
+
+msg=1
+op=0
+s_sendmsg sendmsg(1+msg, 1+op)
+// GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_CUT, 0) ; encoding: [0x12,0x00,0x90,0xbf]
+
+msg=1
+op=2
+stream=1
+s_sendmsg sendmsg(msg+1, op+1, stream+1)
+// GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_EMIT_CUT, 2) ; encoding: [0x32,0x02,0x90,0xbf]
+
+msg=1
+op=2
+stream=1
+s_sendmsg sendmsg(1+msg, 1+op, 1+stream)
+// GCN: s_sendmsg sendmsg(MSG_GS, GS_OP_EMIT_CUT, 2) ; encoding: [0x32,0x02,0x90,0xbf]
+
+MSG_GS=-1
+GS_OP_EMIT=-1
+s_sendmsghalt sendmsg(MSG_GS, GS_OP_EMIT, 1)
+// GCN: s_sendmsghalt sendmsg(MSG_GS, GS_OP_EMIT, 1) ; encoding: [0x22,0x01,0x91,0xbf]
+
+//===----------------------------------------------------------------------===//
+// misc sopp instructions
+//===----------------------------------------------------------------------===//
 
 s_trap 4
 // GCN: s_trap 4 ; encoding: [0x04,0x00,0x92,0xbf]
