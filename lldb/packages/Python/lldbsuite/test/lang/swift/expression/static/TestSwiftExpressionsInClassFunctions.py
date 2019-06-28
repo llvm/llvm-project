@@ -74,6 +74,8 @@ class TestSwiftExpressionsInClassFunctions(TestBase):
 
             self.assertTrue(len(threads) == 1)
             self.check_expression("i", str(i), False)
+            if i == 6:
+              self.check_expression("self", "a.H<Int>")
             self.runCmd("continue")
 
 if __name__ == '__main__':
