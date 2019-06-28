@@ -130,11 +130,11 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   const Driver &D = HTC.getDriver();
   ArgStringList CmdArgs;
 
-  CmdArgs.push_back("-march=hexagon");
+  CmdArgs.push_back("--arch=hexagon");
 
   RenderExtraToolArgs(JA, CmdArgs);
 
-  const char *AsName = "hexagon-llvm-mc";
+  const char *AsName = "llvm-mc";
   CmdArgs.push_back("-filetype=obj");
   CmdArgs.push_back(Args.MakeArgString(
       "-mcpu=hexagon" +

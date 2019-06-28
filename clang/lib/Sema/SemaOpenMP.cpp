@@ -1354,16 +1354,28 @@ const DSAStackTy::DSAVarData DSAStackTy::getTopDSA(ValueDecl *D,
   // in a Construct, C/C++, predetermined, p.7]
   //  Variables with static storage duration that are declared in a scope
   //  inside the construct are shared.
-  auto &&MatchesAlways = [](OpenMPDirectiveKind) { return true; };
   if (VD && VD->isStaticDataMember()) {
-    DSAVarData DVarTemp = hasDSA(D, isOpenMPPrivate, MatchesAlways, FromParent);
-    if (DVarTemp.CKind != OMPC_unknown && DVarTemp.RefExpr)
+    // Check for explicitly specified attributes.
+    const_iterator I = begin();
+    const_iterator EndI = end();
+    if (FromParent && I != EndI)
+      ++I;
+    auto It = I->SharingMap.find(D);
+    if (It != I->SharingMap.end()) {
+      const DSAInfo &Data = It->getSecond();
+      DVar.RefExpr = Data.RefExpr.getPointer();
+      DVar.PrivateCopy = Data.PrivateCopy;
+      DVar.CKind = Data.Attributes;
+      DVar.ImplicitDSALoc = I->DefaultAttrLoc;
+      DVar.DKind = I->Directive;
       return DVar;
+    }
 
     DVar.CKind = OMPC_shared;
     return DVar;
   }
 
+  auto &&MatchesAlways = [](OpenMPDirectiveKind) { return true; };
   // The predetermined shared attribute for const-qualified types having no
   // mutable members was removed after OpenMP 3.1.
   if (SemaRef.LangOpts.OpenMP <= 31) {
@@ -2624,24 +2636,7 @@ class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
     // Check implicitly captured variables.
     if (!S->hasAssociatedStmt() || !S->getAssociatedStmt())
       return;
-    for (const CapturedStmt::Capture &Cap :
-         S->getInnermostCapturedStmt()->captures()) {
-      if (!Cap.capturesVariable())
-        continue;
-      VarDecl *VD = Cap.getCapturedVar();
-      // Do not try to map the variable if it or its sub-component was mapped
-      // already.
-      if (isOpenMPTargetExecutionDirective(Stack->getCurrentDirective()) &&
-          Stack->checkMappableExprComponentListsForDecl(
-              VD, /*CurrentRegionOnly=*/true,
-              [](OMPClauseMappableExprCommon::MappableExprComponentListRef,
-                 OpenMPClauseKind) { return true; }))
-        continue;
-      DeclRefExpr *DRE = buildDeclRefExpr(
-          SemaRef, VD, VD->getType().getNonLValueExprType(SemaRef.Context),
-          Cap.getLocation(), /*RefersToCapture=*/true);
-      Visit(DRE);
-    }
+    visitSubCaptures(S->getInnermostCapturedStmt());
   }
 
 public:
@@ -2657,7 +2652,10 @@ public:
             Visit(CED->getInit());
             return;
           }
-      }
+      } else if (VD->isImplicit() || isa<OMPCapturedExprDecl>(VD))
+        // Do not analyze internal variables and do not enclose them into
+        // implicit clauses.
+        return;
       VD = VD->getCanonicalDecl();
       // Skip internally declared variables.
       if (VD->hasLocalStorage() && CS && !CS->capturesVariable(VD))
@@ -2909,6 +2907,25 @@ public:
     }
   }
 
+  void visitSubCaptures(CapturedStmt *S) {
+    for (const CapturedStmt::Capture &Cap : S->captures()) {
+      if (!Cap.capturesVariable() && !Cap.capturesVariableByCopy())
+        continue;
+      VarDecl *VD = Cap.getCapturedVar();
+      // Do not try to map the variable if it or its sub-component was mapped
+      // already.
+      if (isOpenMPTargetExecutionDirective(Stack->getCurrentDirective()) &&
+          Stack->checkMappableExprComponentListsForDecl(
+              VD, /*CurrentRegionOnly=*/true,
+              [](OMPClauseMappableExprCommon::MappableExprComponentListRef,
+                 OpenMPClauseKind) { return true; }))
+        continue;
+      DeclRefExpr *DRE = buildDeclRefExpr(
+          SemaRef, VD, VD->getType().getNonLValueExprType(SemaRef.Context),
+          Cap.getLocation(), /*RefersToCapture=*/true);
+      Visit(DRE);
+    }
+  }
   bool isErrorFound() const { return ErrorFound; }
   ArrayRef<Expr *> getImplicitFirstprivate() const {
     return ImplicitFirstprivate;
@@ -3990,6 +4007,17 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     while (--ThisCaptureLevel >= 0)
       S = cast<CapturedStmt>(S)->getCapturedStmt();
     DSAChecker.Visit(S);
+    if (!isOpenMPTargetDataManagementDirective(Kind) &&
+        !isOpenMPTaskingDirective(Kind)) {
+      // Visit subcaptures to generate implicit clauses for captured vars.
+      auto *CS = cast<CapturedStmt>(AStmt);
+      SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
+      getOpenMPCaptureRegions(CaptureRegions, Kind);
+      // Ignore outer tasking regions for target directives.
+      if (CaptureRegions.size() > 1 && CaptureRegions.front() == OMPD_task)
+        CS = cast<CapturedStmt>(CS->getCapturedStmt());
+      DSAChecker.visitSubCaptures(CS);
+    }
     if (DSAChecker.isErrorFound())
       return StmtError();
     // Generate list of implicitly defined firstprivate variables.
@@ -4372,11 +4400,13 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       VarsWithInheritedDSA[P.getFirst()] = P.getSecond();
   }
   for (const auto &P : VarsWithInheritedDSA) {
+    if (P.getFirst()->isImplicit() || isa<OMPCapturedExprDecl>(P.getFirst()))
+      continue;
+    ErrorFound = true;
     Diag(P.second->getExprLoc(), diag::err_omp_no_dsa_for_variable)
         << P.first << P.second->getSourceRange();
     Diag(DSAStack->getDefaultDSALocation(), diag::note_omp_default_dsa_none);
   }
-  ErrorFound = !VarsWithInheritedDSA.empty() || ErrorFound;
 
   if (!AllowedNameModifiers.empty())
     ErrorFound = checkIfClauses(*this, Kind, Clauses, AllowedNameModifiers) ||
@@ -5697,12 +5727,14 @@ static bool checkOpenMPIterationSpace(
             ? ((NestedLoopCount == 1) ? OMPC_linear : OMPC_lastprivate)
             : OMPC_private;
     if (((isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
-          DVar.CKind != PredeterminedCKind) ||
+          DVar.CKind != PredeterminedCKind && DVar.RefExpr &&
+          (SemaRef.getLangOpts().OpenMP <= 45 ||
+           (DVar.CKind != OMPC_lastprivate && DVar.CKind != OMPC_private))) ||
          ((isOpenMPWorksharingDirective(DKind) || DKind == OMPD_taskloop ||
            isOpenMPDistributeDirective(DKind)) &&
           !isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
           DVar.CKind != OMPC_private && DVar.CKind != OMPC_lastprivate)) &&
-        (DVar.CKind != OMPC_private || DVar.RefExpr != nullptr)) {
+        (DVar.CKind != OMPC_private || DVar.RefExpr)) {
       SemaRef.Diag(Init->getBeginLoc(), diag::err_omp_loop_var_dsa)
           << getOpenMPClauseName(DVar.CKind) << getOpenMPDirectiveName(DKind)
           << getOpenMPClauseName(PredeterminedCKind);
