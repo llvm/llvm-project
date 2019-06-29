@@ -199,6 +199,7 @@ public:
                            const llvm::Triple &triple) override;
 
   llvm::VersionTuple GetHostOSVersion() override;
+  llvm::VersionTuple GetHostMacCatalystVersion() override;
 
   size_t LoadModules(LoadedModuleInfoList &module_list) override;
 

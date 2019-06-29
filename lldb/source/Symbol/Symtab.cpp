@@ -304,7 +304,7 @@ void Symtab::InitNameIndexes() {
         if (type == eSymbolTypeCode || type == eSymbolTypeResolver) {
           if (mangled.DemangleWithRichManglingInfo(rmc, lldb_skip_name))
             RegisterMangledNameEntry(value, class_contexts, backlog, rmc);
-	  else if (SwiftLanguageRuntime::IsSwiftMangledName(name.str().c_str())) {
+	  else if (SwiftLanguageRuntime::IsSwiftMangledName(name.GetCString())) {
             lldb_private::ConstString basename;
             bool is_method = false;
             ConstString mangled_name = mangled.GetMangledName();
@@ -327,7 +327,7 @@ void Symtab::InitNameIndexes() {
       SymbolContext sc;
       symbol->CalculateSymbolContext(&sc);
       sc.module_sp = m_objfile->GetModule();
-      if (ConstString name = mangled.GetDemangledName(symbol->GetLanguage()), &sc) {
+      if (ConstString name = mangled.GetDemangledName(symbol->GetLanguage(), &sc)) {
         m_name_to_index.Append(name, value);
 
         if (symbol->ContainsLinkerAnnotations()) {
