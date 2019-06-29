@@ -51,7 +51,7 @@ bool DWARFDebugInfoEntry::Extract(const DWARFDataExtractor &data,
 
   if (m_abbr_idx) {
     lldb::offset_t offset = *offset_ptr;
-    auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
+    const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
     if (abbrevDecl == nullptr) {
       cu->GetSymbolFileDWARF().GetObjectFile()->GetModule()->ReportError(
           "{0x%8.8x}: invalid abbreviation code %u, please file a bug and "
@@ -232,7 +232,7 @@ bool DWARFDebugInfoEntry::GetDIENamesAndRanges(
   std::vector<DWARFDIE> dies;
   bool set_frame_base_loclist_addr = false;
 
-  auto abbrevDecl = GetAbbreviationDeclarationPtr(cu);
+  const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
 
   SymbolFileDWARF &dwarf = cu->GetSymbolFileDWARF();
   lldb::ModuleSP module = dwarf.GetObjectFile()->GetModule();
@@ -415,7 +415,7 @@ void DWARFDebugInfoEntry::Dump(const DWARFUnit *cu, Stream &s,
     if (abbrCode != m_abbr_idx) {
       s.Printf("error: DWARF has been modified\n");
     } else if (abbrCode) {
-      auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
+      const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
       if (abbrevDecl) {
         s.PutCString(DW_TAG_value_to_name(abbrevDecl->Tag()));
         s.Printf(" [%u] %c\n", abbrCode, abbrevDecl->HasChildren() ? '*' : ' ');
@@ -546,7 +546,7 @@ void DWARFDebugInfoEntry::DumpAttribute(
 size_t DWARFDebugInfoEntry::GetAttributes(
     const DWARFUnit *cu, DWARFAttributes &attributes,
     uint32_t curr_depth) const {
-  auto abbrevDecl = GetAbbreviationDeclarationPtr(cu);
+  const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu);
   if (abbrevDecl) {
     const DWARFDataExtractor &data = cu->GetData();
     lldb::offset_t offset = GetFirstAttributeOffset();
@@ -606,7 +606,7 @@ dw_offset_t DWARFDebugInfoEntry::GetAttributeValue(
     const DWARFUnit *cu, const dw_attr_t attr, DWARFFormValue &form_value,
     dw_offset_t *end_attr_offset_ptr,
     bool check_specification_or_abstract_origin) const {
-  if (auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu)) {
+  if (const auto *abbrevDecl = GetAbbreviationDeclarationPtr(cu)) {
     uint32_t attr_idx = abbrevDecl->FindAttributeIndex(attr);
 
     if (attr_idx != DW_INVALID_INDEX) {
