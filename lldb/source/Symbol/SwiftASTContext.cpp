@@ -2762,6 +2762,9 @@ void SwiftASTContext::InitializeSearchPathOptions(
                                  sdk.min_version_minor);
       search_path_opts.SDKPath = dir.AsCString("");
     }
+
+    std::vector<std::string>& lpaths = search_path_opts.LibrarySearchPaths;
+    lpaths.insert(lpaths.begin(), "/usr/lib/swift");
   }
 
   llvm::StringMap<bool> processed;
@@ -3189,7 +3192,8 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
   // <resource-dir>/<platform>/prebuilt-modules
   llvm::Triple triple(GetTriple());
   llvm::SmallString<128> prebuiltModuleCachePath = GetResourceDir(triple);
-  StringRef platform = swift::getPlatformNameForTriple(triple);
+  StringRef platform;
+    platform = swift::getPlatformNameForTriple(triple);
   llvm::sys::path::append(prebuiltModuleCachePath, platform,
                           "prebuilt-modules");
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "Using prebuilt Swift module cache path: %s",

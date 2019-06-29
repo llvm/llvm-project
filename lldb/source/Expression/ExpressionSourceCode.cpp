@@ -502,9 +502,8 @@ bool ExpressionSourceCode::GetText(
             // can the version out of an environment variable.
             os_vers << platform->GetOSVersion(process_sp.get()).getAsString();
           } else {
-	    llvm::VersionTuple version = 
-	      process_sp->GetHostOSVersion();
-	    os_vers << version.getAsString();
+            llvm::VersionTuple version = process_sp->GetHostOSVersion();
+            os_vers << version.getAsString();
           }
         }
       }

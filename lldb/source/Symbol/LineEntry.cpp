@@ -204,7 +204,8 @@ AddressRange LineEntry::GetSameLineContiguousAddressRange() const {
 
     if (next_line_sc.line_entry.IsValid() &&
         next_line_sc.line_entry.range.GetByteSize() > 0 &&
-        original_file == next_line_sc.line_entry.original_file) {
+        (original_file == next_line_sc.line_entry.original_file ||
+         next_line_sc.line_entry.line == 0)) {
       // Include any line 0 entries - they indicate that this is compiler-
       // generated code that does not correspond to user source code.
       if (next_line_sc.line_entry.line == 0) {

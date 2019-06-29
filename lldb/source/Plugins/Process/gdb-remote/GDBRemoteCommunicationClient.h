@@ -265,6 +265,8 @@ public:
 
   llvm::VersionTuple GetOSVersion();
 
+  llvm::VersionTuple GetMacCatalystVersion();
+
   bool GetOSBuildString(std::string &s);
 
   bool GetOSKernelDescription(std::string &s);
@@ -571,6 +573,7 @@ protected:
   ArchSpec m_host_arch;
   ArchSpec m_process_arch;
   llvm::VersionTuple m_os_version;
+  llvm::VersionTuple m_maccatalyst_version;
   std::string m_os_build;
   std::string m_os_kernel;
   std::string m_hostname;
