@@ -2636,24 +2636,7 @@ class DSAAttrChecker final : public StmtVisitor<DSAAttrChecker, void> {
     // Check implicitly captured variables.
     if (!S->hasAssociatedStmt() || !S->getAssociatedStmt())
       return;
-    for (const CapturedStmt::Capture &Cap :
-         S->getInnermostCapturedStmt()->captures()) {
-      if (!Cap.capturesVariable())
-        continue;
-      VarDecl *VD = Cap.getCapturedVar();
-      // Do not try to map the variable if it or its sub-component was mapped
-      // already.
-      if (isOpenMPTargetExecutionDirective(Stack->getCurrentDirective()) &&
-          Stack->checkMappableExprComponentListsForDecl(
-              VD, /*CurrentRegionOnly=*/true,
-              [](OMPClauseMappableExprCommon::MappableExprComponentListRef,
-                 OpenMPClauseKind) { return true; }))
-        continue;
-      DeclRefExpr *DRE = buildDeclRefExpr(
-          SemaRef, VD, VD->getType().getNonLValueExprType(SemaRef.Context),
-          Cap.getLocation(), /*RefersToCapture=*/true);
-      Visit(DRE);
-    }
+    visitSubCaptures(S->getInnermostCapturedStmt());
   }
 
 public:
@@ -2669,7 +2652,10 @@ public:
             Visit(CED->getInit());
             return;
           }
-      }
+      } else if (VD->isImplicit() || isa<OMPCapturedExprDecl>(VD))
+        // Do not analyze internal variables and do not enclose them into
+        // implicit clauses.
+        return;
       VD = VD->getCanonicalDecl();
       // Skip internally declared variables.
       if (VD->hasLocalStorage() && CS && !CS->capturesVariable(VD))
@@ -2921,6 +2907,25 @@ public:
     }
   }
 
+  void visitSubCaptures(CapturedStmt *S) {
+    for (const CapturedStmt::Capture &Cap : S->captures()) {
+      if (!Cap.capturesVariable() && !Cap.capturesVariableByCopy())
+        continue;
+      VarDecl *VD = Cap.getCapturedVar();
+      // Do not try to map the variable if it or its sub-component was mapped
+      // already.
+      if (isOpenMPTargetExecutionDirective(Stack->getCurrentDirective()) &&
+          Stack->checkMappableExprComponentListsForDecl(
+              VD, /*CurrentRegionOnly=*/true,
+              [](OMPClauseMappableExprCommon::MappableExprComponentListRef,
+                 OpenMPClauseKind) { return true; }))
+        continue;
+      DeclRefExpr *DRE = buildDeclRefExpr(
+          SemaRef, VD, VD->getType().getNonLValueExprType(SemaRef.Context),
+          Cap.getLocation(), /*RefersToCapture=*/true);
+      Visit(DRE);
+    }
+  }
   bool isErrorFound() const { return ErrorFound; }
   ArrayRef<Expr *> getImplicitFirstprivate() const {
     return ImplicitFirstprivate;
@@ -4002,6 +4007,17 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
     while (--ThisCaptureLevel >= 0)
       S = cast<CapturedStmt>(S)->getCapturedStmt();
     DSAChecker.Visit(S);
+    if (!isOpenMPTargetDataManagementDirective(Kind) &&
+        !isOpenMPTaskingDirective(Kind)) {
+      // Visit subcaptures to generate implicit clauses for captured vars.
+      auto *CS = cast<CapturedStmt>(AStmt);
+      SmallVector<OpenMPDirectiveKind, 4> CaptureRegions;
+      getOpenMPCaptureRegions(CaptureRegions, Kind);
+      // Ignore outer tasking regions for target directives.
+      if (CaptureRegions.size() > 1 && CaptureRegions.front() == OMPD_task)
+        CS = cast<CapturedStmt>(CS->getCapturedStmt());
+      DSAChecker.visitSubCaptures(CS);
+    }
     if (DSAChecker.isErrorFound())
       return StmtError();
     // Generate list of implicitly defined firstprivate variables.
@@ -4384,11 +4400,13 @@ StmtResult Sema::ActOnOpenMPExecutableDirective(
       VarsWithInheritedDSA[P.getFirst()] = P.getSecond();
   }
   for (const auto &P : VarsWithInheritedDSA) {
+    if (P.getFirst()->isImplicit() || isa<OMPCapturedExprDecl>(P.getFirst()))
+      continue;
+    ErrorFound = true;
     Diag(P.second->getExprLoc(), diag::err_omp_no_dsa_for_variable)
         << P.first << P.second->getSourceRange();
     Diag(DSAStack->getDefaultDSALocation(), diag::note_omp_default_dsa_none);
   }
-  ErrorFound = !VarsWithInheritedDSA.empty() || ErrorFound;
 
   if (!AllowedNameModifiers.empty())
     ErrorFound = checkIfClauses(*this, Kind, Clauses, AllowedNameModifiers) ||

@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
 #pragma omp teams firstprivate(S1) // expected-error {{'S1' does not refer to a value}}
   foo();
 #pragma omp target
-#pragma omp teams firstprivate(a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}}
+#pragma omp teams firstprivate(a, b, c, d, f) // expected-error {{incomplete type 'S1' where a complete type is required}} expected-error {{firstprivate variable with incomplete type 'S1'}}
   foo();
 #pragma omp target
 #pragma omp teams firstprivate(argv[1]) // expected-error {{expected variable name}}

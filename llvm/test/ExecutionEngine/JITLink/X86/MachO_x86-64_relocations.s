@@ -129,6 +129,18 @@ Lanon_minuend_quad:
 Lanon_minuend_long:
         .long Lanon_minuend_long - named_data + 2
 
+# Check X86_64_RELOC_GOT handling.
+# X86_64_RELOC_GOT is the data-section counterpart to X86_64_RELOC_GOTLD. It is
+# handled exactly the same way, including having an implicit PC-rel offset of -4
+# (despite this not making sense in a data section, and requiring an explicit
+# +4 addend to cancel it out and get the correct result).
+#
+# jitlink-check: *{4}test_got = (got_addr(macho_reloc.o, external_data) - test_got)[31:0]
+        .globl test_got
+        .p2align  2
+test_got:
+        .long   external_data@GOTPCREL + 4
+
 # Named quad storage target (first named atom in __data).
         .globl named_data
         .p2align  3

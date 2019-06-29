@@ -1011,6 +1011,7 @@ void FlushShadowMemory();
 void WriteMemoryProfile(char *buf, uptr buf_size, uptr nthread, uptr nlive);
 int ExtractResolvFDs(void *state, int *fds, int nfd);
 int ExtractRecvmsgFDs(void *msg, int *fds, int nfd);
+uptr UnmangleLongJmpSp(uptr mangled_sp);
 void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size);
 
 int call_pthread_cancel_with_cleanup(int(*fn)(void *c, void *m,

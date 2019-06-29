@@ -243,10 +243,10 @@ int main(int argc, char **argv) {
 #pragma omp teams distribute parallel for simd reduction(^ : S1) // expected-error {{'S1' does not refer to a value}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for simd reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{const-qualified variable cannot be reduction}} expected-error {{'operator+' is a private member of 'S2'}}
+#pragma omp teams distribute parallel for simd reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{const-qualified variable cannot be reduction}} expected-error {{'operator+' is a private member of 'S2'}} expected-error {{incomplete type 'S1' where a complete type is required}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for simd reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 2 {{const-qualified variable cannot be reduction}}
+#pragma omp teams distribute parallel for simd reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 2 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 2 {{const-qualified variable cannot be reduction}} expected-error {{incomplete type 'S1' where a complete type is required}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target
 #pragma omp teams distribute parallel for simd reduction(max : h.b) // expected-error {{expected variable name, array element or array section}}
