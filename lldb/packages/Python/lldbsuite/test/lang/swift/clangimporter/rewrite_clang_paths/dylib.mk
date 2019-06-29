@@ -10,6 +10,7 @@ SWIFTFLAGS_EXTRAS = \
 	    -Xcc -F./buildbot/Frameworks \
 	    -Xcc -F -Xcc buildbot/Frameworks \
 	    -Xcc -iquote -Xcc /nonexisting-rootdir \
-	    -import-objc-header $(BOTDIR)/Foo/bridge.h
+	    -import-objc-header $(BOTDIR)/Foo/bridge.h \
+	    -Xcc -ivfsoverlay -Xcc buildbot/Foo/overlay.yaml
 
 include $(LEVEL)/Makefile.rules
