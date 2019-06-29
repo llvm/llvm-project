@@ -71,13 +71,13 @@ class TestRecognizeBreakpoint(GDBRemoteTestBase):
             def qXferRead(self, obj, annex, offset, length):
                 if annex == "target.xml":
                     return """<?xml version="1.0"?>
-			<target version="1.0">
+                        <target version="1.0">
                           <architecture>i386:x86-64</architecture>
                           <feature name="org.gnu.gdb.i386.core">
                             <reg name="rip" bitsize="64" regnum="0" type="code_ptr" group="general"/>
                           </feature>
                         </target>""", False
-		else:
+                else:
                     return None, False
 
             def selectThread(self, op, thread):
