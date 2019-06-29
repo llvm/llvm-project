@@ -214,10 +214,10 @@ Block *Block::GetInlinedParent() {
 
 Block *Block::GetContainingInlinedBlockWithCallSite(
     const Declaration &find_call_site) {
-  auto inlined_block = GetContainingInlinedBlock();
+  Block *inlined_block = GetContainingInlinedBlock();
 
   while (inlined_block) {
-    auto function_info = inlined_block->GetInlinedFunctionInfo();
+    const auto *function_info = inlined_block->GetInlinedFunctionInfo();
 
     if (function_info &&
         function_info->GetCallSite().FileAndLineEqual(find_call_site))
