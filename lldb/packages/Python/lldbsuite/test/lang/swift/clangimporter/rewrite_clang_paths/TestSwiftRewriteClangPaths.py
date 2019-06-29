@@ -90,21 +90,23 @@ class TestSwiftRewriteClangPaths(TestBase):
         found_i2 = 0
         found_rel = 0
         found_abs = 0
+        found_ovl = 0
         logfile = open(log, "r")
         for line in logfile:
             self.assertFalse("remapped -iquote" in line)
             if " remapped " in line:
                 if line[:-1].endswith('/user'): found_abs += 1;
                 continue
-            if "error: missing required module 'CFoo'" in line:
+            if "error: " in line and "Foo" in line:
                 errs += 1
                 continue
-            if 'user/iquote-path' in line: found_iquote += 1; continue
-            if 'user/I-single'    in line: found_i1 += 1;     continue
-            if 'user/I-double'    in line: found_i2 += 1;     continue
-            if './iquote-path'    in line: found_rel += 1;    continue
-            if './I-'             in line: found_rel += 1;    continue
-            if '/user/Frameworks' in line: found_f += 1;      continue
+            if 'user/iquote-path'      in line: found_iquote += 1; continue
+            if 'user/I-single'         in line: found_i1 += 1;     continue
+            if 'user/I-double'         in line: found_i2 += 1;     continue
+            if './iquote-path'         in line: found_rel += 1;    continue
+            if './I-'                  in line: found_rel += 1;    continue
+            if '/user/Frameworks'      in line: found_f += 1;      continue
+            if 'user/Foo/overlay.yaml' in line: found_ovl += 1;    continue
 
         if remap:
             self.assertEqual(errs, 0, "expected no module import error")
@@ -115,6 +117,7 @@ class TestSwiftRewriteClangPaths(TestBase):
             self.assertEqual(found_f, 4)
             self.assertEqual(found_rel, 0)
             self.assertEqual(found_abs, 1)
+            self.assertEqual(found_ovl, 2)
         else:
             self.assertTrue(errs > 0, "expected module import error")
         
