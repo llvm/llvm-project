@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown -std=c++17 -ast-dump=json %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown -fclang-abi-compat=7.0 -std=c++17 -ast-dump=json %s | FileCheck %s
 
 void f() {
   auto IsNotGenericLambda = [](){};
