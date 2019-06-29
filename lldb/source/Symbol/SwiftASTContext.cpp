@@ -1476,7 +1476,8 @@ bool ConsumeIncludeOption(StringRef &arg, StringRef &prefix) {
                                 "-iwithprefix",
                                 "-isystemafter",
                                 "-isystem",
-                                "-isysroot"};
+                                "-isysroot",
+                                "-ivfsoverlay"};
   for (StringRef &option : options)
     if (arg.consume_front(option)) {
       prefix = option;
@@ -3443,14 +3444,13 @@ swift::ModuleDecl *SwiftASTContext::GetModule(const SourceModule &module,
   if (HasErrors()) {
     DiagnosticManager diagnostic_manager;
     PrintDiagnostics(diagnostic_manager);
+    std::string diagnostic = diagnostic_manager.GetString();
     error.SetErrorStringWithFormat(
         "failed to get module \"%s\" from AST context:\n%s",
-        module.path.front().GetCString(),
-        diagnostic_manager.GetString().c_str());
+        module.path.front().GetCString(), diagnostic.c_str());
 
-    LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- error: %s",
-               module.path.front().GetCString(),
-               diagnostic_manager.GetString().c_str());
+    LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- %s",
+               module.path.front().GetCString(), diagnostic.c_str());
     return nullptr;
   }
 
