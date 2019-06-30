@@ -2027,23 +2027,24 @@ static PHINode *getLoopPhiForCounter(Value *IncV, Loop *L) {
   return nullptr;
 }
 
-/// Given a loop with one backedge and one exit, return the ICmpInst
-/// controlling the sole loop exit.  There is no guarantee that the exiting
-/// block is also the latch.
-static ICmpInst *getLoopTest(Loop *L, BasicBlock *ExitingBB) {
-
-  BasicBlock *LatchBlock = L->getLoopLatch();
-  // Don't bother with LFTR if the loop is not properly simplified.
-  if (!LatchBlock)
-    return nullptr;
-
+/// Whether the current loop exit test is based on this value.  Currently this
+/// is limited to a direct use in the loop condition.
+static bool isLoopExitTestBasedOn(Value *V, BasicBlock *ExitingBB) {
   BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
-  return dyn_cast<ICmpInst>(BI->getCondition());
+  ICmpInst *ICmp = dyn_cast<ICmpInst>(BI->getCondition());
+  // TODO: Allow non-icmp loop test.
+  if (!ICmp)
+    return false;
+
+  // TODO: Allow indirect use.
+  return ICmp->getOperand(0) == V || ICmp->getOperand(1) == V;
 }
 
 /// linearFunctionTestReplace policy. Return true unless we can show that the
 /// current exit test is already sufficiently canonical.
 static bool needsLFTR(Loop *L, BasicBlock *ExitingBB) {
+  assert(L->getLoopLatch() && "Must be in simplified form");
+
   // Avoid converting a constant or loop invariant test back to a runtime
   // test.  This is critical for when SCEV's cached ExitCount is less precise
   // than the current IR (such as after we've proven a particular exit is
@@ -2053,7 +2054,7 @@ static bool needsLFTR(Loop *L, BasicBlock *ExitingBB) {
     return false;
   
   // Do LFTR to simplify the exit condition to an ICMP.
-  ICmpInst *Cond = getLoopTest(L, ExitingBB);
+  ICmpInst *Cond = dyn_cast<ICmpInst>(BI->getCondition());
   if (!Cond)
     return true;
 
@@ -2228,7 +2229,7 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
   PHINode *BestPhi = nullptr;
   const SCEV *BestInit = nullptr;
   BasicBlock *LatchBlock = L->getLoopLatch();
-  assert(LatchBlock && "needsLFTR should guarantee a loop latch");
+  assert(LatchBlock && "Must be in simplified form");
   const DataLayout &DL = L->getHeader()->getModule()->getDataLayout();
 
   for (BasicBlock::iterator I = L->getHeader()->begin(); isa<PHINode>(I); ++I) {
@@ -2255,10 +2256,10 @@ static PHINode *FindLoopCounter(Loop *L, BasicBlock *ExitingBB,
       // We explicitly allow unknown phis as long as they are already used by
       // the loop exit test.  This is legal since performing LFTR could not
       // increase the number of undef users. 
-      if (ICmpInst *Cond = getLoopTest(L, ExitingBB))
-        if (Phi != getLoopPhiForCounter(Cond->getOperand(0), L) &&
-            Phi != getLoopPhiForCounter(Cond->getOperand(1), L))
-          continue;
+      Value *IncPhi = Phi->getIncomingValueForBlock(LatchBlock);
+      if (!isLoopExitTestBasedOn(Phi, ExitingBB) &&
+          !isLoopExitTestBasedOn(IncPhi, ExitingBB))
+        continue;
     }
 
     // Avoid introducing undefined behavior due to poison which didn't exist in
@@ -2406,20 +2407,14 @@ linearFunctionTestReplace(Loop *L, BasicBlock *ExitingBB,
   // compare against the post-incremented value, otherwise we must compare
   // against the preincremented value.
   if (ExitingBB == L->getLoopLatch()) {
-    bool SafeToPostInc = IndVar->getType()->isIntegerTy();
-    if (!SafeToPostInc) {
-      // For pointer IVs, we chose to not strip inbounds which requires us not
-      // to add a potentially UB introducing use.  We need to either a) show
-      // the loop test we're modifying is already in post-inc form, or b) show
-      // that adding a use must not introduce UB.
-      if (ICmpInst *LoopTest = getLoopTest(L, ExitingBB))
-        SafeToPostInc = LoopTest->getOperand(0) == IncVar ||
-          LoopTest->getOperand(1) == IncVar;
-      if (!SafeToPostInc)
-        SafeToPostInc =
-          mustExecuteUBIfPoisonOnPathTo(IncVar, ExitingBB->getTerminator(), DT);
-    }
-
+    // For pointer IVs, we chose to not strip inbounds which requires us not
+    // to add a potentially UB introducing use.  We need to either a) show
+    // the loop test we're modifying is already in post-inc form, or b) show
+    // that adding a use must not introduce UB.
+    bool SafeToPostInc =
+        IndVar->getType()->isIntegerTy() ||
+        isLoopExitTestBasedOn(IncVar, ExitingBB) ||
+        mustExecuteUBIfPoisonOnPathTo(IncVar, ExitingBB->getTerminator(), DT);
     if (SafeToPostInc) {
       UsePostInc = true;
       CmpIndVar = IncVar;
