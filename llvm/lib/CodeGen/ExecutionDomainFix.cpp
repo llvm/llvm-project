@@ -337,8 +337,8 @@ void ExecutionDomainFix::visitSoftInstr(MachineInstr *mi, unsigned mask) {
     // Sorted insertion.
     // Enables giving priority to the latest domains during merging.
     const int Def = RDA->getReachingDef(mi, RC->getRegister(rx));
-    auto I = llvm::bsearch(Regs, [&](int I) {
-      return Def < RDA->getReachingDef(mi, RC->getRegister(I));
+    auto I = partition_point(Regs, [&](int I) {
+      return RDA->getReachingDef(mi, RC->getRegister(I)) <= Def;
     });
     Regs.insert(I, rx);
   }

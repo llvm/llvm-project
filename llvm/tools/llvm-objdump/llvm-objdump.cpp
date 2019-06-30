@@ -963,14 +963,15 @@ static bool shouldAdjustVA(const SectionRef &Section) {
 typedef std::pair<uint64_t, char> MappingSymbolPair;
 static char getMappingSymbolKind(ArrayRef<MappingSymbolPair> MappingSymbols,
                                  uint64_t Address) {
-  auto Sym = bsearch(MappingSymbols, [Address](const MappingSymbolPair &Val) {
-      return Val.first > Address;
-  });
+  auto It =
+      partition_point(MappingSymbols, [Address](const MappingSymbolPair &Val) {
+        return Val.first <= Address;
+      });
   // Return zero for any address before the first mapping symbol; this means
   // we should use the default disassembly mode, depending on the target.
-  if (Sym == MappingSymbols.begin())
+  if (It == MappingSymbols.begin())
     return '\x00';
-  return (Sym - 1)->second;
+  return (It - 1)->second;
 }
 
 static uint64_t
@@ -1111,9 +1112,9 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
       error(ExportEntry.getExportRVA(RVA));
 
       uint64_t VA = COFFObj->getImageBase() + RVA;
-      auto Sec = llvm::bsearch(
-          SectionAddresses, [VA](const std::pair<uint64_t, SectionRef> &RHS) {
-            return VA < RHS.first;
+      auto Sec = partition_point(
+          SectionAddresses, [VA](const std::pair<uint64_t, SectionRef> &O) {
+            return O.first <= VA;
           });
       if (Sec != SectionAddresses.begin()) {
         --Sec;
@@ -1369,10 +1370,10 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
             // N.B. We don't walk the relocations in the relocatable case yet.
             auto *TargetSectionSymbols = &Symbols;
             if (!Obj->isRelocatableObject()) {
-              auto It = llvm::bsearch(
+              auto It = partition_point(
                   SectionAddresses,
-                  [=](const std::pair<uint64_t, SectionRef> &RHS) {
-                    return Target < RHS.first;
+                  [=](const std::pair<uint64_t, SectionRef> &O) {
+                    return O.first <= Target;
                   });
               if (It != SectionAddresses.begin()) {
                 --It;
@@ -1385,17 +1386,17 @@ static void disassembleObject(const Target *TheTarget, const ObjectFile *Obj,
             // Find the last symbol in the section whose offset is less than
             // or equal to the target. If there isn't a section that contains
             // the target, find the nearest preceding absolute symbol.
-            auto TargetSym = llvm::bsearch(
+            auto TargetSym = partition_point(
                 *TargetSectionSymbols,
-                [=](const std::tuple<uint64_t, StringRef, uint8_t> &RHS) {
-                  return Target < std::get<0>(RHS);
+                [=](const std::tuple<uint64_t, StringRef, uint8_t> &O) {
+                  return std::get<0>(O) <= Target;
                 });
             if (TargetSym == TargetSectionSymbols->begin()) {
               TargetSectionSymbols = &AbsoluteSymbols;
-              TargetSym = llvm::bsearch(
+              TargetSym = partition_point(
                   AbsoluteSymbols,
-                  [=](const std::tuple<uint64_t, StringRef, uint8_t> &RHS) {
-                    return Target < std::get<0>(RHS);
+                  [=](const std::tuple<uint64_t, StringRef, uint8_t> &O) {
+                    return std::get<0>(O) <= Target;
                   });
             }
             if (TargetSym != TargetSectionSymbols->begin()) {

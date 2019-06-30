@@ -158,8 +158,8 @@ const X86InstrFMA3Group *llvm::getFMA3Group(unsigned Opcode, uint64_t TSFlags) {
   // FMA 231 instructions have an opcode of 0xB6-0xBF
   unsigned FormIndex = ((BaseOpcode - 0x90) >> 4) & 0x3;
 
-  auto I = llvm::bsearch(Table, [=](const X86InstrFMA3Group &Group) {
-    return Opcode <= Group.Opcodes[FormIndex];
+  auto I = partition_point(Table, [=](const X86InstrFMA3Group &Group) {
+    return Group.Opcodes[FormIndex] < Opcode;
   });
   assert(I != Table.end() && I->Opcodes[FormIndex] == Opcode &&
          "Couldn't find FMA3 opcode!");

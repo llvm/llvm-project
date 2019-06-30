@@ -463,8 +463,8 @@ DataLayout::AlignmentsTy::iterator
 DataLayout::findAlignmentLowerBound(AlignTypeEnum AlignType,
                                     uint32_t BitWidth) {
   auto Pair = std::make_pair((unsigned)AlignType, BitWidth);
-  return llvm::bsearch(Alignments, [=](const LayoutAlignElem &E) {
-    return Pair <= std::make_pair(E.AlignType, E.TypeBitWidth);
+  return partition_point(Alignments, [=](const LayoutAlignElem &E) {
+    return std::make_pair(E.AlignType, E.TypeBitWidth) < Pair;
   });
 }
 

@@ -115,7 +115,7 @@ void DWARFDebugAranges::construct() {
 
 uint32_t DWARFDebugAranges::findAddress(uint64_t Address) const {
   RangeCollIterator It =
-      llvm::bsearch(Aranges, [=](Range RHS) { return Address < RHS.HighPC(); });
+      partition_point(Aranges, [=](Range R) { return R.HighPC() <= Address; });
   if (It != Aranges.end() && It->LowPC <= Address)
     return It->CUOffset;
   return -1U;
