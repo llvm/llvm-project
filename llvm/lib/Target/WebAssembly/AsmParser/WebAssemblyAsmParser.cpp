@@ -344,9 +344,7 @@ public:
     Parser.Lex();
   }
 
-  bool parseOperandStartingWithInteger(bool IsNegative, OperandVector &Operands,
-                                       StringRef InstName) {
-    parseSingleInteger(IsNegative, Operands);
+  bool checkForP2AlignIfLoadStore(OperandVector &Operands, StringRef InstName) {
     // FIXME: there is probably a cleaner way to do this.
     auto IsLoadStore = InstName.find(".load") != StringRef::npos ||
                        InstName.find(".store") != StringRef::npos;
@@ -471,11 +469,13 @@ public:
           // Assume this identifier is a label.
           const MCExpr *Val;
           SMLoc End;
-          if (Parser.parsePrimaryExpr(Val, End))
+          if (Parser.parseExpression(Val, End))
             return error("Cannot parse symbol: ", Lexer.getTok());
           Operands.push_back(make_unique<WebAssemblyOperand>(
               WebAssemblyOperand::Symbol, Id.getLoc(), Id.getEndLoc(),
               WebAssemblyOperand::SymOp{Val}));
+          if (checkForP2AlignIfLoadStore(Operands, Name))
+            return true;
         }
         break;
       }
@@ -483,11 +483,13 @@ public:
         Parser.Lex();
         if (Lexer.isNot(AsmToken::Integer))
           return error("Expected integer instead got: ", Lexer.getTok());
-        if (parseOperandStartingWithInteger(true, Operands, Name))
+        parseSingleInteger(true, Operands);
+        if (checkForP2AlignIfLoadStore(Operands, Name))
           return true;
         break;
       case AsmToken::Integer:
-        if (parseOperandStartingWithInteger(false, Operands, Name))
+        parseSingleInteger(false, Operands);
+        if (checkForP2AlignIfLoadStore(Operands, Name))
           return true;
         break;
       case AsmToken::Real: {
@@ -663,13 +665,18 @@ public:
       return expect(AsmToken::EndOfStatement, "EOL");
     }
 
-    if (DirectiveID.getString() == ".int8") {
+    if (DirectiveID.getString() == ".int8" ||
+        DirectiveID.getString() == ".int16" ||
+        DirectiveID.getString() == ".int32" ||
+        DirectiveID.getString() == ".int64") {
       if (CheckDataSection()) return true;
-      int64_t V;
-      if (Parser.parseAbsoluteExpression(V))
-        return error("Cannot parse int8 constant: ", Lexer.getTok());
-      // TODO: error if value doesn't fit?
-      Out.EmitIntValue(static_cast<uint64_t>(V), 1);
+      const MCExpr *Val;
+      SMLoc End;
+      if (Parser.parseExpression(Val, End))
+        return error("Cannot parse .int expression: ", Lexer.getTok());
+      size_t NumBits = 0;
+      DirectiveID.getString().drop_front(4).getAsInteger(10, NumBits);
+      Out.EmitValue(Val, NumBits / 8, End);
       return expect(AsmToken::EndOfStatement, "EOL");
     }
 
@@ -748,6 +755,10 @@ public:
     auto SymName = Symbol->getName();
     if (SymName.startswith(".L"))
       return; // Local Symbol.
+    // Only create a new text section if we're already in one.
+    auto CWS = cast<MCSectionWasm>(getStreamer().getCurrentSection().first);
+    if (!CWS || !CWS->getKind().isText())
+      return;
     auto SecName = ".text." + SymName;
     auto WS = getContext().getWasmSection(SecName, SectionKind::getText());
     getStreamer().SwitchSection(WS);

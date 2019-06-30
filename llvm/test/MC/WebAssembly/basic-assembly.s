@@ -81,6 +81,8 @@ test0:
     end_block
     end_try
     i32.const   .L.str
+    i32.load8_u .L.str+2
+    i32.load16_u .L.str:p2align=0
     throw 0
 .LBB0_5:
     #i32.trunc_sat_f32_s
@@ -89,10 +91,14 @@ test0:
 
     .section    .rodata..L.str,"",@
     .hidden     .L.str
+    .type       .L.str,@object
 .L.str:
     .int8       'H'
     .asciz      "ello, World!"
-    .size       .L.str, 14
+    .int16      1234
+    .int64      5000000000
+    .int32      2000000000
+    .size       .L.str, 28
 
     .ident      "clang version 9.0.0 (trunk 364502) (llvm/trunk 364571)"
     .globaltype __stack_pointer, i32
@@ -170,6 +176,8 @@ test0:
 # CHECK-NEXT:      end_block
 # CHECK-NEXT:      end_try
 # CHECK-NEXT:      i32.const   .L.str
+# CHECK-NEXT:      i32.load8_u .L.str+2
+# CHECK-NEXT:      i32.load16_u .L.str:p2align=0
 # CHECK-NEXT:      throw       0
 # CHECK-NEXT:  .LBB0_5:
 # CHECK-NEXT:      global.get  __stack_pointer
@@ -180,5 +188,8 @@ test0:
 # CHECK-NEXT:  .L.str:
 # CHECK-NEXT:      .int8       72
 # CHECK-NEXT:      .asciz      "ello, World!"
+# CHECK-NEXT:      .int16       1234
+# CHECK-NEXT:      .int64       5000000000
+# CHECK-NEXT:      .int32       2000000000
 
 # CHECK:           .globaltype __stack_pointer, i32

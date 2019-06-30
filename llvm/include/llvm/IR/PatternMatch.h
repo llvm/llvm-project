@@ -418,6 +418,20 @@ inline cst_pred_ty<is_lowbit_mask> m_LowBitMask() {
   return cst_pred_ty<is_lowbit_mask>();
 }
 
+struct is_unsigned_less_than {
+  const APInt *Thr;
+  bool isValue(const APInt &C) { return C.ult(*Thr); }
+};
+/// Match an integer or vector with every element unsigned less than the
+/// Threshold. For vectors, this includes constants with undefined elements.
+/// FIXME: is it worth generalizing this to simply take ICmpInst::Predicate?
+inline cst_pred_ty<is_unsigned_less_than>
+m_SpecificInt_ULT(const APInt &Threshold) {
+  cst_pred_ty<is_unsigned_less_than> P;
+  P.Thr = &Threshold;
+  return P;
+}
+
 struct is_nan {
   bool isValue(const APFloat &C) { return C.isNaN(); }
 };

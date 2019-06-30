@@ -19,3 +19,7 @@ D: clang-rename, all parts of clang-tools-extra not covered by someone else
 N: Alexander Kornienko
 E: alexfh@google.com
 D: clang-tidy
+
+N: Julie Hockett
+E: juliehockett@google.com
+D: clang-doc

@@ -110,7 +110,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 
 #pragma omp target
-#pragma omp teams distribute firstprivate(ca) // expected-error {{no matching constructor for initialization of 'S3'}}
+#pragma omp teams distribute firstprivate(ca) // expected-error {{no matching constructor for initialization of 'S3'}} expected-warning {{Non-trivial type 'const S3 [5]' is mapped, only trivial types are guaranteed to be mapped correctly}}
   for (i = 0; i < argc; ++i) foo();
 
 #pragma omp target teams distribute firstprivate(da)

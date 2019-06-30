@@ -811,17 +811,13 @@ declare float @fminf(float, float)
 declare fp128 @fmaxl(fp128, fp128)
 declare fp128 @fminl(fp128, fp128)
 
-; No NaNs is the minimum requirement to replace these calls.
-; This should always be set when unsafe-fp-math is true, but
-; alternate the attributes for additional test coverage.
 ; 'nsz' is implied by the definition of fmax or fmin itself.
 
-; Shrink and remove the call.
+; Shrink and replace the call.
 define float @max1(float %a, float %b) {
 ; CHECK-LABEL: @max1(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ogt float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select fast i1 [[TMP1]], float [[A]], float [[B]]
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.maxnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %c = fpext float %a to double
   %d = fpext float %b to double
@@ -832,8 +828,8 @@ define float @max1(float %a, float %b) {
 
 define float @fmax_no_fmf(float %a, float %b) {
 ; CHECK-LABEL: @fmax_no_fmf(
-; CHECK-NEXT:    [[C:%.*]] = call float @fmaxf(float [[A:%.*]], float [[B:%.*]])
-; CHECK-NEXT:    ret float [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nsz float @llvm.maxnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %c = call float @fmaxf(float %a, float %b)
   ret float %c
@@ -841,9 +837,8 @@ define float @fmax_no_fmf(float %a, float %b) {
 
 define float @max2(float %a, float %b) {
 ; CHECK-LABEL: @max2(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan nsz ogt float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select nnan nsz i1 [[TMP1]], float [[A]], float [[B]]
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz float @llvm.maxnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %c = call nnan float @fmaxf(float %a, float %b)
   ret float %c
@@ -852,9 +847,8 @@ define float @max2(float %a, float %b) {
 
 define double @max3(double %a, double %b) {
 ; CHECK-LABEL: @max3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast ogt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select fast i1 [[TMP1]], double [[A]], double [[B]]
-; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast double @llvm.maxnum.f64(double [[A:%.*]], double [[B:%.*]])
+; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %c = call fast double @fmax(double %a, double %b)
   ret double %c
@@ -862,9 +856,8 @@ define double @max3(double %a, double %b) {
 
 define fp128 @max4(fp128 %a, fp128 %b) {
 ; CHECK-LABEL: @max4(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan nsz ogt fp128 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select nnan nsz i1 [[TMP1]], fp128 [[A]], fp128 [[B]]
-; CHECK-NEXT:    ret fp128 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz fp128 @llvm.maxnum.f128(fp128 [[A:%.*]], fp128 [[B:%.*]])
+; CHECK-NEXT:    ret fp128 [[TMP1]]
 ;
   %c = call nnan fp128 @fmaxl(fp128 %a, fp128 %b)
   ret fp128 %c
@@ -873,9 +866,8 @@ define fp128 @max4(fp128 %a, fp128 %b) {
 ; Shrink and remove the call.
 define float @min1(float %a, float %b) {
 ; CHECK-LABEL: @min1(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan nsz olt float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select nnan nsz i1 [[TMP1]], float [[A]], float [[B]]
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %c = fpext float %a to double
   %d = fpext float %b to double
@@ -886,8 +878,8 @@ define float @min1(float %a, float %b) {
 
 define float @fmin_no_fmf(float %a, float %b) {
 ; CHECK-LABEL: @fmin_no_fmf(
-; CHECK-NEXT:    [[C:%.*]] = call float @fminf(float [[A:%.*]], float [[B:%.*]])
-; CHECK-NEXT:    ret float [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nsz float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %c = call float @fminf(float %a, float %b)
   ret float %c
@@ -895,9 +887,8 @@ define float @fmin_no_fmf(float %a, float %b) {
 
 define float @min2(float %a, float %b) {
 ; CHECK-LABEL: @min2(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast olt float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select fast i1 [[TMP1]], float [[A]], float [[B]]
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %c = call fast float @fminf(float %a, float %b)
   ret float %c
@@ -905,9 +896,8 @@ define float @min2(float %a, float %b) {
 
 define double @min3(double %a, double %b) {
 ; CHECK-LABEL: @min3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp nnan nsz olt double [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select nnan nsz i1 [[TMP1]], double [[A]], double [[B]]
-; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call nnan nsz double @llvm.minnum.f64(double [[A:%.*]], double [[B:%.*]])
+; CHECK-NEXT:    ret double [[TMP1]]
 ;
   %c = call nnan double @fmin(double %a, double %b)
   ret double %c
@@ -915,9 +905,8 @@ define double @min3(double %a, double %b) {
 
 define fp128 @min4(fp128 %a, fp128 %b) {
 ; CHECK-LABEL: @min4(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp fast olt fp128 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select fast i1 [[TMP1]], fp128 [[A]], fp128 [[B]]
-; CHECK-NEXT:    ret fp128 [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call fast fp128 @llvm.minnum.f128(fp128 [[A:%.*]], fp128 [[B:%.*]])
+; CHECK-NEXT:    ret fp128 [[TMP1]]
 ;
   %c = call fast fp128 @fminl(fp128 %a, fp128 %b)
   ret fp128 %c

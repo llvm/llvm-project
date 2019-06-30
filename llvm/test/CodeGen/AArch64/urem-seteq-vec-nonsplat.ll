@@ -33,9 +33,11 @@ define <4 x i32> @test_urem_odd_even(<4 x i32> %X) nounwind {
   ret <4 x i32> %ret
 }
 
+;==============================================================================;
+
 ; One all-ones divisor in odd divisor
-define <4 x i32> @test_urem_odd_allones(<4 x i32> %X) nounwind {
-; CHECK-LABEL: test_urem_odd_allones:
+define <4 x i32> @test_urem_odd_allones_eq(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_odd_allones_eq:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI1_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
@@ -58,10 +60,8 @@ define <4 x i32> @test_urem_odd_allones(<4 x i32> %X) nounwind {
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
-
-; One all-ones divisor in even divisor
-define <4 x i32> @test_urem_even_allones(<4 x i32> %X) nounwind {
-; CHECK-LABEL: test_urem_even_allones:
+define <4 x i32> @test_urem_odd_allones_ne(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_odd_allones_ne:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
@@ -69,29 +69,26 @@ define <4 x i32> @test_urem_even_allones(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI2_1]
 ; CHECK-NEXT:    adrp x8, .LCPI2_2
 ; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI2_2]
-; CHECK-NEXT:    neg v1.4s, v1.4s
-; CHECK-NEXT:    adrp x8, .LCPI2_3
-; CHECK-NEXT:    ushl v1.4s, v0.4s, v1.4s
-; CHECK-NEXT:    umull2 v4.2d, v1.4s, v2.4s
-; CHECK-NEXT:    umull v1.2d, v1.2s, v2.2s
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI2_3]
+; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
+; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    neg v3.4s, v3.4s
-; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    mls v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    neg v2.4s, v2.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    mls v0.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i32> %X, <i32 14, i32 14, i32 4294967295, i32 14>
-  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %urem = urem <4 x i32> %X, <i32 5, i32 5, i32 4294967295, i32 5>
+  %cmp = icmp ne <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
 
-; One all-ones divisor in odd+even divisor
-define <4 x i32> @test_urem_odd_even_allones(<4 x i32> %X) nounwind {
-; CHECK-LABEL: test_urem_odd_even_allones:
+; One all-ones divisor in even divisor
+define <4 x i32> @test_urem_even_allones_eq(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_even_allones_eq:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
@@ -113,15 +110,13 @@ define <4 x i32> @test_urem_odd_even_allones(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i32> %X, <i32 5, i32 14, i32 4294967295, i32 100>
+  %urem = urem <4 x i32> %X, <i32 14, i32 14, i32 4294967295, i32 14>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
-
-; One power-of-two divisor in odd divisor
-define <4 x i32> @test_urem_odd_poweroftwo(<4 x i32> %X) nounwind {
-; CHECK-LABEL: test_urem_odd_poweroftwo:
+define <4 x i32> @test_urem_even_allones_ne(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_even_allones_ne:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI4_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
@@ -129,25 +124,30 @@ define <4 x i32> @test_urem_odd_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI4_1]
 ; CHECK-NEXT:    adrp x8, .LCPI4_2
 ; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI4_2]
-; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
-; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
+; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    adrp x8, .LCPI4_3
+; CHECK-NEXT:    ushl v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    umull2 v4.2d, v1.4s, v2.4s
+; CHECK-NEXT:    umull v1.2d, v1.2s, v2.2s
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI4_3]
 ; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    neg v2.4s, v2.4s
-; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    mls v0.4s, v1.4s, v3.4s
+; CHECK-NEXT:    neg v3.4s, v3.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    mls v0.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i32> %X, <i32 5, i32 5, i32 16, i32 5>
-  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %urem = urem <4 x i32> %X, <i32 14, i32 14, i32 4294967295, i32 14>
+  %cmp = icmp ne <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
 
-; One power-of-two divisor in even divisor
-define <4 x i32> @test_urem_even_poweroftwo(<4 x i32> %X) nounwind {
-; CHECK-LABEL: test_urem_even_poweroftwo:
+; One all-ones divisor in odd+even divisor
+define <4 x i32> @test_urem_odd_even_allones_eq(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_odd_even_allones_eq:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI5_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI5_0]
@@ -169,15 +169,13 @@ define <4 x i32> @test_urem_even_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i32> %X, <i32 14, i32 14, i32 16, i32 14>
+  %urem = urem <4 x i32> %X, <i32 5, i32 14, i32 4294967295, i32 100>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
-
-; One power-of-two divisor in odd+even divisor
-define <4 x i32> @test_urem_odd_even_poweroftwo(<4 x i32> %X) nounwind {
-; CHECK-LABEL: test_urem_odd_even_poweroftwo:
+define <4 x i32> @test_urem_odd_even_allones_ne(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_odd_even_allones_ne:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI6_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI6_0]
@@ -196,18 +194,21 @@ define <4 x i32> @test_urem_odd_even_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    mls v0.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    mvn v0.16b, v0.16b
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i32> %X, <i32 5, i32 14, i32 16, i32 100>
-  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %urem = urem <4 x i32> %X, <i32 5, i32 14, i32 4294967295, i32 100>
+  %cmp = icmp ne <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
 
-; One all-ones divisor and one power-of-two divisor in odd divisor
-define <4 x i32> @test_urem_odd_allones_and_poweroftwo(<4 x i32> %X) nounwind {
-; CHECK-LABEL: test_urem_odd_allones_and_poweroftwo:
+;------------------------------------------------------------------------------;
+
+; One power-of-two divisor in odd divisor
+define <4 x i32> @test_urem_odd_poweroftwo(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_odd_poweroftwo:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI7_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI7_0]
@@ -225,15 +226,15 @@ define <4 x i32> @test_urem_odd_allones_and_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i32> %X, <i32 5, i32 16, i32 4294967295, i32 5>
+  %urem = urem <4 x i32> %X, <i32 5, i32 5, i32 16, i32 5>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
 
-; One all-ones divisor and one power-of-two divisor in even divisor
-define <4 x i32> @test_urem_even_allones_and_poweroftwo(<4 x i32> %X) nounwind {
-; CHECK-LABEL: test_urem_even_allones_and_poweroftwo:
+; One power-of-two divisor in even divisor
+define <4 x i32> @test_urem_even_poweroftwo(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_even_poweroftwo:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI8_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI8_0]
@@ -255,15 +256,15 @@ define <4 x i32> @test_urem_even_allones_and_poweroftwo(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i32> %X, <i32 14, i32 16, i32 4294967295, i32 14>
+  %urem = urem <4 x i32> %X, <i32 14, i32 14, i32 16, i32 14>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
 
-; One all-ones divisor and one power-of-two divisor in odd+even divisor
-define <4 x i32> @test_urem_odd_even_allones_and_poweroftwo(<4 x i32> %X) nounwind {
-; CHECK-LABEL: test_urem_odd_even_allones_and_poweroftwo:
+; One power-of-two divisor in odd+even divisor
+define <4 x i32> @test_urem_odd_even_poweroftwo(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_odd_even_poweroftwo:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI9_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI9_0]
@@ -271,27 +272,29 @@ define <4 x i32> @test_urem_odd_even_allones_and_poweroftwo(<4 x i32> %X) nounwi
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI9_1]
 ; CHECK-NEXT:    adrp x8, .LCPI9_2
 ; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI9_2]
-; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
-; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
+; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    adrp x8, .LCPI9_3
+; CHECK-NEXT:    ushl v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    umull2 v4.2d, v1.4s, v2.4s
+; CHECK-NEXT:    umull v1.2d, v1.2s, v2.2s
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI9_3]
 ; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    neg v2.4s, v2.4s
-; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    mls v0.4s, v1.4s, v3.4s
+; CHECK-NEXT:    neg v3.4s, v3.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    mls v0.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i32> %X, <i32 5, i32 16, i32 4294967295, i32 100>
+  %urem = urem <4 x i32> %X, <i32 5, i32 14, i32 16, i32 100>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
 
 ;------------------------------------------------------------------------------;
-; Negative tests - the fold is invalid if any divisor is 1.
-;------------------------------------------------------------------------------;
 
-; One divisor in odd divisor
+; One one divisor in odd divisor
 define <4 x i32> @test_urem_odd_one(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_odd_one:
 ; CHECK:       // %bb.0:
@@ -314,13 +317,13 @@ define <4 x i32> @test_urem_odd_one(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i32> %X, <i32 25, i32 25, i32 1, i32 25>
+  %urem = urem <4 x i32> %X, <i32 5, i32 5, i32 1, i32 5>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
 
-; One divisor in even divisors
+; One one divisor in even divisor
 define <4 x i32> @test_urem_even_one(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_even_one:
 ; CHECK:       // %bb.0:
@@ -330,26 +333,30 @@ define <4 x i32> @test_urem_even_one(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI11_1]
 ; CHECK-NEXT:    adrp x8, .LCPI11_2
 ; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI11_2]
+; CHECK-NEXT:    neg v1.4s, v1.4s
 ; CHECK-NEXT:    adrp x8, .LCPI11_3
-; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
-; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
+; CHECK-NEXT:    ushl v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    umull2 v4.2d, v1.4s, v2.4s
+; CHECK-NEXT:    umull v1.2d, v1.2s, v2.2s
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI11_3]
+; CHECK-NEXT:    adrp x8, .LCPI11_4
 ; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI11_3]
-; CHECK-NEXT:    neg v2.4s, v2.4s
-; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mls v0.4s, v3.4s, v4.4s
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI11_4]
+; CHECK-NEXT:    neg v3.4s, v3.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mls v0.4s, v2.4s, v4.4s
 ; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i32> %X, <i32 100, i32 100, i32 1, i32 100>
+  %urem = urem <4 x i32> %X, <i32 14, i32 14, i32 1, i32 14>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
 
-; One divisor in odd-even divisors
+; One one divisor in odd+even divisor
 define <4 x i32> @test_urem_odd_even_one(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_odd_even_one:
 ; CHECK:       // %bb.0:
@@ -359,11 +366,130 @@ define <4 x i32> @test_urem_odd_even_one(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI12_1]
 ; CHECK-NEXT:    adrp x8, .LCPI12_2
 ; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI12_2]
+; CHECK-NEXT:    neg v1.4s, v1.4s
 ; CHECK-NEXT:    adrp x8, .LCPI12_3
+; CHECK-NEXT:    ushl v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    umull2 v4.2d, v1.4s, v2.4s
+; CHECK-NEXT:    umull v1.2d, v1.2s, v2.2s
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI12_3]
+; CHECK-NEXT:    adrp x8, .LCPI12_4
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI12_4]
+; CHECK-NEXT:    neg v3.4s, v3.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mls v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %urem = urem <4 x i32> %X, <i32 5, i32 14, i32 1, i32 100>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
+;==============================================================================;
+
+; One all-ones divisor and power-of-two divisor divisor in odd divisor
+define <4 x i32> @test_urem_odd_allones_and_poweroftwo(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_odd_allones_and_poweroftwo:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI13_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI13_0]
+; CHECK-NEXT:    adrp x8, .LCPI13_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI13_1]
+; CHECK-NEXT:    adrp x8, .LCPI13_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI13_2]
 ; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
 ; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
 ; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI12_3]
+; CHECK-NEXT:    neg v2.4s, v2.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    mls v0.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %urem = urem <4 x i32> %X, <i32 5, i32 4294967295, i32 16, i32 5>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
+; One all-ones divisor and power-of-two divisor divisor in even divisor
+define <4 x i32> @test_urem_even_allones_and_poweroftwo(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_even_allones_and_poweroftwo:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI14_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI14_0]
+; CHECK-NEXT:    adrp x8, .LCPI14_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI14_1]
+; CHECK-NEXT:    adrp x8, .LCPI14_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI14_2]
+; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    adrp x8, .LCPI14_3
+; CHECK-NEXT:    ushl v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    umull2 v4.2d, v1.4s, v2.4s
+; CHECK-NEXT:    umull v1.2d, v1.2s, v2.2s
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI14_3]
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    neg v3.4s, v3.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    mls v0.4s, v1.4s, v2.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %urem = urem <4 x i32> %X, <i32 14, i32 4294967295, i32 16, i32 14>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
+; One all-ones divisor and power-of-two divisor divisor in odd+even divisor
+define <4 x i32> @test_urem_odd_even_allones_and_poweroftwo(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_odd_even_allones_and_poweroftwo:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI15_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI15_0]
+; CHECK-NEXT:    adrp x8, .LCPI15_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI15_1]
+; CHECK-NEXT:    adrp x8, .LCPI15_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI15_2]
+; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
+; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    neg v2.4s, v2.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    mls v0.4s, v1.4s, v3.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %urem = urem <4 x i32> %X, <i32 5, i32 4294967295, i32 16, i32 100>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
+;------------------------------------------------------------------------------;
+
+; One all-ones divisor and one one divisor in odd divisor
+define <4 x i32> @test_urem_odd_allones_and_one(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_odd_allones_and_one:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI16_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI16_0]
+; CHECK-NEXT:    adrp x8, .LCPI16_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI16_1]
+; CHECK-NEXT:    adrp x8, .LCPI16_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI16_2]
+; CHECK-NEXT:    adrp x8, .LCPI16_3
+; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
+; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI16_3]
 ; CHECK-NEXT:    neg v2.4s, v2.4s
 ; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
 ; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
@@ -372,7 +498,224 @@ define <4 x i32> @test_urem_odd_even_one(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i32> %X, <i32 25, i32 100, i32 1, i32 25>
+  %urem = urem <4 x i32> %X, <i32 5, i32 4294967295, i32 1, i32 5>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
+; One all-ones divisor and one one divisor in even divisor
+define <4 x i32> @test_urem_even_allones_and_one(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_even_allones_and_one:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI17_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI17_0]
+; CHECK-NEXT:    adrp x8, .LCPI17_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI17_1]
+; CHECK-NEXT:    adrp x8, .LCPI17_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI17_2]
+; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    adrp x8, .LCPI17_3
+; CHECK-NEXT:    ushl v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    umull2 v4.2d, v1.4s, v2.4s
+; CHECK-NEXT:    umull v1.2d, v1.2s, v2.2s
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI17_3]
+; CHECK-NEXT:    adrp x8, .LCPI17_4
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI17_4]
+; CHECK-NEXT:    neg v3.4s, v3.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mls v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %urem = urem <4 x i32> %X, <i32 14, i32 4294967295, i32 1, i32 14>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
+; One all-ones divisor and one one divisor in odd+even divisor
+define <4 x i32> @test_urem_odd_even_allones_and_one(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_odd_even_allones_and_one:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI18_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI18_0]
+; CHECK-NEXT:    adrp x8, .LCPI18_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI18_1]
+; CHECK-NEXT:    adrp x8, .LCPI18_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI18_2]
+; CHECK-NEXT:    adrp x8, .LCPI18_3
+; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
+; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI18_3]
+; CHECK-NEXT:    neg v2.4s, v2.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mls v0.4s, v3.4s, v4.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %urem = urem <4 x i32> %X, <i32 5, i32 4294967295, i32 1, i32 100>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
+;------------------------------------------------------------------------------;
+
+; One power-of-two divisor divisor and one divisor in odd divisor
+define <4 x i32> @test_urem_odd_poweroftwo_and_one(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_odd_poweroftwo_and_one:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI19_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI19_0]
+; CHECK-NEXT:    adrp x8, .LCPI19_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI19_1]
+; CHECK-NEXT:    adrp x8, .LCPI19_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI19_2]
+; CHECK-NEXT:    adrp x8, .LCPI19_3
+; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
+; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI19_3]
+; CHECK-NEXT:    neg v2.4s, v2.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mls v0.4s, v3.4s, v4.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %urem = urem <4 x i32> %X, <i32 5, i32 16, i32 1, i32 5>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
+; One power-of-two divisor divisor and one divisor in even divisor
+define <4 x i32> @test_urem_even_poweroftwo_and_one(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_even_poweroftwo_and_one:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI20_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI20_0]
+; CHECK-NEXT:    adrp x8, .LCPI20_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI20_1]
+; CHECK-NEXT:    adrp x8, .LCPI20_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI20_2]
+; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    adrp x8, .LCPI20_3
+; CHECK-NEXT:    ushl v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    umull2 v4.2d, v1.4s, v2.4s
+; CHECK-NEXT:    umull v1.2d, v1.2s, v2.2s
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI20_3]
+; CHECK-NEXT:    adrp x8, .LCPI20_4
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI20_4]
+; CHECK-NEXT:    neg v3.4s, v3.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mls v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %urem = urem <4 x i32> %X, <i32 14, i32 16, i32 1, i32 14>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
+; One power-of-two divisor divisor and one divisor in odd+even divisor
+define <4 x i32> @test_urem_odd_even_poweroftwo_and_one(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_odd_even_poweroftwo_and_one:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI21_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI21_0]
+; CHECK-NEXT:    adrp x8, .LCPI21_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI21_1]
+; CHECK-NEXT:    adrp x8, .LCPI21_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI21_2]
+; CHECK-NEXT:    adrp x8, .LCPI21_3
+; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
+; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI21_3]
+; CHECK-NEXT:    neg v2.4s, v2.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mls v0.4s, v3.4s, v4.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %urem = urem <4 x i32> %X, <i32 5, i32 16, i32 1, i32 100>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
+;------------------------------------------------------------------------------;
+
+define <4 x i32> @test_urem_odd_allones_and_poweroftwo_and_one(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_odd_allones_and_poweroftwo_and_one:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI22_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI22_0]
+; CHECK-NEXT:    adrp x8, .LCPI22_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI22_1]
+; CHECK-NEXT:    adrp x8, .LCPI22_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI22_2]
+; CHECK-NEXT:    adrp x8, .LCPI22_3
+; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
+; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI22_3]
+; CHECK-NEXT:    neg v2.4s, v2.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
+; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mls v0.4s, v3.4s, v4.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %urem = urem <4 x i32> %X, <i32 5, i32 4294967295, i32 16, i32 1>
+  %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+
+define <4 x i32> @test_urem_even_allones_and_poweroftwo_and_one(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_even_allones_and_poweroftwo_and_one:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    adrp x8, .LCPI23_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI23_0]
+; CHECK-NEXT:    adrp x8, .LCPI23_1
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI23_1]
+; CHECK-NEXT:    adrp x8, .LCPI23_2
+; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI23_2]
+; CHECK-NEXT:    neg v1.4s, v1.4s
+; CHECK-NEXT:    adrp x8, .LCPI23_3
+; CHECK-NEXT:    ushl v1.4s, v0.4s, v1.4s
+; CHECK-NEXT:    umull2 v4.2d, v1.4s, v2.4s
+; CHECK-NEXT:    umull v1.2d, v1.2s, v2.2s
+; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI23_3]
+; CHECK-NEXT:    adrp x8, .LCPI23_4
+; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
+; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI23_4]
+; CHECK-NEXT:    neg v3.4s, v3.4s
+; CHECK-NEXT:    ushl v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    bsl v2.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mls v0.4s, v2.4s, v4.4s
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    ret
+  %urem = urem <4 x i32> %X, <i32 14, i32 4294967295, i32 16, i32 1>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret

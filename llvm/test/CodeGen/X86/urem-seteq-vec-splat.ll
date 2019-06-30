@@ -348,34 +348,47 @@ define <4 x i32> @test_urem_even_undef1(<4 x i32> %X) nounwind {
 ; Negative tests
 ;------------------------------------------------------------------------------;
 
-; The fold is invalid if divisor is 1.
-define <4 x i32> @test_urem_one(<4 x i32> %X) nounwind {
-; CHECK-SSE-LABEL: test_urem_one:
+; We can lower remainder of division by powers of two much better elsewhere.
+define <4 x i32> @test_urem_pow2(<4 x i32> %X) nounwind {
+; CHECK-SSE-LABEL: test_urem_pow2:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
+; CHECK-SSE-NEXT:    pand {{.*}}(%rip), %xmm0
+; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
+; CHECK-SSE-NEXT:    pcmpeqd %xmm1, %xmm0
+; CHECK-SSE-NEXT:    psrld $31, %xmm0
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: test_urem_one:
+; CHECK-AVX1-LABEL: test_urem_pow2:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
+; CHECK-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX1-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: test_urem_one:
+; CHECK-AVX2-LABEL: test_urem_pow2:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
+; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
+; CHECK-AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-AVX512VL-LABEL: test_urem_one:
+; CHECK-AVX512VL-LABEL: test_urem_pow2:
 ; CHECK-AVX512VL:       # %bb.0:
-; CHECK-AVX512VL-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
+; CHECK-AVX512VL-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vpsrld $31, %xmm0, %xmm0
 ; CHECK-AVX512VL-NEXT:    retq
-  %urem = urem <4 x i32> %X, <i32 1, i32 1, i32 1, i32 1>
+  %urem = urem <4 x i32> %X, <i32 16, i32 16, i32 16, i32 16>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
 
-; We can lower remainder of division by all-ones much better elsewhere.
+; We could lower remainder of division by all-ones much better elsewhere.
 define <4 x i32> @test_urem_allones(<4 x i32> %X) nounwind {
 ; CHECK-SSE2-LABEL: test_urem_allones:
 ; CHECK-SSE2:       # %bb.0:
@@ -430,42 +443,44 @@ define <4 x i32> @test_urem_allones(<4 x i32> %X) nounwind {
   ret <4 x i32> %ret
 }
 
-; We can lower remainder of division by powers of two much better elsewhere.
-define <4 x i32> @test_urem_pow2(<4 x i32> %X) nounwind {
-; CHECK-SSE-LABEL: test_urem_pow2:
+; If all divisors are ones, this is constant-folded.
+define <4 x i32> @test_urem_one_eq(<4 x i32> %X) nounwind {
+; CHECK-SSE-LABEL: test_urem_one_eq:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    pand {{.*}}(%rip), %xmm0
-; CHECK-SSE-NEXT:    pxor %xmm1, %xmm1
-; CHECK-SSE-NEXT:    pcmpeqd %xmm1, %xmm0
-; CHECK-SSE-NEXT:    psrld $31, %xmm0
+; CHECK-SSE-NEXT:    movaps {{.*#+}} xmm0 = [1,1,1,1]
 ; CHECK-SSE-NEXT:    retq
 ;
-; CHECK-AVX1-LABEL: test_urem_pow2:
+; CHECK-AVX1-LABEL: test_urem_one_eq:
 ; CHECK-AVX1:       # %bb.0:
-; CHECK-AVX1-NEXT:    vpand {{.*}}(%rip), %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-AVX1-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; CHECK-AVX1-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [1,1,1,1]
 ; CHECK-AVX1-NEXT:    retq
 ;
-; CHECK-AVX2-LABEL: test_urem_pow2:
+; CHECK-AVX2-LABEL: test_urem_one_eq:
 ; CHECK-AVX2:       # %bb.0:
-; CHECK-AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [15,15,15,15]
-; CHECK-AVX2-NEXT:    vpand %xmm1, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-AVX2-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; CHECK-AVX2-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
 ; CHECK-AVX2-NEXT:    retq
 ;
-; CHECK-AVX512VL-LABEL: test_urem_pow2:
+; CHECK-AVX512VL-LABEL: test_urem_one_eq:
 ; CHECK-AVX512VL:       # %bb.0:
-; CHECK-AVX512VL-NEXT:    vpandd {{.*}}(%rip){1to4}, %xmm0, %xmm0
-; CHECK-AVX512VL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; CHECK-AVX512VL-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
-; CHECK-AVX512VL-NEXT:    vpsrld $31, %xmm0, %xmm0
+; CHECK-AVX512VL-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1,1,1,1]
 ; CHECK-AVX512VL-NEXT:    retq
-  %urem = urem <4 x i32> %X, <i32 16, i32 16, i32 16, i32 16>
+  %urem = urem <4 x i32> %X, <i32 1, i32 1, i32 1, i32 1>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+define <4 x i32> @test_urem_one_ne(<4 x i32> %X) nounwind {
+; CHECK-SSE-LABEL: test_urem_one_ne:
+; CHECK-SSE:       # %bb.0:
+; CHECK-SSE-NEXT:    xorps %xmm0, %xmm0
+; CHECK-SSE-NEXT:    retq
+;
+; CHECK-AVX-LABEL: test_urem_one_ne:
+; CHECK-AVX:       # %bb.0:
+; CHECK-AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-AVX-NEXT:    retq
+  %urem = urem <4 x i32> %X, <i32 1, i32 1, i32 1, i32 1>
+  %cmp = icmp ne <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }

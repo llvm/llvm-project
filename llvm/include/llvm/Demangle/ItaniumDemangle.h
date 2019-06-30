@@ -3624,6 +3624,10 @@ Node *AbstractManglingParser<Derived, Alloc>::parseType() {
     case 's':
       First += 2;
       return make<NameType>("char16_t");
+    //                ::= Du   # char8_t (C++2a, not yet in the Itanium spec)
+    case 'u':
+      First += 2;
+      return make<NameType>("char8_t");
     //                ::= Da   # auto (in dependent new-expressions)
     case 'a':
       First += 2;

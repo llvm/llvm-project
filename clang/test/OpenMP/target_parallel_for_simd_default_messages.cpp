@@ -29,9 +29,9 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i)  // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
     foo();
 
-#pragma omp parallel default(none)
+#pragma omp parallel default(none) // expected-note 2 {{explicit data sharing attribute requested here}}
 #pragma omp target parallel for simd default(shared)
-  for (i = 0; i < argc; ++i)
+  for (i = 0; i < argc; ++i) // expected-error {{variable 'i' must have explicitly specified data sharing attributes}} expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
     foo();
 
   return 0;

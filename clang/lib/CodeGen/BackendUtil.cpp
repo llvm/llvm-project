@@ -60,7 +60,6 @@
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 #include "llvm/Transforms/Instrumentation/InstrProfiling.h"
 #include "llvm/Transforms/Instrumentation/MemorySanitizer.h"
-#include "llvm/Transforms/Instrumentation/PGOInstrumentation.h"
 #include "llvm/Transforms/Instrumentation/ThreadSanitizer.h"
 #include "llvm/Transforms/ObjCARC.h"
 #include "llvm/Transforms/Scalar.h"
@@ -1222,11 +1221,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
 
     if (CodeGenOpts.OptimizationLevel == 0)
       addSanitizersAtO0(MPM, TargetTriple, LangOpts, CodeGenOpts);
-
-    if (CodeGenOpts.hasProfileIRInstr()) {
-      // This file is stored as the ProfileFile.
-      MPM.addPass(PGOInstrumentationGenCreateVar(PGOOpt->ProfileFile));
-    }
   }
 
   // FIXME: We still use the legacy pass manager to do code generation. We

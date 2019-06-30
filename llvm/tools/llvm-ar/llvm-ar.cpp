@@ -78,6 +78,7 @@ OPTIONS:
   --plugin=<string>     - Ignored for compatibility
   --help                - Display available options
   --version             - Display the version of this program
+  @<file>               - read options from <file>
 
 OPERATIONS:
   d - delete [files] from the archive

@@ -528,10 +528,13 @@ static void LongJmp(ThreadState *thr, uptr *env) {
   uptr mangled_sp = env[6];
 # endif
 #endif
+  uptr sp = UnmangleLongJmpSp(mangled_sp);
   // Find the saved buf by mangled_sp.
   for (uptr i = 0; i < thr->jmp_bufs.Size(); i++) {
     JmpBuf *buf = &thr->jmp_bufs[i];
     if (buf->mangled_sp == mangled_sp) {
+      CHECK_EQ(buf->sp, sp);
+      // TODO(yln): Lookup via sp, remove mangled_sp from struct.
       CHECK_GE(thr->shadow_stack_pos, buf->shadow_stack_pos);
       // Unwind the stack.
       while (thr->shadow_stack_pos > buf->shadow_stack_pos)
