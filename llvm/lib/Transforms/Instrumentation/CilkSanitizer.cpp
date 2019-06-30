@@ -196,7 +196,8 @@ struct CilkSanitizerImpl : public CSIImpl {
                     function_ref<TaskInfo &(Function &)> GetTaskInfo,
                     function_ref<LoopInfo &(Function &)> GetLoopInfo,
                     function_ref<DependenceInfo &(Function &)> GetDepInfo,
-                    const TargetLibraryInfo *TLI, bool JitMode = false)
+                    const TargetLibraryInfo *TLI, bool JitMode = false,
+                    bool CallsMayThrow = !AssumeNoExceptions)
       : CSIImpl(M, CG, GetDomTree, GetTaskInfo, TLI),
         GetLoopInfo(GetLoopInfo), GetDepInfo(GetDepInfo) {
     // Even though we're doing our own instrumentation, we want the CSI setup
@@ -211,6 +212,7 @@ struct CilkSanitizerImpl : public CSIImpl {
     Options.InstrumentMemIntrinsics = false;
     Options.InstrumentTapir = false;
     Options.jitMode = JitMode;
+    Options.CallsMayThrow = CallsMayThrow;
   }
   bool run();
 
@@ -330,17 +332,17 @@ private:
 /// CilkSanitizer: instrument the code in module to find races.
 struct CilkSanitizerLegacyPass : public ModulePass {
   static char ID;  // Pass identification, replacement for typeid.
-  CilkSanitizerLegacyPass(bool JitMode = false)
-      : ModulePass(ID), JitMode(JitMode) {
+  CilkSanitizerLegacyPass(bool JitMode = false,
+                          bool CallsMayThrow = !AssumeNoExceptions)
+      : ModulePass(ID), JitMode(JitMode), CallsMayThrow(CallsMayThrow) {
     initializeCilkSanitizerLegacyPassPass(*PassRegistry::getPassRegistry());
   }
-  StringRef getPassName() const override {
-    return "CilkSanitizer";
-  }
+  StringRef getPassName() const override { return "CilkSanitizer"; }
   void getAnalysisUsage(AnalysisUsage &AU) const override;
   bool runOnModule(Module &M) override;
 
   bool JitMode = false;
+  bool CallsMayThrow = true;
 };
 } // namespace
 
@@ -375,8 +377,9 @@ void CilkSanitizerLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<BasicAAWrapperPass>();
 }
 
-ModulePass *llvm::createCilkSanitizerLegacyPass(bool JitMode) {
-  return new CilkSanitizerLegacyPass(JitMode);
+ModulePass *llvm::createCilkSanitizerLegacyPass(bool JitMode,
+                                                bool CallsMayThrow) {
+  return new CilkSanitizerLegacyPass(JitMode, CallsMayThrow);
 }
 
 uint64_t ObjectTable::add(Instruction &I, Value *Obj) {
@@ -1738,7 +1741,7 @@ bool CilkSanitizerImpl::prepareToInstrumentFunction(Function &F) {
   if (F.empty() || shouldNotInstrumentFunction(F))
     return false;
 
-  if (!AssumeNoExceptions)
+  if (Options.CallsMayThrow)
     setupCalls(F);
   setupBlocks(F);
 
@@ -2734,7 +2737,7 @@ bool CilkSanitizerLegacyPass::runOnModule(Module &M) {
   };
 
   return CilkSanitizerImpl(M, CG, GetDomTree, GetTaskInfo, GetLoopInfo,
-                           GetDepInfo, TLI, JitMode).run();
+                           GetDepInfo, TLI, JitMode, CallsMayThrow).run();
 }
 
 PreservedAnalyses CilkSanitizerPass::run(Module &M, ModuleAnalysisManager &AM) {

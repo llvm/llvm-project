@@ -113,6 +113,11 @@ static cl::opt<InstrumentationConfigMode> ClConfigurationMode(
                           "Use configuration file as a blacklist")),
     cl::desc("Specifies how to interpret the configuration file"), cl::Hidden);
 
+static cl::opt<bool>
+    AssumeNoExceptions(
+        "csi-assume-no-exceptions", cl::init(false), cl::Hidden,
+        cl::desc("Assume that ordinary calls cannot throw exceptions."));
+
 static size_t numPassRuns = 0;
 bool IsFirstRun() { return numPassRuns == 0; }
 
@@ -128,6 +133,7 @@ static CSIOptions OverrideFromCL(CSIOptions Options) {
   Options.InstrumentTapir = ClInstrumentTapir;
   Options.InstrumentAllocas = ClInstrumentAllocas;
   Options.InstrumentAllocFns = ClInstrumentAllocFns;
+  Options.CallsMayThrow = !AssumeNoExceptions;
   return Options;
 }
 
@@ -1967,7 +1973,8 @@ void CSIImpl::instrumentFunction(Function &F) {
   if (F.empty() || shouldNotInstrumentFunction(F))
     return;
 
-  setupCalls(F);
+  if (Options.CallsMayThrow)
+    setupCalls(F);
 
   setupBlocks(F, TLI);
 
