@@ -499,8 +499,9 @@ class raw_ostream;
     /// Move iterator to the next IdxMBBPair where the SlotIndex is greater or
     /// equal to \p To.
     MBBIndexIterator advanceMBBIndex(MBBIndexIterator I, SlotIndex To) const {
-      return llvm::bsearch(I, idx2MBBMap.end(),
-                           [=](const IdxMBBPair &IM) { return To <= IM.first; });
+      return std::partition_point(
+          I, idx2MBBMap.end(),
+          [=](const IdxMBBPair &IM) { return IM.first < To; });
     }
 
     /// Get an iterator pointing to the IdxMBBPair with the biggest SlotIndex
