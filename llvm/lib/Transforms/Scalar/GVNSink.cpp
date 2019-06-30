@@ -441,6 +441,7 @@ public:
       break;
     case Instruction::Call:
     case Instruction::Invoke:
+    case Instruction::FNeg:
     case Instruction::Add:
     case Instruction::FAdd:
     case Instruction::Sub:

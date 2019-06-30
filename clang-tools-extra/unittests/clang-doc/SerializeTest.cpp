@@ -131,6 +131,7 @@ TEST(SerializeTest, emitAnonymousNamespaceInfo) {
 
   NamespaceInfo *A = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedA(EmptySID);
+  ExpectedA.Name = "@nonymous_namespace";
   CheckNamespaceInfo(&ExpectedA, A);
 }
 

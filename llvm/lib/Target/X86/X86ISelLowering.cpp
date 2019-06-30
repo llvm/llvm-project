@@ -32047,15 +32047,15 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
 
     SDValue Src1 = V1, Src2 = V2;
     unsigned Offset1 = 0, Offset2 = 0;
-    if (V1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-        isa<ConstantSDNode>(V1.getOperand(1))) {
-      Src1 = V1.getOperand(0);
-      Offset1 = V1.getConstantOperandVal(1);
+    while (Src1.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+           isa<ConstantSDNode>(Src1.getOperand(1))) {
+      Offset1 += Src1.getConstantOperandVal(1);
+      Src1 = Src1.getOperand(0);
     }
-    if (V2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-        isa<ConstantSDNode>(V2.getOperand(1))) {
-      Src2 = V2.getOperand(0);
-      Offset2 = V2.getConstantOperandVal(1);
+    while (Src2.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+           isa<ConstantSDNode>(Src2.getOperand(1))) {
+      Offset2 += Src2.getConstantOperandVal(1);
+      Src2 = Src2.getOperand(0);
     }
     if (Offset1 == 0 && Offset2 == 0)
       return false;

@@ -259,6 +259,10 @@ void InitializePlatform() {
   }
 }
 
+uptr UnmangleLongJmpSp(uptr mangled_sp) {
+  return mangled_sp ^ __tsan_darwin_setjmp_xor_key;
+}
+
 #if !SANITIZER_GO
 void ImitateTlsWrite(ThreadState *thr, uptr tls_addr, uptr tls_size) {
   // The pointer to the ThreadState object is stored in the shadow memory

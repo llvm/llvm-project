@@ -810,9 +810,9 @@ void decodeMsg(unsigned Val,
   StreamId = (Val & STREAM_ID_MASK_) >> STREAM_ID_SHIFT_;
 }
 
-int64_t encodeMsg(int64_t MsgId,
-                  int64_t OpId,
-                  int64_t StreamId) {
+uint64_t encodeMsg(uint64_t MsgId,
+                   uint64_t OpId,
+                   uint64_t StreamId) {
   return (MsgId << ID_SHIFT_) |
          (OpId << OP_SHIFT_) |
          (StreamId << STREAM_ID_SHIFT_);

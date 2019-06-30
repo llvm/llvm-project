@@ -1,8 +1,9 @@
 ; RUN: opt -S < %s -gvn-sink | FileCheck %s
 
 ; CHECK-LABEL: sink
-; CHECK: fneg
+; CHECK-NOT: fneg
 ; CHECK: = phi
+; CHECK: fneg
 define float @sink(float %a, float %b, i1 %cmp) {
 entry:
   br i1 %cmp, label %if.then, label %if.else

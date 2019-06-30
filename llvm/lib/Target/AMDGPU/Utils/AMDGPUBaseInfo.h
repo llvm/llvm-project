@@ -483,9 +483,9 @@ void decodeMsg(unsigned Val,
                uint16_t &StreamId);
 
 LLVM_READNONE
-int64_t encodeMsg(int64_t MsgId,
-                  int64_t OpId,
-                  int64_t StreamId);
+uint64_t encodeMsg(uint64_t MsgId,
+                   uint64_t OpId,
+                   uint64_t StreamId);
 
 } // namespace SendMsg
 

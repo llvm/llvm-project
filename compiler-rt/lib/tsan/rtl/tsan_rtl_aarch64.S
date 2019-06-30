@@ -3,14 +3,6 @@
 
 #include "sanitizer_common/sanitizer_asm.h"
 
-#if !defined(__APPLE__)
-.section .bss
-.type	__tsan_pointer_chk_guard, %object
-ASM_SIZE(ASM_SYMBOL_INTERCEPTOR(__tsan_pointer_chk_guard))
-__tsan_pointer_chk_guard:
-.zero	8
-#endif
-
 #if defined(__APPLE__)
 .align  2
 

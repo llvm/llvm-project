@@ -100,7 +100,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 
 #pragma omp target
-#pragma omp teams distribute parallel for simd firstprivate (a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}}
+#pragma omp teams distribute parallel for simd firstprivate (a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}} expected-error {{incomplete type 'S1' where a complete type is required}}
   for (i = 0; i < argc; ++i) foo();
 
 #pragma omp target

@@ -115,13 +115,6 @@ bool GDBRemoteCommunicationClient::HandshakeWithServer(Status *error_ptr) {
   // Start the read thread after we send the handshake ack since if we fail to
   // send the handshake ack, there is no reason to continue...
   if (SendAck()) {
-    // Wait for any responses that might have been queued up in the remote
-    // GDB server and flush them all
-    StringExtractorGDBRemote response;
-    PacketResult packet_result = PacketResult::Success;
-    while (packet_result == PacketResult::Success)
-      packet_result = ReadPacket(response, milliseconds(10), false);
-
     // The return value from QueryNoAckModeSupported() is true if the packet
     // was sent and _any_ response (including UNIMPLEMENTED) was received), or
     // false if no response was received. This quickly tells us if we have a

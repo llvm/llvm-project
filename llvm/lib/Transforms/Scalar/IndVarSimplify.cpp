@@ -2353,21 +2353,16 @@ static Value *genLoopLimit(PHINode *IndVar, BasicBlock *ExitingBB,
     // were generated on top of case #2, which is not expected.
 
     assert(AR->getStepRecurrence(*SE)->isOne() && "only handles unit stride");
-    const SCEV *IVLimit = nullptr;
     // For unit stride, IVCount = Start + BECount with 2's complement overflow.
-    // For non-zero Start, compute IVCount here.
-    if (AR->getStart()->isZero())
-      IVLimit = IVCount;
-    else {
-      const SCEV *IVInit = AR->getStart();
+    const SCEV *IVInit = AR->getStart();
 
-      // For integer IVs, truncate the IV before computing IVInit + BECount.
-      if (SE->getTypeSizeInBits(IVInit->getType())
-          > SE->getTypeSizeInBits(IVCount->getType()))
-        IVInit = SE->getTruncateExpr(IVInit, IVCount->getType());
+    // For integer IVs, truncate the IV before computing IVInit + BECount.
+    if (SE->getTypeSizeInBits(IVInit->getType())
+        > SE->getTypeSizeInBits(IVCount->getType()))
+      IVInit = SE->getTruncateExpr(IVInit, IVCount->getType());
 
-      IVLimit = SE->getAddExpr(IVInit, IVCount);
-    }
+    const SCEV *IVLimit = SE->getAddExpr(IVInit, IVCount);
+    
     // Expand the code for the iteration count.
     BranchInst *BI = cast<BranchInst>(ExitingBB->getTerminator());
     IRBuilder<> Builder(BI);

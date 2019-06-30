@@ -104,6 +104,14 @@ ASM_FUNCTION_AARCH64_DARWIN_RE = re.compile(
      r'^[ \t]*;[ \t]--[ \t]End[ \t]function',
      flags=(re.M | re.S))
 
+ASM_FUNCTION_ARM_DARWIN_RE = re.compile(
+     r'^[ \t]*\.globl[ \t]*_(?P<func>[^ \t])[ \t]*@[ \t]--[ \t]Begin[ \t]function[ \t](?P=func)'
+     r'(?P<directives>.*?)'
+     r'^_(?P=func):\n[ \t]*'
+     r'(?P<body>.*?)'
+     r'^[ \t]*@[ \t]--[ \t]End[ \t]function',
+     flags=(re.M | re.S ))
+
 ASM_FUNCTION_ARM_MACHO_RE = re.compile(
      r'^_(?P<func>[^:]+):[ \t]*\n'
      r'([ \t]*.cfi_startproc\n[ \t]*)?'
@@ -301,6 +309,7 @@ def build_function_body_dictionary_for_triple(args, raw_tool_output, triple, pre
       'arm64': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_RE),
       'arm64-apple-ios': (scrub_asm_arm_eabi, ASM_FUNCTION_AARCH64_DARWIN_RE),
       'armv7-apple-ios' : (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_IOS_RE),
+      'armv7-apple-darwin': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_DARWIN_RE),
       'thumb': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_RE),
       'thumb-macho': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),
       'thumbv5-macho': (scrub_asm_arm_eabi, ASM_FUNCTION_ARM_MACHO_RE),

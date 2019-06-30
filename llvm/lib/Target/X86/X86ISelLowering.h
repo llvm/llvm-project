@@ -105,8 +105,7 @@ namespace llvm {
 
       /// X86 conditional moves. Operand 0 and operand 1 are the two values
       /// to select from. Operand 2 is the condition code, and operand 3 is the
-      /// flag operand produced by a CMP or TEST instruction. It also writes a
-      /// flag result.
+      /// flag operand produced by a CMP or TEST instruction.
       CMOV,
 
       /// X86 conditional branches. Operand 0 is the chain operand, operand 1
