@@ -2371,7 +2371,8 @@ Function *DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
         func_name.SetValue(ConstString(mangled), true);
       else if ((die.GetParent().Tag() == DW_TAG_compile_unit ||
                 die.GetParent().Tag() == DW_TAG_partial_unit) &&
-               Language::LanguageIsCPlusPlus(die.GetLanguage()) && name &&
+               Language::LanguageIsCPlusPlus(die.GetLanguage()) &&
+               !Language::LanguageIsObjC(die.GetLanguage()) && name &&
                strcmp(name, "main") != 0) {
         // If the mangled name is not present in the DWARF, generate the
         // demangled name using the decl context. We skip if the function is

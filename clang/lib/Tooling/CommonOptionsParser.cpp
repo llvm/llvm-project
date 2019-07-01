@@ -39,7 +39,7 @@ const char *const CommonOptionsParser::HelpMessage =
     "\tCMake option to get this output). When no build path is specified,\n"
     "\ta search for compile_commands.json will be attempted through all\n"
     "\tparent paths of the first input file . See:\n"
-    "\thttp://clang.llvm.org/docs/HowToSetupToolingForLLVM.html for an\n"
+    "\thttps://clang.llvm.org/docs/HowToSetupToolingForLLVM.html for an\n"
     "\texample of setting up Clang Tooling on a source tree.\n"
     "\n"
     "<source0> ... specify the paths of source files. These paths are\n"

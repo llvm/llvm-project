@@ -113,6 +113,7 @@ if( NOT CLANG_BUILT_STANDALONE )
     llvm-nm
     llvm-objdump
     llvm-profdata
+    llvm-readelf
     llvm-readobj
     llvm-symbolizer
     opt
