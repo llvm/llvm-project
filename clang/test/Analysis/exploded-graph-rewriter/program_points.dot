@@ -41,6 +41,14 @@ Node0x1 [shape=record,label=
 // CHECK-SAME:     </td>
 // CHECK-SAME:     <td>x</td>
 // CHECK-SAME:   </tr>
+// CHECK-SAME:   <tr>
+// CHECK-SAME:     <td width="0">
+// CHECK-SAME:     </td>
+// CHECK-SAME:     <td colspan="2" align="left">
+// CHECK-SAME:       <b>Tag: </b>
+// CHECK-SAME:       <font color="crimson">ExprEngine : Clean Node</font>
+// CHECK-SAME:     </td>
+// CHECK-SAME:   </tr>
 // CHECK-SAME: </table>
 Node0x2 [shape=record,label=
  "{
@@ -56,7 +64,7 @@ Node0x2 [shape=record,label=
           "line": 4,
           "column": 5
         },
-        "tag": null
+        "tag": "ExprEngine : Clean Node"
       }
     ]}
 \l}"];

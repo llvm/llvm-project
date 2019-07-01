@@ -387,6 +387,12 @@ class DotDumpVisitor(object):
                        '<font color="%s">%s</font></td></tr>'
                        % (color, p.kind))
 
+        if p.tag is not None:
+            self._dump('<tr><td width="0"></td>'
+                       '<td colspan="2" align="left">'
+                       '<b>Tag: </b> <font color="crimson">'
+                       '%s</font></td></tr>' % p.tag)
+
     def visit_environment(self, e, prev_e=None):
         self._dump('<table border="0">')
 
