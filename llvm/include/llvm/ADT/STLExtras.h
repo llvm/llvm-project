@@ -1322,44 +1322,12 @@ void stable_sort(R &&Range, Compare C) {
   std::stable_sort(adl_begin(Range), adl_end(Range), C);
 }
 
-/// Binary search for the first index where a predicate is true.
-/// Returns the first I in [Lo, Hi) where C(I) is true, or Hi if it never is.
-/// Requires that C is always false below some limit, and always true above it.
-///
-/// Example:
-///   size_t DawnModernEra = bsearch(1776, 2050, [](size_t Year){
-///     return Presidents.for(Year).twitterHandle() != None;
-///   });
-///
-/// Note the return value differs from std::binary_search!
-template <typename Predicate>
-size_t bsearch(size_t Lo, size_t Hi, Predicate P) {
-  while (Lo != Hi) {
-    assert(Hi > Lo);
-    size_t Mid = Lo + (Hi - Lo) / 2;
-    if (P(Mid))
-      Hi = Mid;
-    else
-      Lo = Mid + 1;
-  }
-  return Hi;
-}
-
-/// Binary search for the first iterator where a predicate is true.
-/// Returns the first I in [Lo, Hi) where C(*I) is true, or Hi if it never is.
-/// Requires that C is always false below some limit, and always true above it.
-template <typename It, typename Predicate,
-          typename Val = decltype(*std::declval<It>())>
-It bsearch(It Lo, It Hi, Predicate P) {
-  return std::lower_bound(Lo, Hi, 0u,
-                          [&](const Val &V, unsigned) { return !P(V); });
-}
-
-/// Binary search for the first iterator in a range where a predicate is true.
-/// Requires that C is always false below some limit, and always true above it.
-template <typename R, typename Predicate>
-auto bsearch(R &&Range, Predicate P) -> decltype(adl_begin(Range)) {
-  return bsearch(adl_begin(Range), adl_end(Range), P);
+/// Binary search for the first iterator in a range where a predicate is false.
+/// Requires that C is always true below some limit, and always false above it.
+template <typename R, typename Predicate,
+          typename Val = decltype(*adl_begin(std::declval<R>()))>
+auto partition_point(R &&Range, Predicate P) -> decltype(adl_begin(Range)) {
+  return std::partition_point(adl_begin(Range), adl_end(Range), P);
 }
 
 /// Wrapper function around std::equal to detect if all elements

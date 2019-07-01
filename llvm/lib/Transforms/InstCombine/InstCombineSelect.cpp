@@ -2030,6 +2030,19 @@ Instruction *InstCombiner::visitSelectInst(SelectInst &SI) {
     }
   }
 
+  // Canonicalize select of FP values where NaN and -0.0 are not valid as
+  // minnum/maxnum intrinsics.
+  if (isa<FPMathOperator>(SI) && SI.hasNoNaNs() && SI.hasNoSignedZeros()) {
+    Value *X, *Y;
+    if (match(&SI, m_OrdFMax(m_Value(X), m_Value(Y))))
+      return replaceInstUsesWith(
+          SI, Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI));
+
+    if (match(&SI, m_OrdFMin(m_Value(X), m_Value(Y))))
+      return replaceInstUsesWith(
+          SI, Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Y, &SI));
+  }
+
   // See if we can fold the select into a phi node if the condition is a select.
   if (auto *PN = dyn_cast<PHINode>(SI.getCondition()))
     // The true/false values have to be live in the PHI predecessor's blocks.
