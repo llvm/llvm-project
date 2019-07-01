@@ -14,12 +14,17 @@
 // clang-format off
 #include <sys/param.h>
 #include <sys/types.h>
+#include <sys/ptrace.h>
 #include <machine/reg.h>
 // clang-format on
 
 #include "Plugins/Process/NetBSD/NativeRegisterContextNetBSD.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+
+#if defined(PT_GETXSTATE) && defined(PT_SETXSTATE)
+#define HAVE_XSTATE
+#endif
 
 namespace lldb_private {
 namespace process_netbsd {
@@ -68,12 +73,15 @@ public:
 
 private:
   // Private member types.
-  enum { GPRegSet, FPRegSet, DBRegSet };
+  enum { GPRegSet, FPRegSet, DBRegSet, XStateRegSet };
 
   // Private member variables.
   struct reg m_gpr_x86_64;
   struct fpreg m_fpr_x86_64;
   struct dbreg m_dbr_x86_64;
+#ifdef HAVE_XSTATE
+  struct xstate m_xstate_x86_64;
+#endif
 
   int GetSetForNativeRegNum(int reg_num) const;
 

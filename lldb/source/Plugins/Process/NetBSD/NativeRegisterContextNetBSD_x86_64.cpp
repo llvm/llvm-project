@@ -22,7 +22,10 @@
 #include <sys/types.h>
 #include <sys/ptrace.h>
 #include <sys/sysctl.h>
+#include <sys/uio.h>
 #include <x86/cpu.h>
+#include <x86/cpu_extended_state.h>
+#include <x86/specialreg.h>
 #include <elf.h>
 #include <err.h>
 #include <stdint.h>
@@ -148,7 +151,7 @@ int NativeRegisterContextNetBSD_x86_64::GetSetForNativeRegNum(
   else if (reg_num <= k_last_fpr_x86_64)
     return FPRegSet;
   else if (reg_num <= k_last_avx_x86_64)
-    return -1; // AVX
+    return XStateRegSet; // AVX
   else if (reg_num <= k_last_mpxr_x86_64)
     return -1; // MPXR
   else if (reg_num <= k_last_mpxc_x86_64)
@@ -167,6 +170,15 @@ Status NativeRegisterContextNetBSD_x86_64::ReadRegisterSet(uint32_t set) {
     return DoRegisterSet(PT_GETFPREGS, &m_fpr_x86_64);
   case DBRegSet:
     return DoRegisterSet(PT_GETDBREGS, &m_dbr_x86_64);
+  case XStateRegSet:
+#ifdef HAVE_XSTATE
+    {
+      struct iovec iov = {&m_xstate_x86_64, sizeof(m_xstate_x86_64)};
+      return DoRegisterSet(PT_GETXSTATE, &iov);
+    }
+#else
+    return Status("XState is not supported by the kernel");
+#endif
   }
   llvm_unreachable("NativeRegisterContextNetBSD_x86_64::ReadRegisterSet");
 }
@@ -179,6 +191,15 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegisterSet(uint32_t set) {
     return DoRegisterSet(PT_SETFPREGS, &m_fpr_x86_64);
   case DBRegSet:
     return DoRegisterSet(PT_SETDBREGS, &m_dbr_x86_64);
+  case XStateRegSet:
+#ifdef HAVE_XSTATE
+    {
+      struct iovec iov = {&m_xstate_x86_64, sizeof(m_xstate_x86_64)};
+      return DoRegisterSet(PT_SETXSTATE, &iov);
+    }
+#else
+    return Status("XState is not supported by the kernel");
+#endif
   }
   llvm_unreachable("NativeRegisterContextNetBSD_x86_64::WriteRegisterSet");
 }
@@ -359,6 +380,39 @@ NativeRegisterContextNetBSD_x86_64::ReadRegister(const RegisterInfo *reg_info,
   case lldb_xmm15_x86_64:
     reg_value.SetBytes(&m_fpr_x86_64.fxstate.fx_xmm[reg - lldb_xmm0_x86_64],
                        reg_info->byte_size, endian::InlHostByteOrder());
+    break;
+  case lldb_ymm0_x86_64:
+  case lldb_ymm1_x86_64:
+  case lldb_ymm2_x86_64:
+  case lldb_ymm3_x86_64:
+  case lldb_ymm4_x86_64:
+  case lldb_ymm5_x86_64:
+  case lldb_ymm6_x86_64:
+  case lldb_ymm7_x86_64:
+  case lldb_ymm8_x86_64:
+  case lldb_ymm9_x86_64:
+  case lldb_ymm10_x86_64:
+  case lldb_ymm11_x86_64:
+  case lldb_ymm12_x86_64:
+  case lldb_ymm13_x86_64:
+  case lldb_ymm14_x86_64:
+  case lldb_ymm15_x86_64:
+#ifdef HAVE_XSTATE
+    if (!(m_xstate_x86_64.xs_rfbm & XCR0_SSE) ||
+        !(m_xstate_x86_64.xs_rfbm & XCR0_YMM_Hi128)) {
+      error.SetErrorStringWithFormat("register \"%s\" not supported by CPU/kernel",
+                                     reg_info->name);
+    } else {
+      uint32_t reg_index = reg - lldb_ymm0_x86_64;
+      YMMReg ymm = XStateToYMM(
+          m_xstate_x86_64.xs_fxsave.fx_xmm[reg_index].xmm_bytes,
+          m_xstate_x86_64.xs_ymm_hi128.xs_ymm[reg_index].ymm_bytes);
+      reg_value.SetBytes(ymm.bytes, reg_info->byte_size,
+                         endian::InlHostByteOrder());
+    }
+#else
+    error.SetErrorString("XState queries not supported by the kernel");
+#endif
     break;
   case lldb_dr0_x86_64:
   case lldb_dr1_x86_64:
@@ -551,6 +605,39 @@ Status NativeRegisterContextNetBSD_x86_64::WriteRegister(
   case lldb_xmm15_x86_64:
     ::memcpy(&m_fpr_x86_64.fxstate.fx_xmm[reg - lldb_xmm0_x86_64],
              reg_value.GetBytes(), reg_value.GetByteSize());
+    break;
+  case lldb_ymm0_x86_64:
+  case lldb_ymm1_x86_64:
+  case lldb_ymm2_x86_64:
+  case lldb_ymm3_x86_64:
+  case lldb_ymm4_x86_64:
+  case lldb_ymm5_x86_64:
+  case lldb_ymm6_x86_64:
+  case lldb_ymm7_x86_64:
+  case lldb_ymm8_x86_64:
+  case lldb_ymm9_x86_64:
+  case lldb_ymm10_x86_64:
+  case lldb_ymm11_x86_64:
+  case lldb_ymm12_x86_64:
+  case lldb_ymm13_x86_64:
+  case lldb_ymm14_x86_64:
+  case lldb_ymm15_x86_64:
+#ifdef HAVE_XSTATE
+    if (!(m_xstate_x86_64.xs_rfbm & XCR0_SSE) ||
+        !(m_xstate_x86_64.xs_rfbm & XCR0_YMM_Hi128)) {
+      error.SetErrorStringWithFormat("register \"%s\" not supported by CPU/kernel",
+                                     reg_info->name);
+    } else {
+      uint32_t reg_index = reg - lldb_ymm0_x86_64;
+      YMMReg ymm;
+      ::memcpy(ymm.bytes, reg_value.GetBytes(), reg_value.GetByteSize());
+      YMMToXState(ymm,
+          m_xstate_x86_64.xs_fxsave.fx_xmm[reg_index].xmm_bytes,
+          m_xstate_x86_64.xs_ymm_hi128.xs_ymm[reg_index].ymm_bytes);
+    }
+#else
+    error.SetErrorString("XState not supported by the kernel");
+#endif
     break;
   case lldb_dr0_x86_64:
   case lldb_dr1_x86_64:
