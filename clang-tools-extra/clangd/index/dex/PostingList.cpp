@@ -50,8 +50,8 @@ public:
       return;
     advanceToChunk(ID);
     // Try to find ID within current chunk.
-    CurrentID = llvm::bsearch(CurrentID, DecompressedChunk.end(),
-                              [&](const DocID D) { return D >= ID; });
+    CurrentID = std::partition_point(CurrentID, DecompressedChunk.end(),
+                                     [&](const DocID D) { return D < ID; });
     normalizeCursor();
   }
 
@@ -103,8 +103,8 @@ private:
     if ((CurrentChunk != Chunks.end() - 1) &&
         ((CurrentChunk + 1)->Head <= ID)) {
       CurrentChunk =
-          llvm::bsearch(CurrentChunk + 1, Chunks.end(),
-                        [&](const Chunk &C) { return C.Head >= ID; });
+          std::partition_point(CurrentChunk + 1, Chunks.end(),
+                               [&](const Chunk &C) { return C.Head < ID; });
       --CurrentChunk;
       DecompressedChunk = CurrentChunk->decompress();
       CurrentID = DecompressedChunk.begin();
