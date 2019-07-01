@@ -8659,6 +8659,7 @@ ASTImporter::getImportDeclErrorIfAny(Decl *FromD) const {
 
 void ASTImporter::setImportDeclError(Decl *From, ImportError Error) {
   auto InsertRes = ImportDeclErrors.insert({From, Error});
+  (void)InsertRes;
   // Either we set the error for the first time, or we already had set one and
   // now we want to set the same error.
   assert(InsertRes.second || InsertRes.first->second.Error == Error.Error);
