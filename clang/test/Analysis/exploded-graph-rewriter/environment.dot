@@ -34,6 +34,7 @@ Node0x1 [shape=record,label=
       "program_state": {
         "store": null,
         "constraints": null,
+        "dynamic_types": null,
         "environment": {
           "pointer": "0x2",
           "items": [

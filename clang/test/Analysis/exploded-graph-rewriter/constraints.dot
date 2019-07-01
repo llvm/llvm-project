@@ -19,6 +19,7 @@ Node0x1 [shape=record,label=
       "program_state": {
         "store": null,
         "environment": null,
+        "dynamic_types": null,
         "constraints": [
           { "symbol": "reg_$0<x>", "range": "{ [0, 0] }" }
         ]

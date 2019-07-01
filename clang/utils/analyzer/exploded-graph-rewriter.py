@@ -27,8 +27,8 @@ def diff_dicts(curr, prev):
 
 # Represents any program state trait that is a dictionary of key-value pairs.
 class GenericMap(object):
-    def __init__(self, generic_map):
-        self.generic_map = generic_map
+    def __init__(self, items):
+        self.generic_map = collections.OrderedDict(items)
 
     def diff(self, prev):
         return diff_dicts(self.generic_map, prev.generic_map)
@@ -218,11 +218,17 @@ class ProgramState(object):
             if json_ps['store'] is not None else None
         self.environment = Environment(json_ps['environment']) \
             if json_ps['environment'] is not None else None
-        self.constraints = GenericMap(collections.OrderedDict([
+        self.constraints = GenericMap([
             (c['symbol'], c['range']) for c in json_ps['constraints']
-        ])) if json_ps['constraints'] is not None else None
+        ]) if json_ps['constraints'] is not None else None
+        self.dynamic_types = GenericMap([
+                (t['region'], '%s%s' % (t['dyn_type'],
+                                        ' (or a sub-class)'
+                                        if t['sub_classable'] else ''))
+                for t in json_ps['dynamic_types']]) \
+            if json_ps['dynamic_types'] is not None else None
+
         # TODO: Objects under construction.
-        # TODO: Dynamic types of objects.
         # TODO: Checker messages.
 
 
@@ -435,8 +441,7 @@ class DotDumpVisitor(object):
         self._dump('</table>')
 
     def visit_environment_in_state(self, s, prev_s=None):
-        self._dump('<tr><td align="left">'
-                   '<b>Environment: </b>')
+        self._dump('<hr /><tr><td align="left"><b>Environment: </b>')
         if s.environment is None:
             self._dump('<i> Nothing!</i>')
         else:
@@ -491,7 +496,7 @@ class DotDumpVisitor(object):
         self._dump('</table>')
 
     def visit_store_in_state(self, s, prev_s=None):
-        self._dump('<tr><td align="left"><b>Store: </b>')
+        self._dump('<hr /><tr><td align="left"><b>Store: </b>')
         if s.store is None:
             self._dump('<i> Nothing!</i>')
         else:
@@ -528,16 +533,19 @@ class DotDumpVisitor(object):
 
         self._dump('</table>')
 
-    def visit_generic_map_in_state(self, selector, s, prev_s=None):
-        self._dump('<tr><td align="left">'
-                   '<b>Ranges: </b>')
+    def visit_generic_map_in_state(self, selector, title, s, prev_s=None):
         m = getattr(s, selector)
+        prev_m = getattr(prev_s, selector) if prev_s is not None else None
+        if m is None and prev_m is None:
+            return
+
+        self._dump('<hr />')
+        self._dump('<tr><td align="left">'
+                   '<b>%s: </b>' % title)
         if m is None:
             self._dump('<i> Nothing!</i>')
         else:
-            prev_m = None
             if prev_s is not None:
-                prev_m = getattr(prev_s, selector)
                 if prev_m is not None:
                     if m.is_different(prev_m):
                         self._dump('</td></tr><tr><td align="left">')
@@ -551,10 +559,11 @@ class DotDumpVisitor(object):
 
     def visit_state(self, s, prev_s):
         self.visit_store_in_state(s, prev_s)
-        self._dump('<hr />')
         self.visit_environment_in_state(s, prev_s)
-        self._dump('<hr />')
-        self.visit_generic_map_in_state('constraints', s, prev_s)
+        self.visit_generic_map_in_state('constraints', 'Ranges',
+                                        s, prev_s)
+        self.visit_generic_map_in_state('dynamic_types', 'Dynamic Types',
+                                        s, prev_s)
 
     def visit_node(self, node):
         self._dump('%s [shape=record,label=<<table border="0">'
@@ -576,7 +585,6 @@ class DotDumpVisitor(object):
         self._dump('</table></td></tr>')
 
         if node.state is not None:
-            self._dump('<hr />')
             prev_s = None
             # Do diffs only when we have a unique predecessor.
             # Don't do diffs on the leaf nodes because they're
