@@ -41,7 +41,6 @@ class WatchpointPythonCommandTestCase(TestBase):
         oslist=["linux"],
         archs=["aarch64"],
         bugnumber="llvm.org/pr27710")
-    @expectedFailureNetBSD
     def test_watchpoint_command(self):
         """Test 'watchpoint command'."""
         self.build(dictionary=self.d)
@@ -112,7 +111,6 @@ class WatchpointPythonCommandTestCase(TestBase):
         oslist=["linux"],
         archs=["aarch64"],
         bugnumber="llvm.org/pr27710")
-    @expectedFailureNetBSD
     def test_continue_in_watchpoint_command(self):
         """Test continue in a watchpoint command."""
         self.build(dictionary=self.d)

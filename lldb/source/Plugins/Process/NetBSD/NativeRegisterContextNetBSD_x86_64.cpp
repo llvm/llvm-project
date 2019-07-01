@@ -764,7 +764,7 @@ Status NativeRegisterContextNetBSD_x86_64::IsWatchpointVacant(uint32_t wp_index,
 
   uint64_t control_bits = reg_value.GetAsUInt64();
 
-  is_vacant = !(control_bits & (1 << (2 * wp_index)));
+  is_vacant = !(control_bits & (1 << (2 * wp_index + 1)));
 
   return error;
 }
@@ -803,7 +803,7 @@ Status NativeRegisterContextNetBSD_x86_64::SetHardwareWatchpointWithIndex(
     return error;
 
   // for watchpoints 0, 1, 2, or 3, respectively, set bits 1, 3, 5, or 7
-  uint64_t enable_bit = 1 << (2 * wp_index);
+  uint64_t enable_bit = 1 << (2 * wp_index + 1);
 
   // set bits 16-17, 20-21, 24-25, or 28-29
   // with 0b01 for write, and 0b11 for read/write
