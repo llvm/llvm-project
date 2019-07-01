@@ -201,6 +201,14 @@ llvm::StringSet<> collectWords(llvm::StringRef Content);
 std::vector<std::string> visibleNamespaces(llvm::StringRef Code,
                                            const format::FormatStyle &Style);
 
+struct DefinedMacro {
+  llvm::StringRef Name;
+  const MacroInfo *Info;
+};
+// Gets the macro at a specified \p Loc.
+llvm::Optional<DefinedMacro> locateMacroAt(SourceLocation Loc,
+                                           Preprocessor &PP);
+
 } // namespace clangd
 } // namespace clang
 #endif

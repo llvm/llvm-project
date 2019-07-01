@@ -129,6 +129,13 @@ TEST(RenameTest, Renameable) {
       )cpp",
        "not a supported kind", HeaderFile},
 
+      {
+          R"cpp(
+         #define MACRO 1
+         int s = MAC^RO;
+       )cpp",
+          "not a supported kind", HeaderFile},
+
       {R"cpp(// foo is declared outside the file.
         void fo^o() {}
       )cpp", "used outside main file", !HeaderFile/*cc file*/},

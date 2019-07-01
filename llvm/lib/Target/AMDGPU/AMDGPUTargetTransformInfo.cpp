@@ -117,8 +117,10 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       // Add a small bonus for each of such "if" statements.
       if (const BranchInst *Br = dyn_cast<BranchInst>(&I)) {
         if (UP.Threshold < MaxBoost && Br->isConditional()) {
-          if (L->isLoopExiting(Br->getSuccessor(0)) ||
-              L->isLoopExiting(Br->getSuccessor(1)))
+          BasicBlock *Succ0 = Br->getSuccessor(0);
+          BasicBlock *Succ1 = Br->getSuccessor(1);
+          if ((L->contains(Succ0) && L->isLoopExiting(Succ0)) ||
+              (L->contains(Succ1) && L->isLoopExiting(Succ1)))
             continue;
           if (dependsOnLocalPhi(L, Br->getCondition())) {
             UP.Threshold += UnrollThresholdIf;

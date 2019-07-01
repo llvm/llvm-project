@@ -125,6 +125,8 @@ class VectorType;
       WIN__CHKSTK,  // Windows' __chkstk call to do stack probing.
       WIN__DBZCHK,  // Windows' divide by zero check
 
+      WLS,          // Low-overhead loops, While Loop Start
+
       VCEQ,         // Vector compare equal.
       VCEQZ,        // Vector compare equal to zero.
       VCGE,         // Vector compare greater than or equal.

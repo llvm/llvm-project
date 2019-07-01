@@ -149,12 +149,30 @@ define float @fmin32_intrinsic(float %x, float %y) {
   ret float %a
 }
 
+; CHECK-LABEL: fminnum32_intrinsic:
+; CHECK: f32.min $push0=, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+declare float @llvm.minnum.f32(float, float)
+define float @fminnum32_intrinsic(float %x, float %y) {
+  %a = call nnan float @llvm.minnum.f32(float %x, float %y)
+  ret float %a
+}
+
 ; CHECK-LABEL: fmax32_intrinsic:
 ; CHECK: f32.max $push0=, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
 ; CHECK-NEXT: return $pop0{{$}}
 declare float @llvm.maximum.f32(float, float)
 define float @fmax32_intrinsic(float %x, float %y) {
   %a = call float @llvm.maximum.f32(float %x, float %y)
+  ret float %a
+}
+
+; CHECK-LABEL: fmaxnum32_intrinsic:
+; CHECK: f32.max $push0=, $pop{{[0-9]+}}, $pop{{[0-9]+}}{{$}}
+; CHECK-NEXT: return $pop0{{$}}
+declare float @llvm.maxnum.f32(float, float)
+define float @fmaxnum32_intrinsic(float %x, float %y) {
+  %a = call nnan float @llvm.maxnum.f32(float %x, float %y)
   ret float %a
 }
 

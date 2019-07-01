@@ -140,7 +140,7 @@ NativeProcessNetBSD::NativeProcessNetBSD(::pid_t pid, int terminal_fd,
                                          NativeDelegate &delegate,
                                          const ArchSpec &arch,
                                          MainLoop &mainloop)
-    : NativeProcessELF(pid, terminal_fd, delegate), m_arch(arch) {
+    : NativeProcessProtocol(pid, terminal_fd, delegate), m_arch(arch) {
   if (m_terminal_fd != -1) {
     Status status = EnsureFDFlags(m_terminal_fd, O_NONBLOCK);
     assert(status.Success());
@@ -238,12 +238,25 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
     SetState(StateType::eStateStopped, true);
   } break;
   case TRAP_DBREG: {
+    // Find the thread.
+    NativeThreadNetBSD* thread = nullptr;
+    for (const auto &t : m_threads) {
+      if (t->GetID() == info.psi_lwpid) {
+        thread = static_cast<NativeThreadNetBSD *>(t.get());
+        break;
+      }
+    }
+    if (!thread) {
+      LLDB_LOG(log,
+               "thread not found in m_threads, pid = {0}, LWP = {1}",
+               GetID(), info.psi_lwpid);
+      break;
+    }
+
     // If a watchpoint was hit, report it
-    uint32_t wp_index;
-    Status error = static_cast<NativeThreadNetBSD &>(*m_threads[info.psi_lwpid])
-                       .GetRegisterContext()
-                       .GetWatchpointHitIndex(
-                           wp_index, (uintptr_t)info.psi_siginfo.si_addr);
+    uint32_t wp_index = LLDB_INVALID_INDEX32;
+    Status error = thread->GetRegisterContext().GetWatchpointHitIndex(
+        wp_index, (uintptr_t)info.psi_siginfo.si_addr);
     if (error.Fail())
       LLDB_LOG(log,
                "received error while checking for watchpoint hits, pid = "
@@ -258,11 +271,9 @@ void NativeProcessNetBSD::MonitorSIGTRAP(lldb::pid_t pid) {
     }
 
     // If a breakpoint was hit, report it
-    uint32_t bp_index;
-    error = static_cast<NativeThreadNetBSD &>(*m_threads[info.psi_lwpid])
-                .GetRegisterContext()
-                .GetHardwareBreakHitIndex(bp_index,
-                                           (uintptr_t)info.psi_siginfo.si_addr);
+    uint32_t bp_index = LLDB_INVALID_INDEX32;
+    error = thread->GetRegisterContext().GetHardwareBreakHitIndex(
+        bp_index, (uintptr_t)info.psi_siginfo.si_addr);
     if (error.Fail())
       LLDB_LOG(log,
                "received error while checking for hardware "

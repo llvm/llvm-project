@@ -1064,27 +1064,24 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       const Register DefReg = I.getOperand(0).getReg();
       const LLT DefTy = MRI.getType(DefReg);
 
-      const TargetRegisterClass *DefRC = nullptr;
-      if (TargetRegisterInfo::isPhysicalRegister(DefReg)) {
-        DefRC = TRI.getRegClass(DefReg);
-      } else {
-        const RegClassOrRegBank &RegClassOrBank =
-            MRI.getRegClassOrRegBank(DefReg);
+      const RegClassOrRegBank &RegClassOrBank =
+        MRI.getRegClassOrRegBank(DefReg);
 
-        DefRC = RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+      const TargetRegisterClass *DefRC
+        = RegClassOrBank.dyn_cast<const TargetRegisterClass *>();
+      if (!DefRC) {
+        if (!DefTy.isValid()) {
+          LLVM_DEBUG(dbgs() << "PHI operand has no type, not a gvreg?\n");
+          return false;
+        }
+        const RegisterBank &RB = *RegClassOrBank.get<const RegisterBank *>();
+        DefRC = getRegClassForTypeOnBank(DefTy, RB, RBI);
         if (!DefRC) {
-          if (!DefTy.isValid()) {
-            LLVM_DEBUG(dbgs() << "PHI operand has no type, not a gvreg?\n");
-            return false;
-          }
-          const RegisterBank &RB = *RegClassOrBank.get<const RegisterBank *>();
-          DefRC = getRegClassForTypeOnBank(DefTy, RB, RBI);
-          if (!DefRC) {
-            LLVM_DEBUG(dbgs() << "PHI operand has unexpected size/bank\n");
-            return false;
-          }
+          LLVM_DEBUG(dbgs() << "PHI operand has unexpected size/bank\n");
+          return false;
         }
       }
+
       I.setDesc(TII.get(TargetOpcode::PHI));
 
       return RBI.constrainGenericRegister(DefReg, *DefRC, MRI);

@@ -17,6 +17,30 @@ about one or more object files.
 If ``input`` is "``-``" or omitted, :program:`llvm-readobj` reads from standard
 input. Otherwise, it will read from the specified ``filenames``.
 
+DIFFERENCES TO LLVM-READELF
+---------------------------
+
+:program:`llvm-readelf` is an alias for the :manpage:`llvm-readobj` tool with a
+slightly different command-line interface and output that is GNU compatible.
+Following is a list of differences between :program:`llvm-readelf` and
+:program:`llvm-readobj`:
+
+- :program:`llvm-readelf` uses `GNU` for the :option:`--elf-output-style` option
+  by default. :program:`llvm-readobj` uses `LLVM`.
+- :program:`llvm-readelf` allows single-letter grouped flags (e.g.
+  ``llvm-readelf -SW`` is the same as  ``llvm-readelf -S -W``).
+  :program:`llvm-readobj` does not allow grouping.
+- :program:`llvm-readelf` provides :option:`-s` as an alias for
+  :option:`--symbols`, for GNU :program:`readelf` compatibility, whereas it is
+  an alias for :option:`--section-headers` in :program:`llvm-readobj`.
+- :program:`llvm-readobj` provides ``-t`` as an alias for :option:`--symbols`.
+  :program:`llvm-readelf` does not.
+- :program:`llvm-readobj` provides ``--sr``, ``--sd``, ``--st`` and ``--dt`` as
+  aliases for :option:`--section-relocations`, :option:`--section-data`,
+  :option:`--section-symbols` and :option:`--dyn-symbols` respectively.
+  :program:`llvm-readelf` does not provide these aliases, to avoid conflicting
+  with grouped flags.
+
 GENERAL AND MULTI-FORMAT OPTIONS
 --------------------------------
 

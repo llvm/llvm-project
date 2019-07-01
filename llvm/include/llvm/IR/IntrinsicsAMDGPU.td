@@ -395,6 +395,7 @@ class AMDGPULDSF32Intrin<string clang_builtin> :
     [IntrArgMemOnly, NoCapture<0>, ImmArg<2>, ImmArg<3>, ImmArg<4>]
 >;
 
+// FIXME: The m0 argument should be moved after the normal arguments
 class AMDGPUDSOrderedIntrinsic : Intrinsic<
   [llvm_i32_ty],
   // M0 = {hi16:address, lo16:waveID}. Allow passing M0 as a pointer, so that

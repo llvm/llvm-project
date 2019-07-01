@@ -14,7 +14,7 @@
 #include "ASTImporterFixtures.h"
 
 #include "clang/AST/ASTImporter.h"
-#include "clang/AST/ASTImporterLookupTable.h"
+#include "clang/AST/ASTImporterSharedState.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Tooling/Tooling.h"
 
@@ -50,28 +50,31 @@ ASTImporterTestBase::TU::TU(StringRef Code, StringRef FileName, ArgVector Args,
   if (!Creator)
     Creator = [](ASTContext &ToContext, FileManager &ToFileManager,
                  ASTContext &FromContext, FileManager &FromFileManager,
-                 bool MinimalImport, ASTImporterLookupTable *LookupTable) {
+                 bool MinimalImport,
+                 const std::shared_ptr<ASTImporterSharedState> &SharedState) {
       return new ASTImporter(ToContext, ToFileManager, FromContext,
-                             FromFileManager, MinimalImport, LookupTable);
+                             FromFileManager, MinimalImport, SharedState);
     };
 }
 
 ASTImporterTestBase::TU::~TU() {}
 
 void ASTImporterTestBase::TU::lazyInitImporter(
-    ASTImporterLookupTable &LookupTable, ASTUnit *ToAST) {
+    const std::shared_ptr<ASTImporterSharedState> &SharedState,
+    ASTUnit *ToAST) {
   assert(ToAST);
   if (!Importer)
     Importer.reset(Creator(ToAST->getASTContext(), ToAST->getFileManager(),
                            Unit->getASTContext(), Unit->getFileManager(), false,
-                           &LookupTable));
+                           SharedState));
   assert(&ToAST->getASTContext() == &Importer->getToContext());
   createVirtualFileIfNeeded(ToAST, FileName, Code);
 }
 
-Decl *ASTImporterTestBase::TU::import(ASTImporterLookupTable &LookupTable,
-                                      ASTUnit *ToAST, Decl *FromDecl) {
-  lazyInitImporter(LookupTable, ToAST);
+Decl *ASTImporterTestBase::TU::import(
+    const std::shared_ptr<ASTImporterSharedState> &SharedState, ASTUnit *ToAST,
+    Decl *FromDecl) {
+  lazyInitImporter(SharedState, ToAST);
   if (auto ImportedOrErr = Importer->Import(FromDecl))
     return *ImportedOrErr;
   else {
@@ -80,9 +83,10 @@ Decl *ASTImporterTestBase::TU::import(ASTImporterLookupTable &LookupTable,
   }
 }
 
-QualType ASTImporterTestBase::TU::import(ASTImporterLookupTable &LookupTable,
-                                         ASTUnit *ToAST, QualType FromType) {
-  lazyInitImporter(LookupTable, ToAST);
+QualType ASTImporterTestBase::TU::import(
+    const std::shared_ptr<ASTImporterSharedState> &SharedState, ASTUnit *ToAST,
+    QualType FromType) {
+  lazyInitImporter(SharedState, ToAST);
   if (auto ImportedOrErr = Importer->Import(FromType))
     return *ImportedOrErr;
   else {
@@ -91,10 +95,10 @@ QualType ASTImporterTestBase::TU::import(ASTImporterLookupTable &LookupTable,
   }
 }
 
-void ASTImporterTestBase::lazyInitLookupTable(TranslationUnitDecl *ToTU) {
+void ASTImporterTestBase::lazyInitSharedState(TranslationUnitDecl *ToTU) {
   assert(ToTU);
-  if (!LookupTablePtr)
-    LookupTablePtr = llvm::make_unique<ASTImporterLookupTable>(*ToTU);
+  if (!SharedStatePtr)
+    SharedStatePtr = std::make_shared<ASTImporterSharedState>(*ToTU);
 }
 
 void ASTImporterTestBase::lazyInitToAST(Language ToLang, StringRef ToSrcCode,
@@ -107,7 +111,7 @@ void ASTImporterTestBase::lazyInitToAST(Language ToLang, StringRef ToSrcCode,
   // Build the AST from an empty file.
   ToAST = tooling::buildASTFromCodeWithArgs(ToCode, ToArgs, FileName);
   ToAST->enableSourceFileDiagnostics();
-  lazyInitLookupTable(ToAST->getASTContext().getTranslationUnitDecl());
+  lazyInitSharedState(ToAST->getASTContext().getTranslationUnitDecl());
 }
 
 ASTImporterTestBase::TU *ASTImporterTestBase::findFromTU(Decl *From) {
@@ -147,7 +151,7 @@ ASTImporterTestBase::getImportedDecl(StringRef FromSrcCode, Language FromLang,
   assert(FoundDecls.size() == 1);
 
   Decl *Imported =
-      FromTU.import(*LookupTablePtr, ToAST.get(), FoundDecls.front());
+      FromTU.import(SharedStatePtr, ToAST.get(), FoundDecls.front());
 
   assert(Imported);
   return std::make_tuple(*FoundDecls.begin(), Imported);
@@ -178,16 +182,17 @@ TranslationUnitDecl *ASTImporterTestBase::getToTuDecl(StringRef ToSrcCode,
 Decl *ASTImporterTestBase::Import(Decl *From, Language ToLang) {
   lazyInitToAST(ToLang, "", OutputFileName);
   TU *FromTU = findFromTU(From);
-  assert(LookupTablePtr);
-  return FromTU->import(*LookupTablePtr, ToAST.get(), From);
+  assert(SharedStatePtr);
+  Decl *To = FromTU->import(SharedStatePtr, ToAST.get(), From);
+  return To;
 }
 
 QualType ASTImporterTestBase::ImportType(QualType FromType, Decl *TUDecl,
                                          Language ToLang) {
   lazyInitToAST(ToLang, "", OutputFileName);
   TU *FromTU = findFromTU(TUDecl);
-  assert(LookupTablePtr);
-  return FromTU->import(*LookupTablePtr, ToAST.get(), FromType);
+  assert(SharedStatePtr);
+  return FromTU->import(SharedStatePtr, ToAST.get(), FromType);
 }
 
 ASTImporterTestBase::~ASTImporterTestBase() {

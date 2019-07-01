@@ -316,10 +316,11 @@ struct RedirectingImporterTest : ASTImporterOptionSpecificTestBase {
   RedirectingImporterTest() {
     Creator = [](ASTContext &ToContext, FileManager &ToFileManager,
                  ASTContext &FromContext, FileManager &FromFileManager,
-                 bool MinimalImport, ASTImporterLookupTable *LookupTable) {
+                 bool MinimalImport,
+                 const std::shared_ptr<ASTImporterSharedState> &SharedState) {
       return new RedirectingImporter(ToContext, ToFileManager, FromContext,
                                      FromFileManager, MinimalImport,
-                                     LookupTable);
+                                     SharedState);
     };
   }
 };
@@ -356,6 +357,106 @@ TEST_P(RedirectingImporterTest, InterceptIndirectImport) {
   unsigned count =
       DeclCounterWithPredicate<CXXRecordDecl>().match(ToTU, Pattern);
   EXPECT_EQ(0U, count);
+}
+
+struct ImportPath : ASTImporterOptionSpecificTestBase {
+  Decl *FromTU;
+  FunctionDecl *D0, *D1, *D2;
+  ImportPath() {
+    FromTU = getTuDecl("void f(); void f(); void f();", Lang_CXX);
+    auto Pattern = functionDecl(hasName("f"));
+    D0 = FirstDeclMatcher<FunctionDecl>().match(FromTU, Pattern);
+    D2 = LastDeclMatcher<FunctionDecl>().match(FromTU, Pattern);
+    D1 = D2->getPreviousDecl();
+  }
+};
+
+TEST_P(ImportPath, Push) {
+  ASTImporter::ImportPathTy path;
+  path.push(D0);
+  EXPECT_FALSE(path.hasCycleAtBack());
+}
+
+TEST_P(ImportPath, SmallCycle) {
+  ASTImporter::ImportPathTy path;
+  path.push(D0);
+  path.push(D0);
+  EXPECT_TRUE(path.hasCycleAtBack());
+  path.pop();
+  EXPECT_FALSE(path.hasCycleAtBack());
+  path.push(D0);
+  EXPECT_TRUE(path.hasCycleAtBack());
+}
+
+TEST_P(ImportPath, GetSmallCycle) {
+  ASTImporter::ImportPathTy path;
+  path.push(D0);
+  path.push(D0);
+  EXPECT_TRUE(path.hasCycleAtBack());
+  std::array<Decl* ,2> Res;
+  int i = 0;
+  for (Decl *Di : path.getCycleAtBack()) {
+    Res[i++] = Di;
+  }
+  ASSERT_EQ(i, 2);
+  EXPECT_EQ(Res[0], D0);
+  EXPECT_EQ(Res[1], D0);
+}
+
+TEST_P(ImportPath, GetCycle) {
+  ASTImporter::ImportPathTy path;
+  path.push(D0);
+  path.push(D1);
+  path.push(D2);
+  path.push(D0);
+  EXPECT_TRUE(path.hasCycleAtBack());
+  std::array<Decl* ,4> Res;
+  int i = 0;
+  for (Decl *Di : path.getCycleAtBack()) {
+    Res[i++] = Di;
+  }
+  ASSERT_EQ(i, 4);
+  EXPECT_EQ(Res[0], D0);
+  EXPECT_EQ(Res[1], D2);
+  EXPECT_EQ(Res[2], D1);
+  EXPECT_EQ(Res[3], D0);
+}
+
+TEST_P(ImportPath, CycleAfterCycle) {
+  ASTImporter::ImportPathTy path;
+  path.push(D0);
+  path.push(D1);
+  path.push(D0);
+  path.push(D1);
+  path.push(D2);
+  path.push(D0);
+  EXPECT_TRUE(path.hasCycleAtBack());
+  std::array<Decl* ,4> Res;
+  int i = 0;
+  for (Decl *Di : path.getCycleAtBack()) {
+    Res[i++] = Di;
+  }
+  ASSERT_EQ(i, 4);
+  EXPECT_EQ(Res[0], D0);
+  EXPECT_EQ(Res[1], D2);
+  EXPECT_EQ(Res[2], D1);
+  EXPECT_EQ(Res[3], D0);
+
+  path.pop();
+  path.pop();
+  path.pop();
+  EXPECT_TRUE(path.hasCycleAtBack());
+  i = 0;
+  for (Decl *Di : path.getCycleAtBack()) {
+    Res[i++] = Di;
+  }
+  ASSERT_EQ(i, 3);
+  EXPECT_EQ(Res[0], D0);
+  EXPECT_EQ(Res[1], D1);
+  EXPECT_EQ(Res[2], D0);
+
+  path.pop();
+  EXPECT_FALSE(path.hasCycleAtBack());
 }
 
 TEST_P(ImportExpr, ImportStringLiteral) {
@@ -2788,7 +2889,7 @@ private:
       CXXMethodDecl *Method =
           FirstDeclMatcher<CXXMethodDecl>().match(ToClass, MethodMatcher);
       ToClass->removeDecl(Method);
-      LookupTablePtr->remove(Method);
+      SharedStatePtr->getLookupTable()->remove(Method);
     }
 
     ASSERT_EQ(DeclCounter<CXXMethodDecl>().match(ToClass, MethodMatcher), 0u);
@@ -4547,12 +4648,6 @@ TEST_P(ASTImporterLookupTableTest, LookupSearchesInTheWholeRedeclChain) {
   EXPECT_EQ(*Res.begin(), A);
 }
 
-INSTANTIATE_TEST_CASE_P(ParameterizedTests, DeclContextTest,
-                        ::testing::Values(ArgVector()), );
-
-INSTANTIATE_TEST_CASE_P(
-    ParameterizedTests, CanonicalRedeclChain,
-    ::testing::Values(ArgVector()),);
 
 // FIXME This test is disabled currently, upcoming patches will make it
 // possible to enable.
@@ -4629,10 +4724,11 @@ struct ErrorHandlingTest : ASTImporterOptionSpecificTestBase {
   ErrorHandlingTest() {
     Creator = [](ASTContext &ToContext, FileManager &ToFileManager,
                  ASTContext &FromContext, FileManager &FromFileManager,
-                 bool MinimalImport, ASTImporterLookupTable *LookupTable) {
+                 bool MinimalImport,
+                 const std::shared_ptr<ASTImporterSharedState> &SharedState) {
       return new ASTImporterWithFakeErrors(ToContext, ToFileManager,
                                            FromContext, FromFileManager,
-                                           MinimalImport, LookupTable);
+                                           MinimalImport, SharedState);
     };
   }
   // In this test we purposely report an error (UnsupportedConstruct) when
@@ -4738,11 +4834,260 @@ TEST_P(ErrorHandlingTest, ErrorHappensAfterNodeIsCreatedAndLinked) {
   EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
 }
 
+// An error should be set for a class if we cannot import one member.
+TEST_P(ErrorHandlingTest, ErrorIsPropagatedFromMemberToClass) {
+  TranslationUnitDecl *FromTU = getTuDecl(
+      std::string(R"(
+      class X {
+        void f() { )") + ErroneousStmt + R"( } // This member has the error
+                                               // during import.
+        void ok();        // The error should not prevent importing this.
+      };                  // An error will be set for X too.
+      )",
+      Lang_CXX);
+  auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("X")));
+  CXXRecordDecl *ImportedX = Import(FromX, Lang_CXX);
+
+  // An error is set for X.
+  EXPECT_FALSE(ImportedX);
+  ASTImporter *Importer = findFromTU(FromX)->Importer.get();
+  Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
+  ASSERT_TRUE(OptErr);
+  EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+
+  // An error is set for f().
+  auto *FromF = FirstDeclMatcher<CXXMethodDecl>().match(
+      FromTU, cxxMethodDecl(hasName("f")));
+  OptErr = Importer->getImportDeclErrorIfAny(FromF);
+  ASSERT_TRUE(OptErr);
+  EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+  // And any subsequent import should fail.
+  CXXMethodDecl *ImportedF = Import(FromF, Lang_CXX);
+  EXPECT_FALSE(ImportedF);
+
+  // There is an error set for the other member too.
+  auto *FromOK = FirstDeclMatcher<CXXMethodDecl>().match(
+      FromTU, cxxMethodDecl(hasName("ok")));
+  OptErr = Importer->getImportDeclErrorIfAny(FromOK);
+  EXPECT_TRUE(OptErr);
+  // Cannot import the other member.
+  CXXMethodDecl *ImportedOK = Import(FromOK, Lang_CXX);
+  EXPECT_FALSE(ImportedOK);
+}
+
+// Check that an error propagates to the dependent AST nodes.
+// In the below code it means that an error in X should propagate to A.
+// And even to F since the containing A is erroneous.
+// And to all AST nodes which we visit during the import process which finally
+// ends up in a failure (in the error() function).
+TEST_P(ErrorHandlingTest, ErrorPropagatesThroughImportCycles) {
+  Decl *FromTU = getTuDecl(
+      std::string(R"(
+      namespace NS {
+        class A {
+          template <int I> class F {};
+          class X {
+            template <int I> friend class F;
+            void error() { )") + ErroneousStmt + R"( }
+          };
+        };
+
+        class B {};
+      } // NS
+      )",
+      Lang_CXX, "input0.cc");
+
+  auto *FromFRD = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("F"), isDefinition()));
+  auto *FromA = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("A"), isDefinition()));
+  auto *FromB = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("B"), isDefinition()));
+  auto *FromNS = FirstDeclMatcher<NamespaceDecl>().match(
+      FromTU, namespaceDecl(hasName("NS")));
+
+  // Start by importing the templated CXXRecordDecl of F.
+  // Import fails for that.
+  EXPECT_FALSE(Import(FromFRD, Lang_CXX));
+  // Import fails for A.
+  EXPECT_FALSE(Import(FromA, Lang_CXX));
+  // But we should be able to import the independent B.
+  EXPECT_TRUE(Import(FromB, Lang_CXX));
+  // And the namespace.
+  EXPECT_TRUE(Import(FromNS, Lang_CXX));
+
+  // An error is set to the templated CXXRecordDecl of F.
+  ASTImporter *Importer = findFromTU(FromFRD)->Importer.get();
+  Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromFRD);
+  EXPECT_TRUE(OptErr);
+
+  // An error is set to A.
+  OptErr = Importer->getImportDeclErrorIfAny(FromA);
+  EXPECT_TRUE(OptErr);
+
+  // There is no error set to B.
+  OptErr = Importer->getImportDeclErrorIfAny(FromB);
+  EXPECT_FALSE(OptErr);
+
+  // There is no error set to NS.
+  OptErr = Importer->getImportDeclErrorIfAny(FromNS);
+  EXPECT_FALSE(OptErr);
+
+  // Check some of those decls whose ancestor is X, they all should have an
+  // error set if we visited them during an import process which finally failed.
+  // These decls are part of a cycle in an ImportPath.
+  // There would not be any error set for these decls if we hadn't follow the
+  // ImportPaths and the cycles.
+  OptErr = Importer->getImportDeclErrorIfAny(
+      FirstDeclMatcher<ClassTemplateDecl>().match(
+          FromTU, classTemplateDecl(hasName("F"))));
+  // An error is set to the 'F' ClassTemplateDecl.
+  EXPECT_TRUE(OptErr);
+  // An error is set to the FriendDecl.
+  OptErr = Importer->getImportDeclErrorIfAny(
+      FirstDeclMatcher<FriendDecl>().match(
+          FromTU, friendDecl()));
+  EXPECT_TRUE(OptErr);
+  // An error is set to the implicit class of A.
+  OptErr =
+      Importer->getImportDeclErrorIfAny(FirstDeclMatcher<CXXRecordDecl>().match(
+          FromTU, cxxRecordDecl(hasName("A"), isImplicit())));
+  EXPECT_TRUE(OptErr);
+  // An error is set to the implicit class of X.
+  OptErr =
+      Importer->getImportDeclErrorIfAny(FirstDeclMatcher<CXXRecordDecl>().match(
+          FromTU, cxxRecordDecl(hasName("X"), isImplicit())));
+  EXPECT_TRUE(OptErr);
+}
+
+TEST_P(ErrorHandlingTest, ErrorIsNotPropagatedFromMemberToNamespace) {
+  TranslationUnitDecl *FromTU = getTuDecl(
+      std::string(R"(
+      namespace X {
+        void f() { )") + ErroneousStmt + R"( } // This member has the error
+                                               // during import.
+        void ok();        // The error should not prevent importing this.
+      };                  // An error will be set for X too.
+      )",
+      Lang_CXX);
+  auto *FromX = FirstDeclMatcher<NamespaceDecl>().match(
+      FromTU, namespaceDecl(hasName("X")));
+  NamespaceDecl *ImportedX = Import(FromX, Lang_CXX);
+
+  // There is no error set for X.
+  EXPECT_TRUE(ImportedX);
+  ASTImporter *Importer = findFromTU(FromX)->Importer.get();
+  Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
+  ASSERT_FALSE(OptErr);
+
+  // An error is set for f().
+  auto *FromF = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("f")));
+  OptErr = Importer->getImportDeclErrorIfAny(FromF);
+  ASSERT_TRUE(OptErr);
+  EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+  // And any subsequent import should fail.
+  FunctionDecl *ImportedF = Import(FromF, Lang_CXX);
+  EXPECT_FALSE(ImportedF);
+
+  // There is no error set for ok().
+  auto *FromOK = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("ok")));
+  OptErr = Importer->getImportDeclErrorIfAny(FromOK);
+  EXPECT_FALSE(OptErr);
+  // And we should be able to import.
+  FunctionDecl *ImportedOK = Import(FromOK, Lang_CXX);
+  EXPECT_TRUE(ImportedOK);
+}
+
+// An error should be set for a class if it had a previous import with an error
+// from another TU.
+TEST_P(ErrorHandlingTest,
+       ImportedDeclWithErrorShouldFailTheImportOfDeclWhichMapToIt) {
+  // We already have a fwd decl.
+  TranslationUnitDecl *ToTU = getToTuDecl(
+      "class X;", Lang_CXX);
+  // Then we import a definition.
+  {
+    TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
+        class X {
+          void f() { )") + ErroneousStmt + R"( }
+          void ok();
+        };
+        )",
+        Lang_CXX);
+    auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+        FromTU, cxxRecordDecl(hasName("X")));
+    CXXRecordDecl *ImportedX = Import(FromX, Lang_CXX);
+
+    // An error is set for X ...
+    EXPECT_FALSE(ImportedX);
+    ASTImporter *Importer = findFromTU(FromX)->Importer.get();
+    Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
+    ASSERT_TRUE(OptErr);
+    EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+  }
+  // ... but the node had been created.
+  auto *ToXDef = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("X"), isDefinition()));
+  // An error is set for "ToXDef" in the shared state.
+  Optional<ImportError> OptErr =
+      SharedStatePtr->getImportDeclErrorIfAny(ToXDef);
+  ASSERT_TRUE(OptErr);
+  EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+
+  auto *ToXFwd = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("X"), unless(isDefinition())));
+  // An error is NOT set for the fwd Decl of X in the shared state.
+  OptErr = SharedStatePtr->getImportDeclErrorIfAny(ToXFwd);
+  ASSERT_FALSE(OptErr);
+
+  // Try to import  X again but from another TU.
+  {
+    TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
+        class X {
+          void f() { )") + ErroneousStmt + R"( }
+          void ok();
+        };
+        )",
+        Lang_CXX, "input1.cc");
+
+    auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+        FromTU, cxxRecordDecl(hasName("X")));
+    CXXRecordDecl *ImportedX = Import(FromX, Lang_CXX);
+
+    // If we did not save the errors for the "to" context then the below checks
+    // would fail, because the lookup finds the fwd Decl of the existing
+    // definition in the "to" context. We can reach the existing definition via
+    // the found fwd Decl. That existing definition is structurally equivalent
+    // (we check only the fields) with this one we want to import, so we return
+    // with the existing definition, which is erroneous (one method is missing).
+
+    // The import should fail.
+    EXPECT_FALSE(ImportedX);
+    ASTImporter *Importer = findFromTU(FromX)->Importer.get();
+    Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
+    // And an error is set for this new X in the "from" ctx.
+    ASSERT_TRUE(OptErr);
+    EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+  }
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ErrorHandlingTest,
                         DefaultTestValuesForRunOptions, );
 
+INSTANTIATE_TEST_CASE_P(ParameterizedTests, DeclContextTest,
+                        ::testing::Values(ArgVector()), );
+
+INSTANTIATE_TEST_CASE_P(ParameterizedTests, CanonicalRedeclChain,
+                        ::testing::Values(ArgVector()), );
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
                         DefaultTestValuesForRunOptions, );
+
+INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportPath,
+                        ::testing::Values(ArgVector()), );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportExpr,
                         DefaultTestValuesForRunOptions, );

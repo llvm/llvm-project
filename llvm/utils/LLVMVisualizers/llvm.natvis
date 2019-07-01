@@ -76,36 +76,27 @@ For later versions of Visual Studio, no setup is required.
     </Expand>
   </Type>
 
+  <!-- PointerIntPair. In addition to the regular view, it is possible to view just the pointer or just the int
+    The same code is duplicated from the regular viewer to improve the performance of the common case -->
   <Type Name="llvm::PointerIntPair&lt;*&gt;">
+    <DisplayString IncludeView="ptr">{($T1)(Value &amp; $T5::PointerBitMask)}</DisplayString>
+    <DisplayString IncludeView="int">{($T3)((Value &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)}</DisplayString>
     <DisplayString>{$T5::IntMask}: {($T1)(Value &amp; $T5::PointerBitMask)} [{($T3)((Value &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)}]</DisplayString>
     <Expand>
       <Item Name="[ptr]">($T1)(Value &amp; $T5::PointerBitMask)</Item>
       <Item Name="[int]">($T3)((Value &gt;&gt; $T5::IntShift) &amp; $T5::IntMask)</Item>
     </Expand>
   </Type>
-  <!-- PointerUnion types - In addition to the regular view, which displays the pointer, there is a "deref" view that
-       displays the pointed to object, which is often needed by other visualizers -->
+  <!-- PointerUnion types -->
   <Type Name="llvm::pointer_union_detail::PointerUnionMembers&lt;*&gt;">
-    <DisplayString Optional="true" IncludeView="deref" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 0">
-      {*($T4)(Val.Value &amp; $T2::InfoTy::PointerBitMask)}
-    </DisplayString>
     <DisplayString Optional="true" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 0">
       {($T4)(Val.Value &amp; $T2::InfoTy::PointerBitMask)}
-    </DisplayString>
-    <DisplayString Optional="true" IncludeView="deref" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 1">
-      {*($T5)(Val.Value &amp; $T2::InfoTy::PointerBitMask)}
     </DisplayString>
     <DisplayString Optional="true" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 1">
       {($T5)(Val.Value &amp; $T2::InfoTy::PointerBitMask)}
     </DisplayString>
-    <DisplayString Optional="true" IncludeView="deref" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 2">
-      {*($T6)(Val.Value &amp; $T2::InfoTy::PointerBitMask)}
-    </DisplayString>
     <DisplayString Optional="true" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 2">
       {($T6)(Val.Value &amp; $T2::InfoTy::PointerBitMask)}
-    </DisplayString>
-    <DisplayString Optional="true" IncludeView="deref" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 3">
-      {*($T7)(Val.Value &amp; $T2::InfoTy::PointerBitMask)}
     </DisplayString>
     <DisplayString Optional="true" Condition="((Val.Value&gt;&gt;$T2::InfoTy::IntShift) &amp; $T2::InfoTy::IntMask) == 3">
       {($T7)(Val.Value &amp; $T2::InfoTy::PointerBitMask)}
