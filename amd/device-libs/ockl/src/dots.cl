@@ -59,11 +59,11 @@ __ockl_sdot2(short2 a, short2 b, int c, bool s)
     if (SWDOT) {
         int p0 = (int)a.s0 * (int)b.s0;
         int p1 = (int)a.s1 * (int)b.s1;
-        int r = (long)c + (long)p0 + (long)p1;
+        long r = (long)c + (long)p0 + (long)p1;
 
         if (s)
             return r < -2147483648L ? -2147483648 :
-                   (r > 2147483647L ? 2147483647 : r);
+                   (r > 2147483647L ? 2147483647 : (int)r);
         else
             return (int)r;
     } else {
