@@ -37,7 +37,7 @@ int main(int, char**) {
     int a1[] = {1, 2, 3, 4};
     int a2[] = {1, 2, 4};
     std::list<int> c(a1, a1 + 4);
-    c.remove(3);
+    assert(c.remove(3) == 1);
     assert(c == std::list<int>(a2, a2 + 3));
   }
   { // LWG issue #526
@@ -53,7 +53,7 @@ int main(int, char**) {
     std::list<S> c;
     for (int *ip = a1; ip < a1 + 8; ++ip)
       c.push_back(S(*ip));
-    c.remove(c.front());
+    assert(c.remove(c.front()) == 3);
     std::list<S>::const_iterator it = c.begin();
     for (int *ip = a2; ip < a2 + 5; ++ip, ++it) {
       assert(it != c.end());
@@ -67,7 +67,7 @@ int main(int, char**) {
     int a1[] = {1, 2, 3, 4};
     int a2[] = {1, 2, 4};
     List c(a1, a1 + 4, Alloc::create());
-    c.remove(3);
+      assert(c.remove(3) == 1);
     assert(c == List(a2, a2 + 3, Alloc::create()));
   }
 #if TEST_STD_VER >= 11
@@ -75,7 +75,7 @@ int main(int, char**) {
     int a1[] = {1, 2, 3, 4};
     int a2[] = {1, 2, 4};
     std::list<int, min_allocator<int>> c(a1, a1 + 4);
-    c.remove(3);
+    assert(c.remove(3) == 1);
     assert((c == std::list<int, min_allocator<int>>(a2, a2 + 3)));
   }
 #endif
