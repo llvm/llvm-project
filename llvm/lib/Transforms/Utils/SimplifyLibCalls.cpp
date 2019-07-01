@@ -1563,40 +1563,30 @@ Value *LibCallSimplifier::optimizeExp2(CallInst *CI, IRBuilder<> &B) {
 }
 
 Value *LibCallSimplifier::optimizeFMinFMax(CallInst *CI, IRBuilder<> &B) {
-  Function *Callee = CI->getCalledFunction();
   // If we can shrink the call to a float function rather than a double
   // function, do that first.
+  Function *Callee = CI->getCalledFunction();
   StringRef Name = Callee->getName();
   if ((Name == "fmin" || Name == "fmax") && hasFloatVersion(Name))
     if (Value *Ret = optimizeBinaryDoubleFP(CI, B))
       return Ret;
 
+  // The LLVM intrinsics minnum/maxnum correspond to fmin/fmax. Canonicalize to
+  // the intrinsics for improved optimization (for example, vectorization).
+  // No-signed-zeros is implied by the definitions of fmax/fmin themselves.
+  // From the C standard draft WG14/N1256:
+  // "Ideally, fmax would be sensitive to the sign of zero, for example
+  // fmax(-0.0, +0.0) would return +0; however, implementation in software
+  // might be impractical."
   IRBuilder<>::FastMathFlagGuard Guard(B);
-  FastMathFlags FMF;
-  if (CI->isFast()) {
-    // If the call is 'fast', then anything we create here will also be 'fast'.
-    FMF.setFast();
-  } else {
-    // At a minimum, no-nans-fp-math must be true.
-    if (!CI->hasNoNaNs())
-      return nullptr;
-    // No-signed-zeros is implied by the definitions of fmax/fmin themselves:
-    // "Ideally, fmax would be sensitive to the sign of zero, for example
-    // fmax(-0. 0, +0. 0) would return +0; however, implementation in software
-    // might be impractical."
-    FMF.setNoSignedZeros();
-    FMF.setNoNaNs();
-  }
+  FastMathFlags FMF = CI->getFastMathFlags();
+  FMF.setNoSignedZeros();
   B.setFastMathFlags(FMF);
 
-  // We have a relaxed floating-point environment. We can ignore NaN-handling
-  // and transform to a compare and select. We do not have to consider errno or
-  // exceptions, because fmin/fmax do not have those.
-  Value *Op0 = CI->getArgOperand(0);
-  Value *Op1 = CI->getArgOperand(1);
-  Value *Cmp = Callee->getName().startswith("fmin") ?
-    B.CreateFCmpOLT(Op0, Op1) : B.CreateFCmpOGT(Op0, Op1);
-  return B.CreateSelect(Cmp, Op0, Op1);
+  Intrinsic::ID IID = Callee->getName().startswith("fmin") ? Intrinsic::minnum
+                                                           : Intrinsic::maxnum;
+  Function *F = Intrinsic::getDeclaration(CI->getModule(), IID, CI->getType());
+  return B.CreateCall(F, { CI->getArgOperand(0), CI->getArgOperand(1) });
 }
 
 Value *LibCallSimplifier::optimizeLog(CallInst *CI, IRBuilder<> &B) {

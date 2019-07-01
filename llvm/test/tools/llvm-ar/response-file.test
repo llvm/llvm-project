@@ -1,9 +1,0 @@
-RUN: touch %t-a.txt %t-b.txt %t-c.txt
-RUN: echo "rcs %t.a %t-a.txt %t-b.txt %t-c.txt" > %t-response
-RUN: rm -f %t.a
-RUN: llvm-ar @%t-response
-RUN: llvm-ar t %t.a | FileCheck %s
-
-CHECK:      a.txt
-CHECK-NEXT: b.txt
-CHECK-NEXT: c.txt

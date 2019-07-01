@@ -42,9 +42,10 @@ define void @test_ptr(i32 %start) {
 ; CHECK-LABEL: @test_ptr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[START:%.*]] to i3
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i3 0, [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = sub i3 -1, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i3 [[TMP1]] to i64
-; CHECK-NEXT:    [[LFTR_LIMIT:%.*]] = getelementptr i8, i8* getelementptr inbounds ([256 x i8], [256 x i8]* @data, i64 0, i64 0), i64 [[TMP2]]
+; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
+; CHECK-NEXT:    [[LFTR_LIMIT:%.*]] = getelementptr i8, i8* getelementptr inbounds ([256 x i8], [256 x i8]* @data, i64 0, i64 0), i64 [[TMP3]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[P:%.*]] = phi i8* [ getelementptr inbounds ([256 x i8], [256 x i8]* @data, i64 0, i64 0), [[ENTRY:%.*]] ], [ [[P_INC:%.*]], [[LOOP]] ]

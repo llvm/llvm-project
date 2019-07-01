@@ -64,6 +64,27 @@ TEST_F(PatternMatchTest, OneUse) {
   EXPECT_FALSE(m_OneUse(m_Value()).match(Leaf));
 }
 
+TEST_F(PatternMatchTest, SpecificIntULT) {
+  Type *IntTy = IRB.getInt32Ty();
+  unsigned BitWidth = IntTy->getScalarSizeInBits();
+
+  Value *Zero = ConstantInt::get(IntTy, 0);
+  Value *One = ConstantInt::get(IntTy, 1);
+  Value *NegOne = ConstantInt::get(IntTy, -1);
+
+  EXPECT_FALSE(m_SpecificInt_ULT(APInt(BitWidth, 0)).match(Zero));
+  EXPECT_FALSE(m_SpecificInt_ULT(APInt(BitWidth, 0)).match(One));
+  EXPECT_FALSE(m_SpecificInt_ULT(APInt(BitWidth, 0)).match(NegOne));
+
+  EXPECT_TRUE(m_SpecificInt_ULT(APInt(BitWidth, 1)).match(Zero));
+  EXPECT_FALSE(m_SpecificInt_ULT(APInt(BitWidth, 1)).match(One));
+  EXPECT_FALSE(m_SpecificInt_ULT(APInt(BitWidth, 1)).match(NegOne));
+
+  EXPECT_TRUE(m_SpecificInt_ULT(APInt(BitWidth, -1)).match(Zero));
+  EXPECT_TRUE(m_SpecificInt_ULT(APInt(BitWidth, -1)).match(One));
+  EXPECT_FALSE(m_SpecificInt_ULT(APInt(BitWidth, -1)).match(NegOne));
+}
+
 TEST_F(PatternMatchTest, CommutativeDeferredValue) {
   Value *X = IRB.getInt32(1);
   Value *Y = IRB.getInt32(2);

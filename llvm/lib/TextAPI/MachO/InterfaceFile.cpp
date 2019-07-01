@@ -14,17 +14,15 @@
 #include <iomanip>
 #include <sstream>
 
-using namespace llvm::MachO;
-
 namespace llvm {
 namespace MachO {
 namespace detail {
 template <typename C>
 typename C::iterator addEntry(C &Container, StringRef InstallName) {
-  auto I = llvm::bsearch(Container, [=](const InterfaceFileRef &O) {
-    return InstallName <= O.getInstallName();
+  auto I = partition_point(Container, [=](const InterfaceFileRef &O) {
+    return O.getInstallName() < InstallName;
   });
-  if ((I != std::end(Container)) && !(InstallName < I->getInstallName()))
+  if (I != Container.end() && I->getInstallName() == InstallName)
     return I;
 
   return Container.emplace(I, InstallName);
@@ -44,10 +42,10 @@ void InterfaceFile::addReexportedLibrary(StringRef InstallName,
 }
 
 void InterfaceFile::addUUID(Architecture Arch, StringRef UUID) {
-  auto I =
-      llvm::bsearch(UUIDs, [=](const std::pair<Architecture, std::string> &O) {
-        return Arch <= O.first;
-      });
+  auto I = partition_point(UUIDs,
+                           [=](const std::pair<Architecture, std::string> &O) {
+                             return O.first < Arch;
+                           });
 
   if (I != UUIDs.end() && Arch == I->first) {
     I->second = UUID;

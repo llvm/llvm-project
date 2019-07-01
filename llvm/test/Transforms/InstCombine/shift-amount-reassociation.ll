@@ -12,10 +12,7 @@
 
 define i32 @t0(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t0(
-; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[X:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], -2
-; CHECK-NEXT:    [[T3:%.*]] = lshr exact i32 [[T1]], [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = lshr i32 [[X:%.*]], 30
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = sub i32 32, %y
@@ -27,10 +24,7 @@ define i32 @t0(i32 %x, i32 %y) {
 
 define <2 x i32> @t1_vec_splat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @t1_vec_splat(
-; CHECK-NEXT:    [[T0:%.*]] = sub <2 x i32> <i32 32, i32 32>, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[X:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[Y]], <i32 -2, i32 -2>
-; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[T1]], [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 30, i32 30>
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
   %t0 = sub <2 x i32> <i32 32, i32 32>, %y
@@ -42,10 +36,7 @@ define <2 x i32> @t1_vec_splat(<2 x i32> %x, <2 x i32> %y) {
 
 define <2 x i32> @t2_vec_nonsplat(<2 x i32> %x, <2 x i32> %y) {
 ; CHECK-LABEL: @t2_vec_nonsplat(
-; CHECK-NEXT:    [[T0:%.*]] = sub <2 x i32> <i32 32, i32 30>, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr <2 x i32> [[X:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add <2 x i32> [[Y]], <i32 -2, i32 0>
-; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[T1]], [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = lshr <2 x i32> [[X:%.*]], <i32 30, i32 30>
 ; CHECK-NEXT:    ret <2 x i32> [[T3]]
 ;
   %t0 = sub <2 x i32> <i32 32, i32 30>, %y
@@ -59,10 +50,7 @@ define <2 x i32> @t2_vec_nonsplat(<2 x i32> %x, <2 x i32> %y) {
 
 define <3 x i32> @t3_vec_nonsplat_undef0(<3 x i32> %x, <3 x i32> %y) {
 ; CHECK-LABEL: @t3_vec_nonsplat_undef0(
-; CHECK-NEXT:    [[T0:%.*]] = sub <3 x i32> <i32 32, i32 undef, i32 32>, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i32> [[X:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[Y]], <i32 -2, i32 -2, i32 -2>
-; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[T1]], [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 30, i32 undef, i32 30>
 ; CHECK-NEXT:    ret <3 x i32> [[T3]]
 ;
   %t0 = sub <3 x i32> <i32 32, i32 undef, i32 32>, %y
@@ -74,10 +62,7 @@ define <3 x i32> @t3_vec_nonsplat_undef0(<3 x i32> %x, <3 x i32> %y) {
 
 define <3 x i32> @t4_vec_nonsplat_undef1(<3 x i32> %x, <3 x i32> %y) {
 ; CHECK-LABEL: @t4_vec_nonsplat_undef1(
-; CHECK-NEXT:    [[T0:%.*]] = sub <3 x i32> <i32 32, i32 32, i32 32>, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i32> [[X:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[Y]], <i32 -2, i32 undef, i32 -2>
-; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[T1]], [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 30, i32 undef, i32 30>
 ; CHECK-NEXT:    ret <3 x i32> [[T3]]
 ;
   %t0 = sub <3 x i32> <i32 32, i32 32, i32 32>, %y
@@ -89,10 +74,7 @@ define <3 x i32> @t4_vec_nonsplat_undef1(<3 x i32> %x, <3 x i32> %y) {
 
 define <3 x i32> @t5_vec_nonsplat_undef1(<3 x i32> %x, <3 x i32> %y) {
 ; CHECK-LABEL: @t5_vec_nonsplat_undef1(
-; CHECK-NEXT:    [[T0:%.*]] = sub <3 x i32> <i32 32, i32 undef, i32 32>, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr <3 x i32> [[X:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add <3 x i32> [[Y]], <i32 -2, i32 undef, i32 -2>
-; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[T1]], [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = lshr <3 x i32> [[X:%.*]], <i32 30, i32 undef, i32 30>
 ; CHECK-NEXT:    ret <3 x i32> [[T3]]
 ;
   %t0 = sub <3 x i32> <i32 32, i32 undef, i32 32>, %y
@@ -105,10 +87,7 @@ define <3 x i32> @t5_vec_nonsplat_undef1(<3 x i32> %x, <3 x i32> %y) {
 ; Some other shift opcodes
 define i32 @t6_shl(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t6_shl(
-; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = shl nuw i32 [[X:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], -2
-; CHECK-NEXT:    [[T3:%.*]] = shl nsw i32 [[T1]], [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[X:%.*]], 30
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = sub i32 32, %y
@@ -119,10 +98,7 @@ define i32 @t6_shl(i32 %x, i32 %y) {
 }
 define i32 @t7_ashr(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t7_ashr(
-; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = ashr exact i32 [[X:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], -2
-; CHECK-NEXT:    [[T3:%.*]] = ashr i32 [[T1]], [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = ashr i32 [[X:%.*]], 30
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = sub i32 32, %y
@@ -135,10 +111,7 @@ define i32 @t7_ashr(i32 %x, i32 %y) {
 ; If the same flag is present on both shifts, it can be kept.
 define i32 @t8_lshr_exact_flag_preservation(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t8_lshr_exact_flag_preservation(
-; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = lshr exact i32 [[X:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], -2
-; CHECK-NEXT:    [[T3:%.*]] = lshr exact i32 [[T1]], [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = lshr exact i32 [[X:%.*]], 30
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = sub i32 32, %y
@@ -149,10 +122,7 @@ define i32 @t8_lshr_exact_flag_preservation(i32 %x, i32 %y) {
 }
 define i32 @t9_ashr_exact_flag_preservation(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t9_ashr_exact_flag_preservation(
-; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = ashr exact i32 [[X:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], -2
-; CHECK-NEXT:    [[T3:%.*]] = ashr exact i32 [[T1]], [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = ashr exact i32 [[X:%.*]], 30
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = sub i32 32, %y
@@ -163,10 +133,7 @@ define i32 @t9_ashr_exact_flag_preservation(i32 %x, i32 %y) {
 }
 define i32 @t10_shl_nuw_flag_preservation(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t10_shl_nuw_flag_preservation(
-; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = shl nuw i32 [[X:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], -2
-; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw i32 [[T1]], [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = shl nuw i32 [[X:%.*]], 30
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = sub i32 32, %y
@@ -177,10 +144,7 @@ define i32 @t10_shl_nuw_flag_preservation(i32 %x, i32 %y) {
 }
 define i32 @t11_shl_nsw_flag_preservation(i32 %x, i32 %y) {
 ; CHECK-LABEL: @t11_shl_nsw_flag_preservation(
-; CHECK-NEXT:    [[T0:%.*]] = sub i32 32, [[Y:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = shl nsw i32 [[X:%.*]], [[T0]]
-; CHECK-NEXT:    [[T2:%.*]] = add i32 [[Y]], -2
-; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw i32 [[T1]], [[T2]]
+; CHECK-NEXT:    [[T3:%.*]] = shl nsw i32 [[X:%.*]], 30
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = sub i32 32, %y
