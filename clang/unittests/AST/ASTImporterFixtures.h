@@ -17,8 +17,8 @@
 #include "gmock/gmock.h"
 
 #include "clang/AST/ASTImporter.h"
-#include "clang/AST/ASTImporterLookupTable.h"
 #include "clang/Frontend/ASTUnit.h"
+#include "clang/AST/ASTImporterSharedState.h"
 
 #include "DeclMatcher.h"
 #include "Language.h"
@@ -26,7 +26,7 @@
 namespace clang {
 
 class ASTImporter;
-class ASTImporterLookupTable;
+class ASTImporterSharedState;
 class ASTUnit;
 
 namespace ast_matchers {
@@ -77,9 +77,9 @@ class ASTImporterTestBase : public CompilerOptionSpecificTest {
 
 public:
   /// Allocates an ASTImporter (or one of its subclasses).
-  typedef std::function<ASTImporter *(ASTContext &, FileManager &, ASTContext &,
-                                      FileManager &, bool,
-                                      ASTImporterLookupTable *)>
+  typedef std::function<ASTImporter *(
+      ASTContext &, FileManager &, ASTContext &, FileManager &, bool,
+      const std::shared_ptr<ASTImporterSharedState> &SharedState)>
       ImporterConstructor;
 
   // The lambda that constructs the ASTImporter we use in this test.
@@ -104,11 +104,13 @@ private:
        ImporterConstructor C = ImporterConstructor());
     ~TU();
 
-    void lazyInitImporter(ASTImporterLookupTable &LookupTable, ASTUnit *ToAST);
-    Decl *import(ASTImporterLookupTable &LookupTable, ASTUnit *ToAST,
-                 Decl *FromDecl);
-    QualType import(ASTImporterLookupTable &LookupTable, ASTUnit *ToAST,
-                    QualType FromType);
+    void
+    lazyInitImporter(const std::shared_ptr<ASTImporterSharedState> &SharedState,
+                     ASTUnit *ToAST);
+    Decl *import(const std::shared_ptr<ASTImporterSharedState> &SharedState,
+                 ASTUnit *ToAST, Decl *FromDecl);
+    QualType import(const std::shared_ptr<ASTImporterSharedState> &SharedState,
+                    ASTUnit *ToAST, QualType FromType);
   };
 
   // We may have several From contexts and related translation units. In each
@@ -120,13 +122,13 @@ private:
   // vector is expanding, with the list we won't have these issues.
   std::list<TU> FromTUs;
 
-  // Initialize the lookup table if not initialized already.
-  void lazyInitLookupTable(TranslationUnitDecl *ToTU);
+  // Initialize the shared state if not initialized already.
+  void lazyInitSharedState(TranslationUnitDecl *ToTU);
 
   void lazyInitToAST(Language ToLang, StringRef ToSrcCode, StringRef FileName);
 
 protected:
-  std::unique_ptr<ASTImporterLookupTable> LookupTablePtr;
+  std::shared_ptr<ASTImporterSharedState> SharedStatePtr;
 
 public:
   // We may have several From context but only one To context.

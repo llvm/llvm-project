@@ -5098,6 +5098,17 @@ SDValue TargetLowering::expandFMINNUM_FMAXNUM(SDNode *Node,
     return DAG.getNode(NewOp, dl, VT, Quiet0, Quiet1, Node->getFlags());
   }
 
+  // If the target has FMINIMUM/FMAXIMUM but not FMINNUM/FMAXNUM use that
+  // instead if there are no NaNs.
+  if (Node->getFlags().hasNoNaNs()) {
+    unsigned IEEE2018Op =
+        Node->getOpcode() == ISD::FMINNUM ? ISD::FMINIMUM : ISD::FMAXIMUM;
+    if (isOperationLegalOrCustom(IEEE2018Op, VT)) {
+      return DAG.getNode(IEEE2018Op, dl, VT, Node->getOperand(0),
+                         Node->getOperand(1), Node->getFlags());
+    }
+  }
+
   return SDValue();
 }
 

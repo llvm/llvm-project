@@ -476,9 +476,9 @@ public:
     return ArgInfo.getPreloadedValue(Value);
   }
 
-  unsigned getPreloadedReg(AMDGPUFunctionArgInfo::PreloadedValue Value) const {
+  Register getPreloadedReg(AMDGPUFunctionArgInfo::PreloadedValue Value) const {
     auto Arg = ArgInfo.getPreloadedValue(Value).first;
-    return Arg ? Arg->getRegister() : 0;
+    return Arg ? Arg->getRegister() : Register();
   }
 
   unsigned getGITPtrHigh() const {

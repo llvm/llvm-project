@@ -633,6 +633,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
   if (Subtarget->hasMVEIntegerOps())
     addMVEVectorTypes(Subtarget->hasMVEFloatOps());
 
+  // Combine low-overhead loop intrinsics so that we can lower i1 types.
+  if (Subtarget->hasLOB())
+    setTargetDAGCombine(ISD::BRCOND);
+
   if (Subtarget->hasNEON()) {
     addDRTypeForNEON(MVT::v2f32);
     addDRTypeForNEON(MVT::v8i8);
@@ -1542,6 +1546,7 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::VST2LN_UPD:    return "ARMISD::VST2LN_UPD";
   case ARMISD::VST3LN_UPD:    return "ARMISD::VST3LN_UPD";
   case ARMISD::VST4LN_UPD:    return "ARMISD::VST4LN_UPD";
+  case ARMISD::WLS:           return "ARMISD::WLS";
   }
   return nullptr;
 }
@@ -12883,6 +12888,42 @@ SDValue ARMTargetLowering::PerformCMOVToBFICombine(SDNode *CMOV, SelectionDAG &D
   return V;
 }
 
+static SDValue PerformHWLoopCombine(SDNode *N,
+                                    TargetLowering::DAGCombinerInfo &DCI,
+                                    const ARMSubtarget *ST) {
+  // Look for (brcond (xor test.set.loop.iterations, -1)
+  SDValue CC = N->getOperand(1);
+
+  if (CC->getOpcode() != ISD::XOR && CC->getOpcode() != ISD::SETCC)
+    return SDValue();
+
+  if (CC->getOperand(0)->getOpcode() != ISD::INTRINSIC_W_CHAIN)
+    return SDValue();
+
+  SDValue Int = CC->getOperand(0);
+  unsigned IntOp = cast<ConstantSDNode>(Int.getOperand(1))->getZExtValue();
+  if (IntOp != Intrinsic::test_set_loop_iterations)
+    return SDValue();
+
+  if (auto *Const = dyn_cast<ConstantSDNode>(CC->getOperand(1)))
+    assert(Const->isOne() && "Expected to compare against 1");
+  else
+    assert(Const->isOne() && "Expected to compare against 1");
+
+  SDLoc dl(Int);
+  SDValue Chain = N->getOperand(0);
+  SDValue Elements = Int.getOperand(2);
+  SDValue ExitBlock = N->getOperand(2);
+
+  // TODO: Once we start supporting tail predication, we can add another
+  // operand to WLS for the number of elements processed in a vector loop.
+
+  SDValue Ops[] = { Chain, Elements, ExitBlock };
+  SDValue Res = DCI.DAG.getNode(ARMISD::WLS, dl, MVT::Other, Ops);
+  DCI.DAG.ReplaceAllUsesOfValueWith(Int.getValue(1), Int.getOperand(0));
+  return Res;
+}
+
 /// PerformBRCONDCombine - Target-specific DAG combining for ARMISD::BRCOND.
 SDValue
 ARMTargetLowering::PerformBRCONDCombine(SDNode *N, SelectionDAG &DAG) const {
@@ -13114,6 +13155,7 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::OR:         return PerformORCombine(N, DCI, Subtarget);
   case ISD::XOR:        return PerformXORCombine(N, DCI, Subtarget);
   case ISD::AND:        return PerformANDCombine(N, DCI, Subtarget);
+  case ISD::BRCOND:     return PerformHWLoopCombine(N, DCI, Subtarget);
   case ARMISD::ADDC:
   case ARMISD::SUBC:    return PerformAddcSubcCombine(N, DCI, Subtarget);
   case ARMISD::SUBE:    return PerformAddeSubeCombine(N, DCI, Subtarget);

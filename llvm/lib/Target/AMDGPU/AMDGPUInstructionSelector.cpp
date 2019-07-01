@@ -60,21 +60,36 @@ AMDGPUInstructionSelector::AMDGPUInstructionSelector(
 const char *AMDGPUInstructionSelector::getName() { return DEBUG_TYPE; }
 
 static bool isSCC(unsigned Reg, const MachineRegisterInfo &MRI) {
-  if (Reg == AMDGPU::SCC)
-    return true;
-
-  if (TargetRegisterInfo::isPhysicalRegister(Reg))
-    return false;
+  assert(!TargetRegisterInfo::isPhysicalRegister(Reg));
 
   auto &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
   const TargetRegisterClass *RC =
       RegClassOrBank.dyn_cast<const TargetRegisterClass*>();
-  if (RC)
-    return RC->getID() == AMDGPU::SReg_32_XM0RegClassID &&
-           MRI.getType(Reg).getSizeInBits() == 1;
+  if (RC) {
+    if (RC->getID() != AMDGPU::SReg_32_XM0RegClassID)
+      return false;
+    const LLT Ty = MRI.getType(Reg);
+    return Ty.isValid() && Ty.getSizeInBits() == 1;
+  }
 
   const RegisterBank *RB = RegClassOrBank.get<const RegisterBank *>();
   return RB->getID() == AMDGPU::SCCRegBankID;
+}
+
+static bool isVCC(unsigned Reg, const MachineRegisterInfo &MRI,
+                  const SIRegisterInfo &TRI) {
+  assert(!TargetRegisterInfo::isPhysicalRegister(Reg));
+
+  auto &RegClassOrBank = MRI.getRegClassOrRegBank(Reg);
+  const TargetRegisterClass *RC =
+      RegClassOrBank.dyn_cast<const TargetRegisterClass*>();
+  if (RC) {
+    return RC == TRI.getWaveMaskRegClass() &&
+           MRI.getType(Reg).getSizeInBits() == 1;
+  }
+
+  const RegisterBank *RB = RegClassOrBank.get<const RegisterBank *>();
+  return RB->getID() == AMDGPU::VCCRegBankID;
 }
 
 bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
@@ -88,14 +103,12 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
   const MachineOperand &Src = I.getOperand(1);
   unsigned SrcReg = Src.getReg();
   if (!TargetRegisterInfo::isPhysicalRegister(SrcReg) && isSCC(SrcReg, MRI)) {
-    unsigned DstReg = TRI.getRegSizeInBits(I.getOperand(0).getReg(), MRI);
-    unsigned DstSize = TRI.getRegSizeInBits(DstReg, MRI);
+    unsigned DstReg = I.getOperand(0).getReg();
 
-    // We have a copy from a 32-bit to 64-bit register.  This happens
-    // when we are selecting scc->vcc copies.
-    if (DstSize == 64) {
+    // Specially handle scc->vcc copies.
+    if (isVCC(DstReg, MRI, TRI)) {
       const DebugLoc &DL = I.getDebugLoc();
-      BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_CMP_NE_U32_e64), I.getOperand(0).getReg())
+      BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_CMP_NE_U32_e64), DstReg)
         .addImm(0)
         .addReg(SrcReg);
       if (!MRI.getRegClassOrNull(SrcReg))
@@ -307,8 +320,9 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I,
   return false;
 }
 
-static unsigned getV_CMPOpcode(CmpInst::Predicate P, unsigned Size) {
-  assert(Size == 32 || Size == 64);
+static int getV_CMPOpcode(CmpInst::Predicate P, unsigned Size) {
+  if (Size != 32 && Size != 64)
+    return -1;
   switch (P) {
   default:
     llvm_unreachable("Unknown condition code!");
@@ -335,12 +349,26 @@ static unsigned getV_CMPOpcode(CmpInst::Predicate P, unsigned Size) {
   }
 }
 
-static unsigned getS_CMPOpcode(CmpInst::Predicate P, unsigned Size) {
-  // FIXME: VI supports 64-bit comparse.
-  assert(Size == 32);
+int AMDGPUInstructionSelector::getS_CMPOpcode(CmpInst::Predicate P,
+                                              unsigned Size) const {
+  if (Size == 64) {
+    if (!STI.hasScalarCompareEq64())
+      return -1;
+
+    switch (P) {
+    case CmpInst::ICMP_NE:
+      return AMDGPU::S_CMP_LG_U64;
+    case CmpInst::ICMP_EQ:
+      return AMDGPU::S_CMP_EQ_U64;
+    default:
+      return -1;
+    }
+  }
+
+  if (Size != 32)
+    return -1;
+
   switch (P) {
-  default:
-    llvm_unreachable("Unknown condition code!");
   case CmpInst::ICMP_NE:
     return AMDGPU::S_CMP_LG_U32;
   case CmpInst::ICMP_EQ:
@@ -361,6 +389,8 @@ static unsigned getS_CMPOpcode(CmpInst::Predicate P, unsigned Size) {
     return AMDGPU::S_CMP_LT_U32;
   case CmpInst::ICMP_ULE:
     return AMDGPU::S_CMP_LE_U32;
+  default:
+    llvm_unreachable("Unknown condition code!");
   }
 }
 
@@ -372,12 +402,14 @@ bool AMDGPUInstructionSelector::selectG_ICMP(MachineInstr &I) const {
 
   unsigned SrcReg = I.getOperand(2).getReg();
   unsigned Size = RBI.getSizeInBits(SrcReg, MRI, TRI);
-  // FIXME: VI supports 64-bit compares.
-  assert(Size == 32);
+
+  auto Pred = (CmpInst::Predicate)I.getOperand(1).getPredicate();
 
   unsigned CCReg = I.getOperand(0).getReg();
   if (isSCC(CCReg, MRI)) {
-    unsigned Opcode = getS_CMPOpcode((CmpInst::Predicate)I.getOperand(1).getPredicate(), Size);
+    int Opcode = getS_CMPOpcode(Pred, Size);
+    if (Opcode == -1)
+      return false;
     MachineInstr *ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode))
             .add(I.getOperand(2))
             .add(I.getOperand(3));
@@ -390,8 +422,10 @@ bool AMDGPUInstructionSelector::selectG_ICMP(MachineInstr &I) const {
     return Ret;
   }
 
-  assert(Size == 32 || Size == 64);
-  unsigned Opcode = getV_CMPOpcode((CmpInst::Predicate)I.getOperand(1).getPredicate(), Size);
+  int Opcode = getV_CMPOpcode(Pred, Size);
+  if (Opcode == -1)
+    return false;
+
   MachineInstr *ICmp = BuildMI(*BB, &I, DL, TII.get(Opcode),
             I.getOperand(0).getReg())
             .add(I.getOperand(2))
@@ -518,6 +552,12 @@ bool AMDGPUInstructionSelector::selectG_STORE(MachineInstr &I) const {
   MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
   DebugLoc DL = I.getDebugLoc();
+  unsigned PtrSize = RBI.getSizeInBits(I.getOperand(1).getReg(), MRI, TRI);
+  if (PtrSize != 64) {
+    LLVM_DEBUG(dbgs() << "Unhandled address space\n");
+    return false;
+  }
+
   unsigned StoreSize = RBI.getSizeInBits(I.getOperand(0).getReg(), MRI, TRI);
   unsigned Opcode;
 
@@ -626,6 +666,13 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
   return true;
 }
 
+/// \returns true if a bitmask for \p Size bits will be an inline immediate.
+static bool shouldUseAndMask(unsigned Size, unsigned &Mask) {
+  Mask = maskTrailingOnes<unsigned>(Size);
+  int SignedMask = static_cast<int>(Mask);
+  return SignedMask >= -16 && SignedMask <= 64;
+}
+
 bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
   bool Signed = I.getOpcode() == AMDGPU::G_SEXT;
   const DebugLoc &DL = I.getDebugLoc();
@@ -688,9 +735,17 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
 
   if (SrcBank->getID() == AMDGPU::VGPRRegBankID && DstSize <= 32) {
     // 64-bit should have been split up in RegBankSelect
-    //
-    // TODO: USE V_AND_B32 when the constant mask is an inline immediate for
-    // unsigned for smaller code size.
+
+    // Try to use an and with a mask if it will save code size.
+    unsigned Mask;
+    if (!Signed && shouldUseAndMask(SrcSize, Mask)) {
+      MachineInstr *ExtI =
+      BuildMI(MBB, I, DL, TII.get(AMDGPU::V_AND_B32_e32), DstReg)
+        .addImm(Mask)
+        .addReg(SrcReg);
+      return constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
+    }
+
     const unsigned BFE = Signed ? AMDGPU::V_BFE_I32 : AMDGPU::V_BFE_U32;
     MachineInstr *ExtI =
       BuildMI(MBB, I, DL, TII.get(BFE), DstReg)
@@ -736,9 +791,17 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
       return RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_64RegClass, MRI);
     }
 
-    BuildMI(MBB, I, DL, TII.get(BFE32), DstReg)
-      .addReg(SrcReg)
-      .addImm(SrcSize << 16);
+    unsigned Mask;
+    if (!Signed && shouldUseAndMask(SrcSize, Mask)) {
+      BuildMI(MBB, I, DL, TII.get(AMDGPU::S_AND_B32), DstReg)
+        .addReg(SrcReg)
+        .addImm(Mask);
+    } else {
+      BuildMI(MBB, I, DL, TII.get(BFE32), DstReg)
+        .addReg(SrcReg)
+        .addImm(SrcSize << 16);
+    }
+
     return RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_32RegClass, MRI);
   }
 
@@ -951,7 +1014,9 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
     return selectG_INTRINSIC_W_SIDE_EFFECTS(I, CoverageInfo);
   case TargetOpcode::G_ICMP:
-    return selectG_ICMP(I);
+    if (selectG_ICMP(I))
+      return true;
+    return selectImpl(I, CoverageInfo);
   case TargetOpcode::G_LOAD:
     if (selectImpl(I, CoverageInfo))
       return true;
@@ -983,6 +1048,26 @@ AMDGPUInstructionSelector::selectVCSRC(MachineOperand &Root) const {
 
 }
 
+std::pair<Register, unsigned>
+AMDGPUInstructionSelector::selectVOP3ModsImpl(
+  Register Src, const MachineRegisterInfo &MRI) const {
+  unsigned Mods = 0;
+  MachineInstr *MI = MRI.getVRegDef(Src);
+
+  if (MI && MI->getOpcode() == AMDGPU::G_FNEG) {
+    Src = MI->getOperand(1).getReg();
+    Mods |= SISrcMods::NEG;
+    MI = MRI.getVRegDef(Src);
+  }
+
+  if (MI && MI->getOpcode() == AMDGPU::G_FABS) {
+    Src = MI->getOperand(1).getReg();
+    Mods |= SISrcMods::ABS;
+  }
+
+  return std::make_pair(Src, Mods);
+}
+
 ///
 /// This will select either an SGPR or VGPR operand and will save us from
 /// having to write an extra tablegen pattern.
@@ -995,11 +1080,18 @@ AMDGPUInstructionSelector::selectVSRC0(MachineOperand &Root) const {
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3Mods0(MachineOperand &Root) const {
+  MachineRegisterInfo &MRI
+    = Root.getParent()->getParent()->getParent()->getRegInfo();
+
+  Register Src;
+  unsigned Mods;
+  std::tie(Src, Mods) = selectVOP3ModsImpl(Root.getReg(), MRI);
+
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }, // src0_mods
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }, // clamp
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }  // omod
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }, // src0_mods
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },    // clamp
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }     // omod
   }};
 }
 InstructionSelector::ComplexRendererFns
@@ -1013,9 +1105,16 @@ AMDGPUInstructionSelector::selectVOP3OMods(MachineOperand &Root) const {
 
 InstructionSelector::ComplexRendererFns
 AMDGPUInstructionSelector::selectVOP3Mods(MachineOperand &Root) const {
+  MachineRegisterInfo &MRI
+    = Root.getParent()->getParent()->getParent()->getRegInfo();
+
+  Register Src;
+  unsigned Mods;
+  std::tie(Src, Mods) = selectVOP3ModsImpl(Root.getReg(), MRI);
+
   return {{
-      [=](MachineInstrBuilder &MIB) { MIB.add(Root); },
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); }  // src_mods
+      [=](MachineInstrBuilder &MIB) { MIB.addReg(Src); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(Mods); }  // src_mods
   }};
 }
 

@@ -32180,8 +32180,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
       return DAG.getBitcast(RootVT, Res);
     }
 
-    // If that failed and both inputs are extracted from the same source type
-    // then try to combine as an unary shuffle with the larger type.
+    // If that failed and either input is extracted then try to combine as a
+    // shuffle with the larger type.
     SDValue NewRoot;
     SmallVector<int, 64> NewMask;
     SmallVector<SDValue, 2> NewInputs;
@@ -32360,8 +32360,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     return DAG.getBitcast(RootVT, Res);
   }
 
-  // If that failed and both inputs are extracted from the same source type
-  // then try to combine as an unary shuffle with the larger type.
+  // If that failed and either input is extracted then try to combine as a
+  // shuffle with the larger type.
   SDValue NewRoot;
   SmallVector<int, 64> NewMask;
   SmallVector<SDValue, 2> NewInputs;
@@ -41100,6 +41100,34 @@ static SDValue combineX86INT_TO_FP(SDNode *N, SelectionDAG &DAG,
   if (TLI.SimplifyDemandedVectorElts(SDValue(N, 0), DemandedElts, KnownUndef,
                                      KnownZero, DCI))
     return SDValue(N, 0);
+
+  // Convert a full vector load into vzload when not all bits are needed.
+  SDValue In = N->getOperand(0);
+  MVT InVT = In.getSimpleValueType();
+  if (VT.getVectorNumElements() < InVT.getVectorNumElements() &&
+      ISD::isNormalLoad(In.getNode()) && In.hasOneUse()) {
+    assert(InVT.is128BitVector() && "Expected 128-bit input vector");
+    LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
+    // Unless the load is volatile.
+    if (!LN->isVolatile()) {
+      SDLoc dl(N);
+      unsigned NumBits = InVT.getScalarSizeInBits() * VT.getVectorNumElements();
+      MVT MemVT = MVT::getIntegerVT(NumBits);
+      MVT LoadVT = MVT::getVectorVT(MemVT, 128 / NumBits);
+      SDVTList Tys = DAG.getVTList(LoadVT, MVT::Other);
+      SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
+      SDValue VZLoad =
+          DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, dl, Tys, Ops, MemVT,
+                                  LN->getPointerInfo(),
+                                  LN->getAlignment(),
+                                  LN->getMemOperand()->getFlags());
+      SDValue Convert = DAG.getNode(N->getOpcode(), dl, VT,
+                                    DAG.getBitcast(InVT, VZLoad));
+      DCI.CombineTo(N, Convert);
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
+      return SDValue(N, 0);
+    }
+  }
 
   return SDValue();
 }

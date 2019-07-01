@@ -1566,16 +1566,16 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
     ArrayRef<Register> Res = getOrCreateVRegs(CI);
 
     SmallVector<ArrayRef<Register>, 8> Args;
-    SmallVector<Register, 8> InVRegs;
+    Register SwiftInVReg = 0;
     Register SwiftErrorVReg = 0;
     for (auto &Arg: CI.arg_operands()) {
       if (CLI->supportSwiftError() && isSwiftError(Arg)) {
+        assert(SwiftInVReg == 0 && "Expected only one swift error argument");
         LLT Ty = getLLTForType(*Arg->getType(), *DL);
-        InVRegs.push_back(MRI->createGenericVirtualRegister(Ty));
-        MIRBuilder.buildCopy(
-            InVRegs.back(),
-            SwiftError.getOrCreateVRegUseAt(&CI, &MIRBuilder.getMBB(), Arg));
-        Args.emplace_back(llvm::makeArrayRef(InVRegs.back()));
+        SwiftInVReg = MRI->createGenericVirtualRegister(Ty);
+        MIRBuilder.buildCopy(SwiftInVReg, SwiftError.getOrCreateVRegUseAt(
+                                              &CI, &MIRBuilder.getMBB(), Arg));
+        Args.emplace_back(makeArrayRef(SwiftInVReg));
         SwiftErrorVReg =
             SwiftError.getOrCreateVRegDefAt(&CI, &MIRBuilder.getMBB(), Arg);
         continue;
@@ -1669,13 +1669,15 @@ bool IRTranslator::translateInvoke(const User &U,
     Res = getOrCreateVRegs(I);
   SmallVector<ArrayRef<Register>, 8> Args;
   Register SwiftErrorVReg = 0;
+  Register SwiftInVReg = 0;
   for (auto &Arg : I.arg_operands()) {
     if (CLI->supportSwiftError() && isSwiftError(Arg)) {
+      assert(SwiftInVReg == 0 && "Expected only one swift error argument");
       LLT Ty = getLLTForType(*Arg->getType(), *DL);
-      Register InVReg = MRI->createGenericVirtualRegister(Ty);
-      MIRBuilder.buildCopy(InVReg, SwiftError.getOrCreateVRegUseAt(
-                                       &I, &MIRBuilder.getMBB(), Arg));
-      Args.push_back(InVReg);
+      SwiftInVReg = MRI->createGenericVirtualRegister(Ty);
+      MIRBuilder.buildCopy(SwiftInVReg, SwiftError.getOrCreateVRegUseAt(
+                                            &I, &MIRBuilder.getMBB(), Arg));
+      Args.push_back(makeArrayRef(SwiftInVReg));
       SwiftErrorVReg =
           SwiftError.getOrCreateVRegDefAt(&I, &MIRBuilder.getMBB(), Arg);
       continue;

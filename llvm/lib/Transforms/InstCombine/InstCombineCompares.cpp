@@ -1317,14 +1317,16 @@ static Instruction *processUGT_ADDCST_ADD(ICmpInst &I, Value *A, Value *B,
   return ExtractValueInst::Create(Call, 1, "sadd.overflow");
 }
 
-// Handle (icmp sgt smin(PosA, B) 0) -> (icmp sgt B 0)
+// Handle  icmp pred X, 0
 Instruction *InstCombiner::foldICmpWithZero(ICmpInst &Cmp) {
   CmpInst::Predicate Pred = Cmp.getPredicate();
-  Value *X = Cmp.getOperand(0);
+  if (!match(Cmp.getOperand(1), m_Zero()))
+    return nullptr;
 
-  if (match(Cmp.getOperand(1), m_Zero()) && Pred == ICmpInst::ICMP_SGT) {
+  // (icmp sgt smin(PosA, B) 0) -> (icmp sgt B 0)
+  if (Pred == ICmpInst::ICMP_SGT) {
     Value *A, *B;
-    SelectPatternResult SPR = matchSelectPattern(X, A, B);
+    SelectPatternResult SPR = matchSelectPattern(Cmp.getOperand(0), A, B);
     if (SPR.Flavor == SPF_SMIN) {
       if (isKnownPositive(A, DL, 0, &AC, &Cmp, &DT))
         return new ICmpInst(Pred, B, Cmp.getOperand(1));
@@ -1332,6 +1334,20 @@ Instruction *InstCombiner::foldICmpWithZero(ICmpInst &Cmp) {
         return new ICmpInst(Pred, A, Cmp.getOperand(1));
     }
   }
+
+  // Given:
+  //   icmp eq/ne (urem %x, %y), 0
+  // Iff %x has 0 or 1 bits set, and %y has at least 2 bits set, omit 'urem':
+  //   icmp eq/ne %x, 0
+  Value *X, *Y;
+  if (match(Cmp.getOperand(0), m_URem(m_Value(X), m_Value(Y))) &&
+      ICmpInst::isEquality(Pred)) {
+    KnownBits XKnown = computeKnownBits(X, 0, &Cmp);
+    KnownBits YKnown = computeKnownBits(Y, 0, &Cmp);
+    if (XKnown.countMaxPopulation() == 1 && YKnown.countMinPopulation() >= 2)
+      return new ICmpInst(Pred, X, Cmp.getOperand(1));
+  }
+
   return nullptr;
 }
 

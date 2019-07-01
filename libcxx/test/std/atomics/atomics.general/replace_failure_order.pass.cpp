@@ -30,13 +30,13 @@ int main(int, char**) {
     volatile std::atomic<int> v;
     int exp = 0;
 
-    i.compare_exchange_weak(exp, 0, std::memory_order_acq_rel);
-    i.compare_exchange_weak(exp, 0, std::memory_order_release);
+    (void) i.compare_exchange_weak(exp, 0, std::memory_order_acq_rel);
+    (void) i.compare_exchange_weak(exp, 0, std::memory_order_release);
     i.compare_exchange_strong(exp, 0, std::memory_order_acq_rel);
     i.compare_exchange_strong(exp, 0, std::memory_order_release);
 
-    v.compare_exchange_weak(exp, 0, std::memory_order_acq_rel);
-    v.compare_exchange_weak(exp, 0, std::memory_order_release);
+    (void) v.compare_exchange_weak(exp, 0, std::memory_order_acq_rel);
+    (void) v.compare_exchange_weak(exp, 0, std::memory_order_release);
     v.compare_exchange_strong(exp, 0, std::memory_order_acq_rel);
     v.compare_exchange_strong(exp, 0, std::memory_order_release);
 

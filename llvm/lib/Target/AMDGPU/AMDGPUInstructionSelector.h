@@ -18,6 +18,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
+#include "llvm/IR/InstrTypes.h"
 
 namespace {
 #define GET_GLOBALISEL_PREDICATE_BITSET
@@ -74,6 +75,7 @@ private:
   bool selectG_INTRINSIC(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
   bool selectG_INTRINSIC_W_SIDE_EFFECTS(MachineInstr &I,
                                         CodeGenCoverage &CoverageInfo) const;
+  int getS_CMPOpcode(CmpInst::Predicate P, unsigned Size) const;
   bool selectG_ICMP(MachineInstr &I) const;
   bool hasVgprParts(ArrayRef<GEPInfo> AddrInfo) const;
   void getAddrModeInfo(const MachineInstr &Load, const MachineRegisterInfo &MRI,
@@ -82,6 +84,9 @@ private:
   bool selectG_LOAD(MachineInstr &I) const;
   bool selectG_SELECT(MachineInstr &I) const;
   bool selectG_STORE(MachineInstr &I) const;
+
+  std::pair<Register, unsigned>
+  selectVOP3ModsImpl(Register Src, const MachineRegisterInfo &MRI) const;
 
   InstructionSelector::ComplexRendererFns
   selectVCSRC(MachineOperand &Root) const;
