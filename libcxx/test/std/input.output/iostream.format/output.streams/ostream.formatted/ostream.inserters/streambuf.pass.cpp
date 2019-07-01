@@ -67,6 +67,13 @@ int main(int, char**)
         os << &sb2;
         assert(sb.str() == "testing...");
     }
+    { // LWG 2221 - nullptr
+        testbuf<char> sb;
+        std::ostream os(&sb);
+        os << nullptr;
+        assert(sb.str().size() != 0);
+        LIBCPP_ASSERT(sb.str() == "nullptr");
+    }
 
   return 0;
 }
