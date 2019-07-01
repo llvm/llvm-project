@@ -57,6 +57,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
@@ -1635,16 +1636,32 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
     auto ToDCOrErr = Importer.ImportContext(FromDC);
     return ToDCOrErr.takeError();
   }
+
+  // We use strict error handling in case of records and enums, but not
+  // with e.g. namespaces.
+  //
+  // FIXME Clients of the ASTImporter should be able to choose an
+  // appropriate error handling strategy for their needs.  For instance,
+  // they may not want to mark an entire namespace as erroneous merely
+  // because there is an ODR error with two typedefs.  As another example,
+  // the client may allow EnumConstantDecls with same names but with
+  // different values in two distinct translation units.
+  bool AccumulateChildErrors = isa<TagDecl>(FromDC);
+
+  Error ChildErrors = Error::success();
   llvm::SmallVector<Decl *, 8> ImportedDecls;
   for (auto *From : FromDC->decls()) {
     ExpectedDecl ImportedOrErr = import(From);
-    if (!ImportedOrErr)
-      // Ignore the error, continue with next Decl.
-      // FIXME: Handle this case somehow better.
-      consumeError(ImportedOrErr.takeError());
+    if (!ImportedOrErr) {
+      if (AccumulateChildErrors)
+        ChildErrors =
+            joinErrors(std::move(ChildErrors), ImportedOrErr.takeError());
+      else
+        consumeError(ImportedOrErr.takeError());
+    }
   }
 
-  return Error::success();
+  return ChildErrors;
 }
 
 Error ASTNodeImporter::ImportDeclContext(
@@ -1702,6 +1719,11 @@ Error ASTNodeImporter::ImportDefinition(
   }
 
   To->startDefinition();
+  // Complete the definition even if error is returned.
+  // The RecordDecl may be already part of the AST so it is better to
+  // have it in complete state even if something is wrong with it.
+  auto DefinitionCompleter =
+      llvm::make_scope_exit([To]() { To->completeDefinition(); });
 
   if (Error Err = setTypedefNameForAnonDecl(From, To, Importer))
     return Err;
@@ -1826,7 +1848,6 @@ Error ASTNodeImporter::ImportDefinition(
     if (Error Err = ImportDeclContext(From, /*ForceImport=*/true))
       return Err;
 
-  To->completeDefinition();
   return Error::success();
 }
 
