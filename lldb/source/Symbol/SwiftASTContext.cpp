@@ -390,6 +390,9 @@ public:
     m_nopayload_elems_bitmask =
         enum_impl_strategy.getBitMaskForNoPayloadElements();
 
+    if (enum_decl->isObjC())
+      m_is_objc_enum = true;
+
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "m_nopayload_elems_bitmask = %s",
                Dump(m_nopayload_elems_bitmask).c_str());
 
@@ -446,18 +449,20 @@ public:
     // case Y         // => i1 1
     // }
     // From this we can find out the number of bits really used for the payload.
-    current_payload &= m_nopayload_elems_bitmask;
-    auto elem_mask =
-        swift::ClusteredBitVector::getConstant(current_payload.size(), false);
-    int64_t bit_count = m_elements.size() - 1;
-    if (bit_count > 0 && no_payload) {
-      uint64_t bit_set = 0;
-      while (bit_count > 0) {
-        elem_mask.setBit(bit_set);
-        bit_set += 1;
-        bit_count /= 2;
+    if (!m_is_objc_enum) {
+      current_payload &= m_nopayload_elems_bitmask;
+      auto elem_mask =
+          swift::ClusteredBitVector::getConstant(current_payload.size(), false);
+      int64_t bit_count = m_elements.size() - 1;
+      if (bit_count > 0 && no_payload) {
+        uint64_t bit_set = 0;
+        while (bit_count > 0) {
+          elem_mask.setBit(bit_set);
+          bit_set += 1;
+          bit_count /= 2;
+        }
+        current_payload &= elem_mask;
       }
-      current_payload &= elem_mask;
     }
 
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "masked current_payload           = %s",
@@ -497,6 +502,7 @@ private:
   swift::ClusteredBitVector m_nopayload_elems_bitmask;
   std::map<swift::ClusteredBitVector, std::unique_ptr<ElementInfo>> m_elements;
   std::map<uint64_t, ElementInfo *> m_element_indexes;
+  bool m_is_objc_enum = false;
 };
 
 class SwiftAllPayloadEnumDescriptor : public SwiftEnumDescriptor {
