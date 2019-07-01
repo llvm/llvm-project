@@ -120,7 +120,7 @@ NativeProcessELF::ReadSVR4LibraryInfo(lldb::addr_t link_map_addr) {
   char name_buffer[PATH_MAX];
   error = ReadMemory(link_map.l_name, &name_buffer, sizeof(name_buffer),
                      bytes_read);
-  if (!error.Success())
+  if (bytes_read == 0)
     return error.ToError();
   name_buffer[PATH_MAX - 1] = '\0';
 
