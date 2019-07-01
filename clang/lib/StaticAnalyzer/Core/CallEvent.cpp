@@ -393,8 +393,7 @@ bool CallEvent::isCalled(const CallDescription &CD) const {
       return false;
   }
 
-  return (CD.RequiredArgs == CallDescription::NoArgRequirement ||
-          CD.RequiredArgs == getNumArgs());
+  return (!CD.RequiredArgs || CD.RequiredArgs == getNumArgs());
 }
 
 SVal CallEvent::getArgSVal(unsigned Index) const {
