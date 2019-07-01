@@ -97,19 +97,23 @@ define <4 x i32> @test_urem_even_undef1(<4 x i32> %X) nounwind {
 ; Negative tests
 ;------------------------------------------------------------------------------;
 
-; The fold is invalid if divisor is 1.
-define <4 x i32> @test_urem_one(<4 x i32> %X) nounwind {
-; CHECK-LABEL: test_urem_one:
+; We can lower remainder of division by powers of two much better elsewhere.
+define <4 x i32> @test_urem_pow2(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_pow2:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v0.4s, #1
+; CHECK-NEXT:    movi v1.4s, #15
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    movi v1.4s, #1
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i32> %X, <i32 1, i32 1, i32 1, i32 1>
+  %urem = urem <4 x i32> %X, <i32 16, i32 16, i32 16, i32 16>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }
 
-; We can lower remainder of division by all-ones much better elsewhere.
+; We could lower remainder of division by all-ones much better elsewhere.
 define <4 x i32> @test_urem_allones(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_allones:
 ; CHECK:       // %bb.0:
@@ -124,18 +128,24 @@ define <4 x i32> @test_urem_allones(<4 x i32> %X) nounwind {
   ret <4 x i32> %ret
 }
 
-; We can lower remainder of division by powers of two much better elsewhere.
-define <4 x i32> @test_urem_pow2(<4 x i32> %X) nounwind {
-; CHECK-LABEL: test_urem_pow2:
+; If all divisors are ones, this is constant-folded.
+define <4 x i32> @test_urem_one_eq(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_one_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi v1.4s, #15
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    movi v0.4s, #1
 ; CHECK-NEXT:    ret
-  %urem = urem <4 x i32> %X, <i32 16, i32 16, i32 16, i32 16>
+  %urem = urem <4 x i32> %X, <i32 1, i32 1, i32 1, i32 1>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
+  %ret = zext <4 x i1> %cmp to <4 x i32>
+  ret <4 x i32> %ret
+}
+define <4 x i32> @test_urem_one_ne(<4 x i32> %X) nounwind {
+; CHECK-LABEL: test_urem_one_ne:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
+; CHECK-NEXT:    ret
+  %urem = urem <4 x i32> %X, <i32 1, i32 1, i32 1, i32 1>
+  %cmp = icmp ne <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
   %ret = zext <4 x i1> %cmp to <4 x i32>
   ret <4 x i32> %ret
 }

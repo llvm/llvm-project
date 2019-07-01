@@ -43,11 +43,11 @@ T tmain(T argc) {
   for (i = 0; i < argc; ++i)  // expected-error 2 {{variable 'argc' must have explicitly specified data sharing attributes}}
     foo();
 
-#pragma omp parallel default(none)
+#pragma omp parallel default(none) // expected-note 4 {{explicit data sharing attribute requested here}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd default(shared)
-  for (i = 0; i < argc; ++i)
+  for (i = 0; i < argc; ++i) // expected-error 2 {{variable 'argc' must have explicitly specified data sharing attributes}} expected-error 2 {{variable 'i' must have explicitly specified data sharing attributes}}
     foo();
 
   return T();
@@ -91,11 +91,11 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i)  // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}}
     foo();
 
-#pragma omp parallel default(none)
+#pragma omp parallel default(none) // expected-note 2 {{explicit data sharing attribute requested here}}
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd default(shared)
-  for (i = 0; i < argc; ++i)
+  for (i = 0; i < argc; ++i) // expected-error {{variable 'argc' must have explicitly specified data sharing attributes}} expected-error {{variable 'i' must have explicitly specified data sharing attributes}}
     foo();
 
   return (tmain<int, 5>(argc) + tmain<char, 1>(argv[0][0])); // expected-note {{in instantiation of function template specialization 'tmain<int, 5>' requested here}} expected-note {{in instantiation of function template specialization 'tmain<char, 1>' requested here}}

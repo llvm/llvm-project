@@ -57,6 +57,14 @@
 @interface Interface3 <T : I1 *>
 @end
 
+@interface EmptySelectorSlot
+- (void)method:(int)arg;
+- (void)method:(int)arg :(int)empty;
+
+- (void)multiple:(int)arg1 args:(int)arg2 :(int)arg3;
+- (void)multiple:(int)arg1 :(int)arg2 args:(int)arg3;
+@end
+
 #endif
 
 #if defined(FIRST)
@@ -288,6 +296,29 @@ Invalid3 i3;
 
 }  // namespace ObjCTypeParam
 }  // namespace Types
+
+namespace CallMethods {
+#if defined(FIRST)
+void invalid1(EmptySelectorSlot *obj) {
+  [obj method:0];
+}
+void invalid2(EmptySelectorSlot *obj) {
+  [obj multiple:0 args:0 :0];
+}
+#elif defined(SECOND)
+void invalid1(EmptySelectorSlot *obj) {
+  [obj method:0 :0];
+}
+void invalid2(EmptySelectorSlot *obj) {
+  [obj multiple:0 :0 args:0];
+}
+#endif
+// expected-error@second.h:* {{'CallMethods::invalid1' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+
+// expected-error@second.h:* {{'CallMethods::invalid2' has different definitions in different modules; definition in module 'SecondModule' first difference is function body}}
+// expected-note@first.h:* {{but in 'FirstModule' found a different body}}
+}  // namespace CallMethods
 
 // Keep macros contained to one file.
 #ifdef FIRST

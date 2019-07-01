@@ -1991,6 +1991,7 @@ NewGVN::performSymbolicEvaluation(Value *V,
     case Instruction::FCmp:
       E = performSymbolicCmpEvaluation(I);
       break;
+    case Instruction::FNeg:
     case Instruction::Add:
     case Instruction::FAdd:
     case Instruction::Sub:

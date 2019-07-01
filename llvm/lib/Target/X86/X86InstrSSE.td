@@ -7757,11 +7757,6 @@ multiclass maskmov_lowering<string InstrStr, RegisterClass RC, ValueType VT,
     def: Pat<(VT (masked_load addr:$ptr, (MaskVT RC:$mask),
                               (VT immAllZerosV))),
              (!cast<Instruction>(InstrStr#"rm") RC:$mask, addr:$ptr)>;
-    def: Pat<(VT (masked_load addr:$ptr, (MaskVT RC:$mask), (VT RC:$src0))),
-             (!cast<Instruction>(BlendStr#"rr")
-                 RC:$src0,
-                 (VT (!cast<Instruction>(InstrStr#"rm") RC:$mask, addr:$ptr)),
-                 RC:$mask)>;
 }
 let Predicates = [HasAVX] in {
   defm : maskmov_lowering<"VMASKMOVPS", VR128, v4f32, v4i32, "VBLENDVPS", v4i32>;

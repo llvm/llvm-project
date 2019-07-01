@@ -114,13 +114,17 @@ public:
     if (Lexer->isNot(AsmToken::String))
       return error("expected string in directive, instead got: ", Lexer->getTok());
 
-    SectionKind Kind = StringSwitch<SectionKind>(Name)
-                       .StartsWith(".data", SectionKind::getData())
-                       .StartsWith(".rodata", SectionKind::getReadOnly())
-                       .StartsWith(".text", SectionKind::getText())
-                       .StartsWith(".custom_section", SectionKind::getMetadata());
+    auto Kind = StringSwitch<Optional<SectionKind>>(Name)
+                    .StartsWith(".data", SectionKind::getData())
+                    .StartsWith(".rodata", SectionKind::getReadOnly())
+                    .StartsWith(".text", SectionKind::getText())
+                    .StartsWith(".custom_section", SectionKind::getMetadata())
+                    .StartsWith(".bss", SectionKind::getBSS())
+                    .Default(Optional<SectionKind>());
+    if (!Kind.hasValue())
+      return Parser->Error(Lexer->getLoc(), "unknown section kind: " + Name);
 
-    MCSectionWasm* Section = getContext().getWasmSection(Name, Kind);
+    MCSectionWasm *Section = getContext().getWasmSection(Name, Kind.getValue());
 
     // Update section flags if present in this .section directive
     bool Passive = false;
@@ -139,28 +143,9 @@ public:
     if (expect(AsmToken::Comma, ",") || expect(AsmToken::At, "@") ||
         expect(AsmToken::EndOfStatement, "eol"))
       return true;
-    struct SectionType {
-      const char *Name;
-      SectionKind Kind;
-    };
-    static SectionType SectionTypes[] = {
-        {".text", SectionKind::getText()},
-        {".rodata", SectionKind::getReadOnly()},
-        {".data", SectionKind::getData()},
-        {".custom_section", SectionKind::getMetadata()},
-        // TODO: add more types.
-    };
-    for (size_t I = 0; I < sizeof(SectionTypes) / sizeof(SectionType); I++) {
-      if (Name.startswith(SectionTypes[I].Name)) {
-        auto WS = getContext().getWasmSection(Name, SectionTypes[I].Kind);
-        getStreamer().SwitchSection(WS);
-        return false;
-      }
-    }
-    // Not found, just ignore this section.
-    // For code in a text section WebAssemblyAsmParser automatically adds
-    // one section per function, so they're optional to be specified with
-    // this directive.
+
+    auto WS = getContext().getWasmSection(Name, Kind.getValue());
+    getStreamer().SwitchSection(WS);
     return false;
   }
 
@@ -202,6 +187,8 @@ public:
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_FUNCTION);
     else if (TypeName == "global")
       WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
+    else if (TypeName == "object")
+      WasmSym->setType(wasm::WASM_SYMBOL_TYPE_DATA);
     else
       return error("Unknown WASM symbol type: ", Lexer->getTok());
     Lex();
