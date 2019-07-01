@@ -196,8 +196,6 @@ protected:
   llvm::Expected<std::unique_ptr<llvm::MemoryBuffer>>
   ReadXferObject(llvm::StringRef object, llvm::StringRef annex);
 
-  static std::string XMLEncodeAttributeValue(llvm::StringRef value);
-
 private:
   void HandleInferiorState_Exited(NativeProcessProtocol *process);
 
