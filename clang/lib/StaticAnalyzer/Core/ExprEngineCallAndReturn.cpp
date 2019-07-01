@@ -634,12 +634,19 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     std::tie(State, Target) =
         prepareForObjectConstruction(Call.getOriginExpr(), State, LCtx,
                                      RTC->getConstructionContext(), CallOpts);
-    assert(Target.getAsRegion());
-    // Invalidate the region so that it didn't look uninitialized. Don't notify
-    // the checkers.
-    State = State->invalidateRegions(Target.getAsRegion(), E, Count, LCtx,
+    const MemRegion *TargetR = Target.getAsRegion();
+    assert(TargetR);
+    // Invalidate the region so that it didn't look uninitialized. If this is
+    // a field or element constructor, we do not want to invalidate
+    // the whole structure. Pointer escape is meaningless because
+    // the structure is a product of conservative evaluation
+    // and therefore contains nothing interesting at this point.
+    RegionAndSymbolInvalidationTraits ITraits;
+    ITraits.setTrait(TargetR,
+        RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
+    State = State->invalidateRegions(TargetR, E, Count, LCtx,
                                      /* CausedByPointerEscape=*/false, nullptr,
-                                     &Call, nullptr);
+                                     &Call, &ITraits);
 
     R = State->getSVal(Target.castAs<Loc>(), E->getType());
   } else {
