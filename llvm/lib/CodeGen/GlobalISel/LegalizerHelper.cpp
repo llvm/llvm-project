@@ -1612,6 +1612,11 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerUITOFP(MI, TypeIdx, Ty);
   case G_SITOFP:
     return lowerSITOFP(MI, TypeIdx, Ty);
+  case G_SMIN:
+  case G_SMAX:
+  case G_UMIN:
+  case G_UMAX:
+    return lowerMinMax(MI, TypeIdx, Ty);
   }
 }
 
@@ -3109,4 +3114,35 @@ LegalizerHelper::lowerSITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   }
 
   return UnableToLegalize;
+}
+
+static CmpInst::Predicate minMaxToCompare(unsigned Opc) {
+  switch (Opc) {
+  case TargetOpcode::G_SMIN:
+    return CmpInst::ICMP_SLT;
+  case TargetOpcode::G_SMAX:
+    return CmpInst::ICMP_SGT;
+  case TargetOpcode::G_UMIN:
+    return CmpInst::ICMP_ULT;
+  case TargetOpcode::G_UMAX:
+    return CmpInst::ICMP_UGT;
+  default:
+    llvm_unreachable("not in integer min/max");
+  }
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerMinMax(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Src1 = MI.getOperand(2).getReg();
+
+  const CmpInst::Predicate Pred = minMaxToCompare(MI.getOpcode());
+  LLT CmpType = MRI.getType(Dst).changeElementSize(1);
+
+  auto Cmp = MIRBuilder.buildICmp(Pred, CmpType, Src0, Src1);
+  MIRBuilder.buildSelect(Dst, Cmp, Src0, Src1);
+
+  MI.eraseFromParent();
+  return Legalized;
 }

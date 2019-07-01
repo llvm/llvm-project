@@ -277,10 +277,6 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
-  if (!data_sp)
-    return Status("failed to allocate DataBufferHeap instance of size %" PRIu64,
-                  REG_CONTEXT_SIZE);
-
   error = ReadGPR();
   if (error.Fail())
     return error;
@@ -290,13 +286,6 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
     return error;
 
   uint8_t *dst = data_sp->GetBytes();
-  if (dst == nullptr) {
-    error.SetErrorStringWithFormat("DataBufferHeap instance of size %" PRIu64
-                                   " returned a null pointer",
-                                   REG_CONTEXT_SIZE);
-    return error;
-  }
-
   ::memcpy(dst, &m_gpr_arm64, GetGPRSize());
   dst += GetGPRSize();
   ::memcpy(dst, &m_fpr, sizeof(m_fpr));

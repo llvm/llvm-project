@@ -128,23 +128,17 @@ SymbolLocation getPreferredLocation(const Location &ASTLoc,
   return Merged.CanonicalDeclaration;
 }
 
-struct MacroDecl {
-  llvm::StringRef Name;
-  const MacroInfo *Info;
-};
-
 /// Finds declarations locations that a given source location refers to.
 class DeclarationAndMacrosFinder : public index::IndexDataConsumer {
-  std::vector<MacroDecl> MacroInfos;
+  std::vector<DefinedMacro> MacroInfos;
   llvm::DenseSet<const Decl *> Decls;
   const SourceLocation &SearchedLocation;
-  const ASTContext &AST;
   Preprocessor &PP;
 
 public:
   DeclarationAndMacrosFinder(const SourceLocation &SearchedLocation,
-                             ASTContext &AST, Preprocessor &PP)
-      : SearchedLocation(SearchedLocation), AST(AST), PP(PP) {}
+                             Preprocessor &PP)
+      : SearchedLocation(SearchedLocation), PP(PP) {}
 
   // The results are sorted by declaration location.
   std::vector<const Decl *> getFoundDecls() const {
@@ -158,16 +152,18 @@ public:
     return Result;
   }
 
-  std::vector<MacroDecl> takeMacroInfos() {
+  std::vector<DefinedMacro> takeMacroInfos() {
     // Don't keep the same Macro info multiple times.
-    llvm::sort(MacroInfos, [](const MacroDecl &Left, const MacroDecl &Right) {
-      return Left.Info < Right.Info;
-    });
+    llvm::sort(MacroInfos,
+               [](const DefinedMacro &Left, const DefinedMacro &Right) {
+                 return Left.Info < Right.Info;
+               });
 
-    auto Last = std::unique(MacroInfos.begin(), MacroInfos.end(),
-                            [](const MacroDecl &Left, const MacroDecl &Right) {
-                              return Left.Info == Right.Info;
-                            });
+    auto Last =
+        std::unique(MacroInfos.begin(), MacroInfos.end(),
+                    [](const DefinedMacro &Left, const DefinedMacro &Right) {
+                      return Left.Info == Right.Info;
+                    });
     MacroInfos.erase(Last, MacroInfos.end());
     return std::move(MacroInfos);
   }
@@ -211,43 +207,21 @@ public:
 
 private:
   void finish() override {
-    // Also handle possible macro at the searched location.
-    Token Result;
-    auto &Mgr = AST.getSourceManager();
-    if (!Lexer::getRawToken(Mgr.getSpellingLoc(SearchedLocation), Result, Mgr,
-                            AST.getLangOpts(), false)) {
-      if (Result.is(tok::raw_identifier)) {
-        PP.LookUpIdentifierInfo(Result);
-      }
-      IdentifierInfo *IdentifierInfo = Result.getIdentifierInfo();
-      if (IdentifierInfo && IdentifierInfo->hadMacroDefinition()) {
-        std::pair<FileID, unsigned int> DecLoc =
-            Mgr.getDecomposedExpansionLoc(SearchedLocation);
-        // Get the definition just before the searched location so that a macro
-        // referenced in a '#undef MACRO' can still be found.
-        SourceLocation BeforeSearchedLocation = Mgr.getMacroArgExpandedLocation(
-            Mgr.getLocForStartOfFile(DecLoc.first)
-                .getLocWithOffset(DecLoc.second - 1));
-        MacroDefinition MacroDef =
-            PP.getMacroDefinitionAtLoc(IdentifierInfo, BeforeSearchedLocation);
-        MacroInfo *MacroInf = MacroDef.getMacroInfo();
-        if (MacroInf) {
-          MacroInfos.push_back(MacroDecl{IdentifierInfo->getName(), MacroInf});
-          assert(Decls.empty());
-        }
-      }
+    if (auto DefinedMacro = locateMacroAt(SearchedLocation, PP)) {
+      MacroInfos.push_back(*DefinedMacro);
+      assert(Decls.empty());
     }
   }
 };
 
 struct IdentifiedSymbol {
   std::vector<const Decl *> Decls;
-  std::vector<MacroDecl> Macros;
+  std::vector<DefinedMacro> Macros;
 };
 
 IdentifiedSymbol getSymbolAtPosition(ParsedAST &AST, SourceLocation Pos) {
-  auto DeclMacrosFinder = DeclarationAndMacrosFinder(Pos, AST.getASTContext(),
-                                                     AST.getPreprocessor());
+  auto DeclMacrosFinder =
+      DeclarationAndMacrosFinder(Pos, AST.getPreprocessor());
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;
@@ -740,18 +714,18 @@ static HoverInfo getHoverContents(QualType T, const Decl *D,
 }
 
 /// Generate a \p Hover object given the macro \p MacroDecl.
-static HoverInfo getHoverContents(MacroDecl Decl, ParsedAST &AST) {
+static HoverInfo getHoverContents(const DefinedMacro &Macro, ParsedAST &AST) {
   HoverInfo HI;
   SourceManager &SM = AST.getSourceManager();
-  HI.Name = Decl.Name;
+  HI.Name = Macro.Name;
   HI.Kind = indexSymbolKindToSymbolKind(
-      index::getSymbolInfoForMacro(*Decl.Info).Kind);
+      index::getSymbolInfoForMacro(*Macro.Info).Kind);
   // FIXME: Populate documentation
   // FIXME: Pupulate parameters
 
   // Try to get the full definition, not just the name
-  SourceLocation StartLoc = Decl.Info->getDefinitionLoc();
-  SourceLocation EndLoc = Decl.Info->getDefinitionEndLoc();
+  SourceLocation StartLoc = Macro.Info->getDefinitionLoc();
+  SourceLocation EndLoc = Macro.Info->getDefinitionEndLoc();
   if (EndLoc.isValid()) {
     EndLoc = Lexer::getLocForEndOfToken(EndLoc, 0, SM,
                                         AST.getASTContext().getLangOpts());

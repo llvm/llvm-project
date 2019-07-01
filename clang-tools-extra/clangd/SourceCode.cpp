@@ -16,6 +16,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
 #include "clang/Lex/Lexer.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -651,6 +652,32 @@ llvm::StringSet<> collectWords(llvm::StringRef Content) {
   Flush();
 
   return Result;
+}
+
+llvm::Optional<DefinedMacro> locateMacroAt(SourceLocation Loc,
+                                           Preprocessor &PP) {
+  const auto &SM = PP.getSourceManager();
+  const auto &LangOpts = PP.getLangOpts();
+  Token Result;
+  if (Lexer::getRawToken(SM.getSpellingLoc(Loc), Result, SM, LangOpts, false))
+    return None;
+  if (Result.is(tok::raw_identifier))
+    PP.LookUpIdentifierInfo(Result);
+  IdentifierInfo *IdentifierInfo = Result.getIdentifierInfo();
+  if (!IdentifierInfo || !IdentifierInfo->hadMacroDefinition())
+    return None;
+
+  std::pair<FileID, unsigned int> DecLoc = SM.getDecomposedExpansionLoc(Loc);
+  // Get the definition just before the searched location so that a macro
+  // referenced in a '#undef MACRO' can still be found.
+  SourceLocation BeforeSearchedLocation =
+      SM.getMacroArgExpandedLocation(SM.getLocForStartOfFile(DecLoc.first)
+                                         .getLocWithOffset(DecLoc.second - 1));
+  MacroDefinition MacroDef =
+      PP.getMacroDefinitionAtLoc(IdentifierInfo, BeforeSearchedLocation);
+  if (auto *MI = MacroDef.getMacroInfo())
+    return DefinedMacro{IdentifierInfo->getName(), MI};
+  return None;
 }
 
 } // namespace clangd

@@ -288,6 +288,8 @@ def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BCLR|BCLRI)_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BNEG|BNEGI)_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortInt], (instregex "^(BSEL_V|BSELI_B)$")>;
 def : InstRW<[P5600WriteMSAShortInt], (instregex "^BMN*Z.*$")>;
+def : InstRW<[P5600WriteMSAShortInt],
+             (instregex "^BSEL_(H|W|D|FW|FD)_PSEUDO$")>;
 
 // pcnt.[bhwd], sat_s.[bhwd], sat_u.bhwd]
 def : InstRW<[P5600WriteMSAOther3], (instregex "^PCNT_[BHWD]$")>;
@@ -335,6 +337,10 @@ def : InstRW<[P5600WriteMSAShortLogic], (instregex "^MOVE_V$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^LDI_[BHWD]$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(AND|OR|[XN]OR)_V$")>;
 def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(AND|OR|[XN]OR)I_B$")>;
+def : InstRW<[P5600WriteMSAShortLogic],
+             (instregex "^(AND|OR|[XN]OR)_V_[DHW]_PSEUDO$")>;
+def : InstRW<[P5600WriteMSAShortLogic], (instregex "^FILL_F(D|W)_PSEUDO$")>;
+def : InstRW<[P5600WriteMSAShortLogic], (instregex "^INSERT_F(D|W)_PSEUDO$")>;
 
 // fexp2_w, fexp2_d
 def : InstRW<[P5600WriteFPUS], (instregex "^FEXP2_(W|D)$")>;
@@ -593,4 +599,20 @@ def : InstRW<[P5600WriteFPUL], (instregex "^ROUND_(L|W)_(S|D32|D64)$")>;
 // Reason behind guess: rotr is in the same category and the two register forms
 //                      generally follow the immediate forms in this category
 def : InstRW<[P5600WriteEitherALU], (instrs ROTRV)>;
+
+// Atomic instructions
+
+// FIXME: Define `WriteAtomic` in the MipsSchedule.td and
+// attach it to the Atomic2OpsPostRA, AtomicCmpSwapPostRA, ...
+// classes. Then just define resources for the `WriteAtomic` in each
+// machine models.
+def P5600Atomic : ProcResource<1> { let BufferSize = 1; }
+def P5600WriteAtomic : SchedWriteRes<[P5600Atomic]> { let Latency = 2; }
+
+def : InstRW<[P5600WriteAtomic],
+    (instregex "^ATOMIC_SWAP_I(8|16|32|64)_POSTRA$")>;
+def : InstRW<[P5600WriteAtomic],
+    (instregex "^ATOMIC_CMP_SWAP_I(8|16|32|64)_POSTRA$")>;
+def : InstRW<[P5600WriteAtomic],
+    (instregex "^ATOMIC_LOAD_(ADD|SUB|AND|OR|XOR|NAND)_I(8|16|32|64)_POSTRA$")>;
 }

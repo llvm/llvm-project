@@ -246,14 +246,12 @@ size_t ObjectFileJIT::ReadSectionData(
   if (section->GetFileSize()) {
     const void *src = (void *)(uintptr_t)section->GetFileOffset();
 
-    DataBufferSP data_sp(
-        new lldb_private::DataBufferHeap(src, section->GetFileSize()));
-    if (data_sp) {
-      section_data.SetData(data_sp, 0, data_sp->GetByteSize());
-      section_data.SetByteOrder(GetByteOrder());
-      section_data.SetAddressByteSize(GetAddressByteSize());
-      return section_data.GetByteSize();
-    }
+    DataBufferSP data_sp =
+        std::make_shared<DataBufferHeap>(src, section->GetFileSize());
+    section_data.SetData(data_sp, 0, data_sp->GetByteSize());
+    section_data.SetByteOrder(GetByteOrder());
+    section_data.SetAddressByteSize(GetAddressByteSize());
+    return section_data.GetByteSize();
   }
   section_data.Clear();
   return 0;

@@ -158,7 +158,7 @@ int __libcpp_condvar_destroy(__libcpp_condvar_t* __cv);
 // Execute once
 _LIBCPP_THREAD_ABI_VISIBILITY
 int __libcpp_execute_once(__libcpp_exec_once_flag *flag,
-                          void (*init_routine)(void));
+                          void (*init_routine)());
 
 // Thread id
 _LIBCPP_THREAD_ABI_VISIBILITY
@@ -301,7 +301,7 @@ int __libcpp_condvar_destroy(__libcpp_condvar_t *__cv)
 
 // Execute once
 int __libcpp_execute_once(__libcpp_exec_once_flag *flag,
-                          void (*init_routine)(void)) {
+                          void (*init_routine)()) {
   return pthread_once(flag, init_routine);
 }
 

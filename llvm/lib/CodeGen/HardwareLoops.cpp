@@ -294,6 +294,7 @@ static bool CanGenerateTest(Loop *L, Value *Count) {
   // Check that the icmp is checking for equality of Count and zero and that
   // a non-zero value results in entering the loop.
   auto ICmp = cast<ICmpInst>(BI->getCondition());
+  LLVM_DEBUG(dbgs() << " - Found condition: " << *ICmp << "\n");
   if (!ICmp->isEquality())
     return false;
 

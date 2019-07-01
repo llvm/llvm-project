@@ -60,6 +60,10 @@ MATCHER_P3(Fix, Range, Replacement, Message,
          arg.Edits[0].range == Range && arg.Edits[0].newText == Replacement;
 }
 
+MATCHER_P(FixMessage, Message, "") {
+  return arg.Message == Message;
+}
+
 MATCHER_P(EqualToLSPDiag, LSPDiag,
           "LSP diagnostic " + llvm::to_string(LSPDiag)) {
   if (toJSON(arg) != toJSON(LSPDiag)) {
@@ -180,19 +184,17 @@ TEST(DiagnosticsTest, ClangTidy) {
     #include $deprecated[["assert.h"]]
 
     #define $macrodef[[SQUARE]](X) (X)*(X)
-    int main() {
-      return $doubled[[sizeof]](sizeof(int));
-    }
-    int square() {
+    int $main[[main]]() {
       int y = 4;
       return SQUARE($macroarg[[++]]y);
+      return $doubled[[sizeof]](sizeof(int));
     }
   )cpp");
   auto TU = TestTU::withCode(Test.code());
   TU.HeaderFilename = "assert.h"; // Suppress "not found" error.
   TU.ClangTidyChecks =
       "-*, bugprone-sizeof-expression, bugprone-macro-repeated-side-effects, "
-      "modernize-deprecated-headers";
+      "modernize-deprecated-headers, modernize-use-trailing-return-type";
   EXPECT_THAT(
       TU.build().getDiagnostics(),
       UnorderedElementsAre(
@@ -214,7 +216,15 @@ TEST(DiagnosticsTest, ClangTidy) {
               WithNote(
                   Diag(Test.range("macrodef"), "macro 'SQUARE' defined here"))),
           Diag(Test.range("macroarg"),
-               "multiple unsequenced modifications to 'y'")));
+               "multiple unsequenced modifications to 'y'"),
+          AllOf(
+            Diag(Test.range("main"),
+                 "use a trailing return type for this function"),
+            DiagSource(Diag::ClangTidy),
+            DiagName("modernize-use-trailing-return-type"),
+            // Verify that we don't have "[check-name]" suffix in the message.
+            WithFix(FixMessage("use a trailing return type for this function")))
+          ));
 }
 
 TEST(DiagnosticTest, ClangTidySuppressionComment) {

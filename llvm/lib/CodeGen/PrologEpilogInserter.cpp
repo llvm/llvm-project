@@ -1200,6 +1200,16 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
         MI.getOperand(0).setIsDebug();
 
         const DIExpression *DIExpr = MI.getDebugExpression();
+
+        // If we have a direct DBG_VALUE, and its location expression isn't
+        // currently complex, then adding an offset will morph it into a
+        // complex location that is interpreted as being a memory address.
+        // This changes a pointer-valued variable to dereference that pointer,
+        // which is incorrect. Fix by adding DW_OP_stack_value.
+        unsigned PrependFlags = DIExpression::ApplyOffset;
+        if (!MI.isIndirectDebugValue() && !DIExpr->isComplex())
+          PrependFlags |= DIExpression::StackValue;
+
         // If we have DBG_VALUE that is indirect and has a Implicit location
         // expression need to insert a deref before prepending a Memory
         // location expression. Also after doing this we change the DBG_VALUE
@@ -1211,8 +1221,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
           // Make the DBG_VALUE direct.
           MI.getOperand(1).ChangeToRegister(0, false);
         }
-        DIExpr =
-            DIExpression::prepend(DIExpr, DIExpression::ApplyOffset, Offset);
+        DIExpr = DIExpression::prepend(DIExpr, PrependFlags, Offset);
         MI.getOperand(3).setMetadata(DIExpr);
         continue;
       }

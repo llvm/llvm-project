@@ -2642,3 +2642,155 @@ define <16 x i8> @fptoui_16f32_to_16i8(<16 x float> %a) {
   %cvt = fptoui <16 x float> %a to <16 x i8>
   ret <16 x i8> %cvt
 }
+
+define <2 x i64> @fptosi_2f32_to_2i64_load(<2 x float>* %x) {
+; SSE-LABEL: fptosi_2f32_to_2i64_load:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    cvttss2si %xmm1, %rax
+; SSE-NEXT:    movq %rax, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; SSE-NEXT:    cvttss2si %xmm1, %rax
+; SSE-NEXT:    movq %rax, %xmm1
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    retq
+;
+; VEX-LABEL: fptosi_2f32_to_2i64_load:
+; VEX:       # %bb.0:
+; VEX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; VEX-NEXT:    vcvttss2si %xmm0, %rax
+; VEX-NEXT:    vmovq %rax, %xmm1
+; VEX-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; VEX-NEXT:    vcvttss2si %xmm0, %rax
+; VEX-NEXT:    vmovq %rax, %xmm0
+; VEX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; VEX-NEXT:    retq
+;
+; AVX512F-LABEL: fptosi_2f32_to_2i64_load:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512F-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX512F-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm0
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: fptosi_2f32_to_2i64_load:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512VL-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512VL-NEXT:    vmovq %rax, %xmm1
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX512VL-NEXT:    vcvttss2si %xmm0, %rax
+; AVX512VL-NEXT:    vmovq %rax, %xmm0
+; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512VL-NEXT:    retq
+;
+; AVX512DQ-LABEL: fptosi_2f32_to_2i64_load:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQ-NEXT:    vcvttps2qq %ymm0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: fptosi_2f32_to_2i64_load:
+; AVX512VLDQ:       # %bb.0:
+; AVX512VLDQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512VLDQ-NEXT:    vcvttps2qq %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    retq
+  %a = load <2 x float>, <2 x float>* %x
+  %b = fptosi <2 x float> %a to <2 x i64>
+  ret <2 x i64> %b
+}
+
+define <2 x i64> @fptoui_2f32_to_2i64_load(<2 x float>* %x) {
+; SSE-LABEL: fptoui_2f32_to_2i64_load:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; SSE-NEXT:    movaps %xmm1, %xmm0
+; SSE-NEXT:    subss %xmm2, %xmm0
+; SSE-NEXT:    cvttss2si %xmm0, %rax
+; SSE-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; SSE-NEXT:    xorq %rcx, %rax
+; SSE-NEXT:    cvttss2si %xmm1, %rdx
+; SSE-NEXT:    ucomiss %xmm2, %xmm1
+; SSE-NEXT:    cmovaeq %rax, %rdx
+; SSE-NEXT:    movq %rdx, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[1,1,2,3]
+; SSE-NEXT:    movaps %xmm1, %xmm3
+; SSE-NEXT:    subss %xmm2, %xmm3
+; SSE-NEXT:    cvttss2si %xmm3, %rax
+; SSE-NEXT:    xorq %rcx, %rax
+; SSE-NEXT:    cvttss2si %xmm1, %rcx
+; SSE-NEXT:    ucomiss %xmm2, %xmm1
+; SSE-NEXT:    cmovaeq %rax, %rcx
+; SSE-NEXT:    movq %rcx, %xmm1
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    retq
+;
+; VEX-LABEL: fptoui_2f32_to_2i64_load:
+; VEX:       # %bb.0:
+; VEX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; VEX-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; VEX-NEXT:    vsubss %xmm1, %xmm0, %xmm2
+; VEX-NEXT:    vcvttss2si %xmm2, %rax
+; VEX-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; VEX-NEXT:    xorq %rcx, %rax
+; VEX-NEXT:    vcvttss2si %xmm0, %rdx
+; VEX-NEXT:    vucomiss %xmm1, %xmm0
+; VEX-NEXT:    cmovaeq %rax, %rdx
+; VEX-NEXT:    vmovq %rdx, %xmm2
+; VEX-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; VEX-NEXT:    vsubss %xmm1, %xmm0, %xmm3
+; VEX-NEXT:    vcvttss2si %xmm3, %rax
+; VEX-NEXT:    xorq %rcx, %rax
+; VEX-NEXT:    vcvttss2si %xmm0, %rcx
+; VEX-NEXT:    vucomiss %xmm1, %xmm0
+; VEX-NEXT:    cmovaeq %rax, %rcx
+; VEX-NEXT:    vmovq %rcx, %xmm0
+; VEX-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm2[0],xmm0[0]
+; VEX-NEXT:    retq
+;
+; AVX512F-LABEL: fptoui_2f32_to_2i64_load:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512F-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm1
+; AVX512F-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX512F-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512F-NEXT:    vmovq %rax, %xmm0
+; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512F-NEXT:    retq
+;
+; AVX512VL-LABEL: fptoui_2f32_to_2i64_load:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512VL-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512VL-NEXT:    vmovq %rax, %xmm1
+; AVX512VL-NEXT:    vmovshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; AVX512VL-NEXT:    vcvttss2usi %xmm0, %rax
+; AVX512VL-NEXT:    vmovq %rax, %xmm0
+; AVX512VL-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512VL-NEXT:    retq
+;
+; AVX512DQ-LABEL: fptoui_2f32_to_2i64_load:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512DQ-NEXT:    vcvttps2uqq %ymm0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+;
+; AVX512VLDQ-LABEL: fptoui_2f32_to_2i64_load:
+; AVX512VLDQ:       # %bb.0:
+; AVX512VLDQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX512VLDQ-NEXT:    vcvttps2uqq %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    retq
+  %a = load <2 x float>, <2 x float>* %x
+  %b = fptoui <2 x float> %a to <2 x i64>
+  ret <2 x i64> %b
+}

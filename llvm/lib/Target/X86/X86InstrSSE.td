@@ -699,11 +699,17 @@ let Predicates = [UseAVX] in {
   def : Pat<(v2f64 (X86Unpckl VR128:$src1,
                       (bc_v2f64 (v2i64 (scalar_to_vector (loadi64 addr:$src2)))))),
             (VMOVHPDrm VR128:$src1, addr:$src2)>;
+  def : Pat<(v2f64 (X86Unpckl VR128:$src1, (X86vzload addr:$src2))),
+            (VMOVHPDrm VR128:$src1, addr:$src2)>;
 
   def : Pat<(store (f64 (extractelt
                           (v2f64 (X86VPermilpi VR128:$src, (i8 1))),
                           (iPTR 0))), addr:$dst),
             (VMOVHPDmr addr:$dst, VR128:$src)>;
+
+  // MOVLPD patterns
+  def : Pat<(v2f64 (X86Movsd VR128:$src1, (X86vzload addr:$src2))),
+            (VMOVLPDrm VR128:$src1, addr:$src2)>;
 }
 
 let Predicates = [UseSSE1] in {
@@ -722,11 +728,17 @@ let Predicates = [UseSSE2] in {
   def : Pat<(v2f64 (X86Unpckl VR128:$src1,
                       (bc_v2f64 (v2i64 (scalar_to_vector (loadi64 addr:$src2)))))),
             (MOVHPDrm VR128:$src1, addr:$src2)>;
+  def : Pat<(v2f64 (X86Unpckl VR128:$src1, (X86vzload addr:$src2))),
+            (MOVHPDrm VR128:$src1, addr:$src2)>;
 
   def : Pat<(store (f64 (extractelt
                           (v2f64 (X86Shufp VR128:$src, VR128:$src, (i8 1))),
                           (iPTR 0))), addr:$dst),
             (MOVHPDmr addr:$dst, VR128:$src)>;
+
+  // MOVLPD patterns
+  def : Pat<(v2f64 (X86Movsd VR128:$src1, (X86vzload addr:$src2))),
+            (MOVLPDrm VR128:$src1, addr:$src2)>;
 }
 
 //===----------------------------------------------------------------------===//

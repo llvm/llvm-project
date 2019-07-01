@@ -109,6 +109,35 @@ while.end:                                        ; preds = %while.body
   ret i32 0
 }
 
+; CHECK-LABEL: pre_existing_test_set
+; CHECK: call i1 @llvm.test.set.loop.iterations
+; CHECK-NOT: llvm.set{{.*}}.loop.iterations
+; CHECK: call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+; CHECK-NOT: call i32 @llvm.loop.decrement.reg
+define i32 @pre_existing_test_set(i32 %n, i32* nocapture %p, i32* nocapture readonly %q) {
+entry:
+  %guard = call i1 @llvm.test.set.loop.iterations.i32(i32 %n)
+  br i1 %guard, label %while.preheader, label %while.end
+
+while.preheader:
+  br label %while.body
+
+while.body:                                       ; preds = %while.body, %entry
+  %q.addr.05 = phi i32* [ %incdec.ptr, %while.body ], [ %q, %while.preheader ]
+  %p.addr.04 = phi i32* [ %incdec.ptr1, %while.body ], [ %p, %while.preheader ]
+  %0 = phi i32 [ %n, %while.preheader ], [ %2, %while.body ]
+  %incdec.ptr = getelementptr inbounds i32, i32* %q.addr.05, i32 1
+  %1 = load i32, i32* %q.addr.05, align 4
+  %incdec.ptr1 = getelementptr inbounds i32, i32* %p.addr.04, i32 1
+  store i32 %1, i32* %p.addr.04, align 4
+  %2 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %0, i32 1)
+  %3 = icmp ne i32 %2, 0
+  br i1 %3, label %while.body, label %while.end
+
+while.end:                                        ; preds = %while.body
+  ret i32 0
+}
+
 ; CHECK-LABEL: pre_existing_inner
 ; CHECK-NOT: llvm.set.loop.iterations
 ; CHECK: while.cond1.preheader.us:
@@ -223,14 +252,16 @@ exit:
 }
 
 ; CHECK-LABEL: search
+; CHECK: entry:
+; CHECK:   [[TEST:%[^ ]+]] = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
+; CHECK:   br i1 [[TEST]], label %for.body.preheader, label %for.cond.cleanup
 ; CHECK: for.body.preheader:
-; CHECK: call void @llvm.set.loop.iterations.i32(i32 %N)
-; CHECK: br label %for.body
+; CHECK:   br label %for.body
 ; CHECK: for.body:
 ; CHECK: for.inc:
-; CHECK: [[LOOP_DEC:%[^ ]+]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32
-; CHECK: [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
-; CHECK: br i1 [[CMP]], label %for.body, label %for.cond.cleanup
+; CHECK:   [[LOOP_DEC:%[^ ]+]] = call i32 @llvm.loop.decrement.reg.i32.i32.i32
+; CHECK:   [[CMP:%[^ ]+]] = icmp ne i32 [[LOOP_DEC]], 0
+; CHECK:   br i1 [[CMP]], label %for.body, label %for.cond.cleanup
 define i32 @search(i8* nocapture readonly %c, i32 %N) {
 entry:
   %cmp11 = icmp eq i32 %N, 0
@@ -276,16 +307,16 @@ for.inc:                                          ; preds = %sw.bb, %sw.bb1, %fo
 ; CHECK: call i32 @llvm.loop.decrement.reg.i32.i32.i32(
 
 ; TODO: We should be able to support the unrolled loop body.
-; CHECK-UNROLL-LABEL: unroll_inc_int:
+; CHECK-UNROLL-LABEL: unroll_inc_int
 ; CHECK-UNROLL:     [[PREHEADER:.LBB[0-9_]+]]: @ %for.body.preheader
 ; CHECK-UNROLL-NOT: dls
 ; CHECK-UNROLL:     [[LOOP:.LBB[0-9_]+]]: @ %for.body
 ; CHECK-UNROLL-NOT: le lr, [[LOOP]]
 ; CHECK-UNROLL:     bne [[LOOP]]
-; CHECK-UNROLL:     %for.body.epil.preheader
-; CHECK-UNROLL:     dls
-; CHECK-UNROLL:     %for.body.epil
-; CHECK-UNROLL:     le
+; CHECK-UNROLL:     wls lr, lr, [[EXIT:.LBB[0-9_]+]]
+; CHECK-UNROLL:     [[EPIL:.LBB[0-9_]+]]:
+; CHECK-UNROLL:     le lr, [[EPIL]]
+; CHECK-UNROLL-NEXT: [[EXIT]]
 
 define void @unroll_inc_int(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
 entry:
@@ -310,24 +341,27 @@ for.body:
 }
 
 ; CHECK-LABEL: unroll_inc_unsigned
-; CHECK: call void @llvm.set.loop.iterations.i32(i32 %N)
+; CHECK: call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
 ; CHECK: call i32 @llvm.loop.decrement.reg.i32.i32.i32(
 
 ; CHECK-LLC-LABEL: unroll_inc_unsigned:
-; CHECK-LLC: dls lr, [[COUNT:r[0-9]+]]
-; CHECK-LLC: le  lr
+; CHECK-LLC: wls lr, r3, [[EXIT:.LBB[0-9_]+]]
+; CHECK-LLC: [[HEADER:.LBB[0-9_]+]]:
+; CHECK-LLC: le lr, [[HEADER]]
+; CHECK-LLC-NEXT: [[EXIT]]:
 
 ; TODO: We should be able to support the unrolled loop body.
-; CHECK-UNROLL-LABEL: unroll_inc_unsigned:
+; CHECK-UNROLL-LABEL: unroll_inc_unsigned
 ; CHECK-UNROLL:     [[PREHEADER:.LBB[0-9_]+]]: @ %for.body.preheader
 ; CHECK-UNROLL-NOT: dls
 ; CHECK-UNROLL:     [[LOOP:.LBB[0-9_]+]]: @ %for.body
 ; CHECK-UNROLL-NOT: le lr, [[LOOP]]
 ; CHECK-UNROLL:     bne [[LOOP]]
-; CHECK-UNROLL:     %for.body.epil.preheader
-; CHECK-UNROLL:     dls
-; CHECK-UNROLL:     %for.body.epil
-; CHECK-UNROLL:     le
+; CHECK-UNROLL:     wls lr, lr, [[EPIL_EXIT:.LBB[0-9_]+]]
+; CHECK-UNROLL: [[EPIL:.LBB[0-9_]+]]:
+; CHECK-UNROLL:     le lr, [[EPIL]]
+; CHECK-UNROLL: [[EPIL_EXIT]]:
+; CHECK-UNROLL:     pop
 define void @unroll_inc_unsigned(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
 entry:
   %cmp8 = icmp eq i32 %N, 0
@@ -357,15 +391,21 @@ for.body:
 ; TODO: An unnecessary register is being held to hold COUNT, lr should just
 ; be used instead.
 ; CHECK-LLC-LABEL: unroll_dec_int:
-; CHECK-LLC: dls lr, [[COUNT:r[0-9]+]]
-; CHECK-LLC: subs  [[COUNT]], #1
-; CHECK-LLC: le  lr
+; CHECK-LLC: dls lr, r3
+; CHECK-LLC-NOT: mov lr, r3
+; CHECK-LLC: [[HEADER:.LBB[0-9_]+]]:
+; CHECK-LLC: le lr, [[HEADER]]
 
-; CHECK-UNROLL-LABEL: unroll_dec_int
-; CHECK-UNROLL: dls lr
-; CHECK-UNROLL: le lr
-; CHECK-UNROLL: dls lr
-; CHECK-UNROLL: le lr
+; CHECK-UNROLL-LABEL: unroll_dec_int:
+; CHECK-UNROLL:         wls lr, {{.*}}, [[PROLOGUE_EXIT:.LBB[0-9_]+]]
+; CHECK-UNROLL-NEXT: [[PROLOGUE:.LBB[0-9_]+]]:
+; CHECK-UNROLL:         le lr, [[PROLOGUE]]
+; CHECK-UNROLL-NEXT: [[PROLOGUE_EXIT:.LBB[0-9_]+]]:
+; CHECK-UNROLL:         dls lr, lr
+; CHECK-UNROLL:      [[BODY:.LBB[0-9_]+]]:
+; CHECK-UNROLL:         le lr, [[BODY]]
+; CHECK-UNROLL-NOT:     b
+; CHECK-UNROLL:         pop
 define void @unroll_dec_int(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
 entry:
   %cmp8 = icmp sgt i32 %N, 0
@@ -389,5 +429,6 @@ for.body:
 }
 
 declare void @llvm.set.loop.iterations.i32(i32) #0
+declare i1 @llvm.test.set.loop.iterations.i32(i32) #0
 declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #0
 

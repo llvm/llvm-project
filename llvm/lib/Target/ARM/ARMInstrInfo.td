@@ -106,6 +106,11 @@ def SDT_ARMIntShiftParts : SDTypeProfile<2, 3, [SDTCisSameAs<0, 1>,
                                               SDTCisInt<0>,
                                               SDTCisInt<4>]>;
 
+// TODO Add another operand for 'Size' so that we can re-use this node when we
+// start supporting *TP versions.
+def SDT_ARMWhileLoop : SDTypeProfile<0, 2, [SDTCisVT<0, i32>,
+                                            SDTCisVT<1, OtherVT>]>;
+
 def ARMSmlald        : SDNode<"ARMISD::SMLALD", SDT_LongMac>;
 def ARMSmlaldx       : SDNode<"ARMISD::SMLALDX", SDT_LongMac>;
 def ARMSmlsld        : SDNode<"ARMISD::SMLSLD", SDT_LongMac>;
@@ -243,6 +248,9 @@ def SDTARMVGETLN  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisInt<1>,
                                          SDTCisVT<2, i32>]>;
 def ARMvgetlaneu : SDNode<"ARMISD::VGETLANEu", SDTARMVGETLN>;
 def ARMvgetlanes : SDNode<"ARMISD::VGETLANEs", SDTARMVGETLN>;
+
+def ARMWLS : SDNode<"ARMISD::WLS", SDT_ARMWhileLoop,
+                    [SDNPHasChain]>;
 
 //===----------------------------------------------------------------------===//
 // ARM Flag Definitions.

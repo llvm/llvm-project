@@ -262,6 +262,7 @@ private:
   unsigned GITPtrHigh;
 
   unsigned HighBitsOf32BitAddress;
+  unsigned GDSSize;
 
   // Current recorded maximum possible occupancy.
   unsigned Occupancy;
@@ -476,9 +477,9 @@ public:
     return ArgInfo.getPreloadedValue(Value);
   }
 
-  unsigned getPreloadedReg(AMDGPUFunctionArgInfo::PreloadedValue Value) const {
+  Register getPreloadedReg(AMDGPUFunctionArgInfo::PreloadedValue Value) const {
     auto Arg = ArgInfo.getPreloadedValue(Value).first;
-    return Arg ? Arg->getRegister() : 0;
+    return Arg ? Arg->getRegister() : Register();
   }
 
   unsigned getGITPtrHigh() const {
@@ -487,6 +488,10 @@ public:
 
   unsigned get32BitAddressHighBits() const {
     return HighBitsOf32BitAddress;
+  }
+
+  unsigned getGDSSize() const {
+    return GDSSize;
   }
 
   unsigned getNumUserSGPRs() const {

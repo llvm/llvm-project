@@ -1479,7 +1479,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<float>
     size_t operator()(float __v) const _NOEXCEPT
     {
         // -0.0 and 0.0 should return same hash
-       if (__v == 0.0)
+       if (__v == 0.0f)
            return 0;
         return __scalar_hash<float>::operator()(__v);
     }
@@ -1507,7 +1507,7 @@ struct _LIBCPP_TEMPLATE_VIS hash<long double>
     size_t operator()(long double __v) const _NOEXCEPT
     {
         // -0.0 and 0.0 should return same hash
-        if (__v == 0.0)
+        if (__v == 0.0L)
             return 0;
 #if defined(__i386__)
         // Zero out padding bits

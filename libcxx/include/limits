@@ -409,7 +409,7 @@ protected:
     static _LIBCPP_CONSTEXPR const bool is_exact = false;
     static _LIBCPP_CONSTEXPR const int  radix = __FLT_RADIX__;
     _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type epsilon() _NOEXCEPT {return __LDBL_EPSILON__;}
-    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type round_error() _NOEXCEPT {return 0.5;}
+    _LIBCPP_INLINE_VISIBILITY static _LIBCPP_CONSTEXPR type round_error() _NOEXCEPT {return 0.5L;}
 
     static _LIBCPP_CONSTEXPR const int  min_exponent = __LDBL_MIN_EXP__;
     static _LIBCPP_CONSTEXPR const int  min_exponent10 = __LDBL_MIN_10_EXP__;

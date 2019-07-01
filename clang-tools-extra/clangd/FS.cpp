@@ -10,20 +10,25 @@
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/None.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 namespace clang {
 namespace clangd {
 
-PreambleFileStatusCache::PreambleFileStatusCache(llvm::StringRef MainFilePath)
-    : MainFilePath(MainFilePath) {
+PreambleFileStatusCache::PreambleFileStatusCache(llvm::StringRef MainFilePath){
   assert(llvm::sys::path::is_absolute(MainFilePath));
+  llvm::SmallString<256> MainFileCanonical(MainFilePath);
+  llvm::sys::path::remove_dots(MainFileCanonical, /*remove_dot_dot=*/true);
+  this->MainFilePath = MainFileCanonical.str();
 }
 
 void PreambleFileStatusCache::update(const llvm::vfs::FileSystem &FS,
                                      llvm::vfs::Status S) {
+  // Canonicalize path for later lookup, which is usually by absolute path.
   llvm::SmallString<32> PathStore(S.getName());
   if (FS.makeAbsolute(PathStore))
     return;
+  llvm::sys::path::remove_dots(PathStore, /*remove_dot_dot=*/true);
   // Do not cache status for the main file.
   if (PathStore == MainFilePath)
     return;
@@ -33,9 +38,15 @@ void PreambleFileStatusCache::update(const llvm::vfs::FileSystem &FS,
 
 llvm::Optional<llvm::vfs::Status>
 PreambleFileStatusCache::lookup(llvm::StringRef File) const {
-  auto I = StatCache.find(File);
+  // Canonicalize to match the cached form.
+  // Lookup tends to be first by absolute path, so no need to make absolute.
+  llvm::SmallString<256> PathLookup(File);
+  llvm::sys::path::remove_dots(PathLookup, /*remove_dot_dot=*/true);
+
+  auto I = StatCache.find(PathLookup);
   if (I != StatCache.end())
-    return I->getValue();
+    // Returned Status name should always match the requested File.
+    return llvm::vfs::Status::copyWithNewName(I->getValue(), File);
   return None;
 }
 

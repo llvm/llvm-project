@@ -926,6 +926,27 @@ bool DIExpression::isImplicit() const {
   return false;
 }
 
+bool DIExpression::isComplex() const {
+  if (!isValid())
+    return false;
+
+  if (getNumElements() == 0)
+    return false;
+
+  // If there are any elements other than fragment or tag_offset, then some
+  // kind of complex computation occurs.
+  for (const auto &It : expr_ops()) {
+    switch (It.getOp()) {
+      case dwarf::DW_OP_LLVM_tag_offset:
+      case dwarf::DW_OP_LLVM_fragment:
+        continue;
+      default: return true;
+    }
+  }
+
+  return false;
+}
+
 Optional<DIExpression::FragmentInfo>
 DIExpression::getFragmentInfo(expr_op_iterator Start, expr_op_iterator End) {
   for (auto I = Start; I != End; ++I)
