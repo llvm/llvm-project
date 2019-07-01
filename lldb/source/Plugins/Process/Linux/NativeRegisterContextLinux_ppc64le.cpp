@@ -371,13 +371,6 @@ Status NativeRegisterContextLinux_ppc64le::ReadAllRegisterValues(
     return error;
 
   uint8_t *dst = data_sp->GetBytes();
-  if (dst == nullptr) {
-    error.SetErrorStringWithFormat("DataBufferHeap instance of size %" PRIu64
-                                   " returned a null pointer",
-                                   REG_CONTEXT_SIZE);
-    return error;
-  }
-
   ::memcpy(dst, &m_gpr_ppc64le, GetGPRSize());
   dst += GetGPRSize();
   ::memcpy(dst, &m_fpr_ppc64le, GetFPRSize());
