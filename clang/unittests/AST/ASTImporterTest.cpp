@@ -316,10 +316,11 @@ struct RedirectingImporterTest : ASTImporterOptionSpecificTestBase {
   RedirectingImporterTest() {
     Creator = [](ASTContext &ToContext, FileManager &ToFileManager,
                  ASTContext &FromContext, FileManager &FromFileManager,
-                 bool MinimalImport, ASTImporterLookupTable *LookupTable) {
+                 bool MinimalImport,
+                 const std::shared_ptr<ASTImporterSharedState> &SharedState) {
       return new RedirectingImporter(ToContext, ToFileManager, FromContext,
                                      FromFileManager, MinimalImport,
-                                     LookupTable);
+                                     SharedState);
     };
   }
 };
@@ -2888,7 +2889,7 @@ private:
       CXXMethodDecl *Method =
           FirstDeclMatcher<CXXMethodDecl>().match(ToClass, MethodMatcher);
       ToClass->removeDecl(Method);
-      LookupTablePtr->remove(Method);
+      SharedStatePtr->getLookupTable()->remove(Method);
     }
 
     ASSERT_EQ(DeclCounter<CXXMethodDecl>().match(ToClass, MethodMatcher), 0u);
@@ -4723,10 +4724,11 @@ struct ErrorHandlingTest : ASTImporterOptionSpecificTestBase {
   ErrorHandlingTest() {
     Creator = [](ASTContext &ToContext, FileManager &ToFileManager,
                  ASTContext &FromContext, FileManager &FromFileManager,
-                 bool MinimalImport, ASTImporterLookupTable *LookupTable) {
+                 bool MinimalImport,
+                 const std::shared_ptr<ASTImporterSharedState> &SharedState) {
       return new ASTImporterWithFakeErrors(ToContext, ToFileManager,
                                            FromContext, FromFileManager,
-                                           MinimalImport, LookupTable);
+                                           MinimalImport, SharedState);
     };
   }
   // In this test we purposely report an error (UnsupportedConstruct) when
@@ -4997,6 +4999,79 @@ TEST_P(ErrorHandlingTest, ErrorIsNotPropagatedFromMemberToNamespace) {
   // And we should be able to import.
   FunctionDecl *ImportedOK = Import(FromOK, Lang_CXX);
   EXPECT_TRUE(ImportedOK);
+}
+
+// An error should be set for a class if it had a previous import with an error
+// from another TU.
+TEST_P(ErrorHandlingTest,
+       ImportedDeclWithErrorShouldFailTheImportOfDeclWhichMapToIt) {
+  // We already have a fwd decl.
+  TranslationUnitDecl *ToTU = getToTuDecl(
+      "class X;", Lang_CXX);
+  // Then we import a definition.
+  {
+    TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
+        class X {
+          void f() { )") + ErroneousStmt + R"( }
+          void ok();
+        };
+        )",
+        Lang_CXX);
+    auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+        FromTU, cxxRecordDecl(hasName("X")));
+    CXXRecordDecl *ImportedX = Import(FromX, Lang_CXX);
+
+    // An error is set for X ...
+    EXPECT_FALSE(ImportedX);
+    ASTImporter *Importer = findFromTU(FromX)->Importer.get();
+    Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
+    ASSERT_TRUE(OptErr);
+    EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+  }
+  // ... but the node had been created.
+  auto *ToXDef = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("X"), isDefinition()));
+  // An error is set for "ToXDef" in the shared state.
+  Optional<ImportError> OptErr =
+      SharedStatePtr->getImportDeclErrorIfAny(ToXDef);
+  ASSERT_TRUE(OptErr);
+  EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+
+  auto *ToXFwd = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("X"), unless(isDefinition())));
+  // An error is NOT set for the fwd Decl of X in the shared state.
+  OptErr = SharedStatePtr->getImportDeclErrorIfAny(ToXFwd);
+  ASSERT_FALSE(OptErr);
+
+  // Try to import  X again but from another TU.
+  {
+    TranslationUnitDecl *FromTU = getTuDecl(std::string(R"(
+        class X {
+          void f() { )") + ErroneousStmt + R"( }
+          void ok();
+        };
+        )",
+        Lang_CXX, "input1.cc");
+
+    auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+        FromTU, cxxRecordDecl(hasName("X")));
+    CXXRecordDecl *ImportedX = Import(FromX, Lang_CXX);
+
+    // If we did not save the errors for the "to" context then the below checks
+    // would fail, because the lookup finds the fwd Decl of the existing
+    // definition in the "to" context. We can reach the existing definition via
+    // the found fwd Decl. That existing definition is structurally equivalent
+    // (we check only the fields) with this one we want to import, so we return
+    // with the existing definition, which is erroneous (one method is missing).
+
+    // The import should fail.
+    EXPECT_FALSE(ImportedX);
+    ASTImporter *Importer = findFromTU(FromX)->Importer.get();
+    Optional<ImportError> OptErr = Importer->getImportDeclErrorIfAny(FromX);
+    // And an error is set for this new X in the "from" ctx.
+    ASSERT_TRUE(OptErr);
+    EXPECT_EQ(OptErr->Error, ImportError::UnsupportedConstruct);
+  }
 }
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ErrorHandlingTest,

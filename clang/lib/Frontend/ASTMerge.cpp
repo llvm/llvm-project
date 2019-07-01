@@ -9,7 +9,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/ASTImporter.h"
-#include "clang/AST/ASTImporterLookupTable.h"
+#include "clang/AST/ASTImporterSharedState.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendActions.h"
@@ -38,7 +38,7 @@ void ASTMergeAction::ExecuteAction() {
                                        &CI.getASTContext());
   IntrusiveRefCntPtr<DiagnosticIDs>
       DiagIDs(CI.getDiagnostics().getDiagnosticIDs());
-  ASTImporterLookupTable LookupTable(
+  auto SharedState = std::make_shared<ASTImporterSharedState>(
       *CI.getASTContext().getTranslationUnitDecl());
   for (unsigned I = 0, N = ASTFiles.size(); I != N; ++I) {
     IntrusiveRefCntPtr<DiagnosticsEngine>
@@ -55,7 +55,7 @@ void ASTMergeAction::ExecuteAction() {
 
     ASTImporter Importer(CI.getASTContext(), CI.getFileManager(),
                          Unit->getASTContext(), Unit->getFileManager(),
-                         /*MinimalImport=*/false, &LookupTable);
+                         /*MinimalImport=*/false, SharedState);
 
     TranslationUnitDecl *TU = Unit->getASTContext().getTranslationUnitDecl();
     for (auto *D : TU->decls()) {
