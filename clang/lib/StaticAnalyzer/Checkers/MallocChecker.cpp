@@ -177,9 +177,10 @@ public:
         II_free(nullptr), II_realloc(nullptr), II_calloc(nullptr),
         II_valloc(nullptr), II_reallocf(nullptr), II_strndup(nullptr),
         II_strdup(nullptr), II_win_strdup(nullptr), II_kmalloc(nullptr),
-        II_if_nameindex(nullptr), II_if_freenameindex(nullptr),
-        II_wcsdup(nullptr), II_win_wcsdup(nullptr), II_g_malloc(nullptr),
-        II_g_malloc0(nullptr), II_g_realloc(nullptr), II_g_try_malloc(nullptr),
+        II_kfree(nullptr), II_if_nameindex(nullptr),
+        II_if_freenameindex(nullptr), II_wcsdup(nullptr),
+        II_win_wcsdup(nullptr), II_g_malloc(nullptr), II_g_malloc0(nullptr),
+        II_g_realloc(nullptr), II_g_try_malloc(nullptr),
         II_g_try_malloc0(nullptr), II_g_try_realloc(nullptr),
         II_g_free(nullptr), II_g_memdup(nullptr), II_g_malloc_n(nullptr),
         II_g_malloc0_n(nullptr), II_g_realloc_n(nullptr),
@@ -249,13 +250,13 @@ private:
   mutable IdentifierInfo *II_alloca, *II_win_alloca, *II_malloc, *II_free,
                          *II_realloc, *II_calloc, *II_valloc, *II_reallocf,
                          *II_strndup, *II_strdup, *II_win_strdup, *II_kmalloc,
-                         *II_if_nameindex, *II_if_freenameindex, *II_wcsdup,
-                         *II_win_wcsdup, *II_g_malloc, *II_g_malloc0,
-                         *II_g_realloc, *II_g_try_malloc, *II_g_try_malloc0,
-                         *II_g_try_realloc, *II_g_free, *II_g_memdup,
-                         *II_g_malloc_n, *II_g_malloc0_n, *II_g_realloc_n,
-                         *II_g_try_malloc_n, *II_g_try_malloc0_n,
-                         *II_g_try_realloc_n;
+                         *II_kfree, *II_if_nameindex, *II_if_freenameindex,
+                         *II_wcsdup, *II_win_wcsdup, *II_g_malloc,
+                         *II_g_malloc0, *II_g_realloc, *II_g_try_malloc,
+                         *II_g_try_malloc0, *II_g_try_realloc, *II_g_free,
+                         *II_g_memdup, *II_g_malloc_n, *II_g_malloc0_n,
+                         *II_g_realloc_n, *II_g_try_malloc_n,
+                         *II_g_try_malloc0_n, *II_g_try_realloc_n;
   mutable Optional<uint64_t> KernelZeroFlagVal;
 
   void initIdentifierInfo(ASTContext &C) const;
@@ -598,6 +599,7 @@ void MallocChecker::initIdentifierInfo(ASTContext &Ctx) const {
   II_strndup = &Ctx.Idents.get("strndup");
   II_wcsdup = &Ctx.Idents.get("wcsdup");
   II_kmalloc = &Ctx.Idents.get("kmalloc");
+  II_kfree = &Ctx.Idents.get("kfree");
   II_if_nameindex = &Ctx.Idents.get("if_nameindex");
   II_if_freenameindex = &Ctx.Idents.get("if_freenameindex");
 
@@ -657,7 +659,7 @@ bool MallocChecker::isCMemFunction(const FunctionDecl *FD,
 
     if (Family == AF_Malloc && CheckFree) {
       if (FunI == II_free || FunI == II_realloc || FunI == II_reallocf ||
-          FunI == II_g_free)
+          FunI == II_g_free || FunI == II_kfree)
         return true;
     }
 
@@ -874,7 +876,7 @@ void MallocChecker::checkPostStmt(const CallExpr *CE, CheckerContext &C) const {
       State = CallocMem(C, CE, State);
       State = ProcessZeroAllocation(C, CE, 0, State);
       State = ProcessZeroAllocation(C, CE, 1, State);
-    } else if (FunI == II_free || FunI == II_g_free) {
+    } else if (FunI == II_free || FunI == II_g_free || FunI == II_kfree) {
       State = FreeMemAux(C, CE, State, 0, false, ReleasedAllocatedMemory);
     } else if (FunI == II_strdup || FunI == II_win_strdup ||
                FunI == II_wcsdup || FunI == II_win_wcsdup) {
