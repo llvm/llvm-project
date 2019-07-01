@@ -11,7 +11,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-class BreakpointAfterJoinTestCase(TestBase):
+class BacktraceAllTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
