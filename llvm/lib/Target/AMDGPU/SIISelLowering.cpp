@@ -1173,7 +1173,7 @@ bool SITargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
   } else if (AS == AMDGPUAS::PRIVATE_ADDRESS) {
     unsigned MaxPrivateBits = 8 * getSubtarget()->getMaxPrivateElementSize();
     return (MemVT.getSizeInBits() <= MaxPrivateBits);
-  } else if (AS == AMDGPUAS::LOCAL_ADDRESS) {
+  } else if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
     return (MemVT.getSizeInBits() <= 2 * 32);
   }
   return true;
@@ -5891,11 +5891,28 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     SDValue Chain = M->getOperand(0);
     SDValue M0 = M->getOperand(2);
     SDValue Value = M->getOperand(3);
-    unsigned OrderedCountIndex = M->getConstantOperandVal(7);
+    unsigned IndexOperand = M->getConstantOperandVal(7);
     unsigned WaveRelease = M->getConstantOperandVal(8);
     unsigned WaveDone = M->getConstantOperandVal(9);
     unsigned ShaderType;
     unsigned Instruction;
+
+    unsigned OrderedCountIndex = IndexOperand & 0x3f;
+    IndexOperand &= ~0x3f;
+    unsigned CountDw = 0;
+
+    if (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX10) {
+      CountDw = (IndexOperand >> 24) & 0xf;
+      IndexOperand &= ~(0xf << 24);
+
+      if (CountDw < 1 || CountDw > 4) {
+        report_fatal_error(
+            "ds_ordered_count: dword count must be between 1 and 4");
+      }
+    }
+
+    if (IndexOperand)
+      report_fatal_error("ds_ordered_count: bad index operand");
 
     switch (IntrID) {
     case Intrinsic::amdgcn_ds_ordered_add:
@@ -5930,6 +5947,10 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     unsigned Offset0 = OrderedCountIndex << 2;
     unsigned Offset1 = WaveRelease | (WaveDone << 1) | (ShaderType << 2) |
                        (Instruction << 4);
+
+    if (Subtarget->getGeneration() >= AMDGPUSubtarget::GFX10)
+      Offset1 |= (CountDw - 1) << 6;
+
     unsigned Offset = Offset0 | (Offset1 << 8);
 
     SDValue Ops[] = {
@@ -7135,7 +7156,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     default:
       llvm_unreachable("unsupported private_element_size");
     }
-  } else if (AS == AMDGPUAS::LOCAL_ADDRESS) {
+  } else if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
     // Use ds_read_b128 if possible.
     if (Subtarget->useDS128() && Load->getAlignment() >= 16 &&
         MemVT.getStoreSize() == 16)
@@ -7557,7 +7578,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
     default:
       llvm_unreachable("unsupported private_element_size");
     }
-  } else if (AS == AMDGPUAS::LOCAL_ADDRESS) {
+  } else if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS) {
     // Use ds_write_b128 if possible.
     if (Subtarget->useDS128() && Store->getAlignment() >= 16 &&
         VT.getStoreSize() == 16 && NumElements != 3)

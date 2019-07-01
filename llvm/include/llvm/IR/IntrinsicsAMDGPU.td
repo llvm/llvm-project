@@ -395,6 +395,7 @@ class AMDGPULDSF32Intrin<string clang_builtin> :
     [IntrArgMemOnly, NoCapture<0>, ImmArg<2>, ImmArg<3>, ImmArg<4>]
 >;
 
+// FIXME: The m0 argument should be moved after the normal arguments
 class AMDGPUDSOrderedIntrinsic : Intrinsic<
   [llvm_i32_ty],
   // M0 = {hi16:address, lo16:waveID}. Allow passing M0 as a pointer, so that
@@ -405,6 +406,7 @@ class AMDGPUDSOrderedIntrinsic : Intrinsic<
    llvm_i32_ty, // scope
    llvm_i1_ty,  // isVolatile
    llvm_i32_ty, // ordered count index (OA index), also added to the address
+                // gfx10: bits 24-27 indicate the number of active threads/dwords
    llvm_i1_ty,  // wave release, usually set to 1
    llvm_i1_ty], // wave done, set to 1 for the last ordered instruction
   [NoCapture<0>,

@@ -1690,8 +1690,8 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
     case AMDGPU::VGPRRegBankID:
       return &AMDGPU::VGPR_32RegClass;
     case AMDGPU::VCCRegBankID:
-      // TODO: Check wavesize
-      return &AMDGPU::SReg_64_XEXECRegClass;
+      return isWave32 ?
+        &AMDGPU::SReg_32_XM0_XEXECRegClass : &AMDGPU::SReg_64_XEXECRegClass;
     case AMDGPU::SGPRRegBankID:
       return &AMDGPU::SReg_32_XM0RegClass;
     case AMDGPU::SCCRegBankID:

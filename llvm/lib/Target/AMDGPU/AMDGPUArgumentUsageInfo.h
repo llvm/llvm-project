@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUARGUMENTUSAGEINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Pass.h"
 
@@ -28,7 +29,7 @@ private:
   friend class AMDGPUArgumentUsageInfo;
 
   union {
-    unsigned Register;
+    Register Reg;
     unsigned StackOffset;
   };
 
@@ -41,18 +42,18 @@ private:
 public:
   ArgDescriptor(unsigned Val = 0, unsigned Mask = ~0u,
                 bool IsStack = false, bool IsSet = false)
-    : Register(Val), Mask(Mask), IsStack(IsStack), IsSet(IsSet) {}
+    : Reg(Val), Mask(Mask), IsStack(IsStack), IsSet(IsSet) {}
 
-  static ArgDescriptor createRegister(unsigned Reg, unsigned Mask = ~0u) {
+  static ArgDescriptor createRegister(Register Reg, unsigned Mask = ~0u) {
     return ArgDescriptor(Reg, Mask, false, true);
   }
 
-  static ArgDescriptor createStack(unsigned Reg, unsigned Mask = ~0u) {
+  static ArgDescriptor createStack(Register Reg, unsigned Mask = ~0u) {
     return ArgDescriptor(Reg, Mask, true, true);
   }
 
   static ArgDescriptor createArg(const ArgDescriptor &Arg, unsigned Mask) {
-    return ArgDescriptor(Arg.Register, Mask, Arg.IsStack, Arg.IsSet);
+    return ArgDescriptor(Arg.Reg, Mask, Arg.IsStack, Arg.IsSet);
   }
 
   bool isSet() const {
@@ -67,9 +68,9 @@ public:
     return !IsStack;
   }
 
-  unsigned getRegister() const {
+  Register getRegister() const {
     assert(!IsStack);
-    return Register;
+    return Reg;
   }
 
   unsigned getStackOffset() const {

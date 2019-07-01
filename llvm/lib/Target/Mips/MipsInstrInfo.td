@@ -1851,7 +1851,9 @@ class InsBase<string opstr, RegisterOperand RO, Operand PosOpnd,
 // Atomic instructions with 2 source operands (ATOMIC_SWAP & ATOMIC_LOAD_*).
 class Atomic2Ops<PatFrag Op, RegisterClass DRC> :
   PseudoSE<(outs DRC:$dst), (ins PtrRC:$ptr, DRC:$incr),
-           [(set DRC:$dst, (Op iPTR:$ptr, DRC:$incr))]>;
+           [(set DRC:$dst, (Op iPTR:$ptr, DRC:$incr))]> {
+  let hasNoSchedulingInfo = 1;
+}
 
 class Atomic2OpsPostRA<RegisterClass RC> :
   PseudoSE<(outs RC:$dst), (ins PtrRC:$ptr, RC:$incr), []> {
@@ -1868,7 +1870,9 @@ class Atomic2OpsSubwordPostRA<RegisterClass RC> :
 // during ISelLowering, which produces the PostRA version of this instruction.
 class AtomicCmpSwap<PatFrag Op, RegisterClass DRC> :
   PseudoSE<(outs DRC:$dst), (ins PtrRC:$ptr, DRC:$cmp, DRC:$swap),
-           [(set DRC:$dst, (Op iPTR:$ptr, DRC:$cmp, DRC:$swap))]>;
+           [(set DRC:$dst, (Op iPTR:$ptr, DRC:$cmp, DRC:$swap))]> {
+  let hasNoSchedulingInfo = 1;
+}
 
 class AtomicCmpSwapPostRA<RegisterClass RC> :
   PseudoSE<(outs RC:$dst), (ins PtrRC:$ptr, RC:$cmp, RC:$swap), []> {
@@ -1882,7 +1886,6 @@ class AtomicCmpSwapSubwordPostRA<RegisterClass RC> :
   let mayLoad = 1;
   let mayStore = 1;
 }
-
 
 class LLBase<string opstr, RegisterOperand RO, DAGOperand MO = mem> :
   InstSE<(outs RO:$rt), (ins MO:$addr), !strconcat(opstr, "\t$rt, $addr"),
@@ -1935,7 +1938,7 @@ let isReturn=1, isTerminator=1, isBarrier=1, hasCtrlDep=1, isCTI=1 in {
   def ERet : PseudoSE<(outs), (ins), [(MipsERet)]>;
 }
 
-let Defs = [SP], Uses = [SP], hasSideEffects = 1 in {
+let Defs = [SP], Uses = [SP], hasSideEffects = 1, hasNoSchedulingInfo = 1 in {
 def ADJCALLSTACKDOWN : MipsPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
                                   [(callseq_start timm:$amt1, timm:$amt2)]>;
 def ADJCALLSTACKUP   : MipsPseudo<(outs), (ins i32imm:$amt1, i32imm:$amt2),
@@ -2011,17 +2014,25 @@ let isPseudo = 1, isCodeGenOnly = 1, hasNoSchedulingInfo = 1 in {
 
 // Expands to: lui $dst, %highest/%higher/%hi/%lo($tgt - $baltgt)
 def LONG_BRANCH_LUi : PseudoSE<(outs GPR32Opnd:$dst),
-  (ins brtarget:$tgt, brtarget:$baltgt), []>;
+  (ins brtarget:$tgt, brtarget:$baltgt), []> {
+  bit hasNoSchedulingInfo = 1;
+}
 // Expands to: lui $dst, highest/%higher/%hi/%lo($tgt)
 def LONG_BRANCH_LUi2Op : PseudoSE<(outs GPR32Opnd:$dst),
-  (ins brtarget:$tgt), []>;
+  (ins brtarget:$tgt), []> {
+  bit hasNoSchedulingInfo = 1;
+}
 
 // Expands to: addiu $dst, $src, %highest/%higher/%hi/%lo($tgt - $baltgt)
 def LONG_BRANCH_ADDiu : PseudoSE<(outs GPR32Opnd:$dst),
-  (ins GPR32Opnd:$src, brtarget:$tgt, brtarget:$baltgt), []>;
+  (ins GPR32Opnd:$src, brtarget:$tgt, brtarget:$baltgt), []> {
+  bit hasNoSchedulingInfo = 1;
+}
 // Expands to: addiu $dst, $src, %highest/%higher/%hi/%lo($tgt)
 def LONG_BRANCH_ADDiu2Op : PseudoSE<(outs GPR32Opnd:$dst),
-  (ins GPR32Opnd:$src, brtarget:$tgt), []>;
+  (ins GPR32Opnd:$src, brtarget:$tgt), []> {
+  bit hasNoSchedulingInfo = 1;
+}
 
 //===----------------------------------------------------------------------===//
 // Instruction definition
@@ -2332,7 +2343,7 @@ def MIPSehret : SDNode<"MipsISD::EH_RETURN", SDT_MipsEHRET,
                       [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 let Uses = [V0, V1], isTerminator = 1, isReturn = 1,
-           isBarrier = 1, isCTI = 1 in {
+           isBarrier = 1, isCTI = 1, hasNoSchedulingInfo = 1 in {
   def MIPSeh_return32 : MipsPseudo<(outs), (ins GPR32:$spoff, GPR32:$dst),
                                    [(MIPSehret GPR32:$spoff, GPR32:$dst)]>;
   def MIPSeh_return64 : MipsPseudo<(outs), (ins GPR64:$spoff, GPR64:$dst),

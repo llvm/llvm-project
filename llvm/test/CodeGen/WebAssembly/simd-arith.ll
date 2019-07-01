@@ -1073,6 +1073,17 @@ define <4 x float> @min_intrinsic_v4f32(<4 x float> %x, <4 x float> %y) {
   ret <4 x float> %a
 }
 
+; CHECK-LABEL: minnum_intrinsic_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype minnum_intrinsic_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.min $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.minnum.v4f32(<4 x float>, <4 x float>)
+define <4 x float> @minnum_intrinsic_v4f32(<4 x float> %x, <4 x float> %y) {
+  %a = call nnan <4 x float> @llvm.minnum.v4f32(<4 x float> %x, <4 x float> %y)
+  ret <4 x float> %a
+}
+
 ; CHECK-LABEL: max_intrinsic_v4f32:
 ; NO-SIMD128-NOT: f32x4
 ; SIMD128-NEXT: .functype max_intrinsic_v4f32 (v128, v128) -> (v128){{$}}
@@ -1081,6 +1092,17 @@ define <4 x float> @min_intrinsic_v4f32(<4 x float> %x, <4 x float> %y) {
 declare <4 x float> @llvm.maximum.v4f32(<4 x float>, <4 x float>)
 define <4 x float> @max_intrinsic_v4f32(<4 x float> %x, <4 x float> %y) {
   %a = call <4 x float> @llvm.maximum.v4f32(<4 x float> %x, <4 x float> %y)
+  ret <4 x float> %a
+}
+
+; CHECK-LABEL: maxnum_intrinsic_v4f32:
+; NO-SIMD128-NOT: f32x4
+; SIMD128-NEXT: .functype maxnum_intrinsic_v4f32 (v128, v128) -> (v128){{$}}
+; SIMD128-NEXT: f32x4.max $push[[R:[0-9]+]]=, $0, $1{{$}}
+; SIMD128-NEXT: return $pop[[R]]{{$}}
+declare <4 x float> @llvm.maxnum.v4f32(<4 x float>, <4 x float>)
+define <4 x float> @maxnum_intrinsic_v4f32(<4 x float> %x, <4 x float> %y) {
+  %a = call nnan <4 x float> @llvm.maxnum.v4f32(<4 x float> %x, <4 x float> %y)
   ret <4 x float> %a
 }
 

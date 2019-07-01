@@ -568,8 +568,6 @@ SDNode *AMDGPUDAGToDAGISel::glueCopyToM0(SDNode *N, SDValue Val) const {
   const SITargetLowering& Lowering =
     *static_cast<const SITargetLowering*>(getTargetLowering());
 
-  // Write max value to m0 before each load operation
-
   assert(N->getOperand(0).getValueType() == MVT::Other && "Expected chain");
 
   SDValue M0 = Lowering.copyToM0(*CurDAG, N->getOperand(0), SDLoc(N),
@@ -587,10 +585,17 @@ SDNode *AMDGPUDAGToDAGISel::glueCopyToM0(SDNode *N, SDValue Val) const {
 }
 
 SDNode *AMDGPUDAGToDAGISel::glueCopyToM0LDSInit(SDNode *N) const {
-  if (cast<MemSDNode>(N)->getAddressSpace() != AMDGPUAS::LOCAL_ADDRESS ||
-      !Subtarget->ldsRequiresM0Init())
-    return N;
-  return glueCopyToM0(N, CurDAG->getTargetConstant(-1, SDLoc(N), MVT::i32));
+  unsigned AS = cast<MemSDNode>(N)->getAddressSpace();
+  if (AS == AMDGPUAS::LOCAL_ADDRESS) {
+    if (Subtarget->ldsRequiresM0Init())
+      return glueCopyToM0(N, CurDAG->getTargetConstant(-1, SDLoc(N), MVT::i32));
+  } else if (AS == AMDGPUAS::REGION_ADDRESS) {
+    MachineFunction &MF = CurDAG->getMachineFunction();
+    unsigned Value = MF.getInfo<SIMachineFunctionInfo>()->getGDSSize();
+    return
+        glueCopyToM0(N, CurDAG->getTargetConstant(Value, SDLoc(N), MVT::i32));
+  }
+  return N;
 }
 
 MachineSDNode *AMDGPUDAGToDAGISel::buildSMovImm64(SDLoc &DL, uint64_t Imm,
