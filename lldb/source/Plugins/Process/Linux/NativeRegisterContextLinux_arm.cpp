@@ -276,10 +276,6 @@ Status NativeRegisterContextLinux_arm::ReadAllRegisterValues(
   Status error;
 
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
-  if (!data_sp)
-    return Status("failed to allocate DataBufferHeap instance of size %" PRIu64,
-                  (uint64_t)REG_CONTEXT_SIZE);
-
   error = ReadGPR();
   if (error.Fail())
     return error;

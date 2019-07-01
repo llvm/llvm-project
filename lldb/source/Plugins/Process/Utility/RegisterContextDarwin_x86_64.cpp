@@ -910,8 +910,7 @@ bool RegisterContextDarwin_x86_64::WriteRegister(const RegisterInfo *reg_info,
 bool RegisterContextDarwin_x86_64::ReadAllRegisterValues(
     lldb::DataBufferSP &data_sp) {
   data_sp = std::make_shared<DataBufferHeap>(REG_CONTEXT_SIZE, 0);
-  if (data_sp && ReadGPR(false) == 0 && ReadFPU(false) == 0 &&
-      ReadEXC(false) == 0) {
+  if (ReadGPR(false) == 0 && ReadFPU(false) == 0 && ReadEXC(false) == 0) {
     uint8_t *dst = data_sp->GetBytes();
     ::memcpy(dst, &gpr, sizeof(gpr));
     dst += sizeof(gpr);
