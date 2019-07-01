@@ -76,6 +76,7 @@ def : GINodeEquiv<G_FREM, frem>;
 def : GINodeEquiv<G_FPOW, fpow>;
 def : GINodeEquiv<G_FEXP2, fexp2>;
 def : GINodeEquiv<G_FLOG2, flog2>;
+def : GINodeEquiv<G_FCANONICALIZE, fcanonicalize>;
 def : GINodeEquiv<G_INTRINSIC, intrinsic_wo_chain>;
 // ISD::INTRINSIC_VOID can also be handled with G_INTRINSIC_W_SIDE_EFFECTS.
 def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_void>;
@@ -97,6 +98,10 @@ def : GINodeEquiv<G_FSQRT, fsqrt>;
 def : GINodeEquiv<G_FFLOOR, ffloor>;
 def : GINodeEquiv<G_FRINT, frint>;
 def : GINodeEquiv<G_FNEARBYINT, fnearbyint>;
+def : GINodeEquiv<G_SMIN, smin>;
+def : GINodeEquiv<G_SMAX, smax>;
+def : GINodeEquiv<G_UMIN, umin>;
+def : GINodeEquiv<G_UMAX, umax>;
 
 // Broadly speaking G_LOAD is equivalent to ISD::LOAD but there are some
 // complications that tablegen must take care of. For example, Predicates such

@@ -50,11 +50,9 @@ body: |
     ; CHECK: [[FPEXT:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC]](s16)
     ; CHECK: [[FPEXT1:%[0-9]+]]:_(s32) = G_FPEXT [[TRUNC1]](s16)
     ; CHECK: [[FCMP:%[0-9]+]]:_(s1) = G_FCMP floatpred(oeq), [[FPEXT]](s32), [[FPEXT1]]
-    ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[FCMP]](s1), [[COPY1]], [[COPY2]]
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY3]](s32)
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[FCMP]](s1), [[TRUNC]], [[TRUNC1]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
+    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s16) = G_CONSTANT i16 0
     %1:_(s32) = COPY $vgpr0
     %2:_(s16) = G_TRUNC %1

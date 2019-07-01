@@ -1,6 +1,7 @@
 ; RUN: opt -mtriple=amdgcn-- -loop-unroll -simplifycfg -sroa %s -S -o - | FileCheck %s
 ; RUN: opt -mtriple=r600-- -loop-unroll -simplifycfg -sroa %s -S -o - | FileCheck %s
 
+target datalayout = "e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5"
 
 ; This test contains a simple loop that initializes an array declared in
 ; private memory.  We want to make sure these kinds of loops are always
@@ -11,7 +12,7 @@
 ; CHECK: store i32 5, i32 addrspace(1)* %out
 define amdgpu_kernel void @private_memory(i32 addrspace(1)* %out) {
 entry:
-  %0 = alloca [32 x i32]
+  %0 = alloca [32 x i32], addrspace(5)
   br label %loop.header
 
 loop.header:
@@ -19,8 +20,8 @@ loop.header:
   br label %loop.body
 
 loop.body:
-  %ptr = getelementptr [32 x i32], [32 x i32]* %0, i32 0, i32 %counter
-  store i32 %counter, i32* %ptr
+  %ptr = getelementptr [32 x i32], [32 x i32] addrspace(5)* %0, i32 0, i32 %counter
+  store i32 %counter, i32 addrspace(5)* %ptr
   br label %loop.inc
 
 loop.inc:
@@ -29,8 +30,8 @@ loop.inc:
   br i1 %1, label  %exit, label %loop.header
 
 exit:
-  %2 = getelementptr [32 x i32], [32 x i32]* %0, i32 0, i32 5
-  %3 = load i32, i32* %2
+  %2 = getelementptr [32 x i32], [32 x i32] addrspace(5)* %0, i32 0, i32 5
+  %3 = load i32, i32 addrspace(5)* %2
   store i32 %3, i32 addrspace(1)* %out
   ret void
 }
@@ -74,7 +75,7 @@ exit:
 ; CHECK-NEXT: getelementptr
 ; CHECK-NEXT: store
 ; CHECK-NOT: br
-define amdgpu_kernel void @unroll_for_if(i32* %a) {
+define amdgpu_kernel void @unroll_for_if(i32 addrspace(5)* %a) {
 entry:
   br label %for.body
 
@@ -86,8 +87,8 @@ for.body:                                         ; preds = %entry, %for.inc
 
 if.then:                                          ; preds = %for.body
   %0 = sext i32 %i1 to i64
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %0
-  store i32 0, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, i32 addrspace(5)* %a, i64 %0
+  store i32 0, i32 addrspace(5)* %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then

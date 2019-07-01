@@ -170,7 +170,7 @@ bool RegisterContextPOSIXProcessMonitor_powerpc::ReadAllRegisterValues(
     DataBufferSP &data_sp) {
   bool success = false;
   data_sp.reset(new DataBufferHeap(REG_CONTEXT_SIZE, 0));
-  if (data_sp && ReadGPR() && ReadFPR()) {
+  if (ReadGPR() && ReadFPR()) {
     uint8_t *dst = data_sp->GetBytes();
     success = dst != 0;
 

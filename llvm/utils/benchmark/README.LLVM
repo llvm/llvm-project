@@ -21,3 +21,5 @@ Changes:
   is applied to fix building with MinGW headers for ARM
 * https://github.com/google/benchmark/commit/a9b31c51b1ee7ec7b31438c647123c2cbac5d956
   is applied to disable exceptions in Microsoft STL when exceptions are disabled
+* Disabled CMake get_git_version as it is meaningless for this in-tree build,
+  and hardcoded a null version

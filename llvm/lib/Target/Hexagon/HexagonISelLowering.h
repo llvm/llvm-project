@@ -167,6 +167,7 @@ namespace HexagonISD {
     SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerUnalignedLoad(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerUAddSubO(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerAddSubCarry(SDValue Op, SelectionDAG &DAG) const;
 
     SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;

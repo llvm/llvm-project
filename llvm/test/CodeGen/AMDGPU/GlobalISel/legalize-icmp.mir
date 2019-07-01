@@ -44,18 +44,18 @@ body: |
     liveins: $vgpr0
     ; CHECK-LABEL: name: test_icmp_s16
     ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s32)
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 65535
     ; CHECK: [[COPY1:%[0-9]+]]:_(s32) = COPY [[C]](s32)
     ; CHECK: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C1]]
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C1]]
     ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[AND]](s32), [[AND1]]
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[COPY3]], [[COPY4]]
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY5]](s32)
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC]], [[TRUNC1]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
+    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s16) = G_CONSTANT i16 0
     %1:_(s32) = COPY $vgpr0
     %2:_(s16) = G_TRUNC %1
@@ -79,11 +79,11 @@ body: |
     ; CHECK: [[COPY2:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; CHECK: [[AND1:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C1]]
     ; CHECK: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(ne), [[AND]](s32), [[AND1]]
-    ; CHECK: [[COPY3:%[0-9]+]]:_(s32) = COPY [[C]](s32)
-    ; CHECK: [[COPY4:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP]](s1), [[COPY3]], [[COPY4]]
-    ; CHECK: [[COPY5:%[0-9]+]]:_(s32) = COPY [[SELECT]](s32)
-    ; CHECK: $vgpr0 = COPY [[COPY5]](s32)
+    ; CHECK: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[C]](s32)
+    ; CHECK: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
+    ; CHECK: [[SELECT:%[0-9]+]]:_(s16) = G_SELECT [[ICMP]](s1), [[TRUNC]], [[TRUNC1]]
+    ; CHECK: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[SELECT]](s16)
+    ; CHECK: $vgpr0 = COPY [[ANYEXT]](s32)
     %0:_(s8) = G_CONSTANT i8 0
     %1:_(s32) = COPY $vgpr0
     %2:_(s8) = G_TRUNC %1

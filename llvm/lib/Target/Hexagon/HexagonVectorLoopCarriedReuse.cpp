@@ -238,10 +238,17 @@ namespace {
     // used over the backedge. This is teh value that gets reused from a
     // previous iteration.
     Instruction *BackedgeInst = nullptr;
+    std::map<Instruction *, DepChain *> DepChains;
+    int Iterations = -1;
 
     ReuseValue() = default;
 
-    void reset() { Inst2Replace = nullptr; BackedgeInst = nullptr; }
+    void reset() {
+      Inst2Replace = nullptr;
+      BackedgeInst = nullptr;
+      DepChains.clear();
+      Iterations = -1;
+    }
     bool isDefined() { return Inst2Replace != nullptr; }
   };
 
@@ -288,10 +295,10 @@ namespace {
     void findDepChainFromPHI(Instruction *I, DepChain &D);
     void reuseValue();
     Value *findValueInBlock(Value *Op, BasicBlock *BB);
-    bool isDepChainBtwn(Instruction *I1, Instruction *I2, int Iters);
-    DepChain *getDepChainBtwn(Instruction *I1, Instruction *I2);
+    DepChain *getDepChainBtwn(Instruction *I1, Instruction *I2, int Iters);
     bool isEquivalentOperation(Instruction *I1, Instruction *I2);
     bool canReplace(Instruction *I);
+    bool isCallInstCommutative(CallInst *C);
   };
 
 } // end anonymous namespace
@@ -324,6 +331,70 @@ bool HexagonVectorLoopCarriedReuse::runOnLoop(Loop *L, LPPassManager &LPM) {
   CurLoop = L;
 
   return doVLCR();
+}
+
+bool HexagonVectorLoopCarriedReuse::isCallInstCommutative(CallInst *C) {
+  switch (C->getCalledFunction()->getIntrinsicID()) {
+    case Intrinsic::hexagon_V6_vaddb:
+    case Intrinsic::hexagon_V6_vaddb_128B:
+    case Intrinsic::hexagon_V6_vaddh:
+    case Intrinsic::hexagon_V6_vaddh_128B:
+    case Intrinsic::hexagon_V6_vaddw:
+    case Intrinsic::hexagon_V6_vaddw_128B:
+    case Intrinsic::hexagon_V6_vaddubh:
+    case Intrinsic::hexagon_V6_vaddubh_128B:
+    case Intrinsic::hexagon_V6_vadduhw:
+    case Intrinsic::hexagon_V6_vadduhw_128B:
+    case Intrinsic::hexagon_V6_vaddhw:
+    case Intrinsic::hexagon_V6_vaddhw_128B:
+    case Intrinsic::hexagon_V6_vmaxb:
+    case Intrinsic::hexagon_V6_vmaxb_128B:
+    case Intrinsic::hexagon_V6_vmaxh:
+    case Intrinsic::hexagon_V6_vmaxh_128B:
+    case Intrinsic::hexagon_V6_vmaxw:
+    case Intrinsic::hexagon_V6_vmaxw_128B:
+    case Intrinsic::hexagon_V6_vmaxub:
+    case Intrinsic::hexagon_V6_vmaxub_128B:
+    case Intrinsic::hexagon_V6_vmaxuh:
+    case Intrinsic::hexagon_V6_vmaxuh_128B:
+    case Intrinsic::hexagon_V6_vminub:
+    case Intrinsic::hexagon_V6_vminub_128B:
+    case Intrinsic::hexagon_V6_vminuh:
+    case Intrinsic::hexagon_V6_vminuh_128B:
+    case Intrinsic::hexagon_V6_vminb:
+    case Intrinsic::hexagon_V6_vminb_128B:
+    case Intrinsic::hexagon_V6_vminh:
+    case Intrinsic::hexagon_V6_vminh_128B:
+    case Intrinsic::hexagon_V6_vminw:
+    case Intrinsic::hexagon_V6_vminw_128B:
+    case Intrinsic::hexagon_V6_vmpyub:
+    case Intrinsic::hexagon_V6_vmpyub_128B:
+    case Intrinsic::hexagon_V6_vmpyuh:
+    case Intrinsic::hexagon_V6_vmpyuh_128B:
+    case Intrinsic::hexagon_V6_vavgub:
+    case Intrinsic::hexagon_V6_vavgub_128B:
+    case Intrinsic::hexagon_V6_vavgh:
+    case Intrinsic::hexagon_V6_vavgh_128B:
+    case Intrinsic::hexagon_V6_vavguh:
+    case Intrinsic::hexagon_V6_vavguh_128B:
+    case Intrinsic::hexagon_V6_vavgw:
+    case Intrinsic::hexagon_V6_vavgw_128B:
+    case Intrinsic::hexagon_V6_vavgb:
+    case Intrinsic::hexagon_V6_vavgb_128B:
+    case Intrinsic::hexagon_V6_vavguw:
+    case Intrinsic::hexagon_V6_vavguw_128B:
+    case Intrinsic::hexagon_V6_vabsdiffh:
+    case Intrinsic::hexagon_V6_vabsdiffh_128B:
+    case Intrinsic::hexagon_V6_vabsdiffub:
+    case Intrinsic::hexagon_V6_vabsdiffub_128B:
+    case Intrinsic::hexagon_V6_vabsdiffuh:
+    case Intrinsic::hexagon_V6_vabsdiffuh_128B:
+    case Intrinsic::hexagon_V6_vabsdiffw:
+    case Intrinsic::hexagon_V6_vabsdiffw_128B:
+      return true;
+    default:
+      return false;
+  }
 }
 
 bool HexagonVectorLoopCarriedReuse::isEquivalentOperation(Instruction *I1,
@@ -360,13 +431,19 @@ bool HexagonVectorLoopCarriedReuse::isEquivalentOperation(Instruction *I1,
 
 bool HexagonVectorLoopCarriedReuse::canReplace(Instruction *I) {
   const IntrinsicInst *II = dyn_cast<IntrinsicInst>(I);
-  if (II &&
-      (II->getIntrinsicID() == Intrinsic::hexagon_V6_hi ||
-       II->getIntrinsicID() == Intrinsic::hexagon_V6_lo)) {
+  if (!II)
+    return true;
+
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::hexagon_V6_hi:
+  case Intrinsic::hexagon_V6_lo:
+  case Intrinsic::hexagon_V6_hi_128B:
+  case Intrinsic::hexagon_V6_lo_128B:
     LLVM_DEBUG(dbgs() << "Not considering for reuse: " << *II << "\n");
     return false;
+  default:
+    return true;
   }
-  return true;
 }
 void HexagonVectorLoopCarriedReuse::findValueToReuse() {
   for (auto *D : Dependences) {
@@ -427,34 +504,85 @@ void HexagonVectorLoopCarriedReuse::findValueToReuse() {
 
         int NumOperands = I->getNumOperands();
 
-        for (int OpNo = 0; OpNo < NumOperands; ++OpNo) {
-          Value *Op = I->getOperand(OpNo);
-          Value *BEOp = BEUser->getOperand(OpNo);
+        // Take operands of each PNUser one by one and try to find DepChain
+        // with every operand of the BEUser. If any of the operands of BEUser
+        // has DepChain with current operand of the PNUser, break the matcher
+        // loop. Keep doing this for Every PNUser operand. If PNUser operand
+        // does not have DepChain with any of the BEUser operand, break the
+        // outer matcher loop, mark the BEUser as null and reset the ReuseCandidate.
+        // This ensures that DepChain exist for all the PNUser operand with
+        // BEUser operand. This also ensures that DepChains are independent of
+        // the positions in PNUser and BEUser.
+        std::map<Instruction *, DepChain *> DepChains;
+        CallInst *C1 = dyn_cast<CallInst>(I);
+        if ((I && I->isCommutative()) || (C1 && isCallInstCommutative(C1))) {
+          bool Found = false;
+          for (int OpNo = 0; OpNo < NumOperands; ++OpNo) {
+            Value *Op = I->getOperand(OpNo);
+            Instruction *OpInst = dyn_cast<Instruction>(Op);
+            Found = false;
+            for (int T = 0; T < NumOperands; ++T) {
+              Value *BEOp = BEUser->getOperand(T);
+              Instruction *BEOpInst = dyn_cast<Instruction>(BEOp);
+              if (!OpInst && !BEOpInst) {
+                if (Op == BEOp) {
+                  Found = true;
+                  break;
+                }
+              }
 
-          Instruction *OpInst = dyn_cast<Instruction>(Op);
-          if (!OpInst) {
-            if (Op == BEOp)
-              continue;
-            // Do not allow reuse to occur when the operands may be different
-            // values.
-            BEUser = nullptr;
-            break;
+              if ((OpInst && !BEOpInst) || (!OpInst && BEOpInst))
+                continue;
+
+              DepChain *D = getDepChainBtwn(OpInst, BEOpInst, Iters);
+
+              if (D) {
+                Found = true;
+                DepChains[OpInst] = D;
+                break;
+              }
+            }
+            if (!Found) {
+              BEUser = nullptr;
+              break;
+            }
           }
+        } else {
 
-          Instruction *BEOpInst = dyn_cast<Instruction>(BEOp);
+          for (int OpNo = 0; OpNo < NumOperands; ++OpNo) {
+            Value *Op = I->getOperand(OpNo);
+            Value *BEOp = BEUser->getOperand(OpNo);
 
-          if (!isDepChainBtwn(OpInst, BEOpInst, Iters)) {
-            BEUser = nullptr;
-            break;
+            Instruction *OpInst = dyn_cast<Instruction>(Op);
+            if (!OpInst) {
+              if (Op == BEOp)
+                continue;
+              // Do not allow reuse to occur when the operands may be different
+              // values.
+              BEUser = nullptr;
+              break;
+            }
+
+            Instruction *BEOpInst = dyn_cast<Instruction>(BEOp);
+            DepChain *D = getDepChainBtwn(OpInst, BEOpInst, Iters);
+
+            if (D) {
+              DepChains[OpInst] = D;
+            } else {
+              BEUser = nullptr;
+              break;
+            }
           }
         }
         if (BEUser) {
           LLVM_DEBUG(dbgs() << "Found Value for reuse.\n");
           ReuseCandidate.Inst2Replace = I;
           ReuseCandidate.BackedgeInst = BEUser;
+          ReuseCandidate.DepChains = DepChains;
+          ReuseCandidate.Iterations = Iters;
           return;
-        } else
-          ReuseCandidate.reset();
+        }
+        ReuseCandidate.reset();
       }
     }
   }
@@ -474,27 +602,10 @@ void HexagonVectorLoopCarriedReuse::reuseValue() {
   Instruction *Inst2Replace = ReuseCandidate.Inst2Replace;
   Instruction *BEInst = ReuseCandidate.BackedgeInst;
   int NumOperands = Inst2Replace->getNumOperands();
-  std::map<Instruction *, DepChain *> DepChains;
-  int Iterations = -1;
+  std::map<Instruction *, DepChain *> &DepChains = ReuseCandidate.DepChains;
+  int Iterations = ReuseCandidate.Iterations;
   BasicBlock *LoopPH = CurLoop->getLoopPreheader();
-
-  for (int i = 0; i < NumOperands; ++i) {
-    Instruction *I = dyn_cast<Instruction>(Inst2Replace->getOperand(i));
-    if(!I)
-      continue;
-    else {
-      Instruction *J = cast<Instruction>(BEInst->getOperand(i));
-      DepChain *D = getDepChainBtwn(I, J);
-
-      assert(D &&
-             "No DepChain between corresponding operands in ReuseCandidate\n");
-      if (Iterations == -1)
-        Iterations = D->iterations();
-      assert(Iterations == D->iterations() && "Iterations mismatch");
-      DepChains[I] = D;
-    }
-  }
-
+  assert(!DepChains.empty() && "No DepChains");
   LLVM_DEBUG(dbgs() << "reuseValue is making the following changes\n");
 
   SmallVector<Instruction *, 4> InstsInPreheader;
@@ -603,20 +714,11 @@ void HexagonVectorLoopCarriedReuse::findDepChainFromPHI(Instruction *I,
   }
 }
 
-bool HexagonVectorLoopCarriedReuse::isDepChainBtwn(Instruction *I1,
-                                                      Instruction *I2,
-                                                      int Iters) {
+DepChain *HexagonVectorLoopCarriedReuse::getDepChainBtwn(Instruction *I1,
+                                                         Instruction *I2,
+                                                         int Iters) {
   for (auto *D : Dependences) {
     if (D->front() == I1 && D->back() == I2 && D->iterations() == Iters)
-      return true;
-  }
-  return false;
-}
-
-DepChain *HexagonVectorLoopCarriedReuse::getDepChainBtwn(Instruction *I1,
-                                                            Instruction *I2) {
-  for (auto *D : Dependences) {
-    if (D->front() == I1 && D->back() == I2)
       return D;
   }
   return nullptr;

@@ -418,6 +418,8 @@ std::vector<Diag> StoreDiags::take(const clang::tidy::ClangTidyContext *Tidy) {
         CleanMessage(Diag.Message);
         for (auto &Note : Diag.Notes)
           CleanMessage(Note.Message);
+        for (auto &Fix : Diag.Fixes)
+          CleanMessage(Fix.Message);
         continue;
       }
     }

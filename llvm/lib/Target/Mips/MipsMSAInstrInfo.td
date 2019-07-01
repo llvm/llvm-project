@@ -1239,6 +1239,7 @@ class MSA_COPY_PSEUDO_BASE<SDPatternOperator OpNode, ValueType VecTy,
       MSAPseudo<(outs RCD:$wd), (ins RCWS:$ws, ImmOp:$n),
                 [(set RCD:$wd, (OpNode (VecTy RCWS:$ws), Imm:$n))]> {
   bit usesCustomInserter = 1;
+  bit hasNoSchedulingInfo = 1;
 }
 
 class MSA_I5_DESC_BASE<string instr_asm, SDPatternOperator OpNode,
@@ -1446,6 +1447,7 @@ class MSA_INSERT_VIDX_PSEUDO_BASE<SDPatternOperator OpNode, ValueType Ty,
                 [(set ROWD:$wd, (OpNode (Ty ROWD:$wd_in), ROFS:$fs,
                                         ROIdx:$n))]> {
   bit usesCustomInserter = 1;
+  bit hasNoSchedulingInfo = 1;
   string Constraints = "$wd = $wd_in";
 }
 
@@ -2043,7 +2045,7 @@ class FEXDO_W_DESC : MSA_3RF_DESC_BASE<"fexdo.w", int_mips_fexdo_w,
 // 1.0 when we only need to match ISD::FEXP2.
 class FEXP2_W_DESC : MSA_3RF_DESC_BASE<"fexp2.w", mul_fexp2, MSA128WOpnd>;
 class FEXP2_D_DESC : MSA_3RF_DESC_BASE<"fexp2.d", mul_fexp2, MSA128DOpnd>;
-let usesCustomInserter = 1 in {
+let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
   class FEXP2_W_1_PSEUDO_DESC :
       MSAPseudo<(outs MSA128W:$wd), (ins MSA128W:$ws),
                 [(set MSA128W:$wd, (fexp2 MSA128W:$ws))]>;
@@ -3737,6 +3739,7 @@ class MSA_CBRANCH_PSEUDO_DESC_BASE<SDPatternOperator OpNode, ValueType TyNode,
              (ins RCWS:$ws),
              [(set GPR32:$dst, (OpNode (TyNode RCWS:$ws)))]> {
   bit usesCustomInserter = 1;
+  bit hasNoSchedulingInfo = 1;
 }
 
 def SNZ_B_PSEUDO : MSA_CBRANCH_PSEUDO_DESC_BASE<MipsVAllNonZero, v16i8,
@@ -3773,7 +3776,7 @@ let ASEPredicate = [HasMSA] in {
                    [(set MSA128F16:$ws, (f16 (load addrimm10:$addr)))]>;
   }
 
-  let usesCustomInserter = 1 in {
+  let usesCustomInserter = 1, hasNoSchedulingInfo = 1 in {
     def MSA_FP_EXTEND_W_PSEUDO :
         MipsPseudo<(outs FGR32Opnd:$fd), (ins MSA128F16:$ws),
                    [(set FGR32Opnd:$fd, (f32 (fpextend MSA128F16:$ws)))]>;

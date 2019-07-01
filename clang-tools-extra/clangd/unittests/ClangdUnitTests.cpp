@@ -83,6 +83,26 @@ TEST(ClangdUnitTest, TopLevelDecls) {
   EXPECT_THAT(AST.getLocalTopLevelDecls(), ElementsAre(DeclNamed("main")));
 }
 
+TEST(ClangdUnitTest, DoesNotGetIncludedTopDecls) {
+  TestTU TU;
+  TU.HeaderCode = R"cpp(
+    #define LL void foo(){}
+    template<class T>
+    struct H {
+      H() {}
+      LL
+    };
+  )cpp";
+  TU.Code = R"cpp(
+    int main() {
+      H<int> h;
+      h.foo();
+    }
+  )cpp";
+  auto AST = TU.build();
+  EXPECT_THAT(AST.getLocalTopLevelDecls(), ElementsAre(DeclNamed("main")));
+}
+
 TEST(ClangdUnitTest, TokensAfterPreamble) {
   TestTU TU;
   TU.AdditionalFiles["foo.h"] = R"(

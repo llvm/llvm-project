@@ -42,6 +42,9 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
                               MachineRegisterInfo &MRI,
                               ArrayRef<unsigned> OpIndices) const;
 
+  void constrainOpWithReadfirstlane(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                    unsigned OpIdx) const;
+
   /// See RegisterBankInfo::applyMapping.
   void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
 
@@ -70,6 +73,10 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
   addMappingFromTable(const MachineInstr &MI, const MachineRegisterInfo &MRI,
                       const std::array<unsigned, NumOps> RegSrcOpIdx,
                       ArrayRef<OpRegBankEntry<NumOps>> Table) const;
+
+  RegisterBankInfo::InstructionMappings
+  getInstrAlternativeMappingsIntrinsic(
+      const MachineInstr &MI, const MachineRegisterInfo &MRI) const;
 
   RegisterBankInfo::InstructionMappings
   getInstrAlternativeMappingsIntrinsicWSideEffects(

@@ -601,9 +601,9 @@ def : GCNPat <
   (DS_SWIZZLE_B32 $src, (as_i16imm $offset16), (i1 0))
 >;
 
-class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
+class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))),
-  (inst $ptr, (as_i16imm $offset), (i1 0))
+  (inst $ptr, (as_i16imm $offset), (i1 gds))
 >;
 
 multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
@@ -657,9 +657,9 @@ def : DSReadPat_D16<DS_READ_I8_D16, sextloadi8_d16_lo_local, v2i16>;
 def : DSReadPat_D16<DS_READ_I8_D16, sextloadi8_d16_lo_local, v2f16>;
 }
 
-class DSWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
+class DSWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
   (frag vt:$value, (DS1Addr1Offset i32:$ptr, i32:$offset)),
-  (inst $ptr, $value, (as_i16imm $offset), (i1 0))
+  (inst $ptr, $value, (as_i16imm $offset), (i1 gds))
 >;
 
 multiclass DSWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
@@ -734,75 +734,79 @@ defm : DSWritePat_mc <DS_WRITE_B64, v2i32, "store_align8_local">;
 defm : DSWritePat_mc <DS_WRITE_B128, v4i32, "store_align16_local">;
 
 } // End AddedComplexity = 100
-class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
+class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, bit gds=0> : GCNPat <
   (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),
-  (inst $ptr, $value, (as_i16imm $offset), (i1 0))
+  (inst $ptr, $value, (as_i16imm $offset), (i1 gds))
 >;
 
 multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_m0")>;
+    def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_local_m0")>;
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
     def : DSAtomicRetPat<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                         !cast<PatFrag>(frag)>;
+                         !cast<PatFrag>(frag#"_local")>;
   }
+
+  def : DSAtomicRetPat<inst, vt, !cast<PatFrag>(frag#"_region_m0"), 1>;
 }
 
 
 
-class DSAtomicCmpXChg<DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
+class DSAtomicCmpXChg<DS_Pseudo inst, ValueType vt, PatFrag frag, bit gds=0> : GCNPat <
   (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$cmp, vt:$swap),
-  (inst $ptr, $cmp, $swap, (as_i16imm $offset), (i1 0))
+  (inst $ptr, $cmp, $swap, (as_i16imm $offset), (i1 gds))
 >;
 
 multiclass DSAtomicCmpXChg_mc<DS_Pseudo inst, ValueType vt, string frag> {
   let OtherPredicates = [LDSRequiresM0Init] in {
-    def : DSAtomicCmpXChg<inst, vt, !cast<PatFrag>(frag#"_m0")>;
+    def : DSAtomicCmpXChg<inst, vt, !cast<PatFrag>(frag#"_local_m0")>;
   }
 
   let OtherPredicates = [NotLDSRequiresM0Init] in {
     def : DSAtomicCmpXChg<!cast<DS_Pseudo>(!cast<string>(inst)#"_gfx9"), vt,
-                          !cast<PatFrag>(frag)>;
+                          !cast<PatFrag>(frag#"_local")>;
   }
+
+  def : DSAtomicCmpXChg<inst, vt, !cast<PatFrag>(frag#"_region_m0"), 1>;
 }
 
 
 
 // 32-bit atomics.
-defm : DSAtomicRetPat_mc<DS_WRXCHG_RTN_B32, i32, "atomic_swap_local">;
-defm : DSAtomicRetPat_mc<DS_ADD_RTN_U32, i32, "atomic_load_add_local">;
-defm : DSAtomicRetPat_mc<DS_SUB_RTN_U32, i32, "atomic_load_sub_local">;
-defm : DSAtomicRetPat_mc<DS_INC_RTN_U32, i32, "atomic_inc_local">;
-defm : DSAtomicRetPat_mc<DS_DEC_RTN_U32, i32, "atomic_dec_local">;
-defm : DSAtomicRetPat_mc<DS_AND_RTN_B32, i32, "atomic_load_and_local">;
-defm : DSAtomicRetPat_mc<DS_OR_RTN_B32, i32, "atomic_load_or_local">;
-defm : DSAtomicRetPat_mc<DS_XOR_RTN_B32, i32, "atomic_load_xor_local">;
-defm : DSAtomicRetPat_mc<DS_MIN_RTN_I32, i32, "atomic_load_min_local">;
-defm : DSAtomicRetPat_mc<DS_MAX_RTN_I32, i32, "atomic_load_max_local">;
-defm : DSAtomicRetPat_mc<DS_MIN_RTN_U32, i32, "atomic_load_umin_local">;
-defm : DSAtomicRetPat_mc<DS_MAX_RTN_U32, i32, "atomic_load_umax_local">;
-defm : DSAtomicCmpXChg_mc<DS_CMPST_RTN_B32, i32, "atomic_cmp_swap_local">;
-defm : DSAtomicRetPat_mc<DS_MIN_RTN_F32, f32, "atomic_load_fmin_local">;
-defm : DSAtomicRetPat_mc<DS_MAX_RTN_F32, f32, "atomic_load_fmax_local">;
-defm : DSAtomicRetPat_mc<DS_ADD_RTN_F32, f32, "atomic_load_fadd_local">;
+defm : DSAtomicRetPat_mc<DS_WRXCHG_RTN_B32, i32, "atomic_swap">;
+defm : DSAtomicRetPat_mc<DS_ADD_RTN_U32, i32, "atomic_load_add">;
+defm : DSAtomicRetPat_mc<DS_SUB_RTN_U32, i32, "atomic_load_sub">;
+defm : DSAtomicRetPat_mc<DS_INC_RTN_U32, i32, "atomic_inc">;
+defm : DSAtomicRetPat_mc<DS_DEC_RTN_U32, i32, "atomic_dec">;
+defm : DSAtomicRetPat_mc<DS_AND_RTN_B32, i32, "atomic_load_and">;
+defm : DSAtomicRetPat_mc<DS_OR_RTN_B32, i32, "atomic_load_or">;
+defm : DSAtomicRetPat_mc<DS_XOR_RTN_B32, i32, "atomic_load_xor">;
+defm : DSAtomicRetPat_mc<DS_MIN_RTN_I32, i32, "atomic_load_min">;
+defm : DSAtomicRetPat_mc<DS_MAX_RTN_I32, i32, "atomic_load_max">;
+defm : DSAtomicRetPat_mc<DS_MIN_RTN_U32, i32, "atomic_load_umin">;
+defm : DSAtomicRetPat_mc<DS_MAX_RTN_U32, i32, "atomic_load_umax">;
+defm : DSAtomicCmpXChg_mc<DS_CMPST_RTN_B32, i32, "atomic_cmp_swap">;
+defm : DSAtomicRetPat_mc<DS_MIN_RTN_F32, f32, "atomic_load_fmin">;
+defm : DSAtomicRetPat_mc<DS_MAX_RTN_F32, f32, "atomic_load_fmax">;
+defm : DSAtomicRetPat_mc<DS_ADD_RTN_F32, f32, "atomic_load_fadd">;
 
 // 64-bit atomics.
-defm : DSAtomicRetPat_mc<DS_WRXCHG_RTN_B64, i64, "atomic_swap_local">;
-defm : DSAtomicRetPat_mc<DS_ADD_RTN_U64, i64, "atomic_load_add_local">;
-defm : DSAtomicRetPat_mc<DS_SUB_RTN_U64, i64, "atomic_load_sub_local">;
-defm : DSAtomicRetPat_mc<DS_INC_RTN_U64, i64, "atomic_inc_local">;
-defm : DSAtomicRetPat_mc<DS_DEC_RTN_U64, i64, "atomic_dec_local">;
-defm : DSAtomicRetPat_mc<DS_AND_RTN_B64, i64, "atomic_load_and_local">;
-defm : DSAtomicRetPat_mc<DS_OR_RTN_B64, i64, "atomic_load_or_local">;
-defm : DSAtomicRetPat_mc<DS_XOR_RTN_B64, i64, "atomic_load_xor_local">;
-defm : DSAtomicRetPat_mc<DS_MIN_RTN_I64, i64, "atomic_load_min_local">;
-defm : DSAtomicRetPat_mc<DS_MAX_RTN_I64, i64, "atomic_load_max_local">;
-defm : DSAtomicRetPat_mc<DS_MIN_RTN_U64, i64, "atomic_load_umin_local">;
-defm : DSAtomicRetPat_mc<DS_MAX_RTN_U64, i64, "atomic_load_umax_local">;
+defm : DSAtomicRetPat_mc<DS_WRXCHG_RTN_B64, i64, "atomic_swap">;
+defm : DSAtomicRetPat_mc<DS_ADD_RTN_U64, i64, "atomic_load_add">;
+defm : DSAtomicRetPat_mc<DS_SUB_RTN_U64, i64, "atomic_load_sub">;
+defm : DSAtomicRetPat_mc<DS_INC_RTN_U64, i64, "atomic_inc">;
+defm : DSAtomicRetPat_mc<DS_DEC_RTN_U64, i64, "atomic_dec">;
+defm : DSAtomicRetPat_mc<DS_AND_RTN_B64, i64, "atomic_load_and">;
+defm : DSAtomicRetPat_mc<DS_OR_RTN_B64, i64, "atomic_load_or">;
+defm : DSAtomicRetPat_mc<DS_XOR_RTN_B64, i64, "atomic_load_xor">;
+defm : DSAtomicRetPat_mc<DS_MIN_RTN_I64, i64, "atomic_load_min">;
+defm : DSAtomicRetPat_mc<DS_MAX_RTN_I64, i64, "atomic_load_max">;
+defm : DSAtomicRetPat_mc<DS_MIN_RTN_U64, i64, "atomic_load_umin">;
+defm : DSAtomicRetPat_mc<DS_MAX_RTN_U64, i64, "atomic_load_umax">;
 
-defm : DSAtomicCmpXChg_mc<DS_CMPST_RTN_B64, i64, "atomic_cmp_swap_local">;
+defm : DSAtomicCmpXChg_mc<DS_CMPST_RTN_B64, i64, "atomic_cmp_swap">;
 
 def : Pat <
   (SIds_ordered_count i32:$value, i16:$offset),
