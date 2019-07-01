@@ -9,6 +9,7 @@
 #include "Context.h"
 #include "Protocol.h"
 #include "SourceCode.h"
+#include "TestTU.h"
 #include "clang/Format/Format.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_os_ostream.h"
@@ -27,6 +28,8 @@ using ::testing::UnorderedElementsAreArray;
 MATCHER_P2(Pos, Line, Col, "") {
   return arg.line == int(Line) && arg.character == int(Col);
 }
+
+MATCHER_P(MacroName, Name, "") { return arg.Name == Name; }
 
 /// A helper to make tests easier to read.
 Position position(int line, int character) {
@@ -402,6 +405,20 @@ TEST(SourceCodeTests, VisibleNamespaces) {
               visibleNamespaces(Case.first, format::getLLVMStyle()))
         << Case.first;
   }
+}
+
+TEST(SourceCodeTests, GetMacros) {
+  Annotations Code(R"cpp(
+     #define MACRO 123
+     int abc = MA^CRO;
+   )cpp");
+  TestTU TU = TestTU::withCode(Code.code());
+  auto AST = TU.build();
+  auto Loc = getBeginningOfIdentifier(AST, Code.point(),
+                                      AST.getSourceManager().getMainFileID());
+  auto Result = locateMacroAt(Loc, AST.getPreprocessor());
+  ASSERT_TRUE(Result);
+  EXPECT_THAT(*Result, MacroName("MACRO"));
 }
 
 } // namespace
