@@ -67,7 +67,8 @@ public:
 
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
     for (Decl *D : DG) {
-      if (D->isFromASTFile())
+      auto &SM = D->getASTContext().getSourceManager();
+      if (!SM.isWrittenInMainFile(SM.getExpansionLoc(D->getLocation())))
         continue;
 
       // ObjCMethodDecl are not actually top-level decls.

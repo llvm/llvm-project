@@ -133,13 +133,12 @@ class DeclarationAndMacrosFinder : public index::IndexDataConsumer {
   std::vector<DefinedMacro> MacroInfos;
   llvm::DenseSet<const Decl *> Decls;
   const SourceLocation &SearchedLocation;
-  const ASTContext &AST;
   Preprocessor &PP;
 
 public:
   DeclarationAndMacrosFinder(const SourceLocation &SearchedLocation,
-                             ASTContext &AST, Preprocessor &PP)
-      : SearchedLocation(SearchedLocation), AST(AST), PP(PP) {}
+                             Preprocessor &PP)
+      : SearchedLocation(SearchedLocation), PP(PP) {}
 
   // The results are sorted by declaration location.
   std::vector<const Decl *> getFoundDecls() const {
@@ -221,8 +220,8 @@ struct IdentifiedSymbol {
 };
 
 IdentifiedSymbol getSymbolAtPosition(ParsedAST &AST, SourceLocation Pos) {
-  auto DeclMacrosFinder = DeclarationAndMacrosFinder(Pos, AST.getASTContext(),
-                                                     AST.getPreprocessor());
+  auto DeclMacrosFinder =
+      DeclarationAndMacrosFinder(Pos, AST.getPreprocessor());
   index::IndexingOptions IndexOpts;
   IndexOpts.SystemSymbolFilter =
       index::IndexingOptions::SystemSymbolFilterKind::All;

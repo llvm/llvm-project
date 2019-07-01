@@ -84,8 +84,8 @@ headers to output diagnostics from. Diagnostics
 from the main file of each translation unit are
 always displayed.
 Can be used together with -line-filter.
-This option overrides the 'HeaderFilter' option
-in .clang-tidy file, if any.
+This option overrides the 'HeaderFilterRegex'
+option in .clang-tidy file, if any.
 )"),
                                          cl::init(""),
                                          cl::cat(ClangTidyCategory));
