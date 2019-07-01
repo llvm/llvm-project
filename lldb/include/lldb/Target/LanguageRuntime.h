@@ -152,9 +152,9 @@ public:
   virtual lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                           bool stop_others) = 0;
 
-  /// Identify whether a value is a language implementation detaul
-  /// that should be hidden from the user interface by default.
-  virtual bool IsRuntimeSupportValue(ValueObject &valobj) { return false; }
+  /// Identify whether a name is a runtime value that should not be hidden by
+  /// from the user interface.
+  virtual bool IsWhitelistedRuntimeValue(ConstString name) { return false; }
 
   virtual void ModulesDidLoad(const ModuleList &module_list) {}
 

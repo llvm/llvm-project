@@ -78,7 +78,7 @@ public:
   lldb::ThreadPlanSP GetStepThroughTrampolinePlan(Thread &thread,
                                                   bool stop_others) override;
 
-  bool IsRuntimeSupportValue(ValueObject &valobj) override;
+  bool IsWhitelistedRuntimeValue(ConstString name) override;
 protected:
   // Classes that inherit from CPPLanguageRuntime can see and modify these
   CPPLanguageRuntime(Process *process);
