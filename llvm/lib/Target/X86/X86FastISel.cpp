@@ -3646,24 +3646,19 @@ X86FastISel::fastSelectInstruction(const Instruction *I)  {
     return true;
   }
   case Instruction::BitCast: {
-    // Select SSE2/AVX bitcasts between 128/256 bit vector types.
+    // Select SSE2/AVX bitcasts between 128/256/512 bit vector types.
     if (!Subtarget->hasSSE2())
       return false;
 
-    EVT SrcVT = TLI.getValueType(DL, I->getOperand(0)->getType());
-    EVT DstVT = TLI.getValueType(DL, I->getType());
-
-    if (!SrcVT.isSimple() || !DstVT.isSimple())
+    MVT SrcVT, DstVT;
+    if (!isTypeLegal(I->getOperand(0)->getType(), SrcVT) ||
+        !isTypeLegal(I->getType(), DstVT))
       return false;
 
-    MVT SVT = SrcVT.getSimpleVT();
-    MVT DVT = DstVT.getSimpleVT();
-
-    if (!SVT.is128BitVector() &&
-        !(Subtarget->hasAVX() && SVT.is256BitVector()) &&
-        !(Subtarget->hasAVX512() && SVT.is512BitVector() &&
-          (Subtarget->hasBWI() || (SVT.getScalarSizeInBits() >= 32 &&
-                                   DVT.getScalarSizeInBits() >= 32))))
+    // Only allow vectors that use xmm/ymm/zmm.
+    if (!SrcVT.isVector() || !DstVT.isVector() ||
+        SrcVT.getVectorElementType() == MVT::i1 ||
+        DstVT.getVectorElementType() == MVT::i1)
       return false;
 
     unsigned Reg = getRegForValue(I->getOperand(0));

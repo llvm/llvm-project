@@ -469,13 +469,14 @@ TEST(STLExtrasTest, to_address) {
   EXPECT_EQ(V1, to_address(V3));
 }
 
-TEST(STLExtrasTest, bsearch) {
+TEST(STLExtrasTest, partition_point) {
   std::vector<int> V = {1, 3, 5, 7, 9};
 
   // Range version.
-  EXPECT_EQ(V.begin() + 3, bsearch(V, [](unsigned X) { return X >= 7; }));
-  EXPECT_EQ(V.begin(), bsearch(V, [](unsigned X) { return X >= 1; }));
-  EXPECT_EQ(V.end(), bsearch(V, [](unsigned X) { return X >= 50; }));
+  EXPECT_EQ(V.begin() + 3,
+            partition_point(V, [](unsigned X) { return X < 7; }));
+  EXPECT_EQ(V.begin(), partition_point(V, [](unsigned X) { return X < 1; }));
+  EXPECT_EQ(V.end(), partition_point(V, [](unsigned X) { return X < 50; }));
 }
 
 } // namespace

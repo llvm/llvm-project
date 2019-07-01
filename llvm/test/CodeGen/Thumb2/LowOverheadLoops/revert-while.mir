@@ -1,0 +1,130 @@
+# RUN: llc -mtriple=thumbv8.1m.main -mattr=+lob -run-pass=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s
+# CHECK:      body:
+# CHECK:      bb.0.entry:
+# CHECK:        t2CMPri $lr, 0, 14
+# CHECK-NEXT:   t2Bcc %bb.3, 0, $cpsr
+# CHECK-NEXT:   tB %bb.1
+# CHECK:      bb.1.do.body.preheader:
+# CHECK:        $lr = tMOVr killed $r3
+# CHECK:      bb.2.do.body:
+# CHECK:        $lr = t2SUBri killed renamable $lr, 1, 14
+# CHECK-NEXT:   t2CMPri $lr, 0, 14, $cpsr
+# CHECK-NEXT:   t2Bcc %bb.2, 1, $cpsr
+# CHECK-NEXT:   tB %bb.3, 14
+--- |
+  target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
+  target triple = "thumbv8.1m.main"
+  
+  define void @ne_trip_count(i1 zeroext %t1, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) #0 {
+  entry:
+    %cmp = icmp ne i32 %N, 0
+    %0 = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
+    br i1 %0, label %do.body.preheader, label %if.end
+  
+  do.body.preheader:                                ; preds = %entry
+    br label %do.body
+  
+  do.body:                                          ; preds = %do.body.preheader, %do.body
+    %i.0 = phi i32 [ %inc, %do.body ], [ 0, %do.body.preheader ]
+    %1 = phi i32 [ %N, %do.body.preheader ], [ %2, %do.body ]
+    %scevgep = getelementptr i32, i32* %b, i32 %i.0
+    %scevgep1 = getelementptr i32, i32* %a, i32 %i.0
+    %size = call i32 @llvm.arm.space(i32 4096, i32 undef)
+    %tmp = load i32, i32* %scevgep, align 4
+    store i32 %tmp, i32* %scevgep1, align 4
+    %inc = add nuw i32 %i.0, 1
+    %2 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %1, i32 1)
+    %3 = icmp ne i32 %2, 0
+    br i1 %3, label %do.body, label %if.end
+  
+  if.end:                                           ; preds = %do.body, %entry
+    ret void
+  }
+  
+  declare i32 @llvm.arm.space(i32, i32) #1
+  declare i1 @llvm.test.set.loop.iterations.i32(i32) #2
+  declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #2
+  
+  attributes #0 = { "target-features"="+lob" }
+  attributes #1 = { nounwind "target-features"="+lob" }
+  attributes #2 = { noduplicate nounwind }
+  attributes #3 = { nounwind }
+
+...
+---
+name:            ne_trip_count
+alignment:       1
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: false
+hasWinCFI:       false
+registers:       []
+liveins:         
+  - { reg: '$r1', virtual-reg: '' }
+  - { reg: '$r2', virtual-reg: '' }
+  - { reg: '$r3', virtual-reg: '' }
+frameInfo:       
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       8
+  offsetAdjustment: 0
+  maxAlignment:    4
+  adjustsStack:    false
+  hasCalls:        false
+  stackProtector:  ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  localFrameSize:  0
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:           
+  - { id: 0, name: '', type: spill-slot, offset: -4, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: false, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 4, alignment: 4, 
+      stack-id: default, callee-saved-register: '$r7', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+constants:       []
+machineFunctionInfo: {}
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x40000000), %bb.3(0x40000000)
+  
+    frame-setup tPUSH 14, $noreg, killed $r7, killed $lr, implicit-def $sp, implicit $sp
+    frame-setup CFI_INSTRUCTION def_cfa_offset 8
+    frame-setup CFI_INSTRUCTION offset $lr, -4
+    frame-setup CFI_INSTRUCTION offset $r7, -8
+    t2WhileLoopStart $r3, %bb.3
+    tB %bb.1, 14, $noreg
+  
+  bb.1.do.body.preheader:
+    successors: %bb.2(0x80000000)
+  
+    $lr = tMOVr killed $r3, 14, $noreg
+    renamable $r0, dead $cpsr = tMOVi8 0, 14, $noreg
+  
+  bb.2.do.body:
+    successors: %bb.2(0x7c000000), %bb.3(0x04000000)
+  
+    dead renamable $r3 = SPACE 4096, undef renamable $r0
+    renamable $r3 = t2LDRs renamable $r2, renamable $r0, 2, 14, $noreg :: (load 4 from %ir.scevgep)
+    t2STRs killed renamable $r3, renamable $r1, renamable $r0, 2, 14, $noreg :: (store 4 into %ir.scevgep1)
+    renamable $r0, dead $cpsr = nuw tADDi8 killed renamable $r0, 1, 14, $noreg
+    renamable $lr = t2LoopDec killed renamable $lr, 1
+    t2LoopEnd renamable $lr, %bb.2
+    tB %bb.3, 14, $noreg
+  
+  bb.3.if.end:
+    tPOP_RET 14, $noreg, def $r7, def $pc
+
+...

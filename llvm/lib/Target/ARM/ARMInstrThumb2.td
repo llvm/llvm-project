@@ -5216,10 +5216,18 @@ def t2LoopDec :
   t2PseudoInst<(outs GPRlr:$Rm), (ins GPRlr:$Rn, imm0_7:$size),
                4, IIC_Br, []>, Sched<[WriteBr]>;
 
-let isBranch = 1, isTerminator = 1, hasSideEffects = 1 in
+let isBranch = 1, isTerminator = 1, hasSideEffects = 1 in {
+def t2WhileLoopStart :
+    t2PseudoInst<(outs),
+                 (ins rGPR:$elts, brtarget:$target),
+                 4, IIC_Br, []>,
+                 Sched<[WriteBr]>;
+
 def t2LoopEnd :
   t2PseudoInst<(outs), (ins GPRlr:$elts, brtarget:$target),
   8, IIC_Br, []>, Sched<[WriteBr]>;
+
+} // end isBranch, isTerminator, hasSideEffects
 
 } // end isNotDuplicable
 
