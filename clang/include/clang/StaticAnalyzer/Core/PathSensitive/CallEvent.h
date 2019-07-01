@@ -1044,6 +1044,14 @@ public:
   }
 };
 
+enum CallDescriptionFlags : int {
+  /// Describes a C standard function that is sometimes implemented as a macro
+  /// that expands to a compiler builtin with some __builtin prefix.
+  /// The builtin may as well have a few extra arguments on top of the requested
+  /// number of arguments.
+  CDF_MaybeBuiltin = 1 << 0,
+};
+
 /// This class represents a description of a function call using the number of
 /// arguments and the name of the function.
 class CallDescription {
@@ -1055,6 +1063,7 @@ class CallDescription {
   // e.g. "{a, b}" represent the qualified names, like "a::b".
   std::vector<const char *> QualifiedName;
   Optional<unsigned> RequiredArgs;
+  int Flags;
 
 public:
   /// Constructs a CallDescription object.
@@ -1067,9 +1076,15 @@ public:
   /// @param RequiredArgs The number of arguments that is expected to match a
   /// call. Omit this parameter to match every occurrence of call with a given
   /// name regardless the number of arguments.
+  CallDescription(int Flags, ArrayRef<const char *> QualifiedName,
+                  Optional<unsigned> RequiredArgs = None)
+      : QualifiedName(QualifiedName), RequiredArgs(RequiredArgs),
+        Flags(Flags) {}
+
+  /// Construct a CallDescription with default flags.
   CallDescription(ArrayRef<const char *> QualifiedName,
                   Optional<unsigned> RequiredArgs = None)
-      : QualifiedName(QualifiedName), RequiredArgs(RequiredArgs) {}
+      : CallDescription(0, QualifiedName, RequiredArgs) {}
 
   /// Get the name of the function that this object matches.
   StringRef getFunctionName() const { return QualifiedName.back(); }

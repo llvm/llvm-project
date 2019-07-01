@@ -143,6 +143,18 @@ TEST(CallEvent, CallDescription) {
           {{{"bar", "foo"}}, false},
           {{"foo"}, true},
       }), "void foo(); struct bar { void foo(); }; void test() { foo(); }"));
+
+  // Test CDF_MaybeBuiltin - a flag that allows matching weird builtins.
+  EXPECT_TRUE(tooling::runToolOnCode(
+      new CallDescriptionAction({
+          {{"memset", 3}, false},
+          {{CDF_MaybeBuiltin, "memset", 3}, true}
+      }),
+      "void foo() {"
+      "  int x;"
+      "  __builtin___memset_chk(&x, 0, sizeof(x),"
+      "                         __builtin_object_size(&x, 0));"
+      "}"));
 }
 
 } // namespace
