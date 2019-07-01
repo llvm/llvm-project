@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InputFiles.h"
+#include "SyntheticSections.h"
 #include "Target.h"
 
 using namespace llvm;
@@ -22,6 +23,12 @@ class RISCV final : public TargetInfo {
 public:
   RISCV();
   uint32_t calcEFlags() const override;
+  void writeGotHeader(uint8_t *Buf) const override;
+  void writeGotPlt(uint8_t *Buf, const Symbol &S) const override;
+  void writePltHeader(uint8_t *Buf) const override;
+  void writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr, uint64_t PltEntryAddr,
+                int32_t Index, unsigned RelOff) const override;
+  RelType getDynRel(RelType Type) const override;
   RelExpr getRelExpr(RelType Type, const Symbol &S,
                      const uint8_t *Loc) const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
@@ -29,7 +36,67 @@ public:
 
 } // end anonymous namespace
 
-RISCV::RISCV() { NoneRel = R_RISCV_NONE; }
+const uint64_t DTPOffset = 0x800;
+
+enum Op {
+  ADDI = 0x13,
+  AUIPC = 0x17,
+  JALR = 0x67,
+  LD = 0x3003,
+  LW = 0x2003,
+  SRLI = 0x5013,
+  SUB = 0x40000033,
+};
+
+enum Reg {
+  X_RA = 1,
+  X_T0 = 5,
+  X_T1 = 6,
+  X_T2 = 7,
+  X_T3 = 28,
+};
+
+static uint32_t hi20(uint32_t Val) { return (Val + 0x800) >> 12; }
+static uint32_t lo12(uint32_t Val) { return Val & 4095; }
+
+static uint32_t itype(uint32_t Op, uint32_t Rd, uint32_t Rs1, uint32_t Imm) {
+  return Op | (Rd << 7) | (Rs1 << 15) | (Imm << 20);
+}
+static uint32_t rtype(uint32_t Op, uint32_t Rd, uint32_t Rs1, uint32_t Rs2) {
+  return Op | (Rd << 7) | (Rs1 << 15) | (Rs2 << 20);
+}
+static uint32_t utype(uint32_t Op, uint32_t Rd, uint32_t Imm) {
+  return Op | (Rd << 7) | (Imm << 12);
+}
+
+RISCV::RISCV() {
+  CopyRel = R_RISCV_COPY;
+  NoneRel = R_RISCV_NONE;
+  PltRel = R_RISCV_JUMP_SLOT;
+  RelativeRel = R_RISCV_RELATIVE;
+  if (Config->Is64) {
+    SymbolicRel = R_RISCV_64;
+    TlsModuleIndexRel = R_RISCV_TLS_DTPMOD64;
+    TlsOffsetRel = R_RISCV_TLS_DTPREL64;
+    TlsGotRel = R_RISCV_TLS_TPREL64;
+  } else {
+    SymbolicRel = R_RISCV_32;
+    TlsModuleIndexRel = R_RISCV_TLS_DTPMOD32;
+    TlsOffsetRel = R_RISCV_TLS_DTPREL32;
+    TlsGotRel = R_RISCV_TLS_TPREL32;
+  }
+  GotRel = SymbolicRel;
+
+  // .got[0] = _DYNAMIC
+  GotBaseSymInGotPlt = false;
+  GotHeaderEntriesNum = 1;
+
+  // .got.plt[0] = _dl_runtime_resolve, .got.plt[1] = link_map
+  GotPltHeaderEntriesNum = 2;
+
+  PltEntrySize = 16;
+  PltHeaderSize = 32;
+}
 
 static uint32_t getEFlags(InputFile *F) {
   if (Config->Is64)
@@ -59,6 +126,59 @@ uint32_t RISCV::calcEFlags() const {
   return Target;
 }
 
+void RISCV::writeGotHeader(uint8_t *Buf) const {
+  if (Config->Is64)
+    write64le(Buf, Main->Dynamic->getVA());
+  else
+    write32le(Buf, Main->Dynamic->getVA());
+}
+
+void RISCV::writeGotPlt(uint8_t *Buf, const Symbol &S) const {
+  if (Config->Is64)
+    write64le(Buf, In.Plt->getVA());
+  else
+    write32le(Buf, In.Plt->getVA());
+}
+
+void RISCV::writePltHeader(uint8_t *Buf) const {
+  // 1: auipc t2, %pcrel_hi(.got.plt)
+  // sub t1, t1, t3
+  // l[wd] t3, %pcrel_lo(1b)(t2); t3 = _dl_runtime_resolve
+  // addi t1, t1, -PltHeaderSize-12; t1 = &.plt[i] - &.plt[0]
+  // addi t0, t2, %pcrel_lo(1b)
+  // srli t1, t1, (rv64?1:2); t1 = &.got.plt[i] - &.got.plt[0]
+  // l[wd] t0, Wordsize(t0); t0 = link_map
+  // jr t3
+  uint32_t Offset = In.GotPlt->getVA() - In.Plt->getVA();
+  uint32_t Load = Config->Is64 ? LD : LW;
+  write32le(Buf + 0, utype(AUIPC, X_T2, hi20(Offset)));
+  write32le(Buf + 4, rtype(SUB, X_T1, X_T1, X_T3));
+  write32le(Buf + 8, itype(Load, X_T3, X_T2, lo12(Offset)));
+  write32le(Buf + 12, itype(ADDI, X_T1, X_T1, -Target->PltHeaderSize - 12));
+  write32le(Buf + 16, itype(ADDI, X_T0, X_T2, lo12(Offset)));
+  write32le(Buf + 20, itype(SRLI, X_T1, X_T1, Config->Is64 ? 1 : 2));
+  write32le(Buf + 24, itype(Load, X_T0, X_T0, Config->Wordsize));
+  write32le(Buf + 28, itype(JALR, 0, X_T3, 0));
+}
+
+void RISCV::writePlt(uint8_t *Buf, uint64_t GotPltEntryAddr,
+                     uint64_t PltEntryAddr, int32_t Index,
+                     unsigned RelOff) const {
+  // 1: auipc t3, %pcrel_hi(f@.got.plt)
+  // l[wd] t3, %pcrel_lo(1b)(t3)
+  // jalr t1, t3
+  // nop
+  uint32_t Offset = GotPltEntryAddr - PltEntryAddr;
+  write32le(Buf + 0, utype(AUIPC, X_T3, hi20(Offset)));
+  write32le(Buf + 4, itype(Config->Is64 ? LD : LW, X_T3, X_T3, lo12(Offset)));
+  write32le(Buf + 8, itype(JALR, X_T1, X_T3, 0));
+  write32le(Buf + 12, itype(ADDI, 0, 0, 0));
+}
+
+RelType RISCV::getDynRel(RelType Type) const {
+  return Type == Target->SymbolicRel ? Type : R_RISCV_NONE;
+}
+
 RelExpr RISCV::getRelExpr(const RelType Type, const Symbol &S,
                           const uint8_t *Loc) const {
   switch (Type) {
@@ -78,17 +198,31 @@ RelExpr RISCV::getRelExpr(const RelType Type, const Symbol &S,
     return R_RISCV_ADD;
   case R_RISCV_JAL:
   case R_RISCV_BRANCH:
-  case R_RISCV_CALL:
   case R_RISCV_PCREL_HI20:
   case R_RISCV_RVC_BRANCH:
   case R_RISCV_RVC_JUMP:
   case R_RISCV_32_PCREL:
     return R_PC;
+  case R_RISCV_CALL:
+  case R_RISCV_CALL_PLT:
+    return R_PLT_PC;
+  case R_RISCV_GOT_HI20:
+    return R_GOT_PC;
   case R_RISCV_PCREL_LO12_I:
   case R_RISCV_PCREL_LO12_S:
     return R_RISCV_PC_INDIRECT;
+  case R_RISCV_TLS_GD_HI20:
+    return R_TLSGD_PC;
+  case R_RISCV_TLS_GOT_HI20:
+    Config->HasStaticTlsModel = true;
+    return R_GOT_PC;
+  case R_RISCV_TPREL_HI20:
+  case R_RISCV_TPREL_LO12_I:
+  case R_RISCV_TPREL_LO12_S:
+    return R_TLS;
   case R_RISCV_RELAX:
   case R_RISCV_ALIGN:
+  case R_RISCV_TPREL_ADD:
     return R_HINT;
   default:
     return R_ABS;
@@ -189,7 +323,8 @@ void RISCV::relocateOne(uint8_t *Loc, const RelType Type,
   }
 
   // auipc + jalr pair
-  case R_RISCV_CALL: {
+  case R_RISCV_CALL:
+  case R_RISCV_CALL_PLT: {
     int64_t Hi = SignExtend64(Val + 0x800, Bits) >> 12;
     checkInt(Loc, Hi, 20, Type);
     if (isInt<20>(Hi)) {
@@ -199,7 +334,11 @@ void RISCV::relocateOne(uint8_t *Loc, const RelType Type,
     return;
   }
 
+  case R_RISCV_GOT_HI20:
   case R_RISCV_PCREL_HI20:
+  case R_RISCV_TLS_GD_HI20:
+  case R_RISCV_TLS_GOT_HI20:
+  case R_RISCV_TPREL_HI20:
   case R_RISCV_HI20: {
     uint64_t Hi = Val + 0x800;
     checkInt(Loc, SignExtend64(Hi, Bits) >> 12, 20, Type);
@@ -208,6 +347,7 @@ void RISCV::relocateOne(uint8_t *Loc, const RelType Type,
   }
 
   case R_RISCV_PCREL_LO12_I:
+  case R_RISCV_TPREL_LO12_I:
   case R_RISCV_LO12_I: {
     uint64_t Hi = (Val + 0x800) >> 12;
     uint64_t Lo = Val - (Hi << 12);
@@ -216,6 +356,7 @@ void RISCV::relocateOne(uint8_t *Loc, const RelType Type,
   }
 
   case R_RISCV_PCREL_LO12_S:
+  case R_RISCV_TPREL_LO12_S:
   case R_RISCV_LO12_S: {
     uint64_t Hi = (Val + 0x800) >> 12;
     uint64_t Lo = Val - (Hi << 12);
@@ -265,6 +406,13 @@ void RISCV::relocateOne(uint8_t *Loc, const RelType Type,
   case R_RISCV_32_PCREL:
     write32le(Loc, Val);
     return;
+
+  case R_RISCV_TLS_DTPREL32:
+    write32le(Loc, Val - DTPOffset);
+    break;
+  case R_RISCV_TLS_DTPREL64:
+    write64le(Loc, Val - DTPOffset);
+    break;
 
   case R_RISCV_ALIGN:
   case R_RISCV_RELAX:
