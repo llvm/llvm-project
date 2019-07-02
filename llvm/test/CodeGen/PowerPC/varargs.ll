@@ -8,25 +8,29 @@ define i8* @test1(i8** %foo) nounwind {
 ; P32-LABEL: test1:
 ; P32:       # %bb.0:
 ; P32-NEXT:    lbz r4, 0(r3)
-; P32-NEXT:    addi r5, r4, 1
-; P32-NEXT:    stb r5, 0(r3)
-; P32-NEXT:    cmpwi r4, 8
 ; P32-NEXT:    lwz r5, 4(r3)
+; P32-NEXT:    lwz r6, 8(r3)
+; P32-NEXT:    addi r7, r4, 1
+; P32-NEXT:    stb r7, 0(r3)
+; P32-NEXT:    addi r7, r5, 4
+; P32-NEXT:    cmpwi r4, 8
 ; P32-NEXT:    slwi r4, r4, 2
-; P32-NEXT:    addi r6, r5, 4
-; P32-NEXT:    bc 12, lt, .LBB0_1
-; P32-NEXT:    b .LBB0_2
-; P32-NEXT:  .LBB0_1:
-; P32-NEXT:    addi r6, r5, 0
+; P32-NEXT:    add r4, r6, r4
+; P32-NEXT:    bc 12, lt, .LBB0_2
+; P32-NEXT:  # %bb.1:
+; P32-NEXT:    ori r6, r7, 0
+; P32-NEXT:    b .LBB0_3
 ; P32-NEXT:  .LBB0_2:
+; P32-NEXT:    addi r6, r5, 0
+; P32-NEXT:  .LBB0_3:
 ; P32-NEXT:    stw r6, 4(r3)
-; P32-NEXT:    lwz r3, 8(r3)
-; P32-NEXT:    add r3, r3, r4
-; P32-NEXT:    bc 12, lt, .LBB0_4
-; P32-NEXT:  # %bb.3:
+; P32-NEXT:    bc 12, lt, .LBB0_5
+; P32-NEXT:  # %bb.4:
 ; P32-NEXT:    ori r3, r5, 0
-; P32-NEXT:    b .LBB0_4
-; P32-NEXT:  .LBB0_4:
+; P32-NEXT:    b .LBB0_6
+; P32-NEXT:  .LBB0_5:
+; P32-NEXT:    addi r3, r4, 0
+; P32-NEXT:  .LBB0_6:
 ; P32-NEXT:    lwz r3, 0(r3)
 ; P32-NEXT:    blr
 ;

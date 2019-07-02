@@ -357,6 +357,22 @@ public:
                             unsigned SrcReg2, int Mask, int Value,
                             const MachineRegisterInfo *MRI) const override;
 
+
+  /// Return true if get the base operand, byte offset of an instruction and
+  /// the memory width. Width is the size of memory that is being
+  /// loaded/stored (e.g. 1, 2, 4, 8).
+  bool getMemOperandWithOffsetWidth(const MachineInstr &LdSt,
+                                    const MachineOperand *&BaseOp,
+                                    int64_t &Offset, unsigned &Width,
+                                    const TargetRegisterInfo *TRI) const;
+
+  /// Return true if two MIs access different memory addresses and false
+  /// otherwise
+  bool
+  areMemAccessesTriviallyDisjoint(const MachineInstr &MIa,
+                                  const MachineInstr &MIb,
+                                  AliasAnalysis *AA = nullptr) const override;
+
   /// GetInstSize - Return the number of bytes of code the specified
   /// instruction may be.  This returns the maximum number of bytes.
   ///
