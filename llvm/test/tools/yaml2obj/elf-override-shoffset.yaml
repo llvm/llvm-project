@@ -77,9 +77,9 @@ Sections:
 # RUN: od -t x8 -v %t3 >> %t.txt
 # RUN: FileCheck %s --input-file=%t.txt --check-prefix=CASE2
 
-# CASE2: [[OFFSET:.*]] 8877665544332211
+# CASE2: [[OFFSET:.*]] fefefefefefefefe
 # CASE2: [[FILESIZE:.*]]{{$}}
-# CASE2: [[OFFSET]] 8877665544332211
+# CASE2: [[OFFSET]] fefefefefefefefe
 # CASE2: [[FILESIZE]]{{$}}
 
 --- !ELF
@@ -91,7 +91,7 @@ FileHeader:
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
-    Content: "1122334455667788"
+    Content: "fefefefefefefefe"
 
 --- !ELF
 FileHeader:
@@ -103,4 +103,4 @@ Sections:
   - Name: .foo
     Type: SHT_PROGBITS
     ShOffset: 0xFFFF0000
-    Content: "1122334455667788"
+    Content: "fefefefefefefefe"
