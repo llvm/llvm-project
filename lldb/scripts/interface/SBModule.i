@@ -528,50 +528,24 @@ public:
                     self.compile_units_array.append(self.GetCompileUnitAtIndex(idx))
             return self.compile_units_array
 
-        __swig_getmethods__["symbols"] = get_symbols_array
-        if _newclass: symbols = property(get_symbols_array, None, doc='''A read only property that returns a list() of lldb.SBSymbol objects contained in this module.''')
-
-        __swig_getmethods__["symbol"] = get_symbols_access_object
-        if _newclass: symbol = property(get_symbols_access_object, None, doc='''A read only property that can be used to access symbols by index ("symbol = module.symbol[0]"), name ("symbols = module.symbol['main']"), or using a regular expression ("symbols = module.symbol[re.compile(...)]"). The return value is a single lldb.SBSymbol object for array access, and a list() of lldb.SBSymbol objects for name and regular expression access''')
-
-        __swig_getmethods__["sections"] = get_sections_array
-        if _newclass: sections = property(get_sections_array, None, doc='''A read only property that returns a list() of lldb.SBSection objects contained in this module.''')
-
-        __swig_getmethods__["compile_units"] = get_compile_units_array
-        if _newclass: compile_units = property(get_compile_units_array, None, doc='''A read only property that returns a list() of lldb.SBCompileUnit objects contained in this module.''')
-
-        __swig_getmethods__["section"] = get_sections_access_object
-        if _newclass: section = property(get_sections_access_object, None, doc='''A read only property that can be used to access symbols by index ("section = module.section[0]"), name ("sections = module.section[\'main\']"), or using a regular expression ("sections = module.section[re.compile(...)]"). The return value is a single lldb.SBSection object for array access, and a list() of lldb.SBSection objects for name and regular expression access''')
-
-        __swig_getmethods__["compile_unit"] = get_compile_units_access_object
-        if _newclass: section = property(get_sections_access_object, None, doc='''A read only property that can be used to access compile units by index ("compile_unit = module.compile_unit[0]"), name ("compile_unit = module.compile_unit[\'main.cpp\']"), or using a regular expression ("compile_unit = module.compile_unit[re.compile(...)]"). The return value is a single lldb.SBCompileUnit object for array access or by full or partial path, and a list() of lldb.SBCompileUnit objects regular expressions.''')
+        symbols = property(get_symbols_array, None, doc='''A read only property that returns a list() of lldb.SBSymbol objects contained in this module.''')
+        symbol = property(get_symbols_access_object, None, doc='''A read only property that can be used to access symbols by index ("symbol = module.symbol[0]"), name ("symbols = module.symbol['main']"), or using a regular expression ("symbols = module.symbol[re.compile(...)]"). The return value is a single lldb.SBSymbol object for array access, and a list() of lldb.SBSymbol objects for name and regular expression access''')
+        sections = property(get_sections_array, None, doc='''A read only property that returns a list() of lldb.SBSection objects contained in this module.''')
+        compile_units = property(get_compile_units_array, None, doc='''A read only property that returns a list() of lldb.SBCompileUnit objects contained in this module.''')
+        section = property(get_sections_access_object, None, doc='''A read only property that can be used to access symbols by index ("section = module.section[0]"), name ("sections = module.section[\'main\']"), or using a regular expression ("sections = module.section[re.compile(...)]"). The return value is a single lldb.SBSection object for array access, and a list() of lldb.SBSection objects for name and regular expression access''')
+        section = property(get_sections_access_object, None, doc='''A read only property that can be used to access compile units by index ("compile_unit = module.compile_unit[0]"), name ("compile_unit = module.compile_unit[\'main.cpp\']"), or using a regular expression ("compile_unit = module.compile_unit[re.compile(...)]"). The return value is a single lldb.SBCompileUnit object for array access or by full or partial path, and a list() of lldb.SBCompileUnit objects regular expressions.''')
 
         def get_uuid(self):
             return uuid.UUID (self.GetUUIDString())
 
-        __swig_getmethods__["uuid"] = get_uuid
-        if _newclass: uuid = property(get_uuid, None, doc='''A read only property that returns a standard python uuid.UUID object that represents the UUID of this module.''')
-
-        __swig_getmethods__["file"] = GetFileSpec
-        if _newclass: file = property(GetFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this object file for this module as it is represented where it is being debugged.''')
-
-        __swig_getmethods__["platform_file"] = GetPlatformFileSpec
-        if _newclass: platform_file = property(GetPlatformFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this object file for this module as it is represented on the current host system.''')
-
-        __swig_getmethods__["byte_order"] = GetByteOrder
-        if _newclass: byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this module.''')
-
-        __swig_getmethods__["addr_size"] = GetAddressByteSize
-        if _newclass: addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this module.''')
-
-        __swig_getmethods__["triple"] = GetTriple
-        if _newclass: triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this module.''')
-
-        __swig_getmethods__["num_symbols"] = GetNumSymbols
-        if _newclass: num_symbols = property(GetNumSymbols, None, doc='''A read only property that returns number of symbols in the module symbol table as an integer.''')
-
-        __swig_getmethods__["num_sections"] = GetNumSections
-        if _newclass: num_sections = property(GetNumSections, None, doc='''A read only property that returns number of sections in the module as an integer.''')
+        uuid = property(get_uuid, None, doc='''A read only property that returns a standard python uuid.UUID object that represents the UUID of this module.''')
+        file = property(GetFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this object file for this module as it is represented where it is being debugged.''')
+        platform_file = property(GetPlatformFileSpec, None, doc='''A read only property that returns an lldb object that represents the file (lldb.SBFileSpec) for this object file for this module as it is represented on the current host system.''')
+        byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this module.''')
+        addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this module.''')
+        triple = property(GetTriple, None, doc='''A read only property that returns the target triple (arch-vendor-os) for this module.''')
+        num_symbols = property(GetNumSymbols, None, doc='''A read only property that returns number of symbols in the module symbol table as an integer.''')
+        num_sections = property(GetNumSections, None, doc='''A read only property that returns number of sections in the module as an integer.''')
 
     %}
 

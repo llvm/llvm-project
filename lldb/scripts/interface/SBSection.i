@@ -126,33 +126,15 @@ public:
         def get_addr(self):
             return SBAddress(self, 0)
 
-        __swig_getmethods__["name"] = GetName
-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name of this section as a string.''')
-
-        __swig_getmethods__["addr"] = get_addr
-        if _newclass: addr = property(get_addr, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this section.''')
-
-        __swig_getmethods__["file_addr"] = GetFileAddress
-        if _newclass: file_addr = property(GetFileAddress, None, doc='''A read only property that returns an integer that represents the starting "file" address for this section, or the address of the section in the object file in which it is defined.''')
-
-        __swig_getmethods__["size"] = GetByteSize
-        if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this section as an integer.''')
-
-        __swig_getmethods__["file_offset"] = GetFileOffset
-        if _newclass: file_offset = property(GetFileOffset, None, doc='''A read only property that returns the file offset in bytes of this section as an integer.''')
-
-        __swig_getmethods__["file_size"] = GetFileByteSize
-        if _newclass: file_size = property(GetFileByteSize, None, doc='''A read only property that returns the file size in bytes of this section as an integer.''')
-
-        __swig_getmethods__["data"] = GetSectionData
-        if _newclass: data = property(GetSectionData, None, doc='''A read only property that returns an lldb object that represents the bytes for this section (lldb.SBData) for this section.''')
-
-        __swig_getmethods__["type"] = GetSectionType
-        if _newclass: type = property(GetSectionType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eSectionType") that represents the type of this section (code, data, etc.).''')
-
-        __swig_getmethods__["target_byte_size"] = GetTargetByteSize
-        if _newclass: target_byte_size = property(GetTargetByteSize, None, doc='''A read only property that returns the size of a target byte represented by this section as a number of host bytes.''')
-
+        name = property(GetName, None, doc='''A read only property that returns the name of this section as a string.''')
+        addr = property(get_addr, None, doc='''A read only property that returns an lldb object that represents the start address (lldb.SBAddress) for this section.''')
+        file_addr = property(GetFileAddress, None, doc='''A read only property that returns an integer that represents the starting "file" address for this section, or the address of the section in the object file in which it is defined.''')
+        size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this section as an integer.''')
+        file_offset = property(GetFileOffset, None, doc='''A read only property that returns the file offset in bytes of this section as an integer.''')
+        file_size = property(GetFileByteSize, None, doc='''A read only property that returns the file size in bytes of this section as an integer.''')
+        data = property(GetSectionData, None, doc='''A read only property that returns an lldb object that represents the bytes for this section (lldb.SBData) for this section.''')
+        type = property(GetSectionType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eSectionType") that represents the type of this section (code, data, etc.).''')
+        target_byte_size = property(GetTargetByteSize, None, doc='''A read only property that returns the size of a target byte represented by this section as a number of host bytes.''')
     %}
 
 private:

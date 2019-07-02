@@ -3,8 +3,8 @@
 // RUN: %expect_crash %run %t 2>&1 | FileCheck %s
 
 // CHECK: GWP-ASan detected a memory error
-// CHECK: Buffer underflow occurred when accessing memory at:
-// CHECK: is located 1 bytes to the left
+// CHECK: Buffer underflow at 0x{{[a-f0-9]+}} (1 byte to the left
+// CHECK-SAME: of a {{[1-9][0-9]*}}-byte allocation
 
 #include <cstdlib>
 
