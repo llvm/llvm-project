@@ -10,7 +10,7 @@
 // CHECK-SAME:       <b>#0 Call</b>
 // CHECK-SAME:     </td>
 // CHECK-SAME:     <td align="left" colspan="2">
-// CHECK-SAME:       <font color="grey60">foo </font>(line 4)
+// CHECK-SAME:       <font color="gray60">foo </font>(line 4)
 // CHECK-SAME:     </td>
 // CHECK-SAME:   </tr>
 // CHECK-SAME:   <tr>

@@ -334,9 +334,10 @@ class ExplodedGraph(object):
 # A visitor that dumps the ExplodedGraph into a DOT file with fancy HTML-based
 # syntax highlighing.
 class DotDumpVisitor(object):
-    def __init__(self, do_diffs):
+    def __init__(self, do_diffs, dark_mode):
         super(DotDumpVisitor, self).__init__()
         self._do_diffs = do_diffs
+        self._dark_mode = dark_mode
 
     @staticmethod
     def _dump_raw(s):
@@ -363,6 +364,8 @@ class DotDumpVisitor(object):
     def visit_begin_graph(self, graph):
         self._graph = graph
         self._dump_raw('digraph "ExplodedGraph" {\n')
+        if self._dark_mode:
+            self._dump_raw('bgcolor="gray10";\n')
         self._dump_raw('label="";\n')
 
     def visit_program_point(self, p):
@@ -372,7 +375,7 @@ class DotDumpVisitor(object):
                         'PostStmtPurgeDeadSymbols']:
             color = 'red'
         elif p.kind in ['CallEnter', 'CallExitBegin', 'CallExitEnd']:
-            color = 'blue'
+            color = 'dodgerblue' if self._dark_mode else 'blue'
         elif p.kind in ['Statement']:
             color = 'cyan4'
         else:
@@ -436,7 +439,7 @@ class DotDumpVisitor(object):
             self._dump('<tr><td>%s</td>'
                        '<td align="left"><b>%s</b></td>'
                        '<td align="left" colspan="2">'
-                       '<font color="grey60">%s </font>'
+                       '<font color="gray60">%s </font>'
                        '%s</td></tr>'
                        % (self._diff_plus_minus(is_added),
                           lc.caption, lc.decl,
@@ -451,9 +454,11 @@ class DotDumpVisitor(object):
                        '<td align="left">%s</td></tr>'
                        % (self._diff_plus_minus(is_added),
                           b.stmt_id,
-                          '<td align="left"><font color="darkgreen"><i>'
-                          '(%s)</i></font></td>' % b.kind
-                          if b.kind is not None else '',
+                          '<td align="left"><font color="%s"><i>'
+                          '%s</i></font></td>' % (
+                              'lavender' if self._dark_mode else 'darkgreen',
+                              ('(%s)' % b.kind) if b.kind is not None else ' '
+                          ),
                           b.pretty, f.bindings[b]))
 
         frames_updated = e.diff_frames(prev_e) if prev_e is not None else None
@@ -615,12 +620,16 @@ class DotDumpVisitor(object):
                                         s, prev_s)
 
     def visit_node(self, node):
-        self._dump('%s [shape=record,label=<<table border="0">'
+        self._dump('%s [shape=record,'
                    % (node.node_name()))
+        if self._dark_mode:
+            self._dump('color="white",fontcolor="gray80",')
+        self._dump('label=<<table border="0">')
 
-        self._dump('<tr><td bgcolor="grey"><b>Node %d (%s) - '
+        self._dump('<tr><td bgcolor="%s"><b>Node %d (%s) - '
                    'State %s</b></td></tr>'
-                   % (node.node_id, node.ptr, node.state.state_id
+                   % ("gray20" if self._dark_mode else "gray",
+                      node.node_id, node.ptr, node.state.state_id
                       if node.state is not None else 'Unspecified'))
         self._dump('<tr><td align="left" width="0">')
         if len(node.points) > 1:
@@ -645,7 +654,10 @@ class DotDumpVisitor(object):
         self._dump_raw('</table>>];\n')
 
     def visit_edge(self, pred, succ):
-        self._dump_raw('%s -> %s;\n' % (pred.node_name(), succ.node_name()))
+        self._dump_raw('%s -> %s%s;\n' % (
+            pred.node_name(), succ.node_name(),
+            ' [color="white"]' if self._dark_mode else ''
+        ))
 
     def visit_end_of_graph(self):
         self._dump_raw('}\n')
@@ -678,6 +690,9 @@ def main():
     parser.add_argument('-d', '--diff', action='store_const', dest='diff',
                         const=True, default=False,
                         help='display differences between states')
+    parser.add_argument('--dark', action='store_const', dest='dark',
+                        const=True, default=False,
+                        help='dark mode')
     args = parser.parse_args()
     logging.basicConfig(level=args.loglevel)
 
@@ -688,7 +703,7 @@ def main():
             graph.add_raw_line(raw_line)
 
     explorer = Explorer()
-    visitor = DotDumpVisitor(args.diff)
+    visitor = DotDumpVisitor(args.diff, args.dark)
     explorer.explore(graph, visitor)
 
 

@@ -17,7 +17,7 @@ void test() {
   // CHECK-SAME: <tr>
   // CHECK-SAME:   <td align="left"><b>#0 Call</b></td>
   // CHECK-SAME:   <td align="left" colspan="2">
-  // CHECK-SAME:     <font color="grey60">test </font>
+  // CHECK-SAME:     <font color="gray60">test </font>
   // CHECK-SAME:   </td>
   // CHECK-SAME: </tr>
   // CHECK-SAME: <tr>
