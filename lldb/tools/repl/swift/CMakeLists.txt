@@ -24,6 +24,10 @@ if(CMAKE_SYSTEM_NAME STREQUAL Windows)
     WIN32_EXECUTABLE TRUE)
 endif()
 
+if(LLDB_BUILD_FRAMEWORK)
+  lldb_add_to_framework(repl_swift)
+endif()
+
 # The dummy repl executable is a C program, but we always look for a mangled
 # swift symbol (corresponding to main). If we build the repl with debug info,
 # the debugger looks at the frame language (looking up the compile unit) and gets
