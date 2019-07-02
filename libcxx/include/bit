@@ -201,7 +201,7 @@ using __bitop_unsigned_integer _LIBCPP_NODEBUG_TYPE = integral_constant<bool,
 
 // rotl
 template<class _Tp>
-inline _LIBCPP_INLINE_VISIBILITY constexpr
+_LIBCPP_INLINE_VISIBILITY constexpr
 enable_if_t<__bitop_unsigned_integer<_Tp>::value, _Tp>
 rotl(_Tp __t, unsigned int __cnt) noexcept
 {
@@ -362,11 +362,7 @@ ceil2(_Tp __t) noexcept
 {
     if (__t < 2) return 1;
     const unsigned __n = numeric_limits<_Tp>::digits - countl_zero((_Tp)(__t - 1u));
-
-#ifndef _LIBCPP_HAS_NO_BUILTIN_IS_CONSTANT_EVALUATED
-    if (!__builtin_is_constant_evaluated ())
-        _LIBCPP_DEBUG_ASSERT( __n != numeric_limits<_Tp>::digits, "Bad input to ceil2" );
-#endif
+    _LIBCPP_DEBUG_ASSERT(__libcpp_is_constant_evaluated() || __n != numeric_limits<_Tp>::digits, "Bad input to ceil2");
 
     if constexpr (sizeof(_Tp) >= sizeof(unsigned))
         return _Tp{1} << __n;
