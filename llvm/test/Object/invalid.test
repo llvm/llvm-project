@@ -241,7 +241,7 @@ Sections:
 ## has a broken sh_offset (past the end of the file).
 
 # RUN: yaml2obj %s --docnum=12 -o %t12
-# RUN: yaml2obj %s --docnum=13 -o %t12
+# RUN: yaml2obj %s --docnum=13 -o %t13
 # RUN: not llvm-readobj -r %t12 2>&1 | FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
 # RUN: not llvm-readobj -r %t13 2>&1 | FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
 
