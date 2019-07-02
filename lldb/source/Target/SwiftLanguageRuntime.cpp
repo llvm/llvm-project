@@ -2586,19 +2586,8 @@ llvm::Optional<uint64_t> SwiftLanguageRuntime::GetBitSize(CompilerType type) {
   return type_info->getSize() * 8;
 }
 
-bool SwiftLanguageRuntime::IsRuntimeSupportValue(ValueObject &valobj) {
-  // All runtime support values have to be marked as artificial by the
-  // compiler. But not all artificial variables should be hidden from
-  // the user.
-  if (!valobj.GetVariable())
-    return false;
-  if (!valobj.GetVariable()->IsArtificial())
-    return false;
-
-  // Whitelist "self".
-  if (valobj.GetName() == g_self)
-     return false;
-  return true;
+bool SwiftLanguageRuntime::IsWhitelistedRuntimeValue(ConstString name) {
+  return name == g_self;
 }
 
 bool SwiftLanguageRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
