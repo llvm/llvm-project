@@ -302,8 +302,8 @@ HashedCollectionConfig::StorageObjectAtAddress(
   if (error.Fail())
     return nullptr;
 
-  CompilerType rawStorage_type = ast_ctx->GetTypeFromMangledTypename(
-    m_nativeStorageRoot_mangled.GetCString(), error);
+  CompilerType rawStorage_type =
+      ast_ctx->GetTypeFromMangledTypename(m_nativeStorageRoot_mangled, error);
   if (!rawStorage_type.IsValid())
     return nullptr;
 
