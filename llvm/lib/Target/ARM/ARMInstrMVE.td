@@ -1719,6 +1719,11 @@ def MVE_VMOV_from_lane_u8  : MVE_VMOV_lane_8 < "u8", 0b1, MVE_VMOV_from_lane>;
 def MVE_VMOV_to_lane_8     : MVE_VMOV_lane_8 <  "8", 0b0, MVE_VMOV_to_lane>;
 
 let Predicates = [HasMVEInt] in {
+  def : Pat<(extractelt (v2f64 MQPR:$src), imm:$lane),
+            (f64 (EXTRACT_SUBREG MQPR:$src, (DSubReg_f64_reg imm:$lane)))>;
+  def : Pat<(insertelt (v2f64 MQPR:$src1), DPR:$src2, imm:$lane),
+            (INSERT_SUBREG (v2f64 (COPY_TO_REGCLASS MQPR:$src1, MQPR)), DPR:$src2, (DSubReg_f64_reg imm:$lane))>;
+
   def : Pat<(extractelt (v4i32 MQPR:$src), imm:$lane),
             (COPY_TO_REGCLASS
               (i32 (EXTRACT_SUBREG MQPR:$src, (SSubReg_f32_reg imm:$lane))), rGPR)>;

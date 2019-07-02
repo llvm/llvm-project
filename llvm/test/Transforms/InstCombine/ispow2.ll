@@ -27,9 +27,8 @@ define <2 x i1> @is_pow2or0_negate_op_vec(<2 x i32> %x) {
 
 define i1 @is_pow2or0_decrement_op(i8 %x) {
 ; CHECK-LABEL: @is_pow2or0_decrement_op(
-; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DEC]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X:%.*]]), !range !1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[TMP1]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %dec = add i8 %x, -1
@@ -40,9 +39,8 @@ define i1 @is_pow2or0_decrement_op(i8 %x) {
 
 define <2 x i1> @is_pow2or0_decrement_op_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @is_pow2or0_decrement_op_vec(
-; CHECK-NEXT:    [[DEC:%.*]] = add <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[DEC]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[TMP1]], <i8 2, i8 2>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %dec = add <2 x i8> %x, <i8 -1, i8 -1>
@@ -77,9 +75,8 @@ define <2 x i1> @isnot_pow2or0_negate_op_vec(<2 x i32> %x) {
 
 define i1 @isnot_pow2or0_decrement_op(i8 %x) {
 ; CHECK-LABEL: @isnot_pow2or0_decrement_op(
-; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DEC]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X:%.*]]), !range !1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i8 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %dec = add i8 %x, -1
@@ -90,9 +87,8 @@ define i1 @isnot_pow2or0_decrement_op(i8 %x) {
 
 define <2 x i1> @isnot_pow2or0_decrement_op_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @isnot_pow2or0_decrement_op_vec(
-; CHECK-NEXT:    [[DEC:%.*]] = add <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[DEC]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[AND]], zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[TMP1]], <i8 1, i8 1>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
   %dec = add <2 x i8> %x, <i8 -1, i8 -1>
@@ -104,7 +100,7 @@ define <2 x i1> @isnot_pow2or0_decrement_op_vec(<2 x i8> %x) {
 define i1 @is_pow2or0_negate_op_commute1(i32 %p) {
 ; CHECK-LABEL: @is_pow2or0_negate_op_commute1(
 ; CHECK-NEXT:    [[X:%.*]] = srem i32 42, [[P:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range !1
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range !2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 2
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -120,7 +116,7 @@ define i1 @is_pow2or0_negate_op_commute1(i32 %p) {
 define i1 @isnot_pow2or0_negate_op_commute2(i32 %p) {
 ; CHECK-LABEL: @isnot_pow2or0_negate_op_commute2(
 ; CHECK-NEXT:    [[X:%.*]] = urem i32 42, [[P:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range !2
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range !3
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -134,7 +130,7 @@ define i1 @isnot_pow2or0_negate_op_commute2(i32 %p) {
 define i1 @isnot_pow2or0_negate_op_commute3(i32 %p) {
 ; CHECK-LABEL: @isnot_pow2or0_negate_op_commute3(
 ; CHECK-NEXT:    [[X:%.*]] = urem i32 42, [[P:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range !2
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range !3
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
@@ -449,12 +445,9 @@ define <2 x i1> @is_pow2_negate_op_vec(<2 x i32> %x) {
 
 define i1 @is_pow2_decrement_op(i8 %x) {
 ; CHECK-LABEL: @is_pow2_decrement_op(
-; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DEC]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], 0
-; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i8 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP]], [[NOTZERO]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X:%.*]]), !range !1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %dec = add i8 %x, -1
   %and = and i8 %dec, %x
@@ -466,12 +459,9 @@ define i1 @is_pow2_decrement_op(i8 %x) {
 
 define <2 x i1> @is_pow2_decrement_op_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @is_pow2_decrement_op_vec(
-; CHECK-NEXT:    [[DEC:%.*]] = add <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[DEC]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[AND]], zeroinitializer
-; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne <2 x i8> [[X]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[NOTZERO]], [[CMP]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i8> [[TMP1]], <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %dec = add <2 x i8> %x, <i8 -1, i8 -1>
   %and = and <2 x i8> %dec, %x
@@ -511,12 +501,9 @@ define <2 x i1> @isnot_pow2_negate_op_vec(<2 x i32> %x) {
 
 define i1 @isnot_pow2_decrement_op(i8 %x) {
 ; CHECK-LABEL: @isnot_pow2_decrement_op(
-; CHECK-NEXT:    [[DEC:%.*]] = add i8 [[X:%.*]], -1
-; CHECK-NEXT:    [[AND:%.*]] = and i8 [[DEC]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[AND]], 0
-; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i8 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISZERO]], [[CMP]]
-; CHECK-NEXT:    ret i1 [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X:%.*]]), !range !1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[TMP2]]
 ;
   %dec = add i8 %x, -1
   %and = and i8 %dec, %x
@@ -528,12 +515,9 @@ define i1 @isnot_pow2_decrement_op(i8 %x) {
 
 define <2 x i1> @isnot_pow2_decrement_op_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @isnot_pow2_decrement_op_vec(
-; CHECK-NEXT:    [[DEC:%.*]] = add <2 x i8> [[X:%.*]], <i8 -1, i8 -1>
-; CHECK-NEXT:    [[AND:%.*]] = and <2 x i8> [[DEC]], [[X]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[AND]], zeroinitializer
-; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
-; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[CMP]], [[ISZERO]]
-; CHECK-NEXT:    ret <2 x i1> [[R]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i8> [[TMP1]], <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
 ;
   %dec = add <2 x i8> %x, <i8 -1, i8 -1>
   %and = and <2 x i8> %dec, %x

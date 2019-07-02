@@ -142,7 +142,7 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
       unsigned Threshold = 0;
       if (AS == AMDGPUAS::PRIVATE_ADDRESS)
         Threshold = ThresholdPrivate;
-      else if (AS == AMDGPUAS::LOCAL_ADDRESS)
+      else if (AS == AMDGPUAS::LOCAL_ADDRESS || AS == AMDGPUAS::REGION_ADDRESS)
         Threshold = ThresholdLocal;
       else
         continue;
@@ -160,7 +160,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
         unsigned AllocaSize = Ty->isSized() ? DL.getTypeAllocSize(Ty) : 0;
         if (AllocaSize > MaxAlloca)
           continue;
-      } else if (AS == AMDGPUAS::LOCAL_ADDRESS) {
+      } else if (AS == AMDGPUAS::LOCAL_ADDRESS ||
+                 AS == AMDGPUAS::REGION_ADDRESS) {
         LocalGEPsSeen++;
         // Inhibit unroll for local memory if we have seen addressing not to
         // a variable, most likely we will be unable to combine it.

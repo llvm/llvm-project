@@ -417,17 +417,25 @@ let isCodeGenOnly = 1, rs = 0, shamt = 0 in {
 // explanation.
 
 // Expands to: lui $dst, %highest/%higher/%hi/%lo($tgt)
-def LONG_BRANCH_LUi2Op_64 : PseudoSE<(outs GPR64Opnd:$dst),
-  (ins brtarget:$tgt), []>, GPR_64;
+def LONG_BRANCH_LUi2Op_64 :
+    PseudoSE<(outs GPR64Opnd:$dst), (ins brtarget:$tgt), []>, GPR_64 {
+  bit hasNoSchedulingInfo = 1;
+}
 // Expands to: addiu $dst, %highest/%higher/%hi/%lo($tgt)
-def LONG_BRANCH_DADDiu2Op : PseudoSE<(outs GPR64Opnd:$dst),
-  (ins GPR64Opnd:$src, brtarget:$tgt), []>, GPR_64;
-
+def LONG_BRANCH_DADDiu2Op :
+    PseudoSE<(outs GPR64Opnd:$dst), (ins GPR64Opnd:$src, brtarget:$tgt), []>,
+    GPR_64 {
+  bit hasNoSchedulingInfo = 1;
+}
 // Expands to: daddiu $dst, $src, %PART($tgt - $baltgt)
 // where %PART may be %hi or %lo, depending on the relocation kind
 // that $tgt is annotated with.
-def LONG_BRANCH_DADDiu : PseudoSE<(outs GPR64Opnd:$dst),
-  (ins GPR64Opnd:$src, brtarget:$tgt, brtarget:$baltgt), []>, GPR_64;
+def LONG_BRANCH_DADDiu :
+    PseudoSE<(outs GPR64Opnd:$dst),
+             (ins GPR64Opnd:$src, brtarget:$tgt, brtarget:$baltgt), []>,
+    GPR_64 {
+  bit hasNoSchedulingInfo = 1;
+}
 
 // Cavium Octeon cnMIPS instructions
 let DecoderNamespace = "CnMips",

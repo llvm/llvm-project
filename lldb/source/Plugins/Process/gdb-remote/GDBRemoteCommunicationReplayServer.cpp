@@ -142,6 +142,7 @@ GDBRemoteCommunicationReplayServer::GetPacketAndSendResponse(
                  entry.packet.data);
         LLDB_LOG(log, "GDBRemoteCommunicationReplayServer actual packet: '{0}'",
                  packet.GetStringRef());
+        assert(false && "Encountered unexpected packet during replay");
         return PacketResult::ErrorSendFailed;
       }
 

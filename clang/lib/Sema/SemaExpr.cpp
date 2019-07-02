@@ -15210,6 +15210,8 @@ MarkVarDeclODRUsed(VarDecl *Var, SourceLocation Loc, Sema &SemaRef,
       old = Loc;
   }
   QualType CaptureType, DeclRefType;
+  if (SemaRef.LangOpts.OpenMP)
+    SemaRef.tryCaptureOpenMPLambdas(Var);
   SemaRef.tryCaptureVariable(Var, Loc, Sema::TryCapture_Implicit,
     /*EllipsisLoc*/ SourceLocation(),
     /*BuildAndDiagnose*/ true,

@@ -353,6 +353,10 @@ class LocalAddress : CodePatPred<[{
   return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
 }]>;
 
+class RegionAddress : CodePatPred<[{
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::REGION_ADDRESS;
+}]>;
+
 class GlobalAddress : CodePatPred<[{
   return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
 }]>;
@@ -401,6 +405,9 @@ class PrivateStore <SDPatternOperator op> : StoreFrag <op>, PrivateAddress;
 
 class LocalLoad <SDPatternOperator op> : LoadFrag <op>, LocalAddress;
 class LocalStore <SDPatternOperator op> : StoreFrag <op>, LocalAddress;
+
+class RegionLoad <SDPatternOperator op> : LoadFrag <op>, RegionAddress;
+class RegionStore <SDPatternOperator op> : StoreFrag <op>, RegionAddress;
 
 class GlobalLoad <SDPatternOperator op> : LoadFrag<op>, GlobalLoadAddress;
 class GlobalStore <SDPatternOperator op> : StoreFrag<op>, GlobalAddress;
@@ -497,6 +504,13 @@ class local_binary_atomic_op<SDNode atomic_op> :
   return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
 }]>;
 
+class region_binary_atomic_op<SDNode atomic_op> :
+  PatFrag<(ops node:$ptr, node:$value),
+    (atomic_op node:$ptr, node:$value), [{
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::REGION_ADDRESS;
+}]>;
+
+
 def atomic_swap_local : local_binary_atomic_op<atomic_swap>;
 def atomic_load_add_local : local_binary_atomic_op<atomic_load_add>;
 def atomic_load_sub_local : local_binary_atomic_op<atomic_load_sub>;
@@ -519,6 +533,13 @@ class AtomicCmpSwapLocal <SDNode cmp_swap_node> : PatFrag<
     (cmp_swap_node node:$ptr, node:$cmp, node:$swap), [{
       AtomicSDNode *AN = cast<AtomicSDNode>(N);
       return AN->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+}]>;
+
+class AtomicCmpSwapRegion <SDNode cmp_swap_node> : PatFrag<
+    (ops node:$ptr, node:$cmp, node:$swap),
+    (cmp_swap_node node:$ptr, node:$cmp, node:$swap), [{
+      AtomicSDNode *AN = cast<AtomicSDNode>(N);
+      return AN->getAddressSpace() == AMDGPUAS::REGION_ADDRESS;
 }]>;
 
 def atomic_cmp_swap_local : AtomicCmpSwapLocal <atomic_cmp_swap>;

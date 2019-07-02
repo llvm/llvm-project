@@ -583,8 +583,9 @@ void CodeViewDebug::endModule() {
   clear();
 }
 
-static void emitNullTerminatedSymbolName(MCStreamer &OS, StringRef S,
-    unsigned MaxFixedRecordLength = 0xF00) {
+static void
+emitNullTerminatedSymbolName(MCStreamer &OS, StringRef S,
+                             unsigned MaxFixedRecordLength = 0xF00) {
   // The maximum CV record length is 0xFF00. Most of the strings we emit appear
   // after a fixed length portion of the record. The fixed length portion should
   // always be less than 0xF00 (3840) bytes, so truncate the string so that the

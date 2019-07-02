@@ -7010,7 +7010,7 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
   return false;
 }
 
-/// Removes unused shuffle source inputs and adjusts the shuffle mask accordingly.
+/// Removes unused/repeated shuffle source inputs and adjusts the shuffle mask.
 static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Inputs,
                                               SmallVectorImpl<int> &Mask) {
   int MaskWidth = Mask.size();
@@ -7026,13 +7026,28 @@ static void resolveTargetShuffleInputsAndMask(SmallVectorImpl<SDValue> &Inputs,
           M = SM_SentinelUndef;
 
     // Check for unused inputs.
-    if (any_of(Mask, [lo, hi](int i) { return (lo <= i) && (i < hi); })) {
-      UsedInputs.push_back(Inputs[i]);
+    if (none_of(Mask, [lo, hi](int i) { return (lo <= i) && (i < hi); })) {
+      for (int &M : Mask)
+        if (lo <= M)
+          M -= MaskWidth;
       continue;
     }
-    for (int &M : Mask)
-      if (lo <= M)
-        M -= MaskWidth;
+
+    // Check for repeated inputs.
+    bool IsRepeat = false;
+    for (int j = 0, ue = UsedInputs.size(); j != ue; ++j) {
+      if (UsedInputs[j] != Inputs[i])
+        continue;
+      for (int &M : Mask)
+        if (lo <= M)
+          M = (M < hi) ? ((M - lo) + (j * MaskWidth)) : (M - MaskWidth);
+      IsRepeat = true;
+      break;
+    }
+    if (IsRepeat)
+      continue;
+
+    UsedInputs.push_back(Inputs[i]);
   }
   Inputs = UsedInputs;
 }
@@ -32668,7 +32683,7 @@ static SDValue combineX86ShufflesRecursively(
     return getZeroVector(Root.getSimpleValueType(), Subtarget, DAG,
                          SDLoc(Root));
 
-  // Remove unused shuffle source ops.
+  // Remove unused/repeated shuffle source ops.
   resolveTargetShuffleInputsAndMask(Ops, Mask);
   assert(!Ops.empty() && "Shuffle with no inputs detected");
 
@@ -41144,6 +41159,41 @@ static SDValue combineX86INT_TO_FP(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+static SDValue combineCVTP2I_CVTTP2I(SDNode *N, SelectionDAG &DAG,
+                                     TargetLowering::DAGCombinerInfo &DCI) {
+  EVT VT = N->getValueType(0);
+
+  // Convert a full vector load into vzload when not all bits are needed.
+  SDValue In = N->getOperand(0);
+  MVT InVT = In.getSimpleValueType();
+  if (VT.getVectorNumElements() < InVT.getVectorNumElements() &&
+      ISD::isNormalLoad(In.getNode()) && In.hasOneUse()) {
+    assert(InVT.is128BitVector() && "Expected 128-bit input vector");
+    LoadSDNode *LN = cast<LoadSDNode>(N->getOperand(0));
+    // Unless the load is volatile.
+    if (!LN->isVolatile()) {
+      SDLoc dl(N);
+      unsigned NumBits = InVT.getScalarSizeInBits() * VT.getVectorNumElements();
+      MVT MemVT = MVT::getFloatingPointVT(NumBits);
+      MVT LoadVT = MVT::getVectorVT(MemVT, 128 / NumBits);
+      SDVTList Tys = DAG.getVTList(LoadVT, MVT::Other);
+      SDValue Ops[] = { LN->getChain(), LN->getBasePtr() };
+      SDValue VZLoad =
+          DAG.getMemIntrinsicNode(X86ISD::VZEXT_LOAD, dl, Tys, Ops, MemVT,
+                                  LN->getPointerInfo(),
+                                  LN->getAlignment(),
+                                  LN->getMemOperand()->getFlags());
+      SDValue Convert = DAG.getNode(N->getOpcode(), dl, VT,
+                                    DAG.getBitcast(InVT, VZLoad));
+      DCI.CombineTo(N, Convert);
+      DAG.ReplaceAllUsesOfValueWith(SDValue(LN, 1), VZLoad.getValue(1));
+      return SDValue(N, 0);
+    }
+  }
+
+  return SDValue();
+}
+
 /// Do target-specific dag combines on X86ISD::ANDNP nodes.
 static SDValue combineAndnp(SDNode *N, SelectionDAG &DAG,
                             TargetLowering::DAGCombinerInfo &DCI,
@@ -43940,6 +43990,10 @@ SDValue X86TargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::FMAXNUM:        return combineFMinNumFMaxNum(N, DAG, Subtarget);
   case X86ISD::CVTSI2P:
   case X86ISD::CVTUI2P:     return combineX86INT_TO_FP(N, DAG, DCI);
+  case X86ISD::CVTP2SI:
+  case X86ISD::CVTP2UI:
+  case X86ISD::CVTTP2SI:
+  case X86ISD::CVTTP2UI:    return combineCVTP2I_CVTTP2I(N, DAG, DCI);
   case X86ISD::BT:          return combineBT(N, DAG, DCI);
   case ISD::ANY_EXTEND:
   case ISD::ZERO_EXTEND:    return combineZext(N, DAG, DCI, Subtarget);

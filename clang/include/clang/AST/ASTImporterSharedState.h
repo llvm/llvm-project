@@ -16,6 +16,7 @@
 #define LLVM_CLANG_AST_ASTIMPORTERSHAREDSTATE_H
 
 #include "clang/AST/ASTImporterLookupTable.h"
+#include "clang/AST/Decl.h"
 #include "llvm/ADT/DenseMap.h"
 // FIXME We need this because of ImportError.
 #include "clang/AST/ASTImporter.h"

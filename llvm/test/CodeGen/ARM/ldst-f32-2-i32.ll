@@ -36,3 +36,43 @@ bb:
 return:
   ret void
 }
+
+@a1 = local_unnamed_addr global float 0.000000e+00, align 4
+@a2 = local_unnamed_addr global float 0.000000e+00, align 4
+@a3 = local_unnamed_addr global float 0.000000e+00, align 4
+@a4 = local_unnamed_addr global float 0.000000e+00, align 4
+@a5 = local_unnamed_addr global float 0.000000e+00, align 4
+@a6 = local_unnamed_addr global float 0.000000e+00, align 4
+@a7 = local_unnamed_addr global float 0.000000e+00, align 4
+@a8 = local_unnamed_addr global float 0.000000e+00, align 4
+
+
+declare void @_Z3fooddddddddddddddd(float, float, float, float, float, float, float, float)
+
+; Because this test function is trying to pass float argument by stack,
+; it can be optimized to i32 load / store
+define signext i32 @test() {
+%1 = load float, float* @a1, align 4
+%2 = load float, float* @a2, align 4
+%3 = load float, float* @a3, align 4
+%4 = load float, float* @a4, align 4
+%5 = load float, float* @a5, align 4
+%6 = load float, float* @a6, align 4
+%7 = load float, float* @a7, align 4
+%8 = load float, float* @a8, align 4
+tail call void @_Z3fooddddddddddddddd(float %1, float %2, float %3, float %4, float %5, float %6, float %7, float %8)
+ret i32 0
+}
+
+; CHECK-LABEL: _test:
+; CHECK: ldr r3, [pc, r3]
+; CHECK: ldr r2, [pc, r2]
+; CHECK: ldr r1, [pc, r1]
+; CHECK: ldr r0, [pc, r0]
+; CHECK: ldr r9, [pc, r9]
+; CHECK: ldr r12, [pc, r12]
+; CHECK: ldr lr, [pc, lr]
+; CHECK: stm sp, {r9, r12, lr}
+; CHECK: ldr r4, [pc, r4]
+; CHECK: str r4, [sp, #12]
+; CHECK: bl __Z3fooddddddddddddddd

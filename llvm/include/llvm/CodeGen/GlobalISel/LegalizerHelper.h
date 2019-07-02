@@ -218,6 +218,7 @@ private:
   LegalizeResult lowerU64ToF32BitOps(MachineInstr &MI);
   LegalizeResult lowerUITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
   LegalizeResult lowerSITOFP(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
+  LegalizeResult lowerMinMax(MachineInstr &MI, unsigned TypeIdx, LLT Ty);
 
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;

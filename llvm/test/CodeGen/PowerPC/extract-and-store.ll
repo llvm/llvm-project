@@ -744,6 +744,7 @@ define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b)
 ; CHECK-NEXT:    stb r4, 9(r5)
 ; CHECK-NEXT:    rldicl r4, r7, 32, 56
 ; CHECK-NEXT:    rldicl r6, r7, 8, 56
+; CHECK-NEXT:    stb r3, 12(r5)
 ; CHECK-NEXT:    stb r4, 0(r5)
 ; CHECK-NEXT:    rldicl r4, r7, 16, 56
 ; CHECK-NEXT:    stb r6, 3(r5)
@@ -756,7 +757,6 @@ define void @test_13_consecutive_stores_of_bytes(<16 x i8> %a, i8* nocapture %b)
 ; CHECK-NEXT:    rldicl r4, r7, 24, 56
 ; CHECK-NEXT:    stb r6, 10(r5)
 ; CHECK-NEXT:    stb r4, 11(r5)
-; CHECK-NEXT:    stb r3, 12(r5)
 ; CHECK-NEXT:    blr
 ;
 ; CHECK-BE-LABEL: test_13_consecutive_stores_of_bytes:

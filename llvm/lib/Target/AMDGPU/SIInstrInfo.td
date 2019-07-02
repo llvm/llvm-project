@@ -505,6 +505,7 @@ multiclass SIAtomicM0Glue2 <string op_name, bit is_amdgpu = 0,
   >;
 
   def _local_m0 : local_binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
+  def _region_m0 : region_binary_atomic_op <!cast<SDNode>(NAME#"_glue")>;
 }
 
 defm atomic_load_add : SIAtomicM0Glue2 <"LOAD_ADD">;
@@ -528,6 +529,7 @@ def atomic_cmp_swap_glue : SDNode <"ISD::ATOMIC_CMP_SWAP", SDTAtomic3,
 >;
 
 def atomic_cmp_swap_local_m0 : AtomicCmpSwapLocal<atomic_cmp_swap_glue>;
+def atomic_cmp_swap_region_m0 : AtomicCmpSwapRegion<atomic_cmp_swap_glue>;
 
 
 def as_i1imm : SDNodeXForm<imm, [{
