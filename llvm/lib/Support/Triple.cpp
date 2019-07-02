@@ -239,6 +239,7 @@ StringRef Triple::getEnvironmentTypeName(EnvironmentType Kind) {
   case Cygnus: return "cygnus";
   case CoreCLR: return "coreclr";
   case Simulator: return "simulator";
+  case MacCatalyst: return "maccatalyst";
   }
 
   llvm_unreachable("Invalid EnvironmentType!");
@@ -541,6 +542,7 @@ static Triple::EnvironmentType parseEnvironment(StringRef EnvironmentName) {
     .StartsWith("cygnus", Triple::Cygnus)
     .StartsWith("coreclr", Triple::CoreCLR)
     .StartsWith("simulator", Triple::Simulator)
+    .StartsWith("maccatalyst", Triple::MacCatalyst)
     .Default(Triple::UnknownEnvironment);
 }
 
