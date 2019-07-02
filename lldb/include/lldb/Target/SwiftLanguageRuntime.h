@@ -308,7 +308,7 @@ public:
   /// Ask Remote Mirrors for the size of a Swift type.
   llvm::Optional<uint64_t> GetBitSize(CompilerType type);
 
-  bool IsRuntimeSupportValue(ValueObject &valobj) override;
+  bool IsWhitelistedRuntimeValue(ConstString name) override;
 
   virtual CompilerType DoArchetypeBindingForType(StackFrame &stack_frame,
                                                  CompilerType base_type);
