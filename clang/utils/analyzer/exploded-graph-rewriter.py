@@ -71,8 +71,11 @@ class ProgramPoint(object):
 class EnvironmentBindingKey(object):
     def __init__(self, json_ek):
         super(EnvironmentBindingKey, self).__init__()
-        self.stmt_id = json_ek['stmt_id']
+        # CXXCtorInitializer is not a Stmt!
+        self.stmt_id = json_ek['stmt_id'] if 'stmt_id' in json_ek \
+            else json_ek['init_id']
         self.pretty = json_ek['pretty']
+        self.kind = json_ek['kind'] if 'kind' in json_ek else None
 
     def _key(self):
         return self.stmt_id
@@ -122,12 +125,12 @@ class EnvironmentFrame(object):
         return len(removed) != 0 or len(added) != 0
 
 
-# A deserialized Environment.
-class Environment(object):
+# A deserialized Environment. This class can also hold other entities that
+# are similar to Environment, such as Objects Under Construction.
+class GenericEnvironment(object):
     def __init__(self, json_e):
-        super(Environment, self).__init__()
-        self.ptr = json_e['pointer']
-        self.frames = [EnvironmentFrame(f) for f in json_e['items']]
+        super(GenericEnvironment, self).__init__()
+        self.frames = [EnvironmentFrame(f) for f in json_e]
 
     def diff_frames(self, prev):
         # TODO: It's difficult to display a good diff when frame numbers shift.
@@ -214,13 +217,18 @@ class ProgramState(object):
         logging.debug('Adding ProgramState ' + str(state_id))
 
         self.state_id = state_id
+
         self.store = Store(json_ps['store']) \
             if json_ps['store'] is not None else None
-        self.environment = Environment(json_ps['environment']) \
+
+        self.environment = \
+            GenericEnvironment(json_ps['environment']['items']) \
             if json_ps['environment'] is not None else None
+
         self.constraints = GenericMap([
             (c['symbol'], c['range']) for c in json_ps['constraints']
         ]) if json_ps['constraints'] is not None else None
+
         self.dynamic_types = GenericMap([
                 (t['region'], '%s%s' % (t['dyn_type'],
                                         ' (or a sub-class)'
@@ -228,7 +236,10 @@ class ProgramState(object):
                 for t in json_ps['dynamic_types']]) \
             if json_ps['dynamic_types'] is not None else None
 
-        # TODO: Objects under construction.
+        self.constructing_objects = \
+            GenericEnvironment(json_ps['constructing_objects']) \
+            if json_ps['constructing_objects'] is not None else None
+
         # TODO: Checker messages.
 
 
@@ -416,10 +427,15 @@ class DotDumpVisitor(object):
         def dump_binding(f, b, is_added=None):
             self._dump('<tr><td>%s</td>'
                        '<td align="left"><i>S%s</i></td>'
+                       '%s'
                        '<td align="left">%s</td>'
                        '<td align="left">%s</td></tr>'
                        % (self._diff_plus_minus(is_added),
-                          b.stmt_id, b.pretty, f.bindings[b]))
+                          b.stmt_id,
+                          '<td align="left"><font color="darkgreen"><i>'
+                          '(%s)</i></font></td>' % b.kind
+                          if b.kind is not None else '',
+                          b.pretty, f.bindings[b]))
 
         frames_updated = e.diff_frames(prev_e) if prev_e is not None else None
         if frames_updated:
@@ -440,20 +456,25 @@ class DotDumpVisitor(object):
 
         self._dump('</table>')
 
-    def visit_environment_in_state(self, s, prev_s=None):
-        self._dump('<hr /><tr><td align="left"><b>Environment: </b>')
-        if s.environment is None:
+    def visit_environment_in_state(self, selector, title, s, prev_s=None):
+        e = getattr(s, selector)
+        prev_e = getattr(prev_s, selector) if prev_s is not None else None
+        if e is None and prev_e is None:
+            return
+
+        self._dump('<hr /><tr><td align="left"><b>%s: </b>' % title)
+        if e is None:
             self._dump('<i> Nothing!</i>')
         else:
-            if prev_s is not None and prev_s.environment is not None:
-                if s.environment.is_different(prev_s.environment):
+            if prev_e is not None:
+                if e.is_different(prev_e):
                     self._dump('</td></tr><tr><td align="left">')
-                    self.visit_environment(s.environment, prev_s.environment)
+                    self.visit_environment(e, prev_e)
                 else:
                     self._dump('<i> No changes!</i>')
             else:
                 self._dump('</td></tr><tr><td align="left">')
-                self.visit_environment(s.environment)
+                self.visit_environment(e)
 
         self._dump('</td></tr>')
 
@@ -496,19 +517,24 @@ class DotDumpVisitor(object):
         self._dump('</table>')
 
     def visit_store_in_state(self, s, prev_s=None):
+        st = s.store
+        prev_st = prev_s.store if prev_s is not None else None
+        if st is None and prev_st is None:
+            return
+
         self._dump('<hr /><tr><td align="left"><b>Store: </b>')
-        if s.store is None:
+        if st is None:
             self._dump('<i> Nothing!</i>')
         else:
-            if prev_s is not None and prev_s.store is not None:
-                if s.store.is_different(prev_s.store):
+            if prev_st is not None:
+                if s.store.is_different(prev_st):
                     self._dump('</td></tr><tr><td align="left">')
-                    self.visit_store(s.store, prev_s.store)
+                    self.visit_store(st, prev_st)
                 else:
                     self._dump('<i> No changes!</i>')
             else:
                 self._dump('</td></tr><tr><td align="left">')
-                self.visit_store(s.store)
+                self.visit_store(st)
         self._dump('</td></tr>')
 
     def visit_generic_map(self, m, prev_m=None):
@@ -559,10 +585,14 @@ class DotDumpVisitor(object):
 
     def visit_state(self, s, prev_s):
         self.visit_store_in_state(s, prev_s)
-        self.visit_environment_in_state(s, prev_s)
+        self.visit_environment_in_state('environment', 'Environment',
+                                        s, prev_s)
         self.visit_generic_map_in_state('constraints', 'Ranges',
                                         s, prev_s)
         self.visit_generic_map_in_state('dynamic_types', 'Dynamic Types',
+                                        s, prev_s)
+        self.visit_environment_in_state('constructing_objects',
+                                        'Objects Under Construction',
                                         s, prev_s)
 
     def visit_node(self, node):

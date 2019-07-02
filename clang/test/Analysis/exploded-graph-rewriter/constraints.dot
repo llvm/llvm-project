@@ -20,6 +20,7 @@ Node0x1 [shape=record,label=
         "store": null,
         "environment": null,
         "dynamic_types": null,
+        "constructing_objects": null,
         "constraints": [
           { "symbol": "reg_$0<x>", "range": "{ [0, 0] }" }
         ]
