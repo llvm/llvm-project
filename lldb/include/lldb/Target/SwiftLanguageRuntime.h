@@ -462,8 +462,8 @@ protected:
                      std::unique_ptr<swift::remoteAST::RemoteASTContext>>
     m_remote_ast_contexts;
 
-  std::unordered_map<const char *, lldb::SyntheticChildrenSP>
-      m_bridged_synthetics_map;
+  /// Uses ConstStrings as keys to avoid storing the strings twice.
+  llvm::DenseMap<const char *, lldb::SyntheticChildrenSP> m_bridged_synthetics_map;
 
   /// Cached member variable offsets.
   typename KeyHasher<const swift::TypeBase *, const char *, uint64_t>::MapType
