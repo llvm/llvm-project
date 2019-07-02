@@ -17,6 +17,7 @@
 #include "AMDGPUArgumentUsageInfo.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/CodeGen/Register.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelector.h"
 #include "llvm/IR/InstrTypes.h"
 
@@ -59,11 +60,16 @@ private:
   };
 
   bool isInstrUniform(const MachineInstr &MI) const;
+  bool isVCC(Register Reg, const MachineRegisterInfo &MRI) const;
+
   /// tblgen-erated 'select' implementation.
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
 
-  MachineOperand getSubOperand64(MachineOperand &MO, unsigned SubIdx) const;
+  MachineOperand getSubOperand64(MachineOperand &MO,
+                                 const TargetRegisterClass &SubRC,
+                                 unsigned SubIdx) const;
   bool selectCOPY(MachineInstr &I) const;
+  bool selectPHI(MachineInstr &I) const;
   bool selectG_TRUNC(MachineInstr &I) const;
   bool selectG_SZA_EXT(MachineInstr &I) const;
   bool selectG_CONSTANT(MachineInstr &I) const;
@@ -84,6 +90,8 @@ private:
   bool selectG_LOAD(MachineInstr &I) const;
   bool selectG_SELECT(MachineInstr &I) const;
   bool selectG_STORE(MachineInstr &I) const;
+  bool selectG_BRCOND(MachineInstr &I) const;
+  bool selectG_FRAME_INDEX(MachineInstr &I) const;
 
   std::pair<Register, unsigned>
   selectVOP3ModsImpl(Register Src, const MachineRegisterInfo &MRI) const;

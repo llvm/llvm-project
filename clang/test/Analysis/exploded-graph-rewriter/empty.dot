@@ -1,4 +1,6 @@
 // RUN: %exploded_graph_rewriter %s | FileCheck %s
+// RUN: %exploded_graph_rewriter --dark %s | FileCheck %s \
+// RUN:                                         -check-prefixes=CHECK,DARK
 
 // FIXME: Substitution doesn't seem to work on Windows.
 // UNSUPPORTED: system-windows
@@ -8,5 +10,6 @@ digraph "Exploded Graph" {
 }
 
 // CHECK:      digraph "ExplodedGraph" {
+// DARK-NEXT:    bgcolor="gray10";
 // CHECK-NEXT:   label="";
 // CHECK-NEXT: }

@@ -17,16 +17,24 @@
 namespace clang {
 namespace ento {
 
+// Find a node in the current AST that matches a matcher.
+template <typename T, typename MatcherT>
+const T *findNode(const Decl *Where, MatcherT What) {
+  using namespace ast_matchers;
+  auto Matches = match(decl(hasDescendant(What.bind("root"))),
+                       *Where, Where->getASTContext());
+  assert(Matches.size() <= 1 && "Ambiguous match!");
+  assert(Matches.size() >= 1 && "Match not found!");
+  const T *Node = selectFirst<T>("root", Matches);
+  assert(Node && "Type mismatch!");
+  return Node;
+}
+
 // Find a declaration in the current AST by name.
 template <typename T>
 const T *findDeclByName(const Decl *Where, StringRef Name) {
   using namespace ast_matchers;
-  auto Matcher = decl(hasDescendant(namedDecl(hasName(Name)).bind("d")));
-  auto Matches = match(Matcher, *Where, Where->getASTContext());
-  assert(Matches.size() == 1 && "Ambiguous name!");
-  const T *Node = selectFirst<T>("d", Matches);
-  assert(Node && "Name not found!");
-  return Node;
+  return findNode<T>(Where, namedDecl(hasName(Name)));
 }
 
 // A re-usable consumer that constructs ExprEngine out of CompilerInvocation.

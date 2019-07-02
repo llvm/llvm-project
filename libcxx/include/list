@@ -129,11 +129,11 @@ public:
     void splice(const_iterator position, list&& x, const_iterator first,
                                                   const_iterator last);
 
-    void remove(const value_type& value);
-    template <class Pred> void remove_if(Pred pred);
-    void unique();
+    size_type remove(const value_type& value);
+    template <class Pred> size_type remove_if(Pred pred);
+    size_type unique();
     template <class BinaryPredicate>
-        void unique(BinaryPredicate binary_pred);
+        size_type unique(BinaryPredicate binary_pred);
     void merge(list& x);
     void merge(list&& x);
     template <class Compare>
@@ -1070,12 +1070,12 @@ public:
     void splice(const_iterator __p, list& __c, const_iterator __i);
     void splice(const_iterator __p, list& __c, const_iterator __f, const_iterator __l);
 
-    void remove(const value_type& __x);
-    template <class _Pred> void remove_if(_Pred __pred);
+    size_type remove(const value_type& __x);
+    template <class _Pred> size_type remove_if(_Pred __pred);
     _LIBCPP_INLINE_VISIBILITY
-    void unique();
+    size_type unique() { return unique(__equal_to<value_type>()); }
     template <class _BinaryPred>
-        void unique(_BinaryPred __binary_pred);
+        size_type unique(_BinaryPred __binary_pred);
     _LIBCPP_INLINE_VISIBILITY
     void merge(list& __c);
 #ifndef _LIBCPP_CXX03_LANG
@@ -2141,7 +2141,7 @@ list<_Tp, _Alloc>::splice(const_iterator __p, list& __c, const_iterator __f, con
 }
 
 template <class _Tp, class _Alloc>
-void
+typename list<_Tp, _Alloc>::size_type
 list<_Tp, _Alloc>::remove(const value_type& __x)
 {
     list<_Tp, _Alloc> __deleted_nodes(get_allocator()); // collect the nodes we're removing
@@ -2160,11 +2160,13 @@ list<_Tp, _Alloc>::remove(const value_type& __x)
         else
             ++__i;
     }
+
+    return __deleted_nodes.size();
 }
 
 template <class _Tp, class _Alloc>
 template <class _Pred>
-void
+typename list<_Tp, _Alloc>::size_type
 list<_Tp, _Alloc>::remove_if(_Pred __pred)
 {
     list<_Tp, _Alloc> __deleted_nodes(get_allocator()); // collect the nodes we're removing
@@ -2183,19 +2185,13 @@ list<_Tp, _Alloc>::remove_if(_Pred __pred)
         else
             ++__i;
     }
-}
 
-template <class _Tp, class _Alloc>
-inline
-void
-list<_Tp, _Alloc>::unique()
-{
-    unique(__equal_to<value_type>());
+    return __deleted_nodes.size();
 }
 
 template <class _Tp, class _Alloc>
 template <class _BinaryPred>
-void
+typename list<_Tp, _Alloc>::size_type
 list<_Tp, _Alloc>::unique(_BinaryPred __binary_pred)
 {
     list<_Tp, _Alloc> __deleted_nodes(get_allocator()); // collect the nodes we're removing
@@ -2209,6 +2205,8 @@ list<_Tp, _Alloc>::unique(_BinaryPred __binary_pred)
             __i = __j;
             }
     }
+    
+    return __deleted_nodes.size();
 }
 
 template <class _Tp, class _Alloc>

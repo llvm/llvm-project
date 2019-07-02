@@ -1565,8 +1565,9 @@ ARMTargetLowering::getRegClassFor(MVT VT, bool isDivergent) const {
   (void)isDivergent;
   // Map v4i64 to QQ registers but do not make the type legal. Similarly map
   // v8i64 to QQQQ registers. v4i64 and v8i64 are only used for REG_SEQUENCE to
-  // load / store 4 to 8 consecutive D registers.
-  if (Subtarget->hasNEON()) {
+  // load / store 4 to 8 consecutive NEON D registers, or 2 to 4 consecutive
+  // MVE Q registers.
+  if (Subtarget->hasNEON() || Subtarget->hasMVEIntegerOps()) {
     if (VT == MVT::v4i64)
       return &ARM::QQPRRegClass;
     if (VT == MVT::v8i64)

@@ -163,7 +163,7 @@ E: stoklund@2pi.dk
 D: TableGen
 
 N: Krzysztof Parzyszek
-E: kparzysz@codeaurora.org
+E: kparzysz@quicinc.com
 D: Hexagon Backend
 
 N: Jacques Pienaar

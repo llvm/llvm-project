@@ -56,6 +56,7 @@ public:
     basic_ostream& operator<<(long double f);
     basic_ostream& operator<<(const void* p);
     basic_ostream& operator<<(basic_streambuf<char_type,traits>* sb);
+    basic_ostream& operator<<(nullptr_t);
 
     // 27.7.2.7 Unformatted output:
     basic_ostream& put(char_type c);
@@ -217,6 +218,10 @@ public:
     basic_ostream& operator<<(long double __f);
     basic_ostream& operator<<(const void* __p);
     basic_ostream& operator<<(basic_streambuf<char_type, traits_type>* __sb);
+
+    _LIBCPP_INLINE_VISIBILITY
+    basic_ostream& operator<<(nullptr_t)
+    { return *this << "nullptr"; }
 
     // 27.7.2.7 Unformatted output:
     basic_ostream& put(char_type __c);

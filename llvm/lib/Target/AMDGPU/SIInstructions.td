@@ -438,6 +438,8 @@ def ADJCALLSTACKUP : SPseudoInstSI<
   let FixedSize = 1;
   let hasSideEffects = 1;
   let usesCustomInserter = 1;
+  let SchedRW = [WriteSALU];
+  let Defs = [SCC];
 }
 
 def ADJCALLSTACKDOWN : SPseudoInstSI<
@@ -447,6 +449,8 @@ def ADJCALLSTACKDOWN : SPseudoInstSI<
   let Size = 8; // Worst case. (s_add_u32 + constant)
   let hasSideEffects = 1;
   let usesCustomInserter = 1;
+  let SchedRW = [WriteSALU];
+  let Defs = [SCC];
 }
 
 let Defs = [M0, EXEC, SCC],
