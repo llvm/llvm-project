@@ -14,7 +14,10 @@ build folders that contained old signed items. The darwin kernel will cache
 code signing using the executable's file system node, so you will need to
 delete the file so the kernel clears its cache.
 
-If you don't have one yet you will need to:
+Automatic setup:
+- Run scripts/macos-setup-codesign.sh
+
+Manual setup steps:
 - Launch /Applications/Utilities/Keychain Access.app
 
 - In Keychain Access select the "login" keychain in the "Keychains"
