@@ -339,3 +339,200 @@ Sections:
 
 # RUN: not llvm-readobj %p/Inputs/invalid-coff-header-too-small 2>&1 | FileCheck --check-prefix=COFF-HEADER %s
 # COFF-HEADER: The file was not recognized as a valid object file
+
+## Check that llvm-readobj reports an error if section name offset
+## overflows the section name string table.
+
+# RUN: yaml2obj %s --docnum=17 -o %t17
+# RUN: not llvm-readobj --sections %t17 2>&1 | FileCheck --check-prefix=BROKEN-SECNAME %s
+
+## BROKEN-SECNAME: invalid string offset
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .shstrtab
+    Type: SHT_STRTAB
+    Size: 1
+
+## Check that llvm-readobj reports an error if a section has a broken offset
+## that goes past the end of the file.
+
+# RUN: yaml2obj %s --docnum=18 -o %t18
+# RUN: not llvm-readobj --sections --section-data %t18 2>&1 \
+# RUN:  | FileCheck --check-prefix=BROKEN-SECSHOFFSET %s
+
+# BROKEN-SECSHOFFSET: invalid section offset
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:     .foo
+    Type:     SHT_PROGBITS
+    ShOffset: 0xFFFF0000
+
+## Check that llvm-readobj reports an error if symbol name
+## offset goes past the end of the symbol string table.
+
+# RUN: yaml2obj %s --docnum=19 -o %t19
+# RUN: not llvm-readobj --symbols %t19 2>&1 | FileCheck --check-prefix=INVALID-SYM-NAME %s
+
+# INVALID-SYM-NAME: error: Invalid data was encountered while parsing the file
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .strtab
+    Type: SHT_STRTAB
+    Size: 1
+Symbols:
+  - Name: foo
+
+## Version index in .gnu.version overflows the version map.
+## Check llvm-readobj reports it.
+
+# RUN: yaml2obj %s --docnum=20 -o %t20
+# RUN: not llvm-readobj -dt %t20 2>&1 | FileCheck --check-prefix=INVALID-VERSION %s
+
+# INVALID-VERSION: error: Invalid version entry
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+Sections:
+  - Name:    .gnu.version
+    Type:    SHT_GNU_versym
+    Entries: [ 0xFF ]
+DynamicSymbols:
+  - Name: foo
+
+## ELF header contains e_phentsize field with a value != sizeof(Elf_Phdr).
+## Check llvm-readobj reports it.
+
+# RUN: not llvm-readobj -l %p/Inputs/corrupt-invalid-phentsize.elf.x86-64 2>&1 \
+# RUN:   | FileCheck --check-prefix=PHENTSIZE %s
+
+# PHENTSIZE: invalid e_phentsize
+
+## The dynamic table contains DT_STRTAB with a value that is not in any loadable segment.
+## Check llvm-readobj reports it.
+
+# RUN: yaml2obj %s --docnum=21 -o %t21
+# RUN: llvm-readobj --dynamic-table %t21 2>&1 | FileCheck --check-prefix=INVALID-DTSTRTAB %s
+
+# INVALID-DTSTRTAB: warning: Unable to parse DT_STRTAB: Virtual address is not in any segment
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Address: 0x1000
+    Entries:
+      - Tag:   DT_STRTAB
+        Value: 0xFFFF0000
+      - Tag:   DT_NULL
+        Value: 0x0
+ProgramHeaders:
+  - Type: PT_LOAD
+    VAddr: 0x1000
+    Sections:
+      - Section: .dynamic
+
+## Check that llvm-readobj reports an error when a dynamic relocation section
+## has sh_entsize field with size != sizeof(Elf_Rela).
+
+# RUN: not llvm-readobj --dyn-relocations \
+# RUN:   %p/Inputs/corrupt-invalid-relocation-size.elf.x86-64 2>&1 \
+# RUN:    | FileCheck --check-prefix=RELOC-BROKEN-ENTSIZE %s
+
+# RELOC-BROKEN-ENTSIZE: Invalid entity size
+
+## Check that llvm-readobj reports an error when .dynamic section has an invalid
+## size, which isn't a multiple of the dynamic entry size. 
+
+# RUN: yaml2obj %s --docnum=22 -o %t22
+# RUN: not llvm-readobj --dyn-relocations %t22 2>&1 | FileCheck --check-prefix=DYN-TABLE-SIZE %s
+
+# DYN-TABLE-SIZE: Invalid entity size
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:    .dynamic
+    Type:    SHT_DYNAMIC
+    Content: "00"
+
+## PT_DYNAMIC's p_offset field is so large that p_offset + p_filesz is larger
+## than the object size. Check llvm-readobj reports it.
+
+# RUN: yaml2obj %s --docnum=23 -o %t23
+# RUN: not llvm-readobj --dyn-relocations %t23 2>&1 | FileCheck --check-prefix=DYN-TABLE-PHDR %s
+
+# DYN-TABLE-PHDR: error: PT_DYNAMIC segment offset + size exceeds the size of the file
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:   PT_DYNAMIC
+    Offset: 0xffff0000
+    Sections:
+      - Section: .dynamic
+
+## PT_DYNAMIC's p_filesz field is so large that p_offset + p_filesz is larger
+## than the object size. Check llvm-readobj reports it.
+
+# RUN: yaml2obj %s --docnum=24 -o %t24
+# RUN: not llvm-readobj --dyn-relocations %t24 2>&1 \
+# RUN:  | FileCheck --check-prefix=DYN-TABLE-PHDR %s
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name: .dynamic
+    Type: SHT_DYNAMIC
+    Entries:
+      - Tag:   DT_NULL
+        Value: 0
+ProgramHeaders:
+  - Type:     PT_DYNAMIC
+    FileSize: 0xffff0000
+    Sections:
+      - Section: .dynamic
