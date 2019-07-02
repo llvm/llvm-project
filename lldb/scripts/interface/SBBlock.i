@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-%include <attribute.i>
-
 namespace lldb {
 
 %feature("docstring",
@@ -145,17 +143,34 @@ public:
         def get_call_site(self):
             return declaration(self.GetInlinedCallSiteFile(), self.GetInlinedCallSiteLine(), self.GetInlinedCallSiteColumn())
 
-        call_site = property(get_call_site, None, doc='''A read only property that returns a lldb.declaration object that contains the inlined call site file, line and column.''')
-        range = property(get_ranges_access_object, None, doc='''A read only property that allows item access to the address ranges for a block by integer (range = block.range[0]) and by lldb.SBAdddress (find the range that contains the specified lldb.SBAddress like "pc_range = lldb.frame.block.range[frame.addr]").''')
-        ranges = property(get_ranges_array, None, doc='''A read only property that returns a list() object that contains all of the address ranges for the block.''')
-    %}
-};
+        __swig_getmethods__["parent"] = GetParent
+        if _newclass: parent = property(GetParent, None, doc='''A read only property that returns the same result as GetParent().''')
 
-%attributeref(lldb::SBBlock, lldb::SBBlock, parent, GetParent);
-%attributeref(lldb::SBBlock, lldb::SBBlock, first_child, GetFirstChild);
-%attributeref(lldb::SBBlock, lldb::SBBlock, sibling, GetSibling);
-%attributeref(lldb::SBBlock, lldb::SBBlock, inlined_block, GetContainingInlinedBlock);
-%attribute(lldb::SBBlock, const char*, name, GetInlinedName);
-%attribute(lldb::SBBlock, uint32_t, num_ranges, GetNumRanges);
+        __swig_getmethods__["first_child"] = GetFirstChild
+        if _newclass: first_child = property(GetFirstChild, None, doc='''A read only property that returns the same result as GetFirstChild().''')
+
+        __swig_getmethods__["call_site"] = get_call_site
+        if _newclass: call_site = property(get_call_site, None, doc='''A read only property that returns a lldb.declaration object that contains the inlined call site file, line and column.''')
+
+        __swig_getmethods__["sibling"] = GetSibling
+        if _newclass: sibling = property(GetSibling, None, doc='''A read only property that returns the same result as GetSibling().''')
+
+        __swig_getmethods__["name"] = GetInlinedName
+        if _newclass: name = property(GetInlinedName, None, doc='''A read only property that returns the same result as GetInlinedName().''')
+
+        __swig_getmethods__["inlined_block"] = GetContainingInlinedBlock
+        if _newclass: inlined_block = property(GetContainingInlinedBlock, None, doc='''A read only property that returns the same result as GetContainingInlinedBlock().''')
+
+        __swig_getmethods__["range"] = get_ranges_access_object
+        if _newclass: range = property(get_ranges_access_object, None, doc='''A read only property that allows item access to the address ranges for a block by integer (range = block.range[0]) and by lldb.SBAdddress (find the range that contains the specified lldb.SBAddress like "pc_range = lldb.frame.block.range[frame.addr]").''')
+
+        __swig_getmethods__["ranges"] = get_ranges_array
+        if _newclass: ranges = property(get_ranges_array, None, doc='''A read only property that returns a list() object that contains all of the address ranges for the block.''')
+
+        __swig_getmethods__["num_ranges"] = GetNumRanges
+        if _newclass: num_ranges = property(GetNumRanges, None, doc='''A read only property that returns the same result as GetNumRanges().''')
+    %}
+
+};
 
 } // namespace lldb
