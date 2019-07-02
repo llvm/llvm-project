@@ -101,3 +101,15 @@ extern CFBooleanRef kBoolMutable;
 void testNonnullNonconstBool() {
   clang_analyzer_eval(kBoolMutable); // expected-warning{{UNKNOWN}}
 }
+
+// If it's annotated as nonnull, it doesn't even need to be const.
+extern CFStringRef _Nonnull str3;
+void testNonnullNonconstCFString() {
+  clang_analyzer_eval(str3); // expected-warning{{TRUE}}
+}
+
+// This one's nonnull for two reasons.
+extern const CFStringRef _Nonnull str4;
+void testNonnullNonnullCFString() {
+  clang_analyzer_eval(str4); // expected-warning{{TRUE}}
+}

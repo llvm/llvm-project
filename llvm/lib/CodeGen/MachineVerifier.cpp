@@ -1176,6 +1176,16 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     LLT SrcTy = MRI->getType(MI->getOperand(1).getReg());
     if (DstTy.isVector() || SrcTy.isVector())
       report("G_MERGE_VALUES cannot operate on vectors", MI);
+
+    const unsigned NumOps = MI->getNumOperands();
+    if (DstTy.getSizeInBits() != SrcTy.getSizeInBits() * (NumOps - 1))
+      report("G_MERGE_VALUES result size is inconsistent", MI);
+
+    for (unsigned I = 2; I != NumOps; ++I) {
+      if (MRI->getType(MI->getOperand(I).getReg()) != SrcTy)
+        report("G_MERGE_VALUES source types do not match", MI);
+    }
+
     break;
   }
   case TargetOpcode::G_UNMERGE_VALUES: {

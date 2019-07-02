@@ -325,7 +325,6 @@ struct ThreadSignalContext;
 
 struct JmpBuf {
   uptr sp;
-  uptr mangled_sp;
   int int_signal_send;
   bool in_blocking_func;
   uptr in_signal_handler;

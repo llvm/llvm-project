@@ -939,6 +939,8 @@ def bc_v8i64 : PatFrag<(ops node:$in), (v8i64 (bitconvert node:$in))>;
 def bc_v8f64 : PatFrag<(ops node:$in), (v8f64 (bitconvert node:$in))>;
 def bc_v16f32 : PatFrag<(ops node:$in), (v16f32 (bitconvert node:$in))>;
 
+def vzload_v4i32 : PatFrag<(ops node:$src),
+                           (bitconvert (v4i32 (X86vzload node:$src)))>;
 def vzload_v2i64 : PatFrag<(ops node:$src),
                            (bitconvert (v2i64 (X86vzload node:$src)))>;
 

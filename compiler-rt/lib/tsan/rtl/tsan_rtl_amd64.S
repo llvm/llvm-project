@@ -189,19 +189,11 @@ ASM_SYMBOL_INTERCEPTOR(setjmp):
   push %rdi
   CFI_ADJUST_CFA_OFFSET(8)
   CFI_REL_OFFSET(%rdi, 0)
-  // obtain %rsp
+  // obtain SP, store in %rdi, first argument to `void __tsan_setjmp(uptr sp)`
 #if defined(__FreeBSD__) || defined(__NetBSD__)
   lea 8(%rsp), %rdi
-  mov %rdi, %rsi
-#elif defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__)
   lea 16(%rsp), %rdi
-  mov %rdi, %rsi
-  xorq ___tsan_darwin_setjmp_xor_key(%rip), %rsi
-#elif defined(__linux__)
-  lea 16(%rsp), %rdi
-  mov %rdi, %rsi
-  xor %fs:0x30, %rsi  // magic mangling of rsp (see libc setjmp)
-  rol $0x11, %rsi
 #else
 # error "Unknown platform"
 #endif
@@ -238,19 +230,11 @@ ASM_SYMBOL_INTERCEPTOR(_setjmp):
   push %rdi
   CFI_ADJUST_CFA_OFFSET(8)
   CFI_REL_OFFSET(%rdi, 0)
-  // obtain %rsp
+  // obtain SP, store in %rdi, first argument to `void __tsan_setjmp(uptr sp)`
 #if defined(__FreeBSD__) || defined(__NetBSD__)
   lea 8(%rsp), %rdi
-  mov %rdi, %rsi
-#elif defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__)
   lea 16(%rsp), %rdi
-  mov %rdi, %rsi
-  xorq ___tsan_darwin_setjmp_xor_key(%rip), %rsi
-#elif defined(__linux__)
-  lea 16(%rsp), %rdi
-  mov %rdi, %rsi
-  xor %fs:0x30, %rsi  // magic mangling of rsp (see libc setjmp)
-  rol $0x11, %rsi
 #else
 # error "Unknown platform"
 #endif
@@ -294,19 +278,11 @@ ASM_SYMBOL_INTERCEPTOR(sigsetjmp):
   // align stack frame
   sub $8, %rsp
   CFI_ADJUST_CFA_OFFSET(8)
-  // obtain %rsp
+  // obtain SP, store in %rdi, first argument to `void __tsan_setjmp(uptr sp)`
 #if defined(__FreeBSD__) || defined(__NetBSD__)
   lea 24(%rsp), %rdi
-  mov %rdi, %rsi
-#elif defined(__APPLE__)
+#elif defined(__linux__) || defined(__APPLE__)
   lea 32(%rsp), %rdi
-  mov %rdi, %rsi
-  xorq ___tsan_darwin_setjmp_xor_key(%rip), %rsi
-#elif defined(__linux__)
-  lea 32(%rsp), %rdi
-  mov %rdi, %rsi
-  xor %fs:0x30, %rsi  // magic mangling of rsp (see libc setjmp)
-  rol $0x11, %rsi
 #else
 # error "Unknown platform"
 #endif
@@ -358,15 +334,11 @@ ASM_SYMBOL_INTERCEPTOR(__sigsetjmp):
   // align stack frame
   sub $8, %rsp
   CFI_ADJUST_CFA_OFFSET(8)
-  // obtain %rsp
+  // obtain SP, store in %rdi, first argument to `void __tsan_setjmp(uptr sp)`
 #if defined(__FreeBSD__)
   lea 24(%rsp), %rdi
-  mov %rdi, %rsi
 #else
   lea 32(%rsp), %rdi
-  mov %rdi, %rsi
-  xor %fs:0x30, %rsi  // magic mangling of rsp (see libc setjmp)
-  rol $0x11, %rsi
 #endif
   // call tsan interceptor
   call ASM_SYMBOL(__tsan_setjmp)

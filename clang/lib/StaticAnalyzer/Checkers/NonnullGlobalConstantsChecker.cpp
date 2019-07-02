@@ -106,14 +106,21 @@ bool NonnullGlobalConstantsChecker::isGlobalConstString(SVal V) const {
     return true;
 
   // Look through the typedefs.
-  while (auto *T = dyn_cast<TypedefType>(Ty)) {
-    Ty = T->getDecl()->getUnderlyingType();
-
-    // It is sufficient for any intermediate typedef
-    // to be classified const.
-    HasConst = HasConst || Ty.isConstQualified();
-    if (isNonnullType(Ty) && HasConst)
-      return true;
+  while (const Type *T = Ty.getTypePtr()) {
+    if (const auto *TT = dyn_cast<TypedefType>(T)) {
+      Ty = TT->getDecl()->getUnderlyingType();
+      // It is sufficient for any intermediate typedef
+      // to be classified const.
+      HasConst = HasConst || Ty.isConstQualified();
+      if (isNonnullType(Ty) && HasConst)
+        return true;
+    } else if (const auto *AT = dyn_cast<AttributedType>(T)) {
+      if (AT->getAttrKind() == attr::TypeNonNull)
+        return true;
+      Ty = AT->getModifiedType();
+    } else {
+      return false;
+    }
   }
   return false;
 }

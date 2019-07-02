@@ -2698,8 +2698,7 @@ define <2 x i64> @fptosi_2f32_to_2i64_load(<2 x float>* %x) {
 ;
 ; AVX512VLDQ-LABEL: fptosi_2f32_to_2i64_load:
 ; AVX512VLDQ:       # %bb.0:
-; AVX512VLDQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512VLDQ-NEXT:    vcvttps2qq %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    vcvttps2qq (%rdi), %xmm0
 ; AVX512VLDQ-NEXT:    retq
   %a = load <2 x float>, <2 x float>* %x
   %b = fptosi <2 x float> %a to <2 x i64>
@@ -2787,8 +2786,7 @@ define <2 x i64> @fptoui_2f32_to_2i64_load(<2 x float>* %x) {
 ;
 ; AVX512VLDQ-LABEL: fptoui_2f32_to_2i64_load:
 ; AVX512VLDQ:       # %bb.0:
-; AVX512VLDQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512VLDQ-NEXT:    vcvttps2uqq %xmm0, %xmm0
+; AVX512VLDQ-NEXT:    vcvttps2uqq (%rdi), %xmm0
 ; AVX512VLDQ-NEXT:    retq
   %a = load <2 x float>, <2 x float>* %x
   %b = fptoui <2 x float> %a to <2 x i64>

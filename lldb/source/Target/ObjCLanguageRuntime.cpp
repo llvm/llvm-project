@@ -46,19 +46,6 @@ bool ObjCLanguageRuntime::IsWhitelistedRuntimeValue(ConstString name) {
   return name == g_self || name == g_cmd;
 }
 
-bool ObjCLanguageRuntime::IsRuntimeSupportValue(ValueObject &valobj) {
-  // All runtime support values have to be marked as artificial by the
-  // compiler. But not all artificial variables should be hidden from
-  // the user.
-  if (!valobj.GetVariable())
-    return false;
-  if (!valobj.GetVariable()->IsArtificial())
-    return false;
-
-  // Whitelist "self" and "_cmd".
-  return !IsWhitelistedRuntimeValue(valobj.GetName());
-}
-
 bool ObjCLanguageRuntime::AddClass(ObjCISA isa,
                                    const ClassDescriptorSP &descriptor_sp,
                                    const char *class_name) {

@@ -10,7 +10,7 @@
 // CHECK-SAME:       <b>#0 Call</b>
 // CHECK-SAME:     </td>
 // CHECK-SAME:     <td align="left" colspan="2">
-// CHECK-SAME:       <font color="grey60">foo </font>(line 4)
+// CHECK-SAME:       <font color="gray60">foo </font>(line 4)
 // CHECK-SAME:     </td>
 // CHECK-SAME:   </tr>
 // CHECK-SAME:   <tr>
@@ -34,6 +34,8 @@ Node0x1 [shape=record,label=
       "program_state": {
         "store": null,
         "constraints": null,
+        "dynamic_types": null,
+        "constructing_objects": null,
         "environment": {
           "pointer": "0x2",
           "items": [

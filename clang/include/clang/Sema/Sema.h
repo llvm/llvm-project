@@ -8969,6 +8969,10 @@ private:
                                      SourceRange SrcRange = SourceRange());
 
 public:
+  /// Function tries to capture lambda's captured variables in the OpenMP region
+  /// before the original lambda is captured.
+  void tryCaptureOpenMPLambdas(ValueDecl *V);
+
   /// Return true if the provided declaration \a VD should be captured by
   /// reference.
   /// \param Level Relative level of nested OpenMP construct for that the check

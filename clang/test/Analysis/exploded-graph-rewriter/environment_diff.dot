@@ -13,6 +13,8 @@ Node0x1 [shape=record,label=
       "program_state": {
         "store": null,
         "constraints": null,
+        "dynamic_types": null,
+        "constructing_objects": null,
         "environment": {
           "pointer": "0x2",
           "items": [
@@ -59,6 +61,8 @@ Node0x6 [shape=record,label=
       "program_state": {
         "store": null,
         "constraints": null,
+        "dynamic_types": null,
+        "constructing_objects": null,
         "environment": {
           "pointer": "0x2",
           "items": [
@@ -99,6 +103,8 @@ Node0x9 [shape=record,label=
       "program_state": {
         "store": null,
         "constraints": null,
+        "dynamic_types": null,
+        "constructing_objects": null,
         "environment": {
           "pointer": "0x2",
           "items": [

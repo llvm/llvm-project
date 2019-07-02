@@ -589,10 +589,14 @@ uint32_t Function::GetPrologueByteSize() {
 }
 
 lldb::LanguageType Function::GetLanguage() const {
+  lldb::LanguageType lang = m_mangled.GuessLanguage();
+  if (lang != lldb::eLanguageTypeUnknown)
+    return lang;
+
   if (m_comp_unit)
     return m_comp_unit->GetLanguage();
-  else
-    return lldb::eLanguageTypeUnknown;
+
+  return lldb::eLanguageTypeUnknown;
 }
 
 ConstString Function::GetName() const {

@@ -17,7 +17,7 @@ void escapes() {
   // CHECK-SAME: <td align="left">&amp;Element\{"foo",0 S64b,char\}</td>
   const char *const foo = "\x66\x6f\x6f";
 
-  // CHECK: <font color="cyan3">BinaryOperator</font>
+  // CHECK: <font color="cyan4">BinaryOperator</font>
   // CHECK-SAME: <td align="left">1 \| 2</td>
   // CHECK-SAME: <td align="left">3 S32b</td>
   int x = 1 | 2;

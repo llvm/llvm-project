@@ -383,26 +383,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I,
   case Intrinsic::minnum:
   case Intrinsic::amdgcn_cvt_pkrtz:
     return selectImpl(I, CoverageInfo);
-
-  case Intrinsic::amdgcn_kernarg_segment_ptr: {
-    MachineFunction *MF = I.getParent()->getParent();
-    MachineRegisterInfo &MRI = MF->getRegInfo();
-    const SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
-    const ArgDescriptor *InputPtrReg;
-    const TargetRegisterClass *RC;
-    const DebugLoc &DL = I.getDebugLoc();
-
-    std::tie(InputPtrReg, RC)
-      = MFI->getPreloadedValue(AMDGPUFunctionArgInfo::KERNARG_SEGMENT_PTR);
-    if (!InputPtrReg)
-      report_fatal_error("missing kernarg segment ptr");
-
-    BuildMI(*I.getParent(), &I, DL, TII.get(AMDGPU::COPY))
-      .add(I.getOperand(0))
-      .addReg(MRI.getLiveInVirtReg(InputPtrReg->getRegister()));
-    I.eraseFromParent();
-    return true;
-  }
   }
   return false;
 }
