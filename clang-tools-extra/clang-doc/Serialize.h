@@ -27,16 +27,30 @@ namespace clang {
 namespace doc {
 namespace serialize {
 
-std::unique_ptr<Info> emitInfo(const NamespaceDecl *D, const FullComment *FC,
-                               int LineNumber, StringRef File, bool PublicOnly);
-std::unique_ptr<Info> emitInfo(const RecordDecl *D, const FullComment *FC,
-                               int LineNumber, StringRef File, bool PublicOnly);
-std::unique_ptr<Info> emitInfo(const EnumDecl *D, const FullComment *FC,
-                               int LineNumber, StringRef File, bool PublicOnly);
-std::unique_ptr<Info> emitInfo(const FunctionDecl *D, const FullComment *FC,
-                               int LineNumber, StringRef File, bool PublicOnly);
-std::unique_ptr<Info> emitInfo(const CXXMethodDecl *D, const FullComment *FC,
-                               int LineNumber, StringRef File, bool PublicOnly);
+// The first element will contain the relevant information about the declaration
+// passed as parameter.
+// The second element will contain the relevant information about the
+// declaration's parent, it can be a NamespaceInfo or RecordInfo.
+// Both elements can be nullptrs if the declaration shouldn't be handled.
+// When the declaration is handled, the first element will be a nullptr for
+// EnumDecl, FunctionDecl and CXXMethodDecl; they are only returned wrapped in
+// its parent scope. For NamespaceDecl and RecordDecl both elements are not
+// nullptr.
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const NamespaceDecl *D, const FullComment *FC, int LineNumber,
+         StringRef File, bool PublicOnly);
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
+         StringRef File, bool PublicOnly);
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
+         StringRef File, bool PublicOnly);
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
+         StringRef File, bool PublicOnly);
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const CXXMethodDecl *D, const FullComment *FC, int LineNumber,
+         StringRef File, bool PublicOnly);
 
 // Function to hash a given USR value for storage.
 // As USRs (Unified Symbol Resolution) could be large, especially for functions

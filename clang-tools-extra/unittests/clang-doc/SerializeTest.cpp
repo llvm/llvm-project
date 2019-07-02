@@ -35,48 +35,30 @@ public:
   ClangDocSerializeTestVisitor(EmittedInfoList &EmittedInfos, bool Public)
       : EmittedInfos(EmittedInfos), Public(Public) {}
 
-  bool VisitNamespaceDecl(const NamespaceDecl *D) {
+  template <typename T> bool mapDecl(const T *D) {
     auto I = serialize::emitInfo(D, getComment(D), /*Line=*/0,
                                  /*File=*/"test.cpp", Public);
-    if (I)
-      EmittedInfos.emplace_back(std::move(I));
+    if (I.first)
+      EmittedInfos.emplace_back(std::move(I.first));
+    if (I.second)
+      EmittedInfos.emplace_back(std::move(I.second));
     return true;
   }
+
+  bool VisitNamespaceDecl(const NamespaceDecl *D) { return mapDecl(D); }
 
   bool VisitFunctionDecl(const FunctionDecl *D) {
     // Don't visit CXXMethodDecls twice
     if (dyn_cast<CXXMethodDecl>(D))
       return true;
-    auto I = serialize::emitInfo(D, getComment(D), /*Line=*/0,
-                                 /*File=*/"test.cpp", Public);
-    if (I)
-      EmittedInfos.emplace_back(std::move(I));
-    return true;
+    return mapDecl(D);
   }
 
-  bool VisitCXXMethodDecl(const CXXMethodDecl *D) {
-    auto I = serialize::emitInfo(D, getComment(D), /*Line=*/0,
-                                 /*File=*/"test.cpp", Public);
-    if (I)
-      EmittedInfos.emplace_back(std::move(I));
-    return true;
-  }
+  bool VisitCXXMethodDecl(const CXXMethodDecl *D) { return mapDecl(D); }
 
-  bool VisitRecordDecl(const RecordDecl *D) {
-    auto I = serialize::emitInfo(D, getComment(D), /*Line=*/0,
-                                 /*File=*/"test.cpp", Public);
-    if (I)
-      EmittedInfos.emplace_back(std::move(I));
-    return true;
-  }
+  bool VisitRecordDecl(const RecordDecl *D) { return mapDecl(D); }
 
-  bool VisitEnumDecl(const EnumDecl *D) {
-    auto I = serialize::emitInfo(D, getComment(D), /*Line=*/0,
-                                 /*File=*/"test.cpp", Public);
-    if (I)
-      EmittedInfos.emplace_back(std::move(I));
-    return true;
-  }
+  bool VisitEnumDecl(const EnumDecl *D) { return mapDecl(D); }
 };
 
 void ExtractInfosFromCode(StringRef Code, size_t NumExpectedInfos, bool Public,
@@ -101,19 +83,19 @@ void ExtractInfosFromCodeWithArgs(StringRef Code, size_t NumExpectedInfos,
 // Test serialization of namespace declarations.
 TEST(SerializeTest, emitNamespaceInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("namespace A { namespace B { void f() {} } }", 3,
+  ExtractInfosFromCode("namespace A { namespace B { void f() {} } }", 5,
                        /*Public=*/false, Infos);
 
   NamespaceInfo *A = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedA(EmptySID, "A");
   CheckNamespaceInfo(&ExpectedA, A);
 
-  NamespaceInfo *B = InfoAsNamespace(Infos[1].get());
+  NamespaceInfo *B = InfoAsNamespace(Infos[2].get());
   NamespaceInfo ExpectedB(EmptySID, "B");
   ExpectedB.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
   CheckNamespaceInfo(&ExpectedB, B);
 
-  NamespaceInfo *BWithFunction = InfoAsNamespace(Infos[2].get());
+  NamespaceInfo *BWithFunction = InfoAsNamespace(Infos[4].get());
   NamespaceInfo ExpectedBWithFunction(EmptySID);
   FunctionInfo F;
   F.Name = "f";
@@ -127,7 +109,7 @@ TEST(SerializeTest, emitNamespaceInfo) {
 
 TEST(SerializeTest, emitAnonymousNamespaceInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("namespace { }", 1, /*Public=*/false, Infos);
+  ExtractInfosFromCode("namespace { }", 2, /*Public=*/false, Infos);
 
   NamespaceInfo *A = InfoAsNamespace(Infos[0].get());
   NamespaceInfo ExpectedA(EmptySID);
@@ -151,7 +133,7 @@ struct F {
 template <>
 void F<int>::TemplateMethod();
 typedef struct {} G;)raw",
-                       7, /*Public=*/false, Infos);
+                       10, /*Public=*/false, Infos);
 
   RecordInfo *E = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedE(EmptySID, "E");
@@ -159,7 +141,7 @@ typedef struct {} G;)raw",
   ExpectedE.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedE, E);
 
-  RecordInfo *RecordWithEConstructor = InfoAsRecord(Infos[1].get());
+  RecordInfo *RecordWithEConstructor = InfoAsRecord(Infos[2].get());
   RecordInfo ExpectedRecordWithEConstructor(EmptySID);
   FunctionInfo EConstructor;
   EConstructor.Name = "E";
@@ -173,7 +155,7 @@ typedef struct {} G;)raw",
       std::move(EConstructor));
   CheckRecordInfo(&ExpectedRecordWithEConstructor, RecordWithEConstructor);
 
-  RecordInfo *RecordWithMethod = InfoAsRecord(Infos[2].get());
+  RecordInfo *RecordWithMethod = InfoAsRecord(Infos[3].get());
   RecordInfo ExpectedRecordWithMethod(EmptySID);
   FunctionInfo Method;
   Method.Name = "ProtectedMethod";
@@ -186,13 +168,13 @@ typedef struct {} G;)raw",
   ExpectedRecordWithMethod.ChildFunctions.emplace_back(std::move(Method));
   CheckRecordInfo(&ExpectedRecordWithMethod, RecordWithMethod);
 
-  RecordInfo *F = InfoAsRecord(Infos[3].get());
+  RecordInfo *F = InfoAsRecord(Infos[4].get());
   RecordInfo ExpectedF(EmptySID, "F");
   ExpectedF.TagType = TagTypeKind::TTK_Struct;
   ExpectedF.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedF, F);
 
-  RecordInfo *RecordWithTemplateMethod = InfoAsRecord(Infos[4].get());
+  RecordInfo *RecordWithTemplateMethod = InfoAsRecord(Infos[6].get());
   RecordInfo ExpectedRecordWithTemplateMethod(EmptySID);
   FunctionInfo TemplateMethod;
   TemplateMethod.Name = "TemplateMethod";
@@ -206,7 +188,7 @@ typedef struct {} G;)raw",
       std::move(TemplateMethod));
   CheckRecordInfo(&ExpectedRecordWithTemplateMethod, RecordWithTemplateMethod);
 
-  RecordInfo *TemplatedRecord = InfoAsRecord(Infos[5].get());
+  RecordInfo *TemplatedRecord = InfoAsRecord(Infos[7].get());
   RecordInfo ExpectedTemplatedRecord(EmptySID);
   FunctionInfo SpecializedTemplateMethod;
   SpecializedTemplateMethod.Name = "TemplateMethod";
@@ -224,7 +206,7 @@ typedef struct {} G;)raw",
       std::move(SpecializedTemplateMethod));
   CheckRecordInfo(&ExpectedTemplatedRecord, TemplatedRecord);
 
-  RecordInfo *G = InfoAsRecord(Infos[6].get());
+  RecordInfo *G = InfoAsRecord(Infos[8].get());
   RecordInfo ExpectedG(EmptySID, "G");
   ExpectedG.TagType = TagTypeKind::TTK_Struct;
   ExpectedG.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
@@ -262,7 +244,7 @@ TEST(SerializeTest, emitEnumInfo) {
 
 TEST(SerializeTest, emitUndefinedRecordInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("class E;", 1, /*Public=*/false, Infos);
+  ExtractInfosFromCode("class E;", 2, /*Public=*/false, Infos);
 
   RecordInfo *E = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedE(EmptySID, "E");
@@ -273,7 +255,7 @@ TEST(SerializeTest, emitUndefinedRecordInfo) {
 
 TEST(SerializeTest, emitRecordMemberInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("struct E { int I; };", 1, /*Public=*/false, Infos);
+  ExtractInfosFromCode("struct E { int I; };", 2, /*Public=*/false, Infos);
 
   RecordInfo *E = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedE(EmptySID, "E");
@@ -285,7 +267,7 @@ TEST(SerializeTest, emitRecordMemberInfo) {
 
 TEST(SerializeTest, emitInternalRecordInfo) {
   EmittedInfoList Infos;
-  ExtractInfosFromCode("class E { class G {}; };", 2, /*Public=*/false, Infos);
+  ExtractInfosFromCode("class E { class G {}; };", 4, /*Public=*/false, Infos);
 
   RecordInfo *E = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedE(EmptySID, "E");
@@ -293,7 +275,7 @@ TEST(SerializeTest, emitInternalRecordInfo) {
   ExpectedE.TagType = TagTypeKind::TTK_Class;
   CheckRecordInfo(&ExpectedE, E);
 
-  RecordInfo *G = InfoAsRecord(Infos[1].get());
+  RecordInfo *G = InfoAsRecord(Infos[2].get());
   RecordInfo ExpectedG(EmptySID, "G");
   ExpectedG.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   ExpectedG.TagType = TagTypeKind::TTK_Class;
@@ -336,7 +318,7 @@ TEST(SerializeTest, emitInlinedFunctionInfo) {
   CheckNamespaceInfo(&ExpectedBWithFunction, BWithFunction);
 }
 
-TEST(SerializeTest, emitInheritedRecordInfo) {
+TEST(SerializeTest, ) {
   EmittedInfoList Infos;
   ExtractInfosFromCode(R"raw(class F {};
 class G {} ;
@@ -344,7 +326,7 @@ class E : public F, virtual private G {};
 template <typename T>
 class H {} ;
 class I : public H<int> {} ;)raw",
-                       5, /*Public=*/false, Infos);
+                       10, /*Public=*/false, Infos);
 
   RecordInfo *F = InfoAsRecord(Infos[0].get());
   RecordInfo ExpectedF(EmptySID, "F");
@@ -352,13 +334,13 @@ class I : public H<int> {} ;)raw",
   ExpectedF.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedF, F);
 
-  RecordInfo *G = InfoAsRecord(Infos[1].get());
+  RecordInfo *G = InfoAsRecord(Infos[2].get());
   RecordInfo ExpectedG(EmptySID, "G");
   ExpectedG.TagType = TagTypeKind::TTK_Class;
   ExpectedG.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedG, G);
 
-  RecordInfo *E = InfoAsRecord(Infos[2].get());
+  RecordInfo *E = InfoAsRecord(Infos[4].get());
   RecordInfo ExpectedE(EmptySID, "E");
   ExpectedE.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
   ExpectedE.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
@@ -366,13 +348,13 @@ class I : public H<int> {} ;)raw",
   ExpectedE.TagType = TagTypeKind::TTK_Class;
   CheckRecordInfo(&ExpectedE, E);
 
-  RecordInfo *H = InfoAsRecord(Infos[3].get());
+  RecordInfo *H = InfoAsRecord(Infos[6].get());
   RecordInfo ExpectedH(EmptySID, "H");
   ExpectedH.TagType = TagTypeKind::TTK_Class;
   ExpectedH.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
   CheckRecordInfo(&ExpectedH, H);
 
-  RecordInfo *I = InfoAsRecord(Infos[4].get());
+  RecordInfo *I = InfoAsRecord(Infos[8].get());
   RecordInfo ExpectedI(EmptySID, "I");
   ExpectedI.Parents.emplace_back(EmptySID, "H<int>", InfoType::IT_record);
   ExpectedI.DefLoc = Location(0, llvm::SmallString<16>{"test.cpp"});
@@ -410,6 +392,47 @@ export double exportedModuleFunction(double y);)raw",
   ExpectedBWithExportedFunction.ChildFunctions.emplace_back(
       std::move(ExportedF));
   CheckNamespaceInfo(&ExpectedBWithExportedFunction, BWithExportedFunction);
+}
+
+// Test serialization of child records in namespaces and other records
+TEST(SerializeTest, emitChildRecords) {
+  EmittedInfoList Infos;
+  ExtractInfosFromCode("class A { class B {}; }; namespace { class C {}; } ", 8,
+                       /*Public=*/false, Infos);
+
+  NamespaceInfo *ParentA = InfoAsNamespace(Infos[1].get());
+  NamespaceInfo ExpectedParentA(EmptySID);
+  ExpectedParentA.ChildRecords.emplace_back(EmptySID, "A", InfoType::IT_record);
+  CheckNamespaceInfo(&ExpectedParentA, ParentA);
+
+  RecordInfo *ParentB = InfoAsRecord(Infos[3].get());
+  RecordInfo ExpectedParentB(EmptySID);
+  ExpectedParentB.ChildRecords.emplace_back(EmptySID, "B", InfoType::IT_record);
+  CheckRecordInfo(&ExpectedParentB, ParentB);
+
+  NamespaceInfo *ParentC = InfoAsNamespace(Infos[7].get());
+  NamespaceInfo ExpectedParentC(EmptySID);
+  ExpectedParentC.ChildRecords.emplace_back(EmptySID, "C", InfoType::IT_record);
+  CheckNamespaceInfo(&ExpectedParentC, ParentC);
+}
+
+// Test serialization of child namespaces
+TEST(SerializeTest, emitChildNamespaces) {
+  EmittedInfoList Infos;
+  ExtractInfosFromCode("namespace A { namespace B { } }", 4, /*Public=*/false,
+                       Infos);
+
+  NamespaceInfo *ParentA = InfoAsNamespace(Infos[1].get());
+  NamespaceInfo ExpectedParentA(EmptySID);
+  ExpectedParentA.ChildNamespaces.emplace_back(EmptySID, "A",
+                                               InfoType::IT_namespace);
+  CheckNamespaceInfo(&ExpectedParentA, ParentA);
+
+  NamespaceInfo *ParentB = InfoAsNamespace(Infos[3].get());
+  NamespaceInfo ExpectedParentB(EmptySID);
+  ExpectedParentB.ChildNamespaces.emplace_back(EmptySID, "B",
+                                               InfoType::IT_namespace);
+  CheckNamespaceInfo(&ExpectedParentB, ParentB);
 }
 
 } // namespace doc

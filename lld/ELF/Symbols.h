@@ -335,8 +335,8 @@ public:
   SharedSymbol(InputFile &File, StringRef Name, uint8_t Binding,
                uint8_t StOther, uint8_t Type, uint64_t Value, uint64_t Size,
                uint32_t Alignment, uint32_t VerdefIndex)
-      : Symbol(SharedKind, &File, Name, Binding, StOther, Type),
-        Alignment(Alignment), Value(Value), Size(Size) {
+      : Symbol(SharedKind, &File, Name, Binding, StOther, Type), Value(Value),
+        Size(Size), Alignment(Alignment) {
     this->VerdefIndex = VerdefIndex;
     // GNU ifunc is a mechanism to allow user-supplied functions to
     // resolve PLT slot values at load-time. This is contrary to the
@@ -360,10 +360,14 @@ public:
 
   SharedFile &getFile() const { return *cast<SharedFile>(File); }
 
-  uint32_t Alignment;
-
   uint64_t Value; // st_value
   uint64_t Size;  // st_size
+  uint32_t Alignment;
+
+  // This is true if there has been at least one undefined reference to the
+  // symbol. The binding may change to STB_WEAK if the first undefined reference
+  // is weak.
+  bool Referenced = false;
 };
 
 // LazyArchive and LazyObject represent a symbols that is not yet in the link,
