@@ -82,6 +82,10 @@ LegalizerHelper::LegalizeResult
 LegalizerHelper::legalizeInstrStep(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "Legalizing: "; MI.print(dbgs()));
 
+  if (MI.getOpcode() == TargetOpcode::G_INTRINSIC ||
+      MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS)
+    return LI.legalizeIntrinsic(MI, MRI, MIRBuilder) ? Legalized
+                                                     : UnableToLegalize;
   auto Step = LI.getAction(MI, MRI);
   switch (Step.Action) {
   case Legal:
@@ -790,12 +794,38 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
   if (!DstTy.isScalar())
     return UnableToLegalize;
 
+  Register Src1 = MI.getOperand(1).getReg();
+  LLT SrcTy = MRI.getType(Src1);
+  int NumMerge = DstTy.getSizeInBits() / WideTy.getSizeInBits();
+
+  // Try to turn this into a merge of merges if we can use the requested type as
+  // the source.
+
+  // TODO: Pad with undef if DstTy > WideTy
+  if (NumMerge > 1 && WideTy.getSizeInBits() % SrcTy.getSizeInBits() == 0) {
+    int PartsPerMerge = WideTy.getSizeInBits() / SrcTy.getSizeInBits();
+    SmallVector<Register, 4> Parts;
+    SmallVector<Register, 4> SubMerges;
+
+    for (int I = 0; I != NumMerge; ++I) {
+      for (int J = 0; J != PartsPerMerge; ++J)
+        Parts.push_back(MI.getOperand(I * PartsPerMerge + J + 1).getReg());
+
+      auto SubMerge = MIRBuilder.buildMerge(WideTy, Parts);
+      SubMerges.push_back(SubMerge.getReg(0));
+      Parts.clear();
+    }
+
+    MIRBuilder.buildMerge(DstReg, SubMerges);
+    MI.eraseFromParent();
+    return Legalized;
+  }
+
   unsigned NumOps = MI.getNumOperands();
   unsigned NumSrc = MI.getNumOperands() - 1;
   unsigned PartSize = DstTy.getSizeInBits() / NumSrc;
 
-  Register Src1 = MI.getOperand(1).getReg();
-  Register ResultReg = MIRBuilder.buildZExt(DstTy, Src1)->getOperand(0).getReg();
+  Register ResultReg = MIRBuilder.buildZExt(DstTy, Src1).getReg(0);
 
   for (unsigned I = 2; I != NumOps; ++I) {
     const unsigned Offset = (I - 1) * PartSize;

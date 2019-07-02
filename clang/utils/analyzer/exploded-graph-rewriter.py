@@ -27,8 +27,8 @@ def diff_dicts(curr, prev):
 
 # Represents any program state trait that is a dictionary of key-value pairs.
 class GenericMap(object):
-    def __init__(self, generic_map):
-        self.generic_map = generic_map
+    def __init__(self, items):
+        self.generic_map = collections.OrderedDict(items)
 
     def diff(self, prev):
         return diff_dicts(self.generic_map, prev.generic_map)
@@ -59,6 +59,7 @@ class ProgramPoint(object):
             self.dst_id = json_pp['dst_id']
         elif self.kind == 'Statement':
             self.stmt_kind = json_pp['stmt_kind']
+            self.stmt_point_kind = json_pp['stmt_point_kind']
             self.pointer = json_pp['pointer']
             self.pretty = json_pp['pretty']
             self.loc = SourceLocation(json_pp['location']) \
@@ -71,8 +72,11 @@ class ProgramPoint(object):
 class EnvironmentBindingKey(object):
     def __init__(self, json_ek):
         super(EnvironmentBindingKey, self).__init__()
-        self.stmt_id = json_ek['stmt_id']
+        # CXXCtorInitializer is not a Stmt!
+        self.stmt_id = json_ek['stmt_id'] if 'stmt_id' in json_ek \
+            else json_ek['init_id']
         self.pretty = json_ek['pretty']
+        self.kind = json_ek['kind'] if 'kind' in json_ek else None
 
     def _key(self):
         return self.stmt_id
@@ -122,12 +126,12 @@ class EnvironmentFrame(object):
         return len(removed) != 0 or len(added) != 0
 
 
-# A deserialized Environment.
-class Environment(object):
+# A deserialized Environment. This class can also hold other entities that
+# are similar to Environment, such as Objects Under Construction.
+class GenericEnvironment(object):
     def __init__(self, json_e):
-        super(Environment, self).__init__()
-        self.ptr = json_e['pointer']
-        self.frames = [EnvironmentFrame(f) for f in json_e['items']]
+        super(GenericEnvironment, self).__init__()
+        self.frames = [EnvironmentFrame(f) for f in json_e]
 
     def diff_frames(self, prev):
         # TODO: It's difficult to display a good diff when frame numbers shift.
@@ -214,15 +218,29 @@ class ProgramState(object):
         logging.debug('Adding ProgramState ' + str(state_id))
 
         self.state_id = state_id
+
         self.store = Store(json_ps['store']) \
             if json_ps['store'] is not None else None
-        self.environment = Environment(json_ps['environment']) \
+
+        self.environment = \
+            GenericEnvironment(json_ps['environment']['items']) \
             if json_ps['environment'] is not None else None
-        self.constraints = GenericMap(collections.OrderedDict([
+
+        self.constraints = GenericMap([
             (c['symbol'], c['range']) for c in json_ps['constraints']
-        ])) if json_ps['constraints'] is not None else None
-        # TODO: Objects under construction.
-        # TODO: Dynamic types of objects.
+        ]) if json_ps['constraints'] is not None else None
+
+        self.dynamic_types = GenericMap([
+                (t['region'], '%s%s' % (t['dyn_type'],
+                                        ' (or a sub-class)'
+                                        if t['sub_classable'] else ''))
+                for t in json_ps['dynamic_types']]) \
+            if json_ps['dynamic_types'] is not None else None
+
+        self.constructing_objects = \
+            GenericEnvironment(json_ps['constructing_objects']) \
+            if json_ps['constructing_objects'] is not None else None
+
         # TODO: Checker messages.
 
 
@@ -316,9 +334,10 @@ class ExplodedGraph(object):
 # A visitor that dumps the ExplodedGraph into a DOT file with fancy HTML-based
 # syntax highlighing.
 class DotDumpVisitor(object):
-    def __init__(self, do_diffs):
+    def __init__(self, do_diffs, dark_mode):
         super(DotDumpVisitor, self).__init__()
         self._do_diffs = do_diffs
+        self._dark_mode = dark_mode
 
     @staticmethod
     def _dump_raw(s):
@@ -345,6 +364,8 @@ class DotDumpVisitor(object):
     def visit_begin_graph(self, graph):
         self._graph = graph
         self._dump_raw('digraph "ExplodedGraph" {\n')
+        if self._dark_mode:
+            self._dump_raw('bgcolor="gray10";\n')
         self._dump_raw('label="";\n')
 
     def visit_program_point(self, p):
@@ -354,38 +375,62 @@ class DotDumpVisitor(object):
                         'PostStmtPurgeDeadSymbols']:
             color = 'red'
         elif p.kind in ['CallEnter', 'CallExitBegin', 'CallExitEnd']:
-            color = 'blue'
+            color = 'dodgerblue' if self._dark_mode else 'blue'
         elif p.kind in ['Statement']:
-            color = 'cyan3'
+            color = 'cyan4'
         else:
             color = 'forestgreen'
 
         if p.kind == 'Statement':
+            # This avoids pretty-printing huge statements such as CompoundStmt.
+            # Such statements show up only at [Pre|Post]StmtPurgeDeadSymbols
+            skip_pretty = 'PurgeDeadSymbols' in p.stmt_point_kind
+            stmt_color = 'cyan3'
             if p.loc is not None:
                 self._dump('<tr><td align="left" width="0">'
                            '%s:<b>%s</b>:<b>%s</b>:</td>'
                            '<td align="left" width="0"><font color="%s">'
-                           '%s</font></td><td>%s</td></tr>'
+                           '%s</font></td>'
+                           '<td align="left"><font color="%s">%s</font></td>'
+                           '<td>%s</td></tr>'
                            % (p.loc.filename, p.loc.line,
-                              p.loc.col, color, p.stmt_kind, p.pretty))
+                              p.loc.col, color, p.stmt_kind,
+                              stmt_color, p.stmt_point_kind,
+                              p.pretty if not skip_pretty else ''))
             else:
                 self._dump('<tr><td align="left" width="0">'
                            '<i>Invalid Source Location</i>:</td>'
                            '<td align="left" width="0">'
-                           '<font color="%s">%s</font></td><td>%s</td></tr>'
-                           % (color, p.stmt_kind, p.pretty))
+                           '<font color="%s">%s</font></td>'
+                           '<td align="left"><font color="%s">%s</font></td>'
+                           '<td>%s</td></tr>'
+                           % (color, p.stmt_kind,
+                              stmt_color, p.stmt_point_kind,
+                              p.pretty if not skip_pretty else ''))
         elif p.kind == 'Edge':
             self._dump('<tr><td width="0"></td>'
                        '<td align="left" width="0">'
                        '<font color="%s">%s</font></td><td align="left">'
                        '[B%d] -\\> [B%d]</td></tr>'
-                       % (color, p.kind, p.src_id, p.dst_id))
+                       % (color, 'BlockEdge', p.src_id, p.dst_id))
+        elif p.kind == 'BlockEntrance':
+            self._dump('<tr><td width="0"></td>'
+                       '<td align="left" width="0">'
+                       '<font color="%s">%s</font></td>'
+                       '<td align="left">[B%d]</td></tr>'
+                       % (color, p.kind, p.block_id))
         else:
             # TODO: Print more stuff for other kinds of points.
             self._dump('<tr><td width="0"></td>'
                        '<td align="left" width="0" colspan="2">'
                        '<font color="%s">%s</font></td></tr>'
                        % (color, p.kind))
+
+        if p.tag is not None:
+            self._dump('<tr><td width="0"></td>'
+                       '<td colspan="3" align="left">'
+                       '<b>Tag: </b> <font color="crimson">'
+                       '%s</font></td></tr>' % p.tag)
 
     def visit_environment(self, e, prev_e=None):
         self._dump('<table border="0">')
@@ -394,7 +439,7 @@ class DotDumpVisitor(object):
             self._dump('<tr><td>%s</td>'
                        '<td align="left"><b>%s</b></td>'
                        '<td align="left" colspan="2">'
-                       '<font color="grey60">%s </font>'
+                       '<font color="gray60">%s </font>'
                        '%s</td></tr>'
                        % (self._diff_plus_minus(is_added),
                           lc.caption, lc.decl,
@@ -404,10 +449,17 @@ class DotDumpVisitor(object):
         def dump_binding(f, b, is_added=None):
             self._dump('<tr><td>%s</td>'
                        '<td align="left"><i>S%s</i></td>'
+                       '%s'
                        '<td align="left">%s</td>'
                        '<td align="left">%s</td></tr>'
                        % (self._diff_plus_minus(is_added),
-                          b.stmt_id, b.pretty, f.bindings[b]))
+                          b.stmt_id,
+                          '<td align="left"><font color="%s"><i>'
+                          '%s</i></font></td>' % (
+                              'lavender' if self._dark_mode else 'darkgreen',
+                              ('(%s)' % b.kind) if b.kind is not None else ' '
+                          ),
+                          b.pretty, f.bindings[b]))
 
         frames_updated = e.diff_frames(prev_e) if prev_e is not None else None
         if frames_updated:
@@ -428,21 +480,25 @@ class DotDumpVisitor(object):
 
         self._dump('</table>')
 
-    def visit_environment_in_state(self, s, prev_s=None):
-        self._dump('<tr><td align="left">'
-                   '<b>Environment: </b>')
-        if s.environment is None:
+    def visit_environment_in_state(self, selector, title, s, prev_s=None):
+        e = getattr(s, selector)
+        prev_e = getattr(prev_s, selector) if prev_s is not None else None
+        if e is None and prev_e is None:
+            return
+
+        self._dump('<hr /><tr><td align="left"><b>%s: </b>' % title)
+        if e is None:
             self._dump('<i> Nothing!</i>')
         else:
-            if prev_s is not None and prev_s.environment is not None:
-                if s.environment.is_different(prev_s.environment):
+            if prev_e is not None:
+                if e.is_different(prev_e):
                     self._dump('</td></tr><tr><td align="left">')
-                    self.visit_environment(s.environment, prev_s.environment)
+                    self.visit_environment(e, prev_e)
                 else:
                     self._dump('<i> No changes!</i>')
             else:
                 self._dump('</td></tr><tr><td align="left">')
-                self.visit_environment(s.environment)
+                self.visit_environment(e)
 
         self._dump('</td></tr>')
 
@@ -485,19 +541,24 @@ class DotDumpVisitor(object):
         self._dump('</table>')
 
     def visit_store_in_state(self, s, prev_s=None):
-        self._dump('<tr><td align="left"><b>Store: </b>')
-        if s.store is None:
+        st = s.store
+        prev_st = prev_s.store if prev_s is not None else None
+        if st is None and prev_st is None:
+            return
+
+        self._dump('<hr /><tr><td align="left"><b>Store: </b>')
+        if st is None:
             self._dump('<i> Nothing!</i>')
         else:
-            if prev_s is not None and prev_s.store is not None:
-                if s.store.is_different(prev_s.store):
+            if prev_st is not None:
+                if s.store.is_different(prev_st):
                     self._dump('</td></tr><tr><td align="left">')
-                    self.visit_store(s.store, prev_s.store)
+                    self.visit_store(st, prev_st)
                 else:
                     self._dump('<i> No changes!</i>')
             else:
                 self._dump('</td></tr><tr><td align="left">')
-                self.visit_store(s.store)
+                self.visit_store(st)
         self._dump('</td></tr>')
 
     def visit_generic_map(self, m, prev_m=None):
@@ -522,16 +583,19 @@ class DotDumpVisitor(object):
 
         self._dump('</table>')
 
-    def visit_generic_map_in_state(self, selector, s, prev_s=None):
-        self._dump('<tr><td align="left">'
-                   '<b>Ranges: </b>')
+    def visit_generic_map_in_state(self, selector, title, s, prev_s=None):
         m = getattr(s, selector)
+        prev_m = getattr(prev_s, selector) if prev_s is not None else None
+        if m is None and prev_m is None:
+            return
+
+        self._dump('<hr />')
+        self._dump('<tr><td align="left">'
+                   '<b>%s: </b>' % title)
         if m is None:
             self._dump('<i> Nothing!</i>')
         else:
-            prev_m = None
             if prev_s is not None:
-                prev_m = getattr(prev_s, selector)
                 if prev_m is not None:
                     if m.is_different(prev_m):
                         self._dump('</td></tr><tr><td align="left">')
@@ -545,18 +609,27 @@ class DotDumpVisitor(object):
 
     def visit_state(self, s, prev_s):
         self.visit_store_in_state(s, prev_s)
-        self._dump('<hr />')
-        self.visit_environment_in_state(s, prev_s)
-        self._dump('<hr />')
-        self.visit_generic_map_in_state('constraints', s, prev_s)
+        self.visit_environment_in_state('environment', 'Environment',
+                                        s, prev_s)
+        self.visit_generic_map_in_state('constraints', 'Ranges',
+                                        s, prev_s)
+        self.visit_generic_map_in_state('dynamic_types', 'Dynamic Types',
+                                        s, prev_s)
+        self.visit_environment_in_state('constructing_objects',
+                                        'Objects Under Construction',
+                                        s, prev_s)
 
     def visit_node(self, node):
-        self._dump('%s [shape=record,label=<<table border="0">'
+        self._dump('%s [shape=record,'
                    % (node.node_name()))
+        if self._dark_mode:
+            self._dump('color="white",fontcolor="gray80",')
+        self._dump('label=<<table border="0">')
 
-        self._dump('<tr><td bgcolor="grey"><b>Node %d (%s) - '
+        self._dump('<tr><td bgcolor="%s"><b>Node %d (%s) - '
                    'State %s</b></td></tr>'
-                   % (node.node_id, node.ptr, node.state.state_id
+                   % ("gray20" if self._dark_mode else "gray",
+                      node.node_id, node.ptr, node.state.state_id
                       if node.state is not None else 'Unspecified'))
         self._dump('<tr><td align="left" width="0">')
         if len(node.points) > 1:
@@ -570,7 +643,6 @@ class DotDumpVisitor(object):
         self._dump('</table></td></tr>')
 
         if node.state is not None:
-            self._dump('<hr />')
             prev_s = None
             # Do diffs only when we have a unique predecessor.
             # Don't do diffs on the leaf nodes because they're
@@ -582,7 +654,10 @@ class DotDumpVisitor(object):
         self._dump_raw('</table>>];\n')
 
     def visit_edge(self, pred, succ):
-        self._dump_raw('%s -> %s;\n' % (pred.node_name(), succ.node_name()))
+        self._dump_raw('%s -> %s%s;\n' % (
+            pred.node_name(), succ.node_name(),
+            ' [color="white"]' if self._dark_mode else ''
+        ))
 
     def visit_end_of_graph(self):
         self._dump_raw('}\n')
@@ -615,6 +690,9 @@ def main():
     parser.add_argument('-d', '--diff', action='store_const', dest='diff',
                         const=True, default=False,
                         help='display differences between states')
+    parser.add_argument('--dark', action='store_const', dest='dark',
+                        const=True, default=False,
+                        help='dark mode')
     args = parser.parse_args()
     logging.basicConfig(level=args.loglevel)
 
@@ -625,7 +703,7 @@ def main():
             graph.add_raw_line(raw_line)
 
     explorer = Explorer()
-    visitor = DotDumpVisitor(args.diff)
+    visitor = DotDumpVisitor(args.diff, args.dark)
     explorer.explore(graph, visitor)
 
 

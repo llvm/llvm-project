@@ -67,13 +67,13 @@ define <2 x i64> @getsmaxi64(<2 x i64> %a, <2 x i64> %b) {
 ; NOP8VEC-NEXT:    stxvd2x 1, 0, 4
 ; NOP8VEC-NEXT:    ld 3, -24(1)
 ; NOP8VEC-NEXT:    ld 4, -40(1)
+; NOP8VEC-NEXT:    ld 6, -48(1)
 ; NOP8VEC-NEXT:    cmpd 4, 3
 ; NOP8VEC-NEXT:    li 3, 0
 ; NOP8VEC-NEXT:    li 4, -1
 ; NOP8VEC-NEXT:    isel 5, 4, 3, 1
 ; NOP8VEC-NEXT:    std 5, -8(1)
 ; NOP8VEC-NEXT:    ld 5, -32(1)
-; NOP8VEC-NEXT:    ld 6, -48(1)
 ; NOP8VEC-NEXT:    cmpd 6, 5
 ; NOP8VEC-NEXT:    isel 3, 4, 3, 1
 ; NOP8VEC-NEXT:    std 3, -16(1)
@@ -184,13 +184,13 @@ define <2 x i64> @getsmini64(<2 x i64> %a, <2 x i64> %b) {
 ; NOP8VEC-NEXT:    stxvd2x 1, 0, 4
 ; NOP8VEC-NEXT:    ld 3, -24(1)
 ; NOP8VEC-NEXT:    ld 4, -40(1)
+; NOP8VEC-NEXT:    ld 6, -48(1)
 ; NOP8VEC-NEXT:    cmpd 4, 3
 ; NOP8VEC-NEXT:    li 3, 0
 ; NOP8VEC-NEXT:    li 4, -1
 ; NOP8VEC-NEXT:    isel 5, 4, 3, 0
 ; NOP8VEC-NEXT:    std 5, -8(1)
 ; NOP8VEC-NEXT:    ld 5, -32(1)
-; NOP8VEC-NEXT:    ld 6, -48(1)
 ; NOP8VEC-NEXT:    cmpd 6, 5
 ; NOP8VEC-NEXT:    isel 3, 4, 3, 0
 ; NOP8VEC-NEXT:    std 3, -16(1)

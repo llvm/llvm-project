@@ -658,6 +658,12 @@ LegalizerInfo::findVectorLegalAction(const InstrAspect &Aspect) const {
                       IntermediateType.getScalarSizeInBits())};
 }
 
+bool LegalizerInfo::legalizeIntrinsic(MachineInstr &MI,
+                                      MachineRegisterInfo &MRI,
+                                      MachineIRBuilder &MIRBuilder) const {
+  return true;
+}
+
 /// \pre Type indices of every opcode form a dense set starting from 0.
 void LegalizerInfo::verify(const MCInstrInfo &MII) const {
 #ifndef NDEBUG

@@ -486,7 +486,7 @@ static void JmpBufGarbageCollect(ThreadState *thr, uptr sp) {
   }
 }
 
-static void SetJmp(ThreadState *thr, uptr sp, uptr mangled_sp) {
+static void SetJmp(ThreadState *thr, uptr sp) {
   if (!thr->is_inited)  // called from libc guts during bootstrap
     return;
   // Cleanup old bufs.
@@ -494,7 +494,6 @@ static void SetJmp(ThreadState *thr, uptr sp, uptr mangled_sp) {
   // Remember the buf.
   JmpBuf *buf = thr->jmp_bufs.PushBack();
   buf->sp = sp;
-  buf->mangled_sp = mangled_sp;
   buf->shadow_stack_pos = thr->shadow_stack_pos;
   ThreadSignalContext *sctx = SigCtx(thr);
   buf->int_signal_send = sctx ? sctx->int_signal_send : 0;
@@ -529,12 +528,10 @@ static void LongJmp(ThreadState *thr, uptr *env) {
 # endif
 #endif
   uptr sp = UnmangleLongJmpSp(mangled_sp);
-  // Find the saved buf by mangled_sp.
+  // Find the saved buf with matching sp.
   for (uptr i = 0; i < thr->jmp_bufs.Size(); i++) {
     JmpBuf *buf = &thr->jmp_bufs[i];
-    if (buf->mangled_sp == mangled_sp) {
-      CHECK_EQ(buf->sp, sp);
-      // TODO(yln): Lookup via sp, remove mangled_sp from struct.
+    if (buf->sp == sp) {
       CHECK_GE(thr->shadow_stack_pos, buf->shadow_stack_pos);
       // Unwind the stack.
       while (thr->shadow_stack_pos > buf->shadow_stack_pos)
@@ -556,9 +553,9 @@ static void LongJmp(ThreadState *thr, uptr *env) {
 }
 
 // FIXME: put everything below into a common extern "C" block?
-extern "C" void __tsan_setjmp(uptr sp, uptr mangled_sp) {
+extern "C" void __tsan_setjmp(uptr sp) {
   cur_thread_init();
-  SetJmp(cur_thread(), sp, mangled_sp);
+  SetJmp(cur_thread(), sp);
 }
 
 #if SANITIZER_MAC

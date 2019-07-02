@@ -90,6 +90,11 @@ def : InstRW<[P5600COP2], (instrs MFC2, MTC2)> {
   let Unsupported = 1;
 }
 
+// MIPS Virtualization ASE
+// =======================
+def : InstRW<[P5600COP0], (instrs HYPCALL, MFGC0, MFHGC0, MTGC0, MTHGC0,
+                           TLBGINV, TLBGINVF, TLBGP, TLBGR, TLBGWI, TLBGWR)>;
+
 // LDST Pipeline
 // -------------
 

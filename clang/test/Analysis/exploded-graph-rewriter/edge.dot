@@ -1,4 +1,5 @@
-// RUN: %exploded_graph_rewriter %s | FileCheck %s
+// RUN: %exploded_graph_rewriter %s | FileCheck %s -check-prefix=LIGHT
+// RUN: %exploded_graph_rewriter --dark %s | FileCheck %s -check-prefixes=DARK
 
 // FIXME: Substitution doesn't seem to work on Windows.
 // UNSUPPORTED: system-windows
@@ -7,7 +8,8 @@ Node0x1 [shape=record,label=
  "{{ "node_id": 1, "pointer": "0x1",
      "program_state": null, "program_points": []}\l}"];
 
-// CHECK: Node0x1 -> Node0x2;
+// LIGHT: Node0x1 -> Node0x2;
+// DARK:  Node0x1 -> Node0x2 [color="white"];
 Node0x1 -> Node0x2;
 
 Node0x2 [shape=record,label=

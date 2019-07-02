@@ -412,6 +412,15 @@ Instruction *llvm::promoteCall(CallSite CS, Function *Callee,
       // Remove any incompatible attributes for the argument.
       AttrBuilder ArgAttrs(CallerPAL.getParamAttributes(ArgNo));
       ArgAttrs.remove(AttributeFuncs::typeIncompatible(FormalTy));
+
+      // If byval is used, this must be a pointer type, and the byval type must
+      // match the element type. Update it if present.
+      if (ArgAttrs.getByValType()) {
+        Type *NewTy = Callee->getParamByValType(ArgNo);
+        ArgAttrs.addByValAttr(
+            NewTy ? NewTy : cast<PointerType>(FormalTy)->getElementType());
+      }
+
       NewArgAttrs.push_back(AttributeSet::get(Ctx, ArgAttrs));
       AttributeChanged = true;
     } else

@@ -340,6 +340,8 @@ findPotentialBlockers(MachineInstr *LoadInst) {
   for (auto PBInst = std::next(MachineBasicBlock::reverse_iterator(LoadInst)),
             E = LoadInst->getParent()->rend();
        PBInst != E; ++PBInst) {
+    if (PBInst->isMetaInstruction())
+      continue;
     BlockCount++;
     if (BlockCount >= InspectionLimit)
       break;
@@ -363,6 +365,8 @@ findPotentialBlockers(MachineInstr *LoadInst) {
       for (MachineBasicBlock::reverse_iterator PBInst = PMBB->rbegin(),
                                                PME = PMBB->rend();
            PBInst != PME; ++PBInst) {
+        if (PBInst->isMetaInstruction())
+          continue;
         PredCount++;
         if (PredCount >= LimitLeft)
           break;

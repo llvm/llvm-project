@@ -82,6 +82,7 @@ define fp128 @testStruct_03(%struct.With9fp128params* byval nocapture readonly
                             align 16 %a) {
 ; CHECK-LABEL: testStruct_03:
 ; CHECK:       # %bb.0: # %entry
+; CHECK:        lxv v2, 128(r1)
 ; CHECK-DAG:    std r10, 88(r1)
 ; CHECK-DAG:    std r9, 80(r1)
 ; CHECK-DAG:    std r8, 72(r1)
@@ -90,11 +91,11 @@ define fp128 @testStruct_03(%struct.With9fp128params* byval nocapture readonly
 ; CHECK-DAG:    std r5, 48(r1)
 ; CHECK-DAG:    std r4, 40(r1)
 ; CHECK-DAG:    std r3, 32(r1)
-; CHECK-NEXT:    lxv v2, 128(r1)
 ; CHECK-NEXT:    blr
 
 ; CHECK-BE-LABEL: testStruct_03:
 ; CHECK-BE:       # %bb.0: # %entry
+; CHECK-BE:        lxv v2, 144(r1)
 ; CHECK-BE-DAG:    std r10, 104(r1)
 ; CHECK-BE-DAG:    std r9, 96(r1)
 ; CHECK-BE-DAG:    std r8, 88(r1)
@@ -103,7 +104,6 @@ define fp128 @testStruct_03(%struct.With9fp128params* byval nocapture readonly
 ; CHECK-BE-DAG:    std r5, 64(r1)
 ; CHECK-BE-DAG:    std r4, 56(r1)
 ; CHECK-BE-DAG:    std r3, 48(r1)
-; CHECK-BE-NEXT:    lxv v2, 144(r1)
 ; CHECK-BE-NEXT:    blr
 entry:
   %a7 = getelementptr inbounds %struct.With9fp128params,
@@ -256,28 +256,28 @@ entry:
 define fp128 @testNestedAggregate(%struct.MixedC* byval nocapture readonly align 16 %a) {
 ; CHECK-LABEL: testNestedAggregate:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-DAG:     std r10, 88(r1)
-; CHECK-DAG:     std r9, 80(r1)
 ; CHECK-DAG:     std r8, 72(r1)
 ; CHECK-DAG:     std r7, 64(r1)
+; CHECK:         lxv v2, 64(r1)
+; CHECK-DAG:     std r10, 88(r1)
+; CHECK-DAG:     std r9, 80(r1)
 ; CHECK-DAG:     std r6, 56(r1)
 ; CHECK-DAG:     std r5, 48(r1)
 ; CHECK-DAG:     std r4, 40(r1)
 ; CHECK-DAG:     std r3, 32(r1)
-; CHECK-NEXT:    lxv v2, 64(r1)
 ; CHECK-NEXT:    blr
 
 ; CHECK-BE-LABEL: testNestedAggregate:
 ; CHECK-BE:       # %bb.0: # %entry
 ; CHECK-BE-DAG:     std r8, 88(r1)
 ; CHECK-BE-DAG:     std r7, 80(r1)
+; CHECK-BE-NEXT:    lxv v2, 80(r1)
 ; CHECK-BE-DAG:     std r10, 104(r1)
 ; CHECK-BE-DAG:     std r9, 96(r1)
 ; CHECK-BE-DAG:     std r6, 72(r1)
 ; CHECK-BE-DAG:     std r5, 64(r1)
 ; CHECK-BE-DAG:     std r4, 56(r1)
 ; CHECK-BE-DAG:     std r3, 48(r1)
-; CHECK-BE-NEXT:    lxv v2, 80(r1)
 ; CHECK-BE-NEXT:    blr
 entry:
   %c = getelementptr inbounds %struct.MixedC, %struct.MixedC* %a, i64 0, i32 1, i32 1

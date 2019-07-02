@@ -24,7 +24,7 @@ void test_zeroed() {
     t = list[i];
     foo(t);
   }
-  free(list); // no-warning
+  kfree(list); // no-warning
 }
 
 void test_nonzero() {
@@ -39,7 +39,7 @@ void test_nonzero() {
     t = list[i]; // expected-warning{{undefined}}
     foo(t);
   }
-  free(list);
+  kfree(list);
 }
 
 void test_indeterminate(int flags) {
@@ -54,5 +54,5 @@ void test_indeterminate(int flags) {
     t = list[i]; // expected-warning{{undefined}}
     foo(t);
   }
-  free(list);
+  kfree(list);
 }

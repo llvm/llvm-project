@@ -15,12 +15,42 @@
 
 namespace std {
 
+  template <class T>
+    constexpr bool ispow2(T x) noexcept; // C++20
+  template <class T>
+    constexpr T ceil2(T x);              // C++20
+  template <class T>
+    constexpr T floor2(T x) noexcept;    // C++20
+  template <class T>
+    constexpr T log2p1(T x) noexcept;    // C++20
+
+  // 23.20.2, rotating
+  template<class T>
+    constexpr T rotl(T x, unsigned int s) noexcept; // C++20
+  template<class T>
+    constexpr T rotr(T x, unsigned int s) noexcept; // C++20
+
+  // 23.20.3, counting
+  template<class T>
+    constexpr int countl_zero(T x) noexcept;  // C++20
+  template<class T>
+    constexpr int countl_one(T x) noexcept;   // C++20
+  template<class T>
+    constexpr int countr_zero(T x) noexcept;  // C++20
+  template<class T>
+    constexpr int countr_one(T x) noexcept;   // C++20
+  template<class T>
+    constexpr int popcount(T x) noexcept;     // C++20
+
 } // namespace std
 
 */
 
 #include <__config>
+#include <limits>
+#include <type_traits>
 #include <version>
+#include <__debug>
 
 #if defined(__IBMCPP__)
 #include "support/ibm/support.h"
@@ -33,38 +63,41 @@ namespace std {
 #pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 #ifndef _LIBCPP_COMPILER_MSVC
 
-inline _LIBCPP_INLINE_VISIBILITY
-int __ctz(unsigned __x)           { return __builtin_ctz(__x); }
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+int __ctz(unsigned __x)           _NOEXCEPT { return __builtin_ctz(__x); }
 
-inline _LIBCPP_INLINE_VISIBILITY
-int __ctz(unsigned long __x)      { return __builtin_ctzl(__x); }
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+int __ctz(unsigned long __x)      _NOEXCEPT { return __builtin_ctzl(__x); }
 
-inline _LIBCPP_INLINE_VISIBILITY
-int __ctz(unsigned long long __x) { return __builtin_ctzll(__x); }
-
-
-inline _LIBCPP_INLINE_VISIBILITY
-int __clz(unsigned __x)           { return __builtin_clz(__x); }
-
-inline _LIBCPP_INLINE_VISIBILITY
-int __clz(unsigned long __x)      { return __builtin_clzl(__x); }
-
-inline _LIBCPP_INLINE_VISIBILITY
-int __clz(unsigned long long __x) { return __builtin_clzll(__x); }
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+int __ctz(unsigned long long __x) _NOEXCEPT { return __builtin_ctzll(__x); }
 
 
-inline _LIBCPP_INLINE_VISIBILITY
-int __popcount(unsigned __x)           { return __builtin_popcount(__x); }
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+int __clz(unsigned __x)           _NOEXCEPT { return __builtin_clz(__x); }
 
-inline _LIBCPP_INLINE_VISIBILITY
-int __popcount(unsigned long __x)      { return __builtin_popcountl(__x); }
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+int __clz(unsigned long __x)      _NOEXCEPT { return __builtin_clzl(__x); }
 
-inline _LIBCPP_INLINE_VISIBILITY
-int __popcount(unsigned long long __x) { return __builtin_popcountll(__x); }
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+int __clz(unsigned long long __x) _NOEXCEPT { return __builtin_clzll(__x); }
+
+
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+int __popcount(unsigned __x)           _NOEXCEPT { return __builtin_popcount(__x); }
+
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+int __popcount(unsigned long __x)      _NOEXCEPT { return __builtin_popcountl(__x); }
+
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
+int __popcount(unsigned long long __x) _NOEXCEPT { return __builtin_popcountll(__x); }
 
 #else  // _LIBCPP_COMPILER_MSVC
 
@@ -152,6 +185,205 @@ inline _LIBCPP_INLINE_VISIBILITY int __popcount(unsigned long long __x) {
 
 #endif // _LIBCPP_COMPILER_MSVC
 
+#if _LIBCPP_STD_VER > 17
+
+template <class _Tp>
+using __bitop_unsigned_integer _LIBCPP_NODEBUG_TYPE = integral_constant<bool,
+         is_integral_v<_Tp> &&
+         is_unsigned_v<_Tp> &&
+        _IsNotSame<remove_cv_t<_Tp>, bool>::value &&
+        _IsNotSame<remove_cv_t<_Tp>, signed char>::value &&
+        _IsNotSame<remove_cv_t<_Tp>, wchar_t>::value &&
+        _IsNotSame<remove_cv_t<_Tp>, char16_t>::value &&
+        _IsNotSame<remove_cv_t<_Tp>, char32_t>::value
+    >;
+
+
+// rotl
+template<class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<__bitop_unsigned_integer<_Tp>::value, _Tp>
+rotl(_Tp __t, unsigned int __cnt) noexcept
+{
+    const unsigned int __dig = numeric_limits<_Tp>::digits;
+    if ((__cnt % __dig) == 0)
+        return __t;
+    return (__t << (__cnt % __dig)) | (__t >> (__dig - (__cnt % __dig)));
+}
+
+
+// rotr
+template<class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<__bitop_unsigned_integer<_Tp>::value, _Tp>
+rotr(_Tp __t, unsigned int __cnt) noexcept
+{
+    const unsigned int __dig = numeric_limits<_Tp>::digits;
+    if ((__cnt % __dig) == 0)
+        return __t;
+    return (__t >> (__cnt % __dig)) | (__t << (__dig - (__cnt % __dig)));
+}
+
+
+// countl_zero
+template<class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<__bitop_unsigned_integer<_Tp>::value, int>
+countl_zero(_Tp __t) noexcept
+{
+    if (__t == 0)
+        return numeric_limits<_Tp>::digits;
+
+    if      constexpr (sizeof(_Tp) <= sizeof(unsigned int))
+        return __clz(static_cast<unsigned int>(__t))
+              - (numeric_limits<unsigned int>::digits - numeric_limits<_Tp>::digits);
+    else if constexpr (sizeof(_Tp) <= sizeof(unsigned long))
+        return __clz(static_cast<unsigned long>(__t))
+              - (numeric_limits<unsigned long>::digits - numeric_limits<_Tp>::digits);
+    else if constexpr (sizeof(_Tp) <= sizeof(unsigned long long))
+        return __clz(static_cast<unsigned long long>(__t))
+              - (numeric_limits<unsigned long long>::digits - numeric_limits<_Tp>::digits);
+    else
+    {
+        int __ret = 0;
+        int __iter = 0;
+        const unsigned int __ulldigits = numeric_limits<unsigned long long>::digits;
+        while (true) {
+            __t = rotr(__t, __ulldigits);
+            if ((__iter = countl_zero(static_cast<unsigned long long>(__t))) != __ulldigits)
+                break;
+            __ret += __iter;
+            }
+        return __ret + __iter;
+    }
+}
+
+
+// countl_one
+template<class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<__bitop_unsigned_integer<_Tp>::value, int>
+countl_one(_Tp __t) noexcept
+{
+    return __t != numeric_limits<_Tp>::max()
+        ? countl_zero(static_cast<_Tp>(~__t))
+        : numeric_limits<_Tp>::digits;
+}
+
+
+// countr_zero
+template<class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<__bitop_unsigned_integer<_Tp>::value, int>
+countr_zero(_Tp __t) noexcept
+{
+    if (__t == 0)
+        return numeric_limits<_Tp>::digits;
+
+    if      constexpr (sizeof(_Tp) <= sizeof(unsigned int))
+        return __ctz(static_cast<unsigned int>(__t));
+    else if constexpr (sizeof(_Tp) <= sizeof(unsigned long))
+        return __ctz(static_cast<unsigned long>(__t));
+    else if constexpr (sizeof(_Tp) <= sizeof(unsigned long long))
+        return __ctz(static_cast<unsigned long long>(__t));
+    else
+    {
+        int __ret = 0;
+        int __iter = 0;
+        const unsigned int __ulldigits = numeric_limits<unsigned long long>::digits;
+        while ((__iter = countr_zero(static_cast<unsigned long long>(__t))) == __ulldigits)
+        {
+            __ret += __iter;
+            __t >>= __ulldigits;
+        }
+        return __ret + __iter;
+    }
+}
+
+
+// countr_one
+template<class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<__bitop_unsigned_integer<_Tp>::value, int>
+countr_one(_Tp __t) noexcept
+{
+    return __t != numeric_limits<_Tp>::max()
+        ? countr_zero(static_cast<_Tp>(~__t))
+        : numeric_limits<_Tp>::digits;
+}
+
+
+// popcount
+template<class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<__bitop_unsigned_integer<_Tp>::value, int>
+popcount(_Tp __t) noexcept
+{
+    if      constexpr (sizeof(_Tp) <= sizeof(unsigned int))
+        return __popcount(static_cast<unsigned int>(__t));
+    else if constexpr (sizeof(_Tp) <= sizeof(unsigned long))
+        return __popcount(static_cast<unsigned long>(__t));
+    else if constexpr (sizeof(_Tp) <= sizeof(unsigned long long))
+        return __popcount(static_cast<unsigned long long>(__t));
+    else
+    {
+        int __ret = 0;
+        while (__t != 0)
+        {
+            __ret += __popcount(static_cast<unsigned long long>(__t));
+            __t >>= numeric_limits<unsigned long long>::digits;
+        }
+        return __ret;
+    }
+}
+
+
+// integral log base 2
+template<class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+unsigned __bit_log2(_Tp __t) noexcept
+{ return std::numeric_limits<_Tp>::digits - 1 - countl_zero(__t); }
+
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<__bitop_unsigned_integer<_Tp>::value, bool>
+ispow2(_Tp __t) noexcept { return popcount(__t) == 1; }
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<__bitop_unsigned_integer<_Tp>::value, _Tp>
+floor2(_Tp __t) noexcept { return __t == 0 ? 0 : _Tp{1} << __bit_log2(__t); }
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<__bitop_unsigned_integer<_Tp>::value, _Tp>
+ceil2(_Tp __t) noexcept
+{
+    if (__t < 2) return 1;
+    const unsigned __n = numeric_limits<_Tp>::digits - countl_zero((_Tp)(__t - 1u));
+    _LIBCPP_DEBUG_ASSERT(__libcpp_is_constant_evaluated() || __n != numeric_limits<_Tp>::digits, "Bad input to ceil2");
+
+    if constexpr (sizeof(_Tp) >= sizeof(unsigned))
+        return _Tp{1} << __n;
+    else
+    {
+        const unsigned __extra = numeric_limits<unsigned>::digits  - numeric_limits<_Tp>::digits;
+        const unsigned __retVal = 1u << (__n + __extra);
+        return (_Tp) (__retVal >> __extra);
+    }
+}
+
+template <class _Tp>
+_LIBCPP_INLINE_VISIBILITY constexpr
+enable_if_t<__bitop_unsigned_integer<_Tp>::value, _Tp>
+log2p1(_Tp __t) noexcept
+{ return __t == 0 ? 0 : __bit_log2(__t) + 1; }
+
+#endif // _LIBCPP_STD_VER > 17
+
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP_BIT

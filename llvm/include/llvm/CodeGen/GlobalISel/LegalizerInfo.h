@@ -1114,6 +1114,11 @@ public:
                               MachineIRBuilder &MIRBuilder,
                               GISelChangeObserver &Observer) const;
 
+  /// Return true if MI is either legal or has been legalized and false
+  /// if not legal.
+  virtual bool legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                 MachineIRBuilder &MIRBuilder) const;
+
 private:
   /// Determine what action should be taken to legalize the given generic
   /// instruction opcode, type-index and type. Requires computeTables to have

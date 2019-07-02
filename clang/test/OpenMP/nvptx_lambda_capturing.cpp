@@ -12,8 +12,8 @@
 #ifndef HEADER
 #define HEADER
 
-// HOST-DAG: = private unnamed_addr constant [11 x i64] [i64 4, i64 4, i64 0, i64 4, i64 40, i64 4, i64 4, i64 4, i64 8, i64 4, i64 4]
-// HOST-DAG: = private unnamed_addr constant [11 x i64] [i64 673, i64 673, i64 544, i64 33, i64 673, i64 1407374883554064, i64 1407374883554064, i64 1407374883554064, i64 1407374883554064, i64 1407374883554064, i64 288]
+// HOST-DAG: = private unnamed_addr constant [11 x i64] [i64 4, i64 4, i64 4, i64 0, i64 4, i64 40, i64 4, i64 4, i64 4, i64 8, i64 4]
+// HOST-DAG: = private unnamed_addr constant [11 x i64] [i64 288, i64 673, i64 673, i64 544, i64 33, i64 673, i64 1688849860264720, i64 1688849860264720, i64 1688849860264720, i64 1688849860264720, i64 1688849860264720]
 // HOST-DAG: = private unnamed_addr constant [11 x i64] [i64 4, i64 4, i64 4, i64 0, i64 4, i64 40, i64 4, i64 4, i64 4, i64 8, i64 4]
 // HOST-DAG: = private unnamed_addr constant [11 x i64] [i64 673, i64 673, i64 673, i64 544, i64 673, i64 673, i64 1688849860264720, i64 1688849860264720, i64 1688849860264720, i64 1688849860264720, i64 1688849860264720]
 // HOST-DAG: = private unnamed_addr constant [3 x i64] [i64 4, i64 8, i64 8]
@@ -73,7 +73,7 @@ struct S {
 } s;
 
 // FUN: define internal void @__omp_offloading_{{.+}}_main_l124_worker()
-// FUN: define weak void @__omp_offloading_{{.+}}_main_l124(i32* dereferenceable(4) %{{.+}}, i32* dereferenceable(4) %{{.+}}, i32* %{{.+}}, i32* dereferenceable(4) %{{.+}}, [[CAP2]]* dereferenceable(40) %{{.+}}, i64 %{{.+}})
+// FUN: define weak void @__omp_offloading_{{.+}}_main_l124(i64 %{{.+}}, i32* dereferenceable(4) %{{.+}}, i32* dereferenceable(4) %{{.+}}, i32* %{{.+}}, i32* dereferenceable(4) %{{.+}}, [[CAP2]]* dereferenceable(40) %{{.+}})
 // FUN-NOT: getelementptr
 // FUN: br i1 %
 // FUN: call void @__omp_offloading_{{.*}}_{{.*}}main{{.*}}_l124_worker()
@@ -134,11 +134,11 @@ int main(int argc, char **argv) {
 // HOST-DAG: call i32 @__tgt_target(i64 -1, i8* @{{.+}}, i32 11, i8** [[BASES:%.+]], i8** [[PTRS:%.+]],
 // HOST-DAG: [[BASES:%.+]] = getelementptr inbounds [11 x i8*], [11 x i8*]* [[BASE_PTR:%.+]], i32 0, i32 0
 // HOST-DAG: [[PTRS:%.+]] = getelementptr inbounds [11 x i8*], [11 x i8*]* [[PTR_PTR:%.+]], i32 0, i32 0
-// HOST-DAG: [[BASE_REF:%.+]] = getelementptr inbounds [11 x i8*], [11 x i8*]* [[BASE_PTR]], i32 0, i32 5
+// HOST-DAG: [[BASE_REF:%.+]] = getelementptr inbounds [11 x i8*], [11 x i8*]* [[BASE_PTR]], i32 0, i32 6
 // HOST-DAG: [[BASE_REF_CAST:%.+]] = bitcast i8** [[BASE_REF]] to i32***
 // HOST-DAG: store i32** [[BASE:%.+]], i32*** [[BASE_REF_CAST]],
 // HOST-DAG: [[BASE]] = getelementptr inbounds [[LAMBDA:%.+]], [[LAMBDA]]* [[LAMBDA_ADDR:%.+]], i32 0, i32 0
-// HOST-DAG: [[PTR_REF:%.+]] = getelementptr inbounds [11 x i8*], [11 x i8*]* [[PTR_PTR]], i32 0, i32 5
+// HOST-DAG: [[PTR_REF:%.+]] = getelementptr inbounds [11 x i8*], [11 x i8*]* [[PTR_PTR]], i32 0, i32 6
 // HOST-DAG: [[PTR_REF_CAST:%.+]] = bitcast i8** [[PTR_REF]] to i32**
 // HOST-DAG: store i32* [[PTR:%.+]], i32** [[PTR_REF_CAST]],
 // HOST-DAG: [[PTR]] = load i32*, i32** [[PTR_REF:%.+]],

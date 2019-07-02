@@ -43,20 +43,8 @@ CPPLanguageRuntime::~CPPLanguageRuntime() {}
 CPPLanguageRuntime::CPPLanguageRuntime(Process *process)
     : LanguageRuntime(process) {}
 
-bool CPPLanguageRuntime::IsRuntimeSupportValue(ValueObject &valobj) {
-  // All runtime support values have to be marked as artificial by the
-  // compiler. But not all artificial variables should be hidden from
-  // the user.
-  if (!valobj.GetVariable())
-    return false;
-  if (!valobj.GetVariable()->IsArtificial())
-    return false;
-
-  // Whitelist "this" and since there is no ObjC++ runtime, any ObjC names.
-  ConstString name = valobj.GetName();
-  if (name == g_this)
-    return false;
-  return !ObjCLanguageRuntime::IsWhitelistedRuntimeValue(name);
+bool CPPLanguageRuntime::IsWhitelistedRuntimeValue(ConstString name) {
+  return name == g_this;
 }
 
 bool CPPLanguageRuntime::GetObjectDescription(Stream &str,

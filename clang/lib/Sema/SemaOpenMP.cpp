@@ -1726,12 +1726,10 @@ bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {
 
   if (IsByRef && Ty.getNonReferenceType()->isScalarType()) {
     IsByRef =
-        ((DSAStack->isForceCaptureByReferenceInTargetExecutable() &&
-          !Ty->isAnyPointerType()) ||
-         !DSAStack->hasExplicitDSA(
-             D,
-             [](OpenMPClauseKind K) -> bool { return K == OMPC_firstprivate; },
-             Level, /*NotLastprivate=*/true)) &&
+        !DSAStack->hasExplicitDSA(
+            D,
+            [](OpenMPClauseKind K) -> bool { return K == OMPC_firstprivate; },
+            Level, /*NotLastprivate=*/true) &&
         // If the variable is artificial and must be captured by value - try to
         // capture by value.
         !(isa<OMPCapturedExprDecl>(D) && !D->hasAttr<OMPCaptureNoInitAttr>() &&
@@ -1799,53 +1797,6 @@ VarDecl *Sema::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
       if (OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD))
         return nullptr;
       return VD;
-    }
-  }
-  // Capture variables captured by reference in lambdas for target-based
-  // directives.
-  // FIXME: Triggering capture from here is completely inappropriate.
-  if (VD && !DSAStack->isClauseParsingMode()) {
-    if (const auto *RD = VD->getType()
-                             .getCanonicalType()
-                             .getNonReferenceType()
-                             ->getAsCXXRecordDecl()) {
-      bool SavedForceCaptureByReferenceInTargetExecutable =
-          DSAStack->isForceCaptureByReferenceInTargetExecutable();
-      DSAStack->setForceCaptureByReferenceInTargetExecutable(/*V=*/true);
-      InParentDirectiveRAII.disable();
-      if (RD->isLambda()) {
-        llvm::DenseMap<const VarDecl *, FieldDecl *> Captures;
-        FieldDecl *ThisCapture;
-        RD->getCaptureFields(Captures, ThisCapture);
-        for (const LambdaCapture &LC : RD->captures()) {
-          if (LC.getCaptureKind() == LCK_ByRef) {
-            VarDecl *VD = LC.getCapturedVar();
-            DeclContext *VDC = VD->getDeclContext();
-            if (!VDC->Encloses(CurContext))
-              continue;
-            DSAStackTy::DSAVarData DVarPrivate =
-                DSAStack->getTopDSA(VD, /*FromParent=*/false);
-            // Do not capture already captured variables.
-            if (!OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD) &&
-                DVarPrivate.CKind == OMPC_unknown &&
-                !DSAStack->checkMappableExprComponentListsForDecl(
-                    D, /*CurrentRegionOnly=*/true,
-                    [](OMPClauseMappableExprCommon::
-                           MappableExprComponentListRef,
-                       OpenMPClauseKind) { return true; }))
-              MarkVariableReferenced(LC.getLocation(), LC.getCapturedVar());
-          } else if (LC.getCaptureKind() == LCK_This) {
-            QualType ThisTy = getCurrentThisType();
-            if (!ThisTy.isNull() &&
-                Context.typesAreCompatible(ThisTy, ThisCapture->getType()))
-              CheckCXXThisCapture(LC.getLocation());
-          }
-        }
-      }
-      if (CheckScopeInfo && DSAStack->isBodyComplete())
-        InParentDirectiveRAII.enable();
-      DSAStack->setForceCaptureByReferenceInTargetExecutable(
-          SavedForceCaptureByReferenceInTargetExecutable);
     }
   }
 
@@ -3384,6 +3335,46 @@ public:
   }
 };
 } // namespace
+
+void Sema::tryCaptureOpenMPLambdas(ValueDecl *V) {
+  // Capture variables captured by reference in lambdas for target-based
+  // directives.
+  if (!CurContext->isDependentContext() &&
+      (isOpenMPTargetExecutionDirective(DSAStack->getCurrentDirective()) ||
+       isOpenMPTargetDataManagementDirective(
+           DSAStack->getCurrentDirective()))) {
+    QualType Type = V->getType();
+    if (const auto *RD = Type.getCanonicalType()
+                             .getNonReferenceType()
+                             ->getAsCXXRecordDecl()) {
+      bool SavedForceCaptureByReferenceInTargetExecutable =
+          DSAStack->isForceCaptureByReferenceInTargetExecutable();
+      DSAStack->setForceCaptureByReferenceInTargetExecutable(
+          /*V=*/true);
+      if (RD->isLambda()) {
+        llvm::DenseMap<const VarDecl *, FieldDecl *> Captures;
+        FieldDecl *ThisCapture;
+        RD->getCaptureFields(Captures, ThisCapture);
+        for (const LambdaCapture &LC : RD->captures()) {
+          if (LC.getCaptureKind() == LCK_ByRef) {
+            VarDecl *VD = LC.getCapturedVar();
+            DeclContext *VDC = VD->getDeclContext();
+            if (!VDC->Encloses(CurContext))
+              continue;
+            MarkVariableReferenced(LC.getLocation(), VD);
+          } else if (LC.getCaptureKind() == LCK_This) {
+            QualType ThisTy = getCurrentThisType();
+            if (!ThisTy.isNull() &&
+                Context.typesAreCompatible(ThisTy, ThisCapture->getType()))
+              CheckCXXThisCapture(LC.getLocation());
+          }
+        }
+      }
+      DSAStack->setForceCaptureByReferenceInTargetExecutable(
+          SavedForceCaptureByReferenceInTargetExecutable);
+    }
+  }
+}
 
 StmtResult Sema::ActOnOpenMPRegionEnd(StmtResult S,
                                       ArrayRef<OMPClause *> Clauses) {

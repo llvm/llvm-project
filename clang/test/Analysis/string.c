@@ -1598,3 +1598,9 @@ void memset29_plain_int_zero() {
   memset(&x, 0, sizeof(short));
   clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}
 }
+
+void test_memset_chk() {
+  int x;
+  __builtin___memset_chk(&x, 0, sizeof(x), __builtin_object_size(&x, 0));
+  clang_analyzer_eval(x == 0); // expected-warning{{TRUE}}
+}
