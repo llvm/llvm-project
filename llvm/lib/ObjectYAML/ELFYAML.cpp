@@ -910,6 +910,12 @@ static void commonSectionMapping(IO &IO, ELFYAML::Section &Section) {
   IO.mapOptional("Link", Section.Link, StringRef());
   IO.mapOptional("AddressAlign", Section.AddressAlign, Hex64(0));
   IO.mapOptional("EntSize", Section.EntSize);
+
+  // obj2yaml does not dump this field. It is expected to be empty when we are
+  // producing YAML, because yaml2obj sets an appropriate value for sh_offset
+  // automatically when it is not explicitly defined.
+  assert(!IO.outputting() || !Section.ShOffset.hasValue());
+  IO.mapOptional("ShOffset", Section.ShOffset);
 }
 
 static void sectionMapping(IO &IO, ELFYAML::DynamicSection &Section) {

@@ -360,6 +360,8 @@ std::error_code ELFDumper<ELFT>::dumpRelocation(const RelT *Rel,
 template <class ELFT>
 std::error_code ELFDumper<ELFT>::dumpCommonSection(const Elf_Shdr *Shdr,
                                                    ELFYAML::Section &S) {
+  // Dump fields. We do not dump the ShOffset field. When not explicitly
+  // set, the value is set by yaml2obj automatically.
   S.Type = Shdr->sh_type;
   if (Shdr->sh_flags)
     S.Flags = static_cast<ELFYAML::ELF_SHF>(Shdr->sh_flags);
