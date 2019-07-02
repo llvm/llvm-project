@@ -791,7 +791,8 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
 
     std::function<bool(lldb::addr_t &, SymbolContextList &,
                        const lldb_private::SymbolContext &)>
-        get_external_load_address = [&best_internal_load_address, target](
+        get_external_load_address = [&best_internal_load_address, target,
+                                     &symbol_was_missing_weak](
             lldb::addr_t &load_address, SymbolContextList &sc_list,
             const lldb_private::SymbolContext &sc) -> lldb::addr_t {
       load_address = LLDB_INVALID_ADDRESS;
@@ -801,7 +802,7 @@ lldb::addr_t IRExecutionUnit::FindInSymbols(
 
       // missing_weak_symbol will be true only if we found only weak undefined 
       // references to this symbol.
-      bool symbol_was_missing_weak = true;      
+      symbol_was_missing_weak = true;      
       for (auto candidate_sc : sc_list.SymbolContexts()) {        
         // Only symbols can be weak undefined:
         if (!candidate_sc.symbol)
