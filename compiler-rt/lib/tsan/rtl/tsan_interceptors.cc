@@ -554,7 +554,7 @@ static void LongJmp(ThreadState *thr, uptr *env) {
 }
 
 // FIXME: put everything below into a common extern "C" block?
-extern "C" void __tsan_setjmp(uptr sp, uptr mangled_sp) {
+extern "C" void __tsan_setjmp(uptr sp) {
   cur_thread_init();
   SetJmp(cur_thread(), sp);
 }
