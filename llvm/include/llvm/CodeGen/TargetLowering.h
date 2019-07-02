@@ -4055,11 +4055,13 @@ private:
                                                DAGCombinerInfo &DCI,
                                                const SDLoc &DL) const;
 
-  SDValue prepareUREMEqFold(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
+  SDValue prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
+                            SDValue CompTargetNode, ISD::CondCode Cond,
                             DAGCombinerInfo &DCI, const SDLoc &DL,
                             SmallVectorImpl<SDNode *> &Created) const;
-  SDValue buildUREMEqFold(EVT VT, SDValue N0, SDValue N1, ISD::CondCode Cond,
-                          DAGCombinerInfo &DCI, const SDLoc &DL) const;
+  SDValue buildUREMEqFold(EVT SETCCVT, SDValue REMNode, SDValue CompTargetNode,
+                          ISD::CondCode Cond, DAGCombinerInfo &DCI,
+                          const SDLoc &DL) const;
 };
 
 /// Given an LLVM IR type and return type attributes, compute the return value

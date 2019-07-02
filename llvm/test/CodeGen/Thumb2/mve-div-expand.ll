@@ -738,114 +738,57 @@ entry:
 
 
 define arm_aapcs_vfpcc <4 x float> @fdiv_f32(<4 x float> %in1, <4 x float> %in2) {
-; CHECK-MVE-LABEL: fdiv_f32:
-; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    vdiv.f32 s8, s0, s4
-; CHECK-MVE-NEXT:    movs r0, #0
-; CHECK-MVE-NEXT:    vdiv.f32 s10, s1, s5
-; CHECK-MVE-NEXT:    vdiv.f32 s12, s2, s6
-; CHECK-MVE-NEXT:    vdiv.f32 s4, s3, s7
-; CHECK-MVE-NEXT:    vdup.32 q0, r0
-; CHECK-MVE-NEXT:    vmov.f32 s0, s8
-; CHECK-MVE-NEXT:    vmov.f32 s1, s10
-; CHECK-MVE-NEXT:    vmov.f32 s2, s12
-; CHECK-MVE-NEXT:    vmov.f32 s3, s4
-; CHECK-MVE-NEXT:    bx lr
-;
-; CHECK-MVEFP-LABEL: fdiv_f32:
-; CHECK-MVEFP:       @ %bb.0: @ %entry
-; CHECK-MVEFP-NEXT:    vmov q2, q0
-; CHECK-MVEFP-NEXT:    vdiv.f32 s0, s8, s4
-; CHECK-MVEFP-NEXT:    vdiv.f32 s1, s9, s5
-; CHECK-MVEFP-NEXT:    vdiv.f32 s2, s10, s6
-; CHECK-MVEFP-NEXT:    vdiv.f32 s3, s11, s7
-; CHECK-MVEFP-NEXT:    bx lr
+; CHECK-LABEL: fdiv_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vdiv.f32 s11, s3, s7
+; CHECK-NEXT:    vdiv.f32 s10, s2, s6
+; CHECK-NEXT:    vdiv.f32 s9, s1, s5
+; CHECK-NEXT:    vdiv.f32 s8, s0, s4
+; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    bx lr
 entry:
   %out = fdiv <4 x float> %in1, %in2
   ret <4 x float> %out
 }
 
 define arm_aapcs_vfpcc <4 x float> @frem_f32(<4 x float> %in1, <4 x float> %in2) {
-; CHECK-MVE-LABEL: frem_f32:
-; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-MVE-NEXT:    push {r4, r5, r6, lr}
-; CHECK-MVE-NEXT:    .vsave {d8, d9, d10}
-; CHECK-MVE-NEXT:    vpush {d8, d9, d10}
-; CHECK-MVE-NEXT:    .pad #32
-; CHECK-MVE-NEXT:    sub sp, #32
-; CHECK-MVE-NEXT:    vstr s3, [sp, #24]
-; CHECK-MVE-NEXT:    ldr r4, [sp, #24]
-; CHECK-MVE-NEXT:    vstr s1, [sp, #8]
-; CHECK-MVE-NEXT:    vstr s5, [sp, #12]
-; CHECK-MVE-NEXT:    vstr s0, [sp]
-; CHECK-MVE-NEXT:    vstr s4, [sp, #4]
-; CHECK-MVE-NEXT:    vstr s7, [sp, #28]
-; CHECK-MVE-NEXT:    vstr s2, [sp, #16]
-; CHECK-MVE-NEXT:    vstr s6, [sp, #20]
-; CHECK-MVE-NEXT:    ldrd r0, r1, [sp, #8]
-; CHECK-MVE-NEXT:    bl fmodf
-; CHECK-MVE-NEXT:    mov r5, r0
-; CHECK-MVE-NEXT:    ldrd r0, r1, [sp]
-; CHECK-MVE-NEXT:    bl fmodf
-; CHECK-MVE-NEXT:    ldrd r2, r1, [sp, #16]
-; CHECK-MVE-NEXT:    vmov s16, r0
-; CHECK-MVE-NEXT:    ldr r6, [sp, #28]
-; CHECK-MVE-NEXT:    vmov s18, r5
-; CHECK-MVE-NEXT:    mov r0, r2
-; CHECK-MVE-NEXT:    bl fmodf
-; CHECK-MVE-NEXT:    vmov s20, r0
-; CHECK-MVE-NEXT:    mov r0, r4
-; CHECK-MVE-NEXT:    mov r1, r6
-; CHECK-MVE-NEXT:    bl fmodf
-; CHECK-MVE-NEXT:    movs r1, #0
-; CHECK-MVE-NEXT:    vmov s4, r0
-; CHECK-MVE-NEXT:    vdup.32 q0, r1
-; CHECK-MVE-NEXT:    vmov.f32 s0, s16
-; CHECK-MVE-NEXT:    vmov.f32 s1, s18
-; CHECK-MVE-NEXT:    vmov.f32 s2, s20
-; CHECK-MVE-NEXT:    vmov.f32 s3, s4
-; CHECK-MVE-NEXT:    add sp, #32
-; CHECK-MVE-NEXT:    vpop {d8, d9, d10}
-; CHECK-MVE-NEXT:    pop {r4, r5, r6, pc}
-;
-; CHECK-MVEFP-LABEL: frem_f32:
-; CHECK-MVEFP:       @ %bb.0: @ %entry
-; CHECK-MVEFP-NEXT:    .save {r4, r5, r6, lr}
-; CHECK-MVEFP-NEXT:    push {r4, r5, r6, lr}
-; CHECK-MVEFP-NEXT:    .vsave {d8, d9}
-; CHECK-MVEFP-NEXT:    vpush {d8, d9}
-; CHECK-MVEFP-NEXT:    .pad #32
-; CHECK-MVEFP-NEXT:    sub sp, #32
-; CHECK-MVEFP-NEXT:    vstr s3, [sp, #24]
-; CHECK-MVEFP-NEXT:    ldr r4, [sp, #24]
-; CHECK-MVEFP-NEXT:    vstr s1, [sp, #8]
-; CHECK-MVEFP-NEXT:    vstr s5, [sp, #12]
-; CHECK-MVEFP-NEXT:    vstr s0, [sp]
-; CHECK-MVEFP-NEXT:    vstr s4, [sp, #4]
-; CHECK-MVEFP-NEXT:    vstr s7, [sp, #28]
-; CHECK-MVEFP-NEXT:    vstr s2, [sp, #16]
-; CHECK-MVEFP-NEXT:    vstr s6, [sp, #20]
-; CHECK-MVEFP-NEXT:    ldrd r0, r1, [sp, #8]
-; CHECK-MVEFP-NEXT:    bl fmodf
-; CHECK-MVEFP-NEXT:    mov r5, r0
-; CHECK-MVEFP-NEXT:    ldrd r0, r1, [sp]
-; CHECK-MVEFP-NEXT:    bl fmodf
-; CHECK-MVEFP-NEXT:    ldrd r2, r1, [sp, #16]
-; CHECK-MVEFP-NEXT:    vmov s16, r0
-; CHECK-MVEFP-NEXT:    ldr r6, [sp, #28]
-; CHECK-MVEFP-NEXT:    vmov s17, r5
-; CHECK-MVEFP-NEXT:    mov r0, r2
-; CHECK-MVEFP-NEXT:    bl fmodf
-; CHECK-MVEFP-NEXT:    vmov s18, r0
-; CHECK-MVEFP-NEXT:    mov r0, r4
-; CHECK-MVEFP-NEXT:    mov r1, r6
-; CHECK-MVEFP-NEXT:    bl fmodf
-; CHECK-MVEFP-NEXT:    vmov s19, r0
-; CHECK-MVEFP-NEXT:    vmov q0, q4
-; CHECK-MVEFP-NEXT:    add sp, #32
-; CHECK-MVEFP-NEXT:    vpop {d8, d9}
-; CHECK-MVEFP-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-LABEL: frem_f32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    .pad #32
+; CHECK-NEXT:    sub sp, #32
+; CHECK-NEXT:    vstr s0, [sp]
+; CHECK-NEXT:    ldr r4, [sp]
+; CHECK-NEXT:    vstr s2, [sp, #16]
+; CHECK-NEXT:    vstr s6, [sp, #20]
+; CHECK-NEXT:    vstr s3, [sp, #24]
+; CHECK-NEXT:    vstr s7, [sp, #28]
+; CHECK-NEXT:    vstr s4, [sp, #4]
+; CHECK-NEXT:    vstr s1, [sp, #8]
+; CHECK-NEXT:    vstr s5, [sp, #12]
+; CHECK-NEXT:    ldrd r0, r1, [sp, #16]
+; CHECK-NEXT:    bl fmodf
+; CHECK-NEXT:    mov r5, r0
+; CHECK-NEXT:    ldrd r0, r1, [sp, #24]
+; CHECK-NEXT:    bl fmodf
+; CHECK-NEXT:    ldr r1, [sp, #12]
+; CHECK-NEXT:    vmov s19, r0
+; CHECK-NEXT:    ldrd r6, r2, [sp, #4]
+; CHECK-NEXT:    vmov s18, r5
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    bl fmodf
+; CHECK-NEXT:    vmov s17, r0
+; CHECK-NEXT:    mov r0, r4
+; CHECK-NEXT:    mov r1, r6
+; CHECK-NEXT:    bl fmodf
+; CHECK-NEXT:    vmov s16, r0
+; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    add sp, #32
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %out = frem <4 x float> %in1, %in2
   ret <4 x float> %out
@@ -853,390 +796,198 @@ entry:
 
 
 define arm_aapcs_vfpcc <8 x half> @fdiv_f16(<8 x half> %in1, <8 x half> %in2) {
-; CHECK-MVE-LABEL: fdiv_f16:
-; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    vmov.u16 r0, q1[0]
-; CHECK-MVE-NEXT:    vmov.u16 r1, q0[0]
-; CHECK-MVE-NEXT:    vmov s10, r1
-; CHECK-MVE-NEXT:    vmov.u16 r1, q1[1]
-; CHECK-MVE-NEXT:    vmov s8, r0
-; CHECK-MVE-NEXT:    movs r2, #0
-; CHECK-MVE-NEXT:    vdiv.f16 s8, s10, s8
-; CHECK-MVE-NEXT:    vmov r0, s8
-; CHECK-MVE-NEXT:    vmov s8, r1
-; CHECK-MVE-NEXT:    vmov.u16 r1, q0[1]
-; CHECK-MVE-NEXT:    vmov s10, r1
-; CHECK-MVE-NEXT:    vdiv.f16 s8, s10, s8
-; CHECK-MVE-NEXT:    vmov r1, s8
-; CHECK-MVE-NEXT:    vdup.16 q2, r2
-; CHECK-MVE-NEXT:    vmov.16 q2[0], r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q1[2]
-; CHECK-MVE-NEXT:    vmov s12, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q0[2]
-; CHECK-MVE-NEXT:    vmov s14, r0
-; CHECK-MVE-NEXT:    vmov.16 q2[1], r1
-; CHECK-MVE-NEXT:    vdiv.f16 s12, s14, s12
-; CHECK-MVE-NEXT:    vmov r0, s12
-; CHECK-MVE-NEXT:    vmov.16 q2[2], r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q1[3]
-; CHECK-MVE-NEXT:    vmov s12, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q0[3]
-; CHECK-MVE-NEXT:    vmov s14, r0
-; CHECK-MVE-NEXT:    vdiv.f16 s12, s14, s12
-; CHECK-MVE-NEXT:    vmov r0, s12
-; CHECK-MVE-NEXT:    vmov.16 q2[3], r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q1[4]
-; CHECK-MVE-NEXT:    vmov s12, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q0[4]
-; CHECK-MVE-NEXT:    vmov s14, r0
-; CHECK-MVE-NEXT:    vdiv.f16 s12, s14, s12
-; CHECK-MVE-NEXT:    vmov r0, s12
-; CHECK-MVE-NEXT:    vmov.16 q2[4], r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q1[5]
-; CHECK-MVE-NEXT:    vmov s12, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q0[5]
-; CHECK-MVE-NEXT:    vmov s14, r0
-; CHECK-MVE-NEXT:    vdiv.f16 s12, s14, s12
-; CHECK-MVE-NEXT:    vmov r0, s12
-; CHECK-MVE-NEXT:    vmov.16 q2[5], r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q1[6]
-; CHECK-MVE-NEXT:    vmov s12, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q0[6]
-; CHECK-MVE-NEXT:    vmov s14, r0
-; CHECK-MVE-NEXT:    vdiv.f16 s12, s14, s12
-; CHECK-MVE-NEXT:    vmov r0, s12
-; CHECK-MVE-NEXT:    vmov.16 q2[6], r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q1[7]
-; CHECK-MVE-NEXT:    vmov s4, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q0[7]
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vdiv.f16 s0, s0, s4
-; CHECK-MVE-NEXT:    vmov r0, s0
-; CHECK-MVE-NEXT:    vmov.16 q2[7], r0
-; CHECK-MVE-NEXT:    vmov q0, q2
-; CHECK-MVE-NEXT:    bx lr
-;
-; CHECK-MVEFP-LABEL: fdiv_f16:
-; CHECK-MVEFP:       @ %bb.0: @ %entry
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q1[0]
-; CHECK-MVEFP-NEXT:    vmov.u16 r1, q1[1]
-; CHECK-MVEFP-NEXT:    vmov s8, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q0[0]
-; CHECK-MVEFP-NEXT:    vmov s10, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r2, q0[1]
-; CHECK-MVEFP-NEXT:    vdiv.f16 s8, s10, s8
-; CHECK-MVEFP-NEXT:    vmov s10, r2
-; CHECK-MVEFP-NEXT:    vmov r0, s8
-; CHECK-MVEFP-NEXT:    vmov s8, r1
-; CHECK-MVEFP-NEXT:    vdiv.f16 s8, s10, s8
-; CHECK-MVEFP-NEXT:    vmov r1, s8
-; CHECK-MVEFP-NEXT:    vmov.16 q2[0], r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q1[2]
-; CHECK-MVEFP-NEXT:    vmov.16 q2[1], r1
-; CHECK-MVEFP-NEXT:    vmov s12, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q0[2]
-; CHECK-MVEFP-NEXT:    vmov s14, r0
-; CHECK-MVEFP-NEXT:    vdiv.f16 s12, s14, s12
-; CHECK-MVEFP-NEXT:    vmov r0, s12
-; CHECK-MVEFP-NEXT:    vmov.16 q2[2], r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q1[3]
-; CHECK-MVEFP-NEXT:    vmov s12, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q0[3]
-; CHECK-MVEFP-NEXT:    vmov s14, r0
-; CHECK-MVEFP-NEXT:    vdiv.f16 s12, s14, s12
-; CHECK-MVEFP-NEXT:    vmov r0, s12
-; CHECK-MVEFP-NEXT:    vmov.16 q2[3], r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q1[4]
-; CHECK-MVEFP-NEXT:    vmov s12, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q0[4]
-; CHECK-MVEFP-NEXT:    vmov s14, r0
-; CHECK-MVEFP-NEXT:    vdiv.f16 s12, s14, s12
-; CHECK-MVEFP-NEXT:    vmov r0, s12
-; CHECK-MVEFP-NEXT:    vmov.16 q2[4], r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q1[5]
-; CHECK-MVEFP-NEXT:    vmov s12, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q0[5]
-; CHECK-MVEFP-NEXT:    vmov s14, r0
-; CHECK-MVEFP-NEXT:    vdiv.f16 s12, s14, s12
-; CHECK-MVEFP-NEXT:    vmov r0, s12
-; CHECK-MVEFP-NEXT:    vmov.16 q2[5], r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q1[6]
-; CHECK-MVEFP-NEXT:    vmov s12, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q0[6]
-; CHECK-MVEFP-NEXT:    vmov s14, r0
-; CHECK-MVEFP-NEXT:    vdiv.f16 s12, s14, s12
-; CHECK-MVEFP-NEXT:    vmov r0, s12
-; CHECK-MVEFP-NEXT:    vmov.16 q2[6], r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q1[7]
-; CHECK-MVEFP-NEXT:    vmov s4, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q0[7]
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vdiv.f16 s0, s0, s4
-; CHECK-MVEFP-NEXT:    vmov r0, s0
-; CHECK-MVEFP-NEXT:    vmov.16 q2[7], r0
-; CHECK-MVEFP-NEXT:    vmov q0, q2
-; CHECK-MVEFP-NEXT:    bx lr
+; CHECK-LABEL: fdiv_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.u16 r0, q1[0]
+; CHECK-NEXT:    vmov.u16 r1, q1[1]
+; CHECK-NEXT:    vmov s8, r0
+; CHECK-NEXT:    vmov.u16 r0, q0[0]
+; CHECK-NEXT:    vmov s10, r0
+; CHECK-NEXT:    vmov.u16 r2, q0[1]
+; CHECK-NEXT:    vdiv.f16 s8, s10, s8
+; CHECK-NEXT:    vmov s10, r2
+; CHECK-NEXT:    vmov r0, s8
+; CHECK-NEXT:    vmov s8, r1
+; CHECK-NEXT:    vdiv.f16 s8, s10, s8
+; CHECK-NEXT:    vmov r1, s8
+; CHECK-NEXT:    vmov.16 q2[0], r0
+; CHECK-NEXT:    vmov.u16 r0, q1[2]
+; CHECK-NEXT:    vmov.16 q2[1], r1
+; CHECK-NEXT:    vmov s12, r0
+; CHECK-NEXT:    vmov.u16 r0, q0[2]
+; CHECK-NEXT:    vmov s14, r0
+; CHECK-NEXT:    vdiv.f16 s12, s14, s12
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmov.16 q2[2], r0
+; CHECK-NEXT:    vmov.u16 r0, q1[3]
+; CHECK-NEXT:    vmov s12, r0
+; CHECK-NEXT:    vmov.u16 r0, q0[3]
+; CHECK-NEXT:    vmov s14, r0
+; CHECK-NEXT:    vdiv.f16 s12, s14, s12
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmov.16 q2[3], r0
+; CHECK-NEXT:    vmov.u16 r0, q1[4]
+; CHECK-NEXT:    vmov s12, r0
+; CHECK-NEXT:    vmov.u16 r0, q0[4]
+; CHECK-NEXT:    vmov s14, r0
+; CHECK-NEXT:    vdiv.f16 s12, s14, s12
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmov.16 q2[4], r0
+; CHECK-NEXT:    vmov.u16 r0, q1[5]
+; CHECK-NEXT:    vmov s12, r0
+; CHECK-NEXT:    vmov.u16 r0, q0[5]
+; CHECK-NEXT:    vmov s14, r0
+; CHECK-NEXT:    vdiv.f16 s12, s14, s12
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmov.16 q2[5], r0
+; CHECK-NEXT:    vmov.u16 r0, q1[6]
+; CHECK-NEXT:    vmov s12, r0
+; CHECK-NEXT:    vmov.u16 r0, q0[6]
+; CHECK-NEXT:    vmov s14, r0
+; CHECK-NEXT:    vdiv.f16 s12, s14, s12
+; CHECK-NEXT:    vmov r0, s12
+; CHECK-NEXT:    vmov.16 q2[6], r0
+; CHECK-NEXT:    vmov.u16 r0, q1[7]
+; CHECK-NEXT:    vmov s4, r0
+; CHECK-NEXT:    vmov.u16 r0, q0[7]
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vdiv.f16 s0, s0, s4
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 q2[7], r0
+; CHECK-NEXT:    vmov q0, q2
+; CHECK-NEXT:    bx lr
 entry:
   %out = fdiv <8 x half> %in1, %in2
   ret <8 x half> %out
 }
 
 define arm_aapcs_vfpcc <8 x half> @frem_f16(<8 x half> %in1, <8 x half> %in2) {
-; CHECK-MVE-LABEL: frem_f16:
-; CHECK-MVE:       @ %bb.0: @ %entry
-; CHECK-MVE-NEXT:    .save {r4, lr}
-; CHECK-MVE-NEXT:    push {r4, lr}
-; CHECK-MVE-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
-; CHECK-MVE-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
-; CHECK-MVE-NEXT:    .pad #64
-; CHECK-MVE-NEXT:    sub sp, #64
-; CHECK-MVE-NEXT:    vmov q5, q1
-; CHECK-MVE-NEXT:    vmov q4, q0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q1[0]
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q4[0]
-; CHECK-MVE-NEXT:    vmov s2, r0
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVE-NEXT:    vstr s2, [sp, #56]
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVE-NEXT:    vstr s0, [sp, #60]
-; CHECK-MVE-NEXT:    ldrd r0, r1, [sp, #56]
-; CHECK-MVE-NEXT:    bl fmodf
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q5[1]
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVE-NEXT:    vmov r4, s0
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q4[1]
-; CHECK-MVE-NEXT:    vmov s2, r0
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVE-NEXT:    vstr s2, [sp, #48]
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVE-NEXT:    vstr s0, [sp, #52]
-; CHECK-MVE-NEXT:    ldrd r0, r1, [sp, #48]
-; CHECK-MVE-NEXT:    bl fmodf
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    movs r1, #0
-; CHECK-MVE-NEXT:    vdup.16 q6, r1
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVE-NEXT:    vmov r0, s0
-; CHECK-MVE-NEXT:    vmov.16 q6[0], r4
-; CHECK-MVE-NEXT:    vmov.16 q6[1], r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q5[2]
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q4[2]
-; CHECK-MVE-NEXT:    vmov s2, r0
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVE-NEXT:    vstr s2, [sp, #40]
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVE-NEXT:    vstr s0, [sp, #44]
-; CHECK-MVE-NEXT:    ldrd r0, r1, [sp, #40]
-; CHECK-MVE-NEXT:    bl fmodf
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVE-NEXT:    vmov r0, s0
-; CHECK-MVE-NEXT:    vmov.16 q6[2], r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q5[3]
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q4[3]
-; CHECK-MVE-NEXT:    vmov s2, r0
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVE-NEXT:    vstr s2, [sp, #32]
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVE-NEXT:    vstr s0, [sp, #36]
-; CHECK-MVE-NEXT:    ldrd r0, r1, [sp, #32]
-; CHECK-MVE-NEXT:    bl fmodf
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVE-NEXT:    vmov r0, s0
-; CHECK-MVE-NEXT:    vmov.16 q6[3], r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q5[4]
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q4[4]
-; CHECK-MVE-NEXT:    vmov s2, r0
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVE-NEXT:    vstr s2, [sp, #24]
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVE-NEXT:    vstr s0, [sp, #28]
-; CHECK-MVE-NEXT:    ldrd r0, r1, [sp, #24]
-; CHECK-MVE-NEXT:    bl fmodf
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVE-NEXT:    vmov r0, s0
-; CHECK-MVE-NEXT:    vmov.16 q6[4], r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q5[5]
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q4[5]
-; CHECK-MVE-NEXT:    vmov s2, r0
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVE-NEXT:    vstr s2, [sp, #16]
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVE-NEXT:    vstr s0, [sp, #20]
-; CHECK-MVE-NEXT:    ldrd r0, r1, [sp, #16]
-; CHECK-MVE-NEXT:    bl fmodf
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVE-NEXT:    vmov r0, s0
-; CHECK-MVE-NEXT:    vmov.16 q6[5], r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q5[6]
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q4[6]
-; CHECK-MVE-NEXT:    vmov s2, r0
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVE-NEXT:    vstr s2, [sp, #8]
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVE-NEXT:    vstr s0, [sp, #12]
-; CHECK-MVE-NEXT:    ldrd r0, r1, [sp, #8]
-; CHECK-MVE-NEXT:    bl fmodf
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVE-NEXT:    vmov r0, s0
-; CHECK-MVE-NEXT:    vmov.16 q6[6], r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q5[7]
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vmov.u16 r0, q4[7]
-; CHECK-MVE-NEXT:    vmov s2, r0
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVE-NEXT:    vstr s2, [sp]
-; CHECK-MVE-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVE-NEXT:    vstr s0, [sp, #4]
-; CHECK-MVE-NEXT:    ldrd r0, r1, [sp]
-; CHECK-MVE-NEXT:    bl fmodf
-; CHECK-MVE-NEXT:    vmov s0, r0
-; CHECK-MVE-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVE-NEXT:    vmov r0, s0
-; CHECK-MVE-NEXT:    vmov.16 q6[7], r0
-; CHECK-MVE-NEXT:    vmov q0, q6
-; CHECK-MVE-NEXT:    add sp, #64
-; CHECK-MVE-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
-; CHECK-MVE-NEXT:    pop {r4, pc}
-;
-; CHECK-MVEFP-LABEL: frem_f16:
-; CHECK-MVEFP:       @ %bb.0: @ %entry
-; CHECK-MVEFP-NEXT:    .save {r4, lr}
-; CHECK-MVEFP-NEXT:    push {r4, lr}
-; CHECK-MVEFP-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
-; CHECK-MVEFP-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
-; CHECK-MVEFP-NEXT:    .pad #64
-; CHECK-MVEFP-NEXT:    sub sp, #64
-; CHECK-MVEFP-NEXT:    vmov q5, q1
-; CHECK-MVEFP-NEXT:    vmov q4, q0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q1[0]
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q4[0]
-; CHECK-MVEFP-NEXT:    vmov s2, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVEFP-NEXT:    vstr s2, [sp, #56]
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVEFP-NEXT:    vstr s0, [sp, #60]
-; CHECK-MVEFP-NEXT:    ldrd r0, r1, [sp, #56]
-; CHECK-MVEFP-NEXT:    bl fmodf
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q5[1]
-; CHECK-MVEFP-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVEFP-NEXT:    vmov r4, s0
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q4[1]
-; CHECK-MVEFP-NEXT:    vmov s2, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVEFP-NEXT:    vstr s2, [sp, #48]
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVEFP-NEXT:    vstr s0, [sp, #52]
-; CHECK-MVEFP-NEXT:    ldrd r0, r1, [sp, #48]
-; CHECK-MVEFP-NEXT:    bl fmodf
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vmov.16 q6[0], r4
-; CHECK-MVEFP-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVEFP-NEXT:    vmov r0, s0
-; CHECK-MVEFP-NEXT:    vmov.16 q6[1], r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q5[2]
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q4[2]
-; CHECK-MVEFP-NEXT:    vmov s2, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVEFP-NEXT:    vstr s2, [sp, #40]
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVEFP-NEXT:    vstr s0, [sp, #44]
-; CHECK-MVEFP-NEXT:    ldrd r0, r1, [sp, #40]
-; CHECK-MVEFP-NEXT:    bl fmodf
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVEFP-NEXT:    vmov r0, s0
-; CHECK-MVEFP-NEXT:    vmov.16 q6[2], r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q5[3]
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q4[3]
-; CHECK-MVEFP-NEXT:    vmov s2, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVEFP-NEXT:    vstr s2, [sp, #32]
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVEFP-NEXT:    vstr s0, [sp, #36]
-; CHECK-MVEFP-NEXT:    ldrd r0, r1, [sp, #32]
-; CHECK-MVEFP-NEXT:    bl fmodf
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVEFP-NEXT:    vmov r0, s0
-; CHECK-MVEFP-NEXT:    vmov.16 q6[3], r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q5[4]
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q4[4]
-; CHECK-MVEFP-NEXT:    vmov s2, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVEFP-NEXT:    vstr s2, [sp, #24]
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVEFP-NEXT:    vstr s0, [sp, #28]
-; CHECK-MVEFP-NEXT:    ldrd r0, r1, [sp, #24]
-; CHECK-MVEFP-NEXT:    bl fmodf
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVEFP-NEXT:    vmov r0, s0
-; CHECK-MVEFP-NEXT:    vmov.16 q6[4], r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q5[5]
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q4[5]
-; CHECK-MVEFP-NEXT:    vmov s2, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVEFP-NEXT:    vstr s2, [sp, #16]
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVEFP-NEXT:    vstr s0, [sp, #20]
-; CHECK-MVEFP-NEXT:    ldrd r0, r1, [sp, #16]
-; CHECK-MVEFP-NEXT:    bl fmodf
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVEFP-NEXT:    vmov r0, s0
-; CHECK-MVEFP-NEXT:    vmov.16 q6[5], r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q5[6]
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q4[6]
-; CHECK-MVEFP-NEXT:    vmov s2, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVEFP-NEXT:    vstr s2, [sp, #8]
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVEFP-NEXT:    vstr s0, [sp, #12]
-; CHECK-MVEFP-NEXT:    ldrd r0, r1, [sp, #8]
-; CHECK-MVEFP-NEXT:    bl fmodf
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVEFP-NEXT:    vmov r0, s0
-; CHECK-MVEFP-NEXT:    vmov.16 q6[6], r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q5[7]
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vmov.u16 r0, q4[7]
-; CHECK-MVEFP-NEXT:    vmov s2, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s2, s2
-; CHECK-MVEFP-NEXT:    vstr s2, [sp]
-; CHECK-MVEFP-NEXT:    vcvtb.f32.f16 s0, s0
-; CHECK-MVEFP-NEXT:    vstr s0, [sp, #4]
-; CHECK-MVEFP-NEXT:    ldrd r0, r1, [sp]
-; CHECK-MVEFP-NEXT:    bl fmodf
-; CHECK-MVEFP-NEXT:    vmov s0, r0
-; CHECK-MVEFP-NEXT:    vcvtb.f16.f32 s0, s0
-; CHECK-MVEFP-NEXT:    vmov r0, s0
-; CHECK-MVEFP-NEXT:    vmov.16 q6[7], r0
-; CHECK-MVEFP-NEXT:    vmov q0, q6
-; CHECK-MVEFP-NEXT:    add sp, #64
-; CHECK-MVEFP-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
-; CHECK-MVEFP-NEXT:    pop {r4, pc}
+; CHECK-LABEL: frem_f16:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r4, lr}
+; CHECK-NEXT:    push {r4, lr}
+; CHECK-NEXT:    .vsave {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    .pad #64
+; CHECK-NEXT:    sub sp, #64
+; CHECK-NEXT:    vmov q5, q1
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov.u16 r0, q1[0]
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vmov.u16 r0, q4[0]
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-NEXT:    vstr s2, [sp, #56]
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vstr s0, [sp, #60]
+; CHECK-NEXT:    ldrd r0, r1, [sp, #56]
+; CHECK-NEXT:    bl fmodf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vmov.u16 r0, q5[1]
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vmov r4, s0
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vmov.u16 r0, q4[1]
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-NEXT:    vstr s2, [sp, #48]
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vstr s0, [sp, #52]
+; CHECK-NEXT:    ldrd r0, r1, [sp, #48]
+; CHECK-NEXT:    bl fmodf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vmov.16 q6[0], r4
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 q6[1], r0
+; CHECK-NEXT:    vmov.u16 r0, q5[2]
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vmov.u16 r0, q4[2]
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-NEXT:    vstr s2, [sp, #40]
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vstr s0, [sp, #44]
+; CHECK-NEXT:    ldrd r0, r1, [sp, #40]
+; CHECK-NEXT:    bl fmodf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 q6[2], r0
+; CHECK-NEXT:    vmov.u16 r0, q5[3]
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vmov.u16 r0, q4[3]
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-NEXT:    vstr s2, [sp, #32]
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vstr s0, [sp, #36]
+; CHECK-NEXT:    ldrd r0, r1, [sp, #32]
+; CHECK-NEXT:    bl fmodf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 q6[3], r0
+; CHECK-NEXT:    vmov.u16 r0, q5[4]
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vmov.u16 r0, q4[4]
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-NEXT:    vstr s2, [sp, #24]
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vstr s0, [sp, #28]
+; CHECK-NEXT:    ldrd r0, r1, [sp, #24]
+; CHECK-NEXT:    bl fmodf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 q6[4], r0
+; CHECK-NEXT:    vmov.u16 r0, q5[5]
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vmov.u16 r0, q4[5]
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-NEXT:    vstr s2, [sp, #16]
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vstr s0, [sp, #20]
+; CHECK-NEXT:    ldrd r0, r1, [sp, #16]
+; CHECK-NEXT:    bl fmodf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 q6[5], r0
+; CHECK-NEXT:    vmov.u16 r0, q5[6]
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vmov.u16 r0, q4[6]
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-NEXT:    vstr s2, [sp, #8]
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vstr s0, [sp, #12]
+; CHECK-NEXT:    ldrd r0, r1, [sp, #8]
+; CHECK-NEXT:    bl fmodf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 q6[6], r0
+; CHECK-NEXT:    vmov.u16 r0, q5[7]
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vmov.u16 r0, q4[7]
+; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
+; CHECK-NEXT:    vstr s2, [sp]
+; CHECK-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-NEXT:    vstr s0, [sp, #4]
+; CHECK-NEXT:    ldrd r0, r1, [sp]
+; CHECK-NEXT:    bl fmodf
+; CHECK-NEXT:    vmov s0, r0
+; CHECK-NEXT:    vcvtb.f16.f32 s0, s0
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.16 q6[7], r0
+; CHECK-NEXT:    vmov q0, q6
+; CHECK-NEXT:    add sp, #64
+; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13}
+; CHECK-NEXT:    pop {r4, pc}
 entry:
   %out = frem <8 x half> %in1, %in2
   ret <8 x half> %out

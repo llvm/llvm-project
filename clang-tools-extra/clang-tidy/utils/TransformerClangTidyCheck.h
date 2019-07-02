@@ -10,7 +10,9 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_TRANSFORMER_CLANG_TIDY_CHECK_H
 
 #include "../ClangTidy.h"
+#include "../utils/IncludeInserter.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/Tooling/Refactoring/Transformer.h"
 #include <deque>
 #include <vector>
@@ -52,11 +54,14 @@ public:
   TransformerClangTidyCheck(tooling::RewriteRule R, StringRef Name,
                             ClangTidyContext *Context);
 
+  void registerPPCallbacks(const SourceManager &SM, Preprocessor *PP,
+                           Preprocessor *ModuleExpanderPP) override;
   void registerMatchers(ast_matchers::MatchFinder *Finder) final;
   void check(const ast_matchers::MatchFinder::MatchResult &Result) final;
 
 private:
   Optional<tooling::RewriteRule> Rule;
+  std::unique_ptr<clang::tidy::utils::IncludeInserter> Inserter;
 };
 
 } // namespace utils

@@ -1480,17 +1480,6 @@ def VCVTTPS2DQYrm : VS2SI<0x5B, MRMSrcMem, (outs VR256:$dst), (ins f256mem:$src)
                           Sched<[WriteCvtPS2IYLd]>, VEX_WIG;
 }
 
-let Predicates = [HasAVX, NoVLX] in {
-  def : Pat<(v4i32 (fp_to_sint (v4f32 VR128:$src))),
-            (VCVTTPS2DQrr VR128:$src)>;
-  def : Pat<(v4i32 (fp_to_sint (loadv4f32 addr:$src))),
-            (VCVTTPS2DQrm addr:$src)>;
-  def : Pat<(v8i32 (fp_to_sint (v8f32 VR256:$src))),
-            (VCVTTPS2DQYrr VR256:$src)>;
-  def : Pat<(v8i32 (fp_to_sint (loadv8f32 addr:$src))),
-            (VCVTTPS2DQYrm addr:$src)>;
-}
-
 def CVTTPS2DQrr : S2SI<0x5B, MRMSrcReg, (outs VR128:$dst), (ins VR128:$src),
                        "cvttps2dq\t{$src, $dst|$dst, $src}",
                        [(set VR128:$dst,
@@ -1501,13 +1490,6 @@ def CVTTPS2DQrm : S2SI<0x5B, MRMSrcMem, (outs VR128:$dst), (ins f128mem:$src),
                        [(set VR128:$dst,
                          (v4i32 (X86cvttp2si (memopv4f32 addr:$src))))]>,
                        Sched<[WriteCvtPS2ILd]>;
-
-let Predicates = [UseSSE2] in {
-  def : Pat<(v4i32 (fp_to_sint (v4f32 VR128:$src))),
-            (CVTTPS2DQrr VR128:$src)>;
-  def : Pat<(v4i32 (fp_to_sint (memopv4f32 addr:$src))),
-            (CVTTPS2DQrm addr:$src)>;
-}
 
 // The assembler can recognize rr 256-bit instructions by seeing a ymm
 // register, but the same isn't true when using memory operands instead.

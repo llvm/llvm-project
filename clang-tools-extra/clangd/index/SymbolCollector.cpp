@@ -314,10 +314,12 @@ bool SymbolCollector::handleDeclOccurence(
   if (IsOnlyRef && !CollectRef)
     return true;
 
-  // ND is the canonical (i.e. first) declaration. If it's in the main file,
-  // then no public declaration was visible, so assume it's main-file only.
+  // ND is the canonical (i.e. first) declaration. If it's in the main file
+  // (which is not a header), then no public declaration was visible, so assume
+  // it's main-file only.
   bool IsMainFileOnly =
-      SM.isWrittenInMainFile(SM.getExpansionLoc(ND->getBeginLoc()));
+      SM.isWrittenInMainFile(SM.getExpansionLoc(ND->getBeginLoc())) &&
+      !ASTCtx->getLangOpts().IsHeaderFile;
   // In C, printf is a redecl of an implicit builtin! So check OrigD instead.
   if (ASTNode.OrigD->isImplicit() ||
       !shouldCollectSymbol(*ND, *ASTCtx, Opts, IsMainFileOnly))

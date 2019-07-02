@@ -4462,13 +4462,14 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
 /// return a DAG expression that will generate the same comparison result
 /// using only multiplications, additions and shifts/rotations.
 /// Ref: "Hacker's Delight" 10-17.
-SDValue TargetLowering::buildUREMEqFold(EVT VT, SDValue REMNode,
-                                        SDValue CompNode, ISD::CondCode Cond,
+SDValue TargetLowering::buildUREMEqFold(EVT SETCCVT, SDValue REMNode,
+                                        SDValue CompTargetNode,
+                                        ISD::CondCode Cond,
                                         DAGCombinerInfo &DCI,
                                         const SDLoc &DL) const {
   SmallVector<SDNode *, 2> Built;
-  if (SDValue Folded =
-          prepareUREMEqFold(VT, REMNode, CompNode, Cond, DCI, DL, Built)) {
+  if (SDValue Folded = prepareUREMEqFold(SETCCVT, REMNode, CompTargetNode, Cond,
+                                         DCI, DL, Built)) {
     for (SDNode *N : Built)
       DCI.AddToWorklist(N);
     return Folded;
@@ -4478,9 +4479,9 @@ SDValue TargetLowering::buildUREMEqFold(EVT VT, SDValue REMNode,
 }
 
 SDValue
-TargetLowering::prepareUREMEqFold(EVT VT, SDValue REMNode, SDValue CompNode,
-                                  ISD::CondCode Cond, DAGCombinerInfo &DCI,
-                                  const SDLoc &DL,
+TargetLowering::prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
+                                  SDValue CompTargetNode, ISD::CondCode Cond,
+                                  DAGCombinerInfo &DCI, const SDLoc &DL,
                                   SmallVectorImpl<SDNode *> &Created) const {
   // fold (seteq/ne (urem N, D), 0) -> (setule/ugt (rotr (mul N, P), K), Q)
   // - D must be constant with D = D0 * 2^K where D0 is odd and D0 != 1
@@ -4490,15 +4491,15 @@ TargetLowering::prepareUREMEqFold(EVT VT, SDValue REMNode, SDValue CompNode,
   assert((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
          "Only applicable for (in)equality comparisons.");
 
-  EVT REMVT = REMNode->getValueType(0);
+  EVT VT = REMNode.getValueType();
 
   // If MUL is unavailable, we cannot proceed in any case.
-  if (!isOperationLegalOrCustom(ISD::MUL, REMVT))
+  if (!isOperationLegalOrCustom(ISD::MUL, VT))
     return SDValue();
 
   // TODO: Add non-uniform constant support.
   ConstantSDNode *Divisor = isConstOrConstSplat(REMNode->getOperand(1));
-  ConstantSDNode *CompTarget = isConstOrConstSplat(CompNode);
+  ConstantSDNode *CompTarget = isConstOrConstSplat(CompTargetNode);
   if (!Divisor || !CompTarget || Divisor->isNullValue() ||
       !CompTarget->isNullValue())
     return SDValue();
@@ -4529,28 +4530,28 @@ TargetLowering::prepareUREMEqFold(EVT VT, SDValue REMNode, SDValue CompNode,
 
   SelectionDAG &DAG = DCI.DAG;
 
-  SDValue PVal = DAG.getConstant(P, DL, REMVT);
-  SDValue QVal = DAG.getConstant(Q, DL, REMVT);
+  SDValue PVal = DAG.getConstant(P, DL, VT);
+  SDValue QVal = DAG.getConstant(Q, DL, VT);
   // (mul N, P)
-  SDValue Op1 = DAG.getNode(ISD::MUL, DL, REMVT, REMNode->getOperand(0), PVal);
+  SDValue Op1 = DAG.getNode(ISD::MUL, DL, VT, REMNode->getOperand(0), PVal);
   Created.push_back(Op1.getNode());
 
   // Rotate right only if D was even.
   if (DivisorIsEven) {
     // We need ROTR to do this.
-    if (!isOperationLegalOrCustom(ISD::ROTR, REMVT))
+    if (!isOperationLegalOrCustom(ISD::ROTR, VT))
       return SDValue();
     SDValue ShAmt =
-        DAG.getConstant(K, DL, getShiftAmountTy(REMVT, DAG.getDataLayout()));
+        DAG.getConstant(K, DL, getShiftAmountTy(VT, DAG.getDataLayout()));
     SDNodeFlags Flags;
     Flags.setExact(true);
     // UREM: (rotr (mul N, P), K)
-    Op1 = DAG.getNode(ISD::ROTR, DL, REMVT, Op1, ShAmt, Flags);
+    Op1 = DAG.getNode(ISD::ROTR, DL, VT, Op1, ShAmt, Flags);
     Created.push_back(Op1.getNode());
   }
 
   // UREM: (setule/setugt (rotr (mul N, P), K), Q)
-  return DAG.getSetCC(DL, VT, Op1, QVal,
+  return DAG.getSetCC(DL, SETCCVT, Op1, QVal,
                       ((Cond == ISD::SETEQ) ? ISD::SETULE : ISD::SETUGT));
 }
 

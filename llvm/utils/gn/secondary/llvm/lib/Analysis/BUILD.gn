@@ -55,7 +55,6 @@ static_library("Analysis") {
     "InstructionSimplify.cpp",
     "Interval.cpp",
     "IntervalPartition.cpp",
-    "IteratedDominanceFrontier.cpp",
     "LazyBlockFrequencyInfo.cpp",
     "LazyBranchProbabilityInfo.cpp",
     "LazyCallGraph.cpp",

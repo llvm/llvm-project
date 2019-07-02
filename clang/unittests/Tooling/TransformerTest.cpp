@@ -198,6 +198,42 @@ TEST_F(TransformerTest, Flag) {
   testRule(std::move(Rule), Input, Expected);
 }
 
+TEST_F(TransformerTest, AddIncludeQuoted) {
+  RewriteRule Rule = makeRule(callExpr(callee(functionDecl(hasName("f")))),
+                              change(text("other()")));
+  addInclude(Rule, "clang/OtherLib.h");
+
+  std::string Input = R"cc(
+    int f(int x);
+    int h(int x) { return f(x); }
+  )cc";
+  std::string Expected = R"cc(#include "clang/OtherLib.h"
+
+    int f(int x);
+    int h(int x) { return other(); }
+  )cc";
+
+  testRule(Rule, Input, Expected);
+}
+
+TEST_F(TransformerTest, AddIncludeAngled) {
+  RewriteRule Rule = makeRule(callExpr(callee(functionDecl(hasName("f")))),
+                              change(text("other()")));
+  addInclude(Rule, "clang/OtherLib.h", IncludeFormat::Angled);
+
+  std::string Input = R"cc(
+    int f(int x);
+    int h(int x) { return f(x); }
+  )cc";
+  std::string Expected = R"cc(#include <clang/OtherLib.h>
+
+    int f(int x);
+    int h(int x) { return other(); }
+  )cc";
+
+  testRule(Rule, Input, Expected);
+}
+
 TEST_F(TransformerTest, NodePartNameNamedDecl) {
   StringRef Fun = "fun";
   RewriteRule Rule = makeRule(functionDecl(hasName("bad")).bind(Fun),

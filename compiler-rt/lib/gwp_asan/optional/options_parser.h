@@ -9,18 +9,17 @@
 #ifndef GWP_ASAN_OPTIONAL_OPTIONS_PARSER_H_
 #define GWP_ASAN_OPTIONAL_OPTIONS_PARSER_H_
 
+#include "gwp_asan/optional/backtrace.h"
 #include "gwp_asan/options.h"
 #include "sanitizer_common/sanitizer_common.h"
 
 namespace gwp_asan {
 namespace options {
-
 // Parse the options from the GWP_ASAN_FLAGS environment variable.
 void initOptions();
-// Returns a pointer to the initialised options. Call initOptions() prior to
-// calling this function.
-const Options &getOptions();
-
+// Returns the initialised options. Call initOptions() prior to calling this
+// function.
+Options &getOptions();
 } // namespace options
 } // namespace gwp_asan
 

@@ -1,12 +1,13 @@
-; RUN: llc < %s -mtriple=thumbv7-none-eabi   -mcpu=cortex-m3 | FileCheck %s -check-prefix=CHECK -check-prefix=NONE
+; RUN: llc < %s -mtriple=thumbv7-none-eabi   -mcpu=cortex-m3 | FileCheck %s -check-prefix=CHECK -check-prefix=NONE -check-prefix=NOREGS
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m4 | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=SP -check-prefix=VFP4-ALL
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-m7 | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=DP -check-prefix=FP-ARMv8
 ; RUN: llc < %s -mtriple=thumbv7-none-eabihf -mcpu=cortex-a8 | FileCheck %s -check-prefix=CHECK -check-prefix=HARD -check-prefix=DP -check-prefix=VFP4-ALL -check-prefix=VFP4-DP
+; RUN: llc < %s -mtriple=thumbv8.1m.main-none-eabihf -mattr=+mve | FileCheck %s -check-prefix=CHECK -check-prefix=NONE -check-prefix=ONLYREGS
 
 define float @add_f(float %a, float %b) {
 entry:
 ; CHECK-LABEL: add_f:
-; NONE: bl __aeabi_fadd
+; NONE: {{b|bl}} __aeabi_fadd
 ; HARD: vadd.f32  s0, s0, s1
   %0 = fadd float %a, %b
   ret float %0
@@ -15,8 +16,8 @@ entry:
 define double @add_d(double %a, double %b) {
 entry:
 ; CHECK-LABEL: add_d:
-; NONE: bl __aeabi_dadd
-; SP: bl __aeabi_dadd
+; NONE: {{b|bl}} __aeabi_dadd
+; SP: {{b|bl}} __aeabi_dadd
 ; DP: vadd.f64  d0, d0, d1
   %0 = fadd double %a, %b
   ret double %0
@@ -25,7 +26,7 @@ entry:
 define float @sub_f(float %a, float %b) {
 entry:
 ; CHECK-LABEL: sub_f:
-; NONE: bl __aeabi_fsub
+; NONE: {{b|bl}} __aeabi_fsub
 ; HARD: vsub.f32  s
   %0 = fsub float %a, %b
   ret float %0
@@ -34,8 +35,8 @@ entry:
 define double @sub_d(double %a, double %b) {
 entry:
 ; CHECK-LABEL: sub_d:
-; NONE: bl __aeabi_dsub
-; SP: bl __aeabi_dsub
+; NONE: {{b|bl}} __aeabi_dsub
+; SP: {{b|bl}} __aeabi_dsub
 ; DP: vsub.f64  d0, d0, d1
   %0 = fsub double %a, %b
   ret double %0
@@ -44,7 +45,7 @@ entry:
 define float @mul_f(float %a, float %b) {
 entry:
 ; CHECK-LABEL: mul_f:
-; NONE: bl __aeabi_fmul
+; NONE: {{b|bl}} __aeabi_fmul
 ; HARD: vmul.f32  s
   %0 = fmul float %a, %b
   ret float %0
@@ -53,8 +54,8 @@ entry:
 define double @mul_d(double %a, double %b) {
 entry:
 ; CHECK-LABEL: mul_d:
-; NONE: bl __aeabi_dmul
-; SP: bl __aeabi_dmul
+; NONE: {{b|bl}} __aeabi_dmul
+; SP: {{b|bl}} __aeabi_dmul
 ; DP: vmul.f64  d0, d0, d1
   %0 = fmul double %a, %b
   ret double %0
@@ -63,7 +64,7 @@ entry:
 define float @div_f(float %a, float %b) {
 entry:
 ; CHECK-LABEL: div_f:
-; NONE: bl __aeabi_fdiv
+; NONE: {{b|bl}} __aeabi_fdiv
 ; HARD: vdiv.f32  s
   %0 = fdiv float %a, %b
   ret float %0
@@ -72,8 +73,8 @@ entry:
 define double @div_d(double %a, double %b) {
 entry:
 ; CHECK-LABEL: div_d:
-; NONE: bl __aeabi_ddiv
-; SP: bl __aeabi_ddiv
+; NONE: {{b|bl}} __aeabi_ddiv
+; SP: {{b|bl}} __aeabi_ddiv
 ; DP: vdiv.f64  d0, d0, d1
   %0 = fdiv double %a, %b
   ret double %0
@@ -109,7 +110,8 @@ entry:
 define double @load_d(double* %a) {
 entry:
 ; CHECK-LABEL: load_d:
-; NONE: ldm r0, {r0, r1}
+; NOREGS: ldm r0, {r0, r1}
+; ONLYREGS: vldr d0, [r0]
 ; HARD: vldr d0, [r0]
   %0 = load double, double* %a, align 8
   ret double %0
@@ -127,7 +129,8 @@ entry:
 define void @store_d(double* %a, double %b) {
 entry:
 ; CHECK-LABEL: store_d:
-; NONE: strd r2, r3, [r0]
+; NOREGS: strd r2, r3, [r0]
+; ONLYREGS: vstr d0, [r0]
 ; HARD: vstr d0, [r0]
   store double %b, double* %a, align 8
   ret void
@@ -259,8 +262,10 @@ define i64 @bitcast_d_to_i(double %a) {
 
 define float @select_f(float %a, float %b, i1 %c) {
 ; CHECK-LABEL: select_f:
-; NONE: lsls    r2, r2, #31
-; NONE: moveq   r0, r1
+; NOREGS: lsls    r2, r2, #31
+; NOREGS: moveq   r0, r1
+; ONLYREGS: lsls    r2, r2, #31
+; ONLYREGS: vmovne.f32      s2, s0
 ; HARD: lsls    r0, r0, #31
 ; VFP4-ALL: vmovne.f32      s1, s0
 ; VFP4-ALL: vmov.f32        s0, s1
@@ -273,8 +278,8 @@ define double @select_d(double %a, double %b, i1 %c) {
 ; CHECK-LABEL: select_d:
 ; NONE: ldr{{(.w)?}}     [[REG:r[0-9]+]], [sp]
 ; NONE  ands    [[REG]], [[REG]], #1
-; NONE: moveq   r0, r2
-; NONE: moveq   r1, r3
+; NONE-DAG: moveq   r0, r2
+; NONE-DAG: moveq   r1, r3
 ; SP: ands r0, r0, #1
 ; SP-DAG: vmov [[ALO:r[0-9]+]], [[AHI:r[0-9]+]], d0
 ; SP-DAG: vmov [[BLO:r[0-9]+]], [[BHI:r[0-9]+]], d1

@@ -2269,13 +2269,13 @@ def VMOVDcc  : PseudoInst<(outs DPR:$Dd), (ins DPR:$Dn, DPR:$Dm, cmovpred:$p),
                     IIC_fpUNA64,
                     [(set (f64 DPR:$Dd),
                           (ARMcmov DPR:$Dn, DPR:$Dm, cmovpred:$p))]>,
-               RegConstraint<"$Dn = $Dd">, Requires<[HasVFP2,HasDPVFP]>;
+               RegConstraint<"$Dn = $Dd">, Requires<[HasFPRegs64]>;
 
 def VMOVScc  : PseudoInst<(outs SPR:$Sd), (ins SPR:$Sn, SPR:$Sm, cmovpred:$p),
                     IIC_fpUNA32,
                     [(set (f32 SPR:$Sd),
                           (ARMcmov SPR:$Sn, SPR:$Sm, cmovpred:$p))]>,
-               RegConstraint<"$Sn = $Sd">, Requires<[HasVFP2]>;
+               RegConstraint<"$Sn = $Sd">, Requires<[HasFPRegs]>;
 } // hasSideEffects
 
 //===----------------------------------------------------------------------===//
