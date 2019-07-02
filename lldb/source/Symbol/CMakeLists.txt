@@ -13,7 +13,9 @@ add_lldb_library(lldbSymbol
   CompactUnwindInfo.cpp
   DebugMacros.cpp
   Declaration.cpp
+  DeclVendor.cpp
   DWARFCallFrameInfo.cpp
+  FuncUnwinders.cpp
   Function.cpp
   FuncUnwinders.cpp
   LineEntry.cpp
