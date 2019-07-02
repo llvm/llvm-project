@@ -174,8 +174,8 @@ static CompilerType ImportType(SwiftASTContext &target_context,
   ConstString mangled_counterpart;
   bool found_counterpart = type_name.GetMangledCounterpart(mangled_counterpart);
   if (found_counterpart)
-    target_type = target_context.GetTypeFromMangledTypename(
-        mangled_counterpart.GetCString(), mangled_error);
+    target_type = target_context.GetTypeFromMangledTypename(mangled_counterpart,
+                                                            mangled_error);
 
   if (!target_type.IsValid())
     target_type = target_context.ImportType(source_type, error);
