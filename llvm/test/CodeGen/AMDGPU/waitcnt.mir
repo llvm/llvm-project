@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefix=GFX89 %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefix=GFX89 %s
+# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefixes=CHECK,GFX89 %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefixes=CHECK,GFX89 %s
 
 --- |
   define amdgpu_kernel void @flat_zero_waitcnt(i32 addrspace(1)* %global4,

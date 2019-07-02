@@ -98,8 +98,14 @@ ASTEdit tooling::change(RangeSelector S, TextGenerator Replacement) {
 
 RewriteRule tooling::makeRule(DynTypedMatcher M, SmallVector<ASTEdit, 1> Edits,
                               TextGenerator Explanation) {
-  return RewriteRule{{RewriteRule::Case{std::move(M), std::move(Edits),
-                                        std::move(Explanation)}}};
+  return RewriteRule{{RewriteRule::Case{
+      std::move(M), std::move(Edits), std::move(Explanation), {}}}};
+}
+
+void tooling::addInclude(RewriteRule &Rule, StringRef Header,
+                         IncludeFormat Format) {
+  for (auto &Case : Rule.Cases)
+    Case.AddedIncludes.emplace_back(Header.str(), Format);
 }
 
 // Determines whether A is a base type of B in the class hierarchy, including
@@ -217,8 +223,8 @@ void Transformer::run(const MatchResult &Result) {
       Root->second.getSourceRange().getBegin());
   assert(RootLoc.isValid() && "Invalid location for Root node of match.");
 
-  auto Transformations = tooling::detail::translateEdits(
-      Result, tooling::detail::findSelectedCase(Result, Rule).Edits);
+  RewriteRule::Case Case = tooling::detail::findSelectedCase(Result, Rule);
+  auto Transformations = tooling::detail::translateEdits(Result, Case.Edits);
   if (!Transformations) {
     Consumer(Transformations.takeError());
     return;
@@ -238,6 +244,18 @@ void Transformer::run(const MatchResult &Result) {
     if (auto Err = AC.replace(*Result.SourceManager, T.Range, T.Replacement)) {
       Consumer(std::move(Err));
       return;
+    }
+  }
+
+  for (const auto &I : Case.AddedIncludes) {
+    auto &Header = I.first;
+    switch (I.second) {
+      case IncludeFormat::Quoted:
+        AC.addHeader(Header);
+        break;
+      case IncludeFormat::Angled:
+        AC.addHeader((llvm::Twine("<") + Header + ">").str());
+        break;
     }
   }
 

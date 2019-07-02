@@ -278,12 +278,15 @@ bool AMDGPUInstructionSelector::selectG_ADD(MachineInstr &I) const {
       .add(Lo1)
       .add(Lo2)
       .addImm(0);
-    BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_ADDC_U32_e64), DstHi)
+    MachineInstr *Addc = BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_ADDC_U32_e64), DstHi)
       .addDef(MRI.createVirtualRegister(CarryRC), RegState::Dead)
       .add(Hi1)
       .add(Hi2)
       .addReg(CarryReg, RegState::Kill)
       .addImm(0);
+
+    if (!constrainSelectedInstRegOperands(*Addc, TII, TRI, RBI))
+      return false;
   }
 
   BuildMI(*BB, &I, DL, TII.get(AMDGPU::REG_SEQUENCE), DstReg)
@@ -292,9 +295,8 @@ bool AMDGPUInstructionSelector::selectG_ADD(MachineInstr &I) const {
     .addReg(DstHi)
     .addImm(AMDGPU::sub1);
 
-  if (!RBI.constrainGenericRegister(DstReg, RC, MRI) ||
-      !RBI.constrainGenericRegister(I.getOperand(1).getReg(), RC, MRI) ||
-      !RBI.constrainGenericRegister(I.getOperand(2).getReg(), RC, MRI))
+
+  if (!RBI.constrainGenericRegister(DstReg, RC, MRI))
     return false;
 
   I.eraseFromParent();
@@ -373,18 +375,17 @@ bool AMDGPUInstructionSelector::selectG_INSERT(MachineInstr &I) const {
   return true;
 }
 
-bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I,
-                                          CodeGenCoverage &CoverageInfo) const {
+bool AMDGPUInstructionSelector::selectG_INTRINSIC(
+  MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
   unsigned IntrinsicID =  I.getOperand(I.getNumExplicitDefs()).getIntrinsicID();
   switch (IntrinsicID) {
-  default:
-    break;
   case Intrinsic::maxnum:
   case Intrinsic::minnum:
   case Intrinsic::amdgcn_cvt_pkrtz:
     return selectImpl(I, CoverageInfo);
+  default:
+    return selectImpl(I, CoverageInfo);
   }
-  return false;
 }
 
 static int getV_CMPOpcode(CmpInst::Predicate P, unsigned Size) {
@@ -523,8 +524,7 @@ buildEXP(const TargetInstrInfo &TII, MachineInstr *Insert, unsigned Tgt,
 }
 
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
-                                                 MachineInstr &I,
-						 CodeGenCoverage &CoverageInfo) const {
+  MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
   MachineBasicBlock *BB = I.getParent();
   MachineFunction *MF = BB->getParent();
   MachineRegisterInfo &MRI = MF->getRegInfo();
@@ -563,8 +563,9 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     I.eraseFromParent();
     return constrainSelectedInstRegOperands(*Exp, TII, TRI, RBI);
   }
+  default:
+    return selectImpl(I, CoverageInfo);
   }
-  return false;
 }
 
 bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
@@ -1180,6 +1181,11 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
     return selectG_BRCOND(I);
   case TargetOpcode::G_FRAME_INDEX:
     return selectG_FRAME_INDEX(I);
+  case TargetOpcode::G_FENCE:
+    // FIXME: Tablegen importer doesn't handle the imm operands correctly, and
+    // is checking for G_CONSTANT
+    I.setDesc(TII.get(AMDGPU::ATOMIC_FENCE));
+    return true;
   }
   return false;
 }

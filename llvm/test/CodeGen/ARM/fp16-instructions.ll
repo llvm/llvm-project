@@ -1,6 +1,8 @@
 ; SOFT:
 ; RUN: llc < %s -mtriple=arm-none-eabi -float-abi=soft     | FileCheck %s --check-prefixes=CHECK,CHECK-SOFT
 ; RUN: llc < %s -mtriple=thumb-none-eabi -float-abi=soft   | FileCheck %s --check-prefixes=CHECK,CHECK-SOFT
+; RUN: llc < %s -mtriple=thumbv8.1m.main-none-eabi -mattr=+mve | FileCheck %s --check-prefixes=CHECK,CHECK-SOFT
+; RUN: llc < %s -mtriple=thumbv8.1m.main-none-eabi -float-abi=soft -mattr=+mve | FileCheck %s --check-prefixes=CHECK,CHECK-SOFT
 
 ; SOFTFP:
 ; RUN: llc < %s -mtriple=arm-none-eabi -mattr=+vfp3        | FileCheck %s --check-prefixes=CHECK,CHECK-SOFTFP-VFP3
@@ -206,8 +208,8 @@ for.end:
 
 ; CHECK-LABEL:            VCMPBRCC:
 
-; CHECK-SOFT:             bl  __aeabi_fcmpgt
-; CHECK-SOFT:             cmp r0, #0
+; CHECK-SOFT:             bl  __aeabi_fcmp{{gt|le}}
+; CHECK-SOFT:             cmp r0, #{{0|1}}
 
 ; CHECK-SOFTFP-FP16:      vcvtb.f32.f16 [[S2:s[0-9]]], [[S2]]
 ; CHECK-SOFTFP-FP16:      vcmpe.f32 [[S2]], s0

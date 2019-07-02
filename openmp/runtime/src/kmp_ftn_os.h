@@ -70,9 +70,7 @@
 #define FTN_GET_ANCESTOR_THREAD_NUM omp_get_ancestor_thread_num
 #define FTN_GET_TEAM_SIZE omp_get_team_size
 #define FTN_IN_FINAL omp_in_final
-//  #define FTN_SET_PROC_BIND                    omp_set_proc_bind
 #define FTN_GET_PROC_BIND omp_get_proc_bind
-//  #define FTN_CURR_PROC_BIND                   omp_curr_proc_bind
 #if OMP_40_ENABLED
 #define FTN_GET_NUM_TEAMS omp_get_num_teams
 #define FTN_GET_TEAM_NUM omp_get_team_num
@@ -203,9 +201,7 @@
 #define FTN_GET_ANCESTOR_THREAD_NUM omp_get_ancestor_thread_num_
 #define FTN_GET_TEAM_SIZE omp_get_team_size_
 #define FTN_IN_FINAL omp_in_final_
-//  #define FTN_SET_PROC_BIND                    omp_set_proc_bind_
 #define FTN_GET_PROC_BIND omp_get_proc_bind_
-//  #define FTN_CURR_PROC_BIND                   omp_curr_proc_bind_
 #if OMP_40_ENABLED
 #define FTN_GET_NUM_TEAMS omp_get_num_teams_
 #define FTN_GET_TEAM_NUM omp_get_team_num_
@@ -338,9 +334,7 @@
 #define FTN_GET_ANCESTOR_THREAD_NUM OMP_GET_ANCESTOR_THREAD_NUM
 #define FTN_GET_TEAM_SIZE OMP_GET_TEAM_SIZE
 #define FTN_IN_FINAL OMP_IN_FINAL
-//  #define FTN_SET_PROC_BIND                    OMP_SET_PROC_BIND
 #define FTN_GET_PROC_BIND OMP_GET_PROC_BIND
-//  #define FTN_CURR_PROC_BIND                   OMP_CURR_PROC_BIND
 #if OMP_40_ENABLED
 #define FTN_GET_NUM_TEAMS OMP_GET_NUM_TEAMS
 #define FTN_GET_TEAM_NUM OMP_GET_TEAM_NUM
@@ -471,9 +465,7 @@
 #define FTN_GET_ANCESTOR_THREAD_NUM OMP_GET_ANCESTOR_THREAD_NUM_
 #define FTN_GET_TEAM_SIZE OMP_GET_TEAM_SIZE_
 #define FTN_IN_FINAL OMP_IN_FINAL_
-//  #define FTN_SET_PROC_BIND                    OMP_SET_PROC_BIND_
 #define FTN_GET_PROC_BIND OMP_GET_PROC_BIND_
-//  #define FTN_CURR_PROC_BIND                   OMP_CURR_PROC_BIND_
 #if OMP_40_ENABLED
 #define FTN_GET_NUM_TEAMS OMP_GET_NUM_TEAMS_
 #define FTN_GET_TEAM_NUM OMP_GET_TEAM_NUM_

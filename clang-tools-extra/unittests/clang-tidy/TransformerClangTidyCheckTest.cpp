@@ -19,6 +19,7 @@ namespace tidy {
 namespace utils {
 namespace {
 using tooling::change;
+using tooling::IncludeFormat;
 using tooling::RewriteRule;
 using tooling::text;
 using tooling::stencil::cat;
@@ -119,6 +120,54 @@ TEST(TransformerClangTidyCheckTest, DisableByConfig) {
   Options.CheckOptions["test-check-0.Skip"] = "false";
   EXPECT_EQ(Expected, test::runCheckOnCode<ConfigurableCheck>(
                           Input, nullptr, "input.cc", None, Options));
+}
+
+RewriteRule replaceCall(IncludeFormat Format) {
+  using namespace ::clang::ast_matchers;
+  RewriteRule Rule = makeRule(callExpr(callee(functionDecl(hasName("f")))),
+                              change(text("other()")), text("no message"));
+  addInclude(Rule, "clang/OtherLib.h", Format);
+  return Rule;
+}
+
+template <IncludeFormat Format>
+class IncludeCheck : public TransformerClangTidyCheck {
+public:
+  IncludeCheck(StringRef Name, ClangTidyContext *Context)
+      : TransformerClangTidyCheck(replaceCall(Format), Name, Context) {}
+};
+
+TEST(TransformerClangTidyCheckTest, AddIncludeQuoted) {
+
+  std::string Input = R"cc(
+    int f(int x);
+    int h(int x) { return f(x); }
+  )cc";
+  std::string Expected = R"cc(#include "clang/OtherLib.h"
+
+
+    int f(int x);
+    int h(int x) { return other(); }
+  )cc";
+
+  EXPECT_EQ(Expected,
+            test::runCheckOnCode<IncludeCheck<IncludeFormat::Quoted>>(Input));
+}
+
+TEST(TransformerClangTidyCheckTest, AddIncludeAngled) {
+  std::string Input = R"cc(
+    int f(int x);
+    int h(int x) { return f(x); }
+  )cc";
+  std::string Expected = R"cc(#include <clang/OtherLib.h>
+
+
+    int f(int x);
+    int h(int x) { return other(); }
+  )cc";
+
+  EXPECT_EQ(Expected,
+            test::runCheckOnCode<IncludeCheck<IncludeFormat::Angled>>(Input));
 }
 
 } // namespace
