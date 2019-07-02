@@ -3400,14 +3400,12 @@ Status SwiftLanguageRuntime::SwiftExceptionPrecondition::ConfigurePrecondition(
   return error;
 }
 
-void SwiftLanguageRuntime::AddToLibraryNegativeCache(
-    const std::string &library_name) {
+void SwiftLanguageRuntime::AddToLibraryNegativeCache(StringRef library_name) {
   std::lock_guard<std::mutex> locker(m_negative_cache_mutex);
   m_library_negative_cache.insert(library_name);
 }
 
-bool SwiftLanguageRuntime::IsInLibraryNegativeCache(
-    const std::string &library_name) {
+bool SwiftLanguageRuntime::IsInLibraryNegativeCache(StringRef library_name) {
   std::lock_guard<std::mutex> locker(m_negative_cache_mutex);
   return m_library_negative_cache.count(library_name) == 1;
 }
