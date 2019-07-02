@@ -59,6 +59,7 @@ class ProgramPoint(object):
             self.dst_id = json_pp['dst_id']
         elif self.kind == 'Statement':
             self.stmt_kind = json_pp['stmt_kind']
+            self.stmt_point_kind = json_pp['stmt_point_kind']
             self.pointer = json_pp['pointer']
             self.pretty = json_pp['pretty']
             self.loc = SourceLocation(json_pp['location']) \
@@ -373,30 +374,48 @@ class DotDumpVisitor(object):
         elif p.kind in ['CallEnter', 'CallExitBegin', 'CallExitEnd']:
             color = 'blue'
         elif p.kind in ['Statement']:
-            color = 'cyan3'
+            color = 'cyan4'
         else:
             color = 'forestgreen'
 
         if p.kind == 'Statement':
+            # This avoids pretty-printing huge statements such as CompoundStmt.
+            # Such statements show up only at [Pre|Post]StmtPurgeDeadSymbols
+            skip_pretty = 'PurgeDeadSymbols' in p.stmt_point_kind
+            stmt_color = 'cyan3'
             if p.loc is not None:
                 self._dump('<tr><td align="left" width="0">'
                            '%s:<b>%s</b>:<b>%s</b>:</td>'
                            '<td align="left" width="0"><font color="%s">'
-                           '%s</font></td><td>%s</td></tr>'
+                           '%s</font></td>'
+                           '<td align="left"><font color="%s">%s</font></td>'
+                           '<td>%s</td></tr>'
                            % (p.loc.filename, p.loc.line,
-                              p.loc.col, color, p.stmt_kind, p.pretty))
+                              p.loc.col, color, p.stmt_kind,
+                              stmt_color, p.stmt_point_kind,
+                              p.pretty if not skip_pretty else ''))
             else:
                 self._dump('<tr><td align="left" width="0">'
                            '<i>Invalid Source Location</i>:</td>'
                            '<td align="left" width="0">'
-                           '<font color="%s">%s</font></td><td>%s</td></tr>'
-                           % (color, p.stmt_kind, p.pretty))
+                           '<font color="%s">%s</font></td>'
+                           '<td align="left"><font color="%s">%s</font></td>'
+                           '<td>%s</td></tr>'
+                           % (color, p.stmt_kind,
+                              stmt_color, p.stmt_point_kind,
+                              p.pretty if not skip_pretty else ''))
         elif p.kind == 'Edge':
             self._dump('<tr><td width="0"></td>'
                        '<td align="left" width="0">'
                        '<font color="%s">%s</font></td><td align="left">'
                        '[B%d] -\\> [B%d]</td></tr>'
-                       % (color, p.kind, p.src_id, p.dst_id))
+                       % (color, 'BlockEdge', p.src_id, p.dst_id))
+        elif p.kind == 'BlockEntrance':
+            self._dump('<tr><td width="0"></td>'
+                       '<td align="left" width="0">'
+                       '<font color="%s">%s</font></td>'
+                       '<td align="left">[B%d]</td></tr>'
+                       % (color, p.kind, p.block_id))
         else:
             # TODO: Print more stuff for other kinds of points.
             self._dump('<tr><td width="0"></td>'
@@ -406,7 +425,7 @@ class DotDumpVisitor(object):
 
         if p.tag is not None:
             self._dump('<tr><td width="0"></td>'
-                       '<td colspan="2" align="left">'
+                       '<td colspan="3" align="left">'
                        '<b>Tag: </b> <font color="crimson">'
                        '%s</font></td></tr>' % p.tag)
 
