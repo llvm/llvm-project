@@ -484,96 +484,40 @@ public:
             '''Return the number of child values of a lldb.SBValue object.'''
             return self.GetNumChildren()
 
-        __swig_getmethods__["children"] = get_value_child_list
-        if _newclass: children = property(get_value_child_list, None, doc='''A read only property that returns a list() of lldb.SBValue objects for the children of the value.''')
-
-        __swig_getmethods__["child"] = get_child_access_object
-        if _newclass: child = property(get_child_access_object, None, doc='''A read only property that returns an object that can access children of a variable by index (child_value = value.children[12]).''')
-
-        __swig_getmethods__["name"] = GetName
-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name of this value as a string.''')
-
-        __swig_getmethods__["type"] = GetType
-        if _newclass: type = property(GetType, None, doc='''A read only property that returns a lldb.SBType object that represents the type for this value.''')
-
-        __swig_getmethods__["size"] = GetByteSize
-        if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this value.''')
-
-        __swig_getmethods__["is_in_scope"] = IsInScope
-        if _newclass: is_in_scope = property(IsInScope, None, doc='''A read only property that returns a boolean value that indicates whether this value is currently lexically in scope.''')
-
-        __swig_getmethods__["format"] = GetFormat
-        __swig_setmethods__["format"] = SetFormat
-        if _newclass: format = property(GetName, SetFormat, doc='''A read/write property that gets/sets the format used for lldb.SBValue().GetValue() for this value. See enumerations that start with "lldb.eFormat".''')
-
-        __swig_getmethods__["value"] = GetValue
-        __swig_setmethods__["value"] = SetValueFromCString
-        if _newclass: value = property(GetValue, SetValueFromCString, doc='''A read/write property that gets/sets value from a string.''')
-
-        __swig_getmethods__["value_type"] = GetValueType
-        if _newclass: value_type = property(GetValueType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eValueType") that represents the type of this value (local, argument, global, register, etc.).''')
-
-        __swig_getmethods__["changed"] = GetValueDidChange
-        if _newclass: changed = property(GetValueDidChange, None, doc='''A read only property that returns a boolean value that indicates if this value has changed since it was last updated.''')
-
-        __swig_getmethods__["data"] = GetData
-        if _newclass: data = property(GetData, None, doc='''A read only property that returns an lldb object (lldb.SBData) that represents the bytes that make up the value for this object.''')
-
-        __swig_getmethods__["load_addr"] = GetLoadAddress
-        if _newclass: load_addr = property(GetLoadAddress, None, doc='''A read only property that returns the load address of this value as an integer.''')
-
-        __swig_getmethods__["addr"] = GetAddress
-        if _newclass: addr = property(GetAddress, None, doc='''A read only property that returns an lldb.SBAddress that represents the address of this value if it is in memory.''')
-
-        __swig_getmethods__["deref"] = Dereference
-        if _newclass: deref = property(Dereference, None, doc='''A read only property that returns an lldb.SBValue that is created by dereferencing this value.''')
-
-        __swig_getmethods__["address_of"] = AddressOf
-        if _newclass: address_of = property(AddressOf, None, doc='''A read only property that returns an lldb.SBValue that represents the address-of this value.''')
-
-        __swig_getmethods__["error"] = GetError
-        if _newclass: error = property(GetError, None, doc='''A read only property that returns the lldb.SBError that represents the error from the last time the variable value was calculated.''')
-
-        __swig_getmethods__["summary"] = GetSummary
-        if _newclass: summary = property(GetSummary, None, doc='''A read only property that returns the summary for this value as a string''')
-
-        __swig_getmethods__["description"] = GetObjectDescription
-        if _newclass: description = property(GetObjectDescription, None, doc='''A read only property that returns the language-specific description of this value as a string''')
-
-        __swig_getmethods__["dynamic"] = __get_dynamic__
-        if _newclass: dynamic = property(__get_dynamic__, None, doc='''A read only property that returns an lldb.SBValue that is created by finding the dynamic type of this value.''')
-
-        __swig_getmethods__["location"] = GetLocation
-        if _newclass: location = property(GetLocation, None, doc='''A read only property that returns the location of this value as a string.''')
-
-        __swig_getmethods__["target"] = GetTarget
-        if _newclass: target = property(GetTarget, None, doc='''A read only property that returns the lldb.SBTarget that this value is associated with.''')
-
-        __swig_getmethods__["process"] = GetProcess
-        if _newclass: process = property(GetProcess, None, doc='''A read only property that returns the lldb.SBProcess that this value is associated with, the returned value might be invalid and should be tested.''')
-
-        __swig_getmethods__["thread"] = GetThread
-        if _newclass: thread = property(GetThread, None, doc='''A read only property that returns the lldb.SBThread that this value is associated with, the returned value might be invalid and should be tested.''')
-
-        __swig_getmethods__["frame"] = GetFrame
-        if _newclass: frame = property(GetFrame, None, doc='''A read only property that returns the lldb.SBFrame that this value is associated with, the returned value might be invalid and should be tested.''')
-
-        __swig_getmethods__["num_children"] = GetNumChildren
-        if _newclass: num_children = property(GetNumChildren, None, doc='''A read only property that returns the number of child lldb.SBValues that this value has.''')
-
-        __swig_getmethods__["unsigned"] = GetValueAsUnsigned
-        if _newclass: unsigned = property(GetValueAsUnsigned, None, doc='''A read only property that returns the value of this SBValue as an usigned integer.''')
-
-        __swig_getmethods__["signed"] = GetValueAsSigned
-        if _newclass: signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this SBValue as a signed integer.''')
+        children = property(get_value_child_list, None, doc='''A read only property that returns a list() of lldb.SBValue objects for the children of the value.''')
+        child = property(get_child_access_object, None, doc='''A read only property that returns an object that can access children of a variable by index (child_value = value.children[12]).''')
+        name = property(GetName, None, doc='''A read only property that returns the name of this value as a string.''')
+        type = property(GetType, None, doc='''A read only property that returns a lldb.SBType object that represents the type for this value.''')
+        size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes of this value.''')
+        is_in_scope = property(IsInScope, None, doc='''A read only property that returns a boolean value that indicates whether this value is currently lexically in scope.''')
+        format = property(GetName, SetFormat, doc='''A read/write property that gets/sets the format used for lldb.SBValue().GetValue() for this value. See enumerations that start with "lldb.eFormat".''')
+        value = property(GetValue, SetValueFromCString, doc='''A read/write property that gets/sets value from a string.''')
+        value_type = property(GetValueType, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eValueType") that represents the type of this value (local, argument, global, register, etc.).''')
+        changed = property(GetValueDidChange, None, doc='''A read only property that returns a boolean value that indicates if this value has changed since it was last updated.''')
+        data = property(GetData, None, doc='''A read only property that returns an lldb object (lldb.SBData) that represents the bytes that make up the value for this object.''')
+        load_addr = property(GetLoadAddress, None, doc='''A read only property that returns the load address of this value as an integer.''')
+        addr = property(GetAddress, None, doc='''A read only property that returns an lldb.SBAddress that represents the address of this value if it is in memory.''')
+        deref = property(Dereference, None, doc='''A read only property that returns an lldb.SBValue that is created by dereferencing this value.''')
+        address_of = property(AddressOf, None, doc='''A read only property that returns an lldb.SBValue that represents the address-of this value.''')
+        error = property(GetError, None, doc='''A read only property that returns the lldb.SBError that represents the error from the last time the variable value was calculated.''')
+        summary = property(GetSummary, None, doc='''A read only property that returns the summary for this value as a string''')
+        description = property(GetObjectDescription, None, doc='''A read only property that returns the language-specific description of this value as a string''')
+        dynamic = property(__get_dynamic__, None, doc='''A read only property that returns an lldb.SBValue that is created by finding the dynamic type of this value.''')
+        location = property(GetLocation, None, doc='''A read only property that returns the location of this value as a string.''')
+        target = property(GetTarget, None, doc='''A read only property that returns the lldb.SBTarget that this value is associated with.''')
+        process = property(GetProcess, None, doc='''A read only property that returns the lldb.SBProcess that this value is associated with, the returned value might be invalid and should be tested.''')
+        thread = property(GetThread, None, doc='''A read only property that returns the lldb.SBThread that this value is associated with, the returned value might be invalid and should be tested.''')
+        frame = property(GetFrame, None, doc='''A read only property that returns the lldb.SBFrame that this value is associated with, the returned value might be invalid and should be tested.''')
+        num_children = property(GetNumChildren, None, doc='''A read only property that returns the number of child lldb.SBValues that this value has.''')
+        unsigned = property(GetValueAsUnsigned, None, doc='''A read only property that returns the value of this SBValue as an usigned integer.''')
+        signed = property(GetValueAsSigned, None, doc='''A read only property that returns the value of this SBValue as a signed integer.''')
 
         def get_expr_path(self):
             s = SBStream()
             self.GetExpressionPath (s)
             return s.GetData()
 
-        __swig_getmethods__["path"] = get_expr_path
-        if _newclass: path = property(get_expr_path, None, doc='''A read only property that returns the expression path that one can use to reach this value in an expression.''')
+        path = property(get_expr_path, None, doc='''A read only property that returns the expression path that one can use to reach this value in an expression.''')
 
         def synthetic_child_from_expression(self, name, expr, options=None):
             if options is None: options = lldb.SBExpressionOptions()

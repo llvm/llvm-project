@@ -83,23 +83,12 @@ public:
         def __load_adrr_property__ (self):
             return self.GetComment (target)
 
-        __swig_getmethods__["mnemonic"] = __mnemonic_property__
-        if _newclass: mnemonic = property(__mnemonic_property__, None, doc='''A read only property that returns the mnemonic for this instruction as a string.''')
-
-        __swig_getmethods__["operands"] = __operands_property__
-        if _newclass: operands = property(__operands_property__, None, doc='''A read only property that returns the operands for this instruction as a string.''')
-
-        __swig_getmethods__["comment"] = __comment_property__
-        if _newclass: comment = property(__comment_property__, None, doc='''A read only property that returns the comment for this instruction as a string.''')
-
-        __swig_getmethods__["addr"] = GetAddress
-        if _newclass: addr = property(GetAddress, None, doc='''A read only property that returns an lldb object that represents the address (lldb.SBAddress) for this instruction.''')
-
-        __swig_getmethods__["size"] = GetByteSize
-        if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes for this instruction as an integer.''')
-
-        __swig_getmethods__["is_branch"] = DoesBranch
-        if _newclass: is_branch = property(DoesBranch, None, doc='''A read only property that returns a boolean value that indicates if this instruction is a branch instruction.''')
+        mnemonic = property(__mnemonic_property__, None, doc='''A read only property that returns the mnemonic for this instruction as a string.''')
+        operands = property(__operands_property__, None, doc='''A read only property that returns the operands for this instruction as a string.''')
+        comment = property(__comment_property__, None, doc='''A read only property that returns the comment for this instruction as a string.''')
+        addr = property(GetAddress, None, doc='''A read only property that returns an lldb object that represents the address (lldb.SBAddress) for this instruction.''')
+        size = property(GetByteSize, None, doc='''A read only property that returns the size in bytes for this instruction as an integer.''')
+        is_branch = property(DoesBranch, None, doc='''A read only property that returns a boolean value that indicates if this instruction is a branch instruction.''')
     %}
 
 
