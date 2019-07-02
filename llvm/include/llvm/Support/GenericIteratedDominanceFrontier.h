@@ -124,7 +124,7 @@ ChildrenGetterTy<NodeTy, IsPostDom>::get(
 
   auto Children = children<OrderedNodeTy>(N);
   return {Children.begin(), Children.end()};
-};
+}
 
 } // end of namespace IDFCalculatorDetail
 
