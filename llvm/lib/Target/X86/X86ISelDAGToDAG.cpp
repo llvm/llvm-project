@@ -792,6 +792,27 @@ void X86DAGToDAGISel::PreprocessISelDAG() {
     }
 
     switch (N->getOpcode()) {
+    case ISD::FP_TO_SINT:
+    case ISD::FP_TO_UINT: {
+      // Replace vector fp_to_s/uint with their X86 specific equivalent so we
+      // don't need 2 sets of patterns.
+      if (!N->getSimpleValueType(0).isVector())
+        break;
+
+      unsigned NewOpc;
+      switch (N->getOpcode()) {
+      default: llvm_unreachable("Unexpected opcode!");
+      case ISD::FP_TO_SINT: NewOpc = X86ISD::CVTTP2SI; break;
+      case ISD::FP_TO_UINT: NewOpc = X86ISD::CVTTP2UI; break;
+      }
+      SDValue Res = CurDAG->getNode(NewOpc, SDLoc(N), N->getValueType(0),
+                                    N->getOperand(0));
+      --I;
+      CurDAG->ReplaceAllUsesOfValueWith(SDValue(N, 0), Res);
+      ++I;
+      CurDAG->DeleteNode(N);
+      continue;
+    }
     case ISD::SHL:
     case ISD::SRA:
     case ISD::SRL: {

@@ -8,17 +8,15 @@ define arm_aapcs_vfpcc <8 x half> @fneg_float16_t(<8 x half> %src) {
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q0[0]
 ; CHECK-MVE-NEXT:    vmov.u16 r1, q0[1]
 ; CHECK-MVE-NEXT:    vmov s4, r0
-; CHECK-MVE-NEXT:    movs r2, #0
 ; CHECK-MVE-NEXT:    vneg.f16 s4, s4
 ; CHECK-MVE-NEXT:    vmov r0, s4
 ; CHECK-MVE-NEXT:    vmov s4, r1
 ; CHECK-MVE-NEXT:    vneg.f16 s4, s4
 ; CHECK-MVE-NEXT:    vmov r1, s4
-; CHECK-MVE-NEXT:    vdup.16 q1, r2
 ; CHECK-MVE-NEXT:    vmov.16 q1[0], r0
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q0[2]
-; CHECK-MVE-NEXT:    vmov s8, r0
 ; CHECK-MVE-NEXT:    vmov.16 q1[1], r1
+; CHECK-MVE-NEXT:    vmov s8, r0
 ; CHECK-MVE-NEXT:    vneg.f16 s8, s8
 ; CHECK-MVE-NEXT:    vmov r0, s8
 ; CHECK-MVE-NEXT:    vmov.16 q1[2], r0
@@ -62,16 +60,11 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @fneg_float32_t(<4 x float> %src) {
 ; CHECK-MVE-LABEL: fneg_float32_t:
 ; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    vneg.f32 s7, s3
+; CHECK-MVE-NEXT:    vneg.f32 s6, s2
+; CHECK-MVE-NEXT:    vneg.f32 s5, s1
 ; CHECK-MVE-NEXT:    vneg.f32 s4, s0
-; CHECK-MVE-NEXT:    movs r0, #0
-; CHECK-MVE-NEXT:    vneg.f32 s6, s1
-; CHECK-MVE-NEXT:    vneg.f32 s8, s2
-; CHECK-MVE-NEXT:    vneg.f32 s10, s3
-; CHECK-MVE-NEXT:    vdup.32 q0, r0
-; CHECK-MVE-NEXT:    vmov.f32 s0, s4
-; CHECK-MVE-NEXT:    vmov.f32 s1, s6
-; CHECK-MVE-NEXT:    vmov.f32 s2, s8
-; CHECK-MVE-NEXT:    vmov.f32 s3, s10
+; CHECK-MVE-NEXT:    vmov q0, q1
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: fneg_float32_t:
@@ -89,17 +82,15 @@ define arm_aapcs_vfpcc <8 x half> @fabs_float16_t(<8 x half> %src) {
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q0[0]
 ; CHECK-MVE-NEXT:    vmov.u16 r1, q0[1]
 ; CHECK-MVE-NEXT:    vmov s4, r0
-; CHECK-MVE-NEXT:    movs r2, #0
 ; CHECK-MVE-NEXT:    vabs.f16 s4, s4
 ; CHECK-MVE-NEXT:    vmov r0, s4
 ; CHECK-MVE-NEXT:    vmov s4, r1
 ; CHECK-MVE-NEXT:    vabs.f16 s4, s4
 ; CHECK-MVE-NEXT:    vmov r1, s4
-; CHECK-MVE-NEXT:    vdup.16 q1, r2
 ; CHECK-MVE-NEXT:    vmov.16 q1[0], r0
 ; CHECK-MVE-NEXT:    vmov.u16 r0, q0[2]
-; CHECK-MVE-NEXT:    vmov s8, r0
 ; CHECK-MVE-NEXT:    vmov.16 q1[1], r1
+; CHECK-MVE-NEXT:    vmov s8, r0
 ; CHECK-MVE-NEXT:    vabs.f16 s8, s8
 ; CHECK-MVE-NEXT:    vmov r0, s8
 ; CHECK-MVE-NEXT:    vmov.16 q1[2], r0
@@ -143,16 +134,11 @@ entry:
 define arm_aapcs_vfpcc <4 x float> @fabs_float32_t(<4 x float> %src) {
 ; CHECK-MVE-LABEL: fabs_float32_t:
 ; CHECK-MVE:       @ %bb.0: @ %entry
+; CHECK-MVE-NEXT:    vabs.f32 s7, s3
+; CHECK-MVE-NEXT:    vabs.f32 s6, s2
+; CHECK-MVE-NEXT:    vabs.f32 s5, s1
 ; CHECK-MVE-NEXT:    vabs.f32 s4, s0
-; CHECK-MVE-NEXT:    movs r0, #0
-; CHECK-MVE-NEXT:    vabs.f32 s6, s1
-; CHECK-MVE-NEXT:    vabs.f32 s8, s2
-; CHECK-MVE-NEXT:    vabs.f32 s10, s3
-; CHECK-MVE-NEXT:    vdup.32 q0, r0
-; CHECK-MVE-NEXT:    vmov.f32 s0, s4
-; CHECK-MVE-NEXT:    vmov.f32 s1, s6
-; CHECK-MVE-NEXT:    vmov.f32 s2, s8
-; CHECK-MVE-NEXT:    vmov.f32 s3, s10
+; CHECK-MVE-NEXT:    vmov q0, q1
 ; CHECK-MVE-NEXT:    bx lr
 ;
 ; CHECK-MVEFP-LABEL: fabs_float32_t:

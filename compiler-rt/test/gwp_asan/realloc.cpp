@@ -23,8 +23,8 @@ int main() {
   free(Ptr + 1);
 
   // CHECK-MALLOC: GWP-ASan detected a memory error
-  // CHECK-MALLOC: Invalid (wild) free occurred when trying to free memory at:
-  // CHECK-MALLOC: is located 1 bytes to the right of a 1-byte allocation
+  // CHECK-MALLOC: Invalid (wild) free at 0x{{[a-f0-9]+}} (1 byte to the right
+  // CHECK-MALLOC-SAME: of a 1-byte allocation
 #elif defined(TEST_FREE)
   char *Ptr = (char *) malloc(1);
   // realloc(ptr, 0) is equivalent to free(ptr) and must return nullptr. Note
@@ -36,8 +36,8 @@ int main() {
   *Ptr = 0;
 
   // CHECK-FREE: GWP-ASan detected a memory error
-  // CHECK-FREE: Use after free occurred when accessing memory at:
-  // CHECK-FREE: is a 1-byte allocation
+  // CHECK-FREE: Use after free at 0x{{[a-f0-9]+}} (0 bytes into a 1-byte
+  // CHECK-FREE-SAME: allocation
 #endif
 
   return 0;

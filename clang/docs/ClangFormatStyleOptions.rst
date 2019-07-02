@@ -192,6 +192,20 @@ the configuration (without a prefix: ``Auto``).
 
 
 
+**AlignConsecutiveMacros** (``bool``)
+  If ``true``, aligns consecutive C/C++ preprocessor macros.
+
+  This will align the C/C++ preprocessor macros of consecutive lines. This
+  will result in formattings like
+
+  .. code-block:: c++
+
+    #define SHORT_NAME       42
+    #define LONGER_NAME      0x007f
+    #define EVEN_LONGER_NAME (2)
+    #define foo(x)           (x * x)
+    #define bar(y, z)        (y + z)
+
 **AlignConsecutiveAssignments** (``bool``)
   If ``true``, aligns consecutive assignments.
 

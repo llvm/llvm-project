@@ -23,14 +23,18 @@ namespace tooling {
 ArgumentsAdjuster getClangSyntaxOnlyAdjuster() {
   return [](const CommandLineArguments &Args, StringRef /*unused*/) {
     CommandLineArguments AdjustedArgs;
+    bool HasSyntaxOnly = false;
     for (size_t i = 0, e = Args.size(); i < e; ++i) {
       StringRef Arg = Args[i];
       // FIXME: Remove options that generate output.
       if (!Arg.startswith("-fcolor-diagnostics") &&
           !Arg.startswith("-fdiagnostics-color"))
         AdjustedArgs.push_back(Args[i]);
+      if (Arg == "-fsyntax-only")
+        HasSyntaxOnly = true;
     }
-    AdjustedArgs.push_back("-fsyntax-only");
+    if (!HasSyntaxOnly)
+      AdjustedArgs.push_back("-fsyntax-only");
     return AdjustedArgs;
   };
 }

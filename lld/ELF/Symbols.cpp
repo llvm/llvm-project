@@ -410,13 +410,22 @@ void Symbol::resolveUndefined(const Undefined &Other) {
   if (Traced)
     printTraceSymbol(&Other);
 
-  if (isShared() || isLazy() || (isUndefined() && Other.Binding != STB_WEAK))
-    Binding = Other.Binding;
-
-  if (isLazy()) {
+  if (isUndefined()) {
+    // The binding may "upgrade" from weak to non-weak.
+    if (Other.Binding != STB_WEAK)
+      Binding = Other.Binding;
+  } else if (auto *S = dyn_cast<SharedSymbol>(this)) {
+    // The binding of a SharedSymbol will be weak if there is at least one
+    // reference and all are weak. The binding has one opportunity to change to
+    // weak: if the first reference is weak.
+    if (Other.Binding != STB_WEAK || !S->Referenced)
+      Binding = Other.Binding;
+    S->Referenced = true;
+  } else if (isLazy()) {
     // An undefined weak will not fetch archive members. See comment on Lazy in
     // Symbols.h for the details.
     if (Other.Binding == STB_WEAK) {
+      Binding = STB_WEAK;
       Type = Other.Type;
       return;
     }
@@ -635,5 +644,6 @@ void Symbol::resolveShared(const SharedSymbol &Other) {
     uint8_t Bind = Binding;
     replace(Other);
     Binding = Bind;
+    cast<SharedSymbol>(this)->Referenced = true;
   }
 }

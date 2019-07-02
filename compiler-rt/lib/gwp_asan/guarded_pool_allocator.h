@@ -41,16 +41,14 @@ public:
   struct AllocationMetadata {
     // Maximum number of stack trace frames to collect for allocations + frees.
     // TODO(hctim): Implement stack frame compression, a-la Chromium.
-    // Currently the maximum stack frames is one, as we don't collect traces.
-    static constexpr size_t kMaximumStackFrames = 1;
+    static constexpr size_t kMaximumStackFrames = 64;
 
-    // Records the given allocation metadata into this struct. In the future,
-    // this will collect the allocation trace as well.
-    void RecordAllocation(uintptr_t Addr, size_t Size);
+    // Records the given allocation metadata into this struct.
+    void RecordAllocation(uintptr_t Addr, size_t Size,
+                          options::Backtrace_t Backtrace);
 
-    // Record that this allocation is now deallocated. In future, this will
-    // collect the deallocation trace as well.
-    void RecordDeallocation();
+    // Record that this allocation is now deallocated.
+    void RecordDeallocation(options::Backtrace_t Backtrace);
 
     struct CallSiteInfo {
       // The backtrace to the allocation/deallocation. If the first value is
@@ -234,6 +232,8 @@ private:
   // general) use printf() from the cstdlib as it may malloc(), causing infinite
   // recursion.
   options::Printf_t Printf = nullptr;
+  options::Backtrace_t Backtrace = nullptr;
+  options::PrintBacktrace_t PrintBacktrace = nullptr;
 
   // The adjusted sample rate for allocation sampling. Default *must* be
   // nonzero, as dynamic initialisation may call malloc (e.g. from libstdc++)

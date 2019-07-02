@@ -12,7 +12,7 @@ def MipsP5600Model : SchedMachineModel {
   int LoadLatency = 4;
   int MispredictPenalty = 8; // TODO: Estimated
 
-  let CompleteModel = 0;
+  let CompleteModel = 1;
   let FullInstRWOverlapCheck = 1;
 
   list<Predicate> UnsupportedFeatures = [HasMips3, HasMips32r6, HasMips64,
@@ -59,15 +59,21 @@ def P5600WriteJumpAndLink : SchedWriteRes<[P5600IssueCTISTD, P5600CTISTD]> {
   let Latency = 2;
 }
 
+def P5600Nop : SchedWriteRes<[P5600IssueCTISTD]> {
+  let Latency = 0;
+}
+
+def : InstRW<[P5600Nop], (instrs SSNOP, NOP)>;
+
 // b, beq, beql, bg[et]z, bl[et]z, bne, bnel, j, syscall, jal, bltzal,
 // jalr, jr.hb, jr
 def : InstRW<[P5600WriteJump], (instrs B, BAL, BAL_BR, BEQ, BEQL, BGEZ, BGEZAL,
                                 BGEZALL, BGEZL, BGTZ, BGTZL, BLEZ, BLEZL, BLTZ,
                                 BLTZAL, BLTZALL, BLTZL, BNE, BNEL, BREAK,
-                                DERET, ERET, ERETNC, J, JR, JR_HB,
+                                DERET, ERET, ERet, ERETNC, J, JR, JR_HB,
                                 PseudoIndirectBranch,
                                 PseudoIndirectHazardBranch, PseudoReturn,
-                                SDBBP, SSNOP, SYSCALL, TAILCALL, TAILCALLREG,
+                                SDBBP, SYSCALL, RetRA, TAILCALL, TAILCALLREG,
                                 TAILCALLREGHB, TEQ, TEQI, TGE, TGEI, TGEIU,
                                 TGEU, TLT, TLTI, TLTU, TNE, TNEI, TRAP,
                                 TTLTIU, WAIT, PAUSE)>;
@@ -438,17 +444,19 @@ def : InstRW<[P5600WriteMSAShortLogic], (instregex "^(NLOC|NLZC)_[BHWD]$")>;
 // ----------
 //
 // add.[ds], add.ps, cvt.d.[sw], cvt.s.[dw], cvt.w.[sd], cvt.[sw].ps,
-// cvt.ps.[sw], c.<cc>.[ds], c.<cc>.ps, mul.[ds], mul.ps, sub.[ds], sub.ps,
-// trunc.w.[ds], trunc.w.ps
+// cvt.ps.[sw], cvt.s.(pl|pu), c.<cc>.[ds], c.<cc>.ps, mul.[ds], mul.ps,
+// pl[lu].ps, sub.[ds], sub.ps, trunc.w.[ds], trunc.w.ps
 def : InstRW<[P5600WriteFPUL],
              (instrs FADD_D32, FADD_D64, FADD_S, FMUL_D32, FMUL_D64, FMUL_S,
               FSUB_D32, FSUB_D64, FSUB_S)>;
 def : InstRW<[P5600WriteFPUL], (instregex "^TRUNC_(L|W)_(S|D32|D64)$")>;
 def : InstRW<[P5600WriteFPUL],
              (instregex "^CVT_(S|D32|D64|L|W)_(S|D32|D64|L|W)$")>;
+def : InstRW<[P5600WriteFPUL], (instrs CVT_PS_S64, CVT_S_PL64, CVT_S_PU64)>;
 def : InstRW<[P5600WriteFPUL], (instregex "^C_[A-Z]+_(S|D32|D64)$")>;
 def : InstRW<[P5600WriteFPUL], (instregex "^FCMP_(S32|D32|D64)$")>;
 def : InstRW<[P5600WriteFPUL], (instregex "^PseudoCVT_(S|D32|D64)_(L|W)$")>;
+def : InstRW<[P5600WriteFPUL], (instrs PLL_PS64, PLU_PS64)>;
 
 // div.[ds], div.ps
 def : InstRW<[P5600WriteFPUDivS], (instrs FDIV_S)>;
@@ -566,16 +574,20 @@ def : InstRW<[P5600WriteMoveFPUToGPR], (instrs BC1F, BC1FL, BC1T, BC1TL, CFC1,
                                         ExtractElementF64_64)>;
 
 // swc1, swxc1, st.[bhwd]
-def : InstRW<[P5600WriteStoreFPUS], (instrs SDC1, SDXC1, SUXC1, SWC1, SWXC1)>;
+def : InstRW<[P5600WriteStoreFPUS], (instrs SDC1, SDC164, SDXC1, SDXC164,
+                                     SWC1, SWXC1, SUXC1, SUXC164)>;
 def : InstRW<[P5600WriteStoreFPUS], (instregex "^ST_[BHWD]$")>;
+def : InstRW<[P5600WriteStoreFPUS], (instrs ST_F16)>;
 
 // movn.[ds], movz.[ds]
 def : InstRW<[P5600WriteStoreFPUL], (instrs MOVN_I_D32, MOVN_I_D64, MOVN_I_S,
                                      MOVZ_I_D32, MOVZ_I_D64, MOVZ_I_S)>;
 
 // l[dw]x?c1, ld.[bhwd]
-def : InstRW<[P5600WriteLoadFPU], (instrs LDC1, LDXC1, LWC1, LWXC1, LUXC1)>;
+def : InstRW<[P5600WriteLoadFPU], (instrs LDC1, LDC164, LDXC1, LDXC164,
+                                   LWC1, LWXC1, LUXC1, LUXC164)>;
 def : InstRW<[P5600WriteLoadFPU], (instregex "LD_[BHWD]")>;
+def : InstRW<[P5600WriteLoadFPU], (instrs LD_F16)>;
 
 // Unsupported Instructions
 // ========================

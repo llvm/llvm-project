@@ -4683,6 +4683,20 @@ static void __kmp_stg_print_forkjoin_frames_mode(kmp_str_buf_t *buffer,
 #endif /* USE_ITT_BUILD */
 
 // -----------------------------------------------------------------------------
+// KMP_ENABLE_TASK_THROTTLING
+
+static void __kmp_stg_parse_task_throttling(char const *name,
+                                            char const *value, void *data) {
+  __kmp_stg_parse_bool(name, value, &__kmp_enable_task_throttling);
+} // __kmp_stg_parse_task_throttling
+
+
+static void __kmp_stg_print_task_throttling(kmp_str_buf_t *buffer,
+                                            char const *name, void *data) {
+  __kmp_stg_print_bool(buffer, name, __kmp_enable_task_throttling);
+} // __kmp_stg_print_task_throttling
+
+// -----------------------------------------------------------------------------
 // OMP_DISPLAY_ENV
 
 #if OMP_40_ENABLED
@@ -5003,6 +5017,8 @@ static kmp_setting_t __kmp_stg_table[] = {
     {"KMP_FORKJOIN_FRAMES_MODE", __kmp_stg_parse_forkjoin_frames_mode,
      __kmp_stg_print_forkjoin_frames_mode, NULL, 0, 0},
 #endif
+    {"KMP_ENABLE_TASK_THROTTLING", __kmp_stg_parse_task_throttling,
+     __kmp_stg_print_task_throttling, NULL, 0, 0},
 
 #if OMP_40_ENABLED
     {"OMP_DISPLAY_ENV", __kmp_stg_parse_omp_display_env,

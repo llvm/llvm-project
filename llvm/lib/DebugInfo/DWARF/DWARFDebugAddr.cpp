@@ -147,28 +147,13 @@ void DWARFDebugAddrTable::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
                HeaderData.Length, HeaderData.Version, HeaderData.AddrSize,
                HeaderData.SegSize);
 
-  static const char *Fmt32 = "0x%8.8" PRIx64;
-  static const char *Fmt64 = "0x%16.16" PRIx64;
-  std::string AddrFmt = "\n";
-  std::string AddrFmtVerbose = " => ";
-  if (HeaderData.AddrSize == 4) {
-    AddrFmt.append(Fmt32);
-    AddrFmtVerbose.append(Fmt32);
-  }
-  else {
-    AddrFmt.append(Fmt64);
-    AddrFmtVerbose.append(Fmt64);
-  }
-
   if (Addrs.size() > 0) {
-    OS << "Addrs: [";
-    for (uint64_t Addr : Addrs) {
-      OS << format(AddrFmt.c_str(), Addr);
-      if (DumpOpts.Verbose)
-        OS << format(AddrFmtVerbose.c_str(),
-                     Addr + HeaderOffset + sizeof(HeaderData));
-    }
-    OS << "\n]\n";
+    const char *AddrFmt = (HeaderData.AddrSize == 4) ? "0x%8.8" PRIx64 "\n"
+                                                     : "0x%16.16" PRIx64 "\n";
+    OS << "Addrs: [\n";
+    for (uint64_t Addr : Addrs)
+      OS << format(AddrFmt, Addr);
+    OS << "]\n";
   }
 }
 

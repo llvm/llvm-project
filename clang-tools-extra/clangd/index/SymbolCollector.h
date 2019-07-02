@@ -134,9 +134,10 @@ private:
   void setIncludeLocation(const Symbol &S, SourceLocation);
   // Indexed macros, to be erased if they turned out to be include guards.
   llvm::DenseSet<const IdentifierInfo *> IndexedMacros;
-  // All refs collected from the AST.
-  // Only symbols declared in preamble (from #include) and referenced from the
-  // main file will be included.
+  // All refs collected from the AST. It includes:
+  //   1) symbols declared in the preamble and referenced from the main file (
+  //     which is not a header), or
+  //   2) symbols declared and referenced from the main file (which is a header)
   RefSlab::Builder Refs;
   // All relations collected from the AST.
   RelationSlab::Builder Relations;

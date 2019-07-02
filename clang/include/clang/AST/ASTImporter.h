@@ -14,6 +14,7 @@
 #ifndef LLVM_CLANG_AST_ASTIMPORTER_H
 #define LLVM_CLANG_AST_ASTIMPORTER_H
 
+#include "clang/AST/DeclBase.h"
 #include "clang/AST/DeclarationName.h"
 #include "clang/AST/NestedNameSpecifier.h"
 #include "clang/AST/TemplateName.h"

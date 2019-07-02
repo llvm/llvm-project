@@ -374,7 +374,8 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
   // Check if deque is full
   if (TCR_4(thread_data->td.td_deque_ntasks) >=
       TASK_DEQUE_SIZE(thread_data->td)) {
-    if (__kmp_task_is_allowed(gtid, __kmp_task_stealing_constraint, taskdata,
+    if (__kmp_enable_task_throttling &&
+        __kmp_task_is_allowed(gtid, __kmp_task_stealing_constraint, taskdata,
                               thread->th.th_current_task)) {
       KA_TRACE(20, ("__kmp_push_task: T#%d deque is full; returning "
                     "TASK_NOT_PUSHED for task %p\n",
@@ -394,7 +395,8 @@ static kmp_int32 __kmp_push_task(kmp_int32 gtid, kmp_task_t *task) {
     // Need to recheck as we can get a proxy task from thread outside of OpenMP
     if (TCR_4(thread_data->td.td_deque_ntasks) >=
         TASK_DEQUE_SIZE(thread_data->td)) {
-      if (__kmp_task_is_allowed(gtid, __kmp_task_stealing_constraint, taskdata,
+      if (__kmp_enable_task_throttling &&
+          __kmp_task_is_allowed(gtid, __kmp_task_stealing_constraint, taskdata,
                                 thread->th.th_current_task)) {
         __kmp_release_bootstrap_lock(&thread_data->td.td_deque_lock);
         KA_TRACE(20, ("__kmp_push_task: T#%d deque is full on 2nd check; "

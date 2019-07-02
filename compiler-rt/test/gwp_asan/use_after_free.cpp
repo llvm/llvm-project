@@ -3,7 +3,7 @@
 // RUN: %expect_crash %run %t 2>&1 | FileCheck %s
 
 // CHECK: GWP-ASan detected a memory error
-// CHECK: Use after free occurred when accessing memory at:
+// CHECK: Use after free at 0x{{[a-f0-9]+}} (0 bytes into a 10-byte allocation
 
 #include <cstdlib>
 
