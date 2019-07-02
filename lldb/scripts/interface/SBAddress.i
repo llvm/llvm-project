@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+%include <attribute.i>
+
 namespace lldb {
 
 %feature("docstring",
@@ -162,39 +164,20 @@ public:
             '''Convert the address to an hex string'''
             return '0x%x' % int(self)
 
-        __swig_getmethods__["module"] = GetModule
-        if _newclass: module = property(GetModule, None, doc='''A read only property that returns an lldb object that represents the module (lldb.SBModule) that this address resides within.''')
-
-        __swig_getmethods__["compile_unit"] = GetCompileUnit
-        if _newclass: compile_unit = property(GetCompileUnit, None, doc='''A read only property that returns an lldb object that represents the compile unit (lldb.SBCompileUnit) that this address resides within.''')
-
-        __swig_getmethods__["line_entry"] = GetLineEntry
-        if _newclass: line_entry = property(GetLineEntry, None, doc='''A read only property that returns an lldb object that represents the line entry (lldb.SBLineEntry) that this address resides within.''')
-
-        __swig_getmethods__["function"] = GetFunction
-        if _newclass: function = property(GetFunction, None, doc='''A read only property that returns an lldb object that represents the function (lldb.SBFunction) that this address resides within.''')
-
-        __swig_getmethods__["block"] = GetBlock
-        if _newclass: block = property(GetBlock, None, doc='''A read only property that returns an lldb object that represents the block (lldb.SBBlock) that this address resides within.''')
-
-        __swig_getmethods__["symbol"] = GetSymbol
-        if _newclass: symbol = property(GetSymbol, None, doc='''A read only property that returns an lldb object that represents the symbol (lldb.SBSymbol) that this address resides within.''')
-
-        __swig_getmethods__["offset"] = GetOffset
-        if _newclass: offset = property(GetOffset, None, doc='''A read only property that returns the section offset in bytes as an integer.''')
-
-        __swig_getmethods__["section"] = GetSection
-        if _newclass: section = property(GetSection, None, doc='''A read only property that returns an lldb object that represents the section (lldb.SBSection) that this address resides within.''')
-
-        __swig_getmethods__["file_addr"] = GetFileAddress
-        if _newclass: file_addr = property(GetFileAddress, None, doc='''A read only property that returns file address for the section as an integer. This is the address that represents the address as it is found in the object file that defines it.''')
-
-        __swig_getmethods__["load_addr"] = __get_load_addr_property__
-        __swig_setmethods__["load_addr"] = __set_load_addr_property__
-        if _newclass: load_addr = property(__get_load_addr_property__, __set_load_addr_property__, doc='''A read/write property that gets/sets the SBAddress using load address. The setter resolves SBAddress using the SBTarget from lldb.target so this property can ONLY be used in the interactive script interpreter (i.e. under the lldb script command) and not in Python based commands, or breakpoint commands.''')
+        load_addr = property(__get_load_addr_property__, __set_load_addr_property__, doc='''A read/write property that gets/sets the SBAddress using load address. The setter resolves SBAddress using the SBTarget from lldb.target so this property can ONLY be used in the interactive script interpreter (i.e. under the lldb script command) and not in Python based commands, or breakpoint commands.''')
 
     %}
 
 };
+
+%attributeref(lldb::SBAddress, lldb::SBModule, module, GetModule);
+%attributeref(lldb::SBAddress, lldb::SBCompileUnit, compile_unit, GetCompileUnit);
+%attributeref(lldb::SBAddress, lldb::SBLineEntry, line_entry, GetLineEntry);
+%attributeref(lldb::SBAddress, lldb::SBFunction, function, GetFunction);
+%attributeref(lldb::SBAddress, lldb::SBBlock, block, GetBlock);
+%attributeref(lldb::SBAddress, lldb::SBSymbol, symbol, GetSymbol);
+%attributeref(lldb::SBAddress, lldb::SBSection, section, GetSection);
+%attribute(lldb::SBAddress, lldb::addr_t, symbol, GetOffset);
+%attribute(lldb::SBAddress, lldb::addr_t, file_addr, GetFileAddress);
 
 } // namespace lldb

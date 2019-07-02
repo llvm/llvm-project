@@ -6,6 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
+%include <attribute.i>
+
 namespace lldb {
 
 %feature("docstring",
@@ -125,13 +127,10 @@ public:
             '''Return the number of line entries in a lldb.SBCompileUnit
             object.'''
             return self.GetNumLineEntries()
-
-        __swig_getmethods__["file"] = GetFileSpec
-        if _newclass: file = property(GetFileSpec, None, doc='''A read only property that returns the same result an lldb object that represents the source file (lldb.SBFileSpec) for the compile unit.''')
-
-        __swig_getmethods__["num_line_entries"] = GetNumLineEntries
-        if _newclass: num_line_entries = property(GetNumLineEntries, None, doc='''A read only property that returns the number of line entries in a compile unit as an integer.''')
     %}
 };
+
+%attributeref(lldb::SBCompileUnit, lldb::SBFileSpec, file, GetFileSpec);
+%attribute(lldb::SBCompileUnit, uint32_t, num_line_entries, GetNumLineEntries);
 
 } // namespace lldb

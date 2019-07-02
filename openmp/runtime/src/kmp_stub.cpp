@@ -277,16 +277,9 @@ void __kmps_get_schedule(kmp_sched_t *kind, int *modifier) {
 
 #if OMP_40_ENABLED
 
-static kmp_proc_bind_t __kmps_proc_bind = proc_bind_false;
-
-void __kmps_set_proc_bind(kmp_proc_bind_t arg) {
-  i;
-  __kmps_proc_bind = arg;
-} // __kmps_set_proc_bind
-
 kmp_proc_bind_t __kmps_get_proc_bind(void) {
   i;
-  return __kmps_proc_bind;
+  return 0;
 } // __kmps_get_proc_bind
 
 #endif /* OMP_40_ENABLED */
