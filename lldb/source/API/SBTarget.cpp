@@ -1847,18 +1847,12 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
     }
 
     // Didn't find the type in the symbols; Try the loaded language runtimes
-    // FIXME: This depends on clang, but should be able to support any
-    // TypeSystem/compiler.
     if (auto process_sp = target_sp->GetProcessSP()) {
       for (auto *runtime : process_sp->GetLanguageRuntimes()) {
         if (auto vendor = runtime->GetDeclVendor()) {
-          std::vector<clang::NamedDecl *> decls;
-          if (vendor->FindDecls(const_typename, /*append*/ true,
-                                /*max_matches*/ 1, decls) > 0) {
-            if (CompilerType type =
-                    ClangASTContext::GetTypeForDecl(decls.front()))
-              return LLDB_RECORD_RESULT(SBType(type));
-          }
+          auto types = vendor->FindTypes(const_typename, /*max_matches*/ 1);
+          if (!types.empty())
+            return LLDB_RECORD_RESULT(SBType(types.front()));
         }
       }
     }
@@ -1911,19 +1905,13 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
     }
 
     // Try the loaded language runtimes
-    // FIXME: This depends on clang, but should be able to support any
-    // TypeSystem/compiler.
     if (auto process_sp = target_sp->GetProcessSP()) {
       for (auto *runtime : process_sp->GetLanguageRuntimes()) {
         if (auto *vendor = runtime->GetDeclVendor()) {
-          std::vector<clang::NamedDecl *> decls;
-          if (vendor->FindDecls(const_typename, /*append*/ true,
-                                /*max_matches*/ 1, decls) > 0) {
-            for (auto *decl : decls) {
-              if (CompilerType type = ClangASTContext::GetTypeForDecl(decl))
-                sb_type_list.Append(SBType(type));
-            }
-          }
+          auto types =
+              vendor->FindTypes(const_typename, /*max_matches*/ UINT32_MAX);
+          for (auto type : types)
+            sb_type_list.Append(SBType(type));
         }
       }
     }

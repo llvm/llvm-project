@@ -47,6 +47,19 @@ public:
                              uint32_t max_matches,
                              std::vector<clang::NamedDecl *> &decls) = 0;
 
+  /// Look up the types that the DeclVendor currently knows about matching a
+  /// given name.
+  ///
+  /// \param[in] name
+  ///     The name to look for.
+  ///
+  /// \param[in] max_matches
+  //      The maximum number of matches. UINT32_MAX means "as many as possible".
+  ///
+  /// \return
+  ///     The vector of CompilerTypes that was found.
+  std::vector<CompilerType> FindTypes(ConstString name, uint32_t max_matches);
+
   /// Interface for ExternalASTMerger.  Returns an ImporterSource 
   /// allowing type completion.
   ///
