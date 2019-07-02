@@ -27,6 +27,7 @@
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
 
 namespace swift {
@@ -345,9 +346,9 @@ public:
   /// Determines wether \c variable is the "self" object.
   static bool IsSelf(Variable &variable);
 
-  void AddToLibraryNegativeCache(const std::string &library_name);
+  void AddToLibraryNegativeCache(llvm::StringRef library_name);
 
-  bool IsInLibraryNegativeCache(const std::string &library_name);
+  bool IsInLibraryNegativeCache(llvm::StringRef library_name);
 
   // Swift uses a few known-unused bits in ObjC pointers
   // to record useful-for-bridging information
@@ -432,12 +433,10 @@ protected:
 
   void PopLocalBuffer();
 
-  std::unordered_set<std::string> m_library_negative_cache; // We have to load
-                                                            // swift dependent
-                                                            // libraries by
-                                                            // hand,
-  std::mutex m_negative_cache_mutex; // but if they are missing, we shouldn't
-                                     // keep trying.
+  /// We have to load swift dependent libraries by hand, but if they
+  /// are missing, we shouldn't keep trying.
+  llvm::StringSet<> m_library_negative_cache;
+  std::mutex m_negative_cache_mutex;
 
   llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
 
