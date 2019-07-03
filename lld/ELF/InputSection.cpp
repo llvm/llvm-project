@@ -570,6 +570,11 @@ static uint64_t getARMStaticBase(const Symbol &Sym) {
 // R_RISCV_PCREL_LO12's symbol and addend.
 static Relocation *getRISCVPCRelHi20(const Symbol *Sym, uint64_t Addend) {
   const Defined *D = cast<Defined>(Sym);
+  if (!D->Section) {
+    error("R_RISCV_PCREL_LO12 relocation points to an absolute symbol: " +
+          Sym->getName());
+    return nullptr;
+  }
   InputSection *IS = cast<InputSection>(D->Section);
 
   if (Addend != 0)
