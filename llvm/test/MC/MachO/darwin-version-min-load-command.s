@@ -1,6 +1,7 @@
 // RUN: llvm-mc -triple x86_64-apple-macosx10.10.0 %s -filetype=obj -o - | llvm-objdump -macho -private-headers - | FileCheck %s
 // RUN: llvm-mc -triple x86_64-apple-ios8.0.0 %s -filetype=obj -o - | llvm-objdump -macho -private-headers - | FileCheck %s --check-prefix=CHECK-IOS
 // RUN: llvm-mc -triple x86_64-apple-darwin %s -filetype=obj -o - | llvm-objdump -macho -private-headers - | FileCheck %s --check-prefix=CHECK-DARWIN
+// RUN: llvm-mc -triple x86_64-apple-ios13.0-macabi %s -filetype=obj -o - | llvm-objdump -macho -private-headers - | FileCheck %s --check-prefix=CHECK-MACCATALYST
 
 // Test version-min load command should be inferred from triple and should always be generated on Darwin
 // CHECK: Load command
@@ -33,3 +34,10 @@
 // CHECK-BRIDGEOS-NEXT:       sdk n/a
 // CHECK-BRIDGEOS-NEXT:     minos 2.0
 // CHECK-BRIDGEOS-NEXT:    ntools 0
+
+// CHECK-MACCATALYST:           cmd LC_BUILD_VERSION
+// CHECK-MACCATALYST-NEXT:  cmdsize 24
+// CHECK-MACCATALYST-NEXT: platform macCatalyst
+// CHECK-MACCATALYST-NEXT:      sdk n/a
+// CHECK-MACCATALYST-NEXT:    minos 13.0
+// CHECK-MACCATALYST-NEXT:   ntools 0
