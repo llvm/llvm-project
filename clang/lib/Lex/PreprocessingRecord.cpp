@@ -238,16 +238,13 @@ unsigned PreprocessingRecord::findBeginLocalPreprocessedEntity(
   return First - PreprocessedEntities.begin();
 }
 
-unsigned PreprocessingRecord::findEndLocalPreprocessedEntity(
-                                                     SourceLocation Loc) const {
+unsigned
+PreprocessingRecord::findEndLocalPreprocessedEntity(SourceLocation Loc) const {
   if (SourceMgr.isLoadedSourceLocation(Loc))
     return 0;
 
-  std::vector<PreprocessedEntity *>::const_iterator
-  I = std::upper_bound(PreprocessedEntities.begin(),
-                       PreprocessedEntities.end(),
-                       Loc,
-                       PPEntityComp<&SourceRange::getBegin>(SourceMgr));
+  auto I = llvm::upper_bound(PreprocessedEntities, Loc,
+                             PPEntityComp<&SourceRange::getBegin>(SourceMgr));
   return I - PreprocessedEntities.begin();
 }
 
@@ -305,10 +302,9 @@ PreprocessingRecord::addPreprocessedEntity(PreprocessedEntity *Entity) {
   }
 
   // Linear search unsuccessful. Do a binary search.
-  pp_iter I = std::upper_bound(PreprocessedEntities.begin(),
-                               PreprocessedEntities.end(),
-                               BeginLoc,
-                               PPEntityComp<&SourceRange::getBegin>(SourceMgr));
+  pp_iter I =
+      llvm::upper_bound(PreprocessedEntities, BeginLoc,
+                        PPEntityComp<&SourceRange::getBegin>(SourceMgr));
   pp_iter insertI = PreprocessedEntities.insert(I, Entity);
   return getPPEntityID(insertI - PreprocessedEntities.begin(),
                        /*isLoaded=*/false);

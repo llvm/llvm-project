@@ -228,12 +228,11 @@ RawComment *ASTContext::getRawCommentForDeclNoCache(const Decl *D) const {
 
     if (Found) {
       Comment = MaybeBeforeDecl + 1;
-      assert(Comment == std::lower_bound(RawComments.begin(), RawComments.end(),
-                                         &CommentAtDeclLoc, Compare));
+      assert(Comment ==
+             llvm::lower_bound(RawComments, &CommentAtDeclLoc, Compare));
     } else {
       // Slow path.
-      Comment = std::lower_bound(RawComments.begin(), RawComments.end(),
-                                 &CommentAtDeclLoc, Compare);
+      Comment = llvm::lower_bound(RawComments, &CommentAtDeclLoc, Compare);
     }
   }
 

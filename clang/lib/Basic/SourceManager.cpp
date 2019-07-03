@@ -277,9 +277,9 @@ const LineEntry *LineTableInfo::FindNearestLineEntry(FileID FID,
     return &Entries.back();
 
   // Do a binary search to find the maximal element that is still before Offset.
-  std::vector<LineEntry>::const_iterator I =
-    std::upper_bound(Entries.begin(), Entries.end(), Offset);
-  if (I == Entries.begin()) return nullptr;
+  std::vector<LineEntry>::const_iterator I = llvm::upper_bound(Entries, Offset);
+  if (I == Entries.begin())
+    return nullptr;
   return &*--I;
 }
 

@@ -5700,7 +5700,7 @@ void ASTWriter::associateDeclWithFile(const Decl *D, DeclID ID) {
   }
 
   LocDeclIDsTy::iterator I =
-      std::upper_bound(Decls.begin(), Decls.end(), LocDecl, llvm::less_first());
+      llvm::upper_bound(Decls, LocDecl, llvm::less_first());
 
   Decls.insert(I, LocDecl);
 }

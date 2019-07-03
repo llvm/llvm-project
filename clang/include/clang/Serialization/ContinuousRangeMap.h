@@ -73,7 +73,7 @@ public:
   }
 
   void insertOrReplace(const value_type &Val) {
-    iterator I = std::lower_bound(Rep.begin(), Rep.end(), Val, Compare());
+    iterator I = llvm::lower_bound(Rep, Val, Compare());
     if (I != Rep.end() && I->first == Val.first) {
       I->second = Val.second;
       return;
@@ -91,7 +91,7 @@ public:
   const_iterator end() const { return Rep.end(); }
 
   iterator find(Int K) {
-    iterator I = std::upper_bound(Rep.begin(), Rep.end(), K, Compare());
+    iterator I = llvm::upper_bound(Rep, K, Compare());
     // I points to the first entry with a key > K, which is the range that
     // follows the one containing K.
     if (I == Rep.begin())
