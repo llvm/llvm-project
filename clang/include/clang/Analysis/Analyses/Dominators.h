@@ -155,13 +155,51 @@ private:
 
 } // namespace clang
 
+namespace llvm {
+
+/// Clang's CFG contains nullpointers for unreachable succesors, e.g. when an
+/// if statement's condition is always false, it's 'then' branch is represented
+/// with a nullptr. This however will result in a nullpointer derefernece for
+/// dominator tree calculation.
+///
+/// To circumvent this, let's just crudely specialize the children getters
+/// used in LLVM's dominator tree builder.
+namespace DomTreeBuilder {
+
+using ClangCFGDomChildrenGetter =
+SemiNCAInfo<DomTreeBase<clang::CFGBlock>>::ChildrenGetter</*Inverse=*/false>;
+
+template <>
+template <>
+inline ClangCFGDomChildrenGetter::ResultTy ClangCFGDomChildrenGetter::Get(
+    clang::CFGBlock *N, std::integral_constant<bool, /*Inverse=*/false>) {
+  auto RChildren = reverse(children<NodePtr>(N));
+  ResultTy Ret(RChildren.begin(), RChildren.end());
+  Ret.erase(std::remove(Ret.begin(), Ret.end(), nullptr), Ret.end());
+  return Ret;
+}
+
+using ClangCFGDomReverseChildrenGetter =
+SemiNCAInfo<DomTreeBase<clang::CFGBlock>>::ChildrenGetter</*Inverse=*/true>;
+
+template <>
+template <>
+inline ClangCFGDomReverseChildrenGetter::ResultTy
+ClangCFGDomReverseChildrenGetter::Get(
+    clang::CFGBlock *N, std::integral_constant<bool, /*Inverse=*/true>) {
+  auto IChildren = inverse_children<NodePtr>(N);
+  ResultTy Ret(IChildren.begin(), IChildren.end());
+  Ret.erase(std::remove(Ret.begin(), Ret.end(), nullptr), Ret.end());
+  return Ret;
+}
+
+} // end of namespace DomTreeBuilder
+
 //===-------------------------------------
 /// DominatorTree GraphTraits specialization so the DominatorTree can be
 /// iterable by generic graph iterators.
 ///
-namespace llvm {
-
-template <> struct GraphTraits< ::clang::DomTreeNode* > {
+template <> struct GraphTraits<clang::DomTreeNode *> {
   using NodeRef = ::clang::DomTreeNode *;
   using ChildIteratorType = ::clang::DomTreeNode::iterator;
 

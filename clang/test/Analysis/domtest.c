@@ -1,6 +1,6 @@
-// RUN: rm -f %t
-// RUN: %clang_analyze_cc1 -analyzer-checker=debug.DumpDominators %s > %t 2>&1
-// RUN: FileCheck --input-file=%t %s
+// RUN: %clang_analyze_cc1 %s \
+// RUN:   -analyzer-checker=debug.DumpDominators \
+// RUN:   2>&1 | FileCheck %s
 
 // Test the DominatorsTree implementation with various control flows
 int test1()
@@ -24,17 +24,24 @@ int test1()
   return 0;
 }
 
-// CHECK: Immediate dominance tree (Node#,IDom#):
-// CHECK: (0,1)
-// CHECK: (1,7)
-// CHECK: (2,3)
-// CHECK: (3,6)
-// CHECK: (4,6)
-// CHECK: (5,6)
-// CHECK: (6,7)
-// CHECK: (7,8)
-// CHECK: (8,9)
-// CHECK: (9,9)
+// [B9 (ENTRY)] -> [B8] -> [B7] -> [B6] -> [B5] -> [B3] -> [B2]
+//                          |\       \              /       /
+//                          | \       ---> [B4] --->       /
+//                          |  <---------------------------
+//                          V
+//                         [B1] -> [B0 (EXIT)]
+
+// CHECK:      Immediate dominance tree (Node#,IDom#):
+// CHECK-NEXT: (0,1)
+// CHECK-NEXT: (1,7)
+// CHECK-NEXT: (2,3)
+// CHECK-NEXT: (3,6)
+// CHECK-NEXT: (4,6)
+// CHECK-NEXT: (5,6)
+// CHECK-NEXT: (6,7)
+// CHECK-NEXT: (7,8)
+// CHECK-NEXT: (8,9)
+// CHECK-NEXT: (9,9)
 
 int test2()
 {
@@ -54,15 +61,22 @@ int test2()
   return 0;
 }
 
-// CHECK: Immediate dominance tree (Node#,IDom#):
-// CHECK: (0,1)
-// CHECK: (1,6)
-// CHECK: (2,3)
-// CHECK: (3,4)
-// CHECK: (4,6)
-// CHECK: (5,6)
-// CHECK: (6,7)
-// CHECK: (7,7)
+//                                    <-------------
+//                                   /              \
+//                    -----------> [B4] -> [B3] -> [B2]
+//                   /              |
+//                  /               V
+// [B7 (ENTRY)] -> [B6] -> [B5] -> [B1] -> [B0 (EXIT)]
+
+// CHECK:      Immediate dominance tree (Node#,IDom#):
+// CHECK-NEXT: (0,1)
+// CHECK-NEXT: (1,6)
+// CHECK-NEXT: (2,3)
+// CHECK-NEXT: (3,4)
+// CHECK-NEXT: (4,6)
+// CHECK-NEXT: (5,6)
+// CHECK-NEXT: (6,7)
+// CHECK-NEXT: (7,7)
 
 int test3()
 {
@@ -82,16 +96,26 @@ int test3()
   return 0;
 }
 
-// CHECK: Immediate dominance tree (Node#,IDom#):
-// CHECK: (0,1)
-// CHECK: (1,7)
-// CHECK: (2,5)
-// CHECK: (3,4)
-// CHECK: (4,5)
-// CHECK: (5,6)
-// CHECK: (6,7)
-// CHECK: (7,8)
-// CHECK: (8,8)
+//                            <-------------
+//                           /              \
+//                           |        ---> [B2]
+//                           |       /
+// [B8 (ENTRY)] -> [B7] -> [B6] -> [B5] -> [B4] -> [B3]
+//                   \       |       \              /
+//                    \      |        <-------------
+//                     \      \
+//                      --------> [B1] -> [B0 (EXIT)]
+
+// CHECK:      Immediate dominance tree (Node#,IDom#):
+// CHECK-NEXT: (0,1)
+// CHECK-NEXT: (1,7)
+// CHECK-NEXT: (2,5)
+// CHECK-NEXT: (3,4)
+// CHECK-NEXT: (4,5)
+// CHECK-NEXT: (5,6)
+// CHECK-NEXT: (6,7)
+// CHECK-NEXT: (7,8)
+// CHECK-NEXT: (8,8)
 
 int test4()
 {
@@ -108,20 +132,33 @@ int test4()
   return 0;
 }
 
-// CHECK: Immediate dominance tree (Node#,IDom#):
-// CHECK: (0,1)
-// CHECK: (1,10)
-// CHECK: (2,9)
-// CHECK: (3,4)
-// CHECK: (4,5)
-// CHECK: (5,9)
-// CHECK: (6,7)
-// CHECK: (7,8)
-// CHECK: (8,9)
-// CHECK: (9,10)
-// CHECK: (10,11)
-// CHECK: (11,12)
-// CHECK: (12,12)
+//                               <----------------------------------
+//                              /              <-----------------   \
+//                             /              /                  \   \
+// [B12 (ENTRY)] -> [B11] -> [B10]-> [B9] -> [B8] ---> [B7] -> [B6]  |
+//                             |      \        \                     /
+//                             |       \        -----> [B2] --------/
+//                             |        \      /
+//                             |          -> [B5] -> [B4] -> [B3]
+//                             |               \              /
+//                             |                <------------
+//                              \
+//                               -> [B1] -> [B0 (EXIT)]
+
+// CHECK:      Immediate dominance tree (Node#,IDom#):
+// CHECK-NEXT: (0,1)
+// CHECK-NEXT: (1,10)
+// CHECK-NEXT: (2,9)
+// CHECK-NEXT: (3,4)
+// CHECK-NEXT: (4,5)
+// CHECK-NEXT: (5,9)
+// CHECK-NEXT: (6,7)
+// CHECK-NEXT: (7,8)
+// CHECK-NEXT: (8,9)
+// CHECK-NEXT: (9,10)
+// CHECK-NEXT: (10,11)
+// CHECK-NEXT: (11,12)
+// CHECK-NEXT: (12,12)
 
 int test5()
 {
@@ -151,18 +188,25 @@ int test5()
   return 0;
 }
 
-// CHECK: Immediate dominance tree (Node#,IDom#):
-// CHECK: (0,1)
-// CHECK: (1,10)
-// CHECK: (2,10)
-// CHECK: (3,9)
-// CHECK: (4,9)
-// CHECK: (5,8)
-// CHECK: (6,8)
-// CHECK: (7,8)
-// CHECK: (8,9)
-// CHECK: (9,10)
-// CHECK: (10,11)
-// CHECK: (11,11)
+//                                                    [B0 (EXIT)] <--
+//                                                                   \
+// [B11 (ENTY)] -> [B10] -> [B9] -> [B8] -> [B7] -> [B5] -> [B3] -> [B1]
+//                            |       |       |      /       /       /
+//                            |       |       V     /       /       /
+//                            |       V     [B6] -->       /       /
+//                            V     [B4] ----------------->       /
+//                          [B2]--------------------------------->
 
-
+// CHECK:      Immediate dominance tree (Node#,IDom#):
+// CHECK-NEXT: (0,1)
+// CHECK-NEXT: (1,10)
+// CHECK-NEXT: (2,10)
+// CHECK-NEXT: (3,9)
+// CHECK-NEXT: (4,9)
+// CHECK-NEXT: (5,8)
+// CHECK-NEXT: (6,8)
+// CHECK-NEXT: (7,8)
+// CHECK-NEXT: (8,9)
+// CHECK-NEXT: (9,10)
+// CHECK-NEXT: (10,11)
+// CHECK-NEXT: (11,11)
