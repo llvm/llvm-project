@@ -328,7 +328,7 @@ struct CodeCompletionBuilder {
       if (!ResolvedInserted)
         return ResolvedInserted.takeError();
       return std::make_pair(
-          Includes.calculateIncludePath(*ResolvedInserted),
+          Includes.calculateIncludePath(*ResolvedInserted, FileName),
           Includes.shouldInsertInclude(*ResolvedDeclaring, *ResolvedInserted));
     };
     bool ShouldInsert = C.headerToInsertIfAllowed(Opts).hasValue();

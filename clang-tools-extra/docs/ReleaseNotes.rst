@@ -125,6 +125,12 @@ Improvements to clang-tidy
   repeated branches in ``switch`` statements and indentical true and false
   branches in conditional operators.
 
+- New :doc:`bugprone-posix-return
+  <clang-tidy/checks/android-posix-return>` check.
+
+  Checks if any calls to POSIX functions (except ``posix_openpt``) expect negative
+  return values.
+
 - New :doc:`fuchsia-default-arguments-calls
   <clang-tidy/checks/fuchsia-default-arguments-calls>` check.
 
