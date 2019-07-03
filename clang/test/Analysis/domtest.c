@@ -1,5 +1,6 @@
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=debug.DumpDominators \
+// RUN:   -analyzer-checker=debug.DumpPostDominators \
 // RUN:   2>&1 | FileCheck %s
 
 // Test the DominatorsTree implementation with various control flows
@@ -42,6 +43,17 @@ int test1()
 // CHECK-NEXT: (7,8)
 // CHECK-NEXT: (8,9)
 // CHECK-NEXT: (9,9)
+// CHECK-NEXT: Immediate post dominance tree (Node#,IDom#):
+// CHECK-NEXT: (0,0)
+// CHECK-NEXT: (1,0)
+// CHECK-NEXT: (2,7)
+// CHECK-NEXT: (3,2)
+// CHECK-NEXT: (4,3)
+// CHECK-NEXT: (5,3)
+// CHECK-NEXT: (6,3)
+// CHECK-NEXT: (7,1)
+// CHECK-NEXT: (8,7)
+// CHECK-NEXT: (9,8)
 
 int test2()
 {
@@ -77,6 +89,15 @@ int test2()
 // CHECK-NEXT: (5,6)
 // CHECK-NEXT: (6,7)
 // CHECK-NEXT: (7,7)
+// CHECK-NEXT: Immediate post dominance tree (Node#,IDom#):
+// CHECK-NEXT: (0,0)
+// CHECK-NEXT: (1,0)
+// CHECK-NEXT: (2,4)
+// CHECK-NEXT: (3,2)
+// CHECK-NEXT: (4,1)
+// CHECK-NEXT: (5,1)
+// CHECK-NEXT: (6,1)
+// CHECK-NEXT: (7,6)
 
 int test3()
 {
@@ -116,6 +137,16 @@ int test3()
 // CHECK-NEXT: (6,7)
 // CHECK-NEXT: (7,8)
 // CHECK-NEXT: (8,8)
+// CHECK-NEXT: Immediate post dominance tree (Node#,IDom#):
+// CHECK-NEXT: (0,0)
+// CHECK-NEXT: (1,0)
+// CHECK-NEXT: (2,6)
+// CHECK-NEXT: (3,5)
+// CHECK-NEXT: (4,3)
+// CHECK-NEXT: (5,2)
+// CHECK-NEXT: (6,1)
+// CHECK-NEXT: (7,1)
+// CHECK-NEXT: (8,7)
 
 int test4()
 {
@@ -159,6 +190,20 @@ int test4()
 // CHECK-NEXT: (10,11)
 // CHECK-NEXT: (11,12)
 // CHECK-NEXT: (12,12)
+// CHECK-NEXT: Immediate post dominance tree (Node#,IDom#):
+// CHECK-NEXT: (0,0)
+// CHECK-NEXT: (1,0)
+// CHECK-NEXT: (2,10)
+// CHECK-NEXT: (3,5)
+// CHECK-NEXT: (4,3)
+// CHECK-NEXT: (5,2)
+// CHECK-NEXT: (6,8)
+// CHECK-NEXT: (7,6)
+// CHECK-NEXT: (8,2)
+// CHECK-NEXT: (9,2)
+// CHECK-NEXT: (10,1)
+// CHECK-NEXT: (11,10)
+// CHECK-NEXT: (12,11)
 
 int test5()
 {
@@ -210,3 +255,16 @@ int test5()
 // CHECK-NEXT: (9,10)
 // CHECK-NEXT: (10,11)
 // CHECK-NEXT: (11,11)
+// CHECK-NEXT: Immediate post dominance tree (Node#,IDom#):
+// CHECK-NEXT: (0,0)
+// CHECK-NEXT: (1,0)
+// CHECK-NEXT: (2,1)
+// CHECK-NEXT: (3,1)
+// CHECK-NEXT: (4,3)
+// CHECK-NEXT: (5,3)
+// CHECK-NEXT: (6,5)
+// CHECK-NEXT: (7,5)
+// CHECK-NEXT: (8,5)
+// CHECK-NEXT: (9,3)
+// CHECK-NEXT: (10,1)
+// CHECK-NEXT: (11,10)

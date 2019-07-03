@@ -36,122 +36,146 @@ namespace clang {
 
 using DomTreeNode = llvm::DomTreeNodeBase<CFGBlock>;
 
-/// Concrete subclass of DominatorTreeBase for Clang
-/// This class implements the dominators tree functionality given a Clang CFG.
-///
-class DominatorTree : public ManagedAnalysis {
+/// Dominator tree builder for Clang's CFG based on llvm::DominatorTreeBase.
+template <bool IsPostDom>
+class CFGDominatorTreeImpl : public ManagedAnalysis {
   virtual void anchor();
 
 public:
-  llvm::DomTreeBase<CFGBlock> *DT;
+  using DominatorTreeBase = llvm::DominatorTreeBase<CFGBlock, IsPostDom>;
 
-  DominatorTree() {
-    DT = new llvm::DomTreeBase<CFGBlock>();
-  }
+  DominatorTreeBase DT;
 
-  ~DominatorTree() override { delete DT; }
+  CFGDominatorTreeImpl() = default;
+  ~CFGDominatorTreeImpl() override = default;
 
-  llvm::DomTreeBase<CFGBlock>& getBase() { return *DT; }
+  DominatorTreeBase& getBase() { return *DT; }
 
-  /// This method returns the root CFGBlock of the dominators tree.
+  /// \returns the root CFGBlock of the dominators tree.
   CFGBlock *getRoot() const {
-    return DT->getRoot();
+    return DT.getRoot();
   }
 
-  /// This method returns the root DomTreeNode, which is the wrapper
-  /// for CFGBlock.
-  DomTreeNode *getRootNode() const {
-    return DT->getRootNode();
+  /// \returns the root DomTreeNode, which is the wrapper for CFGBlock.
+  DomTreeNode *getRootNode() {
+    return DT.getRootNode();
   }
 
-  /// This method compares two dominator trees.
-  /// The method returns false if the other dominator tree matches this
-  /// dominator tree, otherwise returns true.
-  bool compare(DominatorTree &Other) const {
+  /// Compares two dominator trees.
+  /// \returns false if the other dominator tree matches this dominator tree,
+  /// false otherwise.
+  bool compare(CFGDominatorTreeImpl &Other) const {
     DomTreeNode *R = getRootNode();
     DomTreeNode *OtherR = Other.getRootNode();
 
     if (!R || !OtherR || R->getBlock() != OtherR->getBlock())
       return true;
 
-    if (DT->compare(Other.getBase()))
+    if (DT.compare(Other.getBase()))
       return true;
 
     return false;
   }
 
-  /// This method builds the dominator tree for a given CFG
-  /// The CFG information is passed via AnalysisDeclContext
-  void buildDominatorTree(AnalysisDeclContext &AC) {
-    cfg = AC.getCFG();
-    DT->recalculate(*cfg);
+  /// Builds the dominator tree for a given CFG.
+  void buildDominatorTree(CFG *cfg) {
+    assert(cfg);
+    this->cfg = cfg;
+    DT.recalculate(*cfg);
   }
 
-  /// This method dumps immediate dominators for each block,
-  /// mainly used for debug purposes.
+  /// Dumps immediate dominators for each block.
   void dump() {
-    llvm::errs() << "Immediate dominance tree (Node#,IDom#):\n";
+    llvm::errs() << "Immediate " << (IsPostDom ? "post " : "")
+                 << "dominance tree (Node#,IDom#):\n";
     for (CFG::const_iterator I = cfg->begin(),
         E = cfg->end(); I != E; ++I) {
-      if(DT->getNode(*I)->getIDom())
+
+      assert(*I &&
+             "LLVM's Dominator tree builder uses nullpointers to signify the "
+             "virtual root!");
+
+      DomTreeNode *IDom = DT.getNode(*I)->getIDom();
+      if (IDom && IDom->getBlock())
         llvm::errs() << "(" << (*I)->getBlockID()
                      << ","
-                     << DT->getNode(*I)->getIDom()->getBlock()->getBlockID()
+                     << IDom->getBlock()->getBlockID()
                      << ")\n";
-      else llvm::errs() << "(" << (*I)->getBlockID()
-                        << "," << (*I)->getBlockID() << ")\n";
+      else {
+        bool IsEntryBlock = *I == &(*I)->getParent()->getEntry();
+        bool IsExitBlock = *I == &(*I)->getParent()->getExit();
+
+        bool IsDomTreeRoot = !IDom && !IsPostDom && IsEntryBlock;
+        bool IsPostDomTreeRoot =
+            IDom && !IDom->getBlock() && IsPostDom && IsExitBlock;
+
+        assert((IsDomTreeRoot || IsPostDomTreeRoot) &&
+               "If the immediate dominator node is nullptr, the CFG block "
+               "should be the exit point (since it's the root of the dominator "
+               "tree), or if the CFG block it refers to is a nullpointer, it "
+               "must be the entry block (since it's the root of the post "
+               "dominator tree)");
+
+        (void)IsDomTreeRoot;
+        (void)IsPostDomTreeRoot;
+
+        llvm::errs() << "(" << (*I)->getBlockID()
+                     << "," << (*I)->getBlockID() << ")\n";
+      }
     }
   }
 
-  /// This method tests if one CFGBlock dominates the other.
-  /// The method return true if A dominates B, false otherwise.
+  /// Tests whether \p A dominates \p B.
   /// Note a block always dominates itself.
   bool dominates(const CFGBlock *A, const CFGBlock *B) const {
-    return DT->dominates(A, B);
+    return DT.dominates(A, B);
   }
 
-  /// This method tests if one CFGBlock properly dominates the other.
-  /// The method return true if A properly dominates B, false otherwise.
+  /// Tests whether \p A properly dominates \p B.
+  /// \returns false if \p A is the same block as \p B, otherwise whether A
+  /// dominates B.
   bool properlyDominates(const CFGBlock *A, const CFGBlock *B) const {
-    return DT->properlyDominates(A, B);
+    return DT.properlyDominates(A, B);
   }
 
-  /// This method finds the nearest common dominator CFG block
-  /// for CFG block A and B. If there is no such block then return NULL.
+  /// \returns the nearest common dominator CFG block for CFG block \p A and \p
+  /// B. If there is no such block then return NULL.
   CFGBlock *findNearestCommonDominator(CFGBlock *A, CFGBlock *B) {
-    return DT->findNearestCommonDominator(A, B);
+    return DT.findNearestCommonDominator(A, B);
   }
 
   const CFGBlock *findNearestCommonDominator(const CFGBlock *A,
                                              const CFGBlock *B) {
-    return DT->findNearestCommonDominator(A, B);
+    return DT.findNearestCommonDominator(A, B);
   }
 
-  /// This method is used to update the dominator
-  /// tree information when a node's immediate dominator changes.
+  /// Update the dominator tree information when a node's immediate dominator
+  /// changes.
   void changeImmediateDominator(CFGBlock *N, CFGBlock *NewIDom) {
-    DT->changeImmediateDominator(N, NewIDom);
+    DT.changeImmediateDominator(N, NewIDom);
   }
 
-  /// This method tests if the given CFGBlock can be reachable from root.
-  /// Returns true if reachable, false otherwise.
+  /// Tests whether \p A is reachable from the entry block.
   bool isReachableFromEntry(const CFGBlock *A) {
-    return DT->isReachableFromEntry(A);
+    return DT.isReachableFromEntry(A);
   }
 
-  /// This method releases the memory held by the dominator tree.
+  /// Releases the memory held by the dominator tree.
   virtual void releaseMemory() {
-    DT->releaseMemory();
+    DT.releaseMemory();
   }
 
-  /// This method converts the dominator tree to human readable form.
+  /// Converts the dominator tree to human readable form.
   virtual void print(raw_ostream &OS, const llvm::Module* M= nullptr) const {
-    DT->print(OS);
+    DT.print(OS);
   }
 
 private:
   CFG *cfg;
 };
+
+using CFGDomTree = CFGDominatorTreeImpl</*IsPostDom*/ false>;
+using CFGPostDomTree = CFGDominatorTreeImpl</*IsPostDom*/ true>;
 
 } // namespace clang
 
@@ -167,7 +191,8 @@ namespace llvm {
 namespace DomTreeBuilder {
 
 using ClangCFGDomChildrenGetter =
-SemiNCAInfo<DomTreeBase<clang::CFGBlock>>::ChildrenGetter</*Inverse=*/false>;
+SemiNCAInfo<clang::CFGDomTree::DominatorTreeBase>::ChildrenGetter<
+                                                             /*Inverse=*/false>;
 
 template <>
 template <>
@@ -180,12 +205,43 @@ inline ClangCFGDomChildrenGetter::ResultTy ClangCFGDomChildrenGetter::Get(
 }
 
 using ClangCFGDomReverseChildrenGetter =
-SemiNCAInfo<DomTreeBase<clang::CFGBlock>>::ChildrenGetter</*Inverse=*/true>;
+SemiNCAInfo<clang::CFGDomTree::DominatorTreeBase>::ChildrenGetter<
+                                                              /*Inverse=*/true>;
 
 template <>
 template <>
 inline ClangCFGDomReverseChildrenGetter::ResultTy
 ClangCFGDomReverseChildrenGetter::Get(
+    clang::CFGBlock *N, std::integral_constant<bool, /*Inverse=*/true>) {
+  auto IChildren = inverse_children<NodePtr>(N);
+  ResultTy Ret(IChildren.begin(), IChildren.end());
+  Ret.erase(std::remove(Ret.begin(), Ret.end(), nullptr), Ret.end());
+  return Ret;
+}
+
+using ClangCFGPostDomChildrenGetter =
+SemiNCAInfo<clang::CFGPostDomTree::DominatorTreeBase>::ChildrenGetter<
+                                                             /*Inverse=*/false>;
+
+template <>
+template <>
+inline ClangCFGPostDomChildrenGetter::ResultTy
+ClangCFGPostDomChildrenGetter::Get(
+    clang::CFGBlock *N, std::integral_constant<bool, /*Inverse=*/false>) {
+  auto RChildren = reverse(children<NodePtr>(N));
+  ResultTy Ret(RChildren.begin(), RChildren.end());
+  Ret.erase(std::remove(Ret.begin(), Ret.end(), nullptr), Ret.end());
+  return Ret;
+}
+
+using ClangCFGPostDomReverseChildrenGetter =
+SemiNCAInfo<clang::CFGPostDomTree::DominatorTreeBase>::ChildrenGetter<
+                                                              /*Inverse=*/true>;
+
+template <>
+template <>
+inline ClangCFGPostDomReverseChildrenGetter::ResultTy
+ClangCFGPostDomReverseChildrenGetter::Get(
     clang::CFGBlock *N, std::integral_constant<bool, /*Inverse=*/true>) {
   auto IChildren = inverse_children<NodePtr>(N);
   ResultTy Ret(IChildren.begin(), IChildren.end());
@@ -219,17 +275,17 @@ template <> struct GraphTraits<clang::DomTreeNode *> {
   }
 };
 
-template <> struct GraphTraits< ::clang::DominatorTree* >
-    : public GraphTraits< ::clang::DomTreeNode* > {
-  static NodeRef getEntryNode(::clang::DominatorTree *DT) {
+template <> struct GraphTraits<clang::CFGDomTree *>
+    : public GraphTraits<clang::DomTreeNode *> {
+  static NodeRef getEntryNode(clang::CFGDomTree *DT) {
     return DT->getRootNode();
   }
 
-  static nodes_iterator nodes_begin(::clang::DominatorTree *N) {
+  static nodes_iterator nodes_begin(clang::CFGDomTree *N) {
     return nodes_iterator(df_begin(getEntryNode(N)));
   }
 
-  static nodes_iterator nodes_end(::clang::DominatorTree *N) {
+  static nodes_iterator nodes_end(clang::CFGDomTree *N) {
     return nodes_iterator(df_end(getEntryNode(N)));
   }
 };

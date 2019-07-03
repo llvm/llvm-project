@@ -10,4 +10,8 @@
 
 using namespace clang;
 
-void DominatorTree::anchor() {}
+template <>
+void CFGDominatorTreeImpl</*IsPostDom=*/true>::anchor() {}
+
+template <>
+void CFGDominatorTreeImpl</*IsPostDom=*/false>::anchor() {}

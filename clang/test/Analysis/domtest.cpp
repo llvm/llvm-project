@@ -1,5 +1,6 @@
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=debug.DumpDominators \
+// RUN:   -analyzer-checker=debug.DumpPostDominators \
 // RUN:   2>&1 | FileCheck %s
 
 bool coin();
@@ -24,6 +25,11 @@ void f() {
 // CHECK-NEXT: (1,3)
 // CHECK-NEXT: (2,1)
 // CHECK-NEXT: (3,3)
+// CHECK-NEXT: Immediate post dominance tree (Node#,IDom#):
+// CHECK-NEXT: (0,0)
+// CHECK-NEXT: (1,2)
+// CHECK-NEXT: (2,0)
+// CHECK-NEXT: (3,1)
 
 void funcWithBranch() {
   int x = 0;
@@ -49,3 +55,10 @@ void funcWithBranch() {
 // CHECK-NEXT: (3,4)
 // CHECK-NEXT: (4,5)
 // CHECK-NEXT: (5,5)
+// CHECK-NEXT: Immediate post dominance tree (Node#,IDom#):
+// CHECK-NEXT: (0,0)
+// CHECK-NEXT: (1,0)
+// CHECK-NEXT: (2,1)
+// CHECK-NEXT: (3,1)
+// CHECK-NEXT: (4,0)
+// CHECK-NEXT: (5,4)
