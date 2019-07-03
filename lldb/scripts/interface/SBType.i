@@ -44,24 +44,12 @@ public:
     GetBitfieldSizeInBits();
 
     %pythoncode %{
-        __swig_getmethods__["name"] = GetName
-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this member as a string.''')
-
-        __swig_getmethods__["type"] = GetType
-        if _newclass: type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this member.''')
-
-        __swig_getmethods__["byte_offset"] = GetOffsetInBytes
-        if _newclass: byte_offset = property(GetOffsetInBytes, None, doc='''A read only property that returns offset in bytes for this member as an integer.''')
-
-        __swig_getmethods__["bit_offset"] = GetOffsetInBits
-        if _newclass: bit_offset = property(GetOffsetInBits, None, doc='''A read only property that returns offset in bits for this member as an integer.''')
-
-        __swig_getmethods__["is_bitfield"] = IsBitfield
-        if _newclass: is_bitfield = property(IsBitfield, None, doc='''A read only property that returns true if this member is a bitfield.''')
-
-        __swig_getmethods__["bitfield_bit_size"] = GetBitfieldSizeInBits
-        if _newclass: bitfield_bit_size = property(GetBitfieldSizeInBits, None, doc='''A read only property that returns the bitfield size in bits for this member as an integer, or zero if this member is not a bitfield.''')
-
+        name = property(GetName, None, doc='''A read only property that returns the name for this member as a string.''')
+        type = property(GetType, None, doc='''A read only property that returns an lldb object that represents the type (lldb.SBType) for this member.''')
+        byte_offset = property(GetOffsetInBytes, None, doc='''A read only property that returns offset in bytes for this member as an integer.''')
+        bit_offset = property(GetOffsetInBits, None, doc='''A read only property that returns offset in bits for this member as an integer.''')
+        is_bitfield = property(IsBitfield, None, doc='''A read only property that returns true if this member is a bitfield.''')
+        bitfield_bit_size = property(GetBitfieldSizeInBits, None, doc='''A read only property that returns the bitfield size in bits for this member as an integer, or zero if this member is not a bitfield.''')
     %}
 
 protected:
@@ -334,41 +322,18 @@ public:
                 return template_args
             return None
 
-        __swig_getmethods__["name"] = GetName
-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name for this type as a string.''')
-
-        __swig_getmethods__["size"] = GetByteSize
-        if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns size in bytes for this type as an integer.''')
-
-        __swig_getmethods__["is_pointer"] = IsPointerType
-        if _newclass: is_pointer = property(IsPointerType, None, doc='''A read only property that returns a boolean value that indicates if this type is a pointer type.''')
-
-        __swig_getmethods__["is_reference"] = IsReferenceType
-        if _newclass: is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a reference type.''')
-
-        __swig_getmethods__["is_function"] = IsFunctionType
-        if _newclass: is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a function type.''')
-
-        __swig_getmethods__["num_fields"] = GetNumberOfFields
-        if _newclass: num_fields = property(GetNumberOfFields, None, doc='''A read only property that returns number of fields in this type as an integer.''')
-
-        __swig_getmethods__["num_bases"] = GetNumberOfDirectBaseClasses
-        if _newclass: num_bases = property(GetNumberOfDirectBaseClasses, None, doc='''A read only property that returns number of direct base classes in this type as an integer.''')
-
-        __swig_getmethods__["num_vbases"] = GetNumberOfVirtualBaseClasses
-        if _newclass: num_vbases = property(GetNumberOfVirtualBaseClasses, None, doc='''A read only property that returns number of virtual base classes in this type as an integer.''')
-
-        __swig_getmethods__["num_template_args"] = GetNumberOfTemplateArguments
-        if _newclass: num_template_args = property(GetNumberOfTemplateArguments, None, doc='''A read only property that returns number of template arguments in this type as an integer.''')
-
-        __swig_getmethods__["template_args"] = template_arg_array
-        if _newclass: template_args = property(template_arg_array, None, doc='''A read only property that returns a list() of lldb.SBType objects that represent all template arguments in this type.''')
-
-        __swig_getmethods__["type"] = GetTypeClass
-        if _newclass: type = property(GetTypeClass, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eTypeClass") that represents a classification for this type.''')
-
-        __swig_getmethods__["is_complete"] = IsTypeComplete
-        if _newclass: is_complete = property(IsTypeComplete, None, doc='''A read only property that returns a boolean value that indicates if this type is a complete type (True) or a forward declaration (False).''')
+        name = property(GetName, None, doc='''A read only property that returns the name for this type as a string.''')
+        size = property(GetByteSize, None, doc='''A read only property that returns size in bytes for this type as an integer.''')
+        is_pointer = property(IsPointerType, None, doc='''A read only property that returns a boolean value that indicates if this type is a pointer type.''')
+        is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a reference type.''')
+        is_reference = property(IsReferenceType, None, doc='''A read only property that returns a boolean value that indicates if this type is a function type.''')
+        num_fields = property(GetNumberOfFields, None, doc='''A read only property that returns number of fields in this type as an integer.''')
+        num_bases = property(GetNumberOfDirectBaseClasses, None, doc='''A read only property that returns number of direct base classes in this type as an integer.''')
+        num_vbases = property(GetNumberOfVirtualBaseClasses, None, doc='''A read only property that returns number of virtual base classes in this type as an integer.''')
+        num_template_args = property(GetNumberOfTemplateArguments, None, doc='''A read only property that returns number of template arguments in this type as an integer.''')
+        template_args = property(template_arg_array, None, doc='''A read only property that returns a list() of lldb.SBType objects that represent all template arguments in this type.''')
+        type = property(GetTypeClass, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eTypeClass") that represents a classification for this type.''')
+        is_complete = property(IsTypeComplete, None, doc='''A read only property that returns a boolean value that indicates if this type is a complete type (True) or a forward declaration (False).''')
 
         def get_bases_array(self):
             '''An accessor function that returns a list() that contains all direct base classes in a lldb.SBType object.'''
@@ -437,21 +402,11 @@ public:
                 enum_members_list.append(sb_enum_members.GetTypeEnumMemberAtIndex(idx))
             return enum_members_list
 
-        __swig_getmethods__["bases"] = get_bases_array
-        if _newclass: bases = property(get_bases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the direct base classes for this type.''')
-
-        __swig_getmethods__["vbases"] = get_vbases_array
-        if _newclass: vbases = property(get_vbases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the virtual base classes for this type.''')
-
-        __swig_getmethods__["fields"] = get_fields_array
-        if _newclass: fields = property(get_fields_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the fields for this type.''')
-
-        __swig_getmethods__["members"] = get_members_array
-        if _newclass: members = property(get_members_array, None, doc='''A read only property that returns a list() of all lldb.SBTypeMember objects that represent all of the base classes, virtual base classes and fields for this type in ascending bit offset order.''')
-
-        __swig_getmethods__["enum_members"] = get_enum_members_array
-        if _newclass: enum_members = property(get_enum_members_array, None, doc='''A read only property that returns a list() of all lldb.SBTypeEnumMember objects that represent the enum members for this type.''')
-
+        bases = property(get_bases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the direct base classes for this type.''')
+        vbases = property(get_vbases_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the virtual base classes for this type.''')
+        fields = property(get_fields_array, None, doc='''A read only property that returns a list() of lldb.SBTypeMember objects that represent all of the fields for this type.''')
+        members = property(get_members_array, None, doc='''A read only property that returns a list() of all lldb.SBTypeMember objects that represent all of the base classes, virtual base classes and fields for this type in ascending bit offset order.''')
+        enum_members = property(get_enum_members_array, None, doc='''A read only property that returns a list() of all lldb.SBTypeEnumMember objects that represent the enum members for this type.''')
         %}
 
 };

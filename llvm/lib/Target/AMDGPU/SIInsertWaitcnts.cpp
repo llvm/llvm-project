@@ -1357,7 +1357,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   // Walk over the instructions.
   MachineInstr *OldWaitcntInstr = nullptr;
 
-  for (MachineBasicBlock::iterator Iter = Block.begin(), E = Block.end();
+  for (MachineBasicBlock::instr_iterator Iter = Block.instr_begin(),
+                                         E = Block.instr_end();
        Iter != E;) {
     MachineInstr &Inst = *Iter;
 

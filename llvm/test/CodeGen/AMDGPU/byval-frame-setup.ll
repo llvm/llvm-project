@@ -171,19 +171,21 @@ entry:
 
 ; GCN-LABEL: {{^}}call_void_func_byval_struct_kernel:
 ; GCN: s_mov_b32 s33, s7
-; GCN: s_add_u32 s32, s33, 0xc00{{$}}
+; GCN-NOT: s_add_u32 s32, s32, 0x800
 
-; GCN-DAG: v_mov_b32_e32 [[NINE:v[0-9]+]], 9
-; GCN-DAG: v_mov_b32_e32 [[THIRTEEN:v[0-9]+]], 13
-; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s33 offset:8
+; GCN: v_mov_b32_e32 [[NINE:v[0-9]+]], 9
+; GCN: buffer_store_dword [[NINE]], off, s[0:3], s33 offset:8
+; GCN: v_mov_b32_e32 [[THIRTEEN:v[0-9]+]], 13
 ; GCN: buffer_store_dword [[THIRTEEN]], off, s[0:3], s33 offset:24
 
 ; GCN-NOT: s_add_u32 s32, s32, 0x800
-
 ; GCN-DAG: buffer_load_dword [[LOAD0:v[0-9]+]], off, s[0:3], s33 offset:8
 ; GCN-DAG: buffer_load_dword [[LOAD1:v[0-9]+]], off, s[0:3], s33 offset:12
+; GCN-DAG: s_add_u32 s32, s33, 0xc00{{$}}
 ; GCN-DAG: buffer_load_dword [[LOAD2:v[0-9]+]], off, s[0:3], s33 offset:16
 ; GCN-DAG: buffer_load_dword [[LOAD3:v[0-9]+]], off, s[0:3], s33 offset:20
+
+; GCN: s_getpc_b64
 
 ; GCN-DAG: buffer_store_dword [[LOAD0]], off, s[0:3], s32{{$}}
 ; GCN-DAG: buffer_store_dword [[LOAD1]], off, s[0:3], s32 offset:4
@@ -249,24 +251,27 @@ entry:
 ; Make sure the byval alignment is respected in the call frame setup
 ; GCN-LABEL: {{^}}call_void_func_byval_struct_align8_kernel:
 ; GCN: s_mov_b32 s33, s7
-; GCN: s_add_u32 s32, s33, 0xc00{{$}}
+; GCN-NOT: s_add_u32 s32, s32, 0x800
 
-; GCN-DAG: v_mov_b32_e32 [[NINE:v[0-9]+]], 9
-; GCN-DAG: v_mov_b32_e32 [[THIRTEEN:v[0-9]+]], 13
-; GCN-DAG: buffer_store_dword [[NINE]], off, s[0:3], s33 offset:8
+; GCN: v_mov_b32_e32 [[NINE:v[0-9]+]], 9
+; GCN: buffer_store_dword [[NINE]], off, s[0:3], s33 offset:8
+; GCN: v_mov_b32_e32 [[THIRTEEN:v[0-9]+]], 13
 ; GCN: buffer_store_dword [[THIRTEEN]], off, s[0:3], s33 offset:24
+
 
 ; GCN-NOT: s_add_u32 s32, s32, 0x800
 
-; GCN-DAG: buffer_load_dword [[LOAD0:v[0-9]+]], off, s[0:3], s33 offset:8
-; GCN-DAG: buffer_load_dword [[LOAD1:v[0-9]+]], off, s[0:3], s33 offset:12
-; GCN-DAG: buffer_load_dword [[LOAD2:v[0-9]+]], off, s[0:3], s33 offset:16
-; GCN-DAG: buffer_load_dword [[LOAD3:v[0-9]+]], off, s[0:3], s33 offset:20
+; GCN: buffer_load_dword [[LOAD0:v[0-9]+]], off, s[0:3], s33 offset:8
+; GCN: buffer_load_dword [[LOAD1:v[0-9]+]], off, s[0:3], s33 offset:12
+; GCN-DAG: s_add_u32 s32, s33, 0xc00{{$}}
+; GCN: buffer_load_dword [[LOAD2:v[0-9]+]], off, s[0:3], s33 offset:16
+; GCN: buffer_load_dword [[LOAD3:v[0-9]+]], off, s[0:3], s33 offset:20
 
-; GCN-DAG: buffer_store_dword [[LOAD0]], off, s[0:3], s32{{$}}
-; GCN-DAG: buffer_store_dword [[LOAD1]], off, s[0:3], s32 offset:4
-; GCN-DAG: buffer_store_dword [[LOAD2]], off, s[0:3], s32 offset:8
-; GCN-DAG: buffer_store_dword [[LOAD3]], off, s[0:3], s32 offset:12
+; GCN: buffer_store_dword [[LOAD3]], off, s[0:3], s32 offset:12
+; GCN: buffer_store_dword [[LOAD2]], off, s[0:3], s32 offset:8
+; GCN: buffer_store_dword [[LOAD1]], off, s[0:3], s32 offset:4
+; GCN: buffer_store_dword [[LOAD0]], off, s[0:3], s32{{$}}
+
 
 ; GCN-DAG: buffer_load_dword [[LOAD4:v[0-9]+]], off, s[0:3], s33 offset:24
 ; GCN-DAG: buffer_load_dword [[LOAD5:v[0-9]+]], off, s[0:3], s33 offset:28

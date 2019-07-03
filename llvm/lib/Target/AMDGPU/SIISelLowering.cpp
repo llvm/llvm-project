@@ -630,6 +630,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2i16, Custom);
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, MVT::v2f16, Custom);
 
+    setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4f16, Custom);
+    setOperationAction(ISD::VECTOR_SHUFFLE, MVT::v4i16, Custom);
+
     setOperationAction(ISD::SHL, MVT::v4i16, Custom);
     setOperationAction(ISD::SRA, MVT::v4i16, Custom);
     setOperationAction(ISD::SRL, MVT::v4i16, Custom);
@@ -3957,6 +3960,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerINSERT_VECTOR_ELT(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT:
     return lowerEXTRACT_VECTOR_ELT(Op, DAG);
+  case ISD::VECTOR_SHUFFLE:
+    return lowerVECTOR_SHUFFLE(Op, DAG);
   case ISD::BUILD_VECTOR:
     return lowerBUILD_VECTOR(Op, DAG);
   case ISD::FP_ROUND:
@@ -4738,6 +4743,63 @@ SDValue SITargetLowering::lowerEXTRACT_VECTOR_ELT(SDValue Op,
   }
 
   return DAG.getAnyExtOrTrunc(Elt, SL, ResultVT);
+}
+
+static bool elementPairIsContiguous(ArrayRef<int> Mask, int Elt) {
+  assert(Elt % 2 == 0);
+  return Mask[Elt + 1] == Mask[Elt] + 1 && (Mask[Elt] % 2 == 0);
+}
+
+SDValue SITargetLowering::lowerVECTOR_SHUFFLE(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  EVT ResultVT = Op.getValueType();
+  ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op);
+
+  EVT PackVT = ResultVT.isInteger() ? MVT::v2i16 : MVT::v2f16;
+  EVT EltVT = PackVT.getVectorElementType();
+  int SrcNumElts = Op.getOperand(0).getValueType().getVectorNumElements();
+
+  // vector_shuffle <0,1,6,7> lhs, rhs
+  // -> concat_vectors (extract_subvector lhs, 0), (extract_subvector rhs, 2)
+  //
+  // vector_shuffle <6,7,2,3> lhs, rhs
+  // -> concat_vectors (extract_subvector rhs, 2), (extract_subvector lhs, 2)
+  //
+  // vector_shuffle <6,7,0,1> lhs, rhs
+  // -> concat_vectors (extract_subvector rhs, 2), (extract_subvector lhs, 0)
+
+  // Avoid scalarizing when both halves are reading from consecutive elements.
+  SmallVector<SDValue, 4> Pieces;
+  for (int I = 0, N = ResultVT.getVectorNumElements(); I != N; I += 2) {
+    if (elementPairIsContiguous(SVN->getMask(), I)) {
+      const int Idx = SVN->getMaskElt(I);
+      int VecIdx = Idx < SrcNumElts ? 0 : 1;
+      int EltIdx = Idx < SrcNumElts ? Idx : Idx - SrcNumElts;
+      SDValue SubVec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, SL,
+                                    PackVT, SVN->getOperand(VecIdx),
+                                    DAG.getConstant(EltIdx, SL, MVT::i32));
+      Pieces.push_back(SubVec);
+    } else {
+      const int Idx0 = SVN->getMaskElt(I);
+      const int Idx1 = SVN->getMaskElt(I + 1);
+      int VecIdx0 = Idx0 < SrcNumElts ? 0 : 1;
+      int VecIdx1 = Idx1 < SrcNumElts ? 0 : 1;
+      int EltIdx0 = Idx0 < SrcNumElts ? Idx0 : Idx0 - SrcNumElts;
+      int EltIdx1 = Idx1 < SrcNumElts ? Idx1 : Idx1 - SrcNumElts;
+
+      SDValue Vec0 = SVN->getOperand(VecIdx0);
+      SDValue Elt0 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
+                                 Vec0, DAG.getConstant(EltIdx0, SL, MVT::i32));
+
+      SDValue Vec1 = SVN->getOperand(VecIdx1);
+      SDValue Elt1 = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT,
+                                 Vec1, DAG.getConstant(EltIdx1, SL, MVT::i32));
+      Pieces.push_back(DAG.getBuildVector(PackVT, SL, { Elt0, Elt1 }));
+    }
+  }
+
+  return DAG.getNode(ISD::CONCAT_VECTORS, SL, ResultVT, Pieces);
 }
 
 SDValue SITargetLowering::lowerBUILD_VECTOR(SDValue Op,

@@ -15,11 +15,10 @@ define i32 @f() {
 
 ; CHECK:      mrc p15, #0, [[TEB:r[0-9]]], c13, c0, #2
 
-; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
 ; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
@@ -36,11 +35,10 @@ define i32 @e() {
 
 ; CHECK:      mrc p15, #0, [[TEB:r[0-9]]], c13, c0, #2
 
-; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
 ; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
@@ -57,11 +55,10 @@ define i32 @d() {
 
 ; CHECK:      mrc p15, #0, [[TEB:r[0-9]]], c13, c0, #2
 
-; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
 ; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
@@ -78,11 +75,10 @@ define i32 @c() {
 
 ; CHECK:      mrc p15, #0, [[TEB:r[0-9]]], c13, c0, #2
 
-; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
 ; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
@@ -99,11 +95,10 @@ define i32 @b() {
 
 ; CHECK:      mrc p15, #0, [[TEB:r[0-9]]], c13, c0, #2
 
-; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
 ; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
@@ -120,11 +115,10 @@ define i16 @a() {
 
 ; CHECK:      mrc p15, #0, [[TEB:r[0-9]]], c13, c0, #2
 
-; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
 ; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]
@@ -141,11 +135,10 @@ define i8 @Z() {
 
 ; CHECK:      mrc p15, #0, [[TEB:r[0-9]]], c13, c0, #2
 
-; CHECK:      ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK:      movw [[TLS_INDEX:r[0-9]]], :lower16:_tls_index
 ; CHECK-NEXT: movt [[TLS_INDEX]], :upper16:_tls_index
 ; CHECK-NEXT: ldr [[INDEX:r[0-9]]], {{\[}}[[TLS_INDEX]]]
-
+; CHECK-NEXT: ldr [[TLS_POINTER:r[0-9]]], {{\[}}[[TEB]], #44]
 ; CHECK-NEXT: ldr{{.w}} [[TLS:r[0-9]]], {{\[}}[[TLS_POINTER]], [[INDEX]], lsl #2]
 
 ; CHECK-NEXT: ldr [[SLOT:r[0-9]]], [[CPI:\.LCPI[0-9]+_[0-9]+]]

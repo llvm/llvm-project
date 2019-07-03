@@ -889,8 +889,9 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
         findNextOrderedReg(std::begin(AllCopyRegs), CopyRegs, AllCopyRegsEnd);
 
     // Create the PUSH, but don't insert it yet (the MOVs need to come first).
-    MachineInstrBuilder PushMIB =
-        BuildMI(MF, DL, TII.get(ARM::tPUSH)).add(predOps(ARMCC::AL));
+    MachineInstrBuilder PushMIB = BuildMI(MF, DL, TII.get(ARM::tPUSH))
+                                      .add(predOps(ARMCC::AL))
+                                      .setMIFlags(MachineInstr::FrameSetup);
 
     SmallVector<unsigned, 4> RegsToPush;
     while (HiRegToSave != AllHighRegsEnd && CopyReg != AllCopyRegsEnd) {
@@ -903,7 +904,8 @@ spillCalleeSavedRegisters(MachineBasicBlock &MBB,
         BuildMI(MBB, MI, DL, TII.get(ARM::tMOVr))
             .addReg(*CopyReg, RegState::Define)
             .addReg(*HiRegToSave, getKillRegState(isKill))
-            .add(predOps(ARMCC::AL));
+            .add(predOps(ARMCC::AL))
+            .setMIFlags(MachineInstr::FrameSetup);
 
         // Record the register that must be added to the PUSH.
         RegsToPush.push_back(*CopyReg);

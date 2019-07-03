@@ -223,8 +223,10 @@ void LinkerDriver::addFile(StringRef Path, bool WithLOption) {
       // default action without the LTO hack described above.
       for (const std::pair<MemoryBufferRef, uint64_t> &P :
            getArchiveMembers(MBRef))
-        if (identify_magic(P.first.getBuffer()) != file_magic::bitcode)
+        if (identify_magic(P.first.getBuffer()) != file_magic::bitcode) {
+          error(Path + ": archive has no index; run ranlib to add one");
           return;
+        }
 
       for (const std::pair<MemoryBufferRef, uint64_t> &P :
            getArchiveMembers(MBRef))

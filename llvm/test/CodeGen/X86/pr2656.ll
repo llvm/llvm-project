@@ -17,15 +17,16 @@ define void @foo(%struct.anon* byval %p) nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    subl $28, %esp
-; CHECK-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movaps {{.*#+}} xmm2 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
-; CHECK-NEXT:    xorps %xmm2, %xmm0
-; CHECK-NEXT:    cvtss2sd %xmm0, %xmm0
-; CHECK-NEXT:    xorps %xmm2, %xmm1
+; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; CHECK-NEXT:    xorps %xmm0, %xmm1
 ; CHECK-NEXT:    cvtss2sd %xmm1, %xmm1
-; CHECK-NEXT:    movsd %xmm1, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    xorps %xmm0, %xmm2
+; CHECK-NEXT:    xorps %xmm0, %xmm0
+; CHECK-NEXT:    cvtss2sd %xmm2, %xmm0
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%esp)
+; CHECK-NEXT:    movsd %xmm1, {{[0-9]+}}(%esp)
 ; CHECK-NEXT:    movl $_.str, (%esp)
 ; CHECK-NEXT:    calll _printf
 ; CHECK-NEXT:    addl $28, %esp

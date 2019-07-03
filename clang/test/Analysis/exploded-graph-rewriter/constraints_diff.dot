@@ -7,6 +7,8 @@ Node0x1 [shape=record,label=
  "{
     { "node_id": 1,
       "pointer": "0x1",
+      "has_report": false,
+      "is_sink": false,
       "state_id": 2,
       "program_points": [],
       "program_state": {
@@ -14,6 +16,7 @@ Node0x1 [shape=record,label=
         "environment": null,
         "dynamic_types": null,
         "constructing_objects": null,
+        "checker_messages": null,
         "constraints": [
           { "symbol": "reg_$0<x>", "range": "{ [0, 10] }" }
         ]
@@ -38,6 +41,8 @@ Node0x3 [shape=record,label=
  "{
     { "node_id": 3,
       "pointer": "0x3",
+      "has_report": false,
+      "is_sink": false,
       "state_id": 4,
       "program_points": [],
       "program_state": {
@@ -45,6 +50,7 @@ Node0x3 [shape=record,label=
         "environment": null,
         "dynamic_types": null,
         "constructing_objects": null,
+        "checker_messages": null,
         "constraints": [
           { "symbol": "reg_$0<x>", "range": "{ [0, 5] }" }
         ]
@@ -58,6 +64,8 @@ Node0x5 [shape=record,label=
  "{
     { "node_id": 5,
       "pointer": "0x5",
+      "has_report": false,
+      "is_sink": false,
       "state_id": 6,
       "program_points": [],
       "program_state": {
@@ -65,7 +73,8 @@ Node0x5 [shape=record,label=
         "environment": null,
         "constraints": null,
         "dynamic_types": null,
-        "constructing_objects": null
+        "constructing_objects": null,
+        "checker_messages": null
       }
     }
 \l}"];

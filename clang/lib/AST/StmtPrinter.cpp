@@ -1703,6 +1703,14 @@ void StmtPrinter::VisitCXXConstCastExpr(CXXConstCastExpr *Node) {
   VisitCXXNamedCastExpr(Node);
 }
 
+void StmtPrinter::VisitBuiltinBitCastExpr(BuiltinBitCastExpr *Node) {
+  OS << "__builtin_bit_cast(";
+  Node->getTypeInfoAsWritten()->getType().print(OS, Policy);
+  OS << ", ";
+  PrintExpr(Node->getSubExpr());
+  OS << ")";
+}
+
 void StmtPrinter::VisitCXXTypeidExpr(CXXTypeidExpr *Node) {
   OS << "typeid(";
   if (Node->isTypeOperand()) {

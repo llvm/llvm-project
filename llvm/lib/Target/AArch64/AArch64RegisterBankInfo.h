@@ -57,6 +57,7 @@ protected:
     FPExt16To64Idx = 43,
     FPExt32To64Idx = 45,
     FPExt64To128Idx = 47,
+    Shift64Imm = 49
   };
 
   static bool checkPartialMap(unsigned Idx, unsigned ValStartIdx,

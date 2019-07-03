@@ -494,9 +494,9 @@ define <8 x float> @masked_gather_v8float(<8 x float*>* %ptr, <8 x i1> %masks, <
 ; NOGATHER-NEXT:    je .LBB7_10
 ; NOGATHER-NEXT:  # %bb.9: # %cond.load10
 ; NOGATHER-NEXT:    vmovq %xmm2, %rax
-; NOGATHER-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; NOGATHER-NEXT:    vextractf128 $1, %ymm1, %xmm4
-; NOGATHER-NEXT:    vblendps {{.*#+}} xmm3 = xmm3[0],xmm4[1,2,3]
+; NOGATHER-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; NOGATHER-NEXT:    vmovss {{.*#+}} xmm4 = mem[0],zero,zero,zero
+; NOGATHER-NEXT:    vblendps {{.*#+}} xmm3 = xmm4[0],xmm3[1,2,3]
 ; NOGATHER-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
 ; NOGATHER-NEXT:  .LBB7_10: # %else11
 ; NOGATHER-NEXT:    vpextrb $10, %xmm0, %eax
