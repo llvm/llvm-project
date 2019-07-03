@@ -432,44 +432,19 @@ public:
                 frames.append(frame)
             return frames
 
-        __swig_getmethods__["id"] = GetThreadID
-        if _newclass: id = property(GetThreadID, None, doc='''A read only property that returns the thread ID as an integer.''')
-
-        __swig_getmethods__["idx"] = GetIndexID
-        if _newclass: idx = property(GetIndexID, None, doc='''A read only property that returns the thread index ID as an integer. Thread index ID values start at 1 and increment as threads come and go and can be used to uniquely identify threads.''')
-
-        __swig_getmethods__["return_value"] = GetStopReturnValue
-        if _newclass: return_value = property(GetStopReturnValue, None, doc='''A read only property that returns an lldb object that represents the return value from the last stop (lldb.SBValue) if we just stopped due to stepping out of a function.''')
-
-        __swig_getmethods__["process"] = GetProcess
-        if _newclass: process = property(GetProcess, None, doc='''A read only property that returns an lldb object that represents the process (lldb.SBProcess) that owns this thread.''')
-
-        __swig_getmethods__["num_frames"] = GetNumFrames
-        if _newclass: num_frames = property(GetNumFrames, None, doc='''A read only property that returns the number of stack frames in this thread as an integer.''')
-
-        __swig_getmethods__["frames"] = get_thread_frames
-        if _newclass: frames = property(get_thread_frames, None, doc='''A read only property that returns a list() of lldb.SBFrame objects for all frames in this thread.''')
-
-        __swig_getmethods__["frame"] = get_frames_access_object
-        if _newclass: frame = property(get_frames_access_object, None, doc='''A read only property that returns an object that can be used to access frames as an array ("frame_12 = lldb.thread.frame[12]").''')
-
-        __swig_getmethods__["name"] = GetName
-        if _newclass: name = property(GetName, None, doc='''A read only property that returns the name of this thread as a string.''')
-
-        __swig_getmethods__["queue"] = GetQueueName
-        if _newclass: queue = property(GetQueueName, None, doc='''A read only property that returns the dispatch queue name of this thread as a string.''')
-
-        __swig_getmethods__["queue_id"] = GetQueueID
-        if _newclass: queue_id = property(GetQueueID, None, doc='''A read only property that returns the dispatch queue id of this thread as an integer.''')
-
-        __swig_getmethods__["stop_reason"] = GetStopReason
-        if _newclass: stop_reason = property(GetStopReason, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eStopReason") that represents the reason this thread stopped.''')
-
-        __swig_getmethods__["is_suspended"] = IsSuspended
-        if _newclass: is_suspended = property(IsSuspended, None, doc='''A read only property that returns a boolean value that indicates if this thread is suspended.''')
-
-        __swig_getmethods__["is_stopped"] = IsStopped
-        if _newclass: is_stopped = property(IsStopped, None, doc='''A read only property that returns a boolean value that indicates if this thread is stopped but not exited.''')
+        id = property(GetThreadID, None, doc='''A read only property that returns the thread ID as an integer.''')
+        idx = property(GetIndexID, None, doc='''A read only property that returns the thread index ID as an integer. Thread index ID values start at 1 and increment as threads come and go and can be used to uniquely identify threads.''')
+        return_value = property(GetStopReturnValue, None, doc='''A read only property that returns an lldb object that represents the return value from the last stop (lldb.SBValue) if we just stopped due to stepping out of a function.''')
+        process = property(GetProcess, None, doc='''A read only property that returns an lldb object that represents the process (lldb.SBProcess) that owns this thread.''')
+        num_frames = property(GetNumFrames, None, doc='''A read only property that returns the number of stack frames in this thread as an integer.''')
+        frames = property(get_thread_frames, None, doc='''A read only property that returns a list() of lldb.SBFrame objects for all frames in this thread.''')
+        frame = property(get_frames_access_object, None, doc='''A read only property that returns an object that can be used to access frames as an array ("frame_12 = lldb.thread.frame[12]").''')
+        name = property(GetName, None, doc='''A read only property that returns the name of this thread as a string.''')
+        queue = property(GetQueueName, None, doc='''A read only property that returns the dispatch queue name of this thread as a string.''')
+        queue_id = property(GetQueueID, None, doc='''A read only property that returns the dispatch queue id of this thread as an integer.''')
+        stop_reason = property(GetStopReason, None, doc='''A read only property that returns an lldb enumeration value (see enumerations that start with "lldb.eStopReason") that represents the reason this thread stopped.''')
+        is_suspended = property(IsSuspended, None, doc='''A read only property that returns a boolean value that indicates if this thread is suspended.''')
+        is_stopped = property(IsStopped, None, doc='''A read only property that returns a boolean value that indicates if this thread is stopped but not exited.''')
     %}
 
 };

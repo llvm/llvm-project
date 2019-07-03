@@ -1473,8 +1473,8 @@ define <16 x float> @expandload_v16f32_const(float* %base, <16 x float> %src0) {
 ; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm1[0],mem[0],xmm1[2,3]
 ; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm2 = xmm2[0,1],mem[0],xmm2[3]
 ; AVX1OR2-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm1[4,5,6,7]
-; AVX1OR2-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; AVX1OR2-NEXT:    vextractf128 $1, %ymm1, %xmm1
+; AVX1OR2-NEXT:    vmovss {{.*#+}} xmm3 = mem[0],zero,zero,zero
 ; AVX1OR2-NEXT:    vblendps {{.*#+}} xmm1 = xmm3[0],xmm1[1,2,3]
 ; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
 ; AVX1OR2-NEXT:    vinsertps {{.*#+}} xmm1 = xmm1[0,1],mem[0],xmm1[3]

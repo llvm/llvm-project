@@ -651,8 +651,8 @@ define void @build_v2f32_01(x86_mmx *%p0, float %a0, float %a1) nounwind {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-SSE-NEXT:    movdq2q %xmm1, %mm0
+; X86-SSE-NEXT:    movdq2q %xmm0, %mm0
+; X86-SSE-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    movdq2q %xmm0, %mm1
 ; X86-SSE-NEXT:    punpckldq %mm0, %mm1 # mm1 = mm1[0],mm0[0]
 ; X86-SSE-NEXT:    paddd %mm1, %mm1

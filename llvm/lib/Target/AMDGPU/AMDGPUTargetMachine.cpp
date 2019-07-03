@@ -835,6 +835,7 @@ bool GCNPassConfig::addPreISel() {
   if (!LateCFGStructurize) {
     addPass(createSIAnnotateControlFlowPass());
   }
+  addPass(createLCSSAPass());
 
   return false;
 }

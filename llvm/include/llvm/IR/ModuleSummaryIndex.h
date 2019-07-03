@@ -698,6 +698,18 @@ template <> struct DenseMapInfo<FunctionSummary::ConstVCall> {
   }
 };
 
+/// The ValueInfo and offset for a function within a vtable definition
+/// initializer array.
+struct VirtFuncOffset {
+  VirtFuncOffset(ValueInfo VI, uint64_t Offset)
+      : FuncVI(VI), VTableOffset(Offset) {}
+
+  ValueInfo FuncVI;
+  uint64_t VTableOffset;
+};
+/// List of functions referenced by a particular vtable definition.
+using VTableFuncList = std::vector<VirtFuncOffset>;
+
 /// Global variable summary information to aid decisions and
 /// implementation of importing.
 ///
@@ -705,6 +717,11 @@ template <> struct DenseMapInfo<FunctionSummary::ConstVCall> {
 /// modified during the program run or not. This affects ThinLTO
 /// internalization
 class GlobalVarSummary : public GlobalValueSummary {
+private:
+  /// For vtable definitions this holds the list of functions and
+  /// their corresponding offsets within the initializer array.
+  std::unique_ptr<VTableFuncList> VTableFuncs;
+
 public:
   struct GVarFlags {
     GVarFlags(bool ReadOnly = false) : ReadOnly(ReadOnly) {}
@@ -725,6 +742,17 @@ public:
   GVarFlags varflags() const { return VarFlags; }
   void setReadOnly(bool RO) { VarFlags.ReadOnly = RO; }
   bool isReadOnly() const { return VarFlags.ReadOnly; }
+
+  void setVTableFuncs(VTableFuncList Funcs) {
+    assert(!VTableFuncs);
+    VTableFuncs = llvm::make_unique<VTableFuncList>(std::move(Funcs));
+  }
+
+  ArrayRef<VirtFuncOffset> vTableFuncs() const {
+    if (VTableFuncs)
+      return *VTableFuncs;
+    return {};
+  }
 };
 
 struct TypeTestResolution {
@@ -823,6 +851,29 @@ using GVSummaryMapTy = DenseMap<GlobalValue::GUID, GlobalValueSummary *>;
 using TypeIdSummaryMapTy =
     std::multimap<GlobalValue::GUID, std::pair<std::string, TypeIdSummary>>;
 
+/// The following data structures summarize type metadata information.
+/// For type metadata overview see https://llvm.org/docs/TypeMetadata.html.
+/// Each type metadata includes both the type identifier and the offset of
+/// the address point of the type (the address held by objects of that type
+/// which may not be the beginning of the virtual table). Vtable definitions
+/// are decorated with type metadata for the types they are compatible with.
+///
+/// Holds information about vtable definitions decorated with type metadata:
+/// the vtable definition value and its address point offset in a type
+/// identifier metadata it is decorated (compatible) with.
+struct TypeIdOffsetVtableInfo {
+  TypeIdOffsetVtableInfo(uint64_t Offset, ValueInfo VI)
+      : AddressPointOffset(Offset), VTableVI(VI) {}
+
+  uint64_t AddressPointOffset;
+  ValueInfo VTableVI;
+};
+/// List of vtable definitions decorated by a particular type identifier,
+/// and their corresponding offsets in that type identifier's metadata.
+/// Note that each type identifier may be compatible with multiple vtables, due
+/// to inheritance, which is why this is a vector.
+using TypeIdCompatibleVtableInfo = std::vector<TypeIdOffsetVtableInfo>;
+
 /// Class to hold module path string table and global value map,
 /// and encapsulate methods for operating on them.
 class ModuleSummaryIndex {
@@ -835,8 +886,14 @@ private:
   ModulePathStringTableTy ModulePathStringTable;
 
   /// Mapping from type identifier GUIDs to type identifier and its summary
-  /// information.
+  /// information. Produced by thin link.
   TypeIdSummaryMapTy TypeIdMap;
+
+  /// Mapping from type identifier to information about vtables decorated
+  /// with that type identifier's metadata. Produced by per module summary
+  /// analysis and consumed by thin link. For more information, see description
+  /// above where TypeIdCompatibleVtableInfo is defined.
+  std::map<std::string, TypeIdCompatibleVtableInfo> TypeIdCompatibleVtableMap;
 
   /// Mapping from original ID to GUID. If original ID can map to multiple
   /// GUIDs, it will be mapped to 0.
@@ -1199,6 +1256,29 @@ public:
       if (It->second.first == TypeId)
         return &It->second.second;
     return nullptr;
+  }
+
+  const std::map<std::string, TypeIdCompatibleVtableInfo> &
+  typeIdCompatibleVtableMap() const {
+    return TypeIdCompatibleVtableMap;
+  }
+
+  /// Return an existing or new TypeIdCompatibleVtableMap entry for \p TypeId.
+  /// This accessor can mutate the map and therefore should not be used in
+  /// the ThinLTO backends.
+  TypeIdCompatibleVtableInfo &
+  getOrInsertTypeIdCompatibleVtableSummary(StringRef TypeId) {
+    return TypeIdCompatibleVtableMap[TypeId];
+  }
+
+  /// For the given \p TypeId, this returns the TypeIdCompatibleVtableMap
+  /// entry if present in the summary map. This may be used when importing.
+  Optional<const TypeIdCompatibleVtableInfo>
+  getTypeIdCompatibleVtableSummary(StringRef TypeId) const {
+    auto I = TypeIdCompatibleVtableMap.find(TypeId);
+    if (I == TypeIdCompatibleVtableMap.end())
+      return None;
+    return I->second;
   }
 
   /// Collect for the given module the list of functions it defines

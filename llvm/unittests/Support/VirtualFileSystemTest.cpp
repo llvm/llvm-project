@@ -342,6 +342,57 @@ TEST(VirtualFileSystemTest, MergedDirPermissions) {
   EXPECT_EQ(0200, Status->getPermissions());
 }
 
+TEST(VirtualFileSystemTest, OverlayIterator) {
+  IntrusiveRefCntPtr<DummyFileSystem> Lower(new DummyFileSystem());
+  Lower->addRegularFile("/foo");
+  IntrusiveRefCntPtr<DummyFileSystem> Upper(new DummyFileSystem());
+
+  IntrusiveRefCntPtr<vfs::OverlayFileSystem> O(
+      new vfs::OverlayFileSystem(Lower));
+  O->pushOverlay(Upper);
+
+  ErrorOr<vfs::Status> Status((std::error_code()));
+  {
+    auto it = O->overlays_begin();
+    auto end = O->overlays_end();
+
+    EXPECT_NE(it, end);
+
+    Status = (*it)->status("/foo");
+    ASSERT_TRUE(Status.getError());
+
+    it++;
+    EXPECT_NE(it, end);
+
+    Status = (*it)->status("/foo");
+    ASSERT_FALSE(Status.getError());
+    EXPECT_TRUE(Status->exists());
+
+    it++;
+    EXPECT_EQ(it, end);
+  }
+
+  {
+    auto it = O->overlays_rbegin();
+    auto end = O->overlays_rend();
+
+    EXPECT_NE(it, end);
+
+    Status = (*it)->status("/foo");
+    ASSERT_FALSE(Status.getError());
+    EXPECT_TRUE(Status->exists());
+
+    it++;
+    EXPECT_NE(it, end);
+
+    Status = (*it)->status("/foo");
+    ASSERT_TRUE(Status.getError());
+
+    it++;
+    EXPECT_EQ(it, end);
+  }
+}
+
 namespace {
 struct ScopedDir {
   SmallString<128> Path;

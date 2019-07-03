@@ -3,8 +3,8 @@
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 // CHECK: GWP-ASan detected a memory error
-// CHECK: Invalid (wild) free occurred when trying to free memory at:
-// CHECK: is located 1 bytes to the right
+// CHECK: Invalid (wild) free at 0x{{[a-f0-9]+}} (1 byte to the right of a
+// CHECK-SAME: 1-byte allocation
 
 #include <cstdlib>
 

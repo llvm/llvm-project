@@ -263,6 +263,11 @@ let canFoldAsLoad = 1, isReMaterializable = 1 in {
 
 // Patterns
 let Predicates = [UseAVX] in {
+  def : Pat<(v4f32 (scalar_to_vector (loadf32 addr:$src))),
+            (VMOVSSrm addr:$src)>;
+  def : Pat<(v2f64 (scalar_to_vector (loadf64 addr:$src))),
+            (VMOVSDrm addr:$src)>;
+
   // Represent the same patterns above but in the form they appear for
   // 256-bit types
   def : Pat<(v8f32 (X86vzload addr:$src)),
@@ -290,16 +295,22 @@ let Predicates = [UseAVX, OptForSize] in {
               (v4i32 (EXTRACT_SUBREG (v8i32 VR256:$src), sub_xmm)))), sub_xmm)>;
 }
 
-let Predicates = [UseSSE1] in {
-  let Predicates = [UseSSE1, NoSSE41_Or_OptForSize] in {
-  // Move scalar to XMM zero-extended, zeroing a VR128 then do a
-  // MOVSS to the lower bits.
-  def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
-            (MOVSSrr (v4f32 (V_SET0)), VR128:$src)>;
-  def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
-            (MOVSSrr (v4i32 (V_SET0)), VR128:$src)>;
-  }
+let Predicates = [UseSSE1, NoSSE41_Or_OptForSize] in {
+// Move scalar to XMM zero-extended, zeroing a VR128 then do a
+// MOVSS to the lower bits.
+def : Pat<(v4f32 (X86vzmovl (v4f32 VR128:$src))),
+          (MOVSSrr (v4f32 (V_SET0)), VR128:$src)>;
+def : Pat<(v4i32 (X86vzmovl (v4i32 VR128:$src))),
+          (MOVSSrr (v4i32 (V_SET0)), VR128:$src)>;
 }
+
+let Predicates = [UseSSE2] in
+def : Pat<(v2f64 (scalar_to_vector (loadf64 addr:$src))),
+          (MOVSDrm addr:$src)>;
+
+let Predicates = [UseSSE1] in
+def : Pat<(v4f32 (scalar_to_vector (loadf32 addr:$src))),
+          (MOVSSrm addr:$src)>;
 
 //===----------------------------------------------------------------------===//
 // SSE 1 & 2 - Move Aligned/Unaligned FP Instructions
@@ -4936,8 +4947,6 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy,
             (!cast<I>(OpcPrefix#BDYrm) addr:$src)>;
   def : Pat<(v8i32 (InVecOp (v16i8 (vzload_v2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#BDYrm) addr:$src)>;
-  def : Pat<(v8i32 (InVecOp (loadv16i8 addr:$src))),
-            (!cast<I>(OpcPrefix#BDYrm) addr:$src)>;
 
   def : Pat<(v4i64 (ExtOp (loadv4i32 addr:$src))),
             (!cast<I>(OpcPrefix#DQYrm) addr:$src)>;
@@ -4946,14 +4955,10 @@ multiclass SS41I_pmovx_avx2_patterns<string OpcPrefix, string ExtTy,
             (!cast<I>(OpcPrefix#BQYrm) addr:$src)>;
   def : Pat<(v4i64 (InVecOp (v16i8 (vzload_v2i64 addr:$src)))),
             (!cast<I>(OpcPrefix#BQYrm) addr:$src)>;
-  def : Pat<(v4i64 (InVecOp (loadv16i8 addr:$src))),
-            (!cast<I>(OpcPrefix#BQYrm) addr:$src)>;
 
   def : Pat<(v4i64 (InVecOp (bc_v8i16 (v2i64 (scalar_to_vector (loadi64 addr:$src)))))),
             (!cast<I>(OpcPrefix#WQYrm) addr:$src)>;
   def : Pat<(v4i64 (InVecOp (v8i16 (vzload_v2i64 addr:$src)))),
-            (!cast<I>(OpcPrefix#WQYrm) addr:$src)>;
-  def : Pat<(v4i64 (InVecOp (loadv8i16 addr:$src))),
             (!cast<I>(OpcPrefix#WQYrm) addr:$src)>;
   }
 }

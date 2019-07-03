@@ -283,6 +283,7 @@
 		23D4007E1C210201000C3885 /* DebugMacros.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 23E77CDB1C20F2F2007192AD /* DebugMacros.cpp */; };
 		AF116BEF20CF234B0071093F /* DebugNamesDWARFIndex.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF116BED20CF234B0071093F /* DebugNamesDWARFIndex.cpp */; };
 		2689003913353E0400698AC0 /* Debugger.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 263664921140A4930075843B /* Debugger.cpp */; };
+		AF1675A922CC1A3C00DC40ED /* DeclVendor.cpp in Sources */ = {isa = PBXBuildFile; fileRef = AF1675A822CC1A3C00DC40ED /* DeclVendor.cpp */; };
 		268900D613353E6F00698AC0 /* Declaration.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7F1610F1B8EC00F91463 /* Declaration.cpp */; };
 		49E4F66B1C9CAD16008487EA /* DiagnosticManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 49E4F6681C9CAD12008487EA /* DiagnosticManager.cpp */; };
 		2689003A13353E0400698AC0 /* Disassembler.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 26BC7E7610F1B85900F91463 /* Disassembler.cpp */; };
@@ -1826,6 +1827,7 @@
 		AF116BEE20CF234B0071093F /* DebugNamesDWARFIndex.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = DebugNamesDWARFIndex.h; sourceTree = "<group>"; };
 		263664921140A4930075843B /* Debugger.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; lineEnding = 0; name = Debugger.cpp; path = source/Core/Debugger.cpp; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.cpp; };
 		263664941140A4C10075843B /* Debugger.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; lineEnding = 0; name = Debugger.h; path = include/lldb/Core/Debugger.h; sourceTree = "<group>"; xcLanguageSpecificationIdentifier = xcode.lang.objcpp; };
+		AF1675A822CC1A3C00DC40ED /* DeclVendor.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = DeclVendor.cpp; path = source/Symbol/DeclVendor.cpp; sourceTree = "<group>"; };
 		49B01A2D15F67B1700666829 /* DeclVendor.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = DeclVendor.h; path = include/lldb/Symbol/DeclVendor.h; sourceTree = "<group>"; };
 		26BC7F1610F1B8EC00F91463 /* Declaration.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Declaration.cpp; path = source/Symbol/Declaration.cpp; sourceTree = "<group>"; };
 		26BC7C5810F1B6E900F91463 /* Declaration.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Declaration.h; path = include/lldb/Symbol/Declaration.h; sourceTree = "<group>"; };
@@ -5322,6 +5324,7 @@
 				26BC7F1510F1B8EC00F91463 /* CompileUnit.cpp */,
 				23E77CDB1C20F2F2007192AD /* DebugMacros.cpp */,
 				26BC7C5810F1B6E900F91463 /* Declaration.h */,
+				AF1675A822CC1A3C00DC40ED /* DeclVendor.cpp */,
 				DDB5829B2278C8D600491B41 /* CxxModuleHandler.cpp */,
 				26BC7F1610F1B8EC00F91463 /* Declaration.cpp */,
 				49B01A2D15F67B1700666829 /* DeclVendor.h */,
@@ -8267,6 +8270,7 @@
 				268900B013353E5000698AC0 /* RegisterContextLLDB.cpp in Sources */,
 				23E2E5451D904913006F38BB /* MinidumpTypes.cpp in Sources */,
 				AF33B4BE1C1FA441001B28D9 /* NetBSDSignals.cpp in Sources */,
+				AF1675A922CC1A3C00DC40ED /* DeclVendor.cpp in Sources */,
 				949EEDA31BA76577008C63CF /* Cocoa.cpp in Sources */,
 				AFD966BB217140B6006714AC /* SymbolFileNativePDB.cpp in Sources */,
 				AFCB1D59219CD4FD00730AD5 /* GDBRemoteCommunicationReplayServer.cpp in Sources */,

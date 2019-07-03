@@ -20,7 +20,8 @@ if not config.android:
 
 cxx_flags = (c_flags + config.cxx_mode_flags + ["-std=c++11"])
 
-gwp_asan_flags = ["-fsanitize=scudo"]
+gwp_asan_flags = ["-fsanitize=scudo", "-g", "-fno-omit-frame-pointer",
+                  "-mno-omit-leaf-frame-pointer"]
 
 def build_invocation(compile_flags):
   return " " + " ".join([config.clang] + compile_flags) + " "
