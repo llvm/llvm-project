@@ -10736,6 +10736,15 @@ bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
   return false;
 }
 
+bool ARMTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
+  if (!Subtarget->hasNEON()) {
+    if (Subtarget->isThumb1Only())
+      return VT.getScalarSizeInBits() <= 32;
+    return true;
+  }
+  return VT.isScalarInteger();
+}
+
 static SDValue PerformSHLSimplify(SDNode *N,
                                 TargetLowering::DAGCombinerInfo &DCI,
                                 const ARMSubtarget *ST) {

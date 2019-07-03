@@ -2424,6 +2424,17 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
       if (Xor)
         return DAG.getNode(ISD::SUB, DL, VT, A, Xor.getOperand(0));
     }
+
+    // Look for:
+    //   add (add x, y), 1
+    // And if the target does not like this form then turn into:
+    //   sub y, (xor x, -1)
+    if (!TLI.preferIncOfAddToSubOfNot(VT) && N0.hasOneUse() &&
+        N0.getOpcode() == ISD::ADD) {
+      SDValue Not = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(0),
+                                DAG.getAllOnesConstant(DL, VT));
+      return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(1), Not);
+    }
   }
 
   // (x - y) + -1  ->  add (xor y, -1), x
@@ -2583,6 +2594,17 @@ SDValue DAGCombiner::visitADDLikeCommutative(SDValue N0, SDValue N1,
 
   if (SDValue V = foldAddSubMasked1(true, N0, N1, DAG, DL))
     return V;
+
+  // Look for:
+  //   add (add x, 1), y
+  // And if the target does not like this form then turn into:
+  //   sub y, (xor x, -1)
+  if (!TLI.preferIncOfAddToSubOfNot(VT) && N0.hasOneUse() &&
+      N0.getOpcode() == ISD::ADD && isOneOrOneSplat(N0.getOperand(1))) {
+    SDValue Not = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(0),
+                              DAG.getAllOnesConstant(DL, VT));
+    return DAG.getNode(ISD::SUB, DL, VT, N1, Not);
+  }
 
   // Hoist one-use subtraction by non-opaque constant:
   //   (x - C) + y  ->  (x + y) - C
@@ -3106,6 +3128,15 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(1),
                               DAG.getAllOnesConstant(DL, VT));
     return DAG.getNode(ISD::ADD, DL, VT, Xor, N0.getOperand(0));
+  }
+
+  // Look for:
+  //   sub y, (xor x, -1)
+  // And if the target does not like this form then turn into:
+  //   add (add x, y), 1
+  if (TLI.preferIncOfAddToSubOfNot(VT) && N1.hasOneUse() && isBitwiseNot(N1)) {
+    SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, N1.getOperand(0));
+    return DAG.getNode(ISD::ADD, DL, VT, Add, DAG.getConstant(1, DL, VT));
   }
 
   // Hoist one-use addition by non-opaque constant:

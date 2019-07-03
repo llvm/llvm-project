@@ -1279,6 +1279,10 @@ bool PPCTargetLowering::hasSPE() const {
   return Subtarget.hasSPE();
 }
 
+bool PPCTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
+  return VT.isScalarInteger();
+}
+
 const char *PPCTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch ((PPCISD::NodeType)Opcode) {
   case PPCISD::FIRST_NUMBER:    break;

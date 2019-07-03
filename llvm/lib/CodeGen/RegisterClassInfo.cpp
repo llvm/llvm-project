@@ -90,6 +90,7 @@ void RegisterClassInfo::runOnMachineFunction(const MachineFunction &mf) {
 void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
   assert(RC && "no register class given");
   RCInfo &RCI = RegClass[RC->getID()];
+  auto &STI = MF->getSubtarget();
 
   // Raw register count, including all reserved regs.
   unsigned NumRegs = RC->getNumRegs();
@@ -114,7 +115,8 @@ void RegisterClassInfo::compute(const TargetRegisterClass *RC) const {
     unsigned Cost = TRI->getCostPerUse(PhysReg);
     MinCost = std::min(MinCost, Cost);
 
-    if (CalleeSavedAliases[PhysReg])
+    if (CalleeSavedAliases[PhysReg] &&
+        !STI.ignoreCSRForAllocationOrder(*MF, PhysReg))
       // PhysReg aliases a CSR, save it for later.
       CSRAlias.push_back(PhysReg);
     else {

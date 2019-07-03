@@ -3387,8 +3387,8 @@ compatible LLVM libraries built without it defined.  By default,
 turning on assertions also turns on `LLVM_ENABLE_ABI_BREAKING_CHECKS`
 so a default +Asserts build is not ABI compatible with a
 default -Asserts build.  Clients that want ABI compatibility
-between +Asserts and -Asserts builds should use the CMake or autoconf
-build systems to set `LLVM_ENABLE_ABI_BREAKING_CHECKS` independently
+between +Asserts and -Asserts builds should use the CMake build system
+to set `LLVM_ENABLE_ABI_BREAKING_CHECKS` independently
 of `LLVM_ENABLE_ASSERTIONS`.
 
 .. _coreclasses:

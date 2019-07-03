@@ -381,6 +381,53 @@ static void updateBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
   }
 }
 
+/// Initialize the weights.
+///
+/// \param Header The header block.
+/// \param LatchBR The latch branch.
+/// \param AvgIters The average number of iterations we expect the loop to have.
+/// \param[out] ExitWeight The weight of the edge from Latch to Exit block.
+/// \param[out] CurHeaderWeight The # of time the header is executed.
+static void initBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
+                              unsigned AvgIters, uint64_t &ExitWeight,
+                              uint64_t &CurHeaderWeight) {
+  uint64_t TrueWeight, FalseWeight;
+  if (!LatchBR->extractProfMetadata(TrueWeight, FalseWeight))
+    return;
+  unsigned HeaderIdx = LatchBR->getSuccessor(0) == Header ? 0 : 1;
+  ExitWeight = HeaderIdx ? TrueWeight : FalseWeight;
+  // The # of times the loop body executes is the sum of the exit block
+  // weight and the # of times the backedges are taken.
+  CurHeaderWeight = TrueWeight + FalseWeight;
+}
+
+/// Update the weights of original Latch block after peeling off all iterations.
+///
+/// \param Header The header block.
+/// \param LatchBR The latch branch.
+/// \param ExitWeight The weight of the edge from Latch to Exit block.
+/// \param CurHeaderWeight The # of time the header is executed.
+static void fixupBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
+                               uint64_t ExitWeight, uint64_t CurHeaderWeight) {
+  // Adjust the branch weights on the loop exit.
+  if (ExitWeight) {
+    // The backedge count is the difference of current header weight and
+    // current loop exit weight. If the current header weight is smaller than
+    // the current loop exit weight, we mark the loop backedge weight as 1.
+    uint64_t BackEdgeWeight = 0;
+    if (ExitWeight < CurHeaderWeight)
+      BackEdgeWeight = CurHeaderWeight - ExitWeight;
+    else
+      BackEdgeWeight = 1;
+    MDBuilder MDB(LatchBR->getContext());
+    unsigned HeaderIdx = LatchBR->getSuccessor(0) == Header ? 0 : 1;
+    MDNode *WeightNode =
+        HeaderIdx ? MDB.createBranchWeights(ExitWeight, BackEdgeWeight)
+                  : MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
+    LatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
+  }
+}
+
 /// Clones the body of the loop L, putting it between \p InsertTop and \p
 /// InsertBot.
 /// \param IterNumber The serial number of the iteration currently being
@@ -576,16 +623,8 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   // newly created branches.
   BranchInst *LatchBR =
       cast<BranchInst>(cast<BasicBlock>(Latch)->getTerminator());
-  unsigned HeaderIdx = (LatchBR->getSuccessor(0) == Header ? 0 : 1);
-
-  uint64_t TrueWeight, FalseWeight;
   uint64_t ExitWeight = 0, CurHeaderWeight = 0;
-  if (LatchBR->extractProfMetadata(TrueWeight, FalseWeight)) {
-    ExitWeight = HeaderIdx ? TrueWeight : FalseWeight;
-    // The # of times the loop body executes is the sum of the exit block
-    // weight and the # of times the backedges are taken.
-    CurHeaderWeight = TrueWeight + FalseWeight;
-  }
+  initBranchWeights(Header, LatchBR, PeelCount, ExitWeight, CurHeaderWeight);
 
   // For each peeled-off iteration, make a copy of the loop.
   for (unsigned Iter = 0; Iter < PeelCount; ++Iter) {
@@ -647,22 +686,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     PHI->setIncomingValueForBlock(NewPreHeader, NewVal);
   }
 
-  // Adjust the branch weights on the loop exit.
-  if (ExitWeight) {
-    // The backedge count is the difference of current header weight and
-    // current loop exit weight. If the current header weight is smaller than
-    // the current loop exit weight, we mark the loop backedge weight as 1.
-    uint64_t BackEdgeWeight = 0;
-    if (ExitWeight < CurHeaderWeight)
-      BackEdgeWeight = CurHeaderWeight - ExitWeight;
-    else
-      BackEdgeWeight = 1;
-    MDBuilder MDB(LatchBR->getContext());
-    MDNode *WeightNode =
-        HeaderIdx ? MDB.createBranchWeights(ExitWeight, BackEdgeWeight)
-                  : MDB.createBranchWeights(BackEdgeWeight, ExitWeight);
-    LatchBR->setMetadata(LLVMContext::MD_prof, WeightNode);
-  }
+  fixupBranchWeights(Header, LatchBR, ExitWeight, CurHeaderWeight);
 
   if (Loop *ParentLoop = L->getParentLoop())
     L = ParentLoop;
