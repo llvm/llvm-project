@@ -132,20 +132,26 @@ void DataSection::finalizeContents() {
   OS.flush();
   BodySize = DataSectionHeader.size();
 
+  assert(!Config->Pic ||
+         Segments.size() <= 1 &&
+             "Currenly only a single data segment is supported in PIC mode");
+
   for (OutputSegment *Segment : Segments) {
     raw_string_ostream OS(Segment->Header);
-    writeUleb128(OS, 0, "memory index");
-    WasmInitExpr InitExpr;
-    if (Config->Pic) {
-      assert(Segments.size() <= 1 &&
-             "Currenly only a single data segment is supported in PIC mode");
-      InitExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
-      InitExpr.Value.Global = WasmSym::MemoryBase->getGlobalIndex();
-    } else {
-      InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-      InitExpr.Value.Int32 = Segment->StartVA;
+    writeUleb128(OS, Segment->InitFlags, "init flags");
+    if (Segment->InitFlags & WASM_SEGMENT_HAS_MEMINDEX)
+      writeUleb128(OS, 0, "memory index");
+    if ((Segment->InitFlags & WASM_SEGMENT_IS_PASSIVE) == 0) {
+      WasmInitExpr InitExpr;
+      if (Config->Pic) {
+        InitExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
+        InitExpr.Value.Global = WasmSym::MemoryBase->getGlobalIndex();
+      } else {
+        InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+        InitExpr.Value.Int32 = Segment->StartVA;
+      }
+      writeInitExpr(OS, InitExpr);
     }
-    writeInitExpr(OS, InitExpr);
     writeUleb128(OS, Segment->Size, "segment size");
     OS.flush();
 

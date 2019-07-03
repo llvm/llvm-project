@@ -50,6 +50,10 @@ void lld::wasm::markLive() {
     // function.  However, this function does not contain relocations so we
     // have to manually mark the ctors as live if CallCtors itself is live.
     if (Sym == WasmSym::CallCtors) {
+      if (Config->PassiveSegments)
+        Enqueue(WasmSym::InitMemory);
+      if (Config->Pic)
+        Enqueue(WasmSym::ApplyRelocs);
       for (const ObjFile *Obj : Symtab->ObjectFiles) {
         const WasmLinkingData &L = Obj->getWasmObj()->linkingData();
         for (const WasmInitFunc &F : L.InitFunctions) {
@@ -79,10 +83,8 @@ void lld::wasm::markLive() {
     }
   }
 
-  if (Config->Pic) {
+  if (Config->Pic)
     Enqueue(WasmSym::CallCtors);
-    Enqueue(WasmSym::ApplyRelocs);
-  }
 
   // Follow relocations to mark all reachable chunks.
   while (!Q.empty()) {
