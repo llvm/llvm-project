@@ -860,10 +860,12 @@ public:
   Stmt *getTerminatorStmt() { return Terminator.getStmt(); }
   const Stmt *getTerminatorStmt() const { return Terminator.getStmt(); }
 
-  Stmt *getTerminatorCondition(bool StripParens = true);
+  /// \returns the condition of the terminator (condition of an if statement,
+  /// for loop, etc).
+  const Stmt *getTerminatorCondition(bool StripParens = true) const;
 
-  const Stmt *getTerminatorCondition(bool StripParens = true) const {
-    return const_cast<CFGBlock*>(this)->getTerminatorCondition(StripParens);
+  const Expr *getTerminatorConditionExpr(bool StripParens = true) const {
+    return dyn_cast_or_null<Expr>(getTerminatorCondition(StripParens));
   }
 
   const Stmt *getLoopTarget() const { return LoopTarget; }
