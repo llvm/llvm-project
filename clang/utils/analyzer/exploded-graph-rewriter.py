@@ -398,6 +398,21 @@ class DotDumpVisitor(object):
             return '<font color="forestgreen">+</font>'
         return '<font color="red">-</font>'
 
+    @staticmethod
+    def _short_pretty(s):
+        if s is None:
+            return None
+        if len(s) < 20:
+            return s
+        left = s.find('{')
+        right = s.rfind('}')
+        if left == -1 or right == -1 or left >= right:
+            return s
+        candidate = s[0:left + 1] + ' ... ' + s[right:]
+        if len(candidate) >= len(s):
+            return s
+        return candidate
+
     def visit_begin_graph(self, graph):
         self._graph = graph
         self._dump_raw('digraph "ExplodedGraph" {\n')
@@ -433,7 +448,8 @@ class DotDumpVisitor(object):
                            % (p.loc.filename, p.loc.line,
                               p.loc.col, color, p.stmt_kind,
                               stmt_color, p.stmt_point_kind,
-                              p.pretty if not skip_pretty else ''))
+                              self._short_pretty(p.pretty)
+                              if not skip_pretty else ''))
             else:
                 self._dump('<tr><td align="left" width="0">'
                            '<i>Invalid Source Location</i>:</td>'
@@ -443,7 +459,8 @@ class DotDumpVisitor(object):
                            '<td>%s</td></tr>'
                            % (color, p.stmt_kind,
                               stmt_color, p.stmt_point_kind,
-                              p.pretty if not skip_pretty else ''))
+                              self._short_pretty(p.pretty)
+                              if not skip_pretty else ''))
         elif p.kind == 'Edge':
             self._dump('<tr><td width="0"></td>'
                        '<td align="left" width="0">'
@@ -496,7 +513,7 @@ class DotDumpVisitor(object):
                               'lavender' if self._dark_mode else 'darkgreen',
                               ('(%s)' % b.kind) if b.kind is not None else ' '
                           ),
-                          b.pretty, f.bindings[b]))
+                          self._short_pretty(b.pretty), f.bindings[b]))
 
         frames_updated = e.diff_frames(prev_e) if prev_e is not None else None
         if frames_updated:
