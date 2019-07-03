@@ -210,8 +210,9 @@ public:
     Itanium,
     Cygnus,
     CoreCLR,
-    Simulator,  // Simulator variants of other systems, e.g., Apple's iOS
-    LastEnvironmentType = Simulator
+    Simulator, // Simulator variants of other systems, e.g., Apple's iOS
+    MacCatalyst,
+    LastEnvironmentType = MacCatalyst
   };
   enum ObjectFormatType {
     UnknownObjectFormat,
@@ -478,6 +479,10 @@ public:
 
   bool isSimulatorEnvironment() const {
     return getEnvironment() == Triple::Simulator;
+  }
+
+  bool isMacCatalystEnvironment() const {
+    return getEnvironment() == Triple::MacCatalyst;
   }
 
   bool isOSNetBSD() const {
