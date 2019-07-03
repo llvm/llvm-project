@@ -196,8 +196,7 @@ bool ValueObjectVariable::UpdateValue() {
           (type_info & (lldb::eTypeIsPointer | lldb::eTypeIsReference)) != 0;
 
       // BEGIN Swift
-      if (variable->GetType() && variable->GetType() &&
-          variable->GetType()->IsSwiftFixedValueBuffer())
+      if (variable->GetType() && variable->GetType()->IsSwiftFixedValueBuffer())
         if (auto process_sp = GetProcessSP())
           if (auto runtime = process_sp->GetLanguageRuntime(
                   compiler_type.GetMinimumLanguage())) {
