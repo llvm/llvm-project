@@ -5615,21 +5615,69 @@ void CFGBlock::printTerminatorJson(raw_ostream &Out, const LangOptions &LO,
   Out << JsonFormat(TempOut.str(), AddQuotes);
 }
 
-const Stmt *CFGBlock::getTerminatorCondition(bool StripParens) const {
-  // If the terminator is a temporary dtor or a virtual base, etc, we can't
-  // retrieve a meaningful condition, bail out.
-  if (rbegin()->getKind() != CFGElement::Kind::Statement)
+Stmt *CFGBlock::getTerminatorCondition(bool StripParens) {
+  Stmt *Terminator = getTerminatorStmt();
+  if (!Terminator)
     return nullptr;
 
-  // This should be the condition of the terminator block.
-  const Stmt *S = rbegin()->castAs<CFGStmt>().getStmt();
-  if (isa<ObjCForCollectionStmt>(S)) {
-    return getTerminatorStmt();
+  Expr *E = nullptr;
+
+  switch (Terminator->getStmtClass()) {
+    default:
+      break;
+
+    case Stmt::CXXForRangeStmtClass:
+      E = cast<CXXForRangeStmt>(Terminator)->getCond();
+      break;
+
+    case Stmt::ForStmtClass:
+      E = cast<ForStmt>(Terminator)->getCond();
+      break;
+
+    case Stmt::WhileStmtClass:
+      E = cast<WhileStmt>(Terminator)->getCond();
+      break;
+
+    case Stmt::DoStmtClass:
+      E = cast<DoStmt>(Terminator)->getCond();
+      break;
+
+    case Stmt::IfStmtClass:
+      E = cast<IfStmt>(Terminator)->getCond();
+      break;
+
+    case Stmt::ChooseExprClass:
+      E = cast<ChooseExpr>(Terminator)->getCond();
+      break;
+
+    case Stmt::IndirectGotoStmtClass:
+      E = cast<IndirectGotoStmt>(Terminator)->getTarget();
+      break;
+
+    case Stmt::SwitchStmtClass:
+      E = cast<SwitchStmt>(Terminator)->getCond();
+      break;
+
+    case Stmt::BinaryConditionalOperatorClass:
+      E = cast<BinaryConditionalOperator>(Terminator)->getCond();
+      break;
+
+    case Stmt::ConditionalOperatorClass:
+      E = cast<ConditionalOperator>(Terminator)->getCond();
+      break;
+
+    case Stmt::BinaryOperatorClass: // '&&' and '||'
+      E = cast<BinaryOperator>(Terminator)->getLHS();
+      break;
+
+    case Stmt::ObjCForCollectionStmtClass:
+      return Terminator;
   }
 
-  // Only ObjCForCollectionStmt is known not to be a non-Expr terminator.
-  const Expr *Cond = cast<Expr>(S);
-  return StripParens ? Cond->IgnoreParens() : Cond;
+  if (!StripParens)
+    return E;
+
+  return E ? E->IgnoreParens() : nullptr;
 }
 
 //===----------------------------------------------------------------------===//
