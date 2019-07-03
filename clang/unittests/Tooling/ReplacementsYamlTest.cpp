@@ -46,6 +46,30 @@ TEST(ReplacementsYamlTest, serializesReplacements) {
                YamlContentStream.str().c_str());
 }
 
+TEST(ReplacementsYamlTest, serializesNewLines) {
+  TranslationUnitReplacements Doc;
+
+  Doc.MainSourceFile = "/path/to/source.cpp";
+  Doc.Replacements.emplace_back("/path/to/file1.h", 0, 0, "#include <utility>\n");
+
+  std::string YamlContent;
+  llvm::raw_string_ostream YamlContentStream(YamlContent);
+
+  yaml::Output YAML(YamlContentStream);
+  YAML << Doc;
+
+  // NOTE: If this test starts to fail for no obvious reason, check whitespace.
+  ASSERT_STREQ("---\n"
+               "MainSourceFile:  '/path/to/source.cpp'\n"
+               "Replacements:    \n" // Extra whitespace here!
+               "  - FilePath:        '/path/to/file1.h'\n"
+               "    Offset:          0\n"
+               "    Length:          0\n"
+               "    ReplacementText: '#include <utility>\n\n'\n"
+               "...\n",
+               YamlContentStream.str().c_str());
+}
+
 TEST(ReplacementsYamlTest, deserializesReplacements) {
   std::string YamlContent = "---\n"
                             "MainSourceFile:      /path/to/source.cpp\n"
