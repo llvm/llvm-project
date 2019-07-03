@@ -52,9 +52,7 @@ add_lldb_library(lldbSymbol
     swiftASTSectionImporter
     swiftBasic
     swiftClangImporter
-    swiftDriver
     swiftFrontend
-    swiftIDE
     swiftSIL
     swiftSerialization
     clangAST
