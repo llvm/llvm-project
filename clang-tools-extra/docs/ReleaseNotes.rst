@@ -126,7 +126,7 @@ Improvements to clang-tidy
   branches in conditional operators.
 
 - New :doc:`bugprone-posix-return
-  <clang-tidy/checks/android-posix-return>` check.
+  <clang-tidy/checks/bugprone-posix-return>` check.
 
   Checks if any calls to POSIX functions (except ``posix_openpt``) expect negative
   return values.
