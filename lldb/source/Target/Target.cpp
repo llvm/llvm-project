@@ -66,9 +66,6 @@
 #include <memory>
 #include <mutex>
 
-#include "swift/Frontend/Frontend.h"
-#include "swift/SIL/SILModule.h"
-
 using namespace lldb;
 using namespace lldb_private;
 
@@ -2490,7 +2487,7 @@ SwiftASTContextReader Target::GetScratchSwiftASTContext(
     ModuleLanguage idx = {lldb_module, lldb::eLanguageTypeSwift};
     auto cached = m_scratch_typesystem_for_module.find(idx);
     if (cached != m_scratch_typesystem_for_module.end()) {
-      auto *cached_ast_ctx = cast<SwiftASTContext>(cached->second.get());
+      auto *cached_ast_ctx = llvm::cast<SwiftASTContext>(cached->second.get());
       if (cached_ast_ctx->HasFatalErrors() &&
           !m_cant_make_scratch_type_system.count(lldb::eLanguageTypeSwift)) {
         DisplayFallbackSwiftContextErrors(cached_ast_ctx);
@@ -2513,7 +2510,7 @@ SwiftASTContextReader Target::GetScratchSwiftASTContext(
     bool fallback = true;
     auto typesystem_sp = SwiftASTContext::CreateInstance(
         lldb::eLanguageTypeSwift, *lldb_module, this, fallback);
-    auto *swift_ast_ctx = cast<SwiftASTContext>(typesystem_sp.get());
+    auto *swift_ast_ctx = llvm::cast<SwiftASTContext>(typesystem_sp.get());
     m_scratch_typesystem_for_module.insert({idx, typesystem_sp});
     GetSwiftScratchContextLock().unlock();
     if (log)
