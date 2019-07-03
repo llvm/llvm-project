@@ -37,7 +37,7 @@
 
 // CHECK-MACCATALYST:           cmd LC_BUILD_VERSION
 // CHECK-MACCATALYST-NEXT:  cmdsize 24
-// CHECK-MACCATALYST-NEXT: platform maccatalyst
+// CHECK-MACCATALYST-NEXT: platform macCatalyst
 // CHECK-MACCATALYST-NEXT:      sdk n/a
 // CHECK-MACCATALYST-NEXT:    minos 13.0
 // CHECK-MACCATALYST-NEXT:   ntools 0
