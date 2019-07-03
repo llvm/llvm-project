@@ -343,15 +343,24 @@ public:
 
   using iterator = FileSystemList::reverse_iterator;
   using const_iterator = FileSystemList::const_reverse_iterator;
+  using reverse_iterator = FileSystemList::iterator;
+  using const_reverse_iterator = FileSystemList::const_iterator;
 
   /// Get an iterator pointing to the most recently added file system.
   iterator overlays_begin() { return FSList.rbegin(); }
   const_iterator overlays_begin() const { return FSList.rbegin(); }
 
-  /// Get an iterator pointing one-past the least recently added file
-  /// system.
+  /// Get an iterator pointing one-past the least recently added file system.
   iterator overlays_end() { return FSList.rend(); }
   const_iterator overlays_end() const { return FSList.rend(); }
+
+  /// Get an iterator pointing to the least recently added file system.
+  reverse_iterator overlays_rbegin() { return FSList.begin(); }
+  const_reverse_iterator overlays_rbegin() const { return FSList.begin(); }
+
+  /// Get an iterator pointing one-past the most recently added file system.
+  reverse_iterator overlays_rend() { return FSList.end(); }
+  const_reverse_iterator overlays_rend() const { return FSList.end(); }
 };
 
 /// By default, this delegates all calls to the underlying file system. This
