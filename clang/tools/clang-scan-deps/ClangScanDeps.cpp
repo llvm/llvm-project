@@ -129,6 +129,7 @@ int main(int argc, const char **argv) {
         AdjustedArgs.push_back("-Eonly");
         AdjustedArgs.push_back("-Xclang");
         AdjustedArgs.push_back("-sys-header-deps");
+        AdjustedArgs.push_back("-Wno-error");
         return AdjustedArgs;
       });
 

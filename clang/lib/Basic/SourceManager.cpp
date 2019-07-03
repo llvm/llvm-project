@@ -113,7 +113,8 @@ const llvm::MemoryBuffer *ContentCache::getBuffer(DiagnosticsEngine &Diag,
   // Clang (including elsewhere in this file!) use 'unsigned' to represent file
   // offsets, line numbers, string literal lengths, and so on, and fail
   // miserably on large source files.
-  if (ContentsEntry->getSize() >= std::numeric_limits<unsigned>::max()) {
+  if ((uint64_t)ContentsEntry->getSize() >=
+      std::numeric_limits<unsigned>::max()) {
     // We can't make a memory buffer of the required size, so just make a small
     // one. We should never hit a situation where we've already parsed to a
     // later offset of the file, so it shouldn't matter that the buffer is

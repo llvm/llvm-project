@@ -172,3 +172,12 @@ macro(add_clang_symlink name dest)
   # Always generate install targets
   llvm_install_symlink(${name} ${dest} ALWAYS_GENERATE)
 endmacro()
+
+function(clang_target_link_libraries target type)
+  if (CLANG_LINK_CLANG_DYLIB)
+    target_link_libraries(${target} ${type} clang_shared)
+  else()
+    target_link_libraries(${target} ${type} ${ARGN})
+  endif()
+
+endfunction()

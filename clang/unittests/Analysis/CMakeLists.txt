@@ -8,7 +8,7 @@ add_clang_unittest(ClangAnalysisTests
   ExprMutationAnalyzerTest.cpp
   )
 
-target_link_libraries(ClangAnalysisTests
+clang_target_link_libraries(ClangAnalysisTests
   PRIVATE
   clangAnalysis
   clangAST

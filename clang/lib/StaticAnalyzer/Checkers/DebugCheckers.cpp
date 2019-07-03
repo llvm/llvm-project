@@ -35,8 +35,8 @@ public:
   void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
                         BugReporter &BR) const {
     if (AnalysisDeclContext *AC = mgr.getAnalysisDeclContext(D)) {
-      DominatorTree dom;
-      dom.buildDominatorTree(*AC);
+      CFGDomTree dom;
+      dom.buildDominatorTree(AC->getCFG());
       dom.dump();
     }
   }
@@ -48,6 +48,32 @@ void ento::registerDominatorsTreeDumper(CheckerManager &mgr) {
 }
 
 bool ento::shouldRegisterDominatorsTreeDumper(const LangOptions &LO) {
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+// PostDominatorsTreeDumper
+//===----------------------------------------------------------------------===//
+
+namespace {
+class PostDominatorsTreeDumper : public Checker<check::ASTCodeBody> {
+public:
+  void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
+                        BugReporter &BR) const {
+    if (AnalysisDeclContext *AC = mgr.getAnalysisDeclContext(D)) {
+      CFGPostDomTree dom;
+      dom.buildDominatorTree(AC->getCFG());
+      dom.dump();
+    }
+  }
+};
+}
+
+void ento::registerPostDominatorsTreeDumper(CheckerManager &mgr) {
+  mgr.registerChecker<PostDominatorsTreeDumper>();
+}
+
+bool ento::shouldRegisterPostDominatorsTreeDumper(const LangOptions &LO) {
   return true;
 }
 

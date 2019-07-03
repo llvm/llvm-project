@@ -1,6 +1,11 @@
-// RUN: %exploded_graph_rewriter %s | FileCheck %s -check-prefixes=CHECK,LIGHT
-// RUN: %exploded_graph_rewriter %s --dark | FileCheck %s \
-// RUN:                                         -check-prefixes CHECK,DARK
+// RUN: %exploded_graph_rewriter %s \
+// RUN:     | FileCheck %s -check-prefixes=CHECK,LIGHT,COLOR
+// RUN: %exploded_graph_rewriter %s --dark \
+// RUN:     | FileCheck %s -check-prefixes CHECK,DARK,COLOR
+// RUN: %exploded_graph_rewriter %s --gray \
+// RUN:     | FileCheck %s -check-prefixes=CHECK,LIGHT,GRAY
+// RUN: %exploded_graph_rewriter %s --gray --dark \
+// RUN:     | FileCheck %s -check-prefixes CHECK,DARK,GRAY
 
 // FIXME: Substitution doesn't seem to work on Windows.
 // UNSUPPORTED: system-windows
@@ -23,10 +28,12 @@ Node0x1 [shape=record,label=
 
 // CHECK: Node0x2 [
 // CHECK-SAME: <tr><td>
-// CHECK-SAME:   <font color="red"><b>Bug Report Attached</b></font>
+// COLOR-SAME:   <font color="red"><b>Bug Report Attached</b></font>
+// GRAY-SAME:    <b>Bug Report Attached</b>
 // CHECK-SAME: </td></tr>
 // CHECK-SAME: <tr><td>
-// CHECK-SAME:   <font color="cornflowerblue"><b>Sink Node</b></font>
+// COLOR-SAME:   <font color="cornflowerblue"><b>Sink Node</b></font>
+// GRAY-SAME:    <b>Sink Node</b>
 // CHECK-SAME: </td></tr>
 Node0x2 [shape=record,label=
  "{

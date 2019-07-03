@@ -11,7 +11,7 @@ add_clang_unittest(LexTests
   PPConditionalDirectiveRecordTest.cpp
   )
 
-target_link_libraries(LexTests
+clang_target_link_libraries(LexTests
   PRIVATE
   clangAST
   clangBasic
