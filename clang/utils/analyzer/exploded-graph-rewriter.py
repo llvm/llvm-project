@@ -13,6 +13,7 @@ from __future__ import print_function
 
 import argparse
 import collections
+import difflib
 import json
 import logging
 import re
@@ -211,6 +212,41 @@ class Store(object):
         return len(removed) != 0 or len(added) != 0 or len(updated) != 0
 
 
+# Deserialized messages from a single checker in a single program state.
+# Basically a list of raw strings.
+class CheckerLines(object):
+    def __init__(self, json_lines):
+        super(CheckerLines, self).__init__()
+        self.lines = json_lines
+
+    def diff_lines(self, prev):
+        lines = difflib.ndiff(prev.lines, self.lines)
+        return [l.strip() for l in lines
+                if l.startswith('+') or l.startswith('-')]
+
+    def is_different(self, prev):
+        return len(self.diff_lines(prev)) > 0
+
+
+# Deserialized messages of all checkers, separated by checker.
+class CheckerMessages(object):
+    def __init__(self, json_m):
+        super(CheckerMessages, self).__init__()
+        self.items = collections.OrderedDict(
+            [(m['checker'], CheckerLines(m['messages'])) for m in json_m])
+
+    def diff_messages(self, prev):
+        removed = [k for k in prev.items if k not in self.items]
+        added = [k for k in self.items if k not in prev.items]
+        updated = [k for k in prev.items if k in self.items
+                   and prev.items[k].is_different(self.items[k])]
+        return (removed, added, updated)
+
+    def is_different(self, prev):
+        removed, added, updated = self.diff_messages(prev)
+        return len(removed) != 0 or len(added) != 0 or len(updated) != 0
+
+
 # A deserialized program state.
 class ProgramState(object):
     def __init__(self, state_id, json_ps):
@@ -241,7 +277,8 @@ class ProgramState(object):
             GenericEnvironment(json_ps['constructing_objects']) \
             if json_ps['constructing_objects'] is not None else None
 
-        # TODO: Checker messages.
+        self.checker_messages = CheckerMessages(json_ps['checker_messages']) \
+            if json_ps['checker_messages'] is not None else None
 
 
 # A deserialized exploded graph node. Has a default constructor because it
@@ -595,16 +632,73 @@ class DotDumpVisitor(object):
         if m is None:
             self._dump('<i> Nothing!</i>')
         else:
-            if prev_s is not None:
-                if prev_m is not None:
-                    if m.is_different(prev_m):
-                        self._dump('</td></tr><tr><td align="left">')
-                        self.visit_generic_map(m, prev_m)
-                    else:
-                        self._dump('<i> No changes!</i>')
-            if prev_m is None:
+            if prev_m is not None:
+                if m.is_different(prev_m):
+                    self._dump('</td></tr><tr><td align="left">')
+                    self.visit_generic_map(m, prev_m)
+                else:
+                    self._dump('<i> No changes!</i>')
+            else:
                 self._dump('</td></tr><tr><td align="left">')
                 self.visit_generic_map(m)
+
+        self._dump('</td></tr>')
+
+    def visit_checker_messages(self, m, prev_m=None):
+        self._dump('<table border="0">')
+
+        def dump_line(l, is_added=None):
+            self._dump('<tr><td>%s</td>'
+                       '<td align="left">%s</td></tr>'
+                       % (self._diff_plus_minus(is_added), l))
+
+        def dump_chk(chk, is_added=None):
+            dump_line('<i>%s</i>:' % chk, is_added)
+
+        if prev_m is not None:
+            removed, added, updated = m.diff_messages(prev_m)
+            for chk in removed:
+                dump_chk(chk, False)
+                for l in prev_m.items[chk].lines:
+                    dump_line(l, False)
+            for chk in updated:
+                dump_chk(chk)
+                for l in m.items[chk].diff_lines(prev_m.items[chk]):
+                    dump_line(l[1:], l.startswith('+'))
+            for chk in added:
+                dump_chk(chk, True)
+                for l in m.items[chk].lines:
+                    dump_line(l, True)
+        else:
+            for chk in m.items:
+                dump_chk(chk)
+                for l in m.items[chk].lines:
+                    dump_line(l)
+
+        self._dump('</table>')
+
+    def visit_checker_messages_in_state(self, s, prev_s=None):
+        m = s.checker_messages
+        prev_m = prev_s.checker_messages if prev_s is not None else None
+        if m is None and prev_m is None:
+            return
+
+        self._dump('<hr />')
+        self._dump('<tr><td align="left">'
+                   '<b>Checker State: </b>')
+        if m is None:
+            self._dump('<i> Nothing!</i>')
+        else:
+            if prev_m is not None:
+                if m.is_different(prev_m):
+                    self._dump('</td></tr><tr><td align="left">')
+                    self.visit_checker_messages(m, prev_m)
+                else:
+                    self._dump('<i> No changes!</i>')
+            else:
+                self._dump('</td></tr><tr><td align="left">')
+                self.visit_checker_messages(m)
+
         self._dump('</td></tr>')
 
     def visit_state(self, s, prev_s):
@@ -618,6 +712,7 @@ class DotDumpVisitor(object):
         self.visit_environment_in_state('constructing_objects',
                                         'Objects Under Construction',
                                         s, prev_s)
+        self.visit_checker_messages_in_state(s, prev_s)
 
     def visit_node(self, node):
         self._dump('%s [shape=record,'

@@ -15,6 +15,7 @@ Node0x1 [shape=record,label=
         "constraints": null,
         "dynamic_types": null,
         "constructing_objects": null,
+        "checker_messages": null,
         "environment": {
           "pointer": "0x2",
           "items": [
@@ -63,6 +64,7 @@ Node0x6 [shape=record,label=
         "constraints": null,
         "dynamic_types": null,
         "constructing_objects": null,
+        "checker_messages": null,
         "environment": {
           "pointer": "0x2",
           "items": [
@@ -105,6 +107,7 @@ Node0x9 [shape=record,label=
         "constraints": null,
         "dynamic_types": null,
         "constructing_objects": null,
+        "checker_messages": null,
         "environment": {
           "pointer": "0x2",
           "items": [
