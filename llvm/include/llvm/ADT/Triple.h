@@ -215,8 +215,8 @@ public:
     Cygnus,
     CoreCLR,
     Simulator, // Simulator variants of other systems, e.g., Apple's iOS
-    MacCatalyst,
-    LastEnvironmentType = MacCatalyst
+    MacABI, // Mac Catalyst variant of Apple's iOS deployment target.
+    LastEnvironmentType = MacABI
   };
   enum ObjectFormatType {
     UnknownObjectFormat,
@@ -487,7 +487,7 @@ public:
   }
 
   bool isMacCatalystEnvironment() const {
-    return getEnvironment() == Triple::MacCatalyst;
+    return getEnvironment() == Triple::MacABI;
   }
 
   bool isOSNetBSD() const {

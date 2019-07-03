@@ -1239,13 +1239,13 @@ TEST(TripleTest, getOSVersion) {
   EXPECT_TRUE(T.isSimulatorEnvironment());
   EXPECT_FALSE(T.isMacCatalystEnvironment());
 
-  T = Triple("x86_64-apple-ios13.0-maccatalyst");
+  T = Triple("x86_64-apple-ios13.0-macabi");
   EXPECT_TRUE(T.isiOS());
   T.getiOSVersion(Major, Minor, Micro);
   EXPECT_EQ((unsigned)13, Major);
   EXPECT_EQ((unsigned)0, Minor);
   EXPECT_EQ((unsigned)0, Micro);
-  EXPECT_TRUE(T.getEnvironment() == Triple::MacCatalyst);
+  EXPECT_TRUE(T.getEnvironment() == Triple::MacABI);
   EXPECT_TRUE(T.isMacCatalystEnvironment());
   EXPECT_FALSE(T.isSimulatorEnvironment());
 }
