@@ -68,25 +68,6 @@ bool lldb_private::formatters::swift::SwiftSharedString_SummaryProvider(
       StringPrinter::ReadStringAndDumpToStreamOptions());
 }
 
-/// Get an Obj-C object's class name, if one is present.
-static Optional<StringRef> getObjC_ClassName(ValueObject &valobj,
-                                             Process &process) {
-  ObjCLanguageRuntime *runtime =
-      (ObjCLanguageRuntime *)process.GetLanguageRuntime(
-          lldb::eLanguageTypeObjC);
-  if (!runtime)
-    return None;
-
-  ObjCLanguageRuntime::ClassDescriptorSP descriptor(
-      runtime->GetClassDescriptor(valobj));
-
-  if (!descriptor.get() || !descriptor->IsValid())
-    return None;
-
-  ConstString class_name_cs = descriptor->GetClassName();
-  return class_name_cs.GetStringRef();
-}
-
 static bool readStringFromAddress(
     uint64_t startAddress, uint64_t length, ProcessSP process, Stream &stream,
     const TypeSummaryOptions &summary_options,
