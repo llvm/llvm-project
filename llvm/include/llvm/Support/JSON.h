@@ -39,7 +39,7 @@
 ///
 /// - LLVM bitstream is a space- and CPU- efficient binary format. Typically it
 ///   encodes LLVM IR ("bitcode"), but it can be a container for other data.
-///   Low-level reader/writer libraries are in Bitcode/Bitstream*.h
+///   Low-level reader/writer libraries are in Bitstream/Bitstream*.h
 ///
 //===---------------------------------------------------------------------===//
 

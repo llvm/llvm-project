@@ -1,7 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   support
-  BitReader
-  BitWriter
+  BitstreamReader
   )
 
 get_filename_component(CLANG_DOC_SOURCE_DIR

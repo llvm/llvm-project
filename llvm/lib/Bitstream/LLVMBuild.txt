@@ -1,4 +1,4 @@
-;===- ./lib/Bitcode/Reader/LLVMBuild.txt -----------------------*- Conf -*--===;
+;===- ./lib/Bitstream/LLVMBuild.txt ----------------------------*- Conf -*--===;
 ;
 ; Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 ; See https://llvm.org/LICENSE.txt for license information.
@@ -14,8 +14,10 @@
 ;
 ;===------------------------------------------------------------------------===;
 
+[common]
+subdirectories = Reader
+
 [component_0]
-type = Library
-name = BitReader
-parent = Bitcode
-required_libraries = BitstreamReader Core Support
+type = Group
+name = Bitstream
+parent = Libraries
