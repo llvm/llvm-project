@@ -10064,7 +10064,6 @@
 					"-lpython2.7",
 					"-lxml2",
 					"-framework",
-					"-framework",
 					Foundation,
 					"-framework",
 					Carbon,
