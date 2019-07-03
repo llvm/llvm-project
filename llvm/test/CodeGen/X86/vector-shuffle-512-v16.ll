@@ -322,12 +322,9 @@ define <4 x i32> @test_v16i32_0_1_2_12 (<16 x i32> %v) {
 define <4 x i32> @test_v16i32_0_4_8_12(<16 x i32> %v) {
 ; ALL-LABEL: test_v16i32_0_4_8_12:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; ALL-NEXT:    vunpcklps {{.*#+}} xmm1 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; ALL-NEXT:    vextractf64x4 $1, %zmm0, %ymm0
-; ALL-NEXT:    vbroadcastsd {{.*#+}} ymm2 = [17179869184,17179869184,17179869184,17179869184]
-; ALL-NEXT:    vpermps %ymm0, %ymm2, %ymm0
-; ALL-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0,1],xmm0[2,3]
+; ALL-NEXT:    vmovaps {{.*#+}} xmm1 = [0,4,8,12]
+; ALL-NEXT:    vpermps %zmm0, %zmm1, %zmm0
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; ALL-NEXT:    vzeroupper
 ; ALL-NEXT:    retq
   %res = shufflevector <16 x i32> %v, <16 x i32> undef, <4 x i32> <i32 0, i32 4, i32 8, i32 12>

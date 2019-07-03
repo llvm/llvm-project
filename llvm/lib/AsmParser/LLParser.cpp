@@ -7849,9 +7849,13 @@ static const auto FwdVIRef = (GlobalValueSummaryMapTy::value_type *)-8;
 
 static void resolveFwdRef(ValueInfo *Fwd, ValueInfo &Resolved) {
   bool ReadOnly = Fwd->isReadOnly();
+  bool WriteOnly = Fwd->isWriteOnly();
+  assert(!(ReadOnly && WriteOnly));
   *Fwd = Resolved;
   if (ReadOnly)
     Fwd->setReadOnly();
+  if (WriteOnly)
+    Fwd->setWriteOnly();
 }
 
 /// Stores the given Name/GUID and associated summary into the Index.
@@ -8081,7 +8085,8 @@ bool LLParser::ParseVariableSummary(std::string Name, GlobalValue::GUID GUID,
   GlobalValueSummary::GVFlags GVFlags = GlobalValueSummary::GVFlags(
       /*Linkage=*/GlobalValue::ExternalLinkage, /*NotEligibleToImport=*/false,
       /*Live=*/false, /*IsLocal=*/false, /*CanAutoHide=*/false);
-  GlobalVarSummary::GVarFlags GVarFlags(/*ReadOnly*/ false);
+  GlobalVarSummary::GVarFlags GVarFlags(/*ReadOnly*/ false,
+                                        /* WriteOnly */ false);
   std::vector<ValueInfo> Refs;
   VTableFuncList VTableFuncs;
   if (ParseToken(lltok::colon, "expected ':' here") ||
@@ -8422,10 +8427,11 @@ bool LLParser::ParseOptionalRefs(std::vector<ValueInfo> &Refs) {
     VContexts.push_back(VC);
   } while (EatIfPresent(lltok::comma));
 
-  // Sort value contexts so that ones with readonly ValueInfo are at the end
-  // of VContexts vector. This is needed to match immutableRefCount() behavior.
+  // Sort value contexts so that ones with writeonly
+  // and readonly ValueInfo  are at the end of VContexts vector.
+  // See FunctionSummary::specialRefCounts()
   llvm::sort(VContexts, [](const ValueContext &VC1, const ValueContext &VC2) {
-    return VC1.VI.isReadOnly() < VC2.VI.isReadOnly();
+    return VC1.VI.getAccessSpecifier() < VC2.VI.getAccessSpecifier();
   });
 
   IdToIndexMapType IdToIndexMap;
@@ -8743,24 +8749,41 @@ bool LLParser::ParseGVFlags(GlobalValueSummary::GVFlags &GVFlags) {
 }
 
 /// GVarFlags
-///   ::= 'varFlags' ':' '(' 'readonly' ':' Flag ')'
+///   ::= 'varFlags' ':' '(' 'readonly' ':' Flag
+///                      ',' 'writeonly' ':' Flag ')'
 bool LLParser::ParseGVarFlags(GlobalVarSummary::GVarFlags &GVarFlags) {
   assert(Lex.getKind() == lltok::kw_varFlags);
   Lex.Lex();
 
-  unsigned Flag = 0;
   if (ParseToken(lltok::colon, "expected ':' here") ||
-      ParseToken(lltok::lparen, "expected '(' here") ||
-      ParseToken(lltok::kw_readonly, "expected 'readonly' here") ||
-      ParseToken(lltok::colon, "expected ':' here"))
+      ParseToken(lltok::lparen, "expected '(' here"))
     return true;
 
-  ParseFlag(Flag);
-  GVarFlags.ReadOnly = Flag;
+  auto ParseRest = [this](unsigned int &Val) {
+    Lex.Lex();
+    if (ParseToken(lltok::colon, "expected ':'"))
+      return true;
+    return ParseFlag(Val);
+  };
 
-  if (ParseToken(lltok::rparen, "expected ')' here"))
-    return true;
-  return false;
+  do {
+    unsigned Flag = 0;
+    switch (Lex.getKind()) {
+    case lltok::kw_readonly:
+      if (ParseRest(Flag))
+        return true;
+      GVarFlags.MaybeReadOnly = Flag;
+      break;
+    case lltok::kw_writeonly:
+      if (ParseRest(Flag))
+        return true;
+      GVarFlags.MaybeWriteOnly = Flag;
+      break;
+    default:
+      return Error(Lex.getLoc(), "expected gvar flag type");
+    }
+  } while (EatIfPresent(lltok::comma));
+  return ParseToken(lltok::rparen, "expected ')' here");
 }
 
 /// ModuleReference
@@ -8783,7 +8806,9 @@ bool LLParser::ParseModuleReference(StringRef &ModulePath) {
 /// GVReference
 ///   ::= SummaryID
 bool LLParser::ParseGVReference(ValueInfo &VI, unsigned &GVId) {
-  bool ReadOnly = EatIfPresent(lltok::kw_readonly);
+  bool WriteOnly = false, ReadOnly = EatIfPresent(lltok::kw_readonly);
+  if (!ReadOnly)
+    WriteOnly = EatIfPresent(lltok::kw_writeonly);
   if (ParseToken(lltok::SummaryID, "expected GV ID"))
     return true;
 
@@ -8798,5 +8823,7 @@ bool LLParser::ParseGVReference(ValueInfo &VI, unsigned &GVId) {
 
   if (ReadOnly)
     VI.setReadOnly();
+  if (WriteOnly)
+    VI.setWriteOnly();
   return false;
 }

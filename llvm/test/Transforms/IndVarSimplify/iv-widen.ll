@@ -173,6 +173,7 @@ define void @loop_2(i32 %size, i32 %nsteps, i32 %hsize, i32* %lined, i8 %tmp1) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i64 [[TMP3]], [[TMP1]]
 ; CHECK-NEXT:    br i1 [[CMP215]], label [[FOR_BODY2_PREHEADER:%.*]], label [[FOR_INC]]
 ; CHECK:       for.body2.preheader:
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SIZE]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY2:%.*]]
 ; CHECK:       for.body2:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ 1, [[FOR_BODY2_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY2]] ]
@@ -180,12 +181,12 @@ define void @loop_2(i32 %size, i32 %nsteps, i32 %hsize, i32* %lined, i8 %tmp1) {
 ; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, i8* [[BC0]], i64 [[TMP5]]
 ; CHECK-NEXT:    store i8 [[TMP1:%.*]], i8* [[ADD_PTR]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SIZE]] to i64
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY2]], label [[FOR_BODY3_PREHEADER:%.*]]
 ; CHECK:       for.body3.preheader:
 ; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[TMP4]] to i32
 ; CHECK-NEXT:    [[TMP7:%.*]] = zext i32 [[TMP6]] to i64
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT5:%.*]] = zext i32 [[SIZE]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY3:%.*]]
 ; CHECK:       for.body3:
 ; CHECK-NEXT:    [[INDVARS_IV2:%.*]] = phi i64 [ 1, [[FOR_BODY3_PREHEADER]] ], [ [[INDVARS_IV_NEXT3:%.*]], [[FOR_BODY3]] ]
@@ -193,7 +194,6 @@ define void @loop_2(i32 %size, i32 %nsteps, i32 %hsize, i32* %lined, i8 %tmp1) {
 ; CHECK-NEXT:    [[ADD_PTR2:%.*]] = getelementptr inbounds i8, i8* [[BC0]], i64 [[TMP8]]
 ; CHECK-NEXT:    store i8 [[TMP1]], i8* [[ADD_PTR2]], align 1
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT3]] = add nuw nsw i64 [[INDVARS_IV2]], 1
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT5:%.*]] = zext i32 [[SIZE]] to i64
 ; CHECK-NEXT:    [[EXITCOND6:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT3]], [[WIDE_TRIP_COUNT5]]
 ; CHECK-NEXT:    br i1 [[EXITCOND6]], label [[FOR_BODY3]], label [[FOR_INC_LOOPEXIT:%.*]]
 ; CHECK:       for.inc.loopexit:

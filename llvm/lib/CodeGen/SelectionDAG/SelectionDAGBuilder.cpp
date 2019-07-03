@@ -4745,10 +4745,12 @@ void SelectionDAGBuilder::visitTargetIntrinsic(const CallInst &I,
   SDValue Result;
   if (IsTgtIntrinsic) {
     // This is target intrinsic that touches memory
-    Result = DAG.getMemIntrinsicNode(Info.opc, getCurSDLoc(), VTs,
-      Ops, Info.memVT,
-      MachinePointerInfo(Info.ptrVal, Info.offset), Info.align,
-      Info.flags, Info.size);
+    AAMDNodes AAInfo;
+    I.getAAMetadata(AAInfo);
+    Result =
+        DAG.getMemIntrinsicNode(Info.opc, getCurSDLoc(), VTs, Ops, Info.memVT,
+                                MachinePointerInfo(Info.ptrVal, Info.offset),
+                                Info.align, Info.flags, Info.size, AAInfo);
   } else if (!HasChain) {
     Result = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, getCurSDLoc(), VTs, Ops);
   } else if (!I.getType()->isVoidTy()) {
@@ -6744,7 +6746,6 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
 
   case Intrinsic::icall_branch_funnel: {
     SmallVector<SDValue, 16> Ops;
-    Ops.push_back(DAG.getRoot());
     Ops.push_back(getValue(I.getArgOperand(0)));
 
     int64_t Offset;
@@ -6787,6 +6788,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       Ops.push_back(T.Target);
     }
 
+    Ops.push_back(DAG.getRoot()); // Chain
     SDValue N(DAG.getMachineNode(TargetOpcode::ICALL_BRANCH_FUNNEL,
                                  getCurSDLoc(), MVT::Other, Ops),
               0);

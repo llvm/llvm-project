@@ -1,5 +1,4 @@
-; FIXME: Fix machine verifier issues and remove -verify-machineinstrs=0. PR39436.
-; RUN: llc -mtriple=x86_64-unknown-linux -verify-machineinstrs=0 < %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-linux < %s | FileCheck %s
 
 @g = external global i8
 

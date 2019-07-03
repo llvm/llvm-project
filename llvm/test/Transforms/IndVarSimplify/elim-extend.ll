@@ -60,6 +60,7 @@ define void @postincVarIV(i8* %base, i32 %init, i32 %limit) nounwind {
 ; CHECK-NEXT:    br i1 [[PRECOND]], label [[LOOP_PREHEADER:%.*]], label [[RETURN:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[INIT]] to i64
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = sext i32 [[LIMIT]] to i64
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[TMP0]], [[LOOP_PREHEADER]] ], [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ]
@@ -70,7 +71,6 @@ define void @postincVarIV(i8* %base, i32 %init, i32 %limit) nounwind {
 ; CHECK-NEXT:    store i8 0, i8* [[POSTADR]]
 ; CHECK-NEXT:    [[POSTADRNSW:%.*]] = getelementptr i8, i8* [[BASE]], i64 [[INDVARS_IV_NEXT]]
 ; CHECK-NEXT:    store i8 0, i8* [[POSTADRNSW]]
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = sext i32 [[LIMIT]] to i64
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOP]], label [[EXIT:%.*]]
 ; CHECK:       exit:

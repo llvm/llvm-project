@@ -17,7 +17,7 @@
 #ifndef LLVM_BITCODE_LLVMBITCODES_H
 #define LLVM_BITCODE_LLVMBITCODES_H
 
-#include "llvm/Bitcode/BitCodes.h"
+#include "llvm/Bitstream/BitCodes.h"
 
 namespace llvm {
 namespace bitc {
