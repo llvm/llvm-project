@@ -294,7 +294,7 @@ def V_MAX_F64 : VOP3Inst <"v_max_f64", VOP3_Profile<VOP_F64_F64_F64>, fmaxnum_li
 } // End SchedRW = [WriteDoubleAdd]
 
 let SchedRW = [WriteQuarterRate32] in {
-def V_MUL_LO_U32 : VOP3Inst <"v_mul_lo_u32", VOP3_Profile<VOP_I32_I32_I32>>;
+def V_MUL_LO_U32 : VOP3Inst <"v_mul_lo_u32", VOP3_Profile<VOP_I32_I32_I32>, mul>;
 def V_MUL_HI_U32 : VOP3Inst <"v_mul_hi_u32", VOP3_Profile<VOP_I32_I32_I32>, mulhu>;
 def V_MUL_LO_I32 : VOP3Inst <"v_mul_lo_i32", VOP3_Profile<VOP_I32_I32_I32>>;
 def V_MUL_HI_I32 : VOP3Inst <"v_mul_hi_i32", VOP3_Profile<VOP_I32_I32_I32>, mulhs>;

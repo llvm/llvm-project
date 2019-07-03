@@ -12,7 +12,7 @@ legalized:       true
 regBankSelected: true
 
 # GCN: body:
-# GCN: [[PTR:%[0-9]+]]:sreg_64_xexec = COPY $sgpr0_sgpr1
+# GCN: [[PTR:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
 
 # Immediate offset:
 # SICI: S_LOAD_DWORD_IMM [[PTR]], 1, 0, 0

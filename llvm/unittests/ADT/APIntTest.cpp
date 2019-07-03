@@ -2527,10 +2527,13 @@ TEST(APIntTest, MultiplicativeInverseExaustive) {
               .multiplicativeInverse(APInt::getSignedMinValue(BitWidth + 1))
               .trunc(BitWidth);
       APInt One = V * MulInv;
-      EXPECT_TRUE(MulInv.isNullValue() || One.isOneValue())
-          << " bitwidth = " << BitWidth << ", value = " << Value
-          << ", computed multiplicative inverse = " << MulInv
-          << ", value * multiplicative inverse = " << One << " (should be 1)";
+      if (!V.isNullValue() && V.countTrailingZeros() == 0) {
+        // Multiplicative inverse exists for all odd numbers.
+        EXPECT_TRUE(One.isOneValue());
+      } else {
+        // Multiplicative inverse does not exist for even numbers (and 0).
+        EXPECT_TRUE(MulInv.isNullValue());
+      }
     }
   }
 }

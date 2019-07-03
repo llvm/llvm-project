@@ -10,29 +10,27 @@ body:             |
   ; CHECK-LABEL: name: zext_trunc_dead_inst_crash
   ; CHECK: bb.0:
   ; CHECK:   successors: %bb.1(0x80000000)
-  ; CHECK:   [[C:%[0-9]+]]:_(s8) = G_CONSTANT i8 46
-  ; CHECK:   [[C1:%[0-9]+]]:_(s8) = G_CONSTANT i8 26
   ; CHECK:   [[DEF:%[0-9]+]]:_(s16) = G_IMPLICIT_DEF
   ; CHECK: bb.1:
   ; CHECK:   successors: %bb.2(0x80000000)
   ; CHECK:   [[PHI:%[0-9]+]]:_(s16) = G_PHI %32(s16), %bb.2, [[DEF]](s16), %bb.0
-  ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
+  ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 255
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[PHI]](s16)
-  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C2]]
-  ; CHECK:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[C]](s8)
-  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[AND]](s32), [[ZEXT]]
+  ; CHECK:   [[AND:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C]]
+  ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 46
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[AND]](s32), [[C1]]
   ; CHECK:   [[COPY:%[0-9]+]]:_(s32) = COPY [[ICMP]](s32)
   ; CHECK:   [[DEF1:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
   ; CHECK:   [[OR:%[0-9]+]]:_(s32) = G_OR [[COPY]], [[DEF1]]
-  ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -33
-  ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C3]]
+  ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 -33
+  ; CHECK:   [[AND1:%[0-9]+]]:_(s32) = G_AND [[ANYEXT]], [[C2]]
   ; CHECK:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[AND1]](s32)
-  ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 -65
-  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY1]], [[C4]]
+  ; CHECK:   [[C3:%[0-9]+]]:_(s32) = G_CONSTANT i32 -65
+  ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[COPY1]], [[C3]]
   ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
-  ; CHECK:   [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C2]]
-  ; CHECK:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[C1]](s8)
-  ; CHECK:   [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[AND2]](s32), [[ZEXT1]]
+  ; CHECK:   [[AND2:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C]]
+  ; CHECK:   [[C4:%[0-9]+]]:_(s32) = G_CONSTANT i32 26
+  ; CHECK:   [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[AND2]](s32), [[C4]]
   ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[ICMP1]](s32)
   ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[OR]](s32)
   ; CHECK:   [[OR1:%[0-9]+]]:_(s32) = G_OR [[COPY3]], [[COPY4]]

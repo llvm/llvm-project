@@ -264,6 +264,13 @@ bool TargetTransformInfo::canMacroFuseCmp() const {
   return TTIImpl->canMacroFuseCmp();
 }
 
+bool TargetTransformInfo::canSaveCmp(Loop *L, BranchInst **BI,
+                                     ScalarEvolution *SE, LoopInfo *LI,
+                                     DominatorTree *DT, AssumptionCache *AC,
+                                     TargetLibraryInfo *LibInfo) const {
+  return TTIImpl->canSaveCmp(L, BI, SE, LI, DT, AC, LibInfo);
+}
+
 bool TargetTransformInfo::shouldFavorPostInc() const {
   return TTIImpl->shouldFavorPostInc();
 }

@@ -47,7 +47,7 @@
 
 ; Empty as the corresponding object file is not ThinTLO.
 ; RUN: not llvm-bcanalyzer --dump %t3.o.thinlto.bc 2>&1 | FileCheck %s -check-prefixes=CHECK-BC3
-; CHECK-BC3: LLVM ERROR: Unexpected end of file
+; CHECK-BC3: Unexpected end of file
 
 ; RUN: cat %t.index | FileCheck %s
 ; CHECK: thinlto_emit_linked_objects.ll.tmp1.o

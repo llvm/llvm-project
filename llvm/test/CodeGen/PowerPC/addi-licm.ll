@@ -18,8 +18,8 @@ entry:
 ; CHECK: addi [[REG1:[0-9]+]], 1,
 ; CHECK: addi [[REG2:[0-9]+]], 1,
 ; CHECK: %for.body.i
-; CHECK-DAG: lfsx {{[0-9]+}}, [[REG1]],
-; CHECK-DAG: lfsx {{[0-9]+}}, [[REG2]],
+; CHECK-DAG: lfs {{[0-9]+}}, 0([[REG1]])
+; CHECK-DAG: lfs {{[0-9]+}}, 0([[REG2]])
 ; CHECK: blr
 
 ; PIP-LABEL: @foo

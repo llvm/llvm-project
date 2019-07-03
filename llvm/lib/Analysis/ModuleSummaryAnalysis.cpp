@@ -411,9 +411,98 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   Index.addGlobalValueSummary(F, std::move(FuncSummary));
 }
 
+/// Find function pointers referenced within the given vtable initializer
+/// (or subset of an initializer) \p I. The starting offset of \p I within
+/// the vtable initializer is \p StartingOffset. Any discovered function
+/// pointers are added to \p VTableFuncs along with their cumulative offset
+/// within the initializer.
+static void findFuncPointers(const Constant *I, uint64_t StartingOffset,
+                             const Module &M, ModuleSummaryIndex &Index,
+                             VTableFuncList &VTableFuncs) {
+  // First check if this is a function pointer.
+  if (I->getType()->isPointerTy()) {
+    auto Fn = dyn_cast<Function>(I->stripPointerCasts());
+    // We can disregard __cxa_pure_virtual as a possible call target, as
+    // calls to pure virtuals are UB.
+    if (Fn && Fn->getName() != "__cxa_pure_virtual")
+      VTableFuncs.push_back({Index.getOrInsertValueInfo(Fn), StartingOffset});
+    return;
+  }
+
+  // Walk through the elements in the constant struct or array and recursively
+  // look for virtual function pointers.
+  const DataLayout &DL = M.getDataLayout();
+  if (auto *C = dyn_cast<ConstantStruct>(I)) {
+    StructType *STy = dyn_cast<StructType>(C->getType());
+    assert(STy);
+    const StructLayout *SL = DL.getStructLayout(C->getType());
+
+    for (StructType::element_iterator EB = STy->element_begin(), EI = EB,
+                                      EE = STy->element_end();
+         EI != EE; ++EI) {
+      auto Offset = SL->getElementOffset(EI - EB);
+      unsigned Op = SL->getElementContainingOffset(Offset);
+      findFuncPointers(cast<Constant>(I->getOperand(Op)),
+                       StartingOffset + Offset, M, Index, VTableFuncs);
+    }
+  } else if (auto *C = dyn_cast<ConstantArray>(I)) {
+    ArrayType *ATy = C->getType();
+    Type *EltTy = ATy->getElementType();
+    uint64_t EltSize = DL.getTypeAllocSize(EltTy);
+    for (unsigned i = 0, e = ATy->getNumElements(); i != e; ++i) {
+      findFuncPointers(cast<Constant>(I->getOperand(i)),
+                       StartingOffset + i * EltSize, M, Index, VTableFuncs);
+    }
+  }
+}
+
+// Identify the function pointers referenced by vtable definition \p V.
+static void computeVTableFuncs(ModuleSummaryIndex &Index,
+                               const GlobalVariable &V, const Module &M,
+                               VTableFuncList &VTableFuncs) {
+  if (!V.isConstant())
+    return;
+
+  findFuncPointers(V.getInitializer(), /*StartingOffset=*/0, M, Index,
+                   VTableFuncs);
+
+#ifndef NDEBUG
+  // Validate that the VTableFuncs list is ordered by offset.
+  uint64_t PrevOffset = 0;
+  for (auto &P : VTableFuncs) {
+    // The findVFuncPointers traversal should have encountered the
+    // functions in offset order. We need to use ">=" since PrevOffset
+    // starts at 0.
+    assert(P.VTableOffset >= PrevOffset);
+    PrevOffset = P.VTableOffset;
+  }
+#endif
+}
+
+/// Record vtable definition \p V for each type metadata it references.
 static void
-computeVariableSummary(ModuleSummaryIndex &Index, const GlobalVariable &V,
-                       DenseSet<GlobalValue::GUID> &CantBePromoted) {
+recordTypeIdCompatibleVtableReferences(ModuleSummaryIndex &Index,
+                                       const GlobalVariable &V,
+                                       SmallVectorImpl<MDNode *> &Types) {
+  for (MDNode *Type : Types) {
+    auto TypeID = Type->getOperand(1).get();
+
+    uint64_t Offset =
+        cast<ConstantInt>(
+            cast<ConstantAsMetadata>(Type->getOperand(0))->getValue())
+            ->getZExtValue();
+
+    if (auto *TypeId = dyn_cast<MDString>(TypeID))
+      Index.getOrInsertTypeIdCompatibleVtableSummary(TypeId->getString())
+          .push_back({Offset, Index.getOrInsertValueInfo(&V)});
+  }
+}
+
+static void computeVariableSummary(ModuleSummaryIndex &Index,
+                                   const GlobalVariable &V,
+                                   DenseSet<GlobalValue::GUID> &CantBePromoted,
+                                   const Module &M,
+                                   SmallVectorImpl<MDNode *> &Types) {
   SetVector<ValueInfo> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
   bool HasBlockAddress = findRefEdges(Index, &V, RefEdges, Visited);
@@ -421,6 +510,21 @@ computeVariableSummary(ModuleSummaryIndex &Index, const GlobalVariable &V,
   GlobalValueSummary::GVFlags Flags(V.getLinkage(), NonRenamableLocal,
                                     /* Live = */ false, V.isDSOLocal(),
                                     V.hasLinkOnceODRLinkage() && V.hasGlobalUnnamedAddr());
+
+  VTableFuncList VTableFuncs;
+  // If splitting is not enabled, then we compute the summary information
+  // necessary for index-based whole program devirtualization.
+  if (!Index.enableSplitLTOUnit()) {
+    Types.clear();
+    V.getMetadata(LLVMContext::MD_type, Types);
+    if (!Types.empty()) {
+      // Identify the function pointers referenced by this vtable definition.
+      computeVTableFuncs(Index, V, M, VTableFuncs);
+
+      // Record this vtable definition for each type metadata it references.
+      recordTypeIdCompatibleVtableReferences(Index, V, Types);
+    }
+  }
 
   // Don't mark variables we won't be able to internalize as read-only.
   GlobalVarSummary::GVarFlags VarFlags(
@@ -432,6 +536,8 @@ computeVariableSummary(ModuleSummaryIndex &Index, const GlobalVariable &V,
     CantBePromoted.insert(V.getGUID());
   if (HasBlockAddress)
     GVarSummary->setNotEligibleToImport();
+  if (!VTableFuncs.empty())
+    GVarSummary->setVTableFuncs(VTableFuncs);
   Index.addGlobalValueSummary(V, std::move(GVarSummary));
 }
 
@@ -578,10 +684,11 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
 
   // Compute summaries for all variables defined in module, and save in the
   // index.
+  SmallVector<MDNode *, 2> Types;
   for (const GlobalVariable &G : M.globals()) {
     if (G.isDeclaration())
       continue;
-    computeVariableSummary(Index, G, CantBePromoted);
+    computeVariableSummary(Index, G, CantBePromoted, M, Types);
   }
 
   // Compute summaries for all aliases defined in module, and save in the

@@ -222,20 +222,20 @@ std::string getMainExecutable(const char *argv0, void *MainAddr) {
     // the program, and not the eventual binary file. Therefore, call realpath
     // so this behaves the same on all platforms.
 #if _POSIX_VERSION >= 200112 || defined(__GLIBC__)
-    char *real_path = realpath(exe_path, NULL);
-    std::string ret = std::string(real_path);
-    free(real_path);
-    return ret;
+    if (char *real_path = realpath(exe_path, NULL)) {
+      std::string ret = std::string(real_path);
+      free(real_path);
+      return ret;
+    }
 #else
     char real_path[MAXPATHLEN];
-    realpath(exe_path, real_path);
-    return std::string(real_path);
+    if (realpath(exe_path, real_path))
+      return std::string(real_path);
 #endif
-  } else {
-    // Fall back to the classical detection.
-    if (getprogpath(exe_path, argv0))
-      return exe_path;
   }
+  // Fall back to the classical detection.
+  if (getprogpath(exe_path, argv0))
+    return exe_path;
 #elif defined(HAVE_DLFCN_H) && defined(HAVE_DLADDR)
   // Use dladdr to get executable path if available.
   Dl_info DLInfo;

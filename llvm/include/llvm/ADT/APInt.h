@@ -2212,6 +2212,15 @@ Optional<APInt> SolveQuadraticEquationWrap(APInt A, APInt B, APInt C,
 // See friend declaration above. This additional declaration is required in
 // order to compile LLVM with IBM xlC compiler.
 hash_code hash_value(const APInt &Arg);
-} // End of llvm namespace
+
+/// StoreIntToMemory - Fills the StoreBytes bytes of memory starting from Dst
+/// with the integer held in IntVal.
+void StoreIntToMemory(const APInt &IntVal, uint8_t *Dst, unsigned StoreBytes);
+
+/// LoadIntFromMemory - Loads the integer stored in the LoadBytes bytes starting
+/// from Src into IntVal, which is assumed to be wide enough and to hold zero.
+void LoadIntFromMemory(APInt &IntVal, uint8_t *Src, unsigned LoadBytes);
+
+} // namespace llvm
 
 #endif

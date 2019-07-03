@@ -57,6 +57,9 @@ public:
                                 AssumptionCache &AC,
                                 TargetLibraryInfo *LibInfo,
                                 HardwareLoopInfo &HWLoopInfo);
+  bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
+                  DominatorTree *DT, AssumptionCache *AC,
+                  TargetLibraryInfo *LibInfo);
   void getUnrollingPreferences(Loop *L, ScalarEvolution &SE,
                                TTI::UnrollingPreferences &UP);
 

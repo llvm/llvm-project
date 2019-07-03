@@ -2,20 +2,18 @@
 # FIXME: Make the other headers DWARF-64 also.
 # FIXME: Add variants for earlier DWARF versions.
 
-# Lines beginning with @ELF@ should be preserved for ELF targets;
-# lines beginning with @MACHO@ should be preserved for Mach-O targets.
+# RUN: llvm-mc -triple x86_64-unknown-linux --defsym ELF=0 \
+# RUN:     -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
 
-# RUN: sed -e 's/@ELF@//;s/@MACHO@.*//' %s | \
-# RUN: llvm-mc -triple x86_64-unknown-linux -filetype=obj -o - | \
-# RUN: llvm-dwarfdump -v - | FileCheck %s
+# RUN: llvm-mc -triple x86_64-apple-darwin --defsym MACHO=0 \
+# RUN:     -filetype=obj -o - %s | llvm-dwarfdump -v - | FileCheck %s
 
-# RUN: sed -e 's/@ELF@.*//;s/@MACHO@//' %s | \
-# RUN: llvm-mc -triple x86_64-apple-darwin -filetype=obj -o - | \
-# RUN: llvm-dwarfdump -v - | FileCheck %s
-
-
-@ELF@   .section .debug_str,"MS",@progbits,1
-@MACHO@ .section __DWARF,__debug_str,regular,debug
+.ifdef ELF
+        .section .debug_str,"MS",@progbits,1
+.endif
+.ifdef MACHO
+        .section __DWARF,__debug_str,regular,debug
+.endif
 str_producer:
         .asciz  "Handmade DWARF producer"
 str_CU_5:
@@ -25,8 +23,12 @@ str_LT_5a:
 str_LT_5b:
         .asciz  "Directory5b"
 
-@ELF@   .section .debug_abbrev,"",@progbits
-@MACHO@ .section __DWARF,__debug_abbrev,regular,debug
+.ifdef ELF
+        .section .debug_abbrev,"",@progbits
+.endif
+.ifdef MACHO
+        .section __DWARF,__debug_abbrev,regular,debug
+.endif
 abbrev:
         .byte   0x01    # Abbrev code
         .byte   0x11    # DW_TAG_compile_unit
@@ -40,8 +42,12 @@ abbrev:
         .byte   0x00    # EOM(1)
         .byte   0x00    # EOM(2)
 
-@ELF@   .section .debug_info,"",@progbits
-@MACHO@ .section __DWARF,__debug_info,regular,debug
+.ifdef ELF
+        .section .debug_info,"",@progbits
+.endif
+.ifdef MACHO
+        .section __DWARF,__debug_info,regular,debug
+.endif
 
 # DWARF-32 v5 normal CU header.
 Lset0 = CU_5_end-CU_5_version   # Length of Unit
@@ -50,14 +56,22 @@ CU_5_version:
         .short  5               # DWARF version number
         .byte   1               # DWARF Unit Type
         .byte   8               # Address Size (in bytes)
-@ELF@   .long   abbrev          # Offset Into Abbrev. Section
-@MACHO@ .long   0
+.ifdef ELF
+        .long   abbrev          # Offset Into Abbrev. Section
+.endif
+.ifdef MACHO
+        .long   0
+.endif
 # The compile-unit DIE, with DW_AT_producer, DW_AT_name, DW_AT_stmt_list.
         .byte   1
         .long   str_producer
         .long   str_CU_5
-@ELF@   .long   LH_5_start
-@MACHO@ .long   0
+.ifdef ELF
+        .long   LH_5_start
+.endif
+.ifdef MACHO
+        .long   0
+.endif
         .byte   0 # NULL
 CU_5_end:
 
@@ -68,8 +82,12 @@ CU_5_end:
 # CHECK-NEXT: DW_AT_name {{.*}} "V5_compile_unit"
 # CHECK-NEXT: DW_AT_stmt_list {{.*}} (0x00000000)
 
-@ELF@   .section .debug_line,"",@progbits
-@MACHO@ .section __DWARF,__debug_line,regular,debug
+.ifdef ELF
+        .section .debug_line,"",@progbits
+.endif
+.ifdef MACHO
+        .section __DWARF,__debug_line,regular,debug
+.endif
 
 # DWARF-64 v5 line-table header.
 LH_5_start:

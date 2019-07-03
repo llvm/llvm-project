@@ -1136,6 +1136,9 @@ public:
   MachineInstrBuilder buildAtomicRMWUmin(Register OldValRes, Register Addr,
                                          Register Val, MachineMemOperand &MMO);
 
+  /// Build and insert `G_FENCE Ordering, Scope`.
+  MachineInstrBuilder buildFence(unsigned Ordering, unsigned Scope);
+
   /// Build and insert \p Res = G_BLOCK_ADDR \p BA
   ///
   /// G_BLOCK_ADDR computes the address of a basic block.

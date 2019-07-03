@@ -16,6 +16,12 @@
 # FULL-NEXT: scratchWaveOffsetReg:  '$sgpr12'
 # FULL-NEXT: frameOffsetReg:  '$sgpr12'
 # FULL-NEXT: stackPtrOffsetReg:  '$sgpr13'
+# FULL-NEXT: argumentInfo:
+# FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# FULL-NEXT: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+# FULL-NEXT: workGroupIDX: { reg: '$sgpr6' }
+# FULL-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr7' }
+# FULL-NEXT: workItemIDX: { reg: '$vgpr0' }
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -29,6 +35,12 @@
 # SIMPLE-NEXT: scratchWaveOffsetReg:  '$sgpr12'
 # SIMPLE-NEXT: frameOffsetReg:  '$sgpr12'
 # SIMPLE-NEXT: stackPtrOffsetReg:  '$sgpr13'
+# SIMPLE-NEXT: argumentInfo:
+# SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# SIMPLE-NEXT: kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+# SIMPLE-NEXT: workGroupIDX: { reg: '$sgpr6' }
+# SIMPLE-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr7' }
+# SIMPLE-NEXT: workItemIDX: { reg: '$vgpr0' }
 # SIMPLE-NEXT: body:
 name: kernel0
 machineFunctionInfo:
@@ -43,6 +55,12 @@ machineFunctionInfo:
   scratchWaveOffsetReg:  '$sgpr12'
   frameOffsetReg: '$sgpr12'
   stackPtrOffsetReg:  '$sgpr13'
+  argumentInfo:
+    privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+    kernargSegmentPtr: { reg: '$sgpr4_sgpr5' }
+    workGroupIDX:    { reg: '$sgpr6' }
+    privateSegmentWaveByteOffset: { reg: '$sgpr7' }
+    workItemIDX:     { reg: '$vgpr0' }
 body:             |
   bb.0:
     S_ENDPGM 0
@@ -64,8 +82,15 @@ body:             |
 # FULL-NEXT: scratchWaveOffsetReg:  '$scratch_wave_offset_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+# FULL-NEXT: argumentInfo:
+# FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# FULL-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr33' }
+# FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
+# SIMPLE-NEXT: argumentInfo:
+# SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# SIMPLE-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr33' }
 # SIMPLE-NEXT: body:
 
 name: no_mfi
@@ -89,8 +114,15 @@ body:             |
 # FULL-NEXT: scratchWaveOffsetReg:  '$scratch_wave_offset_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+# FULL-NEXT: argumentInfo:
+# FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# FULL-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr33' }
+# FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
+# SIMPLE-NEXT: argumentInfo:
+# SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# SIMPLE-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr33' }
 # SIMPLE-NEXT: body:
 
 name: empty_mfi
@@ -115,9 +147,16 @@ body:             |
 # FULL-NEXT: scratchWaveOffsetReg:  '$scratch_wave_offset_reg'
 # FULL-NEXT: frameOffsetReg:  '$fp_reg'
 # FULL-NEXT: stackPtrOffsetReg:  '$sp_reg'
+# FULL-NEXT: argumentInfo:
+# FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# FULL-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr33' }
+# FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
 # SIMPLE-NEXT: isEntryFunction: true
+# SIMPLE-NEXT: argumentInfo:
+# SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# SIMPLE-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr33' }
 # SIMPLE-NEXT: body:
 
 name: empty_mfi_entry_func
@@ -143,6 +182,32 @@ body:             |
 name: default_regs_mfi
 machineFunctionInfo:
   scratchRSrcReg:  '$private_rsrc_reg'
+
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...
+
+---
+# ALL-LABEL: name: fake_stack_arginfo
+
+# FULL: argumentInfo:
+# FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# FULL-NEXT: flatScratchInit: { offset: 4 }
+# FULL-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr33' }
+# FULL-NEXT: workItemIDY: { reg: '$vgpr0', mask: 65280 }
+
+# SIMPLE: argumentInfo:
+# SIMPLE-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
+# SIMPLE-NEXT: flatScratchInit: { offset: 4 }
+# SIMPLE-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr33' }
+# SIMPLE-NEXT: workItemIDY: { reg: '$vgpr0', mask: 65280 }
+name: fake_stack_arginfo
+machineFunctionInfo:
+  argumentInfo:
+    flatScratchInit: { offset: 4 }
+    workItemIDY:     { reg: '$vgpr0' , mask: 0xff00 }
 
 body:             |
   bb.0:

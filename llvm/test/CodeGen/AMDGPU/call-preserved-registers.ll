@@ -130,12 +130,12 @@ define amdgpu_kernel void @test_call_void_func_void_mayclobber_v31(i32 addrspace
 ; GCN-LABEL: {{^}}test_call_void_func_void_preserves_s33:
 ; GCN: s_mov_b32 s33, s9
 ; GCN: s_mov_b32 s32, s33
-; GCN: #ASMSTART
-; GCN-NEXT: ; def s33
-; GCN-NEXT: #ASMEND
 ; GCN: s_getpc_b64 s[4:5]
 ; GCN-NEXT: s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s5, s5, external_void_func_void@rel32@hi+4
+; GCN: #ASMSTART
+; GCN-NEXT: ; def s33
+; GCN-NEXT: #ASMEND
 ; GCN: s_swappc_b64 s[30:31], s[4:5]
 ; GCN: ;;#ASMSTART
 ; GCN-NEXT: ; use s33
@@ -152,15 +152,16 @@ define amdgpu_kernel void @test_call_void_func_void_preserves_s33(i32 addrspace(
 ; GCN-LABEL: {{^}}test_call_void_func_void_preserves_s34:
 ; GCN: s_mov_b32 s33, s9
 ; GCN-NOT: s34
-; GCN: ;;#ASMSTART
-; GCN-NEXT: ; def s34
-; GCN-NEXT: ;;#ASMEND
-
 ; GCN-NOT: s34
 
 ; GCN: s_getpc_b64 s[4:5]
 ; GCN-NEXT: s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s5, s5, external_void_func_void@rel32@hi+4
+
+; GCN-NOT: s34
+; GCN: ;;#ASMSTART
+; GCN-NEXT: ; def s34
+; GCN-NEXT: ;;#ASMEND
 
 ; GCN-NOT: s34
 ; GCN: s_swappc_b64 s[30:31], s[4:5]
@@ -181,16 +182,16 @@ define amdgpu_kernel void @test_call_void_func_void_preserves_s34(i32 addrspace(
 ; GCN-LABEL: {{^}}test_call_void_func_void_preserves_v32:
 ; GCN: s_mov_b32 s33, s9
 
-; GCN: ;;#ASMSTART
-; GCN-NEXT: ; def v32
-; GCN-NEXT: ;;#ASMEND
-
 ; GCN-NOT: v32
 ; GCN: s_getpc_b64 s[4:5]
 ; GCN-NEXT: s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
 ; GCN-NEXT: s_addc_u32 s5, s5, external_void_func_void@rel32@hi+4
 ; GCN-NOT: v32
 ; GCN-DAG: s_mov_b32 s32, s33
+
+; GCN: ;;#ASMSTART
+; GCN-NEXT: ; def v32
+; GCN-NEXT: ;;#ASMEND
 
 ; GCN: s_swappc_b64 s[30:31], s[4:5]
 

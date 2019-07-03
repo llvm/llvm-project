@@ -30,6 +30,7 @@
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/Dominators.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include <functional>
 
 namespace llvm {
@@ -527,6 +528,12 @@ public:
   /// Loop-strength-reduction (LSR) uses that knowledge to adjust its cost
   /// calculation for the instructions in a loop.
   bool canMacroFuseCmp() const;
+
+  /// Return true if the target can save a compare for loop count, for example
+  /// hardware loop saves a compare.
+  bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
+                  DominatorTree *DT, AssumptionCache *AC,
+                  TargetLibraryInfo *LibInfo) const;
 
   /// \return True is LSR should make efforts to create/preserve post-inc
   /// addressing mode expressions.
@@ -1152,6 +1159,9 @@ public:
   virtual bool isLSRCostLess(TargetTransformInfo::LSRCost &C1,
                              TargetTransformInfo::LSRCost &C2) = 0;
   virtual bool canMacroFuseCmp() = 0;
+  virtual bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
+                          LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
+                          TargetLibraryInfo *LibInfo) = 0;
   virtual bool shouldFavorPostInc() const = 0;
   virtual bool shouldFavorBackedgeIndex(const Loop *L) const = 0;
   virtual bool isLegalMaskedStore(Type *DataType) = 0;
@@ -1401,6 +1411,12 @@ public:
   }
   bool canMacroFuseCmp() override {
     return Impl.canMacroFuseCmp();
+  }
+  bool canSaveCmp(Loop *L, BranchInst **BI,
+                        ScalarEvolution *SE,
+                        LoopInfo *LI, DominatorTree *DT, AssumptionCache *AC,
+                        TargetLibraryInfo *LibInfo) override {
+    return Impl.canSaveCmp(L, BI, SE, LI, DT, AC, LibInfo);
   }
   bool shouldFavorPostInc() const override {
     return Impl.shouldFavorPostInc();
