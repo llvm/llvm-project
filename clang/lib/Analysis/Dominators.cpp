@@ -11,7 +11,7 @@
 using namespace clang;
 
 template <>
-void CFGDominatorTreeImpl</*IsPostDom=*/true>::anchor() {}
+void clang::CFGDominatorTreeImpl</*IsPostDom=*/true>::anchor() {}
 
 template <>
-void CFGDominatorTreeImpl</*IsPostDom=*/false>::anchor() {}
+void clang::CFGDominatorTreeImpl</*IsPostDom=*/false>::anchor() {}
