@@ -19,6 +19,11 @@ import logging
 import re
 
 
+#===-----------------------------------------------------------------------===#
+# These data structures represent a deserialized ExplodedGraph.
+#===-----------------------------------------------------------------------===#
+
+
 # A helper function for finding the difference between two dictionaries.
 def diff_dicts(curr, prev):
     removed = [k for k in prev if k not in curr or curr[k] != prev[k]]
@@ -366,6 +371,12 @@ class ExplodedGraph(object):
             self.nodes[node_id].construct(node_id, json_node)
             return
         logging.debug('Skipping.')
+
+
+#===-----------------------------------------------------------------------===#
+# Visitors traverse a deserialized ExplodedGraph and do different things
+# with every node and edge.
+#===-----------------------------------------------------------------------===#
 
 
 # A visitor that dumps the ExplodedGraph into a DOT file with fancy HTML-based
@@ -775,11 +786,17 @@ class DotDumpVisitor(object):
         self._dump_raw('}\n')
 
 
+#===-----------------------------------------------------------------------===#
+# Explorers know how to traverse the ExplodedGraph in a certain order.
+# They would invoke a Visitor on every node or edge they encounter.
+#===-----------------------------------------------------------------------===#
+
+
 # A class that encapsulates traversal of the ExplodedGraph. Different explorer
 # kinds could potentially traverse specific sub-graphs.
-class Explorer(object):
+class BasicExplorer(object):
     def __init__(self):
-        super(Explorer, self).__init__()
+        super(BasicExplorer, self).__init__()
 
     def explore(self, graph, visitor):
         visitor.visit_begin_graph(graph)
@@ -790,6 +807,11 @@ class Explorer(object):
                 logging.debug('Visiting edge: %s -> %s ' % (node, succ))
                 visitor.visit_edge(graph.nodes[node], graph.nodes[succ])
         visitor.visit_end_of_graph()
+
+
+#===-----------------------------------------------------------------------===#
+# The entry point to the script.
+#===-----------------------------------------------------------------------===#
 
 
 def main():
@@ -814,7 +836,7 @@ def main():
             raw_line = raw_line.strip()
             graph.add_raw_line(raw_line)
 
-    explorer = Explorer()
+    explorer = BasicExplorer()
     visitor = DotDumpVisitor(args.diff, args.dark)
     explorer.explore(graph, visitor)
 
