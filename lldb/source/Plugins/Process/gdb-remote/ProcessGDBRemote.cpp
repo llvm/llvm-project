@@ -111,18 +111,40 @@ void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
 namespace {
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"packet-timeout", OptionValue::eTypeUInt64, true, 5
+    {"packet-timeout",
+     OptionValue::eTypeUInt64,
+     true,
+     5
 #if defined(__has_feature)
 #if __has_feature(address_sanitizer)
          * 2
 #endif
 #endif
-     , nullptr, {},
+     ,
+     nullptr,
+     {},
      "Specify the default packet timeout in seconds."},
-    {"target-definition-file", OptionValue::eTypeFileSpec, true, 0, nullptr, {},
-     "The file that provides the description for remote target registers."}};
+    {"target-definition-file",
+     OptionValue::eTypeFileSpec,
+     true,
+     0,
+     nullptr,
+     {},
+     "The file that provides the description for remote target registers."},
+    {"use-libraries-svr4",
+     OptionValue::eTypeBoolean,
+     true,
+     false,
+     nullptr,
+     {},
+     "If true, the libraries-svr4 feature will be used to get a hold of the "
+     "process's loaded modules."}};
 
-enum { ePropertyPacketTimeout, ePropertyTargetDefinitionFile };
+enum {
+  ePropertyPacketTimeout,
+  ePropertyTargetDefinitionFile,
+  ePropertyUseSVR4
+};
 
 class PluginProperties : public Properties {
 public:
@@ -151,6 +173,12 @@ public:
   FileSpec GetTargetDefinitionFile() const {
     const uint32_t idx = ePropertyTargetDefinitionFile;
     return m_collection_sp->GetPropertyAtIndexAsFileSpec(nullptr, idx);
+  }
+
+  bool GetUseSVR4() const {
+    const uint32_t idx = ePropertyUseSVR4;
+    return m_collection_sp->GetPropertyAtIndexAsBoolean(
+        nullptr, idx, g_properties[idx].default_uint_value != 0);
   }
 };
 
@@ -4681,9 +4709,10 @@ Status ProcessGDBRemote::GetLoadedModuleList(LoadedModuleInfoList &list) {
     log->Printf("ProcessGDBRemote::%s", __FUNCTION__);
 
   GDBRemoteCommunicationClient &comm = m_gdb_comm;
+  bool can_use_svr4 = GetGlobalPluginProperties()->GetUseSVR4();
 
   // check that we have extended feature read support
-  if (comm.GetQXferLibrariesSVR4ReadSupported()) {
+  if (can_use_svr4 && comm.GetQXferLibrariesSVR4ReadSupported()) {
     list.clear();
 
     // request the loaded library list
