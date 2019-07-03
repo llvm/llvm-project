@@ -75,8 +75,8 @@ class ARMThunk : public Thunk {
 public:
   ARMThunk(Symbol &Dest) : Thunk(Dest) {}
 
-  bool mayUseShortThunk();
-  uint32_t size() override { return mayUseShortThunk() ? 4 : sizeLong(); }
+  bool getMayUseShortThunk();
+  uint32_t size() override { return getMayUseShortThunk() ? 4 : sizeLong(); }
   void writeTo(uint8_t *Buf) override;
   bool isCompatibleWith(const InputSection &IS,
                         const Relocation &Rel) const override;
@@ -105,8 +105,8 @@ class ThumbThunk : public Thunk {
 public:
   ThumbThunk(Symbol &Dest) : Thunk(Dest) { Alignment = 2; }
 
-  bool mayUseShortThunk();
-  uint32_t size() override { return mayUseShortThunk() ? 4 : sizeLong(); }
+  bool getMayUseShortThunk();
+  uint32_t size() override { return getMayUseShortThunk() ? 4 : sizeLong(); }
   void writeTo(uint8_t *Buf) override;
   bool isCompatibleWith(const InputSection &IS,
                         const Relocation &Rel) const override;
@@ -389,7 +389,7 @@ static uint64_t getARMThunkDestVA(const Symbol &S) {
 
 // This function returns true if the target is not Thumb and is within 2^26, and
 // it has not previously returned false (see comment for MayUseShortThunk).
-bool ARMThunk::mayUseShortThunk() {
+bool ARMThunk::getMayUseShortThunk() {
   if (!MayUseShortThunk)
     return false;
   uint64_t S = getARMThunkDestVA(Destination);
@@ -404,7 +404,7 @@ bool ARMThunk::mayUseShortThunk() {
 }
 
 void ARMThunk::writeTo(uint8_t *Buf) {
-  if (!mayUseShortThunk()) {
+  if (!getMayUseShortThunk()) {
     writeLong(Buf);
     return;
   }
@@ -427,7 +427,7 @@ bool ARMThunk::isCompatibleWith(const InputSection &IS,
 
 // This function returns true if the target is Thumb and is within 2^25, and
 // it has not previously returned false (see comment for MayUseShortThunk).
-bool ThumbThunk::mayUseShortThunk() {
+bool ThumbThunk::getMayUseShortThunk() {
   if (!MayUseShortThunk)
     return false;
   uint64_t S = getARMThunkDestVA(Destination);
@@ -442,7 +442,7 @@ bool ThumbThunk::mayUseShortThunk() {
 }
 
 void ThumbThunk::writeTo(uint8_t *Buf) {
-  if (!mayUseShortThunk()) {
+  if (!getMayUseShortThunk()) {
     writeLong(Buf);
     return;
   }

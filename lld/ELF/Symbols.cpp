@@ -317,18 +317,18 @@ void elf::maybeWarnUnorderableSymbol(const Symbol *Sym) {
   const InputFile *File = Sym->File;
   auto *D = dyn_cast<Defined>(Sym);
 
-  auto Warn = [&](StringRef S) { warn(toString(File) + S + Sym->getName()); };
+  auto Report = [&](StringRef S) { warn(toString(File) + S + Sym->getName()); };
 
   if (Sym->isUndefined())
-    Warn(": unable to order undefined symbol: ");
+    Report(": unable to order undefined symbol: ");
   else if (Sym->isShared())
-    Warn(": unable to order shared symbol: ");
+    Report(": unable to order shared symbol: ");
   else if (D && !D->Section)
-    Warn(": unable to order absolute symbol: ");
+    Report(": unable to order absolute symbol: ");
   else if (D && isa<OutputSection>(D->Section))
-    Warn(": unable to order synthetic symbol: ");
+    Report(": unable to order synthetic symbol: ");
   else if (D && !D->Section->Repl->isLive())
-    Warn(": unable to order discarded symbol: ");
+    Report(": unable to order discarded symbol: ");
 }
 
 // Returns a symbol for an error message.

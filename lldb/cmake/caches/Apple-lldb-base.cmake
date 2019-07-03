@@ -7,6 +7,9 @@ set(LLVM_ENABLE_ASSERTIONS ON CACHE BOOL "")
 # Unfortunately this is blocked on Swift being properly modularized.
 set(LLVM_ENABLE_MODULES OFF CACHE BOOL "")
 
+set(LIBCXX_ENABLE_SHARED OFF CACHE BOOL "")
+set(LIBCXX_ENABLE_STATIC OFF CACHE BOOL "")
+
 # Release builds set these explicitly:
 #set(LLDB_VERSION_MAJOR 9999 CACHE STRING "")
 #set(LLDB_VERSION_MINOR 9 CACHE STRING "")

@@ -838,7 +838,7 @@ void InputSection::relocateNonAlloc(uint8_t *Buf, ArrayRef<RelTy> Rels) {
     if (Expr == R_NONE)
       continue;
 
-    if (Expr != R_ABS && Expr != R_DTPREL) {
+    if (Expr != R_ABS && Expr != R_DTPREL && Expr != R_RISCV_ADD) {
       std::string Msg = getLocation<ELFT>(Offset) +
                         ": has non-ABS relocation " + toString(Type) +
                         " against symbol '" + toString(Sym) + "'";
