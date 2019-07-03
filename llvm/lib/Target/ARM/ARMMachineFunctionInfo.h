@@ -245,6 +245,8 @@ public:
   void setPromotedConstpoolIncrease(int Sz) {
     PromotedGlobalsIncrease = Sz;
   }
+
+  DenseMap<unsigned, unsigned> EHPrologueRemappedRegs;
 };
 
 } // end namespace llvm

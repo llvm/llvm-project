@@ -168,8 +168,8 @@ define <2 x i64> @elt0_v2i64(i64 %x) {
 define <4 x float> @elt1_v4f32(float %x) {
 ; X32SSE2-LABEL: elt1_v4f32:
 ; X32SSE2:       # %bb.0:
-; X32SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32SSE2-NEXT:    movaps {{.*#+}} xmm1 = <4.2E+1,u,2.0E+0,3.0E+0>
+; X32SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[0,0]
 ; X32SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,0],xmm1[2,3]
 ; X32SSE2-NEXT:    retl
@@ -305,8 +305,8 @@ define <8 x i32> @elt7_v8i32(i32 %x) {
 define <8 x float> @elt6_v8f32(float %x) {
 ; X32SSE2-LABEL: elt6_v8f32:
 ; X32SSE2:       # %bb.0:
-; X32SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32SSE2-NEXT:    movaps {{.*#+}} xmm1 = <4.0E+0,5.0E+0,u,7.0E+0>
+; X32SSE2-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X32SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,0],xmm1[3,0]
 ; X32SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[0,2]
 ; X32SSE2-NEXT:    movaps {{.*#+}} xmm0 = [4.2E+1,1.0E+0,2.0E+0,3.0E+0]

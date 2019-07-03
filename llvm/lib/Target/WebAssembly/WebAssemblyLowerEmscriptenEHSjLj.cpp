@@ -485,6 +485,13 @@ bool WebAssemblyLowerEmscriptenEHSjLj::canLongjmp(Module &M,
     if (CalleeF->isIntrinsic())
       return false;
 
+  // Attempting to transform inline assembly will result in something like:
+  //     call void @__invoke_void(void ()* asm ...)
+  // which is invalid because inline assembly blocks do not have addresses
+  // and can't be passed by pointer. The result is a crash with illegal IR.
+  if (isa<InlineAsm>(Callee))
+    return false;
+
   // The reason we include malloc/free here is to exclude the malloc/free
   // calls generated in setjmp prep / cleanup routines.
   Function *SetjmpF = M.getFunction("setjmp");

@@ -1543,8 +1543,9 @@ Value *LibCallSimplifier::optimizePow(CallInst *Pow, IRBuilder<> &B) {
 
     APSInt IntExpo(32, /*isUnsigned=*/false);
     // powf(x, C) -> powi(x, C) iff C is a constant signed integer value
-    if (ExpoF->convertToInteger(IntExpo, APFloat::rmTowardZero, &Ignored) ==
-        APFloat::opOK) {
+    if (ExpoF->isInteger() &&
+        ExpoF->convertToInteger(IntExpo, APFloat::rmTowardZero, &Ignored) ==
+            APFloat::opOK) {
       return createPowWithIntegerExponent(
           Base, ConstantInt::get(B.getInt32Ty(), IntExpo), M, B);
     }

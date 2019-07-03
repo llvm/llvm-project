@@ -27,6 +27,7 @@
 
 #ifdef GWP_ASAN_HOOKS
 # include "gwp_asan/guarded_pool_allocator.h"
+# include "gwp_asan/optional/backtrace.h"
 # include "gwp_asan/optional/options_parser.h"
 #endif // GWP_ASAN_HOOKS
 
@@ -671,7 +672,10 @@ void initScudo() {
   Instance.init();
 #ifdef GWP_ASAN_HOOKS
   gwp_asan::options::initOptions();
-  GuardedAlloc.init(gwp_asan::options::getOptions());
+  gwp_asan::options::Options &Opts = gwp_asan::options::getOptions();
+  Opts.Backtrace = gwp_asan::options::getBacktraceFunction();
+  Opts.PrintBacktrace = gwp_asan::options::getPrintBacktraceFunction();
+  GuardedAlloc.init(Opts);
 #endif // GWP_ASAN_HOOKS
 }
 

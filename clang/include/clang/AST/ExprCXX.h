@@ -4716,6 +4716,35 @@ public:
   }
 };
 
+/// Represents a C++2a __builtin_bit_cast(T, v) expression. Used to implement
+/// std::bit_cast. These can sometimes be evaluated as part of a constant
+/// expression, but otherwise CodeGen to a simple memcpy in general.
+class BuiltinBitCastExpr final
+    : public ExplicitCastExpr,
+      private llvm::TrailingObjects<BuiltinBitCastExpr, CXXBaseSpecifier *> {
+  friend class ASTStmtReader;
+  friend class CastExpr;
+  friend class TrailingObjects;
+
+  SourceLocation KWLoc;
+  SourceLocation RParenLoc;
+
+public:
+  BuiltinBitCastExpr(QualType T, ExprValueKind VK, CastKind CK, Expr *SrcExpr,
+                     TypeSourceInfo *DstType, SourceLocation KWLoc,
+                     SourceLocation RParenLoc)
+      : ExplicitCastExpr(BuiltinBitCastExprClass, T, VK, CK, SrcExpr, 0,
+                         DstType),
+        KWLoc(KWLoc), RParenLoc(RParenLoc) {}
+
+  SourceLocation getBeginLoc() const LLVM_READONLY { return KWLoc; }
+  SourceLocation getEndLoc() const LLVM_READONLY { return RParenLoc; }
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == BuiltinBitCastExprClass;
+  }
+};
+
 } // namespace clang
 
 #endif // LLVM_CLANG_AST_EXPRCXX_H

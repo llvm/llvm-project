@@ -1070,7 +1070,7 @@ def BUNDLE : StandardPseudoInstruction {
   let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);
   let AsmString = "BUNDLE";
-  let hasSideEffects = 1;
+  let hasSideEffects = 0;
 }
 def LIFETIME_START : StandardPseudoInstruction {
   let OutOperandList = (outs);

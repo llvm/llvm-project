@@ -2546,7 +2546,11 @@ enum CXCursorKind {
    */
   CXCursor_OMPTargetTeamsDistributeSimdDirective = 279,
 
-  CXCursor_LastStmt = CXCursor_OMPTargetTeamsDistributeSimdDirective,
+  /** C++2a std::bit_cast expression.
+   */
+  CXCursor_BuiltinBitCastExpr = 280,
+
+  CXCursor_LastStmt = CXCursor_BuiltinBitCastExpr,
 
   /**
    * Cursor that represents the translation unit itself.

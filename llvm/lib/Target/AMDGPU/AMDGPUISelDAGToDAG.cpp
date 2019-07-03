@@ -39,6 +39,9 @@
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
 #include "llvm/IR/BasicBlock.h"
+#ifdef EXPENSIVE_CHECKS
+#include "llvm/IR/Dominators.h"
+#endif
 #include "llvm/IR/Instruction.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/Casting.h"
@@ -138,6 +141,10 @@ public:
     AU.addRequired<AMDGPUArgumentUsageInfo>();
     AU.addRequired<AMDGPUPerfHintAnalysis>();
     AU.addRequired<LegacyDivergenceAnalysis>();
+#ifdef EXPENSIVE_CHECKS
+    AU.addRequired<DominatorTreeWrapperPass>();
+    AU.addRequired<LoopInfoWrapperPass>();
+#endif
     SelectionDAGISel::getAnalysisUsage(AU);
   }
 
@@ -351,6 +358,10 @@ INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISel, "amdgpu-isel",
 INITIALIZE_PASS_DEPENDENCY(AMDGPUArgumentUsageInfo)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUPerfHintAnalysis)
 INITIALIZE_PASS_DEPENDENCY(LegacyDivergenceAnalysis)
+#ifdef EXPENSIVE_CHECKS
+INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
+INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
+#endif
 INITIALIZE_PASS_END(AMDGPUDAGToDAGISel, "amdgpu-isel",
                     "AMDGPU DAG->DAG Pattern Instruction Selection", false, false)
 
@@ -369,6 +380,13 @@ FunctionPass *llvm::createR600ISelDag(TargetMachine *TM,
 }
 
 bool AMDGPUDAGToDAGISel::runOnMachineFunction(MachineFunction &MF) {
+#ifdef EXPENSIVE_CHECKS
+  DominatorTree & DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+  LoopInfo * LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+  for (auto &L : LI->getLoopsInPreorder()) {
+    assert(L->isLCSSAForm(DT));
+  }
+#endif
   Subtarget = &MF.getSubtarget<GCNSubtarget>();
   return SelectionDAGISel::runOnMachineFunction(MF);
 }

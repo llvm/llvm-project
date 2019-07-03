@@ -13,9 +13,15 @@ from __future__ import print_function
 
 import argparse
 import collections
+import difflib
 import json
 import logging
 import re
+
+
+#===-----------------------------------------------------------------------===#
+# These data structures represent a deserialized ExplodedGraph.
+#===-----------------------------------------------------------------------===#
 
 
 # A helper function for finding the difference between two dictionaries.
@@ -211,6 +217,41 @@ class Store(object):
         return len(removed) != 0 or len(added) != 0 or len(updated) != 0
 
 
+# Deserialized messages from a single checker in a single program state.
+# Basically a list of raw strings.
+class CheckerLines(object):
+    def __init__(self, json_lines):
+        super(CheckerLines, self).__init__()
+        self.lines = json_lines
+
+    def diff_lines(self, prev):
+        lines = difflib.ndiff(prev.lines, self.lines)
+        return [l.strip() for l in lines
+                if l.startswith('+') or l.startswith('-')]
+
+    def is_different(self, prev):
+        return len(self.diff_lines(prev)) > 0
+
+
+# Deserialized messages of all checkers, separated by checker.
+class CheckerMessages(object):
+    def __init__(self, json_m):
+        super(CheckerMessages, self).__init__()
+        self.items = collections.OrderedDict(
+            [(m['checker'], CheckerLines(m['messages'])) for m in json_m])
+
+    def diff_messages(self, prev):
+        removed = [k for k in prev.items if k not in self.items]
+        added = [k for k in self.items if k not in prev.items]
+        updated = [k for k in prev.items if k in self.items
+                   and prev.items[k].is_different(self.items[k])]
+        return (removed, added, updated)
+
+    def is_different(self, prev):
+        removed, added, updated = self.diff_messages(prev)
+        return len(removed) != 0 or len(added) != 0 or len(updated) != 0
+
+
 # A deserialized program state.
 class ProgramState(object):
     def __init__(self, state_id, json_ps):
@@ -241,7 +282,8 @@ class ProgramState(object):
             GenericEnvironment(json_ps['constructing_objects']) \
             if json_ps['constructing_objects'] is not None else None
 
-        # TODO: Checker messages.
+        self.checker_messages = CheckerMessages(json_ps['checker_messages']) \
+            if json_ps['checker_messages'] is not None else None
 
 
 # A deserialized exploded graph node. Has a default constructor because it
@@ -257,6 +299,8 @@ class ExplodedNode(object):
         logging.debug('Adding ' + node_id)
         self.node_id = json_node['node_id']
         self.ptr = json_node['pointer']
+        self.has_report = json_node['has_report']
+        self.is_sink = json_node['is_sink']
         self.points = [ProgramPoint(p) for p in json_node['program_points']]
         self.state = ProgramState(json_node['state_id'],
                                   json_node['program_state']) \
@@ -331,6 +375,12 @@ class ExplodedGraph(object):
         logging.debug('Skipping.')
 
 
+#===-----------------------------------------------------------------------===#
+# Visitors traverse a deserialized ExplodedGraph and do different things
+# with every node and edge.
+#===-----------------------------------------------------------------------===#
+
+
 # A visitor that dumps the ExplodedGraph into a DOT file with fancy HTML-based
 # syntax highlighing.
 class DotDumpVisitor(object):
@@ -360,6 +410,21 @@ class DotDumpVisitor(object):
         if is_added:
             return '<font color="forestgreen">+</font>'
         return '<font color="red">-</font>'
+
+    @staticmethod
+    def _short_pretty(s):
+        if s is None:
+            return None
+        if len(s) < 20:
+            return s
+        left = s.find('{')
+        right = s.rfind('}')
+        if left == -1 or right == -1 or left >= right:
+            return s
+        candidate = s[0:left + 1] + ' ... ' + s[right:]
+        if len(candidate) >= len(s):
+            return s
+        return candidate
 
     def visit_begin_graph(self, graph):
         self._graph = graph
@@ -396,7 +461,8 @@ class DotDumpVisitor(object):
                            % (p.loc.filename, p.loc.line,
                               p.loc.col, color, p.stmt_kind,
                               stmt_color, p.stmt_point_kind,
-                              p.pretty if not skip_pretty else ''))
+                              self._short_pretty(p.pretty)
+                              if not skip_pretty else ''))
             else:
                 self._dump('<tr><td align="left" width="0">'
                            '<i>Invalid Source Location</i>:</td>'
@@ -406,7 +472,8 @@ class DotDumpVisitor(object):
                            '<td>%s</td></tr>'
                            % (color, p.stmt_kind,
                               stmt_color, p.stmt_point_kind,
-                              p.pretty if not skip_pretty else ''))
+                              self._short_pretty(p.pretty)
+                              if not skip_pretty else ''))
         elif p.kind == 'Edge':
             self._dump('<tr><td width="0"></td>'
                        '<td align="left" width="0">'
@@ -459,7 +526,7 @@ class DotDumpVisitor(object):
                               'lavender' if self._dark_mode else 'darkgreen',
                               ('(%s)' % b.kind) if b.kind is not None else ' '
                           ),
-                          b.pretty, f.bindings[b]))
+                          self._short_pretty(b.pretty), f.bindings[b]))
 
         frames_updated = e.diff_frames(prev_e) if prev_e is not None else None
         if frames_updated:
@@ -595,16 +662,73 @@ class DotDumpVisitor(object):
         if m is None:
             self._dump('<i> Nothing!</i>')
         else:
-            if prev_s is not None:
-                if prev_m is not None:
-                    if m.is_different(prev_m):
-                        self._dump('</td></tr><tr><td align="left">')
-                        self.visit_generic_map(m, prev_m)
-                    else:
-                        self._dump('<i> No changes!</i>')
-            if prev_m is None:
+            if prev_m is not None:
+                if m.is_different(prev_m):
+                    self._dump('</td></tr><tr><td align="left">')
+                    self.visit_generic_map(m, prev_m)
+                else:
+                    self._dump('<i> No changes!</i>')
+            else:
                 self._dump('</td></tr><tr><td align="left">')
                 self.visit_generic_map(m)
+
+        self._dump('</td></tr>')
+
+    def visit_checker_messages(self, m, prev_m=None):
+        self._dump('<table border="0">')
+
+        def dump_line(l, is_added=None):
+            self._dump('<tr><td>%s</td>'
+                       '<td align="left">%s</td></tr>'
+                       % (self._diff_plus_minus(is_added), l))
+
+        def dump_chk(chk, is_added=None):
+            dump_line('<i>%s</i>:' % chk, is_added)
+
+        if prev_m is not None:
+            removed, added, updated = m.diff_messages(prev_m)
+            for chk in removed:
+                dump_chk(chk, False)
+                for l in prev_m.items[chk].lines:
+                    dump_line(l, False)
+            for chk in updated:
+                dump_chk(chk)
+                for l in m.items[chk].diff_lines(prev_m.items[chk]):
+                    dump_line(l[1:], l.startswith('+'))
+            for chk in added:
+                dump_chk(chk, True)
+                for l in m.items[chk].lines:
+                    dump_line(l, True)
+        else:
+            for chk in m.items:
+                dump_chk(chk)
+                for l in m.items[chk].lines:
+                    dump_line(l)
+
+        self._dump('</table>')
+
+    def visit_checker_messages_in_state(self, s, prev_s=None):
+        m = s.checker_messages
+        prev_m = prev_s.checker_messages if prev_s is not None else None
+        if m is None and prev_m is None:
+            return
+
+        self._dump('<hr />')
+        self._dump('<tr><td align="left">'
+                   '<b>Checker State: </b>')
+        if m is None:
+            self._dump('<i> Nothing!</i>')
+        else:
+            if prev_m is not None:
+                if m.is_different(prev_m):
+                    self._dump('</td></tr><tr><td align="left">')
+                    self.visit_checker_messages(m, prev_m)
+                else:
+                    self._dump('<i> No changes!</i>')
+            else:
+                self._dump('</td></tr><tr><td align="left">')
+                self.visit_checker_messages(m)
+
         self._dump('</td></tr>')
 
     def visit_state(self, s, prev_s):
@@ -618,6 +742,7 @@ class DotDumpVisitor(object):
         self.visit_environment_in_state('constructing_objects',
                                         'Objects Under Construction',
                                         s, prev_s)
+        self.visit_checker_messages_in_state(s, prev_s)
 
     def visit_node(self, node):
         self._dump('%s [shape=record,'
@@ -631,6 +756,12 @@ class DotDumpVisitor(object):
                    % ("gray20" if self._dark_mode else "gray",
                       node.node_id, node.ptr, node.state.state_id
                       if node.state is not None else 'Unspecified'))
+        if node.has_report:
+            self._dump('<tr><td><font color="red"><b>Bug Report Attached'
+                       '</b></font></td></tr>')
+        if node.is_sink:
+            self._dump('<tr><td><font color="cornflowerblue"><b>Sink Node'
+                       '</b></font></td></tr>')
         self._dump('<tr><td align="left" width="0">')
         if len(node.points) > 1:
             self._dump('<b>Program points:</b></td></tr>')
@@ -663,11 +794,17 @@ class DotDumpVisitor(object):
         self._dump_raw('}\n')
 
 
+#===-----------------------------------------------------------------------===#
+# Explorers know how to traverse the ExplodedGraph in a certain order.
+# They would invoke a Visitor on every node or edge they encounter.
+#===-----------------------------------------------------------------------===#
+
+
 # A class that encapsulates traversal of the ExplodedGraph. Different explorer
 # kinds could potentially traverse specific sub-graphs.
-class Explorer(object):
+class BasicExplorer(object):
     def __init__(self):
-        super(Explorer, self).__init__()
+        super(BasicExplorer, self).__init__()
 
     def explore(self, graph, visitor):
         visitor.visit_begin_graph(graph)
@@ -678,6 +815,11 @@ class Explorer(object):
                 logging.debug('Visiting edge: %s -> %s ' % (node, succ))
                 visitor.visit_edge(graph.nodes[node], graph.nodes[succ])
         visitor.visit_end_of_graph()
+
+
+#===-----------------------------------------------------------------------===#
+# The entry point to the script.
+#===-----------------------------------------------------------------------===#
 
 
 def main():
@@ -702,7 +844,7 @@ def main():
             raw_line = raw_line.strip()
             graph.add_raw_line(raw_line)
 
-    explorer = Explorer()
+    explorer = BasicExplorer()
     visitor = DotDumpVisitor(args.diff, args.dark)
     explorer.explore(graph, visitor)
 

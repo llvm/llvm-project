@@ -215,6 +215,19 @@ def note_constexpr_memcpy_unsupported : Note<
   "size to copy (%4) is not a multiple of size of element type %3 (%5)|"
   "source is not a contiguous array of at least %4 elements of type %3|"
   "destination is not a contiguous array of at least %4 elements of type %3}2">;
+def note_constexpr_bit_cast_unsupported_type : Note<
+  "constexpr bit_cast involving type %0 is not yet supported">;
+def note_constexpr_bit_cast_unsupported_bitfield : Note<
+  "constexpr bit_cast involving bit-field is not yet supported">;
+def note_constexpr_bit_cast_invalid_type : Note<
+  "bit_cast %select{from|to}0 a %select{|type with a }1"
+  "%select{union|pointer|member pointer|volatile|reference}2 "
+  "%select{type|member}1 is not allowed in a constant expression">;
+def note_constexpr_bit_cast_invalid_subtype : Note<
+  "invalid type %0 is a %select{member|base}1 of %2">;
+def note_constexpr_bit_cast_indet_dest : Note<
+  "indeterminate value can only initialize an object of type 'unsigned char'"
+  "%select{, 'char',|}1 or 'std::byte'; %0 is invalid">;
 
 def warn_integer_constant_overflow : Warning<
   "overflow in expression; result is %0 with type %1">,

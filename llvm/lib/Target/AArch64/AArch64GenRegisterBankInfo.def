@@ -110,6 +110,10 @@ RegisterBankInfo::ValueMapping AArch64GenRegisterBankInfo::ValMappings[]{
     // 47: FPExt vector: 64 to 128. <-- This must match FPExt64To128Idx.
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR128 - PMI_Min], 1},
     {&AArch64GenRegisterBankInfo::PartMappings[PMI_FPR64 - PMI_Min], 1},
+    // 49: Shift scalar with 64 bit shift imm
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR32 - PMI_Min], 1},
+    {&AArch64GenRegisterBankInfo::PartMappings[PMI_GPR64 - PMI_Min], 1},
 };
 
 bool AArch64GenRegisterBankInfo::checkPartialMap(unsigned Idx,

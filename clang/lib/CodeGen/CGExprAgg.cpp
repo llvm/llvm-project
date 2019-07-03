@@ -711,6 +711,25 @@ void AggExprEmitter::VisitCastExpr(CastExpr *E) {
     break;
   }
 
+  case CK_LValueToRValueBitCast: {
+    if (Dest.isIgnored()) {
+      CGF.EmitAnyExpr(E->getSubExpr(), AggValueSlot::ignored(),
+                      /*ignoreResult=*/true);
+      break;
+    }
+
+    LValue SourceLV = CGF.EmitLValue(E->getSubExpr());
+    Address SourceAddress =
+        Builder.CreateElementBitCast(SourceLV.getAddress(), CGF.Int8Ty);
+    Address DestAddress =
+        Builder.CreateElementBitCast(Dest.getAddress(), CGF.Int8Ty);
+    llvm::Value *SizeVal = llvm::ConstantInt::get(
+        CGF.SizeTy,
+        CGF.getContext().getTypeSizeInChars(E->getType()).getQuantity());
+    Builder.CreateMemCpy(DestAddress, SourceAddress, SizeVal);
+    break;
+  }
+
   case CK_DerivedToBase:
   case CK_BaseToDerived:
   case CK_UncheckedDerivedToBase: {

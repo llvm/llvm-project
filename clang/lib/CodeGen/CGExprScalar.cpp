@@ -2033,6 +2033,15 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     return EmitLoadOfLValue(LV, CE->getExprLoc());
   }
 
+  case CK_LValueToRValueBitCast: {
+    LValue SourceLVal = CGF.EmitLValue(E);
+    Address Addr = Builder.CreateElementBitCast(SourceLVal.getAddress(),
+                                                CGF.ConvertTypeForMem(DestTy));
+    LValue DestLV = CGF.MakeAddrLValue(Addr, DestTy);
+    DestLV.setTBAAInfo(TBAAAccessInfo::getMayAliasInfo());
+    return EmitLoadOfLValue(DestLV, CE->getExprLoc());
+  }
+
   case CK_CPointerToObjCPointerCast:
   case CK_BlockPointerToObjCPointerCast:
   case CK_AnyPointerToBlockPointerCast:

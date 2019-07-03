@@ -1077,6 +1077,15 @@ void MCStreamer::EmitVersionForTarget(const Triple &Target,
   unsigned Major;
   unsigned Minor;
   unsigned Update;
+  if (Target.isMacCatalystEnvironment()) {
+    // Mac Catalyst always uses the build version load command.
+    Target.getiOSVersion(Major, Minor, Update);
+    assert(Major && "A non-zero major version is expected");
+    EmitBuildVersion(MachO::PLATFORM_MACCATALYST, Major, Minor, Update,
+                     SDKVersion);
+    return;
+  }
+
   MCVersionMinType VersionType;
   if (Target.isWatchOS()) {
     VersionType = MCVM_WatchOSVersionMin;

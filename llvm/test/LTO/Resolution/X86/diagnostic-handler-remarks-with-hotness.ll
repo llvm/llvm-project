@@ -27,13 +27,13 @@
 ; YAML-NEXT:   - Caller:          main
 ; YAML-NEXT:   - String:          ' with '
 ; YAML-NEXT:   - String:          '(cost='
-; YAML-NEXT:   - Cost:            '0'
+; YAML-NEXT:   - Cost:            '-15000'
 ; YAML-NEXT:   - String:          ', threshold='
-; YAML-NEXT:   - Threshold:       '15337'
+; YAML-NEXT:   - Threshold:       '337'
 ; YAML-NEXT:   - String:          ')'
 ; YAML-NEXT: ...
 
-; CHECK: tinkywinky inlined into main with (cost=0, threshold=15337) (hotness: 300)
+; CHECK: tinkywinky inlined into main with (cost=-15000, threshold=337) (hotness: 300)
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-scei-ps4"
