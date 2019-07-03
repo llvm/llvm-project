@@ -521,6 +521,13 @@ class _LIBCPP_TEMPLATE_VIS tuple
         template <class ..._Args>
         static constexpr bool __enable_implicit() {
             return
+               __tuple_constructible<
+                    tuple<_Args...>,
+                    typename __make_tuple_types<tuple,
+                             sizeof...(_Args) < sizeof...(_Tp) ?
+                                 sizeof...(_Args) :
+                                 sizeof...(_Tp)>::type
+                >::value &&
                 __tuple_convertible<
                     tuple<_Args...>,
                     typename __make_tuple_types<tuple,
@@ -547,7 +554,8 @@ class _LIBCPP_TEMPLATE_VIS tuple
     {
         template <class _Tuple>
         static constexpr bool __enable_implicit() {
-            return __tuple_convertible<_Tuple, tuple>::value;
+            return __tuple_constructible<_Tuple, tuple>::value
+                && __tuple_convertible<_Tuple, tuple>::value;
         }
 
         template <class _Tuple>
@@ -577,6 +585,7 @@ class _LIBCPP_TEMPLATE_VIS tuple
         template <class _Tuple>
         static constexpr bool __enable_implicit() {
             return _And<
+                __tuple_constructible<_Tuple, tuple>,
                 __tuple_convertible<_Tuple, tuple>,
                 _PreferTupleLikeConstructor<_Tuple>
             >::value;
