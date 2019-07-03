@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefix=GFX89 %s
-# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefix=GFX89 %s
+# RUN: llc -march=amdgcn -mcpu=gfx803 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefixes=CHECK,GFX89 %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass si-insert-waitcnts  %s -o - | FileCheck -check-prefixes=CHECK,GFX89 %s
 
 --- |
   define amdgpu_kernel void @flat_zero_waitcnt(i32 addrspace(1)* %global4,
@@ -14,6 +14,30 @@
   }
 
   define amdgpu_kernel void @single_branch_successor_not_next_block() {
+    ret void
+  }
+
+  define amdgpu_kernel void @preexisting_waitcnt() {
+    ret void
+  }
+
+  define amdgpu_kernel void @bundle_no_waitcnt() {
+    ret void
+  }
+
+  define amdgpu_kernel void @preexisting_waitcnt_in_bundle() {
+    ret void
+  }
+
+  define amdgpu_kernel void @insert_in_bundle() {
+    ret void
+  }
+
+  define amdgpu_kernel void @exit_bundle() {
+    ret void
+  }
+
+  define amdgpu_kernel void @cross_bundle() {
     ret void
   }
 
@@ -117,4 +141,146 @@ body: |
      $vgpr3_vgpr4 = V_LSHLREV_B64 4, $vgpr7_vgpr8, implicit $exec
     FLAT_STORE_DWORD $vgpr3_vgpr4, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
     S_ENDPGM 0
+...
+
+# CHECK-LABEL: name: preexisting_waitcnt{{$}}
+# CHECK: FLAT_LOAD_DWORD
+# CHECK-NEXT: S_WAITCNT 0
+# CHECK-NOT: S_WAITCNT
+name: preexisting_waitcnt
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr1_vgpr2
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    S_WAITCNT 0
+    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+
+...
+
+---
+
+# CHECK-LABEL: name: bundle_no_waitcnt{{$}}
+# CHECK: FLAT_LOAD_DWORD
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT: S_NOP
+# CHECK-NEXT: S_NOP
+# CHECK-NEXT: }
+# CHECK-NEXT: S_WAITCNT 112
+name: bundle_no_waitcnt
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr1_vgpr2
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    BUNDLE {
+      S_NOP 0
+      S_NOP 0
+    }
+    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+
+...
+
+---
+
+# See the waitcnt inside the bundle and don't insert an extra
+# CHECK-LABEL: name: preexisting_waitcnt_in_bundle{{$}}
+# CHECK: FLAT_LOAD_DWORD
+# CHECK: S_WAITCNT 0
+# CHECK-NOT: S_WAITCNT
+name: preexisting_waitcnt_in_bundle
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr1_vgpr2
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    BUNDLE {
+      S_NOP 0
+      S_WAITCNT 0
+    }
+    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+
+...
+
+---
+
+# Def and use inside bundle
+# CHECK-LABEL: name: insert_in_bundle{{$}}
+# CHECK: BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
+# CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, internal $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: }
+
+name: insert_in_bundle
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr1_vgpr2
+    BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    FLAT_STORE_DWORD $vgpr1_vgpr2, internal $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    }
+...
+
+---
+
+# Def is last instruction in bundle, use is outside bundle
+
+# CHECK-LABEL: name: exit_bundle{{$}}
+# CHECK: BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
+# CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: }
+# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+
+name: exit_bundle
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr1_vgpr2
+    BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    }
+
+    FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+
+...
+
+---
+
+# Def is in bundle, use is in another bundle
+
+# CHECK-LABEL: name: cross_bundle{{$}}
+# CHECK: BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
+# CHECK-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: }
+# CHECK-NEXT: S_WAITCNT 112
+# CHECK-NEXT: BUNDLE implicit $vgpr0, implicit $vgpr1_vgpr2 {
+# CHECK-NEXT: FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+# CHECK-NEXT: }
+
+name: cross_bundle
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+body: |
+  bb.0:
+    liveins: $vgpr1_vgpr2
+    BUNDLE implicit-def $vgpr0, implicit $vgpr1_vgpr2 {
+    $vgpr0 = FLAT_LOAD_DWORD $vgpr1_vgpr2, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    }
+    BUNDLE implicit $vgpr0, implicit $vgpr1_vgpr2 {
+      FLAT_STORE_DWORD $vgpr1_vgpr2, $vgpr0, 0, 0, 0, 0, implicit $exec, implicit $flat_scr
+    }
 ...

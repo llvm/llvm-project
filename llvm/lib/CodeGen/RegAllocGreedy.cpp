@@ -137,7 +137,7 @@ CSRFirstTimeCost("regalloc-csr-first-time-cost",
               cl::init(0), cl::Hidden);
 
 static cl::opt<bool> ConsiderLocalIntervalCost(
-    "condsider-local-interval-cost", cl::Hidden,
+    "consider-local-interval-cost", cl::Hidden,
     cl::desc("Consider the cost of local intervals created by a split "
              "candidate when choosing the best split candidate."),
     cl::init(false));

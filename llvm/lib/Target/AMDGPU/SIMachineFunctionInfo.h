@@ -21,6 +21,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/SparseBitVector.h"
 #include "llvm/CodeGen/MIRYamlMapping.h"
@@ -114,6 +115,123 @@ public:
 
 namespace yaml {
 
+struct SIArgument {
+  bool IsRegister;
+  union {
+    StringValue RegisterName;
+    unsigned StackOffset;
+  };
+  Optional<unsigned> Mask;
+
+  // Default constructor, which creates a stack argument.
+  SIArgument() : IsRegister(false), StackOffset(0) {}
+  SIArgument(const SIArgument &Other) {
+    IsRegister = Other.IsRegister;
+    if (IsRegister) {
+      ::new ((void *)std::addressof(RegisterName))
+          StringValue(Other.RegisterName);
+    } else
+      StackOffset = Other.StackOffset;
+    Mask = Other.Mask;
+  }
+  SIArgument &operator=(const SIArgument &Other) {
+    IsRegister = Other.IsRegister;
+    if (IsRegister) {
+      ::new ((void *)std::addressof(RegisterName))
+          StringValue(Other.RegisterName);
+    } else
+      StackOffset = Other.StackOffset;
+    Mask = Other.Mask;
+    return *this;
+  }
+  ~SIArgument() {
+    if (IsRegister)
+      RegisterName.~StringValue();
+  }
+
+  // Helper to create a register or stack argument.
+  static inline SIArgument createArgument(bool IsReg) {
+    if (IsReg)
+      return SIArgument(IsReg);
+    return SIArgument();
+  }
+
+private:
+  // Construct a register argument.
+  SIArgument(bool) : IsRegister(true), RegisterName() {}
+};
+
+template <> struct MappingTraits<SIArgument> {
+  static void mapping(IO &YamlIO, SIArgument &A) {
+    if (YamlIO.outputting()) {
+      if (A.IsRegister)
+        YamlIO.mapRequired("reg", A.RegisterName);
+      else
+        YamlIO.mapRequired("offset", A.StackOffset);
+    } else {
+      auto Keys = YamlIO.keys();
+      if (is_contained(Keys, "reg")) {
+        A = SIArgument::createArgument(true);
+        YamlIO.mapRequired("reg", A.RegisterName);
+      } else if (is_contained(Keys, "offset"))
+        YamlIO.mapRequired("offset", A.StackOffset);
+      else
+        YamlIO.setError("missing required key 'reg' or 'offset'");
+    }
+    YamlIO.mapOptional("mask", A.Mask);
+  }
+  static const bool flow = true;
+};
+
+struct SIArgumentInfo {
+  Optional<SIArgument> PrivateSegmentBuffer;
+  Optional<SIArgument> DispatchPtr;
+  Optional<SIArgument> QueuePtr;
+  Optional<SIArgument> KernargSegmentPtr;
+  Optional<SIArgument> DispatchID;
+  Optional<SIArgument> FlatScratchInit;
+  Optional<SIArgument> PrivateSegmentSize;
+
+  Optional<SIArgument> WorkGroupIDX;
+  Optional<SIArgument> WorkGroupIDY;
+  Optional<SIArgument> WorkGroupIDZ;
+  Optional<SIArgument> WorkGroupInfo;
+  Optional<SIArgument> PrivateSegmentWaveByteOffset;
+
+  Optional<SIArgument> ImplicitArgPtr;
+  Optional<SIArgument> ImplicitBufferPtr;
+
+  Optional<SIArgument> WorkItemIDX;
+  Optional<SIArgument> WorkItemIDY;
+  Optional<SIArgument> WorkItemIDZ;
+};
+
+template <> struct MappingTraits<SIArgumentInfo> {
+  static void mapping(IO &YamlIO, SIArgumentInfo &AI) {
+    YamlIO.mapOptional("privateSegmentBuffer", AI.PrivateSegmentBuffer);
+    YamlIO.mapOptional("dispatchPtr", AI.DispatchPtr);
+    YamlIO.mapOptional("queuePtr", AI.QueuePtr);
+    YamlIO.mapOptional("kernargSegmentPtr", AI.KernargSegmentPtr);
+    YamlIO.mapOptional("dispatchID", AI.DispatchID);
+    YamlIO.mapOptional("flatScratchInit", AI.FlatScratchInit);
+    YamlIO.mapOptional("privateSegmentSize", AI.PrivateSegmentSize);
+
+    YamlIO.mapOptional("workGroupIDX", AI.WorkGroupIDX);
+    YamlIO.mapOptional("workGroupIDY", AI.WorkGroupIDY);
+    YamlIO.mapOptional("workGroupIDZ", AI.WorkGroupIDZ);
+    YamlIO.mapOptional("workGroupInfo", AI.WorkGroupInfo);
+    YamlIO.mapOptional("privateSegmentWaveByteOffset",
+                       AI.PrivateSegmentWaveByteOffset);
+
+    YamlIO.mapOptional("implicitArgPtr", AI.ImplicitArgPtr);
+    YamlIO.mapOptional("implicitBufferPtr", AI.ImplicitBufferPtr);
+
+    YamlIO.mapOptional("workItemIDX", AI.WorkItemIDX);
+    YamlIO.mapOptional("workItemIDY", AI.WorkItemIDY);
+    YamlIO.mapOptional("workItemIDZ", AI.WorkItemIDZ);
+  }
+};
+
 struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   uint64_t ExplicitKernArgSize = 0;
   unsigned MaxKernArgAlign = 0;
@@ -127,6 +245,8 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue ScratchWaveOffsetReg = "$scratch_wave_offset_reg";
   StringValue FrameOffsetReg = "$fp_reg";
   StringValue StackPtrOffsetReg = "$sp_reg";
+
+  Optional<SIArgumentInfo> ArgInfo;
 
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
@@ -154,6 +274,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
                        StringValue("$fp_reg"));
     YamlIO.mapOptional("stackPtrOffsetReg", MFI.StackPtrOffsetReg,
                        StringValue("$sp_reg"));
+    YamlIO.mapOptional("argumentInfo", MFI.ArgInfo);
   }
 };
 

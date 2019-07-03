@@ -3,7 +3,7 @@
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 // CHECK: GWP-ASan detected a memory error
-// CHECK: Double free occurred when trying to free memory at:
+// CHECK: Double free at 0x{{[a-f0-9]+}} (a 1-byte allocation)
 
 #include <cstdlib>
 

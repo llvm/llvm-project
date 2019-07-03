@@ -2511,3 +2511,192 @@ entry:
   %e = zext <8 x i6> %d to <8 x i64>
   ret <8 x i64> %e
 }
+
+define <4 x i64> @splatshuf_zext_v4i64(<4 x i32> %x) {
+; SSE2-LABEL: splatshuf_zext_v4i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: splatshuf_zext_v4i64:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; SSSE3-NEXT:    pxor %xmm1, %xmm1
+; SSSE3-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
+; SSSE3-NEXT:    movdqa %xmm0, %xmm1
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: splatshuf_zext_v4i64:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: splatshuf_zext_v4i64:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; AVX1-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: splatshuf_zext_v4i64:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX2-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: splatshuf_zext_v4i64:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpbroadcastd %xmm0, %xmm0
+; AVX512-NEXT:    vpmovzxdq {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX512-NEXT:    retq
+  %shuf = shufflevector <4 x i32> %x, <4 x i32> undef, <4 x i32> zeroinitializer
+  %ext = zext <4 x i32> %shuf to <4 x i64>
+  ret <4 x i64> %ext
+}
+
+define <8 x i32> @splatshuf_zext_v8i32_matching_undefs(<8 x i16> %x) {
+; SSE2-LABEL: splatshuf_zext_v8i32_matching_undefs:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,1,1,3]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,7,7]
+; SSE2-NEXT:    pand {{.*}}(%rip), %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: splatshuf_zext_v8i32_matching_undefs:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,zero,xmm0[u,u],zero,zero,xmm0[6,7],zero,zero,xmm0[14,15],zero,zero
+; SSSE3-NEXT:    movdqa %xmm0, %xmm1
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: splatshuf_zext_v8i32_matching_undefs:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,6,7,6,7,14,15,8,9,10,11,12,13,14,15]
+; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: splatshuf_zext_v8i32_matching_undefs:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,6,7,6,7,14,15,0,1,6,7,6,7,14,15]
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: splatshuf_zext_v8i32_matching_undefs:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,6,7,6,7,14,15,0,1,6,7,6,7,14,15]
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: splatshuf_zext_v8i32_matching_undefs:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,6,7,6,7,14,15,0,1,6,7,6,7,14,15]
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512-NEXT:    retq
+  %shuf = shufflevector <8 x i16> %x, <8 x i16> undef, <8 x i32> <i32 0, i32 undef, i32 3, i32 7, i32 0, i32 undef, i32 3, i32 7>
+  %ext = zext <8 x i16> %shuf to <8 x i32>
+  ret <8 x i32> %ext
+}
+
+define <8 x i32> @splatshuf_zext_v8i32_unmatched_undef(<8 x i16> %x) {
+; SSE2-LABEL: splatshuf_zext_v8i32_unmatched_undef:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,1,3]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,7,5,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,1,3,2,4,5,6,7]
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: splatshuf_zext_v8i32_unmatched_undef:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1],zero,zero,xmm0[2,3],zero,zero,xmm0[6,7],zero,zero,xmm0[14,15],zero,zero
+; SSSE3-NEXT:    movdqa %xmm0, %xmm1
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: splatshuf_zext_v8i32_unmatched_undef:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,6,7,14,15,14,15,6,7,12,13,14,15]
+; SSE41-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: splatshuf_zext_v8i32_unmatched_undef:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,6,7,14,15,0,1,6,7,6,7,14,15]
+; AVX1-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm1 = xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; AVX1-NEXT:    vpmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: splatshuf_zext_v8i32_unmatched_undef:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,6,7,14,15,0,1,6,7,6,7,14,15]
+; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: splatshuf_zext_v8i32_unmatched_undef:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,2,3,6,7,14,15,0,1,6,7,6,7,14,15]
+; AVX512-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX512-NEXT:    retq
+  %shuf = shufflevector <8 x i16> %x, <8 x i16> undef, <8 x i32> <i32 0, i32 1, i32 3, i32 7, i32 0, i32 undef, i32 3, i32 7>
+  %ext = zext <8 x i16> %shuf to <8 x i32>
+  ret <8 x i32> %ext
+}
+
+define <16 x i16> @splatshuf_zext_v16i16(<16 x i8> %x) {
+; SSE2-LABEL: splatshuf_zext_v16i16:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm0 = xmm0[8,8,9,9,10,10,11,11,12,12,13,13,14,14,15,15]
+; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,6,6,6,7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,2,2,3]
+; SSE2-NEXT:    pxor %xmm1, %xmm1
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3],xmm0[4],xmm1[4],xmm0[5],xmm1[5],xmm0[6],xmm1[6],xmm0[7],xmm1[7]
+; SSE2-NEXT:    movdqa %xmm0, %xmm1
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: splatshuf_zext_v16i16:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[14],zero,xmm0[14],zero,xmm0[14],zero,xmm0[14],zero,xmm0[14],zero,xmm0[14],zero,xmm0[14],zero,xmm0[14],zero
+; SSSE3-NEXT:    movdqa %xmm0, %xmm1
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: splatshuf_zext_v16i16:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[14,14,14,14,14,14,14,14,14,14,14,14,14,14,15,15]
+; SSE41-NEXT:    pmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; SSE41-NEXT:    movdqa %xmm0, %xmm1
+; SSE41-NEXT:    retq
+;
+; AVX1-LABEL: splatshuf_zext_v16i16:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14]
+; AVX1-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: splatshuf_zext_v16i16:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14]
+; AVX2-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: splatshuf_zext_v16i16:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[14,14,14,14,14,14,14,14,14,14,14,14,14,14,14,14]
+; AVX512-NEXT:    vpmovzxbw {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero,xmm0[8],zero,xmm0[9],zero,xmm0[10],zero,xmm0[11],zero,xmm0[12],zero,xmm0[13],zero,xmm0[14],zero,xmm0[15],zero
+; AVX512-NEXT:    retq
+  %shuf = shufflevector <16 x i8> %x, <16 x i8> undef, <16 x i32> <i32 14, i32 14, i32 14, i32 14, i32 14, i32 14, i32 14, i32 14, i32 14, i32 14, i32 14, i32 14, i32 14, i32 14, i32 14, i32 14>
+  %ext = zext <16 x i8> %shuf to <16 x i16>
+  ret <16 x i16> %ext
+}

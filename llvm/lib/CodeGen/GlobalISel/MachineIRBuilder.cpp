@@ -851,6 +851,13 @@ MachineIRBuilder::buildAtomicRMWUmin(Register OldValRes, Register Addr,
 }
 
 MachineInstrBuilder
+MachineIRBuilder::buildFence(unsigned Ordering, unsigned Scope) {
+  return buildInstr(TargetOpcode::G_FENCE)
+    .addImm(Ordering)
+    .addImm(Scope);
+}
+
+MachineInstrBuilder
 MachineIRBuilder::buildBlockAddress(Register Res, const BlockAddress *BA) {
 #ifndef NDEBUG
   assert(getMRI()->getType(Res).isPointer() && "invalid res type");

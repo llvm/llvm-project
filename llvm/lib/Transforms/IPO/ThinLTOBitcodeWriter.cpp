@@ -417,34 +417,53 @@ void splitAndWriteThinLTOBitcode(
   }
 }
 
-// Returns whether this module needs to be split because splitting is
-// enabled and it uses type metadata.
-bool requiresSplit(Module &M) {
-  // First check if the LTO Unit splitting has been enabled.
+// Check if the LTO Unit splitting has been enabled.
+bool enableSplitLTOUnit(Module &M) {
   bool EnableSplitLTOUnit = false;
   if (auto *MD = mdconst::extract_or_null<ConstantInt>(
           M.getModuleFlag("EnableSplitLTOUnit")))
     EnableSplitLTOUnit = MD->getZExtValue();
-  if (!EnableSplitLTOUnit)
-    return false;
+  return EnableSplitLTOUnit;
+}
 
-  // Module only needs to be split if it contains type metadata.
+// Returns whether this module needs to be split because it uses type metadata.
+bool hasTypeMetadata(Module &M) {
   for (auto &GO : M.global_objects()) {
     if (GO.hasMetadata(LLVMContext::MD_type))
       return true;
   }
-
   return false;
 }
 
 void writeThinLTOBitcode(raw_ostream &OS, raw_ostream *ThinLinkOS,
                          function_ref<AAResults &(Function &)> AARGetter,
                          Module &M, const ModuleSummaryIndex *Index) {
-  // Split module if splitting is enabled and it contains any type metadata.
-  if (requiresSplit(M))
-    return splitAndWriteThinLTOBitcode(OS, ThinLinkOS, AARGetter, M);
+  std::unique_ptr<ModuleSummaryIndex> NewIndex = nullptr;
+  // See if this module has any type metadata. If so, we try to split it
+  // or at least promote type ids to enable WPD.
+  if (hasTypeMetadata(M)) {
+    if (enableSplitLTOUnit(M))
+      return splitAndWriteThinLTOBitcode(OS, ThinLinkOS, AARGetter, M);
+    // Promote type ids as needed for index-based WPD.
+    std::string ModuleId = getUniqueModuleId(&M);
+    if (!ModuleId.empty()) {
+      promoteTypeIds(M, ModuleId);
+      // Need to rebuild the index so that it contains type metadata
+      // for the newly promoted type ids.
+      // FIXME: Probably should not bother building the index at all
+      // in the caller of writeThinLTOBitcode (which does so via the
+      // ModuleSummaryIndexAnalysis pass), since we have to rebuild it
+      // anyway whenever there is type metadata (here or in
+      // splitAndWriteThinLTOBitcode). Just always build it once via the
+      // buildModuleSummaryIndex when Module(s) are ready.
+      ProfileSummaryInfo PSI(M);
+      NewIndex = llvm::make_unique<ModuleSummaryIndex>(
+          buildModuleSummaryIndex(M, nullptr, &PSI));
+      Index = NewIndex.get();
+    }
+  }
 
-  // Otherwise we can just write it out as a regular module.
+  // Write it out as an unsplit ThinLTO module.
 
   // Save the module hash produced for the full bitcode, which will
   // be used in the backends, and use that in the minimized bitcode

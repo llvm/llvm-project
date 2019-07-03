@@ -369,9 +369,11 @@ namespace llvm {
                          IdToIndexMapType &IdToIndexMap, unsigned Index);
     bool ParseVFuncId(FunctionSummary::VFuncId &VFuncId,
                       IdToIndexMapType &IdToIndexMap, unsigned Index);
+    bool ParseOptionalVTableFuncs(VTableFuncList &VTableFuncs);
     bool ParseOptionalRefs(std::vector<ValueInfo> &Refs);
     bool ParseTypeIdEntry(unsigned ID);
     bool ParseTypeIdSummary(TypeIdSummary &TIS);
+    bool ParseTypeIdCompatibleVtableEntry(unsigned ID);
     bool ParseTypeTestResolution(TypeTestResolution &TTRes);
     bool ParseOptionalWpdResolutions(
         std::map<uint64_t, WholeProgramDevirtResolution> &WPDResMap);

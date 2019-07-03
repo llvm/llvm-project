@@ -62,12 +62,9 @@ using ReverseIDFCalculator = IDFCalculator<true>;
 namespace IDFCalculatorDetail {
 
 template <bool IsPostDom>
-using BBChildrenGetterTy = ChildrenGetterTy<BasicBlock, IsPostDom>;
-
-template <bool IsPostDom>
-typename BBChildrenGetterTy<IsPostDom>::ChildrenTy
-BBChildrenGetterTy<IsPostDom>::get(
-    const BBChildrenGetterTy<IsPostDom>::NodeRef &N) {
+typename ChildrenGetterTy<BasicBlock, IsPostDom>::ChildrenTy
+ChildrenGetterTy<BasicBlock, IsPostDom>::get(
+    const ChildrenGetterTy<BasicBlock, IsPostDom>::NodeRef &N) {
 
   using OrderedNodeTy =
       typename IDFCalculatorBase<BasicBlock, IsPostDom>::OrderedNodeTy;

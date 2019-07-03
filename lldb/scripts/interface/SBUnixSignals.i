@@ -67,8 +67,7 @@ public:
                 signals.append(self.GetSignalAtIndex(sig))
             return signals
 
-        __swig_getmethods__["signals"] = get_unix_signals_list
-        if _newclass: threads = property(get_unix_signals_list, None, doc='''A read only property that returns a list() of valid signal numbers for this platform.''')
+        threads = property(get_unix_signals_list, None, doc='''A read only property that returns a list() of valid signal numbers for this platform.''')
     %}
 };
 

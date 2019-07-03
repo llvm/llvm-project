@@ -11,6 +11,8 @@
 #include "gwp_asan/options.h"
 
 #include <assert.h>
+#include <inttypes.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
@@ -26,6 +28,25 @@ namespace {
 // referenced by users outside this translation unit, in order to avoid
 // init-order-fiasco.
 GuardedPoolAllocator *SingletonPtr = nullptr;
+
+class ScopedBoolean {
+public:
+  ScopedBoolean(bool &B) : Bool(B) { Bool = true; }
+  ~ScopedBoolean() { Bool = false; }
+
+private:
+  bool &Bool;
+};
+
+void defaultPrintStackTrace(uintptr_t *Trace, options::Printf_t Printf) {
+  if (Trace[0] == 0)
+    Printf("  <unknown (does your allocator support backtracing?)>\n");
+
+  for (size_t i = 0; Trace[i] != 0; ++i) {
+    Printf("  #%zu 0x%zx in <unknown>\n", i, Trace[i]);
+  }
+  Printf("\n");
+}
 } // anonymous namespace
 
 // Gets the singleton implementation of this class. Thread-compatible until
@@ -33,25 +54,33 @@ GuardedPoolAllocator *SingletonPtr = nullptr;
 GuardedPoolAllocator *getSingleton() { return SingletonPtr; }
 
 void GuardedPoolAllocator::AllocationMetadata::RecordAllocation(
-    uintptr_t AllocAddr, size_t AllocSize) {
+    uintptr_t AllocAddr, size_t AllocSize, options::Backtrace_t Backtrace) {
   Addr = AllocAddr;
   Size = AllocSize;
   IsDeallocated = false;
 
-  // TODO(hctim): Implement stack trace collection.
   // TODO(hctim): Ask the caller to provide the thread ID, so we don't waste
   // other thread's time getting the thread ID under lock.
   AllocationTrace.ThreadID = getThreadID();
   DeallocationTrace.ThreadID = kInvalidThreadID;
-  AllocationTrace.Trace[0] = 0;
+  if (Backtrace)
+    Backtrace(AllocationTrace.Trace, kMaximumStackFrames);
+  else
+    AllocationTrace.Trace[0] = 0;
   DeallocationTrace.Trace[0] = 0;
 }
 
-void GuardedPoolAllocator::AllocationMetadata::RecordDeallocation() {
+void GuardedPoolAllocator::AllocationMetadata::RecordDeallocation(
+    options::Backtrace_t Backtrace) {
   IsDeallocated = true;
-  // TODO(hctim): Implement stack trace collection. Ensure that the unwinder is
-  // not called if we have our recursive flag called, otherwise non-reentrant
-  // unwinders may deadlock.
+  // Ensure that the unwinder is not called if the recursive flag is set,
+  // otherwise non-reentrant unwinders may deadlock.
+  if (Backtrace && !ThreadLocals.RecursiveGuard) {
+    ScopedBoolean B(ThreadLocals.RecursiveGuard);
+    Backtrace(DeallocationTrace.Trace, kMaximumStackFrames);
+  } else {
+    DeallocationTrace.Trace[0] = 0;
+  }
   DeallocationTrace.ThreadID = getThreadID();
 }
 
@@ -93,6 +122,11 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
 
   PerfectlyRightAlign = Opts.PerfectlyRightAlign;
   Printf = Opts.Printf;
+  Backtrace = Opts.Backtrace;
+  if (Opts.PrintBacktrace)
+    PrintBacktrace = Opts.PrintBacktrace;
+  else
+    PrintBacktrace = defaultPrintStackTrace;
 
   size_t PoolBytesRequired =
       PageSize * (1 + MaxSimultaneousAllocations) +
@@ -126,17 +160,6 @@ void GuardedPoolAllocator::init(const options::Options &Opts) {
     installSignalHandlers();
 }
 
-namespace {
-class ScopedBoolean {
-public:
-  ScopedBoolean(bool &B) : Bool(B) { Bool = true; }
-  ~ScopedBoolean() { Bool = false; }
-
-private:
-  bool &Bool;
-};
-} // anonymous namespace
-
 void *GuardedPoolAllocator::allocate(size_t Size) {
   // GuardedPagePoolEnd == 0 when GWP-ASan is disabled. If we are disabled, fall
   // back to the supporting allocator.
@@ -169,7 +192,7 @@ void *GuardedPoolAllocator::allocate(size_t Size) {
   // unmapped.
   markReadWrite(reinterpret_cast<void *>(getPageAddr(Ptr)), Size);
 
-  Meta->RecordAllocation(Ptr, Size);
+  Meta->RecordAllocation(Ptr, Size, Backtrace);
 
   return reinterpret_cast<void *>(Ptr);
 }
@@ -196,7 +219,7 @@ void GuardedPoolAllocator::deallocate(void *Ptr) {
     // Ensure that the deallocation is recorded before marking the page as
     // inaccessible. Otherwise, a racy use-after-free will have inconsistent
     // metadata.
-    Meta->RecordDeallocation();
+    Meta->RecordDeallocation(Backtrace);
   }
 
   markInaccessible(reinterpret_cast<void *>(SlotStart),
@@ -328,78 +351,101 @@ Error GuardedPoolAllocator::diagnoseUnknownError(uintptr_t AccessPtr,
 
   // If we have reached here, the error is still unknown. There is no metadata
   // available.
+  *Meta = nullptr;
   return Error::UNKNOWN;
 }
 
-// Prints the provided error and metadata information. Returns true if there is
-// additional context that can be provided, false otherwise (i.e. returns false
-// if Error == {UNKNOWN, INVALID_FREE without metadata}).
-bool printErrorType(Error E, uintptr_t AccessPtr, AllocationMetadata *Meta,
-                    options::Printf_t Printf) {
+namespace {
+// Prints the provided error and metadata information.
+void printErrorType(Error E, uintptr_t AccessPtr, AllocationMetadata *Meta,
+                    options::Printf_t Printf, uint64_t ThreadID) {
+  // Print using intermediate strings. Platforms like Android don't like when
+  // you print multiple times to the same line, as there may be a newline
+  // appended to a log file automatically per Printf() call.
+  const char *ErrorString;
   switch (E) {
   case Error::UNKNOWN:
-    Printf("GWP-ASan couldn't automatically determine the source of the "
-           "memory error when accessing 0x%zx. It was likely caused by a wild "
-           "memory access into the GWP-ASan pool.\n",
-           AccessPtr);
-    return false;
+    ErrorString = "GWP-ASan couldn't automatically determine the source of "
+                  "the memory error. It was likely caused by a wild memory "
+                  "access into the GWP-ASan pool. The error occured";
+    break;
   case Error::USE_AFTER_FREE:
-    Printf("Use after free occurred when accessing memory at: 0x%zx\n",
-           AccessPtr);
+    ErrorString = "Use after free";
     break;
   case Error::DOUBLE_FREE:
-    Printf("Double free occurred when trying to free memory at: 0x%zx\n",
-           AccessPtr);
+    ErrorString = "Double free";
     break;
   case Error::INVALID_FREE:
-    Printf(
-        "Invalid (wild) free occurred when trying to free memory at: 0x%zx\n",
-        AccessPtr);
-    // It's possible for an invalid free to fall onto a slot that has never been
-    // allocated. If this is the case, there is no valid metadata.
-    if (Meta == nullptr)
-      return false;
+    ErrorString = "Invalid (wild) free";
     break;
   case Error::BUFFER_OVERFLOW:
-    Printf("Buffer overflow occurred when accessing memory at: 0x%zx\n",
-           AccessPtr);
+    ErrorString = "Buffer overflow";
     break;
   case Error::BUFFER_UNDERFLOW:
-    Printf("Buffer underflow occurred when accessing memory at: 0x%zx\n",
-           AccessPtr);
+    ErrorString = "Buffer underflow";
     break;
   }
 
-  Printf("0x%zx is ", AccessPtr);
-  if (AccessPtr < Meta->Addr)
-    Printf("located %zu bytes to the left of a %zu-byte allocation located at "
-           "0x%zx\n",
-           Meta->Addr - AccessPtr, Meta->Size, Meta->Addr);
-  else if (AccessPtr > Meta->Addr)
-    Printf("located %zu bytes to the right of a %zu-byte allocation located at "
-           "0x%zx\n",
-           AccessPtr - Meta->Addr, Meta->Size, Meta->Addr);
+  constexpr size_t kDescriptionBufferLen = 128;
+  char DescriptionBuffer[kDescriptionBufferLen];
+  if (Meta) {
+    if (E == Error::USE_AFTER_FREE) {
+      snprintf(DescriptionBuffer, kDescriptionBufferLen,
+               "(%zu byte%s into a %zu-byte allocation at 0x%zx)",
+               AccessPtr - Meta->Addr, (AccessPtr - Meta->Addr == 1) ? "" : "s",
+               Meta->Size, Meta->Addr);
+    } else if (AccessPtr < Meta->Addr) {
+      snprintf(DescriptionBuffer, kDescriptionBufferLen,
+               "(%zu byte%s to the left of a %zu-byte allocation at 0x%zx)",
+               Meta->Addr - AccessPtr, (Meta->Addr - AccessPtr == 1) ? "" : "s",
+               Meta->Size, Meta->Addr);
+    } else if (AccessPtr > Meta->Addr) {
+      snprintf(DescriptionBuffer, kDescriptionBufferLen,
+               "(%zu byte%s to the right of a %zu-byte allocation at 0x%zx)",
+               AccessPtr - Meta->Addr, (AccessPtr - Meta->Addr == 1) ? "" : "s",
+               Meta->Size, Meta->Addr);
+    } else {
+      snprintf(DescriptionBuffer, kDescriptionBufferLen,
+               "(a %zu-byte allocation)", Meta->Size);
+    }
+  }
+
+  // Possible number of digits of a 64-bit number: ceil(log10(2^64)) == 20. Add
+  // a null terminator, and round to the nearest 8-byte boundary.
+  constexpr size_t kThreadBufferLen = 24;
+  char ThreadBuffer[kThreadBufferLen];
+  if (ThreadID == GuardedPoolAllocator::kInvalidThreadID)
+    snprintf(ThreadBuffer, kThreadBufferLen, "<unknown>");
   else
-    Printf("a %zu-byte allocation\n", Meta->Size);
-  return true;
+    snprintf(ThreadBuffer, kThreadBufferLen, "%" PRIu64, ThreadID);
+
+  Printf("%s at 0x%zx %s by thread %s here:\n", ErrorString, AccessPtr,
+         DescriptionBuffer, ThreadBuffer);
 }
 
-void printThreadInformation(Error E, uintptr_t AccessPtr,
-                            AllocationMetadata *Meta,
-                            options::Printf_t Printf) {
-  Printf("0x%zx was allocated by thread ", AccessPtr);
-  if (Meta->AllocationTrace.ThreadID == UINT64_MAX)
-    Printf("UNKNOWN.\n");
-  else
-    Printf("%zu.\n", Meta->AllocationTrace.ThreadID);
+void printAllocDeallocTraces(uintptr_t AccessPtr, AllocationMetadata *Meta,
+                             options::Printf_t Printf,
+                             options::PrintBacktrace_t PrintBacktrace) {
+  assert(Meta != nullptr && "Metadata is non-null for printAllocDeallocTraces");
 
-  if (E == Error::USE_AFTER_FREE || E == Error::DOUBLE_FREE) {
-    Printf("0x%zx was freed by thread ", AccessPtr);
-    if (Meta->AllocationTrace.ThreadID == UINT64_MAX)
-      Printf("UNKNOWN.\n");
+  if (Meta->IsDeallocated) {
+    if (Meta->DeallocationTrace.ThreadID ==
+        GuardedPoolAllocator::kInvalidThreadID)
+      Printf("0x%zx was deallocated by thread <unknown> here:\n", AccessPtr);
     else
-      Printf("%zu.\n", Meta->AllocationTrace.ThreadID);
+      Printf("0x%zx was deallocated by thread %zu here:\n", AccessPtr,
+             Meta->DeallocationTrace.ThreadID);
+
+    PrintBacktrace(Meta->DeallocationTrace.Trace, Printf);
   }
+
+  if (Meta->AllocationTrace.ThreadID == GuardedPoolAllocator::kInvalidThreadID)
+    Printf("0x%zx was allocated by thread <unknown> here:\n", Meta->Addr);
+  else
+    Printf("0x%zx was allocated by thread %zu here:\n", Meta->Addr,
+           Meta->AllocationTrace.ThreadID);
+
+  PrintBacktrace(Meta->AllocationTrace.Trace, Printf);
 }
 
 struct ScopedEndOfReportDecorator {
@@ -407,6 +453,7 @@ struct ScopedEndOfReportDecorator {
   ~ScopedEndOfReportDecorator() { Printf("*** End GWP-ASan report ***\n"); }
   options::Printf_t Printf;
 };
+} // anonymous namespace
 
 void GuardedPoolAllocator::reportErrorInternal(uintptr_t AccessPtr, Error E) {
   if (!pointerIsMine(reinterpret_cast<void *>(AccessPtr))) {
@@ -434,22 +481,21 @@ void GuardedPoolAllocator::reportErrorInternal(uintptr_t AccessPtr, Error E) {
       Meta = nullptr;
   }
 
-  // Print the error information, and if there is no valid metadata, stop here.
-  if (!printErrorType(E, AccessPtr, Meta, Printf)) {
-    return;
+  // Print the error information.
+  uint64_t ThreadID = getThreadID();
+  printErrorType(E, AccessPtr, Meta, Printf, ThreadID);
+  if (Backtrace) {
+    static constexpr unsigned kMaximumStackFramesForCrashTrace = 128;
+    uintptr_t Trace[kMaximumStackFramesForCrashTrace];
+    Backtrace(Trace, kMaximumStackFramesForCrashTrace);
+
+    PrintBacktrace(Trace, Printf);
+  } else {
+    Printf("  <unknown (does your allocator support backtracing?)>\n\n");
   }
 
-  // Ensure that we have a valid metadata pointer from this point forward.
-  if (Meta == nullptr) {
-    Printf("GWP-ASan internal unreachable error. Metadata is not null.\n");
-    return;
-  }
-
-  printThreadInformation(E, AccessPtr, Meta, Printf);
-  // TODO(hctim): Implement stack unwinding here. Ask the caller to provide us
-  // with the base pointer, and we unwind the stack to give a stack trace for
-  // the access.
-  // TODO(hctim): Implement dumping here of allocation/deallocation traces.
+  if (Meta)
+    printAllocDeallocTraces(AccessPtr, Meta, Printf, PrintBacktrace);
 }
 
 TLS_INITIAL_EXEC

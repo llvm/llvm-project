@@ -83,29 +83,12 @@ public:
 
 
     %pythoncode %{
-        __swig_getmethods__["module"] = GetModule
-        __swig_setmethods__["module"] = SetModule
-        if _newclass: module = property(GetModule, SetModule, doc='''A read/write property that allows the getting/setting of the module (lldb.SBModule) in this symbol context.''')
-
-        __swig_getmethods__["compile_unit"] = GetCompileUnit
-        __swig_setmethods__["compile_unit"] = SetCompileUnit
-        if _newclass: compile_unit = property(GetCompileUnit, SetCompileUnit, doc='''A read/write property that allows the getting/setting of the compile unit (lldb.SBCompileUnit) in this symbol context.''')
-
-        __swig_getmethods__["function"] = GetFunction
-        __swig_setmethods__["function"] = SetFunction
-        if _newclass: function = property(GetFunction, SetFunction, doc='''A read/write property that allows the getting/setting of the function (lldb.SBFunction) in this symbol context.''')
-
-        __swig_getmethods__["block"] = GetBlock
-        __swig_setmethods__["block"] = SetBlock
-        if _newclass: block = property(GetBlock, SetBlock, doc='''A read/write property that allows the getting/setting of the block (lldb.SBBlock) in this symbol context.''')
-
-        __swig_getmethods__["symbol"] = GetSymbol
-        __swig_setmethods__["symbol"] = SetSymbol
-        if _newclass: symbol = property(GetSymbol, SetSymbol, doc='''A read/write property that allows the getting/setting of the symbol (lldb.SBSymbol) in this symbol context.''')
-
-        __swig_getmethods__["line_entry"] = GetLineEntry
-        __swig_setmethods__["line_entry"] = SetLineEntry
-        if _newclass: line_entry = property(GetLineEntry, SetLineEntry, doc='''A read/write property that allows the getting/setting of the line entry (lldb.SBLineEntry) in this symbol context.''')
+        module = property(GetModule, SetModule, doc='''A read/write property that allows the getting/setting of the module (lldb.SBModule) in this symbol context.''')
+        compile_unit = property(GetCompileUnit, SetCompileUnit, doc='''A read/write property that allows the getting/setting of the compile unit (lldb.SBCompileUnit) in this symbol context.''')
+        function = property(GetFunction, SetFunction, doc='''A read/write property that allows the getting/setting of the function (lldb.SBFunction) in this symbol context.''')
+        block = property(GetBlock, SetBlock, doc='''A read/write property that allows the getting/setting of the block (lldb.SBBlock) in this symbol context.''')
+        symbol = property(GetSymbol, SetSymbol, doc='''A read/write property that allows the getting/setting of the symbol (lldb.SBSymbol) in this symbol context.''')
+        line_entry = property(GetLineEntry, SetLineEntry, doc='''A read/write property that allows the getting/setting of the line entry (lldb.SBLineEntry) in this symbol context.''')
     %}
 
 };

@@ -86,6 +86,12 @@ struct ASTEdit {
   TextGenerator Note;
 };
 
+/// Format of the path in an include directive -- angle brackets or quotes.
+enum class IncludeFormat {
+  Quoted,
+  Angled,
+};
+
 /// Description of a source-code transformation.
 //
 // A *rewrite rule* describes a transformation of source code. A simple rule
@@ -114,6 +120,10 @@ struct RewriteRule {
     ast_matchers::internal::DynTypedMatcher Matcher;
     SmallVector<ASTEdit, 1> Edits;
     TextGenerator Explanation;
+    // Include paths to add to the file affected by this case.  These are
+    // bundled with the `Case`, rather than the `RewriteRule`, because each case
+    // might have different associated changes to the includes.
+    std::vector<std::pair<std::string, IncludeFormat>> AddedIncludes;
   };
   // We expect RewriteRules will most commonly include only one case.
   SmallVector<Case, 1> Cases;
@@ -136,6 +146,19 @@ inline RewriteRule makeRule(ast_matchers::internal::DynTypedMatcher M,
   Edits.emplace_back(std::move(Edit));
   return makeRule(std::move(M), std::move(Edits), std::move(Explanation));
 }
+
+/// For every case in Rule, adds an include directive for the given header. The
+/// common use is assumed to be a rule with only one case. For example, to
+/// replace a function call and add headers corresponding to the new code, one
+/// could write:
+/// \code
+///   auto R = makeRule(callExpr(callee(functionDecl(hasName("foo")))),
+///            change(text("bar()")));
+///   AddInclude(R, "path/to/bar_header.h");
+///   AddInclude(R, "vector", IncludeFormat::Angled);
+/// \endcode
+void addInclude(RewriteRule &Rule, llvm::StringRef Header,
+                IncludeFormat Format = IncludeFormat::Quoted);
 
 /// Applies the first rule whose pattern matches; other rules are ignored.
 ///

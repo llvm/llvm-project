@@ -1071,7 +1071,6 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
   const TargetRegisterInfo *TargetRegInfo =
     MF.getSubtarget().getRegisterInfo();
   const MachineRegisterInfo &MachineRegInfo = MF.getRegInfo();
-  const ARMFunctionInfo &AFI = *MF.getInfo<ARMFunctionInfo>();
 
   unsigned FramePtr = TargetRegInfo->getFrameRegister(MF);
   unsigned Opc = MI->getOpcode();
@@ -1135,7 +1134,12 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
           Pad += Width;
           continue;
         }
-        RegList.push_back(MO.getReg());
+        // Check for registers that are remapped (for a Thumb1 prologue that
+        // saves high registers).
+        unsigned Reg = MO.getReg();
+        if (unsigned RemappedReg = AFI->EHPrologueRemappedRegs.lookup(Reg))
+          Reg = RemappedReg;
+        RegList.push_back(Reg);
       }
       break;
     case ARM::STR_PRE_IMM:
@@ -1185,7 +1189,7 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
         unsigned CPI = MI->getOperand(1).getIndex();
         const MachineConstantPool *MCP = MF.getConstantPool();
         if (CPI >= MCP->getConstants().size())
-          CPI = AFI.getOriginalCPIdx(CPI);
+          CPI = AFI->getOriginalCPIdx(CPI);
         assert(CPI != -1U && "Invalid constpool index");
 
         // Derive the actual offset.
@@ -1215,8 +1219,12 @@ void ARMAsmPrinter::EmitUnwindingInstruction(const MachineInstr *MI) {
     } else if (DstReg == ARM::SP) {
       MI->print(errs());
       llvm_unreachable("Unsupported opcode for unwinding information");
-    }
-    else {
+    } else if (Opc == ARM::tMOVr) {
+      // If a Thumb1 function spills r8-r11, we copy the values to low
+      // registers before pushing them. Record the copy so we can emit the
+      // correct ".save" later.
+      AFI->EHPrologueRemappedRegs[DstReg] = SrcReg;
+    } else {
       MI->print(errs());
       llvm_unreachable("Unsupported opcode for unwinding information");
     }

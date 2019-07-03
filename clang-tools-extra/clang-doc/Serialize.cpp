@@ -335,30 +335,39 @@ static void populateFunctionInfo(FunctionInfo &I, const FunctionDecl *D,
   parseParameters(I, D);
 }
 
-std::unique_ptr<Info> emitInfo(const NamespaceDecl *D, const FullComment *FC,
-                               int LineNumber, llvm::StringRef File,
-                               bool PublicOnly) {
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const NamespaceDecl *D, const FullComment *FC, int LineNumber,
+         llvm::StringRef File, bool PublicOnly) {
   auto I = llvm::make_unique<NamespaceInfo>();
   bool IsInAnonymousNamespace = false;
   populateInfo(*I, D, FC, IsInAnonymousNamespace);
   if (PublicOnly && ((IsInAnonymousNamespace || D->isAnonymousNamespace()) ||
                      !isPublic(D->getAccess(), D->getLinkageInternal())))
-    return nullptr;
+    return {};
   I->Name = D->isAnonymousNamespace()
                 ? llvm::SmallString<16>("@nonymous_namespace")
                 : I->Name;
-  return std::unique_ptr<Info>{std::move(I)};
+  if (I->Namespace.empty() && I->USR == SymbolID())
+    return {std::unique_ptr<Info>{std::move(I)}, nullptr};
+
+  SymbolID ParentUSR = I->Namespace.empty() ? SymbolID() : I->Namespace[0].USR;
+
+  auto Parent = llvm::make_unique<NamespaceInfo>();
+  Parent->USR = ParentUSR;
+  Parent->ChildNamespaces.emplace_back(I->USR, I->Name, InfoType::IT_namespace);
+  return {std::unique_ptr<Info>{std::move(I)},
+          std::unique_ptr<Info>{std::move(Parent)}};
 }
 
-std::unique_ptr<Info> emitInfo(const RecordDecl *D, const FullComment *FC,
-                               int LineNumber, llvm::StringRef File,
-                               bool PublicOnly) {
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const RecordDecl *D, const FullComment *FC, int LineNumber,
+         llvm::StringRef File, bool PublicOnly) {
   auto I = llvm::make_unique<RecordInfo>();
   bool IsInAnonymousNamespace = false;
   populateSymbolInfo(*I, D, FC, LineNumber, File, IsInAnonymousNamespace);
   if (PublicOnly && ((IsInAnonymousNamespace ||
                       !isPublic(D->getAccess(), D->getLinkageInternal()))))
-    return nullptr;
+    return {};
 
   I->TagType = D->getTagKind();
   parseFields(*I, D, PublicOnly);
@@ -369,18 +378,44 @@ std::unique_ptr<Info> emitInfo(const RecordDecl *D, const FullComment *FC,
     }
     parseBases(*I, C);
   }
-  return std::unique_ptr<Info>{std::move(I)};
+
+  if (I->Namespace.empty()) {
+    auto Parent = llvm::make_unique<NamespaceInfo>();
+    Parent->USR = SymbolID();
+    Parent->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record);
+    return {std::unique_ptr<Info>{std::move(I)},
+            std::unique_ptr<Info>{std::move(Parent)}};
+  }
+
+  switch (I->Namespace[0].RefType) {
+  case InfoType::IT_namespace: {
+    auto Parent = llvm::make_unique<NamespaceInfo>();
+    Parent->USR = I->Namespace[0].USR;
+    Parent->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record);
+    return {std::unique_ptr<Info>{std::move(I)},
+            std::unique_ptr<Info>{std::move(Parent)}};
+  }
+  case InfoType::IT_record: {
+    auto Parent = llvm::make_unique<RecordInfo>();
+    Parent->USR = I->Namespace[0].USR;
+    Parent->ChildRecords.emplace_back(I->USR, I->Name, InfoType::IT_record);
+    return {std::unique_ptr<Info>{std::move(I)},
+            std::unique_ptr<Info>{std::move(Parent)}};
+  }
+  default:
+    llvm_unreachable("Invalid reference type");
+  }
 }
 
-std::unique_ptr<Info> emitInfo(const FunctionDecl *D, const FullComment *FC,
-                               int LineNumber, llvm::StringRef File,
-                               bool PublicOnly) {
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const FunctionDecl *D, const FullComment *FC, int LineNumber,
+         llvm::StringRef File, bool PublicOnly) {
   FunctionInfo Func;
   bool IsInAnonymousNamespace = false;
   populateFunctionInfo(Func, D, FC, LineNumber, File, IsInAnonymousNamespace);
   if (PublicOnly && ((IsInAnonymousNamespace ||
                       !isPublic(D->getAccess(), D->getLinkageInternal()))))
-    return nullptr;
+    return {};
 
   Func.Access = clang::AccessSpecifier::AS_none;
 
@@ -391,18 +426,19 @@ std::unique_ptr<Info> emitInfo(const FunctionDecl *D, const FullComment *FC,
   else
     I->USR = SymbolID();
   I->ChildFunctions.emplace_back(std::move(Func));
-  return std::unique_ptr<Info>{std::move(I)};
+  // Info es wrapped in its parent scope so it's returned in the second position
+  return {nullptr, std::unique_ptr<Info>{std::move(I)}};
 }
 
-std::unique_ptr<Info> emitInfo(const CXXMethodDecl *D, const FullComment *FC,
-                               int LineNumber, llvm::StringRef File,
-                               bool PublicOnly) {
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const CXXMethodDecl *D, const FullComment *FC, int LineNumber,
+         llvm::StringRef File, bool PublicOnly) {
   FunctionInfo Func;
   bool IsInAnonymousNamespace = false;
   populateFunctionInfo(Func, D, FC, LineNumber, File, IsInAnonymousNamespace);
   if (PublicOnly && ((IsInAnonymousNamespace ||
                       !isPublic(D->getAccess(), D->getLinkageInternal()))))
-    return nullptr;
+    return {};
 
   Func.IsMethod = true;
 
@@ -422,18 +458,19 @@ std::unique_ptr<Info> emitInfo(const CXXMethodDecl *D, const FullComment *FC,
   auto I = llvm::make_unique<RecordInfo>();
   I->USR = ParentUSR;
   I->ChildFunctions.emplace_back(std::move(Func));
-  return std::unique_ptr<Info>{std::move(I)};
+  // Info is wrapped in its parent scope so it's returned in the second position
+  return {nullptr, std::unique_ptr<Info>{std::move(I)}};
 }
 
-std::unique_ptr<Info> emitInfo(const EnumDecl *D, const FullComment *FC,
-                               int LineNumber, llvm::StringRef File,
-                               bool PublicOnly) {
+std::pair<std::unique_ptr<Info>, std::unique_ptr<Info>>
+emitInfo(const EnumDecl *D, const FullComment *FC, int LineNumber,
+         llvm::StringRef File, bool PublicOnly) {
   EnumInfo Enum;
   bool IsInAnonymousNamespace = false;
   populateSymbolInfo(Enum, D, FC, LineNumber, File, IsInAnonymousNamespace);
   if (PublicOnly && ((IsInAnonymousNamespace ||
                       !isPublic(D->getAccess(), D->getLinkageInternal()))))
-    return nullptr;
+    return {};
 
   Enum.Scoped = D->isScoped();
   parseEnumerators(Enum, D);
@@ -445,13 +482,17 @@ std::unique_ptr<Info> emitInfo(const EnumDecl *D, const FullComment *FC,
       auto I = llvm::make_unique<NamespaceInfo>();
       I->USR = Enum.Namespace[0].USR;
       I->ChildEnums.emplace_back(std::move(Enum));
-      return std::unique_ptr<Info>{std::move(I)};
+      // Info is wrapped in its parent scope so it's returned in the second
+      // position
+      return {nullptr, std::unique_ptr<Info>{std::move(I)}};
     }
     case InfoType::IT_record: {
       auto I = llvm::make_unique<RecordInfo>();
       I->USR = Enum.Namespace[0].USR;
       I->ChildEnums.emplace_back(std::move(Enum));
-      return std::unique_ptr<Info>{std::move(I)};
+      // Info is wrapped in its parent scope so it's returned in the second
+      // position
+      return {nullptr, std::unique_ptr<Info>{std::move(I)}};
     }
     default:
       break;
@@ -462,7 +503,8 @@ std::unique_ptr<Info> emitInfo(const EnumDecl *D, const FullComment *FC,
   auto I = llvm::make_unique<NamespaceInfo>();
   I->USR = SymbolID();
   I->ChildEnums.emplace_back(std::move(Enum));
-  return std::unique_ptr<Info>{std::move(I)};
+  // Info is wrapped in its parent scope so it's returned in the second position
+  return {nullptr, std::unique_ptr<Info>{std::move(I)}};
 }
 
 } // namespace serialize

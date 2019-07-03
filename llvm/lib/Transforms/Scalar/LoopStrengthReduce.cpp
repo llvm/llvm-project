@@ -1909,6 +1909,8 @@ class LSRInstance {
   ScalarEvolution &SE;
   DominatorTree &DT;
   LoopInfo &LI;
+  AssumptionCache &AC;
+  TargetLibraryInfo &LibInfo;
   const TargetTransformInfo &TTI;
   Loop *const L;
   bool FavorBackedgeIndex = false;
@@ -2047,7 +2049,8 @@ class LSRInstance {
 
 public:
   LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE, DominatorTree &DT,
-              LoopInfo &LI, const TargetTransformInfo &TTI);
+              LoopInfo &LI, const TargetTransformInfo &TTI, AssumptionCache &AC,
+              TargetLibraryInfo &LibInfo);
 
   bool getChanged() const { return Changed; }
 
@@ -3232,6 +3235,9 @@ void LSRInstance::GenerateIVChain(const IVChain &Chain, SCEVExpander &Rewriter,
 }
 
 void LSRInstance::CollectFixupsAndInitialFormulae() {
+  BranchInst *ExitBranch = nullptr;
+  bool SaveCmp = TTI.canSaveCmp(L, &ExitBranch, &SE, &LI, &DT, &AC, &LibInfo);
+
   for (const IVStrideUse &U : IU) {
     Instruction *UserInst = U.getUser();
     // Skip IV users that are part of profitable IV Chains.
@@ -3261,6 +3267,10 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
     // equality icmps, thanks to IndVarSimplify.
     if (ICmpInst *CI = dyn_cast<ICmpInst>(UserInst))
       if (CI->isEquality()) {
+        // If CI can be saved in some target, like replaced inside hardware loop
+        // in PowerPC, no need to generate initial formulae for it.
+        if (SaveCmp && CI == cast<ICmpInst>(ExitBranch->getCondition()))
+          continue;
         // Swap the operands if needed to put the OperandValToReplace on the
         // left, for consistency.
         Value *NV = CI->getOperand(1);
@@ -5479,8 +5489,9 @@ void LSRInstance::ImplementSolution(
 
 LSRInstance::LSRInstance(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                          DominatorTree &DT, LoopInfo &LI,
-                         const TargetTransformInfo &TTI)
-    : IU(IU), SE(SE), DT(DT), LI(LI), TTI(TTI), L(L),
+                         const TargetTransformInfo &TTI, AssumptionCache &AC,
+                         TargetLibraryInfo &LibInfo)
+    : IU(IU), SE(SE), DT(DT), LI(LI), AC(AC), LibInfo(LibInfo), TTI(TTI), L(L),
       FavorBackedgeIndex(EnableBackedgeIndexing &&
                          TTI.shouldFavorBackedgeIndex(L)) {
   // If LoopSimplify form is not available, stay out of trouble.
@@ -5677,6 +5688,8 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.addPreserved<DominatorTreeWrapperPass>();
   AU.addRequired<ScalarEvolutionWrapperPass>();
   AU.addPreserved<ScalarEvolutionWrapperPass>();
+  AU.addRequired<AssumptionCacheTracker>();
+  AU.addRequired<TargetLibraryInfoWrapperPass>();
   // Requiring LoopSimplify a second time here prevents IVUsers from running
   // twice, since LoopSimplify was invalidated by running ScalarEvolution.
   AU.addRequiredID(LoopSimplifyID);
@@ -5687,11 +5700,14 @@ void LoopStrengthReduce::getAnalysisUsage(AnalysisUsage &AU) const {
 
 static bool ReduceLoopStrength(Loop *L, IVUsers &IU, ScalarEvolution &SE,
                                DominatorTree &DT, LoopInfo &LI,
-                               const TargetTransformInfo &TTI) {
+                               const TargetTransformInfo &TTI,
+                               AssumptionCache &AC,
+                               TargetLibraryInfo &LibInfo) {
+
   bool Changed = false;
 
   // Run the main LSR transformation.
-  Changed |= LSRInstance(L, IU, SE, DT, LI, TTI).getChanged();
+  Changed |= LSRInstance(L, IU, SE, DT, LI, TTI, AC, LibInfo).getChanged();
 
   // Remove any extra phis created by processing inner loops.
   Changed |= DeleteDeadPHIs(L->getHeader());
@@ -5722,14 +5738,17 @@ bool LoopStrengthReduce::runOnLoop(Loop *L, LPPassManager & /*LPM*/) {
   auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   const auto &TTI = getAnalysis<TargetTransformInfoWrapperPass>().getTTI(
       *L->getHeader()->getParent());
-  return ReduceLoopStrength(L, IU, SE, DT, LI, TTI);
+  auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
+      *L->getHeader()->getParent());
+  auto &LibInfo = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI();
+  return ReduceLoopStrength(L, IU, SE, DT, LI, TTI, AC, LibInfo);
 }
 
 PreservedAnalyses LoopStrengthReducePass::run(Loop &L, LoopAnalysisManager &AM,
                                               LoopStandardAnalysisResults &AR,
                                               LPMUpdater &) {
   if (!ReduceLoopStrength(&L, AM.getResult<IVUsersAnalysis>(L, AR), AR.SE,
-                          AR.DT, AR.LI, AR.TTI))
+                          AR.DT, AR.LI, AR.TTI, AR.AC, AR.TLI))
     return PreservedAnalyses::all();
 
   return getLoopPassPreservedAnalyses();

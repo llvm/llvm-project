@@ -46,6 +46,19 @@ TransformerClangTidyCheck::TransformerClangTidyCheck(RewriteRule R,
          " explicitly provide an empty explanation if none is desired");
 }
 
+void TransformerClangTidyCheck::registerPPCallbacks(
+    const SourceManager &SM, Preprocessor *PP, Preprocessor *ModuleExpanderPP) {
+  // Only allocate and register the IncludeInsert when some `Case` will add
+  // includes.
+  if (Rule && llvm::any_of(Rule->Cases, [](const RewriteRule::Case &C) {
+        return !C.AddedIncludes.empty();
+      })) {
+    Inserter = llvm::make_unique<IncludeInserter>(
+        SM, getLangOpts(), utils::IncludeSorter::IS_LLVM);
+    PP->addPPCallbacks(Inserter->CreatePPCallbacks());
+  }
+}
+
 void TransformerClangTidyCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
   if (Rule)
@@ -88,6 +101,15 @@ void TransformerClangTidyCheck::check(
   DiagnosticBuilder Diag = diag(RootLoc, *Explanation);
   for (const auto &T : *Transformations) {
     Diag << FixItHint::CreateReplacement(T.Range, T.Replacement);
+  }
+
+  for (const auto &I : Case.AddedIncludes) {
+    auto &Header = I.first;
+    if (Optional<FixItHint> Fix = Inserter->CreateIncludeInsertion(
+            Result.SourceManager->getMainFileID(), Header,
+            /*IsAngled=*/I.second == tooling::IncludeFormat::Angled)) {
+      Diag << *Fix;
+    }
   }
 }
 

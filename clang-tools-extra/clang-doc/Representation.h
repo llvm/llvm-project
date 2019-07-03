@@ -75,15 +75,16 @@ struct CommentInfo {
                  Other.ParamName, Other.CloseName, Other.SelfClosing,
                  Other.Explicit, Other.AttrKeys, Other.AttrValues, Other.Args);
 
-    if (FirstCI < SecondCI ||
-        (FirstCI == SecondCI && Children.size() < Other.Children.size()))
+    if (FirstCI < SecondCI)
       return true;
 
-    if (FirstCI > SecondCI || Children.size() > Other.Children.size())
-      return false;
+    if (FirstCI == SecondCI) {
+      return std::lexicographical_compare(
+          Children.begin(), Children.end(), Other.Children.begin(),
+          Other.Children.end(), llvm::deref<llvm::less>());
+    }
 
-    return std::equal(Children.begin(), Children.end(), Other.Children.begin(),
-                      llvm::deref<llvm::less>{});
+    return false;
   }
 
   SmallString<16>

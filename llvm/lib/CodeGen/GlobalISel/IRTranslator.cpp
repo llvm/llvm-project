@@ -2029,6 +2029,14 @@ bool IRTranslator::translateAtomicRMW(const User &U,
   return true;
 }
 
+bool IRTranslator::translateFence(const User &U,
+                                  MachineIRBuilder &MIRBuilder) {
+  const FenceInst &Fence = cast<FenceInst>(U);
+  MIRBuilder.buildFence(static_cast<unsigned>(Fence.getOrdering()),
+                        Fence.getSyncScopeID());
+  return true;
+}
+
 void IRTranslator::finishPendingPhis() {
 #ifndef NDEBUG
   DILocationVerifier Verifier;

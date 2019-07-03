@@ -264,76 +264,28 @@ public:
         def _read_all_double(self):
             return self._make_helper_double().all()
 
-        __swig_getmethods__["uint8"] = _make_helper_uint8
-        if _newclass: uint8 = property(_make_helper_uint8, None, doc='''A read only property that returns an array-like object out of which you can read uint8 values.''')
-
-        __swig_getmethods__["uint16"] = _make_helper_uint16
-        if _newclass: uint16 = property(_make_helper_uint16, None, doc='''A read only property that returns an array-like object out of which you can read uint16 values.''')
-
-        __swig_getmethods__["uint32"] = _make_helper_uint32
-        if _newclass: uint32 = property(_make_helper_uint32, None, doc='''A read only property that returns an array-like object out of which you can read uint32 values.''')
-
-        __swig_getmethods__["uint64"] = _make_helper_uint64
-        if _newclass: uint64 = property(_make_helper_uint64, None, doc='''A read only property that returns an array-like object out of which you can read uint64 values.''')
-
-        __swig_getmethods__["sint8"] = _make_helper_sint8
-        if _newclass: sint8 = property(_make_helper_sint8, None, doc='''A read only property that returns an array-like object out of which you can read sint8 values.''')
-
-        __swig_getmethods__["sint16"] = _make_helper_sint16
-        if _newclass: sint16 = property(_make_helper_sint16, None, doc='''A read only property that returns an array-like object out of which you can read sint16 values.''')
-
-        __swig_getmethods__["sint32"] = _make_helper_sint32
-        if _newclass: sint32 = property(_make_helper_sint32, None, doc='''A read only property that returns an array-like object out of which you can read sint32 values.''')
-
-        __swig_getmethods__["sint64"] = _make_helper_sint64
-        if _newclass: sint64 = property(_make_helper_sint64, None, doc='''A read only property that returns an array-like object out of which you can read sint64 values.''')
-
-        __swig_getmethods__["float"] = _make_helper_float
-        if _newclass: float = property(_make_helper_float, None, doc='''A read only property that returns an array-like object out of which you can read float values.''')
-
-        __swig_getmethods__["double"] = _make_helper_double
-        if _newclass: double = property(_make_helper_double, None, doc='''A read only property that returns an array-like object out of which you can read double values.''')
-
-        __swig_getmethods__["uint8s"] = _read_all_uint8
-        if _newclass: uint8s = property(_read_all_uint8, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint8 values.''')
-
-        __swig_getmethods__["uint16s"] = _read_all_uint16
-        if _newclass: uint16s = property(_read_all_uint16, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint16 values.''')
-
-        __swig_getmethods__["uint32s"] = _read_all_uint32
-        if _newclass: uint32s = property(_read_all_uint32, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint32 values.''')
-
-        __swig_getmethods__["uint64s"] = _read_all_uint64
-        if _newclass: uint64s = property(_read_all_uint64, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint64 values.''')
-
-        __swig_getmethods__["sint8s"] = _read_all_sint8
-        if _newclass: sint8s = property(_read_all_sint8, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint8 values.''')
-
-        __swig_getmethods__["sint16s"] = _read_all_sint16
-        if _newclass: sint16s = property(_read_all_sint16, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint16 values.''')
-
-        __swig_getmethods__["sint32s"] = _read_all_sint32
-        if _newclass: sint32s = property(_read_all_sint32, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint32 values.''')
-
-        __swig_getmethods__["sint64s"] = _read_all_sint64
-        if _newclass: sint64s = property(_read_all_sint64, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint64 values.''')
-
-        __swig_getmethods__["floats"] = _read_all_float
-        if _newclass: floats = property(_read_all_float, None, doc='''A read only property that returns an array with all the contents of this SBData represented as float values.''')
-
-        __swig_getmethods__["doubles"] = _read_all_double
-        if _newclass: doubles = property(_read_all_double, None, doc='''A read only property that returns an array with all the contents of this SBData represented as double values.''')
-
-    %}
-
-    %pythoncode %{
-        __swig_getmethods__["byte_order"] = GetByteOrder
-        __swig_setmethods__["byte_order"] = SetByteOrder
-        if _newclass: byte_order = property(GetByteOrder, SetByteOrder, doc='''A read/write property getting and setting the endianness of this SBData (data.byte_order = lldb.eByteOrderLittle).''')
-
-        __swig_getmethods__["size"] = GetByteSize
-        if _newclass: size = property(GetByteSize, None, doc='''A read only property that returns the size the same result as GetByteSize().''')
-
+        uint8 = property(_make_helper_uint8, None, doc='''A read only property that returns an array-like object out of which you can read uint8 values.''')
+        uint16 = property(_make_helper_uint16, None, doc='''A read only property that returns an array-like object out of which you can read uint16 values.''')
+        uint32 = property(_make_helper_uint32, None, doc='''A read only property that returns an array-like object out of which you can read uint32 values.''')
+        uint64 = property(_make_helper_uint64, None, doc='''A read only property that returns an array-like object out of which you can read uint64 values.''')
+        sint8 = property(_make_helper_sint8, None, doc='''A read only property that returns an array-like object out of which you can read sint8 values.''')
+        sint16 = property(_make_helper_sint16, None, doc='''A read only property that returns an array-like object out of which you can read sint16 values.''')
+        sint32 = property(_make_helper_sint32, None, doc='''A read only property that returns an array-like object out of which you can read sint32 values.''')
+        sint64 = property(_make_helper_sint64, None, doc='''A read only property that returns an array-like object out of which you can read sint64 values.''')
+        float = property(_make_helper_float, None, doc='''A read only property that returns an array-like object out of which you can read float values.''')
+        double = property(_make_helper_double, None, doc='''A read only property that returns an array-like object out of which you can read double values.''')
+        uint8s = property(_read_all_uint8, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint8 values.''')
+        uint16s = property(_read_all_uint16, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint16 values.''')
+        uint32s = property(_read_all_uint32, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint32 values.''')
+        uint64s = property(_read_all_uint64, None, doc='''A read only property that returns an array with all the contents of this SBData represented as uint64 values.''')
+        sint8s = property(_read_all_sint8, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint8 values.''')
+        sint16s = property(_read_all_sint16, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint16 values.''')
+        sint32s = property(_read_all_sint32, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint32 values.''')
+        sint64s = property(_read_all_sint64, None, doc='''A read only property that returns an array with all the contents of this SBData represented as sint64 values.''')
+        floats = property(_read_all_float, None, doc='''A read only property that returns an array with all the contents of this SBData represented as float values.''')
+        doubles = property(_read_all_double, None, doc='''A read only property that returns an array with all the contents of this SBData represented as double values.''')
+        byte_order = property(GetByteOrder, SetByteOrder, doc='''A read/write property getting and setting the endianness of this SBData (data.byte_order = lldb.eByteOrderLittle).''')
+        size = property(GetByteSize, None, doc='''A read only property that returns the size the same result as GetByteSize().''')
     %}
 
 };

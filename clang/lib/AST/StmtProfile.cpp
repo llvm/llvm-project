@@ -1569,6 +1569,11 @@ void StmtProfiler::VisitCXXConstCastExpr(const CXXConstCastExpr *S) {
   VisitCXXNamedCastExpr(S);
 }
 
+void StmtProfiler::VisitBuiltinBitCastExpr(const BuiltinBitCastExpr *S) {
+  VisitExpr(S);
+  VisitType(S->getTypeInfoAsWritten()->getType());
+}
+
 void StmtProfiler::VisitUserDefinedLiteral(const UserDefinedLiteral *S) {
   VisitCallExpr(S);
 }

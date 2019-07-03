@@ -743,6 +743,12 @@ def G_ATOMICRMW_MIN : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UMAX : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UMIN : G_ATOMICRMW_OP;
 
+def G_FENCE : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins i32imm:$ordering, i32imm:$scope);
+  let hasSideEffects = 1;
+}
+
 //------------------------------------------------------------------------------
 // Variadic ops
 //------------------------------------------------------------------------------

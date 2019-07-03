@@ -1,9 +1,9 @@
 ; RUN: llc  -mcpu=pwr9 -mtriple=powerpc64-unknown-linux-gnu < %s -verify-machineinstrs | FileCheck %s
 ; RUN: llc  -mcpu=pwr9 -mtriple=powerpc64le-unknown-linux-gnu < %s -verify-machineinstrs | FileCheck %s
-; RUN: llc  -mcpu=pwr8 -mtriple=powerpc64-unknown-linux-gnu < %s -verify-machineinstrs | FileCheck %s \
-; RUN: --check-prefix=CHECK-ITIN
-; RUN: llc  -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu < %s -verify-machineinstrs | FileCheck %s \
-; RUN: --check-prefix=CHECK-ITIN
+; RUN: llc  -mcpu=pwr8 -mtriple=powerpc64-unknown-linux-gnu -disable-ppc-ctrloops < %s -verify-machineinstrs \
+; RUN: | FileCheck %s --check-prefix=CHECK-ITIN
+; RUN: llc  -mcpu=pwr8 -mtriple=powerpc64le-unknown-linux-gnu -disable-ppc-ctrloops < %s -verify-machineinstrs \
+; RUN: | FileCheck %s --check-prefix=CHECK-ITIN
 
 
 %0 = type { i32, i32 }
@@ -12,11 +12,11 @@
 define void @initCombList(%0* nocapture, i32 signext) local_unnamed_addr #0 {
 ; CHECK-LABEL: initCombList:
 ; CHECK: addi 4, 4, -8
-; CHECK: stwu 5, 64(3)
+; CHECK: stwu [[REG:[0-9]+]], 64(3)
 
 ; CHECK-ITIN-LABEL: initCombList:
-; CHECK-ITIN: stwu 5, 64(4)
-; CHECK-ITIN-NEXT:   addi 3, 3, -8
+; CHECK-ITIN: stwu [[REG:[0-9]+]], 64(3)
+; CHECK-ITIN-NEXT:   addi [[REG2:[0-9]+]], [[REG2]], 8
 
 
   %3 = zext i32 %1 to i64

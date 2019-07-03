@@ -69,12 +69,9 @@ public:
     if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
       const LLT &DstTy = MRI.getType(DstReg);
       if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
-        auto CstVal = SrcMI->getOperand(1);
-        APInt Val = CstVal.isImm()
-                        ? APInt(DstTy.getSizeInBits(), CstVal.getImm())
-                        : CstVal.getCImm()->getValue();
-        Val = Val.sext(DstTy.getSizeInBits());
-        Builder.buildConstant(DstReg, Val);
+        auto &CstVal = SrcMI->getOperand(1);
+        Builder.buildConstant(
+            DstReg, CstVal.getCImm()->getValue().sext(DstTy.getSizeInBits()));
         markInstAndDefDead(MI, *SrcMI, DeadInsts);
         return true;
       }
@@ -107,6 +104,20 @@ public:
                        MIBMask);
       markInstAndDefDead(MI, *MRI.getVRegDef(SrcReg), DeadInsts);
       return true;
+    }
+
+    // Try to fold zext(g_constant) when the larger constant type is legal.
+    // Can't use MIPattern because we don't have a specific constant in mind.
+    auto *SrcMI = MRI.getVRegDef(SrcReg);
+    if (SrcMI->getOpcode() == TargetOpcode::G_CONSTANT) {
+      const LLT &DstTy = MRI.getType(DstReg);
+      if (isInstLegal({TargetOpcode::G_CONSTANT, {DstTy}})) {
+        auto &CstVal = SrcMI->getOperand(1);
+        Builder.buildConstant(
+            DstReg, CstVal.getCImm()->getValue().zext(DstTy.getSizeInBits()));
+        markInstAndDefDead(MI, *SrcMI, DeadInsts);
+        return true;
+      }
     }
     return tryFoldImplicitDef(MI, DeadInsts);
   }
