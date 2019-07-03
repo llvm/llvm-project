@@ -1547,6 +1547,30 @@ int main(int, char**)
         assert(m.position(0) == 0);
         assert(m.str(0) == s);
     }
+    { // LWG 2273
+        std::regex re("Foo|FooBar");
+        std::cmatch m;
+        {
+            assert(std::regex_search("FooBar", m, re));
+            assert(m.size() == 1);
+            assert(m[0] == "Foo");
+        }
+        {
+            assert(std::regex_search("Foo", m, re));
+            assert(m.size() == 1);
+            assert(m[0] == "Foo");
+        }
+        {
+            assert(std::regex_search("FooBarBaz", m, re));
+            assert(m.size() == 1);
+            assert(m[0] == "Foo");
+        }
+        {
+            assert(std::regex_search("FooBa", m, re));
+            assert(m.size() == 1);
+            assert(m[0] == "Foo");
+        }
+    }
 
   return 0;
 }
