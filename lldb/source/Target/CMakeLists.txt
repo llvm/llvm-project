@@ -62,7 +62,6 @@ add_lldb_library(lldbTarget
   LINK_LIBS
     swiftAST
     swiftBasic
-    swiftFrontend
     swiftReflection
     swiftRemoteAST
     lldbBreakpoint
