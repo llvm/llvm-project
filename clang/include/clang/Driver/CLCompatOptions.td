@@ -63,7 +63,8 @@ def _SLASH_c : CLFlag<"c">, HelpText<"Compile only">, Alias<c>;
 def _SLASH_d1PP : CLFlag<"d1PP">,
   HelpText<"Retain macro definitions in /E mode">, Alias<dD>;
 def _SLASH_d1reportAllClassLayout : CLFlag<"d1reportAllClassLayout">,
-  HelpText<"Dump record layout information">, Alias<fdump_record_layouts>;
+  HelpText<"Dump record layout information">,
+Alias<Xclang>, AliasArgs<["-fdump-record-layouts"]>;
 def _SLASH_diagnostics_caret : CLFlag<"diagnostics:caret">,
   HelpText<"Enable caret and column diagnostics (on by default)">;
 def _SLASH_diagnostics_column : CLFlag<"diagnostics:column">,

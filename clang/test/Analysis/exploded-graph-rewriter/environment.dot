@@ -29,6 +29,8 @@ Node0x1 [shape=record,label=
  "{
     { "node_id": 1,
       "pointer": "0x1",
+      "has_report": false,
+      "is_sink": false,
       "state_id": 2,
       "program_points": [],
       "program_state": {
@@ -36,6 +38,7 @@ Node0x1 [shape=record,label=
         "constraints": null,
         "dynamic_types": null,
         "constructing_objects": null,
+        "checker_messages": null,
         "environment": {
           "pointer": "0x2",
           "items": [

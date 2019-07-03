@@ -1201,6 +1201,7 @@ CanThrowResult Sema::canThrow(const Expr *E) {
   case Expr::CoyieldExprClass:
   case Expr::CXXConstCastExprClass:
   case Expr::CXXReinterpretCastExprClass:
+  case Expr::BuiltinBitCastExprClass:
   case Expr::CXXStdInitializerListExprClass:
   case Expr::DesignatedInitExprClass:
   case Expr::DesignatedInitUpdateExprClass:

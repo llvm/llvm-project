@@ -1115,6 +1115,7 @@ public:
     case CK_ToVoid:
     case CK_Dynamic:
     case CK_LValueBitCast:
+    case CK_LValueToRValueBitCast:
     case CK_NullToMemberPointer:
     case CK_UserDefinedConversion:
     case CK_CPointerToObjCPointerCast:
