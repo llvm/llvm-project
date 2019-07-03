@@ -237,9 +237,9 @@ To build the documentation, build the desired target(s).
 
 ::
 
-  > cmake --build . --target docs-lldb-html
-  > cmake --build . --target lldb-cpp-doc
-  > cmake --build . --target lldb-python-doc
+  > ninja docs-lldb-html
+  > ninja lldb-cpp-doc
+  > ninja lldb-python-doc
 
 Cross-compiling LLDB
 --------------------
