@@ -2649,9 +2649,12 @@ swift::CompilerInvocation &SwiftASTContext::GetCompilerInvocation() {
 }
 
 swift::SourceManager &SwiftASTContext::GetSourceManager() {
-  if (!m_source_manager_up)
-    m_source_manager_up = llvm::make_unique<swift::SourceManager>(
-        FileSystem::Instance().GetVirtualFileSystem());
+  if (!m_source_manager_up) {
+    auto OverlayFS = llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>(
+        new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+    OverlayFS->pushOverlay(FileSystem::Instance().GetVirtualFileSystem());
+    m_source_manager_up = llvm::make_unique<swift::SourceManager>(OverlayFS);
+  }
   return *m_source_manager_up;
 }
 
