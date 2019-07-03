@@ -5,7 +5,7 @@
 // UNSUPPORTED: system-windows
 
 Node0x1 [shape=record,label=
- "{{ "node_id": 1, "pointer": "0x1",
+ "{{ "node_id": 1, "pointer": "0x1", "has_report": false, "is_sink": false,
      "program_state": null, "program_points": []}\l}"];
 
 // LIGHT: Node0x1 -> Node0x2;
@@ -13,5 +13,5 @@ Node0x1 [shape=record,label=
 Node0x1 -> Node0x2;
 
 Node0x2 [shape=record,label=
- "{{ "node_id": 2, "pointer": "0x2",
+ "{{ "node_id": 2, "pointer": "0x2", "has_report": false, "is_sink": false,
      "program_state": null, "program_points": []}\l}"];

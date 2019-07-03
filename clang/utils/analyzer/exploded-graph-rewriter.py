@@ -299,6 +299,8 @@ class ExplodedNode(object):
         logging.debug('Adding ' + node_id)
         self.node_id = json_node['node_id']
         self.ptr = json_node['pointer']
+        self.has_report = json_node['has_report']
+        self.is_sink = json_node['is_sink']
         self.points = [ProgramPoint(p) for p in json_node['program_points']]
         self.state = ProgramState(json_node['state_id'],
                                   json_node['program_state']) \
@@ -754,6 +756,12 @@ class DotDumpVisitor(object):
                    % ("gray20" if self._dark_mode else "gray",
                       node.node_id, node.ptr, node.state.state_id
                       if node.state is not None else 'Unspecified'))
+        if node.has_report:
+            self._dump('<tr><td><font color="red"><b>Bug Report Attached'
+                       '</b></font></td></tr>')
+        if node.is_sink:
+            self._dump('<tr><td><font color="cornflowerblue"><b>Sink Node'
+                       '</b></font></td></tr>')
         self._dump('<tr><td align="left" width="0">')
         if len(node.points) > 1:
             self._dump('<b>Program points:</b></td></tr>')

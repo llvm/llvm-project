@@ -15,7 +15,22 @@
 // CHECK-SAME:   </tr>
 Node0x1 [shape=record,label=
  "{
-    { "node_id": 1, "pointer": "0x1",
+    { "node_id": 1, "pointer": "0x1", "has_report": false, "is_sink": false,
+      "program_state": null,
+      "program_points": []
+    }
+\l}"];
+
+// CHECK: Node0x2 [
+// CHECK-SAME: <tr><td>
+// CHECK-SAME:   <font color="red"><b>Bug Report Attached</b></font>
+// CHECK-SAME: </td></tr>
+// CHECK-SAME: <tr><td>
+// CHECK-SAME:   <font color="cornflowerblue"><b>Sink Node</b></font>
+// CHECK-SAME: </td></tr>
+Node0x2 [shape=record,label=
+ "{
+    { "node_id": 2, "pointer": "0x2", "has_report": true, "is_sink": true,
       "program_state": null,
       "program_points": []
     }

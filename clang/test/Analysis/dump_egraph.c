@@ -20,7 +20,7 @@ int foo() {
 
 // CHECK: \"program_points\": [\l&nbsp;&nbsp;&nbsp;&nbsp;\{ \"kind\": \"BlockEntrance\", \"block_id\": 1
 
-// CHECK: \"has_report\": true
 
 // CHECK: \"pretty\": \"*x\", \"location\": \{ \"line\": 16, \"column\": 10, \"file\": \"{{(.+)}}dump_egraph.c\" \}
 
+// CHECK: \"has_report\": true

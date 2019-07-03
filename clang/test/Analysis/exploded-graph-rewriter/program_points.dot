@@ -28,7 +28,7 @@
 // CHECK-SAME: </table>
 Node0x1 [shape=record,label=
  "{
-    { "node_id": 1, "pointer": "0x1",
+    { "node_id": 1, "pointer": "0x1", "has_report": false, "is_sink": false,
       "program_state": null, "program_points": [
       {
         "kind": "Edge",
@@ -73,7 +73,7 @@ Node0x1 [shape=record,label=
 // CHECK-SAME: </table>
 Node0x2 [shape=record,label=
  "{
-    { "node_id": 2, "pointer": "0x2",
+    { "node_id": 2, "pointer": "0x2", "has_report": false, "is_sink": false,
       "program_state": null, "program_points": [
       {
         "kind": "Statement",
@@ -97,7 +97,7 @@ Node0x2 [shape=record,label=
 // CHECK-SAME: <td>\{ ... \}</td>
 Node0x3 [shape=record,label=
  "{
-    { "node_id": 3, "pointer": "0x3",
+    { "node_id": 3, "pointer": "0x3", "has_report": false, "is_sink": false,
       "program_state": null, "program_points": [
       {
         "kind": "Statement",
