@@ -578,15 +578,11 @@ public:
 
   /// Get the SDK OS version this object file was built with.
   ///
-  /// The versions arguments and returns values are the same as the
-  /// GetMinimumOSVersion()
-  virtual uint32_t GetSDKVersion(uint32_t *versions, uint32_t num_versions) {
-    if (versions && num_versions) {
-      for (uint32_t i = 0; i < num_versions; ++i)
-        versions[i] = UINT32_MAX;
-    }
-    return 0;
-  }
+  /// \return
+  ///     This function returns extracted version numbers as a
+  ///     llvm::VersionTuple. In case of error an empty VersionTuple is
+  ///     returned.
+  virtual llvm::VersionTuple GetSDKVersion() { return llvm::VersionTuple(); }
 
   /// Return true if this file is a dynamic link editor (dyld)
   ///

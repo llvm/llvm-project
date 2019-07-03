@@ -163,8 +163,8 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
       std::string xcode_contents_path;
       std::string default_xcode_sdk;
       FileSpec fspec;
-      uint32_t versions[2];
-      if (objfile->GetSDKVersion(versions, 2)) {
+      llvm::VersionTuple version = objfile->GetSDKVersion();
+      if (!version.empty()) {
         fspec = HostInfo::GetShlibDir();
         if (fspec) {
           std::string path;
@@ -208,8 +208,8 @@ ConstString PlatformMacOSX::GetSDKDirectory(lldb_private::Target &target) {
           StreamString sdk_path;
           sdk_path.Printf("%sDeveloper/Platforms/MacOSX.platform/Developer/"
                           "SDKs/MacOSX%u.%u.sdk",
-                          xcode_contents_path.c_str(), versions[0],
-                          versions[1]);
+                          xcode_contents_path.c_str(), version.getMajor(),
+                          version.getMinor().getValue());
           fspec.SetFile(sdk_path.GetString(), FileSpec::Style::native);
           if (FileSystem::Instance().Exists(fspec))
             return ConstString(sdk_path.GetString());
