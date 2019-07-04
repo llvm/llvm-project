@@ -1954,7 +1954,8 @@ NamespaceDecl *ClangASTContext::GetUniqueNamespaceDeclaration(
         assert(namespace_decl ==
                parent_namespace_decl->getAnonymousNamespace());
       } else {
-        // BAD!!!
+        assert(false && "GetUniqueNamespaceDeclaration called with no name and "
+                        "no namespace as decl_ctx");
       }
     }
   }
