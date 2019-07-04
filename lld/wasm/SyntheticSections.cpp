@@ -323,7 +323,7 @@ void DataCountSection::writeBody() {
 }
 
 bool DataCountSection::isNeeded() const {
-  return NumSegments && Out.TargetFeaturesSec->Features.count("bulk-memory");
+  return NumSegments && Config->PassiveSegments;
 }
 
 static uint32_t getWasmFlags(const Symbol *Sym) {

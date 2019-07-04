@@ -18,7 +18,7 @@
 //===          is guaranteed to work on all UNIX variants.
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Config/config.h" // Get autoconf configuration settings
+#include "llvm/Config/config.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/Errno.h"
 #include <algorithm>

@@ -9,8 +9,8 @@
 define i8 @scalar_i8(i8 %x, i8 %y) nounwind {
 ; CHECK-LABEL: scalar_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    sub w0, w1, w8
+; CHECK-NEXT:    add w8, w1, w0
+; CHECK-NEXT:    add w0, w8, #1 // =1
 ; CHECK-NEXT:    ret
   %t0 = xor i8 %x, -1
   %t1 = sub i8 %y, %t0
@@ -20,8 +20,8 @@ define i8 @scalar_i8(i8 %x, i8 %y) nounwind {
 define i16 @scalar_i16(i16 %x, i16 %y) nounwind {
 ; CHECK-LABEL: scalar_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    sub w0, w1, w8
+; CHECK-NEXT:    add w8, w1, w0
+; CHECK-NEXT:    add w0, w8, #1 // =1
 ; CHECK-NEXT:    ret
   %t0 = xor i16 %x, -1
   %t1 = sub i16 %y, %t0
@@ -31,8 +31,8 @@ define i16 @scalar_i16(i16 %x, i16 %y) nounwind {
 define i32 @scalar_i32(i32 %x, i32 %y) nounwind {
 ; CHECK-LABEL: scalar_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    sub w0, w1, w8
+; CHECK-NEXT:    add w8, w1, w0
+; CHECK-NEXT:    add w0, w8, #1 // =1
 ; CHECK-NEXT:    ret
   %t0 = xor i32 %x, -1
   %t1 = sub i32 %y, %t0
@@ -42,8 +42,8 @@ define i32 @scalar_i32(i32 %x, i32 %y) nounwind {
 define i64 @scalar_i64(i64 %x, i64 %y) nounwind {
 ; CHECK-LABEL: scalar_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn x8, x0
-; CHECK-NEXT:    sub x0, x1, x8
+; CHECK-NEXT:    add x8, x1, x0
+; CHECK-NEXT:    add x0, x8, #1 // =1
 ; CHECK-NEXT:    ret
   %t0 = xor i64 %x, -1
   %t1 = sub i64 %y, %t0

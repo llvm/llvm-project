@@ -1042,12 +1042,12 @@ define arm_aapcs_vfpcc <8 x half> @pow_float16_t(<8 x half> %src1, <8 x half> %s
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13}
 ; CHECK-NEXT:    .pad #64
 ; CHECK-NEXT:    sub sp, #64
-; CHECK-NEXT:    vmov q5, q1
 ; CHECK-NEXT:    vmov q4, q0
 ; CHECK-NEXT:    vmov.u16 r0, q1[0]
 ; CHECK-NEXT:    vmov s0, r0
 ; CHECK-NEXT:    vmov.u16 r0, q4[0]
 ; CHECK-NEXT:    vmov s2, r0
+; CHECK-NEXT:    vmov q5, q1
 ; CHECK-NEXT:    vcvtb.f32.f16 s2, s2
 ; CHECK-NEXT:    vstr s2, [sp, #56]
 ; CHECK-NEXT:    vcvtb.f32.f16 s0, s0

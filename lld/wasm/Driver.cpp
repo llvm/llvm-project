@@ -320,6 +320,9 @@ static void readConfigs(opt::InputArgList &Args) {
       Args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
   Config->ImportMemory = Args.hasArg(OPT_import_memory);
   Config->SharedMemory = Args.hasArg(OPT_shared_memory);
+  // TODO: Make passive segments the default with shared memory
+  Config->PassiveSegments =
+      Args.hasFlag(OPT_passive_segments, OPT_active_segments, false);
   Config->ImportTable = Args.hasArg(OPT_import_table);
   Config->LTOO = args::getInteger(Args, OPT_lto_O, 2);
   Config->LTOPartitions = args::getInteger(Args, OPT_lto_partitions, 1);
@@ -460,10 +463,19 @@ static void createSyntheticSymbols() {
         "__wasm_call_ctors", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(NullSignature, "__wasm_call_ctors"));
 
+    if (Config->PassiveSegments) {
+      // Passive segments are used to avoid memory being reinitialized on each
+      // thread's instantiation. These passive segments are initialized and
+      // dropped in __wasm_init_memory, which is the first function called from
+      // __wasm_call_ctors.
+      WasmSym::InitMemory = Symtab->addSyntheticFunction(
+          "__wasm_init_memory", WASM_SYMBOL_VISIBILITY_HIDDEN,
+          make<SyntheticFunction>(NullSignature, "__wasm_init_memory"));
+    }
+
     if (Config->Pic) {
-      // For PIC code we create a synthetic function call __wasm_apply_relocs
-      // and add this as the first call in __wasm_call_ctors.
-      // We also unconditionally export 
+      // For PIC code we create a synthetic function __wasm_apply_relocs which
+      // is called from __wasm_call_ctors before the user-level constructors.
       WasmSym::ApplyRelocs = Symtab->addSyntheticFunction(
           "__wasm_apply_relocs", WASM_SYMBOL_VISIBILITY_HIDDEN,
           make<SyntheticFunction>(NullSignature, "__wasm_apply_relocs"));

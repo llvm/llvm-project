@@ -2424,6 +2424,17 @@ SDValue DAGCombiner::visitADDLike(SDNode *N) {
       if (Xor)
         return DAG.getNode(ISD::SUB, DL, VT, A, Xor.getOperand(0));
     }
+
+    // Look for:
+    //   add (add x, y), 1
+    // And if the target does not like this form then turn into:
+    //   sub y, (xor x, -1)
+    if (!TLI.preferIncOfAddToSubOfNot(VT) && N0.hasOneUse() &&
+        N0.getOpcode() == ISD::ADD) {
+      SDValue Not = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(0),
+                                DAG.getAllOnesConstant(DL, VT));
+      return DAG.getNode(ISD::SUB, DL, VT, N0.getOperand(1), Not);
+    }
   }
 
   // (x - y) + -1  ->  add (xor y, -1), x
@@ -2584,6 +2595,17 @@ SDValue DAGCombiner::visitADDLikeCommutative(SDValue N0, SDValue N1,
   if (SDValue V = foldAddSubMasked1(true, N0, N1, DAG, DL))
     return V;
 
+  // Look for:
+  //   add (add x, 1), y
+  // And if the target does not like this form then turn into:
+  //   sub y, (xor x, -1)
+  if (!TLI.preferIncOfAddToSubOfNot(VT) && N0.hasOneUse() &&
+      N0.getOpcode() == ISD::ADD && isOneOrOneSplat(N0.getOperand(1))) {
+    SDValue Not = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(0),
+                              DAG.getAllOnesConstant(DL, VT));
+    return DAG.getNode(ISD::SUB, DL, VT, N1, Not);
+  }
+
   // Hoist one-use subtraction by non-opaque constant:
   //   (x - C) + y  ->  (x + y) - C
   // This is necessary because SUB(X,C) -> ADD(X,-C) doesn't work for vectors.
@@ -2677,7 +2699,7 @@ static SDValue flipBoolean(SDValue V, const SDLoc &DL,
     Cst = DAG.getConstant(1, DL, VT);
     break;
   case TargetLowering::ZeroOrNegativeOneBooleanContent:
-    Cst = DAG.getConstant(-1, DL, VT);
+    Cst = DAG.getAllOnesConstant(DL, VT);
     break;
   }
 
@@ -2853,6 +2875,93 @@ SDValue DAGCombiner::visitADDCARRY(SDNode *N) {
   return SDValue();
 }
 
+/**
+ * If we are facing some sort of diamond carry propapagtion pattern try to
+ * break it up to generate something like:
+ *   (addcarry X, 0, (addcarry A, B, Z):Carry)
+ *
+ * The end result is usually an increase in operation required, but because the
+ * carry is now linearized, other tranforms can kick in and optimize the DAG.
+ *
+ * Patterns typically look something like
+ *            (uaddo A, B)
+ *             /       \
+ *          Carry      Sum
+ *            |          \
+ *            | (addcarry *, 0, Z)
+ *            |       /
+ *             \   Carry
+ *              |   /
+ * (addcarry X, *, *)
+ *
+ * But numerous variation exist. Our goal is to identify A, B, X and Z and
+ * produce a combine with a single path for carry propagation.
+ */
+static SDValue combineADDCARRYDiamond(DAGCombiner &Combiner, SelectionDAG &DAG,
+                                      SDValue X, SDValue Carry0, SDValue Carry1,
+                                      SDNode *N) {
+  if (Carry1.getResNo() != 1 || Carry0.getResNo() != 1)
+    return SDValue();
+  if (Carry1.getOpcode() != ISD::UADDO)
+    return SDValue();
+
+  SDValue Z;
+
+  /**
+   * First look for a suitable Z. It will present itself in the form of
+   * (addcarry Y, 0, Z) or its equivalent (uaddo Y, 1) for Z=true
+   */
+  if (Carry0.getOpcode() == ISD::ADDCARRY &&
+      isNullConstant(Carry0.getOperand(1))) {
+    Z = Carry0.getOperand(2);
+  } else if (Carry0.getOpcode() == ISD::UADDO &&
+             isOneConstant(Carry0.getOperand(1))) {
+    EVT VT = Combiner.getSetCCResultType(Carry0.getValueType());
+    Z = DAG.getConstant(1, SDLoc(Carry0.getOperand(1)), VT);
+  } else {
+    // We couldn't find a suitable Z.
+    return SDValue();
+  }
+
+
+  auto cancelDiamond = [&](SDValue A,SDValue B) {
+    SDLoc DL(N);
+    SDValue NewY = DAG.getNode(ISD::ADDCARRY, DL, Carry0->getVTList(), A, B, Z);
+    Combiner.AddToWorklist(NewY.getNode());
+    return DAG.getNode(ISD::ADDCARRY, DL, N->getVTList(), X,
+                       DAG.getConstant(0, DL, X.getValueType()),
+                       NewY.getValue(1));
+  };
+
+  /**
+   *      (uaddo A, B)
+   *           |
+   *          Sum
+   *           |
+   * (addcarry *, 0, Z)
+   */
+  if (Carry0.getOperand(0) == Carry1.getValue(0)) {
+    return cancelDiamond(Carry1.getOperand(0), Carry1.getOperand(1));
+  }
+
+  /**
+   * (addcarry A, 0, Z)
+   *         |
+   *        Sum
+   *         |
+   *  (uaddo *, B)
+   */
+  if (Carry1.getOperand(0) == Carry0.getValue(0)) {
+    return cancelDiamond(Carry0.getOperand(0), Carry1.getOperand(1));
+  }
+
+  if (Carry1.getOperand(1) == Carry0.getValue(0)) {
+    return cancelDiamond(Carry1.getOperand(0), Carry0.getOperand(0));
+  }
+
+  return SDValue();
+}
+
 SDValue DAGCombiner::visitADDCARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
                                        SDNode *N) {
   // Iff the flag result is dead:
@@ -2867,35 +2976,13 @@ SDValue DAGCombiner::visitADDCARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
    * When one of the addcarry argument is itself a carry, we may be facing
    * a diamond carry propagation. In which case we try to transform the DAG
    * to ensure linear carry propagation if that is possible.
-   *
-   * We are trying to get:
-   *   (addcarry X, 0, (addcarry A, B, Z):Carry)
    */
   if (auto Y = getAsCarry(TLI, N1)) {
-    /**
-     *            (uaddo A, B)
-     *             /       \
-     *          Carry      Sum
-     *            |          \
-     *            | (addcarry *, 0, Z)
-     *            |       /
-     *             \   Carry
-     *              |   /
-     * (addcarry X, *, *)
-     */
-    if (Y.getOpcode() == ISD::UADDO &&
-        CarryIn.getResNo() == 1 &&
-        CarryIn.getOpcode() == ISD::ADDCARRY &&
-        isNullConstant(CarryIn.getOperand(1)) &&
-        CarryIn.getOperand(0) == Y.getValue(0)) {
-      auto NewY = DAG.getNode(ISD::ADDCARRY, SDLoc(N), Y->getVTList(),
-                              Y.getOperand(0), Y.getOperand(1),
-                              CarryIn.getOperand(2));
-      AddToWorklist(NewY.getNode());
-      return DAG.getNode(ISD::ADDCARRY, SDLoc(N), N->getVTList(), N0,
-                         DAG.getConstant(0, SDLoc(N), N0.getValueType()),
-                         NewY.getValue(1));
-    }
+    // Because both are carries, Y and Z can be swapped.
+    if (auto R = combineADDCARRYDiamond(*this, DAG, N0, Y, CarryIn, N))
+      return R;
+    if (auto R = combineADDCARRYDiamond(*this, DAG, N0, CarryIn, Y, N))
+      return R;
   }
 
   return SDValue();
@@ -3106,6 +3193,15 @@ SDValue DAGCombiner::visitSUB(SDNode *N) {
     SDValue Xor = DAG.getNode(ISD::XOR, DL, VT, N0.getOperand(1),
                               DAG.getAllOnesConstant(DL, VT));
     return DAG.getNode(ISD::ADD, DL, VT, Xor, N0.getOperand(0));
+  }
+
+  // Look for:
+  //   sub y, (xor x, -1)
+  // And if the target does not like this form then turn into:
+  //   add (add x, y), 1
+  if (TLI.preferIncOfAddToSubOfNot(VT) && N1.hasOneUse() && isBitwiseNot(N1)) {
+    SDValue Add = DAG.getNode(ISD::ADD, DL, VT, N0, N1.getOperand(0));
+    return DAG.getNode(ISD::ADD, DL, VT, Add, DAG.getConstant(1, DL, VT));
   }
 
   // Hoist one-use addition by non-opaque constant:

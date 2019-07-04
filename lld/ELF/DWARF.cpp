@@ -58,7 +58,7 @@ namespace {
 template <class RelTy> struct LLDRelocationResolver {
   // In the ELF ABIs, S sepresents the value of the symbol in the relocation
   // entry. For Rela, the addend is stored as part of the relocation entry.
-  static uint64_t Resolve(object::RelocationRef Ref, uint64_t S,
+  static uint64_t resolve(object::RelocationRef Ref, uint64_t S,
                           uint64_t /* A */) {
     return S + Ref.getRawDataRefImpl().p;
   }
@@ -66,7 +66,7 @@ template <class RelTy> struct LLDRelocationResolver {
 
 template <class ELFT> struct LLDRelocationResolver<Elf_Rel_Impl<ELFT, false>> {
   // For Rel, the addend A is supplied by the caller.
-  static uint64_t Resolve(object::RelocationRef /*Ref*/, uint64_t S,
+  static uint64_t resolve(object::RelocationRef /*Ref*/, uint64_t S,
                           uint64_t A) {
     return S + A;
   }
@@ -110,7 +110,7 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &Sec, uint64_t Pos,
   DataRefImpl D;
   D.p = getAddend<ELFT>(Rel);
   return RelocAddrEntry{SecIndex, RelocationRef(D, nullptr),
-                        LLDRelocationResolver<RelTy>::Resolve, Val};
+                        LLDRelocationResolver<RelTy>::resolve, Val};
 }
 
 template <class ELFT>

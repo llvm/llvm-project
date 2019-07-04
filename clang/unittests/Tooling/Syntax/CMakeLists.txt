@@ -6,7 +6,7 @@ add_clang_unittest(SyntaxTests
   TokensTest.cpp
 )
 
-target_link_libraries(SyntaxTests
+clang_target_link_libraries(SyntaxTests
   PRIVATE
   clangAST
   clangBasic
@@ -15,5 +15,9 @@ target_link_libraries(SyntaxTests
   clangSerialization
   clangTooling
   clangToolingSyntax
-  LLVMTestingSupport
   )
+
+target_link_libraries(SyntaxTests
+  PRIVATE
+  LLVMTestingSupport
+)

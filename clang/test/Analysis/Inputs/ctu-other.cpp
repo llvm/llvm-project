@@ -38,6 +38,7 @@ int embed_cls::fecl(int x) {
 class mycls {
 public:
   int fcl(int x);
+  virtual int fvcl(int x);
   static int fscl(int x);
 
   class embed_cls2 {
@@ -49,11 +50,23 @@ public:
 int mycls::fcl(int x) {
   return x + 5;
 }
+int mycls::fvcl(int x) {
+  return x + 7;
+}
 int mycls::fscl(int x) {
   return x + 6;
 }
 int mycls::embed_cls2::fecl2(int x) {
   return x - 11;
+}
+
+class derived : public mycls {
+public:
+  virtual int fvcl(int x) override;
+};
+
+int derived::fvcl(int x) {
+  return x + 8;
 }
 
 namespace chns {

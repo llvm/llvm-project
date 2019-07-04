@@ -323,6 +323,14 @@ set(CLANG_VENDOR_UTI "org.llvm.clang" CACHE STRING
 set(CLANG_PYTHON_BINDINGS_VERSIONS "" CACHE STRING
     "Python versions to install libclang python bindings for")
 
+set(CLANG_LINK_CLANG_DYLIB ${LLVM_LINK_LLVM_DYLIB} CACHE BOOL
+    "Link tools against libclang_shared.so")
+
+if (NOT LLVM_LINK_LLVM_DYLIB AND CLANG_LINK_CLANG_DYLIB)
+  message(FATAL_ERROR "Cannot set CLANG_LINK_CLANG_DYLIB=ON when "
+                      "LLVM_LINK_LLVM_DYLIB=OFF")
+endif()
+
 # The libdir suffix must exactly match whatever LLVM's configuration used.
 set(CLANG_LIBDIR_SUFFIX "${LLVM_LIBDIR_SUFFIX}")
 

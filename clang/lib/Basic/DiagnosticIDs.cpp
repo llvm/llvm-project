@@ -580,11 +580,8 @@ static bool getDiagnosticsInGroup(diag::Flavor Flavor,
 bool
 DiagnosticIDs::getDiagnosticsInGroup(diag::Flavor Flavor, StringRef Group,
                                      SmallVectorImpl<diag::kind> &Diags) const {
-  auto Found = std::lower_bound(std::begin(OptionTable), std::end(OptionTable),
-                                Group,
-                                [](const WarningOption &LHS, StringRef RHS) {
-                                  return LHS.getName() < RHS;
-                                });
+  auto Found = llvm::partition_point(
+      OptionTable, [=](const WarningOption &O) { return O.getName() < Group; });
   if (Found == std::end(OptionTable) || Found->getName() != Group)
     return true; // Option not found.
 

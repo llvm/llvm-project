@@ -189,23 +189,17 @@ entry:
 }
 
 ; Test inline asm handling
-define hidden void @inline_asm() #0 {
+define hidden void @inline_asm() {
 ; CHECK-LABEL: @inline_asm
 entry:
   %env = alloca [1 x %struct.__jmp_buf_tag], align 16
   %arraydecay = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %env, i32 0, i32 0
   %call = call i32 @setjmp(%struct.__jmp_buf_tag* %arraydecay) #4
-  %cmp = icmp eq i32 %call, 0
-  br i1 %cmp, label %if.then, label %if.else
-
-if.then:                                          ; preds = %entry
+; Inline assembly should not generate __invoke wrappers.
+; Doing so would fail as inline assembly cannot be passed as a function pointer.
 ; CHECK: call void asm sideeffect "", ""()
+; CHECK-NOT: __invoke_void
   call void asm sideeffect "", ""()
-  %arraydecay1 = getelementptr inbounds [1 x %struct.__jmp_buf_tag], [1 x %struct.__jmp_buf_tag]* %env, i32 0, i32 0
-  call void @longjmp(%struct.__jmp_buf_tag* %arraydecay1, i32 1) #5
-  unreachable
-
-if.else:                                          ; preds = %entry
   ret void
 }
 

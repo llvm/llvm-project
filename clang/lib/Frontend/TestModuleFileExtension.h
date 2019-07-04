@@ -11,7 +11,7 @@
 #include "clang/Serialization/ModuleFileExtension.h"
 #include "clang/Basic/LLVM.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Bitcode/BitstreamReader.h"
+#include "llvm/Bitstream/BitstreamReader.h"
 #include <string>
 
 namespace clang {

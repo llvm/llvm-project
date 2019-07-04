@@ -6,13 +6,10 @@ llvm-dis - LLVM disassembler
 SYNOPSIS
 --------
 
-
 **llvm-dis** [*options*] [*filename*]
-
 
 DESCRIPTION
 -----------
-
 
 The **llvm-dis** command is the LLVM disassembler.  It takes an LLVM
 bitcode file and converts it into human-readable LLVM assembly language.
@@ -27,11 +24,8 @@ a ``.ll`` suffix added (any existing ``.bc`` suffix will first be
 removed).  You can override the choice of output file using the
 **-o** option.
 
-
 OPTIONS
 -------
-
-
 
 **-f**
 
@@ -39,32 +33,22 @@ OPTIONS
  write raw bitcode output if the output stream is a terminal. With this option,
  **llvm-dis** will write raw bitcode regardless of the output device.
 
-
-
 **-help**
 
  Print a summary of command line options.
-
-
 
 **-o** *filename*
 
  Specify the output file name.  If *filename* is -, then the output is sent
  to standard output.
 
-
-
-
 EXIT STATUS
 -----------
-
 
 If **llvm-dis** succeeds, it will exit with 0.  Otherwise, if an error
 occurs, it will exit with a non-zero value.
 
-
 SEE ALSO
 --------
-
 
 llvm-as|llvm-as

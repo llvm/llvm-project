@@ -21,7 +21,7 @@ set(CLANG_SCAN_DEPS_LIB_DEPS
   clangDependencyScanning
   )
 
-target_link_libraries(clang-scan-deps
+clang_target_link_libraries(clang-scan-deps
   PRIVATE
   ${CLANG_SCAN_DEPS_LIB_DEPS}
   )

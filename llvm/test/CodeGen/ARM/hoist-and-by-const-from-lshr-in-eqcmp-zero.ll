@@ -370,14 +370,13 @@ define i1 @scalar_i64_signbit_eq(i64 %x, i64 %y) nounwind {
 ; ARM6:       @ %bb.0:
 ; ARM6-NEXT:    push {r11, lr}
 ; ARM6-NEXT:    mov r12, #-2147483648
-; ARM6-NEXT:    sub lr, r2, #32
+; ARM6-NEXT:    subs lr, r2, #32
 ; ARM6-NEXT:    lsr r3, r12, r2
 ; ARM6-NEXT:    rsb r2, r2, #32
-; ARM6-NEXT:    cmp lr, #0
-; ARM6-NEXT:    lsl r2, r12, r2
-; ARM6-NEXT:    movge r3, #0
-; ARM6-NEXT:    lsrge r2, r12, lr
+; ARM6-NEXT:    movpl r3, #0
 ; ARM6-NEXT:    and r1, r3, r1
+; ARM6-NEXT:    lsl r2, r12, r2
+; ARM6-NEXT:    lsrpl r2, r12, lr
 ; ARM6-NEXT:    and r0, r2, r0
 ; ARM6-NEXT:    orr r0, r0, r1
 ; ARM6-NEXT:    clz r0, r0
@@ -388,14 +387,13 @@ define i1 @scalar_i64_signbit_eq(i64 %x, i64 %y) nounwind {
 ; ARM78:       @ %bb.0:
 ; ARM78-NEXT:    push {r11, lr}
 ; ARM78-NEXT:    mov r12, #-2147483648
-; ARM78-NEXT:    sub lr, r2, #32
+; ARM78-NEXT:    subs lr, r2, #32
 ; ARM78-NEXT:    lsr r3, r12, r2
 ; ARM78-NEXT:    rsb r2, r2, #32
-; ARM78-NEXT:    cmp lr, #0
-; ARM78-NEXT:    lsl r2, r12, r2
-; ARM78-NEXT:    movwge r3, #0
-; ARM78-NEXT:    lsrge r2, r12, lr
+; ARM78-NEXT:    movwpl r3, #0
 ; ARM78-NEXT:    and r1, r3, r1
+; ARM78-NEXT:    lsl r2, r12, r2
+; ARM78-NEXT:    lsrpl r2, r12, lr
 ; ARM78-NEXT:    and r0, r2, r0
 ; ARM78-NEXT:    orr r0, r0, r1
 ; ARM78-NEXT:    clz r0, r0
@@ -423,14 +421,13 @@ define i1 @scalar_i64_signbit_eq(i64 %x, i64 %y) nounwind {
 ; THUMB7-NEXT:    push {r7, lr}
 ; THUMB7-NEXT:    rsb.w r3, r2, #32
 ; THUMB7-NEXT:    mov.w r12, #-2147483648
-; THUMB7-NEXT:    sub.w lr, r2, #32
+; THUMB7-NEXT:    subs.w lr, r2, #32
 ; THUMB7-NEXT:    lsr.w r2, r12, r2
 ; THUMB7-NEXT:    lsl.w r3, r12, r3
-; THUMB7-NEXT:    cmp.w lr, #0
-; THUMB7-NEXT:    it ge
-; THUMB7-NEXT:    lsrge.w r3, r12, lr
-; THUMB7-NEXT:    it ge
-; THUMB7-NEXT:    movge r2, #0
+; THUMB7-NEXT:    it pl
+; THUMB7-NEXT:    lsrpl.w r3, r12, lr
+; THUMB7-NEXT:    it pl
+; THUMB7-NEXT:    movpl r2, #0
 ; THUMB7-NEXT:    ands r0, r3
 ; THUMB7-NEXT:    ands r1, r2
 ; THUMB7-NEXT:    orrs r0, r1
@@ -440,25 +437,24 @@ define i1 @scalar_i64_signbit_eq(i64 %x, i64 %y) nounwind {
 ;
 ; THUMB8-LABEL: scalar_i64_signbit_eq:
 ; THUMB8:       @ %bb.0:
-; THUMB8-NEXT:    .save {r4, lr}
-; THUMB8-NEXT:    push {r4, lr}
-; THUMB8-NEXT:    rsb.w r4, r2, #32
-; THUMB8-NEXT:    sub.w r3, r2, #32
+; THUMB8-NEXT:    .save {r7, lr}
+; THUMB8-NEXT:    push {r7, lr}
+; THUMB8-NEXT:    subs.w r3, r2, #32
 ; THUMB8-NEXT:    mov.w r12, #-2147483648
-; THUMB8-NEXT:    cmp r3, #0
-; THUMB8-NEXT:    lsl.w r4, r12, r4
-; THUMB8-NEXT:    lsr.w r2, r12, r2
 ; THUMB8-NEXT:    lsr.w lr, r12, r3
-; THUMB8-NEXT:    it ge
-; THUMB8-NEXT:    movge r4, lr
-; THUMB8-NEXT:    it ge
-; THUMB8-NEXT:    movge r2, #0
-; THUMB8-NEXT:    ands r0, r4
+; THUMB8-NEXT:    rsb.w r3, r2, #32
+; THUMB8-NEXT:    lsr.w r2, r12, r2
+; THUMB8-NEXT:    lsl.w r3, r12, r3
+; THUMB8-NEXT:    it pl
+; THUMB8-NEXT:    movpl r3, lr
+; THUMB8-NEXT:    it pl
+; THUMB8-NEXT:    movpl r2, #0
+; THUMB8-NEXT:    ands r0, r3
 ; THUMB8-NEXT:    ands r1, r2
 ; THUMB8-NEXT:    orrs r0, r1
 ; THUMB8-NEXT:    clz r0, r0
 ; THUMB8-NEXT:    lsrs r0, r0, #5
-; THUMB8-NEXT:    pop {r4, pc}
+; THUMB8-NEXT:    pop {r7, pc}
   %t0 = lshr i64 9223372036854775808, %y
   %t1 = and i64 %t0, %x
   %res = icmp eq i64 %t1, 0
@@ -470,9 +466,8 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; ARM6:       @ %bb.0:
 ; ARM6-NEXT:    mov r1, #1
 ; ARM6-NEXT:    lsr r1, r1, r2
-; ARM6-NEXT:    sub r2, r2, #32
-; ARM6-NEXT:    cmp r2, #0
-; ARM6-NEXT:    movge r1, #0
+; ARM6-NEXT:    subs r2, r2, #32
+; ARM6-NEXT:    movpl r1, #0
 ; ARM6-NEXT:    and r0, r1, r0
 ; ARM6-NEXT:    clz r0, r0
 ; ARM6-NEXT:    lsr r0, r0, #5
@@ -482,9 +477,8 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; ARM78:       @ %bb.0:
 ; ARM78-NEXT:    mov r1, #1
 ; ARM78-NEXT:    lsr r1, r1, r2
-; ARM78-NEXT:    sub r2, r2, #32
-; ARM78-NEXT:    cmp r2, #0
-; ARM78-NEXT:    movwge r1, #0
+; ARM78-NEXT:    subs r2, r2, #32
+; ARM78-NEXT:    movwpl r1, #0
 ; ARM78-NEXT:    and r0, r1, r0
 ; ARM78-NEXT:    clz r0, r0
 ; ARM78-NEXT:    lsr r0, r0, #5
@@ -510,9 +504,8 @@ define i1 @scalar_i64_lowestbit_eq(i64 %x, i64 %y) nounwind {
 ; THUMB78-NEXT:    movs r1, #1
 ; THUMB78-NEXT:    lsrs r1, r2
 ; THUMB78-NEXT:    subs r2, #32
-; THUMB78-NEXT:    cmp r2, #0
-; THUMB78-NEXT:    it ge
-; THUMB78-NEXT:    movge r1, #0
+; THUMB78-NEXT:    it pl
+; THUMB78-NEXT:    movpl r1, #0
 ; THUMB78-NEXT:    ands r0, r1
 ; THUMB78-NEXT:    clz r0, r0
 ; THUMB78-NEXT:    lsrs r0, r0, #5
@@ -528,11 +521,10 @@ define i1 @scalar_i64_bitsinmiddle_eq(i64 %x, i64 %y) nounwind {
 ; ARM6:       @ %bb.0:
 ; ARM6-NEXT:    push {r11, lr}
 ; ARM6-NEXT:    mov r12, #255
-; ARM6-NEXT:    sub lr, r2, #32
+; ARM6-NEXT:    subs lr, r2, #32
 ; ARM6-NEXT:    orr r12, r12, #65280
-; ARM6-NEXT:    cmp lr, #0
 ; ARM6-NEXT:    lsr r3, r12, r2
-; ARM6-NEXT:    movge r3, #0
+; ARM6-NEXT:    movpl r3, #0
 ; ARM6-NEXT:    and r1, r3, r1
 ; ARM6-NEXT:    mov r3, #16711680
 ; ARM6-NEXT:    cmp lr, #0
@@ -540,7 +532,7 @@ define i1 @scalar_i64_bitsinmiddle_eq(i64 %x, i64 %y) nounwind {
 ; ARM6-NEXT:    lsr r3, r3, r2
 ; ARM6-NEXT:    rsb r2, r2, #32
 ; ARM6-NEXT:    orr r2, r3, r12, lsl r2
-; ARM6-NEXT:    lsrge r2, r12, lr
+; ARM6-NEXT:    lsrpl r2, r12, lr
 ; ARM6-NEXT:    and r0, r2, r0
 ; ARM6-NEXT:    orr r0, r0, r1
 ; ARM6-NEXT:    clz r0, r0
@@ -551,10 +543,9 @@ define i1 @scalar_i64_bitsinmiddle_eq(i64 %x, i64 %y) nounwind {
 ; ARM78:       @ %bb.0:
 ; ARM78-NEXT:    push {r11, lr}
 ; ARM78-NEXT:    movw r12, #65535
-; ARM78-NEXT:    sub lr, r2, #32
+; ARM78-NEXT:    subs lr, r2, #32
 ; ARM78-NEXT:    lsr r3, r12, r2
-; ARM78-NEXT:    cmp lr, #0
-; ARM78-NEXT:    movwge r3, #0
+; ARM78-NEXT:    movwpl r3, #0
 ; ARM78-NEXT:    and r1, r3, r1
 ; ARM78-NEXT:    movw r3, #0
 ; ARM78-NEXT:    cmp lr, #0
@@ -562,7 +553,7 @@ define i1 @scalar_i64_bitsinmiddle_eq(i64 %x, i64 %y) nounwind {
 ; ARM78-NEXT:    lsr r3, r3, r2
 ; ARM78-NEXT:    rsb r2, r2, #32
 ; ARM78-NEXT:    orr r2, r3, r12, lsl r2
-; ARM78-NEXT:    lsrge r2, r12, lr
+; ARM78-NEXT:    lsrpl r2, r12, lr
 ; ARM78-NEXT:    and r0, r2, r0
 ; ARM78-NEXT:    orr r0, r0, r1
 ; ARM78-NEXT:    clz r0, r0
@@ -599,15 +590,14 @@ define i1 @scalar_i64_bitsinmiddle_eq(i64 %x, i64 %y) nounwind {
 ; THUMB7-NEXT:    lsr.w r12, r3, r2
 ; THUMB7-NEXT:    rsb.w r3, r2, #32
 ; THUMB7-NEXT:    lsl.w r3, lr, r3
-; THUMB7-NEXT:    orr.w r3, r3, r12
-; THUMB7-NEXT:    sub.w r12, r2, #32
+; THUMB7-NEXT:    orr.w r12, r12, r3
+; THUMB7-NEXT:    subs.w r3, r2, #32
 ; THUMB7-NEXT:    lsr.w r2, lr, r2
-; THUMB7-NEXT:    cmp.w r12, #0
-; THUMB7-NEXT:    it ge
-; THUMB7-NEXT:    lsrge.w r3, lr, r12
-; THUMB7-NEXT:    it ge
-; THUMB7-NEXT:    movge r2, #0
-; THUMB7-NEXT:    ands r0, r3
+; THUMB7-NEXT:    it pl
+; THUMB7-NEXT:    lsrpl.w r12, lr, r3
+; THUMB7-NEXT:    it pl
+; THUMB7-NEXT:    movpl r2, #0
+; THUMB7-NEXT:    and.w r0, r0, r12
 ; THUMB7-NEXT:    ands r1, r2
 ; THUMB7-NEXT:    orrs r0, r1
 ; THUMB7-NEXT:    clz r0, r0
@@ -616,8 +606,8 @@ define i1 @scalar_i64_bitsinmiddle_eq(i64 %x, i64 %y) nounwind {
 ;
 ; THUMB8-LABEL: scalar_i64_bitsinmiddle_eq:
 ; THUMB8:       @ %bb.0:
-; THUMB8-NEXT:    .save {r4, lr}
-; THUMB8-NEXT:    push {r4, lr}
+; THUMB8-NEXT:    .save {r7, lr}
+; THUMB8-NEXT:    push {r7, lr}
 ; THUMB8-NEXT:    movs r3, #0
 ; THUMB8-NEXT:    movw lr, #65535
 ; THUMB8-NEXT:    movt r3, #65535
@@ -625,20 +615,19 @@ define i1 @scalar_i64_bitsinmiddle_eq(i64 %x, i64 %y) nounwind {
 ; THUMB8-NEXT:    rsb.w r3, r2, #32
 ; THUMB8-NEXT:    lsl.w r3, lr, r3
 ; THUMB8-NEXT:    orr.w r12, r12, r3
-; THUMB8-NEXT:    sub.w r3, r2, #32
+; THUMB8-NEXT:    subs.w r3, r2, #32
 ; THUMB8-NEXT:    lsr.w r2, lr, r2
-; THUMB8-NEXT:    cmp r3, #0
-; THUMB8-NEXT:    lsr.w r4, lr, r3
-; THUMB8-NEXT:    it lt
-; THUMB8-NEXT:    movlt r4, r12
-; THUMB8-NEXT:    it ge
-; THUMB8-NEXT:    movge r2, #0
-; THUMB8-NEXT:    ands r0, r4
+; THUMB8-NEXT:    lsr.w r3, lr, r3
+; THUMB8-NEXT:    it mi
+; THUMB8-NEXT:    movmi r3, r12
+; THUMB8-NEXT:    it pl
+; THUMB8-NEXT:    movpl r2, #0
+; THUMB8-NEXT:    ands r0, r3
 ; THUMB8-NEXT:    ands r1, r2
 ; THUMB8-NEXT:    orrs r0, r1
 ; THUMB8-NEXT:    clz r0, r0
 ; THUMB8-NEXT:    lsrs r0, r0, #5
-; THUMB8-NEXT:    pop {r4, pc}
+; THUMB8-NEXT:    pop {r7, pc}
   %t0 = lshr i64 281474976645120, %y
   %t1 = and i64 %t0, %x
   %res = icmp eq i64 %t1, 0
@@ -1239,7 +1228,7 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; ARM6-NEXT:    sxtb r1, r0
 ; ARM6-NEXT:    mov r0, #0
 ; ARM6-NEXT:    cmp r1, #0
-; ARM6-NEXT:    movlt r0, #1
+; ARM6-NEXT:    movmi r0, #1
 ; ARM6-NEXT:    bx lr
 ;
 ; ARM78-LABEL: negative_scalar_i8_bitsinmiddle_slt:
@@ -1250,7 +1239,7 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; ARM78-NEXT:    sxtb r1, r0
 ; ARM78-NEXT:    mov r0, #0
 ; ARM78-NEXT:    cmp r1, #0
-; ARM78-NEXT:    movwlt r0, #1
+; ARM78-NEXT:    movwmi r0, #1
 ; ARM78-NEXT:    bx lr
 ;
 ; THUMB6-LABEL: negative_scalar_i8_bitsinmiddle_slt:
@@ -1261,7 +1250,7 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; THUMB6-NEXT:    ands r2, r0
 ; THUMB6-NEXT:    sxtb r0, r2
 ; THUMB6-NEXT:    cmp r0, #0
-; THUMB6-NEXT:    blt .LBB20_2
+; THUMB6-NEXT:    bmi .LBB20_2
 ; THUMB6-NEXT:  @ %bb.1:
 ; THUMB6-NEXT:    movs r0, #0
 ; THUMB6-NEXT:    bx lr
@@ -1278,8 +1267,8 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; THUMB78-NEXT:    sxtb r1, r0
 ; THUMB78-NEXT:    movs r0, #0
 ; THUMB78-NEXT:    cmp r1, #0
-; THUMB78-NEXT:    it lt
-; THUMB78-NEXT:    movlt r0, #1
+; THUMB78-NEXT:    it mi
+; THUMB78-NEXT:    movmi r0, #1
 ; THUMB78-NEXT:    bx lr
   %t0 = lshr i8 24, %y
   %t1 = and i8 %t0, %x

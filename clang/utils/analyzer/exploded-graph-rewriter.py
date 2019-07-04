@@ -384,24 +384,28 @@ class ExplodedGraph(object):
 # A visitor that dumps the ExplodedGraph into a DOT file with fancy HTML-based
 # syntax highlighing.
 class DotDumpVisitor(object):
-    def __init__(self, do_diffs, dark_mode):
+    def __init__(self, do_diffs, dark_mode, gray_mode):
         super(DotDumpVisitor, self).__init__()
         self._do_diffs = do_diffs
         self._dark_mode = dark_mode
+        self._gray_mode = gray_mode
 
     @staticmethod
     def _dump_raw(s):
         print(s, end='')
 
-    @staticmethod
-    def _dump(s):
-        print(s.replace('&', '&amp;')
-               .replace('{', '\\{')
-               .replace('}', '\\}')
-               .replace('\\<', '&lt;')
-               .replace('\\>', '&gt;')
-               .replace('\\l', '<br />')
-               .replace('|', '\\|'), end='')
+    def _dump(self, s):
+        s = s.replace('&', '&amp;') \
+             .replace('{', '\\{') \
+             .replace('}', '\\}') \
+             .replace('\\<', '&lt;') \
+             .replace('\\>', '&gt;') \
+             .replace('\\l', '<br />') \
+             .replace('|', '\\|')
+        if self._gray_mode:
+            s = re.sub(r'<font color="[a-z0-9]*">', '', s)
+            s = re.sub(r'</font>', '', s)
+        self._dump_raw(s)
 
     @staticmethod
     def _diff_plus_minus(is_added):
@@ -835,6 +839,9 @@ def main():
     parser.add_argument('--dark', action='store_const', dest='dark',
                         const=True, default=False,
                         help='dark mode')
+    parser.add_argument('--gray', action='store_const', dest='gray',
+                        const=True, default=False,
+                        help='black-and-white mode')
     args = parser.parse_args()
     logging.basicConfig(level=args.loglevel)
 
@@ -845,7 +852,7 @@ def main():
             graph.add_raw_line(raw_line)
 
     explorer = BasicExplorer()
-    visitor = DotDumpVisitor(args.diff, args.dark)
+    visitor = DotDumpVisitor(args.diff, args.dark, args.gray)
     explorer.explore(graph, visitor)
 
 

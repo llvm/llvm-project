@@ -11,7 +11,7 @@
 
 #include "clang/Basic/LLVM.h"
 #include "clang/Frontend/SerializedDiagnostics.h"
-#include "llvm/Bitcode/BitstreamWriter.h"
+#include "llvm/Bitstream/BitstreamWriter.h"
 
 namespace llvm {
 class raw_ostream;

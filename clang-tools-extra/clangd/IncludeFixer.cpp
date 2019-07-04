@@ -152,7 +152,7 @@ std::vector<Fix> IncludeFixer::fixesForSymbols(const SymbolSlab &Syms) const {
     if (!ResolvedInserted)
       return ResolvedInserted.takeError();
     return std::make_pair(
-        Inserter->calculateIncludePath(*ResolvedInserted),
+        Inserter->calculateIncludePath(*ResolvedInserted, File),
         Inserter->shouldInsertInclude(*ResolvedDeclaring, *ResolvedInserted));
   };
 
@@ -396,7 +396,6 @@ std::vector<Fix> IncludeFixer::fixUnresolvedName() const {
 
   return {};
 }
-
 
 llvm::Optional<const SymbolSlab *>
 IncludeFixer::fuzzyFindCached(const FuzzyFindRequest &Req) const {

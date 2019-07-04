@@ -10,7 +10,7 @@ add_clang_unittest(StaticAnalysisTests
   SymbolReaperTest.cpp
   )
 
-target_link_libraries(StaticAnalysisTests
+clang_target_link_libraries(StaticAnalysisTests
   PRIVATE
   clangBasic
   clangAnalysis

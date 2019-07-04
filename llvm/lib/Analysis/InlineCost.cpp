@@ -897,15 +897,7 @@ void CallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
   // and the callsite.
   int SingleBBBonusPercent = 50;
   int VectorBonusPercent = 150;
-
-  int LastCallToStaticBonus = 0;
-  bool OnlyOneCallAndLocalLinkage =
-      F.hasLocalLinkage() && F.hasOneUse() && &F == Call.getCalledFunction();
-  // If there is only one call of the function, and it has internal linkage,
-  // we can allow to inline pretty anything as it will lead to size reduction
-  // anyway.
-  if (OnlyOneCallAndLocalLinkage)
-    LastCallToStaticBonus = InlineConstants::LastCallToStaticBonus;
+  int LastCallToStaticBonus = InlineConstants::LastCallToStaticBonus;
 
   // Lambda to set all the above bonus and bonus percentages to 0.
   auto DisallowAllBonuses = [&]() {
@@ -978,13 +970,20 @@ void CallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
     }
   }
 
-  // Take the target-specific inlining threshold multiplier into account.
+  // Finally, take the target-specific inlining threshold multiplier into
+  // account.
   Threshold *= TTI.getInliningThresholdMultiplier();
 
   SingleBBBonus = Threshold * SingleBBBonusPercent / 100;
   VectorBonus = Threshold * VectorBonusPercent / 100;
 
-  Threshold += LastCallToStaticBonus;
+  bool OnlyOneCallAndLocalLinkage =
+      F.hasLocalLinkage() && F.hasOneUse() && &F == Call.getCalledFunction();
+  // If there is only one call of the function, and it has internal linkage,
+  // the cost of inlining it drops dramatically. It may seem odd to update
+  // Cost in updateThreshold, but the bonus depends on the logic in this method.
+  if (OnlyOneCallAndLocalLinkage)
+    Cost -= LastCallToStaticBonus;
 }
 
 bool CallAnalyzer::visitCmpInst(CmpInst &I) {
@@ -1331,10 +1330,9 @@ bool CallAnalyzer::visitCallBase(CallBase &Call) {
   CallAnalyzer CA(TTI, GetAssumptionCache, GetBFI, PSI, ORE, *F, Call,
                   IndirectCallParams);
   if (CA.analyzeCall(Call)) {
-    // We were able to inline the indirect call! Increase the threshold
-    // with the bonus we want to apply (less the cost of inlinee).
-    // Make sure the bonus doesn't go below zero.
-    Threshold += std::max(0, CA.getThreshold() - CA.getCost());
+    // We were able to inline the indirect call! Subtract the cost from the
+    // threshold to get the bonus we want to apply, but don't go below zero.
+    Cost -= std::max(0, CA.getThreshold() - CA.getCost());
   }
 
   if (!F->onlyReadsMemory())

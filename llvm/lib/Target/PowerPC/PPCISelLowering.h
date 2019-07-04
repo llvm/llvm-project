@@ -634,6 +634,8 @@ namespace llvm {
       return true;
     }
 
+    bool preferIncOfAddToSubOfNot(EVT VT) const override;
+
     bool convertSetCCLogicToBitwiseLogic(EVT VT) const override {
       return VT.isScalarInteger();
     }

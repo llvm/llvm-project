@@ -87,6 +87,8 @@ void X86ExpandPseudo::ExpandICallBranchFunnel(
   const GlobalValue *CombinedGlobal = JTInst->getOperand(1).getGlobal();
 
   auto CmpTarget = [&](unsigned Target) {
+    if (Selector.isReg())
+      MBB->addLiveIn(Selector.getReg());
     BuildMI(*MBB, MBBI, DL, TII->get(X86::LEA64r), X86::R11)
         .addReg(X86::RIP)
         .addImm(1)
@@ -102,6 +104,8 @@ void X86ExpandPseudo::ExpandICallBranchFunnel(
   auto CreateMBB = [&]() {
     auto *NewMBB = MF->CreateMachineBasicBlock(BB);
     MBB->addSuccessor(NewMBB);
+    if (!MBB->isLiveIn(X86::EFLAGS))
+      MBB->addLiveIn(X86::EFLAGS);
     return NewMBB;
   };
 

@@ -89,3 +89,11 @@ Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
   return TFI->hasFP(MF) ? FuncInfo->getFrameOffsetReg()
                         : FuncInfo->getStackPtrOffsetReg();
 }
+
+const uint32_t *SIRegisterInfo::getAllVGPRRegMask() const {
+  return CSR_AMDGPU_AllVGPRs_RegMask;
+}
+
+const uint32_t *SIRegisterInfo::getAllAllocatableSRegMask() const {
+  return CSR_AMDGPU_AllAllocatableSRegs_RegMask;
+}

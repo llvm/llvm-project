@@ -145,9 +145,20 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     KernargSegmentPtr = true;
 
   if (ST.hasFlatAddressSpace() && isEntryFunction() && isAmdHsaOrMesa) {
+    auto hasNonSpillStackObjects = [&]() {
+      // Avoid expensive checking if there's no stack objects.
+      if (!HasStackObjects)
+        return false;
+      for (auto OI = FrameInfo.getObjectIndexBegin(),
+                OE = FrameInfo.getObjectIndexEnd(); OI != OE; ++OI)
+        if (!FrameInfo.isSpillSlotObjectIndex(OI))
+          return true;
+      // All stack objects are spill slots.
+      return false;
+    };
     // TODO: This could be refined a lot. The attribute is a poor way of
     // detecting calls that may require it before argument lowering.
-    if (HasStackObjects || F.hasFnAttribute("amdgpu-flat-scratch"))
+    if (hasNonSpillStackObjects() || F.hasFnAttribute("amdgpu-flat-scratch"))
       FlatScratchInit = true;
   }
 

@@ -1207,7 +1207,7 @@ def FENTRY_CALL : StandardPseudoInstruction {
   let hasSideEffects = 1;
 }
 def ICALL_BRANCH_FUNNEL : StandardPseudoInstruction {
-  let OutOperandList = (outs unknown:$dst);
+  let OutOperandList = (outs);
   let InOperandList = (ins variable_ops);
   let AsmString = "";
   let hasSideEffects = 1;

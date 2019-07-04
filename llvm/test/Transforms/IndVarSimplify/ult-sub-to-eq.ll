@@ -12,6 +12,7 @@ define void @test1(float* nocapture %autoc, float* nocapture %data, float %d, i3
 ; CHECK-NEXT:    [[CMP4:%.*]] = icmp eq i32 [[DATA_LEN]], [[SAMPLE]]
 ; CHECK-NEXT:    br i1 [[CMP4]], label [[FOR_END:%.*]], label [[FOR_BODY_PREHEADER:%.*]]
 ; CHECK:       for.body.preheader:
+; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SUB]] to i64
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 0, [[FOR_BODY_PREHEADER]] ]
@@ -26,7 +27,6 @@ define void @test1(float* nocapture %autoc, float* nocapture %data, float %d, i3
 ; CHECK-NEXT:    [[ADD3:%.*]] = fadd float [[TMP2]], [[MUL]]
 ; CHECK-NEXT:    store float [[ADD3]], float* [[ARRAYIDX2]], align 4
 ; CHECK-NEXT:    [[INDVARS_IV_NEXT]] = add nuw nsw i64 [[INDVARS_IV]], 1
-; CHECK-NEXT:    [[WIDE_TRIP_COUNT:%.*]] = zext i32 [[SUB]] to i64
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDVARS_IV_NEXT]], [[WIDE_TRIP_COUNT]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_BODY]], label [[FOR_END_LOOPEXIT:%.*]]
 ; CHECK:       for.end.loopexit:

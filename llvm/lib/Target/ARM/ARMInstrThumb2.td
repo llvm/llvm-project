@@ -2756,7 +2756,8 @@ def : T2Pat<(and     rGPR:$src, t2_so_imm_not:$imm),
 
 // top16Zero - answer true if the upper 16 bits of $src are 0, false otherwise
 def top16Zero: PatLeaf<(i32 rGPR:$src), [{
-  return CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 16));
+  return !SDValue(N,0)->getValueType(0).isVector() &&
+         CurDAG->MaskedValueIsZero(SDValue(N,0), APInt::getHighBitsSet(32, 16));
   }]>;
 
 // so_imm_notSext is needed instead of so_imm_not, as the value of imm

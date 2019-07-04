@@ -75,7 +75,7 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/ADT/iterator_range.h"
-#include "llvm/Bitcode/BitstreamWriter.h"
+#include "llvm/Bitstream/BitstreamWriter.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CrashRecoveryContext.h"
@@ -2447,8 +2447,8 @@ void ASTUnit::addFileLevelDecl(Decl *D) {
     return;
   }
 
-  LocDeclsTy::iterator I = std::upper_bound(Decls->begin(), Decls->end(),
-                                            LocDecl, llvm::less_first());
+  LocDeclsTy::iterator I =
+      llvm::upper_bound(*Decls, LocDecl, llvm::less_first());
 
   Decls->insert(I, LocDecl);
 }
@@ -2473,9 +2473,9 @@ void ASTUnit::findFileRegionDecls(FileID File, unsigned Offset, unsigned Length,
     return;
 
   LocDeclsTy::iterator BeginIt =
-      std::lower_bound(LocDecls.begin(), LocDecls.end(),
-                       std::make_pair(Offset, (Decl *)nullptr),
-                       llvm::less_first());
+      llvm::partition_point(LocDecls, [=](std::pair<unsigned, Decl *> LD) {
+        return LD.first < Offset;
+      });
   if (BeginIt != LocDecls.begin())
     --BeginIt;
 
@@ -2486,9 +2486,9 @@ void ASTUnit::findFileRegionDecls(FileID File, unsigned Offset, unsigned Length,
          BeginIt->second->isTopLevelDeclInObjCContainer())
     --BeginIt;
 
-  LocDeclsTy::iterator EndIt = std::upper_bound(
-      LocDecls.begin(), LocDecls.end(),
-      std::make_pair(Offset + Length, (Decl *)nullptr), llvm::less_first());
+  LocDeclsTy::iterator EndIt = llvm::upper_bound(
+      LocDecls, std::make_pair(Offset + Length, (Decl *)nullptr),
+      llvm::less_first());
   if (EndIt != LocDecls.end())
     ++EndIt;
 

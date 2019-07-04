@@ -368,6 +368,9 @@ void WebAssemblyPassConfig::addIRPasses() {
     addPass(createWebAssemblyLowerEmscriptenEHSjLj(EnableEmException,
                                                    EnableEmSjLj));
 
+  // Expand indirectbr instructions to switches.
+  addPass(createIndirectBrExpandPass());
+
   TargetPassConfig::addIRPasses();
 }
 

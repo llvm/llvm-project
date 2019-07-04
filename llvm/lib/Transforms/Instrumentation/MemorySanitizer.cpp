@@ -3233,21 +3233,21 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void visitCallSite(CallSite CS) {
     Instruction &I = *CS.getInstruction();
     assert(!I.getMetadata("nosanitize"));
-    assert((CS.isCall() || CS.isInvoke()) && "Unknown type of CallSite");
+    assert((CS.isCall() || CS.isInvoke() || CS.isCallBr()) &&
+           "Unknown type of CallSite");
+    if (CS.isCallBr() || (CS.isCall() && cast<CallInst>(&I)->isInlineAsm())) {
+      // For inline asm (either a call to asm function, or callbr instruction),
+      // do the usual thing: check argument shadow and mark all outputs as
+      // clean. Note that any side effects of the inline asm that are not
+      // immediately visible in its constraints are not handled.
+      if (ClHandleAsmConservative && MS.CompileKernel)
+        visitAsmInstruction(I);
+      else
+        visitInstruction(I);
+      return;
+    }
     if (CS.isCall()) {
       CallInst *Call = cast<CallInst>(&I);
-
-      // For inline asm, do the usual thing: check argument shadow and mark all
-      // outputs as clean. Note that any side effects of the inline asm that are
-      // not immediately visible in its constraints are not handled.
-      if (Call->isInlineAsm()) {
-        if (ClHandleAsmConservative && MS.CompileKernel)
-          visitAsmInstruction(I);
-        else
-          visitInstruction(I);
-        return;
-      }
-
       assert(!isa<IntrinsicInst>(&I) && "intrinsics are handled elsewhere");
 
       // We are going to insert code that relies on the fact that the callee
@@ -3624,10 +3624,10 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   /// Get the number of output arguments returned by pointers.
-  int getNumOutputArgs(InlineAsm *IA, CallInst *CI) {
+  int getNumOutputArgs(InlineAsm *IA, CallBase *CB) {
     int NumRetOutputs = 0;
     int NumOutputs = 0;
-    Type *RetTy = dyn_cast<Value>(CI)->getType();
+    Type *RetTy = dyn_cast<Value>(CB)->getType();
     if (!RetTy->isVoidTy()) {
       // Register outputs are returned via the CallInst return value.
       StructType *ST = dyn_cast_or_null<StructType>(RetTy);
@@ -3667,24 +3667,24 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // corresponding CallInst has nO+nI+1 operands (the last operand is the
     // function to be called).
     const DataLayout &DL = F.getParent()->getDataLayout();
-    CallInst *CI = dyn_cast<CallInst>(&I);
+    CallBase *CB = dyn_cast<CallBase>(&I);
     IRBuilder<> IRB(&I);
-    InlineAsm *IA = cast<InlineAsm>(CI->getCalledValue());
-    int OutputArgs = getNumOutputArgs(IA, CI);
+    InlineAsm *IA = cast<InlineAsm>(CB->getCalledValue());
+    int OutputArgs = getNumOutputArgs(IA, CB);
     // The last operand of a CallInst is the function itself.
-    int NumOperands = CI->getNumOperands() - 1;
+    int NumOperands = CB->getNumOperands() - 1;
 
     // Check input arguments. Doing so before unpoisoning output arguments, so
     // that we won't overwrite uninit values before checking them.
     for (int i = OutputArgs; i < NumOperands; i++) {
-      Value *Operand = CI->getOperand(i);
+      Value *Operand = CB->getOperand(i);
       instrumentAsmArgument(Operand, I, IRB, DL, /*isOutput*/ false);
     }
     // Unpoison output arguments. This must happen before the actual InlineAsm
     // call, so that the shadow for memory published in the asm() statement
     // remains valid.
     for (int i = 0; i < OutputArgs; i++) {
-      Value *Operand = CI->getOperand(i);
+      Value *Operand = CB->getOperand(i);
       instrumentAsmArgument(Operand, I, IRB, DL, /*isOutput*/ true);
     }
 

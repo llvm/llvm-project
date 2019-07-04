@@ -23,6 +23,9 @@ namespace llvm {
 namespace remarks {
 
 struct ParserImpl;
+struct ParsedStringTable;
+
+enum class ParserFormat { YAML };
 
 /// Parser used to parse a raw buffer to remarks::Remark objects.
 struct Parser {
@@ -30,13 +33,14 @@ struct Parser {
   std::unique_ptr<ParserImpl> Impl;
 
   /// Create a parser parsing \p Buffer to Remark objects.
-  /// This constructor should be only used for parsing YAML remarks.
-  Parser(StringRef Buffer);
+  /// This constructor should be only used for parsing remarks without a string
+  /// table.
+  Parser(ParserFormat Format, StringRef Buffer);
 
-  /// Create a parser parsing \p Buffer to Remark objects, using \p StrTabBuf as
+  /// Create a parser parsing \p Buffer to Remark objects, using \p StrTab as a
   /// string table.
-  /// This constructor should be only used for parsing YAML remarks.
-  Parser(StringRef Buffer, StringRef StrTabBuf);
+  Parser(ParserFormat Format, StringRef Buffer,
+         const ParsedStringTable &StrTab);
 
   // Needed because ParserImpl is an incomplete type.
   ~Parser();
@@ -54,7 +58,7 @@ struct ParsedStringTable {
   /// Collection of offsets in the buffer for each string entry.
   SmallVector<size_t, 8> Offsets;
 
-  Expected<StringRef> operator[](size_t Index);
+  Expected<StringRef> operator[](size_t Index) const;
   ParsedStringTable(StringRef Buffer);
 };
 

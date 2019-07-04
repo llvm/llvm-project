@@ -20,7 +20,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
-#include "llvm/Bitcode/BitstreamReader.h"
+#include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Bitcode/LLVMBitCodes.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Argument.h"
@@ -616,13 +616,13 @@ private:
   }
 
   /// Return the flattened type (suitable for use in a Value)
-  /// specified by the given \param ID.
+  /// specified by the given \param ID .
   Type *getTypeByID(unsigned ID) {
     return flattenPointerTypes(getFullyStructuredTypeByID(ID));
   }
 
   /// Return the fully structured (bitcode-reader internal) type
-  /// corresponding to the given \param ID.
+  /// corresponding to the given \param ID .
   Type *getFullyStructuredTypeByID(unsigned ID);
 
   Value *getFnValueByID(unsigned ID, Type *Ty, Type **FullTy = nullptr) {

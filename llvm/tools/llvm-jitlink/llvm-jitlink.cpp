@@ -14,6 +14,7 @@
 
 #include "llvm-jitlink.h"
 
+#include "llvm/ExecutionEngine/JITLink/EHFrameSupport.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
@@ -232,7 +233,8 @@ Session::Session(Triple TT) : ObjLayer(ES, MemMgr), TT(std::move(TT)) {
   };
 
   if (!NoExec && !TT.isOSWindows())
-    ObjLayer.addPlugin(llvm::make_unique<LocalEHFrameRegistrationPlugin>());
+    ObjLayer.addPlugin(llvm::make_unique<EHFrameRegistrationPlugin>(
+        InProcessEHFrameRegistrar::getInstance()));
 
   ObjLayer.addPlugin(llvm::make_unique<JITLinkSessionPlugin>(*this));
 }

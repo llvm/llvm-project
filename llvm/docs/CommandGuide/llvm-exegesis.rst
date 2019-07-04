@@ -166,7 +166,6 @@ Note that the scheduling class names will be resolved only when
 :program:`llvm-exegesis` is compiled in debug mode, else only the class id will
 be shown. This does not invalidate any of the analysis results though.
 
-
 OPTIONS
 -------
 

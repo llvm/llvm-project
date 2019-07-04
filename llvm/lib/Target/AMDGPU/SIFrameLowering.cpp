@@ -721,11 +721,10 @@ void SIFrameLowering::emitEpilogue(MachineFunction &MF,
 
 // Note SGPRSpill stack IDs should only be used for SGPR spilling to VGPRs, not
 // memory.
-static bool allStackObjectsAreDeadOrSGPR(const MachineFrameInfo &MFI) {
+static bool allStackObjectsAreDead(const MachineFrameInfo &MFI) {
   for (int I = MFI.getObjectIndexBegin(), E = MFI.getObjectIndexEnd();
        I != E; ++I) {
-    if (!MFI.isDeadObjectIndex(I) &&
-        MFI.getStackID(I) != TargetStackID::SGPRSpill)
+    if (!MFI.isDeadObjectIndex(I))
       return false;
   }
 
@@ -753,37 +752,12 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   const SIRegisterInfo &TRI = TII->getRegisterInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
-  if (TRI.spillSGPRToVGPR() && FuncInfo->hasSpilledSGPRs()) {
-    // Process all SGPR spills before frame offsets are finalized. Ideally SGPRs
-    // are spilled to VGPRs, in which case we can eliminate the stack usage.
-    //
-    // XXX - This operates under the assumption that only other SGPR spills are
-    // users of the frame index. I'm not 100% sure this is correct. The
-    // StackColoring pass has a comment saying a future improvement would be to
-    // merging of allocas with spill slots, but for now according to
-    // MachineFrameInfo isSpillSlot can't alias any other object.
-    for (MachineBasicBlock &MBB : MF) {
-      MachineBasicBlock::iterator Next;
-      for (auto I = MBB.begin(), E = MBB.end(); I != E; I = Next) {
-        MachineInstr &MI = *I;
-        Next = std::next(I);
-
-        if (TII->isSGPRSpill(MI)) {
-          int FI = TII->getNamedOperand(MI, AMDGPU::OpName::addr)->getIndex();
-          assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
-          if (FuncInfo->allocateSGPRSpillToVGPR(MF, FI)) {
-            bool Spilled = TRI.eliminateSGPRToVGPRSpillFrameIndex(MI, FI, RS);
-            (void)Spilled;
-            assert(Spilled && "failed to spill SGPR to VGPR when allocated");
-          }
-        }
-      }
-    }
-  }
-
   FuncInfo->removeSGPRToVGPRFrameIndices(MFI);
 
-  if (!allStackObjectsAreDeadOrSGPR(MFI)) {
+  // FIXME: The other checks should be redundant with allStackObjectsAreDead,
+  // but currently hasNonSpillStackObjects is set only from source
+  // allocas. Stack temps produced from legalization are not counted currently.
+  if (!allStackObjectsAreDead(MFI)) {
     assert(RS && "RegScavenger required if spilling");
 
     if (FuncInfo->isEntryFunction()) {
@@ -800,13 +774,33 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   }
 }
 
-void SIFrameLowering::determineCalleeSaves(MachineFunction &MF, BitVector &SavedRegs,
+// Only report VGPRs to generic code.
+void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
+                                           BitVector &SavedRegs,
                                            RegScavenger *RS) const {
+  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  SavedRegs.clearBitsNotInMask(TRI->getAllVGPRRegMask());
+
+  // VGPRs used for SGPR spilling need to be specially inserted in the prolog.
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  for (auto SSpill : MFI->getSGPRSpillVGPRs())
+    SavedRegs.reset(SSpill.VGPR);
+}
+
+void SIFrameLowering::determineCalleeSavesSGPR(MachineFunction &MF,
+                                               BitVector &SavedRegs,
+                                               RegScavenger *RS) const {
   TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
   const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+
   // The SP is specifically managed and we don't want extra spills of it.
   SavedRegs.reset(MFI->getStackPtrOffsetReg());
+  SavedRegs.clearBitsInMask(TRI->getAllVGPRRegMask());
 }
 
 MachineBasicBlock::iterator SIFrameLowering::eliminateCallFramePseudoInstr(

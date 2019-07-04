@@ -438,6 +438,10 @@ struct WasmSym {
   // Function that directly calls all ctors in priority order.
   static DefinedFunction *CallCtors;
 
+  // __wasm_init_memory
+  // Function that initializes passive data segments post-instantiation.
+  static DefinedFunction *InitMemory;
+
   // __wasm_apply_relocs
   // Function that applies relocations to data segment post-instantiation.
   static DefinedFunction *ApplyRelocs;

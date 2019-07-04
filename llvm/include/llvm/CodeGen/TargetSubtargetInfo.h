@@ -291,6 +291,14 @@ public:
 
   /// This is called after a .mir file was loaded.
   virtual void mirFileLoaded(MachineFunction &MF) const;
+
+  /// True if the register allocator should use the allocation orders exactly as
+  /// written in the tablegen descriptions, false if it should allocate
+  /// the specified physical register later if is it callee-saved.
+  virtual bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
+                                           unsigned PhysReg) const {
+    return false;
+  }
 };
 
 } // end namespace llvm

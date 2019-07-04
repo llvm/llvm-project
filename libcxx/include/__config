@@ -1294,15 +1294,15 @@ _LIBCPP_FUNC_VIS extern "C" void __sanitizer_annotate_contiguous_container(
      __attribute__((availability(macosx,strict,introduced=10.9)))              \
      __attribute__((availability(ios,strict,introduced=7.0)))
 #  define _LIBCPP_AVAILABILITY_FILESYSTEM                                      \
-     __attribute__((availability(macosx,strict,unavailable)))                  \
-     __attribute__((availability(ios,strict,unavailable)))                     \
-     __attribute__((availability(tvos,strict,unavailable)))                    \
-     __attribute__((availability(watchos,strict,unavailable)))
+     __attribute__((availability(macosx,strict,introduced=10.15)))             \
+     __attribute__((availability(ios,strict,introduced=13.0)))                 \
+     __attribute__((availability(tvos,strict,introduced=13.0)))                \
+     __attribute__((availability(watchos,strict,introduced=6.0)))
 #  define _LIBCPP_AVAILABILITY_FILESYSTEM_PUSH                                 \
-     _Pragma("clang attribute push(__attribute__((availability(macosx,strict,unavailable))), apply_to=any(function,record))") \
-     _Pragma("clang attribute push(__attribute__((availability(ios,strict,unavailable))), apply_to=any(function,record))")    \
-     _Pragma("clang attribute push(__attribute__((availability(tvos,strict,unavailable))), apply_to=any(function,record))")   \
-     _Pragma("clang attribute push(__attribute__((availability(watchos,strict,unavailable))), apply_to=any(function,record))")
+     _Pragma("clang attribute push(__attribute__((availability(macosx,strict,introduced=10.15))), apply_to=any(function,record))") \
+     _Pragma("clang attribute push(__attribute__((availability(ios,strict,introduced=13.0))), apply_to=any(function,record))")     \
+     _Pragma("clang attribute push(__attribute__((availability(tvos,strict,introduced=13.0))), apply_to=any(function,record))")    \
+     _Pragma("clang attribute push(__attribute__((availability(watchos,strict,introduced=6.0))), apply_to=any(function,record))")
 #  define _LIBCPP_AVAILABILITY_FILESYSTEM_POP                                  \
      _Pragma("clang attribute pop")                                            \
      _Pragma("clang attribute pop")                                            \

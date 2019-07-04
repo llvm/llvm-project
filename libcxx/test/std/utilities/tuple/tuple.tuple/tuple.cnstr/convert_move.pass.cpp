@@ -46,6 +46,20 @@ struct D
     explicit D(int i) : B(i) {}
 };
 
+struct BonkersBananas {
+  template <class T>
+  operator T() &&;
+  template <class T, class = void>
+  explicit operator T() && = delete;
+};
+
+void test_bonkers_bananas_conversion() {
+  using ReturnType = std::tuple<int, int>;
+  static_assert(std::is_convertible<BonkersBananas, ReturnType>(), "");
+  static_assert(!std::is_constructible<ReturnType, BonkersBananas>(), "");
+
+}
+
 int main(int, char**)
 {
     {

@@ -19,6 +19,7 @@ subdirectories =
  Analysis
  AsmParser
  Bitcode
+ Bitstream
  CodeGen
  DebugInfo
  Demangle
