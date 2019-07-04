@@ -154,9 +154,7 @@ OPTIONS
             optional offset of the exact entry to dump within the
             respective section. When an offset is provided, only the
             entry at that offset will be dumped, else the entire
-            section will be dumped. Children of items at a specific
-            offset can be dumped by also using the
-            :option:`--show-children` option where applicable.
+            section will be dumped.
 
 .. option:: @<FILE>
 

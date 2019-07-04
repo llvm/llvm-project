@@ -6,8 +6,8 @@
 # error). The format is
 # <name> <attributes> # comment
 
-# Computed gotos are not supported (Cannot select BlockAddress/BRIND)
-20071220-1.c O2
+# blockaddress without an indirectbr still can't be supported
+20071220-1.c O2 # Relocation against a BB address
 20071220-2.c
 990208-1.c
 label13.C O0

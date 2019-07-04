@@ -386,8 +386,8 @@ static void updateBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
 /// \param Header The header block.
 /// \param LatchBR The latch branch.
 /// \param AvgIters The average number of iterations we expect the loop to have.
-/// \param[out] ExitWeight The weight of the edge from Latch to Exit block.
-/// \param[out] CurHeaderWeight The # of time the header is executed.
+/// \param[out] ExitWeight The # of times the edge from Latch to Exit is taken.
+/// \param[out] CurHeaderWeight The # of times the header is executed.
 static void initBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
                               unsigned AvgIters, uint64_t &ExitWeight,
                               uint64_t &CurHeaderWeight) {
@@ -397,7 +397,7 @@ static void initBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
   unsigned HeaderIdx = LatchBR->getSuccessor(0) == Header ? 0 : 1;
   ExitWeight = HeaderIdx ? TrueWeight : FalseWeight;
   // The # of times the loop body executes is the sum of the exit block
-  // weight and the # of times the backedges are taken.
+  // is taken and the # of times the backedges are taken.
   CurHeaderWeight = TrueWeight + FalseWeight;
 }
 

@@ -16965,7 +16965,7 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     // this can be done with a mask.
     IdxVal &= ElemsPerChunk - 1;
     return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, Op.getValueType(), Vec,
-                       DAG.getConstant(IdxVal, dl, MVT::i32));
+                       DAG.getIntPtrConstant(IdxVal, dl));
   }
 
   assert(VecVT.is128BitVector() && "Unexpected vector length");
@@ -17140,7 +17140,7 @@ SDValue X86TargetLowering::LowerINSERT_VECTOR_ELT(SDValue Op,
     unsigned IdxIn128 = IdxVal & (NumEltsIn128 - 1);
 
     V = DAG.getNode(ISD::INSERT_VECTOR_ELT, dl, V.getValueType(), V, N1,
-                    DAG.getConstant(IdxIn128, dl, MVT::i32));
+                    DAG.getIntPtrConstant(IdxIn128, dl));
 
     // Insert the changed part back into the bigger vector
     return insert128BitVector(N0, V, IdxVal, DAG, dl);

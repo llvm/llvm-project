@@ -62,8 +62,8 @@ entry:
 
 define double @f7(double %a, double %b) {
 ;CHECK-LABEL: f7:
-;CHECK: movlt
-;CHECK: movge
+;CHECK: movmi
+;CHECK: movpl
 ;CHECK-VFP-LABEL: f7:
 ;CHECK-VFP: vmovmi
     %tmp = fcmp olt double %a, 1.234e+00
