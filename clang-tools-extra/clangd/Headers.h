@@ -151,8 +151,12 @@ public:
   /// \param InsertedHeader The preferred header to be inserted. This could be
   /// the same as DeclaringHeader but must be provided.
   ///
+  /// \param IncludingFile is the absolute path of the file that InsertedHeader
+  /// will be inserted.
+  ///
   /// \return A quoted "path" or <path> to be included.
-  std::string calculateIncludePath(const HeaderFile &InsertedHeader) const;
+  std::string calculateIncludePath(const HeaderFile &InsertedHeader,
+                                   llvm::StringRef IncludingFile) const;
 
   /// Calculates an edit that inserts \p VerbatimHeader into code. If the header
   /// is already included, this returns None.

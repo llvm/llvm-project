@@ -201,9 +201,10 @@ public:
   }
 
   /// True if terminator in the block can branch to another block that is
-  /// outside of the current loop.
+  /// outside of the current loop. \p BB must be inside the loop.
   bool isLoopExiting(const BlockT *BB) const {
     assert(!isInvalid() && "Loop not in a valid state!");
+    assert(contains(BB) && "Exiting block must be part of the loop");
     for (const auto &Succ : children<const BlockT *>(BB)) {
       if (!contains(Succ))
         return true;

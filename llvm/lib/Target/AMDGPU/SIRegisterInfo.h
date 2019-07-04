@@ -264,6 +264,9 @@ public:
                                 MachineRegisterInfo &MRI,
                                 LiveIntervals *LIS) const;
 
+  const uint32_t *getAllVGPRRegMask() const;
+  const uint32_t *getAllAllocatableSRegMask() const;
+
 private:
   void buildSpillLoadStore(MachineBasicBlock::iterator MI,
                            unsigned LoadStoreOp,

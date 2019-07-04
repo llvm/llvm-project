@@ -11,14 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_BITCODE_BITSTREAMWRITER_H
-#define LLVM_BITCODE_BITSTREAMWRITER_H
+#ifndef LLVM_BITSTREAM_BITSTREAMWRITER_H
+#define LLVM_BITSTREAM_BITSTREAMWRITER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Bitcode/BitCodes.h"
+#include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Support/Endian.h"
 #include <vector>
 

@@ -7,7 +7,7 @@ add_clang_executable(clang-extdef-mapping
   ClangExtDefMapGen.cpp
   )
 
-target_link_libraries(clang-extdef-mapping
+clang_target_link_libraries(clang-extdef-mapping
   PRIVATE
   clangAST
   clangBasic

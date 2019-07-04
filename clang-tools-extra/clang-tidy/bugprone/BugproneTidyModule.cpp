@@ -31,6 +31,7 @@
 #include "MoveForwardingReferenceCheck.h"
 #include "MultipleStatementMacroCheck.h"
 #include "ParentVirtualCallCheck.h"
+#include "PosixReturnCheck.h"
 #include "SizeofContainerCheck.h"
 #include "SizeofExpressionCheck.h"
 #include "StringConstructorCheck.h"
@@ -104,6 +105,8 @@ public:
         "bugprone-narrowing-conversions");
     CheckFactories.registerCheck<ParentVirtualCallCheck>(
         "bugprone-parent-virtual-call");
+    CheckFactories.registerCheck<PosixReturnCheck>(
+        "bugprone-posix-return");
     CheckFactories.registerCheck<SizeofContainerCheck>(
         "bugprone-sizeof-container");
     CheckFactories.registerCheck<SizeofExpressionCheck>(

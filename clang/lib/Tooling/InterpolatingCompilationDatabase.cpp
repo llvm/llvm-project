@@ -478,8 +478,7 @@ private:
                                  ArrayRef<SubstringAndIndex> Idx) const {
     assert(!Idx.empty());
     // Longest substring match will be adjacent to a direct lookup.
-    auto It =
-        std::lower_bound(Idx.begin(), Idx.end(), SubstringAndIndex{Key, 0});
+    auto It = llvm::lower_bound(Idx, SubstringAndIndex{Key, 0});
     if (It == Idx.begin())
       return *It;
     if (It == Idx.end())

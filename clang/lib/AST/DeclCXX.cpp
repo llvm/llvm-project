@@ -1450,10 +1450,8 @@ CXXRecordDecl::getLambdaExplicitTemplateParameters() const {
                              [](const NamedDecl *D) { return !D->isImplicit(); })
          && "Explicit template params should be ordered before implicit ones");
 
-  const auto ExplicitEnd = std::lower_bound(List->begin(), List->end(), false,
-                                            [](const NamedDecl *D, bool) {
-    return !D->isImplicit();
-  });
+  const auto ExplicitEnd = llvm::partition_point(
+      *List, [](const NamedDecl *D) { return !D->isImplicit(); });
   return llvm::makeArrayRef(List->begin(), ExplicitEnd);
 }
 

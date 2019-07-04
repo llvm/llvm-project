@@ -6,13 +6,10 @@ llvm-ar - LLVM archiver
 SYNOPSIS
 --------
 
-
 **llvm-ar** [-]{dmpqrtx}[Rabfikou] [relpos] [count] <archive> [files...]
-
 
 DESCRIPTION
 -----------
-
 
 The **llvm-ar** command is similar to the common Unix utility, ``ar``. It
 archives several files together into a single file. The intent for this is
@@ -29,23 +26,18 @@ update) operations, the archive will be reconstructed in GNU format.
 
 Here's where **llvm-ar** departs from previous ``ar`` implementations:
 
-
 *Symbol Table*
 
  Since **llvm-ar** supports bitcode files. The symbol table it creates
  is in GNU format and includes both native and bitcode files.
-
 
 *Long Paths*
 
  Currently **llvm-ar** can read GNU and BSD long file names, but only writes
  archives with the GNU format.
 
-
-
 OPTIONS
 -------
-
 
 The options to **llvm-ar** are compatible with other ``ar`` implementations.
 However, there are a few modifiers (*R*) that are not found in other ``ar``
@@ -64,16 +56,12 @@ generally means either "none" or "all" members, depending on the operation.
 Operations
 ~~~~~~~~~~
 
-
-
 d
 
  Delete files from the archive. No modifiers are applicable to this operation.
  The *files* options specify which members should be removed from the
  archive. It is not an error if a specified file does not appear in the archive.
  If no *files* are specified, the archive is not modified.
-
-
 
 m[abi]
 
@@ -83,8 +71,6 @@ m[abi]
  will be moved to the end of the archive. If no *files* are specified, the
  archive is not modified.
 
-
-
 p
 
  Print files to the standard output. This operation simply prints the
@@ -92,8 +78,6 @@ p
  specified, the entire  archive is printed.  Printing bitcode files is
  ill-advised as they might confuse your terminal settings. The *p*
  operation never modifies the archive.
-
-
 
 q
 
@@ -103,16 +87,12 @@ q
  Because of the way that **llvm-ar** constructs the archive file, its dubious
  whether the *q* operation is any faster than the *r* operation.
 
-
-
 r[abu]
 
  Replace or insert file members. The *a*, *b*,  and *u*
  modifiers apply to this operation. This operation will replace existing
  *files* or insert them at the end of the archive if they do not exist. If no
  *files* are specified, the archive is not modified.
-
-
 
 t[v]
 
@@ -124,8 +104,6 @@ t[v]
  those files. If no *files* are specified, the table of contents for the
  whole archive is printed.
 
-
-
 x[oP]
 
  Extract archive members back to files. The *o* modifier applies to this
@@ -133,24 +111,17 @@ x[oP]
  and writes them back to the operating system's file system. If no
  *files* are specified, the entire archive is extract.
 
-
-
-
 Modifiers (operation specific)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
 The modifiers below are specific to certain operations. See the Operations
 section (above) to determine which modifiers are applicable to which operations.
-
 
 [a]
 
  When inserting or moving member files, this option specifies the destination of
  the new files as being after the *relpos* member. If *relpos* is not found,
  the files are placed at the end of the archive.
-
-
 
 [b]
 
@@ -159,42 +130,30 @@ section (above) to determine which modifiers are applicable to which operations.
  found, the files are placed at the end of the archive. This modifier is
  identical to the *i* modifier.
 
-
-
 [i]
 
  A synonym for the *b* option.
-
-
 
 [o]
 
  When extracting files, this option will cause **llvm-ar** to preserve the
  original modification times of the files it writes.
 
-
-
 [u]
 
  When replacing existing files in the archive, only replace those files that have
  a time stamp than the time stamp of the member in the archive.
 
-
-
-
 Modifiers (generic)
 ~~~~~~~~~~~~~~~~~~~
 
-
 The modifiers below may be applied to any operation.
-
 
 [c]
 
  For all operations, **llvm-ar** will always create the archive if it doesn't
  exist. Normally, **llvm-ar** will print a warning message indicating that the
  archive is being created. Using this modifier turns off that warning.
-
 
 
 [s]
@@ -204,15 +163,11 @@ The modifiers below may be applied to any operation.
  all the externally visible functions and global variables defined by all the
  bitcode files in the archive.
 
-
-
 [S]
 
  This modifier is the opposite of the *s* modifier. It instructs **llvm-ar** to
  not build the symbol table. If both *s* and *S* are used, the last modifier to
  occur in the options will prevail.
-
-
 
 [v]
 
@@ -220,13 +175,8 @@ The modifiers below may be applied to any operation.
  editing operation taken against the archive will produce a line of output saying
  what is being done.
 
-
-
-
-
 STANDARDS
 ---------
-
 
 The **llvm-ar** utility is intended to provide a superset of the IEEE Std 1003.2
 (POSIX.2) functionality for ``ar``. **llvm-ar** can read both SVR4 and BSD4.4 (or
@@ -236,10 +186,8 @@ then **llvm-ar** will write SVR4 compatible archives. Without this modifier,
 immediately after the header and indicated using the "#1/ddd" notation for the
 name in the header.
 
-
 FILE FORMAT
 -----------
-
 
 The file format for LLVM Archive files is similar to that of BSD 4.4 or macOS
 archive files. In fact, except for the symbol table, the ``ar`` commands on those
@@ -258,7 +206,6 @@ The fields of the header are described in the items below. All fields of the
 header contain only ASCII characters, are left justified and are right padded
 with space characters.
 
-
 name - char[16]
 
  This field of the header provides the name of the archive member. If the name is
@@ -268,15 +215,11 @@ name - char[16]
  bytes immediately following the header. If the name is 15 characters or less, it
  is contained directly in this field and terminated with a slash (/) character.
 
-
-
 date - char[12]
 
  This field provides the date of modification of the file in the form of a
  decimal encoded number that provides the number of seconds since the epoch
  (since 00:00:00 Jan 1, 1970) per Posix specifications.
-
-
 
 uid - char[6]
 
@@ -285,16 +228,12 @@ uid - char[6]
  same value as the st_uid field of the stat structure returned by the stat(2)
  operating system call.
 
-
-
 gid - char[6]
 
  This field provides the group id of the file encoded as a decimal ASCII string.
  This field might not make much sense on non-Unix systems. On Unix, it is the
  same value as the st_gid field of the stat structure returned by the stat(2)
  operating system call.
-
-
 
 mode - char[8]
 
@@ -303,21 +242,16 @@ mode - char[8]
  is the same value as the st_mode field of the stat structure returned by the
  stat(2) operating system call.
 
-
-
 size - char[10]
 
  This field provides the size of the file, in bytes, encoded as a decimal ASCII
  string.
-
-
 
 fmag - char[2]
 
  This field is the archive file member magic number. Its content is always the
  two characters back tick (0x60) and newline (0x0A). This provides some measure
  utility in identifying archive files that have been corrupted.
-
 
 offset - vbr encoded 32-bit integer
 
@@ -331,14 +265,10 @@ offset - vbr encoded 32-bit integer
  if there are more bytes to follow. The remaining 7 bits in each byte carry bits
  from the value. The final byte does not have the high bit set.
 
-
-
 length - vbr encoded 32-bit integer
 
  The length item provides the length of the symbol that follows. Like this
  *offset* item, the length is variable bit rate encoded.
-
-
 
 symbol - character array
 
@@ -348,21 +278,15 @@ symbol - character array
  characters (even 0x00) in the symbol. This allows for multiple encodings of
  symbol names.
 
-
-
-
 EXIT STATUS
 -----------
-
 
 If **llvm-ar** succeeds, it will exit with 0.  A usage error, results
 in an exit code of 1. A hard (file system typically) error results in an
 exit code of 2. Miscellaneous or unknown errors result in an
 exit code of 3.
 
-
 SEE ALSO
 --------
-
 
 ar(1)

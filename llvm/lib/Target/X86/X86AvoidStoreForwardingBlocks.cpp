@@ -408,7 +408,7 @@ void X86AvoidSFBPass::buildCopy(MachineInstr *LoadInst, unsigned NLoadOpcode,
   // If the load and store are consecutive, use the loadInst location to
   // reduce register pressure.
   MachineInstr *StInst = StoreInst;
-  auto PrevInstrIt = skipDebugInstructionsBackward(
+  auto PrevInstrIt = skipMetaInstructionsBackward(
       std::prev(MachineBasicBlock::instr_iterator(StoreInst)),
       MBB->instr_begin());
   if (PrevInstrIt.getNodePtr() == LoadInst)
@@ -496,7 +496,7 @@ void X86AvoidSFBPass::buildCopies(int Size, MachineInstr *LoadInst,
 static void updateKillStatus(MachineInstr *LoadInst, MachineInstr *StoreInst) {
   MachineOperand &LoadBase = getBaseOperand(LoadInst);
   MachineOperand &StoreBase = getBaseOperand(StoreInst);
-  auto StorePrevNonDbgInstr = skipDebugInstructionsBackward(
+  auto StorePrevNonMetaInstr = skipMetaInstructionsBackward(
           std::prev(MachineBasicBlock::instr_iterator(StoreInst)),
           LoadInst->getParent()->instr_begin()).getNodePtr();
   if (LoadBase.isReg()) {
@@ -505,13 +505,13 @@ static void updateKillStatus(MachineInstr *LoadInst, MachineInstr *StoreInst) {
     // then the partial copies were also created in
     // a consecutive order to reduce register pressure,
     // and the location of the last load is before the last store.
-    if (StorePrevNonDbgInstr == LoadInst)
+    if (StorePrevNonMetaInstr == LoadInst)
       LastLoad = LoadInst->getPrevNode()->getPrevNode();
     getBaseOperand(LastLoad).setIsKill(LoadBase.isKill());
   }
   if (StoreBase.isReg()) {
     MachineInstr *StInst = StoreInst;
-    if (StorePrevNonDbgInstr == LoadInst)
+    if (StorePrevNonMetaInstr == LoadInst)
       StInst = LoadInst;
     getBaseOperand(StInst->getPrevNode()).setIsKill(StoreBase.isKill());
   }

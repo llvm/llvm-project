@@ -27,6 +27,41 @@ Error registerEHFrameSection(const void *EHFrameSectionAddr);
 /// Deregisters all FDEs in the given eh-frame section with the current process.
 Error deregisterEHFrameSection(const void *EHFrameSectionAddr);
 
+/// Supports registration/deregistration of EH-frames in a target process.
+class EHFrameRegistrar {
+public:
+  virtual ~EHFrameRegistrar();
+  virtual Error registerEHFrames(JITTargetAddress EHFrameSectionAddr) = 0;
+  virtual Error deregisterEHFrames(JITTargetAddress EHFrameSectionAddr) = 0;
+};
+
+/// Registers / Deregisters EH-frames in the current process.
+class InProcessEHFrameRegistrar final : public EHFrameRegistrar {
+public:
+  /// Get a reference to the InProcessEHFrameRegistrar singleton.
+  static InProcessEHFrameRegistrar &getInstance();
+
+  InProcessEHFrameRegistrar(const InProcessEHFrameRegistrar &) = delete;
+  InProcessEHFrameRegistrar &
+  operator=(const InProcessEHFrameRegistrar &) = delete;
+
+  InProcessEHFrameRegistrar(InProcessEHFrameRegistrar &&) = delete;
+  InProcessEHFrameRegistrar &operator=(InProcessEHFrameRegistrar &&) = delete;
+
+  Error registerEHFrames(JITTargetAddress EHFrameSectionAddr) override {
+    return registerEHFrameSection(
+        jitTargetAddressToPointer<void *>(EHFrameSectionAddr));
+  }
+
+  Error deregisterEHFrames(JITTargetAddress EHFrameSectionAddr) override {
+    return deregisterEHFrameSection(
+        jitTargetAddressToPointer<void *>(EHFrameSectionAddr));
+  }
+
+private:
+  InProcessEHFrameRegistrar();
+};
+
 using StoreFrameAddressFunction = std::function<void(JITTargetAddress)>;
 
 /// Creates a pass that records the address of the EH frame section. If no

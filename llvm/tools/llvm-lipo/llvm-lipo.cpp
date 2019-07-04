@@ -93,8 +93,15 @@ struct Config {
 } // end namespace
 
 static void validateArchitectureName(StringRef ArchitectureName) {
-  if (Triple(ArchitectureName).getArch() == Triple::ArchType::UnknownArch)
-    reportError("Invalid architecture: " + ArchitectureName);
+  if (!MachOObjectFile::isValidArch(ArchitectureName)) {
+    std::string Buf;
+    raw_string_ostream OS(Buf);
+    OS << "Invalid architecture: " << ArchitectureName
+       << "\nValid architecture names are:";
+    for (auto arch : MachOObjectFile::getValidArchs())
+      OS << " " << arch;
+    reportError(OS.str());
+  }
 }
 
 static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {

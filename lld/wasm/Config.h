@@ -34,6 +34,7 @@ struct Configuration {
   bool GcSections;
   bool ImportMemory;
   bool SharedMemory;
+  bool PassiveSegments;
   bool ImportTable;
   bool MergeDataSegments;
   bool Pie;

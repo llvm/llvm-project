@@ -390,13 +390,13 @@ define i128 @addcarry1_not(i128 %n) {
 define i128 @addcarry_to_subcarry(i64 %a, i64 %b) {
 ; CHECK-LABEL: addcarry_to_subcarry:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    notq %rsi
-; CHECK-NEXT:    xorl %eax, %eax
+; CHECK-NEXT:    movb $1, %cl
+; CHECK-NEXT:    addb $-1, %cl
 ; CHECK-NEXT:    movq %rdi, %rcx
-; CHECK-NEXT:    addq %rsi, %rcx
-; CHECK-NEXT:    setb %al
-; CHECK-NEXT:    addq $1, %rcx
-; CHECK-NEXT:    adcq %rdi, %rax
+; CHECK-NEXT:    adcq %rsi, %rcx
+; CHECK-NEXT:    adcq $0, %rax
 ; CHECK-NEXT:    setb %cl
 ; CHECK-NEXT:    movzbl %cl, %edx
 ; CHECK-NEXT:    addq %rsi, %rax

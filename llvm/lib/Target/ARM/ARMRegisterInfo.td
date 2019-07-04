@@ -227,9 +227,10 @@ def GPR : RegisterClass<"ARM", [i32], 32, (add (sequence "R%u", 0, 12),
   // know how to spill them. If we make our prologue/epilogue code smarter at
   // some point, we can go back to using the above allocation orders for the
   // Thumb1 instructions that know how to use hi regs.
-  let AltOrders = [(add LR, GPR), (trunc GPR, 8)];
+  let AltOrders = [(add LR, GPR), (trunc GPR, 8),
+                   (add (trunc GPR, 8), R12, LR, (shl GPR, 8))];
   let AltOrderSelect = [{
-      return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+      return MF.getSubtarget<ARMSubtarget>().getGPRAllocationOrder(MF);
   }];
   let DiagnosticString = "operand must be a register in range [r0, r15]";
 }
@@ -238,9 +239,10 @@ def GPR : RegisterClass<"ARM", [i32], 32, (add (sequence "R%u", 0, 12),
 // certain operand slots, particularly as the destination.  Primarily
 // useful for disassembly.
 def GPRnopc : RegisterClass<"ARM", [i32], 32, (sub GPR, PC)> {
-  let AltOrders = [(add LR, GPRnopc), (trunc GPRnopc, 8)];
+  let AltOrders = [(add LR, GPRnopc), (trunc GPRnopc, 8),
+                   (add (trunc GPRnopc, 8), R12, LR, (shl GPRnopc, 8))];
   let AltOrderSelect = [{
-      return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+      return MF.getSubtarget<ARMSubtarget>().getGPRAllocationOrder(MF);
   }];
   let DiagnosticString = "operand must be a register in range [r0, r14]";
 }
@@ -295,9 +297,10 @@ def GPRlr : RegisterClass<"ARM", [i32], 32, (add LR)>;
 // or SP (R13 or R15) are used. The ARM ISA refers to these operands
 // via the BadReg() pseudo-code description.
 def rGPR : RegisterClass<"ARM", [i32], 32, (sub GPR, SP, PC)> {
-  let AltOrders = [(add LR, rGPR), (trunc rGPR, 8)];
+  let AltOrders = [(add LR, rGPR), (trunc rGPR, 8),
+                   (add (trunc rGPR, 8), R12, LR, (shl rGPR, 8))];
   let AltOrderSelect = [{
-      return 1 + MF.getSubtarget<ARMSubtarget>().isThumb1Only();
+      return MF.getSubtarget<ARMSubtarget>().getGPRAllocationOrder(MF);
   }];
   let DiagnosticType = "rGPR";
 }

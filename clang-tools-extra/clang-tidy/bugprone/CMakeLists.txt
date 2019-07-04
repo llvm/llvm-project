@@ -23,6 +23,7 @@ add_clang_library(clangTidyBugproneModule
   MoveForwardingReferenceCheck.cpp
   MultipleStatementMacroCheck.cpp
   ParentVirtualCallCheck.cpp
+  PosixReturnCheck.cpp
   SizeofContainerCheck.cpp
   SizeofExpressionCheck.cpp
   StringConstructorCheck.cpp

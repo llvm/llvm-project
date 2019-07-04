@@ -163,7 +163,6 @@ EXIT STATUS
 :program:`llvm-cov gcov` returns 1 if it cannot read input files.  Otherwise,
 it exits with zero.
 
-
 .. program:: llvm-cov show
 
 .. _llvm-cov-show:

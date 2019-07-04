@@ -148,3 +148,42 @@ define i1 @foo1_or_signbit_lshr(i32 %k, i32 %c1, i32 %c2) {
   %or = and i1 %t2, %t6
   ret i1 %or
 }
+
+; Same as last two, but shift-of-signbit replaced with 'icmp s*'
+define i1 @foo1_and_signbit_lshr_without_shifting_signbit(i32 %k, i32 %c1, i32 %c2) {
+; CHECK-LABEL: @foo1_and_signbit_lshr_without_shifting_signbit(
+; CHECK-NEXT:    [[T0:%.*]] = shl i32 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[K:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = icmp sgt i32 [[T3]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %t0 = shl i32 1, %c1
+  %t1 = and i32 %t0, %k
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = shl i32 %k, %c2
+  %t4 = icmp sgt i32 %t3, -1
+  %or = or i1 %t2, %t4
+  ret i1 %or
+}
+
+define i1 @foo1_or_signbit_lshr_without_shifting_signbit(i32 %k, i32 %c1, i32 %c2) {
+; CHECK-LABEL: @foo1_or_signbit_lshr_without_shifting_signbit(
+; CHECK-NEXT:    [[T0:%.*]] = shl i32 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[K:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp ne i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = icmp slt i32 [[T3]], 0
+; CHECK-NEXT:    [[OR:%.*]] = and i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %t0 = shl i32 1, %c1
+  %t1 = and i32 %t0, %k
+  %t2 = icmp ne i32 %t1, 0
+  %t3 = shl i32 %k, %c2
+  %t4 = icmp slt i32 %t3, 0
+  %or = and i1 %t2, %t4
+  ret i1 %or
+}

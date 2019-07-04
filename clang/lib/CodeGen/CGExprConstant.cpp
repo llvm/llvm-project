@@ -288,7 +288,7 @@ Optional<size_t> ConstantAggregateBuilder::splitAt(CharUnits Pos) {
     return Offsets.size();
 
   while (true) {
-    auto FirstAfterPos = std::upper_bound(Offsets.begin(), Offsets.end(), Pos);
+    auto FirstAfterPos = llvm::upper_bound(Offsets, Pos);
     if (FirstAfterPos == Offsets.begin())
       return 0;
 

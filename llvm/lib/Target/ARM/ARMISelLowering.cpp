@@ -10736,6 +10736,15 @@ bool ARMTargetLowering::shouldFoldConstantShiftPairToMask(
   return false;
 }
 
+bool ARMTargetLowering::preferIncOfAddToSubOfNot(EVT VT) const {
+  if (!Subtarget->hasNEON()) {
+    if (Subtarget->isThumb1Only())
+      return VT.getScalarSizeInBits() <= 32;
+    return true;
+  }
+  return VT.isScalarInteger();
+}
+
 static SDValue PerformSHLSimplify(SDNode *N,
                                 TargetLowering::DAGCombinerInfo &DCI,
                                 const ARMSubtarget *ST) {
@@ -12955,10 +12964,9 @@ static SDValue PerformHWLoopCombine(SDNode *N,
   if (IntOp != Intrinsic::test_set_loop_iterations)
     return SDValue();
 
-  if (auto *Const = dyn_cast<ConstantSDNode>(CC->getOperand(1)))
-    assert(Const->isOne() && "Expected to compare against 1");
-  else
-    assert(Const->isOne() && "Expected to compare against 1");
+  assert((isa<ConstantSDNode>(CC->getOperand(1)) &&
+          cast<ConstantSDNode>(CC->getOperand(1))->isOne()) &&
+          "Expected to compare against 1");
 
   SDLoc dl(Int);
   SDValue Chain = N->getOperand(0);

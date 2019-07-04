@@ -10,7 +10,7 @@ add_clang_unittest(ClangCodeGenTests
   TBAAMetadataTest.cpp
   )
 
-target_link_libraries(ClangCodeGenTests
+clang_target_link_libraries(ClangCodeGenTests
   PRIVATE
   clangAST
   clangBasic

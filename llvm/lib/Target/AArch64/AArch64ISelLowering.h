@@ -497,6 +497,8 @@ public:
     return VTIsOk(XVT) && VTIsOk(KeptBitsVT);
   }
 
+  bool preferIncOfAddToSubOfNot(EVT VT) const override;
+
   bool hasBitPreservingFPLogic(EVT VT) const override {
     // FIXME: Is this always true? It should be true for vectors at least.
     return VT == MVT::f32 || VT == MVT::f64;

@@ -2701,8 +2701,7 @@ bool Sema::CheckHexagonBuiltinCpu(unsigned BuiltinID, CallExpr *TheCall) {
   const TargetInfo &TI = Context.getTargetInfo();
 
   const BuiltinAndString *FC =
-      std::lower_bound(std::begin(ValidCPU), std::end(ValidCPU), BuiltinID,
-                       LowerBoundCmp);
+      llvm::lower_bound(ValidCPU, BuiltinID, LowerBoundCmp);
   if (FC != std::end(ValidCPU) && FC->BuiltinID == BuiltinID) {
     const TargetOptions &Opts = TI.getTargetOpts();
     StringRef CPU = Opts.CPU;
@@ -2718,8 +2717,7 @@ bool Sema::CheckHexagonBuiltinCpu(unsigned BuiltinID, CallExpr *TheCall) {
   }
 
   const BuiltinAndString *FH =
-      std::lower_bound(std::begin(ValidHVX), std::end(ValidHVX), BuiltinID,
-                       LowerBoundCmp);
+      llvm::lower_bound(ValidHVX, BuiltinID, LowerBoundCmp);
   if (FH != std::end(ValidHVX) && FH->BuiltinID == BuiltinID) {
     if (!TI.hasFeature("hvx"))
       return Diag(TheCall->getBeginLoc(),
@@ -2948,11 +2946,8 @@ bool Sema::CheckHexagonBuiltinArgument(unsigned BuiltinID, CallExpr *TheCall) {
        true);
   (void)SortOnce;
 
-  const BuiltinInfo *F =
-      std::lower_bound(std::begin(Infos), std::end(Infos), BuiltinID,
-                       [](const BuiltinInfo &BI, unsigned BuiltinID) {
-                         return BI.BuiltinID < BuiltinID;
-                       });
+  const BuiltinInfo *F = llvm::partition_point(
+      Infos, [=](const BuiltinInfo &BI) { return BI.BuiltinID < BuiltinID; });
   if (F == std::end(Infos) || F->BuiltinID != BuiltinID)
     return false;
 

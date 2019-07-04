@@ -304,4 +304,3 @@ SEE ALSO
 --------
 
 :doc:`/CommandGuide/llvm-dis`, :doc:`/BitCodeFormat`
-

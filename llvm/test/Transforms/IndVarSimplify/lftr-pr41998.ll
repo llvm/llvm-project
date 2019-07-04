@@ -45,13 +45,13 @@ define void @test_ptr(i32 %start) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i3 -1, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i3 [[TMP1]] to i64
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nuw nsw i64 [[TMP2]], 1
-; CHECK-NEXT:    [[LFTR_LIMIT:%.*]] = getelementptr i8, i8* getelementptr inbounds ([256 x i8], [256 x i8]* @data, i64 0, i64 0), i64 [[TMP3]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr [256 x i8], [256 x i8]* @data, i64 0, i64 [[TMP3]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[P:%.*]] = phi i8* [ getelementptr inbounds ([256 x i8], [256 x i8]* @data, i64 0, i64 0), [[ENTRY:%.*]] ], [ [[P_INC:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[P_INC]] = getelementptr inbounds i8, i8* [[P]], i64 1
 ; CHECK-NEXT:    store volatile i8 0, i8* [[P_INC]]
-; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i8* [[P_INC]], [[LFTR_LIMIT]]
+; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i8* [[P_INC]], [[SCEVGEP]]
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[END:%.*]], label [[LOOP]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret void

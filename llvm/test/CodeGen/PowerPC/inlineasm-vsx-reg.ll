@@ -38,3 +38,12 @@ define double @test() {
 ; CHECK: mtvsrd v2, r1
 ; CHECK: #NO_APP
 }
+
+define float @test_ww(float %x, float %y) {
+  %1 = tail call float asm "xsmaxdp ${0:x}, ${1:x}, ${2:x}", "=^ww,^ww,^ww"(float %x, float %y)
+  ret float %1
+; CHECK-LABEL: test_ww:
+; CHECK: #APP
+; CHECK: xsmaxdp f1, f1, f2
+; CHECK: #NO_APP
+}

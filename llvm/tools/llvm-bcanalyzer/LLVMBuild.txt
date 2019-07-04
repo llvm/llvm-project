@@ -18,4 +18,4 @@
 type = Tool
 name = llvm-bcanalyzer
 parent = Tools
-required_libraries = BitReader
+required_libraries = BitReader BitstreamReader Support

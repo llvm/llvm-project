@@ -8,7 +8,7 @@ add_clang_executable(clang-check
   ClangCheck.cpp
   )
 
-target_link_libraries(clang-check
+clang_target_link_libraries(clang-check
   PRIVATE
   clangAST
   clangBasic

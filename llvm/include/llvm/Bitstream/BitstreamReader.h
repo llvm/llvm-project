@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_BITCODE_BITSTREAMREADER_H
-#define LLVM_BITCODE_BITSTREAMREADER_H
+#ifndef LLVM_BITSTREAM_BITSTREAMREADER_H
+#define LLVM_BITSTREAM_BITSTREAMREADER_H
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Bitcode/BitCodes.h"
+#include "llvm/Bitstream/BitCodes.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -550,4 +550,4 @@ public:
 
 } // end llvm namespace
 
-#endif // LLVM_BITCODE_BITSTREAMREADER_H
+#endif // LLVM_BITSTREAM_BITSTREAMREADER_H

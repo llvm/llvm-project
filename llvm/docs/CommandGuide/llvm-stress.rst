@@ -33,4 +33,3 @@ EXIT STATUS
 -----------
 
 :program:`llvm-stress` returns 0.
-

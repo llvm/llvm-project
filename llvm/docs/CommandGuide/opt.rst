@@ -122,4 +122,3 @@ EXIT STATUS
 
 If :program:`opt` succeeds, it will exit with 0.  Otherwise, if an error
 occurs, it will exit with a non-zero value.
-

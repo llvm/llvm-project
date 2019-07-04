@@ -7,7 +7,7 @@ add_clang_unittest(IndexTests
   IndexTests.cpp
   )
 
-target_link_libraries(IndexTests
+clang_target_link_libraries(IndexTests
   PRIVATE
   clangAST
   clangBasic

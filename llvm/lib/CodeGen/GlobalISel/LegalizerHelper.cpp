@@ -791,7 +791,7 @@ LegalizerHelper::widenScalarMergeValues(MachineInstr &MI, unsigned TypeIdx,
 
   Register DstReg = MI.getOperand(0).getReg();
   LLT DstTy = MRI.getType(DstReg);
-  if (!DstTy.isScalar())
+  if (DstTy.isVector())
     return UnableToLegalize;
 
   Register Src1 = MI.getOperand(1).getReg();
