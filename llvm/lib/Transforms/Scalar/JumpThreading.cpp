@@ -102,6 +102,12 @@ static cl::opt<bool> PrintLVIAfterJumpThreading(
     cl::desc("Print the LazyValueInfo cache after JumpThreading"), cl::init(false),
     cl::Hidden);
 
+static cl::opt<bool> ThreadAcrossLoopHeaders(
+    "jump-threading-across-loop-headers",
+    cl::desc("Allow JumpThreading to thread across loop headers, for testing"),
+    cl::init(false), cl::Hidden);
+
+
 namespace {
 
   /// This pass performs 'jump threading', which looks at blocks that have
@@ -368,7 +374,8 @@ bool JumpThreadingPass::runImpl(Function &F, TargetLibraryInfo *TLI_,
     if (!DT.isReachableFromEntry(&BB))
       Unreachable.insert(&BB);
 
-  FindLoopHeaders(F);
+  if (!ThreadAcrossLoopHeaders)
+    FindLoopHeaders(F);
 
   bool EverChanged = false;
   bool Changed;
@@ -1978,8 +1985,14 @@ bool JumpThreadingPass::ThreadEdge(BasicBlock *BB,
   }
 
   BasicBlock::iterator BI = BB->begin();
-  for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI)
-    ValueMapping[PN] = PN->getIncomingValueForBlock(PredBB);
+  // Clone the phi nodes of BB into NewBB. The resulting phi nodes are trivial,
+  // since NewBB only has one predecessor, but SSAUpdater might need to rewrite
+  // the operand of the cloned phi.
+  for (; PHINode *PN = dyn_cast<PHINode>(BI); ++BI) {
+    PHINode *NewPN = PHINode::Create(PN->getType(), 1, PN->getName(), NewBB);
+    NewPN->addIncoming(PN->getIncomingValueForBlock(PredBB), PredBB);
+    ValueMapping[PN] = NewPN;
+  }
 
   // Clone the non-phi instructions of BB into NewBB, keeping track of the
   // mapping and using it to remap operands in the cloned instructions.

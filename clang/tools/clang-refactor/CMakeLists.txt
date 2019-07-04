@@ -8,7 +8,7 @@ add_clang_tool(clang-refactor
   TestSupport.cpp
   )
 
-target_link_libraries(clang-refactor
+clang_target_link_libraries(clang-refactor
   PRIVATE
   clangAST
   clangBasic

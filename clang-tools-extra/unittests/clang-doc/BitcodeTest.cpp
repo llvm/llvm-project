@@ -10,8 +10,8 @@
 #include "BitcodeWriter.h"
 #include "ClangDocTest.h"
 #include "Representation.h"
-#include "llvm/Bitcode/BitstreamReader.h"
-#include "llvm/Bitcode/BitstreamWriter.h"
+#include "llvm/Bitstream/BitstreamReader.h"
+#include "llvm/Bitstream/BitstreamWriter.h"
 #include "gtest/gtest.h"
 
 namespace clang {

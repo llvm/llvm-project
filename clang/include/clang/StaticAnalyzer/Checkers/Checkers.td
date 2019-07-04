@@ -274,6 +274,10 @@ def NullableReturnedFromNonnullChecker : Checker<"NullableReturnedFromNonnull">,
 
 let ParentPackage = APIModeling in {
 
+def ReturnValueChecker : Checker<"ReturnValue">,
+  HelpText<"Model the guaranteed boolean return value of function calls">,
+  Documentation<NotDocumented>;
+
 def StdCLibraryFunctionsChecker : Checker<"StdCLibraryFunctions">,
   HelpText<"Improve modeling of the C standard library functions">,
   Documentation<NotDocumented>;
@@ -1227,6 +1231,10 @@ def AnalysisOrderChecker : Checker<"AnalysisOrder">,
 
 def DominatorsTreeDumper : Checker<"DumpDominators">,
   HelpText<"Print the dominance tree for a given CFG">,
+  Documentation<NotDocumented>;
+
+def PostDominatorsTreeDumper : Checker<"DumpPostDominators">,
+  HelpText<"Print the post dominance tree for a given CFG">,
   Documentation<NotDocumented>;
 
 def LiveVariablesDumper : Checker<"DumpLiveVars">,

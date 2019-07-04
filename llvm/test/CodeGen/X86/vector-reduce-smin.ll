@@ -1276,8 +1276,6 @@ define i16 @test_v4i16(<4 x i16> %a0) {
 ; SSE2-NEXT:    pandn %xmm1, %xmm2
 ; SSE2-NEXT:    por %xmm0, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,2,3]
-; SSE2-NEXT:    pslld $16, %xmm0
-; SSE2-NEXT:    psrad $16, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    pcmpgtd %xmm2, %xmm1
 ; SSE2-NEXT:    pand %xmm1, %xmm2
@@ -1296,8 +1294,6 @@ define i16 @test_v4i16(<4 x i16> %a0) {
 ; SSE41-NEXT:    psrad $16, %xmm1
 ; SSE41-NEXT:    pminsd %xmm0, %xmm1
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
-; SSE41-NEXT:    pslld $16, %xmm0
-; SSE41-NEXT:    psrad $16, %xmm0
 ; SSE41-NEXT:    pminsd %xmm1, %xmm0
 ; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -1312,8 +1308,6 @@ define i16 @test_v4i16(<4 x i16> %a0) {
 ; AVX-NEXT:    vpsrad $16, %xmm0, %xmm0
 ; AVX-NEXT:    vpminsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX-NEXT:    vpslld $16, %xmm1, %xmm1
-; AVX-NEXT:    vpsrad $16, %xmm1, %xmm1
 ; AVX-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -1328,8 +1322,6 @@ define i16 @test_v4i16(<4 x i16> %a0) {
 ; AVX512-NEXT:    vpsrad $16, %xmm0, %xmm0
 ; AVX512-NEXT:    vpminsd %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpslld $16, %xmm1, %xmm1
-; AVX512-NEXT:    vpsrad $16, %xmm1, %xmm1
 ; AVX512-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vmovd %xmm0, %eax
 ; AVX512-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -1763,8 +1755,6 @@ define i8 @test_v4i8(<4 x i8> %a0) {
 ; SSE2-NEXT:    pandn %xmm1, %xmm2
 ; SSE2-NEXT:    por %xmm0, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,1,2,3]
-; SSE2-NEXT:    pslld $24, %xmm0
-; SSE2-NEXT:    psrad $24, %xmm0
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
 ; SSE2-NEXT:    pcmpgtd %xmm2, %xmm1
 ; SSE2-NEXT:    pand %xmm1, %xmm2
@@ -1783,8 +1773,6 @@ define i8 @test_v4i8(<4 x i8> %a0) {
 ; SSE41-NEXT:    psrad $24, %xmm1
 ; SSE41-NEXT:    pminsd %xmm0, %xmm1
 ; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,1,2,3]
-; SSE41-NEXT:    pslld $24, %xmm0
-; SSE41-NEXT:    psrad $24, %xmm0
 ; SSE41-NEXT:    pminsd %xmm1, %xmm0
 ; SSE41-NEXT:    pextrb $0, %xmm0, %eax
 ; SSE41-NEXT:    # kill: def $al killed $al killed $eax
@@ -1799,8 +1787,6 @@ define i8 @test_v4i8(<4 x i8> %a0) {
 ; AVX-NEXT:    vpsrad $24, %xmm0, %xmm0
 ; AVX-NEXT:    vpminsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX-NEXT:    vpslld $24, %xmm1, %xmm1
-; AVX-NEXT:    vpsrad $24, %xmm1, %xmm1
 ; AVX-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
@@ -1815,8 +1801,6 @@ define i8 @test_v4i8(<4 x i8> %a0) {
 ; AVX512-NEXT:    vpsrad $24, %xmm0, %xmm0
 ; AVX512-NEXT:    vpminsd %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX512-NEXT:    vpslld $24, %xmm1, %xmm1
-; AVX512-NEXT:    vpsrad $24, %xmm1, %xmm1
 ; AVX512-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    vpextrb $0, %xmm0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax

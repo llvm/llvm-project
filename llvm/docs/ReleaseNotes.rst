@@ -45,6 +45,10 @@ Non-comprehensive list of changes in this release
   the platform's libc) without specifying ``-ffreestanding`` may need to either
   pass ``-fno-builtin-bcmp``, or provide a ``bcmp`` function.
 
+* Two new extension points, namely ``EP_FullLinkTimeOptimizationEarly`` and
+  ``EP_FullLinkTimeOptimizationLast`` are available for plugins to specialize
+  the legacy pass manager full LTO pipeline.
+
 .. NOTE
    If you would like to document a larger change, then you can add a
    subsection about it right here. You can copy the following boilerplate

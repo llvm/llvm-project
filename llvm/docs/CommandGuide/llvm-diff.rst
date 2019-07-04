@@ -6,13 +6,10 @@ llvm-diff - LLVM structural 'diff'
 SYNOPSIS
 --------
 
-
 **llvm-diff** [*options*] *module 1* *module 2* [*global name ...*]
-
 
 DESCRIPTION
 -----------
-
 
 **llvm-diff** compares the structure of two LLVM modules, primarily
 focusing on differences in function definitions.  Insignificant
@@ -36,19 +33,15 @@ which tend to stop any downstream changes from being detected.
 **llvm-diff** is intended as a debugging tool for writers of LLVM
 passes and frontends.  It does not have a stable output format.
 
-
 EXIT STATUS
 -----------
-
 
 If **llvm-diff** finds no differences between the modules, it will exit
 with 0 and produce no output.  Otherwise it will exit with a non-zero
 value.
 
-
 BUGS
 ----
-
 
 Many important differences, like changes in linkage or function
 attributes, are not diagnosed.

@@ -59,35 +59,41 @@ protected:
 
 TEST_F(HeaderSearchTest, NoSearchDir) {
   EXPECT_EQ(Search.search_dir_size(), 0u);
-  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/x/y/z", /*WorkingDir=*/""),
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/x/y/z", /*WorkingDir=*/"",
+                                                   /*MainFile=*/""),
             "/x/y/z");
 }
 
 TEST_F(HeaderSearchTest, SimpleShorten) {
   addSearchDir("/x");
   addSearchDir("/x/y");
-  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/x/y/z", /*WorkingDir=*/""),
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/x/y/z", /*WorkingDir=*/"",
+                                                   /*MainFile=*/""),
             "z");
   addSearchDir("/a/b/");
-  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/a/b/c", /*WorkingDir=*/""),
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/a/b/c", /*WorkingDir=*/"",
+                                                   /*MainFile=*/""),
             "c");
 }
 
 TEST_F(HeaderSearchTest, ShortenWithWorkingDir) {
   addSearchDir("x/y");
   EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/a/b/c/x/y/z",
-                                                   /*WorkingDir=*/"/a/b/c"),
+                                                   /*WorkingDir=*/"/a/b/c",
+                                                   /*MainFile=*/""),
             "z");
 }
 
 TEST_F(HeaderSearchTest, Dots) {
   addSearchDir("/x/./y/");
   EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/x/y/./z",
-                                                   /*WorkingDir=*/""),
+                                                   /*WorkingDir=*/"",
+                                                   /*MainFile=*/""),
             "z");
   addSearchDir("a/.././c/");
   EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/m/n/./c/z",
-                                                   /*WorkingDir=*/"/m/n/"),
+                                                   /*WorkingDir=*/"/m/n/",
+                                                   /*MainFile=*/""),
             "z");
 }
 
@@ -95,14 +101,16 @@ TEST_F(HeaderSearchTest, Dots) {
 TEST_F(HeaderSearchTest, BackSlash) {
   addSearchDir("C:\\x\\y\\");
   EXPECT_EQ(Search.suggestPathToFileForDiagnostics("C:\\x\\y\\z\\t",
-                                                   /*WorkingDir=*/""),
+                                                   /*WorkingDir=*/"",
+                                                   /*MainFile=*/""),
             "z/t");
 }
 
 TEST_F(HeaderSearchTest, BackSlashWithDotDot) {
   addSearchDir("..\\y");
   EXPECT_EQ(Search.suggestPathToFileForDiagnostics("C:\\x\\y\\z\\t",
-                                                   /*WorkingDir=*/"C:/x/y/"),
+                                                   /*WorkingDir=*/"C:/x/y/",
+                                                   /*MainFile=*/""),
             "z/t");
 }
 #endif
@@ -110,8 +118,22 @@ TEST_F(HeaderSearchTest, BackSlashWithDotDot) {
 TEST_F(HeaderSearchTest, DotDotsWithAbsPath) {
   addSearchDir("/x/../y/");
   EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/y/z",
-                                                   /*WorkingDir=*/""),
+                                                   /*WorkingDir=*/"",
+                                                   /*MainFile=*/""),
             "z");
+}
+
+TEST_F(HeaderSearchTest, IncludeFromSameDirectory) {
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/y/z/t.h",
+                                                   /*WorkingDir=*/"",
+                                                   /*MainFile=*/"/y/a.cc"),
+            "z/t.h");
+
+  addSearchDir("/");
+  EXPECT_EQ(Search.suggestPathToFileForDiagnostics("/y/z/t.h",
+                                                   /*WorkingDir=*/"",
+                                                   /*MainFile=*/"/y/a.cc"),
+            "y/z/t.h");
 }
 
 } // namespace

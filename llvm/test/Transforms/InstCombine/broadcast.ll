@@ -72,11 +72,12 @@ define <4 x float> @good5(float %v) {
   ret <4 x float> %res
 }
 
-define <4 x float> @bad1(float %arg) {
-; CHECK-LABEL: @bad1(
-; CHECK-NEXT:    [[T4:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 1
-; CHECK-NEXT:    [[T5:%.*]] = insertelement <4 x float> [[T4]], float [[ARG]], i32 2
-; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x float> [[T5]], float [[ARG]], i32 3
+; The insert is changed to allow the canonical shuffle-splat pattern from element 0.
+
+define <4 x float> @splat_undef1(float %arg) {
+; CHECK-LABEL: @splat_undef1(
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
+; CHECK-NEXT:    [[T6:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    ret <4 x float> [[T6]]
 ;
   %t = insertelement <4 x float> undef, float %arg, i32 1
@@ -86,11 +87,12 @@ define <4 x float> @bad1(float %arg) {
   ret <4 x float> %t6
 }
 
-define <4 x float> @bad2(float %arg) {
-; CHECK-LABEL: @bad2(
+; Re-uses the existing first insertelement.
+
+define <4 x float> @splat_undef2(float %arg) {
+; CHECK-LABEL: @splat_undef2(
 ; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
-; CHECK-NEXT:    [[T5:%.*]] = insertelement <4 x float> [[T]], float [[ARG]], i32 2
-; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x float> [[T5]], float [[ARG]], i32 3
+; CHECK-NEXT:    [[T6:%.*]] = shufflevector <4 x float> [[T]], <4 x float> undef, <4 x i32> <i32 0, i32 undef, i32 0, i32 0>
 ; CHECK-NEXT:    ret <4 x float> [[T6]]
 ;
   %t = insertelement <4 x float> undef, float %arg, i32 0
@@ -123,10 +125,13 @@ define <1 x float> @bad4(float %arg) {
   ret <1 x float> %t
 }
 
-define <4 x float> @bad5(float %arg) {
-; CHECK-LABEL: @bad5(
+; Multiple undef elements are ok.
+; TODO: Multiple uses triggers the transform at %t4, but we could form another splat from %t6 and simplify?
+
+define <4 x float> @splat_undef3(float %arg) {
+; CHECK-LABEL: @splat_undef3(
 ; CHECK-NEXT:    [[T:%.*]] = insertelement <4 x float> undef, float [[ARG:%.*]], i32 0
-; CHECK-NEXT:    [[T4:%.*]] = insertelement <4 x float> [[T]], float [[ARG]], i32 1
+; CHECK-NEXT:    [[T4:%.*]] = shufflevector <4 x float> [[T]], <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[T5:%.*]] = insertelement <4 x float> [[T4]], float [[ARG]], i32 2
 ; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x float> [[T5]], float [[ARG]], i32 3
 ; CHECK-NEXT:    [[T7:%.*]] = fadd <4 x float> [[T6]], [[T4]]

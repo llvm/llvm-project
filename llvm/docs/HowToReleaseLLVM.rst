@@ -109,9 +109,8 @@ Update LLVM Version
 ^^^^^^^^^^^^^^^^^^^
 
 After creating the LLVM release branch, update the release branches'
-``autoconf`` and ``configure.ac`` versions from '``X.Ysvn``' to '``X.Y``'.
+``CMakeLists.txt`` versions from '``X.Ysvn``' to '``X.Y``'.
 Update it on mainline as well to be the next version ('``X.Y+1svn``').
-Regenerate the configure scripts for both ``llvm`` and the ``test-suite``.
 
 In addition, the version numbers of all the Bugzilla components must be updated
 for the next release.

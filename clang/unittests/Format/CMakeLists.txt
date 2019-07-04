@@ -22,7 +22,7 @@ add_clang_unittest(FormatTests
   UsingDeclarationsSorterTest.cpp
   )
 
-target_link_libraries(FormatTests
+clang_target_link_libraries(FormatTests
   PRIVATE
   clangBasic
   clangFormat

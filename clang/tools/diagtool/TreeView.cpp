@@ -102,9 +102,7 @@ public:
       return 1;
     }
 
-    const GroupRecord *Found =
-        std::lower_bound(AllGroups.begin(), AllGroups.end(), RootGroup);
-
+    const GroupRecord *Found = llvm::lower_bound(AllGroups, RootGroup);
     if (Found == AllGroups.end() || Found->getName() != RootGroup) {
       llvm::errs() << "No such diagnostic group exists\n";
       return 1;

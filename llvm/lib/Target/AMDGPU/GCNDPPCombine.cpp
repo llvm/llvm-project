@@ -32,9 +32,9 @@
 // -> $combined_old = src1,
 //    $combined_bound_ctrl = DPP_BOUND_OFF
 //
-// Othervise cancel.
+// Otherwise cancel.
 //
-// The mov_dpp instruction should recide in the same BB as all it's uses
+// The mov_dpp instruction should reside in the same BB as all its uses
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
@@ -300,7 +300,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       return nullptr;
     }
     if (!isIdentityValue(OrigMI.getOpcode(), OldOpndValue)) {
-      LLVM_DEBUG(dbgs() << "  failed: old immediate ins't an identity\n");
+      LLVM_DEBUG(dbgs() << "  failed: old immediate isn't an identity\n");
       return nullptr;
     }
     CombOldVGPR = getRegSubRegPair(*Src1);

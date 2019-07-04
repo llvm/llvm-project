@@ -55,7 +55,7 @@ static ELFKind getELFKind(MemoryBufferRef MB, StringRef ArchiveName) {
   unsigned char Endian;
   std::tie(Size, Endian) = getElfArchType(MB.getBuffer());
 
-  auto Fatal = [&](StringRef Msg) {
+  auto Report = [&](StringRef Msg) {
     StringRef Filename = MB.getBufferIdentifier();
     if (ArchiveName.empty())
       fatal(Filename + ": " + Msg);
@@ -64,16 +64,16 @@ static ELFKind getELFKind(MemoryBufferRef MB, StringRef ArchiveName) {
   };
 
   if (!MB.getBuffer().startswith(ElfMagic))
-    Fatal("not an ELF file");
+    Report("not an ELF file");
   if (Endian != ELFDATA2LSB && Endian != ELFDATA2MSB)
-    Fatal("corrupted ELF file: invalid data encoding");
+    Report("corrupted ELF file: invalid data encoding");
   if (Size != ELFCLASS32 && Size != ELFCLASS64)
-    Fatal("corrupted ELF file: invalid file class");
+    Report("corrupted ELF file: invalid file class");
 
   size_t BufSize = MB.getBuffer().size();
   if ((Size == ELFCLASS32 && BufSize < sizeof(Elf32_Ehdr)) ||
       (Size == ELFCLASS64 && BufSize < sizeof(Elf64_Ehdr)))
-    Fatal("corrupted ELF file: file is too short");
+    Report("corrupted ELF file: file is too short");
 
   if (Size == ELFCLASS32)
     return (Endian == ELFDATA2LSB) ? ELF32LEKind : ELF32BEKind;

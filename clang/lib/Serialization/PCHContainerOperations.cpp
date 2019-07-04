@@ -13,7 +13,7 @@
 #include "clang/Serialization/PCHContainerOperations.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Lex/ModuleLoader.h"
-#include "llvm/Bitcode/BitstreamReader.h"
+#include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 

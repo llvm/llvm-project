@@ -281,12 +281,12 @@ cond.false.15.i:                                  ; preds = %cond.false.10.i
   ret i32 %j.add3
 
 ; CHECK-LABEL: @unfold3
-; CHECK: br i1 %cmp.i, label %.exit.thread2, label %cond.false.i
+; CHECK: br i1 %cmp.i, label %.exit.thread3, label %cond.false.i
 ; CHECK: br i1 %cmp4.i, label %.exit.thread, label %cond.false.6.i
-; CHECK: br i1 %cmp8.i, label %.exit.thread2, label %cond.false.10.i
+; CHECK: br i1 %cmp8.i, label %.exit.thread3, label %cond.false.10.i
 ; CHECK: br i1 %cmp13.i, label %.exit.thread, label %.exit
-; CHECK: br i1 %phitmp, label %.exit.thread, label %.exit.thread2
-; CHECK: br label %.exit.thread2
+; CHECK: br i1 %phitmp, label %.exit.thread, label %.exit.thread3
+; CHECK: br label %.exit.thread3
 }
 
 define i32 @unfold4(i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z, i32 %j) nounwind {
@@ -320,11 +320,11 @@ cond.false.15.i:                                  ; preds = %cond.false.10.i
 
 ; CHECK-LABEL: @unfold4
 ; CHECK: br i1 %cmp.i, label %.exit.thread, label %cond.false.i
-; CHECK: br i1 %cmp4.i, label %.exit.thread3, label %cond.false.6.i
+; CHECK: br i1 %cmp4.i, label %.exit.thread4, label %cond.false.6.i
 ; CHECK: br i1 %cmp8.i, label %.exit.thread, label %cond.false.10.i
-; CHECK: br i1 %cmp13.i, label %.exit.thread3, label %.exit
-; CHECK: br i1 %lnot.i18, label %.exit.thread, label %.exit.thread3
-; CHECK: br label %.exit.thread3
+; CHECK: br i1 %cmp13.i, label %.exit.thread4, label %.exit
+; CHECK: br i1 %lnot.i18, label %.exit.thread, label %.exit.thread4
+; CHECK: br label %.exit.thread4
 }
 
 define i32 @unfold5(i32 %u, i32 %v, i32 %w, i32 %x, i32 %y, i32 %z, i32 %j) nounwind {

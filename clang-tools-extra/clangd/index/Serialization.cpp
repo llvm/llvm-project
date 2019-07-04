@@ -7,15 +7,20 @@
 //===----------------------------------------------------------------------===//
 
 #include "Serialization.h"
+#include "Headers.h"
 #include "Logger.h"
 #include "RIFF.h"
 #include "SymbolLocation.h"
 #include "SymbolOrigin.h"
 #include "Trace.h"
 #include "dex/Dex.h"
+#include "clang/Tooling/CompilationDatabase.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/raw_ostream.h"
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -274,7 +279,7 @@ SymbolLocation readLocation(Reader &Data,
 IncludeGraphNode readIncludeGraphNode(Reader &Data,
                                       llvm::ArrayRef<llvm::StringRef> Strings) {
   IncludeGraphNode IGN;
-  IGN.IsTU = Data.consume8();
+  IGN.Flags = static_cast<IncludeGraphNode::SourceFlag>(Data.consume8());
   IGN.URI = Data.consumeString(Strings);
   llvm::StringRef Digest = Data.consume(IGN.Digest.size());
   std::copy(Digest.bytes_begin(), Digest.bytes_end(), IGN.Digest.begin());
@@ -287,7 +292,7 @@ IncludeGraphNode readIncludeGraphNode(Reader &Data,
 void writeIncludeGraphNode(const IncludeGraphNode &IGN,
                            const StringTableOut &Strings,
                            llvm::raw_ostream &OS) {
-  OS.write(IGN.IsTU);
+  OS.write(static_cast<uint8_t>(IGN.Flags));
   writeVar(Strings.index(IGN.URI), OS);
   llvm::StringRef Hash(reinterpret_cast<const char *>(IGN.Digest.data()),
                        IGN.Digest.size());
@@ -403,6 +408,30 @@ Relation readRelation(Reader &Data) {
   return {Subject, Predicate, Object};
 }
 
+struct InternedCompileCommand {
+  llvm::StringRef Directory;
+  std::vector<llvm::StringRef> CommandLine;
+};
+
+void writeCompileCommand(const InternedCompileCommand &Cmd,
+                         const StringTableOut &Strings,
+                         llvm::raw_ostream &CmdOS) {
+  writeVar(Strings.index(Cmd.Directory), CmdOS);
+  writeVar(Cmd.CommandLine.size(), CmdOS);
+  for (llvm::StringRef C : Cmd.CommandLine)
+    writeVar(Strings.index(C), CmdOS);
+}
+
+InternedCompileCommand
+readCompileCommand(Reader CmdReader, llvm::ArrayRef<llvm::StringRef> Strings) {
+  InternedCompileCommand Cmd;
+  Cmd.Directory = CmdReader.consumeString(Strings);
+  Cmd.CommandLine.resize(CmdReader.consumeVar());
+  for (llvm::StringRef &C : Cmd.CommandLine)
+    C = CmdReader.consumeString(Strings);
+  return Cmd;
+}
+
 // FILE ENCODING
 // A file is a RIFF chunk with type 'CdIx'.
 // It contains the sections:
@@ -415,7 +444,7 @@ Relation readRelation(Reader &Data) {
 // The current versioning scheme is simple - non-current versions are rejected.
 // If you make a breaking change, bump this version number to invalidate stored
 // data. Later we may want to support some backward compatibility.
-constexpr static uint32_t Version = 10;
+constexpr static uint32_t Version = 11;
 
 llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
   auto RIFF = riff::readFile(Data);
@@ -490,6 +519,18 @@ llvm::Expected<IndexFileIn> readRIFF(llvm::StringRef Data) {
       return makeError("malformed or truncated relations");
     Result.Relations = std::move(Relations).build();
   }
+  if (Chunks.count("cmdl")) {
+    Reader CmdReader(Chunks.lookup("cmdl"));
+    if (CmdReader.err())
+      return makeError("malformed or truncated commandline section");
+    InternedCompileCommand Cmd =
+        readCompileCommand(CmdReader, Strings->Strings);
+    Result.Cmd.emplace();
+    Result.Cmd->Directory = Cmd.Directory;
+    Result.Cmd->CommandLine.reserve(Cmd.CommandLine.size());
+    for (llvm::StringRef C : Cmd.CommandLine)
+      Result.Cmd->CommandLine.emplace_back(C);
+  }
   return std::move(Result);
 }
 
@@ -547,6 +588,17 @@ void writeRIFF(const IndexFileOut &Data, llvm::raw_ostream &OS) {
     }
   }
 
+  InternedCompileCommand InternedCmd;
+  if (Data.Cmd) {
+    InternedCmd.CommandLine.reserve(Data.Cmd->CommandLine.size());
+    InternedCmd.Directory = Data.Cmd->Directory;
+    Strings.intern(InternedCmd.Directory);
+    for (llvm::StringRef C : Data.Cmd->CommandLine) {
+      InternedCmd.CommandLine.emplace_back(C);
+      Strings.intern(InternedCmd.CommandLine.back());
+    }
+  }
+
   std::string StringSection;
   {
     llvm::raw_string_ostream StringOS(StringSection);
@@ -590,6 +642,15 @@ void writeRIFF(const IndexFileOut &Data, llvm::raw_ostream &OS) {
         writeIncludeGraphNode(SF, Strings, SrcsOS);
     }
     RIFF.Chunks.push_back({riff::fourCC("srcs"), SrcsSection});
+  }
+
+  std::string CmdlSection;
+  if (Data.Cmd) {
+    {
+      llvm::raw_string_ostream CmdOS(CmdlSection);
+      writeCompileCommand(InternedCmd, Strings, CmdOS);
+    }
+    RIFF.Chunks.push_back({riff::fourCC("cmdl"), CmdlSection});
   }
 
   OS << RIFF;

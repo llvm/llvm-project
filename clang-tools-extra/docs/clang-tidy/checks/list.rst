@@ -58,6 +58,7 @@ Clang-Tidy Checks
    bugprone-move-forwarding-reference
    bugprone-multiple-statement-macro
    bugprone-parent-virtual-call
+   bugprone-posix-return
    bugprone-sizeof-container
    bugprone-sizeof-expression
    bugprone-string-constructor

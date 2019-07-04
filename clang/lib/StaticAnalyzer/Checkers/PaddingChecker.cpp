@@ -274,15 +274,13 @@ public:
       long long CurAlignmentBits = 1ull << (std::min)(TrailingZeros, 62u);
       CharUnits CurAlignment = CharUnits::fromQuantity(CurAlignmentBits);
       FieldInfo InsertPoint = {CurAlignment, CharUnits::Zero(), nullptr};
-      auto CurBegin = Fields.begin();
-      auto CurEnd = Fields.end();
 
       // In the typical case, this will find the last element
       // of the vector. We won't find a middle element unless
       // we started on a poorly aligned address or have an overly
       // aligned field.
-      auto Iter = std::upper_bound(CurBegin, CurEnd, InsertPoint);
-      if (Iter != CurBegin) {
+      auto Iter = llvm::upper_bound(Fields, InsertPoint);
+      if (Iter != Fields.begin()) {
         // We found a field that we can layout with the current alignment.
         --Iter;
         NewOffset += Iter->Size;

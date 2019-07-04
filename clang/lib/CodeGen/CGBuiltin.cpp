@@ -5076,8 +5076,7 @@ findNeonIntrinsicInMap(ArrayRef<NeonIntrinsicInfo> IntrinsicMap,
   }
 #endif
 
-  const NeonIntrinsicInfo *Builtin =
-      std::lower_bound(IntrinsicMap.begin(), IntrinsicMap.end(), BuiltinID);
+  const NeonIntrinsicInfo *Builtin = llvm::lower_bound(IntrinsicMap, BuiltinID);
 
   if (Builtin != IntrinsicMap.end() && Builtin->BuiltinID == BuiltinID)
     return Builtin;

@@ -6,14 +6,11 @@ llvm-lib - LLVM lib.exe compatible library tool
 SYNOPSIS
 --------
 
-
 **llvm-lib** [/libpath:<path>] [/out:<output>] [/llvmlibthin]
 [/ignore] [/machine] [/nologo] [files...]
 
-
 DESCRIPTION
 -----------
-
 
 The **llvm-lib** command is intended to be a ``lib.exe`` compatible
 tool. See https://msdn.microsoft.com/en-us/library/7ykb2k5f for the

@@ -1273,7 +1273,7 @@ public:
 
   /// For the given \p TypeId, this returns the TypeIdCompatibleVtableMap
   /// entry if present in the summary map. This may be used when importing.
-  Optional<const TypeIdCompatibleVtableInfo>
+  Optional<TypeIdCompatibleVtableInfo>
   getTypeIdCompatibleVtableSummary(StringRef TypeId) const {
     auto I = TypeIdCompatibleVtableMap.find(TypeId);
     if (I == TypeIdCompatibleVtableMap.end())

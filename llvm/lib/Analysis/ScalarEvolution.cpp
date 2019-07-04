@@ -8243,9 +8243,9 @@ const SCEV *ScalarEvolution::computeSCEVAtScope(const SCEV *V, const Loop *L) {
           NewOps.push_back(OpAtScope);
         }
         if (isa<SCEVAddExpr>(Comm))
-          return getAddExpr(NewOps);
+          return getAddExpr(NewOps, Comm->getNoWrapFlags());
         if (isa<SCEVMulExpr>(Comm))
-          return getMulExpr(NewOps);
+          return getMulExpr(NewOps, Comm->getNoWrapFlags());
         if (isa<SCEVMinMaxExpr>(Comm))
           return getMinMaxExpr(Comm->getSCEVType(), NewOps);
         llvm_unreachable("Unknown commutative SCEV type!");

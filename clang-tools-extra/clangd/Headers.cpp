@@ -14,6 +14,7 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/HeaderSearch.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 
 namespace clang {
@@ -186,15 +187,18 @@ bool IncludeInserter::shouldInsertInclude(
 }
 
 std::string
-IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader) const {
+IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
+                                      llvm::StringRef IncludingFile) const {
   assert(InsertedHeader.valid());
   if (InsertedHeader.Verbatim)
     return InsertedHeader.File;
   bool IsSystem = false;
+  // FIXME(kadircet): Handle same directory includes even if there is no
+  // HeaderSearchInfo.
   if (!HeaderSearchInfo)
     return "\"" + InsertedHeader.File + "\"";
   std::string Suggested = HeaderSearchInfo->suggestPathToFileForDiagnostics(
-      InsertedHeader.File, BuildDir, &IsSystem);
+      InsertedHeader.File, BuildDir, IncludingFile, &IsSystem);
   if (IsSystem)
     Suggested = "<" + Suggested + ">";
   else

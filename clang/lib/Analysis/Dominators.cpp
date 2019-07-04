@@ -8,6 +8,12 @@
 
 #include "clang/Analysis/Analyses/Dominators.h"
 
-using namespace clang;
+namespace clang {
 
-void DominatorTree::anchor() {}
+template <>
+void CFGDominatorTreeImpl</*IsPostDom=*/true>::anchor() {}
+
+template <>
+void CFGDominatorTreeImpl</*IsPostDom=*/false>::anchor() {}
+
+} // end of namespace clang

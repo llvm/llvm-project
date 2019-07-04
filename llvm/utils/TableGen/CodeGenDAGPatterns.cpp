@@ -2437,18 +2437,32 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
       }
     }
 
+    // If one or more operands with a default value appear at the end of the
+    // formal operand list for an instruction, we allow them to be overridden
+    // by optional operands provided in the pattern.
+    //
+    // But if an operand B without a default appears at any point after an
+    // operand A with a default, then we don't allow A to be overridden,
+    // because there would be no way to specify whether the next operand in
+    // the pattern was intended to override A or skip it.
+    unsigned NonOverridableOperands = Inst.getNumOperands();
+    while (NonOverridableOperands > 0 &&
+           CDP.operandHasDefault(Inst.getOperand(NonOverridableOperands-1)))
+      --NonOverridableOperands;
+
     unsigned ChildNo = 0;
     for (unsigned i = 0, e = Inst.getNumOperands(); i != e; ++i) {
       Record *OperandNode = Inst.getOperand(i);
 
-      // If the instruction expects a predicate or optional def operand, we
-      // codegen this by setting the operand to it's default value if it has a
-      // non-empty DefaultOps field.
-      if (OperandNode->isSubClassOf("OperandWithDefaultOps") &&
-          !CDP.getDefaultOperand(OperandNode).DefaultOps.empty())
+      // If the operand has a default value, do we use it? We must use the
+      // default if we've run out of children of the pattern DAG to consume,
+      // or if the operand is followed by a non-defaulted one.
+      if (CDP.operandHasDefault(OperandNode) &&
+          (i < NonOverridableOperands || ChildNo >= getNumChildren()))
         continue;
 
-      // Verify that we didn't run out of provided operands.
+      // If we have run out of child nodes and there _isn't_ a default
+      // value we can use for the next operand, give an error.
       if (ChildNo >= getNumChildren()) {
         emitTooFewOperandsError(TP, getOperator()->getName(), getNumChildren());
         return false;

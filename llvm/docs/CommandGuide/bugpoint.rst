@@ -109,7 +109,6 @@ OPTIONS
  line options to enable various optimizations.  To see the new complete list of
  optimizations, use the **-help** and **--load** options together; for example:
 
-
  .. code-block:: bash
 
       bugpoint --load myNewPass.so -help

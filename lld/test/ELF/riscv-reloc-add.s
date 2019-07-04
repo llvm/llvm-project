@@ -24,3 +24,9 @@ _start:
 .word .L1 - .L0
 .half .L1 - .L0
 .byte .L1 - .L0
+
+## Debug section may use R_RISCV_ADD64/R_RISCV_SUB64 pairs to measure lengths
+## of code ranges (e.g. DW_AT_high_pc). Check we allow R_RISCV_ADD*/R_RISCV_SUB*
+## in such non-SHF_ALLOC sections in -pie/-shared mode.
+.section .debug_info
+.quad .L1 - .L0

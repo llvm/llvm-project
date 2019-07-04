@@ -54,9 +54,7 @@ const DiagnosticRecord &diagtool::getDiagnosticForID(short DiagID) {
   DiagnosticRecord Key = {nullptr, DiagID, 0};
 
   const DiagnosticRecord *Result =
-    std::lower_bound(std::begin(BuiltinDiagnosticsByID),
-                     std::end(BuiltinDiagnosticsByID),
-                     Key, orderByID);
+      llvm::lower_bound(BuiltinDiagnosticsByID, Key, orderByID);
   assert(Result && "diagnostic not found; table may be out of date");
   return *Result;
 }

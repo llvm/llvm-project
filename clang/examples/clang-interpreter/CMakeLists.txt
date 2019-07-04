@@ -19,7 +19,7 @@ add_dependencies(clang-interpreter
   clang-resource-headers
   )
 
-target_link_libraries(clang-interpreter
+clang_target_link_libraries(clang-interpreter
   PRIVATE
   clangBasic
   clangCodeGen

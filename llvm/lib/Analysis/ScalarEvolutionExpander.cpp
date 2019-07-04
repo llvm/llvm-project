@@ -60,12 +60,10 @@ Value *SCEVExpander::ReuseOrCreateCast(Value *V, Type *Ty,
           // instructions that might be inserted before BIP.
           if (BasicBlock::iterator(CI) != IP || BIP == IP) {
             // Create a new cast, and leave the old cast in place in case
-            // it is being used as an insert point. Clear its operand
-            // so that it doesn't hold anything live.
+            // it is being used as an insert point.
             Ret = CastInst::Create(Op, V, Ty, "", &*IP);
             Ret->takeName(CI);
             CI->replaceAllUsesWith(Ret);
-            CI->setOperand(0, UndefValue::get(V->getType()));
             break;
           }
           Ret = CI;

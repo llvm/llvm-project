@@ -12,6 +12,9 @@
 #include <mutex>
 #include <thread>
 
+void operator delete(void *, size_t) noexcept;
+void operator delete[](void *, size_t) noexcept;
+
 // Note that every Cxx allocation function in the test binary will be fulfilled
 // by Scudo. See the comment in the C counterpart of this file.
 

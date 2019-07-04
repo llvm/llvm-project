@@ -856,6 +856,10 @@ public:
   unsigned getPrefLoopAlignment() const {
     return PrefLoopAlignment;
   }
+
+  bool ignoreCSRForAllocationOrder(const MachineFunction &MF,
+                                   unsigned PhysReg) const override;
+  unsigned getGPRAllocationOrder(const MachineFunction &MF) const;
 };
 
 } // end namespace llvm
