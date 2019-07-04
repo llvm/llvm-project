@@ -207,7 +207,8 @@ public:
       switch (Name[1]) {
       case 'd': // VSX vector register to hold vector double data
       case 'f': // VSX vector register to hold vector float data
-      case 's': // VSX vector register to hold scalar float data
+      case 's': // VSX vector register to hold scalar double data
+      case 'w': // VSX vector register to hold scalar double data
       case 'a': // Any VSX register
       case 'c': // An individual CR bit
       case 'i': // FP or VSX register to hold 64-bit integers data

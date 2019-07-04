@@ -12,6 +12,7 @@
 #include "Context.h"
 #include "FSProvider.h"
 #include "GlobalCompilationDatabase.h"
+#include "SourceCode.h"
 #include "Threading.h"
 #include "index/FileIndex.h"
 #include "index/Index.h"
@@ -93,12 +94,18 @@ public:
   static void preventThreadStarvationInTests();
 
 private:
+  /// Represents the state of a single file when indexing was performed.
+  struct ShardVersion {
+    FileDigest Digest{0};
+    bool HadErrors = false;
+  };
+
   /// Given index results from a TU, only update symbols coming from files with
-  /// different digests than \p DigestsSnapshot. Also stores new index
+  /// different digests than \p ShardVersionsSnapshot. Also stores new index
   /// information on IndexStorage.
   void update(llvm::StringRef MainFile, IndexFileIn Index,
-              const llvm::StringMap<FileDigest> &DigestsSnapshot,
-              BackgroundIndexStorage *IndexStorage);
+              const llvm::StringMap<ShardVersion> &ShardVersionsSnapshot,
+              BackgroundIndexStorage *IndexStorage, bool HadErrors);
 
   // configuration
   const FileSystemProvider &FSProvider;
@@ -115,8 +122,8 @@ private:
   std::condition_variable IndexCV;
 
   FileSymbols IndexedSymbols;
-  llvm::StringMap<FileDigest> IndexedFileDigests; // Key is absolute file path.
-  std::mutex DigestsMu;
+  llvm::StringMap<ShardVersion> ShardVersions; // Key is absolute file path.
+  std::mutex ShardVersionsMu;
 
   BackgroundIndexStorage::Factory IndexStorageFactory;
   struct Source {

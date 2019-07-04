@@ -40,7 +40,7 @@ struct YAMLRemarkParser {
   /// Temporary parsing buffer for the arguments.
   SmallVector<Argument, 8> TmpArgs;
   /// The string table used for parsing strings.
-  Optional<ParsedStringTable> StrTab;
+  Optional<const ParsedStringTable *> StrTab;
   /// The state used by the parser to parse a remark entry. Invalidated with
   /// every call to `parseYAMLElement`.
   struct ParseState {
@@ -59,13 +59,11 @@ struct YAMLRemarkParser {
   /// not be containing any value.
   Optional<ParseState> State;
 
-  YAMLRemarkParser(StringRef Buf, Optional<StringRef> StrTabBuf = None)
+  YAMLRemarkParser(StringRef Buf,
+                   Optional<const ParsedStringTable *> StrTab = None)
       : SM(), Stream(Buf, SM), ErrorString(), ErrorStream(ErrorString),
-        TmpArgs(), StrTab() {
+        TmpArgs(), StrTab(StrTab) {
     SM.setDiagHandler(YAMLRemarkParser::HandleDiagnostic, this);
-
-    if (StrTabBuf)
-      StrTab.emplace(*StrTabBuf);
   }
 
   /// Parse a YAML element.
@@ -127,12 +125,13 @@ struct YAMLParserImpl : public ParserImpl {
   /// Set to `true` if we had any errors during parsing.
   bool HasErrors = false;
 
-  YAMLParserImpl(StringRef Buf, Optional<StringRef> StrTabBuf = None)
-      : ParserImpl{ParserImpl::Kind::YAML}, YAMLParser(Buf, StrTabBuf),
+  YAMLParserImpl(StringRef Buf,
+                 Optional<const ParsedStringTable *> StrTab = None)
+      : ParserImpl{ParserFormat::YAML}, YAMLParser(Buf, StrTab),
         YAMLIt(YAMLParser.Stream.begin()), HasErrors(false) {}
 
   static bool classof(const ParserImpl *PI) {
-    return PI->ParserKind == ParserImpl::Kind::YAML;
+    return PI->Format == ParserFormat::YAML;
   }
 };
 } // end namespace remarks

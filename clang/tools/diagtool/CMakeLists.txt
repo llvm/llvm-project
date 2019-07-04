@@ -12,7 +12,7 @@ add_clang_executable(diagtool
   TreeView.cpp
 )
 
-target_link_libraries(diagtool
+clang_target_link_libraries(diagtool
   PRIVATE
   clangBasic
   clangFrontend

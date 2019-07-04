@@ -39,7 +39,7 @@ add_clang_tool(clang
   ${tablegen_deps}
   )
 
-target_link_libraries(clang
+clang_target_link_libraries(clang
   PRIVATE
   clangBasic
   clangCodeGen

@@ -875,3 +875,25 @@ int PPCTTIImpl::getInterleavedMemoryOpCost(unsigned Opcode, Type *VecTy,
   return Cost;
 }
 
+bool PPCTTIImpl::canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE,
+                            LoopInfo *LI, DominatorTree *DT,
+                            AssumptionCache *AC, TargetLibraryInfo *LibInfo) {
+  // Process nested loops first.
+  for (Loop::iterator I = L->begin(), E = L->end(); I != E; ++I)
+    if (canSaveCmp(*I, BI, SE, LI, DT, AC, LibInfo))
+      return false; // Stop search.
+
+  HardwareLoopInfo HWLoopInfo(L);
+
+  if (!HWLoopInfo.canAnalyze(*LI))
+    return false;
+
+  if (!isHardwareLoopProfitable(L, *SE, *AC, LibInfo, HWLoopInfo))
+    return false;
+
+  if (!HWLoopInfo.isHardwareLoopCandidate(*SE, *LI, *DT))
+    return false;
+
+  *BI = HWLoopInfo.ExitBranch;
+  return true;
+}

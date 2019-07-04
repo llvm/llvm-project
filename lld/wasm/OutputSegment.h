@@ -33,6 +33,7 @@ public:
 
   StringRef Name;
   const uint32_t Index;
+  uint32_t InitFlags = 0;
   uint32_t SectionOffset = 0;
   uint32_t Alignment = 0;
   uint32_t StartVA = 0;

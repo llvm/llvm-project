@@ -508,6 +508,15 @@ Error deregisterEHFrameSection(const void *EHFrameSectionAddr) {
 #endif
 }
 
+EHFrameRegistrar::~EHFrameRegistrar() {}
+
+InProcessEHFrameRegistrar &InProcessEHFrameRegistrar::getInstance() {
+  static InProcessEHFrameRegistrar Instance;
+  return Instance;
+}
+
+InProcessEHFrameRegistrar::InProcessEHFrameRegistrar() {}
+
 AtomGraphPassFunction
 createEHFrameRecorderPass(const Triple &TT,
                           StoreFrameAddressFunction StoreFrameAddress) {

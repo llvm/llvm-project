@@ -413,3 +413,45 @@ bool ARMSubtarget::useFastISel() const {
          ((isTargetMachO() && !isThumb1Only()) ||
           (isTargetLinux() && !isThumb()) || (isTargetNaCl() && !isThumb()));
 }
+
+unsigned ARMSubtarget::getGPRAllocationOrder(const MachineFunction &MF) const {
+  // The GPR register class has multiple possible allocation orders, with
+  // tradeoffs preferred by different sub-architectures and optimisation goals.
+  // The allocation orders are:
+  // 0: (the default tablegen order, not used)
+  // 1: r14, r0-r13
+  // 2: r0-r7
+  // 3: r0-r7, r12, lr, r8-r11
+  // Note that the register allocator will change this order so that
+  // callee-saved registers are used later, as they require extra work in the
+  // prologue/epilogue (though we sometimes override that).
+
+  // For thumb1-only targets, only the low registers are allocatable.
+  if (isThumb1Only())
+    return 2;
+
+  // Allocate low registers first, so we can select more 16-bit instructions.
+  // We also (in ignoreCSRForAllocationOrder) override  the default behaviour
+  // with regards to callee-saved registers, because pushing extra registers is
+  // much cheaper (in terms of code size) than using high registers. After
+  // that, we allocate r12 (doesn't need to be saved), lr (saving it means we
+  // can return with the pop, don't need an extra "bx lr") and then the rest of
+  // the high registers.
+  if (isThumb2() && MF.getFunction().hasMinSize())
+    return 3;
+
+  // Otherwise, allocate in the default order, using LR first because saving it
+  // allows a shorter epilogue sequence.
+  return 1;
+}
+
+bool ARMSubtarget::ignoreCSRForAllocationOrder(const MachineFunction &MF,
+                                               unsigned PhysReg) const {
+  // To minimize code size in Thumb2, we prefer the usage of low regs (lower
+  // cost per use) so we can  use narrow encoding. By default, caller-saved
+  // registers (e.g. lr, r12) are always  allocated first, regardless of
+  // their cost per use. When optForMinSize, we prefer the low regs even if
+  // they are CSR because usually push/pop can be folded into existing ones.
+  return isThumb2() && MF.getFunction().hasMinSize() &&
+         ARM::GPRRegClass.contains(PhysReg);
+}

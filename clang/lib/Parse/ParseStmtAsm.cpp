@@ -144,8 +144,8 @@ void ClangAsmParserCallback::findTokensForString(
 
   // Try to find a token whose offset matches the first token.
   unsigned FirstCharOffset = Str.begin() - AsmString.begin();
-  const unsigned *FirstTokOffset = std::lower_bound(
-      AsmTokOffsets.begin(), AsmTokOffsets.end(), FirstCharOffset);
+  const unsigned *FirstTokOffset =
+      llvm::lower_bound(AsmTokOffsets, FirstCharOffset);
 
   // For now, assert that the start of the string exactly
   // corresponds to the start of a token.
@@ -174,8 +174,7 @@ ClangAsmParserCallback::translateLocation(const llvm::SourceMgr &LSM,
   unsigned Offset = SMLoc.getPointer() - LBuf->getBufferStart();
 
   // Figure out which token that offset points into.
-  const unsigned *TokOffsetPtr =
-      std::lower_bound(AsmTokOffsets.begin(), AsmTokOffsets.end(), Offset);
+  const unsigned *TokOffsetPtr = llvm::lower_bound(AsmTokOffsets, Offset);
   unsigned TokIndex = TokOffsetPtr - AsmTokOffsets.begin();
   unsigned TokOffset = *TokOffsetPtr;
 

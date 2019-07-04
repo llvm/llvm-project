@@ -264,3 +264,34 @@ entry:
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@c2{{.*}}, i64 1)
 ; CHECK-CONS: call void @__msan_instrument_asm_store({{.*}}@memcpy_d1{{.*}}, i64 8)
 ; CHECK: call void asm "", "=*m,=*m,=*m,*m,*m,*m,~{dirflag},~{fpsr},~{flags}"(%struct.pair* @pair2, i8* @c2, i8* (i8*, i8*, i32)** @memcpy_d1, %struct.pair* @pair1, i8* @c1, i8* (i8*, i8*, i32)** @memcpy_s1)
+
+
+; A simple asm goto construct to check that callbr is handled correctly:
+;  int asm_goto(int n) {
+;    int v = 1;
+;    asm goto("cmp %0, %1; jnz %l2;" :: "r"(n), "r"(v)::skip_label);
+;    return 0;
+;  skip_label:
+;    return 1;
+;  }
+; asm goto statements can't have outputs, so just make sure we check the input
+; and the compiler doesn't crash.
+define dso_local i32 @asm_goto(i32 %n) sanitize_memory {
+entry:
+  callbr void asm sideeffect "cmp $0, $1; jnz ${2:l}", "r,r,X,~{dirflag},~{fpsr},~{flags}"(i32 %n, i32 1, i8* blockaddress(@asm_goto, %skip_label))
+          to label %cleanup [label %skip_label]
+
+skip_label:                                       ; preds = %entry
+  br label %cleanup
+
+cleanup:                                          ; preds = %entry, %skip_label
+  %retval.0 = phi i32 [ 2, %skip_label ], [ 1, %entry ]
+  ret i32 %retval.0
+}
+
+; CHECK-LABEL: @asm_goto
+; CHECK: [[LOAD_ARG:%.*]] = load {{.*}} %_msarg
+; CHECK: [[CMP:%.*]] = icmp ne {{.*}} [[LOAD_ARG]], 0
+; CHECK: br {{.*}} [[CMP]], label %[[LABEL:.*]], label
+; CHECK: [[LABEL]]:
+; CHECK-NEXT: call void @__msan_warning

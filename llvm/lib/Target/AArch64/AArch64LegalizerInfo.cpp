@@ -109,7 +109,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .scalarize(0);
 
   getActionDefinitionsBuilder({G_LSHR, G_ASHR})
-      .legalFor({{s32, s32}, {s64, s64}, {v2s32, v2s32}, {v4s32, v4s32}})
+      .customIf([=](const LegalityQuery &Query) {
+        const auto &SrcTy = Query.Types[0];
+        const auto &AmtTy = Query.Types[1];
+        return !SrcTy.isVector() && SrcTy.getSizeInBits() == 32 &&
+               AmtTy.getSizeInBits() == 32;
+      })
+      .legalFor(
+          {{s32, s32}, {s32, s64}, {s64, s64}, {v2s32, v2s32}, {v4s32, v4s32}})
       .clampScalar(1, s32, s64)
       .clampScalar(0, s32, s64)
       .minScalarSameAs(1, 0);
@@ -601,9 +608,37 @@ bool AArch64LegalizerInfo::legalizeCustom(MachineInstr &MI,
   case TargetOpcode::G_LOAD:
   case TargetOpcode::G_STORE:
     return legalizeLoadStore(MI, MRI, MIRBuilder, Observer);
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_ASHR:
+  case TargetOpcode::G_LSHR:
+    return legalizeShlAshrLshr(MI, MRI, MIRBuilder, Observer);
   }
 
   llvm_unreachable("expected switch to return");
+}
+
+bool AArch64LegalizerInfo::legalizeShlAshrLshr(
+    MachineInstr &MI, MachineRegisterInfo &MRI, MachineIRBuilder &MIRBuilder,
+    GISelChangeObserver &Observer) const {
+  assert(MI.getOpcode() == TargetOpcode::G_ASHR ||
+         MI.getOpcode() == TargetOpcode::G_LSHR ||
+         MI.getOpcode() == TargetOpcode::G_SHL);
+  // If the shift amount is a G_CONSTANT, promote it to a 64 bit type so the
+  // imported patterns can select it later. Either way, it will be legal.
+  Register AmtReg = MI.getOperand(2).getReg();
+  auto *CstMI = MRI.getVRegDef(AmtReg);
+  assert(CstMI && "expected to find a vreg def");
+  if (CstMI->getOpcode() != TargetOpcode::G_CONSTANT)
+    return true;
+  // Check the shift amount is in range for an immediate form.
+  unsigned Amount = CstMI->getOperand(1).getCImm()->getZExtValue();
+  if (Amount > 31)
+    return true; // This will have to remain a register variant.
+  assert(MRI.getType(AmtReg).getSizeInBits() == 32);
+  MIRBuilder.setInstr(MI);
+  auto ExtCst = MIRBuilder.buildZExt(LLT::scalar(64), AmtReg);
+  MI.getOperand(2).setReg(ExtCst.getReg(0));
+  return true;
 }
 
 bool AArch64LegalizerInfo::legalizeLoadStore(

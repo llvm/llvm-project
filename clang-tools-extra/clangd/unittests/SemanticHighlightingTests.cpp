@@ -8,6 +8,7 @@
 
 #include "Annotations.h"
 #include "ClangdServer.h"
+#include "Protocol.h"
 #include "SemanticHighlighting.h"
 #include "TestFS.h"
 #include "TestTU.h"
@@ -66,7 +67,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
   }
 }
 
-TEST(ClangdSemanticHighlightingTest, GeneratesHighlightsWhenFileChange) {
+TEST(SemanticHighlighting, GeneratesHighlightsWhenFileChange) {
   class HighlightingsCounterDiagConsumer : public DiagnosticsConsumer {
   public:
     std::atomic<int> Count = {0};
@@ -88,6 +89,29 @@ TEST(ClangdSemanticHighlightingTest, GeneratesHighlightsWhenFileChange) {
   Server.addDocument(FooCpp, "int a;");
   ASSERT_TRUE(Server.blockUntilIdleForTest()) << "Waiting for server";
   ASSERT_EQ(DiagConsumer.Count, 1);
+}
+
+TEST(SemanticHighlighting, toSemanticHighlightingInformation) {
+  auto CreatePosition = [](int Line, int Character) -> Position {
+    Position Pos;
+    Pos.line = Line;
+    Pos.character = Character;
+    return Pos;
+  };
+
+  std::vector<HighlightingToken> Tokens{
+      {HighlightingKind::Variable,
+                        Range{CreatePosition(3, 8), CreatePosition(3, 12)}},
+      {HighlightingKind::Function,
+                        Range{CreatePosition(3, 4), CreatePosition(3, 7)}},
+      {HighlightingKind::Variable,
+                        Range{CreatePosition(1, 1), CreatePosition(1, 5)}}};
+  std::vector<SemanticHighlightingInformation> ActualResults =
+      toSemanticHighlightingInformation(Tokens);
+  std::vector<SemanticHighlightingInformation> ExpectedResults = {
+      {1, "AAAAAQAEAAA="},
+      {3, "AAAACAAEAAAAAAAEAAMAAQ=="}};
+  EXPECT_EQ(ActualResults, ExpectedResults);
 }
 
 } // namespace

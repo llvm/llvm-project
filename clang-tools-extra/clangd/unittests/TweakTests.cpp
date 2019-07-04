@@ -278,6 +278,14 @@ TEST(TweakTest, DumpRecordLayout) {
   EXPECT_THAT(getMessage(ID, Input), ::testing::HasSubstr("0 |   int x"));
 }
 
+TEST(TweakTest, AnnotateHighlightings) {
+  llvm::StringLiteral ID = "AnnotateHighlightings";
+  checkAvailable(ID, "^vo^id^ ^f(^) {^}^"); // available everywhere.
+  const char *Input = "void ^f() {}";
+  const char *Output = "void /* entity.name.function.cpp */f() {}";
+  checkTransform(ID, Input, Output);
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

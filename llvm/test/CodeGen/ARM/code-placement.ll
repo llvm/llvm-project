@@ -40,7 +40,7 @@ entry:
 bb1:                                              ; preds = %bb2.preheader, %bb1
 ; CHECK: LBB1_[[BB3:.]]: @ %bb3
 ; CHECK: LBB1_[[PREHDR:.]]: @ %bb2.preheader
-; CHECK: blt LBB1_[[BB3]]
+; CHECK: bmi LBB1_[[BB3]]
   %indvar = phi i32 [ %indvar.next, %bb1 ], [ 0, %bb2.preheader ] ; <i32> [#uses=2]
   %sum.08 = phi i32 [ %2, %bb1 ], [ %sum.110, %bb2.preheader ] ; <i32> [#uses=1]
   %tmp17 = sub i32 %i.07, %indvar                 ; <i32> [#uses=1]

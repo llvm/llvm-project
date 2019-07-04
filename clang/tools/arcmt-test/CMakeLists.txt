@@ -6,7 +6,7 @@ add_clang_executable(arcmt-test
   arcmt-test.cpp
   )
 
-target_link_libraries(arcmt-test
+clang_target_link_libraries(arcmt-test
   PRIVATE
   clangARCMigrate
   clangBasic

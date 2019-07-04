@@ -5615,7 +5615,7 @@ class BufferToAPValueConverter {
           !EnumSugar && (T->isSpecificBuiltinType(BuiltinType::UChar) ||
                          T->isSpecificBuiltinType(BuiltinType::Char_U));
       if (!IsStdByte && !IsUChar) {
-        QualType DisplayType(EnumSugar ? (Type *)EnumSugar : T, 0);
+        QualType DisplayType(EnumSugar ? (const Type *)EnumSugar : T, 0);
         Info.FFDiag(BCE->getExprLoc(),
                     diag::note_constexpr_bit_cast_indet_dest)
             << DisplayType << Info.Ctx.getLangOpts().CharIsSigned;

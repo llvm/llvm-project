@@ -314,9 +314,9 @@ std::string IncludeFixerSemaSource::minimizeInclude(
   if (!Entry)
     return Include;
 
-  bool IsSystem;
+  bool IsSystem = false;
   std::string Suggestion =
-      HeaderSearch.suggestPathToFileForDiagnostics(Entry, &IsSystem);
+      HeaderSearch.suggestPathToFileForDiagnostics(Entry, "", &IsSystem);
 
   return IsSystem ? '<' + Suggestion + '>' : '"' + Suggestion + '"';
 }

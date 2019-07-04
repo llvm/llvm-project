@@ -45,12 +45,6 @@ systems.  Most of the code is written in standard C++ with operating system
 services abstracted to a support library.  The tools required to build and
 test LLVM have been ported to a plethora of platforms.
 
-Some porting problems may exist in the following areas:
-
-* The autoconf/makefile build system relies heavily on UNIX shell tools,
-  like the Bourne Shell and sed.  Porting to systems without these tools
-  (MacOS 9, Plan 9) will require more effort.
-
 What API do I use to store a value to one of the virtual registers in LLVM IR's SSA representation?
 ---------------------------------------------------------------------------------------------------
 

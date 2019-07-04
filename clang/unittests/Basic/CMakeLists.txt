@@ -10,7 +10,7 @@ add_clang_unittest(BasicTests
   SourceManagerTest.cpp
   )
 
-target_link_libraries(BasicTests
+clang_target_link_libraries(BasicTests
   PRIVATE
   clangAST
   clangBasic

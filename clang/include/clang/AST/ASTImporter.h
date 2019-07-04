@@ -300,7 +300,7 @@ class TypeSourceInfo;
     /// as little as it can, e.g., by importing declarations as forward
     /// declarations that can be completed at a later point.
     ///
-    /// \param LookupTable The importer specific lookup table which may be
+    /// \param SharedState The importer specific lookup table which may be
     /// shared amongst several ASTImporter objects.
     /// If not set then the original C/C++ lookup is used.
     ASTImporter(ASTContext &ToContext, FileManager &ToFileManager,

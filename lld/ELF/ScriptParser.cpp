@@ -40,14 +40,21 @@ using namespace llvm::support::endian;
 using namespace lld;
 using namespace lld::elf;
 
-static bool isUnderSysroot(StringRef Path);
-
 namespace {
 class ScriptParser final : ScriptLexer {
 public:
-  ScriptParser(MemoryBufferRef MB)
-      : ScriptLexer(MB),
-        IsUnderSysroot(isUnderSysroot(MB.getBufferIdentifier())) {}
+  ScriptParser(MemoryBufferRef MB) : ScriptLexer(MB) {
+    // Initialize IsUnderSysroot
+    if (Config->Sysroot == "")
+      return;
+    StringRef Path = MB.getBufferIdentifier();
+    for (; !Path.empty(); Path = sys::path::parent_path(Path)) {
+      if (!sys::fs::equivalent(Config->Sysroot, Path))
+        continue;
+      IsUnderSysroot = true;
+      return;
+    }
+  }
 
   void readLinkerScript();
   void readVersionScript();
@@ -118,7 +125,7 @@ private:
   readSymbols();
 
   // True if a script being read is in a subdirectory specified by -sysroot.
-  bool IsUnderSysroot;
+  bool IsUnderSysroot = false;
 
   // A set to detect an INCLUDE() cycle.
   StringSet<> Seen;
@@ -129,15 +136,6 @@ static StringRef unquote(StringRef S) {
   if (S.startswith("\""))
     return S.substr(1, S.size() - 2);
   return S;
-}
-
-static bool isUnderSysroot(StringRef Path) {
-  if (Config->Sysroot == "")
-    return false;
-  for (; !Path.empty(); Path = sys::path::parent_path(Path))
-    if (sys::fs::equivalent(Config->Sysroot, Path))
-      return true;
-  return false;
 }
 
 // Some operations only support one non absolute value. Move the
@@ -1449,8 +1447,8 @@ std::vector<SymbolVersion> ScriptParser::readVersionExtern() {
   std::vector<SymbolVersion> Ret;
   while (!errorCount() && peek() != "}") {
     StringRef Tok = next();
-    bool HasWildcard = !Tok.startswith("\"") && hasWildcard(Tok);
-    Ret.push_back({unquote(Tok), IsCXX, HasWildcard});
+    Ret.push_back(
+        {unquote(Tok), IsCXX, !Tok.startswith("\"") && hasWildcard(Tok)});
     if (consume("}"))
       return Ret;
     expect(";");

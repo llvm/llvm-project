@@ -31,7 +31,7 @@ add_clang_unittest(ASTTests
   StructuralEquivalenceTest.cpp
   )
 
-target_link_libraries(ASTTests
+clang_target_link_libraries(ASTTests
   PRIVATE
   clangAST
   clangASTMatchers

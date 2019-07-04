@@ -53,9 +53,8 @@ define i64 @scalar_i64(i64 %x, i64 %y) nounwind {
 define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 ; CHECK-LABEL: vector_i128_i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    movi v1.16b, #1
-; CHECK-NEXT:    add v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    sub v0.16b, v1.16b, v0.16b
 ; CHECK-NEXT:    ret
   %t0 = add <16 x i8> %x, <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
   %t1 = add <16 x i8> %y, %t0
@@ -65,9 +64,8 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y) nounwind {
 define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 ; CHECK-LABEL: vector_i128_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
-; CHECK-NEXT:    movi v1.8h, #1
-; CHECK-NEXT:    add v0.8h, v0.8h, v1.8h
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    sub v0.8h, v1.8h, v0.8h
 ; CHECK-NEXT:    ret
   %t0 = add <8 x i16> %x, <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
   %t1 = add <8 x i16> %y, %t0
@@ -77,9 +75,8 @@ define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y) nounwind {
 define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 ; CHECK-LABEL: vector_i128_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    movi v1.4s, #1
-; CHECK-NEXT:    add v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    sub v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    ret
   %t0 = add <4 x i32> %x, <i32 1, i32 1, i32 1, i32 1>
   %t1 = add <4 x i32> %y, %t0
@@ -89,10 +86,8 @@ define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y) nounwind {
 define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; CHECK-LABEL: vector_i128_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1
-; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
-; CHECK-NEXT:    dup v1.2d, x8
-; CHECK-NEXT:    add v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    sub v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
   %t0 = add <2 x i64> %x, <i64 1, i64 1>
   %t1 = add <2 x i64> %y, %t0

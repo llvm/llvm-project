@@ -142,6 +142,9 @@ extern char &SIFixupVectorISelID;
 void initializeSILowerI1CopiesPass(PassRegistry &);
 extern char &SILowerI1CopiesID;
 
+void initializeSILowerSGPRSpillsPass(PassRegistry &);
+extern char &SILowerSGPRSpillsID;
+
 void initializeSILoadStoreOptimizerPass(PassRegistry &);
 extern char &SILoadStoreOptimizerID;
 

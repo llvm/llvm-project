@@ -60,7 +60,7 @@ entry:
 
 while.body:
 ; CHECK: while.body
-; CHECK: mul r{{[0-9]+}}
+; CHECK: muls r{{[0-9]+}}
 ; CHECK: muls
   %ptr1.addr.09 = phi i32* [ %add.ptr, %while.body ], [ %ptr1, %entry ]
   %ptr2.addr.08 = phi i32* [ %incdec.ptr, %while.body ], [ %ptr2, %entry ]

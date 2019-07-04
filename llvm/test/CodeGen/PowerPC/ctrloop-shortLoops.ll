@@ -86,10 +86,12 @@ for.body:                                         ; preds = %entry, %for.body
 }
 
 ; Function Attrs: norecurse nounwind
+; On core a2q, IssueWidth is 1. On core pwr8, IssueWidth is 8.
+; a2q should use mtctr, but pwr8 should not use mtctr.
 define signext i32 @testTripCount2NonSmallLoop() {
 ; CHECK-LABEL: testTripCount2NonSmallLoop:
-; CHECK: blt
-; CHECK: beq
+; CHECK-A2Q: mtctr
+; CHECK-PWR8-NOT: mtctr
 ; CHECK: blr
 
 entry:

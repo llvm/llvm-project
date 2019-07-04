@@ -143,6 +143,12 @@ def import_memory: F<"import-memory">,
 def shared_memory: F<"shared-memory">,
   HelpText<"Use shared linear memory">;
 
+def active_segments: F<"active-segments">,
+  HelpText<"Force segments to be active">;
+
+def passive_segments: F<"passive-segments">,
+  HelpText<"Force segments to be passive">;
+
 def import_table: F<"import-table">,
   HelpText<"Import function table from the environment">;
 

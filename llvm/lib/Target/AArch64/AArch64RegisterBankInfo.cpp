@@ -537,10 +537,6 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case TargetOpcode::G_AND:
   case TargetOpcode::G_OR:
   case TargetOpcode::G_XOR:
-    // Shifts.
-  case TargetOpcode::G_SHL:
-  case TargetOpcode::G_LSHR:
-  case TargetOpcode::G_ASHR:
     // Floating point ops.
   case TargetOpcode::G_FADD:
   case TargetOpcode::G_FSUB:
@@ -554,6 +550,17 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
         DefaultMappingID, /*Cost*/ 1,
         getFPExtMapping(DstTy.getSizeInBits(), SrcTy.getSizeInBits()),
         /*NumOperands*/ 2);
+  }
+    // Shifts.
+  case TargetOpcode::G_SHL:
+  case TargetOpcode::G_LSHR:
+  case TargetOpcode::G_ASHR: {
+    LLT ShiftAmtTy = MRI.getType(MI.getOperand(2).getReg());
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    if (ShiftAmtTy.getSizeInBits() == 64 && SrcTy.getSizeInBits() == 32)
+      return getInstructionMapping(DefaultMappingID, 1,
+                                   &ValMappings[Shift64Imm], 3);
+    return getSameKindOfOperandsMapping(MI);
   }
   case TargetOpcode::COPY: {
     unsigned DstReg = MI.getOperand(0).getReg();

@@ -2557,19 +2557,12 @@ define <8 x i32> @shuffle_v8i32_uuuuuu7u(<8 x i32> %a, <8 x i32> %b) nounwind {
 }
 
 define <8 x i32> @shuffle_v8i32_32107654_v4i32(<4 x i32> %a, <4 x i32> %b) {
-; AVX1-LABEL: shuffle_v8i32_32107654_v4i32:
-; AVX1:       # %bb.0:
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[3,2,1,0]
-; AVX1-NEXT:    vpermilps {{.*#+}} xmm1 = xmm1[3,2,1,0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX1-NEXT:    retq
-;
-; AVX2OR512VL-LABEL: shuffle_v8i32_32107654_v4i32:
-; AVX2OR512VL:       # %bb.0:
-; AVX2OR512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX2OR512VL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
-; AVX2OR512VL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
-; AVX2OR512VL-NEXT:    retq
+; ALL-LABEL: shuffle_v8i32_32107654_v4i32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; ALL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; ALL-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
+; ALL-NEXT:    retq
   %1 = shufflevector <4 x i32> %a, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %2 = shufflevector <4 x i32> %b, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %3 = shufflevector <4 x i32> %1, <4 x i32> %2, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>

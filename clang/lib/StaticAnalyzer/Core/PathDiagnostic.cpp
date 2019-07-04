@@ -780,6 +780,9 @@ PathDiagnosticLocation::create(const ProgramPoint& P,
           NewAllocElt->getAllocatorExpr()->getBeginLoc(), SMng);
     }
     llvm_unreachable("Unexpected CFG element at front of block");
+  } else if (Optional<FunctionExitPoint> FE = P.getAs<FunctionExitPoint>()) {
+    return PathDiagnosticLocation(FE->getStmt(), SMng,
+                                  FE->getLocationContext());
   } else {
     llvm_unreachable("Unexpected ProgramPoint");
   }

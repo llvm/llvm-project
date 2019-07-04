@@ -24,3 +24,16 @@ unsigned char test_wc_i8(unsigned char b1, unsigned char b2) {
 // CHECK: call i8 asm "crand $0, $1, $2", "=^wc,^wc,^wc"(i8 %b1, i8 %b2)
 }
 
+float test_fmaxf(float x, float y) {
+  asm("xsmaxdp %x0, %x1, %x2" : "=ww"(x) : "ww"(x), "ww"(y));
+  return x;
+// CHECK-LABEL: float @test_fmaxf(float %x, float %y)
+// CHECK: call float asm "xsmaxdp ${0:x}, ${1:x}, ${2:x}", "=^ww,^ww,^ww"(float %x, float %y)
+}
+
+double test_fmax(double x, double y) {
+  asm("xsmaxdp %x0, %x1, %x2" : "=ws"(x) : "ws"(x), "ws"(y));
+  return x;
+// CHECK-LABEL: double @test_fmax(double %x, double %y)
+// CHECK: call double asm "xsmaxdp ${0:x}, ${1:x}, ${2:x}", "=^ws,^ws,^ws"(double %x, double %y)
+}

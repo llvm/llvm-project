@@ -19,5 +19,17 @@ entry:
 ; CHECK: error: couldn't allocate output register for constraint 'wi'
 }
 
+define float @test_ww(float %x, float %y) #0 {
+  %1 = tail call float asm "xsmaxdp ${0:x},${1:x},${2:x}", "=^ww,^ww,^ww"(float %x, float %y) #0
+  ret float %1
+; CHECK: error: couldn't allocate output register for constraint 'ww'
+}
+
+define double @test_ws(double %x, double %y) #0 {
+  %1 = tail call double asm "xsmaxdp ${0:x},${1:x},${2:x}", "=^ws,^ws,^ws"(double %x, double %y) #0
+  ret double %1
+; CHECK: error: couldn't allocate output register for constraint 'ws'
+}
+
 attributes #0 = { nounwind "target-features"="-vsx" }
 

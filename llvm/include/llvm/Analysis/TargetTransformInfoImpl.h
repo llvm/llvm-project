@@ -221,6 +221,12 @@ public:
 
   bool canMacroFuseCmp() { return false; }
 
+  bool canSaveCmp(Loop *L, BranchInst **BI, ScalarEvolution *SE, LoopInfo *LI,
+                  DominatorTree *DT, AssumptionCache *AC,
+                  TargetLibraryInfo *LibInfo) {
+    return false;
+  }
+
   bool shouldFavorPostInc() const { return false; }
 
   bool shouldFavorBackedgeIndex(const Loop *L) const { return false; }
