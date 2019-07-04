@@ -44,8 +44,7 @@ __invoke_if(std::true_type, _Fp __f)
 }
 
 template <typename _Fp>
-void
-__invoke_if(std::false_type, _Fp)
+void __invoke_if(std::false_type, _Fp)
 {
 }
 
@@ -57,8 +56,7 @@ __invoke_if_not(std::false_type, _Fp __f)
 }
 
 template <typename _Fp>
-void
-__invoke_if_not(std::true_type, _Fp)
+void __invoke_if_not(std::true_type, _Fp)
 {
 }
 

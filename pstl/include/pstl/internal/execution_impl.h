@@ -13,6 +13,7 @@
 #include <iterator>
 #include <type_traits>
 
+#include "pstl_config.h"
 #include "execution_defs.h"
 
 namespace __pstl

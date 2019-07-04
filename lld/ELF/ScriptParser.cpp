@@ -85,7 +85,6 @@ private:
   SymbolAssignment *readSymbolAssignment(StringRef Name);
   ByteCommand *readByteCommand(StringRef Tok);
   std::array<uint8_t, 4> readFill();
-  std::array<uint8_t, 4> parseFill(StringRef Tok);
   bool readSectionDirective(OutputSection *Cmd, StringRef Tok1, StringRef Tok2);
   void readSectionAddressType(OutputSection *Cmd);
   OutputSection *readOverlaySectionDescription();
@@ -726,17 +725,6 @@ Expr ScriptParser::readAssert() {
   };
 }
 
-// Reads a FILL(expr) command. We handle the FILL command as an
-// alias for =fillexp section attribute, which is different from
-// what GNU linkers do.
-// https://sourceware.org/binutils/docs/ld/Output-Section-Data.html
-std::array<uint8_t, 4> ScriptParser::readFill() {
-  expect("(");
-  std::array<uint8_t, 4> V = parseFill(next());
-  expect(")");
-  return V;
-}
-
 // Tries to read the special directive for an output section definition which
 // can be one of following: "(NOLOAD)", "(COPY)", "(INFO)" or "(OVERLAY)".
 // Tok1 and Tok2 are next 2 tokens peeked. See comment for readSectionAddressType below.
@@ -837,6 +825,9 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
       // by name. This is for very old file formats such as ECOFF/XCOFF.
       // For ELF, we should ignore.
     } else if (Tok == "FILL") {
+      // We handle the FILL command as an alias for =fillexp section attribute,
+      // which is different from what GNU linkers do.
+      // https://sourceware.org/binutils/docs/ld/Output-Section-Data.html
       Cmd->Filler = readFill();
     } else if (Tok == "SORT") {
       readSort();
@@ -867,10 +858,12 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
 
   Cmd->Phdrs = readOutputSectionPhdrs();
 
-  if (consume("="))
-    Cmd->Filler = parseFill(next());
-  else if (peek().startswith("="))
-    Cmd->Filler = parseFill(next().drop_front());
+  if (peek() == "=" || peek().startswith("=")) {
+    InExpr = true;
+    consume("=");
+    Cmd->Filler = readFill();
+    InExpr = false;
+  }
 
   // Consume optional comma following output section command.
   consume(",");
@@ -880,20 +873,21 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef OutSec) {
   return Cmd;
 }
 
-// Parses a given string as a octal/decimal/hexadecimal number and
-// returns it as a big-endian number. Used for `=<fillexp>`.
+// Reads a `=<fillexp>` expression and returns its value as a big-endian number.
 // https://sourceware.org/binutils/docs/ld/Output-Section-Fill.html
+// We do not support using symbols in such expressions.
 //
 // When reading a hexstring, ld.bfd handles it as a blob of arbitrary
 // size, while ld.gold always handles it as a 32-bit big-endian number.
 // We are compatible with ld.gold because it's easier to implement.
-std::array<uint8_t, 4> ScriptParser::parseFill(StringRef Tok) {
-  uint32_t V = 0;
-  if (!to_integer(Tok, V))
-    setError("invalid filler expression: " + Tok);
+std::array<uint8_t, 4> ScriptParser::readFill() {
+  uint64_t Value = readExpr()().Val;
+  if (Value > UINT32_MAX)
+    setError("filler expression result does not fit 32-bit: 0x" +
+             Twine::utohexstr(Value));
 
   std::array<uint8_t, 4> Buf;
-  write32be(Buf.data(), V);
+  write32be(Buf.data(), (uint32_t)Value);
   return Buf;
 }
 

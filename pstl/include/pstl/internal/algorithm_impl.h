@@ -23,7 +23,6 @@
 #include "parallel_impl.h"
 #include "unseq_backend_simd.h"
 
-
 namespace __pstl
 {
 namespace __internal
@@ -2133,7 +2132,7 @@ __pattern_partial_sort(_ExecutionPolicy&& __exec, _RandomAccessIterator __first,
                        _RandomAccessIterator __last, _Compare __comp, _IsVector, /*is_parallel=*/std::true_type)
 {
     const auto __n = __middle - __first;
-    if(__n == 0)
+    if (__n == 0)
         return;
 
     __internal::__except_handler([&]() {
@@ -2666,17 +2665,19 @@ __pattern_inplace_merge(_ExecutionPolicy&& __exec, _BidirectionalIterator __firs
             return __internal::__brick_uninitialized_move(__first1, __last1, __first2, _IsVector());
         };
 
-        __par_backend::__parallel_merge(std::forward<_ExecutionPolicy>(__exec), __first, __middle, __middle, __last, __r,
-            __comp, [__n, __move_values, __move_sequences](_BidirectionalIterator __f1, _BidirectionalIterator __l1,
-            _BidirectionalIterator __f2, _BidirectionalIterator __l2, _Tp* __f3,_Compare __comp) {
-                (__par_backend::__serial_move_merge(__n))(__f1, __l1, __f2, __l2, __f3, __comp, __move_values, __move_values, __move_sequences,
-                __move_sequences);
+        __par_backend::__parallel_merge(
+            std::forward<_ExecutionPolicy>(__exec), __first, __middle, __middle, __last, __r, __comp,
+            [__n, __move_values, __move_sequences](_BidirectionalIterator __f1, _BidirectionalIterator __l1,
+                                                   _BidirectionalIterator __f2, _BidirectionalIterator __l2, _Tp* __f3,
+                                                   _Compare __comp) {
+                (__par_backend::__serial_move_merge(__n))(__f1, __l1, __f2, __l2, __f3, __comp, __move_values,
+                                                          __move_values, __move_sequences, __move_sequences);
                 return __f3 + (__l1 - __f1) + (__l2 - __f2);
             });
-            __par_backend::__parallel_for(std::forward<_ExecutionPolicy>(__exec), __r, __r + __n,
-                [__r, __first, __is_vector](_Tp* __i, _Tp* __j) {
-                    __internal::__brick_move(__i, __j, __first + (__i - __r), __is_vector);
-            });
+        __par_backend::__parallel_for(std::forward<_ExecutionPolicy>(__exec), __r, __r + __n,
+                                      [__r, __first, __is_vector](_Tp* __i, _Tp* __j) {
+                                          __internal::__brick_move(__i, __j, __first + (__i - __r), __is_vector);
+                                      });
     });
 }
 
