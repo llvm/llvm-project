@@ -409,7 +409,11 @@ Error ObjectLinkingLayer::removeAllModules() {
   return Err;
 }
 
-void LocalEHFrameRegistrationPlugin::modifyPassConfig(
+EHFrameRegistrationPlugin::EHFrameRegistrationPlugin(
+    jitlink::EHFrameRegistrar &Registrar)
+    : Registrar(Registrar) {}
+
+void EHFrameRegistrationPlugin::modifyPassConfig(
     MaterializationResponsibility &MR, const Triple &TT,
     PassConfiguration &PassConfig) {
   assert(!InProcessLinks.count(&MR) && "Link for MR already being tracked?");
@@ -417,18 +421,18 @@ void LocalEHFrameRegistrationPlugin::modifyPassConfig(
   PassConfig.PostFixupPasses.push_back(
       createEHFrameRecorderPass(TT, [this, &MR](JITTargetAddress Addr) {
         if (Addr)
-          InProcessLinks[&MR] = jitTargetAddressToPointer<void *>(Addr);
+          InProcessLinks[&MR] = Addr;
       }));
 }
 
-Error LocalEHFrameRegistrationPlugin::notifyEmitted(
+Error EHFrameRegistrationPlugin::notifyEmitted(
     MaterializationResponsibility &MR) {
 
   auto EHFrameAddrItr = InProcessLinks.find(&MR);
   if (EHFrameAddrItr == InProcessLinks.end())
     return Error::success();
 
-  const void *EHFrameAddr = EHFrameAddrItr->second;
+  auto EHFrameAddr = EHFrameAddrItr->second;
   assert(EHFrameAddr && "eh-frame addr to register can not be null");
 
   InProcessLinks.erase(EHFrameAddrItr);
@@ -437,25 +441,25 @@ Error LocalEHFrameRegistrationPlugin::notifyEmitted(
   else
     UntrackedEHFrameAddrs.push_back(EHFrameAddr);
 
-  return registerEHFrameSection(EHFrameAddr);
+  return Registrar.registerEHFrames(EHFrameAddr);
 }
 
-Error LocalEHFrameRegistrationPlugin::notifyRemovingModule(VModuleKey K) {
+Error EHFrameRegistrationPlugin::notifyRemovingModule(VModuleKey K) {
   auto EHFrameAddrItr = TrackedEHFrameAddrs.find(K);
   if (EHFrameAddrItr == TrackedEHFrameAddrs.end())
     return Error::success();
 
-  const void *EHFrameAddr = EHFrameAddrItr->second;
+  auto EHFrameAddr = EHFrameAddrItr->second;
   assert(EHFrameAddr && "Tracked eh-frame addr must not be null");
 
   TrackedEHFrameAddrs.erase(EHFrameAddrItr);
 
-  return deregisterEHFrameSection(EHFrameAddr);
+  return Registrar.deregisterEHFrames(EHFrameAddr);
 }
 
-Error LocalEHFrameRegistrationPlugin::notifyRemovingAllModules() {
+Error EHFrameRegistrationPlugin::notifyRemovingAllModules() {
 
-  std::vector<const void *> EHFrameAddrs = std::move(UntrackedEHFrameAddrs);
+  std::vector<JITTargetAddress> EHFrameAddrs = std::move(UntrackedEHFrameAddrs);
   EHFrameAddrs.reserve(EHFrameAddrs.size() + TrackedEHFrameAddrs.size());
 
   for (auto &KV : TrackedEHFrameAddrs)
@@ -466,10 +470,10 @@ Error LocalEHFrameRegistrationPlugin::notifyRemovingAllModules() {
   Error Err = Error::success();
 
   while (!EHFrameAddrs.empty()) {
-    const void *EHFrameAddr = EHFrameAddrs.back();
+    auto EHFrameAddr = EHFrameAddrs.back();
     assert(EHFrameAddr && "Untracked eh-frame addr must not be null");
     EHFrameAddrs.pop_back();
-    Err = joinErrors(std::move(Err), deregisterEHFrameSection(EHFrameAddr));
+    Err = joinErrors(std::move(Err), Registrar.deregisterEHFrames(EHFrameAddr));
   }
 
   return Err;

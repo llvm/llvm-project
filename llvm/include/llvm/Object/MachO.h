@@ -571,6 +571,7 @@ public:
                               const char **McpuDefault = nullptr,
                               const char **ArchFlag = nullptr);
   static bool isValidArch(StringRef ArchFlag);
+  static ArrayRef<StringRef> getValidArchs();
   static Triple getHostArch();
 
   bool isRelocatableObject() const override;

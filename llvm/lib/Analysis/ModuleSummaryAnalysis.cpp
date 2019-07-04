@@ -231,13 +231,6 @@ static bool isNonVolatileLoad(const Instruction *I) {
   return false;
 }
 
-static bool isNonVolatileStore(const Instruction *I) {
-  if (const auto *SI = dyn_cast<StoreInst>(I))
-    return !SI->isVolatile();
-
-  return false;
-}
-
 static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
                                    const Function &F, BlockFrequencyInfo *BFI,
                                    ProfileSummaryInfo *PSI, DominatorTree &DT,
@@ -252,7 +245,7 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   // Map from callee ValueId to profile count. Used to accumulate profile
   // counts for all static calls to a given callee.
   MapVector<ValueInfo, CalleeInfo> CallGraphEdges;
-  SetVector<ValueInfo> RefEdges, LoadRefEdges, StoreRefEdges;
+  SetVector<ValueInfo> RefEdges;
   SetVector<GlobalValue::GUID> TypeTests;
   SetVector<FunctionSummary::VFuncId> TypeTestAssumeVCalls,
       TypeCheckedLoadVCalls;
@@ -265,7 +258,6 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
   // list.
   findRefEdges(Index, &F, RefEdges, Visited);
   std::vector<const Instruction *> NonVolatileLoads;
-  std::vector<const Instruction *> NonVolatileStores;
 
   bool HasInlineAsmMaybeReferencingInternal = false;
   for (const BasicBlock &BB : F)
@@ -273,34 +265,12 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       if (isa<DbgInfoIntrinsic>(I))
         continue;
       ++NumInsts;
-      // Regular LTO module doesn't participate in ThinLTO import,
-      // so no reference from it can be read/writeonly, since this
-      // would require importing variable as local copy
-      if (IsThinLTO) {
-        if (isNonVolatileLoad(&I)) {
-          // Postpone processing of non-volatile load instructions
-          // See comments below
-          Visited.insert(&I);
-          NonVolatileLoads.push_back(&I);
-          continue;
-        } else if (isNonVolatileStore(&I)) {
-          Visited.insert(&I);
-          NonVolatileStores.push_back(&I);
-          // All references from second operand of store (destination address)
-          // can be considered write-only if they're not referenced by any
-          // non-store instruction. References from first operand of store 
-          // (stored value) can't be treated either as read- or as write-only
-          // so we add them to RefEdges as we do with all other instructions
-          // except non-volatile load.
-          Value *Stored = I.getOperand(0);
-          if (auto *GV = dyn_cast<GlobalValue>(Stored))
-            // findRefEdges will try to examine GV operands, so instead
-            // of calling it we should add GV to RefEdges directly.
-            RefEdges.insert(Index.getOrInsertValueInfo(GV));
-          else if (auto *U = dyn_cast<User>(Stored))
-            findRefEdges(Index, U, RefEdges, Visited);
-          continue;
-        }
+      if (isNonVolatileLoad(&I)) {
+        // Postpone processing of non-volatile load instructions
+        // See comments below
+        Visited.insert(&I);
+        NonVolatileLoads.push_back(&I);
+        continue;
       }
       findRefEdges(Index, &I, RefEdges, Visited);
       auto CS = ImmutableCallSite(&I);
@@ -391,49 +361,24 @@ static void computeFunctionSummary(ModuleSummaryIndex &Index, const Module &M,
       }
     }
 
-  std::vector<ValueInfo> Refs;
-  if (IsThinLTO) {
-    auto AddRefEdges = [&](const std::vector<const Instruction *> &Instrs,
-                          SetVector<ValueInfo> &Edges) {
-      for (const auto *I : Instrs) {
-        Visited.erase(I);
-        findRefEdges(Index, I, Edges, Visited);
-      }
-    };
-
-    // By now we processed all instructions in a function, except
-    // non-volatile loads and non-volatile value stores. Let's find
-    // ref edges for both of instruction sets
-    AddRefEdges(NonVolatileLoads, LoadRefEdges);
-    AddRefEdges(NonVolatileStores, StoreRefEdges);
-
-    // If both load and store instruction reference the same variable
-    // we won't be able to optimize it. Add all such reference edges
-    // to RefEdges set.
-    for (auto &VI : StoreRefEdges)
-      if (LoadRefEdges.remove(VI))
-        RefEdges.insert(VI);
-
-    unsigned RefCnt = RefEdges.size();
-    // All new reference edges inserted in two loops below are either
-    // read or write only. They will be grouped in the end of RefEdges
-    // vector, so we can use a single integer value to identify them.
-    for (auto &VI : LoadRefEdges)
-      RefEdges.insert(VI);
-
-    unsigned FirstWORef = RefEdges.size();
-    for (auto &VI : StoreRefEdges)
-      RefEdges.insert(VI);
-
-    Refs = RefEdges.takeVector();
-    for (; RefCnt < FirstWORef; ++RefCnt)
+  // By now we processed all instructions in a function, except
+  // non-volatile loads. All new refs we add in a loop below
+  // are obviously constant. All constant refs are grouped in the
+  // end of RefEdges vector, so we can use a single integer value
+  // to identify them.
+  unsigned RefCnt = RefEdges.size();
+  for (const Instruction *I : NonVolatileLoads) {
+    Visited.erase(I);
+    findRefEdges(Index, I, RefEdges, Visited);
+  }
+  std::vector<ValueInfo> Refs = RefEdges.takeVector();
+  // Regular LTO module doesn't participate in ThinLTO import,
+  // so no reference from it can be readonly, since this would
+  // require importing variable as local copy
+  if (IsThinLTO)
+    for (; RefCnt < Refs.size(); ++RefCnt)
       Refs[RefCnt].setReadOnly();
 
-    for (; RefCnt < Refs.size(); ++RefCnt)
-      Refs[RefCnt].setWriteOnly();
-  } else {
-    Refs = RefEdges.takeVector();
-  }
   // Explicit add hot edges to enforce importing for designated GUIDs for
   // sample PGO, to enable the same inlines as the profiled optimized binary.
   for (auto &I : F.getImportGUIDs())
@@ -581,11 +526,10 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
     }
   }
 
-  // Don't mark variables we won't be able to internalize as read/write-only.
-  bool CanBeInternalized =
+  // Don't mark variables we won't be able to internalize as read-only.
+  GlobalVarSummary::GVarFlags VarFlags(
       !V.hasComdat() && !V.hasAppendingLinkage() && !V.isInterposable() &&
-      !V.hasAvailableExternallyLinkage() && !V.hasDLLExportStorageClass();
-  GlobalVarSummary::GVarFlags VarFlags(CanBeInternalized, CanBeInternalized);
+      !V.hasAvailableExternallyLinkage() && !V.hasDLLExportStorageClass());
   auto GVarSummary = llvm::make_unique<GlobalVarSummary>(Flags, VarFlags,
                                                          RefEdges.takeVector());
   if (NonRenamableLocal)
@@ -703,7 +647,7 @@ ModuleSummaryIndex llvm::buildModuleSummaryIndex(
           } else {
             std::unique_ptr<GlobalVarSummary> Summary =
                 llvm::make_unique<GlobalVarSummary>(
-                    GVFlags, GlobalVarSummary::GVarFlags(false, false),
+                    GVFlags, GlobalVarSummary::GVarFlags(),
                     ArrayRef<ValueInfo>{});
             Index.addGlobalValueSummary(*GV, std::move(Summary));
           }

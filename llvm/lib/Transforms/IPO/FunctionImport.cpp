@@ -850,16 +850,14 @@ void llvm::computeDeadSymbolsWithConstProp(
     bool ImportEnabled) {
   computeDeadSymbols(Index, GUIDPreservedSymbols, isPrevailing);
   if (ImportEnabled) {
-    Index.propagateAttributes(GUIDPreservedSymbols);
+    Index.propagateConstants(GUIDPreservedSymbols);
   } else {
-    // If import is disabled we should drop read/write-only attribute
+    // If import is disabled we should drop read-only attribute
     // from all summaries to prevent internalization.
     for (auto &P : Index)
       for (auto &S : P.second.SummaryList)
-        if (auto *GVS = dyn_cast<GlobalVarSummary>(S.get())) {
+        if (auto *GVS = dyn_cast<GlobalVarSummary>(S.get()))
           GVS->setReadOnly(false);
-          GVS->setWriteOnly(false);
-        }
   }
 }
 
@@ -1066,7 +1064,7 @@ static Function *replaceAliasWithAliasee(Module *SrcModule, GlobalAlias *GA) {
 
 // Internalize values that we marked with specific attribute
 // in processGlobalForThinLTO.
-static void internalizeGVsAfterImport(Module &M) {
+static void internalizeImmutableGVs(Module &M) {
   for (auto &GV : M.globals())
     // Skip GVs which have been converted to declarations
     // by dropDeadSymbols.
@@ -1199,7 +1197,7 @@ Expected<bool> FunctionImporter::importFunctions(
     NumImportedModules++;
   }
 
-  internalizeGVsAfterImport(DestModule);
+  internalizeImmutableGVs(DestModule);
 
   NumImportedFunctions += (ImportedCount - ImportedGVCount);
   NumImportedGlobalVars += ImportedGVCount;

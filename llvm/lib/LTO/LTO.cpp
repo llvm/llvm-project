@@ -192,10 +192,8 @@ void llvm::computeLTOCacheKey(
       AddUnsigned(VI.isDSOLocal());
       AddUsedCfiGlobal(VI.getGUID());
     }
-    if (auto *GVS = dyn_cast<GlobalVarSummary>(GS)) {
-      AddUnsigned(GVS->maybeReadOnly());
-      AddUnsigned(GVS->maybeWriteOnly());
-    }
+    if (auto *GVS = dyn_cast<GlobalVarSummary>(GS))
+      AddUnsigned(GVS->isReadOnly());
     if (auto *FS = dyn_cast<FunctionSummary>(GS)) {
       for (auto &TT : FS->type_tests())
         UsedTypeIds.insert(TT);
@@ -373,9 +371,9 @@ void llvm::thinLTOResolvePrevailingInIndex(
                                  GUIDPreservedSymbols);
 }
 
-static bool isWeakObjectWithRWAccess(GlobalValueSummary *GVS) {
+static bool isWeakWriteableObject(GlobalValueSummary *GVS) {
   if (auto *VarSummary = dyn_cast<GlobalVarSummary>(GVS->getBaseObject()))
-    return !VarSummary->maybeReadOnly() && !VarSummary->maybeWriteOnly() &&
+    return !VarSummary->isReadOnly() &&
            (VarSummary->linkage() == GlobalValue::WeakODRLinkage ||
             VarSummary->linkage() == GlobalValue::LinkOnceODRLinkage);
   return false;
@@ -396,12 +394,11 @@ static void thinLTOInternalizeAndPromoteGUID(
                // We can't internalize available_externally globals because this
                // can break function pointer equality.
                S->linkage() != GlobalValue::AvailableExternallyLinkage &&
-               // Functions and read-only variables with linkonce_odr and
-               // weak_odr linkage can be internalized. We can't internalize
-               // linkonce_odr and weak_odr variables which are both modified
-               // and read somewhere in the program because reads and writes
-               // will become inconsistent.
-               !isWeakObjectWithRWAccess(S.get()))
+               // Functions and read-only variables with linkonce_odr and weak_odr 
+               // linkage can be internalized. We can't internalize linkonce_odr
+               // and weak_odr variables which are modified somewhere in the
+               // program because reads and writes will become inconsistent.
+               !isWeakWriteableObject(S.get()))
       S->setLinkage(GlobalValue::InternalLinkage);
   }
 }

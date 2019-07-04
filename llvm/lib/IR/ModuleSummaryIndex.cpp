@@ -23,8 +23,6 @@ using namespace llvm;
 
 STATISTIC(ReadOnlyLiveGVars,
           "Number of live global variables marked read only");
-STATISTIC(WriteOnlyLiveGVars,
-          "Number of live global variables marked write only");
 
 FunctionSummary FunctionSummary::ExternalNode =
     FunctionSummary::makeDummyFunctionSummary({});
@@ -47,18 +45,15 @@ bool ValueInfo::canAutoHide() const {
                       });
 }
 
-// Gets the number of readonly and writeonly refs in RefEdgeList
-std::pair<unsigned, unsigned> FunctionSummary::specialRefCounts() const {
-  // Here we take advantage of having all readonly and writeonly references
+// Gets the number of immutable refs in RefEdgeList
+unsigned FunctionSummary::immutableRefCount() const {
+  // Here we take advantage of having all readonly references
   // located in the end of the RefEdgeList.
   auto Refs = refs();
-  unsigned RORefCnt = 0, WORefCnt = 0;
-  int I;
-  for (I = Refs.size() - 1; I >= 0 && Refs[I].isWriteOnly(); --I)
-    WORefCnt++;
-  for (; I >= 0 && Refs[I].isReadOnly(); --I)
-    RORefCnt++;
-  return {RORefCnt, WORefCnt};
+  unsigned ImmutableRefCnt = 0;
+  for (int I = Refs.size() - 1; I >= 0 && Refs[I].isReadOnly(); --I)
+    ImmutableRefCnt++;
+  return ImmutableRefCnt;
 }
 
 // Collect for the given module the list of function it defines
@@ -104,56 +99,48 @@ bool ModuleSummaryIndex::isGUIDLive(GlobalValue::GUID GUID) const {
   return false;
 }
 
-static void propagateAttributesToRefs(GlobalValueSummary *S) {
-  // If reference is not readonly or writeonly then referenced summary is not
-  // read/writeonly either. Note that:
+static void propagateConstantsToRefs(GlobalValueSummary *S) {
+  // If reference is not readonly then referenced summary is not
+  // readonly either. Note that:
   // - All references from GlobalVarSummary are conservatively considered as
-  //   not readonly or writeonly. Tracking them properly requires more complex
-  //   analysis then we have now.
+  //   not readonly. Tracking them properly requires more complex analysis
+  //   then we have now.
   //
   // - AliasSummary objects have no refs at all so this function is a no-op
   //   for them.
   for (auto &VI : S->refs()) {
-    assert(VI.getAccessSpecifier() == 0 || isa<FunctionSummary>(S));
+    if (VI.isReadOnly()) {
+      // We only mark refs as readonly when computing function summaries on
+      // analysis phase.
+      assert(isa<FunctionSummary>(S));
+      continue;
+    }
     for (auto &Ref : VI.getSummaryList())
-      // If references to alias is not read/writeonly then aliasee
-      // is not read/writeonly
-      if (auto *GVS = dyn_cast<GlobalVarSummary>(Ref->getBaseObject())) {
-        if (!VI.isReadOnly())
-          GVS->setReadOnly(false);
-        if (!VI.isWriteOnly())
-          GVS->setWriteOnly(false);
-      }
+      // If references to alias is not readonly then aliasee is not readonly
+      if (auto *GVS = dyn_cast<GlobalVarSummary>(Ref->getBaseObject()))
+        GVS->setReadOnly(false);
   }
 }
 
-// Do the access attribute propagation in combined index.
-// The goal of attribute propagation is internalization of readonly (RO)
-// or writeonly (WO) variables. To determine which variables are RO or WO
-// and which are not we take following steps:
-// - During analysis we speculatively assign readonly and writeonly
-//   attribute to all variables which can be internalized. When computing
-//   function summary we also assign readonly or writeonly attribute to a
-//   reference if function doesn't modify referenced variable (readonly)
-//   or doesn't read it (writeonly).
+// Do the constant propagation in combined index.
+// The goal of constant propagation is internalization of readonly
+// variables. To determine which variables are readonly and which
+// are not we take following steps:
+// - During analysis we speculatively assign readonly attribute to
+//   all variables which can be internalized. When computing function
+//   summary we also assign readonly attribute to a reference if
+//   function doesn't modify referenced variable.
 //
-// - After computing dead symbols in combined index we do the attribute
-//   propagation. During this step we:
-//   a. clear RO and WO attributes from variables which are preserved or
-//      can't be imported
-//   b. clear RO and WO attributes from variables referenced by any global
-//      variable initializer
-//   c. clear RO attribute from variable referenced by a function when
-//      reference is not readonly
-//   d. clear WO attribute from variable referenced by a function when
-//      reference is not writeonly
-//
-//   Because of (c, d) we don't internalize variables read by function A
-//   and modified by function B.
+// - After computing dead symbols in combined index we do the constant
+//   propagation. During this step we clear readonly attribute from
+//   all variables which:
+//   a. are preserved or can't be imported
+//   b. referenced by any global variable initializer
+//   c. referenced by a function and reference is not readonly
 //
 // Internalization itself happens in the backend after import is finished
-// See internalizeGVsAfterImport.
-void ModuleSummaryIndex::propagateAttributes(
+// See internalizeImmutableGVs.
+void ModuleSummaryIndex::propagateConstants(
     const DenseSet<GlobalValue::GUID> &GUIDPreservedSymbols) {
   for (auto &P : *this)
     for (auto &S : P.second.SummaryList) {
@@ -161,36 +148,29 @@ void ModuleSummaryIndex::propagateAttributes(
         // We don't examine references from dead objects
         continue;
 
-      // Global variable can't be marked read/writeonly if it is not eligible
-      // to import since we need to ensure that all external references get
-      // a local (imported) copy. It also can't be marked read/writeonly if
-      // it or any alias (since alias points to the same memory) are preserved
-      // or notEligibleToImport, since either of those means there could be
-      // writes (or reads in case of writeonly) that are not visible (because
-      // preserved means it could have external to DSO writes or reads, and
-      // notEligibleToImport means it could have writes or reads via inline
-      // assembly leading it to be in the @llvm.*used).
+      // Global variable can't be marked read only if it is not eligible
+      // to import since we need to ensure that all external references
+      // get a local (imported) copy. It also can't be marked read only
+      // if it or any alias (since alias points to the same memory) are
+      // preserved or notEligibleToImport, since either of those means
+      // there could be writes that are not visible (because preserved
+      // means it could have external to DSO writes, and notEligibleToImport
+      // means it could have writes via inline assembly leading it to be
+      // in the @llvm.*used).
       if (auto *GVS = dyn_cast<GlobalVarSummary>(S->getBaseObject()))
         // Here we intentionally pass S.get() not GVS, because S could be
         // an alias.
-        if (!canImportGlobalVar(S.get()) ||
-            GUIDPreservedSymbols.count(P.first)) {
+        if (!canImportGlobalVar(S.get()) || GUIDPreservedSymbols.count(P.first))
           GVS->setReadOnly(false);
-          GVS->setWriteOnly(false);
-        }
-      propagateAttributesToRefs(S.get());
+      propagateConstantsToRefs(S.get());
     }
   if (llvm::AreStatisticsEnabled())
     for (auto &P : *this)
       if (P.second.SummaryList.size())
         if (auto *GVS = dyn_cast<GlobalVarSummary>(
                 P.second.SummaryList[0]->getBaseObject()))
-          if (isGlobalValueLive(GVS)) {
-            if (GVS->maybeReadOnly())
-              ReadOnlyLiveGVars++;
-            if (GVS->maybeWriteOnly())
-              WriteOnlyLiveGVars++;
-          }
+          if (isGlobalValueLive(GVS) && GVS->isReadOnly())
+            ReadOnlyLiveGVars++;
 }
 
 // TODO: write a graphviz dumper for SCCs (see ModuleSummaryIndex::exportToDot)
@@ -353,13 +333,7 @@ static void defineExternalNode(raw_ostream &OS, const char *Pfx,
 
 static bool hasReadOnlyFlag(const GlobalValueSummary *S) {
   if (auto *GVS = dyn_cast<GlobalVarSummary>(S))
-    return GVS->maybeReadOnly();
-  return false;
-}
-
-static bool hasWriteOnlyFlag(const GlobalValueSummary *S) {
-  if (auto *GVS = dyn_cast<GlobalVarSummary>(S))
-    return GVS->maybeWriteOnly();
+    return GVS->isReadOnly();
   return false;
 }
 
@@ -384,14 +358,12 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
     // 0 - alias
     // 1 - reference
     // 2 - constant reference
-    // 3 - writeonly reference
-    // Other value: (hotness - 4).
-    TypeOrHotness += 4;
+    // Other value: (hotness - 3).
+    TypeOrHotness += 3;
     static const char *EdgeAttrs[] = {
         " [style=dotted]; // alias",
         " [style=dashed]; // ref",
         " [style=dashed,color=forestgreen]; // const-ref",
-        " [style=dashed,color=violetred]; // writeOnly-ref",
         " // call (hotness : Unknown)",
         " [color=blue]; // call (hotness : Cold)",
         " // call (hotness : None)",
@@ -436,8 +408,6 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
         A.add("shape", "Mrecord", "variable");
         if (Flags.Live && hasReadOnlyFlag(SummaryIt.second))
           A.addComment("immutable");
-        if (Flags.Live && hasWriteOnlyFlag(SummaryIt.second))
-          A.addComment("writeOnly");
       }
       if (Flags.DSOLocal)
         A.addComment("dsoLocal");
@@ -459,11 +429,10 @@ void ModuleSummaryIndex::exportToDot(raw_ostream &OS) const {
     for (auto &SummaryIt : GVSMap) {
       auto *GVS = SummaryIt.second;
       for (auto &R : GVS->refs())
-        Draw(SummaryIt.first, R.getGUID(),
-             R.isWriteOnly() ? -1 : (R.isReadOnly() ? -2 : -3));
+        Draw(SummaryIt.first, R.getGUID(), R.isReadOnly() ? -1 : -2);
 
       if (auto *AS = dyn_cast_or_null<AliasSummary>(SummaryIt.second)) {
-        Draw(SummaryIt.first, AS->getAliaseeGUID(), -4);
+        Draw(SummaryIt.first, AS->getAliaseeGUID(), -3);
         continue;
       }
 
