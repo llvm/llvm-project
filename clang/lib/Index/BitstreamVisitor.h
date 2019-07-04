@@ -10,7 +10,7 @@
 #ifndef LLVM_CLANG_LIB_INDEX_BITSTREAMVISITOR_H
 #define LLVM_CLANG_LIB_INDEX_BITSTREAMVISITOR_H
 
-#include "llvm/Bitcode/BitstreamReader.h"
+#include "llvm/Bitstream/BitstreamReader.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Serialization/ASTReader.h"
 #include <string>
