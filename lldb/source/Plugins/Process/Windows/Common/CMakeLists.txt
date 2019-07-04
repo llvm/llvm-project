@@ -1,4 +1,5 @@
-set(PROC_WINDOWS_COMMON_SOURCES
+
+add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
   DebuggerThread.cpp
   LocalDebugDelegate.cpp
   ProcessDebugger.cpp
@@ -6,20 +7,6 @@ set(PROC_WINDOWS_COMMON_SOURCES
   ProcessWindowsLog.cpp
   RegisterContextWindows.cpp
   TargetThreadWindows.cpp
-  )
-
-if (CMAKE_SIZEOF_VOID_P EQUAL 4)
-  set(PROC_WINDOWS_COMMON_SOURCES ${PROC_WINDOWS_COMMON_SOURCES}
-    x86/RegisterContextWindows_x86.cpp
-    )
-elseif (CMAKE_SIZEOF_VOID_P EQUAL 8)
-  set(PROC_WINDOWS_COMMON_SOURCES ${PROC_WINDOWS_COMMON_SOURCES}
-    x64/RegisterContextWindows_x64.cpp
-    )
-endif()
-
-add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
-  ${PROC_WINDOWS_COMMON_SOURCES}
 
   LINK_LIBS
     lldbCore
@@ -33,3 +20,13 @@ add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
   LINK_COMPONENTS
     Support
   )
+
+# TODO add support for ARM (NT) and ARM64
+# TODO build these unconditionally as we cannot do cross-debugging or WoW
+if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64")
+  target_sources(lldbPluginProcessWindowsCommon PRIVATE
+    x64/RegisterContextWindows_x64.cpp)
+elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "i?86|X86")
+  target_sources(lldbPluginProcessWindowsCommon PRIVATE
+    x86/RegisterContextWindows_x86.cpp)
+endif()
