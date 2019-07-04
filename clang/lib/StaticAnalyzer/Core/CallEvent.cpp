@@ -766,8 +766,11 @@ RuntimeDefinition CXXInstanceCall::getRuntimeDefinition() const {
 
   // Does the decl that we found have an implementation?
   const FunctionDecl *Definition;
-  if (!Result->hasBody(Definition))
+  if (!Result->hasBody(Definition)) {
+    if (!DynType.canBeASubClass())
+      return AnyFunctionCall::getRuntimeDefinition();
     return {};
+  }
 
   // We found a definition. If we're not sure that this devirtualization is
   // actually what will happen at runtime, make sure to provide the region so
