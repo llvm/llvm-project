@@ -12,6 +12,8 @@
 
 #include <functional>
 
+#include "pstl_config.h"
+
 #include "execution_defs.h"
 #include "utils.h"
 #include "algorithm_fwd.h"

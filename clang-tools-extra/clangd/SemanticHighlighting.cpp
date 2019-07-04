@@ -149,16 +149,17 @@ toSemanticHighlightingInformation(llvm::ArrayRef<HighlightingToken> Tokens) {
   return Lines;
 }
 
-std::vector<std::vector<std::string>> getTextMateScopeLookupTable() {
+llvm::StringRef toTextMateScope(HighlightingKind Kind) {
   // FIXME: Add scopes for C and Objective C.
-  std::map<HighlightingKind, std::vector<std::string>> Scopes = {
-      {HighlightingKind::Variable, {"variable.cpp"}},
-      {HighlightingKind::Function, {"entity.name.function.cpp"}}};
-  std::vector<std::vector<std::string>> NestedScopes(Scopes.size());
-  for (const auto &Scope : Scopes)
-    NestedScopes[static_cast<int>(Scope.first)] = Scope.second;
-
-  return NestedScopes;
+  switch (Kind) {
+  case HighlightingKind::Function:
+    return "entity.name.function.cpp";
+  case HighlightingKind::Variable:
+    return "variable.cpp";
+  case HighlightingKind::NumKinds:
+    llvm_unreachable("must not pass NumKinds to the function");
+  }
+  llvm_unreachable("unhandled HighlightingKind");
 }
 
 } // namespace clangd

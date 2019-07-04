@@ -3,11 +3,12 @@
 # Generate a mock-driver that will print %temp_dir%/my/dir and
 # %temp_dir%/my/dir2 as include search paths.
 # RUN: echo '#!/bin/bash' >> %t.dir/my_driver.sh
-# RUN: echo 'echo line to ignore' >> %t.dir/my_driver.sh
-# RUN: echo 'echo \#include \<...\> search starts here:' >> %t.dir/my_driver.sh
-# RUN: echo 'echo %t.dir/my/dir/' >> %t.dir/my_driver.sh
-# RUN: echo 'echo %t.dir/my/dir2/' >> %t.dir/my_driver.sh
-# RUN: echo 'echo End of search list.' >> %t.dir/my_driver.sh
+# RUN: echo '[ "$0" = "%t.dir/my_driver.sh" ] || exit' >> %t.dir/my_driver.sh
+# RUN: echo 'echo line to ignore >&2' >> %t.dir/my_driver.sh
+# RUN: echo 'echo \#include \<...\> search starts here: >&2' >> %t.dir/my_driver.sh
+# RUN: echo 'echo %t.dir/my/dir/ >&2' >> %t.dir/my_driver.sh
+# RUN: echo 'echo %t.dir/my/dir2/ >&2' >> %t.dir/my_driver.sh
+# RUN: echo 'echo End of search list. >&2' >> %t.dir/my_driver.sh
 # RUN: chmod +x %t.dir/my_driver.sh
 
 # Create header files my/dir/a.h and my/dir2/b.h

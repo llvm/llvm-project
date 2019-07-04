@@ -82,6 +82,17 @@ CompletionItemKindBitset defaultCompletionItemKinds() {
   return Defaults;
 }
 
+// Build a lookup table (HighlightingKind => {TextMate Scopes}), which is sent
+// to the LSP client.
+std::vector<std::vector<std::string>> buildHighlightScopeLookupTable() {
+  std::vector<std::vector<std::string>> LookupTable;
+  // HighlightingKind is using as the index.
+  for (int KindValue = 0; KindValue < (int)HighlightingKind::NumKinds;
+       ++KindValue)
+    LookupTable.push_back({toTextMateScope((HighlightingKind)(KindValue))});
+  return LookupTable;
+}
+
 } // namespace
 
 // MessageHandler dispatches incoming LSP messages.
@@ -414,7 +425,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     Result.getObject("capabilities")
         ->insert(
             {"semanticHighlighting",
-             llvm::json::Object{{"scopes", getTextMateScopeLookupTable()}}});
+             llvm::json::Object{{"scopes", buildHighlightScopeLookupTable()}}});
   Reply(std::move(Result));
 }
 

@@ -96,7 +96,7 @@ public:
 private:
   /// Represents the state of a single file when indexing was performed.
   struct ShardVersion {
-    FileDigest Digest{0};
+    FileDigest Digest{{0}};
     bool HadErrors = false;
   };
 

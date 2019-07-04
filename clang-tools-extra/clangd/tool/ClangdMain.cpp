@@ -76,7 +76,7 @@ static llvm::cl::opt<JSONStreamStyle> InputStyle(
         clEnumValN(JSONStreamStyle::Standard, "standard", "usual LSP protocol"),
         clEnumValN(JSONStreamStyle::Delimited, "delimited",
                    "messages delimited by --- lines, with # comment support")),
-    llvm::cl::init(JSONStreamStyle::Standard));
+    llvm::cl::init(JSONStreamStyle::Standard), llvm::cl::Hidden);
 
 static llvm::cl::opt<bool>
     PrettyPrint("pretty", llvm::cl::desc("Pretty-print JSON output"),
@@ -215,7 +215,8 @@ static llvm::cl::opt<bool> EnableFunctionArgSnippets(
     llvm::cl::desc("When disabled, completions contain only parentheses for "
                    "function calls. When enabled, completions also contain "
                    "placeholders for method parameters"),
-    llvm::cl::init(CodeCompleteOptions().EnableFunctionArgSnippets));
+    llvm::cl::init(CodeCompleteOptions().EnableFunctionArgSnippets),
+    llvm::cl::Hidden);
 
 static llvm::cl::opt<std::string> ClangTidyChecks(
     "clang-tidy-checks",
