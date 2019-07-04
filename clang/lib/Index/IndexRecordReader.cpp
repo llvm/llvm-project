@@ -12,7 +12,7 @@
 #include "BitstreamVisitor.h"
 #include "clang/Index/IndexDataStoreSymbolUtils.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/Bitcode/BitstreamReader.h"
+#include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"

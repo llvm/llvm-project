@@ -10,7 +10,7 @@
 #ifndef LLVM_CLANG_LIB_INDEX_INDEXDATASTOREUTILS_H
 #define LLVM_CLANG_LIB_INDEX_INDEXDATASTOREUTILS_H
 
-#include "llvm/Bitcode/BitCodes.h"
+#include "llvm/Bitstream/BitCodes.h"
 #include "clang/Basic/LLVM.h"
 
 namespace llvm {
