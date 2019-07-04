@@ -511,8 +511,8 @@ class __merge_task : public tbb::task
 
   public:
     __merge_task(_SizeType __xs, _SizeType __xe, _SizeType __ys, _SizeType __ye, _SizeType __zs, _Compare __comp,
-               _Cleanup __cleanup, _LeafMerge __leaf_merge, _SizeType __nsort, _RandomAccessIterator1 __x_beg,
-               _RandomAccessIterator2 __z_beg, bool __x_orig, bool __y_orig, bool __root)
+                 _Cleanup __cleanup, _LeafMerge __leaf_merge, _SizeType __nsort, _RandomAccessIterator1 __x_beg,
+                 _RandomAccessIterator2 __z_beg, bool __x_orig, bool __y_orig, bool __root)
         : _M_xs(__xs), _M_xe(__xe), _M_ys(__ys), _M_ye(__ye), _M_zs(__zs), _M_x_beg(__x_beg), _M_z_beg(__z_beg),
           _M_comp(__comp), _M_cleanup(__cleanup), _M_leaf_merge(__leaf_merge), _M_nsort(__nsort), _root(__root),
           _x_orig(__x_orig), _y_orig(__y_orig), _x_first_move(false), _y_first_move(false), _split(false)
@@ -780,8 +780,8 @@ class __merge_task : public tbb::task
         auto __zm = _M_zs + ((__xm - _M_xs) + (__ym - _M_ys));
 
         __merge_task* __right = new (tbb::task::allocate_additional_child_of(*parent()))
-            __merge_task(__xm, _M_xe, __ym, _M_ye, __zm, _M_comp, _M_cleanup, _M_leaf_merge, _M_nsort, _M_x_beg, _M_z_beg,
-                       _x_orig, _y_orig, _root);
+            __merge_task(__xm, _M_xe, __ym, _M_ye, __zm, _M_comp, _M_cleanup, _M_leaf_merge, _M_nsort, _M_x_beg,
+                         _M_z_beg, _x_orig, _y_orig, _root);
 
         __right->_x_first_move = _x_first_move;
         __right->_y_first_move = _y_first_move;
@@ -858,9 +858,9 @@ class __stable_sort_task : public tbb::task
     _SizeType _M_nsort; //zero or number of elements to be sorted for partial_sort alforithm
 
   public:
-    __stable_sort_task(_RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe, _RandomAccessIterator2 __zs, bool __root,
-                     _Compare __comp, _LeafSort __leaf_sort, _SizeType __nsort, _RandomAccessIterator1 __x_beg,
-                     _RandomAccessIterator2 __z_beg)
+    __stable_sort_task(_RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe, _RandomAccessIterator2 __zs,
+                       bool __root, _Compare __comp, _LeafSort __leaf_sort, _SizeType __nsort,
+                       _RandomAccessIterator1 __x_beg, _RandomAccessIterator2 __z_beg)
         : _M_xs(__xs), _M_xe(__xe), _M_x_beg(__x_beg), _M_zs(__zs), _M_z_beg(__z_beg), _M_root(__root), _M_comp(__comp),
           _M_leaf_sort(__leaf_sort), _M_nsort(__nsort)
     {
@@ -873,7 +873,8 @@ template <typename _RandomAccessIterator1, typename _RandomAccessIterator2, type
 tbb::task*
 __stable_sort_task<_RandomAccessIterator1, _RandomAccessIterator2, _Compare, _LeafSort>::execute()
 {
-    typedef __merge_task<_RandomAccessIterator1, _RandomAccessIterator2, _Compare, __serial_destroy, __serial_move_merge>
+    typedef __merge_task<_RandomAccessIterator1, _RandomAccessIterator2, _Compare, __serial_destroy,
+                         __serial_move_merge>
         _MergeTaskType;
 
     const _SizeType __n = _M_xe - _M_xs;
@@ -896,8 +897,8 @@ __stable_sort_task<_RandomAccessIterator1, _RandomAccessIterator2, _Compare, _Le
     const _RandomAccessIterator2 __zm = _M_zs + (__xm - _M_xs);
     const _RandomAccessIterator2 __ze = _M_zs + __n;
     _MergeTaskType* __m = new (allocate_continuation())
-        _MergeTaskType(_M_xs - _M_x_beg, __xm - _M_x_beg, __xm - _M_x_beg, _M_xe - _M_x_beg, _M_zs - _M_z_beg,
-                       _M_comp, __serial_destroy(), __serial_move_merge(__nmerge), _M_nsort, _M_x_beg, _M_z_beg,
+        _MergeTaskType(_M_xs - _M_x_beg, __xm - _M_x_beg, __xm - _M_x_beg, _M_xe - _M_x_beg, _M_zs - _M_z_beg, _M_comp,
+                       __serial_destroy(), __serial_move_merge(__nmerge), _M_nsort, _M_x_beg, _M_z_beg,
                        /*x_orig*/ true, /*y_orig*/ true, /*root*/ _M_root);
 
     _M_root = false;
@@ -959,8 +960,8 @@ class __merge_task_static : public tbb::task
 
   public:
     __merge_task_static(_RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe, _RandomAccessIterator2 __ys,
-                      _RandomAccessIterator2 __ye, _RandomAccessIterator3 __zs, _Compare __comp,
-                      _LeafMerge __leaf_merge)
+                        _RandomAccessIterator2 __ye, _RandomAccessIterator3 __zs, _Compare __comp,
+                        _LeafMerge __leaf_merge)
         : _M_xs(__xs), _M_xe(__xe), _M_ys(__ys), _M_ye(__ye), _M_zs(__zs), _M_comp(__comp), _M_leaf_merge(__leaf_merge)
     {
     }
@@ -971,7 +972,7 @@ template <typename _RandomAccessIterator1, typename _RandomAccessIterator2, type
           typename __M_Compare, typename _LeafMerge>
 tbb::task*
 __merge_task_static<_RandomAccessIterator1, _RandomAccessIterator2, _RandomAccessIterator3, __M_Compare,
-                  _LeafMerge>::execute()
+                    _LeafMerge>::execute()
 {
     typedef typename std::iterator_traits<_RandomAccessIterator1>::difference_type _DifferenceType1;
     typedef typename std::iterator_traits<_RandomAccessIterator2>::difference_type _DifferenceType2;
@@ -1027,8 +1028,8 @@ __parallel_merge(_ExecutionPolicy&&, _RandomAccessIterator1 __xs, _RandomAccessI
     else
     {
         tbb::this_task_arena::isolate([=]() {
-            typedef __merge_task_static<_RandomAccessIterator1, _RandomAccessIterator2, _RandomAccessIterator3, _Compare,
-                                      _LeafMerge>
+            typedef __merge_task_static<_RandomAccessIterator1, _RandomAccessIterator2, _RandomAccessIterator3,
+                                        _Compare, _LeafMerge>
                 _TaskType;
             tbb::task::spawn_root_and_wait(*new (tbb::task::allocate_root())
                                                _TaskType(__xs, __xe, __ys, __ye, __zs, __comp, __leaf_merge));
