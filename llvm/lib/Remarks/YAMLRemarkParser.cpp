@@ -42,7 +42,7 @@ Error YAMLRemarkParser::parseStr(T &Result, yaml::KeyValueNode &Node) {
     unsigned StrID = 0;
     if (Error E = parseUnsigned(StrID, Node))
       return E;
-    if (Expected<StringRef> Str = (*StrTab)[StrID])
+    if (Expected<StringRef> Str = (**StrTab)[StrID])
       Tmp = *Str;
     else
       return Str.takeError();

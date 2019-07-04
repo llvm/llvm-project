@@ -23,6 +23,7 @@ namespace llvm {
 namespace remarks {
 
 struct ParserImpl;
+struct ParsedStringTable;
 
 /// Parser used to parse a raw buffer to remarks::Remark objects.
 struct Parser {
@@ -33,10 +34,10 @@ struct Parser {
   /// This constructor should be only used for parsing YAML remarks.
   Parser(StringRef Buffer);
 
-  /// Create a parser parsing \p Buffer to Remark objects, using \p StrTabBuf as
+  /// Create a parser parsing \p Buffer to Remark objects, using \p StrTab as a
   /// string table.
   /// This constructor should be only used for parsing YAML remarks.
-  Parser(StringRef Buffer, StringRef StrTabBuf);
+  Parser(StringRef Buffer, const ParsedStringTable &StrTab);
 
   // Needed because ParserImpl is an incomplete type.
   ~Parser();
@@ -54,7 +55,7 @@ struct ParsedStringTable {
   /// Collection of offsets in the buffer for each string entry.
   SmallVector<size_t, 8> Offsets;
 
-  Expected<StringRef> operator[](size_t Index);
+  Expected<StringRef> operator[](size_t Index) const;
   ParsedStringTable(StringRef Buffer);
 };
 

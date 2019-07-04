@@ -515,7 +515,8 @@ TEST(YAMLRemarks, ContentsStrTab) {
                 "unavailable",
                 115);
 
-  remarks::Parser Parser(Buf, StrTabBuf);
+  remarks::ParsedStringTable StrTab(StrTabBuf);
+  remarks::Parser Parser(Buf, StrTab);
   Expected<const remarks::Remark *> RemarkOrErr = Parser.getNext();
   EXPECT_FALSE(errorToBool(RemarkOrErr.takeError()));
   EXPECT_TRUE(*RemarkOrErr != nullptr);
@@ -582,7 +583,8 @@ TEST(YAMLRemarks, ParsingBadStringTableIndex) {
 
   StringRef StrTabBuf = StringRef("inline");
 
-  remarks::Parser Parser(Buf, StrTabBuf);
+  remarks::ParsedStringTable StrTab(StrTabBuf);
+  remarks::Parser Parser(Buf, StrTab);
   Expected<const remarks::Remark *> Remark = Parser.getNext();
   EXPECT_FALSE(Remark); // Expect an error here.
 

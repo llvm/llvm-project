@@ -22,8 +22,8 @@ using namespace llvm::remarks;
 
 Parser::Parser(StringRef Buf) : Impl(llvm::make_unique<YAMLParserImpl>(Buf)) {}
 
-Parser::Parser(StringRef Buf, StringRef StrTabBuf)
-    : Impl(llvm::make_unique<YAMLParserImpl>(Buf, StrTabBuf)) {}
+Parser::Parser(StringRef Buf, const ParsedStringTable &StrTab)
+    : Impl(llvm::make_unique<YAMLParserImpl>(Buf, &StrTab)) {}
 
 Parser::~Parser() = default;
 
@@ -69,7 +69,7 @@ ParsedStringTable::ParsedStringTable(StringRef InBuffer) : Buffer(InBuffer) {
   }
 }
 
-Expected<StringRef> ParsedStringTable::operator[](size_t Index) {
+Expected<StringRef> ParsedStringTable::operator[](size_t Index) const {
   if (Index >= Offsets.size())
     return createStringError(
         std::make_error_code(std::errc::invalid_argument),
