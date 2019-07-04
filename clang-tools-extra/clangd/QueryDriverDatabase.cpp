@@ -48,6 +48,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -102,20 +103,19 @@ std::vector<std::string> extractSystemIncludes(PathRef Driver,
     return {};
   }
 
-  llvm::SmallString<128> OutputPath;
-  auto EC = llvm::sys::fs::createTemporaryFile("system-includes", "clangd",
-                                               OutputPath);
-  if (EC) {
+  llvm::SmallString<128> StdErrPath;
+  if (auto EC = llvm::sys::fs::createTemporaryFile("system-includes", "clangd",
+                                                   StdErrPath)) {
     elog("System include extraction: failed to create temporary file with "
          "error {0}",
          EC.message());
     return {};
   }
   auto CleanUp = llvm::make_scope_exit(
-      [&OutputPath]() { llvm::sys::fs::remove(OutputPath); });
+      [&StdErrPath]() { llvm::sys::fs::remove(StdErrPath); });
 
   llvm::Optional<llvm::StringRef> Redirects[] = {
-      {""}, llvm::StringRef(OutputPath), {""}};
+      {""}, {""}, llvm::StringRef(StdErrPath)};
 
   auto Type = driver::types::lookupTypeForExtension(Ext);
   if (Type == driver::types::TY_INVALID) {
@@ -123,22 +123,21 @@ std::vector<std::string> extractSystemIncludes(PathRef Driver,
     return {};
   }
   // Should we also preserve flags like "-sysroot", "-nostdinc" ?
-  const llvm::StringRef Args[] = {"-E", "-x", driver::types::getTypeName(Type),
-                                  "-", "-v"};
+  const llvm::StringRef Args[] = {
+      Driver, "-E", "-x", driver::types::getTypeName(Type), "-", "-v"};
 
-  int RC =
-      llvm::sys::ExecuteAndWait(Driver, Args, /*Env=*/llvm::None, Redirects);
-  if (RC) {
+  if (int RC = llvm::sys::ExecuteAndWait(Driver, Args, /*Env=*/llvm::None,
+                                         Redirects)) {
     elog("System include extraction: driver execution failed with return code: "
          "{0}",
          llvm::to_string(RC));
     return {};
   }
 
-  auto BufOrError = llvm::MemoryBuffer::getFile(OutputPath);
+  auto BufOrError = llvm::MemoryBuffer::getFile(StdErrPath);
   if (!BufOrError) {
     elog("System include extraction: failed to read {0} with error {1}",
-         OutputPath, BufOrError.getError().message());
+         StdErrPath, BufOrError.getError().message());
     return {};
   }
 
@@ -223,16 +222,19 @@ public:
 
     llvm::SmallString<128> Driver(Cmd->CommandLine.front());
     llvm::sys::fs::make_absolute(Cmd->Directory, Driver);
+    llvm::StringRef Ext = llvm::sys::path::extension(File).trim('.');
+    auto Key = std::make_pair(Driver.str(), Ext);
 
-    llvm::ArrayRef<std::string> SystemIncludes;
+    std::vector<std::string> SystemIncludes;
     {
       std::lock_guard<std::mutex> Lock(Mu);
 
-      llvm::StringRef Ext = llvm::sys::path::extension(File).trim('.');
-      auto It = DriverToIncludesCache.try_emplace({Driver, Ext});
-      if (It.second)
-        It.first->second = extractSystemIncludes(Driver, Ext, QueryDriverRegex);
-      SystemIncludes = It.first->second;
+      auto It = DriverToIncludesCache.find(Key);
+      if (It != DriverToIncludesCache.end())
+        SystemIncludes = It->second;
+      else
+        DriverToIncludesCache[Key] = SystemIncludes =
+            extractSystemIncludes(Key.first, Key.second, QueryDriverRegex);
     }
 
     return addSystemIncludes(*Cmd, SystemIncludes);
@@ -241,8 +243,8 @@ public:
 private:
   mutable std::mutex Mu;
   // Caches includes extracted from a driver.
-  mutable llvm::DenseMap<std::pair<StringRef, StringRef>,
-                         std::vector<std::string>>
+  mutable std::map<std::pair<std::string, std::string>,
+                   std::vector<std::string>>
       DriverToIncludesCache;
   mutable llvm::Regex QueryDriverRegex;
 

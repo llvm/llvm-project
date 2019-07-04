@@ -794,14 +794,27 @@ EmitResultInstructionAsOperand(const TreePatternNode *N,
   // 'execute always' values. Match up the node operands to the instruction
   // operands to do this.
   unsigned ChildNo = 0;
+
+  // Similarly to the code in TreePatternNode::ApplyTypeConstraints, count the
+  // number of operands at the end of the list which have default values.
+  // Those can come from the pattern if it provides enough arguments, or be
+  // filled in with the default if the pattern hasn't provided them. But any
+  // operand with a default value _before_ the last mandatory one will be
+  // filled in with their defaults unconditionally.
+  unsigned NonOverridableOperands = NumFixedOperands;
+  while (NonOverridableOperands > NumResults &&
+         CGP.operandHasDefault(II.Operands[NonOverridableOperands-1].Rec))
+    --NonOverridableOperands;
+
   for (unsigned InstOpNo = NumResults, e = NumFixedOperands;
        InstOpNo != e; ++InstOpNo) {
     // Determine what to emit for this operand.
     Record *OperandNode = II.Operands[InstOpNo].Rec;
-    if (OperandNode->isSubClassOf("OperandWithDefaultOps") &&
-        !CGP.getDefaultOperand(OperandNode).DefaultOps.empty()) {
-      // This is a predicate or optional def operand; emit the
-      // 'default ops' operands.
+    if (CGP.operandHasDefault(OperandNode) &&
+        (InstOpNo < NonOverridableOperands || ChildNo >= N->getNumChildren())) {
+      // This is a predicate or optional def operand which the pattern has not
+      // overridden, or which we aren't letting it override; emit the 'default
+      // ops' operands.
       const DAGDefaultOperand &DefaultOp
         = CGP.getDefaultOperand(OperandNode);
       for (unsigned i = 0, e = DefaultOp.DefaultOps.size(); i != e; ++i)

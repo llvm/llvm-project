@@ -11,6 +11,7 @@
 #include "FormattedString.h"
 #include "GlobalCompilationDatabase.h"
 #include "Protocol.h"
+#include "SemanticHighlighting.h"
 #include "SourceCode.h"
 #include "Trace.h"
 #include "URI.h"
@@ -79,6 +80,17 @@ CompletionItemKindBitset defaultCompletionItemKinds() {
        I <= static_cast<size_t>(CompletionItemKind::Reference); ++I)
     Defaults.set(I);
   return Defaults;
+}
+
+// Build a lookup table (HighlightingKind => {TextMate Scopes}), which is sent
+// to the LSP client.
+std::vector<std::vector<std::string>> buildHighlightScopeLookupTable() {
+  std::vector<std::vector<std::string>> LookupTable;
+  // HighlightingKind is using as the index.
+  for (int KindValue = 0; KindValue < (int)HighlightingKind::NumKinds;
+       ++KindValue)
+    LookupTable.push_back({toTextMateScope((HighlightingKind)(KindValue))});
+  return LookupTable;
 }
 
 } // namespace
@@ -328,6 +340,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
     WithOffsetEncoding.emplace(kCurrentOffsetEncoding,
                                *NegotiatedOffsetEncoding);
 
+  ClangdServerOpts.SemanticHighlighting =
+      Params.capabilities.SemanticHighlighting;
   if (Params.rootUri && *Params.rootUri)
     ClangdServerOpts.WorkspaceRoot = Params.rootUri->file();
   else if (Params.rootPath && !Params.rootPath->empty())
@@ -407,6 +421,11 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
         }}}};
   if (NegotiatedOffsetEncoding)
     Result["offsetEncoding"] = *NegotiatedOffsetEncoding;
+  if (Params.capabilities.SemanticHighlighting)
+    Result.getObject("capabilities")
+        ->insert(
+            {"semanticHighlighting",
+             llvm::json::Object{{"scopes", buildHighlightScopeLookupTable()}}});
   Reply(std::move(Result));
 }
 
@@ -927,6 +946,11 @@ void ClangdLSPServer::applyConfiguration(
     reparseOpenedFiles();
 }
 
+void ClangdLSPServer::publishSemanticHighlighting(
+    SemanticHighlightingParams Params) {
+  notify("textDocument/semanticHighlighting", Params);
+}
+
 void ClangdLSPServer::publishDiagnostics(
     const URIForFile &File, std::vector<clangd::Diagnostic> Diagnostics) {
   // Publish diagnostics.
@@ -1061,6 +1085,13 @@ bool ClangdLSPServer::shouldRunCompletion(
     return (*Code)[*Offset - 2] == ':'; // trigger only on '::'.
   assert(false && "unhandled trigger character");
   return true;
+}
+
+void ClangdLSPServer::onHighlightingsReady(
+    PathRef File, std::vector<HighlightingToken> Highlightings) {
+  publishSemanticHighlighting(
+      {{URIForFile::canonicalize(File, /*TUPath=*/File)},
+       toSemanticHighlightingInformation(Highlightings)});
 }
 
 void ClangdLSPServer::onDiagnosticsReady(PathRef File,

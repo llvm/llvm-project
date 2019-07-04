@@ -406,6 +406,9 @@ struct ClientCapabilities {
   /// textDocument.codeAction.codeActionLiteralSupport.
   bool CodeActionStructure = false;
 
+  /// Client supports semantic highlighting.
+  bool SemanticHighlighting = false;
+
   /// Supported encodings for LSP character offsets. (clangd extension).
   llvm::Optional<std::vector<OffsetEncoding>> offsetEncoding;
 
@@ -1172,6 +1175,27 @@ struct FileStatus {
   // FIXME: add detail messages.
 };
 llvm::json::Value toJSON(const FileStatus &FStatus);
+
+/// Represents a semantic highlighting information that has to be applied on a
+/// specific line of the text document.
+struct SemanticHighlightingInformation {
+  /// The line these highlightings belong to.
+  int Line;
+  /// The base64 encoded string of highlighting tokens.
+  std::string Tokens;
+};
+bool operator==(const SemanticHighlightingInformation &Lhs,
+                const SemanticHighlightingInformation &Rhs);
+llvm::json::Value toJSON(const SemanticHighlightingInformation &Highlighting);
+
+/// Parameters for the semantic highlighting (server-side) push notification.
+struct SemanticHighlightingParams {
+  /// The textdocument these highlightings belong to.
+  TextDocumentIdentifier TextDocument;
+  /// The lines of highlightings that should be sent.
+  std::vector<SemanticHighlightingInformation> Lines;
+};
+llvm::json::Value toJSON(const SemanticHighlightingParams &Highlighting);
 
 } // namespace clangd
 } // namespace clang

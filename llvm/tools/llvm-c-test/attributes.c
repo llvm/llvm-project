@@ -29,9 +29,12 @@ int llvm_test_function_attributes(void) {
     for (Idx = LLVMAttributeFunctionIndex, ParamCount = LLVMCountParams(F);
          Idx <= ParamCount; ++Idx) {
       int AttrCount = LLVMGetAttributeCountAtIndex(F, Idx);
-      LLVMAttributeRef *Attrs =
-          (LLVMAttributeRef *)malloc(AttrCount * sizeof(LLVMAttributeRef));
-      assert(Attrs);
+      LLVMAttributeRef *Attrs = 0;
+      if (AttrCount) {
+        Attrs =
+            (LLVMAttributeRef *)malloc(AttrCount * sizeof(LLVMAttributeRef));
+        assert(Attrs);
+      }
       LLVMGetAttributesAtIndex(F, Idx, Attrs);
       free(Attrs);
     }
@@ -61,9 +64,12 @@ int llvm_test_callsite_attributes(void) {
               ParamCount = LLVMCountParams(F);
                Idx <= ParamCount; ++Idx) {
             int AttrCount = LLVMGetCallSiteAttributeCount(I, Idx);
-            LLVMAttributeRef *Attrs = (LLVMAttributeRef *)malloc(
-                AttrCount * sizeof(LLVMAttributeRef));
-            assert(Attrs);
+            LLVMAttributeRef *Attrs = 0;
+            if (AttrCount) {
+              Attrs = (LLVMAttributeRef *)malloc(
+                  AttrCount * sizeof(LLVMAttributeRef));
+              assert(Attrs);
+            }
             LLVMGetCallSiteAttributes(I, Idx, Attrs);
             free(Attrs);
           }

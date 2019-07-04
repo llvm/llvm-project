@@ -189,7 +189,7 @@ static llvm::cl::opt<bool> EnableBackgroundIndex(
     llvm::cl::desc(
         "Index project code in the background and persist index on disk. "
         "Experimental"),
-    llvm::cl::init(false), llvm::cl::Hidden);
+    llvm::cl::init(true));
 
 static llvm::cl::opt<int> BackgroundIndexRebuildPeriod(
     "background-index-rebuild-period",

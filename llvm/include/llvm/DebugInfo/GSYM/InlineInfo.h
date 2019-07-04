@@ -58,10 +58,9 @@ struct InlineInfo {
   /// non-inlined code.
   ///
   /// \param Addr the address to lookup
-  /// \param InlineStack a vector of InlineInfo objects that describe the
-  /// inline call stack for a given address.
   ///
-  /// \returns true if successful, false otherwise
+  /// \returns optional vector of InlineInfo objects that describe the
+  /// inline call stack for a given address, false otherwise.
   llvm::Optional<InlineArray> getInlineStack(uint64_t Addr) const;
 };
 

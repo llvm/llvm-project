@@ -2919,6 +2919,8 @@ template <class ELFT> bool VersionNeedSection<ELFT>::isNeeded() const {
 void MergeSyntheticSection::addSection(MergeInputSection *MS) {
   MS->Parent = this;
   Sections.push_back(MS);
+  assert(Alignment == MS->Alignment || !(MS->Flags & SHF_STRINGS));
+  Alignment = std::max(Alignment, MS->Alignment);
 }
 
 MergeTailSection::MergeTailSection(StringRef Name, uint32_t Type,
@@ -3062,8 +3064,11 @@ void elf::mergeSections() {
       //
       // Using Entsize in here also allows us to propagate it to the synthetic
       // section.
+      //
+      // SHF_STRINGS section with different alignments should not be merged.
       return Sec->Name == OutsecName && Sec->Flags == MS->Flags &&
-             Sec->Entsize == MS->Entsize && Sec->Alignment == MS->Alignment;
+             Sec->Entsize == MS->Entsize &&
+             (Sec->Alignment == MS->Alignment || !(Sec->Flags & SHF_STRINGS));
     });
     if (I == MergeSections.end()) {
       MergeSyntheticSection *Syn =

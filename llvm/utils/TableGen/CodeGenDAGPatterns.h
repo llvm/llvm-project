@@ -1282,6 +1282,11 @@ public:
 
   unsigned allocateScope() { return ++NumScopes; }
 
+  bool operandHasDefault(Record *Op) const {
+    return Op->isSubClassOf("OperandWithDefaultOps") &&
+      !getDefaultOperand(Op).DefaultOps.empty();
+  }
+
 private:
   void ParseNodeInfo();
   void ParseNodeTransforms();

@@ -410,18 +410,7 @@ void Symbol::resolveUndefined(const Undefined &Other) {
   if (Traced)
     printTraceSymbol(&Other);
 
-  if (isUndefined()) {
-    // The binding may "upgrade" from weak to non-weak.
-    if (Other.Binding != STB_WEAK)
-      Binding = Other.Binding;
-  } else if (auto *S = dyn_cast<SharedSymbol>(this)) {
-    // The binding of a SharedSymbol will be weak if there is at least one
-    // reference and all are weak. The binding has one opportunity to change to
-    // weak: if the first reference is weak.
-    if (Other.Binding != STB_WEAK || !S->Referenced)
-      Binding = Other.Binding;
-    S->Referenced = true;
-  } else if (isLazy()) {
+  if (isLazy()) {
     // An undefined weak will not fetch archive members. See comment on Lazy in
     // Symbols.h for the details.
     if (Other.Binding == STB_WEAK) {
@@ -489,6 +478,24 @@ void Symbol::resolveUndefined(const Undefined &Other) {
     if (Backref && !isWeak())
       warn("backward reference detected: " + Other.getName() + " in " +
            toString(Other.File) + " refers to " + toString(File));
+    return;
+  }
+
+  // Undefined symbols in a SharedFile do not change the binding.
+  if (dyn_cast_or_null<SharedFile>(Other.File))
+    return;
+
+  if (isUndefined()) {
+    // The binding may "upgrade" from weak to non-weak.
+    if (Other.Binding != STB_WEAK)
+      Binding = Other.Binding;
+  } else if (auto *S = dyn_cast<SharedSymbol>(this)) {
+    // The binding of a SharedSymbol will be weak if there is at least one
+    // reference and all are weak. The binding has one opportunity to change to
+    // weak: if the first reference is weak.
+    if (Other.Binding != STB_WEAK || !S->Referenced)
+      Binding = Other.Binding;
+    S->Referenced = true;
   }
 }
 

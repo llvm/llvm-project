@@ -616,13 +616,13 @@ private:
   }
 
   /// Return the flattened type (suitable for use in a Value)
-  /// specified by the given \param ID.
+  /// specified by the given \param ID .
   Type *getTypeByID(unsigned ID) {
     return flattenPointerTypes(getFullyStructuredTypeByID(ID));
   }
 
   /// Return the fully structured (bitcode-reader internal) type
-  /// corresponding to the given \param ID.
+  /// corresponding to the given \param ID .
   Type *getFullyStructuredTypeByID(unsigned ID);
 
   Value *getFnValueByID(unsigned ID, Type *Ty, Type **FullTy = nullptr) {

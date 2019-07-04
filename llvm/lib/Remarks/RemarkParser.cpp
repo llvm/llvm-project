@@ -26,6 +26,7 @@ static std::unique_ptr<ParserImpl> formatToParserImpl(ParserFormat Format,
   case ParserFormat::YAML:
     return llvm::make_unique<YAMLParserImpl>(Buf);
   };
+  llvm_unreachable("Unhandled llvm::remarks::ParserFormat enum");
 }
 
 static std::unique_ptr<ParserImpl>
@@ -35,6 +36,7 @@ formatToParserImpl(ParserFormat Format, StringRef Buf,
   case ParserFormat::YAML:
     return llvm::make_unique<YAMLParserImpl>(Buf, &StrTab);
   };
+  llvm_unreachable("Unhandled llvm::remarks::ParserFormat enum");
 }
 
 Parser::Parser(ParserFormat Format, StringRef Buf)

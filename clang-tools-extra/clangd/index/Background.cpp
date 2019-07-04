@@ -9,7 +9,9 @@
 #include "index/Background.h"
 #include "ClangdUnit.h"
 #include "Compiler.h"
+#include "Headers.h"
 #include "Logger.h"
+#include "Path.h"
 #include "SourceCode.h"
 #include "Symbol.h"
 #include "Threading.h"
@@ -17,14 +19,19 @@
 #include "URI.h"
 #include "index/IndexAction.h"
 #include "index/MemIndex.h"
+#include "index/Ref.h"
+#include "index/Relation.h"
 #include "index/Serialization.h"
 #include "index/SymbolCollector.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/SHA1.h"
 #include "llvm/Support/Threading.h"
 
@@ -92,28 +99,6 @@ IncludeGraph getSubGraph(const URI &U, const IncludeGraph &FullGraph) {
   }
 
   return IG;
-}
-
-// Creates a filter to not collect index results from files with unchanged
-// digests.
-// \p FileDigests contains file digests for the current indexed files.
-decltype(SymbolCollector::Options::FileFilter)
-createFileFilter(const llvm::StringMap<FileDigest> &FileDigests) {
-  return [&FileDigests](const SourceManager &SM, FileID FID) {
-    const auto *F = SM.getFileEntryForID(FID);
-    if (!F)
-      return false; // Skip invalid files.
-    auto AbsPath = getCanonicalPath(F, SM);
-    if (!AbsPath)
-      return false; // Skip files without absolute path.
-    auto Digest = digestFile(SM, FID);
-    if (!Digest)
-      return false;
-    auto D = FileDigests.find(*AbsPath);
-    if (D != FileDigests.end() && D->second == Digest)
-      return false; // Skip files that haven't changed.
-    return true;
-  };
 }
 
 // We cannot use vfs->makeAbsolute because Cmd.FileName is either absolute or
@@ -267,11 +252,12 @@ void BackgroundIndex::enqueueTask(Task T, llvm::ThreadPriority Priority) {
 }
 
 /// Given index results from a TU, only update symbols coming from files that
-/// are different or missing from than \p DigestsSnapshot. Also stores new index
-/// information on IndexStorage.
-void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
-                             const llvm::StringMap<FileDigest> &DigestsSnapshot,
-                             BackgroundIndexStorage *IndexStorage) {
+/// are different or missing from than \p ShardVersionsSnapshot. Also stores new
+/// index information on IndexStorage.
+void BackgroundIndex::update(
+    llvm::StringRef MainFile, IndexFileIn Index,
+    const llvm::StringMap<ShardVersion> &ShardVersionsSnapshot,
+    BackgroundIndexStorage *IndexStorage, bool HadErrors) {
   // Partition symbols/references into files.
   struct File {
     llvm::DenseSet<const Symbol *> Symbols;
@@ -283,10 +269,14 @@ void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
   URIToFileCache URICache(MainFile);
   for (const auto &IndexIt : *Index.Sources) {
     const auto &IGN = IndexIt.getValue();
+    // Note that sources do not contain any information regarding missing
+    // headers, since we don't even know what absolute path they should fall in.
     const auto AbsPath = URICache.resolve(IGN.URI);
-    const auto DigestIt = DigestsSnapshot.find(AbsPath);
-    // File has different contents.
-    if (DigestIt == DigestsSnapshot.end() || DigestIt->getValue() != IGN.Digest)
+    const auto DigestIt = ShardVersionsSnapshot.find(AbsPath);
+    // File has different contents, or indexing was successfull this time.
+    if (DigestIt == ShardVersionsSnapshot.end() ||
+        DigestIt->getValue().Digest != IGN.Digest ||
+        (DigestIt->getValue().HadErrors && !HadErrors))
       Files.try_emplace(AbsPath).first->getValue().Digest = IGN.Digest;
   }
   // This map is used to figure out where to store relations.
@@ -347,8 +337,10 @@ void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
     auto RelS = llvm::make_unique<RelationSlab>(std::move(Relations).build());
     auto IG = llvm::make_unique<IncludeGraph>(
         getSubGraph(URI::create(Path), Index.Sources.getValue()));
+
     // We need to store shards before updating the index, since the latter
     // consumes slabs.
+    // FIXME: Also skip serializing the shard if it is already up-to-date.
     if (IndexStorage) {
       IndexFileOut Shard;
       Shard.Symbols = SS.get();
@@ -356,18 +348,28 @@ void BackgroundIndex::update(llvm::StringRef MainFile, IndexFileIn Index,
       Shard.Relations = RelS.get();
       Shard.Sources = IG.get();
 
+      // Only store command line hash for main files of the TU, since our
+      // current model keeps only one version of a header file.
+      if (Path == MainFile)
+        Shard.Cmd = Index.Cmd.getPointer();
+
       if (auto Error = IndexStorage->storeShard(Path, Shard))
         elog("Failed to write background-index shard for file {0}: {1}", Path,
              std::move(Error));
     }
+
     {
-      std::lock_guard<std::mutex> Lock(DigestsMu);
+      std::lock_guard<std::mutex> Lock(ShardVersionsMu);
       auto Hash = FileIt.second.Digest;
-      // Skip if file is already up to date.
-      auto DigestIt = IndexedFileDigests.try_emplace(Path);
-      if (!DigestIt.second && DigestIt.first->second == Hash)
+      auto DigestIt = ShardVersions.try_emplace(Path);
+      ShardVersion &SV = DigestIt.first->second;
+      // Skip if file is already up to date, unless previous index was broken
+      // and this one is not.
+      if (!DigestIt.second && SV.Digest == Hash && SV.HadErrors && !HadErrors)
         continue;
-      DigestIt.first->second = Hash;
+      SV.Digest = Hash;
+      SV.HadErrors = HadErrors;
+
       // This can override a newer version that is added in another thread, if
       // this thread sees the older version but finishes later. This should be
       // rare in practice.
@@ -415,11 +417,11 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
     return llvm::errorCodeToError(Buf.getError());
   auto Hash = digest(Buf->get()->getBuffer());
 
-  // Take a snapshot of the digests to avoid locking for each file in the TU.
-  llvm::StringMap<FileDigest> DigestsSnapshot;
+  // Take a snapshot of the versions to avoid locking for each file in the TU.
+  llvm::StringMap<ShardVersion> ShardVersionsSnapshot;
   {
-    std::lock_guard<std::mutex> Lock(DigestsMu);
-    DigestsSnapshot = IndexedFileDigests;
+    std::lock_guard<std::mutex> Lock(ShardVersionsMu);
+    ShardVersionsSnapshot = ShardVersions;
   }
 
   vlog("Indexing {0} (digest:={1})", Cmd.Filename, llvm::toHex(Hash));
@@ -439,7 +441,26 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
                                    "Couldn't build compiler instance");
 
   SymbolCollector::Options IndexOpts;
-  IndexOpts.FileFilter = createFileFilter(DigestsSnapshot);
+  // Creates a filter to not collect index results from files with unchanged
+  // digests.
+  IndexOpts.FileFilter = [&ShardVersionsSnapshot](const SourceManager &SM,
+                                                  FileID FID) {
+    const auto *F = SM.getFileEntryForID(FID);
+    if (!F)
+      return false; // Skip invalid files.
+    auto AbsPath = getCanonicalPath(F, SM);
+    if (!AbsPath)
+      return false; // Skip files without absolute path.
+    auto Digest = digestFile(SM, FID);
+    if (!Digest)
+      return false;
+    auto D = ShardVersionsSnapshot.find(*AbsPath);
+    if (D != ShardVersionsSnapshot.end() && D->second.Digest == Digest &&
+        !D->second.HadErrors)
+      return false; // Skip files that haven't changed, without errors.
+    return true;
+  };
+
   IndexFileIn Index;
   auto Action = createStaticIndexingAction(
       IndexOpts, [&](SymbolSlab S) { Index.Symbols = std::move(S); },
@@ -460,13 +481,8 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
     return Err;
 
   Action->EndSourceFile();
-  if (Clang->hasDiagnostics() &&
-      Clang->getDiagnostics().hasUncompilableErrorOccurred()) {
-    return llvm::createStringError(
-        llvm::inconvertibleErrorCode(),
-        "IndexingAction failed: has uncompilable errors");
-  }
 
+  Index.Cmd = Inputs.CompileCommand;
   assert(Index.Symbols && Index.Refs && Index.Sources &&
          "Symbols, Refs and Sources must be set.");
 
@@ -477,7 +493,15 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
   SPAN_ATTACH(Tracer, "refs", int(Index.Refs->numRefs()));
   SPAN_ATTACH(Tracer, "sources", int(Index.Sources->size()));
 
-  update(AbsolutePath, std::move(Index), DigestsSnapshot, IndexStorage);
+  bool HadErrors = Clang->hasDiagnostics() &&
+                   Clang->getDiagnostics().hasUncompilableErrorOccurred();
+  if (HadErrors) {
+    log("Failed to compile {0}, index may be incomplete", AbsolutePath);
+    for (auto &It : *Index.Sources)
+      It.second.Flags |= IncludeGraphNode::SourceFlag::HadErrors;
+  }
+  update(AbsolutePath, std::move(Index), ShardVersionsSnapshot, IndexStorage,
+         HadErrors);
 
   if (BuildIndexPeriodMs > 0)
     SymbolsUpdatedSinceLastIndex = true;
@@ -497,6 +521,7 @@ BackgroundIndex::loadShard(const tooling::CompileCommand &Cmd,
     std::unique_ptr<IndexFileIn> Shard;
     FileDigest Digest = {};
     bool CountReferences = false;
+    bool HadErrors = false;
   };
   std::vector<ShardInfo> IntermediateSymbols;
   // Make sure we don't have duplicate elements in the queue. Keys are absolute
@@ -557,7 +582,10 @@ BackgroundIndex::loadShard(const tooling::CompileCommand &Cmd,
       SI.AbsolutePath = CurDependency.Path;
       SI.Shard = std::move(Shard);
       SI.Digest = I.getValue().Digest;
-      SI.CountReferences = I.getValue().IsTU;
+      SI.CountReferences =
+          I.getValue().Flags & IncludeGraphNode::SourceFlag::IsTU;
+      SI.HadErrors =
+          I.getValue().Flags & IncludeGraphNode::SourceFlag::HadErrors;
       IntermediateSymbols.push_back(std::move(SI));
       // Check if the source needs re-indexing.
       // Get the digest, skip it if file doesn't exist.
@@ -568,13 +596,15 @@ BackgroundIndex::loadShard(const tooling::CompileCommand &Cmd,
         continue;
       }
       // If digests match then dependency doesn't need re-indexing.
+      // FIXME: Also check for dependencies(sources) of this shard and compile
+      // commands for cache invalidation.
       CurDependency.NeedsReIndexing =
           digest(Buf->get()->getBuffer()) != I.getValue().Digest;
     }
   }
   // Load shard information into background-index.
   {
-    std::lock_guard<std::mutex> Lock(DigestsMu);
+    std::lock_guard<std::mutex> Lock(ShardVersionsMu);
     // This can override a newer version that is added in another thread,
     // if this thread sees the older version but finishes later. This
     // should be rare in practice.
@@ -590,7 +620,10 @@ BackgroundIndex::loadShard(const tooling::CompileCommand &Cmd,
           SI.Shard->Relations
               ? llvm::make_unique<RelationSlab>(std::move(*SI.Shard->Relations))
               : nullptr;
-      IndexedFileDigests[SI.AbsolutePath] = SI.Digest;
+      ShardVersion &SV = ShardVersions[SI.AbsolutePath];
+      SV.Digest = SI.Digest;
+      SV.HadErrors = SI.HadErrors;
+
       IndexedSymbols.update(SI.AbsolutePath, std::move(SS), std::move(RS),
                             std::move(RelS), SI.CountReferences);
     }
