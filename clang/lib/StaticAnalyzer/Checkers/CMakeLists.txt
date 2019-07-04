@@ -83,6 +83,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   RetainCountChecker/RetainCountDiagnostics.cpp
   ReturnPointerRangeChecker.cpp
   ReturnUndefChecker.cpp
+  ReturnValueChecker.cpp
   RunLoopAutoreleaseLeakChecker.cpp
   SimpleStreamChecker.cpp
   SmartPtrModeling.cpp
