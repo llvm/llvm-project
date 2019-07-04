@@ -127,11 +127,11 @@ struct YAMLParserImpl : public ParserImpl {
 
   YAMLParserImpl(StringRef Buf,
                  Optional<const ParsedStringTable *> StrTab = None)
-      : ParserImpl{ParserImpl::Kind::YAML}, YAMLParser(Buf, StrTab),
+      : ParserImpl{ParserFormat::YAML}, YAMLParser(Buf, StrTab),
         YAMLIt(YAMLParser.Stream.begin()), HasErrors(false) {}
 
   static bool classof(const ParserImpl *PI) {
-    return PI->ParserKind == ParserImpl::Kind::YAML;
+    return PI->Format == ParserFormat::YAML;
   }
 };
 } // end namespace remarks

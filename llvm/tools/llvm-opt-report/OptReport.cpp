@@ -150,7 +150,7 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
     return false;
   }
 
-  remarks::Parser Parser((*Buf)->getBuffer());
+  remarks::Parser Parser(remarks::ParserFormat::YAML, (*Buf)->getBuffer());
 
   while (true) {
     Expected<const remarks::Remark *> RemarkOrErr = Parser.getNext();

@@ -14,7 +14,7 @@
 using namespace llvm;
 
 template <size_t N> void parseGood(const char (&Buf)[N]) {
-  remarks::Parser Parser({Buf, N - 1});
+  remarks::Parser Parser(remarks::ParserFormat::YAML, {Buf, N - 1});
   Expected<const remarks::Remark *> Remark = Parser.getNext();
   EXPECT_FALSE(errorToBool(Remark.takeError())); // Check for parsing errors.
   EXPECT_TRUE(*Remark != nullptr);               // At least one remark.
@@ -25,7 +25,7 @@ template <size_t N> void parseGood(const char (&Buf)[N]) {
 
 template <size_t N>
 bool parseExpectError(const char (&Buf)[N], const char *Error) {
-  remarks::Parser Parser({Buf, N - 1});
+  remarks::Parser Parser(remarks::ParserFormat::YAML, {Buf, N - 1});
   Expected<const remarks::Remark *> Remark = Parser.getNext();
   EXPECT_FALSE(Remark); // Expect an error here.
 
@@ -354,7 +354,7 @@ TEST(YAMLRemarks, Contents) {
                   "  - String: ' because its definition is unavailable'\n"
                   "\n";
 
-  remarks::Parser Parser(Buf);
+  remarks::Parser Parser(remarks::ParserFormat::YAML, Buf);
   Expected<const remarks::Remark *> RemarkOrErr = Parser.getNext();
   EXPECT_FALSE(errorToBool(RemarkOrErr.takeError()));
   EXPECT_TRUE(*RemarkOrErr != nullptr);
@@ -516,7 +516,7 @@ TEST(YAMLRemarks, ContentsStrTab) {
                 115);
 
   remarks::ParsedStringTable StrTab(StrTabBuf);
-  remarks::Parser Parser(Buf, StrTab);
+  remarks::Parser Parser(remarks::ParserFormat::YAML, Buf, StrTab);
   Expected<const remarks::Remark *> RemarkOrErr = Parser.getNext();
   EXPECT_FALSE(errorToBool(RemarkOrErr.takeError()));
   EXPECT_TRUE(*RemarkOrErr != nullptr);
@@ -584,7 +584,7 @@ TEST(YAMLRemarks, ParsingBadStringTableIndex) {
   StringRef StrTabBuf = StringRef("inline");
 
   remarks::ParsedStringTable StrTab(StrTabBuf);
-  remarks::Parser Parser(Buf, StrTab);
+  remarks::Parser Parser(remarks::ParserFormat::YAML, Buf, StrTab);
   Expected<const remarks::Remark *> Remark = Parser.getNext();
   EXPECT_FALSE(Remark); // Expect an error here.
 

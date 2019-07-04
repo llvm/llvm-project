@@ -13,19 +13,19 @@
 #ifndef LLVM_REMARKS_REMARK_PARSER_IMPL_H
 #define LLVM_REMARKS_REMARK_PARSER_IMPL_H
 
+#include "llvm/Remarks/RemarkParser.h"
+
 namespace llvm {
 namespace remarks {
 /// This is used as a base for any parser implementation.
 struct ParserImpl {
-  enum class Kind { YAML };
-
-  explicit ParserImpl(Kind TheParserKind) : ParserKind(TheParserKind) {}
+  explicit ParserImpl(ParserFormat Format) : Format(Format) {}
   // Virtual destructor prevents mismatched deletes
   virtual ~ParserImpl() {}
 
-  // The parser kind. This is used as a tag to safely cast between
+  // The parser format. This is used as a tag to safely cast between
   // implementations.
-  Kind ParserKind;
+  ParserFormat Format;
 };
 } // end namespace remarks
 } // end namespace llvm

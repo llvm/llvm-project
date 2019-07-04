@@ -25,19 +25,22 @@ namespace remarks {
 struct ParserImpl;
 struct ParsedStringTable;
 
+enum class ParserFormat { YAML };
+
 /// Parser used to parse a raw buffer to remarks::Remark objects.
 struct Parser {
   /// The hidden implementation of the parser.
   std::unique_ptr<ParserImpl> Impl;
 
   /// Create a parser parsing \p Buffer to Remark objects.
-  /// This constructor should be only used for parsing YAML remarks.
-  Parser(StringRef Buffer);
+  /// This constructor should be only used for parsing remarks without a string
+  /// table.
+  Parser(ParserFormat Format, StringRef Buffer);
 
   /// Create a parser parsing \p Buffer to Remark objects, using \p StrTab as a
   /// string table.
-  /// This constructor should be only used for parsing YAML remarks.
-  Parser(StringRef Buffer, const ParsedStringTable &StrTab);
+  Parser(ParserFormat Format, StringRef Buffer,
+         const ParsedStringTable &StrTab);
 
   // Needed because ParserImpl is an incomplete type.
   ~Parser();

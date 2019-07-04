@@ -20,10 +20,29 @@
 using namespace llvm;
 using namespace llvm::remarks;
 
-Parser::Parser(StringRef Buf) : Impl(llvm::make_unique<YAMLParserImpl>(Buf)) {}
+static std::unique_ptr<ParserImpl> formatToParserImpl(ParserFormat Format,
+                                                      StringRef Buf) {
+  switch (Format) {
+  case ParserFormat::YAML:
+    return llvm::make_unique<YAMLParserImpl>(Buf);
+  };
+}
 
-Parser::Parser(StringRef Buf, const ParsedStringTable &StrTab)
-    : Impl(llvm::make_unique<YAMLParserImpl>(Buf, &StrTab)) {}
+static std::unique_ptr<ParserImpl>
+formatToParserImpl(ParserFormat Format, StringRef Buf,
+                   const ParsedStringTable &StrTab) {
+  switch (Format) {
+  case ParserFormat::YAML:
+    return llvm::make_unique<YAMLParserImpl>(Buf, &StrTab);
+  };
+}
+
+Parser::Parser(ParserFormat Format, StringRef Buf)
+    : Impl(formatToParserImpl(Format, Buf)) {}
+
+Parser::Parser(ParserFormat Format, StringRef Buf,
+               const ParsedStringTable &StrTab)
+    : Impl(formatToParserImpl(Format, Buf, StrTab)) {}
 
 Parser::~Parser() = default;
 
@@ -90,7 +109,8 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(remarks::Parser, LLVMRemarkParserRef)
 extern "C" LLVMRemarkParserRef LLVMRemarkParserCreateYAML(const void *Buf,
                                                           uint64_t Size) {
   return wrap(
-      new remarks::Parser(StringRef(static_cast<const char *>(Buf), Size)));
+      new remarks::Parser(remarks::ParserFormat::YAML,
+                          StringRef(static_cast<const char *>(Buf), Size)));
 }
 
 static void handleYAMLError(remarks::YAMLParserImpl &Impl, Error E) {
