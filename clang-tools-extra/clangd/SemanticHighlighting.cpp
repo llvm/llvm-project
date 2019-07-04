@@ -8,6 +8,7 @@
 
 #include "SemanticHighlighting.h"
 #include "Logger.h"
+#include "Protocol.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
@@ -63,6 +64,48 @@ private:
   }
 };
 
+// Encode binary data into base64.
+// This was copied from compiler-rt/lib/fuzzer/FuzzerUtil.cpp.
+// FIXME: Factor this out into llvm/Support?
+std::string encodeBase64(const llvm::SmallVectorImpl<char> &Bytes) {
+  static const char Table[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+                              "abcdefghijklmnopqrstuvwxyz"
+                              "0123456789+/";
+  std::string Res;
+  size_t I;
+  for (I = 0; I + 2 < Bytes.size(); I += 3) {
+    uint32_t X = (Bytes[I] << 16) + (Bytes[I + 1] << 8) + Bytes[I + 2];
+    Res += Table[(X >> 18) & 63];
+    Res += Table[(X >> 12) & 63];
+    Res += Table[(X >> 6) & 63];
+    Res += Table[X & 63];
+  }
+  if (I + 1 == Bytes.size()) {
+    uint32_t X = (Bytes[I] << 16);
+    Res += Table[(X >> 18) & 63];
+    Res += Table[(X >> 12) & 63];
+    Res += "==";
+  } else if (I + 2 == Bytes.size()) {
+    uint32_t X = (Bytes[I] << 16) + (Bytes[I + 1] << 8);
+    Res += Table[(X >> 18) & 63];
+    Res += Table[(X >> 12) & 63];
+    Res += Table[(X >> 6) & 63];
+    Res += "=";
+  }
+  return Res;
+}
+
+void write32be(uint32_t I, llvm::raw_ostream &OS) {
+  std::array<char, 4> Buf;
+  llvm::support::endian::write32be(Buf.data(), I);
+  OS.write(Buf.data(), Buf.size());
+}
+
+void write16be(uint16_t I, llvm::raw_ostream &OS) {
+  std::array<char, 2> Buf;
+  llvm::support::endian::write16be(Buf.data(), I);
+  OS.write(Buf.data(), Buf.size());
+}
 } // namespace
 
 bool operator==(const HighlightingToken &Lhs, const HighlightingToken &Rhs) {
@@ -71,6 +114,51 @@ bool operator==(const HighlightingToken &Lhs, const HighlightingToken &Rhs) {
 
 std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST) {
   return HighlightingTokenCollector(AST).collectTokens();
+}
+
+std::vector<SemanticHighlightingInformation>
+toSemanticHighlightingInformation(llvm::ArrayRef<HighlightingToken> Tokens) {
+  if (Tokens.size() == 0)
+    return {};
+
+  // FIXME: Tokens might be multiple lines long (block comments) in this case
+  // this needs to add multiple lines for those tokens.
+  std::map<int, std::vector<HighlightingToken>> TokenLines;
+  for (const HighlightingToken &Token : Tokens)
+    TokenLines[Token.R.start.line].push_back(Token);
+
+  std::vector<SemanticHighlightingInformation> Lines;
+  Lines.reserve(TokenLines.size());
+  for (const auto &Line : TokenLines) {
+    llvm::SmallVector<char, 128> LineByteTokens;
+    llvm::raw_svector_ostream OS(LineByteTokens);
+    for (const auto &Token : Line.second) {
+      // Writes the token to LineByteTokens in the byte format specified by the
+      // LSP proposal. Described below.
+      // |<---- 4 bytes ---->|<-- 2 bytes -->|<--- 2 bytes -->|
+      // |    character      |  length       |    index       |
+
+      write32be(Token.R.start.character, OS);
+      write16be(Token.R.end.character - Token.R.start.character, OS);
+      write16be(static_cast<int>(Token.Kind), OS);
+    }
+
+    Lines.push_back({Line.first, encodeBase64(LineByteTokens)});
+  }
+
+  return Lines;
+}
+
+std::vector<std::vector<std::string>> getTextMateScopeLookupTable() {
+  // FIXME: Add scopes for C and Objective C.
+  std::map<HighlightingKind, std::vector<std::string>> Scopes = {
+      {HighlightingKind::Variable, {"variable.cpp"}},
+      {HighlightingKind::Function, {"entity.name.function.cpp"}}};
+  std::vector<std::vector<std::string>> NestedScopes(Scopes.size());
+  for (const auto &Scope : Scopes)
+    NestedScopes[static_cast<int>(Scope.first)] = Scope.second;
+
+  return NestedScopes;
 }
 
 } // namespace clangd

@@ -273,6 +273,12 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R) {
   if (!O)
     return false;
   if (auto *TextDocument = O->getObject("textDocument")) {
+    if (auto *SemanticHighlighting =
+            TextDocument->getObject("semanticHighlightingCapabilities")) {
+      if (auto SemanticHighlightingSupport =
+              SemanticHighlighting->getBoolean("semanticHighlighting"))
+        R.SemanticHighlighting = *SemanticHighlightingSupport;
+    }
     if (auto *Diagnostics = TextDocument->getObject("publishDiagnostics")) {
       if (auto CategorySupport = Diagnostics->getBoolean("categorySupport"))
         R.DiagnosticCategory = *CategorySupport;
@@ -1025,6 +1031,23 @@ bool fromJSON(const llvm::json::Value &V, OffsetEncoding &OE) {
 }
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, OffsetEncoding Enc) {
   return OS << toString(Enc);
+}
+
+bool operator==(const SemanticHighlightingInformation &Lhs,
+                const SemanticHighlightingInformation &Rhs) {
+  return Lhs.Line == Rhs.Line && Lhs.Tokens == Rhs.Tokens;
+}
+
+llvm::json::Value toJSON(const SemanticHighlightingInformation &Highlighting) {
+  return llvm::json::Object{{"line", Highlighting.Line},
+                            {"tokens", Highlighting.Tokens}};
+}
+
+llvm::json::Value toJSON(const SemanticHighlightingParams &Highlighting) {
+  return llvm::json::Object{
+      {"textDocument", Highlighting.TextDocument},
+      {"lines", std::move(Highlighting.Lines)},
+  };
 }
 
 } // namespace clangd

@@ -5,18 +5,27 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// An implementation of semantic highlighting based on this proposal:
+// https://github.com/microsoft/vscode-languageserver-node/pull/367 in clangd.
+// Semantic highlightings are calculated for an AST by visiting every AST node
+// and classifying nodes that are interesting to highlight (variables/function
+// calls etc.).
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_SEMANTICHIGHLIGHTING_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SEMANTICHIGHLIGHTING_H
 
 #include "ClangdUnit.h"
+#include "Protocol.h"
 
 namespace clang {
 namespace clangd {
 
 enum class HighlightingKind {
-  Variable,
-  Function,
+  Variable = 0,
+  Function = 1,
 };
 
 // Contains all information needed for the highlighting a token.
@@ -30,6 +39,14 @@ bool operator==(const HighlightingToken &Lhs, const HighlightingToken &Rhs);
 // Returns all HighlightingTokens from an AST. Only generates highlights for the
 // main AST.
 std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST);
+
+// Gets the TextMate scopes as a double nested array where the
+// SemanticHighlightKind indexes correctly into this vector.
+std::vector<std::vector<std::string>> getTextMateScopeLookupTable();
+
+// Convert to LSP's semantic highlighting information.
+std::vector<SemanticHighlightingInformation>
+toSemanticHighlightingInformation(llvm::ArrayRef<HighlightingToken> Tokens);
 
 } // namespace clangd
 } // namespace clang
