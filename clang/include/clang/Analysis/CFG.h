@@ -860,6 +860,14 @@ public:
   Stmt *getTerminatorStmt() { return Terminator.getStmt(); }
   const Stmt *getTerminatorStmt() const { return Terminator.getStmt(); }
 
+  /// \returns the last (\c rbegin()) condition, e.g. observe the following code
+  /// snippet:
+  ///   if (A && B && C)
+  /// A block would be created for \c A, \c B, and \c C. For the latter,
+  /// \c getTerminatorStmt() would retrieve the entire condition, rather than
+  /// C itself, while this method would only return C.
+  const Expr *getLastCondition() const;
+
   Stmt *getTerminatorCondition(bool StripParens = true);
 
   const Stmt *getTerminatorCondition(bool StripParens = true) const {
