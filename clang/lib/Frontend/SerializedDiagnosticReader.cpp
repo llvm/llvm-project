@@ -124,7 +124,12 @@ SerializedDiagnosticReader::skipUntilRecordOrBlock(
     else
       return llvm::errorToErrorCode(Res.takeError());
 
-    switch ((llvm::bitc::FixedAbbrevIDs)Code) {
+    if (Code >= static_cast<unsigned>(llvm::bitc::FIRST_APPLICATION_ABBREV)) {
+      // We found a record.
+      BlockOrRecordID = Code;
+      return Cursor::Record;
+    }
+    switch (static_cast<llvm::bitc::FixedAbbrevIDs>(Code)) {
     case llvm::bitc::ENTER_SUBBLOCK:
       if (Expected<unsigned> Res = Stream.ReadSubBlockID())
         BlockOrRecordID = Res.get();
@@ -145,10 +150,8 @@ SerializedDiagnosticReader::skipUntilRecordOrBlock(
     case llvm::bitc::UNABBREV_RECORD:
       return SDError::UnsupportedConstruct;
 
-    default:
-      // We found a record.
-      BlockOrRecordID = Code;
-      return Cursor::Record;
+    case llvm::bitc::FIRST_APPLICATION_ABBREV:
+      llvm_unreachable("Unexpected abbrev id.");
     }
   }
 
