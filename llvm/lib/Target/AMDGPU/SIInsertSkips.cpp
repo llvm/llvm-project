@@ -270,6 +270,7 @@ void SIInsertSkips::kill(MachineInstr &MI) {
     }
     break;
   }
+  case AMDGPU::SI_DEMOTE_I1_TERMINATOR:
   case AMDGPU::SI_KILL_I1_TERMINATOR: {
     const MachineFunction *MF = MI.getParent()->getParent();
     const GCNSubtarget &ST = MF->getSubtarget<GCNSubtarget>();
@@ -486,10 +487,12 @@ bool SIInsertSkips::runOnMachineFunction(MachineFunction &MF) {
 
       case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
       case AMDGPU::SI_KILL_I1_TERMINATOR:
+      case AMDGPU::SI_DEMOTE_I1_TERMINATOR:
         MadeChange = true;
         kill(MI);
 
-        if (ExecBranchStack.empty()) {
+        if (ExecBranchStack.empty() &&
+            MI.getOpcode() != AMDGPU::SI_DEMOTE_I1_TERMINATOR) {
           if (NextBB != BE && skipIfDead(MI, *NextBB)) {
             HaveSkipBlock = true;
             NextBB = std::next(BI);

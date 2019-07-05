@@ -1426,6 +1426,18 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     MI.setDesc(get(AMDGPU::S_ANDN2_B32));
     break;
 
+  case AMDGPU::S_AND_B64_term:
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(get(AMDGPU::S_AND_B64));
+    break;
+
+  case AMDGPU::S_AND_B32_term:
+    // This is only a terminator to get the correct spill code placement during
+    // register allocation.
+    MI.setDesc(get(AMDGPU::S_AND_B32));
+    break;
+
   case AMDGPU::V_MOV_B64_PSEUDO: {
     Register Dst = MI.getOperand(0).getReg();
     Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
@@ -1907,15 +1919,18 @@ bool SIInstrInfo::analyzeBranch(MachineBasicBlock &MBB, MachineBasicBlock *&TBB,
     case AMDGPU::S_MOV_B64_term:
     case AMDGPU::S_XOR_B64_term:
     case AMDGPU::S_ANDN2_B64_term:
+    case AMDGPU::S_AND_B64_term:
     case AMDGPU::S_MOV_B32_term:
     case AMDGPU::S_XOR_B32_term:
     case AMDGPU::S_OR_B32_term:
     case AMDGPU::S_ANDN2_B32_term:
+    case AMDGPU::S_AND_B32_term:
       break;
     case AMDGPU::SI_IF:
     case AMDGPU::SI_ELSE:
     case AMDGPU::SI_KILL_I1_TERMINATOR:
     case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
+    case AMDGPU::SI_DEMOTE_I1_TERMINATOR:
       // FIXME: It's messy that these need to be considered here at all.
       return true;
     default:
@@ -6129,6 +6144,7 @@ bool SIInstrInfo::isKillTerminator(unsigned Opcode) {
   switch (Opcode) {
   case AMDGPU::SI_KILL_F32_COND_IMM_TERMINATOR:
   case AMDGPU::SI_KILL_I1_TERMINATOR:
+  case AMDGPU::SI_DEMOTE_I1_TERMINATOR:
     return true;
   default:
     return false;

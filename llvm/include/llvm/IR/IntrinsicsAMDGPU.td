@@ -1276,10 +1276,7 @@ def int_amdgcn_interp_p2_f16 :
 
 // Pixel shaders only: whether the current pixel is live (i.e. not a helper
 // invocation for derivative computation).
-def int_amdgcn_ps_live : Intrinsic <
-  [llvm_i1_ty],
-  [],
-  [IntrNoMem]>;
+def int_amdgcn_ps_live : Intrinsic <[llvm_i1_ty], [], []>;
 
 def int_amdgcn_mbcnt_lo :
   GCCBuiltin<"__builtin_amdgcn_mbcnt_lo">,
@@ -1492,6 +1489,9 @@ def int_amdgcn_wqm_vote : Intrinsic<[llvm_i1_ty],
 
 // If false, set EXEC=0 for the current thread until the end of program.
 def int_amdgcn_kill : Intrinsic<[], [llvm_i1_ty], []>;
+
+// If false, mark all active lanes as helper lanes until the end of program.
+def int_amdgcn_wqm_demote : Intrinsic<[], [llvm_i1_ty], []>;
 
 // Copies the active channels of the source value to the destination value,
 // with the guarantee that the source value is computed as if the entire
