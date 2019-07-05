@@ -331,8 +331,6 @@ public:
   static void ModulesDidLoad(const lldb::ProcessSP &process_sp,
                              const ModuleList &module_list);
 
-  bool IsVTableName(const char *name) override;
-
   bool GetDynamicTypeAndAddress(ValueObject &in_value,
                                 lldb::DynamicValueType use_dynamic,
                                 TypeAndOrName &class_type_or_name,
