@@ -86,24 +86,10 @@ TEST(CFG, ConditionExpr) {
     return *(cfg->begin() + Index);
   };
 
-  auto GetExprText = [] (const Expr *E) -> std::string {
-    // It's very awkward trying to recover the actual expression text without
-    // a real source file, so use this as a workaround. We know that the
-    // condition expression looks like this:
-    //
-    // ImplicitCastExpr 0xd07bf8 '_Bool' <LValueToRValue>
-    //  `-DeclRefExpr 0xd07bd8 '_Bool' lvalue ParmVar 0xd07960 'C' '_Bool'
-
-    assert(isa<ImplicitCastExpr>(E));
-    assert(++E->child_begin() == E->child_end());
-    const auto *D = dyn_cast<DeclRefExpr>(*E->child_begin());
-    return D->getFoundDecl()->getNameAsString();
-  };
-
   EXPECT_EQ(GetBlock(1)->getLastCondition(), nullptr);
-  EXPECT_EQ(GetExprText(GetBlock(4)->getLastCondition()), "A");
-  EXPECT_EQ(GetExprText(GetBlock(3)->getLastCondition()), "B");
-  EXPECT_EQ(GetExprText(GetBlock(2)->getLastCondition()), "C");
+  // Unfortunately, we can't check whether the correct Expr was returned by
+  // getLastCondition, because the lifetime of the AST ends by the time we
+  // retrieve the CFG.
 
   //===--------------------------------------------------------------------===//
 
