@@ -4896,59 +4896,65 @@ bool MipsAsmParser::expandStoreDM1Macro(MCInst &Inst, SMLoc IDLoc,
 
 bool MipsAsmParser::expandSeq(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                               const MCSubtargetInfo *STI) {
-
-  warnIfNoMacro(IDLoc);
   MipsTargetStreamer &TOut = getTargetStreamer();
 
-  if (Inst.getOperand(1).getReg() != Mips::ZERO &&
-      Inst.getOperand(2).getReg() != Mips::ZERO) {
-    TOut.emitRRR(Mips::XOR, Inst.getOperand(0).getReg(),
-                 Inst.getOperand(1).getReg(), Inst.getOperand(2).getReg(),
-                 IDLoc, STI);
-    TOut.emitRRI(Mips::SLTiu, Inst.getOperand(0).getReg(),
-                 Inst.getOperand(0).getReg(), 1, IDLoc, STI);
+  assert(Inst.getNumOperands() == 3 && "Invalid operand count");
+  assert(Inst.getOperand(0).isReg() &&
+         Inst.getOperand(1).isReg() &&
+         Inst.getOperand(2).isReg() && "Invalid instruction operand.");
+
+  unsigned DstReg = Inst.getOperand(0).getReg();
+  unsigned SrcReg = Inst.getOperand(1).getReg();
+  unsigned OpReg = Inst.getOperand(2).getReg();
+
+  warnIfNoMacro(IDLoc);
+
+  if (SrcReg != Mips::ZERO && OpReg != Mips::ZERO) {
+    TOut.emitRRR(Mips::XOR, DstReg, SrcReg, OpReg, IDLoc, STI);
+    TOut.emitRRI(Mips::SLTiu, DstReg, DstReg, 1, IDLoc, STI);
     return false;
   }
 
-  unsigned Reg = 0;
-  if (Inst.getOperand(1).getReg() == Mips::ZERO) {
-    Reg = Inst.getOperand(2).getReg();
-  } else {
-    Reg = Inst.getOperand(1).getReg();
-  }
-  TOut.emitRRI(Mips::SLTiu, Inst.getOperand(0).getReg(), Reg, 1, IDLoc, STI);
+  unsigned Reg = SrcReg == Mips::ZERO ? OpReg : SrcReg;
+  TOut.emitRRI(Mips::SLTiu, DstReg, Reg, 1, IDLoc, STI);
   return false;
 }
 
 bool MipsAsmParser::expandSeqI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                                const MCSubtargetInfo *STI) {
-  warnIfNoMacro(IDLoc);
   MipsTargetStreamer &TOut = getTargetStreamer();
 
-  unsigned Opc;
+  assert(Inst.getNumOperands() == 3 && "Invalid operand count");
+  assert(Inst.getOperand(0).isReg() &&
+         Inst.getOperand(1).isReg() &&
+         Inst.getOperand(2).isImm() && "Invalid instruction operand.");
+
+  unsigned DstReg = Inst.getOperand(0).getReg();
+  unsigned SrcReg = Inst.getOperand(1).getReg();
   int64_t Imm = Inst.getOperand(2).getImm();
-  unsigned Reg = Inst.getOperand(1).getReg();
+
+  warnIfNoMacro(IDLoc);
 
   if (Imm == 0) {
-    TOut.emitRRI(Mips::SLTiu, Inst.getOperand(0).getReg(),
-                 Inst.getOperand(1).getReg(), 1, IDLoc, STI);
+    TOut.emitRRI(Mips::SLTiu, DstReg, SrcReg, 1, IDLoc, STI);
     return false;
-  } else {
-
-    if (Reg == Mips::ZERO) {
-      Warning(IDLoc, "comparison is always false");
-      TOut.emitRRR(isGP64bit() ? Mips::DADDu : Mips::ADDu,
-                   Inst.getOperand(0).getReg(), Reg, Reg, IDLoc, STI);
-      return false;
-    }
-
-    if (Imm > -0x8000 && Imm < 0) {
-      Imm = -Imm;
-      Opc = isGP64bit() ? Mips::DADDiu : Mips::ADDiu;
-    } else {
-      Opc = Mips::XORi;
-    }
   }
+
+  if (SrcReg == Mips::ZERO) {
+    Warning(IDLoc, "comparison is always false");
+    TOut.emitRRR(isGP64bit() ? Mips::DADDu : Mips::ADDu,
+                 DstReg, SrcReg, SrcReg, IDLoc, STI);
+    return false;
+  }
+
+  unsigned Opc;
+  if (Imm > -0x8000 && Imm < 0) {
+    Imm = -Imm;
+    Opc = isGP64bit() ? Mips::DADDiu : Mips::ADDiu;
+  } else {
+    Opc = Mips::XORi;
+  }
+
   if (!isUInt<16>(Imm)) {
     unsigned ATReg = getATReg(IDLoc);
     if (!ATReg)
@@ -4958,17 +4964,13 @@ bool MipsAsmParser::expandSeqI(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                       Out, STI))
       return true;
 
-    TOut.emitRRR(Mips::XOR, Inst.getOperand(0).getReg(),
-                 Inst.getOperand(1).getReg(), ATReg, IDLoc, STI);
-    TOut.emitRRI(Mips::SLTiu, Inst.getOperand(0).getReg(),
-                 Inst.getOperand(0).getReg(), 1, IDLoc, STI);
+    TOut.emitRRR(Mips::XOR, DstReg, SrcReg, ATReg, IDLoc, STI);
+    TOut.emitRRI(Mips::SLTiu, DstReg, DstReg, 1, IDLoc, STI);
     return false;
   }
 
-  TOut.emitRRI(Opc, Inst.getOperand(0).getReg(), Inst.getOperand(1).getReg(),
-               Imm, IDLoc, STI);
-  TOut.emitRRI(Mips::SLTiu, Inst.getOperand(0).getReg(),
-               Inst.getOperand(0).getReg(), 1, IDLoc, STI);
+  TOut.emitRRI(Opc, DstReg, SrcReg, Imm, IDLoc, STI);
+  TOut.emitRRI(Mips::SLTiu, DstReg, DstReg, 1, IDLoc, STI);
   return false;
 }
 

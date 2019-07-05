@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- glue_memory_impl.h ------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,8 @@
 
 #ifndef _PSTL_GLUE_MEMORY_IMPL_H
 #define _PSTL_GLUE_MEMORY_IMPL_H
+
+#include "pstl_config.h"
 
 #include "execution_defs.h"
 #include "utils.h"

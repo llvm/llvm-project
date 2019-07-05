@@ -4921,7 +4921,7 @@ llvm::Value *CGObjCMac::EmitIvarOffset(CodeGen::CodeGenFunction &CGF,
 std::string CGObjCCommonMac::GetSectionName(StringRef Section,
                                             StringRef MachOAttributes) {
   switch (CGM.getTriple().getObjectFormat()) {
-  default:
+  case llvm::Triple::UnknownObjectFormat:
     llvm_unreachable("unexpected object file format");
   case llvm::Triple::MachO: {
     if (MachOAttributes.empty())
@@ -4936,6 +4936,10 @@ std::string CGObjCCommonMac::GetSectionName(StringRef Section,
     assert(Section.substr(0, 2) == "__" &&
            "expected the name to begin with __");
     return ("." + Section.substr(2) + "$B").str();
+  case llvm::Triple::Wasm:
+  case llvm::Triple::XCOFF:
+    llvm::report_fatal_error(
+        "Objective-C support is unimplemented for object file format.");
   }
 }
 

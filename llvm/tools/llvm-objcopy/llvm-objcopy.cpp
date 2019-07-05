@@ -196,16 +196,27 @@ static Error executeObjcopyOnArchive(const CopyConfig &Config,
                           Config.DeterministicArchives, Ar.isThin());
 }
 
-static Error restoreDateOnFile(StringRef Filename,
-                               const sys::fs::file_status &Stat) {
+static Error restoreStatOnFile(StringRef Filename,
+                               const sys::fs::file_status &Stat,
+                               bool PreserveDates) {
   int FD;
+
+  // Writing to stdout should not be treated as an error here, just
+  // do not set access/modification times or permissions.
+  if (Filename == "-")
+    return Error::success();
 
   if (auto EC =
           sys::fs::openFileForWrite(Filename, FD, sys::fs::CD_OpenExisting))
     return createFileError(Filename, EC);
 
-  if (auto EC = sys::fs::setLastAccessAndModificationTime(
-          FD, Stat.getLastAccessedTime(), Stat.getLastModificationTime()))
+  if (PreserveDates)
+    if (auto EC = sys::fs::setLastAccessAndModificationTime(
+            FD, Stat.getLastAccessedTime(), Stat.getLastModificationTime()))
+      return createFileError(Filename, EC);
+
+  if (auto EC = sys::fs::setPermissions(Filename, Stat.permissions(),
+                                        /*respectUmask=*/true))
     return createFileError(Filename, EC);
 
   if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
@@ -219,9 +230,12 @@ static Error restoreDateOnFile(StringRef Filename,
 /// format-agnostic modifications, i.e. preserving dates.
 static Error executeObjcopy(const CopyConfig &Config) {
   sys::fs::file_status Stat;
-  if (Config.PreserveDates)
+  if (Config.InputFilename != "-") {
     if (auto EC = sys::fs::status(Config.InputFilename, Stat))
       return createFileError(Config.InputFilename, EC);
+  } else {
+    Stat.permissions(static_cast<sys::fs::perms>(0777));
+  }
 
   typedef Error (*ProcessRawFn)(const CopyConfig &, MemoryBuffer &, Buffer &);
   auto ProcessRaw = StringSwitch<ProcessRawFn>(Config.InputFormat)
@@ -253,12 +267,15 @@ static Error executeObjcopy(const CopyConfig &Config) {
     }
   }
 
-  if (Config.PreserveDates) {
-    if (Error E = restoreDateOnFile(Config.OutputFilename, Stat))
+  if (Error E =
+          restoreStatOnFile(Config.OutputFilename, Stat, Config.PreserveDates))
+    return E;
+
+  if (!Config.SplitDWO.empty()) {
+    Stat.permissions(static_cast<sys::fs::perms>(0666));
+    if (Error E =
+            restoreStatOnFile(Config.SplitDWO, Stat, Config.PreserveDates))
       return E;
-    if (!Config.SplitDWO.empty())
-      if (Error E = restoreDateOnFile(Config.SplitDWO, Stat))
-        return E;
   }
 
   return Error::success();
