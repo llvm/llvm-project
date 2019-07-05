@@ -98,6 +98,97 @@ TEST(CFGDominatorTree, DomTree) {
   EXPECT_TRUE(PostDom.dominates(nullptr, ExitBlock));
 }
 
+TEST(CFGDominatorTree, ControlDependency) {
+  const char *Code = R"(bool coin();
+
+                        void funcWithBranch() {
+                          int x = 0;
+                          if (coin()) {
+                            if (coin()) {
+                              x = 5;
+                            }
+                            int j = 10 / x;
+                            (void)j;
+                          }
+                        };)";
+  BuildResult Result = BuildCFG(Code);
+  EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
+
+  //                  1st if  2nd if
+  //  [B5 (ENTRY)]  -> [B4] -> [B3] -> [B2] -> [B1] -> [B0 (EXIT)]
+  //                    \        \              /         /
+  //                     \        ------------->         /
+  //                      ------------------------------>
+
+  CFG *cfg = Result.getCFG();
+
+  // Sanity checks.
+  EXPECT_EQ(cfg->size(), 6u);
+
+  CFGBlock *ExitBlock = *cfg->begin();
+  EXPECT_EQ(ExitBlock, &cfg->getExit());
+
+  CFGBlock *NullDerefBlock = *(cfg->begin() + 1);
+
+  CFGBlock *SecondThenBlock = *(cfg->begin() + 2);
+
+  CFGBlock *SecondIfBlock = *(cfg->begin() + 3);
+
+  CFGBlock *FirstIfBlock = *(cfg->begin() + 4);
+
+  CFGBlock *EntryBlock = *(cfg->begin() + 5);
+  EXPECT_EQ(EntryBlock, &cfg->getEntry());
+
+  ControlDependencyCalculator Control(cfg);
+
+  EXPECT_TRUE(Control.isControlDependent(SecondThenBlock, SecondIfBlock));
+  EXPECT_TRUE(Control.isControlDependent(SecondIfBlock, FirstIfBlock));
+  EXPECT_FALSE(Control.isControlDependent(NullDerefBlock, SecondIfBlock));
+}
+
+TEST(CFGDominatorTree, ControlDependencyWithLoops) {
+  const char *Code = R"(int test3() {
+                          int x,y,z;
+
+                          x = y = z = 1;
+                          if (x > 0) {
+                            while (x >= 0){
+                              while (y >= x) {
+                                x = x-1;
+                                y = y/2;
+                              }
+                            }
+                          }
+                          z = y;
+
+                          return 0;
+                        })";
+  BuildResult Result = BuildCFG(Code);
+  EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
+
+  //                           <- [B2] <-
+  //                          /          \
+  // [B8 (ENTRY)] -> [B7] -> [B6] ---> [B5] -> [B4] -> [B3]
+  //                   \       |         \              /
+  //                    \      |          <-------------
+  //                     \      \
+  //                      --------> [B1] -> [B0 (EXIT)]
+
+  CFG *cfg = Result.getCFG();
+
+  ControlDependencyCalculator Control(cfg);
+
+  auto GetBlock = [cfg] (unsigned Index) -> CFGBlock * {
+    assert(Index < cfg->size());
+    return *(cfg->begin() + Index);
+  };
+
+  // While not immediately obvious, the second block in fact post dominates the
+  // fifth, hence B5 is not a control dependency of 2.
+  EXPECT_FALSE(Control.isControlDependent(GetBlock(5), GetBlock(2)));
+}
+
+
 } // namespace
 } // namespace analysis
 } // namespace clang

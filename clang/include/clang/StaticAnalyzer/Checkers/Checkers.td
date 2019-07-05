@@ -1237,6 +1237,10 @@ def PostDominatorsTreeDumper : Checker<"DumpPostDominators">,
   HelpText<"Print the post dominance tree for a given CFG">,
   Documentation<NotDocumented>;
 
+def ControlDependencyTreeDumper : Checker<"DumpControlDependencies">,
+  HelpText<"Print the post control dependency tree for a given CFG">,
+  Documentation<NotDocumented>;
+
 def LiveVariablesDumper : Checker<"DumpLiveVars">,
   HelpText<"Print results of live variable analysis">,
   Documentation<NotDocumented>;

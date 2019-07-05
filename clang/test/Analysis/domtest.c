@@ -1,6 +1,7 @@
 // RUN: %clang_analyze_cc1 %s \
 // RUN:   -analyzer-checker=debug.DumpDominators \
 // RUN:   -analyzer-checker=debug.DumpPostDominators \
+// RUN:   -analyzer-checker=debug.DumpControlDependencies \
 // RUN:   2>&1 | FileCheck %s
 
 // Test the DominatorsTree implementation with various control flows
@@ -32,7 +33,16 @@ int test1()
 //                          V
 //                         [B1] -> [B0 (EXIT)]
 
-// CHECK:      Immediate dominance tree (Node#,IDom#):
+// CHECK:      Control dependencies (Node#,Dependency#):
+// CHECK-NEXT: (2,7)
+// CHECK-NEXT: (3,7)
+// CHECK-NEXT: (4,6)
+// CHECK-NEXT: (4,7)
+// CHECK-NEXT: (5,6)
+// CHECK-NEXT: (5,7)
+// CHECK-NEXT: (6,7)
+// CHECK-NEXT: (7,7)
+// CHECK-NEXT: Immediate dominance tree (Node#,IDom#):
 // CHECK-NEXT: (0,1)
 // CHECK-NEXT: (1,7)
 // CHECK-NEXT: (2,3)
@@ -80,7 +90,15 @@ int test2()
 //                  /               V
 // [B7 (ENTRY)] -> [B6] -> [B5] -> [B1] -> [B0 (EXIT)]
 
-// CHECK:      Immediate dominance tree (Node#,IDom#):
+// CHECK:      Control dependencies (Node#,Dependency#):
+// CHECK-NEXT: (2,4)
+// CHECK-NEXT: (2,6)
+// CHECK-NEXT: (3,4)
+// CHECK-NEXT: (3,6)
+// CHECK-NEXT: (4,6)
+// CHECK-NEXT: (4,4)
+// CHECK-NEXT: (5,6)
+// CHECK-NEXT: Immediate dominance tree (Node#,IDom#):
 // CHECK-NEXT: (0,1)
 // CHECK-NEXT: (1,6)
 // CHECK-NEXT: (2,3)
@@ -117,17 +135,29 @@ int test3()
   return 0;
 }
 
-//                            <-------------
-//                           /              \
-//                           |        ---> [B2]
-//                           |       /
-// [B8 (ENTRY)] -> [B7] -> [B6] -> [B5] -> [B4] -> [B3]
-//                   \       |       \              /
-//                    \      |        <-------------
+//                           <- [B2] <-
+//                          /          \
+// [B8 (ENTRY)] -> [B7] -> [B6] ---> [B5] -> [B4] -> [B3]
+//                   \       |         \              /
+//                    \      |          <-------------
 //                     \      \
 //                      --------> [B1] -> [B0 (EXIT)]
 
-// CHECK:      Immediate dominance tree (Node#,IDom#):
+// CHECK:      Control dependencies (Node#,Dependency#):
+// CHECK-NEXT: (2,6)
+// CHECK-NEXT: (2,7)
+// CHECK-NEXT: (3,5)
+// CHECK-NEXT: (3,6)
+// CHECK-NEXT: (3,7)
+// CHECK-NEXT: (4,5)
+// CHECK-NEXT: (4,6)
+// CHECK-NEXT: (4,7)
+// CHECK-NEXT: (5,6)
+// CHECK-NEXT: (5,5)
+// CHECK-NEXT: (5,7)
+// CHECK-NEXT: (6,7)
+// CHECK-NEXT: (6,6)
+// CHECK-NEXT: Immediate dominance tree (Node#,IDom#):
 // CHECK-NEXT: (0,1)
 // CHECK-NEXT: (1,7)
 // CHECK-NEXT: (2,5)
@@ -176,7 +206,29 @@ int test4()
 //                              \
 //                               -> [B1] -> [B0 (EXIT)]
 
-// CHECK:      Immediate dominance tree (Node#,IDom#):
+// CHECK:      Control dependencies (Node#,Dependency#):
+// CHECK-NEXT: (2,10)
+// CHECK-NEXT: (3,5)
+// CHECK-NEXT: (3,9)
+// CHECK-NEXT: (3,10)
+// CHECK-NEXT: (4,5)
+// CHECK-NEXT: (4,9)
+// CHECK-NEXT: (4,10)
+// CHECK-NEXT: (5,9)
+// CHECK-NEXT: (5,5)
+// CHECK-NEXT: (5,10)
+// CHECK-NEXT: (6,8)
+// CHECK-NEXT: (6,9)
+// CHECK-NEXT: (6,10)
+// CHECK-NEXT: (7,8)
+// CHECK-NEXT: (7,9)
+// CHECK-NEXT: (7,10)
+// CHECK-NEXT: (8,9)
+// CHECK-NEXT: (8,8)
+// CHECK-NEXT: (8,10)
+// CHECK-NEXT: (9,10)
+// CHECK-NEXT: (10,10)
+// CHECK-NEXT: Immediate dominance tree (Node#,IDom#):
 // CHECK-NEXT: (0,1)
 // CHECK-NEXT: (1,10)
 // CHECK-NEXT: (2,9)
@@ -242,7 +294,23 @@ int test5()
 //                            V     [B4] ----------------->       /
 //                          [B2]--------------------------------->
 
-// CHECK:      Immediate dominance tree (Node#,IDom#):
+// CHECK:      Control dependencies (Node#,Dependency#):
+// CHECK-NEXT: (2,10)
+// CHECK-NEXT: (3,10)
+// CHECK-NEXT: (4,9)
+// CHECK-NEXT: (4,10)
+// CHECK-NEXT: (5,9)
+// CHECK-NEXT: (5,10)
+// CHECK-NEXT: (6,8)
+// CHECK-NEXT: (6,9)
+// CHECK-NEXT: (6,10)
+// CHECK-NEXT: (7,8)
+// CHECK-NEXT: (7,9)
+// CHECK-NEXT: (7,10)
+// CHECK-NEXT: (8,9)
+// CHECK-NEXT: (8,10)
+// CHECK-NEXT: (9,10)
+// CHECK-NEXT: Immediate dominance tree (Node#,IDom#):
 // CHECK-NEXT: (0,1)
 // CHECK-NEXT: (1,10)
 // CHECK-NEXT: (2,10)
