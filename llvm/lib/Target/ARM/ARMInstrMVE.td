@@ -2546,6 +2546,25 @@ def MVE_VCVTf16u16n : MVE_VCVT_fp_int<"f16.u16", 0b01, 0b01>;
 def MVE_VCVTf32s32n : MVE_VCVT_fp_int<"f32.s32", 0b10, 0b00>;
 def MVE_VCVTf32u32n : MVE_VCVT_fp_int<"f32.u32", 0b10, 0b01>;
 
+let Predicates = [HasMVEFloat] in {
+def : Pat<(v4i32 (fp_to_sint (v4f32 MQPR:$src))),
+          (v4i32 (MVE_VCVTs32f32z (v4f32 MQPR:$src)))>;
+def : Pat<(v4i32 (fp_to_uint (v4f32 MQPR:$src))),
+          (v4i32 (MVE_VCVTu32f32z (v4f32 MQPR:$src)))>;
+def : Pat<(v8i16 (fp_to_sint (v8f16 MQPR:$src))),
+          (v8i16 (MVE_VCVTs16f16z (v8f16 MQPR:$src)))>;
+def : Pat<(v8i16 (fp_to_uint (v8f16 MQPR:$src))),
+          (v8i16 (MVE_VCVTu16f16z (v8f16 MQPR:$src)))>;
+def : Pat<(v4f32 (sint_to_fp (v4i32 MQPR:$src))),
+          (v4f32 (MVE_VCVTf32s32n (v4i32 MQPR:$src)))>;
+def : Pat<(v4f32 (uint_to_fp (v4i32 MQPR:$src))),
+          (v4f32 (MVE_VCVTf32u32n (v4i32 MQPR:$src)))>;
+def : Pat<(v8f16 (sint_to_fp (v8i16 MQPR:$src))),
+          (v8f16 (MVE_VCVTf16s16n (v8i16 MQPR:$src)))>;
+def : Pat<(v8f16 (uint_to_fp (v8i16 MQPR:$src))),
+          (v8f16 (MVE_VCVTf16u16n (v8i16 MQPR:$src)))>;
+}
+
 class MVE_VABSNEG_fp<string iname, string suffix, bits<2> size, bit negate,
                    list<dag> pattern=[]>
   : MVE_float<iname, suffix, (outs MQPR:$Qd),

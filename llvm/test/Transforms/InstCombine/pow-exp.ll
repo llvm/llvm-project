@@ -205,6 +205,247 @@ define double @function_pointer(double ()* %fptr, double %p1) {
   ret double %pow
 }
 
+declare void @use_d(double)
+declare void @use_f(float)
+
+define double @pow_ok_base(double %e) {
+; CHECK-LABEL: @pow_ok_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double 0x3FE6666666666666, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call afn nnan ninf double @pow(double 0x3FE6666666666666, double %e)
+  ret double %call
+}
+
+define double @pow_ok_base_fast(double %e) {
+; CHECK-LABEL: @pow_ok_base_fast(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call fast double @pow(double 0x3FE6666666666666, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call fast double @pow(double 0x3FE6666666666666, double %e)
+  ret double %call
+}
+
+define double @pow_ok_base2(double %e) {
+; CHECK-LABEL: @pow_ok_base2(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double 1.770000e+01, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call afn nnan ninf double @pow(double 1.770000e+01, double %e)
+  ret double %call
+}
+
+define double @pow_ok_base3(double %e) {
+; CHECK-LABEL: @pow_ok_base3(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double 1.010000e+01, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call afn nnan ninf double @pow(double 1.010000e+01, double %e)
+  ret double %call
+}
+
+define double @pow_ok_ten_base(double %e) {
+; CHECK-LABEL: @pow_ok_ten_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double 1.000000e+01, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call afn nnan ninf double @pow(double 1.000000e+01, double %e)
+  ret double %call
+}
+
+define float @powf_ok_base(float %e) {
+; CHECK-LABEL: @powf_ok_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float 0x3FE6666660000000, float [[E:%.*]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = tail call afn nnan ninf float @powf(float 0x3FE6666660000000, float %e)
+  ret float %call
+}
+
+define float @powf_ok_base2(float %e) {
+; CHECK-LABEL: @powf_ok_base2(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float 0x4031B33340000000, float [[E:%.*]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = tail call afn nnan ninf float @powf(float 0x4031B33340000000, float %e)
+  ret float %call
+}
+
+define float @powf_ok_base3(float %e) {
+; CHECK-LABEL: @powf_ok_base3(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float 0x4024333340000000, float [[E:%.*]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = tail call afn nnan ninf float @powf(float 0x4024333340000000, float %e)
+  ret float %call
+}
+
+define float @powf_ok_ten_base(float %e) {
+; CHECK-LABEL: @powf_ok_ten_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float 1.000000e+01, float [[E:%.*]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = tail call afn nnan ninf float @powf(float 1.000000e+01, float %e)
+  ret float %call
+}
+
+define double @pow_zero_base(double %e) {
+; CHECK-LABEL: @pow_zero_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double 0.000000e+00, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call afn nnan ninf double @pow(double 0.000000e+00, double %e)
+  ret double %call
+}
+
+define double @pow_zero_base2(double %e) {
+; CHECK-LABEL: @pow_zero_base2(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double -0.000000e+00, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call afn nnan ninf double @pow(double -0.000000e+00, double %e)
+  ret double %call
+}
+
+define double @pow_inf_base(double %e) {
+; CHECK-LABEL: @pow_inf_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double 0x7FF0000000000000, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call afn nnan ninf double @pow(double 0x7FF0000000000000, double %e)
+  ret double %call
+}
+
+define double @pow_nan_base(double %e) {
+; CHECK-LABEL: @pow_nan_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double 0x7FF8000000000000, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call afn nnan ninf double @pow(double 0x7FF8000000000000, double %e)
+  ret double %call
+}
+
+define double @pow_negative_base(double %e) {
+; CHECK-LABEL: @pow_negative_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double -4.000000e+00, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call afn nnan ninf double @pow(double -4.000000e+00, double %e)
+  ret double %call
+}
+
+define double @pow_multiuse(double %e) {
+; CHECK-LABEL: @pow_multiuse(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn double @pow(double 5.000000e+00, double [[E:%.*]])
+; CHECK-NEXT:    tail call void @use_d(double [[CALL]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call afn nnan ninf double @pow(double 5.000000e+00, double %e)
+  tail call void @use_d(double %call)
+  ret double %call
+}
+
+define double @pow_ok_base_no_afn(double %e) {
+; CHECK-LABEL: @pow_ok_base_no_afn(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf double @pow(double 0x3FE6666666666666, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call nnan ninf double @pow(double 0x3FE6666666666666, double %e)
+  ret double %call
+}
+
+define double @pow_ok_base_no_nnan(double %e) {
+; CHECK-LABEL: @pow_ok_base_no_nnan(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call ninf afn double @pow(double 0x3FE6666666666666, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call afn ninf double @pow(double 0x3FE6666666666666, double %e)
+  ret double %call
+}
+
+define double @pow_ok_base_no_ninf(double %e) {
+; CHECK-LABEL: @pow_ok_base_no_ninf(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan afn double @pow(double 0x3FE6666666666666, double [[E:%.*]])
+; CHECK-NEXT:    ret double [[CALL]]
+;
+  %call = tail call afn nnan double @pow(double 0x3FE6666666666666, double %e)
+  ret double %call
+}
+
+define float @powf_zero_base(float %e) {
+; CHECK-LABEL: @powf_zero_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float 0.000000e+00, float [[E:%.*]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = tail call afn nnan ninf float @powf(float 0.000000e+00, float %e)
+  ret float %call
+}
+
+define float @powf_zero_base2(float %e) {
+; CHECK-LABEL: @powf_zero_base2(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float -0.000000e+00, float [[E:%.*]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = tail call afn nnan ninf float @powf(float -0.000000e+00, float %e)
+  ret float %call
+}
+
+define float @powf_inf_base(float %e) {
+; CHECK-LABEL: @powf_inf_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float 0x7FF0000000000000, float [[E:%.*]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = tail call afn nnan ninf float @powf(float 0x7FF0000000000000, float %e)
+  ret float %call
+}
+
+define float @powf_nan_base(float %e) {
+; CHECK-LABEL: @powf_nan_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float 0x7FF8000000000000, float [[E:%.*]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = tail call afn nnan ninf float @powf(float 0x7FF8000000000000, float %e)
+  ret float %call
+}
+
+define float @powf_negative_base(float %e) {
+; CHECK-LABEL: @powf_negative_base(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float -4.000000e+00, float [[E:%.*]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = tail call afn nnan ninf float @powf(float -4.000000e+00, float %e)
+  ret float %call
+}
+
+define float @powf_multiuse(float %e) {
+; CHECK-LABEL: @powf_multiuse(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn float @powf(float 5.000000e+00, float [[E:%.*]])
+; CHECK-NEXT:    tail call void @use_f(float [[CALL]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = tail call afn nnan ninf float @powf(float 5.000000e+00, float %e)
+  tail call void @use_f(float %call)
+  ret float %call
+}
+
+define float @powf_ok_base_no_afn(float %e) {
+; CHECK-LABEL: @powf_ok_base_no_afn(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call float @powf(float 0x3FE6666660000000, float [[E:%.*]])
+; CHECK-NEXT:    ret float [[CALL]]
+;
+  %call = tail call float @powf(float 0x3FE6666660000000, float %e)
+  ret float %call
+}
+
+define fp128 @powl_long_dbl_no_fold(fp128 %e) {
+; CHECK-LABEL: @powl_long_dbl_no_fold(
+; CHECK-NEXT:    [[CALL:%.*]] = tail call nnan ninf afn fp128 @powl(fp128 0xL00000000000000005001000000000000, fp128 [[E:%.*]])
+; CHECK-NEXT:    ret fp128 [[CALL]]
+;
+  %call = tail call afn nnan ninf fp128 @powl(fp128 0xL00000000000000005001000000000000, fp128 %e)
+  ret fp128 %call
+}
+
 declare float @expf(float)
 declare double @exp(double)
 declare fp128 @expl(fp128)

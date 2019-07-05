@@ -43551,18 +43551,18 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
                            DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Src),
                            Op0.getOperand(1));
       }
-      break;
+      LLVM_FALLTHROUGH;
     case X86ISD::VPERMILPI:
-      // TODO - AVX1 must use VPERMILPI + v8f32 for v8i32 shuffles.
       // TODO - add support for vXf64/vXi64 shuffles.
-      if (!IsSplat && NumOps == 2 && VT == MVT::v8f32 && Subtarget.hasAVX() &&
-          Op0.getOperand(1) == Ops[1].getOperand(1)) {
+      if (!IsSplat && NumOps == 2 && (VT == MVT::v8f32 || VT == MVT::v8i32) &&
+          Subtarget.hasAVX() && Op0.getOperand(1) == Ops[1].getOperand(1)) {
         SmallVector<SDValue, 2> Src;
         for (unsigned i = 0; i != NumOps; ++i)
-          Src.push_back(Ops[i].getOperand(0));
-        return DAG.getNode(Op0.getOpcode(), DL, VT,
-                           DAG.getNode(ISD::CONCAT_VECTORS, DL, VT, Src),
-                           Op0.getOperand(1));
+          Src.push_back(DAG.getBitcast(MVT::v4f32, Ops[i].getOperand(0)));
+        SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v8f32, Src);
+        Res = DAG.getNode(X86ISD::VPERMILPI, DL, MVT::v8f32, Res,
+                          Op0.getOperand(1));
+        return DAG.getBitcast(VT, Res);
       }
       break;
     case X86ISD::PACKUS:

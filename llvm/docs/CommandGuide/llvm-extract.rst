@@ -77,4 +77,4 @@ occurs, it will exit with a non-zero value.
 SEE ALSO
 --------
 
-bugpoint
+:manpage:`bugpoint(1)`

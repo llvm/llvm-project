@@ -32,8 +32,6 @@ private:
   int MoveF64FrameIndex = -1;
 
 public:
-  //  RISCVMachineFunctionInfo() = default;
-
   RISCVMachineFunctionInfo(MachineFunction &MF) : MF(MF) {}
 
   int getVarArgsFrameIndex() const { return VarArgsFrameIndex; }
