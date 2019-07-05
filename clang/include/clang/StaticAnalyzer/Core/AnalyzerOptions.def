@@ -291,6 +291,11 @@ ANALYZER_OPTION(bool, DisplayCTUProgress, "display-ctu-progress",
                 "the analyzer's progress related to ctu.",
                 false)
 
+ANALYZER_OPTION(bool, ShouldTrackConditions, "track-conditions",
+                "Whether to track conditions that are a control dependency of "
+                "an already tracked variable.",
+                false)
+
 //===----------------------------------------------------------------------===//
 // Unsinged analyzer options.
 //===----------------------------------------------------------------------===//

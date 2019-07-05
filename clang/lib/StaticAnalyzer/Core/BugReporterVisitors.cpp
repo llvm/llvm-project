@@ -22,6 +22,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Analysis/Analyses/Dominators.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/CFGStmtMap.h"
@@ -1619,6 +1620,89 @@ SuppressInlineDefensiveChecksVisitor::VisitNode(const ExplodedNode *Succ,
 }
 
 //===----------------------------------------------------------------------===//
+// TrackControlDependencyCondBRVisitor.
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Tracks the expressions that are a control dependency of the node that was
+/// supplied to the constructor.
+/// For example:
+///
+///   cond = 1;
+///   if (cond)
+///     10 / 0;
+///
+/// An error is emitted at line 3. This visitor realizes that the branch
+/// on line 2 is a control dependency of line 3, and tracks it's condition via
+/// trackExpressionValue().
+class TrackControlDependencyCondBRVisitor final : public BugReporterVisitor {
+  const ExplodedNode *Origin;
+  ControlDependencyCalculator ControlDeps;
+  llvm::SmallSet<const CFGBlock *, 32> VisitedBlocks;
+
+public:
+  TrackControlDependencyCondBRVisitor(const ExplodedNode *O)
+  : Origin(O), ControlDeps(&O->getCFG()) {}
+
+  void Profile(llvm::FoldingSetNodeID &ID) const override {
+    static int x = 0;
+    ID.AddPointer(&x);
+  }
+
+  std::shared_ptr<PathDiagnosticPiece> VisitNode(const ExplodedNode *N,
+                                                 BugReporterContext &BRC,
+                                                 BugReport &BR) override;
+};
+} // end of anonymous namespace
+
+static CFGBlock *GetRelevantBlock(const ExplodedNode *Node) {
+  if (auto SP = Node->getLocationAs<StmtPoint>()) {
+    const Stmt *S = SP->getStmt();
+    assert(S);
+
+    return const_cast<CFGBlock *>(Node->getLocationContext()
+        ->getAnalysisDeclContext()->getCFGStmtMap()->getBlock(S));
+  }
+
+  return nullptr;
+}
+
+std::shared_ptr<PathDiagnosticPiece>
+TrackControlDependencyCondBRVisitor::VisitNode(const ExplodedNode *N,
+                                               BugReporterContext &BRC,
+                                               BugReport &BR) {
+  // We can only reason about control dependencies within the same stack frame.
+  if (Origin->getStackFrame() != N->getStackFrame())
+    return nullptr;
+
+  CFGBlock *NB = GetRelevantBlock(N);
+
+  // Skip if we already inspected this block.
+  if (!VisitedBlocks.insert(NB).second)
+    return nullptr;
+
+  CFGBlock *OriginB = GetRelevantBlock(Origin);
+
+  // TODO: Cache CFGBlocks for each ExplodedNode.
+  if (!OriginB || !NB)
+    return nullptr;
+
+  if (ControlDeps.isControlDependent(OriginB, NB)) {
+    if (const Expr *Condition = NB->getLastCondition()) {
+      // Keeping track of the already tracked conditions on a visitor level
+      // isn't sufficient, because a new visitor is created for each tracked
+      // expression, hence the BugReport level set.
+      if (BR.addTrackedCondition(N)) {
+        bugreporter::trackExpressionValue(
+            N, Condition, BR, /*EnableNullFPSuppression=*/false);
+      }
+    }
+  }
+
+  return nullptr;
+}
+
+//===----------------------------------------------------------------------===//
 // Implementation of trackExpressionValue.
 //===----------------------------------------------------------------------===//
 
@@ -1733,6 +1817,15 @@ bool bugreporter::trackExpressionValue(const ExplodedNode *InputNode,
     return false;
 
   ProgramStateRef LVState = LVNode->getState();
+
+  // We only track expressions if we believe that they are important. Chances
+  // are good that control dependencies to the tracking point are also improtant
+  // because of this, let's explain why we believe control reached this point.
+  // TODO: Shouldn't we track control dependencies of every bug location, rather
+  // than only tracked expressions?
+  if (LVState->getAnalysisManager().getAnalyzerOptions().ShouldTrackConditions)
+    report.addVisitor(llvm::make_unique<TrackControlDependencyCondBRVisitor>(
+          InputNode));
 
   // The message send could be nil due to the receiver being nil.
   // At this point in the path, the receiver should be live since we are at the
