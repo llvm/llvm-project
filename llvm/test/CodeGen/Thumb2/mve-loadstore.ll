@@ -92,8 +92,7 @@ define arm_aapcs_vfpcc <4 x i32> @loadstore_4xi32_stack_off16() {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .pad #40
 ; CHECK-NEXT:    sub sp, #40
-; CHECK-NEXT:    movs r0, #1
-; CHECK-NEXT:    vdup.32 q0, r0
+; CHECK-NEXT:    vmov.i32 q0, #0x1
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    movs r0, #3
@@ -121,8 +120,7 @@ define arm_aapcs_vfpcc <8 x i16> @loadstore_8xi16_stack_off16() {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .pad #40
 ; CHECK-NEXT:    sub sp, #40
-; CHECK-NEXT:    movs r0, #1
-; CHECK-NEXT:    vdup.16 q0, r0
+; CHECK-NEXT:    vmov.i16 q0, #0x1
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vstrh.16 q0, [r0]
 ; CHECK-NEXT:    movs r0, #3
@@ -150,8 +148,7 @@ define arm_aapcs_vfpcc <16 x i8> @loadstore_16xi8_stack_off16() {
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .pad #40
 ; CHECK-NEXT:    sub sp, #40
-; CHECK-NEXT:    movs r0, #1
-; CHECK-NEXT:    vdup.8 q0, r0
+; CHECK-NEXT:    vmov.i8 q0, #0x1
 ; CHECK-NEXT:    mov r0, sp
 ; CHECK-NEXT:    vstrb.8 q0, [r0]
 ; CHECK-NEXT:    movs r0, #3

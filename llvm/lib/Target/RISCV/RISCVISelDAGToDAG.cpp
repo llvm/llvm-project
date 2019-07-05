@@ -157,6 +157,13 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
+  case RISCVISD::READ_CYCLE_WIDE:
+    assert(!Subtarget->is64Bit() && "READ_CYCLE_WIDE is only used on riscv32");
+
+    ReplaceNode(Node, CurDAG->getMachineNode(RISCV::ReadCycleWide, DL, MVT::i32,
+                                             MVT::i32, MVT::Other,
+                                             Node->getOperand(0)));
+    return;
   }
 
   // Select the default instruction.

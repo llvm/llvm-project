@@ -65,18 +65,18 @@ def FeatureRelax
                        "Enable Linker relaxation.">;
 
 //===----------------------------------------------------------------------===//
+// Named operands for CSR instructions.
+//===----------------------------------------------------------------------===//
+
+include "RISCVSystemOperands.td"
+
+//===----------------------------------------------------------------------===//
 // Registers, calling conventions, instruction descriptions.
 //===----------------------------------------------------------------------===//
 
 include "RISCVRegisterInfo.td"
 include "RISCVCallingConv.td"
 include "RISCVInstrInfo.td"
-
-//===----------------------------------------------------------------------===//
-// Named operands for CSR instructions.
-//===----------------------------------------------------------------------===//
-
-include "RISCVSystemOperands.td"
 
 //===----------------------------------------------------------------------===//
 // RISC-V processors supported.

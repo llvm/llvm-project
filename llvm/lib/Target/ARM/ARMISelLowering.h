@@ -833,6 +833,7 @@ class VectorType;
   enum NEONModImmType {
     VMOVModImm,
     VMVNModImm,
+    MVEVMVNModImm,
     OtherModImm
   };
 

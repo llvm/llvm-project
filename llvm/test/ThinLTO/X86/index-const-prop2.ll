@@ -11,8 +11,10 @@
 ; RUN:  -r=%t2.bc,rand, \
 ; RUN:  -r=%t2.bc,gBar,pl \
 ; RUN:  -r=%t1.bc,main,plx \
+; RUN:  -r=%t1.bc,main2,pl \
 ; RUN:  -r=%t1.bc,foo, \
 ; RUN:  -r=%t1.bc,bar, \
+; RUN:  -r=%t1.bc,baz, \
 ; RUN:  -r=%t1.bc,gBar, \
 ; RUN:  -o %t3
 ; RUN: llvm-dis %t3.1.3.import.bc -o - | FileCheck %s --check-prefix=IMPORT
@@ -26,11 +28,32 @@
 ; RUN:  -r=%t2.bc,rand, \
 ; RUN:  -r=%t2.bc,gBar,plx \
 ; RUN:  -r=%t1.bc,main,plx \
+; RUN:  -r=%t1.bc,main2,pl \
 ; RUN:  -r=%t1.bc,foo, \
 ; RUN:  -r=%t1.bc,bar, \
+; RUN:  -r=%t1.bc,baz, \
 ; RUN:  -r=%t1.bc,gBar, \
-; RUN:  -o %t3
-; RUN: llvm-dis %t3.1.3.import.bc -o - | FileCheck %s --check-prefix=IMPORT2
+; RUN:  -o %t4
+; RUN: llvm-dis %t4.1.3.import.bc -o - | FileCheck %s --check-prefix=IMPORT2
+
+; RUN: llvm-lto2 run %t1.bc %t2.bc -save-temps \
+; RUN:  -r=%t2.bc,foo,pl \
+; RUN:  -r=%t2.bc,bar,pl \
+; RUN:  -r=%t2.bc,baz,pl \
+; RUN:  -r=%t2.bc,rand, \
+; RUN:  -r=%t2.bc,gBar,pl \
+; RUN:  -r=%t1.bc,main,pl \
+; RUN:  -r=%t1.bc,main2,plx \
+; RUN:  -r=%t1.bc,foo, \
+; RUN:  -r=%t1.bc,bar, \
+; RUN:  -r=%t1.bc,baz, \
+; RUN:  -r=%t1.bc,gBar, \
+; RUN:  -o %t5
+; RUN: llvm-dis %t5.1.3.import.bc -o - | FileCheck %s --check-prefix=IMPORT
+; RUN: llvm-dis %t5.1.5.precodegen.bc -o - | FileCheck %s --check-prefix=CODEGEN2
+; Check that gFoo and gBar were eliminated from source module together
+; with corresponsing stores
+; RUN: llvm-dis %t5.2.5.precodegen.bc -o - | FileCheck %s --check-prefix=CODEGEN2-SRC
 
 ; IMPORT:       @gFoo.llvm.0 = internal unnamed_addr global i32 1, align 4
 ; IMPORT-NEXT:  @gBar = internal local_unnamed_addr global i32 2, align 4
@@ -40,6 +63,16 @@
 ; CODEGEN-NEXT:     ret i32 3
 
 ; IMPORT2: @gBar = available_externally dso_local local_unnamed_addr global i32 2, align 4
+
+; CODEGEN2:      i32 @main2
+; CODEGEN2-NEXT:   %1 = tail call i32 @rand()
+; CODEGEN2-NEXT:   %2 = tail call i32 @rand()
+; CODEGEN2-NEXT:   ret i32 0
+
+; CODEGEN2-SRC:       void @baz()
+; CODEGEN2-SRC-NEXT:    %1 = tail call i32 @rand()
+; CODEGEN2-SRC-NEXT:    %2 = tail call i32 @rand()
+; CODEGEN2-SRC-NEXT:    ret void
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-linux-gnu"
@@ -54,6 +87,13 @@ define i32 @main() local_unnamed_addr {
   ret i32 %add
 }
 
+define i32 @main2() local_unnamed_addr {
+  tail call void @baz()
+  ret i32 0
+}
+
 declare i32 @foo(...) local_unnamed_addr
 
 declare i32 @bar(...) local_unnamed_addr
+
+declare void @baz() local_unnamed_addr

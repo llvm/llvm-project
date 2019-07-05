@@ -608,16 +608,14 @@ def : InstAlias<"ret",         (JALR X0,      X1, 0), 2>;
 
 def : InstAlias<"fence", (FENCE 0xF, 0xF)>; // 0xF == iorw
 
-// CSR Addresses: 0xC00 == cycle,  0xC01 == time,  0xC02 == instret
-//                0xC80 == cycleh, 0xC81 == timeh, 0xC82 == instreth
-def : InstAlias<"rdinstret $rd", (CSRRS GPR:$rd, 0xC02, X0)>;
-def : InstAlias<"rdcycle $rd",   (CSRRS GPR:$rd, 0xC00, X0)>;
-def : InstAlias<"rdtime $rd",    (CSRRS GPR:$rd, 0xC01, X0)>;
+def : InstAlias<"rdinstret $rd", (CSRRS GPR:$rd, INSTRET.Encoding, X0)>;
+def : InstAlias<"rdcycle $rd",   (CSRRS GPR:$rd, CYCLE.Encoding, X0)>;
+def : InstAlias<"rdtime $rd",    (CSRRS GPR:$rd, TIME.Encoding, X0)>;
 
 let Predicates = [IsRV32] in {
-def : InstAlias<"rdinstreth $rd", (CSRRS GPR:$rd, 0xC82, X0)>;
-def : InstAlias<"rdcycleh $rd",   (CSRRS GPR:$rd, 0xC80, X0)>;
-def : InstAlias<"rdtimeh $rd",    (CSRRS GPR:$rd, 0xC81, X0)>;
+def : InstAlias<"rdinstreth $rd", (CSRRS GPR:$rd, INSTRETH.Encoding, X0)>;
+def : InstAlias<"rdcycleh $rd",   (CSRRS GPR:$rd, CYCLEH.Encoding, X0)>;
+def : InstAlias<"rdtimeh $rd",    (CSRRS GPR:$rd, TIMEH.Encoding, X0)>;
 } // Predicates = [IsRV32]
 
 def : InstAlias<"csrr $rd, $csr", (CSRRS GPR:$rd, csr_sysreg:$csr,      X0)>;
@@ -1055,6 +1053,16 @@ defm : LdPat<load, LD>;
 defm : StPat<truncstorei32, SW, GPR>;
 defm : StPat<store, SD, GPR>;
 } // Predicates = [IsRV64]
+
+/// readcyclecounter
+// On RV64, we can directly read the 64-bit "cycle" CSR.
+let Predicates = [IsRV64] in
+def : Pat<(readcyclecounter), (CSRRS CYCLE.Encoding, X0)>;
+// On RV32, ReadCycleWide will be expanded to the suggested loop reading both
+// halves of the 64-bit "cycle" CSR.
+let Predicates = [IsRV32], usesCustomInserter = 1, hasSideEffects = 0,
+mayLoad = 0, mayStore = 0, hasNoSchedulingInfo = 1 in
+def ReadCycleWide : Pseudo<(outs GPR:$lo, GPR:$hi), (ins), [], "", "">;
 
 //===----------------------------------------------------------------------===//
 // Standard extensions

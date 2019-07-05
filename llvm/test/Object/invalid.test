@@ -4,7 +4,7 @@
 # RUN: yaml2obj %s --docnum=1 -o %t1
 # RUN: not llvm-objdump -s %t1 2>&1 | FileCheck %s --check-prefix=INVALIDERR
 
-# INVALIDERR: Invalid data was encountered while parsing the file
+# INVALIDERR: error: reading file: Invalid data was encountered while parsing the file
 
 --- !ELF
 FileHeader:
@@ -45,7 +45,7 @@ Sections:
 # RUN: yaml2obj %s --docnum=3 -o %t3
 # RUN: not llvm-dwarfdump -debug-line %t3 2>&1 | FileCheck --check-prefix=RELA %s
 
-# RELA: Section is not SHT_RELA
+# RELA: LLVM ERROR: Section is not SHT_RELA
 
 --- !ELF
 FileHeader:
@@ -91,7 +91,7 @@ Sections:
 # RUN: yaml2obj %s --docnum=5 -o %t5
 # RUN: not llvm-objdump -syms %t5 2>&1 | FileCheck --check-prefix=NONULL %s
 
-# NONULL: string table non-null terminated
+# NONULL: error: {{.*}}: SHT_STRTAB string table section [index 1] is non-null terminated
 
 --- !ELF
 FileHeader:
@@ -111,7 +111,7 @@ Symbols:
 # RUN: yaml2obj %s --docnum=6 -o %t6
 # RUN: not llvm-readobj --symbols %t6 2>&1 | FileCheck --check-prefix=INVALID-SYM-SIZE %s
 
-# INVALID-SYM-SIZE: invalid sh_entsize
+# INVALID-SYM-SIZE: error: section [index 1] has an invalid sh_entsize: 32
 
 --- !ELF
 FileHeader:
@@ -152,7 +152,7 @@ DynamicSymbols:
 # RUN: yaml2obj %s --docnum=8 -o %t8
 # RUN: not llvm-readobj --symbols %t8 2>&1 | FileCheck --check-prefix=INVALID-SYMTAB-LINK %s
 
-# INVALID-SYMTAB-LINK: invalid section index
+# INVALID-SYMTAB-LINK: error: invalid section index: 255
 
 --- !ELF
 FileHeader:
@@ -171,7 +171,7 @@ Sections:
 # RUN: yaml2obj %s --docnum=9 -o %t9
 # RUN: not llvm-readobj -S %t9 2>&1 | FileCheck --check-prefix=INVALID-SH-ENTSIZE %s
 
-# INVALID-SH-ENTSIZE: invalid section header entry size (e_shentsize) in ELF header
+# INVALID-SH-ENTSIZE: error: {{.*}}: invalid  e_shentsize in ELF header: 1
 
 --- !ELF
 FileHeader:
@@ -187,7 +187,7 @@ FileHeader:
 # RUN: yaml2obj %s --docnum=10 -o %t10
 # RUN: not llvm-readobj --symbols %t10 2>&1 | FileCheck --check-prefix=INVALID-SYMTAB-SIZE %s
 
-# INVALID-SYMTAB-SIZE: size is not a multiple of sh_entsize
+# INVALID-SYMTAB-SIZE: error: section [index 1] has an invalid sh_size (1) which is not a multiple of its sh_entsize (24)
 
 --- !ELF
 FileHeader:
@@ -207,7 +207,7 @@ Sections:
 # RUN: yaml2obj %s --docnum=11 -o %t11
 # RUN: not llvm-readobj --symbols %t11 2>&1 | FileCheck --check-prefix=INVALID-XINDEX-SIZE %s
 
-# INVALID-XINDEX-SIZE: invalid section contents size
+# INVALID-XINDEX-SIZE: error: {{.*}}: SHT_SYMTAB_SHNDX section has sh_size (24) which is not equal to the number of symbols (6)
 
 --- !ELF
 FileHeader:
@@ -227,7 +227,7 @@ Sections:
 # RUN: not llvm-readobj --program-headers %p/Inputs/invalid-e_shnum.elf 2>&1 | \
 # RUN:  FileCheck --check-prefix=INVALID-PH-ENTSIZE %s
 
-# INVALID-PH-ENTSIZE: invalid e_phentsize
+# INVALID-PH-ENTSIZE: error: invalid e_phentsize: 12336
 
 ## Check that llvm-readobj reports an error when we have no SHT_SYMTAB_SHNDX section,
 ## but have a symbol referencing it.
@@ -235,7 +235,7 @@ Sections:
 # RUN: not llvm-readobj --symbols %p/Inputs/invalid-ext-symtab-index.elf-x86-64 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-EXT-SYMTAB-INDEX %s
 
-# INVALID-EXT-SYMTAB-INDEX: index past the end of the symbol table
+# INVALID-EXT-SYMTAB-INDEX: error: extended symbol index (0) is past the end of the SHT_SYMTAB_SHNDX section of size 0
 
 ## Check that llvm-readobj reports an error if a relocation section
 ## has a broken sh_offset (past the end of the file).
@@ -245,7 +245,7 @@ Sections:
 # RUN: not llvm-readobj -r %t12 2>&1 | FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
 # RUN: not llvm-readobj -r %t13 2>&1 | FileCheck --check-prefix=INVALID-RELOC-SH-OFFSET %s
 
-# INVALID-RELOC-SH-OFFSET: invalid section offset
+# INVALID-RELOC-SH-OFFSET: error: section [index 1] has a sh_offset (0x10000) + sh_size (0x0) that cannot be represented
 
 --- !ELF
 FileHeader:
@@ -275,7 +275,7 @@ Sections:
 # RUN: yaml2obj %s --docnum=14 -o %t14
 # RUN: not llvm-readobj --symbols %t14 2>&1 | FileCheck --check-prefix=INVALID-SECTION-SIZE2 %s
 
-# INVALID-SECTION-SIZE2: invalid section offset
+# INVALID-SECTION-SIZE2: error: section [index 1] has a sh_offset (0xffffffff) + sh_size (0x27) that cannot be represented
 
 --- !ELF
 FileHeader:
@@ -294,8 +294,8 @@ Sections:
 # RUN: yaml2obj %s --docnum=15 -o %t15
 # RUN: not llvm-readobj -S %t15 2>&1 | FileCheck --check-prefix=INVALID-SECTION-NUM %s
 
-# INVALID-SECTION-NUM: section table goes past the end of file
-
+# INVALID-SECTION-NUM: error: {{.*}}: section table goes past the end of file
+ 
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
@@ -310,7 +310,7 @@ FileHeader:
 # RUN: yaml2obj %s --docnum=16 -o %t16
 # RUN: not llvm-readobj -r %t16 2>&1 | FileCheck --check-prefix=INVALID-REL-SYM %s
 
-# INVALID-REL-SYM: invalid section offset
+# INVALID-REL-SYM: error: unable to access section [index 2] data at 0x18000180: offset goes past the end of file
 
 --- !ELF
 FileHeader:
@@ -335,7 +335,7 @@ Sections:
 # RUN: echo -e -n "\x7f\x45\x4c\x46\x02\x01\x01\x03\x00\x00\x00\x00\x00\x00\x00\x00\x01\x00" > %t11
 # RUN: not llvm-readobj -r %t11 2>&1 | FileCheck --check-prefix=INVALID-BUFFER %s
 
-# INVALID-BUFFER: Invalid buffer
+# INVALID-BUFFER: error: {{.*}}': invalid buffer: the size (18) is smaller than an ELF header (64)
 
 # RUN: not llvm-readobj %p/Inputs/invalid-coff-header-too-small 2>&1 | FileCheck --check-prefix=COFF-HEADER %s
 # COFF-HEADER: The file was not recognized as a valid object file
@@ -346,7 +346,7 @@ Sections:
 # RUN: yaml2obj %s --docnum=17 -o %t17
 # RUN: not llvm-readobj --sections %t17 2>&1 | FileCheck --check-prefix=BROKEN-SECNAME %s
 
-## BROKEN-SECNAME: invalid string offset
+## BROKEN-SECNAME: error: a section [index 1] has an invalid sh_name (0x1) offset which goes past the end of the section name string table
 
 --- !ELF
 FileHeader:
@@ -366,7 +366,7 @@ Sections:
 # RUN: not llvm-readobj --sections --section-data %t18 2>&1 \
 # RUN:  | FileCheck --check-prefix=BROKEN-SECSHOFFSET %s
 
-# BROKEN-SECSHOFFSET: invalid section offset
+# BROKEN-SECSHOFFSET: error: section [index 1] has a sh_offset (0xffff0000) + sh_size (0x0) that cannot be represented
 
 --- !ELF
 FileHeader:
@@ -427,7 +427,7 @@ DynamicSymbols:
 # RUN: not llvm-readobj -l %p/Inputs/corrupt-invalid-phentsize.elf.x86-64 2>&1 \
 # RUN:   | FileCheck --check-prefix=PHENTSIZE %s
 
-# PHENTSIZE: invalid e_phentsize
+# PHENTSIZE: error: invalid e_phentsize: 57
 
 ## The dynamic table contains DT_STRTAB with a value that is not in any loadable segment.
 ## Check llvm-readobj reports it.
@@ -435,7 +435,7 @@ DynamicSymbols:
 # RUN: yaml2obj %s --docnum=21 -o %t21
 # RUN: llvm-readobj --dynamic-table %t21 2>&1 | FileCheck --check-prefix=INVALID-DTSTRTAB %s
 
-# INVALID-DTSTRTAB: warning: Unable to parse DT_STRTAB: Virtual address is not in any segment
+# INVALID-DTSTRTAB: warning: Unable to parse DT_STRTAB: virtual address is not in any segment: 0xffff0000
 
 --- !ELF
 FileHeader:
@@ -465,7 +465,7 @@ ProgramHeaders:
 # RUN:   %p/Inputs/corrupt-invalid-relocation-size.elf.x86-64 2>&1 \
 # RUN:    | FileCheck --check-prefix=RELOC-BROKEN-ENTSIZE %s
 
-# RELOC-BROKEN-ENTSIZE: Invalid entity size
+# RELOC-BROKEN-ENTSIZE: error: Invalid entity size
 
 ## Check that llvm-readobj reports an error when .dynamic section has an invalid
 ## size, which isn't a multiple of the dynamic entry size. 
@@ -473,7 +473,7 @@ ProgramHeaders:
 # RUN: yaml2obj %s --docnum=22 -o %t22
 # RUN: not llvm-readobj --dyn-relocations %t22 2>&1 | FileCheck --check-prefix=DYN-TABLE-SIZE %s
 
-# DYN-TABLE-SIZE: Invalid entity size
+# DYN-TABLE-SIZE: error: Invalid entity size
 
 --- !ELF
 FileHeader:

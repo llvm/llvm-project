@@ -947,28 +947,6 @@ inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin) {
   return It;
 }
 
-/// Increment \p It until it points to a non-meta instruction or to \p End
-/// and return the resulting iterator. This function should only be used
-/// MachineBasicBlock::{iterator, const_iterator, instr_iterator,
-/// const_instr_iterator} and the respective reverse iterators.
-template <typename IterT>
-inline IterT skipMetaInstructionsForward(IterT It, IterT End) {
-  while (It != End && It->isMetaInstruction())
-    It++;
-  return It;
-}
-
-/// Decrement \p It until it points to a non-meta instruction or to \p Begin
-/// and return the resulting iterator. This function should only be used
-/// MachineBasicBlock::{iterator, const_iterator, instr_iterator,
-/// const_instr_iterator} and the respective reverse iterators.
-template <class IterT>
-inline IterT skipMetaInstructionsBackward(IterT It, IterT Begin) {
-  while (It != Begin && It->isMetaInstruction())
-    It--;
-  return It;
-}
-
 } // end namespace llvm
 
 #endif // LLVM_CODEGEN_MACHINEBASICBLOCK_H

@@ -130,6 +130,11 @@ Error FileCheckPattern::parseNumericVariableDefinition(
     return FileCheckErrorDiagnostic::get(
         SM, Name, "string variable with name '" + Name + "' already exists");
 
+  Expr = Expr.ltrim(SpaceChars);
+  if (!Expr.empty())
+    return FileCheckErrorDiagnostic::get(
+        SM, Expr, "unexpected characters after numeric variable name");
+
   return Error::success();
 }
 
@@ -146,12 +151,12 @@ FileCheckPattern::parseNumericVariableUse(StringRef &Expr,
     return FileCheckErrorDiagnostic::get(
         SM, Name, "invalid pseudo numeric variable '" + Name + "'");
 
-  // This method is indirectly called from parsePattern for all numeric
-  // variable definitions and uses in the order in which they appear in the
-  // CHECK pattern. For each definition, the pointer to the class instance of
-  // the corresponding numeric variable definition is stored in
-  // GlobalNumericVariableTable. Therefore, the pointer we get below is for the
-  // class instance corresponding to the last definition of this variable use.
+  // Numeric variable definitions and uses are parsed in the order in which
+  // they appear in the CHECK patterns. For each definition, the pointer to the
+  // class instance of the corresponding numeric variable definition is stored
+  // in GlobalNumericVariableTable in parsePattern. Therefore, the pointer we
+  // get below is for the class instance corresponding to the last definition
+  // of this variable use.
   auto VarTableIter = Context->GlobalNumericVariableTable.find(Name);
   if (VarTableIter == Context->GlobalNumericVariableTable.end())
     return FileCheckErrorDiagnostic::get(
@@ -229,27 +234,21 @@ Expected<FileCheckExpression *> FileCheckPattern::parseNumericSubstitutionBlock(
   size_t DefEnd = Expr.find(':');
   if (DefEnd != StringRef::npos) {
     StringRef DefExpr = Expr.substr(0, DefEnd);
-    StringRef UseExpr = Expr = Expr.substr(DefEnd + 1);
+    StringRef UseExpr = Expr.substr(DefEnd + 1);
 
-    DefExpr = DefExpr.ltrim(SpaceChars);
-    StringRef Name;
-    Error ErrorDiagnostic =
-        parseNumericVariableDefinition(DefExpr, Name, Context, SM);
-    if (ErrorDiagnostic)
-      return std::move(ErrorDiagnostic);
-
-    DefinedNumericVariable =
-        Context->makeNumericVariable(this->LineNumber, Name);
-
-    DefExpr = DefExpr.ltrim(SpaceChars);
-    if (!DefExpr.empty())
-      return FileCheckErrorDiagnostic::get(
-          SM, DefExpr, "invalid numeric variable definition");
     UseExpr = UseExpr.ltrim(SpaceChars);
     if (!UseExpr.empty())
       return FileCheckErrorDiagnostic::get(
           SM, UseExpr,
           "unexpected string after variable definition: '" + UseExpr + "'");
+
+    DefExpr = DefExpr.ltrim(SpaceChars);
+    StringRef Name;
+    Error Err = parseNumericVariableDefinition(DefExpr, Name, Context, SM);
+    if (Err)
+      return std::move(Err);
+    DefinedNumericVariable = Context->makeNumericVariable(LineNumber, Name);
+
     return Context->makeExpression(add, nullptr, 0);
   }
 
@@ -660,7 +659,7 @@ void FileCheckPattern::printSubstitutions(const SourceMgr &SM, StringRef Buffer,
         bool UndefSeen = false;
         handleAllErrors(MatchedValue.takeError(),
                         [](const FileCheckNotFoundError &E) {},
-                        // Handled in PrintNoMatch()
+                        // Handled in PrintNoMatch().
                         [](const FileCheckErrorDiagnostic &E) {},
                         [&](const FileCheckUndefVarError &E) {
                           if (!UndefSeen) {
@@ -1735,30 +1734,10 @@ Error FileCheckPatternContext::defineCmdlineVariables(
     if (CmdlineDef[0] == '#') {
       StringRef CmdlineName = CmdlineDef.substr(1, EqIdx - 1);
       StringRef VarName;
-      SMLoc CmdlineNameLoc = SMLoc::getFromPointer(CmdlineName.data());
       Error ErrorDiagnostic = FileCheckPattern::parseNumericVariableDefinition(
           CmdlineName, VarName, this, SM);
       if (ErrorDiagnostic) {
         Errs = joinErrors(std::move(Errs), std::move(ErrorDiagnostic));
-        continue;
-      }
-      // Check that CmdlineName is only composed of the parsed numeric
-      // variable. This catches cases like "FOO+2" in a "FOO+2=10" definition.
-      if (!CmdlineName.empty()) {
-        Errs = joinErrors(std::move(Errs),
-                          FileCheckErrorDiagnostic::get(
-                              SM, CmdlineNameLoc, "invalid variable name"));
-        continue;
-      }
-
-      // Detect collisions between string and numeric variables when the latter
-      // is created later than the former.
-      if (DefinedVariableTable.find(VarName) != DefinedVariableTable.end()) {
-        Errs = joinErrors(
-            std::move(Errs),
-            FileCheckErrorDiagnostic::get(SM, VarName,
-                                          "string variable with name '" +
-                                              VarName + "' already exists"));
         continue;
       }
 

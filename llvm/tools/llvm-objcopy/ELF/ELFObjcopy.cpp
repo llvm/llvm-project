@@ -423,7 +423,7 @@ static Error updateAndRemoveSymbols(const CopyConfig &Config, Object &Obj) {
 
     if ((Config.StripUnneeded ||
          is_contained(Config.UnneededSymbolsToRemove, Sym.Name)) &&
-        isUnneededSymbol(Sym))
+        (!Obj.isRelocatable() || isUnneededSymbol(Sym)))
       return true;
 
     // We want to remove undefined symbols if all references have been stripped.

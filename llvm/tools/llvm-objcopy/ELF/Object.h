@@ -1051,6 +1051,9 @@ public:
     Segments.emplace_back(llvm::make_unique<Segment>(Data));
     return *Segments.back();
   }
+  bool isRelocatable() const {
+    return Type != ELF::ET_DYN && Type != ELF::ET_EXEC;
+  }
 };
 
 } // end namespace elf

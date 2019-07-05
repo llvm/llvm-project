@@ -13,11 +13,13 @@
 
 ## Truncate the file to end before the program header table ends.
 # RUN: %python -c "with open('%/t.o', 'r+b') as input: input.truncate(65)"
-# RUN: not llvm-objcopy %t.o 2>&1 | FileCheck %s
+# RUN: not llvm-objcopy %t.o 2>&1 | FileCheck %s --check-prefix=CASE1
+
+# CASE1: error: program headers are longer than binary of size 65: e_phoff = 0x40, e_phnum = 1, e_phentsize = 56
 
 ## Set the e_phoff field to a value much larger than the object file size.
 # RUN: %python -c "with open('%/t2.o', 'r+b') as input: import struct; bytes = struct.pack('<Q', 0x40000000); input.seek(32); input.write(bytes)"
-# RUN: not llvm-objcopy %t2.o 2>&1 | FileCheck %s
+# RUN: not llvm-objcopy %t2.o 2>&1 | FileCheck %s --check-prefix=CASE2
 
 --- !ELF
 FileHeader:
@@ -28,4 +30,4 @@ FileHeader:
 ProgramHeaders:
   - Type: PT_LOAD
 
-# CHECK: error: program headers longer than binary
+# CASE2: error: program headers are longer than binary of size 120: e_phoff = 0x40000000, e_phnum = 1, e_phentsize = 56
