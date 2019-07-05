@@ -296,6 +296,10 @@ ANALYZER_OPTION(bool, ShouldTrackConditions, "track-conditions",
                 "an already tracked variable.",
                 false)
 
+ANALYZER_OPTION(bool, ShouldTrackConditionsDebug, "track-conditions-debug",
+                "Whether to place an event at each tracked condition.",
+                false)
+
 //===----------------------------------------------------------------------===//
 // Unsinged analyzer options.
 //===----------------------------------------------------------------------===//

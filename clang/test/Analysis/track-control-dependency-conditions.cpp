@@ -3,7 +3,23 @@
 // RUN:   -analyzer-config track-conditions=true \
 // RUN:   -analyzer-output=text \
 // RUN:   -analyzer-checker=core
+
+// RUN: not %clang_analyze_cc1 -verify %s \
+// RUN:   -analyzer-checker=core \
+// RUN:   -analyzer-config track-conditions-debug=true \
+// RUN:   2>&1 | FileCheck %s -check-prefix=CHECK-INVALID-DEBUG
+
+// CHECK-INVALID-DEBUG: (frontend): invalid input for analyzer-config option
+// CHECK-INVALID-DEBUG-SAME:        'track-conditions-debug', that expects
+// CHECK-INVALID-DEBUG-SAME:        'track-conditions' to also be enabled
 //
+// RUN: %clang_analyze_cc1 %s \
+// RUN:   -verify=expected,tracking,debug \
+// RUN:   -analyzer-config track-conditions=true \
+// RUN:   -analyzer-config track-conditions-debug=true \
+// RUN:   -analyzer-output=text \
+// RUN:   -analyzer-checker=core
+
 // RUN: %clang_analyze_cc1 %s -verify \
 // RUN:   -analyzer-output=text \
 // RUN:   -analyzer-checker=core
@@ -30,6 +46,8 @@ void test() {
 
   if (flag) // expected-note   {{Assuming 'flag' is not equal to 0}}
             // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'flag'}}
+
     *x = 5; // expected-warning{{Dereference of null pointer}}
             // expected-note@-1{{Dereference of null pointer}}
 }
@@ -59,6 +77,8 @@ void test() {
 
   if (flag) // expected-note   {{Assuming 'flag' is not equal to 0}}
             // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'flag'}}
+
     *x = 5; // expected-warning{{Dereference of null pointer}}
             // expected-note@-1{{Dereference of null pointer}}
 }
@@ -85,8 +105,11 @@ void test() {
 
   if (bar) // expected-note   {{Assuming 'bar' is not equal to 0}}
            // expected-note@-1{{Taking true branch}}
+           // debug-note@-2{{Tracking condition 'bar'}}
     if (flag) // expected-note   {{Assuming 'flag' is not equal to 0}}
               // expected-note@-1{{Taking true branch}}
+              // debug-note@-2{{Tracking condition 'flag'}}
+
       *x = 5; // expected-warning{{Dereference of null pointer}}
               // expected-note@-1{{Dereference of null pointer}}
 }
@@ -107,7 +130,7 @@ void test() {
   if (int flag = foo()) // tracking-note{{Calling 'foo'}}
                         // tracking-note@-1{{Returning from 'foo'}}
                         // tracking-note@-2{{'flag' initialized here}}
-
+                        // debug-note@-3{{Tracking condition 'flag'}}
                         // expected-note@-4{{Assuming 'flag' is not equal to 0}}
                         // expected-note@-5{{Taking true branch}}
 
@@ -129,7 +152,7 @@ void test() {
   if (ConvertsToBool())
     // tracking-note@-1 {{Calling 'ConvertsToBool::operator bool'}}
     // tracking-note@-2{{Returning from 'ConvertsToBool::operator bool'}}
-
+    // debug-note@-3{{Tracking condition 'ConvertsToBool()'}}
     // expected-note@-4{{Assuming the condition is true}}
     // expected-note@-5{{Taking true branch}}
     *x = 5; // expected-warning{{Dereference of null pointer}}
@@ -150,8 +173,9 @@ void i(int *ptr) {
   if (!flipCoin())
     // tracking-note@-1{{Calling 'flipCoin'}}
     // tracking-note@-2{{Returning from 'flipCoin'}}
-    // expected-note@-3{{Assuming the condition is true}}
-    // expected-note@-4{{Taking true branch}}
+    // debug-note@-3{{Tracking condition '!flipCoin()'}}
+    // expected-note@-4{{Assuming the condition is true}}
+    // expected-note@-5{{Taking true branch}}
     *ptr = 5; // expected-warning{{Dereference of null pointer}}
               // expected-note@-1{{Dereference of null pointer}}
 }
@@ -163,6 +187,7 @@ bool coin();
 bool flipCoin() {
   if (coin()) // tracking-note{{Assuming the condition is false}}
               // tracking-note@-1{{Taking false branch}}
+              // debug-note@-2{{Tracking condition 'coin()'}}
     return true;
   return coin(); // tracking-note{{Returning value}}
 }
@@ -174,8 +199,9 @@ void i(int *ptr) {
   if (!flipCoin())
     // tracking-note@-1{{Calling 'flipCoin'}}
     // tracking-note@-2{{Returning from 'flipCoin'}}
-    // expected-note@-3{{Assuming the condition is true}}
-    // expected-note@-4{{Taking true branch}}
+    // debug-note@-3{{Tracking condition '!flipCoin()'}}
+    // expected-note@-4{{Assuming the condition is true}}
+    // expected-note@-5{{Taking true branch}}
     *ptr = 5; // expected-warning{{Dereference of null pointer}}
               // expected-note@-1{{Dereference of null pointer}}
 }
@@ -189,6 +215,7 @@ void f() {
   int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
   if (flag) // expected-note{{Assuming 'flag' is not equal to 0}}
             // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'flag'}}
     *x = 5; // expected-warning{{Dereference of null pointer}}
             // expected-note@-1{{Dereference of null pointer}}
 }
@@ -205,6 +232,7 @@ void f(int y) {
   int *x = 0; // expected-note{{'x' initialized to a null pointer value}}
   if (flag) // expected-note{{'flag' is 1}}
             // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'flag'}}
     *x = 5; // expected-warning{{Dereference of null pointer}}
             // expected-note@-1{{Dereference of null pointer}}
 }
@@ -229,6 +257,7 @@ void f(int y) {
 
   if (flag) // expected-note{{'flag' is 1}}
             // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'flag'}}
     *x = 5; // expected-warning{{Dereference of null pointer}}
             // expected-note@-1{{Dereference of null pointer}}
 }
@@ -252,6 +281,7 @@ void f(int flag) {
 
   if (flag) // expected-note{{'flag' is not equal to 0}}
             // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'flag'}}
     *x = 5; // expected-warning{{Dereference of null pointer}}
             // expected-note@-1{{Dereference of null pointer}}
 }
@@ -278,6 +308,7 @@ void f(int flag) {
 
   if (flag) // expected-note{{'flag' is not equal to 0}}
             // expected-note@-1{{Taking true branch}}
+            // debug-note@-2{{Tracking condition 'flag'}}
     *x = 5; // expected-warning{{Dereference of null pointer}}
             // expected-note@-1{{Dereference of null pointer}}
 }
