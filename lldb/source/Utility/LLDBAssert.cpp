@@ -21,8 +21,8 @@ void lldb_private::lldb_assert(bool expression, const char *expr_text,
   if (LLVM_LIKELY(expression))
     return;
 
-  // In a Debug configuration lldb_assert() behaves like assert().
-  assert(false && "lldb_assert failed");
+  // In a Debug configuration lldb_assert() behaves like assert(0).
+  llvm_unreachable("lldb_assert failed");
 
   // In a Release configuration it will print a warning and encourage the user
   // to file a bug report, similar to LLVM’s crash handler, and then return
