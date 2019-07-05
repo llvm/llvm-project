@@ -117,6 +117,58 @@ TEST(CFG, IsLinear) {
   expectLinear(true,  "void foo() { foo(); }"); // Recursion is not our problem.
 }
 
+TEST(CFG, ConditionExpr) {
+  const char *Code = R"(void f(bool A, bool B, bool C) {
+                          if (A && B && C)
+                            int x;
+                        })";
+  BuildResult Result = BuildCFG(Code);
+  EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
+
+  // [B5 (ENTRY)] -> [B4] -> [B3] -> [B2] -> [B1] -> [B0 (EXIT)]
+  //                   \      \       \                 /
+  //                    ------------------------------->
+
+  CFG *cfg = Result.getCFG();
+
+  auto GetBlock = [cfg] (unsigned Index) -> CFGBlock * {
+    assert(Index < cfg->size());
+    return *(cfg->begin() + Index);
+  };
+
+  auto GetExprText = [] (const Expr *E) -> std::string {
+    // It's very awkward trying to recover the actual expression text without
+    // a real source file, so use this as a workaround. We know that the
+    // condition expression looks like this:
+    //
+    // ImplicitCastExpr 0xd07bf8 '_Bool' <LValueToRValue>
+    //  `-DeclRefExpr 0xd07bd8 '_Bool' lvalue ParmVar 0xd07960 'C' '_Bool'
+
+    assert(isa<ImplicitCastExpr>(E));
+    assert(++E->child_begin() == E->child_end());
+    const auto *D = dyn_cast<DeclRefExpr>(*E->child_begin());
+    return D->getFoundDecl()->getNameAsString();
+  };
+
+  EXPECT_EQ(GetBlock(1)->getLastCondition(), nullptr);
+  EXPECT_EQ(GetExprText(GetBlock(4)->getLastCondition()), "A");
+  EXPECT_EQ(GetExprText(GetBlock(3)->getLastCondition()), "B");
+  EXPECT_EQ(GetExprText(GetBlock(2)->getLastCondition()), "C");
+
+  //===--------------------------------------------------------------------===//
+
+  Code = R"(void foo(int x, int y) {
+              (void)(x + y);
+            })";
+  Result = BuildCFG(Code);
+  EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
+
+  // [B2 (ENTRY)] -> [B1] -> [B0 (EXIT)]
+
+  cfg = Result.getCFG();
+  EXPECT_EQ(GetBlock(1)->getLastCondition(), nullptr);
+}
+
 } // namespace
 } // namespace analysis
 } // namespace clang
