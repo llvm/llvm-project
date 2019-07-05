@@ -615,10 +615,12 @@ ClangDocBitcodeReader::skipUntilRecordOrBlock(unsigned &BlockOrRecordID) {
       return Cursor::BadBlock;
     }
 
-    // FIXME check that the enum is in range.
-    auto Code = static_cast<llvm::bitc::FixedAbbrevIDs>(MaybeCode.get());
-
-    switch (Code) {
+    unsigned Code = MaybeCode.get();
+    if (Code >= static_cast<unsigned>(llvm::bitc::FIRST_APPLICATION_ABBREV)) {
+      BlockOrRecordID = Code;
+      return Cursor::Record;
+    }
+    switch (static_cast<llvm::bitc::FixedAbbrevIDs>(Code)) {
     case llvm::bitc::ENTER_SUBBLOCK:
       if (Expected<unsigned> MaybeID = Stream.ReadSubBlockID())
         BlockOrRecordID = MaybeID.get();
@@ -639,9 +641,8 @@ ClangDocBitcodeReader::skipUntilRecordOrBlock(unsigned &BlockOrRecordID) {
       continue;
     case llvm::bitc::UNABBREV_RECORD:
       return Cursor::BadBlock;
-    default:
-      BlockOrRecordID = Code;
-      return Cursor::Record;
+    case llvm::bitc::FIRST_APPLICATION_ABBREV:
+      llvm_unreachable("Unexpected abbrev id.");
     }
   }
   llvm_unreachable("Premature stream end.");
