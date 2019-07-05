@@ -6,7 +6,7 @@
 # RUN: llvm-readobj -S %t1 2>&1 | FileCheck %s --check-prefixes=LLVM,ERR
 # RUN: llvm-readelf -S %t1 2>&1 | FileCheck %s --check-prefixes=GNU,ERR
 
-# ERR: warning: invalid sh_type for string table, expected SHT_STRTAB
+# ERR: warning: invalid sh_type for string table section [index 0]: expected SHT_STRTAB, but got SHT_NULL
 
 # LLVM:      Name: .dynsym
 # LLVM-NEXT:  Type: SHT_DYNSYM

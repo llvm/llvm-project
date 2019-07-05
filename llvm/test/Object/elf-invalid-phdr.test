@@ -23,4 +23,4 @@
 RUN: not llvm-objdump -private-headers %p/Inputs/invalid-phdr.elf 2>&1 \
 RUN:         | FileCheck %s
 
-CHECK: LLVM ERROR: program headers longer than binary
+CHECK: LLVM ERROR: program headers are longer than binary of size 4162: e_phoff = 0xffffff, e_phnum = 1, e_phentsize = 56
