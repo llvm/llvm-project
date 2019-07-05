@@ -149,22 +149,9 @@ set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 
 # Setup the default options if LIBCXX_CXX_ABI is not specified.
 if (LIBCXX_CXX_ABI STREQUAL "default")
-  find_path(
-    LIBCXX_LIBCXXABI_INCLUDES_INTERNAL cxxabi.h
-    PATHS ${LLVM_MAIN_SRC_DIR}/projects/libcxxabi/include
-          ${LLVM_MAIN_SRC_DIR}/runtimes/libcxxabi/include
-          ${LLVM_MAIN_SRC_DIR}/../libcxxabi/include
-    NO_DEFAULT_PATH
-    NO_CMAKE_FIND_ROOT_PATH
-  )
   if (LIBCXX_TARGETING_MSVC)
     # FIXME: Figure out how to configure the ABI library on Windows.
     set(LIBCXX_CXX_ABI_LIBNAME "vcruntime")
-  elseif ((NOT LIBCXX_STANDALONE_BUILD OR HAVE_LIBCXXABI) AND
-          IS_DIRECTORY "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
-    set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
-    set(LIBCXX_CXX_ABI_INCLUDE_PATHS "${LIBCXX_LIBCXXABI_INCLUDES_INTERNAL}")
-    set(LIBCXX_CXX_ABI_INTREE 1)
   elseif (APPLE)
     set(LIBCXX_CXX_ABI_LIBNAME "libcxxabi")
     set(LIBCXX_CXX_ABI_SYSTEM 1)

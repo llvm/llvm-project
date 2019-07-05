@@ -12,6 +12,8 @@
 
 #include <type_traits>
 
+#include "pstl_config.h"
+
 namespace __pstl
 {
 namespace execution
