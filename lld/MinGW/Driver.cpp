@@ -105,7 +105,7 @@ opt::InputArgList MinGWOptTable::parse(ArrayRef<const char *> Argv) {
   if (MissingCount)
     fatal(StringRef(Args.getArgString(MissingIndex)) + ": missing argument");
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
-    fatal("unknown argument: " + Arg->getSpelling());
+    fatal("unknown argument: " + Arg->getAsString(Args));
   return Args;
 }
 
@@ -313,7 +313,7 @@ bool mingw::link(ArrayRef<const char *> ArgsArr, raw_ostream &Diag) {
   StringRef Prefix = "";
   bool Static = false;
   for (auto *A : Args) {
-    switch (A->getOption().getUnaliasedOption().getID()) {
+    switch (A->getOption().getID()) {
     case OPT_INPUT:
       if (StringRef(A->getValue()).endswith_lower(".def"))
         Add("-def:" + StringRef(A->getValue()));

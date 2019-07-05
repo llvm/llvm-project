@@ -10,6 +10,8 @@
 #ifndef _PSTL_PARALLEL_IMPL_H
 #define _PSTL_PARALLEL_IMPL_H
 
+#include "pstl_config.h"
+
 #include <atomic>
 // This header defines the minimum set of parallel routines required to support Parallel STL,
 // implemented on top of Intel(R) Threading Building Blocks (Intel(R) TBB) library

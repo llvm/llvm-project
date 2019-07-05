@@ -3700,9 +3700,15 @@ bool ProcessGDBRemote::StartAsyncThread() {
     // Create a thread that watches our internal state and controls which
     // events make it to clients (into the DCProcess event queue).
 
-    m_async_thread = ThreadLauncher::LaunchThread(
-        "<lldb.process.gdb-remote.async>", ProcessGDBRemote::AsyncThread, this,
-        nullptr);
+    llvm::Expected<HostThread> async_thread = ThreadLauncher::LaunchThread(
+        "<lldb.process.gdb-remote.async>", ProcessGDBRemote::AsyncThread, this);
+    if (!async_thread) {
+      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
+               "failed to launch host thread: {}",
+               llvm::toString(async_thread.takeError()));
+      return false;
+    }
+    m_async_thread = *async_thread;
   } else if (log)
     log->Printf("ProcessGDBRemote::%s () - Called when Async thread was "
                 "already running.",

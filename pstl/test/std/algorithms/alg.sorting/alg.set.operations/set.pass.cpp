@@ -11,10 +11,11 @@
 
 #include "support/pstl_test_config.h"
 
-#include <cmath>
-#include <chrono>
-#include <execution>
 #include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <execution>
+#include <functional>
 
 #include "support/utils.h"
 
@@ -97,8 +98,7 @@ struct test_one_policy
 
     template <typename Policy, typename InputIterator1, typename InputIterator2, typename Compare>
     typename std::enable_if<TestUtils::isReverse<InputIterator1>::value, void>::type
-    operator()(Policy&&, InputIterator1, InputIterator1, InputIterator2, InputIterator2,
-               Compare)
+    operator()(Policy&&, InputIterator1, InputIterator1, InputIterator2, InputIterator2, Compare)
     {
     }
 };
@@ -151,7 +151,7 @@ int32_t
 main()
 {
 
-    test_set<float64_t, float64_t>(__pstl::__internal::__pstl_less());
+    test_set<float64_t, float64_t>(std::less<>());
     test_set<Num<int64_t>, Num<int32_t>>([](const Num<int64_t>& x, const Num<int32_t>& y) { return x < y; });
 
     test_algo_basic_double<int32_t>(run_for_rnd_fw<test_non_const<int32_t>>());
