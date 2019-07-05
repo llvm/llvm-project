@@ -1642,8 +1642,17 @@ bool Debugger::StartEventHandlerThread() {
         full_name.AsCString() : "dbg.evt-handler";
 
     // Use larger 8MB stack for this thread
-    m_event_handler_thread = ThreadLauncher::LaunchThread(thread_name,
-        EventHandlerThread, this, nullptr, g_debugger_event_thread_stack_bytes);
+    llvm::Expected<HostThread> event_handler_thread =
+        ThreadLauncher::LaunchThread(thread_name, EventHandlerThread, this,
+                                     g_debugger_event_thread_stack_bytes);
+
+    if (event_handler_thread) {
+      m_event_handler_thread = *event_handler_thread;
+    } else {
+      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
+               "failed to launch host thread: {}",
+               llvm::toString(event_handler_thread.takeError()));
+    }
 
     // Make sure DefaultEventHandler() is running and listening to events
     // before we return from this function. We are only listening for events of
@@ -1674,10 +1683,18 @@ lldb::thread_result_t Debugger::IOHandlerThread(lldb::thread_arg_t arg) {
 bool Debugger::HasIOHandlerThread() { return m_io_handler_thread.IsJoinable(); }
 
 bool Debugger::StartIOHandlerThread() {
-  if (!m_io_handler_thread.IsJoinable())
-    m_io_handler_thread = ThreadLauncher::LaunchThread(
-        "lldb.debugger.io-handler", IOHandlerThread, this, nullptr,
+  if (!m_io_handler_thread.IsJoinable()) {
+    llvm::Expected<HostThread> io_handler_thread = ThreadLauncher::LaunchThread(
+        "lldb.debugger.io-handler", IOHandlerThread, this,
         8 * 1024 * 1024); // Use larger 8MB stack for this thread
+    if (io_handler_thread) {
+      m_io_handler_thread = *io_handler_thread;
+    } else {
+      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
+               "failed to launch host thread: {}",
+               llvm::toString(io_handler_thread.takeError()));
+    }
+  }
   return m_io_handler_thread.IsJoinable();
 }
 

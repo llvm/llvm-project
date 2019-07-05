@@ -888,22 +888,23 @@ GDBRemoteCommunication::CheckForPacket(const uint8_t *src, size_t src_len,
 
 Status GDBRemoteCommunication::StartListenThread(const char *hostname,
                                                  uint16_t port) {
-  Status error;
-  if (m_listen_thread.IsJoinable()) {
-    error.SetErrorString("listen thread already running");
-  } else {
-    char listen_url[512];
-    if (hostname && hostname[0])
-      snprintf(listen_url, sizeof(listen_url), "listen://%s:%i", hostname,
-               port);
-    else
-      snprintf(listen_url, sizeof(listen_url), "listen://%i", port);
-    m_listen_url = listen_url;
-    SetConnection(new ConnectionFileDescriptor());
-    m_listen_thread = ThreadLauncher::LaunchThread(
-        listen_url, GDBRemoteCommunication::ListenThread, this, &error);
-  }
-  return error;
+  if (m_listen_thread.IsJoinable())
+    return Status("listen thread already running");
+
+  char listen_url[512];
+  if (hostname && hostname[0])
+    snprintf(listen_url, sizeof(listen_url), "listen://%s:%i", hostname, port);
+  else
+    snprintf(listen_url, sizeof(listen_url), "listen://%i", port);
+  m_listen_url = listen_url;
+  SetConnection(new ConnectionFileDescriptor());
+  llvm::Expected<HostThread> listen_thread = ThreadLauncher::LaunchThread(
+      listen_url, GDBRemoteCommunication::ListenThread, this);
+  if (!listen_thread)
+    return Status(listen_thread.takeError());
+  m_listen_thread = *listen_thread;
+
+  return Status();
 }
 
 bool GDBRemoteCommunication::JoinListenThread() {

@@ -203,9 +203,16 @@ bool GDBRemoteCommunicationReplayServer::StartAsyncThread() {
   if (!m_async_thread.IsJoinable()) {
     // Create a thread that watches our internal state and controls which
     // events make it to clients (into the DCProcess event queue).
-    m_async_thread = ThreadLauncher::LaunchThread(
+    llvm::Expected<HostThread> async_thread = ThreadLauncher::LaunchThread(
         "<lldb.gdb-replay.async>",
-        GDBRemoteCommunicationReplayServer::AsyncThread, this, nullptr);
+        GDBRemoteCommunicationReplayServer::AsyncThread, this);
+    if (!async_thread) {
+      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
+               "failed to launch host thread: {}",
+               llvm::toString(async_thread.takeError()));
+      return false;
+    }
+    m_async_thread = *async_thread;
   }
 
   // Wait for handshake.

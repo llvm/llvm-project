@@ -204,10 +204,23 @@ bool Communication::StartReadThread(Status *error_ptr) {
 
   m_read_thread_enabled = true;
   m_read_thread_did_exit = false;
-  m_read_thread = ThreadLauncher::LaunchThread(
-      thread_name, Communication::ReadThread, this, error_ptr);
+  auto maybe_thread = ThreadLauncher::LaunchThread(
+      thread_name, Communication::ReadThread, this);
+  if (maybe_thread) {
+    m_read_thread = *maybe_thread;
+  } else {
+    if (error_ptr)
+      *error_ptr = Status(maybe_thread.takeError());
+    else {
+      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
+               "failed to launch host thread: {}",
+               llvm::toString(maybe_thread.takeError()));
+    }
+  }
+
   if (!m_read_thread.IsJoinable())
     m_read_thread_enabled = false;
+
   return m_read_thread_enabled;
 }
 

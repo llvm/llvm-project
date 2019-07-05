@@ -32,6 +32,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "lldb/Utility/UUID.h"
@@ -739,8 +740,15 @@ bool ProcessKDP::StartAsyncThread() {
   if (m_async_thread.IsJoinable())
     return true;
 
-  m_async_thread = ThreadLauncher::LaunchThread(
-      "<lldb.process.kdp-remote.async>", ProcessKDP::AsyncThread, this, NULL);
+  llvm::Expected<HostThread> async_thread = ThreadLauncher::LaunchThread(
+      "<lldb.process.kdp-remote.async>", ProcessKDP::AsyncThread, this);
+  if (!async_thread) {
+    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
+             "failed to launch host thread: {}",
+             llvm::toString(async_thread.takeError()));
+    return false;
+  }
+  m_async_thread = *async_thread;
   return m_async_thread.IsJoinable();
 }
 
