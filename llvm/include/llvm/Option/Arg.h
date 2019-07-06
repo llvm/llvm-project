@@ -70,7 +70,15 @@ public:
   ~Arg();
 
   const Option &getOption() const { return Opt; }
+
+  /// Returns the used prefix and name of the option:
+  /// For `--foo=bar`, returns `--foo=`.
+  /// This is often the wrong function to call:
+  /// * Use `getValue()` to get `bar`.
+  /// * Use `getAsString()` to get a string suitable for printing an Arg in
+  ///   a diagnostic.
   StringRef getSpelling() const { return Spelling; }
+
   unsigned getIndex() const { return Index; }
 
   /// Return the base argument which generated this arg.

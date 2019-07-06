@@ -1943,7 +1943,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S1S2 = IRB.CreateAnd(S1, S2);
     Value *V1S2 = IRB.CreateAnd(V1, S2);
     Value *S1V2 = IRB.CreateAnd(S1, V2);
-    setShadow(&I, IRB.CreateOr(S1S2, IRB.CreateOr(V1S2, S1V2)));
+    setShadow(&I, IRB.CreateOr({S1S2, V1S2, S1V2}));
     setOriginForNaryOp(I);
   }
 
@@ -1965,7 +1965,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *S1S2 = IRB.CreateAnd(S1, S2);
     Value *V1S2 = IRB.CreateAnd(V1, S2);
     Value *S1V2 = IRB.CreateAnd(S1, V2);
-    setShadow(&I, IRB.CreateOr(S1S2, IRB.CreateOr(V1S2, S1V2)));
+    setShadow(&I, IRB.CreateOr({S1S2, V1S2, S1V2}));
     setOriginForNaryOp(I);
   }
 
@@ -3508,7 +3508,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       D = CreateAppToShadowCast(IRB, D);
 
       // Result shadow if condition shadow is 1.
-      Sa1 = IRB.CreateOr(IRB.CreateXor(C, D), IRB.CreateOr(Sc, Sd));
+      Sa1 = IRB.CreateOr({IRB.CreateXor(C, D), Sc, Sd});
     }
     Value *Sa = IRB.CreateSelect(Sb, Sa1, Sa0, "_msprop_select");
     setShadow(&I, Sa);

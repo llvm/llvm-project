@@ -20,9 +20,9 @@ NUMERRCLIPSEUDO-NEXT: {{^                   \^$}}
 RUN: not FileCheck -D#VALUE+2=10 --input-file %s %s 2>&1 \
 RUN:   | FileCheck %s --strict-whitespace --check-prefix NUMERRCLITRAIL
 
-NUMERRCLITRAIL: Global defines:1:20: error: invalid variable name
+NUMERRCLITRAIL: Global defines:1:25: error: unexpected characters after numeric variable name
 NUMERRCLITRAIL-NEXT: Global define #1: #VALUE+2=10
-NUMERRCLITRAIL-NEXT: {{^                   \^$}}
+NUMERRCLITRAIL-NEXT: {{^                        \^$}}
 
 ; Invalid value: numeric expression instead of literal.
 RUN: not FileCheck -D#VALUE1=3 -D#VALUE2='VALUE1 + 2' --input-file %s %s 2>&1 \

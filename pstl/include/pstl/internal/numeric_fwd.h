@@ -13,6 +13,8 @@
 #include <type_traits>
 #include <utility>
 
+#include "pstl_config.h"
+
 namespace __pstl
 {
 namespace __internal

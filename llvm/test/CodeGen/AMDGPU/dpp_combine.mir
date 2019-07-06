@@ -1,4 +1,4 @@
-# RUN: llc -march=amdgcn -mcpu=tonga  -run-pass=gcn-dpp-combine  -o - %s | FileCheck %s
+# RUN: llc -march=amdgcn -mcpu=gfx900 -run-pass=gcn-dpp-combine -o - %s | FileCheck %s
 
 ---
 # old is undefined: only combine when masks are fully enabled and
@@ -326,6 +326,30 @@ body:             |
     ; this shouldn't be combined as modifiers aren't abs|neg
     %9:vgpr_32 = V_MOV_B32_dpp undef %2, %1, 1, 15, 15, 1, implicit $exec
     %10:vgpr_32 = V_ADD_F32_e64 4, %9, 8, %0, 0, 0, implicit $exec
+...
+
+# check for e64 modifiers
+# CHECK-LABEL: name: add_u32_e64
+# CHECK: %4:vgpr_32 = V_ADD_U32_dpp %2, %0, %1, 1, 15, 15, 1, implicit $exec
+# CHECK: %6:vgpr_32 = V_ADD_U32_e64 %5, %1, 1, implicit $exec
+
+name: add_u32_e64
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0, $vgpr1
+
+    %0:vgpr_32 = COPY $vgpr0
+    %1:vgpr_32 = COPY $vgpr1
+    %2:vgpr_32 = IMPLICIT_DEF
+
+    ; this should be combined as all modifiers are default
+    %3:vgpr_32 = V_MOV_B32_dpp undef %2, %0, 1, 15, 15, 1, implicit $exec
+    %4:vgpr_32 = V_ADD_U32_e64 %3, %1, 0, implicit $exec
+
+    ; this shouldn't be combined as clamp is set
+    %5:vgpr_32 = V_MOV_B32_dpp undef %2, %0, 1, 15, 15, 1, implicit $exec
+    %6:vgpr_32 = V_ADD_U32_e64 %5, %1, 1, implicit $exec
 ...
 
 # tests on sequences of dpp consumers

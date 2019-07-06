@@ -13,6 +13,7 @@
 #include <type_traits>
 
 #include "execution_defs.h"
+#include "pstl_config.h"
 
 namespace std
 {

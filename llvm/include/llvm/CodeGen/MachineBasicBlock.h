@@ -910,11 +910,11 @@ class MachineInstrSpan {
   MachineBasicBlock::iterator I, B, E;
 
 public:
-  MachineInstrSpan(MachineBasicBlock::iterator I)
-    : MBB(*I->getParent()),
-      I(I),
-      B(I == MBB.begin() ? MBB.end() : std::prev(I)),
-      E(std::next(I)) {}
+  MachineInstrSpan(MachineBasicBlock::iterator I, MachineBasicBlock *BB)
+      : MBB(*BB), I(I), B(I == MBB.begin() ? MBB.end() : std::prev(I)),
+        E(std::next(I)) {
+    assert(I == BB->end() || I->getParent() == BB);
+  }
 
   MachineBasicBlock::iterator begin() {
     return B == MBB.end() ? MBB.begin() : std::next(B);
@@ -943,28 +943,6 @@ inline IterT skipDebugInstructionsForward(IterT It, IterT End) {
 template<class IterT>
 inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin) {
   while (It != Begin && It->isDebugInstr())
-    It--;
-  return It;
-}
-
-/// Increment \p It until it points to a non-meta instruction or to \p End
-/// and return the resulting iterator. This function should only be used
-/// MachineBasicBlock::{iterator, const_iterator, instr_iterator,
-/// const_instr_iterator} and the respective reverse iterators.
-template <typename IterT>
-inline IterT skipMetaInstructionsForward(IterT It, IterT End) {
-  while (It != End && It->isMetaInstruction())
-    It++;
-  return It;
-}
-
-/// Decrement \p It until it points to a non-meta instruction or to \p Begin
-/// and return the resulting iterator. This function should only be used
-/// MachineBasicBlock::{iterator, const_iterator, instr_iterator,
-/// const_instr_iterator} and the respective reverse iterators.
-template <class IterT>
-inline IterT skipMetaInstructionsBackward(IterT It, IterT Begin) {
-  while (It != Begin && It->isMetaInstruction())
     It--;
   return It;
 }

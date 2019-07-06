@@ -140,11 +140,18 @@ static Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
 /// of the output specified by the command line options.
 static Error executeObjcopyOnRawBinary(const CopyConfig &Config,
                                        MemoryBuffer &In, Buffer &Out) {
-  // TODO: llvm-objcopy should parse CopyConfig.OutputFormat to recognize
-  // formats other than ELF / "binary" and invoke
-  // elf::executeObjcopyOnRawBinary, macho::executeObjcopyOnRawBinary or
-  // coff::executeObjcopyOnRawBinary accordingly.
-  return elf::executeObjcopyOnRawBinary(Config, In, Out);
+  switch (Config.OutputFormat) {
+  case FileFormat::ELF:
+  // FIXME: Currently, we call elf::executeObjcopyOnRawBinary even if the
+  // output format is binary/ihex or it's not given. This behavior differs from
+  // GNU objcopy. See https://bugs.llvm.org/show_bug.cgi?id=42171 for details.
+  case FileFormat::Binary:
+  case FileFormat::IHex:
+  case FileFormat::Unspecified:
+    return elf::executeObjcopyOnRawBinary(Config, In, Out);
+  }
+
+  llvm_unreachable("unsupported output format");
 }
 
 /// The function executeObjcopyOnBinary does the dispatch based on the format
@@ -238,10 +245,17 @@ static Error executeObjcopy(const CopyConfig &Config) {
   }
 
   typedef Error (*ProcessRawFn)(const CopyConfig &, MemoryBuffer &, Buffer &);
-  auto ProcessRaw = StringSwitch<ProcessRawFn>(Config.InputFormat)
-                        .Case("binary", executeObjcopyOnRawBinary)
-                        .Case("ihex", executeObjcopyOnIHex)
-                        .Default(nullptr);
+  ProcessRawFn ProcessRaw;
+  switch (Config.InputFormat) {
+  case FileFormat::Binary:
+    ProcessRaw = executeObjcopyOnRawBinary;
+    break;
+  case FileFormat::IHex:
+    ProcessRaw = executeObjcopyOnIHex;
+    break;
+  default:
+    ProcessRaw = nullptr;
+  }
 
   if (ProcessRaw) {
     auto BufOrErr = MemoryBuffer::getFileOrSTDIN(Config.InputFilename);

@@ -163,7 +163,8 @@ int llvm::libDriverMain(ArrayRef<const char *> ArgsArr) {
     return 1;
   }
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
-    llvm::errs() << "ignoring unknown argument: " << Arg->getSpelling() << "\n";
+    llvm::errs() << "ignoring unknown argument: " << Arg->getAsString(Args)
+                 << "\n";
 
   // Handle /help
   if (Args.hasArg(OPT_help)) {

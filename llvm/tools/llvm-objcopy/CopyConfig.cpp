@@ -277,8 +277,13 @@ static Expected<const MachineInfo &> getMachineInfo(StringRef Arch) {
   return Iter->getValue();
 }
 
+struct TargetInfo {
+  FileFormat Format;
+  MachineInfo Machine;
+};
+
 // FIXME: consolidate with the bfd parsing used by lld.
-static const StringMap<MachineInfo> OutputFormatMap{
+static const StringMap<MachineInfo> TargetMap{
     // Name, {EMachine, 64bit, LittleEndian}
     // x86
     {"elf32-i386", {ELF::EM_386, false, true}},
@@ -312,18 +317,28 @@ static const StringMap<MachineInfo> OutputFormatMap{
     {"elf32-sparcel", {ELF::EM_SPARC, false, true}},
 };
 
-static Expected<MachineInfo> getOutputFormatMachineInfo(StringRef Format) {
-  StringRef OriginalFormat = Format;
-  bool IsFreeBSD = Format.consume_back("-freebsd");
-  auto Iter = OutputFormatMap.find(Format);
-  if (Iter == std::end(OutputFormatMap))
+static Expected<TargetInfo>
+getOutputTargetInfoByTargetName(StringRef TargetName) {
+  StringRef OriginalTargetName = TargetName;
+  bool IsFreeBSD = TargetName.consume_back("-freebsd");
+  auto Iter = TargetMap.find(TargetName);
+  if (Iter == std::end(TargetMap))
     return createStringError(errc::invalid_argument,
                              "invalid output format: '%s'",
-                             OriginalFormat.str().c_str());
+                             OriginalTargetName.str().c_str());
   MachineInfo MI = Iter->getValue();
   if (IsFreeBSD)
     MI.OSABI = ELF::ELFOSABI_FREEBSD;
-  return {MI};
+
+  FileFormat Format;
+  if (TargetName.startswith("elf"))
+    Format = FileFormat::ELF;
+  else
+    // This should never happen because `TargetName` is valid (it certainly
+    // exists in the TargetMap).
+    llvm_unreachable("unknown target prefix");
+
+  return {TargetInfo{Format, MI}};
 }
 
 static Error addSymbolsFromFile(std::vector<NameOrRegex> &Symbols,
@@ -445,14 +460,23 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
         "--target cannot be used with --input-target or --output-target");
 
   bool UseRegex = InputArgs.hasArg(OBJCOPY_regex);
+  StringRef InputFormat, OutputFormat;
   if (InputArgs.hasArg(OBJCOPY_target)) {
-    Config.InputFormat = InputArgs.getLastArgValue(OBJCOPY_target);
-    Config.OutputFormat = InputArgs.getLastArgValue(OBJCOPY_target);
+    InputFormat = InputArgs.getLastArgValue(OBJCOPY_target);
+    OutputFormat = InputArgs.getLastArgValue(OBJCOPY_target);
   } else {
-    Config.InputFormat = InputArgs.getLastArgValue(OBJCOPY_input_target);
-    Config.OutputFormat = InputArgs.getLastArgValue(OBJCOPY_output_target);
+    InputFormat = InputArgs.getLastArgValue(OBJCOPY_input_target);
+    OutputFormat = InputArgs.getLastArgValue(OBJCOPY_output_target);
   }
-  if (Config.InputFormat == "binary") {
+
+  // FIXME:  Currently, we ignore the target for non-binary/ihex formats
+  // explicitly specified by -I option (e.g. -Ielf32-x86-64) and guess the
+  // format by llvm::object::createBinary regardless of the option value.
+  Config.InputFormat = StringSwitch<FileFormat>(InputFormat)
+                           .Case("binary", FileFormat::Binary)
+                           .Case("ihex", FileFormat::IHex)
+                           .Default(FileFormat::Unspecified);
+  if (Config.InputFormat == FileFormat::Binary) {
     auto BinaryArch = InputArgs.getLastArgValue(OBJCOPY_binary_architecture);
     if (BinaryArch.empty())
       return createStringError(
@@ -463,12 +487,17 @@ Expected<DriverConfig> parseObjcopyOptions(ArrayRef<const char *> ArgsArr) {
       return MI.takeError();
     Config.BinaryArch = *MI;
   }
-  if (!Config.OutputFormat.empty() && Config.OutputFormat != "binary" &&
-      Config.OutputFormat != "ihex") {
-    Expected<MachineInfo> MI = getOutputFormatMachineInfo(Config.OutputFormat);
-    if (!MI)
-      return MI.takeError();
-    Config.OutputArch = *MI;
+
+  Config.OutputFormat = StringSwitch<FileFormat>(OutputFormat)
+                            .Case("binary", FileFormat::Binary)
+                            .Case("ihex", FileFormat::IHex)
+                            .Default(FileFormat::Unspecified);
+  if (Config.OutputFormat == FileFormat::Unspecified && !OutputFormat.empty()) {
+    Expected<TargetInfo> Target = getOutputTargetInfoByTargetName(OutputFormat);
+    if (!Target)
+      return Target.takeError();
+    Config.OutputFormat = Target->Format;
+    Config.OutputArch = Target->Machine;
   }
 
   if (auto Arg = InputArgs.getLastArg(OBJCOPY_compress_debug_sections,
@@ -804,6 +833,8 @@ parseStripOptions(ArrayRef<const char *> ArgsArr,
                         STRIP_disable_deterministic_archives, /*default=*/true);
 
   Config.PreserveDates = InputArgs.hasArg(STRIP_preserve_dates);
+  Config.InputFormat = FileFormat::Unspecified;
+  Config.OutputFormat = FileFormat::Unspecified;
 
   DriverConfig DC;
   if (Positional.size() == 1) {

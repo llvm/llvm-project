@@ -150,10 +150,10 @@ them.
 
 .. option:: --add-symbol <name>=[<section>:]<value>[,<flags>]
 
- Add to the output a new symbol called ``<name>`` to the symbol table, in the
- section named ``<section>``, with value ``<value>``. If ``<section>`` is not
- specified, the symbol is added as an absolute symbol. The ``<flags>`` affect
- the symbol properties. Accepted values are:
+ Add a new symbol called ``<name>`` to the output symbol table, in the section
+ named ``<section>``, with value ``<value>``. If ``<section>`` is not specified,
+ the symbol is added as an absolute symbol. The ``<flags>`` affect the symbol
+ properties. Accepted values are:
 
  - `global` = the symbol will have global binding.
  - `local` = the symbol will have local binding.

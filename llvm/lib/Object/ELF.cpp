@@ -537,12 +537,15 @@ Expected<typename ELFT::DynRange> ELFFile<ELFT>::dynamicEntries() const {
   }
 
   if (Dyn.empty())
+    // TODO: this error is untested.
     return createError("invalid empty dynamic section");
 
   if (DynSecSize % sizeof(Elf_Dyn) != 0)
+    // TODO: this error is untested.
     return createError("malformed dynamic section");
 
   if (Dyn.back().d_tag != ELF::DT_NULL)
+    // TODO: this error is untested.
     return createError("dynamic sections must be DT_NULL terminated");
 
   return Dyn;
@@ -567,12 +570,14 @@ Expected<const uint8_t *> ELFFile<ELFT>::toMappedAddr(uint64_t VAddr) const {
                        });
 
   if (I == LoadSegments.begin())
-    return createError("Virtual address is not in any segment");
+    return createError("virtual address is not in any segment: 0x" +
+                       Twine::utohexstr(VAddr));
   --I;
   const Elf_Phdr &Phdr = **I;
   uint64_t Delta = VAddr - Phdr.p_vaddr;
   if (Delta >= Phdr.p_filesz)
-    return createError("Virtual address is not in any segment");
+    return createError("virtual address is not in any segment: 0x" +
+                       Twine::utohexstr(VAddr));
   return base() + Phdr.p_offset + Delta;
 }
 

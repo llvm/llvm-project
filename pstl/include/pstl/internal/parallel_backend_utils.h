@@ -15,6 +15,8 @@
 #include <cassert>
 #include "utils.h"
 
+#include "pstl_config.h"
+
 namespace __pstl
 {
 namespace __par_backend

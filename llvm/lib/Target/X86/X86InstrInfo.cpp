@@ -4568,7 +4568,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
       const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
       const TargetRegisterClass *RC = getRegClass(MI.getDesc(), OpNum, &RI, MF);
       unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
-      if (Size <= RCSize && 4 <= Align) {
+      if ((Size == 0 || Size >= 16) && RCSize >= 16 && 4 <= Align) {
         int PtrOffset = SrcIdx * 4;
         unsigned NewImm = (DstIdx << 4) | ZMask;
         unsigned NewOpCode =
@@ -4592,7 +4592,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
       const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
       const TargetRegisterClass *RC = getRegClass(MI.getDesc(), OpNum, &RI, MF);
       unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
-      if (Size <= RCSize && 8 <= Align) {
+      if ((Size == 0 || Size >= 16) && RCSize >= 16 && 8 <= Align) {
         unsigned NewOpCode =
             (MI.getOpcode() == X86::VMOVHLPSZrr) ? X86::VMOVLPSZ128rm :
             (MI.getOpcode() == X86::VMOVHLPSrr)  ? X86::VMOVLPSrm     :

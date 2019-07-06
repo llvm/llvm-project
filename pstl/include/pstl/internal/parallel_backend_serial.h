@@ -16,6 +16,8 @@
 #include <numeric>
 #include <utility>
 
+#include "pstl_config.h"
+
 namespace __pstl
 {
 namespace __serial

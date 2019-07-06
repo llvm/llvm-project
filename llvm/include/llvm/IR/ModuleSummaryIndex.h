@@ -119,7 +119,7 @@ class GlobalValueSummary;
 
 using GlobalValueSummaryList = std::vector<std::unique_ptr<GlobalValueSummary>>;
 
-struct GlobalValueSummaryInfo {
+struct LLVM_ALIGNAS(8) GlobalValueSummaryInfo {
   union NameOrGV {
     NameOrGV(bool HaveGVs) {
       if (HaveGVs)
@@ -162,7 +162,8 @@ using GlobalValueSummaryMapTy =
 /// Struct that holds a reference to a particular GUID in a global value
 /// summary.
 struct ValueInfo {
-  PointerIntPair<const GlobalValueSummaryMapTy::value_type *, 2, int>
+  enum Flags { HaveGV = 1, ReadOnly = 2, WriteOnly = 4 };
+  PointerIntPair<const GlobalValueSummaryMapTy::value_type *, 3, int>
       RefAndFlags;
 
   ValueInfo() = default;
@@ -188,9 +189,33 @@ struct ValueInfo {
                      : getRef()->second.U.Name;
   }
 
-  bool haveGVs() const { return RefAndFlags.getInt() & 0x1; }
-  bool isReadOnly() const { return RefAndFlags.getInt() & 0x2; }
-  void setReadOnly() { RefAndFlags.setInt(RefAndFlags.getInt() | 0x2); }
+  bool haveGVs() const { return RefAndFlags.getInt() & HaveGV; }
+  bool isReadOnly() const {
+    assert(isValidAccessSpecifier());
+    return RefAndFlags.getInt() & ReadOnly;
+  }
+  bool isWriteOnly() const {
+    assert(isValidAccessSpecifier());
+    return RefAndFlags.getInt() & WriteOnly;
+  }
+  unsigned getAccessSpecifier() const {
+    assert(isValidAccessSpecifier());
+    return RefAndFlags.getInt() & (ReadOnly | WriteOnly);
+  }
+  bool isValidAccessSpecifier() const {
+    unsigned BadAccessMask = ReadOnly | WriteOnly;
+    return (RefAndFlags.getInt() & BadAccessMask) != BadAccessMask;
+  }
+  void setReadOnly() {
+    // We expect ro/wo attribute to set only once during
+    // ValueInfo lifetime.
+    assert(getAccessSpecifier() == 0);
+    RefAndFlags.setInt(RefAndFlags.getInt() | ReadOnly);
+  }
+  void setWriteOnly() {
+    assert(getAccessSpecifier() == 0);
+    RefAndFlags.setInt(RefAndFlags.getInt() | WriteOnly);
+  }
 
   const GlobalValueSummaryMapTy::value_type *getRef() const {
     return RefAndFlags.getPointer();
@@ -584,8 +609,8 @@ public:
           std::move(TypeTestAssumeConstVCalls),
           std::move(TypeCheckedLoadConstVCalls)});
   }
-  // Gets the number of immutable refs in RefEdgeList
-  unsigned immutableRefCount() const;
+  // Gets the number of readonly and writeonly refs in RefEdgeList
+  std::pair<unsigned, unsigned> specialRefCounts() const;
 
   /// Check if this is a function summary.
   static bool classof(const GlobalValueSummary *GVS) {
@@ -713,9 +738,12 @@ using VTableFuncList = std::vector<VirtFuncOffset>;
 /// Global variable summary information to aid decisions and
 /// implementation of importing.
 ///
-/// Global variable summary has extra flag, telling if it is
-/// modified during the program run or not. This affects ThinLTO
-/// internalization
+/// Global variable summary has two extra flag, telling if it is
+/// readonly or writeonly. Both readonly and writeonly variables
+/// can be optimized in the backed: readonly variables can be
+/// const-folded, while writeonly vars can be completely eliminated
+/// together with corresponding stores. We let both things happen
+/// by means of internalizing such variables after ThinLTO import.
 class GlobalVarSummary : public GlobalValueSummary {
 private:
   /// For vtable definitions this holds the list of functions and
@@ -724,9 +752,14 @@ private:
 
 public:
   struct GVarFlags {
-    GVarFlags(bool ReadOnly = false) : ReadOnly(ReadOnly) {}
+    GVarFlags(bool ReadOnly, bool WriteOnly)
+        : MaybeReadOnly(ReadOnly), MaybeWriteOnly(WriteOnly) {}
 
-    unsigned ReadOnly : 1;
+    // In permodule summaries both MaybeReadOnly and MaybeWriteOnly
+    // bits are set, because attribute propagation occurs later on
+    // thin link phase.
+    unsigned MaybeReadOnly : 1;
+    unsigned MaybeWriteOnly : 1;
   } VarFlags;
 
   GlobalVarSummary(GVFlags Flags, GVarFlags VarFlags,
@@ -740,8 +773,10 @@ public:
   }
 
   GVarFlags varflags() const { return VarFlags; }
-  void setReadOnly(bool RO) { VarFlags.ReadOnly = RO; }
-  bool isReadOnly() const { return VarFlags.ReadOnly; }
+  void setReadOnly(bool RO) { VarFlags.MaybeReadOnly = RO; }
+  void setWriteOnly(bool WO) { VarFlags.MaybeWriteOnly = WO; }
+  bool maybeReadOnly() const { return VarFlags.MaybeReadOnly; }
+  bool maybeWriteOnly() const { return VarFlags.MaybeWriteOnly; }
 
   void setVTableFuncs(VTableFuncList Funcs) {
     assert(!VTableFuncs);
@@ -1312,7 +1347,7 @@ public:
   void dumpSCCs(raw_ostream &OS);
 
   /// Analyze index and detect unmodified globals
-  void propagateConstants(const DenseSet<GlobalValue::GUID> &PreservedSymbols);
+  void propagateAttributes(const DenseSet<GlobalValue::GUID> &PreservedSymbols);
 };
 
 /// GraphTraits definition to build SCC for the index

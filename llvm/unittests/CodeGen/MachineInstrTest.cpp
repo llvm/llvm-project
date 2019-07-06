@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
@@ -271,6 +272,38 @@ TEST(MachineInstrPrintingTest, DebugLocPrinting) {
       StringRef(OS.str()).startswith("$noreg = UNKNOWN debug-location "));
   ASSERT_TRUE(
       StringRef(OS.str()).endswith("filename:1:5"));
+}
+
+TEST(MachineInstrSpan, DistanceBegin) {
+  auto MF = createMachineFunction();
+  auto MBB = MF->CreateMachineBasicBlock();
+
+  MCInstrDesc MCID = {0, 0,       0,       0,       0, 0,
+                      0, nullptr, nullptr, nullptr, 0, nullptr};
+
+  auto MII = MBB->begin();
+  MachineInstrSpan MIS(MII, MBB);
+  ASSERT_TRUE(MIS.empty());
+
+  auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MII, MI);
+  ASSERT_TRUE(std::distance(MIS.begin(), MII) == 1);
+}
+
+TEST(MachineInstrSpan, DistanceEnd) {
+  auto MF = createMachineFunction();
+  auto MBB = MF->CreateMachineBasicBlock();
+
+  MCInstrDesc MCID = {0, 0,       0,       0,       0, 0,
+                      0, nullptr, nullptr, nullptr, 0, nullptr};
+
+  auto MII = MBB->end();
+  MachineInstrSpan MIS(MII, MBB);
+  ASSERT_TRUE(MIS.empty());
+
+  auto MI = MF->CreateMachineInstr(MCID, DebugLoc());
+  MBB->insert(MII, MI);
+  ASSERT_TRUE(std::distance(MIS.begin(), MII) == 1);
 }
 
 static_assert(is_trivially_copyable<MCOperand>::value, "trivially copyable");

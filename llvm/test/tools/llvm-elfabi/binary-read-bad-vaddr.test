@@ -47,4 +47,4 @@ ProgramHeaders:
     Sections:
       - Section: .dynamic
 
-# CHECK: Virtual address is not in any segment when locating .dynstr section contents
+# CHECK: virtual address is not in any segment: 0x260 when locating .dynstr section contents

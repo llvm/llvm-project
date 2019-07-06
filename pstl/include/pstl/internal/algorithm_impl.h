@@ -18,9 +18,10 @@
 
 #include "execution_impl.h"
 #include "memory_impl.h"
-#include "parallel_backend_utils.h"
 #include "parallel_backend.h"
+#include "parallel_backend_utils.h"
 #include "parallel_impl.h"
+#include "pstl_config.h"
 #include "unseq_backend_simd.h"
 
 namespace __pstl

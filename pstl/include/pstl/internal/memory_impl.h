@@ -12,6 +12,7 @@
 
 #include <iterator>
 
+#include "pstl_config.h"
 #include "unseq_backend_simd.h"
 
 namespace __pstl

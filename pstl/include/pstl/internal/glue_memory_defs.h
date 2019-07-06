@@ -11,6 +11,7 @@
 #define _PSTL_GLUE_MEMORY_DEFS_H
 
 #include "execution_defs.h"
+#include "pstl_config.h"
 
 namespace std
 {

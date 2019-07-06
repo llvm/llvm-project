@@ -153,6 +153,9 @@ protected:
   /// \sa removeInvalidation
   llvm::SmallSet<InvalidationRecord, 4> Invalidations;
 
+  /// Conditions we're already tracking.
+  llvm::SmallSet<const ExplodedNode *, 4> TrackedConditions;
+
 private:
   // Used internally by BugReporter.
   Symbols &getInterestingSymbols();
@@ -348,6 +351,13 @@ public:
   /// Iterators through the custom diagnostic visitors.
   visitor_iterator visitor_begin() { return Callbacks.begin(); }
   visitor_iterator visitor_end() { return Callbacks.end(); }
+
+  /// Notes that the condition of the CFGBlock associated with \p Cond is
+  /// being tracked.
+  /// \returns false if the condition is already being tracked.
+  bool addTrackedCondition(const ExplodedNode *Cond) {
+    return TrackedConditions.insert(Cond).second;
+  }
 
   /// Profile to identify equivalent bug reports for error report coalescing.
   /// Reports are uniqued to ensure that we do not emit multiple diagnostics

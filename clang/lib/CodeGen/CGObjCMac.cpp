@@ -4941,6 +4941,8 @@ std::string CGObjCCommonMac::GetSectionName(StringRef Section,
     llvm::report_fatal_error(
         "Objective-C support is unimplemented for object file format.");
   }
+
+  llvm_unreachable("Unhandled llvm::Triple::ObjectFormatType enum");
 }
 
 /// EmitImageInfo - Emit the image info marker used to encode some module
