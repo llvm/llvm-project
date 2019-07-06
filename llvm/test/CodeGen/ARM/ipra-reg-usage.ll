@@ -11,5 +11,8 @@ define void @foo()#0 {
   call void @bar2()
   ret void
 }
+
+@llvm.used = appending global [1 x i8*] [i8* bitcast (void ()* @foo to i8*)]
+
 declare void @bar2()
 attributes #0 = {nounwind}

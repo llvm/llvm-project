@@ -935,7 +935,14 @@ RegisterCoalescer::removeCopyByCommutingDef(const CoalescerPair &CP,
     const SlotIndexes &Indexes = *LIS->getSlotIndexes();
     for (LiveInterval::SubRange &SA : IntA.subranges()) {
       VNInfo *ASubValNo = SA.getVNInfoAt(AIdx);
-      assert(ASubValNo != nullptr);
+      // Even if we are dealing with a full copy, some lanes can
+      // still be undefined.
+      // E.g.,
+      // undef A.subLow = ...
+      // B = COPY A <== A.subHigh is undefined here and does
+      //                not have a value number.
+      if (!ASubValNo)
+        continue;
       MaskA |= SA.LaneMask;
 
       IntB.refineSubRanges(

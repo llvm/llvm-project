@@ -46,8 +46,8 @@ define void @t3(<2 x double>* %a0) {
 ; X32-SSE2-LABEL: t3:
 ; X32-SSE2:       # %bb.0: # %bb
 ; X32-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-SSE2-NEXT:    movupd (%eax), %xmm0
-; X32-SSE2-NEXT:    movhpd %xmm0, (%eax)
+; X32-SSE2-NEXT:    movups (%eax), %xmm0
+; X32-SSE2-NEXT:    movhps %xmm0, (%eax)
 ; X32-SSE2-NEXT:    retl
 ;
 ; X64-SSSE3-LABEL: t3:

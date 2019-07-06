@@ -910,11 +910,11 @@ class MachineInstrSpan {
   MachineBasicBlock::iterator I, B, E;
 
 public:
-  MachineInstrSpan(MachineBasicBlock::iterator I)
-    : MBB(*I->getParent()),
-      I(I),
-      B(I == MBB.begin() ? MBB.end() : std::prev(I)),
-      E(std::next(I)) {}
+  MachineInstrSpan(MachineBasicBlock::iterator I, MachineBasicBlock *BB)
+      : MBB(*BB), I(I), B(I == MBB.begin() ? MBB.end() : std::prev(I)),
+        E(std::next(I)) {
+    assert(I == BB->end() || I->getParent() == BB);
+  }
 
   MachineBasicBlock::iterator begin() {
     return B == MBB.end() ? MBB.begin() : std::next(B);

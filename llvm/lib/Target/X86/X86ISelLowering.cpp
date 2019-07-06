@@ -7237,11 +7237,11 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, unsigned NonZeros,
     }
 
     if (NextIsNonZero) {
-      SDValue NextElt;
+      SDValue NextElt = Op.getOperand(i + 1);
       if (i == 0 && NumZero)
-        NextElt = DAG.getZExtOrTrunc(Op.getOperand(i+1), dl, MVT::i32);
+        NextElt = DAG.getZExtOrTrunc(NextElt, dl, MVT::i32);
       else
-        NextElt = DAG.getAnyExtOrTrunc(Op.getOperand(i+1), dl, MVT::i32);
+        NextElt = DAG.getAnyExtOrTrunc(NextElt, dl, MVT::i32);
       NextElt = DAG.getNode(ISD::SHL, dl, MVT::i32, NextElt,
                             DAG.getConstant(8, dl, MVT::i8));
       if (ThisIsNonZero)
@@ -33908,9 +33908,9 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
     // If we reuse the shift amount just for sse shift amounts then we know that
     // only the bottom 64-bits are only ever used.
     bool AssumeSingleUse = llvm::all_of(Amt->uses(), [&Amt](SDNode *Use) {
-      unsigned Opc = Use->getOpcode();
-      return (Opc == X86ISD::VSHL || Opc == X86ISD::VSRL ||
-              Opc == X86ISD::VSRA) &&
+      unsigned UseOpc = Use->getOpcode();
+      return (UseOpc == X86ISD::VSHL || UseOpc == X86ISD::VSRL ||
+              UseOpc == X86ISD::VSRA) &&
              Use->getOperand(0) != Amt;
     });
 

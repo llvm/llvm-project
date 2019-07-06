@@ -92,7 +92,7 @@ static void insertCSRSaves(MachineBasicBlock &SaveBlock,
       // Insert the spill to the stack frame.
       unsigned Reg = CS.getReg();
 
-      MachineInstrSpan MIS(I);
+      MachineInstrSpan MIS(I, &SaveBlock);
       const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(Reg);
 
       TII.storeRegToStackSlot(SaveBlock, I, Reg, true, CS.getFrameIdx(), RC,

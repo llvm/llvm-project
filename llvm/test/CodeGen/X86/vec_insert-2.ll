@@ -41,7 +41,7 @@ define <4 x i32> @t2(i32 %s, <4 x i32> %tmp) nounwind {
 define <2 x double> @t3(double %s, <2 x double> %tmp) nounwind {
 ; X32-LABEL: t3:
 ; X32:       # %bb.0:
-; X32-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; X32-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: t3:

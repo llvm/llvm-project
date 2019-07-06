@@ -45,15 +45,15 @@ define <2 x double> @load_v2f64_v2i64(<2 x i64> %trigger, <2 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.load
-; SSE2-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE2-NEXT:  LBB1_2: ## %else
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.load1
-; SSE2-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB1_4: ## %else2
-; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: load_v2f64_v2i64:
@@ -64,15 +64,15 @@ define <2 x double> @load_v2f64_v2i64(<2 x i64> %trigger, <2 x double>* %addr, <
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_2
 ; SSE42-NEXT:  ## %bb.1: ## %cond.load
-; SSE42-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE42-NEXT:  LBB1_2: ## %else
 ; SSE42-NEXT:    pextrb $8, %xmm2, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_4
 ; SSE42-NEXT:  ## %bb.3: ## %cond.load1
-; SSE42-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB1_4: ## %else2
-; SSE42-NEXT:    movapd %xmm1, %xmm0
+; SSE42-NEXT:    movaps %xmm1, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: load_v2f64_v2i64:
@@ -114,13 +114,13 @@ define <4 x double> @load_v4f64_v4i32(<4 x i32> %trigger, <4 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB2_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.load
-; SSE2-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE2-NEXT:  LBB2_2: ## %else
 ; SSE2-NEXT:    pextrw $2, %xmm3, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB2_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.load1
-; SSE2-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB2_4: ## %else2
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    pcmpeqd %xmm3, %xmm0
@@ -128,16 +128,16 @@ define <4 x double> @load_v4f64_v4i32(<4 x i32> %trigger, <4 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB2_6
 ; SSE2-NEXT:  ## %bb.5: ## %cond.load4
-; SSE2-NEXT:    movlpd {{.*#+}} xmm2 = mem[0],xmm2[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm2 = mem[0,1],xmm2[2,3]
 ; SSE2-NEXT:  LBB2_6: ## %else5
 ; SSE2-NEXT:    pextrw $6, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB2_8
 ; SSE2-NEXT:  ## %bb.7: ## %cond.load7
-; SSE2-NEXT:    movhpd {{.*#+}} xmm2 = xmm2[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB2_8: ## %else8
-; SSE2-NEXT:    movapd %xmm1, %xmm0
-; SSE2-NEXT:    movapd %xmm2, %xmm1
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm2, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: load_v4f64_v4i32:
@@ -148,13 +148,13 @@ define <4 x double> @load_v4f64_v4i32(<4 x i32> %trigger, <4 x double>* %addr, <
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB2_2
 ; SSE42-NEXT:  ## %bb.1: ## %cond.load
-; SSE42-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE42-NEXT:  LBB2_2: ## %else
 ; SSE42-NEXT:    pextrb $4, %xmm3, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB2_4
 ; SSE42-NEXT:  ## %bb.3: ## %cond.load1
-; SSE42-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB2_4: ## %else2
 ; SSE42-NEXT:    pxor %xmm3, %xmm3
 ; SSE42-NEXT:    pcmpeqd %xmm3, %xmm0
@@ -162,16 +162,16 @@ define <4 x double> @load_v4f64_v4i32(<4 x i32> %trigger, <4 x double>* %addr, <
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB2_6
 ; SSE42-NEXT:  ## %bb.5: ## %cond.load4
-; SSE42-NEXT:    movlpd {{.*#+}} xmm2 = mem[0],xmm2[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm2 = mem[0,1],xmm2[2,3]
 ; SSE42-NEXT:  LBB2_6: ## %else5
 ; SSE42-NEXT:    pextrb $12, %xmm0, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB2_8
 ; SSE42-NEXT:  ## %bb.7: ## %cond.load7
-; SSE42-NEXT:    movhpd {{.*#+}} xmm2 = xmm2[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB2_8: ## %else8
-; SSE42-NEXT:    movapd %xmm1, %xmm0
-; SSE42-NEXT:    movapd %xmm2, %xmm1
+; SSE42-NEXT:    movaps %xmm1, %xmm0
+; SSE42-NEXT:    movaps %xmm2, %xmm1
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: load_v4f64_v4i32:
@@ -225,17 +225,17 @@ define <4 x double> @load_v4f64_v4i32_zero(<4 x i32> %trigger, <4 x double>* %ad
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm3
 ; SSE2-NEXT:    movd %xmm3, %eax
 ; SSE2-NEXT:    testb $1, %al
-; SSE2-NEXT:    xorpd %xmm1, %xmm1
+; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:    je LBB3_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.load
 ; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    xorpd %xmm1, %xmm1
+; SSE2-NEXT:    xorps %xmm1, %xmm1
 ; SSE2-NEXT:  LBB3_2: ## %else
 ; SSE2-NEXT:    pextrw $2, %xmm3, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB3_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.load1
-; SSE2-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB3_4: ## %else2
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    pcmpeqd %xmm3, %xmm2
@@ -243,13 +243,13 @@ define <4 x double> @load_v4f64_v4i32_zero(<4 x i32> %trigger, <4 x double>* %ad
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB3_6
 ; SSE2-NEXT:  ## %bb.5: ## %cond.load4
-; SSE2-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE2-NEXT:  LBB3_6: ## %else5
 ; SSE2-NEXT:    pextrw $6, %xmm2, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB3_8
 ; SSE2-NEXT:  ## %bb.7: ## %cond.load7
-; SSE2-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB3_8: ## %else8
 ; SSE2-NEXT:    retq
 ;
@@ -261,17 +261,17 @@ define <4 x double> @load_v4f64_v4i32_zero(<4 x i32> %trigger, <4 x double>* %ad
 ; SSE42-NEXT:    pcmpeqd %xmm0, %xmm3
 ; SSE42-NEXT:    pextrb $0, %xmm3, %eax
 ; SSE42-NEXT:    testb $1, %al
-; SSE42-NEXT:    xorpd %xmm1, %xmm1
+; SSE42-NEXT:    xorps %xmm1, %xmm1
 ; SSE42-NEXT:    je LBB3_2
 ; SSE42-NEXT:  ## %bb.1: ## %cond.load
 ; SSE42-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; SSE42-NEXT:    xorpd %xmm1, %xmm1
+; SSE42-NEXT:    xorps %xmm1, %xmm1
 ; SSE42-NEXT:  LBB3_2: ## %else
 ; SSE42-NEXT:    pextrb $4, %xmm3, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB3_4
 ; SSE42-NEXT:  ## %bb.3: ## %cond.load1
-; SSE42-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB3_4: ## %else2
 ; SSE42-NEXT:    pxor %xmm3, %xmm3
 ; SSE42-NEXT:    pcmpeqd %xmm3, %xmm2
@@ -279,13 +279,13 @@ define <4 x double> @load_v4f64_v4i32_zero(<4 x i32> %trigger, <4 x double>* %ad
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB3_6
 ; SSE42-NEXT:  ## %bb.5: ## %cond.load4
-; SSE42-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE42-NEXT:  LBB3_6: ## %else5
 ; SSE42-NEXT:    pextrb $12, %xmm2, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB3_8
 ; SSE42-NEXT:  ## %bb.7: ## %cond.load7
-; SSE42-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB3_8: ## %else8
 ; SSE42-NEXT:    retq
 ;
@@ -339,13 +339,13 @@ define <4 x double> @load_v4f64_v4i64(<4 x i64> %trigger, <4 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB4_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.load
-; SSE2-NEXT:    movlpd {{.*#+}} xmm2 = mem[0],xmm2[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm2 = mem[0,1],xmm2[2,3]
 ; SSE2-NEXT:  LBB4_2: ## %else
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB4_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.load1
-; SSE2-NEXT:    movhpd {{.*#+}} xmm2 = xmm2[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB4_4: ## %else2
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
@@ -355,16 +355,16 @@ define <4 x double> @load_v4f64_v4i64(<4 x i64> %trigger, <4 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB4_6
 ; SSE2-NEXT:  ## %bb.5: ## %cond.load4
-; SSE2-NEXT:    movlpd {{.*#+}} xmm3 = mem[0],xmm3[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm3 = mem[0,1],xmm3[2,3]
 ; SSE2-NEXT:  LBB4_6: ## %else5
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB4_8
 ; SSE2-NEXT:  ## %bb.7: ## %cond.load7
-; SSE2-NEXT:    movhpd {{.*#+}} xmm3 = xmm3[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm3 = xmm3[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB4_8: ## %else8
-; SSE2-NEXT:    movapd %xmm2, %xmm0
-; SSE2-NEXT:    movapd %xmm3, %xmm1
+; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    movaps %xmm3, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: load_v4f64_v4i64:
@@ -375,13 +375,13 @@ define <4 x double> @load_v4f64_v4i64(<4 x i64> %trigger, <4 x double>* %addr, <
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB4_2
 ; SSE42-NEXT:  ## %bb.1: ## %cond.load
-; SSE42-NEXT:    movlpd {{.*#+}} xmm2 = mem[0],xmm2[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm2 = mem[0,1],xmm2[2,3]
 ; SSE42-NEXT:  LBB4_2: ## %else
 ; SSE42-NEXT:    pextrb $8, %xmm4, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB4_4
 ; SSE42-NEXT:  ## %bb.3: ## %cond.load1
-; SSE42-NEXT:    movhpd {{.*#+}} xmm2 = xmm2[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB4_4: ## %else2
 ; SSE42-NEXT:    pxor %xmm0, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm0, %xmm1
@@ -389,16 +389,16 @@ define <4 x double> @load_v4f64_v4i64(<4 x i64> %trigger, <4 x double>* %addr, <
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB4_6
 ; SSE42-NEXT:  ## %bb.5: ## %cond.load4
-; SSE42-NEXT:    movlpd {{.*#+}} xmm3 = mem[0],xmm3[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm3 = mem[0,1],xmm3[2,3]
 ; SSE42-NEXT:  LBB4_6: ## %else5
 ; SSE42-NEXT:    pextrb $8, %xmm1, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB4_8
 ; SSE42-NEXT:  ## %bb.7: ## %cond.load7
-; SSE42-NEXT:    movhpd {{.*#+}} xmm3 = xmm3[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm3 = xmm3[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB4_8: ## %else8
-; SSE42-NEXT:    movapd %xmm2, %xmm0
-; SSE42-NEXT:    movapd %xmm3, %xmm1
+; SSE42-NEXT:    movaps %xmm2, %xmm0
+; SSE42-NEXT:    movaps %xmm3, %xmm1
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: load_v4f64_v4i64:
@@ -450,13 +450,13 @@ define <8 x double> @load_v8f64_v8i16(<8 x i16> %trigger, <8 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB5_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.load
-; SSE2-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE2-NEXT:  LBB5_2: ## %else
 ; SSE2-NEXT:    shrl $16, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB5_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.load1
-; SSE2-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB5_4: ## %else2
 ; SSE2-NEXT:    pxor %xmm5, %xmm5
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm5
@@ -464,13 +464,13 @@ define <8 x double> @load_v8f64_v8i16(<8 x i16> %trigger, <8 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB5_6
 ; SSE2-NEXT:  ## %bb.5: ## %cond.load4
-; SSE2-NEXT:    movlpd {{.*#+}} xmm2 = mem[0],xmm2[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm2 = mem[0,1],xmm2[2,3]
 ; SSE2-NEXT:  LBB5_6: ## %else5
 ; SSE2-NEXT:    pextrw $3, %xmm5, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB5_8
 ; SSE2-NEXT:  ## %bb.7: ## %cond.load7
-; SSE2-NEXT:    movhpd {{.*#+}} xmm2 = xmm2[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB5_8: ## %else8
 ; SSE2-NEXT:    pxor %xmm5, %xmm5
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm5
@@ -478,13 +478,13 @@ define <8 x double> @load_v8f64_v8i16(<8 x i16> %trigger, <8 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB5_10
 ; SSE2-NEXT:  ## %bb.9: ## %cond.load10
-; SSE2-NEXT:    movlpd {{.*#+}} xmm3 = mem[0],xmm3[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm3 = mem[0,1],xmm3[2,3]
 ; SSE2-NEXT:  LBB5_10: ## %else11
 ; SSE2-NEXT:    pextrw $5, %xmm5, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB5_12
 ; SSE2-NEXT:  ## %bb.11: ## %cond.load13
-; SSE2-NEXT:    movhpd {{.*#+}} xmm3 = xmm3[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm3 = xmm3[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB5_12: ## %else14
 ; SSE2-NEXT:    pxor %xmm5, %xmm5
 ; SSE2-NEXT:    pcmpeqw %xmm5, %xmm0
@@ -492,18 +492,18 @@ define <8 x double> @load_v8f64_v8i16(<8 x i16> %trigger, <8 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB5_14
 ; SSE2-NEXT:  ## %bb.13: ## %cond.load16
-; SSE2-NEXT:    movlpd {{.*#+}} xmm4 = mem[0],xmm4[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm4 = mem[0,1],xmm4[2,3]
 ; SSE2-NEXT:  LBB5_14: ## %else17
 ; SSE2-NEXT:    pextrw $7, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB5_16
 ; SSE2-NEXT:  ## %bb.15: ## %cond.load19
-; SSE2-NEXT:    movhpd {{.*#+}} xmm4 = xmm4[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm4 = xmm4[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB5_16: ## %else20
-; SSE2-NEXT:    movapd %xmm1, %xmm0
-; SSE2-NEXT:    movapd %xmm2, %xmm1
-; SSE2-NEXT:    movapd %xmm3, %xmm2
-; SSE2-NEXT:    movapd %xmm4, %xmm3
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm2, %xmm1
+; SSE2-NEXT:    movaps %xmm3, %xmm2
+; SSE2-NEXT:    movaps %xmm4, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: load_v8f64_v8i16:
@@ -514,13 +514,13 @@ define <8 x double> @load_v8f64_v8i16(<8 x i16> %trigger, <8 x double>* %addr, <
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB5_2
 ; SSE42-NEXT:  ## %bb.1: ## %cond.load
-; SSE42-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE42-NEXT:  LBB5_2: ## %else
 ; SSE42-NEXT:    pextrb $2, %xmm5, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB5_4
 ; SSE42-NEXT:  ## %bb.3: ## %cond.load1
-; SSE42-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB5_4: ## %else2
 ; SSE42-NEXT:    pxor %xmm5, %xmm5
 ; SSE42-NEXT:    pcmpeqw %xmm0, %xmm5
@@ -528,13 +528,13 @@ define <8 x double> @load_v8f64_v8i16(<8 x i16> %trigger, <8 x double>* %addr, <
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB5_6
 ; SSE42-NEXT:  ## %bb.5: ## %cond.load4
-; SSE42-NEXT:    movlpd {{.*#+}} xmm2 = mem[0],xmm2[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm2 = mem[0,1],xmm2[2,3]
 ; SSE42-NEXT:  LBB5_6: ## %else5
 ; SSE42-NEXT:    pextrb $6, %xmm5, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB5_8
 ; SSE42-NEXT:  ## %bb.7: ## %cond.load7
-; SSE42-NEXT:    movhpd {{.*#+}} xmm2 = xmm2[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB5_8: ## %else8
 ; SSE42-NEXT:    pxor %xmm5, %xmm5
 ; SSE42-NEXT:    pcmpeqw %xmm0, %xmm5
@@ -542,13 +542,13 @@ define <8 x double> @load_v8f64_v8i16(<8 x i16> %trigger, <8 x double>* %addr, <
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB5_10
 ; SSE42-NEXT:  ## %bb.9: ## %cond.load10
-; SSE42-NEXT:    movlpd {{.*#+}} xmm3 = mem[0],xmm3[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm3 = mem[0,1],xmm3[2,3]
 ; SSE42-NEXT:  LBB5_10: ## %else11
 ; SSE42-NEXT:    pextrb $10, %xmm5, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB5_12
 ; SSE42-NEXT:  ## %bb.11: ## %cond.load13
-; SSE42-NEXT:    movhpd {{.*#+}} xmm3 = xmm3[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm3 = xmm3[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB5_12: ## %else14
 ; SSE42-NEXT:    pxor %xmm5, %xmm5
 ; SSE42-NEXT:    pcmpeqw %xmm5, %xmm0
@@ -556,18 +556,18 @@ define <8 x double> @load_v8f64_v8i16(<8 x i16> %trigger, <8 x double>* %addr, <
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB5_14
 ; SSE42-NEXT:  ## %bb.13: ## %cond.load16
-; SSE42-NEXT:    movlpd {{.*#+}} xmm4 = mem[0],xmm4[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm4 = mem[0,1],xmm4[2,3]
 ; SSE42-NEXT:  LBB5_14: ## %else17
 ; SSE42-NEXT:    pextrb $14, %xmm0, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB5_16
 ; SSE42-NEXT:  ## %bb.15: ## %cond.load19
-; SSE42-NEXT:    movhpd {{.*#+}} xmm4 = xmm4[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm4 = xmm4[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB5_16: ## %else20
-; SSE42-NEXT:    movapd %xmm1, %xmm0
-; SSE42-NEXT:    movapd %xmm2, %xmm1
-; SSE42-NEXT:    movapd %xmm3, %xmm2
-; SSE42-NEXT:    movapd %xmm4, %xmm3
+; SSE42-NEXT:    movaps %xmm1, %xmm0
+; SSE42-NEXT:    movaps %xmm2, %xmm1
+; SSE42-NEXT:    movaps %xmm3, %xmm2
+; SSE42-NEXT:    movaps %xmm4, %xmm3
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: load_v8f64_v8i16:
@@ -646,7 +646,7 @@ define <8 x double> @load_v8f64_v8i64(<8 x i64> %trigger, <8 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB6_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.load
-; SSE2-NEXT:    movlpd {{.*#+}} xmm4 = mem[0],xmm4[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm4 = mem[0,1],xmm4[2,3]
 ; SSE2-NEXT:  LBB6_2: ## %else
 ; SSE2-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero
 ; SSE2-NEXT:    movd %xmm0, %eax
@@ -654,7 +654,7 @@ define <8 x double> @load_v8f64_v8i64(<8 x i64> %trigger, <8 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB6_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.load1
-; SSE2-NEXT:    movhpd {{.*#+}} xmm4 = xmm4[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm4 = xmm4[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB6_4: ## %else2
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
@@ -664,13 +664,13 @@ define <8 x double> @load_v8f64_v8i64(<8 x i64> %trigger, <8 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB6_6
 ; SSE2-NEXT:  ## %bb.5: ## %cond.load4
-; SSE2-NEXT:    movlpd {{.*#+}} xmm5 = mem[0],xmm5[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm5 = mem[0,1],xmm5[2,3]
 ; SSE2-NEXT:  LBB6_6: ## %else5
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB6_8
 ; SSE2-NEXT:  ## %bb.7: ## %cond.load7
-; SSE2-NEXT:    movhpd {{.*#+}} xmm5 = xmm5[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm5 = xmm5[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB6_8: ## %else8
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm2
@@ -680,13 +680,13 @@ define <8 x double> @load_v8f64_v8i64(<8 x i64> %trigger, <8 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB6_10
 ; SSE2-NEXT:  ## %bb.9: ## %cond.load10
-; SSE2-NEXT:    movlpd {{.*#+}} xmm6 = mem[0],xmm6[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm6 = mem[0,1],xmm6[2,3]
 ; SSE2-NEXT:  LBB6_10: ## %else11
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB6_12
 ; SSE2-NEXT:  ## %bb.11: ## %cond.load13
-; SSE2-NEXT:    movhpd {{.*#+}} xmm6 = xmm6[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm6 = xmm6[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB6_12: ## %else14
 ; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm3
@@ -696,18 +696,18 @@ define <8 x double> @load_v8f64_v8i64(<8 x i64> %trigger, <8 x double>* %addr, <
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB6_14
 ; SSE2-NEXT:  ## %bb.13: ## %cond.load16
-; SSE2-NEXT:    movlpd {{.*#+}} xmm8 = mem[0],xmm8[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm8 = mem[0,1],xmm8[2,3]
 ; SSE2-NEXT:  LBB6_14: ## %else17
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB6_16
 ; SSE2-NEXT:  ## %bb.15: ## %cond.load19
-; SSE2-NEXT:    movhpd {{.*#+}} xmm8 = xmm8[0],mem[0]
+; SSE2-NEXT:    movhps {{.*#+}} xmm8 = xmm8[0,1],mem[0,1]
 ; SSE2-NEXT:  LBB6_16: ## %else20
-; SSE2-NEXT:    movapd %xmm4, %xmm0
-; SSE2-NEXT:    movapd %xmm5, %xmm1
-; SSE2-NEXT:    movapd %xmm6, %xmm2
-; SSE2-NEXT:    movapd %xmm8, %xmm3
+; SSE2-NEXT:    movaps %xmm4, %xmm0
+; SSE2-NEXT:    movaps %xmm5, %xmm1
+; SSE2-NEXT:    movaps %xmm6, %xmm2
+; SSE2-NEXT:    movaps %xmm8, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: load_v8f64_v8i64:
@@ -719,13 +719,13 @@ define <8 x double> @load_v8f64_v8i64(<8 x i64> %trigger, <8 x double>* %addr, <
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB6_2
 ; SSE42-NEXT:  ## %bb.1: ## %cond.load
-; SSE42-NEXT:    movlpd {{.*#+}} xmm4 = mem[0],xmm4[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm4 = mem[0,1],xmm4[2,3]
 ; SSE42-NEXT:  LBB6_2: ## %else
 ; SSE42-NEXT:    pextrb $8, %xmm7, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB6_4
 ; SSE42-NEXT:  ## %bb.3: ## %cond.load1
-; SSE42-NEXT:    movhpd {{.*#+}} xmm4 = xmm4[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm4 = xmm4[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB6_4: ## %else2
 ; SSE42-NEXT:    pxor %xmm0, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm0, %xmm1
@@ -733,13 +733,13 @@ define <8 x double> @load_v8f64_v8i64(<8 x i64> %trigger, <8 x double>* %addr, <
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB6_6
 ; SSE42-NEXT:  ## %bb.5: ## %cond.load4
-; SSE42-NEXT:    movlpd {{.*#+}} xmm5 = mem[0],xmm5[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm5 = mem[0,1],xmm5[2,3]
 ; SSE42-NEXT:  LBB6_6: ## %else5
 ; SSE42-NEXT:    pextrb $8, %xmm1, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB6_8
 ; SSE42-NEXT:  ## %bb.7: ## %cond.load7
-; SSE42-NEXT:    movhpd {{.*#+}} xmm5 = xmm5[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm5 = xmm5[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB6_8: ## %else8
 ; SSE42-NEXT:    pxor %xmm0, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm0, %xmm2
@@ -747,13 +747,13 @@ define <8 x double> @load_v8f64_v8i64(<8 x i64> %trigger, <8 x double>* %addr, <
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB6_10
 ; SSE42-NEXT:  ## %bb.9: ## %cond.load10
-; SSE42-NEXT:    movlpd {{.*#+}} xmm6 = mem[0],xmm6[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm6 = mem[0,1],xmm6[2,3]
 ; SSE42-NEXT:  LBB6_10: ## %else11
 ; SSE42-NEXT:    pextrb $8, %xmm2, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB6_12
 ; SSE42-NEXT:  ## %bb.11: ## %cond.load13
-; SSE42-NEXT:    movhpd {{.*#+}} xmm6 = xmm6[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm6 = xmm6[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB6_12: ## %else14
 ; SSE42-NEXT:    pxor %xmm0, %xmm0
 ; SSE42-NEXT:    pcmpeqq %xmm0, %xmm3
@@ -761,18 +761,18 @@ define <8 x double> @load_v8f64_v8i64(<8 x i64> %trigger, <8 x double>* %addr, <
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB6_14
 ; SSE42-NEXT:  ## %bb.13: ## %cond.load16
-; SSE42-NEXT:    movlpd {{.*#+}} xmm8 = mem[0],xmm8[1]
+; SSE42-NEXT:    movlps {{.*#+}} xmm8 = mem[0,1],xmm8[2,3]
 ; SSE42-NEXT:  LBB6_14: ## %else17
 ; SSE42-NEXT:    pextrb $8, %xmm3, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB6_16
 ; SSE42-NEXT:  ## %bb.15: ## %cond.load19
-; SSE42-NEXT:    movhpd {{.*#+}} xmm8 = xmm8[0],mem[0]
+; SSE42-NEXT:    movhps {{.*#+}} xmm8 = xmm8[0,1],mem[0,1]
 ; SSE42-NEXT:  LBB6_16: ## %else20
-; SSE42-NEXT:    movapd %xmm4, %xmm0
-; SSE42-NEXT:    movapd %xmm5, %xmm1
-; SSE42-NEXT:    movapd %xmm6, %xmm2
-; SSE42-NEXT:    movapd %xmm8, %xmm3
+; SSE42-NEXT:    movaps %xmm4, %xmm0
+; SSE42-NEXT:    movaps %xmm5, %xmm1
+; SSE42-NEXT:    movaps %xmm6, %xmm2
+; SSE42-NEXT:    movaps %xmm8, %xmm3
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: load_v8f64_v8i64:
@@ -1511,16 +1511,16 @@ define <2 x i64> @load_v2i64_v2i64(<2 x i64> %trigger, <2 x i64>* %addr, <2 x i6
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB13_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.load
-; SSE2-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE2-NEXT:  LBB13_2: ## %else
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB13_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.load1
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
 ; SSE2-NEXT:  LBB13_4: ## %else2
-; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: load_v2i64_v2i64:
@@ -1591,16 +1591,16 @@ define <4 x i64> @load_v4i64_v4i64(<4 x i64> %trigger, <4 x i64>* %addr, <4 x i6
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB14_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.load
-; SSE2-NEXT:    movlpd {{.*#+}} xmm2 = mem[0],xmm2[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm2 = mem[0,1],xmm2[2,3]
 ; SSE2-NEXT:  LBB14_2: ## %else
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB14_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.load1
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm0[0]
 ; SSE2-NEXT:  LBB14_4: ## %else2
-; SSE2-NEXT:    xorpd %xmm0, %xmm0
+; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
@@ -1608,17 +1608,17 @@ define <4 x i64> @load_v4i64_v4i64(<4 x i64> %trigger, <4 x i64>* %addr, <4 x i6
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB14_6
 ; SSE2-NEXT:  ## %bb.5: ## %cond.load4
-; SSE2-NEXT:    movlpd {{.*#+}} xmm3 = mem[0],xmm3[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm3 = mem[0,1],xmm3[2,3]
 ; SSE2-NEXT:  LBB14_6: ## %else5
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB14_8
 ; SSE2-NEXT:  ## %bb.7: ## %cond.load7
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm3 = xmm3[0],xmm0[0]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm0[0]
 ; SSE2-NEXT:  LBB14_8: ## %else8
-; SSE2-NEXT:    movapd %xmm2, %xmm0
-; SSE2-NEXT:    movapd %xmm3, %xmm1
+; SSE2-NEXT:    movaps %xmm2, %xmm0
+; SSE2-NEXT:    movaps %xmm3, %xmm1
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: load_v4i64_v4i64:
@@ -1704,64 +1704,64 @@ define <8 x i64> @load_v8i64_v8i16(<8 x i16> %trigger, <8 x i64>* %addr, <8 x i6
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB15_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.load
-; SSE2-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE2-NEXT:  LBB15_2: ## %else
 ; SSE2-NEXT:    shrl $16, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB15_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.load1
 ; SSE2-NEXT:    movsd {{.*#+}} xmm5 = mem[0],zero
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm1 = xmm1[0],xmm5[0]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm5[0]
 ; SSE2-NEXT:  LBB15_4: ## %else2
-; SSE2-NEXT:    xorpd %xmm5, %xmm5
+; SSE2-NEXT:    pxor %xmm5, %xmm5
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm5
 ; SSE2-NEXT:    pextrw $2, %xmm5, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB15_6
 ; SSE2-NEXT:  ## %bb.5: ## %cond.load4
-; SSE2-NEXT:    movlpd {{.*#+}} xmm2 = mem[0],xmm2[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm2 = mem[0,1],xmm2[2,3]
 ; SSE2-NEXT:  LBB15_6: ## %else5
 ; SSE2-NEXT:    pextrw $3, %xmm5, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB15_8
 ; SSE2-NEXT:  ## %bb.7: ## %cond.load7
 ; SSE2-NEXT:    movsd {{.*#+}} xmm5 = mem[0],zero
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm5[0]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm2 = xmm2[0],xmm5[0]
 ; SSE2-NEXT:  LBB15_8: ## %else8
-; SSE2-NEXT:    xorpd %xmm5, %xmm5
+; SSE2-NEXT:    pxor %xmm5, %xmm5
 ; SSE2-NEXT:    pcmpeqw %xmm0, %xmm5
 ; SSE2-NEXT:    pextrw $4, %xmm5, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB15_10
 ; SSE2-NEXT:  ## %bb.9: ## %cond.load10
-; SSE2-NEXT:    movlpd {{.*#+}} xmm3 = mem[0],xmm3[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm3 = mem[0,1],xmm3[2,3]
 ; SSE2-NEXT:  LBB15_10: ## %else11
 ; SSE2-NEXT:    pextrw $5, %xmm5, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB15_12
 ; SSE2-NEXT:  ## %bb.11: ## %cond.load13
 ; SSE2-NEXT:    movsd {{.*#+}} xmm5 = mem[0],zero
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm3 = xmm3[0],xmm5[0]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm5[0]
 ; SSE2-NEXT:  LBB15_12: ## %else14
-; SSE2-NEXT:    xorpd %xmm5, %xmm5
+; SSE2-NEXT:    pxor %xmm5, %xmm5
 ; SSE2-NEXT:    pcmpeqw %xmm5, %xmm0
 ; SSE2-NEXT:    pextrw $6, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB15_14
 ; SSE2-NEXT:  ## %bb.13: ## %cond.load16
-; SSE2-NEXT:    movlpd {{.*#+}} xmm4 = mem[0],xmm4[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm4 = mem[0,1],xmm4[2,3]
 ; SSE2-NEXT:  LBB15_14: ## %else17
 ; SSE2-NEXT:    pextrw $7, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB15_16
 ; SSE2-NEXT:  ## %bb.15: ## %cond.load19
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm4 = xmm4[0],xmm0[0]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm4 = xmm4[0],xmm0[0]
 ; SSE2-NEXT:  LBB15_16: ## %else20
-; SSE2-NEXT:    movapd %xmm1, %xmm0
-; SSE2-NEXT:    movapd %xmm2, %xmm1
-; SSE2-NEXT:    movapd %xmm3, %xmm2
-; SSE2-NEXT:    movapd %xmm4, %xmm3
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    movaps %xmm2, %xmm1
+; SSE2-NEXT:    movaps %xmm3, %xmm2
+; SSE2-NEXT:    movaps %xmm4, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: load_v8i64_v8i16:
@@ -1904,7 +1904,7 @@ define <8 x i64> @load_v8i64_v8i64(<8 x i64> %trigger, <8 x i64>* %addr, <8 x i6
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB16_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.load
-; SSE2-NEXT:    movlpd {{.*#+}} xmm4 = mem[0],xmm4[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm4 = mem[0,1],xmm4[2,3]
 ; SSE2-NEXT:  LBB16_2: ## %else
 ; SSE2-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[6,7,8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero
 ; SSE2-NEXT:    movd %xmm0, %eax
@@ -1913,9 +1913,9 @@ define <8 x i64> @load_v8i64_v8i64(<8 x i64> %trigger, <8 x i64>* %addr, <8 x i6
 ; SSE2-NEXT:    je LBB16_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.load1
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm4 = xmm4[0],xmm0[0]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm4 = xmm4[0],xmm0[0]
 ; SSE2-NEXT:  LBB16_4: ## %else2
-; SSE2-NEXT:    xorpd %xmm0, %xmm0
+; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm1[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
@@ -1923,16 +1923,16 @@ define <8 x i64> @load_v8i64_v8i64(<8 x i64> %trigger, <8 x i64>* %addr, <8 x i6
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB16_6
 ; SSE2-NEXT:  ## %bb.5: ## %cond.load4
-; SSE2-NEXT:    movlpd {{.*#+}} xmm5 = mem[0],xmm5[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm5 = mem[0,1],xmm5[2,3]
 ; SSE2-NEXT:  LBB16_6: ## %else5
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB16_8
 ; SSE2-NEXT:  ## %bb.7: ## %cond.load7
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm5 = xmm5[0],xmm0[0]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm5 = xmm5[0],xmm0[0]
 ; SSE2-NEXT:  LBB16_8: ## %else8
-; SSE2-NEXT:    xorpd %xmm0, %xmm0
+; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm2
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm2, %xmm0
@@ -1940,16 +1940,16 @@ define <8 x i64> @load_v8i64_v8i64(<8 x i64> %trigger, <8 x i64>* %addr, <8 x i6
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB16_10
 ; SSE2-NEXT:  ## %bb.9: ## %cond.load10
-; SSE2-NEXT:    movlpd {{.*#+}} xmm6 = mem[0],xmm6[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm6 = mem[0,1],xmm6[2,3]
 ; SSE2-NEXT:  LBB16_10: ## %else11
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB16_12
 ; SSE2-NEXT:  ## %bb.11: ## %cond.load13
 ; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm6 = xmm6[0],xmm0[0]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm6 = xmm6[0],xmm0[0]
 ; SSE2-NEXT:  LBB16_12: ## %else14
-; SSE2-NEXT:    xorpd %xmm0, %xmm0
+; SSE2-NEXT:    pxor %xmm0, %xmm0
 ; SSE2-NEXT:    pcmpeqd %xmm0, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[1,0,3,2]
 ; SSE2-NEXT:    pand %xmm3, %xmm0
@@ -1957,19 +1957,19 @@ define <8 x i64> @load_v8i64_v8i64(<8 x i64> %trigger, <8 x i64>* %addr, <8 x i6
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB16_14
 ; SSE2-NEXT:  ## %bb.13: ## %cond.load16
-; SSE2-NEXT:    movlpd {{.*#+}} xmm8 = mem[0],xmm8[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm8 = mem[0,1],xmm8[2,3]
 ; SSE2-NEXT:  LBB16_14: ## %else17
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB16_16
 ; SSE2-NEXT:  ## %bb.15: ## %cond.load19
-; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE2-NEXT:    unpcklpd {{.*#+}} xmm8 = xmm8[0],xmm0[0]
+; SSE2-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm8 = xmm8[0],xmm0[0]
 ; SSE2-NEXT:  LBB16_16: ## %else20
-; SSE2-NEXT:    movapd %xmm4, %xmm0
-; SSE2-NEXT:    movapd %xmm5, %xmm1
-; SSE2-NEXT:    movapd %xmm6, %xmm2
-; SSE2-NEXT:    movapd %xmm8, %xmm3
+; SSE2-NEXT:    movaps %xmm4, %xmm0
+; SSE2-NEXT:    movaps %xmm5, %xmm1
+; SSE2-NEXT:    movaps %xmm6, %xmm2
+; SSE2-NEXT:    movdqa %xmm8, %xmm3
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: load_v8i64_v8i64:
@@ -6686,12 +6686,12 @@ define <4 x float> @mload_constmask_v4f32_all(<4 x float>* %addr) {
 define <2 x double> @mload_constmask_v2f64(<2 x double>* %addr, <2 x double> %dst) {
 ; SSE-LABEL: mload_constmask_v2f64:
 ; SSE:       ## %bb.0:
-; SSE-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: mload_constmask_v2f64:
 ; AVX:       ## %bb.0:
-; AVX-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; AVX-NEXT:    retq
   %res = call <2 x double> @llvm.masked.load.v2f64.p0v2f64(<2 x double>* %addr, i32 4, <2 x i1> <i1 0, i1 1>, <2 x double> %dst)
   ret <2 x double> %res
@@ -6887,7 +6887,7 @@ define <4 x double> @mload_constmask_v4f64(<4 x double>* %addr, <4 x double> %ds
 ; SSE-LABEL: mload_constmask_v4f64:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
-; SSE-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: mload_constmask_v4f64:
@@ -6982,7 +6982,7 @@ define <8 x i32> @mload_constmask_v8i32(<8 x i32>* %addr, <8 x i32> %dst) {
 define <4 x i64> @mload_constmask_v4i64(<4 x i64>* %addr, <4 x i64> %dst) {
 ; SSE2-LABEL: mload_constmask_v4i64:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    movlpd {{.*#+}} xmm0 = mem[0],xmm0[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; SSE2-NEXT:    movsd {{.*#+}} xmm2 = mem[0],zero
 ; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm2[0]
 ; SSE2-NEXT:    retq
@@ -7030,8 +7030,8 @@ define <8 x double> @mload_constmask_v8f64(<8 x double>* %addr, <8 x double> %ds
 ; SSE-LABEL: mload_constmask_v8f64:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movups (%rdi), %xmm0
-; SSE-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
-; SSE-NEXT:    movhpd {{.*#+}} xmm3 = xmm3[0],mem[0]
+; SSE-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
+; SSE-NEXT:    movhps {{.*#+}} xmm3 = xmm3[0,1],mem[0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: mload_constmask_v8f64:
@@ -7199,7 +7199,7 @@ define <4 x float> @load_one_mask_bit_set2(<4 x float>* %addr, <4 x float> %val)
 define <4 x i64> @load_one_mask_bit_set3(<4 x i64>* %addr, <4 x i64> %val) {
 ; SSE2-LABEL: load_one_mask_bit_set3:
 ; SSE2:       ## %bb.0:
-; SSE2-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: load_one_mask_bit_set3:
@@ -7236,13 +7236,13 @@ define <4 x i64> @load_one_mask_bit_set3(<4 x i64>* %addr, <4 x i64> %val) {
 define <4 x double> @load_one_mask_bit_set4(<4 x double>* %addr, <4 x double> %val) {
 ; SSE-LABEL: load_one_mask_bit_set4:
 ; SSE:       ## %bb.0:
-; SSE-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; SSE-NEXT:    movhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: load_one_mask_bit_set4:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; AVX-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; AVX-NEXT:    retq
   %res = call <4 x double> @llvm.masked.load.v4f64.p0v4f64(<4 x double>* %addr, i32 4, <4 x i1> <i1 false, i1 false, i1 false, i1 true>, <4 x double> %val)
@@ -7254,20 +7254,20 @@ define <4 x double> @load_one_mask_bit_set4(<4 x double>* %addr, <4 x double> %v
 define <8 x double> @load_one_mask_bit_set5(<8 x double>* %addr, <8 x double> %val) {
 ; SSE-LABEL: load_one_mask_bit_set5:
 ; SSE:       ## %bb.0:
-; SSE-NEXT:    movhpd {{.*#+}} xmm3 = xmm3[0],mem[0]
+; SSE-NEXT:    movhps {{.*#+}} xmm3 = xmm3[0,1],mem[0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX1OR2-LABEL: load_one_mask_bit_set5:
 ; AVX1OR2:       ## %bb.0:
 ; AVX1OR2-NEXT:    vextractf128 $1, %ymm1, %xmm2
-; AVX1OR2-NEXT:    vmovhpd {{.*#+}} xmm2 = xmm2[0],mem[0]
+; AVX1OR2-NEXT:    vmovhps {{.*#+}} xmm2 = xmm2[0,1],mem[0,1]
 ; AVX1OR2-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
 ; AVX1OR2-NEXT:    retq
 ;
 ; AVX512-LABEL: load_one_mask_bit_set5:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm1
-; AVX512-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; AVX512-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; AVX512-NEXT:    vinsertf32x4 $3, %xmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %res = call <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>* %addr, i32 4, <8 x i1> <i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x double> %val)

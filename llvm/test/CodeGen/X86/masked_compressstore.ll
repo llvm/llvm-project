@@ -18,56 +18,56 @@ define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB0_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.store
-; SSE2-NEXT:    movlpd %xmm0, (%rdi)
+; SSE2-NEXT:    movlps %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB0_2: ## %else
 ; SSE2-NEXT:    shrl $16, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB0_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.store1
-; SSE2-NEXT:    movhpd %xmm0, (%rdi)
+; SSE2-NEXT:    movhps %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB0_4: ## %else2
 ; SSE2-NEXT:    pextrw $2, %xmm4, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB0_6
 ; SSE2-NEXT:  ## %bb.5: ## %cond.store4
-; SSE2-NEXT:    movlpd %xmm1, (%rdi)
+; SSE2-NEXT:    movlps %xmm1, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB0_6: ## %else5
 ; SSE2-NEXT:    pextrw $3, %xmm4, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB0_8
 ; SSE2-NEXT:  ## %bb.7: ## %cond.store7
-; SSE2-NEXT:    movhpd %xmm1, (%rdi)
+; SSE2-NEXT:    movhps %xmm1, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB0_8: ## %else8
 ; SSE2-NEXT:    pextrw $4, %xmm4, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB0_10
 ; SSE2-NEXT:  ## %bb.9: ## %cond.store10
-; SSE2-NEXT:    movlpd %xmm2, (%rdi)
+; SSE2-NEXT:    movlps %xmm2, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB0_10: ## %else11
 ; SSE2-NEXT:    pextrw $5, %xmm4, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB0_12
 ; SSE2-NEXT:  ## %bb.11: ## %cond.store13
-; SSE2-NEXT:    movhpd %xmm2, (%rdi)
+; SSE2-NEXT:    movhps %xmm2, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB0_12: ## %else14
 ; SSE2-NEXT:    pextrw $6, %xmm4, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB0_14
 ; SSE2-NEXT:  ## %bb.13: ## %cond.store16
-; SSE2-NEXT:    movlpd %xmm3, (%rdi)
+; SSE2-NEXT:    movlps %xmm3, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB0_14: ## %else17
 ; SSE2-NEXT:    pextrw $7, %xmm4, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB0_16
 ; SSE2-NEXT:  ## %bb.15: ## %cond.store19
-; SSE2-NEXT:    movhpd %xmm3, (%rdi)
+; SSE2-NEXT:    movhps %xmm3, (%rdi)
 ; SSE2-NEXT:  LBB0_16: ## %else20
 ; SSE2-NEXT:    retq
 ;
@@ -77,56 +77,56 @@ define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB0_2
 ; SSE42-NEXT:  ## %bb.1: ## %cond.store
-; SSE42-NEXT:    movlpd %xmm0, (%rdi)
+; SSE42-NEXT:    movlps %xmm0, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB0_2: ## %else
 ; SSE42-NEXT:    pextrb $2, %xmm4, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB0_4
 ; SSE42-NEXT:  ## %bb.3: ## %cond.store1
-; SSE42-NEXT:    movhpd %xmm0, (%rdi)
+; SSE42-NEXT:    movhps %xmm0, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB0_4: ## %else2
 ; SSE42-NEXT:    pextrb $4, %xmm4, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB0_6
 ; SSE42-NEXT:  ## %bb.5: ## %cond.store4
-; SSE42-NEXT:    movlpd %xmm1, (%rdi)
+; SSE42-NEXT:    movlps %xmm1, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB0_6: ## %else5
 ; SSE42-NEXT:    pextrb $6, %xmm4, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB0_8
 ; SSE42-NEXT:  ## %bb.7: ## %cond.store7
-; SSE42-NEXT:    movhpd %xmm1, (%rdi)
+; SSE42-NEXT:    movhps %xmm1, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB0_8: ## %else8
 ; SSE42-NEXT:    pextrb $8, %xmm4, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB0_10
 ; SSE42-NEXT:  ## %bb.9: ## %cond.store10
-; SSE42-NEXT:    movlpd %xmm2, (%rdi)
+; SSE42-NEXT:    movlps %xmm2, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB0_10: ## %else11
 ; SSE42-NEXT:    pextrb $10, %xmm4, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB0_12
 ; SSE42-NEXT:  ## %bb.11: ## %cond.store13
-; SSE42-NEXT:    movhpd %xmm2, (%rdi)
+; SSE42-NEXT:    movhps %xmm2, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB0_12: ## %else14
 ; SSE42-NEXT:    pextrb $12, %xmm4, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB0_14
 ; SSE42-NEXT:  ## %bb.13: ## %cond.store16
-; SSE42-NEXT:    movlpd %xmm3, (%rdi)
+; SSE42-NEXT:    movlps %xmm3, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB0_14: ## %else17
 ; SSE42-NEXT:    pextrb $14, %xmm4, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB0_16
 ; SSE42-NEXT:  ## %bb.15: ## %cond.store19
-; SSE42-NEXT:    movhpd %xmm3, (%rdi)
+; SSE42-NEXT:    movhps %xmm3, (%rdi)
 ; SSE42-NEXT:  LBB0_16: ## %else20
 ; SSE42-NEXT:    retq
 ;
@@ -136,14 +136,14 @@ define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB0_2
 ; AVX1OR2-NEXT:  ## %bb.1: ## %cond.store
-; AVX1OR2-NEXT:    vmovlpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovlps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB0_2: ## %else
 ; AVX1OR2-NEXT:    vpextrb $2, %xmm2, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB0_4
 ; AVX1OR2-NEXT:  ## %bb.3: ## %cond.store1
-; AVX1OR2-NEXT:    vmovhpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovhps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB0_4: ## %else2
 ; AVX1OR2-NEXT:    vpextrb $4, %xmm2, %eax
@@ -151,28 +151,28 @@ define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %
 ; AVX1OR2-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1OR2-NEXT:    je LBB0_6
 ; AVX1OR2-NEXT:  ## %bb.5: ## %cond.store4
-; AVX1OR2-NEXT:    vmovlpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovlps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB0_6: ## %else5
 ; AVX1OR2-NEXT:    vpextrb $6, %xmm2, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB0_8
 ; AVX1OR2-NEXT:  ## %bb.7: ## %cond.store7
-; AVX1OR2-NEXT:    vmovhpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovhps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB0_8: ## %else8
 ; AVX1OR2-NEXT:    vpextrb $8, %xmm2, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB0_10
 ; AVX1OR2-NEXT:  ## %bb.9: ## %cond.store10
-; AVX1OR2-NEXT:    vmovlpd %xmm1, (%rdi)
+; AVX1OR2-NEXT:    vmovlps %xmm1, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB0_10: ## %else11
 ; AVX1OR2-NEXT:    vpextrb $10, %xmm2, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB0_12
 ; AVX1OR2-NEXT:  ## %bb.11: ## %cond.store13
-; AVX1OR2-NEXT:    vmovhpd %xmm1, (%rdi)
+; AVX1OR2-NEXT:    vmovhps %xmm1, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB0_12: ## %else14
 ; AVX1OR2-NEXT:    vpextrb $12, %xmm2, %eax
@@ -180,14 +180,14 @@ define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %
 ; AVX1OR2-NEXT:    vextractf128 $1, %ymm1, %xmm0
 ; AVX1OR2-NEXT:    je LBB0_14
 ; AVX1OR2-NEXT:  ## %bb.13: ## %cond.store16
-; AVX1OR2-NEXT:    vmovlpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovlps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB0_14: ## %else17
 ; AVX1OR2-NEXT:    vpextrb $14, %xmm2, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB0_16
 ; AVX1OR2-NEXT:  ## %bb.15: ## %cond.store19
-; AVX1OR2-NEXT:    vmovhpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovhps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:  LBB0_16: ## %else20
 ; AVX1OR2-NEXT:    vzeroupper
 ; AVX1OR2-NEXT:    retq
@@ -229,7 +229,7 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; SSE2-NEXT:    testb $1, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    je LBB1_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.store
-; SSE2-NEXT:    movlpd %xmm0, (%rdi)
+; SSE2-NEXT:    movlps %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_2: ## %else
 ; SSE2-NEXT:    movd %xmm8, %eax
@@ -238,7 +238,7 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; SSE2-NEXT:    testb $1, %cl
 ; SSE2-NEXT:    je LBB1_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.store1
-; SSE2-NEXT:    movhpd %xmm0, (%rdi)
+; SSE2-NEXT:    movhps %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_4: ## %else2
 ; SSE2-NEXT:    movl %eax, %ecx
@@ -246,98 +246,98 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; SSE2-NEXT:    testb $1, %cl
 ; SSE2-NEXT:    je LBB1_6
 ; SSE2-NEXT:  ## %bb.5: ## %cond.store4
-; SSE2-NEXT:    movlpd %xmm1, (%rdi)
+; SSE2-NEXT:    movlps %xmm1, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_6: ## %else5
 ; SSE2-NEXT:    shrl $24, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_8
 ; SSE2-NEXT:  ## %bb.7: ## %cond.store7
-; SSE2-NEXT:    movhpd %xmm1, (%rdi)
+; SSE2-NEXT:    movhps %xmm1, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_8: ## %else8
 ; SSE2-NEXT:    pextrw $2, %xmm8, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_10
 ; SSE2-NEXT:  ## %bb.9: ## %cond.store10
-; SSE2-NEXT:    movlpd %xmm2, (%rdi)
+; SSE2-NEXT:    movlps %xmm2, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_10: ## %else11
 ; SSE2-NEXT:    shrl $8, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_12
 ; SSE2-NEXT:  ## %bb.11: ## %cond.store13
-; SSE2-NEXT:    movhpd %xmm2, (%rdi)
+; SSE2-NEXT:    movhps %xmm2, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_12: ## %else14
 ; SSE2-NEXT:    pextrw $3, %xmm8, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_14
 ; SSE2-NEXT:  ## %bb.13: ## %cond.store16
-; SSE2-NEXT:    movlpd %xmm3, (%rdi)
+; SSE2-NEXT:    movlps %xmm3, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_14: ## %else17
 ; SSE2-NEXT:    shrl $8, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_16
 ; SSE2-NEXT:  ## %bb.15: ## %cond.store19
-; SSE2-NEXT:    movhpd %xmm3, (%rdi)
+; SSE2-NEXT:    movhps %xmm3, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_16: ## %else20
 ; SSE2-NEXT:    pextrw $4, %xmm8, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_18
 ; SSE2-NEXT:  ## %bb.17: ## %cond.store22
-; SSE2-NEXT:    movlpd %xmm4, (%rdi)
+; SSE2-NEXT:    movlps %xmm4, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_18: ## %else23
 ; SSE2-NEXT:    shrl $8, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_20
 ; SSE2-NEXT:  ## %bb.19: ## %cond.store25
-; SSE2-NEXT:    movhpd %xmm4, (%rdi)
+; SSE2-NEXT:    movhps %xmm4, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_20: ## %else26
 ; SSE2-NEXT:    pextrw $5, %xmm8, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_22
 ; SSE2-NEXT:  ## %bb.21: ## %cond.store28
-; SSE2-NEXT:    movlpd %xmm5, (%rdi)
+; SSE2-NEXT:    movlps %xmm5, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_22: ## %else29
 ; SSE2-NEXT:    shrl $8, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_24
 ; SSE2-NEXT:  ## %bb.23: ## %cond.store31
-; SSE2-NEXT:    movhpd %xmm5, (%rdi)
+; SSE2-NEXT:    movhps %xmm5, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_24: ## %else32
 ; SSE2-NEXT:    pextrw $6, %xmm8, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_26
 ; SSE2-NEXT:  ## %bb.25: ## %cond.store34
-; SSE2-NEXT:    movlpd %xmm6, (%rdi)
+; SSE2-NEXT:    movlps %xmm6, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_26: ## %else35
 ; SSE2-NEXT:    shrl $8, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_28
 ; SSE2-NEXT:  ## %bb.27: ## %cond.store37
-; SSE2-NEXT:    movhpd %xmm6, (%rdi)
+; SSE2-NEXT:    movhps %xmm6, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_28: ## %else38
 ; SSE2-NEXT:    pextrw $7, %xmm8, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_30
 ; SSE2-NEXT:  ## %bb.29: ## %cond.store40
-; SSE2-NEXT:    movlpd %xmm7, (%rdi)
+; SSE2-NEXT:    movlps %xmm7, (%rdi)
 ; SSE2-NEXT:    addq $8, %rdi
 ; SSE2-NEXT:  LBB1_30: ## %else41
 ; SSE2-NEXT:    shrl $8, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_32
 ; SSE2-NEXT:  ## %bb.31: ## %cond.store43
-; SSE2-NEXT:    movhpd %xmm7, (%rdi)
+; SSE2-NEXT:    movhps %xmm7, (%rdi)
 ; SSE2-NEXT:  LBB1_32: ## %else44
 ; SSE2-NEXT:    retq
 ;
@@ -348,112 +348,112 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_2
 ; SSE42-NEXT:  ## %bb.1: ## %cond.store
-; SSE42-NEXT:    movlpd %xmm0, (%rdi)
+; SSE42-NEXT:    movlps %xmm0, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_2: ## %else
 ; SSE42-NEXT:    pextrb $1, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_4
 ; SSE42-NEXT:  ## %bb.3: ## %cond.store1
-; SSE42-NEXT:    movhpd %xmm0, (%rdi)
+; SSE42-NEXT:    movhps %xmm0, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_4: ## %else2
 ; SSE42-NEXT:    pextrb $2, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_6
 ; SSE42-NEXT:  ## %bb.5: ## %cond.store4
-; SSE42-NEXT:    movlpd %xmm1, (%rdi)
+; SSE42-NEXT:    movlps %xmm1, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_6: ## %else5
 ; SSE42-NEXT:    pextrb $3, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_8
 ; SSE42-NEXT:  ## %bb.7: ## %cond.store7
-; SSE42-NEXT:    movhpd %xmm1, (%rdi)
+; SSE42-NEXT:    movhps %xmm1, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_8: ## %else8
 ; SSE42-NEXT:    pextrb $4, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_10
 ; SSE42-NEXT:  ## %bb.9: ## %cond.store10
-; SSE42-NEXT:    movlpd %xmm2, (%rdi)
+; SSE42-NEXT:    movlps %xmm2, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_10: ## %else11
 ; SSE42-NEXT:    pextrb $5, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_12
 ; SSE42-NEXT:  ## %bb.11: ## %cond.store13
-; SSE42-NEXT:    movhpd %xmm2, (%rdi)
+; SSE42-NEXT:    movhps %xmm2, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_12: ## %else14
 ; SSE42-NEXT:    pextrb $6, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_14
 ; SSE42-NEXT:  ## %bb.13: ## %cond.store16
-; SSE42-NEXT:    movlpd %xmm3, (%rdi)
+; SSE42-NEXT:    movlps %xmm3, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_14: ## %else17
 ; SSE42-NEXT:    pextrb $7, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_16
 ; SSE42-NEXT:  ## %bb.15: ## %cond.store19
-; SSE42-NEXT:    movhpd %xmm3, (%rdi)
+; SSE42-NEXT:    movhps %xmm3, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_16: ## %else20
 ; SSE42-NEXT:    pextrb $8, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_18
 ; SSE42-NEXT:  ## %bb.17: ## %cond.store22
-; SSE42-NEXT:    movlpd %xmm4, (%rdi)
+; SSE42-NEXT:    movlps %xmm4, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_18: ## %else23
 ; SSE42-NEXT:    pextrb $9, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_20
 ; SSE42-NEXT:  ## %bb.19: ## %cond.store25
-; SSE42-NEXT:    movhpd %xmm4, (%rdi)
+; SSE42-NEXT:    movhps %xmm4, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_20: ## %else26
 ; SSE42-NEXT:    pextrb $10, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_22
 ; SSE42-NEXT:  ## %bb.21: ## %cond.store28
-; SSE42-NEXT:    movlpd %xmm5, (%rdi)
+; SSE42-NEXT:    movlps %xmm5, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_22: ## %else29
 ; SSE42-NEXT:    pextrb $11, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_24
 ; SSE42-NEXT:  ## %bb.23: ## %cond.store31
-; SSE42-NEXT:    movhpd %xmm5, (%rdi)
+; SSE42-NEXT:    movhps %xmm5, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_24: ## %else32
 ; SSE42-NEXT:    pextrb $12, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_26
 ; SSE42-NEXT:  ## %bb.25: ## %cond.store34
-; SSE42-NEXT:    movlpd %xmm6, (%rdi)
+; SSE42-NEXT:    movlps %xmm6, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_26: ## %else35
 ; SSE42-NEXT:    pextrb $13, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_28
 ; SSE42-NEXT:  ## %bb.27: ## %cond.store37
-; SSE42-NEXT:    movhpd %xmm6, (%rdi)
+; SSE42-NEXT:    movhps %xmm6, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_28: ## %else38
 ; SSE42-NEXT:    pextrb $14, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_30
 ; SSE42-NEXT:  ## %bb.29: ## %cond.store40
-; SSE42-NEXT:    movlpd %xmm7, (%rdi)
+; SSE42-NEXT:    movlps %xmm7, (%rdi)
 ; SSE42-NEXT:    addq $8, %rdi
 ; SSE42-NEXT:  LBB1_30: ## %else41
 ; SSE42-NEXT:    pextrb $15, %xmm8, %eax
 ; SSE42-NEXT:    testb $1, %al
 ; SSE42-NEXT:    je LBB1_32
 ; SSE42-NEXT:  ## %bb.31: ## %cond.store43
-; SSE42-NEXT:    movhpd %xmm7, (%rdi)
+; SSE42-NEXT:    movhps %xmm7, (%rdi)
 ; SSE42-NEXT:  LBB1_32: ## %else44
 ; SSE42-NEXT:    retq
 ;
@@ -463,14 +463,14 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB1_2
 ; AVX1OR2-NEXT:  ## %bb.1: ## %cond.store
-; AVX1OR2-NEXT:    vmovlpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovlps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_2: ## %else
 ; AVX1OR2-NEXT:    vpextrb $1, %xmm4, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB1_4
 ; AVX1OR2-NEXT:  ## %bb.3: ## %cond.store1
-; AVX1OR2-NEXT:    vmovhpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovhps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_4: ## %else2
 ; AVX1OR2-NEXT:    vpextrb $2, %xmm4, %eax
@@ -478,28 +478,28 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX1OR2-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; AVX1OR2-NEXT:    je LBB1_6
 ; AVX1OR2-NEXT:  ## %bb.5: ## %cond.store4
-; AVX1OR2-NEXT:    vmovlpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovlps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_6: ## %else5
 ; AVX1OR2-NEXT:    vpextrb $3, %xmm4, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB1_8
 ; AVX1OR2-NEXT:  ## %bb.7: ## %cond.store7
-; AVX1OR2-NEXT:    vmovhpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovhps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_8: ## %else8
 ; AVX1OR2-NEXT:    vpextrb $4, %xmm4, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB1_10
 ; AVX1OR2-NEXT:  ## %bb.9: ## %cond.store10
-; AVX1OR2-NEXT:    vmovlpd %xmm1, (%rdi)
+; AVX1OR2-NEXT:    vmovlps %xmm1, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_10: ## %else11
 ; AVX1OR2-NEXT:    vpextrb $5, %xmm4, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB1_12
 ; AVX1OR2-NEXT:  ## %bb.11: ## %cond.store13
-; AVX1OR2-NEXT:    vmovhpd %xmm1, (%rdi)
+; AVX1OR2-NEXT:    vmovhps %xmm1, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_12: ## %else14
 ; AVX1OR2-NEXT:    vpextrb $6, %xmm4, %eax
@@ -507,28 +507,28 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX1OR2-NEXT:    vextractf128 $1, %ymm1, %xmm0
 ; AVX1OR2-NEXT:    je LBB1_14
 ; AVX1OR2-NEXT:  ## %bb.13: ## %cond.store16
-; AVX1OR2-NEXT:    vmovlpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovlps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_14: ## %else17
 ; AVX1OR2-NEXT:    vpextrb $7, %xmm4, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB1_16
 ; AVX1OR2-NEXT:  ## %bb.15: ## %cond.store19
-; AVX1OR2-NEXT:    vmovhpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovhps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_16: ## %else20
 ; AVX1OR2-NEXT:    vpextrb $8, %xmm4, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB1_18
 ; AVX1OR2-NEXT:  ## %bb.17: ## %cond.store22
-; AVX1OR2-NEXT:    vmovlpd %xmm2, (%rdi)
+; AVX1OR2-NEXT:    vmovlps %xmm2, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_18: ## %else23
 ; AVX1OR2-NEXT:    vpextrb $9, %xmm4, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB1_20
 ; AVX1OR2-NEXT:  ## %bb.19: ## %cond.store25
-; AVX1OR2-NEXT:    vmovhpd %xmm2, (%rdi)
+; AVX1OR2-NEXT:    vmovhps %xmm2, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_20: ## %else26
 ; AVX1OR2-NEXT:    vpextrb $10, %xmm4, %eax
@@ -536,28 +536,28 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX1OR2-NEXT:    vextractf128 $1, %ymm2, %xmm0
 ; AVX1OR2-NEXT:    je LBB1_22
 ; AVX1OR2-NEXT:  ## %bb.21: ## %cond.store28
-; AVX1OR2-NEXT:    vmovlpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovlps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_22: ## %else29
 ; AVX1OR2-NEXT:    vpextrb $11, %xmm4, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB1_24
 ; AVX1OR2-NEXT:  ## %bb.23: ## %cond.store31
-; AVX1OR2-NEXT:    vmovhpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovhps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_24: ## %else32
 ; AVX1OR2-NEXT:    vpextrb $12, %xmm4, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB1_26
 ; AVX1OR2-NEXT:  ## %bb.25: ## %cond.store34
-; AVX1OR2-NEXT:    vmovlpd %xmm3, (%rdi)
+; AVX1OR2-NEXT:    vmovlps %xmm3, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_26: ## %else35
 ; AVX1OR2-NEXT:    vpextrb $13, %xmm4, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB1_28
 ; AVX1OR2-NEXT:  ## %bb.27: ## %cond.store37
-; AVX1OR2-NEXT:    vmovhpd %xmm3, (%rdi)
+; AVX1OR2-NEXT:    vmovhps %xmm3, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_28: ## %else38
 ; AVX1OR2-NEXT:    vpextrb $14, %xmm4, %eax
@@ -565,14 +565,14 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX1OR2-NEXT:    vextractf128 $1, %ymm3, %xmm0
 ; AVX1OR2-NEXT:    je LBB1_30
 ; AVX1OR2-NEXT:  ## %bb.29: ## %cond.store40
-; AVX1OR2-NEXT:    vmovlpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovlps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
 ; AVX1OR2-NEXT:  LBB1_30: ## %else41
 ; AVX1OR2-NEXT:    vpextrb $15, %xmm4, %eax
 ; AVX1OR2-NEXT:    testb $1, %al
 ; AVX1OR2-NEXT:    je LBB1_32
 ; AVX1OR2-NEXT:  ## %bb.31: ## %cond.store43
-; AVX1OR2-NEXT:    vmovhpd %xmm0, (%rdi)
+; AVX1OR2-NEXT:    vmovhps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:  LBB1_32: ## %else44
 ; AVX1OR2-NEXT:    vzeroupper
 ; AVX1OR2-NEXT:    retq

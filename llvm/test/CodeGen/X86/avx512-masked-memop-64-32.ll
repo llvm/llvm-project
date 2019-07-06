@@ -75,7 +75,7 @@ define <8 x double> @load_one_mask_bit_set5(<8 x double>* %addr, <8 x double> %v
 ; AVX512-LABEL: load_one_mask_bit_set5:
 ; AVX512:       ## %bb.0:
 ; AVX512-NEXT:    vextractf32x4 $3, %zmm0, %xmm1
-; AVX512-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; AVX512-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; AVX512-NEXT:    vinsertf32x4 $3, %xmm1, %zmm0, %zmm0
 ; AVX512-NEXT:    retq
   %res = call <8 x double> @llvm.masked.load.v8f64.p0v8f64(<8 x double>* %addr, i32 4, <8 x i1><i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 false, i1 true>, <8 x double> %val)

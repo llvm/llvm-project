@@ -17,6 +17,7 @@
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/CallGraph.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -71,7 +72,7 @@ public:
                  const TargetLowering *TLI_)
       : FIM(FIM_), DL(nullptr), TLI(TLI_) {}
 
-  void runOnFunction(Function &F);
+  bool runOnFunction(Function &F);
 
 private:
   struct MemAccessInfo {
@@ -100,7 +101,7 @@ private:
 
   const TargetLowering *TLI;
 
-  void visit(const Function &F);
+  AMDGPUPerfHintAnalysis::FuncInfo *visit(const Function &F);
   static bool isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &F);
   static bool needLimitWave(const AMDGPUPerfHintAnalysis::FuncInfo &F);
 
@@ -202,12 +203,8 @@ bool AMDGPUPerfHint::isIndirectAccess(const Instruction *Inst) const {
   return false;
 }
 
-void AMDGPUPerfHint::visit(const Function &F) {
-  auto FIP = FIM.insert(std::make_pair(&F, AMDGPUPerfHintAnalysis::FuncInfo()));
-  if (!FIP.second)
-    return;
-
-  AMDGPUPerfHintAnalysis::FuncInfo &FI = FIP.first->second;
+AMDGPUPerfHintAnalysis::FuncInfo *AMDGPUPerfHint::visit(const Function &F) {
+  AMDGPUPerfHintAnalysis::FuncInfo &FI = FIM[&F];
 
   LLVM_DEBUG(dbgs() << "[AMDGPUPerfHint] process " << F.getName() << '\n');
 
@@ -233,10 +230,10 @@ void AMDGPUPerfHint::visit(const Function &F) {
         if (&F == Callee) // Handle immediate recursion
           continue;
 
-        visit(*Callee);
         auto Loc = FIM.find(Callee);
+        if (Loc == FIM.end())
+          continue;
 
-        assert(Loc != FIM.end() && "No func info");
         FI.MemInstCount += Loc->second.MemInstCount;
         FI.InstCount += Loc->second.InstCount;
         FI.IAMInstCount += Loc->second.IAMInstCount;
@@ -256,36 +253,39 @@ void AMDGPUPerfHint::visit(const Function &F) {
       }
     }
   }
+
+  return &FI;
 }
 
-void AMDGPUPerfHint::runOnFunction(Function &F) {
-  if (FIM.find(&F) != FIM.end())
-    return;
-
+bool AMDGPUPerfHint::runOnFunction(Function &F) {
   const Module &M = *F.getParent();
   DL = &M.getDataLayout();
 
-  visit(F);
-  auto Loc = FIM.find(&F);
+  if (F.hasFnAttribute("amdgpu-wave-limiter") &&
+      F.hasFnAttribute("amdgpu-memory-bound"))
+    return false;
 
-  assert(Loc != FIM.end() && "No func info");
-  LLVM_DEBUG(dbgs() << F.getName() << " MemInst: " << Loc->second.MemInstCount
+  const AMDGPUPerfHintAnalysis::FuncInfo *Info = visit(F);
+
+  LLVM_DEBUG(dbgs() << F.getName() << " MemInst: " << Info->MemInstCount
                     << '\n'
-                    << " IAMInst: " << Loc->second.IAMInstCount << '\n'
-                    << " LSMInst: " << Loc->second.LSMInstCount << '\n'
-                    << " TotalInst: " << Loc->second.InstCount << '\n');
+                    << " IAMInst: " << Info->IAMInstCount << '\n'
+                    << " LSMInst: " << Info->LSMInstCount << '\n'
+                    << " TotalInst: " << Info->InstCount << '\n');
 
-  auto &FI = Loc->second;
-
-  if (isMemBound(FI)) {
+  if (isMemBound(*Info)) {
     LLVM_DEBUG(dbgs() << F.getName() << " is memory bound\n");
     NumMemBound++;
+    F.addFnAttr("amdgpu-memory-bound", "true");
   }
 
-  if (AMDGPU::isEntryFunctionCC(F.getCallingConv()) && needLimitWave(FI)) {
+  if (AMDGPU::isEntryFunctionCC(F.getCallingConv()) && needLimitWave(*Info)) {
     LLVM_DEBUG(dbgs() << F.getName() << " needs limit wave\n");
     NumLimitWave++;
+    F.addFnAttr("amdgpu-wave-limiter", "true");
   }
+
+  return true;
 }
 
 bool AMDGPUPerfHint::isMemBound(const AMDGPUPerfHintAnalysis::FuncInfo &FI) {
@@ -364,17 +364,27 @@ bool AMDGPUPerfHint::MemAccessInfo::isLargeStride(
 }
 } // namespace
 
-bool AMDGPUPerfHintAnalysis::runOnFunction(Function &F) {
+bool AMDGPUPerfHintAnalysis::runOnSCC(CallGraphSCC &SCC) {
   auto *TPC = getAnalysisIfAvailable<TargetPassConfig>();
   if (!TPC)
     return false;
 
   const TargetMachine &TM = TPC->getTM<TargetMachine>();
-  const TargetSubtargetInfo *ST = TM.getSubtargetImpl(F);
 
-  AMDGPUPerfHint Analyzer(FIM, ST->getTargetLowering());
-  Analyzer.runOnFunction(F);
-  return false;
+  bool Changed = false;
+  for (CallGraphNode *I : SCC) {
+    Function *F = I->getFunction();
+    if (!F || F->isDeclaration())
+      continue;
+
+    const TargetSubtargetInfo *ST = TM.getSubtargetImpl(*F);
+    AMDGPUPerfHint Analyzer(FIM, ST->getTargetLowering());
+
+    if (Analyzer.runOnFunction(*F))
+      Changed = true;
+  }
+
+  return Changed;
 }
 
 bool AMDGPUPerfHintAnalysis::isMemoryBound(const Function *F) const {

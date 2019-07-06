@@ -627,7 +627,7 @@ define <8 x double> @merge_8f64_f64_23uuuuu9_volatile(double* %ptr) nounwind uwt
 ; ALL-LABEL: merge_8f64_f64_23uuuuu9_volatile:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; ALL-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; ALL-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; ALL-NEXT:    vbroadcastsd 72(%rdi), %ymm1
 ; ALL-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; ALL-NEXT:    retq
@@ -636,7 +636,7 @@ define <8 x double> @merge_8f64_f64_23uuuuu9_volatile(double* %ptr) nounwind uwt
 ; X32-AVX512F:       # %bb.0:
 ; X32-AVX512F-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-AVX512F-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; X32-AVX512F-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; X32-AVX512F-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; X32-AVX512F-NEXT:    vbroadcastsd 72(%eax), %ymm1
 ; X32-AVX512F-NEXT:    vinsertf64x4 $1, %ymm1, %zmm0, %zmm0
 ; X32-AVX512F-NEXT:    retl

@@ -1197,6 +1197,9 @@ public:
   }
 
   Value *CreateAnd(Value *LHS, Value *RHS, const Twine &Name = "") {
+    if (auto *LC = dyn_cast<ConstantInt>(LHS))
+      if (LC->isMinusOne())
+        return RHS;  // -1 & RHS = RHS
     if (auto *RC = dyn_cast<Constant>(RHS)) {
       if (isa<ConstantInt>(RC) && cast<ConstantInt>(RC)->isMinusOne())
         return LHS;  // LHS & -1 -> LHS
@@ -1214,7 +1217,18 @@ public:
     return CreateAnd(LHS, ConstantInt::get(LHS->getType(), RHS), Name);
   }
 
+  Value *CreateAnd(ArrayRef<Value*> Ops) {
+    assert(!Ops.empty());
+    Value *Accum = Ops[0];
+    for (unsigned i = 1; i < Ops.size(); i++)
+      Accum = CreateAnd(Accum, Ops[i]);
+    return Accum;
+  }
+
   Value *CreateOr(Value *LHS, Value *RHS, const Twine &Name = "") {
+    if (auto *LC = dyn_cast<Constant>(LHS))
+      if (LC->isNullValue())
+        return RHS;  //  0 | RHS -> RHS
     if (auto *RC = dyn_cast<Constant>(RHS)) {
       if (RC->isNullValue())
         return LHS;  // LHS | 0 -> LHS
@@ -1230,6 +1244,14 @@ public:
 
   Value *CreateOr(Value *LHS, uint64_t RHS, const Twine &Name = "") {
     return CreateOr(LHS, ConstantInt::get(LHS->getType(), RHS), Name);
+  }
+
+  Value *CreateOr(ArrayRef<Value*> Ops) {
+    assert(!Ops.empty());
+    Value *Accum = Ops[0];
+    for (unsigned i = 1; i < Ops.size(); i++)
+      Accum = CreateOr(Accum, Ops[i]);
+    return Accum;
   }
 
   Value *CreateXor(Value *LHS, Value *RHS, const Twine &Name = "") {

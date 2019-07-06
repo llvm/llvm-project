@@ -101,15 +101,18 @@ file formats.
 
 .. option:: --section-data, --sd
 
- When used with :option:`--sections`, display section data for each section shown.
+ When used with :option:`--sections`, display section data for each section
+ shown. This option has no effect for GNU style output.
 
 .. option:: --section-relocations, --sr
 
- When used with :option:`--sections`, display relocations for each section shown.
+ When used with :option:`--sections`, display relocations for each section
+ shown. This option has no effect for GNU style output.
 
 .. option:: --section-symbols, --st
 
  When used with :option:`--sections`, display symbols for each section shown.
+ This option has no effect for GNU style output.
 
 .. option:: --stackmap
 
