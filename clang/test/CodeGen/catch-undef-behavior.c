@@ -17,9 +17,7 @@
 // CHECK-UBSAN: @[[LINE_700:.*]] = {{.*}}, i32 700, i32 14 {{.*}} @[[STRUCT_S]], i8 2, i8 3 }
 // CHECK-UBSAN: @[[LINE_800:.*]] = {{.*}}, i32 800, i32 12 {{.*}} @{{.*}} }
 // CHECK-UBSAN: @[[LINE_900:.*]] = {{.*}}, i32 900, i32 11 {{.*}} @{{.*}} }
-// CHECK-UBSAN: @[[LINE_1000:.*]] = {{.*}}, i32 1000, i32 10 {{.*}} @{{.*}} }
 // CHECK-UBSAN: @[[FP16:.*]] = private unnamed_addr constant { i16, i16, [9 x i8] } { i16 1, i16 16, [9 x i8] c"'__fp16'\00" }
-// CHECK-UBSAN: @[[LINE_1100:.*]] = {{.*}}, i32 1100, i32 8 {{.*}} @{{.*}} }
 // CHECK-UBSAN: @[[LINE_1200:.*]] = {{.*}}, i32 1200, i32 10 {{.*}} @{{.*}} }
 // CHECK-UBSAN: @[[LINE_1300:.*]] = {{.*}}, i32 1300, i32 10 {{.*}} @{{.*}} }
 // CHECK-UBSAN: @[[LINE_1400:.*]] = {{.*}}, i32 1400, i32 10 {{.*}} @{{.*}} }
@@ -27,7 +25,6 @@
 // CHECK-UBSAN: @[[LINE_1500:.*]] = {{.*}}, i32 1500, i32 10 {{.*}} @[[FP16]], {{.*}} }
 // CHECK-UBSAN: @[[SCHAR:.*]] = private unnamed_addr constant { i16, i16, [14 x i8] } { i16 0, i16 7, [14 x i8] c"'signed char'\00" }
 // CHECK-UBSAN: @[[LINE_1500:.*]] = {{.*}}, i32 1500, i32 10 {{.*}} @[[FP16]], {{.*}} }
-// CHECK-UBSAN: @[[LINE_1600:.*]] = {{.*}}, i32 1600, i32 10 {{.*}} @{{.*}} }
 
 // PR6805
 // CHECK-COMMON-LABEL: @foo
@@ -197,30 +194,16 @@ float int_float_no_overflow(__int128 n) {
 
 // CHECK-COMMON-LABEL: @int_float_overflow
 float int_float_overflow(unsigned __int128 n) {
-  // This is 2**104. FLT_MAX is 2**128 - 2**104.
-  // CHECK-COMMON: %[[INBOUNDS:.*]] = icmp ule i128 %{{.*}}, -20282409603651670423947251286016
-  // CHECK-COMMON-NEXT: br i1 %[[INBOUNDS]]
-
-  // CHECK-UBSAN: call void @__ubsan_handle_float_cast_overflow(i8* bitcast ({{.*}} @[[LINE_1000]] to i8*),
-
-  // CHECK-TRAP:      call void @llvm.trap() [[NR_NUW]]
-  // CHECK-TRAP-NEXT: unreachable
-#line 1000
+  // CHECK-UBSAN-NOT: call {{.*}} @__ubsan_handle_float_cast_overflow(
+  // CHECK-TRAP-NOT:  call {{.*}} @llvm.trap(
+  // CHECK-COMMON: }
   return n;
 }
 
 // CHECK-COMMON-LABEL: @int_fp16_overflow
 void int_fp16_overflow(int n, __fp16 *p) {
-  // CHECK-COMMON: %[[GE:.*]] = icmp sge i32 %{{.*}}, -65504
-  // CHECK-COMMON: %[[LE:.*]] = icmp sle i32 %{{.*}}, 65504
-  // CHECK-COMMON: %[[INBOUNDS:.*]] = and i1 %[[GE]], %[[LE]]
-  // CHECK-COMMON-NEXT: br i1 %[[INBOUNDS]]
-
-  // CHECK-UBSAN: call void @__ubsan_handle_float_cast_overflow(i8* bitcast ({{.*}} @[[LINE_1100]] to i8*),
-
-  // CHECK-TRAP:      call void @llvm.trap() [[NR_NUW]]
-  // CHECK-TRAP-NEXT: unreachable
-#line 1100
+  // CHECK-UBSAN-NOT: call {{.*}} @__ubsan_handle_float_cast_overflow(
+  // CHECK-COMMON: }
   *p = n;
 }
 
@@ -292,18 +275,9 @@ signed char fp16_char_overflow(__fp16 *p) {
 
 // CHECK-COMMON-LABEL: @float_float_overflow
 float float_float_overflow(double f) {
-  // CHECK-COMMON: %[[F:.*]] = call double @llvm.fabs.f64(
-  // CHECK-COMMON: %[[GE:.*]] = fcmp ogt double %[[F]], 0x47EFFFFFE0000000
-  // CHECK-COMMON: %[[LE:.*]] = fcmp olt double %[[F]], 0x7FF0000000000000
-  // CHECK-COMMON: %[[OUTOFBOUNDS:.*]] = and i1 %[[GE]], %[[LE]]
-  // CHECK-COMMON: %[[INBOUNDS:.*]] = xor i1 %[[OUTOFBOUNDS]], true
-  // CHECK-COMMON-NEXT: br i1 %[[INBOUNDS]]
-
-  // CHECK-UBSAN: call void @__ubsan_handle_float_cast_overflow(i8* bitcast ({{.*}} @[[LINE_1600]] to i8*),
-
-  // CHECK-TRAP:      call void @llvm.trap() [[NR_NUW]]
-  // CHECK-TRAP-NEXT: unreachable
-#line 1600
+  // CHECK-UBSAN-NOT: call {{.*}} @__ubsan_handle_float_cast_overflow(i8* bitcast ({{.*}} @[[LINE_1600]] to i8*),
+  // CHECK-TRAP-NOT:  call {{.*}} @llvm.trap() [[NR_NUW]]
+  // CHECK-COMMON: }
   return f;
 }
 
