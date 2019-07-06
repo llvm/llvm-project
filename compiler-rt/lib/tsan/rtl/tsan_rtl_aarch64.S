@@ -105,18 +105,8 @@ ASM_SYMBOL_INTERCEPTOR(setjmp):
   CFI_OFFSET (19, -16)
   mov     x19, x0
 
-#if !defined(__APPLE__)
-  // SP pointer mangling (see glibc setjmp)
-  adrp    x2, __tsan_pointer_chk_guard
-  ldr     x2, [x2, #:lo12:__tsan_pointer_chk_guard]
+  // Obtain SP, first argument to `void __tsan_setjmp(uptr sp)`
   add     x0, x29, 32
-  eor     x1, x2, x0
-#else
-  adrp    x2, ___tsan_darwin_setjmp_xor_key@page
-  ldr     x2, [x2, ___tsan_darwin_setjmp_xor_key@pageoff]
-  add     x0, x29, 32
-  eor     x1, x2, x0
-#endif
 
   // call tsan interceptor
   bl      ASM_SYMBOL(__tsan_setjmp)
@@ -165,18 +155,8 @@ ASM_SYMBOL_INTERCEPTOR(_setjmp):
   CFI_OFFSET (19, -16)
   mov     x19, x0
 
-#if !defined(__APPLE__)
-  // SP pointer mangling (see glibc setjmp)
-  adrp    x2, __tsan_pointer_chk_guard
-  ldr     x2, [x2, #:lo12:__tsan_pointer_chk_guard]
+  // Obtain SP, first argument to `void __tsan_setjmp(uptr sp)`
   add     x0, x29, 32
-  eor     x1, x2, x0
-#else
-  adrp    x2, ___tsan_darwin_setjmp_xor_key@page
-  ldr     x2, [x2, ___tsan_darwin_setjmp_xor_key@pageoff]
-  add     x0, x29, 32
-  eor     x1, x2, x0
-#endif
 
   // call tsan interceptor
   bl      ASM_SYMBOL(__tsan_setjmp)
@@ -227,18 +207,8 @@ ASM_SYMBOL_INTERCEPTOR(sigsetjmp):
   mov     w20, w1
   mov     x19, x0
 
-#if !defined(__APPLE__)
-  // SP pointer mangling (see glibc setjmp)
-  adrp    x2, __tsan_pointer_chk_guard
-  ldr     x2, [x2, #:lo12:__tsan_pointer_chk_guard]
+  // Obtain SP, first argument to `void __tsan_setjmp(uptr sp)`
   add     x0, x29, 32
-  eor     x1, x2, x0
-#else
-  adrp    x2, ___tsan_darwin_setjmp_xor_key@page
-  ldr     x2, [x2, ___tsan_darwin_setjmp_xor_key@pageoff]
-  add     x0, x29, 32
-  eor     x1, x2, x0
-#endif
 
   // call tsan interceptor
   bl      ASM_SYMBOL(__tsan_setjmp)
@@ -292,13 +262,8 @@ ASM_SYMBOL_INTERCEPTOR(__sigsetjmp):
   mov     w20, w1
   mov     x19, x0
 
-#if !defined(__APPLE__)
-  // SP pointer mangling (see glibc setjmp)
-  adrp    x2, __tsan_pointer_chk_guard
-  ldr     x2, [x2, #:lo12:__tsan_pointer_chk_guard]
+  // Obtain SP, first argument to `void __tsan_setjmp(uptr sp)`
   add     x0, x29, 32
-  eor     x1, x2, x0
-#endif
 
   // call tsan interceptor
   bl      ASM_SYMBOL(__tsan_setjmp)
