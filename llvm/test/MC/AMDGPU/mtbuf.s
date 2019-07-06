@@ -14,9 +14,9 @@ tbuffer_load_format_xy v[1:2], off, s[4:7], dfmt:15, nfmt:2, s1
 // SICI: tbuffer_load_format_xy v[1:2], off, s[4:7],  dfmt:15,  nfmt:2, s1 ; encoding: [0x00,0x00,0x79,0xe9,0x00,0x01,0x01,0x01]
 // VI:   tbuffer_load_format_xy v[1:2], off, s[4:7],  dfmt:15,  nfmt:2, s1 ; encoding: [0x00,0x80,0x78,0xe9,0x00,0x01,0x01,0x01]
 
-tbuffer_load_format_xyz v[1:4], off, s[4:7], dfmt:15, nfmt:2, s1
-// SICI: tbuffer_load_format_xyz v[1:4], off, s[4:7],  dfmt:15,  nfmt:2, s1 ; encoding: [0x00,0x00,0x7a,0xe9,0x00,0x01,0x01,0x01]
-// VI:   tbuffer_load_format_xyz v[1:4], off, s[4:7],  dfmt:15,  nfmt:2, s1 ; encoding: [0x00,0x00,0x79,0xe9,0x00,0x01,0x01,0x01]
+tbuffer_load_format_xyz v[1:3], off, s[4:7], dfmt:15, nfmt:2, s1
+// SICI: tbuffer_load_format_xyz v[1:3], off, s[4:7],  dfmt:15,  nfmt:2, s1 ; encoding: [0x00,0x00,0x7a,0xe9,0x00,0x01,0x01,0x01]
+// VI:   tbuffer_load_format_xyz v[1:3], off, s[4:7],  dfmt:15,  nfmt:2, s1 ; encoding: [0x00,0x00,0x79,0xe9,0x00,0x01,0x01,0x01]
 
 tbuffer_load_format_xyzw v[1:4], off, s[4:7], dfmt:15, nfmt:2, s1
 // SICI: tbuffer_load_format_xyzw v[1:4], off, s[4:7],  dfmt:15,  nfmt:2, s1 ; encoding: [0x00,0x00,0x7b,0xe9,0x00,0x01,0x01,0x01]

@@ -281,6 +281,23 @@ bb:
   ret void
 }
 
+; GCN-LABEL: {{^}}s_select_v5f32:
+; GCN: v_cmp_eq_u32_e64 vcc, s{{[0-9]+}}, 0{{$}}
+
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+; GCN: v_cndmask_b32_e32
+
+; GCN: buffer_store_dwordx
+define amdgpu_kernel void @s_select_v5f32(<5 x float> addrspace(1)* %out, <5 x float> %a, <5 x float> %b, i32 %c) #0 {
+  %cmp = icmp eq i32 %c, 0
+  %select = select i1 %cmp, <5 x float> %a, <5 x float> %b
+  store <5 x float> %select, <5 x float> addrspace(1)* %out, align 16
+  ret void
+}
+
 ; GCN-LABEL: {{^}}select_v8f32:
 ; GCN: v_cndmask_b32_e32
 ; GCN: v_cndmask_b32_e32

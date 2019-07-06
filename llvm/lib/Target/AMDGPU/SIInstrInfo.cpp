@@ -882,6 +882,8 @@ static unsigned getSGPRSpillSaveOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_S96_SAVE;
   case 16:
     return AMDGPU::SI_SPILL_S128_SAVE;
+  case 20:
+    return AMDGPU::SI_SPILL_S160_SAVE;
   case 32:
     return AMDGPU::SI_SPILL_S256_SAVE;
   case 64:
@@ -901,6 +903,8 @@ static unsigned getVGPRSpillSaveOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_V96_SAVE;
   case 16:
     return AMDGPU::SI_SPILL_V128_SAVE;
+  case 20:
+    return AMDGPU::SI_SPILL_V160_SAVE;
   case 32:
     return AMDGPU::SI_SPILL_V256_SAVE;
   case 64:
@@ -986,6 +990,8 @@ static unsigned getSGPRSpillRestoreOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_S96_RESTORE;
   case 16:
     return AMDGPU::SI_SPILL_S128_RESTORE;
+  case 20:
+    return AMDGPU::SI_SPILL_S160_RESTORE;
   case 32:
     return AMDGPU::SI_SPILL_S256_RESTORE;
   case 64:
@@ -1005,6 +1011,8 @@ static unsigned getVGPRSpillRestoreOpcode(unsigned Size) {
     return AMDGPU::SI_SPILL_V96_RESTORE;
   case 16:
     return AMDGPU::SI_SPILL_V128_RESTORE;
+  case 20:
+    return AMDGPU::SI_SPILL_V160_RESTORE;
   case 32:
     return AMDGPU::SI_SPILL_V256_RESTORE;
   case 64:

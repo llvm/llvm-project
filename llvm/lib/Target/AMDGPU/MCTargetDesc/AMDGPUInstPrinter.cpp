@@ -399,6 +399,9 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   } else if (MRI.getRegClass(AMDGPU::SReg_96RegClassID).contains(RegNo)) {
     O << 's';
     NumRegs = 3;
+  } else if (MRI.getRegClass(AMDGPU::VReg_160RegClassID).contains(RegNo)) {
+    O << 'v';
+    NumRegs = 5;
   } else if (MRI.getRegClass(AMDGPU::VReg_256RegClassID).contains(RegNo)) {
     O << 'v';
     NumRegs = 8;
