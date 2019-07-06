@@ -32,30 +32,34 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   endif()
   set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_TOOLS_BINARY_DIR}/${lit_file_name}" CACHE PATH "Path to llvm-lit")
 
-  if(CMAKE_CROSSCOMPILING)
-    set(LLVM_NATIVE_BUILD "${LLDB_PATH_TO_LLVM_BUILD}/NATIVE")
-    if (NOT EXISTS "${LLVM_NATIVE_BUILD}")
-      message(FATAL_ERROR
-        "Attempting to cross-compile LLDB standalone but no native LLVM build
-        found. Please cross-compile LLVM as well.")
-    endif()
-
-    if (CMAKE_HOST_SYSTEM_NAME MATCHES "Windows")
-      set(HOST_EXECUTABLE_SUFFIX ".exe")
-    endif()
-
-    if (NOT CMAKE_CONFIGURATION_TYPES)
-      set(LLVM_TABLEGEN_EXE
-        "${LLVM_NATIVE_BUILD}/bin/llvm-tblgen${HOST_EXECUTABLE_SUFFIX}")
-    else()
-      # NOTE: LLVM NATIVE build is always built Release, as is specified in
-      # CrossCompile.cmake
-      set(LLVM_TABLEGEN_EXE
-        "${LLVM_NATIVE_BUILD}/Release/bin/llvm-tblgen${HOST_EXECUTABLE_SUFFIX}")
-    endif()
+  if(LLVM_TABLEGEN)
+    set(LLVM_TABLEGEN_EXE ${LLVM_TABLEGEN})
   else()
-    find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
-      NO_DEFAULT_PATH)
+    if(CMAKE_CROSSCOMPILING)
+      set(LLVM_NATIVE_BUILD "${LLDB_PATH_TO_LLVM_BUILD}/NATIVE")
+      if (NOT EXISTS "${LLVM_NATIVE_BUILD}")
+        message(FATAL_ERROR
+          "Attempting to cross-compile LLDB standalone but no native LLVM build
+          found. Please cross-compile LLVM as well.")
+      endif()
+
+      if (CMAKE_HOST_SYSTEM_NAME MATCHES "Windows")
+        set(HOST_EXECUTABLE_SUFFIX ".exe")
+      endif()
+
+      if (NOT CMAKE_CONFIGURATION_TYPES)
+        set(LLVM_TABLEGEN_EXE
+          "${LLVM_NATIVE_BUILD}/bin/llvm-tblgen${HOST_EXECUTABLE_SUFFIX}")
+      else()
+        # NOTE: LLVM NATIVE build is always built Release, as is specified in
+        # CrossCompile.cmake
+        set(LLVM_TABLEGEN_EXE
+          "${LLVM_NATIVE_BUILD}/Release/bin/llvm-tblgen${HOST_EXECUTABLE_SUFFIX}")
+      endif()
+    else()
+      find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
+        NO_DEFAULT_PATH)
+    endif()
   endif()
 
   # They are used as destination of target generators.
