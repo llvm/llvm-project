@@ -35,9 +35,9 @@ public:
   void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
                         BugReporter &BR) const {
     if (AnalysisDeclContext *AC = mgr.getAnalysisDeclContext(D)) {
-      CFGDomTree dom;
-      dom.buildDominatorTree(AC->getCFG());
-      dom.dump();
+      CFGDomTree Dom;
+      Dom.buildDominatorTree(AC->getCFG());
+      Dom.dump();
     }
   }
 };
@@ -61,9 +61,9 @@ public:
   void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
                         BugReporter &BR) const {
     if (AnalysisDeclContext *AC = mgr.getAnalysisDeclContext(D)) {
-      CFGPostDomTree dom;
-      dom.buildDominatorTree(AC->getCFG());
-      dom.dump();
+      CFGPostDomTree Dom;
+      Dom.buildDominatorTree(AC->getCFG());
+      Dom.dump();
     }
   }
 };
@@ -74,6 +74,31 @@ void ento::registerPostDominatorsTreeDumper(CheckerManager &mgr) {
 }
 
 bool ento::shouldRegisterPostDominatorsTreeDumper(const LangOptions &LO) {
+  return true;
+}
+
+//===----------------------------------------------------------------------===//
+// ControlDependencyTreeDumper
+//===----------------------------------------------------------------------===//
+
+namespace {
+class ControlDependencyTreeDumper : public Checker<check::ASTCodeBody> {
+public:
+  void checkASTCodeBody(const Decl *D, AnalysisManager& mgr,
+                        BugReporter &BR) const {
+    if (AnalysisDeclContext *AC = mgr.getAnalysisDeclContext(D)) {
+      ControlDependencyCalculator Dom(AC->getCFG());
+      Dom.dump();
+    }
+  }
+};
+}
+
+void ento::registerControlDependencyTreeDumper(CheckerManager &mgr) {
+  mgr.registerChecker<ControlDependencyTreeDumper>();
+}
+
+bool ento::shouldRegisterControlDependencyTreeDumper(const LangOptions &LO) {
   return true;
 }
 

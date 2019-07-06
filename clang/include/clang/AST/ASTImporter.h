@@ -201,7 +201,7 @@ class TypeSourceInfo;
       }
 
     private:
-      // All the nodes of the path.
+      // All nodes of the path.
       VecTy Nodes;
       // Auxiliary container to be able to answer "Do we have a cycle ending
       // at last element?" as fast as possible.
