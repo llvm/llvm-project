@@ -268,17 +268,15 @@ entry:
   ret void
 }
 
-; TODO: Reinstate the test below once v3i32/v3f32 is reinstated.
-
 ; Make sure tuples of 3 SGPRs are printed with the [] syntax instead
 ; of the tablegen default.
-; xCHECK-LABEL: {{^}}sgpr96_name_format:
-; xCHECK: ; sgpr96 s[0:2]
-;define amdgpu_kernel void @sgpr96_name_format()  {
-;entry:
-;  tail call void asm sideeffect "; sgpr96 $0", "s"(<3 x i32> <i32 10, i32 11, i32 12>) #1
-;  ret void
-;}
+; CHECK-LABEL: {{^}}sgpr96_name_format:
+; CHECK: ; sgpr96 s[0:2]
+define amdgpu_kernel void @sgpr96_name_format()  {
+entry:
+  tail call void asm sideeffect "; sgpr96 $0", "s"(<3 x i32> <i32 10, i32 11, i32 12>) #1
+  ret void
+}
 
 ; Check aggregate types are handled properly.
 ; CHECK-LABEL: mad_u64

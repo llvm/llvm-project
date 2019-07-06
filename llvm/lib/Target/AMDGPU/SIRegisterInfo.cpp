@@ -452,6 +452,8 @@ static unsigned getNumSubRegsForSpillOp(unsigned Op) {
   case AMDGPU::SI_SPILL_V128_SAVE:
   case AMDGPU::SI_SPILL_V128_RESTORE:
     return 4;
+  case AMDGPU::SI_SPILL_S96_SAVE:
+  case AMDGPU::SI_SPILL_S96_RESTORE:
   case AMDGPU::SI_SPILL_V96_SAVE:
   case AMDGPU::SI_SPILL_V96_RESTORE:
     return 3;
@@ -1023,12 +1025,14 @@ bool SIRegisterInfo::eliminateSGPRToVGPRSpillFrameIndex(
   case AMDGPU::SI_SPILL_S512_SAVE:
   case AMDGPU::SI_SPILL_S256_SAVE:
   case AMDGPU::SI_SPILL_S128_SAVE:
+  case AMDGPU::SI_SPILL_S96_SAVE:
   case AMDGPU::SI_SPILL_S64_SAVE:
   case AMDGPU::SI_SPILL_S32_SAVE:
     return spillSGPR(MI, FI, RS, true);
   case AMDGPU::SI_SPILL_S512_RESTORE:
   case AMDGPU::SI_SPILL_S256_RESTORE:
   case AMDGPU::SI_SPILL_S128_RESTORE:
+  case AMDGPU::SI_SPILL_S96_RESTORE:
   case AMDGPU::SI_SPILL_S64_RESTORE:
   case AMDGPU::SI_SPILL_S32_RESTORE:
     return restoreSGPR(MI, FI, RS, true);
@@ -1061,6 +1065,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_S512_SAVE:
     case AMDGPU::SI_SPILL_S256_SAVE:
     case AMDGPU::SI_SPILL_S128_SAVE:
+    case AMDGPU::SI_SPILL_S96_SAVE:
     case AMDGPU::SI_SPILL_S64_SAVE:
     case AMDGPU::SI_SPILL_S32_SAVE: {
       spillSGPR(MI, Index, RS);
@@ -1071,6 +1076,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
     case AMDGPU::SI_SPILL_S512_RESTORE:
     case AMDGPU::SI_SPILL_S256_RESTORE:
     case AMDGPU::SI_SPILL_S128_RESTORE:
+    case AMDGPU::SI_SPILL_S96_RESTORE:
     case AMDGPU::SI_SPILL_S64_RESTORE:
     case AMDGPU::SI_SPILL_S32_RESTORE: {
       restoreSGPR(MI, Index, RS);
@@ -1297,6 +1303,7 @@ const TargetRegisterClass *SIRegisterInfo::getPhysRegClass(unsigned Reg) const {
     &AMDGPU::VReg_64RegClass,
     &AMDGPU::SReg_64RegClass,
     &AMDGPU::VReg_96RegClass,
+    &AMDGPU::SReg_96RegClass,
     &AMDGPU::VReg_128RegClass,
     &AMDGPU::SReg_128RegClass,
     &AMDGPU::VReg_256RegClass,
@@ -1367,6 +1374,8 @@ const TargetRegisterClass *SIRegisterInfo::getEquivalentSGPRClass(
     return &AMDGPU::SGPR_32RegClass;
   case 64:
     return &AMDGPU::SReg_64RegClass;
+  case 96:
+    return &AMDGPU::SReg_96RegClass;
   case 128:
     return &AMDGPU::SReg_128RegClass;
   case 256:
@@ -1391,6 +1400,8 @@ const TargetRegisterClass *SIRegisterInfo::getSubRegClass(
       return &AMDGPU::SGPR_32RegClass;
     case 2:
       return &AMDGPU::SReg_64RegClass;
+    case 3:
+      return &AMDGPU::SReg_96RegClass;
     case 4:
       return &AMDGPU::SReg_128RegClass;
     case 8:
@@ -1670,7 +1681,7 @@ SIRegisterInfo::getRegClassForSizeOnBank(unsigned Size,
                                                  &AMDGPU::SReg_64_XEXECRegClass;
   case 96:
     return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_96RegClass :
-                                                 nullptr;
+                                                 &AMDGPU::SReg_96RegClass;
   case 128:
     return RB.getID() == AMDGPU::VGPRRegBankID ? &AMDGPU::VReg_128RegClass :
                                                  &AMDGPU::SReg_128RegClass;

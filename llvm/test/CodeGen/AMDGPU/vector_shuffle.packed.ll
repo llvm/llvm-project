@@ -726,11 +726,11 @@ define <6 x half> @shuffle_v6f16_452367(<6 x half> addrspace(1)* %arg0, <6 x hal
 ; GFX9-LABEL: shuffle_v6f16_452367:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    v_mov_b32_e32 v5, v3
-; GFX9-NEXT:    v_mov_b32_e32 v4, v2
-; GFX9-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
-; GFX9-NEXT:    s_waitcnt vmcnt(0)
-; GFX9-NEXT:    global_load_dword v3, v[4:5], off
+; GFX9-NEXT:    v_mov_b32_e32 v4, v3
+; GFX9-NEXT:    v_mov_b32_e32 v3, v2
+; GFX9-NEXT:    global_load_dwordx3 v[0:2], v[0:1], off
+; GFX9-NEXT:    global_load_dword v3, v[3:4], off
+; GFX9-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_mov_b32_e32 v2, v3

@@ -121,11 +121,11 @@ define amdgpu_kernel void @load_v3i8_to_v3f32(<3 x float> addrspace(1)* noalias 
 ; VI-NEXT:    v_mov_b32_e32 v1, s1
 ; VI-NEXT:    v_add_u32_e32 v0, vcc, s0, v0
 ; VI-NEXT:    v_addc_u32_e32 v1, vcc, 0, v1, vcc
-; VI-NEXT:    flat_load_dword v2, v[0:1]
+; VI-NEXT:    flat_load_dword v0, v[0:1]
 ; VI-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; VI-NEXT:    v_cvt_f32_ubyte1_e32 v1, v2
-; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v2
-; VI-NEXT:    v_cvt_f32_ubyte2_e32 v2, v2
+; VI-NEXT:    v_cvt_f32_ubyte2_e32 v2, v0
+; VI-NEXT:    v_cvt_f32_ubyte1_e32 v1, v0
+; VI-NEXT:    v_cvt_f32_ubyte0_e32 v0, v0
 ; VI-NEXT:    buffer_store_dwordx3 v[0:2], off, s[4:7], 0
 ; VI-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

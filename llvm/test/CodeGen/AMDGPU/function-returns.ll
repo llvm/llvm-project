@@ -140,7 +140,7 @@ define <2 x i32> @v2i32_func_void() #0 {
 }
 
 ; GCN-LABEL: {{^}}v3i32_func_void:
-; GCN: buffer_load_dwordx4 v[0:3], off
+; GCN: buffer_load_dwordx3 v[0:2], off
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define <3 x i32> @v3i32_func_void() #0 {

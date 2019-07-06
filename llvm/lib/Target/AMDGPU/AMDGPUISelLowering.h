@@ -110,8 +110,22 @@ protected:
   SDValue getLoHalf64(SDValue Op, SelectionDAG &DAG) const;
   SDValue getHiHalf64(SDValue Op, SelectionDAG &DAG) const;
 
+  /// Split a vector type into two parts. The first part is a power of two
+  /// vector. The second part is whatever is left over, and is a scalar if it
+  /// would otherwise be a 1-vector.
+  std::pair<EVT, EVT> getSplitDestVTs(const EVT &VT, SelectionDAG &DAG) const;
+
+  /// Split a vector value into two parts of types LoVT and HiVT. HiVT could be
+  /// scalar.
+  std::pair<SDValue, SDValue> splitVector(const SDValue &N, const SDLoc &DL,
+                                          const EVT &LoVT, const EVT &HighVT,
+                                          SelectionDAG &DAG) const;
+
   /// Split a vector load into 2 loads of half the vector.
   SDValue SplitVectorLoad(SDValue Op, SelectionDAG &DAG) const;
+
+  /// Widen a vector load from vec3 to vec4.
+  SDValue WidenVectorLoad(SDValue Op, SelectionDAG &DAG) const;
 
   /// Split a vector store into 2 stores of half the vector.
   SDValue SplitVectorStore(SDValue Op, SelectionDAG &DAG) const;

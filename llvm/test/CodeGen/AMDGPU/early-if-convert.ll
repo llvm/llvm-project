@@ -316,10 +316,10 @@ endif:
 ; GCN: s_add_i32
 ; GCN: s_add_i32
 ; GCN: s_add_i32
-; GCN: s_add_i32
 ; GCN: s_cmp_lg_u32 s{{[0-9]+}}, 1
-; GCN-NEXT: s_cselect_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}
-; GCN-NEXT: s_cselect_b64 s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}, s{{\[[0-9]+:[0-9]+\]}}
+; GCN-NEXT: s_cselect_b32 s
+; GCN-NEXT: s_cselect_b32 s
+; GCN-NEXT: s_cselect_b32 s
 define amdgpu_kernel void @test_scc1_sgpr_ifcvt_triangle96(<3 x i32> addrspace(4)* %in, i32 %cond) #0 {
 entry:
   %v = load <3 x i32>, <3 x i32> addrspace(4)* %in
