@@ -55,4 +55,4 @@ will exit with a non-zero value.
 SEE ALSO
 --------
 
-llvm-dis|llvm-dis, gccas|gccas
+:manpage:`llvm-dis(1)`, as(1)

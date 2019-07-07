@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- glue_numeric_impl.h -----------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,6 +11,8 @@
 #define _PSTL_GLUE_NUMERIC_IMPL_H
 
 #include <functional>
+
+#include "pstl_config.h"
 
 #include "utils.h"
 #include "numeric_fwd.h"

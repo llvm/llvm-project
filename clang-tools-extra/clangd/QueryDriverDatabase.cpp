@@ -48,6 +48,7 @@
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include <algorithm>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -221,16 +222,19 @@ public:
 
     llvm::SmallString<128> Driver(Cmd->CommandLine.front());
     llvm::sys::fs::make_absolute(Cmd->Directory, Driver);
+    llvm::StringRef Ext = llvm::sys::path::extension(File).trim('.');
+    auto Key = std::make_pair(Driver.str(), Ext);
 
-    llvm::ArrayRef<std::string> SystemIncludes;
+    std::vector<std::string> SystemIncludes;
     {
       std::lock_guard<std::mutex> Lock(Mu);
 
-      llvm::StringRef Ext = llvm::sys::path::extension(File).trim('.');
-      auto It = DriverToIncludesCache.try_emplace({Driver, Ext});
-      if (It.second)
-        It.first->second = extractSystemIncludes(Driver, Ext, QueryDriverRegex);
-      SystemIncludes = It.first->second;
+      auto It = DriverToIncludesCache.find(Key);
+      if (It != DriverToIncludesCache.end())
+        SystemIncludes = It->second;
+      else
+        DriverToIncludesCache[Key] = SystemIncludes =
+            extractSystemIncludes(Key.first, Key.second, QueryDriverRegex);
     }
 
     return addSystemIncludes(*Cmd, SystemIncludes);
@@ -239,8 +243,8 @@ public:
 private:
   mutable std::mutex Mu;
   // Caches includes extracted from a driver.
-  mutable llvm::DenseMap<std::pair<StringRef, StringRef>,
-                         std::vector<std::string>>
+  mutable std::map<std::pair<std::string, std::string>,
+                   std::vector<std::string>>
       DriverToIncludesCache;
   mutable llvm::Regex QueryDriverRegex;
 

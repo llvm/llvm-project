@@ -634,15 +634,15 @@ define <4 x double> @masked_gather_v4double(<4 x double*>* %ptr, <4 x i1> %masks
 ; NOGATHER-NEXT:  # %bb.1: # %cond.load
 ; NOGATHER-NEXT:    vmovq %xmm2, %rax
 ; NOGATHER-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
-; NOGATHER-NEXT:    vblendpd {{.*#+}} ymm1 = ymm3[0],ymm1[1,2,3]
+; NOGATHER-NEXT:    vblendps {{.*#+}} ymm1 = ymm3[0,1],ymm1[2,3,4,5,6,7]
 ; NOGATHER-NEXT:  .LBB9_2: # %else
 ; NOGATHER-NEXT:    vpextrb $4, %xmm0, %eax
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB9_4
 ; NOGATHER-NEXT:  # %bb.3: # %cond.load1
 ; NOGATHER-NEXT:    vpextrq $1, %xmm2, %rax
-; NOGATHER-NEXT:    vmovhpd {{.*#+}} xmm3 = xmm1[0],mem[0]
-; NOGATHER-NEXT:    vblendpd {{.*#+}} ymm1 = ymm3[0,1],ymm1[2,3]
+; NOGATHER-NEXT:    vmovhps {{.*#+}} xmm3 = xmm1[0,1],mem[0,1]
+; NOGATHER-NEXT:    vblendps {{.*#+}} ymm1 = ymm3[0,1,2,3],ymm1[4,5,6,7]
 ; NOGATHER-NEXT:  .LBB9_4: # %else2
 ; NOGATHER-NEXT:    vpextrb $8, %xmm0, %eax
 ; NOGATHER-NEXT:    vextractf128 $1, %ymm2, %xmm2
@@ -651,7 +651,7 @@ define <4 x double> @masked_gather_v4double(<4 x double*>* %ptr, <4 x i1> %masks
 ; NOGATHER-NEXT:  # %bb.5: # %cond.load4
 ; NOGATHER-NEXT:    vmovq %xmm2, %rax
 ; NOGATHER-NEXT:    vextractf128 $1, %ymm1, %xmm3
-; NOGATHER-NEXT:    vmovlpd {{.*#+}} xmm3 = mem[0],xmm3[1]
+; NOGATHER-NEXT:    vmovlps {{.*#+}} xmm3 = mem[0,1],xmm3[2,3]
 ; NOGATHER-NEXT:    vinsertf128 $1, %xmm3, %ymm1, %ymm1
 ; NOGATHER-NEXT:  .LBB9_6: # %else5
 ; NOGATHER-NEXT:    vpextrb $12, %xmm0, %eax
@@ -660,10 +660,10 @@ define <4 x double> @masked_gather_v4double(<4 x double*>* %ptr, <4 x i1> %masks
 ; NOGATHER-NEXT:  # %bb.7: # %cond.load7
 ; NOGATHER-NEXT:    vpextrq $1, %xmm2, %rax
 ; NOGATHER-NEXT:    vextractf128 $1, %ymm1, %xmm0
-; NOGATHER-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; NOGATHER-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; NOGATHER-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm1
 ; NOGATHER-NEXT:  .LBB9_8: # %else8
-; NOGATHER-NEXT:    vmovapd %ymm1, %ymm0
+; NOGATHER-NEXT:    vmovaps %ymm1, %ymm0
 ; NOGATHER-NEXT:    retq
 entry:
   %ld  = load <4 x double*>, <4 x double*>* %ptr
@@ -744,16 +744,16 @@ define <2 x double> @masked_gather_v2double(<2 x double*>* %ptr, <2 x i1> %masks
 ; NOGATHER-NEXT:    je .LBB11_2
 ; NOGATHER-NEXT:  # %bb.1: # %cond.load
 ; NOGATHER-NEXT:    vmovq %xmm2, %rax
-; NOGATHER-NEXT:    vmovlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; NOGATHER-NEXT:    vmovlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; NOGATHER-NEXT:  .LBB11_2: # %else
 ; NOGATHER-NEXT:    vpextrb $8, %xmm0, %eax
 ; NOGATHER-NEXT:    testb $1, %al
 ; NOGATHER-NEXT:    je .LBB11_4
 ; NOGATHER-NEXT:  # %bb.3: # %cond.load1
 ; NOGATHER-NEXT:    vpextrq $1, %xmm2, %rax
-; NOGATHER-NEXT:    vmovhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
+; NOGATHER-NEXT:    vmovhps {{.*#+}} xmm1 = xmm1[0,1],mem[0,1]
 ; NOGATHER-NEXT:  .LBB11_4: # %else2
-; NOGATHER-NEXT:    vmovapd %xmm1, %xmm0
+; NOGATHER-NEXT:    vmovaps %xmm1, %xmm0
 ; NOGATHER-NEXT:    retq
 entry:
   %ld  = load <2 x double*>, <2 x double*>* %ptr

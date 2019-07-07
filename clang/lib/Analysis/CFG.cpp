@@ -5615,6 +5615,30 @@ void CFGBlock::printTerminatorJson(raw_ostream &Out, const LangOptions &LO,
   Out << JsonFormat(TempOut.str(), AddQuotes);
 }
 
+const Expr *CFGBlock::getLastCondition() const {
+  // If the terminator is a temporary dtor or a virtual base, etc, we can't
+  // retrieve a meaningful condition, bail out.
+  if (Terminator.getKind() != CFGTerminator::StmtBranch)
+    return nullptr;
+
+  // Also, if this method was called on a block that doesn't have 2 successors,
+  // this block doesn't have retrievable condition.
+  if (succ_size() < 2)
+    return nullptr;
+
+  auto StmtElem = rbegin()->getAs<CFGStmt>();
+  if (!StmtElem)
+    return nullptr;
+
+  const Stmt *Cond = StmtElem->getStmt();
+  if (isa<ObjCForCollectionStmt>(Cond))
+    return nullptr;
+
+  // Only ObjCForCollectionStmt is known not to be a non-Expr terminator, hence
+  // the cast<>.
+  return cast<Expr>(Cond)->IgnoreParens();
+}
+
 Stmt *CFGBlock::getTerminatorCondition(bool StripParens) {
   Stmt *Terminator = getTerminatorStmt();
   if (!Terminator)

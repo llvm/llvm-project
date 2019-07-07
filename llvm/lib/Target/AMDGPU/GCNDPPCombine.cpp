@@ -32,9 +32,9 @@
 // -> $combined_old = src1,
 //    $combined_bound_ctrl = DPP_BOUND_OFF
 //
-// Othervise cancel.
+// Otherwise cancel.
 //
-// The mov_dpp instruction should recide in the same BB as all it's uses
+// The mov_dpp instruction should reside in the same BB as all its uses
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
@@ -253,33 +253,46 @@ static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
   switch (OrigMIOp) {
   default: break;
   case AMDGPU::V_ADD_U32_e32:
+  case AMDGPU::V_ADD_U32_e64:
   case AMDGPU::V_ADD_I32_e32:
+  case AMDGPU::V_ADD_I32_e64:
   case AMDGPU::V_OR_B32_e32:
+  case AMDGPU::V_OR_B32_e64:
   case AMDGPU::V_SUBREV_U32_e32:
+  case AMDGPU::V_SUBREV_U32_e64:
   case AMDGPU::V_SUBREV_I32_e32:
+  case AMDGPU::V_SUBREV_I32_e64:
   case AMDGPU::V_MAX_U32_e32:
+  case AMDGPU::V_MAX_U32_e64:
   case AMDGPU::V_XOR_B32_e32:
+  case AMDGPU::V_XOR_B32_e64:
     if (OldOpnd->getImm() == 0)
       return true;
     break;
   case AMDGPU::V_AND_B32_e32:
+  case AMDGPU::V_AND_B32_e64:
   case AMDGPU::V_MIN_U32_e32:
+  case AMDGPU::V_MIN_U32_e64:
     if (static_cast<uint32_t>(OldOpnd->getImm()) ==
         std::numeric_limits<uint32_t>::max())
       return true;
     break;
   case AMDGPU::V_MIN_I32_e32:
+  case AMDGPU::V_MIN_I32_e64:
     if (static_cast<int32_t>(OldOpnd->getImm()) ==
         std::numeric_limits<int32_t>::max())
       return true;
     break;
   case AMDGPU::V_MAX_I32_e32:
+  case AMDGPU::V_MAX_I32_e64:
     if (static_cast<int32_t>(OldOpnd->getImm()) ==
         std::numeric_limits<int32_t>::min())
       return true;
     break;
   case AMDGPU::V_MUL_I32_I24_e32:
+  case AMDGPU::V_MUL_I32_I24_e64:
   case AMDGPU::V_MUL_U32_U24_e32:
+  case AMDGPU::V_MUL_U32_U24_e64:
     if (OldOpnd->getImm() == 1)
       return true;
     break;
@@ -300,7 +313,7 @@ MachineInstr *GCNDPPCombine::createDPPInst(MachineInstr &OrigMI,
       return nullptr;
     }
     if (!isIdentityValue(OrigMI.getOpcode(), OldOpndValue)) {
-      LLVM_DEBUG(dbgs() << "  failed: old immediate ins't an identity\n");
+      LLVM_DEBUG(dbgs() << "  failed: old immediate isn't an identity\n");
       return nullptr;
     }
     CombOldVGPR = getRegSubRegPair(*Src1);

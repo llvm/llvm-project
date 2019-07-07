@@ -1,0 +1,39 @@
+## Test that permissions for ouput files are mirrored
+## from their input files.
+
+## The Unix version of this test is seperated because it needs
+## to use umask(1). Windows has no umask, so it can be considered
+## to be always 0, the required behavior.
+# REQUIRES: system-windows
+
+# RUN: touch %t
+# RUN: chmod 0777 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0777
+# RUN: chmod 0666 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0666
+# RUN: chmod 0640 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0640
+
+# RUN: yaml2obj %s -o %t
+
+# RUN: chmod 0777 %t
+# RUN: llvm-objcopy %t %t1
+# RUN: ls -l %t1 | cut -f 1 -d ' ' > %t1.perms
+# RUN: cmp %t1.perms %t.0777
+
+# RUN: chmod 0666 %t
+# RUN: llvm-objcopy %t %t1
+# RUN: ls -l %t1 | cut -f 1 -d ' ' > %t1.perms
+# RUN: cmp %t1.perms %t.0666
+
+# RUN: chmod 0640 %t
+# RUN: llvm-objcopy %t %t1
+# RUN: ls -l %t1 | cut -f 1 -d ' ' > %t1.perms
+# RUN: cmp %t1.perms %t.0640
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64

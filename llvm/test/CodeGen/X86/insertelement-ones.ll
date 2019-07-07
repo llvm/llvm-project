@@ -11,17 +11,17 @@
 define <2 x i64> @insert_v2i64_x1(<2 x i64> %a) {
 ; SSE2-LABEL: insert_v2i64_x1:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movlpd {{.*#+}} xmm0 = mem[0],xmm0[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: insert_v2i64_x1:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    movlpd {{.*#+}} xmm0 = mem[0],xmm0[1]
+; SSE3-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_v2i64_x1:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movlpd {{.*#+}} xmm0 = mem[0],xmm0[1]
+; SSSE3-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: insert_v2i64_x1:
@@ -54,17 +54,17 @@ define <2 x i64> @insert_v2i64_x1(<2 x i64> %a) {
 define <4 x i64> @insert_v4i64_01x3(<4 x i64> %a) {
 ; SSE2-LABEL: insert_v4i64_01x3:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE2-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE3-LABEL: insert_v4i64_01x3:
 ; SSE3:       # %bb.0:
-; SSE3-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSE3-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: insert_v4i64_01x3:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movlpd {{.*#+}} xmm1 = mem[0],xmm1[1]
+; SSSE3-NEXT:    movlps {{.*#+}} xmm1 = mem[0,1],xmm1[2,3]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: insert_v4i64_01x3:

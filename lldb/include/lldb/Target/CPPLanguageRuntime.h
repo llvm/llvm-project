@@ -58,8 +58,6 @@ public:
         process.GetLanguageRuntime(lldb::eLanguageTypeC_plus_plus));
   }
 
-  virtual bool IsVTableName(const char *name) = 0;
-
   bool GetObjectDescription(Stream &str, ValueObject &object) override;
 
   bool GetObjectDescription(Stream &str, Value &value,

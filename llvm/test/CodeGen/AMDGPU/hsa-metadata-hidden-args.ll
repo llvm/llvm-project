@@ -278,8 +278,75 @@ entry:
   ret void
 }
 
+; CHECK:      - Name:       test56
+; CHECK:        SymbolName: 'test56@kd'
+; CHECK:        Args:
+; CHECK-NEXT:     - Name:            r
+; CHECK-NEXT:       Size:            8
+; CHECK-NEXT:       Align:           8
+; CHECK-NEXT:       ValueKind:       GlobalBuffer
+; CHECK-NEXT:       ValueType:       F16
+; CHECK-NEXT:       AddrSpaceQual:   Global
+; CHECK-NEXT:     - Name:            a
+; CHECK-NEXT:       Size:            8
+; CHECK-NEXT:       Align:           8
+; CHECK-NEXT:       ValueKind:       GlobalBuffer
+; CHECK-NEXT:       ValueType:       F16
+; CHECK-NEXT:       AddrSpaceQual:   Global
+; CHECK-NEXT:     - Name:            b
+; CHECK-NEXT:       Size:            8
+; CHECK-NEXT:       Align:           8
+; CHECK-NEXT:       ValueKind:       GlobalBuffer
+; CHECK-NEXT:       ValueType:       F16
+; CHECK-NEXT:       AddrSpaceQual:   Global
+; CHECK-NEXT:     - Size:            8
+; CHECK-NEXT:       Align:           8
+; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetX
+; CHECK-NEXT:       ValueType:       I64
+; CHECK-NEXT:     - Size:            8
+; CHECK-NEXT:       Align:           8
+; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetY
+; CHECK-NEXT:       ValueType:       I64
+; CHECK-NEXT:     - Size:            8
+; CHECK-NEXT:       Align:           8
+; CHECK-NEXT:       ValueKind:       HiddenGlobalOffsetZ
+; CHECK-NEXT:       ValueType:       I64
+; CHECK-NEXT:     - Size:            8
+; CHECK-NEXT:       Align:           8
+; CHECK-NEXT:       ValueKind:       HiddenNone
+; CHECK-NEXT:       ValueType:       I8
+; CHECK-NEXT:       AddrSpaceQual:   Global
+; CHECK-NEXT:     - Size:            8
+; CHECK-NEXT:       Align:           8
+; CHECK-NEXT:       ValueKind:       HiddenNone
+; CHECK-NEXT:       ValueType:       I8
+; CHECK-NEXT:       AddrSpaceQual:   Global
+; CHECK-NEXT:     - Size:            8
+; CHECK-NEXT:       Align:           8
+; CHECK-NEXT:       ValueKind:       HiddenNone
+; CHECK-NEXT:       ValueType:       I8
+; CHECK-NEXT:       AddrSpaceQual:   Global
+; CHECK-NEXT:     - Size:            8
+; CHECK-NEXT:       Align:           8
+; CHECK-NEXT:       ValueKind:       HiddenMultiGridSyncArg
+; CHECK-NEXT:       ValueType:       I8
+; CHECK-NEXT:       AddrSpaceQual:   Global
+; CHECK-NEXT:   CodeProps:
+define amdgpu_kernel void @test56(
+    half addrspace(1)* %r,
+    half addrspace(1)* %a,
+    half addrspace(1)* %b) #5 {
+entry:
+  %a.val = load half, half addrspace(1)* %a
+  %b.val = load half, half addrspace(1)* %b
+  %r.val = fadd half %a.val, %b.val
+  store half %r.val, half addrspace(1)* %r
+  ret void
+}
+
 attributes #0 = { "amdgpu-implicitarg-num-bytes"="8" }
 attributes #1 = { "amdgpu-implicitarg-num-bytes"="16" }
 attributes #2 = { "amdgpu-implicitarg-num-bytes"="24" }
 attributes #3 = { "amdgpu-implicitarg-num-bytes"="32" }
 attributes #4 = { "amdgpu-implicitarg-num-bytes"="48" }
+attributes #5 = { "amdgpu-implicitarg-num-bytes"="56" }

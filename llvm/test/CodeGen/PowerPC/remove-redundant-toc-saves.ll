@@ -37,7 +37,6 @@ if.end:                                           ; preds = %entry, %if.then
 define signext i32 @test3(i32 signext %i, i32 (i32)* nocapture %Func, i32 (i32)* nocapture %Func2) {
 ; CHECK-LABEL: test3:
 ; CHECK:    std 2, 24(1)
-; CHECK:    std 2, 24(1)
 ; CHECK-NOT:    std 2, 24(1)
 entry:
   %tobool = icmp eq i32 %i, 0
@@ -86,7 +85,6 @@ if.end:                                           ; preds = %if.else, %if.then
 define signext i32 @test5(i32 signext %i, i32 (i32)* nocapture %Func, i32 (i32)* nocapture readnone %Func2) {
 entry:
 ; CHECK-LABEL: test5:
-; CHECK:    std 2, 24(1)
 ; CHECK:    std 2, 24(1)
 
   %tobool = icmp eq i32 %i, 0

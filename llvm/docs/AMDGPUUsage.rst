@@ -1391,6 +1391,11 @@ non-AMD key names should be prefixed by "*vendor-name*.".
                                                   the ancestor tree for determining
                                                   when the parent kernel has finished.
 
+                                                "HiddenMultiGridSyncArg"
+                                                  A global address space pointer for
+                                                  multi-grid synchronization is
+                                                  passed in the kernarg.
+
      "ValueType"       string         Required  Kernel argument value type. Only
                                                 present if "ValueKind" is
                                                 "ByValue". For vector data
@@ -1879,6 +1884,11 @@ same *vendor-name*.
                                                        to help link enqueued kernels into
                                                        the ancestor tree for determining
                                                        when the parent kernel has finished.
+
+                                                     "hidden_multigrid_sync_arg"
+                                                       A global address space pointer for
+                                                       multi-grid synchronization is
+                                                       passed in the kernarg.
 
      ".value_type"          string         Required  Kernel argument value type. Only
                                                      present if ".value_kind" is
@@ -5696,6 +5706,8 @@ When the language is OpenCL the following differences occur:
                              enqueue_kernel.
      6        8    8         OpenCL address of AqlWrap struct used by
                              enqueue_kernel.
+     7        8    8         Pointer argument used for Multi-gird
+                             synchronization.
      ======== ==== ========= ===========================================
 
 .. _amdgpu-hcc:

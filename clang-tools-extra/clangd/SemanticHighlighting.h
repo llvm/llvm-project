@@ -25,7 +25,9 @@ namespace clangd {
 
 enum class HighlightingKind {
   Variable = 0,
-  Function = 1,
+  Function,
+
+  NumKinds,
 };
 
 // Contains all information needed for the highlighting a token.
@@ -40,9 +42,9 @@ bool operator==(const HighlightingToken &Lhs, const HighlightingToken &Rhs);
 // main AST.
 std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST);
 
-// Gets the TextMate scopes as a double nested array where the
-// SemanticHighlightKind indexes correctly into this vector.
-std::vector<std::vector<std::string>> getTextMateScopeLookupTable();
+/// Converts a HighlightingKind to a corresponding TextMate scope
+/// (https://manual.macromates.com/en/language_grammars).
+llvm::StringRef toTextMateScope(HighlightingKind Kind);
 
 // Convert to LSP's semantic highlighting information.
 std::vector<SemanticHighlightingInformation>

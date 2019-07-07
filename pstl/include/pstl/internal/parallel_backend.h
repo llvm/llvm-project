@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- parallel_backend.h ------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,8 @@
 
 #ifndef _PSTL_PARALLEL_BACKEND_H
 #define _PSTL_PARALLEL_BACKEND_H
+
+#include "pstl_config.h"
 
 #if defined(_PSTL_PAR_BACKEND_SERIAL)
 #    include "parallel_backend_serial.h"

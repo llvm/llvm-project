@@ -21,9 +21,9 @@ define noalias i8* @_ZN2CC3funEv(%class.CC* %this) {
 ; CHECK-NEXT:    std 30, -16(1)
 ; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -48(1)
-; CHECK-NEXT:    ld 12, 0(3)
-; CHECK-NEXT:    mr 30, 3
 ; CHECK-NEXT:    std 2, 24(1)
+; CHECK-NEXT:    mr 30, 3
+; CHECK-NEXT:    ld 12, 0(3)
 ; CHECK-NEXT:    mtctr 12
 ; CHECK-NEXT:    bctrl
 ; CHECK-NEXT:    ld 2, 24(1)

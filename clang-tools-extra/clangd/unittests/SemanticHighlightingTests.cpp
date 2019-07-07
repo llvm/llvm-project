@@ -48,20 +48,35 @@ void checkHighlightings(llvm::StringRef Code) {
 
 TEST(SemanticHighlighting, GetsCorrectTokens) {
   const char *TestCases[] = {
-      R"cpp(
-    struct A {
-      double SomeMember;
-    };
-    struct {
-    }   $Variable[[HStruct]];
-    void $Function[[foo]](int $Variable[[a]]) {
-      auto $Variable[[VeryLongVariableName]] = 12312;
-      A     $Variable[[aa]];
-    }
-  )cpp",
-      R"cpp(
-    void $Function[[foo]](int);
-  )cpp"};
+    R"cpp(
+      struct AS {
+        double SomeMember;
+      };
+      struct {
+      } $Variable[[S]];
+      void $Function[[foo]](int $Variable[[A]]) {
+        auto $Variable[[VeryLongVariableName]] = 12312;
+        AS     $Variable[[AA]];
+        auto $Variable[[L]] = $Variable[[AA]].SomeMember + $Variable[[A]];
+        auto $Variable[[FN]] = [ $Variable[[AA]]](int $Variable[[A]]) -> void {};
+        $Variable[[FN]](12312);
+      }
+    )cpp",
+    R"cpp(
+      void $Function[[foo]](int);
+      void $Function[[Gah]]();
+      void $Function[[foo]]() {
+        auto $Variable[[Bou]] = $Function[[Gah]];
+      }
+    )cpp",
+    R"cpp(
+      struct A {
+        A();
+        ~A();
+        void $Function[[abc]]();
+        void operator<<(int);
+      };
+    )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);
   }

@@ -704,9 +704,17 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
     CurrIE = NextIE;
   }
 
-  // Make sure we've seen an insert into every element.
-  if (llvm::any_of(ElementPresent, [](bool Present) { return !Present; }))
+  // If this is just a single insertelement (not a sequence), we are done.
+  if (FirstIE == &InsElt)
     return nullptr;
+
+  // If we are not inserting into an undef vector, make sure we've seen an
+  // insert into every element.
+  // TODO: If the base vector is not undef, it might be better to create a splat
+  //       and then a select-shuffle (blend) with the base vector.
+  if (!isa<UndefValue>(FirstIE->getOperand(0)))
+    if (any_of(ElementPresent, [](bool Present) { return !Present; }))
+      return nullptr;
 
   // Create the insert + shuffle.
   Type *Int32Ty = Type::getInt32Ty(InsElt.getContext());
@@ -715,8 +723,13 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
   if (!cast<ConstantInt>(FirstIE->getOperand(2))->isZero())
     FirstIE = InsertElementInst::Create(UndefVec, SplatVal, Zero, "", &InsElt);
 
-  Constant *ZeroMask = ConstantVector::getSplat(NumElements, Zero);
-  return new ShuffleVectorInst(FirstIE, UndefVec, ZeroMask);
+  // Splat from element 0, but replace absent elements with undef in the mask.
+  SmallVector<Constant *, 16> Mask(NumElements, Zero);
+  for (unsigned i = 0; i != NumElements; ++i)
+    if (!ElementPresent[i])
+      Mask[i] = UndefValue::get(Int32Ty);
+
+  return new ShuffleVectorInst(FirstIE, UndefVec, ConstantVector::get(Mask));
 }
 
 /// If we have an insertelement instruction feeding into another insertelement

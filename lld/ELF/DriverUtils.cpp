@@ -135,10 +135,10 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> Argv) {
   for (auto *Arg : Args.filtered(OPT_UNKNOWN)) {
     std::string Nearest;
     if (findNearest(Arg->getAsString(Args), Nearest) > 1)
-      error("unknown argument '" + Arg->getSpelling() + "'");
+      error("unknown argument '" + Arg->getAsString(Args) + "'");
     else
-      error("unknown argument '" + Arg->getSpelling() + "', did you mean '" +
-            Nearest + "'");
+      error("unknown argument '" + Arg->getAsString(Args) +
+            "', did you mean '" + Nearest + "'");
   }
   return Args;
 }
@@ -172,7 +172,7 @@ std::string elf::createResponseFile(const opt::InputArgList &Args) {
 
   // Copy the command line to the output while rewriting paths.
   for (auto *Arg : Args) {
-    switch (Arg->getOption().getUnaliasedOption().getID()) {
+    switch (Arg->getOption().getID()) {
     case OPT_reproduce:
       break;
     case OPT_INPUT:

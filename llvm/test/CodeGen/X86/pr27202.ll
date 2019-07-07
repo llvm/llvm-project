@@ -4,8 +4,8 @@
 define i1 @foo(i32 %i) optsize {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    andl $305419896, %edi # imm = 0x12345678
 ; CHECK-NEXT:    movl $305419896, %eax # imm = 0x12345678
+; CHECK-NEXT:    andl %eax, %edi
 ; CHECK-NEXT:    cmpl %eax, %edi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq
@@ -17,8 +17,8 @@ define i1 @foo(i32 %i) optsize {
 define zeroext i1 @g(i32 %x) optsize {
 ; CHECK-LABEL: g:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    orl $1, %edi
 ; CHECK-NEXT:    movl $1, %eax
+; CHECK-NEXT:    orl %eax, %edi
 ; CHECK-NEXT:    cmpl %eax, %edi
 ; CHECK-NEXT:    sete %al
 ; CHECK-NEXT:    retq

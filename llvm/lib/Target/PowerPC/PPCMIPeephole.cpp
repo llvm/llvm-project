@@ -21,9 +21,12 @@
 #include "PPC.h"
 #include "PPCInstrBuilder.h"
 #include "PPCInstrInfo.h"
+#include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
@@ -37,6 +40,7 @@ using namespace llvm;
 STATISTIC(RemoveTOCSave, "Number of TOC saves removed");
 STATISTIC(MultiTOCSaves,
           "Number of functions with multiple TOC saves that must be kept");
+STATISTIC(NumTOCSavesInPrologue, "Number of TOC saves placed in the prologue");
 STATISTIC(NumEliminatedSExt, "Number of eliminated sign-extensions");
 STATISTIC(NumEliminatedZExt, "Number of eliminated zero-extensions");
 STATISTIC(NumOptADDLIs, "Number of optimized ADD instruction fed by LI");
@@ -84,6 +88,9 @@ struct PPCMIPeephole : public MachineFunctionPass {
 
 private:
   MachineDominatorTree *MDT;
+  MachinePostDominatorTree *MPDT;
+  MachineBlockFrequencyInfo *MBFI;
+  uint64_t EntryFreq;
 
   // Initialize class variables.
   void initialize(MachineFunction &MFParm);
@@ -102,7 +109,11 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<MachineDominatorTree>();
+    AU.addRequired<MachinePostDominatorTree>();
+    AU.addRequired<MachineBlockFrequencyInfo>();
     AU.addPreserved<MachineDominatorTree>();
+    AU.addPreserved<MachinePostDominatorTree>();
+    AU.addPreserved<MachineBlockFrequencyInfo>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
@@ -120,6 +131,9 @@ void PPCMIPeephole::initialize(MachineFunction &MFParm) {
   MF = &MFParm;
   MRI = &MF->getRegInfo();
   MDT = &getAnalysis<MachineDominatorTree>();
+  MPDT = &getAnalysis<MachinePostDominatorTree>();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
+  EntryFreq = MBFI->getEntryFreq();
   TII = MF->getSubtarget<PPCSubtarget>().getInstrInfo();
   LLVM_DEBUG(dbgs() << "*** PowerPC MI peephole pass ***\n\n");
   LLVM_DEBUG(MF->dump());
@@ -200,6 +214,30 @@ getKnownLeadingZeroCount(MachineInstr *MI, const PPCInstrInfo *TII) {
 void PPCMIPeephole::UpdateTOCSaves(
   std::map<MachineInstr *, bool> &TOCSaves, MachineInstr *MI) {
   assert(TII->isTOCSaveMI(*MI) && "Expecting a TOC save instruction here");
+  assert(MF->getSubtarget<PPCSubtarget>().isELFv2ABI() &&
+         "TOC-save removal only supported on ELFv2");
+  PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
+
+  MachineBasicBlock *Entry = &MF->front();
+  uint64_t CurrBlockFreq = MBFI->getBlockFreq(MI->getParent()).getFrequency();
+
+  // If the block in which the TOC save resides is in a block that
+  // post-dominates Entry, or a block that is hotter than entry (keep in mind
+  // that early MachineLICM has already run so the TOC save won't be hoisted)
+  // we can just do the save in the prologue.
+  if (CurrBlockFreq > EntryFreq || MPDT->dominates(MI->getParent(), Entry))
+    FI->setMustSaveTOC(true);
+
+  // If we are saving the TOC in the prologue, all the TOC saves can be removed
+  // from the code.
+  if (FI->mustSaveTOC()) {
+    for (auto &TOCSave : TOCSaves)
+      TOCSave.second = false;
+    // Add new instruction to map.
+    TOCSaves[MI] = false;
+    return;
+  }
+
   bool Keep = true;
   for (auto It = TOCSaves.begin(); It != TOCSaves.end(); It++ ) {
     MachineInstr *CurrInst = It->first;
@@ -777,6 +815,10 @@ bool PPCMIPeephole::simplifyCode(void) {
 
   // Eliminate all the TOC save instructions which are redundant.
   Simplified |= eliminateRedundantTOCSaves(TOCSaves);
+  PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
+  if (FI->mustSaveTOC())
+    NumTOCSavesInPrologue++;
+
   // We try to eliminate redundant compare instruction.
   Simplified |= eliminateRedundantCompare();
 
@@ -1341,6 +1383,9 @@ bool PPCMIPeephole::emitRLDICWhenLoweringJumpTables(MachineInstr &MI) {
 
 INITIALIZE_PASS_BEGIN(PPCMIPeephole, DEBUG_TYPE,
                       "PowerPC MI Peephole Optimization", false, false)
+INITIALIZE_PASS_DEPENDENCY(MachineBlockFrequencyInfo)
+INITIALIZE_PASS_DEPENDENCY(MachineDominatorTree)
+INITIALIZE_PASS_DEPENDENCY(MachinePostDominatorTree)
 INITIALIZE_PASS_END(PPCMIPeephole, DEBUG_TYPE,
                     "PowerPC MI Peephole Optimization", false, false)
 

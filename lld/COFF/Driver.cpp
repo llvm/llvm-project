@@ -332,7 +332,7 @@ void LinkerDriver::parseDirectives(InputFile *File) {
   }
 
   for (auto *Arg : Args) {
-    switch (Arg->getOption().getUnaliasedOption().getID()) {
+    switch (Arg->getOption().getID()) {
     case OPT_aligncomm:
       parseAligncomm(Arg->getValue());
       break;
@@ -642,7 +642,8 @@ static unsigned parseDebugTypes(const opt::InputArgList &Args) {
 
   if (auto *A = Args.getLastArg(OPT_debugtype)) {
     SmallVector<StringRef, 3> Types;
-    A->getSpelling().split(Types, ',', /*KeepEmpty=*/false);
+    StringRef(A->getValue())
+        .split(Types, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 
     for (StringRef Type : Types) {
       unsigned V = StringSwitch<unsigned>(Type.lower())
@@ -651,7 +652,7 @@ static unsigned parseDebugTypes(const opt::InputArgList &Args) {
                        .Case("fixup", static_cast<unsigned>(DebugType::Fixup))
                        .Default(0);
       if (V == 0) {
-        warn("/debugtype: unknown option: " + Twine(A->getValue()));
+        warn("/debugtype: unknown option '" + Type + "'");
         continue;
       }
       DebugTypes |= V;

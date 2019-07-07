@@ -45,6 +45,10 @@ Non-comprehensive list of changes in this release
   the platform's libc) without specifying ``-ffreestanding`` may need to either
   pass ``-fno-builtin-bcmp``, or provide a ``bcmp`` function.
 
+* Two new extension points, namely ``EP_FullLinkTimeOptimizationEarly`` and
+  ``EP_FullLinkTimeOptimizationLast`` are available for plugins to specialize
+  the legacy pass manager full LTO pipeline.
+
 .. NOTE
    If you would like to document a larger change, then you can add a
    subsection about it right here. You can copy the following boilerplate
@@ -121,6 +125,15 @@ Changes to the C API
 
 Changes to the DAG infrastructure
 ---------------------------------
+
+Changes to LLDB
+===============
+
+* Backtraces are now color highlighting in the terminal.
+
+* This release will be the last where ``lldb-mi`` is shipped as part of LLDB.
+  The tool will still be available in a `downstream repository on GitHub
+  <https://github.com/lldb-tools/lldb-mi>`_.
 
 External Open Source Projects Using LLVM 9
 ==========================================

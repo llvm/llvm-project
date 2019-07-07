@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- parallel_backend_serial.h -----------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -15,6 +15,8 @@
 #include <memory>
 #include <numeric>
 #include <utility>
+
+#include "pstl_config.h"
 
 namespace __pstl
 {

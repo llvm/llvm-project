@@ -139,7 +139,8 @@ OPTIONS
 
 .. option:: --section-data
 
- When used with :option:`--sections`, display section data for each section shown.
+ When used with :option:`--sections`, display section data for each section
+ shown. This option has no effect for GNU style output.
 
 .. option:: --section-mapping
 
@@ -147,11 +148,13 @@ OPTIONS
 
 .. option:: --section-relocations
 
- When used with :option:`--sections`, display relocations for each section shown.
+ When used with :option:`--sections`, display relocations for each section
+ shown. This option has no effect for GNU style output.
 
 .. option:: --section-symbols
 
  When used with :option:`--sections`, display symbols for each section shown.
+ This option has no effect for GNU style output.
 
 .. option:: --stackmap
 

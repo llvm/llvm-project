@@ -213,16 +213,16 @@ define void @t9(<4 x float>* %r, <2 x i32>* %A) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movapd (%ecx), %xmm0
-; X86-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; X86-NEXT:    movapd %xmm0, (%ecx)
+; X86-NEXT:    movaps (%ecx), %xmm0
+; X86-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; X86-NEXT:    movaps %xmm0, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t9:
 ; X64:       # %bb.0:
-; X64-NEXT:    movapd (%rdi), %xmm0
-; X64-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; X64-NEXT:    movapd %xmm0, (%rdi)
+; X64-NEXT:    movaps (%rdi), %xmm0
+; X64-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; X64-NEXT:    movaps %xmm0, (%rdi)
 ; X64-NEXT:    retq
 	%tmp = load <4 x float>, <4 x float>* %r
 	%tmp.upgrd.3 = bitcast <2 x i32>* %A to double*

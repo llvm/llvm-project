@@ -108,7 +108,8 @@ int llvm::dlltoolDriverMain(llvm::ArrayRef<const char *> ArgsArr) {
   }
 
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
-    llvm::errs() << "ignoring unknown argument: " << Arg->getSpelling() << "\n";
+    llvm::errs() << "ignoring unknown argument: " << Arg->getAsString(Args)
+                 << "\n";
 
   if (!Args.hasArg(OPT_d)) {
     llvm::errs() << "no definition file specified\n";

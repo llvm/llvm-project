@@ -335,16 +335,16 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::INSERT_VECTOR_ELT, MVT::v4f16, Custom);
 
   // Deal with vec3 vector operations when widened to vec4.
-  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v3i32, Expand);
-  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v3f32, Expand);
-  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v4i32, Expand);
-  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v4f32, Expand);
+  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v3i32, Custom);
+  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v3f32, Custom);
+  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v4i32, Custom);
+  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v4f32, Custom);
 
   // Deal with vec5 vector operations when widened to vec8.
-  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v5i32, Expand);
-  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v5f32, Expand);
-  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v8i32, Expand);
-  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v8f32, Expand);
+  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v5i32, Custom);
+  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v5f32, Custom);
+  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v8i32, Custom);
+  setOperationAction(ISD::INSERT_SUBVECTOR, MVT::v8f32, Custom);
 
   // BUFFER/FLAT_ATOMIC_CMP_SWAP on GCN GPUs needs input marshalling,
   // and output demarshalling
@@ -3956,6 +3956,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::INTRINSIC_W_CHAIN: return LowerINTRINSIC_W_CHAIN(Op, DAG);
   case ISD::INTRINSIC_VOID: return LowerINTRINSIC_VOID(Op, DAG);
   case ISD::ADDRSPACECAST: return lowerADDRSPACECAST(Op, DAG);
+  case ISD::INSERT_SUBVECTOR:
+    return lowerINSERT_SUBVECTOR(Op, DAG);
   case ISD::INSERT_VECTOR_ELT:
     return lowerINSERT_VECTOR_ELT(Op, DAG);
   case ISD::EXTRACT_VECTOR_ELT:
@@ -4626,6 +4628,32 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
   DAG.getContext()->diagnose(InvalidAddrSpaceCast);
 
   return DAG.getUNDEF(ASC->getValueType(0));
+}
+
+// This lowers an INSERT_SUBVECTOR by extracting the individual elements from
+// the small vector and inserting them into the big vector. That is better than
+// the default expansion of doing it via a stack slot. Even though the use of
+// the stack slot would be optimized away afterwards, the stack slot itself
+// remains.
+SDValue SITargetLowering::lowerINSERT_SUBVECTOR(SDValue Op,
+                                                SelectionDAG &DAG) const {
+  SDValue Vec = Op.getOperand(0);
+  SDValue Ins = Op.getOperand(1);
+  SDValue Idx = Op.getOperand(2);
+  EVT VecVT = Vec.getValueType();
+  EVT InsVT = Ins.getValueType();
+  EVT EltVT = VecVT.getVectorElementType();
+  unsigned InsNumElts = InsVT.getVectorNumElements();
+  unsigned IdxVal = cast<ConstantSDNode>(Idx)->getZExtValue();
+  SDLoc SL(Op);
+
+  for (unsigned I = 0; I != InsNumElts; ++I) {
+    SDValue Elt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, SL, EltVT, Ins,
+                              DAG.getConstant(I, SL, MVT::i32));
+    Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, SL, VecVT, Vec, Elt,
+                      DAG.getConstant(IdxVal + I, SL, MVT::i32));
+  }
+  return Vec;
 }
 
 SDValue SITargetLowering::lowerINSERT_VECTOR_ELT(SDValue Op,

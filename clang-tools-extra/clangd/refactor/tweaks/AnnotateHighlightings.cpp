@@ -12,15 +12,6 @@ namespace clang {
 namespace clangd {
 namespace {
 
-// FIXME: move it to SemanticHighlighting.h.
-llvm::StringRef toTextMateScope(HighlightingKind Kind) {
-  static const auto &TextMateLookupTable = getTextMateScopeLookupTable();
-  auto LookupIndex = static_cast<size_t>(Kind);
-  assert(LookupIndex < TextMateLookupTable.size() &&
-         !TextMateLookupTable[LookupIndex].empty());
-  return TextMateLookupTable[LookupIndex].front();
-}
-
 /// Annotate all highlighting tokens in the current file. This is a hidden tweak
 /// which is used to debug semantic highlightings.
 /// Before:
