@@ -207,7 +207,7 @@ Arg *Option::accept(const ArgList &Args,
     // FIXME: Avoid strlen.
     if (ArgSize != strlen(Args.getArgString(Index))) {
       const char *Value = Args.getArgString(Index) + ArgSize;
-      return new Arg(*this, Spelling, Index++, Value);
+      return new Arg(UnaliasedOption, Spelling, Index++, Value);
     }
 
     // Otherwise it must be separate.

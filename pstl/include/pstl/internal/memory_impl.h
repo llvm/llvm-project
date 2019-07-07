@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- memory_impl.h -----------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -12,6 +12,7 @@
 
 #include <iterator>
 
+#include "pstl_config.h"
 #include "unseq_backend_simd.h"
 
 namespace __pstl

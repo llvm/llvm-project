@@ -53,8 +53,6 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; LV-NEXT: [[CheckOr0:%[^ ]*]] = or i1 [[Cmp]], [[BECheck]]
 ; LV-NEXT: [[PredCheck0:%[^ ]*]] = or i1 [[CheckOr0]], [[OFMulOverflow]]
 
-; LV-NEXT: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
-
 ; LV-NEXT: [[OFMul1:%[^ ]*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[BE]])
 ; LV-NEXT: [[OFMulResult1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 0
 ; LV-NEXT: [[OFMulOverflow1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 1
@@ -65,7 +63,7 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 false, i1 [[CmpNeg1]], i1 [[CmpPos1]]
 ; LV-NEXT: [[PredCheck1:%[^ ]*]] = or i1 [[Cmp]], [[OFMulOverflow1]]
 
-; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
+; LV: [[FinalCheck:%[^ ]*]] = or i1 [[PredCheck0]], [[PredCheck1]]
 ; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f1(i16* noalias %a,
                 i16* noalias %b, i64 %N) {
@@ -147,9 +145,6 @@ for.end:                                          ; preds = %for.body
 ; LV-NEXT: [[BECheck:%[^ ]*]] = icmp ugt i64 [[BE]], 4294967295
 ; LV-NEXT: [[CheckOr0:%[^ ]*]] = or i1 [[Cmp]], [[BECheck]]
 ; LV-NEXT: [[PredCheck0:%[^ ]*]] = or i1 [[CheckOr0]], [[OFMulOverflow]]
-
-; LV-NEXT: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
-
 ; LV: [[OFMul1:%[^ ]*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[BE]])
 ; LV-NEXT: [[OFMulResult1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 0
 ; LV-NEXT: [[OFMulOverflow1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 1
@@ -160,7 +155,7 @@ for.end:                                          ; preds = %for.body
 ; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 true, i1 [[CmpNeg1]], i1 [[CmpPos1]]
 ; LV-NEXT: [[PredCheck1:%[^ ]*]] = or i1 [[Cmp]], [[OFMulOverflow1]]
 
-; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
+; LV: [[FinalCheck:%[^ ]*]] = or i1 [[PredCheck0]], [[PredCheck1]]
 ; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f2(i16* noalias %a,
                 i16* noalias %b, i64 %N) {
@@ -227,9 +222,6 @@ for.end:                                          ; preds = %for.body
 ; LV-NEXT: [[BECheck:%[^ ]*]] = icmp ugt i64 [[BE]], 4294967295
 ; LV-NEXT: [[CheckOr0:%[^ ]*]] = or i1 [[Cmp]], [[BECheck]]
 ; LV-NEXT: [[PredCheck0:%[^ ]*]] = or i1 [[CheckOr0]], [[OFMulOverflow]]
-
-; LV-NEXT: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
-
 ; LV: [[OFMul1:%[^ ]*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[BE:%[^ ]*]])
 ; LV-NEXT: [[OFMulResult1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 0
 ; LV-NEXT: [[OFMulOverflow1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 1
@@ -240,7 +232,7 @@ for.end:                                          ; preds = %for.body
 ; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 false, i1 [[CmpNeg1]], i1 [[CmpPos1]]
 ; LV-NEXT: [[PredCheck1:%[^ ]*]] = or i1 [[Cmp]], [[OFMulOverflow1]]
 
-; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
+; LV: [[FinalCheck:%[^ ]*]] = or i1 [[PredCheck0]], [[PredCheck1]]
 ; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f3(i16* noalias %a,
                 i16* noalias %b, i64 %N) {
@@ -303,9 +295,6 @@ for.end:                                          ; preds = %for.body
 ; LV-NEXT: [[BECheck:%[^ ]*]] = icmp ugt i64 [[BE]], 4294967295
 ; LV-NEXT: [[CheckOr0:%[^ ]*]] = or i1 [[Cmp]], [[BECheck]]
 ; LV-NEXT: [[PredCheck0:%[^ ]*]] = or i1 [[CheckOr0]], [[OFMulOverflow]]
-
-; LV-NEXT: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
-
 ; LV: [[OFMul1:%[^ ]*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[BE:%[^ ]*]])
 ; LV-NEXT: [[OFMulResult1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 0
 ; LV-NEXT: [[OFMulOverflow1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 1
@@ -316,7 +305,7 @@ for.end:                                          ; preds = %for.body
 ; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 true, i1 [[CmpNeg1]], i1 [[CmpPos1]]
 ; LV-NEXT: [[PredCheck1:%[^ ]*]] = or i1 [[Cmp]], [[OFMulOverflow1]]
 
-; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
+; LV: [[FinalCheck:%[^ ]*]] = or i1 [[PredCheck0]], [[PredCheck1]]
 ; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f4(i16* noalias %a,
                 i16* noalias %b, i64 %N) {
@@ -381,9 +370,6 @@ for.end:                                          ; preds = %for.body
 ; LV-NEXT: [[BECheck:%[^ ]*]] = icmp ugt i64 [[BE]], 4294967295
 ; LV-NEXT: [[CheckOr0:%[^ ]*]] = or i1 [[Cmp]], [[BECheck]]
 ; LV-NEXT: [[PredCheck0:%[^ ]*]] = or i1 [[CheckOr0]], [[OFMulOverflow]]
-
-; LV-NEXT: [[Or0:%[^ ]*]] = or i1 false, [[PredCheck0]]
-
 ; LV: [[OFMul1:%[^ ]*]] = call { i64, i1 } @llvm.umul.with.overflow.i64(i64 4, i64 [[BE:%[^ ]*]])
 ; LV-NEXT: [[OFMulResult1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 0
 ; LV-NEXT: [[OFMulOverflow1:%[^ ]*]] = extractvalue { i64, i1 } [[OFMul1]], 1
@@ -394,7 +380,7 @@ for.end:                                          ; preds = %for.body
 ; LV-NEXT: [[Cmp:%[^ ]*]] = select i1 true, i1 [[CmpNeg1]], i1 [[CmpPos1]]
 ; LV-NEXT: [[PredCheck1:%[^ ]*]] = or i1 [[Cmp]], [[OFMulOverflow1]]
 
-; LV: [[FinalCheck:%[^ ]*]] = or i1 [[Or0]], [[PredCheck1]]
+; LV: [[FinalCheck:%[^ ]*]] = or i1 [[PredCheck0]], [[PredCheck1]]
 ; LV: br i1 [[FinalCheck]], label %for.body.ph.lver.orig, label %for.body.ph
 define void @f5(i16* noalias %a,
                 i16* noalias %b, i64 %N) {

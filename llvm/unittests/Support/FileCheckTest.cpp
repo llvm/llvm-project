@@ -178,6 +178,7 @@ public:
     GlobalDefines.emplace_back(std::string("BAR=BAZ"));
     EXPECT_FALSE(
         errorToBool(Context.defineCmdlineVariables(GlobalDefines, SM)));
+    Context.createLineVariable();
     // Call parsePattern to have @LINE defined.
     P.parsePattern("N/A", "CHECK", SM, Req);
     // parsePattern does not expect to be called twice for the same line and
@@ -192,9 +193,9 @@ public:
 
   bool parseNumVarDefExpect(StringRef Expr) {
     StringRef ExprBufferRef = bufferize(SM, Expr);
-    StringRef Name;
     return errorToBool(FileCheckPattern::parseNumericVariableDefinition(
-        ExprBufferRef, Name, &Context, SM));
+                           ExprBufferRef, &Context, LineNumber, SM)
+                           .takeError());
   }
 
   bool parseSubstExpect(StringRef Expr) {
@@ -257,11 +258,11 @@ TEST_F(FileCheckTest, ParseExpr) {
   // Unacceptable variable.
   EXPECT_TRUE(Tester.parseSubstExpect("10VAR"));
   EXPECT_TRUE(Tester.parseSubstExpect("@FOO"));
-  EXPECT_TRUE(Tester.parseSubstExpect("UNDEF"));
 
   // Only valid variable.
   EXPECT_FALSE(Tester.parseSubstExpect("@LINE"));
   EXPECT_FALSE(Tester.parseSubstExpect("FOO"));
+  EXPECT_FALSE(Tester.parseSubstExpect("UNDEF"));
 
   // Use variable defined on same line.
   EXPECT_FALSE(Tester.parsePatternExpect("[[#LINE1VAR:]]"));
@@ -471,9 +472,14 @@ TEST_F(FileCheckTest, FileCheckContext) {
   P = FileCheckPattern(Check::CheckPlain, &Cxt, 2);
   Expression = P.parseNumericSubstitutionBlock(LocalNumVarRef,
                                                DefinedNumericVariable, SM);
-  EXPECT_TRUE(errorToBool(Expression.takeError()));
+  EXPECT_TRUE(bool(Expression));
+  ExpressionVal = (*Expression)->eval();
+  EXPECT_TRUE(errorToBool(ExpressionVal.takeError()));
   EmptyVar = Cxt.getPatternVarValue(EmptyVarStr);
   EXPECT_TRUE(errorToBool(EmptyVar.takeError()));
+  // Clear again because parseNumericSubstitutionBlock would have created a
+  // dummy variable and stored it in GlobalNumericVariableTable.
+  Cxt.clearLocalVars();
 
   // Redefine global variables and check variables are defined again.
   GlobalDefines.emplace_back(std::string("$GlobalVar=BAR"));

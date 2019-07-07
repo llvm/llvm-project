@@ -34,26 +34,46 @@ public:
     return Tokens;
   }
 
-  bool VisitVarDecl(VarDecl *Var) {
-    addToken(Var, HighlightingKind::Variable);
+  bool VisitNamedDecl(NamedDecl *ND) {
+    // FIXME: (De)Constructors/operator need to be highlighted some other way.
+    if (ND->getDeclName().getNameKind() != DeclarationName::Identifier)
+      return true;
+
+    if (ND->getDeclName().isEmpty())
+      // Don't add symbols that don't have any length.
+      return true;
+    addToken(ND->getLocation(), ND);
     return true;
   }
-  bool VisitFunctionDecl(FunctionDecl *Func) {
-    addToken(Func, HighlightingKind::Function);
+
+  bool VisitDeclRefExpr(DeclRefExpr *Ref) {
+    if (Ref->getNameInfo().getName().getNameKind() !=
+        DeclarationName::Identifier)
+      // Only want to highlight identifiers.
+      return true;
+
+    addToken(Ref->getLocation(), Ref->getDecl());
     return true;
   }
 
 private:
-  void addToken(const NamedDecl *D, HighlightingKind Kind) {
-    if (D->getLocation().isMacroID())
+  void addToken(SourceLocation Loc, const Decl *D) {
+    if (isa<VarDecl>(D)) {
+      addToken(Loc, HighlightingKind::Variable);
+      return;
+    }
+    if (isa<FunctionDecl>(D)) {
+      addToken(Loc, HighlightingKind::Function);
+      return;
+    }
+  }
+
+  void addToken(SourceLocation Loc, HighlightingKind Kind) {
+    if (Loc.isMacroID())
       // FIXME: skip tokens inside macros for now.
       return;
 
-    if (D->getDeclName().isEmpty())
-      // Don't add symbols that don't have any length.
-      return;
-
-    auto R = getTokenRange(SM, Ctx.getLangOpts(), D->getLocation());
+    auto R = getTokenRange(SM, Ctx.getLangOpts(), Loc);
     if (!R) {
       // R should always have a value, if it doesn't something is very wrong.
       elog("Tried to add semantic token with an invalid range");

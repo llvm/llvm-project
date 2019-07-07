@@ -3692,6 +3692,7 @@ typename enable_if
 #else
 void
 #endif
+_LIBCPP_CONSTEXPR_AFTER_CXX17
 swap(_Tp& __x, _Tp& __y) _NOEXCEPT_(is_nothrow_move_constructible<_Tp>::value &&
                                     is_nothrow_move_assignable<_Tp>::value)
 {
@@ -3701,14 +3702,14 @@ swap(_Tp& __x, _Tp& __y) _NOEXCEPT_(is_nothrow_move_constructible<_Tp>::value &&
 }
 
 template<class _Tp, size_t _Np>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 typename enable_if<
     __is_swappable<_Tp>::value
 >::type
 swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable<_Tp>::value);
 
 template <class _ForwardIterator1, class _ForwardIterator2>
-inline _LIBCPP_INLINE_VISIBILITY
+inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
 void
 iter_swap(_ForwardIterator1 __a, _ForwardIterator2 __b)
     //                                  _NOEXCEPT_(_NOEXCEPT_(swap(*__a, *__b)))

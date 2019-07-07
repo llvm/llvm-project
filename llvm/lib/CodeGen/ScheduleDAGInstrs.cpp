@@ -1104,22 +1104,21 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
     if (!MI.isBundled()) {
       toggleKills(MRI, LiveRegs, MI, true);
     } else {
-      MachineBasicBlock::instr_iterator First = MI.getIterator();
-      if (MI.isBundle()) {
+      MachineBasicBlock::instr_iterator Bundle = MI.getIterator();
+      if (MI.isBundle())
         toggleKills(MRI, LiveRegs, MI, false);
-        ++First;
-      }
+
       // Some targets make the (questionable) assumtion that the instructions
       // inside the bundle are ordered and consequently only the last use of
       // a register inside the bundle can kill it.
-      MachineBasicBlock::instr_iterator I = std::next(First);
+      MachineBasicBlock::instr_iterator I = std::next(Bundle);
       while (I->isBundledWithSucc())
         ++I;
       do {
         if (!I->isDebugInstr())
           toggleKills(MRI, LiveRegs, *I, true);
         --I;
-      } while(I != First);
+      } while (I != Bundle);
     }
   }
 }

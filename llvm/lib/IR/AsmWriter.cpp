@@ -620,7 +620,10 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   }
   case Type::VectorTyID: {
     VectorType *PTy = cast<VectorType>(Ty);
-    OS << "<" << PTy->getNumElements() << " x ";
+    OS << "<";
+    if (PTy->isScalable())
+      OS << "vscale x ";
+    OS << PTy->getNumElements() << " x ";
     print(PTy->getElementType(), OS);
     OS << '>';
     return;
@@ -2888,7 +2891,8 @@ void AssemblyWriter::printAliasSummary(const AliasSummary *AS) {
 }
 
 void AssemblyWriter::printGlobalVarSummary(const GlobalVarSummary *GS) {
-  Out << ", varFlags: (readonly: " << GS->VarFlags.ReadOnly << ")";
+  Out << ", varFlags: (readonly: " << GS->VarFlags.MaybeReadOnly << ", "
+      << "writeonly: " << GS->VarFlags.MaybeWriteOnly << ")";
 
   auto VTableFuncs = GS->vTableFuncs();
   if (!VTableFuncs.empty()) {
@@ -3098,6 +3102,8 @@ void AssemblyWriter::printSummary(const GlobalValueSummary &Summary) {
       Out << FS;
       if (Ref.isReadOnly())
         Out << "readonly ";
+      else if (Ref.isWriteOnly())
+        Out << "writeonly ";
       Out << "^" << Machine.getGUIDSlot(Ref.getGUID());
     }
     Out << ")";

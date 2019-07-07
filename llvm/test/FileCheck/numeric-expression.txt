@@ -76,9 +76,15 @@ UNDEF VAR USE
 UNDEFVAR: 11
 UNDEF-USE-LABEL: UNDEF VAR USE
 UNDEF-USE-NEXT: UNDEFVAR: [[#UNDEFVAR]]
-UNDEF-USE-MSG: numeric-expression.txt:[[#@LINE-1]]:30: error: using undefined numeric variable 'UNDEFVAR'
+UNDEF-USE-MSG: numeric-expression.txt:[[#@LINE-1]]:17: error: {{U}}NDEF-USE-NEXT: expected string not found in input
 UNDEF-USE-MSG-NEXT: {{U}}NDEF-USE-NEXT: UNDEFVAR: {{\[\[#UNDEFVAR\]\]}}
-UNDEF-USE-MSG-NEXT: {{^                             \^$}}
+UNDEF-USE-MSG-NEXT: {{^                \^$}}
+UNDEF-USE-MSG-NEXT: numeric-expression.txt:[[#@LINE-6]]:1: note: scanning from here
+UNDEF-USE-MSG-NEXT: UNDEFVAR: 11
+UNDEF-USE-MSG-NEXT: {{^\^$}}
+UNDEF-USE-MSG-NEXT: numeric-expression.txt:[[#@LINE-9]]:1: note: uses undefined variable "UNDEFVAR"
+UNDEF-USE-MSG-NEXT: UNDEFVAR: 11
+UNDEF-USE-MSG-NEXT: {{^\^$}}
 
 ; Numeric expression with unsupported operator.
 RUN: not FileCheck -D#NUMVAR=10 --check-prefix INVAL-OP --input-file %s %s 2>&1 \

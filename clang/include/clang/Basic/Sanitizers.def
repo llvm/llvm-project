@@ -130,7 +130,7 @@ SANITIZER("shadow-call-stack", ShadowCallStack)
 // ABI or address space layout implications, and only catch undefined behavior.
 SANITIZER_GROUP("undefined", Undefined,
                 Alignment | Bool | Builtin | ArrayBounds | Enum |
-                    FloatCastOverflow | FloatDivideByZero |
+                    FloatCastOverflow |
                     IntegerDivideByZero | NonnullAttribute | Null | ObjectSize |
                     PointerOverflow | Return | ReturnsNonnullAttribute | Shift |
                     SignedIntegerOverflow | Unreachable | VLABound | Function |

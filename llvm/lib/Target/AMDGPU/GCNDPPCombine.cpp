@@ -253,33 +253,46 @@ static bool isIdentityValue(unsigned OrigMIOp, MachineOperand *OldOpnd) {
   switch (OrigMIOp) {
   default: break;
   case AMDGPU::V_ADD_U32_e32:
+  case AMDGPU::V_ADD_U32_e64:
   case AMDGPU::V_ADD_I32_e32:
+  case AMDGPU::V_ADD_I32_e64:
   case AMDGPU::V_OR_B32_e32:
+  case AMDGPU::V_OR_B32_e64:
   case AMDGPU::V_SUBREV_U32_e32:
+  case AMDGPU::V_SUBREV_U32_e64:
   case AMDGPU::V_SUBREV_I32_e32:
+  case AMDGPU::V_SUBREV_I32_e64:
   case AMDGPU::V_MAX_U32_e32:
+  case AMDGPU::V_MAX_U32_e64:
   case AMDGPU::V_XOR_B32_e32:
+  case AMDGPU::V_XOR_B32_e64:
     if (OldOpnd->getImm() == 0)
       return true;
     break;
   case AMDGPU::V_AND_B32_e32:
+  case AMDGPU::V_AND_B32_e64:
   case AMDGPU::V_MIN_U32_e32:
+  case AMDGPU::V_MIN_U32_e64:
     if (static_cast<uint32_t>(OldOpnd->getImm()) ==
         std::numeric_limits<uint32_t>::max())
       return true;
     break;
   case AMDGPU::V_MIN_I32_e32:
+  case AMDGPU::V_MIN_I32_e64:
     if (static_cast<int32_t>(OldOpnd->getImm()) ==
         std::numeric_limits<int32_t>::max())
       return true;
     break;
   case AMDGPU::V_MAX_I32_e32:
+  case AMDGPU::V_MAX_I32_e64:
     if (static_cast<int32_t>(OldOpnd->getImm()) ==
         std::numeric_limits<int32_t>::min())
       return true;
     break;
   case AMDGPU::V_MUL_I32_I24_e32:
+  case AMDGPU::V_MUL_I32_I24_e64:
   case AMDGPU::V_MUL_U32_U24_e32:
+  case AMDGPU::V_MUL_U32_U24_e64:
     if (OldOpnd->getImm() == 1)
       return true;
     break;

@@ -249,6 +249,11 @@ def SDTARMVGETLN  : SDTypeProfile<1, 2, [SDTCisVT<0, i32>, SDTCisInt<1>,
 def ARMvgetlaneu : SDNode<"ARMISD::VGETLANEu", SDTARMVGETLN>;
 def ARMvgetlanes : SDNode<"ARMISD::VGETLANEs", SDTARMVGETLN>;
 
+def SDTARMVMOVIMM : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVT<1, i32>]>;
+def ARMvmovImm   : SDNode<"ARMISD::VMOVIMM", SDTARMVMOVIMM>;
+def ARMvmvnImm   : SDNode<"ARMISD::VMVNIMM", SDTARMVMOVIMM>;
+def ARMvmovFPImm : SDNode<"ARMISD::VMOVFPIMM", SDTARMVMOVIMM>;
+
 def ARMWLS : SDNode<"ARMISD::WLS", SDT_ARMWhileLoop,
                     [SDNPHasChain]>;
 

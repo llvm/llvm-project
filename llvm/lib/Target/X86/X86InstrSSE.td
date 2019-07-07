@@ -635,10 +635,10 @@ defm MOVL : sse12_mov_hilo_packed<0x12, X86Movsd, "movlp">;
 
 let SchedRW = [WriteFStore] in {
 let Predicates = [UseAVX] in {
+let mayStore = 1, hasSideEffects = 0 in
 def VMOVLPSmr : VPSI<0x13, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                      "movlps\t{$src, $dst|$dst, $src}",
-                     [(store (f64 (extractelt (bc_v2f64 (v4f32 VR128:$src)),
-                                   (iPTR 0))), addr:$dst)]>,
+                     []>,
                      VEX, VEX_WIG;
 def VMOVLPDmr : VPDI<0x13, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                      "movlpd\t{$src, $dst|$dst, $src}",
@@ -646,10 +646,10 @@ def VMOVLPDmr : VPDI<0x13, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                                    (iPTR 0))), addr:$dst)]>,
                      VEX, VEX_WIG;
 }// UseAVX
+let mayStore = 1, hasSideEffects = 0 in
 def MOVLPSmr : PSI<0x13, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                    "movlps\t{$src, $dst|$dst, $src}",
-                   [(store (f64 (extractelt (bc_v2f64 (v4f32 VR128:$src)),
-                                 (iPTR 0))), addr:$dst)]>;
+                   []>;
 def MOVLPDmr : PDI<0x13, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                    "movlpd\t{$src, $dst|$dst, $src}",
                    [(store (f64 (extractelt (v2f64 VR128:$src),
@@ -657,15 +657,11 @@ def MOVLPDmr : PDI<0x13, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
 } // SchedRW
 
 let Predicates = [UseSSE1] in {
-  // (store (vector_shuffle (load addr), v2, <4, 5, 2, 3>), addr) using MOVLPS
-  def : Pat<(store (i64 (extractelt (bc_v2i64 (v4f32 VR128:$src2)),
-                                 (iPTR 0))), addr:$src1),
-            (MOVLPSmr addr:$src1, VR128:$src2)>;
-
   // This pattern helps select MOVLPS on SSE1 only targets. With SSE2 we'll
   // end up with a movsd or blend instead of shufp.
   // No need for aligned load, we're only loading 64-bits.
-  def : Pat<(X86Shufp (loadv4f32 addr:$src2), VR128:$src1, (i8 -28)),
+  def : Pat<(X86Shufp (v4f32 (nonvolatile_load addr:$src2)), VR128:$src1,
+                      (i8 -28)),
             (MOVLPSrm VR128:$src1, addr:$src2)>;
 }
 
@@ -679,24 +675,20 @@ let SchedRW = [WriteFStore] in {
 // v2f64 extract element 1 is always custom lowered to unpack high to low
 // and extract element 0 so the non-store version isn't too horrible.
 let Predicates = [UseAVX] in {
+let mayStore = 1, hasSideEffects = 0 in
 def VMOVHPSmr : VPSI<0x17, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                    "movhps\t{$src, $dst|$dst, $src}",
-                   [(store (f64 (extractelt
-                                 (X86Unpckh (bc_v2f64 (v4f32 VR128:$src)),
-                                            (bc_v2f64 (v4f32 VR128:$src))),
-                                 (iPTR 0))), addr:$dst)]>, VEX, VEX_WIG;
+                   []>, VEX, VEX_WIG;
 def VMOVHPDmr : VPDI<0x17, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                    "movhpd\t{$src, $dst|$dst, $src}",
                    [(store (f64 (extractelt
                                  (v2f64 (X86Unpckh VR128:$src, VR128:$src)),
                                  (iPTR 0))), addr:$dst)]>, VEX, VEX_WIG;
 } // UseAVX
+let mayStore = 1, hasSideEffects = 0 in
 def MOVHPSmr : PSI<0x17, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                    "movhps\t{$src, $dst|$dst, $src}",
-                   [(store (f64 (extractelt
-                                 (X86Unpckh (bc_v2f64 (v4f32 VR128:$src)),
-                                            (bc_v2f64 (v4f32 VR128:$src))),
-                                 (iPTR 0))), addr:$dst)]>;
+                   []>;
 def MOVHPDmr : PDI<0x17, MRMDestMem, (outs), (ins f64mem:$dst, VR128:$src),
                    "movhpd\t{$src, $dst|$dst, $src}",
                    [(store (f64 (extractelt
@@ -727,7 +719,7 @@ let Predicates = [UseSSE1] in {
   // This pattern helps select MOVHPS on SSE1 only targets. With SSE2 we'll
   // end up with a movsd or blend instead of shufp.
   // No need for aligned load, we're only loading 64-bits.
-  def : Pat<(X86Movlhps VR128:$src1, (loadv4f32 addr:$src2)),
+  def : Pat<(X86Movlhps VR128:$src1, (v4f32 (nonvolatile_load addr:$src2))),
             (MOVHPSrm VR128:$src1, addr:$src2)>;
 }
 
@@ -749,6 +741,13 @@ let Predicates = [UseSSE2] in {
 
   // MOVLPD patterns
   def : Pat<(v2f64 (X86Movsd VR128:$src1, (X86vzload addr:$src2))),
+            (MOVLPDrm VR128:$src1, addr:$src2)>;
+}
+
+let Predicates = [UseSSE2, NoSSE41_Or_OptForSize] in {
+  // Use MOVLPD to load into the low bits from a full vector unless we can use
+  // BLENDPD.
+  def : Pat<(X86Movsd VR128:$src1, (v2f64 (nonvolatile_load addr:$src2))),
             (MOVLPDrm VR128:$src1, addr:$src2)>;
 }
 
@@ -2077,6 +2076,13 @@ let Predicates = [HasAVX1Only] in {
             (VUNPCKHPDYrm VR256:$src1, addr:$src2)>;
   def : Pat<(v4i64 (X86Unpckh VR256:$src1, VR256:$src2)),
             (VUNPCKHPDYrr VR256:$src1, VR256:$src2)>;
+}
+
+let Predicates = [UseSSE2] in {
+  // Use MOVHPD if the load isn't aligned enough for UNPCKLPD.
+  def : Pat<(v2f64 (X86Unpckl VR128:$src1,
+                              (v2f64 (nonvolatile_load addr:$src2)))),
+            (MOVHPDrm VR128:$src1, addr:$src2)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4358,7 +4364,7 @@ defm MOVDDUP : sse3_replicate_dfp<"movddup", SchedWriteFShuffle>;
 
 
 let Predicates = [HasAVX, NoVLX] in {
-  def : Pat<(X86Movddup (loadv2f64 addr:$src)),
+  def : Pat<(X86Movddup (v2f64 (nonvolatile_load addr:$src))),
             (VMOVDDUPrm addr:$src)>, Requires<[HasAVX]>;
   def : Pat<(X86Movddup (v2f64 (X86vzload addr:$src))),
             (VMOVDDUPrm addr:$src)>, Requires<[HasAVX]>;
@@ -4366,7 +4372,7 @@ let Predicates = [HasAVX, NoVLX] in {
 
 let Predicates = [UseSSE3] in {
   // No need for aligned memory as this only loads 64-bits.
-  def : Pat<(X86Movddup (loadv2f64 addr:$src)),
+  def : Pat<(X86Movddup (v2f64 (nonvolatile_load addr:$src))),
             (MOVDDUPrm addr:$src)>;
   def : Pat<(X86Movddup (v2f64 (X86vzload addr:$src))),
             (MOVDDUPrm addr:$src)>;

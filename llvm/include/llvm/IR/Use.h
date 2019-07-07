@@ -139,7 +139,7 @@ private:
   const Use *getImpliedUser() const LLVM_READONLY;
 
   Value *Val = nullptr;
-  Use *Next;
+  Use *Next = nullptr;
   PointerIntPair<Use **, 2, PrevPtrTag, PrevPointerTraits> Prev;
 
   void setPrev(Use **NewPrev) { Prev.setPointer(NewPrev); }

@@ -16,7 +16,7 @@ define <2 x double> @var_shuffle_v2f64_v2f64_xx_i64(<2 x double> %x, i64 %i0, i6
 ; SSE-NEXT:    andl $1, %edi
 ; SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: var_shuffle_v2f64_v2f64_xx_i64:
@@ -25,7 +25,7 @@ define <2 x double> @var_shuffle_v2f64_v2f64_xx_i64(<2 x double> %x, i64 %i0, i6
 ; AVX-NEXT:    andl $1, %edi
 ; AVX-NEXT:    vmovaps %xmm0, -{{[0-9]+}}(%rsp)
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; AVX-NEXT:    retq
   %x0 = extractelement <2 x double> %x, i64 %i0
   %x1 = extractelement <2 x double> %x, i64 %i1

@@ -74,6 +74,7 @@ enum class ValueKind : uint8_t {
   HiddenPrintfBuffer     = 11,
   HiddenDefaultQueue     = 12,
   HiddenCompletionAction = 13,
+  HiddenMultiGridSyncArg = 14,
   Unknown                = 0xff
 };
 

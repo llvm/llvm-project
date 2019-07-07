@@ -2966,8 +2966,11 @@ SDValue DAGCombiner::visitADDCARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
                                        SDNode *N) {
   // Iff the flag result is dead:
   // (addcarry (add|uaddo X, Y), 0, Carry) -> (addcarry X, Y, Carry)
+  // Don't do this if the Carry comes from the uaddo. It won't remove the uaddo
+  // or the dependency between the instructions.
   if ((N0.getOpcode() == ISD::ADD ||
-       (N0.getOpcode() == ISD::UADDO && N0.getResNo() == 0)) &&
+       (N0.getOpcode() == ISD::UADDO && N0.getResNo() == 0 &&
+        N0.getValue(1) != CarryIn)) &&
       isNullConstant(N1) && !N->hasAnyUseOfValue(1))
     return DAG.getNode(ISD::ADDCARRY, SDLoc(N), N->getVTList(),
                        N0.getOperand(0), N0.getOperand(1), CarryIn);
@@ -17579,7 +17582,7 @@ SDValue DAGCombiner::convertBuildVecZextToZext(SDNode *N) {
   auto checkElem = [&](SDValue Op) -> int64_t {
     unsigned Opc = Op.getOpcode();
     FoundZeroExtend |= (Opc == ISD::ZERO_EXTEND);
-    if ((Op.getOpcode() == ISD::ZERO_EXTEND || Opc == ISD::ANY_EXTEND) &&
+    if ((Opc == ISD::ZERO_EXTEND || Opc == ISD::ANY_EXTEND) &&
         Op.getOperand(0).getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
         Op0.getOperand(0).getOperand(0) == Op.getOperand(0).getOperand(0))
       if (auto *C = dyn_cast<ConstantSDNode>(Op.getOperand(0).getOperand(1)))

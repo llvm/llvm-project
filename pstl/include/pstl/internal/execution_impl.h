@@ -1,5 +1,5 @@
 // -*- C++ -*-
-//===-- execution_impl.h --------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +13,7 @@
 #include <iterator>
 #include <type_traits>
 
+#include "pstl_config.h"
 #include "execution_defs.h"
 
 namespace __pstl

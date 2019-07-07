@@ -271,6 +271,71 @@ entry:
   ret void
 }
 
+; CHECK:        - .args:
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .name:           r
+; CHECK-NEXT:         .offset:         0
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     global_buffer
+; CHECK-NEXT:         .value_type:     f16
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .name:           a
+; CHECK-NEXT:         .offset:         8
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     global_buffer
+; CHECK-NEXT:         .value_type:     f16
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .name:           b
+; CHECK-NEXT:         .offset:         16
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     global_buffer
+; CHECK-NEXT:         .value_type:     f16
+; CHECK-NEXT:       - .offset:         24
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_x
+; CHECK-NEXT:         .value_type:     i64
+; CHECK-NEXT:       - .offset:         32
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_y
+; CHECK-NEXT:         .value_type:     i64
+; CHECK-NEXT:       - .offset:         40
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_global_offset_z
+; CHECK-NEXT:         .value_type:     i64
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         48
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_type:     i8
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         56
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_type:     i8
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         64
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_none
+; CHECK-NEXT:         .value_type:     i8
+; CHECK-NEXT:       - .address_space:  global
+; CHECK-NEXT:         .offset:         72
+; CHECK-NEXT:         .size:           8
+; CHECK-NEXT:         .value_kind:     hidden_multigrid_sync_arg
+; CHECK-NEXT:         .value_type:     i8
+; CHECK:          .name:           test56
+; CHECK:          .symbol:         test56.kd
+define amdgpu_kernel void @test56(
+    half addrspace(1)* %r,
+    half addrspace(1)* %a,
+    half addrspace(1)* %b) #5 {
+entry:
+  %a.val = load half, half addrspace(1)* %a
+  %b.val = load half, half addrspace(1)* %b
+  %r.val = fadd half %a.val, %b.val
+  store half %r.val, half addrspace(1)* %r
+  ret void
+}
+
 ; CHECK:  amdhsa.version:
 ; CHECK-NEXT: - 1
 ; CHECK-NEXT: - 0
@@ -280,3 +345,4 @@ attributes #1 = { "amdgpu-implicitarg-num-bytes"="16" }
 attributes #2 = { "amdgpu-implicitarg-num-bytes"="24" }
 attributes #3 = { "amdgpu-implicitarg-num-bytes"="32" }
 attributes #4 = { "amdgpu-implicitarg-num-bytes"="48" }
+attributes #5 = { "amdgpu-implicitarg-num-bytes"="56" }

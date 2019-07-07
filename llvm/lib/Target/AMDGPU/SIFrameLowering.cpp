@@ -21,7 +21,6 @@
 
 using namespace llvm;
 
-
 static ArrayRef<MCPhysReg> getAllSGPR128(const GCNSubtarget &ST,
                                          const MachineFunction &MF) {
   return makeArrayRef(AMDGPU::SGPR_128RegClass.begin(),

@@ -140,11 +140,18 @@ static Error executeObjcopyOnIHex(const CopyConfig &Config, MemoryBuffer &In,
 /// of the output specified by the command line options.
 static Error executeObjcopyOnRawBinary(const CopyConfig &Config,
                                        MemoryBuffer &In, Buffer &Out) {
-  // TODO: llvm-objcopy should parse CopyConfig.OutputFormat to recognize
-  // formats other than ELF / "binary" and invoke
-  // elf::executeObjcopyOnRawBinary, macho::executeObjcopyOnRawBinary or
-  // coff::executeObjcopyOnRawBinary accordingly.
-  return elf::executeObjcopyOnRawBinary(Config, In, Out);
+  switch (Config.OutputFormat) {
+  case FileFormat::ELF:
+  // FIXME: Currently, we call elf::executeObjcopyOnRawBinary even if the
+  // output format is binary/ihex or it's not given. This behavior differs from
+  // GNU objcopy. See https://bugs.llvm.org/show_bug.cgi?id=42171 for details.
+  case FileFormat::Binary:
+  case FileFormat::IHex:
+  case FileFormat::Unspecified:
+    return elf::executeObjcopyOnRawBinary(Config, In, Out);
+  }
+
+  llvm_unreachable("unsupported output format");
 }
 
 /// The function executeObjcopyOnBinary does the dispatch based on the format
@@ -196,16 +203,27 @@ static Error executeObjcopyOnArchive(const CopyConfig &Config,
                           Config.DeterministicArchives, Ar.isThin());
 }
 
-static Error restoreDateOnFile(StringRef Filename,
-                               const sys::fs::file_status &Stat) {
+static Error restoreStatOnFile(StringRef Filename,
+                               const sys::fs::file_status &Stat,
+                               bool PreserveDates) {
   int FD;
+
+  // Writing to stdout should not be treated as an error here, just
+  // do not set access/modification times or permissions.
+  if (Filename == "-")
+    return Error::success();
 
   if (auto EC =
           sys::fs::openFileForWrite(Filename, FD, sys::fs::CD_OpenExisting))
     return createFileError(Filename, EC);
 
-  if (auto EC = sys::fs::setLastAccessAndModificationTime(
-          FD, Stat.getLastAccessedTime(), Stat.getLastModificationTime()))
+  if (PreserveDates)
+    if (auto EC = sys::fs::setLastAccessAndModificationTime(
+            FD, Stat.getLastAccessedTime(), Stat.getLastModificationTime()))
+      return createFileError(Filename, EC);
+
+  if (auto EC = sys::fs::setPermissions(Filename, Stat.permissions(),
+                                        /*respectUmask=*/true))
     return createFileError(Filename, EC);
 
   if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
@@ -219,15 +237,25 @@ static Error restoreDateOnFile(StringRef Filename,
 /// format-agnostic modifications, i.e. preserving dates.
 static Error executeObjcopy(const CopyConfig &Config) {
   sys::fs::file_status Stat;
-  if (Config.PreserveDates)
+  if (Config.InputFilename != "-") {
     if (auto EC = sys::fs::status(Config.InputFilename, Stat))
       return createFileError(Config.InputFilename, EC);
+  } else {
+    Stat.permissions(static_cast<sys::fs::perms>(0777));
+  }
 
   typedef Error (*ProcessRawFn)(const CopyConfig &, MemoryBuffer &, Buffer &);
-  auto ProcessRaw = StringSwitch<ProcessRawFn>(Config.InputFormat)
-                        .Case("binary", executeObjcopyOnRawBinary)
-                        .Case("ihex", executeObjcopyOnIHex)
-                        .Default(nullptr);
+  ProcessRawFn ProcessRaw;
+  switch (Config.InputFormat) {
+  case FileFormat::Binary:
+    ProcessRaw = executeObjcopyOnRawBinary;
+    break;
+  case FileFormat::IHex:
+    ProcessRaw = executeObjcopyOnIHex;
+    break;
+  default:
+    ProcessRaw = nullptr;
+  }
 
   if (ProcessRaw) {
     auto BufOrErr = MemoryBuffer::getFileOrSTDIN(Config.InputFilename);
@@ -253,12 +281,15 @@ static Error executeObjcopy(const CopyConfig &Config) {
     }
   }
 
-  if (Config.PreserveDates) {
-    if (Error E = restoreDateOnFile(Config.OutputFilename, Stat))
+  if (Error E =
+          restoreStatOnFile(Config.OutputFilename, Stat, Config.PreserveDates))
+    return E;
+
+  if (!Config.SplitDWO.empty()) {
+    Stat.permissions(static_cast<sys::fs::perms>(0666));
+    if (Error E =
+            restoreStatOnFile(Config.SplitDWO, Stat, Config.PreserveDates))
       return E;
-    if (!Config.SplitDWO.empty())
-      if (Error E = restoreDateOnFile(Config.SplitDWO, Stat))
-        return E;
   }
 
   return Error::success();

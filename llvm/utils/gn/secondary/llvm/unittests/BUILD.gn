@@ -7,6 +7,7 @@ group("unittests") {
     "AsmParser:AsmParserTests",
     "BinaryFormat:BinaryFormatTests",
     "Bitcode:BitcodeTests",
+    "Bitstream:BitstreamTests",
     "CodeGen:CodeGenTests",
     "CodeGen/GlobalISel:GlobalISelTests",
     "DebugInfo/CodeView:DebugInfoCodeViewTests",

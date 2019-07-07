@@ -384,7 +384,7 @@ define <2 x double> @var_shuffle_v2f64(<2 x double> %v, <2 x i64> %indices) noun
 ; SSE3-NEXT:    andl $1, %ecx
 ; SSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE3-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSE3-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; SSE3-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE3-NEXT:    retq
 ;
 ; SSSE3-LABEL: var_shuffle_v2f64:
@@ -396,7 +396,7 @@ define <2 x double> @var_shuffle_v2f64(<2 x double> %v, <2 x i64> %indices) noun
 ; SSSE3-NEXT:    andl $1, %ecx
 ; SSSE3-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSSE3-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; SSSE3-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; SSSE3-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: var_shuffle_v2f64:

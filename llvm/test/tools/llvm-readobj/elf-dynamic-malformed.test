@@ -141,7 +141,7 @@ ProgramHeaders:
 
 # RUN: llvm-readobj --dynamic-table %t.bad-strtab 2>&1 >/dev/null | FileCheck %s --check-prefix BAD-STRTAB-ERR
 # RUN: llvm-readelf --dynamic-table %t.bad-strtab 2>&1 >/dev/null | FileCheck %s --check-prefix BAD-STRTAB-ERR
-# BAD-STRTAB-ERR: warning: Unable to parse DT_STRTAB: Virtual address is not in any segment
+# BAD-STRTAB-ERR: warning: Unable to parse DT_STRTAB: virtual address is not in any segment: 0x2000000
 
 # RUN: llvm-readobj --dynamic-table --needed-libs %t.bad-strtab | FileCheck %s --check-prefixes=BAD-STRTAB,BAD-STRTAB-LLVM
 # RUN: llvm-readelf --dynamic-table --needed-libs %t.bad-strtab | FileCheck %s --check-prefixes=BAD-STRTAB,BAD-STRTAB-GNU
@@ -186,7 +186,8 @@ ProgramHeaders:
 # RUN: llvm-readobj --dynamic-table %t.bad-rela 2>&1 | FileCheck %s --check-prefixes=CHECK,BAD-RELA
 # RUN: llvm-readelf --dynamic-table %t.bad-rela 2>&1 | FileCheck %s --check-prefixes=CHECK,BAD-RELA-GNU
 
-# CHECK: warning: Unable to parse DT_RELA: Virtual address is not in any segment
+# CHECK: warning: Unable to parse DT_RELA: virtual address is not in any segment: 0x1000000
+
 # BAD-RELA:      DynamicSection [ (2 entries)
 # BAD-RELA-NEXT:   Tag                Type Name/Value
 # BAD-RELA-NEXT:   0x0000000000000007 RELA 0x1000000

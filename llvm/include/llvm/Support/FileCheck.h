@@ -40,10 +40,7 @@ struct FileCheckRequest {
 // Numeric substitution handling code.
 //===----------------------------------------------------------------------===//
 
-/// Class representing a numeric variable with a given value in a numeric
-/// expression. Each definition of a variable gets its own instance of this
-/// class. Variable uses share the same instance as their respective
-/// definition.
+/// Class representing a numeric variable and its associated current value.
 class FileCheckNumericVariable {
 private:
   /// Name of the numeric variable.
@@ -271,13 +268,15 @@ private:
   StringMap<bool> DefinedVariableTable;
 
   /// When matching a given pattern, this holds the pointers to the classes
-  /// representing the last definitions of numeric variables defined in
-  /// previous patterns. Earlier definitions of the variables, if any, have
-  /// their own class instance not referenced by this table. When matching a
-  /// pattern all definitions for that pattern are recorded in the
+  /// representing the numeric variables defined in previous patterns. When
+  /// matching a pattern all definitions for that pattern are recorded in the
   /// NumericVariableDefs table in the FileCheckPattern instance of that
   /// pattern.
   StringMap<FileCheckNumericVariable *> GlobalNumericVariableTable;
+
+  /// Pointer to the class instance representing the @LINE pseudo variable for
+  /// easily updating its value.
+  FileCheckNumericVariable *LineVariable = nullptr;
 
   /// Vector holding pointers to all parsed expressions. Used to automatically
   /// free the expressions once they are guaranteed to no longer be used.
@@ -302,6 +301,10 @@ public:
   /// \p SM for all definition parsing failures, if any, or Success otherwise.
   Error defineCmdlineVariables(std::vector<std::string> &CmdlineDefines,
                                SourceMgr &SM);
+
+  /// Create @LINE pseudo variable. Value is set when pattern are being
+  /// matched.
+  void createLineVariable();
 
   /// Undefines local variables (variables whose name does not start with a '$'
   /// sign), i.e. removes them from GlobalVariableTable and from
@@ -462,13 +465,14 @@ public:
   /// name.
   static Expected<StringRef> parseVariable(StringRef &Str, bool &IsPseudo,
                                            const SourceMgr &SM);
-  /// Parses \p Expr for the name of a numeric variable to be defined. \returns
-  /// an error holding a diagnostic against \p SM should defining such a
-  /// variable be invalid, or Success otherwise. In the latter case, sets
-  /// \p Name to the name of the parsed numeric variable name.
-  static Error parseNumericVariableDefinition(StringRef &Expr, StringRef &Name,
-                                              FileCheckPatternContext *Context,
-                                              const SourceMgr &SM);
+  /// Parses \p Expr for the name of a numeric variable to be defined at line
+  /// \p LineNumber. \returns a pointer to the class instance representing that
+  /// variable, creating it if needed, or an error holding a diagnostic against
+  /// \p SM should defining such a variable be invalid.
+  static Expected<FileCheckNumericVariable *>
+  parseNumericVariableDefinition(StringRef &Expr,
+                                 FileCheckPatternContext *Context,
+                                 size_t LineNumber, const SourceMgr &SM);
   /// Parses \p Expr for a numeric substitution block. \returns the class
   /// representing the AST of the expression whose value must be substituted,
   /// or an error holding a diagnostic against \p SM if parsing fails. If

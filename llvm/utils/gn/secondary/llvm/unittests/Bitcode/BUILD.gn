@@ -10,7 +10,5 @@ unittest("BitcodeTests") {
   ]
   sources = [
     "BitReaderTest.cpp",
-    "BitstreamReaderTest.cpp",
-    "BitstreamWriterTest.cpp",
   ]
 }

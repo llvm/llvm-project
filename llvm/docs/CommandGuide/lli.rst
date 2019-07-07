@@ -214,4 +214,4 @@ Otherwise, it will return the exit code of the program it executes.
 SEE ALSO
 --------
 
-:program:`llc`
+:manpage:`llc(1)`

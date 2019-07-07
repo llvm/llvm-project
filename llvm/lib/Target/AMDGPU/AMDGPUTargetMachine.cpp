@@ -751,6 +751,8 @@ void AMDGPUPassConfig::addCodeGenPrepare() {
       EnableLowerKernelArguments)
     addPass(createAMDGPULowerKernelArgumentsPass());
 
+  addPass(&AMDGPUPerfHintAnalysisID);
+
   TargetPassConfig::addCodeGenPrepare();
 
   if (EnableLoadStoreVectorizer)

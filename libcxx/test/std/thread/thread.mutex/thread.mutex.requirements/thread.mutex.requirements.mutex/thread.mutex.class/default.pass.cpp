@@ -21,8 +21,8 @@
 
 int main(int, char**)
 {
-    static_assert(std::is_nothrow_default_constructible<std::mutex>::value, "");
-    std::mutex m;
-
+  static_assert(std::is_nothrow_default_constructible<std::mutex>::value, "");
+  std::mutex m;
+  ((void)m);
   return 0;
 }

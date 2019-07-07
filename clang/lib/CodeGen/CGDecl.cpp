@@ -153,6 +153,8 @@ void CodeGenFunction::EmitDecl(const Decl &D) {
 
     if (Ty->isVariablyModifiedType())
       EmitVariablyModifiedType(Ty);
+
+    return;
   }
   }
 }

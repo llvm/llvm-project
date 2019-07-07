@@ -9,7 +9,7 @@
 ; Check a function that makes several calls with various profile hotness, and a
 ; reference (also tests forward references to function and variables in calls
 ; and refs).
-^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold), (callee: ^16, hotness: none)), refs: (readonly ^13, ^14))))
+^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold), (callee: ^16, hotness: none)), refs: (writeonly ^14, readonly ^13, ^11))))
 
 ; Function with a call that has relative block frequency instead of profile
 ; hotness.
@@ -33,7 +33,7 @@
 ^13 = gv: (guid: 12, summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0), varFlags: (readonly: 1))))
 
 ; Test a dsoLocal variable.
-^14 = gv: (guid: 13, summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 1), varFlags: (readonly: 0))))
+^14 = gv: (guid: 13, summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 1), varFlags: (writeonly: 0))))
 
 ; Functions with various flag combinations (notEligibleToImport, Live,
 ; combinations of optional function flags).
@@ -67,7 +67,7 @@
 ; Make sure we get back from llvm-dis essentially what we put in via llvm-as.
 ; CHECK: ^0 = module: (path: "thinlto-summary1.o", hash: (1369602428, 2747878711, 259090915, 2507395659, 1141468049))
 ; CHECK: ^1 = module: (path: "thinlto-summary2.o", hash: (2998369023, 4283347029, 1195487472, 2757298015, 1852134156))
-; CHECK: ^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold), (callee: ^16, hotness: none)), refs: (^14, readonly ^13))))
+; CHECK: ^2 = gv: (guid: 1, summaries: (function: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 10, calls: ((callee: ^15, hotness: hot), (callee: ^17, hotness: cold), (callee: ^16, hotness: none)), refs: (^11, readonly ^13, writeonly ^14))))
 ; CHECK: ^3 = gv: (guid: 2, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 10, calls: ((callee: ^15)))))
 ; CHECK: ^4 = gv: (guid: 3, summaries: (function: (module: ^0, flags: (linkage: internal, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), insts: 1)))
 ; CHECK: ^5 = gv: (guid: 4, summaries: (alias: (module: ^0, flags: (linkage: private, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), aliasee: ^14)))
@@ -76,10 +76,10 @@
 ; CHECK: ^8 = gv: (guid: 7, summaries: (function: (module: ^0, flags: (linkage: linkonce_odr, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
 ; CHECK: ^9 = gv: (guid: 8, summaries: (function: (module: ^0, flags: (linkage: weak_odr, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 1), insts: 1)))
 ; CHECK: ^10 = gv: (guid: 9, summaries: (function: (module: ^0, flags: (linkage: weak, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1)))
-; CHECK: ^11 = gv: (guid: 10, summaries: (variable: (module: ^0, flags: (linkage: common, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), varFlags: (readonly: 0))))
-; CHECK: ^12 = gv: (guid: 11, summaries: (variable: (module: ^0, flags: (linkage: appending, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), varFlags: (readonly: 0), refs: (^4))))
-; CHECK: ^13 = gv: (guid: 12, summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), varFlags: (readonly: 1))))
-; CHECK: ^14 = gv: (guid: 13, summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 0))))
+; CHECK: ^11 = gv: (guid: 10, summaries: (variable: (module: ^0, flags: (linkage: common, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), varFlags: (readonly: 0, writeonly: 0))))
+; CHECK: ^12 = gv: (guid: 11, summaries: (variable: (module: ^0, flags: (linkage: appending, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), varFlags: (readonly: 0, writeonly: 0), refs: (^4))))
+; CHECK: ^13 = gv: (guid: 12, summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), varFlags: (readonly: 1, writeonly: 0))))
+; CHECK: ^14 = gv: (guid: 13, summaries: (variable: (module: ^0, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 1, canAutoHide: 0), varFlags: (readonly: 0, writeonly: 0))))
 ; CHECK: ^15 = gv: (guid: 14, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 1, live: 1, dsoLocal: 0, canAutoHide: 0), insts: 1)))
 ; CHECK: ^16 = gv: (guid: 15, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1, funcFlags: (readNone: 1, readOnly: 0, noRecurse: 1, returnDoesNotAlias: 0, noInline: 0))))
 ; CHECK: ^17 = gv: (guid: 16, summaries: (function: (module: ^1, flags: (linkage: external, notEligibleToImport: 0, live: 0, dsoLocal: 0, canAutoHide: 0), insts: 1, funcFlags: (readNone: 0, readOnly: 1, noRecurse: 0, returnDoesNotAlias: 1, noInline: 0), calls: ((callee: ^15)))))

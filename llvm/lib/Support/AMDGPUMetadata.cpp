@@ -65,6 +65,8 @@ struct ScalarEnumerationTraits<ValueKind> {
     YIO.enumCase(EN, "HiddenDefaultQueue", ValueKind::HiddenDefaultQueue);
     YIO.enumCase(EN, "HiddenCompletionAction",
                  ValueKind::HiddenCompletionAction);
+    YIO.enumCase(EN, "HiddenMultiGridSyncArg",
+		 ValueKind::HiddenMultiGridSyncArg);
   }
 };
 

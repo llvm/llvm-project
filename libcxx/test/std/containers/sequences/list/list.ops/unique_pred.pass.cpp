@@ -8,7 +8,8 @@
 
 // <list>
 
-// template <class BinaryPred> void unique(BinaryPred pred);
+// template <class BinaryPred> void      unique(BinaryPred pred); // before C++20
+// template <class BinaryPred> size_type unique(BinaryPred pred); // C++20 and later
 
 #include <list>
 #include <cassert>
@@ -21,10 +22,10 @@ bool g(int x, int y)
     return x == y;
 }
 
-struct PredLWG529 {
-    PredLWG529 (int i) : i_(i) {};
-    ~PredLWG529() { i_ = -32767; }
-    bool operator() (const PredLWG529 &lhs, const PredLWG529 &rhs) const { return lhs.i_ == rhs.i_; }
+struct PredLWG526 {
+    PredLWG526 (int i) : i_(i) {};
+    ~PredLWG526() { i_ = -32767; }
+    bool operator() (const PredLWG526 &lhs, const PredLWG526 &rhs) const { return lhs.i_ == rhs.i_; }
 
     bool operator==(int i) const { return i == i_;}
     int i_;
@@ -35,16 +36,27 @@ int main(int, char**)
     {
     int a1[] = {2, 1, 1, 4, 4, 4, 4, 3, 3};
     int a2[] = {2, 1, 4, 3};
-    std::list<int> c(a1, a1+sizeof(a1)/sizeof(a1[0]));
+    typedef std::list<int> L;
+    L c(a1, a1+sizeof(a1)/sizeof(a1[0]));
+#if TEST_STD_VER > 17
+	ASSERT_SAME_TYPE(L::size_type, decltype(c.unique(g)));
+    assert(c.unique(g) == 5);
+#else
+	ASSERT_SAME_TYPE(void,         decltype(c.unique(g)));
     c.unique(g);
+#endif
     assert(c == std::list<int>(a2, a2+4));
     }
 
     { // LWG issue #526
     int a1[] = {1, 1, 1, 2, 3, 5, 5, 2, 11};
     int a2[] = {1,       2, 3, 5,    2, 11};
-    std::list<PredLWG529> c(a1, a1 + 9);
+    std::list<PredLWG526> c(a1, a1 + 9);
+#if TEST_STD_VER > 17
+    assert(c.unique(std::ref(c.front())) == 3);
+#else
     c.unique(std::ref(c.front()));
+#endif
     assert(c.size() == 6);
     for (size_t i = 0; i < c.size(); ++i)
     {
@@ -58,7 +70,11 @@ int main(int, char**)
     int a1[] = {2, 1, 1, 4, 4, 4, 4, 3, 3};
     int a2[] = {2, 1, 4, 3};
     std::list<int, min_allocator<int>> c(a1, a1+sizeof(a1)/sizeof(a1[0]));
+#if TEST_STD_VER > 17
+    assert(c.unique(g) == 5);
+#else
     c.unique(g);
+#endif
     assert((c == std::list<int, min_allocator<int>>(a2, a2+4)));
     }
 #endif

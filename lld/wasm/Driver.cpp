@@ -170,7 +170,7 @@ opt::InputArgList WasmOptTable::parse(ArrayRef<const char *> Argv) {
 
   handleColorDiagnostics(Args);
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
-    error("unknown argument: " + Arg->getSpelling());
+    error("unknown argument: " + Arg->getAsString(Args));
   return Args;
 }
 
@@ -271,7 +271,7 @@ void LinkerDriver::addLibrary(StringRef Name) {
 
 void LinkerDriver::createFiles(opt::InputArgList &Args) {
   for (auto *Arg : Args) {
-    switch (Arg->getOption().getUnaliasedOption().getID()) {
+    switch (Arg->getOption().getID()) {
     case OPT_l:
       addLibrary(Arg->getValue());
       break;
@@ -531,7 +531,7 @@ static std::string createResponseFile(const opt::InputArgList &Args) {
 
   // Copy the command line to the output while rewriting paths.
   for (auto *Arg : Args) {
-    switch (Arg->getOption().getUnaliasedOption().getID()) {
+    switch (Arg->getOption().getID()) {
     case OPT_reproduce:
       break;
     case OPT_INPUT:

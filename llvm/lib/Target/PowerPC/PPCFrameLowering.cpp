@@ -464,6 +464,7 @@ PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
                                        bool UseEstimate,
                                        unsigned *NewMaxCallFrameSize) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
+  const PPCFunctionInfo *FI = MF.getInfo<PPCFunctionInfo>();
 
   // Get the number of bytes to allocate from the FrameInfo
   unsigned FrameSize =
@@ -481,6 +482,7 @@ PPCFrameLowering::determineFrameLayout(const MachineFunction &MF,
   bool CanUseRedZone = !MFI.hasVarSizedObjects() && // No dynamic alloca.
                        !MFI.adjustsStack() &&       // No calls.
                        !MustSaveLR(MF, LR) &&       // No need to save LR.
+                       !FI->mustSaveTOC() &&        // No need to save TOC.
                        !RegInfo->hasBasePointer(MF); // No special alignment.
 
   // Note: for PPC32 SVR4ABI (Non-DarwinABI), we can still generate stackless
@@ -808,6 +810,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   // Check if the link register (LR) must be saved.
   PPCFunctionInfo *FI = MF.getInfo<PPCFunctionInfo>();
   bool MustSaveLR = FI->mustSaveLR();
+  bool MustSaveTOC = FI->mustSaveTOC();
   const SmallVectorImpl<unsigned> &MustSaveCRs = FI->getMustSaveCRs();
   bool MustSaveCR = !MustSaveCRs.empty();
   // Do we have a frame pointer and/or base pointer for this function?
@@ -819,6 +822,7 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
   unsigned BPReg       = RegInfo->getBaseRegister(MF);
   unsigned FPReg       = isPPC64 ? PPC::X31 : PPC::R31;
   unsigned LRReg       = isPPC64 ? PPC::LR8 : PPC::LR;
+  unsigned TOCReg      = isPPC64 ? PPC::X2 :  PPC::R2;
   unsigned ScratchReg  = 0;
   unsigned TempReg     = isPPC64 ? PPC::X12 : PPC::R12; // another scratch reg
   //  ...(R12/X12 is volatile in both Darwin & SVR4, & can't be a function arg.)
@@ -1092,6 +1096,16 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
     HasSTUX = true;
   }
 
+  // Save the TOC register after the stack pointer update if a prologue TOC
+  // save is required for the function.
+  if (MustSaveTOC) {
+    assert(isELFv2ABI && "TOC saves in the prologue only supported on ELFv2");
+    BuildMI(MBB, StackUpdateLoc, dl, TII.get(PPC::STD))
+      .addReg(TOCReg, getKillRegState(true))
+      .addImm(TOCSaveOffset)
+      .addReg(SPReg);
+  }
+
   if (!HasRedZone) {
     assert(!isPPC64 && "A red zone is always available on PPC64");
     if (HasSTUX) {
@@ -1291,6 +1305,9 @@ void PPCFrameLowering::emitPrologue(MachineFunction &MF,
       // This is a bit of a hack: CR2LT, CR2GT, CR2EQ and CR2UN are just
       // subregisters of CR2. We just need to emit a move of CR2.
       if (PPC::CRBITRCRegClass.contains(Reg))
+        continue;
+
+      if ((Reg == PPC::X2 || Reg == PPC::R2) && MustSaveTOC)
         continue;
 
       // For SVR4, don't emit a move for the CR spill slot if we haven't
@@ -1852,6 +1869,9 @@ void PPCFrameLowering::processFunctionBeforeFrameFinalized(MachineFunction &MF,
 
   for (unsigned i = 0, e = CSI.size(); i != e; ++i) {
     unsigned Reg = CSI[i].getReg();
+    assert((!MF.getInfo<PPCFunctionInfo>()->mustSaveTOC() ||
+            (Reg != PPC::X2 && Reg != PPC::R2)) &&
+           "Not expecting to try to spill R2 in a function that must save TOC");
     if (PPC::GPRCRegClass.contains(Reg) ||
         PPC::SPE4RCRegClass.contains(Reg)) {
       HasGPSaveArea = true;
@@ -2161,6 +2181,8 @@ PPCFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
 
   MachineFunction *MF = MBB.getParent();
   const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
+  PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
+  bool MustSaveTOC = FI->mustSaveTOC();
   DebugLoc DL;
   bool CRSpilled = false;
   MachineInstrBuilder CRMIB;
@@ -2190,6 +2212,10 @@ PPCFrameLowering::spillCalleeSavedRegisters(MachineBasicBlock &MBB,
       CRMIB.addReg(Reg, RegState::ImplicitKill);
       continue;
     }
+
+    // The actual spill will happen in the prologue.
+    if ((Reg == PPC::X2 || Reg == PPC::R2) && MustSaveTOC)
+      continue;
 
     // Insert the spill to the stack frame.
     if (IsCRField) {
@@ -2318,6 +2344,8 @@ PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
 
   MachineFunction *MF = MBB.getParent();
   const PPCInstrInfo &TII = *Subtarget.getInstrInfo();
+  PPCFunctionInfo *FI = MF->getInfo<PPCFunctionInfo>();
+  bool MustSaveTOC = FI->mustSaveTOC();
   bool CR2Spilled = false;
   bool CR3Spilled = false;
   bool CR4Spilled = false;
@@ -2338,6 +2366,9 @@ PPCFrameLowering::restoreCalleeSavedRegisters(MachineBasicBlock &MBB,
     // here if, for example, @llvm.eh.unwind.init() is used.  If we're not on
     // Darwin, ignore it.
     if (Reg == PPC::VRSAVE && !Subtarget.isDarwinABI())
+      continue;
+
+    if ((Reg == PPC::X2 || Reg == PPC::R2) && MustSaveTOC)
       continue;
 
     if (Reg == PPC::CR2) {

@@ -826,9 +826,9 @@ opt::InputArgList ArgParser::parse(ArrayRef<const char *> Argv) {
   for (auto *Arg : Args.filtered(OPT_UNKNOWN)) {
     std::string Nearest;
     if (Table.findNearest(Arg->getAsString(Args), Nearest) > 1)
-      warn("ignoring unknown argument '" + Arg->getSpelling() + "'");
+      warn("ignoring unknown argument '" + Arg->getAsString(Args) + "'");
     else
-      warn("ignoring unknown argument '" + Arg->getSpelling() +
+      warn("ignoring unknown argument '" + Arg->getAsString(Args) +
            "', did you mean '" + Nearest + "'");
   }
 
@@ -861,7 +861,7 @@ ArgParser::parseDirectives(StringRef S) {
   if (MissingCount)
     fatal(Twine(Args.getArgString(MissingIndex)) + ": missing argument");
   for (auto *Arg : Args.filtered(OPT_UNKNOWN))
-    warn("ignoring unknown argument: " + Arg->getSpelling());
+    warn("ignoring unknown argument: " + Arg->getAsString(Args));
   return {std::move(Args), std::move(Exports)};
 }
 

@@ -179,6 +179,44 @@ TEST(DiagnosticsTest, DiagnosticPreamble) {
                   DiagSource(Diag::Clang), DiagName("pp_file_not_found"))));
 }
 
+TEST(DiagnosticsTest, DeduplicatedClangTidyDiagnostics) {
+  Annotations Test(R"cpp(
+    float foo = [[0.1f]];
+  )cpp");
+  auto TU = TestTU::withCode(Test.code());
+  // Enable alias clang-tidy checks, these check emits the same diagnostics
+  // (except the check name).
+  TU.ClangTidyChecks = "-*, readability-uppercase-literal-suffix, "
+                       "hicpp-uppercase-literal-suffix";
+  // Verify that we filter out the duplicated diagnostic message.
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(::testing::AllOf(
+          Diag(Test.range(),
+               "floating point literal has suffix 'f', which is not uppercase"),
+          DiagSource(Diag::ClangTidy))));
+
+  Test = Annotations(R"cpp(
+    template<typename T>
+    void func(T) {
+      float f = [[0.3f]];
+    }
+    void k() {
+      func(123);
+      func(2.0);
+    }
+  )cpp");
+  TU.Code = Test.code();
+  // The check doesn't handle template instantiations which ends up emitting
+  // duplicated messages, verify that we deduplicate them.
+  EXPECT_THAT(
+      TU.build().getDiagnostics(),
+      UnorderedElementsAre(::testing::AllOf(
+          Diag(Test.range(),
+               "floating point literal has suffix 'f', which is not uppercase"),
+          DiagSource(Diag::ClangTidy))));
+}
+
 TEST(DiagnosticsTest, ClangTidy) {
   Annotations Test(R"cpp(
     #include $deprecated[["assert.h"]]

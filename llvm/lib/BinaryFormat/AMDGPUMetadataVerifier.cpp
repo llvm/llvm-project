@@ -121,6 +121,7 @@ bool MetadataVerifier::verifyKernelArgs(msgpack::DocNode &Node) {
                                .Case("hidden_printf_buffer", true)
                                .Case("hidden_default_queue", true)
                                .Case("hidden_completion_action", true)
+                               .Case("hidden_multigrid_sync_arg", true)
                                .Default(false);
                          }))
     return false;
