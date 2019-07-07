@@ -229,11 +229,11 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
     }
   }
 
-  // Mark read-only variables which can be imported with specific attribute.
-  // We can't internalize them now because IRMover will fail to link variable
-  // definitions to their external declarations during ThinLTO import. We'll
-  // internalize read-only variables later, after import is finished.
-  // See internalizeImmutableGVs.
+  // Mark read/write-only variables which can be imported with specific
+  // attribute. We can't internalize them now because IRMover will fail
+  // to link variable definitions to their external declarations during
+  // ThinLTO import. We'll internalize read-only variables later, after
+  // import is finished. See internalizeGVsAfterImport.
   //
   // If global value dead stripping is not enabled in summary then
   // propagateConstants hasn't been run. We can't internalize GV
@@ -241,7 +241,8 @@ void FunctionImportGlobalProcessing::processGlobalForThinLTO(GlobalValue &GV) {
   if (!GV.isDeclaration() && VI && ImportIndex.withGlobalValueDeadStripping()) {
     const auto &SL = VI.getSummaryList();
     auto *GVS = SL.empty() ? nullptr : dyn_cast<GlobalVarSummary>(SL[0].get());
-    if (GVS && GVS->isReadOnly())
+    // At this stage "maybe" is "definitely"
+    if (GVS && (GVS->maybeReadOnly() || GVS->maybeWriteOnly()))
       cast<GlobalVariable>(&GV)->addAttribute("thinlto-internalize");
   }
 

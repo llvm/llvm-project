@@ -613,11 +613,12 @@ define i32 @cnt32_optsize(i32 %x) nounwind readnone optsize {
 ; X32-NEXT:    shrl %ecx
 ; X32-NEXT:    andl $1431655765, %ecx # imm = 0x55555555
 ; X32-NEXT:    subl %ecx, %eax
-; X32-NEXT:    movl %eax, %ecx
-; X32-NEXT:    andl $858993459, %ecx # imm = 0x33333333
+; X32-NEXT:    movl $858993459, %ecx # imm = 0x33333333
+; X32-NEXT:    movl %eax, %edx
+; X32-NEXT:    andl %ecx, %edx
 ; X32-NEXT:    shrl $2, %eax
-; X32-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; X32-NEXT:    addl %ecx, %eax
+; X32-NEXT:    andl %ecx, %eax
+; X32-NEXT:    addl %edx, %eax
 ; X32-NEXT:    movl %eax, %ecx
 ; X32-NEXT:    shrl $4, %ecx
 ; X32-NEXT:    addl %eax, %ecx
@@ -632,11 +633,12 @@ define i32 @cnt32_optsize(i32 %x) nounwind readnone optsize {
 ; X64-NEXT:    shrl %eax
 ; X64-NEXT:    andl $1431655765, %eax # imm = 0x55555555
 ; X64-NEXT:    subl %eax, %edi
-; X64-NEXT:    movl %edi, %eax
-; X64-NEXT:    andl $858993459, %eax # imm = 0x33333333
+; X64-NEXT:    movl $858993459, %eax # imm = 0x33333333
+; X64-NEXT:    movl %edi, %ecx
+; X64-NEXT:    andl %eax, %ecx
 ; X64-NEXT:    shrl $2, %edi
-; X64-NEXT:    andl $858993459, %edi # imm = 0x33333333
-; X64-NEXT:    addl %eax, %edi
+; X64-NEXT:    andl %eax, %edi
+; X64-NEXT:    addl %ecx, %edi
 ; X64-NEXT:    movl %edi, %eax
 ; X64-NEXT:    shrl $4, %eax
 ; X64-NEXT:    addl %edi, %eax
@@ -661,40 +663,49 @@ define i32 @cnt32_optsize(i32 %x) nounwind readnone optsize {
 define i64 @cnt64_optsize(i64 %x) nounwind readnone optsize {
 ; X32-NOSSE-LABEL: cnt64_optsize:
 ; X32-NOSSE:       # %bb.0:
+; X32-NOSSE-NEXT:    pushl %ebx
+; X32-NOSSE-NEXT:    pushl %edi
+; X32-NOSSE-NEXT:    pushl %esi
 ; X32-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X32-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NOSSE-NEXT:    movl %ecx, %edx
 ; X32-NOSSE-NEXT:    shrl %edx
-; X32-NOSSE-NEXT:    andl $1431655765, %edx # imm = 0x55555555
+; X32-NOSSE-NEXT:    movl $1431655765, %esi # imm = 0x55555555
+; X32-NOSSE-NEXT:    andl %esi, %edx
 ; X32-NOSSE-NEXT:    subl %edx, %ecx
-; X32-NOSSE-NEXT:    movl %ecx, %edx
-; X32-NOSSE-NEXT:    andl $858993459, %edx # imm = 0x33333333
+; X32-NOSSE-NEXT:    movl $858993459, %edx # imm = 0x33333333
+; X32-NOSSE-NEXT:    movl %ecx, %edi
+; X32-NOSSE-NEXT:    andl %edx, %edi
 ; X32-NOSSE-NEXT:    shrl $2, %ecx
-; X32-NOSSE-NEXT:    andl $858993459, %ecx # imm = 0x33333333
-; X32-NOSSE-NEXT:    addl %edx, %ecx
-; X32-NOSSE-NEXT:    movl %ecx, %edx
-; X32-NOSSE-NEXT:    shrl $4, %edx
-; X32-NOSSE-NEXT:    addl %ecx, %edx
-; X32-NOSSE-NEXT:    andl $252645135, %edx # imm = 0xF0F0F0F
-; X32-NOSSE-NEXT:    imull $16843009, %edx, %ecx # imm = 0x1010101
-; X32-NOSSE-NEXT:    shrl $24, %ecx
-; X32-NOSSE-NEXT:    movl %eax, %edx
-; X32-NOSSE-NEXT:    shrl %edx
-; X32-NOSSE-NEXT:    andl $1431655765, %edx # imm = 0x55555555
-; X32-NOSSE-NEXT:    subl %edx, %eax
-; X32-NOSSE-NEXT:    movl %eax, %edx
-; X32-NOSSE-NEXT:    andl $858993459, %edx # imm = 0x33333333
+; X32-NOSSE-NEXT:    andl %edx, %ecx
+; X32-NOSSE-NEXT:    addl %edi, %ecx
+; X32-NOSSE-NEXT:    movl %ecx, %edi
+; X32-NOSSE-NEXT:    shrl $4, %edi
+; X32-NOSSE-NEXT:    addl %ecx, %edi
+; X32-NOSSE-NEXT:    movl $252645135, %ecx # imm = 0xF0F0F0F
+; X32-NOSSE-NEXT:    andl %ecx, %edi
+; X32-NOSSE-NEXT:    imull $16843009, %edi, %edi # imm = 0x1010101
+; X32-NOSSE-NEXT:    shrl $24, %edi
+; X32-NOSSE-NEXT:    movl %eax, %ebx
+; X32-NOSSE-NEXT:    shrl %ebx
+; X32-NOSSE-NEXT:    andl %esi, %ebx
+; X32-NOSSE-NEXT:    subl %ebx, %eax
+; X32-NOSSE-NEXT:    movl %eax, %esi
+; X32-NOSSE-NEXT:    andl %edx, %esi
 ; X32-NOSSE-NEXT:    shrl $2, %eax
-; X32-NOSSE-NEXT:    andl $858993459, %eax # imm = 0x33333333
-; X32-NOSSE-NEXT:    addl %edx, %eax
+; X32-NOSSE-NEXT:    andl %edx, %eax
+; X32-NOSSE-NEXT:    addl %esi, %eax
 ; X32-NOSSE-NEXT:    movl %eax, %edx
 ; X32-NOSSE-NEXT:    shrl $4, %edx
 ; X32-NOSSE-NEXT:    addl %eax, %edx
-; X32-NOSSE-NEXT:    andl $252645135, %edx # imm = 0xF0F0F0F
+; X32-NOSSE-NEXT:    andl %ecx, %edx
 ; X32-NOSSE-NEXT:    imull $16843009, %edx, %eax # imm = 0x1010101
 ; X32-NOSSE-NEXT:    shrl $24, %eax
-; X32-NOSSE-NEXT:    addl %ecx, %eax
+; X32-NOSSE-NEXT:    addl %edi, %eax
 ; X32-NOSSE-NEXT:    xorl %edx, %edx
+; X32-NOSSE-NEXT:    popl %esi
+; X32-NOSSE-NEXT:    popl %edi
+; X32-NOSSE-NEXT:    popl %ebx
 ; X32-NOSSE-NEXT:    retl
 ;
 ; X64-LABEL: cnt64_optsize:
@@ -781,77 +792,83 @@ define i64 @cnt64_optsize(i64 %x) nounwind readnone optsize {
 define i128 @cnt128_optsize(i128 %x) nounwind readnone optsize {
 ; X32-NOSSE-LABEL: cnt128_optsize:
 ; X32-NOSSE:       # %bb.0:
+; X32-NOSSE-NEXT:    pushl %ebp
 ; X32-NOSSE-NEXT:    pushl %ebx
 ; X32-NOSSE-NEXT:    pushl %edi
 ; X32-NOSSE-NEXT:    pushl %esi
-; X32-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X32-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X32-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X32-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X32-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
-; X32-NOSSE-NEXT:    movl %edi, %ebx
+; X32-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; X32-NOSSE-NEXT:    movl %ebx, %ecx
+; X32-NOSSE-NEXT:    shrl %ecx
+; X32-NOSSE-NEXT:    movl $1431655765, %edi # imm = 0x55555555
+; X32-NOSSE-NEXT:    andl %edi, %ecx
+; X32-NOSSE-NEXT:    movl $1431655765, %edi # imm = 0x55555555
+; X32-NOSSE-NEXT:    subl %ecx, %ebx
+; X32-NOSSE-NEXT:    movl $858993459, %ecx # imm = 0x33333333
+; X32-NOSSE-NEXT:    movl %ebx, %ebp
+; X32-NOSSE-NEXT:    andl %ecx, %ebp
+; X32-NOSSE-NEXT:    shrl $2, %ebx
+; X32-NOSSE-NEXT:    andl %ecx, %ebx
+; X32-NOSSE-NEXT:    addl %ebp, %ebx
+; X32-NOSSE-NEXT:    movl %ebx, %ebp
+; X32-NOSSE-NEXT:    shrl $4, %ebp
+; X32-NOSSE-NEXT:    addl %ebx, %ebp
+; X32-NOSSE-NEXT:    movl %eax, %ebx
 ; X32-NOSSE-NEXT:    shrl %ebx
-; X32-NOSSE-NEXT:    andl $1431655765, %ebx # imm = 0x55555555
-; X32-NOSSE-NEXT:    subl %ebx, %edi
-; X32-NOSSE-NEXT:    movl %edi, %ebx
-; X32-NOSSE-NEXT:    andl $858993459, %ebx # imm = 0x33333333
-; X32-NOSSE-NEXT:    shrl $2, %edi
-; X32-NOSSE-NEXT:    andl $858993459, %edi # imm = 0x33333333
-; X32-NOSSE-NEXT:    addl %ebx, %edi
-; X32-NOSSE-NEXT:    movl %edi, %ebx
-; X32-NOSSE-NEXT:    shrl $4, %ebx
-; X32-NOSSE-NEXT:    addl %edi, %ebx
-; X32-NOSSE-NEXT:    andl $252645135, %ebx # imm = 0xF0F0F0F
-; X32-NOSSE-NEXT:    imull $16843009, %ebx, %edi # imm = 0x1010101
+; X32-NOSSE-NEXT:    andl %edi, %ebx
+; X32-NOSSE-NEXT:    subl %ebx, %eax
+; X32-NOSSE-NEXT:    movl %eax, %ebx
+; X32-NOSSE-NEXT:    andl %ecx, %ebx
+; X32-NOSSE-NEXT:    shrl $2, %eax
+; X32-NOSSE-NEXT:    andl %ecx, %eax
+; X32-NOSSE-NEXT:    addl %ebx, %eax
+; X32-NOSSE-NEXT:    movl %eax, %edi
+; X32-NOSSE-NEXT:    shrl $4, %edi
+; X32-NOSSE-NEXT:    addl %eax, %edi
+; X32-NOSSE-NEXT:    movl $252645135, %ebx # imm = 0xF0F0F0F
+; X32-NOSSE-NEXT:    andl %ebx, %ebp
+; X32-NOSSE-NEXT:    imull $16843009, %ebp, %eax # imm = 0x1010101
+; X32-NOSSE-NEXT:    shrl $24, %eax
+; X32-NOSSE-NEXT:    andl %ebx, %edi
+; X32-NOSSE-NEXT:    imull $16843009, %edi, %edi # imm = 0x1010101
 ; X32-NOSSE-NEXT:    shrl $24, %edi
-; X32-NOSSE-NEXT:    movl %esi, %ebx
-; X32-NOSSE-NEXT:    shrl %ebx
-; X32-NOSSE-NEXT:    andl $1431655765, %ebx # imm = 0x55555555
-; X32-NOSSE-NEXT:    subl %ebx, %esi
-; X32-NOSSE-NEXT:    movl %esi, %ebx
-; X32-NOSSE-NEXT:    andl $858993459, %ebx # imm = 0x33333333
+; X32-NOSSE-NEXT:    addl %eax, %edi
+; X32-NOSSE-NEXT:    movl %esi, %eax
+; X32-NOSSE-NEXT:    shrl %eax
+; X32-NOSSE-NEXT:    movl $1431655765, %ebp # imm = 0x55555555
+; X32-NOSSE-NEXT:    andl %ebp, %eax
+; X32-NOSSE-NEXT:    subl %eax, %esi
+; X32-NOSSE-NEXT:    movl %esi, %eax
+; X32-NOSSE-NEXT:    andl %ecx, %eax
 ; X32-NOSSE-NEXT:    shrl $2, %esi
-; X32-NOSSE-NEXT:    andl $858993459, %esi # imm = 0x33333333
-; X32-NOSSE-NEXT:    addl %ebx, %esi
-; X32-NOSSE-NEXT:    movl %esi, %ebx
-; X32-NOSSE-NEXT:    shrl $4, %ebx
-; X32-NOSSE-NEXT:    addl %esi, %ebx
-; X32-NOSSE-NEXT:    andl $252645135, %ebx # imm = 0xF0F0F0F
-; X32-NOSSE-NEXT:    imull $16843009, %ebx, %esi # imm = 0x1010101
-; X32-NOSSE-NEXT:    shrl $24, %esi
-; X32-NOSSE-NEXT:    addl %edi, %esi
-; X32-NOSSE-NEXT:    movl %edx, %edi
-; X32-NOSSE-NEXT:    shrl %edi
-; X32-NOSSE-NEXT:    andl $1431655765, %edi # imm = 0x55555555
-; X32-NOSSE-NEXT:    subl %edi, %edx
-; X32-NOSSE-NEXT:    movl %edx, %edi
-; X32-NOSSE-NEXT:    andl $858993459, %edi # imm = 0x33333333
+; X32-NOSSE-NEXT:    andl %ecx, %esi
+; X32-NOSSE-NEXT:    addl %eax, %esi
+; X32-NOSSE-NEXT:    movl %esi, %eax
+; X32-NOSSE-NEXT:    shrl $4, %eax
+; X32-NOSSE-NEXT:    addl %esi, %eax
+; X32-NOSSE-NEXT:    movl %edx, %esi
+; X32-NOSSE-NEXT:    shrl %esi
+; X32-NOSSE-NEXT:    andl %ebp, %esi
+; X32-NOSSE-NEXT:    subl %esi, %edx
+; X32-NOSSE-NEXT:    movl %edx, %esi
+; X32-NOSSE-NEXT:    andl %ecx, %esi
 ; X32-NOSSE-NEXT:    shrl $2, %edx
-; X32-NOSSE-NEXT:    andl $858993459, %edx # imm = 0x33333333
-; X32-NOSSE-NEXT:    addl %edi, %edx
-; X32-NOSSE-NEXT:    movl %edx, %edi
-; X32-NOSSE-NEXT:    shrl $4, %edi
-; X32-NOSSE-NEXT:    addl %edx, %edi
-; X32-NOSSE-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
-; X32-NOSSE-NEXT:    imull $16843009, %edi, %edx # imm = 0x1010101
-; X32-NOSSE-NEXT:    shrl $24, %edx
-; X32-NOSSE-NEXT:    movl %ecx, %edi
-; X32-NOSSE-NEXT:    shrl %edi
-; X32-NOSSE-NEXT:    andl $1431655765, %edi # imm = 0x55555555
-; X32-NOSSE-NEXT:    subl %edi, %ecx
-; X32-NOSSE-NEXT:    movl %ecx, %edi
-; X32-NOSSE-NEXT:    andl $858993459, %edi # imm = 0x33333333
-; X32-NOSSE-NEXT:    shrl $2, %ecx
-; X32-NOSSE-NEXT:    andl $858993459, %ecx # imm = 0x33333333
-; X32-NOSSE-NEXT:    addl %edi, %ecx
-; X32-NOSSE-NEXT:    movl %ecx, %edi
-; X32-NOSSE-NEXT:    shrl $4, %edi
-; X32-NOSSE-NEXT:    addl %ecx, %edi
-; X32-NOSSE-NEXT:    andl $252645135, %edi # imm = 0xF0F0F0F
-; X32-NOSSE-NEXT:    imull $16843009, %edi, %ecx # imm = 0x1010101
-; X32-NOSSE-NEXT:    shrl $24, %ecx
+; X32-NOSSE-NEXT:    andl %ecx, %edx
+; X32-NOSSE-NEXT:    addl %esi, %edx
+; X32-NOSSE-NEXT:    movl %edx, %ecx
+; X32-NOSSE-NEXT:    shrl $4, %ecx
 ; X32-NOSSE-NEXT:    addl %edx, %ecx
-; X32-NOSSE-NEXT:    addl %esi, %ecx
+; X32-NOSSE-NEXT:    andl %ebx, %eax
+; X32-NOSSE-NEXT:    andl %ebx, %ecx
+; X32-NOSSE-NEXT:    imull $16843009, %eax, %eax # imm = 0x1010101
+; X32-NOSSE-NEXT:    shrl $24, %eax
+; X32-NOSSE-NEXT:    imull $16843009, %ecx, %ecx # imm = 0x1010101
+; X32-NOSSE-NEXT:    shrl $24, %ecx
+; X32-NOSSE-NEXT:    addl %eax, %ecx
+; X32-NOSSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X32-NOSSE-NEXT:    addl %edi, %ecx
 ; X32-NOSSE-NEXT:    xorl %edx, %edx
 ; X32-NOSSE-NEXT:    movl %edx, 12(%eax)
 ; X32-NOSSE-NEXT:    movl %edx, 8(%eax)
@@ -860,6 +877,7 @@ define i128 @cnt128_optsize(i128 %x) nounwind readnone optsize {
 ; X32-NOSSE-NEXT:    popl %esi
 ; X32-NOSSE-NEXT:    popl %edi
 ; X32-NOSSE-NEXT:    popl %ebx
+; X32-NOSSE-NEXT:    popl %ebp
 ; X32-NOSSE-NEXT:    retl $4
 ;
 ; X64-LABEL: cnt128_optsize:

@@ -1112,7 +1112,7 @@ void LinkerDriver::createFiles(opt::InputArgList &Args) {
 
   // Iterate over argv to process input files and positional arguments.
   for (auto *Arg : Args) {
-    switch (Arg->getOption().getUnaliasedOption().getID()) {
+    switch (Arg->getOption().getID()) {
     case OPT_library:
       addLibrary(Arg->getValue());
       break;

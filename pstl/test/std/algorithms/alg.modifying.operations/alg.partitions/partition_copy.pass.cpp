@@ -12,9 +12,10 @@
 // Tests for stable_partition and partition_copy
 #include "support/pstl_test_config.h"
 
-#include <execution>
 #include <algorithm>
 #include <cstdlib>
+#include <execution>
+#include <functional>
 #include <iterator>
 
 #include "support/utils.h"
@@ -26,16 +27,15 @@ struct test_partition_copy
     template <typename Policy, typename InputIterator, typename OutputIterator, typename OutputIterator2,
               typename UnaryOp>
     void
-    operator()(Policy&& exec, InputIterator first, InputIterator last, OutputIterator true_first,
-               OutputIterator, OutputIterator2 false_first, OutputIterator2, UnaryOp unary_op)
+    operator()(Policy&& exec, InputIterator first, InputIterator last, OutputIterator true_first, OutputIterator,
+               OutputIterator2 false_first, OutputIterator2, UnaryOp unary_op)
     {
 
         auto actual_ret = std::partition_copy(exec, first, last, true_first, false_first, unary_op);
 
         EXPECT_TRUE(std::distance(true_first, actual_ret.first) == std::count_if(first, last, unary_op),
                     "partition_copy has wrong effect from true sequence");
-        EXPECT_TRUE(std::distance(false_first, actual_ret.second) ==
-                        std::count_if(first, last, __pstl::__internal::__not_pred<UnaryOp>(unary_op)),
+        EXPECT_TRUE(std::distance(false_first, actual_ret.second) == std::count_if(first, last, std::not_fn(unary_op)),
                     "partition_copy has wrong effect from false sequence");
     }
 

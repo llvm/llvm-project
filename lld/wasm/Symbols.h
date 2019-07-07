@@ -41,7 +41,7 @@ class OutputSection;
 // The base class for real symbol classes.
 class Symbol {
 public:
-  enum Kind {
+  enum Kind : uint8_t {
     DefinedFunctionKind,
     DefinedDataKind,
     DefinedGlobalKind,
@@ -107,6 +107,33 @@ public:
   WasmSymbolType getWasmType() const;
   bool isExported() const;
 
+  const WasmSignature* getSignature() const;
+
+  bool isInGOT() const { return GOTIndex != INVALID_INDEX; }
+
+  uint32_t getGOTIndex() const {
+    assert(GOTIndex != INVALID_INDEX);
+    return GOTIndex;
+  }
+
+  void setGOTIndex(uint32_t Index);
+  bool hasGOTIndex() const { return GOTIndex != INVALID_INDEX; }
+
+protected:
+  Symbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F)
+      : Name(Name), File(F), Flags(Flags), SymbolKind(K),
+        Referenced(!Config->GcSections), IsUsedInRegularObj(false),
+        ForceExport(false), CanInline(false), Traced(false) {}
+
+  StringRef Name;
+  InputFile *File;
+  uint32_t Flags;
+  uint32_t OutputSymbolIndex = INVALID_INDEX;
+  uint32_t GOTIndex = INVALID_INDEX;
+  Kind SymbolKind;
+  unsigned Referenced : 1;
+
+public:
   // True if the symbol was used for linking and thus need to be added to the
   // output file's symbol table. This is true for all symbols except for
   // unreferenced DSO symbols, lazy (archive) symbols, and bitcode symbols that
@@ -124,32 +151,6 @@ public:
 
   // True if this symbol is specified by --trace-symbol option.
   unsigned Traced : 1;
-
-  const WasmSignature* getSignature() const;
-
-  bool isInGOT() const { return GOTIndex != INVALID_INDEX; }
-
-  uint32_t getGOTIndex() const {
-    assert(GOTIndex != INVALID_INDEX);
-    return GOTIndex;
-  }
-
-  void setGOTIndex(uint32_t Index);
-  bool hasGOTIndex() const { return GOTIndex != INVALID_INDEX; }
-
-protected:
-  Symbol(StringRef Name, Kind K, uint32_t Flags, InputFile *F)
-      : IsUsedInRegularObj(false), ForceExport(false), CanInline(false),
-        Traced(false), Name(Name), SymbolKind(K), Flags(Flags), File(F),
-        Referenced(!Config->GcSections) {}
-
-  StringRef Name;
-  Kind SymbolKind;
-  uint32_t Flags;
-  InputFile *File;
-  uint32_t OutputSymbolIndex = INVALID_INDEX;
-  uint32_t GOTIndex = INVALID_INDEX;
-  bool Referenced;
 };
 
 class FunctionSymbol : public Symbol {

@@ -288,6 +288,12 @@ libc++ Feature Options
 
   Build libc++ with run time type information.
 
+.. option:: LIBCXX_INCLUDE_TESTS:BOOL
+
+  **Default**: ``ON`` (or value of ``LLVM_INCLUDE_DIR``)
+
+  Build the libc++ tests.
+
 .. option:: LIBCXX_INCLUDE_BENCHMARKS:BOOL
 
   **Default**: ``ON``

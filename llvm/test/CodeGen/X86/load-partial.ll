@@ -174,3 +174,41 @@ define <4 x float> @load_float4_float3_trunc(<4 x float>* nocapture readonly der
   %16 = insertelement <4 x float> %13, float %15, i32 2
   ret <4 x float> %16
 }
+
+; PR21780
+define <4 x double> @load_double4_0u2u(double* nocapture readonly dereferenceable(32)) {
+; SSE2-LABEL: load_double4_0u2u:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
+; SSE2-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
+; SSE2-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0,0]
+; SSE2-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0,0]
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: load_double4_0u2u:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
+; SSSE3-NEXT:    movddup {{.*#+}} xmm1 = mem[0,0]
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: load_double4_0u2u:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    movddup {{.*#+}} xmm0 = mem[0,0]
+; SSE41-NEXT:    movddup {{.*#+}} xmm1 = mem[0,0]
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: load_double4_0u2u:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
+; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-NEXT:    vmovddup {{.*#+}} ymm0 = ymm0[0,0,2,2]
+; AVX-NEXT:    retq
+  %2 = load double, double* %0, align 8
+  %3 = insertelement <4 x double> undef, double %2, i32 0
+  %4 = getelementptr inbounds double, double* %0, i64 2
+  %5 = load double, double* %4, align 8
+  %6 = insertelement <4 x double> %3, double %5, i32 2
+  %7 = shufflevector <4 x double> %6, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  ret <4 x double> %7
+}

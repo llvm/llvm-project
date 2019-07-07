@@ -1,0 +1,10 @@
+static_library("Reader") {
+  output_name = "LLVMBitstreamReader"
+  deps = [
+    "//llvm/lib/Support",
+  ]
+
+  sources = [
+    "BitstreamReader.cpp",
+  ]
+}

@@ -2192,6 +2192,23 @@ def MVE_VMVNimmi32 : MVE_mod_imm<"vmvn", "i32", {?,?,?,?}, 0b1, (ins nImmVMOVI32
 }
 } // let isReMaterializable = 1
 
+let Predicates = [HasMVEInt] in {
+  def : Pat<(v16i8 (ARMvmovImm timm:$simm)),
+            (v16i8 (MVE_VMOVimmi8  nImmSplatI8:$simm))>;
+  def : Pat<(v8i16 (ARMvmovImm timm:$simm)),
+            (v8i16 (MVE_VMOVimmi16 nImmSplatI16:$simm))>;
+  def : Pat<(v4i32 (ARMvmovImm timm:$simm)),
+            (v4i32 (MVE_VMOVimmi32 nImmVMOVI32:$simm))>;
+
+  def : Pat<(v8i16 (ARMvmvnImm timm:$simm)),
+            (v8i16 (MVE_VMVNimmi16 nImmSplatI16:$simm))>;
+  def : Pat<(v4i32 (ARMvmvnImm timm:$simm)),
+            (v4i32 (MVE_VMVNimmi32 nImmVMOVI32:$simm))>;
+
+  def : Pat<(v4f32 (ARMvmovFPImm timm:$simm)),
+            (v4f32 (MVE_VMOVimmf32 nImmVMOVF32:$simm))>;
+}
+
 class MVE_VMINMAXA<string iname, string suffix, bits<2> size,
                    bit bit_12, list<dag> pattern=[]>
   : MVE_p<(outs MQPR:$Qd), (ins MQPR:$Qd_src, MQPR:$Qm),
@@ -2545,6 +2562,25 @@ def MVE_VCVTf16s16n : MVE_VCVT_fp_int<"f16.s16", 0b01, 0b00>;
 def MVE_VCVTf16u16n : MVE_VCVT_fp_int<"f16.u16", 0b01, 0b01>;
 def MVE_VCVTf32s32n : MVE_VCVT_fp_int<"f32.s32", 0b10, 0b00>;
 def MVE_VCVTf32u32n : MVE_VCVT_fp_int<"f32.u32", 0b10, 0b01>;
+
+let Predicates = [HasMVEFloat] in {
+def : Pat<(v4i32 (fp_to_sint (v4f32 MQPR:$src))),
+          (v4i32 (MVE_VCVTs32f32z (v4f32 MQPR:$src)))>;
+def : Pat<(v4i32 (fp_to_uint (v4f32 MQPR:$src))),
+          (v4i32 (MVE_VCVTu32f32z (v4f32 MQPR:$src)))>;
+def : Pat<(v8i16 (fp_to_sint (v8f16 MQPR:$src))),
+          (v8i16 (MVE_VCVTs16f16z (v8f16 MQPR:$src)))>;
+def : Pat<(v8i16 (fp_to_uint (v8f16 MQPR:$src))),
+          (v8i16 (MVE_VCVTu16f16z (v8f16 MQPR:$src)))>;
+def : Pat<(v4f32 (sint_to_fp (v4i32 MQPR:$src))),
+          (v4f32 (MVE_VCVTf32s32n (v4i32 MQPR:$src)))>;
+def : Pat<(v4f32 (uint_to_fp (v4i32 MQPR:$src))),
+          (v4f32 (MVE_VCVTf32u32n (v4i32 MQPR:$src)))>;
+def : Pat<(v8f16 (sint_to_fp (v8i16 MQPR:$src))),
+          (v8f16 (MVE_VCVTf16s16n (v8i16 MQPR:$src)))>;
+def : Pat<(v8f16 (uint_to_fp (v8i16 MQPR:$src))),
+          (v8f16 (MVE_VCVTf16u16n (v8i16 MQPR:$src)))>;
+}
 
 class MVE_VABSNEG_fp<string iname, string suffix, bits<2> size, bit negate,
                    list<dag> pattern=[]>

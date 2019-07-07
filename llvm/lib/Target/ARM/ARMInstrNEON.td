@@ -526,11 +526,6 @@ def NEONvqrshrnsu : SDNode<"ARMISD::VQRSHRNsu", SDTARMVSHX>;
 def NEONvsli      : SDNode<"ARMISD::VSLI", SDTARMVSHINS>;
 def NEONvsri      : SDNode<"ARMISD::VSRI", SDTARMVSHINS>;
 
-def SDTARMVMOVIMM : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVT<1, i32>]>;
-def NEONvmovImm   : SDNode<"ARMISD::VMOVIMM", SDTARMVMOVIMM>;
-def NEONvmvnImm   : SDNode<"ARMISD::VMVNIMM", SDTARMVMOVIMM>;
-def NEONvmovFPImm : SDNode<"ARMISD::VMOVFPIMM", SDTARMVMOVIMM>;
-
 def SDTARMVORRIMM : SDTypeProfile<1, 2, [SDTCisVec<0>, SDTCisSameAs<0, 1>,
                                            SDTCisVT<2, i32>]>;
 def NEONvorrImm   : SDNode<"ARMISD::VORRIMM", SDTARMVORRIMM>;
@@ -566,14 +561,14 @@ def NEONvtbl1     : SDNode<"ARMISD::VTBL1", SDTARMVTBL1>;
 def NEONvtbl2     : SDNode<"ARMISD::VTBL2", SDTARMVTBL2>;
 
 
-def NEONimmAllZerosV: PatLeaf<(NEONvmovImm (i32 timm)), [{
+def NEONimmAllZerosV: PatLeaf<(ARMvmovImm (i32 timm)), [{
   ConstantSDNode *ConstVal = cast<ConstantSDNode>(N->getOperand(0));
   unsigned EltBits = 0;
   uint64_t EltVal = ARM_AM::decodeNEONModImm(ConstVal->getZExtValue(), EltBits);
   return (EltBits == 32 && EltVal == 0);
 }]>;
 
-def NEONimmAllOnesV: PatLeaf<(NEONvmovImm (i32 timm)), [{
+def NEONimmAllOnesV: PatLeaf<(ARMvmovImm (i32 timm)), [{
   ConstantSDNode *ConstVal = cast<ConstantSDNode>(N->getOperand(0));
   unsigned EltBits = 0;
   uint64_t EltVal = ARM_AM::decodeNEONModImm(ConstVal->getZExtValue(), EltBits);
@@ -5345,28 +5340,28 @@ let isReMaterializable = 1 in {
 def VMVNv4i16 : N1ModImm<1, 0b000, {1,0,?,0}, 0, 0, 1, 1, (outs DPR:$Vd),
                          (ins nImmSplatI16:$SIMM), IIC_VMOVImm,
                          "vmvn", "i16", "$Vd, $SIMM", "",
-                         [(set DPR:$Vd, (v4i16 (NEONvmvnImm timm:$SIMM)))]> {
+                         [(set DPR:$Vd, (v4i16 (ARMvmvnImm timm:$SIMM)))]> {
   let Inst{9} = SIMM{9};
 }
 
 def VMVNv8i16 : N1ModImm<1, 0b000, {1,0,?,0}, 0, 1, 1, 1, (outs QPR:$Vd),
                          (ins nImmSplatI16:$SIMM), IIC_VMOVImm,
                          "vmvn", "i16", "$Vd, $SIMM", "",
-                         [(set QPR:$Vd, (v8i16 (NEONvmvnImm timm:$SIMM)))]> {
+                         [(set QPR:$Vd, (v8i16 (ARMvmvnImm timm:$SIMM)))]> {
   let Inst{9} = SIMM{9};
 }
 
 def VMVNv2i32 : N1ModImm<1, 0b000, {?,?,?,?}, 0, 0, 1, 1, (outs DPR:$Vd),
                          (ins nImmVMOVI32:$SIMM), IIC_VMOVImm,
                          "vmvn", "i32", "$Vd, $SIMM", "",
-                         [(set DPR:$Vd, (v2i32 (NEONvmvnImm timm:$SIMM)))]> {
+                         [(set DPR:$Vd, (v2i32 (ARMvmvnImm timm:$SIMM)))]> {
   let Inst{11-8} = SIMM{11-8};
 }
 
 def VMVNv4i32 : N1ModImm<1, 0b000, {?,?,?,?}, 0, 1, 1, 1, (outs QPR:$Vd),
                          (ins nImmVMOVI32:$SIMM), IIC_VMOVImm,
                          "vmvn", "i32", "$Vd, $SIMM", "",
-                         [(set QPR:$Vd, (v4i32 (NEONvmvnImm timm:$SIMM)))]> {
+                         [(set QPR:$Vd, (v4i32 (ARMvmvnImm timm:$SIMM)))]> {
   let Inst{11-8} = SIMM{11-8};
 }
 }
@@ -6053,57 +6048,57 @@ let isReMaterializable = 1, isAsCheapAsAMove=1 in {
 def VMOVv8i8  : N1ModImm<1, 0b000, 0b1110, 0, 0, 0, 1, (outs DPR:$Vd),
                          (ins nImmSplatI8:$SIMM), IIC_VMOVImm,
                          "vmov", "i8", "$Vd, $SIMM", "",
-                         [(set DPR:$Vd, (v8i8 (NEONvmovImm timm:$SIMM)))]>;
+                         [(set DPR:$Vd, (v8i8 (ARMvmovImm timm:$SIMM)))]>;
 def VMOVv16i8 : N1ModImm<1, 0b000, 0b1110, 0, 1, 0, 1, (outs QPR:$Vd),
                          (ins nImmSplatI8:$SIMM), IIC_VMOVImm,
                          "vmov", "i8", "$Vd, $SIMM", "",
-                         [(set QPR:$Vd, (v16i8 (NEONvmovImm timm:$SIMM)))]>;
+                         [(set QPR:$Vd, (v16i8 (ARMvmovImm timm:$SIMM)))]>;
 
 def VMOVv4i16 : N1ModImm<1, 0b000, {1,0,?,0}, 0, 0, 0, 1, (outs DPR:$Vd),
                          (ins nImmSplatI16:$SIMM), IIC_VMOVImm,
                          "vmov", "i16", "$Vd, $SIMM", "",
-                         [(set DPR:$Vd, (v4i16 (NEONvmovImm timm:$SIMM)))]> {
+                         [(set DPR:$Vd, (v4i16 (ARMvmovImm timm:$SIMM)))]> {
   let Inst{9} = SIMM{9};
 }
 
 def VMOVv8i16 : N1ModImm<1, 0b000, {1,0,?,0}, 0, 1, 0, 1, (outs QPR:$Vd),
                          (ins nImmSplatI16:$SIMM), IIC_VMOVImm,
                          "vmov", "i16", "$Vd, $SIMM", "",
-                         [(set QPR:$Vd, (v8i16 (NEONvmovImm timm:$SIMM)))]> {
+                         [(set QPR:$Vd, (v8i16 (ARMvmovImm timm:$SIMM)))]> {
  let Inst{9} = SIMM{9};
 }
 
 def VMOVv2i32 : N1ModImm<1, 0b000, {?,?,?,?}, 0, 0, 0, 1, (outs DPR:$Vd),
                          (ins nImmVMOVI32:$SIMM), IIC_VMOVImm,
                          "vmov", "i32", "$Vd, $SIMM", "",
-                         [(set DPR:$Vd, (v2i32 (NEONvmovImm timm:$SIMM)))]> {
+                         [(set DPR:$Vd, (v2i32 (ARMvmovImm timm:$SIMM)))]> {
   let Inst{11-8} = SIMM{11-8};
 }
 
 def VMOVv4i32 : N1ModImm<1, 0b000, {?,?,?,?}, 0, 1, 0, 1, (outs QPR:$Vd),
                          (ins nImmVMOVI32:$SIMM), IIC_VMOVImm,
                          "vmov", "i32", "$Vd, $SIMM", "",
-                         [(set QPR:$Vd, (v4i32 (NEONvmovImm timm:$SIMM)))]> {
+                         [(set QPR:$Vd, (v4i32 (ARMvmovImm timm:$SIMM)))]> {
   let Inst{11-8} = SIMM{11-8};
 }
 
 def VMOVv1i64 : N1ModImm<1, 0b000, 0b1110, 0, 0, 1, 1, (outs DPR:$Vd),
                          (ins nImmSplatI64:$SIMM), IIC_VMOVImm,
                          "vmov", "i64", "$Vd, $SIMM", "",
-                         [(set DPR:$Vd, (v1i64 (NEONvmovImm timm:$SIMM)))]>;
+                         [(set DPR:$Vd, (v1i64 (ARMvmovImm timm:$SIMM)))]>;
 def VMOVv2i64 : N1ModImm<1, 0b000, 0b1110, 0, 1, 1, 1, (outs QPR:$Vd),
                          (ins nImmSplatI64:$SIMM), IIC_VMOVImm,
                          "vmov", "i64", "$Vd, $SIMM", "",
-                         [(set QPR:$Vd, (v2i64 (NEONvmovImm timm:$SIMM)))]>;
+                         [(set QPR:$Vd, (v2i64 (ARMvmovImm timm:$SIMM)))]>;
 
 def VMOVv2f32 : N1ModImm<1, 0b000, 0b1111, 0, 0, 0, 1, (outs DPR:$Vd),
                          (ins nImmVMOVF32:$SIMM), IIC_VMOVImm,
                          "vmov", "f32", "$Vd, $SIMM", "",
-                         [(set DPR:$Vd, (v2f32 (NEONvmovFPImm timm:$SIMM)))]>;
+                         [(set DPR:$Vd, (v2f32 (ARMvmovFPImm timm:$SIMM)))]>;
 def VMOVv4f32 : N1ModImm<1, 0b000, 0b1111, 0, 1, 0, 1, (outs QPR:$Vd),
                          (ins nImmVMOVF32:$SIMM), IIC_VMOVImm,
                          "vmov", "f32", "$Vd, $SIMM", "",
-                         [(set QPR:$Vd, (v4f32 (NEONvmovFPImm timm:$SIMM)))]>;
+                         [(set QPR:$Vd, (v4f32 (ARMvmovFPImm timm:$SIMM)))]>;
 } // isReMaterializable, isAsCheapAsAMove
 
 // Add support for bytes replication feature, so it could be GAS compatible.

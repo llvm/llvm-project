@@ -18,6 +18,7 @@
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/iterator.h"
+#include "llvm/Support/GenericIteratedDominanceFrontier.h"
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/GenericDomTreeConstruction.h"
 #include "llvm/Support/raw_ostream.h"
@@ -44,12 +45,17 @@ class CFGDominatorTreeImpl : public ManagedAnalysis {
 public:
   using DominatorTreeBase = llvm::DominatorTreeBase<CFGBlock, IsPostDom>;
 
-  DominatorTreeBase DT;
-
   CFGDominatorTreeImpl() = default;
+
+  CFGDominatorTreeImpl(CFG *cfg) {
+    buildDominatorTree(cfg);
+  }
+
   ~CFGDominatorTreeImpl() override = default;
 
-  DominatorTreeBase& getBase() { return *DT; }
+  DominatorTreeBase &getBase() { return DT; }
+
+  CFG *getCFG() { return cfg; }
 
   /// \returns the root CFGBlock of the dominators tree.
   CFGBlock *getRoot() const {
@@ -172,10 +178,95 @@ public:
 
 private:
   CFG *cfg;
+  DominatorTreeBase DT;
 };
 
 using CFGDomTree = CFGDominatorTreeImpl</*IsPostDom*/ false>;
 using CFGPostDomTree = CFGDominatorTreeImpl</*IsPostDom*/ true>;
+
+} // end of namespace clang
+
+namespace llvm {
+namespace IDFCalculatorDetail {
+
+/// Specialize ChildrenGetterTy to skip nullpointer successors.
+template <bool IsPostDom>
+struct ChildrenGetterTy<clang::CFGBlock, IsPostDom> {
+  using NodeRef = typename GraphTraits<clang::CFGBlock>::NodeRef;
+  using ChildrenTy = SmallVector<NodeRef, 8>;
+
+  ChildrenTy get(const NodeRef &N) {
+    using OrderedNodeTy =
+        typename IDFCalculatorBase<clang::CFGBlock, IsPostDom>::OrderedNodeTy;
+
+    auto Children = children<OrderedNodeTy>(N);
+    ChildrenTy Ret{Children.begin(), Children.end()};
+    Ret.erase(std::remove(Ret.begin(), Ret.end(), nullptr), Ret.end());
+    return Ret;
+  }
+};
+
+} // end of namespace IDFCalculatorDetail
+} // end of namespace llvm
+
+namespace clang {
+
+class ControlDependencyCalculator : public ManagedAnalysis {
+  using IDFCalculator = llvm::IDFCalculatorBase<CFGBlock, /*IsPostDom=*/true>;
+  using CFGBlockVector = llvm::SmallVector<CFGBlock *, 4>;
+  using CFGBlockSet = llvm::SmallPtrSet<CFGBlock *, 4>;
+
+  CFGPostDomTree PostDomTree;
+  IDFCalculator IDFCalc;
+
+  llvm::DenseMap<CFGBlock *, CFGBlockVector> ControlDepenencyMap;
+
+public:
+  ControlDependencyCalculator(CFG *cfg)
+    : PostDomTree(cfg), IDFCalc(PostDomTree.getBase()) {}
+
+  const CFGPostDomTree &getCFGPostDomTree() const { return PostDomTree; }
+
+  // Lazily retrieves the set of control dependencies to \p A.
+  const CFGBlockVector &getControlDependencies(CFGBlock *A) {
+    auto It = ControlDepenencyMap.find(A);
+    if (It == ControlDepenencyMap.end()) {
+      CFGBlockSet DefiningBlock = {A};
+      IDFCalc.setDefiningBlocks(DefiningBlock);
+
+      CFGBlockVector ControlDependencies;
+      IDFCalc.calculate(ControlDependencies);
+
+      It = ControlDepenencyMap.insert({A, ControlDependencies}).first;
+    }
+
+    assert(It != ControlDepenencyMap.end());
+    return It->second;
+  }
+
+  /// Whether \p A is control dependent on \p B.
+  bool isControlDependent(CFGBlock *A, CFGBlock *B) {
+    return llvm::is_contained(getControlDependencies(A), B);
+  }
+
+  // Dumps immediate control dependencies for each block.
+  LLVM_DUMP_METHOD void dump() {
+    CFG *cfg = PostDomTree.getCFG();
+    llvm::errs() << "Control dependencies (Node#,Dependency#):\n";
+    for (CFGBlock *BB : *cfg) {
+
+      assert(BB &&
+             "LLVM's Dominator tree builder uses nullpointers to signify the "
+             "virtual root!");
+
+      for (CFGBlock *isControlDependency : getControlDependencies(BB))
+        llvm::errs() << "(" << BB->getBlockID()
+                     << ","
+                     << isControlDependency->getBlockID()
+                     << ")\n";
+    }
+  }
+};
 
 } // namespace clang
 
