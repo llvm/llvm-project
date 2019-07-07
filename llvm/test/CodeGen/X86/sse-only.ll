@@ -8,9 +8,9 @@ define void @test1(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movapd (%ecx), %xmm0
-; CHECK-NEXT:    movlpd {{[0-9]+}}(%esp), %xmm0
-; CHECK-NEXT:    movapd %xmm0, (%eax)
+; CHECK-NEXT:    movaps (%ecx), %xmm0
+; CHECK-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; CHECK-NEXT:    movaps %xmm0, (%eax)
 ; CHECK-NEXT:    retl
 	%tmp3 = load <2 x double>, <2 x double>* %A, align 16
 	%tmp7 = insertelement <2 x double> undef, double %B, i32 0

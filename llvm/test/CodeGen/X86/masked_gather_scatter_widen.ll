@@ -127,14 +127,14 @@ define void @test_scatter_v2i32_index(<2 x double> %a1, double* %base, <2 x i32>
 ; WIDEN_AVX2-NEXT:    je .LBB1_2
 ; WIDEN_AVX2-NEXT:  # %bb.1: # %cond.store
 ; WIDEN_AVX2-NEXT:    vmovq %xmm1, %rax
-; WIDEN_AVX2-NEXT:    vmovlpd %xmm0, (%rax)
+; WIDEN_AVX2-NEXT:    vmovlps %xmm0, (%rax)
 ; WIDEN_AVX2-NEXT:  .LBB1_2: # %else
 ; WIDEN_AVX2-NEXT:    vpextrb $8, %xmm2, %eax
 ; WIDEN_AVX2-NEXT:    testb $1, %al
 ; WIDEN_AVX2-NEXT:    je .LBB1_4
 ; WIDEN_AVX2-NEXT:  # %bb.3: # %cond.store1
 ; WIDEN_AVX2-NEXT:    vpextrq $1, %xmm1, %rax
-; WIDEN_AVX2-NEXT:    vmovhpd %xmm0, (%rax)
+; WIDEN_AVX2-NEXT:    vmovhps %xmm0, (%rax)
 ; WIDEN_AVX2-NEXT:  .LBB1_4: # %else2
 ; WIDEN_AVX2-NEXT:    retq
 ;
@@ -152,14 +152,14 @@ define void @test_scatter_v2i32_index(<2 x double> %a1, double* %base, <2 x i32>
 ; PROMOTE_AVX2-NEXT:    je .LBB1_2
 ; PROMOTE_AVX2-NEXT:  # %bb.1: # %cond.store
 ; PROMOTE_AVX2-NEXT:    vmovq %xmm1, %rax
-; PROMOTE_AVX2-NEXT:    vmovlpd %xmm0, (%rax)
+; PROMOTE_AVX2-NEXT:    vmovlps %xmm0, (%rax)
 ; PROMOTE_AVX2-NEXT:  .LBB1_2: # %else
 ; PROMOTE_AVX2-NEXT:    vpextrb $8, %xmm2, %eax
 ; PROMOTE_AVX2-NEXT:    testb $1, %al
 ; PROMOTE_AVX2-NEXT:    je .LBB1_4
 ; PROMOTE_AVX2-NEXT:  # %bb.3: # %cond.store1
 ; PROMOTE_AVX2-NEXT:    vpextrq $1, %xmm1, %rax
-; PROMOTE_AVX2-NEXT:    vmovhpd %xmm0, (%rax)
+; PROMOTE_AVX2-NEXT:    vmovhps %xmm0, (%rax)
 ; PROMOTE_AVX2-NEXT:  .LBB1_4: # %else2
 ; PROMOTE_AVX2-NEXT:    retq
   %gep = getelementptr double, double *%base, <2 x i32> %ind

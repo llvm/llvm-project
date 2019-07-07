@@ -6362,14 +6362,11 @@ let Predicates = [HasAVX512] in {
 }
 
 let SchedRW = [WriteFStore] in {
+let mayStore = 1, hasSideEffects = 0 in
 def VMOVHPSZ128mr : AVX512PSI<0x17, MRMDestMem, (outs),
                        (ins f64mem:$dst, VR128X:$src),
                        "vmovhps\t{$src, $dst|$dst, $src}",
-                       [(store (f64 (extractelt
-                                     (X86Unpckh (bc_v2f64 (v4f32 VR128X:$src)),
-                                                (bc_v2f64 (v4f32 VR128X:$src))),
-                                     (iPTR 0))), addr:$dst)]>,
-                       EVEX, EVEX_CD8<32, CD8VT2>;
+                       []>, EVEX, EVEX_CD8<32, CD8VT2>;
 def VMOVHPDZ128mr : AVX512PDI<0x17, MRMDestMem, (outs),
                        (ins f64mem:$dst, VR128X:$src),
                        "vmovhpd\t{$src, $dst|$dst, $src}",
@@ -6377,12 +6374,11 @@ def VMOVHPDZ128mr : AVX512PDI<0x17, MRMDestMem, (outs),
                                      (v2f64 (X86Unpckh VR128X:$src, VR128X:$src)),
                                      (iPTR 0))), addr:$dst)]>,
                        EVEX, EVEX_CD8<64, CD8VT1>, VEX_W;
+let mayStore = 1, hasSideEffects = 0 in
 def VMOVLPSZ128mr : AVX512PSI<0x13, MRMDestMem, (outs),
                        (ins f64mem:$dst, VR128X:$src),
                        "vmovlps\t{$src, $dst|$dst, $src}",
-                       [(store (f64 (extractelt (bc_v2f64 (v4f32 VR128X:$src)),
-                                     (iPTR 0))), addr:$dst)]>,
-                       EVEX, EVEX_CD8<32, CD8VT2>;
+                       []>, EVEX, EVEX_CD8<32, CD8VT2>;
 def VMOVLPDZ128mr : AVX512PDI<0x13, MRMDestMem, (outs),
                        (ins f64mem:$dst, VR128X:$src),
                        "vmovlpd\t{$src, $dst|$dst, $src}",

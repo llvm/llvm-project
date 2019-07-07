@@ -5962,6 +5962,19 @@ static const uint16_t ReplaceableInstrsAVX2[][3] = {
   { X86::VUNPCKHPSYrr,    X86::VUNPCKHPSYrr,    X86::VPUNPCKHDQYrr },
 };
 
+static const uint16_t ReplaceableInstrsFP[][3] = {
+  //PackedSingle         PackedDouble
+  { X86::MOVLPSrm,       X86::MOVLPDrm,      X86::INSTRUCTION_LIST_END },
+  { X86::MOVHPSrm,       X86::MOVHPDrm,      X86::INSTRUCTION_LIST_END },
+  { X86::MOVHPSmr,       X86::MOVHPDmr,      X86::INSTRUCTION_LIST_END },
+  { X86::VMOVLPSrm,      X86::VMOVLPDrm,     X86::INSTRUCTION_LIST_END },
+  { X86::VMOVHPSrm,      X86::VMOVHPDrm,     X86::INSTRUCTION_LIST_END },
+  { X86::VMOVHPSmr,      X86::VMOVHPDmr,     X86::INSTRUCTION_LIST_END },
+  { X86::VMOVLPSZ128rm,  X86::VMOVLPDZ128rm, X86::INSTRUCTION_LIST_END },
+  { X86::VMOVHPSZ128rm,  X86::VMOVHPDZ128rm, X86::INSTRUCTION_LIST_END },
+  { X86::VMOVHPSZ128mr,  X86::VMOVHPDZ128mr, X86::INSTRUCTION_LIST_END },
+};
+
 static const uint16_t ReplaceableInstrsAVX2InsertExtract[][3] = {
   //PackedSingle       PackedDouble       PackedInt
   { X86::VEXTRACTF128mr, X86::VEXTRACTF128mr, X86::VEXTRACTI128mr },
@@ -6202,7 +6215,7 @@ static const uint16_t ReplaceableInstrsAVX512DQMasked[][4] = {
 };
 
 // NOTE: These should only be used by the custom domain methods.
-static const uint16_t ReplaceableCustomInstrs[][3] = {
+static const uint16_t ReplaceableBlendInstrs[][3] = {
   //PackedSingle             PackedDouble             PackedInt
   { X86::BLENDPSrmi,         X86::BLENDPDrmi,         X86::PBLENDWrmi   },
   { X86::BLENDPSrri,         X86::BLENDPDrri,         X86::PBLENDWrri   },
@@ -6211,7 +6224,7 @@ static const uint16_t ReplaceableCustomInstrs[][3] = {
   { X86::VBLENDPSYrmi,       X86::VBLENDPDYrmi,       X86::VPBLENDWYrmi },
   { X86::VBLENDPSYrri,       X86::VBLENDPDYrri,       X86::VPBLENDWYrri },
 };
-static const uint16_t ReplaceableCustomAVX2Instrs[][3] = {
+static const uint16_t ReplaceableBlendAVX2Instrs[][3] = {
   //PackedSingle             PackedDouble             PackedInt
   { X86::VBLENDPSrmi,        X86::VBLENDPDrmi,        X86::VPBLENDDrmi  },
   { X86::VBLENDPSrri,        X86::VBLENDPDrri,        X86::VPBLENDDrri  },
@@ -6405,9 +6418,9 @@ bool X86InstrInfo::setExecutionDomainCustom(MachineInstr &MI,
       Imm = (ImmWidth == 16 ? ((Imm << 8) | Imm) : Imm);
       unsigned NewImm = Imm;
 
-      const uint16_t *table = lookup(Opcode, dom, ReplaceableCustomInstrs);
+      const uint16_t *table = lookup(Opcode, dom, ReplaceableBlendInstrs);
       if (!table)
-        table = lookup(Opcode, dom, ReplaceableCustomAVX2Instrs);
+        table = lookup(Opcode, dom, ReplaceableBlendAVX2Instrs);
 
       if (Domain == 1) { // PackedSingle
         AdjustBlendMask(Imm, ImmWidth, Is256 ? 8 : 4, &NewImm);
@@ -6417,7 +6430,7 @@ bool X86InstrInfo::setExecutionDomainCustom(MachineInstr &MI,
         if (Subtarget.hasAVX2()) {
           // If we are already VPBLENDW use that, else use VPBLENDD.
           if ((ImmWidth / (Is256 ? 2 : 1)) != 8) {
-            table = lookup(Opcode, dom, ReplaceableCustomAVX2Instrs);
+            table = lookup(Opcode, dom, ReplaceableBlendAVX2Instrs);
             AdjustBlendMask(Imm, ImmWidth, Is256 ? 8 : 4, &NewImm);
           }
         } else {
@@ -6525,6 +6538,8 @@ X86InstrInfo::getExecutionDomain(const MachineInstr &MI) const {
       validDomains = 0xe;
     } else if (lookup(opcode, domain, ReplaceableInstrsAVX2)) {
       validDomains = Subtarget.hasAVX2() ? 0xe : 0x6;
+    } else if (lookup(opcode, domain, ReplaceableInstrsFP)) {
+      validDomains = 0x6;
     } else if (lookup(opcode, domain, ReplaceableInstrsAVX2InsertExtract)) {
       // Insert/extract instructions should only effect domain if AVX2
       // is enabled.
@@ -6563,6 +6578,11 @@ void X86InstrInfo::setExecutionDomain(MachineInstr &MI, unsigned Domain) const {
     assert((Subtarget.hasAVX2() || Domain < 3) &&
            "256-bit vector operations only available in AVX2");
     table = lookup(MI.getOpcode(), dom, ReplaceableInstrsAVX2);
+  }
+  if (!table) { // try the FP table
+    table = lookup(MI.getOpcode(), dom, ReplaceableInstrsFP);
+    assert((!table || Domain < 3) &&
+           "Can only select PackedSingle or PackedDouble");
   }
   if (!table) { // try the other table
     assert(Subtarget.hasAVX2() &&

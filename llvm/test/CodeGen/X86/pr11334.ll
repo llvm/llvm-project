@@ -85,15 +85,15 @@ entry:
 define void @test_vector_creation() nounwind {
 ; SSE-LABEL: test_vector_creation:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    xorpd %xmm0, %xmm0
-; SSE-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; SSE-NEXT:    movapd %xmm0, (%rax)
+; SSE-NEXT:    xorps %xmm0, %xmm0
+; SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; SSE-NEXT:    movaps %xmm0, (%rax)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: test_vector_creation:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vxorpd %xmm0, %xmm0, %xmm0
-; AVX-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; AVX-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
 ; AVX-NEXT:    vmovaps %ymm0, (%rax)
 ; AVX-NEXT:    vzeroupper

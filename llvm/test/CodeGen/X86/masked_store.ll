@@ -50,13 +50,13 @@ define void @store_v2f64_v2i64(<2 x i64> %trigger, <2 x double>* %addr, <2 x dou
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.store
-; SSE2-NEXT:    movlpd %xmm1, (%rdi)
+; SSE2-NEXT:    movlps %xmm1, (%rdi)
 ; SSE2-NEXT:  LBB1_2: ## %else
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB1_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.store1
-; SSE2-NEXT:    movhpd %xmm1, 8(%rdi)
+; SSE2-NEXT:    movhps %xmm1, 8(%rdi)
 ; SSE2-NEXT:  LBB1_4: ## %else2
 ; SSE2-NEXT:    retq
 ;
@@ -68,13 +68,13 @@ define void @store_v2f64_v2i64(<2 x i64> %trigger, <2 x double>* %addr, <2 x dou
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB1_2
 ; SSE4-NEXT:  ## %bb.1: ## %cond.store
-; SSE4-NEXT:    movlpd %xmm1, (%rdi)
+; SSE4-NEXT:    movlps %xmm1, (%rdi)
 ; SSE4-NEXT:  LBB1_2: ## %else
 ; SSE4-NEXT:    pextrb $8, %xmm2, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB1_4
 ; SSE4-NEXT:  ## %bb.3: ## %cond.store1
-; SSE4-NEXT:    movhpd %xmm1, 8(%rdi)
+; SSE4-NEXT:    movhps %xmm1, 8(%rdi)
 ; SSE4-NEXT:  LBB1_4: ## %else2
 ; SSE4-NEXT:    retq
 ;
@@ -128,13 +128,13 @@ define void @store_v4f64_v4i64(<4 x i64> %trigger, <4 x double>* %addr, <4 x dou
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB2_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.store
-; SSE2-NEXT:    movlpd %xmm2, (%rdi)
+; SSE2-NEXT:    movlps %xmm2, (%rdi)
 ; SSE2-NEXT:  LBB2_2: ## %else
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB2_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.store1
-; SSE2-NEXT:    movhpd %xmm2, 8(%rdi)
+; SSE2-NEXT:    movhps %xmm2, 8(%rdi)
 ; SSE2-NEXT:  LBB2_4: ## %else2
 ; SSE2-NEXT:    pxor %xmm4, %xmm1
 ; SSE2-NEXT:    movdqa %xmm4, %xmm0
@@ -148,13 +148,13 @@ define void @store_v4f64_v4i64(<4 x i64> %trigger, <4 x double>* %addr, <4 x dou
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB2_6
 ; SSE2-NEXT:  ## %bb.5: ## %cond.store3
-; SSE2-NEXT:    movlpd %xmm3, 16(%rdi)
+; SSE2-NEXT:    movlps %xmm3, 16(%rdi)
 ; SSE2-NEXT:  LBB2_6: ## %else4
 ; SSE2-NEXT:    pextrw $4, %xmm0, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB2_8
 ; SSE2-NEXT:  ## %bb.7: ## %cond.store5
-; SSE2-NEXT:    movhpd %xmm3, 24(%rdi)
+; SSE2-NEXT:    movhps %xmm3, 24(%rdi)
 ; SSE2-NEXT:  LBB2_8: ## %else6
 ; SSE2-NEXT:    retq
 ;
@@ -166,13 +166,13 @@ define void @store_v4f64_v4i64(<4 x i64> %trigger, <4 x double>* %addr, <4 x dou
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB2_2
 ; SSE4-NEXT:  ## %bb.1: ## %cond.store
-; SSE4-NEXT:    movlpd %xmm2, (%rdi)
+; SSE4-NEXT:    movlps %xmm2, (%rdi)
 ; SSE4-NEXT:  LBB2_2: ## %else
 ; SSE4-NEXT:    pextrb $8, %xmm4, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB2_4
 ; SSE4-NEXT:  ## %bb.3: ## %cond.store1
-; SSE4-NEXT:    movhpd %xmm2, 8(%rdi)
+; SSE4-NEXT:    movhps %xmm2, 8(%rdi)
 ; SSE4-NEXT:  LBB2_4: ## %else2
 ; SSE4-NEXT:    pxor %xmm0, %xmm0
 ; SSE4-NEXT:    pcmpgtq %xmm1, %xmm0
@@ -180,13 +180,13 @@ define void @store_v4f64_v4i64(<4 x i64> %trigger, <4 x double>* %addr, <4 x dou
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB2_6
 ; SSE4-NEXT:  ## %bb.5: ## %cond.store3
-; SSE4-NEXT:    movlpd %xmm3, 16(%rdi)
+; SSE4-NEXT:    movlps %xmm3, 16(%rdi)
 ; SSE4-NEXT:  LBB2_6: ## %else4
 ; SSE4-NEXT:    pextrb $8, %xmm0, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB2_8
 ; SSE4-NEXT:  ## %bb.7: ## %cond.store5
-; SSE4-NEXT:    movhpd %xmm3, 24(%rdi)
+; SSE4-NEXT:    movhps %xmm3, 24(%rdi)
 ; SSE4-NEXT:  LBB2_8: ## %else6
 ; SSE4-NEXT:    retq
 ;
@@ -5019,13 +5019,13 @@ define void @one_mask_bit_set3(<4 x i64>* %addr, <4 x i64> %val) {
 define void @one_mask_bit_set4(<4 x double>* %addr, <4 x double> %val) {
 ; SSE-LABEL: one_mask_bit_set4:
 ; SSE:       ## %bb.0:
-; SSE-NEXT:    movhpd %xmm1, 24(%rdi)
+; SSE-NEXT:    movhps %xmm1, 24(%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: one_mask_bit_set4:
 ; AVX:       ## %bb.0:
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm0
-; AVX-NEXT:    vmovhpd %xmm0, 24(%rdi)
+; AVX-NEXT:    vmovhps %xmm0, 24(%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
   call void @llvm.masked.store.v4f64.p0v4f64(<4 x double> %val, <4 x double>* %addr, i32 4, <4 x i1><i1 false, i1 false, i1 false, i1 true>)
@@ -5066,25 +5066,25 @@ define void @masked_store_bool_mask_demand_trunc_sext(<4 x double> %x, <4 x doub
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB23_2
 ; SSE2-NEXT:  ## %bb.1: ## %cond.store
-; SSE2-NEXT:    movlpd %xmm0, (%rdi)
+; SSE2-NEXT:    movlps %xmm0, (%rdi)
 ; SSE2-NEXT:  LBB23_2: ## %else
 ; SSE2-NEXT:    pextrw $2, %xmm2, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB23_4
 ; SSE2-NEXT:  ## %bb.3: ## %cond.store1
-; SSE2-NEXT:    movhpd %xmm0, 8(%rdi)
+; SSE2-NEXT:    movhps %xmm0, 8(%rdi)
 ; SSE2-NEXT:  LBB23_4: ## %else2
 ; SSE2-NEXT:    pextrw $4, %xmm2, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB23_6
 ; SSE2-NEXT:  ## %bb.5: ## %cond.store3
-; SSE2-NEXT:    movlpd %xmm1, 16(%rdi)
+; SSE2-NEXT:    movlps %xmm1, 16(%rdi)
 ; SSE2-NEXT:  LBB23_6: ## %else4
 ; SSE2-NEXT:    pextrw $6, %xmm2, %eax
 ; SSE2-NEXT:    testb $1, %al
 ; SSE2-NEXT:    je LBB23_8
 ; SSE2-NEXT:  ## %bb.7: ## %cond.store5
-; SSE2-NEXT:    movhpd %xmm1, 24(%rdi)
+; SSE2-NEXT:    movhps %xmm1, 24(%rdi)
 ; SSE2-NEXT:  LBB23_8: ## %else6
 ; SSE2-NEXT:    retq
 ;
@@ -5094,25 +5094,25 @@ define void @masked_store_bool_mask_demand_trunc_sext(<4 x double> %x, <4 x doub
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB23_2
 ; SSE4-NEXT:  ## %bb.1: ## %cond.store
-; SSE4-NEXT:    movlpd %xmm0, (%rdi)
+; SSE4-NEXT:    movlps %xmm0, (%rdi)
 ; SSE4-NEXT:  LBB23_2: ## %else
 ; SSE4-NEXT:    pextrb $4, %xmm2, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB23_4
 ; SSE4-NEXT:  ## %bb.3: ## %cond.store1
-; SSE4-NEXT:    movhpd %xmm0, 8(%rdi)
+; SSE4-NEXT:    movhps %xmm0, 8(%rdi)
 ; SSE4-NEXT:  LBB23_4: ## %else2
 ; SSE4-NEXT:    pextrb $8, %xmm2, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB23_6
 ; SSE4-NEXT:  ## %bb.5: ## %cond.store3
-; SSE4-NEXT:    movlpd %xmm1, 16(%rdi)
+; SSE4-NEXT:    movlps %xmm1, 16(%rdi)
 ; SSE4-NEXT:  LBB23_6: ## %else4
 ; SSE4-NEXT:    pextrb $12, %xmm2, %eax
 ; SSE4-NEXT:    testb $1, %al
 ; SSE4-NEXT:    je LBB23_8
 ; SSE4-NEXT:  ## %bb.7: ## %cond.store5
-; SSE4-NEXT:    movhpd %xmm1, 24(%rdi)
+; SSE4-NEXT:    movhps %xmm1, 24(%rdi)
 ; SSE4-NEXT:  LBB23_8: ## %else6
 ; SSE4-NEXT:    retq
 ;

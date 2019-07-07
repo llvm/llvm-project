@@ -42,23 +42,23 @@ define void @v3i64(<2 x i64> %a, <2 x i64> %b, <3 x i64>* %p) nounwind {
 define void @v3f64(<2 x double> %a, <2 x double> %b, <3 x double>* %p) nounwind {
 ; SSE-LABEL: v3f64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movhpd %xmm0, 16(%rdi)
-; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE-NEXT:    movapd %xmm0, (%rdi)
+; SSE-NEXT:    movhps %xmm0, 16(%rdi)
+; SSE-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE-NEXT:    movaps %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: v3f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],xmm1[0]
-; AVX-NEXT:    vmovhpd %xmm0, 16(%rdi)
-; AVX-NEXT:    vmovapd %xmm1, (%rdi)
+; AVX-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm0[0],xmm1[0]
+; AVX-NEXT:    vmovhps %xmm0, 16(%rdi)
+; AVX-NEXT:    vmovaps %xmm1, (%rdi)
 ; AVX-NEXT:    retq
 ;
 ; XOP-LABEL: v3f64:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vunpcklpd {{.*#+}} xmm1 = xmm0[0],xmm1[0]
-; XOP-NEXT:    vmovhpd %xmm0, 16(%rdi)
-; XOP-NEXT:    vmovapd %xmm1, (%rdi)
+; XOP-NEXT:    vmovlhps {{.*#+}} xmm1 = xmm0[0],xmm1[0]
+; XOP-NEXT:    vmovhps %xmm0, 16(%rdi)
+; XOP-NEXT:    vmovaps %xmm1, (%rdi)
 ; XOP-NEXT:    retq
   %r = shufflevector <2 x double> %a, <2 x double> %b, <3 x i32> <i32 0, i32 2, i32 1>
   store <3 x double> %r, <3 x double>* %p

@@ -35,8 +35,8 @@ define void @merge_vec_element_store(<4 x double> %v, double* %ptr) {
 ;
 ; SLOW-LABEL: merge_vec_element_store:
 ; SLOW:       # %bb.0:
-; SLOW-NEXT:    movlpd %xmm0, (%rdi)
-; SLOW-NEXT:    movhpd %xmm0, 8(%rdi)
+; SLOW-NEXT:    movlps %xmm0, (%rdi)
+; SLOW-NEXT:    movhps %xmm0, 8(%rdi)
 ; SLOW-NEXT:    retq
 
   %vecext0 = extractelement <4 x double> %v, i32 0

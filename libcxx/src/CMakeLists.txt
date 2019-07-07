@@ -22,6 +22,7 @@ set(LIBCXX_SOURCES
   locale.cpp
   memory.cpp
   mutex.cpp
+  mutex_destructor.cpp
   new.cpp
   optional.cpp
   random.cpp

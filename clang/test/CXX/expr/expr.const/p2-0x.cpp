@@ -136,9 +136,9 @@ namespace UndefinedBehavior {
     case (int)10000000000ll: // expected-note {{here}}
     case (unsigned int)10000000000ll: // expected-error {{duplicate case value}}
     case (int)(unsigned)(long long)4.4e9: // ok
-    case (int)(float)1e300: // expected-error {{constant expression}} expected-note {{value 1.0E+300 is outside the range of representable values of type 'float'}}
+    case (int)(float)1e300: // expected-error {{constant expression}} expected-note {{value +Inf is outside the range of representable values of type 'int'}}
     case (int)((float)1e37 / 1e30): // ok
-    case (int)(__fp16)65536: // expected-error {{constant expression}} expected-note {{value 65536 is outside the range of representable values of type '__fp16'}}
+    case (int)(__fp16)65536: // expected-error {{constant expression}} expected-note {{value +Inf is outside the range of representable values of type 'int'}}
       break;
     }
   }
@@ -264,14 +264,28 @@ namespace UndefinedBehavior {
     static_assert(0u - 1u == 4294967295u, ""); // ok
     static_assert(~0u * ~0u == 1u, ""); // ok
 
+    template<typename T> constexpr bool isinf(T v) { return v && v / 2 == v; }
+
     // Floating-point overflow and NaN.
     constexpr float f1 = 1e38f * 3.4028f; // ok
-    constexpr float f2 = 1e38f * 3.4029f; // expected-error {{constant expression}} expected-note {{floating point arithmetic produces an infinity}}
+    constexpr float f2 = 1e38f * 3.4029f; // ok, +inf is in range of representable values
     constexpr float f3 = 1e38f / -.2939f; // ok
-    constexpr float f4 = 1e38f / -.2938f; // expected-error {{constant expression}} expected-note {{floating point arithmetic produces an infinity}}
-    constexpr float f5 = 2e38f + 2e38f; // expected-error {{constant expression}} expected-note {{floating point arithmetic produces an infinity}}
-    constexpr float f6 = -2e38f - 2e38f; // expected-error {{constant expression}} expected-note {{floating point arithmetic produces an infinity}}
-    constexpr float f7 = 0.f / 0.f; // expected-error {{constant expression}} expected-note {{floating point arithmetic produces a NaN}}
+    constexpr float f4 = 1e38f / -.2938f; // ok, -inf is in range of representable values
+    constexpr float f5 = 2e38f + 2e38f; // ok, +inf is in range of representable values
+    constexpr float f6 = -2e38f - 2e38f; // ok, -inf is in range of representable values
+    constexpr float f7 = 0.f / 0.f; // expected-error {{constant expression}} expected-note {{division by zero}}
+    constexpr float f8 = 1.f / 0.f; // expected-error {{constant expression}} expected-note {{division by zero}}
+    constexpr float f9 = 1e308 / 1e-308; // ok, +inf
+    constexpr float f10 = f2 - f2; // expected-error {{constant expression}} expected-note {{produces a NaN}}
+    constexpr float f11 = f2 + f4; // expected-error {{constant expression}} expected-note {{produces a NaN}}
+    constexpr float f12 = f2 / f2; // expected-error {{constant expression}} expected-note {{produces a NaN}}
+    static_assert(!isinf(f1), "");
+    static_assert(isinf(f2), "");
+    static_assert(!isinf(f3), "");
+    static_assert(isinf(f4), "");
+    static_assert(isinf(f5), "");
+    static_assert(isinf(f6), "");
+    static_assert(isinf(f9), "");
   }
 }
 
