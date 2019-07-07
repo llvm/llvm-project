@@ -113,6 +113,11 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v16i32:   return "MVT::v16i32";
   case MVT::v32i32:   return "MVT::v32i32";
   case MVT::v64i32:   return "MVT::v64i32";
+  case MVT::v128i32:  return "MVT::v128i32";
+  case MVT::v256i32:  return "MVT::v256i32";
+  case MVT::v512i32:  return "MVT::v512i32";
+  case MVT::v1024i32: return "MVT::v1024i32";
+  case MVT::v2048i32: return "MVT::v2048i32";
   case MVT::v1i64:    return "MVT::v1i64";
   case MVT::v2i64:    return "MVT::v2i64";
   case MVT::v4i64:    return "MVT::v4i64";
@@ -130,6 +135,13 @@ StringRef llvm::getEnumName(MVT::SimpleValueType T) {
   case MVT::v5f32:    return "MVT::v5f32";
   case MVT::v8f32:    return "MVT::v8f32";
   case MVT::v16f32:   return "MVT::v16f32";
+  case MVT::v32f32:   return "MVT::v32f32";
+  case MVT::v64f32:   return "MVT::v64f32";
+  case MVT::v128f32:  return "MVT::v128f32";
+  case MVT::v256f32:  return "MVT::v256f32";
+  case MVT::v512f32:  return "MVT::v512f32";
+  case MVT::v1024f32: return "MVT::v1024f32";
+  case MVT::v2048f32: return "MVT::v2048f32";
   case MVT::v1f64:    return "MVT::v1f64";
   case MVT::v2f64:    return "MVT::v2f64";
   case MVT::v4f64:    return "MVT::v4f64";
