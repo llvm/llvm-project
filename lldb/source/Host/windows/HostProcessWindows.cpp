@@ -82,20 +82,21 @@ bool HostProcessWindows::IsRunning() const {
 
 llvm::Expected<HostThread> HostProcessWindows::StartMonitoring(
     const Host::MonitorChildProcessCallback &callback, bool monitor_signals) {
-  HostThread monitor_thread;
   MonitorInfo *info = new MonitorInfo;
   info->callback = callback;
 
   // Since the life of this HostProcessWindows instance and the life of the
   // process may be different, duplicate the handle so that the monitor thread
   // can have ownership over its own copy of the handle.
-  HostThread result;
   if (::DuplicateHandle(GetCurrentProcess(), m_process, GetCurrentProcess(),
-                        &info->process_handle, 0, FALSE, DUPLICATE_SAME_ACCESS))
-    result = ThreadLauncher::LaunchThread("ChildProcessMonitor",
-                                          HostProcessWindows::MonitorThread,
-                                          info);
-  return result;
+                        &info->process_handle, 0, FALSE, DUPLICATE_SAME_ACCESS)) {
+    return ThreadLauncher::LaunchThread("ChildProcessMonitor",
+                                        HostProcessWindows::MonitorThread,
+                                        info);
+  } else {
+    DWORD err = GetLastError();
+    return llvm::errorCodeToError(std::error_code(err, std::system_category()));
+  }
 }
 
 lldb::thread_result_t HostProcessWindows::MonitorThread(void *thread_arg) {
