@@ -99,7 +99,7 @@ public:
   ///     was spawned to monitor \a pid.
   ///
   /// \see static void Host::StopMonitoringChildProcess (uint32_t)
-  static HostThread
+  static llvm::Expected<HostThread>
   StartMonitoringChildProcess(const MonitorChildProcessCallback &callback,
                               lldb::pid_t pid, bool monitor_signals);
 
