@@ -32,7 +32,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/SHA1.h"
 #include "llvm/Support/Threading.h"
 
 #include <atomic>

@@ -13,17 +13,10 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
-#include "llvm/Support/SHA1.h"
 
 namespace clang {
 namespace clangd {
 namespace {
-
-using FileDigest = decltype(llvm::SHA1::hash({}));
-
-static FileDigest digest(StringRef Content) {
-  return llvm::SHA1::hash({(const uint8_t *)Content.data(), Content.size()});
-}
 
 std::string getShardPathFromFilePath(llvm::StringRef ShardRoot,
                                      llvm::StringRef FilePath) {
