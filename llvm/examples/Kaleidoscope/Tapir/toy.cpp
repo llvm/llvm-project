@@ -1335,14 +1335,18 @@ Value *SpawnExprAST::codegen() {
   Builder.CreateDetach(DetachBB, ContinBB, SyncRegion);
   Builder.SetInsertPoint(DetachBB);
 
-  TaskScopeRAII TaskScope(DetachBB);
-  // Emit the spawned expr.  This, like any other expr, can change the
-  // current BB.
-  if (!Spawned->codegen())
-    return nullptr;
+  // Emit the spawned computation.
+  {
+    TaskScopeRAII TaskScope(DetachBB);
+    // Emit the spawned expr.  This, like any other expr, can change the current
+    // BB.
+    if (!Spawned->codegen())
+      return nullptr;
 
-  // Emit a reattach to the continue block.
-  Builder.CreateReattach(ContinBB, SyncRegion);
+    // Emit a reattach to the continue block.
+    Builder.CreateReattach(ContinBB, SyncRegion);
+  }
+
   TheFunction->getBasicBlockList().push_back(ContinBB);
   Builder.SetInsertPoint(ContinBB);
 
@@ -1492,29 +1496,32 @@ Value *ParForExprAST::codegen() {
   Builder.CreateDetach(DetachBB, ContinueBB, SyncRegion);
   Builder.SetInsertPoint(DetachBB);
 
-  // Create a nested task scope corresponding to the loop body.
-  TaskScopeRAII TaskScope(DetachBB);
+  // Emit the spawned loop body.
+  {
+    // Create a nested task scope corresponding to the loop body.
+    TaskScopeRAII TaskScope(DetachBB);
 
 #if !BUG
-  // To avoid races, within the parallel loop's body, the variable is stored in
-  // a task-local allocation. Create an alloca in the task's entry block for
-  // this version of the variable.
-  AllocaInst *VarAlloca =
-    CreateTaskEntryBlockAlloca(VarName, Type::getInt64Ty(TheContext));
-  // Store the value into the alloca.
-  Builder.CreateStore(Variable, VarAlloca);
-  NamedValues[VarName] = VarAlloca;
+    // To avoid races, within the parallel loop's body, the variable is stored
+    // in a task-local allocation. Create an alloca in the task's entry block
+    // for this version of the variable.
+    AllocaInst *VarAlloca =
+      CreateTaskEntryBlockAlloca(VarName, Type::getInt64Ty(TheContext));
+    // Store the value into the alloca.
+    Builder.CreateStore(Variable, VarAlloca);
+    NamedValues[VarName] = VarAlloca;
 #endif // !BUG
 
-  // Emit the body of the loop.  This, like any other expr, can change the
-  // current BB.  Note that we ignore the value computed by the body, but don't
-  // allow an error.
-  if (!Body->codegen())
-    return nullptr;
+    // Emit the body of the loop.  This, like any other expr, can change the
+    // current BB.  Note that we ignore the value computed by the body, but
+    // don't allow an error.
+    if (!Body->codegen())
+      return nullptr;
 
-  // Emit the reattach to terminate the task containing the body of the parallel
-  // loop.
-  Builder.CreateReattach(ContinueBB, SyncRegion);
+    // Emit the reattach to terminate the task containing the body of the
+    // parallel loop.
+    Builder.CreateReattach(ContinueBB, SyncRegion);
+  }
 
   // Emit the continue block of the detach.
   TheFunction->getBasicBlockList().push_back(ContinueBB);
