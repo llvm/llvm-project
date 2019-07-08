@@ -228,6 +228,7 @@ DefinedData *SymbolTable::addOptionalDataSymbol(StringRef Name, uint32_t Value,
   LLVM_DEBUG(dbgs() << "addOptionalDataSymbol: " << Name << "\n");
   auto *rtn = replaceSymbol<DefinedData>(S, Name, Flags);
   rtn->setVirtualAddress(Value);
+  rtn->Referenced = true;
   return rtn;
 }
 

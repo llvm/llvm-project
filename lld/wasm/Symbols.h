@@ -131,9 +131,10 @@ protected:
   uint32_t OutputSymbolIndex = INVALID_INDEX;
   uint32_t GOTIndex = INVALID_INDEX;
   Kind SymbolKind;
-  bool Referenced : 1;
 
 public:
+  bool Referenced : 1;
+
   // True if the symbol was used for linking and thus need to be added to the
   // output file's symbol table. This is true for all symbols except for
   // unreferenced DSO symbols, lazy (archive) symbols, and bitcode symbols that
