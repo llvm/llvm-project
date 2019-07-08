@@ -894,13 +894,15 @@ void CSIImpl::instrumentCallsite(Instruction *I, DominatorTree *DT) {
   Value *FuncId = nullptr;
   GlobalVariable *FuncIdGV = nullptr;
   if (Called) {
-    Module *M = I->getParent()->getParent()->getParent();
     std::string GVName = CsiFuncIdVariablePrefix + Called->getName().str();
     FuncIdGV = dyn_cast<GlobalVariable>(
-        M->getOrInsertGlobal(GVName, IRB.getInt64Ty()));
+        M.getOrInsertGlobal(GVName, IRB.getInt64Ty()));
     assert(FuncIdGV);
     FuncIdGV->setConstant(false);
-    FuncIdGV->setLinkage(GlobalValue::WeakAnyLinkage);
+    if (Options.jitMode && !Called->empty())
+      FuncIdGV->setLinkage(Called->getLinkage());
+    else
+      FuncIdGV->setLinkage(GlobalValue::WeakAnyLinkage);
     FuncIdGV->setInitializer(IRB.getInt64(CsiCallsiteUnknownTargetId));
     FuncId = IRB.CreateLoad(FuncIdGV);
   } else {
@@ -1821,8 +1823,6 @@ void llvm::CSIImpl::loadConfiguration() {
 }
 
 bool CSIImpl::shouldNotInstrumentFunction(Function &F) {
-  Module &M = *F.getParent();
-
   // Don't instrument standard library calls.
 #ifdef WIN32
   if (F.hasName() && F.getName().find("_") == 0) {

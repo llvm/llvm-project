@@ -893,7 +893,7 @@ static Spindle *GetRepSpindleInTask(Spindle *S, const Task *T,
 }
 
 // Structure to record the set of child tasks that might be in parallel with
-// this spindle, ignoring back edges of loops..
+// this spindle, ignoring back edges of loops.
 struct MaybeParallelTasksInLoopBody : public MaybeParallelTasks {
   MPTaskListTy TaskList;
   LoopInfo &LI;
@@ -1738,7 +1738,8 @@ bool CilkSanitizerImpl::simpleCallCannotRace(const Instruction &I) {
 }
 
 bool CilkSanitizerImpl::prepareToInstrumentFunction(Function &F) {
-  if (F.empty() || shouldNotInstrumentFunction(F))
+  if (F.empty() || shouldNotInstrumentFunction(F) ||
+      F.hasFnAttribute(Attribute::SanitizeCilk))
     return false;
 
   if (Options.CallsMayThrow)
@@ -1883,7 +1884,8 @@ void CilkSanitizerImpl::determineCallSitesToInstrument() {
 bool CilkSanitizerImpl::instrumentFunction(
     Function &F, SmallPtrSetImpl<Instruction *> &ToInstrument,
     SmallPtrSetImpl<Instruction *> &NoRaceCallsites) {
-  if (F.empty() || shouldNotInstrumentFunction(F))
+  if (F.empty() || shouldNotInstrumentFunction(F) ||
+      F.hasFnAttribute(Attribute::SanitizeCilk))
     return false;
   bool Res = false;
 
@@ -1960,6 +1962,8 @@ bool CilkSanitizerImpl::instrumentFunction(
     if (LocalAllocToInstrument.count(I))
       MayRaceAllocFns.insert(I);
 
+  uint64_t LocalId = getLocalFunctionID(F);
+
   // If the function does not access memory and we can statically prove it
   // contains no races, don't instrument it.
   if (F.doesNotAccessMemory() && MayRaceLoadsAndStores.empty() &&
@@ -1988,8 +1992,6 @@ bool CilkSanitizerImpl::instrumentFunction(
   // Instrument all instructions that might race and the associated memory
   // allocation and parallel control flow.
   bool MaySpawn = !TI.isSerial();
-
-  uint64_t LocalId = getLocalFunctionID(F);
 
   for (auto Inst : MayRaceLoadsAndStores)
     Res |= instrumentLoadOrStore(Inst);
@@ -2057,6 +2059,7 @@ bool CilkSanitizerImpl::instrumentFunction(
     }
 
     updateInstrumentedFnAttrs(F);
+    F.addFnAttr(Attribute::SanitizeCilk);
   }
 
   return Res;
@@ -2241,14 +2244,16 @@ bool CilkSanitizerImpl::instrumentCallsite(Instruction *I) {
   Value *FuncId = NULL;
   GlobalVariable *FuncIdGV = NULL;
   if (Called) {
-    Module *M = I->getParent()->getParent()->getParent();
     std::string GVName =
       CsiFuncIdVariablePrefix + Called->getName().str();
-    FuncIdGV = dyn_cast<GlobalVariable>(M->getOrInsertGlobal(GVName,
-                                                             IRB.getInt64Ty()));
+    FuncIdGV = dyn_cast<GlobalVariable>(M.getOrInsertGlobal(GVName,
+                                                            IRB.getInt64Ty()));
     assert(FuncIdGV);
     FuncIdGV->setConstant(false);
-    FuncIdGV->setLinkage(GlobalValue::WeakAnyLinkage);
+    if (Options.jitMode && !Called->empty())
+      FuncIdGV->setLinkage(Called->getLinkage());
+    else
+      FuncIdGV->setLinkage(GlobalValue::WeakAnyLinkage);
     FuncIdGV->setInitializer(IRB.getInt64(CsiCallsiteUnknownTargetId));
     FuncId = IRB.CreateLoad(FuncIdGV);
   } else {
