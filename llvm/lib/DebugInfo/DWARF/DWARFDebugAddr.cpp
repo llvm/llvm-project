@@ -50,34 +50,48 @@ Error DWARFDebugAddrTable::extractV5(const DWARFDataExtractor &Data,
                              "section is not large enough to contain an "
                              "address table length at offset 0x%" PRIx64,
                              Offset);
-  // TODO: Add support for DWARF64.
   Format = dwarf::DwarfFormat::DWARF32;
   Length = Data.getU32(OffsetPtr);
   if (Length == dwarf::DW_LENGTH_DWARF64) {
+    // Check that we can read the extended unit length field.
+    if (!Data.isValidOffsetForDataOfSize(*OffsetPtr, 8)) {
+      invalidateLength();
+      return createStringError(
+          errc::invalid_argument,
+          "section is not large enough to contain an extended length field "
+          "of the address table at offset 0x%" PRIx64,
+          Offset);
+    }
+    Format = dwarf::DwarfFormat::DWARF64;
+    Length = Data.getU64(OffsetPtr);
+  } else if (Length >= dwarf::DW_LENGTH_lo_reserved) {
+    uint64_t DiagnosticLength = Length;
     invalidateLength();
     return createStringError(
         errc::not_supported,
-        "DWARF64 is not supported in .debug_addr at offset 0x%" PRIx64, Offset);
+        "address table at offset 0x%" PRIx64
+        " has unsupported reserved unit length of value 0x%" PRIx64,
+        Offset, DiagnosticLength);
   }
 
   if (!Data.isValidOffsetForDataOfSize(*OffsetPtr, Length)) {
-    uint32_t DiagnosticLength = Length;
+    uint64_t DiagnosticLength = Length;
     invalidateLength();
     return createStringError(
         errc::invalid_argument,
         "section is not large enough to contain an address table "
-        "at offset 0x%" PRIx64 " with a unit_length value of 0x%" PRIx32,
+        "at offset 0x%" PRIx64 " with a unit_length value of 0x%" PRIx64,
         Offset, DiagnosticLength);
   }
   uint64_t EndOffset = *OffsetPtr + Length;
   // Ensure that we can read the remaining header fields.
   if (Length < 4) {
-    uint32_t DiagnosticLength = Length;
+    uint64_t DiagnosticLength = Length;
     invalidateLength();
     return createStringError(
         errc::invalid_argument,
         "address table at offset 0x%" PRIx64
-        " has a unit_length value of 0x%" PRIx32
+        " has a unit_length value of 0x%" PRIx64
         ", which is too small to contain a complete header",
         Offset, DiagnosticLength);
   }
@@ -142,12 +156,14 @@ Error DWARFDebugAddrTable::extract(const DWARFDataExtractor &Data,
 
 void DWARFDebugAddrTable::dump(raw_ostream &OS, DIDumpOptions DumpOpts) const {
   if (DumpOpts.Verbose)
-    OS << format("0x%8.8" PRIx32 ": ", Offset);
-  if (Length)
-    OS << format("Address table header: length = 0x%8.8" PRIx32
+    OS << format("0x%8.8" PRIx64 ": ", Offset);
+  if (Length) {
+    int LengthFieldWidth = (Format == dwarf::DwarfFormat::DWARF64) ? 16 : 8;
+    OS << format("Address table header: length = 0x%0*" PRIx64
                  ", version = 0x%4.4" PRIx16 ", addr_size = 0x%2.2" PRIx8
                  ", seg_size = 0x%2.2" PRIx8 "\n",
-                 Length, Version, AddrSize, SegSize);
+                 LengthFieldWidth, Length, Version, AddrSize, SegSize);
+  }
 
   if (Addrs.size() > 0) {
     const char *AddrFmt =
@@ -171,7 +187,6 @@ Expected<uint64_t> DWARFDebugAddrTable::getAddrEntry(uint32_t Index) const {
 Optional<uint64_t> DWARFDebugAddrTable::getFullLength() const {
   if (Length == 0)
     return None;
-  // TODO: DWARF64 support.
-  return Length + sizeof(uint32_t);
+  return Length + dwarf::getUnitLengthFieldByteSize(Format);
 }
 
