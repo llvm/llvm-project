@@ -307,14 +307,6 @@ TypeAndOrName ItaniumABILanguageRuntime::FixUpDynamicType(
   return ret;
 }
 
-bool ItaniumABILanguageRuntime::IsVTableName(const char *name) {
-  if (name == nullptr)
-    return false;
-
-  // Can we maybe ask Clang about this?
-  return strstr(name, "_vptr$") == name;
-}
-
 // Static Functions
 LanguageRuntime *
 ItaniumABILanguageRuntime::CreateInstance(Process *process,

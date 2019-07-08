@@ -13,25 +13,24 @@ define void @test1(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    movapd (%ecx), %xmm0
-; X86-SSE-NEXT:    movlpd {{.*#+}} xmm0 = mem[0],xmm0[1]
-; X86-SSE-NEXT:    movapd %xmm0, (%eax)
+; X86-SSE-NEXT:    movaps (%ecx), %xmm0
+; X86-SSE-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-SSE-NEXT:    movaps %xmm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test1:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    vmovapd (%ecx), %xmm0
-; X86-AVX-NEXT:    vmovlpd {{.*#+}} xmm0 = mem[0],xmm0[1]
-; X86-AVX-NEXT:    vmovapd %xmm0, (%eax)
+; X86-AVX-NEXT:    vmovaps (%ecx), %xmm0
+; X86-AVX-NEXT:    vmovlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
+; X86-AVX-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test1:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movapd (%rsi), %xmm1
-; X64-SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; X64-SSE-NEXT:    movapd %xmm1, (%rdi)
+; X64-SSE-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[0],mem[1]
+; X64-SSE-NEXT:    movapd %xmm0, (%rdi)
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test1:
@@ -51,18 +50,18 @@ define void @test2(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    movapd (%ecx), %xmm0
-; X86-SSE-NEXT:    movhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; X86-SSE-NEXT:    movapd %xmm0, (%eax)
+; X86-SSE-NEXT:    movaps (%ecx), %xmm0
+; X86-SSE-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; X86-SSE-NEXT:    movaps %xmm0, (%eax)
 ; X86-SSE-NEXT:    retl
 ;
 ; X86-AVX-LABEL: test2:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-AVX-NEXT:    vmovapd (%ecx), %xmm0
-; X86-AVX-NEXT:    vmovhpd {{.*#+}} xmm0 = xmm0[0],mem[0]
-; X86-AVX-NEXT:    vmovapd %xmm0, (%eax)
+; X86-AVX-NEXT:    vmovaps (%ecx), %xmm0
+; X86-AVX-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
+; X86-AVX-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-AVX-NEXT:    retl
 ;
 ; X64-SSE-LABEL: test2:

@@ -107,8 +107,10 @@ void InputChunk::writeTo(uint8_t *Buf) const {
   for (const WasmRelocation &Rel : Relocations) {
     uint8_t *Loc = Buf + Rel.Offset + Off;
     uint32_t Value = File->calcNewValue(Rel);
-    LLVM_DEBUG(dbgs() << "apply reloc: type=" << relocTypeToString(Rel.Type)
-                      << " addend=" << Rel.Addend << " index=" << Rel.Index
+    LLVM_DEBUG(dbgs() << "apply reloc: type=" << relocTypeToString(Rel.Type));
+    if (Rel.Type != R_WASM_TYPE_INDEX_LEB)
+      LLVM_DEBUG(dbgs() << " sym=" << File->getSymbols()[Rel.Index]->getName());
+    LLVM_DEBUG(dbgs() << " addend=" << Rel.Addend << " index=" << Rel.Index
                       << " value=" << Value << " offset=" << Rel.Offset
                       << "\n");
 

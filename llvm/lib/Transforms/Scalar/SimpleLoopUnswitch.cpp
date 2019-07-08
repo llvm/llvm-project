@@ -180,14 +180,9 @@ static void buildPartialUnswitchConditionalBranch(BasicBlock &BB,
                                                   BasicBlock &UnswitchedSucc,
                                                   BasicBlock &NormalSucc) {
   IRBuilder<> IRB(&BB);
-  Value *Cond = Invariants.front();
-  for (Value *Invariant :
-       make_range(std::next(Invariants.begin()), Invariants.end()))
-    if (Direction)
-      Cond = IRB.CreateOr(Cond, Invariant);
-    else
-      Cond = IRB.CreateAnd(Cond, Invariant);
-
+  
+  Value *Cond = Direction ? IRB.CreateOr(Invariants) :
+    IRB.CreateAnd(Invariants);
   IRB.CreateCondBr(Cond, Direction ? &UnswitchedSucc : &NormalSucc,
                    Direction ? &NormalSucc : &UnswitchedSucc);
 }

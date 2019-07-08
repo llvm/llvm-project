@@ -3449,11 +3449,17 @@ SDValue SystemZTargetLowering::lowerADDSUBCARRY(SDValue Op,
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Unknown instruction!");
   case ISD::ADDCARRY:
+    if (Carry.getOpcode() != ISD::UADDO && Carry.getOpcode() != ISD::ADDCARRY)
+      return SDValue();
+
     BaseOp = SystemZISD::ADDCARRY;
     CCValid = SystemZ::CCMASK_LOGICAL;
     CCMask = SystemZ::CCMASK_LOGICAL_CARRY;
     break;
   case ISD::SUBCARRY:
+    if (Carry.getOpcode() != ISD::USUBO && Carry.getOpcode() != ISD::SUBCARRY)
+      return SDValue();
+
     BaseOp = SystemZISD::SUBCARRY;
     CCValid = SystemZ::CCMASK_LOGICAL;
     CCMask = SystemZ::CCMASK_LOGICAL_BORROW;

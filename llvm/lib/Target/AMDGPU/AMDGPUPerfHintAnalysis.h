@@ -1,4 +1,4 @@
-//===- AMDGPUPerfHintAnalysis.h - analysis of functions memory traffic ----===//
+//===- AMDGPUPerfHintAnalysis.h ---- analysis of memory traffic -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,18 +14,20 @@
 
 #ifndef LLVM_LIB_TARGET_AMDGPU_MDGPUPERFHINTANALYSIS_H
 #define LLVM_LIB_TARGET_AMDGPU_MDGPUPERFHINTANALYSIS_H
+
+#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/IR/ValueMap.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
 
-struct AMDGPUPerfHintAnalysis : public FunctionPass {
+struct AMDGPUPerfHintAnalysis : public CallGraphSCCPass {
   static char ID;
 
 public:
-  AMDGPUPerfHintAnalysis() : FunctionPass(ID) {}
+  AMDGPUPerfHintAnalysis() : CallGraphSCCPass(ID) {}
 
-  bool runOnFunction(Function &F) override;
+  bool runOnSCC(CallGraphSCC &SCC) override;
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

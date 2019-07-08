@@ -110,14 +110,15 @@ char FileCheckUndefVarError::ID = 0;
 char FileCheckErrorDiagnostic::ID = 0;
 char FileCheckNotFoundError::ID = 0;
 
-Error FileCheckPattern::parseNumericVariableDefinition(
-    StringRef &Expr, StringRef &Name, FileCheckPatternContext *Context,
+Expected<FileCheckNumericVariable *>
+FileCheckPattern::parseNumericVariableDefinition(
+    StringRef &Expr, FileCheckPatternContext *Context, size_t LineNumber,
     const SourceMgr &SM) {
   bool IsPseudo;
   Expected<StringRef> ParseVarResult = parseVariable(Expr, IsPseudo, SM);
   if (!ParseVarResult)
     return ParseVarResult.takeError();
-  Name = *ParseVarResult;
+  StringRef Name = *ParseVarResult;
 
   if (IsPseudo)
     return FileCheckErrorDiagnostic::get(
@@ -135,7 +136,14 @@ Error FileCheckPattern::parseNumericVariableDefinition(
     return FileCheckErrorDiagnostic::get(
         SM, Expr, "unexpected characters after numeric variable name");
 
-  return Error::success();
+  FileCheckNumericVariable *DefinedNumericVariable;
+  auto VarTableIter = Context->GlobalNumericVariableTable.find(Name);
+  if (VarTableIter != Context->GlobalNumericVariableTable.end())
+    DefinedNumericVariable = VarTableIter->second;
+  else
+    DefinedNumericVariable = Context->makeNumericVariable(LineNumber, Name);
+
+  return DefinedNumericVariable;
 }
 
 Expected<FileCheckNumericVariable *>
@@ -154,15 +162,20 @@ FileCheckPattern::parseNumericVariableUse(StringRef &Expr,
   // Numeric variable definitions and uses are parsed in the order in which
   // they appear in the CHECK patterns. For each definition, the pointer to the
   // class instance of the corresponding numeric variable definition is stored
-  // in GlobalNumericVariableTable in parsePattern. Therefore, the pointer we
-  // get below is for the class instance corresponding to the last definition
-  // of this variable use.
+  // in GlobalNumericVariableTable in parsePattern. Therefore, if the pointer
+  // we get below is null, it means no such variable was defined before. When
+  // that happens, we create a dummy variable so that parsing can continue. All
+  // uses of undefined variables, whether string or numeric, are then diagnosed
+  // in printSubstitutions() after failing to match.
   auto VarTableIter = Context->GlobalNumericVariableTable.find(Name);
-  if (VarTableIter == Context->GlobalNumericVariableTable.end())
-    return FileCheckErrorDiagnostic::get(
-        SM, Name, "using undefined numeric variable '" + Name + "'");
+  FileCheckNumericVariable *NumericVariable;
+  if (VarTableIter != Context->GlobalNumericVariableTable.end())
+    NumericVariable = VarTableIter->second;
+  else {
+    NumericVariable = Context->makeNumericVariable(0, Name);
+    Context->GlobalNumericVariableTable[Name] = NumericVariable;
+  }
 
-  FileCheckNumericVariable *NumericVariable = VarTableIter->second;
   if (!IsPseudo && NumericVariable->getDefLineNumber() == LineNumber)
     return FileCheckErrorDiagnostic::get(
         SM, Name,
@@ -243,11 +256,11 @@ Expected<FileCheckExpression *> FileCheckPattern::parseNumericSubstitutionBlock(
           "unexpected string after variable definition: '" + UseExpr + "'");
 
     DefExpr = DefExpr.ltrim(SpaceChars);
-    StringRef Name;
-    Error Err = parseNumericVariableDefinition(DefExpr, Name, Context, SM);
-    if (Err)
-      return std::move(Err);
-    DefinedNumericVariable = Context->makeNumericVariable(LineNumber, Name);
+    Expected<FileCheckNumericVariable *> ParseResult =
+        parseNumericVariableDefinition(DefExpr, Context, LineNumber, SM);
+    if (!ParseResult)
+      return ParseResult.takeError();
+    DefinedNumericVariable = *ParseResult;
 
     return Context->makeExpression(add, nullptr, 0);
   }
@@ -263,13 +276,6 @@ bool FileCheckPattern::parsePattern(StringRef PatternStr, StringRef Prefix,
   bool MatchFullLinesHere = Req.MatchFullLines && CheckTy != Check::CheckNot;
 
   PatternLoc = SMLoc::getFromPointer(PatternStr.data());
-
-  // Create fake @LINE pseudo variable definition.
-  StringRef LinePseudo = "@LINE";
-  uint64_t LineNumber64 = LineNumber;
-  FileCheckNumericVariable *LinePseudoVar =
-      Context->makeNumericVariable(LinePseudo, LineNumber64);
-  Context->GlobalNumericVariableTable[LinePseudo] = LinePseudoVar;
 
   if (!(Req.NoCanonicalizeWhiteSpace && Req.MatchFullLines))
     // Ignore trailing whitespace.
@@ -565,6 +571,7 @@ Expected<size_t> FileCheckPattern::match(StringRef Buffer, size_t &MatchLen,
   std::string TmpStr;
   if (!Substitutions.empty()) {
     TmpStr = RegExStr;
+    Context->LineVariable->setValue(LineNumber);
 
     size_t InsertOffset = 0;
     // Substitute all string variables and expressions whose values are only
@@ -584,6 +591,7 @@ Expected<size_t> FileCheckPattern::match(StringRef Buffer, size_t &MatchLen,
 
     // Match the newly constructed regex.
     RegExToMatch = TmpStr;
+    Context->LineVariable->clearValue();
   }
 
   SmallVector<StringRef, 4> MatchInfo;
@@ -1052,6 +1060,13 @@ FindFirstMatchingPrefix(Regex &PrefixRE, StringRef &Buffer,
   return {StringRef(), StringRef()};
 }
 
+void FileCheckPatternContext::createLineVariable() {
+  assert(!LineVariable && "@LINE pseudo numeric variable already created");
+  StringRef LineName = "@LINE";
+  LineVariable = makeNumericVariable(0, LineName);
+  GlobalNumericVariableTable[LineName] = LineVariable;
+}
+
 bool FileCheck::ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
                               std::vector<FileCheckString> &CheckStrings) {
   Error DefineError =
@@ -1060,6 +1075,8 @@ bool FileCheck::ReadCheckFile(SourceMgr &SM, StringRef Buffer, Regex &PrefixRE,
     logAllUnhandledErrors(std::move(DefineError), errs());
     return true;
   }
+
+  PatternContext.createLineVariable();
 
   std::vector<FileCheckPattern> ImplicitNegativeChecks;
   for (const auto &PatternString : Req.ImplicitCheckNot) {
@@ -1733,11 +1750,11 @@ Error FileCheckPatternContext::defineCmdlineVariables(
     // Numeric variable definition.
     if (CmdlineDef[0] == '#') {
       StringRef CmdlineName = CmdlineDef.substr(1, EqIdx - 1);
-      StringRef VarName;
-      Error ErrorDiagnostic = FileCheckPattern::parseNumericVariableDefinition(
-          CmdlineName, VarName, this, SM);
-      if (ErrorDiagnostic) {
-        Errs = joinErrors(std::move(Errs), std::move(ErrorDiagnostic));
+      Expected<FileCheckNumericVariable *> ParseResult =
+          FileCheckPattern::parseNumericVariableDefinition(CmdlineName, this, 0,
+                                                           SM);
+      if (!ParseResult) {
+        Errs = joinErrors(std::move(Errs), ParseResult.takeError());
         continue;
       }
 
@@ -1751,7 +1768,7 @@ Error FileCheckPatternContext::defineCmdlineVariables(
                                   CmdlineVal + "'"));
         continue;
       }
-      auto DefinedNumericVariable = makeNumericVariable(0, VarName);
+      FileCheckNumericVariable *DefinedNumericVariable = *ParseResult;
       DefinedNumericVariable->setValue(Val);
 
       // Record this variable definition.

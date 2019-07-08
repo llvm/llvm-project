@@ -48,7 +48,10 @@ enum NodeType : unsigned {
   // This is a more convenient semantic for producing dagcombines that remove
   // unnecessary GPR->FPR->GPR moves.
   FMV_W_X_RV64,
-  FMV_X_ANYEXTW_RV64
+  FMV_X_ANYEXTW_RV64,
+  // READ_CYCLE_WIDE - A read of the 64-bit cycle CSR on a 32-bit target
+  // (returns (Lo, Hi)). It takes a chain operand.
+  READ_CYCLE_WIDE
 };
 }
 
@@ -127,6 +130,16 @@ public:
   }
   bool isDesirableToCommuteWithShift(const SDNode *N,
                                      CombineLevel Level) const override;
+
+  /// If a physical register, this returns the register that receives the
+  /// exception address on entry to an EH pad.
+  unsigned
+  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+
+  /// If a physical register, this returns the register that receives the
+  /// exception typeid on entry to a landing pad.
+  unsigned
+  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
 
 private:
   void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,

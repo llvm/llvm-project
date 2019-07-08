@@ -139,7 +139,6 @@ public:
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<AMDGPUArgumentUsageInfo>();
-    AU.addRequired<AMDGPUPerfHintAnalysis>();
     AU.addRequired<LegacyDivergenceAnalysis>();
 #ifdef EXPENSIVE_CHECKS
     AU.addRequired<DominatorTreeWrapperPass>();

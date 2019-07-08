@@ -793,14 +793,9 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
 
   // Emit the new guard condition
   IRBuilder<> Builder(findInsertPt(Guard, Checks));
-  Value *LastCheck = nullptr;
-  for (auto *Check : Checks)
-    if (!LastCheck)
-      LastCheck = Check;
-    else
-      LastCheck = Builder.CreateAnd(LastCheck, Check);
+  Value *AllChecks = Builder.CreateAnd(Checks);
   auto *OldCond = Guard->getOperand(0);
-  Guard->setOperand(0, LastCheck);
+  Guard->setOperand(0, AllChecks);
   RecursivelyDeleteTriviallyDeadInstructions(OldCond);
 
   LLVM_DEBUG(dbgs() << "Widened checks = " << NumWidened << "\n");
@@ -824,14 +819,9 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
 
   // Emit the new guard condition
   IRBuilder<> Builder(findInsertPt(BI, Checks));
-  Value *LastCheck = nullptr;
-  for (auto *Check : Checks)
-    if (!LastCheck)
-      LastCheck = Check;
-    else
-      LastCheck = Builder.CreateAnd(LastCheck, Check);
+  Value *AllChecks = Builder.CreateAnd(Checks);
   auto *OldCond = BI->getCondition();
-  BI->setCondition(LastCheck);
+  BI->setCondition(AllChecks);
   assert(isGuardAsWidenableBranch(BI) &&
          "Stopped being a guard after transform?");
   RecursivelyDeleteTriviallyDeadInstructions(OldCond);

@@ -67,44 +67,6 @@ TEST(CFG, IsLinear) {
   expectLinear(true,  "void foo() { foo(); }"); // Recursion is not our problem.
 }
 
-TEST(CFG, ConditionExpr) {
-  const char *Code = R"(void f(bool A, bool B, bool C) {
-                          if (A && B && C)
-                            int x;
-                        })";
-  BuildResult Result = BuildCFG(Code);
-  EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
-
-  // [B5 (ENTRY)] -> [B4] -> [B3] -> [B2] -> [B1] -> [B0 (EXIT)]
-  //                   \      \       \                 /
-  //                    ------------------------------->
-
-  CFG *cfg = Result.getCFG();
-
-  auto GetBlock = [cfg] (unsigned Index) -> CFGBlock * {
-    assert(Index < cfg->size());
-    return *(cfg->begin() + Index);
-  };
-
-  EXPECT_EQ(GetBlock(1)->getLastCondition(), nullptr);
-  // Unfortunately, we can't check whether the correct Expr was returned by
-  // getLastCondition, because the lifetime of the AST ends by the time we
-  // retrieve the CFG.
-
-  //===--------------------------------------------------------------------===//
-
-  Code = R"(void foo(int x, int y) {
-              (void)(x + y);
-            })";
-  Result = BuildCFG(Code);
-  EXPECT_EQ(BuildResult::BuiltCFG, Result.getStatus());
-
-  // [B2 (ENTRY)] -> [B1] -> [B0 (EXIT)]
-
-  cfg = Result.getCFG();
-  EXPECT_EQ(GetBlock(1)->getLastCondition(), nullptr);
-}
-
 } // namespace
 } // namespace analysis
 } // namespace clang

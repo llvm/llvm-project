@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <type_traits>
 
+#include "pstl_config.h"
 #include "parallel_backend_utils.h"
 
 // Bring in minimal required subset of Intel TBB

@@ -126,6 +126,15 @@ Changes to the C API
 Changes to the DAG infrastructure
 ---------------------------------
 
+Changes to LLDB
+===============
+
+* Backtraces are now color highlighting in the terminal.
+
+* This release will be the last where ``lldb-mi`` is shipped as part of LLDB.
+  The tool will still be available in a `downstream repository on GitHub
+  <https://github.com/lldb-tools/lldb-mi>`_.
+
 External Open Source Projects Using LLVM 9
 ==========================================
 

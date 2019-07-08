@@ -44,6 +44,12 @@ class PPCFunctionInfo : public MachineFunctionInfo {
   /// PEI.
   bool MustSaveLR;
 
+  /// MustSaveTOC - Indicates that the TOC save needs to be performed in the
+  /// prologue of the function. This is typically the case when there are
+  /// indirect calls in the function and it is more profitable to save the
+  /// TOC pointer in the prologue than in the block(s) containing the call(s).
+  bool MustSaveTOC = false;
+
   /// Do we have to disable shrink-wrapping? This has to be set if we emit any
   /// instructions that clobber LR in the entry block because discovering this
   /// in PEI is too late (happens after shrink-wrapping);
@@ -150,6 +156,9 @@ public:
   /// referenced by builtin_return_address.
   void setMustSaveLR(bool U) { MustSaveLR = U; }
   bool mustSaveLR() const    { return MustSaveLR; }
+
+  void setMustSaveTOC(bool U) { MustSaveTOC = U; }
+  bool mustSaveTOC() const    { return MustSaveTOC; }
 
   /// We certainly don't want to shrink wrap functions if we've emitted a
   /// MovePCtoLR8 as that has to go into the entry, so the prologue definitely

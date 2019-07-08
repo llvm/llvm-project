@@ -8,6 +8,7 @@ set(LIBCXX_SOURCES
   charconv.cpp
   chrono.cpp
   condition_variable.cpp
+  condition_variable_destructor.cpp
   debug.cpp
   exception.cpp
   functional.cpp
@@ -22,6 +23,7 @@ set(LIBCXX_SOURCES
   locale.cpp
   memory.cpp
   mutex.cpp
+  mutex_destructor.cpp
   new.cpp
   optional.cpp
   random.cpp

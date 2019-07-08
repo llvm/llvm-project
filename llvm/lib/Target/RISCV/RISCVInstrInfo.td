@@ -1054,6 +1054,16 @@ defm : StPat<truncstorei32, SW, GPR>;
 defm : StPat<store, SD, GPR>;
 } // Predicates = [IsRV64]
 
+/// readcyclecounter
+// On RV64, we can directly read the 64-bit "cycle" CSR.
+let Predicates = [IsRV64] in
+def : Pat<(readcyclecounter), (CSRRS CYCLE.Encoding, X0)>;
+// On RV32, ReadCycleWide will be expanded to the suggested loop reading both
+// halves of the 64-bit "cycle" CSR.
+let Predicates = [IsRV32], usesCustomInserter = 1, hasSideEffects = 0,
+mayLoad = 0, mayStore = 0, hasNoSchedulingInfo = 1 in
+def ReadCycleWide : Pseudo<(outs GPR:$lo, GPR:$hi), (ins), [], "", "">;
+
 //===----------------------------------------------------------------------===//
 // Standard extensions
 //===----------------------------------------------------------------------===//

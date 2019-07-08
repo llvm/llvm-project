@@ -435,6 +435,10 @@ void MetadataStreamerV2::emitHiddenKernelArgs(const Function &Func) {
       emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenNone);
     }
   }
+
+  // Emit the pointer argument for multi-grid object.
+  if (HiddenArgNumBytes >= 56)
+    emitKernelArg(DL, Int8PtrTy, ValueKind::HiddenMultiGridSyncArg);
 }
 
 bool MetadataStreamerV2::emitTo(AMDGPUTargetStreamer &TargetStreamer) {
@@ -864,6 +868,10 @@ void MetadataStreamerV3::emitHiddenKernelArgs(const Function &Func,
       emitKernelArg(DL, Int8PtrTy, "hidden_none", Offset, Args);
     }
   }
+
+  // Emit the pointer argument for multi-grid object.
+  if (HiddenArgNumBytes >= 56)
+    emitKernelArg(DL, Int8PtrTy, "hidden_multigrid_sync_arg", Offset, Args);
 }
 
 msgpack::MapDocNode

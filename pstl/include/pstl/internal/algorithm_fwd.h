@@ -10,8 +10,11 @@
 #ifndef _PSTL_ALGORITHM_FWD_H
 #define _PSTL_ALGORITHM_FWD_H
 
+#include <iterator>
 #include <type_traits>
 #include <utility>
+
+#include "pstl_config.h"
 
 namespace __pstl
 {

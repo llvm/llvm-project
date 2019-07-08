@@ -65,9 +65,7 @@ entry:
 define <2 x double> @test_negative_zero_2(<2 x double> %A) {
 ; SSE2-LABEL: test_negative_zero_2:
 ; SSE2:       # %bb.0: # %entry
-; SSE2-NEXT:    movapd {{.*#+}} xmm1 = <u,-0.0E+0>
-; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[0],mem[1]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test_negative_zero_2:
