@@ -40,6 +40,7 @@ class WatchpointLLDBCommandTestCase(TestBase):
     @expectedFailureAll(
         oslist=["windows"],
         bugnumber="llvm.org/pr24446: WINDOWS XFAIL TRIAGE - Watchpoints not supported on Windows")
+    @expectedFailureNetBSD
     def test_watchpoint_command(self):
         """Test 'watchpoint command'."""
         self.build(dictionary=self.d)
