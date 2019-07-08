@@ -78,7 +78,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @_ZN7cxxopts12_GLOBAL__N_116option_specifierB5cxx11E = internal global %"class.std::__cxx11::basic_regex" zeroinitializer, align 8, !dbg !1889
 @.str.28 = private unnamed_addr constant [50 x i8] c"(([[:alnum:]]),)?[ ]*([[:alnum:]][-_[:alnum:]]*)?\00", align 1
 
-; Function Attrs: uwtable
+; Function Attrs: sanitize_cilk uwtable
 define internal void @_GLOBAL__sub_I_main.cpp() #3 section ".text.startup" personality i32 (...)* @__gxx_personality_v0 !dbg !123083 {
 entry:
   %agg.tmp.i.i.i11 = alloca %"class.std::locale", align 8
@@ -465,7 +465,7 @@ declare dso_local void @_ZNSt6localeD1Ev(%"class.std::locale"*) unnamed_addr #1
 ; Function Attrs: nounwind
 declare dso_local void @_ZNSt6localeC1Ev(%"class.std::locale"*) unnamed_addr #1
 
-; Function Attrs: uwtable
+; Function Attrs: sanitize_cilk uwtable
 declare dso_local void @_ZNSt7__cxx1111basic_regexIcNS_12regex_traitsIcEEEC2IPKcEET_S7_St6localeNSt15regex_constants18syntax_option_typeE(%"class.std::__cxx11::basic_regex"* %this, i8* %__first, i8* %__last, %"class.std::locale"* %__loc, i32 %__f) unnamed_addr #3
 
 ; Function Attrs: nounwind uwtable
@@ -500,7 +500,7 @@ declare dso_local i32 @mallopt(i32, i32) local_unnamed_addr #1
 
 attributes #0 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #3 = { sanitize_cilk uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #4 = { nounwind readnone speculatable }
 attributes #5 = { argmemonly nounwind }
 attributes #7 = { nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
