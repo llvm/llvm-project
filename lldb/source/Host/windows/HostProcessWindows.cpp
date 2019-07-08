@@ -94,7 +94,7 @@ llvm::Expected<HostThread> HostProcessWindows::StartMonitoring(
                         &info->process_handle, 0, FALSE, DUPLICATE_SAME_ACCESS))
     result = ThreadLauncher::LaunchThread("ChildProcessMonitor",
                                           HostProcessWindows::MonitorThread,
-                                          info, nullptr);
+                                          info);
   return result;
 }
 
