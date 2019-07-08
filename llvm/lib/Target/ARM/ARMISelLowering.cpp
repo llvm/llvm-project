@@ -1981,12 +1981,14 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
     // more times in this block, we can improve codesize by calling indirectly
     // as BLXr has a 16-bit encoding.
     auto *GV = cast<GlobalAddressSDNode>(Callee)->getGlobal();
-    auto *BB = CLI.CS.getParent();
-    PreferIndirect =
-        Subtarget->isThumb() && Subtarget->hasMinSize() &&
-        count_if(GV->users(), [&BB](const User *U) {
-          return isa<Instruction>(U) && cast<Instruction>(U)->getParent() == BB;
-        }) > 2;
+    if (CLI.CS) {
+      auto *BB = CLI.CS.getParent();
+      PreferIndirect = Subtarget->isThumb() && Subtarget->hasMinSize() &&
+                       count_if(GV->users(), [&BB](const User *U) {
+                         return isa<Instruction>(U) &&
+                                cast<Instruction>(U)->getParent() == BB;
+                       }) > 2;
+    }
   }
   if (isTailCall) {
     // Check if it's really possible to do a tail call.
@@ -15235,6 +15237,36 @@ bool ARMTargetLowering::shouldInsertFencesForAtomic(
 // This has so far only been implemented for MachO.
 bool ARMTargetLowering::useLoadStackGuardNode() const {
   return Subtarget->isTargetMachO();
+}
+
+void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
+  if (!Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
+    return TargetLowering::insertSSPDeclarations(M);
+
+  // MSVC CRT has a global variable holding security cookie.
+  M.getOrInsertGlobal("__security_cookie",
+                      Type::getInt8PtrTy(M.getContext()));
+
+  // MSVC CRT has a function to validate security cookie.
+  FunctionCallee SecurityCheckCookie = M.getOrInsertFunction(
+      "__security_check_cookie", Type::getVoidTy(M.getContext()),
+      Type::getInt8PtrTy(M.getContext()));
+  if (Function *F = dyn_cast<Function>(SecurityCheckCookie.getCallee()))
+    F->addAttribute(1, Attribute::AttrKind::InReg);
+}
+
+Value *ARMTargetLowering::getSDagStackGuard(const Module &M) const {
+  // MSVC CRT has a global variable holding security cookie.
+  if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
+    return M.getGlobalVariable("__security_cookie");
+  return TargetLowering::getSDagStackGuard(M);
+}
+
+Function *ARMTargetLowering::getSSPStackGuardCheck(const Module &M) const {
+  // MSVC CRT has a function to validate security cookie.
+  if (Subtarget->getTargetTriple().isWindowsMSVCEnvironment())
+    return M.getFunction("__security_check_cookie");
+  return TargetLowering::getSSPStackGuardCheck(M);
 }
 
 bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,

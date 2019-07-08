@@ -2608,3 +2608,13 @@ Value *RISCVTargetLowering::emitMaskedAtomicCmpXchgIntrinsic(
     Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
   return Result;
 }
+
+unsigned RISCVTargetLowering::getExceptionPointerRegister(
+    const Constant *PersonalityFn) const {
+  return RISCV::X10;
+}
+
+unsigned RISCVTargetLowering::getExceptionSelectorRegister(
+    const Constant *PersonalityFn) const {
+  return RISCV::X11;
+}
