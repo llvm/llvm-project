@@ -45,7 +45,8 @@ enum class index_error_code {
   failed_to_generate_usr,
   triple_mismatch,
   lang_mismatch,
-  lang_dialect_mismatch
+  lang_dialect_mismatch,
+  load_threshold_reached
 };
 
 class IndexError : public llvm::ErrorInfo<IndexError> {
@@ -134,7 +135,8 @@ public:
   /// A definition with the same declaration will be looked up in the
   /// index file which should be in the \p CrossTUDir directory, called
   /// \p IndexName. In case the declaration is found in the index the
-  /// corresponding AST file will be loaded.
+  /// corresponding AST file will be loaded. If the number of TUs imported
+  /// reaches \p CTULoadTreshold, no loading is performed.
   ///
   /// \return Returns a pointer to the ASTUnit that contains the definition of
   /// the looked up name or an Error.
@@ -182,6 +184,10 @@ private:
   CompilerInstance &CI;
   ASTContext &Context;
   std::shared_ptr<ASTImporterSharedState> ImporterSharedSt;
+  /// \p CTULoadTreshold should serve as an upper limit to the number of TUs
+  /// imported in order to reduce the memory footprint of CTU analysis.
+  const unsigned CTULoadThreshold;
+  unsigned NumASTLoaded{0u};
 };
 
 } // namespace cross_tu

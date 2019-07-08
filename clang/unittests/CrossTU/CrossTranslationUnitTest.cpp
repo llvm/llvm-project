@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/CrossTU/CrossTranslationUnit.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "clang/AST/ASTConsumer.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Tooling.h"
@@ -70,12 +71,14 @@ public:
     EXPECT_TRUE(llvm::sys::fs::exists(ASTFileName));
 
     // Load the definition from the AST file.
-    llvm::Expected<const FunctionDecl *> NewFDorError =
-        CTU.getCrossTUDefinition(FD, "", IndexFileName);
-    EXPECT_TRUE((bool)NewFDorError);
-    const FunctionDecl *NewFD = *NewFDorError;
+    llvm::Expected<const FunctionDecl *> NewFDorError = handleExpected(
+        CTU.getCrossTUDefinition(FD, "", IndexFileName, false),
+        []() { return nullptr; }, [](IndexError &) {});
 
-    *Success = NewFD && NewFD->hasBody() && !OrigFDHasBody;
+    if (NewFDorError) {
+      const FunctionDecl *NewFD = *NewFDorError;
+      *Success = NewFD && NewFD->hasBody() && !OrigFDHasBody;
+    }
   }
 
 private:
@@ -85,24 +88,35 @@ private:
 
 class CTUAction : public clang::ASTFrontendAction {
 public:
-  CTUAction(bool *Success) : Success(Success) {}
+  CTUAction(bool *Success, unsigned OverrideLimit)
+      : Success(Success), OverrideLimit(OverrideLimit) {}
 
 protected:
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &CI, StringRef) override {
+    CI.getAnalyzerOpts()->CTUImportThreshold = OverrideLimit;
     return llvm::make_unique<CTUASTConsumer>(CI, Success);
   }
 
 private:
   bool *Success;
+  const unsigned OverrideLimit;
 };
 
 } // end namespace
 
 TEST(CrossTranslationUnit, CanLoadFunctionDefinition) {
   bool Success = false;
-  EXPECT_TRUE(tooling::runToolOnCode(new CTUAction(&Success), "int f(int);"));
+  EXPECT_TRUE(
+      tooling::runToolOnCode(new CTUAction(&Success, 1u), "int f(int);"));
   EXPECT_TRUE(Success);
+}
+
+TEST(CrossTranslationUnit, RespectsLoadThreshold) {
+  bool Success = false;
+  EXPECT_TRUE(
+      tooling::runToolOnCode(new CTUAction(&Success, 0u), "int f(int);"));
+  EXPECT_FALSE(Success);
 }
 
 TEST(CrossTranslationUnit, IndexFormatCanBeParsed) {
