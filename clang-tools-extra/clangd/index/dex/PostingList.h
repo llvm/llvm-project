@@ -32,7 +32,7 @@
 namespace clang {
 namespace clangd {
 namespace dex {
-struct Token;
+class Token;
 
 /// NOTE: This is an implementation detail.
 ///
