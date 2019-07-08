@@ -31,10 +31,8 @@ llvm::Expected<HostThread> ThreadLauncher::LaunchThread(
   thread = (lldb::thread_t)::_beginthreadex(
       0, (unsigned)min_stack_byte_size,
       HostNativeThread::ThreadCreateTrampoline, info_ptr, 0, NULL);
-  if (thread == (lldb::thread_t)(-1L)) {
-    DWORD err = GetLastError();
-    return llvm::errorCodeToError(std::error_code(err, std::system_category()));
-  }
+  if (thread == LLDB_INVALID_HOST_THREAD)
+    return llvm::errorCodeToError(llvm::mapWindowsError(GetLastError()));
 #else
 
 // ASAN instrumentation adds a lot of bookkeeping overhead on stack frames.
