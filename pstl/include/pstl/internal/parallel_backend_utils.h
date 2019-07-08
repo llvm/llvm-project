@@ -19,7 +19,8 @@
 
 namespace __pstl
 {
-namespace __par_backend
+
+namespace __utils
 {
 
 //! Destroy sequence [xs,xe)
@@ -135,91 +136,7 @@ struct __serial_move_merge
     }
 };
 
-template <typename _RandomAccessIterator1, typename _OutputIterator>
-void
-__init_buf(_RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe, _OutputIterator __zs, bool __bMove)
-{
-    const _OutputIterator __ze = __zs + (__xe - __xs);
-    typedef typename std::iterator_traits<_OutputIterator>::value_type _ValueType;
-    if (__bMove)
-    {
-        // Initialize the temporary buffer and move keys to it.
-        for (; __zs != __ze; ++__xs, ++__zs)
-            new (&*__zs) _ValueType(std::move(*__xs));
-    }
-    else
-    {
-        // Initialize the temporary buffer
-        for (; __zs != __ze; ++__zs)
-            new (&*__zs) _ValueType;
-    }
-}
-
-// TODO is this actually used anywhere?
-template <typename _Buf>
-class __stack
-{
-    typedef typename std::iterator_traits<decltype(_Buf(0).get())>::value_type _ValueType;
-    typedef typename std::iterator_traits<_ValueType*>::difference_type _DifferenceType;
-
-    _Buf _M_buf;
-    _ValueType* _M_ptr;
-    _DifferenceType _M_maxsize;
-
-    __stack(const __stack&) = delete;
-    void
-    operator=(const __stack&) = delete;
-
-  public:
-    __stack(_DifferenceType __max_size) : _M_buf(__max_size), _M_maxsize(__max_size) { _M_ptr = _M_buf.get(); }
-
-    ~__stack()
-    {
-        assert(size() <= _M_maxsize);
-        while (!empty())
-            pop();
-    }
-
-    const _Buf&
-    buffer() const
-    {
-        return _M_buf;
-    }
-    size_t
-    size() const
-    {
-        assert(_M_ptr - _M_buf.get() <= _M_maxsize);
-        assert(_M_ptr - _M_buf.get() >= 0);
-        return _M_ptr - _M_buf.get();
-    }
-    bool
-    empty() const
-    {
-        assert(_M_ptr >= _M_buf.get());
-        return _M_ptr == _M_buf.get();
-    }
-    void
-    push(const _ValueType& __v)
-    {
-        assert(size() < _M_maxsize);
-        new (_M_ptr) _ValueType(__v);
-        ++_M_ptr;
-    }
-    const _ValueType&
-    top() const
-    {
-        return *(_M_ptr - 1);
-    }
-    void
-    pop()
-    {
-        assert(_M_ptr > _M_buf.get());
-        --_M_ptr;
-        (*_M_ptr).~_ValueType();
-    }
-};
-
-} // namespace __par_backend
+} // namespace __utils
 } // namespace __pstl
 
 #endif /* _PSTL_PARALLEL_BACKEND_UTILS_H */
