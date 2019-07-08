@@ -7,7 +7,4 @@
    <FileRef
       location = "group:tools/debugserver/debugserver.xcodeproj">
    </FileRef>
-   <FileRef
-      location = "group:tools/lldb-perf/lldbperf.xcodeproj">
-   </FileRef>
 </Workspace>
