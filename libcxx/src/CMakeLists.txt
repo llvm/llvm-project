@@ -8,6 +8,7 @@ set(LIBCXX_SOURCES
   charconv.cpp
   chrono.cpp
   condition_variable.cpp
+  condition_variable_destructor.cpp
   debug.cpp
   exception.cpp
   functional.cpp

@@ -1951,12 +1951,14 @@ let Predicates = [UseSSE1] in {
 /// sse12_shuffle - sse 1 & 2 fp shuffle instructions
 multiclass sse12_shuffle<RegisterClass RC, X86MemOperand x86memop,
                          ValueType vt, string asm, PatFrag mem_frag,
-                         X86FoldableSchedWrite sched, Domain d> {
+                         X86FoldableSchedWrite sched, Domain d,
+                         bit IsCommutable = 0> {
   def rmi : PIi8<0xC6, MRMSrcMem, (outs RC:$dst),
                    (ins RC:$src1, x86memop:$src2, u8imm:$src3), asm,
                    [(set RC:$dst, (vt (X86Shufp RC:$src1, (mem_frag addr:$src2),
                                        (i8 imm:$src3))))], d>,
             Sched<[sched.Folded, sched.ReadAfterFold]>;
+  let isCommutable = IsCommutable in
   def rri : PIi8<0xC6, MRMSrcReg, (outs RC:$dst),
                  (ins RC:$src1, RC:$src2, u8imm:$src3), asm,
                  [(set RC:$dst, (vt (X86Shufp RC:$src1, RC:$src2,
@@ -1988,7 +1990,7 @@ let Constraints = "$src1 = $dst" in {
                     memopv4f32, SchedWriteFShuffle.XMM, SSEPackedSingle>, PS;
   defm SHUFPD : sse12_shuffle<VR128, f128mem, v2f64,
                     "shufpd\t{$src3, $src2, $dst|$dst, $src2, $src3}",
-                    memopv2f64, SchedWriteFShuffle.XMM, SSEPackedDouble>, PD;
+                    memopv2f64, SchedWriteFShuffle.XMM, SSEPackedDouble, 1>, PD;
 }
 
 //===----------------------------------------------------------------------===//

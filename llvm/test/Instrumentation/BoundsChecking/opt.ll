@@ -50,6 +50,7 @@ for.body.i:                                       ; preds = %for.body.i, %entry
 ; CHECK: mul i64 {{.*}}, 4
 ; CHECK: sub i64 4000, %
 ; CHECK-NEXT: icmp ult i64 {{.*}}, 4
+; CHECK-NEXT: or i1
 ; CHECK: trap
   %1 = load i32, i32* %arrayidx.i, align 4
   %add.i = add nsw i32 %1, %sum.01.i
@@ -242,6 +243,7 @@ for.body4:                                        ; preds = %for.body4, %for.con
 ; CHECK: add i64
 ; CHECK: sub i64 16, %
 ; CHECK-NEXT: icmp ult i64 {{.*}}, 4
+; CHECK-NEXT: or i1
 ; CHECK: trap
   %1 = load i32, i32* %arrayidx7, align 4
   %add = add nsw i32 %1, %sum.119

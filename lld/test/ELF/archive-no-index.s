@@ -5,7 +5,7 @@
 # RUN: rm -f %t.a
 # RUN: llvm-ar crS %t.a %t.archive.o
 
-# RUN: not ld.lld -o out.wasm %t.o %t.a 2>&1 | FileCheck %s
+# RUN: not ld.lld -o /dev/null %t.o %t.a 2>&1 | FileCheck %s
 
 .globl _start
 _start:

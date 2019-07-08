@@ -223,10 +223,10 @@ define <2 x i64> @shr2_nosplat(<2 x i64> %A) nounwind {
 ; X32-NEXT:    psrlq $8, %xmm2
 ; X32-NEXT:    movdqa %xmm0, %xmm1
 ; X32-NEXT:    psrlq $1, %xmm1
-; X32-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; X32-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
-; X32-NEXT:    xorpd %xmm0, %xmm1
-; X32-NEXT:    movapd %xmm1, %xmm0
+; X32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3]
+; X32-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
+; X32-NEXT:    xorps %xmm2, %xmm1
+; X32-NEXT:    movaps %xmm1, %xmm0
 ; X32-NEXT:    retl
 ;
 ; X64-LABEL: shr2_nosplat:
@@ -235,10 +235,10 @@ define <2 x i64> @shr2_nosplat(<2 x i64> %A) nounwind {
 ; X64-NEXT:    psrlq $8, %xmm2
 ; X64-NEXT:    movdqa %xmm0, %xmm1
 ; X64-NEXT:    psrlq $1, %xmm1
-; X64-NEXT:    movsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
-; X64-NEXT:    movsd {{.*#+}} xmm1 = xmm2[0],xmm1[1]
-; X64-NEXT:    xorpd %xmm0, %xmm1
-; X64-NEXT:    movapd %xmm1, %xmm0
+; X64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm1[2,3]
+; X64-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
+; X64-NEXT:    xorps %xmm2, %xmm1
+; X64-NEXT:    movaps %xmm1, %xmm0
 ; X64-NEXT:    retq
 entry:
   %B = lshr <2 x i64> %A,  < i64 8, i64 1>

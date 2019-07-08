@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
 
 void foo() {
 }
@@ -12,6 +12,7 @@ bool foobool(int argc) {
 struct S1; // expected-note {{declared here}}
 
 int main(int argc, char **argv) {
+  int k;
   #pragma omp target parallel device // expected-error {{expected '(' after 'device'}}
   foo();
   #pragma omp target parallel device ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -26,7 +27,7 @@ int main(int argc, char **argv) {
   foo();
   #pragma omp target parallel device (argc + argc)
   foo();
-  #pragma omp target parallel device (argc), device (argc+1) // expected-error {{directive '#pragma omp target parallel' cannot contain more than one 'device' clause}}
+  #pragma omp target parallel device (k), device (argc+1) // expected-error {{directive '#pragma omp target parallel' cannot contain more than one 'device' clause}}
   foo();
   #pragma omp target parallel device (S1) // expected-error {{'S1' does not refer to a value}}
   foo();

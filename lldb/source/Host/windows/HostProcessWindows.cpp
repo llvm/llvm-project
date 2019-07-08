@@ -80,7 +80,7 @@ bool HostProcessWindows::IsRunning() const {
   return (code == STILL_ACTIVE);
 }
 
-HostThread HostProcessWindows::StartMonitoring(
+llvm::Expected<HostThread> HostProcessWindows::StartMonitoring(
     const Host::MonitorChildProcessCallback &callback, bool monitor_signals) {
   HostThread monitor_thread;
   MonitorInfo *info = new MonitorInfo;

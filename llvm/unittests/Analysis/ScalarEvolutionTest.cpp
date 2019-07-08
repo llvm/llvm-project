@@ -1637,5 +1637,46 @@ TEST_F(ScalarEvolutionsTest, SCEVExpandInsertCanonicalIV) {
   TestMatchingCanonicalIV(GetAR2, ARBitWidth);
 }
 
+TEST_F(ScalarEvolutionsTest, SCEVExpanderShlNSW) {
+
+  auto checkOneCase = [this](std::string &&str) {
+    LLVMContext C;
+    SMDiagnostic Err;
+    std::unique_ptr<Module> M = parseAssemblyString(str, Err, C);
+
+    assert(M && "Could not parse module?");
+    assert(!verifyModule(*M) && "Must have been well formed!");
+
+    Function *F = M->getFunction("f");
+    ASSERT_NE(F, nullptr) << "Could not find function 'f'";
+
+    BasicBlock &Entry = F->getEntryBlock();
+    LoadInst *Load = cast<LoadInst>(&Entry.front());
+    BinaryOperator *And = cast<BinaryOperator>(*Load->user_begin());
+
+    ScalarEvolution SE = buildSE(*F);
+    const SCEV *AndSCEV = SE.getSCEV(And);
+    EXPECT_TRUE(isa<SCEVMulExpr>(AndSCEV));
+    EXPECT_TRUE(cast<SCEVMulExpr>(AndSCEV)->hasNoSignedWrap());
+
+    SCEVExpander Exp(SE, M->getDataLayout(), "expander");
+    auto *I = cast<Instruction>(Exp.expandCodeFor(AndSCEV, nullptr, And));
+    EXPECT_EQ(I->getOpcode(), Instruction::Shl);
+    EXPECT_FALSE(I->hasNoSignedWrap());
+  };
+
+  checkOneCase("define void @f(i16* %arrayidx) { "
+               "  %1 = load i16, i16* %arrayidx "
+               "  %2 = and i16 %1, -32768 "
+               "  ret void "
+               "} ");
+
+  checkOneCase("define void @f(i8* %arrayidx) { "
+               "  %1 = load i8, i8* %arrayidx "
+               "  %2 = and i8 %1, -128 "
+               "  ret void "
+               "} ");
+}
+
 }  // end anonymous namespace
 }  // end namespace llvm

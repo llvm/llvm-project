@@ -75,6 +75,30 @@ Examples:
   [v252]
   [v252,v253,v254,v255]
 
+.. _amdgpu_synid_nsa:
+
+*Image* instructions may use special *NSA* (Non-Sequential Address) syntax for *image addresses*:
+
+    =================================================== ====================================================================
+    Syntax                                              Description
+    =================================================== ====================================================================
+    **[v**\ <A>, \ **v**\ <B>, ... **v**\ <X>\ **]**    A sequence of *vector* registers. At least one register
+                                                        must be specified.
+
+                                                        In contrast with standard syntax described above, registers in
+                                                        this sequence are not required to have consecutive indices.
+                                                        Moreover, the same register may appear in the list more than once.
+    =================================================== ====================================================================
+
+Note. Reqister indices must be in the range 0..255. They must be specified as decimal integer numbers.
+
+Examples:
+
+.. parsed-literal::
+
+  [v32,v1,v2]
+  [v4,v4,v4,v4]
+
 .. _amdgpu_synid_s:
 
 s
@@ -88,6 +112,7 @@ Scalar 32-bit registers. The number of available *scalar* registers depends on G
     GFX7    104
     GFX8    102
     GFX9    102
+    GFX10   106
     ======= ============================
 
 A sequence of *scalar* registers may be used to operate with more than 32 bits of data.
@@ -171,6 +196,7 @@ The number of available *ttmp* registers depends on GPU:
     GFX7    12
     GFX8    12
     GFX9    16
+    GFX10   16
     ======= ===========================
 
 A sequence of *ttmp* registers may be used to operate with more than 32 bits of data.
@@ -255,7 +281,7 @@ High and low 32 bits of *trap base address* may be accessed as separate register
     [tba_hi]           High 32 bits of *trap base address* register (an alternative syntax).   GFX7, GFX8
     ================== ======================================================================= =============
 
-Note that *tba*, *tba_lo* and *tba_hi* are not accessible as assembler registers in GFX9,
+Note that *tba*, *tba_lo* and *tba_hi* are not accessible as assembler registers in GFX9 and GFX10,
 but *tba* is readable/writable with the help of *s_get_reg* and *s_set_reg* instructions.
 
 .. _amdgpu_synid_tma:
@@ -284,7 +310,7 @@ High and low 32 bits of *trap memory address* may be accessed as separate regist
     [tma_hi]          High 32 bits of *trap memory address* register (an alternative syntax). GFX7, GFX8
     ================= ======================================================================= ==================
 
-Note that *tma*, *tma_lo* and *tma_hi* are not accessible as assembler registers in GFX9,
+Note that *tma*, *tma_lo* and *tma_hi* are not accessible as assembler registers in GFX9 and GFX10,
 but *tma* is readable/writable with the help of *s_get_reg* and *s_set_reg* instructions.
 
 .. _amdgpu_synid_flat_scratch:
@@ -321,7 +347,7 @@ xnack
 Xnack mask, 64-bits wide. Holds a 64-bit mask of which threads
 received an *XNACK* due to a vector memory operation.
 
-.. WARNING:: GFX7 does not support *xnack* feature. Not all GFX8 and GFX9 :ref:`processors<amdgpu-processors>` support *xnack* feature.
+.. WARNING:: GFX7 does not support *xnack* feature. For availability of this feature in other GPUs, refer :ref:`this table<amdgpu-processors>`.
 
 \
 
@@ -345,12 +371,15 @@ High and low 32 bits of *xnack mask* may be accessed as separate registers:
     ===================== ==============================================================
 
 .. _amdgpu_synid_vcc:
+.. _amdgpu_synid_vcc_lo:
 
 vcc
 ---
 
 Vector condition code, 64-bits wide. A bit mask with one bit per thread;
 it holds the result of a vector compare operation.
+
+Note that GFX10 H/W does not use high 32 bits of *vcc* in *wave32* mode.
 
     ================ =========================================================================
     Syntax           Description
@@ -395,6 +424,8 @@ Execute mask, 64-bits wide. A bit mask with one bit per thread,
 which is applied to vector instructions and controls which threads execute
 and which ignore the instruction.
 
+Note that GFX10 H/W does not use high 32 bits of *exec* in *wave32* mode.
+
     ===================== =================================================================
     Syntax                Description
     ===================== =================================================================
@@ -419,9 +450,9 @@ High and low 32 bits of *execute mask* may be accessed as separate registers:
 vccz
 ----
 
-A single bit-flag indicating that the :ref:`vcc<amdgpu_synid_vcc>` is all zeros.
+A single bit flag indicating that the :ref:`vcc<amdgpu_synid_vcc>` is all zeros.
 
-.. WARNING:: This operand is not currently supported by AMDGPU assembler.
+Note. When GFX10 operates in *wave32* mode, this register reflects state of :ref:`vcc_lo<amdgpu_synid_vcc_lo>`.
 
 .. _amdgpu_synid_execz:
 
@@ -430,7 +461,7 @@ execz
 
 A single bit flag indicating that the :ref:`exec<amdgpu_synid_exec>` is all zeros.
 
-.. WARNING:: This operand is not currently supported by AMDGPU assembler.
+Note. When GFX10 operates in *wave32* mode, this register reflects state of :ref:`exec_lo<amdgpu_synid_exec>`.
 
 .. _amdgpu_synid_scc:
 
@@ -439,7 +470,7 @@ scc
 
 A single bit flag indicating the result of a scalar compare operation.
 
-.. WARNING:: This operand is not currently supported by AMDGPU assembler.
+.. _amdgpu_synid_lds_direct:
 
 lds_direct
 ----------
@@ -447,29 +478,43 @@ lds_direct
 A special operand which supplies a 32-bit value
 fetched from *LDS* memory using :ref:`m0<amdgpu_synid_m0>` as an address.
 
-.. WARNING:: This operand is not currently supported by AMDGPU assembler.
+.. _amdgpu_synid_null:
+
+null
+----
+
+This is a special operand which may be used as a source or a destination.
+
+When used as a destination, the result of the operation is discarded.
+
+When used as a source, it supplies zero value.
+
+GFX10 only.
+
+.. WARNING:: Due to a H/W bug, this operand cannot be used with VALU instructions in first generation of GFX10.
 
 .. _amdgpu_synid_constant:
 
 constant
 --------
 
-A set of integer and floating-point *inline constants*:
+A set of integer and floating-point *inline* constants and values:
 
 * :ref:`iconst<amdgpu_synid_iconst>`
 * :ref:`fconst<amdgpu_synid_fconst>`
+* :ref:`ival<amdgpu_synid_ival>`
 
-These operands are encoded as a part of instruction.
+In contrast with :ref:`literals<amdgpu_synid_literal>`, these operands are encoded as a part of instruction.
 
 If a number may be encoded as either
 a :ref:`literal<amdgpu_synid_literal>` or 
-an :ref:`inline constant<amdgpu_synid_constant>`,
+a :ref:`constant<amdgpu_synid_constant>`,
 assembler selects the latter encoding as more efficient.
 
 .. _amdgpu_synid_iconst:
 
 iconst
-------
+~~~~~~
 
 An :ref:`integer number<amdgpu_synid_integer_number>`
 encoded as an *inline constant*.
@@ -491,26 +536,10 @@ as described :ref:`here<amdgpu_synid_int_const_conv>`.
 
 .. WARNING:: GFX7 does not support inline constants for *f16* operands.
 
-There are also symbolic inline constants which provide read-only access to H/W registers.
-
-.. WARNING:: These inline constants are not currently supported by AMDGPU assembler.
-
-\
-
-    ======================== ================================================ =============
-    Syntax                   Note                                             Availability
-    ======================== ================================================ =============
-    shared_base              Base address of shared memory region.            GFX9
-    shared_limit             Address of the end of shared memory region.      GFX9
-    private_base             Base address of private memory region.           GFX9
-    private_limit            Address of the end of private memory region.     GFX9
-    pops_exiting_wave_id     A dedicated counter for POPS.                    GFX9
-    ======================== ================================================ =============
-
 .. _amdgpu_synid_fconst:
 
 fconst
-------
+~~~~~~
 
 A :ref:`floating-point number<amdgpu_synid_floating-point_number>`
 encoded as an *inline constant*.
@@ -535,12 +564,30 @@ as described :ref:`here<amdgpu_synid_fp_const_conv>`.
     -1.0                  Floating-point constant -1.0                          All GPUs
     -2.0                  Floating-point constant -2.0                          All GPUs
     -4.0                  Floating-point constant -4.0                          All GPUs
-    0.1592                1.0/(2.0*pi). Use only for 16-bit operands.           GFX8, GFX9
-    0.15915494            1.0/(2.0*pi). Use only for 16- and 32-bit operands.   GFX8, GFX9
-    0.15915494309189532   1.0/(2.0*pi).                                         GFX8, GFX9
+    0.1592                1.0/(2.0*pi). Use only for 16-bit operands.           GFX8, GFX9, GFX10
+    0.15915494            1.0/(2.0*pi). Use only for 16- and 32-bit operands.   GFX8, GFX9, GFX10
+    0.15915494309189532   1.0/(2.0*pi).                                         GFX8, GFX9, GFX10
     ===================== ===================================================== ==================
 
 .. WARNING:: GFX7 does not support inline constants for *f16* operands.
+
+.. _amdgpu_synid_ival:
+
+ival
+~~~~
+
+A symbolic operand encoded as an *inline constant*.
+These operands provide read-only access to H/W registers.
+
+    ======================== ================================================ =============
+    Syntax                   Note                                             Availability
+    ======================== ================================================ =============
+    shared_base              Base address of shared memory region.            GFX9, GFX10
+    shared_limit             Address of the end of shared memory region.      GFX9, GFX10
+    private_base             Base address of private memory region.           GFX9, GFX10
+    private_limit            Address of the end of private memory region.     GFX9, GFX10
+    pops_exiting_wave_id     A dedicated counter for POPS.                    GFX9, GFX10
+    ======================== ================================================ =============
 
 .. _amdgpu_synid_literal:
 
@@ -604,7 +651,7 @@ simm21
 
 A 21-bit :ref:`integer number<amdgpu_synid_integer_number>`.
 
-.. WARNING:: Assembler currently supports 20-bit unsigned offsets only .Use :ref:`uimm20<amdgpu_synid_uimm20>` as a replacement.
+.. WARNING:: Assembler currently supports 20-bit unsigned offsets only. Use :ref:`uimm20<amdgpu_synid_uimm20>` as a replacement.
 
 .. _amdgpu_synid_off:
 

@@ -478,17 +478,19 @@ bool InstructionSelector::executeMatchTable(
                              << InsnID << "]->getOperand(" << OpIdx
                              << "), SizeInBits=" << SizeInBits << ")\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
+      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
+      const LLT Ty = MRI.getType(MO.getReg());
+
       // iPTR must be looked up in the target.
       if (SizeInBits == 0) {
         MachineFunction *MF = State.MIs[InsnID]->getParent()->getParent();
-        SizeInBits = MF->getDataLayout().getPointerSizeInBits(0);
+        const unsigned AddrSpace = Ty.getAddressSpace();
+        SizeInBits = MF->getDataLayout().getPointerSizeInBits(AddrSpace);
       }
 
       assert(SizeInBits != 0 && "Pointer size must be known");
 
-      MachineOperand &MO = State.MIs[InsnID]->getOperand(OpIdx);
       if (MO.isReg()) {
-        const LLT &Ty = MRI.getType(MO.getReg());
         if (!Ty.isPointer() || Ty.getSizeInBits() != SizeInBits)
           if (handleReject() == RejectAndGiveUp)
             return false;

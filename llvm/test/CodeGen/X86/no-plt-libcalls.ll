@@ -12,7 +12,7 @@ define void @printf_call() {
   ret void
 }
 
-; CHECK: Function Attrs: nounwind nonlazybind
+; CHECK: Function Attrs: nofree nounwind nonlazybind
 ; CHECK-NEXT: declare i32 @puts(i8* nocapture readonly)
 
 !llvm.module.flags = !{!0}

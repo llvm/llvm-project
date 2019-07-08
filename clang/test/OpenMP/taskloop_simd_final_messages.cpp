@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -13,6 +13,7 @@ struct S1; // expected-note {{declared here}}
 
 template <class T, class S> // expected-note {{declared here}}
 int tmain(T argc, S **argv) {
+  T z;
 #pragma omp taskloop simd final // expected-error {{expected '(' after 'final'}}
   for (int i = 0; i < 10; ++i)
     foo();
@@ -25,7 +26,7 @@ int tmain(T argc, S **argv) {
 #pragma omp taskloop simd final(argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp taskloop simd final(argc)) // expected-warning {{extra tokens at the end of '#pragma omp taskloop simd' are ignored}}
+#pragma omp taskloop simd final(argc + z)) // expected-warning {{extra tokens at the end of '#pragma omp taskloop simd' are ignored}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp taskloop simd final(argc > 0 ? argv[1] : argv[2])
@@ -51,6 +52,7 @@ int tmain(T argc, S **argv) {
 }
 
 int main(int argc, char **argv) {
+  int z;
 #pragma omp taskloop simd final // expected-error {{expected '(' after 'final'}}
   for (int i = 0; i < 10; ++i)
     foo();
@@ -63,7 +65,7 @@ int main(int argc, char **argv) {
 #pragma omp taskloop simd final(argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (int i = 0; i < 10; ++i)
     foo();
-#pragma omp taskloop simd final(argc)) // expected-warning {{extra tokens at the end of '#pragma omp taskloop simd' are ignored}}
+#pragma omp taskloop simd final(z+argc)) // expected-warning {{extra tokens at the end of '#pragma omp taskloop simd' are ignored}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp taskloop simd final(argc > 0 ? argv[1] : argv[2])

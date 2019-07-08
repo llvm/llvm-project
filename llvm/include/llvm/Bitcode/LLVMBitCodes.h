@@ -629,6 +629,7 @@ enum AttributeKindCodes {
   ATTR_KIND_SPECULATIVE_LOAD_HARDENING = 59,
   ATTR_KIND_IMMARG = 60,
   ATTR_KIND_WILLRETURN = 61,
+  ATTR_KIND_NOFREE = 62
 };
 
 enum ComdatSelectionKindCodes {

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -76,7 +76,7 @@ template <class I, class C>
 int foomain(int argc, char **argv) {
   I e(4);
   C g(5);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp parallel
 #pragma omp taskloop simd firstprivate // expected-error {{expected '(' after 'firstprivate'}}
@@ -115,7 +115,7 @@ int foomain(int argc, char **argv) {
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp parallel
-#pragma omp taskloop simd firstprivate(argv[1]) // expected-error {{expected variable name}}
+#pragma omp taskloop simd firstprivate(z, argv[1]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp parallel
@@ -182,7 +182,7 @@ int main(int argc, char **argv) {
   S5 g(5);
   S3 m;
   S6 n(2);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp parallel
 #pragma omp taskloop simd firstprivate // expected-error {{expected '(' after 'firstprivate'}}
@@ -209,7 +209,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel
-#pragma omp taskloop simd firstprivate(argc)
+#pragma omp taskloop simd firstprivate(argc, z)
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel

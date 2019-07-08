@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -68,7 +68,7 @@ template <class I, class C>
 int foomain(int argc, char **argv) {
   I e(4);
   I g(5);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp parallel for simd lastprivate // expected-error {{expected '(' after 'lastprivate'}}
   for (int k = 0; k < argc; ++k)
@@ -100,7 +100,7 @@ int foomain(int argc, char **argv) {
 #pragma omp parallel for simd lastprivate(argv[1]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k)
     ++k;
-#pragma omp parallel for simd lastprivate(e, g) // expected-error 2 {{calling a private constructor of class 'S4'}}
+#pragma omp parallel for simd lastprivate(z, e, g) // expected-error 2 {{calling a private constructor of class 'S4'}}
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp parallel for simd lastprivate(h) // expected-error {{threadprivate or thread local variable cannot be lastprivate}}
@@ -145,7 +145,7 @@ int main(int argc, char **argv) {
   S5 g(5);
   S3 m;
   S6 n(2);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp parallel for simd lastprivate // expected-error {{expected '(' after 'lastprivate'}}
   for (i = 0; i < argc; ++i)
@@ -180,7 +180,7 @@ int main(int argc, char **argv) {
 #pragma omp parallel for simd lastprivate(2 * 2) // expected-error {{expected variable name}}
   for (i = 0; i < argc; ++i)
     foo();
-#pragma omp parallel for simd lastprivate(ba)
+#pragma omp parallel for simd lastprivate(ba, z)
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel for simd lastprivate(ca) // expected-error {{const-qualified variable without mutable fields cannot be lastprivate}}

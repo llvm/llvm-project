@@ -876,11 +876,13 @@ TEST(TripleTest, BitWidthPredicates) {
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_TRUE(T.isRISCV());
 
   T.setArch(Triple::riscv64);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_TRUE(T.isRISCV());
 }
 
 TEST(TripleTest, BitWidthArchVariants) {

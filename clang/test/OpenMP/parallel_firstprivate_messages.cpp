@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
   const int da[5] = { 0 };
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;
   static int m;
   #pragma omp parallel firstprivate // expected-error {{expected '(' after 'firstprivate'}}
@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
   #pragma omp parallel firstprivate (argc) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
   #pragma omp parallel firstprivate (S1) // expected-error {{'S1' does not refer to a value}}
   #pragma omp parallel firstprivate (a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}}
-  #pragma omp parallel firstprivate (d)
+  #pragma omp parallel firstprivate (z, d)
     d = 5; // expected-error {{cannot assign to variable 'd' with const-qualified type}}
   #pragma omp parallel firstprivate (argv[1]) // expected-error {{expected variable name}}
   #pragma omp parallel firstprivate(ba)

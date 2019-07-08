@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
   const int da[5] = { 0 }; // expected-note {{'da' defined here}}
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp target teams private // expected-error {{expected '(' after 'private'}}
   foo();
@@ -104,7 +104,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target teams firstprivate(i) private(i) // expected-error {{firstprivate variable cannot be private}} expected-note {{defined as firstprivate}}
   foo();
-#pragma omp target teams private(i)
+#pragma omp target teams private(i, z)
   foo();
 #pragma omp target teams private(j)
   foo();

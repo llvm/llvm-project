@@ -6760,12 +6760,12 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     if (!isa<ConstantSDNode>(N.getOperand(2)) ||
         !N->isOnlyUserOf(Sub.getNode()))
       return false;
-    int InsertIdx = N.getConstantOperandVal(2);
+    uint64_t InsertIdx = N.getConstantOperandVal(2);
     // Handle INSERT_SUBVECTOR(SRC0, EXTRACT_SUBVECTOR(SRC1)).
     if (Sub.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
         Sub.getOperand(0).getValueType() == VT &&
         isa<ConstantSDNode>(Sub.getOperand(1))) {
-      int ExtractIdx = Sub.getConstantOperandVal(1);
+      uint64_t ExtractIdx = Sub.getConstantOperandVal(1);
       for (int i = 0; i != (int)NumElts; ++i)
         Mask.push_back(i);
       for (int i = 0; i != (int)NumSubElts; ++i)
@@ -43625,7 +43625,7 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
   SDValue Vec = N->getOperand(0);
   SDValue SubVec = N->getOperand(1);
 
-  unsigned IdxVal = N->getConstantOperandVal(2);
+  uint64_t IdxVal = N->getConstantOperandVal(2);
   MVT SubVecVT = SubVec.getSimpleValueType();
 
   if (Vec.isUndef() && SubVec.isUndef())
@@ -43641,7 +43641,7 @@ static SDValue combineInsertSubvector(SDNode *N, SelectionDAG &DAG,
     // just insert into the larger zero vector directly.
     if (SubVec.getOpcode() == ISD::INSERT_SUBVECTOR &&
         ISD::isBuildVectorAllZeros(SubVec.getOperand(0).getNode())) {
-      unsigned Idx2Val = SubVec.getConstantOperandVal(2);
+      uint64_t Idx2Val = SubVec.getConstantOperandVal(2);
       return DAG.getNode(ISD::INSERT_SUBVECTOR, dl, OpVT,
                          getZeroVector(OpVT, Subtarget, DAG, dl),
                          SubVec.getOperand(1),

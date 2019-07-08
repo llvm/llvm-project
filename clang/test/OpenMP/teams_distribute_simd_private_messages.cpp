@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -34,7 +34,7 @@ class S4 {
 public:
   S4(int v):a(v) { }
 };
-class S5 { 
+class S5 {
   int a;
   S5():a(0) {} // expected-note {{implicitly declared private here}}
 public:

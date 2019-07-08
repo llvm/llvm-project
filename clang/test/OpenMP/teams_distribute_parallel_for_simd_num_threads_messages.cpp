@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -13,7 +13,7 @@ struct S1; // expected-note {{declared here}}
 
 template <class T, typename S, int N> // expected-note {{declared here}}
 T tmain(T argc, S **argv) {
-  T i;
+  T i, k;
 #pragma omp target
 #pragma omp teams distribute parallel for simd num_threads // expected-error {{expected '(' after 'num_threads'}}
   for (i = 0; i < argc; ++i) foo();
@@ -27,7 +27,7 @@ T tmain(T argc, S **argv) {
 #pragma omp teams distribute parallel for simd num_threads (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for simd num_threads (argc)) // expected-warning {{extra tokens at the end of '#pragma omp teams distribute parallel for simd' are ignored}}
+#pragma omp teams distribute parallel for simd num_threads (k)) // expected-warning {{extra tokens at the end of '#pragma omp teams distribute parallel for simd' are ignored}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
 #pragma omp teams distribute parallel for simd num_threads ((argc > 0) ? argv[1] : argv[2]) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'char *'}}
@@ -52,7 +52,7 @@ T tmain(T argc, S **argv) {
 }
 
 int main(int argc, char **argv) {
-  int i;
+  int i, k;
 #pragma omp target
 #pragma omp teams distribute parallel for simd num_threads // expected-error {{expected '(' after 'num_threads'}}
   for (i = 0; i < argc; ++i) foo();
@@ -66,7 +66,7 @@ int main(int argc, char **argv) {
 #pragma omp teams distribute parallel for simd num_threads (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
-#pragma omp teams distribute parallel for simd num_threads (argc)) // expected-warning {{extra tokens at the end of '#pragma omp teams distribute parallel for simd' are ignored}}
+#pragma omp teams distribute parallel for simd num_threads (k)) // expected-warning {{extra tokens at the end of '#pragma omp teams distribute parallel for simd' are ignored}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
 #pragma omp teams distribute parallel for simd num_threads (argc > 0 ? argv[1] : argv[2]) // expected-error {{integral }}

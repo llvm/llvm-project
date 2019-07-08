@@ -32,8 +32,9 @@ public:
   lldb::pid_t GetProcessId() const override;
   bool IsRunning() const override;
 
-  HostThread StartMonitoring(const Host::MonitorChildProcessCallback &callback,
-                             bool monitor_signals) override;
+  llvm::Expected<HostThread>
+  StartMonitoring(const Host::MonitorChildProcessCallback &callback,
+                  bool monitor_signals) override;
 };
 
 } // namespace lldb_private

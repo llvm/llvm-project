@@ -73,8 +73,8 @@ Examples:
 
 .. _amdgpu_synid_sw_offset16:
 
-pattern
-~~~~~~~
+swizzle pattern
+~~~~~~~~~~~~~~~
 
 This is a special modifier which may be used with *ds_swizzle_b32* instruction only.
 It specifies a swizzle pattern in numeric or symbolic form. The default value is 0.
@@ -165,8 +165,8 @@ EXP Modifiers
 done
 ~~~~
 
-Specifies if this is the last export from the shader to the target. By default, current
-instruction does not finish an export sequence.
+Specifies if this is the last export from the shader to the target. By default,
+*exp* instruction does not finish an export sequence.
 
     ======================================== ================================================
     Syntax                                   Description
@@ -249,10 +249,70 @@ Examples:
   offset:-4000
   offset:0x10
 
+.. _amdgpu_synid_flat_offset12s:
+
+offset12s
+~~~~~~~~~
+
+Specifies an immediate signed 12-bit offset, in bytes. The default value is 0.
+
+Can be used with *global/scratch* opcodes only.
+
+GFX10 only.
+
+    ============================ =======================================================
+    Syntax                       Description
+    ============================ =======================================================
+    offset:{-2048..2047}         Specifies a 12-bit signed offset as an
+                                 :ref:`integer number <amdgpu_synid_integer_number>`.
+    ============================ =======================================================
+
+Examples:
+
+.. parsed-literal::
+
+  offset:-2000
+  offset:0x10
+
+.. _amdgpu_synid_flat_offset11:
+
+offset11
+~~~~~~~~
+
+Specifies an immediate unsigned 11-bit offset, in bytes. The default value is 0.
+
+Cannot be used with *global/scratch* opcodes.
+
+GFX10 only.
+
+    ================= ======================================================
+    Syntax            Description
+    ================= ======================================================
+    offset:{0..2047}  Specifies an 11-bit unsigned offset as a positive
+                      :ref:`integer number <amdgpu_synid_integer_number>`.
+    ================= ======================================================
+
+Examples:
+
+.. parsed-literal::
+
+  offset:2047
+  offset:0xff
+
+dlc
+~~~
+
+See a description :ref:`here<amdgpu_synid_dlc>`. GFX10 only.
+
 glc
 ~~~
 
 See a description :ref:`here<amdgpu_synid_glc>`.
+
+lds
+~~~
+
+See a description :ref:`here<amdgpu_synid_lds>`. GFX10 only.
 
 slc
 ~~~
@@ -345,7 +405,7 @@ r128
 
 Specifies texture resource size. The default size is 256 bits.
 
-GFX7 and GFX8 only.
+GFX7, GFX8 and GFX10 only.
 
     =================== ================================================
     Syntax              Description
@@ -407,7 +467,7 @@ Specifies data size: 16 or 32 bits (32 bits by default). Not supported by GFX7.
                                              Note that GFX8.0 does not support data packing.
                                              Each 16-bit data element occupies 1 VGPR.
 
-                                             GFX8.1 and GFX9 support data packing.
+                                             GFX8.1, GFX9 and GFX10 support data packing.
                                              Each pair of 16-bit data elements 
                                              occupies 1 VGPR.
     ======================================== ================================================
@@ -417,7 +477,8 @@ Specifies data size: 16 or 32 bits (32 bits by default). Not supported by GFX7.
 a16
 ~~~
 
-Specifies size of image address components: 16 or 32 bits (32 bits by default). GFX9 only.
+Specifies size of image address components: 16 or 32 bits (32 bits by default).
+GFX9 and GFX10 only.
 
     ======================================== ================================================
     Syntax                                   Description
@@ -425,8 +486,68 @@ Specifies size of image address components: 16 or 32 bits (32 bits by default). 
     a16                                      Enables 16-bits image address components.
     ======================================== ================================================
 
+.. _amdgpu_synid_dim:
+
+dim
+~~~
+
+Specifies surface dimension. This is a mandatory modifier. There is no default value.
+
+GFX10 only.
+
+    =============================== =========================================================
+    Syntax                          Description
+    =============================== =========================================================
+    dim:1D                          One-dimensional image.
+    dim:2D                          Two-dimensional image.
+    dim:3D                          Three-dimensional image.
+    dim:CUBE                        Cubemap array.
+    dim:1D_ARRAY                    One-dimensional image array.
+    dim:2D_ARRAY                    Two-dimensional image array.
+    dim:2D_MSAA                     Two-dimensional multi-sample auto-aliasing image.
+    dim:2D_MSAA_ARRAY               Two-dimensional multi-sample auto-aliasing image array.
+    =============================== =========================================================
+
+The following table defines an alternative syntax which is supported
+for compatibility with SP3 assembler:
+
+    =============================== =========================================================
+    Syntax                          Description
+    =============================== =========================================================
+    dim:SQ_RSRC_IMG_1D              One-dimensional image.
+    dim:SQ_RSRC_IMG_2D              Two-dimensional image.
+    dim:SQ_RSRC_IMG_3D              Three-dimensional image.
+    dim:SQ_RSRC_IMG_CUBE            Cubemap array.
+    dim:SQ_RSRC_IMG_1D_ARRAY        One-dimensional image array.
+    dim:SQ_RSRC_IMG_2D_ARRAY        Two-dimensional image array.
+    dim:SQ_RSRC_IMG_2D_MSAA         Two-dimensional multi-sample auto-aliasing image.
+    dim:SQ_RSRC_IMG_2D_MSAA_ARRAY   Two-dimensional multi-sample auto-aliasing image array.
+    =============================== =========================================================
+
+dlc
+~~~
+
+See a description :ref:`here<amdgpu_synid_dlc>`. GFX10 only.
+
 Miscellaneous Modifiers
 -----------------------
+
+.. _amdgpu_synid_dlc:
+
+dlc
+~~~
+
+Controls device level cache policy for memory operations. Used for synchronization.
+When specified, forces operation to bypass device level cache making the operation device
+level coherent. By default, instructions use device level cache.
+
+GFX10 only.
+
+    ======================================== ================================================
+    Syntax                                   Description
+    ======================================== ================================================
+    dlc                                      Bypass device level cache.
+    ======================================== ================================================
 
 .. _amdgpu_synid_glc:
 
@@ -442,6 +563,35 @@ See AMD documentation for details.
     Syntax                                   Description
     ======================================== ================================================
     glc                                      Set glc bit to 1.
+    ======================================== ================================================
+
+.. _amdgpu_synid_lds:
+
+lds
+~~~
+
+Specifies where to store the result: VGPRs or LDS (VGPRs by default).
+
+    ======================================== ===========================
+    Syntax                                   Description
+    ======================================== ===========================
+    lds                                      Store result in LDS.
+    ======================================== ===========================
+
+.. _amdgpu_synid_nv:
+
+nv
+~~
+
+Specifies if instruction is operating on non-volatile memory. By default, memory is volatile.
+
+GFX9 only.
+
+    ======================================== ================================================
+    Syntax                                   Description
+    ======================================== ================================================
+    nv                                       Indicates that instruction operates on
+                                             non-volatile memory.
     ======================================== ================================================
 
 .. _amdgpu_synid_slc:
@@ -472,22 +622,6 @@ See AMD documentation for details.
     Syntax                                   Description
     ======================================== ================================================
     tfe                                      Set tfe bit to 1.
-    ======================================== ================================================
-
-.. _amdgpu_synid_nv:
-
-nv
-~~
-
-Specifies if instruction is operating on non-volatile memory. By default, memory is volatile.
-
-GFX9 only.
-
-    ======================================== ================================================
-    Syntax                                   Description
-    ======================================== ================================================
-    nv                                       Indicates that instruction operates on
-                                             non-volatile memory.
     ======================================== ================================================
 
 MUBUF/MTBUF Modifiers
@@ -574,18 +708,15 @@ slc
 
 See a description :ref:`here<amdgpu_synid_slc>`.
 
-.. _amdgpu_synid_lds:
-
 lds
 ~~~
 
-Specifies where to store the result: VGPRs or LDS (VGPRs by default).
+See a description :ref:`here<amdgpu_synid_lds>`.
 
-    ======================================== ===========================
-    Syntax                                   Description
-    ======================================== ===========================
-    lds                                      Store result in LDS.
-    ======================================== ===========================
+dlc
+~~~
+
+See a description :ref:`here<amdgpu_synid_dlc>`. GFX10 only.
 
 tfe
 ~~~
@@ -617,7 +748,12 @@ See a description :ref:`here<amdgpu_synid_glc>`.
 nv
 ~~
 
-See a description :ref:`here<amdgpu_synid_nv>`.
+See a description :ref:`here<amdgpu_synid_nv>`. GFX9 only.
+
+dlc
+~~~
+
+See a description :ref:`here<amdgpu_synid_dlc>`. GFX10 only.
 
 VINTRP Modifiers
 ----------------
@@ -628,7 +764,7 @@ high
 ~~~~
 
 Specifies which half of the LDS word to use. Low half of LDS word is used by default.
-GFX9 only.
+GFX9 and GFX10 only.
 
     ======================================== ================================
     Syntax                                   Description
@@ -636,10 +772,60 @@ GFX9 only.
     high                                     Use high half of LDS word.
     ======================================== ================================
 
-VOP1/VOP2 DPP Modifiers
------------------------
+DPP8 Modifiers
+--------------
 
-GFX8 and GFX9 only.
+GFX10 only.
+
+.. _amdgpu_synid_dpp8_sel:
+
+dpp8_sel
+~~~~~~~~
+
+Selects which lane to pull data from, within a group of 8 lanes. This is a mandatory modifier.
+There is no default value.
+
+GFX10 only.
+
+The *dpp8_sel* modifier must specify exactly 8 values, each ranging from 0 to 7.
+First value selects which lane to read from to supply data into lane 0.
+Second value controls value for lane 1 and so on.
+
+    =============================================================== ===========================
+    Syntax                                                          Description
+    =============================================================== ===========================
+    dpp8:[{0..7},{0..7},{0..7},{0..7},{0..7},{0..7},{0..7},{0..7}]  Select lanes to read from.
+    =============================================================== ===========================
+
+Examples:
+
+.. parsed-literal::
+
+  dpp8:[7,6,5,4,3,2,1,0]
+  dpp8:[0,1,0,1,0,1,0,1]
+
+.. _amdgpu_synid_fi8:
+
+fi
+~~
+
+Controls interaction with inactive lanes for *dpp8* instructions. The default value is zero.
+
+Note. *Inactive* lanes are those whose :ref:`exec<amdgpu_synid_exec>` mask bit is zero.
+
+GFX10 only.
+
+    ==================================== =====================================================
+    Syntax                               Description
+    ==================================== =====================================================
+    fi:0                                 Fetch zero when accessing data from inactive lanes.
+    fi:1                                 Fetch pre-exist values from inactive lanes.
+    ==================================== =====================================================
+
+DPP/DPP16 Modifiers
+-------------------
+
+GFX8, GFX9 and GFX10 only.
 
 .. _amdgpu_synid_dpp_ctrl:
 
@@ -649,7 +835,9 @@ dpp_ctrl
 Specifies how data are shared between threads. This is a mandatory modifier.
 There is no default value.
 
-Note. The lanes of a wavefront are organized in four banks and four rows.
+GFX8 and GFX9 only. Use :ref:`dpp16_ctrl<amdgpu_synid_dpp16_ctrl>` for GFX10.
+
+Note. The lanes of a wavefront are organized in four *rows* and four *banks*.
 
     ======================================== ================================================
     Syntax                                   Description
@@ -679,6 +867,44 @@ Examples:
   quad_perm:[0, 1, 2, 3]
   row_shl:3
 
+.. _amdgpu_synid_dpp16_ctrl:
+
+dpp16_ctrl
+~~~~~~~~~~
+
+Specifies how data are shared between threads. This is a mandatory modifier.
+There is no default value.
+
+GFX10 only. Use :ref:`dpp_ctrl<amdgpu_synid_dpp_ctrl>` for GFX8 and GFX9.
+
+Note. The lanes of a wavefront are organized in four *rows* and four *banks*.
+(There are only two rows in *wave32* mode.)
+
+    ======================================== ====================================================
+    Syntax                                   Description
+    ======================================== ====================================================
+    quad_perm:[{0..3},{0..3},{0..3},{0..3}]  Full permute of 4 threads.
+    row_mirror                               Mirror threads within row.
+    row_half_mirror                          Mirror threads within 1/2 row (8 threads).
+    row_share:{0..15}                        Share the value from the specified lane with other
+                                             lanes in the row.
+    row_xmask:{0..15}                        Fetch from XOR(current lane id, specified lane id).
+    row_shl:{1..15}                          Row shift left by 1-15 threads.
+    row_shr:{1..15}                          Row shift right by 1-15 threads.
+    row_ror:{1..15}                          Row rotate right by 1-15 threads.
+    ======================================== ====================================================
+
+Note: Numeric parameters may be specified as either
+:ref:`integer numbers<amdgpu_synid_integer_number>` or
+:ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
+
+Examples:
+
+.. parsed-literal::
+
+  quad_perm:[0, 1, 2, 3]
+  row_shl:3
+
 .. _amdgpu_synid_row_mask:
 
 row_mask
@@ -686,7 +912,8 @@ row_mask
 
 Controls which rows are enabled for data sharing. By default, all rows are enabled.
 
-Note. The lanes of a wavefront are organized in four banks and four rows.
+Note. The lanes of a wavefront are organized in four *rows* and four *banks*.
+(There are only two rows in *wave32* mode.)
 
     ======================================== =====================================================
     Syntax                                   Description
@@ -696,6 +923,9 @@ Note. The lanes of a wavefront are organized in four banks and four rows.
 
                                              Each of 4 bits in the mask controls one
                                              row (0 - disabled, 1 - enabled).
+
+                                             In *wave32* mode the values should be limited to
+                                             {0..7}.
     ======================================== =====================================================
 
 Examples:
@@ -713,7 +943,8 @@ bank_mask
 
 Controls which banks are enabled for data sharing. By default, all banks are enabled.
 
-Note. The lanes of a wavefront are organized in four banks and four rows.
+Note. The lanes of a wavefront are organized in four *rows* and four *banks*.
+(There are only two rows in *wave32* mode.)
 
     ======================================== =======================================================
     Syntax                                   Description
@@ -750,10 +981,30 @@ invalid lanes is disabled.
                                              return zero.
     ======================================== ================================================
 
-VOP1/VOP2/VOPC SDWA Modifiers
------------------------------
+.. _amdgpu_synid_fi16:
 
-GFX8 and GFX9 only.
+fi
+~~
+
+Controls interaction with *inactive* lanes for *dpp16* instructions. The default value is zero.
+
+Note. *Inactive* lanes are those whose :ref:`exec<amdgpu_synid_exec>` mask bit is zero.
+
+GFX10 only.
+
+    ======================================== ==================================================
+    Syntax                                   Description
+    ======================================== ==================================================
+    fi:0                                     Interaction with inactive lanes is controlled by
+                                             :ref:`bound_ctrl<amdgpu_synid_bound_ctrl>`.
+
+    fi:1                                     Fetch pre-exist values from inactive lanes.
+    ======================================== ==================================================
+
+SDWA Modifiers
+--------------
+
+GFX8, GFX9 and GFX10 only.
 
 clamp
 ~~~~~
@@ -765,7 +1016,7 @@ omod
 
 See a description :ref:`here<amdgpu_synid_omod>`.
 
-GFX9 only.
+GFX9 and GFX10 only.
 
 .. _amdgpu_synid_dst_sel:
 
@@ -844,12 +1095,12 @@ Controls which bits in the src1 are used. By default, all bits are used.
 
 .. _amdgpu_synid_sdwa_operand_modifiers:
 
-VOP1/VOP2/VOPC SDWA Operand Modifiers
--------------------------------------
+SDWA Operand Modifiers
+----------------------
 
 Operand modifiers are not used separately. They are applied to source operands.
 
-GFX8 and GFX9 only.
+GFX8, GFX9 and GFX10 only.
 
 abs
 ~~~
@@ -903,7 +1154,7 @@ The value 0 selects the low bits, while 1 selects the high bits.
 Note. op_sel modifier affects 16-bit operands only. For 32-bit operands the value specified
 by op_sel must be 0.
 
-GFX9 only.
+GFX9 and GFX10 only.
 
     ======================================== ============================================================
     Syntax                                   Description
@@ -1029,7 +1280,7 @@ This section describes modifiers of *regular* VOP3P instructions.
 *v_mad_mix_f32*, *v_mad_mixhi_f16* and *v_mad_mixlo_f16*
 instructions use these modifiers :ref:`in a special manner<amdgpu_synid_mad_mix>`.
 
-GFX9 only.
+GFX9 and GFX10 only.
 
 .. _amdgpu_synid_op_sel:
 
@@ -1173,7 +1424,7 @@ in a manner different from *regular* VOP3P instructions.
 
 See a description below.
 
-GFX9 only.
+GFX9 and GFX10 only.
 
 .. _amdgpu_synid_mad_mix_op_sel:
 

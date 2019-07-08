@@ -99,7 +99,7 @@ struct MonitorInfo {
 
 static thread_result_t MonitorChildProcessThreadFunction(void *arg);
 
-HostThread Host::StartMonitoringChildProcess(
+llvm::Expected<HostThread> Host::StartMonitoringChildProcess(
     const Host::MonitorChildProcessCallback &callback, lldb::pid_t pid,
     bool monitor_signals) {
   MonitorInfo *info_ptr = new MonitorInfo();
@@ -112,7 +112,7 @@ HostThread Host::StartMonitoringChildProcess(
   ::snprintf(thread_name, sizeof(thread_name),
              "<lldb.host.wait4(pid=%" PRIu64 ")>", pid);
   return ThreadLauncher::LaunchThread(
-      thread_name, MonitorChildProcessThreadFunction, info_ptr, nullptr);
+      thread_name, MonitorChildProcessThreadFunction, info_ptr, 0);
 }
 
 #ifndef __linux__

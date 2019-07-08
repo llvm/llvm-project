@@ -13879,7 +13879,7 @@ int64_t test_vqnegd_s64(int64_t a) {
 // CHECK:   [[VUQADDB_S8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.suqadd.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VUQADDB_S8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
-int8_t test_vuqaddb_s8(int8_t a, int8_t b) {
+int8_t test_vuqaddb_s8(int8_t a, uint8_t b) {
   return (int8_t)vuqaddb_s8(a, b);
 }
 
@@ -13889,21 +13889,21 @@ int8_t test_vuqaddb_s8(int8_t a, int8_t b) {
 // CHECK:   [[VUQADDH_S16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.suqadd.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VUQADDH_S16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
-int16_t test_vuqaddh_s16(int16_t a, int16_t b) {
+int16_t test_vuqaddh_s16(int16_t a, uint16_t b) {
   return (int16_t)vuqaddh_s16(a, b);
 }
 
 // CHECK-LABEL: @test_vuqadds_s32(
 // CHECK:   [[VUQADDS_S32_I:%.*]] = call i32 @llvm.aarch64.neon.suqadd.i32(i32 %a, i32 %b)
 // CHECK:   ret i32 [[VUQADDS_S32_I]]
-int32_t test_vuqadds_s32(int32_t a, int32_t b) {
+int32_t test_vuqadds_s32(int32_t a, uint32_t b) {
   return (int32_t)vuqadds_s32(a, b);
 }
 
 // CHECK-LABEL: @test_vuqaddd_s64(
 // CHECK:   [[VUQADDD_S64_I:%.*]] = call i64 @llvm.aarch64.neon.suqadd.i64(i64 %a, i64 %b)
 // CHECK:   ret i64 [[VUQADDD_S64_I]]
-int64_t test_vuqaddd_s64(int64_t a, int64_t b) {
+int64_t test_vuqaddd_s64(int64_t a, uint64_t b) {
   return (int64_t)vuqaddd_s64(a, b);
 }
 
@@ -13913,7 +13913,7 @@ int64_t test_vuqaddd_s64(int64_t a, int64_t b) {
 // CHECK:   [[VSQADDB_U8_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.usqadd.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <8 x i8> [[VSQADDB_U8_I]], i64 0
 // CHECK:   ret i8 [[TMP2]]
-uint8_t test_vsqaddb_u8(uint8_t a, uint8_t b) {
+uint8_t test_vsqaddb_u8(uint8_t a, int8_t b) {
   return (uint8_t)vsqaddb_u8(a, b);
 }
 
@@ -13923,21 +13923,21 @@ uint8_t test_vsqaddb_u8(uint8_t a, uint8_t b) {
 // CHECK:   [[VSQADDH_U16_I:%.*]] = call <4 x i16> @llvm.aarch64.neon.usqadd.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
 // CHECK:   [[TMP2:%.*]] = extractelement <4 x i16> [[VSQADDH_U16_I]], i64 0
 // CHECK:   ret i16 [[TMP2]]
-uint16_t test_vsqaddh_u16(uint16_t a, uint16_t b) {
+uint16_t test_vsqaddh_u16(uint16_t a, int16_t b) {
   return (uint16_t)vsqaddh_u16(a, b);
 }
 
 // CHECK-LABEL: @test_vsqadds_u32(
 // CHECK:   [[VSQADDS_U32_I:%.*]] = call i32 @llvm.aarch64.neon.usqadd.i32(i32 %a, i32 %b)
 // CHECK:   ret i32 [[VSQADDS_U32_I]]
-uint32_t test_vsqadds_u32(uint32_t a, uint32_t b) {
+uint32_t test_vsqadds_u32(uint32_t a, int32_t b) {
   return (uint32_t)vsqadds_u32(a, b);
 }
 
 // CHECK-LABEL: @test_vsqaddd_u64(
 // CHECK:   [[VSQADDD_U64_I:%.*]] = call i64 @llvm.aarch64.neon.usqadd.i64(i64 %a, i64 %b)
 // CHECK:   ret i64 [[VSQADDD_U64_I]]
-uint64_t test_vsqaddd_u64(uint64_t a, uint64_t b) {
+uint64_t test_vsqaddd_u64(uint64_t a, int64_t b) {
   return (uint64_t)vsqaddd_u64(a, b);
 }
 

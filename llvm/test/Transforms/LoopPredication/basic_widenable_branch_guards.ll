@@ -282,13 +282,14 @@ define i32 @signed_loop_0_to_n_ult_check_length_range_known(i32* %array, i32* %l
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[EXIT:%.*]], label [[LOOP_PREHEADER:%.*]]
 ; CHECK:       loop.preheader:
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp sle i32 [[N]], [[LENGTH]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i1 true, [[TMP0]]
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[LOOP_ACC:%.*]] = phi i32 [ [[LOOP_ACC_NEXT:%.*]], [[GUARDED:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[GUARDED]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[WIDENABLE_COND:%.*]] = call i1 @llvm.experimental.widenable.condition()
-; CHECK-NEXT:    [[TMP1:%.*]] = and i1 [[TMP0]], [[WIDENABLE_COND]]
-; CHECK-NEXT:    br i1 [[TMP1]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
+; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[WIDENABLE_COND]]
+; CHECK-NEXT:    br i1 [[TMP2]], label [[GUARDED]], label [[DEOPT:%.*]], !prof !0
 ; CHECK:       deopt:
 ; CHECK-NEXT:    [[DEOPTCALL:%.*]] = call i32 (...) @llvm.experimental.deoptimize.i32(i32 9) [ "deopt"() ]
 ; CHECK-NEXT:    ret i32 [[DEOPTCALL]]

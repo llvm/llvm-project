@@ -13,6 +13,6 @@ entry:
     ret i32 %0
 }
 
-; UNDEF: undefined symbol: data_external
-; ALLOW: undefined-data.ll.tmp.o: cannot resolve relocation of type R_WASM_MEMORY_ADDR_LEB against undefined (non-weak) data symbol: data_external
-; SHARED: undefined-data.ll.tmp.o: relocation R_WASM_MEMORY_ADDR_LEB cannot be used againt symbol data_external; recompile with -fPIC
+; UNDEF: error: {{.*}}undefined-data.ll.tmp.o: undefined symbol: data_external
+; ALLOW: error: {{.*}}undefined-data.ll.tmp.o: cannot resolve relocation of type R_WASM_MEMORY_ADDR_LEB against undefined (non-weak) data symbol: data_external
+; SHARED: error: {{.*}}undefined-data.ll.tmp.o: relocation R_WASM_MEMORY_ADDR_LEB cannot be used against symbol data_external; recompile with -fPIC

@@ -10,7 +10,6 @@
 #include "index/Index.h"
 #include "index/Serialization.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "llvm/Support/SHA1.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -208,9 +207,7 @@ TEST(SerializationTest, SrcsTest) {
 
   std::string TestContent("TestContent");
   IncludeGraphNode IGN;
-  IGN.Digest =
-      llvm::SHA1::hash({reinterpret_cast<const uint8_t *>(TestContent.data()),
-                        TestContent.size()});
+  IGN.Digest = digest(TestContent);
   IGN.DirectIncludes = {"inc1", "inc2"};
   IGN.URI = "URI";
   IGN.Flags |= IncludeGraphNode::SourceFlag::IsTU;

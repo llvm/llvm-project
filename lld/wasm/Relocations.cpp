@@ -69,7 +69,7 @@ void lld::wasm::scanRelocations(InputChunk *Chunk) {
         // Certain relocation types can't be used when building PIC output,
         // since they would require absolute symbol addresses at link time.
         error(toString(File) + ": relocation " + relocTypeToString(Reloc.Type) +
-              " cannot be used againt symbol " + toString(*Sym) +
+              " cannot be used against symbol " + toString(*Sym) +
               "; recompile with -fPIC");
         break;
       case R_WASM_TABLE_INDEX_I32:

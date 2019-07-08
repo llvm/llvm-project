@@ -286,6 +286,99 @@ TEST(TweakTest, AnnotateHighlightings) {
   checkTransform(ID, Input, Output);
 }
 
+TEST(TweakTest, ExpandMacro) {
+  llvm::StringLiteral ID = "ExpandMacro";
+
+  // Available on macro names, not available anywhere else.
+  checkAvailable(ID, R"cpp(
+#define FOO 1 2 3
+#define FUNC(X) X+X+X
+^F^O^O^ BAR ^F^O^O^
+^F^U^N^C^(1)
+)cpp");
+  checkNotAvailable(ID, R"cpp(
+^#^d^efine^ ^FO^O 1 ^2 ^3^
+FOO ^B^A^R^ FOO ^
+FUNC(^1^)^
+)cpp");
+
+  // Works as expected on object-like macros.
+  checkTransform(ID, R"cpp(
+#define FOO 1 2 3
+^FOO BAR FOO
+)cpp",
+                 R"cpp(
+#define FOO 1 2 3
+1 2 3 BAR FOO
+)cpp");
+  checkTransform(ID, R"cpp(
+#define FOO 1 2 3
+FOO BAR ^FOO
+)cpp",
+                 R"cpp(
+#define FOO 1 2 3
+FOO BAR 1 2 3
+)cpp");
+
+  // And function-like macros.
+  checkTransform(ID, R"cpp(
+#define FUNC(X) X+X+X
+F^UNC(2)
+)cpp",
+                 R"cpp(
+#define FUNC(X) X+X+X
+2 + 2 + 2
+)cpp");
+
+  // Works on empty macros.
+  checkTransform(ID, R"cpp(
+#define EMPTY
+int a ^EMPTY;
+  )cpp",
+                 R"cpp(
+#define EMPTY
+int a ;
+  )cpp");
+  checkTransform(ID, R"cpp(
+#define EMPTY_FN(X)
+int a ^EMPTY_FN(1 2 3);
+  )cpp",
+                 R"cpp(
+#define EMPTY_FN(X)
+int a ;
+  )cpp");
+  checkTransform(ID, R"cpp(
+#define EMPTY
+#define EMPTY_FN(X)
+int a = 123 ^EMPTY EMPTY_FN(1);
+  )cpp",
+                 R"cpp(
+#define EMPTY
+#define EMPTY_FN(X)
+int a = 123  EMPTY_FN(1);
+  )cpp");
+  checkTransform(ID, R"cpp(
+#define EMPTY
+#define EMPTY_FN(X)
+int a = 123 ^EMPTY_FN(1) EMPTY;
+  )cpp",
+                 R"cpp(
+#define EMPTY
+#define EMPTY_FN(X)
+int a = 123  EMPTY;
+  )cpp");
+  checkTransform(ID, R"cpp(
+#define EMPTY
+#define EMPTY_FN(X)
+int a = 123 EMPTY_FN(1) ^EMPTY;
+  )cpp",
+                 R"cpp(
+#define EMPTY
+#define EMPTY_FN(X)
+int a = 123 EMPTY_FN(1) ;
+  )cpp");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

@@ -709,4 +709,4 @@ exit:
 
 ; Validate that "memset_pattern" has the proper attributes.
 ; CHECK: declare void @memset_pattern16(i8* nocapture, i8* nocapture readonly, i64) [[ATTRS:#[0-9]+]]
-; CHECK: [[ATTRS]] = { argmemonly }
+; CHECK: [[ATTRS]] = { argmemonly nofree }

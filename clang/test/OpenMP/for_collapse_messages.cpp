@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s -Wuninitialized
 
 void foo() {
 }
@@ -29,7 +29,7 @@ T tmain(T argc, S **argv) { //expected-note 2 {{declared here}}
   // expected-error@+3 {{expected ')'}} expected-note@+3 {{to match this '('}}
   // expected-error@+2 2 {{expression is not an integral constant expression}}
   // expected-note@+1 2 {{read of non-const variable 'argc' is not allowed in a constant expression}}
-  #pragma omp for collapse (argc 
+  #pragma omp for collapse (argc
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
   // expected-error@+1 2 {{argument to 'collapse' clause must be a strictly positive integer value}}
   #pragma omp for collapse (ST // expected-error {{expected ')'}} expected-note {{to match this '('}}

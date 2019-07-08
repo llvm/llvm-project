@@ -1542,20 +1542,39 @@ MachineInstr *X86InstrInfo::commuteInstructionImpl(MachineInstr &MI, bool NewMI,
   case X86::VMOVSDrr:
   case X86::VMOVSSrr:{
     // On SSE41 or later we can commute a MOVSS/MOVSD to a BLENDPS/BLENDPD.
-    assert(Subtarget.hasSSE41() && "Commuting MOVSD/MOVSS requires SSE41!");
+    if (Subtarget.hasSSE41()) {
+      unsigned Mask, Opc;
+      switch (MI.getOpcode()) {
+      default: llvm_unreachable("Unreachable!");
+      case X86::MOVSDrr:  Opc = X86::BLENDPDrri;  Mask = 0x02; break;
+      case X86::MOVSSrr:  Opc = X86::BLENDPSrri;  Mask = 0x0E; break;
+      case X86::VMOVSDrr: Opc = X86::VBLENDPDrri; Mask = 0x02; break;
+      case X86::VMOVSSrr: Opc = X86::VBLENDPSrri; Mask = 0x0E; break;
+      }
 
-    unsigned Mask, Opc;
-    switch (MI.getOpcode()) {
-    default: llvm_unreachable("Unreachable!");
-    case X86::MOVSDrr:  Opc = X86::BLENDPDrri;  Mask = 0x02; break;
-    case X86::MOVSSrr:  Opc = X86::BLENDPSrri;  Mask = 0x0E; break;
-    case X86::VMOVSDrr: Opc = X86::VBLENDPDrri; Mask = 0x02; break;
-    case X86::VMOVSSrr: Opc = X86::VBLENDPSrri; Mask = 0x0E; break;
+      auto &WorkingMI = cloneIfNew(MI);
+      WorkingMI.setDesc(get(Opc));
+      WorkingMI.addOperand(MachineOperand::CreateImm(Mask));
+      return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
+                                                     OpIdx1, OpIdx2);
     }
 
+    // Convert to SHUFPD.
+    assert(MI.getOpcode() == X86::MOVSDrr &&
+           "Can only commute MOVSDrr without SSE4.1");
+
     auto &WorkingMI = cloneIfNew(MI);
-    WorkingMI.setDesc(get(Opc));
-    WorkingMI.addOperand(MachineOperand::CreateImm(Mask));
+    WorkingMI.setDesc(get(X86::SHUFPDrri));
+    WorkingMI.addOperand(MachineOperand::CreateImm(0x02));
+    return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
+                                                   OpIdx1, OpIdx2);
+  }
+  case X86::SHUFPDrri: {
+    // Commute to MOVSD.
+    assert(MI.getOperand(3).getImm() == 0x02 && "Unexpected immediate!");
+    auto &WorkingMI = cloneIfNew(MI);
+    WorkingMI.setDesc(get(X86::MOVSDrr));
+    WorkingMI.RemoveOperand(3);
     return TargetInstrInfo::commuteInstructionImpl(WorkingMI, /*NewMI=*/false,
                                                    OpIdx1, OpIdx2);
   }
@@ -1874,11 +1893,16 @@ bool X86InstrInfo::findCommutedOpIndices(MachineInstr &MI, unsigned &SrcOpIdx1,
     }
     return false;
   }
-  case X86::MOVSDrr:
   case X86::MOVSSrr:
-  case X86::VMOVSDrr:
-  case X86::VMOVSSrr:
+    // X86::MOVSDrr is always commutable. MOVSS is only commutable if we can
+    // form sse4.1 blend. We assume VMOVSSrr/VMOVSDrr is always commutable since
+    // AVX implies sse4.1.
     if (Subtarget.hasSSE41())
+      return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
+    return false;
+  case X86::SHUFPDrri:
+    // We can commute this to MOVSD.
+    if (MI.getOperand(3).getImm() == 0x02)
       return TargetInstrInfo::findCommutedOpIndices(MI, SrcOpIdx1, SrcOpIdx2);
     return false;
   case X86::MOVHLPSrr:
@@ -4603,7 +4627,22 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
       }
     }
     break;
-  };
+  case X86::UNPCKLPDrr:
+    // If we won't be able to fold this to the memory form of UNPCKL, use
+    // MOVHPD instead. Done as custom because we can't have this in the load
+    // table twice.
+    if (OpNum == 2) {
+      const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+      const TargetRegisterClass *RC = getRegClass(MI.getDesc(), OpNum, &RI, MF);
+      unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
+      if ((Size == 0 || Size >= 16) && RCSize >= 16 && Align < 16) {
+        MachineInstr *NewMI =
+            FuseInst(MF, X86::MOVHPDrm, OpNum, MOs, InsertPt, MI, *this, 8);
+        return NewMI;
+      }
+    }
+    break;
+  }
 
   return nullptr;
 }
@@ -6399,6 +6438,8 @@ uint16_t X86InstrInfo::getExecutionDomainCustom(const MachineInstr &MI) const {
         MI.getOperand(2).getSubReg() == 0)
       return 0x6;
     return 0;
+  case X86::SHUFPDrri:
+    return 0x6;
   }
   return 0;
 }
@@ -6519,6 +6560,18 @@ bool X86InstrInfo::setExecutionDomainCustom(MachineInstr &MI,
     // We must always return true for MOVHLPSrr.
     if (Opcode == X86::MOVHLPSrr)
       return true;
+    break;
+  case X86::SHUFPDrri: {
+    if (Domain == 1) {
+      unsigned Imm = MI.getOperand(3).getImm();
+      unsigned NewImm = 0x44;
+      if (Imm & 1) NewImm |= 0x0a;
+      if (Imm & 2) NewImm |= 0xa0;
+      MI.getOperand(3).setImm(NewImm);
+      MI.setDesc(get(X86::SHUFPSrri));
+    }
+    return true;
+  }
   }
   return false;
 }

@@ -14,8 +14,6 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
 #include <algorithm>
-#include <iomanip>
-#include <sstream>
 
 LLVM_INSTANTIATE_REGISTRY(clang::clangd::URISchemeRegistry)
 
@@ -96,17 +94,16 @@ bool shouldEscape(unsigned char C) {
 /// - Unreserved characters are not escaped.
 /// - Reserved characters always escaped with exceptions like '/'.
 /// - All other characters are escaped.
-std::string percentEncode(llvm::StringRef Content) {
+void percentEncode(llvm::StringRef Content, std::string &Out) {
   std::string Result;
-  llvm::raw_string_ostream OS(Result);
   for (unsigned char C : Content)
     if (shouldEscape(C))
-      OS << '%' << llvm::format_hex_no_prefix(C, 2, /*Upper = */ true);
-    else
-      OS << C;
-
-  OS.flush();
-  return Result;
+    {
+      Out.push_back('%');
+      Out.push_back(llvm::hexdigit(C / 16));
+      Out.push_back(llvm::hexdigit(C % 16));
+    } else
+    { Out.push_back(C); }
 }
 
 /// Decodes a string according to percent-encoding.
@@ -149,16 +146,18 @@ URI::URI(llvm::StringRef Scheme, llvm::StringRef Authority,
 
 std::string URI::toString() const {
   std::string Result;
-  llvm::raw_string_ostream OS(Result);
-  OS << percentEncode(Scheme) << ":";
+  percentEncode(Scheme, Result);
+  Result.push_back(':');
   if (Authority.empty() && Body.empty())
-    return OS.str();
+    return Result;
   // If authority if empty, we only print body if it starts with "/"; otherwise,
   // the URI is invalid.
   if (!Authority.empty() || llvm::StringRef(Body).startswith("/"))
-    OS << "//" << percentEncode(Authority);
-  OS << percentEncode(Body);
-  OS.flush();
+  {
+    Result.append("//");
+    percentEncode(Authority, Result);
+  }
+  percentEncode(Body, Result);
   return Result;
 }
 

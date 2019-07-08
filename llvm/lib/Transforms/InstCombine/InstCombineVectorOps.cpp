@@ -1346,6 +1346,41 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
   return NewBO;
 }
 
+/// If we have an insert of a scalar to a non-zero element of an undefined
+/// vector and then shuffle that value, that's the same as inserting to the zero
+/// element and shuffling. Splatting from the zero element is recognized as the
+/// canonical form of splat.
+static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
+                                            InstCombiner::BuilderTy &Builder) {
+  Value *Op0 = Shuf.getOperand(0), *Op1 = Shuf.getOperand(1);
+  Constant *Mask = Shuf.getMask();
+  Value *X;
+  uint64_t IndexC;
+
+  // Match a shuffle that is a splat to a non-zero element.
+  if (!match(Op0, m_OneUse(m_InsertElement(m_Undef(), m_Value(X),
+                                           m_ConstantInt(IndexC)))) ||
+      !match(Op1, m_Undef()) || match(Mask, m_ZeroInt()) || IndexC == 0)
+    return nullptr;
+
+  // Insert into element 0 of an undef vector.
+  UndefValue *UndefVec = UndefValue::get(Shuf.getType());
+  Constant *Zero = Builder.getInt32(0);
+  Value *NewIns = Builder.CreateInsertElement(UndefVec, X, Zero);
+
+  // Splat from element 0. Any mask element that is undefined remains undefined.
+  // For example:
+  // shuf (inselt undef, X, 2), undef, <2,2,undef>
+  //   --> shuf (inselt undef, X, 0), undef, <0,0,undef>
+  unsigned NumMaskElts = Shuf.getType()->getVectorNumElements();
+  SmallVector<Constant *, 16> NewMask(NumMaskElts, Zero);
+  for (unsigned i = 0; i != NumMaskElts; ++i)
+    if (isa<UndefValue>(Mask->getAggregateElement(i)))
+      NewMask[i] = Mask->getAggregateElement(i);
+
+  return new ShuffleVectorInst(NewIns, UndefVec, ConstantVector::get(NewMask));
+}
+
 /// Try to fold shuffles that are the equivalent of a vector select.
 static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
                                       InstCombiner::BuilderTy &Builder,
@@ -1713,6 +1748,9 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     SVI.setOperand(2, ConstantVector::get(Elts));
     return &SVI;
   }
+
+  if (Instruction *I = canonicalizeInsertSplat(SVI, Builder))
+    return I;
 
   if (Instruction *I = foldSelectShuffle(SVI, Builder, DL))
     return I;

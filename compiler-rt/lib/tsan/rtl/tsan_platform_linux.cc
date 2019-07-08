@@ -69,7 +69,7 @@ void *__libc_stack_end = 0;
 
 #if SANITIZER_LINUX && defined(__aarch64__)
 void InitializeGuardPtr() __attribute__((visibility("hidden")));
-extern "C" __tsan::uptr _tsan_pointer_chk_guard = 0;
+extern "C" __tsan::uptr _tsan_pointer_chk_guard;
 #endif
 
 namespace __tsan {

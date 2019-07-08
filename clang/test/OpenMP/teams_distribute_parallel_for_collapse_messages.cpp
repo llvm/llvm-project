@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
-// RUN: %clang_cc1 -verify -fopenmp %s -std=c++98
-// RUN: %clang_cc1 -verify -fopenmp %s -std=c++11
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp %s -std=c++98 -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp %s -std=c++11 -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -std=c++98
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -std=c++11
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -std=c++98 -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -std=c++11 -Wuninitialized
 
 void foo() {
 }

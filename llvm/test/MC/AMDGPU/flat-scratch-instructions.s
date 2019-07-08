@@ -91,9 +91,9 @@ scratch_load_dword v1, v2, off offset:0
 // VI-ERR: error: not a valid operand.
 
 scratch_load_dword v1, v2, off offset:4095
-// GFX10-ERR: error: invalid operand for instruction
+// GFX10-ERR: :32: error: expected a 12-bit signed offset
 // GFX9: scratch_load_dword v1, v2, off offset:4095 ; encoding: [0xff,0x4f,0x50,0xdc,0x02,0x00,0x7f,0x01]
-// VI-ERR: error: not a valid operand.
+// VI-ERR: :32: error: not a valid operand.
 
 scratch_load_dword v1, v2, off offset:-1
 // GFX10: encoding: [0xff,0x4f,0x30,0xdc,0x02,0x00,0x7d,0x01]
@@ -101,19 +101,19 @@ scratch_load_dword v1, v2, off offset:-1
 // VI-ERR: error: not a valid operand.
 
 scratch_load_dword v1, v2, off offset:-4096
-// GFX10-ERR: error: invalid operand for instruction
+// GFX10-ERR: :32: error: expected a 12-bit signed offset
 // GFX9: scratch_load_dword v1, v2, off offset:-4096 ; encoding: [0x00,0x50,0x50,0xdc,0x02,0x00,0x7f,0x01]
-// VI-ERR: error: not a valid operand.
+// VI-ERR: :32: error: not a valid operand.
 
 scratch_load_dword v1, v2, off offset:4096
-// GFX10-ERR: error: invalid operand for instruction
-// GFX9-ERR: error: invalid operand for instruction
-// VI-ERR: error: not a valid operand.
+// GFX10-ERR: :32: error: expected a 12-bit signed offset
+// GFX9-ERR: :32: error: expected a 13-bit signed offset
+// VI-ERR: :32: error: not a valid operand.
 
 scratch_load_dword v1, v2, off offset:-4097
-// GFX10-ERR: error: invalid operand for instruction
-// GFX9-ERR: error: invalid operand for instruction
-// VI-ERR: error: not a valid operand.
+// GFX10-ERR: :32: error: expected a 12-bit signed offset
+// GFX9-ERR: :32: error: expected a 13-bit signed offset
+// VI-ERR: :32: error: not a valid operand.
 
 scratch_store_byte v1, v2, off
 // GFX10: encoding: [0x00,0x40,0x60,0xdc,0x01,0x02,0x7d,0x00]

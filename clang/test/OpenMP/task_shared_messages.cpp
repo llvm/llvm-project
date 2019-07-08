@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
   const int da[5] = {0};
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp task shared                               // expected-error {{expected '(' after 'shared'}}
   foo();
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp task shared(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   foo();
-#pragma omp task shared(argc)
+#pragma omp task shared(argc, z)
   foo();
 #pragma omp task shared(S1) // expected-error {{'S1' does not refer to a value}}
   foo();

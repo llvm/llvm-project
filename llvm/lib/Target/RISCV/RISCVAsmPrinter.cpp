@@ -87,18 +87,36 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
   if (!AsmPrinter::PrintAsmOperand(MI, OpNo, ExtraCode, OS))
     return false;
 
-  if (!ExtraCode) {
-    const MachineOperand &MO = MI->getOperand(OpNo);
-    switch (MO.getType()) {
-    case MachineOperand::MO_Immediate:
-      OS << MO.getImm();
-      return false;
-    case MachineOperand::MO_Register:
-      OS << RISCVInstPrinter::getRegisterName(MO.getReg());
-      return false;
+  const MachineOperand &MO = MI->getOperand(OpNo);
+  if (ExtraCode && ExtraCode[0]) {
+    if (ExtraCode[1] != 0)
+      return true; // Unknown modifier.
+
+    switch (ExtraCode[0]) {
     default:
+      return true; // Unknown modifier.
+    case 'z':      // Print zero register if zero, regular printing otherwise.
+      if (MO.isImm() && MO.getImm() == 0) {
+        OS << RISCVInstPrinter::getRegisterName(RISCV::X0);
+        return false;
+      }
       break;
+    case 'i': // Literal 'i' if operand is not a register.
+      if (!MO.isReg())
+        OS << 'i';
+      return false;
     }
+  }
+
+  switch (MO.getType()) {
+  case MachineOperand::MO_Immediate:
+    OS << MO.getImm();
+    return false;
+  case MachineOperand::MO_Register:
+    OS << RISCVInstPrinter::getRegisterName(MO.getReg());
+    return false;
+  default:
+    break;
   }
 
   return true;

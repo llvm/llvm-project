@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -13,7 +13,7 @@ struct S1; // expected-note {{declared here}}
 
 template <class T, class S> // expected-note {{declared here}}
 int tmain(T argc, S **argv) {
-  T i;
+  T i, k;
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd if // expected-error {{expected '(' after 'if'}}
@@ -32,7 +32,7 @@ int tmain(T argc, S **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd if (argc)) // expected-warning {{extra tokens at the end of '#pragma omp distribute parallel for simd' are ignored}}
+#pragma omp distribute parallel for simd if (k)) // expected-warning {{extra tokens at the end of '#pragma omp distribute parallel for simd' are ignored}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
 #pragma omp teams
@@ -95,7 +95,7 @@ int tmain(T argc, S **argv) {
 }
 
 int main(int argc, char **argv) {
-  int i;
+  int i, k;
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd if // expected-error {{expected '(' after 'if'}}
@@ -114,7 +114,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd if (argc)) // expected-warning {{extra tokens at the end of '#pragma omp distribute parallel for simd' are ignored}}
+#pragma omp distribute parallel for simd if (k)) // expected-warning {{extra tokens at the end of '#pragma omp distribute parallel for simd' are ignored}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target
 #pragma omp teams

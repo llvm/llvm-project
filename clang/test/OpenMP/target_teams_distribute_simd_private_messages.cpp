@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
   const int da[5] = { 0 }; // expected-note {{'da' defined here}}
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, k;
   int &j = i;
 
 #pragma omp target teams distribute simd private // expected-error {{expected '(' after 'private'}}
@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute simd private (a, b, c, d, f) // expected-error {{private variable with incomplete type 'S1'}} expected-error 1 {{const-qualified variable without mutable fields cannot be private}} expected-error 2 {{const-qualified variable cannot be private}}
   for (int k = 0; k < argc; ++k) ++k;
 
-#pragma omp target teams distribute simd private (argv[1]) // expected-error {{expected variable name}}
+#pragma omp target teams distribute simd private (k, argv[1]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target teams distribute simd private(ba) allocate(omp_thread_mem_alloc: ba) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams distribute simd' directive}}

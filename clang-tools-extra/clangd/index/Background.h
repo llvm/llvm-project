@@ -19,7 +19,6 @@
 #include "index/Serialization.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/StringMap.h"
-#include "llvm/Support/SHA1.h"
 #include "llvm/Support/Threading.h"
 #include <atomic>
 #include <condition_variable>
