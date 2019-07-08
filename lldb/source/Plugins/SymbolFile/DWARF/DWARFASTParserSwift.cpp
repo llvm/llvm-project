@@ -133,8 +133,7 @@ lldb::TypeSP DWARFASTParserSwift::ParseTypeFromDWARF(const SymbolContext &sc,
       return type_sp;
 
     // Try to import the type from one of the loaded Swift modules.
-    compiler_type =
-        m_ast.GetTypeFromMangledTypename(mangled_name.GetCString(), error);
+    compiler_type = m_ast.GetTypeFromMangledTypename(mangled_name, error);
   }
 
   if (!compiler_type &&

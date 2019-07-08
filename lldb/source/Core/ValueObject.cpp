@@ -365,16 +365,15 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
           std::vector<clang::NamedDecl *> decls;
 
           // try the modules
-          if (TargetSP target_sp = GetTargetSP()) {
+          if (auto target_sp = GetTargetSP()) {
             if (auto clang_modules_decl_vendor =
                     target_sp->GetClangModulesDeclVendor()) {
-              if (clang_modules_decl_vendor->FindDecls(class_name, false,
-                                                       UINT32_MAX, decls) > 0 &&
-                  decls.size() > 0) {
-                CompilerType module_type =
-                    ClangASTContext::GetTypeForDecl(decls.front());
+              std::vector<CompilerType> types =
+                  clang_modules_decl_vendor->FindTypes(
+                      class_name, /*max_matches*/ UINT32_MAX);
+              if (!types.empty()) {
                 m_override_type =
-                    make_pointer_if_needed(module_type, is_pointer_type);
+                    make_pointer_if_needed(types.front(), is_pointer_type);
               }
 
               if (m_override_type.IsValid())
@@ -384,13 +383,11 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
 
           // then try the runtime
           if (auto runtime_vendor = objc_language_runtime->GetDeclVendor()) {
-            if (runtime_vendor->FindDecls(class_name, false, UINT32_MAX,
-                                          decls) > 0 &&
-                decls.size() > 0) {
-              CompilerType runtime_type =
-                  ClangASTContext::GetTypeForDecl(decls.front());
+            std::vector<CompilerType> types = runtime_vendor->FindTypes(
+                class_name, /*max_matches*/ UINT32_MAX);
+            if (!types.empty()) {
               m_override_type =
-                  make_pointer_if_needed(runtime_type, is_pointer_type);
+                  make_pointer_if_needed(types.front(), is_pointer_type);
             }
 
             if (m_override_type.IsValid())
@@ -1788,18 +1785,28 @@ bool ValueObject::IsPossibleDynamicType() {
 
 bool ValueObject::IsRuntimeSupportValue() {
   Process *process(GetProcessSP().get());
-  if (process) {
-    LanguageRuntime *runtime =
-        process->GetLanguageRuntime(GetObjectRuntimeLanguage());
-    if (!runtime)
-      runtime = ObjCLanguageRuntime::Get(*process);
-    if (runtime)
-      return runtime->IsRuntimeSupportValue(*this);
-    // If there is no language runtime, trust the compiler to mark all
-    // runtime support variables as artificial.
-    return GetVariable() && GetVariable()->IsArtificial();
+  if (!process)
+    return false;
+
+  // We trust the the compiler did the right thing and marked runtime support
+  // values as artificial.
+  if (!GetVariable() || !GetVariable()->IsArtificial())
+    return false;
+
+  LanguageType lang = eLanguageTypeUnknown;
+  if (auto *sym_ctx_scope = GetSymbolContextScope()) {
+    if (auto *func = sym_ctx_scope->CalculateSymbolContextFunction())
+      lang = func->GetLanguage();
+    else if (auto *comp_unit =
+                 sym_ctx_scope->CalculateSymbolContextCompileUnit())
+      lang = comp_unit->GetLanguage();
   }
-  return false;
+
+  if (auto *runtime = process->GetLanguageRuntime(lang))
+    if (runtime->IsWhitelistedRuntimeValue(GetName()))
+      return false;
+
+  return true;
 }
 
 bool ValueObject::IsNilReference() {

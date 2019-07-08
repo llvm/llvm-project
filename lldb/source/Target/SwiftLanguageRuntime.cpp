@@ -2586,19 +2586,8 @@ llvm::Optional<uint64_t> SwiftLanguageRuntime::GetBitSize(CompilerType type) {
   return type_info->getSize() * 8;
 }
 
-bool SwiftLanguageRuntime::IsRuntimeSupportValue(ValueObject &valobj) {
-  // All runtime support values have to be marked as artificial by the
-  // compiler. But not all artificial variables should be hidden from
-  // the user.
-  if (!valobj.GetVariable())
-    return false;
-  if (!valobj.GetVariable()->IsArtificial())
-    return false;
-
-  // Whitelist "self".
-  if (valobj.GetName() == g_self)
-     return false;
-  return true;
+bool SwiftLanguageRuntime::IsWhitelistedRuntimeValue(ConstString name) {
+  return name == g_self;
 }
 
 bool SwiftLanguageRuntime::CouldHaveDynamicValue(ValueObject &in_value) {
@@ -3029,7 +3018,7 @@ void SwiftLanguageRuntime::FindFunctionPointersInCall(
       auto swift_ast = target.GetScratchSwiftASTContext(error, frame);
       if (swift_ast) {
         CompilerType function_type = swift_ast->GetTypeFromMangledTypename(
-            mangled_name.GetMangledName().AsCString(), error);
+            mangled_name.GetMangledName(), error);
         if (error.Success()) {
           if (function_type.IsFunctionType()) {
             // FIXME: For now we only check the first argument since we don't
@@ -3400,14 +3389,12 @@ Status SwiftLanguageRuntime::SwiftExceptionPrecondition::ConfigurePrecondition(
   return error;
 }
 
-void SwiftLanguageRuntime::AddToLibraryNegativeCache(
-    const std::string &library_name) {
+void SwiftLanguageRuntime::AddToLibraryNegativeCache(StringRef library_name) {
   std::lock_guard<std::mutex> locker(m_negative_cache_mutex);
   m_library_negative_cache.insert(library_name);
 }
 
-bool SwiftLanguageRuntime::IsInLibraryNegativeCache(
-    const std::string &library_name) {
+bool SwiftLanguageRuntime::IsInLibraryNegativeCache(StringRef library_name) {
   std::lock_guard<std::mutex> locker(m_negative_cache_mutex);
   return m_library_negative_cache.count(library_name) == 1;
 }
@@ -3749,10 +3736,10 @@ public:
 
 lldb::SyntheticChildrenSP
 SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
-  const char *type_name(valobj.GetCompilerType().GetTypeName().AsCString());
+  ConstString type_name = valobj.GetCompilerType().GetTypeName();
 
-  if (type_name && *type_name) {
-    auto iter = m_bridged_synthetics_map.find(type_name),
+  if (!type_name.IsEmpty()) {
+    auto iter = m_bridged_synthetics_map.find(type_name.AsCString()),
          end = m_bridged_synthetics_map.end();
     if (iter != end)
       return iter->second;
@@ -3785,7 +3772,8 @@ SwiftLanguageRuntime::GetBridgedSyntheticChildProvider(ValueObject &valobj) {
         SyntheticChildrenSP synth_sp =
             SyntheticChildrenSP(new ProjectionSyntheticChildren(
                 SyntheticChildren::Flags(), std::move(type_projection)));
-        return (m_bridged_synthetics_map[type_name] = synth_sp);
+        m_bridged_synthetics_map.insert({type_name.AsCString(), synth_sp});
+        return synth_sp;
       }
     }
   }

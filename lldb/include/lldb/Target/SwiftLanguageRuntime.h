@@ -27,6 +27,7 @@
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Casting.h"
 
 namespace swift {
@@ -307,7 +308,7 @@ public:
   /// Ask Remote Mirrors for the size of a Swift type.
   llvm::Optional<uint64_t> GetBitSize(CompilerType type);
 
-  bool IsRuntimeSupportValue(ValueObject &valobj) override;
+  bool IsWhitelistedRuntimeValue(ConstString name) override;
 
   virtual CompilerType DoArchetypeBindingForType(StackFrame &stack_frame,
                                                  CompilerType base_type);
@@ -345,9 +346,9 @@ public:
   /// Determines wether \c variable is the "self" object.
   static bool IsSelf(Variable &variable);
 
-  void AddToLibraryNegativeCache(const std::string &library_name);
+  void AddToLibraryNegativeCache(llvm::StringRef library_name);
 
-  bool IsInLibraryNegativeCache(const std::string &library_name);
+  bool IsInLibraryNegativeCache(llvm::StringRef library_name);
 
   // Swift uses a few known-unused bits in ObjC pointers
   // to record useful-for-bridging information
@@ -432,12 +433,10 @@ protected:
 
   void PopLocalBuffer();
 
-  std::unordered_set<std::string> m_library_negative_cache; // We have to load
-                                                            // swift dependent
-                                                            // libraries by
-                                                            // hand,
-  std::mutex m_negative_cache_mutex; // but if they are missing, we shouldn't
-                                     // keep trying.
+  /// We have to load swift dependent libraries by hand, but if they
+  /// are missing, we shouldn't keep trying.
+  llvm::StringSet<> m_library_negative_cache;
+  std::mutex m_negative_cache_mutex;
 
   llvm::Optional<lldb::addr_t> m_SwiftNativeNSErrorISA;
 
@@ -463,8 +462,8 @@ protected:
                      std::unique_ptr<swift::remoteAST::RemoteASTContext>>
     m_remote_ast_contexts;
 
-  std::unordered_map<const char *, lldb::SyntheticChildrenSP>
-      m_bridged_synthetics_map;
+  /// Uses ConstStrings as keys to avoid storing the strings twice.
+  llvm::DenseMap<const char *, lldb::SyntheticChildrenSP> m_bridged_synthetics_map;
 
   /// Cached member variable offsets.
   typename KeyHasher<const swift::TypeBase *, const char *, uint64_t>::MapType

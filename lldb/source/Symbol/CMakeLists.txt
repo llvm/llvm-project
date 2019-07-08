@@ -13,7 +13,9 @@ add_lldb_library(lldbSymbol
   CompactUnwindInfo.cpp
   DebugMacros.cpp
   Declaration.cpp
+  DeclVendor.cpp
   DWARFCallFrameInfo.cpp
+  FuncUnwinders.cpp
   Function.cpp
   FuncUnwinders.cpp
   LineEntry.cpp
@@ -40,9 +42,7 @@ add_lldb_library(lldbSymbol
     swiftASTSectionImporter
     swiftBasic
     swiftClangImporter
-    swiftDriver
     swiftFrontend
-    swiftIDE
     swiftSIL
     swiftSerialization
     clangAST

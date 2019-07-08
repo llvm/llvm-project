@@ -44,11 +44,9 @@
 #include "swift/DWARFImporter/DWARFImporter.h"
 #include "swift/Demangling/Demangle.h"
 #include "swift/Demangling/ManglingMacros.h"
-#include "swift/Driver/Util.h"
 #include "swift/Frontend/Frontend.h"
 #include "swift/Frontend/ParseableInterfaceModuleLoader.h"
 #include "swift/Frontend/PrintingDiagnosticConsumer.h"
-#include "swift/IDE/Utils.h"
 #include "swift/IRGen/Linking.h"
 #include "swift/SIL/SILModule.h"
 #include "swift/Serialization/ModuleFile.h"
@@ -391,6 +389,9 @@ public:
     m_nopayload_elems_bitmask =
         enum_impl_strategy.getBitMaskForNoPayloadElements();
 
+    if (enum_decl->isObjC())
+      m_is_objc_enum = true;
+
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "m_nopayload_elems_bitmask = %s",
                Dump(m_nopayload_elems_bitmask).c_str());
 
@@ -447,18 +448,20 @@ public:
     // case Y         // => i1 1
     // }
     // From this we can find out the number of bits really used for the payload.
-    current_payload &= m_nopayload_elems_bitmask;
-    auto elem_mask =
-        swift::ClusteredBitVector::getConstant(current_payload.size(), false);
-    int64_t bit_count = m_elements.size() - 1;
-    if (bit_count > 0 && no_payload) {
-      uint64_t bit_set = 0;
-      while (bit_count > 0) {
-        elem_mask.setBit(bit_set);
-        bit_set += 1;
-        bit_count /= 2;
+    if (!m_is_objc_enum) {
+      current_payload &= m_nopayload_elems_bitmask;
+      auto elem_mask =
+          swift::ClusteredBitVector::getConstant(current_payload.size(), false);
+      int64_t bit_count = m_elements.size() - 1;
+      if (bit_count > 0 && no_payload) {
+        uint64_t bit_set = 0;
+        while (bit_count > 0) {
+          elem_mask.setBit(bit_set);
+          bit_set += 1;
+          bit_count /= 2;
+        }
+        current_payload &= elem_mask;
       }
-      current_payload &= elem_mask;
     }
 
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "masked current_payload           = %s",
@@ -498,6 +501,7 @@ private:
   swift::ClusteredBitVector m_nopayload_elems_bitmask;
   std::map<swift::ClusteredBitVector, std::unique_ptr<ElementInfo>> m_elements;
   std::map<uint64_t, ElementInfo *> m_element_indexes;
+  bool m_is_objc_enum = false;
 };
 
 class SwiftAllPayloadEnumDescriptor : public SwiftEnumDescriptor {
@@ -2645,9 +2649,12 @@ swift::CompilerInvocation &SwiftASTContext::GetCompilerInvocation() {
 }
 
 swift::SourceManager &SwiftASTContext::GetSourceManager() {
-  if (!m_source_manager_up)
-    m_source_manager_up = llvm::make_unique<swift::SourceManager>(
-        FileSystem::Instance().GetVirtualFileSystem());
+  if (!m_source_manager_up) {
+    auto OverlayFS = llvm::IntrusiveRefCntPtr<llvm::vfs::OverlayFileSystem>(
+        new llvm::vfs::OverlayFileSystem(llvm::vfs::getRealFileSystem()));
+    OverlayFS->pushOverlay(FileSystem::Instance().GetVirtualFileSystem());
+    m_source_manager_up = llvm::make_unique<swift::SourceManager>(OverlayFS);
+  }
   return *m_source_manager_up;
 }
 
@@ -3602,8 +3609,8 @@ GetLibrarySearchPaths(const swift::SearchPathOptions &search_path_opts) {
   // one sitting next to the stdlib we just built, and then fall back to the
   // one in the OS if that's not available.
   std::vector<std::string> paths;
-  if (!search_path_opts.RuntimeLibraryPath.empty())
-    paths.push_back(search_path_opts.RuntimeLibraryPath);
+  for (std::string path : search_path_opts.RuntimeLibraryPaths)
+    paths.push_back(path);
   for (std::string path : search_path_opts.LibrarySearchPaths)
     paths.push_back(path);
   return paths;
@@ -4064,25 +4071,25 @@ ConstString SwiftASTContext::GetMangledTypeName(swift::TypeBase *type_base) {
   swift::Mangle::ASTMangler mangler(true);
   std::string s = mangler.mangleTypeForDebugger(swift_type, nullptr);
   if (s.empty())
-    return ConstString();
+    return {};
 
-  ConstString mangled_cs(s.c_str());
-  CacheDemangledType(mangled_cs.AsCString(), type_base);
+  ConstString mangled_cs{StringRef(s)};
+  CacheDemangledType(mangled_cs, type_base);
   return mangled_cs;
 }
 
-void SwiftASTContext::CacheDemangledType(const char *name,
+void SwiftASTContext::CacheDemangledType(ConstString name,
                                          swift::TypeBase *found_type) {
   VALID_OR_RETURN_VOID();
 
-  m_type_to_mangled_name_map.insert(std::make_pair(found_type, name));
-  m_mangled_name_to_type_map.insert(std::make_pair(name, found_type));
+  m_type_to_mangled_name_map.insert({found_type, name.AsCString()});
+  m_mangled_name_to_type_map.insert({name.AsCString(), found_type});
 }
 
-void SwiftASTContext::CacheDemangledTypeFailure(const char *name) {
+void SwiftASTContext::CacheDemangledTypeFailure(ConstString name) {
   VALID_OR_RETURN_VOID();
 
-  m_negative_type_cache.Insert(name);
+  m_negative_type_cache.Insert(name.AsCString());
 }
 
 /// The old TypeReconstruction implementation would reconstruct SILFunctionTypes
@@ -4104,23 +4111,24 @@ swift::Type convertSILFunctionTypesToASTFunctionTypes(swift::Type t) {
 }
 
 CompilerType
-SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
+SwiftASTContext::GetTypeFromMangledTypename(ConstString mangled_typename,
                                             Status &error) {
   VALID_OR_RETURN(CompilerType());
 
-  if (!mangled_typename ||
-      !SwiftLanguageRuntime::IsSwiftMangledName(mangled_typename)) {
+  const char *mangled_cstr = mangled_typename.AsCString();
+  if (mangled_typename.IsEmpty() ||
+      !SwiftLanguageRuntime::IsSwiftMangledName(mangled_cstr)) {
     error.SetErrorStringWithFormat(
-        "typename \"%s\" is not a valid Swift mangled name", mangled_typename);
+        "typename \"%s\" is not a valid Swift mangled name", mangled_cstr);
     return {};
   }
 
-  LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\")", mangled_typename);
+  LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\")", mangled_cstr);
 
   swift::ASTContext *ast_ctx = GetASTContext();
   if (!ast_ctx) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- null Swift AST Context",
-               mangled_typename);
+               mangled_cstr);
     error.SetErrorString("null Swift AST Context");
     return {};
   }
@@ -4128,45 +4136,43 @@ SwiftASTContext::GetTypeFromMangledTypename(const char *mangled_typename,
   error.Clear();
 
   // If we were to crash doing this, remember what type caused it.
-  llvm::PrettyStackTraceFormat PST("error finding type for %s",
-                                   mangled_typename);
-  ConstString mangled_name(mangled_typename);
-  swift::TypeBase *found_type =
-      m_mangled_name_to_type_map.lookup(mangled_name.GetCString());
+  llvm::PrettyStackTraceFormat PST("error finding type for %s", mangled_cstr);
+  swift::TypeBase *found_type = m_mangled_name_to_type_map.lookup(mangled_cstr);
   if (found_type) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- found in the positive cache",
-               mangled_typename);
+               mangled_cstr);
     assert(&found_type->getASTContext() == ast_ctx);
     return {found_type};
   }
 
-  if (m_negative_type_cache.Lookup(mangled_name.GetCString())) {
+  if (m_negative_type_cache.Lookup(mangled_cstr)) {
     LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- found in the negative cache",
-               mangled_typename);
+               mangled_cstr);
     return {};
   }
 
   LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- not cached, searching",
-             mangled_typename);
+             mangled_cstr);
 
-  found_type = swift::Demangle::getTypeForMangling(*ast_ctx, mangled_typename)
+  found_type = swift::Demangle::getTypeForMangling(
+                   *ast_ctx, mangled_typename.GetStringRef())
                    .getPointer();
 
   if (found_type) {
     found_type =
         convertSILFunctionTypesToASTFunctionTypes(found_type).getPointer();
-    CacheDemangledType(mangled_name.GetCString(), found_type);
+    CacheDemangledType(mangled_typename, found_type);
     CompilerType result_type(found_type);
     assert(&found_type->getASTContext() == ast_ctx);
-    LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- found %s", mangled_typename,
+    LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\") -- found %s", mangled_cstr,
                result_type.GetTypeName().GetCString());
     return result_type;
   }
-  LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\")", mangled_typename);
+  LOG_PRINTF(LIBLLDB_LOG_TYPES, "(\"%s\")", mangled_cstr);
 
   error.SetErrorStringWithFormat("type for typename \"%s\" was not found",
-                                 mangled_typename);
-  CacheDemangledTypeFailure(mangled_name.GetCString());
+                                 mangled_cstr);
+  CacheDemangledTypeFailure(mangled_typename);
   return {};
 }
 
@@ -4521,8 +4527,7 @@ CompilerType SwiftASTContext::ImportType(CompilerType &type, Status &error) {
     else {
       Status error;
 
-      CompilerType our_type(
-          GetTypeFromMangledTypename(mangled_name.GetCString(), error));
+      CompilerType our_type(GetTypeFromMangledTypename(mangled_name, error));
       if (error.Success())
         return our_type;
     }
@@ -4709,10 +4714,9 @@ CompilerType SwiftASTContext::GetErrorType() {
 CompilerType SwiftASTContext::GetNSErrorType(Status &error) {
   VALID_OR_RETURN(CompilerType());
 
-  return GetTypeFromMangledTypename(
-      SwiftLanguageRuntime::GetCurrentMangledName("_TtC10Foundation7NSError")
-          .c_str(),
-      error);
+  std::string mangled =
+      SwiftLanguageRuntime::GetCurrentMangledName("_TtC10Foundation7NSError");
+  return GetTypeFromMangledTypename(ConstString(StringRef(mangled)), error);
 }
 
 CompilerType SwiftASTContext::CreateMetatypeType(CompilerType instance_type) {
@@ -4859,8 +4863,15 @@ void SwiftASTContext::LogConfiguration() {
               m_ast_context_ap->SearchPathOpts.SDKPath.c_str());
   log->Printf("  Runtime resource path        : %s",
               m_ast_context_ap->SearchPathOpts.RuntimeResourcePath.c_str());
-  log->Printf("  Runtime library path         : %s",
-              m_ast_context_ap->SearchPathOpts.RuntimeLibraryPath.c_str());
+  log->Printf("  Runtime library paths        : (%llu items)",
+              (unsigned long long)m_ast_context_ap->SearchPathOpts
+                  .RuntimeLibraryPaths.size());
+
+  for (const auto &runtime_library_path :
+       m_ast_context_ap->SearchPathOpts.RuntimeLibraryPaths) {
+    log->Printf("    %s", runtime_library_path.c_str());
+  }
+
   log->Printf("  Runtime library import paths : (%llu items)",
               (unsigned long long)m_ast_context_ap->SearchPathOpts
                   .RuntimeLibraryImportPaths.size());
