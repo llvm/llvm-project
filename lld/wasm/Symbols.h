@@ -131,26 +131,26 @@ protected:
   uint32_t OutputSymbolIndex = INVALID_INDEX;
   uint32_t GOTIndex = INVALID_INDEX;
   Kind SymbolKind;
-  unsigned Referenced : 1;
+  bool Referenced : 1;
 
 public:
   // True if the symbol was used for linking and thus need to be added to the
   // output file's symbol table. This is true for all symbols except for
   // unreferenced DSO symbols, lazy (archive) symbols, and bitcode symbols that
   // are unreferenced except by other bitcode objects.
-  unsigned IsUsedInRegularObj : 1;
+  bool IsUsedInRegularObj : 1;
 
   // True if ths symbol is explicity marked for export (i.e. via the -e/--export
   // command line flag)
-  unsigned ForceExport : 1;
+  bool ForceExport : 1;
 
   // False if LTO shouldn't inline whatever this symbol points to. If a symbol
   // is overwritten after LTO, LTO shouldn't inline the symbol because it
   // doesn't know the final contents of the symbol.
-  unsigned CanInline : 1;
+  bool CanInline : 1;
 
   // True if this symbol is specified by --trace-symbol option.
-  unsigned Traced : 1;
+  bool Traced : 1;
 };
 
 class FunctionSymbol : public Symbol {
@@ -474,6 +474,11 @@ union SymbolUnion {
   alignas(UndefinedGlobal) char H[sizeof(UndefinedGlobal)];
   alignas(SectionSymbol) char I[sizeof(SectionSymbol)];
 };
+
+// It is important to keep the size of SymbolUnion small for performance and
+// memory usage reasons. 96 bytes is a soft limit based on the size of
+// UndefinedFunction on a 64-bit system.
+static_assert(sizeof(SymbolUnion) <= 96, "SymbolUnion too large");
 
 void printTraceSymbol(Symbol *Sym);
 void printTraceSymbolUndefined(StringRef Name, const InputFile* File);

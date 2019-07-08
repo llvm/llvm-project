@@ -188,8 +188,13 @@ bool ProcessLaunchInfo::NoOpMonitorCallback(lldb::pid_t pid, bool exited, int si
 
 bool ProcessLaunchInfo::MonitorProcess() const {
   if (m_monitor_callback && ProcessIDIsValid()) {
+    llvm::Expected<HostThread> maybe_thread =
     Host::StartMonitoringChildProcess(m_monitor_callback, GetProcessID(),
                                       m_monitor_signals);
+    if (!maybe_thread)
+      LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST),
+               "failed to launch host thread: {}",
+               llvm::toString(maybe_thread.takeError()));
     return true;
   }
   return false;
