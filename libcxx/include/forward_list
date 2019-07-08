@@ -120,10 +120,12 @@ public:
                       const_iterator first, const_iterator last);
     void splice_after(const_iterator p, forward_list&& x,
                       const_iterator first, const_iterator last);
-    size_type remove(const value_type& v);
-    template <class Predicate> size_type remove_if(Predicate pred);
-    size_type unique();
-    template <class BinaryPredicate> size_type unique(BinaryPredicate binary_pred);
+    size_type remove(const value_type& v);           // void before C++20
+    template <class Predicate>
+      size_type remove_if(Predicate pred);           // void before C++20
+    size_type unique();                              // void before C++20
+    template <class BinaryPredicate>
+      size_type unique(BinaryPredicate binary_pred); // void before C++20
     void merge(forward_list& x);
     void merge(forward_list&& x);
     template <class Compare> void merge(forward_list& x, Compare comp);
@@ -647,6 +649,11 @@ public:
 
     typedef typename base::iterator       iterator;
     typedef typename base::const_iterator const_iterator;
+#if _LIBCPP_STD_VER > 17
+    typedef size_type                                __remove_return_type;
+#else
+    typedef void                                     __remove_return_type;
+#endif
 
     _LIBCPP_INLINE_VISIBILITY
     forward_list()
@@ -819,11 +826,11 @@ public:
     void splice_after(const_iterator __p, forward_list& __x, const_iterator __i);
     void splice_after(const_iterator __p, forward_list& __x,
                       const_iterator __f, const_iterator __l);
-    size_type remove(const value_type& __v);
-    template <class _Predicate> size_type remove_if(_Predicate __pred);
+    __remove_return_type remove(const value_type& __v);
+    template <class _Predicate> __remove_return_type remove_if(_Predicate __pred);
     _LIBCPP_INLINE_VISIBILITY
-    size_type unique() {return unique(__equal_to<value_type>());}
-    template <class _BinaryPredicate> size_type unique(_BinaryPredicate __binary_pred);
+    __remove_return_type unique() {return unique(__equal_to<value_type>());}
+    template <class _BinaryPredicate> __remove_return_type unique(_BinaryPredicate __binary_pred);
 #ifndef _LIBCPP_CXX03_LANG
     _LIBCPP_INLINE_VISIBILITY
     void merge(forward_list&& __x) {merge(__x, __less<value_type>());}
@@ -1496,7 +1503,7 @@ forward_list<_Tp, _Alloc>::splice_after(const_iterator __p,
 }
 
 template <class _Tp, class _Alloc>
-typename forward_list<_Tp, _Alloc>::size_type
+typename forward_list<_Tp, _Alloc>::__remove_return_type
 forward_list<_Tp, _Alloc>::remove(const value_type& __v)
 {
     forward_list<_Tp, _Alloc> __deleted_nodes(get_allocator()); // collect the nodes we're removing
@@ -1519,12 +1526,12 @@ forward_list<_Tp, _Alloc>::remove(const value_type& __v)
             ++__i;
     }
     
-    return __count_removed;
+    return (__remove_return_type) __count_removed;
 }
 
 template <class _Tp, class _Alloc>
 template <class _Predicate>
-typename forward_list<_Tp, _Alloc>::size_type
+typename forward_list<_Tp, _Alloc>::__remove_return_type
 forward_list<_Tp, _Alloc>::remove_if(_Predicate __pred)
 {
     forward_list<_Tp, _Alloc> __deleted_nodes(get_allocator()); // collect the nodes we're removing
@@ -1547,12 +1554,12 @@ forward_list<_Tp, _Alloc>::remove_if(_Predicate __pred)
             ++__i;
     }
     
-    return __count_removed;
+    return (__remove_return_type) __count_removed;
 }
 
 template <class _Tp, class _Alloc>
 template <class _BinaryPredicate>
-typename forward_list<_Tp, _Alloc>::size_type
+typename forward_list<_Tp, _Alloc>::__remove_return_type
 forward_list<_Tp, _Alloc>::unique(_BinaryPredicate __binary_pred)
 {
     forward_list<_Tp, _Alloc> __deleted_nodes(get_allocator()); // collect the nodes we're removing
@@ -1567,7 +1574,7 @@ forward_list<_Tp, _Alloc>::unique(_BinaryPredicate __binary_pred)
         __i = __j;
     }
     
-    return __count_removed;
+    return (__remove_return_type) __count_removed;
 }
 
 template <class _Tp, class _Alloc>
