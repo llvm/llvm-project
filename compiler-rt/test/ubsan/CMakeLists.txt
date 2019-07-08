@@ -38,9 +38,6 @@ set(UBSAN_TEST_ARCH ${UBSAN_SUPPORTED_ARCH})
 if(APPLE)
   darwin_filter_host_archs(UBSAN_SUPPORTED_ARCH UBSAN_TEST_ARCH)
 endif()
-if(OS_NAME MATCHES "SunOS")
-  list(REMOVE_ITEM UBSAN_TEST_ARCH x86_64)
-endif()
 
 foreach(arch ${UBSAN_TEST_ARCH})
   set(UBSAN_TEST_TARGET_ARCH ${arch})
@@ -49,8 +46,10 @@ foreach(arch ${UBSAN_TEST_ARCH})
 
   if(COMPILER_RT_HAS_ASAN AND ";${ASAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
     # TODO(wwchrome): Re-enable ubsan for asan win 64-bit when ready.
-    # Disable ubsan with AddressSanitizer tests for Windows 64-bit.
-    if(NOT OS_NAME MATCHES "Windows" OR CMAKE_SIZEOF_VOID_P EQUAL 4)
+    # Disable ubsan with AddressSanitizer tests for Windows 64-bit and
+    # 64-bit Solaris/x86.
+    if((NOT (OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)) AND
+       (NOT (OS_NAME MATCHES "SunOS" AND ${arch} MATCHES x86_64)))
       add_ubsan_testsuites("AddressSanitizer" asan ${arch})
     endif()
   endif()
