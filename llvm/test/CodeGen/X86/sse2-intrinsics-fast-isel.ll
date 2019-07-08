@@ -2179,9 +2179,9 @@ define <2 x double> @test_mm_loadr_pd(double* %a0) nounwind {
 ; X86-SSE-LABEL: test_mm_loadr_pd:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-SSE-NEXT:    movapd (%eax), %xmm0 # encoding: [0x66,0x0f,0x28,0x00]
-; X86-SSE-NEXT:    shufpd $1, %xmm0, %xmm0 # encoding: [0x66,0x0f,0xc6,0xc0,0x01]
-; X86-SSE-NEXT:    # xmm0 = xmm0[1,0]
+; X86-SSE-NEXT:    movaps (%eax), %xmm0 # encoding: [0x0f,0x28,0x00]
+; X86-SSE-NEXT:    shufps $78, %xmm0, %xmm0 # encoding: [0x0f,0xc6,0xc0,0x4e]
+; X86-SSE-NEXT:    # xmm0 = xmm0[2,3,0,1]
 ; X86-SSE-NEXT:    retl # encoding: [0xc3]
 ;
 ; X86-AVX1-LABEL: test_mm_loadr_pd:
@@ -2200,9 +2200,9 @@ define <2 x double> @test_mm_loadr_pd(double* %a0) nounwind {
 ;
 ; X64-SSE-LABEL: test_mm_loadr_pd:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movapd (%rdi), %xmm0 # encoding: [0x66,0x0f,0x28,0x07]
-; X64-SSE-NEXT:    shufpd $1, %xmm0, %xmm0 # encoding: [0x66,0x0f,0xc6,0xc0,0x01]
-; X64-SSE-NEXT:    # xmm0 = xmm0[1,0]
+; X64-SSE-NEXT:    movaps (%rdi), %xmm0 # encoding: [0x0f,0x28,0x07]
+; X64-SSE-NEXT:    shufps $78, %xmm0, %xmm0 # encoding: [0x0f,0xc6,0xc0,0x4e]
+; X64-SSE-NEXT:    # xmm0 = xmm0[2,3,0,1]
 ; X64-SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: test_mm_loadr_pd:
@@ -4728,8 +4728,8 @@ define <2 x i64> @test_mm_shuffle_epi32(<2 x i64> %a0) {
 define <2 x double> @test_mm_shuffle_pd(<2 x double> %a0, <2 x double> %a1) {
 ; SSE-LABEL: test_mm_shuffle_pd:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    shufpd $1, %xmm1, %xmm0 # encoding: [0x66,0x0f,0xc6,0xc1,0x01]
-; SSE-NEXT:    # xmm0 = xmm0[1],xmm1[0]
+; SSE-NEXT:    shufps $78, %xmm1, %xmm0 # encoding: [0x0f,0xc6,0xc1,0x4e]
+; SSE-NEXT:    # xmm0 = xmm0[2,3],xmm1[0,1]
 ; SSE-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 ;
 ; AVX1-LABEL: test_mm_shuffle_pd:
@@ -5650,9 +5650,9 @@ define void @test_mm_storer_pd(double *%a0, <2 x double> %a1) {
 ; X86-SSE-LABEL: test_mm_storer_pd:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
-; X86-SSE-NEXT:    shufpd $1, %xmm0, %xmm0 # encoding: [0x66,0x0f,0xc6,0xc0,0x01]
-; X86-SSE-NEXT:    # xmm0 = xmm0[1,0]
-; X86-SSE-NEXT:    movapd %xmm0, (%eax) # encoding: [0x66,0x0f,0x29,0x00]
+; X86-SSE-NEXT:    shufps $78, %xmm0, %xmm0 # encoding: [0x0f,0xc6,0xc0,0x4e]
+; X86-SSE-NEXT:    # xmm0 = xmm0[2,3,0,1]
+; X86-SSE-NEXT:    movaps %xmm0, (%eax) # encoding: [0x0f,0x29,0x00]
 ; X86-SSE-NEXT:    retl # encoding: [0xc3]
 ;
 ; X86-AVX1-LABEL: test_mm_storer_pd:
@@ -5673,9 +5673,9 @@ define void @test_mm_storer_pd(double *%a0, <2 x double> %a1) {
 ;
 ; X64-SSE-LABEL: test_mm_storer_pd:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    shufpd $1, %xmm0, %xmm0 # encoding: [0x66,0x0f,0xc6,0xc0,0x01]
-; X64-SSE-NEXT:    # xmm0 = xmm0[1,0]
-; X64-SSE-NEXT:    movapd %xmm0, (%rdi) # encoding: [0x66,0x0f,0x29,0x07]
+; X64-SSE-NEXT:    shufps $78, %xmm0, %xmm0 # encoding: [0x0f,0xc6,0xc0,0x4e]
+; X64-SSE-NEXT:    # xmm0 = xmm0[2,3,0,1]
+; X64-SSE-NEXT:    movaps %xmm0, (%rdi) # encoding: [0x0f,0x29,0x07]
 ; X64-SSE-NEXT:    retq # encoding: [0xc3]
 ;
 ; X64-AVX1-LABEL: test_mm_storer_pd:

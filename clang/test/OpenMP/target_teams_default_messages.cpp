@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -o - %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -o - %s -Wuninitialized
 
 void foo();
 

@@ -186,19 +186,29 @@ bool IncludeInserter::shouldInsertInclude(
   return !Included(DeclaringHeader) && !Included(InsertedHeader.File);
 }
 
-std::string
+llvm::Optional<std::string>
 IncludeInserter::calculateIncludePath(const HeaderFile &InsertedHeader,
                                       llvm::StringRef IncludingFile) const {
   assert(InsertedHeader.valid());
   if (InsertedHeader.Verbatim)
     return InsertedHeader.File;
   bool IsSystem = false;
-  // FIXME(kadircet): Handle same directory includes even if there is no
-  // HeaderSearchInfo.
-  if (!HeaderSearchInfo)
-    return "\"" + InsertedHeader.File + "\"";
-  std::string Suggested = HeaderSearchInfo->suggestPathToFileForDiagnostics(
-      InsertedHeader.File, BuildDir, IncludingFile, &IsSystem);
+  std::string Suggested;
+  if (HeaderSearchInfo) {
+    Suggested = HeaderSearchInfo->suggestPathToFileForDiagnostics(
+        InsertedHeader.File, BuildDir, IncludingFile, &IsSystem);
+  } else {
+    // Calculate include relative to including file only.
+    StringRef IncludingDir = llvm::sys::path::parent_path(IncludingFile);
+    SmallString<256> RelFile(InsertedHeader.File);
+    // Replacing with "" leaves "/RelFile" if IncludingDir doesn't end in "/".
+    llvm::sys::path::replace_path_prefix(RelFile, IncludingDir, "./");
+    Suggested = llvm::sys::path::convert_to_slash(
+        llvm::sys::path::remove_leading_dotslash(RelFile));
+  }
+  // FIXME: should we allow (some limited number of) "../header.h"?
+  if (llvm::sys::path::is_absolute(Suggested))
+    return None;
   if (IsSystem)
     Suggested = "<" + Suggested + ">";
   else

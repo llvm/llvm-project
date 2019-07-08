@@ -29,9 +29,8 @@ define void @test1(<2 x double>* %r, <2 x double>* %A, double %B) nounwind  {
 ;
 ; X64-SSE-LABEL: test1:
 ; X64-SSE:       # %bb.0:
-; X64-SSE-NEXT:    movapd (%rsi), %xmm1
-; X64-SSE-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; X64-SSE-NEXT:    movapd %xmm1, (%rdi)
+; X64-SSE-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[0],mem[1]
+; X64-SSE-NEXT:    movapd %xmm0, (%rdi)
 ; X64-SSE-NEXT:    retq
 ;
 ; X64-AVX-LABEL: test1:

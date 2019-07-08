@@ -58,8 +58,7 @@ static llvm::cl::opt<CompletionStyleFlag> CompletionStyle(
                    "completion, with full type information"),
         clEnumValN(Bundled, "bundled",
                    "Similar completion items (e.g. function overloads) are "
-                   "combined. Type information shown where possible")),
-    llvm::cl::init(Detailed));
+                   "combined. Type information shown where possible")));
 
 // FIXME: Flags are the wrong mechanism for user preferences.
 // We should probably read a dotfile or similar.
@@ -487,7 +486,8 @@ int main(int argc, char *argv[]) {
   clangd::CodeCompleteOptions CCOpts;
   CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
   CCOpts.Limit = LimitResults;
-  CCOpts.BundleOverloads = CompletionStyle != Detailed;
+  if (CompletionStyle.getNumOccurrences())
+    CCOpts.BundleOverloads = CompletionStyle != Detailed;
   CCOpts.ShowOrigins = ShowOrigins;
   CCOpts.InsertIncludes = HeaderInsertion;
   if (!HeaderInsertionDecorators) {

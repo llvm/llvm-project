@@ -853,4 +853,51 @@ TEST_F(GISelMITest, LowerMinMax) {
 
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
+
+TEST_F(GISelMITest, WidenScalarBuildVector) {
+  if (!TM)
+    return;
+
+  LLT S32 = LLT::scalar(32);
+  LLT S16 = LLT::scalar(16);
+  LLT V2S16 = LLT::vector(2, S16);
+  LLT V2S32 = LLT::vector(2, S32);
+
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder({G_SMIN, G_SMAX, G_UMIN, G_UMAX})
+      .lowerFor({s64, LLT::vector(2, s32)});
+  });
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  B.setInsertPt(*EntryMBB, EntryMBB->end());
+
+  Register Constant0 = B.buildConstant(S16, 1).getReg(0);
+  Register Constant1 = B.buildConstant(S16, 2).getReg(0);
+  auto BV0 = B.buildBuildVector(V2S16, {Constant0, Constant1});
+  auto BV1 = B.buildBuildVector(V2S16, {Constant0, Constant1});
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*BV0, 0, V2S32));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*BV1, 1, S32));
+
+  auto CheckStr = R"(
+  CHECK: [[K0:%[0-9]+]]:_(s16) = G_CONSTANT i16 1
+  CHECK-NEXT: [[K1:%[0-9]+]]:_(s16) = G_CONSTANT i16 2
+  CHECK-NEXT: [[EXT_K0_0:%[0-9]+]]:_(s32) = G_ANYEXT [[K0]]
+  CHECK-NEXT: [[EXT_K1_0:%[0-9]+]]:_(s32) = G_ANYEXT [[K1]]
+  CHECK-NEXT: [[BV0:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[EXT_K0_0]]:_(s32), [[EXT_K1_0]]:_(s32)
+  CHECK-NEXT: [[BV0_TRUNC:%[0-9]+]]:_(<2 x s16>) = G_TRUNC [[BV0]]
+
+  CHECK: [[EXT_K0_1:%[0-9]+]]:_(s32) = G_ANYEXT [[K0]]
+  CHECK-NEXT: [[EXT_K1_1:%[0-9]+]]:_(s32) = G_ANYEXT [[K1]]
+
+  CHECK-NEXT: [[BV1:%[0-9]+]]:_(<2 x s16>) = G_BUILD_VECTOR_TRUNC [[EXT_K0_1]]:_(s32), [[EXT_K1_1]]:_(s32)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
+
 } // namespace

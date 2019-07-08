@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
 
 void foo() {
 }
@@ -16,7 +16,7 @@ T tmain(T argc) {
   T b = argc, c, d, e, f, g;
   char ** argv;
   static T a;
-// CHECK: static T a;
+  T z;
   #pragma omp distribute dist_schedule // expected-error {{expected '(' after 'dist_schedule'}}
   for (int i = 0; i < 10; ++i) foo();
   #pragma omp distribute dist_schedule ( // expected-error {{expected 'static' in OpenMP clause 'dist_schedule'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -31,7 +31,7 @@ T tmain(T argc) {
   for (int i = 0; i < 10; ++i) foo();
   #pragma omp distribute dist_schedule (static, argc > 0 ? argv[1] : argv[2]) // expected-error2 {{expression must have integral or unscoped enumeration type, not 'char *'}}
   for (int i = 0; i < 10; ++i) foo();
-  #pragma omp distribute dist_schedule (static), dist_schedule (static, 1) // expected-error {{directive '#pragma omp distribute' cannot contain more than one 'dist_schedule' clause}}
+  #pragma omp distribute dist_schedule (static), dist_schedule (static, 1 + z) // expected-error {{directive '#pragma omp distribute' cannot contain more than one 'dist_schedule' clause}}
   for (int i = 0; i < 10; ++i) foo();
   #pragma omp distribute dist_schedule (static, S1) // expected-error {{'S1' does not refer to a value}}
   for (int i = 0; i < 10; ++i) foo();
@@ -41,6 +41,7 @@ T tmain(T argc) {
 }
 
 int main(int argc, char **argv) {
+int z;
   #pragma omp distribute dist_schedule // expected-error {{expected '(' after 'dist_schedule'}}
   for (int i = 0; i < 10; ++i) foo();
   #pragma omp distribute dist_schedule ( // expected-error {{expected 'static' in OpenMP clause 'dist_schedule'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -55,7 +56,7 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 10; ++i) foo();
   #pragma omp distribute dist_schedule (static, argc > 0 ? argv[1] : argv[2]) // expected-error {{expression must have integral or unscoped enumeration type, not 'char *'}}
   for (int i = 0; i < 10; ++i) foo();
-  #pragma omp distribute dist_schedule (static), dist_schedule (static, 1) // expected-error {{directive '#pragma omp distribute' cannot contain more than one 'dist_schedule' clause}}
+  #pragma omp distribute dist_schedule (static), dist_schedule (static, 1 -z ) // expected-error {{directive '#pragma omp distribute' cannot contain more than one 'dist_schedule' clause}}
   for (int i = 0; i < 10; ++i) foo();
   #pragma omp distribute dist_schedule (static, S1) // expected-error {{'S1' does not refer to a value}}
   for (int i = 0; i < 10; ++i) foo();

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -76,7 +76,7 @@ template <class I, class C>
 int foomain(int argc, char **argv) {
   I e(4);
   C g(5);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp target parallel for firstprivate // expected-error {{expected '(' after 'firstprivate'}}
   for (int k = 0; k < argc; ++k)
@@ -102,7 +102,7 @@ int foomain(int argc, char **argv) {
 #pragma omp target parallel for firstprivate(S1) // expected-error {{'S1' does not refer to a value}}
   for (int k = 0; k < argc; ++k)
     ++k;
-#pragma omp target parallel for firstprivate(a, b) // expected-error {{firstprivate variable with incomplete type 'S1'}}
+#pragma omp target parallel for firstprivate(z, a, b) // expected-error {{firstprivate variable with incomplete type 'S1'}}
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp target parallel for firstprivate(argv[1]) // expected-error {{expected variable name}}
@@ -161,7 +161,7 @@ int main(int argc, char **argv) {
   S5 g(5);
   S3 m;
   S6 n(2);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp target parallel for firstprivate // expected-error {{expected '(' after 'firstprivate'}}
   for (i = 0; i < argc; ++i)
@@ -187,7 +187,7 @@ int main(int argc, char **argv) {
 #pragma omp target parallel for firstprivate(S1) // expected-error {{'S1' does not refer to a value}}
   for (i = 0; i < argc; ++i)
     foo();
-#pragma omp target parallel for firstprivate(a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}}
+#pragma omp target parallel for firstprivate(z, a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp target parallel for firstprivate(argv[1]) // expected-error {{expected variable name}}

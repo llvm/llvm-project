@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -63,7 +63,7 @@ int main(int argc, char **argv) {
   const int da[5] = {0};
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, k;
   int &j = i;
 #pragma omp parallel sections shared // expected-error {{expected '(' after 'shared'}}
   { foo(); }
@@ -81,7 +81,7 @@ int main(int argc, char **argv) {
   { foo(); }
 #pragma omp parallel sections shared(S1) // expected-error {{'S1' does not refer to a value}}
   { foo(); }
-#pragma omp parallel sections shared(a, b, c, d, f)
+#pragma omp parallel sections shared(a, b, c, d, f, k)
   { foo(); }
 #pragma omp parallel sections shared(argv[1]) // expected-error {{expected variable name}}
   { foo(); }

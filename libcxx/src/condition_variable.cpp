@@ -21,10 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-condition_variable::~condition_variable()
-{
-    __libcpp_condvar_destroy(&__cv_);
-}
+// ~condition_variable is defined elsewhere.
 
 void
 condition_variable::notify_one() _NOEXCEPT

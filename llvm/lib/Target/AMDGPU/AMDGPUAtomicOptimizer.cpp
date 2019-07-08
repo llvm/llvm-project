@@ -248,10 +248,9 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
 
   // We need to know how many lanes are active within the wavefront, and we do
   // this by doing a ballot of active lanes.
-  CallInst *const Ballot =
-      B.CreateIntrinsic(Intrinsic::amdgcn_icmp,
-                        {B.getInt64Ty(), B.getInt32Ty()},
-                        {B.getInt32(1), B.getInt32(0), B.getInt32(33)});
+  CallInst *const Ballot = B.CreateIntrinsic(
+      Intrinsic::amdgcn_icmp, {B.getInt64Ty(), B.getInt32Ty()},
+      {B.getInt32(1), B.getInt32(0), B.getInt32(CmpInst::ICMP_NE)});
 
   // We need to know how many lanes are active within the wavefront that are
   // below us. If we counted each lane linearly starting from 0, a lane is

@@ -129,11 +129,12 @@ public:
     void splice(const_iterator position, list&& x, const_iterator first,
                                                   const_iterator last);
 
-    size_type remove(const value_type& value); // void before C++20
-    template <class Pred> size_type remove_if(Pred pred); // void before C++20
-    size_type unique();  // void before C++20
+    size_type remove(const value_type& value);       // void before C++20
+    template <class Pred>
+      size_type remove_if(Pred pred);                // void before C++20
+    size_type unique();                              // void before C++20
     template <class BinaryPredicate>
-        size_type unique(BinaryPredicate binary_pred); // void before C++20
+      size_type unique(BinaryPredicate binary_pred); // void before C++20
     void merge(list& x);
     void merge(list&& x);
     template <class Compare>
@@ -858,9 +859,9 @@ public:
     typedef _VSTD::reverse_iterator<iterator>         reverse_iterator;
     typedef _VSTD::reverse_iterator<const_iterator>   const_reverse_iterator;
 #if _LIBCPP_STD_VER > 17
-	typedef size_type                                __remove_return_type;
+    typedef size_type                                __remove_return_type;
 #else
-	typedef void                                     __remove_return_type;
+    typedef void                                     __remove_return_type;
 #endif
 
     _LIBCPP_INLINE_VISIBILITY

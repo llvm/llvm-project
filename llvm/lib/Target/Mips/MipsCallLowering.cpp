@@ -109,9 +109,9 @@ private:
     MIRBuilder.getMBB().addLiveIn(PhysReg);
   }
 
-  void buildLoad(unsigned Val, const CCValAssign &VA) {
+  void buildLoad(Register Val, const CCValAssign &VA) {
     MachineMemOperand *MMO;
-    unsigned Addr = getStackAddress(VA, MMO);
+    Register Addr = getStackAddress(VA, MMO);
     MIRBuilder.buildLoad(Val, Addr, *MMO);
   }
 };

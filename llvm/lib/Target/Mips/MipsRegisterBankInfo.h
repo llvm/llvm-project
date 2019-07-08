@@ -37,6 +37,87 @@ public:
 
   const InstructionMapping &
   getInstrMapping(const MachineInstr &MI) const override;
+
+  void applyMappingImpl(const OperandsMapper &OpdMapper) const override;
+
+private:
+  /// Some instructions are used with both floating point and integer operands.
+  /// We assign InstType to such instructions as it helps us to avoid cross bank
+  /// copies. InstType deppends on context.
+  enum InstType {
+    NotDetermined,
+    /// Connected with instruction that interprets 'bags of bits' as integers.
+    /// Select gprb to avoid cross bank copies.
+    Integer,
+    /// Connected with instruction that interprets 'bags of bits' as floating
+    /// point numbers. Select fprb to avoid cross bank copies.
+    FloatingPoint
+  };
+
+  /// Some generic instructions have operands that can be mapped to either fprb
+  /// or gprb e.g. for G_LOAD we consider only operand 0 as ambiguous, operand 1
+  /// is always gprb since it is a pointer.
+  /// This class provides containers for MI's ambiguous:
+  /// DefUses : MachineInstrs that use one of MI's ambiguous def operands.
+  /// UseDefs : MachineInstrs that define MI's ambiguous use operands.
+  class AmbiguousRegDefUseContainer {
+    SmallVector<MachineInstr *, 2> DefUses;
+    SmallVector<MachineInstr *, 2> UseDefs;
+
+    void addDefUses(Register Reg, const MachineRegisterInfo &MRI);
+    void addUseDef(Register Reg, const MachineRegisterInfo &MRI);
+
+  public:
+    AmbiguousRegDefUseContainer(const MachineInstr *MI);
+    SmallVectorImpl<MachineInstr *> &getDefUses() { return DefUses; }
+    SmallVectorImpl<MachineInstr *> &getUseDefs() { return UseDefs; }
+  };
+
+  class TypeInfoForMF {
+    /// MachineFunction name is used to recognise when MF changes.
+    std::string MFName = "";
+    /// Recorded InstTypes for visited instructions.
+    DenseMap<const MachineInstr *, InstType> Types;
+
+    bool visit(const MachineInstr *MI);
+
+    /// Visit MI's adjacent UseDefs or DefUses.
+    bool visitAdjacentInstrs(const MachineInstr *MI,
+                             SmallVectorImpl<MachineInstr *> &AdjacentInstrs,
+                             bool isDefUse);
+
+    void setTypes(const MachineInstr *MI, InstType ITy);
+
+    /// InstType for MI is determined, set it to InstType that corresponds to
+    /// physical regisiter that is operand number Op in CopyInst.
+    void setTypesAccordingToPhysicalRegister(const MachineInstr *MI,
+                                             const MachineInstr *CopyInst,
+                                             unsigned Op);
+
+    /// Set default values for MI in order to start visit.
+    void startVisit(const MachineInstr *MI) {
+      Types.try_emplace(MI, InstType::NotDetermined);
+    }
+
+    bool wasVisited(const MachineInstr *MI) const { return Types.count(MI); };
+
+    /// Returns recorded type for instruction.
+    const InstType &getRecordedTypeForInstr(const MachineInstr *MI) const {
+      assert(wasVisited(MI) && "Instruction was not visited!");
+      return Types.find(MI)->getSecond();
+    };
+
+    /// Change recorded type for instruction.
+    void changeRecordedTypeForInstr(const MachineInstr *MI, InstType InstTy) {
+      assert(wasVisited(MI) && "Instruction was not visited!");
+      Types.find(MI)->getSecond() = InstTy;
+    };
+
+  public:
+    InstType determineInstType(const MachineInstr *MI);
+
+    void cleanupIfNewFunction(llvm::StringRef FunctionName);
+  };
 };
 } // end namespace llvm
 #endif

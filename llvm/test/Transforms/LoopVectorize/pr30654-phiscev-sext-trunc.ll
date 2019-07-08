@@ -33,8 +33,9 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; CHECK: %mul = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 {{.*}}, i8 {{.*}})
 ; CHECK-NOT: %mul = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 {{.*}}, i8 {{.*}})
 ; CHECK: %[[TEST:[0-9]+]] = or i1 {{.*}}, %mul.overflow
+; CHECK: %[[NTEST:[0-9]+]] = or i1 false, %[[TEST]]
 ; CHECK: %ident.check = icmp ne i32 {{.*}}, %{{.*}}
-; CHECK: %{{.*}} = or i1 %[[TEST]], %ident.check
+; CHECK: %{{.*}} = or i1 %[[NTEST]], %ident.check
 ; CHECK-NOT: %mul = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 {{.*}}, i8 {{.*}})
 ; CHECK: vector.body:
 ; CHECK: <4 x i32>
@@ -91,9 +92,10 @@ for.end:
 ; CHECK: %mul = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 {{.*}}, i8 {{.*}})
 ; CHECK-NOT: %mul = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 {{.*}}, i8 {{.*}})
 ; CHECK: %[[TEST:[0-9]+]] = or i1 {{.*}}, %mul.overflow
+; CHECK: %[[NTEST:[0-9]+]] = or i1 false, %[[TEST]]
 ; CHECK: %[[EXT:[0-9]+]] = sext i8 {{.*}} to i32
 ; CHECK: %ident.check = icmp ne i32 {{.*}}, %[[EXT]]
-; CHECK: %{{.*}} = or i1 %[[TEST]], %ident.check
+; CHECK: %{{.*}} = or i1 %[[NTEST]], %ident.check
 ; CHECK-NOT: %mul = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 {{.*}}, i8 {{.*}})
 ; CHECK: vector.body:
 ; CHECK: <4 x i32>

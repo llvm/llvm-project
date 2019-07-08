@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 void foo() {
 }
@@ -13,6 +13,7 @@ struct S1; // expected-note {{declared here}}
 
 template <class T, typename S, int N, int ST> // expected-note {{declared here}}
 T tmain(T argc, S **argv) {
+  T k;
 // expected-error@+2 {{expected '(' after 'schedule'}}
 #pragma omp target
 #pragma omp teams distribute parallel for schedule
@@ -85,7 +86,7 @@ T tmain(T argc, S **argv) {
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
 
 #pragma omp target
-#pragma omp teams distribute parallel for schedule (dynamic, 1)
+#pragma omp teams distribute parallel for schedule (dynamic, k)
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
 
 // expected-error@+2 {{argument to 'schedule' clause must be a strictly positive integer value}}

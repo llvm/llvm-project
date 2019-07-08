@@ -694,7 +694,7 @@ bool isValidHwregWidth(int64_t Width) {
   return 0 <= (Width - 1) && isUInt<WIDTH_M1_WIDTH_>(Width - 1);
 }
 
-int64_t encodeHwreg(int64_t Id, int64_t Offset, int64_t Width) {
+uint64_t encodeHwreg(uint64_t Id, uint64_t Offset, uint64_t Width) {
   return (Id << ID_SHIFT_) |
          (Offset << OFFSET_SHIFT_) |
          ((Width - 1) << WIDTH_M1_SHIFT_);

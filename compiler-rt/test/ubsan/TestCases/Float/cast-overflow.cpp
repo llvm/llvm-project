@@ -137,7 +137,7 @@ int main(int argc, char **argv) {
 
     // Integer -> floating point overflow.
   case '6': {
-    // CHECK-6: cast-overflow.cpp:[[@LINE+2]]:{{34: runtime error: 0xffffff00000000000000000000000001 is outside the range of representable values of type 'float'| __int128 not supported}}
+    // CHECK-6: cast-overflow.cpp:[[@LINE+2]]:{{27: runtime error: 3.40282e\+38 is outside the range of representable values of type 'int'| __int128 not supported}}
 #if defined(__SIZEOF_INT128__) && !defined(_WIN32)
     static int test_int = (float)(FloatMaxAsUInt128 + 1);
     return 0;

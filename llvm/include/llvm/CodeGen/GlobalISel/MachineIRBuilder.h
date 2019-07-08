@@ -357,7 +357,7 @@ public:
   /// \pre \p Res must be a generic virtual register with pointer type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildFrameIndex(Register Res, int Idx);
+  MachineInstrBuilder buildFrameIndex(const DstOp &Res, int Idx);
 
   /// Build and insert \p Res = G_GLOBAL_VALUE \p GV
   ///
@@ -369,8 +369,7 @@ public:
   ///      in the same address space as \p GV.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildGlobalValue(Register Res, const GlobalValue *GV);
-
+  MachineInstrBuilder buildGlobalValue(const DstOp &Res, const GlobalValue *GV);
 
   /// Build and insert \p Res = G_GEP \p Op0, \p Op1
   ///
@@ -383,8 +382,8 @@ public:
   /// \pre \p Op1 must be a generic virtual register with scalar type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildGEP(Register Res, Register Op0,
-                               Register Op1);
+  MachineInstrBuilder buildGEP(const DstOp &Res, const SrcOp &Op0,
+                               const SrcOp &Op1);
 
   /// Materialize and insert \p Res = G_GEP \p Op0, (G_CONSTANT \p Value)
   ///
@@ -419,7 +418,7 @@ public:
   ///      be cleared in \p Op0.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildPtrMask(Register Res, Register Op0,
+  MachineInstrBuilder buildPtrMask(const DstOp &Res, const SrcOp &Op0,
                                    uint32_t NumBits);
 
   /// Build and insert \p Res, \p CarryOut = G_UADDO \p Op0, \p Op1
@@ -667,7 +666,7 @@ public:
   /// \pre \p Addr must be a generic virtual register with pointer type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildLoad(Register Res, Register Addr,
+  MachineInstrBuilder buildLoad(const DstOp &Res, const SrcOp &Addr,
                                 MachineMemOperand &MMO);
 
   /// Build and insert `Res = <opcode> Addr, MMO`.
@@ -679,8 +678,8 @@ public:
   /// \pre \p Addr must be a generic virtual register with pointer type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildLoadInstr(unsigned Opcode, Register Res,
-                                     Register Addr, MachineMemOperand &MMO);
+  MachineInstrBuilder buildLoadInstr(unsigned Opcode, const DstOp &Res,
+                                     const SrcOp &Addr, MachineMemOperand &MMO);
 
   /// Build and insert `G_STORE Val, Addr, MMO`.
   ///
@@ -691,7 +690,7 @@ public:
   /// \pre \p Addr must be a generic virtual register with pointer type.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildStore(Register Val, Register Addr,
+  MachineInstrBuilder buildStore(const SrcOp &Val, const SrcOp &Addr,
                                  MachineMemOperand &MMO);
 
   /// Build and insert `Res0, ... = G_EXTRACT Src, Idx0`.

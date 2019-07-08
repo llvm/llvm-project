@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -68,7 +68,7 @@ template <class I, class C>
 int foomain(int argc, char **argv) {
   I e(4);
   I g(5);
-  int i;
+  int i, k;
   int &j = i;
 #pragma omp parallel
 #pragma omp sections lastprivate // expected-error {{expected '(' after 'lastprivate'}}
@@ -111,7 +111,7 @@ int foomain(int argc, char **argv) {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections lastprivate(a, b) // expected-error {{lastprivate variable with incomplete type 'S1'}}
+#pragma omp sections lastprivate(a, b, k) // expected-error {{lastprivate variable with incomplete type 'S1'}}
   {
     foo();
   }
@@ -174,7 +174,7 @@ int main(int argc, char **argv) {
   S5 g(5);
   S3 m;
   S6 n(2);
-  int i;
+  int i, k;
   int &j = i;
 #pragma omp parallel
 #pragma omp sections lastprivate // expected-error {{expected '(' after 'lastprivate'}}
@@ -232,7 +232,7 @@ int main(int argc, char **argv) {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections lastprivate(ba)
+#pragma omp sections lastprivate(ba, k)
   {
     foo();
   }

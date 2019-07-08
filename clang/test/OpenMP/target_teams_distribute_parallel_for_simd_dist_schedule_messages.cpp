@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 void foo() {
 }
@@ -16,7 +16,7 @@ T tmain(T argc) {
   T b = argc, c, d, e, f, g;
   char ** argv;
   static T a;
-// CHECK: static T a;
+  T z;
 
 #pragma omp target teams distribute parallel for simd dist_schedule // expected-error {{expected '(' after 'dist_schedule'}}
   for (int i = 0; i < 10; ++i) foo();
@@ -39,7 +39,7 @@ T tmain(T argc) {
 #pragma omp target teams distribute parallel for simd dist_schedule (static, argc > 0 ? argv[1] : argv[2]) // expected-error2 {{expression must have integral or unscoped enumeration type, not 'char *'}}
   for (int i = 0; i < 10; ++i) foo();
 
-#pragma omp target teams distribute parallel for simd dist_schedule (static), dist_schedule (static, 1) // expected-error {{directive '#pragma omp target teams distribute parallel for simd' cannot contain more than one 'dist_schedule' clause}}
+#pragma omp target teams distribute parallel for simd dist_schedule (static), dist_schedule (static, z+1) // expected-error {{directive '#pragma omp target teams distribute parallel for simd' cannot contain more than one 'dist_schedule' clause}}
   for (int i = 0; i < 10; ++i) foo();
 
 #pragma omp target teams distribute parallel for simd dist_schedule (static, S1) // expected-error {{'S1' does not refer to a value}}
@@ -52,6 +52,7 @@ T tmain(T argc) {
 }
 
 int main(int argc, char **argv) {
+  int z;
 #pragma omp target teams distribute parallel for simd dist_schedule // expected-error {{expected '(' after 'dist_schedule'}}
   for (int i = 0; i < 10; ++i) foo();
 
@@ -73,7 +74,7 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute parallel for simd dist_schedule (static, argc > 0 ? argv[1] : argv[2]) // expected-error {{expression must have integral or unscoped enumeration type, not 'char *'}}
   for (int i = 0; i < 10; ++i) foo();
 
-#pragma omp target teams distribute parallel for simd dist_schedule (static), dist_schedule (static, 1) // expected-error {{directive '#pragma omp target teams distribute parallel for simd' cannot contain more than one 'dist_schedule' clause}}
+#pragma omp target teams distribute parallel for simd dist_schedule (static), dist_schedule (static, 1+z) // expected-error {{directive '#pragma omp target teams distribute parallel for simd' cannot contain more than one 'dist_schedule' clause}}
   for (int i = 0; i < 10; ++i) foo();
 
 #pragma omp target teams distribute parallel for simd dist_schedule (static, S1) // expected-error {{'S1' does not refer to a value}}

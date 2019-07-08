@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 void foo() {
 }
@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
   const int da[5] = { 0 };
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, k;
   int &j = i;
 #pragma omp target teams distribute parallel for shared // expected-error {{expected '(' after 'shared'}}
   for (int j=0; j<100; j++) foo();
@@ -77,7 +77,7 @@ int main(int argc, char **argv) {
   for (int j=0; j<100; j++) foo();
 #pragma omp target teams distribute parallel for shared (S1) // expected-error {{'S1' does not refer to a value}}
   for (int j=0; j<100; j++) foo();
-#pragma omp target teams distribute parallel for shared (a, b, c, d, f)
+#pragma omp target teams distribute parallel for shared (a, b, c, d, f, k)
   for (int j=0; j<100; j++) foo();
 #pragma omp target teams distribute parallel for shared (argv[1]) // expected-error {{expected variable name}}
   for (int j=0; j<100; j++) foo();

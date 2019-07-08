@@ -729,8 +729,12 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
       "Size mismatch in arguments and offsets");
 
   // Pop loop trip count
-  uint64_t ltc = Device.loopTripCnt;
-  Device.loopTripCnt = 0;
+  uint64_t ltc = 0;
+  TblMapMtx.lock();
+  auto I = Device.LoopTripCnt.find(__kmpc_global_thread_num(NULL));
+  if (I != Device.LoopTripCnt.end())
+    std::swap(ltc, I->second);
+  TblMapMtx.unlock();
 
   // Launch device execution.
   DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",

@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -125,7 +125,7 @@ T tmain(T argc) {
   const T d = T();       // expected-note 4 {{'d' defined here}}
   const T da[5] = {T()}; // expected-note 2 {{'da' defined here}}
   T qa[5] = {T()};
-  T i;
+  T i, z;
   T &j = i;                    // expected-note 2 {{'j' defined here}}
   S3 &p = k;                   // expected-note 2 {{'p' defined here}}
   const T &r = da[(int)i];     // expected-note 2 {{'r' defined here}}
@@ -163,8 +163,8 @@ T tmain(T argc) {
 #pragma omp taskloop simd in_reduction(& : argc // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskgroup task_reduction(|:argc) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
-#pragma omp taskloop simd in_reduction(| : argc, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
+#pragma omp taskgroup task_reduction(|:z) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
+#pragma omp taskloop simd in_reduction(| : z, // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error {{invalid operands to binary expression ('float' and 'float')}}
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskloop simd in_reduction(|| : argc ? i : argc) // expected-error 2 {{expected variable name, array element or array section}}
@@ -268,7 +268,7 @@ int main(int argc, char **argv) {
   int qa[5] = {0};
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;                  // expected-note {{'j' defined here}}
   S3 &p = k;                   // expected-note 2 {{'p' defined here}}
   const int &r = da[i];        // expected-note {{'r' defined here}}
@@ -308,8 +308,8 @@ int main(int argc, char **argv) {
 #pragma omp taskloop simd in_reduction(~ : argc) // expected-error {{expected unqualified-id}}
   for (int i = 0; i < 10; ++i)
   foo();
-#pragma omp taskgroup task_reduction(&&:argc)
-#pragma omp taskloop simd in_reduction(&& : argc)
+#pragma omp taskgroup task_reduction(&&:argc, z)
+#pragma omp taskloop simd in_reduction(&& : argc, z)
   for (int i = 0; i < 10; ++i)
   foo();
 #pragma omp taskloop simd in_reduction(^ : S1) // expected-error {{'S1' does not refer to a value}}

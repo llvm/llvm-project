@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -57,7 +57,7 @@ int main(int argc, char **argv) {
   const int da[5] = { 0 }; // expected-note {{'da' defined here}}
   S4 e(4);
   S5 g[] = {5, 6};
-  int i;
+  int i, z;
   int &j = i;
   #pragma omp parallel private // expected-error {{expected '(' after 'private'}}
   #pragma omp parallel private ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -79,7 +79,7 @@ int main(int argc, char **argv) {
   foo();
   #pragma omp parallel firstprivate(i) private(i) // expected-error {{firstprivate variable cannot be private}} expected-note {{defined as firstprivate}}
   foo();
-  #pragma omp parallel private(i)
+  #pragma omp parallel private(i, z)
   #pragma omp parallel private(j)
   foo();
   #pragma omp parallel firstprivate(i)

@@ -25,6 +25,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/xxhash.h"
 #include <algorithm>
 
 namespace clang {
@@ -376,7 +377,13 @@ bool isRangeConsecutive(const Range &Left, const Range &Right) {
 }
 
 FileDigest digest(llvm::StringRef Content) {
-  return llvm::SHA1::hash({(const uint8_t *)Content.data(), Content.size()});
+  uint64_t Hash{llvm::xxHash64(Content)};
+  FileDigest Result;
+  for (unsigned I = 0; I < Result.size(); ++I) {
+    Result[I] = uint8_t(Hash);
+    Hash >>= 8;
+  }
+  return Result;
 }
 
 llvm::Optional<FileDigest> digestFile(const SourceManager &SM, FileID FID) {

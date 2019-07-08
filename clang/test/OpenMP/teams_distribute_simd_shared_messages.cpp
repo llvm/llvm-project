@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-target -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target -Wuninitialized
 
 void foo() {
 }
@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
   const int da[5] = { 0 };
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;
   #pragma omp target
   #pragma omp teams distribute simd shared // expected-error {{expected '(' after 'shared'}}
@@ -101,7 +101,7 @@ int main(int argc, char **argv) {
   #pragma omp teams distribute simd shared(da)
   for (int j=0; j<100; j++) foo();
   #pragma omp target
-  #pragma omp teams distribute simd shared(e, g)
+  #pragma omp teams distribute simd shared(e, g, z)
   for (int j=0; j<100; j++) foo();
   #pragma omp target
   #pragma omp teams distribute simd shared(h, B::x) // expected-error 2 {{threadprivate or thread local variable cannot be shared}}

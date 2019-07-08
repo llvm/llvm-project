@@ -188,7 +188,7 @@ FLAT
 .. parsed-literal::
 
     **INSTRUCTION**                    **DST**           **SRC0**      **SRC1**             **MODIFIERS**
-    \ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|
+    \ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|
     flat_atomic_add                :ref:`vdst<amdgpu_synid7_dst_flat_atomic32>`::ref:`opt<amdgpu_synid7_opt>`,     :ref:`vaddr<amdgpu_synid7_addr_flat>`,    :ref:`vdata<amdgpu_synid7_vdata32_0>`            :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>`
     flat_atomic_add_x2             :ref:`vdst<amdgpu_synid7_dst_flat_atomic64>`::ref:`opt<amdgpu_synid7_opt>`,     :ref:`vaddr<amdgpu_synid7_addr_flat>`,    :ref:`vdata<amdgpu_synid7_vdata64_0>`            :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>`
     flat_atomic_and                :ref:`vdst<amdgpu_synid7_dst_flat_atomic32>`::ref:`opt<amdgpu_synid7_opt>`,     :ref:`vaddr<amdgpu_synid7_addr_flat>`,    :ref:`vdata<amdgpu_synid7_vdata32_0>`            :ref:`glc<amdgpu_synid_glc>` :ref:`slc<amdgpu_synid_slc>`
@@ -555,22 +555,22 @@ SOPK
     s_addk_i32                     :ref:`sdst<amdgpu_synid7_sdst32_1>`,     :ref:`imm16<amdgpu_synid7_simm16>`
     s_cbranch_i_fork                         :ref:`ssrc<amdgpu_synid7_ssrc64_3>`,     :ref:`label<amdgpu_synid7_label>`
     s_cmovk_i32                    :ref:`sdst<amdgpu_synid7_sdst32_1>`,     :ref:`imm16<amdgpu_synid7_simm16>`
-    s_cmpk_eq_i32                            :ref:`ssrc<amdgpu_synid7_ssrc32_1>`,     :ref:`imm16<amdgpu_synid7_simm16>`
-    s_cmpk_eq_u32                            :ref:`ssrc<amdgpu_synid7_ssrc32_1>`,     :ref:`imm16<amdgpu_synid7_uimm16>`
-    s_cmpk_ge_i32                            :ref:`ssrc<amdgpu_synid7_ssrc32_1>`,     :ref:`imm16<amdgpu_synid7_simm16>`
-    s_cmpk_ge_u32                            :ref:`ssrc<amdgpu_synid7_ssrc32_1>`,     :ref:`imm16<amdgpu_synid7_uimm16>`
-    s_cmpk_gt_i32                            :ref:`ssrc<amdgpu_synid7_ssrc32_1>`,     :ref:`imm16<amdgpu_synid7_simm16>`
-    s_cmpk_gt_u32                            :ref:`ssrc<amdgpu_synid7_ssrc32_1>`,     :ref:`imm16<amdgpu_synid7_uimm16>`
-    s_cmpk_le_i32                            :ref:`ssrc<amdgpu_synid7_ssrc32_1>`,     :ref:`imm16<amdgpu_synid7_simm16>`
-    s_cmpk_le_u32                            :ref:`ssrc<amdgpu_synid7_ssrc32_1>`,     :ref:`imm16<amdgpu_synid7_uimm16>`
-    s_cmpk_lg_i32                            :ref:`ssrc<amdgpu_synid7_ssrc32_1>`,     :ref:`imm16<amdgpu_synid7_simm16>`
-    s_cmpk_lg_u32                            :ref:`ssrc<amdgpu_synid7_ssrc32_1>`,     :ref:`imm16<amdgpu_synid7_uimm16>`
-    s_cmpk_lt_i32                            :ref:`ssrc<amdgpu_synid7_ssrc32_1>`,     :ref:`imm16<amdgpu_synid7_simm16>`
-    s_cmpk_lt_u32                            :ref:`ssrc<amdgpu_synid7_ssrc32_1>`,     :ref:`imm16<amdgpu_synid7_uimm16>`
+    s_cmpk_eq_i32                            :ref:`ssrc<amdgpu_synid7_ssrc32_4>`,     :ref:`imm16<amdgpu_synid7_simm16>`
+    s_cmpk_eq_u32                            :ref:`ssrc<amdgpu_synid7_ssrc32_4>`,     :ref:`imm16<amdgpu_synid7_uimm16>`
+    s_cmpk_ge_i32                            :ref:`ssrc<amdgpu_synid7_ssrc32_4>`,     :ref:`imm16<amdgpu_synid7_simm16>`
+    s_cmpk_ge_u32                            :ref:`ssrc<amdgpu_synid7_ssrc32_4>`,     :ref:`imm16<amdgpu_synid7_uimm16>`
+    s_cmpk_gt_i32                            :ref:`ssrc<amdgpu_synid7_ssrc32_4>`,     :ref:`imm16<amdgpu_synid7_simm16>`
+    s_cmpk_gt_u32                            :ref:`ssrc<amdgpu_synid7_ssrc32_4>`,     :ref:`imm16<amdgpu_synid7_uimm16>`
+    s_cmpk_le_i32                            :ref:`ssrc<amdgpu_synid7_ssrc32_4>`,     :ref:`imm16<amdgpu_synid7_simm16>`
+    s_cmpk_le_u32                            :ref:`ssrc<amdgpu_synid7_ssrc32_4>`,     :ref:`imm16<amdgpu_synid7_uimm16>`
+    s_cmpk_lg_i32                            :ref:`ssrc<amdgpu_synid7_ssrc32_4>`,     :ref:`imm16<amdgpu_synid7_simm16>`
+    s_cmpk_lg_u32                            :ref:`ssrc<amdgpu_synid7_ssrc32_4>`,     :ref:`imm16<amdgpu_synid7_uimm16>`
+    s_cmpk_lt_i32                            :ref:`ssrc<amdgpu_synid7_ssrc32_4>`,     :ref:`imm16<amdgpu_synid7_simm16>`
+    s_cmpk_lt_u32                            :ref:`ssrc<amdgpu_synid7_ssrc32_4>`,     :ref:`imm16<amdgpu_synid7_uimm16>`
     s_getreg_b32                   :ref:`sdst<amdgpu_synid7_sdst32_1>`,     :ref:`hwreg<amdgpu_synid7_hwreg>`
     s_movk_i32                     :ref:`sdst<amdgpu_synid7_sdst32_1>`,     :ref:`imm16<amdgpu_synid7_simm16>`
     s_mulk_i32                     :ref:`sdst<amdgpu_synid7_sdst32_1>`,     :ref:`imm16<amdgpu_synid7_simm16>`
-    s_setreg_b32                   :ref:`hwreg<amdgpu_synid7_hwreg>`,    :ref:`ssrc<amdgpu_synid7_ssrc32_1>`
+    s_setreg_b32                   :ref:`hwreg<amdgpu_synid7_hwreg>`,    :ref:`ssrc<amdgpu_synid7_ssrc32_4>`
     s_setreg_imm32_b32             :ref:`hwreg<amdgpu_synid7_hwreg>`,    :ref:`imm32<amdgpu_synid7_bimm32>`
 
 SOPP
@@ -678,7 +678,7 @@ VOP1
     v_rcp_f64                      :ref:`vdst<amdgpu_synid7_vdst64_0>`,     :ref:`src<amdgpu_synid7_src64_0>`
     v_rcp_iflag_f32                :ref:`vdst<amdgpu_synid7_vdst32_0>`,     :ref:`src<amdgpu_synid7_src32_0>`
     v_rcp_legacy_f32               :ref:`vdst<amdgpu_synid7_vdst32_0>`,     :ref:`src<amdgpu_synid7_src32_0>`
-    v_readfirstlane_b32            :ref:`sdst<amdgpu_synid7_sdst32_2>`,     :ref:`vsrc<amdgpu_synid7_vsrc32_0>`
+    v_readfirstlane_b32            :ref:`sdst<amdgpu_synid7_sdst32_2>`,     :ref:`vsrc<amdgpu_synid7_vsrc32_1>`
     v_rndne_f32                    :ref:`vdst<amdgpu_synid7_vdst32_0>`,     :ref:`src<amdgpu_synid7_src32_0>`
     v_rndne_f64                    :ref:`vdst<amdgpu_synid7_vdst64_0>`,     :ref:`src<amdgpu_synid7_src64_0>`
     v_rsq_clamp_f32                :ref:`vdst<amdgpu_synid7_vdst32_0>`,     :ref:`src<amdgpu_synid7_src32_0>`
@@ -704,7 +704,7 @@ VOP2
     v_addc_u32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,     :ref:`vcc<amdgpu_synid7_vcc_64>`,      :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`,    :ref:`vcc<amdgpu_synid7_vcc_64>`
     v_and_b32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
     v_ashr_i32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_ashrrev_i32                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`::ref:`u32<amdgpu_synid7_type_dev>`, :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
+    v_ashrrev_i32                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`, :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
     v_bcnt_u32_b32                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
     v_bfm_b32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
     v_cndmask_b32                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`,    :ref:`vcc<amdgpu_synid7_vcc_64>`
@@ -716,9 +716,9 @@ VOP2
     v_cvt_pkrtz_f16_f32            :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
     v_ldexp_f32                    :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`::ref:`i32<amdgpu_synid7_type_dev>`
     v_lshl_b32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_lshlrev_b32                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`::ref:`u32<amdgpu_synid7_type_dev>`, :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
+    v_lshlrev_b32                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`, :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
     v_lshr_b32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_lshrrev_b32                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`::ref:`u32<amdgpu_synid7_type_dev>`, :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
+    v_lshrrev_b32                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`, :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
     v_mac_f32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
     v_mac_legacy_f32               :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
     v_madak_f32                    :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`,    :ref:`imm32<amdgpu_synid7_fimm32>`
@@ -740,14 +740,14 @@ VOP2
     v_mul_legacy_f32               :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
     v_mul_u32_u24                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
     v_or_b32                       :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
-    v_readlane_b32                 :ref:`sdst<amdgpu_synid7_sdst32_2>`,               :ref:`vsrc0<amdgpu_synid7_vsrc32_0>`,    :ref:`ssrc1<amdgpu_synid7_ssrc32_4>`
+    v_readlane_b32                 :ref:`sdst<amdgpu_synid7_sdst32_2>`,               :ref:`vsrc0<amdgpu_synid7_vsrc32_1>`,    :ref:`ssrc1<amdgpu_synid7_ssrc32_5>`
     v_sub_f32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
     v_sub_i32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,     :ref:`vcc<amdgpu_synid7_vcc_64>`,      :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
     v_subb_u32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,     :ref:`vcc<amdgpu_synid7_vcc_64>`,      :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`,    :ref:`vcc<amdgpu_synid7_vcc_64>`
-    v_subbrev_u32                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,     :ref:`vcc<amdgpu_synid7_vcc_64>`,      :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`,    :ref:`vcc<amdgpu_synid7_vcc_64>`
-    v_subrev_f32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
-    v_subrev_i32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,     :ref:`vcc<amdgpu_synid7_vcc_64>`,      :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
-    v_writelane_b32                :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`ssrc0<amdgpu_synid7_ssrc32_0>`,    :ref:`ssrc1<amdgpu_synid7_ssrc32_4>`
+    v_subbrev_u32                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,     :ref:`vcc<amdgpu_synid7_vcc_64>`,      :ref:`src0<amdgpu_synid7_src32_2>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`,    :ref:`vcc<amdgpu_synid7_vcc_64>`
+    v_subrev_f32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_2>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
+    v_subrev_i32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,     :ref:`vcc<amdgpu_synid7_vcc_64>`,      :ref:`src0<amdgpu_synid7_src32_2>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
+    v_writelane_b32                :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`ssrc0<amdgpu_synid7_ssrc32_6>`,    :ref:`ssrc1<amdgpu_synid7_ssrc32_5>`
     v_xor_b32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,               :ref:`src0<amdgpu_synid7_src32_0>`,     :ref:`vsrc1<amdgpu_synid7_vsrc32_0>`
 
 VOP3
@@ -757,369 +757,369 @@ VOP3
 
     **INSTRUCTION**                    **DST0**       **DST1**      **SRC0**        **SRC1**        **SRC2**            **MODIFIERS**
     \ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|\ |---|
-    v_add_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_add_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_add_f64                      :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_add_i32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_addc_u32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`ssrc2<amdgpu_synid7_ssrc64_1>`
-    v_alignbit_b32                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`
-    v_alignbyte_b32                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`
-    v_and_b32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_ashr_i32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_ashr_i64                     :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_ashrrev_i32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_2>`
-    v_bcnt_u32_b32_e64             :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_bfe_i32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`,   :ref:`src2<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_bfe_u32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`
-    v_bfi_b32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`
-    v_bfm_b32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_bfrev_b32_e64                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
-    v_ceil_f32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_add_i32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_addc_u32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`ssrc2<amdgpu_synid7_ssrc64_1>`
+    v_alignbit_b32                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`
+    v_alignbyte_b32                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`
+    v_and_b32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_ashr_i32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`
+    v_ashr_i64                     :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`
+    v_ashrrev_i32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_4>`
+    v_bcnt_u32_b32_e64             :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_bfe_i32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`,   :ref:`src2<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`
+    v_bfe_u32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`
+    v_bfi_b32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`
+    v_bfm_b32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_bfrev_b32_e64                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
+    v_ceil_f32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_ceil_f64_e64                 :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_clrexcp_e64
-    v_cmp_class_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`b32<amdgpu_synid7_type_dev>`
-    v_cmp_class_f64_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`b32<amdgpu_synid7_type_dev>`
-    v_cmp_eq_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_class_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`b32<amdgpu_synid7_type_dev>`
+    v_cmp_class_f64_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`b32<amdgpu_synid7_type_dev>`
+    v_cmp_eq_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_eq_f64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_eq_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_eq_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_eq_i64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_eq_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_eq_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_eq_u64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_f_f32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_f_f32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_f_f64_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_f_i32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_f_i32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_f_i64_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_f_u32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_f_u32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_f_u64_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_ge_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_ge_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_ge_f64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_ge_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_ge_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_ge_i64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_ge_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_ge_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_ge_u64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_gt_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_gt_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_gt_f64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_gt_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_gt_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_gt_i64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_gt_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_gt_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_gt_u64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_le_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_le_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_le_f64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_le_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_le_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_le_i64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_le_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_le_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_le_u64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_lg_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_lg_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_lg_f64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_lt_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_lt_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_lt_f64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_lt_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_lt_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_lt_i64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_lt_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_lt_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_lt_u64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_ne_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_ne_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_ne_i64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_ne_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_ne_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_ne_u64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_neq_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_neq_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_neq_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_nge_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_nge_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_nge_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_ngt_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_ngt_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_ngt_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_nle_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_nle_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_nle_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_nlg_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_nlg_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_nlg_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_nlt_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_nlt_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_nlt_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_o_f32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_o_f32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_o_f64_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_t_i32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_t_i32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_t_i64_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_t_u32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmp_t_u32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmp_t_u64_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmp_tru_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_tru_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_tru_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmp_u_f32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmp_u_f32_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmp_u_f64_e64                :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_eq_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_eq_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_eq_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_f_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_f_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_f_f64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_ge_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_ge_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_ge_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_gt_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_gt_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_gt_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_le_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_le_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_le_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_lg_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_lg_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_lg_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_lt_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_lt_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_lt_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_neq_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_neq_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_neq_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_nge_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_nge_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_nge_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_ngt_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_ngt_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_ngt_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_nle_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_nle_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_nle_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_nlg_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_nlg_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_nlg_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_nlt_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_nlt_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_nlt_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_o_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_o_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_o_f64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_tru_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_tru_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_tru_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmps_u_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmps_u_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmps_u_f64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_eq_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_eq_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_eq_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_f_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_f_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_f_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_ge_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_ge_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_ge_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_gt_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_gt_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_gt_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_le_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_le_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_le_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_lg_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_lg_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_lg_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_lt_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_lt_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_lt_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_neq_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_neq_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_neq_f64_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_nge_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_nge_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_nge_f64_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_ngt_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_ngt_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_ngt_f64_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_nle_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_nle_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_nle_f64_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_nlg_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_nlg_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_nlg_f64_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_nlt_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_nlt_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_nlt_f64_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_o_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_o_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_o_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_tru_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_tru_f32_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_tru_f64_e64            :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpsx_u_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpsx_u_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpsx_u_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_class_f32_e64           :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`b32<amdgpu_synid7_type_dev>`
-    v_cmpx_class_f64_e64           :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`b32<amdgpu_synid7_type_dev>`
-    v_cmpx_eq_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_class_f32_e64           :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`b32<amdgpu_synid7_type_dev>`
+    v_cmpx_class_f64_e64           :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`b32<amdgpu_synid7_type_dev>`
+    v_cmpx_eq_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_eq_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_eq_i32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_eq_i32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_eq_i64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_eq_u32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_eq_u32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_eq_u64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_f_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_f_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_f_f64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_f_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_f_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_f_i64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_f_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_f_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_f_u64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_ge_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_ge_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_ge_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_ge_i32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_ge_i32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_ge_i64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_ge_u32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_ge_u32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_ge_u64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_gt_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_gt_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_gt_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_gt_i32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_gt_i32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_gt_i64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_gt_u32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_gt_u32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_gt_u64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_le_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_le_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_le_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_le_i32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_le_i32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_le_i64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_le_u32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_le_u32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_le_u64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_lg_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_lg_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_lg_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_lt_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_lt_f32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_lt_f64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_lt_i32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_lt_i32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_lt_i64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_lt_u32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_lt_u32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_lt_u64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_ne_i32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_ne_i32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_ne_i64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_ne_u32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_ne_u32_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_ne_u64_e64              :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_neq_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_neq_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_neq_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_nge_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_nge_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_nge_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_ngt_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_ngt_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_ngt_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_nle_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_nle_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_nle_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_nlg_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_nlg_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_nlg_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_nlt_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_nlt_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_nlt_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_o_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_o_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_o_f64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_t_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_t_i32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_t_i64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_t_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_cmpx_t_u32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
     v_cmpx_t_u64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`
-    v_cmpx_tru_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_tru_f32_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_tru_f64_e64             :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cmpx_u_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cmpx_u_f32_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
     v_cmpx_u_f64_e64               :ref:`sdst<amdgpu_synid7_sdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cndmask_b32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`ssrc2<amdgpu_synid7_ssrc64_1>`
-    v_cos_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_cubeid_f32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_cubema_f32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_cubesc_f32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_cubetc_f32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_cvt_f16_f32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
-    v_cvt_f32_f16_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`                                     :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_cndmask_b32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`ssrc2<amdgpu_synid7_ssrc64_1>`
+    v_cos_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_cubeid_f32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_cubema_f32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_cubesc_f32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_cubetc_f32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_cvt_f16_f32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`
+    v_cvt_f32_f16_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_5>`                                     :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_cvt_f32_f64_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_cvt_f32_i32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`                                     :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_cvt_f32_u32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`                                     :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_cvt_f32_ubyte0_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
-    v_cvt_f32_ubyte1_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
-    v_cvt_f32_ubyte2_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
-    v_cvt_f32_ubyte3_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
-    v_cvt_f64_f32_e64              :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_cvt_f64_i32_e64              :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src32_2>`                                     :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_cvt_f64_u32_e64              :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src32_2>`                                     :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_cvt_flr_i32_f32_e64          :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
-    v_cvt_i32_f32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cvt_f32_i32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`                                     :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_cvt_f32_u32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`                                     :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_cvt_f32_ubyte0_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
+    v_cvt_f32_ubyte1_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
+    v_cvt_f32_ubyte2_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
+    v_cvt_f32_ubyte3_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
+    v_cvt_f64_f32_e64              :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_cvt_f64_i32_e64              :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src32_3>`                                     :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_cvt_f64_u32_e64              :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src32_3>`                                     :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_cvt_flr_i32_f32_e64          :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`
+    v_cvt_i32_f32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`
     v_cvt_i32_f64_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_cvt_off_f32_i4_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`                                     :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_cvt_pk_i16_i32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_cvt_pk_u16_u32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_cvt_pk_u8_f32                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`,   :ref:`src2<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_cvt_pkaccum_u8_f32_e64       :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_cvt_pknorm_i16_f32_e64       :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
-    v_cvt_pknorm_u16_f32_e64       :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
-    v_cvt_pkrtz_f16_f32_e64        :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
-    v_cvt_rpi_i32_f32_e64          :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
-    v_cvt_u32_f32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`
+    v_cvt_off_f32_i4_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`                                     :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_cvt_pk_i16_i32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_cvt_pk_u16_u32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_cvt_pk_u8_f32                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`,   :ref:`src2<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`
+    v_cvt_pkaccum_u8_f32_e64       :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`
+    v_cvt_pknorm_i16_f32_e64       :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
+    v_cvt_pknorm_u16_f32_e64       :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
+    v_cvt_pkrtz_f16_f32_e64        :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`
+    v_cvt_rpi_i32_f32_e64          :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`
+    v_cvt_u32_f32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`
     v_cvt_u32_f64_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_div_fixup_f32                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_div_fixup_f32                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_div_fixup_f64                :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_div_fmas_f32                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_div_fmas_f32                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_div_fmas_f64                 :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_div_scale_f32                :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`vcc<amdgpu_synid7_vcc_64>`,      :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`
+    v_div_scale_f32                :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`vcc<amdgpu_synid7_vcc_64>`,      :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`
     v_div_scale_f64                :ref:`vdst<amdgpu_synid7_vdst64_0>`,      :ref:`vcc<amdgpu_synid7_vcc_64>`,      :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src64_1>`,       :ref:`src2<amdgpu_synid7_src64_1>`
-    v_exp_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_exp_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_ffbh_i32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
-    v_ffbh_u32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
-    v_ffbl_b32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
-    v_floor_f32_e64                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_exp_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_exp_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_ffbh_i32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
+    v_ffbh_u32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
+    v_ffbl_b32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
+    v_floor_f32_e64                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_floor_f64_e64                :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_fma_f32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_fma_f32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_fma_f64                      :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_fract_f32_e64                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_fract_f32_e64                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_fract_f64_e64                :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_frexp_exp_i32_f32_e64        :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
+    v_frexp_exp_i32_f32_e64        :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
     v_frexp_exp_i32_f64_e64        :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`
-    v_frexp_mant_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
+    v_frexp_mant_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
     v_frexp_mant_f64_e64           :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_ldexp_f32_e64                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`i32<amdgpu_synid7_type_dev>`                    :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_ldexp_f64                    :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`i32<amdgpu_synid7_type_dev>`                    :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_lerp_u8                      :ref:`vdst<amdgpu_synid7_vdst32_0>`::ref:`u32<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src32_1>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_1>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`src2<amdgpu_synid7_src32_1>`::ref:`b32<amdgpu_synid7_type_dev>`
-    v_log_clamp_f32_e64            :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_log_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_log_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_lshl_b32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_lshl_b64                     :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_lshlrev_b32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_2>`
-    v_lshr_b32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_lshr_b64                     :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_lshrrev_b32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_2>`
-    v_mac_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_mac_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_mad_f32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_mad_i32_i24                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`::ref:`i32<amdgpu_synid7_type_dev>`
-    v_mad_i64_i32                  :ref:`vdst<amdgpu_synid7_vdst64_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src64_1>`::ref:`i64<amdgpu_synid7_type_dev>`
-    v_mad_legacy_f32               :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_mad_u32_u24                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_mad_u64_u32                  :ref:`vdst<amdgpu_synid7_vdst64_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src64_1>`::ref:`u64<amdgpu_synid7_type_dev>`
-    v_max3_f32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_max3_i32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`
-    v_max3_u32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`
-    v_max_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_ldexp_f32_e64                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`i32<amdgpu_synid7_type_dev>`                    :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_ldexp_f64                    :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`i32<amdgpu_synid7_type_dev>`                    :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_lerp_u8                      :ref:`vdst<amdgpu_synid7_vdst32_0>`::ref:`u32<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src32_1>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_6>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`src2<amdgpu_synid7_src32_6>`::ref:`b32<amdgpu_synid7_type_dev>`
+    v_log_clamp_f32_e64            :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_log_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_log_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_lshl_b32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`
+    v_lshl_b64                     :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`
+    v_lshlrev_b32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_4>`
+    v_lshr_b32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`
+    v_lshr_b64                     :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`,       :ref:`src1<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`
+    v_lshrrev_b32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_4>`
+    v_mac_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_mac_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_mad_f32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_mad_i32_i24                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`::ref:`i32<amdgpu_synid7_type_dev>`
+    v_mad_i64_i32                  :ref:`vdst<amdgpu_synid7_vdst64_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src64_1>`::ref:`i64<amdgpu_synid7_type_dev>`
+    v_mad_legacy_f32               :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_mad_u32_u24                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`
+    v_mad_u64_u32                  :ref:`vdst<amdgpu_synid7_vdst64_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src64_1>`::ref:`u64<amdgpu_synid7_type_dev>`
+    v_max3_f32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_max3_i32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`
+    v_max3_u32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`
+    v_max_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_max_f64                      :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_max_i32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_max_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_max_u32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_mbcnt_hi_u32_b32_e64         :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_mbcnt_lo_u32_b32_e64         :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_med3_f32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_med3_i32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`
-    v_med3_u32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`
-    v_min3_f32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_min3_i32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`
-    v_min3_u32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`
-    v_min_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_max_i32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_max_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_max_u32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_mbcnt_hi_u32_b32_e64         :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_mbcnt_lo_u32_b32_e64         :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_med3_f32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_med3_i32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`
+    v_med3_u32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`
+    v_min3_f32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_min3_i32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`
+    v_min3_u32                     :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`
+    v_min_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_min_f64                      :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_min_i32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_min_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_min_u32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_mov_b32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
-    v_mov_fed_b32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
-    v_movreld_b32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
+    v_min_i32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_min_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_min_u32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_mov_b32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
+    v_mov_fed_b32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
+    v_movreld_b32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
     v_movrels_b32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`vsrc<amdgpu_synid7_vsrc32_0>`
     v_movrelsd_b32_e64             :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`vsrc<amdgpu_synid7_vsrc32_0>`
-    v_mqsad_pk_u16_u8              :ref:`vdst<amdgpu_synid7_vdst64_0>`::ref:`b64<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src64_2>`::ref:`b64<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_1>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`src2<amdgpu_synid7_src64_2>`::ref:`b64<amdgpu_synid7_type_dev>`
-    v_mqsad_u32_u8                 :ref:`vdst<amdgpu_synid7_vdst128_0>`::ref:`b128<amdgpu_synid7_type_dev>`,           :ref:`src0<amdgpu_synid7_src64_2>`::ref:`b64<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_1>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`vsrc2<amdgpu_synid7_vsrc128_0>`::ref:`b128<amdgpu_synid7_type_dev>`
-    v_msad_u8                      :ref:`vdst<amdgpu_synid7_vdst32_0>`::ref:`u32<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src32_1>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_1>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`src2<amdgpu_synid7_src32_1>`::ref:`b32<amdgpu_synid7_type_dev>`
-    v_mul_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_mqsad_pk_u16_u8              :ref:`vdst<amdgpu_synid7_vdst64_0>`::ref:`b64<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src64_2>`::ref:`b64<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_6>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`src2<amdgpu_synid7_src64_2>`::ref:`b64<amdgpu_synid7_type_dev>`
+    v_mqsad_u32_u8                 :ref:`vdst<amdgpu_synid7_vdst128_0>`::ref:`b128<amdgpu_synid7_type_dev>`,           :ref:`src0<amdgpu_synid7_src64_2>`::ref:`b64<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_6>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`vsrc2<amdgpu_synid7_vsrc128_0>`::ref:`b128<amdgpu_synid7_type_dev>`
+    v_msad_u8                      :ref:`vdst<amdgpu_synid7_vdst32_0>`::ref:`u32<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src32_1>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_6>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`src2<amdgpu_synid7_src32_6>`::ref:`b32<amdgpu_synid7_type_dev>`
+    v_mul_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_mul_f64                      :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_mul_hi_i32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_mul_hi_i32_i24_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_mul_hi_u32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_mul_hi_u32_u24_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_mul_i32_i24_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_mul_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_mul_lo_i32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_mul_lo_u32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_mul_u32_u24_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_mullit_f32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_mul_hi_i32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_mul_hi_i32_i24_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_mul_hi_u32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_mul_hi_u32_u24_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_mul_i32_i24_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_mul_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_mul_lo_i32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_mul_lo_u32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_mul_u32_u24_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_mullit_f32                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src2<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`          :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_nop_e64
-    v_not_b32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`
-    v_or_b32_e64                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_qsad_pk_u16_u8               :ref:`vdst<amdgpu_synid7_vdst64_0>`::ref:`b64<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src64_2>`::ref:`b64<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_1>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`src2<amdgpu_synid7_src64_2>`::ref:`b64<amdgpu_synid7_type_dev>`
-    v_rcp_clamp_f32_e64            :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_not_b32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`
+    v_or_b32_e64                   :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_qsad_pk_u16_u8               :ref:`vdst<amdgpu_synid7_vdst64_0>`::ref:`b64<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src64_2>`::ref:`b64<amdgpu_synid7_type_dev>`,   :ref:`src1<amdgpu_synid7_src32_6>`::ref:`b32<amdgpu_synid7_type_dev>`,   :ref:`src2<amdgpu_synid7_src64_2>`::ref:`b64<amdgpu_synid7_type_dev>`
+    v_rcp_clamp_f32_e64            :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_rcp_clamp_f64_e64            :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_rcp_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_rcp_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_rcp_f64_e64                  :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_rcp_iflag_f32_e64            :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_rcp_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_rndne_f32_e64                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_rcp_iflag_f32_e64            :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_rcp_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_rndne_f32_e64                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_rndne_f64_e64                :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_rsq_clamp_f32_e64            :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_rsq_clamp_f32_e64            :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_rsq_clamp_f64_e64            :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_rsq_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_rsq_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_rsq_f64_e64                  :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_rsq_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_sad_hi_u8                    :ref:`vdst<amdgpu_synid7_vdst32_0>`::ref:`u32<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src32_1>`::ref:`u8x4<amdgpu_synid7_type_dev>`,  :ref:`src1<amdgpu_synid7_src32_1>`::ref:`u8x4<amdgpu_synid7_type_dev>`,  :ref:`src2<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_sad_u16                      :ref:`vdst<amdgpu_synid7_vdst32_0>`::ref:`u32<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src32_1>`::ref:`u16x2<amdgpu_synid7_type_dev>`, :ref:`src1<amdgpu_synid7_src32_1>`::ref:`u16x2<amdgpu_synid7_type_dev>`, :ref:`src2<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_sad_u32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`src2<amdgpu_synid7_src32_2>`
-    v_sad_u8                       :ref:`vdst<amdgpu_synid7_vdst32_0>`::ref:`u32<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src32_1>`::ref:`u8x4<amdgpu_synid7_type_dev>`,  :ref:`src1<amdgpu_synid7_src32_1>`::ref:`u8x4<amdgpu_synid7_type_dev>`,  :ref:`src2<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`
-    v_sin_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_sqrt_f32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_rsq_legacy_f32_e64           :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_sad_hi_u8                    :ref:`vdst<amdgpu_synid7_vdst32_0>`::ref:`u32<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src32_1>`::ref:`u8x4<amdgpu_synid7_type_dev>`,  :ref:`src1<amdgpu_synid7_src32_6>`::ref:`u8x4<amdgpu_synid7_type_dev>`,  :ref:`src2<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`
+    v_sad_u16                      :ref:`vdst<amdgpu_synid7_vdst32_0>`::ref:`u32<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src32_1>`::ref:`u16x2<amdgpu_synid7_type_dev>`, :ref:`src1<amdgpu_synid7_src32_6>`::ref:`u16x2<amdgpu_synid7_type_dev>`, :ref:`src2<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`
+    v_sad_u32                      :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`src2<amdgpu_synid7_src32_4>`
+    v_sad_u8                       :ref:`vdst<amdgpu_synid7_vdst32_0>`::ref:`u32<amdgpu_synid7_type_dev>`,            :ref:`src0<amdgpu_synid7_src32_1>`::ref:`u8x4<amdgpu_synid7_type_dev>`,  :ref:`src1<amdgpu_synid7_src32_6>`::ref:`u8x4<amdgpu_synid7_type_dev>`,  :ref:`src2<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`
+    v_sin_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_sqrt_f32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_sqrt_f64_e64                 :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_sub_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_sub_i32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_subb_u32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`ssrc2<amdgpu_synid7_ssrc64_1>`
-    v_subbrev_u32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`,       :ref:`ssrc2<amdgpu_synid7_ssrc64_1>`
-    v_subrev_f32_e64               :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_subrev_i32_e64               :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
-    v_trig_preop_f64               :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_2>`::ref:`u32<amdgpu_synid7_type_dev>`                    :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_trunc_f32_e64                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_2>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_sub_f32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_sub_i32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_subb_u32_e64                 :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`ssrc2<amdgpu_synid7_ssrc64_1>`
+    v_subbrev_u32_e64              :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_4>`,       :ref:`src1<amdgpu_synid7_src32_4>`,       :ref:`ssrc2<amdgpu_synid7_ssrc64_1>`
+    v_subrev_f32_e64               :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`m<amdgpu_synid7_mod>`                      :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_subrev_i32_e64               :ref:`vdst<amdgpu_synid7_vdst32_0>`,      :ref:`sdst<amdgpu_synid7_sdst64_0>`,     :ref:`src0<amdgpu_synid7_src32_4>`,       :ref:`src1<amdgpu_synid7_src32_4>`
+    v_trig_preop_f64               :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src0<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`,     :ref:`src1<amdgpu_synid7_src32_4>`::ref:`u32<amdgpu_synid7_type_dev>`                    :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
+    v_trunc_f32_e64                :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src<amdgpu_synid7_src32_3>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
     v_trunc_f64_e64                :ref:`vdst<amdgpu_synid7_vdst64_0>`,                :ref:`src<amdgpu_synid7_src64_1>`::ref:`m<amdgpu_synid7_mod>`                                   :ref:`clamp<amdgpu_synid_clamp>` :ref:`omod<amdgpu_synid_omod>`
-    v_xor_b32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_2>`,       :ref:`src1<amdgpu_synid7_src32_2>`
+    v_xor_b32_e64                  :ref:`vdst<amdgpu_synid7_vdst32_0>`,                :ref:`src0<amdgpu_synid7_src32_3>`,       :ref:`src1<amdgpu_synid7_src32_4>`
 
 VOPC
 -----------------------
@@ -1380,6 +1380,9 @@ VOPC
     gfx7_src32_1
     gfx7_src32_2
     gfx7_src32_3
+    gfx7_src32_4
+    gfx7_src32_5
+    gfx7_src32_6
     gfx7_src64_0
     gfx7_src64_1
     gfx7_src64_2
@@ -1389,6 +1392,8 @@ VOPC
     gfx7_ssrc32_2
     gfx7_ssrc32_3
     gfx7_ssrc32_4
+    gfx7_ssrc32_5
+    gfx7_ssrc32_6
     gfx7_ssrc64_0
     gfx7_ssrc64_1
     gfx7_ssrc64_2
@@ -1404,6 +1409,7 @@ VOPC
     gfx7_vdst96_0
     gfx7_vsrc128_0
     gfx7_vsrc32_0
+    gfx7_vsrc32_1
     gfx7_vsrc64_0
     gfx7_mod
     gfx7_opt

@@ -103,39 +103,86 @@ Value *InstrProfIncrementInst::getStep() const {
   return ConstantInt::get(Type::getInt64Ty(Context), 1);
 }
 
-ConstrainedFPIntrinsic::RoundingMode
+Optional<ConstrainedFPIntrinsic::RoundingMode>
 ConstrainedFPIntrinsic::getRoundingMode() const {
   unsigned NumOperands = getNumArgOperands();
   Metadata *MD =
       dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 2))->getMetadata();
   if (!MD || !isa<MDString>(MD))
-    return rmInvalid;
-  StringRef RoundingArg = cast<MDString>(MD)->getString();
+    return None;
+  return StrToRoundingMode(cast<MDString>(MD)->getString());
+}
 
+Optional<ConstrainedFPIntrinsic::RoundingMode>
+ConstrainedFPIntrinsic::StrToRoundingMode(StringRef RoundingArg) {
   // For dynamic rounding mode, we use round to nearest but we will set the
   // 'exact' SDNodeFlag so that the value will not be rounded.
-  return StringSwitch<RoundingMode>(RoundingArg)
+  return StringSwitch<Optional<RoundingMode>>(RoundingArg)
     .Case("round.dynamic",    rmDynamic)
     .Case("round.tonearest",  rmToNearest)
     .Case("round.downward",   rmDownward)
     .Case("round.upward",     rmUpward)
     .Case("round.towardzero", rmTowardZero)
-    .Default(rmInvalid);
+    .Default(None);
 }
 
-ConstrainedFPIntrinsic::ExceptionBehavior
+Optional<StringRef>
+ConstrainedFPIntrinsic::RoundingModeToStr(RoundingMode UseRounding) {
+  Optional<StringRef> RoundingStr = None;
+  switch (UseRounding) {
+  case ConstrainedFPIntrinsic::rmDynamic:
+    RoundingStr = "round.dynamic";
+    break;
+  case ConstrainedFPIntrinsic::rmToNearest:
+    RoundingStr = "round.tonearest";
+    break;
+  case ConstrainedFPIntrinsic::rmDownward:
+    RoundingStr = "round.downward";
+    break;
+  case ConstrainedFPIntrinsic::rmUpward:
+    RoundingStr = "round.upward";
+    break;
+  case ConstrainedFPIntrinsic::rmTowardZero:
+    RoundingStr = "round.tozero";
+    break;
+  }
+  return RoundingStr;
+}
+
+Optional<ConstrainedFPIntrinsic::ExceptionBehavior>
 ConstrainedFPIntrinsic::getExceptionBehavior() const {
   unsigned NumOperands = getNumArgOperands();
   Metadata *MD =
       dyn_cast<MetadataAsValue>(getArgOperand(NumOperands - 1))->getMetadata();
   if (!MD || !isa<MDString>(MD))
-    return ebInvalid;
-  StringRef ExceptionArg = cast<MDString>(MD)->getString();
-  return StringSwitch<ExceptionBehavior>(ExceptionArg)
+    return None;
+  return StrToExceptionBehavior(cast<MDString>(MD)->getString());
+}
+
+Optional<ConstrainedFPIntrinsic::ExceptionBehavior>
+ConstrainedFPIntrinsic::StrToExceptionBehavior(StringRef ExceptionArg) {
+  return StringSwitch<Optional<ExceptionBehavior>>(ExceptionArg)
     .Case("fpexcept.ignore",  ebIgnore)
     .Case("fpexcept.maytrap", ebMayTrap)
     .Case("fpexcept.strict",  ebStrict)
-    .Default(ebInvalid);
+    .Default(None);
+}
+
+Optional<StringRef>
+ConstrainedFPIntrinsic::ExceptionBehaviorToStr(ExceptionBehavior UseExcept) {
+  Optional<StringRef> ExceptStr = None;
+  switch (UseExcept) {
+  case ConstrainedFPIntrinsic::ebStrict:
+    ExceptStr = "fpexcept.strict";
+    break;
+  case ConstrainedFPIntrinsic::ebIgnore:
+    ExceptStr = "fpexcept.ignore";
+    break;
+  case ConstrainedFPIntrinsic::ebMayTrap:
+    ExceptStr = "fpexcept.maytrap";
+    break;
+  }
+  return ExceptStr;
 }
 
 bool ConstrainedFPIntrinsic::isUnaryOp() const {

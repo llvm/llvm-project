@@ -97,9 +97,9 @@ protected:
     auto Inserted = ToHeaderFile(Preferred);
     if (!Inserter.shouldInsertInclude(Original, Inserted))
       return "";
-    std::string Path = Inserter.calculateIncludePath(Inserted, MainFile);
+    auto Path = Inserter.calculateIncludePath(Inserted, MainFile);
     Action.EndSourceFile();
-    return Path;
+    return Path.getValueOr("");
   }
 
   llvm::Optional<TextEdit> insert(llvm::StringRef VerbatimHeader) {
@@ -212,6 +212,11 @@ TEST_F(HeadersTest, DoNotInsertIfInSameFile) {
   EXPECT_EQ(calculate(MainFile), "");
 }
 
+TEST_F(HeadersTest, DoNotInsertOffIncludePath) {
+  MainFile = testPath("sub/main.cpp");
+  EXPECT_EQ(calculate(testPath("sub2/main.cpp")), "");
+}
+
 TEST_F(HeadersTest, ShortenIncludesInSearchPath) {
   std::string BarHeader = testPath("sub/bar.h");
   EXPECT_EQ(calculate(BarHeader), "\"bar.h\"");
@@ -268,13 +273,16 @@ TEST(Headers, NoHeaderSearchInfo) {
   auto Inserting = HeaderFile{HeaderPath, /*Verbatim=*/false};
   auto Verbatim = HeaderFile{"<x>", /*Verbatim=*/true};
 
-  // FIXME(kadircet): This should result in "sub/bar.h" instead of full path.
   EXPECT_EQ(Inserter.calculateIncludePath(Inserting, MainFile),
-            '"' + HeaderPath + '"');
+            std::string("\"sub/bar.h\""));
   EXPECT_EQ(Inserter.shouldInsertInclude(HeaderPath, Inserting), false);
 
-  EXPECT_EQ(Inserter.calculateIncludePath(Verbatim, MainFile), "<x>");
+  EXPECT_EQ(Inserter.calculateIncludePath(Verbatim, MainFile),
+            std::string("<x>"));
   EXPECT_EQ(Inserter.shouldInsertInclude(HeaderPath, Verbatim), true);
+
+  EXPECT_EQ(Inserter.calculateIncludePath(Inserting, "sub2/main2.cpp"),
+            llvm::None);
 }
 
 } // namespace

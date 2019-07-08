@@ -1,13 +1,13 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 void foo() {
 }
 
 template <class T, typename S, int N, int ST>
 T tmain(T argc, S **argv) {
-  int i;
+  int i, k;
   #pragma omp target simd defaultmap // expected-error {{expected '(' after 'defaultmap'}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target simd defaultmap ( // expected-error {{expected 'tofrom' in OpenMP clause 'defaultmap'}} expected-error {{expected ')'}} expected-note {{to match this '('}}

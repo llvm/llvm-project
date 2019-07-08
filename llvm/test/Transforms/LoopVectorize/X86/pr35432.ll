@@ -40,16 +40,16 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    [[TMP5:%.*]] = add i32 [[TMP4]], 1
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp ult i32 [[TMP2]], [[TMP4]]
-; CHECK-NEXT:    [[UMIN:%.*]] = select i1 [[TMP6]], i32 [[TMP2]], i32 [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP5]], [[UMIN]]
+; CHECK-NEXT:    [[UMAX:%.*]] = select i1 [[TMP6]], i32 [[TMP2]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP7:%.*]] = sub i32 [[TMP5]], [[UMAX]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP7]], 8
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP8:%.*]] = add i8 [[CONV3]], -1
 ; CHECK-NEXT:    [[TMP9:%.*]] = zext i8 [[TMP8]] to i32
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ult i32 [[TMP2]], [[TMP9]]
-; CHECK-NEXT:    [[UMIN1:%.*]] = select i1 [[TMP10]], i32 [[TMP2]], i32 [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP9]], [[UMIN1]]
+; CHECK-NEXT:    [[UMAX1:%.*]] = select i1 [[TMP10]], i32 [[TMP2]], i32 [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = sub i32 [[TMP9]], [[UMAX1]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = trunc i32 [[TMP11]] to i8
 ; CHECK-NEXT:    [[MUL:%.*]] = call { i8, i1 } @llvm.umul.with.overflow.i8(i8 1, i8 [[TMP12]])
 ; CHECK-NEXT:    [[MUL_RESULT:%.*]] = extractvalue { i8, i1 } [[MUL]], 0
@@ -62,47 +62,48 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[TMP18:%.*]] = icmp ugt i32 [[TMP11]], 255
 ; CHECK-NEXT:    [[TMP19:%.*]] = or i1 [[TMP17]], [[TMP18]]
 ; CHECK-NEXT:    [[TMP20:%.*]] = or i1 [[TMP19]], [[MUL_OVERFLOW]]
-; CHECK-NEXT:    br i1 [[TMP20]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP21:%.*]] = or i1 false, [[TMP20]]
+; CHECK-NEXT:    br i1 [[TMP21]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[TMP7]], 8
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[TMP7]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[CAST_CRD:%.*]] = trunc i32 [[N_VEC]] to i8
 ; CHECK-NEXT:    [[IND_END:%.*]] = sub i8 [[CONV3]], [[CAST_CRD]]
-; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[DOTPROMOTED]], i32 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <4 x i32> zeroinitializer, i32 [[DOTPROMOTED]], i32 0
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ [[TMP21]], [[VECTOR_PH]] ], [ [[TMP25:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP26:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP22:%.*]] = trunc i32 [[INDEX]] to i8
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i8 [[CONV3]], [[TMP22]]
+; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i32> [ [[TMP22]], [[VECTOR_PH]] ], [ [[TMP26:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_PHI2:%.*]] = phi <4 x i32> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP27:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP23:%.*]] = trunc i32 [[INDEX]] to i8
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i8 [[CONV3]], [[TMP23]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> undef, i8 [[OFFSET_IDX]], i32 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> undef, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[INDUCTION:%.*]] = add <4 x i8> [[BROADCAST_SPLAT]], <i8 0, i8 -1, i8 -2, i8 -3>
 ; CHECK-NEXT:    [[INDUCTION3:%.*]] = add <4 x i8> [[BROADCAST_SPLAT]], <i8 -4, i8 -5, i8 -6, i8 -7>
-; CHECK-NEXT:    [[TMP23:%.*]] = add i8 [[OFFSET_IDX]], 0
-; CHECK-NEXT:    [[TMP24:%.*]] = add i8 [[OFFSET_IDX]], -4
-; CHECK-NEXT:    [[TMP25]] = add <4 x i32> [[VEC_PHI]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP26]] = add <4 x i32> [[VEC_PHI2]], <i32 1, i32 1, i32 1, i32 1>
-; CHECK-NEXT:    [[TMP27:%.*]] = add i8 [[TMP23]], -1
+; CHECK-NEXT:    [[TMP24:%.*]] = add i8 [[OFFSET_IDX]], 0
+; CHECK-NEXT:    [[TMP25:%.*]] = add i8 [[OFFSET_IDX]], -4
+; CHECK-NEXT:    [[TMP26]] = add <4 x i32> [[VEC_PHI]], <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[TMP27]] = add <4 x i32> [[VEC_PHI2]], <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP28:%.*]] = add i8 [[TMP24]], -1
-; CHECK-NEXT:    [[TMP29:%.*]] = zext i8 [[TMP27]] to i32
+; CHECK-NEXT:    [[TMP29:%.*]] = add i8 [[TMP25]], -1
 ; CHECK-NEXT:    [[TMP30:%.*]] = zext i8 [[TMP28]] to i32
+; CHECK-NEXT:    [[TMP31:%.*]] = zext i8 [[TMP29]] to i32
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
-; CHECK-NEXT:    [[TMP31:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP31]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
+; CHECK-NEXT:    [[TMP32:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP32]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop !0
 ; CHECK:       middle.block:
-; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP26]], [[TMP25]]
+; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <4 x i32> [[TMP27]], [[TMP26]]
 ; CHECK-NEXT:    [[RDX_SHUF:%.*]] = shufflevector <4 x i32> [[BIN_RDX]], <4 x i32> undef, <4 x i32> <i32 2, i32 3, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX4:%.*]] = add <4 x i32> [[BIN_RDX]], [[RDX_SHUF]]
 ; CHECK-NEXT:    [[RDX_SHUF5:%.*]] = shufflevector <4 x i32> [[BIN_RDX4]], <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
 ; CHECK-NEXT:    [[BIN_RDX6:%.*]] = add <4 x i32> [[BIN_RDX4]], [[RDX_SHUF5]]
-; CHECK-NEXT:    [[TMP32:%.*]] = extractelement <4 x i32> [[BIN_RDX6]], i32 0
+; CHECK-NEXT:    [[TMP33:%.*]] = extractelement <4 x i32> [[BIN_RDX6]], i32 0
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[TMP7]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
 ; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i8 [ [[IND_END]], [[MIDDLE_BLOCK]] ], [ [[CONV3]], [[FOR_BODY8_LR_PH]] ], [ [[CONV3]], [[VECTOR_SCEVCHECK]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[DOTPROMOTED]], [[FOR_BODY8_LR_PH]] ], [ [[DOTPROMOTED]], [[VECTOR_SCEVCHECK]] ], [ [[TMP32]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[DOTPROMOTED]], [[FOR_BODY8_LR_PH]] ], [ [[DOTPROMOTED]], [[VECTOR_SCEVCHECK]] ], [ [[TMP33]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY8:%.*]]
 ; CHECK:       for.body8:
 ; CHECK-NEXT:    [[INC5:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[INC:%.*]], [[FOR_BODY8]] ]
@@ -113,7 +114,7 @@ define i32 @main() local_unnamed_addr #0 {
 ; CHECK-NEXT:    [[CMP6:%.*]] = icmp ult i32 [[TMP2]], [[CONV5]]
 ; CHECK-NEXT:    br i1 [[CMP6]], label [[FOR_BODY8]], label [[FOR_COND4_FOR_INC9_CRIT_EDGE]], !llvm.loop !2
 ; CHECK:       for.cond4.for.inc9_crit_edge:
-; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[FOR_BODY8]] ], [ [[TMP32]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[INC_LCSSA:%.*]] = phi i32 [ [[INC]], [[FOR_BODY8]] ], [ [[TMP33]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    store i32 [[INC_LCSSA]], i32* getelementptr inbounds ([192 x [192 x i32]], [192 x [192 x i32]]* @a, i64 0, i64 0, i64 0), align 16
 ; CHECK-NEXT:    br label [[FOR_INC9]]
 ; CHECK:       for.inc9:

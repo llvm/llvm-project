@@ -40,8 +40,8 @@ define <4 x float> @b(<4 x float>* %y, <4 x float> %z) nounwind {
 define <2 x double> @c(<2 x double>* %y) nounwind {
 ; CHECK-LABEL: c:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movupd (%rdi), %xmm0
-; CHECK-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; CHECK-NEXT:    movups (%rdi), %xmm0
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; CHECK-NEXT:    retq
   %x = load <2 x double>, <2 x double>* %y, align 8
   %a = extractelement <2 x double> %x, i32 0

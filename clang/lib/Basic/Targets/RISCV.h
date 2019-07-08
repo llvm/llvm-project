@@ -57,6 +57,15 @@ public:
 
   ArrayRef<const char *> getGCCRegNames() const override;
 
+  int getEHDataRegisterNumber(unsigned RegNo) const override {
+    if (RegNo == 0)
+      return 10;
+    else if (RegNo == 1)
+      return 11;
+    else
+      return -1;
+  }
+
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override;
 
   bool validateAsmConstraint(const char *&Name,

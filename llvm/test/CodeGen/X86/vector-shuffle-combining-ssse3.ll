@@ -43,8 +43,7 @@ define <16 x i8> @combine_vpshufb_as_movq(<16 x i8> %a0) {
 define <2 x double> @combine_pshufb_as_movsd(<2 x double> %a0, <2 x double> %a1) {
 ; SSSE3-LABEL: combine_pshufb_as_movsd:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSSE3-NEXT:    movapd %xmm1, %xmm0
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: combine_pshufb_as_movsd:
@@ -669,8 +668,7 @@ declare <16 x i8> @llvm.x86.sse2.packuswb.128(<8 x i16>, <8 x i16>) nounwind rea
 define <16 x i8> @combine_pshufb_pshufb_or_as_blend(<16 x i8> %a0, <16 x i8> %a1) {
 ; SSSE3-LABEL: combine_pshufb_pshufb_or_as_blend:
 ; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSSE3-NEXT:    movapd %xmm1, %xmm0
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: combine_pshufb_pshufb_or_as_blend:

@@ -30,7 +30,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-; CHECK: Function Attrs: nounwind
+; CHECK: Function Attrs: nofree nounwind
 ; CHECK-NEXT: define i32* @external_ret2_nrw(i32* %n0, i32* %r0, i32* %w0)
 define i32* @external_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 entry:
@@ -41,7 +41,7 @@ entry:
   ret i32* %call3
 }
 
-; CHECK: Function Attrs: nounwind
+; CHECK: Function Attrs: nofree nounwind
 ; CHECK-NEXT: define internal i32* @internal_ret0_nw(i32* %n0, i32* %w0)
 define internal i32* @internal_ret0_nw(i32* %n0, i32* %w0) {
 entry:
@@ -70,7 +70,7 @@ return:                                           ; preds = %if.end, %if.then
   ret i32* %retval.0
 }
 
-; CHECK: Function Attrs: nounwind
+; CHECK: Function Attrs: nofree nounwind
 ; CHECK-NEXT: define internal i32* @internal_ret1_rrw(i32* %r0, i32* %r1, i32* %w0)
 define internal i32* @internal_ret1_rrw(i32* %r0, i32* %r1, i32* %w0) {
 entry:
@@ -102,7 +102,7 @@ return:                                           ; preds = %if.end, %if.then
   ret i32* %retval.0
 }
 
-; CHECK: Function Attrs: norecurse nounwind
+; CHECK: Function Attrs: nofree norecurse nounwind
 ; CHECK-NEXT: define i32* @external_sink_ret2_nrw(i32* readnone %n0, i32* nocapture readonly %r0, i32* returned %w0)
 define i32* @external_sink_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 entry:
@@ -121,7 +121,7 @@ return:                                           ; preds = %if.end, %if.then
   ret i32* %w0
 }
 
-; CHECK: Function Attrs: nounwind
+; CHECK: Function Attrs: nofree nounwind
 ; CHECK-NEXT: define internal i32* @internal_ret1_rw(i32* %r0, i32* %w0)
 define internal i32* @internal_ret1_rw(i32* %r0, i32* %w0) {
 entry:
@@ -147,7 +147,7 @@ return:                                           ; preds = %if.end, %if.then
   ret i32* %retval.0
 }
 
-; CHECK: Function Attrs: nounwind
+; CHECK: Function Attrs: nofree nounwind
 ; CHECK-NEXT: define i32* @external_source_ret2_nrw(i32* %n0, i32* %r0, i32* %w0)
 define i32* @external_source_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 entry:
@@ -160,6 +160,6 @@ entry:
 ; for a subset relation.
 ;
 ; CHECK-NOT: attributes #
-; CHECK: attributes #{{.*}} = { nounwind }
-; CHECK: attributes #{{.*}} = { norecurse nounwind }
+; CHECK: attributes #{{.*}} = { nofree nounwind }
+; CHECK: attributes #{{.*}} = { nofree norecurse nounwind }
 ; CHECK-NOT: attributes #

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -74,7 +74,7 @@ int main(int argc, char **argv) {
   const int da[5] = {0};
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp target teams firstprivate // expected-error {{expected '(' after 'firstprivate'}}
   foo();
@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target teams allocate(omp_thread_mem_alloc: ba) firstprivate(ba) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'target teams' directive}}
   foo();
-#pragma omp target teams firstprivate(ca)
+#pragma omp target teams firstprivate(ca, z)
   foo();
 #pragma omp target teams firstprivate(da)
   foo();
