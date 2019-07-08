@@ -5083,6 +5083,45 @@ INSTANTIATE_TEST_CASE_P(ParameterizedTests, DeclContextTest,
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, CanonicalRedeclChain,
                         ::testing::Values(ArgVector()), );
 
+TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionBody) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      void f() {
+        auto L = [](){};
+      }
+      )",
+      Lang_CXX11, "input0.cc");
+  auto Pattern = lambdaExpr();
+  CXXRecordDecl *FromL =
+      FirstDeclMatcher<LambdaExpr>().match(FromTU, Pattern)->getLambdaClass();
+
+  auto ToL = Import(FromL, Lang_CXX11);
+  unsigned ToLSize = std::distance(ToL->decls().begin(), ToL->decls().end());
+  unsigned FromLSize =
+      std::distance(FromL->decls().begin(), FromL->decls().end());
+  EXPECT_NE(ToLSize, 0u);
+  EXPECT_EQ(ToLSize, FromLSize);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionParam) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      template <typename F>
+      void f(F L = [](){}) {}
+      )",
+      Lang_CXX11, "input0.cc");
+  auto Pattern = lambdaExpr();
+  CXXRecordDecl *FromL =
+      FirstDeclMatcher<LambdaExpr>().match(FromTU, Pattern)->getLambdaClass();
+
+  auto ToL = Import(FromL, Lang_CXX11);
+  unsigned ToLSize = std::distance(ToL->decls().begin(), ToL->decls().end());
+  unsigned FromLSize =
+      std::distance(FromL->decls().begin(), FromL->decls().end());
+  EXPECT_NE(ToLSize, 0u);
+  EXPECT_EQ(ToLSize, FromLSize);
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
                         DefaultTestValuesForRunOptions, );
 
