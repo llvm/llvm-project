@@ -1398,6 +1398,25 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
     widenScalarDst(MI, WideTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
+  case TargetOpcode::G_BUILD_VECTOR: {
+    Observer.changingInstr(MI);
+
+    const LLT WideEltTy = TypeIdx == 1 ? WideTy : WideTy.getElementType();
+    for (int I = 1, E = MI.getNumOperands(); I != E; ++I)
+      widenScalarSrc(MI, WideEltTy, I, TargetOpcode::G_ANYEXT);
+
+    // Avoid changing the result vector type if the source element type was
+    // requested.
+    if (TypeIdx == 1) {
+      auto &TII = *MI.getMF()->getSubtarget().getInstrInfo();
+      MI.setDesc(TII.get(TargetOpcode::G_BUILD_VECTOR_TRUNC));
+    } else {
+      widenScalarDst(MI, WideTy, 0);
+    }
+
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   }
 }
 

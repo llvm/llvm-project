@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 void foo() {
 }
@@ -12,7 +12,7 @@ bool foobool(int argc) {
 struct S1; // expected-note {{declared here}}
 
 int main(int argc, char **argv) {
-  int i;
+  int i, z;
   #pragma omp target simd device // expected-error {{expected '(' after 'device'}}
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target simd device ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target simd device (argc > 0 ? argv[1] : argv[2]) // expected-error {{expression must have integral or unscoped enumeration type, not 'char *'}}
   for (i = 0; i < argc; ++i) foo();
-  #pragma omp target simd device (argc + argc)
+  #pragma omp target simd device (argc + argc * z)
   for (i = 0; i < argc; ++i) foo();
   #pragma omp target simd device (argc), device (argc+1) // expected-error {{directive '#pragma omp target simd' cannot contain more than one 'device' clause}}
   for (i = 0; i < argc; ++i) foo();

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -34,7 +34,7 @@ class S4 {
 public:
   S4(int v):a(v) { }
 };
-class S5 { 
+class S5 {
   int a;
   S5():a(0) {} // expected-note {{implicitly declared private here}}
 public:

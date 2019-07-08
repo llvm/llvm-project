@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -13,7 +13,7 @@ struct S1; // expected-note {{declared here}}
 
 template <class T, typename S, int N> // expected-note {{declared here}}
 T tmain(T argc, S **argv) {
-  T i;
+  T i, z;
 #pragma omp target teams distribute parallel for num_threads // expected-error {{expected '(' after 'num_threads'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for num_threads ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -22,7 +22,7 @@ T tmain(T argc, S **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for num_threads (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute parallel for num_threads (argc)) // expected-warning {{extra tokens at the end of '#pragma omp target teams distribute parallel for' are ignored}}
+#pragma omp target teams distribute parallel for num_threads (argc - z)) // expected-warning {{extra tokens at the end of '#pragma omp target teams distribute parallel for' are ignored}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for num_threads ((argc > 0) ? argv[1] : argv[2]) // expected-error 2 {{expression must have integral or unscoped enumeration type, not 'char *'}}
   for (i = 0; i < argc; ++i) foo();
@@ -41,7 +41,7 @@ T tmain(T argc, S **argv) {
 }
 
 int main(int argc, char **argv) {
-  int i;
+  int i, z;
 #pragma omp target teams distribute parallel for num_threads // expected-error {{expected '(' after 'num_threads'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for num_threads ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -50,7 +50,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for num_threads (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute parallel for num_threads (argc)) // expected-warning {{extra tokens at the end of '#pragma omp target teams distribute parallel for' are ignored}}
+#pragma omp target teams distribute parallel for num_threads (z - argc)) // expected-warning {{extra tokens at the end of '#pragma omp target teams distribute parallel for' are ignored}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute parallel for num_threads (argc > 0 ? argv[1] : argv[2]) // expected-error {{integral }}
   for (i = 0; i < argc; ++i) foo();

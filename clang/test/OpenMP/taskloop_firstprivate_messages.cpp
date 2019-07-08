@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -76,7 +76,7 @@ template <class I, class C>
 int foomain(int argc, char **argv) {
   I e(4);
   C g(5);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp parallel
 #pragma omp taskloop firstprivate // expected-error {{expected '(' after 'firstprivate'}}
@@ -119,7 +119,7 @@ int foomain(int argc, char **argv) {
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp parallel
-#pragma omp taskloop firstprivate(e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}}
+#pragma omp taskloop firstprivate(z, e, g) // expected-error {{calling a private constructor of class 'S4'}} expected-error {{calling a private constructor of class 'S5'}}
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp parallel

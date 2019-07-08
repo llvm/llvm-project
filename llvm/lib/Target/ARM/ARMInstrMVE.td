@@ -2834,13 +2834,10 @@ class MVE_qDest_qSrc<string iname, string suffix, dag oops, dag iops,
 }
 
 class MVE_VQxDMLxDH<string iname, bit exch, bit round, bit subtract,
-                    string suffix, bits<2> size, bit earlyclobber,
-                    list<dag> pattern=[]>
+                    string suffix, bits<2> size, list<dag> pattern=[]>
   : MVE_qDest_qSrc<iname, suffix, (outs MQPR:$Qd),
                    (ins MQPR:$Qd_src, MQPR:$Qn, MQPR:$Qm), "$Qd, $Qn, $Qm",
-                   vpred_n,
-                   !if(earlyclobber, "@earlyclobber $Qd,", "") # "$Qd = $Qd_src",
-                   pattern> {
+                   vpred_n, "$Qd = $Qd_src", pattern> {
   bits<4> Qn;
 
   let Inst{28} = subtract;
@@ -2855,9 +2852,9 @@ class MVE_VQxDMLxDH<string iname, bit exch, bit round, bit subtract,
 
 multiclass MVE_VQxDMLxDH_multi<string iname, bit exch,
                                bit round, bit subtract> {
-  def s8  : MVE_VQxDMLxDH<iname, exch, round, subtract, "s8",  0b00, 0b0>;
-  def s16 : MVE_VQxDMLxDH<iname, exch, round, subtract, "s16", 0b01, 0b0>;
-  def s32 : MVE_VQxDMLxDH<iname, exch, round, subtract, "s32", 0b10, 0b1>;
+  def s8  : MVE_VQxDMLxDH<iname, exch, round, subtract, "s8",  0b00>;
+  def s16 : MVE_VQxDMLxDH<iname, exch, round, subtract, "s16", 0b01>;
+  def s32 : MVE_VQxDMLxDH<iname, exch, round, subtract, "s32", 0b10>;
 }
 
 defm MVE_VQDMLADH   : MVE_VQxDMLxDH_multi<"vqdmladh",   0b0, 0b0, 0b0>;

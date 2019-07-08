@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -92,7 +92,7 @@ int main(int argc, char **argv) {
   const int da[5] = {0};
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;
   static int m;
 #pragma omp task firstprivate                               // expected-error {{expected '(' after 'firstprivate'}}
@@ -106,7 +106,7 @@ int main(int argc, char **argv) {
 #pragma omp task firstprivate(a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}}
 #pragma omp task firstprivate(argv[1])       // expected-error {{expected variable name}}
 #pragma omp task allocate(omp_thread_mem_alloc: ba) firstprivate(ba) // expected-warning {{allocator with the 'thread' trait access has unspecified behavior on 'task' directive}}
-#pragma omp task firstprivate(ca)
+#pragma omp task firstprivate(ca,z )
 #pragma omp task firstprivate(da)
 #pragma omp task firstprivate(S2::S2s)
 #pragma omp task firstprivate(S2::S2sc)

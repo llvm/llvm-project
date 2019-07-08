@@ -1,5 +1,9 @@
 # RUN: not llvm-mc -triple=wasm32-unknown-unknown -mattr=+simd128,+nontrapping-fptoint,+exception-handling < %s 2>&1 | FileCheck %s
 
+# CHECK: invalid operand for instruction
+# (must be 0.0 or similar)
+    f32.const 0
+
 # CHECK: End of block construct with no start: end_try
     end_try
 test0:

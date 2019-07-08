@@ -74,7 +74,6 @@ private:
   void addSection(OutputSection *Sec);
 
   void addSections();
-  void addStartStopSymbols(const InputSegment *Seg);
 
   void createCustomSections();
   void createSyntheticSections();
@@ -303,15 +302,15 @@ void Writer::addSection(OutputSection *Sec) {
 // __stop_<secname> symbols. They are at beginning and end of the section,
 // respectively. This is not requested by the ELF standard, but GNU ld and
 // gold provide the feature, and used by many programs.
-void Writer::addStartStopSymbols(const InputSegment *Seg) {
-  StringRef S = Seg->getName();
-  LLVM_DEBUG(dbgs() << "addStartStopSymbols: " << S << "\n");
-  if (!isValidCIdentifier(S))
+static void addStartStopSymbols(const OutputSegment *Seg) {
+  StringRef Name = Seg->Name;
+  LLVM_DEBUG(dbgs() << "addStartStopSymbols: " << Name << "\n");
+  if (!isValidCIdentifier(Name))
     return;
-  uint32_t Start = Seg->OutputSeg->StartVA + Seg->OutputSegmentOffset;
-  uint32_t Stop = Start + Seg->getSize();
-  Symtab->addOptionalDataSymbol(Saver.save("__start_" + S), Start);
-  Symtab->addOptionalDataSymbol(Saver.save("__stop_" + S), Stop);
+  uint32_t Start = Seg->StartVA;
+  uint32_t Stop = Start + Seg->Size;
+  Symtab->addOptionalDataSymbol(Saver.save("__start_" + Name), Start);
+  Symtab->addOptionalDataSymbol(Saver.save("__stop_" + Name), Stop);
 }
 
 void Writer::addSections() {
@@ -811,8 +810,7 @@ void Writer::run() {
     // Create linker synthesized __start_SECNAME/__stop_SECNAME symbols
     // This has to be done after memory layout is performed.
     for (const OutputSegment *Seg : Segments)
-      for (const InputSegment *S : Seg->InputSegments)
-        addStartStopSymbols(S);
+      addStartStopSymbols(Seg);
   }
 
   log("-- scanRelocations");

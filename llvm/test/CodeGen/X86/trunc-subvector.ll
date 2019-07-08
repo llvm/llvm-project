@@ -101,7 +101,7 @@ define <2 x i32> @test5(<8 x i32> %v) {
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; SSE2-NEXT:    pcmpgtd %xmm0, %xmm2
 ; SSE2-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1]
-; SSE2-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1],xmm1[0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,3],xmm1[0,1]
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: test5:
@@ -216,10 +216,10 @@ define <2 x i32> @test9(<8 x i32> %v) {
 define <2 x i32> @test10(<8 x i32> %v) {
 ; SSE2-LABEL: test10:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    xorpd %xmm2, %xmm2
+; SSE2-NEXT:    xorps %xmm2, %xmm2
 ; SSE2-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
 ; SSE2-NEXT:    unpckhps {{.*#+}} xmm0 = xmm0[2],xmm2[2],xmm0[3],xmm2[3]
-; SSE2-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1],xmm1[0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,3],xmm1[0,1]
 ; SSE2-NEXT:    retq
 ;
 ; AVX2-LABEL: test10:

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 
 struct S1; // expected-note 2 {{declared here}}
@@ -54,7 +54,7 @@ T tmain(T argc, S **argv) {
   const int da[5] = { 0 };
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;
   int acc = 0;
   int n = 1000;
@@ -103,7 +103,7 @@ T tmain(T argc, S **argv) {
 
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd shared (argc)
+#pragma omp distribute parallel for simd shared (argc, z)
   for(int k = 0 ; k < n ; k++) {
     acc++;
   }
@@ -228,7 +228,7 @@ int main(int argc, char **argv) {
   const int da[5] = { 0 };
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;
   int acc = 0;
   int n = argc;
@@ -277,7 +277,7 @@ int main(int argc, char **argv) {
 
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd shared (argc)
+#pragma omp distribute parallel for simd shared (argc, z)
   for(int k = 0 ; k < n ; k++) {
     acc++;
   }

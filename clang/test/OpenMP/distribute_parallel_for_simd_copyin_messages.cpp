@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
 
 void foo() {
 }
@@ -126,7 +126,7 @@ T tmain(T argc, S **argv) {
 }
 
 int main(int argc, char **argv) {
-  int i;
+  int i, z;
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd copyin // expected-error {{expected '(' after 'copyin'}}

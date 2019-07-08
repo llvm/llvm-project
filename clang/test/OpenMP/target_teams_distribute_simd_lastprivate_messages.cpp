@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -78,7 +78,7 @@ template <class I, class C>
 int foomain(int argc, char **argv) {
   I e(4);
   I g(5);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp target teams distribute simd lastprivate // expected-error {{expected '(' after 'lastprivate'}}
   for (int k = 0; k < argc; ++k) ++k;
@@ -110,7 +110,7 @@ int foomain(int argc, char **argv) {
 #pragma omp target teams distribute simd lastprivate(argv[1]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
 
-#pragma omp target teams distribute simd lastprivate(e, g) // expected-error 2 {{calling a private constructor of class 'S4'}}
+#pragma omp target teams distribute simd lastprivate(z, e, g) // expected-error 2 {{calling a private constructor of class 'S4'}}
   for (int k = 0; k < argc; ++k) ++k;
 
 #pragma omp target teams distribute simd lastprivate(h) // expected-error {{threadprivate or thread local variable cannot be lastprivate}}
@@ -152,7 +152,7 @@ int main(int argc, char **argv) {
   S5 g(5);
   S3 m;
   S6 n(2);
-  int i;
+  int i, z;
   int &j = i;
   float k;
 #pragma omp target teams distribute simd lastprivate // expected-error {{expected '(' after 'lastprivate'}}
@@ -188,7 +188,7 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute simd lastprivate(2 * 2) // expected-error {{expected variable name}}
   for (i = 0; i < argc; ++i) foo();
 
-#pragma omp target teams distribute simd lastprivate(ba)
+#pragma omp target teams distribute simd lastprivate(ba, z)
   for (i = 0; i < argc; ++i) foo();
 
 #pragma omp target teams distribute simd lastprivate(ca) // expected-error {{const-qualified variable without mutable fields cannot be lastprivate}}

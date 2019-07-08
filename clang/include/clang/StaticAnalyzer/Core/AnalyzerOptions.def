@@ -300,6 +300,14 @@ ANALYZER_OPTION(bool, ShouldTrackConditionsDebug, "track-conditions-debug",
                 "Whether to place an event at each tracked condition.",
                 false)
 
+ANALYZER_OPTION(unsigned, CTUImportThreshold, "ctu-import-threshold",
+                "The maximal amount of translation units that is considered "
+                "for import when inlining functions during CTU analysis. "
+                "Lowering this threshold can alleviate the memory burder of "
+                "analysis with many interdependent definitions located in "
+                "various translation units.",
+                100u)
+
 //===----------------------------------------------------------------------===//
 // Unsinged analyzer options.
 //===----------------------------------------------------------------------===//

@@ -18,6 +18,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/TargetFolder.h"
+#include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstVisitor.h"
@@ -83,6 +84,15 @@ bool isMallocOrCallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
 bool isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
                    bool LookThroughBitCast = false);
 
+/// Tests if a value is a call or invoke to a library function that
+/// reallocates memory (e.g., realloc).
+bool isReallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
+                     bool LookThroughBitCast = false);
+
+/// Tests if a function is a call or invoke to a library function that
+/// reallocates memory (e.g., realloc).
+bool isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI);
+
 //===----------------------------------------------------------------------===//
 //  malloc Call Utility Functions.
 //
@@ -133,6 +143,9 @@ inline CallInst *extractCallocCall(Value *I, const TargetLibraryInfo *TLI) {
 //===----------------------------------------------------------------------===//
 //  free Call Utility Functions.
 //
+
+/// isLibFreeFunction - Returns true if the function is a builtin free()
+bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
 
 /// isFreeCall - Returns non-null if the value is a call to the builtin free()
 const CallInst *isFreeCall(const Value *I, const TargetLibraryInfo *TLI);

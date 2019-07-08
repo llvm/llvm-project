@@ -139,7 +139,7 @@ kernel void assume_convergent_asm()
   __asm__ volatile("s_barrier");
 }
 
-// CHECK: attributes #0 = { noinline norecurse nounwind "
+// CHECK: attributes #0 = { nofree noinline norecurse nounwind "
 // CHECK: attributes #1 = { {{[^}]*}}convergent{{[^}]*}} }
 // CHECK: attributes #2 = { {{[^}]*}}convergent{{[^}]*}} }
 // CHECK: attributes #3 = { {{[^}]*}}convergent noduplicate{{[^}]*}} }

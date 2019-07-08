@@ -169,7 +169,7 @@ struct CompletionCandidate {
   // Returns a token identifying the overload set this is part of.
   // 0 indicates it's not part of any overload set.
   size_t overloadSet(const CodeCompleteOptions &Opts) const {
-    if (!Opts.BundleOverloads)
+    if (!Opts.BundleOverloads.getValueOr(false))
       return 0;
     llvm::SmallString<256> Scratch;
     if (IndexResult) {

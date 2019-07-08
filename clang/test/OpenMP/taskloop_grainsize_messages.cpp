@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -13,6 +13,7 @@ struct S1; // expected-note {{declared here}}
 
 template <class T, class S> // expected-note {{declared here}}
 int tmain(T argc, S **argv) {
+  T z;
   #pragma omp taskloop grainsize // expected-error {{expected '(' after 'grainsize'}}
   for (int i = 0; i < 10; ++i)
     foo();
@@ -28,7 +29,7 @@ int tmain(T argc, S **argv) {
   #pragma omp taskloop grainsize (argc)) // expected-warning {{extra tokens at the end of '#pragma omp taskloop' are ignored}}
   for (int i = 0; i < 10; ++i)
     foo();
-  #pragma omp taskloop grainsize (argc > 0 ? argv[1][0] : argv[2][argc])
+  #pragma omp taskloop grainsize (argc > 0 ? argv[1][0] : argv[2][argc] + z)
   for (int i = 0; i < 10; ++i)
     foo();
   #pragma omp taskloop grainsize (foobool(argc)), grainsize (true) // expected-error {{directive '#pragma omp taskloop' cannot contain more than one 'grainsize' clause}}
@@ -54,6 +55,7 @@ int tmain(T argc, S **argv) {
 }
 
 int main(int argc, char **argv) {
+  int z;
   #pragma omp taskloop grainsize // expected-error {{expected '(' after 'grainsize'}}
   for (int i = 0; i < 10; ++i)
     foo();
@@ -69,7 +71,7 @@ int main(int argc, char **argv) {
   #pragma omp taskloop grainsize (argc)) // expected-warning {{extra tokens at the end of '#pragma omp taskloop' are ignored}}
   for (int i = 0; i < 10; ++i)
     foo();
-  #pragma omp taskloop grainsize (argc > 0 ? argv[1][0] : argv[2][argc])
+  #pragma omp taskloop grainsize (argc > 0 ? argv[1][0] : argv[2][argc] + z)
   for (int i = 0; i < 10; ++i)
     foo();
   #pragma omp taskloop grainsize (foobool(argc)), grainsize (true) // expected-error {{directive '#pragma omp taskloop' cannot contain more than one 'grainsize' clause}}

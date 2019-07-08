@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-target -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -65,7 +65,7 @@ int main(int argc, char **argv) {
   const int da[5] = {0};
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp target
 #pragma omp teams firstprivate // expected-error {{expected '(' after 'firstprivate'}}
@@ -98,7 +98,7 @@ int main(int argc, char **argv) {
 #pragma omp teams firstprivate(argv[1]) // expected-error {{expected variable name}}
   foo();
 #pragma omp target
-#pragma omp teams firstprivate(ba)
+#pragma omp teams firstprivate(ba, z)
   foo();
 #pragma omp target
 #pragma omp teams firstprivate(ca)

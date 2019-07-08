@@ -192,7 +192,7 @@ define <4 x float> @swizzle_18(<4 x float> %v) {
 define <4 x float> @swizzle_19(<4 x float> %v) {
 ; CHECK-LABEL: swizzle_19:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; CHECK-NEXT:    retq
   %1 = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
   %2 = shufflevector <4 x float> %1, <4 x float> undef, <4 x i32> <i32 1, i32 2, i32 3, i32 0>
@@ -232,7 +232,7 @@ define <4 x float> @swizzle_22(<4 x float> %v) {
 define <4 x float> @swizzle_23(<4 x float> %v) {
 ; CHECK-LABEL: swizzle_23:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    shufpd {{.*#+}} xmm0 = xmm0[1,0]
+; CHECK-NEXT:    shufps {{.*#+}} xmm0 = xmm0[2,3,0,1]
 ; CHECK-NEXT:    retq
   %1 = shufflevector <4 x float> %v, <4 x float> undef, <4 x i32> <i32 3, i32 0, i32 1, i32 2>
   %2 = shufflevector <4 x float> %1, <4 x float> undef, <4 x i32> <i32 3, i32 0, i32 1, i32 2>

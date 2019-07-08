@@ -1497,6 +1497,7 @@ static bool isFuncOnlyAttr(Attribute::AttrKind Kind) {
   case Attribute::NoCfCheck:
   case Attribute::NoUnwind:
   case Attribute::NoInline:
+  case Attribute::NoFree:
   case Attribute::AlwaysInline:
   case Attribute::OptimizeForSize:
   case Attribute::StackProtect:
@@ -4775,11 +4776,11 @@ void Verifier::visitConstrainedFPIntrinsic(ConstrainedFPIntrinsic &FPI) {
   // argument type check is needed here.
 
   if (HasExceptionMD) {
-    Assert(FPI.getExceptionBehavior() != ConstrainedFPIntrinsic::ebInvalid,
+    Assert(FPI.getExceptionBehavior().hasValue(),
            "invalid exception behavior argument", &FPI);
   }
   if (HasRoundingMD) {
-    Assert(FPI.getRoundingMode() != ConstrainedFPIntrinsic::rmInvalid,
+    Assert(FPI.getRoundingMode().hasValue(),
            "invalid rounding mode argument", &FPI);
   }
 }

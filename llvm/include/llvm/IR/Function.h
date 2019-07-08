@@ -564,6 +564,14 @@ public:
     addFnAttr(Attribute::Speculatable);
   }
 
+  /// Determine if the call might deallocate memory.
+  bool doesNotFreeMemory() const {
+    return onlyReadsMemory() || hasFnAttribute(Attribute::NoFree);
+  }
+  void setDoesNotFreeMemory() {
+    addFnAttr(Attribute::NoFree);
+  }
+
   /// Determine if the function is known not to recurse, directly or
   /// indirectly.
   bool doesNotRecurse() const {

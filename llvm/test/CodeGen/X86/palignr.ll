@@ -61,8 +61,8 @@ define <4 x i32> @test3(<4 x i32> %A, <4 x i32> %B) nounwind {
 define <4 x i32> @test4(<4 x i32> %A, <4 x i32> %B) nounwind {
 ; CHECK-SSE2-LABEL: test4:
 ; CHECK-SSE2:       # %bb.0:
-; CHECK-SSE2-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[1],xmm0[0]
-; CHECK-SSE2-NEXT:    movapd %xmm1, %xmm0
+; CHECK-SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,3],xmm0[0,1]
+; CHECK-SSE2-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-SSE2-NEXT:    retl
 ;
 ; CHECK-SSSE3-LABEL: test4:
@@ -81,8 +81,8 @@ define <4 x i32> @test4(<4 x i32> %A, <4 x i32> %B) nounwind {
 define <4 x float> @test5(<4 x float> %A, <4 x float> %B) nounwind {
 ; CHECK-SSE-LABEL: test5:
 ; CHECK-SSE:       # %bb.0:
-; CHECK-SSE-NEXT:    shufpd {{.*#+}} xmm1 = xmm1[1],xmm0[0]
-; CHECK-SSE-NEXT:    movapd %xmm1, %xmm0
+; CHECK-SSE-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,3],xmm0[0,1]
+; CHECK-SSE-NEXT:    movaps %xmm1, %xmm0
 ; CHECK-SSE-NEXT:    retl
 ;
 ; CHECK-AVX-LABEL: test5:

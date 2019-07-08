@@ -60,10 +60,12 @@ vqrdmladhx.s16 q0, q0, q1
 # CHECK-NOFP: vqrdmladhx.s32 q1, q0, q4  @ encoding: [0x20,0xee,0x09,0x3e]
 vqrdmladhx.s32 q1, q0, q4
 
-# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qn register can't be identical
+# CHECK: vqrdmladhx.s32 q1, q1, q0  @ encoding: [0x22,0xee,0x01,0x3e]
+# CHECK-NOFP: vqrdmladhx.s32 q1, q1, q0  @ encoding: [0x22,0xee,0x01,0x3e]
 vqrdmladhx.s32 q1, q1, q0
 
-# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qm register can't be identical
+# CHECK: vqrdmladhx.s32 q1, q0, q1  @ encoding: [0x20,0xee,0x03,0x3e]
+# CHECK-NOFP: vqrdmladhx.s32 q1, q0, q1  @ encoding: [0x20,0xee,0x03,0x3e]
 vqrdmladhx.s32 q1, q0, q1
 
 # CHECK: vqrdmladh.s8 q0, q6, q2  @ encoding: [0x0c,0xee,0x05,0x0e]
@@ -126,10 +128,12 @@ vqrdmlsdh.s16 q0, q7, q4
 # CHECK-NOFP: vqrdmlsdh.s32 q0, q6, q7  @ encoding: [0x2c,0xfe,0x0f,0x0e]
 vqrdmlsdh.s32 q0, q6, q7
 
-# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qn register can't be identical
+# CHECK: vqrdmlsdh.s32 q0, q0, q7  @ encoding: [0x20,0xfe,0x0f,0x0e]
+# CHECK-NOFP: vqrdmlsdh.s32 q0, q0, q7  @ encoding: [0x20,0xfe,0x0f,0x0e]
 vqrdmlsdh.s32 q0, q0, q7
 
-# ERROR: [[@LINE+1]]:{{[0-9]+}}: {{error|note}}: Qd register and Qm register can't be identical
+# CHECK: vqrdmlsdh.s32 q0, q6, q0  @ encoding: [0x2c,0xfe,0x01,0x0e]
+# CHECK-NOFP: vqrdmlsdh.s32 q0, q6, q0  @ encoding: [0x2c,0xfe,0x01,0x0e]
 vqrdmlsdh.s32 q0, q6, q0
 
 # CHECK: vcmul.f16 q0, q1, q2, #90 @ encoding: [0x32,0xee,0x05,0x0e]

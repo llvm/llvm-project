@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-target -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target -Wuninitialized
 
 void foo() {
 }
@@ -61,7 +61,7 @@ T tmain(T argc) {
   T &j = i;
   T *k = &j;
   T x;
-  T y;
+  T y ,z;
   T to, tofrom, always;
   const T (&l)[5] = da;
 
@@ -102,7 +102,7 @@ T tmain(T argc) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for simd map(S2::S2sc)
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target parallel for simd map(x)
+#pragma omp target parallel for simd map(x, z)
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for simd map(to: x)
   for (i = 0; i < argc; ++i) foo();
@@ -184,7 +184,7 @@ int main(int argc, char **argv) {
   int &j = i;
   int *k = &j;
   int x;
-  int y;
+  int y, z;
   int to, tofrom, always;
   const int (&l)[5] = da;
 
@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for simd map(to: to)
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target parallel for simd map(to)
+#pragma omp target parallel for simd map(to, z)
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target parallel for simd map(to, x)
   for (i = 0; i < argc; ++i) foo();

@@ -304,8 +304,6 @@ EXTERN int __tgt_target_teams_nowait(int64_t device_id, void *host_ptr,
                             arg_sizes, arg_types, team_num, thread_limit);
 }
 
-
-// The trip count mechanism will be revised - this scheme is not thread-safe.
 EXTERN void __kmpc_push_target_tripcount(int64_t device_id,
     uint64_t loop_tripcount) {
   if (device_id == OFFLOAD_DEVICE_DEFAULT) {
@@ -320,5 +318,8 @@ EXTERN void __kmpc_push_target_tripcount(int64_t device_id,
 
   DP("__kmpc_push_target_tripcount(%" PRId64 ", %" PRIu64 ")\n", device_id,
       loop_tripcount);
-  Devices[device_id].loopTripCnt = loop_tripcount;
+  TblMapMtx.lock();
+  Devices[device_id].loopTripCnt.emplace(__kmpc_global_thread_num(NULL),
+                                         loop_tripcount);
+  TblMapMtx.unlock();
 }

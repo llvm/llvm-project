@@ -32,7 +32,7 @@
 
 namespace __pstl
 {
-namespace __par_backend
+namespace __tbb_backend
 {
 
 //! Raw memory buffer with automatic freeing and no exceptions.
@@ -875,7 +875,7 @@ tbb::task*
 __stable_sort_task<_RandomAccessIterator1, _RandomAccessIterator2, _Compare, _LeafSort>::execute()
 {
     typedef __merge_task<_RandomAccessIterator1, _RandomAccessIterator2, _Compare, __serial_destroy,
-                         __serial_move_merge>
+                         __utils::__serial_move_merge>
         _MergeTaskType;
 
     const _SizeType __n = _M_xe - _M_xs;
@@ -897,10 +897,10 @@ __stable_sort_task<_RandomAccessIterator1, _RandomAccessIterator2, _Compare, _Le
     const _RandomAccessIterator1 __xm = _M_xs + __n / 2;
     const _RandomAccessIterator2 __zm = _M_zs + (__xm - _M_xs);
     const _RandomAccessIterator2 __ze = _M_zs + __n;
-    _MergeTaskType* __m = new (allocate_continuation())
-        _MergeTaskType(_M_xs - _M_x_beg, __xm - _M_x_beg, __xm - _M_x_beg, _M_xe - _M_x_beg, _M_zs - _M_z_beg, _M_comp,
-                       __serial_destroy(), __serial_move_merge(__nmerge), _M_nsort, _M_x_beg, _M_z_beg,
-                       /*x_orig*/ true, /*y_orig*/ true, /*root*/ _M_root);
+    _MergeTaskType* __m = new (allocate_continuation()) _MergeTaskType(
+        _M_xs - _M_x_beg, __xm - _M_x_beg, __xm - _M_x_beg, _M_xe - _M_x_beg, _M_zs - _M_z_beg, _M_comp,
+        __utils::__serial_destroy(), __utils::__serial_move_merge(__nmerge), _M_nsort, _M_x_beg, _M_z_beg,
+        /*x_orig*/ true, /*y_orig*/ true, /*root*/ _M_root);
 
     _M_root = false;
 
@@ -1049,7 +1049,7 @@ __parallel_invoke(_ExecutionPolicy&&, _F1&& __f1, _F2&& __f2)
     tbb::this_task_arena::isolate([&]() { tbb::parallel_invoke(std::forward<_F1>(__f1), std::forward<_F2>(__f2)); });
 }
 
-} // namespace __par_backend
+} // namespace __tbb_backend
 } // namespace __pstl
 
 #endif /* _PSTL_PARALLEL_BACKEND_TBB_H */

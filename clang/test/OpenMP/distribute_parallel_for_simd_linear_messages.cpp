@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-target -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target -Wuninitialized
 
 extern int omp_default_mem_alloc;
 namespace X {

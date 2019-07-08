@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 namespace X {
@@ -104,7 +104,7 @@ S3 h;
 template<class I, class C> int foomain(I argc, C **argv) {
   I e(4);
   I g(5);
-  int i;
+  int i, k;
   int &j = i;
   #pragma omp for linear // expected-error {{expected '(' after 'linear'}}
   for (int k = 0; k < argc; ++k) ++k;
@@ -128,7 +128,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp for linear (argv[1]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp for linear(e, g)
+  #pragma omp for linear(e, g, k)
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp for linear(h) // expected-error {{threadprivate or thread local variable cannot be linear}}
   for (int k = 0; k < argc; ++k) ++k;
@@ -170,7 +170,7 @@ int main(int argc, char **argv) {
 
   S4 e(4); // expected-note {{'e' defined here}}
   S5 g(5); // expected-note {{'g' defined here}}
-  int i;
+  int i, k;
   int &j = i;
   #pragma omp for linear // expected-error {{expected '(' after 'linear'}}
   for (int k = 0; k < argc; ++k) ++k;
@@ -190,7 +190,7 @@ int main(int argc, char **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   // expected-error@+2 {{linear variable with incomplete type 'S1'}}
   // expected-error@+1 {{argument of a linear clause should be of integral or pointer type, not 'S2'}}
-  #pragma omp for linear(a, b)
+  #pragma omp for linear(a, b, k)
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp for linear (argv[1]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;

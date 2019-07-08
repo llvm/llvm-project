@@ -30,8 +30,7 @@ define <4 x float> @test1(<4 x float> %a, <4 x float> %b) {
 define <4 x float> @test2(<4 x float> %a, <4 x float> %b) {
 ; SSE2-LABEL: test2:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test2:
@@ -107,8 +106,7 @@ define <8 x i16> @test6(<8 x i16> %a, <8 x i16> %b) {
 define <8 x i16> @test7(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2-LABEL: test7:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test7:
@@ -392,8 +390,7 @@ define <4 x i32> @test23(<4 x i32> %a, <4 x i32> %b) {
 define <2 x double> @test24(<2 x double> %a, <2 x double> %b) {
 ; SSE2-LABEL: test24:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test24:
@@ -412,8 +409,7 @@ define <2 x double> @test24(<2 x double> %a, <2 x double> %b) {
 define <2 x i64> @test25(<2 x i64> %a, <2 x i64> %b) {
 ; SSE2-LABEL: test25:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm1 = xmm0[0],xmm1[1]
-; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,3]
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: test25:

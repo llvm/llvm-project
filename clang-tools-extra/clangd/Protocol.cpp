@@ -323,6 +323,7 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R) {
       }
     }
     if (auto *Help = TextDocument->getObject("signatureHelp")) {
+      R.HasSignatureHelp = true;
       if (auto *Info = Help->getObject("signatureInformation")) {
         if (auto *Parameter = Info->getObject("parameterInformation")) {
           if (auto OffsetSupport = Parameter->getBoolean("labelOffsetSupport"))

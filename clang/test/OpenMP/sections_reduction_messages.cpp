@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -ferror-limit 150 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 150 -o - %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -88,7 +88,7 @@ T tmain(T argc) {
   const T d = T();       // expected-note 4 {{'d' defined here}}
   const T da[5] = {T()}; // expected-note 2 {{'da' defined here}}
   T qa[5] = {T()};
-  T i;
+  T i, z;
   T &j = i;                // expected-note 4 {{'j' defined here}}
   S3 &p = k;               // expected-note 2 {{'p' defined here}}
   const T &r = da[(int)i]; // expected-note 2 {{'r' defined here}}
@@ -210,7 +210,7 @@ T tmain(T argc) {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections reduction(+ : o) // expected-error 2 {{no viable overloaded '='}}
+#pragma omp sections reduction(+ : o, z) // expected-error 2 {{no viable overloaded '='}}
   {
     foo();
   }
@@ -268,7 +268,7 @@ int main(int argc, char **argv) {
   int qa[5] = {0};
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;           // expected-note 2 {{'j' defined here}}
   S3 &p = k;            // expected-note 2 {{'p' defined here}}
   const int &r = da[i]; // expected-note {{'r' defined here}}
@@ -330,7 +330,7 @@ int main(int argc, char **argv) {
     foo();
   }
 #pragma omp parallel
-#pragma omp sections reduction(&& : argc)
+#pragma omp sections reduction(&& : argc, z)
   {
     foo();
   }

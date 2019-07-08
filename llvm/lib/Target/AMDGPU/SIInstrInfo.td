@@ -745,6 +745,7 @@ def VReg32OrOffClass : AsmOperandClass {
 def WAIT_FLAG : Operand <i32> {
   let ParserMatchClass = SWaitMatchClass;
   let PrintMethod = "printWaitFlag";
+  let OperandType = "OPERAND_IMMEDIATE";
 }
 
 include "SIInstrFormats.td"
@@ -844,17 +845,7 @@ class NamedOperandU8<string Name, AsmOperandClass MatchClass> : Operand<i8> {
   let ParserMatchClass = MatchClass;
 }
 
-class NamedOperandU12<string Name, AsmOperandClass MatchClass> : Operand<i16> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
-}
-
 class NamedOperandU16<string Name, AsmOperandClass MatchClass> : Operand<i16> {
-  let PrintMethod = "print"#Name;
-  let ParserMatchClass = MatchClass;
-}
-
-class NamedOperandS13<string Name, AsmOperandClass MatchClass> : Operand<i16> {
   let PrintMethod = "print"#Name;
   let ParserMatchClass = MatchClass;
 }
@@ -876,8 +867,7 @@ def offen : NamedOperandBit<"Offen", NamedMatchClass<"Offen">>;
 def idxen : NamedOperandBit<"Idxen", NamedMatchClass<"Idxen">>;
 def addr64 : NamedOperandBit<"Addr64", NamedMatchClass<"Addr64">>;
 
-def offset_u12 : NamedOperandU12<"Offset", NamedMatchClass<"OffsetU12">>;
-def offset_s13 : NamedOperandS13<"OffsetS13", NamedMatchClass<"OffsetS13">>;
+def flat_offset : NamedOperandU16<"FlatOffset", NamedMatchClass<"FlatOffset">>;
 def offset : NamedOperandU16<"Offset", NamedMatchClass<"Offset">>;
 def offset0 : NamedOperandU8<"Offset0", NamedMatchClass<"Offset0">>;
 def offset1 : NamedOperandU8<"Offset1", NamedMatchClass<"Offset1">>;

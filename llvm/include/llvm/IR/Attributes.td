@@ -85,6 +85,9 @@ def NoCapture : EnumAttr<"nocapture">;
 /// Call cannot be duplicated.
 def NoDuplicate : EnumAttr<"noduplicate">;
 
+/// Function does not deallocate memory.
+def NoFree : EnumAttr<"nofree">;
+
 /// Disable implicit floating point insts.
 def NoImplicitFloat : EnumAttr<"noimplicitfloat">;
 

@@ -8,7 +8,8 @@
 
 // <forward_list>
 
-// template <class Predicate> void remove_if(Predicate pred);
+// template <class Predicate> void      remove_if(Predicate pred); // C++17 and before
+// template <class Predicate> size_type remove_if(Predicate pred); // C++20 and after
 
 #include <forward_list>
 #include <iterator>
@@ -20,15 +21,29 @@
 #include "counting_predicates.hpp"
 
 
+template <class L, class Predicate>
+void do_remove_if(L &l, Predicate pred, typename L::size_type expected)
+{
+    typename L::size_type old_size = std::distance(l.begin(), l.end());
+#if TEST_STD_VER > 17
+    ASSERT_SAME_TYPE(decltype(l.remove_if(pred)), typename L::size_type);
+    assert(l.remove_if(pred) == expected);
+#else
+    ASSERT_SAME_TYPE(decltype(l.remove_if(pred)), void);
+    l.remove_if(pred);
+#endif
+    assert(old_size - std::distance(l.begin(), l.end()) == expected);
+}
+
 bool g(int i)
 {
     return i < 3;
 }
 
-struct PredLWG529 {
-    PredLWG529 (int i) : i_(i) {};
-    ~PredLWG529() { i_ = -32767; }
-    bool operator() (const PredLWG529 &p) const { return p.i_ == i_; }
+struct PredLWG526 {
+    PredLWG526 (int i) : i_(i) {};
+    ~PredLWG526() { i_ = -32767; }
+    bool operator() (const PredLWG526 &p) const { return p.i_ == i_; }
 
     bool operator==(int i) const { return i == i_;}
     int i_;
@@ -45,7 +60,7 @@ int main(int, char**)
         C c1(std::begin(t1), std::end(t1));
         C c2(std::begin(t2), std::end(t2));
         Predicate cp(g);
-        assert(c1.remove_if(std::ref(cp)) == 4);
+        do_remove_if(c1, std::ref(cp), 4);
         assert(c1 == c2);
         assert(cp.count() == static_cast<std::size_t>(std::distance(std::begin(t1), std::end(t1))));
     }
@@ -57,7 +72,7 @@ int main(int, char**)
         C c1(std::begin(t1), std::end(t1));
         C c2;
         Predicate cp(g);
-        assert(c1.remove_if(std::ref(cp)) == 4);
+        do_remove_if(c1, std::ref(cp), 4);
         assert(c1 == c2);
         assert(cp.count() == static_cast<std::size_t>(std::distance(std::begin(t1), std::end(t1))));
     }
@@ -70,7 +85,7 @@ int main(int, char**)
         C c1(std::begin(t1), std::end(t1));
         C c2(std::begin(t2), std::end(t2));
         Predicate cp(g);
-        assert(c1.remove_if(std::ref(cp)) == 0);
+        do_remove_if(c1, std::ref(cp), 0);
         assert(c1 == c2);
         assert(cp.count() == static_cast<std::size_t>(std::distance(std::begin(t1), std::end(t1))));
     }
@@ -81,7 +96,7 @@ int main(int, char**)
         C c1;
         C c2;
         Predicate cp(g);
-        assert(c1.remove_if(std::ref(cp)) == 0);
+        do_remove_if(c1, std::ref(cp), 0);
         assert(c1 == c2);
         assert(cp.count() == 0);
     }
@@ -94,7 +109,7 @@ int main(int, char**)
         C c1(std::begin(t1), std::end(t1));
         C c2(std::begin(t2), std::end(t2));
         Predicate cp(g);
-        assert(c1.remove_if(std::ref(cp)) == 1);
+        do_remove_if(c1, std::ref(cp), 1);
         assert(c1 == c2);
         assert(cp.count() == static_cast<std::size_t>(std::distance(std::begin(t1), std::end(t1))));
     }
@@ -102,8 +117,8 @@ int main(int, char**)
     { // LWG issue #526
     int a1[] = {1, 2, 1, 3, 5, 8, 11};
     int a2[] = {   2,    3, 5, 8, 11};
-    std::forward_list<PredLWG529> c(a1, a1 + 7);
-    c.remove_if(std::ref(c.front()));
+    std::forward_list<PredLWG526> c(a1, a1 + 7);
+    do_remove_if(c, std::ref(c.front()), 2);
     for (size_t i = 0; i < 5; ++i)
     {
         assert(!c.empty());
@@ -123,7 +138,7 @@ int main(int, char**)
         C c1(std::begin(t1), std::end(t1));
         C c2(std::begin(t2), std::end(t2));
         Predicate cp(g);
-        assert(c1.remove_if(std::ref(cp)) == 4);
+        do_remove_if(c1, std::ref(cp), 4);
         assert(c1 == c2);
         assert(cp.count() == static_cast<std::size_t>(std::distance(std::begin(t1), std::end(t1))));
     }
@@ -135,7 +150,7 @@ int main(int, char**)
         C c1(std::begin(t1), std::end(t1));
         C c2;
         Predicate cp(g);
-        assert(c1.remove_if(std::ref(cp)) == 4);
+        do_remove_if(c1, std::ref(cp), 4);
         assert(c1 == c2);
         assert(cp.count() == static_cast<std::size_t>(std::distance(std::begin(t1), std::end(t1))));
     }
@@ -148,7 +163,7 @@ int main(int, char**)
         C c1(std::begin(t1), std::end(t1));
         C c2(std::begin(t2), std::end(t2));
         Predicate cp(g);
-        assert(c1.remove_if(std::ref(cp)) == 0);
+        do_remove_if(c1, std::ref(cp), 0);
         assert(c1 == c2);
         assert(cp.count() == static_cast<std::size_t>(std::distance(std::begin(t1), std::end(t1))));
     }
@@ -159,7 +174,7 @@ int main(int, char**)
         C c1;
         C c2;
         Predicate cp(g);
-        assert(c1.remove_if(std::ref(cp)) == 0);
+        do_remove_if(c1, std::ref(cp), 0);
         assert(c1 == c2);
         assert(cp.count() == 0);
     }
@@ -172,7 +187,7 @@ int main(int, char**)
         C c1(std::begin(t1), std::end(t1));
         C c2(std::begin(t2), std::end(t2));
         Predicate cp(g);
-        assert(c1.remove_if(std::ref(cp)) == 1);
+        do_remove_if(c1, std::ref(cp), 1);
         assert(c1 == c2);
         assert(cp.count() == static_cast<std::size_t>(std::distance(std::begin(t1), std::end(t1))));
     }

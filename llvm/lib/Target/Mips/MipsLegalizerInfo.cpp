@@ -39,8 +39,15 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .legalForTypesWithMemDesc({{s32, p0, 8, 8},
                                  {s32, p0, 16, 8},
                                  {s32, p0, 32, 8},
+                                 {s64, p0, 64, 8},
                                  {p0, p0, 32, 8}})
       .minScalar(0, s32);
+
+  getActionDefinitionsBuilder(G_UNMERGE_VALUES)
+     .legalFor({{s32, s64}});
+
+  getActionDefinitionsBuilder(G_MERGE_VALUES)
+     .legalFor({{s64, s32}});
 
   getActionDefinitionsBuilder({G_ZEXTLOAD, G_SEXTLOAD})
     .legalForTypesWithMemDesc({{s32, p0, 8, 8},

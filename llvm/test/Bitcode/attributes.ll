@@ -204,7 +204,7 @@ define void @f34()
 ; CHECK: define void @f34()
 {
         call void @nobuiltin() nobuiltin
-; CHECK: call void @nobuiltin() #37
+; CHECK: call void @nobuiltin() #38
         ret void;
 }
 
@@ -357,6 +357,11 @@ define void @f60() willreturn
   ret void
 }
 
+; CHECK: define void @f61() #37
+define void @f61() nofree {
+  ret void
+}
+
 ; CHECK: attributes #0 = { noreturn }
 ; CHECK: attributes #1 = { nounwind }
 ; CHECK: attributes #2 = { readnone }
@@ -394,4 +399,5 @@ define void @f60() willreturn
 ; CHECK: attributes #34 = { sanitize_hwaddress }
 ; CHECK: attributes #35 = { shadowcallstack }
 ; CHECK: attributes #36 = { willreturn }
-; CHECK: attributes #37 = { nobuiltin }
+; CHECK: attributes #37 = { nofree }
+; CHECK: attributes #38 = { nobuiltin }

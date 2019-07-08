@@ -51,10 +51,10 @@ def sync_source_lists():
 
         changed = True
         print(gn_file)
-        add = cmake_cpp - gn_cpp
+        add = sorted(cmake_cpp - gn_cpp)
         if add:
             print('add:\n' + '\n'.join('    "%s",' % a for a in add))
-        remove = gn_cpp - cmake_cpp
+        remove = sorted(gn_cpp - cmake_cpp)
         if remove:
             print('remove:\n' + '\n'.join(remove))
         print()
