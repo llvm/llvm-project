@@ -1,2 +1,0 @@
-// Don't crash while reading non-dynamic files.
-RUN: llvm-readobj %p/Inputs/trivial-object-test.elf-x86-64

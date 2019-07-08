@@ -1,0 +1,50 @@
+## Show the behavior of llvm-readobj/llvm-readelf when no operations are requested.
+
+## Check the behavior on ET_EXEC input.
+
+# RUN: yaml2obj --docnum=1 %s -o %t.exe
+# RUN: llvm-readobj %t.exe | FileCheck %s -DFILE=%t.exe --check-prefix LLVM
+# RUN: llvm-readelf %t.exe | FileCheck %s -DFILE=%t.exe --check-prefix GNU --allow-empty
+
+# LLVM: File: [[FILE]]
+# LLVM: Format: ELF64-x86-64
+# LLVM: Arch: x86_64
+# LLVM: AddressSize: 64bit
+# LLVM: LoadName: <Not found>{{$}}
+# LLVM-EMPTY:
+# LLVM-NOT: {{.}}
+
+# GNU-NOT: {{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+
+## Check the behavior on ET_REL input.
+
+# RUN: yaml2obj --docnum=2 %s -o %t.o
+# RUN: llvm-readobj %t.o | FileCheck %s -DFILE=%t.o --check-prefix LLVM
+# RUN: llvm-readelf %t.o | FileCheck %s -DFILE=%t.o --check-prefix GNU --allow-empty
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+
+## Check the behavior on ET_DYN input.
+
+# RUN: yaml2obj --docnum=3 %s -o %t.so
+# RUN: llvm-readobj %t.so | FileCheck %s -DFILE=%t.so --check-prefix LLVM
+# RUN: llvm-readelf %t.so | FileCheck %s -DFILE=%t.so --check-prefix GNU --allow-empty
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
