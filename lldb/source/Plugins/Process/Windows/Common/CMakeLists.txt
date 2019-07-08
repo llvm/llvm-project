@@ -2,7 +2,6 @@
 add_lldb_library(lldbPluginProcessWindowsCommon PLUGIN
   DebuggerThread.cpp
   LocalDebugDelegate.cpp
-  ProcessDebugger.cpp
   ProcessWindows.cpp
   ProcessWindowsLog.cpp
   RegisterContextWindows.cpp
