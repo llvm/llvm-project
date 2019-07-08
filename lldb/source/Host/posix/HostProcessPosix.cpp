@@ -87,7 +87,7 @@ bool HostProcessPosix::IsRunning() const {
   return error.Success();
 }
 
-HostThread HostProcessPosix::StartMonitoring(
+llvm::Expected<HostThread> HostProcessPosix::StartMonitoring(
     const Host::MonitorChildProcessCallback &callback, bool monitor_signals) {
   return Host::StartMonitoringChildProcess(callback, m_process,
                                            monitor_signals);
