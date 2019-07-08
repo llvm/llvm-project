@@ -1639,6 +1639,10 @@ Function *FunctionAST::codegen() {
     // Validate the generated code, checking for consistency.
     verifyFunction(*TheFunction);
 
+    // Mark the function for race-detection
+    if (RunCilksan)
+      TheFunction->addFnAttr(Attribute::SanitizeCilk);
+
     // Run the optimizer on the function.
     TheFPM->run(*TheFunction);
     TheMPM->run(*TheModule.get());
@@ -1714,7 +1718,6 @@ static void InitializeModuleAndPassManager() {
   TargetLibraryInfoImpl TLII(TargetTriple);
 
   // Set the target for Tapir lowering to the Cilk runtime system.
-  // TLII.setTapirTarget(TapirTargetID::Cilk);
   TLII.setTapirTarget(TheTapirTarget);
 
   // Add the TargetLibraryInfo to the pass manager.
@@ -1795,6 +1798,15 @@ static void HandleTopLevelExpression() {
       auto ExprSymbol = TheJIT->findSymbol("__anon_expr");
       assert(ExprSymbol && "Function not found");
 
+      if (RunCilksan) {
+        // Run the CSI constructor
+        auto ExprSymbol = TheJIT->findSymbolInModule(H, "csirt.unit_ctor");
+        assert(ExprSymbol && "Function not found");
+        void (*CSICtor)() =
+          (void (*)())(intptr_t)cantFail(ExprSymbol.getAddress());
+        CSICtor();
+      }
+
       std::unique_ptr<Timer> T =
         llvm::make_unique<Timer>("__anon_expr", "Top-level expression");
       // Get the symbol's address and cast it to the right type (takes no
@@ -1835,28 +1847,6 @@ static void MainLoop() {
     }
     fprintf(stderr, "ready> ");
   }
-}
-
-//===----------------------------------------------------------------------===//
-// "Library" functions that can be "extern'd" from user code.
-//===----------------------------------------------------------------------===//
-
-#ifdef _WIN32
-#define DLLEXPORT __declspec(dllexport)
-#else
-#define DLLEXPORT
-#endif
-
-/// putchard - putchar that takes a double and returns 0.
-extern "C" DLLEXPORT double putchard(double X) {
-  fputc((char)X, stderr);
-  return 0;
-}
-
-/// printd - printf that takes a double prints it as "%f\n", returning 0.
-extern "C" DLLEXPORT double printd(double X) {
-  fprintf(stderr, "%f\n", X);
-  return 0;
 }
 
 //===----------------------------------------------------------------------===//
