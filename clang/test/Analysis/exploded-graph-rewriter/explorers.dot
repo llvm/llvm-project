@@ -1,0 +1,37 @@
+// RUN: %exploded_graph_rewriter %s \
+// RUN:     | FileCheck %s -check-prefixes=CHECK,BASIC
+// RUN: %exploded_graph_rewriter -s %s \
+// RUN:     | FileCheck %s -check-prefixes=CHECK,SINGLE
+
+// FIXME: Substitution doesn't seem to work on Windows.
+// UNSUPPORTED: system-windows
+
+Node0x1 [shape=record,label=
+ "{{ "node_id": 1, "pointer": "0x1", "has_report": false, "is_sink": false,
+      "program_state": null, "program_points": []}\l}"];
+
+Node0x2 [shape=record,label=
+ "{{ "node_id": 2, "pointer": "0x2", "has_report": false, "is_sink": false,
+      "program_state": null, "program_points": []}\l}"];
+
+Node0x3 [shape=record,label=
+ "{{ "node_id": 3, "pointer": "0x3", "has_report": false, "is_sink": false,
+      "program_state": null, "program_points": []}\l}"];
+
+Node0x4 [shape=record,label=
+ "{{ "node_id": 4, "pointer": "0x4", "has_report": false, "is_sink": false,
+      "program_state": null, "program_points": []}\l}"];
+
+// CHECK: Node0x1 -> Node0x2;
+Node0x1 -> Node0x2;
+
+// BASIC: Node0x1 -> Node0x3;
+// SINGLE-NOT: Node0x1 -> Node0x3;
+Node0x1 -> Node0x3;
+
+// CHECK: Node0x2 -> Node0x4;
+Node0x2 -> Node0x4;
+
+// BASIC: Node0x3 -> Node0x4;
+// SINGLE-NOT: Node0x3 -> Node0x4;
+Node0x3 -> Node0x4;

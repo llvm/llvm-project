@@ -804,8 +804,7 @@ class DotDumpVisitor(object):
 #===-----------------------------------------------------------------------===#
 
 
-# A class that encapsulates traversal of the ExplodedGraph. Different explorer
-# kinds could potentially traverse specific sub-graphs.
+# BasicExplorer explores the whole graph in no particular order.
 class BasicExplorer(object):
     def __init__(self):
         super(BasicExplorer, self).__init__()
@@ -818,6 +817,39 @@ class BasicExplorer(object):
             for succ in sorted(graph.nodes[node].successors):
                 logging.debug('Visiting edge: %s -> %s ' % (node, succ))
                 visitor.visit_edge(graph.nodes[node], graph.nodes[succ])
+        visitor.visit_end_of_graph()
+
+
+# SinglePathExplorer traverses only a single path - the leftmost path
+# from the root. Useful when the trimmed graph is still too large
+# due to a large amount of equivalent reports.
+class SinglePathExplorer(object):
+    def __init__(self):
+        super(SinglePathExplorer, self).__init__()
+
+    def explore(self, graph, visitor):
+        visitor.visit_begin_graph(graph)
+
+        # Keep track of visited nodes in order to avoid loops.
+        visited = set()
+        node_id = graph.root_id
+        while True:
+            visited.add(node_id)
+            node = graph.nodes[node_id]
+            logging.debug('Visiting ' + node_id)
+            visitor.visit_node(node)
+            if len(node.successors) == 0:
+                break
+
+            succ_id = node.successors[0]
+            succ = graph.nodes[succ_id]
+            logging.debug('Visiting edge: %s -> %s ' % (node_id, succ_id))
+            visitor.visit_edge(node, succ)
+            if succ_id in visited:
+                break
+
+            node_id = succ_id
+
         visitor.visit_end_of_graph()
 
 
@@ -836,6 +868,11 @@ def main():
     parser.add_argument('-d', '--diff', action='store_const', dest='diff',
                         const=True, default=False,
                         help='display differences between states')
+    parser.add_argument('-s', '--single-path', action='store_const',
+                        dest='single_path', const=True, default=False,
+                        help='only display the leftmost path in the graph '
+                             '(useful for trimmed graphs that still '
+                             'branch too much)')
     parser.add_argument('--dark', action='store_const', dest='dark',
                         const=True, default=False,
                         help='dark mode')
@@ -851,8 +888,9 @@ def main():
             raw_line = raw_line.strip()
             graph.add_raw_line(raw_line)
 
-    explorer = BasicExplorer()
+    explorer = SinglePathExplorer() if args.single_path else BasicExplorer()
     visitor = DotDumpVisitor(args.diff, args.dark, args.gray)
+
     explorer.explore(graph, visitor)
 
 
