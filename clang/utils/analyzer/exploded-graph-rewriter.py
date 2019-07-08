@@ -384,11 +384,12 @@ class ExplodedGraph(object):
 # A visitor that dumps the ExplodedGraph into a DOT file with fancy HTML-based
 # syntax highlighing.
 class DotDumpVisitor(object):
-    def __init__(self, do_diffs, dark_mode, gray_mode):
+    def __init__(self, do_diffs, dark_mode, gray_mode, topo_mode):
         super(DotDumpVisitor, self).__init__()
         self._do_diffs = do_diffs
         self._dark_mode = dark_mode
         self._gray_mode = gray_mode
+        self._topo_mode = topo_mode
 
     @staticmethod
     def _dump_raw(s):
@@ -766,18 +767,19 @@ class DotDumpVisitor(object):
         if node.is_sink:
             self._dump('<tr><td><font color="cornflowerblue"><b>Sink Node'
                        '</b></font></td></tr>')
-        self._dump('<tr><td align="left" width="0">')
-        if len(node.points) > 1:
-            self._dump('<b>Program points:</b></td></tr>')
-        else:
-            self._dump('<b>Program point:</b></td></tr>')
+        if not self._topo_mode:
+            self._dump('<tr><td align="left" width="0">')
+            if len(node.points) > 1:
+                self._dump('<b>Program points:</b></td></tr>')
+            else:
+                self._dump('<b>Program point:</b></td></tr>')
         self._dump('<tr><td align="left" width="0">'
                    '<table border="0" align="left" width="0">')
         for p in node.points:
             self.visit_program_point(p)
         self._dump('</table></td></tr>')
 
-        if node.state is not None:
+        if node.state is not None and not self._topo_mode:
             prev_s = None
             # Do diffs only when we have a unique predecessor.
             # Don't do diffs on the leaf nodes because they're
@@ -868,6 +870,9 @@ def main():
     parser.add_argument('-d', '--diff', action='store_const', dest='diff',
                         const=True, default=False,
                         help='display differences between states')
+    parser.add_argument('-t', '--topology', action='store_const',
+                        dest='topology', const=True, default=False,
+                        help='only display program points, omit states')
     parser.add_argument('-s', '--single-path', action='store_const',
                         dest='single_path', const=True, default=False,
                         help='only display the leftmost path in the graph '
@@ -889,7 +894,7 @@ def main():
             graph.add_raw_line(raw_line)
 
     explorer = SinglePathExplorer() if args.single_path else BasicExplorer()
-    visitor = DotDumpVisitor(args.diff, args.dark, args.gray)
+    visitor = DotDumpVisitor(args.diff, args.dark, args.gray, args.topology)
 
     explorer.explore(graph, visitor)
 
