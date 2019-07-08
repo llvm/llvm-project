@@ -98,7 +98,7 @@ struct DeviceTy {
 
   // NOTE: Once libomp gains full target-task support, this state should be
   // moved into the target task in libomp.
-  std::map<int32_t, uint64_t> loopTripCnt;
+  std::map<int32_t, uint64_t> LoopTripCnt;
 
   int64_t RTLRequiresFlags;
 
@@ -116,7 +116,7 @@ struct DeviceTy {
         HostDataToTargetMap(d.HostDataToTargetMap),
         PendingCtorsDtors(d.PendingCtorsDtors), ShadowPtrMap(d.ShadowPtrMap),
         DataMapMtx(), PendingGlobalsMtx(),
-        ShadowMtx(), loopTripCnt(d.loopTripCnt),
+        ShadowMtx(), LoopTripCnt(d.LoopTripCnt),
         RTLRequiresFlags(d.RTLRequiresFlags) {}
 
   DeviceTy& operator=(const DeviceTy &d) {
@@ -128,7 +128,7 @@ struct DeviceTy {
     HostDataToTargetMap = d.HostDataToTargetMap;
     PendingCtorsDtors = d.PendingCtorsDtors;
     ShadowPtrMap = d.ShadowPtrMap;
-    loopTripCnt = d.loopTripCnt;
+    LoopTripCnt = d.LoopTripCnt;
     RTLRequiresFlags = d.RTLRequiresFlags;
 
     return *this;
