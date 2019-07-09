@@ -43996,6 +43996,7 @@ static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
   EVT VT = N->getValueType(0);
   SDValue In = N->getOperand(0);
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
 
   // Try to merge vector loads and extend_inreg to an extload.
   if (!DCI.isBeforeLegalizeOps() && ISD::isNormalLoad(In.getNode()) &&
@@ -44006,12 +44007,14 @@ static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG,
       ISD::LoadExtType Ext = N->getOpcode() == ISD::SIGN_EXTEND_VECTOR_INREG ? ISD::SEXTLOAD : ISD::ZEXTLOAD;
       EVT MemVT = EVT::getVectorVT(*DAG.getContext(), SVT,
                                    VT.getVectorNumElements());
-      SDValue Load =
-          DAG.getExtLoad(Ext, SDLoc(N), VT, Ld->getChain(), Ld->getBasePtr(),
-                         Ld->getPointerInfo(), MemVT, Ld->getAlignment(),
-                         Ld->getMemOperand()->getFlags());
-      DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), Load.getValue(1));
-      return Load;
+      if (TLI.isLoadExtLegal(Ext, VT, MemVT)) {
+        SDValue Load =
+            DAG.getExtLoad(Ext, SDLoc(N), VT, Ld->getChain(), Ld->getBasePtr(),
+                           Ld->getPointerInfo(), MemVT, Ld->getAlignment(),
+                           Ld->getMemOperand()->getFlags());
+        DAG.ReplaceAllUsesOfValueWith(SDValue(Ld, 1), Load.getValue(1));
+        return Load;
+      }
     }
   }
 
@@ -44022,7 +44025,6 @@ static SDValue combineExtInVec(SDNode *N, SelectionDAG &DAG,
     return SDValue();
 
   // Combine (ext_invec (ext_invec X)) -> (ext_invec X)
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (In.getOpcode() == N->getOpcode() &&
       TLI.isTypeLegal(VT) && TLI.isTypeLegal(In.getOperand(0).getValueType()))
     return DAG.getNode(N->getOpcode(), SDLoc(N), VT, In.getOperand(0));
