@@ -2750,6 +2750,9 @@ def err_only_annotate_after_access_spec : Error<
 
 def err_attribute_section_invalid_for_target : Error<
   "argument to %select{'code_seg'|'section'}1 attribute is not valid for this target: %0">;
+def warn_attribute_section_drectve : Warning<
+  "#pragma %0(\".drectve\") has undefined behavior, "
+  "use #pragma comment(linker, ...) instead">, InGroup<MicrosoftDrectveSection>;
 def warn_mismatched_section : Warning<
   "%select{codeseg|section}0 does not match previous declaration">, InGroup<Section>;
 def warn_attribute_section_on_redeclaration : Warning<
@@ -6026,6 +6029,10 @@ def warn_tautological_constant_compare : Warning<
   "result of comparison %select{%3|%1}0 %2 "
   "%select{%1|%3}0 is always %4">,
   InGroup<TautologicalTypeLimitCompare>, DefaultIgnore;
+def warn_tautological_compare_objc_bool : Warning<
+  "result of comparison of constant %0 with expression of type BOOL"
+  " is always %1, as the only well defined values for BOOL are YES and NO">,
+  InGroup<TautologicalObjCBoolCompare>;
 
 def warn_mixed_sign_comparison : Warning<
   "comparison of integers of different signs: %0 and %1">,
@@ -9270,6 +9277,8 @@ def err_omp_invariant_or_linear_dependency : Error<
   "expected loop invariant expression or '<invariant1> * %0 + <invariant2>' kind of expression">;
 def err_omp_wrong_dependency_iterator_type : Error<
   "expected an integer or a pointer type of the outer loop counter '%0' for non-rectangular nests">;
+def err_omp_unsupported_type : Error <
+  "host requires %0 bit size %1 type support, but device '%2' does not support it">;
 } // end of OpenMP category
 
 let CategoryName = "Related Result Type Issue" in {

@@ -110,9 +110,9 @@ private:
       auto It = Trees.lower_bound(Range.begin());
       assert(It != Trees.end() && "no node found");
       assert(It->first == Range.begin() && "no child with the specified range");
-      assert(std::next(It) == Trees.end() ||
-             std::next(It)->first == Range.end() &&
-                 "no child with the specified range");
+      assert((std::next(It) == Trees.end() ||
+              std::next(It)->first == Range.end()) &&
+             "no child with the specified range");
       It->second.Role = Role;
     }
 
@@ -129,9 +129,9 @@ private:
              BeginChildren->first == FirstToken &&
              "fold crosses boundaries of existing subtrees");
       auto EndChildren = Trees.lower_bound(NodeTokens.end());
-      assert(EndChildren == Trees.end() ||
-             EndChildren->first == NodeTokens.end() &&
-                 "fold crosses boundaries of existing subtrees");
+      assert((EndChildren == Trees.end() ||
+              EndChildren->first == NodeTokens.end()) &&
+             "fold crosses boundaries of existing subtrees");
 
       // (!) we need to go in reverse order, because we can only prepend.
       for (auto It = EndChildren; It != BeginChildren; --It)

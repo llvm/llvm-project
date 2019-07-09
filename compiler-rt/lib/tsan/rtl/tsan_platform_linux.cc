@@ -69,7 +69,7 @@ void *__libc_stack_end = 0;
 
 #if SANITIZER_LINUX && defined(__aarch64__)
 void InitializeGuardPtr() __attribute__((visibility("hidden")));
-extern "C" __tsan::uptr _tsan_pointer_chk_guard = 0;
+extern "C" __tsan::uptr _tsan_pointer_chk_guard;
 #endif
 
 namespace __tsan {
@@ -353,7 +353,9 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 # endif
 #elif defined(__aarch64__)
 # if SANITIZER_LINUX
-  return mangled_sp ^ _tsan_pointer_chk_guard;
+  // TODO(yln): fix this
+  // return mangled_sp ^ _tsan_pointer_chk_guard;
+  return mangled_sp;
 # else
   return mangled_sp;
 # endif

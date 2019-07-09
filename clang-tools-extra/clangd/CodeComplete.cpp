@@ -327,8 +327,12 @@ struct CodeCompletionBuilder {
       auto ResolvedInserted = toHeaderFile(Header, FileName);
       if (!ResolvedInserted)
         return ResolvedInserted.takeError();
+      auto Spelled = Includes.calculateIncludePath(*ResolvedInserted, FileName);
+      if (!Spelled)
+        return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                       "Header not on include path");
       return std::make_pair(
-          Includes.calculateIncludePath(*ResolvedInserted, FileName),
+          std::move(*Spelled),
           Includes.shouldInsertInclude(*ResolvedDeclaring, *ResolvedInserted));
     };
     bool ShouldInsert = C.headerToInsertIfAllowed(Opts).hasValue();

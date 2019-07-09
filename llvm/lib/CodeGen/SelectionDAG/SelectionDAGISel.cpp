@@ -386,7 +386,7 @@ static void SplitCriticalSideEffectEdges(Function &Fn, DominatorTree *DT,
 static void computeUsesMSVCFloatingPoint(const Triple &TT, const Function &F,
                                          MachineModuleInfo &MMI) {
   // Only needed for MSVC
-  if (!TT.isKnownWindowsMSVCEnvironment())
+  if (!TT.isWindowsMSVCEnvironment())
     return;
 
   // If it's already set, nothing to do.

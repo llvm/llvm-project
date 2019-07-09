@@ -812,21 +812,10 @@ defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX8",   v8f32>;
 defm : SMLoad_Pattern <"S_BUFFER_LOAD_DWORDX16",  v16f32>;
 } // End let AddedComplexity = 100
 
-let OtherPredicates = [isGFX6GFX7] in {
 def : GCNPat <
   (i64 (readcyclecounter)),
   (S_MEMTIME)
 >;
-}
-
-let OtherPredicates = [isGFX8Plus] in {
-
-def : GCNPat <
-  (i64 (readcyclecounter)),
-  (S_MEMREALTIME)
->;
-
-} // let OtherPredicates = [isGFX8Plus]
 
 //===----------------------------------------------------------------------===//
 // GFX10.

@@ -319,7 +319,7 @@ EXTERN void __kmpc_push_target_tripcount(int64_t device_id,
   DP("__kmpc_push_target_tripcount(%" PRId64 ", %" PRIu64 ")\n", device_id,
       loop_tripcount);
   TblMapMtx.lock();
-  Devices[device_id].loopTripCnt.emplace(__kmpc_global_thread_num(NULL),
+  Devices[device_id].LoopTripCnt.emplace(__kmpc_global_thread_num(NULL),
                                          loop_tripcount);
   TblMapMtx.unlock();
 }

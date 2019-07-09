@@ -731,8 +731,8 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
   // Pop loop trip count
   uint64_t ltc = 0;
   TblMapMtx.lock();
-  auto I = Device.loopTripCnt.find(__kmpc_global_thread_num(NULL));
-  if (I != Device.loopTripCnt.end())
+  auto I = Device.LoopTripCnt.find(__kmpc_global_thread_num(NULL));
+  if (I != Device.LoopTripCnt.end())
     std::swap(ltc, I->second);
   TblMapMtx.unlock();
 

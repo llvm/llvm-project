@@ -838,9 +838,13 @@ Value *SCEVExpander::visitMulExpr(const SCEVMulExpr *S) {
       if (match(W, m_Power2(RHS))) {
         // Canonicalize Prod*(1<<C) to Prod<<C.
         assert(!Ty->isVectorTy() && "vector types are not SCEVable");
+        auto NWFlags = S->getNoWrapFlags();
+        // clear nsw flag if shl will produce poison value.
+        if (RHS->logBase2() == RHS->getBitWidth() - 1)
+          NWFlags = ScalarEvolution::clearFlags(NWFlags, SCEV::FlagNSW);
         Prod = InsertBinop(Instruction::Shl, Prod,
-                           ConstantInt::get(Ty, RHS->logBase2()),
-                           S->getNoWrapFlags(), /*IsSafeToHoist*/ true);
+                           ConstantInt::get(Ty, RHS->logBase2()), NWFlags,
+                           /*IsSafeToHoist*/ true);
       } else {
         Prod = InsertBinop(Instruction::Mul, Prod, W, S->getNoWrapFlags(),
                            /*IsSafeToHoist*/ true);

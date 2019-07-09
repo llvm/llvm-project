@@ -498,3 +498,77 @@ define <4 x float> @insert_nonzero_index_splat_wrong_index(float %x, i32 %index)
   %splat = shufflevector <4 x float> %xv, <4 x float> undef, <4 x i32> <i32 undef, i32 1, i32 1, i32 undef>
   ret <4 x float> %splat
 }
+
+define <4 x float> @insert_in_splat(float %x) {
+; CHECK-LABEL: @insert_in_splat(
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 0
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %xv = insertelement <4 x float> undef, float %x, i32 0
+  %splat = shufflevector <4 x float> %xv, <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 0, i32 undef>
+  %r = insertelement <4 x float> %splat, float %x, i32 3
+  ret <4 x float> %r
+}
+
+define <4 x float> @insert_in_splat_extra_uses(float %x) {
+; CHECK-LABEL: @insert_in_splat_extra_uses(
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 0
+; CHECK-NEXT:    call void @use(<4 x float> [[XV]])
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 0, i32 undef>
+; CHECK-NEXT:    call void @use(<4 x float> [[SPLAT]])
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 0, i32 0>
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %xv = insertelement <4 x float> undef, float %x, i32 0
+  call void @use(<4 x float> %xv)
+  %splat = shufflevector <4 x float> %xv, <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 0, i32 undef>
+  call void @use(<4 x float> %splat)
+  %r = insertelement <4 x float> %splat, float %x, i32 3
+  ret <4 x float> %r
+}
+
+; Negative test - not a constant index insert
+
+define <4 x float> @insert_in_splat_variable_index(float %x, i32 %y) {
+; CHECK-LABEL: @insert_in_splat_variable_index(
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 0
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 0, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[SPLAT]], float [[X]], i32 [[Y:%.*]]
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %xv = insertelement <4 x float> undef, float %x, i32 0
+  %splat = shufflevector <4 x float> %xv, <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 0, i32 undef>
+  %r = insertelement <4 x float> %splat, float %x, i32 %y
+  ret <4 x float> %r
+}
+
+; Negative test - not a splat shuffle
+
+define <4 x float> @insert_in_nonsplat(float %x, <4 x float> %y) {
+; CHECK-LABEL: @insert_in_nonsplat(
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 0
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> [[Y:%.*]], <4 x i32> <i32 undef, i32 0, i32 4, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[SPLAT]], float [[X]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %xv = insertelement <4 x float> undef, float %x, i32 0
+  %splat = shufflevector <4 x float> %xv, <4 x float> %y, <4 x i32> <i32 undef, i32 0, i32 4, i32 undef>
+  %r = insertelement <4 x float> %splat, float %x, i32 3
+  ret <4 x float> %r
+}
+
+; Negative test - not a splat shuffle
+
+define <4 x float> @insert_in_nonsplat2(float %x, <4 x float> %y) {
+; CHECK-LABEL: @insert_in_nonsplat2(
+; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> [[Y:%.*]], float [[X:%.*]], i32 0
+; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 1, i32 undef>
+; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[SPLAT]], float [[X]], i32 3
+; CHECK-NEXT:    ret <4 x float> [[R]]
+;
+  %xv = insertelement <4 x float> %y, float %x, i32 0
+  %splat = shufflevector <4 x float> %xv, <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 1, i32 undef>
+  %r = insertelement <4 x float> %splat, float %x, i32 3
+  ret <4 x float> %r
+}

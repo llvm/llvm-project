@@ -66,6 +66,9 @@ LLVM_DUMP_METHOD void Arg::dump() const { print(dbgs()); }
 #endif
 
 std::string Arg::getAsString(const ArgList &Args) const {
+  if (Alias)
+    return Alias->getAsString(Args);
+
   SmallString<256> Res;
   raw_svector_ostream OS(Res);
 

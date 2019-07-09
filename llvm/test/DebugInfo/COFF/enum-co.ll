@@ -1,4 +1,5 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
 
 ; Command to generate enum-co.ll
 ; $ clang++ enum-co.cpp -S -emit-llvm -g -gcodeview -o enum-co.ll

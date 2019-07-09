@@ -298,6 +298,21 @@ public:
     return CreateMemSet(Dest.getPointer(), Value, Size,
                         Dest.getAlignment().getQuantity(), IsVolatile);
   }
+
+  using CGBuilderBaseTy::CreatePreserveStructAccessIndex;
+  Address CreatePreserveStructAccessIndex(Address Addr,
+                                          unsigned Index,
+                                          unsigned FieldIndex,
+                                          llvm::MDNode *DbgInfo) {
+    llvm::StructType *ElTy = cast<llvm::StructType>(Addr.getElementType());
+    const llvm::DataLayout &DL = BB->getParent()->getParent()->getDataLayout();
+    const llvm::StructLayout *Layout = DL.getStructLayout(ElTy);
+    auto Offset = CharUnits::fromQuantity(Layout->getElementOffset(Index));
+
+    return Address(CreatePreserveStructAccessIndex(Addr.getPointer(),
+                                                   Index, FieldIndex, DbgInfo),
+                   Addr.getAlignment().alignmentAtOffset(Offset));
+  }
 };
 
 }  // end namespace CodeGen

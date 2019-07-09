@@ -1068,35 +1068,37 @@ declare void @external_void_func_void() #1
 
 ; GCN-LABEL: {{^}}callee_no_stack_with_call:
 ; GCN: s_waitcnt
-; GCN: s_mov_b32 s5, s32
-; GFX1064: s_add_u32 s32, s32, 0x400
-; GFX1032: s_add_u32 s32, s32, 0x200
+; GCN-NEXT: s_waitcnt_vscnt
 
-; GFX1064: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
-; GFX1032: s_or_saveexec_b32 [[COPY_EXEC0:s[0-9]]], -1{{$}}
-
-; GCN-NEXT: buffer_store_dword v32, off, s[0:3], s5 ; 4-byte Folded Spill
-
+; GFX1064-NEXT: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; GFX1032-NEXT: s_or_saveexec_b32 [[COPY_EXEC0:s[0-9]]], -1{{$}}
+; GCN-NEXT: buffer_store_dword v32, off, s[0:3], s32 ; 4-byte Folded Spill
 ; GFX1064-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
 ; GFX1032-NEXT: s_mov_b32 exec_lo, [[COPY_EXEC0]]
 
-; GCN-DAG: v_writelane_b32 v32, s34, 0
-; GCN-DAG: v_writelane_b32 v32, s35, 1
-; GCN-DAG: s_mov_b32 [[COPY_FP:s[0-9]+]], s5
-; GCN: s_swappc_b64
-; GCN-DAG: s_mov_b32 s5, [[COPY_FP]]
-; GCN-DAG: v_readlane_b32 s35, v32, 1
-; GCN-DAG: v_readlane_b32 s34, v32, 0
+; GCN-NEXT: v_writelane_b32 v32, s34, 2
+; GCN: s_mov_b32 s34, s32
+; GFX1064: s_add_u32 s32, s32, 0x400
+; GFX1032: s_add_u32 s32, s32, 0x200
 
-; GFX1064: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
-; GFX1032: s_or_saveexec_b32 [[COPY_EXEC1:s[0-9]]], -1{{$}}
-; GCN-NEXT: buffer_load_dword v32, off, s[0:3], s5 ; 4-byte Folded Reload
-; GFX1064-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
-; GFX1032-NEXT: s_mov_b32 exec_lo, [[COPY_EXEC1]]
+
+; GCN-DAG: v_writelane_b32 v32, s36, 0
+; GCN-DAG: v_writelane_b32 v32, s37, 1
+; GCN: s_swappc_b64
+; GCN-DAG: v_readlane_b32 s36, v32, 0
+; GCN-DAG: v_readlane_b32 s37, v32, 1
+
 
 ; GFX1064: s_sub_u32 s32, s32, 0x400
 ; GFX1032: s_sub_u32 s32, s32, 0x200
-; GCN: s_setpc_b64
+; GCN: v_readlane_b32 s34, v32, 2
+; GFX1064: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; GFX1032: s_or_saveexec_b32 [[COPY_EXEC1:s[0-9]]], -1{{$}}
+; GCN-NEXT: buffer_load_dword v32, off, s[0:3], s32 ; 4-byte Folded Reload
+; GFX1064-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
+; GFX1032-NEXT: s_mov_b32 exec_lo, [[COPY_EXEC1]]
+; GCN-NEXT: s_waitcnt vmcnt(0)
+; GCN-NEXT: s_setpc_b64
 define void @callee_no_stack_with_call() #1 {
   call void @external_void_func_void()
   ret void

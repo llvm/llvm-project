@@ -184,6 +184,9 @@ private:
 using CFGDomTree = CFGDominatorTreeImpl</*IsPostDom*/ false>;
 using CFGPostDomTree = CFGDominatorTreeImpl</*IsPostDom*/ true>;
 
+template<> void CFGDominatorTreeImpl<true>::anchor();
+template<> void CFGDominatorTreeImpl<false>::anchor();
+
 } // end of namespace clang
 
 namespace llvm {

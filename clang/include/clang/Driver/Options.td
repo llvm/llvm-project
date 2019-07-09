@@ -2023,6 +2023,8 @@ def malign_jumps_EQ : Joined<["-"], "malign-jumps=">, Group<clang_ignored_m_Grou
 def mfancy_math_387 : Flag<["-"], "mfancy-math-387">, Group<clang_ignored_m_Group>;
 def mlong_calls : Flag<["-"], "mlong-calls">, Group<m_Group>,
   HelpText<"Generate branches with extended addressability, usually via indirect jumps.">;
+def mlong_double_64 : Flag<["-"], "mlong-double-64">, Group<f_Group>, Flags<[CC1Option]>,
+  HelpText<"Force long double to be 64 bits">;
 def mno_long_calls : Flag<["-"], "mno-long-calls">, Group<m_Group>,
   HelpText<"Restore the default behaviour of not generating long calls">;
 def mexecute_only : Flag<["-"], "mexecute-only">, Group<m_arm_Features_Group>,

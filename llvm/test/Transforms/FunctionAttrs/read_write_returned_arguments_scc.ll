@@ -31,7 +31,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; CHECK: Function Attrs: nofree nounwind
-; CHECK-NEXT: define i32* @external_ret2_nrw(i32* %n0, i32* %r0, i32* %w0)
+; CHECK-NEXT: define i32* @external_ret2_nrw(i32* %n0, i32* %r0, i32* returned %w0)
 define i32* @external_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 entry:
   %call = call i32* @internal_ret0_nw(i32* %n0, i32* %w0)
@@ -42,7 +42,7 @@ entry:
 }
 
 ; CHECK: Function Attrs: nofree nounwind
-; CHECK-NEXT: define internal i32* @internal_ret0_nw(i32* %n0, i32* %w0)
+; CHECK-NEXT: define internal i32* @internal_ret0_nw(i32* returned %n0, i32* %w0)
 define internal i32* @internal_ret0_nw(i32* %n0, i32* %w0) {
 entry:
   %r0 = alloca i32, align 4
@@ -71,7 +71,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 ; CHECK: Function Attrs: nofree nounwind
-; CHECK-NEXT: define internal i32* @internal_ret1_rrw(i32* %r0, i32* %r1, i32* %w0)
+; CHECK-NEXT: define internal i32* @internal_ret1_rrw(i32* %r0, i32* returned %r1, i32* %w0)
 define internal i32* @internal_ret1_rrw(i32* %r0, i32* %r1, i32* %w0) {
 entry:
   %0 = load i32, i32* %r0, align 4
@@ -122,7 +122,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 ; CHECK: Function Attrs: nofree nounwind
-; CHECK-NEXT: define internal i32* @internal_ret1_rw(i32* %r0, i32* %w0)
+; CHECK-NEXT: define internal i32* @internal_ret1_rw(i32* %r0, i32* returned %w0)
 define internal i32* @internal_ret1_rw(i32* %r0, i32* %w0) {
 entry:
   %0 = load i32, i32* %r0, align 4
@@ -148,7 +148,7 @@ return:                                           ; preds = %if.end, %if.then
 }
 
 ; CHECK: Function Attrs: nofree nounwind
-; CHECK-NEXT: define i32* @external_source_ret2_nrw(i32* %n0, i32* %r0, i32* %w0)
+; CHECK-NEXT: define i32* @external_source_ret2_nrw(i32* %n0, i32* %r0, i32* returned %w0)
 define i32* @external_source_ret2_nrw(i32* %n0, i32* %r0, i32* %w0) {
 entry:
   %call = call i32* @external_sink_ret2_nrw(i32* %n0, i32* %r0, i32* %w0)

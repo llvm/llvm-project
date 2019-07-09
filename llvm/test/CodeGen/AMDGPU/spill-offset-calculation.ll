@@ -292,5 +292,5 @@ entry:
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "amdgpu-num-sgpr"="18" "amdgpu-num-vgpr"="8" }
-attributes #2 = { nounwind "amdgpu-num-sgpr"="15" "amdgpu-num-vgpr"="8" }
+attributes #1 = { nounwind "amdgpu-num-sgpr"="17" "amdgpu-num-vgpr"="8" }
+attributes #2 = { nounwind "amdgpu-num-sgpr"="14" "amdgpu-num-vgpr"="8" }

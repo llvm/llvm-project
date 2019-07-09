@@ -4001,6 +4001,17 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs);
 
+  if (Arg *A = Args.getLastArg(options::OPT_mlong_double_64)) {
+    if (TC.getArch() == llvm::Triple::x86 ||
+        TC.getArch() == llvm::Triple::x86_64 ||
+        TC.getArch() == llvm::Triple::ppc || TC.getTriple().isPPC64()) {
+      CmdArgs.push_back("-mlong-double-64");
+    } else {
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getAsString(Args) << TripleStr;
+    }
+  }
+
   // Decide whether to use verbose asm. Verbose assembly is the default on
   // toolchains which have the integrated assembler on by default.
   bool IsIntegratedAssemblerDefault = TC.IsIntegratedAssemblerDefault();

@@ -279,7 +279,7 @@ public:
   BlockT *getUniqueExitBlock() const;
 
   /// Edge type.
-  typedef std::pair<const BlockT *, const BlockT *> Edge;
+  typedef std::pair<BlockT *, BlockT *> Edge;
 
   /// Return all pairs of (_inside_block_,_outside_block_).
   void getExitEdges(SmallVectorImpl<Edge> &ExitEdges) const;

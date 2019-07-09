@@ -1840,6 +1840,27 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Res);
   }
 
+  case Builtin::BI__builtin_preserve_access_index: {
+    // Only enabled preserved access index region when debuginfo
+    // is available as debuginfo is needed to preserve user-level
+    // access pattern.
+    if (!getDebugInfo()) {
+      CGM.Error(E->getExprLoc(), "using builtin_preserve_access_index() without -g");
+      return RValue::get(EmitScalarExpr(E->getArg(0)));
+    }
+
+    // Nested builtin_preserve_access_index() not supported
+    if (IsInPreservedAIRegion) {
+      CGM.Error(E->getExprLoc(), "nested builtin_preserve_access_index() not supported");
+      return RValue::get(EmitScalarExpr(E->getArg(0)));
+    }
+
+    IsInPreservedAIRegion = true;
+    Value *Res = EmitScalarExpr(E->getArg(0));
+    IsInPreservedAIRegion = false;
+    return RValue::get(Res);
+  }
+
   case Builtin::BI__builtin_cimag:
   case Builtin::BI__builtin_cimagf:
   case Builtin::BI__builtin_cimagl:

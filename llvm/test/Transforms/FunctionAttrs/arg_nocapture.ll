@@ -112,18 +112,15 @@ entry:
 
 ; TEST SCC with various calls, casts, and comparisons agains NULL
 ;
-; FIXME: returned missing for %a
 ; FIXME: no-capture missing for %a
-; CHECK: define float* @scc_A(i32* readnone %a)
+; CHECK: define float* @scc_A(i32* readnone returned %a)
 ;
-; FIXME: returned missing for %a
 ; FIXME: no-capture missing for %a
-; CHECK: define i64* @scc_B(double* readnone %a)
+; CHECK: define i64* @scc_B(double* readnone returned %a)
 ;
-; FIXME: returned missing for %a
 ; FIXME: readnone missing for %s
 ; FIXME: no-capture missing for %a
-; CHECK: define i8* @scc_C(i16* %a)
+; CHECK: define i8* @scc_C(i16* returned %a)
 ;
 ; float *scc_A(int *a) {
 ;   return (float*)(a ? (int*)scc_A((int*)scc_B((double*)scc_C((short*)a))) : a);
