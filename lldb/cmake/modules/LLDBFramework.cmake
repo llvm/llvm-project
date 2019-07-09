@@ -6,7 +6,7 @@ get_filename_component(
 
 message(STATUS "LLDB.framework: build path is '${framework_target_dir}'")
 message(STATUS "LLDB.framework: install path is '${LLDB_FRAMEWORK_INSTALL_DIR}'")
-message(STATUS "LLDB.framework: resources subdirectory is '${LLDB_FRAMEWORK_RESOURCE_DIR}'")
+message(STATUS "LLDB.framework: resources subdirectory is 'Versions/${LLDB_FRAMEWORK_VERSION}/Resources'")
 
 # Configure liblldb as a framework bundle
 set_target_properties(liblldb PROPERTIES
@@ -26,6 +26,12 @@ set_target_properties(liblldb PROPERTIES
   MACOSX_FRAMEWORK_INFO_PLIST ${LLDB_SOURCE_DIR}/resources/LLDB-Info.plist.in
 )
 
+# Defined in AddLLVM.cmake; handles edge cases for multi-config generators
+set_output_directory(liblldb
+  BINARY_DIR ${framework_target_dir}
+  LIBRARY_DIR ${framework_target_dir}
+)
+
 # Affects the layout of the framework bundle (default is macOS layout).
 if(IOS)
   set_target_properties(liblldb PROPERTIES
@@ -36,21 +42,8 @@ else()
 endif()
 
 # Target to capture extra steps for a fully functional framework bundle.
-add_custom_target(lldb-framework)
+add_custom_target(lldb-framework ALL)
 add_dependencies(lldb-framework liblldb)
-
-# Dependencies are defined once tools are added (see AddLLDB.cmake)
-if(LLDB_FRAMEWORK_TOOLS)
-  message(STATUS "LLDB.framework: adding tools ${LLDB_FRAMEWORK_TOOLS}")
-  foreach(tool ${LLDB_FRAMEWORK_TOOLS})
-    add_custom_command(TARGET lldb-framework POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${tool}> $<TARGET_FILE_DIR:liblldb>/Resources
-      COMMENT "LLDB.framework: copy additional tool ${tool}"
-    )
-  endforeach()
-else()
-  message(WARNING "LLDB.framework: no additional tools configured (set via LLDB_FRAMEWORK_TOOLS)")
-endif()
 
 # Apart from this one, CMake creates all required symlinks in the framework bundle.
 add_custom_command(TARGET lldb-framework POST_BUILD
@@ -98,14 +91,36 @@ add_custom_command(TARGET lldb-framework-headers POST_BUILD
 
 # Copy vendor-specific headers from clang (without staging).
 if(NOT IOS)
-  execute_process(
-     COMMAND ${LLDB_PATH_TO_CLANG_BUILD}/bin/clang -print-resource-dir
-     OUTPUT_VARIABLE CLANG_RESOURCE_PATH
-     OUTPUT_STRIP_TRAILING_WHITESPACE)
+  if (TARGET clang-resource-headers)
+    add_dependencies(lldb-framework clang-resource-headers)
+    set(clang_resource_headers_dir $<TARGET_PROPERTY:clang-resource-headers,RUNTIME_OUTPUT_DIRECTORY>)
+  else()
+    # In standalone builds try the best possible guess
+    if(Clang_DIR)
+      set(clang_lib_dir ${Clang_DIR}/../..)
+    elseif(LLVM_DIR)
+      set(clang_lib_dir ${LLVM_DIR}/../..)
+    elseif(LLVM_LIBRARY_DIRS)
+      set(clang_lib_dir ${LLVM_LIBRARY_DIRS})
+    elseif(LLVM_BUILD_LIBRARY_DIR)
+      set(clang_lib_dir ${LLVM_BUILD_LIBRARY_DIR})
+    elseif(LLVM_BINARY_DIR)
+      set(clang_lib_dir ${LLVM_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
+    endif()
+    set(clang_version ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH})
+    set(clang_resource_headers_dir ${clang_lib_dir}/clang/${clang_version}/include)
+    if(NOT EXISTS ${clang_resource_headers_dir})
+      message(WARNING "Expected directory for clang-resource headers not found: ${clang_resource_headers_dir}")
+    endif()
+  endif()
 
-  add_custom_command(TARGET lldb-framework-headers POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${CLANG_RESOURCE_PATH}/include $<TARGET_FILE_DIR:liblldb>/Resources/Clang/include
-    COMMAND ${CMAKE_COMMAND} -E copy_directory ${LLDB_PATH_TO_SWIFT_BUILD}/lib/swift $<TARGET_FILE_DIR:liblldb>/Resources/Swift
+  add_custom_command(TARGET lldb-framework POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${clang_resource_headers_dir}
+            $<TARGET_FILE_DIR:liblldb>/Resources/Clang/include
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+            ${LLDB_PATH_TO_SWIFT_BUILD}/lib/swift
+            $<TARGET_FILE_DIR:liblldb>/Resources/Swift
     COMMENT "LLDB.framework: copy clang vendor-specific headers"
   )
 endif()

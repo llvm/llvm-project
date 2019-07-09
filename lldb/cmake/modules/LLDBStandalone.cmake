@@ -1,3 +1,12 @@
+function(append_configuration_directories input_dir output_dirs)
+  set(dirs_list ${input_dir})
+  foreach(config_type ${LLVM_CONFIGURATION_TYPES})
+    string(REPLACE ${CMAKE_CFG_INTDIR} ${config_type} dir ${input_dir})
+    list(APPEND dirs_list ${dir})
+  endforeach()
+  set(${output_dirs} ${dirs_list} PARENT_SCOPE)
+endfunction()
+
 # If we are not building as a part of LLVM, build LLDB as an
 # standalone project, using LLVM as an external library:
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
@@ -30,7 +39,10 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   if(CMAKE_HOST_WIN32 AND NOT CYGWIN)
     set(lit_file_name "${lit_file_name}.py")
   endif()
-  set(LLVM_DEFAULT_EXTERNAL_LIT "${LLVM_TOOLS_BINARY_DIR}/${lit_file_name}" CACHE PATH "Path to llvm-lit")
+
+  append_configuration_directories(${LLVM_TOOLS_BINARY_DIR} config_dirs)
+  find_program(lit_full_path ${lit_file_name} ${config_dirs} NO_DEFAULT_PATH)
+  set(LLVM_DEFAULT_EXTERNAL_LIT ${lit_full_path} CACHE PATH "Path to llvm-lit")
 
   if(LLVM_TABLEGEN)
     set(LLVM_TABLEGEN_EXE ${LLVM_TABLEGEN})
@@ -91,7 +103,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
                Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
     endif()
   else()
-    message("-- Found PythonInterp: ${PYTHON_EXECUTABLE}")
+    message(STATUS "Found PythonInterp: ${PYTHON_EXECUTABLE}")
   endif()
 
   # Start Swift Mods
@@ -103,6 +115,14 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
 
   # Why are we doing this?
   # set(LLVM_BINARY_DIR ${CMAKE_BINARY_DIR})
+
+  option(LLVM_USE_FOLDERS "Enable solution folders in Visual Studio. Disable for Express versions." ON)
+  if(LLVM_USE_FOLDERS)
+    set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+  endif()
+
+  set_target_properties(clang-tablegen-targets PROPERTIES FOLDER "lldb misc")
+  set_target_properties(intrinsics_gen PROPERTIES FOLDER "lldb misc")
 
   set(CMAKE_INCLUDE_CURRENT_DIR ON)
   include_directories(

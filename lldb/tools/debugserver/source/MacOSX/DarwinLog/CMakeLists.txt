@@ -13,3 +13,5 @@ add_library(lldbDebugserverDarwin_DarwinLog
   LogMessage.cpp
   LogMessageOsLog.cpp
   )
+
+set_target_properties(lldbDebugserverDarwin_DarwinLog PROPERTIES FOLDER "lldb libraries/debugserver")

@@ -251,6 +251,7 @@ if(build_and_sign_debugserver)
     ${DEBUGSERVER_VERS_GENERATED_FILE})
 
   add_library(lldbDebugserverCommon ${lldbDebugserverCommonSources})
+  set_target_properties(lldbDebugserverCommon PROPERTIES FOLDER "lldb libraries/debugserver")
 
   target_link_libraries(lldbDebugserverCommon
                         INTERFACE ${COCOA_LIBRARY}
@@ -278,6 +279,10 @@ if(build_and_sign_debugserver)
     ENTITLEMENTS
       ${entitlements}
     )
+
+  if(LLDB_BUILD_FRAMEWORK)
+    lldb_add_to_framework(debugserver)
+  endif()
 
   if(IOS)
     set_property(TARGET lldbDebugserverCommon APPEND PROPERTY COMPILE_DEFINITIONS
