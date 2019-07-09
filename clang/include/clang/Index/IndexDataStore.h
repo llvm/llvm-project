@@ -45,7 +45,6 @@ public:
   struct UnitEvent {
     UnitEventKind Kind;
     StringRef UnitName;
-    llvm::sys::TimePoint<> ModTime;
   };
   struct UnitEventNotification {
     bool IsInitial;

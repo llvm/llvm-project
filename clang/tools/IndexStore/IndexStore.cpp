@@ -182,12 +182,6 @@ indexstore_unit_event_get_unit_name(indexstore_unit_event_t c_evt) {
   return toIndexStoreString(evt->UnitName);
 }
 
-timespec
-indexstore_unit_event_get_modification_time(indexstore_unit_event_t c_evt) {
-  auto *evt = static_cast<IndexDataStore::UnitEvent*>(c_evt);
-  return toTimeSpec(evt->ModTime);
-}
-
 #if INDEXSTORE_HAS_BLOCKS
 void
 indexstore_store_set_unit_event_handler(indexstore_t c_store,

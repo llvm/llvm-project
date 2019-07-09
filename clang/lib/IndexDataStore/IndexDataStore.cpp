@@ -128,7 +128,7 @@ bool IndexDataStoreImpl::startEventListening(bool waitInitialSync, std::string &
         UnitName = StringRef();
         break;
       }
-      UnitEvents.push_back(IndexDataStore::UnitEvent{K, UnitName, evt.ModTime});
+      UnitEvents.push_back(IndexDataStore::UnitEvent{K, UnitName});
     }
 
     if (auto handler = localUnitEventHandlerData->getHandler()) {
