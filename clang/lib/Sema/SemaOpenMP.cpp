@@ -1593,8 +1593,9 @@ void Sema::checkOpenMPDeviceExpr(const Expr *E) {
        !Context.getTargetInfo().hasFloat128Type()) ||
       (Ty->isIntegerType() && Context.getTypeSize(Ty) == 128 &&
        !Context.getTargetInfo().hasInt128Type()))
-    targetDiag(E->getExprLoc(), diag::err_type_unsupported)
-        << Ty << E->getSourceRange();
+    targetDiag(E->getExprLoc(), diag::err_omp_unsupported_type)
+        << static_cast<unsigned>(Context.getTypeSize(Ty)) << Ty
+        << Context.getTargetInfo().getTriple().str() << E->getSourceRange();
 }
 
 bool Sema::isOpenMPCapturedByRef(const ValueDecl *D, unsigned Level) const {

@@ -600,8 +600,7 @@ void SourcePrinter::printSourceLine(raw_ostream &OS,
     return;
 
   DILineInfo LineInfo = DILineInfo();
-  auto ExpectedLineInfo =
-      Symbolizer->symbolizeCode(Obj->getFileName(), Address);
+  auto ExpectedLineInfo = Symbolizer->symbolizeCode(*Obj, Address);
   if (!ExpectedLineInfo)
     consumeError(ExpectedLineInfo.takeError());
   else

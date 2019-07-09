@@ -1470,7 +1470,7 @@ void TargetLoweringObjectFileCOFF::Initialize(MCContext &Ctx,
                                               const TargetMachine &TM) {
   TargetLoweringObjectFile::Initialize(Ctx, TM);
   const Triple &T = TM.getTargetTriple();
-  if (T.isKnownWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
+  if (T.isWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
     StaticCtorSection =
         Ctx.getCOFFSection(".CRT$XCU", COFF::IMAGE_SCN_CNT_INITIALIZED_DATA |
                                            COFF::IMAGE_SCN_MEM_READ,
@@ -1496,7 +1496,7 @@ static MCSectionCOFF *getCOFFStaticStructorSection(MCContext &Ctx,
                                                    unsigned Priority,
                                                    const MCSymbol *KeySym,
                                                    MCSectionCOFF *Default) {
-  if (T.isKnownWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
+  if (T.isWindowsMSVCEnvironment() || T.isWindowsItaniumEnvironment()) {
     // If the priority is the default, use .CRT$XCU, possibly associative.
     if (Priority == 65535)
       return Ctx.getAssociativeCOFFSection(Default, KeySym, 0);
@@ -1556,9 +1556,7 @@ const MCExpr *TargetLoweringObjectFileCOFF::lowerRelativeReference(
     const GlobalValue *LHS, const GlobalValue *RHS,
     const TargetMachine &TM) const {
   const Triple &T = TM.getTargetTriple();
-  if (!T.isKnownWindowsMSVCEnvironment() &&
-      !T.isWindowsItaniumEnvironment() &&
-      !T.isWindowsCoreCLREnvironment())
+  if (T.isOSCygMing())
     return nullptr;
 
   // Our symbols should exist in address space zero, cowardly no-op if

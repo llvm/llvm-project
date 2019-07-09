@@ -1,24 +1,27 @@
+# Uses echo in a way that is not supported by the iOS "run-on-device" script.
+UNSUPPORTED: ios
+
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
 
 USE-1: INFO: seed corpus: files: 1
-RUN: %run echo -n "%t-SimpleTest" > %t.seed-inputs
+RUN: echo -n "%t-SimpleTest" > %t.seed-inputs
 # Test both formats of -seed_inputs argument.
 RUN: %run %t-SimpleTest -runs=1 -seed_inputs=@%t.seed-inputs 2>&1 | FileCheck %s --check-prefix=USE-1
 RUN: %run %t-SimpleTest -runs=1 -seed_inputs=%t-SimpleTest 2>&1 | FileCheck %s --check-prefix=USE-1
 
 USE-2: INFO: seed corpus: files: 2
-RUN: %run echo -n "%t-SimpleTest,%t-SimpleTest" > %t.seed-inputs
+RUN: echo -n "%t-SimpleTest,%t-SimpleTest" > %t.seed-inputs
 RUN: %run %t-SimpleTest -runs=1 -seed_inputs=@%t.seed-inputs 2>&1 | FileCheck %s --check-prefix=USE-2
 RUN: %run %t-SimpleTest -runs=1 -seed_inputs=%t-SimpleTest,%t-SimpleTest 2>&1 | FileCheck %s --check-prefix=USE-2
 
 # Test that missing files and trailing commas are tolerated.
-RUN: %run echo -n "%t-SimpleTest,%t-SimpleTest,nonexistent-file," > %t.seed-inputs
+RUN: echo -n "%t-SimpleTest,%t-SimpleTest,nonexistent-file," > %t.seed-inputs
 RUN: %run %t-SimpleTest -runs=1 -seed_inputs=@%t.seed-inputs 2>&1 | FileCheck %s --check-prefix=USE-2
 RUN: %run %t-SimpleTest -runs=1 -seed_inputs=%t-SimpleTest,%t-SimpleTest,nonexistent-file, 2>&1 | FileCheck %s --check-prefix=USE-2
 
 # Test that using a non existent file or an empty seed list fails.
 EMPTY: seed_inputs is empty or @file does not exist.
 RUN: not %run %t-SimpleTest -runs=1 -seed_inputs=@nonexistent-file 2>&1 | FileCheck %s --check-prefix=EMPTY
-RUN: %run echo -n "" > %t.seed-inputs
+RUN: echo -n "" > %t.seed-inputs
 RUN: not %run %t-SimpleTest -runs=1 -seed_inputs=@%t.seed-inputs 2>&1 | FileCheck %s --check-prefix=EMPTY
 RUN: not %run %t-SimpleTest -runs=1 -seed_inputs= 2>&1 | FileCheck %s --check-prefix=EMPTY

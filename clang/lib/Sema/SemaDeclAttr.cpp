@@ -3011,13 +3011,18 @@ static void handleSectionAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     D->addAttr(NewAttr);
 }
 
-static bool checkCodeSegName(Sema&S, SourceLocation LiteralLoc, StringRef CodeSegName) {
-  std::string Error = S.Context.getTargetInfo().isValidSectionSpecifier(CodeSegName);
+// This is used for `__declspec(code_seg("segname"))` on a decl.
+// `#pragma code_seg("segname")` uses checkSectionName() instead.
+static bool checkCodeSegName(Sema &S, SourceLocation LiteralLoc,
+                             StringRef CodeSegName) {
+  std::string Error =
+      S.Context.getTargetInfo().isValidSectionSpecifier(CodeSegName);
   if (!Error.empty()) {
-    S.Diag(LiteralLoc, diag::err_attribute_section_invalid_for_target) << Error
-           << 0 /*'code-seg'*/;
+    S.Diag(LiteralLoc, diag::err_attribute_section_invalid_for_target)
+        << Error << 0 /*'code-seg'*/;
     return false;
   }
+
   return true;
 }
 

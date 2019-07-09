@@ -480,6 +480,10 @@ public:
   /// finally block or filter expression.
   bool IsOutlinedSEHHelper = false;
 
+  /// True if CodeGen currently emits code inside presereved access index
+  /// region.
+  bool IsInPreservedAIRegion = false;
+
   const CodeGen::CGBlockInfo *BlockInfo = nullptr;
   llvm::Value *BlockPointer = nullptr;
 

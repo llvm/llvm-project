@@ -623,12 +623,15 @@ class DSReadPat_D16 <DS_Pseudo inst, PatFrag frag, ValueType vt> : GCNPat <
 >;
 
 defm : DSReadPat_mc <DS_READ_I8, i32, "sextloadi8_local">;
-defm : DSReadPat_mc <DS_READ_U8,  i32, "az_extloadi8_local">;
 defm : DSReadPat_mc <DS_READ_I8,  i16, "sextloadi8_local">;
-defm : DSReadPat_mc <DS_READ_U8,  i16, "az_extloadi8_local">;
+defm : DSReadPat_mc <DS_READ_U8,  i32, "extloadi8_local">;
+defm : DSReadPat_mc <DS_READ_U8,  i32, "zextloadi8_local">;
+defm : DSReadPat_mc <DS_READ_U8,  i16, "extloadi8_local">;
+defm : DSReadPat_mc <DS_READ_U8,  i16, "zextloadi8_local">;
 defm : DSReadPat_mc <DS_READ_I16, i32, "sextloadi16_local">;
 defm : DSReadPat_mc <DS_READ_I16, i32, "sextloadi16_local">;
-defm : DSReadPat_mc <DS_READ_U16, i32, "az_extloadi16_local">;
+defm : DSReadPat_mc <DS_READ_U16, i32, "extloadi16_local">;
+defm : DSReadPat_mc <DS_READ_U16, i32, "zextloadi16_local">;
 defm : DSReadPat_mc <DS_READ_U16, i16, "load_local">;
 defm : DSReadPat_mc <DS_READ_B32, i32, "load_local">;
 defm : DSReadPat_mc <DS_READ_B32, i32, "atomic_load_32_local">;

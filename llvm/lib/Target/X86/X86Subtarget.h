@@ -771,10 +771,6 @@ public:
     return TargetTriple.isWindowsMSVCEnvironment();
   }
 
-  bool isTargetKnownWindowsMSVC() const {
-    return TargetTriple.isKnownWindowsMSVCEnvironment();
-  }
-
   bool isTargetWindowsCoreCLR() const {
     return TargetTriple.isWindowsCoreCLREnvironment();
   }

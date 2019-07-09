@@ -642,6 +642,27 @@ Pass *createAttributorLegacyPass();
 ///                       Abstract Attribute Classes
 /// ----------------------------------------------------------------------------
 
+/// An abstract attribute for the returned values of a function.
+struct AAReturnedValues : public AbstractAttribute {
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AAReturnedValues(Function &F, InformationCache &InfoCache)
+      : AbstractAttribute(F, InfoCache) {}
+
+  /// Check \p Pred on all returned values.
+  ///
+  /// This method will evaluate \p Pred on returned values and return
+  /// true if (1) all returned values are known, and (2) \p Pred returned true
+  /// for all returned values.
+  virtual bool
+  checkForallReturnedValues(std::function<bool(Value &)> &Pred) const = 0;
+
+  /// See AbstractAttribute::getAttrKind()
+  virtual Attribute::AttrKind getAttrKind() const override { return ID; }
+
+  /// The identifier used by the Attributor for this class of attributes.
+  static constexpr Attribute::AttrKind ID = Attribute::Returned;
+};
+
 struct AANoUnwind : public AbstractAttribute {
     /// An abstract interface for all nosync attributes.
     AANoUnwind(Value &V, InformationCache &InfoCache)

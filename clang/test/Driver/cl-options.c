@@ -8,7 +8,7 @@
 // c: -c
 
 // RUN: %clang_cl /C -### -- %s 2>&1 | FileCheck -check-prefix=C %s
-// C: error: invalid argument '-C' only allowed with '/E, /P or /EP'
+// C: error: invalid argument '/C' only allowed with '/E, /P or /EP'
 
 // RUN: %clang_cl /C /P -### -- %s 2>&1 | FileCheck -check-prefix=C_P %s
 // C_P: "-E"
@@ -214,11 +214,11 @@
 
 // /source-charset: should warn on everything except UTF-8.
 // RUN: %clang_cl /source-charset:utf-16 -### -- %s 2>&1 | FileCheck -check-prefix=source-charset-utf-16 %s
-// source-charset-utf-16: invalid value 'utf-16'
+// source-charset-utf-16: invalid value 'utf-16' in '/source-charset:utf-16'
 
 // /execution-charset: should warn on everything except UTF-8.
 // RUN: %clang_cl /execution-charset:utf-16 -### -- %s 2>&1 | FileCheck -check-prefix=execution-charset-utf-16 %s
-// execution-charset-utf-16: invalid value 'utf-16'
+// execution-charset-utf-16: invalid value 'utf-16' in '/execution-charset:utf-16'
 //
 // RUN: %clang_cl /Umymacro -### -- %s 2>&1 | FileCheck -check-prefix=U %s
 // RUN: %clang_cl /U mymacro -### -- %s 2>&1 | FileCheck -check-prefix=U %s

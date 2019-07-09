@@ -353,7 +353,9 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 # endif
 #elif defined(__aarch64__)
 # if SANITIZER_LINUX
-  return mangled_sp ^ _tsan_pointer_chk_guard;
+  // TODO(yln): fix this
+  // return mangled_sp ^ _tsan_pointer_chk_guard;
+  return mangled_sp;
 # else
   return mangled_sp;
 # endif

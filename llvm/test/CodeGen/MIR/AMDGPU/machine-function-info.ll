@@ -64,7 +64,7 @@ define amdgpu_ps void @ps_shader(i32 %arg0, i32 inreg %arg1) {
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
 ; CHECK-NEXT: scratchWaveOffsetReg: '$sgpr33'
-; CHECK-NEXT: frameOffsetReg: '$sgpr5'
+; CHECK-NEXT: frameOffsetReg: '$sgpr34'
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'
 ; CHECK-NEXT: argumentInfo:
 ; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
@@ -85,7 +85,7 @@ define void @function() {
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'
 ; CHECK-NEXT: scratchWaveOffsetReg: '$sgpr33'
-; CHECK-NEXT: frameOffsetReg: '$sgpr5'
+; CHECK-NEXT: frameOffsetReg: '$sgpr34'
 ; CHECK-NEXT: stackPtrOffsetReg: '$sgpr32'
 ; CHECK-NEXT: argumentInfo:
 ; CHECK-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }

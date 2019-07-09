@@ -58,6 +58,11 @@ private:
   /// The argument values, as C strings.
   SmallVector<const char *, 2> Values;
 
+  /// If this arg was created through an alias, this is the original alias arg.
+  /// For example, *this might be "-finput-charset=utf-8" and Alias might
+  /// point to an arg representing "/source-charset:utf-8".
+  std::unique_ptr<Arg> Alias;
+
 public:
   Arg(const Option Opt, StringRef Spelling, unsigned Index,
       const Arg *BaseArg = nullptr);
@@ -89,6 +94,11 @@ public:
     return BaseArg ? *BaseArg : *this;
   }
   void setBaseArg(const Arg *BaseArg) { this->BaseArg = BaseArg; }
+
+  /// Args are converted to their unaliased form.  For args that originally
+  /// came from an alias, this returns the alias the arg was produced from.
+  const Arg* getAlias() const { return Alias.get(); }
+  void setAlias(std::unique_ptr<Arg> Alias) { this->Alias = std::move(Alias); }
 
   bool getOwnsValues() const { return OwnsValues; }
   void setOwnsValues(bool Value) const { OwnsValues = Value; }
@@ -127,8 +137,10 @@ public:
   void print(raw_ostream &O) const;
   void dump() const;
 
-  /// Return a formatted version of the argument and
-  /// its values, for debugging and diagnostics.
+  /// Return a formatted version of the argument and its values, for
+  /// diagnostics. Since this is for diagnostics, if this Arg was produced
+  /// through an alias, this returns the string representation of the alias
+  /// that the user wrote.
   std::string getAsString(const ArgList &Args) const;
 };
 

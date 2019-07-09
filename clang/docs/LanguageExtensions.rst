@@ -1950,6 +1950,35 @@ form of ``__builtin_operator_delete`` is currently available.
 These builtins are intended for use in the implementation of ``std::allocator``
 and other similar allocation libraries, and are only available in C++.
 
+``__builtin_preserve_access_index``
+-----------------------------------
+
+``__builtin_preserve_access_index`` specifies a code section where
+array subscript access and structure/union member access are relocatable
+under bpf compile-once run-everywhere framework. Debuginfo (typically
+with ``-g``) is needed, otherwise, the compiler will exit with an error.
+
+**Syntax**:
+
+.. code-block:: c
+
+  const void * __builtin_preserve_access_index(const void * ptr)
+
+**Example of Use**:
+
+.. code-block:: c
+
+  struct t {
+    int i;
+    int j;
+    union {
+      int a;
+      int b;
+    } c[4];
+  };
+  struct t *v = ...;
+  const void *pb =__builtin_preserve_access_index(&v->c[3].b);
+
 Multiprecision Arithmetic Builtins
 ----------------------------------
 

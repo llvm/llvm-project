@@ -206,6 +206,11 @@ public:
   ///                start.
   Arg *accept(const ArgList &Args, unsigned &Index, unsigned ArgSize) const;
 
+private:
+  Arg *acceptInternal(const ArgList &Args, unsigned &Index,
+                      unsigned ArgSize) const;
+
+public:
   void print(raw_ostream &O) const;
   void dump() const;
 };

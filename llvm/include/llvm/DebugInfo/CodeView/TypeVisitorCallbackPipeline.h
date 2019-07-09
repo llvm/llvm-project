@@ -82,6 +82,11 @@ public:
     Pipeline.push_back(&Callbacks);
   }
 
+  void addCallbackToPipelineFront(TypeVisitorCallbacks &Callbacks) {
+    auto CallBackItr = Pipeline.begin();
+    Pipeline.insert(CallBackItr, &Callbacks);
+  }
+
 #define TYPE_RECORD(EnumName, EnumVal, Name)                                   \
   Error visitKnownRecord(CVType &CVR, Name##Record &Record) override {         \
     return visitKnownRecordImpl(CVR, Record);                                  \
