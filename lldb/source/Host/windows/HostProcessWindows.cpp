@@ -14,6 +14,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/WindowsError.h"
 
 #include <psapi.h>
 
@@ -94,8 +95,7 @@ llvm::Expected<HostThread> HostProcessWindows::StartMonitoring(
                                         HostProcessWindows::MonitorThread,
                                         info);
   } else {
-    DWORD err = GetLastError();
-    return llvm::errorCodeToError(std::error_code(err, std::system_category()));
+    return llvm::errorCodeToError(llvm::mapWindowsError(GetLastError()));
   }
 }
 
