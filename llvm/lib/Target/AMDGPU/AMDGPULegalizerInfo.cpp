@@ -90,7 +90,8 @@ static LegalityPredicate isRegisterType(unsigned TypeIdx) {
     if (Ty.isVector()) {
       const int EltSize = Ty.getElementType().getSizeInBits();
       return EltSize == 32 || EltSize == 64 ||
-            (EltSize == 16 && Ty.getNumElements() % 2 == 0);
+            (EltSize == 16 && Ty.getNumElements() % 2 == 0) ||
+             EltSize == 128 || EltSize == 256;
     }
 
     return Ty.getSizeInBits() % 32 == 0 && Ty.getSizeInBits() <= 512;
@@ -648,18 +649,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   }
 
-  // TODO: vectors of pointers
   getActionDefinitionsBuilder(G_BUILD_VECTOR)
       .legalForCartesianProduct(AllS32Vectors, {S32})
       .legalForCartesianProduct(AllS64Vectors, {S64})
       .clampNumElements(0, V16S32, V16S32)
       .clampNumElements(0, V2S64, V8S64)
       .minScalarSameAs(1, 0)
-      // FIXME: Sort of a hack to make progress on other legalizations.
-      .legalIf([=](const LegalityQuery &Query) {
-        return Query.Types[0].getScalarSizeInBits() <= 32 ||
-               Query.Types[0].getScalarSizeInBits() == 64;
-      });
+      .legalIf(isRegisterType(0))
+      .minScalarOrElt(0, S32);
 
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
     .legalIf(isRegisterType(0));
