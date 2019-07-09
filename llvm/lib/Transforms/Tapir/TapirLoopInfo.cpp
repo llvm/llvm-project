@@ -421,8 +421,7 @@ bool TapirLoopInfo::prepareForOutlining(
     DominatorTree &DT, LoopInfo &LI, TaskInfo &TI,
     PredicatedScalarEvolution &PSE, AssumptionCache &AC,
     OptimizationRemarkEmitter &ORE, const TargetTransformInfo &TTI) {
-  Loop *L = getLoop();
-  LLVM_DEBUG(dbgs() << "LS processing loop " << *L << "\n");
+  LLVM_DEBUG(dbgs() << "Preparing loop for outlining " << *getLoop() << "\n");
 
   // Collect the IVs in this loop.
   collectIVs(PSE, ORE);
