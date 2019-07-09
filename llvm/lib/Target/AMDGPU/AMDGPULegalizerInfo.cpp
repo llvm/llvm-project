@@ -298,9 +298,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     .lowerFor({{S64, S16}}) // FIXME: Implement
     .scalarize(0);
 
-  getActionDefinitionsBuilder(G_FCOPYSIGN)
-    .legalForCartesianProduct({S16, S32, S64}, {S16, S32, S64})
-    .scalarize(0);
+  // TODO: Verify V_BFI_B32 is generated from expanded bit ops.
+  getActionDefinitionsBuilder(G_FCOPYSIGN).lower();
 
   getActionDefinitionsBuilder(G_FSUB)
       // Use actual fsub instruction

@@ -1694,6 +1694,8 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   case G_UMIN:
   case G_UMAX:
     return lowerMinMax(MI, TypeIdx, Ty);
+  case G_FCOPYSIGN:
+    return lowerFCopySign(MI, TypeIdx, Ty);
   }
 }
 
@@ -3219,6 +3221,54 @@ LegalizerHelper::lowerMinMax(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
 
   auto Cmp = MIRBuilder.buildICmp(Pred, CmpType, Src0, Src1);
   MIRBuilder.buildSelect(Dst, Cmp, Src0, Src1);
+
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFCopySign(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Src1 = MI.getOperand(2).getReg();
+
+  const LLT Src0Ty = MRI.getType(Src0);
+  const LLT Src1Ty = MRI.getType(Src1);
+
+  const int Src0Size = Src0Ty.getScalarSizeInBits();
+  const int Src1Size = Src1Ty.getScalarSizeInBits();
+
+  auto SignBitMask = MIRBuilder.buildConstant(
+    Src0Ty, APInt::getSignMask(Src0Size));
+
+  auto NotSignBitMask = MIRBuilder.buildConstant(
+    Src0Ty, APInt::getLowBitsSet(Src0Size, Src0Size - 1));
+
+  auto And0 = MIRBuilder.buildAnd(Src0Ty, Src0, NotSignBitMask);
+  MachineInstr *Or;
+
+  if (Src0Ty == Src1Ty) {
+    auto And1 = MIRBuilder.buildAnd(Src1Ty, Src0, SignBitMask);
+    Or = MIRBuilder.buildOr(Dst, And0, And1);
+  } else if (Src0Size > Src1Size) {
+    auto ShiftAmt = MIRBuilder.buildConstant(Src0Ty, Src0Size - Src1Size);
+    auto Zext = MIRBuilder.buildZExt(Src0Ty, Src1);
+    auto Shift = MIRBuilder.buildShl(Src0Ty, Zext, ShiftAmt);
+    auto And1 = MIRBuilder.buildAnd(Src0Ty, Shift, SignBitMask);
+    Or = MIRBuilder.buildOr(Dst, And0, And1);
+  } else {
+    auto ShiftAmt = MIRBuilder.buildConstant(Src1Ty, Src1Size - Src0Size);
+    auto Shift = MIRBuilder.buildLShr(Src1Ty, Src1, ShiftAmt);
+    auto Trunc = MIRBuilder.buildTrunc(Src0Ty, Shift);
+    auto And1 = MIRBuilder.buildAnd(Src0Ty, Trunc, SignBitMask);
+    Or = MIRBuilder.buildOr(Dst, And0, And1);
+  }
+
+  // Be careful about setting nsz/nnan/ninf on every instruction, since the
+  // constants are a nan and -0.0, but the final result should preserve
+  // everything.
+  if (unsigned Flags = MI.getFlags())
+    Or->setFlags(Flags);
 
   MI.eraseFromParent();
   return Legalized;
