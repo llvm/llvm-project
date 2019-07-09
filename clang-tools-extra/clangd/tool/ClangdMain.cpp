@@ -190,14 +190,6 @@ static llvm::cl::opt<bool> EnableBackgroundIndex(
         "Experimental"),
     llvm::cl::init(true));
 
-static llvm::cl::opt<int> BackgroundIndexRebuildPeriod(
-    "background-index-rebuild-period",
-    llvm::cl::desc(
-        "If set to non-zero, the background index rebuilds the symbol index "
-        "periodically every X milliseconds; otherwise, the "
-        "symbol index will be updated for each indexed file"),
-    llvm::cl::init(5000), llvm::cl::Hidden);
-
 enum CompileArgsFrom { LSPCompileArgs, FilesystemCompileArgs };
 static llvm::cl::opt<CompileArgsFrom> CompileArgsFrom(
     "compile_args_from", llvm::cl::desc("The source of compile commands"),
@@ -465,7 +457,6 @@ int main(int argc, char *argv[]) {
     Opts.ResourceDir = ResourceDir;
   Opts.BuildDynamicSymbolIndex = EnableIndex;
   Opts.BackgroundIndex = EnableBackgroundIndex;
-  Opts.BackgroundIndexRebuildPeriodMs = BackgroundIndexRebuildPeriod;
   std::unique_ptr<SymbolIndex> StaticIdx;
   std::future<void> AsyncIndexLoad; // Block exit while loading the index.
   if (EnableIndex && !IndexFile.empty()) {

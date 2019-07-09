@@ -44,6 +44,31 @@ void SplitDelimiters() {
   // CHECK-MESSAGES: [[@LINE-1]]:25: warning: absl::StrSplit() called with a string literal consisting of a single character; consider using the character overload [abseil-faster-strsplit-delimiter]
   // CHECK-FIXES: absl::StrSplit("ABC", 'A');
 
+  absl::StrSplit("ABC", "\x01");
+  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: absl::StrSplit() called with a string literal consisting of a single character; consider using the character overload [abseil-faster-strsplit-delimiter]
+  // CHECK-FIXES: absl::StrSplit("ABC", '\x01');
+
+  absl::StrSplit("ABC", "\001");
+  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: absl::StrSplit() called with a string literal consisting of a single character; consider using the character overload [abseil-faster-strsplit-delimiter]
+  // CHECK-FIXES: absl::StrSplit("ABC", '\001');
+
+  absl::StrSplit("ABC", R"(A)");
+  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: absl::StrSplit() called with a string literal consisting of a single character; consider using the character overload [abseil-faster-strsplit-delimiter]
+  // CHECK-FIXES: absl::StrSplit("ABC", 'A');
+
+  absl::StrSplit("ABC", R"(')");
+  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: absl::StrSplit() called with a string literal consisting of a single character; consider using the character overload [abseil-faster-strsplit-delimiter]
+  // CHECK-FIXES: absl::StrSplit("ABC", '\'');
+
+  absl::StrSplit("ABC", R"(
+)");
+  // CHECK-MESSAGES: [[@LINE-2]]:25: warning: absl::StrSplit() called with a string literal consisting of a single character; consider using the character overload [abseil-faster-strsplit-delimiter]
+  // CHECK-FIXES: absl::StrSplit("ABC", '\n');
+
+  absl::StrSplit("ABC", R"delimiter(A)delimiter");
+  // CHECK-MESSAGES: [[@LINE-1]]:25: warning: absl::StrSplit() called with a string literal consisting of a single character; consider using the character overload [abseil-faster-strsplit-delimiter]
+  // CHECK-FIXES: absl::StrSplit("ABC", 'A');
+
   absl::StrSplit("ABC", absl::ByAnyChar("\n"));
   // CHECK-MESSAGES: [[@LINE-1]]:41: warning: absl::StrSplit()
   // CHECK-FIXES: absl::StrSplit("ABC", '\n');

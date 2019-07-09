@@ -128,8 +128,7 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
   if (Opts.BackgroundIndex) {
     BackgroundIdx = llvm::make_unique<BackgroundIndex>(
         Context::current().clone(), FSProvider, CDB,
-        BackgroundIndexStorage::createDiskBackedStorageFactory(),
-        Opts.BackgroundIndexRebuildPeriodMs);
+        BackgroundIndexStorage::createDiskBackedStorageFactory());
     AddIndex(BackgroundIdx.get());
   }
   if (DynamicIdx)
@@ -499,13 +498,13 @@ void ClangdServer::findDocumentHighlights(
 
 void ClangdServer::findHover(PathRef File, Position Pos,
                              Callback<llvm::Optional<HoverInfo>> CB) {
-  auto Action = [Pos](decltype(CB) CB, Path File,
-                      llvm::Expected<InputsAndAST> InpAST) {
+  auto Action = [Pos, this](decltype(CB) CB, Path File,
+                            llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
     format::FormatStyle Style = getFormatStyleForFile(
         File, InpAST->Inputs.Contents, InpAST->Inputs.FS.get());
-    CB(clangd::getHover(InpAST->AST, Pos, std::move(Style)));
+    CB(clangd::getHover(InpAST->AST, Pos, std::move(Style), Index));
   };
 
   WorkScheduler.runWithAST("Hover", File,

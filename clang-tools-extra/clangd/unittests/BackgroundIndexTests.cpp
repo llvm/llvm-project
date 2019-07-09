@@ -1,8 +1,10 @@
 #include "Headers.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
+#include "TestIndex.h"
 #include "TestTU.h"
 #include "index/Background.h"
+#include "index/BackgroundRebuild.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/Threading.h"
@@ -294,42 +296,6 @@ TEST_F(BackgroundIndexTest, DirectIncludesTest) {
               EmptyIncludeNode());
 }
 
-// FIXME: figure out the right timeouts or rewrite to not use the timeouts and
-// re-enable.
-TEST_F(BackgroundIndexTest, DISABLED_PeriodicalIndex) {
-  MockFSProvider FS;
-  llvm::StringMap<std::string> Storage;
-  size_t CacheHits = 0;
-  MemoryShardStorage MSS(Storage, CacheHits);
-  OverlayCDB CDB(/*Base=*/nullptr);
-  BackgroundIndex Idx(
-      Context::empty(), FS, CDB, [&](llvm::StringRef) { return &MSS; },
-      /*BuildIndexPeriodMs=*/500);
-
-  FS.Files[testPath("root/A.cc")] = "#include \"A.h\"";
-
-  tooling::CompileCommand Cmd;
-  FS.Files[testPath("root/A.h")] = "class X {};";
-  Cmd.Filename = testPath("root/A.cc");
-  Cmd.CommandLine = {"clang++", Cmd.Filename};
-  CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
-
-  ASSERT_TRUE(Idx.blockUntilIdleForTest());
-  EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre());
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre(Named("X")));
-
-  FS.Files[testPath("root/A.h")] = "class Y {};";
-  FS.Files[testPath("root/A.cc")] += " "; // Force reindex the file.
-  Cmd.CommandLine = {"clang++", "-DA=1", testPath("root/A.cc")};
-  CDB.setCompileCommand(testPath("root/A.cc"), Cmd);
-
-  ASSERT_TRUE(Idx.blockUntilIdleForTest());
-  EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre(Named("X")));
-  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-  EXPECT_THAT(runFuzzyFind(Idx, ""), ElementsAre(Named("Y")));
-}
-
 TEST_F(BackgroundIndexTest, ShardStorageLoad) {
   MockFSProvider FS;
   FS.Files[testPath("root/A.h")] = R"cpp(
@@ -603,6 +569,76 @@ TEST_F(BackgroundIndexTest, CmdLineHash) {
     EXPECT_EQ(CmdStored.CommandLine, Cmd.CommandLine);
     EXPECT_EQ(CmdStored.Directory, Cmd.Directory);
   }
+}
+
+class BackgroundIndexRebuilderTest : public testing::Test {
+protected:
+  BackgroundIndexRebuilderTest()
+      : Target(llvm::make_unique<MemIndex>()), Rebuilder(&Target, &Source) {
+    // Prepare FileSymbols with TestSymbol in it, for checkRebuild.
+    TestSymbol.ID = SymbolID("foo");
+  }
+
+  // Perform Action and determine whether it rebuilt the index or not.
+  bool checkRebuild(std::function<void()> Action) {
+    // Update reference count so we can tell if the index updates.
+    ++TestSymbol.References;
+    SymbolSlab::Builder SB;
+    SB.insert(TestSymbol);
+    Source.update("", llvm::make_unique<SymbolSlab>(std::move(SB).build()),
+                  nullptr, nullptr, false);
+    // Now maybe update the index.
+    Action();
+    // Now query the index to get the reference count.
+    unsigned ReadReferences = 0;
+    LookupRequest Req;
+    Req.IDs.insert(TestSymbol.ID);
+    Target.lookup(Req, [&](const Symbol &S) { ReadReferences = S.References; });
+    // The index was rebuild if the reference count is up to date.
+    return ReadReferences == TestSymbol.References;
+  }
+
+  Symbol TestSymbol;
+  FileSymbols Source;
+  SwapIndex Target;
+  BackgroundIndexRebuilder Rebuilder;
+};
+
+TEST_F(BackgroundIndexRebuilderTest, IndexingTUs) {
+  for (unsigned I = 0; I < BackgroundIndexRebuilder::TUsBeforeFirstBuild - 1;
+       ++I)
+    EXPECT_FALSE(checkRebuild([&] { Rebuilder.indexedTU(); }));
+  EXPECT_TRUE(checkRebuild([&] { Rebuilder.indexedTU(); }));
+  for (unsigned I = 0; I < BackgroundIndexRebuilder::TUsBeforeRebuild - 1; ++I)
+    EXPECT_FALSE(checkRebuild([&] { Rebuilder.indexedTU(); }));
+  EXPECT_TRUE(checkRebuild([&] { Rebuilder.indexedTU(); }));
+}
+
+TEST_F(BackgroundIndexRebuilderTest, LoadingShards) {
+  Rebuilder.startLoading();
+  Rebuilder.loadedTU();
+  Rebuilder.loadedTU();
+  EXPECT_TRUE(checkRebuild([&] { Rebuilder.doneLoading(); }));
+
+  // No rebuild for no shards.
+  Rebuilder.startLoading();
+  EXPECT_FALSE(checkRebuild([&] { Rebuilder.doneLoading(); }));
+
+  // Loads can overlap.
+  Rebuilder.startLoading();
+  Rebuilder.loadedTU();
+  Rebuilder.startLoading();
+  Rebuilder.loadedTU();
+  EXPECT_FALSE(checkRebuild([&] { Rebuilder.doneLoading(); }));
+  Rebuilder.loadedTU();
+  EXPECT_TRUE(checkRebuild([&] { Rebuilder.doneLoading(); }));
+
+  // No rebuilding for indexed files while loading.
+  Rebuilder.startLoading();
+  for (unsigned I = 0; I < 3 * BackgroundIndexRebuilder::TUsBeforeRebuild; ++I)
+    EXPECT_FALSE(checkRebuild([&] { Rebuilder.indexedTU(); }));
+  // But they get indexed when we're done, even if no shards were loaded.
+  EXPECT_TRUE(checkRebuild([&] { Rebuilder.doneLoading(); }));
 }
 
 } // namespace clangd

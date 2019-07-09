@@ -17,6 +17,7 @@
 #include "Threading.h"
 #include "Trace.h"
 #include "URI.h"
+#include "index/FileIndex.h"
 #include "index/IndexAction.h"
 #include "index/MemIndex.h"
 #include "index/Ref.h"
@@ -36,7 +37,9 @@
 
 #include <atomic>
 #include <chrono>
+#include <condition_variable>
 #include <memory>
+#include <mutex>
 #include <numeric>
 #include <queue>
 #include <random>
@@ -119,12 +122,10 @@ llvm::SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
 BackgroundIndex::BackgroundIndex(
     Context BackgroundContext, const FileSystemProvider &FSProvider,
     const GlobalCompilationDatabase &CDB,
-    BackgroundIndexStorage::Factory IndexStorageFactory,
-    size_t BuildIndexPeriodMs, size_t ThreadPoolSize)
+    BackgroundIndexStorage::Factory IndexStorageFactory, size_t ThreadPoolSize)
     : SwapIndex(llvm::make_unique<MemIndex>()), FSProvider(FSProvider),
       CDB(CDB), BackgroundContext(std::move(BackgroundContext)),
-      BuildIndexPeriodMs(BuildIndexPeriodMs),
-      SymbolsUpdatedSinceLastIndex(false),
+      Rebuilder(this, &IndexedSymbols),
       IndexStorageFactory(std::move(IndexStorageFactory)),
       CommandsChanged(
           CDB.watch([&](const std::vector<std::string> &ChangedFiles) {
@@ -136,11 +137,6 @@ BackgroundIndex::BackgroundIndex(
     ThreadPool.runAsync("background-worker-" + llvm::Twine(I + 1),
                         [this] { run(); });
   }
-  if (BuildIndexPeriodMs > 0) {
-    log("BackgroundIndex: build symbol index periodically every {0} ms.",
-        BuildIndexPeriodMs);
-    ThreadPool.runAsync("background-index-builder", [this] { buildIndex(); });
-  }
 }
 
 BackgroundIndex::~BackgroundIndex() {
@@ -149,6 +145,7 @@ BackgroundIndex::~BackgroundIndex() {
 }
 
 void BackgroundIndex::stop() {
+  Rebuilder.shutdown();
   {
     std::lock_guard<std::mutex> QueueLock(QueueMu);
     std::lock_guard<std::mutex> IndexLock(IndexMu);
@@ -184,6 +181,12 @@ void BackgroundIndex::run() {
 
     {
       std::unique_lock<std::mutex> Lock(QueueMu);
+      if (NumActiveTasks == 1 && Queue.empty()) {
+        // We just finished the last item, the queue is going idle.
+        Lock.unlock();
+        Rebuilder.idle();
+        Lock.lock();
+      }
       assert(NumActiveTasks > 0 && "before decrementing");
       --NumActiveTasks;
     }
@@ -378,32 +381,6 @@ void BackgroundIndex::update(
   }
 }
 
-void BackgroundIndex::buildIndex() {
-  assert(BuildIndexPeriodMs > 0);
-  while (true) {
-    {
-      std::unique_lock<std::mutex> Lock(IndexMu);
-      if (ShouldStop) // Avoid waiting if stopped.
-        break;
-      // Wait until this is notified to stop or `BuildIndexPeriodMs` has past.
-      IndexCV.wait_for(Lock, std::chrono::milliseconds(BuildIndexPeriodMs));
-      if (ShouldStop) // Avoid rebuilding index if stopped.
-        break;
-    }
-    if (!SymbolsUpdatedSinceLastIndex.exchange(false))
-      continue;
-    // There can be symbol update right after the flag is reset above and before
-    // index is rebuilt below. The new index would contain the updated symbols
-    // but the flag would still be true. This is fine as we would simply run an
-    // extra index build.
-    reset(
-        IndexedSymbols.buildIndex(IndexType::Heavy, DuplicateHandling::Merge));
-    log("BackgroundIndex: rebuilt symbol index with estimated memory {0} "
-        "bytes.",
-        estimateMemoryUsage());
-  }
-}
-
 llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
                                    BackgroundIndexStorage *IndexStorage) {
   trace::Span Tracer("BackgroundIndex");
@@ -502,12 +479,7 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
   update(AbsolutePath, std::move(Index), ShardVersionsSnapshot, IndexStorage,
          HadErrors);
 
-  if (BuildIndexPeriodMs > 0)
-    SymbolsUpdatedSinceLastIndex = true;
-  else
-    reset(
-        IndexedSymbols.buildIndex(IndexType::Light, DuplicateHandling::Merge));
-
+  Rebuilder.indexedTU();
   return llvm::Error::success();
 }
 
@@ -627,6 +599,8 @@ BackgroundIndex::loadShard(const tooling::CompileCommand &Cmd,
                             std::move(RelS), SI.CountReferences);
     }
   }
+  if (!IntermediateSymbols.empty())
+    Rebuilder.loadedTU();
 
   return Dependencies;
 }
@@ -643,6 +617,7 @@ BackgroundIndex::loadShards(std::vector<std::string> ChangedFiles) {
   // Keeps track of the loaded shards to make sure we don't perform redundant
   // disk IO. Keys are absolute paths.
   llvm::StringSet<> LoadedShards;
+  Rebuilder.startLoading();
   for (const auto &File : ChangedFiles) {
     ProjectInfo PI;
     auto Cmd = CDB.getCompileCommand(File, &PI);
@@ -666,11 +641,7 @@ BackgroundIndex::loadShards(std::vector<std::string> ChangedFiles) {
       break;
     }
   }
-  vlog("Loaded all shards");
-  reset(IndexedSymbols.buildIndex(IndexType::Heavy, DuplicateHandling::Merge));
-  vlog("BackgroundIndex: built symbol index with estimated memory {0} "
-       "bytes.",
-       estimateMemoryUsage());
+  Rebuilder.doneLoading();
   return NeedsReIndexing;
 }
 

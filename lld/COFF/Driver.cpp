@@ -365,10 +365,10 @@ void LinkerDriver::parseDirectives(InputFile *File) {
       parseSubsystem(Arg->getValue(), &Config->Subsystem,
                      &Config->MajorOSVersion, &Config->MinorOSVersion);
       break;
+    // Only add flags here that link.exe accepts in
+    // `#pragma comment(linker, "/flag")`-generated sections.
     case OPT_editandcontinue:
-    case OPT_fastfail:
     case OPT_guardsym:
-    case OPT_natvis:
     case OPT_throwingnew:
       break;
     default:
