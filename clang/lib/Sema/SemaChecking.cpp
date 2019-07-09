@@ -11149,6 +11149,11 @@ static bool isSameWidthConstantConversion(Sema &S, Expr *E, QualType T,
   return true;
 }
 
+static bool isObjCSignedCharBool(Sema &S, QualType Ty) {
+  return Ty->isSpecificBuiltinType(BuiltinType::SChar) &&
+         S.getLangOpts().ObjC && S.NSAPIObj->isObjCBOOLType(Ty);
+}
+
 static void
 CheckImplicitConversion(Sema &S, Expr *E, QualType T, SourceLocation CC,
                         bool *ICContext = nullptr) {
@@ -11189,6 +11194,29 @@ CheckImplicitConversion(Sema &S, Expr *E, QualType T, SourceLocation CC,
       // Warn on pointer to bool conversion that is always true.
       S.DiagnoseAlwaysNonNullPointer(E, Expr::NPCK_NotNull, /*IsEqual*/ false,
                                      SourceRange(CC));
+    }
+  }
+
+  // If the we're converting a constant to an ObjC BOOL on a platform where BOOL
+  // is a typedef for signed char (macOS), then that constant value has to be 1
+  // or 0.
+  if (isObjCSignedCharBool(S, T) && Source->isIntegralType(S.Context)) {
+    Expr::EvalResult Result;
+    if (E->EvaluateAsInt(Result, S.getASTContext(),
+                         Expr::SE_AllowSideEffects) &&
+        Result.Val.getInt() != 1 && Result.Val.getInt() != 0) {
+      auto Builder = S.Diag(CC, diag::warn_impcast_constant_int_to_objc_bool)
+                     << Result.Val.getInt().toString(10);
+      Expr *Ignored = E->IgnoreImplicit();
+      bool NeedsParens = isa<AbstractConditionalOperator>(Ignored) ||
+                         isa<BinaryOperator>(Ignored) ||
+                         isa<CXXOperatorCallExpr>(Ignored);
+      SourceLocation EndLoc = S.getLocForEndOfToken(E->getEndLoc());
+      if (NeedsParens)
+        Builder << FixItHint::CreateInsertion(E->getBeginLoc(), "(")
+                << FixItHint::CreateInsertion(EndLoc, ")");
+      Builder << FixItHint::CreateInsertion(EndLoc, " ? YES : NO");
+      return;
     }
   }
 

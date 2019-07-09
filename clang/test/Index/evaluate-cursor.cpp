@@ -21,6 +21,11 @@ unsigned long long HUGE = 1ull << 63;
 
 long long HUGE_NEG = -(1ll << 35);
 
+template <typename d> class e {
+  using f = d;
+  static const auto g = alignof(f);
+};
+
 // RUN: c-index-test -evaluate-cursor-at=%s:4:7 \
 // RUN:    -evaluate-cursor-at=%s:8:7 \
 // RUN:    -evaluate-cursor-at=%s:8:11 -std=c++11 %s | FileCheck %s
@@ -42,3 +47,9 @@ long long HUGE_NEG = -(1ll << 35);
 // CHECK-LONG: unsigned, Value: 1152921504606846976
 // CHECK-LONG: unsigned, Value: 9223372036854775808
 // CHECK-LONG: Value: -34359738368
+
+// RUN: c-index-test -evaluate-cursor-at=%s:18:20 \
+// RUN:    -evaluate-cursor-at=%s:20:20 \
+// RUN:    -evaluate-cursor-at=%s:26:21 \
+// RUN:    -std=c++11 %s | FileCheck -check-prefix=CHECK-DOES-NOT-CRASH %s
+// CHECK-DOES-NOT-CRASH: Not Evaluatable

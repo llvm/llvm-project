@@ -11776,12 +11776,11 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     Value *Call = Builder.CreateCall(CGM.getIntrinsic(ID), {Ops[0], Ops[1]});
     Value *Result = Builder.CreateExtractValue(Call, 0);
     Result = EmitX86MaskedCompareResult(*this, Result, NumElts, nullptr);
-    Value *Store = Builder.CreateDefaultAlignedStore(Result, Ops[2]);
+    Builder.CreateDefaultAlignedStore(Result, Ops[2]);
 
     Result = Builder.CreateExtractValue(Call, 1);
     Result = EmitX86MaskedCompareResult(*this, Result, NumElts, nullptr);
-    Store = Builder.CreateDefaultAlignedStore(Result, Ops[3]);
-    return Store;
+    return Builder.CreateDefaultAlignedStore(Result, Ops[3]);
   }
 
   case X86::BI__builtin_ia32_vpmultishiftqb128:

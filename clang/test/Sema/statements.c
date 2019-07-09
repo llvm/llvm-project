@@ -119,3 +119,21 @@ void test_pr22849() {
     SIZE = sizeof(({unsigned long __ptr; __ptr;}))
   };
 }
+
+// GCC ignores empty statements at the end of compound expressions where the
+// result type is concerned.
+void test13() {
+  int a;
+  a = ({ 1; });
+  a = ({1;; });
+  a = ({int x = 1; (void)x; }); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+  a = ({int x = 1; (void)x;; }); // expected-error {{assigning to 'int' from incompatible type 'void'}}
+}
+
+void test14() { return ({}); }
+void test15() {
+  return ({;;;; });
+}
+void test16() {
+  return ({test:;; });
+}

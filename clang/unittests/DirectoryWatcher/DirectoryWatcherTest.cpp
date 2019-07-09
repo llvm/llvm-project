@@ -1,17 +1,19 @@
 //===- unittests/DirectoryWatcher/DirectoryWatcherTest.cpp ----------------===//
 //
-//                     The LLVM Compiler Infrastructure
-//
-// This file is distributed under the University of Illinois Open Source
-// License. See LICENSE.TXT for details.
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
 #include "clang/DirectoryWatcher/DirectoryWatcher.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Mutex.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 #include <condition_variable>
+#include <future>
 #include <mutex>
 #include <thread>
 
@@ -20,309 +22,405 @@ using namespace llvm::sys;
 using namespace llvm::sys::fs;
 using namespace clang;
 
+namespace clang {
+static bool operator==(const DirectoryWatcher::Event &lhs,
+                       const DirectoryWatcher::Event &rhs) {
+  return lhs.Filename == rhs.Filename &&
+         static_cast<int>(lhs.Kind) == static_cast<int>(rhs.Kind);
+}
+} // namespace clang
+
 namespace {
 
-class EventCollection {
-  SmallVector<DirectoryWatcher::Event, 6> Events;
-public:
-  EventCollection() = default;
-  explicit EventCollection(ArrayRef<DirectoryWatcher::Event> events) {
-    append(events);
-  }
+struct DirectoryWatcherTestFixture {
+  std::string TestRootDir;
+  std::string TestWatchedDir;
 
-  void append(ArrayRef<DirectoryWatcher::Event> events) {
-    Events.append(events.begin(), events.end());
-  }
-
-  bool empty() const { return Events.empty(); }
-  size_t size() const { return Events.size(); }
-  void clear() { Events.clear(); }
-
-  bool hasEvents(ArrayRef<StringRef> filenames,
-                 ArrayRef<DirectoryWatcher::EventKind> kinds,
-                 ArrayRef<file_status> stats) const {
-    assert(filenames.size() == kinds.size());
-    assert(filenames.size() == stats.size());
-    SmallVector<DirectoryWatcher::Event, 6> evts = Events;
-    bool hadError = false;
-    for (unsigned i = 0, e = filenames.size(); i < e; ++i) {
-      StringRef fname = filenames[i];
-      DirectoryWatcher::EventKind kind = kinds[i];
-      file_status stat = stats[i];
-      auto it = std::find_if(evts.begin(), evts.end(), [&](const DirectoryWatcher::Event &evt)->bool {
-        return path::filename(evt.Filename) == fname;
-      });
-      if (it == evts.end()) {
-        hadError = err(Twine("expected filename '"+fname+"' not found"));
-        continue;
-      }
-      if (it->Kind != kind) {
-        hadError = err(Twine("filename '" + fname + "' has event kind " +
-                             std::to_string((int)it->Kind) + ", expected ") +
-                       std::to_string((int)kind));
-      }
-      if (it->Kind != DirectoryWatcher::EventKind::Removed &&
-          it->ModTime != stat.getLastModificationTime())
-        hadError = err(Twine("filename '"+fname+"' has different mod time"));
-      evts.erase(it);
-    }
-    for (const auto &evt : evts) {
-      hadError = err(Twine("unexpected filename '"+path::filename(evt.Filename)+"' found"));
-    }
-    return !hadError;
-  }
-
-  bool hasAdded(ArrayRef<StringRef> filenames, ArrayRef<file_status> stats) const {
-    std::vector<DirectoryWatcher::EventKind> kinds{
-      filenames.size(), DirectoryWatcher::EventKind::Added };
-    return hasEvents(filenames, kinds, stats);
-  }
-
-  bool hasRemoved(ArrayRef<StringRef> filenames) const {
-    std::vector<DirectoryWatcher::EventKind> kinds{
-      filenames.size(), DirectoryWatcher::EventKind::Removed };
-    std::vector<file_status> stats{ filenames.size(), file_status{} };
-    return hasEvents(filenames, kinds, stats);
-  }
-
-private:
-  bool err(Twine msg) const {
-    SmallString<128> buf;
-    llvm::errs() << msg.toStringRef(buf) << '\n';
-    return true;
-  }
-};
-
-struct EventOccurrence {
-  std::vector<DirectoryWatcher::Event> Events;
-  bool IsInitial;
-};
-
-class DirectoryWatcherTest: public std::enable_shared_from_this<DirectoryWatcherTest> {
-  std::string WatchedDir;
-  std::string TempDir;
-  std::unique_ptr<DirectoryWatcher> DirWatcher;
-
-  std::condition_variable Condition;
-  std::mutex Mutex;
-  std::deque<EventOccurrence> EvtOccurs;
-
-public:
-  void init() {
+  DirectoryWatcherTestFixture() {
     SmallString<128> pathBuf;
-    std::error_code EC = createUniqueDirectory("dirwatcher", pathBuf);
-    ASSERT_FALSE(EC);
-    TempDir = pathBuf.str();
+    std::error_code UniqDirRes = createUniqueDirectory("dirwatcher", pathBuf);
+    assert(!UniqDirRes);
+    TestRootDir = pathBuf.str();
     path::append(pathBuf, "watch");
-    WatchedDir = pathBuf.str();
-    EC = create_directory(WatchedDir);
-    ASSERT_FALSE(EC);
+    TestWatchedDir = pathBuf.str();
+    std::error_code CreateDirRes = create_directory(TestWatchedDir, false);
+    assert(!CreateDirRes);
   }
 
-  ~DirectoryWatcherTest() {
-    stopWatching();
-    remove_directories(TempDir);
-  }
+  ~DirectoryWatcherTestFixture() { remove_directories(TestRootDir); }
 
-public:
-  StringRef getWatchedDir() const {
-    return WatchedDir;
-  }
-
-  void addFile(StringRef filename, file_status &stat) {
+  SmallString<128> getPathInWatched(const std::string &testFile) {
     SmallString<128> pathBuf;
-    pathBuf = TempDir;
-    path::append(pathBuf, filename);
-    Expected<file_t> ft = openNativeFileForWrite(pathBuf, CD_CreateNew, OF_None);
-    ASSERT_TRUE((bool)ft);
-    closeFile(*ft);
-
-    SmallString<128> newPath;
-    newPath = WatchedDir;
-    path::append(newPath, filename);
-    std::error_code EC = rename(pathBuf, newPath);
-    ASSERT_FALSE(EC);
-
-    EC = status(newPath, stat);
-    ASSERT_FALSE(EC);
+    pathBuf = TestWatchedDir;
+    path::append(pathBuf, testFile);
+    return pathBuf;
   }
 
-  void addFiles(ArrayRef<StringRef> filenames, std::vector<file_status> &stats) {
-    for (auto fname : filenames) {
-      file_status stat;
-      addFile(fname, stat);
-      stats.push_back(stat);
+  void addFile(const std::string &testFile) {
+    Expected<file_t> ft = openNativeFileForWrite(getPathInWatched(testFile),
+                                                 CD_CreateNew, OF_None);
+    if (ft) {
+      closeFile(*ft);
+    } else {
+      llvm::errs() << llvm::toString(ft.takeError()) << "\n";
+      llvm::errs() << getPathInWatched(testFile) << "\n";
+      llvm_unreachable("Couldn't create test file.");
     }
   }
 
-  void addFiles(ArrayRef<StringRef> filenames) {
-    std::vector<file_status> stats;
-    addFiles(filenames, stats);
-  }
-
-  void removeFile(StringRef filename) {
-    SmallString<128> pathBuf;
-    pathBuf = WatchedDir;
-    path::append(pathBuf, filename);
-    std::error_code EC = remove(pathBuf, /*IgnoreNonExisting=*/false);
+  void deleteFile(const std::string &testFile) {
+    std::error_code EC =
+        remove(getPathInWatched(testFile), /*IgnoreNonExisting=*/false);
     ASSERT_FALSE(EC);
-  }
-
-  void removeFiles(ArrayRef<StringRef> filenames) {
-    for (auto fname : filenames) {
-      removeFile(fname);
-    }
-  }
-
-  /// \returns true for error.
-  bool startWatching(bool waitInitialSync) {
-    std::weak_ptr<DirectoryWatcherTest> weakThis = shared_from_this();
-    auto receiver = [weakThis](ArrayRef<DirectoryWatcher::Event> events, bool isInitial) {
-      if (auto this_ = weakThis.lock())
-        this_->onEvents(events, isInitial);
-    };
-    std::string error;
-    DirWatcher = DirectoryWatcher::create(getWatchedDir(), receiver,
-                                          waitInitialSync, error);
-    return DirWatcher == nullptr;
-  }
-
-  void stopWatching() {
-    DirWatcher.reset();
-  }
-
-  /// \returns None if the timeout is reached before getting an event.
-  Optional<EventOccurrence> getNextEvent(unsigned timeout_seconds = 5) {
-    std::unique_lock<std::mutex> lck(Mutex);
-    auto pred = [&]()->bool { return !EvtOccurs.empty(); };
-    bool gotEvent = Condition.wait_for(lck, std::chrono::seconds(timeout_seconds), pred);
-    if (!gotEvent)
-      return None;
-
-    EventOccurrence occur = EvtOccurs.front();
-    EvtOccurs.pop_front();
-    return occur;
-  }
-
-  EventOccurrence getNextEventImmediately() {
-    std::lock_guard<std::mutex> LG(Mutex);
-    assert(!EvtOccurs.empty());
-    EventOccurrence occur = EvtOccurs.front();
-    EvtOccurs.pop_front();
-    return occur;
-  }
-
-private:
-  void onEvents(ArrayRef<DirectoryWatcher::Event> events, bool isInitial) {
-    std::lock_guard<std::mutex> LG(Mutex);
-    EvtOccurs.push_back({events, isInitial});
-    Condition.notify_all();
   }
 };
 
+std::string eventKindToString(const DirectoryWatcher::Event::EventKind K) {
+  switch (K) {
+  case DirectoryWatcher::Event::EventKind::Removed:
+    return "Removed";
+  case DirectoryWatcher::Event::EventKind::Modified:
+    return "Modified";
+  case DirectoryWatcher::Event::EventKind::WatchedDirRemoved:
+    return "WatchedDirRemoved";
+  case DirectoryWatcher::Event::EventKind::WatcherGotInvalidated:
+    return "WatcherGotInvalidated";
+  }
+  llvm_unreachable("unknown event kind");
 }
 
-TEST(DirectoryWatcherTest, initialScan) {
-  auto t = std::make_shared<DirectoryWatcherTest>();
-  t->init();
+struct VerifyingConsumer {
+  std::vector<DirectoryWatcher::Event> ExpectedInitial;
+  std::vector<DirectoryWatcher::Event> ExpectedNonInitial;
+  std::vector<DirectoryWatcher::Event> OptionalNonInitial;
+  std::vector<DirectoryWatcher::Event> UnexpectedInitial;
+  std::vector<DirectoryWatcher::Event> UnexpectedNonInitial;
+  std::mutex Mtx;
+  std::condition_variable ResultIsReady;
 
-  std::vector<StringRef> fnames = {"a", "b", "c"};
-  std::vector<file_status> stats;
-  t->addFiles(fnames, stats);
+  VerifyingConsumer(
+      const std::vector<DirectoryWatcher::Event> &ExpectedInitial,
+      const std::vector<DirectoryWatcher::Event> &ExpectedNonInitial,
+      const std::vector<DirectoryWatcher::Event> &OptionalNonInitial = {})
+      : ExpectedInitial(ExpectedInitial),
+        ExpectedNonInitial(ExpectedNonInitial),
+        OptionalNonInitial(OptionalNonInitial) {}
 
-  bool err = t->startWatching(/*waitInitialSync=*/true);
-  ASSERT_FALSE(err);
+  // This method is used by DirectoryWatcher.
+  void consume(DirectoryWatcher::Event E, bool IsInitial) {
+    if (IsInitial)
+      consumeInitial(E);
+    else
+      consumeNonInitial(E);
+  }
 
-  auto evt = t->getNextEventImmediately();
-  EXPECT_TRUE(evt.IsInitial);
-  EventCollection coll1{evt.Events};
-  EXPECT_TRUE(coll1.hasAdded(fnames, stats));
+  void consumeInitial(DirectoryWatcher::Event E) {
+    std::unique_lock<std::mutex> L(Mtx);
+    auto It = std::find(ExpectedInitial.begin(), ExpectedInitial.end(), E);
+    if (It == ExpectedInitial.end()) {
+      UnexpectedInitial.push_back(E);
+    } else {
+      ExpectedInitial.erase(It);
+    }
+    if (result())
+      ResultIsReady.notify_one();
+  }
 
-  StringRef additionalFname = "d";
-  file_status additionalStat;
-  t->addFile(additionalFname, additionalStat);
-  auto evtOpt = t->getNextEvent();
-  ASSERT_TRUE(evtOpt.hasValue());
-  EXPECT_FALSE(evtOpt->IsInitial);
-  EventCollection coll2{evtOpt->Events};
-  EXPECT_TRUE(coll2.hasAdded({additionalFname}, {additionalStat}));
+  void consumeNonInitial(DirectoryWatcher::Event E) {
+    std::unique_lock<std::mutex> L(Mtx);
+    auto It =
+        std::find(ExpectedNonInitial.begin(), ExpectedNonInitial.end(), E);
+    if (It == ExpectedNonInitial.end()) {
+      auto OptIt =
+          std::find(OptionalNonInitial.begin(), OptionalNonInitial.end(), E);
+      if (OptIt != OptionalNonInitial.end()) {
+        OptionalNonInitial.erase(OptIt);
+      } else {
+        UnexpectedNonInitial.push_back(E);
+      }
+    } else {
+      ExpectedNonInitial.erase(It);
+    }
+    if (result())
+      ResultIsReady.notify_one();
+  }
+
+  // This method is used by DirectoryWatcher.
+  void consume(llvm::ArrayRef<DirectoryWatcher::Event> Es, bool IsInitial) {
+    for (const auto &E : Es)
+      consume(E, IsInitial);
+  }
+
+  // Not locking - caller has to lock Mtx.
+  llvm::Optional<bool> result() const {
+    if (ExpectedInitial.empty() && ExpectedNonInitial.empty() &&
+        UnexpectedInitial.empty() && UnexpectedNonInitial.empty())
+      return true;
+    if (!UnexpectedInitial.empty() || !UnexpectedNonInitial.empty())
+      return false;
+    return llvm::None;
+  }
+
+  // This method is used by tests.
+  // \returns true on success
+  bool blockUntilResult() {
+    std::unique_lock<std::mutex> L(Mtx);
+    while (true) {
+      if (result())
+        return *result();
+
+      ResultIsReady.wait(L, [this]() { return result().hasValue(); });
+    }
+    return false; // Just to make compiler happy.
+  }
+
+  void printUnmetExpectations(llvm::raw_ostream &OS) {
+    if (!ExpectedInitial.empty()) {
+      OS << "Expected but not seen initial events: \n";
+      for (const auto &E : ExpectedInitial) {
+        OS << eventKindToString(E.Kind) << " " << E.Filename << "\n";
+      }
+    }
+    if (!ExpectedNonInitial.empty()) {
+      OS << "Expected but not seen non-initial events: \n";
+      for (const auto &E : ExpectedNonInitial) {
+        OS << eventKindToString(E.Kind) << " " << E.Filename << "\n";
+      }
+    }
+    if (!UnexpectedInitial.empty()) {
+      OS << "Unexpected initial events seen: \n";
+      for (const auto &E : UnexpectedInitial) {
+        OS << eventKindToString(E.Kind) << " " << E.Filename << "\n";
+      }
+    }
+    if (!UnexpectedNonInitial.empty()) {
+      OS << "Unexpected non-initial events seen: \n";
+      for (const auto &E : UnexpectedNonInitial) {
+        OS << eventKindToString(E.Kind) << " " << E.Filename << "\n";
+      }
+    }
+  }
+};
+
+void checkEventualResultWithTimeout(VerifyingConsumer &TestConsumer) {
+  std::packaged_task<int(void)> task(
+      [&TestConsumer]() { return TestConsumer.blockUntilResult(); });
+  std::future<int> WaitForExpectedStateResult = task.get_future();
+  std::thread worker(std::move(task));
+  worker.detach();
+
+  EXPECT_TRUE(WaitForExpectedStateResult.wait_for(std::chrono::seconds(3)) ==
+              std::future_status::ready)
+      << "The expected result state wasn't reached before the time-out.";
+  EXPECT_TRUE(TestConsumer.result().hasValue());
+  if (TestConsumer.result().hasValue()) {
+    EXPECT_TRUE(*TestConsumer.result());
+  }
+  if ((TestConsumer.result().hasValue() && !TestConsumer.result().getValue()) ||
+      !TestConsumer.result().hasValue())
+    TestConsumer.printUnmetExpectations(llvm::outs());
 }
 
-TEST(DirectoryWatcherTest, fileEvents) {
-  auto t = std::make_shared<DirectoryWatcherTest>();
-  t->init();
+} // namespace
 
-  bool err = t->startWatching(/*waitInitialSync=*/false);
-  ASSERT_FALSE(err);
+TEST(DirectoryWatcherTest, InitialScanSync) {
+  DirectoryWatcherTestFixture fixture;
 
-  auto evt = t->getNextEvent();
-  ASSERT_TRUE(evt.hasValue());
-  EXPECT_TRUE(evt->IsInitial);
-  EXPECT_TRUE(evt->Events.empty());
-  return;
+  fixture.addFile("a");
+  fixture.addFile("b");
+  fixture.addFile("c");
 
-  {
-    std::vector<StringRef> fnames = {"a", "b"};
-    std::vector<file_status> stats;
-    t->addFiles(fnames, stats);
+  VerifyingConsumer TestConsumer{
+      {{DirectoryWatcher::Event::EventKind::Modified, "a"},
+       {DirectoryWatcher::Event::EventKind::Modified, "b"},
+       {DirectoryWatcher::Event::EventKind::Modified, "c"}},
+      {}};
 
-    EventCollection coll{};
-    while (coll.size() < 2) {
-      evt = t->getNextEvent();
-      ASSERT_TRUE(evt.hasValue());
-      coll.append(evt->Events);
-    }
-    EXPECT_TRUE(coll.hasAdded(fnames, stats));
-  }
-  {
-    std::vector<StringRef> fnames = {"b", "c"};
-    std::vector<file_status> stats;
-    t->addFiles(fnames, stats);
-
-    EventCollection coll{};
-    while (coll.size() < 2) {
-      evt = t->getNextEvent();
-      ASSERT_TRUE(evt.hasValue());
-      coll.append(evt->Events);
-    }
-    EXPECT_TRUE(coll.hasAdded(fnames, stats));
-  }
-  {
-    std::vector<StringRef> fnames = {"a", "c"};
-    std::vector<file_status> stats;
-    t->addFiles(fnames, stats);
-    t->removeFile("b");
-
-    EventCollection coll{};
-    while (coll.size() < 3) {
-      evt = t->getNextEvent();
-      ASSERT_TRUE(evt.hasValue());
-      coll.append(evt->Events);
-    }
-
-    EXPECT_TRUE(coll.hasEvents(
-      std::vector<StringRef>{"a", "b", "c"},
-      std::vector<DirectoryWatcher::EventKind>{
-        DirectoryWatcher::EventKind::Added,
-        DirectoryWatcher::EventKind::Removed,
-        DirectoryWatcher::EventKind::Added,
+  auto DW = DirectoryWatcher::create(
+      fixture.TestWatchedDir,
+      [&TestConsumer](llvm::ArrayRef<DirectoryWatcher::Event> Events,
+                      bool IsInitial) {
+        TestConsumer.consume(Events, IsInitial);
       },
-      std::vector<file_status>{
-        stats[0],
-        file_status{},
-        stats[1],
-      }));
-  }
-  {
-    std::vector<StringRef> fnames = {"a", "c"};
-    t->removeFiles(fnames);
+      /*waitForInitialSync=*/true);
 
-    EventCollection coll{};
-    while (coll.size() < 2) {
-      evt = t->getNextEvent();
-      ASSERT_TRUE(evt.hasValue());
-      coll.append(evt->Events);
-    }
-    EXPECT_TRUE(coll.hasRemoved(fnames));
+  checkEventualResultWithTimeout(TestConsumer);
+}
+
+TEST(DirectoryWatcherTest, InitialScanAsync) {
+  DirectoryWatcherTestFixture fixture;
+
+  fixture.addFile("a");
+  fixture.addFile("b");
+  fixture.addFile("c");
+
+  VerifyingConsumer TestConsumer{
+      {{DirectoryWatcher::Event::EventKind::Modified, "a"},
+       {DirectoryWatcher::Event::EventKind::Modified, "b"},
+       {DirectoryWatcher::Event::EventKind::Modified, "c"}},
+      {}};
+
+  auto DW = DirectoryWatcher::create(
+      fixture.TestWatchedDir,
+      [&TestConsumer](llvm::ArrayRef<DirectoryWatcher::Event> Events,
+                      bool IsInitial) {
+        TestConsumer.consume(Events, IsInitial);
+      },
+      /*waitForInitialSync=*/false);
+
+  checkEventualResultWithTimeout(TestConsumer);
+}
+
+TEST(DirectoryWatcherTest, AddFiles) {
+  DirectoryWatcherTestFixture fixture;
+
+  VerifyingConsumer TestConsumer{
+      {},
+      {{DirectoryWatcher::Event::EventKind::Modified, "a"},
+       {DirectoryWatcher::Event::EventKind::Modified, "b"},
+       {DirectoryWatcher::Event::EventKind::Modified, "c"}}};
+
+  auto DW = DirectoryWatcher::create(
+      fixture.TestWatchedDir,
+      [&TestConsumer](llvm::ArrayRef<DirectoryWatcher::Event> Events,
+                      bool IsInitial) {
+        TestConsumer.consume(Events, IsInitial);
+      },
+      /*waitForInitialSync=*/true);
+
+  fixture.addFile("a");
+  fixture.addFile("b");
+  fixture.addFile("c");
+
+  checkEventualResultWithTimeout(TestConsumer);
+}
+
+TEST(DirectoryWatcherTest, ModifyFile) {
+  DirectoryWatcherTestFixture fixture;
+
+  fixture.addFile("a");
+
+  VerifyingConsumer TestConsumer{
+      {{DirectoryWatcher::Event::EventKind::Modified, "a"}},
+      {{DirectoryWatcher::Event::EventKind::Modified, "a"}}};
+
+  auto DW = DirectoryWatcher::create(
+      fixture.TestWatchedDir,
+      [&TestConsumer](llvm::ArrayRef<DirectoryWatcher::Event> Events,
+                      bool IsInitial) {
+        TestConsumer.consume(Events, IsInitial);
+      },
+      /*waitForInitialSync=*/true);
+
+  // modify the file
+  {
+    std::error_code error;
+    llvm::raw_fd_ostream bStream(fixture.getPathInWatched("a"), error,
+                                 CD_OpenExisting);
+    assert(!error);
+    bStream << "foo";
   }
+
+  checkEventualResultWithTimeout(TestConsumer);
+}
+
+TEST(DirectoryWatcherTest, DeleteFile) {
+  DirectoryWatcherTestFixture fixture;
+
+  fixture.addFile("a");
+
+  VerifyingConsumer TestConsumer{
+      {{DirectoryWatcher::Event::EventKind::Modified, "a"}},
+      {{DirectoryWatcher::Event::EventKind::Removed, "a"}}};
+
+  auto DW = DirectoryWatcher::create(
+      fixture.TestWatchedDir,
+      [&TestConsumer](llvm::ArrayRef<DirectoryWatcher::Event> Events,
+                      bool IsInitial) {
+        TestConsumer.consume(Events, IsInitial);
+      },
+      /*waitForInitialSync=*/true);
+
+  fixture.deleteFile("a");
+
+  checkEventualResultWithTimeout(TestConsumer);
+}
+
+TEST(DirectoryWatcherTest, DeleteWatchedDir) {
+  DirectoryWatcherTestFixture fixture;
+
+  VerifyingConsumer TestConsumer{
+      {},
+      {{DirectoryWatcher::Event::EventKind::WatchedDirRemoved, ""},
+       {DirectoryWatcher::Event::EventKind::WatcherGotInvalidated, ""}}};
+
+  auto DW = DirectoryWatcher::create(
+      fixture.TestWatchedDir,
+      [&TestConsumer](llvm::ArrayRef<DirectoryWatcher::Event> Events,
+                      bool IsInitial) {
+        TestConsumer.consume(Events, IsInitial);
+      },
+      /*waitForInitialSync=*/true);
+
+  remove_directories(fixture.TestWatchedDir);
+
+  checkEventualResultWithTimeout(TestConsumer);
+}
+
+TEST(DirectoryWatcherTest, InvalidatedWatcher) {
+  DirectoryWatcherTestFixture fixture;
+
+  VerifyingConsumer TestConsumer{
+      {}, {{DirectoryWatcher::Event::EventKind::WatcherGotInvalidated, ""}}};
+
+  {
+    auto DW = DirectoryWatcher::create(
+        fixture.TestWatchedDir,
+        [&TestConsumer](llvm::ArrayRef<DirectoryWatcher::Event> Events,
+                        bool IsInitial) {
+          TestConsumer.consume(Events, IsInitial);
+        },
+        /*waitForInitialSync=*/true);
+  } // DW is destructed here.
+
+  checkEventualResultWithTimeout(TestConsumer);
+}
+
+TEST(DirectoryWatcherTest, ChangeMetadata) {
+  DirectoryWatcherTestFixture fixture;
+  fixture.addFile("a");
+
+  VerifyingConsumer TestConsumer{
+      {{DirectoryWatcher::Event::EventKind::Modified, "a"}},
+      // We don't expect any notification for file having access file changed.
+      {},
+      // Given the timing we are ok with receiving the duplicate event.
+      {{DirectoryWatcher::Event::EventKind::Modified, "a"}}};
+
+  auto DW = DirectoryWatcher::create(
+      fixture.TestWatchedDir,
+      [&TestConsumer](llvm::ArrayRef<DirectoryWatcher::Event> Events,
+                      bool IsInitial) {
+        TestConsumer.consume(Events, IsInitial);
+      },
+      /*waitForInitialSync=*/true);
+
+  { // Change access and modification time of file a.
+    Expected<file_t> HopefullyTheFD = llvm::sys::fs::openNativeFileForWrite(
+        fixture.getPathInWatched("a"), CD_OpenExisting, OF_None);
+    if (!HopefullyTheFD) {
+      llvm::outs() << HopefullyTheFD.takeError();
+    }
+
+    const int FD = HopefullyTheFD.get();
+    const TimePoint<> NewTimePt =
+        std::chrono::system_clock::now() - std::chrono::minutes(1);
+
+    std::error_code setTimeRes =
+        llvm::sys::fs::setLastAccessAndModificationTime(FD, NewTimePt,
+                                                        NewTimePt);
+    assert(!setTimeRes);
+  }
+
+  checkEventualResultWithTimeout(TestConsumer);
 }
