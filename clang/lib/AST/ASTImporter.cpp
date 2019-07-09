@@ -2480,6 +2480,8 @@ ExpectedDecl ASTNodeImporter::VisitEnumDecl(EnumDecl *D) {
       }
 
       if (auto *FoundEnum = dyn_cast<EnumDecl>(FoundDecl)) {
+        if (!hasSameVisibilityContext(FoundEnum, D))
+          continue;
         if (IsStructuralMatch(D, FoundEnum))
           return Importer.MapImported(D, FoundEnum);
       }
