@@ -38,6 +38,10 @@ public:
                             RegScavenger *RS = nullptr) const override;
   void determineCalleeSavesSGPR(MachineFunction &MF, BitVector &SavedRegs,
                                 RegScavenger *RS = nullptr) const;
+  bool
+  assignCalleeSavedSpillSlots(MachineFunction &MF,
+                              const TargetRegisterInfo *TRI,
+                              std::vector<CalleeSavedInfo> &CSI) const override;
 
   bool isSupportedStackID(TargetStackID::Value ID) const override;
 

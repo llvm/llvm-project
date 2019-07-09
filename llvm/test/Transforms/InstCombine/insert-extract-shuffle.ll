@@ -502,8 +502,7 @@ define <4 x float> @insert_nonzero_index_splat_wrong_index(float %x, i32 %index)
 define <4 x float> @insert_in_splat(float %x) {
 ; CHECK-LABEL: @insert_in_splat(
 ; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 0
-; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 0, i32 undef>
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[SPLAT]], float [[X]], i32 3
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %xv = insertelement <4 x float> undef, float %x, i32 0
@@ -518,7 +517,7 @@ define <4 x float> @insert_in_splat_extra_uses(float %x) {
 ; CHECK-NEXT:    call void @use(<4 x float> [[XV]])
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 0, i32 undef>
 ; CHECK-NEXT:    call void @use(<4 x float> [[SPLAT]])
-; CHECK-NEXT:    [[R:%.*]] = insertelement <4 x float> [[SPLAT]], float [[X]], i32 3
+; CHECK-NEXT:    [[R:%.*]] = shufflevector <4 x float> [[XV]], <4 x float> undef, <4 x i32> <i32 undef, i32 0, i32 0, i32 0>
 ; CHECK-NEXT:    ret <4 x float> [[R]]
 ;
   %xv = insertelement <4 x float> undef, float %x, i32 0
@@ -528,6 +527,8 @@ define <4 x float> @insert_in_splat_extra_uses(float %x) {
   %r = insertelement <4 x float> %splat, float %x, i32 3
   ret <4 x float> %r
 }
+
+; Negative test - not a constant index insert
 
 define <4 x float> @insert_in_splat_variable_index(float %x, i32 %y) {
 ; CHECK-LABEL: @insert_in_splat_variable_index(
@@ -542,6 +543,8 @@ define <4 x float> @insert_in_splat_variable_index(float %x, i32 %y) {
   ret <4 x float> %r
 }
 
+; Negative test - not a splat shuffle
+
 define <4 x float> @insert_in_nonsplat(float %x, <4 x float> %y) {
 ; CHECK-LABEL: @insert_in_nonsplat(
 ; CHECK-NEXT:    [[XV:%.*]] = insertelement <4 x float> undef, float [[X:%.*]], i32 0
@@ -554,6 +557,8 @@ define <4 x float> @insert_in_nonsplat(float %x, <4 x float> %y) {
   %r = insertelement <4 x float> %splat, float %x, i32 3
   ret <4 x float> %r
 }
+
+; Negative test - not a splat shuffle
 
 define <4 x float> @insert_in_nonsplat2(float %x, <4 x float> %y) {
 ; CHECK-LABEL: @insert_in_nonsplat2(

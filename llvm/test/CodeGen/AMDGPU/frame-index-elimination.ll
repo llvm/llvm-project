@@ -29,7 +29,7 @@ define void @func_mov_fi_i32() #0 {
 
 ; CI: s_sub_u32 [[SUB:s[0-9]+]], s32, s33
 ; CI-NEXT: v_lshr_b32_e64 [[SCALED:v[0-9]+]], [[SUB]], 6
-; CI-NEXT: v_add_i32_e64 v1, s[6:7], 4, [[SCALED]]
+; CI-NEXT: v_add_i32_e64 v1, s{{\[[0-9]+:[0-9]+\]}}, 4, [[SCALED]]
 ; CI-NOT: v_mov
 ; CI: ds_write_b32 v0, v0
 ; CI-NEXT: ds_write_b32 v0, v1
@@ -181,7 +181,7 @@ ret:
 ; GCN-DAG: s_movk_i32 [[K:s[0-9]+]], 0x200
 
 ; CI-DAG: v_lshr_b32_e64 [[SCALED:v[0-9]+]], [[SUB]], 6
-; CI: v_add_i32_e64 [[VZ:v[0-9]+]], s[6:7], [[K]], [[SCALED]]
+; CI: v_add_i32_e64 [[VZ:v[0-9]+]], s{{\[[0-9]+:[0-9]+\]}}, [[K]], [[SCALED]]
 
 ; GFX9-DAG: v_lshrrev_b32_e64 [[SCALED:v[0-9]+]], 6, [[SUB]]
 ; GFX9: v_add_u32_e32 [[VZ:v[0-9]+]], [[K]], [[SCALED]]
@@ -233,10 +233,10 @@ declare void @func(<4 x float> addrspace(5)* nocapture) #0
 
 ; GCN-LABEL: {{^}}undefined_stack_store_reg:
 ; GCN: s_and_saveexec_b64
-; GCN: buffer_store_dword v0, off, s[0:3], s5 offset:
-; GCN: buffer_store_dword v0, off, s[0:3], s5 offset:
-; GCN: buffer_store_dword v0, off, s[0:3], s5 offset:
-; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s5 offset:
+; GCN: buffer_store_dword v0, off, s[0:3], s34 offset:
+; GCN: buffer_store_dword v0, off, s[0:3], s34 offset:
+; GCN: buffer_store_dword v0, off, s[0:3], s34 offset:
+; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s34 offset:
 define void @undefined_stack_store_reg(float %arg, i32 %arg1) #0 {
 bb:
   %tmp = alloca <4 x float>, align 16, addrspace(5)

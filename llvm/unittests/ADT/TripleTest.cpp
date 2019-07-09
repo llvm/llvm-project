@@ -1358,6 +1358,8 @@ TEST(TripleTest, NormalizeWindows) {
 
   EXPECT_EQ("i686-pc-windows-elf",
             Triple::normalize("i686-pc-windows-elf-elf"));
+
+  EXPECT_TRUE(Triple("x86_64-pc-win32").isWindowsMSVCEnvironment());
 }
 
 TEST(TripleTest, getARMCPUForArch) {

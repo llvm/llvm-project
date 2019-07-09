@@ -106,49 +106,23 @@ bool Option::matches(OptSpecifier Opt) const {
   return false;
 }
 
-Arg *Option::accept(const ArgList &Args,
-                    unsigned &Index,
-                    unsigned ArgSize) const {
-  const Option &UnaliasedOption = getUnaliasedOption();
-  StringRef Spelling;
-  // If the option was an alias, get the spelling from the unaliased one.
-  if (getID() == UnaliasedOption.getID()) {
-    Spelling = StringRef(Args.getArgString(Index), ArgSize);
-  } else {
-    Spelling = Args.MakeArgString(Twine(UnaliasedOption.getPrefix()) +
-                                  Twine(UnaliasedOption.getName()));
-  }
-
+Arg *Option::acceptInternal(const ArgList &Args, unsigned &Index,
+                            unsigned ArgSize) const {
+  StringRef Spelling = StringRef(Args.getArgString(Index), ArgSize);
   switch (getKind()) {
   case FlagClass: {
     if (ArgSize != strlen(Args.getArgString(Index)))
       return nullptr;
-
-    Arg *A = new Arg(UnaliasedOption, Spelling, Index++);
-    if (getAliasArgs()) {
-      const char *Val = getAliasArgs();
-      while (*Val != '\0') {
-        A->getValues().push_back(Val);
-
-        // Move past the '\0' to the next argument.
-        Val += strlen(Val) + 1;
-      }
-    }
-
-    if (UnaliasedOption.getKind() == JoinedClass && !getAliasArgs())
-      // A Flag alias for a Joined option must provide an argument.
-      A->getValues().push_back("");
-
-    return A;
+    return new Arg(*this, Spelling, Index++);
   }
   case JoinedClass: {
     const char *Value = Args.getArgString(Index) + ArgSize;
-    return new Arg(UnaliasedOption, Spelling, Index++, Value);
+    return new Arg(*this, Spelling, Index++, Value);
   }
   case CommaJoinedClass: {
     // Always matches.
     const char *Str = Args.getArgString(Index) + ArgSize;
-    Arg *A = new Arg(UnaliasedOption, Spelling, Index++);
+    Arg *A = new Arg(*this, Spelling, Index++);
 
     // Parse out the comma separated values.
     const char *Prev = Str;
@@ -184,8 +158,7 @@ Arg *Option::accept(const ArgList &Args,
         Args.getArgString(Index - 1) == nullptr)
       return nullptr;
 
-    return new Arg(UnaliasedOption, Spelling,
-                   Index - 2, Args.getArgString(Index - 1));
+    return new Arg(*this, Spelling, Index - 2, Args.getArgString(Index - 1));
   case MultiArgClass: {
     // Matches iff this is an exact match.
     // FIXME: Avoid strlen.
@@ -196,8 +169,8 @@ Arg *Option::accept(const ArgList &Args,
     if (Index > Args.getNumInputArgStrings())
       return nullptr;
 
-    Arg *A = new Arg(UnaliasedOption, Spelling, Index - 1 - getNumArgs(),
-                      Args.getArgString(Index - getNumArgs()));
+    Arg *A = new Arg(*this, Spelling, Index - 1 - getNumArgs(),
+                     Args.getArgString(Index - getNumArgs()));
     for (unsigned i = 1; i != getNumArgs(); ++i)
       A->getValues().push_back(Args.getArgString(Index - getNumArgs() + i));
     return A;
@@ -207,7 +180,7 @@ Arg *Option::accept(const ArgList &Args,
     // FIXME: Avoid strlen.
     if (ArgSize != strlen(Args.getArgString(Index))) {
       const char *Value = Args.getArgString(Index) + ArgSize;
-      return new Arg(UnaliasedOption, Spelling, Index++, Value);
+      return new Arg(*this, Spelling, Index++, Value);
     }
 
     // Otherwise it must be separate.
@@ -216,8 +189,7 @@ Arg *Option::accept(const ArgList &Args,
         Args.getArgString(Index - 1) == nullptr)
       return nullptr;
 
-    return new Arg(UnaliasedOption, Spelling,
-                   Index - 2, Args.getArgString(Index - 1));
+    return new Arg(*this, Spelling, Index - 2, Args.getArgString(Index - 1));
   }
   case JoinedAndSeparateClass:
     // Always matches.
@@ -226,7 +198,7 @@ Arg *Option::accept(const ArgList &Args,
         Args.getArgString(Index - 1) == nullptr)
       return nullptr;
 
-    return new Arg(UnaliasedOption, Spelling, Index - 2,
+    return new Arg(*this, Spelling, Index - 2,
                    Args.getArgString(Index - 2) + ArgSize,
                    Args.getArgString(Index - 1));
   case RemainingArgsClass: {
@@ -234,14 +206,14 @@ Arg *Option::accept(const ArgList &Args,
     // FIXME: Avoid strlen.
     if (ArgSize != strlen(Args.getArgString(Index)))
       return nullptr;
-    Arg *A = new Arg(UnaliasedOption, Spelling, Index++);
+    Arg *A = new Arg(*this, Spelling, Index++);
     while (Index < Args.getNumInputArgStrings() &&
            Args.getArgString(Index) != nullptr)
       A->getValues().push_back(Args.getArgString(Index++));
     return A;
   }
   case RemainingArgsJoinedClass: {
-    Arg *A = new Arg(UnaliasedOption, Spelling, Index);
+    Arg *A = new Arg(*this, Spelling, Index);
     if (ArgSize != strlen(Args.getArgString(Index))) {
       // An inexact match means there is a joined arg.
       A->getValues().push_back(Args.getArgString(Index) + ArgSize);
@@ -256,4 +228,63 @@ Arg *Option::accept(const ArgList &Args,
   default:
     llvm_unreachable("Invalid option kind!");
   }
+}
+
+Arg *Option::accept(const ArgList &Args,
+                    unsigned &Index,
+                    unsigned ArgSize) const {
+  std::unique_ptr<Arg> A(acceptInternal(Args, Index, ArgSize));
+  if (!A)
+    return nullptr;
+
+  const Option &UnaliasedOption = getUnaliasedOption();
+  if (getID() == UnaliasedOption.getID())
+    return A.release();
+
+  // "A" is an alias for a different flag. For most clients it's more convenient
+  // if this function returns unaliased Args, so create an unaliased arg for
+  // returning.
+
+  // This creates a completely new Arg object for the unaliased Arg because
+  // the alias and the unaliased arg can have different Kinds and different
+  // Values (due to AliasArgs<>).
+
+  // Get the spelling from the unaliased option.
+  StringRef UnaliasedSpelling = Args.MakeArgString(
+      Twine(UnaliasedOption.getPrefix()) + Twine(UnaliasedOption.getName()));
+
+  // It's a bit weird that aliased and unaliased arg share one index, but
+  // the index is mostly use as a memory optimization in render().
+  // Due to this, ArgList::getArgString(A->getIndex()) will return the spelling
+  // of the aliased arg always, while A->getSpelling() returns either the
+  // unaliased or the aliased arg, depending on which Arg object it's called on.
+  Arg *UnaliasedA = new Arg(UnaliasedOption, UnaliasedSpelling, A->getIndex());
+  Arg *RawA = A.get();
+  UnaliasedA->setAlias(std::move(A));
+
+  if (getKind() != FlagClass) {
+    // Values are usually owned by the ArgList. The exception are
+    // CommaJoined flags, where the Arg owns the values. For aliased flags,
+    // make the unaliased Arg the owner of the values.
+    // FIXME: There aren't many uses of CommaJoined -- try removing
+    // CommaJoined in favor of just calling StringRef::split(',') instead.
+    UnaliasedA->getValues() = RawA->getValues();
+    UnaliasedA->setOwnsValues(RawA->getOwnsValues());
+    RawA->setOwnsValues(false);
+    return UnaliasedA;
+  }
+
+  // FlagClass aliases can have AliasArgs<>; add those to the unaliased arg.
+  if (const char *Val = getAliasArgs()) {
+    while (*Val != '\0') {
+      UnaliasedA->getValues().push_back(Val);
+
+      // Move past the '\0' to the next argument.
+      Val += strlen(Val) + 1;
+    }
+  }
+  if (UnaliasedOption.getKind() == JoinedClass && !getAliasArgs())
+    // A Flag alias for a Joined option must provide an argument.
+    UnaliasedA->getValues().push_back("");
+  return UnaliasedA;
 }

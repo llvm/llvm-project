@@ -1969,6 +1969,8 @@ def Section : InheritableAttr {
   let Documentation = [SectionDocs];
 }
 
+// This is used for `__declspec(code_seg("segname"))`, but not for
+// `#pragma code_seg("segname")`.
 def CodeSeg : InheritableAttr {
   let Spellings = [Declspec<"code_seg">];
   let Args = [StringArgument<"Name">];

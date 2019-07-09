@@ -4,9 +4,9 @@
 #define ZERO 0
 #define NEGATIVE_ONE -1
 
+typedef int pid_t;
 typedef long off_t;
 typedef decltype(sizeof(int)) size_t;
-typedef int pid_t;
 typedef struct __posix_spawn_file_actions* posix_spawn_file_actions_t;
 typedef struct __posix_spawnattr* posix_spawnattr_t;
 

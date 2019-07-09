@@ -42,7 +42,7 @@ getDILineInfoSpecifier(FunctionNameKind FNKind) {
 }
 
 ErrorOr<std::unique_ptr<SymbolizableObjectFile>>
-SymbolizableObjectFile::create(object::ObjectFile *Obj,
+SymbolizableObjectFile::create(const object::ObjectFile *Obj,
                                std::unique_ptr<DIContext> DICtx) {
   assert(DICtx);
   std::unique_ptr<SymbolizableObjectFile> res(
@@ -102,7 +102,7 @@ SymbolizableObjectFile::create(object::ObjectFile *Obj,
   return std::move(res);
 }
 
-SymbolizableObjectFile::SymbolizableObjectFile(ObjectFile *Obj,
+SymbolizableObjectFile::SymbolizableObjectFile(const ObjectFile *Obj,
                                                std::unique_ptr<DIContext> DICtx)
     : Module(Obj), DebugInfoContext(std::move(DICtx)) {}
 

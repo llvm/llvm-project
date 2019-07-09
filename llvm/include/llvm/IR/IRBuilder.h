@@ -2453,6 +2453,74 @@ public:
     return V;
   }
 
+  Value *CreatePreserveArrayAccessIndex(Value *Base, unsigned Dimension,
+                                        unsigned LastIndex) {
+    assert(isa<PointerType>(Base->getType()) &&
+           "Invalid Base ptr type for preserve.array.access.index.");
+    auto *BaseType = Base->getType();
+
+    Value *LastIndexV = getInt32(LastIndex);
+    Constant *Zero = ConstantInt::get(Type::getInt32Ty(Context), 0);
+    SmallVector<Value *, 4> IdxList;
+    for (unsigned I = 0; I < Dimension; ++I)
+      IdxList.push_back(Zero);
+    IdxList.push_back(LastIndexV);
+
+    Type *ResultType =
+        GetElementPtrInst::getGEPReturnType(Base, IdxList);
+
+    Module *M = BB->getParent()->getParent();
+    Function *FnPreserveArrayAccessIndex = Intrinsic::getDeclaration(
+        M, Intrinsic::preserve_array_access_index, {ResultType, BaseType});
+
+    Value *DimV = getInt32(Dimension);
+    CallInst *Fn =
+        CreateCall(FnPreserveArrayAccessIndex, {Base, DimV, LastIndexV});
+
+    return Fn;
+  }
+
+  Value *CreatePreserveUnionAccessIndex(Value *Base, unsigned FieldIndex,
+                                        MDNode *DbgInfo) {
+    assert(isa<PointerType>(Base->getType()) &&
+           "Invalid Base ptr type for preserve.union.access.index.");
+    auto *BaseType = Base->getType();
+
+    Module *M = BB->getParent()->getParent();
+    Function *FnPreserveUnionAccessIndex = Intrinsic::getDeclaration(
+        M, Intrinsic::preserve_union_access_index, {BaseType, BaseType});
+
+    Value *DIIndex = getInt32(FieldIndex);
+    CallInst *Fn =
+        CreateCall(FnPreserveUnionAccessIndex, {Base, DIIndex});
+    Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
+
+    return Fn;
+  }
+
+  Value *CreatePreserveStructAccessIndex(Value *Base, unsigned Index,
+                                         unsigned FieldIndex, MDNode *DbgInfo) {
+    assert(isa<PointerType>(Base->getType()) &&
+           "Invalid Base ptr type for preserve.struct.access.index.");
+    auto *BaseType = Base->getType();
+
+    Value *GEPIndex = getInt32(Index);
+    Constant *Zero = ConstantInt::get(Type::getInt32Ty(Context), 0);
+    Type *ResultType =
+        GetElementPtrInst::getGEPReturnType(Base, {Zero, GEPIndex});
+
+    Module *M = BB->getParent()->getParent();
+    Function *FnPreserveStructAccessIndex = Intrinsic::getDeclaration(
+        M, Intrinsic::preserve_struct_access_index, {ResultType, BaseType});
+
+    Value *DIIndex = getInt32(FieldIndex);
+    CallInst *Fn = CreateCall(FnPreserveStructAccessIndex,
+                              {Base, GEPIndex, DIIndex});
+    Fn->setMetadata(LLVMContext::MD_preserve_access_index, DbgInfo);
+
+    return Fn;
+  }
+
 private:
   /// Helper function that creates an assume intrinsic call that
   /// represents an alignment assumption on the provided Ptr, Mask, Type

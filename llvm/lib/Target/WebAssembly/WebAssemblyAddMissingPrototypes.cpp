@@ -78,10 +78,13 @@ bool WebAssemblyAddMissingPrototypes::runOnModule(Module &M) {
       report_fatal_error(
           "Functions with 'no-prototype' attribute must take varargs: " +
           F.getName());
-    if (F.getFunctionType()->getNumParams() != 0)
-      report_fatal_error(
-          "Functions with 'no-prototype' attribute should not have params: " +
-          F.getName());
+    unsigned NumParams = F.getFunctionType()->getNumParams();
+    if (NumParams != 0) {
+      if (!(NumParams == 1 && F.arg_begin()->hasStructRetAttr()))
+        report_fatal_error("Functions with 'no-prototype' attribute should "
+                           "not have params: " +
+                           F.getName());
+    }
 
     // Create a function prototype based on the first call site (first bitcast)
     // that we find.

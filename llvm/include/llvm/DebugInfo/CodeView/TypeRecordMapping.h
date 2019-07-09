@@ -23,9 +23,11 @@ class TypeRecordMapping : public TypeVisitorCallbacks {
 public:
   explicit TypeRecordMapping(BinaryStreamReader &Reader) : IO(Reader) {}
   explicit TypeRecordMapping(BinaryStreamWriter &Writer) : IO(Writer) {}
+  explicit TypeRecordMapping(CodeViewRecordStreamer &Streamer) : IO(Streamer) {}
 
   using TypeVisitorCallbacks::visitTypeBegin;
   Error visitTypeBegin(CVType &Record) override;
+  Error visitTypeBegin(CVType &Record, TypeIndex Index) override;
   Error visitTypeEnd(CVType &Record) override;
 
   Error visitMemberBegin(CVMemberRecord &Record) override;

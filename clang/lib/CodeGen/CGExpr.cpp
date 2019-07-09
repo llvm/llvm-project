@@ -25,6 +25,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/NSAPI.h"
+#include "clang/Basic/Builtins.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringExtras.h"
@@ -3418,8 +3419,20 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
   CharUnits eltAlign =
     getArrayElementAlign(addr.getAlignment(), indices.back(), eltSize);
 
-  llvm::Value *eltPtr = emitArraySubscriptGEP(
-      CGF, addr.getPointer(), indices, inbounds, signedIndices, loc, name);
+  llvm::Value *eltPtr;
+  auto LastIndex = dyn_cast<llvm::ConstantInt>(indices.back());
+  if (!CGF.IsInPreservedAIRegion || !LastIndex) {
+    eltPtr = emitArraySubscriptGEP(
+        CGF, addr.getPointer(), indices, inbounds, signedIndices,
+        loc, name);
+  } else {
+    // Remember the original array subscript for bpf target
+    unsigned idx = LastIndex->getZExtValue();
+    eltPtr = CGF.Builder.CreatePreserveArrayAccessIndex(addr.getPointer(),
+                                                        indices.size() - 1,
+                                                        idx);
+  }
+
   return Address(eltPtr, eltAlign);
 }
 
@@ -3908,6 +3921,19 @@ static Address emitAddrOfFieldStorage(CodeGenFunction &CGF, Address base,
   return CGF.Builder.CreateStructGEP(base, idx, field->getName());
 }
 
+static Address emitPreserveStructAccess(CodeGenFunction &CGF, Address base,
+                                        const FieldDecl *field) {
+  const RecordDecl *rec = field->getParent();
+  llvm::DIType *DbgInfo = CGF.getDebugInfo()->getOrCreateRecordType(
+      CGF.getContext().getRecordType(rec), rec->getLocation());
+
+  unsigned idx =
+      CGF.CGM.getTypes().getCGRecordLayout(rec).getLLVMFieldNo(field);
+
+  return CGF.Builder.CreatePreserveStructAccessIndex(
+      base, idx, field->getFieldIndex(), DbgInfo);
+}
+
 static bool hasAnyVptr(const QualType Type, const ASTContext &Context) {
   const auto *RD = Type.getTypePtr()->getAsCXXRecordDecl();
   if (!RD)
@@ -4015,9 +4041,24 @@ LValue CodeGenFunction::EmitLValueForField(LValue base,
       // a barrier every time CXXRecord field with vptr is referenced.
       addr = Address(Builder.CreateLaunderInvariantGroup(addr.getPointer()),
                      addr.getAlignment());
+
+    if (IsInPreservedAIRegion) {
+      // Remember the original union field index
+      llvm::DIType *DbgInfo = getDebugInfo()->getOrCreateRecordType(
+          getContext().getRecordType(rec), rec->getLocation());
+      addr = Address(
+          Builder.CreatePreserveUnionAccessIndex(
+              addr.getPointer(), field->getFieldIndex(), DbgInfo),
+          addr.getAlignment());
+    }
   } else {
-    // For structs, we GEP to the field that the record layout suggests.
-    addr = emitAddrOfFieldStorage(*this, addr, field);
+
+    if (!IsInPreservedAIRegion)
+      // For structs, we GEP to the field that the record layout suggests.
+      addr = emitAddrOfFieldStorage(*this, addr, field);
+    else
+      // Remember the original struct field index
+      addr = emitPreserveStructAccess(*this, addr, field);
 
     // If this is a reference field, load the reference right now.
     if (FieldType->isReferenceType()) {

@@ -732,6 +732,40 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
   return new ShuffleVectorInst(FirstIE, UndefVec, ConstantVector::get(Mask));
 }
 
+/// Try to fold an insert element into an existing splat shuffle by changing
+/// the shuffle's mask to include the index of this insert element.
+static Instruction *foldInsEltIntoSplat(InsertElementInst &InsElt) {
+  // Check if the vector operand of this insert is a canonical splat shuffle.
+  auto *Shuf = dyn_cast<ShuffleVectorInst>(InsElt.getOperand(0));
+  if (!Shuf || !Shuf->isZeroEltSplat())
+    return nullptr;
+
+  // Check for a constant insertion index.
+  uint64_t IdxC;
+  if (!match(InsElt.getOperand(2), m_ConstantInt(IdxC)))
+    return nullptr;
+
+  // Check if the splat shuffle's input is the same as this insert's scalar op.
+  Value *X = InsElt.getOperand(1);
+  Value *Op0 = Shuf->getOperand(0);
+  if (!match(Op0, m_InsertElement(m_Undef(), m_Specific(X), m_ZeroInt())))
+    return nullptr;
+
+  // Replace the shuffle mask element at the index of this insert with a zero.
+  // For example:
+  // inselt (shuf (inselt undef, X, 0), undef, <0,undef,0,undef>), X, 1
+  //   --> shuf (inselt undef, X, 0), undef, <0,0,0,undef>
+  unsigned NumMaskElts = Shuf->getType()->getVectorNumElements();
+  SmallVector<Constant *, 16> NewMaskVec(NumMaskElts);
+  Type *I32Ty = IntegerType::getInt32Ty(Shuf->getContext());
+  Constant *Zero = ConstantInt::getNullValue(I32Ty);
+  for (unsigned i = 0; i != NumMaskElts; ++i)
+    NewMaskVec[i] = i == IdxC ? Zero : Shuf->getMask()->getAggregateElement(i);
+
+  Constant *NewMask = ConstantVector::get(NewMaskVec);
+  return new ShuffleVectorInst(Op0, UndefValue::get(Op0->getType()), NewMask);
+}
+
 /// If we have an insertelement instruction feeding into another insertelement
 /// and the 2nd is inserting a constant into the vector, canonicalize that
 /// constant insertion before the insertion of a variable:
@@ -949,6 +983,9 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
 
   if (Instruction *Broadcast = foldInsSequenceIntoSplat(IE))
     return Broadcast;
+
+  if (Instruction *Splat = foldInsEltIntoSplat(IE))
+    return Splat;
 
   return nullptr;
 }

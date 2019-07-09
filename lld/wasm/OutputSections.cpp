@@ -132,9 +132,8 @@ void DataSection::finalizeContents() {
   OS.flush();
   BodySize = DataSectionHeader.size();
 
-  assert(!Config->Pic ||
-         Segments.size() <= 1 &&
-             "Currenly only a single data segment is supported in PIC mode");
+  assert((!Config->Pic || Segments.size() <= 1) &&
+         "Currenly only a single data segment is supported in PIC mode");
 
   for (OutputSegment *Segment : Segments) {
     raw_string_ostream OS(Segment->Header);

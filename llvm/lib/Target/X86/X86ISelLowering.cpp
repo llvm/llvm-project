@@ -130,7 +130,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
       addBypassSlowDiv(64, 32);
   }
 
-  if (Subtarget.isTargetKnownWindowsMSVC() ||
+  if (Subtarget.isTargetWindowsMSVC() ||
       Subtarget.isTargetWindowsItanium()) {
     // Setup Windows compiler runtime calls.
     setLibcallName(RTLIB::SDIV_I64, "_alldiv");
@@ -1835,8 +1835,8 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   // is. We should promote the value to 64-bits to solve this.
   // This is what the CRT headers do - `fmodf` is an inline header
   // function casting to f64 and calling `fmod`.
-  if (Subtarget.is32Bit() && (Subtarget.isTargetKnownWindowsMSVC() ||
-                              Subtarget.isTargetWindowsItanium()))
+  if (Subtarget.is32Bit() &&
+      (Subtarget.isTargetWindowsMSVC() || Subtarget.isTargetWindowsItanium()))
     for (ISD::NodeType Op :
          {ISD::FCEIL, ISD::FCOS, ISD::FEXP, ISD::FFLOOR, ISD::FREM, ISD::FLOG,
           ISD::FLOG10, ISD::FPOW, ISD::FSIN})
@@ -17690,9 +17690,7 @@ X86TargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getCopyFromReg(Chain, DL, Reg, PtrVT, Chain.getValue(1));
   }
 
-  if (Subtarget.isTargetKnownWindowsMSVC() ||
-      Subtarget.isTargetWindowsItanium() ||
-      Subtarget.isTargetWindowsGNU()) {
+  if (Subtarget.isOSWindows()) {
     // Just use the implicit TLS architecture
     // Need to generate something similar to:
     //   mov     rdx, qword [gs:abs 58H]; Load pointer to ThreadLocalStorage

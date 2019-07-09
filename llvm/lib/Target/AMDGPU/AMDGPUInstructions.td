@@ -446,9 +446,11 @@ def truncstorei8_hi16_global : StoreHi16 <truncstorei8>, GlobalAddress;
 def truncstorei16_hi16_global : StoreHi16 <truncstorei16>, GlobalAddress;
 
 def load_local : LocalLoad <load>;
-def az_extloadi8_local : LocalLoad <az_extloadi8>;
+def extloadi8_local : LocalLoad <extloadi8>;
+def zextloadi8_local : LocalLoad <zextloadi8>;
 def sextloadi8_local : LocalLoad <sextloadi8>;
-def az_extloadi16_local : LocalLoad <az_extloadi16>;
+def extloadi16_local : LocalLoad <extloadi16>;
+def zextloadi16_local : LocalLoad <zextloadi16>;
 def sextloadi16_local : LocalLoad <sextloadi16>;
 def atomic_load_32_local : LocalLoad<atomic_load_32>;
 def atomic_load_64_local : LocalLoad<atomic_load_64>;
