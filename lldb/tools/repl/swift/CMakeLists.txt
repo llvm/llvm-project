@@ -2,7 +2,7 @@
 if (LLDB_BUILD_FRAMEWORK)
   get_target_property(framework_target_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-rpath \
-      -Wl,${framework_target_dir}/LLDB.framework/${LLDB_FRAMEWORK_RESOURCE_DIR}/Swift/macosx")
+      -Wl,${framework_target_dir}/LLDB.framework/Versions/${LLDB_FRAMEWORK_VERSION}/Resources/Swift/macosx")
 elseif( CMAKE_SYSTEM_NAME MATCHES "Linux" )
   # Set the correct rpath to locate libswiftCore
   if (CMAKE_HOST_SYSTEM_PROCESSOR MATCHES "ppc64le")
@@ -22,6 +22,10 @@ target_link_libraries(repl_swift PRIVATE ${CMAKE_DL_LIBS})
 if(CMAKE_SYSTEM_NAME STREQUAL Windows)
   set_target_properties(repl_swift PROPERTIES
     WIN32_EXECUTABLE TRUE)
+endif()
+
+if(LLDB_BUILD_FRAMEWORK)
+  lldb_add_to_framework(repl_swift)
 endif()
 
 # The dummy repl executable is a C program, but we always look for a mangled

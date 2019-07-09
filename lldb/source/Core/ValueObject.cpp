@@ -361,15 +361,16 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
           std::vector<clang::NamedDecl *> decls;
 
           // try the modules
-          if (auto target_sp = GetTargetSP()) {
+          if (TargetSP target_sp = GetTargetSP()) {
             if (auto clang_modules_decl_vendor =
                     target_sp->GetClangModulesDeclVendor()) {
-              std::vector<CompilerType> types =
-                  clang_modules_decl_vendor->FindTypes(
-                      class_name, /*max_matches*/ UINT32_MAX);
-              if (!types.empty()) {
+              if (clang_modules_decl_vendor->FindDecls(class_name, false,
+                                                       UINT32_MAX, decls) > 0 &&
+                  decls.size() > 0) {
+                CompilerType module_type =
+                    ClangASTContext::GetTypeForDecl(decls.front());
                 m_override_type =
-                    make_pointer_if_needed(types.front(), is_pointer_type);
+                    make_pointer_if_needed(module_type, is_pointer_type);
               }
 
               if (m_override_type.IsValid())
@@ -379,11 +380,13 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
 
           // then try the runtime
           if (auto runtime_vendor = objc_language_runtime->GetDeclVendor()) {
-            std::vector<CompilerType> types = runtime_vendor->FindTypes(
-                class_name, /*max_matches*/ UINT32_MAX);
-            if (!types.empty()) {
+            if (runtime_vendor->FindDecls(class_name, false, UINT32_MAX,
+                                          decls) > 0 &&
+                decls.size() > 0) {
+              CompilerType runtime_type =
+                  ClangASTContext::GetTypeForDecl(decls.front());
               m_override_type =
-                  make_pointer_if_needed(types.front(), is_pointer_type);
+                  make_pointer_if_needed(runtime_type, is_pointer_type);
             }
 
             if (m_override_type.IsValid())
