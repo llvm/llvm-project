@@ -732,6 +732,40 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
   return new ShuffleVectorInst(FirstIE, UndefVec, ConstantVector::get(Mask));
 }
 
+/// Try to fold an insert element into an existing splat shuffle by changing
+/// the shuffle's mask to include the index of this insert element.
+static Instruction *foldInsEltIntoSplat(InsertElementInst &InsElt) {
+  // Check if the vector operand of this insert is a canonical splat shuffle.
+  auto *Shuf = dyn_cast<ShuffleVectorInst>(InsElt.getOperand(0));
+  if (!Shuf || !Shuf->isZeroEltSplat())
+    return nullptr;
+
+  // Check for a constant insertion index.
+  uint64_t IdxC;
+  if (!match(InsElt.getOperand(2), m_ConstantInt(IdxC)))
+    return nullptr;
+
+  // Check if the splat shuffle's input is the same as this insert's scalar op.
+  Value *X = InsElt.getOperand(1);
+  Value *Op0 = Shuf->getOperand(0);
+  if (!match(Op0, m_InsertElement(m_Undef(), m_Specific(X), m_ZeroInt())))
+    return nullptr;
+
+  // Replace the shuffle mask element at the index of this insert with a zero.
+  // For example:
+  // inselt (shuf (inselt undef, X, 0), undef, <0,undef,0,undef>), X, 1
+  //   --> shuf (inselt undef, X, 0), undef, <0,0,0,undef>
+  unsigned NumMaskElts = Shuf->getType()->getVectorNumElements();
+  SmallVector<Constant *, 16> NewMaskVec(NumMaskElts);
+  Type *I32Ty = IntegerType::getInt32Ty(Shuf->getContext());
+  Constant *Zero = ConstantInt::getNullValue(I32Ty);
+  for (unsigned i = 0; i != NumMaskElts; ++i)
+    NewMaskVec[i] = i == IdxC ? Zero : Shuf->getMask()->getAggregateElement(i);
+
+  Constant *NewMask = ConstantVector::get(NewMaskVec);
+  return new ShuffleVectorInst(Op0, UndefValue::get(Op0->getType()), NewMask);
+}
+
 /// If we have an insertelement instruction feeding into another insertelement
 /// and the 2nd is inserting a constant into the vector, canonicalize that
 /// constant insertion before the insertion of a variable:
@@ -949,6 +983,9 @@ Instruction *InstCombiner::visitInsertElementInst(InsertElementInst &IE) {
 
   if (Instruction *Broadcast = foldInsSequenceIntoSplat(IE))
     return Broadcast;
+
+  if (Instruction *Splat = foldInsEltIntoSplat(IE))
+    return Splat;
 
   return nullptr;
 }
@@ -1346,6 +1383,41 @@ static Instruction *foldSelectShuffleWith1Binop(ShuffleVectorInst &Shuf) {
   return NewBO;
 }
 
+/// If we have an insert of a scalar to a non-zero element of an undefined
+/// vector and then shuffle that value, that's the same as inserting to the zero
+/// element and shuffling. Splatting from the zero element is recognized as the
+/// canonical form of splat.
+static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
+                                            InstCombiner::BuilderTy &Builder) {
+  Value *Op0 = Shuf.getOperand(0), *Op1 = Shuf.getOperand(1);
+  Constant *Mask = Shuf.getMask();
+  Value *X;
+  uint64_t IndexC;
+
+  // Match a shuffle that is a splat to a non-zero element.
+  if (!match(Op0, m_OneUse(m_InsertElement(m_Undef(), m_Value(X),
+                                           m_ConstantInt(IndexC)))) ||
+      !match(Op1, m_Undef()) || match(Mask, m_ZeroInt()) || IndexC == 0)
+    return nullptr;
+
+  // Insert into element 0 of an undef vector.
+  UndefValue *UndefVec = UndefValue::get(Shuf.getType());
+  Constant *Zero = Builder.getInt32(0);
+  Value *NewIns = Builder.CreateInsertElement(UndefVec, X, Zero);
+
+  // Splat from element 0. Any mask element that is undefined remains undefined.
+  // For example:
+  // shuf (inselt undef, X, 2), undef, <2,2,undef>
+  //   --> shuf (inselt undef, X, 0), undef, <0,0,undef>
+  unsigned NumMaskElts = Shuf.getType()->getVectorNumElements();
+  SmallVector<Constant *, 16> NewMask(NumMaskElts, Zero);
+  for (unsigned i = 0; i != NumMaskElts; ++i)
+    if (isa<UndefValue>(Mask->getAggregateElement(i)))
+      NewMask[i] = Mask->getAggregateElement(i);
+
+  return new ShuffleVectorInst(NewIns, UndefVec, ConstantVector::get(NewMask));
+}
+
 /// Try to fold shuffles that are the equivalent of a vector select.
 static Instruction *foldSelectShuffle(ShuffleVectorInst &Shuf,
                                       InstCombiner::BuilderTy &Builder,
@@ -1713,6 +1785,9 @@ Instruction *InstCombiner::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     SVI.setOperand(2, ConstantVector::get(Elts));
     return &SVI;
   }
+
+  if (Instruction *I = canonicalizeInsertSplat(SVI, Builder))
+    return I;
 
   if (Instruction *I = foldSelectShuffle(SVI, Builder, DL))
     return I;

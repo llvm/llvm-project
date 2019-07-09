@@ -8,6 +8,9 @@ static_library("Syntax") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "BuildTree.cpp",
+    "Nodes.cpp",
     "Tokens.cpp",
+    "Tree.cpp",
   ]
 }

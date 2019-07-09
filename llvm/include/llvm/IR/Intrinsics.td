@@ -1040,7 +1040,6 @@ def int_clear_cache : Intrinsic<[], [llvm_ptr_ty, llvm_ptr_ty],
 // Intrinsic to detect whether its argument is a constant.
 def int_is_constant : Intrinsic<[llvm_i1_ty], [llvm_any_ty], [IntrNoMem], "llvm.is.constant">;
 
-
 //===-------------------------- Masked Intrinsics -------------------------===//
 //
 def int_masked_store : Intrinsic<[], [llvm_anyvector_ty,
@@ -1214,6 +1213,22 @@ def int_loop_decrement_reg :
 
 def int_ssa_copy : Intrinsic<[llvm_any_ty], [LLVMMatchType<0>],
                              [IntrNoMem, Returned<0>]>;
+
+//===------- Intrinsics that are used to preserve debug information -------===//
+
+def int_preserve_array_access_index : Intrinsic<[llvm_anyptr_ty],
+                                                [llvm_anyptr_ty, llvm_i32_ty,
+                                                 llvm_i32_ty],
+                                                [IntrNoMem, ImmArg<1>, ImmArg<2>]>;
+def int_preserve_union_access_index : Intrinsic<[llvm_anyptr_ty],
+                                                [llvm_anyptr_ty, llvm_i32_ty],
+                                                [IntrNoMem, ImmArg<1>]>;
+def int_preserve_struct_access_index : Intrinsic<[llvm_anyptr_ty],
+                                                 [llvm_anyptr_ty, llvm_i32_ty,
+                                                  llvm_i32_ty],
+                                                 [IntrNoMem, ImmArg<1>,
+                                                  ImmArg<2>]>;
+
 //===----------------------------------------------------------------------===//
 // Target-specific intrinsics
 //===----------------------------------------------------------------------===//

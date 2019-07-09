@@ -153,6 +153,7 @@ For detailed information about operands follow *operand links* in GPU-specific d
 * :doc:`GFX7<AMDGPU/AMDGPUAsmGFX7>`
 * :doc:`GFX8<AMDGPU/AMDGPUAsmGFX8>`
 * :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`
+* :doc:`GFX10<AMDGPU/AMDGPUAsmGFX10>`
 
 Modifiers
 =========
@@ -167,4 +168,5 @@ Information about modifiers supported for individual instructions may be found i
 * :doc:`GFX7<AMDGPU/AMDGPUAsmGFX7>`
 * :doc:`GFX8<AMDGPU/AMDGPUAsmGFX8>`
 * :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`
+* :doc:`GFX10<AMDGPU/AMDGPUAsmGFX10>`
 

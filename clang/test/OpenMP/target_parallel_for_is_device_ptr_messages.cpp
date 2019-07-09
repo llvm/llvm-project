@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++11 -verify -fopenmp %s
+// RUN: %clang_cc1 -std=c++11 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -std=c++11 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -std=c++11 -verify -fopenmp-simd %s -Wuninitialized
 
 struct ST {
   int *a;

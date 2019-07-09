@@ -20,10 +20,10 @@
 
 #include "asan_interceptors.h"
 #include "asan_internal.h"
+#include "asan_mapping.h"
 #include "asan_report.h"
 #include "asan_stack.h"
 #include "asan_thread.h"
-#include "asan_mapping.h"
 #include "sanitizer_common/sanitizer_libc.h"
 #include "sanitizer_common/sanitizer_mutex.h"
 #include "sanitizer_common/sanitizer_win.h"
@@ -77,7 +77,7 @@ static long WINAPI SEHHandler(EXCEPTION_POINTERS *info) {
 }
 
 INTERCEPTOR_WINAPI(LPTOP_LEVEL_EXCEPTION_FILTER, SetUnhandledExceptionFilter,
-    LPTOP_LEVEL_EXCEPTION_FILTER ExceptionFilter) {
+                   LPTOP_LEVEL_EXCEPTION_FILTER ExceptionFilter) {
   CHECK(REAL(SetUnhandledExceptionFilter));
   if (ExceptionFilter == &SEHHandler)
     return REAL(SetUnhandledExceptionFilter)(ExceptionFilter);
@@ -132,7 +132,7 @@ INTERCEPTOR(int, _except_handler4, void *a, void *b, void *c, void *d) {
 #endif
 
 static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
-  AsanThread *t = (AsanThread*)arg;
+  AsanThread *t = (AsanThread *)arg;
   SetCurrentThread(t);
   return t->ThreadStart(GetTid(), /* signal_thread_is_registered */ nullptr);
 }
@@ -162,10 +162,9 @@ void InitializePlatformInterceptors() {
   // The interceptors were not designed to be removable, so we have to keep this
   // module alive for the life of the process.
   HMODULE pinned;
-  CHECK(GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-                           GET_MODULE_HANDLE_EX_FLAG_PIN,
-                           (LPCWSTR)&InitializePlatformInterceptors,
-                           &pinned));
+  CHECK(GetModuleHandleExW(
+      GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
+      (LPCWSTR)&InitializePlatformInterceptors, &pinned));
 
   ASAN_INTERCEPT_FUNC(CreateThread);
   ASAN_INTERCEPT_FUNC(SetUnhandledExceptionFilter);
@@ -197,6 +196,30 @@ static bool tsd_key_inited = false;
 
 static __declspec(thread) void *fake_tsd = 0;
 
+// https://docs.microsoft.com/en-us/windows/desktop/api/winternl/ns-winternl-_teb
+// "[This structure may be altered in future versions of Windows. Applications
+// should use the alternate functions listed in this topic.]"
+typedef struct _TEB {
+  PVOID Reserved1[12];
+  // PVOID ThreadLocalStoragePointer; is here, at the last field in Reserved1.
+  PVOID ProcessEnvironmentBlock;
+  PVOID Reserved2[399];
+  BYTE Reserved3[1952];
+  PVOID TlsSlots[64];
+  BYTE Reserved4[8];
+  PVOID Reserved5[26];
+  PVOID ReservedForOle;
+  PVOID Reserved6[4];
+  PVOID TlsExpansionSlots;
+} TEB, *PTEB;
+
+constexpr size_t TEB_RESERVED_FIELDS_THREAD_LOCAL_STORAGE_OFFSET = 11;
+BOOL IsTlsInitialized() {
+  PTEB teb = (PTEB)NtCurrentTeb();
+  return teb->Reserved1[TEB_RESERVED_FIELDS_THREAD_LOCAL_STORAGE_OFFSET] !=
+         nullptr;
+}
+
 void AsanTSDInit(void (*destructor)(void *tsd)) {
   // FIXME: we're ignoring the destructor for now.
   tsd_key_inited = true;
@@ -204,7 +227,7 @@ void AsanTSDInit(void (*destructor)(void *tsd)) {
 
 void *AsanTSDGet() {
   CHECK(tsd_key_inited);
-  return fake_tsd;
+  return IsTlsInitialized() ? fake_tsd : nullptr;
 }
 
 void AsanTSDSet(void *tsd) {
@@ -212,9 +235,7 @@ void AsanTSDSet(void *tsd) {
   fake_tsd = tsd;
 }
 
-void PlatformTSDDtor(void *tsd) {
-  AsanThread::TSDDtor(tsd);
-}
+void PlatformTSDDtor(void *tsd) { AsanThread::TSDDtor(tsd); }
 // }}}
 
 // ---------------------- Various stuff ---------------- {{{
@@ -245,9 +266,7 @@ void ReadContextStack(void *context, uptr *stack, uptr *ssize) {
   UNIMPLEMENTED();
 }
 
-void AsanOnDeadlySignal(int, void *siginfo, void *context) {
-  UNIMPLEMENTED();
-}
+void AsanOnDeadlySignal(int, void *siginfo, void *context) { UNIMPLEMENTED(); }
 
 #if SANITIZER_WINDOWS64
 // Exception handler for dealing with shadow memory.
@@ -256,7 +275,9 @@ ShadowExceptionHandler(PEXCEPTION_POINTERS exception_pointers) {
   uptr page_size = GetPageSizeCached();
   // Only handle access violations.
   if (exception_pointers->ExceptionRecord->ExceptionCode !=
-      EXCEPTION_ACCESS_VIOLATION) {
+          EXCEPTION_ACCESS_VIOLATION ||
+      exception_pointers->ExceptionRecord->NumberParameters < 2) {
+    __asan_handle_no_return();
     return EXCEPTION_CONTINUE_SEARCH;
   }
 
@@ -265,7 +286,10 @@ ShadowExceptionHandler(PEXCEPTION_POINTERS exception_pointers) {
       (uptr)(exception_pointers->ExceptionRecord->ExceptionInformation[1]);
 
   // Check valid shadow range.
-  if (!AddrIsInShadow(addr)) return EXCEPTION_CONTINUE_SEARCH;
+  if (!AddrIsInShadow(addr)) {
+    __asan_handle_no_return();
+    return EXCEPTION_CONTINUE_SEARCH;
+  }
 
   // This is an access violation while trying to read from the shadow. Commit
   // the relevant page and let execution continue.
@@ -276,7 +300,8 @@ ShadowExceptionHandler(PEXCEPTION_POINTERS exception_pointers) {
   // Commit the page.
   uptr result =
       (uptr)::VirtualAlloc((LPVOID)page, page_size, MEM_COMMIT, PAGE_READWRITE);
-  if (result != page) return EXCEPTION_CONTINUE_SEARCH;
+  if (result != page)
+    return EXCEPTION_CONTINUE_SEARCH;
 
   // The page mapping succeeded, so continue execution as usual.
   return EXCEPTION_CONTINUE_EXECUTION;
@@ -293,7 +318,7 @@ void InitializePlatformExceptionHandlers() {
 }
 
 bool IsSystemHeapAddress(uptr addr) {
-  return ::HeapValidate(GetProcessHeap(), 0, (void*)addr) != FALSE;
+  return ::HeapValidate(GetProcessHeap(), 0, (void *)addr) != FALSE;
 }
 
 // We want to install our own exception handler (EH) to print helpful reports
@@ -312,8 +337,7 @@ bool IsSystemHeapAddress(uptr addr) {
 // asan_dynamic_runtime_thunk.lib to all the modules, thus __asan_set_seh_filter
 // will be called for each instrumented module.  This ensures that at least one
 // __asan_set_seh_filter call happens after the .exe module CRT is initialized.
-extern "C" SANITIZER_INTERFACE_ATTRIBUTE
-int __asan_set_seh_filter() {
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE int __asan_set_seh_filter() {
   // We should only store the previous handler if it's not our own handler in
   // order to avoid loops in the EH chain.
   auto prev_seh_handler = SetUnhandledExceptionFilter(SEHHandler);
@@ -347,12 +371,13 @@ __declspec(allocate(".CRT$XCAB")) int (*__intercept_seh)() =
 // which run before the CRT. Users also add code to .CRT$XLC, so it's important
 // to run our initializers first.
 static void NTAPI asan_thread_init(void *module, DWORD reason, void *reserved) {
-  if (reason == DLL_PROCESS_ATTACH) __asan_init();
+  if (reason == DLL_PROCESS_ATTACH)
+    __asan_init();
 }
 
 #pragma section(".CRT$XLAB", long, read)  // NOLINT
-__declspec(allocate(".CRT$XLAB")) void (NTAPI *__asan_tls_init)(void *,
-    unsigned long, void *) = asan_thread_init;
+__declspec(allocate(".CRT$XLAB")) void(NTAPI *__asan_tls_init)(
+    void *, unsigned long, void *) = asan_thread_init;
 #endif
 
 static void NTAPI asan_thread_exit(void *module, DWORD reason, void *reserved) {
@@ -365,8 +390,8 @@ static void NTAPI asan_thread_exit(void *module, DWORD reason, void *reserved) {
 }
 
 #pragma section(".CRT$XLY", long, read)  // NOLINT
-__declspec(allocate(".CRT$XLY")) void (NTAPI *__asan_tls_exit)(void *,
-    unsigned long, void *) = asan_thread_exit;
+__declspec(allocate(".CRT$XLY")) void(NTAPI *__asan_tls_exit)(
+    void *, unsigned long, void *) = asan_thread_exit;
 
 WIN_FORCE_LINK(__asan_dso_reg_hook)
 

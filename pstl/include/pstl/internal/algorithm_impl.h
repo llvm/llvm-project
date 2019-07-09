@@ -2667,8 +2667,8 @@ __pattern_inplace_merge(_ExecutionPolicy&& __exec, _BidirectionalIterator __firs
             [__n, __move_values, __move_sequences](_BidirectionalIterator __f1, _BidirectionalIterator __l1,
                                                    _BidirectionalIterator __f2, _BidirectionalIterator __l2, _Tp* __f3,
                                                    _Compare __comp) {
-                (__par_backend::__serial_move_merge(__n))(__f1, __l1, __f2, __l2, __f3, __comp, __move_values,
-                                                          __move_values, __move_sequences, __move_sequences);
+                (__utils::__serial_move_merge(__n))(__f1, __l1, __f2, __l2, __f3, __comp, __move_values, __move_values,
+                                                    __move_sequences, __move_sequences);
                 return __f3 + (__l1 - __f1) + (__l2 - __f2);
             });
         __par_backend::__parallel_for(std::forward<_ExecutionPolicy>(__exec), __r, __r + __n,

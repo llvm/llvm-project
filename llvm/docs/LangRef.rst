@@ -1453,6 +1453,14 @@ example:
     duplicated by inlining. That implies that the function has
     internal linkage and only has one call site, so the original
     call is dead after inlining.
+``nofree``
+    This function attribute indicates that the function does not, directly or
+    indirectly, call a memory-deallocation function (free, for example). As a
+    result, uncaptured pointers that are known to be dereferenceable prior to a
+    call to a function with the ``nofree`` attribute are still known to be
+    dereferenceable after the call (the capturing condition is necessary in
+    environments where the function might communicate the pointer to another thread
+    which then deallocates the memory).
 ``noimplicitfloat``
     This attributes disables implicit floating-point instructions.
 ``noinline``
@@ -17296,3 +17304,106 @@ Lowering:
 """""""""
 
 Lowers to a call to `objc_storeWeak <https://clang.llvm.org/docs/AutomaticReferenceCounting.html#arc-runtime-objc-storeweak>`_.
+
+Preserving Debug Information Intrinsics
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+These intrinsics are used to carry certain debuginfo together with
+IR-level operations. For example, it may be desirable to
+know the structure/union name and the original user-level field
+indices. Such information got lost in IR GetElementPtr instruction
+since the IR types are different from debugInfo types and unions
+are converted to structs in IR.
+
+'``llvm.preserve.array.access.index``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+::
+
+      declare <type2>
+      @llvm.preserve.array.access.index.p0s_union.anons.p0a10s_union.anons(<type> base,
+                                                                           i32 dim,
+                                                                           i32 index)
+
+Overview:
+"""""""""
+
+The '``llvm.preserve.array.access.index``' intrinsic returns the getelementptr address
+based on array base ``base``, array dimension ``dim`` and the last access index ``index``
+into the array.
+
+Arguments:
+""""""""""
+
+The ``base`` is the array base address.  The ``dim`` is the array dimension.
+The ``base`` is a pointer if ``dim`` equals 0.
+The ``index`` is the last access index into the array or pointer.
+
+Semantics:
+""""""""""
+
+The '``llvm.preserve.array.access.index``' intrinsic produces the same result
+as a getelementptr with base ``base`` and access operands ``{dim's 0's, index}``.
+
+'``llvm.preserve.union.access.index``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+::
+
+      declare <type>
+      @llvm.preserve.union.access.index.p0s_union.anons.p0s_union.anons(<type> base,
+                                                                        i32 di_index)
+
+Overview:
+"""""""""
+
+The '``llvm.preserve.union.access.index``' intrinsic carries the debuginfo field index
+``di_index`` and returns the ``base`` address.
+The ``llvm.preserve.access.index`` type of metadata is attached to this call instruction
+to provide union debuginfo type.
+
+Arguments:
+""""""""""
+
+The ``base`` is the union base address. The ``di_index`` is the field index in debuginfo.
+
+Semantics:
+""""""""""
+
+The '``llvm.preserve.union.access.index``' intrinsic returns the ``base`` address.
+
+'``llvm.preserve.struct.access.index``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+::
+
+      declare <type2>
+      @llvm.preserve.struct.access.index.p0i8.p0s_struct.anon.0s(<type> base,
+                                                                 i32 gep_index,
+                                                                 i32 di_index)
+
+Overview:
+"""""""""
+
+The '``llvm.preserve.struct.access.index``' intrinsic returns the getelementptr address
+based on struct base ``base`` and IR struct member index ``gep_index``.
+The ``llvm.preserve.access.index`` type of metadata is attached to this call instruction
+to provide struct debuginfo type.
+
+Arguments:
+""""""""""
+
+The ``base`` is the structure base address. The ``gep_index`` is the struct member index
+based on IR structures. The ``di_index`` is the struct member index based on debuginfo.
+
+Semantics:
+""""""""""
+
+The '``llvm.preserve.struct.access.index``' intrinsic produces the same result
+as a getelementptr with base ``base`` and access operands ``{0, gep_index}``.

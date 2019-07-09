@@ -429,6 +429,12 @@ private:
   unsigned NumVGPRSpillLanes = 0;
   SmallVector<SGPRSpillVGPRCSR, 2> SpillVGPRs;
 
+public: // FIXME
+  /// If this is set, an SGPR used for save/restore of the register used for the
+  /// frame pointer.
+  unsigned SGPRForFPSaveRestoreCopy = 0;
+  Optional<int> FramePointerSaveIndex;
+
 public:
   SIMachineFunctionInfo(const MachineFunction &MF);
 
@@ -448,6 +454,8 @@ public:
     return Mode;
   }
 
+  bool haveFreeLanesForSGPRSpill(const MachineFunction &MF,
+                                 unsigned NumLane) const;
   bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);
   void removeSGPRToVGPRFrameIndices(MachineFrameInfo &MFI);
 

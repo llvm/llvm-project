@@ -1,4 +1,5 @@
 ; RUN: llc -filetype=obj < %s | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
 
 ; We need three continuation records for this.
 

@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp %s -Wno-openmp-target -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wno-openmp-target -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -67,7 +67,7 @@ template <class I, class C>
 int foomain(int argc, char **argv) {
   I e(4);
   C g(5);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp target
 #pragma omp teams
@@ -101,7 +101,7 @@ int foomain(int argc, char **argv) {
     ++k;
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd firstprivate(argc)
+#pragma omp distribute parallel for simd firstprivate(argc, z)
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp target
@@ -189,7 +189,7 @@ int main(int argc, char **argv) {
   S5 g(5);
   S3 m;
   S6 n(2);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp target
 #pragma omp teams
@@ -248,7 +248,7 @@ int main(int argc, char **argv) {
     foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd firstprivate(ba) // OK
+#pragma omp distribute parallel for simd firstprivate(ba, z) // OK
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp target

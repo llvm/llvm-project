@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -113,7 +113,7 @@ S3 h;
 template<class I, class C> int foomain(I argc, C **argv) {
   I e(4);
   I g(5);
-  int i;
+  int i, z;
   int &j = i;
   #pragma omp taskloop simd linear // expected-error {{expected '(' after 'linear'}}
   for (int k = 0; k < argc; ++k) ++k;
@@ -149,7 +149,7 @@ template<class I, class C> int foomain(I argc, C **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp taskloop simd linear(ref(e, g)) // expected-error 2 {{variable of non-reference type 'int' can be used only with 'val' modifier, but used with 'ref'}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp taskloop simd linear(h) // expected-error {{threadprivate or thread local variable cannot be linear}}
+  #pragma omp taskloop simd linear(h, z) // expected-error {{threadprivate or thread local variable cannot be linear}}
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp taskloop simd linear(uval(i)) // expected-error {{variable of non-reference type 'int' can be used only with 'val' modifier, but used with 'uval'}}
   for (int k = 0; k < argc; ++k) ++k;
@@ -204,7 +204,7 @@ int main(int argc, char **argv) {
 
   S4 e(4); // expected-note {{'e' defined here}}
   S5 g(5); // expected-note {{'g' defined here}}
-  int i;
+  int i, z;
   int &j = i;
   #pragma omp taskloop simd linear(f) linear(f) // expected-error {{linear variable cannot be linear}} expected-note {{defined as linear}}
   for (int k = 0; k < argc; ++k) ++k;
@@ -226,7 +226,7 @@ int main(int argc, char **argv) {
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp taskloop simd linear (argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k) ++k;
-  #pragma omp taskloop simd linear (argc)
+  #pragma omp taskloop simd linear (argc, z)
   for (int k = 0; k < argc; ++k) ++k;
   #pragma omp taskloop simd linear (S1) // expected-error {{'S1' does not refer to a value}}
   for (int k = 0; k < argc; ++k) ++k;

@@ -765,37 +765,38 @@ Loop *llvm::cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
   DT->addNewBlock(NewPH, LoopDomBB);
 
   for (Loop *CurLoop : OrigLoop->getLoopsInPreorder()) {
-    for (BasicBlock *BB : CurLoop->getBlocks()) {
-      if (CurLoop != LI->getLoopFor(BB))
-        continue;
+    Loop *&NewLoop = LMap[CurLoop];
+    if (!NewLoop) {
+      NewLoop = LI->AllocateLoop();
 
-      Loop *&NewLoop = LMap[CurLoop];
-      if (!NewLoop) {
-        NewLoop = LI->AllocateLoop();
+      // Establish the parent/child relationship.
+      Loop *OrigParent = CurLoop->getParentLoop();
+      assert(OrigParent && "Could not find the original parent loop");
+      Loop *NewParentLoop = LMap[OrigParent];
+      assert(NewParentLoop && "Could not find the new parent loop");
 
-        // Establish the parent/child relationship.
-        Loop *OrigParent = CurLoop->getParentLoop();
-        assert(OrigParent && "Could not find the original parent loop");
-        Loop *NewParentLoop = LMap[OrigParent];
-        assert(NewParentLoop && "Could not find the new parent loop");
-
-        NewParentLoop->addChildLoop(NewLoop);
-      }
-
-      BasicBlock *NewBB = CloneBasicBlock(BB, VMap, NameSuffix, F);
-      VMap[BB] = NewBB;
-
-      // Update LoopInfo.
-      NewLoop->addBasicBlockToLoop(NewBB, *LI);
-      if (BB == CurLoop->getHeader())
-        NewLoop->moveToHeader(NewBB);
-
-      // Add DominatorTree node. After seeing all blocks, update to correct
-      // IDom.
-      DT->addNewBlock(NewBB, NewPH);
-
-      Blocks.push_back(NewBB);
+      NewParentLoop->addChildLoop(NewLoop);
     }
+  }
+
+  for (BasicBlock *BB : OrigLoop->getBlocks()) {
+    Loop *CurLoop = LI->getLoopFor(BB);
+    Loop *&NewLoop = LMap[CurLoop];
+    assert(NewLoop && "Expecting new loop to be allocated");
+
+    BasicBlock *NewBB = CloneBasicBlock(BB, VMap, NameSuffix, F);
+    VMap[BB] = NewBB;
+
+    // Update LoopInfo.
+    NewLoop->addBasicBlockToLoop(NewBB, *LI);
+    if (BB == CurLoop->getHeader())
+      NewLoop->moveToHeader(NewBB);
+
+    // Add DominatorTree node. After seeing all blocks, update to correct
+    // IDom.
+    DT->addNewBlock(NewBB, NewPH);
+
+    Blocks.push_back(NewBB);
   }
 
   for (BasicBlock *BB : OrigLoop->getBlocks()) {

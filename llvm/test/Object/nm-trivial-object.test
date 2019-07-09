@@ -1,215 +1,275 @@
-RUN: yaml2obj %p/Inputs/COFF/i386.yaml | llvm-nm -a -S - \
-RUN:         | FileCheck %s -check-prefix COFF32
-RUN: yaml2obj %p/Inputs/COFF/x86-64.yaml | llvm-nm -a -S - \
-RUN:         | FileCheck %s -check-prefix COFF64
-RUN: llvm-nm %p/Inputs/trivial-object-test.wasm \
-RUN:         | FileCheck %s -check-prefix WASM
-RUN: llvm-nm %p/Inputs/trivial-object-test.elf-i386 \
-RUN:         | FileCheck %s -check-prefix ELF
-RUN: llvm-nm %p/Inputs/trivial-object-test.elf-i386 -S \
-RUN:         | FileCheck %s -check-prefix ELF-SIZE
-RUN: llvm-nm -o %p/Inputs/trivial-object-test.elf-i386 \
-RUN:         | FileCheck %s -check-prefix ELF-o
-RUN: llvm-nm -u %p/Inputs/trivial-object-test.elf-i386 \
-RUN:         | FileCheck %s -check-prefix ELF-u
-RUN: llvm-nm %p/Inputs/trivial-object-test.elf-x86-64 \
-RUN:         | FileCheck %s -check-prefix ELF64
-RUN: llvm-nm %p/Inputs/weak.elf-x86-64 \
-RUN:         | FileCheck %s -check-prefix WEAK-ELF64
-RUN: llvm-nm %p/Inputs/absolute.elf-x86-64 \
-RUN:         | FileCheck %s -check-prefix ABSOLUTE-ELF64
-RUN: llvm-nm -a %p/Inputs/IsNAN.o \
-RUN:         | FileCheck %s -check-prefix ELF64-DEBUG-SYMS
-RUN: llvm-nm %p/Inputs/trivial-object-test.macho-i386 \
-RUN:         | FileCheck %s -check-prefix macho
-RUN: llvm-nm -U %p/Inputs/trivial-object-test.macho-i386 \
-RUN:         | FileCheck %s -check-prefix macho-U
-RUN: llvm-nm %p/Inputs/trivial-object-test.macho-x86-64 \
-RUN:         | FileCheck %s -check-prefix macho64
-RUN: llvm-nm %p/Inputs/macho-text-data-bss.macho-x86_64 \
-RUN:         | FileCheck %s -check-prefix macho-tdb
-RUN: llvm-nm -j %p/Inputs/macho-text-data-bss.macho-x86_64 \
-RUN:         | FileCheck %s -check-prefix macho-j
-RUN: llvm-nm -r %p/Inputs/macho-text-data-bss.macho-x86_64 \
-RUN:         | FileCheck %s -check-prefix macho-r
-RUN: llvm-nm %p/Inputs/macho-text-data-bss.macho-x86_64 -s __DATA __data \
-RUN:         | FileCheck %s -check-prefix macho-s
-RUN: llvm-nm -x %p/Inputs/macho-text-data-bss.macho-x86_64 \
-RUN:         | FileCheck %s -check-prefix macho-x
-RUN: llvm-nm -o %p/Inputs/macho-text-data-bss.macho-x86_64 \
-RUN:         | FileCheck %s -check-prefix macho-o
-RUN: llvm-nm -p -a %p/Inputs/macho-hello-g.macho-x86_64 \
-RUN:         | FileCheck %s -check-prefix macho-pa
-RUN: llvm-nm -u %p/Inputs/macho-hello-g.macho-x86_64 \
-RUN:         | FileCheck %s -check-prefix macho-u
-RUN: llvm-nm -S -a %p/Inputs/common.coff-i386 \
-RUN:         | FileCheck %s -check-prefix COFF-COMMON
-RUN: llvm-nm %p/Inputs/relocatable-with-section-address.elf-x86-64 \
-RUN:         | FileCheck %s -check-prefix ELF-SEC-ADDR64
-RUN: llvm-nm %p/Inputs/thumb-symbols.elf.arm \
-RUN:         | FileCheck %s -check-prefix ELF-THUMB
-RUN: mkdir -p %t
-RUN: cd %t
-RUN: cp %p/Inputs/trivial-object-test.macho-i386 a.out
-RUN: llvm-nm | FileCheck %s -check-prefix A-OUT
+# RUN: yaml2obj %p/Inputs/COFF/i386.yaml | llvm-nm -a -S - \
+# RUN:         | FileCheck %s -check-prefix COFF32
 
+# COFF32: 00000000 d .data
+# COFF32-NEXT: 00000000 t .text
+# COFF32-NEXT: 00000000 d L_.str
+# COFF32-NEXT:          U _SomeOtherFunction
+# COFF32-NEXT: 00000000 T _main
+# COFF32-NEXT:          U _puts
 
-COFF32: 00000000 d .data
-COFF32-NEXT: 00000000 t .text
-COFF32-NEXT: 00000000 d L_.str
-COFF32-NEXT:          U _SomeOtherFunction
-COFF32-NEXT: 00000000 T _main
-COFF32-NEXT:          U _puts
+# RUN: yaml2obj %p/Inputs/COFF/x86-64.yaml | llvm-nm -a -S - \
+# RUN:         | FileCheck %s -check-prefix COFF64
 
+# COFF64: 00000000 d .data
+# COFF64-NEXT: 00000000 t .text
+# COFF64-NEXT: 00000000 r ??__Ex@@YAXXZ
+# COFF64-NEXT: 00000000 d L.str
+# COFF64-NEXT:          U SomeOtherFunction
+# COFF64-NEXT: 00000000 T main
+# COFF64-NEXT:          U puts
 
-WASM:      00000000 d .L.str
-WASM-NEXT: 00000019 t .LSomeOtherFunction_bitcast
-WASM-NEXT:          U SomeOtherFunction
-WASM-NEXT: 00000001 T main
-WASM-NEXT:          U puts
-WASM-NEXT: 00000010 D var
+# RUN: llvm-nm %p/Inputs/trivial-object-test.wasm \
+# RUN:         | FileCheck %s -check-prefix WASM
 
+# WASM:      00000000 d .L.str
+# WASM-NEXT: 00000019 t .LSomeOtherFunction_bitcast
+# WASM-NEXT:          U SomeOtherFunction
+# WASM-NEXT: 00000001 T main
+# WASM-NEXT:          U puts
+# WASM-NEXT: 00000010 D var
 
-COFF64: 00000000 d .data
-COFF64-NEXT: 00000000 t .text
-COFF64-NEXT: 00000000 r ??__Ex@@YAXXZ
-COFF64-NEXT: 00000000 d L.str
-COFF64-NEXT:          U SomeOtherFunction
-COFF64-NEXT: 00000000 T main
-COFF64-NEXT:          U puts
+# RUN: yaml2obj -docnum=1 %s > %t.elf-i386
 
-COFF-COMMON: 00000000 b .bss
-COFF-COMMON-NEXT: 00000000 d .data
-COFF-COMMON-NEXT: 00000000 d .drectve
-COFF-COMMON-NEXT: 00000000 n .file
-COFF-COMMON-NEXT: 00000000 r .rdata$zzz
-COFF-COMMON-NEXT: 00000000 t .text
-COFF-COMMON-NEXT:          C _a
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+Symbols:
+  - Name:    main
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Size:    0x0000000000000024
+  - Name:    SomeOtherFunction
+    Binding: STB_GLOBAL
+  - Name:    puts
+    Binding: STB_GLOBAL
 
+# RUN: llvm-nm %t.elf-i386 | FileCheck %s -check-prefix=ELF
 
-ELF-NOT:      U
-ELF:          U SomeOtherFunction
-ELF: 00000000 T main
-ELF:          U puts
+# ELF-NOT: U
+# ELF:          U SomeOtherFunction
+# ELF: 00000000 T main
+# ELF:          U puts
 
-ELF-SIZE:                        U SomeOtherFunction
-ELF-SIZE-NEXT: 00000000 00000024 T main
-ELF-SIZE-NEXT:                   U puts
+# RUN: llvm-nm -o %t.elf-i386 | FileCheck %s -DFILE=%t.elf-i386 -check-prefix=ELF-o
 
-ELF-o: {{.*}}/trivial-object-test.elf-i386:          U SomeOtherFunction
-ELF-o: {{.*}}/trivial-object-test.elf-i386: 00000000 T main
-ELF-o: {{.*}}/trivial-object-test.elf-i386:          U puts
+# RUN: llvm-nm %t.elf-i386 -S | FileCheck %s -check-prefix ELF-SIZE
 
-ELF-u:          U SomeOtherFunction
-ELF-u:          U puts
+# ELF-SIZE:                        U SomeOtherFunction
+# ELF-SIZE-NEXT: 00000000 00000024 T main
+# ELF-SIZE-NEXT:                   U puts
 
-ELF64:                  U SomeOtherFunction
-ELF64: 0000000000000000 T main
-ELF64:                  U puts
+# ELF-o-NOT: U
+# ELF-o: [[FILE]]:          U SomeOtherFunction
+# ELF-o: [[FILE]]: 00000000 T main
+# ELF-o: [[FILE]]:          U puts
 
-WEAK-ELF64:                  w f1
-WEAK-ELF64: 0000000000000000 W f2
-WEAK-ELF64:                  v x1
-WEAK-ELF64: 0000000000000000 V x2
+# RUN: llvm-nm -u %t.elf-i386 | FileCheck %s -check-prefix ELF-u
 
-ABSOLUTE-ELF64: 0000000000000123 a a1
-ABSOLUTE-ELF64: 0000000000000123 A a2
+# ELF-u: U SomeOtherFunction
+# ELF-u: U puts
 
-ELF64-DEBUG-SYMS: 00000000 b .bss
-ELF64-DEBUG-SYMS-NEXT: 00000000 n .comment
-ELF64-DEBUG-SYMS-NEXT: 00000000 d .data
-ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_abbrev
-ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_aranges
-ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_frame
-ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_info
-ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_line
-ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_pubnames
-ELF64-DEBUG-SYMS-NEXT: 00000000 n .note.GNU-stack
-ELF64-DEBUG-SYMS-NEXT: 00000000 t .text
-ELF64-DEBUG-SYMS-NEXT: 00000000 a IsNAN.cpp
-ELF64-DEBUG-SYMS-NEXT: 00000014 T _ZN4llvm5IsNANEd
-ELF64-DEBUG-SYMS-NEXT: 00000000 T _ZN4llvm5IsNANEf
-ELF64-DEBUG-SYMS-NEXT:          U __isnan
-ELF64-DEBUG-SYMS-NEXT:          U __isnanf
+# RUN: yaml2obj -docnum=2 %s > %t.elf-x86-64
+# RUN: llvm-nm %t.elf-x86-64 | FileCheck %s -check-prefix ELF64
 
-macho:          U _SomeOtherFunction
-macho: 00000000 T _main
-macho:          U _puts
+# ELF64:                  U SomeOtherFunction
+# ELF64: 0000000000000000 T main
+# ELF64:                  U puts
 
-macho-U-NOT:          U _SomeOtherFunction
-macho-U: 00000000 T _main
-macho-U-NOT:          U _puts
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+Symbols:
+  - Name:    main
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Size:    0x0000000000000024
+  - Name:    SomeOtherFunction
+    Binding: STB_GLOBAL
+  - Name:    puts
+    Binding: STB_GLOBAL
 
-macho64: 0000000000000028 s L_.str
-macho64:                  U _SomeOtherFunction
-macho64: 0000000000000000 T _main
-macho64:                  U _puts
+# RUN: llvm-nm %p/Inputs/weak.elf-x86-64 \
+# RUN:         | FileCheck %s -check-prefix WEAK-ELF64
 
-macho-tdb: 0000000000000030 s EH_frame0
-macho-tdb: 0000000000000070 b _b
-macho-tdb: 000000000000000c D _d
-macho-tdb: 0000000000000000 T _t
-macho-tdb: 0000000000000048 S _t.eh
+# WEAK-ELF64:                  w f1
+# WEAK-ELF64: 0000000000000000 W f2
+# WEAK-ELF64:                  v x1
+# WEAK-ELF64: 0000000000000000 V x2
 
-macho-j: EH_frame0
-macho-j: _b
-macho-j: _d
-macho-j: _t
-macho-j: _t.eh
+# RUN: llvm-nm %p/Inputs/absolute.elf-x86-64 \
+# RUN:         | FileCheck %s -check-prefix ABSOLUTE-ELF64
 
-macho-r: 0000000000000048 S _t.eh
-macho-r-NEXT: 0000000000000000 T _t
-macho-r-NEXT: 000000000000000c D _d
-macho-r-NEXT: 0000000000000070 b _b
-macho-r-NEXT: 0000000000000030 s EH_frame0
+# ABSOLUTE-ELF64: 0000000000000123 a a1
+# ABSOLUTE-ELF64: 0000000000000123 A a2
 
-macho-s: 000000000000000c D _d
-macho-s-NOT: 0000000000000048 S _t.eh
-macho-s-NOT: 0000000000000000 T _t
-macho-s-NOT: 0000000000000070 b _b
-macho-s-NOT: 0000000000000030 s EH_frame0
+# RUN: llvm-nm -a %p/Inputs/IsNAN.o \
+# RUN:         | FileCheck %s -check-prefix ELF64-DEBUG-SYMS
 
-macho-x: 0000000000000030 0e 05 0000 00000010 EH_frame0
-macho-x: 0000000000000070 0e 03 0000 0000000d _b
-macho-x: 000000000000000c 0f 02 0000 00000004 _d
-macho-x: 0000000000000000 0f 01 0000 00000001 _t
-macho-x: 0000000000000048 0f 05 0000 00000007 _t.eh
+# ELF64-DEBUG-SYMS: 00000000 b .bss
+# ELF64-DEBUG-SYMS-NEXT: 00000000 n .comment
+# ELF64-DEBUG-SYMS-NEXT: 00000000 d .data
+# ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_abbrev
+# ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_aranges
+# ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_frame
+# ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_info
+# ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_line
+# ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_pubnames
+# ELF64-DEBUG-SYMS-NEXT: 00000000 n .note.GNU-stack
+# ELF64-DEBUG-SYMS-NEXT: 00000000 t .text
+# ELF64-DEBUG-SYMS-NEXT: 00000000 a IsNAN.cpp
+# ELF64-DEBUG-SYMS-NEXT: 00000014 T _ZN4llvm5IsNANEd
+# ELF64-DEBUG-SYMS-NEXT: 00000000 T _ZN4llvm5IsNANEf
+# ELF64-DEBUG-SYMS-NEXT:          U __isnan
+# ELF64-DEBUG-SYMS-NEXT:          U __isnanf
 
+# RUN: llvm-nm %p/Inputs/relocatable-with-section-address.elf-x86-64 \
+# RUN:         | FileCheck %s -check-prefix ELF-SEC-ADDR64
 
-macho-o: {{.*}}/macho-text-data-bss.macho-x86_64: 0000000000000030 s EH_frame0
-macho-o: {{.*}}/macho-text-data-bss.macho-x86_64: 0000000000000070 b _b
-macho-o: {{.*}}/macho-text-data-bss.macho-x86_64: 000000000000000c D _d
-macho-o: {{.*}}/macho-text-data-bss.macho-x86_64: 0000000000000000 T _t
-macho-o: {{.*}}/macho-text-data-bss.macho-x86_64: 0000000000000048 S _t.eh
+## Test that llvm-nm uses addresses even with ELF .o files.
+# ELF-SEC-ADDR64:      0000000000000058 D a
+# ELF-SEC-ADDR64-NEXT: 000000000000005c D b
+# ELF-SEC-ADDR64-NEXT: 0000000000000040 T f
+# ELF-SEC-ADDR64-NEXT: 0000000000000050 T g
+# ELF-SEC-ADDR64-NEXT: 0000000000000060 D p
 
-macho-pa: 0000000000000000 - 00 0000    SO /Volumes/SandBox/
-macho-pa: 0000000000000000 - 00 0000    SO hello.c
-macho-pa: 0000000053c8408d - 03 0001   OSO /Volumes/SandBox/hello.o
-macho-pa: 0000000100000f30 - 01 0000 BNSYM
-macho-pa: 0000000100000f30 - 01 0000   FUN _main
-macho-pa: 000000000000003b - 00 0000   FUN
-macho-pa: 000000000000003b - 01 0000 ENSYM
-macho-pa: 0000000000000000 - 01 0000    SO
-macho-pa: 0000000100000000 T __mh_execute_header
-macho-pa: 0000000100000f30 T _main
-macho-pa:                  U _printf
-macho-pa:                  U dyld_stub_binder
+# RUN: llvm-nm %p/Inputs/thumb-symbols.elf.arm \
+# RUN:         | FileCheck %s -check-prefix ELF-THUMB
 
-macho-u: _printf
-macho-u: dyld_stub_binder
+## Test that we drop the thumb bit only from function addresses.
+# ELF-THUMB: 00000000 t f
+# ELF-THUMB: 00000003 t g
 
-Test that nm uses addresses even with ELF .o files.
-ELF-SEC-ADDR64:      0000000000000058 D a
-ELF-SEC-ADDR64-NEXT: 000000000000005c D b
-ELF-SEC-ADDR64-NEXT: 0000000000000040 T f
-ELF-SEC-ADDR64-NEXT: 0000000000000050 T g
-ELF-SEC-ADDR64-NEXT: 0000000000000060 D p
+# RUN: llvm-nm %p/Inputs/trivial-object-test.macho-i386 \
+# RUN:         | FileCheck %s -check-prefix macho
 
+# macho:          U _SomeOtherFunction
+# macho: 00000000 T _main
+# macho:          U _puts
 
-Test that we drop the thumb bit only from function addresses.
-ELF-THUMB: 00000000 t f
-ELF-THUMB: 00000003 t g
+# RUN: llvm-nm -U %p/Inputs/trivial-object-test.macho-i386 \
+# RUN:         | FileCheck %s -check-prefix macho-U
 
-A-OUT:          U _SomeOtherFunction
-A-OUT: 00000000 T _main
-A-OUT:          U _puts
+# macho-U-NOT:          U _SomeOtherFunction
+# macho-U: 00000000 T _main
+# macho-U-NOT:          U _puts
+
+# RUN: llvm-nm %p/Inputs/trivial-object-test.macho-x86-64 \
+# RUN:         | FileCheck %s -check-prefix macho64
+
+# macho64: 0000000000000028 s L_.str
+# macho64:                  U _SomeOtherFunction
+# macho64: 0000000000000000 T _main
+# macho64:                  U _puts
+
+# RUN: llvm-nm %p/Inputs/macho-text-data-bss.macho-x86_64 \
+# RUN:         | FileCheck %s -check-prefix macho-tdb
+
+# macho-tdb: 0000000000000030 s EH_frame0
+# macho-tdb: 0000000000000070 b _b
+# macho-tdb: 000000000000000c D _d
+# macho-tdb: 0000000000000000 T _t
+# macho-tdb: 0000000000000048 S _t.eh
+
+# RUN: llvm-nm -j %p/Inputs/macho-text-data-bss.macho-x86_64 \
+# RUN:         | FileCheck %s -check-prefix macho-j
+
+# macho-j: EH_frame0
+# macho-j: _b
+# macho-j: _d
+# macho-j: _t
+# macho-j: _t.eh
+
+# RUN: llvm-nm -r %p/Inputs/macho-text-data-bss.macho-x86_64 \
+# RUN:         | FileCheck %s -check-prefix macho-r
+
+# macho-r: 0000000000000048 S _t.eh
+# macho-r-NEXT: 0000000000000000 T _t
+# macho-r-NEXT: 000000000000000c D _d
+# macho-r-NEXT: 0000000000000070 b _b
+# macho-r-NEXT: 0000000000000030 s EH_frame0
+
+# RUN: llvm-nm %p/Inputs/macho-text-data-bss.macho-x86_64 -s __DATA __data \
+# RUN:         | FileCheck %s -check-prefix macho-s
+
+# macho-s: 000000000000000c D _d
+# macho-s-NOT: 0000000000000048 S _t.eh
+# macho-s-NOT: 0000000000000000 T _t
+# macho-s-NOT: 0000000000000070 b _b
+# macho-s-NOT: 0000000000000030 s EH_frame0
+
+# RUN: llvm-nm -x %p/Inputs/macho-text-data-bss.macho-x86_64 \
+# RUN:         | FileCheck %s -check-prefix macho-x
+
+# macho-x: 0000000000000030 0e 05 0000 00000010 EH_frame0
+# macho-x: 0000000000000070 0e 03 0000 0000000d _b
+# macho-x: 000000000000000c 0f 02 0000 00000004 _d
+# macho-x: 0000000000000000 0f 01 0000 00000001 _t
+# macho-x: 0000000000000048 0f 05 0000 00000007 _t.eh
+
+# RUN: llvm-nm -o %p/Inputs/macho-text-data-bss.macho-x86_64 \
+# RUN:         | FileCheck %s -check-prefix macho-o
+
+# macho-o: {{.*}}/macho-text-data-bss.macho-x86_64: 0000000000000030 s EH_frame0
+# macho-o: {{.*}}/macho-text-data-bss.macho-x86_64: 0000000000000070 b _b
+# macho-o: {{.*}}/macho-text-data-bss.macho-x86_64: 000000000000000c D _d
+# macho-o: {{.*}}/macho-text-data-bss.macho-x86_64: 0000000000000000 T _t
+# macho-o: {{.*}}/macho-text-data-bss.macho-x86_64: 0000000000000048 S _t.eh
+
+# RUN: llvm-nm -p -a %p/Inputs/macho-hello-g.macho-x86_64 \
+# RUN:         | FileCheck %s -check-prefix macho-pa
+
+# macho-pa: 0000000000000000 - 00 0000    SO /Volumes/SandBox/
+# macho-pa: 0000000000000000 - 00 0000    SO hello.c
+# macho-pa: 0000000053c8408d - 03 0001   OSO /Volumes/SandBox/hello.o
+# macho-pa: 0000000100000f30 - 01 0000 BNSYM
+# macho-pa: 0000000100000f30 - 01 0000   FUN _main
+# macho-pa: 000000000000003b - 00 0000   FUN
+# macho-pa: 000000000000003b - 01 0000 ENSYM
+# macho-pa: 0000000000000000 - 01 0000    SO
+# macho-pa: 0000000100000000 T __mh_execute_header
+# macho-pa: 0000000100000f30 T _main
+# macho-pa:                  U _printf
+# macho-pa:                  U dyld_stub_binder
+
+# RUN: llvm-nm -u %p/Inputs/macho-hello-g.macho-x86_64 \
+# RUN:         | FileCheck %s -check-prefix macho-u
+
+# macho-u: _printf
+# macho-u: dyld_stub_binder
+
+# RUN: llvm-nm -S -a %p/Inputs/common.coff-i386 \
+# RUN:         | FileCheck %s -check-prefix COFF-COMMON
+
+# COFF-COMMON: 00000000 b .bss
+# COFF-COMMON-NEXT: 00000000 d .data
+# COFF-COMMON-NEXT: 00000000 d .drectve
+# COFF-COMMON-NEXT: 00000000 n .file
+# COFF-COMMON-NEXT: 00000000 r .rdata$zzz
+# COFF-COMMON-NEXT: 00000000 t .text
+# COFF-COMMON-NEXT:          C _a
+
+# RUN: mkdir -p %t
+# RUN: cd %t
+# RUN: cp %p/Inputs/trivial-object-test.macho-i386 a.out
+# RUN: llvm-nm | FileCheck %s -check-prefix A-OUT
+
+# A-OUT:          U _SomeOtherFunction
+# A-OUT: 00000000 T _main
+# A-OUT:          U _puts

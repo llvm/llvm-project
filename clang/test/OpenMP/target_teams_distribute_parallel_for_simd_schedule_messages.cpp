@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 void foo() {
 }
@@ -13,6 +13,7 @@ struct S1; // expected-note {{declared here}}
 
 template <class T, typename S, int N, int ST> // expected-note {{declared here}}
 T tmain(T argc, S **argv) {
+  T z;
 // expected-error@+1 {{expected '(' after 'schedule'}}
 #pragma omp target teams distribute parallel for simd schedule
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
@@ -50,7 +51,7 @@ T tmain(T argc, S **argv) {
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
 
 // expected-warning@+1 {{extra tokens at the end of '#pragma omp target teams distribute parallel for simd' are ignored}}
-#pragma omp target teams distribute parallel for simd schedule (dynamic, 1))
+#pragma omp target teams distribute parallel for simd schedule (dynamic, 1 + z))
   for (int i = ST; i < N; i++) argv[0][i] = argv[0][i] - argv[0][i-ST];
 
 #pragma omp target teams distribute parallel for simd schedule (guided, (ST > 0) ? 1 + ST : 2)
@@ -81,6 +82,7 @@ T tmain(T argc, S **argv) {
 }
 
 int main(int argc, char **argv) {
+  int z;
 // expected-error@+1 {{expected '(' after 'schedule'}}
 #pragma omp target teams distribute parallel for simd schedule
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
@@ -117,7 +119,7 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute parallel for simd schedule (static, 2+2))
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
 
-#pragma omp target teams distribute parallel for simd schedule (dynamic, foobool(1) > 0 ? 1 : 2)
+#pragma omp target teams distribute parallel for simd schedule (dynamic, foobool(1) > 0 ? 1 : z)
   for (int i = 4; i < 12; i++) argv[0][i] = argv[0][i] - argv[0][i-4];
 
 // expected-error@+2 2 {{directive '#pragma omp target teams distribute parallel for simd' cannot contain more than one 'schedule' clause}}

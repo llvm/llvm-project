@@ -30,6 +30,10 @@ class EGOrCaymanPat<dag pattern, dag result> : AMDGPUPat<pattern, result> {
   let SubtargetPredicate = isEGorCayman;
 }
 
+// FIXME: These are deprecated
+def az_extloadi8_local : LocalLoad <az_extloadi8>;
+def az_extloadi16_local : LocalLoad <az_extloadi16>;
+
 //===----------------------------------------------------------------------===//
 // Evergreen / Cayman store instructions
 //===----------------------------------------------------------------------===//

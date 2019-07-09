@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -13,7 +13,7 @@ struct S1; // expected-note {{declared here}}
 
 template <class T, class S> // expected-note {{declared here}}
 int tmain(T argc, S **argv) {
-  T i;
+  T i, z;
 #pragma omp target teams distribute simd if // expected-error {{expected '(' after 'if'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd if ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -34,7 +34,7 @@ int tmain(T argc, S **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd if (argc argc) // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd if(argc)
+#pragma omp target teams distribute simd if(argc * z)
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd if(target // expected-error {{use of undeclared identifier 'target'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
@@ -57,7 +57,7 @@ int tmain(T argc, S **argv) {
 }
 
 int main(int argc, char **argv) {
-  int i;
+  int i, z;
 #pragma omp target teams distribute simd if // expected-error {{expected '(' after 'if'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd if ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -88,7 +88,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd if(target: argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute simd if(target: argc)
+#pragma omp target teams distribute simd if(target: z/argc)
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute simd if(target : argc) if (distribute:argc) // expected-error {{directive name modifier 'distribute' is not allowed for '#pragma omp target teams distribute simd'}}
   for (i = 0; i < argc; ++i) foo();

@@ -18,9 +18,9 @@
 // CHECK-LABEL: @_Z11test_signedii
 auto test_signed(int x, int y) {
   // CHECK: %[[DEST:retval|agg.result]]
-  // CHECK: %cmp.lt = icmp slt i32 %0, %1
+  // CHECK: %cmp.lt = icmp slt i32 %{{.+}}, %{{.+}}
   // CHECK: %sel.lt = select i1 %cmp.lt, i8 [[LT]], i8 [[GT]]
-  // CHECK: %cmp.eq = icmp eq i32 %0, %1
+  // CHECK: %cmp.eq = icmp eq i32 %{{.+}}, %{{.+}}
   // CHECK: %sel.eq = select i1 %cmp.eq, i8 [[EQ]], i8 %sel.lt
   // CHECK: %__value_ = getelementptr inbounds %[[SO]], %[[SO]]* %[[DEST]]
   // CHECK: store i8 %sel.eq, i8* %__value_, align 1
@@ -31,9 +31,9 @@ auto test_signed(int x, int y) {
 // CHECK-LABEL: @_Z13test_unsignedjj
 auto test_unsigned(unsigned x, unsigned y) {
   // CHECK: %[[DEST:retval|agg.result]]
-  // CHECK: %cmp.lt = icmp ult i32 %0, %1
+  // CHECK: %cmp.lt = icmp ult i32 %{{.+}}, %{{.+}}
   // CHECK: %sel.lt = select i1 %cmp.lt, i8 [[LT]], i8 [[GT]]
-  // CHECK: %cmp.eq = icmp eq i32 %0, %1
+  // CHECK: %cmp.eq = icmp eq i32 %{{.+}}, %{{.+}}
   // CHECK: %sel.eq = select i1 %cmp.eq, i8 [[EQ]], i8 %sel.lt
   // CHECK: %__value_ = getelementptr inbounds %[[SO]], %[[SO]]* %[[DEST]]
   // CHECK: store i8 %sel.eq, i8* %__value_
@@ -44,11 +44,11 @@ auto test_unsigned(unsigned x, unsigned y) {
 // CHECK-LABEL: @_Z10float_testdd
 auto float_test(double x, double y) {
   // CHECK: %[[DEST:retval|agg.result]]
-  // CHECK: %cmp.eq = fcmp oeq double %0, %1
+  // CHECK: %cmp.eq = fcmp oeq double %{{.+}}, %{{.+}}
   // CHECK: %sel.eq = select i1 %cmp.eq, i8 [[EQ]], i8 [[UNORD]]
-  // CHECK: %cmp.gt = fcmp ogt double %0, %1
+  // CHECK: %cmp.gt = fcmp ogt double %{{.+}}, %{{.+}}
   // CHECK: %sel.gt = select i1 %cmp.gt, i8 [[GT]], i8 %sel.eq
-  // CHECK: %cmp.lt = fcmp olt double %0, %1
+  // CHECK: %cmp.lt = fcmp olt double %{{.+}}, %{{.+}}
   // CHECK: %sel.lt = select i1 %cmp.lt, i8 [[LT]], i8 %sel.gt
   // CHECK: %__value_ = getelementptr inbounds %[[PO]], %[[PO]]* %[[DEST]]
   // CHECK: store i8 %sel.lt, i8* %__value_
@@ -59,9 +59,9 @@ auto float_test(double x, double y) {
 // CHECK-LABEL: @_Z8ptr_testPiS_
 auto ptr_test(int *x, int *y) {
   // CHECK: %[[DEST:retval|agg.result]]
-  // CHECK: %cmp.lt = icmp ult i32* %0, %1
+  // CHECK: %cmp.lt = icmp ult i32* %{{.+}}, %{{.+}}
   // CHECK: %sel.lt = select i1 %cmp.lt, i8 [[LT]], i8 [[GT]]
-  // CHECK: %cmp.eq = icmp eq i32* %0, %1
+  // CHECK: %cmp.eq = icmp eq i32* %{{.+}}, %{{.+}}
   // CHECK: %sel.eq = select i1 %cmp.eq, i8 [[EQ]], i8 %sel.lt
   // CHECK: %__value_ = getelementptr inbounds %[[SO]], %[[SO]]* %[[DEST]]
   // CHECK: store i8 %sel.eq, i8* %__value_, align 1
@@ -92,7 +92,7 @@ auto mem_ptr_test(MemPtrT x, MemPtrT y) {
 // CHECK-LABEL: @_Z13mem_data_testM6MemPtriS0_
 auto mem_data_test(MemDataT x, MemDataT y) {
   // CHECK: %[[DEST:retval|agg.result]]
-  // CHECK: %[[CMP:.*]] = icmp eq i{{[0-9]+}} %0, %1
+  // CHECK: %[[CMP:.*]] = icmp eq i{{[0-9]+}} %{{.+}}, %{{.+}}
   // CHECK: %sel.eq = select i1 %[[CMP]], i8 [[EQ]], i8 [[NE]]
   // CHECK: %__value_ = getelementptr inbounds %[[SE]], %[[SE]]* %[[DEST]]
   // CHECK: store i8 %sel.eq, i8* %__value_, align 1
@@ -114,7 +114,7 @@ auto test_constant() {
 // CHECK-LABEL: @_Z16test_nullptr_objPiDn
 auto test_nullptr_obj(int* x, decltype(nullptr) y) {
   // CHECK: %[[DEST:retval|agg.result]]
-  // CHECK: %cmp.eq = icmp eq i32* %0, null
+  // CHECK: %cmp.eq = icmp eq i32* %{{.+}}, null
   // CHECK: %sel.eq = select i1 %cmp.eq, i8 [[EQ]], i8 [[NE]]
   // CHECK: %__value_ = getelementptr inbounds %[[SE]], %[[SE]]* %[[DEST]]
   // CHECK: store i8 %sel.eq, i8* %__value_, align 1

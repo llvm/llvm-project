@@ -80,12 +80,11 @@ define i32 @simple5(i8 %a, i8 %b) {
 }
 
 ; CHECK-LABEL: @simple6
-; CHECK:  %1 = uitofp i8 %a to float
-; CHECK:  %2 = uitofp i8 %b to float
-; CHECK:  %3 = fneg float %1
-; CHECK:  %4 = fmul float %3, %2
-; CHECK:  %5 = fptoui float %4 to i32
-; CHECK:  ret i32 %5
+; CHECK:  %1 = zext i8 %a to i32
+; CHECK:  %2 = zext i8 %b to i32
+; CHECK:  %3 = sub i32 0, %1
+; CHECK:  %4 = mul i32 %3, %2
+; CHECK:  ret i32 %4
 define i32 @simple6(i8 %a, i8 %b) {
   %1 = uitofp i8 %a to float
   %2 = uitofp i8 %b to float
@@ -143,6 +142,18 @@ define i32 @simple_negative(i8 %call) {
   %conv2 = fptosi float %mul to i8
   %conv3 = sext i8 %conv2 to i32
   ret i32 %conv3
+}
+
+; CHECK-LABEL: @simple_fneg
+; CHECK:  %1 = zext i8 %a to i32
+; CHECK:  %2 = sub i32 0, %1
+; CHECK:  %3 = trunc i32 %2 to i16
+; CHECK:  ret i16 %3
+define i16 @simple_fneg(i8 %a) {
+  %1 = uitofp i8 %a to float
+  %2 = fneg fast float %1
+  %3 = fptoui float %2 to i16
+  ret i16 %3
 }
 
 ;

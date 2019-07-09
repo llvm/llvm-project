@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -ferror-limit 100 -o - %s -Wuninitialized
 
 void foo() {
 }
@@ -14,6 +14,7 @@ struct S1; // expected-note 2 {{declared here}}
 template <typename T, int C> // expected-note {{declared here}}
 T tmain(T argc) {
   char **a;
+  T z;
 #pragma omp target teams distribute parallel for simd num_teams(C)
   for (int i=0; i<100; i++) foo();
 #pragma omp target teams distribute parallel for simd num_teams(T) // expected-error {{'T' does not refer to a value}}
@@ -30,7 +31,7 @@ T tmain(T argc) {
   for (int i=0; i<100; i++) foo();
 #pragma omp target teams distribute parallel for simd num_teams(argc > 0 ? a[1] : a[2]) // expected-error {{expression must have integral or unscoped enumeration type, not 'char *'}}
   for (int i=0; i<100; i++) foo();
-#pragma omp target teams distribute parallel for simd num_teams(argc + argc)
+#pragma omp target teams distribute parallel for simd num_teams(argc + argc/z)
   for (int i=0; i<100; i++) foo();
 #pragma omp target teams distribute parallel for simd num_teams(argc), num_teams (argc+1) // expected-error {{directive '#pragma omp target teams distribute parallel for simd' cannot contain more than one 'num_teams' clause}}
   for (int i=0; i<100; i++) foo();
@@ -47,6 +48,7 @@ T tmain(T argc) {
 }
 
 int main(int argc, char **argv) {
+  int z;
 #pragma omp target teams distribute parallel for simd num_teams // expected-error {{expected '(' after 'num_teams'}}
   for (int i=0; i<100; i++) foo();
 
@@ -65,7 +67,7 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute parallel for simd num_teams (argc > 0 ? argv[1] : argv[2]) // expected-error {{expression must have integral or unscoped enumeration type, not 'char *'}}
   for (int i=0; i<100; i++) foo();
 
-#pragma omp target teams distribute parallel for simd num_teams (argc + argc)
+#pragma omp target teams distribute parallel for simd num_teams (argc + argc-z)
   for (int i=0; i<100; i++) foo();
 
 #pragma omp target teams distribute parallel for simd num_teams (argc), num_teams (argc+1) // expected-error {{directive '#pragma omp target teams distribute parallel for simd' cannot contain more than one 'num_teams' clause}}

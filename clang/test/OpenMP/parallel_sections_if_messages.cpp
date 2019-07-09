@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -13,6 +13,7 @@ struct S1; // expected-note {{declared here}}
 
 template <class T, class S> // expected-note {{declared here}}
 int tmain(T argc, S **argv) {
+  T z;
   #pragma omp parallel sections if // expected-error {{expected '(' after 'if'}}
   {
     foo();
@@ -53,7 +54,7 @@ int tmain(T argc, S **argv) {
   {
     foo();
   }
-  #pragma omp parallel sections if(argc)
+  #pragma omp parallel sections if(argc + z)
   {
     foo();
   }
@@ -86,6 +87,7 @@ int tmain(T argc, S **argv) {
 }
 
 int main(int argc, char **argv) {
+  int z;
   #pragma omp parallel sections if // expected-error {{expected '(' after 'if'}}
   {
     foo();
@@ -106,7 +108,7 @@ int main(int argc, char **argv) {
   {
     foo();
   }
-  #pragma omp parallel sections if (argc > 0 ? argv[1] : argv[2])
+  #pragma omp parallel sections if (argc > 0 ? argv[1] : argv[2] + z)
   {
     foo();
   }

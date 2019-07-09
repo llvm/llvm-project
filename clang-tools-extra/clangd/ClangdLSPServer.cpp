@@ -366,6 +366,8 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
 
   CCOpts.EnableSnippets = Params.capabilities.CompletionSnippets;
   CCOpts.IncludeFixIts = Params.capabilities.CompletionFixes;
+  if (!CCOpts.BundleOverloads.hasValue())
+    CCOpts.BundleOverloads = Params.capabilities.HasSignatureHelp;
   DiagOpts.EmbedFixesInDiagnostics = Params.capabilities.DiagnosticFixes;
   DiagOpts.SendDiagnosticCategory = Params.capabilities.DiagnosticCategory;
   DiagOpts.EmitRelatedLocations =

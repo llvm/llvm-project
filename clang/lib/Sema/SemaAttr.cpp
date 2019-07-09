@@ -403,9 +403,15 @@ void Sema::ActOnPragmaMSSeg(SourceLocation PragmaLocation,
   if (Action & PSK_Pop && Stack->Stack.empty())
     Diag(PragmaLocation, diag::warn_pragma_pop_failed) << PragmaName
         << "stack empty";
-  if (SegmentName &&
-      !checkSectionName(SegmentName->getBeginLoc(), SegmentName->getString()))
-    return;
+  if (SegmentName) {
+    if (!checkSectionName(SegmentName->getBeginLoc(), SegmentName->getString()))
+      return;
+
+    if (SegmentName->getString() == ".drectve" &&
+        Context.getTargetInfo().getCXXABI().isMicrosoft())
+      Diag(PragmaLocation, diag::warn_attribute_section_drectve) << PragmaName;
+  }
+
   Stack->Act(PragmaLocation, Action, StackSlotLabel, SegmentName);
 }
 

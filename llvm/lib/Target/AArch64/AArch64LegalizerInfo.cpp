@@ -686,26 +686,25 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
   MIRBuilder.setInstr(MI);
   MachineFunction &MF = MIRBuilder.getMF();
   unsigned Align = MI.getOperand(2).getImm();
-  unsigned Dst = MI.getOperand(0).getReg();
-  unsigned ListPtr = MI.getOperand(1).getReg();
+  Register Dst = MI.getOperand(0).getReg();
+  Register ListPtr = MI.getOperand(1).getReg();
 
   LLT PtrTy = MRI.getType(ListPtr);
   LLT IntPtrTy = LLT::scalar(PtrTy.getSizeInBits());
 
   const unsigned PtrSize = PtrTy.getSizeInBits() / 8;
-  unsigned List = MRI.createGenericVirtualRegister(PtrTy);
+  Register List = MRI.createGenericVirtualRegister(PtrTy);
   MIRBuilder.buildLoad(
       List, ListPtr,
       *MF.getMachineMemOperand(MachinePointerInfo(), MachineMemOperand::MOLoad,
                                PtrSize, /* Align = */ PtrSize));
 
-  unsigned DstPtr;
+  Register DstPtr;
   if (Align > PtrSize) {
     // Realign the list to the actual required alignment.
     auto AlignMinus1 = MIRBuilder.buildConstant(IntPtrTy, Align - 1);
 
-    unsigned ListTmp = MRI.createGenericVirtualRegister(PtrTy);
-    MIRBuilder.buildGEP(ListTmp, List, AlignMinus1.getReg(0));
+    auto ListTmp = MIRBuilder.buildGEP(PtrTy, List, AlignMinus1.getReg(0));
 
     DstPtr = MRI.createGenericVirtualRegister(PtrTy);
     MIRBuilder.buildPtrMask(DstPtr, ListTmp, Log2_64(Align));
@@ -720,8 +719,7 @@ bool AArch64LegalizerInfo::legalizeVaArg(MachineInstr &MI,
 
   auto Size = MIRBuilder.buildConstant(IntPtrTy, alignTo(ValSize, PtrSize));
 
-  unsigned NewList = MRI.createGenericVirtualRegister(PtrTy);
-  MIRBuilder.buildGEP(NewList, DstPtr, Size.getReg(0));
+  auto NewList = MIRBuilder.buildGEP(PtrTy, DstPtr, Size.getReg(0));
 
   MIRBuilder.buildStore(
       NewList, ListPtr,

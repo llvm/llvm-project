@@ -14,9 +14,9 @@ struct T {
   char c;
   T() : a(12), f(15) {}
 #ifndef _ARCH_PPC
-// expected-error@+4 {{'__float128' is not supported on this target}}
+// expected-error@+4 {{host requires 128 bit size '__float128' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 #else
-// expected-error@+2 {{'long double' is not supported on this target}}
+// expected-error@+2 {{host requires 128 bit size 'long double' type support, but device 'nvptx64-unknown-unknown' does not support it}}
 #endif
   T &operator+(T &b) { f += b.a; return *this;}
 };

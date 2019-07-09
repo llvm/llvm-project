@@ -5738,13 +5738,11 @@ Instructions
    AMDGPU/AMDGPUAsmGFX7
    AMDGPU/AMDGPUAsmGFX8
    AMDGPU/AMDGPUAsmGFX9
+   AMDGPU/AMDGPUAsmGFX10
    AMDGPUModifierSyntax
    AMDGPUOperandSyntax
    AMDGPUInstructionSyntax
    AMDGPUInstructionNotation
-
-.. TODO
-   AMDGPUAsmGFX10
 
 An instruction has the following :doc:`syntax<AMDGPUInstructionSyntax>`:
 
@@ -5757,7 +5755,8 @@ The order of *operands* and *modifiers* is fixed.
 Most *modifiers* are optional and may be omitted.
 
 See detailed instruction syntax description for :doc:`GFX7<AMDGPU/AMDGPUAsmGFX7>`,
-:doc:`GFX8<AMDGPU/AMDGPUAsmGFX8>` and :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`.
+:doc:`GFX8<AMDGPU/AMDGPUAsmGFX8>`, :doc:`GFX9<AMDGPU/AMDGPUAsmGFX9>`
+and :doc:`GFX10<AMDGPU/AMDGPUAsmGFX10>`.
 
 Note that features under development are not included in this description.
 

@@ -71,7 +71,9 @@ SIMachineFunctionInfo::SIMachineFunctionInfo(const MachineFunction &MF)
     // required for scratch access.
     ScratchRSrcReg = AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3;
     ScratchWaveOffsetReg = AMDGPU::SGPR33;
-    FrameOffsetReg = AMDGPU::SGPR5;
+
+    // TODO: Pick a high register, and shift down, similar to a kernel.
+    FrameOffsetReg = AMDGPU::SGPR34;
     StackPtrOffsetReg = AMDGPU::SGPR32;
 
     ArgInfo.PrivateSegmentBuffer =
@@ -245,6 +247,17 @@ static bool isCalleeSavedReg(const MCPhysReg *CSRegs, MCPhysReg Reg) {
   return false;
 }
 
+/// \p returns true if \p NumLanes slots are available in VGPRs already used for
+/// SGPR spilling.
+//
+// FIXME: This only works after processFunctionBeforeFrameFinalized
+bool SIMachineFunctionInfo::haveFreeLanesForSGPRSpill(const MachineFunction &MF,
+                                                      unsigned NumNeed) const {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  unsigned WaveSize = ST.getWavefrontSize();
+  return NumVGPRSpillLanes + NumNeed <= WaveSize * SpillVGPRs.size();
+}
+
 /// Reserve a slice of a VGPR to support spilling for FrameIndex \p FI.
 bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
                                                     int FI) {
@@ -307,13 +320,18 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPR(MachineFunction &MF,
 }
 
 void SIMachineFunctionInfo::removeSGPRToVGPRFrameIndices(MachineFrameInfo &MFI) {
-  for (auto &R : SGPRToVGPRSpills)
-    MFI.RemoveStackObject(R.first);
-  // All other SPGRs must be allocated on the default stack, so reset
-  // the stack ID.
-  for (unsigned i = MFI.getObjectIndexBegin(), e = MFI.getObjectIndexEnd();
-       i != e; ++i)
-    MFI.setStackID(i, 0);
+  // The FP spill hasn't been inserted yet, so keep it around.
+  for (auto &R : SGPRToVGPRSpills) {
+    if (R.first != FramePointerSaveIndex)
+      MFI.RemoveStackObject(R.first);
+  }
+
+  // All other SPGRs must be allocated on the default stack, so reset the stack
+  // ID.
+  for (int i = MFI.getObjectIndexBegin(), e = MFI.getObjectIndexEnd(); i != e;
+       ++i)
+    if (i != FramePointerSaveIndex)
+      MFI.setStackID(i, TargetStackID::Default);
 }
 
 MCPhysReg SIMachineFunctionInfo::getNextUserSGPR() const {

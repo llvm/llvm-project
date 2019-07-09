@@ -122,6 +122,70 @@ TEST_F(IRBuilderTest, Intrinsics) {
   EXPECT_FALSE(II->hasNoNaNs());
 }
 
+TEST_F(IRBuilderTest, ConstrainedFP) {
+  IRBuilder<> Builder(BB);
+  Value *V;
+  CallInst *Call;
+  IntrinsicInst *II;
+
+  V = Builder.CreateLoad(GV);
+
+  // See if we get constrained intrinsics instead of non-constrained
+  // instructions.
+  Builder.setIsFPConstrained(true);
+
+  V = Builder.CreateFAdd(V, V);
+  ASSERT_TRUE(isa<IntrinsicInst>(V));
+  II = cast<IntrinsicInst>(V);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fadd);
+
+  V = Builder.CreateFSub(V, V);
+  ASSERT_TRUE(isa<IntrinsicInst>(V));
+  II = cast<IntrinsicInst>(V);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fsub);
+
+  V = Builder.CreateFMul(V, V);
+  ASSERT_TRUE(isa<IntrinsicInst>(V));
+  II = cast<IntrinsicInst>(V);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fmul);
+  
+  V = Builder.CreateFDiv(V, V);
+  ASSERT_TRUE(isa<IntrinsicInst>(V));
+  II = cast<IntrinsicInst>(V);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fdiv);
+  
+  V = Builder.CreateFRem(V, V);
+  ASSERT_TRUE(isa<IntrinsicInst>(V));
+  II = cast<IntrinsicInst>(V);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_frem);
+
+  // Verify the codepaths for setting and overriding the default metadata.
+  V = Builder.CreateFAdd(V, V);
+  ASSERT_TRUE(isa<ConstrainedFPIntrinsic>(V));
+  auto *CII = cast<ConstrainedFPIntrinsic>(V);
+  ASSERT_TRUE(CII->getExceptionBehavior() == ConstrainedFPIntrinsic::ebStrict);
+  ASSERT_TRUE(CII->getRoundingMode() == ConstrainedFPIntrinsic::rmDynamic);
+
+  Builder.setDefaultConstrainedExcept(ConstrainedFPIntrinsic::ebIgnore);
+  Builder.setDefaultConstrainedRounding(ConstrainedFPIntrinsic::rmUpward);
+  V = Builder.CreateFAdd(V, V);
+  CII = cast<ConstrainedFPIntrinsic>(V);
+  ASSERT_TRUE(CII->getExceptionBehavior() == ConstrainedFPIntrinsic::ebIgnore);
+  ASSERT_TRUE(CII->getRoundingMode() == ConstrainedFPIntrinsic::rmUpward);
+
+  // Now override the defaults.
+  Call = Builder.CreateConstrainedFPBinOp(
+        Intrinsic::experimental_constrained_fadd, V, V, nullptr, "", nullptr,
+        ConstrainedFPIntrinsic::rmDownward, ConstrainedFPIntrinsic::ebMayTrap);
+  CII = cast<ConstrainedFPIntrinsic>(Call);
+  EXPECT_EQ(CII->getIntrinsicID(), Intrinsic::experimental_constrained_fadd);
+  ASSERT_TRUE(CII->getExceptionBehavior() == ConstrainedFPIntrinsic::ebMayTrap);
+  ASSERT_TRUE(CII->getRoundingMode() == ConstrainedFPIntrinsic::rmDownward);
+
+  Builder.CreateRetVoid();
+  EXPECT_FALSE(verifyModule(*M));
+}
+
 TEST_F(IRBuilderTest, Lifetime) {
   IRBuilder<> Builder(BB);
   AllocaInst *Var1 = Builder.CreateAlloca(Builder.getInt8Ty());

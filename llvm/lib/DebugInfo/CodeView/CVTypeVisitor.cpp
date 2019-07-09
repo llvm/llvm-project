@@ -209,6 +209,14 @@ struct VisitHelper {
     }
   }
 
+  VisitHelper(TypeVisitorCallbackPipeline &Callbacks, VisitorDataSource Source)
+      : Visitor((Source == VDS_BytesPresent) ? Pipeline : Callbacks) {
+    if (Source == VDS_BytesPresent) {
+      Pipeline = Callbacks;
+      Pipeline.addCallbackToPipelineFront(Deserializer);
+    }
+  }
+
   TypeDeserializer Deserializer;
   TypeVisitorCallbackPipeline Pipeline;
   CVTypeVisitor Visitor;
@@ -217,6 +225,13 @@ struct VisitHelper {
 
 Error llvm::codeview::visitTypeRecord(CVType &Record, TypeIndex Index,
                                       TypeVisitorCallbacks &Callbacks,
+                                      VisitorDataSource Source) {
+  VisitHelper V(Callbacks, Source);
+  return V.Visitor.visitTypeRecord(Record, Index);
+}
+
+Error llvm::codeview::visitTypeRecord(CVType &Record, TypeIndex Index,
+                                      TypeVisitorCallbackPipeline &Callbacks,
                                       VisitorDataSource Source) {
   VisitHelper V(Callbacks, Source);
   return V.Visitor.visitTypeRecord(Record, Index);

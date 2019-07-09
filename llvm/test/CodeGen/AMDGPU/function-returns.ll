@@ -104,7 +104,7 @@ define i64 @i64_func_void() #0 {
 }
 
 ; GCN-LABEL: {{^}}f32_func_void:
-; GCN: buffer_load_dword v0, off, s[8:11], 0
+; GCN: buffer_load_dword v0, off, s[4:7], 0
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64
 define float @f32_func_void() #0 {

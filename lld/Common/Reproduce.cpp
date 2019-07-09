@@ -48,6 +48,8 @@ std::string lld::quote(StringRef S) {
   return S;
 }
 
+// Converts an Arg to a string representation suitable for a response file.
+// To show an Arg in a diagnostic, use Arg::getAsString() instead.
 std::string lld::toString(const opt::Arg &Arg) {
   std::string K = Arg.getSpelling();
   if (Arg.getNumValues() == 0)

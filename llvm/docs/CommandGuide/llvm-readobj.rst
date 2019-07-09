@@ -178,7 +178,7 @@ The following options are implemented only for the ELF file format.
 
 .. option:: --elf-output-style=<value>
 
- Specify the style to dump ELF information in. Valid options are ``LLVM`` and
+ Format ELF information in the specified style. Valid options are ``LLVM`` and
  ``GNU``. ``LLVM`` output (the default) is an expanded and structured format,
  whilst ``GNU`` output mimics the equivalent GNU :program:`readelf` output.
 
@@ -192,7 +192,7 @@ The following options are implemented only for the ELF file format.
 
 .. option:: --hash-symbols
 
- Display the dynamic symbols derived from the hash table.
+ Display the expanded hash table with dynamic symbol data.
 
 .. option:: --hash-table
 
