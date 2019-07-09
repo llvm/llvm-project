@@ -439,7 +439,7 @@ LLVM_READNONE
 bool isValidHwregWidth(int64_t Width);
 
 LLVM_READNONE
-int64_t encodeHwreg(int64_t Id, int64_t Offset, int64_t Width);
+uint64_t encodeHwreg(uint64_t Id, uint64_t Offset, uint64_t Width);
 
 LLVM_READNONE
 StringRef getHwreg(unsigned Id, const MCSubtargetInfo &STI);

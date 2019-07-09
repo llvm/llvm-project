@@ -9,6 +9,7 @@ static_library("Reader") {
 
   sources = [
     "BitReader.cpp",
+    "BitcodeAnalyzer.cpp",
     "BitcodeReader.cpp",
     "MetadataLoader.cpp",
     "ValueList.cpp",

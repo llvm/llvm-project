@@ -22,6 +22,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Analysis/MemoryBuiltins.h"
 
 using namespace llvm;
 
@@ -120,6 +121,13 @@ static bool setNonLazyBind(Function &F) {
   return true;
 }
 
+static bool setDoesNotFreeMemory(Function &F) {
+  if (F.hasFnAttribute(Attribute::NoFree))
+    return false;
+  F.addFnAttr(Attribute::NoFree);
+  return true;
+}
+
 bool llvm::inferLibFuncAttributes(Module *M, StringRef Name,
                                   const TargetLibraryInfo &TLI) {
   Function *F = M->getFunction(Name);
@@ -134,6 +142,9 @@ bool llvm::inferLibFuncAttributes(Function &F, const TargetLibraryInfo &TLI) {
     return false;
 
   bool Changed = false;
+
+  if(!isLibFreeFunction(&F, TheLibFunc) && !isReallocLikeFn(&F,  &TLI))
+    Changed |= setDoesNotFreeMemory(F);
 
   if (F.getParent() != nullptr && F.getParent()->getRtLibUseGOT())
     Changed |= setNonLazyBind(F);

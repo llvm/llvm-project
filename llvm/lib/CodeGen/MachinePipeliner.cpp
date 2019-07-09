@@ -2430,7 +2430,7 @@ void SwingSchedulerDAG::generateExistingPhis(
         // Use the value defined by the Phi, unless we're generating the first
         // epilog and the Phi refers to a Phi in a different stage.
         else if (VRMap[PrevStage - np].count(Def) &&
-                 (!LoopDefIsPhi || PrevStage != LastStageNum))
+                 (!LoopDefIsPhi || (PrevStage != LastStageNum) || (LoopValStage == StageScheduled)))
           PhiOp2 = VRMap[PrevStage - np][Def];
       }
 

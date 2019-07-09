@@ -316,8 +316,7 @@ public:
   bool isOffset0() const { return isImmTy(ImmTyOffset0) && isUInt<8>(getImm()); }
   bool isOffset1() const { return isImmTy(ImmTyOffset1) && isUInt<8>(getImm()); }
 
-  bool isOffsetU12() const { return (isImmTy(ImmTyOffset) || isImmTy(ImmTyInstOffset)) && isUInt<12>(getImm()); }
-  bool isOffsetS13() const { return (isImmTy(ImmTyOffset) || isImmTy(ImmTyInstOffset)) && isInt<13>(getImm()); }
+  bool isFlatOffset() const { return isImmTy(ImmTyOffset) || isImmTy(ImmTyInstOffset); }
   bool isGDS() const { return isImmTy(ImmTyGDS); }
   bool isLDS() const { return isImmTy(ImmTyLDS); }
   bool isDLC() const { return isImmTy(ImmTyDLC); }
@@ -1154,15 +1153,17 @@ private:
                        const SMLoc Loc);
 
   bool parseHwregBody(OperandInfoTy &HwReg, int64_t &Offset, int64_t &Width);
-  void validateHwreg(const OperandInfoTy &HwReg,
+  bool validateHwreg(const OperandInfoTy &HwReg,
                      const int64_t Offset,
                      const int64_t Width,
                      const SMLoc Loc);
 
   void errorExpTgt();
   OperandMatchResultTy parseExpTgtImpl(StringRef Str, uint8_t &Val);
+  SMLoc getFlatOffsetLoc(const OperandVector &Operands) const;
 
-  bool validateInstruction(const MCInst &Inst, const SMLoc &IDLoc);
+  bool validateInstruction(const MCInst &Inst, const SMLoc &IDLoc, const OperandVector &Operands);
+  bool validateFlatOffset(const MCInst &Inst, const OperandVector &Operands);
   bool validateSOPLiteral(const MCInst &Inst) const;
   bool validateConstantBusLimitations(const MCInst &Inst);
   bool validateEarlyClobberLimitations(const MCInst &Inst);
@@ -1238,8 +1239,7 @@ public:
   AMDGPUOperand::Ptr defaultSMRDOffset8() const;
   AMDGPUOperand::Ptr defaultSMRDOffset20() const;
   AMDGPUOperand::Ptr defaultSMRDLiteralOffset() const;
-  AMDGPUOperand::Ptr defaultOffsetU12() const;
-  AMDGPUOperand::Ptr defaultOffsetS13() const;
+  AMDGPUOperand::Ptr defaultFlatOffset() const;
 
   OperandMatchResultTy parseOModOperand(OperandVector &Operands);
 
@@ -2437,28 +2437,6 @@ unsigned AMDGPUAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
     }
   }
 
-  if (TSFlags & SIInstrFlags::FLAT) {
-    // FIXME: Produces error without correct column reported.
-    auto Opcode = Inst.getOpcode();
-    auto OpNum = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::offset);
-
-    const auto &Op = Inst.getOperand(OpNum);
-    if (!hasFlatOffsets() && Op.getImm() != 0)
-      return Match_InvalidOperand;
-
-    // GFX10: Address offset is 12-bit signed byte offset. Must be positive for
-    // FLAT segment. For FLAT segment MSB is ignored and forced to zero.
-    if (isGFX10()) {
-      if (TSFlags & SIInstrFlags::IsNonFlatSeg) {
-        if (!isInt<12>(Op.getImm()))
-          return Match_InvalidOperand;
-      } else {
-        if (!isUInt<11>(Op.getImm()))
-          return Match_InvalidOperand;
-      }
-    }
-  }
-
   return Match_Success;
 }
 
@@ -3007,6 +2985,55 @@ bool AMDGPUAsmParser::validateLdsDirect(const MCInst &Inst) {
   return (Desc.TSFlags & SIInstrFlags::SDWA) == 0 && !IsRevOpcode(Opcode);
 }
 
+SMLoc AMDGPUAsmParser::getFlatOffsetLoc(const OperandVector &Operands) const {
+  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
+    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
+    if (Op.isFlatOffset())
+      return Op.getStartLoc();
+  }
+  return getLoc();
+}
+
+bool AMDGPUAsmParser::validateFlatOffset(const MCInst &Inst,
+                                         const OperandVector &Operands) {
+  uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
+  if ((TSFlags & SIInstrFlags::FLAT) == 0)
+    return true;
+
+  auto Opcode = Inst.getOpcode();
+  auto OpNum = AMDGPU::getNamedOperandIdx(Opcode, AMDGPU::OpName::offset);
+  assert(OpNum != -1);
+
+  const auto &Op = Inst.getOperand(OpNum);
+  if (!hasFlatOffsets() && Op.getImm() != 0) {
+    Error(getFlatOffsetLoc(Operands),
+          "flat offset modifier is not supported on this GPU");
+    return false;
+  }
+
+  // Address offset is 12-bit signed for GFX10, 13-bit for GFX9.
+  // For FLAT segment the offset must be positive;
+  // MSB is ignored and forced to zero.
+  unsigned OffsetSize = isGFX9() ? 13 : 12;
+  if (TSFlags & SIInstrFlags::IsNonFlatSeg) {
+    if (!isIntN(OffsetSize, Op.getImm())) {
+      Error(getFlatOffsetLoc(Operands),
+            isGFX9() ? "expected a 13-bit signed offset" :
+                       "expected a 12-bit signed offset");
+      return false;
+    }
+  } else {
+    if (!isUIntN(OffsetSize - 1, Op.getImm())) {
+      Error(getFlatOffsetLoc(Operands),
+            isGFX9() ? "expected a 12-bit unsigned offset" :
+                       "expected an 11-bit unsigned offset");
+      return false;
+    }
+  }
+
+  return true;
+}
+
 bool AMDGPUAsmParser::validateSOPLiteral(const MCInst &Inst) const {
   unsigned Opcode = Inst.getOpcode();
   const MCInstrDesc &Desc = MII.get(Opcode);
@@ -3097,7 +3124,8 @@ bool AMDGPUAsmParser::validateVOP3Literal(const MCInst &Inst) const {
 }
 
 bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
-                                          const SMLoc &IDLoc) {
+                                          const SMLoc &IDLoc,
+                                          const OperandVector &Operands) {
   if (!validateLdsDirect(Inst)) {
     Error(IDLoc,
       "invalid use of lds_direct");
@@ -3163,6 +3191,9 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
       "invalid image_gather dmask: only one bit must be set");
     return false;
   }
+  if (!validateFlatOffset(Inst, Operands)) {
+    return false;
+  }
 
   return true;
 }
@@ -3203,7 +3234,7 @@ bool AMDGPUAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   switch (Result) {
   default: break;
   case Match_Success:
-    if (!validateInstruction(Inst, IDLoc)) {
+    if (!validateInstruction(Inst, IDLoc, Operands)) {
       return true;
     }
     Inst.setLoc(IDLoc);
@@ -4658,7 +4689,7 @@ AMDGPUAsmParser::parseHwregBody(OperandInfoTy &HwReg,
     skipToken(AsmToken::RParen, "expected a closing parenthesis");
 }
 
-void
+bool
 AMDGPUAsmParser::validateHwreg(const OperandInfoTy &HwReg,
                                const int64_t Offset,
                                const int64_t Width,
@@ -4668,13 +4699,18 @@ AMDGPUAsmParser::validateHwreg(const OperandInfoTy &HwReg,
 
   if (HwReg.IsSymbolic && !isValidHwreg(HwReg.Id, getSTI())) {
     Error(Loc, "specified hardware register is not supported on this GPU");
+    return false;
   } else if (!isValidHwreg(HwReg.Id)) {
     Error(Loc, "invalid code of hardware register: only 6-bit values are legal");
+    return false;
   } else if (!isValidHwregOffset(Offset)) {
     Error(Loc, "invalid bit offset: only 5-bit values are legal");
+    return false;
   } else if (!isValidHwregWidth(Width)) {
     Error(Loc, "invalid bitfield width: only values from 1 to 32 are legal");
+    return false;
   }
+  return true;
 }
 
 OperandMatchResultTy
@@ -4690,8 +4726,8 @@ AMDGPUAsmParser::parseHwreg(OperandVector &Operands) {
     OperandInfoTy HwReg(ID_UNKNOWN_);
     int64_t Offset = OFFSET_DEFAULT_;
     int64_t Width = WIDTH_DEFAULT_;
-    if (parseHwregBody(HwReg, Offset, Width)) {
-      validateHwreg(HwReg, Offset, Width, Loc);
+    if (parseHwregBody(HwReg, Offset, Width) &&
+        validateHwreg(HwReg, Offset, Width, Loc)) {
       ImmVal = encodeHwreg(HwReg.Id, Offset, Width);
     }
   } else if (parseExpr(ImmVal)) {
@@ -5646,11 +5682,7 @@ AMDGPUOperand::Ptr AMDGPUAsmParser::defaultSMRDLiteralOffset() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
 }
 
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultOffsetU12() const {
-  return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
-}
-
-AMDGPUOperand::Ptr AMDGPUAsmParser::defaultOffsetS13() const {
+AMDGPUOperand::Ptr AMDGPUAsmParser::defaultFlatOffset() const {
   return AMDGPUOperand::CreateImm(this, 0, SMLoc(), AMDGPUOperand::ImmTyOffset);
 }
 

@@ -433,7 +433,12 @@ function(llvm_add_library name)
       ${ALL_FILES}
       )
     llvm_update_compile_flags(${obj_name})
-    set(ALL_FILES "$<TARGET_OBJECTS:${obj_name}>")
+    if(CMAKE_GENERATOR STREQUAL "Xcode")
+      set(DUMMY_FILE ${CMAKE_CURRENT_BINARY_DIR}/Dummy.c)
+      file(WRITE ${DUMMY_FILE} "// This file intentionally empty\n")
+      set_property(SOURCE ${DUMMY_FILE} APPEND_STRING PROPERTY COMPILE_FLAGS "-Wno-empty-translation-unit")
+    endif()
+    set(ALL_FILES "$<TARGET_OBJECTS:${obj_name}>" ${DUMMY_FILE})
 
     # Do add_dependencies(obj) later due to CMake issue 14747.
     list(APPEND objlibs ${obj_name})

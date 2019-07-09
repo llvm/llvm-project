@@ -29,7 +29,7 @@ struct MapOneMethodRecord {
     error(IO.mapInteger(Method.Type));
     if (Method.isIntroducingVirtual()) {
       error(IO.mapInteger(Method.VFTableOffset));
-    } else if (!IO.isWriting())
+    } else if (IO.isReading())
       Method.VFTableOffset = -1;
 
     if (!IsFromOverloadList)
@@ -72,6 +72,9 @@ static Error mapNameAndUniqueName(CodeViewRecordIO &IO, StringRef &Name,
       error(IO.mapStringZ(N));
     }
   } else {
+    // Reading & Streaming mode come after writing mode is executed for each
+    // record. Truncating large names are done during writing, so its not
+    // necessary to do it while reading or streaming.
     error(IO.mapStringZ(Name));
     if (HasUniqueName)
       error(IO.mapStringZ(UniqueName));
@@ -94,6 +97,10 @@ Error TypeRecordMapping::visitTypeBegin(CVType &CVR) {
   error(IO.beginRecord(MaxLen));
   TypeKind = CVR.kind();
   return Error::success();
+}
+
+Error TypeRecordMapping::visitTypeBegin(CVType &CVR, TypeIndex Index) {
+  return visitTypeBegin(CVR);
 }
 
 Error TypeRecordMapping::visitTypeEnd(CVType &Record) {
@@ -126,7 +133,7 @@ Error TypeRecordMapping::visitMemberEnd(CVMemberRecord &Record) {
   assert(TypeKind.hasValue() && "Not in a type mapping!");
   assert(MemberKind.hasValue() && "Not in a member mapping!");
 
-  if (!IO.isWriting()) {
+  if (IO.isReading()) {
     if (auto EC = IO.skipPadding())
       return EC;
   }
@@ -139,7 +146,6 @@ Error TypeRecordMapping::visitMemberEnd(CVMemberRecord &Record) {
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ModifierRecord &Record) {
   error(IO.mapInteger(Record.ModifiedType));
   error(IO.mapEnum(Record.Modifiers));
-
   return Error::success();
 }
 
@@ -172,7 +178,6 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, ArgListRecord &Record) {
   error(IO.mapVectorN<uint32_t>(
       Record.ArgIndices,
       [](CodeViewRecordIO &IO, TypeIndex &N) { return IO.mapInteger(N); }));
-
   return Error::success();
 }
 
@@ -190,7 +195,7 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, PointerRecord &Record) {
   error(IO.mapInteger(Record.Attrs));
 
   if (Record.isPointerToMember()) {
-    if (!IO.isWriting())
+    if (IO.isReading())
       Record.MemberInfo.emplace();
 
     MemberPointerInfo &M = *Record.MemberInfo;
@@ -260,7 +265,7 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, BitFieldRecord &Record) {
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
                                           VFTableShapeRecord &Record) {
   uint16_t Size;
-  if (IO.isWriting()) {
+  if (!IO.isReading()) {
     ArrayRef<VFTableSlotKind> Slots = Record.getSlots();
     Size = Slots.size();
     error(IO.mapInteger(Size));
@@ -291,7 +296,7 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR, VFTableRecord &Record) {
   error(IO.mapInteger(Record.OverriddenVFTable));
   error(IO.mapInteger(Record.VFPtrOffset));
   uint32_t NamesLen = 0;
-  if (IO.isWriting()) {
+  if (!IO.isReading()) {
     for (auto Name : Record.MethodNames)
       NamesLen += Name.size() + 1;
   }

@@ -1,4 +1,6 @@
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s
+; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 
 ; C++ source to regenerate:
 ; $ cat t.cpp
@@ -344,6 +346,373 @@
 ; CHECK:     }
 ; CHECK:   ]
 ; CHECK: ]
+
+
+
+; ASM: .section	.debug$T,"dr"
+; ASM: .p2align	2
+; ASM: .long	4                       # Debug section magic
+; ASM: .short	18
+; ASM: .short	4609
+; ASM: .long	3
+; ASM: .long	64
+; ASM: .long	65
+; ASM: .long	19
+; ASM: # ArgList (0x1000) {
+; ASM: #   TypeLeafKind: LF_ARGLIST (0x1201)
+; ASM: #   NumArgs: 3
+; ASM: #   Arguments [
+; ASM: #     ArgType: float (0x40)
+; ASM: #     ArgType: double (0x41)
+; ASM: #     ArgType: __int64 (0x13)
+; ASM: #   ]
+; ASM: # }
+; ASM: .short	14
+; ASM: .short	4104
+; ASM: .long	3
+; ASM: .byte	0
+; ASM: .byte	0
+; ASM: .short	3
+; ASM: .long	4096
+; ASM: # Procedure (0x1001) {
+; ASM: #   TypeLeafKind: LF_PROCEDURE (0x1008)
+; ASM: #   ReturnType: void (0x3)
+; ASM: #   CallingConvention: NearC (0x0)
+; ASM: #   FunctionOptions [ (0x0)
+; ASM: #   ]
+; ASM: #   NumParameters: 3
+; ASM: #   ArgListType: (float, double, __int64) (0x1000)
+; ASM: # }
+; ASM: .short	14
+; ASM: .short	5633
+; ASM: .long	0
+; ASM: .long	4097
+; ASM: .asciz	"f"
+; ASM: .byte	242
+; ASM: .byte	241
+; ASM: # FuncId (0x1002) {
+; ASM: #   TypeLeafKind: LF_FUNC_ID (0x1601)
+; ASM: #   ParentScope: 0x0
+; ASM: #   FunctionType: void (float, double, __int64) (0x1001)
+; ASM: #   Name: f
+; ASM: # }
+; ASM: .short	10
+; ASM: .short	4097
+; ASM: .long	116
+; ASM: .short	1
+; ASM: .byte	242
+; ASM: .byte	241
+; ASM: # Modifier (0x1003) {
+; ASM: #   TypeLeafKind: LF_MODIFIER (0x1001)
+; ASM: #   ModifiedType: int (0x74)
+; ASM: #   Modifiers [ (0x1)
+; ASM: #     Const (0x1)
+; ASM: #   ]
+; ASM: # }
+; ASM: .short	10
+; ASM: .short	4098
+; ASM: .long	4099
+; ASM: .long	65548
+; ASM: # Pointer (0x1004) {
+; ASM: #   TypeLeafKind: LF_POINTER (0x1002)
+; ASM: #   PointeeType: const int (0x1003)
+; ASM: #   PtrType: Near64 (0xC)
+; ASM: #   PtrMode: Pointer (0x0)
+; ASM: #   IsFlat: 0
+; ASM: #   IsConst: 0
+; ASM: #   IsVolatile: 0
+; ASM: #   IsUnaligned: 0
+; ASM: #   IsRestrict: 0
+; ASM: #   IsThisPtr&: 0
+; ASM: #   IsThisPtr&&: 0
+; ASM: #   SizeOf: 8
+; ASM: # }
+; ASM: .short	22
+; ASM: .short	5381
+; ASM: .short	0
+; ASM: .short	128
+; ASM: .long	0
+; ASM: .long	0
+; ASM: .long	0
+; ASM: .short	0
+; ASM: .asciz	"A"
+; ASM: # Struct (0x1005) {
+; ASM: #   TypeLeafKind: LF_STRUCTURE (0x1505)
+; ASM: #   MemberCount: 0
+; ASM: #   Properties [ (0x80)
+; ASM: #     ForwardReference (0x80)
+; ASM: #   ]
+; ASM: #   FieldList: 0x0
+; ASM: #   DerivedFrom: 0x0
+; ASM: #   VShape: 0x0
+; ASM: #   SizeOf: 0
+; ASM: #   Name: A
+; ASM: # }
+; ASM: .short	18
+; ASM: .short	4098
+; ASM: .long	116
+; ASM: .long	32844
+; ASM: .long	4101
+; ASM: .short	4
+; ASM: .byte	242
+; ASM: .byte	241
+; ASM: # Pointer (0x1006) {
+; ASM: #   TypeLeafKind: LF_POINTER (0x1002)
+; ASM: #   PointeeType: int (0x74)
+; ASM: #   PtrType: Near64 (0xC)
+; ASM: #   PtrMode: PointerToDataMember (0x2)
+; ASM: #   IsFlat: 0
+; ASM: #   IsConst: 0
+; ASM: #   IsVolatile: 0
+; ASM: #   IsUnaligned: 0
+; ASM: #   IsRestrict: 0
+; ASM: #   IsThisPtr&: 0
+; ASM: #   IsThisPtr&&: 0
+; ASM: #   SizeOf: 4
+; ASM: #   ClassType: A (0x1005)
+; ASM: #   Representation: GeneralData (0x4)
+; ASM: # }
+; ASM: .short	10
+; ASM: .short	4098
+; ASM: .long	4101
+; ASM: .long	66572
+; ASM: # Pointer (0x1007) {
+; ASM: #   TypeLeafKind: LF_POINTER (0x1002)
+; ASM: #   PointeeType: A (0x1005)
+; ASM: #   PtrType: Near64 (0xC)
+; ASM: #   PtrMode: Pointer (0x0)
+; ASM: #   IsFlat: 0
+; ASM: #   IsConst: 1
+; ASM: #   IsVolatile: 0
+; ASM: #   IsUnaligned: 0
+; ASM: #   IsRestrict: 0
+; ASM: #   IsThisPtr&: 0
+; ASM: #   IsThisPtr&&: 0
+; ASM: #   SizeOf: 8
+; ASM: # }
+; ASM: .short	6
+; ASM: .short	4609
+; ASM: .long	0
+; ASM: # ArgList (0x1008) {
+; ASM: #   TypeLeafKind: LF_ARGLIST (0x1201)
+; ASM: #   NumArgs: 0
+; ASM: #   Arguments [
+; ASM: #   ]
+; ASM: # }
+; ASM: .short	26
+; ASM: .short	4105
+; ASM: .long	3
+; ASM: .long	4101
+; ASM: .long	4103
+; ASM: .byte	0
+; ASM: .byte	0
+; ASM: .short	0
+; ASM: .long	4104
+; ASM: .long	0
+; ASM: # MemberFunction (0x1009) {
+; ASM: #   TypeLeafKind: LF_MFUNCTION (0x1009)
+; ASM: #   ReturnType: void (0x3)
+; ASM: #   ClassType: A (0x1005)
+; ASM: #   ThisType: A* const (0x1007)
+; ASM: #   CallingConvention: NearC (0x0)
+; ASM: #   FunctionOptions [ (0x0)
+; ASM: #   ]
+; ASM: #   NumParameters: 0
+; ASM: #   ArgListType: () (0x1008)
+; ASM: #   ThisAdjustment: 0
+; ASM: # }
+; ASM: .short	30
+; ASM: .short	4611
+; ASM: .byte	0x0d, 0x15, 0x03, 0x00
+; ASM: .byte	0x74, 0x00, 0x00, 0x00
+; ASM: .byte	0x00, 0x00, 0x61, 0x00
+; ASM: .byte	0x11, 0x15, 0x03, 0x00
+; ASM: .byte	0x09, 0x10, 0x00, 0x00
+; ASM: .byte	0x41, 0x3a, 0x3a, 0x66
+; ASM: .byte	0x00, 0xf3, 0xf2, 0xf1
+; ASM: # FieldList (0x100A) {
+; ASM: #   TypeLeafKind: LF_FIELDLIST (0x1203)
+; ASM: #   DataMember {
+; ASM: #     TypeLeafKind: LF_MEMBER (0x150D)
+; ASM: #     AccessSpecifier: Public (0x3)
+; ASM: #     Type: int (0x74)
+; ASM: #     FieldOffset: 0x0
+; ASM: #     Name: a
+; ASM: #   }
+; ASM: #   OneMethod {
+; ASM: #     TypeLeafKind: LF_ONEMETHOD (0x1511)
+; ASM: #     AccessSpecifier: Public (0x3)
+; ASM: #     Type: void A::() (0x1009)
+; ASM: #     Name: A::f
+; ASM: #   }
+; ASM: # }
+; ASM: .short	22
+; ASM: .short	5381
+; ASM: .short	2
+; ASM: .short	0
+; ASM: .long	4106
+; ASM: .long	0
+; ASM: .long	0
+; ASM: .short	4
+; ASM: .asciz	"A"
+; ASM: # Struct (0x100B) {
+; ASM: #   TypeLeafKind: LF_STRUCTURE (0x1505)
+; ASM: #   MemberCount: 2
+; ASM: #   Properties [ (0x0)
+; ASM: #   ]
+; ASM: #   FieldList: <field list> (0x100A)
+; ASM: #   DerivedFrom: 0x0
+; ASM: #   VShape: 0x0
+; ASM: #   SizeOf: 4
+; ASM: #   Name: A
+; ASM: # }
+; ASM: .short	30
+; ASM: .short	5637
+; ASM: .long	0
+; ASM: .asciz	"D:\\src\\llvm\\build\\t.cpp"
+; ASM: # StringId (0x100C) {
+; ASM: #   TypeLeafKind: LF_STRING_ID (0x1605)
+; ASM: #   Id: 0x0
+; ASM: #   StringData: D:\src\llvm\build\t.cpp
+; ASM: # }
+; ASM: .short	14
+; ASM: .short	5638
+; ASM: .long	4107
+; ASM: .long	4108
+; ASM: .long	1
+; ASM: # UdtSourceLine (0x100D) {
+; ASM: #   TypeLeafKind: LF_UDT_SRC_LINE (0x1606)
+; ASM: #   UDT: A (0x100B)
+; ASM: #   SourceFile: D:\src\llvm\build\t.cpp (0x100C)
+; ASM: #   LineNumber: 1
+; ASM: # }
+; ASM: .short	18
+; ASM: .short	4098
+; ASM: .long	4105
+; ASM: .long	65644
+; ASM: .long	4101
+; ASM: .short	8
+; ASM: .byte	242
+; ASM: .byte	241
+; ASM: # Pointer (0x100E) {
+; ASM: #   TypeLeafKind: LF_POINTER (0x1002)
+; ASM: #   PointeeType: void A::() (0x1009)
+; ASM: #   PtrType: Near64 (0xC)
+; ASM: #   PtrMode: PointerToMemberFunction (0x3)
+; ASM: #   IsFlat: 0
+; ASM: #   IsConst: 0
+; ASM: #   IsVolatile: 0
+; ASM: #   IsUnaligned: 0
+; ASM: #   IsRestrict: 0
+; ASM: #   IsThisPtr&: 0
+; ASM: #   IsThisPtr&&: 0
+; ASM: #   SizeOf: 8
+; ASM: #   ClassType: A (0x1005)
+; ASM: #   Representation: GeneralFunction (0x8)
+; ASM: # }
+; ASM: .short	10
+; ASM: .short	4097
+; ASM: .long	3
+; ASM: .short	1
+; ASM: .byte	242
+; ASM: .byte	241
+; ASM: # Modifier (0x100F) {
+; ASM: #   TypeLeafKind: LF_MODIFIER (0x1001)
+; ASM: #   ModifiedType: void (0x3)
+; ASM: #   Modifiers [ (0x1)
+; ASM: #     Const (0x1)
+; ASM: #   ]
+; ASM: # }
+; ASM: .short	10
+; ASM: .short	4098
+; ASM: .long	4111
+; ASM: .long	65548
+; ASM: # Pointer (0x1010) {
+; ASM: #   TypeLeafKind: LF_POINTER (0x1002)
+; ASM: #   PointeeType: const void (0x100F)
+; ASM: #   PtrType: Near64 (0xC)
+; ASM: #   PtrMode: Pointer (0x0)
+; ASM: #   IsFlat: 0
+; ASM: #   IsConst: 0
+; ASM: #   IsVolatile: 0
+; ASM: #   IsUnaligned: 0
+; ASM: #   IsRestrict: 0
+; ASM: #   IsThisPtr&: 0
+; ASM: #   IsThisPtr&&: 0
+; ASM: #   SizeOf: 8
+; ASM: # }
+; ASM: .short	14
+; ASM: .short	4104
+; ASM: .long	3
+; ASM: .byte	0
+; ASM: .byte	0
+; ASM: .short	0
+; ASM: .long	4104
+; ASM: # Procedure (0x1011) {
+; ASM: #   TypeLeafKind: LF_PROCEDURE (0x1008)
+; ASM: #   ReturnType: void (0x3)
+; ASM: #   CallingConvention: NearC (0x0)
+; ASM: #   FunctionOptions [ (0x0)
+; ASM: #   ]
+; ASM: #   NumParameters: 0
+; ASM: #   ArgListType: () (0x1008)
+; ASM: # }
+; ASM: .short	22
+; ASM: .short	5633
+; ASM: .long	0
+; ASM: .long	4113
+; ASM: .asciz	"CharTypes"
+; ASM: .byte	242
+; ASM: .byte	241
+; ASM: # FuncId (0x1012) {
+; ASM: #   TypeLeafKind: LF_FUNC_ID (0x1601)
+; ASM: #   ParentScope: 0x0
+; ASM: #   FunctionType: void () (0x1011)
+; ASM: #   Name: CharTypes
+; ASM: # }
+; ASM: .short	26
+; ASM: .short	5637
+; ASM: .long	0
+; ASM: .asciz	"D:\\src\\llvm\\build"
+; ASM: .byte	242
+; ASM: .byte	241
+; ASM: # StringId (0x1013) {
+; ASM: #   TypeLeafKind: LF_STRING_ID (0x1605)
+; ASM: #   Id: 0x0
+; ASM: #   StringData: D:\src\llvm\build
+; ASM: # }
+; ASM: .short	14
+; ASM: .short	5637
+; ASM: .long	0
+; ASM: .asciz	"t.cpp"
+; ASM: .byte	242
+; ASM: .byte	241
+; ASM: # StringId (0x1014) {
+; ASM: #   TypeLeafKind: LF_STRING_ID (0x1605)
+; ASM: #   Id: 0x0
+; ASM: #   StringData: t.cpp
+; ASM: # }
+; ASM: .short	26
+; ASM: .short	5635
+; ASM: .short	5
+; ASM: .long	4115
+; ASM: .long	0
+; ASM: .long	4116
+; ASM: .long	0
+; ASM: .long	0
+; ASM: .byte	242
+; ASM: .byte	241
+; ASM: # BuildInfo (0x1015) {
+; ASM: #   TypeLeafKind: LF_BUILDINFO (0x1603)
+; ASM: #   NumArgs: 5
+; ASM: #   Arguments [
+; ASM: #     ArgType: D:\src\llvm\build (0x1013)
+; ASM: #     ArgType: 0x0
+; ASM: #     ArgType: t.cpp (0x1014)
+; ASM: #     ArgType: 0x0
+; ASM: #     ArgType: 0x0
+; ASM: #   ]
+; ASM: # }
 
 ; ModuleID = 't.cpp'
 source_filename = "t.cpp"

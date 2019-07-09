@@ -26,8 +26,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#define DEBUG_TYPE "amdgpu-propagate-attributes"
-
 #include "AMDGPU.h"
 #include "AMDGPUSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
@@ -39,6 +37,8 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <string>
+
+#define DEBUG_TYPE "amdgpu-propagate-attributes"
 
 using namespace llvm;
 

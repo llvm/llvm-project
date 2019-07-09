@@ -263,6 +263,19 @@ bool llvm::isAllocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
   return getAllocationData(V, AllocLike, TLI, LookThroughBitCast).hasValue();
 }
 
+/// Tests if a value is a call or invoke to a library function that
+/// reallocates memory (e.g., realloc).
+bool llvm::isReallocLikeFn(const Value *V, const TargetLibraryInfo *TLI,
+                     bool LookThroughBitCast) {
+  return getAllocationData(V, ReallocLike, TLI, LookThroughBitCast).hasValue();
+}
+
+/// Tests if a functions is a call or invoke to a library function that
+/// reallocates memory (e.g., realloc).
+bool llvm::isReallocLikeFn(const Function *F, const TargetLibraryInfo *TLI) {
+  return getAllocationDataForFunction(F, ReallocLike, TLI).hasValue();
+}
+
 /// extractMallocCall - Returns the corresponding CallInst if the instruction
 /// is a malloc call.  Since CallInst::CreateMalloc() only creates calls, we
 /// ignore InvokeInst here.
@@ -358,19 +371,8 @@ const CallInst *llvm::extractCallocCall(const Value *I,
   return isCallocLikeFn(I, TLI) ? cast<CallInst>(I) : nullptr;
 }
 
-/// isFreeCall - Returns non-null if the value is a call to the builtin free()
-const CallInst *llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
-  bool IsNoBuiltinCall;
-  const Function *Callee =
-      getCalledFunction(I, /*LookThroughBitCast=*/false, IsNoBuiltinCall);
-  if (Callee == nullptr || IsNoBuiltinCall)
-    return nullptr;
-
-  StringRef FnName = Callee->getName();
-  LibFunc TLIFn;
-  if (!TLI || !TLI->getLibFunc(FnName, TLIFn) || !TLI->has(TLIFn))
-    return nullptr;
-
+/// isLibFreeFunction - Returns true if the function is a builtin free()
+bool llvm::isLibFreeFunction(const Function *F, const LibFunc TLIFn) {
   unsigned ExpectedNumParams;
   if (TLIFn == LibFunc_free ||
       TLIFn == LibFunc_ZdlPv || // operator delete(void*)
@@ -401,21 +403,38 @@ const CallInst *llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
            TLIFn == LibFunc_ZdlPvSt11align_val_tRKSt9nothrow_t) // delete[](void*, align_val_t, nothrow)
     ExpectedNumParams = 3;
   else
-    return nullptr;
+    return false;
 
   // Check free prototype.
   // FIXME: workaround for PR5130, this will be obsolete when a nobuiltin
   // attribute will exist.
-  FunctionType *FTy = Callee->getFunctionType();
+  FunctionType *FTy = F->getFunctionType();
   if (!FTy->getReturnType()->isVoidTy())
-    return nullptr;
+    return false;
   if (FTy->getNumParams() != ExpectedNumParams)
-    return nullptr;
-  if (FTy->getParamType(0) != Type::getInt8PtrTy(Callee->getContext()))
+    return false;
+  if (FTy->getParamType(0) != Type::getInt8PtrTy(F->getContext()))
+    return false;
+
+  return true;
+}
+
+/// isFreeCall - Returns non-null if the value is a call to the builtin free()
+const CallInst *llvm::isFreeCall(const Value *I, const TargetLibraryInfo *TLI) {
+  bool IsNoBuiltinCall;
+  const Function *Callee =
+      getCalledFunction(I, /*LookThroughBitCast=*/false, IsNoBuiltinCall);
+  if (Callee == nullptr || IsNoBuiltinCall)
     return nullptr;
 
-  return dyn_cast<CallInst>(I);
+  StringRef FnName = Callee->getName();
+  LibFunc TLIFn;
+  if (!TLI || !TLI->getLibFunc(FnName, TLIFn) || !TLI->has(TLIFn))
+    return nullptr;
+
+  return isLibFreeFunction(Callee, TLIFn) ? dyn_cast<CallInst>(I) : nullptr;
 }
+
 
 //===----------------------------------------------------------------------===//
 //  Utility functions to compute size of objects.

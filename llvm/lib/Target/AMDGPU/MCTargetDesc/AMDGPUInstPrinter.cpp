@@ -71,17 +71,6 @@ void AMDGPUInstPrinter::printU16ImmDecOperand(const MCInst *MI, unsigned OpNo,
   O << formatDec(MI->getOperand(OpNo).getImm() & 0xffff);
 }
 
-void AMDGPUInstPrinter::printS13ImmDecOperand(const MCInst *MI, unsigned OpNo,
-                                              const MCSubtargetInfo &STI,
-                                              raw_ostream &O) {
-  // GFX10: Address offset is 12-bit signed byte offset.
-  if (AMDGPU::isGFX10(STI)) {
-    O << formatDec(SignExtend32<12>(MI->getOperand(OpNo).getImm()));
-  } else {
-    O << formatDec(SignExtend32<13>(MI->getOperand(OpNo).getImm()));
-  }
-}
-
 void AMDGPUInstPrinter::printU32ImmOperand(const MCInst *MI, unsigned OpNo,
                                            const MCSubtargetInfo &STI,
                                            raw_ostream &O) {
@@ -128,13 +117,25 @@ void AMDGPUInstPrinter::printOffset(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void AMDGPUInstPrinter::printOffsetS13(const MCInst *MI, unsigned OpNo,
-                                       const MCSubtargetInfo &STI,
-                                       raw_ostream &O) {
+void AMDGPUInstPrinter::printFlatOffset(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
   uint16_t Imm = MI->getOperand(OpNo).getImm();
   if (Imm != 0) {
     O << ((OpNo == 0)? "offset:" : " offset:");
-    printS13ImmDecOperand(MI, OpNo, STI, O);
+
+    const MCInstrDesc &Desc = MII.get(MI->getOpcode());
+    bool IsFlatSeg = !(Desc.TSFlags & SIInstrFlags::IsNonFlatSeg);
+
+    if (IsFlatSeg) { // Unsigned offset
+      printU16ImmDecOperand(MI, OpNo, O);
+    } else {         // Signed offset
+      if (AMDGPU::isGFX10(STI)) {
+        O << formatDec(SignExtend32<12>(MI->getOperand(OpNo).getImm()));
+      } else {
+        O << formatDec(SignExtend32<13>(MI->getOperand(OpNo).getImm()));
+      }
+    }
   }
 }
 

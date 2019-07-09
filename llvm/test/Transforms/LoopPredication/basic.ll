@@ -1756,6 +1756,49 @@ exit:
   ret i32 0
 }
 
+; Same as previous, except swapped br/cmp
+define i32 @eq_latch_dom_check_preinc(i32* %array, i32 %length, i32 %n) {
+; CHECK-LABEL: @eq_latch_dom_check_preinc(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp sle i32 [[N:%.*]], 0
+; CHECK-NEXT:    br i1 [[TMP5]], label [[EXIT:%.*]], label [[LOOP_PREHEADER:%.*]]
+; CHECK:       loop.preheader:
+; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[LENGTH:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i32 [[N]], [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ult i32 0, [[LENGTH]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP2]], [[TMP1]]
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_NEXT:%.*]], [[LOOP]] ], [ 0, [[LOOP_PREHEADER]] ]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw i32 [[I]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[I]], [[N]]
+; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT_LOOPEXIT:%.*]], label [[LOOP]]
+; CHECK:       exit.loopexit:
+; CHECK-NEXT:    br label [[EXIT]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %tmp5 = icmp sle i32 %n, 0
+  br i1 %tmp5, label %exit, label %loop.preheader
+
+loop.preheader:
+  br label %loop
+
+loop:
+  %i = phi i32 [ %i.next, %loop ], [ 0, %loop.preheader ]
+  %within.bounds = icmp ult i32 %i, %length
+  call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
+
+  %i.next = add nuw i32 %i, 1
+  %done = icmp eq i32 %i, %n
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret i32 0
+}
+
 
 ; NE latch - can't prove (end-start) mod step == 0 (i.e. might wrap
 ; around several times or even be infinite)

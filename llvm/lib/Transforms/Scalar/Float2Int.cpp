@@ -200,6 +200,7 @@ void Float2IntPass::walkBackwards(const SmallPtrSetImpl<Instruction*> &Roots) {
       continue;
     }
 
+    case Instruction::FNeg:
     case Instruction::FAdd:
     case Instruction::FSub:
     case Instruction::FMul:
@@ -239,6 +240,15 @@ void Float2IntPass::walkForwards() {
     case Instruction::UIToFP:
     case Instruction::SIToFP:
       llvm_unreachable("Should have been handled in walkForwards!");
+
+    case Instruction::FNeg:
+      Op = [](ArrayRef<ConstantRange> Ops) {
+        assert(Ops.size() == 1 && "FNeg is a unary operator!");
+        unsigned Size = Ops[0].getBitWidth();
+        auto Zero = ConstantRange(APInt::getNullValue(Size));
+        return Zero.sub(Ops[0]);
+      };
+      break;
 
     case Instruction::FAdd:
     case Instruction::FSub:
@@ -464,6 +474,10 @@ Value *Float2IntPass::convert(Instruction *I, Type *ToTy) {
 
   case Instruction::SIToFP:
     NewV = IRB.CreateSExtOrTrunc(NewOperands[0], ToTy);
+    break;
+
+  case Instruction::FNeg:
+    NewV = IRB.CreateNeg(NewOperands[0], I->getName());
     break;
 
   case Instruction::FAdd:

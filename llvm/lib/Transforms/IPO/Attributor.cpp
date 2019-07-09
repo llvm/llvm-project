@@ -44,6 +44,11 @@ STATISTIC(NumAttributesManifested,
           "Number of abstract attributes manifested in IR");
 STATISTIC(NumFnNoUnwind, "Number of functions marked nounwind");
 
+STATISTIC(NumFnUniqueReturned, "Number of function with unique return");
+STATISTIC(NumFnKnownReturns, "Number of function with known return values");
+STATISTIC(NumFnArgumentReturned,
+          "Number of function arguments marked returned");
+
 // TODO: Determine a good default value.
 //
 // In the LLVM-TS and SPEC2006, 32 seems to not induce compile time overheads
@@ -91,9 +96,95 @@ static void bookkeeping(AbstractAttribute::ManifestPosition MP,
   case Attribute::NoUnwind:
     NumFnNoUnwind++;
     return;
+  case Attribute::Returned:
+    NumFnArgumentReturned++;
+    return;
   default:
     return;
   }
+}
+
+template <typename StateTy>
+using followValueCB_t = std::function<bool(Value *, StateTy &State)>;
+template <typename StateTy>
+using visitValueCB_t = std::function<void(Value *, StateTy &State)>;
+
+/// Recursively visit all values that might become \p InitV at some point. This
+/// will be done by looking through cast instructions, selects, phis, and calls
+/// with the "returned" attribute. The callback \p FollowValueCB is asked before
+/// a potential origin value is looked at. If no \p FollowValueCB is passed, a
+/// default one is used that will make sure we visit every value only once. Once
+/// we cannot look through the value any further, the callback \p VisitValueCB
+/// is invoked and passed the current value and the \p State. To limit how much
+/// effort is invested, we will never visit more than \p MaxValues values.
+template <typename StateTy>
+static bool genericValueTraversal(
+    Value *InitV, StateTy &State, visitValueCB_t<StateTy> &VisitValueCB,
+    followValueCB_t<StateTy> *FollowValueCB = nullptr, int MaxValues = 8) {
+
+  SmallPtrSet<Value *, 16> Visited;
+  followValueCB_t<bool> DefaultFollowValueCB = [&](Value *Val, bool &) {
+    return Visited.insert(Val).second;
+  };
+
+  if (!FollowValueCB)
+    FollowValueCB = &DefaultFollowValueCB;
+
+  SmallVector<Value *, 16> Worklist;
+  Worklist.push_back(InitV);
+
+  int Iteration = 0;
+  do {
+    Value *V = Worklist.pop_back_val();
+
+    // Check if we should process the current value. To prevent endless
+    // recursion keep a record of the values we followed!
+    if (!(*FollowValueCB)(V, State))
+      continue;
+
+    // Make sure we limit the compile time for complex expressions.
+    if (Iteration++ >= MaxValues)
+      return false;
+
+    // Explicitly look through calls with a "returned" attribute if we do
+    // not have a pointer as stripPointerCasts only works on them.
+    if (V->getType()->isPointerTy()) {
+      V = V->stripPointerCasts();
+    } else {
+      CallSite CS(V);
+      if (CS && CS.getCalledFunction()) {
+        Value *NewV = nullptr;
+        for (Argument &Arg : CS.getCalledFunction()->args())
+          if (Arg.hasReturnedAttr()) {
+            NewV = CS.getArgOperand(Arg.getArgNo());
+            break;
+          }
+        if (NewV) {
+          Worklist.push_back(NewV);
+          continue;
+        }
+      }
+    }
+
+    // Look through select instructions, visit both potential values.
+    if (auto *SI = dyn_cast<SelectInst>(V)) {
+      Worklist.push_back(SI->getTrueValue());
+      Worklist.push_back(SI->getFalseValue());
+      continue;
+    }
+
+    // Look through phi nodes, visit all operands.
+    if (auto *PHI = dyn_cast<PHINode>(V)) {
+      Worklist.append(PHI->op_begin(), PHI->op_end());
+      continue;
+    }
+
+    // Once a leaf is reached we inform the user through the callback.
+    VisitValueCB(V, State);
+  } while (!Worklist.empty());
+
+  // All values have been visited.
+  return true;
 }
 
 /// Helper to identify the correct offset into an attribute list.
@@ -303,6 +394,331 @@ ChangeStatus AANoUnwindFunction::updateImpl(Attributor &A) {
   return ChangeStatus::UNCHANGED;
 }
 
+/// --------------------- Function Return Values -------------------------------
+
+/// "Attribute" that collects all potential returned values and the return
+/// instructions that they arise from.
+///
+/// If there is a unique returned value R, the manifest method will:
+///   - mark R with the "returned" attribute, if R is an argument.
+class AAReturnedValuesImpl final : public AAReturnedValues, AbstractState {
+
+  /// Mapping of values potentially returned by the associated function to the
+  /// return instructions that might return them.
+  DenseMap<Value *, SmallPtrSet<ReturnInst *, 2>> ReturnedValues;
+
+  /// State flags
+  ///
+  ///{
+  bool IsFixed;
+  bool IsValidState;
+  bool HasOverdefinedReturnedCalls;
+  ///}
+
+  /// Collect values that could become \p V in the set \p Values, each mapped to
+  /// \p ReturnInsts.
+  void collectValuesRecursively(
+      Attributor &A, Value *V, SmallPtrSetImpl<ReturnInst *> &ReturnInsts,
+      DenseMap<Value *, SmallPtrSet<ReturnInst *, 2>> &Values) {
+
+    visitValueCB_t<bool> VisitValueCB = [&](Value *Val, bool &) {
+      assert(!isa<Instruction>(Val) ||
+             &getAnchorScope() == cast<Instruction>(Val)->getFunction());
+      Values[Val].insert(ReturnInsts.begin(), ReturnInsts.end());
+    };
+
+    bool UnusedBool;
+    bool Success = genericValueTraversal(V, UnusedBool, VisitValueCB);
+
+    // If we did abort the above traversal we haven't see all the values.
+    // Consequently, we cannot know if the information we would derive is
+    // accurate so we give up early.
+    if (!Success)
+      indicatePessimisticFixpoint();
+  }
+
+public:
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AAReturnedValuesImpl(Function &F, InformationCache &InfoCache)
+      : AAReturnedValues(F, InfoCache) {
+    // We do not have an associated argument yet.
+    AssociatedVal = nullptr;
+  }
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    // Reset the state.
+    AssociatedVal = nullptr;
+    IsFixed = false;
+    IsValidState = true;
+    HasOverdefinedReturnedCalls = false;
+    ReturnedValues.clear();
+
+    Function &F = cast<Function>(getAnchoredValue());
+
+    // The map from instruction opcodes to those instructions in the function.
+    auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(F);
+
+    // Look through all arguments, if one is marked as returned we are done.
+    for (Argument &Arg : F.args()) {
+      if (Arg.hasReturnedAttr()) {
+
+        auto &ReturnInstSet = ReturnedValues[&Arg];
+        for (Instruction *RI : OpcodeInstMap[Instruction::Ret])
+          ReturnInstSet.insert(cast<ReturnInst>(RI));
+
+        indicateOptimisticFixpoint();
+        return;
+      }
+    }
+
+    // If no argument was marked as returned we look at all return instructions
+    // and collect potentially returned values.
+    for (Instruction *RI : OpcodeInstMap[Instruction::Ret]) {
+      SmallPtrSet<ReturnInst *, 1> RISet({cast<ReturnInst>(RI)});
+      collectValuesRecursively(A, cast<ReturnInst>(RI)->getReturnValue(), RISet,
+                               ReturnedValues);
+    }
+  }
+
+  /// See AbstractAttribute::manifest(...).
+  virtual ChangeStatus manifest(Attributor &A) override;
+
+  /// See AbstractAttribute::getState(...).
+  virtual AbstractState &getState() override { return *this; }
+
+  /// See AbstractAttribute::getState(...).
+  virtual const AbstractState &getState() const override { return *this; }
+
+  /// See AbstractAttribute::getManifestPosition().
+  virtual ManifestPosition getManifestPosition() const override {
+    return MP_ARGUMENT;
+  }
+
+  /// See AbstractAttribute::updateImpl(Attributor &A).
+  virtual ChangeStatus updateImpl(Attributor &A) override;
+
+  /// Return the number of potential return values, -1 if unknown.
+  size_t getNumReturnValues() const {
+    return isValidState() ? ReturnedValues.size() : -1;
+  }
+
+  /// Return an assumed unique return value if a single candidate is found. If
+  /// there cannot be one, return a nullptr. If it is not clear yet, return the
+  /// Optional::NoneType.
+  Optional<Value *> getAssumedUniqueReturnValue() const;
+
+  /// See AbstractState::checkForallReturnedValues(...).
+  virtual bool
+  checkForallReturnedValues(std::function<bool(Value &)> &Pred) const override;
+
+  /// Pretty print the attribute similar to the IR representation.
+  virtual const std::string getAsStr() const override;
+
+  /// See AbstractState::isAtFixpoint().
+  bool isAtFixpoint() const override { return IsFixed; }
+
+  /// See AbstractState::isValidState().
+  bool isValidState() const override { return IsValidState; }
+
+  /// See AbstractState::indicateOptimisticFixpoint(...).
+  void indicateOptimisticFixpoint() override {
+    IsFixed = true;
+    IsValidState &= true;
+  }
+  void indicatePessimisticFixpoint() override {
+    IsFixed = true;
+    IsValidState = false;
+  }
+};
+
+ChangeStatus AAReturnedValuesImpl::manifest(Attributor &A) {
+  ChangeStatus Changed = ChangeStatus::UNCHANGED;
+
+  // Bookkeeping.
+  assert(isValidState());
+  NumFnKnownReturns++;
+
+  // Check if we have an assumed unique return value that we could manifest.
+  Optional<Value *> UniqueRV = getAssumedUniqueReturnValue();
+
+  if (!UniqueRV.hasValue() || !UniqueRV.getValue())
+    return Changed;
+
+  // Bookkeeping.
+  NumFnUniqueReturned++;
+
+  // If the assumed unique return value is an argument, annotate it.
+  if (auto *UniqueRVArg = dyn_cast<Argument>(UniqueRV.getValue())) {
+    AssociatedVal = UniqueRVArg;
+    Changed = AbstractAttribute::manifest(A) | Changed;
+  }
+
+  return Changed;
+}
+
+const std::string AAReturnedValuesImpl::getAsStr() const {
+  return (isAtFixpoint() ? "returns(#" : "may-return(#") +
+         (isValidState() ? std::to_string(getNumReturnValues()) : "?") + ")";
+}
+
+Optional<Value *> AAReturnedValuesImpl::getAssumedUniqueReturnValue() const {
+  // If checkForallReturnedValues provides a unique value, ignoring potential
+  // undef values that can also be present, it is assumed to be the actual
+  // return value and forwarded to the caller of this method. If there are
+  // multiple, a nullptr is returned indicating there cannot be a unique
+  // returned value.
+  Optional<Value *> UniqueRV;
+
+  std::function<bool(Value &)> Pred = [&](Value &RV) -> bool {
+    // If we found a second returned value and neither the current nor the saved
+    // one is an undef, there is no unique returned value. Undefs are special
+    // since we can pretend they have any value.
+    if (UniqueRV.hasValue() && UniqueRV != &RV &&
+        !(isa<UndefValue>(RV) || isa<UndefValue>(UniqueRV.getValue()))) {
+      UniqueRV = nullptr;
+      return false;
+    }
+
+    // Do not overwrite a value with an undef.
+    if (!UniqueRV.hasValue() || !isa<UndefValue>(RV))
+      UniqueRV = &RV;
+
+    return true;
+  };
+
+  if (!checkForallReturnedValues(Pred))
+    UniqueRV = nullptr;
+
+  return UniqueRV;
+}
+
+bool AAReturnedValuesImpl::checkForallReturnedValues(
+    std::function<bool(Value &)> &Pred) const {
+  if (!isValidState())
+    return false;
+
+  // Check all returned values but ignore call sites as long as we have not
+  // encountered an overdefined one during an update.
+  for (auto &It : ReturnedValues) {
+    Value *RV = It.first;
+
+    ImmutableCallSite ICS(RV);
+    if (ICS && !HasOverdefinedReturnedCalls)
+      continue;
+
+    if (!Pred(*RV))
+      return false;
+  }
+
+  return true;
+}
+
+ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
+
+  // Check if we know of any values returned by the associated function,
+  // if not, we are done.
+  if (getNumReturnValues() == 0) {
+    indicateOptimisticFixpoint();
+    return ChangeStatus::UNCHANGED;
+  }
+
+  // Check if any of the returned values is a call site we can refine.
+  decltype(ReturnedValues) AddRVs;
+  bool HasCallSite = false;
+
+  // Look at all returned call sites.
+  for (auto &It : ReturnedValues) {
+    SmallPtrSet<ReturnInst *, 2> &ReturnInsts = It.second;
+    Value *RV = It.first;
+    LLVM_DEBUG(dbgs() << "[AAReturnedValues] Potentially returned value " << *RV
+                      << "\n");
+
+    // Only call sites can change during an update, ignore the rest.
+    CallSite RetCS(RV);
+    if (!RetCS)
+      continue;
+
+    // For now, any call site we see will prevent us from directly fixing the
+    // state. However, if the information on the callees is fixed, the call
+    // sites will be removed and we will fix the information for this state.
+    HasCallSite = true;
+
+    // Try to find a assumed unique return value for the called function.
+    auto *RetCSAA = A.getAAFor<AAReturnedValuesImpl>(*this, *RV);
+    if (!RetCSAA || !RetCSAA->isValidState()) {
+      HasOverdefinedReturnedCalls = true;
+      LLVM_DEBUG(dbgs() << "[AAReturnedValues] Returned call site (" << *RV
+                        << ") with " << (RetCSAA ? "invalid" : "no")
+                        << " associated state\n");
+      continue;
+    }
+
+    // Try to find a assumed unique return value for the called function.
+    Optional<Value *> AssumedUniqueRV = RetCSAA->getAssumedUniqueReturnValue();
+
+    // If no assumed unique return value was found due to the lack of
+    // candidates, we may need to resolve more calls (through more update
+    // iterations) or the called function will not return. Either way, we simply
+    // stick with the call sites as return values. Because there were not
+    // multiple possibilities, we do not treat it as overdefined.
+    if (!AssumedUniqueRV.hasValue())
+      continue;
+
+    // If multiple, non-refinable values were found, there cannot be a unique
+    // return value for the called function. The returned call is overdefined!
+    if (!AssumedUniqueRV.getValue()) {
+      HasOverdefinedReturnedCalls = true;
+      LLVM_DEBUG(dbgs() << "[AAReturnedValues] Returned call site has multiple "
+                           "potentially returned values\n");
+      continue;
+    }
+
+    LLVM_DEBUG({
+      bool UniqueRVIsKnown = RetCSAA->isAtFixpoint();
+      dbgs() << "[AAReturnedValues] Returned call site "
+             << (UniqueRVIsKnown ? "known" : "assumed")
+             << " unique return value: " << *AssumedUniqueRV << "\n";
+    });
+
+    // The assumed unique return value.
+    Value *AssumedRetVal = AssumedUniqueRV.getValue();
+
+    // If the assumed unique return value is an argument, lookup the matching
+    // call site operand and recursively collect new returned values.
+    // If it is not an argument, it is just put into the set of returned values
+    // as we would have already looked through casts, phis, and similar values.
+    if (Argument *AssumedRetArg = dyn_cast<Argument>(AssumedRetVal))
+      collectValuesRecursively(A,
+                               RetCS.getArgOperand(AssumedRetArg->getArgNo()),
+                               ReturnInsts, AddRVs);
+    else
+      AddRVs[AssumedRetVal].insert(ReturnInsts.begin(), ReturnInsts.end());
+  }
+
+  // Keep track of any change to trigger updates on dependent attributes.
+  ChangeStatus Changed = ChangeStatus::UNCHANGED;
+
+  for (auto &It : AddRVs) {
+    assert(!It.second.empty() && "Entry does not add anything.");
+    auto &ReturnInsts = ReturnedValues[It.first];
+    for (ReturnInst *RI : It.second)
+      if (ReturnInsts.insert(RI).second) {
+        LLVM_DEBUG(dbgs() << "[AAReturnedValues] Add new returned value "
+                          << *It.first << " => " << *RI << "\n");
+        Changed = ChangeStatus::CHANGED;
+      }
+  }
+
+  // If there is no call site in the returned values we are done.
+  if (!HasCallSite) {
+    indicateOptimisticFixpoint();
+    return ChangeStatus::CHANGED;
+  }
+
+  return Changed;
+}
+
 /// ----------------------------------------------------------------------------
 ///                               Attributor
 /// ----------------------------------------------------------------------------
@@ -448,6 +864,15 @@ void Attributor::identifyDefaultAbstractAttributes(
   // Every function can be nounwind.
   registerAA(*new AANoUnwindFunction(F, InfoCache));
 
+  // Return attributes are only appropriate if the return type is non void.
+  Type *ReturnType = F.getReturnType();
+  if (!ReturnType->isVoidTy()) {
+    // Argument attribute "returned" --- Create only one per function even
+    // though it is an argument attribute.
+    if (!Whitelist || Whitelist->count(AAReturnedValues::ID))
+      registerAA(*new AAReturnedValuesImpl(F, InfoCache));
+  }
+
   // Walk all instructions to find more attribute opportunities and also
   // interesting instructions that might be queried by abstract attributes
   // during their initialization or update.
@@ -474,6 +899,7 @@ void Attributor::identifyDefaultAbstractAttributes(
     case Instruction::CleanupRet:
     case Instruction::CatchSwitch:
     case Instruction::Resume:
+    case Instruction::Ret:
       IsInterestingOpcode = true;
     }
     if (IsInterestingOpcode)

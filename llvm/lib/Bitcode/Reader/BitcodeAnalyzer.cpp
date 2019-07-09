@@ -546,11 +546,9 @@ Error BitcodeAnalyzer::analyze(Optional<BCDumpOptions> O,
   // The block info must be a top-level block.
   if (BlockInfoStream) {
     BitstreamCursor BlockInfoCursor(*BlockInfoStream);
-    CurStreamTypeType BlockInfoStreamType;
     Expected<CurStreamTypeType> H = analyzeHeader(O, BlockInfoCursor);
     if (!H)
       return H.takeError();
-    BlockInfoStreamType = *H;
 
     while (!BlockInfoCursor.AtEndOfStream()) {
       Expected<unsigned> MaybeCode = BlockInfoCursor.ReadCode();

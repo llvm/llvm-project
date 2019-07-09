@@ -2777,10 +2777,6 @@ bool PPCInstrInfo::convertToImmediateForm(MachineInstr &MI,
   return false;
 }
 
-static bool isVFReg(unsigned Reg) {
-  return PPC::VFRCRegClass.contains(Reg);
-}
-
 bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
                                    ImmInstrInfo &III, bool PostRA) const {
   unsigned Opc = MI.getOpcode();
@@ -3115,7 +3111,7 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
       break;
     case PPC::LXSSPX:
       if (PostRA) {
-        if (isVFReg(MI.getOperand(0).getReg()))
+        if (isVFRegister(MI.getOperand(0).getReg()))
           III.ImmOpcode = PPC::LXSSP;
         else {
           III.ImmOpcode = PPC::LFS;
@@ -3129,7 +3125,7 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
       break;
     case PPC::LXSDX:
       if (PostRA) {
-        if (isVFReg(MI.getOperand(0).getReg()))
+        if (isVFRegister(MI.getOperand(0).getReg()))
           III.ImmOpcode = PPC::LXSD;
         else {
           III.ImmOpcode = PPC::LFD;
@@ -3147,7 +3143,7 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
       break;
     case PPC::STXSSPX:
       if (PostRA) {
-        if (isVFReg(MI.getOperand(0).getReg()))
+        if (isVFRegister(MI.getOperand(0).getReg()))
           III.ImmOpcode = PPC::STXSSP;
         else {
           III.ImmOpcode = PPC::STFS;
@@ -3161,7 +3157,7 @@ bool PPCInstrInfo::instrHasImmForm(const MachineInstr &MI,
       break;
     case PPC::STXSDX:
       if (PostRA) {
-        if (isVFReg(MI.getOperand(0).getReg()))
+        if (isVFRegister(MI.getOperand(0).getReg()))
           III.ImmOpcode = PPC::STXSD;
         else {
           III.ImmOpcode = PPC::STFD;

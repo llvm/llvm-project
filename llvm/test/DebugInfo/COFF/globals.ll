@@ -1,5 +1,6 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc < %s -filetype=obj | llvm-readobj - --codeview | FileCheck %s --check-prefix=OBJ
+; RUN: llc < %s | llvm-mc -filetype=obj --triple=x86_64-windows | llvm-readobj - --codeview | FileCheck %s --check-prefix=OBJ
 ; RUN: llc < %s -filetype=obj | obj2yaml | FileCheck %s --check-prefix=YAML
 
 ; C++ source to regenerate:

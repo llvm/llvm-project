@@ -53,6 +53,8 @@ STATISTIC(NumFixedPointIterations,
           "to reg-imm ones");
 STATISTIC(NumRotatesCollapsed,
           "Number of pairs of rotate left, clear left/right collapsed");
+STATISTIC(NumEXTSWAndSLDICombined,
+          "Number of pairs of EXTSW and SLDI combined as EXTSWSLI");
 
 static cl::opt<bool>
 FixedPointRegToImm("ppc-reg-to-imm-fixed-point", cl::Hidden, cl::init(true),
@@ -101,6 +103,7 @@ private:
   // Perform peepholes.
   bool eliminateRedundantCompare(void);
   bool eliminateRedundantTOCSaves(std::map<MachineInstr *, bool> &TOCSaves);
+  bool combineSEXTAndSHL(MachineInstr &MI, MachineInstr *&ToErase);
   bool emitRLDICWhenLoweringJumpTables(MachineInstr &MI);
   void UpdateTOCSaves(std::map<MachineInstr *, bool> &TOCSaves,
                       MachineInstr *MI);
@@ -799,7 +802,8 @@ bool PPCMIPeephole::simplifyCode(void) {
         break;
       }
       case PPC::RLDICR: {
-        Simplified |= emitRLDICWhenLoweringJumpTables(MI);
+        Simplified |= emitRLDICWhenLoweringJumpTables(MI) ||
+                      combineSEXTAndSHL(MI, ToErase);
         break;
       }
       }
@@ -1376,6 +1380,73 @@ bool PPCMIPeephole::emitRLDICWhenLoweringJumpTables(MachineInstr &MI) {
   LLVM_DEBUG(dbgs() << "To: ");
   LLVM_DEBUG(MI.dump());
   NumRotatesCollapsed++;
+  return true;
+}
+
+// For case in LLVM IR
+// entry:
+//   %iconv = sext i32 %index to i64
+//   br i1 undef label %true, label %false
+// true:
+//   %ptr = getelementptr inbounds i32, i32* null, i64 %iconv
+// ...
+// PPCISelLowering::combineSHL fails to combine, because sext and shl are in
+// different BBs when conducting instruction selection. We can do a peephole
+// optimization to combine these two instructions into extswsli after
+// instruction selection.
+bool PPCMIPeephole::combineSEXTAndSHL(MachineInstr &MI,
+                                      MachineInstr *&ToErase) {
+  if (MI.getOpcode() != PPC::RLDICR)
+    return false;
+
+  if (!MF->getSubtarget<PPCSubtarget>().isISA3_0())
+    return false;
+
+  assert(MI.getNumOperands() == 4 && "RLDICR should have 4 operands");
+
+  MachineOperand MOpSHMI = MI.getOperand(2);
+  MachineOperand MOpMEMI = MI.getOperand(3);
+  if (!(MOpSHMI.isImm() && MOpMEMI.isImm()))
+    return false;
+
+  uint64_t SHMI = MOpSHMI.getImm();
+  uint64_t MEMI = MOpMEMI.getImm();
+  if (SHMI + MEMI != 63)
+    return false;
+
+  unsigned SrcReg = MI.getOperand(1).getReg();
+  if (!TargetRegisterInfo::isVirtualRegister(SrcReg))
+    return false;
+
+  MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
+  if (SrcMI->getOpcode() != PPC::EXTSW &&
+      SrcMI->getOpcode() != PPC::EXTSW_32_64)
+    return false;
+
+  // If the register defined by extsw has more than one use, combination is not
+  // needed.
+  if (!MRI->hasOneNonDBGUse(SrcReg))
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Combining pair: ");
+  LLVM_DEBUG(SrcMI->dump());
+  LLVM_DEBUG(MI.dump());
+
+  MachineInstr *NewInstr =
+      BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(),
+              SrcMI->getOpcode() == PPC::EXTSW ? TII->get(PPC::EXTSWSLI)
+                                               : TII->get(PPC::EXTSWSLI_32_64),
+              MI.getOperand(0).getReg())
+          .add(SrcMI->getOperand(1))
+          .add(MOpSHMI);
+  (void)NewInstr;
+
+  LLVM_DEBUG(dbgs() << "TO: ");
+  LLVM_DEBUG(NewInstr->dump());
+  ++NumEXTSWAndSLDICombined;
+  ToErase = &MI;
+  // SrcMI, which is extsw, is of no use now, erase it.
+  SrcMI->eraseFromParent();
   return true;
 }
 

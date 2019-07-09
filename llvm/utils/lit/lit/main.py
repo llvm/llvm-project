@@ -11,6 +11,7 @@ import os
 import platform
 import random
 import re
+import shlex
 import sys
 import time
 import argparse
@@ -322,7 +323,8 @@ def main_with_tmp(builtinParameters):
                       help="Show all discovered tests",
                       action="store_true", default=False)
 
-    opts = parser.parse_args()
+    opts = parser.parse_args(sys.argv[1:] +
+                             shlex.split(os.environ.get("LIT_OPTS", "")))
     args = opts.test_paths
 
     if opts.show_version:

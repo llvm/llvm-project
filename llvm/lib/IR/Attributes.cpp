@@ -321,6 +321,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "nocapture";
   if (hasAttribute(Attribute::NoDuplicate))
     return "noduplicate";
+  if (hasAttribute(Attribute::NoFree))
+    return "nofree";
   if (hasAttribute(Attribute::NoImplicitFloat))
     return "noimplicitfloat";
   if (hasAttribute(Attribute::NoInline))

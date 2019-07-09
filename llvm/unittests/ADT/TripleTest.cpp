@@ -876,11 +876,13 @@ TEST(TripleTest, BitWidthPredicates) {
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_TRUE(T.isArch32Bit());
   EXPECT_FALSE(T.isArch64Bit());
+  EXPECT_TRUE(T.isRISCV());
 
   T.setArch(Triple::riscv64);
   EXPECT_FALSE(T.isArch16Bit());
   EXPECT_FALSE(T.isArch32Bit());
   EXPECT_TRUE(T.isArch64Bit());
+  EXPECT_TRUE(T.isRISCV());
 }
 
 TEST(TripleTest, BitWidthArchVariants) {
@@ -1356,6 +1358,8 @@ TEST(TripleTest, NormalizeWindows) {
 
   EXPECT_EQ("i686-pc-windows-elf",
             Triple::normalize("i686-pc-windows-elf-elf"));
+
+  EXPECT_TRUE(Triple("x86_64-pc-win32").isWindowsMSVCEnvironment());
 }
 
 TEST(TripleTest, getARMCPUForArch) {

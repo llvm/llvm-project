@@ -11,6 +11,15 @@
 // Which is defined depends on whether TLI_DEFINE_ENUM is defined or
 // TLI_DEFINE_STRING is defined. Only one should be defined at a time.
 
+// NOTE: The nofree attribute is added to Libfuncs which are not
+// listed as free or realloc functions in MemoryBuiltins.cpp
+//
+// When adding a function which frees memory include the LibFunc
+// in lib/Analysis/MemoryBuiltins.cpp "isLibFreeFunction".
+//
+// When adding a LibFunc which reallocates memory include the LibFunc
+// in lib/Analysis/MemoryBuiltins.cpp "AllocationFnData[]".
+
 #if !(defined(TLI_DEFINE_ENUM) || defined(TLI_DEFINE_STRING))
 #error "Must define TLI_DEFINE_ENUM or TLI_DEFINE_STRING for TLI .def."
 #elif defined(TLI_DEFINE_ENUM) && defined(TLI_DEFINE_STRING)

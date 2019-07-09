@@ -31,7 +31,7 @@ namespace symbolize {
 class SymbolizableObjectFile : public SymbolizableModule {
 public:
   static ErrorOr<std::unique_ptr<SymbolizableObjectFile>>
-  create(object::ObjectFile *Obj, std::unique_ptr<DIContext> DICtx);
+  create(const object::ObjectFile *Obj, std::unique_ptr<DIContext> DICtx);
 
   DILineInfo symbolizeCode(object::SectionedAddress ModuleOffset,
                            FunctionNameKind FNKind,
@@ -68,7 +68,7 @@ private:
   /// Search for the first occurence of specified Address in ObjectFile.
   uint64_t getModuleSectionIndexForAddress(uint64_t Address) const;
 
-  object::ObjectFile *Module;
+  const object::ObjectFile *Module;
   std::unique_ptr<DIContext> DebugInfoContext;
 
   struct SymbolDesc {
@@ -84,7 +84,7 @@ private:
   std::vector<std::pair<SymbolDesc, StringRef>> Functions;
   std::vector<std::pair<SymbolDesc, StringRef>> Objects;
 
-  SymbolizableObjectFile(object::ObjectFile *Obj,
+  SymbolizableObjectFile(const object::ObjectFile *Obj,
                          std::unique_ptr<DIContext> DICtx);
 };
 
