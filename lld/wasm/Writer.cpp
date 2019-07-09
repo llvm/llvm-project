@@ -304,9 +304,9 @@ void Writer::addSection(OutputSection *Sec) {
 // gold provide the feature, and used by many programs.
 static void addStartStopSymbols(const OutputSegment *Seg) {
   StringRef Name = Seg->Name;
-  LLVM_DEBUG(dbgs() << "addStartStopSymbols: " << Name << "\n");
   if (!isValidCIdentifier(Name))
     return;
+  LLVM_DEBUG(dbgs() << "addStartStopSymbols: " << Name << "\n");
   uint32_t Start = Seg->StartVA;
   uint32_t Stop = Start + Seg->Size;
   Symtab->addOptionalDataSymbol(Saver.save("__start_" + Name), Start);
@@ -601,7 +601,7 @@ static StringRef getOutputDataSegmentName(StringRef Name) {
   // With PIC code we currently only support a single data segment since
   // we only have a single __memory_base to use as our base address.
   if (Config->Pic)
-    return "data";
+    return ".data";
   if (!Config->MergeDataSegments)
     return Name;
   if (Name.startswith(".text."))
@@ -827,13 +827,6 @@ void Writer::run() {
     if (Config->Pic)
       createApplyRelocationsFunction();
     createCallCtorsFunction();
-
-    // Make sure we have resolved all symbols.
-    if (!Config->AllowUndefined)
-      Symtab->reportRemainingUndefines();
-
-    if (errorCount())
-      return;
   }
 
   log("-- calculateTypes");

@@ -16,6 +16,7 @@
 #include "sanitizer_common/sanitizer_stackdepot.h"
 #include "hwasan.h"
 #include "hwasan_allocator.h"
+#include "hwasan_checks.h"
 #include "hwasan_mapping.h"
 #include "hwasan_malloc_bisect.h"
 #include "hwasan_thread.h"
@@ -42,13 +43,8 @@ enum RightAlignMode {
   kRightAlignAlways
 };
 
-// These two variables are initialized from flags()->malloc_align_right
-// in HwasanAllocatorInit and are never changed afterwards.
-static RightAlignMode right_align_mode = kRightAlignNever;
-static bool right_align_8 = false;
-
 // Initialized in HwasanAllocatorInit, an never changed.
-static ALIGNED(16) u8 tail_magic[kShadowAlignment];
+static ALIGNED(16) u8 tail_magic[kShadowAlignment - 1];
 
 bool HwasanChunkView::IsAllocated() const {
   return metadata_ && metadata_->alloc_context_id && metadata_->requested_size;
@@ -58,8 +54,6 @@ bool HwasanChunkView::IsAllocated() const {
 static uptr AlignRight(uptr addr, uptr requested_size) {
   uptr tail_size = requested_size % kShadowAlignment;
   if (!tail_size) return addr;
-  if (right_align_8)
-    return tail_size > 8 ? addr : addr + 8;
   return addr + kShadowAlignment - tail_size;
 }
 
@@ -95,30 +89,7 @@ void HwasanAllocatorInit() {
                        !flags()->disable_allocator_tagging);
   SetAllocatorMayReturnNull(common_flags()->allocator_may_return_null);
   allocator.Init(common_flags()->allocator_release_to_os_interval_ms);
-  switch (flags()->malloc_align_right) {
-    case 0: break;
-    case 1:
-      right_align_mode = kRightAlignSometimes;
-      right_align_8 = false;
-      break;
-    case 2:
-      right_align_mode = kRightAlignAlways;
-      right_align_8 = false;
-      break;
-    case 8:
-      right_align_mode = kRightAlignSometimes;
-      right_align_8 = true;
-      break;
-    case 9:
-      right_align_mode = kRightAlignAlways;
-      right_align_8 = true;
-      break;
-    default:
-      Report("ERROR: unsupported value of malloc_align_right flag: %d\n",
-             flags()->malloc_align_right);
-      Die();
-  }
-  for (uptr i = 0; i < kShadowAlignment; i++)
+  for (uptr i = 0; i < sizeof(tail_magic); i++)
     tail_magic[i] = GetCurrentThread()->GenerateRandomTag();
 }
 
@@ -172,9 +143,10 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
     uptr fill_size = Min(size, (uptr)flags()->max_malloc_fill_size);
     internal_memset(allocated, flags()->malloc_fill_byte, fill_size);
   }
-  if (!right_align_mode)
+  if (size != orig_size) {
     internal_memcpy(reinterpret_cast<u8 *>(allocated) + orig_size, tail_magic,
-                    size - orig_size);
+                    size - orig_size - 1);
+  }
 
   void *user_ptr = allocated;
   // Tagging can only be skipped when both tag_in_malloc and tag_in_free are
@@ -182,19 +154,21 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
   // retag to 0.
   if ((flags()->tag_in_malloc || flags()->tag_in_free) &&
       atomic_load_relaxed(&hwasan_allocator_tagging_enabled)) {
-    tag_t tag = flags()->tag_in_malloc && malloc_bisect(stack, orig_size)
-                    ? (t ? t->GenerateRandomTag() : kFallbackAllocTag)
-                    : 0;
-    user_ptr = (void *)TagMemoryAligned((uptr)user_ptr, size, tag);
-  }
-
-  if ((orig_size % kShadowAlignment) && (alignment <= kShadowAlignment) &&
-      right_align_mode) {
-    uptr as_uptr = reinterpret_cast<uptr>(user_ptr);
-    if (right_align_mode == kRightAlignAlways ||
-        GetTagFromPointer(as_uptr) & 1) {  // use a tag bit as a random bit.
-      user_ptr = reinterpret_cast<void *>(AlignRight(as_uptr, orig_size));
-      meta->right_aligned = 1;
+    if (flags()->tag_in_malloc && malloc_bisect(stack, orig_size)) {
+      tag_t tag = t ? t->GenerateRandomTag() : kFallbackAllocTag;
+      uptr tag_size = orig_size ? orig_size : 1;
+      uptr full_granule_size = RoundDownTo(tag_size, kShadowAlignment);
+      user_ptr =
+          (void *)TagMemoryAligned((uptr)user_ptr, full_granule_size, tag);
+      if (full_granule_size != tag_size) {
+        u8 *short_granule =
+            reinterpret_cast<u8 *>(allocated) + full_granule_size;
+        TagMemoryAligned((uptr)short_granule, kShadowAlignment,
+                         tag_size % kShadowAlignment);
+        short_granule[kShadowAlignment - 1] = tag;
+      }
+    } else {
+      user_ptr = (void *)TagMemoryAligned((uptr)user_ptr, size, 0);
     }
   }
 
@@ -204,10 +178,10 @@ static void *HwasanAllocate(StackTrace *stack, uptr orig_size, uptr alignment,
 
 static bool PointerAndMemoryTagsMatch(void *tagged_ptr) {
   CHECK(tagged_ptr);
-  tag_t ptr_tag = GetTagFromPointer(reinterpret_cast<uptr>(tagged_ptr));
+  uptr tagged_uptr = reinterpret_cast<uptr>(tagged_ptr);
   tag_t mem_tag = *reinterpret_cast<tag_t *>(
       MemToShadow(reinterpret_cast<uptr>(UntagPtr(tagged_ptr))));
-  return ptr_tag == mem_tag;
+  return PossiblyShortTagMatches(mem_tag, tagged_uptr, 1);
 }
 
 static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
@@ -228,14 +202,15 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
 
   // Check tail magic.
   uptr tagged_size = TaggedSize(orig_size);
-  if (flags()->free_checks_tail_magic && !right_align_mode && orig_size) {
-    uptr tail_size = tagged_size - orig_size;
+  if (flags()->free_checks_tail_magic && orig_size &&
+      tagged_size != orig_size) {
+    uptr tail_size = tagged_size - orig_size - 1;
     CHECK_LT(tail_size, kShadowAlignment);
     void *tail_beg = reinterpret_cast<void *>(
         reinterpret_cast<uptr>(aligned_ptr) + orig_size);
     if (tail_size && internal_memcmp(tail_beg, tail_magic, tail_size))
       ReportTailOverwritten(stack, reinterpret_cast<uptr>(tagged_ptr),
-                            orig_size, tail_size, tail_magic);
+                            orig_size, tail_magic);
   }
 
   meta->requested_size = 0;
