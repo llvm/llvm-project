@@ -90,5 +90,6 @@ else
 
 	ARCH_LDFLAGS += \
 		-L$(NDK_ROOT)/sources/cxx-stl/llvm-libc++/libs/$(STL_ARCH) \
-		$(NDK_ROOT)/sources/cxx-stl/llvm-libc++/libs/$(STL_ARCH)/libc++.a
+		$(NDK_ROOT)/sources/cxx-stl/llvm-libc++/libs/$(STL_ARCH)/libc++_static.a \
+		-lc++abi
 endif

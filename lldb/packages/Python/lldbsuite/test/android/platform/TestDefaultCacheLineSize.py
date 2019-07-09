@@ -16,7 +16,7 @@ class DefaultCacheLineSizeTestCase(TestBase):
 
     mydir = TestBase.compute_mydir(__file__)
 
-    @skipUnlessPlatform(['android'])
+    @skipUnlessTargetAndroid
     def test_cache_line_size(self):
         self.build(dictionary=self.getBuildFlags())
         exe = self.getBuildArtifact("a.out")
