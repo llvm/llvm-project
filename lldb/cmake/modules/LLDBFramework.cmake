@@ -26,7 +26,8 @@ set_target_properties(liblldb PROPERTIES
   MACOSX_FRAMEWORK_INFO_PLIST ${LLDB_SOURCE_DIR}/resources/LLDB-Info.plist.in
 )
 
-# Defined in AddLLVM.cmake; handles edge cases for multi-config generators
+# Used in llvm_add_library() to set default output directories for multi-config
+# generators. Overwrite to account for special framework output directory.
 set_output_directory(liblldb
   BINARY_DIR ${framework_target_dir}
   LIBRARY_DIR ${framework_target_dir}
