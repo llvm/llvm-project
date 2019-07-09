@@ -273,38 +273,6 @@ add_compiler_rt_object_libraries(RTSanitizerCommonSymbolizerNoHooks
   CFLAGS ${SANITIZER_NO_WEAK_HOOKS_CFLAGS}
   DEFS ${SANITIZER_COMMON_DEFINITIONS})
 
-if(OS_NAME MATCHES "SunOS")
-  # Solaris ld doesn't support the non-standard GNU ld extension of adding
-  # __start_SECNAME and __stop_SECNAME labels to sections whose names are
-  # valid C identifiers.  Instead we add our own definitions for the
-  # __sancov_guards section.
-  add_compiler_rt_object_libraries(SancovBegin
-    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
-    SOURCES sancov_begin.S
-    CFLAGS ${SANITIZER_CFLAGS}
-    DEFS ${SANITIZER_COMMON_DEFINITIONS})
-
-  add_compiler_rt_runtime(clang_rt.sancov_begin
-    STATIC
-    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
-    OBJECT_LIBS SancovBegin
-    CFLAGS ${SANITIZER_CFLAGS}
-    DEFS ${SANITIZER_COMMON_DEFINITIONS})
-
-  add_compiler_rt_object_libraries(SancovEnd
-    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
-    SOURCES sancov_end.S
-    CFLAGS ${SANITIZER_CFLAGS}
-    DEFS ${SANITIZER_COMMON_DEFINITIONS})
-
-  add_compiler_rt_runtime(clang_rt.sancov_end
-    STATIC
-    ARCHS ${SANITIZER_COMMON_SUPPORTED_ARCH}
-    OBJECT_LIBS SancovEnd
-    CFLAGS ${SANITIZER_CFLAGS}
-    DEFS ${SANITIZER_COMMON_DEFINITIONS})
-endif()
-
 if(WIN32)
   add_compiler_rt_object_libraries(SanitizerCommonWeakInterception
     ${SANITIZER_COMMON_SUPPORTED_OS}

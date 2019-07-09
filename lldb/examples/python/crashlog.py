@@ -300,7 +300,7 @@ class CrashLog(symbolication.Symbolicator):
             if os.path.exists(self.dsymForUUIDBinary):
                 dsym_for_uuid_command = '%s %s' % (
                     self.dsymForUUIDBinary, uuid_str)
-                s = subprocess.check_output(dsym_for_uuid_command, shell=True).decode("utf-8")
+                s = subprocess.check_output(dsym_for_uuid_command, shell=True)
                 if s:
                     try:
                         plist_root = read_plist(s)
