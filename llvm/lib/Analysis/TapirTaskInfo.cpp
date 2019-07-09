@@ -672,7 +672,8 @@ bool IsSyncedState::evaluate(const Spindle *S, unsigned EvalNum) {
 // This method is called once per spindle during an initial DFS traversal of
 // the spindle graph.
 bool MaybeParallelTasks::markDefiningSpindle(const Spindle *S) {
-  LLVM_DEBUG(dbgs() << "markDefiningSpindle @ " << *S << "\n");
+  LLVM_DEBUG(dbgs() << "MaybeParallelTasks::markDefiningSpindle @ "
+             << S->getEntry()->getName() << "\n");
   switch (S->getType()) {
     // Emplace empty task lists for Entry, Detach, and Sync spindles.
   case Spindle::SPType::Entry:
@@ -686,15 +687,17 @@ bool MaybeParallelTasks::markDefiningSpindle(const Spindle *S) {
       // At task-continuation Phi's, initialize the task list with the
       // detached task that reattaches to this continuation.
       if (S->isTaskContinuation()) {
-        LLVM_DEBUG(dbgs() << "TaskCont spindle " << *S << "\n");
+        LLVM_DEBUG(dbgs() << "  TaskCont spindle " << S->getEntry()->getName()
+                   << "\n");
         for (const Spindle *Pred : predecessors(S)) {
-          LLVM_DEBUG(dbgs() << "\tpred spindle " << *Pred << "\n");
+          LLVM_DEBUG(dbgs() << "    pred spindle "
+                     << Pred->getEntry()->getName() << "\n");
           if (S->predInDifferentTask(Pred))
             TaskList[S].insert(Pred->getParentTask());
         }
         LLVM_DEBUG({
             for (const Task *MPT : TaskList[S])
-              dbgs() << "Added MPT " << MPT->getEntry()->getName() << "\n";
+              dbgs() << "  Added MPT " << MPT->getEntry()->getName() << "\n";
           });
         return true;
       }
@@ -707,7 +710,8 @@ bool MaybeParallelTasks::markDefiningSpindle(const Spindle *S) {
 // This method is called once per unevaluated spindle in an inverse-post-order
 // walk of the spindle graph.
 bool MaybeParallelTasks::evaluate(const Spindle *S, unsigned EvalNum) {
-  LLVM_DEBUG(dbgs() << "evaluate @ " << *S << "\n");
+  LLVM_DEBUG(dbgs() << "MaybeParallelTasks::evaluate @ "
+             << S->getEntry()->getName() << "\n");
   if (!TaskList.count(S))
     TaskList.try_emplace(S);
 
@@ -734,9 +738,10 @@ bool MaybeParallelTasks::evaluate(const Spindle *S, unsigned EvalNum) {
     }
   }
   LLVM_DEBUG({
-      dbgs() << "New MPT list for " << *S << "(NoChange? " << NoChange << ")\n";
+      dbgs() << "  New MPT list for " << S->getEntry()->getName()
+             << " (NoChange? " << NoChange << ")\n";
       for (const Task *MP : TaskList[S])
-        dbgs() << "\t" << MP->getEntry()->getName() << "\n";
+        dbgs() << "    " << MP->getEntry()->getName() << "\n";
     });
   return NoChange;
 }

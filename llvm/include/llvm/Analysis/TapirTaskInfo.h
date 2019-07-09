@@ -1057,7 +1057,7 @@ public:
   /// Traverse the graph of spindles to evaluate some parallel state.
   template<typename StateT>
   void evaluateParallelState(StateT &State) const {
-    SmallVector<Spindle *, 8> ToProcess;
+    SetVector<Spindle *> ToProcess;
 
     // First walk the spindles in a depth-first order to mark all defining
     // spindles (and spindles whose state is eagerly updated).
@@ -1075,7 +1075,7 @@ public:
         // state), add its successors for processing.
         if (State.markDefiningSpindle(Curr))
           for (Spindle *Succ : successors(Curr))
-            ToProcess.push_back(Succ);
+            ToProcess.insert(Succ);
 
         for (Spindle *Succ : successors(Curr))
           WorkList.push_back(Succ);
@@ -1097,7 +1097,7 @@ public:
 
         // Get ready to Process the next set of spindles.
         ToProcess.clear();
-        ToProcess.append(NextToProcess.begin(), NextToProcess.end());
+        ToProcess.insert(NextToProcess.begin(), NextToProcess.end());
         NextToProcess.clear();
         ++EvalNum;
       }
