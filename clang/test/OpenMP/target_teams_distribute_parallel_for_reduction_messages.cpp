@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -89,7 +89,7 @@ T tmain(T argc) {
   const T d = T();       // expected-note 4 {{'d' defined here}}
   const T da[5] = {T()}; // expected-note 2 {{'da' defined here}}
   T qa[5] = {T()};
-  T i;
+  T i, z;
   T &j = i;                    // expected-note 4 {{'j' defined here}}
   S3 &p = k;                   // expected-note 2 {{'p' defined here}}
   const T &r = da[(int)i];     // expected-note 2 {{'r' defined here}}
@@ -127,7 +127,7 @@ T tmain(T argc) {
   for (int j=0; j<100; j++) foo();
 #pragma omp target teams distribute parallel for reduction(max : h.b) // expected-error {{expected variable name, array element or array section}}
   for (int j=0; j<100; j++) foo();
-#pragma omp target teams distribute parallel for reduction(+ : ba) // expected-error {{const-qualified variable cannot be reduction}}
+#pragma omp target teams distribute parallel for reduction(+ : z, ba) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target teams distribute parallel for reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
@@ -176,7 +176,7 @@ int main(int argc, char **argv) {
   int qa[5] = {0};
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;                  // expected-note 2 {{'j' defined here}}
   S3 &p = k;                   // expected-note 2 {{'p' defined here}}
   const int &r = da[i];        // expected-note {{'r' defined here}}
@@ -218,7 +218,7 @@ int main(int argc, char **argv) {
   for (int j=0; j<100; j++) foo();
 #pragma omp target teams distribute parallel for reduction(* : ca) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
-#pragma omp target teams distribute parallel for reduction(- : da) // expected-error {{const-qualified variable cannot be reduction}}
+#pragma omp target teams distribute parallel for reduction(- : da, z) // expected-error {{const-qualified variable cannot be reduction}}
   for (int j=0; j<100; j++) foo();
 #pragma omp target teams distribute parallel for reduction(^ : fl) // expected-error {{invalid operands to binary expression ('float' and 'float')}}
   for (int j=0; j<100; j++) foo();

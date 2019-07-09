@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -o - %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -o - %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -o - %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -o - %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -o - %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -94,7 +94,7 @@ T tmain(T argc) {
   const T d = T();       // expected-note 4 {{'d' defined here}}
   const T da[5] = {T()}; // expected-note 2 {{'da' defined here}}
   T qa[5] = {T()};
-  T i;
+  T i, z;
   T &j = i;                    // expected-note 4 {{'j' defined here}}
   S3 &p = k;                   // expected-note 2 {{'p' defined here}}
   const T &r = da[(int)i];     // expected-note 2 {{'r' defined here}}
@@ -126,7 +126,7 @@ T tmain(T argc) {
   foo();
 #pragma omp target teams reduction(^ : T) // expected-error {{'T' does not refer to a value}}
   foo();
-#pragma omp target teams reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified variable cannot be reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}}
+#pragma omp target teams reduction(+ : z, a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified variable cannot be reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}}
   foo();
 #pragma omp target teams reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 4 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 3 {{const-qualified variable cannot be reduction}}
   foo();
@@ -191,7 +191,7 @@ int main(int argc, char **argv) {
   int qa[5] = {0};
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;                  // expected-note 2 {{'j' defined here}}
   S3 &p = k;                   // expected-note 2 {{'p' defined here}}
   const int &r = da[i];        // expected-note {{'r' defined here}}
@@ -219,7 +219,7 @@ int main(int argc, char **argv) {
   foo();
 #pragma omp target teams reduction(~ : argc) // expected-error {{expected unqualified-id}}
   foo();
-#pragma omp target teams reduction(&& : argc)
+#pragma omp target teams reduction(&& : argc, z)
   foo();
 #pragma omp target teams reduction(^ : S1) // expected-error {{'S1' does not refer to a value}}
   foo();

@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 %s
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 %s
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -87,7 +87,7 @@ T tmain(T argc) {
   const T d = T();       // expected-note 4 {{'d' defined here}}
   const T da[5] = {T()}; // expected-note 2 {{'da' defined here}}
   T qa[5] = {T()};
-  T i;
+  T i, z;
   T &j = i;                // expected-note 4 {{'j' defined here}}
   S3 &p = k;               // expected-note 2 {{'p' defined here}}
   const T &r = da[(int)i]; // expected-note 2 {{'r' defined here}}
@@ -146,7 +146,7 @@ T tmain(T argc) {
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel
-#pragma omp for simd reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified variable cannot be reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}}
+#pragma omp for simd reduction(+ : z, a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified variable cannot be reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}}
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel
@@ -236,7 +236,7 @@ int main(int argc, char **argv) {
   int qa[5] = {0};
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;           // expected-note 2 {{'j' defined here}}
   S3 &p = k;            // expected-note 2 {{'p' defined here}}
   const int &r = da[i]; // expected-note {{'r' defined here}}
@@ -287,7 +287,7 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel
-#pragma omp for simd reduction(&& : argc)
+#pragma omp for simd reduction(&& : argc, z)
   for (int i = 0; i < 10; ++i)
     foo();
 #pragma omp parallel

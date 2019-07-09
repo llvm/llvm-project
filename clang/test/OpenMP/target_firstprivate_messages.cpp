@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -99,7 +99,7 @@ template <class I, class C>
 int foomain(I argc, C **argv) {
   I e(4);
   I g(5);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp target firstprivate // expected-error {{expected '(' after 'firstprivate'}}
 {}
@@ -131,8 +131,8 @@ int foomain(I argc, C **argv) {
     int v = 0;
     int i;
   }
-#pragma omp parallel shared(i)
-#pragma omp parallel firstprivate(i)
+#pragma omp parallel shared(i, z)
+#pragma omp parallel firstprivate(i, z)
 #pragma omp target firstprivate(j)
 {}
 #pragma omp target firstprivate(i)
@@ -159,7 +159,7 @@ int main(int argc, char **argv) {
   S5 g(5);
   S6<float> s6(0.0) , s6_0(1.0);
   S7<S6<float> > s7(0.0) , s7_0(1.0);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp target firstprivate // expected-error {{expected '(' after 'firstprivate'}}
 {}
@@ -173,7 +173,7 @@ int main(int argc, char **argv) {
 {}
 #pragma omp target firstprivate(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
 {}
-#pragma omp target firstprivate(argc)
+#pragma omp target firstprivate(argc, z)
 {}
 #pragma omp target firstprivate(S1) // expected-error {{'S1' does not refer to a value}}
 {}

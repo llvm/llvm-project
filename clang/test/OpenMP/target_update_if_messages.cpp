@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -fopenmp-version=45 -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -24,11 +24,11 @@ int tmain(T argc, S **argv) {
 #pragma omp target update from(n) if (S) // expected-error {{'S' does not refer to a value}}
 #pragma omp target update to(n) if (argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update from(n) if (argc argc) // expected-error {{expected ')'}} expected-note {{to match this '('}}
-#pragma omp target update to(n) if(argc)
+#pragma omp target update to(n) if(argc + n)
 #pragma omp target update from(n) if(target update // expected-error {{use of undeclared identifier 'target'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update to(n) if(target update : // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update from(n) if(target update : argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
-#pragma omp target update to(n) if(target update : argc)
+#pragma omp target update to(n) if(target update : argc + n)
 #pragma omp target update from(n) if(target update : argc) if (for:argc) // expected-error {{directive name modifier 'for' is not allowed for '#pragma omp target update'}}
 #pragma omp target update to(n) if(target update : argc) if (target update:argc) // expected-error {{directive '#pragma omp target update' cannot contain more than one 'if' clause with 'target update' name modifier}}
 #pragma omp target update from(n) if(target update : argc) if (argc) // expected-error {{no more 'if' clause is allowed}} expected-note {{previous clause with directive name modifier specified here}}
@@ -52,7 +52,7 @@ int main(int argc, char **argv) {
 #pragma omp target update to(m) if(target update // expected-error {{use of undeclared identifier 'target'}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update from(m) if(target update : // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
 #pragma omp target update to(m) if(target update : argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
-#pragma omp target update from(m) if(target update : argc)
+#pragma omp target update from(m) if(target update : argc + m)
 #pragma omp target update to(m) if(target update : argc) if (for:argc) // expected-error {{directive name modifier 'for' is not allowed for '#pragma omp target update'}}
 #pragma omp target update from(m) if(target update : argc) if (target update:argc)  // expected-error {{directive '#pragma omp target update' cannot contain more than one 'if' clause with 'target update' name modifier}}
 #pragma omp target update to(m) if(target update : argc) if (argc) // expected-error {{no more 'if' clause is allowed}} expected-note {{previous clause with directive name modifier specified here}}

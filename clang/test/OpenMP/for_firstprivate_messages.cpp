@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
   S5 g(5);
   S3 m;
   S6 n(2);
-  int i;
+  int i, k;
   int &j = i;
 #pragma omp parallel
 #pragma omp for firstprivate // expected-error {{expected '(' after 'firstprivate'}}
@@ -207,7 +207,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel
-#pragma omp for firstprivate(a, b, c, d, f) // expected-error {{firstprivate variable with incomplete type 'S1'}} expected-error {{no matching constructor for initialization of 'S3'}}
+#pragma omp for firstprivate(a, b, c, d, f, k) // expected-error {{firstprivate variable with incomplete type 'S1'}} expected-error {{no matching constructor for initialization of 'S3'}}
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel

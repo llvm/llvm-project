@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
 
 void foo() {
 }
@@ -12,7 +12,7 @@ bool foobool(int argc) {
 struct S1; // expected-note {{declared here}}
 
 int main(int argc, char **argv) {
-  int i;
+  int i, z;
 #pragma omp target teams distribute device // expected-error {{expected '(' after 'device'}}
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute device ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -25,7 +25,7 @@ int main(int argc, char **argv) {
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute device (argc > 0 ? argv[1] : argv[2]) // expected-error {{expression must have integral or unscoped enumeration type, not 'char *'}}
   for (i = 0; i < argc; ++i) foo();
-#pragma omp target teams distribute device (argc + argc)
+#pragma omp target teams distribute device (argc + argc + z)
   for (i = 0; i < argc; ++i) foo();
 #pragma omp target teams distribute device (argc), device (argc+1) // expected-error {{directive '#pragma omp target teams distribute' cannot contain more than one 'device' clause}}
   for (i = 0; i < argc; ++i) foo();

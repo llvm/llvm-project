@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -23,7 +23,7 @@ struct S1; // expected-note {{declared here}} expected-note{{forward declaration
 extern S1 a;
 class S2 {
   mutable int a;
-  
+
 public:
   S2() : a(0) {}
   S2(const S2 &s2) : a(s2.a) {}
@@ -36,7 +36,7 @@ const S2 ba[5];
 class S3 {
   int a;
   S3 &operator=(const S3 &s3);
-  
+
 public:
   S3() : a(0) {} // expected-note 2 {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
   S3(S3 &s3) : a(s3.a) {} // expected-note 2 {{candidate constructor not viable: 1st argument ('const S3') would lose const qualifier}}
@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
   S4 e(4);
   S5 g(5);
   S6 p;
-  int i;
+  int i, z;
   int &j = i;
 
 #pragma omp target teams distribute parallel for simd firstprivate // expected-error {{expected '(' after 'firstprivate'}}
@@ -112,7 +112,7 @@ int main(int argc, char **argv) {
 #pragma omp target teams distribute parallel for simd firstprivate(ca) // expected-error {{no matching constructor for initialization of 'S3'}}
   for (i = 0; i < argc; ++i) foo();
 
-#pragma omp target teams distribute parallel for simd firstprivate(da)
+#pragma omp target teams distribute parallel for simd firstprivate(da, z)
   for (i = 0; i < argc; ++i) foo();
 
 #pragma omp target teams distribute parallel for simd firstprivate(S2::S2s)

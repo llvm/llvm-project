@@ -7238,7 +7238,7 @@ bool Sema::ShouldDeleteSpecialMember(CXXMethodDecl *MD, CXXSpecialMember CSM,
   //   The closure type associated with a lambda-expression has a
   //   deleted (8.4.3) default constructor and a deleted copy
   //   assignment operator.
-  // C++2a adds back these operators if the lambda has no capture-default.
+  // C++2a adds back these operators if the lambda has no lambda-capture.
   if (RD->isLambda() && !RD->lambdaIsDefaultConstructibleAndAssignable() &&
       (CSM == CXXDefaultConstructor || CSM == CXXCopyAssignment)) {
     if (Diagnose)

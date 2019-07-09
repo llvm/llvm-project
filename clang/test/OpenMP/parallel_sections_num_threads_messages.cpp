@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 void foo() {
 }
@@ -13,6 +13,7 @@ struct S1; // expected-note {{declared here}}
 
 template <class T, typename S, int N> // expected-note {{declared here}}
 T tmain(T argc, S **argv) {
+  T z;
   #pragma omp parallel sections num_threads // expected-error {{expected '(' after 'num_threads'}}
   {foo();}
   #pragma omp parallel sections num_threads ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -31,7 +32,7 @@ T tmain(T argc, S **argv) {
   {foo();}
   #pragma omp parallel sections num_threads (argv[1]=2) // expected-error {{expected ')'}} expected-note {{to match this '('}} expected-error 2 {{expression must have integral or unscoped enumeration type, not 'char *'}}
   {foo();}
-  #pragma omp parallel sections num_threads (argc)
+  #pragma omp parallel sections num_threads (argc + z)
   {foo();}
   #pragma omp parallel sections num_threads (N) // expected-error {{argument to 'num_threads' clause must be a strictly positive integer value}}
   {foo();}
@@ -40,6 +41,7 @@ T tmain(T argc, S **argv) {
 }
 
 int main(int argc, char **argv) {
+  int z;
   #pragma omp parallel sections num_threads // expected-error {{expected '(' after 'num_threads'}}
   {foo();}
   #pragma omp parallel sections num_threads ( // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -48,7 +50,7 @@ int main(int argc, char **argv) {
   {foo();}
   #pragma omp parallel sections num_threads (argc // expected-error {{expected ')'}} expected-note {{to match this '('}}
   {foo();}
-  #pragma omp parallel sections num_threads (argc)) // expected-warning {{extra tokens at the end of '#pragma omp parallel sections' are ignored}}
+  #pragma omp parallel sections num_threads (argc / z)) // expected-warning {{extra tokens at the end of '#pragma omp parallel sections' are ignored}}
   {foo();}
   #pragma omp parallel sections num_threads (argc > 0 ? argv[1] : argv[2]) // expected-error {{integral }}
   {foo();}

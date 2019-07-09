@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp -ferror-limit 100 -o - %s -Wuninitialized
 
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify -fopenmp-simd -ferror-limit 100 -o - %s -Wuninitialized
 
 void foo() {
 }
@@ -16,7 +16,7 @@ T tmain(T argc) {
   T b = argc, c, d, e, f, g;
   char ** argv;
   static T a;
-// CHECK: static T a;
+  T k;
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd dist_schedule // expected-error {{expected '(' after 'dist_schedule'}}
@@ -47,7 +47,7 @@ T tmain(T argc) {
   for (int i = 0; i < 10; ++i) foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd dist_schedule (static), dist_schedule (static, 1) // expected-error {{directive '#pragma omp distribute parallel for simd' cannot contain more than one 'dist_schedule' clause}}
+#pragma omp distribute parallel for simd dist_schedule (static), dist_schedule (static, k) // expected-error {{directive '#pragma omp distribute parallel for simd' cannot contain more than one 'dist_schedule' clause}}
   for (int i = 0; i < 10; ++i) foo();
 #pragma omp target
 #pragma omp teams
@@ -61,6 +61,7 @@ T tmain(T argc) {
 }
 
 int main(int argc, char **argv) {
+  int k;
 #pragma omp target
 #pragma omp teams
 #pragma omp distribute parallel for simd dist_schedule // expected-error {{expected '(' after 'dist_schedule'}}
@@ -91,7 +92,7 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 10; ++i) foo();
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute parallel for simd dist_schedule (static), dist_schedule (static, 1) // expected-error {{directive '#pragma omp distribute parallel for simd' cannot contain more than one 'dist_schedule' clause}}
+#pragma omp distribute parallel for simd dist_schedule (static), dist_schedule (static, k) // expected-error {{directive '#pragma omp distribute parallel for simd' cannot contain more than one 'dist_schedule' clause}}
   for (int i = 0; i < 10; ++i) foo();
 #pragma omp target
 #pragma omp teams

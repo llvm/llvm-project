@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp %s
+// RUN: %clang_cc1 -verify -fopenmp %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd %s
+// RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -97,7 +97,7 @@ template <class I, class C>
 int foomain(I argc, C **argv) {
   I e(4);
   I g(5);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp parallel for simd private // expected-error {{expected '(' after 'private'}}
   for (int k = 0; k < argc; ++k)
@@ -123,7 +123,7 @@ int foomain(I argc, C **argv) {
 #pragma omp parallel for simd private(S1) // expected-error {{'S1' does not refer to a value}}
   for (int k = 0; k < argc; ++k)
     ++k;
-#pragma omp parallel for simd private(a, b) // expected-error {{private variable with incomplete type 'S1'}}
+#pragma omp parallel for simd private(z, a, b) // expected-error {{private variable with incomplete type 'S1'}}
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp parallel for simd private(argv[1]) // expected-error {{expected variable name}}
@@ -172,7 +172,7 @@ int main(int argc, char **argv) {
   S5 g(5);
   S6<float> s6(0.0) , s6_0(1.0);
   S7<S6<float> > s7(0.0) , s7_0(1.0);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp parallel for simd private // expected-error {{expected '(' after 'private'}}
   for (int k = 0; k < argc; ++k)
@@ -192,7 +192,7 @@ int main(int argc, char **argv) {
 #pragma omp parallel for simd private(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
   for (int k = 0; k < argc; ++k)
     ++k;
-#pragma omp parallel for simd private(argc)
+#pragma omp parallel for simd private(argc, z)
   for (int k = 0; k < argc; ++k)
     ++k;
 #pragma omp parallel for simd private(S1) // expected-error {{'S1' does not refer to a value}}

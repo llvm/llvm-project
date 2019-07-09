@@ -1,10 +1,10 @@
-// RUN: %clang_cc1 -verify -fopenmp -o - %s -Wno-openmp-target
-// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -o - %s -Wno-openmp-target
-// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -o - %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp -o - %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++98 -o - %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp -std=c++11 -o - %s -Wno-openmp-target -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -o - %s -Wno-openmp-target
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -o - %s -Wno-openmp-target
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -o - %s -Wno-openmp-target
+// RUN: %clang_cc1 -verify -fopenmp-simd -o - %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++98 -o - %s -Wno-openmp-target -Wuninitialized
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -o - %s -Wno-openmp-target -Wuninitialized
 
 extern int omp_default_mem_alloc;
 void foo() {
@@ -86,7 +86,7 @@ T tmain(T argc) {
   const T d = T();       // expected-note 4 {{'d' defined here}}
   const T da[5] = {T()}; // expected-note 2 {{'da' defined here}}
   T qa[5] = {T()};
-  T i;
+  T i, z;
   T &j = i;                    // expected-note 4 {{'j' defined here}}
   S3 &p = k;                   // expected-note 2 {{'p' defined here}}
   const T &r = da[(int)i];     // expected-note 2 {{'r' defined here}}
@@ -132,7 +132,7 @@ T tmain(T argc) {
 #pragma omp teams reduction(^ : T) // expected-error {{'T' does not refer to a value}}
   foo();
 #pragma omp target
-#pragma omp teams reduction(+ : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified variable cannot be reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}}
+#pragma omp teams reduction(+ : z, a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 3 {{const-qualified variable cannot be reduction}} expected-error 2 {{'operator+' is a private member of 'S2'}}
   foo();
 #pragma omp target
 #pragma omp teams reduction(min : a, b, c, d, f) // expected-error {{a reduction list item with incomplete type 'S1'}} expected-error 4 {{arguments of OpenMP clause 'reduction' for 'min' or 'max' must be of arithmetic type}} expected-error 3 {{const-qualified variable cannot be reduction}}
@@ -216,7 +216,7 @@ int main(int argc, char **argv) {
   int qa[5] = {0};
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;                  // expected-note 2 {{'j' defined here}}
   S3 &p = k;                   // expected-note 2 {{'p' defined here}}
   const int &r = da[i];        // expected-note {{'r' defined here}}
@@ -295,7 +295,7 @@ int main(int argc, char **argv) {
 #pragma omp teams reduction(+ : h, k, B::x) // expected-error 2 {{threadprivate or thread local variable cannot be reduction}}
   foo();
 #pragma omp target
-#pragma omp teams reduction(+ : o) // expected-error {{no viable overloaded '='}}
+#pragma omp teams reduction(+ : z, o) // expected-error {{no viable overloaded '='}}
   foo();
 #pragma omp target
 #pragma omp teams private(i), reduction(+ : j), reduction(+ : q) // expected-error 2 {{argument of OpenMP clause 'reduction' must reference the same object in all threads}}

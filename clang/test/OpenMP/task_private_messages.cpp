@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp -ferror-limit 100 %s -Wuninitialized
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 %s -Wuninitialized
 
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
   const int da[5] = {0}; // expected-note {{'da' defined here}}
   S4 e(4);
   S5 g(5);
-  int i;
+  int i, z;
   int &j = i;
 #pragma omp task private                               // expected-error {{expected '(' after 'private'}}
 #pragma omp task private(                              // expected-error {{expected expression}} expected-error {{expected ')'}} expected-note {{to match this '('}}
@@ -85,7 +85,7 @@ int main(int argc, char **argv) {
 #pragma omp task private(argc > 0 ? argv[1] : argv[2]) // expected-error {{expected variable name}}
 #pragma omp task private(argc argv)                    // expected-error {{expected ',' or ')' in 'private' clause}}
 #pragma omp task private(S1)                           // expected-error {{'S1' does not refer to a value}}
-#pragma omp task private(a, b, c, d, f)                // expected-error {{a private variable with incomplete type 'S1'}} expected-error 1 {{const-qualified variable without mutable fields cannot be private}} expected-error 2 {{const-qualified variable cannot be private}}
+#pragma omp task private(z, a, b, c, d, f)                // expected-error {{a private variable with incomplete type 'S1'}} expected-error 1 {{const-qualified variable without mutable fields cannot be private}} expected-error 2 {{const-qualified variable cannot be private}}
 #pragma omp task private(argv[1])                      // expected-error {{expected variable name}}
 #pragma omp task private(ba) allocate , allocate(, allocate(omp_default , allocate(omp_default_mem_alloc, allocate(omp_default_mem_alloc:, allocate(omp_default_mem_alloc: argc, allocate(omp_default_mem_alloc: argv), allocate(argv) // expected-error {{expected '(' after 'allocate'}} expected-error 2 {{expected expression}} expected-error 2 {{expected ')'}} expected-error {{use of undeclared identifier 'omp_default'}} expected-note 2 {{to match this '('}}
 #pragma omp task private(ca)           // expected-error {{const-qualified variable without mutable fields cannot be private}}
