@@ -10,6 +10,7 @@
 #include "llvm/Support/Threading.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <deque>
 #include <thread>
 
 using ::testing::_;
@@ -581,27 +582,31 @@ protected:
 
   // Perform Action and determine whether it rebuilt the index or not.
   bool checkRebuild(std::function<void()> Action) {
-    // Update reference count so we can tell if the index updates.
-    ++TestSymbol.References;
+    // Update name so we can tell if the index updates.
+    VersionStorage.push_back("Sym" + std::to_string(++VersionCounter));
+    TestSymbol.Name = VersionStorage.back();
     SymbolSlab::Builder SB;
     SB.insert(TestSymbol);
     Source.update("", llvm::make_unique<SymbolSlab>(std::move(SB).build()),
                   nullptr, nullptr, false);
     // Now maybe update the index.
     Action();
-    // Now query the index to get the reference count.
-    unsigned ReadReferences = 0;
+    // Now query the index to get the name count.
+    std::string ReadName;
     LookupRequest Req;
     Req.IDs.insert(TestSymbol.ID);
-    Target.lookup(Req, [&](const Symbol &S) { ReadReferences = S.References; });
-    // The index was rebuild if the reference count is up to date.
-    return ReadReferences == TestSymbol.References;
+    Target.lookup(Req, [&](const Symbol &S) { ReadName = S.Name; });
+    // The index was rebuild if the name is up to date.
+    return ReadName == VersionStorage.back();
   }
 
   Symbol TestSymbol;
   FileSymbols Source;
   SwapIndex Target;
   BackgroundIndexRebuilder Rebuilder;
+
+  unsigned VersionCounter = 0;
+  std::deque<std::string> VersionStorage;
 };
 
 TEST_F(BackgroundIndexRebuilderTest, IndexingTUs) {
