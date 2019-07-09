@@ -591,6 +591,10 @@ def skipIfWindows(func):
     """Decorate the item to skip tests that should be skipped on Windows."""
     return skipIfPlatform(["windows"])(func)
 
+def skipIfTargetAndroid(func):
+    return unittest2.skipIf(lldbplatformutil.target_is_android(),
+                                "skip on target Android")(func)
+
 
 def skipUnlessWindows(func):
     """Decorate the item to skip tests that should be skipped on any non-Windows platform."""
@@ -600,6 +604,10 @@ def skipUnlessWindows(func):
 def skipUnlessDarwin(func):
     """Decorate the item to skip tests that should be skipped on any non Darwin platform."""
     return skipUnlessPlatform(lldbplatformutil.getDarwinOSTriples())(func)
+
+def skipUnlessTargetAndroid(func):
+    return unittest2.skipUnless(lldbplatformutil.target_is_android(),
+                                "requires target to be Android")(func)
 
 
 def swiftTest(func):
