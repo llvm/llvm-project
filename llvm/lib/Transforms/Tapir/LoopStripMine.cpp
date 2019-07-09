@@ -256,8 +256,8 @@ static Task *getTapirLoopForStripMining(const Loop *L, TaskInfo &TI,
                 << "loop lacks a preheader");
     return nullptr;
   }
-  BranchInst *PreheaderBR = dyn_cast<BranchInst>(Preheader->getTerminator());
-  assert(PreheaderBR && "Preheader not terminated by a branch");
+  assert(isa<BranchInst>(Preheader->getTerminator()) &&
+         "Preheader not terminated by a branch");
 
   BasicBlock *LatchBlock = L->getLoopLatch();
   if (!LatchBlock) {
@@ -1241,7 +1241,15 @@ Loop *llvm::StripMineLoop(
 
   // Connect the epilog code to the original loop and update the PHI functions.
   B2.SetInsertPoint(EpilogPreheader->getTerminator());
-  Value *EpilStartIter = B2.CreateSub(TripCount, ModVal);
+
+  // Compute the start of the epilog iterations.  We use a divide and multiply
+  // by the power-of-2 count to simplify the SCEV's of the induction variables
+  // for later analysis passes.
+  // Value *EpilStartIter = B2.CreateSub(TripCount, ModVal);
+  Value *EpilStartIter =
+    B2.CreateMul(B2.CreateUDiv(TripCount,
+                               ConstantInt::get(TripCount->getType(), Count)),
+                 ConstantInt::get(TripCount->getType(), Count));
   if (Instruction *ESIInst = dyn_cast<Instruction>(EpilStartIter))
     ESIInst->copyIRFlags(PrimaryInc);
   ConnectEpilog(TL, EpilStartIter, ModVal, EpilogPred, LoopReattach, NewExit,
