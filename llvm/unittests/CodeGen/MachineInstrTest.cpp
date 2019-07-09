@@ -44,6 +44,58 @@ public:
   bool hasFP(const MachineFunction &MF) const override { return false; }
 };
 
+static TargetRegisterClass *const BogusRegisterClasses[] = {nullptr};
+
+class BogusRegisterInfo : public TargetRegisterInfo {
+public:
+  BogusRegisterInfo()
+      : TargetRegisterInfo(nullptr, BogusRegisterClasses, BogusRegisterClasses,
+                           nullptr, nullptr, LaneBitmask(~0u), nullptr) {
+    InitMCRegisterInfo(nullptr, 0, 0, 0, nullptr, 0, nullptr, 0, nullptr,
+                       nullptr, nullptr, nullptr, nullptr, 0, nullptr, nullptr);
+  }
+
+  const MCPhysReg *
+  getCalleeSavedRegs(const MachineFunction *MF) const override {
+    return nullptr;
+  }
+  ArrayRef<const uint32_t *> getRegMasks() const override { return None; }
+  ArrayRef<const char *> getRegMaskNames() const override { return None; }
+  BitVector getReservedRegs(const MachineFunction &MF) const override {
+    return BitVector();
+  }
+  const RegClassWeight &
+  getRegClassWeight(const TargetRegisterClass *RC) const override {
+    static RegClassWeight Bogus{1, 16};
+    return Bogus;
+  }
+  unsigned getRegUnitWeight(unsigned RegUnit) const override { return 1; }
+  unsigned getNumRegPressureSets() const override { return 0; }
+  const char *getRegPressureSetName(unsigned Idx) const override {
+    return "bogus";
+  }
+  unsigned getRegPressureSetLimit(const MachineFunction &MF,
+                                  unsigned Idx) const override {
+    return 0;
+  }
+  const int *
+  getRegClassPressureSets(const TargetRegisterClass *RC) const override {
+    static const int Bogus[] = {0, -1};
+    return &Bogus[0];
+  }
+  const int *getRegUnitPressureSets(unsigned RegUnit) const override {
+    static const int Bogus[] = {0, -1};
+    return &Bogus[0];
+  }
+
+  Register getFrameRegister(const MachineFunction &MF) const override {
+    return 0;
+  }
+  void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
+                           unsigned FIOperandNum,
+                           RegScavenger *RS = nullptr) const override {}
+};
+
 class BogusSubtarget : public TargetSubtargetInfo {
 public:
   BogusSubtarget(TargetMachine &TM)
@@ -58,8 +110,11 @@ public:
 
   const TargetInstrInfo *getInstrInfo() const override { return &TII; }
 
+  const TargetRegisterInfo *getRegisterInfo() const override { return &TRI; }
+
 private:
   BogusFrameLowering FL;
+  BogusRegisterInfo TRI;
   BogusTargetLowering TL;
   TargetInstrInfo TII;
 };

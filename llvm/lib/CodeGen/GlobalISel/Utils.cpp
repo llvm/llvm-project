@@ -281,8 +281,8 @@ const llvm::ConstantFP* llvm::getConstantFPVRegVal(unsigned VReg,
   return MI->getOperand(1).getFPImm();
 }
 
-llvm::MachineInstr *llvm::getOpcodeDef(unsigned Opcode, unsigned Reg,
-                                       const MachineRegisterInfo &MRI) {
+llvm::MachineInstr *llvm::getDefIgnoringCopies(Register Reg,
+                                               const MachineRegisterInfo &MRI) {
   auto *DefMI = MRI.getVRegDef(Reg);
   auto DstTy = MRI.getType(DefMI->getOperand(0).getReg());
   if (!DstTy.isValid())
@@ -294,7 +294,13 @@ llvm::MachineInstr *llvm::getOpcodeDef(unsigned Opcode, unsigned Reg,
       break;
     DefMI = MRI.getVRegDef(SrcReg);
   }
-  return DefMI->getOpcode() == Opcode ? DefMI : nullptr;
+  return DefMI;
+}
+
+llvm::MachineInstr *llvm::getOpcodeDef(unsigned Opcode, Register Reg,
+                                       const MachineRegisterInfo &MRI) {
+  MachineInstr *DefMI = getDefIgnoringCopies(Reg, MRI);
+  return DefMI && DefMI->getOpcode() == Opcode ? DefMI : nullptr;
 }
 
 APFloat llvm::getAPFloatFromSize(double Val, unsigned Size) {

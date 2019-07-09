@@ -684,6 +684,11 @@ public:
     Contents.RegMask = RegMaskPtr;
   }
 
+  void setPredicate(unsigned Predicate) {
+    assert(isPredicate() && "Wrong MachineOperand mutator");
+    Contents.Pred = Predicate;
+  }
+
   //===--------------------------------------------------------------------===//
   // Other methods.
   //===--------------------------------------------------------------------===//

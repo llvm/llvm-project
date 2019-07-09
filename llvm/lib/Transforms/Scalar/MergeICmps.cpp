@@ -162,7 +162,7 @@ BCEAtom visitICmpLoadOperand(Value *const Val, BaseIdentifier &BaseId) {
     return {};
   }
   const auto &DL = GEP->getModule()->getDataLayout();
-  if (!isDereferenceablePointer(GEP, DL)) {
+  if (!isDereferenceablePointer(GEP, LoadI->getType(), DL)) {
     LLVM_DEBUG(dbgs() << "not dereferenceable\n");
     // We need to make sure that we can do comparison in any order, so we
     // require memory to be unconditionnally dereferencable.

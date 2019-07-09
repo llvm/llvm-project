@@ -47,7 +47,7 @@ attributes #0 = { norecurse nounwind "correctly-rounded-divide-sqrt-fp-math"="fa
 !11 = !{i32 2, !"Debug Info Version", i32 3}
 !12 = !{i32 1, !"wchar_size", i32 4}
 !13 = !{!"clang version 9.0.0 (trunk 360739) (llvm/trunk 360747)"}
-!14 = distinct !DISubprogram(name: "test", scope: !3, file: !3, line: 3, type: !15, scopeLine: 3, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !2, retainedNodes: !4)
+!14 = distinct !DISubprogram(name: "test", scope: !3, file: !3, line: 3, type: !15, scopeLine: 3, isLocal: false, isDefinition: true, isOptimized: true, unit: !2, retainedNodes: !4)
 !15 = !DISubroutineType(types: !16)
 !16 = !{!9}
 !17 = !DILocation(line: 4, column: 10, scope: !14)

@@ -1,8 +1,5 @@
-# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN
 
---- |
-  define amdgpu_kernel void @sitofp(i32 addrspace(1)* %global0) {ret void}
-...
 ---
 
 name:            sitofp
@@ -30,7 +27,6 @@ body: |
     ; GCN: V_CVT_F32_I32_e64 [[VGPR]], 0, 0
     %4:vgpr(s32) = G_SITOFP %1
 
-    G_STORE %3, %2 :: (store 4 into %ir.global0)
-    G_STORE %4, %2 :: (store 4 into %ir.global0)
+    G_STORE %3, %2 :: (store 4, addrspace 1)
+    G_STORE %4, %2 :: (store 4, addrspace 1)
 ...
----

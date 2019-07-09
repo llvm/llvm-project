@@ -708,6 +708,34 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     narrowScalarDst(MI, NarrowTy, 0, TargetOpcode::G_ZEXT);
     Observer.changedInstr(MI);
     return Legalized;
+  case TargetOpcode::G_PHI: {
+    unsigned NumParts = SizeOp0 / NarrowSize;
+    SmallVector<Register, 2> DstRegs;
+    SmallVector<SmallVector<Register, 2>, 2> SrcRegs;
+    DstRegs.resize(NumParts);
+    SrcRegs.resize(MI.getNumOperands() / 2);
+    Observer.changingInstr(MI);
+    for (unsigned i = 1; i < MI.getNumOperands(); i += 2) {
+      MachineBasicBlock &OpMBB = *MI.getOperand(i + 1).getMBB();
+      MIRBuilder.setInsertPt(OpMBB, OpMBB.getFirstTerminator());
+      extractParts(MI.getOperand(i).getReg(), NarrowTy, NumParts,
+                   SrcRegs[i / 2]);
+    }
+    MachineBasicBlock &MBB = *MI.getParent();
+    MIRBuilder.setInsertPt(MBB, MI);
+    for (unsigned i = 0; i < NumParts; ++i) {
+      DstRegs[i] = MRI.createGenericVirtualRegister(NarrowTy);
+      MachineInstrBuilder MIB =
+          MIRBuilder.buildInstr(TargetOpcode::G_PHI).addDef(DstRegs[i]);
+      for (unsigned j = 1; j < MI.getNumOperands(); j += 2)
+        MIB.addUse(SrcRegs[j / 2][i]).add(MI.getOperand(j + 1));
+    }
+    MIRBuilder.setInsertPt(MBB, --MBB.getFirstNonPHI());
+    MIRBuilder.buildMerge(MI.getOperand(0).getReg(), DstRegs);
+    Observer.changedInstr(MI);
+    MI.eraseFromParent();
+    return Legalized;
+  }
   }
 }
 

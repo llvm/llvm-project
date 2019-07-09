@@ -182,7 +182,8 @@ public:
                              ISD::LoadExtType ExtType,
                              EVT ExtVT) const override;
 
-  bool isLoadBitCastBeneficial(EVT, EVT) const final;
+  bool isLoadBitCastBeneficial(EVT, EVT, const SelectionDAG &DAG,
+                               const MachineMemOperand &MMO) const final;
 
   bool storeOfVectorConstantIsCheap(EVT MemVT,
                                     unsigned NumElem,

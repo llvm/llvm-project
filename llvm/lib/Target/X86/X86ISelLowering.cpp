@@ -4941,8 +4941,9 @@ bool X86TargetLowering::isCheapToSpeculateCtlz() const {
   return Subtarget.hasLZCNT();
 }
 
-bool X86TargetLowering::isLoadBitCastBeneficial(EVT LoadVT,
-                                                EVT BitcastVT) const {
+bool X86TargetLowering::isLoadBitCastBeneficial(EVT LoadVT, EVT BitcastVT,
+                                                const SelectionDAG &DAG,
+                                                const MachineMemOperand &MMO) const {
   if (!Subtarget.hasAVX512() && !LoadVT.isVector() && BitcastVT.isVector() &&
       BitcastVT.getVectorElementType() == MVT::i1)
     return false;
@@ -4950,7 +4951,12 @@ bool X86TargetLowering::isLoadBitCastBeneficial(EVT LoadVT,
   if (!Subtarget.hasDQI() && BitcastVT == MVT::v8i1 && LoadVT == MVT::i8)
     return false;
 
-  return TargetLowering::isLoadBitCastBeneficial(LoadVT, BitcastVT);
+  // If both types are legal vectors, it's always ok to convert them.
+  if (LoadVT.isVector() && BitcastVT.isVector() &&
+      isTypeLegal(LoadVT) && isTypeLegal(BitcastVT))
+    return true;
+
+  return TargetLowering::isLoadBitCastBeneficial(LoadVT, BitcastVT, DAG, MMO);
 }
 
 bool X86TargetLowering::canMergeStoresTo(unsigned AddressSpace, EVT MemVT,
@@ -8759,11 +8765,8 @@ static SDValue LowerToHorizontalOp(const BuildVectorSDNode *BV,
                                    const X86Subtarget &Subtarget,
                                    SelectionDAG &DAG) {
   // We need at least 2 non-undef elements to make this worthwhile by default.
-  unsigned NumNonUndefs = 0;
-  for (const SDValue &V : BV->op_values())
-    if (!V.isUndef())
-      ++NumNonUndefs;
-
+  unsigned NumNonUndefs =
+      count_if(BV->op_values(), [](SDValue V) { return !V.isUndef(); });
   if (NumNonUndefs < 2)
     return SDValue();
 

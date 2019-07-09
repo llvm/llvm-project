@@ -1,5 +1,5 @@
-# RUN: llc -march=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN
 
 ---
 name:            icmp_s32_s_mix

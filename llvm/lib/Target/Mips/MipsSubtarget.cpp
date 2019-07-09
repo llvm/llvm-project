@@ -108,6 +108,11 @@ MipsSubtarget::MipsSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                        "See -mattr=+fp64.",
                        false);
 
+  if (isFP64bit() && !hasMips64() && hasMips32() && !hasMips32r2())
+    report_fatal_error(
+        "FPU with 64-bit registers is not available on MIPS32 pre revision 2. "
+        "Use -mcpu=mips32r2 or greater.");
+
   if (!isABI_O32() && !useOddSPReg())
     report_fatal_error("-mattr=+nooddspreg requires the O32 ABI.", false);
 

@@ -1,8 +1,5 @@
-# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN
 
---- |
-  define amdgpu_kernel void @constant(i32 addrspace(1)* %global0, i64 addrspace(1)* %global1) {ret void}
-...
 ---
 
 name:            constant
@@ -49,13 +46,7 @@ body: |
     ; GCN: %{{[0-9]+}}:vreg_64 = REG_SEQUENCE [[LO3]], %subreg.sub0, [[HI3]], %subreg.sub1
     %9:vgpr(s64) = G_FCONSTANT double 1.0
 
-    G_STORE %2, %0 :: (volatile store 4 into %ir.global0, addrspace 1)
-    G_STORE %4, %0 :: (volatile store 4 into %ir.global0, addrspace 1)
-    G_STORE %6, %0 :: (volatile store 4 into %ir.global0, addrspace 1)
-    G_STORE %8, %0 :: (volatile store 4 into %ir.global0, addrspace 1)
-    G_STORE %3, %1 :: (volatile store 8 into %ir.global1, addrspace 1)
-    G_STORE %5, %1 :: (volatile store 8 into %ir.global1, addrspace 1)
-    G_STORE %7, %1 :: (volatile store 8 into %ir.global1, addrspace 1)
-    G_STORE %9, %1 :: (volatile store 8 into %ir.global1, addrspace 1)
+    S_ENDPGM 0, implicit %2, implicit %4, implicit %6, implicit %8, implicit %3, implicit %5, implicit %7, implicit %9
+
 ...
----
+

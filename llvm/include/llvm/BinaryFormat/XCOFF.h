@@ -22,6 +22,36 @@ namespace XCOFF {
 enum { SectionNameSize = 8, SymbolNameSize = 8 };
 enum ReservedSectionNum { N_DEBUG = -2, N_ABS = -1, N_UNDEF = 0 };
 
+// x_smclas field of x_csect from system header: /usr/include/syms.h
+/// Storage Mapping Class definitions.
+enum StorageMappingClass {
+  //     READ ONLY CLASSES
+  XMC_PR = 0,      ///< Program Code
+  XMC_RO = 1,      ///< Read Only Constant
+  XMC_DB = 2,      ///< Debug Dictionary Table
+  XMC_GL = 6,      ///< Global Linkage (Interfile Interface Code)
+  XMC_XO = 7,      ///< Extended Operation (Pseudo Machine Instruction)
+  XMC_SV = 8,      ///< Supervisor Call (32-bit process only)
+  XMC_SV64 = 17,   ///< Supervisor Call for 64-bit process
+  XMC_SV3264 = 18, ///< Supervisor Call for both 32- and 64-bit processes
+  XMC_TI = 12,     ///< Traceback Index csect
+  XMC_TB = 13,     ///< Traceback Table csect
+
+  //       READ WRITE CLASSES
+  XMC_RW = 5,   ///< Read Write Data
+  XMC_TC0 = 15, ///< TOC Anchor for TOC Addressability
+  XMC_TC = 3,   ///< General TOC item
+  XMC_TD = 16,  ///< Scalar data item in the TOC
+  XMC_DS = 10,  ///< Descriptor csect
+  XMC_UA = 4,   ///< Unclassified - Treated as Read Write
+  XMC_BS = 9,   ///< BSS class (uninitialized static internal)
+  XMC_UC = 11,  ///< Un-named Fortran Common
+
+  XMC_TL = 20, ///< Initialized thread-local variable
+  XMC_UL = 21, ///< Uninitialized thread-local variable
+  XMC_TE = 22  ///< Symbol mapped at the end of TOC
+};
+
 // Flags for defining the section type. Used for the s_flags field of
 // the section header structure. Defined in the system header `scnhdr.h`.
 enum SectionTypeFlags {

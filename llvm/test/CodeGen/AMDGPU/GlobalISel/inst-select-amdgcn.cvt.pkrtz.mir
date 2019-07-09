@@ -1,9 +1,6 @@
-# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN
 
---- |
-  define void @cvt_pkrtz(i32 addrspace(1)* %global0) { ret void }
-...
 ---
 
 name:            cvt_pkrtz
@@ -38,8 +35,5 @@ body: |
     %7:vgpr(s32) = G_BITCAST %4
     %8:vgpr(s32) = G_BITCAST %5
     %9:vgpr(s32) = G_BITCAST %6
-    G_STORE %7, %3 :: (store 4 into %ir.global0, addrspace 1)
-    G_STORE %8, %3 :: (store 4 into %ir.global0, addrspace 1)
-    G_STORE %9, %3 :: (store 4 into %ir.global0, addrspace 1)
+    S_ENDPGM 0, implicit %7, implicit %8, implicit %9
 ...
----

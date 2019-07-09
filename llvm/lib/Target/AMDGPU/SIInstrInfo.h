@@ -570,6 +570,14 @@ public:
     return get(Opcode).TSFlags & SIInstrFlags::VINTRP;
   }
 
+  static bool isMAI(const MachineInstr &MI) {
+    return MI.getDesc().TSFlags & SIInstrFlags::IsMAI;
+  }
+
+  bool isMAI(uint16_t Opcode) const {
+    return get(Opcode).TSFlags & SIInstrFlags::IsMAI;
+  }
+
   static bool isScalarUnit(const MachineInstr &MI) {
     return MI.getDesc().TSFlags & (SIInstrFlags::SALU | SIInstrFlags::SMRD);
   }

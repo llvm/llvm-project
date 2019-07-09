@@ -240,7 +240,7 @@ with the following compilers, though this will change in the near future:
 * Clang 3.1
 * Apple Clang 3.1
 * GCC 4.8
-* Visual Studio 2015 (Update 3)
+* Visual Studio 2017
 
 Anything older than these toolchains *may* work, but will require forcing the
 build system with a special option and is not really a supported host platform.
@@ -275,7 +275,7 @@ Getting a Modern Host C++ Toolchain
 This section mostly applies to Linux and older BSDs. On macOS, you should
 have a sufficiently modern Xcode, or you will likely need to upgrade until you
 do. Windows does not have a "system compiler", so you must install either Visual
-Studio 2015 or a recent version of mingw64. FreeBSD 10.0 and newer have a modern
+Studio 2017 or a recent version of mingw64. FreeBSD 10.0 and newer have a modern
 Clang as the system compiler.
 
 However, some Linux distributions and some other or older BSDs sometimes have

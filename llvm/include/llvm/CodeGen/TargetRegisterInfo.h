@@ -531,9 +531,7 @@ public:
   /// prior to a call and is guaranteed to be restored (also by the caller)
   /// after the call.
   virtual bool isCallerPreservedPhysReg(unsigned PhysReg,
-                                        const MachineFunction &MF) const {
-    return false;
-  }
+                                        const MachineFunction &MF) const;
 
   /// Prior to adding the live-out mask to a stackmap or patchpoint
   /// instruction, provide the target the opportunity to adjust it (mainly to

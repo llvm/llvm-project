@@ -38,15 +38,20 @@ define void @gep0(i8* %unused, i8* %other, i8* %ptr) {
 }
 
 ; Order of accesses does not change computation.
+; Multiple arguments may be dereferenceable.
 
-define void @ordering(i8* %ptr) {
-; CHECK-LABEL: @ordering(i8* %ptr)
-  %arrayidx2 = getelementptr i8, i8* %ptr, i64 2
-  %t2 = load i8, i8* %arrayidx2
-  %arrayidx1 = getelementptr i8, i8* %ptr, i64 1
-  %arrayidx0 = getelementptr i8, i8* %ptr, i64 0
-  %t0 = load i8, i8* %arrayidx0
-  %t1 = load i8, i8* %arrayidx1
+define void @ordering(i8* %ptr1, i32* %ptr2) {
+; CHECK-LABEL: @ordering(i8* %ptr1, i32* %ptr2)
+  %a20 = getelementptr i32, i32* %ptr2, i64 0
+  %a12 = getelementptr i8, i8* %ptr1, i64 2
+  %t12 = load i8, i8* %a12
+  %a11 = getelementptr i8, i8* %ptr1, i64 1
+  %t20 = load i32, i32* %a20
+  %a10 = getelementptr i8, i8* %ptr1, i64 0
+  %t10 = load i8, i8* %a10
+  %t11 = load i8, i8* %a11
+  %a21 = getelementptr i32, i32* %ptr2, i64 1
+  %t21 = load i32, i32* %a21
   ret void
 }
 
@@ -199,3 +204,40 @@ define void @better_bytes(i32* dereferenceable(100) %ptr) {
   ret void
 }
 
+define void @bitcast(i32* %arg) {
+; CHECK-LABEL: @bitcast(i32* %arg)
+  %ptr = bitcast i32* %arg to float*
+  %arrayidx0 = getelementptr float, float* %ptr, i64 0
+  %arrayidx1 = getelementptr float, float* %ptr, i64 1
+  %t0 = load float, float* %arrayidx0
+  %t1 = load float, float* %arrayidx1
+  ret void
+}
+
+define void @bitcast_different_sizes(double* %arg1, i8* %arg2) {
+; CHECK-LABEL: @bitcast_different_sizes(double* %arg1, i8* %arg2)
+  %ptr1 = bitcast double* %arg1 to float*
+  %a10 = getelementptr float, float* %ptr1, i64 0
+  %a11 = getelementptr float, float* %ptr1, i64 1
+  %a12 = getelementptr float, float* %ptr1, i64 2
+  %ld10 = load float, float* %a10
+  %ld11 = load float, float* %a11
+  %ld12 = load float, float* %a12
+
+  %ptr2 = bitcast i8* %arg2 to i64*
+  %a20 = getelementptr i64, i64* %ptr2, i64 0
+  %a21 = getelementptr i64, i64* %ptr2, i64 1
+  %ld20 = load i64, i64* %a20
+  %ld21 = load i64, i64* %a21
+  ret void
+}
+
+define void @negative_offset(i32* %arg) {
+; CHECK-LABEL: @negative_offset(i32* %arg)
+  %ptr = bitcast i32* %arg to float*
+  %arrayidx0 = getelementptr float, float* %ptr, i64 0
+  %arrayidx1 = getelementptr float, float* %ptr, i64 -1
+  %t0 = load float, float* %arrayidx0
+  %t1 = load float, float* %arrayidx1
+  ret void
+}

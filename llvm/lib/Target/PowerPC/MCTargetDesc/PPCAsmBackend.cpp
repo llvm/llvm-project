@@ -229,6 +229,17 @@ public:
   Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 };
 
+class XCOFFPPCAsmBackend : public PPCAsmBackend {
+public:
+  XCOFFPPCAsmBackend(const Target &T, const Triple &TT)
+      : PPCAsmBackend(T, TT) {}
+
+  std::unique_ptr<MCObjectTargetWriter>
+  createObjectTargetWriter() const override {
+    return createPPCXCOFFObjectWriter(TT.isArch64Bit());
+  }
+};
+
 } // end anonymous namespace
 
 Optional<MCFixupKind> ELFPPCAsmBackend::getFixupKind(StringRef Name) const {
@@ -249,6 +260,9 @@ MCAsmBackend *llvm::createPPCAsmBackend(const Target &T,
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSDarwin())
     return new DarwinPPCAsmBackend(T, TT);
+
+  if (TT.isOSBinFormatXCOFF())
+    return new XCOFFPPCAsmBackend(T, TT);
 
   return new ELFPPCAsmBackend(T, TT);
 }

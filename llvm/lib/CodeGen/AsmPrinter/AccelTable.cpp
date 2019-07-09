@@ -614,30 +614,10 @@ void AppleAccelTableStaticTypeData::emit(AsmPrinter *Asm) const {
   Asm->emitInt32(QualifiedNameHash);
 }
 
-#ifndef _MSC_VER
-// The lines below are rejected by older versions (TBD) of MSVC.
 constexpr AppleAccelTableData::Atom AppleAccelTableTypeData::Atoms[];
 constexpr AppleAccelTableData::Atom AppleAccelTableOffsetData::Atoms[];
 constexpr AppleAccelTableData::Atom AppleAccelTableStaticOffsetData::Atoms[];
 constexpr AppleAccelTableData::Atom AppleAccelTableStaticTypeData::Atoms[];
-#else
-// FIXME: Erase this path once the minimum MSCV version has been bumped.
-const SmallVector<AppleAccelTableData::Atom, 4>
-    AppleAccelTableOffsetData::Atoms = {
-        Atom(dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4)};
-const SmallVector<AppleAccelTableData::Atom, 4> AppleAccelTableTypeData::Atoms =
-    {Atom(dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4),
-     Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
-     Atom(dwarf::DW_ATOM_type_flags, dwarf::DW_FORM_data1)};
-const SmallVector<AppleAccelTableData::Atom, 4>
-    AppleAccelTableStaticOffsetData::Atoms = {
-        Atom(dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4)};
-const SmallVector<AppleAccelTableData::Atom, 4>
-    AppleAccelTableStaticTypeData::Atoms = {
-        Atom(dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4),
-        Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
-        Atom(5, dwarf::DW_FORM_data1), Atom(6, dwarf::DW_FORM_data4)};
-#endif
 
 #ifndef NDEBUG
 void AppleAccelTableWriter::Header::print(raw_ostream &OS) const {

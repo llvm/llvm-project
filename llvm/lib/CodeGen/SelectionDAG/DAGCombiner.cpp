@@ -11040,14 +11040,11 @@ SDValue DAGCombiner::visitBITCAST(SDNode *N) {
       // as we assume software couldn't rely on the number of accesses of an
       // illegal type.
       ((!LegalOperations && !cast<LoadSDNode>(N0)->isVolatile()) ||
-       TLI.isOperationLegal(ISD::LOAD, VT)) &&
-      TLI.isLoadBitCastBeneficial(N0.getValueType(), VT)) {
+       TLI.isOperationLegal(ISD::LOAD, VT))) {
     LoadSDNode *LN0 = cast<LoadSDNode>(N0);
 
-    bool Fast = false;
-    if (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), VT,
-                               *LN0->getMemOperand(), &Fast) &&
-        Fast) {
+    if (TLI.isLoadBitCastBeneficial(N0.getValueType(), VT, DAG,
+                                    *LN0->getMemOperand())) {
       SDValue Load =
           DAG.getLoad(VT, SDLoc(N), LN0->getChain(), LN0->getBasePtr(),
                       LN0->getPointerInfo(), LN0->getAlignment(),
@@ -14364,7 +14361,7 @@ struct LoadedSlice {
   /// Get the alignment of the load used for this slice.
   unsigned getAlignment() const {
     unsigned Alignment = Origin->getAlignment();
-    unsigned Offset = getOffsetFromBase();
+    uint64_t Offset = getOffsetFromBase();
     if (Offset != 0)
       Alignment = MinAlign(Alignment, Alignment + Offset);
     return Alignment;
@@ -16174,15 +16171,11 @@ SDValue DAGCombiner::visitSTORE(SDNode *N) {
     // illegal type.
     if (((!LegalOperations && !ST->isVolatile()) ||
          TLI.isOperationLegal(ISD::STORE, SVT)) &&
-        TLI.isStoreBitCastBeneficial(Value.getValueType(), SVT)) {
-      bool Fast = false;
-      if (TLI.allowsMemoryAccess(*DAG.getContext(), DAG.getDataLayout(), SVT,
-                                 *ST->getMemOperand(), &Fast) &&
-          Fast) {
-        return DAG.getStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
-                            ST->getPointerInfo(), ST->getAlignment(),
-                            ST->getMemOperand()->getFlags(), ST->getAAInfo());
-      }
+        TLI.isStoreBitCastBeneficial(Value.getValueType(), SVT,
+                                     DAG, *ST->getMemOperand())) {
+      return DAG.getStore(Chain, SDLoc(N), Value.getOperand(0), Ptr,
+                          ST->getPointerInfo(), ST->getAlignment(),
+                          ST->getMemOperand()->getFlags(), ST->getAAInfo());
     }
   }
 

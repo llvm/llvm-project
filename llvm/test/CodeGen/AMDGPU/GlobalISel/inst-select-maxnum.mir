@@ -1,8 +1,5 @@
-# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN
 
---- |
-  define void @maxnum(i32 addrspace(1)* %global0) { ret void }
-...
 ---
 
 name:            maxnum
@@ -40,9 +37,9 @@ body: |
     ; GCN: V_MAX_F32_e32 [[VGPR0]], [[VGPR1]]
     %6:vgpr(s32) = G_INTRINSIC intrinsic(@llvm.maxnum.f32), %1, %2
 
-    G_STORE %4, %3 :: (store 4 into %ir.global0)
-    G_STORE %5, %3 :: (store 4 into %ir.global0)
-    G_STORE %6, %3 :: (store 4 into %ir.global0)
+    G_STORE %4, %3 :: (store 4, addrspace 1)
+    G_STORE %5, %3 :: (store 4, addrspace 1)
+    G_STORE %6, %3 :: (store 4, addrspace 1)
 
     ; 64-bit
 
@@ -58,9 +55,6 @@ body: |
     ; GCN: V_MAX_F64 0, [[VGPR64_0]], 0, [[VGPR64_1]], 0, 0
     %16:vgpr(s64) = G_INTRINSIC intrinsic(@llvm.maxnum.f64), %11, %12
 
-    G_STORE %14, %3 :: (store 8 into %ir.global0)
-    G_STORE %15, %3 :: (store 8 into %ir.global0)
-    G_STORE %16, %3 :: (store 8 into %ir.global0)
+    S_ENDPGM 0, implicit %14, implicit %15, implicit %16
 
 ...
----

@@ -12,7 +12,7 @@
 
 let Namespace = "AMDGPU" in {
 
-foreach Index = 0-15 in {
+foreach Index = 0-31 in {
   def sub#Index : SubRegIndex<32, !shl(Index, 5)>;
 }
 

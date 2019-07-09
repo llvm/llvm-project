@@ -82,6 +82,21 @@ static LegalityPredicate numElementsNotEven(unsigned TypeIdx) {
   };
 }
 
+// Any combination of 32 or 64-bit elements up to 512 bits, and multiples of
+// v2s16.
+static LegalityPredicate isRegisterType(unsigned TypeIdx) {
+  return [=](const LegalityQuery &Query) {
+    const LLT Ty = Query.Types[TypeIdx];
+    if (Ty.isVector()) {
+      const int EltSize = Ty.getElementType().getSizeInBits();
+      return EltSize == 32 || EltSize == 64 ||
+            (EltSize == 16 && Ty.getNumElements() % 2 == 0);
+    }
+
+    return Ty.getSizeInBits() % 32 == 0 && Ty.getSizeInBits() <= 512;
+  };
+}
+
 AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                                          const GCNTargetMachine &TM)
   :  ST(ST_) {
@@ -102,7 +117,6 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   const LLT V2S16 = LLT::vector(2, 16);
   const LLT V4S16 = LLT::vector(4, 16);
-  const LLT V8S16 = LLT::vector(8, 16);
 
   const LLT V2S32 = LLT::vector(2, 32);
   const LLT V3S32 = LLT::vector(3, 32);
@@ -337,10 +351,16 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
   setAction({G_BLOCK_ADDR, CodePtr}, Legal);
 
-  getActionDefinitionsBuilder(G_ICMP)
+  auto &CmpBuilder =
+    getActionDefinitionsBuilder(G_ICMP)
     .legalForCartesianProduct(
       {S1}, {S32, S64, GlobalPtr, LocalPtr, ConstantPtr, PrivatePtr, FlatPtr})
-    .legalFor({{S1, S32}, {S1, S64}})
+    .legalFor({{S1, S32}, {S1, S64}});
+  if (ST.has16BitInsts()) {
+    CmpBuilder.legalFor({{S1, S16}});
+  }
+
+  CmpBuilder
     .widenScalarToNextPow2(1)
     .clampScalar(1, S32, S64)
     .scalarize(0)
@@ -641,17 +661,8 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                Query.Types[0].getScalarSizeInBits() == 64;
       });
 
-  // TODO: Support any combination of v2s32
   getActionDefinitionsBuilder(G_CONCAT_VECTORS)
-    .legalFor({{V4S32, V2S32},
-               {V8S32, V2S32},
-               {V8S32, V4S32},
-               {V4S64, V2S64},
-               {V4S16, V2S16},
-               {V8S16, V2S16},
-               {V8S16, V4S16},
-               {LLT::vector(4, LocalPtr), LLT::vector(2, LocalPtr)},
-               {LLT::vector(4, PrivatePtr), LLT::vector(2, PrivatePtr)}});
+    .legalIf(isRegisterType(0));
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {

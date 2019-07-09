@@ -127,6 +127,8 @@ public:
   /// the mappings are kept in DwarfDebug.
   void insertDIE(const DINode *Desc, DIE *D);
 
+  void insertDIE(DIE *D);
+
   /// Add a flag that is true to the DIE.
   void addFlag(DIE &Die, dwarf::Attribute Attribute);
 

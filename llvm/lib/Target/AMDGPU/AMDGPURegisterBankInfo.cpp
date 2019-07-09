@@ -1653,20 +1653,25 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   }
 
   case AMDGPU::G_ICMP: {
+    auto Pred = static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
     unsigned Size = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
     unsigned Op2Bank = getRegBankID(MI.getOperand(2).getReg(), MRI, *TRI);
     unsigned Op3Bank = getRegBankID(MI.getOperand(3).getReg(), MRI, *TRI);
-    unsigned Op0Bank = Op2Bank == AMDGPU::SGPRRegBankID &&
-                       Op3Bank == AMDGPU::SGPRRegBankID ?
-                       AMDGPU::SCCRegBankID : AMDGPU::VCCRegBankID;
+
+    bool CanUseSCC = Op2Bank == AMDGPU::SGPRRegBankID &&
+                     Op3Bank == AMDGPU::SGPRRegBankID &&
+      (Size == 32 || (Size == 64 &&
+                      (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) &&
+                      MF.getSubtarget<GCNSubtarget>().hasScalarCompareEq64()));
+
+    unsigned Op0Bank = CanUseSCC ? AMDGPU::SCCRegBankID : AMDGPU::VCCRegBankID;
+
     OpdsMapping[0] = AMDGPU::getValueMapping(Op0Bank, 1);
     OpdsMapping[1] = nullptr; // Predicate Operand.
     OpdsMapping[2] = AMDGPU::getValueMapping(Op2Bank, Size);
     OpdsMapping[3] = AMDGPU::getValueMapping(Op3Bank, Size);
     break;
   }
-
-
   case AMDGPU::G_EXTRACT_VECTOR_ELT: {
     unsigned OutputBankID = isSALUMapping(MI) ?
                             AMDGPU::SGPRRegBankID : AMDGPU::VGPRRegBankID;

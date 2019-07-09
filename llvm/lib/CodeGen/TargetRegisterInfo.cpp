@@ -433,6 +433,20 @@ TargetRegisterInfo::getRegAllocationHints(unsigned VirtReg,
   return false;
 }
 
+bool
+TargetRegisterInfo::isCallerPreservedPhysReg(unsigned PhysReg,
+                                             const MachineFunction &MF) const {
+  if (PhysReg == 0)
+    return false;
+  const uint32_t *callerPreservedRegs =
+      getCallPreservedMask(MF, MF.getFunction().getCallingConv());
+  if (callerPreservedRegs) {
+    assert(isPhysicalRegister(PhysReg) && "Expected physical register");
+    return (callerPreservedRegs[PhysReg / 32] >> PhysReg % 32) & 1;
+  }
+  return false;
+}
+
 bool TargetRegisterInfo::canRealignStack(const MachineFunction &MF) const {
   return !MF.getFunction().hasFnAttribute("no-realign-stack");
 }

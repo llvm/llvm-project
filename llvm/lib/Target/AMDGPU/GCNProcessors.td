@@ -160,6 +160,10 @@ def : ProcessorModel<"gfx906", SIQuarterSpeedModel,
   FeatureISAVersion9_0_6.Features
 >;
 
+def : ProcessorModel<"gfx908", SIQuarterSpeedModel,
+  FeatureISAVersion9_0_8.Features
+>;
+
 def : ProcessorModel<"gfx909", SIQuarterSpeedModel,
   FeatureISAVersion9_0_9.Features
 >;

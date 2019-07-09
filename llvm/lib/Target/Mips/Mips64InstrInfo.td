@@ -1155,5 +1155,33 @@ def SLTUImm64 : MipsAsmPseudoInst<(outs GPR64Opnd:$rs),
 def : MipsInstAlias<"sltu\t$rs, $imm", (SLTUImm64 GPR64Opnd:$rs, GPR64Opnd:$rs,
                                                   imm64:$imm)>, GPR_64;
 
+def SGEImm64 : MipsAsmPseudoInst<(outs GPR64Opnd:$rd),
+                                 (ins GPR64Opnd:$rs, imm64:$imm),
+                                 "sge\t$rd, $rs, $imm">, GPR_64;
+def : MipsInstAlias<"sge $rs, $imm", (SGEImm64 GPR64Opnd:$rs,
+                                               GPR64Opnd:$rs,
+                                               imm64:$imm), 0>, GPR_64;
+
+def SGEUImm64 : MipsAsmPseudoInst<(outs GPR64Opnd:$rd),
+                                  (ins GPR64Opnd:$rs, imm64:$imm),
+                                  "sgeu\t$rd, $rs, $imm">, GPR_64;
+def : MipsInstAlias<"sgeu $rs, $imm", (SGEUImm64 GPR64Opnd:$rs,
+                                                 GPR64Opnd:$rs,
+                                                 imm64:$imm), 0>, GPR_64;
+
+def SGTImm64 : MipsAsmPseudoInst<(outs GPR64Opnd:$rd),
+                                 (ins GPR64Opnd:$rs, imm64:$imm),
+                                 "sgt\t$rd, $rs, $imm">, GPR_64;
+def : MipsInstAlias<"sgt $rs, $imm", (SGTImm64 GPR64Opnd:$rs,
+                                               GPR64Opnd:$rs,
+                                               imm64:$imm), 0>, GPR_64;
+
+def SGTUImm64 : MipsAsmPseudoInst<(outs GPR64Opnd:$rd),
+                                  (ins GPR64Opnd:$rs, imm64:$imm),
+                                  "sgtu\t$rd, $rs, $imm">, GPR_64;
+def : MipsInstAlias<"sgtu $rs, $imm", (SGTUImm64 GPR64Opnd:$rs,
+                                                 GPR64Opnd:$rs,
+                                                 imm64:$imm), 0>, GPR_64;
+
 def : MipsInstAlias<"rdhwr $rt, $rs",
                     (RDHWR64 GPR64Opnd:$rt, HWRegsOpnd:$rs, 0), 1>, GPR_64;

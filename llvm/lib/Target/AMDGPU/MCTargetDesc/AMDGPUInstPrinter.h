@@ -156,6 +156,12 @@ private:
                           const MCSubtargetInfo &STI, raw_ostream &O);
   void printMemOperand(const MCInst *MI, unsigned OpNo,
                        const MCSubtargetInfo &STI, raw_ostream &O);
+  void printBLGP(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                 raw_ostream &O);
+  void printCBSZ(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                 raw_ostream &O);
+  void printABID(const MCInst *MI, unsigned OpNo, const MCSubtargetInfo &STI,
+                 raw_ostream &O);
   void printDefaultVccOperand(unsigned OpNo, const MCSubtargetInfo &STI,
                               raw_ostream &O);
 
