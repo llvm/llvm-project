@@ -17,6 +17,8 @@
 #include "lldb/Host/windows/windows.h"
 #endif
 
+#include "llvm/Support/ErrorHandling.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
