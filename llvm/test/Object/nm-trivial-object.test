@@ -77,12 +77,23 @@ Symbols:
 # ELF-u: U SomeOtherFunction
 # ELF-u: U puts
 
+## Test different ELF symbols for 64-bit platform.
+
 # RUN: yaml2obj -docnum=2 %s > %t.elf-x86-64
 # RUN: llvm-nm %t.elf-x86-64 | FileCheck %s -check-prefix ELF64
 
 # ELF64:                  U SomeOtherFunction
-# ELF64: 0000000000000000 T main
-# ELF64:                  U puts
+# ELF64: 0000000000000123 a absSym1
+# ELF64: 0000000000000123 A absSym2
+# ELF64: 0000000000002000 D dataSym1
+# ELF64: 0000000000002004 D dataSym2
+# ELF64: 0000000000001000 T textSym1
+# ELF64: 0000000000001004 T textSym2
+# ELF64:                  U undefinedSym
+# ELF64:                  v weakObject1
+# ELF64: 0000000000001000 V weakObject2
+# ELF64:                  w weakSym1
+# ELF64: 0000000000001000 W weakSym2
 
 --- !ELF
 FileHeader:
@@ -94,67 +105,146 @@ Sections:
   - Name:  .text
     Type:  SHT_PROGBITS
     Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address: 0x1000
+  - Name:  .data
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_WRITE ]
+    Address: 0x2000
 Symbols:
-  - Name:    main
+  - Name:    absSym1
+    Index:   SHN_ABS
+    Value:   0x0000000000000123
+  - Name:    absSym2
+    Index:   SHN_ABS
+    Binding: STB_GLOBAL
+    Value:   0x0000000000000123
+  - Name:    SomeOtherFunction
+    Binding: STB_GLOBAL
+  - Name:    undefinedSym
+    Binding: STB_GLOBAL
+  - Name:    weakObject1
+    Type:    STT_OBJECT
+    Binding: STB_WEAK
+  - Name:    weakObject2
+    Type:    STT_OBJECT
+    Section: .text
+    Binding: STB_WEAK
+  - Name:    weakSym1
+    Binding: STB_WEAK
+  - Name:    weakSym2
+    Section: .text
+    Binding: STB_WEAK
+  - Name:    dataSym1
+    Type:    STT_OBJECT
+    Section: .data
+    Binding: STB_GLOBAL
+    Value:   0x0000000000000000
+  - Name:    dataSym2
+    Type:    STT_OBJECT
+    Section: .data
+    Binding: STB_GLOBAL
+    Value:   0x0000000000000004
+  - Name:    textSym1
     Type:    STT_FUNC
     Section: .text
     Binding: STB_GLOBAL
-    Size:    0x0000000000000024
-  - Name:    SomeOtherFunction
+    Value:   0x0000000000000000
+  - Name:    textSym2
+    Type:    STT_FUNC
+    Section: .text
     Binding: STB_GLOBAL
-  - Name:    puts
+    Value:   0x0000000000000004
+
+## Test llvm-nm shows all symbols with -a.
+
+# RUN: yaml2obj -docnum=3 %s > %t-a.elf-x86-64
+# RUN: llvm-nm -a %t-a.elf-x86-64 | FileCheck %s -check-prefix ELF64-a
+
+# ELF64-a:      00000000 b .bss
+# ELF64-a-NEXT: 00000000 n .comment
+# ELF64-a-NEXT: 00000000 d .data
+# ELF64-a-NEXT: 00000000 N .debug_sec
+# ELF64-a-NEXT: 00000000 t .text
+# ELF64-a-NEXT: 00000000 a fileSym
+# ELF64-a-NEXT: 00000014 T regularSym
+# ELF64-a-NEXT:          U undefSym
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_386
+Sections:
+  - Name:  .rodata
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC ]	
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Name:  .data
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+  - Name:  .bss
+    Type:  SHT_NOBITS
+    Flags: [ SHF_WRITE, SHF_ALLOC ]
+  - Name:  .debug_sec
+    Type:  SHT_PROGBITS
+  - Name:  .comment
+    Type:  SHT_PROGBITS
+Symbols:
+  - Name:    fileSym
+    Type:    STT_FILE
+    Index:   SHN_ABS
+  - Name:    .text
+    Type:    STT_SECTION
+    Section: .text
+  - Name:    .data
+    Type:    STT_SECTION
+    Section: .data
+  - Name:    .bss
+    Type:    STT_SECTION
+    Section: .bss
+  - Name:    .debug_sec
+    Type:    STT_SECTION
+    Section: .debug_sec
+  - Name:    .comment
+    Type:    STT_SECTION
+    Section: .comment
+  - Name:    undefSym
     Binding: STB_GLOBAL
-
-# RUN: llvm-nm %p/Inputs/weak.elf-x86-64 \
-# RUN:         | FileCheck %s -check-prefix WEAK-ELF64
-
-# WEAK-ELF64:                  w f1
-# WEAK-ELF64: 0000000000000000 W f2
-# WEAK-ELF64:                  v x1
-# WEAK-ELF64: 0000000000000000 V x2
-
-# RUN: llvm-nm %p/Inputs/absolute.elf-x86-64 \
-# RUN:         | FileCheck %s -check-prefix ABSOLUTE-ELF64
-
-# ABSOLUTE-ELF64: 0000000000000123 a a1
-# ABSOLUTE-ELF64: 0000000000000123 A a2
-
-# RUN: llvm-nm -a %p/Inputs/IsNAN.o \
-# RUN:         | FileCheck %s -check-prefix ELF64-DEBUG-SYMS
-
-# ELF64-DEBUG-SYMS: 00000000 b .bss
-# ELF64-DEBUG-SYMS-NEXT: 00000000 n .comment
-# ELF64-DEBUG-SYMS-NEXT: 00000000 d .data
-# ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_abbrev
-# ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_aranges
-# ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_frame
-# ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_info
-# ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_line
-# ELF64-DEBUG-SYMS-NEXT: 00000000 N .debug_pubnames
-# ELF64-DEBUG-SYMS-NEXT: 00000000 n .note.GNU-stack
-# ELF64-DEBUG-SYMS-NEXT: 00000000 t .text
-# ELF64-DEBUG-SYMS-NEXT: 00000000 a IsNAN.cpp
-# ELF64-DEBUG-SYMS-NEXT: 00000014 T _ZN4llvm5IsNANEd
-# ELF64-DEBUG-SYMS-NEXT: 00000000 T _ZN4llvm5IsNANEf
-# ELF64-DEBUG-SYMS-NEXT:          U __isnan
-# ELF64-DEBUG-SYMS-NEXT:          U __isnanf
-
-# RUN: llvm-nm %p/Inputs/relocatable-with-section-address.elf-x86-64 \
-# RUN:         | FileCheck %s -check-prefix ELF-SEC-ADDR64
-
-## Test that llvm-nm uses addresses even with ELF .o files.
-# ELF-SEC-ADDR64:      0000000000000058 D a
-# ELF-SEC-ADDR64-NEXT: 000000000000005c D b
-# ELF-SEC-ADDR64-NEXT: 0000000000000040 T f
-# ELF-SEC-ADDR64-NEXT: 0000000000000050 T g
-# ELF-SEC-ADDR64-NEXT: 0000000000000060 D p
-
-# RUN: llvm-nm %p/Inputs/thumb-symbols.elf.arm \
-# RUN:         | FileCheck %s -check-prefix ELF-THUMB
+  - Name:    regularSym
+    Type:    STT_FUNC
+    Section: .text
+    Binding: STB_GLOBAL
+    Value:   0x0000000000000014
 
 ## Test that we drop the thumb bit only from function addresses.
-# ELF-THUMB: 00000000 t f
-# ELF-THUMB: 00000003 t g
+
+# RUN: yaml2obj -docnum=4 %s > %t.elf-arm32
+# RUN: llvm-nm %t.elf-arm32 | FileCheck %s -check-prefix ELF-THUMB
+
+# ELF-THUMB: 00000000 t func
+# ELF-THUMB: 00000003 t sym
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_ARM
+Sections:
+  - Name:  .text
+    Type:  SHT_PROGBITS
+    Flags: [ SHF_ALLOC, SHF_EXECINSTR ]
+Symbols:
+  - Name:    func
+    Type:    STT_FUNC
+    Section: .text
+    Value:   0x0000000000000001
+  - Name:    sym
+    Section: .text
+    Value:   0x0000000000000003
 
 # RUN: llvm-nm %p/Inputs/trivial-object-test.macho-i386 \
 # RUN:         | FileCheck %s -check-prefix macho
