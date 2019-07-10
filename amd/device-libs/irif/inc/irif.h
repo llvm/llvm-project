@@ -167,9 +167,6 @@ extern uint __llvm_amdgcn_permlane16(uint, uint, uint, uint, bool, bool) __asm("
 // llvm.amdgcn.permlanex16 <old> <src0> <src1> <src2> <fi> <bound_control>
 extern uint __llvm_amdgcn_permlanex16(uint, uint, uint, uint, bool, bool) __asm("llvm.amdgcn.permlanex16");
 
-// Operand bits: [0..3]=VM_CNT, [4..6]=EXP_CNT (Export), [8..11]=LGKM_CNT (LDS, GDS, Konstant, Message)
-extern void __llvm_amdgcn_s_waitcnt(int) __asm("llvm.amdgcn.s.waitcnt");
-
 extern __attribute__((const)) uint __llvm_amdgcn_ubfe_i32(uint, uint, uint) __asm("llvm.amdgcn.ubfe.i32");
 extern __attribute__((const)) int __llvm_amdgcn_sbfe_i32(int, uint, uint) __asm("llvm.amdgcn.sbfe.i32");
 
