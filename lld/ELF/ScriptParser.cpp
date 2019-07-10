@@ -828,7 +828,9 @@ OutputSection *ScriptParser::readOutputSectionDescription(StringRef outSec) {
       // We handle the FILL command as an alias for =fillexp section attribute,
       // which is different from what GNU linkers do.
       // https://sourceware.org/binutils/docs/ld/Output-Section-Data.html
+      expect("(");
       cmd->filler = readFill();
+      expect(")");
     } else if (tok == "SORT") {
       readSort();
     } else if (tok == "INCLUDE") {
