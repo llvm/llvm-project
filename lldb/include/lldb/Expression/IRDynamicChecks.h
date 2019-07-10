@@ -1,5 +1,4 @@
-//===-- IRDynamicChecks.h ---------------------------------------------*- C++
-//-*-===//
+//===-- IRDynamicChecks.h ---------------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -68,8 +67,8 @@ public:
 
   bool DoCheckersExplainStop(lldb::addr_t addr, Stream &message);
 
-  std::unique_ptr<UtilityFunction> m_valid_pointer_check;
-  std::unique_ptr<UtilityFunction> m_objc_object_check;
+  std::shared_ptr<UtilityFunction> m_valid_pointer_check;
+  std::shared_ptr<UtilityFunction> m_objc_object_check;
 };
 
 /// \class IRDynamicChecks IRDynamicChecks.h
