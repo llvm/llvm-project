@@ -15,7 +15,6 @@
 			);
 			dependencies = (
 				26CEF3B014FD591F007286B2 /* PBXTargetDependency */,
-				2687EACD1508115900DD8C2E /* PBXTargetDependency */,
 				2330A1CD1CBC017200076028 /* PBXTargetDependency */,
 			);
 			name = desktop_no_xpc;
@@ -30,7 +29,6 @@
 			);
 			dependencies = (
 				26CEF3BB14FD595B007286B2 /* PBXTargetDependency */,
-				2687EACB1508115000DD8C2E /* PBXTargetDependency */,
 				AF5DFFDF1A9C2A2E00983E81 /* PBXTargetDependency */,
 				2330A1CB1CBC016700076028 /* PBXTargetDependency */,
 			);
@@ -47,7 +45,6 @@
 			dependencies = (
 				AFCA21D21D18E556004386B8 /* PBXTargetDependency */,
 				26CEF3C214FD5973007286B2 /* PBXTargetDependency */,
-				2687EACF1508116300DD8C2E /* PBXTargetDependency */,
 			);
 			name = ios;
 			productName = ios;
@@ -1275,27 +1272,6 @@
 			proxyType = 1;
 			remoteGlobalIDString = 26680206115FD0ED008E1FE4;
 			remoteInfo = LLDB;
-		};
-		2687EACA1508115000DD8C2E /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 2687EAC51508110B00DD8C2E;
-			remoteInfo = "install-headers";
-		};
-		2687EACC1508115900DD8C2E /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 2687EAC51508110B00DD8C2E;
-			remoteInfo = "install-headers";
-		};
-		2687EACE1508116300DD8C2E /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 08FB7793FE84155DC02AAC07 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = 2687EAC51508110B00DD8C2E;
-			remoteInfo = "install-headers";
 		};
 		2689011413353E9B00698AC0 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -7417,20 +7393,6 @@
 			passBuildSettingsInEnvironment = 0;
 			productName = "LLDB Python Test Suite";
 		};
-		2687EAC51508110B00DD8C2E /* install-headers */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "$(ACTION)";
-			buildConfigurationList = 2687EAC61508110B00DD8C2E /* Build configuration list for PBXLegacyTarget "install-headers" */;
-			buildPhases = (
-			);
-			buildToolPath = /usr/bin/make;
-			buildWorkingDirectory = "$(SRCROOT)/tools/install-headers";
-			dependencies = (
-			);
-			name = "install-headers";
-			passBuildSettingsInEnvironment = 1;
-			productName = "install-headers";
-		};
 		941E2F521AE81CA100AAA711 /* PrebuiltSwiftDebugBuild */ = {
 			isa = PBXLegacyTarget;
 			buildArgumentsString = "$(SOURCE_ROOT)/scripts/build-swift-cmake.py";
@@ -7444,20 +7406,6 @@
 			name = PrebuiltSwiftDebugBuild;
 			passBuildSettingsInEnvironment = 0;
 			productName = PrebuiltSwiftDebugBuild;
-		};
-		AF6967871B4609A80014D221 /* install-headers-mini */ = {
-			isa = PBXLegacyTarget;
-			buildArgumentsString = "";
-			buildConfigurationList = AF6967881B4609A80014D221 /* Build configuration list for PBXLegacyTarget "install-headers-mini" */;
-			buildPhases = (
-			);
-			buildToolPath = /usr/bin/true;
-			buildWorkingDirectory = "$(SRCROOT)";
-			dependencies = (
-			);
-			name = "install-headers-mini";
-			passBuildSettingsInEnvironment = 1;
-			productName = "install-headers";
 		};
 /* End PBXLegacyTarget section */
 
@@ -7775,10 +7723,13 @@
 				26579F67126A25920007C5CB /* darwin-debug */,
 				2689FFC913353D7A00698AC0 /* lldb-core */,
 				26DC6A0F1337FE6900FF7998 /* lldb-server */,
+<<<<<<< HEAD
 				2687EAC51508110B00DD8C2E /* install-headers */,
 				AF6967871B4609A80014D221 /* install-headers-mini */,
 				26F8EA1618F6096400EFD6B1 /* repl_swift */,
 				A54A7D0B1A0D99BB001912FE /* LLDB_Automation_Testing */,
+=======
+>>>>>>> mirror/master
 				2690CD161A6DC0D000E717C8 /* lldb-mi */,
 				941E2F521AE81CA100AAA711 /* PrebuiltSwiftDebugBuild */,
 				942829BF1A89835300521B30 /* lldb-argdumper */,
@@ -9252,21 +9203,6 @@
 			isa = PBXTargetDependency;
 			target = 26680206115FD0ED008E1FE4 /* LLDB */;
 			targetProxy = 2679261F211CA40700EE1D10 /* PBXContainerItemProxy */;
-		};
-		2687EACB1508115000DD8C2E /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 2687EAC51508110B00DD8C2E /* install-headers */;
-			targetProxy = 2687EACA1508115000DD8C2E /* PBXContainerItemProxy */;
-		};
-		2687EACD1508115900DD8C2E /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 2687EAC51508110B00DD8C2E /* install-headers */;
-			targetProxy = 2687EACC1508115900DD8C2E /* PBXContainerItemProxy */;
-		};
-		2687EACF1508116300DD8C2E /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = 2687EAC51508110B00DD8C2E /* install-headers */;
-			targetProxy = 2687EACE1508116300DD8C2E /* PBXContainerItemProxy */;
 		};
 		2689011513353E9B00698AC0 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
@@ -13373,6 +13309,7 @@
 			};
 			name = DebugPresubmission;
 		};
+<<<<<<< HEAD
 		9448C4671B1FC0AD00414490 /* DebugPresubmission */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -13387,6 +13324,9 @@
 			name = DebugPresubmission;
 		};
 		9448C4681B1FC0AD00414490 /* DebugPresubmission */ = {
+=======
+		2689FFD513353D7A00698AC0 /* Debug */ = {
+>>>>>>> mirror/master
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_SOURCE_DIR = "$(SRCROOT)/llvm/tools/clang";
@@ -15178,6 +15118,7 @@
 			};
 			name = "CustomSwift-Release";
 		};
+<<<<<<< HEAD
 		94DF55E91ADDBF2C0030B937 /* CustomSwift-Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -15195,6 +15136,9 @@
 			name = "CustomSwift-Release";
 		};
 		94DF55EA1ADDBF2C0030B937 /* CustomSwift-Release */ = {
+=======
+		942829C51A89835400521B30 /* Debug */ = {
+>>>>>>> mirror/master
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				AXLE_ENABLE_DEBUG_INFO = NO;
@@ -15873,6 +15817,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = BuildAndIntegration;
 		};
+<<<<<<< HEAD
 		2687EAC61508110B00DD8C2E /* Build configuration list for PBXLegacyTarget "install-headers" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
@@ -15888,6 +15833,8 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = BuildAndIntegration;
 		};
+=======
+>>>>>>> mirror/master
 		2689FFD813353D7A00698AC0 /* Build configuration list for PBXNativeTarget "lldb-core" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

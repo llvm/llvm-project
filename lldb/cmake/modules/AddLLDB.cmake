@@ -170,45 +170,6 @@ function(lldb_append_link_flags target_name new_link_flags)
   set_target_properties(${target_name} PROPERTIES LINK_FLAGS ${new_link_flags})
 endfunction()
 
-# For tools that depend on liblldb, account for varying directory structures in
-# which LLDB.framework can be used and distributed: In the build-tree we find it
-# by its absolute target path. This is only relevant for running the test suite.
-# In the install step CMake will remove this entry and insert the final RPATHs.
-# These are relative to the file path from where the tool will be loaded on the
-# enduser system.
-#
-# Note that the LLVM install-tree doesn't match the enduser system structure
-# for LLDB.framework, so by default dependent tools will not be functional in
-# their install location. The LLDB_FRAMEWORK_INSTALL_DIR variable allows to fix
-# this. If specified, it causes the install-tree location of the framework to be
-# added as an extra RPATH below.
-#
-function(lldb_setup_framework_rpaths_in_tool name)
-  # The installed framework is relocatable and can be in different locations.
-  set(rpaths_install_tree)
-
-  if(LLDB_FRAMEWORK_INSTALL_DIR)
-    list(APPEND rpaths_install_tree "@loader_path/../${LLDB_FRAMEWORK_INSTALL_DIR}")
-  endif()
-
-  list(APPEND rpaths_install_tree "@loader_path/../../../SharedFrameworks")
-  list(APPEND rpaths_install_tree "@loader_path/../../System/Library/PrivateFrameworks")
-  list(APPEND rpaths_install_tree "@loader_path/../../Library/PrivateFrameworks")
-
-  # In the build-tree, we know the exact path to the framework directory.
-  get_target_property(framework_target_dir liblldb LIBRARY_OUTPUT_DIRECTORY)
-
-  # If LLDB_NO_INSTALL_DEFAULT_RPATH was NOT enabled (default), this overwrites
-  # the default settings from llvm_setup_rpath().
-  set_target_properties(${name} PROPERTIES
-    BUILD_WITH_INSTALL_RPATH OFF
-    BUILD_RPATH "${framework_target_dir}"
-    INSTALL_RPATH "${rpaths_install_tree}"
-  )
-
-  add_dependencies(${name} lldb-framework)
-endfunction()
-
 # Unified handling for executable LLDB.framework resources. Given the name of an
 # executable target, this function adds a post-build step to copy it to the
 # framework bundle in the build-tree.

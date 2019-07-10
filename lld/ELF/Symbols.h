@@ -460,6 +460,11 @@ union SymbolUnion {
   alignas(LazyObject) char F[sizeof(LazyObject)];
 };
 
+// It is important to keep the size of SymbolUnion small for performance and
+// memory usage reasons. 80 bytes is a soft limit based on the size of Defined
+// on a 64-bit system.
+static_assert(sizeof(SymbolUnion) <= 80, "SymbolUnion too large");
+
 template <typename T> struct AssertSymbol {
   static_assert(std::is_trivially_destructible<T>(),
                 "Symbol types must be trivially destructible");

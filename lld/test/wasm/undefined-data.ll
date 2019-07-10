@@ -1,6 +1,6 @@
 ; RUN: llc -filetype=obj %s -o %t.o
 ; RUN: not wasm-ld -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=UNDEF
-; RUN: not wasm-ld --allow-undefined -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=ALLOW
+; RUN: not wasm-ld --allow-undefined -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=UNDEF
 ; RUN: not wasm-ld --shared -o %t.wasm %t.o 2>&1 | FileCheck %s -check-prefix=SHARED
 
 target triple = "wasm32-unknown-unknown"
@@ -14,5 +14,4 @@ entry:
 }
 
 ; UNDEF: error: {{.*}}undefined-data.ll.tmp.o: undefined symbol: data_external
-; ALLOW: error: {{.*}}undefined-data.ll.tmp.o: cannot resolve relocation of type R_WASM_MEMORY_ADDR_LEB against undefined (non-weak) data symbol: data_external
 ; SHARED: error: {{.*}}undefined-data.ll.tmp.o: relocation R_WASM_MEMORY_ADDR_LEB cannot be used against symbol data_external; recompile with -fPIC

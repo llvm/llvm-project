@@ -31,7 +31,11 @@ namespace {
 // signinficant byte.
 uint8_t getByte(const uint32_t* data, size_t offset) {
   const uint8_t* byteData = reinterpret_cast<const uint8_t*>(data);
+#ifdef __LITTLE_ENDIAN__
   return byteData[(offset & ~(size_t)0x03) + (3 - (offset & (size_t)0x03))];
+#else
+  return byteData[offset];
+#endif
 }
 
 const char* getNextWord(const char* data, uint32_t* out) {

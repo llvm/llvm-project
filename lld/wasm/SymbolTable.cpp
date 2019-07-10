@@ -80,19 +80,6 @@ void SymbolTable::addCombinedLTOObject() {
   }
 }
 
-void SymbolTable::reportRemainingUndefines() {
-  for (const auto& Pair : SymMap) {
-    const Symbol *Sym = SymVector[Pair.second];
-    if (!Sym->isUndefined() || Sym->isWeak())
-      continue;
-    if (Config->AllowUndefinedSymbols.count(Sym->getName()) != 0)
-      continue;
-    if (!Sym->IsUsedInRegularObj)
-      continue;
-    error(toString(Sym->getFile()) + ": undefined symbol: " + toString(*Sym));
-  }
-}
-
 Symbol *SymbolTable::find(StringRef Name) {
   auto It = SymMap.find(CachedHashStringRef(Name));
   if (It == SymMap.end() || It->second == -1)
