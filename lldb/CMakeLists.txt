@@ -218,3 +218,7 @@ if (NOT LLDB_DISABLE_PYTHON)
             COMMENT "Copying Python DLL to LLDB binaries directory.")
     endif ()
 endif ()
+
+if(LLDB_BUILT_STANDALONE)
+  llvm_distribution_add_targets()
+endif()
