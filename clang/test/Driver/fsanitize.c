@@ -840,3 +840,17 @@
 // CHECK-POINTER-SUB-NEEDS-ADDRESS: error: invalid argument '-fsanitize=pointer-subtract' only allowed with '-fsanitize=address'
 // CHECK-NO-POINTER-SUB-NOT: {{.*}}asan-detect-invalid-pointer{{.*}}
 // CHECK-NO-POINTER-CMP-NOT: {{.*}}asan-detect-invalid-pointer{{.*}}
+
+// RUN: %clang -target %itanium_abi_triple -fsanitize=float-divide-by-zero %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-DIVBYZERO,CHECK-DIVBYZERO-RECOVER
+// RUN: %clang -target %itanium_abi_triple -fsanitize=float-divide-by-zero %s -fno-sanitize-recover=float-divide-by-zero -### 2>&1 | FileCheck %s --check-prefixes=CHECK-DIVBYZERO,CHECK-DIVBYZERO-NORECOVER
+// RUN: %clang -target %itanium_abi_triple -fsanitize=float-divide-by-zero -fsanitize-trap=float-divide-by-zero %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-DIVBYZERO,CHECK-DIVBYZERO-NORECOVER,CHECK-DIVBYZERO-TRAP
+// CHECK-DIVBYZERO: "-fsanitize=float-divide-by-zero"
+// CHECK-DIVBYZERO-RECOVER: "-fsanitize-recover=float-divide-by-zero"
+// CHECK-DIVBYZERO-NORECOVER-NOT: "-fsanitize-recover=float-divide-by-zero"
+// CHECK-DIVBYZERO-TRAP: "-fsanitize-trap=float-divide-by-zero"
+
+// RUN: %clang -target %itanium_abi_triple -fsanitize=float-divide-by-zero -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefixes=CHECK-DIVBYZERO,CHECK-DIVBYZERO-MINIMAL
+// CHECK-DIVBYZERO-MINIMAL: "-fsanitize-minimal-runtime"
+
+// RUN: %clang -target %itanium_abi_triple -fsanitize=undefined,float-divide-by-zero %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DIVBYZERO-UBSAN
+// CHECK-DIVBYZERO-UBSAN: "-fsanitize={{.*}},float-divide-by-zero,{{.*}}"

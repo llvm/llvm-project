@@ -29,7 +29,7 @@
 // RUN: ls %t.2 | count 2
 //
 // Next, build with sanitization, and check that a new module isn't built.
-// RUN: %clang_cc1 -fsanitize=cfi-vcall,unsigned-integer-overflow,nullability-arg,null -fmodules \
+// RUN: %clang_cc1 -fsanitize=cfi-vcall,float-divide-by-zero,unsigned-integer-overflow,nullability-arg,null -fmodules \
 // RUN:   -fmodules-cache-path=%t.2 \
 // RUN:   -fmodule-map-file=%S/Inputs/check-for-sanitizer-feature/map \
 // RUN:   -I %S/Inputs/check-for-sanitizer-feature -verify %s
