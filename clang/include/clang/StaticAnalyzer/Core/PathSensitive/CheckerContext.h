@@ -247,6 +247,17 @@ public:
         IsPrunable);
   }
 
+  /// A shorthand version of getNoteTag that accepts a plain note.
+  ///
+  /// @param Note The note.
+  /// @param IsPrunable Whether the note is prunable. It allows BugReporter
+  ///        to omit the note from the report if it would make the displayed
+  ///        bug path significantly shorter.
+  const NoteTag *getNoteTag(StringRef Note, bool IsPrunable = false) {
+    return getNoteTag(
+        [Note](BugReporterContext &, BugReport &) { return Note; }, IsPrunable);
+  }
+
   /// Returns the word that should be used to refer to the declaration
   /// in the report.
   StringRef getDeclDescription(const Decl *D);
