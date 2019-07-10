@@ -103,6 +103,7 @@ RelExpr AArch64::getRelExpr(RelType type, const Symbol &s,
   case R_AARCH64_LD_PREL_LO19:
     return R_PC;
   case R_AARCH64_ADR_PREL_PG_HI21:
+  case R_AARCH64_ADR_PREL_PG_HI21_NC:
     return R_AARCH64_PAGE_PC;
   case R_AARCH64_LD64_GOT_LO12_NC:
   case R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
@@ -270,6 +271,8 @@ void AArch64::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
   case R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
   case R_AARCH64_TLSDESC_ADR_PAGE21:
     checkInt(loc, val, 33, type);
+    LLVM_FALLTHROUGH;
+  case R_AARCH64_ADR_PREL_PG_HI21_NC:
     write32AArch64Addr(loc, val >> 12);
     break;
   case R_AARCH64_ADR_PREL_LO21:
