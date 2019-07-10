@@ -517,7 +517,14 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
         case 256:
         case 512:
-          // TODO: constant loads
+          // TODO: Possibly support loads of i256 and i512 .  This will require
+          // adding i256 and i512 types to MVT in order for to be able to use
+          // TableGen.
+          // TODO: Add support for other vector types, this will require
+          //       defining more value mappings for the new types.
+          return Ty0.isVector() && (Ty0.getScalarType().getSizeInBits() == 32 ||
+                                    Ty0.getScalarType().getSizeInBits() == 64);
+
         default:
           return false;
         }

@@ -453,9 +453,9 @@ private:
       MachineInstr *TmpDef = MRI.getVRegDef(PrevRegSrc);
       if (MRI.hasOneUse(PrevRegSrc)) {
         if (TmpDef != &DefMI) {
-          assert(TmpDef->getOpcode() == TargetOpcode::COPY ||
-                 isArtifactCast(TmpDef->getOpcode()) &&
-                     "Expecting copy or artifact cast here");
+          assert((TmpDef->getOpcode() == TargetOpcode::COPY ||
+                  isArtifactCast(TmpDef->getOpcode())) &&
+                 "Expecting copy or artifact cast here");
 
           DeadInsts.push_back(TmpDef);
         }

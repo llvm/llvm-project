@@ -5788,7 +5788,7 @@ static SDValue getShuffleVectorZeroOrUndef(SDValue V2, int Idx,
 }
 
 static const Constant *getTargetConstantFromNode(LoadSDNode *Load) {
-  if (!Load)
+  if (!Load || !ISD::isNormalLoad(Load))
     return nullptr;
 
   SDValue Ptr = Load->getBasePtr();

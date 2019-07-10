@@ -25,7 +25,7 @@ OPTIONS
 
 .. option:: -a, --all
 
-            Disassemble all supported DWARF sections.
+            Dump all supported DWARF sections.
 
 .. option:: --arch=<arch>
 
