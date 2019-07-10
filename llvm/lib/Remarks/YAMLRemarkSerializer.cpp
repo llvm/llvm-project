@@ -17,8 +17,9 @@
 using namespace llvm;
 using namespace llvm::remarks;
 
-cl::opt<bool> RemarksYAMLStringTable("remarks-yaml-string-table",
-                                     cl::init(false));
+cl::opt<bool> RemarksYAMLStringTable(
+    "remarks-yaml-string-table", cl::init(false), cl::Hidden,
+    cl::desc("Enable the usage of a string table with YAML remarks."));
 
 // Use the same keys whether we use a string table or not (respectively, T is an
 // unsigned or a StringRef).
