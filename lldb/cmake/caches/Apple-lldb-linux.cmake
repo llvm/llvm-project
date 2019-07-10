@@ -1,3 +1,0 @@
-include(${CMAKE_CURRENT_LIST_DIR}/Apple-lldb-base.cmake)
-
-set(LLDB_ALLOW_STATIC_BINDINGS ON CACHE BOOL "")
