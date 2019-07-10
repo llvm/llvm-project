@@ -1,10 +1,6 @@
-add_lldb_tool(lldb-argdumper
+add_lldb_tool(lldb-argdumper ADD_TO_FRAMEWORK
   argdumper.cpp
 
   LINK_LIBS
     lldbUtility
-  )
-
-if(LLDB_BUILD_FRAMEWORK)
-  lldb_add_to_framework(lldb-argdumper)
-endif()
+)

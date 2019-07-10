@@ -33,6 +33,8 @@ set_output_directory(liblldb
   LIBRARY_DIR ${framework_target_dir}
 )
 
+lldb_add_post_install_steps_darwin(liblldb ${LLDB_FRAMEWORK_INSTALL_DIR})
+
 # Affects the layout of the framework bundle (default is macOS layout).
 if(IOS)
   set_target_properties(liblldb PROPERTIES

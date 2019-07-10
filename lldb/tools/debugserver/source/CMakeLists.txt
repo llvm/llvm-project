@@ -272,21 +272,13 @@ if(build_and_sign_debugserver)
                  COMPILE_DEFINITIONS HAVE_LIBCOMPRESSION)
   endif()
   set(LLVM_OPTIONAL_SOURCES ${lldbDebugserverCommonSources})
-  add_lldb_tool(debugserver
+  add_lldb_tool(debugserver ADD_TO_FRAMEWORK
     debugserver.cpp
-
-    LINK_LIBS
-      lldbDebugserverCommon
-
-    ENTITLEMENTS
-      ${entitlements}
-    )
+    LINK_LIBS lldbDebugserverCommon
+    ENTITLEMENTS ${entitlements}
+  )
 
   set_target_properties(debugserver PROPERTIES FOLDER "lldb libraries/debugserver")
-
-  if(LLDB_BUILD_FRAMEWORK)
-    lldb_add_to_framework(debugserver)
-  endif()
 
   if(IOS)
     set_property(TARGET lldbDebugserverCommon APPEND PROPERTY COMPILE_DEFINITIONS
