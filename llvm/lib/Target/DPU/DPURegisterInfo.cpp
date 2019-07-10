@@ -52,8 +52,8 @@ using namespace llvm;
 // the closest Double Register from the Stack Pointer (which is defined to be
 // aligned on 8 bytes)
 static const MCPhysReg CalleeSavedRegs[] = {
-    DPU::R16, DPU::D14, DPU::D12, DPU::D10,   DPU::D8, DPU::D6,
-    DPU::D4,  DPU::D2,  DPU::D0,  DPU::RDFUN, 0
+    DPU::D14, DPU::D12, DPU::D10, DPU::D8, DPU::D6,
+    DPU::D4,  DPU::D2,  DPU::D0,  0
     /* Reserved and invisible DPU::R17r, DPU::R18r, DPU::R19r, DPU::RVALHI */
 };
 
@@ -78,54 +78,13 @@ BitVector DPURegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   reserved.set(DPU::ID2);
   reserved.set(DPU::ID4);
   reserved.set(DPU::ID8);
+  reserved.set(DPU::R16);
   reserved.set(DPU::R17);
   reserved.set(DPU::R18);
   reserved.set(DPU::R19);
   reserved.set(DPU::D16);
   reserved.set(DPU::D18);
   return reserved;
-}
-
-static int getFIOperandIndexFromInstruction(MachineInstr &MI) {
-  unsigned int i = 0;
-  while (!MI.getOperand(i).isFI()) {
-    ++i;
-    assert(i < MI.getNumOperands() &&
-           "searching for a frame index in an instruction that has no frame "
-           "index operand!");
-  }
-  return (int)i;
-}
-
-// Adjusts the offset of every frame in an MI.
-// This is mainly used for the following use case:
-//  - A function is passed a pointer to an item in the stack (frame index N)
-//  - First the stack pointer adjustment is achieved
-//  - Then the arguments are passed in the form "addi Rx, STKP, N"
-//  - Then call the function
-// The problem is that STKP has moved, since the pointer was adjusted... As a
-// consequence N is wrong at this step.
-// One solution is to re-adjust all those N offsets.
-static void adjustFrameIndexesWithNewOffset(MachineFunction &MF, int Offset) {
-  for (auto eachFrame = MF.getFrameInfo().getObjectIndexBegin();
-       eachFrame < MF.getFrameInfo().getObjectIndexEnd(); eachFrame++) {
-    if (!MF.getFrameInfo().isDeadObjectIndex(eachFrame)) {
-      int frameOffset = MF.getFrameInfo().getObjectOffset(eachFrame);
-      MF.getFrameInfo().setObjectOffset(eachFrame, frameOffset + Offset);
-    }
-  }
-}
-
-unsigned int DPURegisterInfo::stackAdjustmentDependingOnOptimizationLevel(
-    const MachineFunction &MF, unsigned int FrameSize) const {
-  // In O0, the stack pointer is pushed above the stack before any function
-  // call.
-  unsigned int DebugAdjustment =
-      (MF.getTarget().getOptLevel() == CodeGenOpt::None) ? 4 : 0;
-  // If the stack size is not long-aligned, add 4 padding bytes
-  unsigned int LongAlignment =
-      (((FrameSize + DebugAdjustment) & 7) != 0) ? 4 : 0;
-  return DebugAdjustment + LongAlignment;
 }
 
 void DPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
@@ -137,84 +96,39 @@ void DPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   MachineFunction &MF = *MI.getParent()->getParent();
   DebugLoc DL = MI.getDebugLoc();
 
+  unsigned FrameReg = getFrameRegister(MF);
+  int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
+  unsigned int StackSize = MF.getFrameInfo().getStackSize();
+  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) - StackSize;
+
+  // Call Args from DPUTargetLowering::LowerFormalArguments
+  // We couldn't add the space for D22 in the lowering without seen the stack
+  // reducing wrongly for no obvious reason. It represents the size in the stack
+  // reserved manually in DPUFrameLowering::emitPrologue.
+  if (FrameIndex < 0)
+    Offset -= STACK_SIZE_FOR_D22;
+
   LLVM_DEBUG({
-    dbgs() << "DPU/Reg - eliminating frame index in instruction ";
+      dbgs() << "DPU/Reg - eliminating frame index in instruction (index= "<< FrameIndex << ") ";
     MI.dump();
     dbgs() << "\n";
   });
 
-  int FIOperandIndex = getFIOperandIndexFromInstruction(MI);
-
-  unsigned FrameReg = getFrameRegister(MF);
-  int FrameIndex = MI.getOperand(FIOperandIndex).getIndex();
-
   switch (MI.getOpcode()) {
-  case DPU::MOVEri: {
-    // This is purely empirical: the generator creates move instructions
-    // to save the registers.
-    const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
-    int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
-
-    MI.getOperand(FIOperandIndex).ChangeToRegister(FrameReg, false);
-
-    MachineBasicBlock &MBB = *MI.getParent();
-    unsigned reg = MI.getOperand(FIOperandIndex - 1).getReg();
-    BuildMI(MBB, ++II, DL, TII.get(DPU::ADDrri), reg)
-        .addReg(reg)
-        .addImm(Offset);
-    break;
-  }
   case DPU::ADDrri: {
     // This is necessarily a reference to an object in the stack. Please refer
-    // to DPUISelDATToDAG::Select, to see how we transform things to this
-    // beautiful piece of hack.
-    int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex);
+    // to DPUISelDATToDAG::Select, to see how we generate this machineInstr
     LLVM_DEBUG(dbgs() << "DPU/Frame - adjusting frame object at index "
                       << std::to_string(FrameIndex) << " at offset "
                       << std::to_string(Offset) << "\n");
-    MI.getOperand(FIOperandIndex).ChangeToImmediate(Offset);
-    break;
-  }
-  case DPU::PUSH_STACK_POINTER:
-  case DPU::STAIN_STACK: {
-    unsigned int StackSize = MF.getFrameInfo().getStackSize();
-    int Offset =
-        StackSize + stackAdjustmentDependingOnOptimizationLevel(MF, StackSize);
-    MI.getOperand(FIOperandIndex).ChangeToImmediate(Offset);
-    break;
-  }
-  case DPU::ADJUST_STACK_BEFORE_CALL: {
-    unsigned int StackSize = MF.getFrameInfo().getStackSize();
-    int Offset =
-        StackSize + stackAdjustmentDependingOnOptimizationLevel(MF, StackSize);
-    LLVM_DEBUG({
-      dbgs() << "DPU/Frame - stack size before call = "
-             << std::to_string(Offset) << "\n";
-      MF.getFrameInfo().dump(MF);
-    });
-    adjustFrameIndexesWithNewOffset(MF, -Offset);
-    MI.getOperand(FIOperandIndex).ChangeToImmediate(Offset);
-    break;
-  }
-  case DPU::ADJUST_STACK_AFTER_CALL: {
-    unsigned int StackSize = MF.getFrameInfo().getStackSize();
-    int Offset = -(StackSize +
-                   stackAdjustmentDependingOnOptimizationLevel(MF, StackSize));
-    LLVM_DEBUG({
-      dbgs() << "DPU/Frame - stack size after call = " << std::to_string(Offset)
-             << "\n";
-      MF.getFrameInfo().dump(MF);
-    });
-    adjustFrameIndexesWithNewOffset(MF, -Offset);
-    MI.getOperand(FIOperandIndex).ChangeToImmediate(Offset);
+    MI.getOperand(FIOperandNum).ChangeToImmediate(Offset);
     break;
   }
   default: {
-    int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) +
-                 MI.getOperand(FIOperandIndex + 1).getImm();
+    Offset += MI.getOperand(FIOperandNum + 1).getImm();
 
-    MI.getOperand(FIOperandIndex).ChangeToRegister(FrameReg, false);
-    MI.getOperand(FIOperandIndex + 1).ChangeToImmediate(Offset);
+    MI.getOperand(FIOperandNum).ChangeToRegister(FrameReg, false);
+    MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
   }
   }
 
@@ -226,7 +140,5 @@ void DPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 }
 
 unsigned DPURegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  return getFrameRegister();
+  return DPU::STKP;
 }
-
-unsigned DPURegisterInfo::getFrameRegister() { return R_STKP; }

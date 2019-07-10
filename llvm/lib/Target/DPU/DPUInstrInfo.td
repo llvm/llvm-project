@@ -67,7 +67,15 @@ def WramLoad64Aligned   : SDNode<"DPUISD::WRAM_LOAD_64_ALIGNED", SDT_LOAD_OP, [S
 def SDTDPUWrapper       : SDTypeProfile<1, 1, [SDTCisSameAs<0, 1>, SDTCisPtrTy<0>]>;
 def DPUWrapper          : SDNode<"DPUISD::Wrapper", SDTDPUWrapper>;
 
+def SDT_DPUAddVAStart   : SDTypeProfile<1, 1, [SDTCisPtrTy<0>]>;
+def DPUAddVAStart       : SDNode<"DPUISD::ADD_VASTART", SDT_DPUAddVAStart>;
+
 include "DPUInstrFormats.td"
+
+def ADD_VAStart: PseudoDPUInstruction<
+                    (outs SimpleReg:$rc), (ins SimpleReg:$ra),
+                    "",
+                    [(set i32:$rc, (DPUAddVAStart i32:$ra))]>;
 
 // Necessary because a frameindex can't be matched directly in a pattern.
 def AddrFI : ComplexPattern<iPTR, 1, "SelectAddrFI", [frameindex], []>;
@@ -499,14 +507,6 @@ let Uses = [RADD], hasSideEffects = 1, isCodeGenOnly = 1 in {
                                 "// ADJCALLSTACKUP $amt1 @$amt2",
                                 [(DPUcallseq_end i16:$amt1, i16:$amt2)]>;
 }
-
-// Optional system function that checks the integrity of the stack pointer
-// when a function is called. The primary intent is to prevent from
-// stack overflows.
-def ADJUST_STACK_BEFORE_CALL : PseudoDPUInstruction<(outs), (ins i32imm:$amt), "", []>;
-def ADJUST_STACK_AFTER_CALL : PseudoDPUInstruction<(outs), (ins i32imm:$amt), "", []>;
-def PUSH_STACK_POINTER : PseudoDPUInstruction<(outs), (ins i32imm:$offset), "", []>;
-def STAIN_STACK : PseudoDPUInstruction<(outs), (ins i32imm:$offset), "", []>;
 
 // -----------------------------------------------------------------------------
 // CONDITIONAL JUMP

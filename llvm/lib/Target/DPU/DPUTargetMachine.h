@@ -18,6 +18,10 @@
 
 #include "DPUSubtarget.h"
 
+// we reserve 8 bytes for debugging purpose. See function
+// DPURegisterInfo::eliminateFrameIndex for more information
+#define STACK_SIZE_FOR_D22 (8)
+
 namespace llvm {
 
 class DPUTargetMachine : public LLVMTargetMachine {

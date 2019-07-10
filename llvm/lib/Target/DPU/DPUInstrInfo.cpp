@@ -32,6 +32,7 @@
 #include "DPUCondCodes.h"
 #include "DPUGenRegisterInfo.inc"
 #include "DPUISelLowering.h"
+#include "MCTargetDesc/DPUAsmCondition.h"
 
 #define DEBUG_TYPE "asm-printer"
 
@@ -131,25 +132,6 @@ bool DPUInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(DPU::RVAL)
         .addReg(DPU::R18);
     break;
-  case DPU::ADJUST_STACK_BEFORE_CALL:
-  case DPU::ADJUST_STACK_AFTER_CALL:
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::ADDrri))
-        .addReg(DPU::STKP)
-        .addReg(DPU::STKP)
-        .addImm(MI.getOperand(0).getImm());
-    break;
-  case DPU::PUSH_STACK_POINTER:
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::SWrir))
-        .addReg(DPU::STKP)
-        .addImm(MI.getOperand(0).getImm() - 4)
-        .addReg(DPU::STKP);
-    break;
-  case DPU::STAIN_STACK:
-    BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::SWrir))
-        .addReg(DPU::STKP)
-        .addImm(MI.getOperand(0).getImm() + 4)
-        .addImm(-1);
-    break;
   case DPU::BSWAP16:
     BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::SHrir))
         .addReg(DPU::ID4)
@@ -201,6 +183,16 @@ bool DPUInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
         .addReg(DPU::ID4)
         .addExternalSymbol("__sys_thread_nanostack_entry_0");
     break;
+  }
+  case DPU::ADD_VAStart: {
+      unsigned int StackSize = MF->getFrameInfo().getStackSize();
+      unsigned int ResultReg = MI.getOperand(0).getReg();
+      BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::SUBrrif))
+          .addReg(ResultReg)
+          .addReg(DPU::STKP)
+          .addImm(StackSize + 8)
+          .addImm(DPUAsmCondition::Condition::False);
+      break;
   }
   }
 

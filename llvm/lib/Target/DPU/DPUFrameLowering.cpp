@@ -41,90 +41,44 @@ using namespace llvm;
 bool DPUFrameLowering::hasFP(const MachineFunction &MF) const { return false; }
 
 void DPUFrameLowering::emitPrologue(MachineFunction &MF,
-                                    MachineBasicBlock &MBB) const {}
+                                    MachineBasicBlock &MBB) const {
+  MachineBasicBlock::iterator MBBI = MBB.begin();
+  const DPUInstrInfo &DPUII =
+      *static_cast<const DPUInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  DebugLoc DL;
 
-void DPUFrameLowering::emitEpilogue(MachineFunction &MF,
-                                    MachineBasicBlock &MBB) const {}
+  // We reserve manually 8 bytes to store d22 (r22r23) at the end of the stack
+  // for debug purpose. Not at the beginning because we do not have a frame
+  // pointer (pointing at the beginning of the stack) but only a stack pointer
+  // (pointing at the end of the stack)
+  unsigned int StackSize =
+      alignTo(MFI.getStackSize() + STACK_SIZE_FOR_D22, getStackAlignment());
+  MFI.setStackSize(StackSize);
 
-void DPUFrameLowering::processFunctionBeforeFrameFinalized(
-    MachineFunction &MF, RegScavenger *RS) const {
-  MachineRegisterInfo &MRI = MF.getRegInfo();
-  const DPURegisterInfo *RegInfo =
-      static_cast<const DPURegisterInfo *>(MF.getSubtarget().getRegisterInfo());
-  // Explore the physical registers actually used by the MRI.
-  const MCPhysReg *calleeSavedRegs = RegInfo->getCalleeSavedRegs(&MF);
-  LLVM_DEBUG(
-      dbgs()
-      << "DPU/Frame - computing used callee saved registers for function "
-      << MF.getName() << "\n");
-  for (unsigned i = 0; calleeSavedRegs[i]; i++) {
-    if (MRI.isPhysRegUsed(calleeSavedRegs[i])) {
-      LLVM_DEBUG({
-        int currentReg = calleeSavedRegs[i];
-        dbgs() << "DPU/Frame - " << MF.getName() << " uses register "
-               << std::to_string(i)
-               << " [livein=" << std::to_string(MRI.isLiveIn(currentReg)) << "]"
-               << " [isPhysRegUsed="
-               << std::to_string(MRI.isPhysRegUsed(currentReg)) << "]"
-               << " [isReserved=" << std::to_string(MRI.isReserved(currentReg))
-               << "]"
-               << "\n";
-      });
-    }
-  }
+  BuildMI(MBB, MBBI, DL, DPUII.get(DPU::SDrir), DPU::STKP)
+      .addImm(StackSize - STACK_SIZE_FOR_D22)
+      .addReg(DPU::RDFUN);
+  BuildMI(MBB, MBBI, DL, DPUII.get(DPU::ADDrri), DPU::STKP)
+      .addReg(DPU::STKP)
+      .addImm(StackSize);
 }
 
-void DPUFrameLowering::determineCalleeSaves(MachineFunction &MF,
-                                            BitVector &SavedRegs,
-                                            RegScavenger *RS) const {
-  TargetFrameLowering::determineCalleeSaves(MF, SavedRegs, RS);
+void DPUFrameLowering::emitEpilogue(MachineFunction &MF,
+                                    MachineBasicBlock &MBB) const {
+  MachineBasicBlock::iterator MBBI = MBB.getLastNonDebugInstr();
+  const DPUInstrInfo &DPUII =
+      *static_cast<const DPUInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  DebugLoc DL = MBBI->getDebugLoc();
 
-  if (MF.getTarget().getOptLevel() == CodeGenOpt::None) {
-    SavedRegs.set(DPU::RDFUN);
-  }
+  BuildMI(MBB, MBBI, DL, DPUII.get(DPU::LDrri), DPU::RDFUN)
+      .addReg(DPU::STKP)
+      .addImm(-STACK_SIZE_FOR_D22);
 }
 
 MachineBasicBlock::iterator DPUFrameLowering::eliminateCallFramePseudoInstr(
     MachineFunction &MF, MachineBasicBlock &MBB,
     MachineBasicBlock::iterator MI) const {
-  auto &SubTarget = static_cast<const DPUSubtarget &>(MF.getSubtarget());
-  auto &InstrInfo = *SubTarget.getInstrInfo();
-  MachineInstr &Old = *MI;
-
-  // Right now, we cannot get an accurate value of the estimated stack size...
-  // Generate stack adjustment operations, so that we know exactly what the
-  // stack size is at this point.
-  if (!(Old.getOpcode() == InstrInfo.getCallFrameDestroyOpcode())) {
-    if (MF.getTarget().getOptLevel() == CodeGenOpt::None) {
-      // Optimization is O0: save the stack pointer on top of the stack, so that
-      // we can backtrace. Then polute the future stack, in order for the
-      // debugger to detect that we're in a transient state for which the
-      // backtrace is unreliable from current stack.
-      auto PushStackPointer =
-          BuildMI(MF, Old.getDebugLoc(), InstrInfo.get(DPU::PUSH_STACK_POINTER))
-              .addFrameIndex(0);
-      MBB.insert(MI, PushStackPointer);
-      auto StainStack =
-          BuildMI(MF, Old.getDebugLoc(), InstrInfo.get(DPU::STAIN_STACK))
-              .addFrameIndex(0);
-      MBB.insert(MI, StainStack);
-    }
-
-    // Inject the stack adjustment... The argument is an arbitrary frame index
-    // (0 always exists), so that the instruction is post-processed by
-    // DPURegisterInfo::eliminateFrameIndex, which will replace this index with
-    // the actual stack size. The main reason for doing that is the fact that we
-    // cannot get a reliable stack size at this point of the process.
-    auto AdjustStack = BuildMI(MF, Old.getDebugLoc(),
-                               InstrInfo.get(DPU::ADJUST_STACK_BEFORE_CALL))
-                           .addFrameIndex(0);
-    MBB.insert(MI, AdjustStack);
-  } else {
-    auto AdjustStack = BuildMI(MF, Old.getDebugLoc(),
-                               InstrInfo.get(DPU::ADJUST_STACK_AFTER_CALL))
-                           .addFrameIndex(0);
-    MBB.insert(MI, AdjustStack);
-  }
   return MBB.erase(MI);
 }
 

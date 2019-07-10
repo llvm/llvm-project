@@ -40,7 +40,7 @@ public:
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &dl,
                       SelectionDAG &DAG) const override;
 
-  // Lower a call into CALLSEQ_START - DPUISD::CALL - CALLSEQ_END chain
+  // Lower a call into DPUISD::CALL
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 

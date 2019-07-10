@@ -159,6 +159,8 @@ enum {
   LslSubJcc,
   LslSubNullJcc,
 
+  ADD_VASTART,
+
   TEST_NODE
 };
 }

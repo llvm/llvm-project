@@ -72,7 +72,7 @@ DPUTargetLowering::DPUTargetLowering(const TargetMachine &TM, DPUSubtarget &STI)
   // Compute derived properties from the register classes
   computeRegisterProperties(STI.getRegisterInfo());
 
-  setStackPointerRegisterToSaveRestore(R_STKP);
+  setStackPointerRegisterToSaveRestore(DPU::STKP);
 
   setBooleanContents(BooleanContent::ZeroOrOneBooleanContent);
 
@@ -347,6 +347,8 @@ const char *DPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   switch (Opcode) {
   default:
     return nullptr;
+  case DPUISD::ADD_VASTART:
+    return "DPUISD::ADD_VASTART";
   case DPUISD::RET_FLAG:
     return "DPUISD::RET_FLAG";
   case DPUISD::CALL:
@@ -626,10 +628,12 @@ SDValue DPUTargetLowering::LowerVASTART(SDValue Op, SelectionDAG &DAG) const {
   SDValue StackPtr = DAG.getCopyFromReg(Chain, DL, DPU::STKP,
                                         getPointerTy(DAG.getDataLayout()));
   const Value *SV = cast<SrcValueSDNode>(Op.getOperand(2))->getValue();
+  SDValue VAStartPtr =
+      DAG.getNode(DPUISD::ADD_VASTART, DL, StackPtr.getValueType(), StackPtr);
 
   // just store the stackptr (start of the variable argument list) in the
   // frameindex given in Op1
-  return DAG.getStore(Chain, DL, StackPtr, Op.getOperand(1),
+  return DAG.getStore(Chain, DL, VAStartPtr, Op.getOperand(1),
                       MachinePointerInfo(SV));
 }
 
@@ -750,18 +754,15 @@ SDValue DPUTargetLowering::LowerFormalArguments(
         LLVM_DEBUG(
             dbgs()
             << "DPU/Lower - argument passed by reference - size in bits = "
-            << std::to_string(VA.getLocVT().getSizeInBits()) << "\n");
+            << std::to_string(VA.getLocVT().getSizeInBits()) << " << - locmemoffset=" << VA.getLocMemOffset() << "\n");
         // Create the frame index object for this incoming parameter...
         int FI = MFI.CreateFixedObject(VA.getLocVT().getSizeInBits() / 8,
                                        -VA.getLocMemOffset() -
                                            VA.getLocVT().getSizeInBits() / 8,
                                        IMMUTABLE);
-        LLVM_DEBUG(dbgs() << "DPU/Lower - added FI " << std::to_string(FI)
-                          << "\n");
 
         // Create the SelectionDAG nodes corresponding to a load
         // from this parameter
-        // NON_VOLATILE, TEMPORAL, !INVARIANT, /* Alignment */ 0
         SDValue FIN = DAG.getFrameIndex(FI, MVT::i32);
 
         InVal = DAG.getLoad(VA.getLocVT(), DL, Chain, FIN,
@@ -948,8 +949,10 @@ SDValue DPUTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
       SDValue PtrOff = DAG.getNode(
           ISD::ADD, dl, getPointerTy(DAG.getDataLayout()), StackPtr,
-          DAG.getIntPtrConstant(
-              -VA.getLocMemOffset() - VA.getLocVT().getSizeInBits() / 8, dl));
+          DAG.getIntPtrConstant(-VA.getLocMemOffset() -
+                                    VA.getLocVT().getSizeInBits() / 8 -
+                                    STACK_SIZE_FOR_D22,
+                                dl));
 
       SDValue MemOp;
 
