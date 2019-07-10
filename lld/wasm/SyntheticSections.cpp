@@ -91,7 +91,7 @@ void TypeSection::writeBody() {
     writeSig(BodyOutputStream, *Sig);
 }
 
-uint32_t ImportSection::numImports() const {
+uint32_t ImportSection::getNumImports() const {
   assert(IsSealed);
   uint32_t NumImports = ImportedSymbols.size() + GOTSymbols.size();
   if (Config->ImportMemory)
@@ -123,7 +123,7 @@ void ImportSection::addImport(Symbol *Sym) {
 void ImportSection::writeBody() {
   raw_ostream &OS = BodyOutputStream;
 
-  writeUleb128(OS, numImports(), "import count");
+  writeUleb128(OS, getNumImports(), "import count");
 
   if (Config->ImportMemory) {
     WasmImport Import;
@@ -205,7 +205,7 @@ void FunctionSection::addFunction(InputFunction *Func) {
   if (!Func->Live)
     return;
   uint32_t FunctionIndex =
-      Out.ImportSec->numImportedFunctions() + InputFunctions.size();
+      Out.ImportSec->getNumImportedFunctions() + InputFunctions.size();
   InputFunctions.emplace_back(Func);
   Func->setFunctionIndex(FunctionIndex);
 }
@@ -254,7 +254,7 @@ void GlobalSection::addGlobal(InputGlobal *Global) {
   if (!Global->Live)
     return;
   uint32_t GlobalIndex =
-      Out.ImportSec->numImportedGlobals() + InputGlobals.size();
+      Out.ImportSec->getNumImportedGlobals() + InputGlobals.size();
   LLVM_DEBUG(dbgs() << "addGlobal: " << GlobalIndex << "\n");
   Global->setGlobalIndex(GlobalIndex);
   Out.GlobalSec->InputGlobals.push_back(Global);
@@ -273,7 +273,8 @@ void EventSection::writeBody() {
 void EventSection::addEvent(InputEvent *Event) {
   if (!Event->Live)
     return;
-  uint32_t EventIndex = Out.ImportSec->numImportedEvents() + InputEvents.size();
+  uint32_t EventIndex =
+      Out.ImportSec->getNumImportedEvents() + InputEvents.size();
   LLVM_DEBUG(dbgs() << "addEvent: " << EventIndex << "\n");
   Event->setEventIndex(EventIndex);
   InputEvents.push_back(Event);
@@ -460,7 +461,7 @@ void LinkingSection::addToSymtab(Symbol *Sym) {
 }
 
 unsigned NameSection::numNames() const {
-  unsigned NumNames = Out.ImportSec->numImportedFunctions();
+  unsigned NumNames = Out.ImportSec->getNumImportedFunctions();
   for (const InputFunction *F : Out.FunctionSec->InputFunctions)
     if (!F->getName().empty() || !F->getDebugName().empty())
       ++NumNames;
@@ -538,7 +539,7 @@ void TargetFeaturesSection::writeBody() {
 }
 
 void RelocSection::writeBody() {
-  uint32_t Count = Sec->numRelocations();
+  uint32_t Count = Sec->getNumRelocations();
   assert(Sec->SectionIndex != UINT32_MAX);
   writeUleb128(BodyOutputStream, Sec->SectionIndex, "reloc section");
   writeUleb128(BodyOutputStream, Count, "reloc count");

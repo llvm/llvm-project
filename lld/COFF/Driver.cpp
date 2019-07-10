@@ -210,7 +210,7 @@ void LinkerDriver::enqueuePath(StringRef Path, bool WholeArchive) {
   enqueueTask([=]() {
     auto MBOrErr = Future->get();
     if (MBOrErr.second) {
-      std::string Error =
+      std::string Msg =
           "could not open '" + PathStr + "': " + MBOrErr.second.message();
       // Check if the filename is a typo for an option flag. OptTable thinks
       // that all args that are not known options and that start with / are
@@ -219,9 +219,9 @@ void LinkerDriver::enqueuePath(StringRef Path, bool WholeArchive) {
       // directory.
       std::string Nearest;
       if (COFFOptTable().findNearest(PathStr, Nearest) > 1)
-        error(Error);
+        error(Msg);
       else
-        error(Error + "; did you mean '" + Nearest + "'");
+        error(Msg + "; did you mean '" + Nearest + "'");
     } else
       Driver->addBuffer(std::move(MBOrErr.first), WholeArchive);
   });

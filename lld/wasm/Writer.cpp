@@ -149,7 +149,7 @@ void Writer::createRelocSections() {
     OutputSection *Sec = OutputSections[I];
 
     // Count the number of needed sections.
-    uint32_t Count = Sec->numRelocations();
+    uint32_t Count = Sec->getNumRelocations();
     if (!Count)
       continue;
 
@@ -474,8 +474,8 @@ void Writer::calculateExports() {
     Out.ExportSec->Exports.push_back(
         WasmExport{FunctionTableName, WASM_EXTERNAL_TABLE, 0});
 
-  unsigned FakeGlobalIndex =
-      Out.ImportSec->numImportedGlobals() + Out.GlobalSec->InputGlobals.size();
+  unsigned FakeGlobalIndex = Out.ImportSec->getNumImportedGlobals() +
+                             Out.GlobalSec->InputGlobals.size();
 
   for (Symbol *Sym : Symtab->getSymbols()) {
     if (!Sym->isExported())
@@ -635,7 +635,7 @@ void Writer::createOutputSegments() {
   }
 }
 
-static void CreateFunction(DefinedFunction *Func, StringRef BodyContent) {
+static void createFunction(DefinedFunction *Func, StringRef BodyContent) {
   std::string FunctionBody;
   {
     raw_string_ostream OS(FunctionBody);
@@ -679,7 +679,7 @@ void Writer::createInitMemoryFunction() {
     writeU8(OS, WASM_OPCODE_END, "END");
   }
 
-  CreateFunction(WasmSym::InitMemory, BodyContent);
+  createFunction(WasmSym::InitMemory, BodyContent);
 }
 
 // For -shared (PIC) output, we create create a synthetic function which will
@@ -699,7 +699,7 @@ void Writer::createApplyRelocationsFunction() {
     writeU8(OS, WASM_OPCODE_END, "END");
   }
 
-  CreateFunction(WasmSym::ApplyRelocs, BodyContent);
+  createFunction(WasmSym::ApplyRelocs, BodyContent);
 }
 
 // Create synthetic "__wasm_call_ctors" function based on ctor functions
@@ -734,7 +734,7 @@ void Writer::createCallCtorsFunction() {
     writeU8(OS, WASM_OPCODE_END, "END");
   }
 
-  CreateFunction(WasmSym::CallCtors, BodyContent);
+  createFunction(WasmSym::CallCtors, BodyContent);
 }
 
 // Populate InitFunctions vector with init functions from all input objects.
@@ -844,9 +844,10 @@ void Writer::run() {
     log("Defined Functions: " + Twine(Out.FunctionSec->InputFunctions.size()));
     log("Defined Globals  : " + Twine(Out.GlobalSec->InputGlobals.size()));
     log("Defined Events   : " + Twine(Out.EventSec->InputEvents.size()));
-    log("Function Imports : " + Twine(Out.ImportSec->numImportedFunctions()));
-    log("Global Imports   : " + Twine(Out.ImportSec->numImportedGlobals()));
-    log("Event Imports    : " + Twine(Out.ImportSec->numImportedEvents()));
+    log("Function Imports : " +
+        Twine(Out.ImportSec->getNumImportedFunctions()));
+    log("Global Imports   : " + Twine(Out.ImportSec->getNumImportedGlobals()));
+    log("Event Imports    : " + Twine(Out.ImportSec->getNumImportedEvents()));
     for (ObjFile *File : Symtab->ObjectFiles)
       File->dumpInfo();
   }

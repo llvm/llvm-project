@@ -59,9 +59,6 @@ public:
 
   Kind kind() const { return static_cast<Kind>(SymbolKind); }
 
-  // Returns true if this is an external symbol.
-  bool isExternal() { return IsExternal; }
-
   // Returns the symbol name.
   StringRef getName();
 
@@ -85,10 +82,10 @@ protected:
   const unsigned SymbolKind : 8;
   unsigned IsExternal : 1;
 
+public:
   // This bit is used by the \c DefinedRegular subclass.
   unsigned IsCOMDAT : 1;
 
-public:
   // This bit is used by Writer::createSymbolAndStringTable() to prevent
   // symbols from being written to the symbol table more than once.
   unsigned WrittenToSymtab : 1;
@@ -172,7 +169,6 @@ public:
   }
 
   uint64_t getRVA() const { return (*Data)->getRVA() + Sym->Value; }
-  bool isCOMDAT() const { return IsCOMDAT; }
   SectionChunk *getChunk() const { return *Data; }
   uint32_t getValue() const { return Sym->Value; }
 

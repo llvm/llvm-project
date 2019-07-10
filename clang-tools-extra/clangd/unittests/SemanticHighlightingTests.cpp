@@ -34,11 +34,13 @@ void checkHighlightings(llvm::StringRef Code) {
   auto AST = TestTU::withCode(Test.code()).build();
   static const std::map<HighlightingKind, std::string> KindToString{
       {HighlightingKind::Variable, "Variable"},
-      {HighlightingKind::Function, "Function"}};
+      {HighlightingKind::Function, "Function"},
+      {HighlightingKind::Class, "Class"},
+      {HighlightingKind::Enum, "Enum"}};
   std::vector<HighlightingToken> ExpectedTokens;
   for (const auto &KindString : KindToString) {
-    std::vector<HighlightingToken> Toks =
-        makeHighlightingTokens(Test.ranges(KindString.second), KindString.first);
+    std::vector<HighlightingToken> Toks = makeHighlightingTokens(
+        Test.ranges(KindString.second), KindString.first);
     ExpectedTokens.insert(ExpectedTokens.end(), Toks.begin(), Toks.end());
   }
 
@@ -49,14 +51,14 @@ void checkHighlightings(llvm::StringRef Code) {
 TEST(SemanticHighlighting, GetsCorrectTokens) {
   const char *TestCases[] = {
     R"cpp(
-      struct AS {
+      struct $Class[[AS]] {
         double SomeMember;
       };
       struct {
       } $Variable[[S]];
-      void $Function[[foo]](int $Variable[[A]]) {
+      void $Function[[foo]](int $Variable[[A]], $Class[[AS]] $Variable[[As]]) {
         auto $Variable[[VeryLongVariableName]] = 12312;
-        AS     $Variable[[AA]];
+        $Class[[AS]]     $Variable[[AA]];
         auto $Variable[[L]] = $Variable[[AA]].SomeMember + $Variable[[A]];
         auto $Variable[[FN]] = [ $Variable[[AA]]](int $Variable[[A]]) -> void {};
         $Variable[[FN]](12312);
@@ -68,13 +70,43 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       void $Function[[foo]]() {
         auto $Variable[[Bou]] = $Function[[Gah]];
       }
+      struct $Class[[A]] {
+        void $Function[[abc]]();
+      };
     )cpp",
     R"cpp(
-      struct A {
-        A();
-        ~A();
-        void $Function[[abc]]();
-        void operator<<(int);
+      namespace abc {
+        template<typename T>
+        struct $Class[[A]] {
+          T t;
+        };
+      }
+      template<typename T>
+      struct $Class[[C]] : abc::A<T> {
+        typename T::A* D;
+      };
+      abc::$Class[[A]]<int> $Variable[[AA]];
+      typedef abc::$Class[[A]]<int> AAA;
+      struct $Class[[B]] {
+        $Class[[B]]();
+        ~$Class[[B]]();
+        void operator<<($Class[[B]]);
+        $Class[[AAA]] AA;
+      };
+      $Class[[B]]::$Class[[B]]() {}
+      $Class[[B]]::~$Class[[B]]() {}
+      void $Function[[f]] () {
+        $Class[[B]] $Variable[[BB]] = $Class[[B]]();
+        $Variable[[BB]].~$Class[[B]]();
+        $Class[[B]]();
+      }
+    )cpp",
+    R"cpp(
+      enum class $Enum[[E]] {};
+      enum $Enum[[EE]] {};
+      struct $Class[[A]] {
+        $Enum[[E]] EEE;
+        $Enum[[EE]] EEEE;
       };
     )cpp"};
   for (const auto &TestCase : TestCases) {

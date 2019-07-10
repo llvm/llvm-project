@@ -274,7 +274,7 @@ Symbol *SymbolTable::addDefinedFunction(StringRef Name, uint32_t Flags,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, File);
 
-  auto Replace = [&](Symbol* Sym) {
+  auto ReplaceSym = [&](Symbol *Sym) {
     // If the new defined function doesn't have signture (i.e. bitcode
     // functions) but the old symbol does, then preserve the old signature
     const WasmSignature *OldSig = S->getSignature();
@@ -284,7 +284,7 @@ Symbol *SymbolTable::addDefinedFunction(StringRef Name, uint32_t Flags,
   };
 
   if (WasInserted || S->isLazy()) {
-    Replace(S);
+    ReplaceSym(S);
     return S;
   }
 
@@ -302,10 +302,10 @@ Symbol *SymbolTable::addDefinedFunction(StringRef Name, uint32_t Flags,
     Symbol* Variant;
     if (getFunctionVariant(S, &Function->Signature, File, &Variant))
       // New variant, always replace
-      Replace(Variant);
+      ReplaceSym(Variant);
     else if (shouldReplace(S, File, Flags))
       // Variant already exists, replace it after checking shouldReplace
-      Replace(Variant);
+      ReplaceSym(Variant);
 
     // This variant we found take the place in the symbol table as the primary
     // variant.
@@ -315,7 +315,7 @@ Symbol *SymbolTable::addDefinedFunction(StringRef Name, uint32_t Flags,
 
   // Existing function with matching signature.
   if (shouldReplace(S, File, Flags))
-    Replace(S);
+    ReplaceSym(S);
 
   return S;
 }
@@ -329,19 +329,19 @@ Symbol *SymbolTable::addDefinedData(StringRef Name, uint32_t Flags,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, File);
 
-  auto Replace = [&]() {
+  auto ReplaceSym = [&]() {
     replaceSymbol<DefinedData>(S, Name, Flags, File, Segment, Address, Size);
   };
 
   if (WasInserted || S->isLazy()) {
-    Replace();
+    ReplaceSym();
     return S;
   }
 
   checkDataType(S, File);
 
   if (shouldReplace(S, File, Flags))
-    Replace();
+    ReplaceSym();
   return S;
 }
 
@@ -353,19 +353,19 @@ Symbol *SymbolTable::addDefinedGlobal(StringRef Name, uint32_t Flags,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, File);
 
-  auto Replace = [&]() {
+  auto ReplaceSym = [&]() {
     replaceSymbol<DefinedGlobal>(S, Name, Flags, File, Global);
   };
 
   if (WasInserted || S->isLazy()) {
-    Replace();
+    ReplaceSym();
     return S;
   }
 
   checkGlobalType(S, File, &Global->getType());
 
   if (shouldReplace(S, File, Flags))
-    Replace();
+    ReplaceSym();
   return S;
 }
 
@@ -377,19 +377,19 @@ Symbol *SymbolTable::addDefinedEvent(StringRef Name, uint32_t Flags,
   bool WasInserted;
   std::tie(S, WasInserted) = insert(Name, File);
 
-  auto Replace = [&]() {
+  auto ReplaceSym = [&]() {
     replaceSymbol<DefinedEvent>(S, Name, Flags, File, Event);
   };
 
   if (WasInserted || S->isLazy()) {
-    Replace();
+    ReplaceSym();
     return S;
   }
 
   checkEventType(S, File, &Event->getType(), &Event->Signature);
 
   if (shouldReplace(S, File, Flags))
-    Replace();
+    ReplaceSym();
   return S;
 }
 
@@ -408,13 +408,13 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef ImportName,
   if (S->Traced)
     printTraceSymbolUndefined(Name, File);
 
-  auto Replace = [&]() {
+  auto ReplaceSym = [&]() {
     replaceSymbol<UndefinedFunction>(S, Name, ImportName, ImportModule, Flags,
                                      File, Sig, IsCalledDirectly);
   };
 
   if (WasInserted)
-    Replace();
+    ReplaceSym();
   else if (auto *Lazy = dyn_cast<LazySymbol>(S))
     Lazy->fetch();
   else {
@@ -427,7 +427,7 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef Name, StringRef ImportName,
       ExistingFunction->Signature = Sig;
     if (IsCalledDirectly && !signatureMatches(ExistingFunction, Sig))
       if (getFunctionVariant(S, Sig, File, &S))
-        Replace();
+        ReplaceSym();
   }
 
   return S;
@@ -623,13 +623,13 @@ void SymbolTable::handleWeakUndefines() {
 
 static void reportFunctionSignatureMismatch(StringRef SymName,
                                             FunctionSymbol *A,
-                                            FunctionSymbol *B, bool Error) {
+                                            FunctionSymbol *B, bool IsError) {
   std::string msg = ("function signature mismatch: " + SymName +
                      "\n>>> defined as " + toString(*A->Signature) + " in " +
                      toString(A->getFile()) + "\n>>> defined as " +
                      toString(*B->Signature) + " in " + toString(B->getFile()))
                         .str();
-  if (Error)
+  if (IsError)
     error(msg);
   else
     warn(msg);
