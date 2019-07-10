@@ -88,7 +88,7 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(LLVMDistributionSupport)
 
   if (PYTHON_EXECUTABLE STREQUAL "")
-    set(Python_ADDITIONAL_VERSIONS 3.5 3.4 3.3 3.2 3.1 3.0 2.7 2.6 2.5)
+    set(Python_ADDITIONAL_VERSIONS 3.7 3.6 3.5 3.4 3.3 3.2 3.1 3.0 2.7 2.6 2.5)
     include(FindPythonInterp)
     if( NOT PYTHONINTERP_FOUND )
       message(FATAL_ERROR
