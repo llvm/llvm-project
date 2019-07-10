@@ -163,7 +163,6 @@ bool CastValueChecker::evalCall(const CallEvent &Call,
   if (!Check)
     return false;
 
-  Call.getOriginExpr()->dump();
   const auto *CE = cast<CallExpr>(Call.getOriginExpr());
   if (!CE)
     return false;
