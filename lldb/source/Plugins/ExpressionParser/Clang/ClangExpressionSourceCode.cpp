@@ -9,6 +9,8 @@
 #include "ClangExpressionSourceCode.h"
 
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringRef.h"
 
 #include "Plugins/ExpressionParser/Clang/ClangModulesDeclVendor.h"
@@ -164,44 +166,90 @@ static void AddMacros(const DebugMacros *dm, CompileUnit *comp_unit,
   }
 }
 
-/// Checks if the expression body contains the given variable as a token.
-/// \param body The expression body.
-/// \param var The variable token we are looking for.
-/// \return True iff the expression body containes the variable as a token.
-static bool ExprBodyContainsVar(llvm::StringRef body, llvm::StringRef var) {
-  assert(var.find_if([](char c) { return !clang::isIdentifierBody(c); }) ==
-             llvm::StringRef::npos &&
-         "variable contains non-identifier chars?");
+namespace {
+/// Allows checking if a token is contained in a given expression.
+class TokenVerifier {
+  /// The tokens we found in the expression.
+  llvm::StringSet<> m_tokens;
 
-  size_t start = 0;
-  // Iterate over all occurences of the variable string in our expression.
-  while ((start = body.find(var, start)) != llvm::StringRef::npos) {
-    // We found our variable name in the expression. Check that the token
-    // that contains our needle is equal to our variable and not just contains
-    // the character sequence by accident.
-    // Prevents situations where we for example inlcude the variable 'FOO' in an
-    // expression like 'FOObar + 1'.
-    bool has_characters_before =
-        start != 0 && clang::isIdentifierBody(body[start - 1]);
-    bool has_characters_after =
-        start + var.size() < body.size() &&
-        clang::isIdentifierBody(body[start + var.size()]);
-
-    // Our token just contained the variable name as a substring. Continue
-    // searching the rest of the expression.
-    if (has_characters_before || has_characters_after) {
-      ++start;
-      continue;
-    }
-    return true;
+public:
+  TokenVerifier(std::string body);
+  /// Returns true iff the given expression body contained a token with the
+  /// given content.
+  bool hasToken(llvm::StringRef token) const {
+    return m_tokens.find(token) != m_tokens.end();
   }
-  return false;
+};
+} // namespace
+
+TokenVerifier::TokenVerifier(std::string body) {
+  using namespace clang;
+
+  // We only care about tokens and not their original source locations. If we
+  // move the whole expression to only be in one line we can simplify the
+  // following code that extracts the token contents.
+  std::replace(body.begin(), body.end(), '\n', ' ');
+  std::replace(body.begin(), body.end(), '\r', ' ');
+
+  FileSystemOptions file_opts;
+  FileManager file_mgr(file_opts,
+                       FileSystem::Instance().GetVirtualFileSystem());
+
+  // Let's build the actual source code Clang needs and setup some utility
+  // objects.
+  llvm::IntrusiveRefCntPtr<DiagnosticIDs> diag_ids(new DiagnosticIDs());
+  llvm::IntrusiveRefCntPtr<DiagnosticOptions> diags_opts(
+      new DiagnosticOptions());
+  DiagnosticsEngine diags(diag_ids, diags_opts);
+  clang::SourceManager SM(diags, file_mgr);
+  auto buf = llvm::MemoryBuffer::getMemBuffer(body);
+
+  FileID FID = SM.createFileID(clang::SourceManager::Unowned, buf.get());
+
+  // Let's just enable the latest ObjC and C++ which should get most tokens
+  // right.
+  LangOptions Opts;
+  Opts.ObjC = true;
+  Opts.DollarIdents = true;
+  Opts.CPlusPlus17 = true;
+  Opts.LineComment = true;
+
+  Lexer lex(FID, buf.get(), SM, Opts);
+
+  Token token;
+  bool exit = false;
+  while (!exit) {
+    // Returns true if this is the last token we get from the lexer.
+    exit = lex.LexFromRawLexer(token);
+
+    // Extract the column number which we need to extract the token content.
+    // Our expression is just one line, so we don't need to handle any line
+    // numbers here.
+    bool invalid = false;
+    unsigned start = SM.getSpellingColumnNumber(token.getLocation(), &invalid);
+    if (invalid)
+      continue;
+    // Column numbers start at 1, but indexes in our string start at 0.
+    --start;
+
+    // Annotations don't have a length, so let's skip them.
+    if (token.isAnnotation())
+      continue;
+
+    // Extract the token string from our source code and store it.
+    std::string token_str = body.substr(start, token.getLength());
+    if (token_str.empty())
+      continue;
+    m_tokens.insert(token_str);
+  }
 }
 
 static void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
                                   StreamString &stream,
                                   const std::string &expr,
                                   lldb::LanguageType wrapping_language) {
+  TokenVerifier tokens(expr);
+
   for (size_t i = 0; i < var_list_sp->GetSize(); i++) {
     lldb::VariableSP var_sp = var_list_sp->GetVariableAtIndex(i);
 
@@ -213,7 +261,7 @@ static void AddLocalVariableDecls(const lldb::VariableListSP &var_list_sp,
     if (!var_name || var_name == ".block_descriptor")
       continue;
 
-    if (!expr.empty() && !ExprBodyContainsVar(expr, var_name.GetStringRef()))
+    if (!expr.empty() && !tokens.hasToken(var_name.GetStringRef()))
       continue;
 
     if ((var_name == "self" || var_name == "_cmd") &&
