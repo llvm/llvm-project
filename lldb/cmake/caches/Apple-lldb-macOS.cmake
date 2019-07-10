@@ -13,7 +13,18 @@ set(CMAKE_INSTALL_PREFIX /Applications/Xcode.app/Contents/Developer/usr CACHE ST
 # CMAKE_INSTALL_PREFIX. In any case, DESTDIR will be an extra prefix.
 set(LLDB_FRAMEWORK_INSTALL_DIR /Applications/Xcode.app/Contents/SharedFrameworks CACHE STRING "")
 
+# DESTDIR will be an extra prefix
+set(LLDB_DEBUGINFO_INSTALL_PREFIX /debuginfo CACHE STRING "")
+
 # Release builds may change these:
 set(CMAKE_OSX_DEPLOYMENT_TARGET 10.11 CACHE STRING "")
-set(LLDB_USE_SYSTEM_DEBUGSERVER ON CACHE BOOL "")
+set(LLDB_USE_SYSTEM_DEBUGSERVER OFF CACHE BOOL "")
 set(LLVM_EXTERNALIZE_DEBUGINFO OFF CACHE BOOL "")
+
+set(LLVM_DISTRIBUTION_COMPONENTS
+  lldb
+  liblldb
+  lldb-argdumper
+  darwin-debug
+  debugserver
+  CACHE STRING "")

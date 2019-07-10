@@ -458,7 +458,7 @@ SymbolTable::addComdat(InputFile *F, StringRef N,
     return {cast<DefinedRegular>(S), true};
   }
   auto *ExistingSymbol = cast<DefinedRegular>(S);
-  if (!ExistingSymbol->isCOMDAT())
+  if (!ExistingSymbol->IsCOMDAT)
     reportDuplicate(S, F);
   return {ExistingSymbol, false};
 }
