@@ -180,6 +180,9 @@ unsigned ELFHeader::GetRelocationJumpSlotType() const {
   default:
     assert(false && "architecture not supported");
     break;
+  case EM_CASCADE:
+    slot = R_CASCADE_JUMP_SLOT;
+    break;
   case EM_PPC:
     slot = R_PPC_JMP_SLOT;
     break;

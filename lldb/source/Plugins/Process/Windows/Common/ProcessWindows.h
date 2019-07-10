@@ -13,17 +13,14 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-forward.h"
 
-#include "llvm/Support/Mutex.h"
-
-#include "IDebugDelegate.h"
 #include "Plugins/DynamicLoader/Windows-DYLD/DynamicLoaderWindowsDYLD.h"
+#include "ProcessDebugger.h"
 
 namespace lldb_private {
 
 class HostProcess;
-class ProcessWindowsData;
 
-class ProcessWindows : public Process, public IDebugDelegate {
+class ProcessWindows : public Process, public ProcessDebugger {
 public:
   // Static functions.
   static lldb::ProcessSP CreateInstance(lldb::TargetSP target_sp,
@@ -101,19 +98,7 @@ public:
   void OnUnloadDll(lldb::addr_t module_addr) override;
   void OnDebugString(const std::string &string) override;
   void OnDebuggerError(const Status &error, uint32_t type) override;
-
-private:
-  Status WaitForDebuggerConnection(DebuggerThreadSP debugger,
-                                   HostProcess &process);
-
-  // These decode the page protection bits.
-  static bool IsPageReadable(uint32_t protect);
-  static bool IsPageWritable(uint32_t protect);
-  static bool IsPageExecutable(uint32_t protect);
-
-  llvm::sys::Mutex m_mutex;
-  std::unique_ptr<ProcessWindowsData> m_session_data;
 };
-}
+} // namespace lldb_private
 
 #endif // liblldb_Plugins_Process_Windows_Common_ProcessWindows_H_
