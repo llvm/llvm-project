@@ -12,7 +12,7 @@ __amd_wresvn(volatile __global atomic_size_t *pidx, size_t lim, size_t n)
 {
     uint alc = (size_t)(__builtin_popcount(__builtin_amdgcn_read_exec_lo()) +
                         __builtin_popcount(__builtin_amdgcn_read_exec_hi()));
-    uint l = __llvm_amdgcn_mbcnt_hi(-1, __llvm_amdgcn_mbcnt_lo(-1, 0u));
+    uint l = __builtin_amdgcn_mbcnt_hi(-1, __builtin_amdgcn_mbcnt_lo(-1, 0u));
     size_t rid;
 
     if (__builtin_amdgcn_read_exec() == (1UL << alc) - 1UL) {

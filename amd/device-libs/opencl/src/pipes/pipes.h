@@ -52,8 +52,8 @@ static inline size_t
 wave_reserve_1(volatile __global atomic_size_t *pi, size_t lim)
 {
     ulong n = __builtin_popcountl(__builtin_amdgcn_read_exec());
-    uint l = __llvm_amdgcn_mbcnt_hi(__builtin_amdgcn_read_exec_hi(),
-               __llvm_amdgcn_mbcnt_lo(__builtin_amdgcn_read_exec_lo(), 0u));
+    uint l = __builtin_amdgcn_mbcnt_hi(__builtin_amdgcn_read_exec_hi(),
+               __builtin_amdgcn_mbcnt_lo(__builtin_amdgcn_read_exec_lo(), 0u));
     size_t i = 0;
 
     if (l == 0) {
