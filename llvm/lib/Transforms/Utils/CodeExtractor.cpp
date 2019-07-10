@@ -519,18 +519,20 @@ void CodeExtractor::findAllocas(ValueSet &SinkCands, ValueSet &HoistCands,
       if (Bitcasts.empty())
         continue;
 
-      Instruction *BitcastAddr = Bitcasts.back();
-      const LifetimeMarkerInfo &LMI = BitcastLifetimeInfo.back();
-      assert(LMI.LifeStart &&
-             "Unsafe to sink bitcast without lifetime markers");
-      moveOrIgnoreLifetimeMarkers(LMI);
-      if (!definedInRegion(Blocks, BitcastAddr)) {
-        LLVM_DEBUG(dbgs() << "Sinking bitcast-of-alloca: " << *BitcastAddr
-                          << "\n");
-        SinkCands.insert(BitcastAddr);
-      }
       LLVM_DEBUG(dbgs() << "Sinking alloca (via bitcast): " << *AI << "\n");
       SinkCands.insert(AI);
+      for (unsigned I = 0, E = Bitcasts.size(); I != E; ++I) {
+        Instruction *BitcastAddr = Bitcasts[I];
+        const LifetimeMarkerInfo &LMI = BitcastLifetimeInfo[I];
+        assert(LMI.LifeStart &&
+               "Unsafe to sink bitcast without lifetime markers");
+        moveOrIgnoreLifetimeMarkers(LMI);
+        if (!definedInRegion(Blocks, BitcastAddr)) {
+          LLVM_DEBUG(dbgs() << "Sinking bitcast-of-alloca: " << *BitcastAddr
+                            << "\n");
+          SinkCands.insert(BitcastAddr);
+        }
+      }
     }
   }
 }
@@ -1429,9 +1431,23 @@ Function *CodeExtractor::extractCodeRegion() {
   findInputsOutputs(inputs, outputs, SinkingCands);
 
   // Now sink all instructions which only have non-phi uses inside the region.
-  for (auto *II : SinkingCands)
-    cast<Instruction>(II)->moveBefore(*newFuncRoot,
-                                      newFuncRoot->getFirstInsertionPt());
+  // Group the allocas at the start of the block, so that any bitcast uses of
+  // the allocas are well-defined.
+  AllocaInst *FirstSunkAlloca = nullptr;
+  for (auto *II : SinkingCands) {
+    if (auto *AI = dyn_cast<AllocaInst>(II)) {
+      AI->moveBefore(*newFuncRoot, newFuncRoot->getFirstInsertionPt());
+      if (!FirstSunkAlloca)
+        FirstSunkAlloca = AI;
+    }
+  }
+  assert((SinkingCands.empty() || FirstSunkAlloca) &&
+         "Did not expect a sink candidate without any allocas");
+  for (auto *II : SinkingCands) {
+    if (!isa<AllocaInst>(II)) {
+      cast<Instruction>(II)->moveAfter(FirstSunkAlloca);
+    }
+  }
 
   if (!HoistingCands.empty()) {
     auto *HoistToBlock = findOrCreateBlockForHoisting(CommonExit);
