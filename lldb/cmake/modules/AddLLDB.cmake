@@ -209,18 +209,22 @@ function(lldb_append_link_flags target_name new_link_flags)
   set_target_properties(${target_name} PROPERTIES LINK_FLAGS ${new_link_flags})
 endfunction()
 
+# The test suite relies on finding LLDB.framework binary resources in the
+# build-tree. Remove them before installing to avoid collisions with their
+# own install targets.
 function(lldb_add_to_buildtree_lldb_framework name subdir)
   # Destination for the copy in the build-tree. While the framework target may
   # not exist yet, it will exist when the generator expression gets expanded.
   set(copy_dest "$<TARGET_FILE_DIR:liblldb>/../../../${subdir}")
 
-  # Copy into the framework's Resources directory for testing.
+  # Copy into the given subdirectory for testing.
   add_custom_command(TARGET ${name} POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${name}> ${copy_dest}
     COMMENT "Copy ${name} to ${copy_dest}"
   )
 endfunction()
 
+# Add extra install steps for dSYM creation and stripping for the given target.
 function(lldb_add_post_install_steps_darwin name install_prefix)
   if(NOT APPLE)
     message(WARNING "Darwin-specific functionality; not currently available on non-Apple platforms.")
@@ -252,7 +256,7 @@ function(lldb_add_post_install_steps_darwin name install_prefix)
     endif()
   endif()
 
-  # Generate dSYM in symroot
+  # Generate dSYM
   set(dsym_name ${output_name}.dSYM)
   if(is_framework)
     set(dsym_name ${output_name}.framework.dSYM)
