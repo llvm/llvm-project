@@ -272,7 +272,8 @@ Expected<Profile> loadProfile(StringRef Filename) {
 
   std::error_code EC;
   sys::fs::mapped_file_region MappedFile(
-      Fd, sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
+      sys::fs::convertFDToNativeFile(Fd),
+      sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
   if (EC)
     return make_error<StringError>(
         Twine("Cannot mmap profile '") + Filename + "'", EC);

@@ -3949,7 +3949,8 @@ bool llvm::isSafeToSpeculativelyExecute(const Value *V,
       return false;
     const DataLayout &DL = LI->getModule()->getDataLayout();
     return isDereferenceableAndAlignedPointer(LI->getPointerOperand(),
-                                              LI->getAlignment(), DL, CtxI, DT);
+                                              LI->getType(), LI->getAlignment(),
+                                              DL, CtxI, DT);
   }
   case Instruction::Call: {
     auto *CI = cast<const CallInst>(Inst);

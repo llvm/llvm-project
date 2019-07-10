@@ -27,13 +27,11 @@ combined with other commands:
 
 .. option:: -d, --disassemble
 
-  Display assembler mnemonics for the machine instructions. Disassembles all
-  text sections found in the input file(s) by default.
+  Disassemble all text sections found in the input files.
 
 .. option:: -D, --disassemble-all
 
-  Display assembler mnemonics for the machine instructions. Disassembles all
-  sections found in the input file(s) by default.
+  Disassemble all sections found in the input files.
   
 .. option:: --disassemble-functions=<symbol1[,symbol2,...]>
 
@@ -122,12 +120,12 @@ OPTIONS
 
 .. option:: -j, --section=<section1[,section2,...]>
 
-  Perform the specified command(s) on the specified section(s) only. For Mach-O
-  use `segment,section` to specify the section name.
+  Perform commands on the specified sections only. For Mach-O use
+  `segment,section` to specify the section name.
 
 .. option:: -l, --line-numbers
 
-  When disassembling, display source line numbers with disassembly. Implies
+  When disassembling, display source line numbers. Implies
   :option:`--disassemble`.
 
 .. option:: -M, --disassembler-options=<opt1[,opt2,...]>
@@ -147,13 +145,11 @@ OPTIONS
 
 .. option:: --no-leading-addr
 
-  When disassembling, do not print the leading address in the disassembly
-  output.
+  When disassembling, do not print leading addresses.
 
 .. option:: --no-show-raw-insn
 
-  When disassembling instructions, do not print the raw bytes of the
-  instruction.
+  When disassembling, do not print the raw bytes of each instruction.
 
 .. option:: --print-imm-hex
 
@@ -161,8 +157,8 @@ OPTIONS
 
 .. option:: -S, --source
 
-  When disassembling, display source inlined with the disassembly.
-  Implies :option:`--disassemble`.
+  When disassembling, display source interleaved with the disassembly. Implies
+  :option:`--disassemble`.
 
 .. option:: --show-lma
 

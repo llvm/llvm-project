@@ -694,9 +694,11 @@ let Constraints = "$vdst = $src2",
 defm V_FMAC_F16 : VOP2Inst <"v_fmac_f16", VOP_MAC_F16>;
 }
 
-defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16>;
-
 } // End SubtargetPredicate = isGFX10Plus
+
+let SubtargetPredicate = HasPkFmacF16Inst in {
+defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16>;
+} // End SubtargetPredicate = HasPkFmacF16Inst
 
 // Note: 16-bit instructions produce a 0 result in the high 16-bits
 // on GFX8 and GFX9 and preserve high 16 bits on GFX10+
@@ -1548,3 +1550,7 @@ let SubtargetPredicate = HasDot5Insts in {
 let SubtargetPredicate = HasDot6Insts in {
   defm V_DOT4C_I32_I8  : VOP2_Real_DOT_ACC_gfx10<0x0d>;
 }
+
+let SubtargetPredicate = HasPkFmacF16Inst in {
+defm V_PK_FMAC_F16 : VOP2_Real_e32_vi<0x3c>;
+} // End SubtargetPredicate = HasPkFmacF16Inst

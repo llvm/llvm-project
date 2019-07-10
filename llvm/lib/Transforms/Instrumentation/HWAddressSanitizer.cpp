@@ -198,7 +198,7 @@ public:
                                    Value **MaybeMask);
 
   bool isInterestingAlloca(const AllocaInst &AI);
-  bool tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag);
+  bool tagAlloca(IRBuilder<> &IRB, AllocaInst *AI, Value *Tag, size_t Size);
   Value *tagPointer(IRBuilder<> &IRB, Type *Ty, Value *PtrLong, Value *Tag);
   Value *untagPointer(IRBuilder<> &IRB, Value *PtrLong);
   bool instrumentStack(
@@ -574,10 +574,35 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
   }
 
   Instruction *CheckTerm =
-      SplitBlockAndInsertIfThen(TagMismatch, InsertBefore, !Recover,
+      SplitBlockAndInsertIfThen(TagMismatch, InsertBefore, false,
                                 MDBuilder(*C).createBranchWeights(1, 100000));
 
   IRB.SetInsertPoint(CheckTerm);
+  Value *OutOfShortGranuleTagRange =
+      IRB.CreateICmpUGT(MemTag, ConstantInt::get(Int8Ty, 15));
+  Instruction *CheckFailTerm =
+      SplitBlockAndInsertIfThen(OutOfShortGranuleTagRange, CheckTerm, !Recover,
+                                MDBuilder(*C).createBranchWeights(1, 100000));
+
+  IRB.SetInsertPoint(CheckTerm);
+  Value *PtrLowBits = IRB.CreateTrunc(IRB.CreateAnd(PtrLong, 15), Int8Ty);
+  PtrLowBits = IRB.CreateAdd(
+      PtrLowBits, ConstantInt::get(Int8Ty, (1 << AccessSizeIndex) - 1));
+  Value *PtrLowBitsOOB = IRB.CreateICmpUGE(PtrLowBits, MemTag);
+  SplitBlockAndInsertIfThen(PtrLowBitsOOB, CheckTerm, false,
+                            MDBuilder(*C).createBranchWeights(1, 100000),
+                            nullptr, nullptr, CheckFailTerm->getParent());
+
+  IRB.SetInsertPoint(CheckTerm);
+  Value *InlineTagAddr = IRB.CreateOr(AddrLong, 15);
+  InlineTagAddr = IRB.CreateIntToPtr(InlineTagAddr, Int8PtrTy);
+  Value *InlineTag = IRB.CreateLoad(Int8Ty, InlineTagAddr);
+  Value *InlineTagMismatch = IRB.CreateICmpNE(PtrTag, InlineTag);
+  SplitBlockAndInsertIfThen(InlineTagMismatch, CheckTerm, false,
+                            MDBuilder(*C).createBranchWeights(1, 100000),
+                            nullptr, nullptr, CheckFailTerm->getParent());
+
+  IRB.SetInsertPoint(CheckFailTerm);
   InlineAsm *Asm;
   switch (TargetTriple.getArch()) {
     case Triple::x86_64:
@@ -601,6 +626,8 @@ void HWAddressSanitizer::instrumentMemAccessInline(Value *Ptr, bool IsWrite,
       report_fatal_error("unsupported architecture");
   }
   IRB.CreateCall(Asm, PtrLong);
+  if (Recover)
+    cast<BranchInst>(CheckFailTerm)->setSuccessor(0, CheckTerm->getParent());
 }
 
 void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
@@ -677,15 +704,14 @@ static uint64_t getAllocaSizeInBytes(const AllocaInst &AI) {
 }
 
 bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI,
-                                   Value *Tag) {
-  size_t Size = (getAllocaSizeInBytes(*AI) + Mapping.getAllocaAlignment() - 1) &
-                ~(Mapping.getAllocaAlignment() - 1);
+                                   Value *Tag, size_t Size) {
+  size_t AlignedSize = alignTo(Size, Mapping.getAllocaAlignment());
 
   Value *JustTag = IRB.CreateTrunc(Tag, IRB.getInt8Ty());
   if (ClInstrumentWithCalls) {
     IRB.CreateCall(HwasanTagMemoryFunc,
                    {IRB.CreatePointerCast(AI, Int8PtrTy), JustTag,
-                    ConstantInt::get(IntptrTy, Size)});
+                    ConstantInt::get(IntptrTy, AlignedSize)});
   } else {
     size_t ShadowSize = Size >> Mapping.Scale;
     Value *ShadowPtr = memToShadow(IRB.CreatePointerCast(AI, IntptrTy), IRB);
@@ -695,7 +721,16 @@ bool HWAddressSanitizer::tagAlloca(IRBuilder<> &IRB, AllocaInst *AI,
     // FIXME: the interceptor is not as fast as real memset. Consider lowering
     // llvm.memset right here into either a sequence of stores, or a call to
     // hwasan_tag_memory.
-    IRB.CreateMemSet(ShadowPtr, JustTag, ShadowSize, /*Align=*/1);
+    if (ShadowSize)
+      IRB.CreateMemSet(ShadowPtr, JustTag, ShadowSize, /*Align=*/1);
+    if (Size != AlignedSize) {
+      IRB.CreateStore(
+          ConstantInt::get(Int8Ty, Size % Mapping.getAllocaAlignment()),
+          IRB.CreateConstGEP1_32(Int8Ty, ShadowPtr, ShadowSize));
+      IRB.CreateStore(JustTag, IRB.CreateConstGEP1_32(
+                                   Int8Ty, IRB.CreateBitCast(AI, Int8PtrTy),
+                                   AlignedSize - 1));
+    }
   }
   return true;
 }
@@ -964,14 +999,15 @@ bool HWAddressSanitizer::instrumentStack(
       DDI->setArgOperand(2, MetadataAsValue::get(*C, NewExpr));
     }
 
-    tagAlloca(IRB, AI, Tag);
+    size_t Size = getAllocaSizeInBytes(*AI);
+    tagAlloca(IRB, AI, Tag, Size);
 
     for (auto RI : RetVec) {
       IRB.SetInsertPoint(RI);
 
       // Re-tag alloca memory with the special UAR tag.
       Value *Tag = getUARTag(IRB, StackTag);
-      tagAlloca(IRB, AI, Tag);
+      tagAlloca(IRB, AI, Tag, alignTo(Size, Mapping.getAllocaAlignment()));
     }
   }
 
@@ -1012,11 +1048,6 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
     for (auto &Inst : BB) {
       if (ClInstrumentStack)
         if (AllocaInst *AI = dyn_cast<AllocaInst>(&Inst)) {
-          // Realign all allocas. We don't want small uninteresting allocas to
-          // hide in instrumented alloca's padding.
-          if (AI->getAlignment() < Mapping.getAllocaAlignment())
-            AI->setAlignment(Mapping.getAllocaAlignment());
-          // Instrument some of them.
           if (isInterestingAlloca(*AI))
             AllocasToInstrument.push_back(AI);
           continue;
@@ -1066,6 +1097,45 @@ bool HWAddressSanitizer::sanitizeFunction(Function &F) {
         ClGenerateTagsWithCalls ? nullptr : getStackBaseTag(EntryIRB);
     Changed |= instrumentStack(AllocasToInstrument, AllocaDeclareMap, RetVec,
                                StackTag);
+  }
+
+  // Pad and align each of the allocas that we instrumented to stop small
+  // uninteresting allocas from hiding in instrumented alloca's padding and so
+  // that we have enough space to store real tags for short granules.
+  DenseMap<AllocaInst *, AllocaInst *> AllocaToPaddedAllocaMap;
+  for (AllocaInst *AI : AllocasToInstrument) {
+    uint64_t Size = getAllocaSizeInBytes(*AI);
+    uint64_t AlignedSize = alignTo(Size, Mapping.getAllocaAlignment());
+    AI->setAlignment(std::max(AI->getAlignment(), 16u));
+    if (Size != AlignedSize) {
+      Type *TypeWithPadding = StructType::get(
+          AI->getAllocatedType(), ArrayType::get(Int8Ty, AlignedSize - Size));
+      auto *NewAI = new AllocaInst(
+          TypeWithPadding, AI->getType()->getAddressSpace(), nullptr, "", AI);
+      NewAI->takeName(AI);
+      NewAI->setAlignment(AI->getAlignment());
+      NewAI->setUsedWithInAlloca(AI->isUsedWithInAlloca());
+      NewAI->setSwiftError(AI->isSwiftError());
+      NewAI->copyMetadata(*AI);
+      Value *Zero = ConstantInt::get(Int32Ty, 0);
+      auto *GEP = GetElementPtrInst::Create(TypeWithPadding, NewAI,
+                                            {Zero, Zero}, "", AI);
+      AI->replaceAllUsesWith(GEP);
+      AllocaToPaddedAllocaMap[AI] = NewAI;
+    }
+  }
+
+  if (!AllocaToPaddedAllocaMap.empty()) {
+    for (auto &BB : F)
+      for (auto &Inst : BB)
+        if (auto *DVI = dyn_cast<DbgVariableIntrinsic>(&Inst))
+          if (auto *AI =
+                  dyn_cast_or_null<AllocaInst>(DVI->getVariableLocation()))
+            if (auto *NewAI = AllocaToPaddedAllocaMap.lookup(AI))
+              DVI->setArgOperand(
+                  0, MetadataAsValue::get(*C, LocalAsMetadata::get(NewAI)));
+    for (auto &P : AllocaToPaddedAllocaMap)
+      P.first->eraseFromParent();
   }
 
   // If we split the entry block, move any allocas that were originally in the

@@ -1079,11 +1079,13 @@ int test_mm256_extract_epi32(__m256i A) {
   return _mm256_extract_epi32(A, 7);
 }
 
+#if __x86_64__
 long long test_mm256_extract_epi64(__m256i A) {
   // CHECK-LABEL: test_mm256_extract_epi64
   // CHECK: extractelement <4 x i64> %{{.*}}, {{i32|i64}} 3
   return _mm256_extract_epi64(A, 3);
 }
+#endif
 
 __m128d test_mm256_extractf128_pd(__m256d A) {
   // CHECK-LABEL: test_mm256_extractf128_pd
@@ -1157,11 +1159,13 @@ __m256i test_mm256_insert_epi32(__m256i x, int b) {
   return _mm256_insert_epi32(x, b, 5);
 }
 
+#if __x86_64__
 __m256i test_mm256_insert_epi64(__m256i x, long long b) {
   // CHECK-LABEL: test_mm256_insert_epi64
   // CHECK: insertelement <4 x i64> %{{.*}}, i64 %{{.*}}, {{i32|i64}} 2
   return _mm256_insert_epi64(x, b, 2);
 }
+#endif
 
 __m256d test_mm256_insertf128_pd(__m256d A, __m128d B) {
   // CHECK-LABEL: test_mm256_insertf128_pd

@@ -194,6 +194,20 @@ MipsRegisterBankInfo::AmbiguousRegDefUseContainer::AmbiguousRegDefUseContainer(
 
   if (MI->getOpcode() == TargetOpcode::G_STORE)
     addUseDef(MI->getOperand(0).getReg(), MRI);
+
+  if (MI->getOpcode() == TargetOpcode::G_PHI) {
+    addDefUses(MI->getOperand(0).getReg(), MRI);
+
+    for (unsigned i = 1; i < MI->getNumOperands(); i += 2)
+      addUseDef(MI->getOperand(i).getReg(), MRI);
+  }
+
+  if (MI->getOpcode() == TargetOpcode::G_SELECT) {
+    addDefUses(MI->getOperand(0).getReg(), MRI);
+
+    addUseDef(MI->getOperand(2).getReg(), MRI);
+    addUseDef(MI->getOperand(3).getReg(), MRI);
+  }
 }
 
 bool MipsRegisterBankInfo::TypeInfoForMF::visit(const MachineInstr *MI) {
@@ -298,9 +312,12 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   const MachineFunction &MF = *MI.getParent()->getParent();
   const MachineRegisterInfo &MRI = MF.getRegInfo();
 
-  const RegisterBankInfo::InstructionMapping &Mapping = getInstrMappingImpl(MI);
-  if (Mapping.isValid())
-    return Mapping;
+  if (MI.getOpcode() != TargetOpcode::G_PHI) {
+    const RegisterBankInfo::InstructionMapping &Mapping =
+        getInstrMappingImpl(MI);
+    if (Mapping.isValid())
+      return Mapping;
+  }
 
   using namespace TargetOpcode;
 
@@ -372,6 +389,51 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
           getOperandsMapping({Size <= 32 ? &Mips::ValueMappings[Mips::GPRIdx]
                                          : &Mips::ValueMappings[Mips::DPRIdx],
                               &Mips::ValueMappings[Mips::GPRIdx]});
+      if (Size == 64)
+        MappingID = CustomMappingID;
+    }
+    break;
+  }
+  case G_PHI: {
+    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    InstType InstTy = InstType::Integer;
+    if (!MRI.getType(MI.getOperand(0).getReg()).isPointer()) {
+      InstTy = TI.determineInstType(&MI);
+    }
+
+    // PHI is copylike and should have one regbank in mapping for def register.
+    if (InstTy == InstType::Integer && Size == 64) { // fprb
+      OperandsMapping =
+          getOperandsMapping({&Mips::ValueMappings[Mips::DPRIdx]});
+      return getInstructionMapping(CustomMappingID, /*Cost=*/1, OperandsMapping,
+                                   /*NumOperands=*/1);
+    }
+    // Use default handling for PHI, i.e. set reg bank of def operand to match
+    // register banks of use operands.
+    const RegisterBankInfo::InstructionMapping &Mapping =
+        getInstrMappingImpl(MI);
+    return Mapping;
+  }
+  case G_SELECT: {
+    unsigned Size = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+    InstType InstTy = InstType::Integer;
+    if (!MRI.getType(MI.getOperand(0).getReg()).isPointer()) {
+      InstTy = TI.determineInstType(&MI);
+    }
+
+    if (InstTy == InstType::FloatingPoint) { // fprb
+      const RegisterBankInfo::ValueMapping *Bank =
+          Size == 32 ? &Mips::ValueMappings[Mips::SPRIdx]
+                     : &Mips::ValueMappings[Mips::DPRIdx];
+      OperandsMapping = getOperandsMapping(
+          {Bank, &Mips::ValueMappings[Mips::GPRIdx], Bank, Bank});
+      break;
+    } else { // gprb
+      const RegisterBankInfo::ValueMapping *Bank =
+          Size <= 32 ? &Mips::ValueMappings[Mips::GPRIdx]
+                     : &Mips::ValueMappings[Mips::DPRIdx];
+      OperandsMapping = getOperandsMapping(
+          {Bank, &Mips::ValueMappings[Mips::GPRIdx], Bank, Bank});
       if (Size == 64)
         MappingID = CustomMappingID;
     }
@@ -468,13 +530,6 @@ MipsRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
                             &Mips::ValueMappings[Mips::GPRIdx],
                             &Mips::ValueMappings[Mips::GPRIdx]});
     break;
-  case G_SELECT:
-    OperandsMapping =
-        getOperandsMapping({&Mips::ValueMappings[Mips::GPRIdx],
-                            &Mips::ValueMappings[Mips::GPRIdx],
-                            &Mips::ValueMappings[Mips::GPRIdx],
-                            &Mips::ValueMappings[Mips::GPRIdx]});
-    break;
   default:
     return getInvalidInstructionMapping();
   }
@@ -519,7 +574,9 @@ void MipsRegisterBankInfo::applyMappingImpl(
 
   switch (MI.getOpcode()) {
   case TargetOpcode::G_LOAD:
-  case TargetOpcode::G_STORE: {
+  case TargetOpcode::G_STORE:
+  case TargetOpcode::G_PHI:
+  case TargetOpcode::G_SELECT: {
     Helper.narrowScalar(MI, 0, LLT::scalar(32));
     // Handle new instructions.
     while (!NewInstrs.empty()) {

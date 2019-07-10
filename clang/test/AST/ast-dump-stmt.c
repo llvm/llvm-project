@@ -372,4 +372,14 @@ void TestMiscStmts(void) {
   // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:13> 'int' 10
   // CHECK-NEXT: ImplicitCastExpr
   // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:17> 'int' lvalue Var 0x{{[^ ]*}} 'a' 'int'
+  ({int a = 10; a;;; });
+  // CHECK-NEXT: StmtExpr 0x{{[^ ]*}} <line:[[@LINE-1]]:3, col:23> 'int'
+  // CHECK-NEXT: CompoundStmt
+  // CHECK-NEXT: DeclStmt
+  // CHECK-NEXT: VarDecl 0x{{[^ ]*}} <col:5, col:13> col:9 used a 'int' cinit
+  // CHECK-NEXT: IntegerLiteral 0x{{[^ ]*}} <col:13> 'int' 10
+  // CHECK-NEXT: ImplicitCastExpr
+  // CHECK-NEXT: DeclRefExpr 0x{{[^ ]*}} <col:17> 'int' lvalue Var 0x{{[^ ]*}} 'a' 'int'
+  // CHECK-NEXT: NullStmt
+  // CHECK-NEXT: NullStmt
 }

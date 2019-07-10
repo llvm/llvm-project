@@ -311,6 +311,7 @@ define amdgpu_kernel void @kern_indirect_use_workgroup_id_yz() #1 {
 ; Argument is in right place already
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_x:
 ; GCN-NOT: s4
+; GCN: v_readlane_b32 s4, v32, 0
 define hidden void @func_indirect_use_workgroup_id_x() #1 {
   call void @use_workgroup_id_x()
   ret void
@@ -318,6 +319,7 @@ define hidden void @func_indirect_use_workgroup_id_x() #1 {
 
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_y:
 ; GCN-NOT: s4
+; GCN: v_readlane_b32 s4, v32, 0
 define hidden void @func_indirect_use_workgroup_id_y() #1 {
   call void @use_workgroup_id_y()
   ret void
@@ -325,6 +327,7 @@ define hidden void @func_indirect_use_workgroup_id_y() #1 {
 
 ; GCN-LABEL: {{^}}func_indirect_use_workgroup_id_z:
 ; GCN-NOT: s4
+; GCN: v_readlane_b32 s4, v32, 0
 define hidden void @func_indirect_use_workgroup_id_z() #1 {
   call void @use_workgroup_id_z()
   ret void
@@ -490,7 +493,7 @@ define amdgpu_kernel void @kern_indirect_use_every_sgpr_input() #1 {
 ; GCN-NOT: s[8:9]
 ; GCN-NOT: s[10:11]
 ; GCN-NOT: s[12:13]
-; GCN: s_or_saveexec_b64 s[4:5], -1
+; GCN: s_or_saveexec_b64 s[16:17], -1
 define hidden void @func_indirect_use_every_sgpr_input() #1 {
   call void @use_every_sgpr_input()
   ret void

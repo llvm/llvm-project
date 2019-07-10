@@ -390,3 +390,33 @@ body: |
     %1:_(<3 x s32>) = G_LOAD %0 :: (load 12, addrspace 1, align 16)
     $vgpr0_vgpr1_vgpr2 = COPY %1
 ...
+
+---
+name: test_load_constant_v8i32
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    ; CHECK-LABEL: name: test_load_global_v8i32
+    ; CHECK: [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+    ; CHECK: [[LOAD:%[0-9]+]]:_(<8 x s32>) = G_LOAD [[COPY]](p4) :: (load 32, addrspace 4)
+    ; CHECK: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = COPY [[LOAD]](<8 x s32>)
+    %0:_(p4) = COPY $sgpr0_sgpr1
+    %1:_(<8 x s32>) = G_LOAD %0 :: (load 32, addrspace 4)
+    $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = COPY %1
+...
+
+---
+name: test_load_constant_v16i32
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+
+    ; CHECK-LABEL: name: test_load_global_v16i32
+    ; CHECK: [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr0_sgpr1
+    ; CHECK: [[LOAD:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[COPY]](p4) :: (load 64, addrspace 4)
+    ; CHECK: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY [[LOAD]](<16 x s32>)
+    %0:_(p4) = COPY $sgpr0_sgpr1
+    %1:_(<16 x s32>) = G_LOAD %0 :: (load 64, addrspace 4)
+    $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY %1
+...

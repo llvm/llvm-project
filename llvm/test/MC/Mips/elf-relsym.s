@@ -4,16 +4,10 @@
 
 // CHECK: Symbols [
 // CHECK:   Symbol {
-// CHECK:     Name: $.str
+// CHECK:     Name: .rodata.cst8
 // CHECK:   }
 // CHECK:   Symbol {
-// CHECK:     Name: $.str1
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: $CPI0_0
-// CHECK:   }
-// CHECK:   Symbol {
-// CHECK:     Name: $CPI0_1
+// CHECK:     Name: .rodata.str1.1
 // CHECK:   }
 // CHECK: ]
 

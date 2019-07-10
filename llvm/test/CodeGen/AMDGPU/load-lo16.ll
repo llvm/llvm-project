@@ -271,12 +271,12 @@ entry:
 ; GCN-LABEL: {{^}}load_local_lo_v2i16_reghi_vreg_multi_use_lohi:
 ; GFX900: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900: ds_read_u16 v0, v0
-; GFX900: v_lshrrev_b32_e32 v4, 16, v1
+; GFX900: v_lshrrev_b32_e32 v[[A_F16:[0-9]+]], 16, v1
+; GFX900: v_mov_b32_e32 v[[A_F32:[0-9]+]], 0xffff
 ; GFX900: s_waitcnt lgkmcnt(0)
 ; GFX900: ds_write_b16 v2, v0
-; GFX900: ds_write_b16 v3, v4
-; GFX900: v_mov_b32_e32 v2, 0xffff
-; GFX900: v_bfi_b32 v0, v2, v0, v1
+; GFX900: ds_write_b16 v3, v[[A_F16]]
+; GFX900: v_bfi_b32 v0, v[[A_F32]], v0, v1
 ; GFX900: global_store_dword v[0:1], v0, off
 ; GFX900: s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX900: s_setpc_b64 s[30:31]

@@ -1,6 +1,6 @@
 ; Test the MSA intrinsics that are encoded with the SPECIAL instruction format.
 
-; RUN: llc -march=mips -mattr=+msa,+fp64 < %s | \
+; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 < %s | \
 ; RUN:   FileCheck %s --check-prefix=MIPS32
 ; RUN: llc -march=mips64 -mcpu=mips64r2 -mattr=+msa,+fp64 < %s | \
 ; RUN:   FileCheck %s --check-prefix=MIPS64

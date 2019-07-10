@@ -1,10 +1,14 @@
 ; Test whether the following functions, with vectors featuring negative or values larger than the element
 ; bit size have their results of operations generated correctly when placed into constant pools
 
-; RUN: llc -march=mips64 -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64 %s
-; RUN: llc -march=mips -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS32 %s
-; RUN: llc -march=mips64el -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS64 %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64 -relocation-model=pic < %s | FileCheck -check-prefixes=ALL,MIPS32 %s
+; RUN: llc -march=mips64 -mattr=+msa,+fp64 -relocation-model=pic < %s \
+; RUN:   | FileCheck -check-prefixes=ALL,MIPS64 %s
+; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s \
+; RUN:   | FileCheck -check-prefixes=ALL,MIPS32 %s
+; RUN: llc -march=mips64el -mattr=+msa,+fp64 -relocation-model=pic < %s \
+; RUN:   | FileCheck -check-prefixes=ALL,MIPS64 %s
+; RUN: llc -march=mipsel -mattr=+msa,+fp64,mips32r2 -relocation-model=pic < %s \
+; RUN:   | FileCheck -check-prefixes=ALL,MIPS32 %s
 
 @llvm_mips_bclr_w_test_const_vec_res = global <4 x i32> zeroinitializer, align 16
 

@@ -1614,20 +1614,6 @@ and stack sizes (unsigned LEB128). The stack size values only include the space
 allocated in the function prologue. Functions with dynamic stack allocations are
 not included.
 
-Emitting remark diagnostics in the object file
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-A section containing metadata on remark diagnostics will be emitted when
--remarks-section is passed. The section contains:
-
-* a magic number: "REMARKS\\0"
-* the version number: a little-endian uint64_t
-* the total size of the string table (the size itself excluded):
-  little-endian uint64_t
-* a list of null-terminated strings
-* the absolute file path to the serialized remark diagnostics: a
-  null-terminated string.
-
 VLIW Packetizer
 ---------------
 

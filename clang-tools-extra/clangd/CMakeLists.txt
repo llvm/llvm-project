@@ -73,6 +73,7 @@ add_clang_library(clangDaemon
   XRefs.cpp
 
   index/Background.cpp
+  index/BackgroundRebuild.cpp
   index/BackgroundIndexStorage.cpp
   index/CanonicalIncludes.cpp
   index/FileIndex.cpp

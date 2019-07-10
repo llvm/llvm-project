@@ -1,5 +1,5 @@
 // RUN: %clang_analyze_cc1 \
-// RUN:  -analyzer-checker=core,apiModeling.ReturnValue \
+// RUN:  -analyzer-checker=core,apiModeling.llvm.ReturnValue \
 // RUN:  -analyzer-output=text -verify=class %s
 
 struct Foo { int Field; };

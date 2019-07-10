@@ -41,6 +41,9 @@ private:
   bool materialize32BitImm(Register DestReg, APInt Imm,
                            MachineIRBuilder &B) const;
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
+  const TargetRegisterClass *
+  getRegClassForTypeOnBank(unsigned OpSize, const RegisterBank &RB,
+                           const RegisterBankInfo &RBI) const;
 
   const MipsTargetMachine &TM;
   const MipsSubtarget &STI;
@@ -104,6 +107,22 @@ bool MipsInstructionSelector::selectCopy(MachineInstr &I,
   return true;
 }
 
+const TargetRegisterClass *MipsInstructionSelector::getRegClassForTypeOnBank(
+    unsigned OpSize, const RegisterBank &RB,
+    const RegisterBankInfo &RBI) const {
+  if (RB.getID() == Mips::GPRBRegBankID)
+    return &Mips::GPR32RegClass;
+
+  if (RB.getID() == Mips::FPRBRegBankID)
+    return OpSize == 32
+               ? &Mips::FGR32RegClass
+               : STI.hasMips32r6() || STI.isFP64bit() ? &Mips::FGR64RegClass
+                                                      : &Mips::AFGR64RegClass;
+
+  llvm_unreachable("getRegClassForTypeOnBank can't find register class.");
+  return nullptr;
+}
+
 bool MipsInstructionSelector::materialize32BitImm(Register DestReg, APInt Imm,
                                                   MachineIRBuilder &B) const {
   assert(Imm.getBitWidth() == 32 && "Unsupported immediate size.");
@@ -139,30 +158,49 @@ bool MipsInstructionSelector::materialize32BitImm(Register DestReg, APInt Imm,
 }
 
 /// Returning Opc indicates that we failed to select MIPS instruction opcode.
-static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned MemSizeInBytes) {
-  if (Opc == TargetOpcode::G_STORE)
+static unsigned selectLoadStoreOpCode(unsigned Opc, unsigned MemSizeInBytes,
+                                      unsigned RegBank, bool isFP64) {
+  bool isStore = Opc == TargetOpcode::G_STORE;
+  if (RegBank == Mips::GPRBRegBankID) {
+    if (isStore)
+      switch (MemSizeInBytes) {
+      case 4:
+        return Mips::SW;
+      case 2:
+        return Mips::SH;
+      case 1:
+        return Mips::SB;
+      default:
+        return Opc;
+      }
+    else
+      // Unspecified extending load is selected into zeroExtending load.
+      switch (MemSizeInBytes) {
+      case 4:
+        return Mips::LW;
+      case 2:
+        return Opc == TargetOpcode::G_SEXTLOAD ? Mips::LH : Mips::LHu;
+      case 1:
+        return Opc == TargetOpcode::G_SEXTLOAD ? Mips::LB : Mips::LBu;
+      default:
+        return Opc;
+      }
+  }
+
+  if (RegBank == Mips::FPRBRegBankID) {
     switch (MemSizeInBytes) {
     case 4:
-      return Mips::SW;
-    case 2:
-      return Mips::SH;
-    case 1:
-      return Mips::SB;
+      return isStore ? Mips::SWC1 : Mips::LWC1;
+    case 8:
+      if (isFP64)
+        return isStore ? Mips::SDC164 : Mips::LDC164;
+      else
+        return isStore ? Mips::SDC1 : Mips::LDC1;
     default:
       return Opc;
     }
-  else
-    // Unspecified extending load is selected into zeroExtending load.
-    switch (MemSizeInBytes) {
-    case 4:
-      return Mips::LW;
-    case 2:
-      return Opc == TargetOpcode::G_SEXTLOAD ? Mips::LH : Mips::LHu;
-    case 1:
-      return Opc == TargetOpcode::G_SEXTLOAD ? Mips::LB : Mips::LBu;
-    default:
-      return Opc;
-    }
+  }
+  return Opc;
 }
 
 bool MipsInstructionSelector::select(MachineInstr &I,
@@ -243,13 +281,15 @@ bool MipsInstructionSelector::select(MachineInstr &I,
   }
   case G_PHI: {
     const Register DestReg = I.getOperand(0).getReg();
-    const unsigned DestRegBank = RBI.getRegBank(DestReg, MRI, TRI)->getID();
     const unsigned OpSize = MRI.getType(DestReg).getSizeInBits();
 
-    if (DestRegBank != Mips::GPRBRegBankID || OpSize != 32)
-      return false;
+    const TargetRegisterClass *DefRC = nullptr;
+    if (TargetRegisterInfo::isPhysicalRegister(DestReg))
+      DefRC = TRI.getRegClass(DestReg);
+    else
+      DefRC = getRegClassForTypeOnBank(OpSize,
+                                       *RBI.getRegBank(DestReg, MRI, TRI), RBI);
 
-    const TargetRegisterClass *DefRC = &Mips::GPR32RegClass;
     I.setDesc(TII.get(TargetOpcode::PHI));
     return RBI.constrainGenericRegister(DestReg, *DefRC, MRI);
   }
@@ -262,11 +302,14 @@ bool MipsInstructionSelector::select(MachineInstr &I,
     const unsigned OpSize = MRI.getType(DestReg).getSizeInBits();
     const unsigned OpMemSizeInBytes = (*I.memoperands_begin())->getSize();
 
-    if (DestRegBank != Mips::GPRBRegBankID || OpSize != 32)
+    if (DestRegBank == Mips::GPRBRegBankID && OpSize != 32)
       return false;
 
-    const unsigned NewOpc =
-        selectLoadStoreOpCode(I.getOpcode(), OpMemSizeInBytes);
+    if (DestRegBank == Mips::FPRBRegBankID && OpSize != 32 && OpSize != 64)
+      return false;
+
+    const unsigned NewOpc = selectLoadStoreOpCode(
+        I.getOpcode(), OpMemSizeInBytes, DestRegBank, STI.isFP64bit());
     if (NewOpc == I.getOpcode())
       return false;
 

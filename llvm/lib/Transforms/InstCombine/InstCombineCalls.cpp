@@ -1060,7 +1060,7 @@ Value *InstCombiner::simplifyMaskedLoad(IntrinsicInst &II) {
 
   // If we can unconditionally load from this address, replace with a
   // load/select idiom. TODO: use DT for context sensitive query
-  if (isDereferenceableAndAlignedPointer(LoadPtr, Alignment,
+  if (isDereferenceableAndAlignedPointer(LoadPtr, II.getType(), Alignment,
                                          II.getModule()->getDataLayout(),
                                          &II, nullptr)) {
     Value *LI = Builder.CreateAlignedLoad(II.getType(), LoadPtr, Alignment,

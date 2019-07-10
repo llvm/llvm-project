@@ -76,7 +76,7 @@ std::vector<std::string> parseDriverOutput(llvm::StringRef Output) {
   }
 
   for (llvm::StringRef Line : llvm::make_range(StartIt, EndIt)) {
-    SystemIncludes.push_back(Line.str());
+    SystemIncludes.push_back(Line.trim().str());
     vlog("System include extraction: adding {0}", Line);
   }
   return SystemIncludes;
@@ -215,8 +215,8 @@ public:
   }
 
   llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File, ProjectInfo *PI = nullptr) const override {
-    auto Cmd = Base->getCompileCommand(File, PI);
+  getCompileCommand(PathRef File) const override {
+    auto Cmd = Base->getCompileCommand(File);
     if (!Cmd || Cmd->CommandLine.empty())
       return Cmd;
 
@@ -238,6 +238,10 @@ public:
     }
 
     return addSystemIncludes(*Cmd, SystemIncludes);
+  }
+
+  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override {
+    return Base->getProjectInfo(File);
   }
 
 private:

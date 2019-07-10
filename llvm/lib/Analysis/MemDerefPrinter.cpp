@@ -53,9 +53,10 @@ bool MemDerefPrinter::runOnFunction(Function &F) {
   for (auto &I: instructions(F)) {
     if (LoadInst *LI = dyn_cast<LoadInst>(&I)) {
       Value *PO = LI->getPointerOperand();
-      if (isDereferenceablePointer(PO, DL))
+      if (isDereferenceablePointer(PO, LI->getType(), DL))
         Deref.push_back(PO);
-      if (isDereferenceableAndAlignedPointer(PO, LI->getAlignment(), DL))
+      if (isDereferenceableAndAlignedPointer(PO, LI->getType(),
+                                             LI->getAlignment(), DL))
         DerefAndAligned.insert(PO);
     }
   }

@@ -1,5 +1,7 @@
-; RUN: llc -march=mips -mattr=+msa,+fp64 < %s | FileCheck -check-prefixes=MIPS32-AE,MIPS32-BE %s
-; RUN: llc -march=mipsel -mattr=+msa,+fp64 < %s | FileCheck -check-prefixes=MIPS32-AE,MIPS32-LE %s
+; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 < %s \
+; RUN:   | FileCheck -check-prefixes=MIPS32-AE,MIPS32-BE %s
+; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 < %s \
+; RUN:   | FileCheck -check-prefixes=MIPS32-AE,MIPS32-LE %s
 
 define void @loadstore_v16i8_near() nounwind {
   ; MIPS32-AE: loadstore_v16i8_near:

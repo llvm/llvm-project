@@ -38,6 +38,30 @@ Algorithm
 
 For a more detailed discussion of this approach see https://arxiv.org/pdf/1802.09517.pdf
 
+Short granules
+--------------
+
+A short granule is a granule of size between 1 and `TG-1` bytes. The size
+of a short granule is stored at the location in shadow memory where the
+granule's tag is normally stored, while the granule's actual tag is stored
+in the last byte of the granule. This means that in order to verify that a
+pointer tag matches a memory tag, HWASAN must check for two possibilities:
+
+* the pointer tag is equal to the memory tag in shadow memory, or
+* the shadow memory tag is actually a short granule size, the value being loaded
+  is in bounds of the granule and the pointer tag is equal to the last byte of
+  the granule.
+
+Pointer tags between 1 to `TG-1` are possible and are as likely as any other
+tag. This means that these tags in memory have two interpretations: the full
+tag interpretation (where the pointer tag is between 1 and `TG-1` and the
+last byte of the granule is ordinary data) and the short tag interpretation
+(where the pointer tag is stored in the granule).
+
+When HWASAN detects an error near a memory tag between 1 and `TG-1`, it
+will show both the memory tag and the last byte of the granule. Currently,
+it is up to the user to disambiguate the two possibilities.
+
 Instrumentation
 ===============
 
@@ -46,24 +70,40 @@ Memory Accesses
 All memory accesses are prefixed with an inline instruction sequence that
 verifies the tags. Currently, the following sequence is used:
 
-
 .. code-block:: none
 
   // int foo(int *a) { return *a; }
-  // clang -O2 --target=aarch64-linux -fsanitize=hwaddress -c load.c
+  // clang -O2 --target=aarch64-linux -fsanitize=hwaddress -fsanitize-recover=hwaddress -c load.c
   foo:
-       0:	08 00 00 90 	adrp	x8, 0 <__hwasan_shadow>
-       4:	08 01 40 f9 	ldr	x8, [x8]          // shadow base (to be resolved by the loader)
-       8:	09 dc 44 d3 	ubfx	x9, x0, #4, #52 // shadow offset
-       c:	28 69 68 38 	ldrb	w8, [x9, x8]    // load shadow tag
-      10:	09 fc 78 d3 	lsr	x9, x0, #56       // extract address tag
-      14:	3f 01 08 6b 	cmp	w9, w8            // compare tags
-      18:	61 00 00 54 	b.ne	24              // jump on mismatch
-      1c:	00 00 40 b9 	ldr	w0, [x0]          // original load
-      20:	c0 03 5f d6 	ret
-      24:	40 20 21 d4 	brk	#0x902            // trap
+       0:	90000008 	adrp	x8, 0 <__hwasan_shadow>
+       4:	f9400108 	ldr	x8, [x8]         // shadow base (to be resolved by the loader)
+       8:	d344dc09 	ubfx	x9, x0, #4, #52  // shadow offset
+       c:	38696909 	ldrb	w9, [x8, x9]     // load shadow tag
+      10:	d378fc08 	lsr	x8, x0, #56      // extract address tag
+      14:	6b09011f 	cmp	w8, w9           // compare tags
+      18:	54000061 	b.ne	24 <foo+0x24>    // jump to short tag handler on mismatch
+      1c:	b9400000 	ldr	w0, [x0]         // original load
+      20:	d65f03c0 	ret
+      24:	7100413f 	cmp	w9, #0x10        // is this a short tag?
+      28:	54000142 	b.cs	50 <foo+0x50>    // if not, trap
+      2c:	12000c0a 	and	w10, w0, #0xf    // find the address's position in the short granule
+      30:	11000d4a 	add	w10, w10, #0x3   // adjust to the position of the last byte loaded
+      34:	6b09015f 	cmp	w10, w9          // check that position is in bounds
+      38:	540000c2 	b.cs	50 <foo+0x50>    // if not, trap
+      3c:	9240dc09 	and	x9, x0, #0xffffffffffffff
+      40:	b2400d29 	orr	x9, x9, #0xf     // compute address of last byte of granule
+      44:	39400129 	ldrb	w9, [x9]         // load tag from it
+      48:	6b09011f 	cmp	w8, w9           // compare with pointer tag
+      4c:	54fffe80 	b.eq	1c <foo+0x1c>    // if so, continue
+      50:	d4212440 	brk	#0x922           // otherwise trap
+      54:	b9400000 	ldr	w0, [x0]         // tail duplicated original load (to handle recovery)
+      58:	d65f03c0 	ret
 
 Alternatively, memory accesses are prefixed with a function call.
+On AArch64, a function call is used by default in trapping mode. The code size
+and performance overhead of the call is reduced by using a custom calling
+convention that preserves most registers and is specialized to the register
+containing the address and the type and size of the memory access.
 
 Heap
 ----

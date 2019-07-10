@@ -99,8 +99,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const FileRange &R);
 /// Can represent both expanded and spelled tokens.
 class Token {
 public:
-  Token(SourceLocation Location, unsigned Length, tok::TokenKind Kind)
-      : Location(Location), Length(Length), Kind(Kind) {}
+  Token(SourceLocation Location, unsigned Length, tok::TokenKind Kind);
   /// EXPECTS: clang::Token is not an annotation token.
   explicit Token(const clang::Token &T);
 

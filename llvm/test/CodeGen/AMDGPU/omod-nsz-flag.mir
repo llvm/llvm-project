@@ -1,20 +1,5 @@
 # RUN: llc -march=amdgcn -verify-machineinstrs -run-pass si-fold-operands  %s -o - | FileCheck -check-prefix=GCN %s
 
---- |
-  define amdgpu_ps void @omod_inst_flag_nsz_src() {
-    unreachable
-  }
-
-  define amdgpu_ps void @omod_inst_flag_nsz_result() {
-    unreachable
-  }
-
-  define amdgpu_ps void @omod_inst_flag_nsz_both() {
-    unreachable
-  }
-
-...
-
 ---
 
 # FIXME: Is it OK to fold omod for this?
@@ -24,6 +9,9 @@
 # GCN-NEXT: S_ENDPGM 0, implicit %1
 name: omod_inst_flag_nsz_src
 tracksRegLiveness: true
+machineFunctionInfo:
+  mode:
+    ieee: false
 
 body:             |
   bb.0:
@@ -42,6 +30,9 @@ body:             |
 
 name: omod_inst_flag_nsz_result
 tracksRegLiveness: true
+machineFunctionInfo:
+  mode:
+    ieee: false
 
 body:             |
   bb.0:
@@ -60,6 +51,9 @@ body:             |
 
 name: omod_inst_flag_nsz_both
 tracksRegLiveness: true
+machineFunctionInfo:
+  mode:
+    ieee: false
 
 body:             |
   bb.0:

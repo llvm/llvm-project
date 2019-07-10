@@ -75,6 +75,8 @@ if(COMPILER_RT_DEFAULT_TARGET_ARCH IN_LIST FUZZER_SUPPORTED_ARCH)
   set_target_properties(FuzzerUnitTests PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
 
+  list(APPEND LIBFUZZER_UNITTEST_CFLAGS -I${COMPILER_RT_SOURCE_DIR}/lib/fuzzer/utils)
+
   set(FuzzedDataProviderTestObjects)
   generate_compiler_rt_tests(FuzzedDataProviderTestObjects
     FuzzedDataProviderUnitTests "FuzzerUtils-${arch}-Test" ${arch}

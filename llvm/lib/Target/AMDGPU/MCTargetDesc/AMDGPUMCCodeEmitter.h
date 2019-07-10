@@ -63,6 +63,12 @@ public:
     return 0;
   }
 
+  virtual unsigned getAVOperandEncoding(const MCInst &MI, unsigned OpNo,
+                                        SmallVectorImpl<MCFixup> &Fixups,
+                                        const MCSubtargetInfo &STI) const {
+    return 0;
+  }
+
 protected:
   FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
   void

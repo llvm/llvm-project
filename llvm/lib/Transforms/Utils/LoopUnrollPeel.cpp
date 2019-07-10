@@ -432,18 +432,18 @@ static void fixupBranchWeights(BasicBlock *Header, BranchInst *LatchBR,
 /// InsertBot.
 /// \param IterNumber The serial number of the iteration currently being
 /// peeled off.
-/// \param Exit The exit block of the original loop.
+/// \param ExitEdges The exit edges of the original loop.
 /// \param[out] NewBlocks A list of the blocks in the newly created clone
 /// \param[out] VMap The value map between the loop and the new clone.
 /// \param LoopBlocks A helper for DFS-traversal of the loop.
 /// \param LVMap A value-map that maps instructions from the original loop to
 /// instructions in the last peeled-off iteration.
-static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
-                            BasicBlock *InsertBot, BasicBlock *Exit,
-                            SmallVectorImpl<BasicBlock *> &NewBlocks,
-                            LoopBlocksDFS &LoopBlocks, ValueToValueMapTy &VMap,
-                            ValueToValueMapTy &LVMap, DominatorTree *DT,
-                            LoopInfo *LI) {
+static void cloneLoopBlocks(
+    Loop *L, unsigned IterNumber, BasicBlock *InsertTop, BasicBlock *InsertBot,
+    SmallVectorImpl<std::pair<BasicBlock *, BasicBlock *> > &ExitEdges,
+    SmallVectorImpl<BasicBlock *> &NewBlocks, LoopBlocksDFS &LoopBlocks,
+    ValueToValueMapTy &VMap, ValueToValueMapTy &LVMap, DominatorTree *DT,
+    LoopInfo *LI) {
   BasicBlock *Header = L->getHeader();
   BasicBlock *Latch = L->getLoopLatch();
   BasicBlock *PreHeader = L->getLoopPreheader();
@@ -489,9 +489,11 @@ static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
   // iteration (for every other iteration)
   BasicBlock *NewLatch = cast<BasicBlock>(VMap[Latch]);
   BranchInst *LatchBR = cast<BranchInst>(NewLatch->getTerminator());
-  unsigned HeaderIdx = (LatchBR->getSuccessor(0) == Header ? 0 : 1);
-  LatchBR->setSuccessor(HeaderIdx, InsertBot);
-  LatchBR->setSuccessor(1 - HeaderIdx, Exit);
+  for (unsigned idx = 0, e = LatchBR->getNumSuccessors(); idx < e; ++idx)
+    if (LatchBR->getSuccessor(idx) == Header) {
+      LatchBR->setSuccessor(idx, InsertBot);
+      break;
+    }
   if (DT)
     DT->changeImmediateDominator(InsertBot, NewLatch);
 
@@ -522,14 +524,14 @@ static void cloneLoopBlocks(Loop *L, unsigned IterNumber, BasicBlock *InsertTop,
   // we've just created. Note that this must happen *after* the incoming
   // values are adjusted, since the value going out of the latch may also be
   // a value coming into the header.
-  for (BasicBlock::iterator I = Exit->begin(); isa<PHINode>(I); ++I) {
-    PHINode *PHI = cast<PHINode>(I);
-    Value *LatchVal = PHI->getIncomingValueForBlock(Latch);
-    Instruction *LatchInst = dyn_cast<Instruction>(LatchVal);
-    if (LatchInst && L->contains(LatchInst))
-      LatchVal = VMap[LatchVal];
-    PHI->addIncoming(LatchVal, cast<BasicBlock>(VMap[Latch]));
-  }
+  for (auto Edge : ExitEdges)
+    for (PHINode &PHI : Edge.second->phis()) {
+      Value *LatchVal = PHI.getIncomingValueForBlock(Edge.first);
+      Instruction *LatchInst = dyn_cast<Instruction>(LatchVal);
+      if (LatchInst && L->contains(LatchInst))
+        LatchVal = VMap[LatchVal];
+      PHI.addIncoming(LatchVal, cast<BasicBlock>(VMap[Edge.first]));
+    }
 
   // LastValueMap is updated with the values for the current loop
   // which are used the next time this function is called.
@@ -558,7 +560,8 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
   BasicBlock *Header = L->getHeader();
   BasicBlock *PreHeader = L->getLoopPreheader();
   BasicBlock *Latch = L->getLoopLatch();
-  BasicBlock *Exit = L->getUniqueExitBlock();
+  SmallVector<std::pair<BasicBlock *, BasicBlock *>, 4> ExitEdges;
+  L->getExitEdges(ExitEdges);
 
   Function *F = Header->getParent();
 
@@ -640,8 +643,8 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
     else
       CurHeaderWeight = 1;
 
-    cloneLoopBlocks(L, Iter, InsertTop, InsertBot, Exit,
-                    NewBlocks, LoopBlocks, VMap, LVMap, DT, LI);
+    cloneLoopBlocks(L, Iter, InsertTop, InsertBot, ExitEdges, NewBlocks,
+                    LoopBlocks, VMap, LVMap, DT, LI);
 
     // Remap to use values from the current iteration instead of the
     // previous one.
@@ -652,7 +655,9 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
       // latter is the first cloned loop body, as original PreHeader dominates
       // the original loop body.
       if (Iter == 0)
-        DT->changeImmediateDominator(Exit, cast<BasicBlock>(LVMap[Latch]));
+        for (auto Edge : ExitEdges)
+          DT->changeImmediateDominator(Edge.second,
+                                       cast<BasicBlock>(LVMap[Edge.first]));
 #ifdef EXPENSIVE_CHECKS
       assert(DT->verify(DominatorTree::VerificationLevel::Fast));
 #endif

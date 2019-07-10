@@ -3,20 +3,14 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux -o %t.o %s
 # RUN: ld.lld -shared -o %t.so %t.o
-# RUN: llvm-readobj --symbols --mips-plt-got %t.so | FileCheck %s
+# RUN: llvm-objdump -dD %t.so | FileCheck %s
 
-# CHECK:      Symbol {
-# CHECK:        Name: $.str
-# CHECK-NEXT:   Value: 0x1F1
-# CHECK:      }
-
-# CHECK:      Local entries [
-# CHECK-NEXT:   Entry {
-# CHECK-NEXT:     Address:
-# CHECK-NEXT:     Access: -32744
-# CHECK-NEXT:     Initial: 0x0
-# CHECK:        }
-# CHECK:      ]
+# CHECK: 000001f1 .rodata:
+#                'f''o''o''\0'
+# CHECK-NEXT: 1f1: 66 6f 6f 00
+# CHECK: lw      $25, -32744($gp)
+#                            0x1f1
+# CHECK-NEXT: addiu   $4, $25, 497
 
   .text
   lw     $t9, %got($.str)($gp)

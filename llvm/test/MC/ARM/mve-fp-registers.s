@@ -45,16 +45,48 @@ vldmia  r0, {d0}
 # FP32: vldmia  r0, {d0}               @ encoding: [0x90,0xec,0x02,0x0b]
 # NOFP32: :[[@LINE-2]]:{{[0-9]+}}: {{note|error}}: instruction requires: fp registers
 
+vpop    {d0-d15}
+# FP32: vpop {{.*}}                     @ encoding: [0xbd,0xec,0x20,0x0b]
+# NOFP32: :[[@LINE-2]]:{{[0-9]+}}: {{note|error}}: instruction requires: fp registers
+
+vpop.64    {d0-d15}
+# FP32: vpop {{.*}}                     @ encoding: [0xbd,0xec,0x20,0x0b]
+# NOFP32: :[[@LINE-2]]:{{[0-9]+}}: {{note|error}}: instruction requires: fp registers
+
 vstmia  r0, {d0}
 # FP32: vstmia  r0, {d0}                @ encoding: [0x80,0xec,0x02,0x0b]
+# NOFP32: :[[@LINE-2]]:{{[0-9]+}}: {{note|error}}: instruction requires: fp registers
+
+vpush    {d0-d15}
+# FP32: vpush {{.*}}                    @ encoding: [0x2d,0xed,0x20,0x0b]
+# NOFP32: :[[@LINE-2]]:{{[0-9]+}}: {{note|error}}: instruction requires: fp registers
+
+vpush.64    {d0-d15}
+# FP32: vpush {{.*}}                    @ encoding: [0x2d,0xed,0x20,0x0b]
 # NOFP32: :[[@LINE-2]]:{{[0-9]+}}: {{note|error}}: instruction requires: fp registers
 
 vldmia  r0, {s0}
 # FP32: vldmia  r0, {s0}                @ encoding: [0x90,0xec,0x01,0x0a]
 # NOFP32: :[[@LINE-2]]:{{[0-9]+}}: {{note|error}}: instruction requires: fp registers
 
+vpop {s0-s31}
+# FP32: vpop {{.*}}                     @ encoding: [0xbd,0xec,0x20,0x0a]
+# NOFP32: :[[@LINE-2]]:{{[0-9]+}}: {{note|error}}: instruction requires: fp registers
+
+vpop.32 {s0-s31}
+# FP32: vpop {{.*}}                     @ encoding: [0xbd,0xec,0x20,0x0a]
+# NOFP32: :[[@LINE-2]]:{{[0-9]+}}: {{note|error}}: instruction requires: fp registers
+
 vstmia  r0, {s0}
 # FP32: vstmia  r0, {s0}                @ encoding: [0x80,0xec,0x01,0x0a]
+# NOFP32: :[[@LINE-2]]:{{[0-9]+}}: {{note|error}}: instruction requires: fp registers
+
+vpush {s0-s31}
+# FP32: vpush {{.*}}                    @ encoding: [0x2d,0xed,0x20,0x0a]
+# NOFP32: :[[@LINE-2]]:{{[0-9]+}}: {{note|error}}: instruction requires: fp registers
+
+vpush.32 {s0-s31}
+# FP32: vpush {{.*}}                    @ encoding: [0x2d,0xed,0x20,0x0a]
 # NOFP32: :[[@LINE-2]]:{{[0-9]+}}: {{note|error}}: instruction requires: fp registers
 
 fldmdbx r0!, {d0}

@@ -534,16 +534,10 @@ MicrosoftARM64TargetInfo::MicrosoftARM64TargetInfo(const llvm::Triple &Triple,
   TheCXXABI.set(TargetCXXABI::Microsoft);
 }
 
-void MicrosoftARM64TargetInfo::getVisualStudioDefines(
-    const LangOptions &Opts, MacroBuilder &Builder) const {
-  WindowsTargetInfo<AArch64leTargetInfo>::getVisualStudioDefines(Opts, Builder);
-  Builder.defineMacro("_M_ARM64", "1");
-}
-
 void MicrosoftARM64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                                 MacroBuilder &Builder) const {
-  WindowsTargetInfo::getTargetDefines(Opts, Builder);
-  getVisualStudioDefines(Opts, Builder);
+  WindowsARM64TargetInfo::getTargetDefines(Opts, Builder);
+  Builder.defineMacro("_M_ARM64", "1");
 }
 
 TargetInfo::CallingConvKind

@@ -348,7 +348,7 @@ static void maybeReportRelocationToDiscarded(const SectionChunk *FromChunk,
 }
 
 void SectionChunk::writeTo(uint8_t *Buf) const {
-  if (!hasData())
+  if (!HasData)
     return;
   // Copy section contents from source object file to output file.
   ArrayRef<uint8_t> A = getContents();

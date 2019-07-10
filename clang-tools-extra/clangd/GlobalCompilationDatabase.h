@@ -40,9 +40,13 @@ public:
   virtual ~GlobalCompilationDatabase() = default;
 
   /// If there are any known-good commands for building this file, returns one.
-  /// If the ProjectInfo pointer is set, it will also be populated.
   virtual llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File, ProjectInfo * = nullptr) const = 0;
+  getCompileCommand(PathRef File) const = 0;
+
+  /// Finds the closest project to \p File.
+  virtual llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const {
+    return llvm::None;
+  }
 
   /// Makes a guess at how to build a file.
   /// The default implementation just runs clang on the file.
@@ -71,20 +75,40 @@ public:
 
   /// Scans File's parents looking for compilation databases.
   /// Any extra flags will be added.
+  /// Might trigger OnCommandChanged, if CDB wasn't broadcasted yet.
   llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File, ProjectInfo * = nullptr) const override;
+  getCompileCommand(PathRef File) const override;
+
+  /// Returns the path to first directory containing a compilation database in
+  /// \p File's parents.
+  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
 private:
-  tooling::CompilationDatabase *getCDBForFile(PathRef File,
-                                              ProjectInfo *) const;
-  std::pair<tooling::CompilationDatabase *, /*Cached*/ bool>
+  std::pair<tooling::CompilationDatabase *, /*SentBroadcast*/ bool>
   getCDBInDirLocked(PathRef File) const;
+
+  struct CDBLookupRequest {
+    PathRef FileName;
+    // Whether this lookup should trigger discovery of the CDB found.
+    bool ShouldBroadcast = false;
+  };
+  struct CDBLookupResult {
+    tooling::CompilationDatabase *CDB = nullptr;
+    ProjectInfo PI;
+  };
+  llvm::Optional<CDBLookupResult> lookupCDB(CDBLookupRequest Request) const;
+
+  // Performs broadcast on governed files.
+  void broadcastCDB(CDBLookupResult Res) const;
 
   mutable std::mutex Mutex;
   /// Caches compilation databases loaded from directories(keys are
   /// directories).
-  mutable llvm::StringMap<std::unique_ptr<clang::tooling::CompilationDatabase>>
-      CompilationDatabases;
+  struct CachedCDB {
+    std::unique_ptr<clang::tooling::CompilationDatabase> CDB = nullptr;
+    bool SentBroadcast = false;
+  };
+  mutable llvm::StringMap<CachedCDB> CompilationDatabases;
 
   /// Used for command argument pointing to folder where compile_commands.json
   /// is located.
@@ -109,8 +133,9 @@ public:
              llvm::Optional<std::string> ResourceDir = llvm::None);
 
   llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File, ProjectInfo * = nullptr) const override;
+  getCompileCommand(PathRef File) const override;
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
+  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
   /// Sets or clears the compilation command for a particular file.
   void

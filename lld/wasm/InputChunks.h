@@ -53,7 +53,7 @@ public:
   StringRef getComdatName() const;
   virtual uint32_t getInputSectionOffset() const = 0;
 
-  size_t NumRelocations() const { return Relocations.size(); }
+  size_t getNumRelocations() const { return Relocations.size(); }
   void writeRelocations(llvm::raw_ostream &OS) const;
 
   ObjFile *File;

@@ -38,17 +38,21 @@ bool syntax::Leaf::classof(const Node *N) {
   return N->kind() == NodeKind::Leaf;
 }
 
+syntax::Node::Node(NodeKind Kind)
+    : Parent(nullptr), NextSibling(nullptr), Kind(static_cast<unsigned>(Kind)),
+      Role(static_cast<unsigned>(NodeRole::Detached)) {}
+
 bool syntax::Tree::classof(const Node *N) { return N->kind() > NodeKind::Leaf; }
 
 void syntax::Tree::prependChildLowLevel(Node *Child, NodeRole Role) {
   assert(Child->Parent == nullptr);
   assert(Child->NextSibling == nullptr);
-  assert(Child->Role == NodeRoleDetached);
-  assert(Role != NodeRoleDetached);
+  assert(Child->role() == NodeRole::Detached);
+  assert(Role != NodeRole::Detached);
 
   Child->Parent = this;
   Child->NextSibling = this->FirstChild;
-  Child->Role = Role;
+  Child->Role = static_cast<unsigned>(Role);
   this->FirstChild = Child;
 }
 
@@ -81,9 +85,9 @@ static void dumpTokens(llvm::raw_ostream &OS, ArrayRef<syntax::Token> Tokens,
 
 static void dumpTree(llvm::raw_ostream &OS, const syntax::Node *N,
                      const syntax::Arena &A, std::vector<bool> IndentMask) {
-  if (N->role() != syntax::NodeRoleUnknown) {
+  if (N->role() != syntax::NodeRole::Unknown) {
     // FIXME: print the symbolic name of a role.
-    if (N->role() == syntax::NodeRoleDetached)
+    if (N->role() == syntax::NodeRole::Detached)
       OS << "*: ";
     else
       OS << static_cast<int>(N->role()) << ": ";
@@ -138,7 +142,7 @@ std::string syntax::Node::dumpTokens(const Arena &A) const {
 
 syntax::Node *syntax::Tree::findChild(NodeRole R) {
   for (auto *C = FirstChild; C; C = C->nextSibling()) {
-    if (C->Role == R)
+    if (C->role() == R)
       return C;
   }
   return nullptr;

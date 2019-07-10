@@ -41,8 +41,6 @@ public:
 
   void addCombinedLTOObject();
 
-  void reportRemainingUndefines();
-
   ArrayRef<Symbol *> getSymbols() const { return SymVector; }
 
   Symbol *find(StringRef Name);

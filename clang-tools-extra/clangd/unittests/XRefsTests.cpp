@@ -12,9 +12,11 @@
 #include "Protocol.h"
 #include "SyncAPI.h"
 #include "TestFS.h"
+#include "TestIndex.h"
 #include "TestTU.h"
 #include "XRefs.h"
 #include "index/FileIndex.h"
+#include "index/MemIndex.h"
 #include "index/SymbolCollector.h"
 #include "clang/Index/IndexingAction.h"
 #include "llvm/ADT/None.h"
@@ -987,7 +989,7 @@ void foo())cpp";
     auto AST = TU.build();
     ASSERT_TRUE(AST.getDiagnostics().empty());
 
-    auto H = getHover(AST, T.point(), format::getLLVMStyle());
+    auto H = getHover(AST, T.point(), format::getLLVMStyle(), nullptr);
     ASSERT_TRUE(H);
     HoverInfo Expected;
     Expected.SymRange = T.range();
@@ -1101,7 +1103,8 @@ TEST(Hover, All) {
           "text[Declared in]code[global namespace]\n"
           "codeblock(cpp) [\n"
           "int foo(int)\n"
-          "]",
+          "]\n"
+          "text[Function definition via pointer]",
       },
       {
           R"cpp(// Function declaration via call
@@ -1113,7 +1116,8 @@ TEST(Hover, All) {
           "text[Declared in]code[global namespace]\n"
           "codeblock(cpp) [\n"
           "int foo(int)\n"
-          "]",
+          "]\n"
+          "text[Function declaration via call]",
       },
       {
           R"cpp(// Field
@@ -1224,7 +1228,8 @@ TEST(Hover, All) {
           "text[Declared in]code[global namespace]\n"
           "codeblock(cpp) [\n"
           "typedef int Foo\n"
-          "]",
+          "]\n"
+          "text[Typedef]",
       },
       {
           R"cpp(// Namespace
@@ -1294,7 +1299,8 @@ TEST(Hover, All) {
           "text[Declared in]code[global namespace]\n"
           "codeblock(cpp) [\n"
           "class Foo {}\n"
-          "]",
+          "]\n"
+          "text[Forward class declaration]",
       },
       {
           R"cpp(// Function declaration
@@ -1305,7 +1311,8 @@ TEST(Hover, All) {
           "text[Declared in]code[global namespace]\n"
           "codeblock(cpp) [\n"
           "void foo()\n"
-          "]",
+          "]\n"
+          "text[Function declaration]",
       },
       {
           R"cpp(// Enum declaration
@@ -1319,7 +1326,8 @@ TEST(Hover, All) {
           "text[Declared in]code[global namespace]\n"
           "codeblock(cpp) [\n"
           "enum Hello {}\n"
-          "]",
+          "]\n"
+          "text[Enum declaration]",
       },
       {
           R"cpp(// Enumerator
@@ -1359,7 +1367,8 @@ TEST(Hover, All) {
           "text[Declared in]code[global namespace]\n"
           "codeblock(cpp) [\n"
           "static int hey = 10\n"
-          "]",
+          "]\n"
+          "text[Global variable]",
       },
       {
           R"cpp(// Global variable in namespace
@@ -1400,7 +1409,8 @@ TEST(Hover, All) {
           "text[Declared in]code[global namespace]\n"
           "codeblock(cpp) [\n"
           "template <typename T> T foo()\n"
-          "]",
+          "]\n"
+          "text[Templated function]",
       },
       {
           R"cpp(// Anonymous union
@@ -1415,6 +1425,18 @@ TEST(Hover, All) {
           "codeblock(cpp) [\n"
           "int def\n"
           "]",
+      },
+      {
+          R"cpp(// documentation from index
+            int nextSymbolIsAForwardDeclFromIndexWithNoLocalDocs;
+            void indexSymbol();
+            void g() { ind^exSymbol(); }
+          )cpp",
+          "text[Declared in]code[global namespace]\n"
+          "codeblock(cpp) [\n"
+          "void indexSymbol()\n"
+          "]\n"
+          "text[comment from index]",
       },
       {
           R"cpp(// Nothing
@@ -1773,12 +1795,21 @@ TEST(Hover, All) {
       },
   };
 
+  // Create a tiny index, so tests above can verify documentation is fetched.
+  Symbol IndexSym = func("indexSymbol");
+  IndexSym.Documentation = "comment from index";
+  SymbolSlab::Builder Symbols;
+  Symbols.insert(IndexSym);
+  auto Index =
+      MemIndex::build(std::move(Symbols).build(), RefSlab(), RelationSlab());
+
   for (const OneTest &Test : Tests) {
     Annotations T(Test.Input);
     TestTU TU = TestTU::withCode(T.code());
     TU.ExtraArgs.push_back("-std=c++17");
     auto AST = TU.build();
-    if (auto H = getHover(AST, T.point(), format::getLLVMStyle())) {
+    if (auto H =
+            getHover(AST, T.point(), format::getLLVMStyle(), Index.get())) {
       EXPECT_NE("", Test.ExpectedHover) << Test.Input;
       EXPECT_EQ(H->present().renderForTests(), Test.ExpectedHover.str())
           << Test.Input;

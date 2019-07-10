@@ -265,14 +265,6 @@ namespace {
     /// Return true if a copy involving a physreg should be joined.
     bool canJoinPhys(const CoalescerPair &CP);
 
-    /// When merging SrcReg and DstReg together, and the operand of the
-    /// specified DBG_VALUE refers to one of them, would the def that a
-    /// DBG_VALUE refers to change? This can happen when the DBG_VALUEs
-    /// operand is dead and it's merged into a different live value,
-    /// meaning the DBG_VALUE operands must be updated.
-    bool mergingChangesDbgValue(MachineInstr *DbgV, unsigned SrcReg,
-                                unsigned DstReg) const;
-
     /// Replace all defs and uses of SrcReg to DstReg and update the subregister
     /// number if it is not zero. If DstReg is a physical register and the
     /// existing subregister number of the def / use being updated is not zero,
@@ -1656,59 +1648,8 @@ void RegisterCoalescer::addUndefFlag(const LiveInterval &Int, SlotIndex UseIdx,
   }
 }
 
-bool RegisterCoalescer::mergingChangesDbgValue(MachineInstr *DbgV,
-                                               unsigned SrcReg,
-                                               unsigned DstReg) const {
-  assert(DbgV->isDebugValue());
-  assert(DbgV->getParent() && "DbgValue with no parent");
-  assert(DbgV->getOperand(0).isReg());
-  unsigned DbgReg = DbgV->getOperand(0).getReg();
-
-  SlotIndex MIIdx = LIS->getSlotIndexes()->getIndexAfter(*DbgV);
-  const LiveInterval &SrcLI = LIS->getInterval(SrcReg);
-
-  // Is the source register live across the DBG_VALUE?
-  bool SrcLive = false;
-  auto LII = SrcLI.find(MIIdx);
-  if (LII != SrcLI.end() && LII->contains(MIIdx))
-    SrcLive = true;
-
-  bool DstLive = false;
-  // Destination register can be physical or virtual.
-  if (TargetRegisterInfo::isVirtualRegister(DstReg)) {
-    // Is DstReg live across the DBG_VALUE?
-    const LiveInterval &DstLI = LIS->getInterval(DstReg);
-    LII = DstLI.find(MIIdx);
-    DstLive = (LII != DstLI.end() && LII->contains(MIIdx));
-  } else if (MRI->isConstantPhysReg(DstReg)) {
-    // Constant physical registers are always live.
-    DstLive = true;
-  } else {
-    // For physical registers, see if any register unit containing DstReg
-    // is live across the DBG_VALUE.
-    for (MCRegUnitIterator UI(DstReg, TRI); UI.isValid(); ++UI) {
-      const LiveRange &DstLI = LIS->getRegUnit(*UI);
-      auto DstLII = DstLI.find(MIIdx);
-      if (DstLII != DstLI.end() && DstLII->contains(MIIdx)) {
-        DstLive = true;
-        break;
-      }
-    }
-  }
-
-  // We now know whether src and dst are live. Best case: we have a DBG_VALUE
-  // of a live register, coalesing won't change its value.
-  if ((DstLive && DbgReg == DstReg) || (SrcLive && DbgReg == SrcReg))
-    return false;
-  // If neither register are live, no damage done.
-  if (!DstLive && !SrcLive)
-    return false;
-  // Otherwise, we will end up resurrecting the DBG_VALUE with a different
-  // register, which is unsafe.
-  return true;
-}
-
-void RegisterCoalescer::updateRegDefsUses(unsigned SrcReg, unsigned DstReg,
+void RegisterCoalescer::updateRegDefsUses(unsigned SrcReg,
+                                          unsigned DstReg,
                                           unsigned SubIdx) {
   bool DstIsPhys = TargetRegisterInfo::isPhysicalRegister(DstReg);
   LiveInterval *DstInt = DstIsPhys ? nullptr : &LIS->getInterval(DstReg);
@@ -1920,20 +1861,6 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
   ShrinkMask = LaneBitmask::getNone();
   ShrinkMainRange = false;
 
-  // Although we can update the DBG_VALUEs to the merged register, as debug uses
-  // do not contribute to liveness it might not be a sound update. Collect
-  // DBG_VALUEs that would change value were this interval merging to succeed.
-  SmallVector<MachineInstr *, 4> DbgValuesToChange;
-  auto CheckForDbgUser = [this, &CP, &DbgValuesToChange](MachineInstr &MI) {
-    if (MI.isDebugValue() && MI.getOperand(0).isReg() &&
-        mergingChangesDbgValue(&MI, CP.getSrcReg(), CP.getDstReg()))
-      DbgValuesToChange.push_back(&MI);
-  };
-  for (auto &RegIt : MRI->reg_instructions(CP.getSrcReg()))
-    CheckForDbgUser(RegIt);
-  for (auto &RegIt : MRI->reg_instructions(CP.getDstReg()))
-    CheckForDbgUser(RegIt);
-
   // Okay, attempt to join these two intervals.  On failure, this returns false.
   // Otherwise, if one of the intervals being joined is a physreg, this method
   // always canonicalizes DstInt to be it.  The output "SrcInt" will not have
@@ -2001,16 +1928,6 @@ bool RegisterCoalescer::joinCopy(MachineInstr *CopyMI, bool &Again) {
   if (CP.getDstIdx())
     updateRegDefsUses(CP.getDstReg(), CP.getDstReg(), CP.getDstIdx());
   updateRegDefsUses(CP.getSrcReg(), CP.getDstReg(), CP.getSrcIdx());
-
-  // The updates to these DBG_VALUEs are not sound -- mark them undef.
-  // FIXME: further analysis might recover them, this is the minimal sound
-  // solution.
-  for (MachineInstr *MI : DbgValuesToChange) {
-    assert(MI->getOperand(0).isReg());
-    LLVM_DEBUG(dbgs() << "Update of " << MI->getOperand(0) << " would be "
-                      << "unsound, setting undef\n");
-    MI->getOperand(0).setReg(0);
-  }
 
   // Shrink subregister ranges if necessary.
   if (ShrinkMask.any()) {

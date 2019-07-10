@@ -24,12 +24,14 @@
 
 namespace llvm {
 /// Offsets of the 32-bit fields of bitstream wrapper header.
-static const unsigned BWH_MagicField = 0 * 4;
-static const unsigned BWH_VersionField = 1 * 4;
-static const unsigned BWH_OffsetField = 2 * 4;
-static const unsigned BWH_SizeField = 3 * 4;
-static const unsigned BWH_CPUTypeField = 4 * 4;
-static const unsigned BWH_HeaderSize = 5 * 4;
+enum BitstreamWrapperHeader : unsigned {
+  BWH_MagicField   = 0 * 4,
+  BWH_VersionField = 1 * 4,
+  BWH_OffsetField  = 2 * 4,
+  BWH_SizeField    = 3 * 4,
+  BWH_CPUTypeField = 4 * 4,
+  BWH_HeaderSize   = 5 * 4
+};
 
 namespace bitc {
   enum StandardWidths {

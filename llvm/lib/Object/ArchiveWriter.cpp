@@ -74,10 +74,11 @@ NewArchiveMember::getOldMember(const object::Archive::Child &OldMember,
 Expected<NewArchiveMember> NewArchiveMember::getFile(StringRef FileName,
                                                      bool Deterministic) {
   sys::fs::file_status Status;
-  int FD;
-  if (auto EC = sys::fs::openFileForRead(FileName, FD))
-    return errorCodeToError(EC);
-  assert(FD != -1);
+  auto FDOrErr = sys::fs::openNativeFileForRead(FileName);
+  if (!FDOrErr)
+    return FDOrErr.takeError();
+  sys::fs::file_t FD = *FDOrErr;
+  assert(FD != sys::fs::kInvalidFile);
 
   if (auto EC = sys::fs::status(FD, Status))
     return errorCodeToError(EC);
@@ -93,8 +94,8 @@ Expected<NewArchiveMember> NewArchiveMember::getFile(StringRef FileName,
   if (!MemberBufferOrErr)
     return errorCodeToError(MemberBufferOrErr.getError());
 
-  if (close(FD) != 0)
-    return errorCodeToError(std::error_code(errno, std::generic_category()));
+  if (auto EC = sys::fs::closeFile(FD))
+    return errorCodeToError(EC);
 
   NewArchiveMember M;
   M.Buf = std::move(*MemberBufferOrErr);

@@ -102,7 +102,7 @@ llvm::Expected<std::vector<TextEdit>> runRename(ClangdServer &Server,
                                                 PathRef File, Position Pos,
                                                 llvm::StringRef NewName) {
   llvm::Optional<llvm::Expected<std::vector<TextEdit>>> Result;
-  Server.rename(File, Pos, NewName, capture(Result));
+  Server.rename(File, Pos, NewName, /*WantFormat=*/true, capture(Result));
   return std::move(*Result);
 }
 

@@ -251,7 +251,8 @@ class isFloatType<ValueType SrcVT> {
     !if(!eq(SrcVT.Value, f32.Value), 1,
     !if(!eq(SrcVT.Value, f64.Value), 1,
     !if(!eq(SrcVT.Value, v2f16.Value), 1,
-    0))));
+    !if(!eq(SrcVT.Value, v4f16.Value), 1,
+    0)))));
 }
 
 class isIntType<ValueType SrcVT> {
@@ -265,8 +266,9 @@ class isIntType<ValueType SrcVT> {
 class isPackedType<ValueType SrcVT> {
   bit ret =
     !if(!eq(SrcVT.Value, v2i16.Value), 1,
-      !if(!eq(SrcVT.Value, v2f16.Value), 1, 0)
-    );
+      !if(!eq(SrcVT.Value, v2f16.Value), 1,
+        !if(!eq(SrcVT.Value, v4f16.Value), 1, 0)
+    ));
 }
 
 //===----------------------------------------------------------------------===//
@@ -929,6 +931,10 @@ def op_sel_hi : NamedOperandU32Default0<"OpSelHi", NamedMatchClass<"OpSelHi">>;
 def neg_lo : NamedOperandU32Default0<"NegLo", NamedMatchClass<"NegLo">>;
 def neg_hi : NamedOperandU32Default0<"NegHi", NamedMatchClass<"NegHi">>;
 
+def blgp : NamedOperandU32<"BLGP", NamedMatchClass<"BLGP">>;
+def cbsz : NamedOperandU32<"CBSZ", NamedMatchClass<"CBSZ">>;
+def abid : NamedOperandU32<"ABID", NamedMatchClass<"ABID">>;
+
 def hwreg : NamedOperandU16<"Hwreg", NamedMatchClass<"Hwreg", 0>>;
 
 def exp_tgt : NamedOperandU8<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
@@ -1284,11 +1290,12 @@ class getVALUDstForVT<ValueType VT> {
 class getIsFP<ValueType VT> {
   bit ret = !if(!eq(VT.Value, f16.Value), 1,
             !if(!eq(VT.Value, v2f16.Value), 1,
+            !if(!eq(VT.Value, v4f16.Value), 1,
             !if(!eq(VT.Value, f32.Value), 1,
             !if(!eq(VT.Value, v2f32.Value), 1,
             !if(!eq(VT.Value, f64.Value), 1,
             !if(!eq(VT.Value, v2f64.Value), 1,
-            0))))));
+            0)))))));
 }
 
 // Returns the register class to use for the destination of VOP[12C]
@@ -1312,7 +1319,10 @@ class getVOPSrc0ForVT<ValueType VT> {
             VSrc_f16,
             !if(!eq(VT.Value, v2f16.Value),
                VSrc_v2f16,
-               VSrc_f32
+               !if(!eq(VT.Value, v4f16.Value),
+                 AVSrc_64,
+                 VSrc_f32
+               )
             )
          )
        ),
@@ -1360,7 +1370,10 @@ class getVOP3SrcForVT<ValueType VT> {
                  VSrc_f16,
                  !if(!eq(VT.Value, v2f16.Value),
                     VSrc_v2f16,
-                    VSrc_f32
+                    !if(!eq(VT.Value, v4f16.Value),
+                      AVSrc_64,
+                      VSrc_f32
+                    )
                  )
               ),
               !if(!eq(VT.Value, i16.Value),
@@ -1993,6 +2006,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field bit HasExtSDWA9 = HasExt;
   field int NeedPatGen = PatGenMode.NoPattern;
 
+  field bit IsMAI = 0;
+
   field Operand Src0PackedMod = !if(HasSrc0FloatMods, PackedF16InputMods, PackedI16InputMods);
   field Operand Src1PackedMod = !if(HasSrc1FloatMods, PackedF16InputMods, PackedI16InputMods);
   field Operand Src2PackedMod = !if(HasSrc2FloatMods, PackedF16InputMods, PackedI16InputMods);
@@ -2129,6 +2144,20 @@ def VOP_V4I32_I64_I32_V4I32 : VOPProfile <[v4i32, i64, i32, v4i32]>;
 
 def VOP_F32_V2F16_V2F16_F32 : VOPProfile <[f32, v2f16, v2f16, f32]>;
 def VOP_I32_V2I16_V2I16_I32 : VOPProfile <[i32, v2i16, v2i16, i32]>;
+
+def VOP_V4F32_F32_F32_V4F32       : VOPProfile <[v4f32,  f32,   f32,   v4f32]>;
+def VOP_V16F32_F32_F32_V16F32     : VOPProfile <[v16f32, f32,   f32,   v16f32]>;
+// TODO: define v32f32
+def VOP_V32F32_F32_F32_V32F32     : VOPProfile <[v32i32, f32,   f32,   v32i32]>;
+def VOP_V4F32_V4F16_V4F16_V4F32   : VOPProfile <[v4f32,  v4f16, v4f16, v4f32]>;
+def VOP_V16F32_V4F16_V4F16_V16F32 : VOPProfile <[v16f32, v4f16, v4f16, v16f32]>;
+def VOP_V32F32_V4F16_V4F16_V32F32 : VOPProfile <[v32i32, v4f16, v4f16, v32i32]>;
+def VOP_V4F32_V2I16_V2I16_V4F32   : VOPProfile <[v4f32,  v2i16, v2i16, v4f32]>;
+def VOP_V16F32_V2I16_V2I16_V16F32 : VOPProfile <[v16f32, v2i16, v2i16, v16f32]>;
+def VOP_V32F32_V2I16_V2I16_V32F32 : VOPProfile <[v32i32, v2i16, v2i16, v32i32]>;
+def VOP_V4I32_I32_I32_V4I32       : VOPProfile <[v4i32,  i32,   i32,   v4i32]>;
+def VOP_V16I32_I32_I32_V16I32     : VOPProfile <[v16i32, i32,   i32,   v16i32]>;
+def VOP_V32I32_I32_I32_V32I32     : VOPProfile <[v32i32, i32,   i32,   v32i32]>;
 
 class Commutable_REV <string revOp, bit isOrig> {
   string RevOp = revOp;

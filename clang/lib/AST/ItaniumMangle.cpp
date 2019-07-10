@@ -2608,30 +2608,19 @@ void CXXNameMangler::mangleType(const BuiltinType *T) {
     Out << 'd';
     break;
   case BuiltinType::LongDouble: {
-    bool UseFloat128Mangling =
-        getASTContext().getTargetInfo().useFloat128ManglingForLongDouble();
-    if (getASTContext().getLangOpts().OpenMP &&
-        getASTContext().getLangOpts().OpenMPIsDevice) {
-      UseFloat128Mangling = getASTContext()
-                                .getAuxTargetInfo()
-                                ->useFloat128ManglingForLongDouble();
-    }
-    Out << (UseFloat128Mangling ? 'g' : 'e');
+    const TargetInfo *TI = getASTContext().getLangOpts().OpenMP &&
+                                   getASTContext().getLangOpts().OpenMPIsDevice
+                               ? getASTContext().getAuxTargetInfo()
+                               : &getASTContext().getTargetInfo();
+    Out << TI->getLongDoubleMangling();
     break;
   }
   case BuiltinType::Float128: {
-    bool UseFloat128Mangling =
-        getASTContext().getTargetInfo().useFloat128ManglingForLongDouble();
-    if (getASTContext().getLangOpts().OpenMP &&
-        getASTContext().getLangOpts().OpenMPIsDevice) {
-      UseFloat128Mangling = getASTContext()
-                                .getAuxTargetInfo()
-                                ->useFloat128ManglingForLongDouble();
-    }
-    if (UseFloat128Mangling)
-      Out << "U10__float128"; // Match the GCC mangling
-    else
-      Out << 'g';
+    const TargetInfo *TI = getASTContext().getLangOpts().OpenMP &&
+                                   getASTContext().getLangOpts().OpenMPIsDevice
+                               ? getASTContext().getAuxTargetInfo()
+                               : &getASTContext().getTargetInfo();
+    Out << TI->getFloat128Mangling();
     break;
   }
   case BuiltinType::NullPtr:

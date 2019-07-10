@@ -355,10 +355,9 @@ public:
         Twine(EntryPath), FD, sys::fs::OF_UpdateAtime, &ResultPath);
     if (EC)
       return EC;
-    ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-        MemoryBuffer::getOpenFile(FD, EntryPath,
-                                  /*FileSize*/ -1,
-                                  /*RequiresNullTerminator*/ false);
+    ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr = MemoryBuffer::getOpenFile(
+        sys::fs::convertFDToNativeFile(FD), EntryPath,
+        /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
     close(FD);
     return MBOrErr;
   }

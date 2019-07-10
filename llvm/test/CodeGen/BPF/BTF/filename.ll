@@ -23,41 +23,45 @@ define dso_local i32 @test() local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_FUNC_PROTO(id = 1)
 ; CHECK-NEXT:        .long   218103808               # 0xd000000
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   26                      # BTF_KIND_INT(id = 2)
+; CHECK-NEXT:        .long   1                       # BTF_KIND_INT(id = 2)
 ; CHECK-NEXT:        .long   16777216                # 0x1000000
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   16777248                # 0x1000020
-; CHECK-NEXT:        .long   30                      # BTF_KIND_FUNC(id = 3)
+; CHECK-NEXT:        .long   5                       # BTF_KIND_FUNC(id = 3)
 ; CHECK-NEXT:        .long   201326592               # 0xc000000
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .byte   0                       # string offset=0
-; CHECK-NEXT:        .ascii  ".text"                 # string offset=1
+; CHECK-NEXT:        .ascii  "int"                   # string offset=1
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "/home/yhs/ttmp/t.c"    # string offset=7
+; CHECK-NEXT:        .ascii  "test"                  # string offset=5
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "int"                   # string offset=26
+; CHECK-NEXT:        .ascii  ".text"                 # string offset=10
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "test"                  # string offset=30
+; CHECK-NEXT:        .ascii  "/home/yhs/ttmp/t.c"    # string offset=16
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .section        .BTF.ext,"",@progbits
 ; CHECK-NEXT:        .short  60319                   # 0xeb9f
 ; CHECK-NEXT:        .byte   1
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .long   24
+; CHECK-NEXT:        .long   40
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   28
+; CHECK-NEXT:        .long   48
+; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   48
+; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   8                       # FuncInfo
-; CHECK-NEXT:        .long   1                       # FuncInfo section string offset=1
+; CHECK-NEXT:        .long   10                      # FuncInfo section string offset=10
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   .Lfunc_begin{{[0-9]+}}
 ; CHECK-NEXT:        .long   3
 ; CHECK-NEXT:        .long   16                      # LineInfo
-; CHECK-NEXT:        .long   1                       # LineInfo section string offset=1
+; CHECK-NEXT:        .long   10                      # LineInfo section string offset=10
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
-; CHECK-NEXT:        .long   7
+; CHECK-NEXT:        .long   16
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   1038                    # Line 1 Col 14
 

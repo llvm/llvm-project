@@ -14,6 +14,7 @@
 #include "GlobalCompilationDatabase.h"
 #include "SourceCode.h"
 #include "Threading.h"
+#include "index/BackgroundRebuild.h"
 #include "index/FileIndex.h"
 #include "index/Index.h"
 #include "index/Serialization.h"
@@ -71,7 +72,6 @@ public:
       Context BackgroundContext, const FileSystemProvider &,
       const GlobalCompilationDatabase &CDB,
       BackgroundIndexStorage::Factory IndexStorageFactory,
-      size_t BuildIndexPeriodMs = 0,
       size_t ThreadPoolSize = llvm::heavyweight_hardware_concurrency());
   ~BackgroundIndex(); // Blocks while the current task finishes.
 
@@ -114,13 +114,11 @@ private:
   // index state
   llvm::Error index(tooling::CompileCommand,
                     BackgroundIndexStorage *IndexStorage);
-  void buildIndex(); // Rebuild index periodically every BuildIndexPeriodMs.
-  const size_t BuildIndexPeriodMs;
-  std::atomic<bool> SymbolsUpdatedSinceLastIndex;
   std::mutex IndexMu;
   std::condition_variable IndexCV;
 
   FileSymbols IndexedSymbols;
+  BackgroundIndexRebuilder Rebuilder;
   llvm::StringMap<ShardVersion> ShardVersions; // Key is absolute file path.
   std::mutex ShardVersionsMu;
 

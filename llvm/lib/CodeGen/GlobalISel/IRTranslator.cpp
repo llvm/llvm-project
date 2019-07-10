@@ -1222,6 +1222,14 @@ unsigned IRTranslator::getSimpleIntrinsicOpcode(Intrinsic::ID ID) {
       return TargetOpcode::G_FABS;
     case Intrinsic::copysign:
       return TargetOpcode::G_FCOPYSIGN;
+    case Intrinsic::minnum:
+      return TargetOpcode::G_FMINNUM;
+    case Intrinsic::maxnum:
+      return TargetOpcode::G_FMAXNUM;
+    case Intrinsic::minimum:
+      return TargetOpcode::G_FMINIMUM;
+    case Intrinsic::maximum:
+      return TargetOpcode::G_FMAXIMUM;
     case Intrinsic::canonicalize:
       return TargetOpcode::G_FCANONICALIZE;
     case Intrinsic::floor:

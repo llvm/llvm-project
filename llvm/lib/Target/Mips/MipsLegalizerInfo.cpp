@@ -55,7 +55,7 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder(G_SELECT)
-      .legalForCartesianProduct({p0, s32}, {s32})
+      .legalForCartesianProduct({p0, s32, s64}, {s32})
       .minScalar(0, s32)
       .minScalar(1, s32);
 
@@ -64,7 +64,7 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder(G_PHI)
-      .legalFor({p0, s32})
+      .legalFor({p0, s32, s64})
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder({G_AND, G_OR, G_XOR})

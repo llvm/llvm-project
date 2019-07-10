@@ -44,6 +44,9 @@ class AMDGPURegisterBankInfo : public AMDGPUGenRegisterBankInfo {
 
   void constrainOpWithReadfirstlane(MachineInstr &MI, MachineRegisterInfo &MRI,
                                     unsigned OpIdx) const;
+  bool applyMappingWideLoad(MachineInstr &MI,
+                            const AMDGPURegisterBankInfo::OperandsMapper &OpdMapper,
+                            MachineRegisterInfo &MRI) const;
 
   /// See RegisterBankInfo::applyMapping.
   void applyMappingImpl(const OperandsMapper &OpdMapper) const override;

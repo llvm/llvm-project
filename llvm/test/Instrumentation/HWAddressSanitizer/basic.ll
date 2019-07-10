@@ -27,10 +27,34 @@ define i8 @test_load8(i8* %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; RECOVER: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; RECOVER: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
-; RECOVER: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
+; RECOVER: br i1 %[[F]], label %[[MISMATCH:[0-9]*]], label %[[CONT:[0-9]*]], !prof {{.*}}
 
+; RECOVER: [[MISMATCH]]:
+; RECOVER: %[[NOTSHORT:[^ ]*]] = icmp ugt i8 %[[MEMTAG]], 15
+; RECOVER: br i1 %[[NOTSHORT]], label %[[FAIL:[0-9]*]], label %[[SHORT:[0-9]*]], !prof {{.*}}
+
+; RECOVER: [[FAIL]]:
 ; RECOVER: call void asm sideeffect "brk #2336", "{x0}"(i64 %[[A]])
 ; RECOVER: br label
+
+; RECOVER: [[SHORT]]:
+; RECOVER: %[[LOWBITS:[^ ]*]] = and i64 %[[A]], 15
+; RECOVER: %[[LOWBITS_I8:[^ ]*]] = trunc i64 %[[LOWBITS]] to i8
+; RECOVER: %[[LAST:[^ ]*]] = add i8 %[[LOWBITS_I8]], 0
+; RECOVER: %[[OOB:[^ ]*]] = icmp uge i8 %[[LAST]], %[[MEMTAG]]
+; RECOVER: br i1 %[[OOB]], label %[[FAIL]], label %[[INBOUNDS:[0-9]*]], !prof {{.*}}
+
+; RECOVER: [[INBOUNDS]]:
+; RECOVER: %[[EOG_ADDR:[^ ]*]] = or i64 %[[C]], 15
+; RECOVER: %[[EOG_PTR:[^ ]*]] = inttoptr i64 %[[EOG_ADDR]] to i8*
+; RECOVER: %[[EOGTAG:[^ ]*]] = load i8, i8* %[[EOG_PTR]]
+; RECOVER: %[[EOG_MISMATCH:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[EOGTAG]]
+; RECOVER: br i1 %[[EOG_MISMATCH]], label %[[FAIL]], label %[[CONT1:[0-9]*]], !prof {{.*}}
+
+; RECOVER: [[CONT1]]:
+; RECOVER: br label %[[CONT]]
+
+; RECOVER: [[CONT]]:
 
 ; ABORT-DYNAMIC-SHADOW: call void @llvm.hwasan.check.memaccess(i8* %.hwasan.shadow, i8* %a, i32 0)
 ; ABORT-ZERO-BASED-SHADOW: call void @llvm.hwasan.check.memaccess(i8* null, i8* %a, i32 0)
@@ -54,10 +78,34 @@ define i16 @test_load16(i16* %a) sanitize_hwaddress {
 ; RECOVER-ZERO-BASED-SHADOW: %[[E:[^ ]*]] = inttoptr i64 %[[D]] to i8*
 ; RECOVER: %[[MEMTAG:[^ ]*]] = load i8, i8* %[[E]]
 ; RECOVER: %[[F:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[MEMTAG]]
-; RECOVER: br i1 %[[F]], label {{.*}}, label {{.*}}, !prof {{.*}}
+; RECOVER: br i1 %[[F]], label %[[MISMATCH:[0-9]*]], label %[[CONT:[0-9]*]], !prof {{.*}}
 
+; RECOVER: [[MISMATCH]]:
+; RECOVER: %[[NOTSHORT:[^ ]*]] = icmp ugt i8 %[[MEMTAG]], 15
+; RECOVER: br i1 %[[NOTSHORT]], label %[[FAIL:[0-9]*]], label %[[SHORT:[0-9]*]], !prof {{.*}}
+
+; RECOVER: [[FAIL]]:
 ; RECOVER: call void asm sideeffect "brk #2337", "{x0}"(i64 %[[A]])
 ; RECOVER: br label
+
+; RECOVER: [[SHORT]]:
+; RECOVER: %[[LOWBITS:[^ ]*]] = and i64 %[[A]], 15
+; RECOVER: %[[LOWBITS_I8:[^ ]*]] = trunc i64 %[[LOWBITS]] to i8
+; RECOVER: %[[LAST:[^ ]*]] = add i8 %[[LOWBITS_I8]], 1
+; RECOVER: %[[OOB:[^ ]*]] = icmp uge i8 %[[LAST]], %[[MEMTAG]]
+; RECOVER: br i1 %[[OOB]], label %[[FAIL]], label %[[INBOUNDS:[0-9]*]], !prof {{.*}}
+
+; RECOVER: [[INBOUNDS]]:
+; RECOVER: %[[EOG_ADDR:[^ ]*]] = or i64 %[[C]], 15
+; RECOVER: %[[EOG_PTR:[^ ]*]] = inttoptr i64 %[[EOG_ADDR]] to i8*
+; RECOVER: %[[EOGTAG:[^ ]*]] = load i8, i8* %[[EOG_PTR]]
+; RECOVER: %[[EOG_MISMATCH:[^ ]*]] = icmp ne i8 %[[PTRTAG]], %[[EOGTAG]]
+; RECOVER: br i1 %[[EOG_MISMATCH]], label %[[FAIL]], label %[[CONT1:[0-9]*]], !prof {{.*}}
+
+; RECOVER: [[CONT1]]:
+; RECOVER: br label %[[CONT]]
+
+; RECOVER: [[CONT]]:
 
 ; ABORT: %[[A:[^ ]*]] = bitcast i16* %a to i8*
 ; ABORT-DYNAMIC-SHADOW: call void @llvm.hwasan.check.memaccess(i8* %.hwasan.shadow, i8* %[[A]], i32 1)

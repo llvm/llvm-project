@@ -326,14 +326,8 @@ public:
 
   void emit(AsmPrinter *Asm) const override;
 
-#ifndef _MSC_VER
-  // The line below is rejected by older versions (TBD) of MSVC.
   static constexpr Atom Atoms[] = {
       Atom(dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4)};
-#else
-  // FIXME: Erase this path once the minimum MSCV version has been bumped.
-  static const SmallVector<Atom, 4> Atoms;
-#endif
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override;
@@ -351,16 +345,10 @@ public:
 
   void emit(AsmPrinter *Asm) const override;
 
-#ifndef _MSC_VER
-  // The line below is rejected by older versions (TBD) of MSVC.
   static constexpr Atom Atoms[] = {
       Atom(dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4),
       Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
       Atom(dwarf::DW_ATOM_type_flags, dwarf::DW_FORM_data1)};
-#else
-  // FIXME: Erase this path once the minimum MSCV version has been bumped.
-  static const SmallVector<Atom, 4> Atoms;
-#endif
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override;
@@ -375,14 +363,8 @@ public:
 
   void emit(AsmPrinter *Asm) const override;
 
-#ifndef _MSC_VER
-  // The line below is rejected by older versions (TBD) of MSVC.
   static constexpr Atom Atoms[] = {
       Atom(dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4)};
-#else
-  // FIXME: Erase this path once the minimum MSCV version has been bumped.
-  static const SmallVector<Atom, 4> Atoms;
-#endif
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override;
@@ -406,16 +388,10 @@ public:
 
   void emit(AsmPrinter *Asm) const override;
 
-#ifndef _MSC_VER
-  // The line below is rejected by older versions (TBD) of MSVC.
   static constexpr Atom Atoms[] = {
       Atom(dwarf::DW_ATOM_die_offset, dwarf::DW_FORM_data4),
       Atom(dwarf::DW_ATOM_die_tag, dwarf::DW_FORM_data2),
       Atom(5, dwarf::DW_FORM_data1), Atom(6, dwarf::DW_FORM_data4)};
-#else
-  // FIXME: Erase this path once the minimum MSCV version has been bumped.
-  static const SmallVector<Atom, 4> Atoms;
-#endif
 
 #ifndef NDEBUG
   void print(raw_ostream &OS) const override;

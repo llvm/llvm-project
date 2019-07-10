@@ -66,6 +66,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
     // XCOFF format
     if (startswith(Magic, "\x01\xDF"))
       return file_magic::xcoff_object_32;
+    if (startswith(Magic, "\x01\xF7"))
+      return file_magic::xcoff_object_64;
     break;
 
   case 0xDE: // 0x0B17C0DE = BC wraper

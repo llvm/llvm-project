@@ -134,6 +134,27 @@ TEST(ClangdUnitTest, TokensAfterPreamble) {
   EXPECT_EQ(Spelled.back().text(SM), "last_token");
 }
 
+
+TEST(ClangdUnitTest, NoCrashOnTokensWithTidyCheck) {
+  TestTU TU;
+  // this check runs the preprocessor, we need to make sure it does not break
+  // our recording logic.
+  TU.ClangTidyChecks = "modernize-use-trailing-return-type";
+  TU.Code = "inline int foo() {}";
+
+  auto AST = TU.build();
+  const syntax::TokenBuffer &T = AST.getTokens();
+  const auto &SM = AST.getSourceManager();
+
+  ASSERT_GT(T.expandedTokens().size(), 7u);
+  // Check first token after the preamble.
+  EXPECT_EQ(T.expandedTokens().front().text(SM), "inline");
+  // Last token is always 'eof'.
+  EXPECT_EQ(T.expandedTokens().back().kind(), tok::eof);
+  // Check the token before 'eof'.
+  EXPECT_EQ(T.expandedTokens().drop_back().back().text(SM), "}");
+}
+
 } // namespace
 } // namespace clangd
 } // namespace clang

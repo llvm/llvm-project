@@ -97,21 +97,21 @@ protected:
 class ImportSection : public SyntheticSection {
 public:
   ImportSection() : SyntheticSection(llvm::wasm::WASM_SEC_IMPORT) {}
-  bool isNeeded() const override { return numImports() > 0; }
+  bool isNeeded() const override { return getNumImports() > 0; }
   void writeBody() override;
   void addImport(Symbol *Sym);
   void addGOTEntry(Symbol *Sym);
   void seal() { IsSealed = true; }
-  uint32_t numImports() const;
-  uint32_t numImportedGlobals() const {
+  uint32_t getNumImports() const;
+  uint32_t getNumImportedGlobals() const {
     assert(IsSealed);
     return NumImportedGlobals;
   }
-  uint32_t numImportedFunctions() const {
+  uint32_t getNumImportedFunctions() const {
     assert(IsSealed);
     return NumImportedFunctions;
   }
-  uint32_t numImportedEvents() const {
+  uint32_t getNumImportedEvents() const {
     assert(IsSealed);
     return NumImportedEvents;
   }
@@ -306,7 +306,7 @@ public:
   RelocSection(StringRef Name, OutputSection *Sec)
       : SyntheticSection(llvm::wasm::WASM_SEC_CUSTOM, Name), Sec(Sec) {}
   void writeBody() override;
-  bool isNeeded() const override { return Sec->numRelocations() > 0; };
+  bool isNeeded() const override { return Sec->getNumRelocations() > 0; };
 
 protected:
   OutputSection *Sec;

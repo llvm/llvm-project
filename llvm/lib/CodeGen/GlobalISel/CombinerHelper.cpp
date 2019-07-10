@@ -342,6 +342,68 @@ void CombinerHelper::applyCombineExtendingLoads(MachineInstr &MI,
   Observer.changedInstr(MI);
 }
 
+bool CombinerHelper::matchCombineBr(MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_BR && "Expected a G_BR");
+  // Try to match the following:
+  // bb1:
+  //   %c(s32) = G_ICMP pred, %a, %b
+  //   %c1(s1) = G_TRUNC %c(s32)
+  //   G_BRCOND %c1, %bb2
+  //   G_BR %bb3
+  // bb2:
+  // ...
+  // bb3:
+
+  // The above pattern does not have a fall through to the successor bb2, always
+  // resulting in a branch no matter which path is taken. Here we try to find
+  // and replace that pattern with conditional branch to bb3 and otherwise
+  // fallthrough to bb2.
+
+  MachineBasicBlock *MBB = MI.getParent();
+  MachineBasicBlock::iterator BrIt(MI);
+  if (BrIt == MBB->begin())
+    return false;
+  assert(std::next(BrIt) == MBB->end() && "expected G_BR to be a terminator");
+
+  MachineInstr *BrCond = &*std::prev(BrIt);
+  if (BrCond->getOpcode() != TargetOpcode::G_BRCOND)
+    return false;
+
+  // Check that the next block is the conditional branch target.
+  if (!MBB->isLayoutSuccessor(BrCond->getOperand(1).getMBB()))
+    return false;
+
+  MachineInstr *CmpMI = MRI.getVRegDef(BrCond->getOperand(0).getReg());
+  if (!CmpMI || CmpMI->getOpcode() != TargetOpcode::G_ICMP ||
+      !MRI.hasOneUse(CmpMI->getOperand(0).getReg()))
+    return false;
+  return true;
+}
+
+bool CombinerHelper::tryCombineBr(MachineInstr &MI) {
+  if (!matchCombineBr(MI))
+    return false;
+  MachineBasicBlock *BrTarget = MI.getOperand(0).getMBB();
+  MachineBasicBlock::iterator BrIt(MI);
+  MachineInstr *BrCond = &*std::prev(BrIt);
+  MachineInstr *CmpMI = MRI.getVRegDef(BrCond->getOperand(0).getReg());
+
+  CmpInst::Predicate InversePred = CmpInst::getInversePredicate(
+      (CmpInst::Predicate)CmpMI->getOperand(1).getPredicate());
+
+  // Invert the G_ICMP condition.
+  Observer.changingInstr(*CmpMI);
+  CmpMI->getOperand(1).setPredicate(InversePred);
+  Observer.changedInstr(*CmpMI);
+
+  // Change the conditional branch target.
+  Observer.changingInstr(*BrCond);
+  BrCond->getOperand(1).setMBB(BrTarget);
+  Observer.changedInstr(*BrCond);
+  MI.eraseFromParent();
+  return true;
+}
+
 bool CombinerHelper::tryCombine(MachineInstr &MI) {
   if (tryCombineCopy(MI))
     return true;
