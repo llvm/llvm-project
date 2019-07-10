@@ -262,7 +262,14 @@ static bool isQuoteCppDigitSeparator(const char *const Start,
   if (Start == Cur)
     return false;
   // The previous character must be a valid PP number character.
-  if (!isPreprocessingNumberBody(*(Cur - 1)))
+  // Make sure that the L, u, U, u8 prefixes don't get marked as a
+  // separator though.
+  char Prev = *(Cur - 1);
+  if (Prev == 'L' || Prev == 'U' || Prev == 'u')
+    return false;
+  if (Prev == '8' && (Cur - 1 != Start) && *(Cur - 2) == 'u')
+    return false;
+  if (!isPreprocessingNumberBody(Prev))
     return false;
   // The next character should be a valid identifier body character.
   return (Cur + 1) < End && isIdentifierBody(*(Cur + 1));
