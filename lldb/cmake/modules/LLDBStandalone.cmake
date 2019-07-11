@@ -50,33 +50,26 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   find_program(lit_full_path ${lit_file_name} ${config_dirs} NO_DEFAULT_PATH)
   set(LLVM_DEFAULT_EXTERNAL_LIT ${lit_full_path} CACHE PATH "Path to llvm-lit")
 
-  if(LLVM_TABLEGEN)
-    set(LLVM_TABLEGEN_EXE ${LLVM_TABLEGEN})
-  else()
-    if(CMAKE_CROSSCOMPILING)
-      set(LLVM_NATIVE_BUILD "${LLDB_PATH_TO_LLVM_BUILD}/NATIVE")
-      if (NOT EXISTS "${LLVM_NATIVE_BUILD}")
-        message(FATAL_ERROR
-          "Attempting to cross-compile LLDB standalone but no native LLVM build
-          found. Please cross-compile LLVM as well.")
-      endif()
+  if(CMAKE_CROSSCOMPILING)
+    set(LLVM_NATIVE_BUILD "${LLDB_PATH_TO_LLVM_BUILD}/NATIVE")
+    if (NOT EXISTS "${LLVM_NATIVE_BUILD}")
+      message(FATAL_ERROR
+        "Attempting to cross-compile LLDB standalone but no native LLVM build
+        found. Please cross-compile LLVM as well.")
+    endif()
 
-      if (CMAKE_HOST_SYSTEM_NAME MATCHES "Windows")
-        set(HOST_EXECUTABLE_SUFFIX ".exe")
-      endif()
+    if (CMAKE_HOST_SYSTEM_NAME MATCHES "Windows")
+      set(HOST_EXECUTABLE_SUFFIX ".exe")
+    endif()
 
-      if (NOT CMAKE_CONFIGURATION_TYPES)
-        set(LLVM_TABLEGEN_EXE
-          "${LLVM_NATIVE_BUILD}/bin/llvm-tblgen${HOST_EXECUTABLE_SUFFIX}")
-      else()
-        # NOTE: LLVM NATIVE build is always built Release, as is specified in
-        # CrossCompile.cmake
-        set(LLVM_TABLEGEN_EXE
-          "${LLVM_NATIVE_BUILD}/Release/bin/llvm-tblgen${HOST_EXECUTABLE_SUFFIX}")
-      endif()
+    if (NOT CMAKE_CONFIGURATION_TYPES)
+      set(LLVM_TABLEGEN_EXE
+        "${LLVM_NATIVE_BUILD}/bin/llvm-tblgen${HOST_EXECUTABLE_SUFFIX}")
     else()
-      find_program(LLVM_TABLEGEN_EXE "llvm-tblgen" ${LLVM_TOOLS_BINARY_DIR}
-        NO_DEFAULT_PATH)
+      # NOTE: LLVM NATIVE build is always built Release, as is specified in
+      # CrossCompile.cmake
+      set(LLVM_TABLEGEN_EXE
+        "${LLVM_NATIVE_BUILD}/Release/bin/llvm-tblgen${HOST_EXECUTABLE_SUFFIX}")
     endif()
   else()
     set(tblgen_file_name "llvm-tblgen${CMAKE_EXECUTABLE_SUFFIX}")
