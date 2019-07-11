@@ -107,14 +107,29 @@ exit:
   ret void
 }
 
-; The 1st load can trap, so the 2nd and 3rd may never execute.
+; The volatile load can't be used to prove a non-volatile access is allowed.
+; The 2nd and 3rd loads may never execute.
 
-define void @volatile_can_trap(i16* %ptr) {
-; CHECK-LABEL: @volatile_can_trap(i16* %ptr)
+define void @volatile_is_not_dereferenceable(i16* %ptr) {
+; CHECK-LABEL: @volatile_is_not_dereferenceable(i16* %ptr)
   %arrayidx0 = getelementptr i16, i16* %ptr, i64 0
   %arrayidx1 = getelementptr i16, i16* %ptr, i64 1
   %arrayidx2 = getelementptr i16, i16* %ptr, i64 2
   %t0 = load volatile i16, i16* %arrayidx0
+  %t1 = load i16, i16* %arrayidx1
+  %t2 = load i16, i16* %arrayidx2
+  ret void
+}
+
+declare void @may_not_return()
+
+define void @not_guaranteed_to_transfer_execution(i16* %ptr) {
+; CHECK-LABEL: @not_guaranteed_to_transfer_execution(i16* %ptr)
+  %arrayidx0 = getelementptr i16, i16* %ptr, i64 0
+  %arrayidx1 = getelementptr i16, i16* %ptr, i64 1
+  %arrayidx2 = getelementptr i16, i16* %ptr, i64 2
+  %t0 = load i16, i16* %arrayidx0
+  call void @may_not_return()
   %t1 = load i16, i16* %arrayidx1
   %t2 = load i16, i16* %arrayidx2
   ret void
@@ -239,5 +254,25 @@ define void @negative_offset(i32* %arg) {
   %arrayidx1 = getelementptr float, float* %ptr, i64 -1
   %t0 = load float, float* %arrayidx0
   %t1 = load float, float* %arrayidx1
+  ret void
+}
+
+define void @stores(i32* %arg) {
+; CHECK-LABEL: @stores(i32* %arg)
+  %ptr = bitcast i32* %arg to float*
+  %arrayidx0 = getelementptr float, float* %ptr, i64 0
+  %arrayidx1 = getelementptr float, float* %ptr, i64 1
+  store float 1.0, float* %arrayidx0
+  store float 2.0, float* %arrayidx1
+  ret void
+}
+
+define void @load_store(i32* %arg) {
+; CHECK-LABEL: @load_store(i32* %arg)
+  %ptr = bitcast i32* %arg to float*
+  %arrayidx0 = getelementptr float, float* %ptr, i64 0
+  %arrayidx1 = getelementptr float, float* %ptr, i64 1
+  %t1 = load float, float* %arrayidx0
+  store float 2.0, float* %arrayidx1
   ret void
 }

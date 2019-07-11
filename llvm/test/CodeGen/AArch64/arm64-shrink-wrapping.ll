@@ -1037,15 +1037,14 @@ define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, 
 ; ENABLE-NEXT:    lsl w8, w0, w1
 ; ENABLE-NEXT:    lsl w9, w1, w0
 ; ENABLE-NEXT:    lsr w10, w0, w1
-; ENABLE-NEXT:    lsr w11, w1, w0
-; ENABLE-NEXT:    add w12, w1, w0
-; ENABLE-NEXT:    sub w13, w1, w0
-; ENABLE-NEXT:    cmp w0, w1
-; ENABLE-NEXT:    add w17, w8, w9
-; ENABLE-NEXT:    sub w16, w9, w10
-; ENABLE-NEXT:    add w15, w10, w11
-; ENABLE-NEXT:    add w14, w11, w12
-; ENABLE-NEXT:    b.ge LBB14_2
+; ENABLE-NEXT:    lsr w12, w1, w0
+; ENABLE-NEXT:    add w15, w1, w0
+; ENABLE-NEXT:    subs w17, w1, w0
+; ENABLE-NEXT:    sub w11, w9, w10
+; ENABLE-NEXT:    add w16, w8, w9
+; ENABLE-NEXT:    add w13, w10, w12
+; ENABLE-NEXT:    add w14, w12, w15
+; ENABLE-NEXT:    b.le LBB14_2
 ; ENABLE-NEXT:  ; %bb.1: ; %true
 ; ENABLE-NEXT:    str w0, [sp]
 ; ENABLE-NEXT:    ; InlineAsm Start
@@ -1055,12 +1054,12 @@ define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, 
 ; ENABLE-NEXT:    str w8, [x2]
 ; ENABLE-NEXT:    str w9, [x3]
 ; ENABLE-NEXT:    str w10, [x4]
-; ENABLE-NEXT:    str w11, [x5]
-; ENABLE-NEXT:    str w12, [x6]
-; ENABLE-NEXT:    str w13, [x7]
+; ENABLE-NEXT:    str w12, [x5]
+; ENABLE-NEXT:    str w15, [x6]
+; ENABLE-NEXT:    str w17, [x7]
 ; ENABLE-NEXT:    stp w0, w1, [x2, #4]
-; ENABLE-NEXT:    stp w17, w16, [x2, #12]
-; ENABLE-NEXT:    stp w15, w14, [x2, #20]
+; ENABLE-NEXT:    stp w16, w11, [x2, #12]
+; ENABLE-NEXT:    stp w13, w14, [x2, #20]
 ; ENABLE-NEXT:    sub sp, x29, #80 ; =80
 ; ENABLE-NEXT:    ldp x29, x30, [sp, #80] ; 16-byte Folded Reload
 ; ENABLE-NEXT:    ldp x20, x19, [sp, #64] ; 16-byte Folded Reload
@@ -1097,15 +1096,14 @@ define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, 
 ; DISABLE-NEXT:    lsl w8, w0, w1
 ; DISABLE-NEXT:    lsl w9, w1, w0
 ; DISABLE-NEXT:    lsr w10, w0, w1
-; DISABLE-NEXT:    lsr w11, w1, w0
-; DISABLE-NEXT:    add w12, w1, w0
-; DISABLE-NEXT:    sub w13, w1, w0
-; DISABLE-NEXT:    cmp w0, w1
-; DISABLE-NEXT:    add w17, w8, w9
-; DISABLE-NEXT:    sub w16, w9, w10
-; DISABLE-NEXT:    add w15, w10, w11
-; DISABLE-NEXT:    add w14, w11, w12
-; DISABLE-NEXT:    b.ge LBB14_2
+; DISABLE-NEXT:    lsr w12, w1, w0
+; DISABLE-NEXT:    add w15, w1, w0
+; DISABLE-NEXT:    subs w17, w1, w0
+; DISABLE-NEXT:    sub w11, w9, w10
+; DISABLE-NEXT:    add w16, w8, w9
+; DISABLE-NEXT:    add w13, w10, w12
+; DISABLE-NEXT:    add w14, w12, w15
+; DISABLE-NEXT:    b.le LBB14_2
 ; DISABLE-NEXT:  ; %bb.1: ; %true
 ; DISABLE-NEXT:    str w0, [sp]
 ; DISABLE-NEXT:    ; InlineAsm Start
@@ -1115,12 +1113,12 @@ define void @stack_realign2(i32 %a, i32 %b, i32* %ptr1, i32* %ptr2, i32* %ptr3, 
 ; DISABLE-NEXT:    str w8, [x2]
 ; DISABLE-NEXT:    str w9, [x3]
 ; DISABLE-NEXT:    str w10, [x4]
-; DISABLE-NEXT:    str w11, [x5]
-; DISABLE-NEXT:    str w12, [x6]
-; DISABLE-NEXT:    str w13, [x7]
+; DISABLE-NEXT:    str w12, [x5]
+; DISABLE-NEXT:    str w15, [x6]
+; DISABLE-NEXT:    str w17, [x7]
 ; DISABLE-NEXT:    stp w0, w1, [x2, #4]
-; DISABLE-NEXT:    stp w17, w16, [x2, #12]
-; DISABLE-NEXT:    stp w15, w14, [x2, #20]
+; DISABLE-NEXT:    stp w16, w11, [x2, #12]
+; DISABLE-NEXT:    stp w13, w14, [x2, #20]
 ; DISABLE-NEXT:    sub sp, x29, #80 ; =80
 ; DISABLE-NEXT:    ldp x29, x30, [sp, #80] ; 16-byte Folded Reload
 ; DISABLE-NEXT:    ldp x20, x19, [sp, #64] ; 16-byte Folded Reload

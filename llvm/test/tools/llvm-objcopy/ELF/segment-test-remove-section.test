@@ -46,7 +46,7 @@ ProgramHeaders:
 # Make sure that when we remove a section we overwrite it with zeros
 # DATA: {{^[^[:blank:]]+}} 00 00 00 00
 
-#CHECK: SectionHeaderCount: 4
+#CHECK: SectionHeaderCount: 6
 
 # CHECK: Sections [
 # CHECK:   Section {
@@ -97,6 +97,34 @@ ProgramHeaders:
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Section {
 # CHECK-NEXT:     Index: 3
+# CHECK-NEXT:     Name: .symtab
+# CHECK-NEXT:     Type: SHT_SYMTAB (0x2)
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address: 0x0
+# CHECK-NEXT:     Offset:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Link: 4
+# CHECK-NEXT:     Info: 1
+# CHECK-NEXT:     AddressAlignment: 8
+# CHECK-NEXT:     EntrySize: 24
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 4
+# CHECK-NEXT:     Name: .strtab
+# CHECK-NEXT:     Type: SHT_STRTAB (0x3)
+# CHECK-NEXT:     Flags [ (0x0)
+# CHECK-NEXT:     ]
+# CHECK-NEXT:     Address: 0x0
+# CHECK-NEXT:     Offset:
+# CHECK-NEXT:     Size:
+# CHECK-NEXT:     Link: 0
+# CHECK-NEXT:     Info: 0
+# CHECK-NEXT:     AddressAlignment: 1
+# CHECK-NEXT:     EntrySize: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Section {
+# CHECK-NEXT:     Index: 5
 # CHECK-NEXT:     Name: .shstrtab
 # CHECK-NEXT:     Type: SHT_STRTAB (0x3)
 # CHECK-NEXT:     Flags [ (0x0)

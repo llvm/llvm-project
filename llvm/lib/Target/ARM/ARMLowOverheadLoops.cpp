@@ -54,6 +54,12 @@ namespace {
 
     bool ProcessLoop(MachineLoop *ML);
 
+    void RevertWhile(MachineInstr *MI) const;
+
+    void RevertLoopDec(MachineInstr *MI) const;
+
+    void RevertLoopEnd(MachineInstr *MI) const;
+
     void Expand(MachineLoop *ML, MachineInstr *Start,
                 MachineInstr *Dec, MachineInstr *End, bool Revert);
 
@@ -85,6 +91,7 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &MF) {
     MF.getSubtarget().getInstrInfo());
   BBUtils = std::unique_ptr<ARMBasicBlockUtils>(new ARMBasicBlockUtils(MF));
   BBUtils->computeAllBlockSizes();
+  BBUtils->adjustBBOffsetsAfter(&MF.front());
 
   bool Changed = false;
   for (auto ML : MLI) {
@@ -194,9 +201,18 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
       End->getOperand(1).getMBB() != ML->getHeader())
     report_fatal_error("Expected LoopEnd to target Loop Header");
 
-  // The LE instructions has 12-bits for the label offset.
-  if (!BBUtils->isBBInRange(End, ML->getHeader(), 4096)) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Too large for a low-overhead loop!\n");
+  // The WLS and LE instructions have 12-bits for the label offset. WLS
+  // requires a positive offset, while LE uses negative.
+  if (BBUtils->getOffsetOf(End) < BBUtils->getOffsetOf(ML->getHeader()) ||
+      !BBUtils->isBBInRange(End, ML->getHeader(), 4094)) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: LE offset is out-of-range\n");
+    Revert = true;
+  }
+  if (Start->getOpcode() == ARM::t2WhileLoopStart &&
+      (BBUtils->getOffsetOf(Start) >
+       BBUtils->getOffsetOf(Start->getOperand(1).getMBB()) ||
+       !BBUtils->isBBInRange(Start, Start->getOperand(1).getMBB(), 4094))) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: WLS offset is out-of-range!\n");
     Revert = true;
   }
 
@@ -206,6 +222,68 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
 
   Expand(ML, Start, Dec, End, Revert);
   return true;
+}
+
+// WhileLoopStart holds the exit block, so produce a cmp lr, 0 and then a
+// beq that branches to the exit branch.
+// FIXME: Need to check that we're not trashing the CPSR when generating the
+// cmp. We could also try to generate a cbz if the value in LR is also in
+// another low register.
+void ARMLowOverheadLoops::RevertWhile(MachineInstr *MI) const {
+  LLVM_DEBUG(dbgs() << "ARM Loops: Reverting to cmp: " << *MI);
+  MachineBasicBlock *MBB = MI->getParent();
+  MachineInstrBuilder MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
+                                    TII->get(ARM::t2CMPri));
+  MIB.addReg(ARM::LR);
+  MIB.addImm(0);
+  MIB.addImm(ARMCC::AL);
+  MIB.addReg(ARM::CPSR);
+
+  // TODO: Try to use tBcc instead
+  MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::t2Bcc));
+  MIB.add(MI->getOperand(1));   // branch target
+  MIB.addImm(ARMCC::EQ);        // condition code
+  MIB.addReg(ARM::CPSR);
+  MI->eraseFromParent();
+}
+
+// TODO: Check flags so that we can possibly generate a tSubs or tSub.
+void ARMLowOverheadLoops::RevertLoopDec(MachineInstr *MI) const {
+  LLVM_DEBUG(dbgs() << "ARM Loops: Reverting to sub: " << *MI);
+  MachineBasicBlock *MBB = MI->getParent();
+  MachineInstrBuilder MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
+                                    TII->get(ARM::t2SUBri));
+  MIB.addDef(ARM::LR);
+  MIB.add(MI->getOperand(1));
+  MIB.add(MI->getOperand(2));
+  MIB.addImm(ARMCC::AL);
+  MIB.addReg(0);
+  MIB.addReg(0);
+  MI->eraseFromParent();
+}
+
+// Generate a subs, or sub and cmp, and a branch instead of an LE.
+// FIXME: Need to check that we're not trashing the CPSR when generating
+// the cmp.
+void ARMLowOverheadLoops::RevertLoopEnd(MachineInstr *MI) const {
+  LLVM_DEBUG(dbgs() << "ARM Loops: Reverting to cmp, br: " << *MI);
+
+  // Create cmp
+  MachineBasicBlock *MBB = MI->getParent();
+  MachineInstrBuilder MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
+                                    TII->get(ARM::t2CMPri));
+  MIB.addReg(ARM::LR);
+  MIB.addImm(0);
+  MIB.addImm(ARMCC::AL);
+  MIB.addReg(ARM::CPSR);
+
+  // TODO Try to use tBcc instead.
+  // Create bne
+  MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::t2Bcc));
+  MIB.add(MI->getOperand(1));   // branch target
+  MIB.addImm(ARMCC::NE);        // condition code
+  MIB.addReg(ARM::CPSR);
+  MI->eraseFromParent();
 }
 
 void ARMLowOverheadLoops::Expand(MachineLoop *ML, MachineInstr *Start,
@@ -269,60 +347,6 @@ void ARMLowOverheadLoops::Expand(MachineLoop *ML, MachineInstr *Start,
     return &*MIB;
   };
 
-  // Generate a subs, or sub and cmp, and a branch instead of an LE.
-  // TODO: Check flags so that we can possibly generate a subs.
-  // FIXME: Need to check that we're not trashing the CPSR when generating
-  // the cmp.
-  auto ExpandBranch = [this](MachineInstr *Dec, MachineInstr *End) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Reverting to sub, cmp, br.\n");
-    // Create sub
-    MachineBasicBlock *MBB = Dec->getParent();
-    MachineInstrBuilder MIB = BuildMI(*MBB, Dec, Dec->getDebugLoc(),
-                                      TII->get(ARM::t2SUBri));
-    MIB.addDef(ARM::LR);
-    MIB.add(Dec->getOperand(1));
-    MIB.add(Dec->getOperand(2));
-    MIB.addImm(ARMCC::AL);
-    MIB.addReg(0);
-    MIB.addReg(0);
-
-    // Create cmp
-    MBB = End->getParent();
-    MIB = BuildMI(*MBB, End, End->getDebugLoc(), TII->get(ARM::t2CMPri));
-    MIB.addReg(ARM::LR);
-    MIB.addImm(0);
-    MIB.addImm(ARMCC::AL);
-    MIB.addReg(ARM::CPSR);
-
-    // Create bne
-    MIB = BuildMI(*MBB, End, End->getDebugLoc(), TII->get(ARM::t2Bcc));
-    MIB.add(End->getOperand(1));  // branch target
-    MIB.addImm(ARMCC::NE);        // condition code
-    MIB.addReg(ARM::CPSR);
-    End->eraseFromParent();
-    Dec->eraseFromParent();
-  };
-
-  // WhileLoopStart holds the exit block, so produce a cmp lr, 0 and then a
-  // beq that branches to the exit branch.
-  // FIXME: Need to check that we're not trashing the CPSR when generating the
-  // cmp. We could also try to generate a cbz if the value in LR is also in
-  // another low register.
-  auto ExpandStart = [this](MachineInstr *MI) {
-    MachineBasicBlock *MBB = MI->getParent();
-    MachineInstrBuilder MIB = BuildMI(*MBB, MI, MI->getDebugLoc(),
-                                      TII->get(ARM::t2CMPri));
-    MIB.addReg(ARM::LR);
-    MIB.addImm(0);
-    MIB.addImm(ARMCC::AL);
-    MIB.addReg(ARM::CPSR);
-
-    MIB = BuildMI(*MBB, MI, MI->getDebugLoc(), TII->get(ARM::t2Bcc));
-    MIB.add(MI->getOperand(1));   // branch target
-    MIB.addImm(ARMCC::EQ);        // condition code
-    MIB.addReg(ARM::CPSR);
-  };
-
   // TODO: We should be able to automatically remove these branches before we
   // get here - probably by teaching analyzeBranch about the pseudo
   // instructions.
@@ -342,9 +366,11 @@ void ARMLowOverheadLoops::Expand(MachineLoop *ML, MachineInstr *Start,
 
   if (Revert) {
     if (Start->getOpcode() == ARM::t2WhileLoopStart)
-      ExpandStart(Start);
-    ExpandBranch(Dec, End);
-    Start->eraseFromParent();
+      RevertWhile(Start);
+    else
+      Start->eraseFromParent();
+    RevertLoopDec(Dec);
+    RevertLoopEnd(End);
   } else {
     Start = ExpandLoopStart(ML, Start);
     RemoveDeadBranch(Start);

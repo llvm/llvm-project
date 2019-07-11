@@ -48,7 +48,8 @@ reassociateShiftAmtsOfTwoSameDirectionShifts(BinaryOperator *Sh0,
   // Is the new shift amount smaller than the bit width?
   // FIXME: could also rely on ConstantRange.
   unsigned BitWidth = X->getType()->getScalarSizeInBits();
-  if (!match(NewShAmt, m_SpecificInt_ULT(APInt(BitWidth, BitWidth))))
+  if (!match(NewShAmt, m_SpecificInt_ICMP(ICmpInst::Predicate::ICMP_ULT,
+                                          APInt(BitWidth, BitWidth))))
     return nullptr;
   // All good, we can do this fold.
   BinaryOperator *NewShift = BinaryOperator::Create(ShiftOpcode, X, NewShAmt);

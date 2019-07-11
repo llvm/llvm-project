@@ -418,7 +418,8 @@ yaml::SIMachineFunctionInfo::SIMachineFunctionInfo(
     ScratchWaveOffsetReg(regToString(MFI.getScratchWaveOffsetReg(), TRI)),
     FrameOffsetReg(regToString(MFI.getFrameOffsetReg(), TRI)),
     StackPtrOffsetReg(regToString(MFI.getStackPtrOffsetReg(), TRI)),
-    ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)) {}
+    ArgInfo(convertArgumentInfo(MFI.getArgInfo(), TRI)),
+    Mode(MFI.getMode()) {}
 
 void yaml::SIMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<SIMachineFunctionInfo>::mapping(YamlIO, *this);

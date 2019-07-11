@@ -3655,13 +3655,11 @@ SDValue AMDGPUTargetLowering::performSelectCombine(SDNode *N,
 
   if (Cond.hasOneUse()) { // TODO: Look for multiple select uses.
     SelectionDAG &DAG = DCI.DAG;
-    if ((DAG.isConstantValueOfAnyType(True) ||
-         DAG.isConstantValueOfAnyType(True)) &&
-        (!DAG.isConstantValueOfAnyType(False) &&
-         !DAG.isConstantValueOfAnyType(False))) {
+    if (DAG.isConstantValueOfAnyType(True) &&
+        !DAG.isConstantValueOfAnyType(False)) {
       // Swap cmp + select pair to move constant to false input.
       // This will allow using VOPC cndmasks more often.
-      // select (setcc x, y), k, x -> select (setcc y, x) x, x
+      // select (setcc x, y), k, x -> select (setccinv x, y), x, k
 
       SDLoc SL(N);
       ISD::CondCode NewCC = getSetCCInverse(cast<CondCodeSDNode>(CC)->get(),
@@ -4428,6 +4426,10 @@ const char* AMDGPUTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(BUFFER_ATOMIC_OR)
   NODE_NAME_CASE(BUFFER_ATOMIC_XOR)
   NODE_NAME_CASE(BUFFER_ATOMIC_CMPSWAP)
+  NODE_NAME_CASE(BUFFER_ATOMIC_FADD)
+  NODE_NAME_CASE(BUFFER_ATOMIC_PK_FADD)
+  NODE_NAME_CASE(ATOMIC_FADD)
+  NODE_NAME_CASE(ATOMIC_PK_FADD)
 
   case AMDGPUISD::LAST_AMDGPU_ISD_NUMBER: break;
   }

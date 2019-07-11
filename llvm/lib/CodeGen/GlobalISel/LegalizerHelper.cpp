@@ -1384,6 +1384,12 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FABS:
   case TargetOpcode::G_FCANONICALIZE:
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM_IEEE:
+  case TargetOpcode::G_FMAXNUM_IEEE:
+  case TargetOpcode::G_FMINIMUM:
+  case TargetOpcode::G_FMAXIMUM:
   case TargetOpcode::G_FDIV:
   case TargetOpcode::G_FREM:
   case TargetOpcode::G_FCEIL:
@@ -1696,6 +1702,9 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
     return lowerMinMax(MI, TypeIdx, Ty);
   case G_FCOPYSIGN:
     return lowerFCopySign(MI, TypeIdx, Ty);
+  case G_FMINNUM:
+  case G_FMAXNUM:
+    return lowerFMinNumMaxNum(MI);
   }
 }
 
@@ -2307,6 +2316,12 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_SMAX:
   case G_UMIN:
   case G_UMAX:
+  case G_FMINNUM:
+  case G_FMAXNUM:
+  case G_FMINNUM_IEEE:
+  case G_FMAXNUM_IEEE:
+  case G_FMINIMUM:
+  case G_FMAXIMUM:
     return fewerElementsVectorBasic(MI, TypeIdx, NarrowTy);
   case G_SHL:
   case G_LSHR:
@@ -3270,6 +3285,37 @@ LegalizerHelper::lowerFCopySign(MachineInstr &MI, unsigned TypeIdx, LLT Ty) {
   if (unsigned Flags = MI.getFlags())
     Or->setFlags(Flags);
 
+  MI.eraseFromParent();
+  return Legalized;
+}
+
+LegalizerHelper::LegalizeResult
+LegalizerHelper::lowerFMinNumMaxNum(MachineInstr &MI) {
+  unsigned NewOp = MI.getOpcode() == TargetOpcode::G_FMINNUM ?
+    TargetOpcode::G_FMINNUM_IEEE : TargetOpcode::G_FMAXNUM_IEEE;
+
+  Register Dst = MI.getOperand(0).getReg();
+  Register Src0 = MI.getOperand(1).getReg();
+  Register Src1 = MI.getOperand(2).getReg();
+  LLT Ty = MRI.getType(Dst);
+
+  if (!MI.getFlag(MachineInstr::FmNoNans)) {
+    // Insert canonicalizes if it's possible we need to quiet to get correct
+    // sNaN behavior.
+
+    // Note this must be done here, and not as an optimization combine in the
+    // absence of a dedicate quiet-snan instruction as we're using an
+    // omni-purpose G_FCANONICALIZE.
+    if (!isKnownNeverSNaN(Src0, MRI))
+      Src0 = MIRBuilder.buildFCanonicalize(Ty, Src0, MI.getFlags()).getReg(0);
+
+    if (!isKnownNeverSNaN(Src1, MRI))
+      Src1 = MIRBuilder.buildFCanonicalize(Ty, Src1, MI.getFlags()).getReg(0);
+  }
+
+  // If there are no nans, it's safe to simply replace this with the non-IEEE
+  // version.
+  MIRBuilder.buildInstr(NewOp, {Dst}, {Src0, Src1}, MI.getFlags());
   MI.eraseFromParent();
   return Legalized;
 }

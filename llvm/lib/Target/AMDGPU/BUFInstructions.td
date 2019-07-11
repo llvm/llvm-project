@@ -1021,6 +1021,17 @@ defm BUFFER_STORE_FORMAT_D16_HI_X : MUBUF_Pseudo_Stores <
 def BUFFER_WBINVL1 : MUBUF_Invalidate <"buffer_wbinvl1",
                                        int_amdgcn_buffer_wbinvl1>;
 
+let SubtargetPredicate = HasAtomicFaddInsts in {
+
+defm BUFFER_ATOMIC_ADD_F32 : MUBUF_Pseudo_Atomics_NO_RTN <
+  "buffer_atomic_add_f32", VGPR_32, f32, atomic_add_global
+>;
+defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Pseudo_Atomics_NO_RTN <
+  "buffer_atomic_pk_add_f16", VGPR_32, v2f16, atomic_add_global
+>;
+
+} // End SubtargetPredicate = HasAtomicFaddInsts
+
 //===----------------------------------------------------------------------===//
 // MTBUF Instructions
 //===----------------------------------------------------------------------===//
@@ -1296,6 +1307,46 @@ defm : BufferAtomicPatterns<SIbuffer_atomic_umax, i64, "BUFFER_ATOMIC_UMAX_X2">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_and, i64, "BUFFER_ATOMIC_AND_X2">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_or, i64, "BUFFER_ATOMIC_OR_X2">;
 defm : BufferAtomicPatterns<SIbuffer_atomic_xor, i64, "BUFFER_ATOMIC_XOR_X2">;
+
+multiclass BufferAtomicPatterns_NO_RTN<SDPatternOperator name, ValueType vt,
+                                       string opcode> {
+  def : GCNPat<
+    (name vt:$vdata_in, v4i32:$rsrc, 0,
+          0, i32:$soffset, imm:$offset,
+          imm:$cachepolicy, 0),
+    (!cast<MUBUF_Pseudo>(opcode # _OFFSET) $vdata_in, $rsrc, $soffset,
+                                        (as_i16imm $offset), (extract_slc $cachepolicy))
+  >;
+
+  def : GCNPat<
+    (name vt:$vdata_in, v4i32:$rsrc, i32:$vindex,
+          0, i32:$soffset, imm:$offset,
+          imm:$cachepolicy, imm),
+    (!cast<MUBUF_Pseudo>(opcode # _IDXEN) $vdata_in, $vindex, $rsrc, $soffset,
+                                       (as_i16imm $offset), (extract_slc $cachepolicy))
+  >;
+
+  def : GCNPat<
+    (name vt:$vdata_in, v4i32:$rsrc, 0,
+          i32:$voffset, i32:$soffset, imm:$offset,
+          imm:$cachepolicy, 0),
+    (!cast<MUBUF_Pseudo>(opcode # _OFFEN) $vdata_in, $voffset, $rsrc, $soffset,
+                                       (as_i16imm $offset), (extract_slc $cachepolicy))
+  >;
+
+  def : GCNPat<
+    (name vt:$vdata_in, v4i32:$rsrc, i32:$vindex,
+          i32:$voffset, i32:$soffset, imm:$offset,
+          imm:$cachepolicy, imm),
+    (!cast<MUBUF_Pseudo>(opcode # _BOTHEN)
+      $vdata_in,
+      (REG_SEQUENCE VReg_64, $vindex, sub0, $voffset, sub1),
+      $rsrc, $soffset, (as_i16imm $offset), (extract_slc $cachepolicy))
+  >;
+}
+
+defm : BufferAtomicPatterns_NO_RTN<SIbuffer_atomic_fadd, f32, "BUFFER_ATOMIC_ADD_F32">;
+defm : BufferAtomicPatterns_NO_RTN<SIbuffer_atomic_pk_fadd, v2f16, "BUFFER_ATOMIC_PK_ADD_F16">;
 
 def : GCNPat<
   (SIbuffer_atomic_cmpswap
@@ -2175,6 +2226,13 @@ def BUFFER_STORE_LDS_DWORD_vi   : MUBUF_Real_vi <0x3d, BUFFER_STORE_LDS_DWORD>;
 
 def BUFFER_WBINVL1_vi           : MUBUF_Real_vi <0x3e, BUFFER_WBINVL1>;
 def BUFFER_WBINVL1_VOL_vi       : MUBUF_Real_vi <0x3f, BUFFER_WBINVL1_VOL>;
+
+let SubtargetPredicate = HasAtomicFaddInsts in {
+
+defm BUFFER_ATOMIC_ADD_F32    : MUBUF_Real_AllAddr_vi <0x4d>;
+defm BUFFER_ATOMIC_PK_ADD_F16 : MUBUF_Real_AllAddr_vi <0x4e>;
+
+} // End SubtargetPredicate = HasAtomicFaddInsts
 
 class MTBUF_Real_vi <bits<4> op, MTBUF_Pseudo ps> :
   MTBUF_Real<ps>,

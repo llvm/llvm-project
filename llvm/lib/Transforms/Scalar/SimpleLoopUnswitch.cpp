@@ -2552,7 +2552,7 @@ unswitchBestCondition(Loop &L, DominatorTree &DT, LoopInfo &LI,
       // We can only consider fully loop-invariant switch conditions as we need
       // to completely eliminate the switch after unswitching.
       if (!isa<Constant>(SI->getCondition()) &&
-          L.isLoopInvariant(SI->getCondition()))
+          L.isLoopInvariant(SI->getCondition()) && !BB->getUniqueSuccessor())
         UnswitchCandidates.push_back({SI, {SI->getCondition()}});
       continue;
     }

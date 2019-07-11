@@ -20,6 +20,7 @@ static_library("clang-doc") {
     "BitcodeWriter.cpp",
     "ClangDoc.cpp",
     "Generators.cpp",
+    "HTMLGenerator.cpp",
     "MDGenerator.cpp",
     "Mapper.cpp",
     "Representation.cpp",

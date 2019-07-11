@@ -238,6 +238,9 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
       if (TargetRegisterInfo::isPhysicalRegister(VReg))
         return None;
       break;
+    case TargetOpcode::G_INTTOPTR:
+      VReg = MI->getOperand(1).getReg();
+      break;
     default:
       return None;
     }
@@ -365,6 +368,31 @@ Optional<APInt> llvm::ConstantFoldBinOp(unsigned Opcode, const unsigned Op1,
     }
   }
   return None;
+}
+
+bool llvm::isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
+                           bool SNaN) {
+  const MachineInstr *DefMI = MRI.getVRegDef(Val);
+  if (!DefMI)
+    return false;
+
+  if (DefMI->getFlag(MachineInstr::FmNoNans))
+    return true;
+
+  if (SNaN) {
+    // FP operations quiet. For now, just handle the ones inserted during
+    // legalization.
+    switch (DefMI->getOpcode()) {
+    case TargetOpcode::G_FPEXT:
+    case TargetOpcode::G_FPTRUNC:
+    case TargetOpcode::G_FCANONICALIZE:
+      return true;
+    default:
+      return false;
+    }
+  }
+
+  return false;
 }
 
 void llvm::getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU) {

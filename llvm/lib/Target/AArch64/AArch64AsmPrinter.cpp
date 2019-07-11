@@ -335,7 +335,7 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
             .addReg(Reg)
             .addImm(AArch64_AM::encodeLogicalImmediate(0xf, 64)),
         *STI);
-    size_t Size = 1 << (AccessInfo & 0xf);
+    unsigned Size = 1 << (AccessInfo & 0xf);
     if (Size != 1)
       OutStreamer->EmitInstruction(MCInstBuilder(AArch64::ADDXri)
                                        .addReg(AArch64::X17)

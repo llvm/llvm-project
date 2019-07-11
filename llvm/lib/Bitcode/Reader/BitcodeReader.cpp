@@ -4165,6 +4165,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
           popValue(Record, OpNum, NextValueNo, LHS->getType(), RHS))
         return error("Invalid record");
 
+      if (OpNum >= Record.size())
+        return error(
+            "Invalid record: operand number exceeded available operands");
+
       unsigned PredVal = Record[OpNum];
       bool IsFP = LHS->getType()->isFPOrFPVectorTy();
       FastMathFlags FMF;

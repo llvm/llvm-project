@@ -62,8 +62,7 @@ body:             |
   ; CHECK:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, [[SUBSWri]], %subreg.sub_32
   ; CHECK:   [[UBFMXri:%[0-9]+]]:gpr64common = UBFMXri [[SUBREG_TO_REG]], 0, 31
   ; CHECK:   $xzr = SUBSXri [[UBFMXri]], 71, 0, implicit-def $nzcv
-  ; CHECK:   [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 9, implicit $nzcv
-  ; CHECK:   TBNZW [[CSINCWr]], 0, %bb.4
+  ; CHECK:   Bcc 8, %bb.4, implicit $nzcv
   ; CHECK: bb.1.entry:
   ; CHECK:   successors: %bb.3(0x2aaaaaab), %bb.4(0x2aaaaaab), %bb.2(0x2aaaaaab)
   ; CHECK:   [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 0

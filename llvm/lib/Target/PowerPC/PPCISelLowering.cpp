@@ -4432,25 +4432,15 @@ static bool isFunctionGlobalAddress(SDValue Callee);
 static bool
 callsShareTOCBase(const Function *Caller, SDValue Callee,
                     const TargetMachine &TM) {
-  // Need a GlobalValue to determine if a Caller and Callee share the same
-  // TOCBase.
-  const GlobalValue *GV = nullptr;
+   // Callee is either a GlobalAddress or an ExternalSymbol. ExternalSymbols
+   // don't have enough information to determine if the caller and calle share
+   // the same  TOC base, so we have to pessimistically assume they don't for
+   // correctness.
+   GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee);
+   if (!G)
+     return false;
 
-  if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    GV = G->getGlobal();
-  } else if (MCSymbolSDNode *M = dyn_cast<MCSymbolSDNode>(Callee)) {
-    // On AIX only, we replace GlobalAddressSDNode with MCSymbolSDNode for
-    // the callee of a direct function call. The MCSymbolSDNode contains the
-    // MCSymbol for the funtion entry point.
-    const auto *S = cast<MCSymbolXCOFF>(M->getMCSymbol());
-    GV = S->getGlobalValue();
-  }
-
-  // If we failed to get a GlobalValue, then pessimistically assume they do not
-  // share a TOCBase.
-  if (!GV)
-    return false;
-
+   const GlobalValue *GV = G->getGlobal();
   // The medium and large code models are expected to provide a sufficiently
   // large TOC to provide all data addressing needs of a module with a
   // single TOC. Since each module will be addressed with a single TOC then we
@@ -4934,39 +4924,27 @@ PrepareCall(SelectionDAG &DAG, SDValue &Callee, SDValue &InFlag, SDValue &Chain,
   // we're building with the leopard linker or later, which automatically
   // synthesizes these stubs.
   const TargetMachine &TM = DAG.getTarget();
-  MachineFunction &MF = DAG.getMachineFunction();
-  const Module *Mod = MF.getFunction().getParent();
+  const Module *Mod = DAG.getMachineFunction().getFunction().getParent();
   const GlobalValue *GV = nullptr;
   if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee))
     GV = G->getGlobal();
   bool Local = TM.shouldAssumeDSOLocal(*Mod, GV);
   bool UsePlt = !Local && Subtarget.isTargetELF() && !isPPC64;
 
+  // If the callee is a GlobalAddress/ExternalSymbol node (quite common,
+  // every direct call is) turn it into a TargetGlobalAddress /
+  // TargetExternalSymbol node so that legalize doesn't hack it.
   if (isFunctionGlobalAddress(Callee)) {
     GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Callee);
 
-    if (TM.getTargetTriple().isOSAIX()) {
-      // Direct function calls reference the symbol for the function's entry
-      // point, which is named by inserting a "." before the function's
-      // C-linkage name.
-      auto &Context = MF.getMMI().getContext();
-      MCSymbol *S = Context.getOrCreateSymbol(Twine(".") +
-                                              Twine(G->getGlobal()->getName()));
-      cast<MCSymbolXCOFF>(S)->setGlobalValue(GV);
-      Callee = DAG.getMCSymbol(S, PtrVT);
-    } else {
-      // A call to a TLS address is actually an indirect call to a
-      // thread-specific pointer.
-      unsigned OpFlags = 0;
-      if (UsePlt)
-        OpFlags = PPCII::MO_PLT;
+    // A call to a TLS address is actually an indirect call to a
+    // thread-specific pointer.
+    unsigned OpFlags = 0;
+    if (UsePlt)
+      OpFlags = PPCII::MO_PLT;
 
-      // If the callee is a GlobalAddress/ExternalSymbol node (quite common,
-      // every direct call is) turn it into a TargetGlobalAddress /
-      // TargetExternalSymbol node so that legalize doesn't hack it.
-      Callee = DAG.getTargetGlobalAddress(G->getGlobal(), dl,
-                                          Callee.getValueType(), 0, OpFlags);
-    }
+    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), dl,
+                                        Callee.getValueType(), 0, OpFlags);
     needIndirectCall = false;
   }
 
@@ -5245,6 +5223,7 @@ SDValue PPCTargetLowering::FinishCall(
   // same TOC), the NOP will remain unchanged, or become some other NOP.
 
   MachineFunction &MF = DAG.getMachineFunction();
+  EVT PtrVT = getPointerTy(DAG.getDataLayout());
   if (!isTailCall && !isPatchPoint &&
       ((Subtarget.isSVR4ABI() && Subtarget.isPPC64()) ||
        Subtarget.isAIXABI())) {
@@ -5263,7 +5242,6 @@ SDValue PPCTargetLowering::FinishCall(
       // allocated and an unnecessary move instruction being generated.
       CallOpc = PPCISD::BCTRL_LOAD_TOC;
 
-      EVT PtrVT = getPointerTy(DAG.getDataLayout());
       SDValue StackPtr = DAG.getRegister(PPC::X1, PtrVT);
       unsigned TOCSaveOffset = Subtarget.getFrameLowering()->getTOCSaveOffset();
       SDValue TOCOff = DAG.getIntPtrConstant(TOCSaveOffset, dl);
@@ -5277,6 +5255,19 @@ SDValue PPCTargetLowering::FinishCall(
       // Otherwise insert NOP for non-local calls.
       CallOpc = PPCISD::CALL_NOP;
     }
+  }
+
+  if (Subtarget.isAIXABI() && isFunctionGlobalAddress(Callee)) {
+    // On AIX, direct function calls reference the symbol for the function's
+    // entry point, which is named by inserting a "." before the function's
+    // C-linkage name.
+    GlobalAddressSDNode *G = cast<GlobalAddressSDNode>(Callee);
+    auto &Context = DAG.getMachineFunction().getMMI().getContext();
+    MCSymbol *S = Context.getOrCreateSymbol(Twine(".") +
+                                            Twine(G->getGlobal()->getName()));
+    Callee = DAG.getMCSymbol(S, PtrVT);
+    // Replace the GlobalAddressSDNode Callee with the MCSymbolSDNode.
+    Ops[1] = Callee;
   }
 
   Chain = DAG.getNode(CallOpc, dl, NodeTys, Ops);

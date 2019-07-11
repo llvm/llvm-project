@@ -950,6 +950,33 @@ bool SITargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
 
     return true;
   }
+  case Intrinsic::amdgcn_buffer_atomic_fadd: {
+    SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::getVT(CI.getOperand(0)->getType());
+    Info.ptrVal = MFI->getBufferPSV(
+      *MF.getSubtarget<GCNSubtarget>().getInstrInfo(),
+      CI.getArgOperand(1));
+    Info.align = 0;
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+
+    const ConstantInt *Vol = dyn_cast<ConstantInt>(CI.getOperand(4));
+    if (!Vol || !Vol->isZero())
+      Info.flags |= MachineMemOperand::MOVolatile;
+
+    return true;
+  }
+  case Intrinsic::amdgcn_global_atomic_fadd: {
+    Info.opc = ISD::INTRINSIC_VOID;
+    Info.memVT = MVT::getVT(CI.getOperand(0)->getType()
+                            ->getPointerElementType());
+    Info.ptrVal = CI.getOperand(0);
+    Info.align = 0;
+    Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore;
+
+    return true;
+  }
   case Intrinsic::amdgcn_ds_append:
   case Intrinsic::amdgcn_ds_consume: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -6856,6 +6883,49 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
 
     return DAG.getMemIntrinsicNode(Opc, DL, Op->getVTList(), Ops,
                                    M->getMemoryVT(), M->getMemOperand());
+  }
+
+  case Intrinsic::amdgcn_buffer_atomic_fadd: {
+    unsigned Slc = cast<ConstantSDNode>(Op.getOperand(6))->getZExtValue();
+    unsigned IdxEn = 1;
+    if (auto Idx = dyn_cast<ConstantSDNode>(Op.getOperand(4)))
+      IdxEn = Idx->getZExtValue() != 0;
+    SDValue Ops[] = {
+      Chain,
+      Op.getOperand(2), // vdata
+      Op.getOperand(3), // rsrc
+      Op.getOperand(4), // vindex
+      SDValue(),        // voffset -- will be set by setBufferOffsets
+      SDValue(),        // soffset -- will be set by setBufferOffsets
+      SDValue(),        // offset -- will be set by setBufferOffsets
+      DAG.getConstant(Slc << 1, DL, MVT::i32), // cachepolicy
+      DAG.getConstant(IdxEn, DL, MVT::i1), // idxen
+    };
+    setBufferOffsets(Op.getOperand(5), DAG, &Ops[4]);
+    EVT VT = Op.getOperand(2).getValueType();
+
+    auto *M = cast<MemSDNode>(Op);
+    unsigned Opcode = VT.isVector() ? AMDGPUISD::BUFFER_ATOMIC_PK_FADD
+                                    : AMDGPUISD::BUFFER_ATOMIC_FADD;
+
+    return DAG.getMemIntrinsicNode(Opcode, DL, Op->getVTList(), Ops, VT,
+                                   M->getMemOperand());
+  }
+
+  case Intrinsic::amdgcn_global_atomic_fadd: {
+    SDValue Ops[] = {
+      Chain,
+      Op.getOperand(2), // ptr
+      Op.getOperand(3)  // vdata
+    };
+    EVT VT = Op.getOperand(3).getValueType();
+
+    auto *M = cast<MemSDNode>(Op);
+    unsigned Opcode = VT.isVector() ? AMDGPUISD::ATOMIC_PK_FADD
+                                    : AMDGPUISD::ATOMIC_FADD;
+
+    return DAG.getMemIntrinsicNode(Opcode, DL, Op->getVTList(), Ops, VT,
+                                   M->getMemOperand());
   }
 
   case Intrinsic::amdgcn_end_cf:

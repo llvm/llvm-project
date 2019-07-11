@@ -150,5 +150,16 @@ void getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU);
 Optional<APInt> ConstantFoldBinOp(unsigned Opcode, const unsigned Op1,
                                   const unsigned Op2,
                                   const MachineRegisterInfo &MRI);
+
+/// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is true,
+/// this returns if \p Val can be assumed to never be a signaling NaN.
+bool isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
+                     bool SNaN = false);
+
+/// Returns true if \p Val can be assumed to never be a signaling NaN.
+inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
+  return isKnownNeverNaN(Val, MRI, true);
+}
+
 } // End namespace llvm.
 #endif

@@ -1,5 +1,4 @@
 ; REQUIRES: asserts
-; XFAIL: *
 ; RUN: opt -passes='unswitch<nontrivial>' -disable-output -S < %s
 ; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -disable-output -S < %s
 

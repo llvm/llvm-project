@@ -15,7 +15,7 @@
 #include "AMDGPULegalizerInfo.h"
 #include "AMDGPUTargetMachine.h"
 #include "SIMachineFunctionInfo.h"
-
+#include "llvm/CodeGen/GlobalISel/LegalizerHelper.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/ValueTypes.h"
@@ -173,6 +173,10 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     S32, S64, S16
   };
 
+  const std::initializer_list<LLT> FPTypesPK16 = {
+    S32, S64, S16, V2S16
+  };
+
   setAction({G_BRCOND, S1}, Legal);
 
   // TODO: All multiples of 32, vectors of pointers, all v2s16 pairs, more
@@ -270,6 +274,27 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     else
       FPOpActions.legalFor({S16});
   }
+
+  auto &MinNumMaxNum = getActionDefinitionsBuilder({
+      G_FMINNUM, G_FMAXNUM, G_FMINNUM_IEEE, G_FMAXNUM_IEEE});
+
+  if (ST.hasVOP3PInsts()) {
+    MinNumMaxNum.customFor(FPTypesPK16)
+      .clampMaxNumElements(0, S16, 2)
+      .clampScalar(0, S16, S64)
+      .scalarize(0);
+  } else if (ST.has16BitInsts()) {
+    MinNumMaxNum.customFor(FPTypes16)
+      .clampScalar(0, S16, S64)
+      .scalarize(0);
+  } else {
+    MinNumMaxNum.customFor(FPTypesBase)
+      .clampScalar(0, S32, S64)
+      .scalarize(0);
+  }
+
+  // TODO: Implement
+  getActionDefinitionsBuilder({G_FMINIMUM, G_FMAXIMUM}).lower();
 
   if (ST.hasVOP3PInsts())
     FPOpActions.clampMaxNumElements(0, S16, 2);
@@ -757,6 +782,11 @@ bool AMDGPULegalizerInfo::legalizeCustom(MachineInstr &MI,
     return legalizeITOFP(MI, MRI, MIRBuilder, true);
   case TargetOpcode::G_UITOFP:
     return legalizeITOFP(MI, MRI, MIRBuilder, false);
+  case TargetOpcode::G_FMINNUM:
+  case TargetOpcode::G_FMAXNUM:
+  case TargetOpcode::G_FMINNUM_IEEE:
+  case TargetOpcode::G_FMAXNUM_IEEE:
+    return legalizeMinNumMaxNum(MI, MRI, MIRBuilder);
   default:
     return false;
   }
@@ -1062,6 +1092,30 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
   B.buildFAdd(Dst, LdExp, CvtLo);
   MI.eraseFromParent();
   return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeMinNumMaxNum(
+  MachineInstr &MI, MachineRegisterInfo &MRI,
+  MachineIRBuilder &B) const {
+  MachineFunction &MF = B.getMF();
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  const bool IsIEEEOp = MI.getOpcode() == AMDGPU::G_FMINNUM_IEEE ||
+                        MI.getOpcode() == AMDGPU::G_FMAXNUM_IEEE;
+
+  // With ieee_mode disabled, the instructions have the correct behavior
+  // already for G_FMINNUM/G_FMAXNUM
+  if (!MFI->getMode().IEEE)
+    return !IsIEEEOp;
+
+  if (IsIEEEOp)
+    return true;
+
+  MachineIRBuilder HelperBuilder(MI);
+  GISelObserverWrapper DummyObserver;
+  LegalizerHelper Helper(MF, DummyObserver, HelperBuilder);
+  HelperBuilder.setMBB(*MI.getParent());
+  return Helper.lowerFMinNumMaxNum(MI) == LegalizerHelper::Legalized;
 }
 
 // Return the use branch instruction, otherwise null if the usage is invalid.
