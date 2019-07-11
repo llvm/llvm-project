@@ -482,11 +482,22 @@ static void createSyntheticSymbols() {
     }
   }
 
-  // The __stack_pointer is imported in the shared library case, and exported
-  // in the non-shared (executable) case.
-  if (config->shared) {
+  if (!config->shared)
+    WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
+
+  if (config->isPic) {
     WasmSym::stackPointer =
         createUndefinedGlobal("__stack_pointer", &mutableGlobalTypeI32);
+    // For PIC code, we import two global variables (__memory_base and
+    // __table_base) from the environment and use these as the offset at
+    // which to load our static data and function table.
+    // See:
+    // https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
+    WasmSym::memoryBase =
+        createUndefinedGlobal("__memory_base", &globalTypeI32);
+    WasmSym::tableBase = createUndefinedGlobal("__table_base", &globalTypeI32);
+    WasmSym::memoryBase->markLive();
+    WasmSym::tableBase->markLive();
   } else {
     llvm::wasm::WasmGlobal global;
     global.Type = {WASM_TYPE_I32, true};
@@ -501,22 +512,8 @@ static void createSyntheticSymbols() {
     // See: https://github.com/WebAssembly/mutable-global
     WasmSym::stackPointer = symtab->addSyntheticGlobal(
         "__stack_pointer", WASM_SYMBOL_VISIBILITY_HIDDEN, stackPointer);
-    WasmSym::dataEnd = symtab->addOptionalDataSymbol("__data_end");
     WasmSym::globalBase = symtab->addOptionalDataSymbol("__global_base");
     WasmSym::heapBase = symtab->addOptionalDataSymbol("__heap_base");
-  }
-
-  if (config->isPic) {
-    // For PIC code, we import two global variables (__memory_base and
-    // __table_base) from the environment and use these as the offset at
-    // which to load our static data and function table.
-    // See:
-    // https://github.com/WebAssembly/tool-conventions/blob/master/DynamicLinking.md
-    WasmSym::memoryBase =
-        createUndefinedGlobal("__memory_base", &globalTypeI32);
-    WasmSym::tableBase = createUndefinedGlobal("__table_base", &globalTypeI32);
-    WasmSym::memoryBase->markLive();
-    WasmSym::tableBase->markLive();
   }
 
   WasmSym::dsoHandle = symtab->addSyntheticDataSymbol(

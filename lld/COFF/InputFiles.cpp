@@ -783,6 +783,8 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
                          uint64_t offsetInArchive)
     : InputFile(BitcodeKind, mb) {
   std::string path = mb.getBufferIdentifier().str();
+  if (config->thinLTOIndexOnly)
+    path = replaceThinLTOSuffix(mb.getBufferIdentifier());
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two archives define two members with the same name, this
@@ -848,6 +850,15 @@ MachineTypes BitcodeFile::getMachineType() {
   default:
     return IMAGE_FILE_MACHINE_UNKNOWN;
   }
+}
+
+std::string replaceThinLTOSuffix(StringRef path) {
+  StringRef suffix = config->thinLTOObjectSuffixReplace.first;
+  StringRef repl = config->thinLTOObjectSuffixReplace.second;
+
+  if (path.consume_back(suffix))
+    return (path + repl).str();
+  return path;
 }
 } // namespace coff
 } // namespace lld
