@@ -24,7 +24,7 @@ class TestGdbRemoteHostInfo(GdbRemoteTestCaseBase):
         "os_build",
         "os_kernel",
         "os_version",
-        "uikitformac_version",
+        "maccatalyst_version",
         "ptrsize",
         "triple",
         "vendor",
