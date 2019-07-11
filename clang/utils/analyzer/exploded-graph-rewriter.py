@@ -16,6 +16,7 @@ import collections
 import difflib
 import json
 import logging
+import os
 import re
 
 
@@ -50,8 +51,8 @@ class SourceLocation(object):
         super(SourceLocation, self).__init__()
         self.line = json_loc['line']
         self.col = json_loc['column']
-        self.filename = json_loc['filename'] \
-            if 'filename' in json_loc else '(main file)'
+        self.filename = os.path.basename(json_loc['file']) \
+            if 'file' in json_loc else '(main file)'
 
 
 # A deserialized program point.

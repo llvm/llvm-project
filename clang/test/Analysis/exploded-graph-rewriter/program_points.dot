@@ -52,7 +52,7 @@ Node0x1 [shape=record,label=
 // CHECK-SAME: <table border="0" align="left" width="0">
 // CHECK-SAME:   <tr>
 // CHECK-SAME:     <td align="left" width="0">
-// CHECK-SAME:       (main file):<b>4</b>:<b>5</b>:
+// CHECK-SAME:       main.cpp:<b>4</b>:<b>5</b>:
 // CHECK-SAME:     </td>
 // CHECK-SAME:     <td align="left" width="0">
 // CHECK-SAME:       <font color="cyan4">DeclRefExpr</font>
@@ -83,6 +83,7 @@ Node0x2 [shape=record,label=
         "pointer": "0x3",
         "pretty": "x",
         "location": {
+          "file": "main.cpp",
           "line": 4,
           "column": 5
         },
