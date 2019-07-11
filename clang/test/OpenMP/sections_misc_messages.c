@@ -2,6 +2,14 @@
 
 // RUN: %clang_cc1 -fsyntax-only -fopenmp-simd -verify %s -Wuninitialized
 
+void xxx(int argc) {
+  int x; // expected-note {{initialize the variable 'x' to silence this warning}}
+#pragma omp sections
+{
+  argc = x; // expected-warning {{variable 'x' is uninitialized when used here}}
+}
+}
+
 void foo();
 
 // expected-error@+1 {{unexpected OpenMP directive '#pragma omp sections'}}

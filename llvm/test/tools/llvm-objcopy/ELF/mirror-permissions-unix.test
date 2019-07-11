@@ -36,6 +36,12 @@
 # RUN: ls -l %t1 | cut -f 1 -d ' ' > %t1.perms
 # RUN: cmp %t1.perms %t.0640
 
+## Don't set the permission of a character special file, otherwise there will
+## be an EPERM error (or worse: root may change the permission).
+# RUN: ls -l /dev/null | cut -f 1 -d ' ' > %tnull.perms
+# RUN: llvm-objcopy %t /dev/null
+# RUN: ls -l /dev/null | cut -f 1 -d ' ' | diff - %tnull.perms
+
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64

@@ -260,8 +260,8 @@ template <class ELFT> void MarkLive<ELFT>::run() {
     if (isReserved(sec) || script->shouldKeep(sec)) {
       enqueue(sec, 0);
     } else if (isValidCIdentifier(sec->name)) {
-      cNamedSections[Saver.save("__start_" + sec->name)].push_back(sec);
-      cNamedSections[Saver.save("__stop_" + sec->name)].push_back(sec);
+      cNamedSections[saver.save("__start_" + sec->name)].push_back(sec);
+      cNamedSections[saver.save("__stop_" + sec->name)].push_back(sec);
     }
   }
 

@@ -975,8 +975,7 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
                                   Loop *CurLoop) {
   Value *Addr = LI->getOperand(0);
   const DataLayout &DL = LI->getModule()->getDataLayout();
-  const uint32_t LocSizeInBits = DL.getTypeSizeInBits(
-      cast<PointerType>(Addr->getType())->getElementType());
+  const uint32_t LocSizeInBits = DL.getTypeSizeInBits(LI->getType());
 
   // if the type is i8 addrspace(x)*, we know this is the type of
   // llvm.invariant.start operand

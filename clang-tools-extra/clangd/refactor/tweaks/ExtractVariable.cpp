@@ -81,7 +81,7 @@ computeReferencedDecls(const clang::Expr *Expr) {
 // FIXME: Ignore assignment (a = 1) Expr since it is extracted as dummy = a =
 static bool isExtractableExpr(const clang::Expr *Expr) {
   if (Expr) {
-    const Type *ExprType = Expr->getType().getTypePtr();
+    const Type *ExprType = Expr->getType().getTypePtrOrNull();
     // FIXME: check if we need to cover any other types
     if (ExprType)
       return !ExprType->isVoidType();

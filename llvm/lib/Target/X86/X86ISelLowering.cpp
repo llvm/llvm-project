@@ -42653,6 +42653,7 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
   assert((X86ISD::ADD == N->getOpcode() || X86ISD::SUB == N->getOpcode()) &&
          "Expected X86ISD::ADD or X86ISD::SUB");
 
+  SDLoc DL(N);
   SDValue LHS = N->getOperand(0);
   SDValue RHS = N->getOperand(1);
   MVT VT = LHS.getSimpleValueType();
@@ -42660,21 +42661,20 @@ static SDValue combineX86AddSub(SDNode *N, SelectionDAG &DAG,
 
   // If we don't use the flag result, simplify back to a generic ADD/SUB.
   if (!N->hasAnyUseOfValue(1)) {
-    SDLoc DL(N);
     SDValue Res = DAG.getNode(GenericOpc, DL, VT, LHS, RHS);
     return DAG.getMergeValues({Res, DAG.getConstant(0, DL, MVT::i32)}, DL);
   }
 
   // Fold any similar generic ADD/SUB opcodes to reuse this node.
   auto MatchGeneric = [&](SDValue N0, SDValue N1, bool Negate) {
-    // TODO: Add SUB(RHS, LHS) -> SUB(0, SUB(LHS, RHS)) negation support, this
-    // currently causes regressions as we don't have broad x86sub combines.
-    if (Negate)
-      return;
     SDValue Ops[] = {N0, N1};
     SDVTList VTs = DAG.getVTList(N->getValueType(0));
-    if (SDNode *GenericAddSub = DAG.getNodeIfExists(GenericOpc, VTs, Ops))
-      DCI.CombineTo(GenericAddSub, SDValue(N, 0));
+    if (SDNode *GenericAddSub = DAG.getNodeIfExists(GenericOpc, VTs, Ops)) {
+      SDValue Op(N, 0);
+      if (Negate)
+        Op = DAG.getNode(ISD::SUB, DL, VT, DAG.getConstant(0, DL, VT), Op);
+      DCI.CombineTo(GenericAddSub, Op);
+    }
   };
   MatchGeneric(LHS, RHS, false);
   MatchGeneric(RHS, LHS, X86ISD::SUB == N->getOpcode());

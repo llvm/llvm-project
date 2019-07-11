@@ -451,8 +451,10 @@ for.body:
   br i1 %exitcond, label %for.body, label %for.cond.cleanup
 }
 
+; TODO: I think we should be able to generate one smlad here. The search fails
+; when it finds the alias.
 ; CHECK-LABEL: one_pair_alias
-; FIXME: This tests shows we have a bug with smlad insertion
+; CHECK-NOT: call i32 @llvm.arm.smlad
 define i32 @one_pair_alias(i16* noalias nocapture readonly %b, i16* noalias nocapture readonly %c) {
 entry:
   br label %for.body

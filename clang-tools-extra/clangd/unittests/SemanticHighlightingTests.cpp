@@ -36,7 +36,8 @@ void checkHighlightings(llvm::StringRef Code) {
       {HighlightingKind::Variable, "Variable"},
       {HighlightingKind::Function, "Function"},
       {HighlightingKind::Class, "Class"},
-      {HighlightingKind::Enum, "Enum"}};
+      {HighlightingKind::Enum, "Enum"},
+      {HighlightingKind::Namespace, "Namespace"}};
   std::vector<HighlightingToken> ExpectedTokens;
   for (const auto &KindString : KindToString) {
     std::vector<HighlightingToken> Toks = makeHighlightingTokens(
@@ -75,18 +76,18 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       };
     )cpp",
     R"cpp(
-      namespace abc {
+      namespace $Namespace[[abc]] {
         template<typename T>
         struct $Class[[A]] {
           T t;
         };
       }
       template<typename T>
-      struct $Class[[C]] : abc::A<T> {
+      struct $Class[[C]] : $Namespace[[abc]]::A<T> {
         typename T::A* D;
       };
-      abc::$Class[[A]]<int> $Variable[[AA]];
-      typedef abc::$Class[[A]]<int> AAA;
+      $Namespace[[abc]]::$Class[[A]]<int> $Variable[[AA]];
+      typedef $Namespace[[abc]]::$Class[[A]]<int> AAA;
       struct $Class[[B]] {
         $Class[[B]]();
         ~$Class[[B]]();
@@ -108,6 +109,29 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Enum[[E]] EEE;
         $Enum[[EE]] EEEE;
       };
+    )cpp",
+    R"cpp(
+      namespace $Namespace[[abc]] {
+        namespace {}
+        namespace $Namespace[[bcd]] {
+          struct $Class[[A]] {};
+          namespace $Namespace[[cde]] {
+            struct $Class[[A]] {
+              enum class $Enum[[B]] {
+                Hi,
+              };
+            };
+          }
+        }
+      }
+      using namespace $Namespace[[abc]]::$Namespace[[bcd]];
+      namespace $Namespace[[vwz]] =
+            $Namespace[[abc]]::$Namespace[[bcd]]::$Namespace[[cde]];
+      $Namespace[[abc]]::$Namespace[[bcd]]::$Class[[A]] $Variable[[AA]];
+      $Namespace[[vwz]]::$Class[[A]]::$Enum[[B]] $Variable[[AAA]] =
+            $Namespace[[vwz]]::$Class[[A]]::$Enum[[B]]::Hi;
+      ::$Namespace[[vwz]]::$Class[[A]] $Variable[[B]];
+      ::$Namespace[[abc]]::$Namespace[[bcd]]::$Class[[A]] $Variable[[BB]];
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);

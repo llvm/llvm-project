@@ -72,7 +72,7 @@ entry:
 define <4 x i64> @test_mm512_maskz_cvtneps2bf16_512(<16 x float> %A, i16 %U) local_unnamed_addr #2 {
 ; X86-LABEL: test_mm512_maskz_cvtneps2bf16_512:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:   kmovw 4(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvtneps2bf16 %zmm0, %ymm0 {%k1} {z} # encoding: [0x62,0xf2,0x7e,0xc9,0x72,0xc0]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -92,7 +92,7 @@ entry:
 define <4 x i64> @test_mm512_mask_cvtneps2bf16_512(<4 x i64> %C, i16 %U, <16 x float> %A) local_unnamed_addr #2 {
 ; X86-LABEL: test_mm512_mask_cvtneps2bf16_512:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:   kmovw 4(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
 ; X86-NEXT:    vcvtneps2bf16 %zmm1, %ymm0 {%k1} # encoding: [0x62,0xf2,0x7e,0x49,0x72,0xc1]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
@@ -115,7 +115,7 @@ declare <16 x float> @llvm.x86.avx512bf16.dpbf16ps.512(<16 x float>, <16 x i32>,
 define <16 x float> @test_mm512_dpbf16ps_512(<16 x float> %E, <16 x i32> %A, <16 x i32> %B) local_unnamed_addr #2 {
 ; CHECK-LABEL: test_mm512_dpbf16ps_512:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vdpbf16ps       %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x76,0x48,0x52,0xc2]
+; CHECK-NEXT:    vdpbf16ps %zmm2, %zmm1, %zmm0 # encoding: [0x62,0xf2,0x76,0x48,0x52,0xc2]
 ; CHECK-NEXT:    ret{{[l|q]}} # encoding: [0xc3]
 entry:
   %0 = tail call <16 x float> @llvm.x86.avx512bf16.dpbf16ps.512(<16 x float> %E, <16 x i32> %A, <16 x i32> %B) #4
@@ -125,14 +125,14 @@ entry:
 define <16 x float> @test_mm512_maskz_dpbf16ps_512(<16 x float> %E, <16 x i32> %A, <16 x i32> %B, i16 zeroext %U) local_unnamed_addr #2 {
 ; X86-LABEL: test_mm512_maskz_dpbf16ps_512:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    kmovw   4(%esp), %k1            # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vdpbf16ps       %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0xc9,0x52,0xc2]
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vdpbf16ps %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0xc9,0x52,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_mm512_maskz_dpbf16ps_512:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vdpbf16ps       %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0xc9,0x52,0xc2]
+; X64-NEXT:    vdpbf16ps %zmm2, %zmm1, %zmm0 {%k1} {z} # encoding: [0x62,0xf2,0x76,0xc9,0x52,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call <16 x float> @llvm.x86.avx512bf16.dpbf16ps.512(<16 x float> %E, <16 x i32> %A, <16 x i32> %B) #4
@@ -143,14 +143,14 @@ entry:
 define <16 x float> @test_mm512_mask_dpbf16ps_512(i16 zeroext %U, <16 x float> %E, <16 x i32> %A, <16 x i32> %B) local_unnamed_addr #2 {
 ; X86-LABEL: test_mm512_mask_dpbf16ps_512:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    kmovw   4(%esp), %k1            # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
-; X86-NEXT:    vdpbf16ps       %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf2,0x76,0x49,0x52,0xc2]
+; X86-NEXT:    kmovw {{[0-9]+}}(%esp), %k1 # encoding: [0xc5,0xf8,0x90,0x4c,0x24,0x04]
+; X86-NEXT:    vdpbf16ps %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf2,0x76,0x49,0x52,0xc2]
 ; X86-NEXT:    retl # encoding: [0xc3]
 ;
 ; X64-LABEL: test_mm512_mask_dpbf16ps_512:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    kmovd %edi, %k1 # encoding: [0xc5,0xfb,0x92,0xcf]
-; X64-NEXT:    vdpbf16ps       %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf2,0x76,0x49,0x52,0xc2]
+; X64-NEXT:    vdpbf16ps %zmm2, %zmm1, %zmm0 {%k1} # encoding: [0x62,0xf2,0x76,0x49,0x52,0xc2]
 ; X64-NEXT:    retq # encoding: [0xc3]
 entry:
   %0 = tail call <16 x float> @llvm.x86.avx512bf16.dpbf16ps.512(<16 x float> %E, <16 x i32> %A, <16 x i32> %B) #4

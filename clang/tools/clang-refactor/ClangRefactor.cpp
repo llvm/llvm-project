@@ -38,9 +38,11 @@ namespace opts {
 static cl::OptionCategory CommonRefactorOptions("Refactoring options");
 
 static cl::opt<bool> Verbose("v", cl::desc("Use verbose output"),
+                             cl::cat(cl::GeneralCategory),
                              cl::sub(*cl::AllSubCommands));
 
 static cl::opt<bool> Inplace("i", cl::desc("Inplace edit <file>s"),
+                             cl::cat(cl::GeneralCategory),
                              cl::sub(*cl::AllSubCommands));
 
 } // end namespace opts
@@ -609,7 +611,7 @@ int main(int argc, const char **argv) {
   ClangRefactorTool RefactorTool;
 
   CommonOptionsParser Options(
-      argc, argv, *cl::GeneralCategory, cl::ZeroOrMore,
+      argc, argv, cl::GeneralCategory, cl::ZeroOrMore,
       "Clang-based refactoring tool for C, C++ and Objective-C");
 
   if (auto Err = RefactorTool.Init()) {

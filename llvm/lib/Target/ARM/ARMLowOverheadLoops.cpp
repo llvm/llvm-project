@@ -91,6 +91,7 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &MF) {
     MF.getSubtarget().getInstrInfo());
   BBUtils = std::unique_ptr<ARMBasicBlockUtils>(new ARMBasicBlockUtils(MF));
   BBUtils->computeAllBlockSizes();
+  BBUtils->adjustBBOffsetsAfter(&MF.front());
 
   bool Changed = false;
   for (auto ML : MLI) {
@@ -200,9 +201,18 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
       End->getOperand(1).getMBB() != ML->getHeader())
     report_fatal_error("Expected LoopEnd to target Loop Header");
 
-  // The LE instructions has 12-bits for the label offset.
-  if (!BBUtils->isBBInRange(End, ML->getHeader(), 4096)) {
-    LLVM_DEBUG(dbgs() << "ARM Loops: Too large for a low-overhead loop!\n");
+  // The WLS and LE instructions have 12-bits for the label offset. WLS
+  // requires a positive offset, while LE uses negative.
+  if (BBUtils->getOffsetOf(End) < BBUtils->getOffsetOf(ML->getHeader()) ||
+      !BBUtils->isBBInRange(End, ML->getHeader(), 4094)) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: LE offset is out-of-range\n");
+    Revert = true;
+  }
+  if (Start->getOpcode() == ARM::t2WhileLoopStart &&
+      (BBUtils->getOffsetOf(Start) >
+       BBUtils->getOffsetOf(Start->getOperand(1).getMBB()) ||
+       !BBUtils->isBBInRange(Start, Start->getOperand(1).getMBB(), 4094))) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: WLS offset is out-of-range!\n");
     Revert = true;
   }
 

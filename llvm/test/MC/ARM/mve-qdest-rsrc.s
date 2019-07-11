@@ -384,16 +384,16 @@ vqdmlash.s16 q0, q5, lr
 # CHECK-NOFP: vqdmlash.s32 q0, q2, r3  @ encoding: [0x24,0xee,0x63,0x1e]
 vqdmlash.s32 q0, q2, r3
 
-# CHECK: vqdmlash.u8 q0, q4, r2  @ encoding: [0x08,0xfe,0x62,0x1e]
-# CHECK-NOFP: vqdmlash.u8 q0, q4, r2  @ encoding: [0x08,0xfe,0x62,0x1e]
+# ERROR: [[@LINE+2]]:9: error: invalid operand for instruction
+# ERROR-NOFP: [[@LINE+1]]:9: error: invalid operand for instruction
 vqdmlash.u8 q0, q4, r2
 
-# CHECK: vqdmlash.u16 q1, q4, r2  @ encoding: [0x18,0xfe,0x62,0x3e]
-# CHECK-NOFP: vqdmlash.u16 q1, q4, r2  @ encoding: [0x18,0xfe,0x62,0x3e]
+# ERROR: [[@LINE+2]]:9: error: invalid operand for instruction
+# ERROR-NOFP: [[@LINE+1]]:9: error: invalid operand for instruction
 vqdmlash.u16 q1, q4, r2
 
-# CHECK: vqdmlash.u32 q1, q5, r0  @ encoding: [0x2a,0xfe,0x60,0x3e]
-# CHECK-NOFP: vqdmlash.u32 q1, q5, r0  @ encoding: [0x2a,0xfe,0x60,0x3e]
+# ERROR: [[@LINE+2]]:9: error: invalid operand for instruction
+# ERROR-NOFP: [[@LINE+1]]:9: error: invalid operand for instruction
 vqdmlash.u32 q1, q5, r0
 
 # CHECK: vqdmlah.s8 q0, q3, r3  @ encoding: [0x06,0xee,0x63,0x0e]
@@ -408,16 +408,16 @@ vqdmlah.s16 q5, q3, r9
 # CHECK-NOFP: vqdmlah.s32 q0, q1, r11  @ encoding: [0x22,0xee,0x6b,0x0e]
 vqdmlah.s32 q0, q1, r11
 
-# CHECK: vqdmlah.u8 q0, q2, lr  @ encoding: [0x04,0xfe,0x6e,0x0e]
-# CHECK-NOFP: vqdmlah.u8 q0, q2, lr  @ encoding: [0x04,0xfe,0x6e,0x0e]
+# ERROR: [[@LINE+2]]:8: error: invalid operand for instruction
+# ERROR-NOFP: [[@LINE+1]]:8: error: invalid operand for instruction
 vqdmlah.u8 q0, q2, lr
 
-# CHECK: vqdmlah.u16 q0, q3, r10  @ encoding: [0x16,0xfe,0x6a,0x0e]
-# CHECK-NOFP: vqdmlah.u16 q0, q3, r10  @ encoding: [0x16,0xfe,0x6a,0x0e]
+# ERROR: [[@LINE+2]]:8: error: invalid operand for instruction
+# ERROR-NOFP: [[@LINE+1]]:8: error: invalid operand for instruction
 vqdmlah.u16 q0, q3, r10
 
-# CHECK: vqdmlah.u32 q1, q5, r2  @ encoding: [0x2a,0xfe,0x62,0x2e]
-# CHECK-NOFP: vqdmlah.u32 q1, q5, r2  @ encoding: [0x2a,0xfe,0x62,0x2e]
+# ERROR: [[@LINE+2]]:8: error: invalid operand for instruction
+# ERROR-NOFP: [[@LINE+1]]:8: error: invalid operand for instruction
 vqdmlah.u32 q1, q5, r2
 
 # CHECK: vqrdmlash.s8 q0, q5, r10  @ encoding: [0x0a,0xee,0x4a,0x1e]
@@ -432,16 +432,16 @@ vqrdmlash.s16 q0, q3, r2
 # CHECK-NOFP: vqrdmlash.s32 q0, q0, r4  @ encoding: [0x20,0xee,0x44,0x1e]
 vqrdmlash.s32 q0, q0, r4
 
-# CHECK: vqrdmlash.u8 q0, q4, r9  @ encoding: [0x08,0xfe,0x49,0x1e]
-# CHECK-NOFP: vqrdmlash.u8 q0, q4, r9  @ encoding: [0x08,0xfe,0x49,0x1e]
+# ERROR: [[@LINE+2]]:10: error: invalid operand for instruction
+# ERROR-NOFP: [[@LINE+1]]:10: error: invalid operand for instruction
 vqrdmlash.u8 q0, q4, r9
 
-# CHECK: vqrdmlash.u16 q0, q6, r12  @ encoding: [0x1c,0xfe,0x4c,0x1e]
-# CHECK-NOFP: vqrdmlash.u16 q0, q6, r12  @ encoding: [0x1c,0xfe,0x4c,0x1e]
+# ERROR: [[@LINE+2]]:10: error: invalid operand for instruction
+# ERROR-NOFP: [[@LINE+1]]:10: error: invalid operand for instruction
 vqrdmlash.u16 q0, q6, r12
 
-# CHECK: vqrdmlash.u32 q0, q3, r7  @ encoding: [0x26,0xfe,0x47,0x1e]
-# CHECK-NOFP: vqrdmlash.u32 q0, q3, r7  @ encoding: [0x26,0xfe,0x47,0x1e]
+# ERROR: [[@LINE+2]]:10: error: invalid operand for instruction
+# ERROR-NOFP: [[@LINE+1]]:10: error: invalid operand for instruction
 vqrdmlash.u32 q0, q3, r7
 
 # CHECK: vqrdmlah.s8 q0, q5, r11  @ encoding: [0x0a,0xee,0x4b,0x0e]
@@ -456,16 +456,16 @@ vqrdmlah.s16 q0, q2, r10
 # CHECK-NOFP: vqrdmlah.s32 q0, q4, r11  @ encoding: [0x28,0xee,0x4b,0x0e]
 vqrdmlah.s32 q0, q4, r11
 
-# CHECK: vqrdmlah.u8 q0, q4, r2  @ encoding: [0x08,0xfe,0x42,0x0e]
-# CHECK-NOFP: vqrdmlah.u8 q0, q4, r2  @ encoding: [0x08,0xfe,0x42,0x0e]
+# ERROR: [[@LINE+2]]:9: error: invalid operand for instruction
+# ERROR-NOFP: [[@LINE+1]]:9: error: invalid operand for instruction
 vqrdmlah.u8 q0, q4, r2
 
-# CHECK: vqrdmlah.u16 q0, q6, r1  @ encoding: [0x1c,0xfe,0x41,0x0e]
-# CHECK-NOFP: vqrdmlah.u16 q0, q6, r1  @ encoding: [0x1c,0xfe,0x41,0x0e]
+# ERROR: [[@LINE+2]]:9: error: invalid operand for instruction
+# ERROR-NOFP: [[@LINE+1]]:9: error: invalid operand for instruction
 vqrdmlah.u16 q0, q6, r1
 
-# CHECK: vqrdmlah.u32 q0, q4, r2  @ encoding: [0x28,0xfe,0x42,0x0e]
-# CHECK-NOFP: vqrdmlah.u32 q0, q4, r2  @ encoding: [0x28,0xfe,0x42,0x0e]
+# ERROR: [[@LINE+2]]:9: error: invalid operand for instruction
+# ERROR-NOFP: [[@LINE+1]]:9: error: invalid operand for instruction
 vqrdmlah.u32 q0, q4, r2
 
 # CHECK: viwdup.u8 q0, lr, r1, #1  @ encoding: [0x0f,0xee,0x60,0x0f]

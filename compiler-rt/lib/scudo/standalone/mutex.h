@@ -12,81 +12,61 @@
 #include "atomic_helpers.h"
 #include "common.h"
 
+#include <string.h>
+
+#if SCUDO_FUCHSIA
+#include <lib/sync/mutex.h> // for sync_mutex_t
+#endif
+
 namespace scudo {
 
-class StaticSpinMutex {
+class HybridMutex {
 public:
-  void init() { atomic_store_relaxed(&State, 0); }
-
-  void lock() {
+  void init() { memset(this, 0, sizeof(*this)); }
+  bool tryLock();
+  NOINLINE void lock() {
     if (tryLock())
       return;
-    lockSlow();
-  }
-
-  bool tryLock() {
-    return atomic_exchange(&State, 1, memory_order_acquire) == 0;
-  }
-
-  void unlock() { atomic_store(&State, 0, memory_order_release); }
-
-  void checkLocked() { CHECK_EQ(atomic_load_relaxed(&State), 1); }
-
-private:
-  atomic_u8 State;
-
-  void NOINLINE lockSlow() {
-    for (u32 I = 0;; I++) {
-      if (I < 10)
-        yieldProcessor(10);
-      else
-        yieldPlatform();
-      if (atomic_load_relaxed(&State) == 0 &&
-          atomic_exchange(&State, 1, memory_order_acquire) == 0)
+      // The compiler may try to fully unroll the loop, ending up in a
+      // NumberOfTries*NumberOfYields block of pauses mixed with tryLocks. This
+      // is large, ugly and unneeded, a compact loop is better for our purpose
+      // here. Use a pragma to tell the compiler not to unroll the loop.
+#ifdef __clang__
+#pragma nounroll
+#endif
+    for (u8 I = 0U; I < NumberOfTries; I++) {
+      yieldProcessor(NumberOfYields);
+      if (tryLock())
         return;
     }
+    lockSlow();
   }
-};
-
-class SpinMutex : public StaticSpinMutex {
-public:
-  SpinMutex() { init(); }
-
-private:
-  SpinMutex(const SpinMutex &) = delete;
-  void operator=(const SpinMutex &) = delete;
-};
-
-class BlockingMutex {
-public:
-  explicit constexpr BlockingMutex(LinkerInitialized) : OpaqueStorage{} {}
-  BlockingMutex() { memset(this, 0, sizeof(*this)); }
-  void lock();
   void unlock();
-  void checkLocked() {
-    atomic_u32 *M = reinterpret_cast<atomic_u32 *>(&OpaqueStorage);
-    CHECK_NE(MtxUnlocked, atomic_load_relaxed(M));
-  }
 
 private:
-  enum MutexState { MtxUnlocked = 0, MtxLocked = 1, MtxSleeping = 2 };
-  uptr OpaqueStorage[1];
+  static constexpr u8 NumberOfTries = 10U;
+  static constexpr u8 NumberOfYields = 10U;
+
+#if SCUDO_LINUX
+  atomic_u32 M;
+#elif SCUDO_FUCHSIA
+  sync_mutex_t M;
+#endif
+
+  void lockSlow();
 };
 
-template <typename MutexType> class GenericScopedLock {
+class ScopedLock {
 public:
-  explicit GenericScopedLock(MutexType *M) : Mutex(M) { Mutex->lock(); }
-  ~GenericScopedLock() { Mutex->unlock(); }
+  explicit ScopedLock(HybridMutex &M) : Mutex(M) { Mutex.lock(); }
+  ~ScopedLock() { Mutex.unlock(); }
 
 private:
-  MutexType *Mutex;
+  HybridMutex &Mutex;
 
-  GenericScopedLock(const GenericScopedLock &) = delete;
-  void operator=(const GenericScopedLock &) = delete;
+  ScopedLock(const ScopedLock &) = delete;
+  void operator=(const ScopedLock &) = delete;
 };
-
-typedef GenericScopedLock<StaticSpinMutex> SpinMutexLock;
-typedef GenericScopedLock<BlockingMutex> BlockingMutexLock;
 
 } // namespace scudo
 

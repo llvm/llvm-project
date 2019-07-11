@@ -64,7 +64,6 @@ private:
   std::vector<Symbol *> findAllByVersion(SymbolVersion ver);
 
   llvm::StringMap<std::vector<Symbol *>> &getDemangledSyms();
-  void handleAnonymousVersion();
   void assignExactVersion(SymbolVersion ver, uint16_t versionId,
                           StringRef versionName);
   void assignWildcardVersion(SymbolVersion ver, uint16_t versionId);

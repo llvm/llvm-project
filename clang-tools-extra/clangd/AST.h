@@ -67,6 +67,22 @@ llvm::Optional<SymbolID> getSymbolID(const IdentifierInfo &II,
                                      const MacroInfo *MI,
                                      const SourceManager &SM);
 
+/// Returns a QualType as string.
+std::string printType(const QualType QT, const DeclContext & Context);
+
+/// Try to shorten the OriginalName by removing namespaces from the left of
+/// the string that are redundant in the CurrentNamespace. This way the type
+/// idenfier become shorter and easier to read.
+/// Limitation: It only handles the qualifier of the type itself, not that of
+/// templates.
+/// FIXME: change type of parameter CurrentNamespace to DeclContext ,
+/// take in to account using directives etc
+/// Example: shortenNamespace("ns1::MyClass<ns1::OtherClass>", "ns1")
+///    --> "MyClass<ns1::OtherClass>"
+std::string  shortenNamespace(const llvm::StringRef OriginalName,
+                              const llvm::StringRef CurrentNamespace);
+
+
 } // namespace clangd
 } // namespace clang
 

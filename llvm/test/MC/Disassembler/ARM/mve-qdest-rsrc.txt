@@ -1,4 +1,5 @@
-# RUN: llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -mattr=+mve.fp,+fp64 -show-encoding %s | FileCheck %s
+# RUN: not llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -mattr=+mve.fp,+fp64 -show-encoding %s 2>%t | FileCheck %s
+# RUN: FileCheck --check-prefix=ERROR < %t %s
 # RUN: not llvm-mc -disassemble -triple=thumbv8.1m.main-none-eabi -show-encoding %s &> %t
 # RUN: FileCheck --check-prefix=CHECK-NOMVE < %t %s
 
@@ -382,15 +383,15 @@
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x24,0xee,0x63,0x1e]
 
-# CHECK: vqdmlash.u8 q0, q4, r2  @ encoding: [0x08,0xfe,0x62,0x1e]
+# ERROR: [[@LINE+2]]:2: warning: invalid instruction encoding
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x08,0xfe,0x62,0x1e]
 
-# CHECK: vqdmlash.u16 q1, q4, r2  @ encoding: [0x18,0xfe,0x62,0x3e]
+# ERROR: [[@LINE+2]]:2: warning: invalid instruction encoding
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x18,0xfe,0x62,0x3e]
 
-# CHECK: vqdmlash.u32 q1, q5, r0  @ encoding: [0x2a,0xfe,0x60,0x3e]
+# ERROR: [[@LINE+2]]:2: warning: invalid instruction encoding
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x2a,0xfe,0x60,0x3e]
 
@@ -406,15 +407,15 @@
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x22,0xee,0x6b,0x0e]
 
-# CHECK: vqdmlah.u8 q0, q2, lr  @ encoding: [0x04,0xfe,0x6e,0x0e]
+# ERROR: [[@LINE+2]]:2: warning: invalid instruction encoding
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x04,0xfe,0x6e,0x0e]
 
-# CHECK: vqdmlah.u16 q0, q3, r10  @ encoding: [0x16,0xfe,0x6a,0x0e]
+# ERROR: [[@LINE+2]]:2: warning: invalid instruction encoding
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x16,0xfe,0x6a,0x0e]
 
-# CHECK: vqdmlah.u32 q1, q5, r2  @ encoding: [0x2a,0xfe,0x62,0x2e]
+# ERROR: [[@LINE+2]]:2: warning: invalid instruction encoding
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x2a,0xfe,0x62,0x2e]
 
@@ -430,15 +431,15 @@
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x20,0xee,0x44,0x1e]
 
-# CHECK: vqrdmlash.u8 q0, q4, r9  @ encoding: [0x08,0xfe,0x49,0x1e]
+# ERROR: [[@LINE+2]]:2: warning: invalid instruction encoding
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x08,0xfe,0x49,0x1e]
 
-# CHECK: vqrdmlash.u16 q0, q6, r12  @ encoding: [0x1c,0xfe,0x4c,0x1e]
+# ERROR: [[@LINE+2]]:2: warning: invalid instruction encoding
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x1c,0xfe,0x4c,0x1e]
 
-# CHECK: vqrdmlash.u32 q0, q3, r7  @ encoding: [0x26,0xfe,0x47,0x1e]
+# ERROR: [[@LINE+2]]:2: warning: invalid instruction encoding
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x26,0xfe,0x47,0x1e]
 
@@ -454,15 +455,15 @@
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x28,0xee,0x4b,0x0e]
 
-# CHECK: vqrdmlah.u8 q0, q4, r2  @ encoding: [0x08,0xfe,0x42,0x0e]
+# ERROR: [[@LINE+2]]:2: warning: invalid instruction encoding
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x08,0xfe,0x42,0x0e]
 
-# CHECK: vqrdmlah.u16 q0, q6, r1  @ encoding: [0x1c,0xfe,0x41,0x0e]
+# ERROR: [[@LINE+2]]:2: warning: invalid instruction encoding
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x1c,0xfe,0x41,0x0e]
 
-# CHECK: vqrdmlah.u32 q0, q4, r2  @ encoding: [0x28,0xfe,0x42,0x0e]
+# ERROR: [[@LINE+2]]:2: warning: invalid instruction encoding
 # CHECK-NOMVE: [[@LINE+1]]:2: warning: invalid instruction encoding
 [0x28,0xfe,0x42,0x0e]
 

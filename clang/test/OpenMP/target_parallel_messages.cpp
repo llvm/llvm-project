@@ -1,8 +1,14 @@
 // RUN: %clang_cc1 -verify -fopenmp -std=c++11 -o - %s -Wuninitialized
 // RUN: not %clang_cc1 -fopenmp -std=c++11 -fopenmp-targets=aaa-bbb-ccc-ddd -o - %s 2>&1 | FileCheck %s
 
-// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -o - %s
+// RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -o - %s -Wuninitialized
 // CHECK: error: OpenMP target is invalid: 'aaa-bbb-ccc-ddd'
+
+void xxx(int argc) {
+  int x; // expected-note {{initialize the variable 'x' to silence this warning}}
+#pragma omp target parallel
+  argc = x; // expected-warning {{variable 'x' is uninitialized when used here}}
+}
 
 void foo() {
 }

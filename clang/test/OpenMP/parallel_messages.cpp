@@ -5,6 +5,12 @@
 void foo() {
 }
 
+void xxx(int argc) {
+  int x; // expected-note {{initialize the variable 'x' to silence this warning}}
+#pragma omp parallel
+  argc = x; // expected-warning {{variable 'x' is uninitialized when used here}}
+}
+
 #pragma omp parallel // expected-error {{unexpected OpenMP directive '#pragma omp parallel'}}
 
 int a;

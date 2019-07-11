@@ -15,6 +15,7 @@
 #include "asan_internal.h"
 #include "asan_mapping.h"
 #include "sanitizer_common/sanitizer_flags.h"
+#include "sanitizer_common/sanitizer_platform.h"
 
 namespace __asan {
 
@@ -38,6 +39,10 @@ void PoisonShadowPartialRightRedzone(uptr addr,
 ALWAYS_INLINE void FastPoisonShadow(uptr aligned_beg, uptr aligned_size,
                                     u8 value) {
   DCHECK(!value || CanPoisonMemory());
+#if SANITIZER_FUCHSIA
+  __sanitizer_fill_shadow(aligned_beg, aligned_size, value,
+                          common_flags()->clear_shadow_mmap_threshold);
+#else
   uptr shadow_beg = MEM_TO_SHADOW(aligned_beg);
   uptr shadow_end = MEM_TO_SHADOW(
       aligned_beg + aligned_size - SHADOW_GRANULARITY) + 1;
@@ -46,10 +51,6 @@ ALWAYS_INLINE void FastPoisonShadow(uptr aligned_beg, uptr aligned_size,
   // probably provide higher-level interface for these operations.
   // For now, just memset on Windows.
   if (value || SANITIZER_WINDOWS == 1 ||
-      // TODO(mcgrathr): Fuchsia doesn't allow the shadow mapping to be
-      // changed at all.  It doesn't currently have an efficient means
-      // to zero a bunch of pages, but maybe we should add one.
-      SANITIZER_FUCHSIA == 1 ||
       // RTEMS doesn't have have pages, let alone a fast way to zero
       // them, so default to memset.
       SANITIZER_RTEMS == 1 ||
@@ -72,6 +73,7 @@ ALWAYS_INLINE void FastPoisonShadow(uptr aligned_beg, uptr aligned_size,
       ReserveShadowMemoryRange(page_beg, page_end - 1, nullptr);
     }
   }
+#endif // SANITIZER_FUCHSIA
 }
 
 ALWAYS_INLINE void FastPoisonShadowPartialRightRedzone(

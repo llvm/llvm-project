@@ -12989,21 +12989,25 @@ static SDValue PerformHWLoopCombine(SDNode *N,
                                     const ARMSubtarget *ST) {
   // Look for (brcond (xor test.set.loop.iterations, -1)
   SDValue CC = N->getOperand(1);
+  unsigned Opc = CC->getOpcode();
+  SDValue Int;
 
-  if (CC->getOpcode() != ISD::XOR && CC->getOpcode() != ISD::SETCC)
+  if ((Opc == ISD::XOR || Opc == ISD::SETCC) &&
+      (CC->getOperand(0)->getOpcode() == ISD::INTRINSIC_W_CHAIN)) {
+
+    assert((isa<ConstantSDNode>(CC->getOperand(1)) &&
+            cast<ConstantSDNode>(CC->getOperand(1))->isOne()) &&
+            "Expected to compare against 1");
+
+    Int = CC->getOperand(0);
+  } else if (CC->getOpcode() == ISD::INTRINSIC_W_CHAIN)
+    Int = CC;
+  else 
     return SDValue();
 
-  if (CC->getOperand(0)->getOpcode() != ISD::INTRINSIC_W_CHAIN)
-    return SDValue();
-
-  SDValue Int = CC->getOperand(0);
   unsigned IntOp = cast<ConstantSDNode>(Int.getOperand(1))->getZExtValue();
   if (IntOp != Intrinsic::test_set_loop_iterations)
     return SDValue();
-
-  assert((isa<ConstantSDNode>(CC->getOperand(1)) &&
-          cast<ConstantSDNode>(CC->getOperand(1))->isOne()) &&
-          "Expected to compare against 1");
 
   SDLoc dl(Int);
   SDValue Chain = N->getOperand(0);

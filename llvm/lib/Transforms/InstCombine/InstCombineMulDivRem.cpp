@@ -374,11 +374,13 @@ Instruction *InstCombiner::visitFMul(BinaryOperator &I) {
     return BinaryOperator::CreateFMulFMF(X, ConstantExpr::getFNeg(C), &I);
 
   // Sink negation: -X * Y --> -(X * Y)
-  if (match(Op0, m_OneUse(m_FNeg(m_Value(X)))))
+  // But don't transform constant expressions because there's an inverse fold.
+  if (match(Op0, m_OneUse(m_FNeg(m_Value(X)))) && !isa<ConstantExpr>(Op0))
     return BinaryOperator::CreateFNegFMF(Builder.CreateFMulFMF(X, Op1, &I), &I);
 
   // Sink negation: Y * -X --> -(X * Y)
-  if (match(Op1, m_OneUse(m_FNeg(m_Value(X)))))
+  // But don't transform constant expressions because there's an inverse fold.
+  if (match(Op1, m_OneUse(m_FNeg(m_Value(X)))) && !isa<ConstantExpr>(Op1))
     return BinaryOperator::CreateFNegFMF(Builder.CreateFMulFMF(X, Op0, &I), &I);
 
   // fabs(X) * fabs(X) -> X * X

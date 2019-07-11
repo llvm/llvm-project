@@ -870,7 +870,9 @@ public:
 } // namespace
 
 /// Retrieves the deduced type at a given location (auto, decltype).
-bool hasDeducedType(ParsedAST &AST, SourceLocation SourceLocationBeg) {
+/// SourceLocationBeg must point to the first character of the token
+llvm::Optional<QualType> getDeducedType(ParsedAST &AST,
+                                        SourceLocation SourceLocationBeg) {
   Token Tok;
   auto &ASTCtx = AST.getASTContext();
   // Only try to find a deduced type if the token is auto or decltype.
@@ -878,12 +880,20 @@ bool hasDeducedType(ParsedAST &AST, SourceLocation SourceLocationBeg) {
       Lexer::getRawToken(SourceLocationBeg, Tok, ASTCtx.getSourceManager(),
                          ASTCtx.getLangOpts(), false) ||
       !Tok.is(tok::raw_identifier)) {
-    return false;
+    return {};
   }
   AST.getPreprocessor().LookUpIdentifierInfo(Tok);
   if (!(Tok.is(tok::kw_auto) || Tok.is(tok::kw_decltype)))
-    return false;
-  return true;
+    return {};
+
+  DeducedTypeVisitor V(SourceLocationBeg);
+  V.TraverseAST(AST.getASTContext());
+  return V.DeducedType;
+}
+
+/// Retrieves the deduced type at a given location (auto, decltype).
+bool hasDeducedType(ParsedAST &AST, SourceLocation SourceLocationBeg) {
+  return (bool) getDeducedType(AST, SourceLocationBeg);
 }
 
 llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,

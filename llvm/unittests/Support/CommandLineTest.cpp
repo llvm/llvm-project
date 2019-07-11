@@ -95,16 +95,16 @@ TEST(CommandLineTest, ModifyExisitingOption) {
   cl::Option *Retrieved = Map["test-option"];
   ASSERT_EQ(&TestOption, Retrieved) << "Retrieved wrong option.";
 
-  ASSERT_NE(Retrieved->getCategories().end(),
-            find_if(Retrieved->getCategories(),
+  ASSERT_NE(Retrieved->Categories.end(),
+            find_if(Retrieved->Categories,
                     [&](const llvm::cl::OptionCategory *Cat) {
-                      return Cat == &*cl::GeneralCategory;
+                      return Cat == &cl::GeneralCategory;
                     }))
       << "Incorrect default option category.";
 
   Retrieved->addCategory(TestCategory);
-  ASSERT_NE(Retrieved->getCategories().end(),
-            find_if(Retrieved->getCategories(),
+  ASSERT_NE(Retrieved->Categories.end(),
+            find_if(Retrieved->Categories,
                     [&](const llvm::cl::OptionCategory *Cat) {
                       return Cat == &TestCategory;
                     }))
@@ -160,8 +160,8 @@ TEST(CommandLineTest, ParseEnvironmentToLocalVar) {
 TEST(CommandLineTest, UseOptionCategory) {
   StackOption<int> TestOption2("test-option", cl::cat(TestCategory));
 
-  ASSERT_NE(TestOption2.getCategories().end(),
-            find_if(TestOption2.getCategories(),
+  ASSERT_NE(TestOption2.Categories.end(),
+            find_if(TestOption2.Categories,
                          [&](const llvm::cl::OptionCategory *Cat) {
                            return Cat == &TestCategory;
                          }))
@@ -170,44 +170,42 @@ TEST(CommandLineTest, UseOptionCategory) {
 
 TEST(CommandLineTest, UseMultipleCategories) {
   StackOption<int> TestOption2("test-option2", cl::cat(TestCategory),
-                               cl::cat(*cl::GeneralCategory),
-                               cl::cat(*cl::GeneralCategory));
-  auto TestOption2Categories = TestOption2.getCategories();
+                               cl::cat(cl::GeneralCategory),
+                               cl::cat(cl::GeneralCategory));
 
   // Make sure cl::GeneralCategory wasn't added twice.
-  ASSERT_EQ(TestOption2Categories.size(), 2U);
+  ASSERT_EQ(TestOption2.Categories.size(), 2U);
 
-  ASSERT_NE(TestOption2Categories.end(),
-            find_if(TestOption2Categories,
+  ASSERT_NE(TestOption2.Categories.end(),
+            find_if(TestOption2.Categories,
                          [&](const llvm::cl::OptionCategory *Cat) {
                            return Cat == &TestCategory;
                          }))
       << "Failed to assign Option Category.";
-  ASSERT_NE(TestOption2Categories.end(),
-            find_if(TestOption2Categories,
+  ASSERT_NE(TestOption2.Categories.end(),
+            find_if(TestOption2.Categories,
                          [&](const llvm::cl::OptionCategory *Cat) {
-                           return Cat == &*cl::GeneralCategory;
+                           return Cat == &cl::GeneralCategory;
                          }))
       << "Failed to assign General Category.";
 
   cl::OptionCategory AnotherCategory("Additional test Options", "Description");
   StackOption<int> TestOption("test-option", cl::cat(TestCategory),
                               cl::cat(AnotherCategory));
-  auto TestOptionCategories = TestOption.getCategories();
-  ASSERT_EQ(TestOptionCategories.end(),
-            find_if(TestOptionCategories,
+  ASSERT_EQ(TestOption.Categories.end(),
+            find_if(TestOption.Categories,
                          [&](const llvm::cl::OptionCategory *Cat) {
-                           return Cat == &*cl::GeneralCategory;
+                           return Cat == &cl::GeneralCategory;
                          }))
       << "Failed to remove General Category.";
-  ASSERT_NE(TestOptionCategories.end(),
-            find_if(TestOptionCategories,
+  ASSERT_NE(TestOption.Categories.end(),
+            find_if(TestOption.Categories,
                          [&](const llvm::cl::OptionCategory *Cat) {
                            return Cat == &TestCategory;
                          }))
       << "Failed to assign Option Category.";
-  ASSERT_NE(TestOptionCategories.end(),
-            find_if(TestOptionCategories,
+  ASSERT_NE(TestOption.Categories.end(),
+            find_if(TestOption.Categories,
                          [&](const llvm::cl::OptionCategory *Cat) {
                            return Cat == &AnotherCategory;
                          }))
@@ -378,30 +376,6 @@ TEST(CommandLineTest, AliasRequired) {
   const char *opts2[] = { "-tool", "-o", "x" };
   testAliasRequired(array_lengthof(opts1), opts1);
   testAliasRequired(array_lengthof(opts2), opts2);
-}
-
-TEST(CommandLineTest, AliasWithSubCommand) {
-  StackSubCommand SC1("sc1", "Subcommand 1");
-  StackOption<std::string> Option1("option", cl::value_desc("output file"),
-                                   cl::init("-"), cl::desc("Option"),
-                                   cl::sub(SC1));
-  StackOption<std::string, cl::alias> Alias1("o", llvm::cl::aliasopt(Option1),
-                                             cl::desc("Alias for --option"),
-                                             cl::sub(SC1));
-}
-
-TEST(CommandLineTest, AliasWithMultipleSubCommandsWithSameOption) {
-  StackSubCommand SC1("sc1", "Subcommand 1");
-  StackOption<std::string> Option1("option", cl::value_desc("output file"),
-                                   cl::init("-"), cl::desc("Option"),
-                                   cl::sub(SC1));
-  StackSubCommand SC2("sc2", "Subcommand 2");
-  StackOption<std::string> Option2("option", cl::value_desc("output file"),
-                                   cl::init("-"), cl::desc("Option"),
-                                   cl::sub(SC2));
-
-  StackOption<std::string, cl::alias> Alias1("o", llvm::cl::aliasopt(Option1),
-                                             cl::desc("Alias for --option"));
 }
 
 TEST(CommandLineTest, HideUnrelatedOptions) {

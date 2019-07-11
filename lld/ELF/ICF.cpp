@@ -392,7 +392,7 @@ template <class ELFT>
 void ICF<ELFT>::forEachClass(llvm::function_ref<void(size_t, size_t)> fn) {
   // If threading is disabled or the number of sections are
   // too small to use threading, call Fn sequentially.
-  if (!ThreadsEnabled || sections.size() < 1024) {
+  if (!threadsEnabled || sections.size() < 1024) {
     forEachClassRange(0, sections.size(), fn);
     ++cnt;
     return;

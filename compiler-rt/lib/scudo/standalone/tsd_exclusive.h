@@ -60,7 +60,7 @@ template <class Allocator> struct TSDRegistryExT {
 
 private:
   void initOnceMaybe(Allocator *Instance) {
-    SpinMutexLock L(&Mutex);
+    ScopedLock L(Mutex);
     if (Initialized)
       return;
     initLinkerInitialized(Instance); // Sets Initialized.
@@ -82,7 +82,7 @@ private:
   pthread_key_t PThreadKey;
   bool Initialized;
   TSD<Allocator> *FallbackTSD;
-  StaticSpinMutex Mutex;
+  HybridMutex Mutex;
   static THREADLOCAL ThreadState State;
   static THREADLOCAL TSD<Allocator> ThreadTSD;
 

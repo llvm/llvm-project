@@ -2,6 +2,12 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -ferror-limit 100 -o - -std=c++11 %s -Wuninitialized
 
+void xxx(int argc) {
+  int x; // expected-note {{initialize the variable 'x' to silence this warning}}
+#pragma omp target depend(in : argc)
+  argc = x; // expected-warning {{variable 'x' is uninitialized when used here}}
+}
+
 void foo() {
 }
 
