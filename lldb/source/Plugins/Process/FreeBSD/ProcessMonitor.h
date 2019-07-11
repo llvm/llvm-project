@@ -183,8 +183,8 @@ public:
 private:
   ProcessFreeBSD *m_process;
 
-  lldb_private::HostThread m_operation_thread;
-  lldb_private::HostThread m_monitor_thread;
+  llvm::Expected<lldb_private::HostThread> m_operation_thread;
+  llvm::Expected<lldb_private::HostThread> m_monitor_thread;
   lldb::pid_t m_pid;
 
   int m_terminal_fd;
