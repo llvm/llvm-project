@@ -27,38 +27,42 @@ entry:
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_FUNC_PROTO(id = 1)
 ; CHECK-NEXT:        .long   218103808               # 0xd000000
 ; CHECK-NEXT:        .long   0
-; CHECK-NEXT:        .long   33                      # BTF_KIND_FUNC(id = 2)
+; CHECK-NEXT:        .long   1                       # BTF_KIND_FUNC(id = 2)
 ; CHECK-NEXT:        .long   201326592               # 0xc000000
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .byte   0                       # string offset=0
-; CHECK-NEXT:        .ascii  ".text"                 # string offset=1
+; CHECK-NEXT:        .byte   102                     # string offset=1
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "/tmp/t.c"              # string offset=7
+; CHECK-NEXT:        .ascii  ".text"                 # string offset=3
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "void f(void) { }"      # string offset=16
+; CHECK-NEXT:        .ascii  "/tmp/t.c"              # string offset=9
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .byte   102                     # string offset=33
+; CHECK-NEXT:        .ascii  "void f(void) { }"      # string offset=18
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .section        .BTF.ext,"",@progbits
 ; CHECK-NEXT:        .short  60319                   # 0xeb9f
 ; CHECK-NEXT:        .byte   1
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .long   24
+; CHECK-NEXT:        .long   40
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   28
+; CHECK-NEXT:        .long   48
+; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   48
+; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   8                       # FuncInfo
-; CHECK-NEXT:        .long   1                       # FuncInfo section string offset=1
+; CHECK-NEXT:        .long   3                       # FuncInfo section string offset=3
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   .Lfunc_begin0
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   16                      # LineInfo
-; CHECK-NEXT:        .long   1                       # LineInfo section string offset=1
+; CHECK-NEXT:        .long   3                       # LineInfo section string offset=3
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
-; CHECK-NEXT:        .long   7
-; CHECK-NEXT:        .long   16
+; CHECK-NEXT:        .long   9
+; CHECK-NEXT:        .long   18
 ; CHECK-NEXT:        .long   1040                    # Line 1 Col 16
 
 attributes #0 = { norecurse nounwind readnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

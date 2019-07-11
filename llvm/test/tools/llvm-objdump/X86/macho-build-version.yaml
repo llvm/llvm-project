@@ -54,4 +54,4 @@ CHECK-NEXT:       sdk 9.0
 CHECK-NEXT:     minos 8.0
 CHECK-NEXT:    ntools 1
 CHECK-NEXT:      tool clang
-CHECK-NEXT:   version n/a
+CHECK-NEXT:   version 0.0

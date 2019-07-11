@@ -22,6 +22,9 @@
 # FULL-NEXT: workGroupIDX: { reg: '$sgpr6' }
 # FULL-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr7' }
 # FULL-NEXT: workItemIDX: { reg: '$vgpr0' }
+# FULL-NEXT: mode:
+# FULL-NEXT: ieee: true
+# FULL-NEXT: dx10-clamp: true
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -85,6 +88,9 @@ body:             |
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 # FULL-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr33' }
+# FULL-NEXT: mode:
+# FULL-NEXT: ieee: true
+# FULL-NEXT: dx10-clamp: true
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -117,6 +123,9 @@ body:             |
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 # FULL-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr33' }
+# FULL-NEXT: mode:
+# FULL-NEXT: ieee: true
+# FULL-NEXT: dx10-clamp: true
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -150,6 +159,9 @@ body:             |
 # FULL-NEXT: argumentInfo:
 # FULL-NEXT: privateSegmentBuffer: { reg: '$sgpr0_sgpr1_sgpr2_sgpr3' }
 # FULL-NEXT: privateSegmentWaveByteOffset: { reg: '$sgpr33' }
+# FULL-NEXT: mode:
+# FULL-NEXT: ieee: true
+# FULL-NEXT: dx10-clamp: true
 # FULL-NEXT: body:
 
 # SIMPLE: machineFunctionInfo:
@@ -208,6 +220,23 @@ machineFunctionInfo:
   argumentInfo:
     flatScratchInit: { offset: 4 }
     workItemIDY:     { reg: '$vgpr0' , mask: 0xff00 }
+
+body:             |
+  bb.0:
+    S_ENDPGM 0
+
+...
+
+---
+# ALL-LABEL: name: parse_mode
+# ALL: mode:
+# ALL-NEXT: ieee: false
+# ALL-NEXT: dx10-clamp: false
+name: parse_mode
+machineFunctionInfo:
+  mode:
+    ieee: false
+    dx10-clamp: false
 
 body:             |
   bb.0:

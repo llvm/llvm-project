@@ -314,11 +314,14 @@ public:
 
   bool hasSjLjLowering() const override { return true; }
 
-  bool useFloat128ManglingForLongDouble() const override {
-    return LongDoubleWidth == 128 &&
-           LongDoubleFormat == &llvm::APFloat::PPCDoubleDouble() &&
-           getTriple().isOSBinFormatELF();
+  const char *getLongDoubleMangling() const override {
+    if (LongDoubleWidth == 64)
+      return "e";
+    return LongDoubleFormat == &llvm::APFloat::PPCDoubleDouble()
+               ? "g"
+               : "u9__ieee128";
   }
+  const char *getFloat128Mangling() const override { return "u9__ieee128"; }
 };
 
 class LLVM_LIBRARY_VISIBILITY PPC32TargetInfo : public PPCTargetInfo {

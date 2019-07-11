@@ -30,6 +30,7 @@
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=nullability -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=undefined -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
 // RUN: %clang -target x86_64-linux-gnu -fsanitize=alignment -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
+// RUN: %clang -target %itanium_abi_triple -fsanitize=float-divide-by-zero -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-DEFAULT-UBSAN-BLACKLIST --implicit-check-not=fdepfile-entry --implicit-check-not=-fsanitize-blacklist=
 // CHECK-DEFAULT-UBSAN-BLACKLIST: -fsanitize-blacklist={{.*}}ubsan_blacklist.txt
 
 // Check that combining ubsan and another sanitizer results in both blacklists being used.

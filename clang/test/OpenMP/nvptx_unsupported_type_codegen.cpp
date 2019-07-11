@@ -1,11 +1,11 @@
 // Test target codegen - host bc file has to be created first.
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -aux-triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -aux-triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -aux-triple x86_64-unknown-linux -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -triple powerpc64le-unknown-linux-gnu -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm-bc %s -o %t-host.bc
-// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -aux-triple powerpc64le-unknown-linux-gnu -fopenmp-targets=nvptx64-nvidia-cuda -aux-triple x86_64-unknown-linux -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -triple nvptx64-unknown-unknown -aux-triple powerpc64le-unknown-linux-gnu -fopenmp-targets=nvptx64-nvidia-cuda -emit-llvm %s -fopenmp-is-device -fopenmp-host-ir-file-path %t-host.bc -o - | FileCheck %s
 // expected-no-diagnostics
 
-// CHECK-DAG: [[T:%.+]] = type {{.+}}, fp128,
+// CHECK-DAG: [[T:%.+]] = type {{.+}}, {{fp128|ppc_fp128}},
 // CHECK-DAG: [[T1:%.+]] = type {{.+}}, i128, i128,
 
 #ifndef _ARCH_PPC
@@ -78,4 +78,4 @@ BIGTYPE foo(BIGTYPE f) {
 }
 
 // CHECK: define weak void @__omp_offloading_{{.+}}foo{{.+}}_l75([[BIGTYPE:.+]]*
-// CHECK: store [[BIGTYPE]] 0xL00000000000000003FFF000000000000, [[BIGTYPE]]* %
+// CHECK: store [[BIGTYPE]] {{0xL00000000000000003FFF000000000000|0xM3FF00000000000000000000000000000}}, [[BIGTYPE]]* %

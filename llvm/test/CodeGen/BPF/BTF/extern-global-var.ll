@@ -28,21 +28,21 @@ define dso_local i32 @foo() local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_FUNC_PROTO(id = 1)
 ; CHECK-NEXT:        .long   218103808               # 0xd000000
 ; CHECK-NEXT:        .long   2
-; CHECK-NEXT:        .long   44                      # BTF_KIND_INT(id = 2)
+; CHECK-NEXT:        .long   1                       # BTF_KIND_INT(id = 2)
 ; CHECK-NEXT:        .long   16777216                # 0x1000000
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   16777248                # 0x1000020
-; CHECK-NEXT:        .long   48                      # BTF_KIND_FUNC(id = 3)
+; CHECK-NEXT:        .long   5                       # BTF_KIND_FUNC(id = 3)
 ; CHECK-NEXT:        .long   201326592               # 0xc000000
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .byte   0                       # string offset=0
-; CHECK-NEXT:        .ascii  ".text"                 # string offset=1
+; CHECK-NEXT:        .ascii  "int"                   # string offset=1
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "/home/yhs/work/tests/llvm/bug/test.c" # string offset=7
+; CHECK-NEXT:        .ascii  "foo"                   # string offset=5
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "int"                   # string offset=44
+; CHECK-NEXT:        .ascii  ".text"                 # string offset=9
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "foo"                   # string offset=48
+; CHECK-NEXT:        .ascii  "/home/yhs/work/tests/llvm/bug/test.c" # string offset=15
 ; CHECK-NEXT:        .byte   0
 
 attributes #0 = { norecurse nounwind readonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }

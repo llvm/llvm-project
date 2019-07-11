@@ -141,7 +141,7 @@ public:
     return "";
   }
 
-  bool useFloat128ManglingForLongDouble() const override { return true; }
+  const char *getLongDoubleMangling() const override { return "g"; }
 };
 } // namespace targets
 } // namespace clang

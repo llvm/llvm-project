@@ -1,9 +1,12 @@
 ; Test that the compiled does not fuse fmul and fadd into fmadd when no -fp-contract=fast
 ; option is set (the same applies for fmul, fsub and fmsub).
 
-; RUN: llc -march=mipsel -mattr=+msa,+fp64 < %s | FileCheck %s --check-prefixes=CHECK-CONTRACT-OFF
-; RUN: llc -march=mipsel -mattr=+msa,+fp64 -fp-contract=off < %s | FileCheck %s --check-prefixes=CHECK-CONTRACT-OFF
-; RUN: llc -march=mips -mattr=+msa,+fp64 -fp-contract=fast < %s | FileCheck %s --check-prefixes=CHECK-CONTRACT-FAST
+; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 < %s \
+; RUN:   | FileCheck %s --check-prefixes=CHECK-CONTRACT-OFF
+; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 -fp-contract=off < %s \
+; RUN:   | FileCheck %s --check-prefixes=CHECK-CONTRACT-OFF
+; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 -fp-contract=fast < %s \
+; RUN:   | FileCheck %s --check-prefixes=CHECK-CONTRACT-FAST
 
 declare <4 x float> @llvm.mips.fmul.w(<4 x float>, <4 x float>)
 declare <4 x float> @llvm.mips.fadd.w(<4 x float>, <4 x float>)

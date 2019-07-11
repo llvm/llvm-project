@@ -44,7 +44,8 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
         Twine(EntryPath), FD, sys::fs::OF_UpdateAtime, &ResultPath);
     if (!EC) {
       ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-          MemoryBuffer::getOpenFile(FD, EntryPath,
+          MemoryBuffer::getOpenFile(sys::fs::convertFDToNativeFile(FD),
+                                    EntryPath,
                                     /*FileSize*/ -1,
                                     /*RequiresNullTerminator*/ false);
       close(FD);
@@ -86,9 +87,9 @@ Expected<NativeObjectCache> lto::localCache(StringRef CacheDirectoryPath,
 
         // Open the file first to avoid racing with a cache pruner.
         ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr =
-            MemoryBuffer::getOpenFile(TempFile.FD, TempFile.TmpName,
-                                      /*FileSize*/ -1,
-                                      /*RequiresNullTerminator*/ false);
+            MemoryBuffer::getOpenFile(
+                sys::fs::convertFDToNativeFile(TempFile.FD), TempFile.TmpName,
+                /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
         if (!MBOrErr)
           report_fatal_error(Twine("Failed to open new cache file ") +
                              TempFile.TmpName + ": " +

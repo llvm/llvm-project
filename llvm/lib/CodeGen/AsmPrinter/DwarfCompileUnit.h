@@ -227,12 +227,22 @@ public:
 
   void constructAbstractSubprogramScopeDIE(LexicalScope *Scope);
 
+  dwarf::Tag getDwarf5OrGNUCallSiteTag(dwarf::Tag Tag);
+  dwarf::Attribute getDwarf5OrGNUCallSiteAttr(dwarf::Attribute Attr);
+
   /// Construct a call site entry DIE describing a call within \p Scope to a
   /// callee described by \p CalleeSP. \p IsTail specifies whether the call is
-  /// a tail call. \p PCOffset must be non-zero for non-tail calls or be the
-  /// function-local offset to PC value after the call instruction.
-  DIE &constructCallSiteEntryDIE(DIE &ScopeDIE, const DISubprogram &CalleeSP,
-                                 bool IsTail, const MCExpr *PCOffset);
+  /// a tail call. \p PCAddr (used for GDB + DWARF 4 tuning) points to
+  /// the PC value after the call instruction. \p PCOffset (used for
+  /// cases other than GDB + DWARF 4 tuning) must be non-zero for non-tail calls
+  /// (in the case of non-gdb tuning) or be the function-local offset to PC value
+  /// after the call instruction. \p CallReg is a register location
+  /// for an indirect call.
+  DIE &constructCallSiteEntryDIE(DIE &ScopeDIE, const DISubprogram *CalleeSP,
+                                 bool IsTail, const MCSymbol *PCAddr,
+                                 const MCExpr *PCOffset, unsigned CallReg);
+  void constructCallSiteParmEntryDIEs(DIE &CallSiteDIE,
+                                      SmallVector<DbgCallSiteParam, 4> &Params);
 
   /// Construct import_module DIE.
   DIE *constructImportedEntityDIE(const DIImportedEntity *Module);

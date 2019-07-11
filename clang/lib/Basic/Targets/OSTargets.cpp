@@ -134,5 +134,84 @@ void getDarwinDefines(MacroBuilder &Builder, const LangOptions &Opts,
 
   PlatformMinVersion = VersionTuple(Maj, Min, Rev);
 }
+
+static void addMinGWDefines(const llvm::Triple &Triple, const LangOptions &Opts,
+                            MacroBuilder &Builder) {
+  DefineStd(Builder, "WIN32", Opts);
+  DefineStd(Builder, "WINNT", Opts);
+  if (Triple.isArch64Bit()) {
+    DefineStd(Builder, "WIN64", Opts);
+    Builder.defineMacro("__MINGW64__");
+  }
+  Builder.defineMacro("__MSVCRT__");
+  Builder.defineMacro("__MINGW32__");
+  addCygMingDefines(Opts, Builder);
+}
+
+static void addVisualCDefines(const LangOptions &Opts, MacroBuilder &Builder) {
+  if (Opts.CPlusPlus) {
+    if (Opts.RTTIData)
+      Builder.defineMacro("_CPPRTTI");
+
+    if (Opts.CXXExceptions)
+      Builder.defineMacro("_CPPUNWIND");
+  }
+
+  if (Opts.Bool)
+    Builder.defineMacro("__BOOL_DEFINED");
+
+  if (!Opts.CharIsSigned)
+    Builder.defineMacro("_CHAR_UNSIGNED");
+
+  // FIXME: POSIXThreads isn't exactly the option this should be defined for,
+  //        but it works for now.
+  if (Opts.POSIXThreads)
+    Builder.defineMacro("_MT");
+
+  if (Opts.MSCompatibilityVersion) {
+    Builder.defineMacro("_MSC_VER",
+                        Twine(Opts.MSCompatibilityVersion / 100000));
+    Builder.defineMacro("_MSC_FULL_VER", Twine(Opts.MSCompatibilityVersion));
+    // FIXME We cannot encode the revision information into 32-bits
+    Builder.defineMacro("_MSC_BUILD", Twine(1));
+
+    if (Opts.CPlusPlus11 && Opts.isCompatibleWithMSVC(LangOptions::MSVC2015))
+      Builder.defineMacro("_HAS_CHAR16_T_LANGUAGE_SUPPORT", Twine(1));
+
+    if (Opts.isCompatibleWithMSVC(LangOptions::MSVC2015)) {
+      if (Opts.CPlusPlus2a)
+        Builder.defineMacro("_MSVC_LANG", "201704L");
+      else if (Opts.CPlusPlus17)
+        Builder.defineMacro("_MSVC_LANG", "201703L");
+      else if (Opts.CPlusPlus14)
+        Builder.defineMacro("_MSVC_LANG", "201402L");
+    }
+  }
+
+  if (Opts.MicrosoftExt) {
+    Builder.defineMacro("_MSC_EXTENSIONS");
+
+    if (Opts.CPlusPlus11) {
+      Builder.defineMacro("_RVALUE_REFERENCES_V2_SUPPORTED");
+      Builder.defineMacro("_RVALUE_REFERENCES_SUPPORTED");
+      Builder.defineMacro("_NATIVE_NULLPTR_SUPPORTED");
+    }
+  }
+
+  Builder.defineMacro("_INTEGRAL_MAX_BITS", "64");
+}
+
+void addWindowsDefines(const llvm::Triple &Triple, const LangOptions &Opts,
+                       MacroBuilder &Builder) {
+  Builder.defineMacro("_WIN32");
+  if (Triple.isArch64Bit())
+    Builder.defineMacro("_WIN64");
+  if (Triple.isWindowsGNUEnvironment())
+    addMinGWDefines(Triple, Opts, Builder);
+  else if (Triple.isKnownWindowsMSVCEnvironment() ||
+           (Triple.isWindowsItaniumEnvironment() && Opts.MSVCCompat))
+    addVisualCDefines(Opts, Builder);
+}
+
 } // namespace targets
 } // namespace clang

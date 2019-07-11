@@ -151,6 +151,16 @@ class Value;
     BasicBlock *findOrCreateBlockForHoisting(BasicBlock *CommonExitBlock);
 
   private:
+    struct LifetimeMarkerInfo {
+      bool SinkLifeStart = false;
+      bool HoistLifeEnd = false;
+      Instruction *LifeStart = nullptr;
+      Instruction *LifeEnd = nullptr;
+    };
+
+    LifetimeMarkerInfo getLifetimeMarkers(Instruction *Addr,
+                                          BasicBlock *ExitBlock) const;
+
     void severSplitPHINodesOfEntry(BasicBlock *&Header);
     void severSplitPHINodesOfExits(const SmallPtrSetImpl<BasicBlock *> &Exits);
     void splitReturnBlocks();

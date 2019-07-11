@@ -21,6 +21,25 @@ static bool requiresGOTAccess(const Symbol *Sym) {
   return Config->Pic && !Sym->isHidden() && !Sym->isLocal();
 }
 
+static bool allowUndefined(const Symbol* Sym) {
+  // Historically --allow-undefined doesn't work for data symbols since we don't
+  // have any way to represent these as imports in the final binary.  The idea
+  // behind allowing undefined symbols is to allow importing these symbols from
+  // the embedder and we can't do this for data symbols (at least not without
+  // compiling with -fPIC)
+  if (isa<DataSymbol>(Sym))
+    return false;
+  return (Config->AllowUndefined ||
+          Config->AllowUndefinedSymbols.count(Sym->getName()) != 0);
+}
+
+static void reportUndefined(const Symbol* Sym) {
+  assert(Sym->isUndefined());
+  assert(!Sym->isWeak());
+  if (!allowUndefined(Sym))
+    error(toString(Sym->getFile()) + ": undefined symbol: " + toString(*Sym));
+}
+
 void lld::wasm::scanRelocations(InputChunk *Chunk) {
   if (!Chunk->Live)
     return;
@@ -50,15 +69,6 @@ void lld::wasm::scanRelocations(InputChunk *Chunk) {
       if (!isa<GlobalSymbol>(Sym))
         Out.ImportSec->addGOTEntry(Sym);
       break;
-    case R_WASM_MEMORY_ADDR_SLEB:
-    case R_WASM_MEMORY_ADDR_LEB:
-    case R_WASM_MEMORY_ADDR_REL_SLEB:
-      if (!Config->Relocatable && Sym->isUndefined() && !Sym->isWeak()) {
-        error(toString(File) + ": cannot resolve relocation of type " +
-              relocTypeToString(Reloc.Type) +
-              " against undefined (non-weak) data symbol: " + toString(*Sym));
-      }
-      break;
     }
 
     if (Config->Pic) {
@@ -81,6 +91,11 @@ void lld::wasm::scanRelocations(InputChunk *Chunk) {
           Out.ImportSec->addGOTEntry(Sym);
         break;
       }
+    } else {
+      // Report undefined symbols
+      if (Sym->isUndefined() && !Config->Relocatable && !Sym->isWeak())
+        reportUndefined(Sym);
     }
+
   }
 }

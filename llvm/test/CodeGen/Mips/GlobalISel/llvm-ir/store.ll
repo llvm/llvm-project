@@ -25,3 +25,25 @@ entry:
   store i64 %val, i64* %ptr
   ret void
 }
+
+define void @store_float(float %val, float* %ptr)  {
+; MIPS32-LABEL: store_float:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    swc1 $f12, 0($5)
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  store float %val, float* %ptr
+  ret void
+}
+
+define void @store_double(double %val, double* %ptr)  {
+; MIPS32-LABEL: store_double:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    sdc1 $f12, 0($6)
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  store double %val, double* %ptr
+  ret void
+}

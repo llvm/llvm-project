@@ -175,6 +175,7 @@
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx902 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX902 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx904 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX904 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx906 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX906 %s
+// RUN: %clang -E -dM -target amdgcn -mcpu=gfx908 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX908 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx909 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX909 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1010 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX1010 %s
 // RUN: %clang -E -dM -target amdgcn -mcpu=gfx1011 %s 2>&1 | FileCheck --check-prefixes=ARCH-GCN,GFX1011 %s
@@ -195,6 +196,7 @@
 // GFX902-DAG: #define FP_FAST_FMA 1
 // GFX904-DAG: #define FP_FAST_FMA 1
 // GFX906-DAG: #define FP_FAST_FMA 1
+// GFX908-DAG: #define FP_FAST_FMA 1
 // GFX909-DAG: #define FP_FAST_FMA 1
 // GFX1010-DAG: #define FP_FAST_FMA 1
 // GFX1011-DAG: #define FP_FAST_FMA 1
@@ -215,6 +217,7 @@
 // GFX902-DAG: #define FP_FAST_FMAF 1
 // GFX904-DAG: #define FP_FAST_FMAF 1
 // GFX906-DAG: #define FP_FAST_FMAF 1
+// GFX908-DAG: #define FP_FAST_FMAF 1
 // GFX909-DAG: #define FP_FAST_FMAF 1
 // GFX1010-DAG: #define FP_FAST_FMAF 1
 // GFX1011-DAG: #define FP_FAST_FMAF 1
@@ -239,6 +242,7 @@
 // GFX902-DAG: #define __HAS_FMAF__ 1
 // GFX904-DAG: #define __HAS_FMAF__ 1
 // GFX906-DAG: #define __HAS_FMAF__ 1
+// GFX908-DAG: #define __HAS_FMAF__ 1
 // GFX909-DAG: #define __HAS_FMAF__ 1
 // GFX1010-DAG: #define __HAS_FMAF__ 1
 // GFX1011-DAG: #define __HAS_FMAF__ 1
@@ -259,6 +263,7 @@
 // GFX902-DAG: #define __HAS_FP64__ 1
 // GFX904-DAG: #define __HAS_FP64__ 1
 // GFX906-DAG: #define __HAS_FP64__ 1
+// GFX908-DAG: #define __HAS_FP64__ 1
 // GFX909-DAG: #define __HAS_FP64__ 1
 // GFX1010-DAG: #define __HAS_FP64__ 1
 // GFX1011-DAG: #define __HAS_FP64__ 1
@@ -279,6 +284,7 @@
 // GFX902-DAG: #define __HAS_LDEXPF__ 1
 // GFX904-DAG: #define __HAS_LDEXPF__ 1
 // GFX906-DAG: #define __HAS_LDEXPF__ 1
+// GFX908-DAG: #define __HAS_LDEXPF__ 1
 // GFX909-DAG: #define __HAS_LDEXPF__ 1
 // GFX1010-DAG: #define __HAS_LDEXPF__ 1
 // GFX1011-DAG: #define __HAS_LDEXPF__ 1
@@ -299,6 +305,7 @@
 // GFX902-DAG: #define __gfx902__ 1
 // GFX904-DAG: #define __gfx904__ 1
 // GFX906-DAG: #define __gfx906__ 1
+// GFX908-DAG: #define __gfx908__ 1
 // GFX909-DAG: #define __gfx909__ 1
 // GFX1010-DAG: #define __gfx1010__ 1
 // GFX1011-DAG: #define __gfx1011__ 1

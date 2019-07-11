@@ -1,9 +1,6 @@
-# RUN: llc -march=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN,SI
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN,VI
+# RUN: llc -march=amdgcn -mcpu=tahiti -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,SI
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=GCN,VI
 
---- |
-  define void @ashr(i32 addrspace(1)* %global0) {ret void}
-...
 ---
 
 name:            ashr
@@ -80,7 +77,6 @@ body: |
     %17:vgpr(s32) = G_ASHR %16, %5
 
 
-    G_STORE %17, %3 :: (store 4 into %ir.global0, addrspace 1)
+    S_ENDPGM 0, implicit %17
 
 ...
----

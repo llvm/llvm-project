@@ -8,7 +8,7 @@ void foo() {
   // addrspacecast before passing the value to the function.
   // CHECK: [[REF:%.*]] = alloca i32
   // CHECK: store i32 1, i32* [[REF]]
-  // CHECK: [[REG:%[0-9]+]] = addrspacecast i32* [[REF]] to i32 addrspace(4)*
+  // CHECK: [[REG:%[.a-z0-9]+]] = addrspacecast i32* [[REF]] to i32 addrspace(4)*
   // CHECK: call spir_func i32 @_Z3barRU3AS4Kj(i32 addrspace(4)* dereferenceable(4) [[REG]])
   bar(1);
 }

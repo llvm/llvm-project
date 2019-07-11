@@ -267,12 +267,14 @@ __m128 test_mm_cvtsi32_ss(__m128 A, int B) {
   return _mm_cvtsi32_ss(A, B);
 }
 
+#ifdef __x86_64__
 __m128 test_mm_cvtsi64_ss(__m128 A, long long B) {
   // CHECK-LABEL: test_mm_cvtsi64_ss
   // CHECK: sitofp i64 %{{.*}} to float
   // CHECK: insertelement <4 x float> %{{.*}}, float %{{.*}}, i32 0
   return _mm_cvtsi64_ss(A, B);
 }
+#endif
 
 float test_mm_cvtss_f32(__m128 A) {
   // CHECK-LABEL: test_mm_cvtss_f32
@@ -286,11 +288,13 @@ int test_mm_cvtss_si32(__m128 A) {
   return _mm_cvtss_si32(A);
 }
 
+#ifdef __x86_64__
 long long test_mm_cvtss_si64(__m128 A) {
   // CHECK-LABEL: test_mm_cvtss_si64
   // CHECK: call i64 @llvm.x86.sse.cvtss2si64(<4 x float> %{{.*}})
   return _mm_cvtss_si64(A);
 }
+#endif
 
 int test_mm_cvtt_ss2si(__m128 A) {
   // CHECK-LABEL: test_mm_cvtt_ss2si
@@ -304,11 +308,13 @@ int test_mm_cvttss_si32(__m128 A) {
   return _mm_cvttss_si32(A);
 }
 
+#ifdef __x86_64__
 long long test_mm_cvttss_si64(__m128 A) {
   // CHECK-LABEL: test_mm_cvttss_si64
   // CHECK: call i64 @llvm.x86.sse.cvttss2si64(<4 x float> %{{.*}})
   return _mm_cvttss_si64(A);
 }
+#endif
 
 __m128 test_mm_div_ps(__m128 A, __m128 B) {
   // CHECK-LABEL: test_mm_div_ps
@@ -682,17 +688,15 @@ void test_mm_store1_ps(float* x, __m128 y) {
 
 void test_mm_storeh_pi(__m64* x,  __m128 y) {
   // CHECK-LABEL: test_mm_storeh_pi
-  // CHECK: bitcast <4 x float> %{{.*}} to <2 x i64>
-  // CHECK: extractelement <2 x i64> %{{.*}}, i64 1
-  // CHECK: store i64 %{{.*}}, i64* {{.*}}
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <2 x i32> <i32 2, i32 3>
+  // CHECK: store <2 x float> %{{.*}}, <2 x float>* %{{.*}}, align 1{{$}}
   _mm_storeh_pi(x, y);
 }
 
 void test_mm_storel_pi(__m64* x,  __m128 y) {
   // CHECK-LABEL: test_mm_storel_pi
-  // CHECK: bitcast <4 x float> %{{.*}} to <2 x i64>
-  // CHECK: extractelement <2 x i64> %{{.*}}, i64 0
-  // CHECK: store i64 %{{.*}}, i64* {{.*}}
+  // CHECK: shufflevector <4 x float> %{{.*}}, <4 x float> %{{.*}}, <2 x i32> <i32 0, i32 1>
+  // CHECK: store <2 x float> %{{.*}}, <2 x float>* %{{.*}}, align 1{{$}}
   _mm_storel_pi(x, y);
 }
 

@@ -391,7 +391,8 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
   // Map the opened file into memory and use a StringRef to access it later.
   std::error_code EC;
   sys::fs::mapped_file_region MappedFile(
-      Fd, sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
+      sys::fs::convertFDToNativeFile(Fd),
+      sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
   if (EC) {
     return make_error<StringError>(
         Twine("Cannot read log from '") + Filename + "'", EC);

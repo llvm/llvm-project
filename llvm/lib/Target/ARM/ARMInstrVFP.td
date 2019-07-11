@@ -302,13 +302,13 @@ def VLSTM : AXSI4<(outs), (ins GPRnopc:$Rn, pred:$p), IndexModeNone,
 }
 
 def : InstAlias<"vpush${p} $r", (VSTMDDB_UPD SP, pred:$p, dpr_reglist:$r), 0>,
-                Requires<[HasVFP2]>;
+                Requires<[HasFPRegs]>;
 def : InstAlias<"vpush${p} $r", (VSTMSDB_UPD SP, pred:$p, spr_reglist:$r), 0>,
-                Requires<[HasVFP2]>;
+                Requires<[HasFPRegs]>;
 def : InstAlias<"vpop${p} $r",  (VLDMDIA_UPD SP, pred:$p, dpr_reglist:$r), 0>,
-                Requires<[HasVFP2]>;
+                Requires<[HasFPRegs]>;
 def : InstAlias<"vpop${p} $r",  (VLDMSIA_UPD SP, pred:$p, spr_reglist:$r), 0>,
-                Requires<[HasVFP2]>;
+                Requires<[HasFPRegs]>;
 defm : VFPDTAnyInstAlias<"vpush${p}", "$r",
                          (VSTMSDB_UPD SP, pred:$p, spr_reglist:$r)>;
 defm : VFPDTAnyInstAlias<"vpush${p}", "$r",

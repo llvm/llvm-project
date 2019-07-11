@@ -1235,7 +1235,8 @@ static Value *getPow(Value *InnerChain[33], unsigned Exp, IRBuilder<> &B) {
 }
 
 /// Use exp{,2}(x * y) for pow(exp{,2}(x), y);
-/// exp2(n * x) for pow(2.0 ** n, x); exp10(x) for pow(10.0, x).
+/// exp2(n * x) for pow(2.0 ** n, x); exp10(x) for pow(10.0, x);
+/// exp2(log2(C)*x) for pow(C,x).
 Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilder<> &B) {
   Value *Base = Pow->getArgOperand(0), *Expo = Pow->getArgOperand(1);
   AttributeList Attrs = Pow->getCalledFunction()->getAttributes();
@@ -1347,6 +1348,28 @@ Value *LibCallSimplifier::replacePowWithExp(CallInst *Pow, IRBuilder<> &B) {
     return emitUnaryFloatFnCall(Expo, TLI, LibFunc_exp10, LibFunc_exp10f,
                                 LibFunc_exp10l, B, Attrs);
 
+  // pow(C,x) -> exp2(log2(C)*x)
+  if (Pow->hasOneUse() && Pow->hasApproxFunc() && Pow->hasNoNaNs() &&
+      Pow->hasNoInfs() && BaseF->isNormal() && !BaseF->isNegative()) {
+    Value *Log = nullptr;
+    if (Ty->isFloatTy())
+      Log = ConstantFP::get(Ty, std::log2(BaseF->convertToFloat()));
+    else if (Ty->isDoubleTy())
+      Log = ConstantFP::get(Ty, std::log2(BaseF->convertToDouble()));
+
+    if (Log) {
+      Value *FMul = B.CreateFMul(Log, Expo, "mul");
+      if (Pow->doesNotAccessMemory()) {
+        return B.CreateCall(Intrinsic::getDeclaration(Mod, Intrinsic::exp2, Ty),
+                            FMul, "exp2");
+      } else {
+        if (hasUnaryFloatFn(TLI, Ty, LibFunc_exp2, LibFunc_exp2f,
+                            LibFunc_exp2l))
+          return emitUnaryFloatFnCall(FMul, TLI, LibFunc_exp2, LibFunc_exp2f,
+                                      LibFunc_exp2l, B, Attrs);
+      }
+    }
+  }
   return nullptr;
 }
 

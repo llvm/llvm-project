@@ -82,6 +82,8 @@ public:
   MCOperand decodeOperand_VReg_64(unsigned Val) const;
   MCOperand decodeOperand_VReg_96(unsigned Val) const;
   MCOperand decodeOperand_VReg_128(unsigned Val) const;
+  MCOperand decodeOperand_VReg_256(unsigned Val) const;
+  MCOperand decodeOperand_VReg_512(unsigned Val) const;
 
   MCOperand decodeOperand_SReg_32(unsigned Val) const;
   MCOperand decodeOperand_SReg_32_XM0_XEXEC(unsigned Val) const;
@@ -93,12 +95,20 @@ public:
   MCOperand decodeOperand_SReg_256(unsigned Val) const;
   MCOperand decodeOperand_SReg_512(unsigned Val) const;
 
+  MCOperand decodeOperand_AGPR_32(unsigned Val) const;
+  MCOperand decodeOperand_AReg_128(unsigned Val) const;
+  MCOperand decodeOperand_AReg_512(unsigned Val) const;
+  MCOperand decodeOperand_AReg_1024(unsigned Val) const;
+  MCOperand decodeOperand_AV_32(unsigned Val) const;
+  MCOperand decodeOperand_AV_64(unsigned Val) const;
+
   enum OpWidthTy {
     OPW32,
     OPW64,
     OPW128,
     OPW256,
     OPW512,
+    OPW1024,
     OPW16,
     OPWV216,
     OPW_LAST_,
@@ -106,6 +116,7 @@ public:
   };
 
   unsigned getVgprClassId(const OpWidthTy Width) const;
+  unsigned getAgprClassId(const OpWidthTy Width) const;
   unsigned getSgprClassId(const OpWidthTy Width) const;
   unsigned getTtmpClassId(const OpWidthTy Width) const;
 

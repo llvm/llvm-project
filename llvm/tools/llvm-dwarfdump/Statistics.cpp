@@ -56,9 +56,12 @@ struct GlobalStats {
   /// Total number of PC range bytes in each variable's enclosing scope,
   /// starting from the first definition of the variable.
   unsigned ScopeBytesFromFirstDefinition = 0;
-  /// Total number of call site entries (DW_TAG_call_site) or
-  /// (DW_AT_call_file & DW_AT_call_line).
+  /// Total number of call site entries (DW_AT_call_file & DW_AT_call_line).
   unsigned CallSiteEntries = 0;
+  /// Total number of call site DIEs (DW_TAG_call_site).
+  unsigned CallSiteDIEs = 0;
+  /// Total number of call site parameter DIEs (DW_TAG_call_site_parameter).
+  unsigned CallSiteParamDIEs = 0;
   /// Total byte size of concrete functions. This byte size includes
   /// inline functions contained in the concrete functions.
   uint64_t FunctionSize = 0;
@@ -94,8 +97,15 @@ static void collectStatsForDie(DWARFDie Die, std::string FnPrefix,
   uint64_t BytesCovered = 0;
   uint64_t OffsetToFirstDefinition = 0;
 
-  if (Die.getTag() == dwarf::DW_TAG_call_site) {
-    GlobalStats.CallSiteEntries++;
+  if (Die.getTag() == dwarf::DW_TAG_call_site ||
+      Die.getTag() == dwarf::DW_TAG_GNU_call_site) {
+    GlobalStats.CallSiteDIEs++;
+    return;
+  }
+
+  if (Die.getTag() == dwarf::DW_TAG_call_site_parameter ||
+      Die.getTag() == dwarf::DW_TAG_GNU_call_site_parameter) {
+    GlobalStats.CallSiteParamDIEs++;
     return;
   }
 
@@ -387,6 +397,8 @@ bool collectStatsForObjectFile(ObjectFile &Obj, DWARFContext &DICtx,
   printDatum(OS, "source variables", VarParamTotal);
   printDatum(OS, "variables with location", VarParamWithLoc);
   printDatum(OS, "call site entries", GlobalStats.CallSiteEntries);
+  printDatum(OS, "call site DIEs", GlobalStats.CallSiteDIEs);
+  printDatum(OS, "call site parameter DIEs", GlobalStats.CallSiteParamDIEs);
   printDatum(OS, "scope bytes total",
              GlobalStats.ScopeBytesFromFirstDefinition);
   printDatum(OS, "scope bytes covered", GlobalStats.ScopeBytesCovered);

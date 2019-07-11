@@ -347,6 +347,7 @@ public:
   void VisitObjCPropertyDecl(const ObjCPropertyDecl *D);
   void VisitObjCPropertyImplDecl(const ObjCPropertyImplDecl *D);
   void VisitBlockDecl(const BlockDecl *D);
+  void VisitConceptDecl(const ConceptDecl *D);
 };
 
 } // namespace clang

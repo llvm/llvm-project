@@ -4487,8 +4487,7 @@ SDValue DAGTypeLegalizer::WidenVecOp_SETCC(SDNode *N) {
 
   // Get a new SETCC node to compare the newly widened operands.
   // Only some of the compared elements are legal.
-  EVT SVT = TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(),
-                                   InOp0.getValueType());
+  EVT SVT = getSetCCResultType(InOp0.getValueType());
   // The result type is legal, if its vXi1, keep vXi1 for the new SETCC.
   if (VT.getScalarType() == MVT::i1)
     SVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1,

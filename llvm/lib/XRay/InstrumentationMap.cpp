@@ -178,7 +178,8 @@ loadYAML(int Fd, size_t FileSize, StringRef Filename,
          InstrumentationMap::FunctionAddressReverseMap &FunctionIds) {
   std::error_code EC;
   sys::fs::mapped_file_region MappedFile(
-      Fd, sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
+      sys::fs::convertFDToNativeFile(Fd),
+      sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
   if (EC)
     return make_error<StringError>(
         Twine("Failed memory-mapping file '") + Filename + "'.", EC);

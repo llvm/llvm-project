@@ -1082,11 +1082,11 @@ declare void @external_void_func_void() #1
 ; GFX1032: s_add_u32 s32, s32, 0x200
 
 
-; GCN-DAG: v_writelane_b32 v32, s36, 0
-; GCN-DAG: v_writelane_b32 v32, s37, 1
+; GCN-DAG: v_writelane_b32 v32, s30, 0
+; GCN-DAG: v_writelane_b32 v32, s31, 1
 ; GCN: s_swappc_b64
-; GCN-DAG: v_readlane_b32 s36, v32, 0
-; GCN-DAG: v_readlane_b32 s37, v32, 1
+; GCN-DAG: v_readlane_b32 s4, v32, 0
+; GCN-DAG: v_readlane_b32 s5, v32, 1
 
 
 ; GFX1064: s_sub_u32 s32, s32, 0x400

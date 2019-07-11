@@ -659,32 +659,7 @@ static Constant *stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
   Type *IntPtrTy = DL.getIntPtrType(V->getType())->getScalarType();
   APInt Offset = APInt::getNullValue(IntPtrTy->getIntegerBitWidth());
 
-  // Even though we don't look through PHI nodes, we could be called on an
-  // instruction in an unreachable block, which may be on a cycle.
-  SmallPtrSet<Value *, 4> Visited;
-  Visited.insert(V);
-  do {
-    if (GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
-      if ((!AllowNonInbounds && !GEP->isInBounds()) ||
-          !GEP->accumulateConstantOffset(DL, Offset))
-        break;
-      V = GEP->getPointerOperand();
-    } else if (Operator::getOpcode(V) == Instruction::BitCast) {
-      V = cast<Operator>(V)->getOperand(0);
-    } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
-      if (GA->isInterposable())
-        break;
-      V = GA->getAliasee();
-    } else {
-      if (auto *Call = dyn_cast<CallBase>(V))
-        if (Value *RV = Call->getReturnedArgOperand()) {
-          V = RV;
-          continue;
-        }
-      break;
-    }
-    assert(V->getType()->isPtrOrPtrVectorTy() && "Unexpected operand type!");
-  } while (Visited.insert(V).second);
+  V = V->stripAndAccumulateConstantOffsets(DL, Offset, AllowNonInbounds);
 
   Constant *OffsetIntPtr = ConstantInt::get(IntPtrTy, Offset);
   if (V->getType()->isVectorTy())

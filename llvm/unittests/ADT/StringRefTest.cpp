@@ -34,10 +34,6 @@ std::ostream &operator<<(std::ostream &OS,
 // Check that we can't accidentally assign a temporary std::string to a
 // StringRef. (Unfortunately we can't make use of the same thing with
 // constructors.)
-//
-// Disable this check under MSVC; even MSVC 2015 isn't consistent between
-// std::is_assignable and actually writing such an assignment.
-#if !defined(_MSC_VER)
 static_assert(
     !std::is_assignable<StringRef&, std::string>::value,
     "Assigning from prvalue std::string");
@@ -56,8 +52,6 @@ static_assert(
 static_assert(
     std::is_assignable<StringRef&, const char * &>::value,
     "Assigning from lvalue C string");
-#endif
-
 
 namespace {
 TEST(StringRefTest, Construction) {

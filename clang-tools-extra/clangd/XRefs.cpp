@@ -14,6 +14,7 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "URI.h"
+#include "index/Index.h"
 #include "index/Merge.h"
 #include "index/SymbolCollector.h"
 #include "index/SymbolLocation.h"
@@ -601,8 +602,32 @@ static const FunctionDecl *getUnderlyingFunction(const Decl *D) {
   return D->getAsFunction();
 }
 
+// Look up information about D from the index, and add it to Hover.
+static void enhanceFromIndex(HoverInfo &Hover, const Decl *D,
+                             const SymbolIndex *Index) {
+  if (!Index || !llvm::isa<NamedDecl>(D))
+    return;
+  const NamedDecl &ND = *cast<NamedDecl>(D);
+  // We only add documentation, so don't bother if we already have some.
+  if (!Hover.Documentation.empty())
+    return;
+  // Skip querying for non-indexable symbols, there's no point.
+  // We're searching for symbols that might be indexed outside this main file.
+  if (!SymbolCollector::shouldCollectSymbol(ND, ND.getASTContext(),
+                                            SymbolCollector::Options(),
+                                            /*IsMainFileOnly=*/false))
+    return;
+  auto ID = getSymbolID(&ND);
+  if (!ID)
+    return;
+  LookupRequest Req;
+  Req.IDs.insert(*ID);
+  Index->lookup(
+      Req, [&](const Symbol &S) { Hover.Documentation = S.Documentation; });
+}
+
 /// Generate a \p Hover object given the declaration \p D.
-static HoverInfo getHoverContents(const Decl *D) {
+static HoverInfo getHoverContents(const Decl *D, const SymbolIndex *Index) {
   HoverInfo HI;
   const ASTContext &Ctx = D->getASTContext();
 
@@ -697,19 +722,22 @@ static HoverInfo getHoverContents(const Decl *D) {
   }
 
   HI.Definition = printDefinition(D);
+  enhanceFromIndex(HI, D, Index);
   return HI;
 }
 
 /// Generate a \p Hover object given the type \p T.
-static HoverInfo getHoverContents(QualType T, const Decl *D,
-                                  ASTContext &ASTCtx) {
+static HoverInfo getHoverContents(QualType T, const Decl *D, ASTContext &ASTCtx,
+                                  const SymbolIndex *Index) {
   HoverInfo HI;
   llvm::raw_string_ostream OS(HI.Name);
   PrintingPolicy Policy = printingPolicyForDecls(ASTCtx.getPrintingPolicy());
   T.print(OS, Policy);
 
-  if (D)
+  if (D) {
     HI.Kind = indexSymbolKindToSymbolKind(index::getSymbolInfo(D).Kind);
+    enhanceFromIndex(HI, D, Index);
+  }
   return HI;
 }
 
@@ -859,7 +887,8 @@ bool hasDeducedType(ParsedAST &AST, SourceLocation SourceLocationBeg) {
 }
 
 llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
-                                   format::FormatStyle Style) {
+                                   format::FormatStyle Style,
+                                   const SymbolIndex *Index) {
   llvm::Optional<HoverInfo> HI;
   SourceLocation SourceLocationBeg = getBeginningOfIdentifier(
       AST, Pos, AST.getSourceManager().getMainFileID());
@@ -869,7 +898,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
   if (!Symbols.Macros.empty())
     HI = getHoverContents(Symbols.Macros[0], AST);
   else if (!Symbols.Decls.empty())
-    HI = getHoverContents(Symbols.Decls[0]);
+    HI = getHoverContents(Symbols.Decls[0], Index);
   else {
     if (!hasDeducedType(AST, SourceLocationBeg))
       return None;
@@ -878,7 +907,7 @@ llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
     V.TraverseAST(AST.getASTContext());
     if (V.DeducedType.isNull())
       return None;
-    HI = getHoverContents(V.DeducedType, V.D, AST.getASTContext());
+    HI = getHoverContents(V.DeducedType, V.D, AST.getASTContext(), Index);
   }
 
   auto Replacements = format::reformat(
@@ -1225,6 +1254,9 @@ FormattedString HoverInfo::present() const {
     // Builtin types
     Output.appendCodeBlock(Name);
   }
+
+  if (!Documentation.empty())
+    Output.appendText(Documentation);
   return Output;
 }
 

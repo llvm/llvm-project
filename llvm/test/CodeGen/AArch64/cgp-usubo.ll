@@ -21,11 +21,9 @@ define i1 @usubo_ult_i64(i64 %x, i64 %y, i64* %p) nounwind {
 define i1 @usubo_ugt_i32(i32 %x, i32 %y, i32* %p) nounwind {
 ; CHECK-LABEL: usubo_ugt_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp w1, w0
-; CHECK-NEXT:    cset w8, hi
-; CHECK-NEXT:    sub w9, w0, w1
-; CHECK-NEXT:    mov w0, w8
-; CHECK-NEXT:    str w9, [x2]
+; CHECK-NEXT:    subs w8, w0, w1
+; CHECK-NEXT:    cset w0, lo
+; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %ov = icmp ugt i32 %y, %x
   %s = sub i32 %x, %y

@@ -26,6 +26,7 @@ static_library("Checkers") {
     "CallAndMessageChecker.cpp",
     "CastSizeChecker.cpp",
     "CastToStructChecker.cpp",
+    "CastValueChecker.cpp",
     "CheckObjCDealloc.cpp",
     "CheckObjCInstMethSignature.cpp",
     "CheckSecuritySyntaxOnly.cpp",

@@ -733,6 +733,7 @@ bool DWARFAttribute::mayHaveLocationDescription(dwarf::Attribute Attr) {
   case DW_AT_call_data_value:
   // Extensions.
   case DW_AT_GNU_call_site_value:
+  case DW_AT_GNU_call_site_target:
     return true;
   default:
     return false;

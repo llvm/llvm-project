@@ -36,7 +36,12 @@ public:
   void printNeededLibraries() override;
 
 private:
+  template <typename T> void printSectionHeaders(ArrayRef<T> Sections);
+
   const XCOFFObjectFile &Obj;
+
+  // Least significant 3 bits are reserved.
+  static constexpr unsigned SectionFlagsReservedMask = 0x7;
 };
 } // anonymous namespace
 
@@ -65,12 +70,20 @@ void XCOFFDumper::printFileHeaders() {
                TimeStamp);
   }
 
-  W.printHex("SymbolTableOffset", Obj.getSymbolTableOffset());
-  int32_t SymTabEntries = Obj.getRawNumberOfSymbolTableEntries();
-  if (SymTabEntries >= 0)
-    W.printNumber("SymbolTableEntries", SymTabEntries);
-  else
-    W.printHex("SymbolTableEntries", "Reserved Value", SymTabEntries);
+  // The number of symbol table entries is an unsigned value in 64-bit objects
+  // and a signed value (with negative values being 'reserved') in 32-bit
+  // objects.
+  if (Obj.is64Bit()) {
+    W.printHex("SymbolTableOffset", Obj.getSymbolTableOffset64());
+    W.printNumber("SymbolTableEntries", Obj.getNumberOfSymbolTableEntries64());
+  } else {
+    W.printHex("SymbolTableOffset", Obj.getSymbolTableOffset32());
+    int32_t SymTabEntries = Obj.getRawNumberOfSymbolTableEntries32();
+    if (SymTabEntries >= 0)
+      W.printNumber("SymbolTableEntries", SymTabEntries);
+    else
+      W.printHex("SymbolTableEntries", "Reserved Value", SymTabEntries);
+  }
 
   W.printHex("OptionalHeaderSize", Obj.getOptionalHeaderSize());
   W.printHex("Flags", Obj.getFlags());
@@ -80,7 +93,10 @@ void XCOFFDumper::printFileHeaders() {
 }
 
 void XCOFFDumper::printSectionHeaders() {
-  llvm_unreachable("Unimplemented functionality for XCOFFDumper");
+  if (Obj.is64Bit())
+    printSectionHeaders(Obj.sections64());
+  else
+    printSectionHeaders(Obj.sections32());
 }
 
 void XCOFFDumper::printRelocations() {
@@ -105,6 +121,59 @@ void XCOFFDumper::printStackMap() const {
 
 void XCOFFDumper::printNeededLibraries() {
   llvm_unreachable("Unimplemented functionality for XCOFFDumper");
+}
+
+static const EnumEntry<XCOFF::SectionTypeFlags> SectionTypeFlagsNames[] = {
+#define ECase(X)                                                               \
+  { #X, XCOFF::X }
+    ECase(STYP_PAD),    ECase(STYP_DWARF), ECase(STYP_TEXT),
+    ECase(STYP_DATA),   ECase(STYP_BSS),   ECase(STYP_EXCEPT),
+    ECase(STYP_INFO),   ECase(STYP_TDATA), ECase(STYP_TBSS),
+    ECase(STYP_LOADER), ECase(STYP_DEBUG), ECase(STYP_TYPCHK),
+    ECase(STYP_OVRFLO)
+#undef ECase
+};
+
+template <typename T>
+void XCOFFDumper::printSectionHeaders(ArrayRef<T> Sections) {
+  ListScope Group(W, "Sections");
+
+  uint16_t Index = 1;
+  for (const T &Sec : Sections) {
+    DictScope SecDS(W, "Section");
+
+    W.printNumber("Index", Index++);
+    W.printString("Name", Sec.getName());
+
+    W.printHex("PhysicalAddress", Sec.PhysicalAddress);
+    W.printHex("VirtualAddress", Sec.VirtualAddress);
+    W.printHex("Size", Sec.SectionSize);
+    W.printHex("RawDataOffset", Sec.FileOffsetToRawData);
+    W.printHex("RelocationPointer", Sec.FileOffsetToRelocationInfo);
+    W.printHex("LineNumberPointer", Sec.FileOffsetToLineNumberInfo);
+
+    // TODO Need to add overflow handling when NumberOfX == _OVERFLOW_MARKER
+    // in 32-bit object files.
+    W.printNumber("NumberOfRelocations", Sec.NumberOfRelocations);
+    W.printNumber("NumberOfLineNumbers", Sec.NumberOfLineNumbers);
+
+    // The most significant 16-bits represent the DWARF section subtype. For
+    // now we just dump the section type flags.
+    uint16_t Flags = Sec.Flags & 0xffffu;
+    if (Flags & SectionFlagsReservedMask)
+      W.printHex("Flags", "Reserved", Flags);
+    else
+      W.printEnum("Type", Flags, makeArrayRef(SectionTypeFlagsNames));
+  }
+
+  if (opts::SectionRelocations)
+    report_fatal_error("Dumping section relocations is unimplemented");
+
+  if (opts::SectionSymbols)
+    report_fatal_error("Dumping symbols is unimplemented");
+
+  if (opts::SectionData)
+    report_fatal_error("Dumping section data is unimplemented");
 }
 
 namespace llvm {

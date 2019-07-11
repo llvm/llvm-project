@@ -658,6 +658,11 @@ let Constraints = "$vdst = $src2",
     defm V_DOT2C_F32_F16 : VOP2Inst_e32<"v_dot2c_f32_f16", VOP_DOT_ACC_F32_V2F16>;
   let SubtargetPredicate = HasDot6Insts in
     defm V_DOT4C_I32_I8  : VOP2Inst_e32<"v_dot4c_i32_i8",  VOP_DOT_ACC_I32_I32>;
+
+  let SubtargetPredicate = HasDot4Insts in
+    defm V_DOT2C_I32_I16 : VOP2Inst_e32<"v_dot2c_i32_i16", VOP_DOT_ACC_I32_I32>;
+  let SubtargetPredicate = HasDot3Insts in
+    defm V_DOT8C_I32_I4  : VOP2Inst_e32<"v_dot8c_i32_i4",  VOP_DOT_ACC_I32_I32>;
 }
 
 let AddedComplexity = 30 in {
@@ -672,6 +677,18 @@ let AddedComplexity = 30 in {
     (i32 (V_DOT4C_I32_I8_e32 $src0, $src1, $src2))
   > {
     let SubtargetPredicate = HasDot6Insts;
+  }
+  def : GCNPat<
+    (i32 (int_amdgcn_sdot2 v2i16:$src0, v2i16:$src1, i32:$src2, (i1 DSTCLAMP.NONE))),
+    (i32 (V_DOT2C_I32_I16_e32 $src0, $src1, $src2))
+  > {
+    let SubtargetPredicate = HasDot4Insts;
+  }
+  def : GCNPat<
+    (i32 (int_amdgcn_sdot8 i32:$src0, i32:$src1, i32:$src2, (i1 DSTCLAMP.NONE))),
+    (i32 (V_DOT8C_I32_I4_e32 $src0, $src1, $src2))
+  > {
+    let SubtargetPredicate = HasDot3Insts;
   }
 } // End AddedComplexity = 30
 
@@ -694,9 +711,11 @@ let Constraints = "$vdst = $src2",
 defm V_FMAC_F16 : VOP2Inst <"v_fmac_f16", VOP_MAC_F16>;
 }
 
-defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16>;
-
 } // End SubtargetPredicate = isGFX10Plus
+
+let SubtargetPredicate = HasPkFmacF16Inst in {
+defm V_PK_FMAC_F16 : VOP2Inst<"v_pk_fmac_f16", VOP_V2F16_V2F16_V2F16>;
+} // End SubtargetPredicate = HasPkFmacF16Inst
 
 // Note: 16-bit instructions produce a 0 result in the high 16-bits
 // on GFX8 and GFX9 and preserve high 16 bits on GFX10+
@@ -1534,17 +1553,34 @@ defm V_XNOR_B32 : VOP2_Real_e32e64_vi <0x3d>;
 
 } // End SubtargetPredicate = HasDLInsts
 
+multiclass VOP2_Real_DOT_ACC_gfx9<bits<6> op> : VOP2_Real_e32_vi<op> {
+  def _dpp : VOP2_DPP<op, !cast<VOP2_Pseudo>(NAME#"_e32")>;
+}
+
 multiclass VOP2_Real_DOT_ACC_gfx10<bits<6> op> :
   VOP2_Real_e32_gfx10<op>,
   VOP2_Real_dpp_gfx10<op>,
   VOP2_Real_dpp8_gfx10<op>;
 
 let SubtargetPredicate = HasDot5Insts in {
+  defm V_DOT2C_F32_F16 : VOP2_Real_DOT_ACC_gfx9<0x37>;
   // NB: Opcode conflicts with V_DOT8C_I32_I4
   // This opcode exists in gfx 10.1* only
   defm V_DOT2C_F32_F16 : VOP2_Real_DOT_ACC_gfx10<0x02>;
 }
 
 let SubtargetPredicate = HasDot6Insts in {
+  defm V_DOT4C_I32_I8  : VOP2_Real_DOT_ACC_gfx9<0x39>;
   defm V_DOT4C_I32_I8  : VOP2_Real_DOT_ACC_gfx10<0x0d>;
 }
+
+let SubtargetPredicate = HasDot4Insts in {
+  defm V_DOT2C_I32_I16 : VOP2_Real_DOT_ACC_gfx9<0x38>;
+}
+let SubtargetPredicate = HasDot3Insts in {
+  defm V_DOT8C_I32_I4  : VOP2_Real_DOT_ACC_gfx9<0x3a>;
+}
+
+let SubtargetPredicate = HasPkFmacF16Inst in {
+defm V_PK_FMAC_F16 : VOP2_Real_e32_vi<0x3c>;
+} // End SubtargetPredicate = HasPkFmacF16Inst

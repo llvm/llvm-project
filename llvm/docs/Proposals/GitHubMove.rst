@@ -14,13 +14,6 @@ hosted Subversion to GitHub. Below are the financial and technical arguments as
 to why we are proposing such a move and how people (and validation
 infrastructure) will continue to work with a Git-based LLVM.
 
-There will be a survey pointing at this document which we'll use to gauge the
-community's reaction and, if we collectively decide to move, the time-frame. Be
-sure to make your view count.
-
-Additionally, we will discuss this during a BoF at the next US LLVM Developer
-meeting (http://llvm.org/devmtg/2016-11/).
-
 What This Proposal is *Not* About
 =================================
 
@@ -202,131 +195,17 @@ Step #4 : Post Move
 14. Update links on the LLVM website pointing to viewvc/klaus/phab etc. to
     point to GitHub instead.
 
-One or Multiple Repositories?
+Github Repository Description
 =============================
 
-There are two major variants for how to structure our Git repository: The
-"multirepo" and the "monorepo".
-
-Multirepo Variant
------------------
-
-This variant recommends moving each LLVM sub-project to a separate Git
-repository. This mimics the existing official read-only Git repositories
-(e.g., http://llvm.org/git/compiler-rt.git), and creates new canonical
-repositories for each sub-project.
-
-This will allow the individual sub-projects to remain distinct: a
-developer interested only in compiler-rt can checkout only this repository,
-build it, and work in isolation of the other sub-projects.
-
-A key need is to be able to check out multiple projects (i.e. lldb+clang+llvm or
-clang+llvm+libcxx for example) at a specific revision.
-
-A tuple of revisions (one entry per repository) accurately describes the state
-across the sub-projects.
-For example, a given version of clang would be
-*<LLVM-12345, clang-5432, libcxx-123, etc.>*.
-
-Umbrella Repository
-^^^^^^^^^^^^^^^^^^^
-
-To make this more convenient, a separate *umbrella* repository will be
-provided. This repository will be used for the sole purpose of understanding
-the sequence in which commits were pushed to the different repositories and to
-provide a single revision number.
-
-This umbrella repository will be read-only and continuously updated
-to record the above tuple. The proposed form to record this is to use Git
-[submodules]_, possibly along with a set of scripts to help check out a
-specific revision of the LLVM distribution.
-
-A regular LLVM developer does not need to interact with the umbrella repository
--- the individual repositories can be checked out independently -- but you would
-need to use the umbrella repository to bisect multiple sub-projects at the same
-time, or to check-out old revisions of LLVM with another sub-project at a
-consistent state.
-
-This umbrella repository will be updated automatically by a bot (running on
-notice from a webhook on every push, and periodically) on a per commit basis: a
-single commit in the umbrella repository would match a single commit in a
-sub-project.
-
-Living Downstream
-^^^^^^^^^^^^^^^^^
-
-Downstream SVN users can use the read/write SVN bridges with the following
-caveats:
-
- * Be prepared for a one-time change to the upstream revision numbers.
- * The upstream sub-project revision numbers will no longer be in sync.
-
-Downstream Git users can continue without any major changes, with the minor
-change of upstreaming using `git push` instead of `git svn dcommit`.
-
-Git users also have the option of adopting an umbrella repository downstream.
-The tooling for the upstream umbrella can easily be reused for downstream needs,
-incorporating extra sub-projects and branching in parallel with sub-project
-branches.
-
-Multirepo Preview
-^^^^^^^^^^^^^^^^^
-
-As a preview (disclaimer: this rough prototype, not polished and not
-representative of the final solution), you can look at the following:
-
-  * Repository: https://github.com/llvm-beanz/llvm-submodules
-  * Update bot: http://beanz-bot.com:8180/jenkins/job/submodule-update/
-
-Concerns
-^^^^^^^^
-
- * Because GitHub does not allow server-side hooks, and because there is no
-   "push timestamp" in Git, the umbrella repository sequence isn't totally
-   exact: commits from different repositories pushed around the same time can
-   appear in different orders. However, we don't expect it to be the common case
-   or to cause serious issues in practice.
- * You can't have a single cross-projects commit that would update both LLVM and
-   other sub-projects (something that can be achieved now). It would be possible
-   to establish a protocol whereby users add a special token to their commit
-   messages that causes the umbrella repo's updater bot to group all of them
-   into a single revision.
- * Another option is to group commits that were pushed closely enough together
-   in the umbrella repository. This has the advantage of allowing cross-project
-   commits, and is less sensitive to mis-ordering commits. However, this has the
-   potential to group unrelated commits together, especially if the bot goes
-   down and needs to catch up.
- * This variant relies on heavier tooling. But the current prototype shows that
-   it is not out-of-reach.
- * Submodules don't have a good reputation / are complicating the command line.
-   However, in the proposed setup, a regular developer will seldom interact with
-   submodules directly, and certainly never update them.
- * Refactoring across projects is not friendly: taking some functions from clang
-   to make it part of a utility in libSupport wouldn't carry the history of the
-   code in the llvm repo, preventing recursively applying `git blame` for
-   instance. However, this is not very different than how most people are
-   Interacting with the repository today, by splitting such change in multiple
-   commits.
-
-Workflows
-^^^^^^^^^
-
- * :ref:`Checkout/Clone a Single Project, without Commit Access <workflow-checkout-commit>`.
- * :ref:`Checkout/Clone a Single Project, with Commit Access <workflow-multicheckout-nocommit>`.
- * :ref:`Checkout/Clone Multiple Projects, with Commit Access <workflow-multicheckout-multicommit>`.
- * :ref:`Commit an API Change in LLVM and Update the Sub-projects <workflow-cross-repo-commit>`.
- * :ref:`Branching/Stashing/Updating for Local Development or Experiments <workflow-multi-branching>`.
- * :ref:`Bisecting <workflow-multi-bisecting>`.
-
-Monorepo Variant
+Monorepo
 ----------------
 
-This variant recommends moving all LLVM sub-projects to a single Git repository,
-similar to https://github.com/llvm-project/llvm-project.
-This would mimic an export of the current SVN repository, with each sub-project
-having its own top-level directory.
-Not all sub-projects are used for building toolchains. In practice, www/
-and test-suite/ will probably stay out of the monorepo.
+The LLVM git repository hosted at https://github.com/llvm/llvm-project contains all
+sub-projects in a single source tree.  It is often refered to as a monorepo and
+mimics an export of the current SVN repository, with each sub-project having its
+own top-level directory. Not all sub-projects are used for building toolchains.
+For example, www/ and test-suite/ are not part of the monorepo.
 
 Putting all sub-projects in a single checkout makes cross-project refactoring
 naturally simple:
@@ -353,11 +232,11 @@ hash) identifies the state of the development across all projects.
 Building a single sub-project
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Nobody will be forced to build unnecessary projects.  The exact structure
-is TBD, but making it trivial to configure builds for a single sub-project
-(or a subset of sub-projects) is a hard requirement.
+Even though there is a single source tree, you are not required to build
+all sub-projects together.  It is trivial to configure builds for a single
+sub-project.
 
-As an example, it could look like the following::
+For example::
 
   mkdir build && cd build
   # Configure only LLVM (default)
@@ -369,106 +248,49 @@ As an example, it could look like the following::
 
 .. _git-svn-mirror:
 
-Read/write sub-project mirrors
+Outstanding Questions
+---------------------
+
+Read-only sub-project mirrors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-With the Monorepo, the existing single-subproject mirrors (e.g.
-http://llvm.org/git/compiler-rt.git) with git-svn read-write access would
-continue to be maintained: developers would continue to be able to use the
-existing single-subproject git repositories as they do today, with *no changes
-to workflow*. Everything (git fetch, git svn dcommit, etc.) could continue to
-work identically to how it works today. The monorepo can be set-up such that the
-SVN revision number matches the SVN revision in the GitHub SVN-bridge.
+With the Monorepo, it is undecided whether the existing single-subproject
+mirrors (e.g. https://git.llvm.org/git/compiler-rt.git) will continue to
+be maintained.
 
-Living Downstream
-^^^^^^^^^^^^^^^^^
+Read/write SVN bridge
+^^^^^^^^^^^^^^^^^^^^^
 
-Downstream SVN users can use the read/write SVN bridge. The SVN revision
-number can be preserved in the monorepo, minimizing the impact.
+GitHub supports a read/write SVN bridge for its repositories.  However,
+there have been issues with this bridge working correctly in the past,
+so it's not clear if this is something that will be supported going forward.
 
-Downstream Git users can continue without any major changes, by using the
-git-svn mirrors on top of the SVN bridge.
-
-Git users can also work upstream with monorepo even if their downstream
-fork has split repositories.  They can apply patches in the appropriate
-subdirectories of the monorepo using, e.g., `git am --directory=...`, or
-plain `diff` and `patch`.
-
-Alternatively, Git users can migrate their own fork to the monorepo.  As a
-demonstration, we've migrated the "CHERI" fork to the monorepo in two ways:
-
- * Using a script that rewrites history (including merges) so that it looks
-   like the fork always lived in the monorepo [LebarCHERI]_.  The upside of
-   this is when you check out an old revision, you get a copy of all llvm
-   sub-projects at a consistent revision.  (For instance, if it's a clang
-   fork, when you check out an old revision you'll get a consistent version
-   of llvm proper.)  The downside is that this changes the fork's commit
-   hashes.
-
- * Merging the fork into the monorepo [AminiCHERI]_.  This preserves the
-   fork's commit hashes, but when you check out an old commit you only get
-   the one sub-project.
-
-Monorepo Preview
-^^^^^^^^^^^^^^^^^
-
-As a preview (disclaimer: this rough prototype, not polished and not
-representative of the final solution), you can look at the following:
-
-  * Full Repository: https://github.com/joker-eph/llvm-project
-  * Single sub-project view with *SVN write access* to the full repo:
-    https://github.com/joker-eph/compiler-rt
-
-Concerns
-^^^^^^^^
+Monorepo Drawbacks
+------------------
 
  * Using the monolithic repository may add overhead for those contributing to a
    standalone sub-project, particularly on runtimes like libcxx and compiler-rt
    that don't rely on LLVM; currently, a fresh clone of libcxx is only 15MB (vs.
    1GB for the monorepo), and the commit rate of LLVM may cause more frequent
-   `git push` collisions when upstreaming. Affected contributors can continue to
-   use the SVN bridge or the single-subproject Git mirrors with git-svn for
-   read-write.
+   `git push` collisions when upstreaming. Affected contributors may be able to
+   use the SVN bridge or the single-subproject Git mirrors. However, it's
+   undecided if these projects will continue to be mantained.
  * Using the monolithic repository may add overhead for those *integrating* a
    standalone sub-project, even if they aren't contributing to it, due to the
    same disk space concern as the point above. The availability of the
-   sub-project Git mirror addresses this, even without SVN access.
+   sub-project Git mirrors would addresses this.
  * Preservation of the existing read/write SVN-based workflows relies on the
-   GitHub SVN bridge, which is an extra dependency.  Maintaining this locks us
+   GitHub SVN bridge, which is an extra dependency. Maintaining this locks us
    into GitHub and could restrict future workflow changes.
 
 Workflows
 ^^^^^^^^^
 
  * :ref:`Checkout/Clone a Single Project, without Commit Access <workflow-checkout-commit>`.
- * :ref:`Checkout/Clone a Single Project, with Commit Access <workflow-monocheckout-nocommit>`.
  * :ref:`Checkout/Clone Multiple Projects, with Commit Access <workflow-monocheckout-multicommit>`.
  * :ref:`Commit an API Change in LLVM and Update the Sub-projects <workflow-cross-repo-commit>`.
  * :ref:`Branching/Stashing/Updating for Local Development or Experiments <workflow-mono-branching>`.
  * :ref:`Bisecting <workflow-mono-bisecting>`.
-
-Multi/Mono Hybrid Variant
--------------------------
-
-This variant recommends moving only the LLVM sub-projects that are *rev-locked*
-to LLVM into a monorepo (clang, lld, lldb, ...), following the multirepo
-proposal for the rest.  While neither variant recommends combining sub-projects
-like www/ and test-suite/ (which are completely standalone), this goes further
-and keeps sub-projects like libcxx and compiler-rt in their own distinct
-repositories.
-
-Concerns
-^^^^^^^^
-
- * This has most disadvantages of multirepo and monorepo, without bringing many
-   of the advantages.
- * Downstream have to upgrade to the monorepo structure, but only partially. So
-   they will keep the infrastructure to integrate the other separate
-   sub-projects.
- * All projects that use LIT for testing are effectively rev-locked to LLVM.
-   Furthermore, some runtimes (like compiler-rt) are rev-locked with Clang.
-   It's not clear where to draw the lines.
-
 
 Workflow Before/After
 =====================
@@ -478,24 +300,6 @@ how end-users or developers would interact with the repository for
 various use-cases.
 
 .. _workflow-checkout-commit:
-
-Checkout/Clone a Single Project, without Commit Access
-------------------------------------------------------
-
-Except the URL, nothing changes. The possibilities today are::
-
-  svn co http://llvm.org/svn/llvm-project/llvm/trunk llvm
-  # or with Git
-  git clone http://llvm.org/git/llvm.git
-
-After the move to GitHub, you would do either::
-
-  git clone https://github.com/llvm-project/llvm.git
-  # or using the GitHub svn native bridge
-  svn co https://github.com/llvm-project/llvm/trunk
-
-The above works for both the monorepo and the multirepo, as we'll maintain the
-existing read-only views of the individual sub-projects.
 
 Checkout/Clone a Single Project, with Commit Access
 ---------------------------------------------------
@@ -519,65 +323,21 @@ Commits are performed using `svn commit` or with the sequence `git commit` and
 
 .. _workflow-multicheckout-nocommit:
 
-Multirepo Variant
-^^^^^^^^^^^^^^^^^
-
-With the multirepo variant, nothing changes but the URL, and commits can be
-performed using `svn commit` or `git commit` and `git push`::
-
-  git clone https://github.com/llvm/llvm.git llvm
-  # or using the GitHub svn native bridge
-  svn co https://github.com/llvm/llvm/trunk/ llvm
-
-.. _workflow-monocheckout-nocommit:
-
 Monorepo Variant
 ^^^^^^^^^^^^^^^^
 
 With the monorepo variant, there are a few options, depending on your
-constraints. First, you could just clone the full repository::
+constraints. First, you could just clone the full repository:
 
-  git clone https://github.com/llvm/llvm-projects.git llvm
-  # or using the GitHub svn native bridge
-  svn co https://github.com/llvm/llvm-projects/trunk/ llvm
+git clone https://github.com/llvm/llvm-project.git
 
 At this point you have every sub-project (llvm, clang, lld, lldb, ...), which
 :ref:`doesn't imply you have to build all of them <build_single_project>`. You
 can still build only compiler-rt for instance. In this way it's not different
 from someone who would check out all the projects with SVN today.
 
-You can commit as normal using `git commit` and `git push` or `svn commit`, and
-read the history for a single project (`git log libcxx` for example).
-
-Secondly, there are a few options to avoid checking out all the sources.
-
-**Using the GitHub SVN bridge**
-
-The GitHub SVN native bridge allows to checkout a subdirectory directly:
-
-  svn co https://github.com/llvm/llvm-projects/trunk/compiler-rt compiler-rt  —username=...
-
-This checks out only compiler-rt and provides commit access using "svn commit",
-in the same way as it would do today.
-
-**Using a Subproject Git Mirror**
-
-You can use *git-svn* and one of the sub-project mirrors::
-
-  # Clone from the single read-only Git repo
-  git clone http://llvm.org/git/llvm.git
-  cd llvm
-  # Configure the SVN remote and initialize the svn metadata
-  $ git svn init https://github.com/joker-eph/llvm-project/trunk/llvm —username=...
-  git config svn-remote.svn.fetch :refs/remotes/origin/master
-  git svn rebase -l
-
-In this case the repository contains only a single sub-project, and commits can
-be made using `git svn dcommit`, again exactly as we do today.
-
-**Using a Sparse Checkouts**
-
-You can hide the other directories using a Git sparse checkout::
+If you want to avoid checking out all the sources, you can hide the other
+directories using a Git sparse checkout::
 
   git config core.sparseCheckout true
   echo /compiler-rt > .git/info/sparse-checkout
@@ -645,31 +405,6 @@ Or using git-svn::
 
 Note that the list would be longer with more sub-projects.
 
-.. _workflow-multicheckout-multicommit:
-
-Multirepo Variant
-^^^^^^^^^^^^^^^^^
-
-With the multirepo variant, the umbrella repository will be used. This is
-where the mapping from a single revision number to the individual repositories
-revisions is stored.::
-
-  git clone https://github.com/llvm-beanz/llvm-submodules
-  cd llvm-submodules
-  git checkout $REVISION
-  git submodule init
-  git submodule update clang llvm libcxx
-  # the list of sub-project is optional, `git submodule update` would get them all.
-
-At this point the clang, llvm, and libcxx individual repositories are cloned
-and stored alongside each other. There are CMake flags to describe the directory
-structure; alternatively, you can just symlink `clang` to `llvm/tools/clang`,
-etc.
-
-Another option is to checkout repositories based on the commit timestamp::
-
-  git checkout `git rev-list -n 1 --before="2009-07-27 13:37" master`
-
 .. _workflow-monocheckout-multicommit:
 
 Monorepo Variant
@@ -678,7 +413,7 @@ Monorepo Variant
 The repository contains natively the source for every sub-projects at the right
 revision, which makes this straightforward::
 
-  git clone https://github.com/llvm/llvm-projects.git llvm-projects
+  git clone https://github.com/llvm/llvm-project.git
   cd llvm-projects
   git checkout $REVISION
 
@@ -735,25 +470,6 @@ To switch branches::
   cd ../../projects/libcxx
   git checkout AnotherBranch
 
-.. _workflow-multi-branching:
-
-Multirepo Variant
-^^^^^^^^^^^^^^^^^
-
-The multirepo works the same as the current Git workflow: every command needs
-to be applied to each of the individual repositories.
-However, the umbrella repository makes this easy using `git submodule foreach`
-to replicate a command on all the individual repositories (or submodules
-in this case):
-
-To create a new branch::
-
-  git submodule foreach git checkout -b MyBranch
-
-To switch branches::
-
-  git submodule foreach git checkout AnotherBranch
-
 .. _workflow-mono-branching:
 
 Monorepo Variant
@@ -789,40 +505,6 @@ Using the existing Git read-only view of the repositories, it is possible to use
 the native Git bisection script over the llvm repository, and use some scripting
 to synchronize the clang repository to match the llvm revision.
 
-.. _workflow-multi-bisecting:
-
-Multirepo Variant
-^^^^^^^^^^^^^^^^^
-
-With the multi-repositories variant, the cross-repository synchronization is
-achieved using the umbrella repository. This repository contains only
-submodules for the other sub-projects. The native Git bisection can be used on
-the umbrella repository directly. A subtlety is that the bisect script itself
-needs to make sure the submodules are updated accordingly.
-
-For example, to find which commit introduces a regression where clang-3.9
-crashes but not clang-3.8 passes, one should be able to simply do::
-
-  git bisect start release_39 release_38
-  git bisect run ./bisect_script.sh
-
-With the `bisect_script.sh` script being::
-
-  #!/bin/sh
-  cd $UMBRELLA_DIRECTORY
-  git submodule update llvm clang libcxx #....
-  cd $BUILD_DIR
-
-  ninja clang || exit 125   # an exit code of 125 asks "git bisect"
-                            # to "skip" the current commit
-
-  ./bin/clang some_crash_test.cpp
-
-When the `git bisect run` command returns, the umbrella repository is set to
-the state where the regression is introduced. The commit diff in the umbrella
-indicate which submodule was updated, and the last commit in this sub-projects
-is the one that the bisect found.
-
 .. _workflow-mono-bisecting:
 
 Monorepo Variant
@@ -835,7 +517,7 @@ except that the bisection script does not need to include the
 The same example, finding which commit introduces a regression where clang-3.9
 crashes but not clang-3.8 passes, will look like::
 
-  git bisect start release_39 release_38
+  git bisect start releases/3.9.x releases/3.8.x
   git bisect run ./bisect_script.sh
 
 With the `bisect_script.sh` script being::
@@ -1394,7 +1076,4 @@ References
 .. [TrickRevNum] Andrew Trick, http://lists.llvm.org/pipermail/llvm-dev/2011-July/041721.html
 .. [JSonnRevNum] Joerg Sonnenberg, http://lists.llvm.org/pipermail/llvm-dev/2011-July/041688.html
 .. [MatthewsRevNum] Chris Matthews, http://lists.llvm.org/pipermail/cfe-dev/2016-July/049886.html
-.. [submodules] Git submodules, https://git-scm.com/book/en/v2/Git-Tools-Submodules)
 .. [statuschecks] GitHub status-checks, https://help.github.com/articles/about-required-status-checks/
-.. [LebarCHERI] Port *CHERI* to a single repository rewriting history, http://lists.llvm.org/pipermail/llvm-dev/2016-July/102787.html
-.. [AminiCHERI] Port *CHERI* to a single repository preserving history, http://lists.llvm.org/pipermail/llvm-dev/2016-July/102804.html

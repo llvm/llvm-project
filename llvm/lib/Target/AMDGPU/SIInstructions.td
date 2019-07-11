@@ -746,17 +746,18 @@ def : FMADModsPat<V_MAD_F16, AMDGPUfmad_ftz, f16> {
   let SubtargetPredicate = Has16BitInsts;
 }
 
-multiclass SelectPat <ValueType vt, Instruction inst> {
+multiclass SelectPat <ValueType vt> {
   def : GCNPat <
-    (vt (select i1:$src0, vt:$src1, vt:$src2)),
-    (inst (i32 0), $src2, (i32 0), $src1, $src0)
+    (vt (select i1:$src0, (VOP3Mods vt:$src1, i32:$src1_mods),
+                          (VOP3Mods vt:$src2, i32:$src2_mods))),
+    (V_CNDMASK_B32_e64 $src2_mods, $src2, $src1_mods, $src1, $src0)
   >;
 }
 
-defm : SelectPat <i16, V_CNDMASK_B32_e64>;
-defm : SelectPat <i32, V_CNDMASK_B32_e64>;
-defm : SelectPat <f16, V_CNDMASK_B32_e64>;
-defm : SelectPat <f32, V_CNDMASK_B32_e64>;
+defm : SelectPat <i16>;
+defm : SelectPat <i32>;
+defm : SelectPat <f16>;
+defm : SelectPat <f32>;
 
 let AddedComplexity = 1 in {
 def : GCNPat <

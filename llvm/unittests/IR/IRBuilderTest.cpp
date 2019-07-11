@@ -128,7 +128,7 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   CallInst *Call;
   IntrinsicInst *II;
 
-  V = Builder.CreateLoad(GV);
+  V = Builder.CreateLoad(GV->getValueType(), GV);
 
   // See if we get constrained intrinsics instead of non-constrained
   // instructions.

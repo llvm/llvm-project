@@ -505,6 +505,62 @@ def G_FCANONICALIZE : GenericInstruction {
   let hasSideEffects = 0;
 }
 
+// FMINNUM/FMAXNUM - Perform floating-point minimum or maximum on two
+// values.
+//
+// In the case where a single input is a NaN (either signaling or quiet),
+// the non-NaN input is returned.
+//
+// The return value of (FMINNUM 0.0, -0.0) could be either 0.0 or -0.0.
+def G_FMINNUM : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+def G_FMAXNUM : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+// FMINNUM_IEEE/FMAXNUM_IEEE - Perform floating-point minimum or maximum on
+// two values, following the IEEE-754 2008 definition. This differs from
+// FMINNUM/FMAXNUM in the handling of signaling NaNs. If one input is a
+// signaling NaN, returns a quiet NaN.
+def G_FMINNUM_IEEE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+def G_FMAXNUM_IEEE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+// FMINIMUM/FMAXIMUM - NaN-propagating minimum/maximum that also treat -0.0
+// as less than 0.0. While FMINNUM_IEEE/FMAXNUM_IEEE follow IEEE 754-2008
+// semantics, FMINIMUM/FMAXIMUM follow IEEE 754-2018 draft semantics.
+def G_FMINIMUM : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
+def G_FMAXIMUM : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1, type0:$src2);
+  let hasSideEffects = 0;
+  let isCommutable = 1;
+}
+
 //------------------------------------------------------------------------------
 // Floating Point Binary ops.
 //------------------------------------------------------------------------------

@@ -158,6 +158,14 @@ public:
   void EmitStartOfAsmFile(Module &M) override;
 };
 
+class PPCAIXAsmPrinter : public PPCAsmPrinter {
+public:
+  PPCAIXAsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer)
+      : PPCAsmPrinter(TM, std::move(Streamer)) {}
+
+  StringRef getPassName() const override { return "AIX PPC Assembly Printer"; }
+};
+
 } // end anonymous namespace
 
 void PPCAsmPrinter::PrintSymbolOperand(const MachineOperand &MO,
@@ -1644,6 +1652,9 @@ createPPCAsmPrinterPass(TargetMachine &tm,
                         std::unique_ptr<MCStreamer> &&Streamer) {
   if (tm.getTargetTriple().isMacOSX())
     return new PPCDarwinAsmPrinter(tm, std::move(Streamer));
+  if (tm.getTargetTriple().isOSAIX())
+    return new PPCAIXAsmPrinter(tm, std::move(Streamer));
+
   return new PPCLinuxAsmPrinter(tm, std::move(Streamer));
 }
 

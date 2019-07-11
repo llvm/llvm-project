@@ -577,18 +577,19 @@ body: |
     ; SI: [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[UV3]](s16)
     ; SI: [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[UV]](s16)
     ; SI: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[ZEXT1]], [[ZEXT]](s32)
-    ; SI: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; SI: [[ZEXT2:%[0-9]+]]:_(s32) = G_ZEXT [[UV4]](s16)
     ; SI: [[ZEXT3:%[0-9]+]]:_(s32) = G_ZEXT [[UV1]](s16)
     ; SI: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[ZEXT3]], [[ZEXT2]](s32)
-    ; SI: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR1]](s32)
     ; SI: [[ZEXT4:%[0-9]+]]:_(s32) = G_ZEXT [[UV5]](s16)
     ; SI: [[ZEXT5:%[0-9]+]]:_(s32) = G_ZEXT [[UV2]](s16)
     ; SI: [[LSHR2:%[0-9]+]]:_(s32) = G_LSHR [[ZEXT5]], [[ZEXT4]](s32)
-    ; SI: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR2]](s32)
-    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16), [[TRUNC2]](s16)
+    ; SI: [[COPY2:%[0-9]+]]:_(s32) = COPY [[LSHR]](s32)
+    ; SI: [[COPY3:%[0-9]+]]:_(s32) = COPY [[LSHR1]](s32)
+    ; SI: [[COPY4:%[0-9]+]]:_(s32) = COPY [[LSHR2]](s32)
+    ; SI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
+    ; SI: [[TRUNC:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
     ; SI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; SI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[BUILD_VECTOR]](<3 x s16>), 0
+    ; SI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[TRUNC]](<3 x s16>), 0
     ; SI: $vgpr0_vgpr1 = COPY [[INSERT]](<4 x s16>)
     ; VI-LABEL: name: test_lshr_v3s16_v3s16
     ; VI: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
@@ -600,9 +601,13 @@ body: |
     ; VI: [[LSHR:%[0-9]+]]:_(s16) = G_LSHR [[UV]], [[UV3]](s16)
     ; VI: [[LSHR1:%[0-9]+]]:_(s16) = G_LSHR [[UV1]], [[UV4]](s16)
     ; VI: [[LSHR2:%[0-9]+]]:_(s16) = G_LSHR [[UV2]], [[UV5]](s16)
-    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[LSHR]](s16), [[LSHR1]](s16), [[LSHR2]](s16)
+    ; VI: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[LSHR]](s16)
+    ; VI: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[LSHR1]](s16)
+    ; VI: [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[LSHR2]](s16)
+    ; VI: [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[ANYEXT]](s32), [[ANYEXT1]](s32), [[ANYEXT2]](s32)
+    ; VI: [[TRUNC:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
     ; VI: [[DEF:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-    ; VI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[BUILD_VECTOR]](<3 x s16>), 0
+    ; VI: [[INSERT:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF]], [[TRUNC]](<3 x s16>), 0
     ; VI: $vgpr0_vgpr1 = COPY [[INSERT]](<4 x s16>)
     ; GFX9-LABEL: name: test_lshr_v3s16_v3s16
     ; GFX9: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1

@@ -51,6 +51,9 @@ std::unique_ptr<MCObjectTargetWriter> createPPCELFObjectWriter(bool Is64Bit,
 std::unique_ptr<MCObjectTargetWriter>
 createPPCMachObjectWriter(bool Is64Bit, uint32_t CPUType, uint32_t CPUSubtype);
 
+/// Construct a PPC XCOFF object writer.
+std::unique_ptr<MCObjectTargetWriter> createPPCXCOFFObjectWriter(bool Is64Bit);
+
 /// Returns true iff Val consists of one contiguous run of 1s with any number of
 /// 0s on either side.  The 1s are allowed to wrap from LSB to MSB, so
 /// 0x000FFF0, 0x0000FFFF, and 0xFF0000FF are all runs.  0x0F0F0000 is not,

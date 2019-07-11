@@ -24,18 +24,15 @@
 
 using namespace llvm;
 
-bool FileCheckNumericVariable::setValue(uint64_t NewValue) {
-  if (Value)
-    return true;
+void FileCheckNumericVariable::setValue(uint64_t NewValue) {
+  assert(!Value && "Overwriting numeric variable's value is not allowed");
   Value = NewValue;
-  return false;
 }
 
-bool FileCheckNumericVariable::clearValue() {
+void FileCheckNumericVariable::clearValue() {
   if (!Value)
-    return true;
+    return;
   Value = None;
-  return false;
 }
 
 Expected<uint64_t> FileCheckExpression::eval() const {
@@ -580,8 +577,10 @@ Expected<size_t> FileCheckPattern::match(StringRef Buffer, size_t &MatchLen,
     for (const auto &Substitution : Substitutions) {
       // Substitute and check for failure (e.g. use of undefined variable).
       Expected<std::string> Value = Substitution->getResult();
-      if (!Value)
+      if (!Value) {
+        Context->LineVariable->clearValue();
         return Value.takeError();
+      }
 
       // Plop it into the regex at the adjusted offset.
       TmpStr.insert(TmpStr.begin() + Substitution->getIndex() + InsertOffset,
@@ -623,8 +622,7 @@ Expected<size_t> FileCheckPattern::match(StringRef Buffer, size_t &MatchLen,
     if (MatchedValue.getAsInteger(10, Val))
       return FileCheckErrorDiagnostic::get(SM, MatchedValue,
                                            "Unable to represent numeric value");
-    if (DefinedNumericVariable->setValue(Val))
-      llvm_unreachable("Numeric variable redefined");
+    DefinedNumericVariable->setValue(Val);
   }
 
   // Like CHECK-NEXT, CHECK-EMPTY's match range is considered to start after

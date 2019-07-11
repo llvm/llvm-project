@@ -187,3 +187,148 @@ define i1 @foo1_or_signbit_lshr_without_shifting_signbit(i32 %k, i32 %c1, i32 %c
   %or = and i1 %t2, %t4
   ret i1 %or
 }
+
+; Shift-of-signbit replaced with 'icmp s*' for both sides
+define i1 @foo1_and_signbit_lshr_without_shifting_signbit_both_sides(i32 %k, i32 %c1, i32 %c2) {
+; CHECK-LABEL: @foo1_and_signbit_lshr_without_shifting_signbit_both_sides(
+; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[K:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[K]], [[C2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T0]], [[T2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp sgt i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %t0 = shl i32 %k, %c1
+  %t1 = icmp sgt i32 %t0, -1
+  %t2 = shl i32 %k, %c2
+  %t3 = icmp sgt i32 %t2, -1
+  %or = or i1 %t1, %t3
+  ret i1 %or
+}
+
+define i1 @foo1_or_signbit_lshr_without_shifting_signbit_both_sides(i32 %k, i32 %c1, i32 %c2) {
+; CHECK-LABEL: @foo1_or_signbit_lshr_without_shifting_signbit_both_sides(
+; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[K:%.*]], [[C1:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[K]], [[C2:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[T0]], [[T2]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %t0 = shl i32 %k, %c1
+  %t1 = icmp slt i32 %t0, 0
+  %t2 = shl i32 %k, %c2
+  %t3 = icmp slt i32 %t2, 0
+  %or = and i1 %t1, %t3
+  ret i1 %or
+}
+
+; Extra use
+
+; Expect to fold
+define i1 @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_shl1(i32 %k, i32 %c1, i32 %c2, i32* %p) {
+; CHECK-LABEL: @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_shl1(
+; CHECK-NEXT:    [[T0:%.*]] = shl i32 1, [[C1:%.*]]
+; CHECK-NEXT:    store i32 [[T0]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[K:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = icmp sgt i32 [[T3]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %t0 = shl i32 1, %c1
+  store i32 %t0, i32* %p  ; extra use of shl
+  %t1 = and i32 %t0, %k
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = shl i32 %k, %c2
+  %t4 = icmp sgt i32 %t3, -1
+  %or = or i1 %t2, %t4
+  ret i1 %or
+}
+
+; Not fold
+define i1 @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_and(i32 %k, i32 %c1, i32 %c2, i32* %p) {
+; CHECK-LABEL: @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_and(
+; CHECK-NEXT:    [[T0:%.*]] = shl i32 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[K:%.*]]
+; CHECK-NEXT:    store i32 [[T1]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = icmp sgt i32 [[T3]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %t0 = shl i32 1, %c1
+  %t1 = and i32 %t0, %k
+  store i32 %t1, i32* %p  ; extra use of and
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = shl i32 %k, %c2
+  %t4 = icmp sgt i32 %t3, -1
+  %or = or i1 %t2, %t4
+  ret i1 %or
+}
+
+; Not fold
+define i1 @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_cmp1(i32 %k, i32 %c1, i32 %c2, i1* %p) {
+; CHECK-LABEL: @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_cmp1(
+; CHECK-NEXT:    [[T0:%.*]] = shl i32 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[K:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    store i1 [[T2]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = icmp sgt i32 [[T3]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %t0 = shl i32 1, %c1
+  %t1 = and i32 %t0, %k
+  %t2 = icmp eq i32 %t1, 0
+  store i1 %t2, i1* %p  ; extra use of cmp
+  %t3 = shl i32 %k, %c2
+  %t4 = icmp sgt i32 %t3, -1
+  %or = or i1 %t2, %t4
+  ret i1 %or
+}
+
+; Not fold
+define i1 @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_shl2(i32 %k, i32 %c1, i32 %c2, i32* %p) {
+; CHECK-LABEL: @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_shl2(
+; CHECK-NEXT:    [[T0:%.*]] = shl i32 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[K:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
+; CHECK-NEXT:    store i32 [[T3]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[T4:%.*]] = icmp sgt i32 [[T3]], -1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %t0 = shl i32 1, %c1
+  %t1 = and i32 %t0, %k
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = shl i32 %k, %c2
+  store i32 %t3, i32* %p  ; extra use of shl
+  %t4 = icmp sgt i32 %t3, -1
+  %or = or i1 %t2, %t4
+  ret i1 %or
+}
+
+; Not fold
+define i1 @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_cmp2(i32 %k, i32 %c1, i32 %c2, i1* %p) {
+; CHECK-LABEL: @foo1_and_signbit_lshr_without_shifting_signbit_extra_use_cmp2(
+; CHECK-NEXT:    [[T0:%.*]] = shl i32 1, [[C1:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[K:%.*]]
+; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[K]], [[C2:%.*]]
+; CHECK-NEXT:    [[T4:%.*]] = icmp sgt i32 [[T3]], -1
+; CHECK-NEXT:    store i1 [[T4]], i1* [[P:%.*]], align 1
+; CHECK-NEXT:    [[OR:%.*]] = or i1 [[T2]], [[T4]]
+; CHECK-NEXT:    ret i1 [[OR]]
+;
+  %t0 = shl i32 1, %c1
+  %t1 = and i32 %t0, %k
+  %t2 = icmp eq i32 %t1, 0
+  %t3 = shl i32 %k, %c2
+  %t4 = icmp sgt i32 %t3, -1
+  store i1 %t4, i1* %p  ; extra use of cmp
+  %or = or i1 %t2, %t4
+  ret i1 %or
+}

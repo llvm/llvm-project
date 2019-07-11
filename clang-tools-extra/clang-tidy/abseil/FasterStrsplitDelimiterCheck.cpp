@@ -9,6 +9,7 @@
 #include "FasterStrsplitDelimiterCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/Tooling/FixIt.h"
 
 using namespace clang::ast_matchers;
 
@@ -20,23 +21,29 @@ namespace {
 
 AST_MATCHER(StringLiteral, lengthIsOne) { return Node.getLength() == 1; }
 
-llvm::Optional<std::string> makeCharacterLiteral(const StringLiteral *Literal) {
-  std::string Result;
-  {
+llvm::Optional<std::string> makeCharacterLiteral(const StringLiteral *Literal,
+                                                 const ASTContext &Context) {
+  assert(Literal->getLength() == 1 &&
+         "Only single character string should be matched");
+  assert(Literal->getCharByteWidth() == 1 &&
+         "StrSplit doesn't support wide char");
+  std::string Result = clang::tooling::fixit::getText(*Literal, Context).str();
+  bool IsRawStringLiteral = StringRef(Result).startswith(R"(R")");
+  // Since raw string literal might contain unescaped non-printable characters,
+  // we normalize them using `StringLiteral::outputString`.
+  if (IsRawStringLiteral) {
+    Result.clear();
     llvm::raw_string_ostream Stream(Result);
     Literal->outputString(Stream);
   }
-
   // Special case: If the string contains a single quote, we just need to return
   // a character of the single quote. This is a special case because we need to
   // escape it in the character literal.
   if (Result == R"("'")")
     return std::string(R"('\'')");
 
-  assert(Result.size() == 3 || (Result.size() == 4 && Result.substr(0, 2) == "\"\\"));
-
   // Now replace the " with '.
-  auto Pos = Result.find_first_of('"');
+  std::string::size_type Pos = Result.find_first_of('"');
   if (Pos == Result.npos)
     return llvm::None;
   Result[Pos] = '\'';
@@ -98,7 +105,8 @@ void FasterStrsplitDelimiterCheck::check(
   if (Literal->getBeginLoc().isMacroID() || Literal->getEndLoc().isMacroID())
     return;
 
-  llvm::Optional<std::string> Replacement = makeCharacterLiteral(Literal);
+  llvm::Optional<std::string> Replacement =
+      makeCharacterLiteral(Literal, *Result.Context);
   if (!Replacement)
     return;
   SourceRange Range = Literal->getSourceRange();

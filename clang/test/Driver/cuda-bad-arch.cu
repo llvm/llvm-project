@@ -23,6 +23,8 @@
 // RUN: | FileCheck -check-prefix OK %s
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm_52 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=gfx908 -c %s 2>&1 \
+// RUN: | FileCheck -check-prefix OK %s
 // RUN: %clang -### -target x86_64-linux-gnu -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
 

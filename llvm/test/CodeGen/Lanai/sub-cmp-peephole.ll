@@ -25,7 +25,7 @@ define i32 @g(i32 inreg %a, i32 inreg %b) nounwind ssp {
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
 ; CHECK-NEXT:    sub.f %r7, %r6, %r3
-; CHECK-NEXT:    sel.lt %r3, %r0, %rv
+; CHECK-NEXT:    sel.gt %r3, %r0, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -59,7 +59,7 @@ define i32 @i(i32 inreg %a, i32 inreg %b) nounwind readnone ssp {
 ; CHECK-NEXT:    add %sp, 0x8, %fp
 ; CHECK-NEXT:    sub %sp, 0x8, %sp
 ; CHECK-NEXT:    sub.f %r7, %r6, %r3
-; CHECK-NEXT:    sel.ult %r3, %r0, %rv
+; CHECK-NEXT:    sel.ugt %r3, %r0, %rv
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return
 ; CHECK-NEXT:    add %fp, 0x0, %sp
 ; CHECK-NEXT:    ld -8[%fp], %fp
@@ -75,11 +75,11 @@ define i32 @j(i32 inreg %a, i32 inreg %b) nounwind {
 ; CHECK:       ! %bb.0: ! %entry
 ; CHECK-NEXT:    st %fp, [--%sp]
 ; CHECK-NEXT:    add %sp, 0x8, %fp
-; CHECK-NEXT:    sub %sp, 0x8, %sp
-; CHECK-NEXT:    sub.f %r7, %r6, %r0
+; CHECK-NEXT:    sub.f %r6, %r7, %rv
 ; CHECK-NEXT:    bne .LBB4_2
-; CHECK-NEXT:    sub %r6, %r7, %rv
+; CHECK-NEXT:    sub %sp, 0x8, %sp
 ; CHECK-NEXT:  .LBB4_1: ! %if.then
+; CHECK-NEXT:    sub.f %r7, %r6, %r0
 ; CHECK-NEXT:    sel.gt %rv, %r6, %rv
 ; CHECK-NEXT:  .LBB4_2: ! %if.else
 ; CHECK-NEXT:    ld -4[%fp], %pc ! return

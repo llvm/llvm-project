@@ -1513,6 +1513,18 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
 }
 
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
+                                     ConceptDecl *D1,
+                                     ConceptDecl *D2) {
+  // Check template parameters.
+  if (!IsTemplateDeclCommonStructurallyEquivalent(Context, D1, D2))
+    return false;
+
+  // Check the constraint expression.
+  return IsStructurallyEquivalent(Context, D1->getConstraintExpr(),
+                                  D2->getConstraintExpr());
+}
+
+static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      FriendDecl *D1, FriendDecl *D2) {
   if ((D1->getFriendType() && D2->getFriendDecl()) ||
       (D1->getFriendDecl() && D2->getFriendType())) {
@@ -1769,6 +1781,14 @@ bool StructuralEquivalenceContext::CheckKindSpecificEquivalence(
         return false;
     } else {
       // Class template/non-class-template mismatch.
+      return false;
+    }
+  } else if (auto *ConceptDecl1 = dyn_cast<ConceptDecl>(D1)) {
+    if (auto *ConceptDecl2 = dyn_cast<ConceptDecl>(D2)) {
+      if (!::IsStructurallyEquivalent(*this, ConceptDecl1, ConceptDecl2))
+        return false;
+    } else {
+      // Concept/non-concept mismatch.
       return false;
     }
   } else if (auto *TTP1 = dyn_cast<TemplateTypeParmDecl>(D1)) {

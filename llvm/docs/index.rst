@@ -96,6 +96,7 @@ intermediate LLVM representation.
    Benchmarking
    Docker
    BuildingADistribution
+   Remarks
 
 :doc:`GettingStarted`
    Discusses how to get up and running quickly with the LLVM infrastructure.
@@ -182,6 +183,8 @@ intermediate LLVM representation.
   A best-practices guide for using LLVM's CMake build system to package and
   distribute LLVM-based tools.
 
+:doc:`Remarks`
+   A reference on the implementation of remarks in LLVM.
 
 Programming Documentation
 =========================

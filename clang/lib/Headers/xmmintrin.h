@@ -1919,7 +1919,11 @@ _mm_setzero_ps(void)
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_storeh_pi(__m64 *__p, __m128 __a)
 {
-  __builtin_ia32_storehps((__v2si *)__p, (__v4sf)__a);
+  typedef float __mm_storeh_pi_v2f32 __attribute__((__vector_size__(8)));
+  struct __mm_storeh_pi_struct {
+    __mm_storeh_pi_v2f32 __u;
+  } __attribute__((__packed__, __may_alias__));
+  ((struct __mm_storeh_pi_struct*)__p)->__u = __builtin_shufflevector(__a, __a, 2, 3);
 }
 
 /// Stores the lower 64 bits of a 128-bit vector of [4 x float] to a
@@ -1936,7 +1940,11 @@ _mm_storeh_pi(__m64 *__p, __m128 __a)
 static __inline__ void __DEFAULT_FN_ATTRS
 _mm_storel_pi(__m64 *__p, __m128 __a)
 {
-  __builtin_ia32_storelps((__v2si *)__p, (__v4sf)__a);
+  typedef float __mm_storeh_pi_v2f32 __attribute__((__vector_size__(8)));
+  struct __mm_storeh_pi_struct {
+    __mm_storeh_pi_v2f32 __u;
+  } __attribute__((__packed__, __may_alias__));
+  ((struct __mm_storeh_pi_struct*)__p)->__u = __builtin_shufflevector(__a, __a, 0, 1);
 }
 
 /// Stores the lower 32 bits of a 128-bit vector of [4 x float] to a

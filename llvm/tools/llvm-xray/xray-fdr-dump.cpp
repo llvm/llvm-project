@@ -35,10 +35,9 @@ static cl::opt<bool> DumpVerify("verify",
 
 static CommandRegistration Unused(&Dump, []() -> Error {
   // Open the file provided.
-  int Fd;
-  if (auto EC = sys::fs::openFileForRead(DumpInput, Fd))
-    return createStringError(EC, "Cannot open file '%s' for read.",
-                             DumpInput.c_str());
+  auto FDOrErr = sys::fs::openNativeFileForRead(DumpInput);
+  if (!FDOrErr)
+    return FDOrErr.takeError();
 
   uint64_t FileSize;
   if (auto EC = sys::fs::file_size(DumpInput, FileSize))
@@ -47,7 +46,9 @@ static CommandRegistration Unused(&Dump, []() -> Error {
 
   std::error_code EC;
   sys::fs::mapped_file_region MappedFile(
-      Fd, sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
+      *FDOrErr, sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0,
+      EC);
+  sys::fs::closeFile(*FDOrErr);
 
   DataExtractor DE(StringRef(MappedFile.data(), MappedFile.size()), true, 8);
   uint32_t OffsetPtr = 0;

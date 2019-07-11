@@ -123,8 +123,6 @@ public:
   MicrosoftARM64TargetInfo(const llvm::Triple &Triple,
                            const TargetOptions &Opts);
 
-  void getVisualStudioDefines(const LangOptions &Opts,
-                              MacroBuilder &Builder) const;
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
   TargetInfo::CallingConvKind

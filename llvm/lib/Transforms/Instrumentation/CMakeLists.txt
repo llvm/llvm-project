@@ -12,6 +12,7 @@ add_llvm_library(LLVMInstrumentation
   InstrProfiling.cpp
   PGOInstrumentation.cpp
   PGOMemOPSizeOpt.cpp
+  PoisonChecking.cpp
   SanitizerCoverage.cpp
   ThreadSanitizer.cpp
   HWAddressSanitizer.cpp

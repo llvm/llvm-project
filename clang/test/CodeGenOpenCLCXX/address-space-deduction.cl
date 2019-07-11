@@ -29,7 +29,7 @@ int foo(int par, int PTR par_p){
   int loc;
   //COMMON: %loc_p = alloca i32 addrspace(4)*
   //COMMON: %loc_p_const = alloca i32*
-  //COMMON: [[GAS:%[0-9]+]] = addrspacecast i32* %loc to i32 addrspace(4)*
+  //COMMON: [[GAS:%[._a-z0-9]*]] = addrspacecast i32* %loc to i32 addrspace(4)*
   //COMMON: store i32 addrspace(4)* [[GAS]], i32 addrspace(4)** %loc_p
   int PTR loc_p = ADR(loc);
   //COMMON: store i32* %loc, i32** %loc_p_const

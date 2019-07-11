@@ -2016,8 +2016,8 @@ bool llvm::promoteLoopAccessesToScalars(
         // deref info through it.
         if (!DereferenceableInPH) {
           DereferenceableInPH = isDereferenceableAndAlignedPointer(
-              Store->getPointerOperand(), Store->getAlignment(), MDL,
-              Preheader->getTerminator(), DT);
+              Store->getPointerOperand(), Store->getValueOperand()->getType(),
+              Store->getAlignment(), MDL, Preheader->getTerminator(), DT);
         }
       } else
         return false; // Not a load or store.

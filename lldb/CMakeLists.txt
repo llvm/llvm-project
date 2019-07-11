@@ -203,10 +203,6 @@ if (NOT LLDB_DISABLE_PYTHON)
     # Ensure we do the python post-build step when building lldb.
     add_dependencies(lldb finish_swig)
 
-    if(LLDB_BUILD_FRAMEWORK)
-      add_dependencies(lldb-framework finish_swig)
-    endif()
-
     # Add a Post-Build Event to copy the custom Python DLL to the lldb binaries dir so that Windows can find it when launching
     # lldb.exe or any other executables that were linked with liblldb.
     if (WIN32 AND NOT "${PYTHON_DLL}" STREQUAL "")
@@ -220,3 +216,7 @@ if (NOT LLDB_DISABLE_PYTHON)
             COMMENT "Copying Python DLL to LLDB binaries directory.")
     endif ()
 endif ()
+
+if(LLDB_BUILT_STANDALONE)
+  llvm_distribution_add_targets()
+endif()

@@ -28,12 +28,9 @@ entry:
 define float @caller(i8* %error_ref) {
 ; CHECK-LABEL: caller:
 ; CHECK: mov [[ID:x[0-9]+]], x0
-; CHECK: mov [[ZERO:x[0-9]+]], #0
-; CHECK: mov x21, #0
 ; CHECK: bl {{.*}}foo
 ; CHECK: mov x0, x21
-; CHECK: cmp x21, [[ZERO]]
-; CHECK: b.ne
+; CHECK: cbnz x21
 ; Access part of the error object and save it to error_ref
 ; CHECK: ldrb [[CODE:w[0-9]+]], [x0, #8]
 ; CHECK: strb [[CODE]], [{{.*}}[[ID]]]
@@ -61,12 +58,10 @@ handler:
 define float @caller2(i8* %error_ref) {
 ; CHECK-LABEL: caller2:
 ; CHECK: mov [[ID:x[0-9]+]], x0
-; CHECK: mov [[ZERO:x[0-9]+]], #0
 ; CHECK: fmov [[CMP:s[0-9]+]], #1.0
 ; CHECK: mov x21, #0
 ; CHECK: bl {{.*}}foo
-; CHECK: cmp x21, [[ZERO]]
-; CHECK: b.ne
+; CHECK: cbnz x21
 ; CHECK: fcmp s0, [[CMP]]
 ; CHECK: b.le
 ; Access part of the error object and save it to error_ref
@@ -193,11 +188,9 @@ define float @caller3(i8* %error_ref) {
 ; CHECK-LABEL: caller3:
 ; CHECK: mov [[ID:x[0-9]+]], x0
 ; CHECK: mov [[ZERO:x[0-9]+]], #0
-; CHECK: mov x21, #0
 ; CHECK: bl {{.*}}foo_sret
 ; CHECK: mov x0, x21
-; CHECK: cmp x21, [[ZERO]]
-; CHECK: b.ne
+; CHECK: cbnz x21
 ; Access part of the error object and save it to error_ref
 ; CHECK: ldrb [[CODE:w[0-9]+]], [x0, #8]
 ; CHECK: strb [[CODE]], [{{.*}}[[ID]]]
@@ -272,15 +265,13 @@ define float @caller4(i8* %error_ref) {
 ; CHECK-LABEL: caller4:
 
 ; CHECK: mov [[ID:x[0-9]+]], x0
-; CHECK: mov [[ZERO:x[0-9]+]], #0
 ; CHECK: stp {{x[0-9]+}}, {{x[0-9]+}}, [sp]
 ; CHECK: mov x21, #0
 ; CHECK: str {{x[0-9]+}}, [sp, #16]
 
 ; CHECK: bl {{.*}}foo_vararg
 ; CHECK: mov x0, x21
-; CHECK: cmp x21, [[ZERO]]
-; CHECK: b.ne
+; CHECK: cbnz x21
 ; Access part of the error object and save it to error_ref
 ; CHECK: ldrb [[CODE:w[0-9]+]], [x0, #8]
 ; CHECK: strb [[CODE]], [{{.*}}[[ID]]]

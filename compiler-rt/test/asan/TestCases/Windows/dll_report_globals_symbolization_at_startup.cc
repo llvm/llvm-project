@@ -1,5 +1,5 @@
-// RUN: %clang_cl_asan -LD -O0 -DDLL %s -Fe%t.dll
-// RUN: %clang_cl_asan -O0 -DEXE %s %t.lib -Fe%te.exe
+// RUN: %clang_cl_asan -LD -Od -DDLL %s -Fe%t.dll
+// RUN: %clang_cl_asan -Od -DEXE %s %t.lib -Fe%te.exe
 // RUN: %env_asan_opts=report_globals=2 %run %te.exe 2>&1 | FileCheck %s
 
 // FIXME: Currently, the MT runtime build crashes on startup due to dbghelp.dll

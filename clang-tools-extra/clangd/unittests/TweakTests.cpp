@@ -239,13 +239,13 @@ TEST(TweakTest, DumpAST) {
   checkNotAvailable(ID, "/*c^omment*/ int foo() return 2 ^ + 2; }");
 
   const char *Input = "int x = 2 ^+ 2;";
-  auto result = getMessage(ID, Input);
-  EXPECT_THAT(result, ::testing::HasSubstr("BinaryOperator"));
-  EXPECT_THAT(result, ::testing::HasSubstr("'+'"));
-  EXPECT_THAT(result, ::testing::HasSubstr("|-IntegerLiteral"));
-  EXPECT_THAT(result,
+  auto Result = getMessage(ID, Input);
+  EXPECT_THAT(Result, ::testing::HasSubstr("BinaryOperator"));
+  EXPECT_THAT(Result, ::testing::HasSubstr("'+'"));
+  EXPECT_THAT(Result, ::testing::HasSubstr("|-IntegerLiteral"));
+  EXPECT_THAT(Result,
               ::testing::HasSubstr("<col:9> 'int' 2\n`-IntegerLiteral"));
-  EXPECT_THAT(result, ::testing::HasSubstr("<col:13> 'int' 2"));
+  EXPECT_THAT(Result, ::testing::HasSubstr("<col:13> 'int' 2"));
 }
 
 TEST(TweakTest, ShowSelectionTree) {
@@ -276,6 +276,136 @@ TEST(TweakTest, DumpRecordLayout) {
 
   const char *Input = "struct ^X { int x; int y; }";
   EXPECT_THAT(getMessage(ID, Input), ::testing::HasSubstr("0 |   int x"));
+}
+TEST(TweakTest, ExtractVariable) {
+  llvm::StringLiteral ID = "ExtractVariable";
+  checkAvailable(ID, R"cpp(
+    int xyz() {
+      // return statement
+      return ^1;
+    }
+    void f() {
+      int a = 5 + [[4 ^* ^xyz^()]];
+      // multivariable initialization
+      if(1)
+        int x = ^1, y = ^a + 1, a = ^1, z = a + 1;
+      // if without else
+      if(^1) {}
+      // if with else
+      if(a < ^3)
+        if(a == ^4)
+          a = ^5;
+        else
+          a = ^6;
+      else if (a < ^4)
+        a = ^4;
+      else
+        a = ^5;
+      // for loop 
+      for(a = ^1; a > ^3^+^4; a++)
+        a = ^2;
+      // while 
+      while(a < ^1)
+        ^a++;
+      // do while 
+      do
+        a = ^1;
+      while(a < ^3);
+    }
+  )cpp");
+  checkNotAvailable(ID, R"cpp(
+    int xyz(int a = ^1) {
+      return 1;
+      class T {
+        T(int a = ^1) {};
+        int xyz = ^1;
+      };
+    }
+    // function default argument
+    void f(int b = ^1) {
+      // void expressions
+      auto i = new int, j = new int;
+      de^lete i^, del^ete j;
+      // if
+      if(1)
+        int x = 1, y = a + 1, a = 1, z = ^a + 1;
+      if(int a = 1)
+        if(^a == 4)
+          a = ^a ^+ 1;
+      // for loop 
+      for(int a = 1, b = 2, c = 3; ^a > ^b ^+ ^c; ^a++)
+        a = ^a ^+ 1;
+      // lambda 
+      auto lamb = [&^a, &^b](int r = ^1) {return 1;}
+    }
+  )cpp");
+  // vector of pairs of input and output strings
+  const std::vector<std::pair<llvm::StringLiteral, llvm::StringLiteral>>
+      InputOutputs = {
+          // extraction from variable declaration/assignment
+          {R"cpp(void varDecl() {
+                   int a = 5 * (4 + (3 [[- 1)]]);
+                 })cpp",
+           R"cpp(void varDecl() {
+                   auto dummy = (3 - 1); int a = 5 * (4 + dummy);
+                 })cpp"},
+          // FIXME: extraction from switch case
+          /*{R"cpp(void f(int a) {
+                   if(1)
+                     while(a < 1)
+                       switch (1) {
+                           case 1:
+                             a = [[1 + 2]];
+                             break;
+                           default:
+                             break;
+                       }
+                 })cpp",
+           R"cpp(void f(int a) {
+                   auto dummy = 1 + 2; if(1)
+                     while(a < 1)
+                       switch (1) {
+                           case 1:
+                             a = dummy;
+                             break;
+                           default:
+                             break;
+                       }
+                 })cpp"},*/
+          // ensure InsertionPoint isn't inside a macro
+          {R"cpp(#define LOOP(x) {int a = x + 1;}
+                 void f(int a) {
+                   if(1)
+                    LOOP(5 + ^3)
+                 })cpp",
+           R"cpp(#define LOOP(x) {int a = x + 1;}
+                 void f(int a) {
+                   auto dummy = 3; if(1)
+                    LOOP(5 + dummy)
+                 })cpp"},
+          // label and attribute testing
+          {R"cpp(void f(int a) {
+                    label: [ [gsl::suppress("type")] ] for (;;) a = ^1;
+                 })cpp",
+           R"cpp(void f(int a) {
+                    auto dummy = 1; label: [ [gsl::suppress("type")] ] for (;;) a = dummy;
+                 })cpp"},
+          // FIXME: Doesn't work because bug in selection tree
+          /*{R"cpp(#define PLUS(x) x++
+                 void f(int a) {
+                   PLUS(^a);
+                 })cpp",
+           R"cpp(#define PLUS(x) x++
+                 void f(int a) {
+                   auto dummy = a; PLUS(dummy);
+                 })cpp"},*/
+          // FIXME: Doesn't work correctly for \[\[clang::uninitialized\]\] int b
+          // = 1; since the attr is inside the DeclStmt and the bounds of
+          // DeclStmt don't cover the attribute
+      };
+  for (const auto &IO : InputOutputs) {
+    checkTransform(ID, IO.first, IO.second);
+  }
 }
 
 TEST(TweakTest, AnnotateHighlightings) {

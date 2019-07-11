@@ -11,6 +11,7 @@
 
 #include "Function.h"
 #include "Path.h"
+#include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include <memory>
@@ -18,11 +19,6 @@
 #include <vector>
 
 namespace clang {
-
-namespace tooling {
-class CompilationDatabase;
-struct CompileCommand;
-} // namespace tooling
 
 namespace clangd {
 

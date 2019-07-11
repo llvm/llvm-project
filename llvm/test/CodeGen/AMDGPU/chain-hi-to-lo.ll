@@ -281,12 +281,12 @@ bb:
 
 ; GCN-LABEL: {{^}}chain_hi_to_lo_group_may_alias_store:
 ; GFX900: v_mov_b32_e32 [[K:v[0-9]+]], 0x7b
-; GFX900-NEXT: ds_read_u16 v3, v0
+; GFX900-NEXT: ds_read_u16 v2, v0
 ; GFX900-NEXT: ds_write_b16 v1, [[K]]
 ; GFX900-NEXT: ds_read_u16 v0, v0 offset:2
 ; GFX900-NEXT: s_waitcnt lgkmcnt(0)
 ; GFX900-NEXT: v_and_b32_e32 v0, 0xffff, v0
-; GFX900-NEXT: v_lshl_or_b32 v0, v3, 16, v0
+; GFX900-NEXT: v_lshl_or_b32 v0, v2, 16, v0
 ; GFX900-NEXT: s_setpc_b64
 define <2 x i16> @chain_hi_to_lo_group_may_alias_store(i16 addrspace(3)* %ptr, i16 addrspace(3)* %may.alias) {
 bb:

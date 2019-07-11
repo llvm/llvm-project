@@ -29,22 +29,25 @@ public:
 } // namespace
 
 std::error_code XCOFFDumper::dump() {
-  std::error_code EC;
   dumpHeader();
-  EC = dumpSymbols();
-  return EC;
+  return dumpSymbols();
 }
 
 void XCOFFDumper::dumpHeader() {
-  const XCOFFFileHeader *FileHdrPtr = Obj.getFileHeader();
 
-  YAMLObj.Header.Magic = FileHdrPtr->Magic;
-  YAMLObj.Header.NumberOfSections = FileHdrPtr->NumberOfSections;
-  YAMLObj.Header.TimeStamp = FileHdrPtr->TimeStamp;
-  YAMLObj.Header.SymbolTableOffset = FileHdrPtr->SymbolTableOffset;
-  YAMLObj.Header.NumberOfSymTableEntries = FileHdrPtr->NumberOfSymTableEntries;
-  YAMLObj.Header.AuxHeaderSize = FileHdrPtr->AuxHeaderSize;
-  YAMLObj.Header.Flags = FileHdrPtr->Flags;
+  YAMLObj.Header.Magic = Obj.getMagic();
+  YAMLObj.Header.NumberOfSections = Obj.getNumberOfSections();
+  YAMLObj.Header.TimeStamp = Obj.getTimeStamp();
+
+  // TODO FIXME only dump 32 bit header for now.
+  if (Obj.is64Bit())
+    report_fatal_error("64-bit XCOFF files not supported yet.");
+  YAMLObj.Header.SymbolTableOffset = Obj.getSymbolTableOffset32();
+
+  YAMLObj.Header.NumberOfSymTableEntries =
+      Obj.getRawNumberOfSymbolTableEntries32();
+  YAMLObj.Header.AuxHeaderSize = Obj.getOptionalHeaderSize();
+  YAMLObj.Header.Flags = Obj.getFlags();
 }
 
 std::error_code XCOFFDumper::dumpSymbols() {

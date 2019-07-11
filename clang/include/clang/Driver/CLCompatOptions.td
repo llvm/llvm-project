@@ -52,21 +52,21 @@ class CLRemainingArgsJoined<string name> : Option<["/", "-"], name,
 // already in the right group.)
 
 def _SLASH_Brepro : CLFlag<"Brepro">,
-  HelpText<"Emit an object file which can be reproduced over time">,
+  HelpText<"Do not write current time into COFF output (breaks link.exe /incremental)">,
   Alias<mno_incremental_linker_compatible>;
 def _SLASH_Brepro_ : CLFlag<"Brepro-">,
-  HelpText<"Emit an object file which cannot be reproduced over time">,
+  HelpText<"Write current time into COFF output (default)">,
   Alias<mincremental_linker_compatible>;
 def _SLASH_C : CLFlag<"C">,
-  HelpText<"Don't discard comments when preprocessing">, Alias<C>;
+  HelpText<"Do not discard comments when preprocessing">, Alias<C>;
 def _SLASH_c : CLFlag<"c">, HelpText<"Compile only">, Alias<c>;
 def _SLASH_d1PP : CLFlag<"d1PP">,
   HelpText<"Retain macro definitions in /E mode">, Alias<dD>;
 def _SLASH_d1reportAllClassLayout : CLFlag<"d1reportAllClassLayout">,
   HelpText<"Dump record layout information">,
-Alias<Xclang>, AliasArgs<["-fdump-record-layouts"]>;
+  Alias<Xclang>, AliasArgs<["-fdump-record-layouts"]>;
 def _SLASH_diagnostics_caret : CLFlag<"diagnostics:caret">,
-  HelpText<"Enable caret and column diagnostics (on by default)">;
+  HelpText<"Enable caret and column diagnostics (default)">;
 def _SLASH_diagnostics_column : CLFlag<"diagnostics:column">,
   HelpText<"Disable caret diagnostics but keep column info">;
 def _SLASH_diagnostics_classic : CLFlag<"diagnostics:classic">,
@@ -83,12 +83,14 @@ def _SLASH_fp_precise : CLFlag<"fp:precise">,
 def _SLASH_fp_strict : CLFlag<"fp:strict">, HelpText<"">, Alias<fno_fast_math>;
 def _SLASH_GA : CLFlag<"GA">, Alias<ftlsmodel_EQ>, AliasArgs<["local-exec"]>,
   HelpText<"Assume thread-local variables are defined in the executable">;
-def _SLASH_GR : CLFlag<"GR">, HelpText<"Enable emission of RTTI data">;
-def _SLASH_GR_ : CLFlag<"GR-">, HelpText<"Disable emission of RTTI data">;
-def _SLASH_GF : CLIgnoredFlag<"GF">, HelpText<"Enable string pooling (default)">;
+def _SLASH_GR : CLFlag<"GR">, HelpText<"Emit RTTI data (default)">;
+def _SLASH_GR_ : CLFlag<"GR-">, HelpText<"Do not emit RTTI data">;
+def _SLASH_GF : CLIgnoredFlag<"GF">,
+  HelpText<"Enable string pooling (default)">;
 def _SLASH_GF_ : CLFlag<"GF-">, HelpText<"Disable string pooling">,
   Alias<fwritable_strings>;
-def _SLASH_GS : CLFlag<"GS">, HelpText<"Enable buffer security check (default)">;
+def _SLASH_GS : CLFlag<"GS">,
+  HelpText<"Enable buffer security check (default)">;
 def _SLASH_GS_ : CLFlag<"GS-">, HelpText<"Disable buffer security check">;
 def : CLFlag<"Gs">, HelpText<"Use stack probes (default)">,
   Alias<mstack_probe_size>, AliasArgs<["4096"]>;
@@ -97,12 +99,12 @@ def _SLASH_Gs : CLJoined<"Gs">,
 def _SLASH_Gy : CLFlag<"Gy">, HelpText<"Put each function in its own section">,
   Alias<ffunction_sections>;
 def _SLASH_Gy_ : CLFlag<"Gy-">,
-  HelpText<"Don't put each function in its own section (default)">,
+  HelpText<"Do not put each function in its own section (default)">,
   Alias<fno_function_sections>;
 def _SLASH_Gw : CLFlag<"Gw">, HelpText<"Put each data item in its own section">,
   Alias<fdata_sections>;
 def _SLASH_Gw_ : CLFlag<"Gw-">,
-  HelpText<"Don't put each data item in its own section">,
+  HelpText<"Do not put each data item in its own section (default)">,
   Alias<fno_data_sections>;
 def _SLASH_help : CLFlag<"help">, Alias<help>,
   HelpText<"Display available options">;
@@ -118,16 +120,14 @@ def _SLASH_J : CLFlag<"J">, HelpText<"Make char type unsigned">,
 def _SLASH_O : CLJoined<"O">,
   HelpText<"Set multiple /O flags at once; e.g. '/O2y-' for '/O2 /Oy-'">,
   MetaVarName<"<flags>">;
-// FIXME: Not sure why we have -O0 here; MSVC doesn't support that.
-def : CLFlag<"O0">, Alias<O0>, HelpText<"Disable optimization">;
 def : CLFlag<"O1">, Alias<_SLASH_O>, AliasArgs<["1"]>,
-  HelpText<"Optimize for size  (same as /Og     /Os /Oy /Ob2 /GF /Gy)">;
+  HelpText<"Optimize for size  (like /Og     /Os /Oy /Ob2 /GF /Gy)">;
 def : CLFlag<"O2">, Alias<_SLASH_O>, AliasArgs<["2"]>,
-  HelpText<"Optimize for speed (same as /Og /Oi /Ot /Oy /Ob2 /GF /Gy)">;
+  HelpText<"Optimize for speed (like /Og /Oi /Ot /Oy /Ob2 /GF /Gy)">;
 def : CLFlag<"Ob0">, Alias<_SLASH_O>, AliasArgs<["b0"]>,
   HelpText<"Disable function inlining">;
 def : CLFlag<"Ob1">, Alias<_SLASH_O>, AliasArgs<["b1"]>,
-  HelpText<"Only inline functions which are (explicitly or implicitly) marked inline">;
+  HelpText<"Only inline functions explicitly or implicitly marked inline">;
 def : CLFlag<"Ob2">, Alias<_SLASH_O>, AliasArgs<["b2"]>,
   HelpText<"Inline functions as deemed beneficial by the compiler">;
 def : CLFlag<"Od">, Alias<_SLASH_O>, AliasArgs<["d"]>,
@@ -143,7 +143,7 @@ def : CLFlag<"Os">, Alias<_SLASH_O>, AliasArgs<["s"]>,
 def : CLFlag<"Ot">, Alias<_SLASH_O>, AliasArgs<["t"]>,
   HelpText<"Optimize for speed">;
 def : CLFlag<"Ox">, Alias<_SLASH_O>, AliasArgs<["x"]>,
-  HelpText<"Deprecated (same as /Og /Oi /Ot /Oy /Ob2); use /O2 instead">;
+  HelpText<"Deprecated (like /Og /Oi /Ot /Oy /Ob2); use /O2">;
 def : CLFlag<"Oy">, Alias<_SLASH_O>, AliasArgs<["y"]>,
   HelpText<"Enable frame pointer omission (x86 only)">;
 def : CLFlag<"Oy-">, Alias<_SLASH_O>, AliasArgs<["y-"]>,
@@ -161,13 +161,15 @@ def _SLASH_showIncludes : CLFlag<"showIncludes">,
 def _SLASH_showFilenames : CLFlag<"showFilenames">,
   HelpText<"Print the name of each compiled file">;
 def _SLASH_showFilenames_ : CLFlag<"showFilenames-">,
-  HelpText<"Don't print the name of each compiled file (default)">;
+  HelpText<"Do not print the name of each compiled file (default)">;
 def _SLASH_source_charset : CLCompileJoined<"source-charset:">,
-  HelpText<"Source encoding, supports only UTF-8">, Alias<finput_charset_EQ>;
+  HelpText<"Set source encoding, supports only UTF-8">,
+  Alias<finput_charset_EQ>;
 def _SLASH_execution_charset : CLCompileJoined<"execution-charset:">,
-  HelpText<"Runtime encoding, supports only UTF-8">, Alias<fexec_charset_EQ>;
+  HelpText<"Set runtime encoding, supports only UTF-8">,
+  Alias<fexec_charset_EQ>;
 def _SLASH_std : CLCompileJoined<"std:">,
-  HelpText<"Language standard to compile for (c++14,c++17,c++latest)">;
+  HelpText<"Set C++ version (c++14,c++17,c++latest)">;
 def _SLASH_U : CLJoinedOrSeparate<"U">, HelpText<"Undefine macro">,
   MetaVarName<"<macro>">, Alias<U>;
 def _SLASH_validate_charset : CLFlag<"validate-charset">,
@@ -183,7 +185,8 @@ def _SLASH_Wall : CLFlag<"Wall">, HelpText<"Enable -Weverything">,
   Alias<W_Joined>, AliasArgs<["everything"]>;
 def _SLASH_WX : CLFlag<"WX">, HelpText<"Treat warnings as errors">,
   Alias<W_Joined>, AliasArgs<["error"]>;
-def _SLASH_WX_ : CLFlag<"WX-">, HelpText<"Do not treat warnings as errors">,
+def _SLASH_WX_ : CLFlag<"WX-">,
+  HelpText<"Do not treat warnings as errors (default)">,
   Alias<W_Joined>, AliasArgs<["no-error"]>;
 def _SLASH_w_flag : CLFlag<"w">, HelpText<"Disable all warnings">, Alias<w>;
 def _SLASH_wd4005 : CLFlag<"wd4005">, Alias<W_Joined>,
@@ -199,8 +202,7 @@ def _SLASH_wd4996 : CLFlag<"wd4996">, Alias<W_Joined>,
 def _SLASH_vd : CLJoined<"vd">, HelpText<"Control vtordisp placement">,
   Alias<vtordisp_mode_EQ>;
 def _SLASH_X : CLFlag<"X">,
-  HelpText<"Don't add %INCLUDE% to the include search path">,
-  Alias<nostdlibinc>;
+  HelpText<"Do not add %INCLUDE% to include search path">, Alias<nostdlibinc>;
 def _SLASH_Zc_sizedDealloc : CLFlag<"Zc:sizedDealloc">,
   HelpText<"Enable C++14 sized global deallocation functions">,
   Alias<fsized_deallocation>;
@@ -236,19 +238,19 @@ def _SLASH_Zc_twoPhase : CLFlag<"Zc:twoPhase">,
   HelpText<"Enable two-phase name lookup in templates">,
   Alias<fno_delayed_template_parsing>;
 def _SLASH_Zc_twoPhase_ : CLFlag<"Zc:twoPhase-">,
-  HelpText<"Disable two-phase name lookup in templates">,
+  HelpText<"Disable two-phase name lookup in templates (default)">,
   Alias<fdelayed_template_parsing>;
 def _SLASH_Z7 : CLFlag<"Z7">,
   HelpText<"Enable CodeView debug information in object files">;
 def _SLASH_Zd : CLFlag<"Zd">,
   HelpText<"Emit debug line number tables only">;
 def _SLASH_Zi : CLFlag<"Zi">, Alias<_SLASH_Z7>,
-  HelpText<"Alias for /Z7. Does not produce PDBs.">;
+  HelpText<"Like /Z7">;
 def _SLASH_Zp : CLJoined<"Zp">,
-  HelpText<"Specify the default maximum struct packing alignment">,
+  HelpText<"Set default maximum struct packing alignment">,
   Alias<fpack_struct_EQ>;
 def _SLASH_Zp_flag : CLFlag<"Zp">,
-  HelpText<"Set the default maximum struct packing alignment to 1">,
+  HelpText<"Set default maximum struct packing alignment to 1">,
   Alias<fpack_struct_EQ>, AliasArgs<["1"]>;
 def _SLASH_Zs : CLFlag<"Zs">, HelpText<"Syntax-check only">,
   Alias<fsyntax_only>;
@@ -263,35 +265,35 @@ def _SLASH_M_Group : OptionGroup<"</M group>">, Group<cl_compile_Group>;
 def _SLASH_volatile_Group : OptionGroup<"</volatile group>">,
   Group<cl_compile_Group>;
 
-def _SLASH_EH : CLJoined<"EH">, HelpText<"Exception handling model">;
+def _SLASH_EH : CLJoined<"EH">, HelpText<"Set exception handling model">;
 def _SLASH_EP : CLFlag<"EP">,
   HelpText<"Disable linemarker output and preprocess to stdout">;
 def _SLASH_FA : CLFlag<"FA">,
   HelpText<"Output assembly code file during compilation">;
 def _SLASH_Fa : CLJoined<"Fa">,
-  HelpText<"Output assembly code to this file during compilation (with /FA)">,
-  MetaVarName<"<file or directory>">;
+  HelpText<"Set assembly output file name (with /FA)">,
+  MetaVarName<"<file or dir/>">;
 def _SLASH_fallback : CLCompileFlag<"fallback">,
   HelpText<"Fall back to cl.exe if clang-cl fails to compile">;
 def _SLASH_FI : CLJoinedOrSeparate<"FI">,
   HelpText<"Include file before parsing">, Alias<include_>;
 def _SLASH_Fe : CLJoined<"Fe">,
-  HelpText<"Set output executable file or directory (ends in / or \\)">,
-  MetaVarName<"<file or directory>">;
+  HelpText<"Set output executable file name">,
+  MetaVarName<"<file or dir/>">;
 def _SLASH_Fi : CLCompileJoined<"Fi">,
   HelpText<"Set preprocess output file name (with /P)">,
   MetaVarName<"<file>">;
 def _SLASH_Fo : CLCompileJoined<"Fo">,
-  HelpText<"Set output object file, or directory (ends in / or \\) (with /c)">,
-  MetaVarName<"<file or directory>">;
+  HelpText<"Set output object file (with /c)">,
+  MetaVarName<"<file or dir/>">;
 def _SLASH_guard : CLJoined<"guard:">,
   HelpText<"Enable Control Flow Guard with /guard:cf, or only the table with /guard:cf,nochecks">;
 def _SLASH_GX : CLFlag<"GX">,
-  HelpText<"Enable exception handling">;
+  HelpText<"Deprecated; use /EHsc">;
 def _SLASH_GX_ : CLFlag<"GX-">,
-  HelpText<"Disable exception handling">;
+  HelpText<"Deprecated (like not passing /EH)">;
 def _SLASH_imsvc : CLJoinedOrSeparate<"imsvc">,
-  HelpText<"Add directory to system include search path, as if part of %INCLUDE%">,
+  HelpText<"Add <dir> to system include search path, as if in %INCLUDE%">,
   MetaVarName<"<dir>">;
 def _SLASH_LD : CLFlag<"LD">, HelpText<"Create DLL">;
 def _SLASH_LDd : CLFlag<"LDd">, HelpText<"Create debug DLL">;
@@ -306,14 +308,14 @@ def _SLASH_MT : Option<["/", "-"], "MT", KIND_FLAG>, Group<_SLASH_M_Group>,
 def _SLASH_MTd : Option<["/", "-"], "MTd", KIND_FLAG>, Group<_SLASH_M_Group>,
   Flags<[CLOption, DriverOption]>, HelpText<"Use static debug run-time">;
 def _SLASH_o : CLJoinedOrSeparate<"o">,
-  HelpText<"Set output file or directory (ends in / or \\)">,
-  MetaVarName<"<file or directory>">;
+  HelpText<"Deprecated (set output file name); use /Fe or /Fe">,
+  MetaVarName<"<file or dir/>">;
 def _SLASH_P : CLFlag<"P">, HelpText<"Preprocess to file">;
 def _SLASH_Tc : CLCompileJoinedOrSeparate<"Tc">,
-  HelpText<"Specify a C source file">, MetaVarName<"<filename>">;
+  HelpText<"Treat <file> as C source file">, MetaVarName<"<file>">;
 def _SLASH_TC : CLCompileFlag<"TC">, HelpText<"Treat all source files as C">;
 def _SLASH_Tp : CLCompileJoinedOrSeparate<"Tp">,
-  HelpText<"Specify a C++ source file">, MetaVarName<"<filename>">;
+  HelpText<"Treat <file> as C++ source file">, MetaVarName<"<file>">;
 def _SLASH_TP : CLCompileFlag<"TP">, HelpText<"Treat all source files as C++">;
 def _SLASH_volatile_iso : Option<["/", "-"], "volatile:iso", KIND_FLAG>,
   Group<_SLASH_volatile_Group>, Flags<[CLOption, DriverOption]>,
@@ -336,7 +338,7 @@ def _SLASH_volatile_ms  : Option<["/", "-"], "volatile:ms", KIND_FLAG>,
 def _SLASH_clang : CLJoined<"clang:">,
   HelpText<"Pass <arg> to the clang driver">, MetaVarName<"<arg>">;
 def _SLASH_Zl : CLFlag<"Zl">,
-  HelpText<"Don't mention any default libraries in the object file">;
+  HelpText<"Do not let object file auto-link default libraries">;
 
 def _SLASH_Yc : CLJoined<"Yc">,
   HelpText<"Generate a pch file for all code up to and including <filename>">,
@@ -350,9 +352,9 @@ def _SLASH_Y_ : CLFlag<"Y-">,
 def _SLASH_Zc_dllexportInlines : CLFlag<"Zc:dllexportInlines">,
   HelpText<"dllexport/dllimport inline member functions of dllexport/import classes (default)">;
 def _SLASH_Zc_dllexportInlines_ : CLFlag<"Zc:dllexportInlines-">,
-  HelpText<"Don't dllexport/dllimport inline member functions of dllexport/import classes">;
+  HelpText<"Do not dllexport/dllimport inline member functions of dllexport/import classes">;
 def _SLASH_Fp : CLJoined<"Fp">,
-  HelpText<"Set pch filename (with /Yc and /Yu)">, MetaVarName<"<filename>">;
+  HelpText<"Set pch file name (with /Yc and /Yu)">, MetaVarName<"<file>">;
 
 def _SLASH_Gd : CLFlag<"Gd">,
   HelpText<"Set __cdecl as a default calling convention">;

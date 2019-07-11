@@ -1007,6 +1007,10 @@ bool isSISrcFPOperand(const MCInstrDesc &Desc, unsigned OpNo) {
   case AMDGPU::OPERAND_REG_INLINE_C_FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
   case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
+  case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
+  case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
     return true;
   default:
     return false;
@@ -1027,15 +1031,19 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::SGPR_32RegClassID:
   case AMDGPU::VGPR_32RegClassID:
   case AMDGPU::VRegOrLds_32RegClassID:
+  case AMDGPU::AGPR_32RegClassID:
   case AMDGPU::VS_32RegClassID:
+  case AMDGPU::AV_32RegClassID:
   case AMDGPU::SReg_32RegClassID:
   case AMDGPU::SReg_32_XM0RegClassID:
   case AMDGPU::SRegOrLds_32RegClassID:
     return 32;
   case AMDGPU::SGPR_64RegClassID:
   case AMDGPU::VS_64RegClassID:
+  case AMDGPU::AV_64RegClassID:
   case AMDGPU::SReg_64RegClassID:
   case AMDGPU::VReg_64RegClassID:
+  case AMDGPU::AReg_64RegClassID:
   case AMDGPU::SReg_64_XEXECRegClassID:
     return 64;
   case AMDGPU::SGPR_96RegClassID:
@@ -1045,6 +1053,7 @@ unsigned getRegBitWidth(unsigned RCID) {
   case AMDGPU::SGPR_128RegClassID:
   case AMDGPU::SReg_128RegClassID:
   case AMDGPU::VReg_128RegClassID:
+  case AMDGPU::AReg_128RegClassID:
     return 128;
   case AMDGPU::SGPR_160RegClassID:
   case AMDGPU::SReg_160RegClassID:
@@ -1055,7 +1064,12 @@ unsigned getRegBitWidth(unsigned RCID) {
     return 256;
   case AMDGPU::SReg_512RegClassID:
   case AMDGPU::VReg_512RegClassID:
+  case AMDGPU::AReg_512RegClassID:
     return 512;
+  case AMDGPU::SReg_1024RegClassID:
+  case AMDGPU::VReg_1024RegClassID:
+  case AMDGPU::AReg_1024RegClassID:
+    return 1024;
   default:
     llvm_unreachable("Unexpected register class");
   }

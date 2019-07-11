@@ -37,3 +37,18 @@ void test5() {
 
 struct MMX_t {};
 void test6() { __asm__("" : "=m"(*(MMX_t *)0)); }
+
+template <typename T>
+T test7(T v) {
+  return ({ // expected-warning{{use of GNU statement expression extension}}
+    T a = v;
+    a;
+    ;
+    ;
+  });
+}
+
+void test8() {
+  int a = test7(1);
+  double b = test7(2.0);
+}

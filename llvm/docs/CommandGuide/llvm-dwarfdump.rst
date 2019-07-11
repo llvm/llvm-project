@@ -25,7 +25,7 @@ OPTIONS
 
 .. option:: -a, --all
 
-            Disassemble all supported DWARF sections.
+            Dump all supported DWARF sections.
 
 .. option:: --arch=<arch>
 
@@ -68,19 +68,16 @@ OPTIONS
 
 .. option:: -i, --ignore-case
 
-            Ignore case distinctions when searching.
+            Ignore case distinctions when using :option:`--name`.
 
-.. option:: -n <pattern>, --name=<pattern>
+.. option:: -n <name>, --name=<name>
 
             Find and print all debug info entries whose name
-            (`DW_AT_name` attribute) matches the exact text in
-            <pattern>. Use the :option:`--regex` option to have
-            <pattern> become a regular expression for more flexible
-            pattern matching.
+            (`DW_AT_name` attribute) is <name>.
 
 .. option:: --lookup=<address>
 
-            Lookup <address> in the debug information and print out the file,
+            Look up <address> in the debug information and print out the file,
             function, block, and line table details.
 
 .. option:: -o <path>
@@ -96,8 +93,8 @@ OPTIONS
 
 .. option:: --parent-recurse-depth=<N>
 
-            Only recurse to a maximum depth of <N> when displaying parents of
-            debug info entries.
+            When displaying debug info entry parents, only show them to a
+            maximum depth of <N>.
 
 .. option:: --quiet
 
@@ -105,8 +102,8 @@ OPTIONS
 
 .. option:: -r <N>, --recurse-depth=<N>
 
-            Only recurse to a maximum depth of <N> when dumping debug info
-            entries.
+            When displaying debug info entries, only show children to a maximum
+            depth of <N>.
 
 .. option:: --statistics
 
@@ -119,8 +116,9 @@ OPTIONS
 
 .. option:: -x, --regex
 
-            Treat any <pattern> strings as regular expressions when searching
-            instead of just as an exact string match.
+            Treat any <name> strings as regular expressions when searching
+            with :option:`--name`. If :option:`--ignore-case` is also specified,
+            the regular expression becomes case-insensitive.
 
 .. option:: -u, --uuid
 

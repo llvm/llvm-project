@@ -119,17 +119,8 @@ TYPED_TEST(DenseMapTest, EmptyIntMapTest) {
   // Lookup tests
   EXPECT_FALSE(this->Map.count(this->getKey()));
   EXPECT_TRUE(this->Map.find(this->getKey()) == this->Map.end());
-#if !defined(_MSC_VER) || defined(__clang__)
   EXPECT_EQ(typename TypeParam::mapped_type(),
             this->Map.lookup(this->getKey()));
-#else
-  // MSVC, at least old versions, cannot parse the typename to disambiguate
-  // TypeParam::mapped_type as a type. However, because MSVC doesn't implement
-  // two-phase name lookup, it also doesn't require the typename. Deal with
-  // this mutual incompatibility through specialized code.
-  EXPECT_EQ(TypeParam::mapped_type(),
-            this->Map.lookup(this->getKey()));
-#endif
 }
 
 // Constant map tests

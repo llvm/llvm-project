@@ -121,6 +121,7 @@ enum GPUKind : uint32_t {
   GK_GFX902 = 61,
   GK_GFX904 = 62,
   GK_GFX906 = 63,
+  GK_GFX908 = 64,
   GK_GFX909 = 65,
 
   GK_GFX1010 = 71,
