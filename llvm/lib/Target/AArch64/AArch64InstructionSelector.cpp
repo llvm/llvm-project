@@ -899,12 +899,23 @@ bool AArch64InstructionSelector::selectCompareBranch(
 
   Register LHS = CCMI->getOperand(2).getReg();
   Register RHS = CCMI->getOperand(3).getReg();
-  if (!getConstantVRegVal(RHS, MRI))
+  auto VRegAndVal = getConstantVRegValWithLookThrough(RHS, MRI);
+  if (!VRegAndVal)
     std::swap(RHS, LHS);
 
-  const auto RHSImm = getConstantVRegVal(RHS, MRI);
-  if (!RHSImm || *RHSImm != 0)
-    return false;
+  VRegAndVal = getConstantVRegValWithLookThrough(RHS, MRI);
+  if (!VRegAndVal || VRegAndVal->Value != 0) {
+    MachineIRBuilder MIB(I);
+    // If we can't select a CBZ then emit a cmp + Bcc.
+    if (!emitIntegerCompare(CCMI->getOperand(2), CCMI->getOperand(3),
+                            CCMI->getOperand(1), MIB))
+      return false;
+    const AArch64CC::CondCode CC = changeICMPPredToAArch64CC(
+        (CmpInst::Predicate)CCMI->getOperand(1).getPredicate());
+    MIB.buildInstr(AArch64::Bcc, {}, {}).addImm(CC).addMBB(DestMBB);
+    I.eraseFromParent();
+    return true;
+  }
 
   const RegisterBank &RB = *RBI.getRegBank(LHS, MRI, TRI);
   if (RB.getID() != AArch64::GPRRegBankID)

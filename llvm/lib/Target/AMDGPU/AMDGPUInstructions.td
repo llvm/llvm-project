@@ -546,11 +546,13 @@ class AtomicCmpSwapRegion <SDNode cmp_swap_node> : PatFrag<
 
 def atomic_cmp_swap_local : AtomicCmpSwapLocal <atomic_cmp_swap>;
 
+class global_binary_atomic_op_frag<SDNode atomic_op> : PatFrag<
+    (ops node:$ptr, node:$value),
+    (atomic_op node:$ptr, node:$value),
+    [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;}]>;
+
 multiclass global_binary_atomic_op<SDNode atomic_op> {
-  def "" : PatFrag<
-        (ops node:$ptr, node:$value),
-        (atomic_op node:$ptr, node:$value),
-        [{return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;}]>;
+  def "" : global_binary_atomic_op_frag<atomic_op>;
 
   def _noret : PatFrag<
         (ops node:$ptr, node:$value),

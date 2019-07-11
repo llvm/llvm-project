@@ -377,6 +377,7 @@ LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg) {
 }
 
 void reportWarning(Twine Msg) {
+  fouts().flush();
   errs() << "\n";
   WithColor::warning(errs()) << Msg << "\n";
 }

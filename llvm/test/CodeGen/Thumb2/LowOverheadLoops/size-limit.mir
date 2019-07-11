@@ -29,7 +29,7 @@
     %lsr.iv5 = phi i32* [ %scevgep4, %for.body.preheader ], [ %scevgep6, %for.body ]
     %lsr.iv1 = phi i32* [ %scevgep, %for.body.preheader ], [ %scevgep2, %for.body ]
     %0 = phi i32 [ %N, %for.body.preheader ], [ %3, %for.body ]
-    %size = call i32 @llvm.arm.space(i32 4072, i32 undef)
+    %size = call i32 @llvm.arm.space(i32 4070, i32 undef)
     %scevgep11 = getelementptr i32, i32* %lsr.iv9, i32 1
     %1 = load i32, i32* %scevgep11, align 4, !tbaa !3
     %scevgep7 = getelementptr i32, i32* %lsr.iv5, i32 1
@@ -140,7 +140,7 @@ body:             |
   bb.1.for.body:
     successors: %bb.1(0x7c000000), %bb.2(0x04000000)
   
-    dead renamable $r3 = SPACE 4072, undef renamable $r0
+    dead renamable $r3 = SPACE 4070, undef renamable $r0
     renamable $r12, renamable $r1 = t2LDR_PRE killed renamable $r1, 4, 14, $noreg :: (load 4 from %ir.scevgep11, !tbaa !3)
     renamable $r3, renamable $r2 = t2LDR_PRE killed renamable $r2, 4, 14, $noreg :: (load 4 from %ir.scevgep7, !tbaa !3)
     renamable $r3 = nsw t2MUL killed renamable $r3, killed renamable $r12, 14, $noreg

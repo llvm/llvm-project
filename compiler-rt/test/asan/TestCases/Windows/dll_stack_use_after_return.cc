@@ -1,5 +1,5 @@
-// RUN: %clang_cl_asan -O0 %p/dll_host.cc -Fe%t
-// RUN: %clang_cl_asan -LD -O0 %s -Fe%t.dll
+// RUN: %clang_cl_asan -Od %p/dll_host.cc -Fe%t
+// RUN: %clang_cl_asan -LD -Od %s -Fe%t.dll
 // RUN: %env_asan_opts=detect_stack_use_after_return=1 not %run %t %t.dll 2>&1 | FileCheck %s
 
 #include <malloc.h>

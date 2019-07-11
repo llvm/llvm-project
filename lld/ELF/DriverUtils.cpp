@@ -59,15 +59,15 @@ static void handleColorDiagnostics(opt::InputArgList &args) {
   if (!arg)
     return;
   if (arg->getOption().getID() == OPT_color_diagnostics) {
-    errorHandler().ColorDiagnostics = true;
+    errorHandler().colorDiagnostics = true;
   } else if (arg->getOption().getID() == OPT_no_color_diagnostics) {
-    errorHandler().ColorDiagnostics = false;
+    errorHandler().colorDiagnostics = false;
   } else {
     StringRef s = arg->getValue();
     if (s == "always")
-      errorHandler().ColorDiagnostics = true;
+      errorHandler().colorDiagnostics = true;
     else if (s == "never")
-      errorHandler().ColorDiagnostics = false;
+      errorHandler().colorDiagnostics = false;
     else if (s != "auto")
       error("unknown option: --color-diagnostics=" + s);
   }
@@ -101,7 +101,7 @@ static void concatLTOPluginOptions(SmallVectorImpl<const char *> &args) {
   for (size_t i = 0, e = args.size(); i != e; ++i) {
     StringRef s = args[i];
     if ((s == "-plugin-opt" || s == "--plugin-opt") && i + 1 != e) {
-      v.push_back(Saver.save(s + "=" + args[i + 1]).data());
+      v.push_back(saver.save(s + "=" + args[i + 1]).data());
       ++i;
     } else {
       v.push_back(args[i]);
@@ -124,7 +124,7 @@ opt::InputArgList ELFOptTable::parse(ArrayRef<const char *> argv) {
 
   // Expand response files (arguments in the form of @<filename>)
   // and then parse the argument again.
-  cl::ExpandResponseFiles(Saver, getQuotingStyle(args), vec);
+  cl::ExpandResponseFiles(saver, getQuotingStyle(args), vec);
   concatLTOPluginOptions(vec);
   args = this->ParseArgs(vec, missingIndex, missingCount);
 

@@ -659,32 +659,7 @@ static Constant *stripAndComputeConstantOffsets(const DataLayout &DL, Value *&V,
   Type *IntPtrTy = DL.getIntPtrType(V->getType())->getScalarType();
   APInt Offset = APInt::getNullValue(IntPtrTy->getIntegerBitWidth());
 
-  // Even though we don't look through PHI nodes, we could be called on an
-  // instruction in an unreachable block, which may be on a cycle.
-  SmallPtrSet<Value *, 4> Visited;
-  Visited.insert(V);
-  do {
-    if (GEPOperator *GEP = dyn_cast<GEPOperator>(V)) {
-      if ((!AllowNonInbounds && !GEP->isInBounds()) ||
-          !GEP->accumulateConstantOffset(DL, Offset))
-        break;
-      V = GEP->getPointerOperand();
-    } else if (Operator::getOpcode(V) == Instruction::BitCast) {
-      V = cast<Operator>(V)->getOperand(0);
-    } else if (GlobalAlias *GA = dyn_cast<GlobalAlias>(V)) {
-      if (GA->isInterposable())
-        break;
-      V = GA->getAliasee();
-    } else {
-      if (auto *Call = dyn_cast<CallBase>(V))
-        if (Value *RV = Call->getReturnedArgOperand()) {
-          V = RV;
-          continue;
-        }
-      break;
-    }
-    assert(V->getType()->isPtrOrPtrVectorTy() && "Unexpected operand type!");
-  } while (Visited.insert(V).second);
+  V = V->stripAndAccumulateConstantOffsets(DL, Offset, AllowNonInbounds);
 
   Constant *OffsetIntPtr = ConstantInt::get(IntPtrTy, Offset);
   if (V->getType()->isVectorTy())
@@ -4981,27 +4956,28 @@ static Value *simplifyBinaryIntrinsic(Function *F, Value *Op0, Value *Op1,
   return nullptr;
 }
 
-template <typename IterTy>
-static Value *simplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
-                                const SimplifyQuery &Q) {
+static Value *simplifyIntrinsic(CallBase *Call, const SimplifyQuery &Q) {
+
   // Intrinsics with no operands have some kind of side effect. Don't simplify.
-  unsigned NumOperands = std::distance(ArgBegin, ArgEnd);
-  if (NumOperands == 0)
+  unsigned NumOperands = Call->getNumArgOperands();
+  if (!NumOperands)
     return nullptr;
 
+  Function *F = cast<Function>(Call->getCalledFunction());
   Intrinsic::ID IID = F->getIntrinsicID();
   if (NumOperands == 1)
-    return simplifyUnaryIntrinsic(F, ArgBegin[0], Q);
+    return simplifyUnaryIntrinsic(F, Call->getArgOperand(0), Q);
 
   if (NumOperands == 2)
-    return simplifyBinaryIntrinsic(F, ArgBegin[0], ArgBegin[1], Q);
+    return simplifyBinaryIntrinsic(F, Call->getArgOperand(0),
+                                   Call->getArgOperand(1), Q);
 
   // Handle intrinsics with 3 or more arguments.
   switch (IID) {
   case Intrinsic::masked_load:
   case Intrinsic::masked_gather: {
-    Value *MaskArg = ArgBegin[2];
-    Value *PassthruArg = ArgBegin[3];
+    Value *MaskArg = Call->getArgOperand(2);
+    Value *PassthruArg = Call->getArgOperand(3);
     // If the mask is all zeros or undef, the "passthru" argument is the result.
     if (maskIsAllZeroOrUndef(MaskArg))
       return PassthruArg;
@@ -5009,7 +4985,8 @@ static Value *simplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
   }
   case Intrinsic::fshl:
   case Intrinsic::fshr: {
-    Value *Op0 = ArgBegin[0], *Op1 = ArgBegin[1], *ShAmtArg = ArgBegin[2];
+    Value *Op0 = Call->getArgOperand(0), *Op1 = Call->getArgOperand(1),
+          *ShAmtArg = Call->getArgOperand(2);
 
     // If both operands are undef, the result is undef.
     if (match(Op0, m_Undef()) && match(Op1, m_Undef()))
@@ -5017,14 +4994,14 @@ static Value *simplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
 
     // If shift amount is undef, assume it is zero.
     if (match(ShAmtArg, m_Undef()))
-      return ArgBegin[IID == Intrinsic::fshl ? 0 : 1];
+      return Call->getArgOperand(IID == Intrinsic::fshl ? 0 : 1);
 
     const APInt *ShAmtC;
     if (match(ShAmtArg, m_APInt(ShAmtC))) {
       // If there's effectively no shift, return the 1st arg or 2nd arg.
       APInt BitWidth = APInt(ShAmtC->getBitWidth(), ShAmtC->getBitWidth());
       if (ShAmtC->urem(BitWidth).isNullValue())
-        return ArgBegin[IID == Intrinsic::fshl ? 0 : 1];
+        return Call->getArgOperand(IID == Intrinsic::fshl ? 0 : 1);
     }
     return nullptr;
   }
@@ -5033,56 +5010,36 @@ static Value *simplifyIntrinsic(Function *F, IterTy ArgBegin, IterTy ArgEnd,
   }
 }
 
-template <typename IterTy>
-static Value *SimplifyCall(CallBase *Call, Value *V, IterTy ArgBegin,
-                           IterTy ArgEnd, const SimplifyQuery &Q,
-                           unsigned MaxRecurse) {
-  Type *Ty = V->getType();
-  if (PointerType *PTy = dyn_cast<PointerType>(Ty))
-    Ty = PTy->getElementType();
-  FunctionType *FTy = cast<FunctionType>(Ty);
+Value *llvm::SimplifyCall(CallBase *Call, const SimplifyQuery &Q) {
+  Value *Callee = Call->getCalledValue();
 
   // call undef -> undef
   // call null -> undef
-  if (isa<UndefValue>(V) || isa<ConstantPointerNull>(V))
-    return UndefValue::get(FTy->getReturnType());
+  if (isa<UndefValue>(Callee) || isa<ConstantPointerNull>(Callee))
+    return UndefValue::get(Call->getType());
 
-  Function *F = dyn_cast<Function>(V);
+  Function *F = dyn_cast<Function>(Callee);
   if (!F)
     return nullptr;
 
   if (F->isIntrinsic())
-    if (Value *Ret = simplifyIntrinsic(F, ArgBegin, ArgEnd, Q))
+    if (Value *Ret = simplifyIntrinsic(Call, Q))
       return Ret;
 
   if (!canConstantFoldCallTo(Call, F))
     return nullptr;
 
   SmallVector<Constant *, 4> ConstantArgs;
-  ConstantArgs.reserve(ArgEnd - ArgBegin);
-  for (IterTy I = ArgBegin, E = ArgEnd; I != E; ++I) {
-    Constant *C = dyn_cast<Constant>(*I);
+  unsigned NumArgs = Call->getNumArgOperands();
+  ConstantArgs.reserve(NumArgs);
+  for (auto &Arg : Call->args()) {
+    Constant *C = dyn_cast<Constant>(&Arg);
     if (!C)
       return nullptr;
     ConstantArgs.push_back(C);
   }
 
   return ConstantFoldCall(Call, F, ConstantArgs, Q.TLI);
-}
-
-Value *llvm::SimplifyCall(CallBase *Call, Value *V, User::op_iterator ArgBegin,
-                          User::op_iterator ArgEnd, const SimplifyQuery &Q) {
-  return ::SimplifyCall(Call, V, ArgBegin, ArgEnd, Q, RecursionLimit);
-}
-
-Value *llvm::SimplifyCall(CallBase *Call, Value *V, ArrayRef<Value *> Args,
-                          const SimplifyQuery &Q) {
-  return ::SimplifyCall(Call, V, Args.begin(), Args.end(), Q, RecursionLimit);
-}
-
-Value *llvm::SimplifyCall(CallBase *Call, const SimplifyQuery &Q) {
-  return ::SimplifyCall(Call, Call->getCalledValue(), Call->arg_begin(),
-                        Call->arg_end(), Q, RecursionLimit);
 }
 
 /// See if we can compute a simplified version of this instruction.

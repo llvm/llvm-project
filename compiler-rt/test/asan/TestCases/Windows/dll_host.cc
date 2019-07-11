@@ -2,7 +2,7 @@
 //
 // Just make sure we can compile this.
 // The actual compile&run sequence is to be done by the DLL tests.
-// RUN: %clang_cl_asan -O0 %s -Fe%t
+// RUN: %clang_cl_asan -Od %s -Fe%t
 //
 // Get the list of ASan wrappers exported by the main module RTL:
 // note: The mangling decoration (i.e. @4 )is removed because calling convention

@@ -358,12 +358,10 @@ SelectionTree::SelectionTree(ASTContext &AST, unsigned Offset)
 const Node *SelectionTree::commonAncestor() const {
   if (!Root)
     return nullptr;
-  for (const Node *Ancestor = Root;; Ancestor = Ancestor->Children.front()) {
-    if (Ancestor->Selected || Ancestor->Children.size() > 1)
-      return Ancestor;
-    // The tree only contains ancestors of the interesting nodes.
-    assert(!Ancestor->Children.empty() && "bad node in selection tree");
-  }
+  const Node *Ancestor = Root;
+  while (Ancestor->Children.size() == 1 && !Ancestor->Selected)
+    Ancestor = Ancestor->Children.front();
+  return Ancestor;
 }
 
 } // namespace clangd

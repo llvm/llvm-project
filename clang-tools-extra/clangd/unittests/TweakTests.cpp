@@ -313,6 +313,14 @@ TEST(TweakTest, ExtractVariable) {
       while(a < ^3);
     }
   )cpp");
+  // Should not crash.
+  checkNotAvailable(ID, R"cpp(
+    template<typename T, typename ...Args>
+    struct Test<T, Args...> {
+    Test(const T &v) :val(^) {}
+      T val;
+    };
+  )cpp");
   checkNotAvailable(ID, R"cpp(
     int xyz(int a = ^1) {
       return 1;

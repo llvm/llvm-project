@@ -222,9 +222,20 @@ static Error restoreStatOnFile(StringRef Filename,
             FD, Stat.getLastAccessedTime(), Stat.getLastModificationTime()))
       return createFileError(Filename, EC);
 
-  if (auto EC = sys::fs::setPermissions(Filename, Stat.permissions(),
-                                        /*respectUmask=*/true))
+  sys::fs::file_status OStat;
+  if (std::error_code EC = sys::fs::status(FD, OStat))
     return createFileError(Filename, EC);
+  if (OStat.type() == sys::fs::file_type::regular_file)
+#ifdef _WIN32
+    if (auto EC = sys::fs::setPermissions(
+            Filename, static_cast<sys::fs::perms>(Stat.permissions() &
+                                                  ~sys::fs::getUmask())))
+#else
+    if (auto EC = sys::fs::setPermissions(
+            FD, static_cast<sys::fs::perms>(Stat.permissions() &
+                                            ~sys::fs::getUmask())))
+#endif
+      return createFileError(Filename, EC);
 
   if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
     return createFileError(Filename, EC);

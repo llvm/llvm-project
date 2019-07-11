@@ -87,6 +87,34 @@ Sections:
 # CHECK:   }
 # CHECK:   Section {
 # CHECK:     Index: 4
+# CHECK:     Name: .symtab
+# CHECK:     Type: SHT_SYMTAB (0x2)
+# CHECK:     Flags [ (0x0)
+# CHECK:     ]
+# CHECK:     Address: 0x0
+# CHECK:     Offset:
+# CHECK:     Size:
+# CHECK:     Link: 5
+# CHECK:     Info: 1
+# CHECK:     AddressAlignment: 8
+# CHECK:     EntrySize: 24
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Index: 5
+# CHECK:     Name: .strtab
+# CHECK:     Type: SHT_STRTAB (0x3)
+# CHECK:     Flags [ (0x0)
+# CHECK:     ]
+# CHECK:     Address: 0x0
+# CHECK:     Offset:
+# CHECK:     Size:
+# CHECK:     Link: 0
+# CHECK:     Info: 0
+# CHECK:     AddressAlignment: 1
+# CHECK:     EntrySize: 0
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Index: 6
 # CHECK:     Name: .shstrtab
 # CHECK:     Type: SHT_STRTAB (0x3)
 # CHECK:     Flags [ (0x0)

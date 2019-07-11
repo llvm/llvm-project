@@ -1,5 +1,5 @@
-// RUN: %clang_cl_asan -O0 %p/dll_host.cc -Fe%t
-// RUN: %clang_cl_asan -LD -O0 %s -Fe%t.dll
+// RUN: %clang_cl_asan -Od %p/dll_host.cc -Fe%t
+// RUN: %clang_cl_asan -LD -Od %s -Fe%t.dll
 // RUN: %run %t %t.dll | FileCheck %s
 
 #include <malloc.h>

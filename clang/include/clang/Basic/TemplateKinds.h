@@ -48,9 +48,9 @@ enum TemplateNameKind {
   /// anyway. In C++20, this is mandatory in order to parse ADL-only function
   /// template specialization calls.
   TNK_Undeclared_template,
+  /// The name refers to a concept.
+  TNK_Concept_template,
 };
 
 }
 #endif
-
-

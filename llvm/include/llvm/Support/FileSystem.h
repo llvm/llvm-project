@@ -665,15 +665,17 @@ unsigned getUmask();
 ///
 /// @param Path File to set permissions on.
 /// @param Permissions New file permissions.
-/// @param RespectUmask If true then Permissions will be changed to respect the
-///        umask of the current process.
 /// @returns errc::success if the permissions were successfully set, otherwise
 ///          a platform-specific error_code.
 /// @note On Windows, all permissions except *_write are ignored. Using any of
 ///       owner_write, group_write, or all_write will make the file writable.
 ///       Otherwise, the file will be marked as read-only.
-std::error_code setPermissions(const Twine &Path, perms Permissions,
-                               bool RespectUmask = false);
+std::error_code setPermissions(const Twine &Path, perms Permissions);
+
+/// Vesion of setPermissions accepting a file descriptor.
+/// TODO Delete the path based overload once we implement the FD based overload
+/// on Windows.
+std::error_code setPermissions(int FD, perms Permissions);
 
 /// Get file permissions.
 ///

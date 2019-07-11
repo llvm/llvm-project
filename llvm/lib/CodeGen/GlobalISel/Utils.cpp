@@ -238,6 +238,9 @@ Optional<ValueAndVReg> llvm::getConstantVRegValWithLookThrough(
       if (TargetRegisterInfo::isPhysicalRegister(VReg))
         return None;
       break;
+    case TargetOpcode::G_INTTOPTR:
+      VReg = MI->getOperand(1).getReg();
+      break;
     default:
       return None;
     }

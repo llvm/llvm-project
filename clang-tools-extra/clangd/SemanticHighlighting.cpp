@@ -11,8 +11,6 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTContext.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclarationName.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 
 namespace clang {
@@ -36,7 +34,21 @@ public:
     return Tokens;
   }
 
+  bool VisitNamespaceAliasDecl(NamespaceAliasDecl *NAD) {
+    // The target namespace of an alias can not be found in any other way.
+    addToken(NAD->getTargetNameLoc(), HighlightingKind::Namespace);
+    return true;
+  }
+
   bool VisitNamedDecl(NamedDecl *ND) {
+    // UsingDirectiveDecl's namespaces do not show up anywhere else in the
+    // Visit/Traverse mehods. But they should also be highlighted as a
+    // namespace.
+    if (const auto *UD = dyn_cast<UsingDirectiveDecl>(ND)) {
+      addToken(UD->getIdentLocation(), HighlightingKind::Namespace);
+      return true;
+    }
+
     // Constructors' TypeLoc has a TypePtr that is a FunctionProtoType. It has
     // no tag decl and therefore constructors must be gotten as NamedDecls
     // instead.
@@ -65,15 +77,26 @@ public:
 
   bool VisitTypeLoc(TypeLoc &TL) {
     // This check is for not getting two entries when there are anonymous
-    // structs. It also makes us not highlight namespace qualifiers. For
-    // elaborated types the actual type is highlighted as an inner TypeLoc.
+    // structs. It also makes us not highlight certain namespace qualifiers
+    // twice. For elaborated types the actual type is highlighted as an inner
+    // TypeLoc.
     if (TL.getTypeLocClass() == TypeLoc::TypeLocClass::Elaborated)
       return true;
 
     if (const Type *TP = TL.getTypePtr())
       if (const TagDecl *TD = TP->getAsTagDecl())
-          addToken(TL.getBeginLoc(), TD);
+        addToken(TL.getBeginLoc(), TD);
     return true;
+  }
+
+  bool TraverseNestedNameSpecifierLoc(NestedNameSpecifierLoc NNSLoc) {
+    if (NestedNameSpecifier *NNS = NNSLoc.getNestedNameSpecifier())
+      if (NNS->getKind() == NestedNameSpecifier::Namespace ||
+          NNS->getKind() == NestedNameSpecifier::NamespaceAlias)
+        addToken(NNSLoc.getLocalBeginLoc(), HighlightingKind::Namespace);
+
+    return RecursiveASTVisitor<
+        HighlightingTokenCollector>::TraverseNestedNameSpecifierLoc(NNSLoc);
   }
 
 private:
@@ -102,6 +125,14 @@ private:
     }
     if (isa<FunctionDecl>(D)) {
       addToken(Loc, HighlightingKind::Function);
+      return;
+    }
+    if (isa<NamespaceDecl>(D)) {
+      addToken(Loc, HighlightingKind::Namespace);
+      return;
+    }
+    if (isa<NamespaceAliasDecl>(D)) {
+      addToken(Loc, HighlightingKind::Namespace);
       return;
     }
   }
@@ -218,6 +249,8 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "entity.name.type.class.cpp";
   case HighlightingKind::Enum:
     return "entity.name.type.enum.cpp";
+  case HighlightingKind::Namespace:
+    return "entity.name.namespace.cpp";
   case HighlightingKind::NumKinds:
     llvm_unreachable("must not pass NumKinds to the function");
   }

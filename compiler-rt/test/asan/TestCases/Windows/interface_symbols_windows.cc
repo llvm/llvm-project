@@ -2,7 +2,7 @@
 // functions mentioned in sanitizer_interface.inc.
 //
 // Just make sure we can compile this.
-// RUN: %clang_cl_asan -O0 %s -Fe%t
+// RUN: %clang_cl_asan -Od %s -Fe%t
 //
 // note: The mangling decoration (i.e. @4 )is removed because calling convention
 //       differ from 32-bit and 64-bit.

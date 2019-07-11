@@ -412,7 +412,7 @@ Instruction *MemCpyOptPass::tryMergingIntoMemset(Instruction *StartInst,
       if (!NextStore->isSimple()) break;
 
       // Check to see if this stored value is of the same byte-splattable value.
-      Value *StoredByte = isBytewiseValue(NextStore->getOperand(0));
+      Value *StoredByte = isBytewiseValue(NextStore->getOperand(0), DL);
       if (isa<UndefValue>(ByteVal) && StoredByte)
         ByteVal = StoredByte;
       if (ByteVal != StoredByte)
@@ -749,7 +749,7 @@ bool MemCpyOptPass::processStore(StoreInst *SI, BasicBlock::iterator &BBI) {
   // byte at a time like "0" or "-1" or any width, as well as things like
   // 0xA0A0A0A0 and 0.0.
   auto *V = SI->getOperand(0);
-  if (Value *ByteVal = isBytewiseValue(V)) {
+  if (Value *ByteVal = isBytewiseValue(V, DL)) {
     if (Instruction *I = tryMergingIntoMemset(SI, SI->getPointerOperand(),
                                               ByteVal)) {
       BBI = I->getIterator(); // Don't invalidate iterator.
@@ -1229,7 +1229,8 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M) {
   // If copying from a constant, try to turn the memcpy into a memset.
   if (GlobalVariable *GV = dyn_cast<GlobalVariable>(M->getSource()))
     if (GV->isConstant() && GV->hasDefinitiveInitializer())
-      if (Value *ByteVal = isBytewiseValue(GV->getInitializer())) {
+      if (Value *ByteVal = isBytewiseValue(GV->getInitializer(),
+                                           M->getModule()->getDataLayout())) {
         IRBuilder<> Builder(M);
         Builder.CreateMemSet(M->getRawDest(), ByteVal, M->getLength(),
                              M->getDestAlignment(), false);

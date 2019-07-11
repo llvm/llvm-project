@@ -76,13 +76,13 @@ static void readConfigs(opt::InputArgList &args);
 
 bool elf::link(ArrayRef<const char *> args, bool canExitEarly,
                raw_ostream &error) {
-  errorHandler().LogName = args::getFilenameWithoutExe(args[0]);
-  errorHandler().ErrorLimitExceededMsg =
+  errorHandler().logName = args::getFilenameWithoutExe(args[0]);
+  errorHandler().errorLimitExceededMsg =
       "too many errors emitted, stopping now (use "
       "-error-limit=0 to see all errors)";
-  errorHandler().ErrorOS = &error;
-  errorHandler().ExitEarly = canExitEarly;
-  errorHandler().ColorDiagnostics = error.has_colors();
+  errorHandler().errorOS = &error;
+  errorHandler().exitEarly = canExitEarly;
+  errorHandler().colorDiagnostics = error.has_colors();
 
   inputSections.clear();
   outputSections.clear();
@@ -399,7 +399,7 @@ void LinkerDriver::main(ArrayRef<const char *> argsArr) {
   opt::InputArgList args = parser.parse(argsArr.slice(1));
 
   // Interpret this flag early because error() depends on them.
-  errorHandler().ErrorLimit = args::getInteger(args, OPT_error_limit, 20);
+  errorHandler().errorLimit = args::getInteger(args, OPT_error_limit, 20);
   checkZOptions(args);
 
   // Handle -help
@@ -783,10 +783,10 @@ static void parseClangOption(StringRef opt, const Twine &msg) {
 
 // Initializes Config members by the command line options.
 static void readConfigs(opt::InputArgList &args) {
-  errorHandler().Verbose = args.hasArg(OPT_verbose);
-  errorHandler().FatalWarnings =
+  errorHandler().verbose = args.hasArg(OPT_verbose);
+  errorHandler().fatalWarnings =
       args.hasFlag(OPT_fatal_warnings, OPT_no_fatal_warnings, false);
-  ThreadsEnabled = args.hasFlag(OPT_threads, OPT_no_threads, true);
+  threadsEnabled = args.hasFlag(OPT_threads, OPT_no_threads, true);
 
   config->allowMultipleDefinition =
       args.hasFlag(OPT_allow_multiple_definition,
@@ -939,7 +939,7 @@ static void readConfigs(opt::InputArgList &args) {
 
   // Parse LTO options.
   if (auto *arg = args.getLastArg(OPT_plugin_opt_mcpu_eq))
-    parseClangOption(Saver.save("-mcpu=" + StringRef(arg->getValue())),
+    parseClangOption(saver.save("-mcpu=" + StringRef(arg->getValue())),
                      arg->getSpelling());
 
   for (auto *arg : args.filtered(OPT_plugin_opt))
@@ -1579,8 +1579,8 @@ static std::vector<WrappedSymbol> addWrappedSymbols(opt::InputArgList &args) {
     if (!sym)
       continue;
 
-    Symbol *real = addUndefined(Saver.save("__real_" + name));
-    Symbol *wrap = addUndefined(Saver.save("__wrap_" + name));
+    Symbol *real = addUndefined(saver.save("__real_" + name));
+    Symbol *wrap = addUndefined(saver.save("__wrap_" + name));
     v.push_back({sym, real, wrap});
 
     // We want to tell LTO not to inline symbols to be overwritten

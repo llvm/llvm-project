@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/IR/CallSite.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Intrinsics.h"
 #include <cassert>
@@ -29,7 +30,6 @@ namespace llvm {
 class AddOperator;
 class APInt;
 class AssumptionCache;
-class DataLayout;
 class DominatorTree;
 class GEPOperator;
 class IntrinsicInst;
@@ -224,7 +224,7 @@ class Value;
   /// 0.0 etc. If the value can't be handled with a repeated byte store (e.g.
   /// i16 0x1234), return null. If the value is entirely undef and padding,
   /// return undef.
-  Value *isBytewiseValue(Value *V);
+  Value *isBytewiseValue(Value *V, const DataLayout &DL);
 
   /// Given an aggregrate and an sequence of indices, see if the scalar value
   /// indexed is already around as a register, for example if it were inserted
@@ -238,8 +238,18 @@ class Value;
 
   /// Analyze the specified pointer to see if it can be expressed as a base
   /// pointer plus a constant offset. Return the base and offset to the caller.
-  Value *GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
-                                          const DataLayout &DL);
+  ///
+  /// This is a wrapper around Value::stripAndAccumulateConstantOffsets that
+  /// creates and later unpacks the required APInt.
+  inline Value *GetPointerBaseWithConstantOffset(Value *Ptr, int64_t &Offset,
+                                                 const DataLayout &DL) {
+    APInt OffsetAPInt(DL.getIndexTypeSizeInBits(Ptr->getType()), 0);
+    Value *Base =
+        Ptr->stripAndAccumulateConstantOffsets(DL, OffsetAPInt,
+                                               /* AllowNonInbounds */ true);
+    Offset = OffsetAPInt.getSExtValue();
+    return Base;
+  }
   inline const Value *GetPointerBaseWithConstantOffset(const Value *Ptr,
                                                        int64_t &Offset,
                                                        const DataLayout &DL) {

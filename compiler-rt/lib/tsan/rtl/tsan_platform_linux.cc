@@ -292,9 +292,9 @@ void InitializePlatform() {
     }
     // Initialize the guard pointer used in {sig}{set,long}jump.
     longjmp_xor_key = InitializeGuardPtr();
-    uptr old_value = longjmp_xor_key;
-    InitializeLongjmpXorKey();
-    CHECK_EQ(longjmp_xor_key, old_value);
+    // uptr old_value = longjmp_xor_key;
+    // InitializeLongjmpXorKey();
+    // CHECK_EQ(longjmp_xor_key, old_value);
     // If the above check fails for you, please contact me (jlettner@apple.com)
     // and let me know the values of the two differing keys.  Please also set a
     // breakpoint on `InitializeGuardPtr` and `InitializeLongjmpXorKey` and tell
@@ -425,7 +425,7 @@ DECLARE_REAL(int, _setjmp, void* env)
 static void InitializeLongjmpXorKey() {
   // 1. Call REAL(setjmp), which stores the mangled SP in env.
   jmp_buf env;
-  REAL(setjmp)(env);
+  // REAL(_setjmp)(env); // TODO(yln)
 
   // 2. Retrieve mangled/vanilla SP.
   uptr mangled_sp = ((uptr *)&env)[LONG_JMP_SP_ENV_SLOT];

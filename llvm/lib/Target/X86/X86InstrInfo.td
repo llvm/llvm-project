@@ -2462,15 +2462,20 @@ let Predicates = [HasBMI] in {
             (BLSI64rr GR64:$src)>;
 
   // Versions to match flag producing ops.
+  def : Pat<(and_flag_nocf GR32:$src, (add GR32:$src, -1)),
+            (BLSR32rr GR32:$src)>;
+  def : Pat<(and_flag_nocf GR64:$src, (add GR64:$src, -1)),
+            (BLSR64rr GR64:$src)>;
+
   def : Pat<(xor_flag_nocf GR32:$src, (add GR32:$src, -1)),
             (BLSMSK32rr GR32:$src)>;
   def : Pat<(xor_flag_nocf GR64:$src, (add GR64:$src, -1)),
             (BLSMSK64rr GR64:$src)>;
 
-  def : Pat<(and_flag_nocf GR32:$src, (add GR32:$src, -1)),
-            (BLSR32rr GR32:$src)>;
-  def : Pat<(and_flag_nocf GR64:$src, (add GR64:$src, -1)),
-            (BLSR64rr GR64:$src)>;
+  def : Pat<(and_flag_nocf GR32:$src, (ineg GR32:$src)),
+            (BLSI32rr GR32:$src)>;
+  def : Pat<(and_flag_nocf GR64:$src, (ineg GR64:$src)),
+            (BLSI64rr GR64:$src)>;
 }
 
 multiclass bmi_bextr<bits<8> opc, string mnemonic, RegisterClass RC,
@@ -2896,8 +2901,6 @@ let Predicates = [HasTBM] in {
             (TZMSK64rr GR64:$src)>;
 
   // Patterns to match flag producing ops.
-  // X86and_flag nodes are rarely created. Those should use CMP+AND. We do
-  // TESTrr matching in PostProcessISelDAG to allow BLSR/BLSI to be formed.
   def : Pat<(or_flag_nocf GR32:$src, (not (add GR32:$src, 1))),
             (BLCI32rr GR32:$src)>;
   def : Pat<(or_flag_nocf GR64:$src, (not (add GR64:$src, 1))),
@@ -2908,6 +2911,11 @@ let Predicates = [HasTBM] in {
             (BLCI32rr GR32:$src)>;
   def : Pat<(or_flag_nocf GR64:$src, (sub -2, GR64:$src)),
             (BLCI64rr GR64:$src)>;
+
+  def : Pat<(and_flag_nocf (not GR32:$src), (add GR32:$src, 1)),
+            (BLCIC32rr GR32:$src)>;
+  def : Pat<(and_flag_nocf (not GR64:$src), (add GR64:$src, 1)),
+            (BLCIC64rr GR64:$src)>;
 
   def : Pat<(xor_flag_nocf GR32:$src, (add GR32:$src, 1)),
             (BLCMSK32rr GR32:$src)>;
@@ -2933,6 +2941,11 @@ let Predicates = [HasTBM] in {
             (T1MSKC32rr GR32:$src)>;
   def : Pat<(or_flag_nocf (not GR64:$src), (add GR64:$src, 1)),
             (T1MSKC64rr GR64:$src)>;
+
+  def : Pat<(and_flag_nocf (not GR32:$src), (add GR32:$src, -1)),
+            (TZMSK32rr GR32:$src)>;
+  def : Pat<(and_flag_nocf (not GR64:$src), (add GR64:$src, -1)),
+            (TZMSK64rr GR64:$src)>;
 } // HasTBM
 
 //===----------------------------------------------------------------------===//
