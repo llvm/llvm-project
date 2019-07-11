@@ -42,7 +42,7 @@ namespace {
 // The writer writes a SymbolTable result to a file.
 template <class ELFT> class Writer {
 public:
-  Writer() : buffer(errorHandler().OutputBuffer) {}
+  Writer() : buffer(errorHandler().outputBuffer) {}
   using Elf_Shdr = typename ELFT::Shdr;
   using Elf_Ehdr = typename ELFT::Ehdr;
   using Elf_Phdr = typename ELFT::Phdr;
@@ -103,8 +103,8 @@ StringRef elf::getOutputSectionName(const InputSectionBase *s) {
     if (InputSectionBase *rel = isec->getRelocatedSection()) {
       OutputSection *out = rel->getOutputSection();
       if (s->type == SHT_RELA)
-        return Saver.save(".rela" + out->name);
-      return Saver.save(".rel" + out->name);
+        return saver.save(".rela" + out->name);
+      return saver.save(".rel" + out->name);
     }
   }
 
@@ -204,8 +204,8 @@ static Defined *addOptionalRegular(StringRef name, SectionBase *sec,
   if (!s || s->isDefined())
     return nullptr;
 
-  s->resolve(Defined{/*File=*/nullptr, name, binding, stOther, STT_NOTYPE, val,
-                     /*Size=*/0, sec});
+  s->resolve(Defined{/*file=*/nullptr, name, binding, stOther, STT_NOTYPE, val,
+                     /*size=*/0, sec});
   return cast<Defined>(s);
 }
 
@@ -265,8 +265,8 @@ void elf::addReservedSymbols() {
     if (config->emachine == EM_PPC64)
       gotOff = 0x8000;
 
-    s->resolve(Defined{/*File=*/nullptr, gotSymName, STB_GLOBAL, STV_HIDDEN,
-                       STT_NOTYPE, gotOff, /*Size=*/0, Out::elfHeader});
+    s->resolve(Defined{/*file=*/nullptr, gotSymName, STB_GLOBAL, STV_HIDDEN,
+                       STT_NOTYPE, gotOff, /*size=*/0, Out::elfHeader});
     ElfSym::globalOffsetTable = cast<Defined>(s);
   }
 
@@ -501,7 +501,7 @@ template <class ELFT> static void createSyntheticSections() {
   // We always need to add rel[a].plt to output if it has entries.
   // Even for static linking it can contain R_[*]_IRELATIVE relocations.
   in.relaPlt = make<RelocationSection<ELFT>>(
-      config->isRela ? ".rela.plt" : ".rel.plt", false /*Sort*/);
+      config->isRela ? ".rela.plt" : ".rel.plt", /*sort=*/false);
   add(in.relaPlt);
 
   // The RelaIplt immediately follows .rel.plt (.rel.dyn for ARM) to ensure
@@ -514,7 +514,7 @@ template <class ELFT> static void createSyntheticSections() {
       (config->emachine == EM_ARM && !config->androidPackDynRelocs)
           ? ".rel.dyn"
           : in.relaPlt->name,
-      false /*Sort*/);
+      /*sort=*/false);
   add(in.relaIplt);
 
   in.plt = make<PltSection>(false);
@@ -751,8 +751,8 @@ template <class ELFT> void Writer<ELFT>::addSectionSymbols() {
       continue;
 
     auto *sym =
-        make<Defined>(isec->file, "", STB_LOCAL, /*StOther=*/0, STT_SECTION,
-                      /*Value=*/0, /*Size=*/0, isec);
+        make<Defined>(isec->file, "", STB_LOCAL, /*stOther=*/0, STT_SECTION,
+                      /*value=*/0, /*size=*/0, isec);
     in.symTab->addSymbol(sym);
   }
 }
@@ -1689,9 +1689,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   // Even the author of gold doesn't remember why gold behaves that way.
   // https://sourceware.org/ml/binutils/2002-03/msg00360.html
   if (mainPart->dynamic->parent)
-    symtab->addSymbol(Defined{/*File=*/nullptr, "_DYNAMIC", STB_WEAK,
+    symtab->addSymbol(Defined{/*file=*/nullptr, "_DYNAMIC", STB_WEAK,
                               STV_HIDDEN, STT_NOTYPE,
-                              /*Value=*/0, /*Size=*/0, mainPart->dynamic});
+                              /*value=*/0, /*size=*/0, mainPart->dynamic});
 
   // Define __rel[a]_iplt_{start,end} symbols if needed.
   addRelIpltSymbols();
@@ -1717,9 +1717,9 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     // define _TLS_MODULE_BASE_ relative to the first TLS section.
     Symbol *s = symtab->find("_TLS_MODULE_BASE_");
     if (s && s->isUndefined()) {
-      s->resolve(Defined{/*File=*/nullptr, s->getName(), STB_GLOBAL, STV_HIDDEN,
-                         STT_TLS, /*Value=*/0, 0,
-                         /*Section=*/nullptr});
+      s->resolve(Defined{/*file=*/nullptr, s->getName(), STB_GLOBAL, STV_HIDDEN,
+                         STT_TLS, /*value=*/0, 0,
+                         /*section=*/nullptr});
       ElfSym::tlsModuleBase = cast<Defined>(s);
     }
   }
@@ -2006,8 +2006,8 @@ void Writer<ELFT>::addStartStopSymbols(OutputSection *sec) {
   StringRef s = sec->name;
   if (!isValidCIdentifier(s))
     return;
-  addOptionalRegular(Saver.save("__start_" + s), sec, 0, STV_PROTECTED);
-  addOptionalRegular(Saver.save("__stop_" + s), sec, -1, STV_PROTECTED);
+  addOptionalRegular(saver.save("__start_" + s), sec, 0, STV_PROTECTED);
+  addOptionalRegular(saver.save("__stop_" + s), sec, -1, STV_PROTECTED);
 }
 
 static bool needsPtLoad(OutputSection *sec) {
