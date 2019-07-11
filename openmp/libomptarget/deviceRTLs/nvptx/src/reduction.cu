@@ -16,52 +16,6 @@
 
 #include "omptarget-nvptx.h"
 
-// may eventually remove this
-EXTERN
-int32_t __gpu_block_reduce() {
-  bool isSPMDExecutionMode = isSPMDMode();
-  int nt = GetNumberOfOmpThreads(isSPMDExecutionMode);
-  if (nt != blockDim.x)
-    return 0;
-  unsigned tnum = __ACTIVEMASK();
-  if (tnum != (~0x0)) // assume swapSize is 32
-    return 0;
-  return 1;
-}
-
-EXTERN
-int32_t __kmpc_reduce_gpu(kmp_Ident *loc, int32_t global_tid, int32_t num_vars,
-                          size_t reduce_size, void *reduce_data,
-                          void *reduce_array_size, kmp_ReductFctPtr *reductFct,
-                          kmp_CriticalName *lck) {
-  int threadId = GetLogicalThreadIdInBlock(checkSPMDMode(loc));
-  omptarget_nvptx_TaskDescr *currTaskDescr = getMyTopTaskDescriptor(threadId);
-  int numthread;
-  if (currTaskDescr->IsParallelConstruct()) {
-    numthread = GetNumberOfOmpThreads(checkSPMDMode(loc));
-  } else {
-    numthread = GetNumberOfOmpTeams();
-  }
-
-  if (numthread == 1)
-    return 1;
-  if (!__gpu_block_reduce())
-    return 2;
-  if (threadIdx.x == 0)
-    return 1;
-  return 0;
-}
-
-EXTERN
-int32_t __kmpc_reduce_combined(kmp_Ident *loc) {
-  return threadIdx.x == 0 ? 2 : 0;
-}
-
-EXTERN
-int32_t __kmpc_reduce_simd(kmp_Ident *loc) {
-  return (threadIdx.x % 32 == 0) ? 1 : 0;
-}
-
 EXTERN
 void __kmpc_nvptx_end_reduce(int32_t global_tid) {}
 

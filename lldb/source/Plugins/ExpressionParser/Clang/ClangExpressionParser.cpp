@@ -920,7 +920,7 @@ ClangExpressionParser::ParseInternal(DiagnosticManager &diagnostic_manager,
 
   if (!created_main_file) {
     std::unique_ptr<MemoryBuffer> memory_buffer =
-        MemoryBuffer::getMemBufferCopy(expr_text, __FUNCTION__);
+        MemoryBuffer::getMemBufferCopy(expr_text, "<lldb-expr>");
     source_mgr.setMainFileID(source_mgr.createFileID(std::move(memory_buffer)));
   }
 

@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DWARFDataExtractor.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace lldb_private {
 
@@ -19,4 +20,11 @@ dw_offset_t
 DWARFDataExtractor::GetDWARFOffset(lldb::offset_t *offset_ptr) const {
   return GetMaxU64(offset_ptr, GetDWARFSizeOfOffset());
 }
+
+llvm::DWARFDataExtractor DWARFDataExtractor::GetAsLLVM() const {
+  return llvm::DWARFDataExtractor(
+      llvm::StringRef(reinterpret_cast<const char *>(GetDataStart()),
+                      GetByteSize()),
+      GetByteOrder() == lldb::eByteOrderLittle, GetAddressByteSize());
 }
+} // namespace lldb_private
