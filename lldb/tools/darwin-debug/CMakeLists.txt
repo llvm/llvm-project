@@ -1,7 +1,3 @@
-add_lldb_tool(darwin-debug
+add_lldb_tool(darwin-debug ADD_TO_FRAMEWORK
   darwin-debug.cpp
-  )
-
-if(LLDB_BUILD_FRAMEWORK)
-  lldb_add_to_framework(darwin-debug)
-endif()
+)

@@ -70,7 +70,8 @@ config.substitutions.append( ("%clangxx_lsan ", build_invocation(clang_lsan_cxxf
 # LeakSanitizer tests are currently supported on x86-64 Linux, PowerPC64 Linux, arm Linux, mips64 Linux, and x86_64 Darwin.
 supported_linux = config.host_os is 'Linux' and config.host_arch in ['x86_64', 'ppc64', 'ppc64le', 'mips64', 'arm', 'armhf', 'armv7l']
 supported_darwin = config.host_os is 'Darwin' and config.target_arch is 'x86_64'
-if not (supported_linux or supported_darwin):
+supported_netbsd = config.host_os is 'NetBSD' and config.target_arch is 'x86_64'
+if not (supported_linux or supported_darwin or supported_netbsd):
   config.unsupported = True
 
 # Don't support Thumb due to broken fast unwinder

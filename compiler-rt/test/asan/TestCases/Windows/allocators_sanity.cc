@@ -1,4 +1,4 @@
-// RUN: %clang_cl_asan -O0 %s -Fe%t
+// RUN: %clang_cl_asan -Od %s -Fe%t
 // RUN: %run %t | FileCheck %s
 
 #include <malloc.h>

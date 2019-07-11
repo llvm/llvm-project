@@ -7,11 +7,16 @@
 # RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES %s
 # YES: 66000011 22000011 22000011 22000011
 
+# RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x1100+0x22 }" > %t.script
+# RUN: ld.lld -o %t.out --script %t.script %t
+# RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES2 %s
+# YES2: 66000011 22000011 22000011 22000011
+
 ## Confirming that address was correct:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =0x99887766 }" > %t.script
 # RUN: ld.lld -o %t.out --script %t.script %t
-# RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES2 %s
-# YES2: 66998877 66998877 66998877 66998877
+# RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES3 %s
+# YES3: 66998877 66998877 66998877 66998877
 
 ## Default padding value is 0x00:
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } }" > %t.script
@@ -51,7 +56,7 @@
 # RUN: ld.lld -o %t.out --script %t.script %t
 # RUN: llvm-objdump -s %t.out | FileCheck -check-prefix=YES %s
 
-## Check we report an error if expression value is larger that 32-bits.
+## Check we report an error if expression value is larger than 32-bits.
 # RUN: echo "SECTIONS { .mysec : { *(.mysec*) } =(0x11 << 32) }" > %t.script
 # RUN: not ld.lld -o %t.out --script %t.script %t 2>&1 | FileCheck --check-prefix=ERR3 %s
 # ERR3: filler expression result does not fit 32-bit: 0x1100000000

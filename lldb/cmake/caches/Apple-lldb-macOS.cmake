@@ -2,18 +2,25 @@ include(${CMAKE_CURRENT_LIST_DIR}/Apple-lldb-base.cmake)
 
 set(LLDB_BUILD_FRAMEWORK ON CACHE BOOL "")
 set(LLDB_NO_INSTALL_DEFAULT_RPATH ON CACHE BOOL "")
+set(CMAKE_OSX_DEPLOYMENT_TARGET 10.11 CACHE STRING "")
 
-# Set the install prefix to the default install location on the enduser machine.
-# If the location is not writeable on the build machine, specify another prefix
-# in the DESTDIR environment variable, e.g.: DESTDIR=/tmp ninja install
+# Default install location on the enduser machine. On the build machine, use the
+# DESTDIR environment variable in order to relocate the whole installation, e.g.:
+# `DESTDIR=/tmp ninja install-distribution`
 set(CMAKE_INSTALL_PREFIX /Applications/Xcode.app/Contents/Developer/usr CACHE STRING "")
 
-# Choose the install location for LLDB.framework so that it matches the
-# INSTALL_RPATH of the lldb driver. It's either absolute or relative to
-# CMAKE_INSTALL_PREFIX. In any case, DESTDIR will be an extra prefix.
+# Install location for LLDB.framework on the enduser machine.
+# DESTDIR will be an extra prefix.
 set(LLDB_FRAMEWORK_INSTALL_DIR /Applications/Xcode.app/Contents/SharedFrameworks CACHE STRING "")
 
-# Release builds may change these:
-set(CMAKE_OSX_DEPLOYMENT_TARGET 10.11 CACHE STRING "")
-set(LLDB_USE_SYSTEM_DEBUGSERVER ON CACHE BOOL "")
-set(LLVM_EXTERNALIZE_DEBUGINFO OFF CACHE BOOL "")
+# Install location for externalized debug-info on the build machine.
+# DESTDIR will be an extra prefix.
+set(LLDB_DEBUGINFO_INSTALL_PREFIX /debuginfo CACHE STRING "")
+
+set(LLVM_DISTRIBUTION_COMPONENTS
+  lldb
+  liblldb
+  lldb-argdumper
+  darwin-debug
+  debugserver
+  CACHE STRING "")

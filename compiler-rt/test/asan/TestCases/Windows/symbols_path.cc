@@ -1,6 +1,6 @@
 // Make sure symbolization works even if the path to the .exe file changes.
 // RUN: mkdir %t || true
-// RUN: %clang_cl_asan -O0 %s -Fe%t/symbols_path.exe
+// RUN: %clang_cl_asan -Od %s -Fe%t/symbols_path.exe
 // RUN: not %run %t/symbols_path.exe 2>&1 | FileCheck %s
 // RUN: mkdir %t2 || true
 // RUN: mv %t/* %t2

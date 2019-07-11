@@ -398,9 +398,9 @@ lld::elf::Patch843419Section::Patch843419Section(InputSection *p, uint64_t off)
       patchee(p), patcheeOffset(off) {
   this->parent = p->getParent();
   patchSym = addSyntheticLocal(
-      Saver.save("__CortexA53843419_" + utohexstr(getLDSTAddr())), STT_FUNC, 0,
+      saver.save("__CortexA53843419_" + utohexstr(getLDSTAddr())), STT_FUNC, 0,
       getSize(), *this);
-  addSyntheticLocal(Saver.save("$x"), STT_NOTYPE, 0, 0, *this);
+  addSyntheticLocal(saver.save("$x"), STT_NOTYPE, 0, 0, *this);
 }
 
 uint64_t lld::elf::Patch843419Section::getLDSTAddr() const {
@@ -485,8 +485,8 @@ void AArch64Err843419Patcher::init() {
 void AArch64Err843419Patcher::insertPatches(
     InputSectionDescription &isd, std::vector<Patch843419Section *> &patches) {
   uint64_t isecLimit;
-  uint64_t prevISLimit = isd.sections.front()->outSecOff;
-  uint64_t patchUpperBound = prevISLimit + target->getThunkSectionSpacing();
+  uint64_t prevIsecLimit = isd.sections.front()->outSecOff;
+  uint64_t patchUpperBound = prevIsecLimit + target->getThunkSectionSpacing();
   uint64_t outSecAddr = isd.sections.front()->getParent()->addr;
 
   // Set the OutSecOff of patches to the place where we want to insert them.
@@ -498,14 +498,14 @@ void AArch64Err843419Patcher::insertPatches(
     isecLimit = isec->outSecOff + isec->getSize();
     if (isecLimit > patchUpperBound) {
       while (patchIt != patchEnd) {
-        if ((*patchIt)->getLDSTAddr() - outSecAddr >= prevISLimit)
+        if ((*patchIt)->getLDSTAddr() - outSecAddr >= prevIsecLimit)
           break;
-        (*patchIt)->outSecOff = prevISLimit;
+        (*patchIt)->outSecOff = prevIsecLimit;
         ++patchIt;
       }
-      patchUpperBound = prevISLimit + target->getThunkSectionSpacing();
+      patchUpperBound = prevIsecLimit + target->getThunkSectionSpacing();
     }
-    prevISLimit = isecLimit;
+    prevIsecLimit = isecLimit;
   }
   for (; patchIt != patchEnd; ++patchIt) {
     (*patchIt)->outSecOff = isecLimit;

@@ -67,6 +67,9 @@ uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
 #endif
 #elif SANITIZER_FREEBSD
 void internal_sigdelset(__sanitizer_sigset_t *set, int signum);
+#elif SANITIZER_NETBSD
+void internal_sigdelset(__sanitizer_sigset_t *set, int signum);
+uptr internal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg);
 #endif  // SANITIZER_LINUX
 
 // This class reads thread IDs from /proc/<pid>/task using only syscalls.

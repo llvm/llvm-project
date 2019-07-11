@@ -92,7 +92,7 @@ Optional<MemoryBufferRef> elf::readFile(StringRef path) {
   // The --chroot option changes our virtual root directory.
   // This is useful when you are dealing with files created by --reproduce.
   if (!config->chroot.empty() && path.startswith("/"))
-    path = Saver.save(config->chroot + path);
+    path = saver.save(config->chroot + path);
 
   log(path);
 
@@ -1366,7 +1366,7 @@ template <class ELFT> void SharedFile::parse() {
         reinterpret_cast<const Elf_Verdef *>(verdefs[idx])->getAux()->vda_name;
     versionedNameBuffer.clear();
     name = (name + "@" + verName).toStringRef(versionedNameBuffer);
-    symtab->addSymbol(SharedSymbol{*this, Saver.save(name), sym.getBinding(),
+    symtab->addSymbol(SharedSymbol{*this, saver.save(name), sym.getBinding(),
                                    sym.st_other, sym.getType(), sym.st_value,
                                    sym.st_size, alignment, idx});
   }
@@ -1432,8 +1432,8 @@ BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
   // symbols later in the link stage). So we append file offset to make
   // filename unique.
   StringRef name = archiveName.empty()
-                       ? Saver.save(path)
-                       : Saver.save(archiveName + "(" + path + " at " +
+                       ? saver.save(path)
+                       : saver.save(archiveName + "(" + path + " at " +
                                     utostr(offsetInArchive) + ")");
   MemoryBufferRef mbref(mb.getBuffer(), name);
 
@@ -1460,7 +1460,7 @@ template <class ELFT>
 static Symbol *createBitcodeSymbol(const std::vector<bool> &keptComdats,
                                    const lto::InputFile::Symbol &objSym,
                                    BitcodeFile &f) {
-  StringRef name = Saver.save(objSym.getName());
+  StringRef name = saver.save(objSym.getName());
   uint8_t binding = objSym.isWeak() ? STB_WEAK : STB_GLOBAL;
   uint8_t type = objSym.isTLS() ? STT_TLS : STT_NOTYPE;
   uint8_t visibility = mapVisibility(objSym.getVisibility());
@@ -1513,11 +1513,11 @@ void BinaryFile::parse() {
     if (!isAlnum(s[i]))
       s[i] = '_';
 
-  symtab->addSymbol(Defined{nullptr, Saver.save(s + "_start"), STB_GLOBAL,
+  symtab->addSymbol(Defined{nullptr, saver.save(s + "_start"), STB_GLOBAL,
                             STV_DEFAULT, STT_OBJECT, 0, 0, section});
-  symtab->addSymbol(Defined{nullptr, Saver.save(s + "_end"), STB_GLOBAL,
+  symtab->addSymbol(Defined{nullptr, saver.save(s + "_end"), STB_GLOBAL,
                             STV_DEFAULT, STT_OBJECT, data.size(), 0, section});
-  symtab->addSymbol(Defined{nullptr, Saver.save(s + "_size"), STB_GLOBAL,
+  symtab->addSymbol(Defined{nullptr, saver.save(s + "_size"), STB_GLOBAL,
                             STV_DEFAULT, STT_OBJECT, data.size(), 0, nullptr});
 }
 
@@ -1566,7 +1566,7 @@ template <class ELFT> void LazyObjFile::parse() {
     for (const lto::InputFile::Symbol &sym : obj->symbols()) {
       if (sym.isUndefined())
         continue;
-      symtab->addSymbol(LazyObject{*this, Saver.save(sym.getName())});
+      symtab->addSymbol(LazyObject{*this, saver.save(sym.getName())});
     }
     return;
   }

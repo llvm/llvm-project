@@ -25,7 +25,7 @@ using namespace llvm::wasm;
 using namespace lld;
 using namespace lld::wasm;
 
-OutStruct lld::wasm::Out;
+OutStruct lld::wasm::out;
 
 namespace {
 
@@ -36,512 +36,512 @@ namespace {
 // of the parent section.
 class SubSection {
 public:
-  explicit SubSection(uint32_t Type) : Type(Type) {}
+  explicit SubSection(uint32_t type) : type(type) {}
 
-  void writeTo(raw_ostream &To) {
-    OS.flush();
-    writeUleb128(To, Type, "subsection type");
-    writeUleb128(To, Body.size(), "subsection size");
-    To.write(Body.data(), Body.size());
+  void writeTo(raw_ostream &to) {
+    os.flush();
+    writeUleb128(to, type, "subsection type");
+    writeUleb128(to, body.size(), "subsection size");
+    to.write(body.data(), body.size());
   }
 
 private:
-  uint32_t Type;
-  std::string Body;
+  uint32_t type;
+  std::string body;
 
 public:
-  raw_string_ostream OS{Body};
+  raw_string_ostream os{body};
 };
 
 } // namespace
 
 void DylinkSection::writeBody() {
-  raw_ostream &OS = BodyOutputStream;
+  raw_ostream &os = bodyOutputStream;
 
-  writeUleb128(OS, MemSize, "MemSize");
-  writeUleb128(OS, MemAlign, "MemAlign");
-  writeUleb128(OS, Out.ElemSec->numEntries(), "TableSize");
-  writeUleb128(OS, 0, "TableAlign");
-  writeUleb128(OS, Symtab->SharedFiles.size(), "Needed");
-  for (auto *SO : Symtab->SharedFiles)
-    writeStr(OS, llvm::sys::path::filename(SO->getName()), "so name");
+  writeUleb128(os, memSize, "MemSize");
+  writeUleb128(os, memAlign, "MemAlign");
+  writeUleb128(os, out.elemSec->numEntries(), "TableSize");
+  writeUleb128(os, 0, "TableAlign");
+  writeUleb128(os, symtab->sharedFiles.size(), "Needed");
+  for (auto *so : symtab->sharedFiles)
+    writeStr(os, llvm::sys::path::filename(so->getName()), "so name");
 }
 
-uint32_t TypeSection::registerType(const WasmSignature &Sig) {
-  auto Pair = TypeIndices.insert(std::make_pair(Sig, Types.size()));
-  if (Pair.second) {
-    LLVM_DEBUG(llvm::dbgs() << "type " << toString(Sig) << "\n");
-    Types.push_back(&Sig);
+uint32_t TypeSection::registerType(const WasmSignature &sig) {
+  auto pair = typeIndices.insert(std::make_pair(sig, types.size()));
+  if (pair.second) {
+    LLVM_DEBUG(llvm::dbgs() << "type " << toString(sig) << "\n");
+    types.push_back(&sig);
   }
-  return Pair.first->second;
+  return pair.first->second;
 }
 
-uint32_t TypeSection::lookupType(const WasmSignature &Sig) {
-  auto It = TypeIndices.find(Sig);
-  if (It == TypeIndices.end()) {
-    error("type not found: " + toString(Sig));
+uint32_t TypeSection::lookupType(const WasmSignature &sig) {
+  auto it = typeIndices.find(sig);
+  if (it == typeIndices.end()) {
+    error("type not found: " + toString(sig));
     return 0;
   }
-  return It->second;
+  return it->second;
 }
 
 void TypeSection::writeBody() {
-  writeUleb128(BodyOutputStream, Types.size(), "type count");
-  for (const WasmSignature *Sig : Types)
-    writeSig(BodyOutputStream, *Sig);
+  writeUleb128(bodyOutputStream, types.size(), "type count");
+  for (const WasmSignature *sig : types)
+    writeSig(bodyOutputStream, *sig);
 }
 
 uint32_t ImportSection::getNumImports() const {
-  assert(IsSealed);
-  uint32_t NumImports = ImportedSymbols.size() + GOTSymbols.size();
-  if (Config->ImportMemory)
-    ++NumImports;
-  if (Config->ImportTable)
-    ++NumImports;
-  return NumImports;
+  assert(isSealed);
+  uint32_t numImports = importedSymbols.size() + gotSymbols.size();
+  if (config->importMemory)
+    ++numImports;
+  if (config->importTable)
+    ++numImports;
+  return numImports;
 }
 
-void ImportSection::addGOTEntry(Symbol *Sym) {
-  assert(!IsSealed);
-  if (Sym->hasGOTIndex())
+void ImportSection::addGOTEntry(Symbol *sym) {
+  assert(!isSealed);
+  if (sym->hasGOTIndex())
     return;
-  Sym->setGOTIndex(NumImportedGlobals++);
-  GOTSymbols.push_back(Sym);
+  sym->setGOTIndex(numImportedGlobals++);
+  gotSymbols.push_back(sym);
 }
 
-void ImportSection::addImport(Symbol *Sym) {
-  assert(!IsSealed);
-  ImportedSymbols.emplace_back(Sym);
-  if (auto *F = dyn_cast<FunctionSymbol>(Sym))
-    F->setFunctionIndex(NumImportedFunctions++);
-  else if (auto *G = dyn_cast<GlobalSymbol>(Sym))
-    G->setGlobalIndex(NumImportedGlobals++);
+void ImportSection::addImport(Symbol *sym) {
+  assert(!isSealed);
+  importedSymbols.emplace_back(sym);
+  if (auto *f = dyn_cast<FunctionSymbol>(sym))
+    f->setFunctionIndex(numImportedFunctions++);
+  else if (auto *g = dyn_cast<GlobalSymbol>(sym))
+    g->setGlobalIndex(numImportedGlobals++);
   else
-    cast<EventSymbol>(Sym)->setEventIndex(NumImportedEvents++);
+    cast<EventSymbol>(sym)->setEventIndex(numImportedEvents++);
 }
 
 void ImportSection::writeBody() {
-  raw_ostream &OS = BodyOutputStream;
+  raw_ostream &os = bodyOutputStream;
 
-  writeUleb128(OS, getNumImports(), "import count");
+  writeUleb128(os, getNumImports(), "import count");
 
-  if (Config->ImportMemory) {
-    WasmImport Import;
-    Import.Module = DefaultModule;
-    Import.Field = "memory";
-    Import.Kind = WASM_EXTERNAL_MEMORY;
-    Import.Memory.Flags = 0;
-    Import.Memory.Initial = Out.MemorySec->NumMemoryPages;
-    if (Out.MemorySec->MaxMemoryPages != 0 || Config->SharedMemory) {
-      Import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
-      Import.Memory.Maximum = Out.MemorySec->MaxMemoryPages;
+  if (config->importMemory) {
+    WasmImport import;
+    import.Module = defaultModule;
+    import.Field = "memory";
+    import.Kind = WASM_EXTERNAL_MEMORY;
+    import.Memory.Flags = 0;
+    import.Memory.Initial = out.memorySec->numMemoryPages;
+    if (out.memorySec->maxMemoryPages != 0 || config->sharedMemory) {
+      import.Memory.Flags |= WASM_LIMITS_FLAG_HAS_MAX;
+      import.Memory.Maximum = out.memorySec->maxMemoryPages;
     }
-    if (Config->SharedMemory)
-      Import.Memory.Flags |= WASM_LIMITS_FLAG_IS_SHARED;
-    writeImport(OS, Import);
+    if (config->sharedMemory)
+      import.Memory.Flags |= WASM_LIMITS_FLAG_IS_SHARED;
+    writeImport(os, import);
   }
 
-  if (Config->ImportTable) {
-    uint32_t TableSize = Out.ElemSec->ElemOffset + Out.ElemSec->numEntries();
-    WasmImport Import;
-    Import.Module = DefaultModule;
-    Import.Field = FunctionTableName;
-    Import.Kind = WASM_EXTERNAL_TABLE;
-    Import.Table.ElemType = WASM_TYPE_FUNCREF;
-    Import.Table.Limits = {0, TableSize, 0};
-    writeImport(OS, Import);
+  if (config->importTable) {
+    uint32_t tableSize = out.elemSec->elemOffset + out.elemSec->numEntries();
+    WasmImport import;
+    import.Module = defaultModule;
+    import.Field = functionTableName;
+    import.Kind = WASM_EXTERNAL_TABLE;
+    import.Table.ElemType = WASM_TYPE_FUNCREF;
+    import.Table.Limits = {0, tableSize, 0};
+    writeImport(os, import);
   }
 
-  for (const Symbol *Sym : ImportedSymbols) {
-    WasmImport Import;
-    if (auto *F = dyn_cast<UndefinedFunction>(Sym)) {
-      Import.Field = F->ImportName;
-      Import.Module = F->ImportModule;
-    } else if (auto *G = dyn_cast<UndefinedGlobal>(Sym)) {
-      Import.Field = G->ImportName;
-      Import.Module = G->ImportModule;
+  for (const Symbol *sym : importedSymbols) {
+    WasmImport import;
+    if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
+      import.Field = f->importName;
+      import.Module = f->importModule;
+    } else if (auto *g = dyn_cast<UndefinedGlobal>(sym)) {
+      import.Field = g->importName;
+      import.Module = g->importModule;
     } else {
-      Import.Field = Sym->getName();
-      Import.Module = DefaultModule;
+      import.Field = sym->getName();
+      import.Module = defaultModule;
     }
 
-    if (auto *FunctionSym = dyn_cast<FunctionSymbol>(Sym)) {
-      Import.Kind = WASM_EXTERNAL_FUNCTION;
-      Import.SigIndex = Out.TypeSec->lookupType(*FunctionSym->Signature);
-    } else if (auto *GlobalSym = dyn_cast<GlobalSymbol>(Sym)) {
-      Import.Kind = WASM_EXTERNAL_GLOBAL;
-      Import.Global = *GlobalSym->getGlobalType();
+    if (auto *functionSym = dyn_cast<FunctionSymbol>(sym)) {
+      import.Kind = WASM_EXTERNAL_FUNCTION;
+      import.SigIndex = out.typeSec->lookupType(*functionSym->signature);
+    } else if (auto *globalSym = dyn_cast<GlobalSymbol>(sym)) {
+      import.Kind = WASM_EXTERNAL_GLOBAL;
+      import.Global = *globalSym->getGlobalType();
     } else {
-      auto *EventSym = cast<EventSymbol>(Sym);
-      Import.Kind = WASM_EXTERNAL_EVENT;
-      Import.Event.Attribute = EventSym->getEventType()->Attribute;
-      Import.Event.SigIndex = Out.TypeSec->lookupType(*EventSym->Signature);
+      auto *eventSym = cast<EventSymbol>(sym);
+      import.Kind = WASM_EXTERNAL_EVENT;
+      import.Event.Attribute = eventSym->getEventType()->Attribute;
+      import.Event.SigIndex = out.typeSec->lookupType(*eventSym->signature);
     }
-    writeImport(OS, Import);
+    writeImport(os, import);
   }
 
-  for (const Symbol *Sym : GOTSymbols) {
-    WasmImport Import;
-    Import.Kind = WASM_EXTERNAL_GLOBAL;
-    Import.Global = {WASM_TYPE_I32, true};
-    if (isa<DataSymbol>(Sym))
-      Import.Module = "GOT.mem";
+  for (const Symbol *sym : gotSymbols) {
+    WasmImport import;
+    import.Kind = WASM_EXTERNAL_GLOBAL;
+    import.Global = {WASM_TYPE_I32, true};
+    if (isa<DataSymbol>(sym))
+      import.Module = "GOT.mem";
     else
-      Import.Module = "GOT.func";
-    Import.Field = Sym->getName();
-    writeImport(OS, Import);
+      import.Module = "GOT.func";
+    import.Field = sym->getName();
+    writeImport(os, import);
   }
 }
 
 void FunctionSection::writeBody() {
-  raw_ostream &OS = BodyOutputStream;
+  raw_ostream &os = bodyOutputStream;
 
-  writeUleb128(OS, InputFunctions.size(), "function count");
-  for (const InputFunction *Func : InputFunctions)
-    writeUleb128(OS, Out.TypeSec->lookupType(Func->Signature), "sig index");
+  writeUleb128(os, inputFunctions.size(), "function count");
+  for (const InputFunction *func : inputFunctions)
+    writeUleb128(os, out.typeSec->lookupType(func->signature), "sig index");
 }
 
-void FunctionSection::addFunction(InputFunction *Func) {
-  if (!Func->Live)
+void FunctionSection::addFunction(InputFunction *func) {
+  if (!func->live)
     return;
-  uint32_t FunctionIndex =
-      Out.ImportSec->getNumImportedFunctions() + InputFunctions.size();
-  InputFunctions.emplace_back(Func);
-  Func->setFunctionIndex(FunctionIndex);
+  uint32_t functionIndex =
+      out.importSec->getNumImportedFunctions() + inputFunctions.size();
+  inputFunctions.emplace_back(func);
+  func->setFunctionIndex(functionIndex);
 }
 
 void TableSection::writeBody() {
-  uint32_t TableSize = Out.ElemSec->ElemOffset + Out.ElemSec->numEntries();
+  uint32_t tableSize = out.elemSec->elemOffset + out.elemSec->numEntries();
 
-  raw_ostream &OS = BodyOutputStream;
-  writeUleb128(OS, 1, "table count");
-  WasmLimits Limits = {WASM_LIMITS_FLAG_HAS_MAX, TableSize, TableSize};
-  writeTableType(OS, WasmTable{WASM_TYPE_FUNCREF, Limits});
+  raw_ostream &os = bodyOutputStream;
+  writeUleb128(os, 1, "table count");
+  WasmLimits limits = {WASM_LIMITS_FLAG_HAS_MAX, tableSize, tableSize};
+  writeTableType(os, WasmTable{WASM_TYPE_FUNCREF, limits});
 }
 
 void MemorySection::writeBody() {
-  raw_ostream &OS = BodyOutputStream;
+  raw_ostream &os = bodyOutputStream;
 
-  bool HasMax = MaxMemoryPages != 0 || Config->SharedMemory;
-  writeUleb128(OS, 1, "memory count");
-  unsigned Flags = 0;
-  if (HasMax)
-    Flags |= WASM_LIMITS_FLAG_HAS_MAX;
-  if (Config->SharedMemory)
-    Flags |= WASM_LIMITS_FLAG_IS_SHARED;
-  writeUleb128(OS, Flags, "memory limits flags");
-  writeUleb128(OS, NumMemoryPages, "initial pages");
-  if (HasMax)
-    writeUleb128(OS, MaxMemoryPages, "max pages");
+  bool hasMax = maxMemoryPages != 0 || config->sharedMemory;
+  writeUleb128(os, 1, "memory count");
+  unsigned flags = 0;
+  if (hasMax)
+    flags |= WASM_LIMITS_FLAG_HAS_MAX;
+  if (config->sharedMemory)
+    flags |= WASM_LIMITS_FLAG_IS_SHARED;
+  writeUleb128(os, flags, "memory limits flags");
+  writeUleb128(os, numMemoryPages, "initial pages");
+  if (hasMax)
+    writeUleb128(os, maxMemoryPages, "max pages");
 }
 
 void GlobalSection::writeBody() {
-  raw_ostream &OS = BodyOutputStream;
+  raw_ostream &os = bodyOutputStream;
 
-  writeUleb128(OS, numGlobals(), "global count");
-  for (const InputGlobal *G : InputGlobals)
-    writeGlobal(OS, G->Global);
-  for (const DefinedData *Sym : DefinedFakeGlobals) {
-    WasmGlobal Global;
-    Global.Type = {WASM_TYPE_I32, false};
-    Global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-    Global.InitExpr.Value.Int32 = Sym->getVirtualAddress();
-    writeGlobal(OS, Global);
+  writeUleb128(os, numGlobals(), "global count");
+  for (const InputGlobal *g : inputGlobals)
+    writeGlobal(os, g->global);
+  for (const DefinedData *sym : definedFakeGlobals) {
+    WasmGlobal global;
+    global.Type = {WASM_TYPE_I32, false};
+    global.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+    global.InitExpr.Value.Int32 = sym->getVirtualAddress();
+    writeGlobal(os, global);
   }
 }
 
-void GlobalSection::addGlobal(InputGlobal *Global) {
-  if (!Global->Live)
+void GlobalSection::addGlobal(InputGlobal *global) {
+  if (!global->live)
     return;
-  uint32_t GlobalIndex =
-      Out.ImportSec->getNumImportedGlobals() + InputGlobals.size();
-  LLVM_DEBUG(dbgs() << "addGlobal: " << GlobalIndex << "\n");
-  Global->setGlobalIndex(GlobalIndex);
-  Out.GlobalSec->InputGlobals.push_back(Global);
+  uint32_t globalIndex =
+      out.importSec->getNumImportedGlobals() + inputGlobals.size();
+  LLVM_DEBUG(dbgs() << "addGlobal: " << globalIndex << "\n");
+  global->setGlobalIndex(globalIndex);
+  out.globalSec->inputGlobals.push_back(global);
 }
 
 void EventSection::writeBody() {
-  raw_ostream &OS = BodyOutputStream;
+  raw_ostream &os = bodyOutputStream;
 
-  writeUleb128(OS, InputEvents.size(), "event count");
-  for (InputEvent *E : InputEvents) {
-    E->Event.Type.SigIndex = Out.TypeSec->lookupType(E->Signature);
-    writeEvent(OS, E->Event);
+  writeUleb128(os, inputEvents.size(), "event count");
+  for (InputEvent *e : inputEvents) {
+    e->event.Type.SigIndex = out.typeSec->lookupType(e->signature);
+    writeEvent(os, e->event);
   }
 }
 
-void EventSection::addEvent(InputEvent *Event) {
-  if (!Event->Live)
+void EventSection::addEvent(InputEvent *event) {
+  if (!event->live)
     return;
-  uint32_t EventIndex =
-      Out.ImportSec->getNumImportedEvents() + InputEvents.size();
-  LLVM_DEBUG(dbgs() << "addEvent: " << EventIndex << "\n");
-  Event->setEventIndex(EventIndex);
-  InputEvents.push_back(Event);
+  uint32_t eventIndex =
+      out.importSec->getNumImportedEvents() + inputEvents.size();
+  LLVM_DEBUG(dbgs() << "addEvent: " << eventIndex << "\n");
+  event->setEventIndex(eventIndex);
+  inputEvents.push_back(event);
 }
 
 void ExportSection::writeBody() {
-  raw_ostream &OS = BodyOutputStream;
+  raw_ostream &os = bodyOutputStream;
 
-  writeUleb128(OS, Exports.size(), "export count");
-  for (const WasmExport &Export : Exports)
-    writeExport(OS, Export);
+  writeUleb128(os, exports.size(), "export count");
+  for (const WasmExport &export_ : exports)
+    writeExport(os, export_);
 }
 
-void ElemSection::addEntry(FunctionSymbol *Sym) {
-  if (Sym->hasTableIndex())
+void ElemSection::addEntry(FunctionSymbol *sym) {
+  if (sym->hasTableIndex())
     return;
-  Sym->setTableIndex(ElemOffset + IndirectFunctions.size());
-  IndirectFunctions.emplace_back(Sym);
+  sym->setTableIndex(elemOffset + indirectFunctions.size());
+  indirectFunctions.emplace_back(sym);
 }
 
 void ElemSection::writeBody() {
-  raw_ostream &OS = BodyOutputStream;
+  raw_ostream &os = bodyOutputStream;
 
-  writeUleb128(OS, 1, "segment count");
-  writeUleb128(OS, 0, "table index");
-  WasmInitExpr InitExpr;
-  if (Config->Pic) {
-    InitExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
-    InitExpr.Value.Global = WasmSym::TableBase->getGlobalIndex();
+  writeUleb128(os, 1, "segment count");
+  writeUleb128(os, 0, "table index");
+  WasmInitExpr initExpr;
+  if (config->isPic) {
+    initExpr.Opcode = WASM_OPCODE_GLOBAL_GET;
+    initExpr.Value.Global = WasmSym::tableBase->getGlobalIndex();
   } else {
-    InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-    InitExpr.Value.Int32 = ElemOffset;
+    initExpr.Opcode = WASM_OPCODE_I32_CONST;
+    initExpr.Value.Int32 = elemOffset;
   }
-  writeInitExpr(OS, InitExpr);
-  writeUleb128(OS, IndirectFunctions.size(), "elem count");
+  writeInitExpr(os, initExpr);
+  writeUleb128(os, indirectFunctions.size(), "elem count");
 
-  uint32_t TableIndex = ElemOffset;
-  for (const FunctionSymbol *Sym : IndirectFunctions) {
-    assert(Sym->getTableIndex() == TableIndex);
-    writeUleb128(OS, Sym->getFunctionIndex(), "function index");
-    ++TableIndex;
+  uint32_t tableIndex = elemOffset;
+  for (const FunctionSymbol *sym : indirectFunctions) {
+    assert(sym->getTableIndex() == tableIndex);
+    writeUleb128(os, sym->getFunctionIndex(), "function index");
+    ++tableIndex;
   }
 }
 
 void DataCountSection::writeBody() {
-  writeUleb128(BodyOutputStream, NumSegments, "data count");
+  writeUleb128(bodyOutputStream, numSegments, "data count");
 }
 
 bool DataCountSection::isNeeded() const {
-  return NumSegments && Config->PassiveSegments;
+  return numSegments && config->passiveSegments;
 }
 
-static uint32_t getWasmFlags(const Symbol *Sym) {
-  uint32_t Flags = 0;
-  if (Sym->isLocal())
-    Flags |= WASM_SYMBOL_BINDING_LOCAL;
-  if (Sym->isWeak())
-    Flags |= WASM_SYMBOL_BINDING_WEAK;
-  if (Sym->isHidden())
-    Flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
-  if (Sym->isUndefined())
-    Flags |= WASM_SYMBOL_UNDEFINED;
-  if (auto *F = dyn_cast<UndefinedFunction>(Sym)) {
-    if (F->getName() != F->ImportName)
-      Flags |= WASM_SYMBOL_EXPLICIT_NAME;
-  } else if (auto *G = dyn_cast<UndefinedGlobal>(Sym)) {
-    if (G->getName() != G->ImportName)
-      Flags |= WASM_SYMBOL_EXPLICIT_NAME;
+static uint32_t getWasmFlags(const Symbol *sym) {
+  uint32_t flags = 0;
+  if (sym->isLocal())
+    flags |= WASM_SYMBOL_BINDING_LOCAL;
+  if (sym->isWeak())
+    flags |= WASM_SYMBOL_BINDING_WEAK;
+  if (sym->isHidden())
+    flags |= WASM_SYMBOL_VISIBILITY_HIDDEN;
+  if (sym->isUndefined())
+    flags |= WASM_SYMBOL_UNDEFINED;
+  if (auto *f = dyn_cast<UndefinedFunction>(sym)) {
+    if (f->getName() != f->importName)
+      flags |= WASM_SYMBOL_EXPLICIT_NAME;
+  } else if (auto *g = dyn_cast<UndefinedGlobal>(sym)) {
+    if (g->getName() != g->importName)
+      flags |= WASM_SYMBOL_EXPLICIT_NAME;
   }
-  return Flags;
+  return flags;
 }
 
 void LinkingSection::writeBody() {
-  raw_ostream &OS = BodyOutputStream;
+  raw_ostream &os = bodyOutputStream;
 
-  writeUleb128(OS, WasmMetadataVersion, "Version");
+  writeUleb128(os, WasmMetadataVersion, "Version");
 
-  if (!SymtabEntries.empty()) {
-    SubSection Sub(WASM_SYMBOL_TABLE);
-    writeUleb128(Sub.OS, SymtabEntries.size(), "num symbols");
+  if (!symtabEntries.empty()) {
+    SubSection sub(WASM_SYMBOL_TABLE);
+    writeUleb128(sub.os, symtabEntries.size(), "num symbols");
 
-    for (const Symbol *Sym : SymtabEntries) {
-      assert(Sym->isDefined() || Sym->isUndefined());
-      WasmSymbolType Kind = Sym->getWasmType();
-      uint32_t Flags = getWasmFlags(Sym);
+    for (const Symbol *sym : symtabEntries) {
+      assert(sym->isDefined() || sym->isUndefined());
+      WasmSymbolType kind = sym->getWasmType();
+      uint32_t flags = getWasmFlags(sym);
 
-      writeU8(Sub.OS, Kind, "sym kind");
-      writeUleb128(Sub.OS, Flags, "sym flags");
+      writeU8(sub.os, kind, "sym kind");
+      writeUleb128(sub.os, flags, "sym flags");
 
-      if (auto *F = dyn_cast<FunctionSymbol>(Sym)) {
-        writeUleb128(Sub.OS, F->getFunctionIndex(), "index");
-        if (Sym->isDefined() || (Flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
-          writeStr(Sub.OS, Sym->getName(), "sym name");
-      } else if (auto *G = dyn_cast<GlobalSymbol>(Sym)) {
-        writeUleb128(Sub.OS, G->getGlobalIndex(), "index");
-        if (Sym->isDefined() || (Flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
-          writeStr(Sub.OS, Sym->getName(), "sym name");
-      } else if (auto *E = dyn_cast<EventSymbol>(Sym)) {
-        writeUleb128(Sub.OS, E->getEventIndex(), "index");
-        if (Sym->isDefined() || (Flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
-          writeStr(Sub.OS, Sym->getName(), "sym name");
-      } else if (isa<DataSymbol>(Sym)) {
-        writeStr(Sub.OS, Sym->getName(), "sym name");
-        if (auto *DataSym = dyn_cast<DefinedData>(Sym)) {
-          writeUleb128(Sub.OS, DataSym->getOutputSegmentIndex(), "index");
-          writeUleb128(Sub.OS, DataSym->getOutputSegmentOffset(),
+      if (auto *f = dyn_cast<FunctionSymbol>(sym)) {
+        writeUleb128(sub.os, f->getFunctionIndex(), "index");
+        if (sym->isDefined() || (flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
+          writeStr(sub.os, sym->getName(), "sym name");
+      } else if (auto *g = dyn_cast<GlobalSymbol>(sym)) {
+        writeUleb128(sub.os, g->getGlobalIndex(), "index");
+        if (sym->isDefined() || (flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
+          writeStr(sub.os, sym->getName(), "sym name");
+      } else if (auto *e = dyn_cast<EventSymbol>(sym)) {
+        writeUleb128(sub.os, e->getEventIndex(), "index");
+        if (sym->isDefined() || (flags & WASM_SYMBOL_EXPLICIT_NAME) != 0)
+          writeStr(sub.os, sym->getName(), "sym name");
+      } else if (isa<DataSymbol>(sym)) {
+        writeStr(sub.os, sym->getName(), "sym name");
+        if (auto *dataSym = dyn_cast<DefinedData>(sym)) {
+          writeUleb128(sub.os, dataSym->getOutputSegmentIndex(), "index");
+          writeUleb128(sub.os, dataSym->getOutputSegmentOffset(),
                        "data offset");
-          writeUleb128(Sub.OS, DataSym->getSize(), "data size");
+          writeUleb128(sub.os, dataSym->getSize(), "data size");
         }
       } else {
-        auto *S = cast<OutputSectionSymbol>(Sym);
-        writeUleb128(Sub.OS, S->Section->SectionIndex, "sym section index");
+        auto *s = cast<OutputSectionSymbol>(sym);
+        writeUleb128(sub.os, s->section->sectionIndex, "sym section index");
       }
     }
 
-    Sub.writeTo(OS);
+    sub.writeTo(os);
   }
 
-  if (DataSegments.size()) {
-    SubSection Sub(WASM_SEGMENT_INFO);
-    writeUleb128(Sub.OS, DataSegments.size(), "num data segments");
-    for (const OutputSegment *S : DataSegments) {
-      writeStr(Sub.OS, S->Name, "segment name");
-      writeUleb128(Sub.OS, S->Alignment, "alignment");
-      writeUleb128(Sub.OS, 0, "flags");
+  if (dataSegments.size()) {
+    SubSection sub(WASM_SEGMENT_INFO);
+    writeUleb128(sub.os, dataSegments.size(), "num data segments");
+    for (const OutputSegment *s : dataSegments) {
+      writeStr(sub.os, s->name, "segment name");
+      writeUleb128(sub.os, s->alignment, "alignment");
+      writeUleb128(sub.os, 0, "flags");
     }
-    Sub.writeTo(OS);
+    sub.writeTo(os);
   }
 
-  if (!InitFunctions.empty()) {
-    SubSection Sub(WASM_INIT_FUNCS);
-    writeUleb128(Sub.OS, InitFunctions.size(), "num init functions");
-    for (const WasmInitEntry &F : InitFunctions) {
-      writeUleb128(Sub.OS, F.Priority, "priority");
-      writeUleb128(Sub.OS, F.Sym->getOutputSymbolIndex(), "function index");
+  if (!initFunctions.empty()) {
+    SubSection sub(WASM_INIT_FUNCS);
+    writeUleb128(sub.os, initFunctions.size(), "num init functions");
+    for (const WasmInitEntry &f : initFunctions) {
+      writeUleb128(sub.os, f.priority, "priority");
+      writeUleb128(sub.os, f.sym->getOutputSymbolIndex(), "function index");
     }
-    Sub.writeTo(OS);
+    sub.writeTo(os);
   }
 
   struct ComdatEntry {
-    unsigned Kind;
-    uint32_t Index;
+    unsigned kind;
+    uint32_t index;
   };
-  std::map<StringRef, std::vector<ComdatEntry>> Comdats;
+  std::map<StringRef, std::vector<ComdatEntry>> comdats;
 
-  for (const InputFunction *F : Out.FunctionSec->InputFunctions) {
-    StringRef Comdat = F->getComdatName();
-    if (!Comdat.empty())
-      Comdats[Comdat].emplace_back(
-          ComdatEntry{WASM_COMDAT_FUNCTION, F->getFunctionIndex()});
+  for (const InputFunction *f : out.functionSec->inputFunctions) {
+    StringRef comdat = f->getComdatName();
+    if (!comdat.empty())
+      comdats[comdat].emplace_back(
+          ComdatEntry{WASM_COMDAT_FUNCTION, f->getFunctionIndex()});
   }
-  for (uint32_t I = 0; I < DataSegments.size(); ++I) {
-    const auto &InputSegments = DataSegments[I]->InputSegments;
-    if (InputSegments.empty())
+  for (uint32_t i = 0; i < dataSegments.size(); ++i) {
+    const auto &inputSegments = dataSegments[i]->inputSegments;
+    if (inputSegments.empty())
       continue;
-    StringRef Comdat = InputSegments[0]->getComdatName();
+    StringRef comdat = inputSegments[0]->getComdatName();
 #ifndef NDEBUG
-    for (const InputSegment *IS : InputSegments)
-      assert(IS->getComdatName() == Comdat);
+    for (const InputSegment *isec : inputSegments)
+      assert(isec->getComdatName() == comdat);
 #endif
-    if (!Comdat.empty())
-      Comdats[Comdat].emplace_back(ComdatEntry{WASM_COMDAT_DATA, I});
+    if (!comdat.empty())
+      comdats[comdat].emplace_back(ComdatEntry{WASM_COMDAT_DATA, i});
   }
 
-  if (!Comdats.empty()) {
-    SubSection Sub(WASM_COMDAT_INFO);
-    writeUleb128(Sub.OS, Comdats.size(), "num comdats");
-    for (const auto &C : Comdats) {
-      writeStr(Sub.OS, C.first, "comdat name");
-      writeUleb128(Sub.OS, 0, "comdat flags"); // flags for future use
-      writeUleb128(Sub.OS, C.second.size(), "num entries");
-      for (const ComdatEntry &Entry : C.second) {
-        writeU8(Sub.OS, Entry.Kind, "entry kind");
-        writeUleb128(Sub.OS, Entry.Index, "entry index");
+  if (!comdats.empty()) {
+    SubSection sub(WASM_COMDAT_INFO);
+    writeUleb128(sub.os, comdats.size(), "num comdats");
+    for (const auto &c : comdats) {
+      writeStr(sub.os, c.first, "comdat name");
+      writeUleb128(sub.os, 0, "comdat flags"); // flags for future use
+      writeUleb128(sub.os, c.second.size(), "num entries");
+      for (const ComdatEntry &entry : c.second) {
+        writeU8(sub.os, entry.kind, "entry kind");
+        writeUleb128(sub.os, entry.index, "entry index");
       }
     }
-    Sub.writeTo(OS);
+    sub.writeTo(os);
   }
 }
 
-void LinkingSection::addToSymtab(Symbol *Sym) {
-  Sym->setOutputSymbolIndex(SymtabEntries.size());
-  SymtabEntries.emplace_back(Sym);
+void LinkingSection::addToSymtab(Symbol *sym) {
+  sym->setOutputSymbolIndex(symtabEntries.size());
+  symtabEntries.emplace_back(sym);
 }
 
 unsigned NameSection::numNames() const {
-  unsigned NumNames = Out.ImportSec->getNumImportedFunctions();
-  for (const InputFunction *F : Out.FunctionSec->InputFunctions)
-    if (!F->getName().empty() || !F->getDebugName().empty())
-      ++NumNames;
+  unsigned numNames = out.importSec->getNumImportedFunctions();
+  for (const InputFunction *f : out.functionSec->inputFunctions)
+    if (!f->getName().empty() || !f->getDebugName().empty())
+      ++numNames;
 
-  return NumNames;
+  return numNames;
 }
 
 // Create the custom "name" section containing debug symbol names.
 void NameSection::writeBody() {
-  SubSection Sub(WASM_NAMES_FUNCTION);
-  writeUleb128(Sub.OS, numNames(), "name count");
+  SubSection sub(WASM_NAMES_FUNCTION);
+  writeUleb128(sub.os, numNames(), "name count");
 
   // Names must appear in function index order.  As it happens ImportedSymbols
   // and InputFunctions are numbered in order with imported functions coming
   // first.
-  for (const Symbol *S : Out.ImportSec->ImportedSymbols) {
-    if (auto *F = dyn_cast<FunctionSymbol>(S)) {
-      writeUleb128(Sub.OS, F->getFunctionIndex(), "func index");
-      writeStr(Sub.OS, toString(*S), "symbol name");
+  for (const Symbol *s : out.importSec->importedSymbols) {
+    if (auto *f = dyn_cast<FunctionSymbol>(s)) {
+      writeUleb128(sub.os, f->getFunctionIndex(), "func index");
+      writeStr(sub.os, toString(*s), "symbol name");
     }
   }
-  for (const InputFunction *F : Out.FunctionSec->InputFunctions) {
-    if (!F->getName().empty()) {
-      writeUleb128(Sub.OS, F->getFunctionIndex(), "func index");
-      if (!F->getDebugName().empty()) {
-        writeStr(Sub.OS, F->getDebugName(), "symbol name");
+  for (const InputFunction *f : out.functionSec->inputFunctions) {
+    if (!f->getName().empty()) {
+      writeUleb128(sub.os, f->getFunctionIndex(), "func index");
+      if (!f->getDebugName().empty()) {
+        writeStr(sub.os, f->getDebugName(), "symbol name");
       } else {
-        writeStr(Sub.OS, maybeDemangleSymbol(F->getName()), "symbol name");
+        writeStr(sub.os, maybeDemangleSymbol(f->getName()), "symbol name");
       }
     }
   }
 
-  Sub.writeTo(BodyOutputStream);
+  sub.writeTo(bodyOutputStream);
 }
 
-void ProducersSection::addInfo(const WasmProducerInfo &Info) {
-  for (auto &Producers :
-       {std::make_pair(&Info.Languages, &Languages),
-        std::make_pair(&Info.Tools, &Tools), std::make_pair(&Info.SDKs, &SDKs)})
-    for (auto &Producer : *Producers.first)
-      if (Producers.second->end() ==
-          llvm::find_if(*Producers.second,
-                        [&](std::pair<std::string, std::string> Seen) {
-                          return Seen.first == Producer.first;
+void ProducersSection::addInfo(const WasmProducerInfo &info) {
+  for (auto &producers :
+       {std::make_pair(&info.Languages, &languages),
+        std::make_pair(&info.Tools, &tools), std::make_pair(&info.SDKs, &sDKs)})
+    for (auto &producer : *producers.first)
+      if (producers.second->end() ==
+          llvm::find_if(*producers.second,
+                        [&](std::pair<std::string, std::string> seen) {
+                          return seen.first == producer.first;
                         }))
-        Producers.second->push_back(Producer);
+        producers.second->push_back(producer);
 }
 
 void ProducersSection::writeBody() {
-  auto &OS = BodyOutputStream;
-  writeUleb128(OS, fieldCount(), "field count");
-  for (auto &Field :
-       {std::make_pair("language", Languages),
-        std::make_pair("processed-by", Tools), std::make_pair("sdk", SDKs)}) {
-    if (Field.second.empty())
+  auto &os = bodyOutputStream;
+  writeUleb128(os, fieldCount(), "field count");
+  for (auto &field :
+       {std::make_pair("language", languages),
+        std::make_pair("processed-by", tools), std::make_pair("sdk", sDKs)}) {
+    if (field.second.empty())
       continue;
-    writeStr(OS, Field.first, "field name");
-    writeUleb128(OS, Field.second.size(), "number of entries");
-    for (auto &Entry : Field.second) {
-      writeStr(OS, Entry.first, "producer name");
-      writeStr(OS, Entry.second, "producer version");
+    writeStr(os, field.first, "field name");
+    writeUleb128(os, field.second.size(), "number of entries");
+    for (auto &entry : field.second) {
+      writeStr(os, entry.first, "producer name");
+      writeStr(os, entry.second, "producer version");
     }
   }
 }
 
 void TargetFeaturesSection::writeBody() {
-  SmallVector<std::string, 8> Emitted(Features.begin(), Features.end());
-  llvm::sort(Emitted);
-  auto &OS = BodyOutputStream;
-  writeUleb128(OS, Emitted.size(), "feature count");
-  for (auto &Feature : Emitted) {
-    writeU8(OS, WASM_FEATURE_PREFIX_USED, "feature used prefix");
-    writeStr(OS, Feature, "feature name");
+  SmallVector<std::string, 8> emitted(features.begin(), features.end());
+  llvm::sort(emitted);
+  auto &os = bodyOutputStream;
+  writeUleb128(os, emitted.size(), "feature count");
+  for (auto &feature : emitted) {
+    writeU8(os, WASM_FEATURE_PREFIX_USED, "feature used prefix");
+    writeStr(os, feature, "feature name");
   }
 }
 
 void RelocSection::writeBody() {
-  uint32_t Count = Sec->getNumRelocations();
-  assert(Sec->SectionIndex != UINT32_MAX);
-  writeUleb128(BodyOutputStream, Sec->SectionIndex, "reloc section");
-  writeUleb128(BodyOutputStream, Count, "reloc count");
-  Sec->writeRelocations(BodyOutputStream);
+  uint32_t count = sec->getNumRelocations();
+  assert(sec->sectionIndex != UINT32_MAX);
+  writeUleb128(bodyOutputStream, sec->sectionIndex, "reloc section");
+  writeUleb128(bodyOutputStream, count, "reloc count");
+  sec->writeRelocations(bodyOutputStream);
 }
