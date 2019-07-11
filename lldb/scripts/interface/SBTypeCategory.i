@@ -213,6 +213,11 @@ namespace lldb {
             name = property(GetName, None)
             enabled = property(GetEnabled, SetEnabled)
         %}
+#if SWIG_VERSION < 0x030009
+        %pythoncode %{
+           __swig_setmethods__["enabled"] = SetEnabled
+        %}
+#endif
 
     };
 
