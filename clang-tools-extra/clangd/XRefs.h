@@ -141,6 +141,16 @@ llvm::Optional<TypeHierarchyItem> getTypeHierarchy(
     ParsedAST &AST, Position Pos, int Resolve, TypeHierarchyDirection Direction,
     const SymbolIndex *Index = nullptr, PathRef TUPath = PathRef{});
 
+/// Retrieves the deduced type at a given location (auto, decltype).
+/// Retuns None unless SourceLocationBeg starts an auto/decltype token.
+/// It will return the underlying type.
+llvm::Optional<QualType> getDeducedType(ParsedAST &AST,
+                                        SourceLocation SourceLocationBeg);
+
+/// Check if there is a deduced type at a given location (auto, decltype).
+/// SourceLocationBeg must point to the first character of the token
+bool hasDeducedType(ParsedAST &AST, SourceLocation SourceLocationBeg);
+
 } // namespace clangd
 } // namespace clang
 

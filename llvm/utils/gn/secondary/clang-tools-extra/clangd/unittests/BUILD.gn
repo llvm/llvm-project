@@ -29,6 +29,7 @@ unittest("ClangdTests") {
     "$target_gen_dir/../../clangd/tool",
   ]
   sources = [
+    "ASTTests.cpp",
     "Annotations.cpp",
     "BackgroundIndexTests.cpp",
     "CancellationTests.cpp",

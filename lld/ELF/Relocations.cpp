@@ -1639,18 +1639,18 @@ void ThunkCreator::createInitialThunkSections(
           lastThunkLowerBound = isdEnd - thunkSectionSpacing;
 
         uint32_t isecLimit;
-        uint32_t prevISLimit = isdBegin;
+        uint32_t prevIsecLimit = isdBegin;
         uint32_t thunkUpperBound = isdBegin + thunkSectionSpacing;
 
         for (const InputSection *isec : isd->sections) {
           isecLimit = isec->outSecOff + isec->getSize();
           if (isecLimit > thunkUpperBound) {
-            addThunkSection(os, isd, prevISLimit);
-            thunkUpperBound = prevISLimit + thunkSectionSpacing;
+            addThunkSection(os, isd, prevIsecLimit);
+            thunkUpperBound = prevIsecLimit + thunkSectionSpacing;
           }
           if (isecLimit > lastThunkLowerBound)
             break;
-          prevISLimit = isecLimit;
+          prevIsecLimit = isecLimit;
         }
         addThunkSection(os, isd, isecLimit);
       });

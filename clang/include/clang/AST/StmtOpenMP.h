@@ -87,6 +87,63 @@ protected:
   }
 
 public:
+  /// Iterates over expressions/statements used in the construct.
+  class used_clauses_child_iterator
+      : public llvm::iterator_adaptor_base<
+            used_clauses_child_iterator, ArrayRef<OMPClause *>::iterator,
+            std::forward_iterator_tag, Stmt *, ptrdiff_t, Stmt *, Stmt *> {
+    ArrayRef<OMPClause *>::iterator End;
+    OMPClause::child_iterator ChildI, ChildEnd;
+
+    void MoveToNext() {
+      if (ChildI != ChildEnd)
+        return;
+      while (this->I != End) {
+        ++this->I;
+        if (this->I != End) {
+          ChildI = (*this->I)->used_children().begin();
+          ChildEnd = (*this->I)->used_children().end();
+          if (ChildI != ChildEnd)
+            return;
+        }
+      }
+    }
+
+  public:
+    explicit used_clauses_child_iterator(ArrayRef<OMPClause *> Clauses)
+        : used_clauses_child_iterator::iterator_adaptor_base(Clauses.begin()),
+          End(Clauses.end()) {
+      if (this->I != End) {
+        ChildI = (*this->I)->used_children().begin();
+        ChildEnd = (*this->I)->used_children().end();
+        MoveToNext();
+      }
+    }
+    Stmt *operator*() const { return *ChildI; }
+    Stmt *operator->() const { return **this; }
+
+    used_clauses_child_iterator &operator++() {
+      ++ChildI;
+      if (ChildI != ChildEnd)
+        return *this;
+      if (this->I != End) {
+        ++this->I;
+        if (this->I != End) {
+          ChildI = (*this->I)->used_children().begin();
+          ChildEnd = (*this->I)->used_children().end();
+        }
+      }
+      MoveToNext();
+      return *this;
+    }
+  };
+
+  static llvm::iterator_range<used_clauses_child_iterator>
+  used_clauses_children(ArrayRef<OMPClause *> Clauses) {
+    return {used_clauses_child_iterator(Clauses),
+            used_clauses_child_iterator(llvm::makeArrayRef(Clauses.end(), 0))};
+  }
+
   /// Iterates over a filtered subrange of clauses applied to a
   /// directive.
   ///

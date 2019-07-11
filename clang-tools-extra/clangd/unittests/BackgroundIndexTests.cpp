@@ -82,7 +82,7 @@ public:
 
 class BackgroundIndexTest : public ::testing::Test {
 protected:
-  BackgroundIndexTest() { BackgroundIndex::preventThreadStarvationInTests(); }
+  BackgroundIndexTest() { BackgroundQueue::preventThreadStarvationInTests(); }
 };
 
 TEST_F(BackgroundIndexTest, NoCrashOnErrorFile) {
@@ -644,6 +644,38 @@ TEST_F(BackgroundIndexRebuilderTest, LoadingShards) {
     EXPECT_FALSE(checkRebuild([&] { Rebuilder.indexedTU(); }));
   // But they get indexed when we're done, even if no shards were loaded.
   EXPECT_TRUE(checkRebuild([&] { Rebuilder.doneLoading(); }));
+}
+
+TEST(BackgroundQueueTest, Priority) {
+  // Create high and low priority tasks.
+  // Once a bunch of high priority tasks have run, the queue is stopped.
+  // So the low priority tasks should never run.
+  BackgroundQueue Q;
+  std::atomic<unsigned> HiRan(0), LoRan(0);
+  BackgroundQueue::Task Lo([&] { ++LoRan; });
+  BackgroundQueue::Task Hi([&] {
+    if (++HiRan >= 10)
+      Q.stop();
+  });
+  Hi.QueuePri = 100;
+
+  // Enqueuing the low-priority ones first shouldn't make them run first.
+  Q.append(std::vector<BackgroundQueue::Task>(30, Lo));
+  for (unsigned I = 0; I < 30; ++I)
+    Q.push(Hi);
+
+  AsyncTaskRunner ThreadPool;
+  for (unsigned I = 0; I < 5; ++I)
+    ThreadPool.runAsync("worker", [&] { Q.work(); });
+  // We should test enqueue with active workers, but it's hard to avoid races.
+  // Just make sure we don't crash.
+  Q.push(Lo);
+  Q.append(std::vector<BackgroundQueue::Task>(2, Hi));
+
+  // After finishing, check the tasks that ran.
+  ThreadPool.wait();
+  EXPECT_GE(HiRan, 10u);
+  EXPECT_EQ(LoRan, 0u);
 }
 
 } // namespace clangd

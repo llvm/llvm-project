@@ -72,7 +72,7 @@ static ArrayRef<uint8_t> getVersion() {
   // This is only for testing.
   StringRef s = getenv("LLD_VERSION");
   if (s.empty())
-    s = Saver.save(Twine("Linker: ") + getLLDVersion());
+    s = saver.save(Twine("Linker: ") + getLLDVersion());
 
   // +1 to include the terminating '\0'.
   return {(const uint8_t *)s.data(), s.size() + 1};
@@ -254,7 +254,7 @@ MipsReginfoSection<ELFT> *MipsReginfoSection<ELFT>::create() {
 
 InputSection *elf::createInterpSection() {
   // StringSaver guarantees that the returned string ends with '\0'.
-  StringRef s = Saver.save(config->dynamicLinker);
+  StringRef s = saver.save(config->dynamicLinker);
   ArrayRef<uint8_t> contents = {(const uint8_t *)s.data(), s.size() + 1};
 
   auto *sec = make<InputSection>(nullptr, SHF_ALLOC, SHT_PROGBITS, 1, contents,
@@ -2530,7 +2530,7 @@ createSymbols(ArrayRef<std::vector<GdbIndexSection::NameAttrEntry>> nameAttrs,
   // speed it up.
   size_t numShards = 32;
   size_t concurrency = 1;
-  if (ThreadsEnabled)
+  if (threadsEnabled)
     concurrency =
         std::min<size_t>(PowerOf2Floor(hardware_concurrency()), numShards);
 
@@ -2973,7 +2973,7 @@ void MergeNoTailSection::finalizeContents() {
   // Concurrency level. Must be a power of 2 to avoid expensive modulo
   // operations in the following tight loop.
   size_t concurrency = 1;
-  if (ThreadsEnabled)
+  if (threadsEnabled)
     concurrency =
         std::min<size_t>(PowerOf2Floor(hardware_concurrency()), numShards);
 

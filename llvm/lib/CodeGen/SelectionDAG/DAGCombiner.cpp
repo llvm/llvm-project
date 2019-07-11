@@ -18002,11 +18002,21 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *Extract,
   SDValue Index = Extract->getOperand(1);
   EVT VT = Extract->getValueType(0);
 
+  // Helper that peeks through INSERT_SUBVECTOR/CONCAT_VECTORS to find
+  // if the source subvector is the same type as the one being extracted.
   auto GetSubVector = [VT, Index](SDValue V) -> SDValue {
-    if (V.getOpcode() != ISD::INSERT_SUBVECTOR ||
-        V.getOperand(1).getValueType() != VT || V.getOperand(2) != Index)
-      return SDValue();
-    return V.getOperand(1);
+    if (V.getOpcode() == ISD::INSERT_SUBVECTOR &&
+        V.getOperand(1).getValueType() == VT && V.getOperand(2) == Index) {
+      return V.getOperand(1);
+    }
+    auto *IndexC = dyn_cast<ConstantSDNode>(Index);
+    if (IndexC && V.getOpcode() == ISD::CONCAT_VECTORS &&
+        V.getOperand(0).getValueType() == VT &&
+        (IndexC->getZExtValue() % VT.getVectorNumElements()) == 0) {
+      uint64_t SubIdx = IndexC->getZExtValue() / VT.getVectorNumElements();
+      return V.getOperand(SubIdx);
+    }
+    return SDValue();
   };
   SDValue Sub0 = GetSubVector(Bop0);
   SDValue Sub1 = GetSubVector(Bop1);

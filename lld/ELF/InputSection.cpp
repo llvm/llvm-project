@@ -148,7 +148,7 @@ void InputSectionBase::uncompress() const {
   {
     static std::mutex mu;
     std::lock_guard<std::mutex> lock(mu);
-    uncompressedBuf = BAlloc.Allocate<char>(size);
+    uncompressedBuf = bAlloc.Allocate<char>(size);
   }
 
   if (Error e = zlib::uncompress(toStringRef(rawData), uncompressedBuf, size))
@@ -231,7 +231,7 @@ void InputSectionBase::parseCompressedHeader() {
 
     // Restore the original section name.
     // (e.g. ".zdebug_info" -> ".debug_info")
-    name = Saver.save("." + name.substr(2));
+    name = saver.save("." + name.substr(2));
     return;
   }
 

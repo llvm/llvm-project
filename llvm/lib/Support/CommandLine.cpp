@@ -142,7 +142,7 @@ public:
   // This collects Options added with the cl::DefaultOption flag. Since they can
   // be overridden, they are not added to the appropriate SubCommands until
   // ParseCommandLineOptions actually runs.
-  SmallVector<std::pair<Option*, SubCommand*>, 4> DefaultOptions;
+  SmallVector<Option*, 4> DefaultOptions;
 
   // This collects the different option categories that have been registered.
   SmallPtrSet<OptionCategory *, 16> RegisteredOptionCategories;
@@ -151,7 +151,6 @@ public:
   SmallPtrSet<SubCommand *, 4> RegisteredSubCommands;
 
   CommandLineParser() : ActiveSubCommand(nullptr) {
-    RegisteredOptionCategories.insert(&*GeneralCategory);
     registerSubCommand(&*TopLevelSubCommand);
     registerSubCommand(&*AllSubCommands);
   }
@@ -183,16 +182,15 @@ public:
   }
 
   void addLiteralOption(Option &Opt, StringRef Name) {
-    for(SubCommand *SC: Opt.getSubCommands())
-      addLiteralOption(Opt, SC, Name);
+    if (Opt.Subs.empty())
+      addLiteralOption(Opt, &*TopLevelSubCommand, Name);
+    else {
+      for (auto SC : Opt.Subs)
+        addLiteralOption(Opt, SC, Name);
+    }
   }
 
-  void addOption(Option *O, SubCommand *SC, bool ProcessDefaultOptions = false) {
-    if (!ProcessDefaultOptions && O->isDefaultOption()) {
-      DefaultOptions.push_back(std::make_pair(O, SC));
-      return;
-    }
-
+  void addOption(Option *O, SubCommand *SC) {
     bool HadErrors = false;
     if (O->hasArgStr()) {
       // If it's a DefaultOption, check to make sure it isn't already there.
@@ -234,14 +232,22 @@ public:
       for (const auto &Sub : RegisteredSubCommands) {
         if (SC == Sub)
           continue;
-        addOption(O, Sub, ProcessDefaultOptions);
+        addOption(O, Sub);
       }
     }
   }
 
-  void addDefaultOptions() {
-    for (std::pair<Option *, SubCommand *> &DO : DefaultOptions) {
-      addOption(DO.first, DO.second, true);
+  void addOption(Option *O, bool ProcessDefaultOption = false) {
+    if (!ProcessDefaultOption && O->isDefaultOption()) {
+      DefaultOptions.push_back(O);
+      return;
+    }
+
+    if (O->Subs.empty()) {
+      addOption(O, &*TopLevelSubCommand);
+    } else {
+      for (auto SC : O->Subs)
+        addOption(O, SC);
     }
   }
 
@@ -279,8 +285,17 @@ public:
   }
 
   void removeOption(Option *O) {
-    for (auto SC : RegisteredSubCommands)
-      removeOption(O, SC);
+    if (O->Subs.empty())
+      removeOption(O, &*TopLevelSubCommand);
+    else {
+      if (O->isInAllSubCommands()) {
+        for (auto SC : RegisteredSubCommands)
+          removeOption(O, SC);
+      } else {
+        for (auto SC : O->Subs)
+          removeOption(O, SC);
+      }
+    }
   }
 
   bool hasOptions(const SubCommand &Sub) const {
@@ -309,8 +324,17 @@ public:
   }
 
   void updateArgStr(Option *O, StringRef NewName) {
-    for (auto SC : RegisteredSubCommands)
-      updateArgStr(O, NewName, SC);
+    if (O->Subs.empty())
+      updateArgStr(O, NewName, &*TopLevelSubCommand);
+    else {
+      if (O->isInAllSubCommands()) {
+        for (auto SC : RegisteredSubCommands)
+          updateArgStr(O, NewName, SC);
+      } else {
+        for (auto SC : O->Subs)
+          updateArgStr(O, NewName, SC);
+      }
+    }
   }
 
   void printOptionValues();
@@ -365,7 +389,6 @@ public:
 
     MoreHelp.clear();
     RegisteredOptionCategories.clear();
-    RegisteredOptionCategories.insert(&*GeneralCategory);
 
     ResetAllOptionOccurrences();
     RegisteredSubCommands.clear();
@@ -404,37 +427,12 @@ extrahelp::extrahelp(StringRef Help) : morehelp(Help) {
   GlobalParser->MoreHelp.push_back(Help);
 }
 
-void Option::addArgument(SubCommand &SC) {
-  GlobalParser->addOption(this, &SC);
+void Option::addArgument() {
+  GlobalParser->addOption(this);
   FullyInitialized = true;
 }
 
 void Option::removeArgument() { GlobalParser->removeOption(this); }
-
-SmallPtrSet<OptionCategory *, 1> Option::getCategories() const {
-  SmallPtrSet<OptionCategory *, 1> Cats;
-  for (OptionCategory *C: GlobalParser->RegisteredOptionCategories) {
-    if (C->MemberOptions.find(this) != C->MemberOptions.end())
-      Cats.insert(C);
-  }
-  if (Cats.empty())
-    Cats.insert(&*GeneralCategory);
-  return Cats;
-}
-
-SmallPtrSet<SubCommand *, 1> Option::getSubCommands() const {
-  // This can happen for enums and literal options.
-  if (ArgStr.empty())
-    return SmallPtrSet<SubCommand *, 1>{&*TopLevelSubCommand};
-
-  SmallPtrSet<SubCommand *, 1> Subs;
-  for (SubCommand *SC : GlobalParser->getRegisteredSubcommands()) {
-    auto I = SC->OptionsMap.find(ArgStr);
-    if (I != SC->OptionsMap.end() && I->getValue() == this)
-      Subs.insert(SC);
-  }
-  return Subs;
-}
 
 void Option::setArgStr(StringRef S) {
   if (FullyInitialized)
@@ -446,7 +444,14 @@ void Option::setArgStr(StringRef S) {
 }
 
 void Option::addCategory(OptionCategory &C) {
-  C.MemberOptions.insert(this);
+  assert(!Categories.empty() && "Categories cannot be empty.");
+  // Maintain backward compatibility by replacing the default GeneralCategory
+  // if it's still set.  Otherwise, just add the new one.  The GeneralCategory
+  // must be explicitly added if you want multiple categories that include it.
+  if (&C != &GeneralCategory && Categories[0] == &GeneralCategory)
+    Categories[0] = &C;
+  else if (find(Categories, &C) == Categories.end())
+    Categories.push_back(&C);
 }
 
 void Option::reset() {
@@ -457,8 +462,7 @@ void Option::reset() {
 }
 
 // Initialise the general option category.
-LLVM_REQUIRE_CONSTANT_INITIALIZATION
-ManagedStatic<OptionCategory> llvm::cl::GeneralCategory;
+OptionCategory llvm::cl::GeneralCategory("General options");
 
 void OptionCategory::registerCategory() {
   GlobalParser->registerCategory(this);
@@ -1298,7 +1302,9 @@ bool CommandLineParser::ParseCommandLineOptions(int argc,
   auto &SinkOpts = ChosenSubCommand->SinkOpts;
   auto &OptionsMap = ChosenSubCommand->OptionsMap;
 
-  addDefaultOptions();
+  for (auto O: DefaultOptions) {
+    addOption(O, true);
+  }
 
   if (ConsumeAfterOpt) {
     assert(PositionalOpts.size() > 0 &&
@@ -2198,7 +2204,7 @@ protected:
     // options within categories will also be alphabetically sorted.
     for (size_t I = 0, E = Opts.size(); I != E; ++I) {
       Option *Opt = Opts[I].second;
-      for (auto *Cat : Opt->getCategories()) {
+      for (auto &Cat : Opt->Categories) {
         assert(CategorizedOptions.count(Cat) > 0 &&
                "Option has an unregistered category");
         CategorizedOptions[Cat].push_back(Opt);
@@ -2459,7 +2465,7 @@ cl::getRegisteredSubcommands() {
 
 void cl::HideUnrelatedOptions(cl::OptionCategory &Category, SubCommand &Sub) {
   for (auto &I : Sub.OptionsMap) {
-    for (OptionCategory *Cat : I.second->getCategories()) {
+    for (auto &Cat : I.second->Categories) {
       if (Cat != &Category &&
           Cat != &GenericCategory)
         I.second->setHiddenFlag(cl::ReallyHidden);
@@ -2470,7 +2476,7 @@ void cl::HideUnrelatedOptions(cl::OptionCategory &Category, SubCommand &Sub) {
 void cl::HideUnrelatedOptions(ArrayRef<const cl::OptionCategory *> Categories,
                               SubCommand &Sub) {
   for (auto &I : Sub.OptionsMap) {
-    for (OptionCategory *Cat : I.second->getCategories()) {
+    for (auto &Cat : I.second->Categories) {
       if (find(Categories, Cat) == Categories.end() && Cat != &GenericCategory)
         I.second->setHiddenFlag(cl::ReallyHidden);
     }

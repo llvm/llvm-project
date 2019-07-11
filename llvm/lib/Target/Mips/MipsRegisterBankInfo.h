@@ -45,13 +45,19 @@ private:
   /// We assign InstType to such instructions as it helps us to avoid cross bank
   /// copies. InstType deppends on context.
   enum InstType {
+    /// Temporary type, when visit(..., nullptr) finishes will convert to one of
+    /// the remaining types: Integer, FloatingPoint or Ambiguous.
     NotDetermined,
     /// Connected with instruction that interprets 'bags of bits' as integers.
     /// Select gprb to avoid cross bank copies.
     Integer,
     /// Connected with instruction that interprets 'bags of bits' as floating
     /// point numbers. Select fprb to avoid cross bank copies.
-    FloatingPoint
+    FloatingPoint,
+    /// Represents moving 'bags of bits' around. Select same bank for entire
+    /// chain to avoid cross bank copies. Currently we select fprb for s64 and
+    /// gprb for s32 Ambiguous operands.
+    Ambiguous
   };
 
   /// Some generic instructions have operands that can be mapped to either fprb
@@ -67,6 +73,20 @@ private:
     void addDefUses(Register Reg, const MachineRegisterInfo &MRI);
     void addUseDef(Register Reg, const MachineRegisterInfo &MRI);
 
+    /// Skip copy instructions until we get to a non-copy instruction or to a
+    /// copy with phys register as def. Used during search for DefUses.
+    /// MI :  %5 = COPY %4
+    ///       %6 = COPY %5
+    ///       $v0 = COPY %6 <- we want this one.
+    MachineInstr *skipCopiesOutgoing(MachineInstr *MI) const;
+
+    /// Skip copy instructions until we get to a non-copy instruction or to a
+    /// copy with phys register as use. Used during search for UseDefs.
+    ///       %1 = COPY $a1 <- we want this one.
+    ///       %2 = COPY %1
+    /// MI =  %3 = COPY %2
+    MachineInstr *skipCopiesIncoming(MachineInstr *MI) const;
+
   public:
     AmbiguousRegDefUseContainer(const MachineInstr *MI);
     SmallVectorImpl<MachineInstr *> &getDefUses() { return DefUses; }
@@ -76,16 +96,23 @@ private:
   class TypeInfoForMF {
     /// MachineFunction name is used to recognise when MF changes.
     std::string MFName = "";
+    /// <key, value> : value is vector of all MachineInstrs that are waiting for
+    /// key to figure out type of some of its ambiguous operands.
+    DenseMap<const MachineInstr *, SmallVector<const MachineInstr *, 2>>
+        WaitingQueues;
     /// Recorded InstTypes for visited instructions.
     DenseMap<const MachineInstr *, InstType> Types;
 
-    bool visit(const MachineInstr *MI);
+    /// Recursively visit MI's adjacent instructions and find MI's InstType.
+    bool visit(const MachineInstr *MI, const MachineInstr *WaitingForTypeOfMI);
 
     /// Visit MI's adjacent UseDefs or DefUses.
     bool visitAdjacentInstrs(const MachineInstr *MI,
                              SmallVectorImpl<MachineInstr *> &AdjacentInstrs,
                              bool isDefUse);
 
+    /// Set type for MI, and recursively for all instructions that are
+    /// waiting for MI's type.
     void setTypes(const MachineInstr *MI, InstType ITy);
 
     /// InstType for MI is determined, set it to InstType that corresponds to
@@ -97,8 +124,11 @@ private:
     /// Set default values for MI in order to start visit.
     void startVisit(const MachineInstr *MI) {
       Types.try_emplace(MI, InstType::NotDetermined);
+      WaitingQueues.try_emplace(MI);
     }
 
+    /// Returns true if instruction was already visited. Type might not be
+    /// determined at this point but will be when visit(..., nullptr) finishes.
     bool wasVisited(const MachineInstr *MI) const { return Types.count(MI); };
 
     /// Returns recorded type for instruction.
@@ -111,6 +141,20 @@ private:
     void changeRecordedTypeForInstr(const MachineInstr *MI, InstType InstTy) {
       assert(wasVisited(MI) && "Instruction was not visited!");
       Types.find(MI)->getSecond() = InstTy;
+    };
+
+    /// Returns WaitingQueue for instruction.
+    const SmallVectorImpl<const MachineInstr *> &
+    getWaitingQueueFor(const MachineInstr *MI) const {
+      assert(WaitingQueues.count(MI) && "Instruction was not visited!");
+      return WaitingQueues.find(MI)->getSecond();
+    };
+
+    /// Add WaitingForMI to MI's WaitingQueue.
+    void addToWaitingQueue(const MachineInstr *MI,
+                           const MachineInstr *WaitingForMI) {
+      assert(WaitingQueues.count(MI) && "Instruction was not visited!");
+      WaitingQueues.find(MI)->getSecond().push_back(WaitingForMI);
     };
 
   public:

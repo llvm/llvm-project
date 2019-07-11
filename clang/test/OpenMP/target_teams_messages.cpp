@@ -2,6 +2,12 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -std=c++11 -o - %s -Wuninitialized
 
+void xxx(int argc) {
+  int x; // expected-note {{initialize the variable 'x' to silence this warning}}
+#pragma omp target teams
+  argc = x; // expected-warning {{variable 'x' is uninitialized when used here}}
+}
+
 void foo() {
 }
 

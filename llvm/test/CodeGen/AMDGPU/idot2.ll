@@ -2786,9 +2786,9 @@ define amdgpu_kernel void @notsdot2_sext8(<2 x i8> addrspace(1)* %src1,
 ; GFX10-DL-NEXT:    global_load_ushort v2, v[2:3], off
 ; GFX10-DL-NEXT:    global_load_ushort v7, v[0:1], off
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(1)
-; GFX10-DL-NEXT:    v_and_b32_sdwa v1, v2, v4
+; GFX10-DL-NEXT:    v_and_b32_sdwa v1, v2, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-DL-NEXT:    v_and_b32_sdwa v3, v7, v4
+; GFX10-DL-NEXT:    v_and_b32_sdwa v3, v7, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:BYTE_1 src1_sel:DWORD
 ; GFX10-DL-NEXT:    v_bfe_i32 v2, v2, 0, 8
 ; GFX10-DL-NEXT:    v_bfe_i32 v0, v7, 0, 8
 ; GFX10-DL-NEXT:    v_bfe_i32 v1, v1, 0, 8

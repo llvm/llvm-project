@@ -304,16 +304,71 @@ static void allocateSystemSGPRs(CCState &CCInfo,
   }
 }
 
+bool AMDGPUCallLowering::lowerFormalArgumentsKernel(
+    MachineIRBuilder &MIRBuilder, const Function &F,
+    ArrayRef<ArrayRef<Register>> VRegs) const {
+  MachineFunction &MF = MIRBuilder.getMF();
+  const GCNSubtarget *Subtarget = &MF.getSubtarget<GCNSubtarget>();
+  MachineRegisterInfo &MRI = MF.getRegInfo();
+  SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
+  const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
+  const DataLayout &DL = F.getParent()->getDataLayout();
+
+  SmallVector<CCValAssign, 16> ArgLocs;
+  CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
+
+  allocateHSAUserSGPRs(CCInfo, MIRBuilder, MF, *TRI, *Info);
+
+  unsigned i = 0;
+  const unsigned KernArgBaseAlign = 16;
+  const unsigned BaseOffset = Subtarget->getExplicitKernelArgOffset(F);
+  uint64_t ExplicitArgOffset = 0;
+
+  // TODO: Align down to dword alignment and extract bits for extending loads.
+  for (auto &Arg : F.args()) {
+    Type *ArgTy = Arg.getType();
+    unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
+    if (AllocSize == 0)
+      continue;
+
+    unsigned ABIAlign = DL.getABITypeAlignment(ArgTy);
+
+    uint64_t ArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + BaseOffset;
+    ExplicitArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + AllocSize;
+
+    ArrayRef<Register> OrigArgRegs = VRegs[i];
+    Register ArgReg =
+      OrigArgRegs.size() == 1
+      ? OrigArgRegs[0]
+      : MRI.createGenericVirtualRegister(getLLTForType(*ArgTy, DL));
+    unsigned Align = MinAlign(KernArgBaseAlign, ArgOffset);
+    ArgOffset = alignTo(ArgOffset, DL.getABITypeAlignment(ArgTy));
+    lowerParameter(MIRBuilder, ArgTy, ArgOffset, Align, ArgReg);
+    if (OrigArgRegs.size() > 1)
+      unpackRegs(OrigArgRegs, ArgReg, ArgTy, MIRBuilder);
+    ++i;
+  }
+
+  allocateSpecialEntryInputVGPRs(CCInfo, MF, *TRI, *Info);
+  allocateSystemSGPRs(CCInfo, MF, *Info, F.getCallingConv(), false);
+  return true;
+}
+
 bool AMDGPUCallLowering::lowerFormalArguments(
     MachineIRBuilder &MIRBuilder, const Function &F,
     ArrayRef<ArrayRef<Register>> VRegs) const {
+  // The infrastructure for normal calling convention lowering is essentially
+  // useless for kernels. We want to avoid any kind of legalization or argument
+  // splitting.
+  if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL)
+    return lowerFormalArgumentsKernel(MIRBuilder, F, VRegs);
+
   // AMDGPU_GS and AMDGP_HS are not supported yet.
   if (F.getCallingConv() == CallingConv::AMDGPU_GS ||
       F.getCallingConv() == CallingConv::AMDGPU_HS)
     return false;
 
   MachineFunction &MF = MIRBuilder.getMF();
-  const GCNSubtarget *Subtarget = &MF.getSubtarget<GCNSubtarget>();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *Info = MF.getInfo<SIMachineFunctionInfo>();
   const SIRegisterInfo *TRI = MF.getSubtarget<GCNSubtarget>().getRegisterInfo();
@@ -323,47 +378,6 @@ bool AMDGPUCallLowering::lowerFormalArguments(
 
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
-
-  // The infrastructure for normal calling convention lowering is essentially
-  // useless for kernels. We want to avoid any kind of legalization or argument
-  // splitting.
-  if (F.getCallingConv() == CallingConv::AMDGPU_KERNEL) {
-    allocateHSAUserSGPRs(CCInfo, MIRBuilder, MF, *TRI, *Info);
-
-    unsigned i = 0;
-    const unsigned KernArgBaseAlign = 16;
-    const unsigned BaseOffset = Subtarget->getExplicitKernelArgOffset(F);
-    uint64_t ExplicitArgOffset = 0;
-
-    // TODO: Align down to dword alignment and extract bits for extending loads.
-    for (auto &Arg : F.args()) {
-      Type *ArgTy = Arg.getType();
-      unsigned AllocSize = DL.getTypeAllocSize(ArgTy);
-      if (AllocSize == 0)
-        continue;
-
-      unsigned ABIAlign = DL.getABITypeAlignment(ArgTy);
-
-      uint64_t ArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + BaseOffset;
-      ExplicitArgOffset = alignTo(ExplicitArgOffset, ABIAlign) + AllocSize;
-
-      ArrayRef<Register> OrigArgRegs = VRegs[i];
-      Register ArgReg =
-          OrigArgRegs.size() == 1
-              ? OrigArgRegs[0]
-              : MRI.createGenericVirtualRegister(getLLTForType(*ArgTy, DL));
-      unsigned Align = MinAlign(KernArgBaseAlign, ArgOffset);
-      ArgOffset = alignTo(ArgOffset, DL.getABITypeAlignment(ArgTy));
-      lowerParameter(MIRBuilder, ArgTy, ArgOffset, Align, ArgReg);
-      if (OrigArgRegs.size() > 1)
-        unpackRegs(OrigArgRegs, ArgReg, ArgTy, MIRBuilder);
-      ++i;
-    }
-
-    allocateSpecialEntryInputVGPRs(CCInfo, MF, *TRI, *Info);
-    allocateSystemSGPRs(CCInfo, MF, *Info, F.getCallingConv(), IsShader);
-    return true;
-  }
 
   if (Info->hasImplicitBufferPtr()) {
     unsigned ImplicitBufferPtrReg = Info->addImplicitBufferPtr(*TRI);

@@ -28,6 +28,7 @@ enum class HighlightingKind {
   Function,
   Class,
   Enum,
+  Namespace,
 
   NumKinds,
 };

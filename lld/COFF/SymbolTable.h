@@ -47,7 +47,7 @@ class Symbol;
 // There is one add* function per symbol type.
 class SymbolTable {
 public:
-  void addFile(InputFile *File);
+  void addFile(InputFile *file);
 
   // Try to resolve any undefined symbols and update the symbol table
   // accordingly, then print an error message for any remaining undefined
@@ -55,20 +55,20 @@ public:
   void reportRemainingUndefines();
 
   void loadMinGWAutomaticImports();
-  bool handleMinGWAutomaticImport(Symbol *Sym, StringRef Name);
+  bool handleMinGWAutomaticImport(Symbol *sym, StringRef name);
 
   // Returns a list of chunks of selected symbols.
   std::vector<Chunk *> getChunks();
 
   // Returns a symbol for a given name. Returns a nullptr if not found.
-  Symbol *find(StringRef Name);
-  Symbol *findUnderscore(StringRef Name);
+  Symbol *find(StringRef name);
+  Symbol *findUnderscore(StringRef name);
 
   // Occasionally we have to resolve an undefined symbol to its
   // mangled symbol. This function tries to find a mangled name
   // for U from the symbol table, and if found, set the symbol as
   // a weak alias for U.
-  Symbol *findMangle(StringRef Name);
+  Symbol *findMangle(StringRef name);
 
   // Build a set of COFF objects representing the combined contents of
   // BitcodeFiles and add them to the symbol table. Called after all files are
@@ -77,53 +77,53 @@ public:
   std::vector<StringRef> compileBitcodeFiles();
 
   // Creates an Undefined symbol for a given name.
-  Symbol *addUndefined(StringRef Name);
+  Symbol *addUndefined(StringRef name);
 
-  Symbol *addSynthetic(StringRef N, Chunk *C);
-  Symbol *addAbsolute(StringRef N, uint64_t VA);
+  Symbol *addSynthetic(StringRef n, Chunk *c);
+  Symbol *addAbsolute(StringRef n, uint64_t va);
 
-  Symbol *addUndefined(StringRef Name, InputFile *F, bool IsWeakAlias);
-  void addLazy(ArchiveFile *F, const Archive::Symbol Sym);
-  Symbol *addAbsolute(StringRef N, COFFSymbolRef S);
-  Symbol *addRegular(InputFile *F, StringRef N,
-                     const llvm::object::coff_symbol_generic *S = nullptr,
-                     SectionChunk *C = nullptr);
+  Symbol *addUndefined(StringRef name, InputFile *f, bool isWeakAlias);
+  void addLazy(ArchiveFile *f, const Archive::Symbol sym);
+  Symbol *addAbsolute(StringRef n, COFFSymbolRef s);
+  Symbol *addRegular(InputFile *f, StringRef n,
+                     const llvm::object::coff_symbol_generic *s = nullptr,
+                     SectionChunk *c = nullptr);
   std::pair<DefinedRegular *, bool>
-  addComdat(InputFile *F, StringRef N,
-            const llvm::object::coff_symbol_generic *S = nullptr);
-  Symbol *addCommon(InputFile *F, StringRef N, uint64_t Size,
-                    const llvm::object::coff_symbol_generic *S = nullptr,
-                    CommonChunk *C = nullptr);
-  Symbol *addImportData(StringRef N, ImportFile *F);
-  Symbol *addImportThunk(StringRef Name, DefinedImportData *S,
-                         uint16_t Machine);
+  addComdat(InputFile *f, StringRef n,
+            const llvm::object::coff_symbol_generic *s = nullptr);
+  Symbol *addCommon(InputFile *f, StringRef n, uint64_t size,
+                    const llvm::object::coff_symbol_generic *s = nullptr,
+                    CommonChunk *c = nullptr);
+  Symbol *addImportData(StringRef n, ImportFile *f);
+  Symbol *addImportThunk(StringRef name, DefinedImportData *s,
+                         uint16_t machine);
 
-  void reportDuplicate(Symbol *Existing, InputFile *NewFile);
+  void reportDuplicate(Symbol *existing, InputFile *newFile);
 
   // A list of chunks which to be added to .rdata.
-  std::vector<Chunk *> LocalImportChunks;
+  std::vector<Chunk *> localImportChunks;
 
   // Iterates symbols in non-determinstic hash table order.
-  template <typename T> void forEachSymbol(T Callback) {
-    for (auto &Pair : SymMap)
-      Callback(Pair.second);
+  template <typename T> void forEachSymbol(T callback) {
+    for (auto &pair : symMap)
+      callback(pair.second);
   }
 
 private:
   /// Inserts symbol if not already present.
-  std::pair<Symbol *, bool> insert(StringRef Name);
+  std::pair<Symbol *, bool> insert(StringRef name);
   /// Same as insert(Name), but also sets IsUsedInRegularObj.
-  std::pair<Symbol *, bool> insert(StringRef Name, InputFile *F);
+  std::pair<Symbol *, bool> insert(StringRef name, InputFile *f);
 
-  std::vector<Symbol *> getSymsWithPrefix(StringRef Prefix);
+  std::vector<Symbol *> getSymsWithPrefix(StringRef prefix);
 
-  llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> SymMap;
-  std::unique_ptr<BitcodeCompiler> LTO;
+  llvm::DenseMap<llvm::CachedHashStringRef, Symbol *> symMap;
+  std::unique_ptr<BitcodeCompiler> lto;
 };
 
-extern SymbolTable *Symtab;
+extern SymbolTable *symtab;
 
-std::vector<std::string> getSymbolLocations(ObjFile *File, uint32_t SymIndex);
+std::vector<std::string> getSymbolLocations(ObjFile *file, uint32_t symIndex);
 
 } // namespace coff
 } // namespace lld

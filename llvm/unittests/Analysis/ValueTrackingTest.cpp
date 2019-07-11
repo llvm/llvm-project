@@ -934,7 +934,7 @@ const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
 };
 
 INSTANTIATE_TEST_CASE_P(IsBytewiseValueParamTests, IsBytewiseValueTest,
-                        ::testing::ValuesIn(IsBytewiseValueTests));
+                        ::testing::ValuesIn(IsBytewiseValueTests),);
 
 TEST_P(IsBytewiseValueTest, IsBytewiseValue) {
   auto M = parseModule(std::string("@test = global ") + GetParam().second);

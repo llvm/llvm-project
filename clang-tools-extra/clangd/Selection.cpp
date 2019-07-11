@@ -358,12 +358,23 @@ SelectionTree::SelectionTree(ASTContext &AST, unsigned Offset)
 const Node *SelectionTree::commonAncestor() const {
   if (!Root)
     return nullptr;
-  for (const Node *Ancestor = Root;; Ancestor = Ancestor->Children.front()) {
-    if (Ancestor->Selected || Ancestor->Children.size() > 1)
-      return Ancestor;
-    // The tree only contains ancestors of the interesting nodes.
-    assert(!Ancestor->Children.empty() && "bad node in selection tree");
+  const Node *Ancestor = Root;
+  while (Ancestor->Children.size() == 1 && !Ancestor->Selected)
+    Ancestor = Ancestor->Children.front();
+  return Ancestor;
+}
+
+const DeclContext& SelectionTree::Node::getDeclContext() const {
+  for (const Node* CurrentNode = this; CurrentNode != nullptr;
+       CurrentNode = CurrentNode->Parent) {
+    if (const Decl* Current = CurrentNode->ASTNode.get<Decl>()) {
+      if (CurrentNode != this)
+        if (auto *DC = dyn_cast<DeclContext>(Current))
+          return *DC;
+      return *Current->getDeclContext();
+    }
   }
+  llvm_unreachable("A tree must always be rooted at TranslationUnitDecl.");
 }
 
 } // namespace clangd

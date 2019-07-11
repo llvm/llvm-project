@@ -12,15 +12,15 @@
 
 #include <string.h>
 
-template <typename MutexType> class TestData {
+class TestData {
 public:
-  explicit TestData(MutexType *M) : Mutex(M) {
+  explicit TestData(scudo::HybridMutex &M) : Mutex(M) {
     for (scudo::u32 I = 0; I < Size; I++)
       Data[I] = 0;
   }
 
   void write() {
-    Lock L(Mutex);
+    scudo::ScopedLock L(Mutex);
     T V0 = Data[0];
     for (scudo::u32 I = 0; I < Size; I++) {
       EXPECT_EQ(Data[I], V0);
@@ -29,14 +29,14 @@ public:
   }
 
   void tryWrite() {
-    if (!Mutex->tryLock())
+    if (!Mutex.tryLock())
       return;
     T V0 = Data[0];
     for (scudo::u32 I = 0; I < Size; I++) {
       EXPECT_EQ(Data[I], V0);
       Data[I]++;
     }
-    Mutex->unlock();
+    Mutex.unlock();
   }
 
   void backoff() {
@@ -48,10 +48,9 @@ public:
   }
 
 private:
-  typedef scudo::GenericScopedLock<MutexType> Lock;
   static const scudo::u32 Size = 64U;
   typedef scudo::u64 T;
-  MutexType *Mutex;
+  scudo::HybridMutex &Mutex;
   ALIGNED(SCUDO_CACHE_LINE_SIZE) T Data[Size];
 };
 
@@ -62,8 +61,8 @@ const scudo::u32 NumberOfIterations = 4 * 1024;
 const scudo::u32 NumberOfIterations = 16 * 1024;
 #endif
 
-template <typename MutexType> static void *lockThread(void *Param) {
-  TestData<MutexType> *Data = reinterpret_cast<TestData<MutexType> *>(Param);
+static void *lockThread(void *Param) {
+  TestData *Data = reinterpret_cast<TestData *>(Param);
   for (scudo::u32 I = 0; I < NumberOfIterations; I++) {
     Data->write();
     Data->backoff();
@@ -71,8 +70,8 @@ template <typename MutexType> static void *lockThread(void *Param) {
   return 0;
 }
 
-template <typename MutexType> static void *tryThread(void *Param) {
-  TestData<MutexType> *Data = reinterpret_cast<TestData<MutexType> *>(Param);
+static void *tryThread(void *Param) {
+  TestData *Data = reinterpret_cast<TestData *>(Param);
   for (scudo::u32 I = 0; I < NumberOfIterations; I++) {
     Data->tryWrite();
     Data->backoff();
@@ -80,42 +79,24 @@ template <typename MutexType> static void *tryThread(void *Param) {
   return 0;
 }
 
-template <typename MutexType> static void checkLocked(MutexType *M) {
-  scudo::GenericScopedLock<MutexType> L(M);
-  M->checkLocked();
-}
-
-TEST(ScudoMutexTest, SpinMutex) {
-  scudo::SpinMutex M;
+TEST(ScudoMutexTest, Mutex) {
+  scudo::HybridMutex M;
   M.init();
-  TestData<scudo::SpinMutex> Data(&M);
+  TestData Data(M);
   pthread_t Threads[NumberOfThreads];
   for (scudo::u32 I = 0; I < NumberOfThreads; I++)
-    pthread_create(&Threads[I], 0, lockThread<scudo::SpinMutex>, &Data);
+    pthread_create(&Threads[I], 0, lockThread, &Data);
   for (scudo::u32 I = 0; I < NumberOfThreads; I++)
     pthread_join(Threads[I], 0);
 }
 
-TEST(ScudoMutexTest, SpinMutexTry) {
-  scudo::SpinMutex M;
+TEST(ScudoMutexTest, MutexTry) {
+  scudo::HybridMutex M;
   M.init();
-  TestData<scudo::SpinMutex> Data(&M);
+  TestData Data(M);
   pthread_t Threads[NumberOfThreads];
   for (scudo::u32 I = 0; I < NumberOfThreads; I++)
-    pthread_create(&Threads[I], 0, tryThread<scudo::SpinMutex>, &Data);
+    pthread_create(&Threads[I], 0, tryThread, &Data);
   for (scudo::u32 I = 0; I < NumberOfThreads; I++)
     pthread_join(Threads[I], 0);
-}
-
-TEST(ScudoMutexTest, BlockingMutex) {
-  scudo::u64 MutexMemory[1024] = {};
-  scudo::BlockingMutex *M =
-      new (MutexMemory) scudo::BlockingMutex(scudo::LINKER_INITIALIZED);
-  TestData<scudo::BlockingMutex> Data(M);
-  pthread_t Threads[NumberOfThreads];
-  for (scudo::u32 I = 0; I < NumberOfThreads; I++)
-    pthread_create(&Threads[I], 0, lockThread<scudo::BlockingMutex>, &Data);
-  for (scudo::u32 I = 0; I < NumberOfThreads; I++)
-    pthread_join(Threads[I], 0);
-  checkLocked(M);
 }

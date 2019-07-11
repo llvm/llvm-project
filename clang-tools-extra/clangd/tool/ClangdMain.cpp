@@ -356,7 +356,7 @@ int main(int argc, char *argv[]) {
     LogLevel = Logger::Verbose;
     PrettyPrint = true;
     // Ensure background index makes progress.
-    BackgroundIndex::preventThreadStarvationInTests();
+    BackgroundQueue::preventThreadStarvationInTests();
   }
   if (Test || EnableTestScheme) {
     static URISchemeRegistry::Add<TestScheme> X(

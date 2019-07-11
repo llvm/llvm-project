@@ -23,19 +23,19 @@ class InputArgList;
 namespace lld {
 namespace args {
 
-llvm::CodeGenOpt::Level getCGOptLevel(int OptLevelLTO);
+llvm::CodeGenOpt::Level getCGOptLevel(int optLevelLTO);
 
-int64_t getInteger(llvm::opt::InputArgList &Args, unsigned Key,
+int64_t getInteger(llvm::opt::InputArgList &args, unsigned key,
                    int64_t Default);
 
-std::vector<StringRef> getStrings(llvm::opt::InputArgList &Args, int Id);
+std::vector<StringRef> getStrings(llvm::opt::InputArgList &args, int id);
 
-uint64_t getZOptionValue(llvm::opt::InputArgList &Args, int Id, StringRef Key,
+uint64_t getZOptionValue(llvm::opt::InputArgList &args, int id, StringRef key,
                          uint64_t Default);
 
-std::vector<StringRef> getLines(MemoryBufferRef MB);
+std::vector<StringRef> getLines(MemoryBufferRef mb);
 
-StringRef getFilenameWithoutExe(StringRef Path);
+StringRef getFilenameWithoutExe(StringRef path);
 
 } // namespace args
 } // namespace lld

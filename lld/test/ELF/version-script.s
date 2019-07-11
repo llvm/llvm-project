@@ -32,12 +32,6 @@
 # RUN:   FileCheck -check-prefix=ERR2 %s
 # ERR2: EOF expected, but got VERSION_2.0
 
-# RUN: echo "VERSION_1.0 { global: foo1; local: *; };" > %t6.script
-# RUN: echo "VERSION_2.0 { global: foo1; local: *; };" >> %t6.script
-# RUN: not ld.lld --version-script %t6.script -shared %t.o %t2.so -o /dev/null 2>&1 | \
-# RUN:   FileCheck -check-prefix=ERR3 %s
-# ERR3: duplicate symbol 'foo1' in version script
-
 # RUN: echo "{ foo1; foo2; };" > %t.list
 # RUN: ld.lld --version-script %t.script --dynamic-list %t.list %t.o %t2.so -o %t2
 # RUN: llvm-readobj %t2 > /dev/null

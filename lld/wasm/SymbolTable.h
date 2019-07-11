@@ -35,89 +35,89 @@ class InputSegment;
 // There is one add* function per symbol type.
 class SymbolTable {
 public:
-  void wrap(Symbol *Sym, Symbol *Real, Symbol *Wrap);
+  void wrap(Symbol *sym, Symbol *real, Symbol *wrap);
 
-  void addFile(InputFile *File);
+  void addFile(InputFile *file);
 
   void addCombinedLTOObject();
 
-  ArrayRef<Symbol *> getSymbols() const { return SymVector; }
+  ArrayRef<Symbol *> getSymbols() const { return symVector; }
 
-  Symbol *find(StringRef Name);
+  Symbol *find(StringRef name);
 
-  void replace(StringRef Name, Symbol* Sym);
+  void replace(StringRef name, Symbol* sym);
 
-  void trace(StringRef Name);
+  void trace(StringRef name);
 
-  Symbol *addDefinedFunction(StringRef Name, uint32_t Flags, InputFile *File,
-                             InputFunction *Function);
-  Symbol *addDefinedData(StringRef Name, uint32_t Flags, InputFile *File,
-                         InputSegment *Segment, uint32_t Address,
-                         uint32_t Size);
-  Symbol *addDefinedGlobal(StringRef Name, uint32_t Flags, InputFile *File,
-                           InputGlobal *G);
-  Symbol *addDefinedEvent(StringRef Name, uint32_t Flags, InputFile *File,
-                          InputEvent *E);
+  Symbol *addDefinedFunction(StringRef name, uint32_t flags, InputFile *file,
+                             InputFunction *function);
+  Symbol *addDefinedData(StringRef name, uint32_t flags, InputFile *file,
+                         InputSegment *segment, uint32_t address,
+                         uint32_t size);
+  Symbol *addDefinedGlobal(StringRef name, uint32_t flags, InputFile *file,
+                           InputGlobal *g);
+  Symbol *addDefinedEvent(StringRef name, uint32_t flags, InputFile *file,
+                          InputEvent *e);
 
-  Symbol *addUndefinedFunction(StringRef Name, StringRef ImportName,
-                               StringRef ImportModule, uint32_t Flags,
-                               InputFile *File, const WasmSignature *Signature,
-                               bool IsCalledDirectly);
-  Symbol *addUndefinedData(StringRef Name, uint32_t Flags, InputFile *File);
-  Symbol *addUndefinedGlobal(StringRef Name, StringRef ImportName,
-                             StringRef ImportModule,  uint32_t Flags,
-                             InputFile *File, const WasmGlobalType *Type);
+  Symbol *addUndefinedFunction(StringRef name, StringRef importName,
+                               StringRef importModule, uint32_t flags,
+                               InputFile *file, const WasmSignature *signature,
+                               bool isCalledDirectly);
+  Symbol *addUndefinedData(StringRef name, uint32_t flags, InputFile *file);
+  Symbol *addUndefinedGlobal(StringRef name, StringRef importName,
+                             StringRef importModule,  uint32_t flags,
+                             InputFile *file, const WasmGlobalType *type);
 
-  void addLazy(ArchiveFile *F, const llvm::object::Archive::Symbol *Sym);
+  void addLazy(ArchiveFile *f, const llvm::object::Archive::Symbol *sym);
 
-  bool addComdat(StringRef Name);
+  bool addComdat(StringRef name);
 
-  DefinedData *addSyntheticDataSymbol(StringRef Name, uint32_t Flags);
-  DefinedGlobal *addSyntheticGlobal(StringRef Name, uint32_t Flags,
-                                    InputGlobal *Global);
-  DefinedFunction *addSyntheticFunction(StringRef Name, uint32_t Flags,
-                                        InputFunction *Function);
-  DefinedData *addOptionalDataSymbol(StringRef Name, uint32_t Value = 0,
-                                     uint32_t Flags = 0);
+  DefinedData *addSyntheticDataSymbol(StringRef name, uint32_t flags);
+  DefinedGlobal *addSyntheticGlobal(StringRef name, uint32_t flags,
+                                    InputGlobal *global);
+  DefinedFunction *addSyntheticFunction(StringRef name, uint32_t flags,
+                                        InputFunction *function);
+  DefinedData *addOptionalDataSymbol(StringRef name, uint32_t value = 0,
+                                     uint32_t flags = 0);
 
   void handleSymbolVariants();
   void handleWeakUndefines();
 
-  std::vector<ObjFile *> ObjectFiles;
-  std::vector<SharedFile *> SharedFiles;
-  std::vector<BitcodeFile *> BitcodeFiles;
-  std::vector<InputFunction *> SyntheticFunctions;
-  std::vector<InputGlobal *> SyntheticGlobals;
+  std::vector<ObjFile *> objectFiles;
+  std::vector<SharedFile *> sharedFiles;
+  std::vector<BitcodeFile *> bitcodeFiles;
+  std::vector<InputFunction *> syntheticFunctions;
+  std::vector<InputGlobal *> syntheticGlobals;
 
 private:
-  std::pair<Symbol *, bool> insert(StringRef Name, const InputFile *File);
-  std::pair<Symbol *, bool> insertName(StringRef Name);
+  std::pair<Symbol *, bool> insert(StringRef name, const InputFile *file);
+  std::pair<Symbol *, bool> insertName(StringRef name);
 
-  bool getFunctionVariant(Symbol* Sym, const WasmSignature *Sig,
-                          const InputFile *File, Symbol **Out);
-  InputFunction *replaceWithUnreachable(Symbol *Sym, const WasmSignature &Sig,
-                                        StringRef DebugName);
+  bool getFunctionVariant(Symbol* sym, const WasmSignature *sig,
+                          const InputFile *file, Symbol **out);
+  InputFunction *replaceWithUnreachable(Symbol *sym, const WasmSignature &sig,
+                                        StringRef debugName);
 
   // Maps symbol names to index into the SymVector.  -1 means that symbols
   // is to not yet in the vector but it should have tracing enabled if it is
   // ever added.
-  llvm::DenseMap<llvm::CachedHashStringRef, int> SymMap;
-  std::vector<Symbol *> SymVector;
+  llvm::DenseMap<llvm::CachedHashStringRef, int> symMap;
+  std::vector<Symbol *> symVector;
 
   // For certain symbols types, e.g. function symbols, we allow for muliple
   // variants of the same symbol with different signatures.
-  llvm::DenseMap<llvm::CachedHashStringRef, std::vector<Symbol *>> SymVariants;
+  llvm::DenseMap<llvm::CachedHashStringRef, std::vector<Symbol *>> symVariants;
 
   // Comdat groups define "link once" sections. If two comdat groups have the
   // same name, only one of them is linked, and the other is ignored. This set
   // is used to uniquify them.
-  llvm::DenseSet<llvm::CachedHashStringRef> ComdatGroups;
+  llvm::DenseSet<llvm::CachedHashStringRef> comdatGroups;
 
   // For LTO.
-  std::unique_ptr<BitcodeCompiler> LTO;
+  std::unique_ptr<BitcodeCompiler> lto;
 };
 
-extern SymbolTable *Symtab;
+extern SymbolTable *symtab;
 
 } // namespace wasm
 } // namespace lld

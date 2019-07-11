@@ -126,12 +126,12 @@ Sections:
 Symbols:
   - Name: foo
 
-## Check that llvm-readobj reports an error if .dynsym has an invalid sh_entsize.
+## Check that llvm-readobj reports a warning if .dynsym has an invalid sh_entsize.
 
 # RUN: yaml2obj %s --docnum=7 -o %t7
-# RUN: not llvm-readobj --dyn-symbols %t7 2>&1 | FileCheck --check-prefix=INVALID-DYNSYM-SIZE %s
+# RUN: llvm-readobj --dyn-symbols %t7 2>&1 | FileCheck --check-prefix=INVALID-DYNSYM-SIZE %s
 
-# INVALID-DYNSYM-SIZE: error: Invalid entity size
+# INVALID-DYNSYM-SIZE: warning: invalid section size (48) or entity size (32)
 
 --- !ELF
 FileHeader:
@@ -458,22 +458,22 @@ ProgramHeaders:
     Sections:
       - Section: .dynamic
 
-## Check that llvm-readobj reports an error when a dynamic relocation section
+## Check that llvm-readobj reports a warning when a dynamic relocation section
 ## has sh_entsize field with size != sizeof(Elf_Rela).
 
-# RUN: not llvm-readobj --dyn-relocations \
+# RUN: llvm-readobj --dyn-relocations \
 # RUN:   %p/Inputs/corrupt-invalid-relocation-size.elf.x86-64 2>&1 \
 # RUN:    | FileCheck --check-prefix=RELOC-BROKEN-ENTSIZE %s
 
-# RELOC-BROKEN-ENTSIZE: error: Invalid entity size
+# RELOC-BROKEN-ENTSIZE: warning: invalid section size (24) or entity size (25)
 
-## Check that llvm-readobj reports an error when .dynamic section has an invalid
+## Check that llvm-readobj reports a warning when .dynamic section has an invalid
 ## size, which isn't a multiple of the dynamic entry size. 
 
 # RUN: yaml2obj %s --docnum=22 -o %t22
-# RUN: not llvm-readobj --dyn-relocations %t22 2>&1 | FileCheck --check-prefix=DYN-TABLE-SIZE %s
+# RUN: llvm-readobj --dyn-relocations %t22 2>&1 | FileCheck --check-prefix=DYN-TABLE-SIZE %s
 
-# DYN-TABLE-SIZE: error: Invalid entity size
+# DYN-TABLE-SIZE: warning: invalid section size (1) or entity size (16)
 
 --- !ELF
 FileHeader:

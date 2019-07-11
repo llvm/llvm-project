@@ -123,6 +123,7 @@ bool HTMLTag::IsSelfClosing() const {
   case HTMLTag::TAG_LI:
     return false;
   }
+  llvm_unreachable("Unhandled HTMLTag::TagType");
 }
 
 bool HTMLTag::HasInlineChildren() const {
@@ -139,6 +140,7 @@ bool HTMLTag::HasInlineChildren() const {
   case HTMLTag::TAG_UL:
     return false;
   }
+  llvm_unreachable("Unhandled HTMLTag::TagType");
 }
 
 llvm::SmallString<16> HTMLTag::ToString() const {
@@ -162,6 +164,7 @@ llvm::SmallString<16> HTMLTag::ToString() const {
   case HTMLTag::TAG_LI:
     return llvm::SmallString<16>("li");
   }
+  llvm_unreachable("Unhandled HTMLTag::TagType");
 }
 
 void TextNode::Render(llvm::raw_ostream &OS, int IndentationLevel) {
