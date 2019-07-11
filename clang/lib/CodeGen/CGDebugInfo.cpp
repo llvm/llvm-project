@@ -3587,9 +3587,12 @@ void CGDebugInfo::EmitFunctionStart(GlobalDecl GD, SourceLocation Loc,
 
   // We use the SPDefCache only in the case when the debug entry values option
   // is set, in order to speed up parameters modification analysis.
-  if (CGM.getCodeGenOpts().EnableDebugEntryValues && HasDecl &&
-      isa<FunctionDecl>(D))
-    SPDefCache[cast<FunctionDecl>(D)].reset(SP);
+  //
+  // FIXME: Use AbstractCallee here to support ObjCMethodDecl.
+  if (CGM.getCodeGenOpts().EnableDebugEntryValues && HasDecl)
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      if (FD->hasBody() && !FD->param_empty())
+        SPDefCache[FD].reset(SP);
 
   if (CGM.getCodeGenOpts().DwarfVersion >= 5) {
     // Starting with DWARF V5 method declarations are emitted as children of

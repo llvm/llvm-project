@@ -25,9 +25,11 @@ llvm::raw_ostream &syntax::operator<<(llvm::raw_ostream &OS, NodeKind K) {
 }
 
 syntax::Leaf *syntax::CompoundStatement::lbrace() {
-  return llvm::cast_or_null<syntax::Leaf>(findChild(Roles::lbrace));
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(NodeRole::CompoundStatement_lbrace));
 }
 
 syntax::Leaf *syntax::CompoundStatement::rbrace() {
-  return llvm::cast_or_null<syntax::Leaf>(findChild(Roles::rbrace));
+  return llvm::cast_or_null<syntax::Leaf>(
+      findChild(NodeRole::CompoundStatement_rbrace));
 }

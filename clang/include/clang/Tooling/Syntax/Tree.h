@@ -66,17 +66,7 @@ private:
 class Tree;
 class TreeBuilder;
 enum class NodeKind : uint16_t;
-
-/// Represents a relation of this node to its parent, e.g. 'lbrace inside a
-/// compound statement'.
-///
-/// Each node type defines a set of roles for its children.
-using NodeRole = uint8_t;
-
-/// Role for detached nodes, i.e. the ones that do not have parent nodes.
-constexpr NodeRole NodeRoleDetached = 0;
-/// Role for children of unknown semantic nature, e.g. skipped tokens, comments.
-constexpr NodeRole NodeRoleUnknown = 255;
+enum class NodeRole : uint8_t;
 
 /// A node in a syntax tree. Each node is either a Leaf (representing tokens) or
 /// a Tree (representing language constructrs).
@@ -84,12 +74,10 @@ class Node {
 public:
   /// Newly created nodes are detached from a tree, parent and sibling links are
   /// set when the node is added as a child to another one.
-  Node(NodeKind Kind)
-      : Parent(nullptr), NextSibling(nullptr),
-        Kind(static_cast<unsigned>(Kind)), Role(NodeRoleDetached) {}
+  Node(NodeKind Kind);
 
   NodeKind kind() const { return static_cast<NodeKind>(Kind); }
-  NodeRole role() const { return Role; }
+  NodeRole role() const { return static_cast<NodeRole>(Role); }
 
   const Tree *parent() const { return Parent; }
   Tree *parent() { return Parent; }

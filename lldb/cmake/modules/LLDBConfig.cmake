@@ -65,12 +65,9 @@ if(LLDB_BUILD_FRAMEWORK)
   set(LLDB_FRAMEWORK_BUILD_DIR bin CACHE STRING "Output directory for LLDB.framework")
   set(LLDB_FRAMEWORK_INSTALL_DIR Library/Frameworks CACHE STRING "Install directory for LLDB.framework")
 
-  # Set designated directory for all dSYMs. Essentially, this emits the
-  # framework's dSYM outside of the framework directory.
-  if(LLVM_EXTERNALIZE_DEBUGINFO)
-    set(LLVM_EXTERNALIZE_DEBUGINFO_OUTPUT_DIR ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin CACHE STRING
-        "Directory to emit dSYM files stripped from executables and libraries (Darwin Only)")
-  endif()
+  # Essentially, emit the framework's dSYM outside of the framework directory.
+  set(LLDB_DEBUGINFO_INSTALL_PREFIX ${CMAKE_BINARY_DIR}/${CMAKE_CFG_INTDIR}/bin CACHE STRING
+      "Directory to emit dSYM files stripped from executables and libraries (Darwin Only)")
 endif()
 
 if (NOT CMAKE_SYSTEM_NAME MATCHES "Windows")

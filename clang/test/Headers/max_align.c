@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -std=c11 -verify %s
 // expected-no-diagnostics
 
-// XFAIL: windows-
+// XFAIL: windows-, i686
 
 #ifndef __BIGGEST_ALIGNMENT__
 #error __BIGGEST_ALIGNMENT__ not defined

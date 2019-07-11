@@ -28,6 +28,18 @@ class LegalizationArtifactCombiner {
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
 
+  static bool isArtifactCast(unsigned Opc) {
+    switch (Opc) {
+    case TargetOpcode::G_TRUNC:
+    case TargetOpcode::G_SEXT:
+    case TargetOpcode::G_ZEXT:
+    case TargetOpcode::G_ANYEXT:
+      return true;
+    default:
+      return false;
+    }
+  }
+
 public:
   LegalizationArtifactCombiner(MachineIRBuilder &B, MachineRegisterInfo &MRI,
                     const LegalizerInfo &LI)
@@ -208,21 +220,33 @@ public:
       return false;
 
     unsigned NumDefs = MI.getNumOperands() - 1;
+    MachineInstr *SrcDef =
+        getDefIgnoringCopies(MI.getOperand(NumDefs).getReg(), MRI);
+    if (!SrcDef)
+      return false;
 
     LLT OpTy = MRI.getType(MI.getOperand(NumDefs).getReg());
     LLT DestTy = MRI.getType(MI.getOperand(0).getReg());
+    MachineInstr *MergeI = SrcDef;
+    unsigned ConvertOp = 0;
 
+    // Handle intermediate conversions
+    unsigned SrcOp = SrcDef->getOpcode();
+    if (isArtifactCast(SrcOp)) {
+      ConvertOp = SrcOp;
+      MergeI = getDefIgnoringCopies(SrcDef->getOperand(1).getReg(), MRI);
+    }
+
+    // FIXME: Handle scalarizing concat_vectors (scalar result type with vector
+    // source)
     unsigned MergingOpcode = getMergeOpcode(OpTy, DestTy);
-    MachineInstr *MergeI =
-        getOpcodeDef(MergingOpcode, MI.getOperand(NumDefs).getReg(), MRI);
-
-    if (!MergeI)
+    if (!MergeI || MergeI->getOpcode() != MergingOpcode)
       return false;
 
     const unsigned NumMergeRegs = MergeI->getNumOperands() - 1;
 
     if (NumMergeRegs < NumDefs) {
-      if (NumDefs % NumMergeRegs != 0)
+      if (ConvertOp != 0 || NumDefs % NumMergeRegs != 0)
         return false;
 
       Builder.setInstr(MI);
@@ -244,7 +268,7 @@ public:
       }
 
     } else if (NumMergeRegs > NumDefs) {
-      if (NumMergeRegs % NumDefs != 0)
+      if (ConvertOp != 0 || NumMergeRegs % NumDefs != 0)
         return false;
 
       Builder.setInstr(MI);
@@ -266,10 +290,22 @@ public:
       }
 
     } else {
+      LLT MergeSrcTy = MRI.getType(MergeI->getOperand(1).getReg());
+      if (ConvertOp) {
+        Builder.setInstr(MI);
+
+        for (unsigned Idx = 0; Idx < NumDefs; ++Idx) {
+          Register MergeSrc = MergeI->getOperand(Idx + 1).getReg();
+          Builder.buildInstr(ConvertOp, {MI.getOperand(Idx).getReg()},
+                             {MergeSrc});
+        }
+
+        markInstAndDefDead(MI, *MergeI, DeadInsts);
+        return true;
+      }
       // FIXME: is a COPY appropriate if the types mismatch? We know both
       // registers are allocatable by now.
-      if (MRI.getType(MI.getOperand(0).getReg()) !=
-          MRI.getType(MergeI->getOperand(1).getReg()))
+      if (DestTy != MergeSrcTy)
         return false;
 
       for (unsigned Idx = 0; Idx < NumDefs; ++Idx)
@@ -417,8 +453,10 @@ private:
       MachineInstr *TmpDef = MRI.getVRegDef(PrevRegSrc);
       if (MRI.hasOneUse(PrevRegSrc)) {
         if (TmpDef != &DefMI) {
-          assert(TmpDef->getOpcode() == TargetOpcode::COPY &&
-                 "Expecting copy here");
+          assert((TmpDef->getOpcode() == TargetOpcode::COPY ||
+                  isArtifactCast(TmpDef->getOpcode())) &&
+                 "Expecting copy or artifact cast here");
+
           DeadInsts.push_back(TmpDef);
         }
       } else

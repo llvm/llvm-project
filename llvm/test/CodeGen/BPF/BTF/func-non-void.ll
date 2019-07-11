@@ -21,52 +21,56 @@ define dso_local i32 @f1(i32 returned) local_unnamed_addr #0 !dbg !7 {
 ; CHECK-NEXT:        .long   48
 ; CHECK-NEXT:        .long   48
 ; CHECK-NEXT:        .long   26
-; CHECK-NEXT:        .long   16                      # BTF_KIND_INT(id = 1)
+; CHECK-NEXT:        .long   1                       # BTF_KIND_INT(id = 1)
 ; CHECK-NEXT:        .long   16777216                # 0x1000000
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   16777248                # 0x1000020
 ; CHECK-NEXT:        .long   0                       # BTF_KIND_FUNC_PROTO(id = 2)
 ; CHECK-NEXT:        .long   218103809               # 0xd000001
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   20
+; CHECK-NEXT:        .long   5
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   23                      # BTF_KIND_FUNC(id = 3)
+; CHECK-NEXT:        .long   8                       # BTF_KIND_FUNC(id = 3)
 ; CHECK-NEXT:        .long   201326592               # 0xc000000
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .byte   0                       # string offset=0
-; CHECK-NEXT:        .ascii  ".text"                 # string offset=1
+; CHECK-NEXT:        .ascii  "int"                   # string offset=1
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "/tmp/t.c"              # string offset=7
+; CHECK-NEXT:        .ascii  "a1"                    # string offset=5
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "int"                   # string offset=16
+; CHECK-NEXT:        .ascii  "f1"                    # string offset=8
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "a1"                    # string offset=20
+; CHECK-NEXT:        .ascii  ".text"                 # string offset=11
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "f1"                    # string offset=23
+; CHECK-NEXT:        .ascii  "/tmp/t.c"              # string offset=17
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .section        .BTF.ext,"",@progbits
 ; CHECK-NEXT:        .short  60319                   # 0xeb9f
 ; CHECK-NEXT:        .byte   1
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .long   24
+; CHECK-NEXT:        .long   40
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   20
 ; CHECK-NEXT:        .long   44
+; CHECK-NEXT:        .long   64
+; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   64
+; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   8                       # FuncInfo
-; CHECK-NEXT:        .long   1                       # FuncInfo section string offset=1
+; CHECK-NEXT:        .long   11                      # FuncInfo section string offset=11
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   .Lfunc_begin0
 ; CHECK-NEXT:        .long   3
 ; CHECK-NEXT:        .long   16                      # LineInfo
-; CHECK-NEXT:        .long   1                       # LineInfo section string offset=1
+; CHECK-NEXT:        .long   11                      # LineInfo section string offset=11
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   .Lfunc_begin0
-; CHECK-NEXT:        .long   7
+; CHECK-NEXT:        .long   17
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   1024                    # Line 1 Col 0
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
-; CHECK-NEXT:        .long   7
+; CHECK-NEXT:        .long   17
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   1042                    # Line 1 Col 18
 

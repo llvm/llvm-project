@@ -684,7 +684,7 @@ def warn_cxx14_compat_template_template_param_typename : Warning<
 def err_template_spec_syntax_non_template : Error<
   "identifier followed by '<' indicates a class template specialization but "
   "%0 %select{does not refer to a template|refers to a function template|"
-  "<unused>|refers to a variable template|<unused>}1">;
+  "<unused>|refers to a variable template|<unused>|refers to a concept}1">;
 def err_id_after_template_in_nested_name_spec : Error<
   "expected template name after 'template' keyword in nested name specifier">;
 def err_unexpected_template_in_unqualified_id : Error<
@@ -1285,6 +1285,14 @@ def note_meant_to_use_typename : Note<
 let CategoryName = "Coroutines Issue" in {
 def err_for_co_await_not_range_for : Error<
   "'co_await' modifier can only be applied to range-based for loop">;
+}
+
+let CategoryName = "Concepts Issue" in {
+def err_concept_definition_not_identifier : Error<
+  "name defined in concept definition must be an identifier">;
+def ext_concept_legacy_bool_keyword : ExtWarn<
+  "ISO C++2a does not permit the 'bool' keyword after 'concept'">,
+  InGroup<DiagGroup<"concepts-ts-compat">>;
 }
 
 } // end of Parser diagnostics

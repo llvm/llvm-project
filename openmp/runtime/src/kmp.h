@@ -3663,7 +3663,7 @@ extern void __kmp_init_implicit_task(ident_t *loc_ref, kmp_info_t *this_thr,
 extern void __kmp_finish_implicit_task(kmp_info_t *this_thr);
 extern void __kmp_free_implicit_task(kmp_info_t *this_thr);
 
-#ifdef OMP_50_ENABLED
+#if OMP_50_ENABLED
 extern kmp_event_t *__kmpc_task_allow_completion_event(ident_t *loc_ref,
                                                        int gtid,
                                                        kmp_task_t *task);

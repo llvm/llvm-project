@@ -13,7 +13,7 @@
 # BEFORE:      Type: PT_LOAD
 # BEFORE-NEXT: Offset: 0x240
 
-# AFTER:      SectionHeaderCount: 3
+# AFTER:      SectionHeaderCount: 5
 # AFTER:      Type: PT_LOAD
 # AFTER-NEXT: Offset: 0x0
 # AFTER:      Type: PT_LOAD

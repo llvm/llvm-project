@@ -152,6 +152,12 @@ bool AMDGPUTargetInfo::initFeatureMap(
       Features["gfx10-insts"] = true;
       Features["s-memrealtime"] = true;
       break;
+    case GK_GFX908:
+      Features["dot3-insts"] = true;
+      Features["dot4-insts"] = true;
+      Features["dot5-insts"] = true;
+      Features["dot6-insts"] = true;
+      LLVM_FALLTHROUGH;
     case GK_GFX906:
       Features["dl-insts"] = true;
       Features["dot1-insts"] = true;

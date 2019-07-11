@@ -217,8 +217,8 @@ define amdgpu_kernel void @v_fneg_add_multi_use_fneg_x_f32(float addrspace(1)* %
 ; This one asserted with -enable-no-signed-zeros-fp-math
 ; GCN-LABEL: {{^}}fneg_fadd_0:
 ; GCN-SAFE-DAG: v_mad_f32 [[A:v[0-9]+]],
-; GCN-SAFE-DAG: v_xor_b32_e32 [[B:v[0-9]+]], 0x80000000
 ; GCN-SAFE-DAG: v_cmp_ngt_f32_e32 {{.*}}, [[A]]
+; GCN-SAFE-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, -[[A]]
 ; GCN-NSZ-DAG: v_mac_f32_e32 [[C:v[0-9]+]],
 ; GCN-NSZ-DAG: v_cmp_nlt_f32_e64 {{.*}}, -[[C]]
 

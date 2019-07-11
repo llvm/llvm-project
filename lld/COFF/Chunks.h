@@ -90,11 +90,6 @@ public:
     assert(RVA == V && "RVA truncated");
   }
 
-  // Returns true if this has non-zero data. BSS chunks return
-  // false. If false is returned, the space occupied by this chunk
-  // will be filled with zeros.
-  bool hasData() const { return HasData; }
-
   // Returns readable/writable/executable bits.
   uint32_t getOutputCharacteristics() const;
 
@@ -126,10 +121,14 @@ protected:
 
   const Kind ChunkKind;
 
-  // True if the section has data. Corresponds to the
+public:
+  // Returns true if this has non-zero data. BSS chunks return
+  // false. If false is returned, the space occupied by this chunk
+  // will be filled with zeros. Corresponds to the
   // IMAGE_SCN_CNT_UNINITIALIZED_DATA section characteristic bit.
   uint8_t HasData : 1;
 
+public:
   // The alignment of this chunk, stored in log2 form. The writer uses the
   // value.
   uint8_t P2Align : 7;

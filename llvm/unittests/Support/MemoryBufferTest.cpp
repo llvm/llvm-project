@@ -149,11 +149,11 @@ void MemoryBufferTest::testGetOpenFileSlice(bool Reopen) {
     EXPECT_FALSE(sys::fs::openFileForRead(TestPath.c_str(), TestFD));
   }
 
-  ErrorOr<OwningBuffer> Buf =
-      MemoryBuffer::getOpenFileSlice(TestFD, TestPath.c_str(),
-                                     40000, // Size
-                                     80000  // Offset
-                                     );
+  ErrorOr<OwningBuffer> Buf = MemoryBuffer::getOpenFileSlice(
+      sys::fs::convertFDToNativeFile(TestFD), TestPath.c_str(),
+      40000, // Size
+      80000  // Offset
+  );
 
   std::error_code EC = Buf.getError();
   EXPECT_FALSE(EC);

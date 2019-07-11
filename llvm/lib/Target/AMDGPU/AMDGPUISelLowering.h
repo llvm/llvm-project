@@ -182,7 +182,8 @@ public:
                              ISD::LoadExtType ExtType,
                              EVT ExtVT) const override;
 
-  bool isLoadBitCastBeneficial(EVT, EVT) const final;
+  bool isLoadBitCastBeneficial(EVT, EVT, const SelectionDAG &DAG,
+                               const MachineMemOperand &MMO) const final;
 
   bool storeOfVectorConstantIsCheap(EVT MemVT,
                                     unsigned NumElem,
@@ -532,6 +533,10 @@ enum NodeType : unsigned {
   BUFFER_ATOMIC_OR,
   BUFFER_ATOMIC_XOR,
   BUFFER_ATOMIC_CMPSWAP,
+  BUFFER_ATOMIC_FADD,
+  BUFFER_ATOMIC_PK_FADD,
+  ATOMIC_FADD,
+  ATOMIC_PK_FADD,
 
   LAST_AMDGPU_ISD_NUMBER
 };

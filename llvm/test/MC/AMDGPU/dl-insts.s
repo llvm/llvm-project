@@ -1,4 +1,5 @@
 // RUN: llvm-mc -arch=amdgcn -mcpu=gfx906 -show-encoding %s | FileCheck %s
+// RUN: llvm-mc -arch=amdgcn -mcpu=gfx908 -show-encoding %s | FileCheck %s
 
 //
 // VOP2 Instructions.

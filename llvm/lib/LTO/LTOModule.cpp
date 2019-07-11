@@ -130,7 +130,8 @@ LTOModule::createFromOpenFileSlice(LLVMContext &Context, int fd, StringRef path,
                                    size_t map_size, off_t offset,
                                    const TargetOptions &options) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-      MemoryBuffer::getOpenFileSlice(fd, path, map_size, offset);
+      MemoryBuffer::getOpenFileSlice(sys::fs::convertFDToNativeFile(fd), path,
+                                     map_size, offset);
   if (std::error_code EC = BufferOrErr.getError()) {
     Context.emitError(EC.message());
     return EC;

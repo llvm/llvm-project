@@ -1144,5 +1144,8 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
                              MFI->ArgInfo.WorkItemIDZ)))
     return true;
 
+  MFI->Mode.IEEE = YamlMFI.Mode.IEEE;
+  MFI->Mode.DX10Clamp = YamlMFI.Mode.DX10Clamp;
+
   return false;
 }

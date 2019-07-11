@@ -16,7 +16,7 @@ int8x8_t test_vtbl1_s8(int8x8_t a, int8x8_t b) {
 // CHECK-LABEL: define <8 x i8> @test_vqtbl1_s8(<16 x i8> %a, <8 x i8> %b) #1 {
 // CHECK:   [[VTBL1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl1.v8i8(<16 x i8> %a, <8 x i8> %b) #3
 // CHECK:   ret <8 x i8> [[VTBL1_I]]
-int8x8_t test_vqtbl1_s8(int8x16_t a, int8x8_t b) {
+int8x8_t test_vqtbl1_s8(int8x16_t a, uint8x8_t b) {
   return vqtbl1_s8(a, b);
 }
 
@@ -59,7 +59,7 @@ int8x8_t test_vtbl2_s8(int8x8x2_t a, int8x8_t b) {
 // CHECK:   [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
 // CHECK:   [[VTBL2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl2.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> %b) #3
 // CHECK:   ret <8 x i8> [[VTBL2_I]]
-int8x8_t test_vqtbl2_s8(int8x16x2_t a, int8x8_t b) {
+int8x8_t test_vqtbl2_s8(int8x16x2_t a, uint8x8_t b) {
   return vqtbl2_s8(a, b);
 }
 
@@ -109,7 +109,7 @@ int8x8_t test_vtbl3_s8(int8x8x3_t a, int8x8_t b) {
 // CHECK:   [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
 // CHECK:   [[VTBL3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl3.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> %b) #3
 // CHECK:   ret <8 x i8> [[VTBL3_I]]
-int8x8_t test_vqtbl3_s8(int8x16x3_t a, int8x8_t b) {
+int8x8_t test_vqtbl3_s8(int8x16x3_t a, uint8x8_t b) {
   return vqtbl3_s8(a, b);
 }
 
@@ -165,7 +165,7 @@ int8x8_t test_vtbl4_s8(int8x8x4_t a, int8x8_t b) {
 // CHECK:   [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
 // CHECK:   [[VTBL4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbl4.v8i8(<16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> %b) #3
 // CHECK:   ret <8 x i8> [[VTBL4_I]]
-int8x8_t test_vqtbl4_s8(int8x16x4_t a, int8x8_t b) {
+int8x8_t test_vqtbl4_s8(int8x16x4_t a, uint8x8_t b) {
   return vqtbl4_s8(a, b);
 }
 
@@ -348,7 +348,7 @@ int8x8_t test_vtbx4_s8(int8x8_t a, int8x8x4_t b, int8x8_t c) {
 // CHECK-LABEL: define <8 x i8> @test_vqtbx1_s8(<8 x i8> %a, <16 x i8> %b, <8 x i8> %c) #1 {
 // CHECK:   [[VTBX1_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx1.v8i8(<8 x i8> %a, <16 x i8> %b, <8 x i8> %c) #3
 // CHECK:   ret <8 x i8> [[VTBX1_I]]
-int8x8_t test_vqtbx1_s8(int8x8_t a, int8x16_t b, int8x8_t c) {
+int8x8_t test_vqtbx1_s8(int8x8_t a, int8x16_t b, uint8x8_t c) {
   return vqtbx1_s8(a, b, c);
 }
 
@@ -369,7 +369,7 @@ int8x8_t test_vqtbx1_s8(int8x8_t a, int8x16_t b, int8x8_t c) {
 // CHECK:   [[TMP2:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX2_I]], align 16
 // CHECK:   [[VTBX2_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx2.v8i8(<8 x i8> %a, <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <8 x i8> %c) #3
 // CHECK:   ret <8 x i8> [[VTBX2_I]]
-int8x8_t test_vqtbx2_s8(int8x8_t a, int8x16x2_t b, int8x8_t c) {
+int8x8_t test_vqtbx2_s8(int8x8_t a, int8x16x2_t b, uint8x8_t c) {
   return vqtbx2_s8(a, b, c);
 }
 
@@ -393,7 +393,7 @@ int8x8_t test_vqtbx2_s8(int8x8_t a, int8x16x2_t b, int8x8_t c) {
 // CHECK:   [[TMP3:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX4_I]], align 16
 // CHECK:   [[VTBX3_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx3.v8i8(<8 x i8> %a, <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <8 x i8> %c) #3
 // CHECK:   ret <8 x i8> [[VTBX3_I]]
-int8x8_t test_vqtbx3_s8(int8x8_t a, int8x16x3_t b, int8x8_t c) {
+int8x8_t test_vqtbx3_s8(int8x8_t a, int8x16x3_t b, uint8x8_t c) {
   return vqtbx3_s8(a, b, c);
 }
 
@@ -420,14 +420,14 @@ int8x8_t test_vqtbx3_s8(int8x8_t a, int8x16x3_t b, int8x8_t c) {
 // CHECK:   [[TMP4:%.*]] = load <16 x i8>, <16 x i8>* [[ARRAYIDX6_I]], align 16
 // CHECK:   [[VTBX4_I:%.*]] = call <8 x i8> @llvm.aarch64.neon.tbx4.v8i8(<8 x i8> %a, <16 x i8> [[TMP1]], <16 x i8> [[TMP2]], <16 x i8> [[TMP3]], <16 x i8> [[TMP4]], <8 x i8> %c) #3
 // CHECK:   ret <8 x i8> [[VTBX4_I]]
-int8x8_t test_vqtbx4_s8(int8x8_t a, int8x16x4_t b, int8x8_t c) {
+int8x8_t test_vqtbx4_s8(int8x8_t a, int8x16x4_t b, uint8x8_t c) {
   return vqtbx4_s8(a, b, c);
 }
 
 // CHECK-LABEL: define <16 x i8> @test_vqtbx1q_s8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) #1 {
 // CHECK:   [[VTBX1_I:%.*]] = call <16 x i8> @llvm.aarch64.neon.tbx1.v16i8(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c) #3
 // CHECK:   ret <16 x i8> [[VTBX1_I]]
-int8x16_t test_vqtbx1q_s8(int8x16_t a, int8x16_t b, int8x16_t c) {
+int8x16_t test_vqtbx1q_s8(int8x16_t a, int8x16_t b, uint8x16_t c) {
   return vqtbx1q_s8(a, b, c);
 }
 

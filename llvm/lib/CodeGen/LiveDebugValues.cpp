@@ -39,6 +39,7 @@
 #include "llvm/CodeGen/TargetFrameLowering.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/Config/llvm-config.h"
@@ -185,7 +186,8 @@ private:
       InvalidKind = 0,
       RegisterKind,
       SpillLocKind,
-      ImmediateKind
+      ImmediateKind,
+      EntryValueKind
     } Kind = InvalidKind;
 
     /// The value location. Stored separately to avoid repeatedly
@@ -199,14 +201,15 @@ private:
       const ConstantInt *CImm;
     } Loc;
 
-    VarLoc(const MachineInstr &MI, LexicalScopes &LS)
-        : Var(MI), MI(MI), UVS(MI.getDebugLoc(), LS) {
+    VarLoc(const MachineInstr &MI, LexicalScopes &LS,
+          VarLocKind K = InvalidKind)
+        : Var(MI), MI(MI), UVS(MI.getDebugLoc(), LS){
       static_assert((sizeof(Loc) == sizeof(uint64_t)),
                     "hash does not cover all members of Loc");
       assert(MI.isDebugValue() && "not a DBG_VALUE");
       assert(MI.getNumOperands() == 4 && "malformed DBG_VALUE");
       if (int RegNo = isDbgValueDescribedByReg(MI)) {
-        Kind = RegisterKind;
+        Kind = MI.isDebugEntryValue() ? EntryValueKind : RegisterKind;
         Loc.RegNo = RegNo;
       } else if (MI.getOperand(0).isImm()) {
         Kind = ImmediateKind;
@@ -218,6 +221,8 @@ private:
         Kind = ImmediateKind;
         Loc.CImm = MI.getOperand(0).getCImm();
       }
+      assert((Kind != ImmediateKind || !MI.isDebugEntryValue()) &&
+             "entry values must be register locations");
     }
 
     /// The constructor for spill locations.
@@ -256,12 +261,12 @@ private:
 
     /// This operator guarantees that VarLocs are sorted by Variable first.
     bool operator<(const VarLoc &Other) const {
-      if (Var == Other.Var)
-        return Loc.Hash < Other.Loc.Hash;
-      return Var < Other.Var;
+      return std::tie(Var, Kind, Loc.Hash) <
+             std::tie(Other.Var, Other.Kind, Other.Loc.Hash);
     }
   };
 
+  using DebugParamMap = SmallDenseMap<const DILocalVariable *, MachineInstr *>;
   using VarLocMap = UniqueVector<VarLoc>;
   using VarLocSet = SparseBitVector<>;
   using VarLocInMBB = SmallDenseMap<const MachineBasicBlock *, VarLocSet>;
@@ -347,17 +352,23 @@ private:
                           VarLocMap &VarLocIDs);
   void transferSpillOrRestoreInst(MachineInstr &MI, OpenRangesSet &OpenRanges,
                                   VarLocMap &VarLocIDs, TransferMap &Transfers);
+  void emitEntryValues(MachineInstr &MI, OpenRangesSet &OpenRanges,
+                       VarLocMap &VarLocIDs, TransferMap &Transfers,
+                       DebugParamMap &DebugEntryVals,
+                       SparseBitVector<> &KillSet);
   void transferRegisterCopy(MachineInstr &MI, OpenRangesSet &OpenRanges,
                             VarLocMap &VarLocIDs, TransferMap &Transfers);
   void transferRegisterDef(MachineInstr &MI, OpenRangesSet &OpenRanges,
-                           const VarLocMap &VarLocIDs);
+                           VarLocMap &VarLocIDs, TransferMap &Transfers,
+                           DebugParamMap &DebugEntryVals);
   bool transferTerminatorInst(MachineInstr &MI, OpenRangesSet &OpenRanges,
                               VarLocInMBB &OutLocs, const VarLocMap &VarLocIDs);
 
   bool process(MachineInstr &MI, OpenRangesSet &OpenRanges,
                VarLocInMBB &OutLocs, VarLocMap &VarLocIDs,
-               TransferMap &Transfers, bool transferChanges,
-               OverlapMap &OverlapFragments, VarToFragments &SeenFragments);
+               TransferMap &Transfers, DebugParamMap &DebugEntryVals,
+               bool transferChanges, OverlapMap &OverlapFragments,
+               VarToFragments &SeenFragments);
 
   void accumulateFragmentMap(MachineInstr &MI, VarToFragments &SeenFragments,
                              OverlapMap &OLapMap);
@@ -568,6 +579,44 @@ void LiveDebugValues::transferDebugValue(const MachineInstr &MI,
   }
 }
 
+void LiveDebugValues::emitEntryValues(MachineInstr &MI,
+                                      OpenRangesSet &OpenRanges,
+                                      VarLocMap &VarLocIDs,
+                                      TransferMap &Transfers,
+                                      DebugParamMap &DebugEntryVals,
+                                      SparseBitVector<> &KillSet) {
+  MachineFunction *MF = MI.getParent()->getParent();
+  for (unsigned ID : KillSet) {
+    if (!VarLocIDs[ID].Var.getVar()->isParameter())
+      continue;
+
+    const MachineInstr *CurrDebugInstr = &VarLocIDs[ID].MI;
+
+    // If parameter's DBG_VALUE is not in the map that means we can't
+    // generate parameter's entry value.
+    if (!DebugEntryVals.count(CurrDebugInstr->getDebugVariable()))
+      continue;
+
+    auto ParamDebugInstr = DebugEntryVals[CurrDebugInstr->getDebugVariable()];
+    DIExpression *NewExpr = DIExpression::prepend(
+        ParamDebugInstr->getDebugExpression(), DIExpression::EntryValue);
+    MachineInstr *EntryValDbgMI =
+        BuildMI(*MF, ParamDebugInstr->getDebugLoc(), ParamDebugInstr->getDesc(),
+                ParamDebugInstr->isIndirectDebugValue(),
+                ParamDebugInstr->getOperand(0).getReg(),
+                ParamDebugInstr->getDebugVariable(), NewExpr);
+
+    if (ParamDebugInstr->isIndirectDebugValue())
+      EntryValDbgMI->getOperand(1).setImm(
+          ParamDebugInstr->getOperand(1).getImm());
+
+    Transfers.push_back({&MI, EntryValDbgMI});
+    VarLoc VL(*EntryValDbgMI, LS);
+    unsigned EntryValLocID = VarLocIDs.insert(VL);
+    OpenRanges.insert(EntryValLocID, VL.Var);
+  }
+}
+
 /// Create new TransferDebugPair and insert it in \p Transfers. The VarLoc
 /// with \p OldVarID should be deleted form \p OpenRanges and replaced with
 /// new VarLoc. If \p NewReg is different than default zero value then the
@@ -658,9 +707,9 @@ void LiveDebugValues::insertTransferDebugPair(
 }
 
 /// A definition of a register may mark the end of a range.
-void LiveDebugValues::transferRegisterDef(MachineInstr &MI,
-                                          OpenRangesSet &OpenRanges,
-                                          const VarLocMap &VarLocIDs) {
+void LiveDebugValues::transferRegisterDef(
+    MachineInstr &MI, OpenRangesSet &OpenRanges, VarLocMap &VarLocIDs,
+    TransferMap &Transfers, DebugParamMap &DebugEntryVals) {
   MachineFunction *MF = MI.getMF();
   const TargetLowering *TLI = MF->getSubtarget().getTargetLowering();
   unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
@@ -690,6 +739,13 @@ void LiveDebugValues::transferRegisterDef(MachineInstr &MI,
     }
   }
   OpenRanges.erase(KillSet, VarLocIDs);
+
+  if (auto *TPC = getAnalysisIfAvailable<TargetPassConfig>()) {
+    auto &TM = TPC->getTM<TargetMachine>();
+    if (TM.Options.EnableDebugEntryValues)
+      emitEntryValues(MI, OpenRanges, VarLocIDs, Transfers, DebugEntryVals,
+                      KillSet);
+  }
 }
 
 /// Decide if @MI is a spill instruction and return true if it is. We use 2
@@ -941,12 +997,14 @@ void LiveDebugValues::accumulateFragmentMap(MachineInstr &MI,
 /// This routine creates OpenRanges and OutLocs.
 bool LiveDebugValues::process(MachineInstr &MI, OpenRangesSet &OpenRanges,
                               VarLocInMBB &OutLocs, VarLocMap &VarLocIDs,
-                              TransferMap &Transfers, bool transferChanges,
+                              TransferMap &Transfers, DebugParamMap &DebugEntryVals,
+                              bool transferChanges,
                               OverlapMap &OverlapFragments,
                               VarToFragments &SeenFragments) {
   bool Changed = false;
   transferDebugValue(MI, OpenRanges, VarLocIDs);
-  transferRegisterDef(MI, OpenRanges, VarLocIDs);
+  transferRegisterDef(MI, OpenRanges, VarLocIDs, Transfers,
+                      DebugEntryVals);
   if (transferChanges) {
     transferRegisterCopy(MI, OpenRanges, VarLocIDs, Transfers);
     transferSpillOrRestoreInst(MI, OpenRanges, VarLocIDs, Transfers);
@@ -1100,6 +1158,43 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
 
   enum : bool { dontTransferChanges = false, transferChanges = true };
 
+  // Besides parameter's modification, check whether a DBG_VALUE is inlined
+  // in order to deduce whether the variable that it tracks comes from
+  // a different function. If that is the case we can't track its entry value.
+  auto IsUnmodifiedFuncParam = [&](const MachineInstr &MI) {
+    auto *DIVar = MI.getDebugVariable();
+    return DIVar->isParameter() && DIVar->isNotModified() &&
+           !MI.getDebugLoc()->getInlinedAt();
+  };
+
+  const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
+  unsigned SP = TLI->getStackPointerRegisterToSaveRestore();
+  unsigned FP = TRI->getFrameRegister(MF);
+  auto IsRegOtherThanSPAndFP = [&](const MachineOperand &Op) -> bool {
+    return Op.isReg() && Op.getReg() != SP && Op.getReg() != FP;
+  };
+
+  // Working set of currently collected debug variables mapped to DBG_VALUEs
+  // representing candidates for production of debug entry values.
+  DebugParamMap DebugEntryVals;
+
+  MachineBasicBlock &First_MBB = *(MF.begin());
+  // Only in the case of entry MBB collect DBG_VALUEs representing
+  // function parameters in order to generate debug entry values for them.
+  // Currently, we generate debug entry values only for parameters that are
+  // unmodified throughout the function and located in a register.
+  // TODO: Add support for parameters that are described as fragments.
+  // TODO: Add support for modified arguments that can be expressed
+  // by using its entry value.
+  // TODO: Add support for local variables that are expressed in terms of
+  // parameters entry values.
+  for (auto &MI : First_MBB)
+    if (MI.isDebugValue() && IsUnmodifiedFuncParam(MI) &&
+        !MI.isIndirectDebugValue() && IsRegOtherThanSPAndFP(MI.getOperand(0)) &&
+        !DebugEntryVals.count(MI.getDebugVariable()) &&
+        !MI.getDebugExpression()->isFragment())
+      DebugEntryVals[MI.getDebugVariable()] = &MI;
+
   // Initialize every mbb with OutLocs.
   // We are not looking at any spill instructions during the initial pass
   // over the BBs. The LiveDebugVariables pass has already created DBG_VALUE
@@ -1107,9 +1202,16 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
   // within the BB in which the spill occurs.
   for (auto &MBB : MF) {
     for (auto &MI : MBB) {
-      process(MI, OpenRanges, OutLocs, VarLocIDs, Transfers,
+      process(MI, OpenRanges, OutLocs, VarLocIDs, Transfers, DebugEntryVals,
               dontTransferChanges, OverlapFragments, SeenFragments);
     }
+    // Add any entry DBG_VALUE instructions necessitated by parameter
+    // clobbering.
+    for (auto &TR : Transfers) {
+      MBB.insertAfter(MachineBasicBlock::iterator(*TR.TransferInst),
+                     TR.DebugInst);
+    }
+    Transfers.clear();
   }
 
   auto hasNonArtificialLocation = [](const MachineInstr &MI) -> bool {
@@ -1158,7 +1260,8 @@ bool LiveDebugValues::ExtendRanges(MachineFunction &MF) {
         for (auto &MI : *MBB)
           OLChanged |=
               process(MI, OpenRanges, OutLocs, VarLocIDs, Transfers,
-                      transferChanges, OverlapFragments, SeenFragments);
+                      DebugEntryVals, transferChanges, OverlapFragments,
+                      SeenFragments);
 
         // Add any DBG_VALUE instructions necessitated by spills.
         for (auto &TR : Transfers)

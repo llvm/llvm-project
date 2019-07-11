@@ -5,4 +5,4 @@
 __global__ void hip_kernel_temp() {
 }
 
-// CHECK: attributes {{.*}} = {{.*}} "amdgpu-implicitarg-num-bytes"="48"
+// CHECK: attributes {{.*}} = {{.*}} "amdgpu-implicitarg-num-bytes"="56"

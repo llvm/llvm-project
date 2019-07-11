@@ -35,6 +35,12 @@
 using namespace clang;
 using namespace clang::syntax;
 
+syntax::Token::Token(SourceLocation Location, unsigned Length,
+                     tok::TokenKind Kind)
+    : Location(Location), Length(Length), Kind(Kind) {
+  assert(Location.isValid());
+}
+
 syntax::Token::Token(const clang::Token &T)
     : Token(T.getLocation(), T.getLength(), T.getKind()) {
   assert(!T.isAnnotation());

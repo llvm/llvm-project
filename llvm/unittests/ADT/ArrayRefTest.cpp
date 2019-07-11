@@ -33,10 +33,6 @@ static_assert(
 
 // Check that we can't accidentally assign a temporary location to an ArrayRef.
 // (Unfortunately we can't make use of the same thing with constructors.)
-//
-// Disable this check under MSVC; even MSVC 2015 isn't inconsistent between
-// std::is_assignable and actually writing such an assignment.
-#if !defined(_MSC_VER)
 static_assert(
     !std::is_assignable<ArrayRef<int *>&, int *>::value,
     "Assigning from single prvalue element");
@@ -49,7 +45,6 @@ static_assert(
 static_assert(
     !std::is_assignable<ArrayRef<int *>&, std::initializer_list<int *>>::value,
     "Assigning from an initializer list");
-#endif
 
 namespace {
 

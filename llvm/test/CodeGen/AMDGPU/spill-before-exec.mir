@@ -99,6 +99,6 @@ body:             |
     S_CMP_EQ_U64 %1120.sub0_sub1, %1121.sub2_sub3, implicit-def $scc
 
     $vgpr0 = V_MOV_B32_e32 0, implicit $exec
-    S_SETPC_B64_return %0, implicit $vgpr0
+    S_SETPC_B64_return undef $sgpr30_sgpr31, implicit %0, implicit $vgpr0
 
 ...

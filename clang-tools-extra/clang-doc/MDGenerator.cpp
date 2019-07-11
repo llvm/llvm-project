@@ -18,76 +18,33 @@ using namespace llvm;
 namespace clang {
 namespace doc {
 
-// Enum conversion
-
-std::string getAccess(AccessSpecifier AS) {
-  switch (AS) {
-  case AccessSpecifier::AS_public:
-    return "public";
-  case AccessSpecifier::AS_protected:
-    return "protected";
-  case AccessSpecifier::AS_private:
-    return "private";
-  case AccessSpecifier::AS_none:
-    return {};
-  }
-  llvm_unreachable("Unknown AccessSpecifier");
-}
-
-std::string getTagType(TagTypeKind AS) {
-  switch (AS) {
-  case TagTypeKind::TTK_Class:
-    return "class";
-  case TagTypeKind::TTK_Union:
-    return "union";
-  case TagTypeKind::TTK_Interface:
-    return "interface";
-  case TagTypeKind::TTK_Struct:
-    return "struct";
-  case TagTypeKind::TTK_Enum:
-    return "enum";
-  }
-  llvm_unreachable("Unknown TagTypeKind");
-}
-
 // Markdown generation
 
-std::string genItalic(const Twine &Text) { return "*" + Text.str() + "*"; }
-
-std::string genEmphasis(const Twine &Text) { return "**" + Text.str() + "**"; }
-
-std::string genLink(const Twine &Text, const Twine &Link) {
-  return "[" + Text.str() + "](" + Link.str() + ")";
+static std::string genItalic(const Twine &Text) {
+  return "*" + Text.str() + "*";
 }
 
-std::string genReferenceList(const llvm::SmallVectorImpl<Reference> &Refs) {
-  std::string Buffer;
-  llvm::raw_string_ostream Stream(Buffer);
-  bool First = true;
-  for (const auto &R : Refs) {
-    if (!First)
-      Stream << ", ";
-    Stream << R.Name;
-    First = false;
-  }
-  return Stream.str();
+static std::string genEmphasis(const Twine &Text) {
+  return "**" + Text.str() + "**";
 }
 
-void writeLine(const Twine &Text, raw_ostream &OS) { OS << Text << "\n\n"; }
+static void writeLine(const Twine &Text, raw_ostream &OS) {
+  OS << Text << "\n\n";
+}
 
-void writeNewLine(raw_ostream &OS) { OS << "\n\n"; }
+static void writeNewLine(raw_ostream &OS) { OS << "\n\n"; }
 
-void writeHeader(const Twine &Text, unsigned int Num, raw_ostream &OS) {
+static void writeHeader(const Twine &Text, unsigned int Num, raw_ostream &OS) {
   OS << std::string(Num, '#') + " " + Text << "\n\n";
 }
 
-void writeFileDefinition(const Location &L, raw_ostream &OS) {
+static void writeFileDefinition(const Location &L, raw_ostream &OS) {
   OS << genItalic("Defined at line " + std::to_string(L.LineNumber) + " of " +
                   L.Filename)
      << "\n\n";
 }
 
-void writeDescription(const CommentInfo &I, raw_ostream &OS) {
+static void writeDescription(const CommentInfo &I, raw_ostream &OS) {
   if (I.Kind == "FullComment") {
     for (const auto &Child : I.Children)
       writeDescription(*Child, OS);
@@ -135,7 +92,7 @@ void writeDescription(const CommentInfo &I, raw_ostream &OS) {
   }
 }
 
-void genMarkdown(const EnumInfo &I, llvm::raw_ostream &OS) {
+static void genMarkdown(const EnumInfo &I, llvm::raw_ostream &OS) {
   if (I.Scoped)
     writeLine("| enum class " + I.Name + " |", OS);
   else
@@ -155,7 +112,7 @@ void genMarkdown(const EnumInfo &I, llvm::raw_ostream &OS) {
     writeDescription(C, OS);
 }
 
-void genMarkdown(const FunctionInfo &I, llvm::raw_ostream &OS) {
+static void genMarkdown(const FunctionInfo &I, llvm::raw_ostream &OS) {
   std::string Buffer;
   llvm::raw_string_ostream Stream(Buffer);
   bool First = true;
@@ -182,7 +139,7 @@ void genMarkdown(const FunctionInfo &I, llvm::raw_ostream &OS) {
     writeDescription(C, OS);
 }
 
-void genMarkdown(const NamespaceInfo &I, llvm::raw_ostream &OS) {
+static void genMarkdown(const NamespaceInfo &I, llvm::raw_ostream &OS) {
   if (I.Name == "")
     writeHeader("Global Namespace", 1, OS);
   else
@@ -221,7 +178,7 @@ void genMarkdown(const NamespaceInfo &I, llvm::raw_ostream &OS) {
   }
 }
 
-void genMarkdown(const RecordInfo &I, llvm::raw_ostream &OS) {
+static void genMarkdown(const RecordInfo &I, llvm::raw_ostream &OS) {
   writeHeader(getTagType(I.TagType) + " " + I.Name, 1, OS);
   if (I.DefLoc)
     writeFileDefinition(I.DefLoc.getValue(), OS);

@@ -160,22 +160,6 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
     // in debug sections.
     if ((isa<FunctionSymbol>(Sym) || isa<DataSymbol>(Sym)) && !Sym->isLive())
       return 0;
-
-    // Special handling for undefined data symbols.  Most relocations against
-    // such symbols cannot be resolved.
-    if (isa<DataSymbol>(Sym) && Sym->isUndefined()) {
-      if (Sym->isWeak() || Config->Relocatable)
-        return 0;
-      // R_WASM_MEMORY_ADDR_I32 relocations in PIC code are turned into runtime
-      // fixups in __wasm_apply_relocs
-      if (Config->Pic && Reloc.Type == R_WASM_MEMORY_ADDR_I32)
-        return 0;
-      if (Reloc.Type != R_WASM_GLOBAL_INDEX_LEB) {
-        llvm_unreachable(
-          ("invalid relocation against undefined data symbol: " + toString(*Sym))
-              .c_str());
-      }
-    }
   }
 
   switch (Reloc.Type) {
@@ -189,6 +173,8 @@ uint32_t ObjFile::calcNewValue(const WasmRelocation &Reloc) const {
   case R_WASM_MEMORY_ADDR_I32:
   case R_WASM_MEMORY_ADDR_LEB:
   case R_WASM_MEMORY_ADDR_REL_SLEB:
+    if (isa<UndefinedData>(Sym))
+      return 0;
     return cast<DefinedData>(Sym)->getVirtualAddress() + Reloc.Addend;
   case R_WASM_TYPE_INDEX_LEB:
     return TypeMap[Reloc.Index];

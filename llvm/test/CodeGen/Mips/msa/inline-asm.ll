@@ -1,6 +1,6 @@
 ; A basic inline assembly test
 
-; RUN: llc -march=mips -mattr=+msa,+fp64 < %s | FileCheck %s
+; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 < %s | FileCheck %s
 
 @v4i32_r  = global <4 x i32> zeroinitializer, align 16
 

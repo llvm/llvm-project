@@ -113,10 +113,10 @@ void CodeSection::writeTo(uint8_t *Buf) {
     Chunk->writeTo(Buf);
 }
 
-uint32_t CodeSection::numRelocations() const {
+uint32_t CodeSection::getNumRelocations() const {
   uint32_t Count = 0;
   for (const InputChunk *Func : Functions)
-    Count += Func->NumRelocations();
+    Count += Func->getNumRelocations();
   return Count;
 }
 
@@ -190,11 +190,11 @@ void DataSection::writeTo(uint8_t *Buf) {
   }
 }
 
-uint32_t DataSection::numRelocations() const {
+uint32_t DataSection::getNumRelocations() const {
   uint32_t Count = 0;
   for (const OutputSegment *Seg : Segments)
     for (const InputChunk *InputSeg : Seg->InputSegments)
-      Count += InputSeg->NumRelocations();
+      Count += InputSeg->getNumRelocations();
   return Count;
 }
 
@@ -237,10 +237,10 @@ void CustomSection::writeTo(uint8_t *Buf) {
     Section->writeTo(Buf);
 }
 
-uint32_t CustomSection::numRelocations() const {
+uint32_t CustomSection::getNumRelocations() const {
   uint32_t Count = 0;
   for (const InputSection *InputSect : InputSections)
-    Count += InputSect->NumRelocations();
+    Count += InputSect->getNumRelocations();
   return Count;
 }
 

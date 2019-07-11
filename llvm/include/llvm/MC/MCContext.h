@@ -18,6 +18,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
+#include "llvm/BinaryFormat/XCOFF.h"
 #include "llvm/MC/MCAsmMacro.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCSubtargetInfo.h"
@@ -49,6 +50,7 @@ namespace llvm {
   class MCSectionELF;
   class MCSectionMachO;
   class MCSectionWasm;
+  class MCSectionXCOFF;
   class MCStreamer;
   class MCSymbol;
   class MCSymbolELF;
@@ -91,6 +93,7 @@ namespace llvm {
     SpecificBumpPtrAllocator<MCSectionELF> ELFAllocator;
     SpecificBumpPtrAllocator<MCSectionMachO> MachOAllocator;
     SpecificBumpPtrAllocator<MCSectionWasm> WasmAllocator;
+    SpecificBumpPtrAllocator<MCSectionXCOFF> XCOFFAllocator;
 
     /// Bindings of names to symbols.
     SymbolTable Symbols;
@@ -246,10 +249,25 @@ namespace llvm {
       }
     };
 
+    struct XCOFFSectionKey {
+      std::string SectionName;
+      XCOFF::StorageMappingClass MappingClass;
+
+      XCOFFSectionKey(StringRef SectionName,
+                      XCOFF::StorageMappingClass MappingClass)
+          : SectionName(SectionName), MappingClass(MappingClass) {}
+
+      bool operator<(const XCOFFSectionKey &Other) const {
+        return std::tie(SectionName, MappingClass) <
+               std::tie(Other.SectionName, Other.MappingClass);
+      }
+    };
+
     StringMap<MCSectionMachO *> MachOUniquingMap;
     std::map<ELFSectionKey, MCSectionELF *> ELFUniquingMap;
     std::map<COFFSectionKey, MCSectionCOFF *> COFFUniquingMap;
     std::map<WasmSectionKey, MCSectionWasm *> WasmUniquingMap;
+    std::map<XCOFFSectionKey, MCSectionXCOFF *> XCOFFUniquingMap;
     StringMap<bool> RelSecNames;
 
     SpecificBumpPtrAllocator<MCSubtargetInfo> MCSubtargetAllocator;
@@ -469,6 +487,11 @@ namespace llvm {
     MCSectionWasm *getWasmSection(const Twine &Section, SectionKind K,
                                   const MCSymbolWasm *Group, unsigned UniqueID,
                                   const char *BeginSymName);
+
+    MCSectionXCOFF *getXCOFFSection(StringRef Section,
+                                    XCOFF::StorageMappingClass MappingClass,
+                                    SectionKind K,
+                                    const char *BeginSymName = nullptr);
 
     // Create and save a copy of STI and return a reference to the copy.
     MCSubtargetInfo &getSubtargetCopy(const MCSubtargetInfo &STI);

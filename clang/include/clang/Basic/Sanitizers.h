@@ -185,7 +185,7 @@ SanitizerMask expandSanitizerGroups(SanitizerMask Kinds);
 inline SanitizerMask getPPTransparentSanitizers() {
   return SanitizerKind::CFI | SanitizerKind::Integer |
          SanitizerKind::ImplicitConversion | SanitizerKind::Nullability |
-         SanitizerKind::Undefined;
+         SanitizerKind::Undefined | SanitizerKind::FloatDivideByZero;
 }
 
 } // namespace clang

@@ -23,6 +23,7 @@ static_library("Instrumentation") {
     "MemorySanitizer.cpp",
     "PGOInstrumentation.cpp",
     "PGOMemOPSizeOpt.cpp",
+    "PoisonChecking.cpp",
     "SanitizerCoverage.cpp",
     "ThreadSanitizer.cpp",
   ]

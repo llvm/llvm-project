@@ -12,21 +12,6 @@
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Mangler.h"
 
-namespace {
-
-  // A SimpleCompiler that owns its TargetMachine.
-  class TMOwningSimpleCompiler : public llvm::orc::SimpleCompiler {
-  public:
-    TMOwningSimpleCompiler(std::unique_ptr<llvm::TargetMachine> TM)
-      : llvm::orc::SimpleCompiler(*TM), TM(std::move(TM)) {}
-  private:
-    // FIXME: shared because std::functions (and thus
-    // IRCompileLayer::CompileFunction) are not moveable.
-    std::shared_ptr<llvm::TargetMachine> TM;
-  };
-
-} // end anonymous namespace
-
 namespace llvm {
 namespace orc {
 
@@ -86,6 +71,26 @@ LLJIT::createObjectLinkingLayer(LLJITBuilderState &S, ExecutionSession &ES) {
   return llvm::make_unique<RTDyldObjectLinkingLayer>(ES, std::move(GetMemMgr));
 }
 
+Expected<IRCompileLayer::CompileFunction>
+LLJIT::createCompileFunction(LLJITBuilderState &S,
+                             JITTargetMachineBuilder JTMB) {
+
+  /// If there is a custom compile function creator set then use it.
+  if (S.CreateCompileFunction)
+    return S.CreateCompileFunction(std::move(JTMB));
+
+  // Otherwise default to creating a SimpleCompiler, or ConcurrentIRCompiler,
+  // depending on the number of threads requested.
+  if (S.NumCompileThreads > 0)
+    return ConcurrentIRCompiler(std::move(JTMB));
+
+  auto TM = JTMB.createTargetMachine();
+  if (!TM)
+    return TM.takeError();
+
+  return TMOwningSimpleCompiler(std::move(*TM));
+}
+
 LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
     : ES(S.ES ? std::move(S.ES) : llvm::make_unique<ExecutionSession>()),
       Main(this->ES->getMainJITDylib()), DL(""), CtorRunner(Main),
@@ -95,25 +100,25 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
 
   ObjLinkingLayer = createObjectLinkingLayer(S, *ES);
 
-  if (S.NumCompileThreads > 0) {
+  if (auto DLOrErr = S.JTMB->getDefaultDataLayoutForTarget())
+    DL = std::move(*DLOrErr);
+  else {
+    Err = DLOrErr.takeError();
+    return;
+  }
 
-    // Configure multi-threaded.
-
-    if (auto DLOrErr = S.JTMB->getDefaultDataLayoutForTarget())
-      DL = std::move(*DLOrErr);
-    else {
-      Err = DLOrErr.takeError();
+  {
+    auto CompileFunction = createCompileFunction(S, std::move(*S.JTMB));
+    if (!CompileFunction) {
+      Err = CompileFunction.takeError();
       return;
     }
+    CompileLayer = llvm::make_unique<IRCompileLayer>(
+        *ES, *ObjLinkingLayer, std::move(*CompileFunction));
+  }
 
-    {
-      auto TmpCompileLayer = llvm::make_unique<IRCompileLayer>(
-          *ES, *ObjLinkingLayer, ConcurrentIRCompiler(std::move(*S.JTMB)));
-
-      TmpCompileLayer->setCloneToNewContextOnEmit(true);
-      CompileLayer = std::move(TmpCompileLayer);
-    }
-
+  if (S.NumCompileThreads > 0) {
+    CompileLayer->setCloneToNewContextOnEmit(true);
     CompileThreads = llvm::make_unique<ThreadPool>(S.NumCompileThreads);
     ES->setDispatchMaterialization(
         [this](JITDylib &JD, std::unique_ptr<MaterializationUnit> MU) {
@@ -122,20 +127,6 @@ LLJIT::LLJIT(LLJITBuilderState &S, Error &Err)
           auto Work = [SharedMU, &JD]() { SharedMU->doMaterialize(JD); };
           CompileThreads->async(std::move(Work));
         });
-  } else {
-
-    // Configure single-threaded.
-
-    auto TM = S.JTMB->createTargetMachine();
-    if (!TM) {
-      Err = TM.takeError();
-      return;
-    }
-
-    DL = (*TM)->createDataLayout();
-
-    CompileLayer = llvm::make_unique<IRCompileLayer>(
-        *ES, *ObjLinkingLayer, TMOwningSimpleCompiler(std::move(*TM)));
   }
 }
 

@@ -683,6 +683,16 @@ let SubtargetPredicate = isGFX10Plus, is_flat_global = 1 in {
     FLAT_Global_Atomic_Pseudo<"global_atomic_fmax_x2", VReg_64, f64>;
 } // End SubtargetPredicate = isGFX10Plus, is_flat_global = 1
 
+let SubtargetPredicate = HasAtomicFaddInsts, is_flat_global = 1 in {
+
+defm GLOBAL_ATOMIC_ADD_F32 : FLAT_Global_Atomic_Pseudo_NO_RTN <
+  "global_atomic_add_f32", VGPR_32, f32, atomic_add_global
+>;
+defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Global_Atomic_Pseudo_NO_RTN <
+  "global_atomic_pk_add_f16", VGPR_32, v2f16, atomic_add_global
+>;
+
+} // End SubtargetPredicate = HasAtomicFaddInsts
 
 //===----------------------------------------------------------------------===//
 // Flat Patterns
@@ -741,6 +751,11 @@ class FlatStoreSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueT
 class FlatAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt,
                      ValueType data_vt = vt> : GCNPat <
   (vt (node (FLATAtomic i64:$vaddr, i16:$offset, i1:$slc), data_vt:$data)),
+  (inst $vaddr, $data, $offset, $slc)
+>;
+
+class FlatAtomicPatNoRtn <FLAT_Pseudo inst, SDPatternOperator node, ValueType vt> : GCNPat <
+  (node (FLATAtomic i64:$vaddr, i16:$offset, i1:$slc), vt:$data),
   (inst $vaddr, $data, $offset, $slc)
 >;
 
@@ -829,6 +844,9 @@ def : FlatLoadPat_D16 <FLAT_LOAD_SHORT_D16, load_d16_lo_flat, v2f16>;
 
 } // End OtherPredicates = [HasFlatAddressSpace]
 
+def atomic_fadd_global    : global_binary_atomic_op_frag<SIglobal_atomic_fadd>;
+def atomic_pk_fadd_global : global_binary_atomic_op_frag<SIglobal_atomic_pk_fadd>;
+
 let OtherPredicates = [HasFlatGlobalInsts], AddedComplexity = 10 in {
 
 def : FlatLoadSignedPat <GLOBAL_LOAD_UBYTE, az_extloadi8_global, i32>;
@@ -905,6 +923,9 @@ def : FlatSignedAtomicPat <GLOBAL_ATOMIC_OR_X2_RTN, atomic_or_global, i64>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_SWAP_X2_RTN, atomic_swap_global, i64>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_CMPSWAP_X2_RTN, AMDGPUatomic_cmp_swap_global, i64, v2i64>;
 def : FlatSignedAtomicPat <GLOBAL_ATOMIC_XOR_X2_RTN, atomic_xor_global, i64>;
+
+def : FlatAtomicPatNoRtn <GLOBAL_ATOMIC_ADD_F32,    atomic_fadd_global, f32>;
+def : FlatAtomicPatNoRtn <GLOBAL_ATOMIC_PK_ADD_F16, atomic_pk_fadd_global, v2f16>;
 
 } // End OtherPredicates = [HasFlatGlobalInsts], AddedComplexity = 10
 
@@ -1326,3 +1347,10 @@ defm SCRATCH_LOAD_SBYTE_D16     : FLAT_Real_AllAddr_gfx10<0x022>;
 defm SCRATCH_LOAD_SBYTE_D16_HI  : FLAT_Real_AllAddr_gfx10<0x023>;
 defm SCRATCH_LOAD_SHORT_D16     : FLAT_Real_AllAddr_gfx10<0x024>;
 defm SCRATCH_LOAD_SHORT_D16_HI  : FLAT_Real_AllAddr_gfx10<0x025>;
+
+let SubtargetPredicate = HasAtomicFaddInsts in {
+
+defm GLOBAL_ATOMIC_ADD_F32    : FLAT_Real_AllAddr_vi <0x04d>;
+defm GLOBAL_ATOMIC_PK_ADD_F16 : FLAT_Real_AllAddr_vi <0x04e>;
+
+} // End SubtargetPredicate = HasAtomicFaddInsts

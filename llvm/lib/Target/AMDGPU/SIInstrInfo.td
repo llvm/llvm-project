@@ -175,6 +175,19 @@ class SDBufferAtomic<string opcode> : SDNode <opcode,
   [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
 >;
 
+class SDBufferAtomicNoRtn<string opcode, ValueType ty> : SDNode <opcode,
+  SDTypeProfile<0, 8,
+      [SDTCisVT<0, ty>,    // vdata
+       SDTCisVT<1, v4i32>, // rsrc
+       SDTCisVT<2, i32>,   // vindex(VGPR)
+       SDTCisVT<3, i32>,   // voffset(VGPR)
+       SDTCisVT<4, i32>,   // soffset(SGPR)
+       SDTCisVT<5, i32>,   // offset(imm)
+       SDTCisVT<6, i32>,   // cachepolicy(imm)
+       SDTCisVT<7, i1>]>,  // idxen(imm)
+  [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
+>;
+
 def SIbuffer_atomic_swap : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SWAP">;
 def SIbuffer_atomic_add : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_ADD">;
 def SIbuffer_atomic_sub : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_SUB">;
@@ -185,6 +198,8 @@ def SIbuffer_atomic_umax : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_UMAX">;
 def SIbuffer_atomic_and : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_AND">;
 def SIbuffer_atomic_or : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_OR">;
 def SIbuffer_atomic_xor : SDBufferAtomic <"AMDGPUISD::BUFFER_ATOMIC_XOR">;
+def SIbuffer_atomic_fadd : SDBufferAtomicNoRtn <"AMDGPUISD::BUFFER_ATOMIC_FADD", f32>;
+def SIbuffer_atomic_pk_fadd : SDBufferAtomicNoRtn <"AMDGPUISD::BUFFER_ATOMIC_PK_FADD", v2f16>;
 
 def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
   SDTypeProfile<1, 9,
@@ -200,6 +215,16 @@ def SIbuffer_atomic_cmpswap : SDNode <"AMDGPUISD::BUFFER_ATOMIC_CMPSWAP",
      SDTCisVT<9, i1>]>,  // idxen(imm)
   [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
 >;
+
+class SDGlobalAtomicNoRtn<string opcode, ValueType ty> : SDNode <opcode,
+  SDTypeProfile<0, 2,
+      [SDTCisPtrTy<0>,     // vaddr
+       SDTCisVT<1, ty>]>,  // vdata
+  [SDNPMemOperand, SDNPHasChain, SDNPMayLoad, SDNPMayStore]
+>;
+
+def SIglobal_atomic_fadd    : SDGlobalAtomicNoRtn <"AMDGPUISD::ATOMIC_FADD", f32>;
+def SIglobal_atomic_pk_fadd : SDGlobalAtomicNoRtn <"AMDGPUISD::ATOMIC_PK_FADD", v2f16>;
 
 def SIpc_add_rel_offset : SDNode<"AMDGPUISD::PC_ADD_REL_OFFSET",
   SDTypeProfile<1, 2, [SDTCisVT<0, iPTR>, SDTCisSameAs<0,1>, SDTCisSameAs<0,2>]>
@@ -251,7 +276,8 @@ class isFloatType<ValueType SrcVT> {
     !if(!eq(SrcVT.Value, f32.Value), 1,
     !if(!eq(SrcVT.Value, f64.Value), 1,
     !if(!eq(SrcVT.Value, v2f16.Value), 1,
-    0))));
+    !if(!eq(SrcVT.Value, v4f16.Value), 1,
+    0)))));
 }
 
 class isIntType<ValueType SrcVT> {
@@ -265,8 +291,9 @@ class isIntType<ValueType SrcVT> {
 class isPackedType<ValueType SrcVT> {
   bit ret =
     !if(!eq(SrcVT.Value, v2i16.Value), 1,
-      !if(!eq(SrcVT.Value, v2f16.Value), 1, 0)
-    );
+      !if(!eq(SrcVT.Value, v2f16.Value), 1,
+        !if(!eq(SrcVT.Value, v4f16.Value), 1, 0)
+    ));
 }
 
 //===----------------------------------------------------------------------===//
@@ -929,6 +956,10 @@ def op_sel_hi : NamedOperandU32Default0<"OpSelHi", NamedMatchClass<"OpSelHi">>;
 def neg_lo : NamedOperandU32Default0<"NegLo", NamedMatchClass<"NegLo">>;
 def neg_hi : NamedOperandU32Default0<"NegHi", NamedMatchClass<"NegHi">>;
 
+def blgp : NamedOperandU32<"BLGP", NamedMatchClass<"BLGP">>;
+def cbsz : NamedOperandU32<"CBSZ", NamedMatchClass<"CBSZ">>;
+def abid : NamedOperandU32<"ABID", NamedMatchClass<"ABID">>;
+
 def hwreg : NamedOperandU16<"Hwreg", NamedMatchClass<"Hwreg", 0>>;
 
 def exp_tgt : NamedOperandU8<"ExpTgt", NamedMatchClass<"ExpTgt", 0>> {
@@ -1284,11 +1315,12 @@ class getVALUDstForVT<ValueType VT> {
 class getIsFP<ValueType VT> {
   bit ret = !if(!eq(VT.Value, f16.Value), 1,
             !if(!eq(VT.Value, v2f16.Value), 1,
+            !if(!eq(VT.Value, v4f16.Value), 1,
             !if(!eq(VT.Value, f32.Value), 1,
             !if(!eq(VT.Value, v2f32.Value), 1,
             !if(!eq(VT.Value, f64.Value), 1,
             !if(!eq(VT.Value, v2f64.Value), 1,
-            0))))));
+            0)))))));
 }
 
 // Returns the register class to use for the destination of VOP[12C]
@@ -1312,7 +1344,10 @@ class getVOPSrc0ForVT<ValueType VT> {
             VSrc_f16,
             !if(!eq(VT.Value, v2f16.Value),
                VSrc_v2f16,
-               VSrc_f32
+               !if(!eq(VT.Value, v4f16.Value),
+                 AVSrc_64,
+                 VSrc_f32
+               )
             )
          )
        ),
@@ -1360,7 +1395,10 @@ class getVOP3SrcForVT<ValueType VT> {
                  VSrc_f16,
                  !if(!eq(VT.Value, v2f16.Value),
                     VSrc_v2f16,
-                    VSrc_f32
+                    !if(!eq(VT.Value, v4f16.Value),
+                      AVSrc_64,
+                      VSrc_f32
+                    )
                  )
               ),
               !if(!eq(VT.Value, i16.Value),
@@ -1993,6 +2031,8 @@ class VOPProfile <list<ValueType> _ArgVT, bit _EnableF32SrcMods = 0,
   field bit HasExtSDWA9 = HasExt;
   field int NeedPatGen = PatGenMode.NoPattern;
 
+  field bit IsMAI = 0;
+
   field Operand Src0PackedMod = !if(HasSrc0FloatMods, PackedF16InputMods, PackedI16InputMods);
   field Operand Src1PackedMod = !if(HasSrc1FloatMods, PackedF16InputMods, PackedI16InputMods);
   field Operand Src2PackedMod = !if(HasSrc2FloatMods, PackedF16InputMods, PackedI16InputMods);
@@ -2129,6 +2169,20 @@ def VOP_V4I32_I64_I32_V4I32 : VOPProfile <[v4i32, i64, i32, v4i32]>;
 
 def VOP_F32_V2F16_V2F16_F32 : VOPProfile <[f32, v2f16, v2f16, f32]>;
 def VOP_I32_V2I16_V2I16_I32 : VOPProfile <[i32, v2i16, v2i16, i32]>;
+
+def VOP_V4F32_F32_F32_V4F32       : VOPProfile <[v4f32,  f32,   f32,   v4f32]>;
+def VOP_V16F32_F32_F32_V16F32     : VOPProfile <[v16f32, f32,   f32,   v16f32]>;
+// TODO: define v32f32
+def VOP_V32F32_F32_F32_V32F32     : VOPProfile <[v32i32, f32,   f32,   v32i32]>;
+def VOP_V4F32_V4F16_V4F16_V4F32   : VOPProfile <[v4f32,  v4f16, v4f16, v4f32]>;
+def VOP_V16F32_V4F16_V4F16_V16F32 : VOPProfile <[v16f32, v4f16, v4f16, v16f32]>;
+def VOP_V32F32_V4F16_V4F16_V32F32 : VOPProfile <[v32i32, v4f16, v4f16, v32i32]>;
+def VOP_V4F32_V2I16_V2I16_V4F32   : VOPProfile <[v4f32,  v2i16, v2i16, v4f32]>;
+def VOP_V16F32_V2I16_V2I16_V16F32 : VOPProfile <[v16f32, v2i16, v2i16, v16f32]>;
+def VOP_V32F32_V2I16_V2I16_V32F32 : VOPProfile <[v32i32, v2i16, v2i16, v32i32]>;
+def VOP_V4I32_I32_I32_V4I32       : VOPProfile <[v4i32,  i32,   i32,   v4i32]>;
+def VOP_V16I32_I32_I32_V16I32     : VOPProfile <[v16i32, i32,   i32,   v16i32]>;
+def VOP_V32I32_I32_I32_V32I32     : VOPProfile <[v32i32, i32,   i32,   v32i32]>;
 
 class Commutable_REV <string revOp, bit isOrig> {
   string RevOp = revOp;

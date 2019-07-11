@@ -652,10 +652,10 @@ public:
   }
 
   static bool shouldIndexTemplateParameterDefaultValue(const NamedDecl *D) {
-    if (!D)
-      return false;
     // We want to index the template parameters only once when indexing the
     // canonical declaration.
+    if (!D)
+      return false;
     if (const auto *FD = dyn_cast<FunctionDecl>(D))
       return FD->getCanonicalDecl() == FD;
     else if (const auto *TD = dyn_cast<TagDecl>(D))

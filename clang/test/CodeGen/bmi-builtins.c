@@ -65,6 +65,7 @@ int test_mm_tzcnt_32(unsigned int __X) {
   return _mm_tzcnt_32(__X);
 }
 
+#ifdef __x86_64__
 unsigned long long test__andn_u64(unsigned long __X, unsigned long __Y) {
   // CHECK-LABEL: test__andn_u64
   // CHECK: xor i64 %{{.*}}, -1
@@ -110,6 +111,7 @@ long long test_mm_tzcnt_64(unsigned long long __X) {
   // CHECK: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
   return _mm_tzcnt_64(__X);
 }
+#endif
 
 // Intel intrinsics
 
@@ -164,6 +166,7 @@ unsigned int test_tzcnt_u32(unsigned int __X) {
   return _tzcnt_u32(__X);
 }
 
+#ifdef __x86_64__
 unsigned long long test_andn_u64(unsigned long __X, unsigned long __Y) {
   // CHECK-LABEL: test_andn_u64
   // CHECK: xor i64 %{{.*}}, -1
@@ -209,3 +212,4 @@ unsigned long long test_tzcnt_u64(unsigned long long __X) {
   // CHECK: i64 @llvm.cttz.i64(i64 %{{.*}}, i1 false)
   return _tzcnt_u64(__X);
 }
+#endif

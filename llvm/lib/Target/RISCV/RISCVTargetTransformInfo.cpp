@@ -71,8 +71,10 @@ int RISCVTTIImpl::getIntImmCost(unsigned Opcode, unsigned Idx, const APInt &Imm,
     // Check immediate is the correct argument...
     if (Instruction::isCommutative(Opcode) || Idx == ImmArgIdx) {
       // ... and fits into the 12-bit immediate.
-      if (getTLI()->isLegalAddImmediate(Imm.getSExtValue()))
+      if (Imm.getMinSignedBits() <= 64 &&
+          getTLI()->isLegalAddImmediate(Imm.getSExtValue())) {
         return TTI::TCC_Free;
+      }
     }
 
     // Otherwise, use the full materialisation cost.

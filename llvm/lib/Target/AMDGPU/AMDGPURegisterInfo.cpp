@@ -31,7 +31,10 @@ unsigned AMDGPURegisterInfo::getSubRegFromChannel(unsigned Channel) {
     AMDGPU::sub0, AMDGPU::sub1, AMDGPU::sub2, AMDGPU::sub3, AMDGPU::sub4,
     AMDGPU::sub5, AMDGPU::sub6, AMDGPU::sub7, AMDGPU::sub8, AMDGPU::sub9,
     AMDGPU::sub10, AMDGPU::sub11, AMDGPU::sub12, AMDGPU::sub13, AMDGPU::sub14,
-    AMDGPU::sub15
+    AMDGPU::sub15, AMDGPU::sub16, AMDGPU::sub17, AMDGPU::sub18, AMDGPU::sub19,
+    AMDGPU::sub20, AMDGPU::sub21, AMDGPU::sub22, AMDGPU::sub23, AMDGPU::sub24,
+    AMDGPU::sub25, AMDGPU::sub26, AMDGPU::sub27, AMDGPU::sub28, AMDGPU::sub29,
+    AMDGPU::sub30, AMDGPU::sub31
   };
 
   assert(Channel < array_lengthof(SubRegs));

@@ -49,6 +49,15 @@ Decl *Parser::ParseDeclarationStartingWithTemplate(
 ///       template-declaration: [C++ temp]
 ///         'export'[opt] 'template' '<' template-parameter-list '>' declaration
 ///
+///       template-declaration: [C++2a]
+///         template-head declaration
+///         template-head concept-definition
+///
+///       TODO: requires-clause
+///       template-head: [C++2a]
+///         'template' '<' template-parameter-list '>'
+///             requires-clause[opt]
+///
 ///       explicit-specialization: [ C++ temp.expl.spec]
 ///         'template' '<' '>' declaration
 Decl *Parser::ParseTemplateDeclarationOrSpecialization(
@@ -142,6 +151,12 @@ Decl *Parser::ParseTemplateDeclarationOrSpecialization(
   ParseScopeFlags TemplateScopeFlags(this, NewFlags, isSpecialization);
 
   // Parse the actual template declaration.
+  if (Tok.is(tok::kw_concept))
+    return ParseConceptDefinition(
+        ParsedTemplateInfo(&ParamLists, isSpecialization,
+                           LastParamListWasEmpty),
+        DeclEnd);
+
   return ParseSingleDeclarationAfterTemplate(
       Context,
       ParsedTemplateInfo(&ParamLists, isSpecialization, LastParamListWasEmpty),
@@ -313,6 +328,85 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
     ParseLexedAttributeList(LateParsedAttrs, ThisDecl, true, false);
   DeclaratorInfo.complete(ThisDecl);
   return ThisDecl;
+}
+
+/// \brief Parse a single declaration that declares a concept.
+///
+/// \param DeclEnd will receive the source location of the last token
+/// within this declaration.
+///
+/// \returns the new declaration.
+Decl *
+Parser::ParseConceptDefinition(const ParsedTemplateInfo &TemplateInfo,
+                               SourceLocation &DeclEnd) {
+  assert(TemplateInfo.Kind != ParsedTemplateInfo::NonTemplate &&
+         "Template information required");
+  assert(Tok.is(tok::kw_concept) &&
+         "ParseConceptDefinition must be called when at a 'concept' keyword");
+
+  ConsumeToken(); // Consume 'concept'
+
+  SourceLocation BoolKWLoc;
+  if (TryConsumeToken(tok::kw_bool, BoolKWLoc))
+    Diag(Tok.getLocation(), diag::ext_concept_legacy_bool_keyword) <<
+        FixItHint::CreateRemoval(SourceLocation(BoolKWLoc));
+
+  DiagnoseAndSkipCXX11Attributes();
+
+  CXXScopeSpec SS;
+  if (ParseOptionalCXXScopeSpecifier(SS, ParsedType(),
+      /*EnteringContext=*/false, /*MayBePseudoDestructor=*/nullptr,
+      /*IsTypename=*/false, /*LastII=*/nullptr, /*OnlyNamespace=*/true) ||
+      SS.isInvalid()) {
+    SkipUntil(tok::semi);
+    return nullptr;
+  }
+
+  if (SS.isNotEmpty())
+    Diag(SS.getBeginLoc(),
+         diag::err_concept_definition_not_identifier);
+
+  UnqualifiedId Result;
+  if (ParseUnqualifiedId(SS, /*EnteringContext=*/false,
+                         /*AllowDestructorName=*/false,
+                         /*AllowConstructorName=*/false,
+                         /*AllowDeductionGuide=*/false,
+                         /*ObjectType=*/ParsedType(), /*TemplateKWLoc=*/nullptr,
+                         Result)) {
+    SkipUntil(tok::semi);
+    return nullptr;
+  }
+
+  if (Result.getKind() != UnqualifiedIdKind::IK_Identifier) {
+    Diag(Result.getBeginLoc(), diag::err_concept_definition_not_identifier);
+    SkipUntil(tok::semi);
+    return nullptr;
+  }
+
+  IdentifierInfo *Id = Result.Identifier;
+  SourceLocation IdLoc = Result.getBeginLoc();
+
+  DiagnoseAndSkipCXX11Attributes();
+
+  if (!TryConsumeToken(tok::equal)) {
+    Diag(Tok.getLocation(), diag::err_expected) << tok::equal;
+    SkipUntil(tok::semi);
+    return nullptr;
+  }
+
+  ExprResult ConstraintExprResult =
+      Actions.CorrectDelayedTyposInExpr(ParseConstraintExpression());
+  if (ConstraintExprResult.isInvalid()) {
+    SkipUntil(tok::semi);
+    return nullptr;
+  }
+
+  DeclEnd = Tok.getLocation();
+  ExpectAndConsumeSemi(diag::err_expected_semi_declaration);
+  Expr *ConstraintExpr = ConstraintExprResult.get();
+  return Actions.ActOnConceptDefinition(getCurScope(),
+                                        *TemplateInfo.TemplateParams,
+                                        Id, IdLoc, ConstraintExpr);
 }
 
 /// ParseTemplateParameters - Parses a template-parameter-list enclosed in

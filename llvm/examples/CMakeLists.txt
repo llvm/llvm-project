@@ -2,6 +2,7 @@ add_subdirectory(BrainF)
 add_subdirectory(Fibonacci)
 add_subdirectory(HowToUseJIT)
 add_subdirectory(HowToUseLLJIT)
+add_subdirectory(LLJITExamples)
 add_subdirectory(Kaleidoscope)
 add_subdirectory(ModuleMaker)
 

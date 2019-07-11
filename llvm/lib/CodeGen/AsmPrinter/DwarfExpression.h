@@ -120,7 +120,7 @@ protected:
   enum { Unknown = 0, Register, Memory, Implicit };
 
   /// The flags of location description being produced.
-  enum { EntryValue = 1 };
+  enum { EntryValue = 1, CallSiteParamValue };
 
   unsigned LocationKind : 3;
   unsigned LocationFlags : 2;
@@ -145,6 +145,10 @@ public:
 
   bool isEntryValue() const {
     return LocationFlags & EntryValue;
+  }
+
+  bool isParameterValue() {
+    return LocationFlags & CallSiteParamValue;
   }
 
   Optional<uint8_t> TagOffset;
@@ -262,6 +266,11 @@ public:
   /// Lock this down to become an entry value location.
   void setEntryValueFlag() {
     LocationFlags |= EntryValue;
+  }
+
+  /// Lock this down to become a call site parameter location.
+  void setCallSiteParamValueFlag() {
+    LocationFlags |= CallSiteParamValue;
   }
 
   /// Emit a machine register location. As an optimization this may also consume

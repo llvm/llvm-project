@@ -415,6 +415,21 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   } else if (MRI.getRegClass(AMDGPU::SGPR_512RegClassID).contains(RegNo)) {
     O << 's';
     NumRegs = 16;
+  } else  if (MRI.getRegClass(AMDGPU::AGPR_32RegClassID).contains(RegNo)) {
+    O << 'a';
+    NumRegs = 1;
+  } else  if (MRI.getRegClass(AMDGPU::AReg_64RegClassID).contains(RegNo)) {
+    O << 'a';
+    NumRegs = 2;
+  } else  if (MRI.getRegClass(AMDGPU::AReg_128RegClassID).contains(RegNo)) {
+    O << 'a';
+    NumRegs = 4;
+  } else  if (MRI.getRegClass(AMDGPU::AReg_512RegClassID).contains(RegNo)) {
+    O << 'a';
+    NumRegs = 16;
+  } else  if (MRI.getRegClass(AMDGPU::AReg_1024RegClassID).contains(RegNo)) {
+    O << 'a';
+    NumRegs = 32;
   } else {
     O << getRegisterName(RegNo);
     return;
@@ -586,6 +601,36 @@ void AMDGPUInstPrinter::printImmediate64(uint64_t Imm,
   }
 }
 
+void AMDGPUInstPrinter::printBLGP(const MCInst *MI, unsigned OpNo,
+                                  const MCSubtargetInfo &STI,
+                                  raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+  if (!Imm)
+    return;
+
+  O << " blgp:" << Imm;
+}
+
+void AMDGPUInstPrinter::printCBSZ(const MCInst *MI, unsigned OpNo,
+                                  const MCSubtargetInfo &STI,
+                                  raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+  if (!Imm)
+    return;
+
+  O << " cbsz:" << Imm;
+}
+
+void AMDGPUInstPrinter::printABID(const MCInst *MI, unsigned OpNo,
+                                  const MCSubtargetInfo &STI,
+                                  raw_ostream &O) {
+  unsigned Imm = MI->getOperand(OpNo).getImm();
+  if (!Imm)
+    return;
+
+  O << " abid:" << Imm;
+}
+
 void AMDGPUInstPrinter::printDefaultVccOperand(unsigned OpNo,
                                                const MCSubtargetInfo &STI,
                                                raw_ostream &O) {
@@ -621,6 +666,8 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     case AMDGPU::OPERAND_REG_IMM_FP32:
     case AMDGPU::OPERAND_REG_INLINE_C_INT32:
     case AMDGPU::OPERAND_REG_INLINE_C_FP32:
+    case AMDGPU::OPERAND_REG_INLINE_AC_INT32:
+    case AMDGPU::OPERAND_REG_INLINE_AC_FP32:
     case MCOI::OPERAND_IMMEDIATE:
       printImmediate32(Op.getImm(), STI, O);
       break;
@@ -632,6 +679,8 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       break;
     case AMDGPU::OPERAND_REG_INLINE_C_INT16:
     case AMDGPU::OPERAND_REG_INLINE_C_FP16:
+    case AMDGPU::OPERAND_REG_INLINE_AC_INT16:
+    case AMDGPU::OPERAND_REG_INLINE_AC_FP16:
     case AMDGPU::OPERAND_REG_IMM_INT16:
     case AMDGPU::OPERAND_REG_IMM_FP16:
       printImmediate16(Op.getImm(), STI, O);
@@ -646,6 +695,8 @@ void AMDGPUInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
       LLVM_FALLTHROUGH;
     case AMDGPU::OPERAND_REG_INLINE_C_V2FP16:
     case AMDGPU::OPERAND_REG_INLINE_C_V2INT16:
+    case AMDGPU::OPERAND_REG_INLINE_AC_V2FP16:
+    case AMDGPU::OPERAND_REG_INLINE_AC_V2INT16:
       printImmediateV216(Op.getImm(), STI, O);
       break;
     case MCOI::OPERAND_UNKNOWN:

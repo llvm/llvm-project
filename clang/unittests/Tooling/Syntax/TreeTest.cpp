@@ -75,6 +75,8 @@ protected:
 
     constexpr const char *FileName = "./input.cpp";
     FS->addFile(FileName, time_t(), llvm::MemoryBuffer::getMemBufferCopy(""));
+    if (!Diags->getClient())
+      Diags->setClient(new IgnoringDiagConsumer);
     // Prepare to run a compiler.
     std::vector<const char *> Args = {"syntax-test", "-std=c++11",
                                       "-fsyntax-only", FileName};
@@ -85,8 +87,6 @@ protected:
         FileName, llvm::MemoryBuffer::getMemBufferCopy(Code).release());
     CompilerInstance Compiler;
     Compiler.setInvocation(std::move(CI));
-    if (!Diags->getClient())
-      Diags->setClient(new IgnoringDiagConsumer);
     Compiler.setDiagnostics(Diags.get());
     Compiler.setFileManager(FileMgr.get());
     Compiler.setSourceManager(SourceMgr.get());
@@ -136,16 +136,16 @@ void foo() {}
 | |-(
 | |-)
 | `-CompoundStatement
-|   |-1: {
-|   `-2: }
+|   |-2: {
+|   `-3: }
 |-TopLevelDeclaration
 | |-void
 | |-foo
 | |-(
 | |-)
 | `-CompoundStatement
-|   |-1: {
-|   `-2: }
+|   |-2: {
+|   `-3: }
 `-<eof>
 )txt"},
   };

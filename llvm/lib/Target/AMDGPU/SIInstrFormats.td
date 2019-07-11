@@ -121,6 +121,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // Instruction is FP atomic.
   field bit FPAtomic = 0;
 
+  // This bit indicates that this is one of MFMA instructions.
+  field bit IsMAI = 0;
+
   // These need to be kept in sync with the enum in SIInstrFlags.
   let TSFlags{0} = SALU;
   let TSFlags{1} = VALU;
@@ -183,6 +186,8 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{52} = FPDPRounding;
 
   let TSFlags{53} = FPAtomic;
+
+  let TSFlags{54} = IsMAI;
 
   let SchedRW = [Write32Bit];
 

@@ -76,12 +76,12 @@ define <4 x float> @constant_fold_fmul_v4f32_undef(<4 x float> %x) {
   ret <4 x float> %y
 }
 
-define <4 x float> @fmul0_v4f32(<4 x float> %x) #0 {
-; CHECK-LABEL: fmul0_v4f32:
+define <4 x float> @fmul0_v4f32_nsz_nnan(<4 x float> %x) #0 {
+; CHECK-LABEL: fmul0_v4f32_nsz_nnan:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %y = fmul <4 x float> %x, <float 0.0, float 0.0, float 0.0, float 0.0>
+  %y = fmul nnan nsz <4 x float> %x, <float 0.0, float 0.0, float 0.0, float 0.0>
   ret <4 x float> %y
 }
 
@@ -90,7 +90,7 @@ define <4 x float> @fmul0_v4f32_undef(<4 x float> %x) #0 {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xorps %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %y = fmul <4 x float> %x, <float undef, float 0.0, float undef, float 0.0>
+  %y = fmul nnan nsz <4 x float> %x, <float undef, float 0.0, float undef, float 0.0>
   ret <4 x float> %y
 }
 

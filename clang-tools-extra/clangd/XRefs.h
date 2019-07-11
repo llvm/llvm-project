@@ -118,7 +118,8 @@ inline bool operator==(const HoverInfo::Param &LHS,
 
 /// Get the hover information when hovering at \p Pos.
 llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
-                                   format::FormatStyle Style);
+                                   format::FormatStyle Style,
+                                   const SymbolIndex *Index);
 
 /// Returns reference locations of the symbol at a specified \p Pos.
 /// \p Limit limits the number of results returned (0 means no limit).

@@ -1995,25 +1995,6 @@ template <class ELFT> Error ELFWriter<ELFT>::write() {
   return Buf.commit();
 }
 
-static Error removeUnneededSections(Object &Obj) {
-  // We can remove an empty symbol table from non-relocatable objects.
-  // Relocatable objects typically have relocation sections whose
-  // sh_link field points to .symtab, so we can't remove .symtab
-  // even if it is empty.
-  if (Obj.isRelocatable() || Obj.SymbolTable == nullptr ||
-      !Obj.SymbolTable->empty())
-    return Error::success();
-
-  // .strtab can be used for section names. In such a case we shouldn't
-  // remove it.
-  auto *StrTab = Obj.SymbolTable->getStrTab() == Obj.SectionNames
-                     ? nullptr
-                     : Obj.SymbolTable->getStrTab();
-  return Obj.removeSections(false, [&](const SectionBase &Sec) {
-    return &Sec == Obj.SymbolTable || &Sec == StrTab;
-  });
-}
-
 template <class ELFT> Error ELFWriter<ELFT>::finalize() {
   // It could happen that SectionNames has been removed and yet the user wants
   // a section header table output. We need to throw an error if a user tries
@@ -2023,8 +2004,6 @@ template <class ELFT> Error ELFWriter<ELFT>::finalize() {
                              "cannot write section header table because "
                              "section header string table was removed");
 
-  if (Error E = removeUnneededSections(Obj))
-    return E;
   Obj.sortSections();
 
   // We need to assign indexes before we perform layout because we need to know

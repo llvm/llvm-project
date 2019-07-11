@@ -147,7 +147,8 @@ createOnDiskBuffer(StringRef Path, size_t Size, unsigned Mode) {
   // Mmap it.
   std::error_code EC;
   auto MappedFile = llvm::make_unique<fs::mapped_file_region>(
-      File.FD, fs::mapped_file_region::readwrite, Size, 0, EC);
+      fs::convertFDToNativeFile(File.FD), fs::mapped_file_region::readwrite,
+      Size, 0, EC);
 
   // mmap(2) can fail if the underlying filesystem does not support it.
   // If that happens, we fall back to in-memory buffer as the last resort.

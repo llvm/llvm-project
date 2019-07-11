@@ -15,6 +15,7 @@ source_set("tweaks") {
     "AnnotateHighlightings.cpp",
     "DumpAST.cpp",
     "ExpandMacro.cpp",
+    "ExtractVariable.cpp",
     "RawStringLiteral.cpp",
     "SwapIfBranches.cpp",
   ]

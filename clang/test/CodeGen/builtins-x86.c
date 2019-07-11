@@ -341,8 +341,6 @@ void f0() {
 #endif
   tmp_V2i = __builtin_ia32_cvttps2pi(tmp_V4f);
   (void) __builtin_ia32_maskmovq(tmp_V8c, tmp_V8c, tmp_cp);
-  (void) __builtin_ia32_storehps(tmp_V2ip, tmp_V4f);
-  (void) __builtin_ia32_storelps(tmp_V2ip, tmp_V4f);
   tmp_i = __builtin_ia32_movmskps(tmp_V4f);
   tmp_i = __builtin_ia32_pmovmskb(tmp_V8c);
   (void) __builtin_ia32_movntq(tmp_V1LLip, tmp_V1LLi);

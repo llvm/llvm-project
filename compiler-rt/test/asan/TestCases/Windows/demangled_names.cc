@@ -1,4 +1,4 @@
-// RUN: %clang_cl_asan -O0 %s -Fe%t
+// RUN: %clang_cl_asan -Od %s -Fe%t
 // RUN: not %run %t 2>&1 | FileCheck %s
 //
 // This test makes sure ASan symbolizes stack traces the way they are typically

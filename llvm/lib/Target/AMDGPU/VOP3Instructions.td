@@ -110,6 +110,11 @@ class getVOP3ClampPat<VOPProfile P, SDPatternOperator node> {
                   ret1));
 }
 
+class getVOP3MAIPat<VOPProfile P, SDPatternOperator node> {
+  list<dag> ret = [(set P.DstVT:$vdst, (node P.Src0VT:$src0, P.Src1VT:$src1, P.Src2VT:$src2,
+                                        imm:$cbsz, imm:$abid, imm:$blgp))];
+}
+
 class VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag, bit VOP3Only = 0> :
   VOP3_Pseudo<OpName, P,
     !if(P.HasOpSel,
@@ -120,7 +125,9 @@ class VOP3Inst<string OpName, VOPProfile P, SDPatternOperator node = null_frag, 
             getVOP3ModPat<P, node>.ret,
             !if(P.HasIntClamp,
                 getVOP3ClampPat<P, node>.ret,
-                getVOP3Pat<P, node>.ret))),
+                !if (P.IsMAI,
+                    getVOP3MAIPat<P, node>.ret,
+                    getVOP3Pat<P, node>.ret)))),
     VOP3Only, 0, P.HasOpSel> {
 
   let IntClamp = P.HasIntClamp;
@@ -143,24 +150,27 @@ def VOP_F64_F64_F64_F64_VCC : VOPProfile<[f64, f64, f64, f64]> {
 }
 }
 
-class VOP3Features<bit Clamp, bit OpSel, bit Packed> {
+class VOP3Features<bit Clamp, bit OpSel, bit Packed, bit MAI> {
   bit HasClamp = Clamp;
   bit HasOpSel = OpSel;
   bit IsPacked = Packed;
+  bit IsMAI = MAI;
 }
 
-def VOP3_REGULAR : VOP3Features<0, 0, 0>;
-def VOP3_CLAMP   : VOP3Features<1, 0, 0>;
-def VOP3_OPSEL   : VOP3Features<1, 1, 0>;
-def VOP3_PACKED  : VOP3Features<1, 1, 1>;
+def VOP3_REGULAR : VOP3Features<0, 0, 0, 0>;
+def VOP3_CLAMP   : VOP3Features<1, 0, 0, 0>;
+def VOP3_OPSEL   : VOP3Features<1, 1, 0, 0>;
+def VOP3_PACKED  : VOP3Features<1, 1, 1, 0>;
+def VOP3_MAI     : VOP3Features<0, 0, 0, 1>;
 
 class VOP3_Profile<VOPProfile P, VOP3Features Features = VOP3_REGULAR> : VOPProfile<P.ArgVT> {
 
   let HasClamp = !if(Features.HasClamp, 1, P.HasClamp);
   let HasOpSel = !if(Features.HasOpSel, 1, P.HasOpSel);
+  let IsMAI    = !if(Features.IsMAI,    1, P.IsMAI);
   let IsPacked = !if(Features.IsPacked, 1, P.IsPacked);
 
-  let HasModifiers = !if(Features.IsPacked, 1, P.HasModifiers);
+  let HasModifiers = !if(Features.IsPacked, !if(Features.IsMAI, 0, 1), P.HasModifiers);
 
   // FIXME: Hack to stop printing _e64
   let Outs64 = (outs DstRC.RegClass:$vdst);

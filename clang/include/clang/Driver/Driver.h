@@ -235,9 +235,6 @@ private:
   /// Certain options suppress the 'no input files' warning.
   unsigned SuppressMissingInputWarning : 1;
 
-  std::list<std::string> TempFiles;
-  std::list<std::string> ResultFiles;
-
   /// Cache of all the ToolChains in use by the driver.
   ///
   /// This maps from the string representation of a triple to a ToolChain

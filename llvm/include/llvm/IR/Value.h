@@ -546,19 +546,48 @@ public:
               static_cast<const Value *>(this)->stripInBoundsConstantOffsets());
   }
 
-  /// Accumulate offsets from \a stripInBoundsConstantOffsets().
+  /// Accumulate the constant offset this value has compared to a base pointer.
+  /// Only 'getelementptr' instructions (GEPs) with constant indices are
+  /// accumulated but other instructions, e.g., casts, are stripped away as
+  /// well. The accumulated constant offset is added to \p Offset and the base
+  /// pointer is returned.
   ///
-  /// Stores the resulting constant offset stripped into the APInt provided.
-  /// The provided APInt will be extended or truncated as needed to be the
-  /// correct bitwidth for an offset of this pointer type.
+  /// The APInt \p Offset has to have a bit-width equal to the IntPtr type for
+  /// the address space of 'this' pointer value, e.g., use
+  /// DataLayout::getIndexTypeSizeInBits(Ty).
   ///
-  /// If this is called on a non-pointer value, it returns 'this'.
+  /// If \p AllowNonInbounds is true, constant offsets in GEPs are stripped and
+  /// accumulated even if the GEP is not "inbounds".
+  ///
+  /// If this is called on a non-pointer value, it returns 'this' and the
+  /// \p Offset is not modified.
+  ///
+  /// Note that this function will never return a nullptr. It will also never
+  /// manipulate the \p Offset in a way that would not match the difference
+  /// between the underlying value and the returned one. Thus, if no constant
+  /// offset was found, the returned value is the underlying one and \p Offset
+  /// is unchanged.
+  const Value *stripAndAccumulateConstantOffsets(const DataLayout &DL,
+                                                 APInt &Offset,
+                                                 bool AllowNonInbounds) const;
+  Value *stripAndAccumulateConstantOffsets(const DataLayout &DL, APInt &Offset,
+                                           bool AllowNonInbounds) {
+    return const_cast<Value *>(
+        static_cast<const Value *>(this)->stripAndAccumulateConstantOffsets(
+            DL, Offset, AllowNonInbounds));
+  }
+
+  /// This is a wrapper around stripAndAccumulateConstantOffsets with the
+  /// in-bounds requirement set to false.
   const Value *stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
-                                                         APInt &Offset) const;
+                                                         APInt &Offset) const {
+    return stripAndAccumulateConstantOffsets(DL, Offset,
+                                             /* AllowNonInbounds */ false);
+  }
   Value *stripAndAccumulateInBoundsConstantOffsets(const DataLayout &DL,
                                                    APInt &Offset) {
-    return const_cast<Value *>(static_cast<const Value *>(this)
-        ->stripAndAccumulateInBoundsConstantOffsets(DL, Offset));
+    return stripAndAccumulateConstantOffsets(DL, Offset,
+                                             /* AllowNonInbounds */ false);
   }
 
   /// Strip off pointer casts and inbounds GEPs.

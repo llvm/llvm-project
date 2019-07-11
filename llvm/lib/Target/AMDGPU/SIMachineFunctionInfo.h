@@ -232,6 +232,31 @@ template <> struct MappingTraits<SIArgumentInfo> {
   }
 };
 
+// Default to default mode for default calling convention.
+struct SIMode {
+  bool IEEE = true;
+  bool DX10Clamp = true;
+
+  SIMode() = default;
+
+
+  SIMode(const AMDGPU::SIModeRegisterDefaults &Mode) {
+    IEEE = Mode.IEEE;
+    DX10Clamp = Mode.DX10Clamp;
+  }
+
+  bool operator ==(const SIMode Other) const {
+    return IEEE == Other.IEEE && DX10Clamp == Other.DX10Clamp;
+  }
+};
+
+template <> struct MappingTraits<SIMode> {
+  static void mapping(IO &YamlIO, SIMode &Mode) {
+    YamlIO.mapOptional("ieee", Mode.IEEE, true);
+    YamlIO.mapOptional("dx10-clamp", Mode.DX10Clamp, true);
+  }
+};
+
 struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   uint64_t ExplicitKernArgSize = 0;
   unsigned MaxKernArgAlign = 0;
@@ -247,6 +272,7 @@ struct SIMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   StringValue StackPtrOffsetReg = "$sp_reg";
 
   Optional<SIArgumentInfo> ArgInfo;
+  SIMode Mode;
 
   SIMachineFunctionInfo() = default;
   SIMachineFunctionInfo(const llvm::SIMachineFunctionInfo &,
@@ -275,6 +301,7 @@ template <> struct MappingTraits<SIMachineFunctionInfo> {
     YamlIO.mapOptional("stackPtrOffsetReg", MFI.StackPtrOffsetReg,
                        StringValue("$sp_reg"));
     YamlIO.mapOptional("argumentInfo", MFI.ArgInfo);
+    YamlIO.mapOptional("mode", MFI.Mode, SIMode());
   }
 };
 
