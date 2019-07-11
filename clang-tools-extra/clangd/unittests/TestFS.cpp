@@ -6,11 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "TestFS.h"
-#include "GlobalCompilationDatabase.h"
-#include "Path.h"
 #include "URI.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Path.h"
@@ -40,13 +36,9 @@ MockCompilationDatabase::MockCompilationDatabase(llvm::StringRef Directory,
   // -ffreestanding avoids implicit stdc-predef.h.
 }
 
-llvm::Optional<ProjectInfo>
-MockCompilationDatabase::getProjectInfo(PathRef File) const {
-  return ProjectInfo{Directory};
-};
-
 llvm::Optional<tooling::CompileCommand>
-MockCompilationDatabase::getCompileCommand(PathRef File) const {
+MockCompilationDatabase::getCompileCommand(PathRef File,
+                                           ProjectInfo *Project) const {
   if (ExtraClangFlags.empty())
     return None;
 
@@ -65,6 +57,8 @@ MockCompilationDatabase::getCompileCommand(PathRef File) const {
     CommandLine.push_back(RelativeFilePath.str());
   }
 
+  if (Project)
+    Project->SourceRoot = Directory;
   return {tooling::CompileCommand(Directory != llvm::StringRef()
                                       ? Directory
                                       : llvm::sys::path::parent_path(File),

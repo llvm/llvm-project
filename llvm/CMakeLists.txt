@@ -641,10 +641,8 @@ option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default
 
 include(HandleLLVMOptions)
 
-# Verify that we can find a Python 2 interpreter.  Python 3 is unsupported.
-# FIXME: We should support systems with only Python 3, but that requires work
-# on LLDB.
-set(Python_ADDITIONAL_VERSIONS 2.7)
+# We support both Python 2 and 3.
+set(Python_ADDITIONAL_VERSIONS 3.7 3.6 3.5 2.7)
 include(FindPythonInterp)
 if( NOT PYTHONINTERP_FOUND )
   message(FATAL_ERROR

@@ -215,8 +215,8 @@ public:
   }
 
   llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File) const override {
-    auto Cmd = Base->getCompileCommand(File);
+  getCompileCommand(PathRef File, ProjectInfo *PI = nullptr) const override {
+    auto Cmd = Base->getCompileCommand(File, PI);
     if (!Cmd || Cmd->CommandLine.empty())
       return Cmd;
 
@@ -238,10 +238,6 @@ public:
     }
 
     return addSystemIncludes(*Cmd, SystemIncludes);
-  }
-
-  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override {
-    return Base->getProjectInfo(File);
   }
 
 private:

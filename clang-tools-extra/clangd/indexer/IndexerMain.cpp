@@ -110,7 +110,7 @@ int main(int argc, const char **argv) {
   )";
 
   auto Executor = clang::tooling::createExecutorFromCommandLineArgs(
-      argc, argv, llvm::cl::GeneralCategory, Overview);
+      argc, argv, *llvm::cl::GeneralCategory, Overview);
 
   if (!Executor) {
     llvm::errs() << llvm::toString(Executor.takeError()) << "\n";

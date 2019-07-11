@@ -292,9 +292,9 @@ void InitializePlatform() {
     }
     // Initialize the guard pointer used in {sig}{set,long}jump.
     longjmp_xor_key = InitializeGuardPtr();
-    uptr old_value = longjmp_xor_key;
-    InitializeLongjmpXorKey();
-    CHECK_EQ(longjmp_xor_key, old_value);
+    // uptr old_value = longjmp_xor_key;
+    // InitializeLongjmpXorKey();
+    // CHECK_EQ(longjmp_xor_key, old_value);
     // If the above check fails for you, please contact me (jlettner@apple.com)
     // and let me know the values of the two differing keys.  Please also set a
     // breakpoint on `InitializeGuardPtr` and `InitializeLongjmpXorKey` and tell
@@ -417,7 +417,7 @@ uptr ExtractLongJmpSp(uptr *env) {
 
 #if SANITIZER_LINUX && defined(__aarch64__)
 #include "interception/interception.h"
-DECLARE_REAL(int, setjmp, void* env);
+DECLARE_REAL(int, _setjmp, void* env)
 // GLIBC mangles the function pointers in jmp_buf (used in {set,long}*jmp
 // functions) by XORing them with a random key.  For AArch64 it is a global
 // variable rather than a TCB one (as for x86_64/powerpc).  We obtain the key by
@@ -425,7 +425,7 @@ DECLARE_REAL(int, setjmp, void* env);
 static void InitializeLongjmpXorKey() {
   // 1. Call REAL(setjmp), which stores the mangled SP in env.
   jmp_buf env;
-  REAL(setjmp)(env);
+  // REAL(_setjmp)(env); // TODO(yln)
 
   // 2. Retrieve mangled/vanilla SP.
   uptr mangled_sp = ((uptr *)&env)[LONG_JMP_SP_ENV_SLOT];

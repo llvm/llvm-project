@@ -27,7 +27,6 @@ struct S {
 volatile int g = 1212;
 
 // CHECK: [[S_FLOAT_TY:%.+]] = type { float }
-// CHECK [[CAP_MAIN_TY:%.+]] = type { i{{[0-9]+}}*, [2 x i{{[0-9]+}}]*, [2 x [[S_FLOAT_TY]]]*, [[S_FLOAT_TY]]*, i{{[0-9]+}}* }
 // CHECK: [[S_INT_TY:%.+]] = type { i32 }
 // CHECK-DAG: [[SECTIONS_BARRIER_LOC:@.+]] = private unnamed_addr global %{{.+}} { i32 0, i32 194, i32 0, i32 0, i8*
 // CHECK-DAG: [[X:@.+]] = global double 0.0

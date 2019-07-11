@@ -1,9 +1,9 @@
 // First, check this works with the default blacklist:
-// RUN: %clang_cl_asan -O0 %s -Fe%t
+// RUN: %clang_cl_asan -Od %s -Fe%t
 // RUN: echo "42" | %run %t 2>&1 | FileCheck %s
 //
 // Then, make sure it still works when a user uses his own blacklist file:
-// RUN: %clang_cl_asan -O0 %s -fsanitize-blacklist=%p/../Helpers/initialization-blacklist.txt -Fe%t2
+// RUN: %clang_cl_asan -Od %s -fsanitize-blacklist=%p/../Helpers/initialization-blacklist.txt -Fe%t2
 // RUN: echo "42" | %run %t2 2>&1 | FileCheck %s
 
 #include <iostream>

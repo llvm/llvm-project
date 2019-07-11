@@ -5169,7 +5169,8 @@ static NamedDecl *getDefinitionToImport(NamedDecl *D) {
   if (ObjCProtocolDecl *PD = dyn_cast<ObjCProtocolDecl>(D))
     return PD->getDefinition();
   if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D))
-    return getDefinitionToImport(TD->getTemplatedDecl());
+    if (NamedDecl *TTD = TD->getTemplatedDecl())
+      return getDefinitionToImport(TTD);
   return nullptr;
 }
 

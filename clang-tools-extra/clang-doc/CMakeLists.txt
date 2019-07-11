@@ -8,6 +8,7 @@ add_clang_library(clangDoc
   BitcodeWriter.cpp
   ClangDoc.cpp
   Generators.cpp
+  HTMLGenerator.cpp
   Mapper.cpp
   MDGenerator.cpp
   Representation.cpp

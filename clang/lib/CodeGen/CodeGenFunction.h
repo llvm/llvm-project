@@ -4199,6 +4199,9 @@ private:
                                      llvm::Value *EmittedE,
                                      bool IsDynamic);
 
+  void emitZeroOrPatternForAutoVarInit(QualType type, const VarDecl &D,
+                                       Address Loc);
+
 public:
 #ifndef NDEBUG
   // Determine whether the given argument is an Objective-C method

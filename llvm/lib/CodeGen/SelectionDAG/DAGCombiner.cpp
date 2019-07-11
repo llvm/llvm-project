@@ -12030,8 +12030,8 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   // Selection pass has a hard time dealing with FP constants.
   bool AllowNewConst = (Level < AfterLegalizeDAG);
 
-  // If 'unsafe math' or nnan is enabled, fold lots of things.
-  if ((Options.UnsafeFPMath || Flags.hasNoNaNs()) && AllowNewConst) {
+  // If nnan is enabled, fold lots of things.
+  if ((Options.NoNaNsFPMath || Flags.hasNoNaNs()) && AllowNewConst) {
     // If allowed, fold (fadd (fneg x), x) -> 0.0
     if (N0.getOpcode() == ISD::FNEG && N0.getOperand(0) == N1)
       return DAG.getConstantFP(0.0, DL, VT);
@@ -12171,7 +12171,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 
   if (N0 == N1) {
     // (fsub x, x) -> 0.0
-    if (Options.UnsafeFPMath || Flags.hasNoNaNs())
+    if (Options.NoNaNsFPMath || Flags.hasNoNaNs())
       return DAG.getConstantFP(0.0f, DL, VT);
   }
 
@@ -12249,7 +12249,7 @@ SDValue DAGCombiner::visitFMUL(SDNode *N) {
   if (SDValue NewSel = foldBinOpIntoSelect(N))
     return NewSel;
 
-  if (Options.UnsafeFPMath ||
+  if ((Options.NoNaNsFPMath && Options.NoSignedZerosFPMath) ||
       (Flags.hasNoNaNs() && Flags.hasNoSignedZeros())) {
     // fold (fmul A, 0) -> 0
     if (N1CFP && N1CFP->isZero())

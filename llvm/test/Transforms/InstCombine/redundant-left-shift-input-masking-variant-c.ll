@@ -239,8 +239,8 @@ define i32 @t10_nuw_nsw(i32 %x, i32 %nbits) {
 
 ; Negative tests
 
-define i32 @n11(i32 %x, i32 %nbits) {
-; CHECK-LABEL: @n11(
+define i32 @n11_not_minus_one(i32 %x, i32 %nbits) {
+; CHECK-LABEL: @n11_not_minus_one(
 ; CHECK-NEXT:    [[T0:%.*]] = lshr i32 -2, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
@@ -256,8 +256,8 @@ define i32 @n11(i32 %x, i32 %nbits) {
   ret i32 %t2
 }
 
-define i32 @n12(i32 %x, i32 %nbits) {
-; CHECK-LABEL: @n12(
+define i32 @n12_shamt_is_smaller(i32 %x, i32 %nbits) {
+; CHECK-LABEL: @n12_shamt_is_smaller(
 ; CHECK-NEXT:    [[T0:%.*]] = lshr i32 -1, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[X:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[NBITS]], -1

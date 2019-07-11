@@ -7567,6 +7567,10 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
          "Register/Memory size mismatch");
   LoadSDNode *LDBase = Loads[FirstLoadedElt];
   assert(LDBase && "Did not find base load for merging consecutive loads");
+  unsigned BaseSizeInBits = EltBaseVT.getStoreSizeInBits();
+  unsigned BaseSizeInBytes = BaseSizeInBits / 8;
+  int LoadSizeInBits = (1 + LastLoadedElt - FirstLoadedElt) * BaseSizeInBits;
+  assert((BaseSizeInBits % 8) == 0 && "Sub-byte element loads detected");
 
   // Consecutive loads can contain UNDEFS but not ZERO elements.
   // Consecutive loads with UNDEFs and ZEROs elements require a
@@ -7575,11 +7579,8 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   bool IsConsecutiveLoadWithZeros = true;
   for (int i = FirstLoadedElt + 1; i <= LastLoadedElt; ++i) {
     if (LoadMask[i]) {
-      SDValue Elt = peekThroughBitcasts(Elts[i]);
-      LoadSDNode *LD = Loads[i];
-      if (!DAG.areNonVolatileConsecutiveLoads(
-              LD, LDBase, Elt.getValueType().getStoreSizeInBits() / 8,
-              i - FirstLoadedElt)) {
+      if (!DAG.areNonVolatileConsecutiveLoads(Loads[i], LDBase, BaseSizeInBytes,
+                                              i - FirstLoadedElt)) {
         IsConsecutiveLoad = false;
         IsConsecutiveLoadWithZeros = false;
         break;
@@ -7646,9 +7647,6 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
     }
   }
 
-  unsigned BaseSize = EltBaseVT.getStoreSizeInBits();
-  int LoadSize = (1 + LastLoadedElt - FirstLoadedElt) * BaseSize;
-
   // If the upper half of a ymm/zmm load is undef then just load the lower half.
   if (VT.is256BitVector() || VT.is512BitVector()) {
     unsigned HalfNumElems = NumElems / 2;
@@ -7666,11 +7664,11 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 
   // VZEXT_LOAD - consecutive 32/64-bit load/undefs followed by zeros/undefs.
   if (IsConsecutiveLoad && FirstLoadedElt == 0 &&
-      (LoadSize == 32 || LoadSize == 64) &&
+      (LoadSizeInBits == 32 || LoadSizeInBits == 64) &&
       ((VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector()))) {
-    MVT VecSVT = VT.isFloatingPoint() ? MVT::getFloatingPointVT(LoadSize)
-                                      : MVT::getIntegerVT(LoadSize);
-    MVT VecVT = MVT::getVectorVT(VecSVT, VT.getSizeInBits() / LoadSize);
+    MVT VecSVT = VT.isFloatingPoint() ? MVT::getFloatingPointVT(LoadSizeInBits)
+                                      : MVT::getIntegerVT(LoadSizeInBits);
+    MVT VecVT = MVT::getVectorVT(VecSVT, VT.getSizeInBits() / LoadSizeInBits);
     if (TLI.isTypeLegal(VecVT)) {
       SDVTList Tys = DAG.getVTList(VecVT, MVT::Other);
       SDValue Ops[] = { LDBase->getChain(), LDBase->getBasePtr() };
@@ -7688,11 +7686,10 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 
   // BROADCAST - match the smallest possible repetition pattern, load that
   // scalar/subvector element and then broadcast to the entire vector.
-  if (ZeroMask.isNullValue() && isPowerOf2_32(NumElems) &&
-      (BaseSize % 8) == 0 && Subtarget.hasAVX() &&
+  if (ZeroMask.isNullValue() && isPowerOf2_32(NumElems) && Subtarget.hasAVX() &&
       (VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector())) {
     for (unsigned SubElems = 1; SubElems < NumElems; SubElems *= 2) {
-      unsigned RepeatSize = SubElems * BaseSize;
+      unsigned RepeatSize = SubElems * BaseSizeInBits;
       unsigned ScalarSize = std::min(RepeatSize, 64u);
       if (!Subtarget.hasAVX2() && ScalarSize < 32)
         continue;

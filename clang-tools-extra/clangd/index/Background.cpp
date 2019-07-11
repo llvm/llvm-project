@@ -619,15 +619,11 @@ BackgroundIndex::loadShards(std::vector<std::string> ChangedFiles) {
   llvm::StringSet<> LoadedShards;
   Rebuilder.startLoading();
   for (const auto &File : ChangedFiles) {
-    auto Cmd = CDB.getCompileCommand(File);
+    ProjectInfo PI;
+    auto Cmd = CDB.getCompileCommand(File, &PI);
     if (!Cmd)
       continue;
-
-    std::string ProjectRoot;
-    if (auto PI = CDB.getProjectInfo(File))
-      ProjectRoot = std::move(PI->SourceRoot);
-
-    BackgroundIndexStorage *IndexStorage = IndexStorageFactory(ProjectRoot);
+    BackgroundIndexStorage *IndexStorage = IndexStorageFactory(PI.SourceRoot);
     auto Dependencies = loadShard(*Cmd, IndexStorage, LoadedShards);
     for (const auto &Dependency : Dependencies) {
       if (!Dependency.NeedsReIndexing || FilesToIndex.count(Dependency.Path))

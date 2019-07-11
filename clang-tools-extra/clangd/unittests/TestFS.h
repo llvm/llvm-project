@@ -12,8 +12,6 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTFS_H
 #define LLVM_CLANG_TOOLS_EXTRA_UNITTESTS_CLANGD_TESTFS_H
 #include "ClangdServer.h"
-#include "GlobalCompilationDatabase.h"
-#include "Path.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
@@ -50,9 +48,7 @@ public:
                           StringRef RelPathPrefix = StringRef());
 
   llvm::Optional<tooling::CompileCommand>
-  getCompileCommand(PathRef File) const override;
-
-  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+  getCompileCommand(PathRef File, ProjectInfo * = nullptr) const override;
 
   std::vector<std::string> ExtraClangFlags;
 

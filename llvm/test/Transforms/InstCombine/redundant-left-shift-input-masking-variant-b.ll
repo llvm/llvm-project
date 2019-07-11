@@ -214,8 +214,8 @@ define i32 @t6_commutativity0(i32 %nbits) {
   ret i32 %t4
 }
 
-define i32 @t6_commutativity1(i32 %nbits0, i32 %nbits1) {
-; CHECK-LABEL: @t6_commutativity1(
+define i32 @t7_commutativity1(i32 %nbits0, i32 %nbits1) {
+; CHECK-LABEL: @t7_commutativity1(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 -1, [[NBITS0:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = shl i32 -1, [[NBITS1:%.*]]
@@ -246,8 +246,8 @@ define i32 @t6_commutativity1(i32 %nbits0, i32 %nbits1) {
   %t6 = shl i32 %t4, %t5
   ret i32 %t6
 }
-define i32 @t6_commutativity2(i32 %nbits0, i32 %nbits1) {
-; CHECK-LABEL: @t6_commutativity2(
+define i32 @t8_commutativity2(i32 %nbits0, i32 %nbits1) {
+; CHECK-LABEL: @t8_commutativity2(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 -1, [[NBITS0:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = shl i32 -1, [[NBITS1:%.*]]
@@ -281,8 +281,8 @@ define i32 @t6_commutativity2(i32 %nbits0, i32 %nbits1) {
 
 ; Fast-math flags. We must not preserve them!
 
-define i32 @t7_nuw(i32 %x, i32 %nbits) {
-; CHECK-LABEL: @t7_nuw(
+define i32 @t9_nuw(i32 %x, i32 %nbits) {
+; CHECK-LABEL: @t9_nuw(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 -1, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], [[X:%.*]]
@@ -306,8 +306,8 @@ define i32 @t7_nuw(i32 %x, i32 %nbits) {
   ret i32 %t4
 }
 
-define i32 @t8_nsw(i32 %x, i32 %nbits) {
-; CHECK-LABEL: @t8_nsw(
+define i32 @t10_nsw(i32 %x, i32 %nbits) {
+; CHECK-LABEL: @t10_nsw(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 -1, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], [[X:%.*]]
@@ -331,8 +331,8 @@ define i32 @t8_nsw(i32 %x, i32 %nbits) {
   ret i32 %t4
 }
 
-define i32 @t9_nuw_nsw(i32 %x, i32 %nbits) {
-; CHECK-LABEL: @t9_nuw_nsw(
+define i32 @t11_nuw_nsw(i32 %x, i32 %nbits) {
+; CHECK-LABEL: @t11_nuw_nsw(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 -1, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], [[X:%.*]]
@@ -358,8 +358,8 @@ define i32 @t9_nuw_nsw(i32 %x, i32 %nbits) {
 
 ; Negative tests
 
-define i32 @n10(i32 %x, i32 %nbits) {
-; CHECK-LABEL: @n10(
+define i32 @n12_not_minus_one(i32 %x, i32 %nbits) {
+; CHECK-LABEL: @n12_not_minus_one(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 -2, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], [[X:%.*]]
@@ -383,8 +383,8 @@ define i32 @n10(i32 %x, i32 %nbits) {
   ret i32 %t4
 }
 
-define i32 @n11(i32 %x, i32 %nbits) {
-; CHECK-LABEL: @n11(
+define i32 @n13_insufficient_sum(i32 %x, i32 %nbits) {
+; CHECK-LABEL: @n13_insufficient_sum(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 -1, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = xor i32 [[T0]], -1
 ; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], [[X:%.*]]

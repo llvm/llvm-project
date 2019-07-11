@@ -2674,6 +2674,17 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
        isCondCodeLegal(SwappedCC, N0.getSimpleValueType())))
     return DAG.getSetCC(dl, VT, N1, N0, SwappedCC);
 
+  // If we have a subtract with the same 2 non-constant operands as this setcc
+  // -- but in reverse order -- then try to commute the operands of this setcc
+  // to match. A matching pair of setcc (cmp) and sub may be combined into 1
+  // instruction on some targets.
+  if (!isConstOrConstSplat(N0) && !isConstOrConstSplat(N1) &&
+      (DCI.isBeforeLegalizeOps() ||
+       isCondCodeLegal(SwappedCC, N0.getSimpleValueType())) &&
+      DAG.getNodeIfExists(ISD::SUB, DAG.getVTList(OpVT), { N1, N0 } ) &&
+      !DAG.getNodeIfExists(ISD::SUB, DAG.getVTList(OpVT), { N0, N1 } ))
+    return DAG.getSetCC(dl, VT, N1, N0, SwappedCC);
+
   if (auto *N1C = dyn_cast<ConstantSDNode>(N1.getNode())) {
     const APInt &C1 = N1C->getAPIntValue();
 

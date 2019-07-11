@@ -1,10 +1,10 @@
-// RUN: %clang_cl_asan -O0 %p/dll_host.cc -Fe%t
+// RUN: %clang_cl_asan -Od %p/dll_host.cc -Fe%t
 //
 // Check both -GS and -GS- builds:
-// RUN: %clang_cl_asan -GS  -LD -O0 %s -Fe%t.dll
+// RUN: %clang_cl_asan -GS  -LD -Od %s -Fe%t.dll
 // RUN: %run %t %t.dll
 //
-// RUN: %clang_cl_asan -GS- -LD -O0 %s -Fe%t.dll
+// RUN: %clang_cl_asan -GS- -LD -Od %s -Fe%t.dll
 // RUN: %run %t %t.dll
 
 #include <windows.h>
