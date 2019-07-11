@@ -1,9 +1,32 @@
-# Test handling of a dynamic section size which is not a multiple of its entry size.
-# RUN: yaml2obj %s --docnum=1 -o %t.bad-size
-# RUN: not llvm-readobj --dynamic-table %t.bad-size 2>&1 | FileCheck %s --check-prefix ERR-SIZE
-# RUN: not llvm-readelf --dynamic-table %t.bad-size 2>&1 | FileCheck %s --check-prefix ERR-SIZE
+## Test handling of a dynamic section size which is not a multiple of its entry size.
+## Test the full output to demonstrate how we print the warnings.
 
-# ERR-SIZE: error: Invalid entity size
+# RUN: yaml2obj %s --docnum=1 -o %t.bad-size
+# RUN: llvm-readobj --all %t.bad-size 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning --check-prefix WARN
+# RUN: llvm-readelf --all %t.bad-size 2>&1 \
+# RUN:   | FileCheck %s --implicit-check-not=warning --check-prefix WARN-GNU
+
+# WARN-NOT: warning
+# WARN: warning: invalid section size (4) or entity size (16)
+# WARN-EMPTY:
+# WARN-NEXT: File:
+# WARN:      Symbols [
+# WARN:      ]
+# WARN-EMPTY:
+## A warning is printed at the place where a normal dynamic table should be. 
+# WARN-NEXT: warning: invalid section size (4) or entity size (16)
+# WARN-NEXT: ProgramHeaders [
+
+# WARN-GNU-NOT:  warning
+# WARN-GNU:      warning: invalid section size (4) or entity size (16)
+# WARN-GNU-NEXT: ELF Header:
+# WARN-GNU:      Symbol table '.symtab' contains 1 entries:
+# WARN-GNU:        0:
+# WARN-GNU-EMPTY:
+## A warning is printed at the place where a normal dynamic table should be. 
+# WARN-GNU:      warning: invalid section size (4) or entity size (16)
+# WARN-GNU-EMPTY:
 
 --- !ELF
 FileHeader:
@@ -26,7 +49,7 @@ ProgramHeaders:
     Sections:
       - Section: .dynamic
 
-# Test handling of a .dynamic section with an invalid entsize (i.e. not 2 * sizeof(Elf_Dyn)).
+## Test handling of a .dynamic section with an invalid entsize (i.e. not 2 * sizeof(Elf_Dyn)).
 # RUN: yaml2obj %s --docnum=2 -o %t.bad-entsize
 # RUN: llvm-readobj --dynamic-table %t.bad-entsize | FileCheck %s --check-prefix BAD-ENTSIZE-LLVM
 # RUN: llvm-readelf --dynamic-table %t.bad-entsize | FileCheck %s --check-prefix BAD-ENTSIZE-GNU
@@ -68,7 +91,7 @@ ProgramHeaders:
     Sections:
       - Section: .dynamic
 
-# Test handling of string references pointing past the end of the dynamic string table.
+## Test handling of string references pointing past the end of the dynamic string table.
 # RUN: yaml2obj %s --docnum=3 -o %t.bad-string
 # RUN: llvm-readobj --dynamic-table %t.bad-string | FileCheck %s --check-prefix BAD-STRING-LLVM
 # RUN: llvm-readelf --dynamic-table %t.bad-string | FileCheck %s --check-prefix BAD-STRING-GNU
@@ -136,7 +159,7 @@ ProgramHeaders:
     Sections:
       - Section: .dynamic
 
-# Test handling of DT_STRTAB pointing outside the file's address space.
+## Test handling of DT_STRTAB pointing outside the file's address space.
 # RUN: yaml2obj %s --docnum=4 -o %t.bad-strtab
 
 # RUN: llvm-readobj --dynamic-table %t.bad-strtab 2>&1 >/dev/null | FileCheck %s --check-prefix BAD-STRTAB-ERR
@@ -181,7 +204,7 @@ ProgramHeaders:
     Sections:
       - Section: .dynamic
 
-# Test handling of other d_ptr tags pointing outside the file's address space.
+## Test handling of other d_ptr tags pointing outside the file's address space.
 # RUN: yaml2obj %s --docnum=5 -o %t.bad-rela
 # RUN: llvm-readobj --dynamic-table %t.bad-rela 2>&1 | FileCheck %s --check-prefixes=CHECK,BAD-RELA
 # RUN: llvm-readelf --dynamic-table %t.bad-rela 2>&1 | FileCheck %s --check-prefixes=CHECK,BAD-RELA-GNU

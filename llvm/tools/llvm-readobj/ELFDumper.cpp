@@ -134,8 +134,12 @@ struct DynRegionInfo {
     const Type *Start = reinterpret_cast<const Type *>(Addr);
     if (!Start)
       return {Start, Start};
-    if (EntSize != sizeof(Type) || Size % EntSize)
-      reportError("Invalid entity size");
+    if (EntSize != sizeof(Type) || Size % EntSize) {
+      // TODO: Add a section index to this warning.
+      reportWarning("invalid section size (" + Twine(Size) +
+                    ") or entity size (" + Twine(EntSize) + ")");
+      return {Start, Start};
+    }
     return {Start, Start + (Size / EntSize)};
   }
 };
