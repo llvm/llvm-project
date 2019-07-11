@@ -38,7 +38,6 @@ static bool readsLaneId(const IntrinsicInst *II) {
 static bool isNVVMAtomic(const IntrinsicInst *II) {
   switch (II->getIntrinsicID()) {
     default: return false;
-    case Intrinsic::nvvm_atomic_load_add_f32:
     case Intrinsic::nvvm_atomic_load_inc_32:
     case Intrinsic::nvvm_atomic_load_dec_32:
 

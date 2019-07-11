@@ -99,6 +99,25 @@ entry:
   ret i64 %cond
 }
 
+define void @select_ambiguous_i64_in_fpr(i1 %test, i64* %i64_ptr_a, i64* %i64_ptr_b, i64* %i64_ptr_c) {
+; MIPS32-LABEL: select_ambiguous_i64_in_fpr:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    ldc1 $f0, 0($5)
+; MIPS32-NEXT:    ldc1 $f2, 0($6)
+; MIPS32-NEXT:    ori $1, $zero, 1
+; MIPS32-NEXT:    and $1, $4, $1
+; MIPS32-NEXT:    movn.d $f2, $f0, $1
+; MIPS32-NEXT:    sdc1 $f2, 0($7)
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %0 = load i64, i64* %i64_ptr_a, align 8
+  %1 = load i64, i64* %i64_ptr_b, align 8
+  %cond = select i1 %test, i64 %0, i64 %1
+  store i64 %cond, i64* %i64_ptr_c, align 8
+  ret void
+}
+
 define float @select_float(i1 %test, float %a, float %b) {
 ; MIPS32-LABEL: select_float:
 ; MIPS32:       # %bb.0: # %entry
@@ -113,6 +132,25 @@ define float @select_float(i1 %test, float %a, float %b) {
 entry:
   %cond = select i1 %test, float %a, float %b
   ret float %cond
+}
+
+define void @select_ambiguous_float_in_gpr(i1 %test, float* %f32_ptr_a, float* %f32_ptr_b, float* %f32_ptr_c) {
+; MIPS32-LABEL: select_ambiguous_float_in_gpr:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    lw $1, 0($5)
+; MIPS32-NEXT:    lw $2, 0($6)
+; MIPS32-NEXT:    ori $3, $zero, 1
+; MIPS32-NEXT:    and $3, $4, $3
+; MIPS32-NEXT:    movn $2, $1, $3
+; MIPS32-NEXT:    sw $2, 0($7)
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %0 = load float, float* %f32_ptr_a, align 4
+  %1 = load float, float* %f32_ptr_b, align 4
+  %cond = select i1 %test, float %0, float %1
+  store float %cond, float* %f32_ptr_c, align 4
+  ret void
 }
 
 define double @select_double(double %a, double %b, i1 %test) {

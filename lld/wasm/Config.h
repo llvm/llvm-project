@@ -22,58 +22,58 @@ namespace wasm {
 // and such fields have the same name as the corresponding options.
 // Most fields are initialized by the driver.
 struct Configuration {
-  bool AllowUndefined;
-  bool CheckFeatures;
-  bool CompressRelocations;
-  bool Demangle;
-  bool DisableVerify;
-  bool EmitRelocs;
-  bool ExportAll;
-  bool ExportDynamic;
-  bool ExportTable;
-  bool GcSections;
-  bool ImportMemory;
-  bool SharedMemory;
-  bool PassiveSegments;
-  bool ImportTable;
-  bool MergeDataSegments;
-  bool Pie;
-  bool PrintGcSections;
-  bool Relocatable;
-  bool SaveTemps;
-  bool Shared;
-  bool StripAll;
-  bool StripDebug;
-  bool StackFirst;
-  bool Trace;
-  uint32_t GlobalBase;
-  uint32_t InitialMemory;
-  uint32_t MaxMemory;
-  uint32_t ZStackSize;
-  unsigned LTOPartitions;
-  unsigned LTOO;
-  unsigned Optimize;
-  unsigned ThinLTOJobs;
+  bool allowUndefined;
+  bool checkFeatures;
+  bool compressRelocations;
+  bool demangle;
+  bool disableVerify;
+  bool emitRelocs;
+  bool exportAll;
+  bool exportDynamic;
+  bool exportTable;
+  bool gcSections;
+  bool importMemory;
+  bool sharedMemory;
+  bool passiveSegments;
+  bool importTable;
+  bool mergeDataSegments;
+  bool pie;
+  bool printGcSections;
+  bool relocatable;
+  bool saveTemps;
+  bool shared;
+  bool stripAll;
+  bool stripDebug;
+  bool stackFirst;
+  bool trace;
+  uint32_t globalBase;
+  uint32_t initialMemory;
+  uint32_t maxMemory;
+  uint32_t zStackSize;
+  unsigned ltoPartitions;
+  unsigned ltoo;
+  unsigned optimize;
+  unsigned thinLTOJobs;
 
-  llvm::StringRef Entry;
-  llvm::StringRef OutputFile;
-  llvm::StringRef ThinLTOCacheDir;
+  llvm::StringRef entry;
+  llvm::StringRef outputFile;
+  llvm::StringRef thinLTOCacheDir;
 
-  llvm::StringSet<> AllowUndefinedSymbols;
-  llvm::StringSet<> ExportedSymbols;
-  std::vector<llvm::StringRef> SearchPaths;
-  llvm::CachePruningPolicy ThinLTOCachePolicy;
-  llvm::Optional<std::vector<std::string>> Features;
+  llvm::StringSet<> allowUndefinedSymbols;
+  llvm::StringSet<> exportedSymbols;
+  std::vector<llvm::StringRef> searchPaths;
+  llvm::CachePruningPolicy thinLTOCachePolicy;
+  llvm::Optional<std::vector<std::string>> features;
 
   // The following config options do not directly correspond to any
   // particualr command line options.
 
   // True if we are creating position-independent code.
-  bool Pic;
+  bool isPic;
 };
 
 // The only instance of Configuration struct.
-extern Configuration *Config;
+extern Configuration *config;
 
 } // namespace wasm
 } // namespace lld

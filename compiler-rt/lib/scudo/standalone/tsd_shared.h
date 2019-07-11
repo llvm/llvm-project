@@ -94,7 +94,7 @@ private:
   }
 
   void initOnceMaybe(Allocator *Instance) {
-    SpinMutexLock L(&Mutex);
+    ScopedLock L(Mutex);
     if (Initialized)
       return;
     initLinkerInitialized(Instance); // Sets Initialized.
@@ -152,7 +152,7 @@ private:
   u32 NumberOfCoPrimes;
   u32 CoPrimes[MaxTSDCount];
   bool Initialized;
-  StaticSpinMutex Mutex;
+  HybridMutex Mutex;
 #if SCUDO_LINUX && !SCUDO_ANDROID
   static THREADLOCAL TSD<Allocator> *ThreadTSD;
 #endif

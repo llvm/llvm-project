@@ -58,6 +58,7 @@ set(SANITIZER_LIBCDEP_SOURCES
   sanitizer_mac_libcdep.cc
   sanitizer_posix_libcdep.cc
   sanitizer_stoptheworld_linux_libcdep.cc
+  sanitizer_stoptheworld_netbsd_libcdep.cc
   )
 
 set(SANITIZER_COVERAGE_SOURCES

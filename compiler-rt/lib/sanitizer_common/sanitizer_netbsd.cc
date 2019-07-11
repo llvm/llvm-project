@@ -245,10 +245,9 @@ uptr internal_clock_gettime(__sanitizer_clockid_t clk_id, void *tp) {
   return _REAL(__clock_gettime50, clk_id, tp);
 }
 
-uptr internal_ptrace(int request, int pid, void *addr, void *data) {
-  Printf("internal_ptrace not implemented for NetBSD");
-  Die();
-  return 0;
+uptr internal_ptrace(int request, int pid, void *addr, int data) {
+  DEFINE__REAL(int, ptrace, int a, int b, void *c, int d);
+  return _REAL(ptrace, request, pid, addr, data);
 }
 
 uptr internal_waitpid(int pid, int *status, int options) {
@@ -322,11 +321,16 @@ void internal_sigemptyset(__sanitizer_sigset_t *set) {
   (void)_REAL(__sigemptyset14, set);
 }
 
-uptr intrnal_clone(int (*fn)(void *), void *child_stack, int flags, void *arg,
-                   int *parent_tidptr, void *newtls, int *child_tidptr) {
-  Printf("internal_clone not implemented for NetBSD");
-  Die();
-  return 0;
+void internal_sigdelset(__sanitizer_sigset_t *set, int signo) {
+  DEFINE__REAL(int, __sigdelset14, const void *a, int b);
+  (void)_REAL(__sigdelset14, set, signo);
+}
+
+uptr internal_clone(int (*fn)(void *), void *child_stack, int flags,
+                    void *arg) {
+  DEFINE__REAL(int, clone, int (*a)(void *b), void *c, int d, void *e);
+
+  return _REAL(clone, fn, child_stack, flags, arg);
 }
 
 }  // namespace __sanitizer

@@ -100,7 +100,7 @@ public:
   TransferBatch *popBatch(CacheT *C, uptr ClassId) {
     DCHECK_LT(ClassId, NumClasses);
     RegionInfo *Region = getRegionInfo(ClassId);
-    BlockingMutexLock L(&Region->Mutex);
+    ScopedLock L(Region->Mutex);
     TransferBatch *B = Region->FreeList.front();
     if (B)
       Region->FreeList.pop_front();
@@ -117,7 +117,7 @@ public:
   void pushBatch(uptr ClassId, TransferBatch *B) {
     DCHECK_GT(B->getCount(), 0);
     RegionInfo *Region = getRegionInfo(ClassId);
-    BlockingMutexLock L(&Region->Mutex);
+    ScopedLock L(Region->Mutex);
     Region->FreeList.push_front(B);
     Region->Stats.PushedBlocks += B->getCount();
     if (Region->CanRelease)
@@ -168,7 +168,7 @@ public:
   void releaseToOS() {
     for (uptr I = 1; I < NumClasses; I++) {
       RegionInfo *Region = getRegionInfo(I);
-      BlockingMutexLock L(&Region->Mutex);
+      ScopedLock L(Region->Mutex);
       releaseToOSMaybe(Region, I, /*Force=*/true);
     }
   }
@@ -194,7 +194,7 @@ private:
   };
 
   struct ALIGNED(SCUDO_CACHE_LINE_SIZE) RegionInfo {
-    BlockingMutex Mutex;
+    HybridMutex Mutex;
     IntrusiveList<TransferBatch> FreeList;
     RegionStats Stats;
     bool CanRelease;

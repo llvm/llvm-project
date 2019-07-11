@@ -3355,9 +3355,6 @@ multiclass MVE_VQDMLAH_qr_types<string iname, bit bit_5, bit bit_12> {
   def s8  : MVE_VQDMLAH_qr<iname, "s8",  0b0, 0b00, bit_5, bit_12>;
   def s16 : MVE_VQDMLAH_qr<iname, "s16", 0b0, 0b01, bit_5, bit_12>;
   def s32 : MVE_VQDMLAH_qr<iname, "s32", 0b0, 0b10, bit_5, bit_12>;
-  def u8  : MVE_VQDMLAH_qr<iname, "u8",  0b1, 0b00, bit_5, bit_12>;
-  def u16 : MVE_VQDMLAH_qr<iname, "u16", 0b1, 0b01, bit_5, bit_12>;
-  def u32 : MVE_VQDMLAH_qr<iname, "u32", 0b1, 0b10, bit_5, bit_12>;
 }
 
 defm MVE_VQDMLAH_qr   : MVE_VQDMLAH_qr_types<"vqdmlah",   0b1, 0b0>;

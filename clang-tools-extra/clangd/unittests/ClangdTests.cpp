@@ -1064,7 +1064,7 @@ TEST_F(ClangdVFSTest, FallbackWhenPreambleIsNotReady) {
   ClangdServer Server(CDB, FS, DiagConsumer, ClangdServer::optsForTest());
 
   auto FooCpp = testPath("foo.cpp");
-   Annotations Code(R"cpp(
+  Annotations Code(R"cpp(
     namespace ns { int xyz; }
     using namespace ns;
     int main() {
@@ -1113,7 +1113,7 @@ TEST_F(ClangdVFSTest, FallbackWhenWaitingForCompileCommand) {
         : CanReturnCommand(CanReturnCommand) {}
 
     llvm::Optional<tooling::CompileCommand>
-    getCompileCommand(PathRef File, ProjectInfo * = nullptr) const override {
+    getCompileCommand(PathRef File) const override {
       // FIXME: make this timeout and fail instead of waiting forever in case
       // something goes wrong.
       CanReturnCommand.wait();

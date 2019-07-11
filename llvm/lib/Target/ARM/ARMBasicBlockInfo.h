@@ -132,6 +132,10 @@ public:
 
   unsigned getOffsetOf(MachineInstr *MI) const;
 
+  unsigned getOffsetOf(MachineBasicBlock *MBB) const {
+    return BBInfo[MBB->getNumber()].Offset;
+  }
+
   void adjustBBOffsetsAfter(MachineBasicBlock *MBB);
 
   void adjustBBSize(MachineBasicBlock *MBB, int Size) {

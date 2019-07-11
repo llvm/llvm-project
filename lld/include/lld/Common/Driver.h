@@ -14,28 +14,28 @@
 
 namespace lld {
 namespace coff {
-bool link(llvm::ArrayRef<const char *> Args, bool CanExitEarly,
-          llvm::raw_ostream &Diag = llvm::errs());
+bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
+          llvm::raw_ostream &diag = llvm::errs());
 }
 
 namespace mingw {
-bool link(llvm::ArrayRef<const char *> Args,
-          llvm::raw_ostream &Diag = llvm::errs());
+bool link(llvm::ArrayRef<const char *> args,
+          llvm::raw_ostream &diag = llvm::errs());
 }
 
 namespace elf {
-bool link(llvm::ArrayRef<const char *> Args, bool CanExitEarly,
-          llvm::raw_ostream &Diag = llvm::errs());
+bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
+          llvm::raw_ostream &diag = llvm::errs());
 }
 
 namespace mach_o {
-bool link(llvm::ArrayRef<const char *> Args, bool CanExitEarly,
-          llvm::raw_ostream &Diag = llvm::errs());
+bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
+          llvm::raw_ostream &diag = llvm::errs());
 }
 
 namespace wasm {
-bool link(llvm::ArrayRef<const char *> Args, bool CanExitEarly,
-          llvm::raw_ostream &Diag = llvm::errs());
+bool link(llvm::ArrayRef<const char *> args, bool canExitEarly,
+          llvm::raw_ostream &diag = llvm::errs());
 }
 }
 
