@@ -843,27 +843,6 @@ static void ResolveSpecialNames(
   }
 }
 
-//----------------------------------------------------------------------
-/// Diagnostics are part of the SwiftASTContext and we must enable and
-/// disable colorization manually in the SwiftASTContext. We need to
-/// ensure that if we modify the setting that we restore it to what it
-/// was. This class helps us to do that without having to intrument
-/// all returns from a function, like in
-/// SwiftExpressionParser::Parse(...).
-/// //----------------------------------------------------------------------
-class SetColorize {
-public:
-  SetColorize(SwiftASTContext *swift_ast, bool colorize)
-      : m_swift_ast(swift_ast),
-        m_saved_colorize(swift_ast->SetColorizeDiagnostics(colorize)) {}
-
-  ~SetColorize() { m_swift_ast->SetColorizeDiagnostics(m_saved_colorize); }
-
-protected:
-  SwiftASTContext *m_swift_ast;
-  const bool m_saved_colorize;
-};
-
 /// Initialize the SwiftASTContext and return the wrapped
 /// swift::ASTContext when successful.
 static swift::ASTContext *SetupASTContext(
@@ -913,11 +892,6 @@ static swift::ASTContext *SetupASTContext(
   // swift_ast_context->GetLanguageOptions().DebugConstraintSolver = true;
   swift_ast_context->ClearDiagnostics();
 
-  // Make a class that will set/restore the colorize setting in the
-  // SwiftASTContext for us.
-  
-  // SetColorize colorize(swift_ast_context,
-  // stream.GetFlags().Test(Stream::eANSIColor));
   swift_ast_context->GetLanguageOptions().DebuggerSupport = true;
   // No longer part of debugger support, set it separately.
   swift_ast_context->GetLanguageOptions().EnableDollarIdentifiers = true;
