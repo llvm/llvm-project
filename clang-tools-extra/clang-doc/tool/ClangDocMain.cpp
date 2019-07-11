@@ -65,6 +65,7 @@ static llvm::cl::opt<bool> DoxygenOnly(
 enum OutputFormatTy {
   md,
   yaml,
+  html,
 };
 
 static llvm::cl::opt<OutputFormatTy>
@@ -72,7 +73,9 @@ static llvm::cl::opt<OutputFormatTy>
                llvm::cl::values(clEnumValN(OutputFormatTy::yaml, "yaml",
                                            "Documentation in YAML format."),
                                 clEnumValN(OutputFormatTy::md, "md",
-                                           "Documentation in MD format.")),
+                                           "Documentation in MD format."),
+                                clEnumValN(OutputFormatTy::html, "html",
+                                           "Documentation in HTML format.")),
                llvm::cl::init(OutputFormatTy::yaml),
                llvm::cl::cat(ClangDocCategory));
 
@@ -82,6 +85,8 @@ std::string getFormatString() {
     return "yaml";
   case OutputFormatTy::md:
     return "md";
+  case OutputFormatTy::html:
+    return "html";
   }
   llvm_unreachable("Unknown OutputFormatTy");
 }

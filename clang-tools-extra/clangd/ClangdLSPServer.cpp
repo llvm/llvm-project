@@ -577,7 +577,7 @@ void ClangdLSPServer::onRename(const RenameParams &Params,
         "onRename called for non-added file", ErrorCode::InvalidParams));
 
   Server->rename(
-      File, Params.position, Params.newName,
+      File, Params.position, Params.newName, /*WantFormat=*/true,
       Bind(
           [File, Code, Params](decltype(Reply) Reply,
                                llvm::Expected<std::vector<TextEdit>> Edits) {

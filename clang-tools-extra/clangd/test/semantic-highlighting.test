@@ -9,12 +9,15 @@
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
 # CHECK-NEXT:            "entity.name.function.cpp"
-# CHECK-NEXT:          ]
+# CHECK-NEXT:          ],
 # CHECK-NEXT:          [
 # CHECK-NEXT:            "entity.name.type.class.cpp"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
 # CHECK-NEXT:            "entity.name.type.enum.cpp"
+# CHECK-NEXT:          ],
+# CHECK-NEXT:          [
+# CHECK-NEXT:            "entity.name.namespace.cpp"
 # CHECK-NEXT:          ]
 # CHECK-NEXT:        ]
 # CHECK-NEXT:      },

@@ -240,8 +240,11 @@ public:
 
   /// Rename all occurrences of the symbol at the \p Pos in \p File to
   /// \p NewName.
+  /// If WantFormat is false, the final TextEdit will be not formatted,
+  /// embedders could use this method to get all occurrences of the symbol (e.g.
+  /// highlighting them in prepare stage).
   void rename(PathRef File, Position Pos, llvm::StringRef NewName,
-              Callback<std::vector<TextEdit>> CB);
+              bool WantFormat, Callback<std::vector<TextEdit>> CB);
 
   struct TweakRef {
     std::string ID;    /// ID to pass for applyTweak.

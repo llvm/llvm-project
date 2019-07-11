@@ -283,23 +283,25 @@ ClangdServer::formatOnType(llvm::StringRef Code, PathRef File, Position Pos,
 }
 
 void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
-                          Callback<std::vector<TextEdit>> CB) {
-  auto Action = [Pos, this](Path File, std::string NewName,
-                            Callback<std::vector<TextEdit>> CB,
-                            llvm::Expected<InputsAndAST> InpAST) {
+                          bool WantFormat, Callback<std::vector<TextEdit>> CB) {
+  auto Action = [Pos, WantFormat, this](Path File, std::string NewName,
+                                        Callback<std::vector<TextEdit>> CB,
+                                        llvm::Expected<InputsAndAST> InpAST) {
     if (!InpAST)
       return CB(InpAST.takeError());
     auto Changes = renameWithinFile(InpAST->AST, File, Pos, NewName, Index);
     if (!Changes)
       return CB(Changes.takeError());
 
-    auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
-                                       InpAST->Inputs.FS.get());
-    if (auto Formatted =
-            cleanupAndFormat(InpAST->Inputs.Contents, *Changes, Style))
-      *Changes = std::move(*Formatted);
-    else
-      elog("Failed to format replacements: {0}", Formatted.takeError());
+    if (WantFormat) {
+      auto Style = getFormatStyleForFile(File, InpAST->Inputs.Contents,
+                                         InpAST->Inputs.FS.get());
+      if (auto Formatted =
+              cleanupAndFormat(InpAST->Inputs.Contents, *Changes, Style))
+        *Changes = std::move(*Formatted);
+      else
+        elog("Failed to format replacements: {0}", Formatted.takeError());
+    }
 
     std::vector<TextEdit> Edits;
     for (const auto &Rep : *Changes)

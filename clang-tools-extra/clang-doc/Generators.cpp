@@ -25,14 +25,62 @@ findGeneratorByName(llvm::StringRef Format) {
                                              llvm::inconvertibleErrorCode());
 }
 
+// Enum conversion
+
+std::string getAccess(AccessSpecifier AS) {
+  switch (AS) {
+  case AccessSpecifier::AS_public:
+    return "public";
+  case AccessSpecifier::AS_protected:
+    return "protected";
+  case AccessSpecifier::AS_private:
+    return "private";
+  case AccessSpecifier::AS_none:
+    return {};
+  }
+  llvm_unreachable("Unknown AccessSpecifier");
+}
+
+std::string getTagType(TagTypeKind AS) {
+  switch (AS) {
+  case TagTypeKind::TTK_Class:
+    return "class";
+  case TagTypeKind::TTK_Union:
+    return "union";
+  case TagTypeKind::TTK_Interface:
+    return "interface";
+  case TagTypeKind::TTK_Struct:
+    return "struct";
+  case TagTypeKind::TTK_Enum:
+    return "enum";
+  }
+  llvm_unreachable("Unknown TagTypeKind");
+}
+
+// Generates a comma-separated list of Refs
+// Used to display the parents of a record
+std::string genReferenceList(const llvm::SmallVectorImpl<Reference> &Refs) {
+  std::string Buffer;
+  llvm::raw_string_ostream Stream(Buffer);
+  for (const auto &R : Refs) {
+    if (&R != Refs.begin())
+      Stream << ", ";
+    Stream << R.Name;
+  }
+  return Stream.str();
+}
+
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the generators.
 extern volatile int YAMLGeneratorAnchorSource;
 extern volatile int MDGeneratorAnchorSource;
+extern volatile int HTMLGeneratorAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED YAMLGeneratorAnchorDest =
     YAMLGeneratorAnchorSource;
 static int LLVM_ATTRIBUTE_UNUSED MDGeneratorAnchorDest =
     MDGeneratorAnchorSource;
+static int LLVM_ATTRIBUTE_UNUSED HTMLGeneratorAnchorDest =
+    HTMLGeneratorAnchorSource;
 
 } // namespace doc
 } // namespace clang
