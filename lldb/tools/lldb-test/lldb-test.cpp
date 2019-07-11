@@ -739,7 +739,7 @@ static void dumpSectionList(LinePrinter &Printer, const SectionList &List, bool 
     Printer.formatLine("File size: {0}", S->GetFileSize());
 
     if (opts::object::SectionContents) {
-      DataExtractor Data;
+      lldb_private::DataExtractor Data;
       S->GetSectionData(Data);
       ArrayRef<uint8_t> Bytes = {Data.GetDataStart(), Data.GetDataEnd()};
       Printer.formatBinary("Data: ", Bytes, 0);

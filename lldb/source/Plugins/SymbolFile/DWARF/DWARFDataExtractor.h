@@ -11,6 +11,7 @@
 
 #include "lldb/Core/dwarf.h"
 #include "lldb/Utility/DataExtractor.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 
 namespace lldb_private {
 
@@ -28,6 +29,8 @@ public:
 
   size_t GetDWARFSizeofInitialLength() const { return 4; }
   size_t GetDWARFSizeOfOffset() const { return 4; }
+
+  llvm::DWARFDataExtractor GetAsLLVM() const;
 };
 }
 

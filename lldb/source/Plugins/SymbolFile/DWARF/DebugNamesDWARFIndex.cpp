@@ -16,13 +16,6 @@
 using namespace lldb_private;
 using namespace lldb;
 
-static llvm::DWARFDataExtractor ToLLVM(const DWARFDataExtractor &data) {
-  return llvm::DWARFDataExtractor(
-      llvm::StringRef(reinterpret_cast<const char *>(data.GetDataStart()),
-                      data.GetByteSize()),
-      data.GetByteOrder() == eByteOrderLittle, data.GetAddressByteSize());
-}
-
 llvm::Expected<std::unique_ptr<DebugNamesDWARFIndex>>
 DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
                              DWARFDataExtractor debug_str,
@@ -31,8 +24,8 @@ DebugNamesDWARFIndex::Create(Module &module, DWARFDataExtractor debug_names,
     return llvm::make_error<llvm::StringError>("debug info null",
                                                llvm::inconvertibleErrorCode());
   }
-  auto index_up =
-      llvm::make_unique<DebugNames>(ToLLVM(debug_names), ToLLVM(debug_str));
+  auto index_up = llvm::make_unique<DebugNames>(debug_names.GetAsLLVM(),
+                                                debug_str.GetAsLLVM());
   if (llvm::Error E = index_up->extract())
     return std::move(E);
 
