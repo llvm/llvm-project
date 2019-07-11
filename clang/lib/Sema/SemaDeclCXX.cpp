@@ -9804,7 +9804,7 @@ UsingShadowDecl *Sema::BuildUsingShadowDecl(Scope *S,
     NonTemplateTarget = TargetTD->getTemplatedDecl();
 
   UsingShadowDecl *Shadow;
-  if (isa<CXXConstructorDecl>(NonTemplateTarget)) {
+  if (NonTemplateTarget && isa<CXXConstructorDecl>(NonTemplateTarget)) {
     bool IsVirtualBase =
         isVirtualDirectBase(cast<CXXRecordDecl>(CurContext),
                             UD->getQualifier()->getAsRecordDecl());

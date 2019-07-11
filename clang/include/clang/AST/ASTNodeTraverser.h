@@ -529,6 +529,11 @@ public:
           D->defaultArgumentWasInherited() ? "inherited from" : "previous");
   }
 
+  void VisitConceptDecl(const ConceptDecl *D) {
+    dumpTemplateParameters(D->getTemplateParameters());
+    Visit(D->getConstraintExpr());
+  }
+
   void VisitUsingShadowDecl(const UsingShadowDecl *D) {
     if (auto *TD = dyn_cast<TypeDecl>(D->getUnderlyingDecl()))
       Visit(TD->getTypeForDecl());

@@ -10651,22 +10651,6 @@ Value *CodeGenFunction::EmitX86BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(Intr, Ops);
   }
 
-  case X86::BI__builtin_ia32_storehps:
-  case X86::BI__builtin_ia32_storelps: {
-    llvm::Type *PtrTy = llvm::PointerType::getUnqual(Int64Ty);
-    llvm::Type *VecTy = llvm::VectorType::get(Int64Ty, 2);
-
-    // cast val v2i64
-    Ops[1] = Builder.CreateBitCast(Ops[1], VecTy, "cast");
-
-    // extract (0, 1)
-    unsigned Index = BuiltinID == X86::BI__builtin_ia32_storelps ? 0 : 1;
-    Ops[1] = Builder.CreateExtractElement(Ops[1], Index, "extract");
-
-    // cast pointer to i64 & store
-    Ops[0] = Builder.CreateBitCast(Ops[0], PtrTy);
-    return Builder.CreateDefaultAlignedStore(Ops[1], Ops[0]);
-  }
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:
   case X86::BI__builtin_ia32_vextractf128_si256:

@@ -19,11 +19,11 @@ __global int globI;
 //CHECK-LABEL: define spir_func void @_Z3barv()
 void bar() {
   C c;
-  //CHECK: addrspacecast %class.C* %c to %class.C addrspace(4)*
-  //CHECK: call void @_ZNU3AS41C6AssignE1E(%class.C addrspace(4)* %{{[0-9]+}}, i32 0)
+  //CHECK: [[A1:%[.a-z0-9]+]] = addrspacecast %class.C* [[C:%[a-z0-9]+]] to %class.C addrspace(4)*
+  //CHECK: call void @_ZNU3AS41C6AssignE1E(%class.C addrspace(4)* [[A1]], i32 0)
   c.Assign(a);
-  //CHECK: addrspacecast %class.C* %c to %class.C addrspace(4)*
-  //CHECK: call void @_ZNU3AS41C8OrAssignE1E(%class.C addrspace(4)* %{{[0-9]+}}, i32 0)
+  //CHECK: [[A2:%[.a-z0-9]+]] = addrspacecast %class.C* [[C]] to %class.C addrspace(4)*
+  //CHECK: call void @_ZNU3AS41C8OrAssignE1E(%class.C addrspace(4)* [[A2]], i32 0)
   c.OrAssign(a);
 
   E e;
@@ -35,19 +35,33 @@ void bar() {
   globI |= b;
   //CHECK: store i32 %add, i32 addrspace(1)* @globI
   globI += a;
-  //CHECK: store volatile i32 %and, i32 addrspace(1)* @globVI
+  //CHECK: [[GVIV1:%[0-9]+]] = load volatile i32, i32 addrspace(1)* @globVI
+  //CHECK: [[AND:%[a-z0-9]+]] = and i32 [[GVIV1]], 1
+  //CHECK: store volatile i32 [[AND]], i32 addrspace(1)* @globVI
   globVI &= b;
-  //CHECK: store volatile i32 %sub, i32 addrspace(1)* @globVI
+  //CHECK: [[GVIV2:%[0-9]+]] = load volatile i32, i32 addrspace(1)* @globVI
+  //CHECK: [[SUB:%[a-z0-9]+]] = sub nsw i32 [[GVIV2]], 0
+  //CHECK: store volatile i32 [[SUB]], i32 addrspace(1)* @globVI
   globVI -= a;
 }
 
-//CHECK: define linkonce_odr void @_ZNU3AS41C6AssignE1E(%class.C addrspace(4)* %this, i32 %e)
-//CHECK: [[E:%[0-9]+]] = load i32, i32* %e.addr
-//CHECK: %me = getelementptr inbounds %class.C, %class.C addrspace(4)* %this1, i32 0, i32 0
-//CHECK: store i32 [[E]], i32 addrspace(4)* %me
+//CHECK: define linkonce_odr void @_ZNU3AS41C6AssignE1E(%class.C addrspace(4)*{{[ %a-z0-9]*}}, i32{{[ %a-z0-9]*}})
+//CHECK: [[THIS_ADDR:%[.a-z0-9]+]] = alloca %class.C addrspace(4)
+//CHECK: [[E_ADDR:%[.a-z0-9]+]] = alloca i32
+//CHECK: store %class.C addrspace(4)* {{%[a-z0-9]+}}, %class.C addrspace(4)** [[THIS_ADDR]]
+//CHECK: store i32 {{%[a-z0-9]+}}, i32* [[E_ADDR]]
+//CHECK: [[THIS1:%[.a-z0-9]+]] = load %class.C addrspace(4)*, %class.C addrspace(4)** [[THIS_ADDR]]
+//CHECK: [[E:%[0-9]+]] = load i32, i32* [[E_ADDR]]
+//CHECK: [[ME:%[a-z0-9]+]] = getelementptr inbounds %class.C, %class.C addrspace(4)* [[THIS1]], i32 0, i32 0
+//CHECK: store i32 [[E]], i32 addrspace(4)* [[ME]]
 
-//CHECK define linkonce_odr void @_ZNU3AS41C8OrAssignE1E(%class.C addrspace(4)* %this, i32 %e)
-//CHECK: [[E:%[0-9]+]] = load i32, i32* %e.addr
-//CHECK: %mi = getelementptr inbounds %class.C, %class.C addrspace(4)* %this1, i32 0, i32 1
-//CHECK: [[MI:%[0-9]+]] = load i32, i32 addrspace(4)* %mi
+//CHECK: define linkonce_odr void @_ZNU3AS41C8OrAssignE1E(%class.C addrspace(4)*{{[ %a-z0-9]*}}, i32{{[ %a-z0-9]*}})
+//CHECK: [[THIS_ADDR:%[.a-z0-9]+]] = alloca %class.C addrspace(4)
+//CHECK: [[E_ADDR:%[.a-z0-9]+]] = alloca i32
+//CHECK: store %class.C addrspace(4)* {{%[a-z0-9]+}}, %class.C addrspace(4)** [[THIS_ADDR]]
+//CHECK: store i32 {{%[a-z0-9]+}}, i32* [[E_ADDR]]
+//CHECK: [[THIS1:%[.a-z0-9]+]] = load %class.C addrspace(4)*, %class.C addrspace(4)** [[THIS_ADDR]]
+//CHECK: [[E:%[0-9]+]] = load i32, i32* [[E_ADDR]]
+//CHECK: [[MI_GEP:%[a-z0-9]+]] = getelementptr inbounds %class.C, %class.C addrspace(4)* [[THIS1]], i32 0, i32 1
+//CHECK: [[MI:%[0-9]+]] = load i32, i32 addrspace(4)* [[MI_GEP]]
 //CHECK: %or = or i32 [[MI]], [[E]]

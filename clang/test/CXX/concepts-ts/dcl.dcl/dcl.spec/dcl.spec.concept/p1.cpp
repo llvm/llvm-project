@@ -30,6 +30,7 @@ template<typename T>
 concept bool D7() throw(int) { return true; } // expected-error {{function concept cannot have exception specification}}
 
 // Tag
+
 concept class CC1 {}; // expected-error {{'concept' can only appear on the definition of a function template or variable template}}
 concept struct CS1 {}; // expected-error {{'concept' can only appear on the definition of a function template or variable template}}
 concept union CU1 {}; // expected-error {{'concept' can only appear on the definition of a function template or variable template}}

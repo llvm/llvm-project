@@ -13,7 +13,7 @@ void test(global int *arg_glob, generic int *arg_gen) {
   // CHECK-NOFAKE-NOT: addrspacecast
 
   arg_gen = &var_priv; // implicit cast with obtaining adr, private -> generic
-  // CHECK: %{{[0-9]+}} = addrspacecast i32* %var_priv to i32 addrspace(4)*
+  // CHECK: %{{[._a-z0-9]+}} = addrspacecast i32* %{{[._a-z0-9]+}} to i32 addrspace(4)*
   // CHECK-NOFAKE-NOT: addrspacecast
 
   arg_glob = (global int *)arg_gen; // explicit cast
