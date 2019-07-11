@@ -11,24 +11,22 @@ SYNOPSIS
 DESCRIPTION
 -----------
 
-The :program:`llvm-nm` utility lists the names of symbols from the LLVM bitcode
-files, object files, or :program:`ar` archives containing them, named on the
-command line.  Each symbol is listed along with some simple information about
-its provenance.  If no filename is specified, *a.out* is used as the input.
-If *-* is used as a filename, :program:`llvm-nm` will read a file from its
-standard input stream.
+The :program:`llvm-nm` utility lists the names of symbols from LLVM bitcode
+files, object files, and archives. Each symbol is listed along with some simple
+information about its provenance. If no filename is specified, *a.out* is used
+as the input. If *-* is used as a filename, :program:`llvm-nm` will read a file
+from its standard input stream.
 
 :program:`llvm-nm`'s default output format is the traditional BSD :program:`nm`
-output format.  Each such output record consists of an (optional) 8-digit
+output format. Each such output record consists of an (optional) 8-digit
 hexadecimal address, followed by a type code character, followed by a name, for
-each symbol.  One record is printed per line; fields are separated by spaces.
+each symbol. One record is printed per line; fields are separated by spaces.
 When the address is omitted, it is replaced by 8 spaces.
 
-Type code characters currently supported, and their meanings, are as follows.
-Where both lower and upper-case characters are listed for the same meaning, a
-lower-case character represents a local symbol, whilst an upper-case character
-represents a global (external) symbol:
-
+The supported type code characters are as follows. Where both lower and
+upper-case characters are listed for the same meaning, a lower-case character
+represents a local symbol, whilst an upper-case character represents a global
+(external) symbol:
 
 a, A
 
@@ -130,7 +128,7 @@ OPTIONS
 
 .. option:: --debug-syms, -a
 
- Show all symbols, even debugger only.
+ Show all symbols, even those usually suppressed.
 
 .. option:: --defined-only, -U
 
@@ -180,7 +178,7 @@ OPTIONS
 
 .. option:: --no-sort, -p
 
- Shows symbols in order encountered.
+ Shows symbols in the order encountered.
 
 .. option:: --no-weak, -W
 

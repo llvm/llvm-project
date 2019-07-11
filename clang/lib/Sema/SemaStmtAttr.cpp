@@ -82,22 +82,17 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
   IdentifierLoc *StateLoc = A.getArgAsIdent(2);
   Expr *ValueExpr = A.getArgAsExpr(3);
 
-  bool PragmaUnroll = PragmaNameLoc->Ident->getName() == "unroll";
-  bool PragmaNoUnroll = PragmaNameLoc->Ident->getName() == "nounroll";
-  bool PragmaUnrollAndJam = PragmaNameLoc->Ident->getName() == "unroll_and_jam";
-  bool PragmaNoUnrollAndJam =
-      PragmaNameLoc->Ident->getName() == "nounroll_and_jam";
+  StringRef PragmaName =
+      llvm::StringSwitch<StringRef>(PragmaNameLoc->Ident->getName())
+          .Cases("unroll", "nounroll", "unroll_and_jam", "nounroll_and_jam",
+                 PragmaNameLoc->Ident->getName())
+          .Default("clang loop");
+
   if (St->getStmtClass() != Stmt::DoStmtClass &&
       St->getStmtClass() != Stmt::ForStmtClass &&
       St->getStmtClass() != Stmt::CXXForRangeStmtClass &&
       St->getStmtClass() != Stmt::WhileStmtClass) {
-    const char *Pragma =
-        llvm::StringSwitch<const char *>(PragmaNameLoc->Ident->getName())
-            .Case("unroll", "#pragma unroll")
-            .Case("nounroll", "#pragma nounroll")
-            .Case("unroll_and_jam", "#pragma unroll_and_jam")
-            .Case("nounroll_and_jam", "#pragma nounroll_and_jam")
-            .Default("#pragma clang loop");
+    std::string Pragma = "#pragma " + std::string(PragmaName);
     S.Diag(St->getBeginLoc(), diag::err_pragma_loop_precedes_nonloop) << Pragma;
     return nullptr;
   }
@@ -106,34 +101,29 @@ static Attr *handleLoopHintAttr(Sema &S, Stmt *St, const ParsedAttr &A,
       LoopHintAttr::Spelling(A.getAttributeSpellingListIndex());
   LoopHintAttr::OptionType Option;
   LoopHintAttr::LoopHintState State;
-  if (PragmaNoUnroll) {
-    // #pragma nounroll
-    Option = LoopHintAttr::Unroll;
-    State = LoopHintAttr::Disable;
-  } else if (PragmaUnroll) {
-    if (ValueExpr) {
-      // #pragma unroll N
-      Option = LoopHintAttr::UnrollCount;
-      State = LoopHintAttr::Numeric;
-    } else {
-      // #pragma unroll
-      Option = LoopHintAttr::Unroll;
-      State = LoopHintAttr::Enable;
-    }
-  } else if (PragmaNoUnrollAndJam) {
-    // #pragma nounroll_and_jam
-    Option = LoopHintAttr::UnrollAndJam;
-    State = LoopHintAttr::Disable;
-  } else if (PragmaUnrollAndJam) {
-    if (ValueExpr) {
-      // #pragma unroll_and_jam N
-      Option = LoopHintAttr::UnrollAndJamCount;
-      State = LoopHintAttr::Numeric;
-    } else {
-      // #pragma unroll_and_jam
-      Option = LoopHintAttr::UnrollAndJam;
-      State = LoopHintAttr::Enable;
-    }
+
+  auto SetHints = [&Option, &State](LoopHintAttr::OptionType O,
+                                    LoopHintAttr::LoopHintState S) {
+    Option = O;
+    State = S;
+  };
+
+  if (PragmaName == "nounroll") {
+    SetHints(LoopHintAttr::Unroll, LoopHintAttr::Disable);
+  } else if (PragmaName == "unroll") {
+    // #pragma unroll N
+    if (ValueExpr)
+      SetHints(LoopHintAttr::UnrollCount, LoopHintAttr::Numeric);
+    else
+      SetHints(LoopHintAttr::Unroll, LoopHintAttr::Enable);
+  } else if (PragmaName == "nounroll_and_jam") {
+    SetHints(LoopHintAttr::UnrollAndJam, LoopHintAttr::Disable);
+  } else if (PragmaName == "unroll_and_jam") {
+    // #pragma unroll_and_jam N
+    if (ValueExpr)
+      SetHints(LoopHintAttr::UnrollAndJamCount, LoopHintAttr::Numeric);
+    else
+      SetHints(LoopHintAttr::UnrollAndJam, LoopHintAttr::Enable);
   } else {
     // #pragma clang loop ...
     assert(OptionLoc && OptionLoc->Ident &&

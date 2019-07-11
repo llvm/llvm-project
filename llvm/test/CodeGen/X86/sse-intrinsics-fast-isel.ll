@@ -2760,8 +2760,8 @@ define void @test_mm_store1_ps(float *%a0, <4 x float> %a1) {
   ret void
 }
 
-define void @test_mm_storeh_ps(x86_mmx *%a0, <4 x float> %a1) nounwind {
-; X86-SSE-LABEL: test_mm_storeh_ps:
+define void @test_mm_storeh_pi(x86_mmx *%a0, <4 x float> %a1) nounwind {
+; X86-SSE-LABEL: test_mm_storeh_pi:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pushl %ebp # encoding: [0x55]
 ; X86-SSE-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
@@ -2777,32 +2777,32 @@ define void @test_mm_storeh_ps(x86_mmx *%a0, <4 x float> %a1) nounwind {
 ; X86-SSE-NEXT:    popl %ebp # encoding: [0x5d]
 ; X86-SSE-NEXT:    retl # encoding: [0xc3]
 ;
-; X86-AVX1-LABEL: test_mm_storeh_ps:
+; X86-AVX1-LABEL: test_mm_storeh_pi:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX1-NEXT:    vmovhps %xmm0, (%eax) # encoding: [0xc5,0xf8,0x17,0x00]
 ; X86-AVX1-NEXT:    retl # encoding: [0xc3]
 ;
-; X86-AVX512-LABEL: test_mm_storeh_ps:
+; X86-AVX512-LABEL: test_mm_storeh_pi:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX512-NEXT:    vmovhps %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x17,0x00]
 ; X86-AVX512-NEXT:    retl # encoding: [0xc3]
 ;
-; X64-SSE-LABEL: test_mm_storeh_ps:
+; X64-SSE-LABEL: test_mm_storeh_pi:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp) # encoding: [0x0f,0x29,0x44,0x24,0xe8]
 ; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8b,0x44,0x24,0xf0]
 ; X64-SSE-NEXT:    movq %rax, (%rdi) # encoding: [0x48,0x89,0x07]
 ; X64-SSE-NEXT:    retq # encoding: [0xc3]
 ;
-; X64-AVX1-LABEL: test_mm_storeh_ps:
+; X64-AVX1-LABEL: test_mm_storeh_pi:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vpextrq $1, %xmm0, %rax # encoding: [0xc4,0xe3,0xf9,0x16,0xc0,0x01]
 ; X64-AVX1-NEXT:    movq %rax, (%rdi) # encoding: [0x48,0x89,0x07]
 ; X64-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
-; X64-AVX512-LABEL: test_mm_storeh_ps:
+; X64-AVX512-LABEL: test_mm_storeh_pi:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vpextrq $1, %xmm0, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe3,0xf9,0x16,0xc0,0x01]
 ; X64-AVX512-NEXT:    movq %rax, (%rdi) # encoding: [0x48,0x89,0x07]
@@ -2814,8 +2814,57 @@ define void @test_mm_storeh_ps(x86_mmx *%a0, <4 x float> %a1) nounwind {
   ret void
 }
 
-define void @test_mm_storel_ps(x86_mmx *%a0, <4 x float> %a1) nounwind {
-; X86-SSE-LABEL: test_mm_storel_ps:
+define void @test_mm_storeh_pi2(x86_mmx *%a0, <4 x float> %a1) nounwind {
+; X86-SSE-LABEL: test_mm_storeh_pi2:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-SSE-NEXT:    movaps %xmm0, %xmm1 # encoding: [0x0f,0x28,0xc8]
+; X86-SSE-NEXT:    movhlps %xmm0, %xmm1 # encoding: [0x0f,0x12,0xc8]
+; X86-SSE-NEXT:    # xmm1 = xmm0[1],xmm1[1]
+; X86-SSE-NEXT:    shufps $231, %xmm0, %xmm0 # encoding: [0x0f,0xc6,0xc0,0xe7]
+; X86-SSE-NEXT:    # xmm0 = xmm0[3,1,2,3]
+; X86-SSE-NEXT:    movss %xmm0, 4(%eax) # encoding: [0xf3,0x0f,0x11,0x40,0x04]
+; X86-SSE-NEXT:    movss %xmm1, (%eax) # encoding: [0xf3,0x0f,0x11,0x08]
+; X86-SSE-NEXT:    retl # encoding: [0xc3]
+;
+; X86-AVX1-LABEL: test_mm_storeh_pi2:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX1-NEXT:    vmovhps %xmm0, (%eax) # encoding: [0xc5,0xf8,0x17,0x00]
+; X86-AVX1-NEXT:    retl # encoding: [0xc3]
+;
+; X86-AVX512-LABEL: test_mm_storeh_pi2:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX512-NEXT:    vmovhps %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x17,0x00]
+; X86-AVX512-NEXT:    retl # encoding: [0xc3]
+;
+; X64-SSE-LABEL: test_mm_storeh_pi2:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movhlps %xmm0, %xmm0 # encoding: [0x0f,0x12,0xc0]
+; X64-SSE-NEXT:    # xmm0 = xmm0[1,1]
+; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp) # encoding: [0x0f,0x29,0x44,0x24,0xe8]
+; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8b,0x44,0x24,0xe8]
+; X64-SSE-NEXT:    movq %rax, (%rdi) # encoding: [0x48,0x89,0x07]
+; X64-SSE-NEXT:    retq # encoding: [0xc3]
+;
+; X64-AVX1-LABEL: test_mm_storeh_pi2:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovhps %xmm0, (%rdi) # encoding: [0xc5,0xf8,0x17,0x07]
+; X64-AVX1-NEXT:    retq # encoding: [0xc3]
+;
+; X64-AVX512-LABEL: test_mm_storeh_pi2:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovhps %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x17,0x07]
+; X64-AVX512-NEXT:    retq # encoding: [0xc3]
+  %ptr = bitcast x86_mmx* %a0 to <2 x float>*
+  %ext = shufflevector <4 x float> %a1, <4 x float> undef, <2 x i32> <i32 2, i32 3>
+  store <2 x float> %ext, <2 x float>* %ptr
+  ret void
+}
+
+define void @test_mm_storel_pi(x86_mmx *%a0, <4 x float> %a1) nounwind {
+; X86-SSE-LABEL: test_mm_storel_pi:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    pushl %ebp # encoding: [0x55]
 ; X86-SSE-NEXT:    movl %esp, %ebp # encoding: [0x89,0xe5]
@@ -2831,32 +2880,32 @@ define void @test_mm_storel_ps(x86_mmx *%a0, <4 x float> %a1) nounwind {
 ; X86-SSE-NEXT:    popl %ebp # encoding: [0x5d]
 ; X86-SSE-NEXT:    retl # encoding: [0xc3]
 ;
-; X86-AVX1-LABEL: test_mm_storel_ps:
+; X86-AVX1-LABEL: test_mm_storel_pi:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX1-NEXT:    vmovlps %xmm0, (%eax) # encoding: [0xc5,0xf8,0x13,0x00]
 ; X86-AVX1-NEXT:    retl # encoding: [0xc3]
 ;
-; X86-AVX512-LABEL: test_mm_storel_ps:
+; X86-AVX512-LABEL: test_mm_storel_pi:
 ; X86-AVX512:       # %bb.0:
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
 ; X86-AVX512-NEXT:    vmovlps %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x13,0x00]
 ; X86-AVX512-NEXT:    retl # encoding: [0xc3]
 ;
-; X64-SSE-LABEL: test_mm_storel_ps:
+; X64-SSE-LABEL: test_mm_storel_pi:
 ; X64-SSE:       # %bb.0:
 ; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp) # encoding: [0x0f,0x29,0x44,0x24,0xe8]
 ; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8b,0x44,0x24,0xe8]
 ; X64-SSE-NEXT:    movq %rax, (%rdi) # encoding: [0x48,0x89,0x07]
 ; X64-SSE-NEXT:    retq # encoding: [0xc3]
 ;
-; X64-AVX1-LABEL: test_mm_storel_ps:
+; X64-AVX1-LABEL: test_mm_storel_pi:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vmovq %xmm0, %rax # encoding: [0xc4,0xe1,0xf9,0x7e,0xc0]
 ; X64-AVX1-NEXT:    movq %rax, (%rdi) # encoding: [0x48,0x89,0x07]
 ; X64-AVX1-NEXT:    retq # encoding: [0xc3]
 ;
-; X64-AVX512-LABEL: test_mm_storel_ps:
+; X64-AVX512-LABEL: test_mm_storel_pi:
 ; X64-AVX512:       # %bb.0:
 ; X64-AVX512-NEXT:    vmovq %xmm0, %rax # EVEX TO VEX Compression encoding: [0xc4,0xe1,0xf9,0x7e,0xc0]
 ; X64-AVX512-NEXT:    movq %rax, (%rdi) # encoding: [0x48,0x89,0x07]
@@ -2865,6 +2914,51 @@ define void @test_mm_storel_ps(x86_mmx *%a0, <4 x float> %a1) nounwind {
   %bc  = bitcast <4 x float> %a1 to <2 x i64>
   %ext = extractelement <2 x i64> %bc, i32 0
   store i64 %ext, i64* %ptr
+  ret void
+}
+
+; FIXME: Switch the frontend to use this code.
+define void @test_mm_storel_pi2(x86_mmx *%a0, <4 x float> %a1) nounwind {
+; X86-SSE-LABEL: test_mm_storel_pi2:
+; X86-SSE:       # %bb.0:
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-SSE-NEXT:    movss %xmm0, (%eax) # encoding: [0xf3,0x0f,0x11,0x00]
+; X86-SSE-NEXT:    shufps $229, %xmm0, %xmm0 # encoding: [0x0f,0xc6,0xc0,0xe5]
+; X86-SSE-NEXT:    # xmm0 = xmm0[1,1,2,3]
+; X86-SSE-NEXT:    movss %xmm0, 4(%eax) # encoding: [0xf3,0x0f,0x11,0x40,0x04]
+; X86-SSE-NEXT:    retl # encoding: [0xc3]
+;
+; X86-AVX1-LABEL: test_mm_storel_pi2:
+; X86-AVX1:       # %bb.0:
+; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX1-NEXT:    vmovlps %xmm0, (%eax) # encoding: [0xc5,0xf8,0x13,0x00]
+; X86-AVX1-NEXT:    retl # encoding: [0xc3]
+;
+; X86-AVX512-LABEL: test_mm_storel_pi2:
+; X86-AVX512:       # %bb.0:
+; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
+; X86-AVX512-NEXT:    vmovlps %xmm0, (%eax) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x13,0x00]
+; X86-AVX512-NEXT:    retl # encoding: [0xc3]
+;
+; X64-SSE-LABEL: test_mm_storel_pi2:
+; X64-SSE:       # %bb.0:
+; X64-SSE-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp) # encoding: [0x0f,0x29,0x44,0x24,0xe8]
+; X64-SSE-NEXT:    movq -{{[0-9]+}}(%rsp), %rax # encoding: [0x48,0x8b,0x44,0x24,0xe8]
+; X64-SSE-NEXT:    movq %rax, (%rdi) # encoding: [0x48,0x89,0x07]
+; X64-SSE-NEXT:    retq # encoding: [0xc3]
+;
+; X64-AVX1-LABEL: test_mm_storel_pi2:
+; X64-AVX1:       # %bb.0:
+; X64-AVX1-NEXT:    vmovlps %xmm0, (%rdi) # encoding: [0xc5,0xf8,0x13,0x07]
+; X64-AVX1-NEXT:    retq # encoding: [0xc3]
+;
+; X64-AVX512-LABEL: test_mm_storel_pi2:
+; X64-AVX512:       # %bb.0:
+; X64-AVX512-NEXT:    vmovlps %xmm0, (%rdi) # EVEX TO VEX Compression encoding: [0xc5,0xf8,0x13,0x07]
+; X64-AVX512-NEXT:    retq # encoding: [0xc3]
+  %ptr = bitcast x86_mmx* %a0 to <2 x float>*
+  %ext = shufflevector <4 x float> %a1, <4 x float> undef, <2 x i32> <i32 0, i32 1>
+  store <2 x float> %ext, <2 x float>* %ptr
   ret void
 }
 

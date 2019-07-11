@@ -76,6 +76,12 @@ Changes to the LLVM IR
   pointee type. In the next release we intend to make this parameter
   mandatory in preparation for opaque pointer types.
 
+Changes to building LLVM
+------------------------
+
+* Building LLVM with Visual Studio now requires version 2017 or later.
+
+
 Changes to the ARM Backend
 --------------------------
 
@@ -130,6 +136,8 @@ Changes to LLDB
 ===============
 
 * Backtraces are now color highlighting in the terminal.
+
+* DWARF4 (debug_types) and DWARF5 (debug_info) type units are now supported.
 
 * This release will be the last where ``lldb-mi`` is shipped as part of LLDB.
   The tool will still be available in a `downstream repository on GitHub

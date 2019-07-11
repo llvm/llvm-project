@@ -703,11 +703,11 @@ def QNEG   : SInst<"vqneg", "dd", "lQl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Signed Saturating Accumulated of Unsigned Value
-def SUQADD : SInst<"vuqadd", "ddd", "csilQcQsQiQl">;
+def SUQADD : SInst<"vuqadd", "ddu", "csilQcQsQiQl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Unsigned Saturating Accumulated of Signed Value
-def USQADD : SInst<"vsqadd", "ddd", "UcUsUiUlQUcQUsQUiQUl">;
+def USQADD : SInst<"vsqadd", "ddx", "UcUsUiUlQUcQUsQUiQUl">;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Reciprocal/Sqrt
@@ -1070,16 +1070,16 @@ def VUZP2 : SOpInst<"vuzp2", "ddd",
 ////////////////////////////////////////////////////////////////////////////////
 // Table lookup
 let InstName = "vtbl" in {
-def VQTBL1_A64 : WInst<"vqtbl1", "djt",  "UccPcQUcQcQPc">;
-def VQTBL2_A64 : WInst<"vqtbl2", "dBt",  "UccPcQUcQcQPc">;
-def VQTBL3_A64 : WInst<"vqtbl3", "dCt",  "UccPcQUcQcQPc">;
-def VQTBL4_A64 : WInst<"vqtbl4", "dDt",  "UccPcQUcQcQPc">;
+def VQTBL1_A64 : WInst<"vqtbl1", "dju",  "UccPcQUcQcQPc">;
+def VQTBL2_A64 : WInst<"vqtbl2", "dBu",  "UccPcQUcQcQPc">;
+def VQTBL3_A64 : WInst<"vqtbl3", "dCu",  "UccPcQUcQcQPc">;
+def VQTBL4_A64 : WInst<"vqtbl4", "dDu",  "UccPcQUcQcQPc">;
 }
 let InstName = "vtbx" in {
-def VQTBX1_A64 : WInst<"vqtbx1", "ddjt", "UccPcQUcQcQPc">;
-def VQTBX2_A64 : WInst<"vqtbx2", "ddBt", "UccPcQUcQcQPc">;
-def VQTBX3_A64 : WInst<"vqtbx3", "ddCt", "UccPcQUcQcQPc">;
-def VQTBX4_A64 : WInst<"vqtbx4", "ddDt", "UccPcQUcQcQPc">;
+def VQTBX1_A64 : WInst<"vqtbx1", "ddju", "UccPcQUcQcQPc">;
+def VQTBX2_A64 : WInst<"vqtbx2", "ddBu", "UccPcQUcQcQPc">;
+def VQTBX3_A64 : WInst<"vqtbx3", "ddCu", "UccPcQUcQcQPc">;
+def VQTBX4_A64 : WInst<"vqtbx4", "ddDu", "UccPcQUcQcQPc">;
 }
 
 ////////////////////////////////////////////////////////////////////////////////

@@ -188,6 +188,8 @@ clang-format
 - Add Microsoft coding style to encapsulate default C# formatting style
 - Added new option `PPDIS_BeforeHash` (in configuration: `BeforeHash`) to
   `IndentPPDirectives` which indents preprocessor directives before the hash.
+- Added new option `AlignConsecutiveMacros` to align the C/C++ preprocessor
+  macros of consecutive lines.
 
 libclang
 --------

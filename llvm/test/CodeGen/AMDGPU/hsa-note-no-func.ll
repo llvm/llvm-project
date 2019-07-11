@@ -23,6 +23,7 @@
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx902 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX902 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx904 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX904 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx906 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX906 %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx908 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX908 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx909 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX909 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1010 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX1010 %s
 ; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=gfx1011 -mattr=-code-object-v3 | FileCheck --check-prefix=HSA --check-prefix=HSA-GFX1011 %s
@@ -44,6 +45,7 @@
 ; HSA-GFX902: .hsa_code_object_isa 9,0,2,"AMD","AMDGPU"
 ; HSA-GFX904: .hsa_code_object_isa 9,0,4,"AMD","AMDGPU"
 ; HSA-GFX906: .hsa_code_object_isa 9,0,6,"AMD","AMDGPU"
+; HSA-GFX908: .hsa_code_object_isa 9,0,8,"AMD","AMDGPU"
 ; HSA-GFX909: .hsa_code_object_isa 9,0,9,"AMD","AMDGPU"
 ; HSA-GFX1010: .hsa_code_object_isa 10,1,0,"AMD","AMDGPU"
 ; HSA-GFX1011: .hsa_code_object_isa 10,1,1,"AMD","AMDGPU"

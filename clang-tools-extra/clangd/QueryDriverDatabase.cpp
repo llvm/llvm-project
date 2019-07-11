@@ -76,7 +76,7 @@ std::vector<std::string> parseDriverOutput(llvm::StringRef Output) {
   }
 
   for (llvm::StringRef Line : llvm::make_range(StartIt, EndIt)) {
-    SystemIncludes.push_back(Line.str());
+    SystemIncludes.push_back(Line.trim().str());
     vlog("System include extraction: adding {0}", Line);
   }
   return SystemIncludes;

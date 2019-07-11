@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -Wc++11-compat %s 
+// RUN: %clang_cc1 -fsyntax-only -verify -Wc++11-compat %s -std=c++98
 class C {
 public:
   auto int errx; // expected-error {{storage class specified for a member declaration}}

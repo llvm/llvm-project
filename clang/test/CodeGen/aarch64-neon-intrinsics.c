@@ -17528,6 +17528,50 @@ float64_t test_vabdd_f64(float64_t a, float64_t b) {
   return vabdd_f64(a, b);
 }
 
+// CHECK-LABEL: @test_vuqaddq_s8(
+// CHECK: entry:
+// CHECK-NEXT:  [[V:%.*]] = call <16 x i8> @llvm.aarch64.neon.suqadd.v16i8(<16 x i8> %a, <16 x i8> %b)
+// CHECK-NEXT:  ret <16 x i8> [[V]]
+int8x16_t test_vuqaddq_s8(int8x16_t a, uint8x16_t b) {
+  return vuqaddq_s8(a, b);
+}
+
+// CHECK-LABEL: @test_vuqaddq_s32(
+// CHECK: [[V:%.*]] = call <4 x i32> @llvm.aarch64.neon.suqadd.v4i32(<4 x i32> %a, <4 x i32> %b)
+// CHECK-NEXT:  ret <4 x i32> [[V]]
+int32x4_t test_vuqaddq_s32(int32x4_t a, uint32x4_t b) {
+  return vuqaddq_s32(a, b);
+}
+
+// CHECK-LABEL: @test_vuqaddq_s64(
+// CHECK: [[V:%.*]] = call <2 x i64> @llvm.aarch64.neon.suqadd.v2i64(<2 x i64> %a, <2 x i64> %b)
+// CHECK-NEXT:  ret <2 x i64> [[V]]
+int64x2_t test_vuqaddq_s64(int64x2_t a, uint64x2_t b) {
+  return vuqaddq_s64(a, b);
+}
+
+// CHECK-LABEL: @test_vuqaddq_s16(
+// CHECK: [[V:%.*]] = call <8 x i16> @llvm.aarch64.neon.suqadd.v8i16(<8 x i16> %a, <8 x i16> %b)
+// CHECK-NEXT:  ret <8 x i16> [[V]]
+int16x8_t test_vuqaddq_s16(int16x8_t a, uint16x8_t b) {
+  return vuqaddq_s16(a, b);
+}
+
+// CHECK-LABEL: @test_vuqadd_s8(
+// CHECK: entry:
+// CHECK-NEXT: [[V:%.*]] = call <8 x i8> @llvm.aarch64.neon.suqadd.v8i8(<8 x i8> %a, <8 x i8> %b)
+// CHECK-NEXT: ret <8 x i8> [[V]]
+int8x8_t test_vuqadd_s8(int8x8_t a, uint8x8_t b) {
+  return vuqadd_s8(a, b);
+}
+
+// CHECK-LABEL: @test_vuqadd_s32(
+// CHECK: [[V:%.*]] = call <2 x i32> @llvm.aarch64.neon.suqadd.v2i32(<2 x i32> %a, <2 x i32> %b)
+// CHECK-NEXT:  ret <2 x i32> [[V]]
+int32x2_t test_vuqadd_s32(int32x2_t a, uint32x2_t b) {
+  return vuqadd_s32(a, b);
+}
+
 // CHECK-LABEL: @test_vuqadd_s64(
 // CHECK:   [[TMP0:%.*]] = bitcast <1 x i64> %a to <8 x i8>
 // CHECK:   [[TMP1:%.*]] = bitcast <1 x i64> %b to <8 x i8>
@@ -17535,6 +17579,13 @@ float64_t test_vabdd_f64(float64_t a, float64_t b) {
 // CHECK:   ret <1 x i64> [[VUQADD2_I]]
 int64x1_t test_vuqadd_s64(int64x1_t a, uint64x1_t b) {
   return vuqadd_s64(a, b);
+}
+
+// CHECK-LABEL: @test_vuqadd_s16(
+// CHECK: [[V:%.*]] = call <4 x i16> @llvm.aarch64.neon.suqadd.v4i16(<4 x i16> %a, <4 x i16> %b)
+// CHECK-NEXT:  ret <4 x i16> [[V]]
+int16x4_t test_vuqadd_s16(int16x4_t a, uint16x4_t b) {
+  return vuqadd_s16(a, b);
 }
 
 // CHECK-LABEL: @test_vsqadd_u64(

@@ -92,11 +92,14 @@
 # RUN: llvm-readobj -S --file-headers %t.o.31 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX906 %s
 # RUN: obj2yaml %t.o.31 | FileCheck --check-prefixes=YAML-GFX906 %s
 # RUN: yaml2obj -docnum=32 %s > %t.o.32
-# RUN: llvm-readobj -S --file-headers %t.o.32 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX909 %s
-# RUN: obj2yaml %t.o.32 | FileCheck --check-prefixes=YAML-GFX909 %s
+# RUN: llvm-readobj -s -file-headers %t.o.32 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX908 %s
+# RUN: obj2yaml %t.o.32 | FileCheck --check-prefixes=YAML-GFX908 %s
 # RUN: yaml2obj -docnum=33 %s > %t.o.33
-# RUN: llvm-readobj -s -file-headers %t.o.33 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX1010 %s
-# RUN: obj2yaml %t.o.33 | FileCheck --check-prefixes=YAML-GFX1010 %s
+# RUN: llvm-readobj -s -file-headers %t.o.33 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX909 %s
+# RUN: obj2yaml %t.o.33 | FileCheck --check-prefixes=YAML-GFX909 %s
+# RUN: yaml2obj -docnum=34 %s > %t.o.34
+# RUN: llvm-readobj -s -file-headers %t.o.34 | FileCheck --check-prefixes=ELF-ALL,ELF-GFX1010 %s
+# RUN: obj2yaml %t.o.34 | FileCheck --check-prefixes=YAML-GFX1010 %s
 
 # ELF-ALL:     Flags [
 # ELF-R600:      EF_AMDGPU_MACH_R600_R600     (0x1)
@@ -130,6 +133,7 @@
 # ELF-GFX902:    EF_AMDGPU_MACH_AMDGCN_GFX902 (0x2D)
 # ELF-GFX904:    EF_AMDGPU_MACH_AMDGCN_GFX904 (0x2E)
 # ELF-GFX906:    EF_AMDGPU_MACH_AMDGCN_GFX906 (0x2F)
+# ELF-GFX908:    EF_AMDGPU_MACH_AMDGCN_GFX908 (0x30)
 # ELF-GFX909:    EF_AMDGPU_MACH_AMDGCN_GFX909 (0x31)
 # ELF-GFX1010:   EF_AMDGPU_MACH_AMDGCN_GFX1010 (0x33)
 # ELF-ALL:     ]
@@ -165,6 +169,7 @@
 # YAML-GFX902:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX902 ]
 # YAML-GFX904:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX904 ]
 # YAML-GFX906:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX906 ]
+# YAML-GFX908:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX908 ]
 # YAML-GFX909:  Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX909 ]
 # YAML-GFX1010: Flags: [ EF_AMDGPU_MACH_AMDGCN_GFX1010 ]
 
@@ -517,7 +522,7 @@ FileHeader:
   OSABI:   ELFOSABI_NONE
   Type:    ET_REL
   Machine: EM_AMDGPU
-  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX909 ]
+  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX908 ]
 ...
 
 # Doc33
@@ -528,5 +533,17 @@ FileHeader:
   OSABI:   ELFOSABI_NONE
   Type:    ET_REL
   Machine: EM_AMDGPU
+  Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX909 ]
+...
+
+# Doc34
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_NONE
+  Type:    ET_REL
+  Machine: EM_AMDGPU
   Flags:   [ EF_AMDGPU_MACH_AMDGCN_GFX1010 ]
 ...
+

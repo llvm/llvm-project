@@ -2,7 +2,7 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define i1 @test_i1(i1 %cnd, i1 %a, i1 %b) {
+  define i1 @phi_i1(i1 %cnd, i1 %a, i1 %b) {
   entry:
     br i1 %cnd, label %cond.true, label %cond.false
 
@@ -17,7 +17,7 @@
     ret i1 %cond
   }
 
-  define i8 @test_i8(i1 %cnd, i8 %a, i8 %b) {
+  define i8 @phi_i8(i1 %cnd, i8 %a, i8 %b) {
   entry:
     br i1 %cnd, label %cond.true, label %cond.false
 
@@ -32,7 +32,7 @@
     ret i8 %cond
   }
 
-  define i16 @test_i16(i1 %cnd, i16 %a, i16 %b) {
+  define i16 @phi_i16(i1 %cnd, i16 %a, i16 %b) {
   entry:
     br i1 %cnd, label %cond.true, label %cond.false
 
@@ -47,7 +47,7 @@
     ret i16 %cond
   }
 
-  define i32 @test_i32(i1 %cnd, i32 %a, i32 %b) {
+  define i32 @phi_i32(i1 %cnd, i32 %a, i32 %b) {
   entry:
     br i1 %cnd, label %cond.true, label %cond.false
 
@@ -62,13 +62,58 @@
     ret i32 %cond
   }
 
+  define i64 @phi_i64(i1 %cnd, i64 %a, i64 %b) {
+  entry:
+    br i1 %cnd, label %cond.true, label %cond.false
+
+  cond.true:                                        ; preds = %entry
+    br label %cond.end
+
+  cond.false:                                       ; preds = %entry
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.false, %cond.true
+    %cond = phi i64 [ %a, %cond.true ], [ %b, %cond.false ]
+    ret i64 %cond
+  }
+
+  define float @phi_float(i1 %cnd, float %a, float %b) {
+  entry:
+    br i1 %cnd, label %cond.true, label %cond.false
+
+  cond.true:                                        ; preds = %entry
+    br label %cond.end
+
+  cond.false:                                       ; preds = %entry
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.false, %cond.true
+    %cond = phi float [ %a, %cond.true ], [ %b, %cond.false ]
+    ret float %cond
+  }
+
+  define double @phi_double(double %a, double %b, i1 %cnd) {
+  entry:
+    br i1 %cnd, label %cond.true, label %cond.false
+
+  cond.true:                                        ; preds = %entry
+    br label %cond.end
+
+  cond.false:                                       ; preds = %entry
+    br label %cond.end
+
+  cond.end:                                         ; preds = %cond.false, %cond.true
+    %cond = phi double [ %a, %cond.true ], [ %b, %cond.false ]
+    ret double %cond
+  }
+
 ...
 ---
-name:            test_i1
+name:            phi_i1
 alignment:       2
 tracksRegLiveness: true
 body:             |
-  ; MIPS32-LABEL: name: test_i1
+  ; MIPS32-LABEL: name: phi_i1
   ; MIPS32: bb.0.entry:
   ; MIPS32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; MIPS32:   liveins: $a0, $a1, $a2
@@ -117,11 +162,11 @@ body:             |
 
 ...
 ---
-name:            test_i8
+name:            phi_i8
 alignment:       2
 tracksRegLiveness: true
 body:             |
-  ; MIPS32-LABEL: name: test_i8
+  ; MIPS32-LABEL: name: phi_i8
   ; MIPS32: bb.0.entry:
   ; MIPS32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; MIPS32:   liveins: $a0, $a1, $a2
@@ -170,11 +215,11 @@ body:             |
 
 ...
 ---
-name:            test_i16
+name:            phi_i16
 alignment:       2
 tracksRegLiveness: true
 body:             |
-  ; MIPS32-LABEL: name: test_i16
+  ; MIPS32-LABEL: name: phi_i16
   ; MIPS32: bb.0.entry:
   ; MIPS32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; MIPS32:   liveins: $a0, $a1, $a2
@@ -223,11 +268,11 @@ body:             |
 
 ...
 ---
-name:            test_i32
+name:            phi_i32
 alignment:       2
 tracksRegLiveness: true
 body:             |
-  ; MIPS32-LABEL: name: test_i32
+  ; MIPS32-LABEL: name: phi_i32
   ; MIPS32: bb.0.entry:
   ; MIPS32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
   ; MIPS32:   liveins: $a0, $a1, $a2
@@ -267,5 +312,169 @@ body:             |
     %4:_(s32) = G_PHI %1(s32), %bb.2, %2(s32), %bb.3
     $v0 = COPY %4(s32)
     RetRA implicit $v0
+
+...
+---
+name:            phi_i64
+alignment:       2
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, offset: 20, size: 4, alignment: 4, isImmutable: true }
+  - { id: 1, offset: 16, size: 4, alignment: 8, isImmutable: true }
+body:             |
+  ; MIPS32-LABEL: name: phi_i64
+  ; MIPS32: bb.0.entry:
+  ; MIPS32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; MIPS32:   liveins: $a0, $a2, $a3
+  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY $a2
+  ; MIPS32:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a3
+  ; MIPS32:   [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[COPY1]](s32), [[COPY2]](s32)
+  ; MIPS32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; MIPS32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %fixed-stack.0, align 8)
+  ; MIPS32:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
+  ; MIPS32:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX1]](p0) :: (load 4 from %fixed-stack.1)
+  ; MIPS32:   [[MV1:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LOAD]](s32), [[LOAD1]](s32)
+  ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; MIPS32:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; MIPS32:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY3]], [[C]]
+  ; MIPS32:   G_BRCOND [[AND]](s32), %bb.1
+  ; MIPS32:   G_BR %bb.2
+  ; MIPS32: bb.1.cond.true:
+  ; MIPS32:   successors: %bb.3(0x80000000)
+  ; MIPS32:   G_BR %bb.3
+  ; MIPS32: bb.2.cond.false:
+  ; MIPS32:   successors: %bb.3(0x80000000)
+  ; MIPS32: bb.3.cond.end:
+  ; MIPS32:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[MV]](s64), %bb.1, [[MV1]](s64), %bb.2
+  ; MIPS32:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[PHI]](s64)
+  ; MIPS32:   $v0 = COPY [[UV]](s32)
+  ; MIPS32:   $v1 = COPY [[UV1]](s32)
+  ; MIPS32:   RetRA implicit $v0, implicit $v1
+  bb.1.entry:
+    liveins: $a0, $a2, $a3
+
+    %3:_(s32) = COPY $a0
+    %0:_(s1) = G_TRUNC %3(s32)
+    %4:_(s32) = COPY $a2
+    %5:_(s32) = COPY $a3
+    %1:_(s64) = G_MERGE_VALUES %4(s32), %5(s32)
+    %8:_(p0) = G_FRAME_INDEX %fixed-stack.1
+    %6:_(s32) = G_LOAD %8(p0) :: (load 4 from %fixed-stack.1, align 8)
+    %9:_(p0) = G_FRAME_INDEX %fixed-stack.0
+    %7:_(s32) = G_LOAD %9(p0) :: (load 4 from %fixed-stack.0)
+    %2:_(s64) = G_MERGE_VALUES %6(s32), %7(s32)
+    G_BRCOND %0(s1), %bb.2
+    G_BR %bb.3
+
+  bb.2.cond.true:
+    G_BR %bb.4
+
+  bb.3.cond.false:
+
+  bb.4.cond.end:
+    %10:_(s64) = G_PHI %1(s64), %bb.2, %2(s64), %bb.3
+    %11:_(s32), %12:_(s32) = G_UNMERGE_VALUES %10(s64)
+    $v0 = COPY %11(s32)
+    $v1 = COPY %12(s32)
+    RetRA implicit $v0, implicit $v1
+
+...
+---
+name:            phi_float
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  ; MIPS32-LABEL: name: phi_float
+  ; MIPS32: bb.0.entry:
+  ; MIPS32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; MIPS32:   liveins: $a0, $a1, $a2
+  ; MIPS32:   [[COPY:%[0-9]+]]:_(s32) = COPY $a0
+  ; MIPS32:   [[MTC1_:%[0-9]+]]:fgr32(s32) = MTC1 $a1
+  ; MIPS32:   [[MTC1_1:%[0-9]+]]:fgr32(s32) = MTC1 $a2
+  ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
+  ; MIPS32:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY1]], [[C]]
+  ; MIPS32:   G_BRCOND [[AND]](s32), %bb.1
+  ; MIPS32:   G_BR %bb.2
+  ; MIPS32: bb.1.cond.true:
+  ; MIPS32:   successors: %bb.3(0x80000000)
+  ; MIPS32:   G_BR %bb.3
+  ; MIPS32: bb.2.cond.false:
+  ; MIPS32:   successors: %bb.3(0x80000000)
+  ; MIPS32: bb.3.cond.end:
+  ; MIPS32:   [[PHI:%[0-9]+]]:_(s32) = G_PHI [[MTC1_]](s32), %bb.1, [[MTC1_1]](s32), %bb.2
+  ; MIPS32:   $f0 = COPY [[PHI]](s32)
+  ; MIPS32:   RetRA implicit $f0
+  bb.1.entry:
+    liveins: $a0, $a1, $a2
+
+    %3:_(s32) = COPY $a0
+    %0:_(s1) = G_TRUNC %3(s32)
+    %1:fgr32(s32) = MTC1 $a1
+    %2:fgr32(s32) = MTC1 $a2
+    G_BRCOND %0(s1), %bb.2
+    G_BR %bb.3
+
+  bb.2.cond.true:
+    G_BR %bb.4
+
+  bb.3.cond.false:
+
+  bb.4.cond.end:
+    %4:_(s32) = G_PHI %1(s32), %bb.2, %2(s32), %bb.3
+    $f0 = COPY %4(s32)
+    RetRA implicit $f0
+
+...
+---
+name:            phi_double
+alignment:       2
+tracksRegLiveness: true
+fixedStack:
+  - { id: 0, offset: 16, size: 4, alignment: 8, isImmutable: true }
+body:             |
+  ; MIPS32-LABEL: name: phi_double
+  ; MIPS32: bb.0.entry:
+  ; MIPS32:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; MIPS32:   liveins: $d6, $d7
+  ; MIPS32:   [[COPY:%[0-9]+]]:_(s64) = COPY $d6
+  ; MIPS32:   [[COPY1:%[0-9]+]]:_(s64) = COPY $d7
+  ; MIPS32:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; MIPS32:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %fixed-stack.0, align 8)
+  ; MIPS32:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+  ; MIPS32:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[LOAD]](s32)
+  ; MIPS32:   [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY2]], [[C]]
+  ; MIPS32:   G_BRCOND [[AND]](s32), %bb.1
+  ; MIPS32:   G_BR %bb.2
+  ; MIPS32: bb.1.cond.true:
+  ; MIPS32:   successors: %bb.3(0x80000000)
+  ; MIPS32:   G_BR %bb.3
+  ; MIPS32: bb.2.cond.false:
+  ; MIPS32:   successors: %bb.3(0x80000000)
+  ; MIPS32: bb.3.cond.end:
+  ; MIPS32:   [[PHI:%[0-9]+]]:_(s64) = G_PHI [[COPY]](s64), %bb.1, [[COPY1]](s64), %bb.2
+  ; MIPS32:   $d0 = COPY [[PHI]](s64)
+  ; MIPS32:   RetRA implicit $d0
+  bb.1.entry:
+    liveins: $d6, $d7
+
+    %0:_(s64) = COPY $d6
+    %1:_(s64) = COPY $d7
+    %4:_(p0) = G_FRAME_INDEX %fixed-stack.0
+    %3:_(s32) = G_LOAD %4(p0) :: (load 4 from %fixed-stack.0, align 8)
+    %2:_(s1) = G_TRUNC %3(s32)
+    G_BRCOND %2(s1), %bb.2
+    G_BR %bb.3
+
+  bb.2.cond.true:
+    G_BR %bb.4
+
+  bb.3.cond.false:
+
+  bb.4.cond.end:
+    %5:_(s64) = G_PHI %0(s64), %bb.2, %1(s64), %bb.3
+    $d0 = COPY %5(s64)
+    RetRA implicit $d0
 
 ...

@@ -27,3 +27,12 @@ define i64 @test3(i64 %a) nounwind {
   %2 = add i64 %1, 32767
   ret i64 %2
 }
+
+; Check that we hoist immediates with very large values.
+define i128 @test4(i128 %a) nounwind {
+; CHECK-LABEL: test4
+; CHECK: %const = bitcast i128 12297829382473034410122878 to i128
+  %1 = add i128 %a, 12297829382473034410122878
+  %2 = add i128 %1, 12297829382473034410122878
+  ret i128 %2
+}

@@ -401,8 +401,11 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     // Successful peeling may result in a change in the loop preheader/trip
     // counts. If we later unroll the loop, we want these to be updated.
     if (Peeled) {
-      BasicBlock *ExitingBlock = L->getExitingBlock();
+      // According to our guards and profitability checks the only
+      // meaningful exit should be latch block.
+      BasicBlock *ExitingBlock = L->getLoopLatch();
       assert(ExitingBlock && "Loop without exiting block?");
+      assert(L->isLoopExiting(ExitingBlock) && "Latch is not exiting?");
       Preheader = L->getLoopPreheader();
       ULO.TripCount = SE->getSmallConstantTripCount(L, ExitingBlock);
       ULO.TripMultiple = SE->getSmallConstantTripMultiple(L, ExitingBlock);

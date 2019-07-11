@@ -213,7 +213,7 @@ OPTIONS
   style is set to ``GNU``, the tool follows the style of GNU's **addr2line**.
   The differences from the ``LLVM`` style are:
   
-  * Does not print column of a source code location.
+  * Does not print the column of a source code location.
 
   * Does not add an empty line after the report for an address.
 

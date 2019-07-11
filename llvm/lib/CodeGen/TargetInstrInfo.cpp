@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
@@ -1118,6 +1119,45 @@ bool TargetInstrInfo::hasLowDefLatency(const TargetSchedModel &SchedModel,
   unsigned DefClass = DefMI.getDesc().getSchedClass();
   int DefCycle = ItinData->getOperandCycle(DefClass, DefIdx);
   return (DefCycle != -1 && DefCycle <= 1);
+}
+
+Optional<ParamLoadedValue>
+TargetInstrInfo::describeLoadedValue(const MachineInstr &MI) const {
+  const MachineOperand *Op = nullptr;
+  DIExpression *Expr = nullptr;
+
+  const MachineOperand *SrcRegOp, *DestRegOp;
+  const MachineFunction *MF = MI.getMF();
+  if (isCopyInstr(MI, SrcRegOp, DestRegOp)) {
+    Expr = DIExpression::get(MF->getFunction().getContext(), {});
+    Op = SrcRegOp;
+    return ParamLoadedValue(Op, Expr);
+  } else if (MI.isMoveImmediate()) {
+    Expr = DIExpression::get(MF->getFunction().getContext(), {});
+    Op = &MI.getOperand(1);
+    return ParamLoadedValue(Op, Expr);
+  } else if (MI.hasOneMemOperand()) {
+    int64_t Offset;
+    const auto &TRI = MF->getSubtarget().getRegisterInfo();
+    const auto &TII = MF->getSubtarget().getInstrInfo();
+    const MachineOperand *BaseOp;
+    if (!TII->getMemOperandWithOffset(MI, BaseOp, Offset, TRI))
+      return None;
+    unsigned CastedOffset = static_cast<unsigned>(Offset);
+    if (Offset > 0)
+      Expr = DIExpression::get(
+          MF->getFunction().getContext(),
+          {dwarf::DW_OP_plus_uconst, CastedOffset, dwarf::DW_OP_deref});
+    else
+      Expr = DIExpression::get(MF->getFunction().getContext(),
+                               {dwarf::DW_OP_constu, -CastedOffset,
+                                dwarf::DW_OP_minus, dwarf::DW_OP_deref});
+
+    Op = BaseOp;
+    return ParamLoadedValue(Op, Expr);
+  }
+
+  return None;
 }
 
 /// Both DefMI and UseMI must be valid.  By default, call directly to the

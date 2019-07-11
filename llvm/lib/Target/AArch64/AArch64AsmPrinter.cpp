@@ -304,17 +304,82 @@ void AArch64AsmPrinter::EmitHwasanMemaccessSymbols(Module &M) {
             .addReg(Reg)
             .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSR, 56)),
         *STI);
-    MCSymbol *HandleMismatchSym = OutContext.createTempSymbol();
+    MCSymbol *HandlePartialSym = OutContext.createTempSymbol();
     OutStreamer->EmitInstruction(
         MCInstBuilder(AArch64::Bcc)
             .addImm(AArch64CC::NE)
-            .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
+            .addExpr(MCSymbolRefExpr::create(HandlePartialSym, OutContext)),
         *STI);
+    MCSymbol *ReturnSym = OutContext.createTempSymbol();
+    OutStreamer->EmitLabel(ReturnSym);
     OutStreamer->EmitInstruction(
         MCInstBuilder(AArch64::RET).addReg(AArch64::LR), *STI);
 
-    OutStreamer->EmitLabel(HandleMismatchSym);
+    OutStreamer->EmitLabel(HandlePartialSym);
+    OutStreamer->EmitInstruction(MCInstBuilder(AArch64::SUBSWri)
+                                     .addReg(AArch64::WZR)
+                                     .addReg(AArch64::W16)
+                                     .addImm(15)
+                                     .addImm(0),
+                                 *STI);
+    MCSymbol *HandleMismatchSym = OutContext.createTempSymbol();
+    OutStreamer->EmitInstruction(
+        MCInstBuilder(AArch64::Bcc)
+            .addImm(AArch64CC::HI)
+            .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
+        *STI);
 
+    OutStreamer->EmitInstruction(
+        MCInstBuilder(AArch64::ANDXri)
+            .addReg(AArch64::X17)
+            .addReg(Reg)
+            .addImm(AArch64_AM::encodeLogicalImmediate(0xf, 64)),
+        *STI);
+    unsigned Size = 1 << (AccessInfo & 0xf);
+    if (Size != 1)
+      OutStreamer->EmitInstruction(MCInstBuilder(AArch64::ADDXri)
+                                       .addReg(AArch64::X17)
+                                       .addReg(AArch64::X17)
+                                       .addImm(Size - 1)
+                                       .addImm(0),
+                                   *STI);
+    OutStreamer->EmitInstruction(MCInstBuilder(AArch64::SUBSWrs)
+                                     .addReg(AArch64::WZR)
+                                     .addReg(AArch64::W16)
+                                     .addReg(AArch64::W17)
+                                     .addImm(0),
+                                 *STI);
+    OutStreamer->EmitInstruction(
+        MCInstBuilder(AArch64::Bcc)
+            .addImm(AArch64CC::LS)
+            .addExpr(MCSymbolRefExpr::create(HandleMismatchSym, OutContext)),
+        *STI);
+
+    OutStreamer->EmitInstruction(
+        MCInstBuilder(AArch64::ORRXri)
+            .addReg(AArch64::X16)
+            .addReg(Reg)
+            .addImm(AArch64_AM::encodeLogicalImmediate(0xf, 64)),
+        *STI);
+    OutStreamer->EmitInstruction(MCInstBuilder(AArch64::LDRBBui)
+                                     .addReg(AArch64::W16)
+                                     .addReg(AArch64::X16)
+                                     .addImm(0),
+                                 *STI);
+    OutStreamer->EmitInstruction(
+        MCInstBuilder(AArch64::SUBSXrs)
+            .addReg(AArch64::XZR)
+            .addReg(AArch64::X16)
+            .addReg(Reg)
+            .addImm(AArch64_AM::getShifterImm(AArch64_AM::LSR, 56)),
+        *STI);
+    OutStreamer->EmitInstruction(
+        MCInstBuilder(AArch64::Bcc)
+            .addImm(AArch64CC::EQ)
+            .addExpr(MCSymbolRefExpr::create(ReturnSym, OutContext)),
+        *STI);
+
+    OutStreamer->EmitLabel(HandleMismatchSym);
     OutStreamer->EmitInstruction(MCInstBuilder(AArch64::STPXpre)
                                      .addReg(AArch64::SP)
                                      .addReg(AArch64::X0)

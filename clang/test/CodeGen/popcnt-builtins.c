@@ -21,6 +21,7 @@ int test__popcntd(unsigned int __X) {
   return __popcntd(__X);
 }
 
+#ifdef __x86_64__
 #ifdef __POPCNT__
 long long test_mm_popcnt_u64(unsigned long long __X) {
   //CHECK-POPCNT: call i64 @llvm.ctpop.i64
@@ -37,3 +38,4 @@ long long test__popcntq(unsigned long long __X) {
   //CHECK: call i64 @llvm.ctpop.i64
   return __popcntq(__X);
 }
+#endif

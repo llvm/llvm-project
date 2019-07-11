@@ -28,6 +28,7 @@ unsigned int test_mulx_u32(unsigned int __X, unsigned int __Y,
   return _mulx_u32(__X, __Y, __P);
 }
 
+#ifdef __x86_64__
 unsigned long long test_bzhi_u64(unsigned long long __X, unsigned long long __Y) {
   // CHECK: @llvm.x86.bmi.bzhi.64
   return _bzhi_u64(__X, __Y);
@@ -49,3 +50,4 @@ unsigned long long test_mulx_u64(unsigned long long __X, unsigned long long __Y,
   // CHECK: mul i128
   return _mulx_u64(__X, __Y, __P);
 }
+#endif

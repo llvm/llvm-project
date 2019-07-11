@@ -18,7 +18,6 @@
 
 namespace llvm {
 
-class JITTargetMachineBuilder;
 class MCContext;
 class MemoryBuffer;
 class Module;
@@ -26,6 +25,8 @@ class ObjectCache;
 class TargetMachine;
 
 namespace orc {
+
+class JITTargetMachineBuilder;
 
 /// Simple compile functor: Takes a single IR module and returns an ObjectFile.
 /// This compiler supports a single compilation thread and LLVMContext only.
@@ -50,6 +51,22 @@ private:
 
   TargetMachine &TM;
   ObjectCache *ObjCache = nullptr;
+};
+
+/// A SimpleCompiler that owns its TargetMachine.
+///
+/// This convenient for clients who don't want to own their TargetMachines,
+/// e.g. LLJIT.
+class TMOwningSimpleCompiler : public SimpleCompiler {
+public:
+  TMOwningSimpleCompiler(std::unique_ptr<TargetMachine> TM,
+                         ObjectCache *ObjCache = nullptr)
+      : SimpleCompiler(*TM, ObjCache), TM(std::move(TM)) {}
+
+private:
+  // FIXME: shared because std::functions (and consequently
+  // IRCompileLayer::CompileFunction) are not moveable.
+  std::shared_ptr<llvm::TargetMachine> TM;
 };
 
 /// A thread-safe version of SimpleCompiler.

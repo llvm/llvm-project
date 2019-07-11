@@ -1326,6 +1326,12 @@ public:
     return buildInstr(TargetOpcode::G_FABS, {Dst}, {Src0});
   }
 
+  /// Build and insert \p Dst = G_FCANONICALIZE \p Src0
+  MachineInstrBuilder buildFCanonicalize(const DstOp &Dst, const SrcOp &Src0,
+                                         Optional<unsigned> Flags = None) {
+    return buildInstr(TargetOpcode::G_FCANONICALIZE, {Dst}, {Src0}, Flags);
+  }
+
   /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1
   MachineInstrBuilder buildFCopysign(const DstOp &Dst, const SrcOp &Src0,
                                      const SrcOp &Src1) {

@@ -1,9 +1,9 @@
 ; Test the MSA element insertion intrinsics that are encoded with the ELM
 ; instruction format.
 
-; RUN: llc -march=mips -mattr=+msa,+fp64 -relocation-model=pic < %s | \
+; RUN: llc -march=mips -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=MIPS-ANY,MIPS32
-; RUN: llc -march=mipsel -mattr=+msa,+fp64 -relocation-model=pic < %s | \
+; RUN: llc -march=mipsel -mattr=+msa,+fp64,+mips32r2 -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=MIPS-ANY,MIPS32
 ; RUN: llc -march=mips64 -mcpu=mips64r2 -mattr=+msa,+fp64 -relocation-model=pic < %s | \
 ; RUN:   FileCheck %s -check-prefixes=MIPS-ANY,MIPS64

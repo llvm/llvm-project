@@ -26,12 +26,11 @@ entry:
 ; NOSLH-NOT:  csetm x16, ne
   %cmp = icmp slt i32 %call, %N
   br i1 %cmp, label %if.then, label %return
-; GlobalISel lowers the branch to a b.ne sometimes instead of b.ge as expected..
-; CHECK: b.[[COND:(ge)|(lt)|(ne)]]
+; CHECK: b.[[COND:(ge)|(lt)|(ne)|(eq)]]
 
 if.then:                                          ; preds = %entry
-; NOSLH-NOT: csel x16, x16, xzr, {{(lt)|(ge)|(eq)}}
-; SLH-DAG: csel x16, x16, xzr, {{(lt)|(ge)|(eq)}}
+; NOSLH-NOT: csel x16, x16, xzr, {{(lt)|(ge)|(eq)|(ne)}}
+; SLH-DAG: csel x16, x16, xzr, {{(lt)|(ge)|(eq)|(ne)}}
   %idxprom = sext i32 %i to i64
   %arrayidx = getelementptr inbounds i8, i8* %p, i64 %idxprom
   %0 = load i8, i8* %arrayidx, align 1
@@ -136,7 +135,7 @@ lpad:
   %l7 = icmp sgt i32 %l0, %l1
   br i1 %l7, label %then, label %else
 ; GlobalISel lowers the branch to a b.ne sometimes instead of b.ge as expected..
-; CHECK: b.[[COND:(le)|(gt)|(ne)]]
+; CHECK: b.[[COND:(le)|(gt)|(ne)|(eq)]]
 
 then:
 ; SLH-DAG: csel x16, x16, xzr, [[COND]]
@@ -144,7 +143,7 @@ then:
   br label %postif
 
 else:
-; SLH-DAG: csel x16, x16, xzr, {{(gt)|(le)|(eq)}}
+; SLH-DAG: csel x16, x16, xzr, {{(gt)|(le)|(eq)|(ne)}}
   %l11 = sdiv i32 %l1, %l0
   br label %postif
 

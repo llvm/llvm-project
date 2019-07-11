@@ -81,3 +81,9 @@ PPCELFMCAsmInfo::PPCELFMCAsmInfo(bool is64Bit, const Triple& T) {
   UseIntegratedAssembler = true;
 }
 
+void PPCXCOFFMCAsmInfo::anchor() {}
+
+PPCXCOFFMCAsmInfo::PPCXCOFFMCAsmInfo(bool Is64Bit, const Triple &T) {
+  assert(!IsLittleEndian && "Little-endian XCOFF not supported.");
+  CodePointerSize = CalleeSaveStackSlotSize = Is64Bit ? 8 : 4;
+}

@@ -330,11 +330,11 @@ Builtin Macros
 ``__BASE_FILE__``
   Defined to a string that contains the name of the main input file passed to
   Clang.
-  
+
 ``__FILE_NAME__``
   Clang-specific extension that functions similar to ``__FILE__`` but only
   renders the last path component (the filename) instead of an invocation
-  dependent full path to that file. 
+  dependent full path to that file.
 
 ``__COUNTER__``
   Defined to an integer value that starts at zero and is incremented each time
@@ -1372,7 +1372,7 @@ Objective-C retaining behavior attributes
 -----------------------------------------
 
 In Objective-C, functions and methods are generally assumed to follow the
-`Cocoa Memory Management 
+`Cocoa Memory Management
 <https://developer.apple.com/library/mac/#documentation/Cocoa/Conceptual/MemoryMgmt/Articles/mmRules.html>`_
 conventions for ownership of object arguments and
 return values. However, there are exceptions, and so Clang provides attributes
@@ -1789,7 +1789,7 @@ the bitpattern of an integer value; for example ``0b10110110`` becomes
 **Description**:
 
 The '``__builtin_rotateleft``' family of builtins is used to rotate
-the bits in the first argument by the amount in the second argument. 
+the bits in the first argument by the amount in the second argument.
 For example, ``0b10000110`` rotated left by 11 becomes ``0b00110100``.
 The shift value is treated as an unsigned amount modulo the size of
 the arguments. Both arguments and the result have the bitwidth specified
@@ -1821,7 +1821,7 @@ by the name of the builtin.
 **Description**:
 
 The '``__builtin_rotateright``' family of builtins is used to rotate
-the bits in the first argument by the amount in the second argument. 
+the bits in the first argument by the amount in the second argument.
 For example, ``0b10000110`` rotated right by 3 becomes ``0b11010000``.
 The shift value is treated as an unsigned amount modulo the size of
 the arguments. Both arguments and the result have the bitwidth specified
@@ -1949,6 +1949,35 @@ form of ``__builtin_operator_delete`` is currently available.
 
 These builtins are intended for use in the implementation of ``std::allocator``
 and other similar allocation libraries, and are only available in C++.
+
+``__builtin_preserve_access_index``
+-----------------------------------
+
+``__builtin_preserve_access_index`` specifies a code section where
+array subscript access and structure/union member access are relocatable
+under bpf compile-once run-everywhere framework. Debuginfo (typically
+with ``-g``) is needed, otherwise, the compiler will exit with an error.
+
+**Syntax**:
+
+.. code-block:: c
+
+  const void * __builtin_preserve_access_index(const void * ptr)
+
+**Example of Use**:
+
+.. code-block:: c
+
+  struct t {
+    int i;
+    int j;
+    union {
+      int a;
+      int b;
+    } c[4];
+  };
+  struct t *v = ...;
+  const void *pb =__builtin_preserve_access_index(&v->c[3].b);
 
 Multiprecision Arithmetic Builtins
 ----------------------------------
@@ -2114,8 +2143,8 @@ Atomic Min/Max builtins with memory ordering
 There are two atomic builtins with min/max in-memory comparison and swap.
 The syntax and semantics are similar to GCC-compatible __atomic_* builtins.
 
-* ``__atomic_fetch_min`` 
-* ``__atomic_fetch_max`` 
+* ``__atomic_fetch_min``
+* ``__atomic_fetch_max``
 
 The builtins work with signed and unsigned integers and require to specify memory ordering.
 The return value is the original value that was stored in memory before comparison.
@@ -2233,7 +2262,7 @@ C++ Coroutines support builtins
 --------------------------------
 
 .. warning::
-  This is a work in progress. Compatibility across Clang/LLVM releases is not 
+  This is a work in progress. Compatibility across Clang/LLVM releases is not
   guaranteed.
 
 Clang provides experimental builtins to support C++ Coroutines as defined by
@@ -2281,7 +2310,7 @@ Other coroutine builtins are either for internal clang use or for use during
 development of the coroutine feature. See `Coroutines in LLVM
 <https://llvm.org/docs/Coroutines.html#intrinsics>`_ for
 more information on their semantics. Note that builtins matching the intrinsics
-that take token as the first parameter (llvm.coro.begin, llvm.coro.alloc, 
+that take token as the first parameter (llvm.coro.begin, llvm.coro.alloc,
 llvm.coro.free and llvm.coro.suspend) omit the token parameter and fill it to
 an appropriate value during the emission.
 
@@ -2456,8 +2485,8 @@ The effective values for mode are:
     - 2 - round to +infinity
     - 3 - round to -infinity
 
-Note that the mode argument will modulo 4, so if the int argument is greater 
-than 3, it will only use the least significant two bits of the mode. 
+Note that the mode argument will modulo 4, so if the int argument is greater
+than 3, it will only use the least significant two bits of the mode.
 Namely, ``__builtin_setrnd(102))`` is equal to ``__builtin_setrnd(2)``.
 
 PowerPC Language Extensions
@@ -2481,7 +2510,7 @@ The effective values for mode are:
     - 3 - round to -infinity
 
 Note that the mode argument will modulo 4, so if the integer argument is greater
-than 3, it will only use the least significant two bits of the mode. 
+than 3, it will only use the least significant two bits of the mode.
 Namely, ``__builtin_setrnd(102))`` is equal to ``__builtin_setrnd(2)``.
 
 PowerPC Language Extensions
@@ -2505,7 +2534,7 @@ The effective values for mode are:
     - 3 - round to -infinity
 
 Note that the mode argument will modulo 4, so if the integer argument is greater
-than 3, it will only use the least significant two bits of the mode. 
+than 3, it will only use the least significant two bits of the mode.
 Namely, ``__builtin_setrnd(102))`` is equal to ``__builtin_setrnd(2)``.
 
 PowerPC cache builtins

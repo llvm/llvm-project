@@ -1,8 +1,5 @@
-# RUN: llc -march=amdgcn -run-pass=instruction-select -verify-machineinstrs -global-isel %s -o - | FileCheck %s -check-prefixes=GCN
+# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN
 
---- |
-  define amdgpu_kernel void @inttoptr(i32 addrspace(4)* %const0, i32 addrspace(0)* %flat0) {ret void}
-...
 ---
 
 name:            inttoptr
@@ -26,9 +23,8 @@ body: |
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:vgpr(s64) = COPY $vgpr0_vgpr1
     %2:sgpr(p4) = G_INTTOPTR %0
-    %3:sgpr(s32) = G_LOAD %2 :: (load 4 from %ir.const0)
+    %3:sgpr(s32) = G_LOAD %2 :: (load 4, addrspace 1)
     %4:vgpr(p0) = G_INTTOPTR %1
     %5:vgpr(s32) = COPY %3
-    G_STORE %5, %4 :: (store 4 into %ir.flat0)
+    G_STORE %5, %4 :: (store 4, addrspace 1)
 ...
----

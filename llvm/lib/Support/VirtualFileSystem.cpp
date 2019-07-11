@@ -56,8 +56,10 @@
 using namespace llvm;
 using namespace llvm::vfs;
 
+using llvm::sys::fs::file_t;
 using llvm::sys::fs::file_status;
 using llvm::sys::fs::file_type;
+using llvm::sys::fs::kInvalidFile;
 using llvm::sys::fs::perms;
 using llvm::sys::fs::UniqueID;
 
@@ -170,15 +172,15 @@ namespace {
 class RealFile : public File {
   friend class RealFileSystem;
 
-  int FD;
+  file_t FD;
   Status S;
   std::string RealName;
 
-  RealFile(int FD, StringRef NewName, StringRef NewRealPathName)
+  RealFile(file_t FD, StringRef NewName, StringRef NewRealPathName)
       : FD(FD), S(NewName, {}, {}, {}, {}, {},
                   llvm::sys::fs::file_type::status_error, {}),
         RealName(NewRealPathName.str()) {
-    assert(FD >= 0 && "Invalid or inactive file descriptor");
+    assert(FD != kInvalidFile && "Invalid or inactive file descriptor");
   }
 
 public:
@@ -198,7 +200,7 @@ public:
 RealFile::~RealFile() { close(); }
 
 ErrorOr<Status> RealFile::status() {
-  assert(FD != -1 && "cannot stat closed file");
+  assert(FD != kInvalidFile && "cannot stat closed file");
   if (!S.isStatusKnown()) {
     file_status RealStatus;
     if (std::error_code EC = sys::fs::status(FD, RealStatus))
@@ -215,14 +217,14 @@ ErrorOr<std::string> RealFile::getName() {
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 RealFile::getBuffer(const Twine &Name, int64_t FileSize,
                     bool RequiresNullTerminator, bool IsVolatile) {
-  assert(FD != -1 && "cannot get buffer for closed file");
+  assert(FD != kInvalidFile && "cannot get buffer for closed file");
   return MemoryBuffer::getOpenFile(FD, Name, FileSize, RequiresNullTerminator,
                                    IsVolatile);
 }
 
 std::error_code RealFile::close() {
-  std::error_code EC = sys::Process::SafelyCloseFileDescriptor(FD);
-  FD = -1;
+  std::error_code EC = sys::fs::closeFile(FD);
+  FD = kInvalidFile;
   return EC;
 }
 
@@ -293,12 +295,13 @@ ErrorOr<Status> RealFileSystem::status(const Twine &Path) {
 
 ErrorOr<std::unique_ptr<File>>
 RealFileSystem::openFileForRead(const Twine &Name) {
-  int FD;
   SmallString<256> RealName, Storage;
-  if (std::error_code EC = sys::fs::openFileForRead(
-          adjustPath(Name, Storage), FD, sys::fs::OF_None, &RealName))
-    return EC;
-  return std::unique_ptr<File>(new RealFile(FD, Name.str(), RealName.str()));
+  Expected<file_t> FDOrErr = sys::fs::openNativeFileForRead(
+      adjustPath(Name, Storage), sys::fs::OF_None, &RealName);
+  if (!FDOrErr)
+    return errorToErrorCode(FDOrErr.takeError());
+  return std::unique_ptr<File>(
+      new RealFile(*FDOrErr, Name.str(), RealName.str()));
 }
 
 llvm::ErrorOr<std::string> RealFileSystem::getCurrentWorkingDirectory() const {

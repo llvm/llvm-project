@@ -17,13 +17,13 @@ declare void @external_void_func_i32(i32) #0
 ; GCN-DAG: v_writelane_b32 v32, s34, 2
 ; GCN-DAG: s_mov_b32 s34, s32
 ; GCN-DAG: s_add_u32 s32, s32, 0x400
-; GCN-DAG: v_writelane_b32 v32, s36, 0
-; GCN-DAG: v_writelane_b32 v32, s37, 1
+; GCN-DAG: v_writelane_b32 v32, s30, 0
+; GCN-DAG: v_writelane_b32 v32, s31, 1
 
 ; GCN: s_swappc_b64
 
-; GCN: v_readlane_b32 s37, v32, 1
-; GCN: v_readlane_b32 s36, v32, 0
+; GCN: v_readlane_b32 s4, v32, 0
+; GCN: v_readlane_b32 s5, v32, 1
 
 ; GCN-NEXT: s_sub_u32 s32, s32, 0x400
 ; GCN-NEXT: v_readlane_b32 s34, v32, 2
@@ -31,7 +31,7 @@ declare void @external_void_func_i32(i32) #0
 ; GCN-NEXT: buffer_load_dword v32, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
 ; GCN-NEXT: s_waitcnt vmcnt(0)
-; GCN-NEXT: s_setpc_b64
+; GCN-NEXT: s_setpc_b64 s[4:5]
 define void @test_func_call_external_void_func_i32_imm() #0 {
   call void @external_void_func_i32(i32 42)
   ret void

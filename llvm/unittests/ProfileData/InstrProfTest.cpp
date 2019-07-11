@@ -1044,4 +1044,25 @@ TEST_F(SparseInstrProfTest, preserve_no_records) {
 INSTANTIATE_TEST_CASE_P(MaybeSparse, MaybeSparseInstrProfTest,
                         ::testing::Bool(),);
 
+#if defined(_LP64) && defined(EXPENSIVE_CHECKS)
+TEST(ProfileReaderTest, ReadsLargeFiles) {
+  const size_t LargeSize = 1ULL << 32; // 4GB
+
+  auto RawProfile = WritableMemoryBuffer::getNewUninitMemBuffer(LargeSize);
+  if (!RawProfile)
+    return;
+  auto RawProfileReaderOrErr = InstrProfReader::create(std::move(RawProfile));
+  ASSERT_TRUE(InstrProfError::take(RawProfileReaderOrErr.takeError()) ==
+              instrprof_error::unrecognized_format);
+
+  auto IndexedProfile = WritableMemoryBuffer::getNewUninitMemBuffer(LargeSize);
+  if (!IndexedProfile)
+    return;
+  auto IndexedReaderOrErr =
+      IndexedInstrProfReader::create(std::move(IndexedProfile), nullptr);
+  ASSERT_TRUE(InstrProfError::take(IndexedReaderOrErr.takeError()) ==
+              instrprof_error::bad_magic);
+}
+#endif
+
 } // end anonymous namespace

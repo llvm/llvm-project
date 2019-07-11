@@ -15,6 +15,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_UTILS_H
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/Register.h"
 
 namespace llvm {
 
@@ -130,8 +131,14 @@ const ConstantFP* getConstantFPVRegVal(unsigned VReg,
 /// See if Reg is defined by an single def instruction that is
 /// Opcode. Also try to do trivial folding if it's a COPY with
 /// same types. Returns null otherwise.
-MachineInstr *getOpcodeDef(unsigned Opcode, unsigned Reg,
+MachineInstr *getOpcodeDef(unsigned Opcode, Register Reg,
                            const MachineRegisterInfo &MRI);
+
+/// Find the def instruction for \p Reg, folding away any trivial copies. Note
+/// it may still return a COPY, if it changes the type. May return nullptr if \p
+/// Reg is not a generic virtual register.
+MachineInstr *getDefIgnoringCopies(Register Reg,
+                                   const MachineRegisterInfo &MRI);
 
 /// Returns an APFloat from Val converted to the appropriate size.
 APFloat getAPFloatFromSize(double Val, unsigned Size);
@@ -143,5 +150,16 @@ void getSelectionDAGFallbackAnalysisUsage(AnalysisUsage &AU);
 Optional<APInt> ConstantFoldBinOp(unsigned Opcode, const unsigned Op1,
                                   const unsigned Op2,
                                   const MachineRegisterInfo &MRI);
+
+/// Returns true if \p Val can be assumed to never be a NaN. If \p SNaN is true,
+/// this returns if \p Val can be assumed to never be a signaling NaN.
+bool isKnownNeverNaN(Register Val, const MachineRegisterInfo &MRI,
+                     bool SNaN = false);
+
+/// Returns true if \p Val can be assumed to never be a signaling NaN.
+inline bool isKnownNeverSNaN(Register Val, const MachineRegisterInfo &MRI) {
+  return isKnownNeverNaN(Val, MRI, true);
+}
+
 } // End namespace llvm.
 #endif

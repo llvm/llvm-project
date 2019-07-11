@@ -995,7 +995,7 @@ bool RISCVTargetLowering::isDesirableToCommuteWithShift(
   //   (shl (add x, c1), c2) -> (add (shl x, c2), c1 << c2)
   //   (shl (or x, c1), c2) -> (or (shl x, c2), c1 << c2)
   SDValue N0 = N->getOperand(0);
-  MVT Ty = N0.getSimpleValueType();
+  EVT Ty = N0.getValueType();
   if (Ty.isScalarInteger() &&
       (N0.getOpcode() == ISD::ADD || N0.getOpcode() == ISD::OR)) {
     auto *C1 = dyn_cast<ConstantSDNode>(N0->getOperand(1));

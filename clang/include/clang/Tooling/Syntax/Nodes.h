@@ -31,6 +31,18 @@ enum class NodeKind : uint16_t {
 /// For debugging purposes.
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, NodeKind K);
 
+/// A relation between a parent and child node. Used for implementing accessors.
+enum class NodeRole : uint8_t {
+  // A node without a parent.
+  Detached,
+  // Children of an unknown semantic nature, e.g. skipped tokens, comments.
+  Unknown,
+  // FIXME: should this be shared for all other nodes with braces, e.g. init
+  //        lists?
+  CompoundStatement_lbrace,
+  CompoundStatement_rbrace
+};
+
 /// A root node for a translation unit. Parent is always null.
 class TranslationUnit final : public Tree {
 public:
@@ -73,11 +85,6 @@ public:
   }
   syntax::Leaf *lbrace();
   syntax::Leaf *rbrace();
-
-  struct Roles {
-    static constexpr NodeRole lbrace = 1;
-    static constexpr NodeRole rbrace = 2;
-  };
 };
 
 } // namespace syntax

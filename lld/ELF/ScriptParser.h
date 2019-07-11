@@ -17,15 +17,15 @@ namespace elf {
 
 // Parses a linker script. Calling this function updates
 // Config and ScriptConfig.
-void readLinkerScript(MemoryBufferRef MB);
+void readLinkerScript(MemoryBufferRef mb);
 
 // Parses a version script.
-void readVersionScript(MemoryBufferRef MB);
+void readVersionScript(MemoryBufferRef mb);
 
-void readDynamicList(MemoryBufferRef MB);
+void readDynamicList(MemoryBufferRef mb);
 
 // Parses the defsym expression.
-void readDefsym(StringRef Name, MemoryBufferRef MB);
+void readDefsym(StringRef name, MemoryBufferRef mb);
 
 } // namespace elf
 } // namespace lld

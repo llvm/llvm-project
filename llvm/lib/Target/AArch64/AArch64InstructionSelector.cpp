@@ -190,17 +190,6 @@ private:
                              unsigned char OpFlags) const;
 
   // Optimization methods.
-
-  // Helper function to check if a reg def is an MI with a given opcode and
-  // returns it if so.
-  MachineInstr *findMIFromReg(unsigned Reg, unsigned Opc,
-                              MachineIRBuilder &MIB) const {
-    auto *Def = MIB.getMRI()->getVRegDef(Reg);
-    if (!Def || Def->getOpcode() != Opc)
-      return nullptr;
-    return Def;
-  }
-
   bool tryOptVectorShuffle(MachineInstr &I) const;
   bool tryOptVectorDup(MachineInstr &MI) const;
   bool tryOptSelect(MachineInstr &MI) const;
@@ -2811,13 +2800,10 @@ void AArch64InstructionSelector::collectShuffleMaskIndices(
       "G_SHUFFLE_VECTOR should have a constant mask operand as G_BUILD_VECTOR");
   // Find the constant indices.
   for (unsigned i = 1, e = MaskDef->getNumOperands(); i < e; ++i) {
-    MachineInstr *ScalarDef = MRI.getVRegDef(MaskDef->getOperand(i).getReg());
-    assert(ScalarDef && "Could not find vreg def of shufflevec index op");
     // Look through copies.
-    while (ScalarDef->getOpcode() == TargetOpcode::COPY) {
-      ScalarDef = MRI.getVRegDef(ScalarDef->getOperand(1).getReg());
-      assert(ScalarDef && "Could not find def of copy operand");
-    }
+    MachineInstr *ScalarDef =
+        getDefIgnoringCopies(MaskDef->getOperand(i).getReg(), MRI);
+    assert(ScalarDef && "Could not find vreg def of shufflevec index op");
     if (ScalarDef->getOpcode() != TargetOpcode::G_CONSTANT) {
       // This be an undef if not a constant.
       assert(ScalarDef->getOpcode() == TargetOpcode::G_IMPLICIT_DEF);
@@ -3229,20 +3215,6 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
   //
   // cmn z, y
 
-  // Helper lambda to find the def.
-  auto FindDef = [&](Register VReg) {
-    MachineInstr *Def = MRI.getVRegDef(VReg);
-    while (Def) {
-      if (Def->getOpcode() != TargetOpcode::COPY)
-        break;
-      // Copies can be from physical registers. If we hit this, we're done.
-      if (TargetRegisterInfo::isPhysicalRegister(Def->getOperand(1).getReg()))
-        break;
-      Def = MRI.getVRegDef(Def->getOperand(1).getReg());
-    }
-    return Def;
-  };
-
   // Helper lambda to detect the subtract followed by the compare.
   // Takes in the def of the LHS or RHS, and checks if it's a subtract from 0.
   auto IsCMN = [&](MachineInstr *DefMI, const AArch64CC::CondCode &CC) {
@@ -3269,8 +3241,8 @@ MachineInstr *AArch64InstructionSelector::tryFoldIntegerCompare(
   };
 
   // Check if the RHS or LHS of the G_ICMP is defined by a SUB
-  MachineInstr *LHSDef = FindDef(LHS.getReg());
-  MachineInstr *RHSDef = FindDef(RHS.getReg());
+  MachineInstr *LHSDef = getDefIgnoringCopies(LHS.getReg(), MRI);
+  MachineInstr *RHSDef = getDefIgnoringCopies(RHS.getReg(), MRI);
   CmpInst::Predicate P = (CmpInst::Predicate)Predicate.getPredicate();
   const AArch64CC::CondCode CC = changeICMPPredToAArch64CC(P);
 
@@ -3342,12 +3314,12 @@ bool AArch64InstructionSelector::tryOptVectorDup(MachineInstr &I) const {
 
   // Begin matching the insert.
   auto *InsMI =
-      findMIFromReg(I.getOperand(1).getReg(), G_INSERT_VECTOR_ELT, MIB);
+      getOpcodeDef(G_INSERT_VECTOR_ELT, I.getOperand(1).getReg(), MRI);
   if (!InsMI)
     return false;
   // Match the undef vector operand.
   auto *UndefMI =
-      findMIFromReg(InsMI->getOperand(1).getReg(), G_IMPLICIT_DEF, MIB);
+      getOpcodeDef(G_IMPLICIT_DEF, InsMI->getOperand(1).getReg(), MRI);
   if (!UndefMI)
     return false;
   // Match the scalar being splatted.
@@ -3359,7 +3331,7 @@ bool AArch64InstructionSelector::tryOptVectorDup(MachineInstr &I) const {
     return false;
 
   // The shuffle's second operand doesn't matter if the mask is all zero.
-  auto *ZeroVec = findMIFromReg(I.getOperand(3).getReg(), G_BUILD_VECTOR, MIB);
+  auto *ZeroVec = getOpcodeDef(G_BUILD_VECTOR, I.getOperand(3).getReg(), MRI);
   if (!ZeroVec)
     return false;
   int64_t Zero = 0;

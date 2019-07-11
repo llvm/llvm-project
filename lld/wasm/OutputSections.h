@@ -42,7 +42,7 @@ public:
   virtual size_t getSize() const = 0;
   virtual void writeTo(uint8_t *Buf) = 0;
   virtual void finalizeContents() = 0;
-  virtual uint32_t numRelocations() const { return 0; }
+  virtual uint32_t getNumRelocations() const { return 0; }
   virtual void writeRelocations(raw_ostream &OS) const {}
 
   std::string Header;
@@ -62,7 +62,7 @@ public:
 
   size_t getSize() const override { return Header.size() + BodySize; }
   void writeTo(uint8_t *Buf) override;
-  uint32_t numRelocations() const override;
+  uint32_t getNumRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
   bool isNeeded() const override { return Functions.size() > 0; }
   void finalizeContents() override;
@@ -80,7 +80,7 @@ public:
 
   size_t getSize() const override { return Header.size() + BodySize; }
   void writeTo(uint8_t *Buf) override;
-  uint32_t numRelocations() const override;
+  uint32_t getNumRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
   bool isNeeded() const override { return Segments.size() > 0; }
   void finalizeContents() override;
@@ -107,7 +107,7 @@ public:
     return Header.size() + NameData.size() + PayloadSize;
   }
   void writeTo(uint8_t *Buf) override;
-  uint32_t numRelocations() const override;
+  uint32_t getNumRelocations() const override;
   void writeRelocations(raw_ostream &OS) const override;
   void finalizeContents() override;
 

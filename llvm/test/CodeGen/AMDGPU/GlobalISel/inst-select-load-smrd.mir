@@ -4,6 +4,7 @@
 
 --- |
   define amdgpu_kernel void @smrd_imm(i32 addrspace(4)* %const0) { ret void }
+  define amdgpu_kernel void @smrd_wide() { ret void }
 ...
 ---
 
@@ -155,3 +156,32 @@ body: |
 
 ...
 ---
+
+name:            smrd_wide
+legalized:       true
+regBankSelected: true
+
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $vgpr2_vgpr3
+    %0:sgpr(p4) = COPY $sgpr0_sgpr1
+    %1:sgpr(p1) = COPY $sgpr2_sgpr3
+
+    ; CHECK: [[CONSTANT_PTR:%[0-9]+]]:sgpr(p4) = COPY $sgpr0_sgpr1
+    ; CHECK: [[GLOBAL_PTR:%[0-9]+]]:sgpr(p1) = COPY $sgpr2_sgpr3
+    ; CHECK: s_load_dwordx8 [[CONSTANT_PTR]]
+    %2:sgpr(<8 x s32>) = G_LOAD %0 :: (load 32, addrspace 4)
+    $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = COPY %2
+
+    ; CHECK: s_load_dwordx16 [[CONSTANT_PTR]]
+    %3:sgpr(<16 x s32>) = G_LOAD %0 :: (load 64, addrspace 4)
+    $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY %3
+
+    ; CHECK: s_load_dwordx8 [[GLOBAL_PTR]]
+    %4:sgpr(<8 x s32>) = G_LOAD %1 :: (load 32, addrspace 1)
+    $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7 = COPY %4
+
+    ; CHECK s_load_dwordx16 [[GLOBAL_PTR]]
+    %5:sgpr(<16 x s32>) = G_LOAD %1 :: (load 64, addrspace 1)
+    $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY %5
+...

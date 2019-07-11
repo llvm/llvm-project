@@ -25,3 +25,25 @@ entry:
   %0 = load i64, i64* %ptr
   ret i64 %0
 }
+
+define float @load_float(float* %ptr) {
+; MIPS32-LABEL: load_float:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    lwc1 $f0, 0($4)
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %0 = load float, float* %ptr
+  ret float %0
+}
+
+define double @load_double(double* %ptr) {
+; MIPS32-LABEL: load_double:
+; MIPS32:       # %bb.0: # %entry
+; MIPS32-NEXT:    ldc1 $f0, 0($4)
+; MIPS32-NEXT:    jr $ra
+; MIPS32-NEXT:    nop
+entry:
+  %0 = load double, double* %ptr
+  ret double %0
+}

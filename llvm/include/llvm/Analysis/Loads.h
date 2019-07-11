@@ -25,7 +25,8 @@ class MDNode;
 /// Return true if this is always a dereferenceable pointer. If the context
 /// instruction is specified perform context-sensitive analysis and return true
 /// if the pointer is dereferenceable at the specified instruction.
-bool isDereferenceablePointer(const Value *V, const DataLayout &DL,
+bool isDereferenceablePointer(const Value *V, Type *Ty,
+                              const DataLayout &DL,
                               const Instruction *CtxI = nullptr,
                               const DominatorTree *DT = nullptr);
 
@@ -33,8 +34,8 @@ bool isDereferenceablePointer(const Value *V, const DataLayout &DL,
 /// greater or equal than requested. If the context instruction is specified
 /// performs context-sensitive analysis and returns true if the pointer is
 /// dereferenceable at the specified instruction.
-bool isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
-                                        const DataLayout &DL,
+bool isDereferenceableAndAlignedPointer(const Value *V, Type *Ty,
+                                        unsigned Align, const DataLayout &DL,
                                         const Instruction *CtxI = nullptr,
                                         const DominatorTree *DT = nullptr);
 
@@ -55,7 +56,20 @@ bool isDereferenceableAndAlignedPointer(const Value *V, unsigned Align,
 /// If it is not obviously safe to load from the specified pointer, we do a
 /// quick local scan of the basic block containing ScanFrom, to determine if
 /// the address is already accessed.
-bool isSafeToLoadUnconditionally(Value *V, unsigned Align,
+bool isSafeToLoadUnconditionally(Value *V, unsigned Align, APInt &Size,
+                                 const DataLayout &DL,
+                                 Instruction *ScanFrom = nullptr,
+                                 const DominatorTree *DT = nullptr);
+
+/// Return true if we know that executing a load from this value cannot trap.
+///
+/// If DT and ScanFrom are specified this method performs context-sensitive
+/// analysis and returns true if it is safe to load immediately before ScanFrom.
+///
+/// If it is not obviously safe to load from the specified pointer, we do a
+/// quick local scan of the basic block containing ScanFrom, to determine if
+/// the address is already accessed.
+bool isSafeToLoadUnconditionally(Value *V, Type *Ty, unsigned Align,
                                  const DataLayout &DL,
                                  Instruction *ScanFrom = nullptr,
                                  const DominatorTree *DT = nullptr);

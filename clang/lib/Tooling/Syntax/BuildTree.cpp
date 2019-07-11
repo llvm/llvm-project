@@ -170,7 +170,7 @@ private:
     /// A with a role that should be assigned to it when adding to a parent.
     struct NodeAndRole {
       explicit NodeAndRole(syntax::Node *Node)
-          : Node(Node), Role(NodeRoleUnknown) {}
+          : Node(Node), Role(NodeRole::Unknown) {}
 
       syntax::Node *Node;
       NodeRole Role;
@@ -221,10 +221,12 @@ public:
   }
 
   bool WalkUpFromCompoundStmt(CompoundStmt *S) {
-    using Roles = syntax::CompoundStatement::Roles;
+    using NodeRole = syntax::NodeRole;
 
-    Builder.markChildToken(S->getLBracLoc(), tok::l_brace, Roles::lbrace);
-    Builder.markChildToken(S->getRBracLoc(), tok::r_brace, Roles::rbrace);
+    Builder.markChildToken(S->getLBracLoc(), tok::l_brace,
+                           NodeRole::CompoundStatement_lbrace);
+    Builder.markChildToken(S->getRBracLoc(), tok::r_brace,
+                           NodeRole::CompoundStatement_rbrace);
 
     Builder.foldNode(Builder.getRange(S),
                      new (allocator()) syntax::CompoundStatement);

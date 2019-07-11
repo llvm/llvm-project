@@ -337,8 +337,13 @@ protected:
   bool HasDLInsts;
   bool HasDot1Insts;
   bool HasDot2Insts;
+  bool HasDot3Insts;
+  bool HasDot4Insts;
   bool HasDot5Insts;
   bool HasDot6Insts;
+  bool HasMAIInsts;
+  bool HasPkFmacF16Inst;
+  bool HasAtomicFaddInsts;
   bool EnableSRAMECC;
   bool DoesNotSupportSRAMECC;
   bool HasNoSdstCMPX;
@@ -779,12 +784,32 @@ public:
     return HasDot2Insts;
   }
 
+  bool hasDot3Insts() const {
+    return HasDot3Insts;
+  }
+
+  bool hasDot4Insts() const {
+    return HasDot4Insts;
+  }
+
   bool hasDot5Insts() const {
     return HasDot5Insts;
   }
 
   bool hasDot6Insts() const {
     return HasDot6Insts;
+  }
+
+  bool hasMAIInsts() const {
+    return HasMAIInsts;
+  }
+
+  bool hasPkFmacF16Inst() const {
+    return HasPkFmacF16Inst;
+  }
+
+  bool hasAtomicFaddInsts() const {
+    return HasAtomicFaddInsts;
   }
 
   bool isSRAMECCEnabled() const {

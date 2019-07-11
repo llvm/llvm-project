@@ -582,7 +582,7 @@ Optional<Symbol *> ObjFile::createDefined(
     }
     COMDATType Selection = (COMDATType)Def->Selection;
 
-    if (Leader->isCOMDAT())
+    if (Leader->IsCOMDAT)
       handleComdatSelection(Sym, Selection, Prevailing, Leader);
 
     if (Prevailing) {

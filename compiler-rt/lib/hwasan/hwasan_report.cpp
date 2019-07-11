@@ -208,6 +208,19 @@ static void PrintStackAllocations(StackAllocationsRingBuffer *sa,
   }
 }
 
+// Returns true if tag == *tag_ptr, reading tags from short granules if
+// necessary. This may return a false positive if tags 1-15 are used as a
+// regular tag rather than a short granule marker.
+static bool TagsEqual(tag_t tag, tag_t *tag_ptr) {
+  if (tag == *tag_ptr)
+    return true;
+  if (*tag_ptr == 0 || *tag_ptr > kShadowAlignment - 1)
+    return false;
+  uptr mem = ShadowToMem(reinterpret_cast<uptr>(tag_ptr));
+  tag_t inline_tag = *reinterpret_cast<tag_t *>(mem + kShadowAlignment - 1);
+  return tag == inline_tag;
+}
+
 void PrintAddressDescription(
     uptr tagged_addr, uptr access_size,
     StackAllocationsRingBuffer *current_stack_allocations) {
@@ -235,39 +248,36 @@ void PrintAddressDescription(
   // check the allocator if it has a live chunk there.
   tag_t addr_tag = GetTagFromPointer(tagged_addr);
   tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
-  if (*tag_ptr != addr_tag) { // should be true usually.
-    tag_t *left = tag_ptr, *right = tag_ptr;
-    // scan left.
-    for (int i = 0; i < 1000 && *left == *tag_ptr; i++, left--){}
-    // scan right.
-    for (int i = 0; i < 1000 && *right == *tag_ptr; i++, right++){}
-    // Chose the object that has addr_tag and that is closer to addr.
-    tag_t *candidate = nullptr;
-    if (*right == addr_tag && *left == addr_tag)
-      candidate = right - tag_ptr < tag_ptr - left ? right : left;
-    else if (*right == addr_tag)
-      candidate = right;
-    else if (*left == addr_tag)
+  tag_t *candidate = nullptr, *left = tag_ptr, *right = tag_ptr;
+  for (int i = 0; i < 1000; i++) {
+    if (TagsEqual(addr_tag, left)) {
       candidate = left;
+      break;
+    }
+    --left;
+    if (TagsEqual(addr_tag, right)) {
+      candidate = right;
+      break;
+    }
+    ++right;
+  }
 
-    if (candidate) {
-      uptr mem = ShadowToMem(reinterpret_cast<uptr>(candidate));
-      HwasanChunkView chunk = FindHeapChunkByAddress(mem);
-      if (chunk.IsAllocated()) {
-        Printf("%s", d.Location());
-        Printf(
-            "%p is located %zd bytes to the %s of %zd-byte region [%p,%p)\n",
-            untagged_addr,
-            candidate == left ? untagged_addr - chunk.End()
-            : chunk.Beg() - untagged_addr,
-            candidate == right ? "left" : "right", chunk.UsedSize(),
-            chunk.Beg(), chunk.End());
-        Printf("%s", d.Allocation());
-        Printf("allocated here:\n");
-        Printf("%s", d.Default());
-        GetStackTraceFromId(chunk.GetAllocStackId()).Print();
-        num_descriptions_printed++;
-      }
+  if (candidate) {
+    uptr mem = ShadowToMem(reinterpret_cast<uptr>(candidate));
+    HwasanChunkView chunk = FindHeapChunkByAddress(mem);
+    if (chunk.IsAllocated()) {
+      Printf("%s", d.Location());
+      Printf("%p is located %zd bytes to the %s of %zd-byte region [%p,%p)\n",
+             untagged_addr,
+             candidate == left ? untagged_addr - chunk.End()
+                               : chunk.Beg() - untagged_addr,
+             candidate == left ? "right" : "left", chunk.UsedSize(),
+             chunk.Beg(), chunk.End());
+      Printf("%s", d.Allocation());
+      Printf("allocated here:\n");
+      Printf("%s", d.Default());
+      GetStackTraceFromId(chunk.GetAllocStackId()).Print();
+      num_descriptions_printed++;
     }
   }
 
@@ -325,13 +335,10 @@ void PrintAddressDescription(
 
 void ReportStats() {}
 
-static void PrintTagsAroundAddr(tag_t *tag_ptr) {
-  Printf(
-      "Memory tags around the buggy address (one tag corresponds to %zd "
-      "bytes):\n", kShadowAlignment);
-
+static void PrintTagInfoAroundAddr(tag_t *tag_ptr, uptr num_rows,
+                                   void (*print_tag)(InternalScopedString &s,
+                                                     tag_t *tag)) {
   const uptr row_len = 16;  // better be power of two.
-  const uptr num_rows = 17;
   tag_t *center_row_beg = reinterpret_cast<tag_t *>(
       RoundDownTo(reinterpret_cast<uptr>(tag_ptr), row_len));
   tag_t *beg_row = center_row_beg - row_len * (num_rows / 2);
@@ -341,12 +348,40 @@ static void PrintTagsAroundAddr(tag_t *tag_ptr) {
     s.append("%s", row == center_row_beg ? "=>" : "  ");
     for (uptr i = 0; i < row_len; i++) {
       s.append("%s", row + i == tag_ptr ? "[" : " ");
-      s.append("%02x", row[i]);
+      print_tag(s, &row[i]);
       s.append("%s", row + i == tag_ptr ? "]" : " ");
     }
     s.append("%s\n", row == center_row_beg ? "<=" : "  ");
   }
   Printf("%s", s.data());
+}
+
+static void PrintTagsAroundAddr(tag_t *tag_ptr) {
+  Printf(
+      "Memory tags around the buggy address (one tag corresponds to %zd "
+      "bytes):\n", kShadowAlignment);
+  PrintTagInfoAroundAddr(tag_ptr, 17, [](InternalScopedString &s, tag_t *tag) {
+    s.append("%02x", *tag);
+  });
+
+  Printf(
+      "Tags for short granules around the buggy address (one tag corresponds "
+      "to %zd bytes):\n",
+      kShadowAlignment);
+  PrintTagInfoAroundAddr(tag_ptr, 3, [](InternalScopedString &s, tag_t *tag) {
+    if (*tag >= 1 && *tag <= kShadowAlignment) {
+      uptr granule_addr = ShadowToMem(reinterpret_cast<uptr>(tag));
+      s.append("%02x",
+               *reinterpret_cast<u8 *>(granule_addr + kShadowAlignment - 1));
+    } else {
+      s.append("..");
+    }
+  });
+  Printf(
+      "See "
+      "https://clang.llvm.org/docs/"
+      "HardwareAssistedAddressSanitizerDesign.html#short-granules for a "
+      "description of short granule tags\n");
 }
 
 void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
@@ -376,7 +411,8 @@ void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
 }
 
 void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
-                           uptr tail_size, const u8 *expected) {
+                           const u8 *expected) {
+  uptr tail_size = kShadowAlignment - (orig_size % kShadowAlignment);
   ScopedReport R(flags()->halt_on_error);
   Decorator d;
   uptr untagged_addr = UntagAddr(tagged_addr);
@@ -420,11 +456,9 @@ void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
     "to the right of a heap object, but within the %zd-byte granule, e.g.\n"
     "   char *x = new char[20];\n"
     "   x[25] = 42;\n"
-    "By default %s does not detect such bugs at the time of write,\n"
-    "but can detect them at the time of free/delete.\n"
-    "To disable this feature set HWASAN_OPTIONS=free_checks_tail_magic=0;\n"
-    "To enable checking at the time of access, set "
-    "HWASAN_OPTIONS=malloc_align_right to non-zero\n\n",
+    "%s does not detect such bugs in uninstrumented code at the time of write,"
+    "\nbut can detect them at the time of free/delete.\n"
+    "To disable this feature set HWASAN_OPTIONS=free_checks_tail_magic=0\n",
     kShadowAlignment, SanitizerToolName);
   Printf("%s", s.data());
   GetCurrentThread()->Announce();

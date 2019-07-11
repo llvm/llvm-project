@@ -1202,7 +1202,7 @@ void Writer::assignAddresses() {
       VirtualSize = alignTo(VirtualSize, C->getAlignment());
       C->setRVA(RVA + VirtualSize);
       VirtualSize += C->getSize();
-      if (C->hasData())
+      if (C->HasData)
         RawSize = alignTo(VirtualSize, Config->FileAlign);
     }
     if (VirtualSize > UINT32_MAX)
@@ -1377,7 +1377,7 @@ template <typename PEHeaderTy> void Writer::writeHeader() {
       SectionChunk *SC = B->getChunk();
       assert(B->getRVA() >= SC->getRVA());
       uint64_t OffsetInChunk = B->getRVA() - SC->getRVA();
-      if (!SC->hasData() || OffsetInChunk + 4 > SC->getSize())
+      if (!SC->HasData || OffsetInChunk + 4 > SC->getSize())
         fatal("_load_config_used is malformed");
 
       ArrayRef<uint8_t> SecContents = SC->getContents();

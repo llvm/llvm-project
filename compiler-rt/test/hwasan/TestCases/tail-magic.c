@@ -10,19 +10,25 @@
 #include <stdio.h>
 #include <sanitizer/hwasan_interface.h>
 
-static volatile void *sink;
+static volatile char *sink;
+
+// Overwrite the tail in a non-hwasan function so that we don't detect the
+// stores as OOB.
+__attribute__((no_sanitize("hwaddress"))) void overwrite_tail() {
+  sink[20] = 0x42;
+  sink[24] = 0x66;
+}
 
 int main(int argc, char **argv) {
   __hwasan_enable_allocator_tagging();
 
   char *p = (char*)malloc(20);
-  sink = p;
-  p[20] = 0x42;
-  p[24] = 0x66;
+  sink = (char *)((uintptr_t)(p) & 0xffffffffffffff);
+  overwrite_tail();
   free(p);
 // CHECK: ERROR: HWAddressSanitizer: alocation-tail-overwritten; heap object [{{.*}}) of size 20
 // CHECK: in main {{.*}}tail-magic.c:[[@LINE-2]]
 // CHECK: allocated here:
-// CHECK: in main {{.*}}tail-magic.c:[[@LINE-8]]
+// CHECK: in main {{.*}}tail-magic.c:[[@LINE-7]]
 // CHECK: Tail contains: .. .. .. .. 42 {{.. .. ..}} 66
 }

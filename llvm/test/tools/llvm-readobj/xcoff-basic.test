@@ -1,5 +1,8 @@
 # RUN: llvm-readobj --file-header %p/Inputs/xcoff-basic.o | \
 # RUN: FileCheck --check-prefix=FILEHEADER %s
+#
+# RUN: llvm-readobj --file-header %p/Inputs/xcoff-basic-64.o | \
+# RUN: FileCheck --check-prefix=FILEHEADER64 %s
 
 # RUN: llvm-readobj --file-header %p/Inputs/xcoff-basic-neg-time.o | \
 # RUN: FileCheck --check-prefix=NEGTIME %s
@@ -20,6 +23,20 @@
 # FILEHEADER-NEXT:   OptionalHeaderSize: 0x1C
 # FILEHEADER-NEXT:   Flags: 0x0
 # FILEHEADER-NEXT: }
+
+# FILEHEADER64:     File: {{.*}}xcoff-basic-64.o
+# FILEHEADER64-NEXT:  Format: aix5coff64-rs6000
+# FILEHEADER64-NEXT:  Arch: powerpc64
+# FILEHEADER64-NEXT:  AddressSize: 64bit
+# FILEHEADER64-NEXT:  FileHeader {
+# FILEHEADER64-NEXT:    Magic: 0x1F7
+# FILEHEADER64-NEXT:    NumberOfSections: 5
+# FILEHEADER64-NEXT:    TimeStamp: 2019-03-18T20:03:47Z (0x5C8FF9A3)
+# FILEHEADER64-NEXT:    SymbolTableOffset: 0x54C
+# FILEHEADER64-NEXT:    SymbolTableEntries: 58
+# FILEHEADER64-NEXT:    OptionalHeaderSize: 0x0
+# FILEHEADER64-NEXT:    Flags: 0x0
+# FILEHEADER64-NEXT:  }
 
 # NEGTIME:     File: {{.*}}xcoff-basic-neg-time.o
 # NEGTIME-NEXT:  Format: aixcoff-rs6000

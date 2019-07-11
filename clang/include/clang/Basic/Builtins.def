@@ -1449,6 +1449,7 @@ BUILTIN(__builtin_operator_new, "v*z", "tc")
 BUILTIN(__builtin_operator_delete, "vv*", "tn")
 BUILTIN(__builtin_char_memchr, "c*cC*iz", "n")
 BUILTIN(__builtin_dump_struct, "ivC*v*", "tn")
+BUILTIN(__builtin_preserve_access_index, "vC*vC*", "nU")
 
 // Safestack builtins
 BUILTIN(__builtin___get_unsafe_stack_start, "v*", "Fn")
@@ -1477,6 +1478,7 @@ BUILTIN(__builtin_coro_begin, "v*v*", "n")
 BUILTIN(__builtin_coro_end, "bv*Ib", "n")
 BUILTIN(__builtin_coro_suspend, "cIb", "n")
 BUILTIN(__builtin_coro_param, "bv*v*", "n")
+
 // OpenCL v2.0 s6.13.16, s9.17.3.5 - Pipe functions.
 // We need the generic prototype, since the packet type could be anything.
 LANGBUILTIN(read_pipe, "i.", "tn", OCLC20_LANG)
@@ -1512,6 +1514,8 @@ LANGBUILTIN(get_kernel_max_sub_group_size_for_ndrange, "Ui.", "tn", OCLC20_LANG)
 LANGBUILTIN(get_kernel_sub_group_count_for_ndrange, "Ui.", "tn", OCLC20_LANG)
 
 // OpenCL v2.0 s6.13.9 - Address space qualifier functions.
+// FIXME: Pointer parameters of OpenCL builtins should have their address space
+// requirement defined.
 LANGBUILTIN(to_global, "v*v*", "tn", OCLC20_LANG)
 LANGBUILTIN(to_local, "v*v*", "tn", OCLC20_LANG)
 LANGBUILTIN(to_private, "v*v*", "tn", OCLC20_LANG)

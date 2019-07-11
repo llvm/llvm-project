@@ -128,18 +128,19 @@ body: |
   ; CHECK:   [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[UV]](s16)
   ; CHECK:   [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[UV3]](s16)
   ; CHECK:   [[ADD:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT]], [[ANYEXT1]]
-  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[ADD]](s32)
   ; CHECK:   [[ANYEXT2:%[0-9]+]]:_(s32) = G_ANYEXT [[UV1]](s16)
   ; CHECK:   [[ANYEXT3:%[0-9]+]]:_(s32) = G_ANYEXT [[UV4]](s16)
   ; CHECK:   [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT2]], [[ANYEXT3]]
-  ; CHECK:   [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[ADD1]](s32)
   ; CHECK:   [[ANYEXT4:%[0-9]+]]:_(s32) = G_ANYEXT [[UV2]](s16)
   ; CHECK:   [[ANYEXT5:%[0-9]+]]:_(s32) = G_ANYEXT [[UV5]](s16)
   ; CHECK:   [[ADD2:%[0-9]+]]:_(s32) = G_ADD [[ANYEXT4]], [[ANYEXT5]]
-  ; CHECK:   [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[ADD2]](s32)
-  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s16>) = G_BUILD_VECTOR [[TRUNC]](s16), [[TRUNC1]](s16), [[TRUNC2]](s16)
+  ; CHECK:   [[COPY2:%[0-9]+]]:_(s32) = COPY [[ADD]](s32)
+  ; CHECK:   [[COPY3:%[0-9]+]]:_(s32) = COPY [[ADD1]](s32)
+  ; CHECK:   [[COPY4:%[0-9]+]]:_(s32) = COPY [[ADD2]](s32)
+  ; CHECK:   [[BUILD_VECTOR:%[0-9]+]]:_(<3 x s32>) = G_BUILD_VECTOR [[COPY2]](s32), [[COPY3]](s32), [[COPY4]](s32)
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(<3 x s16>) = G_TRUNC [[BUILD_VECTOR]](<3 x s32>)
   ; CHECK:   [[DEF1:%[0-9]+]]:_(<4 x s16>) = G_IMPLICIT_DEF
-  ; CHECK:   [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[BUILD_VECTOR]](<3 x s16>), 0
+  ; CHECK:   [[INSERT1:%[0-9]+]]:_(<4 x s16>) = G_INSERT [[DEF1]], [[TRUNC]](<3 x s16>), 0
   ; CHECK:   G_BR %bb.2
   ; CHECK: bb.2:
   ; CHECK:   [[PHI:%[0-9]+]]:_(<4 x s16>) = G_PHI [[INSERT]](<4 x s16>), %bb.0, [[INSERT1]](<4 x s16>), %bb.1

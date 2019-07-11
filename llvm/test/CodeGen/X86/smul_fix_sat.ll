@@ -629,7 +629,7 @@ define i64 @func7(i64 %x, i64 %y) nounwind {
 ; X86-NEXT:    cmovnsl %esi, %edi
 ; X86-NEXT:    cmovnsl %ecx, %edx
 ; X86-NEXT:    testl %edx, %edx
-; X86-NEXT:    setg %cl
+; X86-NEXT:    setns %cl
 ; X86-NEXT:    sets %ch
 ; X86-NEXT:    testl %edi, %edi
 ; X86-NEXT:    setg %bl

@@ -285,15 +285,15 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
 
   m_execution_engine_up.reset(builder.create(target_machine));
 
-  m_strip_underscore =
-      (m_execution_engine_up->getDataLayout().getGlobalPrefix() == '_');
-
   if (!m_execution_engine_up) {
     error.SetErrorToGenericError();
     error.SetErrorStringWithFormat("Couldn't JIT the function: %s",
                                    error_string.c_str());
     return;
   }
+
+  m_strip_underscore =
+      (m_execution_engine_up->getDataLayout().getGlobalPrefix() == '_');
 
   class ObjectDumper : public llvm::ObjectCache {
   public:

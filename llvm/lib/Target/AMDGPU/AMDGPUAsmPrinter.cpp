@@ -634,6 +634,11 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         HighestVGPRReg = Reg;
         break;
       }
+      MCPhysReg AReg = AMDGPU::AGPR0 + TRI.getHWRegIndex(Reg);
+      if (MRI.isPhysRegUsed(AReg)) {
+        HighestVGPRReg = AReg;
+        break;
+      }
     }
 
     MCPhysReg HighestSGPRReg = AMDGPU::NoRegister;
@@ -737,6 +742,9 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         } else if (AMDGPU::VGPR_32RegClass.contains(Reg)) {
           IsSGPR = false;
           Width = 1;
+        } else if (AMDGPU::AGPR_32RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 1;
         } else if (AMDGPU::SReg_64RegClass.contains(Reg)) {
           assert(!AMDGPU::TTMP_64RegClass.contains(Reg) &&
                  "trap handler registers should not be used");
@@ -745,8 +753,13 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         } else if (AMDGPU::VReg_64RegClass.contains(Reg)) {
           IsSGPR = false;
           Width = 2;
+        } else if (AMDGPU::AReg_64RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 2;
         } else if (AMDGPU::VReg_96RegClass.contains(Reg)) {
           IsSGPR = false;
+          Width = 3;
+        } else if (AMDGPU::SReg_96RegClass.contains(Reg)) {
           Width = 3;
         } else if (AMDGPU::SReg_128RegClass.contains(Reg)) {
           assert(!AMDGPU::TTMP_128RegClass.contains(Reg) &&
@@ -754,6 +767,9 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
           IsSGPR = true;
           Width = 4;
         } else if (AMDGPU::VReg_128RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 4;
+        } else if (AMDGPU::AReg_128RegClass.contains(Reg)) {
           IsSGPR = false;
           Width = 4;
         } else if (AMDGPU::SReg_256RegClass.contains(Reg)) {
@@ -772,9 +788,18 @@ AMDGPUAsmPrinter::SIFunctionResourceInfo AMDGPUAsmPrinter::analyzeResourceUsage(
         } else if (AMDGPU::VReg_512RegClass.contains(Reg)) {
           IsSGPR = false;
           Width = 16;
-        } else if (AMDGPU::SReg_96RegClass.contains(Reg)) {
+        } else if (AMDGPU::AReg_512RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 16;
+        } else if (AMDGPU::SReg_1024RegClass.contains(Reg)) {
           IsSGPR = true;
-          Width = 3;
+          Width = 32;
+        } else if (AMDGPU::VReg_1024RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 32;
+        } else if (AMDGPU::AReg_1024RegClass.contains(Reg)) {
+          IsSGPR = false;
+          Width = 32;
         } else {
           llvm_unreachable("Unknown register class");
         }

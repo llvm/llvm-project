@@ -903,7 +903,7 @@ bool LoopPredication::isLoopProfitableToPredicate() {
   if (SkipProfitabilityChecks || !BPI)
     return true;
 
-  SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 8> ExitEdges;
+  SmallVector<std::pair<BasicBlock *, BasicBlock *>, 8> ExitEdges;
   L->getExitEdges(ExitEdges);
   // If there is only one exiting edge in the loop, it is always profitable to
   // predicate the loop.

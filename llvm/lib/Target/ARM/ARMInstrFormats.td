@@ -2591,7 +2591,7 @@ class NEONFPPat<dag pattern, dag result> : Pat<pattern, result> {
 // VFP/NEON Instruction aliases for type suffices.
 // Note: When EmitPriority == 1, the alias will be used for printing
 class VFPDataTypeInstAlias<string opc, string dt, string asm, dag Result, bit EmitPriority = 0> :
-  InstAlias<!strconcat(opc, dt, "\t", asm), Result, EmitPriority>, Requires<[HasVFP2]>;
+  InstAlias<!strconcat(opc, dt, "\t", asm), Result, EmitPriority>, Requires<[HasFPRegs]>;
 
 // Note: When EmitPriority == 1, the alias will be used for printing
 multiclass VFPDTAnyInstAlias<string opc, string asm, dag Result, bit EmitPriority = 0> {

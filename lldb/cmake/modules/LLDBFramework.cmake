@@ -26,11 +26,14 @@ set_target_properties(liblldb PROPERTIES
   MACOSX_FRAMEWORK_INFO_PLIST ${LLDB_SOURCE_DIR}/resources/LLDB-Info.plist.in
 )
 
-# Defined in AddLLVM.cmake; handles edge cases for multi-config generators
+# Used in llvm_add_library() to set default output directories for multi-config
+# generators. Overwrite to account for special framework output directory.
 set_output_directory(liblldb
   BINARY_DIR ${framework_target_dir}
   LIBRARY_DIR ${framework_target_dir}
 )
+
+lldb_add_post_install_steps_darwin(liblldb ${LLDB_FRAMEWORK_INSTALL_DIR})
 
 # Affects the layout of the framework bundle (default is macOS layout).
 if(IOS)
@@ -41,12 +44,8 @@ else()
     XCODE_ATTRIBUTE_MACOSX_DEPLOYMENT_TARGET "${MACOSX_DEPLOYMENT_TARGET}")
 endif()
 
-# Target to capture extra steps for a fully functional framework bundle.
-add_custom_target(lldb-framework ALL)
-add_dependencies(lldb-framework liblldb)
-
 # Apart from this one, CMake creates all required symlinks in the framework bundle.
-add_custom_command(TARGET lldb-framework POST_BUILD
+add_custom_command(TARGET liblldb POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E create_symlink
           Versions/Current/Headers
           ${framework_target_dir}/LLDB.framework/Headers
@@ -78,12 +77,12 @@ foreach(header
 endforeach()
 
 # Wrap output in a target, so lldb-framework can depend on it.
-add_custom_target(lldb-framework-headers DEPENDS ${lldb_staged_headers})
-add_dependencies(lldb-framework lldb-framework-headers)
+add_custom_target(liblldb-resource-headers DEPENDS ${lldb_staged_headers})
+add_dependencies(liblldb liblldb-resource-headers)
 
 # At build time, copy the staged headers into the framework bundle (and do
 # some post-processing in-place).
-add_custom_command(TARGET lldb-framework-headers POST_BUILD
+add_custom_command(TARGET liblldb POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E copy_directory ${lldb_header_staging} $<TARGET_FILE_DIR:liblldb>/Headers
   COMMAND ${LLDB_SOURCE_DIR}/scripts/framework-header-fix.sh $<TARGET_FILE_DIR:liblldb>/Headers ${LLDB_VERSION}
   COMMENT "LLDB.framework: copy framework headers"
@@ -92,7 +91,7 @@ add_custom_command(TARGET lldb-framework-headers POST_BUILD
 # Copy vendor-specific headers from clang (without staging).
 if(NOT IOS)
   if (TARGET clang-resource-headers)
-    add_dependencies(lldb-framework clang-resource-headers)
+    add_dependencies(liblldb clang-resource-headers)
     set(clang_resource_headers_dir $<TARGET_PROPERTY:clang-resource-headers,RUNTIME_OUTPUT_DIRECTORY>)
   else()
     # In standalone builds try the best possible guess
@@ -114,7 +113,7 @@ if(NOT IOS)
     endif()
   endif()
 
-  add_custom_command(TARGET lldb-framework POST_BUILD
+  add_custom_command(TARGET liblldb POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_directory
             ${clang_resource_headers_dir}
             $<TARGET_FILE_DIR:liblldb>/Resources/Clang/include

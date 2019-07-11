@@ -24,6 +24,7 @@
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/MC/MCInstrDesc.h"
@@ -1016,6 +1017,12 @@ public:
     return isDebugValue()
       && getOperand(0).isReg()
       && getOperand(1).isImm();
+  }
+
+  /// A DBG_VALUE is an entry value iff its debug expression contains the
+  /// DW_OP_entry_value DWARF operation.
+  bool isDebugEntryValue() const {
+    return isDebugValue() && getDebugExpression()->isEntryValue();
   }
 
   /// Return true if the instruction is a debug value which describes a part of

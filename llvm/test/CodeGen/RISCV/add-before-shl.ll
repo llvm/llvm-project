@@ -72,3 +72,22 @@ define signext i32 @add_huge_const(i32 signext %a) nounwind {
   %3 = ashr i32 %2, 16
   ret i32 %3
 }
+
+define signext i24 @add_non_machine_type(i24 signext %a) nounwind {
+; RV32I-LABEL: add_non_machine_type:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi a0, a0, 256
+; RV32I-NEXT:    slli a0, a0, 20
+; RV32I-NEXT:    srai a0, a0, 8
+; RV32I-NEXT:    ret
+;
+; RV64I-LABEL: add_non_machine_type:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    addi a0, a0, 256
+; RV64I-NEXT:    slli a0, a0, 52
+; RV64I-NEXT:    srai a0, a0, 40
+; RV64I-NEXT:    ret
+  %1 = add i24 %a, 256
+  %2 = shl i24 %1, 12
+  ret i24 %2
+}

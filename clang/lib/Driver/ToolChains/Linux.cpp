@@ -865,12 +865,13 @@ void Linux::AddClangSystemIncludeArgs(const ArgList &DriverArgs,
   addExternCSystemInclude(DriverArgs, CC1Args, SysRoot + "/usr/include");
 }
 
-static std::string DetectLibcxxIncludePath(StringRef base) {
+static std::string DetectLibcxxIncludePath(llvm::vfs::FileSystem &vfs,
+                                           StringRef base) {
   std::error_code EC;
   int MaxVersion = 0;
   std::string MaxVersionString = "";
-  for (llvm::sys::fs::directory_iterator LI(base, EC), LE; !EC && LI != LE;
-       LI = LI.increment(EC)) {
+  for (llvm::vfs::directory_iterator LI = vfs.dir_begin(base, EC), LE;
+       !EC && LI != LE; LI = LI.increment(EC)) {
     StringRef VersionText = llvm::sys::path::filename(LI->path());
     int Version;
     if (VersionText[0] == 'v' &&
@@ -888,12 +889,12 @@ void Linux::addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                                   llvm::opt::ArgStringList &CC1Args) const {
   const std::string& SysRoot = computeSysRoot();
   const std::string LibCXXIncludePathCandidates[] = {
-      DetectLibcxxIncludePath(getDriver().Dir + "/../include/c++"),
+      DetectLibcxxIncludePath(getVFS(), getDriver().Dir + "/../include/c++"),
       // If this is a development, non-installed, clang, libcxx will
       // not be found at ../include/c++ but it likely to be found at
       // one of the following two locations:
-      DetectLibcxxIncludePath(SysRoot + "/usr/local/include/c++"),
-      DetectLibcxxIncludePath(SysRoot + "/usr/include/c++") };
+      DetectLibcxxIncludePath(getVFS(), SysRoot + "/usr/local/include/c++"),
+      DetectLibcxxIncludePath(getVFS(), SysRoot + "/usr/include/c++") };
   for (const auto &IncludePath : LibCXXIncludePathCandidates) {
     if (IncludePath.empty() || !getVFS().exists(IncludePath))
       continue;

@@ -69,13 +69,13 @@ public:
   /// \returns this variable's value.
   Optional<uint64_t> getValue() const { return Value; }
 
-  /// Sets value of this numeric variable if not defined. \returns whether the
-  /// variable was already defined.
-  bool setValue(uint64_t Value);
+  /// Sets value of this numeric variable, if undefined. Triggers an assertion
+  /// failure if the variable is actually defined.
+  void setValue(uint64_t Value);
 
-  /// Clears value of this numeric variable. \returns whether the variable was
-  /// already undefined.
-  bool clearValue();
+  /// Clears value of this numeric variable, regardless of whether it is
+  /// currently defined or not.
+  void clearValue();
 
   /// \returns the line number where this variable is defined.
   size_t getDefLineNumber() { return DefLineNumber; }
