@@ -44,7 +44,7 @@ endmacro()
 
 macro(add_clang_library name)
   cmake_parse_arguments(ARG
-    "SHARED"
+    "SHARED;INSTALL_WITH_TOOLCHAIN"
     ""
     "ADDITIONAL_HEADERS"
     ${ARGN})
@@ -97,7 +97,7 @@ macro(add_clang_library name)
   if(TARGET ${name})
     target_link_libraries(${name} INTERFACE ${LLVM_COMMON_LIBS})
 
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "libclang")
+    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ARG_INSTALL_WITH_TOOLCHAIN)
       set(export_to_clangtargets)
       if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR
           "clang-libraries" IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR

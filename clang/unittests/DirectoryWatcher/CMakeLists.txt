@@ -1,13 +1,17 @@
-set(LLVM_LINK_COMPONENTS
-  Support
-  )
+if(APPLE OR CMAKE_SYSTEM_NAME MATCHES "Linux")
 
-add_clang_unittest(DirectoryWatcherTests
-  DirectoryWatcherTest.cpp
-  )
+  set(LLVM_LINK_COMPONENTS
+    Support
+    )
 
-target_link_libraries(DirectoryWatcherTests
-  PRIVATE
-  clangDirectoryWatcher
-  clangBasic
-  )
+  add_clang_unittest(DirectoryWatcherTests
+    DirectoryWatcherTest.cpp
+    )
+
+  target_link_libraries(DirectoryWatcherTests
+    PRIVATE
+    clangDirectoryWatcher
+    clangBasic
+    )
+
+endif()

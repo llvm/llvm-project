@@ -3449,19 +3449,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   const llvm::Triple *AuxTriple = IsCuda ? TC.getAuxTriple() : nullptr;
-  bool IsWindowsGNU = RawTriple.isWindowsGNUEnvironment();
-  bool IsWindowsCygnus = RawTriple.isWindowsCygwinEnvironment();
   bool IsWindowsMSVC = RawTriple.isWindowsMSVCEnvironment();
   bool IsIAMCU = RawTriple.isOSIAMCU();
 
   // Adjust IsWindowsXYZ for CUDA/HIP compilations.  Even when compiling in
   // device mode (i.e., getToolchain().getTriple() is NVPTX/AMDGCN, not
   // Windows), we need to pass Windows-specific flags to cc1.
-  if (IsCuda || IsHIP) {
+  if (IsCuda || IsHIP)
     IsWindowsMSVC |= AuxTriple && AuxTriple->isWindowsMSVCEnvironment();
-    IsWindowsGNU |= AuxTriple && AuxTriple->isWindowsGNUEnvironment();
-    IsWindowsCygnus |= AuxTriple && AuxTriple->isWindowsCygwinEnvironment();
-  }
 
   // C++ is not supported for IAMCU.
   if (IsIAMCU && types::isCXX(Input.getType()))
@@ -3540,18 +3535,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Select the appropriate action.
   RewriteKind rewriteKind = RK_None;
-
-  // If CollectArgsForIntegratedAssembler() isn't called below, call it here
-  // with a dummy args list to mark assembler flags as used even when not
-  // running an assembler. Otherwise, clang would emit "argument unused"
-  // warnings for assembler flags when e.g. adding "-E" to flags while debugging
-  // something. That'd be somewhat inconvenient, and it's also inconsistent with
-  // most other flags -- we don't warn on -ffunction-sections not being used
-  // in -E mode either for example, even though it's not really used either.
-  if (!isa<AssembleJobAction>(JA)) {
-    ArgStringList DummyArgs;
-    CollectArgsForIntegratedAssembler(C, Args, DummyArgs, D);
-  }
 
   if (isa<AnalyzeJobAction>(JA)) {
     assert(JA.getType() == types::TY_Plist && "Invalid output type.");

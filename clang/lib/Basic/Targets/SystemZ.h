@@ -100,6 +100,8 @@ public:
       Features["vector"] = true;
     if (ISARevision >= 12)
       Features["vector-enhancements-1"] = true;
+    if (ISARevision >= 13)
+      Features["vector-enhancements-2"] = true;
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 

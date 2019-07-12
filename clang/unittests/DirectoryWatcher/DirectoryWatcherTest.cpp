@@ -38,12 +38,18 @@ struct DirectoryWatcherTestFixture {
 
   DirectoryWatcherTestFixture() {
     SmallString<128> pathBuf;
-    std::error_code UniqDirRes = createUniqueDirectory("dirwatcher", pathBuf);
+#ifndef NDEBUG
+    std::error_code UniqDirRes =
+#endif
+    createUniqueDirectory("dirwatcher", pathBuf);
     assert(!UniqDirRes);
     TestRootDir = pathBuf.str();
     path::append(pathBuf, "watch");
     TestWatchedDir = pathBuf.str();
-    std::error_code CreateDirRes = create_directory(TestWatchedDir, false);
+#ifndef NDEBUG
+    std::error_code CreateDirRes =
+#endif
+    create_directory(TestWatchedDir, false);
     assert(!CreateDirRes);
   }
 
@@ -415,8 +421,9 @@ TEST(DirectoryWatcherTest, ChangeMetadata) {
     const int FD = HopefullyTheFD.get();
     const TimePoint<> NewTimePt =
         std::chrono::system_clock::now() - std::chrono::minutes(1);
-
+#ifndef NDEBUG
     std::error_code setTimeRes =
+#endif
         llvm::sys::fs::setLastAccessAndModificationTime(FD, NewTimePt,
                                                         NewTimePt);
     assert(!setTimeRes);

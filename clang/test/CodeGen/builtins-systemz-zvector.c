@@ -310,6 +310,48 @@ void test_core(void) {
   // CHECK: call <2 x i64> @llvm.s390.vpdi(<2 x i64> %{{.*}}, <2 x i64> %{{.*}}, i32 5)
   // CHECK-ASM: vpdi
 
+  vss = vec_revb(vss);
+  // CHECK-ASM: vperm
+  vus = vec_revb(vus);
+  // CHECK-ASM: vperm
+  vsi = vec_revb(vsi);
+  // CHECK-ASM: vperm
+  vui = vec_revb(vui);
+  // CHECK-ASM: vperm
+  vsl = vec_revb(vsl);
+  // CHECK-ASM: vperm
+  vul = vec_revb(vul);
+  // CHECK-ASM: vperm
+  vd = vec_revb(vd);
+  // CHECK-ASM: vperm
+
+  vsc = vec_reve(vsc);
+  // CHECK-ASM: vperm
+  vuc = vec_reve(vuc);
+  // CHECK-ASM: vperm
+  vbc = vec_reve(vbc);
+  // CHECK-ASM: vperm
+  vss = vec_reve(vss);
+  // CHECK-ASM: vperm
+  vus = vec_reve(vus);
+  // CHECK-ASM: vperm
+  vbs = vec_reve(vbs);
+  // CHECK-ASM: vperm
+  vsi = vec_reve(vsi);
+  // CHECK-ASM: vperm
+  vui = vec_reve(vui);
+  // CHECK-ASM: vperm
+  vbi = vec_reve(vbi);
+  // CHECK-ASM: vperm
+  vsl = vec_reve(vsl);
+  // CHECK-ASM: {{vperm|vpdi}}
+  vul = vec_reve(vul);
+  // CHECK-ASM: {{vperm|vpdi}}
+  vbl = vec_reve(vbl);
+  // CHECK-ASM: {{vperm|vpdi}}
+  vd = vec_reve(vd);
+  // CHECK-ASM: {{vperm|vpdi}}
+
   vsc = vec_sel(vsc, vsc, vuc);
   // CHECK-ASM: vsel
   vsc = vec_sel(vsc, vsc, vbc);
