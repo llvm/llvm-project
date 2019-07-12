@@ -7,4 +7,5 @@ add_lldb_library(lldbPluginCXXItaniumABI PLUGIN
     lldbInterpreter
     lldbSymbol
     lldbTarget
+    lldbPluginCPPRuntime
   )

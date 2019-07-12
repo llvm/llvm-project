@@ -28,6 +28,7 @@ add_lldb_library(lldbPluginCPlusPlusLanguage PLUGIN
     lldbTarget
     lldbUtility
     lldbPluginClangCommon
+    lldbPluginCPPRuntime
 
   LINK_COMPONENTS
     Support

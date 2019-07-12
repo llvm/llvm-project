@@ -19,9 +19,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Expression/LLVMUserExpression.h"
-#include "lldb/Target/CPPLanguageRuntime.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/lldb-private.h"
+
+#include "Plugins/LanguageRuntime/CPlusPlus/CPPLanguageRuntime.h"
 
 namespace lldb_private {
 namespace lldb_renderscript {
