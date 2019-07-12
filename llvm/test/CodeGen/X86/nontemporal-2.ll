@@ -1234,9 +1234,9 @@ define void @test_op_v32i8(<32 x i8> %a, <32 x i8> %b, <32 x i8>* %dst) {
 define void @test_unaligned_v8f32(<8 x float> %a, <8 x float> %b, <8 x float>* %dst) {
 ; SSE-LABEL: test_unaligned_v8f32:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    addps %xmm2, %xmm0
 ; SSE-NEXT:    addps %xmm3, %xmm1
 ; SSE-NEXT:    movntps %xmm1, 16(%rdi)
+; SSE-NEXT:    addps %xmm2, %xmm0
 ; SSE-NEXT:    movntps %xmm0, (%rdi)
 ; SSE-NEXT:    retq
 ;

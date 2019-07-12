@@ -31,6 +31,8 @@ struct GCNRegPressure {
     SGPR_TUPLE,
     VGPR32,
     VGPR_TUPLE,
+    AGPR32,
+    AGPR_TUPLE,
     TOTAL_KINDS
   };
 
@@ -43,9 +45,10 @@ struct GCNRegPressure {
   void clear() { std::fill(&Value[0], &Value[TOTAL_KINDS], 0); }
 
   unsigned getSGPRNum() const { return Value[SGPR32]; }
-  unsigned getVGPRNum() const { return Value[VGPR32]; }
+  unsigned getVGPRNum() const { return std::max(Value[VGPR32], Value[AGPR32]); }
 
-  unsigned getVGPRTuplesWeight() const { return Value[VGPR_TUPLE]; }
+  unsigned getVGPRTuplesWeight() const { return std::max(Value[VGPR_TUPLE],
+                                                         Value[AGPR_TUPLE]); }
   unsigned getSGPRTuplesWeight() const { return Value[SGPR_TUPLE]; }
 
   unsigned getOccupancy(const GCNSubtarget &ST) const {

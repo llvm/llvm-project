@@ -24,6 +24,9 @@ def WriteSMEM   : SchedWrite;
 def WriteVMEM   : SchedWrite;
 def WriteBarrier : SchedWrite;
 
+def MIVGPRRead  : SchedRead;
+def MIMFMARead  : SchedRead;
+
 // Vector ALU instructions
 def Write32Bit         : SchedWrite;
 def WriteQuarterRate32 : SchedWrite;
@@ -42,6 +45,11 @@ def WriteDoubleCvt  : SchedWrite;
 
 // Half rate 64-bit instructions.
 def Write64Bit : SchedWrite;
+
+// mAI multipass instructions.
+def Write2PassMAI  : SchedWrite;
+def Write8PassMAI  : SchedWrite;
+def Write16PassMAI : SchedWrite;
 
 // FIXME: Should there be a class for instructions which are VALU
 // instructions and have VALU rates, but write to the SALU (i.e. VOPC
@@ -97,6 +105,11 @@ class HWWriteRes<SchedWrite write, list<ProcResourceKind> resources,
 class HWVALUWriteRes<SchedWrite write, int latency> :
   HWWriteRes<write, [HWVALU], latency>;
 
+def PredMIReadVGPR : SchedPredicate<[{TII->hasVGPRUses(*MI)}]>;
+
+def MIReadVGPR : SchedReadVariant<[
+      SchedVar<PredMIReadVGPR, [MIVGPRRead]>,
+      SchedVar<NoSchedPred, [ReadDefault]>]>;
 
 // The latency numbers are taken from AMD Accelerated Parallel Processing
 // guide. They may not be accurate.
@@ -115,6 +128,24 @@ multiclass SICommonWriteRes {
   def : HWVALUWriteRes<Write32Bit,         1>;
   def : HWVALUWriteRes<Write64Bit,         2>;
   def : HWVALUWriteRes<WriteQuarterRate32, 4>;
+  def : HWVALUWriteRes<Write2PassMAI,      2>;
+  def : HWVALUWriteRes<Write8PassMAI,      8>;
+  def : HWVALUWriteRes<Write16PassMAI,    16>;
+
+  def : ReadAdvance<MIVGPRRead, -2>;
+  def : InstRW<[Write64Bit, MIReadVGPR], (instregex "^V_ACCVGPR_WRITE_B32$")>;
+
+  // Technicaly mfma reads can be from 0 to 4 cycles but that does not make
+  // sense to model because its register setup is huge. In particular if we
+  // properly model read advanice as -2 for a vgpr read it will result in a
+  // bad scheduling of acc writes before that mfma. To avoid it we would
+  // need to consume 2 or 4 more vgprs to be initialized before the acc
+  // write sequence. Just assume worst case here.
+  def : ReadAdvance<MIMFMARead, -4>;
+
+  def : InstRW<[Write2PassMAI,  MIMFMARead], (instregex "^V_MFMA_..._4X4X")>;
+  def : InstRW<[Write8PassMAI,  MIMFMARead], (instregex "^V_MFMA_..._16X16X")>;
+  def : InstRW<[Write16PassMAI, MIMFMARead], (instregex "^V_MFMA_..._32X32X")>;
 }
 
 def PredIsVGPR32Copy : SchedPredicate<[{TII->isVGPRCopy(*MI) && TII->getOpSize(*MI, 0) <= 32}]>;

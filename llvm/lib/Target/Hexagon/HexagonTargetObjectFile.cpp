@@ -238,10 +238,7 @@ bool HexagonTargetObjectFile::isGlobalInSmallSection(const GlobalObject *GO,
     return false;
   }
 
-  Type *GType = GVar->getType();
-  if (PointerType *PT = dyn_cast<PointerType>(GType))
-    GType = PT->getElementType();
-
+  Type *GType = GVar->getValueType();
   if (isa<ArrayType>(GType)) {
     LLVM_DEBUG(dbgs() << "no, is an array\n");
     return false;
@@ -341,7 +338,7 @@ unsigned HexagonTargetObjectFile::getSmallestAddressableSize(const Type *Ty,
 
 MCSection *HexagonTargetObjectFile::selectSmallSectionForGlobal(
     const GlobalObject *GO, SectionKind Kind, const TargetMachine &TM) const {
-  const Type *GTy = GO->getType()->getElementType();
+  const Type *GTy = GO->getValueType();
   unsigned Size = getSmallestAddressableSize(GTy, GO, TM);
 
   // If we have -ffunction-section or -fdata-section then we should emit the

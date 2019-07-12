@@ -660,6 +660,14 @@ public:
     return !RI.isSGPRReg(MRI, Dest);
   }
 
+  bool hasVGPRUses(const MachineInstr &MI) const {
+    const MachineFunction &MF = *MI.getParent()->getParent();
+    const MachineRegisterInfo &MRI = MF.getRegInfo();
+    return llvm::any_of(MI.explicit_uses(),
+                        [&MRI, this](const MachineOperand &MO) {
+      return MO.isReg() && RI.isVGPR(MRI, MO.getReg());});
+  }
+
   /// Whether we must prevent this instruction from executing with EXEC = 0.
   bool hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const;
 

@@ -1090,7 +1090,7 @@ def S_WAKEUP : SOPP <0x00000003, (ins), "s_wakeup"> {
 
 let mayLoad = 1, mayStore = 1, hasSideEffects = 1 in
 def S_WAITCNT : SOPP <0x0000000c, (ins WAIT_FLAG:$simm16), "s_waitcnt $simm16",
-    [(int_amdgcn_s_waitcnt SIMM16bit:$simm16)]>;
+    [(int_amdgcn_s_waitcnt UIMM16bit:$simm16)]>;
 def S_SETHALT : SOPP <0x0000000d, (ins i16imm:$simm16), "s_sethalt $simm16">;
 def S_SETKILL : SOPP <0x0000000b, (ins i16imm:$simm16), "s_setkill $simm16">;
 

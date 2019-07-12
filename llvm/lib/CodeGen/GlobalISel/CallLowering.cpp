@@ -197,7 +197,7 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
            "Can't handle multiple virtual regs yet");
 
     // FIXME: Pack registers if we have more than one.
-    unsigned ArgReg = Args[i].Regs[0];
+    Register ArgReg = Args[i].Regs[0];
 
     if (VA.isRegLoc()) {
       MVT OrigVT = MVT::getVT(Args[i].Ty);
@@ -206,7 +206,7 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
         if (VAVT.getSizeInBits() < OrigVT.getSizeInBits())
           return false; // Can't handle this type of arg yet.
         const LLT VATy(VAVT);
-        unsigned NewReg =
+        Register NewReg =
             MIRBuilder.getMRI()->createGenericVirtualRegister(VATy);
         Handler.assignValueToReg(NewReg, VA.getLocReg(), VA);
         // If it's a vector type, we either need to truncate the elements
@@ -234,7 +234,7 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                                       : alignTo(VT.getSizeInBits(), 8) / 8;
       unsigned Offset = VA.getLocMemOffset();
       MachinePointerInfo MPO;
-      unsigned StackAddr = Handler.getStackAddress(Size, Offset, MPO);
+      Register StackAddr = Handler.getStackAddress(Size, Offset, MPO);
       Handler.assignValueToAddress(ArgReg, StackAddr, Size, MPO, VA);
     } else {
       // FIXME: Support byvals and other weirdness
@@ -261,12 +261,12 @@ Register CallLowering::ValueHandler::extendRegister(Register ValReg,
     return MIB->getOperand(0).getReg();
   }
   case CCValAssign::SExt: {
-    unsigned NewReg = MRI.createGenericVirtualRegister(LocTy);
+    Register NewReg = MRI.createGenericVirtualRegister(LocTy);
     MIRBuilder.buildSExt(NewReg, ValReg);
     return NewReg;
   }
   case CCValAssign::ZExt: {
-    unsigned NewReg = MRI.createGenericVirtualRegister(LocTy);
+    Register NewReg = MRI.createGenericVirtualRegister(LocTy);
     MIRBuilder.buildZExt(NewReg, ValReg);
     return NewReg;
   }

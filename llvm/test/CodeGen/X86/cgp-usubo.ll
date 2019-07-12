@@ -242,3 +242,19 @@ true:
 exit:
   ret void
 }
+
+define i32 @PR42571(i32 %x, i32 %y) {
+; CHECK-LABEL: PR42571:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    subl $1, %eax
+; CHECK-NEXT:    andl %edi, %eax
+; CHECK-NEXT:    cmpl $1, %edi
+; CHECK-NEXT:    cmovbl %esi, %eax
+; CHECK-NEXT:    retq
+  %tobool = icmp eq i32 %x, 0
+  %sub = add nsw i32 %x, -1
+  %and = and i32 %sub, %x
+  %cond = select i1 %tobool, i32 %y, i32 %and
+  ret i32 %cond
+}

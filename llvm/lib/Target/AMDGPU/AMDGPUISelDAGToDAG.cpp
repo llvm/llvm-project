@@ -647,6 +647,8 @@ static unsigned selectSGPRVectorRegClassID(unsigned NumVectorElts) {
     return AMDGPU::SReg_256RegClassID;
   case 16:
     return AMDGPU::SReg_512RegClassID;
+  case 32:
+    return AMDGPU::SReg_1024RegClassID;
   }
 
   llvm_unreachable("invalid vector size");
@@ -665,12 +667,12 @@ void AMDGPUDAGToDAGISel::SelectBuildVector(SDNode *N, unsigned RegClassID) {
     return;
   }
 
-  assert(NumVectorElts <= 16 && "Vectors with more than 16 elements not "
+  assert(NumVectorElts <= 32 && "Vectors with more than 32 elements not "
                                   "supported yet");
-  // 16 = Max Num Vector Elements
+  // 32 = Max Num Vector Elements
   // 2 = 2 REG_SEQUENCE operands per element (value, subreg index)
   // 1 = Vector Register Class
-  SmallVector<SDValue, 16 * 2 + 1> RegSeqArgs(NumVectorElts * 2 + 1);
+  SmallVector<SDValue, 32 * 2 + 1> RegSeqArgs(NumVectorElts * 2 + 1);
 
   RegSeqArgs[0] = CurDAG->getTargetConstant(RegClassID, DL, MVT::i32);
   bool IsRegSeq = true;

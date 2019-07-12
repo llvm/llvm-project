@@ -377,7 +377,7 @@ struct AbstractState {
 /// state will catch up with the assumed one, for a pessimistic fixpoint it is
 /// the other way around.
 struct IntegerState : public AbstractState {
-  /// Undrlying integer type, we assume 32 bits to be enough.
+  /// Underlying integer type, we assume 32 bits to be enough.
   using base_t = uint32_t;
 
   /// Initialize the (best) state.
@@ -664,20 +664,40 @@ struct AAReturnedValues : public AbstractAttribute {
 };
 
 struct AANoUnwind : public AbstractAttribute {
-    /// An abstract interface for all nosync attributes.
-    AANoUnwind(Value &V, InformationCache &InfoCache)
-        : AbstractAttribute(V, InfoCache) {}
+  /// An abstract interface for all nosync attributes.
+  AANoUnwind(Value &V, InformationCache &InfoCache)
+      : AbstractAttribute(V, InfoCache) {}
 
-    /// See AbstractAttribute::getAttrKind()/
-    virtual Attribute::AttrKind getAttrKind() const override { return ID; }
+  /// See AbstractAttribute::getAttrKind()/
+  virtual Attribute::AttrKind getAttrKind() const override { return ID; }
 
-    static constexpr Attribute::AttrKind ID = Attribute::NoUnwind;
+  static constexpr Attribute::AttrKind ID = Attribute::NoUnwind;
 
-    /// Returns true if nounwind is assumed.
-    virtual bool isAssumedNoUnwind() const = 0;
+  /// Returns true if nounwind is assumed.
+  virtual bool isAssumedNoUnwind() const = 0;
 
-    /// Returns true if nounwind is known.
-    virtual bool isKnownNoUnwind() const = 0;
+  /// Returns true if nounwind is known.
+  virtual bool isKnownNoUnwind() const = 0;
+};
+
+struct AANoSync : public AbstractAttribute {
+  /// An abstract interface for all nosync attributes.
+  AANoSync(Value &V, InformationCache &InfoCache)
+      : AbstractAttribute(V, InfoCache) {}
+
+  /// See AbstractAttribute::getAttrKind().
+  virtual Attribute::AttrKind getAttrKind() const override {
+    return ID;
+  }
+
+  static constexpr Attribute::AttrKind ID =
+      Attribute::AttrKind(Attribute::NoSync);
+
+  /// Returns true if "nosync" is assumed.
+  virtual bool isAssumedNoSync() const = 0;
+
+  /// Returns true if "nosync" is known.
+  virtual bool isKnownNoSync() const = 0;
 };
 
 } // end namespace llvm

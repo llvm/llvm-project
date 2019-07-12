@@ -127,7 +127,7 @@ TEST(MsgPackDocument, TestOutputYAMLMap) {
   ASSERT_EQ(OStream.str(), "---\n"
                            "bar:             2\n"
                            "foo:             1\n"
-                           "qux:             \n"
+                           "qux:\n"
                            "  baz:             true\n"
                            "...\n");
 }
@@ -147,7 +147,7 @@ TEST(MsgPackDocument, TestOutputYAMLMapHex) {
   ASSERT_EQ(OStream.str(), "---\n"
                            "bar:             0x2\n"
                            "foo:             1\n"
-                           "qux:             \n"
+                           "qux:\n"
                            "  baz:             true\n"
                            "...\n");
 }

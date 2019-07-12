@@ -1,6 +1,7 @@
 ; RUN: llc -march=amdgcn -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,FUNC %s
+; RUN: llc -march=amdgcn -mcpu=gfx908 -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,VI,FUNC %s
 ; RUN: llc -march=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; Testing for ds_read/write_128
@@ -268,6 +269,7 @@ define amdgpu_kernel void @local_zextload_v32i32_to_v32i64(<32 x i64> addrspace(
 ; FUNC-LABEL: {{^}}local_load_v32i32:
 ; SICIVI: s_mov_b32 m0, -1
 ; GFX9-NOT: m0
+; GFX9-NOT: accvgpr
 
 define amdgpu_kernel void @local_load_v32i32(<32 x i32> addrspace(3)* %out, <32 x i32> addrspace(3)* %in) #0 {
   %ld = load <32 x i32>, <32 x i32> addrspace(3)* %in

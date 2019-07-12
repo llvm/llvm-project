@@ -253,15 +253,6 @@ Value *SimplifyFPBinOp(unsigned Opcode, Value *LHS, Value *RHS,
 /// Given a callsite, fold the result or return null.
 Value *SimplifyCall(CallBase *Call, const SimplifyQuery &Q);
 
-/// Given a function and iterators over arguments, fold the result or return
-/// null.
-Value *SimplifyCall(CallBase *Call, Value *V, User::op_iterator ArgBegin,
-                    User::op_iterator ArgEnd, const SimplifyQuery &Q);
-
-/// Given a function and set of arguments, fold the result or return null.
-Value *SimplifyCall(CallBase *Call, Value *V, ArrayRef<Value *> Args,
-                    const SimplifyQuery &Q);
-
 /// See if we can compute a simplified version of this instruction. If not,
 /// return null.
 Value *SimplifyInstruction(Instruction *I, const SimplifyQuery &Q,

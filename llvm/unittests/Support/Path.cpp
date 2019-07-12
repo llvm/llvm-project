@@ -1550,19 +1550,20 @@ TEST_F(FileSystemTest, RespectUmask) {
 
   fs::perms AllRWE = static_cast<fs::perms>(0777);
 
-  ASSERT_NO_ERROR(fs::setPermissions(TempPath, AllRWE /*RespectUmask=false*/));
+  ASSERT_NO_ERROR(fs::setPermissions(TempPath, AllRWE));
 
   ErrorOr<fs::perms> Perms = fs::getPermissions(TempPath);
   ASSERT_TRUE(!!Perms);
   EXPECT_EQ(Perms.get(), AllRWE) << "Should have ignored umask by default";
 
-  ASSERT_NO_ERROR(fs::setPermissions(TempPath, AllRWE, /*RespectUmask=*/false));
+  ASSERT_NO_ERROR(fs::setPermissions(TempPath, AllRWE));
 
   Perms = fs::getPermissions(TempPath);
   ASSERT_TRUE(!!Perms);
   EXPECT_EQ(Perms.get(), AllRWE) << "Should have ignored umask";
 
-  ASSERT_NO_ERROR(fs::setPermissions(TempPath, AllRWE, /*RespectUmask=*/true));
+  ASSERT_NO_ERROR(
+      fs::setPermissions(FD, static_cast<fs::perms>(AllRWE & ~fs::getUmask())));
   Perms = fs::getPermissions(TempPath);
   ASSERT_TRUE(!!Perms);
   EXPECT_EQ(Perms.get(), static_cast<fs::perms>(0755))
@@ -1570,7 +1571,8 @@ TEST_F(FileSystemTest, RespectUmask) {
 
   (void)::umask(0057);
 
-  ASSERT_NO_ERROR(fs::setPermissions(TempPath, AllRWE, /*RespectUmask=*/true));
+  ASSERT_NO_ERROR(
+      fs::setPermissions(FD, static_cast<fs::perms>(AllRWE & ~fs::getUmask())));
   Perms = fs::getPermissions(TempPath);
   ASSERT_TRUE(!!Perms);
   EXPECT_EQ(Perms.get(), static_cast<fs::perms>(0720))
