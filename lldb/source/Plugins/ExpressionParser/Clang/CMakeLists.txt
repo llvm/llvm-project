@@ -42,6 +42,7 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
     lldbTarget
     lldbUtility
     lldbPluginCPlusPlusLanguage
+    lldbPluginCPPRuntime
   LINK_COMPONENTS
     Core
     ExecutionEngine

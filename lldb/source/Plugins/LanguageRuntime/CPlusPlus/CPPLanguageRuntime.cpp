@@ -7,12 +7,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "lldb/Target/CPPLanguageRuntime.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
-
 #include <string.h>
 
 #include <memory>
+
+#include "CPPLanguageRuntime.h"
 
 #include "llvm/ADT/StringRef.h"
 
