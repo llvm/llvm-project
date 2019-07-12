@@ -100,6 +100,7 @@ private:
   bool HasThreadNoLock(lldb::tid_t thread_id);
 
   NativeThreadNetBSD &AddThread(lldb::tid_t thread_id);
+  void RemoveThread(lldb::tid_t thread_id);
 
   void MonitorCallback(lldb::pid_t pid, int signal);
   void MonitorExited(lldb::pid_t pid, WaitStatus status);
