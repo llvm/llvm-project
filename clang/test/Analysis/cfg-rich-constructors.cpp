@@ -459,7 +459,7 @@ namespace temporary_object_expr_without_dtors {
 // TODO: Should provide construction context for the constructor,
 // even if there is no specific trigger statement here.
 // CHECK: void simpleTemporary()
-// CHECK           1: C() (CXXConstructExpr, class C)
+// CHECK:          1: C() (CXXConstructExpr, class C)
 void simpleTemporary() {
   C();
 }

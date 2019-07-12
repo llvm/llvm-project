@@ -45,7 +45,7 @@ void *operator new(std::size_t, void * __attribute__((noescape)) p) {
 }
 
 // CHECK-LABEL: define i8* @_Z5test1Pv(
-// CHECK : %call = call {{.*}} @_ZnwmPv({{.*}}, {{.*}} nocapture {{.*}})
+// CHECK: %call = call {{.*}} @_ZnwmPv({{.*}}, {{.*}} nocapture {{.*}})
 void *test1(void *p0) {
   return ::operator new(16, p0);
 }
