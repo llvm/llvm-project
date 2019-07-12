@@ -175,7 +175,7 @@ endmacro()
 
 function(clang_target_link_libraries target type)
   if (CLANG_LINK_CLANG_DYLIB)
-    target_link_libraries(${target} ${type} clang_shared)
+    target_link_libraries(${target} ${type} clang-cpp)
   else()
     target_link_libraries(${target} ${type} ${ARGN})
   endif()

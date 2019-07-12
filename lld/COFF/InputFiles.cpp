@@ -832,7 +832,7 @@ void BitcodeFile::parse() {
     }
     symbols.push_back(sym);
     if (objSym.isUsed())
-      config->gCRoot.push_back(sym);
+      config->gcroot.push_back(sym);
   }
   directives = obj->getCOFFLinkerOpts();
 }

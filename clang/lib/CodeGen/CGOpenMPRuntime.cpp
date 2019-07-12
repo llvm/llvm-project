@@ -8093,20 +8093,30 @@ public:
                       OMP_MAP_MEMBER_OF | OMP_MAP_IMPLICIT);
     }
     for (const LambdaCapture &LC : RD->captures()) {
-      if (LC.getCaptureKind() != LCK_ByRef)
+      if (!LC.capturesVariable())
         continue;
       const VarDecl *VD = LC.getCapturedVar();
+      if (LC.getCaptureKind() != LCK_ByRef && !VD->getType()->isPointerType())
+        continue;
       auto It = Captures.find(VD);
       assert(It != Captures.end() && "Found lambda capture without field.");
       LValue VarLVal = CGF.EmitLValueForFieldInitialization(VDLVal, It->second);
-      LValue VarLValVal = CGF.EmitLValueForField(VDLVal, It->second);
-      LambdaPointers.try_emplace(VarLVal.getPointer(), VDLVal.getPointer());
-      BasePointers.push_back(VarLVal.getPointer());
-      Pointers.push_back(VarLValVal.getPointer());
-      Sizes.push_back(CGF.Builder.CreateIntCast(
-          CGF.getTypeSize(
-              VD->getType().getCanonicalType().getNonReferenceType()),
-          CGF.Int64Ty, /*isSigned=*/true));
+      if (LC.getCaptureKind() == LCK_ByRef) {
+        LValue VarLValVal = CGF.EmitLValueForField(VDLVal, It->second);
+        LambdaPointers.try_emplace(VarLVal.getPointer(), VDLVal.getPointer());
+        BasePointers.push_back(VarLVal.getPointer());
+        Pointers.push_back(VarLValVal.getPointer());
+        Sizes.push_back(CGF.Builder.CreateIntCast(
+            CGF.getTypeSize(
+                VD->getType().getCanonicalType().getNonReferenceType()),
+            CGF.Int64Ty, /*isSigned=*/true));
+      } else {
+        RValue VarRVal = CGF.EmitLoadOfLValue(VarLVal, RD->getLocation());
+        LambdaPointers.try_emplace(VarLVal.getPointer(), VDLVal.getPointer());
+        BasePointers.push_back(VarLVal.getPointer());
+        Pointers.push_back(VarRVal.getScalarVal());
+        Sizes.push_back(llvm::ConstantInt::get(CGF.Int64Ty, 0));
+      }
       Types.push_back(OMP_MAP_PTR_AND_OBJ | OMP_MAP_LITERAL |
                       OMP_MAP_MEMBER_OF | OMP_MAP_IMPLICIT);
     }

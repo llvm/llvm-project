@@ -113,7 +113,7 @@ struct Configuration {
   std::vector<llvm::StringRef> argv;
 
   // Symbols in this set are considered as live by the garbage collector.
-  std::vector<Symbol *> gCRoot;
+  std::vector<Symbol *> gcroot;
 
   std::set<std::string> noDefaultLibs;
   bool noDefaultLibAll = false;

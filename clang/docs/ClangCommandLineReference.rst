@@ -346,6 +346,8 @@ Disable builtin #include directories
 
 .. option:: -noprebind
 
+.. option:: -noprofilelib
+
 .. option:: -noseglinkedit
 
 .. option:: -nostartfiles

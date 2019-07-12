@@ -497,7 +497,7 @@ Symbol *LinkerDriver::addUndefined(StringRef name) {
   Symbol *b = symtab->addUndefined(name);
   if (!b->isGCRoot) {
     b->isGCRoot = true;
-    config->gCRoot.push_back(b);
+    config->gcroot.push_back(b);
   }
   return b;
 }
