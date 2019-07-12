@@ -1140,6 +1140,8 @@ def VOP3Mods  : ComplexPattern<untyped, 2, "SelectVOP3Mods">;
 def VOP3NoMods : ComplexPattern<untyped, 1, "SelectVOP3NoMods">;
 // VOP3Mods, but the input source is known to never be NaN.
 def VOP3Mods_nnan : ComplexPattern<fAny, 2, "SelectVOP3Mods_NNaN">;
+// VOP3Mods, but only allowed for f32 operands.
+def VOP3Mods_f32 : ComplexPattern<fAny, 2, "SelectVOP3Mods_f32">;
 
 def VOP3OMods : ComplexPattern<untyped, 3, "SelectVOP3OMods">;
 

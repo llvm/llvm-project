@@ -178,7 +178,6 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
     return;
   }
 
-#if OMP_40_ENABLED
   // Although there are schedule enumerations above kmp_ord_upper which are not
   // schedules for "distribute", the only ones which are useful are dynamic, so
   // cannot be seen here, since this codepath is only executed for static
@@ -189,9 +188,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
                  kmp_distribute_static; // AC: convert to usual schedule type
     tid = th->th.th_team->t.t_master_tid;
     team = th->th.th_team->t.t_parent;
-  } else
-#endif
-  {
+  } else {
     tid = __kmp_tid_from_gtid(global_tid);
     team = th->th.th_team;
   }
@@ -352,7 +349,6 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
       *plastiter = (tid == ((trip_count - 1) / (UT)chunk) % nth);
     break;
   }
-#if OMP_45_ENABLED
   case kmp_sch_static_balanced_chunked: {
     T old_upper = *pupper;
     // round up to make sure the chunk is enough to cover all iterations
@@ -374,7 +370,6 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
       *plastiter = (tid == ((trip_count - 1) / (UT)chunk));
     break;
   }
-#endif
   default:
     KMP_ASSERT2(0, "__kmpc_for_static_init: unknown scheduling type");
     break;
@@ -383,10 +378,7 @@ static void __kmp_for_static_init(ident_t *loc, kmp_int32 global_tid,
 #if USE_ITT_BUILD
   // Report loop metadata
   if (KMP_MASTER_TID(tid) && __itt_metadata_add_ptr &&
-      __kmp_forkjoin_frames_mode == 3 &&
-#if OMP_40_ENABLED
-      th->th.th_teams_microtask == NULL &&
-#endif
+      __kmp_forkjoin_frames_mode == 3 && th->th.th_teams_microtask == NULL &&
       team->t.t_active_level == 1) {
     kmp_uint64 cur_chunk = chunk;
     // Calculate chunk in case it was not specified; it is specified for
@@ -484,10 +476,8 @@ static void __kmp_dist_for_static_init(ident_t *loc, kmp_int32 gtid,
   th = __kmp_threads[gtid];
   nth = th->th.th_team_nproc;
   team = th->th.th_team;
-#if OMP_40_ENABLED
   KMP_DEBUG_ASSERT(th->th.th_teams_microtask); // we are in the teams construct
   nteams = th->th.th_teams_size.nteams;
-#endif
   team_id = team->t.t_master_tid;
   KMP_DEBUG_ASSERT(nteams == (kmp_uint32)team->t.t_parent->t.t_nproc);
 
@@ -727,10 +717,8 @@ static void __kmp_team_static_init(ident_t *loc, kmp_int32 gtid,
   }
   th = __kmp_threads[gtid];
   team = th->th.th_team;
-#if OMP_40_ENABLED
   KMP_DEBUG_ASSERT(th->th.th_teams_microtask); // we are in the teams construct
   nteams = th->th.th_teams_size.nteams;
-#endif
   team_id = team->t.t_master_tid;
   KMP_DEBUG_ASSERT(nteams == (kmp_uint32)team->t.t_parent->t.t_nproc);
 

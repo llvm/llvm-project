@@ -1855,12 +1855,10 @@ LegalizerHelper::fewerElementsVectorMultiEltType(
   LLT DstTy = MRI.getType(DstReg);
   LLT LeftoverTy0;
 
-  int NumParts, NumLeftover;
   // All of the operands need to have the same number of elements, so if we can
   // determine a type breakdown for the result type, we can for all of the
   // source types.
-  std::tie(NumParts, NumLeftover)
-    = getNarrowTypeBreakDown(DstTy, NarrowTy0, LeftoverTy0);
+  int NumParts = getNarrowTypeBreakDown(DstTy, NarrowTy0, LeftoverTy0).first;
   if (NumParts < 0)
     return UnableToLegalize;
 

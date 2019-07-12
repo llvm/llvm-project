@@ -1016,13 +1016,19 @@ MachineInstr *getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
                                MachineRegisterInfo &MRI);
 
 /// \brief Return false if EXEC is not changed between the def of \p VReg at \p
-/// DefMI and uses. If \p UseMI is not specified, this checks all uses of \p
-/// VReg. Should be run on SSA. Currently does not attempt to track between
-/// blocks.
+/// DefMI and the use at \p UseMI. Should be run on SSA. Currently does not
+/// attempt to track between blocks.
 bool execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
-                                unsigned VReg,
+                                Register VReg,
                                 const MachineInstr &DefMI,
-                                const MachineInstr *UseMI = nullptr);
+                                const MachineInstr &UseMI);
+
+/// \brief Return false if EXEC is not changed between the def of \p VReg at \p
+/// DefMI and all its uses. Should be run on SSA. Currently does not attempt to
+/// track between blocks.
+bool execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
+                                   Register VReg,
+                                   const MachineInstr &DefMI);
 
 namespace AMDGPU {
 

@@ -3,31 +3,36 @@
 ;
 ; RUN: llc < %s -verify-machineinstrs -mtriple=s390x-linux-gnu -mcpu=z13 \
 ; RUN:   -no-integrated-as | FileCheck %s
+;
+; Run the test again to make sure it still works the same even
+; in the presence of the select instructions.
+; RUN: llc < %s -verify-machineinstrs -mtriple=s390x-linux-gnu -mcpu=arch13 \
+; RUN:   -no-integrated-as | FileCheck %s
 
 define void @f1(i32 %limit) {
 ; CHECK-LABEL: f1:
 ; CHECK-DAG: stepa [[REG1:%r[0-5]]]
 ; CHECK-DAG: stepb [[REG2:%r[0-5]]]
 ; CHECK-DAG: clfi %r2, 42
-; CHECK: locfhrl [[REG2]], [[REG1]]
-; CHECK: stepc [[REG2]]
+; CHECK: locfhrhe [[REG1]], [[REG2]]
+; CHECK: stepc [[REG1]]
 ; CHECK: br %r14
   %a = call i32 asm sideeffect "stepa $0", "=h"()
   %b = call i32 asm sideeffect "stepb $0", "=h"()
   %cond = icmp ult i32 %limit, 42
   %res = select i1 %cond, i32 %a, i32 %b
   call void asm sideeffect "stepc $0", "h"(i32 %res)
+  call void asm sideeffect "use $0", "h"(i32 %b)
   ret void
 }
 
-; FIXME: We should commute the LOCRMux to save one move.
 define void @f2(i32 %limit) {
 ; CHECK-LABEL: f2:
 ; CHECK-DAG: stepa [[REG1:%r[0-5]]]
 ; CHECK-DAG: stepb [[REG2:%r[0-5]]]
-; CHECK-DAG: clijhe %r2, 42,
-; CHECK: risblg [[REG2]], [[REG1]], 0, 159, 32
+; CHECK-DAG: clijl %r2, 42, [[LABEL:.LBB[0-9_]+]]
 ; CHECK: risbhg [[REG1]], [[REG2]], 0, 159, 32
+; CHECK: [[LABEL]]
 ; CHECK: stepc [[REG1]]
 ; CHECK: br %r14
   %dummy = call i32 asm sideeffect "dummy $0", "=h"()
@@ -37,16 +42,18 @@ define void @f2(i32 %limit) {
   %res = select i1 %cond, i32 %a, i32 %b
   call void asm sideeffect "stepc $0", "h"(i32 %res)
   call void asm sideeffect "dummy $0", "h"(i32 %dummy)
+  call void asm sideeffect "use $0", "r"(i32 %b)
   ret void
 }
 
 define void @f3(i32 %limit) {
 ; CHECK-LABEL: f3:
-; CHECK-DAG: stepa [[REG2:%r[0-5]]]
-; CHECK-DAG: stepb [[REG1:%r[0-5]]]
-; CHECK-DAG: clijhe %r2, 42,
-; CHECK: risbhg [[REG1]], [[REG2]], 0, 159, 32
-; CHECK: stepc [[REG1]]
+; CHECK-DAG: stepa [[REG1:%r[0-5]]]
+; CHECK-DAG: stepb [[REG2:%r[0-5]]]
+; CHECK-DAG: clijhe %r2, 42, [[LABEL:.LBB[0-9_]+]]
+; CHECK: risbhg [[REG2]], [[REG1]], 0, 159, 32
+; CHECK: [[LABEL]]
+; CHECK: stepc [[REG2]]
 ; CHECK: br %r14
   %dummy = call i32 asm sideeffect "dummy $0", "=h"()
   %a = call i32 asm sideeffect "stepa $0", "=r"()
@@ -55,17 +62,17 @@ define void @f3(i32 %limit) {
   %res = select i1 %cond, i32 %a, i32 %b
   call void asm sideeffect "stepc $0", "h"(i32 %res)
   call void asm sideeffect "dummy $0", "h"(i32 %dummy)
+  call void asm sideeffect "use $0", "r"(i32 %a)
   ret void
 }
 
-; FIXME: We should commute the LOCRMux to save one move.
 define void @f4(i32 %limit) {
 ; CHECK-LABEL: f4:
 ; CHECK-DAG: stepa [[REG1:%r[0-5]]]
 ; CHECK-DAG: stepb [[REG2:%r[0-5]]]
-; CHECK-DAG: clijhe %r2, 42,
-; CHECK: risbhg [[REG2]], [[REG1]], 0, 159, 32
+; CHECK-DAG: clijl %r2, 42, [[LABEL:.LBB[0-9_]+]]
 ; CHECK: risblg [[REG1]], [[REG2]], 0, 159, 32
+; CHECK: [[LABEL]]
 ; CHECK: stepc [[REG1]]
 ; CHECK: br %r14
   %dummy = call i32 asm sideeffect "dummy $0", "=h"()
@@ -75,6 +82,7 @@ define void @f4(i32 %limit) {
   %res = select i1 %cond, i32 %a, i32 %b
   call void asm sideeffect "stepc $0", "r"(i32 %res)
   call void asm sideeffect "dummy $0", "h"(i32 %dummy)
+  call void asm sideeffect "use $0", "h"(i32 %b)
   ret void
 }
 
@@ -82,8 +90,9 @@ define void @f5(i32 %limit) {
 ; CHECK-LABEL: f5:
 ; CHECK-DAG: stepa [[REG2:%r[0-5]]]
 ; CHECK-DAG: stepb [[REG1:%r[0-5]]]
-; CHECK-DAG: clijhe %r2, 42,
+; CHECK-DAG: clijhe %r2, 42, [[LABEL:.LBB[0-9_]+]]
 ; CHECK: risblg [[REG1]], [[REG2]], 0, 159, 32
+; CHECK: [[LABEL]]
 ; CHECK: stepc [[REG1]]
 ; CHECK: br %r14
   %dummy = call i32 asm sideeffect "dummy $0", "=h"()
@@ -102,8 +111,8 @@ define void @f6(i32 %limit) {
 ; CHECK-DAG: stepa [[REG1:%r[0-5]]]
 ; CHECK-DAG: stepb [[REG2:%r[0-5]]]
 ; CHECK-DAG: clfi %r2, 41
-; CHECK: locfhrle [[REG2]], [[REG1]]
-; CHECK: stepc [[REG2]]
+; CHECK: locfhrh [[REG1]], [[REG2]]
+; CHECK: stepc [[REG1]]
 ; CHECK: br %r14
 entry:
   %a = call i32 asm sideeffect "stepa $0", "=h"()
@@ -117,6 +126,7 @@ if.then:
 return:
   %res = phi i32 [ %a, %if.then ], [ %b, %entry ]
   call void asm sideeffect "stepc $0", "h"(i32 %res)
+  call void asm sideeffect "use $0", "h"(i32 %b)
   ret void
 }
 
@@ -126,8 +136,8 @@ define void @f7(i32 %limit) {
 ; CHECK-DAG: stepa [[REG1:%r[0-5]]]
 ; CHECK-DAG: stepb [[REG2:%r[0-5]]]
 ; CHECK-DAG: clfi %r2, 41
-; CHECK: locfhrh [[REG2]], [[REG1]]
-; CHECK: stepc [[REG2]]
+; CHECK: locfhrle [[REG1]], [[REG2]]
+; CHECK: stepc [[REG1]]
 ; CHECK: br %r14
 entry:
   %a = call i32 asm sideeffect "stepa $0", "=h"()
@@ -141,6 +151,7 @@ if.then:
 return:
   %res = phi i32 [ %b, %if.then ], [ %a, %entry ]
   call void asm sideeffect "stepc $0", "h"(i32 %res)
+  call void asm sideeffect "use $0", "h"(i32 %b)
   ret void
 }
 

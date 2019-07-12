@@ -5071,8 +5071,7 @@ void SIInstrInfo::lowerScalarXnor(SetVectorType &Worklist,
                       RI.isSGPRClass(MRI.getRegClass(Src0.getReg()));
     bool Src1IsSGPR = Src1.isReg() &&
                       RI.isSGPRClass(MRI.getRegClass(Src1.getReg()));
-    MachineInstr *Not = nullptr;
-    MachineInstr *Xor = nullptr;
+    MachineInstr *Xor;
     unsigned Temp = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
     unsigned NewDest = MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
 
@@ -5080,14 +5079,12 @@ void SIInstrInfo::lowerScalarXnor(SetVectorType &Worklist,
     // The next iteration over the work list will lower these to the vector
     // unit as necessary.
     if (Src0IsSGPR) {
-      Not = BuildMI(MBB, MII, DL, get(AMDGPU::S_NOT_B32), Temp)
-        .add(Src0);
+      BuildMI(MBB, MII, DL, get(AMDGPU::S_NOT_B32), Temp).add(Src0);
       Xor = BuildMI(MBB, MII, DL, get(AMDGPU::S_XOR_B32), NewDest)
       .addReg(Temp)
       .add(Src1);
     } else if (Src1IsSGPR) {
-      Not = BuildMI(MBB, MII, DL, get(AMDGPU::S_NOT_B32), Temp)
-        .add(Src1);
+      BuildMI(MBB, MII, DL, get(AMDGPU::S_NOT_B32), Temp).add(Src1);
       Xor = BuildMI(MBB, MII, DL, get(AMDGPU::S_XOR_B32), NewDest)
       .add(Src0)
       .addReg(Temp);
@@ -5095,8 +5092,8 @@ void SIInstrInfo::lowerScalarXnor(SetVectorType &Worklist,
       Xor = BuildMI(MBB, MII, DL, get(AMDGPU::S_XOR_B32), Temp)
         .add(Src0)
         .add(Src1);
-      Not = BuildMI(MBB, MII, DL, get(AMDGPU::S_NOT_B32), NewDest)
-        .addReg(Temp);
+      MachineInstr *Not =
+          BuildMI(MBB, MII, DL, get(AMDGPU::S_NOT_B32), NewDest).addReg(Temp);
       Worklist.insert(Not);
     }
 
@@ -6272,42 +6269,29 @@ MachineInstr *llvm::getVRegSubRegDef(const TargetInstrInfo::RegSubRegPair &P,
 }
 
 bool llvm::execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
-                                      unsigned VReg,
+                                      Register VReg,
                                       const MachineInstr &DefMI,
-                                      const MachineInstr *UseMI) {
+                                      const MachineInstr &UseMI) {
   assert(MRI.isSSA() && "Must be run on SSA");
 
   auto *TRI = MRI.getTargetRegisterInfo();
   auto *DefBB = DefMI.getParent();
 
-  if (UseMI) {
-    // Don't bother searching between blocks, although it is possible this block
-    // doesn't modify exec.
-    if (UseMI->getParent() != DefBB)
-      return true;
-  } else {
-    int NumUse = 0;
-    const int MaxUseScan = 10;
-
-    for (auto &UseInst : MRI.use_nodbg_instructions(VReg)) {
-      if (UseInst.getParent() != DefBB)
-        return true;
-
-      if (NumUse++ > MaxUseScan)
-        return true;
-    }
-  }
+  // Don't bother searching between blocks, although it is possible this block
+  // doesn't modify exec.
+  if (UseMI.getParent() != DefBB)
+    return true;
 
   const int MaxInstScan = 20;
-  int NumScan = 0;
+  int NumInst = 0;
 
-  // Stop scan at the use if known.
-  auto E = UseMI ? UseMI->getIterator() : DefBB->end();
+  // Stop scan at the use.
+  auto E = UseMI.getIterator();
   for (auto I = std::next(DefMI.getIterator()); I != E; ++I) {
     if (I->isDebugInstr())
       continue;
 
-    if (NumScan++ > MaxInstScan)
+    if (++NumInst > MaxInstScan)
       return true;
 
     if (I->modifiesRegister(AMDGPU::EXEC, TRI))
@@ -6315,4 +6299,45 @@ bool llvm::execMayBeModifiedBeforeUse(const MachineRegisterInfo &MRI,
   }
 
   return false;
+}
+
+bool llvm::execMayBeModifiedBeforeAnyUse(const MachineRegisterInfo &MRI,
+                                         Register VReg,
+                                         const MachineInstr &DefMI) {
+  assert(MRI.isSSA() && "Must be run on SSA");
+
+  auto *TRI = MRI.getTargetRegisterInfo();
+  auto *DefBB = DefMI.getParent();
+
+  const int MaxUseInstScan = 10;
+  int NumUseInst = 0;
+
+  for (auto &UseInst : MRI.use_nodbg_instructions(VReg)) {
+    // Don't bother searching between blocks, although it is possible this block
+    // doesn't modify exec.
+    if (UseInst.getParent() != DefBB)
+      return true;
+
+    if (++NumUseInst > MaxUseInstScan)
+      return true;
+  }
+
+  const int MaxInstScan = 20;
+  int NumInst = 0;
+
+  // Stop scan when we have seen all the uses.
+  for (auto I = std::next(DefMI.getIterator()); ; ++I) {
+    if (I->isDebugInstr())
+      continue;
+
+    if (++NumInst > MaxInstScan)
+      return true;
+
+    if (I->readsRegister(VReg))
+      if (--NumUseInst == 0)
+        return false;
+
+    if (I->modifiesRegister(AMDGPU::EXEC, TRI))
+      return true;
+  }
 }

@@ -1413,7 +1413,6 @@ uint64_t WasmObjectWriter::writeObject(MCAssembler &Asm,
       } else {
         // An import; the index was assigned above.
         assert(WasmIndices.count(&WS) > 0);
-        Index = WasmIndices.find(&WS)->second;
       }
       LLVM_DEBUG(dbgs() << "  -> event index: " << WasmIndices.find(&WS)->second
                         << "\n");

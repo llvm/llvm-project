@@ -203,20 +203,6 @@ bool canInstrumentWithSancov(const Function &F) {
   return true;
 }
 
-std::string getSectionStartImpl(const Triple &TargetTriple,
-                                const std::string &Section) {
-  if (TargetTriple.isOSBinFormatMachO())
-    return "\1section$start$__DATA$__" + Section;
-  return "__start___" + Section;
-}
-
-std::string getSectionEndImpl(const Triple &TargetTriple,
-                              const std::string &Section) {
-  if (TargetTriple.isOSBinFormatMachO())
-    return "\1section$end$__DATA$__" + Section;
-  return "__stop___" + Section;
-}
-
 /// This is a class for instrumenting the module to add calls to initializing
 /// the trace PC guards and 8bit counter globals. This should only be done
 /// though if there is at least one function that can be instrumented with
@@ -287,10 +273,14 @@ private:
   std::pair<Value *, Value *> CreateSecStartEnd(Module &M, const char *Section,
                                                 Type *Ty);
   std::string getSectionStart(const std::string &Section) const {
-    return getSectionStartImpl(TargetTriple, Section);
+    if (TargetTriple.isOSBinFormatMachO())
+      return "\1section$start$__DATA$__" + Section;
+    return "__start___" + Section;
   }
   std::string getSectionEnd(const std::string &Section) const {
-    return getSectionEndImpl(TargetTriple, Section);
+    if (TargetTriple.isOSBinFormatMachO())
+      return "\1section$end$__DATA$__" + Section;
+    return "__stop___" + Section;
   }
 
   SanitizerCoverageOptions Options;
@@ -364,8 +354,6 @@ private:
   }
 
   std::string getSectionName(const std::string &Section) const;
-  std::string getSectionStart(const std::string &Section) const;
-  std::string getSectionEnd(const std::string &Section) const;
   FunctionCallee SanCovTracePCIndir;
   FunctionCallee SanCovTracePC, SanCovTracePCGuard;
   FunctionCallee SanCovTraceCmpFunction[4];
@@ -1016,15 +1004,6 @@ SanitizerCoverage::getSectionName(const std::string &Section) const {
   if (TargetTriple.isOSBinFormatMachO())
     return "__DATA,__" + Section;
   return "__" + Section;
-}
-
-std::string
-SanitizerCoverage::getSectionStart(const std::string &Section) const {
-  return getSectionStartImpl(TargetTriple, Section);
-}
-
-std::string SanitizerCoverage::getSectionEnd(const std::string &Section) const {
-  return getSectionEndImpl(TargetTriple, Section);
 }
 
 INITIALIZE_PASS(ModuleSanitizerCoverageLegacyPass, "module-sancov",

@@ -587,10 +587,6 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
     IRB.SetInsertPoint(AI);
     unsigned Offset = SSL.getObjectOffset(AI);
 
-    uint64_t Size = getStaticAllocaAllocationSize(AI);
-    if (Size == 0)
-      Size = 1; // Don't create zero-sized stack objects.
-
     replaceDbgDeclareForAlloca(AI, BasePointer, DIB, DIExpression::ApplyOffset,
                                -Offset);
     replaceDbgValueForAlloca(AI, BasePointer, DIB, -Offset);

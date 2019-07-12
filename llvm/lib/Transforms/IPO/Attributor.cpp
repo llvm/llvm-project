@@ -50,6 +50,7 @@ STATISTIC(NumFnKnownReturns, "Number of function with known return values");
 STATISTIC(NumFnArgumentReturned,
           "Number of function arguments marked returned");
 STATISTIC(NumFnNoSync, "Number of functions marked nosync");
+STATISTIC(NumFnNoFree, "Number of functions marked nofree");
 
 // TODO: Determine a good default value.
 //
@@ -103,6 +104,9 @@ static void bookkeeping(AbstractAttribute::ManifestPosition MP,
     return;
   case Attribute::NoSync:
     NumFnNoSync++;
+    break;
+  case Attribute::NoFree:
+    NumFnNoFree++;
     break;
   default:
     return;
@@ -355,22 +359,22 @@ struct AANoUnwindFunction : AANoUnwind, BooleanState {
   /// }
 
   /// See AbstractAttribute::getManifestPosition().
-  virtual ManifestPosition getManifestPosition() const override {
+  ManifestPosition getManifestPosition() const override {
     return MP_FUNCTION;
   }
 
-  virtual const std::string getAsStr() const override {
+  const std::string getAsStr() const override {
     return getAssumed() ? "nounwind" : "may-unwind";
   }
 
   /// See AbstractAttribute::updateImpl(...).
-  virtual ChangeStatus updateImpl(Attributor &A) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AANoUnwind::isAssumedNoUnwind().
-  virtual bool isAssumedNoUnwind() const override { return getAssumed(); }
+  bool isAssumedNoUnwind() const override { return getAssumed(); }
 
   /// See AANoUnwind::isKnownNoUnwind().
-  virtual bool isKnownNoUnwind() const override { return getKnown(); }
+  bool isKnownNoUnwind() const override { return getKnown(); }
 };
 
 ChangeStatus AANoUnwindFunction::updateImpl(Attributor &A) {
@@ -487,21 +491,21 @@ public:
   }
 
   /// See AbstractAttribute::manifest(...).
-  virtual ChangeStatus manifest(Attributor &A) override;
+  ChangeStatus manifest(Attributor &A) override;
 
   /// See AbstractAttribute::getState(...).
-  virtual AbstractState &getState() override { return *this; }
+  AbstractState &getState() override { return *this; }
 
   /// See AbstractAttribute::getState(...).
-  virtual const AbstractState &getState() const override { return *this; }
+  const AbstractState &getState() const override { return *this; }
 
   /// See AbstractAttribute::getManifestPosition().
-  virtual ManifestPosition getManifestPosition() const override {
+  ManifestPosition getManifestPosition() const override {
     return MP_ARGUMENT;
   }
 
   /// See AbstractAttribute::updateImpl(Attributor &A).
-  virtual ChangeStatus updateImpl(Attributor &A) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// Return the number of potential return values, -1 if unknown.
   size_t getNumReturnValues() const {
@@ -514,11 +518,11 @@ public:
   Optional<Value *> getAssumedUniqueReturnValue() const;
 
   /// See AbstractState::checkForallReturnedValues(...).
-  virtual bool
+  bool
   checkForallReturnedValues(std::function<bool(Value &)> &Pred) const override;
 
   /// Pretty print the attribute similar to the IR representation.
-  virtual const std::string getAsStr() const override;
+  const std::string getAsStr() const override;
 
   /// See AbstractState::isAtFixpoint().
   bool isAtFixpoint() const override { return IsFixed; }
@@ -738,22 +742,22 @@ struct AANoSyncFunction : AANoSync, BooleanState {
   /// }
 
   /// See AbstractAttribute::getManifestPosition().
-  virtual ManifestPosition getManifestPosition() const override {
+  ManifestPosition getManifestPosition() const override {
     return MP_FUNCTION;
   }
 
-  virtual const std::string getAsStr() const override {
+  const std::string getAsStr() const override {
     return getAssumed() ? "nosync" : "may-sync";
   }
 
   /// See AbstractAttribute::updateImpl(...).
-  virtual ChangeStatus updateImpl(Attributor &A) override;
+  ChangeStatus updateImpl(Attributor &A) override;
 
   /// See AANoSync::isAssumedNoSync()
-  virtual bool isAssumedNoSync() const override { return getAssumed(); }
+  bool isAssumedNoSync() const override { return getAssumed(); }
 
   /// See AANoSync::isKnownNoSync()
-  virtual bool isKnownNoSync() const override { return getKnown(); }
+  bool isKnownNoSync() const override { return getKnown(); }
 
   /// Helper function used to determine whether an instruction is non-relaxed
   /// atomic. In other words, if an atomic instruction does not have unordered
@@ -909,6 +913,69 @@ ChangeStatus AANoSyncFunction::updateImpl(Attributor &A) {
   return ChangeStatus::UNCHANGED;
 }
 
+/// ------------------------ No-Free Attributes ----------------------------
+
+struct AANoFreeFunction : AbstractAttribute, BooleanState {
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AANoFreeFunction(Function &F, InformationCache &InfoCache)
+      : AbstractAttribute(F, InfoCache) {}
+
+  /// See AbstractAttribute::getState()
+  ///{
+  AbstractState &getState() override { return *this; }
+  const AbstractState &getState() const override { return *this; }
+  ///}
+
+  /// See AbstractAttribute::getManifestPosition().
+  ManifestPosition getManifestPosition() const override { return MP_FUNCTION; }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr() const override {
+    return getAssumed() ? "nofree" : "may-free";
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override;
+
+  /// See AbstractAttribute::getAttrKind().
+  Attribute::AttrKind getAttrKind() const override { return ID; }
+
+  /// Return true if "nofree" is assumed.
+  bool isAssumedNoFree() const { return getAssumed(); }
+
+  /// Return true if "nofree" is known.
+  bool isKnownNoFree() const { return getKnown(); }
+
+  /// The identifier used by the Attributor for this class of attributes.
+  static constexpr Attribute::AttrKind ID = Attribute::NoFree;
+};
+
+ChangeStatus AANoFreeFunction::updateImpl(Attributor &A) {
+  Function &F = getAnchorScope();
+
+  // The map from instruction opcodes to those instructions in the function.
+  auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(F);
+
+  for (unsigned Opcode :
+       {(unsigned)Instruction::Invoke, (unsigned)Instruction::CallBr,
+        (unsigned)Instruction::Call}) {
+    for (Instruction *I : OpcodeInstMap[Opcode]) {
+
+      auto ICS = ImmutableCallSite(I);
+      auto *NoFreeAA = A.getAAFor<AANoFreeFunction>(*this, *I);
+
+      if ((!NoFreeAA || !NoFreeAA->isValidState() ||
+           !NoFreeAA->isAssumedNoFree()) &&
+          !ICS.hasFnAttr(Attribute::NoFree)) {
+        indicatePessimisticFixpoint();
+        return ChangeStatus::CHANGED;
+      }
+    }
+  }
+  return ChangeStatus::UNCHANGED;
+}
+
 /// ----------------------------------------------------------------------------
 ///                               Attributor
 /// ----------------------------------------------------------------------------
@@ -1056,6 +1123,9 @@ void Attributor::identifyDefaultAbstractAttributes(
 
   // Every function might be marked "nosync"
   registerAA(*new AANoSyncFunction(F, InfoCache));
+
+  // Every function might be "no-free".
+  registerAA(*new AANoFreeFunction(F, InfoCache));
 
   // Return attributes are only appropriate if the return type is non void.
   Type *ReturnType = F.getReturnType();

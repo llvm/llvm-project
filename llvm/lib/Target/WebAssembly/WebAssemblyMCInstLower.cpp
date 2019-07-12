@@ -16,7 +16,7 @@
 #include "WebAssemblyAsmPrinter.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblyRuntimeLibcallSignatures.h"
-#include "WebAssemblyUtilities.h"
+#include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/Constants.h"
@@ -221,7 +221,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
 
           // call_indirect instructions have a callee operand at the end which
           // doesn't count as a param.
-          if (WebAssembly::isCallIndirect(*MI))
+          if (WebAssembly::isCallIndirect(MI->getOpcode()))
             Params.pop_back();
 
           auto *WasmSym = cast<MCSymbolWasm>(Sym);

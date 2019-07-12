@@ -358,7 +358,7 @@ Symbols:
 # RUN: mkdir -p %t
 # RUN: cd %t
 # RUN: cp %p/Inputs/trivial-object-test.macho-i386 a.out
-# RUN: llvm-nm | FileCheck %s -check-prefix A-OUT
+# RUN: llvm-nm a.out | FileCheck %s -check-prefix A-OUT
 
 # A-OUT:          U _SomeOtherFunction
 # A-OUT: 00000000 T _main

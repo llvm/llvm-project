@@ -532,6 +532,46 @@ static Instruction *foldSelectICmpAndAnd(Type *SelType, const ICmpInst *Cmp,
 }
 
 /// We want to turn:
+///   (select (icmp sgt x, C), lshr (X, Y), ashr (X, Y)); iff C s>= -1
+///   (select (icmp slt x, C), ashr (X, Y), lshr (X, Y)); iff C s>= 0
+/// into:
+///   ashr (X, Y)
+static Value *foldSelectICmpLshrAshr(const ICmpInst *IC, Value *TrueVal,
+                                     Value *FalseVal,
+                                     InstCombiner::BuilderTy &Builder) {
+  ICmpInst::Predicate Pred = IC->getPredicate();
+  Value *CmpLHS = IC->getOperand(0);
+  Value *CmpRHS = IC->getOperand(1);
+  if (!CmpRHS->getType()->isIntOrIntVectorTy())
+    return nullptr;
+
+  Value *X, *Y;
+  unsigned Bitwidth = CmpRHS->getType()->getScalarSizeInBits();
+  if ((Pred != ICmpInst::ICMP_SGT ||
+       !match(CmpRHS,
+              m_SpecificInt_ICMP(ICmpInst::ICMP_SGE, APInt(Bitwidth, -1)))) &&
+      (Pred != ICmpInst::ICMP_SLT ||
+       !match(CmpRHS,
+              m_SpecificInt_ICMP(ICmpInst::ICMP_SGE, APInt(Bitwidth, 0)))))
+    return nullptr;
+
+  // Canonicalize so that ashr is in FalseVal.
+  if (Pred == ICmpInst::ICMP_SLT)
+    std::swap(TrueVal, FalseVal);
+
+  if (match(TrueVal, m_LShr(m_Value(X), m_Value(Y))) &&
+      match(FalseVal, m_AShr(m_Specific(X), m_Specific(Y))) &&
+      match(CmpLHS, m_Specific(X))) {
+    const auto *Ashr = cast<Instruction>(FalseVal);
+    // if lshr is not exact and ashr is, this new ashr must not be exact.
+    bool IsExact = Ashr->isExact() && cast<Instruction>(TrueVal)->isExact();
+    return Builder.CreateAShr(X, Y, IC->getName(), IsExact);
+  }
+
+  return nullptr;
+}
+
+/// We want to turn:
 ///   (select (icmp eq (and X, C1), 0), Y, (or Y, C2))
 /// into:
 ///   (or (shl (and X, C1), C3), Y)
@@ -1110,6 +1150,9 @@ Instruction *InstCombiner::foldSelectInstWithICmp(SelectInst &SI,
     return V;
 
   if (Value *V = foldSelectICmpAndOr(ICI, TrueVal, FalseVal, Builder))
+    return replaceInstUsesWith(SI, V);
+
+  if (Value *V = foldSelectICmpLshrAshr(ICI, TrueVal, FalseVal, Builder))
     return replaceInstUsesWith(SI, V);
 
   if (Value *V = foldSelectCttzCtlz(ICI, TrueVal, FalseVal, Builder))

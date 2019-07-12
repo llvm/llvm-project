@@ -657,7 +657,7 @@ struct AAReturnedValues : public AbstractAttribute {
   checkForallReturnedValues(std::function<bool(Value &)> &Pred) const = 0;
 
   /// See AbstractAttribute::getAttrKind()
-  virtual Attribute::AttrKind getAttrKind() const override { return ID; }
+  Attribute::AttrKind getAttrKind() const override { return ID; }
 
   /// The identifier used by the Attributor for this class of attributes.
   static constexpr Attribute::AttrKind ID = Attribute::Returned;
@@ -669,7 +669,7 @@ struct AANoUnwind : public AbstractAttribute {
       : AbstractAttribute(V, InfoCache) {}
 
   /// See AbstractAttribute::getAttrKind()/
-  virtual Attribute::AttrKind getAttrKind() const override { return ID; }
+  Attribute::AttrKind getAttrKind() const override { return ID; }
 
   static constexpr Attribute::AttrKind ID = Attribute::NoUnwind;
 
@@ -686,7 +686,7 @@ struct AANoSync : public AbstractAttribute {
       : AbstractAttribute(V, InfoCache) {}
 
   /// See AbstractAttribute::getAttrKind().
-  virtual Attribute::AttrKind getAttrKind() const override {
+  Attribute::AttrKind getAttrKind() const override {
     return ID;
   }
 

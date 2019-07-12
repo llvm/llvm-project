@@ -202,11 +202,9 @@ const char *__kmp_speculative_statsfile = "-";
 
 #endif // KMP_USE_ADAPTIVE_LOCKS
 
-#if OMP_40_ENABLED
 int __kmp_display_env = FALSE;
 int __kmp_display_env_verbose = FALSE;
 int __kmp_omp_cancellation = FALSE;
-#endif
 
 /* map OMP 3.0 schedule types with our internal schedule types */
 enum sched_type __kmp_sch_map[kmp_sched_upper - kmp_sched_lower_ext +
@@ -270,15 +268,10 @@ char *__kmp_cpuinfo_file = NULL;
 
 #endif /* KMP_AFFINITY_SUPPORTED */
 
-#if OMP_40_ENABLED
 kmp_nested_proc_bind_t __kmp_nested_proc_bind = {NULL, 0, 0};
 int __kmp_affinity_num_places = 0;
-#endif
-
-#if OMP_50_ENABLED
 int __kmp_display_affinity = FALSE;
 char *__kmp_affinity_format = NULL;
-#endif // OMP_50_ENABLED
 
 kmp_hws_item_t __kmp_hws_socket = {0, 0};
 kmp_hws_item_t __kmp_hws_node = {0, 0};
@@ -288,17 +281,12 @@ kmp_hws_item_t __kmp_hws_proc = {0, 0};
 int __kmp_hws_requested = 0;
 int __kmp_hws_abs_flag = 0; // absolute or per-item number requested
 
-#if OMP_40_ENABLED
 kmp_int32 __kmp_default_device = 0;
-#endif
 
 kmp_tasking_mode_t __kmp_tasking_mode = tskm_task_teams;
-#if OMP_45_ENABLED
 kmp_int32 __kmp_max_task_priority = 0;
 kmp_uint64 __kmp_taskloop_min_tasks = 0;
-#endif
 
-#if OMP_50_ENABLED
 int __kmp_memkind_available = 0;
 omp_allocator_handle_t const omp_null_allocator = NULL;
 omp_allocator_handle_t const omp_default_mem_alloc =
@@ -331,7 +319,6 @@ omp_memspace_handle_t const omp_high_bw_mem_space =
     (omp_memspace_handle_t const)3;
 omp_memspace_handle_t const omp_low_lat_mem_space =
     (omp_memspace_handle_t const)4;
-#endif
 
 /* This check ensures that the compiler is passing the correct data type for the
    flags formal parameter of the function kmpc_omp_task_alloc(). If the type is
@@ -539,11 +526,9 @@ int _You_must_link_with_Intel_OpenMP_library = 1;
 int _You_must_link_with_Microsoft_OpenMP_library = 1;
 #endif
 
-#if OMP_50_ENABLED
 kmp_target_offload_kind_t __kmp_target_offload = tgt_default;
 
 // OMP Pause Resources
 kmp_pause_status_t __kmp_pause_status = kmp_not_paused;
-#endif // OMP_50_ENABLED
 
 // end of file //

@@ -17,14 +17,6 @@ define amdgpu_vs void @test_f32(float %arg0) {
   ret void
 }
 
-; CHECK-LABEL: name: test_ptr2_byval
-; CHECK: [[S01:%[0-9]+]]:_(p4) = COPY $sgpr2_sgpr3
-; CHECK: G_LOAD [[S01]]
-define amdgpu_vs void @test_ptr2_byval(i32 addrspace(4)* byval %arg0) {
-   %tmp0 = load volatile i32, i32 addrspace(4)* %arg0
-  ret void
-}
-
 ; CHECK-LABEL: name: test_ptr2_inreg
 ; CHECK: [[S01:%[0-9]+]]:_(p4) = COPY $sgpr2_sgpr3
 ; CHECK: G_LOAD [[S01]]

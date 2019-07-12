@@ -3,6 +3,9 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-flat-for-global,+WavefrontSize64 -verify-machineinstrs < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX10 %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
+declare half @llvm.fabs.f16(half)
+declare float @llvm.fabs.f32(float)
+declare double @llvm.fabs.f64(double)
 
 ; GCN-LABEL: {{^}}v_cnd_nan_nosgpr:
 ; GCN: v_cmp_eq_u32_e64 [[COND:vcc|s\[[0-9]+:[0-9]+\]]], s{{[0-9]+}}, 0
@@ -413,6 +416,51 @@ define amdgpu_kernel void @fcmp_k0_vgprX_select_k1_vgprZ_f32_cond_use_x2(float a
   %select1 = select i1 %setcc, float -2.0, float %z
   store volatile float %select0, float addrspace(1)* %out.gep
   store volatile float %select1, float addrspace(1)* %out.gep
+  ret void
+}
+
+; Source modifiers abs/neg only work for f32
+
+; GCN-LABEL: {{^}}v_cndmask_abs_neg_f16:
+; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}},
+define amdgpu_kernel void @v_cndmask_abs_neg_f16(half addrspace(1)* %out, i32 %c, half addrspace(1)* %fptr) #0 {
+  %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %f.gep = getelementptr half, half addrspace(1)* %fptr, i32 %idx
+  %f = load half, half addrspace(1)* %f.gep
+  %f.abs = call half @llvm.fabs.f16(half %f)
+  %f.neg = fneg half %f
+  %setcc = icmp ne i32 %c, 0
+  %select = select i1 %setcc, half %f.abs, half %f.neg
+  store half %select, half addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_cndmask_abs_neg_f32:
+; GCN-DAG: v_cndmask_b32_e64 v{{[0-9]+}}, -v{{[0-9]+}}, |v{{[0-9]+}}|,
+define amdgpu_kernel void @v_cndmask_abs_neg_f32(float addrspace(1)* %out, i32 %c, float addrspace(1)* %fptr) #0 {
+  %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %f.gep = getelementptr float, float addrspace(1)* %fptr, i32 %idx
+  %f = load float, float addrspace(1)* %f.gep
+  %f.abs = call float @llvm.fabs.f32(float %f)
+  %f.neg = fneg float %f
+  %setcc = icmp ne i32 %c, 0
+  %select = select i1 %setcc, float %f.abs, float %f.neg
+  store float %select, float addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: {{^}}v_cndmask_abs_neg_f64:
+; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}},
+; GCN-DAG: v_cndmask_b32_e32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}},
+define amdgpu_kernel void @v_cndmask_abs_neg_f64(double addrspace(1)* %out, i32 %c, double addrspace(1)* %fptr) #0 {
+  %idx = call i32 @llvm.amdgcn.workitem.id.x() #1
+  %f.gep = getelementptr double, double addrspace(1)* %fptr, i32 %idx
+  %f = load double, double addrspace(1)* %f.gep
+  %f.abs = call double @llvm.fabs.f64(double %f)
+  %f.neg = fneg double %f
+  %setcc = icmp ne i32 %c, 0
+  %select = select i1 %setcc, double %f.abs, double %f.neg
+  store double %select, double addrspace(1)* %out
   ret void
 }
 

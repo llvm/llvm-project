@@ -791,8 +791,8 @@ def : FMADModsPat<V_MAD_F16, AMDGPUfmad_ftz, f16> {
 
 multiclass SelectPat <ValueType vt> {
   def : GCNPat <
-    (vt (select i1:$src0, (VOP3Mods vt:$src1, i32:$src1_mods),
-                          (VOP3Mods vt:$src2, i32:$src2_mods))),
+    (vt (select i1:$src0, (VOP3Mods_f32 vt:$src1, i32:$src1_mods),
+                          (VOP3Mods_f32 vt:$src2, i32:$src2_mods))),
     (V_CNDMASK_B32_e64 $src2_mods, $src2, $src1_mods, $src1, $src0)
   >;
 }

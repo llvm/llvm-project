@@ -15,8 +15,7 @@ define void @ult(i64 %n, i64 %m) {
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[LATCH]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    call void @side_effect()
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[IV]], [[M]]
-; CHECK-NEXT:    br i1 [[CMP2]], label [[LOOP]], label [[EXIT_LOOPEXIT]]
+; CHECK-NEXT:    br i1 true, label [[LOOP]], label [[EXIT_LOOPEXIT]]
 ; CHECK:       exit.loopexit:
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
@@ -48,8 +47,7 @@ define void @ugt(i64 %n, i64 %m) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[IV]], [[N]]
-; CHECK-NEXT:    br i1 [[CMP1]], label [[LATCH]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 true, label [[LATCH]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    call void @side_effect()
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[IV]], [[M]]
@@ -160,9 +158,7 @@ define void @ult_const_max(i64 %n) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[IV_NEXT:%.*]], [[LATCH:%.*]] ], [ 0, [[LOOP_PREHEADER]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[UDIV:%.*]] = udiv i64 [[IV]], 10
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[UDIV]], 2
-; CHECK-NEXT:    br i1 [[CMP1]], label [[LATCH]], label [[EXIT_LOOPEXIT:%.*]]
+; CHECK-NEXT:    br i1 true, label [[LATCH]], label [[EXIT_LOOPEXIT:%.*]]
 ; CHECK:       latch:
 ; CHECK-NEXT:    call void @side_effect()
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[IV]], [[N]]

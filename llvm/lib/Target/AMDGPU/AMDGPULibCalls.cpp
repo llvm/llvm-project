@@ -865,7 +865,7 @@ bool AMDGPULibCalls::fold_divide(CallInst *CI, IRBuilder<> &B,
 
 namespace llvm {
 static double log2(double V) {
-#if _XOPEN_SOURCE >= 600 || _ISOC99_SOURCE || _POSIX_C_SOURCE >= 200112L
+#if _XOPEN_SOURCE >= 600 || defined(_ISOC99_SOURCE) || _POSIX_C_SOURCE >= 200112L
   return ::log2(V);
 #else
   return log(V) / 0.693147180559945309417;

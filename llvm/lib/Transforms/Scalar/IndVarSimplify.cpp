@@ -144,6 +144,7 @@ class IndVarSimplify {
   bool rewriteNonIntegerIVs(Loop *L);
 
   bool simplifyAndExtend(Loop *L, SCEVExpander &Rewriter, LoopInfo *LI);
+  bool optimizeLoopExits(Loop *L);
 
   bool canLoopBeDeleted(Loop *L, SmallVector<RewritePhi, 8> &RewritePhiSet);
   bool rewriteLoopExitValues(Loop *L, SCEVExpander &Rewriter);
@@ -2623,6 +2624,111 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
   return MadeAnyChanges;
 }
 
+bool IndVarSimplify::optimizeLoopExits(Loop *L) {
+  SmallVector<BasicBlock*, 16> ExitingBlocks;
+  L->getExitingBlocks(ExitingBlocks);
+
+  // Form an expression for the maximum exit count possible for this loop. We
+  // merge the max and exact information to approximate a version of
+  // getMaxBackedgeTakenInfo which isn't restricted to just constants.
+  // TODO: factor this out as a version of getMaxBackedgeTakenCount which
+  // isn't guaranteed to return a constant.
+  SmallVector<const SCEV*, 4> ExitCounts;
+  const SCEV *MaxConstEC = SE->getMaxBackedgeTakenCount(L);
+  if (!isa<SCEVCouldNotCompute>(MaxConstEC))
+    ExitCounts.push_back(MaxConstEC);
+  for (BasicBlock *ExitingBB : ExitingBlocks) {
+    const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
+    if (!isa<SCEVCouldNotCompute>(ExitCount)) {
+      assert(DT->dominates(ExitingBB, L->getLoopLatch()) &&
+             "We should only have known counts for exiting blocks that "
+             "dominate latch!");
+      ExitCounts.push_back(ExitCount);
+    }
+  }
+  if (ExitCounts.empty())
+    return false;
+  const SCEV *MaxExitCount = SE->getUMinFromMismatchedTypes(ExitCounts);
+
+  bool Changed = false;
+  for (BasicBlock *ExitingBB : ExitingBlocks) {
+    // If our exitting block exits multiple loops, we can only rewrite the
+    // innermost one.  Otherwise, we're changing how many times the innermost
+    // loop runs before it exits. 
+    if (LI->getLoopFor(ExitingBB) != L)
+      continue;
+
+    // Can't rewrite non-branch yet.
+    BranchInst *BI = dyn_cast<BranchInst>(ExitingBB->getTerminator());
+    if (!BI)
+      continue;
+
+    // If already constant, nothing to do.
+    if (isa<Constant>(BI->getCondition()))
+      continue;
+    
+    const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
+    if (isa<SCEVCouldNotCompute>(ExitCount))
+      continue;
+
+    // If we know we'd exit on the first iteration, rewrite the exit to
+    // reflect this.  This does not imply the loop must exit through this
+    // exit; there may be an earlier one taken on the first iteration.
+    // TODO: Given we know the backedge can't be taken, we should go ahead
+    // and break it.  Or at least, kill all the header phis and simplify.
+    if (ExitCount->isZero()) {
+      bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
+      auto *OldCond = BI->getCondition();
+      auto *NewCond = ExitIfTrue ? ConstantInt::getTrue(OldCond->getType()) :
+        ConstantInt::getFalse(OldCond->getType());
+      BI->setCondition(NewCond);
+      if (OldCond->use_empty())
+        DeadInsts.push_back(OldCond);
+      Changed = true;
+      continue;
+    }
+
+    // If we end up with a pointer exit count, bail.
+    if (!ExitCount->getType()->isIntegerTy() ||
+        !MaxExitCount->getType()->isIntegerTy())
+      return false;
+    
+    Type *WiderType =
+      SE->getWiderType(MaxExitCount->getType(), ExitCount->getType());
+    ExitCount = SE->getNoopOrZeroExtend(ExitCount, WiderType);
+    MaxExitCount = SE->getNoopOrZeroExtend(MaxExitCount, WiderType);
+    assert(MaxExitCount->getType() == ExitCount->getType());
+    
+    // Can we prove that some other exit must be taken strictly before this
+    // one?  TODO: handle cases where ule is known, and equality is covered
+    // by a dominating exit
+    if (SE->isLoopEntryGuardedByCond(L, CmpInst::ICMP_ULT,
+                                     MaxExitCount, ExitCount)) {
+      bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
+      auto *OldCond = BI->getCondition();
+      auto *NewCond = ExitIfTrue ? ConstantInt::getFalse(OldCond->getType()) :
+        ConstantInt::getTrue(OldCond->getType());
+      BI->setCondition(NewCond);
+      if (OldCond->use_empty())
+        DeadInsts.push_back(OldCond);
+      Changed = true;
+      continue;
+    }
+
+    // TODO: If we can prove that the exiting iteration is equal to the exit
+    // count for this exit and that no previous exit oppurtunities exist within
+    // the loop, then we can discharge all other exits.  (May fall out of
+    // previous TODO.) 
+    
+    // TODO: If we can't prove any relation between our exit count and the
+    // loops exit count, but taking this exit doesn't require actually running
+    // the loop (i.e. no side effects, no computed values used in exit), then
+    // we can replace the exit test with a loop invariant test which exits on
+    // the first iteration.  
+  }
+  return Changed;
+}
+
 //===----------------------------------------------------------------------===//
 //  IndVarSimplify driver. Manage several subpasses of IV simplification.
 //===----------------------------------------------------------------------===//
@@ -2679,6 +2785,8 @@ bool IndVarSimplify::run(Loop *L) {
   // Eliminate redundant IV cycles.
   NumElimIV += Rewriter.replaceCongruentIVs(L, DT, DeadInsts);
 
+  Changed |= optimizeLoopExits(L);
+
   // If we have a trip count expression, rewrite the loop's exit condition
   // using it.  
   if (!DisableLFTR) {
@@ -2702,23 +2810,7 @@ bool IndVarSimplify::run(Loop *L) {
       if (isa<SCEVCouldNotCompute>(ExitCount))
         continue;
 
-      // If we know we'd exit on the first iteration, rewrite the exit to
-      // reflect this.  This does not imply the loop must exit through this
-      // exit; there may be an earlier one taken on the first iteration.
-      // TODO: Given we know the backedge can't be taken, we should go ahead
-      // and break it.  Or at least, kill all the header phis and simplify.
-      if (ExitCount->isZero()) {
-        auto *BI = cast<BranchInst>(ExitingBB->getTerminator());
-        bool ExitIfTrue = !L->contains(*succ_begin(ExitingBB));
-        auto *OldCond = BI->getCondition();
-        auto *NewCond = ExitIfTrue ? ConstantInt::getTrue(OldCond->getType()) :
-          ConstantInt::getFalse(OldCond->getType());
-        BI->setCondition(NewCond);
-        if (OldCond->use_empty())
-          DeadInsts.push_back(OldCond);
-        Changed = true;
-        continue;
-      }
+      assert(!ExitCount->isZero() && "Should have been folded above");
       
       PHINode *IndVar = FindLoopCounter(L, ExitingBB, ExitCount, SE, DT);
       if (!IndVar)

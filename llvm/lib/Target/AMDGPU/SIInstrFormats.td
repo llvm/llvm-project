@@ -283,12 +283,13 @@ class MIMGe : Enc64 {
   let Inst{63} = d16;
 }
 
-class MIMGe_gfx6789 <bits<7> op> : MIMGe {
+class MIMGe_gfx6789 <bits<8> op> : MIMGe {
   bits<8> vaddr;
   bits<1> da;
 
+  let Inst{0} = op{7};
   let Inst{14} = da;
-  let Inst{24-18} = op;
+  let Inst{24-18} = op{6-0};
   let Inst{39-32} = vaddr;
 }
 

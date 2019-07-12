@@ -1552,8 +1552,7 @@ static void processShaderInputArgs(SmallVectorImpl<ISD::InputArg> &Splits,
 
     // First check if it's a PS input addr.
     if (CallConv == CallingConv::AMDGPU_PS &&
-        !Arg->Flags.isInReg() && !Arg->Flags.isByVal() && PSInputNum <= 15) {
-
+        !Arg->Flags.isInReg() && PSInputNum <= 15) {
       bool SkipArg = !Arg->Used && !Info->isPSInputAllocated(PSInputNum);
 
       // Inconveniently only the first part of the split is marked as isSplit,

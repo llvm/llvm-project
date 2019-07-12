@@ -650,7 +650,7 @@ void SIFoldOperands::foldOperand(
         if (execMayBeModifiedBeforeUse(*MRI,
                                        UseMI->getOperand(UseOpIdx).getReg(),
                                        *OpToFold.getParent(),
-                                       UseMI))
+                                       *UseMI))
           return;
 
         UseMI->setDesc(TII->get(AMDGPU::S_MOV_B32));
@@ -669,7 +669,7 @@ void SIFoldOperands::foldOperand(
         if (execMayBeModifiedBeforeUse(*MRI,
                                        UseMI->getOperand(UseOpIdx).getReg(),
                                        *OpToFold.getParent(),
-                                       UseMI))
+                                       *UseMI))
           return;
 
         // %vgpr = COPY %sgpr0
