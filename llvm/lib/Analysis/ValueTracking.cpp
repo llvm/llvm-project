@@ -3178,6 +3178,10 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
   if (isa<UndefValue>(V))
     return UndefInt8;
 
+  const uint64_t Size = DL.getTypeStoreSize(V->getType());
+  if (!Size)
+    return UndefInt8;
+
   Constant *C = dyn_cast<Constant>(V);
   if (!C) {
     // Conceptually, we could handle things like:
@@ -3215,6 +3219,17 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
       if (!CI->getValue().isSplat(8))
         return nullptr;
       return ConstantInt::get(Ctx, CI->getValue().trunc(8));
+    }
+  }
+
+  if (auto *CE = dyn_cast<ConstantExpr>(C)) {
+    if (CE->getOpcode() == Instruction::IntToPtr) {
+      auto PS = DL.getPointerSizeInBits(
+          cast<PointerType>(CE->getType())->getAddressSpace());
+      return isBytewiseValue(
+          ConstantExpr::getIntegerCast(CE->getOperand(0),
+                                       Type::getIntNTy(Ctx, PS), false),
+          DL);
     }
   }
 

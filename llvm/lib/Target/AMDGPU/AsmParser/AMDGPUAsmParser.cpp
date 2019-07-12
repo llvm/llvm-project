@@ -2753,7 +2753,6 @@ bool AMDGPUAsmParser::validateConstantBusLimitations(const MCInst &Inst) {
             SGPRsUsed.insert(Reg);
             ++ConstantBusUseCount;
           }
-          SGPRUsed = Reg;
         } else { // Expression or a literal
 
           if (Desc.OpInfo[OpIdx].OperandType == MCOI::OPERAND_IMMEDIATE)

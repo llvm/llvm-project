@@ -390,6 +390,7 @@ TEST(TypeHierarchy, RecursiveHierarchyUnbounded) {
   )cpp");
 
   TestTU TU = TestTU::withCode(Source.code());
+  TU.ExtraArgs.push_back("-ftemplate-depth=10");
   auto AST = TU.build();
 
   // The compiler should produce a diagnostic for hitting the

@@ -2,7 +2,10 @@
 // RUN:   FileCheck --check-prefix=FP64 %s
 // RUN: %clang_cc1 -triple powerpc64-linux-gnu -emit-llvm -o - %s -mlong-double-64 | \
 // RUN:   FileCheck --check-prefix=FP64 %s
+
 // RUN: %clang_cc1 -triple powerpc64-linux-gnu -emit-llvm -o - %s | \
+// RUN:   FileCheck --check-prefix=IBM128 %s
+// RUN: %clang_cc1 -triple powerpc64-linux-musl -emit-llvm -o - -mlong-double-128 %s | \
 // RUN:   FileCheck --check-prefix=IBM128 %s
 
 long double x = 0;

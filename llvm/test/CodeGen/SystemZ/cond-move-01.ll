@@ -5,6 +5,9 @@
 ; Run the test again to make sure it still works the same even
 ; in the presence of the load-store-on-condition-2 facility.
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -verify-machineinstrs | FileCheck %s
+;
+; And again in the presence of the select instructions.
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch13 -verify-machineinstrs | FileCheck %s
 
 ; Test LOCR.
 define i32 @f1(i32 %a, i32 %b, i32 %limit) {

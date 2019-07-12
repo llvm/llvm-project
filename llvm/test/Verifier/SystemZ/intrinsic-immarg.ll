@@ -381,3 +381,21 @@ define <16 x i8> @test_vsldb(<16 x i8> %a, <16 x i8> %b, i32 %c) {
   ret <16 x i8> %res
 }
 
+declare <16 x i8> @llvm.s390.vsld(<16 x i8>, <16 x i8>, i32)
+define <16 x i8> @test_vsld(<16 x i8> %a, <16 x i8> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call <16 x i8> @llvm.s390.vsld(<16 x i8> %a, <16 x i8> %b, i32 %c)
+  %res = call <16 x i8> @llvm.s390.vsld(<16 x i8> %a, <16 x i8> %b, i32 %c)
+  ret <16 x i8> %res
+}
+
+declare <16 x i8> @llvm.s390.vsrd(<16 x i8>, <16 x i8>, i32)
+define <16 x i8> @test_vsrd(<16 x i8> %a, <16 x i8> %b, i32 %c) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %c
+  ; CHECK-NEXT: %res = call <16 x i8> @llvm.s390.vsrd(<16 x i8> %a, <16 x i8> %b, i32 %c)
+  %res = call <16 x i8> @llvm.s390.vsrd(<16 x i8> %a, <16 x i8> %b, i32 %c)
+  ret <16 x i8> %res
+}
+

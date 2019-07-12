@@ -311,6 +311,8 @@ private:
 
   std::vector<Symbol *> symbols;
 };
+
+std::string replaceThinLTOSuffix(StringRef path);
 } // namespace coff
 
 std::string toString(const coff::InputFile *file);

@@ -33,11 +33,11 @@ static void HandleDefaultTargetOffload() {
   if (TargetOffloadPolicy == tgt_default) {
     if (omp_get_num_devices() > 0) {
       DP("Default TARGET OFFLOAD policy is now mandatory "
-         "(devicew were found)\n");
+         "(devices were found)\n");
       TargetOffloadPolicy = tgt_mandatory;
     } else {
       DP("Default TARGET OFFLOAD policy is now disabled "
-         "(devices were not found)\n");
+         "(no devices were found)\n");
       TargetOffloadPolicy = tgt_disabled;
     }
   }
@@ -57,8 +57,8 @@ static void HandleTargetOutcome(bool success) {
       }
       break;
     case tgt_default:
-        FATAL_MESSAGE0(1, "default offloading policy must switched to "
-            "mandatory or disabled");
+      FATAL_MESSAGE0(1, "default offloading policy must be switched to "
+                        "mandatory or disabled");
       break;
     case tgt_mandatory:
       if (!success) {

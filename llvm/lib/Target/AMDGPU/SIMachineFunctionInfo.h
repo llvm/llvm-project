@@ -442,6 +442,11 @@ public:
     SGPRSpillVGPRCSR(unsigned V, Optional<int> F) : VGPR(V), FI(F) {}
   };
 
+  struct VGPRSpillToAGPR {
+    SmallVector<MCPhysReg, 32> Lanes;
+    bool FullyAllocated = false;
+  };
+
   SparseBitVector<> WWMReservedRegs;
 
   void ReserveWWMRegister(unsigned reg) { WWMReservedRegs.set(reg); }
@@ -455,6 +460,14 @@ private:
   DenseMap<int, std::vector<SpilledReg>> SGPRToVGPRSpills;
   unsigned NumVGPRSpillLanes = 0;
   SmallVector<SGPRSpillVGPRCSR, 2> SpillVGPRs;
+
+  DenseMap<int, VGPRSpillToAGPR> VGPRToAGPRSpills;
+
+  // AGPRs used for VGPR spills.
+  SmallVector<MCPhysReg, 32> SpillAGPR;
+
+  // VGPRs used for AGPR spills.
+  SmallVector<MCPhysReg, 32> SpillVGPR;
 
 public: // FIXME
   /// If this is set, an SGPR used for save/restore of the register used for the
@@ -477,6 +490,20 @@ public:
     return SpillVGPRs;
   }
 
+  ArrayRef<MCPhysReg> getAGPRSpillVGPRs() const {
+    return SpillAGPR;
+  }
+
+  ArrayRef<MCPhysReg> getVGPRSpillAGPRs() const {
+    return SpillVGPR;
+  }
+
+  MCPhysReg getVGPRToAGPRSpill(int FrameIndex, unsigned Lane) const {
+    auto I = VGPRToAGPRSpills.find(FrameIndex);
+    return (I == VGPRToAGPRSpills.end()) ? (MCPhysReg)AMDGPU::NoRegister
+                                         : I->second.Lanes[Lane];
+  }
+
   AMDGPU::SIModeRegisterDefaults getMode() const {
     return Mode;
   }
@@ -484,7 +511,8 @@ public:
   bool haveFreeLanesForSGPRSpill(const MachineFunction &MF,
                                  unsigned NumLane) const;
   bool allocateSGPRSpillToVGPR(MachineFunction &MF, int FI);
-  void removeSGPRToVGPRFrameIndices(MachineFrameInfo &MFI);
+  bool allocateVGPRSpillToAGPR(MachineFunction &MF, int FI, bool isAGPRtoVGPR);
+  void removeDeadFrameIndices(MachineFrameInfo &MFI);
 
   bool hasCalculatedTID() const { return TIDReg != 0; };
   unsigned getTIDReg() const { return TIDReg; };

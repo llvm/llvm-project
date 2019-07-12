@@ -191,6 +191,11 @@ public:
 // and then overwrites its jump table slot with the result
 // for subsequent function calls.
 static const uint8_t thunkX64[] = {
+    0x48, 0x8D, 0x05, 0, 0, 0, 0,       // lea     rax, [__imp_<FUNCNAME>]
+    0xE9, 0, 0, 0, 0,                   // jmp     __tailMerge_<lib>
+};
+
+static const uint8_t tailMergeX64[] = {
     0x51,                               // push    rcx
     0x52,                               // push    rdx
     0x41, 0x50,                         // push    r8
@@ -200,7 +205,7 @@ static const uint8_t thunkX64[] = {
     0x66, 0x0F, 0x7F, 0x4C, 0x24, 0x10, // movdqa  xmmword ptr [rsp+10h], xmm1
     0x66, 0x0F, 0x7F, 0x54, 0x24, 0x20, // movdqa  xmmword ptr [rsp+20h], xmm2
     0x66, 0x0F, 0x7F, 0x5C, 0x24, 0x30, // movdqa  xmmword ptr [rsp+30h], xmm3
-    0x48, 0x8D, 0x15, 0, 0, 0, 0,       // lea     rdx, [__imp_<FUNCNAME>]
+    0x48, 0x8B, 0xD0,                   // mov     rdx, rax
     0x48, 0x8D, 0x0D, 0, 0, 0, 0,       // lea     rcx, [___DELAY_IMPORT_...]
     0xE8, 0, 0, 0, 0,                   // call    __delayLoadHelper2
     0x66, 0x0F, 0x6F, 0x04, 0x24,       // movdqa  xmm0, xmmword ptr [rsp]
@@ -216,9 +221,14 @@ static const uint8_t thunkX64[] = {
 };
 
 static const uint8_t thunkX86[] = {
+    0xB8, 0, 0, 0, 0,  // mov   eax, offset ___imp__<FUNCNAME>
+    0xE9, 0, 0, 0, 0,  // jmp   __tailMerge_<lib>
+};
+
+static const uint8_t tailMergeX86[] = {
     0x51,              // push  ecx
     0x52,              // push  edx
-    0x68, 0, 0, 0, 0,  // push  offset ___imp__<FUNCNAME>
+    0x50,              // push  eax
     0x68, 0, 0, 0, 0,  // push  offset ___DELAY_IMPORT_DESCRIPTOR_<DLLNAME>_dll
     0xE8, 0, 0, 0, 0,  // call  ___delayLoadHelper2@8
     0x5A,              // pop   edx
@@ -229,6 +239,10 @@ static const uint8_t thunkX86[] = {
 static const uint8_t thunkARM[] = {
     0x40, 0xf2, 0x00, 0x0c, // mov.w   ip, #0 __imp_<FUNCNAME>
     0xc0, 0xf2, 0x00, 0x0c, // mov.t   ip, #0 __imp_<FUNCNAME>
+    0x00, 0xf0, 0x00, 0xb8, // b.w     __tailMerge_<lib>
+};
+
+static const uint8_t tailMergeARM[] = {
     0x2d, 0xe9, 0x0f, 0x48, // push.w  {r0, r1, r2, r3, r11, lr}
     0x0d, 0xf2, 0x10, 0x0b, // addw    r11, sp, #16
     0x2d, 0xed, 0x10, 0x0b, // vpush   {d0, d1, d2, d3, d4, d5, d6, d7}
@@ -245,6 +259,10 @@ static const uint8_t thunkARM[] = {
 static const uint8_t thunkARM64[] = {
     0x11, 0x00, 0x00, 0x90, // adrp    x17, #0      __imp_<FUNCNAME>
     0x31, 0x02, 0x00, 0x91, // add     x17, x17, #0 :lo12:__imp_<FUNCNAME>
+    0x00, 0x00, 0x00, 0x14, // b       __tailMerge_<lib>
+};
+
+static const uint8_t tailMergeARM64[] = {
     0xfd, 0x7b, 0xb3, 0xa9, // stp     x29, x30, [sp, #-208]!
     0xfd, 0x03, 0x00, 0x91, // mov     x29, sp
     0xe0, 0x07, 0x01, 0xa9, // stp     x0, x1, [sp, #16]
@@ -275,75 +293,119 @@ static const uint8_t thunkARM64[] = {
 // A chunk for the delay import thunk.
 class ThunkChunkX64 : public NonSectionChunk {
 public:
-  ThunkChunkX64(Defined *i, Chunk *d, Defined *h)
-      : imp(i), desc(d), helper(h) {}
+  ThunkChunkX64(Defined *i, Chunk *tm) : imp(i), tailMerge(tm) {}
 
   size_t getSize() const override { return sizeof(thunkX64); }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, thunkX64, sizeof(thunkX64));
-    write32le(buf + 36, imp->getRVA() - rva - 40);
-    write32le(buf + 43, desc->getRVA() - rva - 47);
-    write32le(buf + 48, helper->getRVA() - rva - 52);
+    write32le(buf + 3, imp->getRVA() - rva - 7);
+    write32le(buf + 8, tailMerge->getRVA() - rva - 12);
   }
 
   Defined *imp = nullptr;
+  Chunk *tailMerge = nullptr;
+};
+
+class TailMergeChunkX64 : public NonSectionChunk {
+public:
+  TailMergeChunkX64(Chunk *d, Defined *h) : desc(d), helper(h) {}
+
+  size_t getSize() const override { return sizeof(tailMergeX64); }
+
+  void writeTo(uint8_t *buf) const override {
+    memcpy(buf, tailMergeX64, sizeof(tailMergeX64));
+    write32le(buf + 39, desc->getRVA() - rva - 43);
+    write32le(buf + 44, helper->getRVA() - rva - 48);
+  }
+
   Chunk *desc = nullptr;
   Defined *helper = nullptr;
 };
 
 class ThunkChunkX86 : public NonSectionChunk {
 public:
-  ThunkChunkX86(Defined *i, Chunk *d, Defined *h)
-      : imp(i), desc(d), helper(h) {}
+  ThunkChunkX86(Defined *i, Chunk *tm) : imp(i), tailMerge(tm) {}
 
   size_t getSize() const override { return sizeof(thunkX86); }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, thunkX86, sizeof(thunkX86));
-    write32le(buf + 3, imp->getRVA() + config->imageBase);
-    write32le(buf + 8, desc->getRVA() + config->imageBase);
-    write32le(buf + 13, helper->getRVA() - rva - 17);
+    write32le(buf + 1, imp->getRVA() + config->imageBase);
+    write32le(buf + 6, tailMerge->getRVA() - rva - 10);
   }
 
   void getBaserels(std::vector<Baserel> *res) override {
-    res->emplace_back(rva + 3);
-    res->emplace_back(rva + 8);
+    res->emplace_back(rva + 1);
   }
 
   Defined *imp = nullptr;
+  Chunk *tailMerge = nullptr;
+};
+
+class TailMergeChunkX86 : public NonSectionChunk {
+public:
+  TailMergeChunkX86(Chunk *d, Defined *h) : desc(d), helper(h) {}
+
+  size_t getSize() const override { return sizeof(tailMergeX86); }
+
+  void writeTo(uint8_t *buf) const override {
+    memcpy(buf, tailMergeX86, sizeof(tailMergeX86));
+    write32le(buf + 4, desc->getRVA() + config->imageBase);
+    write32le(buf + 9, helper->getRVA() - rva - 13);
+  }
+
+  void getBaserels(std::vector<Baserel> *res) override {
+    res->emplace_back(rva + 4);
+  }
+
   Chunk *desc = nullptr;
   Defined *helper = nullptr;
 };
 
 class ThunkChunkARM : public NonSectionChunk {
 public:
-  ThunkChunkARM(Defined *i, Chunk *d, Defined *h)
-      : imp(i), desc(d), helper(h) {}
+  ThunkChunkARM(Defined *i, Chunk *tm) : imp(i), tailMerge(tm) {}
 
   size_t getSize() const override { return sizeof(thunkARM); }
 
   void writeTo(uint8_t *buf) const override {
     memcpy(buf, thunkARM, sizeof(thunkARM));
     applyMOV32T(buf + 0, imp->getRVA() + config->imageBase);
-    applyMOV32T(buf + 22, desc->getRVA() + config->imageBase);
-    applyBranch24T(buf + 30, helper->getRVA() - rva - 34);
+    applyBranch24T(buf + 8, tailMerge->getRVA() - rva - 12);
   }
 
   void getBaserels(std::vector<Baserel> *res) override {
     res->emplace_back(rva + 0, IMAGE_REL_BASED_ARM_MOV32T);
-    res->emplace_back(rva + 22, IMAGE_REL_BASED_ARM_MOV32T);
   }
 
   Defined *imp = nullptr;
+  Chunk *tailMerge = nullptr;
+};
+
+class TailMergeChunkARM : public NonSectionChunk {
+public:
+  TailMergeChunkARM(Chunk *d, Defined *h) : desc(d), helper(h) {}
+
+  size_t getSize() const override { return sizeof(tailMergeARM); }
+
+  void writeTo(uint8_t *buf) const override {
+    memcpy(buf, tailMergeARM, sizeof(tailMergeARM));
+    applyMOV32T(buf + 14, desc->getRVA() + config->imageBase);
+    applyBranch24T(buf + 22, helper->getRVA() - rva - 26);
+  }
+
+  void getBaserels(std::vector<Baserel> *res) override {
+    res->emplace_back(rva + 14, IMAGE_REL_BASED_ARM_MOV32T);
+  }
+
   Chunk *desc = nullptr;
   Defined *helper = nullptr;
 };
 
 class ThunkChunkARM64 : public NonSectionChunk {
 public:
-  ThunkChunkARM64(Defined *i, Chunk *d, Defined *h)
-      : imp(i), desc(d), helper(h) {}
+  ThunkChunkARM64(Defined *i, Chunk *tm) : imp(i), tailMerge(tm) {}
 
   size_t getSize() const override { return sizeof(thunkARM64); }
 
@@ -351,12 +413,26 @@ public:
     memcpy(buf, thunkARM64, sizeof(thunkARM64));
     applyArm64Addr(buf + 0, imp->getRVA(), rva + 0, 12);
     applyArm64Imm(buf + 4, imp->getRVA() & 0xfff, 0);
-    applyArm64Addr(buf + 52, desc->getRVA(), rva + 52, 12);
-    applyArm64Imm(buf + 56, desc->getRVA() & 0xfff, 0);
-    applyArm64Branch26(buf + 60, helper->getRVA() - rva - 60);
+    applyArm64Branch26(buf + 8, tailMerge->getRVA() - rva - 8);
   }
 
   Defined *imp = nullptr;
+  Chunk *tailMerge = nullptr;
+};
+
+class TailMergeChunkARM64 : public NonSectionChunk {
+public:
+  TailMergeChunkARM64(Chunk *d, Defined *h) : desc(d), helper(h) {}
+
+  size_t getSize() const override { return sizeof(tailMergeARM64); }
+
+  void writeTo(uint8_t *buf) const override {
+    memcpy(buf, tailMergeARM64, sizeof(tailMergeARM64));
+    applyArm64Addr(buf + 44, desc->getRVA(), rva + 44, 12);
+    applyArm64Imm(buf + 48, desc->getRVA() & 0xfff, 0);
+    applyArm64Branch26(buf + 52, helper->getRVA() - rva - 52);
+  }
+
   Chunk *desc = nullptr;
   Defined *helper = nullptr;
 };
@@ -556,8 +632,9 @@ void DelayLoadContents::create(Defined *h) {
     auto *dir = make<DelayDirectoryChunk>(dllNames.back());
 
     size_t base = addresses.size();
+    Chunk *tm = newTailMergeChunk(dir);
     for (DefinedImportData *s : syms) {
-      Chunk *t = newThunkChunk(s, dir);
+      Chunk *t = newThunkChunk(s, tm);
       auto *a = make<DelayAddressChunk>(t);
       addresses.push_back(a);
       thunks.push_back(t);
@@ -570,6 +647,7 @@ void DelayLoadContents::create(Defined *h) {
         hintNames.push_back(c);
       }
     }
+    thunks.push_back(tm);
     // Terminate with null values.
     addresses.push_back(make<NullChunk>(8));
     names.push_back(make<NullChunk>(8));
@@ -590,16 +668,32 @@ void DelayLoadContents::create(Defined *h) {
   dirs.push_back(make<NullChunk>(sizeof(delay_import_directory_table_entry)));
 }
 
-Chunk *DelayLoadContents::newThunkChunk(DefinedImportData *s, Chunk *dir) {
+Chunk *DelayLoadContents::newTailMergeChunk(Chunk *dir) {
   switch (config->machine) {
   case AMD64:
-    return make<ThunkChunkX64>(s, dir, helper);
+    return make<TailMergeChunkX64>(dir, helper);
   case I386:
-    return make<ThunkChunkX86>(s, dir, helper);
+    return make<TailMergeChunkX86>(dir, helper);
   case ARMNT:
-    return make<ThunkChunkARM>(s, dir, helper);
+    return make<TailMergeChunkARM>(dir, helper);
   case ARM64:
-    return make<ThunkChunkARM64>(s, dir, helper);
+    return make<TailMergeChunkARM64>(dir, helper);
+  default:
+    llvm_unreachable("unsupported machine type");
+  }
+}
+
+Chunk *DelayLoadContents::newThunkChunk(DefinedImportData *s,
+                                        Chunk *tailMerge) {
+  switch (config->machine) {
+  case AMD64:
+    return make<ThunkChunkX64>(s, tailMerge);
+  case I386:
+    return make<ThunkChunkX86>(s, tailMerge);
+  case ARMNT:
+    return make<ThunkChunkARM>(s, tailMerge);
+  case ARM64:
+    return make<ThunkChunkARM64>(s, tailMerge);
   default:
     llvm_unreachable("unsupported machine type");
   }

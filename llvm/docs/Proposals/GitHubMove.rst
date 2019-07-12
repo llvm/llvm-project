@@ -2,6 +2,13 @@
 Moving LLVM Projects to GitHub
 ==============================
 
+Current Status
+==============
+
+We are planning to complete the transition to GitHub by Oct 21, 2019.  See
+the GitHub migration `status page <https://llvm.org/GitHubMigrationStatus.html>`_
+for the latest updates and instructions for how to migrate your workflows.
+
 .. contents:: Table of Contents
   :depth: 4
   :local:

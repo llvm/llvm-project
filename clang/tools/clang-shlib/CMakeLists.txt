@@ -1,4 +1,4 @@
-# Building libclang_shared.so fails if LLVM_ENABLE_PIC=Off
+# Building libclang-cpp.so fails if LLVM_ENABLE_PIC=Off
 if (NOT LLVM_ENABLE_PIC)
   return()
 endif()
@@ -11,8 +11,13 @@ foreach (lib ${clang_libs})
   list(APPEND _DEPS $<TARGET_PROPERTY:${lib},LINK_LIBRARIES>)
 endforeach ()
 
-add_clang_library(clang_shared
+if (CLANG_LINK_CLANG_DYLIB)
+  set(INSTALL_WITH_TOOLCHAIN INSTALL_WITH_TOOLCHAIN)
+endif()
+
+add_clang_library(clang-cpp
                   SHARED
+                  ${INSTALL_WITH_TOOLCHAIN}
                   clang-shlib.cpp
                   ${_OBJECTS}
                   LINK_LIBS

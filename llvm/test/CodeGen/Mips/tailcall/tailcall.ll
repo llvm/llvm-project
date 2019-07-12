@@ -47,7 +47,7 @@ entry:
 ; PIC32MM: jalr $25
 ; PIC32R6: jalr $25
 ; STATIC32: jal
-; STATIC32MMR6: jal
+; STATIC32MMR6: balc
 ; N64: jalr $25
 ; N64R6: jalr $25
 ; PIC16: jalrc
@@ -65,7 +65,7 @@ entry:
 ; PIC32MM: jalr $25
 ; PIC32R6: jalr $25
 ; STATIC32: jal
-; STATIC32MMR6: jal
+; STATIC32MMR6: balc
 ; N64: jalr $25
 ; N64R6: jalr $25
 ; PIC16: jalrc
@@ -83,7 +83,7 @@ entry:
 ; PIC32R6: jalr $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; STATIC32MMR6: jal
+; STATIC32MMR6: balc
 ; N64: jalr $25
 ; N64R6: jalr $25
 ; PIC16: jalrc
@@ -179,7 +179,7 @@ entry:
 ; PIC32R6: jalr $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; STATIC32MMR6: jal
+; STATIC32MMR6: balc
 ; PIC64: jalr $25
 ; STATIC64: jal
 ; PIC16: jalrc
@@ -217,7 +217,7 @@ entry:
 ; PIC32R6: jalrc $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; STATIC32MMR6: jal
+; STATIC32MMR6: balc
 ; STATIC64: jal
 ; PIC64: jalr $25
 ; PIC64R6: jalrc $25
@@ -236,7 +236,7 @@ entry:
 ; PIC32R6: jalr $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; STATIC32MMR6: jal
+; STATIC32MMR6: balc
 ; STATIC64: jal
 ; PIC64: jalr $25
 ; PIC64R6: jalr $25
@@ -255,7 +255,7 @@ entry:
 ; PIC32R6: jalrc $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; STATIC32MMR6: jal
+; STATIC32MMR6: balc
 ; STATIC64: jal
 ; PIC64: jalr $25
 ; PIC64R6: jalrc $25
@@ -276,7 +276,7 @@ entry:
 ; PIC32R6: jalrc $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; STATIC32MMR6: jal
+; STATIC32MMR6: balc
 ; STATIC64: jal
 ; PIC64: jalr $25
 ; PIC64R6: jalrc $25
@@ -297,7 +297,7 @@ entry:
 ; PIC32R6: jalr $25
 ; PIC32MM: jalr $25
 ; STATIC32: jal
-; STATIC32MMR6: jal
+; STATIC32MMR6: balc
 ; STATIC64: jal
 ; PIC64R6: jalr $25
 ; PIC64: jalr $25

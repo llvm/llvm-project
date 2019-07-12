@@ -15,13 +15,13 @@
 namespace lld {
 namespace coff {
 
-static Timer gCTimer("GC", Timer::root());
+static Timer gctimer("GC", Timer::root());
 
 // Set live bit on for each reachable chunk. Unmarked (unreachable)
 // COMDAT chunks will be ignored by Writer, so they will be excluded
 // from the final output.
 void markLive(ArrayRef<Chunk *> chunks) {
-  ScopedTimer t(gCTimer);
+  ScopedTimer t(gctimer);
 
   // We build up a worklist of sections which have been marked as live. We only
   // push into the worklist when we discover an unmarked section, and we mark
@@ -51,7 +51,7 @@ void markLive(ArrayRef<Chunk *> chunks) {
   };
 
   // Add GC root chunks.
-  for (Symbol *b : config->gCRoot)
+  for (Symbol *b : config->gcroot)
     addSym(b);
 
   while (!worklist.empty()) {

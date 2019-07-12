@@ -281,6 +281,8 @@ enum NodeType : unsigned {
   VISTR_CC,
   VSTRC_CC,
   VSTRCZ_CC,
+  VSTRS_CC,
+  VSTRSZ_CC,
 
   // Test Data Class.
   //
@@ -339,6 +341,9 @@ enum NodeType : unsigned {
 
   // Byte swapping load/store.  Same operands as regular load/store.
   LRV, STRV,
+
+  // Element swapping load/store.  Same operands as regular load/store.
+  VLER, VSTER,
 
   // Prefetch from the second operand using the 4-bit control code in
   // the first operand.  The code is 1 for a load prefetch and 2 for
@@ -571,6 +576,9 @@ private:
   SDValue lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
+  bool isVectorElementLoad(SDValue Op) const;
+  SDValue buildVector(SelectionDAG &DAG, const SDLoc &DL, EVT VT,
+                      SmallVectorImpl<SDValue> &Elems) const;
   SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue lowerSCALAR_TO_VECTOR(SDValue Op, SelectionDAG &DAG) const;
@@ -590,8 +598,10 @@ private:
   SDValue combineSIGN_EXTEND(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSIGN_EXTEND_INREG(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineMERGE(SDNode *N, DAGCombinerInfo &DCI) const;
+  bool canLoadStoreByteSwapped(EVT VT) const;
   SDValue combineLOAD(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineSTORE(SDNode *N, DAGCombinerInfo &DCI) const;
+  SDValue combineVECTOR_SHUFFLE(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineEXTRACT_VECTOR_ELT(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineJOIN_DWORDS(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue combineFP_ROUND(SDNode *N, DAGCombinerInfo &DCI) const;

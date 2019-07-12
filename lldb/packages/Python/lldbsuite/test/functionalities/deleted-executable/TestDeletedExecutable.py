@@ -1,5 +1,5 @@
 """
-Test process attach/resume.
+Test process attach when executable was deleted.
 """
 
 from __future__ import print_function
@@ -24,8 +24,22 @@ class TestDeletedExecutable(TestBase):
         self.build()
         exe = self.getBuildArtifact("a.out")
 
-        popen = self.spawnSubprocess(exe)
+        # Use a file as a synchronization point between test and inferior.
+        pid_file_path = lldbutil.append_to_process_working_directory(self,
+            "token_pid_%d" % (int(os.getpid())))
+        self.addTearDownHook(
+            lambda: self.run_platform_command(
+                "rm %s" %
+                (pid_file_path)))
+
+        # Spawn a new process
+        popen = self.spawnSubprocess(exe, [pid_file_path])
         self.addTearDownHook(self.cleanupSubprocesses)
+
+        # Wait until process has fully started up.
+        pid = lldbutil.wait_for_file_on_target(self, pid_file_path)
+
+        # Now we can safely remove the executable and test if we can attach.
         os.remove(exe)
 
         self.runCmd("process attach -p " + str(popen.pid))

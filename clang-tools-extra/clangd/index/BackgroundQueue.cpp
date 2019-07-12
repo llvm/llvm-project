@@ -67,6 +67,7 @@ void BackgroundQueue::stop() {
 void BackgroundQueue::push(Task T) {
   {
     std::lock_guard<std::mutex> Lock(Mu);
+    T.QueuePri = std::max(T.QueuePri, Boosts.lookup(T.Tag));
     Queue.push_back(std::move(T));
     std::push_heap(Queue.begin(), Queue.end());
   }
@@ -76,10 +77,31 @@ void BackgroundQueue::push(Task T) {
 void BackgroundQueue::append(std::vector<Task> Tasks) {
   {
     std::lock_guard<std::mutex> Lock(Mu);
+    for (Task &T : Tasks)
+      T.QueuePri = std::max(T.QueuePri, Boosts.lookup(T.Tag));
     std::move(Tasks.begin(), Tasks.end(), std::back_inserter(Queue));
     std::make_heap(Queue.begin(), Queue.end());
   }
   CV.notify_all();
+}
+
+void BackgroundQueue::boost(llvm::StringRef Tag, unsigned NewPriority) {
+  std::lock_guard<std::mutex> Lock(Mu);
+  unsigned &Boost = Boosts[Tag];
+  bool Increase = NewPriority > Boost;
+  Boost = NewPriority;
+  if (!Increase)
+    return; // existing tasks unaffected
+
+  unsigned Changes = 0;
+  for (Task &T : Queue)
+    if (Tag == T.Tag && NewPriority > T.QueuePri) {
+      T.QueuePri = NewPriority;
+      ++Changes;
+    }
+  if (Changes)
+    std::make_heap(Queue.begin(), Queue.end());
+  // No need to signal, only rearranged items in the queue.
 }
 
 bool BackgroundQueue::blockUntilIdleForTest(

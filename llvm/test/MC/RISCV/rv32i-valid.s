@@ -90,6 +90,9 @@ jal s0, (0)
 # CHECK-ASM-AND-OBJ: jal s0, 156
 # CHECK-ASM: encoding: [0x6f,0x04,0xc0,0x09]
 jal s0, (0xff-99)
+# CHECK-ASM: encoding: [0x6f,0bAAAA0000,A,A]
+# CHECK-OBJ: jal zero, 0
+jal zero, .
 
 # CHECK-ASM-AND-OBJ: jalr a0, a1, -2048
 # CHECK-ASM: encoding: [0x67,0x85,0x05,0x80]

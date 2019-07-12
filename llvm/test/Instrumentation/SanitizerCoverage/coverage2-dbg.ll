@@ -1,6 +1,7 @@
 ; Test that coverage instrumentation does not lose debug location.
 
 ; RUN: opt < %s -sancov  -sanitizer-coverage-level=2 -S | FileCheck %s
+; RUN: opt < %s -passes='module(sancov-module),function(sancov-func)' -sanitizer-coverage-level=2 -S | FileCheck %s
 
 ; C++ source:
 ; 1: void foo(int *a) {

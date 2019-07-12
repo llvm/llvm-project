@@ -249,6 +249,81 @@ let Predicates = [FeatureVectorPackedDecimal] in {
 }
 
 //===----------------------------------------------------------------------===//
+// Byte swaps
+//===----------------------------------------------------------------------===//
+
+let Predicates = [FeatureVectorEnhancements2] in {
+  // Load byte-reversed elements.
+  def VLBR  : UnaryVRXGeneric<"vlbr", 0xE606>;
+  def VLBRH : UnaryVRX<"vlbrh", 0xE606, z_loadbswap, v128h, 16, 1>;
+  def VLBRF : UnaryVRX<"vlbrf", 0xE606, z_loadbswap, v128f, 16, 2>;
+  def VLBRG : UnaryVRX<"vlbrg", 0xE606, z_loadbswap, v128g, 16, 3>;
+  def VLBRQ : UnaryVRX<"vlbrq", 0xE606, null_frag, v128q, 16, 4>;
+
+  // Load elements reversed.
+  def VLER  : UnaryVRXGeneric<"vler", 0xE607>;
+  def VLERH : UnaryVRX<"vlerh", 0xE607, z_loadeswap, v128h, 16, 1>;
+  def VLERF : UnaryVRX<"vlerf", 0xE607, z_loadeswap, v128f, 16, 2>;
+  def VLERG : UnaryVRX<"vlerg", 0xE607, z_loadeswap, v128g, 16, 3>;
+  def : Pat<(v4f32 (z_loadeswap bdxaddr12only:$addr)),
+            (VLERF bdxaddr12only:$addr)>;
+  def : Pat<(v2f64 (z_loadeswap bdxaddr12only:$addr)),
+            (VLERG bdxaddr12only:$addr)>;
+  def : Pat<(v16i8 (z_loadeswap bdxaddr12only:$addr)),
+            (VLBRQ bdxaddr12only:$addr)>;
+
+  // Load byte-reversed element.
+  def VLEBRH : TernaryVRX<"vlebrh", 0xE601, z_vlebri16, v128h, v128h, 2, imm32zx3>;
+  def VLEBRF : TernaryVRX<"vlebrf", 0xE603, z_vlebri32, v128f, v128f, 4, imm32zx2>;
+  def VLEBRG : TernaryVRX<"vlebrg", 0xE602, z_vlebri64, v128g, v128g, 8, imm32zx1>;
+
+  // Load byte-reversed element and zero.
+  def VLLEBRZ  : UnaryVRXGeneric<"vllebrz", 0xE604>;
+  def VLLEBRZH : UnaryVRX<"vllebrzh", 0xE604, z_vllebrzi16, v128h, 2, 1>;
+  def VLLEBRZF : UnaryVRX<"vllebrzf", 0xE604, z_vllebrzi32, v128f, 4, 2>;
+  def VLLEBRZG : UnaryVRX<"vllebrzg", 0xE604, z_vllebrzi64, v128g, 8, 3>;
+  def VLLEBRZE : UnaryVRX<"vllebrze", 0xE604, z_vllebrzli32, v128f, 4, 6>;
+  def : InstAlias<"lerv\t$V1, $XBD2",
+                  (VLLEBRZE VR128:$V1, bdxaddr12only:$XBD2), 0>;
+  def : InstAlias<"ldrv\t$V1, $XBD2",
+                  (VLLEBRZG VR128:$V1, bdxaddr12only:$XBD2), 0>;
+
+  // Load byte-reversed element and replicate.
+  def VLBRREP  : UnaryVRXGeneric<"vlbrrep", 0xE605>;
+  def VLBRREPH : UnaryVRX<"vlbrreph", 0xE605, z_replicate_loadbswapi16, v128h, 2, 1>;
+  def VLBRREPF : UnaryVRX<"vlbrrepf", 0xE605, z_replicate_loadbswapi32, v128f, 4, 2>;
+  def VLBRREPG : UnaryVRX<"vlbrrepg", 0xE605, z_replicate_loadbswapi64, v128g, 8, 3>;
+
+  // Store byte-reversed elements.
+  def VSTBR  : StoreVRXGeneric<"vstbr", 0xE60E>;
+  def VSTBRH : StoreVRX<"vstbrh", 0xE60E, z_storebswap, v128h, 16, 1>;
+  def VSTBRF : StoreVRX<"vstbrf", 0xE60E, z_storebswap, v128f, 16, 2>;
+  def VSTBRG : StoreVRX<"vstbrg", 0xE60E, z_storebswap, v128g, 16, 3>;
+  def VSTBRQ : StoreVRX<"vstbrq", 0xE60E, null_frag, v128q, 16, 4>;
+
+  // Store elements reversed.
+  def VSTER  : StoreVRXGeneric<"vster", 0xE60F>;
+  def VSTERH : StoreVRX<"vsterh", 0xE60F, z_storeeswap, v128h, 16, 1>;
+  def VSTERF : StoreVRX<"vsterf", 0xE60F, z_storeeswap, v128f, 16, 2>;
+  def VSTERG : StoreVRX<"vsterg", 0xE60F, z_storeeswap, v128g, 16, 3>;
+  def : Pat<(z_storeeswap (v4f32 VR128:$val), bdxaddr12only:$addr),
+            (VSTERF VR128:$val, bdxaddr12only:$addr)>;
+  def : Pat<(z_storeeswap (v2f64 VR128:$val), bdxaddr12only:$addr),
+            (VSTERG VR128:$val, bdxaddr12only:$addr)>;
+  def : Pat<(z_storeeswap (v16i8 VR128:$val), bdxaddr12only:$addr),
+            (VSTBRQ VR128:$val, bdxaddr12only:$addr)>;
+
+  // Store byte-reversed element.
+  def VSTEBRH : StoreBinaryVRX<"vstebrh", 0xE609, z_vstebri16, v128h, 2, imm32zx3>;
+  def VSTEBRF : StoreBinaryVRX<"vstebrf", 0xE60B, z_vstebri32, v128f, 4, imm32zx2>;
+  def VSTEBRG : StoreBinaryVRX<"vstebrg", 0xE60A, z_vstebri64, v128g, 8, imm32zx1>;
+  def : InstAlias<"sterv\t$V1, $XBD2",
+                  (VSTEBRF VR128:$V1, bdxaddr12only:$XBD2, 0), 0>;
+  def : InstAlias<"stdrv\t$V1, $XBD2",
+                  (VSTEBRG VR128:$V1, bdxaddr12only:$XBD2, 0), 0>;
+}
+
+//===----------------------------------------------------------------------===//
 // Selects and permutes
 //===----------------------------------------------------------------------===//
 
@@ -706,6 +781,10 @@ let Predicates = [FeatureVector] in {
   def : Pat<(int_s390_vsldb VR128:$x, VR128:$y, imm32zx8:$z),
             (VSLDB VR128:$x, VR128:$y, imm32zx8:$z)>;
 
+  // Shift left double by bit.
+  let Predicates = [FeatureVectorEnhancements2] in
+    def VSLD : TernaryVRId<"vsld", 0xE786, int_s390_vsld, v128b, v128b, 0>;
+
   // Shift right arithmetic.
   def VSRA : BinaryVRRc<"vsra", 0xE77E, int_s390_vsra, v128b, v128b>;
 
@@ -717,6 +796,10 @@ let Predicates = [FeatureVector] in {
 
   // Shift right logical by byte.
   def VSRLB : BinaryVRRc<"vsrlb", 0xE77D, int_s390_vsrlb, v128b, v128b>;
+
+  // Shift right double by bit.
+  let Predicates = [FeatureVectorEnhancements2] in
+    def VSRD : TernaryVRId<"vsrd", 0xE787, int_s390_vsrd, v128b, v128b, 0>;
 
   // Subtract.
   def VS  : BinaryVRRcGeneric<"vs", 0xE7F7>;
@@ -945,23 +1028,41 @@ let Predicates = [FeatureVector] in {
     }
   }
 
-  // Convert from fixed 64-bit.
+  // Convert from fixed.
   let Uses = [FPC], mayRaiseFPException = 1 in {
     def VCDG  : TernaryVRRaFloatGeneric<"vcdg", 0xE7C3>;
     def VCDGB : TernaryVRRa<"vcdgb", 0xE7C3, null_frag, v128db, v128g, 3, 0>;
     def WCDGB : TernaryVRRa<"wcdgb", 0xE7C3, null_frag, v64db, v64g, 3, 8>;
   }
   def : FPConversion<VCDGB, sint_to_fp, v128db, v128g, 0, 0>;
+  let Predicates = [FeatureVectorEnhancements2] in {
+    let Uses = [FPC], mayRaiseFPException = 1 in {
+      let isAsmParserOnly = 1 in
+        def VCFPS  : TernaryVRRaFloatGeneric<"vcfps", 0xE7C3>;
+      def VCEFB : TernaryVRRa<"vcefb", 0xE7C3, null_frag, v128sb, v128g, 2, 0>;
+      def WCEFB : TernaryVRRa<"wcefb", 0xE7C3, null_frag, v32sb, v32f, 2, 8>;
+    }
+    def : FPConversion<VCEFB, sint_to_fp, v128sb, v128f, 0, 0>;
+  }
 
-  // Convert from logical 64-bit.
+  // Convert from logical.
   let Uses = [FPC], mayRaiseFPException = 1 in {
     def VCDLG  : TernaryVRRaFloatGeneric<"vcdlg", 0xE7C1>;
     def VCDLGB : TernaryVRRa<"vcdlgb", 0xE7C1, null_frag, v128db, v128g, 3, 0>;
     def WCDLGB : TernaryVRRa<"wcdlgb", 0xE7C1, null_frag, v64db, v64g, 3, 8>;
   }
   def : FPConversion<VCDLGB, uint_to_fp, v128db, v128g, 0, 0>;
+  let Predicates = [FeatureVectorEnhancements2] in {
+    let Uses = [FPC], mayRaiseFPException = 1 in {
+      let isAsmParserOnly = 1 in
+        def VCFPL  : TernaryVRRaFloatGeneric<"vcfpl", 0xE7C1>;
+      def VCELFB : TernaryVRRa<"vcelfb", 0xE7C1, null_frag, v128sb, v128g, 2, 0>;
+      def WCELFB : TernaryVRRa<"wcelfb", 0xE7C1, null_frag, v32sb, v32f, 2, 8>;
+    }
+    def : FPConversion<VCELFB, uint_to_fp, v128sb, v128f, 0, 0>;
+  }
 
-  // Convert to fixed 64-bit.
+  // Convert to fixed.
   let Uses = [FPC], mayRaiseFPException = 1 in {
     def VCGD  : TernaryVRRaFloatGeneric<"vcgd", 0xE7C2>;
     def VCGDB : TernaryVRRa<"vcgdb", 0xE7C2, null_frag, v128g, v128db, 3, 0>;
@@ -969,8 +1070,18 @@ let Predicates = [FeatureVector] in {
   }
   // Rounding mode should agree with SystemZInstrFP.td.
   def : FPConversion<VCGDB, fp_to_sint, v128g, v128db, 0, 5>;
+  let Predicates = [FeatureVectorEnhancements2] in {
+    let Uses = [FPC], mayRaiseFPException = 1 in {
+      let isAsmParserOnly = 1 in
+        def VCSFP  : TernaryVRRaFloatGeneric<"vcsfp", 0xE7C2>;
+      def VCFEB : TernaryVRRa<"vcfeb", 0xE7C2, null_frag, v128sb, v128g, 2, 0>;
+      def WCFEB : TernaryVRRa<"wcfeb", 0xE7C2, null_frag, v32sb, v32f, 2, 8>;
+    }
+    // Rounding mode should agree with SystemZInstrFP.td.
+    def : FPConversion<VCFEB, fp_to_sint, v128f, v128sb, 0, 5>;
+  }
 
-  // Convert to logical 64-bit.
+  // Convert to logical.
   let Uses = [FPC], mayRaiseFPException = 1 in {
     def VCLGD  : TernaryVRRaFloatGeneric<"vclgd", 0xE7C0>;
     def VCLGDB : TernaryVRRa<"vclgdb", 0xE7C0, null_frag, v128g, v128db, 3, 0>;
@@ -978,6 +1089,16 @@ let Predicates = [FeatureVector] in {
   }
   // Rounding mode should agree with SystemZInstrFP.td.
   def : FPConversion<VCLGDB, fp_to_uint, v128g, v128db, 0, 5>;
+  let Predicates = [FeatureVectorEnhancements2] in {
+    let Uses = [FPC], mayRaiseFPException = 1 in {
+      let isAsmParserOnly = 1 in
+        def VCLFP  : TernaryVRRaFloatGeneric<"vclfp", 0xE7C0>;
+      def VCLFEB : TernaryVRRa<"vclfeb", 0xE7C0, null_frag, v128sb, v128g, 2, 0>;
+      def WCLFEB : TernaryVRRa<"wclfeb", 0xE7C0, null_frag, v32sb, v32f, 2, 8>;
+    }
+    // Rounding mode should agree with SystemZInstrFP.td.
+    def : FPConversion<VCLFEB, fp_to_uint, v128f, v128sb, 0, 5>;
+  }
 
   // Divide.
   let Uses = [FPC], mayRaiseFPException = 1 in {
@@ -1568,6 +1689,24 @@ let Predicates = [FeatureVector] in {
                                         z_vstrcz_cc, v128f, v128f, 2, 2>;
 }
 
+let Predicates = [FeatureVectorEnhancements2] in {
+  defm VSTRS  : TernaryExtraVRRdGeneric<"vstrs", 0xE78B>;
+  defm VSTRSB : TernaryExtraVRRd<"vstrsb", 0xE78B,
+                                 z_vstrs_cc, v128b, v128b, 0>;
+  defm VSTRSH : TernaryExtraVRRd<"vstrsh", 0xE78B,
+                                 z_vstrs_cc, v128b, v128h, 1>;
+  defm VSTRSF : TernaryExtraVRRd<"vstrsf", 0xE78B,
+                                 z_vstrs_cc, v128b, v128f, 2>;
+  let Defs = [CC] in {
+    def VSTRSZB : TernaryVRRd<"vstrszb", 0xE78B,
+                              z_vstrsz_cc, v128b, v128b, 0, 2>;
+    def VSTRSZH : TernaryVRRd<"vstrszh", 0xE78B,
+                              z_vstrsz_cc, v128b, v128h, 1, 2>;
+    def VSTRSZF : TernaryVRRd<"vstrszf", 0xE78B,
+                              z_vstrsz_cc, v128b, v128f, 2, 2>;
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Packed-decimal instructions
 //===----------------------------------------------------------------------===//
@@ -1579,6 +1718,10 @@ let Predicates = [FeatureVectorPackedDecimal] in {
   def VUPKZ : StoreLengthVSI<"vupkz", 0xE63C, null_frag, 0>;
 
   let Defs = [CC] in {
+    let Predicates = [FeatureVectorPackedDecimalEnhancement] in {
+      def VCVBOpt : TernaryVRRi<"vcvb", 0xE650, GR32>;
+      def VCVBGOpt : TernaryVRRi<"vcvbg", 0xE652, GR64>;
+    }
     def VCVB : BinaryVRRi<"vcvb", 0xE650, GR32>;
     def VCVBG : BinaryVRRi<"vcvbg", 0xE652, GR64>;
     def VCVD : TernaryVRIi<"vcvd", 0xE658, GR32>;

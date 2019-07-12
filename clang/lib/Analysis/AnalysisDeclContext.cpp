@@ -538,11 +538,9 @@ void LocationContext::printJson(raw_ostream &Out, const char *NL,
       else
         Out << "anonymous code";
 
-      Out << "\", \"call_line\": ";
+      Out << "\", \"location\": ";
       if (const Stmt *S = cast<StackFrameContext>(LCtx)->getCallSite()) {
-        Out << '\"';
-        printLocation(Out, SM, S->getBeginLoc());
-        Out << '\"';
+        printSourceLocationAsJson(Out, S->getBeginLoc(), SM);
       } else {
         Out << "null";
       }
@@ -555,8 +553,8 @@ void LocationContext::printJson(raw_ostream &Out, const char *NL,
     case Block:
       Out << "Invoking block\" ";
       if (const Decl *D = cast<BlockInvocationContext>(LCtx)->getDecl()) {
-        Out << ", \"decl_line\": ";
-        printLocation(Out, SM, D->getBeginLoc());
+        Out << ", \"location\": ";
+        printSourceLocationAsJson(Out, D->getBeginLoc(), SM);
         Out << ' ';
       }
       break;

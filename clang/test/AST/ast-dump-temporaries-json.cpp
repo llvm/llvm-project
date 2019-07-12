@@ -226,7 +226,7 @@ void MaterializeTemp() {
 // CHECK-NEXT:         "qualType": "double"
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "valueCategory": "rvalue",
-// CHECK-NEXT:        "value": 1
+// CHECK-NEXT:        "value": "1"
 // CHECK-NEXT:       }
 // CHECK-NEXT:      ]
 // CHECK-NEXT:     }

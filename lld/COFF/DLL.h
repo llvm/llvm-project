@@ -49,7 +49,8 @@ public:
   uint64_t getDirSize();
 
 private:
-  Chunk *newThunkChunk(DefinedImportData *s, Chunk *dir);
+  Chunk *newThunkChunk(DefinedImportData *s, Chunk *tailMerge);
+  Chunk *newTailMergeChunk(Chunk *dir);
 
   Defined *helper;
   std::vector<DefinedImportData *> imports;

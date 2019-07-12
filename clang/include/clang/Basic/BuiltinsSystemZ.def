@@ -276,5 +276,20 @@ TARGET_BUILTIN(__builtin_s390_vfnmssb, "V4fV4fV4fV4f", "nc", "vector-enhancement
 TARGET_BUILTIN(__builtin_s390_vfsqsb, "V4fV4f", "nc", "vector-enhancements-1")
 TARGET_BUILTIN(__builtin_s390_vftcisb, "V4SiV4fIii*", "nc", "vector-enhancements-1")
 
+// Vector-enhancements facility 2 intrinsics.
+TARGET_BUILTIN(__builtin_s390_vsld, "V16UcV16UcV16UcIi", "nc", "vector-enhancements-2")
+TARGET_BUILTIN(__builtin_s390_vsrd, "V16UcV16UcV16UcIi", "nc", "vector-enhancements-2")
+TARGET_BUILTIN(__builtin_s390_vstrsb, "V16UcV16UcV16UcV16Uci*", "nc", "vector-enhancements-2")
+TARGET_BUILTIN(__builtin_s390_vstrsh, "V16UcV8UsV8UsV16Uci*", "nc", "vector-enhancements-2")
+TARGET_BUILTIN(__builtin_s390_vstrsf, "V16UcV4UiV4UiV16Uci*", "nc", "vector-enhancements-2")
+TARGET_BUILTIN(__builtin_s390_vstrszb, "V16UcV16UcV16UcV16Uci*", "nc", "vector-enhancements-2")
+TARGET_BUILTIN(__builtin_s390_vstrszh, "V16UcV8UsV8UsV16Uci*", "nc", "vector-enhancements-2")
+TARGET_BUILTIN(__builtin_s390_vstrszf, "V16UcV4UiV4UiV16Uci*", "nc", "vector-enhancements-2")
+
+// Helpers to implement vec_revb.
+TARGET_BUILTIN(__builtin_s390_vlbrh, "V8UsV8Us", "nc", "vector")
+TARGET_BUILTIN(__builtin_s390_vlbrf, "V4UiV4Ui", "nc", "vector")
+TARGET_BUILTIN(__builtin_s390_vlbrg, "V2ULLiV2ULLi", "nc", "vector")
+
 #undef BUILTIN
 #undef TARGET_BUILTIN

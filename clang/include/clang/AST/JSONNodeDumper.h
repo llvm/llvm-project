@@ -125,7 +125,7 @@ class JSONNodeDumper
   PrintingPolicy PrintPolicy;
   const comments::CommandTraits *Traits;
   StringRef LastLocFilename;
-  unsigned LastLocLine;
+  unsigned LastLocLine, LastLocPresumedLine;
 
   using InnerAttrVisitor = ConstAttrVisitor<JSONNodeDumper>;
   using InnerCommentVisitor =
@@ -142,7 +142,7 @@ class JSONNodeDumper
   }
 
   // Writes the attributes of a SourceLocation object without.
-  void writeBareSourceLocation(SourceLocation Loc);
+  void writeBareSourceLocation(SourceLocation Loc, bool IsSpelling);
 
   // Writes the attributes of a SourceLocation to JSON based on its presumed
   // spelling location. If the given location represents a macro invocation,
@@ -181,7 +181,7 @@ public:
                  const PrintingPolicy &PrintPolicy,
                  const comments::CommandTraits *Traits)
       : NodeStreamer(OS), SM(SrcMgr), Ctx(Ctx), PrintPolicy(PrintPolicy),
-        Traits(Traits), LastLocLine(0) {}
+        Traits(Traits), LastLocLine(0), LastLocPresumedLine(0) {}
 
   void Visit(const Attr *A);
   void Visit(const Stmt *Node);

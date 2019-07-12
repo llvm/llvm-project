@@ -162,7 +162,9 @@ public:
   }
 
   void releaseToOS() {
-    for (uptr I = 1; I < NumClasses; I++) {
+    for (uptr I = 0; I < NumClasses; I++) {
+      if (I == SizeClassMap::BatchClassId)
+        continue;
       SizeClassInfo *Sci = getSizeClassInfo(I);
       ScopedLock L(Sci->Mutex);
       releaseToOSMaybe(Sci, I, /*Force=*/true);
@@ -291,7 +293,7 @@ private:
       return nullptr;
     C->getStats().add(StatMapped, RegionSize);
     const uptr Size = getSizeByClassId(ClassId);
-    const u32 MaxCount = TransferBatch::MaxCached(Size);
+    const u32 MaxCount = TransferBatch::getMaxCached(Size);
     DCHECK_GT(MaxCount, 0);
     const uptr NumberOfBlocks = RegionSize / Size;
     DCHECK_GT(NumberOfBlocks, 0);

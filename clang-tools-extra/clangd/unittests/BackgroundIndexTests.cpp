@@ -678,5 +678,40 @@ TEST(BackgroundQueueTest, Priority) {
   EXPECT_EQ(LoRan, 0u);
 }
 
+TEST(BackgroundQueueTest, Boost) {
+  std::string Sequence;
+
+  BackgroundQueue::Task A([&] { Sequence.push_back('A'); });
+  A.Tag = "A";
+  A.QueuePri = 1;
+
+  BackgroundQueue::Task B([&] { Sequence.push_back('B'); });
+  B.QueuePri = 2;
+  B.Tag = "B";
+
+  {
+    BackgroundQueue Q;
+    Q.append({A, B});
+    Q.work([&] { Q.stop(); });
+    EXPECT_EQ("BA", Sequence) << "priority order";
+  }
+  Sequence.clear();
+  {
+    BackgroundQueue Q;
+    Q.boost("A", 3);
+    Q.append({A, B});
+    Q.work([&] { Q.stop(); });
+    EXPECT_EQ("AB", Sequence) << "A was boosted before enqueueing";
+  }
+  Sequence.clear();
+  {
+    BackgroundQueue Q;
+    Q.append({A, B});
+    Q.boost("A", 3);
+    Q.work([&] { Q.stop(); });
+    EXPECT_EQ("AB", Sequence) << "A was boosted after enqueueing";
+  }
+}
+
 } // namespace clangd
 } // namespace clang

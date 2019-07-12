@@ -182,7 +182,7 @@ TEST(TBDv2, WriteFile) {
       "current-version: 1.2.3\n"
       "compatibility-version: 0\n"
       "swift-version:   5\n"
-      "exports:         \n"
+      "exports:\n"
       "  - archs:           [ i386 ]\n"
       "    symbols:         [ _sym1 ]\n"
       "    weak-def-symbols: [ _sym2 ]\n"

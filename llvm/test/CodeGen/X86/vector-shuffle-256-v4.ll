@@ -752,6 +752,18 @@ define <4 x double> @shuffle_v4f64_1032_v2f64(<2 x double> %a, <2 x double> %b) 
   ret <4 x double> %3
 }
 
+;PR34359
+define <4 x double> @shuffle_v4f64_2345_0567_select(<4 x double> %vec1, <4 x double> %vec2, <4 x double> %vec3) {
+; ALL-LABEL: shuffle_v4f64_2345_0567_select:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vperm2f128 {{.*#+}} ymm0 = ymm0[2,3],ymm1[0,1]
+; ALL-NEXT:    vblendps {{.*#+}} ymm0 = ymm2[0,1],ymm0[2,3,4,5,6,7]
+; ALL-NEXT:    retq
+  %shuf = shufflevector <4 x double> %vec1, <4 x double> %vec2, <4 x i32> <i32 2, i32 3, i32 4, i32 5>
+  %res = select <4 x i1> <i1 0, i1 1, i1 1, i1 1>, <4 x double> %shuf, <4 x double> %vec3
+  ret <4 x double> %res
+}
+
 define <4 x i64> @shuffle_v4i64_0000(<4 x i64> %a, <4 x i64> %b) {
 ; AVX1-LABEL: shuffle_v4i64_0000:
 ; AVX1:       # %bb.0:

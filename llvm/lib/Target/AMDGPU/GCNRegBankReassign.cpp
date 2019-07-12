@@ -365,6 +365,9 @@ unsigned GCNRegBankReassign::analyzeInst(const MachineInstr& MI,
       continue;
 
     unsigned R = Op.getReg();
+    if (TRI->hasAGPRs(TRI->getRegClassForReg(*MRI, R)))
+      continue;
+
     unsigned ShiftedBank = Bank;
 
     if (Bank != -1 && R == Reg && Op.getSubReg()) {

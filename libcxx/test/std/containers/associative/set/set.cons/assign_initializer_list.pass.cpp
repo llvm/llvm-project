@@ -16,13 +16,14 @@
 
 #include <set>
 #include <cassert>
+#include <iostream>
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 
-int main(int, char**)
-{
-    {
+void basic_test() {
+  {
     typedef std::set<int> C;
     typedef C::value_type V;
     C m = {10, 8};
@@ -36,9 +37,9 @@ int main(int, char**)
     assert(*++i == V(4));
     assert(*++i == V(5));
     assert(*++i == V(6));
-    }
-    {
-    typedef std::set<int, std::less<int>, min_allocator<int>> C;
+  }
+  {
+    typedef std::set<int, std::less<int>, min_allocator<int> > C;
     typedef C::value_type V;
     C m = {10, 8};
     m = {1, 2, 3, 4, 5, 6};
@@ -51,7 +52,27 @@ int main(int, char**)
     assert(*++i == V(4));
     assert(*++i == V(5));
     assert(*++i == V(6));
-    }
+  }
+}
+
+void duplicate_keys_test() {
+  typedef std::set<int, std::less<int>, test_allocator<int> > Set;
+  typedef test_alloc_base AllocBase;
+  {
+    LIBCPP_ASSERT(AllocBase::alloc_count == 0);
+    Set s = {1, 2, 3};
+    LIBCPP_ASSERT(AllocBase::alloc_count == 3);
+    s = {4, 4, 4, 4, 4};
+    LIBCPP_ASSERT(AllocBase::alloc_count == 1);
+    assert(s.size() == 1);
+    assert(*s.begin() == 4);
+  }
+  LIBCPP_ASSERT(AllocBase::alloc_count == 0);
+}
+
+int main(int, char**) {
+  basic_test();
+  duplicate_keys_test();
 
   return 0;
 }

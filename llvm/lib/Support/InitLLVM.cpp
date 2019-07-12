@@ -23,6 +23,7 @@ using namespace llvm::sys;
 
 InitLLVM::InitLLVM(int &Argc, const char **&Argv) : StackPrinter(Argc, Argv) {
   sys::PrintStackTraceOnErrorSignal(Argv[0]);
+  install_out_of_memory_new_handler();
 
 #ifdef _WIN32
   // We use UTF-8 as the internal character encoding. On Windows,

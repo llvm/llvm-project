@@ -1,4 +1,4 @@
-// RUN: grep -Ev "// *[A-Z-]+:" %s | clang-format -lines=2:2 \
+// RUN: grep -Ev "// *[A-Z-]+:" %s | clang-format -style=LLVM -lines=2:2 \
 // RUN:   | FileCheck -strict-whitespace %s
 
 void  f() {

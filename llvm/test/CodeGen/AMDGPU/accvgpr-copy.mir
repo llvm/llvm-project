@@ -1,0 +1,132 @@
+# RUN: llc -march=amdgcn -mcpu=gfx908 -run-pass postrapseudos -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN %s
+
+# GCN-LABEL: name: a_to_v
+# GCN: $vgpr0 = V_ACCVGPR_READ_B32 killed $agpr0, implicit $exec
+---
+name:            a_to_v
+body:             |
+  bb.0:
+    $vgpr0 = COPY killed $agpr0, implicit $exec
+...
+
+# GCN-LABEL: name: a4_to_v4
+# GCN: $vgpr0 = V_ACCVGPR_READ_B32 $agpr0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3, implicit $agpr0_agpr1_agpr2_agpr3
+# GCN: $vgpr1 = V_ACCVGPR_READ_B32 $agpr1, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+# GCN: $vgpr2 = V_ACCVGPR_READ_B32 $agpr2, implicit $exec, implicit $agpr0_agpr1_agpr2_agpr3
+# GCN: $vgpr3 = V_ACCVGPR_READ_B32 $agpr3, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3
+---
+name:            a4_to_v4
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3 = COPY killed $agpr0_agpr1_agpr2_agpr3, implicit $exec
+...
+
+# GCN-LABEL: name: a16_to_v16
+# GCN: $vgpr0 = V_ACCVGPR_READ_B32 $agpr0, implicit $exec, implicit-def $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+# GCN: $vgpr15 = V_ACCVGPR_READ_B32 $agpr15, implicit $exec, implicit killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
+---
+name:            a16_to_v16
+body:             |
+  bb.0:
+    $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15 = COPY killed $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $exec
+...
+
+# GCN-LABEL: name: v_to_a
+# GCN: $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr0, implicit $exec
+---
+name:            v_to_a
+body:             |
+  bb.0:
+    $agpr0 = COPY killed $vgpr0, implicit $exec
+...
+
+# GCN-LABEL: name: v4_to_a4
+# GCN: $agpr0 = V_ACCVGPR_WRITE_B32 $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3, implicit $vgpr0_vgpr1_vgpr2_vgpr3
+# GCN: $agpr1 = V_ACCVGPR_WRITE_B32 $vgpr1, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
+# GCN: $agpr2 = V_ACCVGPR_WRITE_B32 $vgpr2, implicit $exec, implicit $vgpr0_vgpr1_vgpr2_vgpr3
+# GCN: $agpr3 = V_ACCVGPR_WRITE_B32 $vgpr3, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3, implicit $exec
+---
+name:            v4_to_a4
+body:             |
+  bb.0:
+    $agpr0_agpr1_agpr2_agpr3 = COPY killed $vgpr0_vgpr1_vgpr2_vgpr3, implicit $exec
+...
+
+# GCN-LABEL: name: v16_to_a16
+# GCN: $agpr0 = V_ACCVGPR_WRITE_B32 $vgpr0, implicit $exec, implicit-def $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, implicit $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+# GCN: $agpr15 = V_ACCVGPR_WRITE_B32 $vgpr15, implicit $exec, implicit killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+---
+name:            v16_to_a16
+body:             |
+  bb.0:
+    $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = COPY killed $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, implicit $exec
+...
+
+# GCN-LABEL: name: s_to_a
+# GCN: $vgpr[[TMP:[0-9]+]] = V_MOV_B32_e32 killed $sgpr0, implicit $exec
+# GCN: $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr[[TMP]], implicit $exec
+---
+name:            s_to_a
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0
+    $agpr0 = COPY killed $sgpr0, implicit $exec
+...
+
+# GCN-LABEL: name: s2_to_a2
+# GCN: $vgpr[[TMP1:[0-9]+]] = V_MOV_B32_e32 killed $sgpr0, implicit $exec
+# GCN: $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr[[TMP1]], implicit $exec
+# GCN: $vgpr[[TMP2:[0-9]+]] = V_MOV_B32_e32 killed $sgpr1, implicit $exec
+# GCN: $agpr1 = V_ACCVGPR_WRITE_B32 killed $vgpr[[TMP2]], implicit $exec
+---
+name:            s2_to_a2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $sgpr0_sgpr1
+    $agpr0_agpr1 = COPY killed $sgpr0_sgpr1, implicit $exec
+...
+
+# GCN-LABEL: name: a_to_a
+# GCN: $vgpr[[TMP:[0-9]+]] = V_ACCVGPR_READ_B32 killed $agpr1, implicit $exec
+# GCN: $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr[[TMP]], implicit $exec
+---
+name:            a_to_a
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $agpr1 = IMPLICIT_DEF
+    $agpr0 = COPY killed $agpr1, implicit $exec
+...
+
+# GCN-LABEL: name: a2_to_a2
+# GCN: $vgpr[[TMP1:[0-9]+]] = V_ACCVGPR_READ_B32 killed $agpr1, implicit $exec
+# GCN: $agpr2 = V_ACCVGPR_WRITE_B32 killed $vgpr[[TMP1]], implicit $exec
+# GCN: $vgpr[[TMP2:[0-9]+]] = V_ACCVGPR_READ_B32 killed $agpr0, implicit $exec
+# GCN: $agpr1 = V_ACCVGPR_WRITE_B32 killed $vgpr[[TMP2]], implicit $exec
+---
+name:            a2_to_a2
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    $agpr0_agpr1 = IMPLICIT_DEF
+    $agpr1_agpr2 = COPY killed $agpr0_agpr1, implicit $exec
+...
+
+# GCN-LABEL: name: a_to_a_spill
+# Using last vgpr255 will raise error about absence of emergency spill slot.
+
+# GCN: $vgpr255 = V_ACCVGPR_READ_B32 killed $agpr1, implicit $exec
+# GCN: $agpr0 = V_ACCVGPR_WRITE_B32 killed $vgpr255, implicit $exec
+
+---
+name:            a_to_a_spill
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15, $vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31, $vgpr32_vgpr33_vgpr34_vgpr35_vgpr36_vgpr37_vgpr38_vgpr39_vgpr40_vgpr41_vgpr42_vgpr43_vgpr44_vgpr45_vgpr46_vgpr47, $vgpr48_vgpr49_vgpr50_vgpr51_vgpr52_vgpr53_vgpr54_vgpr55_vgpr56_vgpr57_vgpr58_vgpr59_vgpr60_vgpr61_vgpr62_vgpr63, $vgpr64_vgpr65_vgpr66_vgpr67_vgpr68_vgpr69_vgpr70_vgpr71_vgpr72_vgpr73_vgpr74_vgpr75_vgpr76_vgpr77_vgpr78_vgpr79, $vgpr80_vgpr81_vgpr82_vgpr83_vgpr84_vgpr85_vgpr86_vgpr87_vgpr88_vgpr89_vgpr90_vgpr91_vgpr92_vgpr93_vgpr94_vgpr95, $vgpr96_vgpr97_vgpr98_vgpr99_vgpr100_vgpr101_vgpr102_vgpr103_vgpr104_vgpr105_vgpr106_vgpr107_vgpr108_vgpr109_vgpr110_vgpr111, $vgpr112_vgpr113_vgpr114_vgpr115_vgpr116_vgpr117_vgpr118_vgpr119_vgpr120_vgpr121_vgpr122_vgpr123_vgpr124_vgpr125_vgpr126_vgpr127, $vgpr128_vgpr129_vgpr130_vgpr131_vgpr132_vgpr133_vgpr134_vgpr135_vgpr136_vgpr137_vgpr138_vgpr139_vgpr140_vgpr141_vgpr142_vgpr143, $vgpr144_vgpr145_vgpr146_vgpr147_vgpr148_vgpr149_vgpr150_vgpr151_vgpr152_vgpr153_vgpr154_vgpr155_vgpr156_vgpr157_vgpr158_vgpr159, $vgpr160_vgpr161_vgpr162_vgpr163_vgpr164_vgpr165_vgpr166_vgpr167_vgpr168_vgpr169_vgpr170_vgpr171_vgpr172_vgpr173_vgpr174_vgpr175, $vgpr176_vgpr177_vgpr178_vgpr179_vgpr180_vgpr181_vgpr182_vgpr183_vgpr184_vgpr185_vgpr186_vgpr187_vgpr188_vgpr189_vgpr190_vgpr191, $vgpr192_vgpr193_vgpr194_vgpr195_vgpr196_vgpr197_vgpr198_vgpr199_vgpr200_vgpr201_vgpr202_vgpr203_vgpr204_vgpr205_vgpr206_vgpr207, $vgpr208_vgpr209_vgpr210_vgpr211_vgpr212_vgpr213_vgpr214_vgpr215_vgpr216_vgpr217_vgpr218_vgpr219_vgpr220_vgpr221_vgpr222_vgpr223, $vgpr224_vgpr225_vgpr226_vgpr227_vgpr228_vgpr229_vgpr230_vgpr231_vgpr232_vgpr233_vgpr234_vgpr235_vgpr236_vgpr237_vgpr238_vgpr239, $vgpr240_vgpr241_vgpr242_vgpr243_vgpr244_vgpr245_vgpr246_vgpr247, $vgpr248_vgpr249_vgpr250_vgpr251, $vgpr252_vgpr253, $vgpr254
+
+    $agpr1 = IMPLICIT_DEF
+    $agpr0 = COPY killed $agpr1, implicit $exec
+...

@@ -501,6 +501,8 @@ static codegenoptions::DebugInfoKind DebugLevelToInfoKind(const Arg &A) {
   return codegenoptions::LimitedDebugInfo;
 }
 
+enum class FramePointerKind { None, NonLeaf, All };
+
 static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
   switch (Triple.getArch()){
   default:
@@ -515,6 +517,9 @@ static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
 
 static bool useFramePointerForTargetByDefault(const ArgList &Args,
                                               const llvm::Triple &Triple) {
+  if (Args.hasArg(options::OPT_pg))
+    return true;
+
   switch (Triple.getArch()) {
   case llvm::Triple::xcore:
   case llvm::Triple::wasm32:
@@ -523,6 +528,9 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
     // XCore never wants frame pointers, regardless of OS.
     // WebAssembly never wants frame pointers.
     return false;
+  case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
+  case llvm::Triple::ppc64le:
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
     return !areOptimizationsEnabled(Args);
@@ -542,9 +550,6 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
     case llvm::Triple::mips64el:
     case llvm::Triple::mips:
     case llvm::Triple::mipsel:
-    case llvm::Triple::ppc:
-    case llvm::Triple::ppc64:
-    case llvm::Triple::ppc64le:
     case llvm::Triple::systemz:
     case llvm::Triple::x86:
     case llvm::Triple::x86_64:
@@ -574,32 +579,22 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
   return true;
 }
 
-static bool shouldUseFramePointer(const ArgList &Args,
-                                  const llvm::Triple &Triple) {
-  if (Arg *A = Args.getLastArg(options::OPT_fno_omit_frame_pointer,
-                               options::OPT_fomit_frame_pointer))
-    return A->getOption().matches(options::OPT_fno_omit_frame_pointer) ||
-           mustUseNonLeafFramePointerForTarget(Triple);
-
-  if (Args.hasArg(options::OPT_pg))
-    return true;
-
-  return useFramePointerForTargetByDefault(Args, Triple);
-}
-
-static bool shouldUseLeafFramePointer(const ArgList &Args,
-                                      const llvm::Triple &Triple) {
-  if (Arg *A = Args.getLastArg(options::OPT_mno_omit_leaf_frame_pointer,
-                               options::OPT_momit_leaf_frame_pointer))
-    return A->getOption().matches(options::OPT_mno_omit_leaf_frame_pointer);
-
-  if (Args.hasArg(options::OPT_pg))
-    return true;
-
-  if (Triple.isPS4CPU())
-    return false;
-
-  return useFramePointerForTargetByDefault(Args, Triple);
+static FramePointerKind getFramePointerKind(const ArgList &Args,
+                                            const llvm::Triple &Triple) {
+  Arg *A = Args.getLastArg(options::OPT_fomit_frame_pointer,
+                           options::OPT_fno_omit_frame_pointer);
+  bool OmitFP = A && A->getOption().matches(options::OPT_fomit_frame_pointer);
+  bool NoOmitFP =
+      A && A->getOption().matches(options::OPT_fno_omit_frame_pointer);
+  if (NoOmitFP || mustUseNonLeafFramePointerForTarget(Triple) ||
+      (!OmitFP && useFramePointerForTargetByDefault(Args, Triple))) {
+    if (Args.hasFlag(options::OPT_momit_leaf_frame_pointer,
+                     options::OPT_mno_omit_leaf_frame_pointer,
+                     Triple.isPS4CPU()))
+      return FramePointerKind::NonLeaf;
+    return FramePointerKind::All;
+  }
+  return FramePointerKind::None;
 }
 
 /// Add a CC1 option to specify the debug compilation directory.
@@ -3453,19 +3448,14 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   const llvm::Triple *AuxTriple = IsCuda ? TC.getAuxTriple() : nullptr;
-  bool IsWindowsGNU = RawTriple.isWindowsGNUEnvironment();
-  bool IsWindowsCygnus = RawTriple.isWindowsCygwinEnvironment();
   bool IsWindowsMSVC = RawTriple.isWindowsMSVCEnvironment();
   bool IsIAMCU = RawTriple.isOSIAMCU();
 
   // Adjust IsWindowsXYZ for CUDA/HIP compilations.  Even when compiling in
   // device mode (i.e., getToolchain().getTriple() is NVPTX/AMDGCN, not
   // Windows), we need to pass Windows-specific flags to cc1.
-  if (IsCuda || IsHIP) {
+  if (IsCuda || IsHIP)
     IsWindowsMSVC |= AuxTriple && AuxTriple->isWindowsMSVCEnvironment();
-    IsWindowsGNU |= AuxTriple && AuxTriple->isWindowsGNUEnvironment();
-    IsWindowsCygnus |= AuxTriple && AuxTriple->isWindowsCygwinEnvironment();
-  }
 
   // C++ is not supported for IAMCU.
   if (IsIAMCU && types::isCXX(Input.getType()))
@@ -3960,8 +3950,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_mrtd, options::OPT_mno_rtd, false))
     CmdArgs.push_back("-fdefault-calling-conv=stdcall");
 
-  if (shouldUseFramePointer(Args, RawTriple))
+  FramePointerKind FPKeepKind = getFramePointerKind(Args, RawTriple);
+  if (FPKeepKind != FramePointerKind::None) {
     CmdArgs.push_back("-mdisable-fp-elim");
+    if (FPKeepKind == FramePointerKind::NonLeaf)
+      CmdArgs.push_back("-momit-leaf-frame-pointer");
+  }
   if (!Args.hasFlag(options::OPT_fzero_initialized_in_bss,
                     options::OPT_fno_zero_initialized_in_bss))
     CmdArgs.push_back("-mno-zero-initialized-in-bss");
@@ -4013,15 +4007,15 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   RenderFloatingPointOptions(TC, D, OFastEnabled, Args, CmdArgs);
 
-  if (Arg *A = Args.getLastArg(options::OPT_mlong_double_64)) {
+  if (Arg *A = Args.getLastArg(options::OPT_mlong_double_64,
+                               options::OPT_mlong_double_128)) {
     if (TC.getArch() == llvm::Triple::x86 ||
         TC.getArch() == llvm::Triple::x86_64 ||
-        TC.getArch() == llvm::Triple::ppc || TC.getTriple().isPPC64()) {
-      CmdArgs.push_back("-mlong-double-64");
-    } else {
+        TC.getArch() == llvm::Triple::ppc || TC.getTriple().isPPC64())
+      A->render(Args, CmdArgs);
+    else
       D.Diag(diag::err_drv_unsupported_opt_for_target)
           << A->getAsString(Args) << TripleStr;
-    }
   }
 
   // Decide whether to use verbose asm. Verbose assembly is the default on
@@ -4145,9 +4139,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-target-linker-version");
     CmdArgs.push_back(A->getValue());
   }
-
-  if (!shouldUseLeafFramePointer(Args, RawTriple))
-    CmdArgs.push_back("-momit-leaf-frame-pointer");
 
   // Explicitly error on some things we know we don't support and can't just
   // ignore.
@@ -5506,7 +5497,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_pg))
-    if (!shouldUseFramePointer(Args, Triple))
+    if (FPKeepKind == FramePointerKind::None)
       D.Diag(diag::err_drv_argument_not_allowed_with) << "-fomit-frame-pointer"
                                                       << A->getAsString(Args);
 

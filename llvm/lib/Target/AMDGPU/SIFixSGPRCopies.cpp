@@ -143,14 +143,15 @@ FunctionPass *llvm::createSIFixSGPRCopiesPass() {
   return new SIFixSGPRCopies();
 }
 
-static bool hasVGPROperands(const MachineInstr &MI, const SIRegisterInfo *TRI) {
+static bool hasVectorOperands(const MachineInstr &MI,
+                              const SIRegisterInfo *TRI) {
   const MachineRegisterInfo &MRI = MI.getParent()->getParent()->getRegInfo();
   for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
     if (!MI.getOperand(i).isReg() ||
         !TargetRegisterInfo::isVirtualRegister(MI.getOperand(i).getReg()))
       continue;
 
-    if (TRI->hasVGPRs(MRI.getRegClass(MI.getOperand(i).getReg())))
+    if (TRI->hasVectorRegisters(MRI.getRegClass(MI.getOperand(i).getReg())))
       return true;
   }
   return false;
@@ -183,14 +184,14 @@ static bool isVGPRToSGPRCopy(const TargetRegisterClass *SrcRC,
                              const TargetRegisterClass *DstRC,
                              const SIRegisterInfo &TRI) {
   return SrcRC != &AMDGPU::VReg_1RegClass && TRI.isSGPRClass(DstRC) &&
-         TRI.hasVGPRs(SrcRC);
+         TRI.hasVectorRegisters(SrcRC);
 }
 
 static bool isSGPRToVGPRCopy(const TargetRegisterClass *SrcRC,
                              const TargetRegisterClass *DstRC,
                              const SIRegisterInfo &TRI) {
   return DstRC != &AMDGPU::VReg_1RegClass && TRI.isSGPRClass(SrcRC) &&
-         TRI.hasVGPRs(DstRC);
+         TRI.hasVectorRegisters(DstRC);
 }
 
 static bool tryChangeVGPRtoSGPRinCopy(MachineInstr &MI,
@@ -277,6 +278,7 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
   // VGPRz = REG_SEQUENCE VGPRx, sub0
 
   MI.getOperand(0).setReg(CopyUse.getOperand(0).getReg());
+  bool IsAGPR = TRI->hasAGPRs(DstRC);
 
   for (unsigned I = 1, N = MI.getNumOperands(); I != N; I += 2) {
     unsigned SrcReg = MI.getOperand(I).getReg();
@@ -294,6 +296,17 @@ static bool foldVGPRCopyIntoRegSequence(MachineInstr &MI,
     BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY),
             TmpReg)
         .add(MI.getOperand(I));
+
+    if (IsAGPR) {
+      const TargetRegisterClass *NewSrcRC = TRI->getEquivalentAGPRClass(SrcRC);
+      unsigned TmpAReg = MRI.createVirtualRegister(NewSrcRC);
+      unsigned Opc = NewSrcRC == &AMDGPU::AGPR_32RegClass ?
+        AMDGPU::V_ACCVGPR_WRITE_B32 : AMDGPU::COPY;
+      BuildMI(*MI.getParent(), &MI, MI.getDebugLoc(), TII->get(Opc),
+            TmpAReg)
+        .addReg(TmpReg, RegState::Kill);
+      TmpReg = TmpAReg;
+    }
 
     MI.getOperand(I).setReg(TmpReg);
   }
@@ -682,8 +695,8 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         break;
       }
       case AMDGPU::REG_SEQUENCE:
-        if (TRI->hasVGPRs(TII->getOpRegClass(MI, 0)) ||
-            !hasVGPROperands(MI, TRI)) {
+        if (TRI->hasVectorRegisters(TII->getOpRegClass(MI, 0)) ||
+            !hasVectorOperands(MI, TRI)) {
           foldVGPRCopyIntoRegSequence(MI, TRI, TII, MRI);
           continue;
         }
@@ -698,7 +711,8 @@ bool SIFixSGPRCopies::runOnMachineFunction(MachineFunction &MF) {
         Src0RC = MRI.getRegClass(MI.getOperand(1).getReg());
         Src1RC = MRI.getRegClass(MI.getOperand(2).getReg());
         if (TRI->isSGPRClass(DstRC) &&
-            (TRI->hasVGPRs(Src0RC) || TRI->hasVGPRs(Src1RC))) {
+            (TRI->hasVectorRegisters(Src0RC) ||
+             TRI->hasVectorRegisters(Src1RC))) {
           LLVM_DEBUG(dbgs() << " Fixing INSERT_SUBREG: " << MI);
           TII->moveToVALU(MI, MDT);
         }
