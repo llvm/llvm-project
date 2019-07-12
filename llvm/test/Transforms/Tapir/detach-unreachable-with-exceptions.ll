@@ -165,9 +165,6 @@ lpad5.loopexit.us-lcssa.us:                       ; preds = %pfor.detach.us
           cleanup
   br label %lpad5.loopexit
 
-; TS: lpad5.loopexit.us-lcssa.us.body:
-; TS: br label %lpad5
-
 if.then.i.us-lcssa.us:                            ; preds = %pfor.body.us
   br label %if.then.i
 
@@ -350,7 +347,7 @@ sync.continue9:                                   ; preds = %lpad5
 }
 
 ; TS: lpad.sd:
-; TS: br label %lpad5.loopexit.us-lcssa.us.body
+; TS: br label %lpad5.body
 
 ; Function Attrs: uwtable
 declare void @_ZN16kNearestNeighborI6vertexI8_point2dIdELi1EELi1EE3kNN10nearestNghEP9gTreeNodeIS2_7_vect2dIdES3_5nDataIS3_EE(%"struct.kNearestNeighbor<vertex<_point2d<double>, 1>, 1>::kNN"* %this, %class.gTreeNode* %T) local_unnamed_addr #5

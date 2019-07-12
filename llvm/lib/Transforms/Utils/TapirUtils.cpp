@@ -227,8 +227,8 @@ class LandingPadInliningInfo {
   /// Destination for the callee's resume.
   BasicBlock *InnerResumeDest = nullptr;
 
-  /// LandingPadInst associated with the invoke.
-  LandingPadInst *SpawnerLPad = nullptr;
+  /// LandingPadInst associated with the detach.
+  Value *SpawnerLPad = nullptr;
 
   /// PHI for EH values from landingpad insts.
   PHINode *InnerEHValuesPHI = nullptr;
@@ -238,20 +238,29 @@ class LandingPadInliningInfo {
   /// Dominator tree to update.
   DominatorTree *DT = nullptr;
 public:
-  LandingPadInliningInfo(DetachInst *DI, DominatorTree *DT = nullptr)
-      : OuterResumeDest(DI->getUnwindDest()), DT(DT) {
+  LandingPadInliningInfo(DetachInst *DI, BasicBlock *EHContinue,
+                         Value *LPadValInEHContinue,
+                         DominatorTree *DT = nullptr)
+      : OuterResumeDest(EHContinue), SpawnerLPad(LPadValInEHContinue), DT(DT) {
+    // Find the predecessor block of OuterResumeDest.
+    BasicBlock *DetachBB = DI->getParent();
+    BasicBlock *DetachUnwind = DI->getUnwindDest();
+    while (DetachUnwind != OuterResumeDest) {
+      DetachBB = DetachUnwind;
+      DetachUnwind = DetachUnwind->getUniqueSuccessor();
+    }
+
     // If there are PHI nodes in the unwind destination block, we need to keep
     // track of which values came into them from the detach before removing the
     // edge from this block.
-    BasicBlock *DetachBB = DI->getParent();
     BasicBlock::iterator I = OuterResumeDest->begin();
     for (; isa<PHINode>(I); ++I) {
+      if (&*I == LPadValInEHContinue)
+        continue;
       // Save the value to use for this edge.
       PHINode *PHI = cast<PHINode>(I);
       UnwindDestPHIValues.push_back(PHI->getIncomingValueForBlock(DetachBB));
     }
-
-    SpawnerLPad = cast<LandingPadInst>(I);
   }
 
   /// The outer unwind destination is the target of unwind edges introduced for
@@ -261,8 +270,6 @@ public:
   }
 
   BasicBlock *getInnerResumeDest();
-
-  LandingPadInst *getLandingPadInst() const { return SpawnerLPad; }
 
   /// Forward the 'detached_rethrow' instruction to the spawner's landing pad
   /// block.  When the landing pad block has only one predecessor, this is a
@@ -290,13 +297,25 @@ public:
 BasicBlock *LandingPadInliningInfo::getInnerResumeDest() {
   if (InnerResumeDest) return InnerResumeDest;
 
-  // Split the landing pad.
-  BasicBlock::iterator SplitPoint = ++SpawnerLPad->getIterator();
+  // Split the outer resume destionation.
+  BasicBlock::iterator SplitPoint;
+  if (isa<LandingPadInst>(SpawnerLPad))
+    SplitPoint = ++cast<Instruction>(SpawnerLPad)->getIterator();
+  else
+    SplitPoint = OuterResumeDest->getFirstNonPHI()->getIterator();
   InnerResumeDest =
     OuterResumeDest->splitBasicBlock(SplitPoint,
                                      OuterResumeDest->getName() + ".body");
   if (DT)
-    DT->addNewBlock(InnerResumeDest, OuterResumeDest);
+    // OuterResumeDest dominates InnerResumeDest, which dominates all other
+    // nodes dominated by OuterResumeDest.
+    if (DomTreeNode *OldNode = DT->getNode(OuterResumeDest)) {
+      std::vector<DomTreeNode *> Children(OldNode->begin(), OldNode->end());
+
+      DomTreeNode *NewNode = DT->addNewBlock(InnerResumeDest, OuterResumeDest);
+      for (DomTreeNode *I : Children)
+        DT->changeImmediateDominator(I, NewNode);
+    }
 
   // The number of incoming edges we expect to the inner landing pad.
   const unsigned PHICapacity = 2;
@@ -374,10 +393,11 @@ void LandingPadInliningInfo::forwardDetachedRethrow(InvokeInst *DR) {
 }
 
 static void handleDetachedLandingPads(
-    DetachInst *DI, SmallPtrSetImpl<LandingPadInst *> &InlinedLPads,
+    DetachInst *DI, BasicBlock *EHContinue, Value *LPadValInEHContinue,
+    SmallPtrSetImpl<LandingPadInst *> &InlinedLPads,
     SmallVectorImpl<Instruction *> &DetachedRethrows,
     DominatorTree *DT = nullptr) {
-  LandingPadInliningInfo DetUnwind(DI, DT);
+  LandingPadInliningInfo DetUnwind(DI, EHContinue, LPadValInEHContinue, DT);
 
   // Append the clauses from the outer landing pad instruction into the inlined
   // landing pad instructions.
@@ -507,6 +527,7 @@ static void cloneEHBlocks(Function *F, Value *SyncRegion,
 }
 
 void llvm::SerializeDetach(DetachInst *DI, BasicBlock *ParentEntry,
+                           BasicBlock *EHContinue, Value *LPadValInEHContinue,
                            SmallVectorImpl<Instruction *> &Reattaches,
                            SmallVectorImpl<BasicBlock *> *EHBlocksToClone,
                            SmallPtrSetImpl<BasicBlock *> *EHBlockPreds,
@@ -561,7 +582,8 @@ void llvm::SerializeDetach(DetachInst *DI, BasicBlock *ParentEntry,
   if (DI->hasUnwindDest()) {
     assert(InlinedLPads && "Missing set of landing pads in task.");
     assert(DetachedRethrows && "Missing set of detached rethrows in task.");
-    handleDetachedLandingPads(DI, *InlinedLPads, *DetachedRethrows, DT);
+    handleDetachedLandingPads(DI, EHContinue, LPadValInEHContinue,
+                              *InlinedLPads, *DetachedRethrows, DT);
   }
 
   // Replace reattaches with unconditional branches to the continuation.
@@ -656,8 +678,14 @@ void llvm::SerializeDetach(DetachInst *DI, Task *T, DominatorTree *DT) {
 
   AnalyzeTaskForSerialization(T, Reattaches, EHBlocksToClone, EHBlockPreds,
                               InlinedLPads, DetachedRethrows);
-  SerializeDetach(DI, T->getParentTask()->getEntry(), Reattaches,
-                  &EHBlocksToClone, &EHBlockPreds, &InlinedLPads,
+  BasicBlock *EHContinue = nullptr;
+  Value *LPadVal = nullptr;
+  if (DI->hasUnwindDest()) {
+    EHContinue = T->getEHContinuationSpindle()->getEntry();
+    LPadVal = T->getLPadValueInEHContinuationSpindle();
+  }
+  SerializeDetach(DI, T->getParentTask()->getEntry(), EHContinue, LPadVal,
+                  Reattaches, &EHBlocksToClone, &EHBlockPreds, &InlinedLPads,
                   &DetachedRethrows, DT);
 }
 

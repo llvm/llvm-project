@@ -550,6 +550,109 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool CreateRemainderLoop,
     return nullptr;
 }
 
+// Helper function to get the basic-block predecessors of the given exceptional
+// continuation BB associated with task T.  These predecessors are either
+// enclosed by task T or come from the unwind of the detach that spawns T.
+//
+// TODO: Move some of this logic into TapirTaskInfo, so we don't have to
+// recompute it?
+static void getEHContPredecessors(BasicBlock *BB, Task *T,
+                                  SmallVectorImpl<BasicBlock *> &Preds,
+                                  TaskInfo &TI) {
+  DetachInst *DI = T->getDetach();
+  assert(DI && "Root task does not have an exceptional continuation.");
+  assert(DI->hasUnwindDest() &&
+         "Task does not have an exceptional continuation.");
+
+  // Get the predecessors of BB enclosed by task T.
+  for (BasicBlock *Pred : predecessors(BB))
+    if (T->encloses(Pred))
+      Preds.push_back(Pred);
+
+  // Get the predecessor that comes from the unwind of the detach.
+  BasicBlock *DetUnwind = DI->getUnwindDest();
+  Spindle *S = TI.getSpindleFor(DI->getParent());
+  while (DetUnwind->getUniqueSuccessor() != BB)
+    DetUnwind = DetUnwind->getUniqueSuccessor();
+  Preds.push_back(DetUnwind);
+}
+
+// Helper method to nest the exception-handling code of a task with exceptional
+// continuation EHCont within a new parent task.
+static BasicBlock *NestDetachUnwindPredecessors(BasicBlock *EHCont,
+                                                Value *EHContLPad,
+                                                ArrayRef<BasicBlock *> Preds,
+                                                BasicBlock *NewDetachBB,
+                                                const char *Suffix1,
+                                                const char *Suffix2,
+                                                LandingPadInst *OrigLPad,
+                                                Value *SyncReg, Module *M,
+                                                DominatorTree *DT, LoopInfo *LI,
+                                                MemorySSAUpdater *MSSAU,
+                                                bool PreserveLCSSA) {
+  // Split the given Task predecessors of EHCont, which are given in Preds.
+  BasicBlock *InnerUD = SplitBlockPredecessors(EHCont, Preds, Suffix1, DT, LI,
+                                               MSSAU, PreserveLCSSA);
+  // Split the NewDetachBB predecessor of EHCont.
+  BasicBlock *OuterUD = SplitBlockPredecessors(EHCont, {NewDetachBB}, Suffix2,
+                                               DT, LI, MSSAU, PreserveLCSSA);
+
+  // Create a new landing pad for the outer detach by cloning the landing pad
+  // from the old detach-unwind destination.
+  Instruction *Clone = OrigLPad->clone();
+  Clone->setName(Twine("lpad") + Suffix2);
+  OuterUD->getInstList().insert(OuterUD->getFirstInsertionPt(), Clone);
+
+  // Update the PHI nodes in EHCont to accommodate OuterUD.  If the PHI node
+  // corresponds to the EHCont landingpad value, set its incoming value from
+  // OuterUD to be the new landingpad.  For all other PHI nodes, use the
+  // incoming value associated with InnerUD.
+  for (PHINode &PN : EHCont->phis()) {
+    if (&PN == EHContLPad)
+      PN.setIncomingValue(PN.getBasicBlockIndex(OuterUD), Clone);
+    else
+      PN.setIncomingValue(PN.getBasicBlockIndex(OuterUD),
+                          PN.getIncomingValueForBlock(InnerUD));
+  }
+  // Remove InnerUD from the PHI nodes in EHCont.  Record the value of the
+  // EHCont landingpad that comes from InnerUD.
+  Value *InnerUDLPad = EHContLPad;
+  for (PHINode &PN : EHCont->phis()) {
+    if (&PN == EHContLPad)
+      InnerUDLPad = PN.getIncomingValueForBlock(InnerUD);
+    PN.removeIncomingValue(InnerUD);
+  }
+
+  // Replace the termination of InnerUD with a detached rethrow.  Start by
+  // creating a block for the unreachable destination of the detached rethrow.
+  BasicBlock *NewUnreachable = SplitBlock(InnerUD, InnerUD->getTerminator(), DT,
+                                          LI);
+  NewUnreachable->setName(InnerUD->getName() + ".unreachable");
+
+  // Insert a detached rethrow to the end of InnerUD.  NewUnreachable is the
+  // normal destination of this detached rethrow, and OuterUD is the unwind
+  // destination.
+  ReplaceInstWithInst(
+          InnerUD->getTerminator(),
+          InvokeInst::Create(
+              Intrinsic::getDeclaration(
+                  M, Intrinsic::detached_rethrow, { OrigLPad->getType() }),
+              NewUnreachable, OuterUD, { SyncReg, InnerUDLPad }));
+
+  // Terminate NewUnreachable with an unreachable.
+  IRBuilder<> B(NewUnreachable->getTerminator());
+  Instruction *UnreachableTerm = cast<Instruction>(B.CreateUnreachable());
+  UnreachableTerm->setDebugLoc(
+      NewUnreachable->getTerminator()->getDebugLoc());
+  NewUnreachable->getTerminator()->eraseFromParent();
+
+  // Inform the dominator tree of the deleted edge
+  if (DT)
+    DT->deleteEdge(NewUnreachable, EHCont);
+
+  return OuterUD;
+}
+
 Loop *llvm::StripMineLoop(
     Loop *L, unsigned Count, bool AllowExpensiveTripCount,
     bool UnrollRemainder, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
@@ -784,6 +887,17 @@ Loop *llvm::StripMineLoop(
   AnalyzeTaskForSerialization(T, Reattaches, EHBlocksToClone, EHBlockPreds,
                               InlinedLPads, DetachedRethrows);
 
+  // If this detach can throw, get the exceptional continuation of the detach
+  // and its associated landingpad value.
+  BasicBlock *EHCont = nullptr;
+  Value *EHContLPadVal = nullptr;
+  SmallVector<BasicBlock *, 2> UDPreds;
+  if (DI->hasUnwindDest()) {
+    EHCont = T->getEHContinuationSpindle()->getEntry();
+    EHContLPadVal = T->getLPadValueInEHContinuationSpindle();
+    getEHContPredecessors(EHCont, T, UDPreds, *TI);
+  }
+
   // For each extra loop iteration, create a copy of the loop's basic blocks
   // and generate a condition that branches to the copy depending on the
   // number of 'left over' iterations.
@@ -860,11 +974,10 @@ Loop *llvm::StripMineLoop(
         ClonedDetachedRethrows.push_back(DR);
     }
     DetachInst *ClonedDI = cast<DetachInst>(VMap[DI]);
-
     // Serialize the new task.
-    SerializeDetach(ClonedDI, ParentEntry, ClonedReattaches,
-                    &EHBlocksToClone, &ClonedEHBlockPreds, &ClonedInlinedLPads,
-                    &ClonedDetachedRethrows, DT);
+    SerializeDetach(ClonedDI, ParentEntry, EHCont, EHContLPadVal,
+                    ClonedReattaches, &EHBlocksToClone, &ClonedEHBlockPreds,
+                    &ClonedInlinedLPads, &ClonedDetachedRethrows, DT);
   }
 
   // Detach the stripmined loop.
@@ -899,57 +1012,33 @@ Loop *llvm::StripMineLoop(
 
     // Insert new detach instructions
     if (DI->hasUnwindDest()) {
-      BasicBlock *UnwindDest = DI->getUnwindDest();
-      // Insert a detach instruction to detach the stripmined loop.
+      // Insert a detach instruction to detach the stripmined loop.  We do this
+      // early to simplify the operation of nesting the exception-handling code
+      // in the task.
       ReplaceInstWithInst(LoopDetach->getTerminator(),
-                          DetachInst::Create(LoopDetEntry, NewExit, UnwindDest,
-                                             SyncReg));
-      for (PHINode &PN : UnwindDest->phis())
-        PN.addIncoming(PN.getIncomingValueForBlock(Header), LoopDetach);
+                          DetachInst::Create(LoopDetEntry, NewExit,
+                                             EHCont, SyncReg));
+      // Update the dominator tree to reflect LoopDetach as a new predecessor of
+      // EHCont.
+      BasicBlock *OldIDom = DT->getNode(EHCont)->getIDom()->getBlock();
+      DT->changeImmediateDominator(
+          EHCont, DT->findNearestCommonDominator(OldIDom, LoopDetach));
+      // Update the PHIs in EHCont with temporary values from LoopDetach.  These
+      // values will be fixed by NestDetachUnwindPredecessors.
+      for (PHINode &PN : EHCont->phis())
+        PN.addIncoming(UndefValue::get(PN.getType()), LoopDetach);
 
-      // Split the unwind dest to create a new landing pad for the new detach.
-      SmallVector<BasicBlock *, 4> UnwindDestPreds;
-      for (BasicBlock *Pred : predecessors(UnwindDest))
-        if (Pred != LoopDetach)
-          UnwindDestPreds.push_back(Pred);
-      SmallVector<BasicBlock *, 2> NewUnwinds;
-      SplitLandingPadPredecessors(UnwindDest, UnwindDestPreds, "", ".strpm",
-                                  NewUnwinds, DT, LI, nullptr, PreserveLCSSA);
-      BasicBlock *OrigUW = NewUnwinds[0], *NewUW = NewUnwinds[1];
-      BasicBlock *NewUnreachable =
-        SplitBlock(OrigUW, OrigUW->getTerminator(), DT, LI);
-      NewUnreachable->setName(OrigUW->getName() + ".unreachable");
-      // Add a detached rethrow to the end of OrigUW.
-      ReplaceInstWithInst(
-          OrigUW->getTerminator(),
-          InvokeInst::Create(
-              Intrinsic::getDeclaration(
-                  M, Intrinsic::detached_rethrow,
-                  { OrigUW->getLandingPadInst()->getType() }),
-              NewUnreachable, NewUW, { SyncReg, OrigUW->getLandingPadInst() }));
+      // Nest the exceptional code in the original task into the new task.
+      BasicBlock *OuterUD = NestDetachUnwindPredecessors(
+          EHCont, EHContLPadVal, UDPreds, LoopDetach, ".strpm",
+          ".strpm.detachloop.unwind", DI->getUnwindDest()->getLandingPadInst(),
+          SyncReg, M, DT, LI, nullptr, PreserveLCSSA);
+
       // Replace sync regions of existing detached-rethrows.
       for (Instruction *I : DetachedRethrows) {
         InvokeInst *II = cast<InvokeInst>(I);
         II->setArgOperand(0, NewSyncReg);
       }
-
-      // Remove uses of NewUnreachable from PHI nodes.
-      for (PHINode &PN : UnwindDest->phis())
-        PN.removeIncomingValue(NewUnreachable);
-      // Terminate NewUnreachable with an unreachable.
-      {
-        IRBuilder<> B(NewUnreachable->getTerminator());
-        Instruction *UnreachableTerm = cast<Instruction>(B.CreateUnreachable());
-        UnreachableTerm->setDebugLoc(
-            NewUnreachable->getTerminator()->getDebugLoc());
-        NewUnreachable->getTerminator()->eraseFromParent();
-      }
-      // Update PHI nodes in NewUW to get the same value via OrigUW from the new
-      // detach.
-      for (PHINode &PN : NewUW->phis())
-        PN.addIncoming(PN.getIncomingValueForBlock(LoopDetach), OrigUW);
-      // Update the dominator tree
-      DT->changeImmediateDominator(UnwindDest, NewUW);
     } else {
       // Insert a detach instruction to detach the stripmined loop.
       ReplaceInstWithInst(LoopDetach->getTerminator(),
@@ -1025,21 +1114,25 @@ Loop *llvm::StripMineLoop(
     for (PHINode &PN : OrigUnwindDest->phis())
       PN.setIncomingBlock(PN.getBasicBlockIndex(Header), NewHeader);
 
-    // Update DT
-    BasicBlock *OldIDom =
-      DT->getNode(OrigUnwindDest)->getIDom()->getBlock();
-    DT->changeImmediateDominator(
-        OrigUnwindDest, DT->findNearestCommonDominator(OldIDom, NewHeader));
-    if (TI->getSpindleFor(OrigUnwindDest) == TI->getSpindleFor(Header)) {
-      // The detach's unwind destination has been split from other relevant
-      // landing pads.
-
-      // In this case, the DT is generally hard to update; we would have to
-      // search for the common destination of the detach's unwind destination,
-      // the detached-rethrow's unwind destination, and the unwind desintation
-      // of the task code in the epilogue.  Instead, we simply fall back to
-      // recalculating the DT at the end.
-      RecalculateDT = true;
+    // Update DT.  Walk the path of unique successors from the unwind
+    // destination to change the immediate dominators of these nodes.  Continue
+    // updating until OrigDUBB equals the exceptional continuation or, as in the
+    // case of a parallel epilog, we reach a detached-rethrow.
+    BasicBlock *OrigDUBB = OrigUnwindDest;
+    while (OrigDUBB && (OrigDUBB != EHCont)) {
+      BasicBlock *OldIDom =
+        DT->getNode(OrigDUBB)->getIDom()->getBlock();
+      DT->changeImmediateDominator(
+          OrigDUBB, DT->findNearestCommonDominator(OldIDom, NewHeader));
+      // Get the next block along the path.  If we reach the end of the path at
+      // a detached-rethrow, then getUniqueSuccessor() returns nullptr.
+      OrigDUBB = OrigDUBB->getUniqueSuccessor();
+    }
+    // If OrigDUBB equals EHCont, then this is the last block we aim to update.
+    if (OrigDUBB == EHCont) {
+      BasicBlock *OldIDom = DT->getNode(EHCont)->getIDom()->getBlock();
+      DT->changeImmediateDominator(
+          EHCont, DT->findNearestCommonDominator(OldIDom, NewHeader));
     }
   } else
     ReplaceInstWithInst(NewHeader->getTerminator(),

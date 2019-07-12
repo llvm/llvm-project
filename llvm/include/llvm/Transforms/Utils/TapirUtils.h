@@ -49,6 +49,7 @@ bool MoveStaticAllocasInBlock(BasicBlock *Entry, BasicBlock *Block,
 /// serialization.  If \p DT is provided, then it will be updated to reflect the
 /// CFG changes.
 void SerializeDetach(DetachInst *DI, BasicBlock *ParentEntry,
+                     BasicBlock *EHContinue, Value *LPadValInEHContinue,
                      SmallVectorImpl<Instruction *> &Reattaches,
                      SmallVectorImpl<BasicBlock *> *EHBlocksToClone,
                      SmallPtrSetImpl<BasicBlock *> *EHBlockPreds,

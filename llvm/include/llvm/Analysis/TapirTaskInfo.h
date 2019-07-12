@@ -486,6 +486,15 @@ class Task {
   SmallVector<Spindle *, 1> SharedSubTaskEH;
   SmallPtrSet<const Spindle *, 1> DenseEHSpindleSet;
 
+  // Pointers to the continuation and exceptional-continuation spindles for this
+  // task.
+  Spindle *Continuation = nullptr;
+  Spindle *EHContinuation = nullptr;
+  // The exceptional continuation of the task might not be a landingpad, due to
+  // transformations on exception-handling code.  Hence we keep track of the
+  // value of landingpad at the exceptional continuation.
+  Value *LPadValueInEHContinuation = nullptr;
+
   Task(const Task &) = delete;
   const Task &operator=(const Task &) = delete;
 
@@ -527,6 +536,40 @@ public:
     assert(isa<DetachInst>(Detacher->getTerminator()) &&
            "Single predecessor of a task should be terminated by a detach");
     return dyn_cast<DetachInst>(Detacher->getTerminator());
+  }
+
+  /// Get the spindle for the continuation of this task.  Returns nullptr if
+  /// this task is a root task, meaning it has no continuation spindle.
+  Spindle *getContinuationSpindle() const {
+    assert(((isRootTask() && !Continuation) || (!isRootTask() && Continuation))
+           && "Task should have a continuation spindle iff not a root task.");
+    return Continuation;
+  }
+
+  /// Get the spindle for the exceptional continuation o fthis task.  Returns
+  /// nullptr if this task is a root task or the detach for this task does not
+  /// have an unwind destination.
+  Spindle *getEHContinuationSpindle() const {
+    assert(((isRootTask() && !EHContinuation) ||
+            (!isRootTask() &&
+             (getDetach()->hasUnwindDest() && EHContinuation) ||
+             (!getDetach()->hasUnwindDest() && !EHContinuation))) &&
+           "Task should have a EH continuation spindle iff not a root task and "
+           "detach has an unwind destination.");
+    return EHContinuation;
+  }
+
+  /// Get the spindle for the exceptional continuation o fthis task.  Returns
+  /// nullptr if this task is a root task or the detach for this task does not
+  /// have an unwind destination.
+  Value *getLPadValueInEHContinuationSpindle() const {
+    assert(((isRootTask() && !LPadValueInEHContinuation) ||
+            (!isRootTask() &&
+             (getDetach()->hasUnwindDest() && LPadValueInEHContinuation) ||
+             (!getDetach()->hasUnwindDest() && !LPadValueInEHContinuation))) &&
+           "Task should have a EH continuation spindle iff not a root task and "
+           "detach has an unwind destination.");
+    return LPadValueInEHContinuation;
   }
 
   /// Return true if spindle S is in this task.
@@ -751,6 +794,20 @@ public:
     assert(!ST->ParentTask && "SubTask already has a parent task.");
     ST->setParentTask(this);
     SubTasks.push_back(ST);
+  }
+
+  // Set Spindle S to be the continuation spindle of this task.
+  void setContinuationSpindle(Spindle *S) {
+    assert(!isRootTask() && "Root task cannot have a continuation spindle.");
+    Continuation = S;
+  }
+
+  // Set S to be the exceptional continuation spindle of this task.
+  void setEHContinuationSpindle(Spindle *S, Value *LPadVal) {
+    assert((!isRootTask() || getDetach()->hasUnwindDest()) &&
+           "Task should not have an exceptional continuation.");
+    EHContinuation = S;
+    LPadValueInEHContinuation = LPadVal;
   }
 
 protected:

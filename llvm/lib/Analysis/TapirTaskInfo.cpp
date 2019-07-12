@@ -283,6 +283,75 @@ static void computeSpindleEdges(TaskInfo *TI) {
   }
 }
 
+// Search the PHI nodes in BB for a user of Val.  Return Val if no PHI node in
+// BB uses Val.
+static Value *FindUserAmongPHIs(Value *Val, BasicBlock *BB) {
+  for (PHINode &PN : BB->phis()) {
+    if (Val->getType() != PN.getType())
+      continue;
+    for (Value *Incoming : PN.incoming_values())
+      if (Incoming == Val)
+        return &PN;
+  }
+  return Val;
+}
+
+// Helper function to record the normal and exceptional continuation spindles
+// for each task.
+static void recordContinuationSpindles(TaskInfo *TI) {
+  for (Task *T : post_order(TI->getRootTask())) {
+    if (T->isRootTask())
+      continue;
+
+    DetachInst *DI = T->getDetach();
+    Spindle *S = TI->getSpindleFor(DI->getParent());
+
+    // Set the continuation spindle for the spawned task.
+    assert(S != TI->getSpindleFor(DI->getContinue()) &&
+           "Detach and continuation should appear in different spindles");
+    T->setContinuationSpindle(TI->getSpindleFor(DI->getContinue()));
+
+    // If the detach has an unwind destination, set the exceptional continuation
+    // spindle for the spawned task.
+    if (DI->hasUnwindDest()) {
+      BasicBlock *Unwind = DI->getUnwindDest();
+      // We also follow the use-def chain for the landingpad of the
+      // detach-unwind to determine the value of the landingpad in the
+      // exceptional continuation.
+      Value *LPadVal = Unwind->getLandingPadInst();
+      // There should be no substantive code between the detach unwind and the
+      // exceptional continuation.  Instead, we expect a sequence of basic
+      // blocks in the parent spindle S that merges control flow from different
+      // exception-handling code together.  Each basic block in this sequence
+      // should have a unique successor, and the landingpad of the unwind
+      // destination should propagate to the exceptional continuation through
+      // PHI nodes in these blocks.
+      while (TI->getSpindleFor(Unwind) == S) {
+        assert(Unwind->getUniqueSuccessor() &&
+               "Unwind destination of detach has many successors, but belongs to"
+               " the same spindle as the detach.");
+        Unwind = Unwind->getUniqueSuccessor();
+        LPadVal = FindUserAmongPHIs(LPadVal, Unwind);
+      }
+      // Set the exceptional continuation spindle for this task.
+      Spindle *UnwindSpindle = TI->getSpindleFor(Unwind);
+      LLVM_DEBUG({
+          // Check that Task T is indeed a predecessor of this unwind spindle.
+          bool TaskIsPredecessor = false;
+          for (Spindle *Pred : predecessors(UnwindSpindle)) {
+            if (TI->getTaskFor(Pred) == T) {
+              TaskIsPredecessor = true;
+              break;
+            }
+          }
+          assert(TaskIsPredecessor &&
+                 "Exceptional continuation is not a successor of the task.");
+        });
+      T->setEHContinuationSpindle(UnwindSpindle, LPadVal);
+    }
+  }
+}
+
 void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
   // We first compute defining blocks and IDFs based on the detach and sync
   // instructions.
@@ -305,6 +374,14 @@ void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
       // Create a new spindle and task.
       Spindle *S = createSpindleWithEntry(TaskEntry, Spindle::SPType::Detach);
       createTaskWithEntry(S, DomTree);
+
+      // Create a new Phi spindle for the task continuation.  We do this
+      // explicitly to handle cases where the spawned task does not return
+      // (reattach).
+      BasicBlock *TaskContinue = DI->getContinue();
+      DefiningBlocks.insert(TaskContinue);
+      if (!getSpindleFor(TaskContinue))
+        createSpindleWithEntry(TaskContinue, Spindle::SPType::Phi);
     } else if (isa<SyncInst>(B.getTerminator())) {
       BasicBlock *SPEntry = B.getSingleSuccessor();
       // For sync instructions, we mark the block containing the sync
@@ -336,7 +413,7 @@ void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
   // Create spindles for all IDFBlocks.
   for (BasicBlock *B : IDFBlocks)
     if (Spindle *S = getSpindleFor(B)) {
-      assert(S->isSync() &&
+      assert((S->isSync() || S->isPhi()) &&
              "Phi spindle to be created on existing non-sync spindle");
       // Change the type of this spindle.
       S->Ty = Spindle::SPType::Phi;
@@ -437,11 +514,14 @@ void TaskInfo::analyze(Function &F, DominatorTree &DomTree) {
     UnassocTasks.push_back(T);
   }
 
-  // Finally, populate the predecessors and successors of all spindles.
+  // Populate the predecessors and successors of all spindles.
   computeSpindleEdges(this);
+
+  // Record continuation spindles for each task.
+  recordContinuationSpindles(this);
 }
 
-/// \brief Determine which blocks the value is live in.
+/// Determine which blocks the value is live in.
 ///
 /// These are blocks which lead to uses.  Knowing this allows us to avoid
 /// inserting PHI nodes into blocks which don't lead to uses (thus, the inserted
