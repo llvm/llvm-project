@@ -1969,6 +1969,12 @@ size_t Platform::GetSoftwareBreakpointTrapOpcode(Target &target,
     trap_opcode = g_i386_opcode;
     trap_opcode_size = sizeof(g_i386_opcode);
   } break;
+  case llvm::Triple::dpu: {
+    static const uint8_t g_dpu_opcode[] = {0x00, 0x00, 0x00, 0x20,
+                                           0x63, 0x7e, 0x00, 0x00};
+    trap_opcode = g_dpu_opcode;
+    trap_opcode_size = sizeof(g_dpu_opcode);
+  } break;
 
   default:
     return 0;
