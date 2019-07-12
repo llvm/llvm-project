@@ -141,7 +141,7 @@ __amd_scheduler_rocm(__global SchedulerParam* param)
 
                     if (launch != 0) {
                         if (event != 0) {
-                            event->timer[PROFILING_COMMAND_START] = (__builtin_amdgcn_s_memtime() * (ulong)param->eng_clk) >> 10;
+                            event->timer[PROFILING_COMMAND_START] = ((ulong)__builtin_readcyclecounter() * (ulong)param->eng_clk) >> 10;
                         }
                         if (launch > 0) {
                             // Launch child kernel ....
@@ -184,14 +184,14 @@ __amd_scheduler_rocm(__global SchedulerParam* param)
                 if (slotState == AQL_WRAP_BUSY) {
                     atomic_store_explicit((__global atomic_uint*)&disp->state, AQL_WRAP_DONE, memory_order_relaxed, memory_scope_device);
                     if (event != 0) {
-                        event->timer[PROFILING_COMMAND_END] = (__builtin_amdgcn_s_memtime() * (ulong)param->eng_clk) >> 10;
+                        event->timer[PROFILING_COMMAND_END] = ((ulong)__builtin_readcyclecounter() * (ulong)param->eng_clk) >> 10;
                     }
                 }
                 // Was CL_EVENT requested?
                 if (event != 0) {
                     // The current dispatch doesn't have any outstanding children
                     if (disp->child_counter == 0) {
-                        event->timer[PROFILING_COMMAND_COMPLETE] = (__builtin_amdgcn_s_memtime() * (ulong)param->eng_clk) >> 10;
+                        event->timer[PROFILING_COMMAND_COMPLETE] = ((ulong)__builtin_readcyclecounter() * (ulong)param->eng_clk) >> 10;
                         if (event->state >= 0) {
                             event->state = CL_COMPLETE;
                         }
