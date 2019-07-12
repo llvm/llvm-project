@@ -415,7 +415,8 @@ IndexUnitReader::createWithFilePath(StringRef FilePath, std::string &Error) {
     return nullptr;
   }
 
-  auto ErrOrBuf = MemoryBuffer::getOpenFile(FD, FilePath, /*FileSize=*/-1,
+  auto ErrOrBuf = MemoryBuffer::getOpenFile(sys::fs::convertFDToNativeFile(FD),
+                                            FilePath, /*FileSize=*/-1,
                                             /*RequiresNullTerminator=*/false);
   if (!ErrOrBuf) {
     raw_string_ostream(Error) << "Failed opening '" << FilePath << "': "
