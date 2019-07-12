@@ -23,6 +23,7 @@ endif()
 add_custom_target(ClangdUnitTests)
 add_unittest(ClangdUnitTests ClangdTests
   Annotations.cpp
+  ASTTests.cpp
   BackgroundIndexTests.cpp
   CancellationTests.cpp
   CanonicalIncludesTests.cpp

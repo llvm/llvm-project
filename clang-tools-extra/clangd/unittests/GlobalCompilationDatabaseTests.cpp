@@ -234,6 +234,7 @@ TEST(GlobalCompilationDatabaseTest, DiscoveryWithNestedCDBs) {
   CleaningFS FS;
   FS.registerFile("compile_commands.json", CDBOuter);
   FS.registerFile("build/compile_commands.json", CDBInner);
+  llvm::SmallString<128> File;
 
   // Note that gen2.cc goes missing with our following model, not sure this
   // happens in practice though.
@@ -244,10 +245,16 @@ TEST(GlobalCompilationDatabaseTest, DiscoveryWithNestedCDBs) {
         DB.watch([&DiscoveredFiles](const std::vector<std::string> Changes) {
           DiscoveredFiles = Changes;
         });
-    DB.getCompileCommand((FS.Root + "/a.cc").str());
-    EXPECT_THAT(DiscoveredFiles, UnorderedElementsAre(EndsWith("a.cc")));
 
-    DB.getCompileCommand((FS.Root + "/build/gen.cc").str());
+    File = FS.Root;
+    llvm::sys::path::append(File, "a.cc");
+    DB.getCompileCommand(File.str());
+    EXPECT_THAT(DiscoveredFiles, UnorderedElementsAre(EndsWith("a.cc")));
+    DiscoveredFiles.clear();
+
+    File = FS.Root;
+    llvm::sys::path::append(File, "build", "gen.cc");
+    DB.getCompileCommand(File.str());
     EXPECT_THAT(DiscoveredFiles, UnorderedElementsAre(EndsWith("gen.cc")));
   }
 
@@ -259,13 +266,18 @@ TEST(GlobalCompilationDatabaseTest, DiscoveryWithNestedCDBs) {
         DB.watch([&DiscoveredFiles](const std::vector<std::string> Changes) {
           DiscoveredFiles = Changes;
         });
-    DB.getCompileCommand((FS.Root + "/a.cc").str());
+
+    File = FS.Root;
+    llvm::sys::path::append(File, "a.cc");
+    DB.getCompileCommand(File.str());
     EXPECT_THAT(DiscoveredFiles,
                 UnorderedElementsAre(EndsWith("a.cc"), EndsWith("gen.cc"),
                                      EndsWith("gen2.cc")));
-
     DiscoveredFiles.clear();
-    DB.getCompileCommand((FS.Root + "/build/gen.cc").str());
+
+    File = FS.Root;
+    llvm::sys::path::append(File, "build", "gen.cc");
+    DB.getCompileCommand(File.str());
     EXPECT_THAT(DiscoveredFiles, IsEmpty());
   }
 }

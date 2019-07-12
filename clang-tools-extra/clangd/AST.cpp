@@ -169,5 +169,35 @@ llvm::Optional<SymbolID> getSymbolID(const IdentifierInfo &II,
   return SymbolID(USR);
 }
 
+std::string shortenNamespace(const llvm::StringRef OriginalName,
+                             const llvm::StringRef CurrentNamespace) {
+  llvm::SmallVector<llvm::StringRef, 8> OriginalParts;
+  llvm::SmallVector<llvm::StringRef, 8> CurrentParts;
+  llvm::SmallVector<llvm::StringRef, 8> Result;
+  OriginalName.split(OriginalParts, "::");
+  CurrentNamespace.split(CurrentParts, "::");
+  auto MinLength = std::min(CurrentParts.size(), OriginalParts.size());
+
+  unsigned DifferentAt = 0;
+  while (DifferentAt < MinLength &&
+      CurrentParts[DifferentAt] == OriginalParts[DifferentAt]) {
+    DifferentAt++;
+  }
+
+  for (unsigned i = DifferentAt; i < OriginalParts.size(); ++i) {
+    Result.push_back(OriginalParts[i]);
+  }
+  return join(Result, "::");
+}
+
+std::string printType(const QualType QT, const DeclContext & Context){
+  PrintingPolicy PP(Context.getParentASTContext().getPrintingPolicy());
+  PP.SuppressTagKeyword = 1;
+  return shortenNamespace(
+      QT.getAsString(PP),
+      printNamespaceScope(Context) );
+}
+
+
 } // namespace clangd
 } // namespace clang

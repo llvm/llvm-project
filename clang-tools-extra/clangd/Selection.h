@@ -93,6 +93,9 @@ public:
     ast_type_traits::DynTypedNode ASTNode;
     // The extent to which this node is covered by the selection.
     Selection Selected;
+    // Walk up the AST to get the DeclContext of this Node,
+    // which is not the node itself.
+    const DeclContext& getDeclContext() const;
   };
 
   // The most specific common ancestor of all the selected nodes.

@@ -43,7 +43,7 @@ MockCompilationDatabase::MockCompilationDatabase(llvm::StringRef Directory,
 llvm::Optional<ProjectInfo>
 MockCompilationDatabase::getProjectInfo(PathRef File) const {
   return ProjectInfo{Directory};
-};
+}
 
 llvm::Optional<tooling::CompileCommand>
 MockCompilationDatabase::getCompileCommand(PathRef File) const {
