@@ -156,6 +156,10 @@ public:
   /// from the user interface.
   virtual bool IsWhitelistedRuntimeValue(ConstString name) { return false; }
 
+  virtual llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) {
+    return llvm::None;
+  }
+
   virtual void ModulesDidLoad(const ModuleList &module_list) {}
 
   // Called by the Clang expression evaluation engine to allow runtimes to
