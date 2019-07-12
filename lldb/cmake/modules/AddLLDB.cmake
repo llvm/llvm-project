@@ -1,4 +1,37 @@
+function(lldb_tablegen)
+  # Syntax:
+  # lldb_tablegen output-file [tablegen-arg ...] SOURCE source-file
+  # [[TARGET cmake-target-name] [DEPENDS extra-dependency ...]]
+  #
+  # Generates a custom command for invoking tblgen as
+  #
+  # tblgen source-file -o=output-file tablegen-arg ...
+  #
+  # and, if cmake-target-name is provided, creates a custom target for
+  # executing the custom command depending on output-file. It is
+  # possible to list more files to depend after DEPENDS.
+
+  cmake_parse_arguments(LTG "" "SOURCE;TARGET" "" ${ARGN})
+
+  if(NOT LTG_SOURCE)
+    message(FATAL_ERROR "SOURCE source-file required by lldb_tablegen")
+  endif()
+
+  set(LLVM_TARGET_DEFINITIONS ${LTG_SOURCE})
+  tablegen(LLDB ${LTG_UNPARSED_ARGUMENTS})
+
+  if(LTG_TARGET)
+    add_public_tablegen_target(${LTG_TARGET})
+    set_target_properties( ${LTG_TARGET} PROPERTIES FOLDER "LLDB tablegenning")
+    set_property(GLOBAL APPEND PROPERTY LLDB_TABLEGEN_TARGETS ${LTG_TARGET})
+  endif()
+endfunction(lldb_tablegen)
+
 function(add_lldb_library name)
+  include_directories(BEFORE
+    ${CMAKE_CURRENT_BINARY_DIR}
+)
+
   # only supported parameters to this macro are the optional
   # MODULE;SHARED;STATIC library type and source files
   cmake_parse_arguments(PARAM
