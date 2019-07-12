@@ -3564,6 +3564,10 @@ int HexagonInstrInfo::getDotCurOp(const MachineInstr &MI) const {
     return Hexagon::V6_vL32b_nt_cur_pi;
   case Hexagon::V6_vL32b_nt_ai:
     return Hexagon::V6_vL32b_nt_cur_ai;
+  case Hexagon::V6_vL32b_ppu:
+    return Hexagon::V6_vL32b_cur_ppu;
+  case Hexagon::V6_vL32b_nt_ppu:
+    return Hexagon::V6_vL32b_nt_cur_ppu;
   }
   return 0;
 }
@@ -3580,6 +3584,10 @@ int HexagonInstrInfo::getNonDotCurOp(const MachineInstr &MI) const {
     return Hexagon::V6_vL32b_nt_pi;
   case Hexagon::V6_vL32b_nt_cur_ai:
     return Hexagon::V6_vL32b_nt_ai;
+  case Hexagon::V6_vL32b_cur_ppu:
+    return Hexagon::V6_vL32b_ppu;
+  case Hexagon::V6_vL32b_nt_cur_ppu:
+    return Hexagon::V6_vL32b_nt_ppu;
   }
   return 0;
 }
