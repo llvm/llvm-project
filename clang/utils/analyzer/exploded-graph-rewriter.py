@@ -49,10 +49,16 @@ class GenericMap(object):
 class SourceLocation(object):
     def __init__(self, json_loc):
         super(SourceLocation, self).__init__()
+        logging.debug('json: %s' % json_loc)
         self.line = json_loc['line']
         self.col = json_loc['column']
         self.filename = os.path.basename(json_loc['file']) \
             if 'file' in json_loc else '(main file)'
+        self.spelling = SourceLocation(json_loc['spelling']) \
+            if 'spelling' in json_loc else None
+
+    def is_macro(self):
+        return self.spelling is not None
 
 
 # A deserialized program point.
@@ -65,8 +71,10 @@ class ProgramPoint(object):
             self.src_id = json_pp['src_id']
             self.dst_id = json_pp['dst_id']
         elif self.kind == 'Statement':
+            logging.debug(json_pp)
             self.stmt_kind = json_pp['stmt_kind']
             self.stmt_point_kind = json_pp['stmt_point_kind']
+            self.stmt_id = json_pp['stmt_id']
             self.pointer = json_pp['pointer']
             self.pretty = json_pp['pretty']
             self.loc = SourceLocation(json_pp['location']) \
@@ -102,7 +110,8 @@ class LocationContext(object):
         self.lctx_id = json_frame['lctx_id']
         self.caption = json_frame['location_context']
         self.decl = json_frame['calling']
-        self.line = json_frame['call_line']
+        self.loc = SourceLocation(json_frame['location']) \
+            if json_frame['location'] is not None else None
 
     def _key(self):
         return self.lctx_id
@@ -432,6 +441,22 @@ class DotDumpVisitor(object):
             return s
         return candidate
 
+    @staticmethod
+    def _make_sloc(loc):
+        if loc is None:
+            return '<i>Invalid Source Location</i>'
+
+        def make_plain_loc(loc):
+            return '%s:<b>%s</b>:<b>%s</b>' \
+                % (loc.filename, loc.line, loc.col)
+
+        if loc.is_macro():
+            return '%s <font color="royalblue1">' \
+                   '(<i>spelling at </i> %s)</font>' \
+                % (make_plain_loc(loc), make_plain_loc(loc.spelling))
+
+        return make_plain_loc(loc)
+
     def visit_begin_graph(self, graph):
         self._graph = graph
         self._dump_raw('digraph "ExplodedGraph" {\n')
@@ -457,29 +482,16 @@ class DotDumpVisitor(object):
             # Such statements show up only at [Pre|Post]StmtPurgeDeadSymbols
             skip_pretty = 'PurgeDeadSymbols' in p.stmt_point_kind
             stmt_color = 'cyan3'
-            if p.loc is not None:
-                self._dump('<tr><td align="left" width="0">'
-                           '%s:<b>%s</b>:<b>%s</b>:</td>'
-                           '<td align="left" width="0"><font color="%s">'
-                           '%s</font></td>'
-                           '<td align="left"><font color="%s">%s</font></td>'
-                           '<td>%s</td></tr>'
-                           % (p.loc.filename, p.loc.line,
-                              p.loc.col, color, p.stmt_kind,
-                              stmt_color, p.stmt_point_kind,
-                              self._short_pretty(p.pretty)
-                              if not skip_pretty else ''))
-            else:
-                self._dump('<tr><td align="left" width="0">'
-                           '<i>Invalid Source Location</i>:</td>'
-                           '<td align="left" width="0">'
-                           '<font color="%s">%s</font></td>'
-                           '<td align="left"><font color="%s">%s</font></td>'
-                           '<td>%s</td></tr>'
-                           % (color, p.stmt_kind,
-                              stmt_color, p.stmt_point_kind,
-                              self._short_pretty(p.pretty)
-                              if not skip_pretty else ''))
+            self._dump('<tr><td align="left" width="0">%s:</td>'
+                       '<td align="left" width="0"><font color="%s">'
+                       '%s</font> </td>'
+                       '<td align="left"><i>S%s</i></td>'
+                       '<td align="left"><font color="%s">%s</font></td>'
+                       '<td align="left">%s</td></tr>'
+                       % (self._make_sloc(p.loc), color, p.stmt_kind,
+                          p.stmt_id, stmt_color, p.stmt_point_kind,
+                          self._short_pretty(p.pretty)
+                          if not skip_pretty else ''))
         elif p.kind == 'Edge':
             self._dump('<tr><td width="0"></td>'
                        '<td align="left" width="0">'
@@ -516,8 +528,8 @@ class DotDumpVisitor(object):
                        '%s</td></tr>'
                        % (self._diff_plus_minus(is_added),
                           lc.caption, lc.decl,
-                          ('(line %s)' % lc.line) if lc.line is not None
-                          else ''))
+                          ('(%s)' % self._make_sloc(lc.loc))
+                          if lc.loc is not None else ''))
 
         def dump_binding(f, b, is_added=None):
             self._dump('<tr><td>%s</td>'

@@ -25,7 +25,7 @@ Node0x1 [shape=record,label=
               "location_context": "#0 Call",
               "lctx_id": 3,
               "calling": "foo",
-              "call_line": 4,
+              "location": null,
               "items": [
                 {
                   "stmt_id": 5,
@@ -76,7 +76,7 @@ Node0x6 [shape=record,label=
               "location_context": "#0 Call",
               "lctx_id": 3,
               "calling": "foo",
-              "call_line": 4,
+              "location": null,
               "items": [
                 {
                   "stmt_id": 9,
@@ -121,7 +121,7 @@ Node0x9 [shape=record,label=
               "location_context": "#0 Call",
               "lctx_id": 3,
               "calling": "foo",
-              "call_line": 4,
+              "location": null,
               "items": [
                 {
                   "stmt_id": 9,
