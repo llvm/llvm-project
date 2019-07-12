@@ -1,0 +1,48 @@
+## Checks that the tool is able to read section groups from ELF.
+
+# RUN: yaml2obj %s > %t1.o
+# RUN: llvm-readobj --elf-section-groups %t1.o | FileCheck %s -check-prefix=OBJ
+# RUN: obj2yaml %t1.o | FileCheck %s --check-prefix YAML
+
+# OBJ:      Groups {
+# OBJ-NEXT:   Group {
+# OBJ-NEXT:     Name: .group
+# OBJ-NEXT:     Index: 1
+# OBJ-NEXT:     Link: 3
+# OBJ-NEXT:     Info: 1
+# OBJ-NEXT:     Type: COMDAT (0x1)
+# OBJ-NEXT:     Signature: signature
+# OBJ-NEXT:     Section(s) in group [
+# OBJ-NEXT:       .rodata (2)
+# OBJ-NEXT:     ]
+# OBJ-NEXT:   }
+# OBJ-NEXT: }
+
+# YAML: - Name: .group
+# YAML:   Type: SHT_GROUP
+# YAML:   Link: .symtab
+# YAML:   Info: signature
+# YAML:   Members:
+# YAML:     - SectionOrType: GRP_COMDAT
+# YAML:     - SectionOrType: .rodata
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .group
+    Type: SHT_GROUP
+    Link: .symtab
+    Info: signature
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .rodata
+  - Name: .rodata
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    signature
+    Type:    STT_OBJECT
+    Section: .rodata

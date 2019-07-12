@@ -1,3 +1,0 @@
-RUN: yaml2obj %p/Inputs/COFF/long-section-name.yaml | obj2yaml | FileCheck %s --check-prefix COFF-I386
-
-COFF-I386: Name:            .long_section_name

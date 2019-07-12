@@ -1,3 +1,7 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s --check-prefix COFF-I386
+
+# COFF-I386: Characteristics: 0
+
 --- !COFF
 header:
   Machine:         IMAGE_FILE_MACHINE_I386
