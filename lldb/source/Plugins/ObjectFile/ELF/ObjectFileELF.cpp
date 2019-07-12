@@ -3277,6 +3277,9 @@ ObjectFile::Type ObjectFileELF::CalculateType() {
 }
 
 ObjectFile::Strata ObjectFileELF::CalculateStrata() {
+  if (m_header.e_machine == EM_DPU)
+    return eStrataRawImage;
+
   switch (m_header.e_type) {
   case llvm::ELF::ET_NONE:
     // 0 - No file type
