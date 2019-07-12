@@ -69,7 +69,7 @@ void test_T_ctor_sfinae() {
   }
   {
     using V = std::variant<std::string, float>;
-    static_assert(!std::is_constructible<V, int>::value,
+    static_assert(std::is_constructible<V, int>::value == VariantAllowsNarrowingConversions,
                   "no matching constructor");
   }
   {
@@ -127,11 +127,13 @@ void test_T_ctor_basic() {
     static_assert(v.index() == 1, "");
     static_assert(std::get<1>(v) == 42, "");
   }
+#ifndef TEST_VARIANT_ALLOWS_NARROWING_CONVERSIONS
   {
     constexpr std::variant<unsigned, long> v(42);
     static_assert(v.index() == 1, "");
     static_assert(std::get<1>(v) == 42, "");
   }
+#endif
   {
     std::variant<std::string, bool const> v = "foo";
     assert(v.index() == 0);
