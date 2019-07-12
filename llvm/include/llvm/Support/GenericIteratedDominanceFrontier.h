@@ -117,8 +117,7 @@ namespace IDFCalculatorDetail {
 
 template <class NodeTy, bool IsPostDom>
 typename ChildrenGetterTy<NodeTy, IsPostDom>::ChildrenTy
-ChildrenGetterTy<NodeTy, IsPostDom>::get(
-    const ChildrenGetterTy<NodeTy, IsPostDom>::NodeRef &N) {
+ChildrenGetterTy<NodeTy, IsPostDom>::get(const NodeRef &N) {
   using OrderedNodeTy =
       typename IDFCalculatorBase<NodeTy, IsPostDom>::OrderedNodeTy;
 
