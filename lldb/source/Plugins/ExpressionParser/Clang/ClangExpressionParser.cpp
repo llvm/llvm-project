@@ -62,6 +62,7 @@
 #include "ClangExpressionParser.h"
 #include "ClangModulesDeclVendor.h"
 #include "ClangPersistentVariables.h"
+#include "IRDynamicChecks.h"
 #include "IRForTarget.h"
 #include "ModuleDependencyCollector.h"
 
@@ -70,7 +71,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/ExpressionSourceCode.h"
-#include "lldb/Expression/IRDynamicChecks.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Expression/IRInterpreter.h"
 #include "lldb/Host/File.h"
@@ -1269,8 +1269,8 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
         (execution_policy != eExecutionPolicyTopLevel && !can_interpret)) {
       if (m_expr.NeedsValidation() && process) {
         if (!process->GetDynamicCheckers()) {
-          DynamicCheckerFunctions *dynamic_checkers =
-              new DynamicCheckerFunctions();
+          ClangDynamicCheckerFunctions *dynamic_checkers =
+              new ClangDynamicCheckerFunctions();
 
           DiagnosticManager install_diagnostics;
 
@@ -1290,23 +1290,26 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
                         "installing dynamic checkers ==");
         }
 
-        IRDynamicChecks ir_dynamic_checks(*process->GetDynamicCheckers(),
-                                          function_name.AsCString());
+        if (auto *checker_funcs = llvm::dyn_cast<ClangDynamicCheckerFunctions>(
+                process->GetDynamicCheckers())) {
+          IRDynamicChecks ir_dynamic_checks(*checker_funcs,
+                                            function_name.AsCString());
 
-        llvm::Module *module = execution_unit_sp->GetModule();
-        if (!module || !ir_dynamic_checks.runOnModule(*module)) {
-          err.SetErrorToGenericError();
-          err.SetErrorString("Couldn't add dynamic checks to the expression");
-          return err;
-        }
+          llvm::Module *module = execution_unit_sp->GetModule();
+          if (!module || !ir_dynamic_checks.runOnModule(*module)) {
+            err.SetErrorToGenericError();
+            err.SetErrorString("Couldn't add dynamic checks to the expression");
+            return err;
+          }
 
-        if (custom_passes.LatePasses) {
-          if (log)
-            log->Printf("%s - Running Late IR Passes from LanguageRuntime on "
-                        "expression module '%s'",
-                        __FUNCTION__, m_expr.FunctionName());
+          if (custom_passes.LatePasses) {
+            if (log)
+              log->Printf("%s - Running Late IR Passes from LanguageRuntime on "
+                          "expression module '%s'",
+                          __FUNCTION__, m_expr.FunctionName());
 
-          custom_passes.LatePasses->run(*module);
+            custom_passes.LatePasses->run(*module);
+          }
         }
       }
     }

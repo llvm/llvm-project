@@ -9,52 +9,30 @@
 #ifndef liblldb_IRDynamicChecks_h_
 #define liblldb_IRDynamicChecks_h_
 
+#include "lldb/Expression/DynamicCheckerFunctions.h"
 #include "lldb/lldb-types.h"
 #include "llvm/Pass.h"
 
 namespace llvm {
 class BasicBlock;
-class CallInst;
-class Constant;
-class Function;
-class Instruction;
 class Module;
-class DataLayout;
-class Value;
 }
 
 namespace lldb_private {
 
-class ClangExpressionDeclMap;
 class ExecutionContext;
 class Stream;
 
-//----------------------------------------------------------------------
-/// @class DynamicCheckerFunctions IRDynamicChecks.h
-/// "lldb/Expression/IRDynamicChecks.h" Encapsulates dynamic check functions
-/// used by expressions.
-///
-/// Each of the utility functions encapsulated in this class is responsible
-/// for validating some data that an expression is about to use.  Examples
-/// are:
-///
-/// a = *b;     // check that b is a valid pointer [b init];   // check that b
-/// is a valid object to send "init" to
-///
-/// The class installs each checker function into the target process and makes
-/// it available to IRDynamicChecks to use.
-//----------------------------------------------------------------------
-class DynamicCheckerFunctions {
+class ClangDynamicCheckerFunctions
+    : public lldb_private::DynamicCheckerFunctions {
 public:
-  //------------------------------------------------------------------
-  /// Constructor
-  //------------------------------------------------------------------
-  DynamicCheckerFunctions();
+  ClangDynamicCheckerFunctions();
 
-  //------------------------------------------------------------------
-  /// Destructor
-  //------------------------------------------------------------------
-  ~DynamicCheckerFunctions();
+  virtual ~ClangDynamicCheckerFunctions();
+
+  static bool classof(const DynamicCheckerFunctions *checker_funcs) {
+    return checker_funcs->GetKind() == DCF_Clang;
+  }
 
   //------------------------------------------------------------------
   /// Install the utility functions into a process.  This binds the instance
@@ -71,9 +49,9 @@ public:
   ///     already been installed.
   //------------------------------------------------------------------
   bool Install(DiagnosticManager &diagnostic_manager,
-               ExecutionContext &exe_ctx);
+               ExecutionContext &exe_ctx) override;
 
-  bool DoCheckersExplainStop(lldb::addr_t addr, Stream &message);
+  bool DoCheckersExplainStop(lldb::addr_t addr, Stream &message) override;
 
   std::shared_ptr<UtilityFunction> m_valid_pointer_check;
   std::shared_ptr<UtilityFunction> m_objc_object_check;
@@ -93,20 +71,7 @@ public:
 //----------------------------------------------------------------------
 class IRDynamicChecks : public llvm::ModulePass {
 public:
-  //------------------------------------------------------------------
-  /// Constructor
-  ///
-  /// @param[in] checker_functions
-  ///     The checker functions for the target process.
-  ///
-  /// @param[in] func_name
-  ///     The name of the function to prepare for execution in the target.
-  ///
-  /// @param[in] decl_map
-  ///     The mapping used to look up entities in the target process. In
-  ///     this case, used to find objc_msgSend
-  //------------------------------------------------------------------
-  IRDynamicChecks(DynamicCheckerFunctions &checker_functions,
+  IRDynamicChecks(ClangDynamicCheckerFunctions &checker_functions,
                   const char *func_name = "$__lldb_expr");
 
   //------------------------------------------------------------------
@@ -160,7 +125,7 @@ private:
   bool FindDataLoads(llvm::Module &M, llvm::BasicBlock &BB);
 
   std::string m_func_name; ///< The name of the function to add checks to
-  DynamicCheckerFunctions
+  ClangDynamicCheckerFunctions
       &m_checker_functions; ///< The checker functions for the process
 };
 
