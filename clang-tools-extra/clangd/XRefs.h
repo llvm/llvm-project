@@ -141,10 +141,6 @@ llvm::Optional<TypeHierarchyItem> getTypeHierarchy(
     ParsedAST &AST, Position Pos, int Resolve, TypeHierarchyDirection Direction,
     const SymbolIndex *Index = nullptr, PathRef TUPath = PathRef{});
 
-void resolveTypeHierarchy(TypeHierarchyItem &Item, int ResolveLevels,
-                          TypeHierarchyDirection Direction,
-                          const SymbolIndex *Index);
-
 /// Retrieves the deduced type at a given location (auto, decltype).
 /// Retuns None unless SourceLocationBeg starts an auto/decltype token.
 /// It will return the underlying type.

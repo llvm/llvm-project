@@ -42,17 +42,8 @@ MATCHER_P(WithKind, Kind, "") { return arg.kind == Kind; }
 MATCHER_P(SelectionRangeIs, R, "") { return arg.selectionRange == R; }
 template <class... ParentMatchers>
 ::testing::Matcher<TypeHierarchyItem> Parents(ParentMatchers... ParentsM) {
-  return Field(&TypeHierarchyItem::parents,
-               HasValue(UnorderedElementsAre(ParentsM...)));
+  return Field(&TypeHierarchyItem::parents, HasValue(ElementsAre(ParentsM...)));
 }
-template <class... ChildMatchers>
-::testing::Matcher<TypeHierarchyItem> Children(ChildMatchers... ChildrenM) {
-  return Field(&TypeHierarchyItem::children,
-               HasValue(UnorderedElementsAre(ChildrenM...)));
-}
-// Note: "not resolved" is differnt from "resolved but empty"!
-MATCHER(ParentsNotResolved, "") { return !arg.parents; }
-MATCHER(ChildrenNotResolved, "") { return !arg.children; }
 
 TEST(FindRecordTypeAt, TypeOrVariable) {
   Annotations Source(R"cpp(
@@ -610,41 +601,6 @@ struct Child : Parent<T> {};
   SymbolID Child = findSymbolIDByName(Index.get(), "Child");
 
   EXPECT_THAT(collectSubtypes(Parent, Index.get()), ElementsAre(Child));
-}
-
-TEST(Subtypes, LazyResolution) {
-  Annotations Source(R"cpp(
-struct P^arent {};
-struct Child1 : Parent {};
-struct Child2a : Child1 {};
-struct Child2b : Child1 {};
-)cpp");
-
-  TestTU TU = TestTU::withCode(Source.code());
-  auto AST = TU.build();
-  auto Index = TU.index();
-
-  llvm::Optional<TypeHierarchyItem> Result = getTypeHierarchy(
-      AST, Source.point(), /*ResolveLevels=*/1,
-      TypeHierarchyDirection::Children, Index.get(), "/clangd-test/TestTU.cpp");
-  ASSERT_TRUE(bool(Result));
-  EXPECT_THAT(
-      *Result,
-      AllOf(WithName("Parent"), WithKind(SymbolKind::Struct), Parents(),
-            Children(AllOf(WithName("Child1"), WithKind(SymbolKind::Struct),
-                           ParentsNotResolved(), ChildrenNotResolved()))));
-
-  resolveTypeHierarchy((*Result->children)[0], /*ResolveLevels=*/1,
-                       TypeHierarchyDirection::Children, Index.get());
-
-  EXPECT_THAT(
-      (*Result->children)[0],
-      AllOf(WithName("Child1"), WithKind(SymbolKind::Struct),
-            ParentsNotResolved(),
-            Children(AllOf(WithName("Child2a"), WithKind(SymbolKind::Struct),
-                           ParentsNotResolved(), ChildrenNotResolved()),
-                     AllOf(WithName("Child2b"), WithKind(SymbolKind::Struct),
-                           ParentsNotResolved(), ChildrenNotResolved()))));
 }
 
 } // namespace

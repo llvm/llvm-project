@@ -12,6 +12,8 @@
 #include "Logger.h"
 #include "Protocol.h"
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/LangOptions.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Format/Format.h"
@@ -244,20 +246,106 @@ bool halfOpenRangeTouches(const SourceManager &Mgr, SourceRange R,
   return L == R.getEnd() || halfOpenRangeContains(Mgr, R, L);
 }
 
-llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &Mgr,
+static unsigned getTokenLengthAtLoc(SourceLocation Loc, const SourceManager &SM,
+                                    const LangOptions &LangOpts) {
+  Token TheTok;
+  if (Lexer::getRawToken(Loc, TheTok, SM, LangOpts))
+    return 0;
+  // FIXME: Here we check whether the token at the location is a greatergreater
+  // (>>) token and consider it as a single greater (>). This is to get it
+  // working for templates but it isn't correct for the right shift operator. We
+  // can avoid this by using half open char ranges in getFileRange() but getting
+  // token ending is not well supported in macroIDs.
+  if (TheTok.is(tok::greatergreater))
+    return 1;
+  return TheTok.getLength();
+}
+
+// Returns location of the last character of the token at a given loc
+static SourceLocation getLocForTokenEnd(SourceLocation BeginLoc,
+                                        const SourceManager &SM,
+                                        const LangOptions &LangOpts) {
+  unsigned Len = getTokenLengthAtLoc(BeginLoc, SM, LangOpts);
+  return BeginLoc.getLocWithOffset(Len ? Len - 1 : 0);
+}
+
+// Returns location of the starting of the token at a given EndLoc
+static SourceLocation getLocForTokenBegin(SourceLocation EndLoc,
+                                          const SourceManager &SM,
+                                          const LangOptions &LangOpts) {
+  return EndLoc.getLocWithOffset(
+      -(signed)getTokenLengthAtLoc(EndLoc, SM, LangOpts));
+}
+
+// Converts a char source range to a token range.
+static SourceRange toTokenRange(CharSourceRange Range, const SourceManager &SM,
+                                const LangOptions &LangOpts) {
+  if (!Range.isTokenRange())
+    Range.setEnd(getLocForTokenBegin(Range.getEnd(), SM, LangOpts));
+  return Range.getAsRange();
+}
+// Returns the union of two token ranges.
+// To find the maximum of the Ends of the ranges, we compare the location of the
+// last character of the token.
+static SourceRange unionTokenRange(SourceRange R1, SourceRange R2,
+                                   const SourceManager &SM,
+                                   const LangOptions &LangOpts) {
+  SourceLocation E1 = getLocForTokenEnd(R1.getEnd(), SM, LangOpts);
+  SourceLocation E2 = getLocForTokenEnd(R2.getEnd(), SM, LangOpts);
+  return SourceRange(std::min(R1.getBegin(), R2.getBegin()),
+                     E1 < E2 ? R2.getEnd() : R1.getEnd());
+}
+
+// Returns the tokenFileRange for a given Location as a Token Range
+// This is quite similar to getFileLoc in SourceManager as both use
+// getImmediateExpansionRange and getImmediateSpellingLoc (for macro IDs).
+// However:
+// - We want to maintain the full range information as we move from one file to
+//   the next. getFileLoc only uses the BeginLoc of getImmediateExpansionRange.
+// - We want to split '>>' tokens as the lexer parses the '>>' in template
+//   instantiations as a '>>' instead of a '>'.
+// There is also getExpansionRange but it simply calls
+// getImmediateExpansionRange on the begin and ends separately which is wrong.
+static SourceRange getTokenFileRange(SourceLocation Loc,
+                                     const SourceManager &SM,
+                                     const LangOptions &LangOpts) {
+  SourceRange FileRange = Loc;
+  while (!FileRange.getBegin().isFileID()) {
+    assert(!FileRange.getEnd().isFileID() &&
+           "Both Begin and End should be MacroIDs.");
+    if (SM.isMacroArgExpansion(FileRange.getBegin())) {
+      FileRange.setBegin(SM.getImmediateSpellingLoc(FileRange.getBegin()));
+      FileRange.setEnd(SM.getImmediateSpellingLoc(FileRange.getEnd()));
+    } else {
+      SourceRange ExpansionRangeForBegin = toTokenRange(
+          SM.getImmediateExpansionRange(FileRange.getBegin()), SM, LangOpts);
+      SourceRange ExpansionRangeForEnd = toTokenRange(
+          SM.getImmediateExpansionRange(FileRange.getEnd()), SM, LangOpts);
+      FileRange = unionTokenRange(ExpansionRangeForBegin, ExpansionRangeForEnd,
+                                  SM, LangOpts);
+    }
+  }
+  return FileRange;
+}
+
+llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &SM,
                                                 const LangOptions &LangOpts,
                                                 SourceRange R) {
-  auto Begin = Mgr.getFileLoc(R.getBegin());
-  if (Begin.isInvalid())
+  SourceRange R1 = getTokenFileRange(R.getBegin(), SM, LangOpts);
+  if (!isValidFileRange(SM, R1))
     return llvm::None;
-  auto End = Mgr.getFileLoc(R.getEnd());
-  if (End.isInvalid())
-    return llvm::None;
-  End = Lexer::getLocForEndOfToken(End, 0, Mgr, LangOpts);
 
-  SourceRange Result(Begin, End);
-  if (!isValidFileRange(Mgr, Result))
+  SourceRange R2 = getTokenFileRange(R.getEnd(), SM, LangOpts);
+  if (!isValidFileRange(SM, R2))
     return llvm::None;
+
+  SourceRange Result = unionTokenRange(R1, R2, SM, LangOpts);
+  unsigned TokLen = getTokenLengthAtLoc(Result.getEnd(), SM, LangOpts);
+  // Convert from closed token range to half-open (char) range
+  Result.setEnd(Result.getEnd().getLocWithOffset(TokLen));
+  if (!isValidFileRange(SM, Result))
+    return llvm::None;
+
   return Result;
 }
 
@@ -610,7 +698,6 @@ std::vector<std::string> visibleNamespaces(llvm::StringRef Code,
       for (const auto& Used : It->second)
         Found.push_back(Used.getKey());
   }
-
 
   llvm::sort(Found, [&](const std::string &LHS, const std::string &RHS) {
     if (Current == RHS)

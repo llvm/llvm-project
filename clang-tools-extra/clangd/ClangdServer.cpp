@@ -151,7 +151,10 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Inputs.Contents = Contents;
   Inputs.Opts = std::move(Opts);
   Inputs.Index = Index;
-  WorkScheduler.update(File, Inputs, WantDiags);
+  bool NewFile = WorkScheduler.update(File, Inputs, WantDiags);
+  // If we loaded Foo.h, we want to make sure Foo.cpp is indexed.
+  if (NewFile && BackgroundIdx)
+    BackgroundIdx->boostRelated(File);
 }
 
 void ClangdServer::removeDocument(PathRef File) { WorkScheduler.remove(File); }
@@ -523,13 +526,6 @@ void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
   };
 
   WorkScheduler.runWithAST("Type Hierarchy", File, Bind(Action, std::move(CB)));
-}
-
-void ClangdServer::resolveTypeHierarchy(
-    TypeHierarchyItem Item, int Resolve, TypeHierarchyDirection Direction,
-    Callback<llvm::Optional<TypeHierarchyItem>> CB) {
-  clangd::resolveTypeHierarchy(Item, Resolve, Direction, Index);
-  CB(Item);
 }
 
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {

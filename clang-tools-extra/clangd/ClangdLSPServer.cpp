@@ -926,13 +926,6 @@ void ClangdLSPServer::onTypeHierarchy(
                         Params.resolve, Params.direction, std::move(Reply));
 }
 
-void ClangdLSPServer::onResolveTypeHierarchy(
-    const ResolveTypeHierarchyItemParams &Params,
-    Callback<Optional<TypeHierarchyItem>> Reply) {
-  Server->resolveTypeHierarchy(Params.item, Params.resolve, Params.direction,
-                               std::move(Reply));
-}
-
 void ClangdLSPServer::applyConfiguration(
     const ConfigurationSettings &Settings) {
   // Per-file update to the compilation database.
@@ -1028,7 +1021,6 @@ ClangdLSPServer::ClangdLSPServer(
   MsgHandler->bind("workspace/didChangeConfiguration", &ClangdLSPServer::onChangeConfiguration);
   MsgHandler->bind("textDocument/symbolInfo", &ClangdLSPServer::onSymbolInfo);
   MsgHandler->bind("textDocument/typeHierarchy", &ClangdLSPServer::onTypeHierarchy);
-  MsgHandler->bind("typeHierarchy/resolve", &ClangdLSPServer::onResolveTypeHierarchy);
   // clang-format on
 }
 
