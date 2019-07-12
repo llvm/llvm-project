@@ -788,6 +788,16 @@ Value *InstCombiner::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
       else if (True && !False)
         False = Builder.CreateBinOp(Opcode, C, F);
     }
+  } else if (LHSIsSelect && LHS->hasOneUse()) {
+    // (A ? B : C) op Y -> A ? (B op Y) : (C op Y)
+    Cond = A;
+    True = SimplifyBinOp(Opcode, B, RHS, FMF, Q);
+    False = SimplifyBinOp(Opcode, C, RHS, FMF, Q);
+  } else if (RHSIsSelect && RHS->hasOneUse()) {
+    // X op (D ? E : F) -> D ? (X op E) : (X op F)
+    Cond = D;
+    True = SimplifyBinOp(Opcode, LHS, E, FMF, Q);
+    False = SimplifyBinOp(Opcode, LHS, F, FMF, Q);
   }
 
   if (!True || !False)
