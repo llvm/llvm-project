@@ -118,7 +118,7 @@ TEST_F(RefactoringActionRulesTest, MyFirstRefactoringRule) {
                  "Error:           ''\n"
                  "InsertedHeaders: []\n"
                  "RemovedHeaders:  []\n"
-                 "Replacements:    \n" // Extra whitespace here!
+                 "Replacements:\n"
                  "  - FilePath:        input.cpp\n"
                  "    Offset:          30\n"
                  "    Length:          1\n"
