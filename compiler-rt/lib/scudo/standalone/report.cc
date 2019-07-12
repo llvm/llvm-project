@@ -52,7 +52,7 @@ void NORETURN reportCheckFailed(const char *File, int Line,
 // Generic string fatal error message.
 void NORETURN reportError(const char *Message) {
   ScopedErrorReport Report;
-  Report.append("%s", Message);
+  Report.append("%s\n", Message);
 }
 
 void NORETURN reportInvalidFlag(const char *FlagType, const char *Value) {

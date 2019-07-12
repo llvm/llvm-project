@@ -126,6 +126,14 @@ INLINE void atomic_store_relaxed(volatile T *A, typename T::Type V) {
   atomic_store(A, V, memory_order_relaxed);
 }
 
+template <typename T>
+INLINE typename T::Type atomic_compare_exchange(volatile T *A,
+                                                typename T::Type Cmp,
+                                                typename T::Type Xchg) {
+  atomic_compare_exchange_strong(A, &Cmp, Xchg, memory_order_acquire);
+  return Cmp;
+}
+
 } // namespace scudo
 
 #endif // SCUDO_ATOMIC_H_

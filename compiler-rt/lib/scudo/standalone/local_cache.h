@@ -10,6 +10,7 @@
 #define SCUDO_LOCAL_CACHE_H_
 
 #include "internal_defs.h"
+#include "report.h"
 #include "stats.h"
 
 namespace scudo {
@@ -39,7 +40,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
       DCHECK_LE(I, Count);
       return Batch[I];
     }
-    static u32 MaxCached(uptr Size) {
+    static u32 getMaxCached(uptr Size) {
       return Min(MaxNumCached, SizeClassMap::getMaxCachedHint(Size));
     }
     TransferBatch *Next;
@@ -140,7 +141,7 @@ private:
     for (uptr I = 0; I < NumClasses; I++) {
       PerClass *P = &PerClassArray[I];
       const uptr Size = SizeClassAllocator::getSizeByClassId(I);
-      P->MaxCount = 2 * TransferBatch::MaxCached(Size);
+      P->MaxCount = 2 * TransferBatch::getMaxCached(Size);
       P->ClassSize = Size;
     }
   }
@@ -166,7 +167,9 @@ private:
     const u32 Count = Min(C->MaxCount / 2, C->Count);
     const uptr FirstIndexToDrain = C->Count - Count;
     TransferBatch *B = createBatch(ClassId, C->Chunks[FirstIndexToDrain]);
-    CHECK(B);
+    if (UNLIKELY(!B))
+      reportOutOfMemory(
+          SizeClassAllocator::getSizeByClassId(SizeClassMap::BatchClassId));
     B->setFromArray(&C->Chunks[FirstIndexToDrain], Count);
     C->Count -= Count;
     Allocator->pushBatch(ClassId, B);
