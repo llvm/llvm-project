@@ -18,6 +18,8 @@ elseif(CMAKE_SYSTEM_NAME MATCHES "Linux")
     find_package(Threads REQUIRED)
     set(DIRECTORY_WATCHER_LINK_LIBS ${CMAKE_THREAD_LIBS_INIT})
   endif()
+elseif(CMAKE_SYSTEM_NAME MATCHES "Windows")
+  list(APPEND DIRECTORY_WATCHER_SOURCES windows/DirectoryWatcher-windows.cpp)
 endif()
 
 add_clang_library(clangDirectoryWatcher
