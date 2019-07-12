@@ -133,6 +133,10 @@ public:
     LongDoubleFormat = &llvm::APFloat::x87DoubleExtended();
   }
 
+  const char *getLongDoubleMangling() const override {
+    return LongDoubleFormat == &llvm::APFloat::IEEEquad() ? "g" : "e";
+  }
+
   unsigned getFloatEvalMethod() const override {
     // X87 evaluates with 80 bits "long double" precision.
     return SSELevel == NoSSE ? 2 : 0;
@@ -845,8 +849,6 @@ public:
       : LinuxTargetInfo<X86_64TargetInfo>(Triple, Opts) {
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
   }
-
-  const char *getLongDoubleMangling() const override { return "g"; }
 };
 } // namespace targets
 } // namespace clang

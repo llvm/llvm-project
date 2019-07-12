@@ -27,6 +27,7 @@
 #include "index/SymbolCollector.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Driver/Types.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -171,6 +172,11 @@ BackgroundQueue::Task BackgroundIndex::changedFilesTask(
   return T;
 }
 
+static llvm::StringRef filenameWithoutExtension(llvm::StringRef Path) {
+  Path = llvm::sys::path::filename(Path);
+  return Path.drop_back(llvm::sys::path::extension(Path).size());
+}
+
 BackgroundQueue::Task
 BackgroundIndex::indexFileTask(tooling::CompileCommand Cmd,
                                BackgroundIndexStorage *Storage) {
@@ -182,7 +188,17 @@ BackgroundIndex::indexFileTask(tooling::CompileCommand Cmd,
       elog("Indexing {0} failed: {1}", FileName, std::move(Error));
   });
   T.QueuePri = IndexFile;
+  T.Tag = filenameWithoutExtension(Cmd.Filename);
   return T;
+}
+
+void BackgroundIndex::boostRelated(llvm::StringRef Path) {
+  namespace types = clang::driver::types;
+  auto Type =
+      types::lookupTypeForExtension(llvm::sys::path::extension(Path).substr(1));
+  // is this a header?
+  if (Type != types::TY_INVALID && types::onlyPrecompileType(Type))
+    Queue.boost(filenameWithoutExtension(Path), IndexBoostedFile);
 }
 
 /// Given index results from a TU, only update symbols coming from files that

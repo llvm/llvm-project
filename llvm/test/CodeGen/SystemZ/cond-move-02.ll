@@ -1,6 +1,11 @@
 ; Test LOCHI and LOCGHI.
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 -verify-machineinstrs | FileCheck %s
+;
+; Run the test again to make sure it still works the same even
+; in the presence of the select instructions.
+; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=arch13 -verify-machineinstrs | FileCheck %s
+
 
 define i32 @f1(i32 %x) {
 ; CHECK-LABEL: f1:

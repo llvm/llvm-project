@@ -250,6 +250,8 @@ public:
 
   lldb::TypeSP LookupInCompleteClassCache(ConstString &name);
 
+  llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) override;
+
   virtual UtilityFunction *CreateObjectChecker(const char *) = 0;
 
   virtual ObjCRuntimeVersions GetRuntimeVersion() const {

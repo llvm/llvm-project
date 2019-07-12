@@ -40,6 +40,11 @@ using namespace llvm;
 #undef AMDGPUSubtarget
 #include "R600GenSubtargetInfo.inc"
 
+static cl::opt<bool> DisablePowerSched(
+  "amdgpu-disable-power-sched",
+  cl::desc("Disable scheduling to minimize mAI power bursts"),
+  cl::init(false));
+
 GCNSubtarget::~GCNSubtarget() = default;
 
 R600Subtarget &
@@ -751,11 +756,130 @@ struct MemOpClusterMutation : ScheduleDAGMutation {
     }
   }
 };
+
+struct FillMFMAShadowMutation : ScheduleDAGMutation {
+  const SIInstrInfo *TII;
+
+  ScheduleDAGMI *DAG;
+
+  FillMFMAShadowMutation(const SIInstrInfo *tii) : TII(tii) {}
+
+  bool isSALU(const SUnit *SU) const {
+    const MachineInstr &MI = *SU->getInstr();
+    return TII->isSALU(MI) && !MI.isTerminator();
+  }
+
+  bool canAddEdge(const SUnit *Succ, const SUnit *Pred) const {
+    if (Pred->NodeNum < Succ->NodeNum)
+      return true;
+
+    SmallVector<const SUnit*, 64> Succs({Succ}), Preds({Pred});
+
+    for (unsigned I = 0; I < Succs.size(); ++I) {
+      for (const SDep &SI : Succs[I]->Succs) {
+        const SUnit *SU = SI.getSUnit();
+        if (SU != Succs[I] && llvm::find(Succs, SU) == Succs.end())
+          Succs.push_back(SU);
+      }
+    }
+
+    SmallPtrSet<const SUnit*, 32> Visited;
+    while (!Preds.empty()) {
+      const SUnit *SU = Preds.pop_back_val();
+      if (llvm::find(Succs, SU) != Succs.end())
+        return false;
+      Visited.insert(SU);
+      for (const SDep &SI : SU->Preds)
+        if (SI.getSUnit() != SU && !Visited.count(SI.getSUnit()))
+          Preds.push_back(SI.getSUnit());
+    }
+
+    return true;
+  }
+
+  // Link as much SALU intructions in chain as possible. Return the size
+  // of the chain. Links up to MaxChain instructions.
+  unsigned linkSALUChain(SUnit *From, SUnit *To, unsigned MaxChain,
+                         SmallPtrSetImpl<SUnit *> &Visited) const {
+    SmallVector<SUnit *, 8> Worklist({To});
+    unsigned Linked = 0;
+
+    while (!Worklist.empty() && MaxChain-- > 0) {
+      SUnit *SU = Worklist.pop_back_val();
+      if (!Visited.insert(SU).second)
+        continue;
+
+      LLVM_DEBUG(dbgs() << "Inserting edge from\n" ; DAG->dumpNode(*From);
+                 dbgs() << "to\n"; DAG->dumpNode(*SU); dbgs() << '\n');
+
+      if (SU->addPred(SDep(From, SDep::Artificial), false))
+        ++Linked;
+
+      for (SDep &SI : From->Succs) {
+        SUnit *SUv = SI.getSUnit();
+        if (SUv != From && TII->isVALU(*SUv->getInstr()) && canAddEdge(SUv, SU))
+          SUv->addPred(SDep(SU, SDep::Artificial), false);
+      }
+
+      for (SDep &SI : SU->Succs) {
+        SUnit *Succ = SI.getSUnit();
+        if (Succ != SU && isSALU(Succ) && canAddEdge(From, Succ))
+          Worklist.push_back(Succ);
+      }
+    }
+
+    return Linked;
+  }
+
+  void apply(ScheduleDAGInstrs *DAGInstrs) override {
+    const GCNSubtarget &ST = DAGInstrs->MF.getSubtarget<GCNSubtarget>();
+    if (!ST.hasMAIInsts() || DisablePowerSched)
+      return;
+    DAG = static_cast<ScheduleDAGMI*>(DAGInstrs);
+    const TargetSchedModel *TSchedModel = DAGInstrs->getSchedModel();
+    if (!TSchedModel || DAG->SUnits.empty())
+      return;
+
+    // Scan for MFMA long latency instructions and try to add a dependency
+    // of available SALU instructions to give them a chance to fill MFMA
+    // shadow. That is desirable to fill MFMA shadow with SALU instructions
+    // rather than VALU to prevent power consumption bursts and throttle.
+    auto LastSALU = DAG->SUnits.begin();
+    auto E = DAG->SUnits.end();
+    SmallPtrSet<SUnit*, 32> Visited;
+    for (SUnit &SU : DAG->SUnits) {
+      MachineInstr &MAI = *SU.getInstr();
+      if (!TII->isMAI(MAI) ||
+           MAI.getOpcode() == AMDGPU::V_ACCVGPR_WRITE_B32 ||
+           MAI.getOpcode() == AMDGPU::V_ACCVGPR_READ_B32)
+        continue;
+
+      unsigned Lat = TSchedModel->computeInstrLatency(&MAI) - 1;
+
+      LLVM_DEBUG(dbgs() << "Found MFMA: "; DAG->dumpNode(SU);
+                 dbgs() << "Need " << Lat
+                        << " instructions to cover latency.\n");
+
+      // Find up to Lat independent scalar instructions as early as
+      // possible such that they can be scheduled after this MFMA.
+      for ( ; Lat && LastSALU != E; ++LastSALU) {
+        if (Visited.count(&*LastSALU))
+          continue;
+
+        if (!isSALU(&*LastSALU) || !canAddEdge(&*LastSALU, &SU))
+          continue;
+
+        Lat -= linkSALUChain(&SU, &*LastSALU, Lat, Visited);
+      }
+    }
+  }
+};
 } // namespace
 
 void GCNSubtarget::getPostRAMutations(
     std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
   Mutations.push_back(llvm::make_unique<MemOpClusterMutation>(&InstrInfo));
+  Mutations.push_back(llvm::make_unique<FillMFMAShadowMutation>(&InstrInfo));
 }
 
 const AMDGPUSubtarget &AMDGPUSubtarget::get(const MachineFunction &MF) {

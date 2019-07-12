@@ -466,6 +466,27 @@ int SystemZTTIImpl::getArithmeticInstrCost(
     if (Opcode == Instruction::FRem)
       return LIBCALL_COST;
 
+    // Give discount for some combined logical operations if supported.
+    if (Args.size() == 2 && ST->hasMiscellaneousExtensions3()) {
+      if (Opcode == Instruction::Xor) {
+        for (const Value *A : Args) {
+          if (const Instruction *I = dyn_cast<Instruction>(A))
+            if (I->hasOneUse() &&
+                (I->getOpcode() == Instruction::And ||
+                 I->getOpcode() == Instruction::Or ||
+                 I->getOpcode() == Instruction::Xor))
+              return 0;
+        }
+      }
+      else if (Opcode == Instruction::Or || Opcode == Instruction::And) {
+        for (const Value *A : Args) {
+          if (const Instruction *I = dyn_cast<Instruction>(A))
+            if (I->hasOneUse() && I->getOpcode() == Instruction::Xor)
+              return 0;
+        }
+      }
+    }
+
     // Or requires one instruction, although it has custom handling for i64.
     if (Opcode == Instruction::Or)
       return 1;
@@ -686,9 +707,9 @@ int SystemZTTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst, Type *Src,
       // TODO: Fix base implementation which could simplify things a bit here
       // (seems to miss on differentiating on scalar/vector types).
 
-      // Only 64 bit vector conversions are natively supported.
-      if (DstScalarBits == 64) {
-        if (SrcScalarBits == 64)
+      // Only 64 bit vector conversions are natively supported before arch13.
+      if (DstScalarBits == 64 || ST->hasVectorEnhancements2()) {
+        if (SrcScalarBits == DstScalarBits)
           return NumDstVectors;
 
         if (SrcScalarBits == 1)
@@ -856,7 +877,7 @@ int SystemZTTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     case Instruction::Select:
       if (ValTy->isFloatingPointTy())
         return 4; // No load on condition for FP - costs a conditional jump.
-      return 1; // Load On Condition.
+      return 1; // Load On Condition / Select Register.
     }
   }
 
@@ -1009,7 +1030,8 @@ int SystemZTTIImpl::getMemoryOpCost(unsigned Opcode, Type *Src,
     (Src->isVectorTy() ? getNumVectorRegs(Src) : getNumberOfParts(Src));
 
   // Store/Load reversed saves one instruction.
-  if (!Src->isVectorTy() && NumOps == 1 && I != nullptr) {
+  if (((!Src->isVectorTy() && NumOps == 1) || ST->hasVectorEnhancements2()) &&
+      I != nullptr) {
     if (Opcode == Instruction::Load && I->hasOneUse()) {
       const Instruction *LdUser = cast<Instruction>(*I->user_begin());
       // In case of load -> bswap -> store, return normal cost for the load.

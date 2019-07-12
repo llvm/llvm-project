@@ -246,7 +246,6 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
   if (IsN64 && NonPIC && (!ABICallsArg || UseAbiCalls)) {
     D.Diag(diag::warn_drv_unsupported_pic_with_mabicalls)
         << LastPICArg->getAsString(Args) << (!ABICallsArg ? 0 : 1);
-    NonPIC = false;
   }
 
   if (ABICallsArg && !UseAbiCalls && IsPIC) {

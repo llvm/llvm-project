@@ -3559,6 +3559,14 @@ void SMSchedule::orderDependence(SwingSchedulerDAG *SSD, SUnit *SU,
         if (Pos < MoveUse)
           MoveUse = Pos;
       }
+      // We did not handle HW dependences in previous for loop,
+      // and we normally set Latency = 0 for Anti deps,
+      // so may have nodes in same cycle with Anti denpendent on HW regs.
+      else if (S.getKind() == SDep::Anti && stageScheduled(*I) == StageInst1) {
+        OrderBeforeUse = true;
+        if ((MoveUse == 0) || (Pos < MoveUse))
+          MoveUse = Pos;
+      }
     }
     for (auto &P : SU->Preds) {
       if (P.getSUnit() != *I)

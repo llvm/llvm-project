@@ -186,8 +186,7 @@ void LinePrinter::formatMsfStreamData(StringRef Label, PDBFile &File,
     return;
   }
 
-  auto S = MappedBlockStream::createIndexedStream(
-      File.getMsfLayout(), File.getMsfBuffer(), StreamIdx, File.getAllocator());
+  auto S = File.createIndexedStream(StreamIdx);
   if (!S) {
     NewLine();
     formatLine("Stream {0}: Not present", StreamIdx);

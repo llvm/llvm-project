@@ -151,6 +151,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::v4f16, &AMDGPU::SReg_64RegClass);
   }
 
+  if (Subtarget->hasMAIInsts()) {
+    addRegisterClass(MVT::v32i32, &AMDGPU::AReg_1024RegClass);
+  }
+
   computeRegisterProperties(Subtarget->getRegisterInfo());
 
   // We need to custom lower vector stores from local memory
@@ -10194,6 +10198,36 @@ void SITargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
   if (TII->isVOP3(MI.getOpcode())) {
     // Make sure constant bus requirements are respected.
     TII->legalizeOperandsVOP3(MRI, MI);
+
+    // Prefer VGPRs over AGPRs in mAI instructions where possible.
+    // This saves a chain-copy of registers and better ballance register
+    // use between vgpr and agpr as agpr tuples tend to be big.
+    if (const MCOperandInfo *OpInfo = MI.getDesc().OpInfo) {
+      unsigned Opc = MI.getOpcode();
+      const SIRegisterInfo *TRI = Subtarget->getRegisterInfo();
+      for (auto I : { AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0),
+                      AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src1) }) {
+        if (I == -1)
+          break;
+        MachineOperand &Op = MI.getOperand(I);
+        if ((OpInfo[I].RegClass != llvm::AMDGPU::AV_64RegClassID &&
+             OpInfo[I].RegClass != llvm::AMDGPU::AV_32RegClassID) ||
+            !TargetRegisterInfo::isVirtualRegister(Op.getReg()) ||
+            !TRI->isAGPR(MRI, Op.getReg()))
+          continue;
+        auto *Src = MRI.getUniqueVRegDef(Op.getReg());
+        if (!Src || !Src->isCopy() ||
+            !TRI->isSGPRReg(MRI, Src->getOperand(1).getReg()))
+          continue;
+        auto *RC = TRI->getRegClassForReg(MRI, Op.getReg());
+        auto *NewRC = TRI->getEquivalentVGPRClass(RC);
+        // All uses of agpr64 and agpr32 can also accept vgpr except for
+        // v_accvgpr_read, but we do not produce agpr reads during selection,
+        // so no use checks are needed.
+        MRI.setRegClass(Op.getReg(), NewRC);
+      }
+    }
+
     return;
   }
 

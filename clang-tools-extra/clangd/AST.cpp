@@ -184,7 +184,7 @@ std::string shortenNamespace(const llvm::StringRef OriginalName,
     DifferentAt++;
   }
 
-  for (u_int i = DifferentAt; i < OriginalParts.size(); ++i) {
+  for (unsigned i = DifferentAt; i < OriginalParts.size(); ++i) {
     Result.push_back(OriginalParts[i]);
   }
   return join(Result, "::");

@@ -13070,6 +13070,15 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {X, Y, M4Value});
   }
 
+  case SystemZ::BI__builtin_s390_vlbrh:
+  case SystemZ::BI__builtin_s390_vlbrf:
+  case SystemZ::BI__builtin_s390_vlbrg: {
+    llvm::Type *ResultType = ConvertType(E->getType());
+    Value *X = EmitScalarExpr(E->getArg(0));
+    Function *F = CGM.getIntrinsic(Intrinsic::bswap, ResultType);
+    return Builder.CreateCall(F, X);
+  }
+
   // Vector intrinsics that output the post-instruction CC value.
 
 #define INTRINSIC_WITH_CC(NAME) \
@@ -13144,6 +13153,14 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
 
   INTRINSIC_WITH_CC(s390_vftcisb);
   INTRINSIC_WITH_CC(s390_vftcidb);
+
+  INTRINSIC_WITH_CC(s390_vstrsb);
+  INTRINSIC_WITH_CC(s390_vstrsh);
+  INTRINSIC_WITH_CC(s390_vstrsf);
+
+  INTRINSIC_WITH_CC(s390_vstrszb);
+  INTRINSIC_WITH_CC(s390_vstrszh);
+  INTRINSIC_WITH_CC(s390_vstrszf);
 
 #undef INTRINSIC_WITH_CC
 
@@ -13472,24 +13489,12 @@ CodeGenFunction::EmitNVPTXBuiltinExpr(unsigned BuiltinID, const CallExpr *E) {
     // success flag.
     return MakeAtomicCmpXchgValue(*this, E, /*ReturnBool=*/false);
 
-  case NVPTX::BI__nvvm_atom_add_gen_f: {
-    Value *Ptr = EmitScalarExpr(E->getArg(0));
-    Value *Val = EmitScalarExpr(E->getArg(1));
-    // atomicrmw only deals with integer arguments so we need to use
-    // LLVM's nvvm_atomic_load_add_f32 intrinsic for that.
-    Function *FnALAF32 =
-        CGM.getIntrinsic(Intrinsic::nvvm_atomic_load_add_f32, Ptr->getType());
-    return Builder.CreateCall(FnALAF32, {Ptr, Val});
-  }
-
+  case NVPTX::BI__nvvm_atom_add_gen_f:
   case NVPTX::BI__nvvm_atom_add_gen_d: {
     Value *Ptr = EmitScalarExpr(E->getArg(0));
     Value *Val = EmitScalarExpr(E->getArg(1));
-    // atomicrmw only deals with integer arguments, so we need to use
-    // LLVM's nvvm_atomic_load_add_f64 intrinsic.
-    Function *FnALAF64 =
-        CGM.getIntrinsic(Intrinsic::nvvm_atomic_load_add_f64, Ptr->getType());
-    return Builder.CreateCall(FnALAF64, {Ptr, Val});
+    return Builder.CreateAtomicRMW(llvm::AtomicRMWInst::FAdd, Ptr, Val,
+                                   AtomicOrdering::SequentiallyConsistent);
   }
 
   case NVPTX::BI__nvvm_atom_inc_gen_ui: {

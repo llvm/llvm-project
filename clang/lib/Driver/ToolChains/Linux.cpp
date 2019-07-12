@@ -300,9 +300,6 @@ Linux::Linux(const Driver &D, const llvm::Triple &Triple, const ArgList &Args)
       ExtraOpts.push_back("--hash-style=both");
   }
 
-  if (Distro.IsRedhat() && Distro != Distro::RHEL5 && Distro != Distro::RHEL6)
-    ExtraOpts.push_back("--no-add-needed");
-
 #ifdef ENABLE_LINKER_BUILD_ID
   ExtraOpts.push_back("--build-id");
 #endif

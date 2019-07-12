@@ -1,0 +1,33 @@
+## Test llvm-nm when using stdin both explicitly (using '-' as a filename)
+## and implicitly (not specifying any filename).
+
+# RUN: yaml2obj %s -o %t.o
+
+## Pass an explicit filename to produce a baseline output. llvm-nm should
+## have the same behavior when opening a file itself and when reading that
+## file from its standard input stream.
+# RUN: llvm-nm %t.o > %t.base 2> %t.err
+
+## Make sure there is no warning message about no file redirected to stdin.
+# RUN: FileCheck %s --input-file=%t.err --allow-empty --implicit-check-not={{.}}
+
+# RUN: llvm-nm - < %t.o > %t.explicit 2> %t.err
+# RUN: FileCheck %s --input-file=%t.err --allow-empty --implicit-check-not={{.}}
+# RUN: cmp %t.base %t.explicit
+
+# RUN: llvm-nm < %t.o > %t.implicit 2> %t.err
+# RUN: FileCheck %s --input-file=%t.err --allow-empty --implicit-check-not={{.}}
+# RUN: cmp %t.base %t.implicit
+
+!ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+  - Name:    symbol_a
+    Section: .text

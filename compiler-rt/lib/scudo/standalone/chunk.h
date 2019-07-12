@@ -97,12 +97,6 @@ const AtomicPackedHeader *getConstAtomicHeader(const void *Ptr) {
       reinterpret_cast<uptr>(Ptr) - getHeaderSize());
 }
 
-INLINE void *getBlockBegin(const void *Ptr, UnpackedHeader *Header) {
-  return reinterpret_cast<void *>(reinterpret_cast<uptr>(Ptr) -
-                                  getHeaderSize() -
-                                  (Header->Offset << SCUDO_MIN_ALIGNMENT_LOG));
-}
-
 // We do not need a cryptographically strong hash for the checksum, but a CRC
 // type function that can alert us in the event a header is invalid or
 // corrupted. Ideally slightly better than a simple xor of all fields.

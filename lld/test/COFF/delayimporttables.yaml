@@ -23,7 +23,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Import {
 # CHECK-NEXT:     Symbol: two (0)
-# CHECK-NEXT:     Address: 0x1400010A4
+# CHECK-NEXT:     Address: 0x140001059
 # CHECK-NEXT:   }
 # CHECK-NEXT: }
 # CHECK-NEXT: DelayImport {
@@ -36,11 +36,11 @@
 # CHECK-NEXT:   UnloadDelayImportTable: 0x0
 # CHECK-NEXT:   Import {
 # CHECK-NEXT:     Symbol: left (0)
-# CHECK-NEXT:     Address: 0x1400010FB
+# CHECK-NEXT:     Address: 0x1400010B8
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Import {
 # CHECK-NEXT:     Symbol: right (0)
-# CHECK-NEXT:     Address: 0x140001152
+# CHECK-NEXT:     Address: 0x1400010C4
 # CHECK-NEXT:   }
 # CHECK-NEXT: }
 

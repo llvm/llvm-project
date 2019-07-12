@@ -371,11 +371,9 @@ Error loadYAMLLog(StringRef Data, XRayFileHeader &FileHeader,
 } // namespace
 
 Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
-  int Fd;
-  if (auto EC = sys::fs::openFileForRead(Filename, Fd)) {
-    return make_error<StringError>(
-        Twine("Cannot read log from '") + Filename + "'", EC);
-  }
+  Expected<sys::fs::file_t> FdOrErr = sys::fs::openNativeFileForRead(Filename);
+  if (!FdOrErr)
+    return FdOrErr.takeError();
 
   uint64_t FileSize;
   if (auto EC = sys::fs::file_size(Filename, FileSize)) {
@@ -391,8 +389,9 @@ Expected<Trace> llvm::xray::loadTraceFile(StringRef Filename, bool Sort) {
   // Map the opened file into memory and use a StringRef to access it later.
   std::error_code EC;
   sys::fs::mapped_file_region MappedFile(
-      sys::fs::convertFDToNativeFile(Fd),
-      sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
+      *FdOrErr, sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0,
+      EC);
+  sys::fs::closeFile(*FdOrErr);
   if (EC) {
     return make_error<StringError>(
         Twine("Cannot read log from '") + Filename + "'", EC);

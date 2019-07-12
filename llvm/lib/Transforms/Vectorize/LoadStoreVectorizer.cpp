@@ -1152,13 +1152,8 @@ bool Vectorizer::vectorizeLoadChain(
              vectorizeLoadChain(Chains.second, InstructionsProcessed);
     }
 
-    unsigned NewAlign = getOrEnforceKnownAlignment(L0->getPointerOperand(),
-                                                   StackAdjustedAlignment,
-                                                   DL, L0, nullptr, &DT);
-    if (NewAlign != 0)
-      Alignment = NewAlign;
-
-    Alignment = NewAlign;
+    Alignment = getOrEnforceKnownAlignment(
+        L0->getPointerOperand(), StackAdjustedAlignment, DL, L0, nullptr, &DT);
   }
 
   if (!TTI.isLegalToVectorizeLoadChain(SzInBytes, Alignment, AS)) {

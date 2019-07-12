@@ -126,6 +126,16 @@ void test_core(void) {
   // CHECK: call <2 x i64> @llvm.s390.vbperm(<16 x i8> %{{.*}}, <16 x i8> %{{.*}})
   // CHECK-ASM: vbperm
 
+  vf = vec_revb(vf);
+  // CHECK-ASM: vperm
+  vd = vec_revb(vd);
+  // CHECK-ASM: vperm
+
+  vf = vec_reve(vf);
+  // CHECK-ASM: vperm
+  vd = vec_reve(vd);
+  // CHECK-ASM: {{vperm|vpdi}}
+
   vf = vec_sel(vf, vf, vui);
   // CHECK-ASM: vsel
   vf = vec_sel(vf, vf, vbi);

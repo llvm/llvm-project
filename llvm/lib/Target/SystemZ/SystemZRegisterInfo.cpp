@@ -96,17 +96,21 @@ SystemZRegisterInfo::getRegAllocationHints(unsigned VirtReg,
       if (!DoneRegs.insert(Reg).second)
         continue;
 
-      for (auto &Use : MRI->use_instructions(Reg)) {
+      for (auto &Use : MRI->reg_instructions(Reg)) {
         // For LOCRMux, see if the other operand is already a high or low
-        // register, and in that case give the correpsonding hints for
+        // register, and in that case give the corresponding hints for
         // VirtReg. LOCR instructions need both operands in either high or
-        // low parts.
-        if (Use.getOpcode() == SystemZ::LOCRMux) {
+        // low parts. Same handling for SELRMux.
+        if (Use.getOpcode() == SystemZ::LOCRMux ||
+            Use.getOpcode() == SystemZ::SELRMux) {
           MachineOperand &TrueMO = Use.getOperand(1);
           MachineOperand &FalseMO = Use.getOperand(2);
           const TargetRegisterClass *RC =
             TRI->getCommonSubClass(getRC32(FalseMO, VRM, MRI),
                                    getRC32(TrueMO, VRM, MRI));
+          if (Use.getOpcode() == SystemZ::SELRMux)
+            RC = TRI->getCommonSubClass(RC,
+                                        getRC32(Use.getOperand(0), VRM, MRI));
           if (RC && RC != &SystemZ::GRX32BitRegClass) {
             addHints(Order, Hints, RC, MRI);
             // Return true to make these hints the only regs available to

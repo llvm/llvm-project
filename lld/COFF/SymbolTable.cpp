@@ -293,7 +293,7 @@ void SymbolTable::reportRemainingUndefines() {
   if (undefs.empty() && localImports.empty())
     return;
 
-  for (Symbol *b : config->gCRoot) {
+  for (Symbol *b : config->gcroot) {
     if (undefs.count(b))
       errorOrWarn("<root>: undefined symbol: " + toString(*b));
     if (config->warnLocallyDefinedImported)

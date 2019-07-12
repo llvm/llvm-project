@@ -10,6 +10,12 @@
 
 #include "gwp_asan/options.h"
 
+// RHEL creates the PRIu64 format macro (for printing uint64_t's) only when this
+// macro is defined before including <inttypes.h>.
+#ifndef __STDC_FORMAT_MACROS
+  #define __STDC_FORMAT_MACROS 1
+#endif
+
 #include <assert.h>
 #include <inttypes.h>
 #include <stdio.h>

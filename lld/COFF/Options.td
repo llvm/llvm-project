@@ -176,6 +176,21 @@ def pdb_source_path : P<"pdbsourcepath",
                         "Base path used to make relative source file path absolute in PDB">;
 def rsp_quoting : Joined<["--"], "rsp-quoting=">,
   HelpText<"Quoting style for response files, 'windows' (default) or 'posix'">;
+def thinlto_emit_imports_files :
+    F<"thinlto-emit-imports-files">,
+    HelpText<"Emit .imports files with -thinlto-index-only">;
+def thinlto_index_only :
+    F<"thinlto-index-only">,
+    HelpText<"Instead of linking, emit ThinLTO index files">;
+def thinlto_index_only_arg : P<
+    "thinlto-index-only",
+    "-thinlto-index-only and also write native module names to file">;
+def thinlto_object_suffix_replace : P<
+    "thinlto-object-suffix-replace",
+    "'old;new' replace old suffix with new suffix in ThinLTO index">;
+def thinlto_prefix_replace: P<
+    "thinlto-prefix-replace",
+    "'old;new' replace old prefix with new prefix in ThinLTO outputs">;
 def dash_dash_version : Flag<["--"], "version">,
   HelpText<"Print version information">;
 defm threads: B<"threads",

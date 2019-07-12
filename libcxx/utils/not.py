@@ -12,10 +12,20 @@ ex: python /path/to/not.py ' echo hello
     echo $? // (prints 1)
 """
 
-import distutils.spawn
 import subprocess
 import sys
 
+def which_cannot_find_program(prog):
+    # Allow for import errors on distutils.spawn
+    try:
+        import distutils.spawn
+        prog = distutils.spawn.find_executable(prog[0])
+        if prog is None:
+            sys.stderr.write('Failed to find program %s' % prog[0])
+            return True
+        return False
+    except:
+        return False
 
 def main():
     argv = list(sys.argv)
@@ -27,9 +37,7 @@ def main():
         expectCrash = False
     if len(argv) == 0:
         return 1
-    prog = distutils.spawn.find_executable(argv[0])
-    if prog is None:
-        sys.stderr.write('Failed to find program %s' % argv[0])
+    if which_cannot_find_program(argv[0]):
         return 1
     rc = subprocess.call(argv)
     if rc < 0:

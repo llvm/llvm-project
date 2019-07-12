@@ -19,10 +19,10 @@
 
 #include "test_macros.h"
 #include "min_allocator.h"
+#include "test_allocator.h"
 
-int main(int, char**)
-{
-    {
+void test_basic() {
+  {
     typedef std::pair<const int, double> V;
     std::map<int, double> m =
                             {
@@ -70,6 +70,28 @@ int main(int, char**)
     assert(*next(m.begin()) == V(2, 1));
     assert(*next(m.begin(), 2) == V(3, 1));
     }
+}
+
+
+void duplicate_keys_test() {
+  typedef std::map<int, int, std::less<int>, test_allocator<std::pair<const int, int> > > Map;
+  typedef test_alloc_base AllocBase;
+  {
+    LIBCPP_ASSERT(AllocBase::alloc_count == 0);
+    Map s = {{1, 0}, {2, 0}, {3, 0}};
+    LIBCPP_ASSERT(AllocBase::alloc_count == 3);
+    s = {{4, 0}, {4, 0}, {4, 0}, {4, 0}};
+    LIBCPP_ASSERT(AllocBase::alloc_count == 1);
+    assert(s.size() == 1);
+    assert(s.begin()->first == 4);
+  }
+  LIBCPP_ASSERT(AllocBase::alloc_count == 0);
+}
+
+int main(int, char**)
+{
+    test_basic();
+    duplicate_keys_test();
 
   return 0;
 }

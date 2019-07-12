@@ -20,7 +20,7 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ; }
 ;
 ; FIXME: no-return missing
-; CHECK: Function Attrs: noinline nounwind readnone uwtable
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; CHECK: define void @srec0()
 ;
 define void @srec0() #0 {
@@ -37,7 +37,7 @@ entry:
 ; }
 ;
 ; FIXME: no-return missing
-; CHECK: Function Attrs: noinline nounwind readnone uwtable
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; CHECK: define i32 @srec16(i32 %a)
 ;
 define i32 @srec16(i32 %a) #0 {
@@ -69,7 +69,7 @@ entry:
 ; }
 ;
 ; FIXME: no-return missing
-; CHECK: Function Attrs: noinline norecurse nounwind readnone uwtable
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
 ; CHECK: define i32 @endless_loop(i32 %a)
 ;
 define i32 @endless_loop(i32 %a) #0 {
@@ -89,7 +89,7 @@ while.body:                                       ; preds = %entry, %while.body
 ; }
 ;
 ; FIXME: no-return missing
-; CHECK: Function Attrs: noinline norecurse nounwind readnone uwtable
+; CHECK: Function Attrs: nofree noinline norecurse nosync nounwind readnone uwtable
 ; CHECK: define i32 @dead_return(i32 returned %a)
 ;
 define i32 @dead_return(i32 %a) #0 {
@@ -111,7 +111,7 @@ return:                                           ; No predecessors!
 ; }
 ;
 ; FIXME: no-return missing
-; CHECK: Function Attrs: noinline nounwind readnone uwtable
+; CHECK: Function Attrs: nofree noinline nosync nounwind readnone uwtable
 ; CHECK: define i32 @multiple_noreturn_calls(i32 %a)
 ;
 define i32 @multiple_noreturn_calls(i32 %a) #0 {

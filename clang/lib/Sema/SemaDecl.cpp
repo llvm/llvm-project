@@ -3237,7 +3237,6 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
     AdjustedType = Context.adjustFunctionType(AdjustedType, NewTypeInfo);
     New->setType(QualType(AdjustedType, 0));
     NewQType = Context.getCanonicalType(New->getType());
-    NewType = cast<FunctionType>(NewQType);
   }
 
   // If this redeclaration makes the function inline, we may need to add it to

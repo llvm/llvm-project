@@ -38,8 +38,6 @@ std::string getAccess(AccessSpecifier AS);
 
 std::string getTagType(TagTypeKind AS);
 
-std::string genReferenceList(const llvm::SmallVectorImpl<Reference> &Refs);
-
 } // namespace doc
 } // namespace clang
 

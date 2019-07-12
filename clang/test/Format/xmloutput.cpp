@@ -1,4 +1,4 @@
-// RUN: clang-format -output-replacements-xml -sort-includes %s \
+// RUN: clang-format -style=LLVM -output-replacements-xml -sort-includes %s \
 // RUN:   | FileCheck -strict-whitespace %s
 
 // CHECK: <?xml

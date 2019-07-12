@@ -166,7 +166,9 @@ public:
   }
 
   void releaseToOS() {
-    for (uptr I = 1; I < NumClasses; I++) {
+    for (uptr I = 0; I < NumClasses; I++) {
+      if (I == SizeClassMap::BatchClassId)
+        continue;
       RegionInfo *Region = getRegionInfo(I);
       ScopedLock L(Region->Mutex);
       releaseToOSMaybe(Region, I, /*Force=*/true);
@@ -249,7 +251,7 @@ private:
   NOINLINE TransferBatch *populateFreeList(CacheT *C, uptr ClassId,
                                            RegionInfo *Region) {
     const uptr Size = getSizeByClassId(ClassId);
-    const u32 MaxCount = TransferBatch::MaxCached(Size);
+    const u32 MaxCount = TransferBatch::getMaxCached(Size);
 
     const uptr RegionBeg = Region->RegionBeg;
     const uptr MappedUser = Region->MappedUser;

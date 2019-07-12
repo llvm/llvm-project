@@ -31,6 +31,18 @@ define amdgpu_ps void @test2(<8 x i32> inreg %rsrc, i32 %c) {
   ret void
 }
 
+; CHECK-LABEL: {{^}}test3:
+; CHECK: image_load
+; CHECK: s_waitcnt vmcnt(0) lgkmcnt(0)
+; CHECK: image_store
+define amdgpu_ps void @test3(<8 x i32> inreg %rsrc, i32 %c) {
+  %t = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %c, <8 x i32> %rsrc, i32 0, i32 0)
+  call void @llvm.amdgcn.s.waitcnt(i32 49279) ; not isInt<16>, but isUInt<16>
+  %c.1 = mul i32 %c, 2
+  call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %t, i32 15, i32 %c.1, <8 x i32> %rsrc, i32 0, i32 0)
+  ret void
+}
+
 declare void @llvm.amdgcn.s.waitcnt(i32) #0
 
 declare <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32, i32, <8 x i32>, i32, i32) #1

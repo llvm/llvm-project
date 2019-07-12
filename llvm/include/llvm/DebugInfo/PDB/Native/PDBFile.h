@@ -83,7 +83,10 @@ public:
 
   ArrayRef<support::ulittle32_t> getDirectoryBlockArray() const;
 
-  std::unique_ptr<msf::MappedBlockStream> createIndexedStream(uint16_t SN);
+  std::unique_ptr<msf::MappedBlockStream>
+  createIndexedStream(uint16_t SN) const;
+  Expected<std::unique_ptr<msf::MappedBlockStream>>
+  safelyCreateIndexedStream(uint32_t StreamIndex) const;
 
   msf::MSFStreamLayout getStreamLayout(uint32_t StreamIdx) const;
   msf::MSFStreamLayout getFpmStreamLayout() const;
@@ -114,11 +117,6 @@ public:
   uint32_t getPointerSize();
 
 private:
-  Expected<std::unique_ptr<msf::MappedBlockStream>>
-  safelyCreateIndexedStream(const msf::MSFLayout &Layout,
-                            BinaryStreamRef MsfData,
-                            uint32_t StreamIndex) const;
-
   std::string FilePath;
   BumpPtrAllocator &Allocator;
 

@@ -753,10 +753,9 @@ void NonLocalizedStringChecker::reportLocalizationError(
   if (isDebuggingContext(C))
     return;
 
-  ExplodedNode *ErrNode = C.getPredecessor();
   static CheckerProgramPointTag Tag("NonLocalizedStringChecker",
                                     "UnlocalizedString");
-  ErrNode = C.addTransition(C.getState(), C.getPredecessor(), &Tag);
+  ExplodedNode *ErrNode = C.addTransition(C.getState(), C.getPredecessor(), &Tag);
 
   if (!ErrNode)
     return;

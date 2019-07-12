@@ -49,7 +49,7 @@ void foo() {
 // CHECK: AT_name{{.*}} "S"
 // CHECK-NOT: {{DW_TAG|NULL}}
 // CHECK: AT_declaration
-// CHECK-NOT AT_byte_size
+// CHECK-NOT: AT_byte_size
 
 #elif defined(FILE2)
 # 1 "Header.h" 1

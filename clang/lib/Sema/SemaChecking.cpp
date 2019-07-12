@@ -3293,6 +3293,8 @@ bool Sema::CheckSystemZBuiltinFunctionCall(unsigned BuiltinID,
   case SystemZ::BI__builtin_s390_vfmaxsb:
   case SystemZ::BI__builtin_s390_vfmindb:
   case SystemZ::BI__builtin_s390_vfmaxdb: i = 2; l = 0; u = 15; break;
+  case SystemZ::BI__builtin_s390_vsld: i = 2; l = 0; u = 7; break;
+  case SystemZ::BI__builtin_s390_vsrd: i = 2; l = 0; u = 7; break;
   }
   return SemaBuiltinConstantArgRange(TheCall, i, l, u);
 }

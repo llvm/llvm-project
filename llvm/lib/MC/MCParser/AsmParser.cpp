@@ -3424,7 +3424,6 @@ bool AsmParser::parseDirectiveFile(SMLoc DirectiveLoc) {
           FileNumber, Directory, Filename, CKMem, Source);
       if (!FileNumOrErr)
         return Error(DirectiveLoc, toString(FileNumOrErr.takeError()));
-      FileNumber = FileNumOrErr.get();
     }
     // Alert the user if there are some .file directives with MD5 and some not.
     // But only do that once.

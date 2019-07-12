@@ -94,7 +94,7 @@ if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
     remove_definitions("-D_XOPEN_SOURCE=700")
 endif()
 
-add_clang_library(libclang ${ENABLE_SHARED} ${ENABLE_STATIC}
+add_clang_library(libclang ${ENABLE_SHARED} ${ENABLE_STATIC} INSTALL_WITH_TOOLCHAIN
   OUTPUT_NAME ${output_name}
   ${SOURCES}
   DEPENDS clang-resource-headers

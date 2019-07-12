@@ -859,7 +859,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE,
 
   assert(!StepCI->isZero() && "Zero step?");
   bool IsIncreasing = !StepCI->isNegative();
-  bool IsSignedPredicate = ICmpInst::isSigned(Pred);
+  bool IsSignedPredicate;
   const SCEV *StartNext = IndVarBase->getStart();
   const SCEV *Addend = SE.getNegativeSCEV(IndVarBase->getStepRecurrence(SE));
   const SCEV *IndVarStart = SE.getAddExpr(StartNext, Addend);

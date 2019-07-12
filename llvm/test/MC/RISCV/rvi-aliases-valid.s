@@ -117,6 +117,13 @@ j foo
 # CHECK-OBJ: j 0
 # CHECK-OBJ: R_RISCV_JAL a0
 j a0
+# CHECK-S-NOALIAS: [[LABEL:.L[[:alnum:]_]+]]:
+# CHECK-S-NOALIAS-NEXT: jal zero, [[LABEL]]
+# CHECK-S: [[LABEL:.L[[:alnum:]_]+]]:
+# CHECK-S-NEXT: j [[LABEL]]
+# CHECK-OBJ-NOALIAS: jal zero, 0
+# CHECK-OBJ: j 0
+j .
 # CHECK-S-OBJ-NOALIAS: jal ra, 2040
 # CHECK-S-OBJ: jal 2040
 jal 2040

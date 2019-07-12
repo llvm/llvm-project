@@ -18121,13 +18121,15 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
 
   // We need at least one concatenation operation of a binop operand to make
   // this transform worthwhile. The concat must double the input vector sizes.
-  SDValue LHS = peekThroughBitcasts(BinOp.getOperand(0));
-  SDValue RHS = peekThroughBitcasts(BinOp.getOperand(1));
-  bool ConcatL =
-      LHS.getOpcode() == ISD::CONCAT_VECTORS && LHS.getNumOperands() == 2;
-  bool ConcatR =
-      RHS.getOpcode() == ISD::CONCAT_VECTORS && RHS.getNumOperands() == 2;
-  if (ConcatL || ConcatR) {
+  auto GetSubVector = [ConcatOpNum](SDValue V) -> SDValue {
+    if (V.getOpcode() == ISD::CONCAT_VECTORS && V.getNumOperands() == 2)
+      return V.getOperand(ConcatOpNum);
+    return SDValue();
+  };
+  SDValue SubVecL = GetSubVector(peekThroughBitcasts(BinOp.getOperand(0)));
+  SDValue SubVecR = GetSubVector(peekThroughBitcasts(BinOp.getOperand(1)));
+
+  if (SubVecL || SubVecR) {
     // If a binop operand was not the result of a concat, we must extract a
     // half-sized operand for our new narrow binop:
     // extract (binop (concat X1, X2), (concat Y1, Y2)), N --> binop XN, YN
@@ -18135,11 +18137,11 @@ static SDValue narrowExtractedVectorBinOp(SDNode *Extract, SelectionDAG &DAG) {
     // extract (binop X, (concat Y1, Y2)), N --> binop (extract X, IndexC), YN
     SDLoc DL(Extract);
     SDValue IndexC = DAG.getConstant(ExtBOIdx, DL, ExtBOIdxVT);
-    SDValue X = ConcatL ? DAG.getBitcast(NarrowBVT, LHS.getOperand(ConcatOpNum))
+    SDValue X = SubVecL ? DAG.getBitcast(NarrowBVT, SubVecL)
                         : DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowBVT,
                                       BinOp.getOperand(0), IndexC);
 
-    SDValue Y = ConcatR ? DAG.getBitcast(NarrowBVT, RHS.getOperand(ConcatOpNum))
+    SDValue Y = SubVecR ? DAG.getBitcast(NarrowBVT, SubVecR)
                         : DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, NarrowBVT,
                                       BinOp.getOperand(1), IndexC);
 

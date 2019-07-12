@@ -1967,9 +1967,8 @@ static constexpr OptionEnumValueElement g_sort_option_enumeration[] = {
     {eSortOrderByName, "name", "Sort output by symbol name."} };
 
 static constexpr OptionDefinition g_target_modules_dump_symtab_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "sort", 's', OptionParser::eRequiredArgument, nullptr, OptionEnumValues(g_sort_option_enumeration), 0, eArgTypeSortOrder, "Supply a sort order when dumping the symbol table." }
-    // clang-format on
+#define LLDB_OPTIONS_target_modules_dump_symtab
+#include "Options.inc"
 };
 
 class CommandObjectTargetModulesDumpSymtab

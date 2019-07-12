@@ -208,7 +208,7 @@ define i32 @test1(float %t) {
 ; MMR6-SF-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR6-SF-NEXT:    # <MCOperand Imm:20>>
 ; MMR6-SF-NEXT:    .cfi_offset 31, -4
-; MMR6-SF-NEXT:    jalr __fixsfsi # <MCInst #{{[0-9]+}} JALRC16_MMR6
+; MMR6-SF-NEXT:    balc __fixsfsi # <MCInst #{{[0-9]+}} BALC_MMR6
 ; MMR6-SF-NEXT:    # <MCOperand Expr:(__fixsfsi)>>
 ; MMR6-SF-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MMR6-SF-NEXT:    # <MCInst #{{[0-9]+}} LW
@@ -399,7 +399,7 @@ define i32 @test2(double %t) {
 ; MMR6-SF-NEXT:    # <MCOperand Reg:{{[0-9]+}}>
 ; MMR6-SF-NEXT:    # <MCOperand Imm:20>>
 ; MMR6-SF-NEXT:    .cfi_offset 31, -4
-; MMR6-SF-NEXT:    jalr __fixdfsi # <MCInst #{{[0-9]+}} JALRC16_MMR6
+; MMR6-SF-NEXT:    balc __fixdfsi # <MCInst #{{[0-9]+}} BALC_MMR6
 ; MMR6-SF-NEXT:    # <MCOperand Expr:(__fixdfsi)>>
 ; MMR6-SF-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MMR6-SF-NEXT:    # <MCInst #{{[0-9]+}} LW

@@ -278,4 +278,33 @@ define i32 @PR40483_sub4(i32*, i32) nounwind {
   ret i32 %10
 }
 
+; Verify that a bogus cmov is simplified.
+
+define i32 @PR40483_sub5(i32*, i32) {
+; X86-LABEL: PR40483_sub5:
+; X86:       # %bb.0:
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    subl %eax, (%ecx)
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR40483_sub5:
+; X64:       # %bb.0:
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    subl %esi, (%rdi)
+; X64-NEXT:    cmovael %eax, %eax
+; X64-NEXT:    retq
+  %3 = load i32, i32* %0, align 8
+  %4 = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 %3, i32 %1)
+  %5 = extractvalue { i8, i32 } %4, 1
+  store i32 %5, i32* %0, align 8
+  %6 = extractvalue { i8, i32 } %4, 0
+  %7 = icmp eq i8 %6, 0
+  %8 = sub i32 %1, %3
+  %9 = add i32 %8, %5
+  %10 = select i1 %7, i32 %9, i32 0
+  ret i32 %10
+}
+
 declare { i8, i32 } @llvm.x86.subborrow.32(i8, i32, i32)

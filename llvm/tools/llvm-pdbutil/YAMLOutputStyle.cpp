@@ -231,10 +231,7 @@ Error YAMLOutputStyle::dumpDbiStream() {
       if (ModiStream == kInvalidStreamIndex)
         continue;
 
-      auto ModStreamData = msf::MappedBlockStream::createIndexedStream(
-          File.getMsfLayout(), File.getMsfBuffer(), ModiStream,
-          File.getAllocator());
-
+      auto ModStreamData = File.createIndexedStream(ModiStream);
       pdb::ModuleDebugStreamRef ModS(MI, std::move(ModStreamData));
       if (auto EC = ModS.reload())
         return EC;

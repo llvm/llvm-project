@@ -1774,6 +1774,19 @@ let AddedComplexity = 41 in {
   def : StoreRegImmPat<SDC1_D64_MMR6, f64>, FGR_64, ISA_MICROMIPS32R6;
 }
 
+let isCall=1, hasDelaySlot=0, isCTI=1, Defs = [RA] in {
+  class JumpLinkMMR6<Instruction JumpInst, DAGOperand Opnd> :
+    PseudoSE<(outs), (ins calltarget:$target), [], II_JAL>,
+    PseudoInstExpansion<(JumpInst Opnd:$target)>;
+}
+
+def JAL_MMR6 : JumpLinkMMR6<BALC_MMR6, brtarget26_mm>, ISA_MICROMIPS32R6;
+
+def : MipsPat<(MipsJmpLink (i32 texternalsym:$dst)),
+              (JAL_MMR6 texternalsym:$dst)>, ISA_MICROMIPS32R6;
+def : MipsPat<(MipsJmpLink (iPTR tglobaladdr:$dst)),
+              (JAL_MMR6 tglobaladdr:$dst)>, ISA_MICROMIPS32R6;
+
 def TAILCALL_MMR6 : TailCall<BC_MMR6, brtarget26_mm>, ISA_MICROMIPS32R6;
 
 def TAILCALLREG_MMR6  : TailCallReg<JRC16_MM, GPR32Opnd>, ISA_MICROMIPS32R6;
