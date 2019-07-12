@@ -556,6 +556,10 @@ void llvm::sys::SetInterruptFunction(void (*IF)()) {
   LeaveCriticalSection(&CriticalSection);
 }
 
+void llvm::sys::SetInfoSignalFunction(void (*Handler)()) {
+  // Unimplemented.
+}
+
 
 /// Add a function to be called when a signal is delivered to the process. The
 /// handler can have a cookie passed to it to identify what instance of the
