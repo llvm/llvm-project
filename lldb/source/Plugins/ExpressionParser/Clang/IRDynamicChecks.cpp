@@ -14,7 +14,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "lldb/Expression/IRDynamicChecks.h"
+#include "IRDynamicChecks.h"
 
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -40,12 +40,13 @@ static const char g_valid_pointer_check_text[] =
     "    unsigned char $__lldb_local_val = *$__lldb_arg_ptr;\n"
     "}";
 
-DynamicCheckerFunctions::DynamicCheckerFunctions() = default;
+ClangDynamicCheckerFunctions::ClangDynamicCheckerFunctions()
+    : DynamicCheckerFunctions(DCF_Clang) {}
 
-DynamicCheckerFunctions::~DynamicCheckerFunctions() = default;
+ClangDynamicCheckerFunctions::~ClangDynamicCheckerFunctions() = default;
 
-bool DynamicCheckerFunctions::Install(DiagnosticManager &diagnostic_manager,
-                                      ExecutionContext &exe_ctx) {
+bool ClangDynamicCheckerFunctions::Install(
+    DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) {
   Status error;
   m_valid_pointer_check.reset(
       exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
@@ -75,8 +76,8 @@ bool DynamicCheckerFunctions::Install(DiagnosticManager &diagnostic_manager,
   return true;
 }
 
-bool DynamicCheckerFunctions::DoCheckersExplainStop(lldb::addr_t addr,
-                                                    Stream &message) {
+bool ClangDynamicCheckerFunctions::DoCheckersExplainStop(lldb::addr_t addr,
+                                                         Stream &message) {
   // FIXME: We have to get the checkers to know why they scotched the call in
   // more detail,
   // so we can print a better message here.
@@ -533,8 +534,8 @@ private:
   llvm::FunctionCallee m_objc_object_check_func;
 };
 
-IRDynamicChecks::IRDynamicChecks(DynamicCheckerFunctions &checker_functions,
-                                 const char *func_name)
+IRDynamicChecks::IRDynamicChecks(
+    ClangDynamicCheckerFunctions &checker_functions, const char *func_name)
     : ModulePass(ID), m_func_name(func_name),
       m_checker_functions(checker_functions) {}
 
