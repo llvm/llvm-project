@@ -150,7 +150,7 @@ set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 # FIXME: This is a temporary hack to get the buildbots working while D63883 is in flight.
 # Without this all the bots fail while building libc++
 if (DEFINED ENV{USER})
-  if (("$ENV{USER}" STREQUAL "buildbot") OR ("$ENV{USER}" STREQUAL "llvmbb"))
+  if (("$ENV{USER}" STREQUAL "buildbot") OR (("$ENV{USER}" STREQUAL "llvmbb") OR ("$ENV{USER}" STREQUAL "buildslave")))
     message(WARNING "OVERRIDING BUILDBOT CONFIG")
     set(LIBCXX_CXX_ABI "default" CACHE STRING "FIXME" FORCE)
   endif()
