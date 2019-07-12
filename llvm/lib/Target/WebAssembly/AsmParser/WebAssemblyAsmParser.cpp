@@ -349,6 +349,20 @@ public:
     Parser.Lex();
   }
 
+  bool parseSingleFloat(bool IsNegative, OperandVector &Operands) {
+    auto &Flt = Lexer.getTok();
+    double Val;
+    if (Flt.getString().getAsDouble(Val, false))
+      return error("Cannot parse real: ", Flt);
+    if (IsNegative)
+      Val = -Val;
+    Operands.push_back(make_unique<WebAssemblyOperand>(
+        WebAssemblyOperand::Float, Flt.getLoc(), Flt.getEndLoc(),
+        WebAssemblyOperand::FltOp{Val}));
+    Parser.Lex();
+    return false;
+  }
+
   bool checkForP2AlignIfLoadStore(OperandVector &Operands, StringRef InstName) {
     // FIXME: there is probably a cleaner way to do this.
     auto IsLoadStore = InstName.find(".load") != StringRef::npos ||
@@ -486,11 +500,17 @@ public:
       }
       case AsmToken::Minus:
         Parser.Lex();
-        if (Lexer.isNot(AsmToken::Integer))
-          return error("Expected integer instead got: ", Lexer.getTok());
-        parseSingleInteger(true, Operands);
-        if (checkForP2AlignIfLoadStore(Operands, Name))
-          return true;
+        if (Lexer.is(AsmToken::Integer)) {
+          parseSingleInteger(true, Operands);
+          if (checkForP2AlignIfLoadStore(Operands, Name))
+            return true;
+        } else if(Lexer.is(AsmToken::Real)) {
+          if (parseSingleFloat(true, Operands))
+            return true;
+        } else {
+          return error("Expected numeric constant instead got: ",
+                       Lexer.getTok());
+        }
         break;
       case AsmToken::Integer:
         parseSingleInteger(false, Operands);
@@ -498,13 +518,8 @@ public:
           return true;
         break;
       case AsmToken::Real: {
-        double Val;
-        if (Tok.getString().getAsDouble(Val, false))
-          return error("Cannot parse real: ", Tok);
-        Operands.push_back(make_unique<WebAssemblyOperand>(
-            WebAssemblyOperand::Float, Tok.getLoc(), Tok.getEndLoc(),
-            WebAssemblyOperand::FltOp{Val}));
-        Parser.Lex();
+        if (parseSingleFloat(false, Operands))
+          return true;
         break;
       }
       case AsmToken::LCurly: {

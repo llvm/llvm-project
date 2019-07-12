@@ -172,14 +172,14 @@ loadObj(StringRef Filename, object::OwningBinary<object::ObjectFile> &ObjFile,
 }
 
 static Error
-loadYAML(int Fd, size_t FileSize, StringRef Filename,
+loadYAML(sys::fs::file_t Fd, size_t FileSize, StringRef Filename,
          InstrumentationMap::SledContainer &Sleds,
          InstrumentationMap::FunctionAddressMap &FunctionAddresses,
          InstrumentationMap::FunctionAddressReverseMap &FunctionIds) {
   std::error_code EC;
   sys::fs::mapped_file_region MappedFile(
-      sys::fs::convertFDToNativeFile(Fd),
-      sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
+      Fd, sys::fs::mapped_file_region::mapmode::readonly, FileSize, 0, EC);
+  sys::fs::closeFile(Fd);
   if (EC)
     return make_error<StringError>(
         Twine("Failed memory-mapping file '") + Filename + "'.", EC);
@@ -215,9 +215,12 @@ llvm::xray::loadInstrumentationMap(StringRef Filename) {
   if (!ObjectFileOrError) {
     auto E = ObjectFileOrError.takeError();
     // We try to load it as YAML if the ELF load didn't work.
-    int Fd;
-    if (sys::fs::openFileForRead(Filename, Fd))
+    Expected<sys::fs::file_t> FdOrErr = sys::fs::openNativeFileForRead(Filename);
+    if (!FdOrErr) {
+      // Report the ELF load error if YAML failed.
+      consumeError(FdOrErr.takeError());
       return std::move(E);
+    }
 
     uint64_t FileSize;
     if (sys::fs::file_size(Filename, FileSize))
@@ -230,7 +233,7 @@ llvm::xray::loadInstrumentationMap(StringRef Filename) {
     // From this point on the errors will be only for the YAML parts, so we
     // consume the errors at this point.
     consumeError(std::move(E));
-    if (auto E = loadYAML(Fd, FileSize, Filename, Map.Sleds,
+    if (auto E = loadYAML(*FdOrErr, FileSize, Filename, Map.Sleds,
                           Map.FunctionAddresses, Map.FunctionIds))
       return std::move(E);
   } else if (auto E = loadObj(Filename, *ObjectFileOrError, Map.Sleds,

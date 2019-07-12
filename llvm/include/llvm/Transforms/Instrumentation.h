@@ -181,10 +181,6 @@ struct SanitizerCoverageOptions {
   SanitizerCoverageOptions() = default;
 };
 
-// Insert SanitizerCoverage instrumentation.
-ModulePass *createSanitizerCoverageModulePass(
-    const SanitizerCoverageOptions &Options = SanitizerCoverageOptions());
-
 /// Calculate what to divide by to scale counts.
 ///
 /// Given the maximum count, calculate a divisor that will scale all the

@@ -19,7 +19,10 @@
 //  1. Setting up a signal handler so that pretty stack trace is printed out
 //     if a process crashes.
 //
-//  2. If running on Windows, obtain command line arguments using a
+//  2. Set up the global new-handler which is called when a memory allocation
+//     attempt fails.
+//
+//  3. If running on Windows, obtain command line arguments using a
 //     multibyte character-aware API and convert arguments into UTF-8
 //     encoding, so that you can assume that command line arguments are
 //     always encoded in UTF-8 on any platform.

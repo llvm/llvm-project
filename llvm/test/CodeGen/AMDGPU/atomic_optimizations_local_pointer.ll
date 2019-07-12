@@ -45,6 +45,8 @@ entry:
 ; GFX7LESS-NOT: v_mbcnt_hi_u32_b32
 ; GFX7LESS-NOT: s_bcnt1_i32_b64
 ; GFX7LESS: ds_add_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX8MORE: v_add_u32_dpp
+; GFX8MORE: v_add_u32_dpp
 ; GFX8MORE: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 63
 ; GFX8MORE: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
 ; GFX8MORE: ds_add_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v[[value]]
@@ -136,6 +138,8 @@ entry:
 ; GFX7LESS-NOT: v_mbcnt_hi_u32_b32
 ; GFX7LESS-NOT: s_bcnt1_i32_b64
 ; GFX7LESS: ds_sub_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}
+; GFX8MORE: v_sub{{(rev)?}}_u32_dpp
+; GFX8MORE: v_sub{{(rev)?}}_u32_dpp
 ; GFX8MORE: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 63
 ; GFX8MORE: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
 ; GFX8MORE: ds_sub_rtn_u32 v{{[0-9]+}}, v{{[0-9]+}}, v[[value]]

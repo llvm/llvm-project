@@ -46,10 +46,11 @@ foreach(arch ${UBSAN_TEST_ARCH})
 
   if(COMPILER_RT_HAS_ASAN AND ";${ASAN_SUPPORTED_ARCH};" MATCHES ";${arch};")
     # TODO(wwchrome): Re-enable ubsan for asan win 64-bit when ready.
-    # Disable ubsan with AddressSanitizer tests for Windows 64-bit and
-    # 64-bit Solaris/x86.
+    # Disable ubsan with AddressSanitizer tests for Windows 64-bit,
+    # 64-bit Solaris/x86, and SPARC.
     if((NOT (OS_NAME MATCHES "Windows" AND CMAKE_SIZEOF_VOID_P EQUAL 8)) AND
-       (NOT (OS_NAME MATCHES "SunOS" AND ${arch} MATCHES x86_64)))
+       (NOT (OS_NAME MATCHES "SunOS" AND ${arch} MATCHES x86_64)) AND
+       (NOT ${arch} MATCHES sparc))
       add_ubsan_testsuites("AddressSanitizer" asan ${arch})
     endif()
   endif()

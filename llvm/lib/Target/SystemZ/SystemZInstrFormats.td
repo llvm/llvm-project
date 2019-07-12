@@ -1414,13 +1414,15 @@ class InstVRRi<bits<16> op, dag outs, dag ins, string asmstr, list<dag> pattern>
   bits<4> R1;
   bits<5> V2;
   bits<4> M3;
+  bits<4> M4;
 
   let Inst{47-40} = op{15-8};
   let Inst{39-36} = R1;
   let Inst{35-32} = V2{3-0};
   let Inst{31-24} = 0;
   let Inst{23-20} = M3;
-  let Inst{19-12} = 0;
+  let Inst{19-16} = M4;
+  let Inst{15-12} = 0;
   let Inst{11}    = 0;
   let Inst{10}    = V2{4};
   let Inst{9-8}   = 0;
@@ -2489,10 +2491,16 @@ class StoreVRX<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                TypedReg tr, bits<5> bytes, bits<4> type = 0>
   : InstVRX<opcode, (outs), (ins tr.op:$V1, bdxaddr12only:$XBD2),
             mnemonic#"\t$V1, $XBD2",
-            [(set (tr.vt tr.op:$V1), (operator bdxaddr12only:$XBD2))]> {
+            [(operator (tr.vt tr.op:$V1), bdxaddr12only:$XBD2)]> {
   let M3 = type;
   let mayStore = 1;
   let AccessBytes = bytes;
+}
+
+class StoreVRXGeneric<string mnemonic, bits<16> opcode>
+  : InstVRX<opcode, (outs), (ins VR128:$V1, bdxaddr12only:$XBD2, imm32zx4:$M3),
+            mnemonic#"\t$V1, $XBD2, $M3", []> {
+  let mayStore = 1;
 }
 
 multiclass StoreVRXAlign<string mnemonic, bits<16> opcode> {
@@ -3151,6 +3159,11 @@ class BinaryRRFb<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let M4 = 0;
 }
 
+class BinaryRRFc<string mnemonic, bits<16> opcode,
+                 RegisterOperand cls1, RegisterOperand cls2>
+  : InstRRFc<opcode, (outs cls1:$R1), (ins cls2:$R2, imm32zx4:$M3),
+             mnemonic#"\t$R1, $R2, $M3", []>;
+
 class BinaryMemRRFc<string mnemonic, bits<16> opcode,
                     RegisterOperand cls1, RegisterOperand cls2, Immediate imm>
   : InstRRFc<opcode, (outs cls2:$R2, cls1:$R1), (ins cls1:$R1src, imm:$M3),
@@ -3216,6 +3229,41 @@ multiclass CondBinaryRRFPair<string mnemonic, bits<16> opcode,
   let isCodeGenOnly = 1 in
     def "" : CondBinaryRRF<mnemonic, opcode, cls1, cls2>;
   def Asm : AsmCondBinaryRRF<mnemonic, opcode, cls1, cls2>;
+}
+
+class CondBinaryRRFa<string mnemonic, bits<16> opcode, RegisterOperand cls1,
+                    RegisterOperand cls2, RegisterOperand cls3>
+  : InstRRFa<opcode, (outs cls1:$R1),
+             (ins cls3:$R3, cls2:$R2, cond4:$valid, cond4:$M4),
+             mnemonic#"$M4\t$R1, $R2, $R3",
+             [(set cls1:$R1, (z_select_ccmask cls2:$R2, cls3:$R3,
+                                              cond4:$valid, cond4:$M4))]> {
+  let CCMaskLast = 1;
+}
+
+// Like CondBinaryRRFa, but used for the raw assembly form.  The condition-code
+// mask is the third operand rather than being part of the mnemonic.
+class AsmCondBinaryRRFa<string mnemonic, bits<16> opcode, RegisterOperand cls1,
+                        RegisterOperand cls2, RegisterOperand cls3>
+  : InstRRFa<opcode, (outs cls1:$R1), (ins cls3:$R3, cls2:$R2, imm32zx4:$M4),
+             mnemonic#"\t$R1, $R2, $R3, $M4", []>;
+
+// Like CondBinaryRRFa, but with a fixed CC mask.
+class FixedCondBinaryRRFa<CondVariant V, string mnemonic, bits<16> opcode,
+                         RegisterOperand cls1, RegisterOperand cls2,
+                         RegisterOperand cls3>
+  : InstRRFa<opcode, (outs cls1:$R1), (ins cls3:$R3, cls2:$R2),
+             mnemonic#V.suffix#"\t$R1, $R2, $R3", []> {
+  let isAsmParserOnly = V.alternate;
+  let M4 = V.ccmask;
+}
+
+multiclass CondBinaryRRFaPair<string mnemonic, bits<16> opcode,
+                             RegisterOperand cls1, RegisterOperand cls2,
+                             RegisterOperand cls3> {
+  let isCodeGenOnly = 1 in
+    def "" : CondBinaryRRFa<mnemonic, opcode, cls1, cls2, cls3>;
+  def Asm : AsmCondBinaryRRFa<mnemonic, opcode, cls1, cls2, cls3>;
 }
 
 class BinaryRI<string mnemonic, bits<12> opcode, SDPatternOperator operator,
@@ -3612,7 +3660,9 @@ class BinaryVRRf<string mnemonic, bits<16> opcode, SDPatternOperator operator,
 
 class BinaryVRRi<string mnemonic, bits<16> opcode, RegisterOperand cls>
   : InstVRRi<opcode, (outs cls:$R1), (ins VR128:$V2, imm32zx4:$M3),
-             mnemonic#"\t$R1, $V2, $M3", []>;
+             mnemonic#"\t$R1, $V2, $M3", []> {
+  let M4 = 0;
+}
 
 class BinaryVRSa<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                  TypedReg tr1, TypedReg tr2, bits<4> type>
@@ -3990,6 +4040,17 @@ class SideEffectTernaryRRFa<string mnemonic, bits<16> opcode,
   let M4 = 0;
 }
 
+class SideEffectTernaryMemMemRRFa<string mnemonic, bits<16> opcode,
+                                  RegisterOperand cls1, RegisterOperand cls2,
+                                  RegisterOperand cls3>
+  : InstRRFa<opcode, (outs cls1:$R1, cls2:$R2),
+             (ins cls1:$R1src, cls2:$R2src, cls3:$R3),
+             mnemonic#"\t$R1, $R2, $R3", []> {
+  let Constraints = "$R1 = $R1src, $R2 = $R2src";
+  let DisableEncoding = "$R1src, $R2src";
+  let M4 = 0;
+}
+
 class SideEffectTernaryRRFb<string mnemonic, bits<16> opcode,
                             RegisterOperand cls1, RegisterOperand cls2,
                             RegisterOperand cls3>
@@ -4278,7 +4339,7 @@ class TernaryVRRcFloatGeneric<string mnemonic, bits<16> opcode>
              mnemonic#"\t$V1, $V2, $V3, $M4, $M5, $M6", []>;
 
 class TernaryVRRd<string mnemonic, bits<16> opcode, SDPatternOperator operator,
-                  TypedReg tr1, TypedReg tr2, bits<4> type = 0>
+                  TypedReg tr1, TypedReg tr2, bits<4> type = 0, bits<4> m6 = 0>
   : InstVRRd<opcode, (outs tr1.op:$V1),
              (ins tr2.op:$V2, tr2.op:$V3, tr1.op:$V4),
              mnemonic#"\t$V1, $V2, $V3, $V4",
@@ -4286,7 +4347,7 @@ class TernaryVRRd<string mnemonic, bits<16> opcode, SDPatternOperator operator,
                                                   (tr2.vt tr2.op:$V3),
                                                   (tr1.vt tr1.op:$V4)))]> {
   let M5 = type;
-  let M6 = 0;
+  let M6 = m6;
 }
 
 class TernaryVRRdGeneric<string mnemonic, bits<16> opcode>
@@ -4294,6 +4355,34 @@ class TernaryVRRdGeneric<string mnemonic, bits<16> opcode>
              (ins VR128:$V2, VR128:$V3, VR128:$V4, imm32zx4:$M5),
              mnemonic#"\t$V1, $V2, $V3, $V4, $M5", []> {
   let M6 = 0;
+}
+
+// Ternary operation where the assembler mnemonic has an extra operand to
+// optionally allow specifiying arbitrary M6 values.
+multiclass TernaryExtraVRRd<string mnemonic, bits<16> opcode,
+                             SDPatternOperator operator,
+                             TypedReg tr1, TypedReg tr2, bits<4> type> {
+  let M5 = type, Defs = [CC] in
+    def "" : InstVRRd<opcode, (outs tr1.op:$V1),
+                      (ins tr2.op:$V2, tr2.op:$V3, tr1.op:$V4, imm32zx4:$M6),
+                      mnemonic#"\t$V1, $V2, $V3, $V4, $M6", []>;
+  def : Pat<(operator (tr2.vt tr2.op:$V2), (tr2.vt tr2.op:$V3),
+                      (tr1.vt tr1.op:$V4)),
+            (!cast<Instruction>(NAME) tr2.op:$V2, tr2.op:$V3, tr1.op:$V4, 0)>;
+  def : InstAlias<mnemonic#"\t$V1, $V2, $V3, $V4",
+                  (!cast<Instruction>(NAME) tr1.op:$V1, tr2.op:$V2,
+                                            tr2.op:$V3, tr1.op:$V4, 0)>;
+}
+
+multiclass TernaryExtraVRRdGeneric<string mnemonic, bits<16> opcode> {
+  let Defs = [CC] in
+    def "" : InstVRRd<opcode, (outs VR128:$V1),
+                      (ins VR128:$V2, VR128:$V3, VR128:$V4,
+                       imm32zx4:$M5, imm32zx4:$M6),
+                      mnemonic#"\t$V1, $V2, $V3, $V4, $M5, $M6", []>;
+  def : InstAlias<mnemonic#"\t$V1, $V2, $V3, $V4, $M5",
+                  (!cast<Instruction>(NAME) VR128:$V1, VR128:$V2, VR128:$V3,
+                                            VR128:$V4, imm32zx4:$M5, 0)>;
 }
 
 class TernaryVRRe<string mnemonic, bits<16> opcode, SDPatternOperator operator,
@@ -4325,6 +4414,11 @@ class TernaryVRSb<string mnemonic, bits<16> opcode, SDPatternOperator operator,
   let DisableEncoding = "$V1src";
   let M4 = type;
 }
+
+class TernaryVRRi<string mnemonic, bits<16> opcode, RegisterOperand cls>
+  : InstVRRi<opcode, (outs cls:$R1), (ins VR128:$V2,
+                                      imm32zx4:$M3, imm32zx4:$M4),
+             mnemonic#"\t$R1, $V2, $M3, $M4", []>;
 
 class TernaryVRSbGeneric<string mnemonic, bits<16> opcode>
   : InstVRSb<opcode, (outs VR128:$V1),
@@ -4702,6 +4796,17 @@ class CondBinaryRRFPseudo<RegisterOperand cls1, RegisterOperand cls2>
                                             cond4:$valid, cond4:$M3))]> {
   let Constraints = "$R1 = $R1src";
   let DisableEncoding = "$R1src";
+  let CCMaskLast = 1;
+}
+
+// Like CondBinaryRRFa, but expanded after RA depending on the choice of
+// register.
+class CondBinaryRRFaPseudo<RegisterOperand cls1, RegisterOperand cls2,
+                           RegisterOperand cls3>
+  : Pseudo<(outs cls1:$R1),
+           (ins cls3:$R3, cls2:$R2, cond4:$valid, cond4:$M4),
+           [(set cls1:$R1, (z_select_ccmask cls2:$R2, cls3:$R3,
+                                            cond4:$valid, cond4:$M4))]> {
   let CCMaskLast = 1;
 }
 

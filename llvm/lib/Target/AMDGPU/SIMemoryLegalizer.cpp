@@ -145,7 +145,7 @@ private:
     // only contains a single address space.
     if ((OrderingAddrSpace == InstrAddrSpace) &&
         isPowerOf2_32(uint32_t(InstrAddrSpace)))
-      IsCrossAddressSpaceOrdering = false;
+      this->IsCrossAddressSpaceOrdering = false;
   }
 
 public:

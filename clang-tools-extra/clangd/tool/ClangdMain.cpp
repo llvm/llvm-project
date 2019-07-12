@@ -472,7 +472,6 @@ int main(int argc, char *argv[]) {
   }
   Opts.StaticIndex = StaticIdx.get();
   Opts.AsyncThreadsCount = WorkerThreadsCount;
-  Opts.HiddenFeatures = HiddenFeatures;
 
   clangd::CodeCompleteOptions CCOpts;
   CCOpts.IncludeIneligibleResults = IncludeIneligibleResults;
@@ -531,11 +530,14 @@ int main(int argc, char *argv[]) {
   }
   Opts.SuggestMissingIncludes = SuggestMissingIncludes;
   Opts.QueryDriverGlobs = std::move(QueryDriverGlobs);
-  if (TweakList.getNumOccurrences())
-    Opts.TweakFilter = [&](llvm::StringRef TweakToSearch) {
-      // return true if any tweak matches the TweakToSearch
-      return llvm::find(TweakList, TweakToSearch) != TweakList.end();
-    };
+
+  Opts.TweakFilter = [&](const Tweak &T) {
+    if (T.hidden() && !HiddenFeatures)
+      return false;
+    if (TweakList.getNumOccurrences())
+      return llvm::is_contained(TweakList, T.id());
+    return true;
+  };
   llvm::Optional<OffsetEncoding> OffsetEncodingFromFlag;
   if (ForceOffsetEncoding != OffsetEncoding::UnsupportedEncoding)
     OffsetEncodingFromFlag = ForceOffsetEncoding;

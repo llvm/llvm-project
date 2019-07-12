@@ -1772,7 +1772,6 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
       return false;
 
     PPC::Predicate Pred = (PPC::Predicate)UseMI->getOperand(0).getImm();
-    PPC::Predicate NewPred = Pred;
     unsigned PredCond = PPC::getPredicateCondition(Pred);
     unsigned PredHint = PPC::getPredicateHint(Pred);
     int16_t Immed = (int16_t)Value;
@@ -1782,21 +1781,20 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
     if (Immed == -1 && PredCond == PPC::PRED_GT)
       // We convert "greater than -1" into "greater than or equal to 0",
       // since we are assuming signed comparison by !equalityOnly
-      NewPred = PPC::getPredicate(PPC::PRED_GE, PredHint);
+      Pred = PPC::getPredicate(PPC::PRED_GE, PredHint);
     else if (Immed == -1 && PredCond == PPC::PRED_LE)
       // We convert "less than or equal to -1" into "less than 0".
-      NewPred = PPC::getPredicate(PPC::PRED_LT, PredHint);
+      Pred = PPC::getPredicate(PPC::PRED_LT, PredHint);
     else if (Immed == 1 && PredCond == PPC::PRED_LT)
       // We convert "less than 1" into "less than or equal to 0".
-      NewPred = PPC::getPredicate(PPC::PRED_LE, PredHint);
+      Pred = PPC::getPredicate(PPC::PRED_LE, PredHint);
     else if (Immed == 1 && PredCond == PPC::PRED_GE)
       // We convert "greater than or equal to 1" into "greater than 0".
-      NewPred = PPC::getPredicate(PPC::PRED_GT, PredHint);
+      Pred = PPC::getPredicate(PPC::PRED_GT, PredHint);
     else
       return false;
 
-    PredsToUpdate.push_back(std::make_pair(&(UseMI->getOperand(0)),
-                                            NewPred));
+    PredsToUpdate.push_back(std::make_pair(&(UseMI->getOperand(0)), Pred));
   }
 
   // Search for Sub.

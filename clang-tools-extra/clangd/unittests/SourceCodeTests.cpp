@@ -10,6 +10,7 @@
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "TestTU.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Format/Format.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_os_ostream.h"
@@ -419,6 +420,51 @@ TEST(SourceCodeTests, GetMacros) {
   auto Result = locateMacroAt(Loc, AST.getPreprocessor());
   ASSERT_TRUE(Result);
   EXPECT_THAT(*Result, MacroName("MACRO"));
+}
+
+// Test for functions toHalfOpenFileRange and getHalfOpenFileRange
+TEST(SourceCodeTests, HalfOpenFileRange) {
+  // Each marked range should be the file range of the decl with the same name
+  // and each name should be unique.
+  Annotations Test(R"cpp(
+    #define FOO(X, Y) int Y = ++X
+    #define BAR(X) X + 1
+    #define ECHO(X) X
+    template<typename T>
+    class P {};
+    void f() {
+      $a[[P<P<P<P<P<int>>>>> a]];
+      $b[[int b = 1]];
+      $c[[FOO(b, c)]]; 
+      $d[[FOO(BAR(BAR(b)), d)]];
+      // FIXME: We might want to select everything inside the outer ECHO.
+      ECHO(ECHO($e[[int) ECHO(e]]));
+    }
+  )cpp");
+
+  ParsedAST AST = TestTU::withCode(Test.code()).build();
+  llvm::errs() << Test.code();
+  const SourceManager &SM = AST.getSourceManager();
+  const LangOptions &LangOpts = AST.getASTContext().getLangOpts();
+  // Turn a SourceLocation into a pair of positions
+  auto SourceRangeToRange = [&SM](SourceRange SrcRange) {
+    return Range{sourceLocToPosition(SM, SrcRange.getBegin()),
+                 sourceLocToPosition(SM, SrcRange.getEnd())};
+  };
+  auto CheckRange = [&](llvm::StringRef Name) {
+    const NamedDecl &Decl = findUnqualifiedDecl(AST, Name);
+    auto FileRange = toHalfOpenFileRange(SM, LangOpts, Decl.getSourceRange());
+    SCOPED_TRACE("Checking range: " + Name);
+    ASSERT_NE(FileRange, llvm::None);
+    Range HalfOpenRange = SourceRangeToRange(*FileRange);
+    EXPECT_EQ(HalfOpenRange, Test.ranges(Name)[0]);
+  };
+
+  CheckRange("a");
+  CheckRange("b");
+  CheckRange("c");
+  CheckRange("d");
+  CheckRange("e");
 }
 
 } // namespace

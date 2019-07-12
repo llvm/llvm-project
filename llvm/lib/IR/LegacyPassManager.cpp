@@ -1727,14 +1727,12 @@ MPPassManager::runOnModule(Module &M) {
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index)
     Changed |= getContainedPass(Index)->doInitialization(M);
 
-  unsigned InstrCount, ModuleCount = 0;
+  unsigned InstrCount;
   StringMap<std::pair<unsigned, unsigned>> FunctionToInstrCount;
   bool EmitICRemark = M.shouldEmitInstrCountChangedRemark();
   // Collect the initial size of the module.
-  if (EmitICRemark) {
+  if (EmitICRemark)
     InstrCount = initSizeRemarkInfo(M, FunctionToInstrCount);
-    ModuleCount = InstrCount;
-  }
 
   for (unsigned Index = 0; Index < getNumContainedPasses(); ++Index) {
     ModulePass *MP = getContainedPass(Index);
@@ -1752,7 +1750,7 @@ MPPassManager::runOnModule(Module &M) {
       LocalChanged |= MP->runOnModule(M);
       if (EmitICRemark) {
         // Update the size of the module.
-        ModuleCount = M.getInstructionCount();
+        unsigned ModuleCount = M.getInstructionCount();
         if (ModuleCount != InstrCount) {
           int64_t Delta = static_cast<int64_t>(ModuleCount) -
                           static_cast<int64_t>(InstrCount);

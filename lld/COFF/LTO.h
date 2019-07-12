@@ -21,7 +21,9 @@
 #define LLD_COFF_LTO_H
 
 #include "lld/Common/LLVM.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <vector>
 
@@ -49,6 +51,8 @@ private:
   std::unique_ptr<llvm::lto::LTO> ltoObj;
   std::vector<SmallString<0>> buf;
   std::vector<std::unique_ptr<MemoryBuffer>> files;
+  std::unique_ptr<llvm::raw_fd_ostream> indexFile;
+  llvm::DenseSet<StringRef> thinIndices;
 };
 }
 }

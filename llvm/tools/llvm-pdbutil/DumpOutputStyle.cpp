@@ -223,6 +223,8 @@ Error DumpOutputStyle::dump() {
       return EC;
   }
 
+  P.NewLine();
+
   return Error::success();
 }
 

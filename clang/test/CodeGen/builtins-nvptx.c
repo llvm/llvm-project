@@ -279,7 +279,7 @@ __device__ void nvvm_atom(float *fp, float f, double *dfp, double df, int *ip,
   // CHECK-NEXT: extractvalue { i64, i1 } {{%[0-9]+}}, 0
   __nvvm_atom_cas_gen_ll(&sll, 0, ll);
 
-  // CHECK: call float @llvm.nvvm.atomic.load.add.f32.p0f32
+  // CHECK: atomicrmw fadd float
   __nvvm_atom_add_gen_f(fp, f);
 
   // CHECK: call i32 @llvm.nvvm.atomic.load.inc.32.p0i32

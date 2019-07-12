@@ -57,7 +57,7 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
   <div>
     <h3>OneFunction</h3>
     <p>
-       OneFunction()
+      OneFunction()
     </p>
   </div>
   <h2>Enums</h2>
@@ -73,14 +73,16 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
 TEST(HTMLGeneratorTest, emitRecordHTML) {
   RecordInfo I;
   I.Name = "r";
+  I.Path = "X/Y/Z";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.Members.emplace_back("int", "X", AccessSpecifier::AS_private);
+  I.Members.emplace_back("int", "X/Y", "X", AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::TTK_Class;
-  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
+  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record,
+                         llvm::SmallString<128>("path/to"));
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
   I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
@@ -104,11 +106,13 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
     Defined at line 10 of test.cpp
   </p>
   <p>
-    Inherits from F, G
+    Inherits from 
+    <a href="../../../path/to/F.html">F</a>
+    , G
   </p>
   <h2>Members</h2>
   <ul>
-    <li>private int X</li>
+    <li>private <a href="../int.html">int</a> X</li>
   </ul>
   <h2>Records</h2>
   <ul>
@@ -118,7 +122,7 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   <div>
     <h3>OneFunction</h3>
     <p>
-       OneFunction()
+      OneFunction()
     </p>
   </div>
   <h2>Enums</h2>
@@ -139,8 +143,8 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  I.Params.emplace_back("int", "P");
+  I.ReturnType = TypeInfo(EmptySID, "float", InfoType::IT_default, "path/to");
+  I.Params.emplace_back("int", "path/to", "P");
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -156,7 +160,10 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
 <div>
   <h3>f</h3>
   <p>
-    void f(int P)
+    <a href="path/to/float.html">float</a>
+     f(
+    <a href="path/to/int.html">int</a>
+     P)
   </p>
   <p>
     Defined at line 10 of test.cpp
@@ -261,8 +268,7 @@ TEST(HTMLGeneratorTest, emitCommentHTML) {
          Brief description.
       </p>
       <p>
-         Extended description that
-         continues onto the next line.
+         Extended description that continues onto the next line.
       </p>
     </div>
   </div>

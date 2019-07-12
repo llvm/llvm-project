@@ -1499,7 +1499,7 @@ void llvm::updateProfileCallee(
     return;
 
   uint64_t priorEntryCount = CalleeCount.getCount();
-  uint64_t newEntryCount = priorEntryCount;
+  uint64_t newEntryCount;
 
   // Since CallSiteCount is an estimate, it could exceed the original callee
   // count and has to be set to 0 so guard against underflow.

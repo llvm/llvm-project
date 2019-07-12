@@ -118,6 +118,8 @@ void Info::mergeBase(Info &&Other) {
     USR = Other.USR;
   if (Name == "")
     Name = Other.Name;
+  if (Path == "")
+    Path = Other.Path;
   if (Namespace.empty())
     Namespace = std::move(Other.Namespace);
   // Unconditionally extend the description, since each decl may have a comment.

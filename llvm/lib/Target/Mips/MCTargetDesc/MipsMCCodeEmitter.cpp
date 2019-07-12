@@ -185,7 +185,7 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
   // Check for unimplemented opcodes.
   // Unfortunately in MIPS both NOP and SLL will come in with Binary == 0
   // so we have to special check for them.
-  unsigned Opcode = TmpInst.getOpcode();
+  const unsigned Opcode = TmpInst.getOpcode();
   if ((Opcode != Mips::NOP) && (Opcode != Mips::SLL) &&
       (Opcode != Mips::SLL_MM) && (Opcode != Mips::SLL_MMR6) && !Binary)
     llvm_unreachable("unimplemented opcode in encodeInstruction()");
@@ -208,7 +208,6 @@ encodeInstruction(const MCInst &MI, raw_ostream &OS,
       if (Fixups.size() > N)
         Fixups.pop_back();
 
-      Opcode = NewOpcode;
       TmpInst.setOpcode (NewOpcode);
       Binary = getBinaryCodeForInstr(TmpInst, Fixups, STI);
     }

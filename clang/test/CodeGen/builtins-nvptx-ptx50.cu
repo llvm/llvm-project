@@ -17,7 +17,7 @@
 
 // CHECK-LABEL: test_fn
 __device__ void test_fn(double d, double* double_ptr) {
-  // CHECK: call double @llvm.nvvm.atomic.load.add.f64.p0f64
+  // CHECK: atomicrmw fadd double
   // expected-error@+1 {{'__nvvm_atom_add_gen_d' needs target feature sm_60}}
   __nvvm_atom_add_gen_d(double_ptr, d);
 }

@@ -110,12 +110,13 @@ bool CreateDirectory(const Twine &DirName, bool ClearDirectory = false) {
   return false;
 }
 
-// A function to extract the appropriate path name for a given info's
-// documentation. The path returned is a composite of the parent namespaces as
-// directories plus the decl name as the filename.
+// A function to extract the appropriate file name for a given info's
+// documentation. The path returned is a composite of the output directory, the
+// info's relative path and name and the extension. The relative path should
+// have been constructed in the serialization phase.
 //
-// Example: Given the below, the <ext> path for class C will be <
-// root>/A/B/C.<ext>
+// Example: Given the below, the <ext> path for class C will be
+// <root>/A/B/C.<ext>
 //
 // namespace A {
 // namesapce B {
@@ -124,16 +125,14 @@ bool CreateDirectory(const Twine &DirName, bool ClearDirectory = false) {
 //
 // }
 // }
-llvm::Expected<llvm::SmallString<128>>
-getInfoOutputFile(StringRef Root,
-                  llvm::SmallVectorImpl<doc::Reference> &Namespaces,
-                  StringRef Name, StringRef Ext) {
+llvm::Expected<llvm::SmallString<128>> getInfoOutputFile(StringRef Root,
+                                                         StringRef RelativePath,
+                                                         StringRef Name,
+                                                         StringRef Ext) {
   std::error_code OK;
   llvm::SmallString<128> Path;
   llvm::sys::path::native(Root, Path);
-  for (auto R = Namespaces.rbegin(), E = Namespaces.rend(); R != E; ++R)
-    llvm::sys::path::append(Path, R->Name);
-
+  llvm::sys::path::append(Path, RelativePath);
   if (CreateDirectory(Path))
     return llvm::make_error<llvm::StringError>("Unable to create directory.\n",
                                                llvm::inconvertibleErrorCode());
@@ -223,12 +222,11 @@ int main(int argc, const char **argv) {
     }
 
     doc::Info *I = Reduced.get().get();
-
-    auto InfoPath = getInfoOutputFile(OutDirectory, I->Namespace,
-                                      I->extractName(), "." + Format);
+    auto InfoPath = getInfoOutputFile(OutDirectory, I->Path, I->extractName(),
+                                      "." + Format);
     if (!InfoPath) {
       llvm::errs() << toString(InfoPath.takeError()) << "\n";
-      continue;
+      return 1;
     }
     std::error_code FileErr;
     llvm::raw_fd_ostream InfoOS(InfoPath.get(), FileErr, llvm::sys::fs::F_None);

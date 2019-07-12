@@ -148,6 +148,8 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
     return decodeRecord(R, I->USR, Blob);
   case NAMESPACE_NAME:
     return decodeRecord(R, I->Name, Blob);
+  case NAMESPACE_PATH:
+    return decodeRecord(R, I->Path, Blob);
   default:
     return llvm::make_error<llvm::StringError>(
         "Invalid field for NamespaceInfo.\n", llvm::inconvertibleErrorCode());
@@ -161,6 +163,8 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
     return decodeRecord(R, I->USR, Blob);
   case RECORD_NAME:
     return decodeRecord(R, I->Name, Blob);
+  case RECORD_PATH:
+    return decodeRecord(R, I->Path, Blob);
   case RECORD_DEFLOCATION:
     return decodeRecord(R, I->DefLoc, Blob);
   case RECORD_LOCATION:
@@ -286,6 +290,8 @@ llvm::Error parseRecord(Record R, unsigned ID, llvm::StringRef Blob,
     return decodeRecord(R, I->Name, Blob);
   case REFERENCE_TYPE:
     return decodeRecord(R, I->RefType, Blob);
+  case REFERENCE_PATH:
+    return decodeRecord(R, I->Path, Blob);
   case REFERENCE_FIELD:
     return decodeRecord(R, F, Blob);
   default:
@@ -685,7 +691,7 @@ ClangDocBitcodeReader::createInfo(unsigned ID) {
   std::unique_ptr<Info> I = llvm::make_unique<T>();
   if (auto Err = readBlock(ID, static_cast<T *>(I.get())))
     return std::move(Err);
-  return std::unique_ptr<Info>{std::move(I)};;
+  return std::unique_ptr<Info>{std::move(I)};
 }
 
 llvm::Expected<std::unique_ptr<Info>>

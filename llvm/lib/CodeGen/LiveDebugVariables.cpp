@@ -740,10 +740,8 @@ void UserValue::extendDef(SlotIndex Idx, DbgValueLocation Loc, LiveRange *LR,
   }
 
   // Limited by the next def.
-  if (I.valid() && I.start() < Stop) {
+  if (I.valid() && I.start() < Stop)
     Stop = I.start();
-    ToEnd = false;
-  }
   // Limited by VNI's live range.
   else if (!ToEnd && Kills)
     Kills->push_back(Stop);

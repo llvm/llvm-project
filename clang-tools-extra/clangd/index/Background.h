@@ -69,8 +69,8 @@ public:
 
     std::function<void()> Run;
     llvm::ThreadPriority ThreadPri = llvm::ThreadPriority::Background;
-    // Higher-priority tasks will run first.
-    unsigned QueuePri = 0;
+    unsigned QueuePri = 0; // Higher-priority tasks will run first.
+    std::string Tag;       // Allows priority to be boosted later.
 
     bool operator<(const Task &O) const { return QueuePri < O.QueuePri; }
   };
@@ -78,6 +78,10 @@ public:
   // Add tasks to the queue.
   void push(Task);
   void append(std::vector<Task>);
+  // Boost priority of current and new tasks with matching Tag, if they are
+  // lower priority.
+  // Reducing the boost of a tag affects future tasks but not current ones.
+  void boost(llvm::StringRef Tag, unsigned NewPriority);
 
   // Process items on the queue until the queue is stopped.
   // If the queue becomes empty, OnIdle will be called (on one worker).
@@ -98,6 +102,7 @@ private:
   std::condition_variable CV;
   bool ShouldStop = false;
   std::vector<Task> Queue; // max-heap
+  llvm::StringMap<unsigned> Boosts;
 };
 
 // Builds an in-memory index by by running the static indexer action over
@@ -122,6 +127,10 @@ public:
   void enqueue(const std::vector<std::string> &ChangedFiles) {
     Queue.push(changedFilesTask(ChangedFiles));
   }
+
+  /// Boosts priority of indexing related to Path.
+  /// Typically used to index TUs when headers are opened.
+  void boostRelated(llvm::StringRef Path);
 
   // Cause background threads to stop after ther current task, any remaining
   // tasks will be discarded.
@@ -187,6 +196,7 @@ private:
   // from lowest to highest priority
   enum QueuePriority {
     IndexFile,
+    IndexBoostedFile,
     LoadShards,
   };
   BackgroundQueue Queue;

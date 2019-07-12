@@ -28,6 +28,18 @@ static std::string genEmphasis(const Twine &Text) {
   return "**" + Text.str() + "**";
 }
 
+static std::string
+genReferenceList(const llvm::SmallVectorImpl<Reference> &Refs) {
+  std::string Buffer;
+  llvm::raw_string_ostream Stream(Buffer);
+  for (const auto &R : Refs) {
+    if (&R != Refs.begin())
+      Stream << ", ";
+    Stream << R.Name;
+  }
+  return Stream.str();
+}
+
 static void writeLine(const Twine &Text, raw_ostream &OS) {
   OS << Text << "\n\n";
 }

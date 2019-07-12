@@ -46,13 +46,15 @@ Tweak::Selection::Selection(ParsedAST &AST, unsigned RangeBegin,
   Cursor = SM.getComposedLoc(SM.getMainFileID(), RangeBegin);
 }
 
-std::vector<std::unique_ptr<Tweak>> prepareTweaks(const Tweak::Selection &S) {
+std::vector<std::unique_ptr<Tweak>>
+prepareTweaks(const Tweak::Selection &S,
+              llvm::function_ref<bool(const Tweak &)> Filter) {
   validateRegistry();
 
   std::vector<std::unique_ptr<Tweak>> Available;
   for (const auto &E : TweakRegistry::entries()) {
     std::unique_ptr<Tweak> T = E.instantiate();
-    if (!T->prepare(S))
+    if (!Filter(*T) || !T->prepare(S))
       continue;
     Available.push_back(std::move(T));
   }

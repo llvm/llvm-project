@@ -29,6 +29,8 @@ Models core language features and contains general-purpose checkers such as divi
 null pointer dereference, usage of uninitialized values, etc.
 *These checkers must be always switched on as other checker rely on them.*
 
+.. _core-CallAndMessage:
+
 core.CallAndMessage (C, C++, ObjC)
 """"""""""""""""""""""""""""""""""
  Check for logical errors for function calls and Objective-C message expressions (e.g., uninitialized arguments, null function pointers).
@@ -36,12 +38,16 @@ core.CallAndMessage (C, C++, ObjC)
 .. literalinclude:: checkers/callandmessage_example.c
     :language: objc
 
+.. _core-DivideZero:
+
 core.DivideZero (C, C++, ObjC)
 """"""""""""""""""""""""""""""
  Check for division by zero.
 
 .. literalinclude:: checkers/dividezero_example.c
     :language: c
+
+.. _core-NonNullParamChecker:
 
 core.NonNullParamChecker (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""""""
@@ -55,6 +61,8 @@ Check for null pointers passed as arguments to a function whose arguments are re
    if (!p)
      f(p); // warn
  }
+
+.. _core-NullDereference:
 
 core.NullDereference (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""
@@ -99,6 +107,8 @@ Check for dereferences of null pointers.
    obj->x = 1; // warn
  }
 
+.. _core-StackAddressEscape:
+
 core.StackAddressEscape (C)
 """""""""""""""""""""""""""
 Check that addresses to stack memory do not escape the function.
@@ -123,6 +133,8 @@ Check that addresses to stack memory do not escape the function.
  }
 
 
+.. _core-UndefinedBinaryOperatorResult:
+
 core.UndefinedBinaryOperatorResult (C)
 """"""""""""""""""""""""""""""""""""""
 Check for undefined results of binary operators.
@@ -133,6 +145,8 @@ Check for undefined results of binary operators.
    int x;
    int y = x + 1; // warn: left operand is garbage
  }
+
+.. _core-VLASize:
 
 core.VLASize (C)
 """"""""""""""""
@@ -152,6 +166,8 @@ Check for declarations of Variable Length Arrays of undefined or zero size.
    int vla2[x]; // warn: zero size
  }
 
+.. _core-uninitialized-ArraySubscript:
+
 core.uninitialized.ArraySubscript (C)
 """""""""""""""""""""""""""""""""""""
 Check for uninitialized values used as array subscripts.
@@ -163,6 +179,8 @@ Check for uninitialized values used as array subscripts.
    int x = a[i]; // warn: array subscript is undefined
  }
 
+.. _core-uninitialized-Assign:
+
 core.uninitialized.Assign (C)
 """""""""""""""""""""""""""""
 Check for assigning uninitialized values.
@@ -173,6 +191,8 @@ Check for assigning uninitialized values.
    int x;
    x |= 1; // warn: left expression is uninitialized
  }
+
+.. _core-uninitialized-Branch:
 
 core.uninitialized.Branch (C)
 """""""""""""""""""""""""""""
@@ -186,6 +206,8 @@ Check for uninitialized values used as branch conditions.
      return;
  }
 
+.. _core-uninitialized-CapturedBlockVariable:
+
 core.uninitialized.CapturedBlockVariable (C)
 """"""""""""""""""""""""""""""""""""""""""""
 Check for blocks that capture uninitialized values.
@@ -196,6 +218,8 @@ Check for blocks that capture uninitialized values.
    int x;
    ^{ int y = x; }(); // warn
  }
+
+.. _core-uninitialized-UndefReturn:
 
 core.uninitialized.UndefReturn (C)
 """"""""""""""""""""""""""""""""""
@@ -216,9 +240,13 @@ cplusplus
 
 C++ Checkers.
 
+.. _cplusplus-InnerPointer:
+
 cplusplus.InnerPointer
 """"""""""""""""""""""
 Check for inner pointers of C++ containers used after re/deallocation.
+
+.. _cplusplus-NewDelete:
 
 cplusplus.NewDelete (C++)
 """""""""""""""""""""""""
@@ -226,6 +254,8 @@ Check for double-free and use-after-free problems. Traces memory managed by new/
 
 .. literalinclude:: checkers/newdelete_example.cpp
     :language: cpp
+
+.. _cplusplus-NewDeleteLeaks:
 
 cplusplus.NewDeleteLeaks (C++)
 """"""""""""""""""""""""""""""
@@ -238,6 +268,8 @@ Check for memory leaks. Traces memory managed by new/delete.
  } // warn
 
 
+.. _cplusplus-SelfAssignment:
+
 cplusplus.SelfAssignment (C++)
 """"""""""""""""""""""""""""""
 Checks C++ copy and move assignment operators for self assignment.
@@ -248,6 +280,8 @@ deadcode
 ^^^^^^^^
 
 Dead Code Checkers.
+
+.. _deadcode-DeadStores:
 
 deadcode.DeadStores (C)
 """""""""""""""""""""""
@@ -267,6 +301,8 @@ nullability
 
 Objective C checkers that warn for null pointer passing and dereferencing errors.
 
+.. _nullability-NullPassedToNonnull:
+
 nullability.NullPassedToNonnull (ObjC)
 """"""""""""""""""""""""""""""""""""""
 Warns when a null pointer is passed to a pointer which has a _Nonnull type.
@@ -277,6 +313,8 @@ Warns when a null pointer is passed to a pointer which has a _Nonnull type.
    return;
  // Warning: nil passed to a callee that requires a non-null 1st parameter
  NSString *greeting = [@"Hello " stringByAppendingString:name];
+
+.. _nullability-NullReturnedFromNonnull:
 
 nullability.NullReturnedFromNonnull (ObjC)
 """"""""""""""""""""""""""""""""""""""""""
@@ -293,6 +331,8 @@ Warns when a null pointer is returned from a function that has _Nonnull return t
    // to return a non-null value
    return result;
  }
+
+.. _nullability-NullableDereferenced:
 
 nullability.NullableDereferenced (ObjC)
 """""""""""""""""""""""""""""""""""""""
@@ -313,6 +353,8 @@ Warns when a nullable pointer is dereferenced.
    next->data = 7;
  }
 
+.. _nullability-NullablePassedToNonnull:
+
 nullability.NullablePassedToNonnull (ObjC)
 """"""""""""""""""""""""""""""""""""""""""
 Warns when a nullable pointer is passed to a pointer which has a _Nonnull type.
@@ -328,6 +370,8 @@ Warns when a nullable pointer is passed to a pointer which has a _Nonnull type.
    takesNonnull(p); // warn
  }
 
+.. _nullability-NullableReturnedFromNonnull:
+
 nullability.NullableReturnedFromNonnull (ObjC)
 """"""""""""""""""""""""""""""""""""""""""""""
 Warns when a nullable pointer is returned from a function that has _Nonnull return type.
@@ -338,6 +382,8 @@ optin
 ^^^^^
 
 Checkers for portability, performance or coding style specific rules.
+
+.. _optin-cplusplus-UninitializedObject:
 
 optin.cplusplus.UninitializedObject (C++)
 """""""""""""""""""""""""""""""""""""""""
@@ -443,6 +489,8 @@ This checker has several options which can be set from command line (e.g.
   structures that have a field with a name or type name that matches  the given
   pattern. *Defaults to ""*.
 
+.. _optin-cplusplus-VirtualCall:
+
 optin.cplusplus.VirtualCall (C++)
 """""""""""""""""""""""""""""""""
 Check virtual function calls during construction or destruction.
@@ -464,6 +512,8 @@ Check virtual function calls during construction or destruction.
    }
    virtual void f();
  };
+
+.. _optin-mpi-MPI-Checker:
 
 optin.mpi.MPI-Checker (C)
 """""""""""""""""""""""""
@@ -494,6 +544,8 @@ Checks MPI code.
    MPI_Wait(&sendReq1[1][7][9], MPI_STATUS_IGNORE); // warn
  }
 
+.. _optin-osx-cocoa-localizability-EmptyLocalizationContextChecker:
+
 optin.osx.cocoa.localizability.EmptyLocalizationContextChecker (ObjC)
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
 Check that NSLocalizedString macros include a comment for context.
@@ -506,6 +558,8 @@ Check that NSLocalizedString macros include a comment for context.
    NSString *string3 = NSLocalizedStringWithDefaultValue(
      @"LocalizedString", nil, [[NSBundle alloc] init], nil,@""); // warn
  }
+
+.. _optin-osx-cocoa-localizability-NonLocalizedStringChecker:
 
 optin.osx.cocoa.localizability.NonLocalizedStringChecker (ObjC)
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -523,13 +577,19 @@ Warns about uses of non-localized NSStrings passed to UI methods expecting local
  // Warning: User-facing text should use localized string macro
  [alarmStateLabel setText:alarmText];
 
+.. _optin-performance-GCDAntipattern:
+
 optin.performance.GCDAntipattern
 """"""""""""""""""""""""""""""""
 Check for performance anti-patterns when using Grand Central Dispatch.
 
+.. _optin-performance-Padding:
+
 optin.performance.Padding
 """""""""""""""""""""""""
 Check for excessively padded structs.
+
+.. _optin-portability-UnixAPI:
 
 optin.portability.UnixAPI
 """""""""""""""""""""""""
@@ -543,6 +603,8 @@ security
 
 Security related checkers.
 
+.. _security-FloatLoopCounter:
+
 security.FloatLoopCounter (C)
 """""""""""""""""""""""""""""
 Warn on using a floating point value as a loop counter (CERT: FLP30-C, FLP30-CPP).
@@ -552,6 +614,8 @@ Warn on using a floating point value as a loop counter (CERT: FLP30-C, FLP30-CPP
  void test() {
    for (float x = 0.1f; x <= 1.0f; x += 0.1f) {} // warn
  }
+
+.. _security-insecureAPI-UncheckedReturn:
 
 security.insecureAPI.UncheckedReturn (C)
 """"""""""""""""""""""""""""""""""""""""
@@ -563,6 +627,8 @@ Warn on uses of functions whose return values must be always checked.
    setuid(1); // warn
  }
 
+.. _security-insecureAPI-bcmp:
+
 security.insecureAPI.bcmp (C)
 """""""""""""""""""""""""""""
 Warn on uses of the 'bcmp' function.
@@ -572,6 +638,8 @@ Warn on uses of the 'bcmp' function.
  void test() {
    bcmp(ptr0, ptr1, n); // warn
  }
+
+.. _security-insecureAPI-bcopy:
 
 security.insecureAPI.bcopy (C)
 """"""""""""""""""""""""""""""
@@ -583,6 +651,8 @@ Warn on uses of the 'bcopy' function.
    bcopy(src, dst, n); // warn
  }
 
+.. _security-insecureAPI-bzero:
+
 security.insecureAPI.bzero (C)
 """"""""""""""""""""""""""""""
 Warn on uses of the 'bzero' function.
@@ -592,6 +662,8 @@ Warn on uses of the 'bzero' function.
  void test() {
    bzero(ptr, n); // warn
  }
+
+.. _security-insecureAPI-getpw:
 
 security.insecureAPI.getpw (C)
 """"""""""""""""""""""""""""""
@@ -604,6 +676,8 @@ Warn on uses of the 'getpw' function.
    getpw(2, buff); // warn
  }
 
+.. _security-insecureAPI-gets:
+
 security.insecureAPI.gets (C)
 """""""""""""""""""""""""""""
 Warn on uses of the 'gets' function.
@@ -615,6 +689,8 @@ Warn on uses of the 'gets' function.
    gets(buff); // warn
  }
 
+.. _security-insecureAPI-mkstemp:
+
 security.insecureAPI.mkstemp (C)
 """"""""""""""""""""""""""""""""
 Warn when 'mkstemp' is passed fewer than 6 X's in the format string.
@@ -624,6 +700,8 @@ Warn when 'mkstemp' is passed fewer than 6 X's in the format string.
  void test() {
    mkstemp("XX"); // warn
  }
+
+.. _security-insecureAPI-mktemp:
 
 security.insecureAPI.mktemp (C)
 """""""""""""""""""""""""""""""
@@ -635,6 +713,8 @@ Warn on uses of the ``mktemp`` function.
    char *x = mktemp("/tmp/zxcv"); // warn: insecure, use mkstemp
  }
 
+.. _security-insecureAPI-rand:
+
 security.insecureAPI.rand (C)
 """""""""""""""""""""""""""""
 Warn on uses of inferior random number generating functions (only if arc4random function is available):
@@ -645,6 +725,8 @@ Warn on uses of inferior random number generating functions (only if arc4random 
  void test() {
    random(); // warn
  }
+
+.. _security-insecureAPI-strcpy:
 
 security.insecureAPI.strcpy (C)
 """""""""""""""""""""""""""""""
@@ -660,6 +742,8 @@ Warn on uses of the ``strcpy`` and ``strcat`` functions.
  }
 
 
+.. _security-insecureAPI-vfork:
+
 security.insecureAPI.vfork (C)
 """"""""""""""""""""""""""""""
  Warn on uses of the 'vfork' function.
@@ -669,6 +753,8 @@ security.insecureAPI.vfork (C)
  void test() {
    vfork(); // warn
  }
+
+.. _security-insecureAPI-DeprecatedOrUnsafeBufferHandling:
 
 security.insecureAPI.DeprecatedOrUnsafeBufferHandling (C)
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -687,6 +773,8 @@ unix
 ^^^^
 POSIX/Unix checkers.
 
+.. _unix-API:
+
 unix.API (C)
 """"""""""""
 Check calls to various UNIX/Posix functions: ``open, pthread_once, calloc, malloc, realloc, alloca``.
@@ -694,12 +782,16 @@ Check calls to various UNIX/Posix functions: ``open, pthread_once, calloc, mallo
 .. literalinclude:: checkers/unix_api_example.c
     :language: c
 
+.. _unix-Malloc:
+
 unix.Malloc (C)
 """""""""""""""
 Check for memory leaks, double free, and use-after-free problems. Traces memory managed by malloc()/free().
 
 .. literalinclude:: checkers/unix_malloc_example.c
     :language: c
+
+.. _unix-MallocSizeof:
 
 unix.MallocSizeof (C)
 """""""""""""""""""""
@@ -714,12 +806,16 @@ Check for dubious ``malloc`` arguments involving ``sizeof``.
    free(p);
  }
 
+.. _unix-MismatchedDeallocator:
+
 unix.MismatchedDeallocator (C, C++)
 """""""""""""""""""""""""""""""""""
 Check for mismatched deallocators.
 
 .. literalinclude:: checkers/mismatched_deallocator_example.cpp
     :language: c
+
+.. _unix-Vfork:
 
 unix.Vfork (C)
 """"""""""""""
@@ -751,6 +847,8 @@ Check for proper usage of ``vfork``.
    while(1);
  }
 
+.. _unix-cstring-BadSizeArg:
+
 unix.cstring.BadSizeArg (C)
 """""""""""""""""""""""""""
 Check the size argument passed into C string functions for common erroneous patterns. Use ``-Wno-strncat-size`` compiler option to mute other ``strncat``-related compiler warnings.
@@ -762,6 +860,8 @@ Check the size argument passed into C string functions for common erroneous patt
    strncat(dest, """""""""""""""""""""""""*", sizeof(dest));
      // warn: potential buffer overflow
  }
+
+.. _unix-cstrisng-NullArg:
 
 unix.cstrisng.NullArg (C)
 """""""""""""""""""""""""
@@ -780,6 +880,8 @@ osx
 ^^^
 macOS checkers.
 
+.. _osx-API:
+
 osx.API (C)
 """""""""""
 Check for proper uses of various Apple APIs.
@@ -790,6 +892,8 @@ Check for proper uses of various Apple APIs.
    dispatch_once_t pred = 0;
    dispatch_once(&pred, ^(){}); // warn: dispatch_once uses local
  }
+
+.. _osx-NumberObjectConversion:
 
 osx.NumberObjectConversion (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""""""""
@@ -803,6 +907,8 @@ Check for erroneous conversions of objects representing numbers into numbers.
  if (photoCount > 0) {
    [self displayPhotos];
  }
+
+.. _osx-ObjCProperty:
 
 osx.ObjCProperty (ObjC)
 """""""""""""""""""""""
@@ -818,12 +924,16 @@ Check for proper uses of Objective-C properties.
  }
 
 
+.. _osx-SecKeychainAPI:
+
 osx.SecKeychainAPI (C)
 """"""""""""""""""""""
 Check for proper uses of Secure Keychain APIs.
 
 .. literalinclude:: checkers/seckeychainapi_example.m
     :language: objc
+
+.. _osx-cocoa-AtSync:
 
 osx.cocoa.AtSync (ObjC)
 """""""""""""""""""""""
@@ -841,9 +951,13 @@ Check for nil pointers used as mutexes for @synchronized.
    @synchronized(y) {} // warn: uninitialized value used as mutex
  }
 
+.. _osx-cocoa-AutoreleaseWrite:
+
 osx.cocoa.AutoreleaseWrite
 """"""""""""""""""""""""""
 Warn about potentially crashing writes to autoreleasing objects from different autoreleasing pools in Objective-C.
+
+.. _osx-cocoa-ClassRelease:
 
 osx.cocoa.ClassRelease (ObjC)
 """""""""""""""""""""""""""""
@@ -858,12 +972,16 @@ Check for sending 'retain', 'release', or 'autorelease' directly to a Class.
    [MyClass release]; // warn
  }
 
+.. _osx-cocoa-Dealloc:
+
 osx.cocoa.Dealloc (ObjC)
 """"""""""""""""""""""""
 Warn about Objective-C classes that lack a correct implementation of -dealloc
 
 .. literalinclude:: checkers/dealloc_example.m
     :language: objc
+
+.. _osx-cocoa-IncompatibleMethodTypes:
 
 osx.cocoa.IncompatibleMethodTypes (ObjC)
 """"""""""""""""""""""""""""""""""""""""
@@ -887,9 +1005,13 @@ Warn about Objective-C method signatures with type incompatibilities.
  - (float)foo { return 1.0; } // warn
  @end
 
+.. _osx-cocoa-Loops:
+
 osx.cocoa.Loops
 """""""""""""""
 Improved modeling of loops using Cocoa collection types.
+
+.. _osx-cocoa-MissingSuperCall:
 
 osx.cocoa.MissingSuperCall (ObjC)
 """""""""""""""""""""""""""""""""
@@ -904,6 +1026,8 @@ Warn about Objective-C methods that lack a necessary call to super.
  @end
 
 
+.. _osx-cocoa-NSAutoreleasePool:
+
 osx.cocoa.NSAutoreleasePool (ObjC)
 """"""""""""""""""""""""""""""""""
 Warn for suboptimal uses of NSAutoreleasePool in Objective-C GC mode.
@@ -914,6 +1038,8 @@ Warn for suboptimal uses of NSAutoreleasePool in Objective-C GC mode.
    NSAutoreleasePool *pool = [[NSAutoreleasePool alloc] init];
    [pool release]; // warn
  }
+
+.. _osx-cocoa-NSError:
 
 osx.cocoa.NSError (ObjC)
 """"""""""""""""""""""""
@@ -943,6 +1069,8 @@ Check usage of NSError parameters.
  }
  @end
 
+.. _osx-cocoa-NilArg:
+
 osx.cocoa.NilArg (ObjC)
 """""""""""""""""""""""
 Check for prohibited nil arguments to ObjC method calls.
@@ -965,9 +1093,13 @@ Check for prohibited nil arguments to ObjC method calls.
  }
 
 
+.. _osx-cocoa-NonNilReturnValue:
+
 osx.cocoa.NonNilReturnValue
 """""""""""""""""""""""""""
 Models the APIs that are guaranteed to return a non-nil value.
+
+.. _osx-cocoa-ObjCGenerics:
 
 osx.cocoa.ObjCGenerics (ObjC)
 """""""""""""""""""""""""""""
@@ -981,6 +1113,8 @@ Check for type errors when using Objective-C generics.
  // Warning: Conversion from value of type 'NSDate *'
  // to incompatible type 'NSString *'
  [birthDates addObject: [NSDate date]];
+
+.. _osx-cocoa-RetainCount:
 
 osx.cocoa.RetainCount (ObjC)
 """"""""""""""""""""""""""""
@@ -998,9 +1132,13 @@ Check for leaks and improper reference count management
  }
 
 
+.. _osx-cocoa-RunLoopAutoreleaseLeak:
+
 osx.cocoa.RunLoopAutoreleaseLeak
 """"""""""""""""""""""""""""""""
 Check for leaked memory in autorelease pools that will never be drained.
+
+.. _osx-cocoa-SelfInit:
 
 osx.cocoa.SelfInit (ObjC)
 """""""""""""""""""""""""
@@ -1034,6 +1172,8 @@ Check that 'self' is properly initialized inside an initializer method.
  }
  @end
 
+.. _osx-cocoa-SuperDealloc:
+
 osx.cocoa.SuperDealloc (ObjC)
 """""""""""""""""""""""""""""
 Warn about improper use of '[super dealloc]' in Objective-C.
@@ -1052,6 +1192,8 @@ Warn about improper use of '[super dealloc]' in Objective-C.
  }
  @end
 
+.. _osx-cocoa-UnusedIvars:
+
 osx.cocoa.UnusedIvars (ObjC)
 """"""""""""""""""""""""""""
 Warn about private ivars that are never used.
@@ -1067,6 +1209,8 @@ Warn about private ivars that are never used.
  @implementation MyObj
  @end
 
+.. _osx-cocoa-VariadicMethodTypes:
+
 osx.cocoa.VariadicMethodTypes (ObjC)
 """"""""""""""""""""""""""""""""""""
 Check for passing non-Objective-C types to variadic collection
@@ -1078,6 +1222,8 @@ initialization methods that expect only Objective-C types.
    [NSSet setWithObjects:@"Foo", "Bar", nil];
      // warn: argument should be an ObjC pointer type, not 'char *'
  }
+
+.. _osx-coreFoundation-CFError:
 
 osx.coreFoundation.CFError (C)
 """"""""""""""""""""""""""""""
@@ -1095,6 +1241,8 @@ Check usage of CFErrorRef* parameters
    return 0;
  }
 
+.. _osx-coreFoundation-CFNumber:
+
 osx.coreFoundation.CFNumber (C)
 """""""""""""""""""""""""""""""
 Check for proper uses of CFNumber APIs.
@@ -1105,6 +1253,8 @@ Check for proper uses of CFNumber APIs.
    return CFNumberCreate(0, kCFNumberSInt16Type, &x);
     // warn: 8 bit integer is used to initialize a 16 bit integer
  }
+
+.. _osx-coreFoundation-CFRetainRelease:
 
 osx.coreFoundation.CFRetainRelease (C)
 """"""""""""""""""""""""""""""""""""""
@@ -1124,6 +1274,8 @@ Check for null arguments to CFRetain/CFRelease/CFMakeCollectable.
    CFRelease(p); // warn
  }
 
+.. _osx-coreFoundation-containers-OutOfBounds:
+
 osx.coreFoundation.containers.OutOfBounds (C)
 """""""""""""""""""""""""""""""""""""""""""""
 Checks for index out-of-bounds when using 'CFArray' API.
@@ -1134,6 +1286,8 @@ Checks for index out-of-bounds when using 'CFArray' API.
    CFArrayRef A = CFArrayCreate(0, 0, 0, &kCFTypeArrayCallBacks);
    CFArrayGetValueAtIndex(A, 0); // warn
  }
+
+.. _osx-coreFoundation-containers-PointerSizedValues:
 
 osx.coreFoundation.containers.PointerSizedValues (C)
 """"""""""""""""""""""""""""""""""""""""""""""""""""
@@ -1158,6 +1312,8 @@ Experimental Checkers
 alpha.clone
 ^^^^^^^^^^^
 
+.. _alpha-clone-CloneChecker:
+
 alpha.clone.CloneChecker (C, C++, ObjC)
 """""""""""""""""""""""""""""""""""""""
 Reports similar pieces of code.
@@ -1180,6 +1336,8 @@ Reports similar pieces of code.
    return y;
  }
 
+.. _alpha-core-BoolAssignment:
+
 alpha.core.BoolAssignment (ObjC)
 """"""""""""""""""""""""""""""""
 Warn about assigning non-{0,1} values to boolean variables.
@@ -1192,6 +1350,8 @@ Warn about assigning non-{0,1} values to boolean variables.
 
 alpha.core
 ^^^^^^^^^^
+
+.. _alpha-core-CallAndMessageUnInitRefArg:
 
 alpha.core.CallAndMessageUnInitRefArg (C,C++, ObjC)
 """""""""""""""""""""""""""""""""""""""""""""""""""
@@ -1213,6 +1373,8 @@ message expressions (e.g., uninitialized arguments, null function pointers, and 
    foo(&x); // warn
  }
 
+.. _alpha-core-CastSize:
+
 alpha.core.CastSize (C)
 """""""""""""""""""""""
 Check when casting a malloc'ed type ``T``, whether the size is a multiple of the size of ``T``.
@@ -1222,6 +1384,8 @@ Check when casting a malloc'ed type ``T``, whether the size is a multiple of the
  void test() {
    int *x = (int *) malloc(11); // warn
  }
+
+.. _alpha-core-CastToStruct:
 
 alpha.core.CastToStruct (C, C++)
 """"""""""""""""""""""""""""""""
@@ -1242,6 +1406,8 @@ Check for cast from non-struct pointer to struct pointer.
  void test(int *p) {
    c *pc = (c *) p; // warn
  }
+
+.. _alpha-core-Conversion:
 
 alpha.core.Conversion (C, C++, ObjC)
 """"""""""""""""""""""""""""""""""""
@@ -1265,6 +1431,8 @@ Loss of sign/precision in implicit conversions.
    short X = A; // warn (loss of precision)
  }
 
+.. _alpha-core-DynamicTypeChecker:
+
 alpha.core.DynamicTypeChecker (ObjC)
 """"""""""""""""""""""""""""""""""""
 Check for cases where the dynamic and the static type of an object are unrelated.
@@ -1279,6 +1447,8 @@ Check for cases where the dynamic and the static type of an object are unrelated
  NSNumber *number = date;
  [number doubleValue];
 
+.. _alpha-core-FixedAddr:
+
 alpha.core.FixedAddr (C)
 """"""""""""""""""""""""
 Check for assignment of a fixed address to a pointer.
@@ -1289,6 +1459,8 @@ Check for assignment of a fixed address to a pointer.
    int *p;
    p = (int *) 0x10000; // warn
  }
+
+.. _alpha-core-IdenticalExpr:
 
 alpha.core.IdenticalExpr (C, C++)
 """""""""""""""""""""""""""""""""
@@ -1318,6 +1490,8 @@ Warn about unintended use of identical expressions in operators.
    }
  }
 
+.. _alpha-core-PointerArithm:
+
 alpha.core.PointerArithm (C)
 """"""""""""""""""""""""""""
 Check for pointer arithmetic on locations other than array elements.
@@ -1330,6 +1504,8 @@ Check for pointer arithmetic on locations other than array elements.
    p = &x + 1; // warn
  }
 
+.. _alpha-core-PointerSub:
+
 alpha.core.PointerSub (C)
 """""""""""""""""""""""""
 Check for pointer subtractions on two pointers pointing to different memory chunks.
@@ -1340,6 +1516,8 @@ Check for pointer subtractions on two pointers pointing to different memory chun
    int x, y;
    int d = &y - &x; // warn
  }
+
+.. _alpha-core-SizeofPtr:
 
 alpha.core.SizeofPtr (C)
 """"""""""""""""""""""""
@@ -1353,6 +1531,8 @@ Warn about unintended use of ``sizeof()`` on pointer expressions.
    return sizeof(p);
      // warn: sizeof(ptr) can produce an unexpected result
  }
+
+.. _alpha-core-StackAddressAsyncEscape:
 
 alpha.core.StackAddressAsyncEscape (C)
 """"""""""""""""""""""""""""""""""""""
@@ -1376,6 +1556,8 @@ This checker is a part of ``core.StackAddressEscape``, but is temporarily disabl
                  //       returned block
  }
 
+.. _alpha-core-TestAfterDivZero:
+
 alpha.core.TestAfterDivZero (C)
 """""""""""""""""""""""""""""""
 Check for division by variable that is later compared against 0.
@@ -1390,6 +1572,8 @@ Either the comparison is useless or there is division by zero.
 
 alpha.cplusplus
 ^^^^^^^^^^^^^^^
+
+.. _alpha-cplusplus-DeleteWithNonVirtualDtor:
 
 alpha.cplusplus.DeleteWithNonVirtualDtor (C++)
 """"""""""""""""""""""""""""""""""""""""""""""
@@ -1408,6 +1592,8 @@ Reports destructions of polymorphic objects with a non-virtual destructor in the
              //       destructor
  }
 
+.. _alpha-cplusplus-EnumCastOutOfRange:
+
 alpha.cplusplus.EnumCastOutOfRange (C++)
 """"""""""""""""""""""""""""""""""""""""
 Check for integer to enumeration casts that could result in undefined values.
@@ -1423,6 +1609,8 @@ Check for integer to enumeration casts that could result in undefined values.
        // warn: the value provided to the cast expression is not in
                 the valid range of values for the enum
 
+.. _alpha-cplusplus-InvalidatedIterator:
+
 alpha.cplusplus.InvalidatedIterator (C++)
 """""""""""""""""""""""""""""""""""""""""
 Check for use of invalidated iterators.
@@ -1437,6 +1625,8 @@ Check for use of invalidated iterators.
  }
 
 
+.. _alpha-cplusplus-IteratorRange:
+
 alpha.cplusplus.IteratorRange (C++)
 """""""""""""""""""""""""""""""""""
 Check for iterators used outside their valid ranges.
@@ -1447,6 +1637,8 @@ Check for iterators used outside their valid ranges.
    auto i = v.end();
    *i; // warn: iterator accessed outside of its range
  }
+
+.. _alpha-cplusplus-MismatchedIterator:
 
 alpha.cplusplus.MismatchedIterator (C++)
 """"""""""""""""""""""""""""""""""""""""
@@ -1470,6 +1662,8 @@ Check for use of iterators of different containers where iterators of the same c
                                                    //       expected
  }
 
+.. _alpha-cplusplus-MisusedMovedObject:
+
 alpha.cplusplus.MisusedMovedObject (C++)
 """"""""""""""""""""""""""""""""""""""""
 Method calls on a moved-from object and copying a moved-from object will be reported.
@@ -1489,6 +1683,8 @@ Method calls on a moved-from object and copying a moved-from object will be repo
 
 alpha.deadcode
 ^^^^^^^^^^^^^^
+.. _alpha-deadcode-UnreachableCode:
+
 alpha.deadcode.UnreachableCode (C, C++)
 """""""""""""""""""""""""""""""""""""""
 Check unreachable code.
@@ -1522,6 +1718,8 @@ Check unreachable code.
 alpha.llvm
 ^^^^^^^^^^
 
+.. _alpha-llvm-Conventions:
+
 alpha.llvm.Conventions
 """"""""""""""""""""""
 
@@ -1533,6 +1731,8 @@ Check code for LLVM codebase conventions:
 
 alpha.osx
 ^^^^^^^^^
+
+.. _alpha-osx-cocoa-DirectIvarAssignment:
 
 alpha.osx.cocoa.DirectIvarAssignment (ObjC)
 """""""""""""""""""""""""""""""""""""""""""
@@ -1551,6 +1751,8 @@ Check for direct assignments to instance variables.
    _A = 0; // warn
  }
  @end
+
+.. _alpha-osx-cocoa-DirectIvarAssignmentForAnnotatedFunctions:
 
 alpha.osx.cocoa.DirectIvarAssignmentForAnnotatedFunctions (ObjC)
 """"""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -1575,6 +1777,8 @@ the methods annotated with ``objc_no_direct_instance_variable_assignment``.
  }
  @end
 
+
+.. _alpha-osx-cocoa-InstanceVariableInvalidation:
 
 alpha.osx.cocoa.InstanceVariableInvalidation (ObjC)
 """""""""""""""""""""""""""""""""""""""""""""""""""
@@ -1602,6 +1806,8 @@ invalidated in the methods annotated with objc_instance_variable_invalidator.
  @end
  // warn: var needs to be invalidated or set to nil
 
+.. _alpha-osx-cocoa-MissingInvalidationMethod:
+
 alpha.osx.cocoa.MissingInvalidationMethod (ObjC)
 """"""""""""""""""""""""""""""""""""""""""""""""
 Check that the invalidation methods are present in classes that contain invalidatable instance variables.
@@ -1623,6 +1829,8 @@ Check that the invalidation methods are present in classes that contain invalida
 
  @implementation MissingInvalidationMethodDecl
  @end
+
+.. _alpha-osx-cocoa-localizability-PluralMisuseChecker:
 
 alpha.osx.cocoa.localizability.PluralMisuseChecker (ObjC)
 """""""""""""""""""""""""""""""""""""""""""""""""""""""""
@@ -1648,6 +1856,8 @@ Warns against using one vs. many plural pattern in code when generating localize
 
 alpha.security
 ^^^^^^^^^^^^^^
+.. _alpha-security-ArrayBound:
+
 alpha.security.ArrayBound (C)
 """""""""""""""""""""""""""""
 Warn about buffer overflows (older checker).
@@ -1684,6 +1894,8 @@ Warn about buffer overflows (older checker).
    b[1] = 3; // warn
  }
 
+.. _alpha-security-ArrayBoundV2:
+
 alpha.security.ArrayBoundV2 (C)
 """""""""""""""""""""""""""""""
 Warn about buffer overflows (newer checker).
@@ -1716,6 +1928,8 @@ Warn about buffer overflows (newer checker).
    char c = s[x]; // warn: index is tainted
  }
 
+.. _alpha-security-MallocOverflow:
+
 alpha.security.MallocOverflow (C)
 """""""""""""""""""""""""""""""""
 Check for overflows in the arguments to malloc().
@@ -1725,6 +1939,8 @@ Check for overflows in the arguments to malloc().
  void test(int n) {
    void *p = malloc(n * sizeof(int)); // warn
  }
+
+.. _alpha-security-MmapWriteExec:
 
 alpha.security.MmapWriteExec (C)
 """"""""""""""""""""""""""""""""
@@ -1739,6 +1955,8 @@ Warn on mmap() calls that are both writable and executable.
    //       exploitable memory regions, which could be overwritten with malicious
    //       code
  }
+
+.. _alpha-security-ReturnPtrRange:
 
 alpha.security.ReturnPtrRange (C)
 """""""""""""""""""""""""""""""""
@@ -1757,6 +1975,8 @@ Check for an out-of-bound pointer being returned to callers.
    int x;
    return x; // warn: undefined or garbage returned
  }
+
+.. _alpha-security-taint-TaintPropagation:
 
 alpha.security.taint.TaintPropagation (C, C++)
 """"""""""""""""""""""""""""""""""""""""""""""
@@ -1790,6 +2010,8 @@ A data is tainted when it comes from an unreliable source.
 alpha.unix
 ^^^^^^^^^^^
 
+.. _alpha-unix-BlockInCriticalSection:
+
 alpha.unix.BlockInCriticalSection (C)
 """""""""""""""""""""""""""""""""""""
 Check for calls to blocking functions inside a critical section.
@@ -1806,6 +2028,8 @@ Applies to: ``lock, unlock, sleep, getc, fgets, read, recv, pthread_mutex_lock,`
    m.unlock();
  }
 
+.. _alpha-unix-Chroot:
+
 alpha.unix.Chroot (C)
 """""""""""""""""""""
 Check improper use of chroot.
@@ -1818,6 +2042,8 @@ Check improper use of chroot.
    chroot("/usr/local");
    f(); // warn: no call of chdir("/") immediately after chroot
  }
+
+.. _alpha-unix-PthreadLock:
 
 alpha.unix.PthreadLock (C)
 """"""""""""""""""""""""""
@@ -1857,6 +2083,8 @@ lck_rw_try_lock_exclusive, lck_rw_try_lock_shared, pthread_mutex_unlock, pthread
      // warn: this was not the most recently acquired lock
  }
 
+.. _alpha-unix-SimpleStream:
+
 alpha.unix.SimpleStream (C)
 """""""""""""""""""""""""""
 Check for misuses of stream APIs. Check for misuses of stream APIs: ``fopen, fclose``
@@ -1878,6 +2106,8 @@ Check for misuses of stream APIs. Check for misuses of stream APIs: ``fopen, fcl
 
    fclose(F); // warn: closing a previously closed file stream
  }
+
+.. _alpha-unix-Stream:
 
 alpha.unix.Stream (C)
 """""""""""""""""""""
@@ -1919,6 +2149,8 @@ Check stream handling functions: ``fopen, tmpfile, fclose, fread, fwrite, fseek,
  }
 
 
+.. _alpha-unix-cstring-BufferOverlap:
+
 alpha.unix.cstring.BufferOverlap (C)
 """"""""""""""""""""""""""""""""""""
 Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy``.
@@ -1930,6 +2162,8 @@ Checks for overlap in two buffer arguments. Applies to:  ``memcpy, mempcpy``.
    memcpy(a + 2, a + 1, 8); // warn
  }
 
+.. _alpha-unix-cstring-NotNullTerminated:
+
 alpha.unix.cstring.NotNullTerminated (C)
 """"""""""""""""""""""""""""""""""""""""
 Check for arguments which are not null-terminated strings; applies to: ``strlen, strnlen, strcpy, strncpy, strcat, strncat``.
@@ -1939,6 +2173,8 @@ Check for arguments which are not null-terminated strings; applies to: ``strlen,
  void test() {
    int y = strlen((char *)&test); // warn
  }
+
+.. _alpha-unix-cstring-OutOfBounds:
 
 alpha.unix.cstring.OutOfBounds (C)
 """"""""""""""""""""""""""""""""""
@@ -1950,6 +2186,8 @@ Check for out-of-bounds access in string functions; applies to:`` strncopy, strn
  void test() {
    int y = strlen((char *)&test); // warn
  }
+
+.. _alpha-nondeterminism-PointerIteration:
 
 alpha.nondeterminism.PointerIteration (C++)
 """""""""""""""""""""""""""""""""""""""""""
@@ -1964,6 +2202,8 @@ Check for non-determinism caused by iterating unordered containers of pointers.
   for (auto i : UnorderedPtrSet) // warn
     f(i);
  }
+
+.. _alpha-nondeterminism-PointerSorting:
 
 alpha.nondeterminism.PointerSorting (C++)
 """""""""""""""""""""""""""""""""""""""""
@@ -1990,57 +2230,85 @@ debug
 Checkers used for debugging the analyzer.
 :doc:`developer-docs/DebugChecks` page contains a detailed description.
 
+.. _debug-AnalysisOrder:
+
 debug.AnalysisOrder
 """""""""""""""""""
 Print callbacks that are called during analysis in order.
+
+.. _debug-ConfigDumper:
 
 debug.ConfigDumper
 """"""""""""""""""
 Dump config table.
 
+.. _debug-DumpCFG Display:
+
 debug.DumpCFG Display
 """""""""""""""""""""
 Control-Flow Graphs.
+
+.. _debug-DumpCallGraph:
 
 debug.DumpCallGraph
 """""""""""""""""""
 Display Call Graph.
 
+.. _debug-DumpCalls:
+
 debug.DumpCalls
 """""""""""""""
 Print calls as they are traversed by the engine.
+
+.. _debug-DumpDominators:
 
 debug.DumpDominators
 """"""""""""""""""""
 Print the dominance tree for a given CFG.
 
+.. _debug-DumpLiveVars:
+
 debug.DumpLiveVars
 """"""""""""""""""
 Print results of live variable analysis.
+
+.. _debug-DumpTraversal:
 
 debug.DumpTraversal
 """""""""""""""""""
 Print branch conditions as they are traversed by the engine.
 
+.. _debug-ExprInspection:
+
 debug.ExprInspection
 """"""""""""""""""""
 Check the analyzer's understanding of expressions.
+
+.. _debug-Stats:
 
 debug.Stats
 """""""""""
 Emit warnings with analyzer statistics.
 
+.. _debug-TaintTest:
+
 debug.TaintTest
 """""""""""""""
 Mark tainted symbols as such.
+
+.. _debug-ViewCFG:
 
 debug.ViewCFG
 """""""""""""
 View Control-Flow Graphs using GraphViz.
 
+.. _debug-ViewCallGraph:
+
 debug.ViewCallGraph
 """""""""""""""""""
 View Call Graph using GraphViz.
+
+.. _debug-ViewExplodedGraph:
 
 debug.ViewExplodedGraph
 """""""""""""""""""""""

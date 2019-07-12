@@ -383,6 +383,9 @@ template("write_target_def_file") {
     foreach(target, all_targets) {
       value = "$value${invoker.value}($target)\n"
     }
+    if (all_targets == []) {
+      not_needed(invoker, [ "value" ])
+    }
     values = [ "${invoker.key}=$value" ]
   }
 }

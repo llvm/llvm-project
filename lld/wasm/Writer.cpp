@@ -658,13 +658,13 @@ void Writer::createInitMemoryFunction() {
       if (s->initFlags & WASM_SEGMENT_IS_PASSIVE) {
         // destination address
         writeU8(os, WASM_OPCODE_I32_CONST, "i32.const");
-        writeUleb128(os, s->startVA, "destination address");
+        writeSleb128(os, s->startVA, "destination address");
         // source segment offset
         writeU8(os, WASM_OPCODE_I32_CONST, "i32.const");
-        writeUleb128(os, 0, "segment offset");
+        writeSleb128(os, 0, "segment offset");
         // memory region size
         writeU8(os, WASM_OPCODE_I32_CONST, "i32.const");
-        writeUleb128(os, s->size, "memory region size");
+        writeSleb128(os, s->size, "memory region size");
         // memory.init instruction
         writeU8(os, WASM_OPCODE_MISC_PREFIX, "bulk-memory prefix");
         writeUleb128(os, WASM_OPCODE_MEMORY_INIT, "MEMORY.INIT");

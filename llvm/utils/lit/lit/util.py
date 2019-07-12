@@ -404,7 +404,7 @@ def usePlatformSdkOnDarwin(config, lit_config):
         except OSError:
             res = -1
         if res == 0 and out:
-            sdk_path = out
+            sdk_path = out.decode()
             lit_config.note('using SDKROOT: %r' % sdk_path)
             config.environment['SDKROOT'] = sdk_path
 
@@ -420,7 +420,7 @@ def findPlatformSdkVersionOnMacOS(config, lit_config):
         except OSError:
             res = -1
         if res == 0 and out:
-            return out
+            return out.decode()
     return None
 
 

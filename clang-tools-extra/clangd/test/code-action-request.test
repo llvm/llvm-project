@@ -47,7 +47,7 @@
 # CHECK-NEXT:        }
 # CHECK-NEXT:      ],
 # CHECK-NEXT:      "command": "clangd.applyTweak",
-# CHECK-NEXT:      "title": "expand auto type"
+# CHECK-NEXT:      "title": "Expand auto type"
 # CHECK-NEXT:    }
 # CHECK-NEXT:  ]
 ---

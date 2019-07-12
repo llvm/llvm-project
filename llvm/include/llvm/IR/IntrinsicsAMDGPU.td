@@ -1640,7 +1640,7 @@ def int_amdgcn_udot8 :
   >;
 
 //===----------------------------------------------------------------------===//
-// MI-100 intrinsics
+// gfx908 intrinsics
 // ===----------------------------------------------------------------------===//
 
 class AMDGPUBufferAtomicNoRtn : Intrinsic <
@@ -1662,9 +1662,6 @@ class AMDGPUGlobalAtomicNoRtn : Intrinsic <
 def int_amdgcn_buffer_atomic_fadd    : AMDGPUBufferAtomicNoRtn;
 def int_amdgcn_global_atomic_fadd    : AMDGPUGlobalAtomicNoRtn;
 
-//===----------------------------------------------------------------------===//
-// MI-100 intrinsics
-// ===----------------------------------------------------------------------===//
 // llvm.amdgcn.mfma.f32.* vdst, srcA, srcB, srcC, cbsz, abid, blgp
 def int_amdgcn_mfma_f32_32x32x1f32 : Intrinsic<[llvm_v32i32_ty],
   [llvm_float_ty, llvm_float_ty, llvm_v32i32_ty,

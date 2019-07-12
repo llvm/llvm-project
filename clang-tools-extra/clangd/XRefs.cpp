@@ -1230,6 +1230,8 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
   RecursionProtectionSet RPSet;
   Optional<TypeHierarchyItem> Result =
       getTypeAncestors(*CXXRD, AST.getASTContext(), RPSet);
+  if (!Result)
+    return Result;
 
   if ((Direction == TypeHierarchyDirection::Children ||
        Direction == TypeHierarchyDirection::Both) &&
