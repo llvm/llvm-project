@@ -51,6 +51,7 @@ add_lldb_library(lldbPluginProcessUtility
   RegisterInfoPOSIX_ppc64le.cpp
   StopInfoMachException.cpp
   ThreadMemory.cpp
+  UnwindDPU.cpp
 
   LINK_LIBS
     lldbBreakpoint
