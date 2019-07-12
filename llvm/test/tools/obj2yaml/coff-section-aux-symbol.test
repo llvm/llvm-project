@@ -1,13 +1,110 @@
+# RUN: yaml2obj %s | obj2yaml | FileCheck %s --check-prefix COFF-I386
+
+# COFF-I386:     sections:
+# COFF-I386-NEXT:  - Name:            .CRT
+# COFF-I386:     symbols:
+# COFF-I386:       - Name:            '.CRT$XCAA'
+# COFF-I386-NEXT:    Value:           4
+# COFF-I386:         StorageClass:    IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          4
+# COFF-I386-NEXT:      NumberOfRelocations: 1
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386:       - Name:            '.CRT$XIAA'
+# COFF-I386-NEXT:    Value:           16
+# COFF-I386:         StorageClass:    IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          4
+# COFF-I386-NEXT:      NumberOfRelocations: 1
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386:       - Name:            '.CRT$XLD'
+# COFF-I386-NEXT:    Value:           36
+# COFF-I386:         StorageClass:    IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          4
+# COFF-I386-NEXT:      NumberOfRelocations: 1
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386:       - Name:            '.CRT$XLC'
+# COFF-I386-NEXT:    Value:           32
+# COFF-I386:         StorageClass:    IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          4
+# COFF-I386-NEXT:      NumberOfRelocations: 1
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386:       - Name:            '.CRT$XDZ'
+# COFF-I386-NEXT:    Value:           48
+# COFF-I386:         StorageClass:    IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          4
+# COFF-I386-NEXT:      NumberOfRelocations: 0
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386:       - Name:            '.CRT$XDA'
+# COFF-I386-NEXT:    Value:           44
+# COFF-I386:         StorageClass:    IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          4
+# COFF-I386-NEXT:      NumberOfRelocations: 0
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386:       - Name:            '.CRT$XLZ'
+# COFF-I386-NEXT:    Value:           40
+# COFF-I386:         StorageClass:    IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          4
+# COFF-I386-NEXT:      NumberOfRelocations: 0
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386:       - Name:            '.CRT$XLA'
+# COFF-I386-NEXT:    Value:           28
+# COFF-I386:         StorageClass:    IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          4
+# COFF-I386-NEXT:      NumberOfRelocations: 0
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386:       - Name:            '.CRT$XIC'
+# COFF-I386-NEXT:    Value:           20
+# COFF-I386:         StorageClass:    IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          4
+# COFF-I386-NEXT:      NumberOfRelocations: 1
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386:       - Name:            '.CRT$XCZ'
+# COFF-I386-NEXT:    Value:           8
+# COFF-I386:         StorageClass:    IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          4
+# COFF-I386-NEXT:      NumberOfRelocations: 0
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386:       - Name:            '.CRT$XCA'
+# COFF-I386-NEXT:    Value:           0
+# COFF-I386:         StorageClass:    IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          4
+# COFF-I386-NEXT:      NumberOfRelocations: 0
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386:       - Name:            '.CRT$XIZ'
+# COFF-I386-NEXT:    Value:           24
+# COFF-I386:         StorageClass:    IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          4
+# COFF-I386-NEXT:      NumberOfRelocations: 0
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+# COFF-I386:       - Name:            '.CRT$XIA'
+# COFF-I386-NEXT:    Value:           12
+# COFF-I386:         StorageClass:    IMAGE_SYM_CLASS_STATIC
+# COFF-I386-NEXT:    SectionDefinition:
+# COFF-I386-NEXT:      Length:          4
+# COFF-I386-NEXT:      NumberOfRelocations: 0
+# COFF-I386-NEXT:      NumberOfLinenumbers: 0
+
 --- !COFF
-header:          
+header:
   Machine:         IMAGE_FILE_MACHINE_I386
   Characteristics: [ IMAGE_FILE_RELOCS_STRIPPED, IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LINE_NUMS_STRIPPED, IMAGE_FILE_32BIT_MACHINE, IMAGE_FILE_DEBUG_STRIPPED ]
-sections:        
+sections:
   - Name:            .CRT
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
     Alignment:       4
     SectionData:     0000000030114000000000000000000010104000401640000000000000000000B015400060154000000000000000000000000000
-symbols:         
+symbols:
   - Name:            '.CRT$XCAA'
     Value:           4
     SectionNumber:   1

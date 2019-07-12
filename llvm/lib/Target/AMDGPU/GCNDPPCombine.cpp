@@ -344,7 +344,7 @@ bool GCNDPPCombine::combineDPPMov(MachineInstr &MovMI) const {
   auto *DstOpnd = TII->getNamedOperand(MovMI, AMDGPU::OpName::vdst);
   assert(DstOpnd && DstOpnd->isReg());
   auto DPPMovReg = DstOpnd->getReg();
-  if (execMayBeModifiedBeforeUse(*MRI, DPPMovReg, MovMI)) {
+  if (execMayBeModifiedBeforeAnyUse(*MRI, DPPMovReg, MovMI)) {
     LLVM_DEBUG(dbgs() << "  failed: EXEC mask should remain the same"
                          " for all uses\n");
     return false;

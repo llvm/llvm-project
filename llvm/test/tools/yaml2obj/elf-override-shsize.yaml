@@ -136,9 +136,9 @@ Sections:
 ## bytes written is equal to Size in this case.
 
 # RUN: yaml2obj --docnum=5 %s -o %t5
-# RUN: od -t x4 -v %t5 | FileCheck %s --check-prefix=CASE5
+# RUN: od -t x1 -v %t5 | FileCheck %s --check-prefix=CASE5
 
-# CASE5: aaaa 0000bbbb
+# CASE5: aa aa 00 00 bb bb
 
 --- !ELF
 FileHeader:

@@ -159,7 +159,7 @@ TEST(TBDv1, WriteFile) {
       "compatibility-version: 0\n"
       "swift-version:   5\n"
       "objc-constraint: retain_release\n"
-      "exports:         \n"
+      "exports:\n"
       "  - archs:           [ i386 ]\n"
       "    symbols:         [ _sym1 ]\n"
       "    weak-def-symbols: [ _sym2 ]\n"

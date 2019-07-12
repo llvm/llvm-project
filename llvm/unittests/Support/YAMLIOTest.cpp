@@ -2528,7 +2528,7 @@ TEST(YAMLIO, TestMapWithContext) {
   ostr.flush();
   EXPECT_EQ(1, Context.A);
   EXPECT_EQ("---\n"
-            "Simple:          \n"
+            "Simple:\n"
             "  B:               0\n"
             "  C:               0\n"
             "  Context:         1\n"
@@ -2543,7 +2543,7 @@ TEST(YAMLIO, TestMapWithContext) {
   ostr.flush();
   EXPECT_EQ(2, Context.A);
   EXPECT_EQ("---\n"
-            "Simple:          \n"
+            "Simple:\n"
             "  B:               2\n"
             "  C:               3\n"
             "  Context:         2\n"
@@ -2556,13 +2556,22 @@ LLVM_YAML_IS_STRING_MAP(int)
 
 TEST(YAMLIO, TestCustomMapping) {
   std::map<std::string, int> x;
-  x["foo"] = 1;
-  x["bar"] = 2;
 
   std::string out;
   llvm::raw_string_ostream ostr(out);
   Output xout(ostr, nullptr, 0);
 
+  xout << x;
+  ostr.flush();
+  EXPECT_EQ("---\n"
+            "{}\n"
+            "...\n",
+            out);
+
+  x["foo"] = 1;
+  x["bar"] = 2;
+
+  out.clear();
   xout << x;
   ostr.flush();
   EXPECT_EQ("---\n"
@@ -2595,10 +2604,10 @@ TEST(YAMLIO, TestCustomMappingStruct) {
   xout << x;
   ostr.flush();
   EXPECT_EQ("---\n"
-            "bar:             \n"
+            "bar:\n"
             "  foo:             3\n"
             "  bar:             4\n"
-            "foo:             \n"
+            "foo:\n"
             "  foo:             1\n"
             "  bar:             2\n"
             "...\n",
@@ -2612,6 +2621,38 @@ TEST(YAMLIO, TestCustomMappingStruct) {
   EXPECT_EQ(2, y["foo"].bar);
   EXPECT_EQ(3, y["bar"].foo);
   EXPECT_EQ(4, y["bar"].bar);
+}
+
+struct FooBarMapMap {
+  std::map<std::string, FooBar> fbm;
+};
+
+namespace llvm {
+namespace yaml {
+template <> struct MappingTraits<FooBarMapMap> {
+  static void mapping(IO &io, FooBarMapMap &x) {
+    io.mapRequired("fbm", x.fbm);
+  }
+};
+}
+}
+
+TEST(YAMLIO, TestEmptyMapWrite) {
+  FooBarMapMap cont;
+  std::string str;
+  llvm::raw_string_ostream OS(str);
+  Output yout(OS);
+  yout << cont;
+  EXPECT_EQ(OS.str(), "---\nfbm:             {}\n...\n");
+}
+
+TEST(YAMLIO, TestEmptySequenceWrite) {
+  FooBarContainer cont;
+  std::string str;
+  llvm::raw_string_ostream OS(str);
+  Output yout(OS);
+  yout << cont;
+  EXPECT_EQ(OS.str(), "---\nfbs:             []\n...\n");
 }
 
 static void TestEscaped(llvm::StringRef Input, llvm::StringRef Expected) {

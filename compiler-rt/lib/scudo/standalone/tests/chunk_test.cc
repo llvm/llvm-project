@@ -30,7 +30,6 @@ TEST(ScudoChunkTest, ChunkBasic) {
                                      HeaderSize);
   scudo::Chunk::storeHeader(Cookie, P, &Header);
   memset(P, 'A', Size);
-  EXPECT_EQ(scudo::Chunk::getBlockBegin(P, &Header), Block);
   scudo::Chunk::loadHeader(Cookie, P, &Header);
   EXPECT_TRUE(scudo::Chunk::isValid(Cookie, P, &Header));
   EXPECT_FALSE(scudo::Chunk::isValid(InvalidCookie, P, &Header));
@@ -70,7 +69,6 @@ TEST(ScudoChunkTest, CorruptHeader) {
                                      HeaderSize);
   scudo::Chunk::storeHeader(Cookie, P, &Header);
   memset(P, 'A', Size);
-  EXPECT_EQ(scudo::Chunk::getBlockBegin(P, &Header), Block);
   scudo::Chunk::loadHeader(Cookie, P, &Header);
   // Simulate a couple of corrupted bits per byte of header data.
   for (scudo::uptr I = 0; I < sizeof(scudo::Chunk::PackedHeader); I++) {

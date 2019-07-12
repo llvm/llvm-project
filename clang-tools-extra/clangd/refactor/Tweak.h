@@ -110,9 +110,11 @@ public:
       TweakRegistrationFor##Subclass(#Subclass, /*Description=*/"");           \
   const char *Subclass::id() const { return #Subclass; }
 
-/// Calls prepare() on all tweaks, returning those that can run on the
-/// selection.
-std::vector<std::unique_ptr<Tweak>> prepareTweaks(const Tweak::Selection &S);
+/// Calls prepare() on all tweaks that satisfy the filter, returning those that
+/// can run on the selection.
+std::vector<std::unique_ptr<Tweak>>
+prepareTweaks(const Tweak::Selection &S,
+              llvm::function_ref<bool(const Tweak &)> Filter);
 
 // Calls prepare() on the tweak with a given ID.
 // If prepare() returns false, returns an error.

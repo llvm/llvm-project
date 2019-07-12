@@ -364,5 +364,18 @@ const Node *SelectionTree::commonAncestor() const {
   return Ancestor;
 }
 
+const DeclContext& SelectionTree::Node::getDeclContext() const {
+  for (const Node* CurrentNode = this; CurrentNode != nullptr;
+       CurrentNode = CurrentNode->Parent) {
+    if (const Decl* Current = CurrentNode->ASTNode.get<Decl>()) {
+      if (CurrentNode != this)
+        if (auto *DC = dyn_cast<DeclContext>(Current))
+          return *DC;
+      return *Current->getDeclContext();
+    }
+  }
+  llvm_unreachable("A tree must always be rooted at TranslationUnitDecl.");
+}
+
 } // namespace clangd
 } // namespace clang

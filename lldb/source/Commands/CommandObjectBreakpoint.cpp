@@ -1246,15 +1246,10 @@ protected:
 
 #pragma mark List::CommandOptions
 static constexpr OptionDefinition g_breakpoint_list_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_ALL, false, "internal",          'i', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Show debugger internal breakpoints" },
-  { LLDB_OPT_SET_1,   false, "brief",             'b', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Give a brief description of the breakpoint (no location info)." },
-  // FIXME: We need to add an "internal" command, and then add this sort of thing to it.
-  // But I need to see it for now, and don't want to wait.
-  { LLDB_OPT_SET_2,   false, "full",              'f', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Give a full description of the breakpoint and its locations." },
-  { LLDB_OPT_SET_3,   false, "verbose",           'v', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Explain everything we know about the breakpoint (for debugging debugger bugs)." },
-  { LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "List Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets." },
-    // clang-format on
+  // FIXME: We need to add an "internal" command, and then add this sort of
+  // thing to it. But I need to see it for now, and don't want to wait.
+#define LLDB_OPTIONS_breakpoint_list
+#include "Options.inc"
 };
 
 #pragma mark List

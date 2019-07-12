@@ -65,7 +65,7 @@ public:
   }
 
   void link(LocalStats *S) {
-    SpinMutexLock L(&Mutex);
+    ScopedLock L(Mutex);
     S->Next = Next;
     S->Prev = this;
     Next->Prev = S;
@@ -73,7 +73,7 @@ public:
   }
 
   void unlink(LocalStats *S) {
-    SpinMutexLock L(&Mutex);
+    ScopedLock L(Mutex);
     S->Prev->Next = S->Next;
     S->Next->Prev = S->Prev;
     for (uptr I = 0; I < StatCount; I++)
@@ -82,7 +82,7 @@ public:
 
   void get(uptr *S) const {
     memset(S, 0, StatCount * sizeof(uptr));
-    SpinMutexLock L(&Mutex);
+    ScopedLock L(Mutex);
     const LocalStats *Stats = this;
     for (;;) {
       for (uptr I = 0; I < StatCount; I++)
@@ -97,7 +97,7 @@ public:
   }
 
 private:
-  mutable StaticSpinMutex Mutex;
+  mutable HybridMutex Mutex;
 };
 
 } // namespace scudo

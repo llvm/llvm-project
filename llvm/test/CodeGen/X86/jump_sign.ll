@@ -303,18 +303,16 @@ define i32 @func_p(i32 %a, i32 %b) nounwind {
 }
 
 ; PR13475
-; If we have sub a, b and cmp b, a and the result of cmp is used
-; by sbb, we should not optimize cmp away.
+; We don't need an explicit cmp here. A sub/neg combo will do.
+
 define i32 @func_q(i32 %a0, i32 %a1, i32 %a2) {
 ; CHECK-LABEL: func_q:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; CHECK-NEXT:    movl %ecx, %edx
-; CHECK-NEXT:    subl %eax, %edx
-; CHECK-NEXT:    cmpl %ecx, %eax
-; CHECK-NEXT:    sbbl %eax, %eax
-; CHECK-NEXT:    xorl %edx, %eax
+; CHECK-NEXT:    subl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    sbbl %ecx, %ecx
+; CHECK-NEXT:    negl %eax
+; CHECK-NEXT:    xorl %ecx, %eax
 ; CHECK-NEXT:    retl
   %t1 = icmp ult i32 %a0, %a1
   %t2 = sub i32 %a1, %a0

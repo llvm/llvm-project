@@ -97,7 +97,7 @@ public:
   TransferBatch *popBatch(CacheT *C, uptr ClassId) {
     DCHECK_LT(ClassId, NumClasses);
     SizeClassInfo *Sci = getSizeClassInfo(ClassId);
-    BlockingMutexLock L(&Sci->Mutex);
+    ScopedLock L(Sci->Mutex);
     TransferBatch *B = Sci->FreeList.front();
     if (B)
       Sci->FreeList.pop_front();
@@ -115,7 +115,7 @@ public:
     DCHECK_LT(ClassId, NumClasses);
     DCHECK_GT(B->getCount(), 0);
     SizeClassInfo *Sci = getSizeClassInfo(ClassId);
-    BlockingMutexLock L(&Sci->Mutex);
+    ScopedLock L(Sci->Mutex);
     Sci->FreeList.push_front(B);
     Sci->Stats.PushedBlocks += B->getCount();
     if (Sci->CanRelease)
@@ -162,9 +162,11 @@ public:
   }
 
   void releaseToOS() {
-    for (uptr I = 1; I < NumClasses; I++) {
+    for (uptr I = 0; I < NumClasses; I++) {
+      if (I == SizeClassMap::BatchClassId)
+        continue;
       SizeClassInfo *Sci = getSizeClassInfo(I);
-      BlockingMutexLock L(&Sci->Mutex);
+      ScopedLock L(Sci->Mutex);
       releaseToOSMaybe(Sci, I, /*Force=*/true);
     }
   }
@@ -192,7 +194,7 @@ private:
   };
 
   struct ALIGNED(SCUDO_CACHE_LINE_SIZE) SizeClassInfo {
-    BlockingMutex Mutex;
+    HybridMutex Mutex;
     IntrusiveList<TransferBatch> FreeList;
     SizeClassStats Stats;
     bool CanRelease;
@@ -217,7 +219,7 @@ private:
     const uptr MapEnd = MapBase + MapSize;
     uptr Region = MapBase;
     if (isAligned(Region, RegionSize)) {
-      SpinMutexLock L(&RegionsStashMutex);
+      ScopedLock L(RegionsStashMutex);
       if (NumberOfStashedRegions < MaxStashedRegions)
         RegionsStash[NumberOfStashedRegions++] = MapBase + RegionSize;
       else
@@ -237,7 +239,7 @@ private:
     DCHECK_LT(ClassId, NumClasses);
     uptr Region = 0;
     {
-      SpinMutexLock L(&RegionsStashMutex);
+      ScopedLock L(RegionsStashMutex);
       if (NumberOfStashedRegions > 0)
         Region = RegionsStash[--NumberOfStashedRegions];
     }
@@ -291,7 +293,7 @@ private:
       return nullptr;
     C->getStats().add(StatMapped, RegionSize);
     const uptr Size = getSizeByClassId(ClassId);
-    const u32 MaxCount = TransferBatch::MaxCached(Size);
+    const u32 MaxCount = TransferBatch::getMaxCached(Size);
     DCHECK_GT(MaxCount, 0);
     const uptr NumberOfBlocks = RegionSize / Size;
     DCHECK_GT(NumberOfBlocks, 0);
@@ -389,7 +391,7 @@ private:
   // Unless several threads request regions simultaneously from different size
   // classes, the stash rarely contains more than 1 entry.
   static constexpr uptr MaxStashedRegions = 4;
-  StaticSpinMutex RegionsStashMutex;
+  HybridMutex RegionsStashMutex;
   uptr NumberOfStashedRegions;
   uptr RegionsStash[MaxStashedRegions];
 };

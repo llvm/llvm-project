@@ -66,10 +66,8 @@ def generate_compiler_cmd(is_cpp=True, fuzzer_enabled=True, msan_enabled=False):
   compiler_cmd = config.clang
   extra_cmd = config.target_flags
 
-  if is_cpp and 'windows-msvc' in config.target_triple:
-    std_cmd = '--driver-mode=cl'
-  elif is_cpp:
-    std_cmd = '--driver-mode=g++ -std=c++11'
+  if is_cpp:
+    std_cmd = '--driver-mode=g++'
   else:
     std_cmd = ''
 

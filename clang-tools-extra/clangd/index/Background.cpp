@@ -9,6 +9,7 @@
 #include "index/Background.h"
 #include "ClangdUnit.h"
 #include "Compiler.h"
+#include "Context.h"
 #include "Headers.h"
 #include "Logger.h"
 #include "Path.h"
@@ -26,6 +27,7 @@
 #include "index/SymbolCollector.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Driver/Types.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -33,8 +35,10 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/Path.h"
 #include "llvm/Support/Threading.h"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
@@ -49,8 +53,6 @@
 namespace clang {
 namespace clangd {
 namespace {
-
-static std::atomic<bool> PreventStarvation = {false};
 
 // Resolves URI to file paths with cache.
 class URIToFileCache {
@@ -134,8 +136,10 @@ BackgroundIndex::BackgroundIndex(
   assert(ThreadPoolSize > 0 && "Thread pool size can't be zero.");
   assert(this->IndexStorageFactory && "Storage factory can not be null!");
   for (unsigned I = 0; I < ThreadPoolSize; ++I) {
-    ThreadPool.runAsync("background-worker-" + llvm::Twine(I + 1),
-                        [this] { run(); });
+    ThreadPool.runAsync("background-worker-" + llvm::Twine(I + 1), [this] {
+      WithContext Ctx(this->BackgroundContext.clone());
+      Queue.work([&] { Rebuilder.idle(); });
+    });
   }
 }
 
@@ -144,113 +148,57 @@ BackgroundIndex::~BackgroundIndex() {
   ThreadPool.wait();
 }
 
-void BackgroundIndex::stop() {
-  Rebuilder.shutdown();
-  {
-    std::lock_guard<std::mutex> QueueLock(QueueMu);
-    std::lock_guard<std::mutex> IndexLock(IndexMu);
-    ShouldStop = true;
-  }
-  QueueCV.notify_all();
-  IndexCV.notify_all();
+BackgroundQueue::Task BackgroundIndex::changedFilesTask(
+    const std::vector<std::string> &ChangedFiles) {
+  BackgroundQueue::Task T([this, ChangedFiles] {
+    trace::Span Tracer("BackgroundIndexEnqueue");
+    // We're doing this asynchronously, because we'll read shards here too.
+    log("Enqueueing {0} commands for indexing", ChangedFiles.size());
+    SPAN_ATTACH(Tracer, "files", int64_t(ChangedFiles.size()));
+
+    auto NeedsReIndexing = loadShards(std::move(ChangedFiles));
+    // Run indexing for files that need to be updated.
+    std::shuffle(NeedsReIndexing.begin(), NeedsReIndexing.end(),
+                 std::mt19937(std::random_device{}()));
+    std::vector<BackgroundQueue::Task> Tasks;
+    Tasks.reserve(NeedsReIndexing.size());
+    for (auto &Elem : NeedsReIndexing)
+      Tasks.push_back(indexFileTask(std::move(Elem.first), Elem.second));
+    Queue.append(std::move(Tasks));
+  });
+
+  T.QueuePri = LoadShards;
+  T.ThreadPri = llvm::ThreadPriority::Default;
+  return T;
 }
 
-void BackgroundIndex::run() {
-  WithContext Background(BackgroundContext.clone());
-  while (true) {
-    llvm::Optional<Task> Task;
-    llvm::ThreadPriority Priority;
-    {
-      std::unique_lock<std::mutex> Lock(QueueMu);
-      QueueCV.wait(Lock, [&] { return ShouldStop || !Queue.empty(); });
-      if (ShouldStop) {
-        Queue.clear();
-        QueueCV.notify_all();
-        return;
-      }
-      ++NumActiveTasks;
-      std::tie(Task, Priority) = std::move(Queue.front());
-      Queue.pop_front();
-    }
-
-    if (Priority != llvm::ThreadPriority::Default && !PreventStarvation.load())
-      llvm::set_thread_priority(Priority);
-    (*Task)();
-    if (Priority != llvm::ThreadPriority::Default)
-      llvm::set_thread_priority(llvm::ThreadPriority::Default);
-
-    {
-      std::unique_lock<std::mutex> Lock(QueueMu);
-      if (NumActiveTasks == 1 && Queue.empty()) {
-        // We just finished the last item, the queue is going idle.
-        Lock.unlock();
-        Rebuilder.idle();
-        Lock.lock();
-      }
-      assert(NumActiveTasks > 0 && "before decrementing");
-      --NumActiveTasks;
-    }
-    QueueCV.notify_all();
-  }
+static llvm::StringRef filenameWithoutExtension(llvm::StringRef Path) {
+  Path = llvm::sys::path::filename(Path);
+  return Path.drop_back(llvm::sys::path::extension(Path).size());
 }
 
-bool BackgroundIndex::blockUntilIdleForTest(
-    llvm::Optional<double> TimeoutSeconds) {
-  std::unique_lock<std::mutex> Lock(QueueMu);
-  return wait(Lock, QueueCV, timeoutSeconds(TimeoutSeconds),
-              [&] { return Queue.empty() && NumActiveTasks == 0; });
+BackgroundQueue::Task
+BackgroundIndex::indexFileTask(tooling::CompileCommand Cmd,
+                               BackgroundIndexStorage *Storage) {
+  BackgroundQueue::Task T([this, Storage, Cmd] {
+    // We can't use llvm::StringRef here since we are going to
+    // move from Cmd during the call below.
+    const std::string FileName = Cmd.Filename;
+    if (auto Error = index(std::move(Cmd), Storage))
+      elog("Indexing {0} failed: {1}", FileName, std::move(Error));
+  });
+  T.QueuePri = IndexFile;
+  T.Tag = filenameWithoutExtension(Cmd.Filename);
+  return T;
 }
 
-void BackgroundIndex::enqueue(const std::vector<std::string> &ChangedFiles) {
-  enqueueTask(
-      [this, ChangedFiles] {
-        trace::Span Tracer("BackgroundIndexEnqueue");
-        // We're doing this asynchronously, because we'll read shards here too.
-        log("Enqueueing {0} commands for indexing", ChangedFiles.size());
-        SPAN_ATTACH(Tracer, "files", int64_t(ChangedFiles.size()));
-
-        auto NeedsReIndexing = loadShards(std::move(ChangedFiles));
-        // Run indexing for files that need to be updated.
-        std::shuffle(NeedsReIndexing.begin(), NeedsReIndexing.end(),
-                     std::mt19937(std::random_device{}()));
-        for (auto &Elem : NeedsReIndexing)
-          enqueue(std::move(Elem.first), Elem.second);
-      },
-      llvm::ThreadPriority::Default);
-}
-
-void BackgroundIndex::enqueue(tooling::CompileCommand Cmd,
-                              BackgroundIndexStorage *Storage) {
-  enqueueTask(Bind(
-                  [this, Storage](tooling::CompileCommand Cmd) {
-                    // We can't use llvm::StringRef here since we are going to
-                    // move from Cmd during the call below.
-                    const std::string FileName = Cmd.Filename;
-                    if (auto Error = index(std::move(Cmd), Storage))
-                      elog("Indexing {0} failed: {1}", FileName,
-                           std::move(Error));
-                  },
-                  std::move(Cmd)),
-              llvm::ThreadPriority::Background);
-}
-
-void BackgroundIndex::enqueueTask(Task T, llvm::ThreadPriority Priority) {
-  {
-    std::lock_guard<std::mutex> Lock(QueueMu);
-    auto I = Queue.end();
-    // We first store the tasks with Normal priority in the front of the queue.
-    // Then we store low priority tasks. Normal priority tasks are pretty rare,
-    // they should not grow beyond single-digit numbers, so it is OK to do
-    // linear search and insert after that.
-    if (Priority == llvm::ThreadPriority::Default) {
-      I = llvm::find_if(
-          Queue, [](const std::pair<Task, llvm::ThreadPriority> &Elem) {
-            return Elem.second == llvm::ThreadPriority::Background;
-          });
-    }
-    Queue.insert(I, {std::move(T), Priority});
-  }
-  QueueCV.notify_all();
+void BackgroundIndex::boostRelated(llvm::StringRef Path) {
+  namespace types = clang::driver::types;
+  auto Type =
+      types::lookupTypeForExtension(llvm::sys::path::extension(Path).substr(1));
+  // is this a header?
+  if (Type != types::TY_INVALID && types::onlyPrecompileType(Type))
+    Queue.boost(filenameWithoutExtension(Path), IndexBoostedFile);
 }
 
 /// Given index results from a TU, only update symbols coming from files that
@@ -647,10 +595,6 @@ BackgroundIndex::loadShards(std::vector<std::string> ChangedFiles) {
   }
   Rebuilder.doneLoading();
   return NeedsReIndexing;
-}
-
-void BackgroundIndex::preventThreadStarvationInTests() {
-  PreventStarvation.store(true);
 }
 
 } // namespace clangd

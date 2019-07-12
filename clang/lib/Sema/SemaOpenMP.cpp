@@ -12140,10 +12140,14 @@ static bool actOnOMPReductionKindClause(
     if ((OASE && !ConstantLengthOASE) ||
         (!OASE && !ASE &&
          D->getType().getNonReferenceType()->isVariablyModifiedType())) {
-      if (!Context.getTargetInfo().isVLASupported() &&
-          S.shouldDiagnoseTargetSupportFromOpenMP()) {
-        S.Diag(ELoc, diag::err_omp_reduction_vla_unsupported) << !!OASE;
-        S.Diag(ELoc, diag::note_vla_unsupported);
+      if (!Context.getTargetInfo().isVLASupported()) {
+        if (isOpenMPTargetExecutionDirective(Stack->getCurrentDirective())) {
+          S.Diag(ELoc, diag::err_omp_reduction_vla_unsupported) << !!OASE;
+          S.Diag(ELoc, diag::note_vla_unsupported);
+        } else {
+          S.targetDiag(ELoc, diag::err_omp_reduction_vla_unsupported) << !!OASE;
+          S.targetDiag(ELoc, diag::note_vla_unsupported);
+        }
         continue;
       }
       // For arrays/array sections only:

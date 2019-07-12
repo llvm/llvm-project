@@ -167,6 +167,27 @@ define float @atomic_add_f32_addrspace3(float addrspace(3)* %addr, float %val) {
   ret float %ret
 }
 
+; CHECK-LABEL: atomicrmw_add_f32_generic
+define float @atomicrmw_add_f32_generic(float* %addr, float %val) {
+; CHECK: atom.add.f32
+  %ret = atomicrmw fadd float* %addr, float %val seq_cst
+  ret float %ret
+}
+
+; CHECK-LABEL: atomicrmw_add_f32_addrspace1
+define float @atomicrmw_add_f32_addrspace1(float addrspace(1)* %addr, float %val) {
+; CHECK: atom.global.add.f32
+  %ret = atomicrmw fadd float addrspace(1)* %addr, float %val seq_cst
+  ret float %ret
+}
+
+; CHECK-LABEL: atomicrmw_add_f32_addrspace3
+define float @atomicrmw_add_f32_addrspace3(float addrspace(3)* %addr, float %val) {
+; CHECK: atom.shared.add.f32
+  %ret = atomicrmw fadd float addrspace(3)* %addr, float %val seq_cst
+  ret float %ret
+}
+
 ; CHECK-LABEL: atomic_cmpxchg_i32
 define i32 @atomic_cmpxchg_i32(i32* %addr, i32 %cmp, i32 %new) {
 ; CHECK: atom.cas.b32

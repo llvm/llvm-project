@@ -253,8 +253,8 @@ static MachineBasicBlock::reverse_iterator findExecCopy(
 }
 
 // XXX - Seems LivePhysRegs doesn't work correctly since it will incorrectly
-// repor tthe register as unavailable because a super-register with a lane mask
-// as unavailable.
+// report the register as unavailable because a super-register with a lane mask
+// is unavailable.
 static bool isLiveOut(const MachineBasicBlock &MBB, unsigned Reg) {
   for (MachineBasicBlock *Succ : MBB.successors()) {
     if (Succ->isLiveIn(Reg))

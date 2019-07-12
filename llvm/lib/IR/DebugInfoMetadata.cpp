@@ -833,12 +833,10 @@ unsigned DIExpression::ExprOperand::getSize() const {
   case dwarf::DW_OP_LLVM_fragment:
     return 3;
   case dwarf::DW_OP_constu:
-  case dwarf::DW_OP_consts:
   case dwarf::DW_OP_deref_size:
   case dwarf::DW_OP_plus_uconst:
   case dwarf::DW_OP_LLVM_tag_offset:
   case dwarf::DW_OP_entry_value:
-  case dwarf::DW_OP_regx:
     return 2;
   default:
     return 1;
@@ -851,12 +849,8 @@ bool DIExpression::isValid() const {
     if (I->get() + I->getSize() > E->get())
       return false;
 
-    uint64_t Op = I->getOp();
-    if (Op >= dwarf::DW_OP_reg0 && Op <= dwarf::DW_OP_reg31)
-      continue;
-
     // Check that the operand is valid.
-    switch (Op) {
+    switch (I->getOp()) {
     default:
       return false;
     case dwarf::DW_OP_LLVM_fragment:
@@ -911,7 +905,6 @@ bool DIExpression::isValid() const {
     case dwarf::DW_OP_lit0:
     case dwarf::DW_OP_not:
     case dwarf::DW_OP_dup:
-    case dwarf::DW_OP_regx:
       break;
     }
   }

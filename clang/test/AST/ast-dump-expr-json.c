@@ -99,6 +99,7 @@ void PrimaryExpressions(int a) {
   1ll;
   1.0;
   1.0f;
+  0xFp100000000000000000000F;
   1.0l;
   One;
 
@@ -4498,7 +4499,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:    "tokLen": 4
 // CHECK-NEXT:   },
 // CHECK-NEXT:   "end": {
-// CHECK-NEXT:    "line": 106,
+// CHECK-NEXT:    "line": 107,
 // CHECK-NEXT:    "col": 1,
 // CHECK-NEXT:    "tokLen": 1
 // CHECK-NEXT:   }
@@ -4541,7 +4542,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     },
 // CHECK-NEXT:     "end": {
-// CHECK-NEXT:      "line": 106,
+// CHECK-NEXT:      "line": 107,
 // CHECK-NEXT:      "col": 1,
 // CHECK-NEXT:      "tokLen": 1
 // CHECK-NEXT:     }
@@ -4918,7 +4919,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:       "qualType": "double"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "rvalue",
-// CHECK-NEXT:      "value": 1
+// CHECK-NEXT:      "value": "1"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
@@ -4938,7 +4939,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:       "qualType": "float"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "rvalue",
-// CHECK-NEXT:      "value": 1
+// CHECK-NEXT:      "value": "1"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
@@ -4946,6 +4947,26 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
 // CHECK-NEXT:        "line": 102,
+// CHECK-NEXT:        "col": 3,
+// CHECK-NEXT:        "tokLen": 26
+// CHECK-NEXT:       },
+// CHECK-NEXT:       "end": {
+// CHECK-NEXT:        "col": 3,
+// CHECK-NEXT:        "tokLen": 26
+// CHECK-NEXT:       }
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "type": {
+// CHECK-NEXT:       "qualType": "float"
+// CHECK-NEXT:      },
+// CHECK-NEXT:      "valueCategory": "rvalue",
+// CHECK-NEXT:      "value": "+Inf"
+// CHECK-NEXT:     },
+// CHECK-NEXT:     {
+// CHECK-NEXT:      "id": "0x{{.*}}",
+// CHECK-NEXT:      "kind": "FloatingLiteral",
+// CHECK-NEXT:      "range": {
+// CHECK-NEXT:       "begin": {
+// CHECK-NEXT:        "line": 103,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 4
 // CHECK-NEXT:       },
@@ -4958,14 +4979,14 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:       "qualType": "long double"
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "valueCategory": "rvalue",
-// CHECK-NEXT:      "value": 1
+// CHECK-NEXT:      "value": "1"
 // CHECK-NEXT:     },
 // CHECK-NEXT:     {
 // CHECK-NEXT:      "id": "0x{{.*}}",
 // CHECK-NEXT:      "kind": "DeclRefExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "line": 103,
+// CHECK-NEXT:        "line": 104,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 3
 // CHECK-NEXT:       },
@@ -4992,7 +5013,7 @@ void PrimaryExpressions(int a) {
 // CHECK-NEXT:      "kind": "ImplicitCastExpr",
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:       "begin": {
-// CHECK-NEXT:        "line": 105,
+// CHECK-NEXT:        "line": 106,
 // CHECK-NEXT:        "col": 3,
 // CHECK-NEXT:        "tokLen": 1
 // CHECK-NEXT:       },

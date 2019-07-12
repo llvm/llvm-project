@@ -11,6 +11,7 @@
 #include "TestTU.h"
 #include "refactor/Tweak.h"
 #include "clang/AST/Expr.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Rewrite/Core/Rewriter.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/StringRef.h"
@@ -124,6 +125,19 @@ void checkTransform(llvm::StringRef ID, llvm::StringRef Input,
   auto Result = applyEdit(ID, Input);
   ASSERT_TRUE(bool(Result)) << llvm::toString(Result.takeError()) << Input;
   EXPECT_EQ(Output, std::string(*Result)) << Input;
+}
+
+/// Check if apply returns an error and that the @ErrorMessage is contained
+/// in that error
+void checkApplyContainsError(llvm::StringRef ID, llvm::StringRef Input,
+                             const std::string& ErrorMessage) {
+  auto Result = apply(ID, Input);
+  ASSERT_FALSE(Result) << "expected error message:\n   " << ErrorMessage <<
+                       "\non input:" << Input;
+  EXPECT_NE(std::string::npos,
+            llvm::toString(Result.takeError()).find(ErrorMessage))
+            << "Wrong error message:\n  " << llvm::toString(Result.takeError())
+            << "\nexpected:\n  " << ErrorMessage;
 }
 
 TEST(TweakTest, SwapIfBranches) {
@@ -515,6 +529,140 @@ int a = 123 EMPTY_FN(1) ^EMPTY;
 #define EMPTY_FN(X)
 int a = 123 EMPTY_FN(1) ;
   )cpp");
+}
+
+TEST(TweakTest, ExpandAutoType) {
+  llvm::StringLiteral ID = "ExpandAutoType";
+
+  checkAvailable(ID, R"cpp(
+    ^a^u^t^o^ i = 0;
+  )cpp");
+
+  checkNotAvailable(ID, R"cpp(
+    auto ^i^ ^=^ ^0^;^
+  )cpp");
+
+  llvm::StringLiteral Input = R"cpp(
+    [[auto]] i = 0;
+  )cpp";
+  llvm::StringLiteral Output = R"cpp(
+    int i = 0;
+  )cpp";
+  checkTransform(ID, Input, Output);
+
+  // check primitive type
+  Input = R"cpp(
+    au^to i = 0;
+  )cpp";
+  Output = R"cpp(
+    int i = 0;
+  )cpp";
+  checkTransform(ID, Input, Output);
+
+  // check classes and namespaces
+  Input = R"cpp(
+    namespace testns {
+      class TestClass {
+        class SubClass {};
+      };
+    }
+    ^auto C = testns::TestClass::SubClass();
+  )cpp";
+  Output = R"cpp(
+    namespace testns {
+      class TestClass {
+        class SubClass {};
+      };
+    }
+    testns::TestClass::SubClass C = testns::TestClass::SubClass();
+  )cpp";
+  checkTransform(ID, Input, Output);
+
+  // check that namespaces are shortened
+  Input = R"cpp(
+    namespace testns {
+    class TestClass {
+    };
+    void func() { ^auto C = TestClass(); }
+    }
+  )cpp";
+  Output = R"cpp(
+    namespace testns {
+    class TestClass {
+    };
+    void func() { TestClass C = TestClass(); }
+    }
+  )cpp";
+  checkTransform(ID, Input, Output);
+
+  // unknown types in a template should not be replaced
+  Input = R"cpp(
+    template <typename T> void x() {
+        ^auto y =  T::z();
+        }
+  )cpp";
+  checkApplyContainsError(ID, Input, "Could not deduce type for 'auto' type");
+
+  // undefined functions should not be replaced
+  Input = R"cpp(
+    a^uto x = doesnt_exist();
+  )cpp";
+  checkApplyContainsError(ID, Input, "Could not deduce type for 'auto' type");
+
+  // function pointers should not be replaced
+  Input = R"cpp(
+    int foo();
+    au^to x = &foo;
+  )cpp";
+  checkApplyContainsError(ID, Input,
+      "Could not expand type of function pointer");
+
+  // lambda types are not replaced
+  Input = R"cpp(
+    au^to x = []{};
+  )cpp";
+  checkApplyContainsError(ID, Input,
+      "Could not expand type of lambda expression");
+
+  // inline namespaces
+  Input = R"cpp(
+    inline namespace x {
+      namespace { struct S; }
+    }
+    au^to y = S();
+  )cpp";
+  Output = R"cpp(
+    inline namespace x {
+      namespace { struct S; }
+    }
+    S y = S();
+  )cpp";
+
+  // local class
+  Input = R"cpp(
+  namespace x {
+    void y() {
+      struct S{};
+      a^uto z = S();
+  }}
+  )cpp";
+  Output = R"cpp(
+  namespace x {
+    void y() {
+      struct S{};
+      S z = S();
+  }}
+  )cpp";
+  checkTransform(ID, Input, Output);
+
+  // replace array types
+  Input = R"cpp(
+    au^to x = "test";
+  )cpp";
+  Output = R"cpp(
+    const char * x = "test";
+  )cpp";
+  checkTransform(ID, Input, Output);
 }
 
 } // namespace

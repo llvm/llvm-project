@@ -657,7 +657,7 @@ endfunction()
 
 macro(add_llvm_library name)
   cmake_parse_arguments(ARG
-    "SHARED;BUILDTREE_ONLY;MODULE"
+    "SHARED;BUILDTREE_ONLY;MODULE;INSTALL_WITH_TOOLCHAIN"
     ""
     ""
     ${ARGN})
@@ -685,11 +685,7 @@ macro(add_llvm_library name)
   elseif(ARG_BUILDTREE_ONLY)
     set_property(GLOBAL APPEND PROPERTY LLVM_EXPORTS_BUILDTREE_ONLY ${name})
   else()
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR
-        ${name} STREQUAL "LTO" OR
-        ${name} STREQUAL "LLVM-C" OR
-        ${name} STREQUAL "Remarks" OR
-        (LLVM_LINK_LLVM_DYLIB AND ${name} STREQUAL "LLVM"))
+    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ARG_INSTALL_WITH_TOOLCHAIN)
 
       set(export_to_llvmexports)
       if(${name} IN_LIST LLVM_DISTRIBUTION_COMPONENTS OR

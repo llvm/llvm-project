@@ -259,6 +259,10 @@ RawCoverage::read(const std::string &FileName) {
     return make_error_code(errc::illegal_byte_sequence);
   }
 
+  // Ignore slots that are zero, so a runtime implementation is not required
+  // to compactify the data.
+  Addrs->erase(0);
+
   return std::unique_ptr<RawCoverage>(new RawCoverage(std::move(Addrs)));
 }
 
@@ -1229,7 +1233,7 @@ int main(int Argc, char **Argv) {
   llvm::InitializeAllTargetMCs();
   llvm::InitializeAllDisassemblers();
 
-  cl::ParseCommandLineOptions(Argc, Argv, 
+  cl::ParseCommandLineOptions(Argc, Argv,
       "Sanitizer Coverage Processing Tool (sancov)\n\n"
       "  This tool can extract various coverage-related information from: \n"
       "  coverage-instrumented binary files, raw .sancov files and their "

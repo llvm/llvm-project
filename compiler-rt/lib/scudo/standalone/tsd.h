@@ -57,7 +57,7 @@ template <class Allocator> struct ALIGNED(SCUDO_CACHE_LINE_SIZE) TSD {
   INLINE uptr getPrecedence() { return atomic_load_relaxed(&Precedence); }
 
 private:
-  StaticSpinMutex Mutex;
+  HybridMutex Mutex;
   atomic_uptr Precedence;
 };
 

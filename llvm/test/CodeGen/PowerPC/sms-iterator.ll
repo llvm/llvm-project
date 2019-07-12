@@ -7,7 +7,7 @@
 
 ; CHECK: MII = 8 MAX_II = 18
 
-define dso_local fastcc void @_ZN3povL9polysolveEiPdS0_() unnamed_addr #0 {
+define dso_local fastcc double @_ZN3povL9polysolveEiPdS0_() unnamed_addr #0 {
   br label %1
 
 1:                                                ; preds = %1, %0
@@ -32,5 +32,5 @@ define dso_local fastcc void @_ZN3povL9polysolveEiPdS0_() unnamed_addr #0 {
 14:                                               ; preds = %3, %2
   %15 = phi double [ undef, %2 ], [ %11, %3 ]
   %16 = fmul fast double %15, undef
-  ret void
+  ret double %16
 }

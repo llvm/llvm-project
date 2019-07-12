@@ -336,9 +336,9 @@ define <8 x float> @test_store_8xf32_aligned(<8 x float>* nocapture %addr, <8 x 
 define <4 x double> @test_store_4xf64(<4 x double>* nocapture %addr, <4 x double> %value, <4 x double> %value2) {
 ; SSE32-LABEL: test_store_4xf64:
 ; SSE32:       # %bb.0:
-; SSE32-NEXT:    addpd %xmm3, %xmm1
 ; SSE32-NEXT:    addpd %xmm2, %xmm0
 ; SSE32-NEXT:    movupd %xmm0, (%rdi)
+; SSE32-NEXT:    addpd %xmm3, %xmm1
 ; SSE32-NEXT:    movupd %xmm1, 16(%rdi)
 ; SSE32-NEXT:    retq
 ;
@@ -346,10 +346,11 @@ define <4 x double> @test_store_4xf64(<4 x double>* nocapture %addr, <4 x double
 ; SSE64:       # %bb.0:
 ; SSE64-NEXT:    subl $12, %esp
 ; SSE64-NEXT:    .cfi_def_cfa_offset 16
+; SSE64-NEXT:    movapd {{[0-9]+}}(%esp), %xmm3
 ; SSE64-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE64-NEXT:    addpd {{[0-9]+}}(%esp), %xmm1
 ; SSE64-NEXT:    addpd %xmm2, %xmm0
 ; SSE64-NEXT:    movupd %xmm0, (%eax)
+; SSE64-NEXT:    addpd %xmm3, %xmm1
 ; SSE64-NEXT:    movupd %xmm1, 16(%eax)
 ; SSE64-NEXT:    addl $12, %esp
 ; SSE64-NEXT:    .cfi_def_cfa_offset 4
@@ -375,9 +376,9 @@ define <4 x double> @test_store_4xf64(<4 x double>* nocapture %addr, <4 x double
 define <4 x double> @test_store_4xf64_aligned(<4 x double>* nocapture %addr, <4 x double> %value, <4 x double> %value2) {
 ; SSE32-LABEL: test_store_4xf64_aligned:
 ; SSE32:       # %bb.0:
-; SSE32-NEXT:    addpd %xmm3, %xmm1
 ; SSE32-NEXT:    addpd %xmm2, %xmm0
 ; SSE32-NEXT:    movapd %xmm0, (%rdi)
+; SSE32-NEXT:    addpd %xmm3, %xmm1
 ; SSE32-NEXT:    movapd %xmm1, 16(%rdi)
 ; SSE32-NEXT:    retq
 ;
@@ -385,10 +386,11 @@ define <4 x double> @test_store_4xf64_aligned(<4 x double>* nocapture %addr, <4 
 ; SSE64:       # %bb.0:
 ; SSE64-NEXT:    subl $12, %esp
 ; SSE64-NEXT:    .cfi_def_cfa_offset 16
+; SSE64-NEXT:    movapd {{[0-9]+}}(%esp), %xmm3
 ; SSE64-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE64-NEXT:    addpd {{[0-9]+}}(%esp), %xmm1
 ; SSE64-NEXT:    addpd %xmm2, %xmm0
 ; SSE64-NEXT:    movapd %xmm0, (%eax)
+; SSE64-NEXT:    addpd %xmm3, %xmm1
 ; SSE64-NEXT:    movapd %xmm1, 16(%eax)
 ; SSE64-NEXT:    addl $12, %esp
 ; SSE64-NEXT:    .cfi_def_cfa_offset 4
@@ -614,13 +616,13 @@ define <16 x float> @test_store_16xf32_aligned(<16 x float>* nocapture %addr, <1
 define <8 x double> @test_store_8xf64(<8 x double>* nocapture %addr, <8 x double> %value, <8 x double> %value2) {
 ; SSE32-LABEL: test_store_8xf64:
 ; SSE32:       # %bb.0:
-; SSE32-NEXT:    addpd %xmm7, %xmm3
-; SSE32-NEXT:    addpd %xmm6, %xmm2
-; SSE32-NEXT:    addpd %xmm5, %xmm1
 ; SSE32-NEXT:    addpd %xmm4, %xmm0
 ; SSE32-NEXT:    movupd %xmm0, (%rdi)
+; SSE32-NEXT:    addpd %xmm5, %xmm1
 ; SSE32-NEXT:    movupd %xmm1, 16(%rdi)
+; SSE32-NEXT:    addpd %xmm6, %xmm2
 ; SSE32-NEXT:    movupd %xmm2, 32(%rdi)
+; SSE32-NEXT:    addpd %xmm7, %xmm3
 ; SSE32-NEXT:    movupd %xmm3, 48(%rdi)
 ; SSE32-NEXT:    retq
 ;
@@ -628,14 +630,17 @@ define <8 x double> @test_store_8xf64(<8 x double>* nocapture %addr, <8 x double
 ; SSE64:       # %bb.0:
 ; SSE64-NEXT:    subl $12, %esp
 ; SSE64-NEXT:    .cfi_def_cfa_offset 16
+; SSE64-NEXT:    movapd {{[0-9]+}}(%esp), %xmm4
+; SSE64-NEXT:    movapd {{[0-9]+}}(%esp), %xmm5
+; SSE64-NEXT:    movapd {{[0-9]+}}(%esp), %xmm6
 ; SSE64-NEXT:    movapd {{[0-9]+}}(%esp), %xmm3
+; SSE64-NEXT:    addpd %xmm4, %xmm3
 ; SSE64-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE64-NEXT:    addpd {{[0-9]+}}(%esp), %xmm3
-; SSE64-NEXT:    addpd {{[0-9]+}}(%esp), %xmm2
-; SSE64-NEXT:    addpd {{[0-9]+}}(%esp), %xmm1
 ; SSE64-NEXT:    addpd {{[0-9]+}}(%esp), %xmm0
 ; SSE64-NEXT:    movupd %xmm0, (%eax)
+; SSE64-NEXT:    addpd %xmm6, %xmm1
 ; SSE64-NEXT:    movupd %xmm1, 16(%eax)
+; SSE64-NEXT:    addpd %xmm5, %xmm2
 ; SSE64-NEXT:    movupd %xmm2, 32(%eax)
 ; SSE64-NEXT:    movupd %xmm3, 48(%eax)
 ; SSE64-NEXT:    addl $12, %esp
@@ -644,9 +649,9 @@ define <8 x double> @test_store_8xf64(<8 x double>* nocapture %addr, <8 x double
 ;
 ; AVXONLY32-LABEL: test_store_8xf64:
 ; AVXONLY32:       # %bb.0:
-; AVXONLY32-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
 ; AVXONLY32-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; AVXONLY32-NEXT:    vmovupd %ymm0, (%rdi)
+; AVXONLY32-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
 ; AVXONLY32-NEXT:    vmovupd %ymm1, 32(%rdi)
 ; AVXONLY32-NEXT:    retq
 ;
@@ -659,10 +664,11 @@ define <8 x double> @test_store_8xf64(<8 x double>* nocapture %addr, <8 x double
 ; AVXONLY64-NEXT:    .cfi_def_cfa_register %ebp
 ; AVXONLY64-NEXT:    andl $-32, %esp
 ; AVXONLY64-NEXT:    subl $32, %esp
+; AVXONLY64-NEXT:    vmovapd 40(%ebp), %ymm3
 ; AVXONLY64-NEXT:    movl 8(%ebp), %eax
-; AVXONLY64-NEXT:    vaddpd 40(%ebp), %ymm1, %ymm1
 ; AVXONLY64-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; AVXONLY64-NEXT:    vmovupd %ymm0, (%eax)
+; AVXONLY64-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
 ; AVXONLY64-NEXT:    vmovupd %ymm1, 32(%eax)
 ; AVXONLY64-NEXT:    movl %ebp, %esp
 ; AVXONLY64-NEXT:    popl %ebp
@@ -689,13 +695,13 @@ define <8 x double> @test_store_8xf64(<8 x double>* nocapture %addr, <8 x double
 define <8 x double> @test_store_8xf64_aligned(<8 x double>* nocapture %addr, <8 x double> %value, <8 x double> %value2) {
 ; SSE32-LABEL: test_store_8xf64_aligned:
 ; SSE32:       # %bb.0:
-; SSE32-NEXT:    addpd %xmm7, %xmm3
-; SSE32-NEXT:    addpd %xmm6, %xmm2
-; SSE32-NEXT:    addpd %xmm5, %xmm1
 ; SSE32-NEXT:    addpd %xmm4, %xmm0
 ; SSE32-NEXT:    movapd %xmm0, (%rdi)
+; SSE32-NEXT:    addpd %xmm5, %xmm1
 ; SSE32-NEXT:    movapd %xmm1, 16(%rdi)
+; SSE32-NEXT:    addpd %xmm6, %xmm2
 ; SSE32-NEXT:    movapd %xmm2, 32(%rdi)
+; SSE32-NEXT:    addpd %xmm7, %xmm3
 ; SSE32-NEXT:    movapd %xmm3, 48(%rdi)
 ; SSE32-NEXT:    retq
 ;
@@ -703,14 +709,17 @@ define <8 x double> @test_store_8xf64_aligned(<8 x double>* nocapture %addr, <8 
 ; SSE64:       # %bb.0:
 ; SSE64-NEXT:    subl $12, %esp
 ; SSE64-NEXT:    .cfi_def_cfa_offset 16
+; SSE64-NEXT:    movapd {{[0-9]+}}(%esp), %xmm4
+; SSE64-NEXT:    movapd {{[0-9]+}}(%esp), %xmm5
+; SSE64-NEXT:    movapd {{[0-9]+}}(%esp), %xmm6
 ; SSE64-NEXT:    movapd {{[0-9]+}}(%esp), %xmm3
+; SSE64-NEXT:    addpd %xmm4, %xmm3
 ; SSE64-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; SSE64-NEXT:    addpd {{[0-9]+}}(%esp), %xmm3
-; SSE64-NEXT:    addpd {{[0-9]+}}(%esp), %xmm2
-; SSE64-NEXT:    addpd {{[0-9]+}}(%esp), %xmm1
 ; SSE64-NEXT:    addpd {{[0-9]+}}(%esp), %xmm0
 ; SSE64-NEXT:    movapd %xmm0, (%eax)
+; SSE64-NEXT:    addpd %xmm6, %xmm1
 ; SSE64-NEXT:    movapd %xmm1, 16(%eax)
+; SSE64-NEXT:    addpd %xmm5, %xmm2
 ; SSE64-NEXT:    movapd %xmm2, 32(%eax)
 ; SSE64-NEXT:    movapd %xmm3, 48(%eax)
 ; SSE64-NEXT:    addl $12, %esp
@@ -719,9 +728,9 @@ define <8 x double> @test_store_8xf64_aligned(<8 x double>* nocapture %addr, <8 
 ;
 ; AVXONLY32-LABEL: test_store_8xf64_aligned:
 ; AVXONLY32:       # %bb.0:
-; AVXONLY32-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
 ; AVXONLY32-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; AVXONLY32-NEXT:    vmovapd %ymm0, (%rdi)
+; AVXONLY32-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
 ; AVXONLY32-NEXT:    vmovapd %ymm1, 32(%rdi)
 ; AVXONLY32-NEXT:    retq
 ;
@@ -734,10 +743,11 @@ define <8 x double> @test_store_8xf64_aligned(<8 x double>* nocapture %addr, <8 
 ; AVXONLY64-NEXT:    .cfi_def_cfa_register %ebp
 ; AVXONLY64-NEXT:    andl $-32, %esp
 ; AVXONLY64-NEXT:    subl $32, %esp
+; AVXONLY64-NEXT:    vmovapd 40(%ebp), %ymm3
 ; AVXONLY64-NEXT:    movl 8(%ebp), %eax
-; AVXONLY64-NEXT:    vaddpd 40(%ebp), %ymm1, %ymm1
 ; AVXONLY64-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; AVXONLY64-NEXT:    vmovapd %ymm0, (%eax)
+; AVXONLY64-NEXT:    vaddpd %ymm3, %ymm1, %ymm1
 ; AVXONLY64-NEXT:    vmovapd %ymm1, 32(%eax)
 ; AVXONLY64-NEXT:    movl %ebp, %esp
 ; AVXONLY64-NEXT:    popl %ebp

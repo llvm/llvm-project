@@ -335,6 +335,8 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
     return "noredzone";
   if (hasAttribute(Attribute::NoReturn))
     return "noreturn";
+  if (hasAttribute(Attribute::NoSync))
+    return "nosync";
   if (hasAttribute(Attribute::WillReturn))
     return "willreturn";
   if (hasAttribute(Attribute::NoCfCheck))

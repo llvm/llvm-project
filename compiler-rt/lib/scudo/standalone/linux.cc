@@ -37,8 +37,6 @@
 
 namespace scudo {
 
-void yieldPlatform() { sched_yield(); }
-
 uptr getPageSize() { return static_cast<uptr>(sysconf(_SC_PAGESIZE)); }
 
 void NORETURN die() { abort(); }
@@ -46,15 +44,18 @@ void NORETURN die() { abort(); }
 void *map(void *Addr, uptr Size, UNUSED const char *Name, uptr Flags,
           UNUSED MapPlatformData *Data) {
   int MmapFlags = MAP_PRIVATE | MAP_ANON;
-  if (Flags & MAP_NOACCESS)
+  int MmapProt;
+  if (Flags & MAP_NOACCESS) {
     MmapFlags |= MAP_NORESERVE;
+    MmapProt = PROT_NONE;
+  } else {
+    MmapProt = PROT_READ | PROT_WRITE;
+  }
   if (Addr) {
     // Currently no scenario for a noaccess mapping with a fixed address.
     DCHECK_EQ(Flags & MAP_NOACCESS, 0);
     MmapFlags |= MAP_FIXED;
   }
-  const int MmapProt =
-      (Flags & MAP_NOACCESS) ? PROT_NONE : PROT_READ | PROT_WRITE;
   void *P = mmap(Addr, Size, MmapProt, MmapFlags, -1, 0);
   if (P == MAP_FAILED) {
     if (!(Flags & MAP_ALLOWNOMEM) || errno != ENOMEM)
@@ -84,22 +85,34 @@ void releasePagesToOS(uptr BaseAddress, uptr Offset, uptr Size,
 // Calling getenv should be fine (c)(tm) at any time.
 const char *getEnv(const char *Name) { return getenv(Name); }
 
-void BlockingMutex::lock() {
-  atomic_u32 *M = reinterpret_cast<atomic_u32 *>(&OpaqueStorage);
-  if (atomic_exchange(M, MtxLocked, memory_order_acquire) == MtxUnlocked)
-    return;
-  while (atomic_exchange(M, MtxSleeping, memory_order_acquire) != MtxUnlocked)
-    syscall(SYS_futex, reinterpret_cast<uptr>(OpaqueStorage),
-            FUTEX_WAIT_PRIVATE, MtxSleeping, nullptr, nullptr, 0);
+namespace {
+enum State : u32 { Unlocked = 0, Locked = 1, Sleeping = 2 };
 }
 
-void BlockingMutex::unlock() {
-  atomic_u32 *M = reinterpret_cast<atomic_u32 *>(&OpaqueStorage);
-  const u32 V = atomic_exchange(M, MtxUnlocked, memory_order_release);
-  DCHECK_NE(V, MtxUnlocked);
-  if (V == MtxSleeping)
-    syscall(SYS_futex, reinterpret_cast<uptr>(OpaqueStorage),
-            FUTEX_WAKE_PRIVATE, 1, nullptr, nullptr, 0);
+bool HybridMutex::tryLock() {
+  return atomic_compare_exchange(&M, Unlocked, Locked) == Unlocked;
+}
+
+// The following is based on https://akkadia.org/drepper/futex.pdf.
+void HybridMutex::lockSlow() {
+  u32 V = atomic_compare_exchange(&M, Unlocked, Locked);
+  if (V == Unlocked)
+    return;
+  if (V != Sleeping)
+    V = atomic_exchange(&M, Sleeping, memory_order_acquire);
+  while (V != Unlocked) {
+    syscall(SYS_futex, reinterpret_cast<uptr>(&M), FUTEX_WAIT_PRIVATE, Sleeping,
+            nullptr, nullptr, 0);
+    V = atomic_exchange(&M, Sleeping, memory_order_acquire);
+  }
+}
+
+void HybridMutex::unlock() {
+  if (atomic_fetch_sub(&M, 1U, memory_order_release) != Locked) {
+    atomic_store(&M, Unlocked, memory_order_release);
+    syscall(SYS_futex, reinterpret_cast<uptr>(&M), FUTEX_WAKE_PRIVATE, 1,
+            nullptr, nullptr, 0);
+  }
 }
 
 u64 getMonotonicTime() {
@@ -141,8 +154,8 @@ bool getRandom(void *Buffer, uptr Length, UNUSED bool Blocking) {
 }
 
 void outputRaw(const char *Buffer) {
-  static StaticSpinMutex Mutex;
-  SpinMutexLock L(&Mutex);
+  static HybridMutex Mutex;
+  ScopedLock L(Mutex);
   write(2, Buffer, strlen(Buffer));
 }
 

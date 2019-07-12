@@ -72,9 +72,21 @@ __tsan::uptr InitializeGuardPtr() __attribute__((visibility("hidden")));
 extern "C" __tsan::uptr _tsan_pointer_chk_guard;
 #endif
 
+#if SANITIZER_LINUX && defined(__aarch64__) && !SANITIZER_GO
+# define INIT_LONGJMP_XOR_KEY 1
+#else
+# define INIT_LONGJMP_XOR_KEY 0
+#endif
+
+#if INIT_LONGJMP_XOR_KEY
+#include "interception/interception.h"
+// Must be declared outside of other namespaces.
+DECLARE_REAL(int, _setjmp, void *env)
+#endif
+
 namespace __tsan {
 
-#if SANITIZER_LINUX && defined(__aarch64__) && !SANITIZER_GO
+#if INIT_LONGJMP_XOR_KEY
 static void InitializeLongjmpXorKey();
 static uptr longjmp_xor_key;
 #endif
@@ -415,9 +427,7 @@ uptr ExtractLongJmpSp(uptr *env) {
   return UnmangleLongJmpSp(mangled_sp);
 }
 
-#if SANITIZER_LINUX && defined(__aarch64__)
-#include "interception/interception.h"
-DECLARE_REAL(int, _setjmp, void* env)
+#if INIT_LONGJMP_XOR_KEY
 // GLIBC mangles the function pointers in jmp_buf (used in {set,long}*jmp
 // functions) by XORing them with a random key.  For AArch64 it is a global
 // variable rather than a TCB one (as for x86_64/powerpc).  We obtain the key by
@@ -425,7 +435,7 @@ DECLARE_REAL(int, _setjmp, void* env)
 static void InitializeLongjmpXorKey() {
   // 1. Call REAL(setjmp), which stores the mangled SP in env.
   jmp_buf env;
-  // REAL(_setjmp)(env); // TODO(yln)
+  REAL(_setjmp)(env);
 
   // 2. Retrieve mangled/vanilla SP.
   uptr mangled_sp = ((uptr *)&env)[LONG_JMP_SP_ENV_SLOT];

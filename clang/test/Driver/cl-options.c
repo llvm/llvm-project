@@ -161,28 +161,28 @@
 // RUN: %clang_cl /Os --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Os %s
 // RUN: %clang_cl /Os --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Os %s
 // Os-NOT: -mdisable-fp-elim
-// Os: -momit-leaf-frame-pointer
+// Os-NOT: -momit-leaf-frame-pointer
 // Os: -Os
 
 // RUN: %clang_cl /Ot --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ot %s
 // RUN: %clang_cl /Ot --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ot %s
 // Ot-NOT: -mdisable-fp-elim
-// Ot: -momit-leaf-frame-pointer
+// Ot-NOT: -momit-leaf-frame-pointer
 // Ot: -O2
 
 // RUN: %clang_cl /Ox --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ox %s
 // RUN: %clang_cl /Ox --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ox %s
 // Ox-NOT: -mdisable-fp-elim
-// Ox: -momit-leaf-frame-pointer
+// Ox-NOT: -momit-leaf-frame-pointer
 // Ox: -O2
 
 // RUN: %clang_cl --target=i686-pc-win32 /O2sy- -### -- %s 2>&1 | FileCheck -check-prefix=PR24003 %s
 // PR24003: -mdisable-fp-elim
-// PR24003: -momit-leaf-frame-pointer
+// PR24003-NOT: -momit-leaf-frame-pointer
 // PR24003: -Os
 
 // RUN: %clang_cl --target=i686-pc-win32 -Werror /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_2 %s
-// Oy_2: -momit-leaf-frame-pointer
+// Oy_2-NOT: -momit-leaf-frame-pointer
 // Oy_2: -O2
 
 // RUN: %clang_cl --target=aarch64-pc-windows-msvc -Werror /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_aarch64 %s

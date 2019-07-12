@@ -350,6 +350,7 @@ public:
   void VisitBinaryOperator(BinaryOperator *BO);
   void VisitCallExpr(CallExpr *CE);
   void VisitCastExpr(CastExpr *CE);
+  void VisitOMPExecutableDirective(OMPExecutableDirective *ED);
 
   void operator()(Stmt *S) { Visit(S); }
 
@@ -455,6 +456,11 @@ void ClassifyRefs::VisitUnaryOperator(UnaryOperator *UO) {
     classify(UO->getSubExpr(), Use);
 }
 
+void ClassifyRefs::VisitOMPExecutableDirective(OMPExecutableDirective *ED) {
+  for (Stmt *S : OMPExecutableDirective::used_clauses_children(ED->clauses()))
+    classify(cast<Expr>(S), Use);
+}
+
 static bool isPointerToConst(const QualType &QT) {
   return QT->isAnyPointerType() && QT->getPointeeType().isConstQualified();
 }
@@ -532,6 +538,7 @@ public:
   void VisitDeclStmt(DeclStmt *ds);
   void VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS);
   void VisitObjCMessageExpr(ObjCMessageExpr *ME);
+  void VisitOMPExecutableDirective(OMPExecutableDirective *ED);
 
   bool isTrackedVar(const VarDecl *vd) {
     return ::isTrackedVar(vd, cast<DeclContext>(ac.getDecl()));
@@ -705,6 +712,16 @@ void TransferFunctions::VisitObjCForCollectionStmt(ObjCForCollectionStmt *FS) {
     if (isTrackedVar(VD))
       vals[VD] = Initialized;
   }
+}
+
+void TransferFunctions::VisitOMPExecutableDirective(
+    OMPExecutableDirective *ED) {
+  for (Stmt *S : OMPExecutableDirective::used_clauses_children(ED->clauses())) {
+    assert(S && "Expected non-null used-in-clause child.");
+    Visit(S);
+  }
+  if (!ED->isStandaloneDirective())
+    Visit(ED->getStructuredBlock());
 }
 
 void TransferFunctions::VisitBlockExpr(BlockExpr *be) {

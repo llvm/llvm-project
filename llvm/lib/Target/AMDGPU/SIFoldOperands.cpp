@@ -187,6 +187,7 @@ static bool updateOperand(FoldCandidate &Fold,
 
   if (Fold.isImm()) {
     if (MI->getDesc().TSFlags & SIInstrFlags::IsPacked &&
+        !(MI->getDesc().TSFlags & SIInstrFlags::IsMAI) &&
         AMDGPU::isInlinableLiteralV216(static_cast<uint16_t>(Fold.ImmToFold),
                                        ST.hasInv2PiInlineImm())) {
       // Set op_sel/op_sel_hi on this operand or bail out if op_sel is
@@ -419,6 +420,71 @@ static bool isUseSafeToFold(const SIInstrInfo *TII,
   //return !MI.hasRegisterImplicitUseOperand(UseMO.getReg());
 }
 
+static bool tryToFoldACImm(const SIInstrInfo *TII,
+                           const MachineOperand &OpToFold,
+                           MachineInstr *UseMI,
+                           unsigned UseOpIdx,
+                           SmallVectorImpl<FoldCandidate> &FoldList) {
+  const MCInstrDesc &Desc = UseMI->getDesc();
+  const MCOperandInfo *OpInfo = Desc.OpInfo;
+  if (!OpInfo || UseOpIdx >= Desc.getNumOperands())
+    return false;
+
+  uint8_t OpTy = OpInfo[UseOpIdx].OperandType;
+  if (OpTy < AMDGPU::OPERAND_REG_INLINE_AC_FIRST ||
+      OpTy > AMDGPU::OPERAND_REG_INLINE_AC_LAST)
+    return false;
+
+  if (OpToFold.isImm() && TII->isInlineConstant(OpToFold, OpTy)) {
+    UseMI->getOperand(UseOpIdx).ChangeToImmediate(OpToFold.getImm());
+    return true;
+  }
+
+  if (!OpToFold.isReg())
+    return false;
+
+  unsigned UseReg = OpToFold.getReg();
+  if (!TargetRegisterInfo::isVirtualRegister(UseReg))
+    return false;
+
+  if (llvm::find_if(FoldList, [UseMI](const FoldCandidate &FC) {
+        return FC.UseMI == UseMI; }) != FoldList.end())
+    return false;
+
+  MachineRegisterInfo &MRI = UseMI->getParent()->getParent()->getRegInfo();
+  const MachineInstr *Def = MRI.getUniqueVRegDef(UseReg);
+  if (!Def || !Def->isRegSequence())
+    return false;
+
+  int64_t Imm;
+  MachineOperand *Op;
+  for (unsigned I = 1, E = Def->getNumExplicitOperands(); I < E; I += 2) {
+    const MachineOperand &Sub = Def->getOperand(I);
+    if (!Sub.isReg() || Sub.getSubReg())
+      return false;
+    MachineInstr *SubDef = MRI.getUniqueVRegDef(Sub.getReg());
+    while (SubDef && !SubDef->isMoveImmediate() &&
+           !SubDef->getOperand(1).isImm() && TII->isFoldableCopy(*SubDef))
+      SubDef = MRI.getUniqueVRegDef(SubDef->getOperand(1).getReg());
+    if (!SubDef || !SubDef->isMoveImmediate() || !SubDef->getOperand(1).isImm())
+      return false;
+    Op = &SubDef->getOperand(1);
+    auto SubImm = Op->getImm();
+    if (I == 1) {
+      if (!TII->isInlineConstant(SubDef->getOperand(1), OpTy))
+        return false;
+
+      Imm = SubImm;
+      continue;
+    }
+    if (Imm != SubImm)
+      return false; // Can only fold splat constants
+  }
+
+  FoldList.push_back(FoldCandidate(UseMI, UseOpIdx, Op));
+  return true;
+}
+
 void SIFoldOperands::foldOperand(
   MachineOperand &OpToFold,
   MachineInstr *UseMI,
@@ -462,6 +528,11 @@ void SIFoldOperands::foldOperand(
       Next = std::next(RSUse);
 
       MachineInstr *RSUseMI = RSUse->getParent();
+
+      if (tryToFoldACImm(TII, UseMI->getOperand(0), RSUseMI,
+                         RSUse.getOperandNo(), FoldList))
+        continue;
+
       if (RSUse->getSubReg() != RegSeqDstSubReg)
         continue;
 
@@ -471,6 +542,9 @@ void SIFoldOperands::foldOperand(
 
     return;
   }
+
+  if (tryToFoldACImm(TII, OpToFold, UseMI, UseOpIdx, FoldList))
+    return;
 
   if (frameIndexMayFold(TII, *UseMI, UseOpIdx, OpToFold)) {
     // Sanity check that this is a stack access.
@@ -505,7 +579,7 @@ void SIFoldOperands::foldOperand(
     if (TargetRegisterInfo::isVirtualRegister(DestReg) &&
       TargetRegisterInfo::isVirtualRegister(SrcReg)) {
       const TargetRegisterClass * SrcRC = MRI->getRegClass(SrcReg);
-      if (TRI->isSGPRClass(SrcRC) && TRI->hasVGPRs(DestRC)) {
+      if (TRI->isSGPRClass(SrcRC) && TRI->hasVectorRegisters(DestRC)) {
         MachineRegisterInfo::use_iterator NextUse;
         SmallVector<FoldCandidate, 4> CopyUses;
         for (MachineRegisterInfo::use_iterator
@@ -523,6 +597,14 @@ void SIFoldOperands::foldOperand(
       }
     }
 
+    if (DestRC == &AMDGPU::AGPR_32RegClass &&
+        TII->isInlineConstant(OpToFold, AMDGPU::OPERAND_REG_INLINE_C_INT32)) {
+      UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_WRITE_B32));
+      UseMI->getOperand(1).ChangeToImmediate(OpToFold.getImm());
+      CopiesToReplace.push_back(UseMI);
+      return;
+    }
+
     // In order to fold immediates into copies, we need to change the
     // copy to a MOV.
 
@@ -535,14 +617,23 @@ void SIFoldOperands::foldOperand(
   } else {
     if (UseMI->isCopy() && OpToFold.isReg() &&
         TargetRegisterInfo::isVirtualRegister(UseMI->getOperand(0).getReg()) &&
-        TRI->isVGPR(*MRI, UseMI->getOperand(0).getReg()) &&
-        TRI->isVGPR(*MRI, UseMI->getOperand(1).getReg()) &&
+        TRI->isVectorRegister(*MRI, UseMI->getOperand(0).getReg()) &&
+        TRI->isVectorRegister(*MRI, UseMI->getOperand(1).getReg()) &&
         !UseMI->getOperand(1).getSubReg()) {
+      unsigned Size = TII->getOpSize(*UseMI, 1);
       UseMI->getOperand(1).setReg(OpToFold.getReg());
       UseMI->getOperand(1).setSubReg(OpToFold.getSubReg());
       UseMI->getOperand(1).setIsKill(false);
       CopiesToReplace.push_back(UseMI);
       OpToFold.setIsKill(false);
+      if (Size != 4)
+        return;
+      if (TRI->isAGPR(*MRI, UseMI->getOperand(0).getReg()) &&
+          TRI->isVGPR(*MRI, UseMI->getOperand(1).getReg()))
+        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_WRITE_B32));
+      else if (TRI->isVGPR(*MRI, UseMI->getOperand(0).getReg()) &&
+               TRI->isAGPR(*MRI, UseMI->getOperand(1).getReg()))
+        UseMI->setDesc(TII->get(AMDGPU::V_ACCVGPR_READ_B32));
       return;
     }
 
@@ -559,7 +650,7 @@ void SIFoldOperands::foldOperand(
         if (execMayBeModifiedBeforeUse(*MRI,
                                        UseMI->getOperand(UseOpIdx).getReg(),
                                        *OpToFold.getParent(),
-                                       UseMI))
+                                       *UseMI))
           return;
 
         UseMI->setDesc(TII->get(AMDGPU::S_MOV_B32));
@@ -578,7 +669,7 @@ void SIFoldOperands::foldOperand(
         if (execMayBeModifiedBeforeUse(*MRI,
                                        UseMI->getOperand(UseOpIdx).getReg(),
                                        *OpToFold.getParent(),
-                                       UseMI))
+                                       *UseMI))
           return;
 
         // %vgpr = COPY %sgpr0

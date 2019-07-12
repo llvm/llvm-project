@@ -860,9 +860,10 @@ bool TUScheduler::blockUntilIdle(Deadline D) const {
   return true;
 }
 
-void TUScheduler::update(PathRef File, ParseInputs Inputs,
+bool TUScheduler::update(PathRef File, ParseInputs Inputs,
                          WantDiagnostics WantDiags) {
   std::unique_ptr<FileData> &FD = Files[File];
+  bool NewFile = FD == nullptr;
   if (!FD) {
     // Create a new worker to process the AST-related tasks.
     ASTWorkerHandle Worker = ASTWorker::create(
@@ -875,6 +876,7 @@ void TUScheduler::update(PathRef File, ParseInputs Inputs,
     FD->Contents = Inputs.Contents;
   }
   FD->Worker->update(std::move(Inputs), WantDiags);
+  return NewFile;
 }
 
 void TUScheduler::remove(PathRef File) {

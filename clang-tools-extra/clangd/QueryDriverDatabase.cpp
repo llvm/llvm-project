@@ -83,11 +83,11 @@ std::vector<std::string> parseDriverOutput(llvm::StringRef Output) {
 }
 
 std::vector<std::string> extractSystemIncludes(PathRef Driver,
-                                               llvm::StringRef Ext,
+                                               llvm::StringRef Lang,
                                                llvm::Regex &QueryDriverRegex) {
   trace::Span Tracer("Extract system includes");
   SPAN_ATTACH(Tracer, "driver", Driver);
-  SPAN_ATTACH(Tracer, "ext", Ext);
+  SPAN_ATTACH(Tracer, "lang", Lang);
 
   if (!QueryDriverRegex.match(Driver)) {
     vlog("System include extraction: not whitelisted driver {0}", Driver);
@@ -117,14 +117,8 @@ std::vector<std::string> extractSystemIncludes(PathRef Driver,
   llvm::Optional<llvm::StringRef> Redirects[] = {
       {""}, {""}, llvm::StringRef(StdErrPath)};
 
-  auto Type = driver::types::lookupTypeForExtension(Ext);
-  if (Type == driver::types::TY_INVALID) {
-    elog("System include extraction: invalid file type for {0}", Ext);
-    return {};
-  }
   // Should we also preserve flags like "-sysroot", "-nostdinc" ?
-  const llvm::StringRef Args[] = {
-      Driver, "-E", "-x", driver::types::getTypeName(Type), "-", "-v"};
+  const llvm::StringRef Args[] = {Driver, "-E", "-x", Lang, "-", "-v"};
 
   if (int RC = llvm::sys::ExecuteAndWait(Driver, Args, /*Env=*/llvm::None,
                                          Redirects)) {
@@ -220,10 +214,27 @@ public:
     if (!Cmd || Cmd->CommandLine.empty())
       return Cmd;
 
+    llvm::StringRef Lang;
+    for (size_t I = 0, E = Cmd->CommandLine.size(); I < E; ++I) {
+      llvm::StringRef Arg = Cmd->CommandLine[I];
+      if (Arg == "-x" && I + 1 < E)
+        Lang = Cmd->CommandLine[I + 1];
+      else if (Arg.startswith("-x"))
+        Lang = Arg.drop_front(2).trim();
+    }
+    if (Lang.empty()) {
+      llvm::StringRef Ext = llvm::sys::path::extension(File).trim('.');
+      auto Type = driver::types::lookupTypeForExtension(Ext);
+      if (Type == driver::types::TY_INVALID) {
+        elog("System include extraction: invalid file type for {0}", Ext);
+        return {};
+      }
+      Lang = driver::types::getTypeName(Type);
+    }
+
     llvm::SmallString<128> Driver(Cmd->CommandLine.front());
     llvm::sys::fs::make_absolute(Cmd->Directory, Driver);
-    llvm::StringRef Ext = llvm::sys::path::extension(File).trim('.');
-    auto Key = std::make_pair(Driver.str(), Ext);
+    auto Key = std::make_pair(Driver.str(), Lang);
 
     std::vector<std::string> SystemIncludes;
     {

@@ -18,14 +18,11 @@ This file provides integration for git.
 from __future__ import print_function
 import argparse
 import collections
-import contextlib
-import errno
 import os
 import re
 import shutil
 import subprocess
 import sys
-import tempfile
 import time
 assert sys.version_info >= (2, 7)
 
@@ -48,7 +45,7 @@ except ImportError:
     from pipes import quote
 
 # It's *almost* a straightforward mapping from the monorepo to svn...
-GIT_TO_SVN_DIR = {
+LLVM_MONOREPO_SVN_MAPPING = {
     d: (d + '/trunk')
     for d in [
         'clang-tools-extra',
@@ -70,8 +67,11 @@ GIT_TO_SVN_DIR = {
         'pstl',
     ]
 }
-GIT_TO_SVN_DIR.update({'clang': 'cfe/trunk'})
-GIT_TO_SVN_DIR.update({'': 'monorepo-root/trunk'})
+LLVM_MONOREPO_SVN_MAPPING.update({'clang': 'cfe/trunk'})
+LLVM_MONOREPO_SVN_MAPPING.update({'': 'monorepo-root/trunk'})
+
+SPLIT_REPO_NAMES = {'llvm-' + d: d + '/trunk'
+                    for d in ['www', 'zorg', 'test-suite', 'lnt']}
 
 VERBOSE = False
 QUIET = False
@@ -164,6 +164,7 @@ def git(*cmd, **kwargs):
 def svn(cwd, *cmd, **kwargs):
     return shell(['svn'] + list(cmd), cwd=cwd, **kwargs)
 
+
 def program_exists(cmd):
     if sys.platform == 'win32' and not cmd.endswith('.exe'):
         cmd += '.exe'
@@ -171,6 +172,7 @@ def program_exists(cmd):
         if os.access(os.path.join(path, cmd), os.X_OK):
             return True
     return False
+
 
 def get_default_rev_range():
     # Get the branch tracked by the current branch, as set by
@@ -274,16 +276,18 @@ def fix_eol_style_native(rev, svn_sr_path, files):
         # just the diff, and not a mass line ending change.
         shell(['dos2unix'] + crlf_files, ignore_errors=True, cwd=svn_sr_path)
 
-def split_subrepo(f):
+
+def split_subrepo(f, git_to_svn_mapping):
     # Given a path, splits it into (subproject, rest-of-path). If the path is
     # not in a subproject, returns ('', full-path).
 
     subproject, remainder = split_first_path_component(f)
 
-    if subproject in GIT_TO_SVN_DIR:
+    if subproject in git_to_svn_mapping:
         return subproject, remainder
     else:
         return '', f
+
 
 def get_all_parent_dirs(name):
     parts = []
@@ -293,7 +297,8 @@ def get_all_parent_dirs(name):
         head, tail = os.path.split(head)
     return parts
 
-def svn_push_one_rev(svn_repo, rev, dry_run):
+
+def svn_push_one_rev(svn_repo, rev, git_to_svn_mapping, dry_run):
     files = git('diff-tree', '--no-commit-id', '--name-only', '-r',
                 rev).split('\n')
     if not files:
@@ -302,7 +307,7 @@ def svn_push_one_rev(svn_repo, rev, dry_run):
     # Split files by subrepo
     subrepo_files = collections.defaultdict(list)
     for f in files:
-        subrepo, remainder = split_subrepo(f)
+        subrepo, remainder = split_subrepo(f, git_to_svn_mapping)
         subrepo_files[subrepo].append(remainder)
 
     status = svn(svn_repo, 'status', '--no-ignore')
@@ -312,12 +317,13 @@ def svn_push_one_rev(svn_repo, rev, dry_run):
 
     svn_dirs_to_update = set()
     for sr, files in iteritems(subrepo_files):
-        svn_sr_path = GIT_TO_SVN_DIR[sr]
+        svn_sr_path = git_to_svn_mapping[sr]
         for f in files:
             svn_dirs_to_update.add(
                 os.path.dirname(os.path.join(svn_sr_path, f)))
 
-    # We also need to svn update any parent directories which are not yet present
+    # We also need to svn update any parent directories which are not yet
+    # present
     parent_dirs = set()
     for dir in svn_dirs_to_update:
         parent_dirs.update(get_all_parent_dirs(dir))
@@ -333,7 +339,7 @@ def svn_push_one_rev(svn_repo, rev, dry_run):
     svn(svn_repo, 'update', '--depth=files', *sorted_dirs_to_update)
 
     for sr, files in iteritems(subrepo_files):
-        svn_sr_path = os.path.join(svn_repo, GIT_TO_SVN_DIR[sr])
+        svn_sr_path = os.path.join(svn_repo, git_to_svn_mapping[sr])
         if os.name == 'nt':
             fix_eol_style_native(rev, svn_sr_path, files)
         # We use text=False (and pass '--binary') so that we can get an exact
@@ -390,12 +396,23 @@ def cmd_push(args):
     # Push from the root of the git repo
     os.chdir(git_root)
 
+    # Get the remote URL, and check if it's one of the standalone repos.
+    git_remote_url = git('remote', 'get-url', 'origin')
+    git_remote_url = git_remote_url.rstrip('.git').rstrip('/')
+    git_remote_repo_name = git_remote_url.rsplit('/', 1)[-1]
+    split_repo_path = SPLIT_REPO_NAMES.get(git_remote_repo_name)
+    if split_repo_path:
+        git_to_svn_mapping = {'': split_repo_path}
+    else:
+        # Default to the monorepo mapping
+        git_to_svn_mapping = LLVM_MONOREPO_SVN_MAPPING
+
     # We need a staging area for SVN, let's hide it in the .git directory.
     dot_git_dir = git('rev-parse', '--git-common-dir')
     # Not all versions of git support --git-common-dir and just print the
     # unknown command back. If this happens, fall back to --git-dir
     if dot_git_dir == '--git-common-dir':
-      dot_git_dir = git('rev-parse', '--git-dir')
+        dot_git_dir = git('rev-parse', '--git-dir')
 
     svn_root = os.path.join(dot_git_dir, 'llvm-upstream-svn')
     svn_init(svn_root)
@@ -403,13 +420,16 @@ def cmd_push(args):
     rev_range = args.rev_range
     dry_run = args.dry_run
     revs = get_revs_to_push(rev_range)
-    log('Pushing %d commit%s:\n%s' %
-        (len(revs), 's' if len(revs) != 1
-         else '', '\n'.join('  ' + git('show', '--oneline', '--quiet', c)
-                            for c in revs)))
+    log('Pushing %d %s commit%s:\n%s' %
+        (len(revs),
+         'split-repo (%s)' % split_repo_path
+         if split_repo_path else 'monorepo',
+         's' if len(revs) != 1 else '',
+         '\n'.join('  ' + git('show', '--oneline', '--quiet', c)
+                   for c in revs)))
     for r in revs:
         clean_svn(svn_root)
-        svn_push_one_rev(svn_root, r, dry_run)
+        svn_push_one_rev(svn_root, r, git_to_svn_mapping, dry_run)
 
 
 def lookup_llvm_svn_id(git_commit_hash):
@@ -418,7 +438,7 @@ def lookup_llvm_svn_id(git_commit_hash):
     commit_msg = git('log', '-1', '--format=%b', git_commit_hash,
                      ignore_errors=True)
     if len(commit_msg) == 0:
-      die("Can't find git commit " + git_commit_hash)
+        die("Can't find git commit " + git_commit_hash)
     # If a commit has multiple "llvm-svn:" lines (e.g. if the commit is
     # reverting/quoting a previous commit), choose the last one, which should
     # be the authoritative one.
@@ -426,9 +446,9 @@ def lookup_llvm_svn_id(git_commit_hash):
                                  re.MULTILINE)
     svn_match = None
     for m in svn_match_iter:
-      svn_match = m.group(1)
+        svn_match = m.group(1)
     if svn_match:
-      return int(svn_match)
+        return int(svn_match)
     die("Can't find svn revision in git commit " + git_commit_hash)
 
 
@@ -463,11 +483,12 @@ def git_hash_by_svn_rev(svn_rev):
     matching_hashes = [h for h in possible_hashes
                        if lookup_llvm_svn_id(h) == svn_rev]
     if len(matching_hashes) > 1:
-      die("svn revision r%d has ambiguous commits: %s" % (
-          svn_rev, ', '.join(matching_hashes)))
+        die("svn revision r%d has ambiguous commits: %s" % (
+            svn_rev, ', '.join(matching_hashes)))
     elif len(matching_hashes) < 1:
-      die("svn revision r%d matches no commits" % svn_rev)
+        die("svn revision r%d matches no commits" % svn_rev)
     return matching_hashes[0]
+
 
 def cmd_revert(args):
     '''Revert a commit by either SVN id (rNNNNNN) or git hash. This also
@@ -485,23 +506,23 @@ def cmd_revert(args):
     # Check for a client branch first.
     open_files = git('status', '-uno', '-s', '--porcelain')
     if len(open_files) > 0:
-      die("Found open files. Please stash and then revert.\n" + open_files)
+        die("Found open files. Please stash and then revert.\n" + open_files)
 
     # If the revision looks like rNNNNNN, use that. Otherwise, look for it in
     # the git commit.
     svn_match = re.match('^r(\d{5,7})$', args.revision)
     if svn_match:
-      # If the revision looks like rNNNNNN, use that as the svn revision, and
-      # grep through git commits to find which one corresponds to that svn
-      # revision.
-      svn_rev = int(svn_match.group(1))
-      git_hash = git_hash_by_svn_rev(svn_rev)
+        # If the revision looks like rNNNNNN, use that as the svn revision, and
+        # grep through git commits to find which one corresponds to that svn
+        # revision.
+        svn_rev = int(svn_match.group(1))
+        git_hash = git_hash_by_svn_rev(svn_rev)
     else:
-      # Otherwise, this looks like a git hash, so we just need to grab the svn
-      # revision from the end of the commit message.
-      # Get the actual git hash in case the revision is something like "HEAD~1"
-      git_hash = git('rev-parse', '--verify', args.revision + '^{commit}')
-      svn_rev = lookup_llvm_svn_id(git_hash)
+        # Otherwise, this looks like a git hash, so we just need to grab the
+        # svn revision from the end of the commit message.  Get the actual git
+        # hash in case the revision is something like "HEAD~1"
+        git_hash = git('rev-parse', '--verify', args.revision + '^{commit}')
+        svn_rev = lookup_llvm_svn_id(git_hash)
 
     msg = git('log', '-1', '--format=%s', git_hash)
 
@@ -514,11 +535,12 @@ def cmd_revert(args):
         'commit', '-m', 'Revert ' + msg,
         '-m', 'This reverts r%d (git commit %s)' % (svn_rev, git_hash)]
     if args.dry_run:
-      log("Would have run the following commands, if this weren't a dry run:\n"
-          '1) git %s\n2) git %s' % (
-              ' '.join(quote(arg) for arg in revert_args),
-              ' '.join(quote(arg) for arg in commit_args)))
-      return
+        log("Would have run the following commands, if this weren't a"
+            "dry run:\n"
+            '1) git %s\n2) git %s' % (
+                ' '.join(quote(arg) for arg in revert_args),
+                ' '.join(quote(arg) for arg in commit_args)))
+        return
 
     git(*revert_args)
     commit_log = git(*commit_args)
@@ -526,6 +548,7 @@ def cmd_revert(args):
     log('Created revert of r%d: %s' % (svn_rev, commit_log))
     log("Run 'git llvm push -n' to inspect your changes and "
         "run 'git llvm push' when ready")
+
 
 if __name__ == '__main__':
     if not program_exists('svn'):

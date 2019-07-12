@@ -18,5 +18,5 @@ declare i32 @bar(i32 signext) #1
 
 ; CHECK:      jals
 ; CHECK-NEXT: sll16
-; CHECK-MMR6: jal
+; CHECK-MMR6: balc
 ; CHECK-MMR6-NOT: sll16

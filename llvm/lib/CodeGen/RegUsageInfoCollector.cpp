@@ -88,6 +88,9 @@ static bool isCallableFunction(const MachineFunction &MF) {
   case CallingConv::AMDGPU_GS:
   case CallingConv::AMDGPU_PS:
   case CallingConv::AMDGPU_CS:
+  case CallingConv::AMDGPU_HS:
+  case CallingConv::AMDGPU_ES:
+  case CallingConv::AMDGPU_LS:
   case CallingConv::AMDGPU_KERNEL:
     return false;
   default:
