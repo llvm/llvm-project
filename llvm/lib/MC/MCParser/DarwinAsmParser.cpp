@@ -1169,7 +1169,7 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
     .Case("ios", MachO::PLATFORM_IOS)
     .Case("tvos", MachO::PLATFORM_TVOS)
     .Case("watchos", MachO::PLATFORM_WATCHOS)
-    .Case("maccatalyst", MachO::PLATFORM_MACCATALYST)
+    .Case("macCatalyst", MachO::PLATFORM_MACCATALYST)
     .Default(0);
   if (Platform == 0)
     return Error(PlatformLoc, "unknown platform name");
