@@ -39,7 +39,6 @@ if (NOT DEFINED AMDGPU_TARGET_TRIPLE)
 endif()
 
 option(BUILD_HC_LIB "Build Heterogeneous Compute built-in library (hc)" ON)
-option(ROCM_DEVICELIB_INCLUDE_TESTS "Build tests" ON)
 
 if (NOT PREPARE_BUILTINS)
   add_subdirectory(utils/prepare-builtins)
@@ -70,12 +69,6 @@ if(AMDGCN_TARGETS_LIB_DEPS)
 endif()
 
 include(Packages.cmake)
-
-if(ROCM_DEVICELIB_INCLUDE_TESTS)
-  enable_testing()
-  add_subdirectory(test/opencl)
-  add_subdirectory(test/opencl_conformance)
-endif()
 
 ## CPack standard variables
 set ( CPACK_PACKAGE_NAME "rocm-device-libs" )
