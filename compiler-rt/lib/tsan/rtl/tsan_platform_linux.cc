@@ -373,9 +373,7 @@ int ExtractRecvmsgFDs(void *msgp, int *fds, int nfd) {
 // Reverse operation of libc stack pointer mangling
 static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 #if defined(__x86_64__)
-# if SANITIZER_FREEBSD || SANITIZER_NETBSD
-  return mangled_sp;
-# else  // Linux
+# if SANITIZER_LINUX
   // Reverse of:
   //   xor  %fs:0x30, %rsi
   //   rol  $0x11, %rsi
@@ -385,6 +383,8 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
       : "=r" (sp)
       : "0" (mangled_sp));
   return sp;
+# else
+  return mangled_sp;
 # endif
 #elif defined(__aarch64__)
 # if SANITIZER_LINUX
@@ -394,11 +394,11 @@ static uptr UnmangleLongJmpSp(uptr mangled_sp) {
 # endif
 #elif defined(__powerpc64__)
   // Reverse of:
-  //  ld   r4, -28696(r13)
-  //  xor  r4, r3, r4
-  uptr xor_guard;
-  asm("ld  %0, -28696(%%r13) \n" : "=r" (xor_guard));
-  return mangled_sp ^ xor_guard;
+  //   ld   r4, -28696(r13)
+  //   xor  r4, r3, r4
+  uptr xor_key;
+  asm("ld  %0, -28696(%%r13)" : "=r" (xor_key));
+  return mangled_sp ^ xor_key;
 #elif defined(__mips__)
   return mangled_sp;
 #else

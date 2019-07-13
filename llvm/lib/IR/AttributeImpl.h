@@ -179,9 +179,9 @@ class AttributeSetNode final
       private TrailingObjects<AttributeSetNode, Attribute> {
   friend TrailingObjects;
 
-  /// Bitset with a bit for each available attribute Attribute::AttrKind.
-  uint64_t AvailableAttrs;
   unsigned NumAttrs; ///< Number of attributes in this node.
+  /// Bitset with a bit for each available attribute Attribute::AttrKind.
+  uint8_t AvailableAttrs[12] = {};
 
   AttributeSetNode(ArrayRef<Attribute> Attrs);
 
@@ -200,7 +200,7 @@ public:
   unsigned getNumAttributes() const { return NumAttrs; }
 
   bool hasAttribute(Attribute::AttrKind Kind) const {
-    return AvailableAttrs & ((uint64_t)1) << Kind;
+    return AvailableAttrs[Kind / 8] & ((uint64_t)1) << (Kind % 8);
   }
   bool hasAttribute(StringRef Kind) const;
   bool hasAttributes() const { return NumAttrs != 0; }
@@ -244,10 +244,10 @@ class AttributeListImpl final
   friend TrailingObjects;
 
 private:
-  /// Bitset with a bit for each available attribute Attribute::AttrKind.
-  uint64_t AvailableFunctionAttrs;
   LLVMContext &Context;
   unsigned NumAttrSets; ///< Number of entries in this set.
+  /// Bitset with a bit for each available attribute Attribute::AttrKind.
+  uint8_t AvailableFunctionAttrs[12] = {};
 
   // Helper fn for TrailingObjects class.
   size_t numTrailingObjects(OverloadToken<AttributeSet>) { return NumAttrSets; }
@@ -267,7 +267,7 @@ public:
   /// Return true if the AttributeSet or the FunctionIndex has an
   /// enum attribute of the given kind.
   bool hasFnAttribute(Attribute::AttrKind Kind) const {
-    return AvailableFunctionAttrs & ((uint64_t)1) << Kind;
+    return AvailableFunctionAttrs[Kind / 8] & ((uint64_t)1) << (Kind % 8);
   }
 
   using iterator = const AttributeSet *;

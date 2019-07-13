@@ -48,6 +48,9 @@ class SystemZTernaryConv<string name, LLVMType result, LLVMType arg>
   : GCCBuiltin<"__builtin_s390_" ## name>,
     Intrinsic<[result], [arg, arg, result], [IntrNoMem]>;
 
+class SystemZTernaryConvCC<LLVMType result, LLVMType arg>
+  : Intrinsic<[result, llvm_i32_ty], [arg, arg, result], [IntrNoMem]>;
+
 class SystemZTernary<string name, LLVMType type>
   : SystemZTernaryConv<name, type, type>;
 
@@ -415,6 +418,24 @@ let TargetPrefix = "s390" in {
   def int_s390_vstrl : GCCBuiltin<"__builtin_s390_vstrl">,
                        Intrinsic<[], [llvm_v16i8_ty, llvm_i32_ty, llvm_ptr_ty],
                                  [IntrArgMemOnly, IntrWriteMem]>;
+
+  // Instructions from the Vector Enhancements Facility 2
+  def int_s390_vsld : GCCBuiltin<"__builtin_s390_vsld">,
+                      Intrinsic<[llvm_v16i8_ty],
+                                [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
+                                [IntrNoMem, ImmArg<2>]>;
+
+  def int_s390_vsrd : GCCBuiltin<"__builtin_s390_vsrd">,
+                      Intrinsic<[llvm_v16i8_ty],
+                                [llvm_v16i8_ty, llvm_v16i8_ty, llvm_i32_ty],
+                                [IntrNoMem, ImmArg<2>]>;
+
+  def int_s390_vstrsb : SystemZTernaryConvCC<llvm_v16i8_ty, llvm_v16i8_ty>;
+  def int_s390_vstrsh : SystemZTernaryConvCC<llvm_v16i8_ty, llvm_v8i16_ty>;
+  def int_s390_vstrsf : SystemZTernaryConvCC<llvm_v16i8_ty, llvm_v4i32_ty>;
+  def int_s390_vstrszb : SystemZTernaryConvCC<llvm_v16i8_ty, llvm_v16i8_ty>;
+  def int_s390_vstrszh : SystemZTernaryConvCC<llvm_v16i8_ty, llvm_v8i16_ty>;
+  def int_s390_vstrszf : SystemZTernaryConvCC<llvm_v16i8_ty, llvm_v4i32_ty>;
 }
 
 //===----------------------------------------------------------------------===//

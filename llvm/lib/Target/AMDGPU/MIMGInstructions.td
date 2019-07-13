@@ -80,9 +80,9 @@ def getMIMGDimInfoByAsmSuffix : SearchIndex {
   let Key = ["AsmSuffix"];
 }
 
-class mimg <bits<7> si_gfx10, bits<7> vi = si_gfx10> {
-  field bits<7> SI_GFX10 = si_gfx10;
-  field bits<7> VI = vi;
+class mimg <bits<8> si_gfx10, bits<8> vi = si_gfx10> {
+  field bits<8> SI_GFX10 = si_gfx10;
+  field bits<8> VI = vi;
 }
 
 class MIMGLZMapping<MIMGBaseOpcode l, MIMGBaseOpcode lz> {
@@ -117,7 +117,7 @@ def MIMGMIPMappingTable : GenericTable {
   let PrimaryKeyName = "getMIMGMIPMappingInfo";
 }
 
-class MIMG <dag outs, string dns = "">
+class MIMG_Base <dag outs, string dns = "">
   : InstSI <outs, (ins), "", []> {
 
   let VM_CNT = 1;
@@ -126,15 +126,20 @@ class MIMG <dag outs, string dns = "">
   let Uses = [EXEC];
   let mayLoad = 1;
   let mayStore = 0;
-  let hasPostISelHook = 1;
   let SchedRW = [WriteVMEM];
   let UseNamedOperandTable = 1;
   let hasSideEffects = 0; // XXX ????
 
   let DecoderNamespace = dns;
   let isAsmParserOnly = !if(!eq(dns,""), 1, 0);
-  let AsmMatchConverter = "cvtMIMG";
   let usesCustomInserter = 1;
+}
+
+class MIMG <dag outs, string dns = "">
+  : MIMG_Base <outs, dns> {
+
+  let hasPostISelHook = 1;
+  let AsmMatchConverter = "cvtMIMG";
 
   Instruction Opcode = !cast<Instruction>(NAME);
   MIMGBaseOpcode BaseOpcode;
@@ -175,7 +180,7 @@ class MIMGNSAHelper<int num_addrs> {
 }
 
 // Base class of all pre-gfx10 MIMG instructions.
-class MIMG_gfx6789<bits<7> op, dag outs, string dns = "">
+class MIMG_gfx6789<bits<8> op, dag outs, string dns = "">
   : MIMG<outs, dns>, MIMGe_gfx6789<op> {
   let SubtargetPredicate = isGFX6GFX7GFX8GFX9;
   let AssemblerPredicates = [isGFX6GFX7GFX8GFX9];
@@ -214,7 +219,7 @@ class MIMG_nsa_gfx10<int op, dag outs, int num_addrs, string dns="">
   let nsa = nsah.NSA;
 }
 
-class MIMG_NoSampler_Helper <bits<7> op, string asm,
+class MIMG_NoSampler_Helper <bits<8> op, string asm,
                              RegisterClass dst_rc,
                              RegisterClass addr_rc,
                              string dns="">
@@ -252,7 +257,7 @@ class MIMG_NoSampler_nsa_gfx10<int op, string opcode,
                     #!if(BaseOpcode.HasD16, "$d16", "");
 }
 
-multiclass MIMG_NoSampler_Src_Helper <bits<7> op, string asm,
+multiclass MIMG_NoSampler_Src_Helper <bits<8> op, string asm,
                                              RegisterClass dst_rc,
                                              bit enableDisasm> {
   let ssamp = 0 in {
@@ -284,9 +289,9 @@ multiclass MIMG_NoSampler_Src_Helper <bits<7> op, string asm,
   }
 }
 
-multiclass MIMG_NoSampler <bits<7> op, string asm, bit has_d16, bit mip = 0,
+multiclass MIMG_NoSampler <bits<8> op, string asm, bit has_d16, bit mip = 0,
                            bit isResInfo = 0> {
-  def "" : MIMGBaseOpcode {
+  def "" : MIMGBaseOpcode, PredicateControl {
     let Coordinates = !if(isResInfo, 0, 1);
     let LodOrClampOrMip = mip;
     let HasD16 = has_d16;
@@ -307,7 +312,7 @@ multiclass MIMG_NoSampler <bits<7> op, string asm, bit has_d16, bit mip = 0,
   }
 }
 
-class MIMG_Store_Helper <bits<7> op, string asm,
+class MIMG_Store_Helper <bits<8> op, string asm,
                          RegisterClass data_rc,
                          RegisterClass addr_rc,
                          string dns = "">
@@ -376,7 +381,7 @@ multiclass MIMG_Store_Addr_Helper <int op, string asm,
   }
 }
 
-multiclass MIMG_Store <bits<7> op, string asm, bit has_d16, bit mip = 0> {
+multiclass MIMG_Store <bits<8> op, string asm, bit has_d16, bit mip = 0> {
   def "" : MIMGBaseOpcode {
     let Store = 1;
     let LodOrClampOrMip = mip;
@@ -395,7 +400,7 @@ multiclass MIMG_Store <bits<7> op, string asm, bit has_d16, bit mip = 0> {
   }
 }
 
-class MIMG_Atomic_gfx6789_base <bits<7> op, string asm, RegisterClass data_rc,
+class MIMG_Atomic_gfx6789_base <bits<8> op, string asm, RegisterClass data_rc,
                                 RegisterClass addr_rc, string dns="">
   : MIMG_gfx6789 <op, (outs data_rc:$vdst), dns> {
   let Constraints = "$vdst = $vdata";
@@ -500,7 +505,7 @@ multiclass MIMG_Atomic <mimg op, string asm, bit isCmpSwap = 0> { // 64-bit atom
   }
 }
 
-class MIMG_Sampler_Helper <bits<7> op, string asm, RegisterClass dst_rc,
+class MIMG_Sampler_Helper <bits<8> op, string asm, RegisterClass dst_rc,
                            RegisterClass src_rc, string dns="">
   : MIMG_gfx6789 <op, (outs dst_rc:$vdata), dns> {
   let InOperandList = !con((ins src_rc:$vaddr, SReg_256:$srsrc, SReg_128:$ssamp,
@@ -609,7 +614,7 @@ class MIMG_Sampler_AddrSizes<AMDGPUSampleVariant sample> {
                                   lhs))));
 }
 
-multiclass MIMG_Sampler_Src_Helper <bits<7> op, string asm,
+multiclass MIMG_Sampler_Src_Helper <bits<8> op, string asm,
                                     AMDGPUSampleVariant sample, RegisterClass dst_rc,
                                     bit enableDisasm = 0> {
   foreach addr = MIMG_Sampler_AddrSizes<sample>.MachineInstrs in {
@@ -640,7 +645,7 @@ class MIMG_Sampler_BaseOpcode<AMDGPUSampleVariant sample>
   let LodOrClampOrMip = !ne(sample.LodOrClamp, "");
 }
 
-multiclass MIMG_Sampler <bits<7> op, AMDGPUSampleVariant sample, bit wqm = 0,
+multiclass MIMG_Sampler <bits<8> op, AMDGPUSampleVariant sample, bit wqm = 0,
                          bit isGetLod = 0,
                          string asm = "image_sample"#sample.LowerCaseMod> {
   def "" : MIMG_Sampler_BaseOpcode<sample> {
@@ -662,10 +667,10 @@ multiclass MIMG_Sampler <bits<7> op, AMDGPUSampleVariant sample, bit wqm = 0,
   }
 }
 
-multiclass MIMG_Sampler_WQM <bits<7> op, AMDGPUSampleVariant sample>
+multiclass MIMG_Sampler_WQM <bits<8> op, AMDGPUSampleVariant sample>
     : MIMG_Sampler<op, sample, 1>;
 
-multiclass MIMG_Gather <bits<7> op, AMDGPUSampleVariant sample, bit wqm = 0,
+multiclass MIMG_Gather <bits<8> op, AMDGPUSampleVariant sample, bit wqm = 0,
                         string asm = "image_gather4"#sample.LowerCaseMod> {
   def "" : MIMG_Sampler_BaseOpcode<sample> {
     let HasD16 = 1;
@@ -683,7 +688,7 @@ multiclass MIMG_Gather <bits<7> op, AMDGPUSampleVariant sample, bit wqm = 0,
   }
 }
 
-multiclass MIMG_Gather_WQM <bits<7> op, AMDGPUSampleVariant sample>
+multiclass MIMG_Gather_WQM <bits<8> op, AMDGPUSampleVariant sample>
     : MIMG_Gather<op, sample, 1>;
 
 //===----------------------------------------------------------------------===//

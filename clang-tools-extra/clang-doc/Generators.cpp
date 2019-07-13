@@ -57,19 +57,6 @@ std::string getTagType(TagTypeKind AS) {
   llvm_unreachable("Unknown TagTypeKind");
 }
 
-// Generates a comma-separated list of Refs
-// Used to display the parents of a record
-std::string genReferenceList(const llvm::SmallVectorImpl<Reference> &Refs) {
-  std::string Buffer;
-  llvm::raw_string_ostream Stream(Buffer);
-  for (const auto &R : Refs) {
-    if (&R != Refs.begin())
-      Stream << ", ";
-    Stream << R.Name;
-  }
-  return Stream.str();
-}
-
 // This anchor is used to force the linker to link in the generated object file
 // and thus register the generators.
 extern volatile int YAMLGeneratorAnchorSource;

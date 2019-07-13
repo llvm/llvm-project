@@ -116,6 +116,8 @@ llvm::DWARFContext &DWARFContext::GetAsLLVM() {
 
       llvm::StringRef data = llvm::toStringRef(section_data.GetData());
       llvm::StringRef name = section.GetName().GetStringRef();
+      if (name.startswith("."))
+        name = name.drop_front();
       section_map.try_emplace(
           name, llvm::MemoryBuffer::getMemBuffer(data, name, false));
     };

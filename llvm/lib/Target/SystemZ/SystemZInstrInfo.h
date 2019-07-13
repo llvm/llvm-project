@@ -162,6 +162,8 @@ class SystemZInstrInfo : public SystemZGenInstrInfo {
                        unsigned HighOpcode) const;
   void expandLOCRPseudo(MachineInstr &MI, unsigned LowOpcode,
                         unsigned HighOpcode) const;
+  void expandSELRPseudo(MachineInstr &MI, unsigned LowOpcode,
+                        unsigned HighOpcode, unsigned MixedOpcode) const;
   void expandZExtPseudo(MachineInstr &MI, unsigned LowOpcode,
                         unsigned Size) const;
   void expandLoadStackGuard(MachineInstr *MI) const;

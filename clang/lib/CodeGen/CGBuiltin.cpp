@@ -13070,6 +13070,15 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F, {X, Y, M4Value});
   }
 
+  case SystemZ::BI__builtin_s390_vlbrh:
+  case SystemZ::BI__builtin_s390_vlbrf:
+  case SystemZ::BI__builtin_s390_vlbrg: {
+    llvm::Type *ResultType = ConvertType(E->getType());
+    Value *X = EmitScalarExpr(E->getArg(0));
+    Function *F = CGM.getIntrinsic(Intrinsic::bswap, ResultType);
+    return Builder.CreateCall(F, X);
+  }
+
   // Vector intrinsics that output the post-instruction CC value.
 
 #define INTRINSIC_WITH_CC(NAME) \
@@ -13144,6 +13153,14 @@ Value *CodeGenFunction::EmitSystemZBuiltinExpr(unsigned BuiltinID,
 
   INTRINSIC_WITH_CC(s390_vftcisb);
   INTRINSIC_WITH_CC(s390_vftcidb);
+
+  INTRINSIC_WITH_CC(s390_vstrsb);
+  INTRINSIC_WITH_CC(s390_vstrsh);
+  INTRINSIC_WITH_CC(s390_vstrsf);
+
+  INTRINSIC_WITH_CC(s390_vstrszb);
+  INTRINSIC_WITH_CC(s390_vstrszh);
+  INTRINSIC_WITH_CC(s390_vstrszf);
 
 #undef INTRINSIC_WITH_CC
 

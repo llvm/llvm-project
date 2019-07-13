@@ -1440,6 +1440,13 @@ class DeclContext {
     uint64_t NonTrivialToPrimitiveCopy : 1;
     uint64_t NonTrivialToPrimitiveDestroy : 1;
 
+    /// The following bits indicate whether this is or contains a C union that
+    /// is non-trivial to default-initialize, destruct, or copy. These bits
+    /// imply the associated basic non-triviality predicates declared above.
+    uint64_t HasNonTrivialToPrimitiveDefaultInitializeCUnion : 1;
+    uint64_t HasNonTrivialToPrimitiveDestructCUnion : 1;
+    uint64_t HasNonTrivialToPrimitiveCopyCUnion : 1;
+
     /// Indicates whether this struct is destroyed in the callee.
     uint64_t ParamDestroyedInCallee : 1;
 
@@ -1448,7 +1455,7 @@ class DeclContext {
   };
 
   /// Number of non-inherited bits in RecordDeclBitfields.
-  enum { NumRecordDeclBits = 11 };
+  enum { NumRecordDeclBits = 14 };
 
   /// Stores the bits used by OMPDeclareReductionDecl.
   /// If modified NumOMPDeclareReductionDeclBits and the accessor

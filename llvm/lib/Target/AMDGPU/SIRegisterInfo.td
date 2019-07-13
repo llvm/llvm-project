@@ -757,11 +757,11 @@ def VRegOrLds_32 : RegisterClass<"AMDGPU", [i32, f32, i16, f16, v2i16, v2f16], 3
   let isAllocatable = 0;
 }
 
-def SGPR_1024 : RegisterClass<"AMDGPU", [v32i32], 32, (add SGPR_1024Regs)> {
+def SGPR_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32, (add SGPR_1024Regs)> {
   let AllocationPriority = 19;
 }
 
-def SReg_1024 : RegisterClass<"AMDGPU", [v32i32], 32,
+def SReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32,
   (add SGPR_1024)> {
   let CopyCost = 16;
   let AllocationPriority = 19;
@@ -812,7 +812,7 @@ def VReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 32, (add VGPR_512)> {
   let AllocationPriority = 7;
 }
 
-def VReg_1024 : RegisterClass<"AMDGPU", [v32i32], 32, (add VGPR_1024)> {
+def VReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32, (add VGPR_1024)> {
   let Size = 1024;
   let CopyCost = 32;
   let AllocationPriority = 8;
@@ -840,7 +840,7 @@ def AReg_512 : RegisterClass<"AMDGPU", [v16i32, v16f32], 32, (add AGPR_512)> {
 }
 
 // TODO: add v32f32 value type
-def AReg_1024 : RegisterClass<"AMDGPU", [v32i32], 32, (add AGPR_1024)> {
+def AReg_1024 : RegisterClass<"AMDGPU", [v32i32, v32f32], 32, (add AGPR_1024)> {
   let Size = 1024;
   let CopyCost = 65;
   let AllocationPriority = 8;

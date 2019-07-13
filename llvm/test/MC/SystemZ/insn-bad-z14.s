@@ -34,6 +34,16 @@
 	agh	%r0, -524289
 	agh	%r0, 524288
 
+#CHECK: error: instruction requires: deflate-conversion
+#CHECK: dfltcc	%r2, %r4, %r6
+
+	dfltcc	%r2, %r4, %r6
+
+#CHECK: error: instruction requires: message-security-assist-extension9
+#CHECK: kdsa	%r0, %r2
+
+	kdsa	%r0, %r2
+
 #CHECK: error: invalid register pair
 #CHECK: kma	%r1, %r2, %r4
 #CHECK: error: invalid register pair
@@ -109,6 +119,66 @@
 	msgc	%r0, -524289
 	msgc	%r0, 524288
 
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: mvcrl	0, 0
+
+	mvcrl	0, 0
+
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: ncgrk	%r0, %r0, %r0
+
+	ncgrk	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: ncrk	%r0, %r0, %r0
+
+	ncrk	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: nngrk	%r0, %r0, %r0
+
+	nngrk	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: nnrk	%r0, %r0, %r0
+
+	nnrk	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: nogrk	%r0, %r0, %r0
+
+	nogrk	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: nork	%r0, %r0, %r0
+
+	nork	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: nxgrk	%r0, %r0, %r0
+
+	nxgrk	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: nxrk	%r0, %r0, %r0
+
+	nxrk	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: ocgrk	%r0, %r0, %r0
+
+	ocgrk	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: ocrk	%r0, %r0, %r0
+
+	ocrk	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: popcnt	%r2, %r4, 1
+
+	popcnt	%r2, %r4, 1
+
 #CHECK: error: invalid register pair
 #CHECK: prno	%r1, %r2
 #CHECK: error: invalid register pair
@@ -117,6 +187,30 @@
 	prno	%r1, %r2
 	prno	%r2, %r1
 
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: selgr	%r0, %r0, %r0, 0
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: selgre	%r0, %r0, %r0
+
+	selgr	%r0, %r0, %r0, 0
+	selgre	%r0, %r0, %r0
+
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: selfhr  %r0, %r0, %r0, 0
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: selfhre  %r0, %r0, %r0
+
+	selfhr  %r0, %r0, %r0, 0
+	selfhre %r0, %r0, %r0
+
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: selr	%r0, %r0, %r0, 0
+#CHECK: error: instruction requires: miscellaneous-extensions-3
+#CHECK: selre	%r0, %r0, %r0
+
+	selr	%r0, %r0, %r0, 0
+	selre	%r0, %r0, %r0
+
 #CHECK: error: invalid operand
 #CHECK: sgh	%r0, -524289
 #CHECK: error: invalid operand
@@ -124,6 +218,11 @@
 
 	sgh	%r0, -524289
 	sgh	%r0, 524288
+
+#CHECK: error: instruction requires: enhanced-sort
+#CHECK: sortl	%r2, %r4
+
+	sortl	%r2, %r4
 
 #CHECK: error: invalid operand
 #CHECK: stgsc	%r0, -524289
@@ -147,6 +246,41 @@
 	vap	%v0, %v0, %v0, -1, 0
 	vap	%v0, %v0, %v0, 256, 0
 
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vcefb	%v0, %v0, 0, 0
+
+	vcefb	%v0, %v0, 0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vcelfb	%v0, %v0, 0, 0
+
+	vcelfb	%v0, %v0, 0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vcfeb	%v0, %v0, 0, 0
+
+	vcfeb	%v0, %v0, 0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vcfpl	%v0, %v0, 0, 0, 0
+
+	vcfpl	%v0, %v0, 0, 0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vcfps	%v0, %v0, 0, 0, 0
+
+	vcfps	%v0, %v0, 0, 0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vclfeb	%v0, %v0, 0, 0
+
+	vclfeb	%v0, %v0, 0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vclfp	%v0, %v0, 0, 0, 0
+
+	vclfp	%v0, %v0, 0, 0, 0
+
 #CHECK: error: invalid operand
 #CHECK: vcp	%v0, %v0, -1
 #CHECK: error: invalid operand
@@ -155,21 +289,32 @@
 	vcp	%v0, %v0, -1
 	vcp	%v0, %v0, 16
 
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vcsfp	%v0, %v0, 0, 0, 0
+
+	vcsfp	%v0, %v0, 0, 0, 0
+
 #CHECK: error: invalid operand
 #CHECK: vcvb	%r0, %v0, -1
 #CHECK: error: invalid operand
 #CHECK: vcvb	%r0, %v0, 16
+#CHECK: error: instruction requires: vector-packed-decimal-enhancement
+#CHECK: vcvb	%r0, %v0, 0, 1
 
 	vcvb	%r0, %v0, -1
 	vcvb	%r0, %v0, 16
+	vcvb	%r0, %v0, 0, 1
 
 #CHECK: error: invalid operand
 #CHECK: vcvbg	%r0, %v0, -1
 #CHECK: error: invalid operand
 #CHECK: vcvbg	%r0, %v0, 16
+#CHECK: error: instruction requires: vector-packed-decimal-enhancement
+#CHECK: vcvbg	%r0, %v0, 0, 1
 
 	vcvbg	%r0, %v0, -1
 	vcvbg	%r0, %v0, 16
+	vcvbg	%r0, %v0, 0, 1
 
 #CHECK: error: invalid operand
 #CHECK: vcvd	%r0, %v0, 0, -1
@@ -408,6 +553,79 @@
 	vllezlf	%v0, 4096
 	vllezlf	%v0, 0(%v1,%r2)
 
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlbr	%v0, 0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlbrf	%v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlbrg	%v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlbrh	%v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlbrq	%v0, 0
+
+	vlbr	%v0, 0, 0
+	vlbrf	%v0, 0
+	vlbrg	%v0, 0
+	vlbrh	%v0, 0
+	vlbrq	%v0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlbrrep  %v0, 0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlbrrepf %v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlbrrepg %v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlbrreph %v0, 0
+
+	vlbrrep  %v0, 0, 0
+	vlbrrepf %v0, 0
+	vlbrrepg %v0, 0
+	vlbrreph %v0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlebrf	%v0, 0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlebrg	%v0, 0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlebrh	%v0, 0, 0
+
+	vlebrf	%v0, 0, 0
+	vlebrg	%v0, 0, 0
+	vlebrh	%v0, 0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vler	%v0, 0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlerf	%v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlerg	%v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vlerh	%v0, 0
+
+	vler	%v0, 0, 0
+	vlerf	%v0, 0
+	vlerg	%v0, 0
+	vlerh	%v0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vllebrz  %v0, 0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vllebrze %v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vllebrzf %v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vllebrzg %v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vllebrzh %v0, 0
+
+	vllebrz  %v0, 0, 0
+	vllebrze %v0, 0
+	vllebrzf %v0, 0
+	vllebrzg %v0, 0
+	vllebrzh %v0, 0
+
 #CHECK: error: invalid operand
 #CHECK: vlrl	%v0, 0, -1
 #CHECK: error: invalid operand
@@ -551,6 +769,11 @@
 	vsdp	%v0, %v0, %v0, -1, 0
 	vsdp	%v0, %v0, %v0, 256, 0
 
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vsld	%v0, %v0, %v0, 0
+
+	vsld	%v0, %v0, %v0, 0
+
 #CHECK: error: invalid operand
 #CHECK: vsp	%v0, %v0, %v0, 0, -1
 #CHECK: error: invalid operand
@@ -564,6 +787,11 @@
 	vsp	%v0, %v0, %v0, 0, 16
 	vsp	%v0, %v0, %v0, -1, 0
 	vsp	%v0, %v0, %v0, 256, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vsrd	%v0, %v0, %v0, 0
+
+	vsrd	%v0, %v0, %v0, 0
 
 #CHECK: error: invalid operand
 #CHECK: vsrp	%v0, %v0, 0, 0, -1
@@ -584,6 +812,48 @@
 	vsrp	%v0, %v0, 0, 256, 0
 	vsrp	%v0, %v0, -1, 0, 0
 	vsrp	%v0, %v0, 256, 0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstbr	%v0, 0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstbrf	%v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstbrg	%v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstbrh	%v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstbrq	%v0, 0
+
+	vstbr	%v0, 0, 0
+	vstbrf	%v0, 0
+	vstbrg	%v0, 0
+	vstbrh	%v0, 0
+	vstbrq	%v0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstebrf	%v0, 0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstebrg	%v0, 0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstebrh	%v0, 0, 0
+
+	vstebrf	%v0, 0, 0
+	vstebrg	%v0, 0, 0
+	vstebrh	%v0, 0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vster	%v0, 0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vsterf	%v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vsterg	%v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vsterh	%v0, 0
+
+	vster	%v0, 0, 0
+	vsterf	%v0, 0
+	vsterg	%v0, 0
+	vsterh	%v0, 0
 
 #CHECK: error: invalid operand
 #CHECK: vstrl	%v0, 0, -1
@@ -613,6 +883,29 @@
 	vstrlr	%v0, %r0, 4096
 	vstrlr	%v0, %r0, 0(%r0)
 
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstrs	%v0, %v0, %v0, %v0, 0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstrsb  %v0, %v0, %v0, %v0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstrsf  %v0, %v0, %v0, %v0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstrsh  %v0, %v0, %v0, %v0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstrszb %v0, %v0, %v0, %v0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstrszf %v0, %v0, %v0, %v0
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: vstrszh %v0, %v0, %v0, %v0
+
+        vstrs	%v0, %v0, %v0, %v0, 0
+        vstrsb  %v0, %v0, %v0, %v0
+        vstrsf  %v0, %v0, %v0, %v0
+        vstrsh  %v0, %v0, %v0, %v0
+        vstrszb %v0, %v0, %v0, %v0
+        vstrszf %v0, %v0, %v0, %v0
+        vstrszh %v0, %v0, %v0, %v0
+
 #CHECK: error: invalid operand
 #CHECK: vupkz	%v0, 0, -1
 #CHECK: error: invalid operand
@@ -629,6 +922,26 @@
 	vupkz	%v0, -1, 0
 	vupkz	%v0, 4096, 0
 	vupkz	%v0, 0(%r0), 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: wcefb	%v0, %v0, 0, 0
+
+	wcefb	%v0, %v0, 0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: wcelfb	%v0, %v0, 0, 0
+
+	wcelfb	%v0, %v0, 0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: wcfeb	%v0, %v0, 0, 0
+
+	wcfeb	%v0, %v0, 0, 0
+
+#CHECK: error: instruction requires: vector-enhancements-2
+#CHECK: wclfeb	%v0, %v0, 0, 0
+
+	wclfeb	%v0, %v0, 0, 0
 
 #CHECK: error: invalid operand
 #CHECK: wfisb	%v0, %v0, 0, -1

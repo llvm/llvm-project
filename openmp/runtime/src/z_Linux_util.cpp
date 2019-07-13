@@ -1264,11 +1264,9 @@ static void __kmp_atfork_child(void) {
   // over-subscription after the fork and this can improve things for
   // scripting languages that use OpenMP inside process-parallel code).
   __kmp_affinity_type = affinity_none;
-#if OMP_40_ENABLED
   if (__kmp_nested_proc_bind.bind_types != NULL) {
     __kmp_nested_proc_bind.bind_types[0] = proc_bind_false;
   }
-#endif // OMP_40_ENABLED
 #endif // KMP_AFFINITY_SUPPORTED
 
   __kmp_init_runtime = FALSE;
@@ -1438,7 +1436,6 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
   /* TODO: shouldn't this use release semantics to ensure that
      __kmp_suspend_initialize_thread gets called first? */
   old_spin = flag->set_sleeping();
-#if OMP_50_ENABLED
   if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
       __kmp_pause_status != kmp_soft_paused) {
     flag->unset_sleeping();
@@ -1446,7 +1443,6 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
     KMP_CHECK_SYSFAIL("pthread_mutex_unlock", status);
     return;
   }
-#endif
   KF_TRACE(5, ("__kmp_suspend_template: T#%d set sleep bit for spin(%p)==%x,"
                " was %x\n",
                th_gtid, flag->get(), flag->load(), old_spin));

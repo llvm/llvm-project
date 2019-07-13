@@ -3019,8 +3019,6 @@ static void __kmp_affinity_process_proclist(kmp_affin_mask_t **out_masks,
   KMP_CPU_FREE(sumMask);
 }
 
-#if OMP_40_ENABLED
-
 /*-----------------------------------------------------------------------------
 Re-parse the OMP_PLACES proc id list, forming the newMasks for the different
 places.  Again, Here is the grammar:
@@ -3041,7 +3039,6 @@ signed := num
 signed := + signed
 signed := - signed
 -----------------------------------------------------------------------------*/
-
 static void __kmp_process_subplace_list(const char **scan,
                                         kmp_affin_mask_t *osId2Mask,
                                         int maxOsId, kmp_affin_mask_t *tempMask,
@@ -3359,8 +3356,6 @@ void __kmp_affinity_process_placelist(kmp_affin_mask_t **out_masks,
   }
   KMP_CPU_INTERNAL_FREE_ARRAY(newMasks, numNewMasks);
 }
-
-#endif /* OMP_40_ENABLED */
 
 #undef ADD_MASK
 #undef ADD_MASK_OSID
@@ -4486,21 +4481,15 @@ static void __kmp_aux_affinity_initialize(void) {
 
   case affinity_explicit:
     KMP_DEBUG_ASSERT(__kmp_affinity_proclist != NULL);
-#if OMP_40_ENABLED
-    if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_intel)
-#endif
-    {
+    if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_intel) {
       __kmp_affinity_process_proclist(
           &__kmp_affinity_masks, &__kmp_affinity_num_masks,
           __kmp_affinity_proclist, osId2Mask, maxIndex);
-    }
-#if OMP_40_ENABLED
-    else {
+    } else {
       __kmp_affinity_process_placelist(
           &__kmp_affinity_masks, &__kmp_affinity_num_masks,
           __kmp_affinity_proclist, osId2Mask, maxIndex);
     }
-#endif
     if (__kmp_affinity_num_masks == 0) {
       if (__kmp_affinity_verbose ||
           (__kmp_affinity_warnings && (__kmp_affinity_type != affinity_none))) {
@@ -4616,13 +4605,11 @@ static void __kmp_aux_affinity_initialize(void) {
       __kmp_affinity_num_masks = numUnique;
     }
 
-#if OMP_40_ENABLED
     if ((__kmp_nested_proc_bind.bind_types[0] != proc_bind_intel) &&
         (__kmp_affinity_num_places > 0) &&
         ((unsigned)__kmp_affinity_num_places < __kmp_affinity_num_masks)) {
       __kmp_affinity_num_masks = __kmp_affinity_num_places;
     }
-#endif
 
     KMP_CPU_ALLOC_ARRAY(__kmp_affinity_masks, __kmp_affinity_num_masks);
 
@@ -4692,9 +4679,7 @@ void __kmp_affinity_uninitialize(void) {
   }
   __kmp_affinity_num_masks = 0;
   __kmp_affinity_type = affinity_default;
-#if OMP_40_ENABLED
   __kmp_affinity_num_places = 0;
-#endif
   if (__kmp_affinity_proclist != NULL) {
     __kmp_free(__kmp_affinity_proclist);
     __kmp_affinity_proclist = NULL;
@@ -4735,10 +4720,7 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
   kmp_affin_mask_t *mask;
   int i;
 
-#if OMP_40_ENABLED
-  if (KMP_AFFINITY_NON_PROC_BIND)
-#endif
-  {
+  if (KMP_AFFINITY_NON_PROC_BIND) {
     if ((__kmp_affinity_type == affinity_none) ||
         (__kmp_affinity_type == affinity_balanced)) {
 #if KMP_GROUP_AFFINITY
@@ -4754,9 +4736,7 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
       i = (gtid + __kmp_affinity_offset) % __kmp_affinity_num_masks;
       mask = KMP_CPU_INDEX(__kmp_affinity_masks, i);
     }
-  }
-#if OMP_40_ENABLED
-  else {
+  } else {
     if ((!isa_root) ||
         (__kmp_nested_proc_bind.bind_types[0] == proc_bind_false)) {
 #if KMP_GROUP_AFFINITY
@@ -4775,9 +4755,7 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
       mask = KMP_CPU_INDEX(__kmp_affinity_masks, i);
     }
   }
-#endif
 
-#if OMP_40_ENABLED
   th->th.th_current_place = i;
   if (isa_root) {
     th->th.th_new_place = i;
@@ -4797,17 +4775,6 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
     KA_TRACE(100, ("__kmp_affinity_set_init_mask: binding T#%d to place %d\n",
                    gtid, i));
   }
-#else
-  if (i == -1) {
-    KA_TRACE(
-        100,
-        ("__kmp_affinity_set_init_mask: binding T#%d to __kmp_affin_fullMask\n",
-         gtid));
-  } else {
-    KA_TRACE(100, ("__kmp_affinity_set_init_mask: binding T#%d to mask %d\n",
-                   gtid, i));
-  }
-#endif /* OMP_40_ENABLED */
 
   KMP_CPU_COPY(th->th.th_affin_mask, mask);
 
@@ -4832,8 +4799,6 @@ void __kmp_affinity_set_init_mask(int gtid, int isa_root) {
 #endif
     __kmp_set_system_affinity(th->th.th_affin_mask, TRUE);
 }
-
-#if OMP_40_ENABLED
 
 void __kmp_affinity_set_place(int gtid) {
   if (!KMP_AFFINITY_CAPABLE()) {
@@ -4874,8 +4839,6 @@ void __kmp_affinity_set_place(int gtid) {
   }
   __kmp_set_system_affinity(th->th.th_affin_mask, TRUE);
 }
-
-#endif /* OMP_40_ENABLED */
 
 int __kmp_aux_set_affinity(void **mask) {
   int gtid;
@@ -4931,7 +4894,6 @@ int __kmp_aux_set_affinity(void **mask) {
     KMP_CPU_COPY(th->th.th_affin_mask, (kmp_affin_mask_t *)(*mask));
   }
 
-#if OMP_40_ENABLED
   th->th.th_current_place = KMP_PLACE_UNDEFINED;
   th->th.th_new_place = KMP_PLACE_UNDEFINED;
   th->th.th_first_place = 0;
@@ -4939,7 +4901,6 @@ int __kmp_aux_set_affinity(void **mask) {
 
   // Turn off 4.0 affinity for the current tread at this parallel level.
   th->th.th_current_task->td_icvs.proc_bind = proc_bind_false;
-#endif
 
   return retval;
 }

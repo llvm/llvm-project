@@ -23,18 +23,8 @@ class WebAssemblyFunctionInfo;
 
 namespace WebAssembly {
 
-bool isArgument(const MachineInstr &MI);
-bool isCopy(const MachineInstr &MI);
-bool isTee(const MachineInstr &MI);
 bool isChild(const MachineInstr &MI, const WebAssemblyFunctionInfo &MFI);
-bool isCallDirect(const MachineInstr &MI);
-bool isCallIndirect(const MachineInstr &MI);
-bool isMarker(const MachineInstr &MI);
 bool mayThrow(const MachineInstr &MI);
-
-/// Returns the operand number of a callee, assuming the argument is a call
-/// instruction.
-unsigned getCalleeOpNo(const MachineInstr &MI);
 
 // Exception-related function names
 extern const char *const ClangCallTerminateFn;

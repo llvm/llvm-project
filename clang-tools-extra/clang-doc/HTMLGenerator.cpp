@@ -18,13 +18,6 @@ using namespace llvm;
 namespace clang {
 namespace doc {
 
-template <typename Derived, typename Base,
-          typename = std::enable_if<std::is_base_of<Derived, Base>::value>>
-static void AppendVector(std::vector<Derived> &&New,
-                         std::vector<Base> &Original) {
-  std::move(New.begin(), New.end(), std::back_inserter(Original));
-}
-
 namespace {
 
 class HTMLTag {
@@ -40,6 +33,7 @@ public:
     TAG_P,
     TAG_UL,
     TAG_LI,
+    TAG_A,
   };
 
   HTMLTag() = default;
@@ -58,15 +52,22 @@ private:
   TagType Value;
 };
 
+enum NodeType {
+  NODE_TEXT,
+  NODE_TAG,
+};
+
 struct HTMLNode {
+  HTMLNode(NodeType Type) : Type(Type) {}
   virtual ~HTMLNode() = default;
 
   virtual void Render(llvm::raw_ostream &OS, int IndentationLevel) = 0;
+  NodeType Type; // Type of node
 };
 
 struct TextNode : public HTMLNode {
-  TextNode(llvm::StringRef Text, bool Indented)
-      : Text(Text), Indented(Indented) {}
+  TextNode(const Twine &Text, bool Indented = true)
+      : HTMLNode(NodeType::NODE_TEXT), Text(Text.str()), Indented(Indented) {}
 
   std::string Text; // Content of node
   bool Indented; // Indicates if an indentation must be rendered before the text
@@ -75,7 +76,8 @@ struct TextNode : public HTMLNode {
 
 struct TagNode : public HTMLNode {
   TagNode(HTMLTag Tag)
-      : Tag(Tag), InlineChildren(Tag.HasInlineChildren()),
+      : HTMLNode(NodeType::NODE_TAG), Tag(Tag),
+        InlineChildren(Tag.HasInlineChildren()),
         SelfClosing(Tag.IsSelfClosing()) {}
   TagNode(HTMLTag Tag, const Twine &Text) : TagNode(Tag) {
     Children.emplace_back(
@@ -121,6 +123,7 @@ bool HTMLTag::IsSelfClosing() const {
   case HTMLTag::TAG_P:
   case HTMLTag::TAG_UL:
   case HTMLTag::TAG_LI:
+  case HTMLTag::TAG_A:
     return false;
   }
   llvm_unreachable("Unhandled HTMLTag::TagType");
@@ -134,6 +137,7 @@ bool HTMLTag::HasInlineChildren() const {
   case HTMLTag::TAG_H2:
   case HTMLTag::TAG_H3:
   case HTMLTag::TAG_LI:
+  case HTMLTag::TAG_A:
     return true;
   case HTMLTag::TAG_DIV:
   case HTMLTag::TAG_P:
@@ -163,6 +167,8 @@ llvm::SmallString<16> HTMLTag::ToString() const {
     return llvm::SmallString<16>("ul");
   case HTMLTag::TAG_LI:
     return llvm::SmallString<16>("li");
+  case HTMLTag::TAG_A:
+    return llvm::SmallString<16>("a");
   }
   llvm_unreachable("Unhandled HTMLTag::TagType");
 }
@@ -185,21 +191,87 @@ void TagNode::Render(llvm::raw_ostream &OS, int IndentationLevel) {
   OS << ">";
   if (!InlineChildren)
     OS << "\n";
-  int ChildrenIndentation = InlineChildren ? 0 : IndentationLevel + 1;
+  bool NewLineRendered = true;
   for (const auto &C : Children) {
+    int ChildrenIndentation =
+        InlineChildren || !NewLineRendered ? 0 : IndentationLevel + 1;
     C->Render(OS, ChildrenIndentation);
-    if (!InlineChildren)
+    if (!InlineChildren && (C == Children.back() ||
+                            (C->Type != NodeType::NODE_TEXT ||
+                             (&C + 1)->get()->Type != NodeType::NODE_TEXT))) {
       OS << "\n";
+      NewLineRendered = true;
+    } else
+      NewLineRendered = false;
   }
   if (!InlineChildren)
     OS.indent(IndentationLevel * 2);
   OS << "</" << Tag.ToString() << ">";
 }
 
+template <typename Derived, typename Base,
+          typename = std::enable_if<std::is_base_of<Derived, Base>::value>>
+static void AppendVector(std::vector<Derived> &&New,
+                         std::vector<Base> &Original) {
+  std::move(New.begin(), New.end(), std::back_inserter(Original));
+}
+
+// Compute the relative path that names the file path relative to the given
+// directory.
+static SmallString<128> computeRelativePath(StringRef FilePath,
+                                            StringRef Directory) {
+  StringRef Path = FilePath;
+  while (!Path.empty()) {
+    if (Directory == Path)
+      return FilePath.substr(Path.size());
+    Path = llvm::sys::path::parent_path(Path);
+  }
+
+  StringRef Dir = Directory;
+  SmallString<128> Result;
+  while (!Dir.empty()) {
+    if (Dir == FilePath)
+      break;
+    Dir = llvm::sys::path::parent_path(Dir);
+    llvm::sys::path::append(Result, "..");
+  }
+  llvm::sys::path::append(Result, FilePath.substr(Dir.size()));
+  return Result;
+}
+
 // HTML generation
 
+static std::unique_ptr<TagNode> genLink(const Twine &Text, const Twine &Link) {
+  auto LinkNode = llvm::make_unique<TagNode>(HTMLTag::TAG_A, Text);
+  LinkNode->Attributes.try_emplace("href", Link.str());
+  return LinkNode;
+}
+
+static std::unique_ptr<HTMLNode> genTypeReference(const Reference &Type,
+                                                  StringRef CurrentDirectory) {
+  if (Type.Path.empty())
+    return llvm::make_unique<TextNode>(Type.Name);
+  llvm::SmallString<128> Path =
+      computeRelativePath(Type.Path, CurrentDirectory);
+  llvm::sys::path::append(Path, Type.Name + ".html");
+  return genLink(Type.Name, Path);
+}
+
+static std::vector<std::unique_ptr<HTMLNode>>
+genReferenceList(const llvm::SmallVectorImpl<Reference> &Refs,
+                 const StringRef &CurrentDirectory) {
+  std::vector<std::unique_ptr<HTMLNode>> Out;
+  for (const auto &R : Refs) {
+    if (&R != Refs.begin())
+      Out.emplace_back(llvm::make_unique<TextNode>(", "));
+    Out.emplace_back(genTypeReference(R, CurrentDirectory));
+  }
+  return Out;
+}
+
 static std::vector<std::unique_ptr<TagNode>> genHTML(const EnumInfo &I);
-static std::vector<std::unique_ptr<TagNode>> genHTML(const FunctionInfo &I);
+static std::vector<std::unique_ptr<TagNode>> genHTML(const FunctionInfo &I,
+                                                     StringRef ParentInfoDir);
 
 static std::vector<std::unique_ptr<TagNode>>
 genEnumsBlock(const std::vector<EnumInfo> &Enums) {
@@ -229,7 +301,8 @@ genEnumMembersBlock(const llvm::SmallVector<SmallString<16>, 4> &Members) {
 }
 
 static std::vector<std::unique_ptr<TagNode>>
-genFunctionsBlock(const std::vector<FunctionInfo> &Functions) {
+genFunctionsBlock(const std::vector<FunctionInfo> &Functions,
+                  StringRef ParentInfoDir) {
   if (Functions.empty())
     return {};
 
@@ -238,14 +311,15 @@ genFunctionsBlock(const std::vector<FunctionInfo> &Functions) {
   Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_DIV));
   auto &DivBody = Out.back();
   for (const auto &F : Functions) {
-    std::vector<std::unique_ptr<TagNode>> Nodes = genHTML(F);
+    std::vector<std::unique_ptr<TagNode>> Nodes = genHTML(F, ParentInfoDir);
     AppendVector(std::move(Nodes), DivBody->Children);
   }
   return Out;
 }
 
 static std::vector<std::unique_ptr<TagNode>>
-genRecordMembersBlock(const llvm::SmallVector<MemberTypeInfo, 4> &Members) {
+genRecordMembersBlock(const llvm::SmallVector<MemberTypeInfo, 4> &Members,
+                      StringRef ParentInfoDir) {
   if (Members.empty())
     return {};
 
@@ -257,8 +331,11 @@ genRecordMembersBlock(const llvm::SmallVector<MemberTypeInfo, 4> &Members) {
     std::string Access = getAccess(M.Access);
     if (Access != "")
       Access = Access + " ";
-    ULBody->Children.emplace_back(llvm::make_unique<TagNode>(
-        HTMLTag::TAG_LI, Access + M.Type.Name + " " + M.Name));
+    auto LIBody = llvm::make_unique<TagNode>(HTMLTag::TAG_LI);
+    LIBody->Children.emplace_back(llvm::make_unique<TextNode>(Access));
+    LIBody->Children.emplace_back(genTypeReference(M.Type, ParentInfoDir));
+    LIBody->Children.emplace_back(llvm::make_unique<TextNode>(" " + M.Name));
+    ULBody->Children.emplace_back(std::move(LIBody));
   }
   return Out;
 }
@@ -346,25 +423,35 @@ static std::vector<std::unique_ptr<TagNode>> genHTML(const EnumInfo &I) {
   return Out;
 }
 
-static std::vector<std::unique_ptr<TagNode>> genHTML(const FunctionInfo &I) {
+static std::vector<std::unique_ptr<TagNode>> genHTML(const FunctionInfo &I,
+                                                     StringRef ParentInfoDir) {
   std::vector<std::unique_ptr<TagNode>> Out;
   Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_H3, I.Name));
 
-  std::string Buffer;
-  llvm::raw_string_ostream Stream(Buffer);
-  for (const auto &P : I.Params) {
-    if (&P != I.Params.begin())
-      Stream << ", ";
-    Stream << P.Type.Name + " " + P.Name;
-  }
+  Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_P));
+  auto &FunctionHeader = Out.back();
 
   std::string Access = getAccess(I.Access);
   if (Access != "")
-    Access = Access + " ";
+    FunctionHeader->Children.emplace_back(
+        llvm::make_unique<TextNode>(Access + " "));
+  if (I.ReturnType.Type.Name != "") {
+    FunctionHeader->Children.emplace_back(
+        genTypeReference(I.ReturnType.Type, ParentInfoDir));
+    FunctionHeader->Children.emplace_back(llvm::make_unique<TextNode>(" "));
+  }
+  FunctionHeader->Children.emplace_back(
+      llvm::make_unique<TextNode>(I.Name + "("));
 
-  Out.emplace_back(llvm::make_unique<TagNode>(
-      HTMLTag::TAG_P, Access + I.ReturnType.Type.Name + " " + I.Name + "(" +
-                          Stream.str() + ")"));
+  for (const auto &P : I.Params) {
+    if (&P != I.Params.begin())
+      FunctionHeader->Children.emplace_back(llvm::make_unique<TextNode>(", "));
+    FunctionHeader->Children.emplace_back(
+        genTypeReference(P.Type, ParentInfoDir));
+    FunctionHeader->Children.emplace_back(
+        llvm::make_unique<TextNode>(" " + P.Name));
+  }
+  FunctionHeader->Children.emplace_back(llvm::make_unique<TextNode>(")"));
 
   if (I.DefLoc)
     Out.emplace_back(writeFileDefinition(I.DefLoc.getValue()));
@@ -398,7 +485,7 @@ static std::vector<std::unique_ptr<TagNode>> genHTML(const NamespaceInfo &I,
   AppendVector(std::move(ChildRecords), Out);
 
   std::vector<std::unique_ptr<TagNode>> ChildFunctions =
-      genFunctionsBlock(I.ChildFunctions);
+      genFunctionsBlock(I.ChildFunctions, I.Path);
   AppendVector(std::move(ChildFunctions), Out);
   std::vector<std::unique_ptr<TagNode>> ChildEnums =
       genEnumsBlock(I.ChildEnums);
@@ -420,29 +507,34 @@ static std::vector<std::unique_ptr<TagNode>> genHTML(const RecordInfo &I,
   if (!I.Description.empty())
     Out.emplace_back(genHTML(I.Description));
 
-  std::string Parents = genReferenceList(I.Parents);
-  std::string VParents = genReferenceList(I.VirtualParents);
+  std::vector<std::unique_ptr<HTMLNode>> Parents =
+      genReferenceList(I.Parents, I.Path);
+  std::vector<std::unique_ptr<HTMLNode>> VParents =
+      genReferenceList(I.VirtualParents, I.Path);
   if (!Parents.empty() || !VParents.empty()) {
+    Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_P));
+    auto &PBody = Out.back();
+    PBody->Children.emplace_back(llvm::make_unique<TextNode>("Inherits from "));
     if (Parents.empty())
-      Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_P,
-                                                  "Inherits from " + VParents));
+      AppendVector(std::move(VParents), PBody->Children);
     else if (VParents.empty())
-      Out.emplace_back(llvm::make_unique<TagNode>(HTMLTag::TAG_P,
-                                                  "Inherits from " + Parents));
-    else
-      Out.emplace_back(llvm::make_unique<TagNode>(
-          HTMLTag::TAG_P, "Inherits from " + Parents + ", " + VParents));
+      AppendVector(std::move(Parents), PBody->Children);
+    else {
+      AppendVector(std::move(Parents), PBody->Children);
+      PBody->Children.emplace_back(llvm::make_unique<TextNode>(", "));
+      AppendVector(std::move(VParents), PBody->Children);
+    }
   }
 
   std::vector<std::unique_ptr<TagNode>> Members =
-      genRecordMembersBlock(I.Members);
+      genRecordMembersBlock(I.Members, I.Path);
   AppendVector(std::move(Members), Out);
   std::vector<std::unique_ptr<TagNode>> ChildRecords =
       genReferencesBlock(I.ChildRecords, "Records");
   AppendVector(std::move(ChildRecords), Out);
 
   std::vector<std::unique_ptr<TagNode>> ChildFunctions =
-      genFunctionsBlock(I.ChildFunctions);
+      genFunctionsBlock(I.ChildFunctions, I.Path);
   AppendVector(std::move(ChildFunctions), Out);
   std::vector<std::unique_ptr<TagNode>> ChildEnums =
       genEnumsBlock(I.ChildEnums);
@@ -492,7 +584,7 @@ llvm::Error HTMLGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS) {
   }
   case InfoType::IT_function: {
     std::vector<std::unique_ptr<TagNode>> Nodes =
-        genHTML(*static_cast<clang::doc::FunctionInfo *>(I));
+        genHTML(*static_cast<clang::doc::FunctionInfo *>(I), "");
     AppendVector(std::move(Nodes), MainContentNode->Children);
     break;
   }

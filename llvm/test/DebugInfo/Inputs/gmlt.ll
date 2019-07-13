@@ -67,6 +67,7 @@
 ; CHECK-NEXT:       DW_AT_high_pc
 ; CHECK-NEXT:       DW_AT_call_file
 ; CHECK-NEXT:       DW_AT_call_line
+; CHECK-NEXT:       DW_AT_call_column
 
 ; Make sure we don't have any other subprograms here (subprograms with no
 ; inlined subroutines are omitted by design to save space)

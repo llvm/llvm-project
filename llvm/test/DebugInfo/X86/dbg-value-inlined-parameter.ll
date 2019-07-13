@@ -30,6 +30,7 @@
 ;CHECK-NEXT: DW_AT_high_pc [DW_FORM_data4]
 ;CHECK-NEXT: DW_AT_call_file
 ;CHECK-NEXT: DW_AT_call_line
+;CHECK-NEXT: DW_AT_call_column
 
 ;CHECK: DW_TAG_formal_parameter
 ;CHECK-NOT: DW_TAG

@@ -35,7 +35,6 @@
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Target/LanguageRuntime.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
@@ -280,51 +279,21 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
       return compiler_type;
   }
 
-  CompilerType class_type;
-  bool is_pointer_type = false;
-
-  if (ClangASTContext::IsObjCObjectPointerType(compiler_type, &class_type)) {
-    is_pointer_type = true;
-  } else if (ClangASTContext::IsObjCObjectOrInterfaceType(compiler_type)) {
-    class_type = compiler_type;
-  } else {
-    return compiler_type;
-  }
-
   m_did_calculate_complete_objc_class_type = true;
 
-  if (class_type) {
-    ConstString class_name(class_type.GetConstTypeName());
+  ProcessSP process_sp(
+      GetUpdatePoint().GetExecutionContextRef().GetProcessSP());
 
-    if (class_name) {
-      ProcessSP process_sp(
-          GetUpdatePoint().GetExecutionContextRef().GetProcessSP());
+  if (!process_sp)
+    return compiler_type;
 
-      if (process_sp) {
-        ObjCLanguageRuntime *objc_language_runtime(
-            ObjCLanguageRuntime::Get(*process_sp));
-
-        if (objc_language_runtime) {
-          TypeSP complete_objc_class_type_sp =
-              objc_language_runtime->LookupInCompleteClassCache(class_name);
-
-          if (complete_objc_class_type_sp) {
-            CompilerType complete_class(
-                complete_objc_class_type_sp->GetFullCompilerType());
-
-            if (complete_class.GetCompleteType()) {
-              if (is_pointer_type) {
-                m_override_type = complete_class.GetPointerType();
-              } else {
-                m_override_type = complete_class;
-              }
-
-              if (m_override_type.IsValid())
-                return m_override_type;
-            }
-          }
-        }
-      }
+  if (auto *runtime =
+          process_sp->GetLanguageRuntime(GetObjectRuntimeLanguage())) {
+    if (llvm::Optional<CompilerType> complete_type =
+            runtime->GetRuntimeType(compiler_type)) {
+      m_override_type = complete_type.getValue();
+      if (m_override_type.IsValid())
+        return m_override_type;
     }
   }
   return compiler_type;

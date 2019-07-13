@@ -370,6 +370,33 @@ TEST(findCompileArgsInJsonDatabase, FindsEntry) {
   EXPECT_EQ("command4", FoundCommand.CommandLine[0]) << ErrorMessage;
 }
 
+TEST(findCompileArgsInJsonDatabase, ParsesCompilerWrappers) {
+  StringRef Directory("//net/dir");
+  StringRef FileName("//net/dir/filename");
+  std::vector<std::pair<std::string, std::string>> Cases = {
+      {"distcc gcc foo.c", "gcc foo.c"},
+      {"gomacc clang++ foo.c", "clang++ foo.c"},
+      {"ccache gcc foo.c", "gcc foo.c"},
+      {"ccache.exe gcc foo.c", "gcc foo.c"},
+      {"ccache g++.exe foo.c", "g++.exe foo.c"},
+      {"ccache distcc gcc foo.c", "gcc foo.c"},
+
+      {"distcc foo.c", "distcc foo.c"},
+      {"distcc -I/foo/bar foo.c", "distcc -I/foo/bar foo.c"},
+  };
+  std::string ErrorMessage;
+
+  for (const auto &Case : Cases) {
+    std::string DB =
+        R"([{"directory":"//net/dir", "file":"//net/dir/foo.c", "command":")" +
+        Case.first + "\"}]";
+    CompileCommand FoundCommand =
+        findCompileArgsInJsonDatabase("//net/dir/foo.c", DB, ErrorMessage);
+    EXPECT_EQ(Case.second, llvm::join(FoundCommand.CommandLine, " "))
+        << Case.first;
+  }
+}
+
 static std::vector<std::string> unescapeJsonCommandLine(StringRef Command) {
   std::string JsonDatabase =
     ("[{\"directory\":\"//net/root\", \"file\":\"test\", \"command\": \"" +

@@ -57,7 +57,7 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
   <div>
     <h3>OneFunction</h3>
     <p>
-       OneFunction()
+      OneFunction()
     </p>
   </div>
   <h2>Enums</h2>
@@ -73,14 +73,17 @@ TEST(HTMLGeneratorTest, emitNamespaceHTML) {
 TEST(HTMLGeneratorTest, emitRecordHTML) {
   RecordInfo I;
   I.Name = "r";
+  I.Path = "X/Y/Z";
   I.Namespace.emplace_back(EmptySID, "A", InfoType::IT_namespace);
 
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.Members.emplace_back("int", "X", AccessSpecifier::AS_private);
+  SmallString<16> PathTo;
+  llvm::sys::path::native("path/to", PathTo);
+  I.Members.emplace_back("int", "X/Y", "X", AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::TTK_Class;
-  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record);
+  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, PathTo);
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
   I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
@@ -95,6 +98,10 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   llvm::raw_string_ostream Actual(Buffer);
   auto Err = G->generateDocForInfo(&I, Actual);
   assert(!Err);
+  SmallString<16> PathToF;
+  llvm::sys::path::native("../../../path/to/F.html", PathToF);
+  SmallString<16> PathToInt;
+  llvm::sys::path::native("../int.html", PathToInt);
   std::string Expected = R"raw(<!DOCTYPE html>
 <meta charset="utf-8"/>
 <title>class r</title>
@@ -104,11 +111,15 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
     Defined at line 10 of test.cpp
   </p>
   <p>
-    Inherits from F, G
+    Inherits from 
+    <a href=")raw" + std::string(PathToF.str()) +
+                         R"raw(">F</a>
+    , G
   </p>
   <h2>Members</h2>
   <ul>
-    <li>private int X</li>
+    <li>private <a href=")raw" +
+                         std::string(PathToInt.str()) + R"raw(">int</a> X</li>
   </ul>
   <h2>Records</h2>
   <ul>
@@ -118,7 +129,7 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   <div>
     <h3>OneFunction</h3>
     <p>
-       OneFunction()
+      OneFunction()
     </p>
   </div>
   <h2>Enums</h2>
@@ -139,8 +150,10 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.ReturnType = TypeInfo(EmptySID, "void", InfoType::IT_default);
-  I.Params.emplace_back("int", "P");
+  SmallString<16> PathTo;
+  llvm::sys::path::native("path/to", PathTo);
+  I.ReturnType = TypeInfo(EmptySID, "float", InfoType::IT_default, PathTo);
+  I.Params.emplace_back("int", PathTo, "P");
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -150,13 +163,22 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
   llvm::raw_string_ostream Actual(Buffer);
   auto Err = G->generateDocForInfo(&I, Actual);
   assert(!Err);
+  SmallString<16> PathToFloat;
+  llvm::sys::path::native("path/to/float.html", PathToFloat);
+  SmallString<16> PathToInt;
+  llvm::sys::path::native("path/to/int.html", PathToInt);
   std::string Expected = R"raw(<!DOCTYPE html>
 <meta charset="utf-8"/>
 <title></title>
 <div>
   <h3>f</h3>
   <p>
-    void f(int P)
+    <a href=")raw" + std::string(PathToFloat.str()) +
+                         R"raw(">float</a>
+     f(
+    <a href=")raw" + std::string(PathToInt.str()) +
+                         R"raw(">int</a>
+     P)
   </p>
   <p>
     Defined at line 10 of test.cpp
@@ -261,8 +283,7 @@ TEST(HTMLGeneratorTest, emitCommentHTML) {
          Brief description.
       </p>
       <p>
-         Extended description that
-         continues onto the next line.
+         Extended description that continues onto the next line.
       </p>
     </div>
   </div>

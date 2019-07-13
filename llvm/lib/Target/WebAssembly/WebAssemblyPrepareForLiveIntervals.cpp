@@ -64,7 +64,7 @@ FunctionPass *llvm::createWebAssemblyPrepareForLiveIntervals() {
 // Test whether the given register has an ARGUMENT def.
 static bool hasArgumentDef(unsigned Reg, const MachineRegisterInfo &MRI) {
   for (const auto &Def : MRI.def_instructions(Reg))
-    if (WebAssembly::isArgument(Def))
+    if (WebAssembly::isArgument(Def.getOpcode()))
       return true;
   return false;
 }
@@ -114,7 +114,7 @@ bool WebAssemblyPrepareForLiveIntervals::runOnMachineFunction(
   // liveness reflects the fact that these really are live-in values.
   for (auto MII = Entry.begin(), MIE = Entry.end(); MII != MIE;) {
     MachineInstr &MI = *MII++;
-    if (WebAssembly::isArgument(MI)) {
+    if (WebAssembly::isArgument(MI.getOpcode())) {
       MI.removeFromParent();
       Entry.insert(Entry.begin(), &MI);
     }

@@ -34,7 +34,7 @@
   .thumb;                                                                      \
   .syntax unified;                                                             \
   DEFINE_COMPILERRT_THUMB_FUNCTION(__sync_fetch_and_##op)                      \
-  push{r4, r5, r6, lr};                                                        \
+  push {r4, r5, r6, lr};                                                       \
   dmb;                                                                         \
   mov r12, r0;                                                                 \
   LOCAL_LABEL(tryatomic_##op) : ldrexd r0, r1, [r12];                          \

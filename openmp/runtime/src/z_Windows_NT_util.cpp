@@ -372,14 +372,12 @@ static inline void __kmp_suspend_template(int th_gtid, C *flag) {
   /* TODO: shouldn't this use release semantics to ensure that
      __kmp_suspend_initialize_thread gets called first? */
   old_spin = flag->set_sleeping();
-#if OMP_50_ENABLED
   if (__kmp_dflt_blocktime == KMP_MAX_BLOCKTIME &&
       __kmp_pause_status != kmp_soft_paused) {
     flag->unset_sleeping();
     __kmp_win32_mutex_unlock(&th->th.th_suspend_mx);
     return;
   }
-#endif
 
   KF_TRACE(5, ("__kmp_suspend_template: T#%d set sleep bit for flag's"
                " loc(%p)==%d\n",

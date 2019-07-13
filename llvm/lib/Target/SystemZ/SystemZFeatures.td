@@ -241,6 +241,51 @@ def Arch12NewFeatures : SystemZFeatureList<[
 
 //===----------------------------------------------------------------------===//
 //
+// New features added in the Thirteenth Edition of the z/Architecture
+//
+//===----------------------------------------------------------------------===//
+
+def FeatureMiscellaneousExtensions3 : SystemZFeature<
+  "miscellaneous-extensions-3", "MiscellaneousExtensions3",
+  "Assume that the miscellaneous-extensions facility 3 is installed"
+>;
+
+def FeatureMessageSecurityAssist9 : SystemZFeature<
+  "message-security-assist-extension9", "MessageSecurityAssist9",
+  "Assume that the message-security-assist extension facility 9 is installed"
+>;
+
+def FeatureVectorEnhancements2 : SystemZFeature<
+  "vector-enhancements-2", "VectorEnhancements2",
+  "Assume that the vector enhancements facility 2 is installed"
+>;
+
+def FeatureVectorPackedDecimalEnhancement : SystemZFeature<
+  "vector-packed-decimal-enhancement", "VectorPackedDecimalEnhancement",
+  "Assume that the vector packed decimal enhancement facility is installed"
+>;
+
+def FeatureEnhancedSort : SystemZFeature<
+  "enhanced-sort", "EnhancedSort",
+  "Assume that the enhanced-sort facility is installed"
+>;
+
+def FeatureDeflateConversion : SystemZFeature<
+  "deflate-conversion", "DeflateConversion",
+  "Assume that the deflate-conversion facility is installed"
+>;
+
+def Arch13NewFeatures : SystemZFeatureList<[
+    FeatureMiscellaneousExtensions3,
+    FeatureMessageSecurityAssist9,
+    FeatureVectorEnhancements2,
+    FeatureVectorPackedDecimalEnhancement,
+    FeatureEnhancedSort,
+    FeatureDeflateConversion
+]>;
+
+//===----------------------------------------------------------------------===//
+//
 // Cumulative supported and unsupported feature sets
 //
 //===----------------------------------------------------------------------===//
@@ -255,9 +300,13 @@ def Arch11SupportedFeatures
   : SystemZFeatureAdd<Arch10SupportedFeatures.List, Arch11NewFeatures.List>;
 def Arch12SupportedFeatures
   : SystemZFeatureAdd<Arch11SupportedFeatures.List, Arch12NewFeatures.List>;
+def Arch13SupportedFeatures
+  : SystemZFeatureAdd<Arch12SupportedFeatures.List, Arch13NewFeatures.List>;
 
-def Arch12UnsupportedFeatures
+def Arch13UnsupportedFeatures
   : SystemZFeatureList<[]>;
+def Arch12UnsupportedFeatures
+  : SystemZFeatureAdd<Arch13UnsupportedFeatures.List, Arch13NewFeatures.List>;
 def Arch11UnsupportedFeatures
   : SystemZFeatureAdd<Arch12UnsupportedFeatures.List, Arch12NewFeatures.List>;
 def Arch10UnsupportedFeatures
