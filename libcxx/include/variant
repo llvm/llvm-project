@@ -1103,7 +1103,11 @@ struct __overload<_Tp, _Types...> : __overload<_Types...> {
 
   template <class _Up>
   auto operator()(_Tp, _Up&& __t) const
+#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
       -> decltype(__test({ _VSTD::forward<_Up>(__t) }));
+#else
+      -> __identity<_Tp>;
+#endif
 };
 
 template <class _Base, class _Tp>

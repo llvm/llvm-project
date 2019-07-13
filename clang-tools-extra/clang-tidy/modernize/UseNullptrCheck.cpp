@@ -242,10 +242,8 @@ public:
           getOutermostMacroName(StartLoc, SM, Context.getLangOpts());
 
       // Check to see if the user wants to replace the macro being expanded.
-      if (std::find(NullMacros.begin(), NullMacros.end(), OutermostMacroName) ==
-          NullMacros.end()) {
+      if (!llvm::is_contained(NullMacros, OutermostMacroName))
         return skipSubTree();
-      }
 
       StartLoc = SM.getFileLoc(StartLoc);
       EndLoc = SM.getFileLoc(EndLoc);
@@ -327,8 +325,7 @@ private:
 
         StringRef Name =
             Lexer::getImmediateMacroName(OldArgLoc, SM, Context.getLangOpts());
-        return std::find(NullMacros.begin(), NullMacros.end(), Name) !=
-               NullMacros.end();
+        return llvm::is_contained(NullMacros, Name);
       }
 
       MacroLoc = SM.getExpansionRange(ArgLoc).getBegin();

@@ -2238,7 +2238,7 @@ bool llvm::removeUnreachableBlocks(Function &F, LazyValueInfo *LVI,
   assert(Reachable.size() < F.size());
   NumRemoved += F.size()-Reachable.size();
 
-  SmallPtrSet<BasicBlock *, 16> DeadBlockSet;
+  SmallSetVector<BasicBlock *, 8> DeadBlockSet;
   for (Function::iterator I = ++F.begin(), E = F.end(); I != E; ++I) {
     auto *BB = &*I;
     if (Reachable.count(BB))

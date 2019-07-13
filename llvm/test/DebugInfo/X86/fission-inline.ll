@@ -70,6 +70,7 @@
 ; CHECK-NOT: {{DW_AT|DW_TAG|NULL}}
 ; CHECK:     DW_AT_call_file
 ; CHECK-NEXT:     DW_AT_call_line {{.*}} (18)
+; CHECK-NEXT:     DW_AT_call_column {{.*}} (0x05)
 ; CHECK-NOT: DW_
 ; CHECK: .debug_info.dwo contents:
 

@@ -1,4 +1,4 @@
-! include/45/omp_lib.f90.var
+! include/omp_lib.f90.var
 
 !
 !//===----------------------------------------------------------------------===//
@@ -26,7 +26,23 @@
         integer, parameter :: kmp_size_t_kind        = c_size_t
         integer, parameter :: kmp_affinity_mask_kind = c_intptr_t
         integer, parameter :: kmp_cancel_kind        = omp_integer_kind
-        integer, parameter :: omp_lock_hint_kind     = omp_integer_kind
+        integer, parameter :: omp_sync_hint_kind     = omp_integer_kind
+        integer, parameter :: omp_lock_hint_kind     = omp_sync_hint_kind
+        integer, parameter :: omp_control_tool_kind  = omp_integer_kind
+        integer, parameter :: omp_control_tool_result_kind = omp_integer_kind
+        integer, parameter :: omp_allocator_handle_kind = c_intptr_t
+        integer, parameter :: omp_memspace_handle_kind = c_intptr_t
+        integer, parameter :: omp_alloctrait_key_kind = omp_integer_kind
+        integer, parameter :: omp_alloctrait_val_kind = c_intptr_t
+
+        type omp_alloctrait
+          integer(kind=omp_alloctrait_key_kind) key
+          integer(kind=omp_alloctrait_val_kind) value
+        end type omp_alloctrait
+
+        integer, parameter :: omp_pause_resource_kind = omp_integer_kind
+        integer, parameter :: omp_depend_kind = c_intptr_t
+        integer, parameter :: omp_event_handle_kind = c_intptr_t
 
       end module omp_lib_kinds
 
@@ -45,7 +61,7 @@
         integer(kind=omp_sched_kind), parameter :: omp_sched_dynamic = 2
         integer(kind=omp_sched_kind), parameter :: omp_sched_guided  = 3
         integer(kind=omp_sched_kind), parameter :: omp_sched_auto    = 4
-
+        integer(kind=omp_sched_kind), parameter :: omp_sched_monotonic = int(Z'80000000', kind=omp_sched_kind)
 
         integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_false = 0
         integer (kind=omp_proc_bind_kind), parameter :: omp_proc_bind_true = 1
@@ -58,14 +74,78 @@
         integer (kind=kmp_cancel_kind), parameter :: kmp_cancel_sections = 3
         integer (kind=kmp_cancel_kind), parameter :: kmp_cancel_taskgroup = 4
 
-        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_none           = 0
-        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_uncontended    = 1
-        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_contended      = 2
-        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_nonspeculative = 4
-        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_speculative    = 8
-        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_hle            = 65536
-        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_rtm            = 131072
-        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_adaptive       = 262144
+        integer (kind=omp_sync_hint_kind), parameter :: omp_sync_hint_none           = 0
+        integer (kind=omp_sync_hint_kind), parameter :: omp_sync_hint_uncontended    = 1
+        integer (kind=omp_sync_hint_kind), parameter :: omp_sync_hint_contended      = 2
+        integer (kind=omp_sync_hint_kind), parameter :: omp_sync_hint_nonspeculative = 4
+        integer (kind=omp_sync_hint_kind), parameter :: omp_sync_hint_speculative    = 8
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_none = omp_sync_hint_none
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_uncontended = omp_sync_hint_uncontended
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_contended = omp_sync_hint_contended
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_nonspeculative = omp_sync_hint_nonspeculative
+        integer (kind=omp_lock_hint_kind), parameter :: omp_lock_hint_speculative = omp_sync_hint_speculative
+        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_hle         = 65536
+        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_rtm         = 131072
+        integer (kind=omp_lock_hint_kind), parameter :: kmp_lock_hint_adaptive    = 262144
+
+        integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_start = 1
+        integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_pause = 2
+        integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_flush = 3
+        integer (kind=omp_control_tool_kind), parameter :: omp_control_tool_end = 4
+
+        integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_notool = -2
+        integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_nocallback = -1
+        integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_success = 0
+        integer (kind=omp_control_tool_result_kind), parameter :: omp_control_tool_ignored = 1
+
+        integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_threadmodel = 1
+        integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_alignment = 2
+        integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_access = 3
+        integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_pool_size = 4
+        integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_fallback = 5
+        integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_fb_data = 6
+        integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_pinned = 7
+        integer (kind=omp_alloctrait_key_kind), parameter :: omp_atk_partition = 8
+
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_false = 0
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_true = 1
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_default = 2
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_contended = 3
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_uncontended = 4
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_sequential = 5
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_private = 6
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_all = 7
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_thread = 8
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_pteam = 9
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_cgroup = 10
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_default_mem_fb = 11
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_null_fb = 12
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_abort_fb = 13
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_allocator_fb = 14
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_environment = 15
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_nearest = 16
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_blocked = 17
+        integer (kind=omp_alloctrait_val_kind), parameter :: omp_atv_interleaved = 18
+
+        integer (kind=omp_allocator_handle_kind), parameter :: omp_null_allocator = 0
+        integer (kind=omp_allocator_handle_kind), parameter :: omp_default_mem_alloc = 1
+        integer (kind=omp_allocator_handle_kind), parameter :: omp_large_cap_mem_alloc = 2
+        integer (kind=omp_allocator_handle_kind), parameter :: omp_const_mem_alloc = 3
+        integer (kind=omp_allocator_handle_kind), parameter :: omp_high_bw_mem_alloc = 4
+        integer (kind=omp_allocator_handle_kind), parameter :: omp_low_lat_mem_alloc = 5
+        integer (kind=omp_allocator_handle_kind), parameter :: omp_cgroup_mem_alloc = 6
+        integer (kind=omp_allocator_handle_kind), parameter :: omp_pteam_mem_alloc = 7
+        integer (kind=omp_allocator_handle_kind), parameter :: omp_thread_mem_alloc = 8
+
+        integer (kind=omp_memspace_handle_kind), parameter :: omp_default_mem_space = 0
+        integer (kind=omp_memspace_handle_kind), parameter :: omp_large_cap_mem_space = 1
+        integer (kind=omp_memspace_handle_kind), parameter :: omp_const_mem_space = 2
+        integer (kind=omp_memspace_handle_kind), parameter :: omp_high_bw_mem_space = 3
+        integer (kind=omp_memspace_handle_kind), parameter :: omp_low_lat_mem_space = 4
+
+        integer (kind=omp_pause_resource_kind), parameter :: omp_pause_resume = 0
+        integer (kind=omp_pause_resource_kind), parameter :: omp_pause_soft = 1
+        integer (kind=omp_pause_resource_kind), parameter :: omp_pause_hard = 2
 
         interface
 
@@ -264,6 +344,34 @@
             integer (kind=omp_integer_kind) omp_get_initial_device
           end function omp_get_initial_device
 
+          function omp_get_device_num() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_get_device_num
+          end function omp_get_device_num
+
+          function omp_pause_resource(kind, device_num) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_pause_resource_kind), value :: kind
+            integer (kind=omp_integer_kind), value :: device_num
+            integer (kind=omp_integer_kind) omp_pause_resource
+          end function omp_pause_resource
+
+          function omp_pause_resource_all(kind) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_pause_resource_kind), value :: kind
+            integer (kind=omp_integer_kind) omp_pause_resource_all
+          end function omp_pause_resource_all
+
+          function omp_get_supported_active_levels() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_get_supported_active_levels
+          end function omp_get_supported_active_levels
+
+          subroutine omp_fulfill_event(event) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_event_handle_kind), value :: event
+          end subroutine omp_fulfill_event
+
           subroutine omp_init_lock(svar) bind(c)
 !DIR$ IF(__INTEL_COMPILER.GE.1400)
 !DIR$ attributes known_intrinsic :: omp_init_lock
@@ -350,6 +458,50 @@
             use omp_lib_kinds
             integer (kind=omp_integer_kind) omp_get_max_task_priority
           end function omp_get_max_task_priority
+
+          function omp_init_allocator(memspace, ntraits, traits)
+            use omp_lib_kinds
+            integer (kind=omp_allocator_handle_kind) omp_init_allocator
+            integer (kind=omp_memspace_handle_kind) :: memspace
+            integer (kind=omp_integer_kind) :: ntraits
+            type(omp_alloctrait), intent(in) :: traits(*)
+          end function omp_init_allocator
+
+          subroutine omp_destroy_allocator(allocator) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_allocator_handle_kind), value :: allocator
+          end subroutine omp_destroy_allocator
+
+          subroutine omp_set_default_allocator(allocator) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_allocator_handle_kind), value :: allocator
+          end subroutine omp_set_default_allocator
+
+          function omp_get_default_allocator() bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_allocator_handle_kind) omp_get_default_allocator
+          end function omp_get_default_allocator
+
+          subroutine omp_set_affinity_format(format)
+            character (len=*) :: format
+          end subroutine omp_set_affinity_format
+
+          function omp_get_affinity_format(buffer)
+            use omp_lib_kinds
+            character (len=*) :: buffer
+            integer (kind=kmp_size_t_kind) :: omp_get_affinity_format
+          end function omp_get_affinity_format
+
+          subroutine omp_display_affinity(format)
+            character (len=*) :: format
+          end subroutine omp_display_affinity
+
+          function omp_capture_affinity(buffer, format)
+            use omp_lib_kinds
+            character (len=*) :: format
+            character (len=*) :: buffer
+            integer (kind=kmp_size_t_kind) :: omp_capture_affinity
+          end function omp_capture_affinity
 
 !         ***
 !         *** kmp_* entry points
@@ -517,6 +669,14 @@
             integer (kind=omp_nest_lock_kind) nvar
             integer (kind=omp_lock_hint_kind), value :: hint
           end subroutine omp_init_nest_lock_with_hint
+
+          function omp_control_tool(command, modifier, arg) bind(c)
+            use omp_lib_kinds
+            integer (kind=omp_integer_kind) omp_control_tool
+            integer (kind=omp_control_tool_kind), value :: command
+            integer (kind=omp_control_tool_kind), value :: modifier
+            integer (kind=kmp_pointer_kind), optional :: arg
+          end function omp_control_tool
 
         end interface
 

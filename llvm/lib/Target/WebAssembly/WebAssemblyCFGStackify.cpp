@@ -894,7 +894,7 @@ bool WebAssemblyCFGStackify::fixUnwindMismatches(MachineFunction &MF) {
 
       // We wrap up the current range when we see a marker even if we haven't
       // finished a BB.
-      if (RangeEnd && WebAssembly::isMarker(MI)) {
+      if (RangeEnd && WebAssembly::isMarker(MI.getOpcode())) {
         NeedAppendixBlock = true;
         // Record the range. nullptr here means the unwind destination is the
         // caller.

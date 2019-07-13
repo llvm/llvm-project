@@ -196,7 +196,11 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString IncludeView="MaybeEllipses" Condition="TypeForDecl == nullptr">(not yet known if parameter pack) </DisplayString>
     <DisplayString IncludeView="MaybeEllipses" Condition="((TemplateTypeParmType *)(((clang::ExtQualsTypeCommonBase *)(((uintptr_t)TypeForDecl->CanonicalType.Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType))->CanTTPTInfo.ParameterPack">...</DisplayString>
     <DisplayString IncludeView="MaybeEllipses" Condition="!((TemplateTypeParmType *)(((clang::ExtQualsTypeCommonBase *)(((uintptr_t)TypeForDecl->CanonicalType.Value.Value) &amp; ~(uintptr_t)((1 &lt;&lt; 4) - 1)))-&gt;BaseType))->CanTTPTInfo.ParameterPack"></DisplayString>
-    <DisplayString>{*this,view(TorC)} {*this,view(MaybeEllipses)}{Name,view(cpp)}</DisplayString> 
+    <DisplayString IncludeView="DefaultArg" Condition="(DefaultArgument.ValueOrInherited.Val.Value&amp;3LL) == 0">{(TypeSourceInfo *)(DefaultArgument.ValueOrInherited.Val.Value&amp;~3LL),view(cpp)}</DisplayString>
+    <DisplayString IncludeView="DefaultArg">{{InheritedInitializer}}</DisplayString>
+    <DisplayString IncludeView="Initializer" Condition="DefaultArgument.ValueOrInherited.Val.Value&amp;~3LL">= {this,view(DefaultArg)na}</DisplayString>
+    <DisplayString IncludeView="Initializer"></DisplayString>
+    <DisplayString>{*this,view(TorC)} {*this,view(MaybeEllipses)}{Name,view(cpp)} {this,view(Initializer)na}</DisplayString> 
   </Type>
   <Type Name="clang::TemplateDecl">
     <DisplayString>template{TemplateParams,na} {*TemplatedDecl};</DisplayString>
@@ -288,7 +292,7 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::SubstTemplateTypeParmType">
-    <DisplayString>{*Replaced,view(cpp)} &lt;= {CanonicalType,view(cpp)}</DisplayString>
+    <DisplayString>{{{*Replaced,view(cpp)} &lt;= {CanonicalType,view(cpp)}}}</DisplayString>
     <Expand>
       <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
       <Item Name="Replaced">*Replaced</Item>
@@ -353,7 +357,7 @@ For later versions of Visual Studio, no setup is required-->
     </Expand>
   </Type>
   <Type Name="clang::InjectedClassNameType">
-    <DisplayString>{InjectedType,view(cpp)}</DisplayString>
+    <DisplayString>{Decl,view(cpp)}</DisplayString>
     <Expand>
       <Item Name="Decl">Decl</Item>
       <Item Name="InjectedType">InjectedType</Item>
@@ -424,11 +428,20 @@ For later versions of Visual Studio, no setup is required-->
       <ExpandedItem>Ty</ExpandedItem>
     </Expand>
   </Type>
-  <Type Name="clang::TemplateArgumentLoc">
-    <DisplayString>{Argument}</DisplayString>
+  <Type Name="clang::TypeLoc">
+    <DisplayString>{(QualType *)&amp;Ty,na}</DisplayString>
     <Expand>
-      <ExpandedItem>Argument</ExpandedItem>
+      <Item Name="Ty">(QualType *)&amp;Ty</Item>
+      <Item Name="Data">Data</Item>
     </Expand>
+  </Type>
+  <Type Name="clang::TypeLocBuilder">
+    <DisplayString Optional="true" Condition="LastTy.Value.Value==0">Not building anything</DisplayString>
+    <DisplayString Optional="true">Building a {LastTy}</DisplayString>
+  </Type>
+  <Type Name="clang::TemplateArgumentLoc">
+    <DisplayString IncludeView="cpp">{Argument,view(cpp)}</DisplayString>
+    <DisplayString>{Argument}</DisplayString>
   </Type>
   <Type Name="clang::TemplateArgument">
     <DisplayString IncludeView="cpp" Condition="Integer.Kind == clang::TemplateArgument::ArgKind::Type">{*(clang::QualType *)&amp;TypeOrValue.V,view(cpp)}</DisplayString>
@@ -459,6 +472,21 @@ For later versions of Visual Studio, no setup is required-->
       <!-- TODO: Other kinds-->
     </Expand>
   </Type>
+  <Type Name="clang::TemplateArgumentListInfo">
+    <DisplayString IncludeView ="elt0" Condition="Arguments.Size == 0"></DisplayString>
+    <DisplayString IncludeView ="elt0">{((TemplateArgumentLoc*)Arguments.BeginX)[0],view(cpp)}{*this,view(elt1)}</DisplayString>
+    <DisplayString IncludeView ="elt1" Condition="Arguments.Size == 1"></DisplayString>
+    <DisplayString IncludeView ="elt1">, {((TemplateArgumentLoc*)Arguments.BeginX)[1],view(cpp)}{*this,view(elt2)}</DisplayString>
+    <DisplayString IncludeView ="elt2" Condition="Arguments.Size == 2"></DisplayString>
+    <DisplayString IncludeView ="elt2">, {((TemplateArgumentLoc*)Arguments.BeginX)[2],view(cpp)}{*this,view(elt3)}</DisplayString>
+    <DisplayString IncludeView ="elt3" Condition="Arguments.Size == 3"></DisplayString>
+    <DisplayString IncludeView ="elt3">, {((TemplateArgumentLoc*)Arguments.BeginX)[3],view(cpp)}{*this,view(elt4)}</DisplayString>
+    <DisplayString IncludeView ="elt4" Condition="Arguments.Size == 4"></DisplayString>
+    <DisplayString IncludeView ="elt4">, ...</DisplayString>
+    <DisplayString Condition="Arguments.Size == 0">empty</DisplayString>
+    <DisplayString Condition="Arguments.Size != 0">&lt;{*this,view(elt0)}&gt;</DisplayString>
+    <DisplayString>Uninitialized</DisplayString>
+  </Type>
   <Type Name="clang::TemplateArgumentList">
     <DisplayString IncludeView="arg0" Condition="NumArguments==0"></DisplayString>
     <DisplayString IncludeView="arg0">{Arguments[0],view(cpp)}{*this,view(arg1)}</DisplayString>
@@ -483,6 +511,17 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString IncludeView="arg2" Condition="Length==2"></DisplayString>
     <DisplayString IncludeView="arg2">, {Data[2],view(cpp)}, ...</DisplayString>
     <DisplayString>&lt;{*this,view(arg0)}&gt;</DisplayString>
+    <Expand>
+      <Item Name="Length">Length</Item>
+      <Synthetic Name="Data">
+        <Expand>
+          <ArrayItems>
+            <Size>Length</Size>
+            <ValuePointer>Data</ValuePointer>
+          </ArrayItems>
+        </Expand>
+      </Synthetic>
+    </Expand>
   </Type>
   <Type Name="clang::MultiLevelTemplateArgumentList">
     <DisplayString IncludeView="level0" Condition="(llvm::ArrayRef&lt;clang::TemplateArgument&gt; *)TemplateArgumentLists.EndX - (llvm::ArrayRef&lt;clang::TemplateArgument&gt; *)TemplateArgumentLists.BeginX==0"></DisplayString>
@@ -558,6 +597,7 @@ For later versions of Visual Studio, no setup is required-->
         <Size>TemplateSpecializationTypeBits.NumArgs</Size>
         <ValuePointer>(clang::TemplateArgument *)(this+1)</ValuePointer>
       </ArrayItems>
+      <ExpandedItem>*(clang::Type *)this, view(cmn)</ExpandedItem>
     </Expand>
   </Type>
   <Type Name="clang::DeducedType">
@@ -745,7 +785,7 @@ For later versions of Visual Studio, no setup is required-->
     <DisplayString>{this,view(retType)nand} {Name,view(cpp)nd}({*this,view(parm0)nd})</DisplayString>
     <Expand>
       <ExpandedItem>(clang::DeclaratorDecl *)this,nd</ExpandedItem>
-      <Item Name="ReturnType">*this,view(retType)nd</Item>
+      <Item Name="ReturnType">((clang::FunctionProtoType *)((clang::ExtQualsTypeCommonBase *)(((uintptr_t)DeclType.Value.Value) &amp; ~15))-&gt;BaseType)->ResultType</Item>
       <Synthetic Name="Parameter Types">
         <DisplayString>{*this,view(parm0)nd}</DisplayString>
         <Expand>
@@ -755,6 +795,7 @@ For later versions of Visual Studio, no setup is required-->
           </ArrayItems>
         </Expand>
       </Synthetic>
+      <Item Name="TemplateOrSpecialization">TemplateOrSpecialization</Item>
     </Expand>
   </Type>
   <Type Name="clang::OpaquePtr&lt;*&gt;">

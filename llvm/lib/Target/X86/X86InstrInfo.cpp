@@ -3675,15 +3675,9 @@ bool X86InstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, unsigned SrcReg,
   }
 
   // Make sure Sub instruction defines EFLAGS and mark the def live.
-  unsigned i = 0, e = Sub->getNumOperands();
-  for (; i != e; ++i) {
-    MachineOperand &MO = Sub->getOperand(i);
-    if (MO.isReg() && MO.isDef() && MO.getReg() == X86::EFLAGS) {
-      MO.setIsDead(false);
-      break;
-    }
-  }
-  assert(i != e && "Unable to locate a def EFLAGS operand");
+  MachineOperand *FlagDef = Sub->findRegisterDefOperand(X86::EFLAGS);
+  assert(FlagDef && "Unable to locate a def EFLAGS operand");
+  FlagDef->setIsDead(false);
 
   CmpInstr.eraseFromParent();
 

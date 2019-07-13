@@ -233,19 +233,23 @@ define amdgpu_kernel void @max_256_vgprs_spill_9x32(<32 x float> addrspace(1)* %
   ret void
 }
 
+; FIXME: adding an AReg_1024 register class for v32f32 and v32i32
+;        produces unnecessary copies and we still have some amount
+;        of conventional spilling.
+
 ; GCN-LABEL: {{^}}max_256_vgprs_spill_9x32_2bb:
 ; GFX900-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD0
 ; GFX900-DAG: s_mov_b32 s{{[0-9]+}}, SCRATCH_RSRC_DWORD1
-; GFX908-NOT: SCRATCH_RSRC
+; GFX908-FIXME-NOT: SCRATCH_RSRC
 ; GFX908-DAG: v_accvgpr_write_b32 a0, v
 ; GFX900:     buffer_store_dword v
 ; GFX900:     buffer_load_dword v
-; GFX908-NOT: buffer_
+; GFX908-FIXME-NOT: buffer_
 ; GFX908-DAG  v_accvgpr_read_b32
 
 ; GCN:    NumVgprs: 256
 ; GFX900: ScratchSize: 580
-; GFX908: ScratchSize: 0
+; GFX908-FIXME: ScratchSize: 0
 ; GCN:    VGPRBlocks: 63
 ; GCN:    NumVGPRsForWavesPerEU: 256
 define amdgpu_kernel void @max_256_vgprs_spill_9x32_2bb(<32 x float> addrspace(1)* %p) {

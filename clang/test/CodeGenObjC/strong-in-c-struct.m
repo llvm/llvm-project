@@ -1,11 +1,10 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -emit-llvm -o - -DUSESTRUCT -I %S/Inputs %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -emit-llvm -o - -DUSESTRUCT %s | FileCheck %s
 
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -emit-pch -I %S/Inputs -o %t %s
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -include-pch %t -emit-llvm -o - -DUSESTRUCT -I %S/Inputs %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -emit-pch -o %t %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -fblocks  -fobjc-runtime=ios-11.0 -include-pch %t -emit-llvm -o - -DUSESTRUCT %s | FileCheck %s
 
 #ifndef HEADER
 #define HEADER
-#include "strong_in_union.h"
 
 typedef void (^BlockTy)(void);
 
@@ -693,14 +692,6 @@ void test_copy_constructor_Bitfield0(Bitfield0 *a) {
 
 void test_copy_constructor_Bitfield1(Bitfield1 *a) {
   Bitfield1 t = *a;
-}
-
-// CHECK: define void @test_strong_in_union()
-// CHECK: alloca %{{.*}}
-// CHECK-NEXT: ret void
-
-void test_strong_in_union() {
-  U t;
 }
 
 // CHECK: define void @test_copy_constructor_VolatileArray(

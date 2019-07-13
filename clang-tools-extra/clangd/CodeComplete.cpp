@@ -1391,12 +1391,12 @@ private:
     unsigned RangeEnd = HeuristicPrefix.Qualifier.begin() - Content.data(),
              RangeBegin = RangeEnd;
     for (size_t I = 0; I < 3 && RangeBegin > 0; ++I) {
-      auto PrevNL = Content.rfind('\n', RangeBegin - 1);
+      auto PrevNL = Content.rfind('\n', RangeBegin);
       if (PrevNL == StringRef::npos) {
         RangeBegin = 0;
         break;
       }
-      RangeBegin = PrevNL + 1;
+      RangeBegin = PrevNL;
     }
 
     ContextWords = collectWords(Content.slice(RangeBegin, RangeEnd));

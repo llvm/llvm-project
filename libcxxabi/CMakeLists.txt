@@ -43,7 +43,9 @@ include(CMakeDependentOption)
 include(HandleCompilerRT)
 
 # Define options.
-option(LIBCXXABI_ENABLE_EXCEPTIONS "Use exceptions." ON)
+option(LIBCXXABI_ENABLE_EXCEPTIONS
+  "Provide support for exceptions in the runtime.
+  When disabled, libc++abi does not support stack unwinding and other exceptions-related features." ON)
 option(LIBCXXABI_ENABLE_ASSERTIONS "Enable assertions independent of build mode." ON)
 option(LIBCXXABI_ENABLE_PEDANTIC "Compile with pedantic enabled." ON)
 option(LIBCXXABI_ENABLE_PIC "Build Position-Independent Code, even in static library" ON)

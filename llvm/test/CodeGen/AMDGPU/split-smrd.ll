@@ -6,7 +6,7 @@
 
 ; GCN-LABEL: {{^}}split_smrd_add_worklist:
 ; GCN: image_sample v{{[0-9]+}}, v[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}], s[{{[0-9]+:[0-9]+}}] dmask:0x1
-define amdgpu_ps void @split_smrd_add_worklist([34 x <8 x i32>] addrspace(4)* byval %arg) #0 {
+define amdgpu_ps void @split_smrd_add_worklist([34 x <8 x i32>] addrspace(4)* inreg %arg) #0 {
 bb:
   %tmp = call float @llvm.amdgcn.s.buffer.load.f32(<4 x i32> undef, i32 96, i32 0)
   %tmp1 = bitcast float %tmp to i32
