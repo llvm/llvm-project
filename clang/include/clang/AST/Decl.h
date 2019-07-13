@@ -3746,6 +3746,30 @@ public:
     RecordDeclBits.NonTrivialToPrimitiveDestroy = V;
   }
 
+  bool hasNonTrivialToPrimitiveDefaultInitializeCUnion() const {
+    return RecordDeclBits.HasNonTrivialToPrimitiveDefaultInitializeCUnion;
+  }
+
+  void setHasNonTrivialToPrimitiveDefaultInitializeCUnion(bool V) {
+    RecordDeclBits.HasNonTrivialToPrimitiveDefaultInitializeCUnion = V;
+  }
+
+  bool hasNonTrivialToPrimitiveDestructCUnion() const {
+    return RecordDeclBits.HasNonTrivialToPrimitiveDestructCUnion;
+  }
+
+  void setHasNonTrivialToPrimitiveDestructCUnion(bool V) {
+    RecordDeclBits.HasNonTrivialToPrimitiveDestructCUnion = V;
+  }
+
+  bool hasNonTrivialToPrimitiveCopyCUnion() const {
+    return RecordDeclBits.HasNonTrivialToPrimitiveCopyCUnion;
+  }
+
+  void setHasNonTrivialToPrimitiveCopyCUnion(bool V) {
+    RecordDeclBits.HasNonTrivialToPrimitiveCopyCUnion = V;
+  }
+
   /// Determine whether this class can be passed in registers. In C++ mode,
   /// it must have at least one trivial, non-deleted copy or move constructor.
   /// FIXME: This should be set as part of completeDefinition.

@@ -324,8 +324,6 @@ option for a warning and returns true if that is a valid warning option.
   ...
   #endif
 
-.. _languageextensions-builtin-macros:
-
 Builtin Macros
 ==============
 

@@ -98,8 +98,7 @@ public:
         : Kind(Kind), Filename(Filename) {}
   };
 
-  /// Returns nullptr if \param Path doesn't exist.
-  /// Returns nullptr if \param Path isn't a directory.
+  /// Returns nullptr if \param Path doesn't exist or isn't a directory.
   /// Returns nullptr if OS kernel API told us we can't start watching. In such
   /// case it's unclear whether just retrying has any chance to succeeed.
   static std::unique_ptr<DirectoryWatcher>

@@ -56,11 +56,6 @@ Improvements to Clang's diagnostics
 Non-comprehensive list of changes in this release
 -------------------------------------------------
 
-- The ``__VERSION__`` macro has been removed.
-  Previously this macro was set to a string aiming to achieve compatibility with 
-  GCC 4.2.1, but that should no longer be necessary. To get Clang's version,
-  use the :ref:`clang namespaced version macros <languageextensions-builtin-macros>`.
-
 - ...
 
 
@@ -81,11 +76,6 @@ Modified Compiler Flags
 -----------------------
 
 - ``clang -dumpversion`` now returns the version of Clang itself.
-
-- ...
-
-Removed Compiler Options
-------------------------
 
 - ...
 
