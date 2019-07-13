@@ -105,7 +105,7 @@ void ForwardingReferenceOverloadCheck::check(
   // template as the function parameter of that type. (This implies that type
   // deduction will happen on the type.)
   const TemplateParameterList *Params = FuncTemplate->getTemplateParameters();
-  if (std::find(Params->begin(), Params->end(), TypeParmDecl) == Params->end())
+  if (!llvm::is_contained(*Params, TypeParmDecl))
     return;
 
   // Every parameter after the first must have a default value.
