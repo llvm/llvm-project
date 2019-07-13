@@ -22,7 +22,6 @@ class SBFormattersAPITestCase(TestBase):
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
     @add_test_categories(['pyapi'])
-    @expectedFailureNetBSD
     def test_formatters_api(self):
         """Test Python APIs for working with formatters"""
         self.build()
