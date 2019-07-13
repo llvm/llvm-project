@@ -528,6 +528,13 @@ void ClangdServer::typeHierarchy(PathRef File, Position Pos, int Resolve,
   WorkScheduler.runWithAST("Type Hierarchy", File, Bind(Action, std::move(CB)));
 }
 
+void ClangdServer::resolveTypeHierarchy(
+    TypeHierarchyItem Item, int Resolve, TypeHierarchyDirection Direction,
+    Callback<llvm::Optional<TypeHierarchyItem>> CB) {
+  clangd::resolveTypeHierarchy(Item, Resolve, Direction, Index);
+  CB(Item);
+}
+
 void ClangdServer::onFileEvent(const DidChangeWatchedFilesParams &Params) {
   // FIXME: Do nothing for now. This will be used for indexing and potentially
   // invalidating other caches.

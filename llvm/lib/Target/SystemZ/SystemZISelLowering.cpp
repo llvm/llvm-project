@@ -3459,6 +3459,18 @@ SDValue SystemZTargetLowering::lowerXALUO(SDValue Op,
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Result, SetCC);
 }
 
+static bool isAddCarryChain(SDValue Carry) {
+  while (Carry.getOpcode() == ISD::ADDCARRY)
+    Carry = Carry.getOperand(2);
+  return Carry.getOpcode() == ISD::UADDO;
+}
+
+static bool isSubBorrowChain(SDValue Carry) {
+  while (Carry.getOpcode() == ISD::SUBCARRY)
+    Carry = Carry.getOperand(2);
+  return Carry.getOpcode() == ISD::USUBO;
+}
+
 // Lower ADDCARRY/SUBCARRY nodes.
 SDValue SystemZTargetLowering::lowerADDSUBCARRY(SDValue Op,
                                                 SelectionDAG &DAG) const {
@@ -3481,7 +3493,7 @@ SDValue SystemZTargetLowering::lowerADDSUBCARRY(SDValue Op,
   switch (Op.getOpcode()) {
   default: llvm_unreachable("Unknown instruction!");
   case ISD::ADDCARRY:
-    if (Carry.getOpcode() != ISD::UADDO && Carry.getOpcode() != ISD::ADDCARRY)
+    if (!isAddCarryChain(Carry))
       return SDValue();
 
     BaseOp = SystemZISD::ADDCARRY;
@@ -3489,7 +3501,7 @@ SDValue SystemZTargetLowering::lowerADDSUBCARRY(SDValue Op,
     CCMask = SystemZ::CCMASK_LOGICAL_CARRY;
     break;
   case ISD::SUBCARRY:
-    if (Carry.getOpcode() != ISD::USUBO && Carry.getOpcode() != ISD::SUBCARRY)
+    if (!isSubBorrowChain(Carry))
       return SDValue();
 
     BaseOp = SystemZISD::SUBCARRY;

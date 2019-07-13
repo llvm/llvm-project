@@ -50,7 +50,7 @@
 50 ERR9: line-count.txt:[[#@LINE-1]]:17: error: unsupported operation '*'
 51
 52 BAD10: [[@LINE-x]]
-53 ERR10: line-count.txt:[[#@LINE-1]]:19: error: invalid offset in expression 'x'
+53 ERR10: line-count.txt:[[#@LINE-1]]:19: error: invalid operand format 'x'
 54
 55 BAD11: [[@LINE-1x]]
 56 ERR11: line-count.txt:[[#@LINE-1]]:20: error: unexpected characters at end of expression 'x'

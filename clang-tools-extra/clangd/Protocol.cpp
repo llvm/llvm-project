@@ -422,8 +422,7 @@ bool fromJSON(const llvm::json::Value &Params,
 bool fromJSON(const llvm::json::Value &Params,
               DocumentRangeFormattingParams &R) {
   llvm::json::ObjectMapper O(Params);
-  return O && O.map("textDocument", R.textDocument) &&
-         O.map("range", R.range);
+  return O && O.map("textDocument", R.textDocument) && O.map("range", R.range);
 }
 
 bool fromJSON(const llvm::json::Value &Params,
@@ -445,8 +444,8 @@ bool fromJSON(const llvm::json::Value &Params, DocumentSymbolParams &R) {
 
 llvm::json::Value toJSON(const DiagnosticRelatedInformation &DRI) {
   return llvm::json::Object{
-    {"location", DRI.location},
-    {"message", DRI.message},
+      {"location", DRI.location},
+      {"message", DRI.message},
   };
 }
 
@@ -978,6 +977,8 @@ llvm::json::Value toJSON(const TypeHierarchyItem &I) {
     Result["parents"] = I.parents;
   if (I.children)
     Result["children"] = I.children;
+  if (I.data)
+    Result["data"] = I.data;
   return std::move(Result);
 }
 
@@ -996,8 +997,16 @@ bool fromJSON(const llvm::json::Value &Params, TypeHierarchyItem &I) {
   O.map("deprecated", I.deprecated);
   O.map("parents", I.parents);
   O.map("children", I.children);
+  O.map("data", I.data);
 
   return true;
+}
+
+bool fromJSON(const llvm::json::Value &Params,
+              ResolveTypeHierarchyItemParams &P) {
+  llvm::json::ObjectMapper O(Params);
+  return O && O.map("item", P.item) && O.map("resolve", P.resolve) &&
+         O.map("direction", P.direction);
 }
 
 bool fromJSON(const llvm::json::Value &Params, ReferenceParams &R) {

@@ -15,8 +15,6 @@
 #include "ompt-specific.h"
 #endif
 
-#if OMP_40_ENABLED
-
 /*!
 @ingroup CANCELLATION
 @param loc_ref location of the original task directive
@@ -71,7 +69,7 @@ kmp_int32 __kmpc_cancel(ident_t *loc_ref, kmp_int32 gtid, kmp_int32 cncl_kind) {
                 task_data, type | ompt_cancel_activated,
                 OMPT_GET_RETURN_ADDRESS(0));
           }
-#endif
+#endif // OMPT_SUPPORT && OMPT_OPTIONAL
           return 1 /* true */;
         }
         break;
@@ -331,5 +329,3 @@ int __kmp_get_cancellation_status(int cancel_kind) {
 
   return 0 /* false */;
 }
-
-#endif

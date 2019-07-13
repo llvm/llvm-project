@@ -113,6 +113,7 @@ static void FieldTypeInfoMapping(IO &IO, FieldTypeInfo &I) {
 static void InfoMapping(IO &IO, Info &I) {
   IO.mapRequired("USR", I.USR);
   IO.mapOptional("Name", I.Name, SmallString<16>());
+  IO.mapOptional("Path", I.Path, SmallString<128>());
   IO.mapOptional("Namespace", I.Namespace, llvm::SmallVector<Reference, 4>());
   IO.mapOptional("Description", I.Description);
 }
@@ -154,6 +155,7 @@ template <> struct MappingTraits<Reference> {
     IO.mapOptional("Type", Ref.RefType, InfoType::IT_default);
     IO.mapOptional("Name", Ref.Name, SmallString<16>());
     IO.mapOptional("USR", Ref.USR, SymbolID());
+    IO.mapOptional("Path", Ref.Path, SmallString<128>());
   }
 };
 

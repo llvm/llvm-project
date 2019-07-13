@@ -1384,8 +1384,7 @@ static void exportStream() {
            << "' (index " << Index << ") to file " << OutFileName << ".\n";
   }
 
-  SourceStream = MappedBlockStream::createIndexedStream(
-      File.getMsfLayout(), File.getMsfBuffer(), Index, File.getAllocator());
+  SourceStream = File.createIndexedStream(Index);
   auto OutFile = ExitOnErr(
       FileOutputBuffer::create(OutFileName, SourceStream->getLength()));
   FileBufferByteStream DestStream(std::move(OutFile), llvm::support::little);

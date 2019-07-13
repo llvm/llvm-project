@@ -95,7 +95,7 @@ main_body:
 
 ; GCN-LABEL: {{^}}kill_vcc_implicit_def:
 ; GCN: IeeeMode: 0
-define amdgpu_ps float @kill_vcc_implicit_def([6 x <16 x i8>] addrspace(4)* byval, [17 x <16 x i8>] addrspace(4)* byval, [17 x <4 x i32>] addrspace(4)* byval, [34 x <8 x i32>] addrspace(4)* byval, float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, float, i32, float, float) {
+define amdgpu_ps float @kill_vcc_implicit_def([6 x <16 x i8>] addrspace(4)* inreg, [17 x <16 x i8>] addrspace(4)* inreg, [17 x <4 x i32>] addrspace(4)* inreg, [34 x <8 x i32>] addrspace(4)* inreg, float inreg, i32 inreg, <2 x i32>, <2 x i32>, <2 x i32>, <3 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, float, float, float, float, float, float, i32, float, float) {
 entry:
   %tmp0 = fcmp olt float %13, 0.0
   call void @llvm.amdgcn.kill(i1 %tmp0)

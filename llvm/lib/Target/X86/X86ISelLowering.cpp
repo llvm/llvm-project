@@ -36783,6 +36783,10 @@ static SDValue combineCMov(SDNode *N, SelectionDAG &DAG,
   X86::CondCode CC = (X86::CondCode)N->getConstantOperandVal(2);
   SDValue Cond = N->getOperand(3);
 
+  // cmov X, X, ?, ? --> X
+  if (TrueOp == FalseOp)
+    return TrueOp;
+
   // Try to simplify the EFLAGS and condition code operands.
   // We can't always do this as FCMOV only supports a subset of X86 cond.
   if (SDValue Flags = combineSetCCEFLAGS(Cond, CC, DAG, Subtarget)) {

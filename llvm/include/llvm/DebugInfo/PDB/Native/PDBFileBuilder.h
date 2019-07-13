@@ -97,7 +97,7 @@ private:
 
   PDBStringTableBuilder Strings;
   StringTableHashTraits InjectedSourceHashTraits;
-  HashTable<SrcHeaderBlockEntry, StringTableHashTraits> InjectedSourceTable;
+  HashTable<SrcHeaderBlockEntry> InjectedSourceTable;
 
   SmallVector<InjectedSourceDescriptor, 2> InjectedSources;
 

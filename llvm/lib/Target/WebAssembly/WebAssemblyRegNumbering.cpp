@@ -72,7 +72,7 @@ bool WebAssemblyRegNumbering::runOnMachineFunction(MachineFunction &MF) {
   // variables. Assign the numbers for them first.
   MachineBasicBlock &EntryMBB = MF.front();
   for (MachineInstr &MI : EntryMBB) {
-    if (!WebAssembly::isArgument(MI))
+    if (!WebAssembly::isArgument(MI.getOpcode()))
       break;
 
     int64_t Imm = MI.getOperand(1).getImm();

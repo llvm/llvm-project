@@ -136,7 +136,8 @@ void test_T_assignment_sfinae() {
   }
   {
     using V = std::variant<std::string, float>;
-    static_assert(!std::is_assignable<V, int>::value, "no matching operator=");
+    static_assert(std::is_assignable<V, int>::value == VariantAllowsNarrowingConversions,
+    "no matching operator=");
   }
   {
     using V = std::variant<std::unique_ptr<int>, bool>;
@@ -187,6 +188,7 @@ void test_T_assignment_basic() {
     assert(v.index() == 1);
     assert(std::get<1>(v) == 43);
   }
+#ifndef TEST_VARIANT_ALLOWS_NARROWING_CONVERSIONS
   {
     std::variant<unsigned, long> v;
     v = 42;
@@ -196,6 +198,7 @@ void test_T_assignment_basic() {
     assert(v.index() == 0);
     assert(std::get<0>(v) == 43);
   }
+#endif
   {
     std::variant<std::string, bool> v = true;
     v = "bar";

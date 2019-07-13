@@ -153,13 +153,21 @@ if(FUCHSIA_SDK)
     set(RUNTIMES_${target}-unknown-fuchsia+noexcept_LIBCXXABI_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
     set(RUNTIMES_${target}-unknown-fuchsia+noexcept_LIBCXX_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
 
+    set(RUNTIMES_${target}-unknown-fuchsia+asan+noexcept_LLVM_BUILD_COMPILER_RT OFF CACHE BOOL "")
+    set(RUNTIMES_${target}-unknown-fuchsia+asan+noexcept_LLVM_USE_SANITIZER "Address" CACHE STRING "")
+    set(RUNTIMES_${target}-unknown-fuchsia+asan+noexcept_LIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS OFF CACHE BOOL "")
+    set(RUNTIMES_${target}-unknown-fuchsia+asan+noexcept_LIBCXX_ENABLE_NEW_DELETE_DEFINITIONS OFF CACHE BOOL "")
+    set(RUNTIMES_${target}-unknown-fuchsia+asan+noexcept_LIBCXXABI_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
+    set(RUNTIMES_${target}-unknown-fuchsia+asan+noexcept_LIBCXX_ENABLE_EXCEPTIONS OFF CACHE BOOL "")
+
     # Use .build-id link.
     list(APPEND RUNTIME_BUILD_ID_LINK "${target}-unknown-fuchsia")
   endforeach()
 
-  set(LLVM_RUNTIME_MULTILIBS "asan;noexcept" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIBS "asan;noexcept;asan+noexcept" CACHE STRING "")
   set(LLVM_RUNTIME_MULTILIB_asan_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia" CACHE STRING "")
   set(LLVM_RUNTIME_MULTILIB_noexcept_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia" CACHE STRING "")
+  set(LLVM_RUNTIME_MULTILIB_asan+noexcept_TARGETS "x86_64-unknown-fuchsia;aarch64-unknown-fuchsia" CACHE STRING "")
 endif()
 
 set(LLVM_BUILTIN_TARGETS "${BUILTIN_TARGETS}" CACHE STRING "")

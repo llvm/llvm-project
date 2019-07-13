@@ -35,26 +35,3 @@
 // RUN:   | FileCheck %s
 
 // CHECK: "-I" "foo_dir"
-
-// Test that assembler options don't cause warnings when there's no assembler
-// stage.
-
-// RUN: %clang -mincremental-linker-compatible -E \
-// RUN:   -o /dev/null -x c++ %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
-// RUN: %clang -mincremental-linker-compatible -E \
-// RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
-// RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
-// RUN:   -o /dev/null -x c++ %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
-// RUN: %clang -mimplicit-it=always -target armv7-linux-gnueabi -E \
-// RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
-// RUN: %clang -Wa,-mbig-obj -target i386-pc-windows -E \
-// RUN:   -o /dev/null -x c++ %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
-// RUN: %clang -Wa,-mbig-obj -target i386-pc-windows -E \
-// RUN:   -o /dev/null -x assembler-with-cpp %s 2>&1 \
-// RUN:   | FileCheck --check-prefix=WARN --allow-empty %s
-// WARN-NOT: unused

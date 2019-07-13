@@ -893,7 +893,7 @@ llvm::Optional<QualType> getDeducedType(ParsedAST &AST,
 
 /// Retrieves the deduced type at a given location (auto, decltype).
 bool hasDeducedType(ParsedAST &AST, SourceLocation SourceLocationBeg) {
-  return (bool) getDeducedType(AST, SourceLocationBeg);
+  return (bool)getDeducedType(AST, SourceLocationBeg);
 }
 
 llvm::Optional<HoverInfo> getHover(ParsedAST &AST, Position Pos,
@@ -1104,6 +1104,10 @@ symbolToTypeHierarchyItem(const Symbol &S, const SymbolIndex *Index,
   // (https://github.com/clangd/clangd/issues/59).
   THI.range = THI.selectionRange;
   THI.uri = Loc->uri;
+  // Store the SymbolID in the 'data' field. The client will
+  // send this back in typeHierarchy/resolve, allowing us to
+  // continue resolving additional levels of the type hierarchy.
+  THI.data = S.ID.str();
 
   return std::move(THI);
 }
@@ -1245,6 +1249,25 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
   }
 
   return Result;
+}
+
+void resolveTypeHierarchy(TypeHierarchyItem &Item, int ResolveLevels,
+                          TypeHierarchyDirection Direction,
+                          const SymbolIndex *Index) {
+  // We only support typeHierarchy/resolve for children, because for parents
+  // we ignore ResolveLevels and return all levels of parents eagerly.
+  if (Direction == TypeHierarchyDirection::Parents || ResolveLevels == 0)
+    return;
+
+  Item.children.emplace();
+
+  if (Index && Item.data) {
+    // We store the item's SymbolID in the 'data' field, and the client
+    // passes it back to us in typeHierarchy/resolve.
+    if (Expected<SymbolID> ID = SymbolID::fromStr(*Item.data)) {
+      fillSubTypes(*ID, *Item.children, Index, ResolveLevels, Item.uri.file());
+    }
+  }
 }
 
 FormattedString HoverInfo::present() const {

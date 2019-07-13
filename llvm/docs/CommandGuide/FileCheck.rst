@@ -107,10 +107,12 @@ and from the command line.
   Sets a filecheck pattern variable ``VAR`` with value ``VALUE`` that can be
   used in ``CHECK:`` lines.
 
-.. option:: -D#<NUMVAR>=<VALUE>
+.. option:: -D#<NUMVAR>=<VALUE EXPRESSION>
 
-  Sets a filecheck numeric variable ``NUMVAR`` to ``<VALUE>`` that can be used
-  in ``CHECK:`` lines.
+  Sets a filecheck numeric variable ``NUMVAR`` to the result of evaluating
+  ``<VALUE EXPRESSION>`` that can be used in ``CHECK:`` lines. See section
+  ``FileCheck Numeric Variables and Expressions`` for details on the format
+  and meaning of ``<VALUE EXPRESSION>``.
 
 .. option:: -version
 
@@ -590,18 +592,15 @@ For example:
 
 would match ``mov r5, 42`` and set ``REG`` to the value ``5``.
 
-The syntax of a numeric substitution is ``[[#<NUMVAR><op><offset>]]`` where:
+The syntax of a numeric substitution is ``[[#<expr>]]`` where ``<expr>`` is an
+expression. An expression is recursively defined as:
 
-* ``<NUMVAR>`` is the name of a defined numeric variable.
+* a numeric operand, or
+* an expression followed by an operator and a numeric operand.
 
-* ``<op>`` is an optional operation to perform on the value of ``<NUMVAR>``.
-  Currently supported operations are ``+`` and ``-``.
-
-* ``<offset>`` is the immediate value that constitutes the second operand of
-  the operation ``<op>``. It must be present if ``<op>`` is present, absent
-  otherwise.
-
-Spaces are accepted before, after and between any of these elements.
+A numeric operand is a previously defined numeric variable, or an integer
+literal. The supported operators are ``+`` and ``-``. Spaces are accepted
+before, after and between any of these elements.
 
 For example:
 

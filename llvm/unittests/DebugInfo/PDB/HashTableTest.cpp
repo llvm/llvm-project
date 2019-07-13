@@ -27,27 +27,35 @@ using namespace llvm::support;
 
 namespace {
 
-class HashTableInternals : public HashTable<uint32_t> {
+struct IdentityHashTraits {
+  uint32_t hashLookupKey(uint32_t N) const { return N; }
+  uint32_t storageKeyToLookupKey(uint32_t N) const { return N; }
+  uint32_t lookupKeyToStorageKey(uint32_t N) { return N; }
+};
+
+template <class T = uint32_t>
+class HashTableInternals : public HashTable<T> {
 public:
-  using HashTable::Buckets;
-  using HashTable::Present;
-  using HashTable::Deleted;
+  using HashTable<T>::Buckets;
+  using HashTable<T>::Present;
+  using HashTable<T>::Deleted;
 };
 }
 
 TEST(HashTableTest, TestSimple) {
-  HashTableInternals Table;
+  HashTableInternals<> Table;
   EXPECT_EQ(0u, Table.size());
   EXPECT_GT(Table.capacity(), 0u);
 
-  Table.set_as(3u, 7);
+  IdentityHashTraits Traits;
+  Table.set_as(3u, 7, Traits);
   EXPECT_EQ(1u, Table.size());
-  ASSERT_NE(Table.end(), Table.find_as(3u));
-  EXPECT_EQ(7u, Table.get(3u));
+  ASSERT_NE(Table.end(), Table.find_as(3u, Traits));
+  EXPECT_EQ(7u, Table.get(3u, Traits));
 }
 
 TEST(HashTableTest, TestCollision) {
-  HashTableInternals Table;
+  HashTableInternals<> Table;
   EXPECT_EQ(0u, Table.size());
   EXPECT_GT(Table.capacity(), 0u);
 
@@ -57,33 +65,35 @@ TEST(HashTableTest, TestCollision) {
   uint32_t N1 = Table.capacity() + 1;
   uint32_t N2 = 2 * N1;
 
-  Table.set_as(N1, 7);
-  Table.set_as(N2, 12);
+  IdentityHashTraits Traits;
+  Table.set_as(N1, 7, Traits);
+  Table.set_as(N2, 12, Traits);
   EXPECT_EQ(2u, Table.size());
-  ASSERT_NE(Table.end(), Table.find_as(N1));
-  ASSERT_NE(Table.end(), Table.find_as(N2));
+  ASSERT_NE(Table.end(), Table.find_as(N1, Traits));
+  ASSERT_NE(Table.end(), Table.find_as(N2, Traits));
 
-  EXPECT_EQ(7u, Table.get(N1));
-  EXPECT_EQ(12u, Table.get(N2));
+  EXPECT_EQ(7u, Table.get(N1, Traits));
+  EXPECT_EQ(12u, Table.get(N2, Traits));
 }
 
 TEST(HashTableTest, TestRemove) {
-  HashTableInternals Table;
+  HashTableInternals<> Table;
   EXPECT_EQ(0u, Table.size());
   EXPECT_GT(Table.capacity(), 0u);
 
-  Table.set_as(1u, 2);
-  Table.set_as(3u, 4);
+  IdentityHashTraits Traits;
+  Table.set_as(1u, 2, Traits);
+  Table.set_as(3u, 4, Traits);
   EXPECT_EQ(2u, Table.size());
-  ASSERT_NE(Table.end(), Table.find_as(1u));
-  ASSERT_NE(Table.end(), Table.find_as(3u));
+  ASSERT_NE(Table.end(), Table.find_as(1u, Traits));
+  ASSERT_NE(Table.end(), Table.find_as(3u, Traits));
 
-  EXPECT_EQ(2u, Table.get(1u));
-  EXPECT_EQ(4u, Table.get(3u));
+  EXPECT_EQ(2u, Table.get(1u, Traits));
+  EXPECT_EQ(4u, Table.get(3u, Traits));
 }
 
 TEST(HashTableTest, TestCollisionAfterMultipleProbes) {
-  HashTableInternals Table;
+  HashTableInternals<> Table;
   EXPECT_EQ(0u, Table.size());
   EXPECT_GT(Table.capacity(), 0u);
 
@@ -94,17 +104,18 @@ TEST(HashTableTest, TestCollisionAfterMultipleProbes) {
   uint32_t N2 = N1 + 1;
   uint32_t N3 = 2 * N1;
 
-  Table.set_as(N1, 7);
-  Table.set_as(N2, 11);
-  Table.set_as(N3, 13);
+  IdentityHashTraits Traits;
+  Table.set_as(N1, 7, Traits);
+  Table.set_as(N2, 11, Traits);
+  Table.set_as(N3, 13, Traits);
   EXPECT_EQ(3u, Table.size());
-  ASSERT_NE(Table.end(), Table.find_as(N1));
-  ASSERT_NE(Table.end(), Table.find_as(N2));
-  ASSERT_NE(Table.end(), Table.find_as(N3));
+  ASSERT_NE(Table.end(), Table.find_as(N1, Traits));
+  ASSERT_NE(Table.end(), Table.find_as(N2, Traits));
+  ASSERT_NE(Table.end(), Table.find_as(N3, Traits));
 
-  EXPECT_EQ(7u, Table.get(N1));
-  EXPECT_EQ(11u, Table.get(N2));
-  EXPECT_EQ(13u, Table.get(N3));
+  EXPECT_EQ(7u, Table.get(N1, Traits));
+  EXPECT_EQ(11u, Table.get(N2, Traits));
+  EXPECT_EQ(13u, Table.get(N3, Traits));
 }
 
 TEST(HashTableTest, Grow) {
@@ -112,24 +123,26 @@ TEST(HashTableTest, Grow) {
   // guaranteed to trigger a grow.  Then verify that the size is the same, the
   // capacity is larger, and all the original items are still in the table.
 
-  HashTableInternals Table;
+  HashTableInternals<> Table;
+  IdentityHashTraits Traits;
   uint32_t OldCapacity = Table.capacity();
   for (uint32_t I = 0; I < OldCapacity; ++I) {
-    Table.set_as(OldCapacity + I * 2 + 1, I * 2 + 3);
+    Table.set_as(OldCapacity + I * 2 + 1, I * 2 + 3, Traits);
   }
   EXPECT_EQ(OldCapacity, Table.size());
   EXPECT_GT(Table.capacity(), OldCapacity);
   for (uint32_t I = 0; I < OldCapacity; ++I) {
-    ASSERT_NE(Table.end(), Table.find_as(OldCapacity + I * 2 + 1));
-    EXPECT_EQ(I * 2 + 3, Table.get(OldCapacity + I * 2 + 1));
+    ASSERT_NE(Table.end(), Table.find_as(OldCapacity + I * 2 + 1, Traits));
+    EXPECT_EQ(I * 2 + 3, Table.get(OldCapacity + I * 2 + 1, Traits));
   }
 }
 
 TEST(HashTableTest, Serialization) {
-  HashTableInternals Table;
+  HashTableInternals<> Table;
+  IdentityHashTraits Traits;
   uint32_t Cap = Table.capacity();
   for (uint32_t I = 0; I < Cap; ++I) {
-    Table.set_as(Cap + I * 2 + 1, I * 2 + 3);
+    Table.set_as(Cap + I * 2 + 1, I * 2 + 3, Traits);
   }
 
   std::vector<uint8_t> Buffer(Table.calculateSerializedLength());
@@ -139,7 +152,7 @@ TEST(HashTableTest, Serialization) {
   // We should have written precisely the number of bytes we calculated earlier.
   EXPECT_EQ(Buffer.size(), Writer.getOffset());
 
-  HashTableInternals Table2;
+  HashTableInternals<> Table2;
   BinaryStreamReader Reader(Stream);
   EXPECT_THAT_ERROR(Table2.load(Reader), Succeeded());
   // We should have read precisely the number of bytes we calculated earlier.
@@ -192,20 +205,19 @@ TEST(HashTableTest, NamedStreamMap) {
   } while (std::next_permutation(Streams.begin(), Streams.end()));
 }
 
-namespace {
 struct FooBar {
   uint32_t X;
   uint32_t Y;
+
+  bool operator==(const FooBar &RHS) const {
+    return X == RHS.X && Y == RHS.Y;
+  }
 };
 
-} // namespace
-
-namespace llvm {
-namespace pdb {
-template <> struct PdbHashTraits<FooBar> {
+struct FooBarHashTraits {
   std::vector<char> Buffer;
 
-  PdbHashTraits() { Buffer.push_back(0); }
+  FooBarHashTraits() { Buffer.push_back(0); }
 
   uint32_t hashLookupKey(StringRef S) const {
     return llvm::pdb::hashStringV1(S);
@@ -225,17 +237,16 @@ template <> struct PdbHashTraits<FooBar> {
     return N;
   }
 };
-} // namespace pdb
-} // namespace llvm
 
 TEST(HashTableTest, NonTrivialValueType) {
-  HashTable<FooBar> Table;
+  HashTableInternals<FooBar> Table;
+  FooBarHashTraits Traits;
   uint32_t Cap = Table.capacity();
   for (uint32_t I = 0; I < Cap; ++I) {
     FooBar F;
     F.X = I;
     F.Y = I + 1;
-    Table.set_as(utostr(I), F);
+    Table.set_as(utostr(I), F, Traits);
   }
 
   std::vector<uint8_t> Buffer(Table.calculateSerializedLength());
@@ -245,7 +256,7 @@ TEST(HashTableTest, NonTrivialValueType) {
   // We should have written precisely the number of bytes we calculated earlier.
   EXPECT_EQ(Buffer.size(), Writer.getOffset());
 
-  HashTable<FooBar> Table2;
+  HashTableInternals<FooBar> Table2;
   BinaryStreamReader Reader(Stream);
   EXPECT_THAT_ERROR(Table2.load(Reader), Succeeded());
   // We should have read precisely the number of bytes we calculated earlier.
@@ -253,7 +264,7 @@ TEST(HashTableTest, NonTrivialValueType) {
 
   EXPECT_EQ(Table.size(), Table2.size());
   EXPECT_EQ(Table.capacity(), Table2.capacity());
-  // EXPECT_EQ(Table.Buckets, Table2.Buckets);
-  // EXPECT_EQ(Table.Present, Table2.Present);
-  // EXPECT_EQ(Table.Deleted, Table2.Deleted);
+  EXPECT_EQ(Table.Buckets, Table2.Buckets);
+  EXPECT_EQ(Table.Present, Table2.Present);
+  EXPECT_EQ(Table.Deleted, Table2.Deleted);
 }

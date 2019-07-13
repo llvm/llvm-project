@@ -2627,7 +2627,6 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
 bool IndVarSimplify::optimizeLoopExits(Loop *L) {
   SmallVector<BasicBlock*, 16> ExitingBlocks;
   L->getExitingBlocks(ExitingBlocks);
-  BasicBlock * const Latch = L->getLoopLatch();
 
   // Form an expression for the maximum exit count possible for this loop. We
   // merge the max and exact information to approximate a version of
@@ -2641,7 +2640,7 @@ bool IndVarSimplify::optimizeLoopExits(Loop *L) {
   for (BasicBlock *ExitingBB : ExitingBlocks) {
     const SCEV *ExitCount = SE->getExitCount(L, ExitingBB);
     if (!isa<SCEVCouldNotCompute>(ExitCount)) {
-      assert(DT->dominates(ExitingBB, Latch) &&
+      assert(DT->dominates(ExitingBB, L->getLoopLatch()) &&
              "We should only have known counts for exiting blocks that "
              "dominate latch!");
       ExitCounts.push_back(ExitCount);

@@ -59,8 +59,8 @@ CHECK-NEXT: [[# VAR1 -1]]
 CHECK-NEXT: [[# VAR1 - 1]]
 CHECK-NEXT: [[# VAR1 - 1 ]]
 
-; Numeric expressions using variables defined on the command-line and an
-; immediate interpreted as an unsigned value.
+; Numeric expressions using variables defined on other lines and an immediate
+; interpreted as an unsigned value.
 ; Note: 9223372036854775819 = 0x8000000000000000 + 11
 ;       9223372036854775808 = 0x8000000000000000
 USE UNSIGNED IMM
@@ -68,21 +68,29 @@ USE UNSIGNED IMM
 CHECK-LABEL: USE UNSIGNED IMM
 CHECK-NEXT: [[#VAR1+9223372036854775808]]
 
-; Numeric expression using undefined variable.
+; Numeric expressions using more than one variable defined on other lines.
+USE MULTI VAR
+31
+42
+CHECK-LABEL: USE MULTI VAR
+CHECK-NEXT: [[#VAR2:]]
+CHECK-NEXT: [[#VAR1+VAR2]]
+
+; Numeric expression using undefined variables.
 RUN: not FileCheck --check-prefix UNDEF-USE --input-file %s %s 2>&1 \
 RUN:   | FileCheck --strict-whitespace --check-prefix UNDEF-USE-MSG %s
 
 UNDEF VAR USE
 UNDEFVAR: 11
 UNDEF-USE-LABEL: UNDEF VAR USE
-UNDEF-USE-NEXT: UNDEFVAR: [[#UNDEFVAR]]
+UNDEF-USE-NEXT: UNDEFVAR: [[#UNDEFVAR1+UNDEFVAR2]]
 UNDEF-USE-MSG: numeric-expression.txt:[[#@LINE-1]]:17: error: {{U}}NDEF-USE-NEXT: expected string not found in input
-UNDEF-USE-MSG-NEXT: {{U}}NDEF-USE-NEXT: UNDEFVAR: {{\[\[#UNDEFVAR\]\]}}
+UNDEF-USE-MSG-NEXT: {{U}}NDEF-USE-NEXT: UNDEFVAR: {{\[\[#UNDEFVAR1\+UNDEFVAR2\]\]}}
 UNDEF-USE-MSG-NEXT: {{^                \^$}}
 UNDEF-USE-MSG-NEXT: numeric-expression.txt:[[#@LINE-6]]:1: note: scanning from here
 UNDEF-USE-MSG-NEXT: UNDEFVAR: 11
 UNDEF-USE-MSG-NEXT: {{^\^$}}
-UNDEF-USE-MSG-NEXT: numeric-expression.txt:[[#@LINE-9]]:1: note: uses undefined variable "UNDEFVAR"
+UNDEF-USE-MSG-NEXT: numeric-expression.txt:[[#@LINE-9]]:1: note: uses undefined variable(s): "UNDEFVAR1" "UNDEFVAR2"
 UNDEF-USE-MSG-NEXT: UNDEFVAR: 11
 UNDEF-USE-MSG-NEXT: {{^\^$}}
 

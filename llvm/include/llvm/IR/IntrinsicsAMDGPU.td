@@ -1663,8 +1663,8 @@ def int_amdgcn_buffer_atomic_fadd    : AMDGPUBufferAtomicNoRtn;
 def int_amdgcn_global_atomic_fadd    : AMDGPUGlobalAtomicNoRtn;
 
 // llvm.amdgcn.mfma.f32.* vdst, srcA, srcB, srcC, cbsz, abid, blgp
-def int_amdgcn_mfma_f32_32x32x1f32 : Intrinsic<[llvm_v32i32_ty],
-  [llvm_float_ty, llvm_float_ty, llvm_v32i32_ty,
+def int_amdgcn_mfma_f32_32x32x1f32 : Intrinsic<[llvm_v32f32_ty],
+  [llvm_float_ty, llvm_float_ty, llvm_v32f32_ty,
    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
 
 def int_amdgcn_mfma_f32_16x16x1f32 : Intrinsic<[llvm_v16f32_ty],
@@ -1683,8 +1683,8 @@ def int_amdgcn_mfma_f32_16x16x4f32 : Intrinsic<[llvm_v4f32_ty],
   [llvm_float_ty, llvm_float_ty, llvm_v4f32_ty,
    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
 
-def int_amdgcn_mfma_f32_32x32x4f16 : Intrinsic<[llvm_v32i32_ty],
-  [llvm_v4f16_ty, llvm_v4f16_ty, llvm_v32i32_ty,
+def int_amdgcn_mfma_f32_32x32x4f16 : Intrinsic<[llvm_v32f32_ty],
+  [llvm_v4f16_ty, llvm_v4f16_ty, llvm_v32f32_ty,
    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
 
 def int_amdgcn_mfma_f32_16x16x4f16 : Intrinsic<[llvm_v16f32_ty],
@@ -1723,8 +1723,8 @@ def int_amdgcn_mfma_i32_16x16x16i8 : Intrinsic<[llvm_v4i32_ty],
   [llvm_i32_ty, llvm_i32_ty, llvm_v4i32_ty,
    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
 
-def int_amdgcn_mfma_f32_32x32x2bf16 : Intrinsic<[llvm_v32i32_ty],
-  [llvm_v2i16_ty, llvm_v2i16_ty, llvm_v32i32_ty,
+def int_amdgcn_mfma_f32_32x32x2bf16 : Intrinsic<[llvm_v32f32_ty],
+  [llvm_v2i16_ty, llvm_v2i16_ty, llvm_v32f32_ty,
    llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
 
 def int_amdgcn_mfma_f32_16x16x2bf16 : Intrinsic<[llvm_v16f32_ty],

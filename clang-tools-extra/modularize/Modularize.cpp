@@ -369,7 +369,7 @@ getModularizeArgumentsAdjuster(DependencyMap &Dependencies) {
     // Ignore warnings.  (Insert after "clang_tool" at beginning.)
     NewArgs.insert(NewArgs.begin() + 1, "-w");
     // Since we are compiling .h files, assume C++ unless given a -x option.
-    if (std::find(NewArgs.begin(), NewArgs.end(), "-x") == NewArgs.end()) {
+    if (!llvm::is_contained(NewArgs, "-x")) {
       NewArgs.insert(NewArgs.begin() + 2, "-x");
       NewArgs.insert(NewArgs.begin() + 3, "c++");
     }

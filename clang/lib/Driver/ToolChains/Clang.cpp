@@ -3535,18 +3535,6 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // Select the appropriate action.
   RewriteKind rewriteKind = RK_None;
 
-  // If CollectArgsForIntegratedAssembler() isn't called below, call it here
-  // with a dummy args list to mark assembler flags as used even when not
-  // running an assembler. Otherwise, clang would emit "argument unused"
-  // warnings for assembler flags when e.g. adding "-E" to flags while debugging
-  // something. That'd be somewhat inconvenient, and it's also inconsistent with
-  // most other flags -- we don't warn on -ffunction-sections not being used
-  // in -E mode either for example, even though it's not really used either.
-  if (!isa<AssembleJobAction>(JA)) {
-    ArgStringList DummyArgs;
-    CollectArgsForIntegratedAssembler(C, Args, DummyArgs, D);
-  }
-
   if (isa<AnalyzeJobAction>(JA)) {
     assert(JA.getType() == types::TY_Plist && "Invalid output type.");
     CmdArgs.push_back("-analyze");

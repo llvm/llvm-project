@@ -31,21 +31,21 @@ namespace pdb {
 Error readSparseBitVector(BinaryStreamReader &Stream, SparseBitVector<> &V);
 Error writeSparseBitVector(BinaryStreamWriter &Writer, SparseBitVector<> &Vec);
 
-template <typename ValueT, typename TraitsT> class HashTable;
+template <typename ValueT> class HashTable;
 
-template <typename ValueT, typename TraitsT>
+template <typename ValueT>
 class HashTableIterator
-    : public iterator_facade_base<HashTableIterator<ValueT, TraitsT>,
+    : public iterator_facade_base<HashTableIterator<ValueT>,
                                   std::forward_iterator_tag,
                                   std::pair<uint32_t, ValueT>> {
-  friend HashTable<ValueT, TraitsT>;
+  friend HashTable<ValueT>;
 
-  HashTableIterator(const HashTable<ValueT, TraitsT> &Map, uint32_t Index,
+  HashTableIterator(const HashTable<ValueT> &Map, uint32_t Index,
                     bool IsEnd)
       : Map(&Map), Index(Index), IsEnd(IsEnd) {}
 
 public:
-  HashTableIterator(const HashTable<ValueT, TraitsT> &Map) : Map(&Map) {
+  HashTableIterator(const HashTable<ValueT> &Map) : Map(&Map) {
     int I = Map.Present.find_first();
     if (I == -1) {
       Index = 0;
@@ -87,22 +87,14 @@ private:
   bool isEnd() const { return IsEnd; }
   uint32_t index() const { return Index; }
 
-  const HashTable<ValueT, TraitsT> *Map;
+  const HashTable<ValueT> *Map;
   uint32_t Index;
   bool IsEnd;
 };
 
-template <typename T> struct PdbHashTraits {};
-
-template <> struct PdbHashTraits<uint32_t> {
-  uint32_t hashLookupKey(uint32_t N) const { return N; }
-  uint32_t storageKeyToLookupKey(uint32_t N) const { return N; }
-  uint32_t lookupKeyToStorageKey(uint32_t N) { return N; }
-};
-
-template <typename ValueT, typename TraitsT = PdbHashTraits<ValueT>>
+template <typename ValueT>
 class HashTable {
-  using iterator = HashTableIterator<ValueT, TraitsT>;
+  using iterator = HashTableIterator<ValueT>;
   friend iterator;
 
   struct Header {
@@ -114,9 +106,7 @@ class HashTable {
 
 public:
   HashTable() { Buckets.resize(8); }
-
-  explicit HashTable(TraitsT Traits) : HashTable(8, std::move(Traits)) {}
-  HashTable(uint32_t Capacity, TraitsT Traits) : Traits(Traits) {
+  explicit HashTable(uint32_t Capacity) {
     Buckets.resize(Capacity);
   }
 
@@ -221,7 +211,8 @@ public:
 
   /// Find the entry whose key has the specified hash value, using the specified
   /// traits defining hash function and equality.
-  template <typename Key> iterator find_as(const Key &K) const {
+  template <typename Key, typename TraitsT>
+  iterator find_as(const Key &K, TraitsT &Traits) const {
     uint32_t H = Traits.hashLookupKey(K) % capacity();
     uint32_t I = H;
     Optional<uint32_t> FirstUnused;
@@ -252,12 +243,14 @@ public:
 
   /// Set the entry using a key type that the specified Traits can convert
   /// from a real key to an internal key.
-  template <typename Key> bool set_as(const Key &K, ValueT V) {
-    return set_as_internal(K, std::move(V), None);
+  template <typename Key, typename TraitsT>
+  bool set_as(const Key &K, ValueT V, TraitsT &Traits) {
+    return set_as_internal(K, std::move(V), Traits, None);
   }
 
-  template <typename Key> ValueT get(const Key &K) const {
-    auto Iter = find_as(K);
+  template <typename Key, typename TraitsT>
+  ValueT get(const Key &K, TraitsT &Traits) const {
+    auto Iter = find_as(K, Traits);
     assert(Iter != end());
     return (*Iter).second;
   }
@@ -266,7 +259,6 @@ protected:
   bool isPresent(uint32_t K) const { return Present.test(K); }
   bool isDeleted(uint32_t K) const { return Deleted.test(K); }
 
-  TraitsT Traits;
   BucketList Buckets;
   mutable SparseBitVector<> Present;
   mutable SparseBitVector<> Deleted;
@@ -274,9 +266,10 @@ protected:
 private:
   /// Set the entry using a key type that the specified Traits can convert
   /// from a real key to an internal key.
-  template <typename Key>
-  bool set_as_internal(const Key &K, ValueT V, Optional<uint32_t> InternalKey) {
-    auto Entry = find_as(K);
+  template <typename Key, typename TraitsT>
+  bool set_as_internal(const Key &K, ValueT V, TraitsT &Traits,
+                       Optional<uint32_t> InternalKey) {
+    auto Entry = find_as(K, Traits);
     if (Entry != end()) {
       assert(isPresent(Entry.index()));
       assert(Traits.storageKeyToLookupKey(Buckets[Entry.index()].first) == K);
@@ -293,15 +286,16 @@ private:
     Present.set(Entry.index());
     Deleted.reset(Entry.index());
 
-    grow();
+    grow(Traits);
 
-    assert((find_as(K)) != end());
+    assert((find_as(K, Traits)) != end());
     return true;
   }
 
   static uint32_t maxLoad(uint32_t capacity) { return capacity * 2 / 3 + 1; }
 
-  void grow() {
+  template <typename TraitsT>
+  void grow(TraitsT &Traits) {
     uint32_t S = size();
     uint32_t MaxLoad = maxLoad(capacity());
     if (S < maxLoad(capacity()))
@@ -313,10 +307,11 @@ private:
     // Growing requires rebuilding the table and re-hashing every item.  Make a
     // copy with a larger capacity, insert everything into the copy, then swap
     // it in.
-    HashTable NewMap(NewCapacity, Traits);
+    HashTable NewMap(NewCapacity);
     for (auto I : Present) {
       auto LookupKey = Traits.storageKeyToLookupKey(Buckets[I].first);
-      NewMap.set_as_internal(LookupKey, Buckets[I].second, Buckets[I].first);
+      NewMap.set_as_internal(LookupKey, Buckets[I].second, Traits,
+                             Buckets[I].first);
     }
 
     Buckets.swap(NewMap.Buckets);

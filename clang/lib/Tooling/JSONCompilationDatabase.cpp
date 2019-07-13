@@ -256,15 +256,57 @@ JSONCompilationDatabase::getAllCompileCommands() const {
   return Commands;
 }
 
+static llvm::StringRef stripExecutableExtension(llvm::StringRef Name) {
+  Name.consume_back(".exe");
+  return Name;
+}
+
+// There are compiler-wrappers (ccache, distcc, gomacc) that take the "real"
+// compiler as an argument, e.g. distcc gcc -O3 foo.c.
+// These end up in compile_commands.json when people set CC="distcc gcc".
+// Clang's driver doesn't understand this, so we need to unwrap.
+static bool unwrapCommand(std::vector<std::string> &Args) {
+  if (Args.size() < 2)
+    return false;
+  StringRef Wrapper =
+      stripExecutableExtension(llvm::sys::path::filename(Args.front()));
+  if (Wrapper == "distcc" || Wrapper == "gomacc" || Wrapper == "ccache") {
+    // Most of these wrappers support being invoked 3 ways:
+    // `distcc g++ file.c` This is the mode we're trying to match.
+    //                     We need to drop `distcc`.
+    // `distcc file.c`     This acts like compiler is cc or similar.
+    //                     Clang's driver can handle this, no change needed.
+    // `g++ file.c`        g++ is a symlink to distcc.
+    //                     We don't even notice this case, and all is well.
+    //
+    // We need to distinguish between the first and second case.
+    // The wrappers themselves don't take flags, so Args[1] is a compiler flag,
+    // an input file, or a compiler. Inputs have extensions, compilers don't.
+    bool HasCompiler =
+        (Args[1][0] != '-') &&
+        !llvm::sys::path::has_extension(stripExecutableExtension(Args[1]));
+    if (HasCompiler) {
+      Args.erase(Args.begin());
+      return true;
+    }
+    // If !HasCompiler, wrappers act like GCC. Fine: so do we.
+  }
+  return false;
+}
+
 static std::vector<std::string>
 nodeToCommandLine(JSONCommandLineSyntax Syntax,
                   const std::vector<llvm::yaml::ScalarNode *> &Nodes) {
   SmallString<1024> Storage;
-  if (Nodes.size() == 1)
-    return unescapeCommandLine(Syntax, Nodes[0]->getValue(Storage));
   std::vector<std::string> Arguments;
-  for (const auto *Node : Nodes)
-    Arguments.push_back(Node->getValue(Storage));
+  if (Nodes.size() == 1)
+    Arguments = unescapeCommandLine(Syntax, Nodes[0]->getValue(Storage));
+  else
+    for (const auto *Node : Nodes)
+      Arguments.push_back(Node->getValue(Storage));
+  // There may be multiple wrappers: using distcc and ccache together is common.
+  while (unwrapCommand(Arguments))
+    ;
   return Arguments;
 }
 
