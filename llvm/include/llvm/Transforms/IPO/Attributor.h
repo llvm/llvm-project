@@ -179,9 +179,12 @@ struct Attributor {
     assert(AAType::ID != Attribute::None &&
            "Cannot lookup generic abstract attributes!");
 
-    // Determine the argument number automatically for llvm::Arguments.
-    if (auto *Arg = dyn_cast<Argument>(&V))
-      ArgNo = Arg->getArgNo();
+    // Determine the argument number automatically for llvm::Arguments if none
+    // is set. Do not override a given one as it could be a use of the argument
+    // in a call site.
+    if (ArgNo == -1)
+      if (auto *Arg = dyn_cast<Argument>(&V))
+        ArgNo = Arg->getArgNo();
 
     // If a function was given together with an argument number, perform the
     // lookup for the actual argument instead. Don't do it for variadic
@@ -196,8 +199,12 @@ struct Attributor {
     const auto &KindToAbstractAttributeMap = AAMap.lookup({&V, ArgNo});
     if (AAType *AA = static_cast<AAType *>(
             KindToAbstractAttributeMap.lookup(AAType::ID))) {
-      QueryMap[AA].insert(&QueryingAA);
-      return AA;
+      // Do not return an attribute with an invalid state. This minimizes checks
+      // at the calls sites and allows the fallback below to kick in.
+      if (AA->getState().isValidState()) {
+        QueryMap[AA].insert(&QueryingAA);
+        return AA;
+      }
     }
 
     // If no abstract attribute was found and we look for a call site argument,
@@ -225,10 +232,13 @@ struct Attributor {
                   "'AbstractAttribute'!");
 
     // Determine the anchor value and the argument number which are used to
-    // lookup the attribute together with AAType::ID.
+    // lookup the attribute together with AAType::ID. If passed an argument,
+    // use its argument number but do not override a given one as it could be a
+    // use of the argument at a call site.
     Value &AnchoredVal = AA.getAnchoredValue();
-    if (auto *Arg = dyn_cast<Argument>(&AnchoredVal))
-      ArgNo = Arg->getArgNo();
+    if (ArgNo == -1)
+      if (auto *Arg = dyn_cast<Argument>(&AnchoredVal))
+        ArgNo = Arg->getArgNo();
 
     // Put the attribute in the lookup map structure and the container we use to
     // keep track of all attributes.
@@ -686,9 +696,7 @@ struct AANoSync : public AbstractAttribute {
       : AbstractAttribute(V, InfoCache) {}
 
   /// See AbstractAttribute::getAttrKind().
-  Attribute::AttrKind getAttrKind() const override {
-    return ID;
-  }
+  Attribute::AttrKind getAttrKind() const override { return ID; }
 
   static constexpr Attribute::AttrKind ID =
       Attribute::AttrKind(Attribute::NoSync);

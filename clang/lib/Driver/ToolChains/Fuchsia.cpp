@@ -192,6 +192,11 @@ Fuchsia::Fuchsia(const Driver &D, const llvm::Triple &Triple,
   // ASan has higher priority because we always want the instrumentated version.
   Multilibs.push_back(Multilib("asan", {}, {}, 2)
                           .flag("+fsanitize=address"));
+  // Use the asan+noexcept variant with ASan and -fno-exceptions.
+  Multilibs.push_back(Multilib("asan+noexcept", {}, {}, 3)
+                          .flag("+fsanitize=address")
+                          .flag("-fexceptions")
+                          .flag("+fno-exceptions"));
   Multilibs.FilterOut([&](const Multilib &M) {
     std::vector<std::string> RD = FilePaths(M);
     return std::all_of(RD.begin(), RD.end(), [&](std::string P) {

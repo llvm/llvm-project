@@ -73,6 +73,7 @@ __attribute__((noreturn))
 void
 terminate() _NOEXCEPT
 {
+#ifndef _LIBCXXABI_NO_EXCEPTIONS
     // If there might be an uncaught exception
     using namespace __cxxabiv1;
     __cxa_eh_globals* globals = __cxa_get_globals_fast();
@@ -87,6 +88,7 @@ terminate() _NOEXCEPT
                 __terminate(exception_header->terminateHandler);
         }
     }
+#endif
     __terminate(get_terminate());
 }
 

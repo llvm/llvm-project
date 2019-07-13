@@ -205,7 +205,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
                                    E = MF.begin()->end();
        I != E;) {
     MachineInstr &MI = *I++;
-    if (!WebAssembly::isArgument(MI))
+    if (!WebAssembly::isArgument(MI.getOpcode()))
       break;
     unsigned Reg = MI.getOperand(0).getReg();
     assert(!MFI.isVRegStackified(Reg));
@@ -227,7 +227,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
   for (MachineBasicBlock &MBB : MF) {
     for (MachineBasicBlock::iterator I = MBB.begin(), E = MBB.end(); I != E;) {
       MachineInstr &MI = *I++;
-      assert(!WebAssembly::isArgument(MI));
+      assert(!WebAssembly::isArgument(MI.getOpcode()));
 
       if (MI.isDebugInstr() || MI.isLabel())
         continue;
@@ -235,7 +235,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
       // Replace tee instructions with local.tee. The difference is that tee
       // instructions have two defs, while local.tee instructions have one def
       // and an index of a local to write to.
-      if (WebAssembly::isTee(MI)) {
+      if (WebAssembly::isTee(MI.getOpcode())) {
         assert(MFI.isVRegStackified(MI.getOperand(0).getReg()));
         assert(!MFI.isVRegStackified(MI.getOperand(1).getReg()));
         unsigned OldReg = MI.getOperand(2).getReg();
@@ -356,7 +356,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
       }
 
       // Coalesce and eliminate COPY instructions.
-      if (WebAssembly::isCopy(MI)) {
+      if (WebAssembly::isCopy(MI.getOpcode())) {
         MRI.replaceRegWith(MI.getOperand(1).getReg(),
                            MI.getOperand(0).getReg());
         MI.eraseFromParent();

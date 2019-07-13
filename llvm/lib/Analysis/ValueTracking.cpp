@@ -3253,12 +3253,7 @@ Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {
     return Val;
   }
 
-  if (isa<ConstantVector>(C)) {
-    Constant *Splat = cast<ConstantVector>(C)->getSplatValue();
-    return Splat ? isBytewiseValue(Splat, DL) : nullptr;
-  }
-
-  if (isa<ConstantArray>(C) || isa<ConstantStruct>(C)) {
+  if (isa<ConstantAggregate>(C)) {
     Value *Val = UndefInt8;
     for (unsigned I = 0, E = C->getNumOperands(); I != E; ++I)
       if (!(Val = Merge(Val, isBytewiseValue(C->getOperand(I), DL))))

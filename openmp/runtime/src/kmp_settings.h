@@ -16,9 +16,7 @@
 void __kmp_reset_global_vars(void);
 void __kmp_env_initialize(char const *);
 void __kmp_env_print();
-#if OMP_40_ENABLED
 void __kmp_env_print_2();
-#endif // OMP_40_ENABLED
 
 int __kmp_initial_threads_capacity(int req_nproc);
 void __kmp_init_dflt_team_nth();

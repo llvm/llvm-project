@@ -428,8 +428,8 @@ private:
   /// relevant updates to DT and LI.
   void deleteDeadLoopBlocks() {
     if (MSSAU) {
-      SmallPtrSet<BasicBlock *, 8> DeadLoopBlocksSet(DeadLoopBlocks.begin(),
-                                                     DeadLoopBlocks.end());
+      SmallSetVector<BasicBlock *, 8> DeadLoopBlocksSet(DeadLoopBlocks.begin(),
+                                                        DeadLoopBlocks.end());
       MSSAU->removeBlocks(DeadLoopBlocksSet);
     }
 

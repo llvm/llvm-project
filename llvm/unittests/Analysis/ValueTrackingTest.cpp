@@ -878,7 +878,7 @@ const std::pair<const char *, const char *> IsBytewiseValueTests[] = {
         "<4 x i8> <i8 1, i8 1, i8 2, i8 1>",
     },
     {
-        "",
+        "i8 5",
         "<2 x i8> < i8 5, i8 undef >",
     },
     {

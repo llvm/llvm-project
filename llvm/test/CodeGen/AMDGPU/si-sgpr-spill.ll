@@ -19,7 +19,7 @@
 ; GCN: s_endpgm
 
 ; TOVGPR: ScratchSize: 0{{$}}
-define amdgpu_ps void @main([17 x <4 x i32>] addrspace(4)* byval %arg, [32 x <4 x i32>] addrspace(4)* byval %arg1, [16 x <8 x i32>] addrspace(4)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) {
+define amdgpu_ps void @main([17 x <4 x i32>] addrspace(4)* inreg %arg, [32 x <4 x i32>] addrspace(4)* inreg %arg1, [16 x <8 x i32>] addrspace(4)* inreg %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) {
 main_body:
   %lds = inttoptr i32 0 to [64 x i32] addrspace(3)*
   %tmp = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(4)* %arg, i64 0, i32 0
@@ -639,7 +639,7 @@ ENDIF66:                                          ; preds = %LOOP65
 ; GCN-LABEL: {{^}}main1:
 ; GCN: s_endpgm
 ; TOVGPR: ScratchSize: 0{{$}}
-define amdgpu_ps void @main1([17 x <4 x i32>] addrspace(4)* byval %arg, [32 x <4 x i32>] addrspace(4)* byval %arg1, [16 x <8 x i32>] addrspace(4)* byval %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
+define amdgpu_ps void @main1([17 x <4 x i32>] addrspace(4)* inreg %arg, [32 x <4 x i32>] addrspace(4)* inreg %arg1, [16 x <8 x i32>] addrspace(4)* inreg %arg2, float inreg %arg3, i32 inreg %arg4, <2 x i32> %arg5, <2 x i32> %arg6, <2 x i32> %arg7, <3 x i32> %arg8, <2 x i32> %arg9, <2 x i32> %arg10, <2 x i32> %arg11, float %arg12, float %arg13, float %arg14, float %arg15, float %arg16, float %arg17, float %arg18, float %arg19, float %arg20) #0 {
 main_body:
   %tmp = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(4)* %arg, i64 0, i32 0
   %tmp21 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, !tbaa !0

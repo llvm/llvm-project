@@ -76,14 +76,9 @@
 
 #define ompt_callback_mutex_released_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 
-#if OMP_40_ENABLED
 #define ompt_callback_dependences_implemented                             \
   ompt_event_MAY_ALWAYS_OPTIONAL
 #define ompt_callback_task_dependence_implemented ompt_event_MAY_ALWAYS_OPTIONAL
-#else
-#define ompt_callback_dependences_implemented ompt_event_UNIMPLEMENTED
-#define ompt_callback_task_dependence_implemented ompt_event_UNIMPLEMENTED
-#endif /* OMP_40_ENABLED */
 
 #define ompt_callback_work_implemented ompt_event_MAY_ALWAYS_OPTIONAL
 

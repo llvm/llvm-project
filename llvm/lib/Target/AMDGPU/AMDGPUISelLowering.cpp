@@ -165,6 +165,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::LOAD, MVT::v16f32, Promote);
   AddPromotedToType(ISD::LOAD, MVT::v16f32, MVT::v16i32);
 
+  setOperationAction(ISD::LOAD, MVT::v32f32, Promote);
+  AddPromotedToType(ISD::LOAD, MVT::v32f32, MVT::v32i32);
+
   setOperationAction(ISD::LOAD, MVT::i64, Promote);
   AddPromotedToType(ISD::LOAD, MVT::i64, MVT::v2i32);
 
@@ -255,6 +258,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 
   setOperationAction(ISD::STORE, MVT::v16f32, Promote);
   AddPromotedToType(ISD::STORE, MVT::v16f32, MVT::v16i32);
+
+  setOperationAction(ISD::STORE, MVT::v32f32, Promote);
+  AddPromotedToType(ISD::STORE, MVT::v32f32, MVT::v32i32);
 
   setOperationAction(ISD::STORE, MVT::i64, Promote);
   AddPromotedToType(ISD::STORE, MVT::i64, MVT::v2i32);
@@ -355,7 +361,10 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v5i32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v8f32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v8i32, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v16f32, Custom);
   setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v16i32, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v32f32, Custom);
+  setOperationAction(ISD::EXTRACT_SUBVECTOR, MVT::v32i32, Custom);
 
   setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
   setOperationAction(ISD::FP_TO_FP16, MVT::f64, Custom);

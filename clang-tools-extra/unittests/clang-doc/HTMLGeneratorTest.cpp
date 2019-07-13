@@ -79,10 +79,11 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
+  SmallString<16> PathTo;
+  llvm::sys::path::native("path/to", PathTo);
   I.Members.emplace_back("int", "X/Y", "X", AccessSpecifier::AS_private);
   I.TagType = TagTypeKind::TTK_Class;
-  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record,
-                         llvm::SmallString<128>("path/to"));
+  I.Parents.emplace_back(EmptySID, "F", InfoType::IT_record, PathTo);
   I.VirtualParents.emplace_back(EmptySID, "G", InfoType::IT_record);
 
   I.ChildRecords.emplace_back(EmptySID, "ChildStruct", InfoType::IT_record);
@@ -97,6 +98,10 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   llvm::raw_string_ostream Actual(Buffer);
   auto Err = G->generateDocForInfo(&I, Actual);
   assert(!Err);
+  SmallString<16> PathToF;
+  llvm::sys::path::native("../../../path/to/F.html", PathToF);
+  SmallString<16> PathToInt;
+  llvm::sys::path::native("../int.html", PathToInt);
   std::string Expected = R"raw(<!DOCTYPE html>
 <meta charset="utf-8"/>
 <title>class r</title>
@@ -107,12 +112,14 @@ TEST(HTMLGeneratorTest, emitRecordHTML) {
   </p>
   <p>
     Inherits from 
-    <a href="../../../path/to/F.html">F</a>
+    <a href=")raw" + std::string(PathToF.str()) +
+                         R"raw(">F</a>
     , G
   </p>
   <h2>Members</h2>
   <ul>
-    <li>private <a href="../int.html">int</a> X</li>
+    <li>private <a href=")raw" +
+                         std::string(PathToInt.str()) + R"raw(">int</a> X</li>
   </ul>
   <h2>Records</h2>
   <ul>
@@ -143,8 +150,10 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
   I.DefLoc = Location(10, llvm::SmallString<16>{"test.cpp"});
   I.Loc.emplace_back(12, llvm::SmallString<16>{"test.cpp"});
 
-  I.ReturnType = TypeInfo(EmptySID, "float", InfoType::IT_default, "path/to");
-  I.Params.emplace_back("int", "path/to", "P");
+  SmallString<16> PathTo;
+  llvm::sys::path::native("path/to", PathTo);
+  I.ReturnType = TypeInfo(EmptySID, "float", InfoType::IT_default, PathTo);
+  I.Params.emplace_back("int", PathTo, "P");
   I.IsMethod = true;
   I.Parent = Reference(EmptySID, "Parent", InfoType::IT_record);
 
@@ -154,15 +163,21 @@ TEST(HTMLGeneratorTest, emitFunctionHTML) {
   llvm::raw_string_ostream Actual(Buffer);
   auto Err = G->generateDocForInfo(&I, Actual);
   assert(!Err);
+  SmallString<16> PathToFloat;
+  llvm::sys::path::native("path/to/float.html", PathToFloat);
+  SmallString<16> PathToInt;
+  llvm::sys::path::native("path/to/int.html", PathToInt);
   std::string Expected = R"raw(<!DOCTYPE html>
 <meta charset="utf-8"/>
 <title></title>
 <div>
   <h3>f</h3>
   <p>
-    <a href="path/to/float.html">float</a>
+    <a href=")raw" + std::string(PathToFloat.str()) +
+                         R"raw(">float</a>
      f(
-    <a href="path/to/int.html">int</a>
+    <a href=")raw" + std::string(PathToInt.str()) +
+                         R"raw(">int</a>
      P)
   </p>
   <p>

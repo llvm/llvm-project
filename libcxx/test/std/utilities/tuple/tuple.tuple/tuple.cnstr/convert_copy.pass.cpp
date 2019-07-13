@@ -31,6 +31,15 @@ struct Implicit {
   Implicit(int x) : value(x) {}
 };
 
+struct ExplicitTwo {
+    ExplicitTwo() {}
+    ExplicitTwo(ExplicitTwo const&) {}
+    ExplicitTwo(ExplicitTwo &&) {}
+
+    template <class T, class = typename std::enable_if<!std::is_same<T, ExplicitTwo>::value>::type>
+    explicit ExplicitTwo(T) {}
+};
+
 struct B
 {
     int id_;
@@ -136,6 +145,13 @@ int main(int, char**)
         std::tuple<Implicit> t2 = t1;
         assert(std::get<0>(t2).value == 42);
     }
+    {
+        static_assert(std::is_convertible<ExplicitTwo&&, ExplicitTwo>::value, "");
+        static_assert(std::is_convertible<std::tuple<ExplicitTwo&&>&&, const std::tuple<ExplicitTwo>&>::value, "");
 
+        ExplicitTwo e;
+        std::tuple<ExplicitTwo> t = std::tuple<ExplicitTwo&&>(std::move(e));
+        ((void)t);
+    }
   return 0;
 }

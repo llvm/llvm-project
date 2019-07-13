@@ -27,7 +27,7 @@
 ; GCN: NumVgprs: 256
 ; GCN: ScratchSize: 1536
 
-define amdgpu_vs void @main([9 x <4 x i32>] addrspace(4)* byval %arg, [17 x <4 x i32>] addrspace(4)* byval %arg1, [17 x <4 x i32>] addrspace(4)* byval %arg2, [34 x <8 x i32>] addrspace(4)* byval %arg3, [16 x <4 x i32>] addrspace(4)* byval %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10) #0 {
+define amdgpu_vs void @main([9 x <4 x i32>] addrspace(4)* inreg %arg, [17 x <4 x i32>] addrspace(4)* inreg %arg1, [17 x <4 x i32>] addrspace(4)* inreg %arg2, [34 x <8 x i32>] addrspace(4)* inreg %arg3, [16 x <4 x i32>] addrspace(4)* inreg %arg4, i32 inreg %arg5, i32 inreg %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10) #0 {
 bb:
   %tmp = getelementptr [17 x <4 x i32>], [17 x <4 x i32>] addrspace(4)* %arg1, i64 0, i64 0
   %tmp11 = load <4 x i32>, <4 x i32> addrspace(4)* %tmp, align 16, !tbaa !0

@@ -715,7 +715,7 @@ bool SystemZInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   switch (UseOpc) {
   case SystemZ::SELRMux:
     TieOps = true;
-    /* fall through */
+    LLVM_FALLTHROUGH;
   case SystemZ::LOCRMux:
     if (!STI.hasLoadStoreOnCond2())
       return false;
@@ -729,7 +729,7 @@ bool SystemZInstrInfo::FoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
     break;
   case SystemZ::SELGR:
     TieOps = true;
-    /* fall through */
+    LLVM_FALLTHROUGH;
   case SystemZ::LOCGR:
     if (!STI.hasLoadStoreOnCond2())
       return false;

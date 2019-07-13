@@ -542,6 +542,8 @@ static Value *foldSelectICmpLshrAshr(const ICmpInst *IC, Value *TrueVal,
   ICmpInst::Predicate Pred = IC->getPredicate();
   Value *CmpLHS = IC->getOperand(0);
   Value *CmpRHS = IC->getOperand(1);
+  if (!CmpRHS->getType()->isIntOrIntVectorTy())
+    return nullptr;
 
   Value *X, *Y;
   unsigned Bitwidth = CmpRHS->getType()->getScalarSizeInBits();

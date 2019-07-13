@@ -252,7 +252,7 @@ static void query(const MachineInstr &MI, AliasAnalysis &AA, bool &Read,
 
   // Analyze calls.
   if (MI.isCall()) {
-    unsigned CalleeOpNo = WebAssembly::getCalleeOpNo(MI);
+    unsigned CalleeOpNo = WebAssembly::getCalleeOpNo(MI.getOpcode());
     queryCallee(MI, CalleeOpNo, Read, Write, Effects, StackPointer);
   }
 }
@@ -826,7 +826,7 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
 
         // Argument instructions represent live-in registers and not real
         // instructions.
-        if (WebAssembly::isArgument(*Def))
+        if (WebAssembly::isArgument(Def->getOpcode()))
           continue;
 
         // Currently catch's return value register cannot be stackified, because

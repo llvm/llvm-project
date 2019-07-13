@@ -359,9 +359,7 @@ struct AANoUnwindFunction : AANoUnwind, BooleanState {
   /// }
 
   /// See AbstractAttribute::getManifestPosition().
-  ManifestPosition getManifestPosition() const override {
-    return MP_FUNCTION;
-  }
+  ManifestPosition getManifestPosition() const override { return MP_FUNCTION; }
 
   const std::string getAsStr() const override {
     return getAssumed() ? "nounwind" : "may-unwind";
@@ -500,9 +498,7 @@ public:
   const AbstractState &getState() const override { return *this; }
 
   /// See AbstractAttribute::getManifestPosition().
-  ManifestPosition getManifestPosition() const override {
-    return MP_ARGUMENT;
-  }
+  ManifestPosition getManifestPosition() const override { return MP_ARGUMENT; }
 
   /// See AbstractAttribute::updateImpl(Attributor &A).
   ChangeStatus updateImpl(Attributor &A) override;
@@ -655,7 +651,7 @@ ChangeStatus AAReturnedValuesImpl::updateImpl(Attributor &A) {
 
     // Try to find a assumed unique return value for the called function.
     auto *RetCSAA = A.getAAFor<AAReturnedValuesImpl>(*this, *RV);
-    if (!RetCSAA || !RetCSAA->isValidState()) {
+    if (!RetCSAA) {
       HasOverdefinedReturnedCalls = true;
       LLVM_DEBUG(dbgs() << "[AAReturnedValues] Returned call site (" << *RV
                         << ") with " << (RetCSAA ? "invalid" : "no")
@@ -742,9 +738,7 @@ struct AANoSyncFunction : AANoSync, BooleanState {
   /// }
 
   /// See AbstractAttribute::getManifestPosition().
-  ManifestPosition getManifestPosition() const override {
-    return MP_FUNCTION;
-  }
+  ManifestPosition getManifestPosition() const override { return MP_FUNCTION; }
 
   const std::string getAsStr() const override {
     return getAssumed() ? "nosync" : "may-sync";
@@ -767,7 +761,8 @@ struct AANoSyncFunction : AANoSync, BooleanState {
   /// Helper function used to determine whether an instruction is volatile.
   static bool isVolatile(Instruction *I);
 
-  /// Helper function uset to check if intrinsic is volatile (memcpy, memmove, memset).
+  /// Helper function uset to check if intrinsic is volatile (memcpy, memmove,
+  /// memset).
   static bool isNoSyncIntrinsic(Instruction *I);
 };
 
@@ -870,7 +865,7 @@ ChangeStatus AANoSyncFunction::updateImpl(Attributor &A) {
     auto *NoSyncAA = A.getAAFor<AANoSyncFunction>(*this, *I);
 
     if (isa<IntrinsicInst>(I) && isNoSyncIntrinsic(I))
-        continue;
+      continue;
 
     if (ICS && (!NoSyncAA || !NoSyncAA->isAssumedNoSync()) &&
         !ICS.hasFnAttr(Attribute::NoSync)) {
@@ -878,7 +873,7 @@ ChangeStatus AANoSyncFunction::updateImpl(Attributor &A) {
       return ChangeStatus::CHANGED;
     }
 
-    if(ICS)
+    if (ICS)
       continue;
 
     if (!isVolatile(I) && !isNonRelaxedAtomic(I))
@@ -965,8 +960,7 @@ ChangeStatus AANoFreeFunction::updateImpl(Attributor &A) {
       auto ICS = ImmutableCallSite(I);
       auto *NoFreeAA = A.getAAFor<AANoFreeFunction>(*this, *I);
 
-      if ((!NoFreeAA || !NoFreeAA->isValidState() ||
-           !NoFreeAA->isAssumedNoFree()) &&
+      if ((!NoFreeAA || !NoFreeAA->isAssumedNoFree()) &&
           !ICS.hasFnAttr(Attribute::NoFree)) {
         indicatePessimisticFixpoint();
         return ChangeStatus::CHANGED;
