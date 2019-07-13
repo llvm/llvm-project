@@ -31,6 +31,7 @@
 #ifndef LLVM_ANALYSIS_MEMORYSSAUPDATER_H
 #define LLVM_ANALYSIS_MEMORYSSAUPDATER_H
 
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -243,7 +244,7 @@ public:
   /// Deleted blocks still have successor info, but their predecessor edges and
   /// Phi nodes may already be updated. Instructions in DeadBlocks should be
   /// deleted after this call.
-  void removeBlocks(const SmallPtrSetImpl<BasicBlock *> &DeadBlocks);
+  void removeBlocks(const SmallSetVector<BasicBlock *, 8> &DeadBlocks);
 
   /// Instruction I will be changed to an unreachable. Remove all accesses in
   /// I's block that follow I (inclusive), and update the Phis in the blocks'
