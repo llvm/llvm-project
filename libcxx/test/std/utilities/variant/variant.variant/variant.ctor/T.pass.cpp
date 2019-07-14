@@ -177,13 +177,13 @@ void test_T_ctor_basic() {
 #endif
 }
 
-struct BoomOnInt {
+struct BoomOnAnything {
   template <class T>
-  constexpr BoomOnInt(T) { static_assert(!std::is_same<T, int>::value, ""); }
+  constexpr BoomOnAnything(T) { static_assert(!std::is_same<T, T>::value, ""); }
 };
 
 void test_no_narrowing_check_for_class_types() {
-  using V = std::variant<int, BoomOnInt>;
+  using V = std::variant<int, BoomOnAnything>;
   V v(42);
   assert(v.index() == 0);
   assert(std::get<0>(v) == 42);
