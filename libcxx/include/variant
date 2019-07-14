@@ -1098,59 +1098,64 @@ struct __narrowing_check {
   template <class _Dest>
   static auto __test_impl(_Dest (&&)[1]) -> __identity<_Dest>;
   template <class _Dest, class _Source>
-  using _Apply = decltype(__test_impl<_Dest>({std::declval<_Source>()}));
+  using _Apply _LIBCPP_NODEBUG_TYPE = decltype(__test_impl<_Dest>({std::declval<_Source>()}));
 };
 
 template <class _Dest, class _Source>
-using __check_for_narrowing = typename _If<
+using __check_for_narrowing _LIBCPP_NODEBUG_TYPE =
+  typename _If<
 #ifdef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
     false &&
 #endif
     is_arithmetic<_Dest>::value,
     __narrowing_check,
     __no_narrowing_check
-    >::template _Apply<_Dest, _Source>;
+  >::template _Apply<_Dest, _Source>;
 
-
-template <class... _Types>
-struct __overload;
-
-template <>
-struct __overload<> { void operator()() const; };
-
-template <class _Tp, class... _Types>
-struct __overload<_Tp, _Types...> : __overload<_Types...> {
-  using __overload<_Types...>::operator();
-
+template <class _Tp, size_t _Idx>
+struct __overload {
   template <class _Up>
   auto operator()(_Tp, _Up&&) const -> __check_for_narrowing<_Tp, _Up>;
 };
 
-template <class _Base, class _Tp>
-struct __overload_bool : _Base {
-  using _Base::operator();
-
+template <class _Tp, size_t>
+struct __overload_bool  {
   template <class _Up, class _Ap = __uncvref_t<_Up>>
   auto operator()(bool, _Up&&) const
       -> enable_if_t<is_same_v<_Ap, bool>, __identity<_Tp>>;
 };
 
-template <class... _Types>
-struct __overload<bool, _Types...>
-    : __overload_bool<__overload<_Types...>, bool> {};
-template <class... _Types>
-struct __overload<bool const, _Types...>
-    : __overload_bool<__overload<_Types...>, bool const> {};
-template <class... _Types>
-struct __overload<bool volatile, _Types...>
-    : __overload_bool<__overload<_Types...>, bool volatile> {};
-template <class... _Types>
-struct __overload<bool const volatile, _Types...>
-    : __overload_bool<__overload<_Types...>, bool const volatile> {};
+template <size_t _Idx>
+struct __overload<bool, _Idx> : __overload_bool<bool, _Idx> {};
+template <size_t _Idx>
+struct __overload<bool const, _Idx> : __overload_bool<bool const, _Idx> {};
+template <size_t _Idx>
+struct __overload<bool volatile, _Idx> : __overload_bool<bool volatile, _Idx> {};
+template <size_t _Idx>
+struct __overload<bool const volatile, _Idx> : __overload_bool<bool const volatile, _Idx> {};
+
+template <class ..._Bases>
+struct __all_overloads : _Bases... {
+  void operator()() const;
+  using _Bases::operator()...;
+};
+
+template <class IdxSeq>
+struct __make_overloads_imp;
+
+template <size_t ..._Idx>
+struct __make_overloads_imp<__tuple_indices<_Idx...> > {
+  template <class ..._Types>
+  using _Apply _LIBCPP_NODEBUG_TYPE = __all_overloads<__overload<_Types, _Idx>...>;
+};
+
+template <class ..._Types>
+using _MakeOverloads _LIBCPP_NODEBUG_TYPE = typename __make_overloads_imp<
+    __make_indices_imp<sizeof...(_Types), 0> >::template _Apply<_Types...>;
 
 template <class _Tp, class... _Types>
 using __best_match_t =
-    typename invoke_result_t<__overload<_Types...>, _Tp, _Tp>::type;
+    typename invoke_result_t<_MakeOverloads<_Types...>, _Tp, _Tp>::type;
 
 } // __variant_detail
 
