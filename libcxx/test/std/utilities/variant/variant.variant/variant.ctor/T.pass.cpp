@@ -189,10 +189,22 @@ void test_no_narrowing_check_for_class_types() {
   assert(std::get<0>(v) == 42);
 }
 
+struct Bar {};
+struct Baz {};
+void test_construction_with_repeated_types() {
+  using V = std::variant<int, Bar, Baz, int, Baz, int, int>;
+  static_assert(!std::is_constructible<V, int>::value, "");
+  static_assert(!std::is_constructible<V, Baz>::value, "");
+  // OK, the selected type appears only once and so it shouldn't
+  // be affected by the duplicate types.
+  static_assert(std::is_constructible<V, Bar>::value, "");
+}
+
 int main(int, char**) {
   test_T_ctor_basic();
   test_T_ctor_noexcept();
   test_T_ctor_sfinae();
   test_no_narrowing_check_for_class_types();
+  test_construction_with_repeated_types();
   return 0;
 }
