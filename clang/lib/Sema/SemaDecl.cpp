@@ -11082,7 +11082,8 @@ bool Sema::DeduceVariableDeclarationType(VarDecl *VDecl, bool DirectInit,
   return VDecl->isInvalidDecl();
 }
 
-void Sema::checkNonTrivialCUnionInInitializer(const Expr *Init, SourceLocation Loc) {
+void Sema::checkNonTrivialCUnionInInitializer(const Expr *Init,
+                                              SourceLocation Loc) {
   if (auto *CE = dyn_cast<ConstantExpr>(Init))
     Init = CE->getSubExpr();
 
@@ -11113,7 +11114,7 @@ void Sema::checkNonTrivialCUnionInInitializer(const Expr *Init, SourceLocation L
     if (InitType.hasNonTrivialToPrimitiveCopyCUnion())
       checkNonTrivialCUnion(InitType, Loc, NTCUC_CopyInit, NTCUK_Copy);
   }
-};
+}
 
 namespace {
 

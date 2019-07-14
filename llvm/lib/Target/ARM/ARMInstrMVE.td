@@ -1002,6 +1002,23 @@ defm MVE_VMOVLu8 : MVE_VMOVL_shift_half<"vmovl", "u8", 0b01, 0b1>;
 defm MVE_VMOVLs16 : MVE_VMOVL_shift_half<"vmovl", "s16", 0b10, 0b0>;
 defm MVE_VMOVLu16 : MVE_VMOVL_shift_half<"vmovl", "u16", 0b10, 0b1>;
 
+let Predicates = [HasMVEInt] in {
+  def : Pat<(sext_inreg (v4i32 MQPR:$src), v4i16),
+            (MVE_VMOVLs16bh MQPR:$src)>;
+  def : Pat<(sext_inreg (v8i16 MQPR:$src), v8i8),
+            (MVE_VMOVLs8bh MQPR:$src)>;
+  def : Pat<(sext_inreg (v4i32 MQPR:$src), v4i8),
+            (MVE_VMOVLs16bh (MVE_VMOVLs8bh MQPR:$src))>;
+
+  // zext_inreg 16 -> 32
+  def : Pat<(and (v4i32 MQPR:$src), (v4i32 (ARMvmovImm (i32 0xCFF)))),
+            (MVE_VMOVLu16bh MQPR:$src)>;
+  // zext_inreg 8 -> 16
+  def : Pat<(and (v8i16 MQPR:$src), (v8i16 (ARMvmovImm (i32 0x8FF)))),
+            (MVE_VMOVLu8bh MQPR:$src)>;
+}
+
+
 class MVE_VSHLL_imm<string iname, string suffix, bit U, bit th,
                     dag immops, list<dag> pattern=[]>
   : MVE_shift_imm<(outs MQPR:$Qd), !con((ins MQPR:$Qm), immops),
