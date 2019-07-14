@@ -565,12 +565,6 @@ struct _NullSentinal {};
 template <class _Tp>
 using _Void = void;
 
-template <class _Tp>
-struct __is_char : public false_type {};
-
-template <>
-struct __is_char<char> : public true_type {};
-
 template <class _Tp, class = void>
 struct __is_pathable_string : public false_type {};
 
@@ -753,7 +747,12 @@ struct __widen_from_char_iter_pair {
 template <class _InputIt>
 struct __widen_from_char_iter_pair<_InputIt, char> {
   static wstring __convert(const char* __b, const char* __e, const locale& __loc) {
-    // TODO:
+    wstring __r;
+    if (has_facet<codecvt<wchar_t, char, mbstate_t>>(__loc))
+      return __r;
+    __r.reserve(__e - __b);
+    __widen_using_codecvt(use_facet<codecvt<wchar_t, char, mbstate_t>>(__loc) , back_inserter(__r), __b, __e);
+    return __r;
   }
 };
 
