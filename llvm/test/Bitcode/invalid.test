@@ -235,3 +235,8 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-nonpointer-atomicrmw.bc 2>&1
 RUN:   FileCheck --check-prefix=NONPOINTER-ATOMICRMW %s
 
 NONPOINTER-ATOMICRMW: Invalid record
+
+RUN: not llvm-dis -disable-output %p/Inputs/invalid-fcmp-opnum.bc 2>&1 | \
+RUN:   FileCheck --check-prefix=INVALID-FCMP-OPNUM %s
+
+INVALID-FCMP-OPNUM: Invalid record: operand number exceeded available operands
