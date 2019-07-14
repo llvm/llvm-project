@@ -863,8 +863,23 @@ class MVE_VMINMAXNM<string iname, string suffix, bit sz, bit bit_21,
 def MVE_VMAXNMf32 : MVE_VMINMAXNM<"vmaxnm", "f32", 0b0, 0b0>;
 def MVE_VMAXNMf16 : MVE_VMINMAXNM<"vmaxnm", "f16", 0b1, 0b0>;
 
+let Predicates = [HasMVEFloat] in {
+  def : Pat<(v4f32 (fmaxnum (v4f32 MQPR:$val1), (v4f32 MQPR:$val2))),
+            (v4f32 (MVE_VMAXNMf32 (v4f32 MQPR:$val1), (v4f32 MQPR:$val2)))>;
+  def : Pat<(v8f16 (fmaxnum (v8f16 MQPR:$val1), (v8f16 MQPR:$val2))),
+            (v8f16 (MVE_VMAXNMf16 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2)))>;
+}
+
 def MVE_VMINNMf32 : MVE_VMINMAXNM<"vminnm", "f32", 0b0, 0b1>;
 def MVE_VMINNMf16 : MVE_VMINMAXNM<"vminnm", "f16", 0b1, 0b1>;
+
+let Predicates = [HasMVEFloat] in {
+  def : Pat<(v4f32 (fminnum (v4f32 MQPR:$val1), (v4f32 MQPR:$val2))),
+            (v4f32 (MVE_VMINNMf32 (v4f32 MQPR:$val1), (v4f32 MQPR:$val2)))>;
+  def : Pat<(v8f16 (fminnum (v8f16 MQPR:$val1), (v8f16 MQPR:$val2))),
+            (v8f16 (MVE_VMINNMf16 (v8f16 MQPR:$val1), (v8f16 MQPR:$val2)))>;
+}
+
 
 class MVE_VMINMAX<string iname, string suffix, bit U, bits<2> size,
               bit bit_4, list<dag> pattern=[]>
@@ -891,6 +906,36 @@ multiclass MVE_VMINMAX_all_sizes<string iname, bit bit_4> {
 
 defm MVE_VMAX : MVE_VMINMAX_all_sizes<"vmax", 0b0>;
 defm MVE_VMIN : MVE_VMINMAX_all_sizes<"vmin", 0b1>;
+
+let Predicates = [HasMVEInt] in {
+  def : Pat<(v16i8 (smin (v16i8 MQPR:$val1), (v16i8 MQPR:$val2))),
+            (v16i8 (MVE_VMINs8 (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)))>;
+  def : Pat<(v8i16 (smin (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))),
+            (v8i16 (MVE_VMINs16 (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)))>;
+  def : Pat<(v4i32 (smin (v4i32 MQPR:$val1), (v4i32 MQPR:$val2))),
+            (v4i32 (MVE_VMINs32 (v4i32 MQPR:$val1), (v4i32 MQPR:$val2)))>;
+
+  def : Pat<(v16i8 (smax (v16i8 MQPR:$val1), (v16i8 MQPR:$val2))),
+            (v16i8 (MVE_VMAXs8 (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)))>;
+  def : Pat<(v8i16 (smax (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))),
+            (v8i16 (MVE_VMAXs16 (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)))>;
+  def : Pat<(v4i32 (smax (v4i32 MQPR:$val1), (v4i32 MQPR:$val2))),
+            (v4i32 (MVE_VMAXs32 (v4i32 MQPR:$val1), (v4i32 MQPR:$val2)))>;
+
+  def : Pat<(v16i8 (umin (v16i8 MQPR:$val1), (v16i8 MQPR:$val2))),
+            (v16i8 (MVE_VMINu8 (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)))>;
+  def : Pat<(v8i16 (umin (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))),
+            (v8i16 (MVE_VMINu16 (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)))>;
+  def : Pat<(v4i32 (umin (v4i32 MQPR:$val1), (v4i32 MQPR:$val2))),
+            (v4i32 (MVE_VMINu32 (v4i32 MQPR:$val1), (v4i32 MQPR:$val2)))>;
+
+  def : Pat<(v16i8 (umax (v16i8 MQPR:$val1), (v16i8 MQPR:$val2))),
+            (v16i8 (MVE_VMAXu8 (v16i8 MQPR:$val1), (v16i8 MQPR:$val2)))>;
+  def : Pat<(v8i16 (umax (v8i16 MQPR:$val1), (v8i16 MQPR:$val2))),
+            (v8i16 (MVE_VMAXu16 (v8i16 MQPR:$val1), (v8i16 MQPR:$val2)))>;
+  def : Pat<(v4i32 (umax (v4i32 MQPR:$val1), (v4i32 MQPR:$val2))),
+            (v4i32 (MVE_VMAXu32 (v4i32 MQPR:$val1), (v4i32 MQPR:$val2)))>;
+}
 
 // end of mve_comp instructions
 
@@ -956,6 +1001,23 @@ defm MVE_VMOVLs8 : MVE_VMOVL_shift_half<"vmovl", "s8", 0b01, 0b0>;
 defm MVE_VMOVLu8 : MVE_VMOVL_shift_half<"vmovl", "u8", 0b01, 0b1>;
 defm MVE_VMOVLs16 : MVE_VMOVL_shift_half<"vmovl", "s16", 0b10, 0b0>;
 defm MVE_VMOVLu16 : MVE_VMOVL_shift_half<"vmovl", "u16", 0b10, 0b1>;
+
+let Predicates = [HasMVEInt] in {
+  def : Pat<(sext_inreg (v4i32 MQPR:$src), v4i16),
+            (MVE_VMOVLs16bh MQPR:$src)>;
+  def : Pat<(sext_inreg (v8i16 MQPR:$src), v8i8),
+            (MVE_VMOVLs8bh MQPR:$src)>;
+  def : Pat<(sext_inreg (v4i32 MQPR:$src), v4i8),
+            (MVE_VMOVLs16bh (MVE_VMOVLs8bh MQPR:$src))>;
+
+  // zext_inreg 16 -> 32
+  def : Pat<(and (v4i32 MQPR:$src), (v4i32 (ARMvmovImm (i32 0xCFF)))),
+            (MVE_VMOVLu16bh MQPR:$src)>;
+  // zext_inreg 8 -> 16
+  def : Pat<(and (v8i16 MQPR:$src), (v8i16 (ARMvmovImm (i32 0x8FF)))),
+            (MVE_VMOVLu8bh MQPR:$src)>;
+}
+
 
 class MVE_VSHLL_imm<string iname, string suffix, bit U, bit th,
                     dag immops, list<dag> pattern=[]>
@@ -2144,9 +2206,27 @@ def MVE_VABSs8  : MVE_VABSNEG_int<"vabs", "s8",  0b00, 0b0>;
 def MVE_VABSs16 : MVE_VABSNEG_int<"vabs", "s16", 0b01, 0b0>;
 def MVE_VABSs32 : MVE_VABSNEG_int<"vabs", "s32", 0b10, 0b0>;
 
+let Predicates = [HasMVEInt] in {
+  def : Pat<(v16i8 (abs (v16i8 MQPR:$v))),
+            (v16i8 (MVE_VABSs8 $v))>;
+  def : Pat<(v8i16 (abs (v8i16 MQPR:$v))),
+            (v8i16 (MVE_VABSs16 $v))>;
+  def : Pat<(v4i32 (abs (v4i32 MQPR:$v))),
+            (v4i32 (MVE_VABSs32 $v))>;
+}
+
 def MVE_VNEGs8  : MVE_VABSNEG_int<"vneg", "s8",  0b00, 0b1>;
 def MVE_VNEGs16 : MVE_VABSNEG_int<"vneg", "s16", 0b01, 0b1>;
 def MVE_VNEGs32 : MVE_VABSNEG_int<"vneg", "s32", 0b10, 0b1>;
+
+let Predicates = [HasMVEInt] in {
+  def : Pat<(v16i8 (vnegq (v16i8 MQPR:$v))),
+            (v16i8 (MVE_VNEGs8 $v))>;
+  def : Pat<(v8i16 (vnegq (v8i16 MQPR:$v))),
+            (v8i16 (MVE_VNEGs16 $v))>;
+  def : Pat<(v4i32 (vnegq (v4i32 MQPR:$v))),
+            (v4i32 (MVE_VNEGs32 $v))>;
+}
 
 class MVE_VQABSNEG<string iname, string suffix, bits<2> size,
                    bit negate, list<dag> pattern=[]>
@@ -2309,6 +2389,29 @@ multiclass MVE_VRINT_ops<string suffix, bits<2> size, list<dag> pattern=[]> {
 
 defm MVE_VRINTf16 : MVE_VRINT_ops<"f16", 0b01>;
 defm MVE_VRINTf32 : MVE_VRINT_ops<"f32", 0b10>;
+
+let Predicates = [HasMVEFloat] in {
+  def : Pat<(v4f32 (frint (v4f32 MQPR:$val1))),
+            (v4f32 (MVE_VRINTf32X (v4f32 MQPR:$val1)))>;
+  def : Pat<(v8f16 (frint (v8f16 MQPR:$val1))),
+            (v8f16 (MVE_VRINTf16X (v8f16 MQPR:$val1)))>;
+  def : Pat<(v4f32 (fround (v4f32 MQPR:$val1))),
+            (v4f32 (MVE_VRINTf32A (v4f32 MQPR:$val1)))>;
+  def : Pat<(v8f16 (fround (v8f16 MQPR:$val1))),
+            (v8f16 (MVE_VRINTf16A (v8f16 MQPR:$val1)))>;
+  def : Pat<(v4f32 (ftrunc (v4f32 MQPR:$val1))),
+            (v4f32 (MVE_VRINTf32Z (v4f32 MQPR:$val1)))>;
+  def : Pat<(v8f16 (ftrunc (v8f16 MQPR:$val1))),
+            (v8f16 (MVE_VRINTf16Z (v8f16 MQPR:$val1)))>;
+  def : Pat<(v4f32 (ffloor (v4f32 MQPR:$val1))),
+            (v4f32 (MVE_VRINTf32M (v4f32 MQPR:$val1)))>;
+  def : Pat<(v8f16 (ffloor (v8f16 MQPR:$val1))),
+            (v8f16 (MVE_VRINTf16M (v8f16 MQPR:$val1)))>;
+  def : Pat<(v4f32 (fceil (v4f32 MQPR:$val1))),
+            (v4f32 (MVE_VRINTf32P (v4f32 MQPR:$val1)))>;
+  def : Pat<(v8f16 (fceil (v8f16 MQPR:$val1))),
+            (v8f16 (MVE_VRINTf16P (v8f16 MQPR:$val1)))>;
+}
 
 class MVEFloatArithNeon<string iname, string suffix, bit size,
                            dag oops, dag iops, string ops,

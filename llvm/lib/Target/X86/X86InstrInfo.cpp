@@ -4641,7 +4641,7 @@ MachineInstr *X86InstrInfo::foldMemoryOperandCustom(
       unsigned RCSize = TRI.getRegSizeInBits(*RC) / 8;
       if ((Size == 0 || Size >= 16) && RCSize >= 16 && Align < 16) {
         MachineInstr *NewMI =
-            FuseInst(MF, X86::MOVHPDrm, OpNum, MOs, InsertPt, MI, *this, 8);
+            FuseInst(MF, X86::MOVHPDrm, OpNum, MOs, InsertPt, MI, *this);
         return NewMI;
       }
     }

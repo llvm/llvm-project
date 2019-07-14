@@ -291,9 +291,8 @@ define i32 @PR40483_sub5(i32*, i32) {
 ;
 ; X64-LABEL: PR40483_sub5:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    subl %esi, (%rdi)
-; X64-NEXT:    cmovael %eax, %eax
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
   %3 = load i32, i32* %0, align 8
   %4 = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 %3, i32 %1)
