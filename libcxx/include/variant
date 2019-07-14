@@ -1095,19 +1095,39 @@ struct __overload;
 template <>
 struct __overload<> { void operator()() const; };
 
+
+
+struct __no_narrowing_check {
+  template <class _Dest, class _Source>
+  using _Apply = __identity<_Dest>;
+};
+
+struct __narrowing_check {
+  template <class _Dest>
+  static auto __test_impl(_Dest (&&)[1]) -> __identity<_Dest>;
+  template <class _Dest, class _Source>
+  using _Apply = decltype(__test_impl<_Dest>({std::declval<_Source>()}));
+};
+
+template <class _Dest, class _Source>
+using __check_for_narrowing = typename _If<
+#ifdef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
+    false &&
+#endif
+    is_arithmetic<_Dest>::value,
+    __narrowing_check,
+    __no_narrowing_check
+    >::template _Apply<_Dest, _Source>;
+
+
 template <class _Tp, class... _Types>
 struct __overload<_Tp, _Types...> : __overload<_Types...> {
   using __overload<_Types...>::operator();
 
-  static auto __test(_Tp (&&)[1]) -> __identity<_Tp>;
-
   template <class _Up>
-  auto operator()(_Tp, _Up&& __t) const
-#ifndef _LIBCPP_ENABLE_NARROWING_CONVERSIONS_IN_VARIANT
-      -> decltype(__test({ _VSTD::forward<_Up>(__t) }));
-#else
-      -> __identity<_Tp>;
-#endif
+  auto operator()(_Tp, _Up&&) const ->
+
+  __check_for_narrowing<_Tp, _Up>;
 };
 
 template <class _Base, class _Tp>

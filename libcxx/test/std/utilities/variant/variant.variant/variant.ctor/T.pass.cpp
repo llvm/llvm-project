@@ -177,10 +177,22 @@ void test_T_ctor_basic() {
 #endif
 }
 
+struct BoomOnInt {
+  template <class T>
+  constexpr BoomOnInt(T) { static_assert(!std::is_same<T, int>::value, ""); }
+};
+
+void test_no_narrowing_check_for_class_types() {
+  using V = std::variant<int, BoomOnInt>;
+  V v(42);
+  assert(v.index() == 0);
+  assert(std::get<0>(v) == 42);
+}
+
 int main(int, char**) {
   test_T_ctor_basic();
   test_T_ctor_noexcept();
   test_T_ctor_sfinae();
-
+  test_no_narrowing_check_for_class_types();
   return 0;
 }
