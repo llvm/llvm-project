@@ -1135,16 +1135,12 @@ bool tools::isObjCAutoRefCount(const ArgList &Args) {
 
 enum class LibGccType { UnspecifiedLibGcc, StaticLibGcc, SharedLibGcc };
 
-static LibGccType getLibGccType(const ArgList &Args) {
-  bool Static = Args.hasArg(options::OPT_static_libgcc) ||
-                Args.hasArg(options::OPT_static) ||
-                Args.hasArg(options::OPT_static_pie);
-
-  bool Shared = Args.hasArg(options::OPT_shared_libgcc);
-  if (Shared)
-    return LibGccType::SharedLibGcc;
-  if (Static)
+static LibGccType getLibGccType(const Driver &D, const ArgList &Args) {
+  if (Args.hasArg(options::OPT_static_libgcc) ||
+      Args.hasArg(options::OPT_static) || Args.hasArg(options::OPT_static_pie))
     return LibGccType::StaticLibGcc;
+  if (Args.hasArg(options::OPT_shared_libgcc) || D.CCCIsCXX())
+    return LibGccType::SharedLibGcc;
   return LibGccType::UnspecifiedLibGcc;
 }
 
@@ -1170,8 +1166,8 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
       UNW == ToolChain::UNW_None)
     return;
 
-  LibGccType LGT = getLibGccType(Args);
-  bool AsNeeded = D.CCCIsCC() && LGT == LibGccType::UnspecifiedLibGcc &&
+  LibGccType LGT = getLibGccType(D, Args);
+  bool AsNeeded = LGT == LibGccType::UnspecifiedLibGcc &&
                   !TC.getTriple().isAndroid() && !TC.getTriple().isOSCygMing();
   if (AsNeeded)
     CmdArgs.push_back("--as-needed");
@@ -1180,11 +1176,11 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
   case ToolChain::UNW_None:
     return;
   case ToolChain::UNW_Libgcc: {
-    LibGccType LGT = getLibGccType(Args);
-    if (LGT == LibGccType::UnspecifiedLibGcc || LGT == LibGccType::SharedLibGcc)
-      CmdArgs.push_back("-lgcc_s");
-    else if (LGT == LibGccType::StaticLibGcc)
+    LibGccType LGT = getLibGccType(D, Args);
+    if (LGT == LibGccType::StaticLibGcc)
       CmdArgs.push_back("-lgcc_eh");
+    else
+      CmdArgs.push_back("-lgcc_s");
     break;
   }
   case ToolChain::UNW_CompilerRT:
@@ -1198,17 +1194,11 @@ static void AddUnwindLibrary(const ToolChain &TC, const Driver &D,
 
 static void AddLibgcc(const ToolChain &TC, const Driver &D,
                       ArgStringList &CmdArgs, const ArgList &Args) {
-  bool isAndroid = TC.getTriple().isAndroid();
-
-  LibGccType LGT = getLibGccType(Args);
-  bool LibGccFirst = (D.CCCIsCC() && LGT == LibGccType::UnspecifiedLibGcc) ||
-                     LGT == LibGccType::StaticLibGcc;
-  if (LibGccFirst)
+  LibGccType LGT = getLibGccType(D, Args);
+  if (LGT != LibGccType::SharedLibGcc)
     CmdArgs.push_back("-lgcc");
-
   AddUnwindLibrary(TC, D, CmdArgs, Args);
-
-  if (!LibGccFirst)
+  if (LGT == LibGccType::SharedLibGcc)
     CmdArgs.push_back("-lgcc");
 
   // According to Android ABI, we have to link with libdl if we are
@@ -1216,7 +1206,7 @@ static void AddLibgcc(const ToolChain &TC, const Driver &D,
   //
   // NOTE: This fixes a link error on Android MIPS as well.  The non-static
   // libgcc for MIPS relies on _Unwind_Find_FDE and dl_iterate_phdr from libdl.
-  if (isAndroid && getLibGccType(Args) != LibGccType::StaticLibGcc)
+  if (TC.getTriple().isAndroid() && LGT != LibGccType::StaticLibGcc)
     CmdArgs.push_back("-ldl");
 }
 
