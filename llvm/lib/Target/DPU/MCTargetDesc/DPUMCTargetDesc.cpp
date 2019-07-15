@@ -12,6 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstPrinter/DPUInstPrinter.h"
+#include "llvm/BinaryFormat/ELF.h"
+#include "llvm/MC/MCELFStreamer.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
@@ -74,6 +76,22 @@ static MCSubtargetInfo *createDPUMCSubtargetInfo(const Triple &TT,
   return createDPUMCSubtargetInfoImpl(TT, CPU, FS);
 }
 
+class DPUTargetStreamer : public MCTargetStreamer {
+public:
+  MCELFStreamer &getStreamer() {
+    return static_cast<MCELFStreamer &>(Streamer);
+  }
+  DPUTargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {
+    MCAssembler &MCA = getStreamer().getAssembler();
+    MCA.setELFHeaderEFlags(EF_EABI_DPU_SET(MCA.getELFHeaderEFlags(), 1));
+  }
+};
+
+static MCTargetStreamer *
+createDPUTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
+  return new DPUTargetStreamer(S);
+}
+
 extern "C" void LLVMInitializeDPUTargetMC() {
   // Register the MC asm info.
   RegisterMCAsmInfo<DPUMCAsmInfo> X(TheDPUTarget);
@@ -96,4 +114,8 @@ extern "C" void LLVMInitializeDPUTargetMC() {
 
   // Register the Asm Backend.
   TargetRegistry::RegisterMCAsmBackend(TheDPUTarget, createDPUAsmBackend);
+
+  // Register the obj target streamer
+  TargetRegistry::RegisterObjectTargetStreamer(TheDPUTarget,
+                                               createDPUTargetStreamer);
 }
