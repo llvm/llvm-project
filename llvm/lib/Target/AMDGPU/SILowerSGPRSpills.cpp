@@ -250,7 +250,6 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-  bool AllSGPRSpilledToVGPRs = false;
   const bool SpillVGPRToAGPR = ST.hasMAIInsts() && FuncInfo->hasSpilledVGPRs()
     && EnableSpillVGPRToAGPR;
 
@@ -262,8 +261,6 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
   // handled as SpilledToReg in regular PrologEpilogInserter.
   if ((TRI->spillSGPRToVGPR() && (HasCSRs || FuncInfo->hasSpilledSGPRs())) ||
       SpillVGPRToAGPR) {
-    AllSGPRSpilledToVGPRs = true;
-
     // Process all SGPR spills before frame offsets are finalized. Ideally SGPRs
     // are spilled to VGPRs, in which case we can eliminate the stack usage.
     //
@@ -299,8 +296,7 @@ bool SILowerSGPRSpills::runOnMachineFunction(MachineFunction &MF) {
           bool Spilled = TRI->eliminateSGPRToVGPRSpillFrameIndex(MI, FI, nullptr);
           (void)Spilled;
           assert(Spilled && "failed to spill SGPR to VGPR when allocated");
-        } else
-          AllSGPRSpilledToVGPRs = false;
+        }
       }
     }
 

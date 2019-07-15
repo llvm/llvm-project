@@ -420,8 +420,8 @@ def cmd_push(args):
     rev_range = args.rev_range
     dry_run = args.dry_run
     revs = get_revs_to_push(rev_range)
-    log('Pushing %d %s commit%s:\n%s' %
-        (len(revs),
+    log('%sPushing %d %s commit%s:\n%s' %
+        ('[DryRun] ' if dry_run else '', len(revs),
          'split-repo (%s)' % split_repo_path
          if split_repo_path else 'monorepo',
          's' if len(revs) != 1 else '',

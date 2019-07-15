@@ -858,7 +858,7 @@ BitcodeReader::BitcodeReader(BitstreamCursor Stream, StringRef Strtab,
                              StringRef ProducerIdentification,
                              LLVMContext &Context)
     : BitcodeReaderBase(std::move(Stream), Strtab), Context(Context),
-      ValueList(Context) {
+      ValueList(Context, Stream.SizeInBytes()) {
   this->ProducerIdentification = ProducerIdentification;
 }
 
@@ -4170,6 +4170,10 @@ Error BitcodeReader::parseFunctionBody(Function *F) {
       if (getValueTypePair(Record, OpNum, NextValueNo, LHS) ||
           popValue(Record, OpNum, NextValueNo, LHS->getType(), RHS))
         return error("Invalid record");
+
+      if (OpNum >= Record.size())
+        return error(
+            "Invalid record: operand number exceeded available operands");
 
       unsigned PredVal = Record[OpNum];
       bool IsFP = LHS->getType()->isFPOrFPVectorTy();

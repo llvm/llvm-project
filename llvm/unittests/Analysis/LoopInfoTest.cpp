@@ -1110,3 +1110,49 @@ TEST(LoopInfoTest, AuxiliaryIV) {
             L->isAuxiliaryInductionVariable(Instruction_mulopcode, SE));
       });
 }
+
+// Examine getUniqueExitBlocks/getUniqueNonLatchExitBlocks functions.
+TEST(LoopInfoTest, LoopUniqueExitBlocks) {
+  const char *ModuleStr =
+      "target datalayout = \"e-m:o-i64:64-f80:128-n8:16:32:64-S128\"\n"
+      "define void @foo(i32 %n, i1 %cond) {\n"
+      "entry:\n"
+      "  br label %for.cond\n"
+      "for.cond:\n"
+      "  %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.inc ]\n"
+      "  %cmp = icmp slt i32 %i.0, %n\n"
+      "  br i1 %cond, label %for.inc, label %for.end1\n"
+      "for.inc:\n"
+      "  %inc = add nsw i32 %i.0, 1\n"
+      "  br i1 %cmp, label %for.cond, label %for.end2, !llvm.loop !0\n"
+      "for.end1:\n"
+      "  br label %for.end\n"
+      "for.end2:\n"
+      "  br label %for.end\n"
+      "for.end:\n"
+      "  ret void\n"
+      "}\n"
+      "!0 = distinct !{!0, !1}\n"
+      "!1 = !{!\"llvm.loop.distribute.enable\", i1 true}\n";
+
+  // Parse the module.
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleStr);
+
+  runWithLoopInfo(*M, "foo", [&](Function &F, LoopInfo &LI) {
+    Function::iterator FI = F.begin();
+    // First basic block is entry - skip it.
+    BasicBlock *Header = &*(++FI);
+    assert(Header->getName() == "for.cond");
+    Loop *L = LI.getLoopFor(Header);
+
+    SmallVector<BasicBlock *, 2> Exits;
+    // This loop has 2 unique exits.
+    L->getUniqueExitBlocks(Exits);
+    EXPECT_TRUE(Exits.size() == 2);
+    // And one unique non latch exit.
+    Exits.clear();
+    L->getUniqueNonLatchExitBlocks(Exits);
+    EXPECT_TRUE(Exits.size() == 1);
+  });
+}
