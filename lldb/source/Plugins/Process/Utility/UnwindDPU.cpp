@@ -28,6 +28,14 @@ UnwindDPU::UnwindDPU(Thread &thread) : Unwind(thread), m_frames() {}
 
 void UnwindDPU::DoClear() { m_frames.clear(); }
 
+void UnwindDPU::setFrame(CursorSP &frame, lldb::addr_t cfa, lldb::addr_t pc,
+                         lldb::RegisterContextSP reg_ctx_sp) {
+  frame->cfa = cfa;
+  frame->start_pc = pc;
+  frame->reg_ctx_sp = reg_ctx_sp;
+  m_frames.push_back(frame);
+}
+
 uint32_t UnwindDPU::DoGetFrameCount() {
   if (!m_frames.empty())
     return m_frames.size();
@@ -35,34 +43,30 @@ uint32_t UnwindDPU::DoGetFrameCount() {
   Status error;
   ProcessSP process_sp(m_thread.GetProcess());
   CursorSP first_frame(new Cursor());
+  CursorSP &prev_frame = first_frame;
   lldb::RegisterContextSP reg_ctx_sp = m_thread.GetRegisterContext();
-  const RegisterInfo *reg_info_r22 = reg_ctx_sp->GetRegisterInfoByName("r22");
-  const RegisterInfo *reg_info_pc = reg_ctx_sp->GetRegisterInfoByName("pc");
   RegisterValue reg_r22, reg_pc;
 
-  reg_ctx_sp->ReadRegister(reg_info_r22, reg_r22);
-  reg_ctx_sp->ReadRegister(reg_info_pc, reg_pc);
+  reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("r22"), reg_r22);
+  reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("pc"), reg_pc);
 
-  first_frame->cfa = reg_r22.GetAsUInt32();
-  first_frame->start_pc = reg_pc.GetAsUInt32();
-  first_frame->reg_ctx_sp = reg_ctx_sp;
-  m_frames.push_back(first_frame);
+  setFrame(first_frame, reg_r22.GetAsUInt32(), reg_pc.GetAsUInt32(),
+           reg_ctx_sp);
 
-  int r22 = reg_r22.GetAsUInt32();
-
-  while (r22 != 0) {
+  while (true) {
     CursorSP next_frame(new Cursor());
-    process_sp->ReadMemory(r22 - 4, &next_frame->cfa, 4, error);
-    process_sp->ReadMemory(r22 - 8, &next_frame->start_pc, 4, error);
+    process_sp->ReadMemory(prev_frame->cfa - 4, &next_frame->cfa, 4, error);
+    process_sp->ReadMemory(prev_frame->cfa - 8, &next_frame->start_pc, 4,
+                           error);
 
-    next_frame->reg_ctx_sp = reg_ctx_sp;
-    next_frame->start_pc =
-        0xffffffff & (0x80000000 | ((next_frame->start_pc - 1) * 8));
-    next_frame->cfa = 0xffffffff & next_frame->cfa;
+    if (next_frame->cfa == 0xffffffff00000db9)
+      break;
 
-    r22 = next_frame->cfa;
-    if (r22 != 0)
-      m_frames.push_back(next_frame);
+    setFrame(next_frame, 0xffffffff & next_frame->cfa,
+             0xffffffff & (0x80000000 | ((next_frame->start_pc - 1) * 8)),
+             reg_ctx_sp);
+
+    prev_frame = next_frame;
   }
 
   return m_frames.size();
