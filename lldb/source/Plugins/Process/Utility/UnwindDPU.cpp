@@ -28,13 +28,15 @@ UnwindDPU::UnwindDPU(Thread &thread) : Unwind(thread), m_frames() {}
 
 void UnwindDPU::DoClear() { m_frames.clear(); }
 
-void UnwindDPU::setFrame(CursorSP &frame, lldb::addr_t cfa, lldb::addr_t pc,
+void UnwindDPU::SetFrame(CursorSP &frame, lldb::addr_t cfa, lldb::addr_t pc,
                          lldb::RegisterContextSP reg_ctx_sp) {
   frame->cfa = cfa;
-  frame->start_pc = pc;
+  frame->pc = pc;
   frame->reg_ctx_sp = reg_ctx_sp;
   m_frames.push_back(frame);
 }
+
+static void CleanLLDBAddr(lldb::addr_t &addr) { addr = addr & 0xffffffff; }
 
 uint32_t UnwindDPU::DoGetFrameCount() {
   if (!m_frames.empty())
@@ -50,21 +52,24 @@ uint32_t UnwindDPU::DoGetFrameCount() {
   reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("r22"), reg_r22);
   reg_ctx_sp->ReadRegister(reg_ctx_sp->GetRegisterInfoByName("pc"), reg_pc);
 
-  setFrame(first_frame, reg_r22.GetAsUInt32(), reg_pc.GetAsUInt32(),
+  SetFrame(first_frame, reg_r22.GetAsUInt32(), reg_pc.GetAsUInt32(),
            reg_ctx_sp);
 
   while (true) {
     CursorSP next_frame(new Cursor());
     process_sp->ReadMemory(prev_frame->cfa - 4, &next_frame->cfa, 4, error);
-    process_sp->ReadMemory(prev_frame->cfa - 8, &next_frame->start_pc, 4,
-                           error);
+    process_sp->ReadMemory(prev_frame->cfa - 8, &next_frame->pc, 4, error);
 
-    if (next_frame->cfa == 0xffffffff00000db9)
+    CleanLLDBAddr(next_frame->cfa);
+    CleanLLDBAddr(next_frame->pc);
+
+    if (next_frame->cfa == 0xdb9 || next_frame->cfa == 0 ||
+        next_frame->cfa > (64 * 1024) || next_frame->pc > (64 * 1024) ||
+        m_frames.size() > (8 * 1024))
       break;
 
-    setFrame(next_frame, 0xffffffff & next_frame->cfa,
-             0xffffffff & (0x80000000 | ((next_frame->start_pc - 1) * 8)),
-             reg_ctx_sp);
+    SetFrame(next_frame, next_frame->cfa,
+             0x80000000 | ((next_frame->pc - 1) * 8), reg_ctx_sp);
 
     prev_frame = next_frame;
   }
@@ -73,12 +78,12 @@ uint32_t UnwindDPU::DoGetFrameCount() {
 }
 
 bool UnwindDPU::DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
-                                      lldb::addr_t &start_pc) {
+                                      lldb::addr_t &pc) {
   if (frame_idx >= DoGetFrameCount())
     return false;
 
   cfa = m_frames[frame_idx]->cfa;
-  start_pc = m_frames[frame_idx]->start_pc;
+  pc = m_frames[frame_idx]->pc;
   return true;
 }
 

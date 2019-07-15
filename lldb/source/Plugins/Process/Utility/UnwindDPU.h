@@ -38,27 +38,27 @@ protected:
   uint32_t DoGetFrameCount() override;
 
   bool DoGetFrameInfoAtIndex(uint32_t frame_idx, lldb::addr_t &cfa,
-                             lldb::addr_t &start_pc) override;
+                             lldb::addr_t &pc) override;
 
   lldb::RegisterContextSP
   DoCreateRegisterContextForFrame(lldb_private::StackFrame *frame) override;
 
 private:
   struct Cursor {
-    lldb::addr_t start_pc; // The start address of the function/symbol for this
+    lldb::addr_t pc; // The start address of the function/symbol for this
                            // frame - current pc if unknown
     lldb::addr_t cfa;      // The canonical frame address for this stack frame
     lldb::RegisterContextSP reg_ctx_sp;
 
     Cursor()
-        : start_pc(LLDB_INVALID_ADDRESS), cfa(LLDB_INVALID_ADDRESS),
+        : pc(LLDB_INVALID_ADDRESS), cfa(LLDB_INVALID_ADDRESS),
           reg_ctx_sp() {}
   };
 
   typedef std::shared_ptr<Cursor> CursorSP;
   std::vector<CursorSP> m_frames;
 
-  void setFrame(CursorSP &frame, lldb::addr_t cfa, lldb::addr_t pc,
+  void SetFrame(CursorSP &frame, lldb::addr_t cfa, lldb::addr_t pc,
                 lldb::RegisterContextSP reg_ctx_sp);
 };
 } // namespace lldb_private
