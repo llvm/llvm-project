@@ -524,8 +524,6 @@ public:
 
   ConstString GetDisplayTypeName(void *type, const SymbolContext *sc) override;
 
-  ConstString GetTypeSymbolName(void *type) override;
-
   ConstString GetMangledTypeName(void *type) override;
 
   uint32_t GetTypeInfo(void *type,
