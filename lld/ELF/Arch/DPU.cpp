@@ -29,6 +29,7 @@ public:
                      const uint8_t *Loc) const override;
   void relocateOne(uint8_t *Loc, RelType Type, uint64_t Val) const override;
   uint64_t fixupTargetVA(uint64_t TargetVA) const override;
+  uint32_t calcEFlags() const override;
 };
 
 } // end anonymous namespace
@@ -203,6 +204,36 @@ void DPU::relocateOne(uint8_t *Loc, const RelType Type,
     error(getErrorLocation(Loc) + "unrecognized reloc " + Twine(Type));
   }
   write64<E>(Loc, Data);
+}
+
+#define UNKNOWN_E_FLAGS (0xffffffff)
+static uint32_t getEFlags(InputFile *File) {
+  return cast<ObjFile<ELF32LE>>(File)->getObj().getHeader()->e_flags;
+}
+
+static uint32_t getEABI(uint32_t e_flags) {
+  if (!(e_flags & llvm::ELF::EF_DPU_EABI_SET))
+    return ~llvm::ELF::EF_DPU_EABI_SET;
+  else
+    return EF_EABI_DPU_GET(e_flags);
+}
+
+static uint32_t getEABI(InputFile *File) { return getEABI(getEFlags(File)); }
+
+uint32_t DPU::calcEFlags() const {
+  uint32_t e_flags = UNKNOWN_E_FLAGS;
+  InputFile *first_file = NULL;
+  for (InputFile *F : ObjectFiles) {
+    if (e_flags == UNKNOWN_E_FLAGS) {
+      e_flags = getEFlags(F);
+      first_file = F;
+    } else if (getEABI(e_flags) != getEABI(F)) {
+      error("uncompatible abi between '" + toString(first_file) + "' and '" +
+            toString(F) + "' (" + std::to_string(getEABI(e_flags)) +
+            " != " + std::to_string(getEABI(F)) + ")");
+    }
+  }
+  return e_flags;
 }
 
 TargetInfo *elf::getDPUTargetInfo() {
