@@ -738,7 +738,7 @@ struct _PathCVT<char> {
 inline _LIBCPP_INLINE_VISIBILITY
 wstring __widen_from_char_iter_pair(const char* __b, const char* __e, const locale& __loc) {
   wstring __r;
-  if (has_facet<codecvt<wchar_t, char, mbstate_t>>(__loc))
+  if (!has_facet<codecvt<wchar_t, char, mbstate_t>>(__loc))
     return __r;
   __r.reserve(__e - __b);
   __widen_using_codecvt(use_facet<codecvt<wchar_t, char, mbstate_t>>(__loc) , back_inserter(__r), __b, __e);
@@ -746,7 +746,7 @@ wstring __widen_from_char_iter_pair(const char* __b, const char* __e, const loca
 }
 
 template <class _InputIt, 
-         class = enable_if<!is_same<_InputIt, char*>::value, class _Tp>>
+         class = typename enable_if<!is_constructible<const char*, _InputIt>::value>::type>
 inline _LIBCPP_INLINE_VISIBILITY
 wstring __widen_from_char_iter_pair(_InputIt __b, _InputIt __e, const locale& __loc) {
   const string __s(__b, __e);

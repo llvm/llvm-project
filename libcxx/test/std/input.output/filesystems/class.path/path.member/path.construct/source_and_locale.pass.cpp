@@ -29,65 +29,52 @@
 #include "min_allocator.h"
 #include "filesystem_test_helper.hpp"
 
-std::ofstream ofs ("/tmp/test.txt", std::ofstream::out);
-
-template <class CharT, class ...Args>
-void RunTestCaseImpl(MultiStringType const& MS, Args... args) {
+template <class ...Args>
+void RunTestCase(const char* TestPath, const char* Expect, std::locale Locale, Args... args) {
   using namespace fs;
-  std::locale Locale;
-  const char* Expect = MS;
-  const CharT* TestPath = MS;
-  const CharT* TestPathEnd = StrEnd(TestPath);
+  const char* TestPathEnd = StrEnd(TestPath);
   const std::size_t Size = TestPathEnd - TestPath;
   const std::size_t SSize = StrEnd(Expect) - Expect;
   assert(Size == SSize);
   // StringTypes
   {
-    const std::basic_string<CharT> S(TestPath);
-    path p(S, Locale, args...);
+    const std::string S(TestPath);
+    path p(S, Locale, args...); 
     assert(p.native() == Expect);
-    assert(p.string<CharT>() == TestPath);
-    assert(p.string<CharT>() == S);
+    assert(p.string<char>() == TestPath);
+    assert(p.string<char>() == S);
   }
   {
-    const std::basic_string_view<CharT> S(TestPath);
-    path p(S, Locale, args...);
+    const std::string_view S(TestPath);
+    path p(S, Locale, args...); 
     assert(p.native() == Expect);
-    assert(p.string<CharT>() == TestPath);
-    assert(p.string<CharT>() == S);
+    assert(p.string<char>() == TestPath);
+    assert(p.string<char>() == S);
   }
   // Char* pointers
   {
     path p(TestPath, Locale, args...);
     assert(p.native() == Expect);
-    assert(p.string<CharT>() == TestPath);
+    assert(p.string<char>() == TestPath);
   }
   {
     path p(TestPath, TestPathEnd, Locale, args...);
     assert(p.native() == Expect);
-    assert(p.string<CharT>() == TestPath);
+    assert(p.string<char>() == TestPath);
   }
   // Iterators
   {
-    using It = input_iterator<const CharT*>;
+    using It = input_iterator<const char*>;
     path p(It{TestPath}, Locale, args...);
     assert(p.native() == Expect);
-    assert(p.string<CharT>() == TestPath);
+    assert(p.string<char>() == TestPath);
   }
   {
-    using It = input_iterator<const CharT*>;
+    using It = input_iterator<const char*>;
     path p(It{TestPath}, It{TestPathEnd}, Locale, args...);
     assert(p.native() == Expect);
-    assert(p.string<CharT>() == TestPath);
+    assert(p.string<char>() == TestPath);
   }
-}
-
-template <class CharT, class ...Args>
-void RunTestCase(MultiStringType const& MS) {
-  RunTestCaseImpl<CharT>(MS);
-  RunTestCaseImpl<CharT>(MS, fs::path::format::auto_format);
-  RunTestCaseImpl<CharT>(MS, fs::path::format::native_format);
-  RunTestCaseImpl<CharT>(MS, fs::path::format::generic_format);
 }
 
 void test_sfinae() {
@@ -121,12 +108,41 @@ void test_sfinae() {
   }
 }
 
-int main(int, char**) {
-  for (auto const& MS : PathList) {
-    const char* s = MS;
-    ofs << "YOooooooooooooooooooo" << s << std::endl;
-    RunTestCase<char>(MS);
+struct CustomCodeCvt : std::codecvt<wchar_t, char, std::mbstate_t> {
+protected:
+  result do_in(state_type&,
+               const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
+               intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override {
+    for (; __frm < __frm_end && __to < __to_end; ++__frm, ++__to)
+      *__to = 'o';
+    
+    __frm_nxt = __frm;
+    __to_nxt = __to;
+
+    return result::ok;
   }
+};
+
+int main(int, char**) {
+  std::locale Locale;
+  std::locale CustomLocale(Locale, new CustomCodeCvt());
+
+  // Ensure std::codecvt<wchar_t, char, std::mbstate_t> is used.
+  std::string TestPath("aaaa");
+  std::string Expect("oooo");
+  RunTestCase(TestPath.c_str(), Expect.c_str(), CustomLocale);
+  RunTestCase(TestPath.c_str(), Expect.c_str(), CustomLocale, fs::path::format::auto_format);
+  RunTestCase(TestPath.c_str(), Expect.c_str(), CustomLocale, fs::path::format::native_format);
+  RunTestCase(TestPath.c_str(), Expect.c_str(), CustomLocale, fs::path::format::generic_format);
+
+  // Test on paths with global locale.
+  for (auto const& MS : PathList) {
+    RunTestCase(MS, MS, Locale);
+    RunTestCase(MS, MS, Locale, fs::path::format::auto_format);
+    RunTestCase(MS, MS, Locale, fs::path::format::native_format);
+    RunTestCase(MS, MS, Locale, fs::path::format::generic_format);
+  }
+
   test_sfinae();
 
   return 0;
