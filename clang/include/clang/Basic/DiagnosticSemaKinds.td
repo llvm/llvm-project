@@ -8878,6 +8878,8 @@ def note_exits_spawn : Note<
   "jump exits the scope of a '_Cilk_spawn'">;
 def err_jump_out_of_spawn : Error<
   "cannot jump out of '_Cilk_spawn' statement">;
+def warn_return_cilk_spawn : Warning<
+  "no parallelism from a '_Cilk_spawn' in a return statement">, InGroup<ReturnCilkSpawn>;
 
 // cilk_for
 def err_cilk_for_initializer_expected_variable : Error<

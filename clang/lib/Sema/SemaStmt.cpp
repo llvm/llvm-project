@@ -4150,6 +4150,11 @@ Sema::ActOnReturnStmt(SourceLocation ReturnLoc, Expr *RetValExp,
                            ExpressionEvaluationContext::DiscardedStatement)
     return R;
 
+  if (getLangOpts().Cilk)
+    if (const Expr *RV = cast<ReturnStmt>(R.get())->getRetValue())
+      if (isa<CilkSpawnExpr>(RV))
+        Diag(ReturnLoc, diag::warn_return_cilk_spawn);
+
   if (VarDecl *VD =
       const_cast<VarDecl*>(cast<ReturnStmt>(R.get())->getNRVOCandidate())) {
     CurScope->addNRVOCandidate(VD);
