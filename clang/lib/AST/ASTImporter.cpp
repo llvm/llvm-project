@@ -8079,7 +8079,7 @@ ASTImporter::Import(NestedNameSpecifier *FromNNS) {
   if (!FromNNS)
     return nullptr;
 
-  NestedNameSpecifier *Prefix;
+  NestedNameSpecifier *Prefix = nullptr;
   if (Error Err = importInto(Prefix, FromNNS->getPrefix()))
     return std::move(Err);
 
