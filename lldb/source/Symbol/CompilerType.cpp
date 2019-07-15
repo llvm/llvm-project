@@ -320,13 +320,6 @@ CompilerType::GetDisplayTypeName(const SymbolContext *sc) const {
   return ConstString();
 }
 
-ConstString CompilerType::GetTypeSymbolName() const {
-  if (IsValid()) {
-    return m_type_system->GetTypeSymbolName(m_type);
-  }
-  return ConstString();
-}
-
 ConstString CompilerType::GetMangledTypeName() const {
   if (IsValid()) {
     return m_type_system->GetMangledTypeName(m_type);

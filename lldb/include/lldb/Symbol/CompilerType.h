@@ -160,8 +160,6 @@ public:
 
   ConstString GetDisplayTypeName(const SymbolContext *sc = nullptr) const;
 
-  ConstString GetTypeSymbolName() const;
-
   ConstString GetMangledTypeName() const;
 
   uint32_t

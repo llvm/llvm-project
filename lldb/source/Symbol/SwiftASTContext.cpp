@@ -5450,11 +5450,6 @@ ConstString SwiftASTContext::GetDisplayTypeName(void *type,
   return ConstString(type_name);
 }
 
-ConstString SwiftASTContext::GetTypeSymbolName(void *type) {
-  swift::Type swift_type(GetSwiftType(type));
-  return GetTypeName(swift_type->getWithoutParens().getPointer());
-}
-
 ConstString SwiftASTContext::GetMangledTypeName(void *type) {
   return GetMangledTypeName(GetSwiftType(type).getPointer());
 }
