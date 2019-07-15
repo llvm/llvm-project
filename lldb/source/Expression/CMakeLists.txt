@@ -9,7 +9,6 @@ add_lldb_library(lldbExpression
   ExpressionSourceCode.cpp
   ExpressionVariable.cpp
   FunctionCaller.cpp
-  IRDynamicChecks.cpp
   IRExecutionUnit.cpp
   IRInterpreter.cpp
   IRMemoryMap.cpp

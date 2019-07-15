@@ -312,93 +312,69 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
       return compiler_type;
   }
 
-  if (!compiler_type.IsValid())
-    return compiler_type;
-
-  CompilerType class_type;
-  bool is_pointer_type = false;
-
-  if (ClangASTContext::IsObjCObjectPointerType(compiler_type, &class_type)) {
-    is_pointer_type = true;
-  } else if (ClangASTContext::IsObjCObjectOrInterfaceType(compiler_type)) {
-    class_type = compiler_type;
-  } else {
-    return compiler_type;
-  }
-
-  auto make_pointer_if_needed = [](CompilerType compiler_type,
-                                   bool is_pointer_type) -> CompilerType {
-    if (is_pointer_type)
-      return compiler_type.GetPointerType();
-    return compiler_type;
-  };
-
   m_did_calculate_complete_objc_class_type = true;
 
-  if (class_type) {
-    ConstString class_name(class_type.GetConstTypeName());
+  ProcessSP process_sp(
+      GetUpdatePoint().GetExecutionContextRef().GetProcessSP());
 
-    if (class_name) {
-      ProcessSP process_sp(
-          GetUpdatePoint().GetExecutionContextRef().GetProcessSP());
+  if (!process_sp)
+    return compiler_type;
 
-      if (process_sp) {
-        ObjCLanguageRuntime *objc_language_runtime(
-            ObjCLanguageRuntime::Get(*process_sp));
-
-        if (objc_language_runtime) {
-          TypeSP complete_objc_class_type_sp =
-              objc_language_runtime->LookupInCompleteClassCache(class_name);
-
-          if (complete_objc_class_type_sp) {
-            CompilerType complete_class(
-                complete_objc_class_type_sp->GetFullCompilerType());
-
-            if (complete_class.GetCompleteType()) {
-              m_override_type =
-                  make_pointer_if_needed(complete_class, is_pointer_type);
-              if (m_override_type.IsValid())
-                return m_override_type;
-            }
-          }
-
-          std::vector<clang::NamedDecl *> decls;
-
-          // try the modules
-          if (TargetSP target_sp = GetTargetSP()) {
-            if (auto clang_modules_decl_vendor =
-                    target_sp->GetClangModulesDeclVendor()) {
-              if (clang_modules_decl_vendor->FindDecls(class_name, false,
-                                                       UINT32_MAX, decls) > 0 &&
-                  decls.size() > 0) {
-                CompilerType module_type =
-                    ClangASTContext::GetTypeForDecl(decls.front());
-                m_override_type =
-                    make_pointer_if_needed(module_type, is_pointer_type);
-              }
-
-              if (m_override_type.IsValid())
-                return m_override_type;
-            }
-          }
-
-          // then try the runtime
-          if (auto runtime_vendor = objc_language_runtime->GetDeclVendor()) {
-            if (runtime_vendor->FindDecls(class_name, false, UINT32_MAX,
-                                          decls) > 0 &&
-                decls.size() > 0) {
-              CompilerType runtime_type =
-                  ClangASTContext::GetTypeForDecl(decls.front());
-              m_override_type =
-                  make_pointer_if_needed(runtime_type, is_pointer_type);
-            }
-
-            if (m_override_type.IsValid())
-              return m_override_type;
-          }
-        }
-      }
+  if (auto *runtime =
+          process_sp->GetLanguageRuntime(GetObjectRuntimeLanguage())) {
+    if (llvm::Optional<CompilerType> complete_type =
+            runtime->GetRuntimeType(compiler_type)) {
+      m_override_type = complete_type.getValue();
+      if (m_override_type.IsValid())
+        return m_override_type;
     }
+  }
+
+  std::vector<clang::NamedDecl *> decls;
+  CompilerType class_type;
+  bool is_pointer_type = false;
+  if (ClangASTContext::IsObjCObjectPointerType(compiler_type, &class_type))
+    is_pointer_type = true;
+  else if (ClangASTContext::IsObjCObjectOrInterfaceType(compiler_type))
+    class_type = compiler_type;
+  else
+    return compiler_type;
+
+  ConstString class_name(class_type.GetConstTypeName());
+  if (!class_name)
+    return compiler_type;
+
+  // try the modules
+  if (TargetSP target_sp = GetTargetSP()) {
+    if (auto clang_modules_decl_vendor =
+            target_sp->GetClangModulesDeclVendor()) {
+      if (clang_modules_decl_vendor->FindDecls(class_name, false, UINT32_MAX,
+                                               decls) > 0 &&
+          decls.size() > 0) {
+        CompilerType module_type =
+            ClangASTContext::GetTypeForDecl(decls.front());
+        m_override_type =
+            is_pointer_type ? module_type.GetPointerType() : module_type;
+      }
+
+      if (m_override_type.IsValid())
+        return m_override_type;
+    }
+  }
+
+  // then try the runtime
+  auto *objc_language_runtime = ObjCLanguageRuntime::Get(*process_sp);
+  if (auto runtime_vendor = objc_language_runtime->GetDeclVendor()) {
+    if (runtime_vendor->FindDecls(class_name, false, UINT32_MAX, decls) > 0 &&
+        decls.size() > 0) {
+      CompilerType runtime_type =
+          ClangASTContext::GetTypeForDecl(decls.front());
+      m_override_type =
+          is_pointer_type ? runtime_type.GetPointerType() : runtime_type;
+    }
+
+    if (m_override_type.IsValid())
+      return m_override_type;
   }
   return compiler_type;
 }

@@ -14,7 +14,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "lldb/Expression/IRDynamicChecks.h"
+#include "IRDynamicChecks.h"
 
 #include "lldb/Expression/UtilityFunction.h"
 #include "lldb/Target/ExecutionContext.h"
@@ -40,12 +40,13 @@ static const char g_valid_pointer_check_text[] =
     "    unsigned char $__lldb_local_val = *$__lldb_arg_ptr;\n"
     "}";
 
-DynamicCheckerFunctions::DynamicCheckerFunctions() = default;
+ClangDynamicCheckerFunctions::ClangDynamicCheckerFunctions()
+    : DynamicCheckerFunctions(DCF_Clang) {}
 
-DynamicCheckerFunctions::~DynamicCheckerFunctions() = default;
+ClangDynamicCheckerFunctions::~ClangDynamicCheckerFunctions() = default;
 
-bool DynamicCheckerFunctions::Install(DiagnosticManager &diagnostic_manager,
-                                      ExecutionContext &exe_ctx) {
+bool ClangDynamicCheckerFunctions::Install(
+    DiagnosticManager &diagnostic_manager, ExecutionContext &exe_ctx) {
   Status error;
   m_valid_pointer_check.reset(
       exe_ctx.GetTargetRef().GetUtilityFunctionForLanguage(
@@ -75,8 +76,8 @@ bool DynamicCheckerFunctions::Install(DiagnosticManager &diagnostic_manager,
   return true;
 }
 
-bool DynamicCheckerFunctions::DoCheckersExplainStop(lldb::addr_t addr,
-                                                    Stream &message) {
+bool ClangDynamicCheckerFunctions::DoCheckersExplainStop(lldb::addr_t addr,
+                                                         Stream &message) {
   // FIXME: We have to get the checkers to know why they scotched the call in
   // more detail,
   // so we can print a better message here.
@@ -138,8 +139,9 @@ public:
   /// @param[in] module
   ///     The module being instrumented.
   //------------------------------------------------------------------
-  Instrumenter(llvm::Module &module, DynamicCheckerFunctions &checker_functions)
-      : m_module(module), m_checker_functions(checker_functions),
+  Instrumenter(llvm::Module &module,
+               std::shared_ptr<UtilityFunction> checker_function)
+      : m_module(module), m_checker_function(checker_function),
         m_i8ptr_ty(nullptr), m_intptr_ty(nullptr) {}
 
   virtual ~Instrumenter() = default;
@@ -318,8 +320,8 @@ protected:
 
   InstVector m_to_instrument; ///< List of instructions the inspector found
   llvm::Module &m_module;     ///< The module which is being instrumented
-  DynamicCheckerFunctions
-      &m_checker_functions; ///< The dynamic checker functions for the process
+  std::shared_ptr<UtilityFunction>
+      m_checker_function; ///< The dynamic checker function for the process
 
 private:
   PointerType *m_i8ptr_ty;
@@ -329,8 +331,8 @@ private:
 class ValidPointerChecker : public Instrumenter {
 public:
   ValidPointerChecker(llvm::Module &module,
-                      DynamicCheckerFunctions &checker_functions)
-      : Instrumenter(module, checker_functions),
+                      std::shared_ptr<UtilityFunction> checker_function)
+      : Instrumenter(module, checker_function),
         m_valid_pointer_check_func(nullptr) {}
 
   ~ValidPointerChecker() override = default;
@@ -344,8 +346,8 @@ protected:
                   PrintValue(inst).c_str());
 
     if (!m_valid_pointer_check_func)
-      m_valid_pointer_check_func = BuildPointerValidatorFunc(
-          m_checker_functions.m_valid_pointer_check->StartAddress());
+      m_valid_pointer_check_func =
+          BuildPointerValidatorFunc(m_checker_function->StartAddress());
 
     llvm::Value *dereferenced_ptr = nullptr;
 
@@ -388,8 +390,8 @@ private:
 class ObjcObjectChecker : public Instrumenter {
 public:
   ObjcObjectChecker(llvm::Module &module,
-                    DynamicCheckerFunctions &checker_functions)
-      : Instrumenter(module, checker_functions),
+                    std::shared_ptr<UtilityFunction> checker_function)
+      : Instrumenter(module, checker_function),
         m_objc_object_check_func(nullptr) {}
 
   ~ObjcObjectChecker() override = default;
@@ -413,8 +415,8 @@ protected:
                     // InspectInstruction wouldn't have registered it
 
     if (!m_objc_object_check_func)
-      m_objc_object_check_func = BuildObjectCheckerFunc(
-          m_checker_functions.m_objc_object_check->StartAddress());
+      m_objc_object_check_func =
+          BuildObjectCheckerFunc(m_checker_function->StartAddress());
 
     // id objc_msgSend(id theReceiver, SEL theSelector, ...)
 
@@ -554,8 +556,8 @@ private:
   llvm::Value *m_objc_object_check_func;
 };
 
-IRDynamicChecks::IRDynamicChecks(DynamicCheckerFunctions &checker_functions,
-                                 const char *func_name)
+IRDynamicChecks::IRDynamicChecks(
+    ClangDynamicCheckerFunctions &checker_functions, const char *func_name)
     : ModulePass(ID), m_func_name(func_name),
       m_checker_functions(checker_functions) {}
 
@@ -574,7 +576,7 @@ bool IRDynamicChecks::runOnModule(llvm::Module &M) {
   }
 
   if (m_checker_functions.m_valid_pointer_check) {
-    ValidPointerChecker vpc(M, m_checker_functions);
+    ValidPointerChecker vpc(M, m_checker_functions.m_valid_pointer_check);
 
     if (!vpc.Inspect(*function))
       return false;
@@ -584,7 +586,7 @@ bool IRDynamicChecks::runOnModule(llvm::Module &M) {
   }
 
   if (m_checker_functions.m_objc_object_check) {
-    ObjcObjectChecker ooc(M, m_checker_functions);
+    ObjcObjectChecker ooc(M, m_checker_functions.m_objc_object_check);
 
     if (!ooc.Inspect(*function))
       return false;

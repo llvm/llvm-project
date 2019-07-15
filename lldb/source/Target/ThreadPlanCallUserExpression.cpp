@@ -13,7 +13,7 @@
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Expression/DiagnosticManager.h"
-#include "lldb/Expression/IRDynamicChecks.h"
+#include "lldb/Expression/DynamicCheckerFunctions.h"
 #include "lldb/Expression/UserExpression.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/LanguageRuntime.h"
