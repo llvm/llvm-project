@@ -126,10 +126,13 @@ SwiftOptional_SummaryProvider_Impl(ValueObject &valobj, Stream &stream,
     return true;
   }
 
-  const char *value_summary = some->GetSummaryAsCString();
+  const char *summary = some->GetSummaryAsCString();
+  const char *value = some->GetValueAsCString();
 
-  if (value_summary)
-    stream.Printf("%s", value_summary);
+  if (summary)
+    stream.Printf("%s", summary);
+  else if (value)
+    stream.Printf("%s", value);
   else if (lldb_private::DataVisualization::ShouldPrintAsOneLiner(*some)) {
     TypeSummaryImpl::Flags oneliner_flags;
     oneliner_flags.SetHideItemNames(false)

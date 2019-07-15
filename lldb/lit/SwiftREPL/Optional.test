@@ -20,3 +20,6 @@ let y : Optional<Test> = Test(a: 1, b: Patatino.first)
 // CHECK-NEXT: a = 1
 // CHECK-NEXT: b = first
 // CHECK-NEXT: }
+
+let tinky : UInt8? = 250
+// CHECK-NEXT: {{tinky}}: UInt8? = 250
