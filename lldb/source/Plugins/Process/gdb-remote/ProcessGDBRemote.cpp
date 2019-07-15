@@ -3430,6 +3430,7 @@ Status ProcessGDBRemote::LaunchAndConnectToDebugserver(
     debugserver_launch_info.SetMonitorProcessCallback(
         std::bind(MonitorDebugserverProcess, this_wp, _1, _2, _3, _4), false);
     debugserver_launch_info.SetUserID(process_info.GetUserID());
+    debugserver_launch_info.SetArch(process_info.GetArchitecture());
 
 #if defined(__APPLE__)
     // On macOS 11, we need to support x86_64 applications translated to

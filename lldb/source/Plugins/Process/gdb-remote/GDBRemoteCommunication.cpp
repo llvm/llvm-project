@@ -44,6 +44,7 @@
 #define DEBUGSERVER_BASENAME "lldb-server.exe"
 #else
 #define DEBUGSERVER_BASENAME "lldb-server"
+#define DEBUGSERVER_BASENAME_DPU "lldb-server-dpu"
 #endif
 
 #if defined(HAVE_LIBCOMPRESSION)
@@ -920,6 +921,7 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
   // Always check to see if we have an environment override for the path to the
   // debugserver to use and use it if we do.
   std::string env_debugserver_path = host_env.lookup("LLDB_DEBUGSERVER_PATH");
+  ArchSpec dpu_arch("dpu-upmem-dpurte");
   if (!env_debugserver_path.empty()) {
     debugserver_file_spec.SetFile(env_debugserver_path,
                                   FileSpec::Style::native);
@@ -927,6 +929,14 @@ Status GDBRemoteCommunication::StartDebugserverProcess(
               "GDBRemoteCommunication::%s() gdb-remote stub exe path set "
               "from environment variable: %s",
               __FUNCTION__, env_debugserver_path.c_str());
+  } else if (launch_info.GetArch() == dpu_arch) {
+    debugserver_file_spec = HostInfo::GetSupportExeDir();
+    if (debugserver_file_spec) {
+      debugserver_file_spec.AppendPathComponent(DEBUGSERVER_BASENAME_DPU);
+    } else {
+      debugserver_file_spec =
+          platform->LocateExecutable(DEBUGSERVER_BASENAME_DPU);
+    }
   } else
     debugserver_file_spec = g_debugserver_file_spec;
   bool debugserver_exists =

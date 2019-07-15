@@ -146,7 +146,12 @@ public:
     return m_flags.Test(lldb::eLaunchFlagDetachOnError);
   }
 
+  void SetArch(ArchSpec arch) { m_arch = arch; }
+
+  ArchSpec GetArch() const { return m_arch; }
+
 protected:
+  ArchSpec arch;
   FileSpec m_working_dir;
   std::string m_plugin_name;
   FileSpec m_shell;
