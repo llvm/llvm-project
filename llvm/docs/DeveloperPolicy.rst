@@ -732,7 +732,7 @@ effort to change licenses, which aims to solve several problems:
 * Some contributions were not submitted to LLVM due to concerns that
   the patent grant required by the project was overly broad.
 * The patent grant was unique to the LLVM Project, not written by a lawyer, and
-  was difficult to determine what was protection was provided (if any).
+  was difficult to determine what protection was provided (if any).
 
 The scope of relicensing is all code that is considered part of the LLVM
 project, including the main LLVM repository, runtime libraries (compiler_rt,

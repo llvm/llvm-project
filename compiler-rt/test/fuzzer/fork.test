@@ -1,4 +1,4 @@
-# UNSUPPORTED: darwin, freebsd
+# UNSUPPORTED: darwin, freebsd, aarch64
 BINGO: BINGO
 RUN: %cpp_compiler %S/SimpleTest.cpp -o %t-SimpleTest
 RUN: not %run %t-SimpleTest -fork=1 2>&1 | FileCheck %s --check-prefix=BINGO

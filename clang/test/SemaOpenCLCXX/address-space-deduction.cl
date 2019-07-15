@@ -24,3 +24,42 @@ struct c2 {
   alias_c1_ptr ptr = &y;
 };
 
+
+// Addr spaces for pointee of dependent types are not deduced
+// during parsing but during template instantiation instead.
+
+template <class T>
+struct x1 {
+//CHECK: -CXXMethodDecl {{.*}} operator= 'x1<T> &(const x1<T> &) __generic'
+//CHECK: -CXXMethodDecl {{.*}} operator= '__generic x1<int> &(const __generic x1<int> &) __generic'
+  x1<T>& operator=(const x1<T>& xx) {
+    y = xx.y;
+    return *this;
+  }
+  int y;
+};
+
+template <class T>
+struct x2 {
+//CHECK: -CXXMethodDecl {{.*}} foo 'void (x1<T> *) __generic'
+//CHECK: -CXXMethodDecl {{.*}} foo 'void (__generic x1<int> *) __generic'
+  void foo(x1<T>* xx) {
+    m[0] = *xx;
+  }
+//CHECK: -FieldDecl {{.*}}  m 'x1<int> [2]'
+  x1<T> m[2];
+};
+
+void bar(__global x1<int> *xx, __global x2<int> *bar) {
+  bar->foo(xx);
+}
+
+template <typename T>
+class x3 : public T {
+public:
+  //CHECK: -CXXConstructorDecl {{.*}} x3<T> 'void (const x3<T> &) __generic'
+  x3(const x3 &t);
+};
+//CHECK: -CXXConstructorDecl {{.*}} x3<T> 'void (const x3<T> &) __generic'
+template <typename T>
+x3<T>::x3(const x3<T> &t) {}

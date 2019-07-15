@@ -14,6 +14,7 @@
 #include "CGCXXABI.h"
 #include "CGObjCRuntime.h"
 #include "CGOpenMPRuntime.h"
+#include "TargetInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/Intrinsics.h"
@@ -118,9 +119,22 @@ static void EmitDeclDestroy(CodeGenFunction &CGF, const VarDecl &D,
     CXXDestructorDecl *Dtor = Record->getDestructor();
 
     Func = CGM.getAddrAndTypeOfCXXStructor(GlobalDecl(Dtor, Dtor_Complete));
-    Argument = llvm::ConstantExpr::getBitCast(
-        Addr.getPointer(), CGF.getTypes().ConvertType(Type)->getPointerTo());
-
+    if (CGF.getContext().getLangOpts().OpenCL) {
+      auto DestAS =
+          CGM.getTargetCodeGenInfo().getAddrSpaceOfCxaAtexitPtrParam();
+      auto DestTy = CGF.getTypes().ConvertType(Type)->getPointerTo(
+          CGM.getContext().getTargetAddressSpace(DestAS));
+      auto SrcAS = D.getType().getQualifiers().getAddressSpace();
+      if (DestAS == SrcAS)
+        Argument = llvm::ConstantExpr::getBitCast(Addr.getPointer(), DestTy);
+      else
+        // FIXME: On addr space mismatch we are passing NULL. The generation
+        // of the global destructor function should be adjusted accordingly.
+        Argument = llvm::ConstantPointerNull::get(DestTy);
+    } else {
+      Argument = llvm::ConstantExpr::getBitCast(
+          Addr.getPointer(), CGF.getTypes().ConvertType(Type)->getPointerTo());
+    }
   // Otherwise, the standard logic requires a helper function.
   } else {
     Func = CodeGenFunction(CGM)

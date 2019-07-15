@@ -9,6 +9,14 @@ bool foobool(int argc) {
   return argc;
 }
 
+void xxx(int argc) {
+  int cond; // expected-note {{initialize the variable 'cond' to silence this warning}}
+#pragma omp parallel sections if(cond) // expected-warning {{variable 'cond' is uninitialized when used here}}
+  {
+    ;
+  }
+}
+
 struct S1; // expected-note {{declared here}}
 
 template <class T, class S> // expected-note {{declared here}}

@@ -466,7 +466,9 @@ void PPCTargetInfo::adjust(LangOptions &Opts) {
     Opts.AltiVec = 1;
   TargetInfo::adjust(Opts);
   if (LongDoubleFormat != &llvm::APFloat::IEEEdouble())
-    LongDoubleFormat = &llvm::APFloat::PPCDoubleDouble();
+    LongDoubleFormat = Opts.PPCIEEELongDouble
+                           ? &llvm::APFloat::IEEEquad()
+                           : &llvm::APFloat::PPCDoubleDouble();
 }
 
 ArrayRef<Builtin::Info> PPCTargetInfo::getTargetBuiltins() const {

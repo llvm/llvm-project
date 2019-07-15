@@ -177,7 +177,7 @@ OPTIONS
 
 .. option:: --no-sort, -p
 
- Shows symbols in the order encountered.
+ Show symbols in the order encountered.
 
 .. option:: --no-weak, -W
 
