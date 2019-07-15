@@ -54,14 +54,10 @@ bool DpuRank::Open() {
   std::lock_guard<std::mutex> guard(m_lock);
 
   int ret = dpu_get_rank_of_type(m_type, m_profile, &m_rank);
-  fprintf(stderr, "get_rank=>%d\n", ret);
   if (ret != DPU_API_SUCCESS)
     return false;
   m_desc = dpu_get_description(m_rank);
 
-  fprintf(stderr, "rank desc threads %d dpus %d\n", m_desc->dpu.nr_of_threads,
-          m_desc->topology.nr_of_control_interfaces *
-              m_desc->topology.nr_of_dpus_per_control_interface);
   nr_threads = m_desc->dpu.nr_of_threads;
   nr_dpus = m_desc->topology.nr_of_control_interfaces *
             m_desc->topology.nr_of_dpus_per_control_interface;
@@ -200,18 +196,8 @@ bool Dpu::StepThread(uint32_t thread_index) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
   m_context.bkp_fault = false;
 
-  for (dpu_thread_t each_thread = 0; each_thread < nr_threads; ++each_thread) {
-    fprintf(stderr, "[%u] 0x%x\n", each_thread,
-            m_context.scheduling[each_thread]);
-  }
-
   int ret = DPU_API_SUCCESS;
   ret |= dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, &m_context);
-
-  for (dpu_thread_t each_thread = 0; each_thread < nr_threads; ++each_thread) {
-    fprintf(stderr, "[%u] 0x%x\n", each_thread,
-            m_context.scheduling[each_thread]);
-  }
 
   return ret == DPU_API_SUCCESS;
 }
