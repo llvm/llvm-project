@@ -466,9 +466,11 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
 template <class ELFT>
 StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
                                               const Elf_Shdr &sec) {
-  const Elf_Sym *sym =
-      CHECK(object::getSymbol<ELFT>(this->getELFSyms<ELFT>(), sec.sh_info), this);
-  StringRef signature = CHECK(sym->getName(this->stringTable), this);
+  typename ELFT::SymRange symbols = this->getELFSyms<ELFT>();
+  if (sec.sh_info >= symbols.size())
+    fatal(toString(this) + ": invalid symbol index");
+  const typename ELFT::Sym &sym = symbols[sec.sh_info];
+  StringRef signature = CHECK(sym.getName(this->stringTable), this);
 
   // As a special case, if a symbol is a section symbol and has no name,
   // we use a section name as a signature.
@@ -477,7 +479,7 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
   // standard, but GNU gold 1.14 (the newest version as of July 2017) or
   // older produce such sections as outputs for the -r option, so we need
   // a bug-compatibility.
-  if (signature.empty() && sym->getType() == STT_SECTION)
+  if (signature.empty() && sym.getType() == STT_SECTION)
     return getSectionName(sec);
   return signature;
 }
