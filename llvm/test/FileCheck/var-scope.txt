@@ -34,5 +34,5 @@ LOCAL3: [[LOCAL]][[#LOCNUM+2]]
 GLOBAL: [[$GLOBAL]][[#$GLOBNUM+2]]
 
 ERRUNDEF: expected string not found in input
-ERRUNDEFLOCAL: uses undefined variable "LOCAL"
-ERRUNDEFLOCNUM: uses undefined variable "LOCNUM"
+ERRUNDEFLOCAL: uses undefined variable(s): "LOCAL"
+ERRUNDEFLOCNUM: uses undefined variable(s): "LOCNUM"

@@ -101,6 +101,7 @@
 // COMMON:#define __ORDER_PDP_ENDIAN__ 3412
 // COMMON:#define __STDC_HOSTED__ 1
 // COMMON:#define __STDC__ 1
+// COMMON:#define __VERSION__ {{.*}}
 // COMMON:#define __clang__ 1
 // COMMON:#define __clang_major__ {{[0-9]+}}
 // COMMON:#define __clang_minor__ {{[0-9]+}}
@@ -8168,6 +8169,7 @@
 // SPARC:#define __UINT_LEAST8_MAX__ 255
 // SPARC:#define __UINT_LEAST8_TYPE__ unsigned char
 // SPARC:#define __USER_LABEL_PREFIX__
+// SPARC:#define __VERSION__ "4.2.1 Compatible{{.*}}
 // SPARC:#define __WCHAR_MAX__ 2147483647
 // SPARC:#define __WCHAR_TYPE__ int
 // SPARC:#define __WCHAR_WIDTH__ 32
@@ -9039,6 +9041,7 @@
 // X86_64-CLOUDABI:#define __UINT_LEAST8_MAX__ 255
 // X86_64-CLOUDABI:#define __UINT_LEAST8_TYPE__ unsigned char
 // X86_64-CLOUDABI:#define __USER_LABEL_PREFIX__
+// X86_64-CLOUDABI:#define __VERSION__ "4.2.1 Compatible{{.*}}
 // X86_64-CLOUDABI:#define __WCHAR_MAX__ 2147483647
 // X86_64-CLOUDABI:#define __WCHAR_TYPE__ int
 // X86_64-CLOUDABI:#define __WCHAR_WIDTH__ 32
@@ -10040,6 +10043,7 @@
 // WEBASSEMBLY-NEXT:#define __UINT_LEAST8_MAX__ 255
 // WEBASSEMBLY-NEXT:#define __UINT_LEAST8_TYPE__ unsigned char
 // WEBASSEMBLY-NEXT:#define __USER_LABEL_PREFIX__
+// WEBASSEMBLY-NEXT:#define __VERSION__ "{{.*}}"
 // WEBASSEMBLY-NEXT:#define __WCHAR_MAX__ 2147483647
 // WEBASSEMBLY-NEXT:#define __WCHAR_TYPE__ int
 // WEBASSEMBLY-NOT:#define __WCHAR_UNSIGNED__

@@ -49,6 +49,7 @@ RUN: done;
 #undef __INT8_TYPE__
 #undef __SSP__
 #undef __APPLE_CC__
+#undef __VERSION__
 #undef __clang__
 #undef __llvm__
 #undef __nocona

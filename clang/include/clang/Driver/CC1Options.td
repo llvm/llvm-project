@@ -298,6 +298,8 @@ def menable_unsafe_fp_math : Flag<["-"], "menable-unsafe-fp-math">,
            "precision">;
 def mreassociate : Flag<["-"], "mreassociate">,
   HelpText<"Allow reassociation transformations for floating-point instructions">;
+def mabi_EQ_ieeelongdouble : Flag<["-"], "mabi=ieeelongdouble">,
+  HelpText<"Use IEEE 754 quadruple-precision for long double">;
 def mfloat_abi : Separate<["-"], "mfloat-abi">,
   HelpText<"The float ABI to use">;
 def mtp : Separate<["-"], "mtp">,

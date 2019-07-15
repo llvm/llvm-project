@@ -108,8 +108,7 @@ void AssertSideEffectCheck::check(const MatchFinder::MatchResult &Result) {
     StringRef MacroName = Lexer::getImmediateMacroName(Loc, SM, LangOpts);
 
     // Check if this macro is an assert.
-    if (std::find(AssertMacros.begin(), AssertMacros.end(), MacroName) !=
-        AssertMacros.end()) {
+    if (llvm::is_contained(AssertMacros, MacroName)) {
       AssertMacroName = MacroName;
       break;
     }

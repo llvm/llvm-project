@@ -97,6 +97,10 @@ void BitcodeReaderValueList::assignValue(Value *V, unsigned Idx, Type *FullTy) {
 }
 
 Constant *BitcodeReaderValueList::getConstantFwdRef(unsigned Idx, Type *Ty) {
+  // Bail out for a clearly invalid value.
+  if (Idx >= RefsUpperBound)
+    return nullptr;
+
   if (Idx >= size())
     resize(Idx + 1);
 
@@ -114,8 +118,8 @@ Constant *BitcodeReaderValueList::getConstantFwdRef(unsigned Idx, Type *Ty) {
 
 Value *BitcodeReaderValueList::getValueFwdRef(unsigned Idx, Type *Ty,
                                               Type **FullTy) {
-  // Bail out for a clearly invalid value. This would make us call resize(0)
-  if (Idx == std::numeric_limits<unsigned>::max())
+  // Bail out for a clearly invalid value.
+  if (Idx >= RefsUpperBound)
     return nullptr;
 
   if (Idx >= size())

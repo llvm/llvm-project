@@ -5,16 +5,25 @@
 # CHECK:      "semanticHighlighting": {
 # CHECK-NEXT:        "scopes": [
 # CHECK-NEXT:          [
-# CHECK-NEXT:            "variable.cpp"
+# CHECK-NEXT:            "variable.other.cpp"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
 # CHECK-NEXT:            "entity.name.function.cpp"
+# CHECK-NEXT:          ],
+# CHECK-NEXT:          [
+# CHECK-NEXT:            "entity.name.function.method.cpp"
+# CHECK-NEXT:          ],
+# CHECK-NEXT:          [
+# CHECK-NEXT:            "variable.other.field.cpp"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
 # CHECK-NEXT:            "entity.name.type.class.cpp"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
 # CHECK-NEXT:            "entity.name.type.enum.cpp"
+# CHECK-NEXT:          ],
+# CHECK-NEXT:          [
+# CHECK-NEXT:            "variable.other.enummember.cpp"
 # CHECK-NEXT:          ],
 # CHECK-NEXT:          [
 # CHECK-NEXT:            "entity.name.namespace.cpp"

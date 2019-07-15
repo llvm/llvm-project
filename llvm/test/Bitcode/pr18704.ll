@@ -1,6 +1,6 @@
 ; RUN:  not llvm-dis < %s.bc 2>&1 | FileCheck %s
 
-; CHECK: llvm-dis{{(\.EXE|\.exe)?}}: error: Never resolved value found in function
+; CHECK: llvm-dis{{(\.EXE|\.exe)?}}: error: Invalid record
 
 ; pr18704.ll.bc has an instruction referring to invalid type.
 ; The test checks that LLVM reports the error and doesn't access freed memory

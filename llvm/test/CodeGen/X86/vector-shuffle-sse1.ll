@@ -230,15 +230,7 @@ define <4 x float> @insert_mem_and_zero_v4f32(float* %ptr) {
 define <4 x float> @insert_mem_lo_v4f32(<2 x float>* %ptr, <4 x float> %b) {
 ; SSE1-LABEL: insert_mem_lo_v4f32:
 ; SSE1:       # %bb.0:
-; SSE1-NEXT:    movq (%rdi), %rax
-; SSE1-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; SSE1-NEXT:    shrq $32, %rax
-; SSE1-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE1-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE1-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSE1-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm0[2,3]
-; SSE1-NEXT:    movaps %xmm1, %xmm0
+; SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; SSE1-NEXT:    retq
   %a = load <2 x float>, <2 x float>* %ptr
   %v = shufflevector <2 x float> %a, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
@@ -249,14 +241,7 @@ define <4 x float> @insert_mem_lo_v4f32(<2 x float>* %ptr, <4 x float> %b) {
 define <4 x float> @insert_mem_hi_v4f32(<2 x float>* %ptr, <4 x float> %b) {
 ; SSE1-LABEL: insert_mem_hi_v4f32:
 ; SSE1:       # %bb.0:
-; SSE1-NEXT:    movq (%rdi), %rax
-; SSE1-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; SSE1-NEXT:    shrq $32, %rax
-; SSE1-NEXT:    movl %eax, -{{[0-9]+}}(%rsp)
-; SSE1-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; SSE1-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE1-NEXT:    unpcklps {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
-; SSE1-NEXT:    movlhps {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE1-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE1-NEXT:    retq
   %a = load <2 x float>, <2 x float>* %ptr
   %v = shufflevector <2 x float> %a, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>

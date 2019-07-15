@@ -17332,7 +17332,7 @@ Syntax:
 """""""
 ::
 
-      declare <type2>
+      declare <ret_type>
       @llvm.preserve.array.access.index.p0s_union.anons.p0a10s_union.anons(<type> base,
                                                                            i32 dim,
                                                                            i32 index)
@@ -17342,7 +17342,9 @@ Overview:
 
 The '``llvm.preserve.array.access.index``' intrinsic returns the getelementptr address
 based on array base ``base``, array dimension ``dim`` and the last access index ``index``
-into the array.
+into the array. The return type ``ret_type`` is a pointer type to the array element.
+The array ``dim`` and ``index`` are preserved which is more robust than
+getelementptr instruction which may be subject to compiler transformation.
 
 Arguments:
 """"""""""
@@ -17375,6 +17377,8 @@ The '``llvm.preserve.union.access.index``' intrinsic carries the debuginfo field
 ``di_index`` and returns the ``base`` address.
 The ``llvm.preserve.access.index`` type of metadata is attached to this call instruction
 to provide union debuginfo type.
+The metadata is a ``DICompositeType`` representing the debuginfo version of ``type``.
+The return type ``type`` is the same as the ``base`` type.
 
 Arguments:
 """"""""""
@@ -17393,7 +17397,7 @@ Syntax:
 """""""
 ::
 
-      declare <type2>
+      declare <ret_type>
       @llvm.preserve.struct.access.index.p0i8.p0s_struct.anon.0s(<type> base,
                                                                  i32 gep_index,
                                                                  i32 di_index)
@@ -17405,6 +17409,8 @@ The '``llvm.preserve.struct.access.index``' intrinsic returns the getelementptr 
 based on struct base ``base`` and IR struct member index ``gep_index``.
 The ``llvm.preserve.access.index`` type of metadata is attached to this call instruction
 to provide struct debuginfo type.
+The metadata is a ``DICompositeType`` representing the debuginfo version of ``type``.
+The return type ``ret_type`` is a pointer type to the structure member.
 
 Arguments:
 """"""""""

@@ -762,12 +762,29 @@
 // CHECK-V81M-MVE: #define __ARM_FEATURE_MVE 1
 // CHECK-V81M-MVE: #define __ARM_FEATURE_SIMD32 1
 
-// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVE-FP %s
-// CHECK-V81M-MVE-FP: #define __ARM_FEATURE_DSP 1
-// CHECK-V81M-MVE-FP: #define __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
-// CHECK-V81M-MVE-FP: #define __ARM_FEATURE_MVE 3
-// CHECK-V81M-MVE-FP: #define __ARM_FEATURE_SIMD32 1
-// CHECK-V81M-MVE-FP: #define __ARM_FPV5__ 1
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVEFP %s
+// CHECK-V81M-MVEFP: #define __ARM_FEATURE_DSP 1
+// CHECK-V81M-MVEFP: #define __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
+// CHECK-V81M-MVEFP: #define __ARM_FEATURE_MVE 3
+// CHECK-V81M-MVEFP: #define __ARM_FEATURE_SIMD32 1
+// CHECK-V81M-MVEFP: #define __ARM_FPV5__ 1
+
+// nofp discards mve.fp
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp+nofp -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVEFP-NOFP %s
+// CHECK-V81M-MVEFP-NOFP-NOT: #define __ARM_FEATURE_MVE
+
+// nomve discards mve.fp
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve.fp+nomve -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVEFP-NOMVE %s
+// CHECK-V81M-MVEFP-NOMVE-NOT: #define __ARM_FEATURE_MVE
+
+// mve+fp doesn't imply mve.fp
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve+fp -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVE-FP %s
+// CHECK-V81M-MVE-FP: #define __ARM_FEATURE_MVE 1
+
+// nodsp discards both dsp and mve
+// RUN: %clang -target arm-arm-none-eabi -march=armv8.1-m.main+mve+nodsp -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81M-MVE-NODSP %s
+// CHECK-V81M-MVE-NODSP-NOT: #define __ARM_FEATURE_MVE
+// CHECK-V81M-MVE-NODSP-NOT: #define __ARM_FEATURE_DSP
 
 // RUN: %clang -target armv8.1a-none-none-eabi -x c -E -dM %s -o - | FileCheck -match-full-lines --check-prefix=CHECK-V81A %s
 // CHECK-V81A: #define __ARM_ARCH 8

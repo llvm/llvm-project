@@ -324,8 +324,6 @@ option for a warning and returns true if that is a valid warning option.
   ...
   #endif
 
-.. _languageextensions-builtin-macros:
-
 Builtin Macros
 ==============
 
@@ -2466,6 +2464,10 @@ Which compiles to (on X86-32):
           movl    4(%esp), %eax
           movl    %gs:(%eax), %eax
           ret
+
+You can also use the GCC compatibility macros ``__seg_fs`` and ``__seg_gs`` for
+the same purpose. The preprocessor symbols ``__SEG_FS`` and ``__SEG_GS``
+indicate their support.
 
 PowerPC Language Extensions
 ------------------------------

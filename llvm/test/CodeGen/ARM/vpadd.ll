@@ -285,17 +285,14 @@ define void @addCombineToVPADDLq_s8(<16 x i8> *%cbcr, <8 x i16> *%X) nounwind ss
 define void @addCombineToVPADDL_s8(<16 x i8> *%cbcr, <4 x i16> *%X) nounwind ssp {
 ; CHECK-LABEL: addCombineToVPADDL_s8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.i16	d16, #0x8
-; CHECK-NEXT:    vld1.64	{d18, d19}, [r0]
-; CHECK-NEXT:    vext.8	d17, d18, d16, #1
-; CHECK-NEXT:    vneg.s16	d16, d16
-; CHECK-NEXT:    vshl.i16	d18, d18, #8
-; CHECK-NEXT:    vshl.i16	d17, d17, #8
-; CHECK-NEXT:    vshl.s16	d18, d18, d16
-; CHECK-NEXT:    vshl.s16	d16, d17, d16
-; CHECK-NEXT:    vadd.i16	d16, d16, d18
-; CHECK-NEXT:    vstr	d16, [r1]
-; CHECK-NEXT:    mov	pc, lr
+; CHECK-NEXT:    vld1.64 {d16, d17}, [r0]
+; CHECK-NEXT:    vext.8 d18, d16, d16, #1
+; CHECK-NEXT:    vshl.i16 d16, d16, #8
+; CHECK-NEXT:    vshl.i16 d18, d18, #8
+; CHECK-NEXT:    vshr.s16 d17, d18, #8
+; CHECK-NEXT:    vsra.s16 d17, d16, #8
+; CHECK-NEXT:    vstr d17, [r1]
+; CHECK-NEXT:    mov pc, lr
   %tmp = load <16 x i8>, <16 x i8>* %cbcr
   %tmp1 = shufflevector <16 x i8> %tmp, <16 x i8> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %tmp3 = shufflevector <16 x i8> %tmp, <16 x i8> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
@@ -488,7 +485,19 @@ define <2 x i16> @fromExtendingExtractVectorElt_i16(<4 x i16> %in) {
 ; And <2 x i8> to <2 x i32>
 define <2 x i8> @fromExtendingExtractVectorElt_2i8(<8 x i8> %in) {
 ; CHECK-LABEL: fromExtendingExtractVectorElt_2i8:
-; CHECK:    vadd.i32
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vmov.u8 r1, d16[1]
+; CHECK-NEXT:    vmov.u8 r0, d16[0]
+; CHECK-NEXT:    vmov.u8 r2, d16[2]
+; CHECK-NEXT:    vmov.u8 r3, d16[3]
+; CHECK-NEXT:    vmov.32 d17[0], r1
+; CHECK-NEXT:    vmov.32 d16[0], r0
+; CHECK-NEXT:    vmov.32 d17[1], r3
+; CHECK-NEXT:    vmov.32 d16[1], r2
+; CHECK-NEXT:    vadd.i32 d16, d17, d16
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    mov pc, lr
   %tmp1 = shufflevector <8 x i8> %in, <8 x i8> undef, <2 x i32> <i32 0, i32 2>
   %tmp2 = shufflevector <8 x i8> %in, <8 x i8> undef, <2 x i32> <i32 1, i32 3>
   %x = add <2 x i8> %tmp2, %tmp1
@@ -497,7 +506,19 @@ define <2 x i8> @fromExtendingExtractVectorElt_2i8(<8 x i8> %in) {
 
 define <2 x i16> @fromExtendingExtractVectorElt_2i16(<8 x i16> %in) {
 ; CHECK-LABEL: fromExtendingExtractVectorElt_2i16:
-; CHECK:    vadd.i32
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vmov d16, r0, r1
+; CHECK-NEXT:    vmov.u16 r0, d16[0]
+; CHECK-NEXT:    vmov.u16 r1, d16[1]
+; CHECK-NEXT:    vmov.u16 r3, d16[3]
+; CHECK-NEXT:    vmov.u16 r2, d16[2]
+; CHECK-NEXT:    vmov.32 d16[0], r0
+; CHECK-NEXT:    vmov.32 d17[0], r1
+; CHECK-NEXT:    vmov.32 d16[1], r2
+; CHECK-NEXT:    vmov.32 d17[1], r3
+; CHECK-NEXT:    vadd.i32 d16, d17, d16
+; CHECK-NEXT:    vmov r0, r1, d16
+; CHECK-NEXT:    mov pc, lr
  %tmp1 = shufflevector <8 x i16> %in, <8 x i16> undef, <2 x i32> <i32 0, i32 2>
  %tmp2 = shufflevector <8 x i16> %in, <8 x i16> undef, <2 x i32> <i32 1, i32 3>
  %x = add <2 x i16> %tmp2, %tmp1

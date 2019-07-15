@@ -402,7 +402,8 @@ LoopUnrollResult llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
     // counts. If we later unroll the loop, we want these to be updated.
     if (Peeled) {
       // According to our guards and profitability checks the only
-      // meaningful exit should be latch block.
+      // meaningful exit should be latch block. Other exits go to deopt,
+      // so we do not worry about them.
       BasicBlock *ExitingBlock = L->getLoopLatch();
       assert(ExitingBlock && "Loop without exiting block?");
       assert(L->isLoopExiting(ExitingBlock) && "Latch is not exiting?");

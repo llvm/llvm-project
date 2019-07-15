@@ -280,7 +280,7 @@ define i32 @PR40483_sub4(i32*, i32) nounwind {
 
 ; Verify that a bogus cmov is simplified.
 
-define i32 @PR40483_sub5(i32*, i32) {
+define i32 @PR40483_sub5(i32*, i32) nounwind {
 ; X86-LABEL: PR40483_sub5:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -291,9 +291,8 @@ define i32 @PR40483_sub5(i32*, i32) {
 ;
 ; X64-LABEL: PR40483_sub5:
 ; X64:       # %bb.0:
-; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    subl %esi, (%rdi)
-; X64-NEXT:    cmovael %eax, %eax
+; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    retq
   %3 = load i32, i32* %0, align 8
   %4 = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 %3, i32 %1)
@@ -304,6 +303,51 @@ define i32 @PR40483_sub5(i32*, i32) {
   %8 = sub i32 %1, %3
   %9 = add i32 %8, %5
   %10 = select i1 %7, i32 %9, i32 0
+  ret i32 %10
+}
+
+define i32 @PR40483_sub6(i32*, i32) nounwind {
+; X86-LABEL: PR40483_sub6:
+; X86:       # %bb.0:
+; X86-NEXT:    pushl %edi
+; X86-NEXT:    pushl %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl (%edx), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl %esi, %ecx
+; X86-NEXT:    subl %edi, %ecx
+; X86-NEXT:    xorl %eax, %eax
+; X86-NEXT:    subl %edi, %esi
+; X86-NEXT:    movl %esi, (%edx)
+; X86-NEXT:    jae .LBB8_2
+; X86-NEXT:  # %bb.1:
+; X86-NEXT:    addl %ecx, %ecx
+; X86-NEXT:    movl %ecx, %eax
+; X86-NEXT:  .LBB8_2:
+; X86-NEXT:    popl %esi
+; X86-NEXT:    popl %edi
+; X86-NEXT:    retl
+;
+; X64-LABEL: PR40483_sub6:
+; X64:       # %bb.0:
+; X64-NEXT:    movl (%rdi), %ecx
+; X64-NEXT:    movl %ecx, %edx
+; X64-NEXT:    subl %esi, %edx
+; X64-NEXT:    addl %edx, %edx
+; X64-NEXT:    xorl %eax, %eax
+; X64-NEXT:    subl %esi, %ecx
+; X64-NEXT:    movl %ecx, (%rdi)
+; X64-NEXT:    cmovbl %edx, %eax
+; X64-NEXT:    retq
+  %3 = load i32, i32* %0, align 8
+  %4 = tail call { i8, i32 } @llvm.x86.subborrow.32(i8 0, i32 %3, i32 %1)
+  %5 = extractvalue { i8, i32 } %4, 1
+  store i32 %5, i32* %0, align 8
+  %6 = extractvalue { i8, i32 } %4, 0
+  %7 = icmp eq i8 %6, 0
+  %8 = sub i32 %3, %1
+  %9 = add i32 %8, %5
+  %10 = select i1 %7, i32 0, i32 %9
   ret i32 %10
 }
 
