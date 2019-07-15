@@ -765,8 +765,8 @@ struct FillMFMAShadowMutation : ScheduleDAGMutation {
   FillMFMAShadowMutation(const SIInstrInfo *tii) : TII(tii) {}
 
   bool isSALU(const SUnit *SU) const {
-    const MachineInstr &MI = *SU->getInstr();
-    return TII->isSALU(MI) && !MI.isTerminator();
+    const MachineInstr *MI = SU->getInstr();
+    return MI && TII->isSALU(*MI) && !MI->isTerminator();
   }
 
   bool canAddEdge(const SUnit *Succ, const SUnit *Pred) const {

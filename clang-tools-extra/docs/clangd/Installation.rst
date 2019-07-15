@@ -324,7 +324,7 @@ symlink it (or copy it) to the root of your source tree, if they are different.
 
 ::
 
-  $ ln -s ~/myproject/compile_commands.json ~/myproject-build/
+  $ ln -s ~/myproject-build/compile_commands.json ~/myproject/
 
 :raw-html:`</details>`
 

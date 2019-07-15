@@ -263,6 +263,14 @@ struct Attributor {
       Function &F, InformationCache &InfoCache,
       DenseSet</* Attribute::AttrKind */ unsigned> *Whitelist = nullptr);
 
+  /// Check \p Pred on all function call sites.
+  ///
+  /// This method will evaluate \p Pred on call sites and return
+  /// true if \p Pred holds in every call sites. However, this is only possible
+  /// all call sites are known, hence the function has internal linkage.
+  bool checkForAllCallSites(Function &F, std::function<bool(CallSite)> &Pred,
+                            bool RequireAllCallSites);
+
 private:
   /// The set of all abstract attributes.
   ///{
@@ -708,6 +716,30 @@ struct AANoSync : public AbstractAttribute {
   virtual bool isKnownNoSync() const = 0;
 };
 
+/// An abstract interface for all nonnull attributes.
+struct AANonNull : public AbstractAttribute {
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AANonNull(Value &V, InformationCache &InfoCache)
+      : AbstractAttribute(V, InfoCache) {}
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AANonNull(Value *AssociatedVal, Value &AnchoredValue,
+            InformationCache &InfoCache)
+      : AbstractAttribute(AssociatedVal, AnchoredValue, InfoCache) {}
+
+  /// Return true if we assume that the underlying value is nonnull.
+  virtual bool isAssumedNonNull() const = 0;
+
+  /// Return true if we know that underlying value is nonnull.
+  virtual bool isKnownNonNull() const = 0;
+
+  /// See AbastractState::getAttrKind().
+  Attribute::AttrKind getAttrKind() const override { return ID; }
+
+  /// The identifier used by the Attributor for this class of attributes.
+  static constexpr Attribute::AttrKind ID = Attribute::NonNull;
+};
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H

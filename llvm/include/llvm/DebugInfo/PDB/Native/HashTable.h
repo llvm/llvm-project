@@ -37,7 +37,7 @@ template <typename ValueT>
 class HashTableIterator
     : public iterator_facade_base<HashTableIterator<ValueT>,
                                   std::forward_iterator_tag,
-                                  std::pair<uint32_t, ValueT>> {
+                                  const std::pair<uint32_t, ValueT>> {
   friend HashTable<ValueT>;
 
   HashTableIterator(const HashTable<ValueT> &Map, uint32_t Index,
@@ -94,8 +94,8 @@ private:
 
 template <typename ValueT>
 class HashTable {
-  using iterator = HashTableIterator<ValueT>;
-  friend iterator;
+  using const_iterator = HashTableIterator<ValueT>;
+  friend const_iterator;
 
   struct Header {
     support::ulittle32_t Size;
@@ -206,20 +206,20 @@ public:
   uint32_t capacity() const { return Buckets.size(); }
   uint32_t size() const { return Present.count(); }
 
-  iterator begin() const { return iterator(*this); }
-  iterator end() const { return iterator(*this, 0, true); }
+  const_iterator begin() const { return const_iterator(*this); }
+  const_iterator end() const { return const_iterator(*this, 0, true); }
 
   /// Find the entry whose key has the specified hash value, using the specified
   /// traits defining hash function and equality.
   template <typename Key, typename TraitsT>
-  iterator find_as(const Key &K, TraitsT &Traits) const {
+  const_iterator find_as(const Key &K, TraitsT &Traits) const {
     uint32_t H = Traits.hashLookupKey(K) % capacity();
     uint32_t I = H;
     Optional<uint32_t> FirstUnused;
     do {
       if (isPresent(I)) {
         if (Traits.storageKeyToLookupKey(Buckets[I].first) == K)
-          return iterator(*this, I, false);
+          return const_iterator(*this, I, false);
       } else {
         if (!FirstUnused)
           FirstUnused = I;
@@ -238,7 +238,7 @@ public:
     // table were Present.  But this would violate the load factor constraints
     // that we impose, so it should never happen.
     assert(FirstUnused);
-    return iterator(*this, *FirstUnused, true);
+    return const_iterator(*this, *FirstUnused, true);
   }
 
   /// Set the entry using a key type that the specified Traits can convert

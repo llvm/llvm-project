@@ -89,7 +89,7 @@ intermediate LLVM representation.
    GetElementPtr
    Frontend/PerformanceTips
    MCJITDesignAndImplementation
-   ORCv2DesignAndImplementation
+   ORCv2
    CodeOfConduct
    CompileCudaWithLLVM
    ReportingGuide
@@ -383,9 +383,9 @@ For API clients and LLVM developers.
 :doc:`MCJITDesignAndImplementation`
    Describes the inner workings of MCJIT execution engine.
 
-:doc:`ORCv2DesignAndImplementation`
+:doc:`ORCv2`
    Describes the design and implementation of the ORC APIs, including some
-   usage examples.
+   usage examples, and a guide for users transitioning from ORCv1 to ORCv2.
 
 :doc:`BranchWeightMetadata`
    Provides information about Branch Prediction Information.

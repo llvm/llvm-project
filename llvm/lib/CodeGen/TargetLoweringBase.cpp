@@ -123,6 +123,34 @@ void TargetLoweringBase::InitLibcalls(const Triple &TT) {
   for (int LC = 0; LC < RTLIB::UNKNOWN_LIBCALL; ++LC)
     setLibcallCallingConv((RTLIB::Libcall)LC, CallingConv::C);
 
+  // For IEEE quad-precision libcall names, PPC uses "kf" instead of "tf".
+  if (TT.getArch() == Triple::ppc || TT.isPPC64()) {
+    setLibcallName(RTLIB::ADD_F128, "__addkf3");
+    setLibcallName(RTLIB::SUB_F128, "__subkf3");
+    setLibcallName(RTLIB::MUL_F128, "__mulkf3");
+    setLibcallName(RTLIB::DIV_F128, "__divkf3");
+    setLibcallName(RTLIB::FPEXT_F32_F128, "__extendsfkf2");
+    setLibcallName(RTLIB::FPEXT_F64_F128, "__extenddfkf2");
+    setLibcallName(RTLIB::FPROUND_F128_F32, "__trunckfsf2");
+    setLibcallName(RTLIB::FPROUND_F128_F64, "__trunckfdf2");
+    setLibcallName(RTLIB::FPTOSINT_F128_I32, "__fixkfsi");
+    setLibcallName(RTLIB::FPTOSINT_F128_I64, "__fixkfdi");
+    setLibcallName(RTLIB::FPTOUINT_F128_I32, "__fixunskfsi");
+    setLibcallName(RTLIB::FPTOUINT_F128_I64, "__fixunskfdi");
+    setLibcallName(RTLIB::SINTTOFP_I32_F128, "__floatsikf");
+    setLibcallName(RTLIB::SINTTOFP_I64_F128, "__floatdikf");
+    setLibcallName(RTLIB::UINTTOFP_I32_F128, "__floatunsikf");
+    setLibcallName(RTLIB::UINTTOFP_I64_F128, "__floatundikf");
+    setLibcallName(RTLIB::OEQ_F128, "__eqkf2");
+    setLibcallName(RTLIB::UNE_F128, "__nekf2");
+    setLibcallName(RTLIB::OGE_F128, "__gekf2");
+    setLibcallName(RTLIB::OLT_F128, "__ltkf2");
+    setLibcallName(RTLIB::OLE_F128, "__lekf2");
+    setLibcallName(RTLIB::OGT_F128, "__gtkf2");
+    setLibcallName(RTLIB::UO_F128, "__unordkf2");
+    setLibcallName(RTLIB::O_F128, "__unordkf2");
+  }
+
   // A few names are different on particular architectures or environments.
   if (TT.isOSDarwin()) {
     // For f16/f32 conversions, Darwin uses the standard naming scheme, instead

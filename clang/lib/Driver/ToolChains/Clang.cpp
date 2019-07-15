@@ -1803,12 +1803,21 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
       break;
     }
 
-  if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ))
-    // The ppc64 linux abis are all "altivec" abis by default. Accept and ignore
-    // the option if given as we don't have backend support for any targets
-    // that don't use the altivec abi.
-    if (StringRef(A->getValue()) != "altivec")
+  bool IEEELongDouble = false;
+  for (const Arg *A : Args.filtered(options::OPT_mabi_EQ)) {
+    StringRef V = A->getValue();
+    if (V == "ieeelongdouble")
+      IEEELongDouble = true;
+    else if (V == "ibmlongdouble")
+      IEEELongDouble = false;
+    else if (V != "altivec")
+      // The ppc64 linux abis are all "altivec" abis by default. Accept and ignore
+      // the option if given as we don't have backend support for any targets
+      // that don't use the altivec abi.
       ABIName = A->getValue();
+  }
+  if (IEEELongDouble)
+    CmdArgs.push_back("-mabi=ieeelongdouble");
 
   ppc::FloatABI FloatABI =
       ppc::getPPCFloatABI(getToolChain().getDriver(), Args);

@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/InstIterator.h"
@@ -51,6 +52,10 @@ STATISTIC(NumFnArgumentReturned,
           "Number of function arguments marked returned");
 STATISTIC(NumFnNoSync, "Number of functions marked nosync");
 STATISTIC(NumFnNoFree, "Number of functions marked nofree");
+STATISTIC(NumFnReturnedNonNull,
+          "Number of function return values marked nonnull");
+STATISTIC(NumFnArgumentNonNull, "Number of function arguments marked nonnull");
+STATISTIC(NumCSArgumentNonNull, "Number of call site arguments marked nonnull");
 
 // TODO: Determine a good default value.
 //
@@ -107,6 +112,21 @@ static void bookkeeping(AbstractAttribute::ManifestPosition MP,
     break;
   case Attribute::NoFree:
     NumFnNoFree++;
+    break;
+  case Attribute::NonNull:
+    switch (MP) {
+    case AbstractAttribute::MP_RETURNED:
+      NumFnReturnedNonNull++;
+      break;
+    case AbstractAttribute::MP_ARGUMENT:
+      NumFnArgumentNonNull++;
+      break;
+    case AbstractAttribute::MP_CALL_SITE_ARGUMENT:
+      NumCSArgumentNonNull++;
+      break;
+    default:
+      break;
+    }
     break;
   default:
     return;
@@ -970,9 +990,251 @@ ChangeStatus AANoFreeFunction::updateImpl(Attributor &A) {
   return ChangeStatus::UNCHANGED;
 }
 
+/// ------------------------ NonNull Argument Attribute ------------------------
+struct AANonNullImpl : AANonNull, BooleanState {
+
+  AANonNullImpl(Value &V, InformationCache &InfoCache)
+      : AANonNull(V, InfoCache) {}
+
+  AANonNullImpl(Value *AssociatedVal, Value &AnchoredValue,
+                InformationCache &InfoCache)
+      : AANonNull(AssociatedVal, AnchoredValue, InfoCache) {}
+
+  /// See AbstractAttribute::getState()
+  /// {
+  AbstractState &getState() override { return *this; }
+  const AbstractState &getState() const override { return *this; }
+  /// }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr() const override {
+    return getAssumed() ? "nonnull" : "may-null";
+  }
+
+  /// See AANonNull::isAssumedNonNull().
+  bool isAssumedNonNull() const override { return getAssumed(); }
+
+  /// See AANonNull::isKnownNonNull().
+  bool isKnownNonNull() const override { return getKnown(); }
+
+  /// Generate a predicate that checks if a given value is assumed nonnull.
+  /// The generated function returns true if a value satisfies any of
+  /// following conditions.
+  /// (i) A value is known nonZero(=nonnull).
+  /// (ii) A value is associated with AANonNull and its isAssumedNonNull() is
+  /// true.
+  std::function<bool(Value &)> generatePredicate(Attributor &);
+};
+
+std::function<bool(Value &)> AANonNullImpl::generatePredicate(Attributor &A) {
+  // FIXME: The `AAReturnedValues` should provide the predicate with the
+  // `ReturnInst` vector as well such that we can use the control flow sensitive
+  // version of `isKnownNonZero`. This should fix `test11` in
+  // `test/Transforms/FunctionAttrs/nonnull.ll`
+
+  std::function<bool(Value &)> Pred = [&](Value &RV) -> bool {
+    if (isKnownNonZero(&RV, getAnchorScope().getParent()->getDataLayout()))
+      return true;
+
+    auto *NonNullAA = A.getAAFor<AANonNull>(*this, RV);
+
+    ImmutableCallSite ICS(&RV);
+
+    if ((!NonNullAA || !NonNullAA->isAssumedNonNull()) &&
+        (!ICS || !ICS.hasRetAttr(Attribute::NonNull)))
+      return false;
+
+    return true;
+  };
+
+  return Pred;
+}
+
+/// NonNull attribute for function return value.
+struct AANonNullReturned : AANonNullImpl {
+
+  AANonNullReturned(Function &F, InformationCache &InfoCache)
+      : AANonNullImpl(F, InfoCache) {}
+
+  /// See AbstractAttribute::getManifestPosition().
+  ManifestPosition getManifestPosition() const override { return MP_RETURNED; }
+
+  /// See AbstractAttriubute::initialize(...).
+  void initialize(Attributor &A) override {
+    Function &F = getAnchorScope();
+
+    // Already nonnull.
+    if (F.getAttributes().hasAttribute(AttributeList::ReturnIndex,
+                                       Attribute::NonNull))
+      indicateOptimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override;
+};
+
+ChangeStatus AANonNullReturned::updateImpl(Attributor &A) {
+  Function &F = getAnchorScope();
+
+  auto *AARetVal = A.getAAFor<AAReturnedValues>(*this, F);
+  if (!AARetVal) {
+    indicatePessimisticFixpoint();
+    return ChangeStatus::CHANGED;
+  }
+
+  std::function<bool(Value &)> Pred = this->generatePredicate(A);
+  if (!AARetVal->checkForallReturnedValues(Pred)) {
+    indicatePessimisticFixpoint();
+    return ChangeStatus::CHANGED;
+  }
+  return ChangeStatus::UNCHANGED;
+}
+
+/// NonNull attribute for function argument.
+struct AANonNullArgument : AANonNullImpl {
+
+  AANonNullArgument(Argument &A, InformationCache &InfoCache)
+      : AANonNullImpl(A, InfoCache) {}
+
+  /// See AbstractAttribute::getManifestPosition().
+  ManifestPosition getManifestPosition() const override { return MP_ARGUMENT; }
+
+  /// See AbstractAttriubute::initialize(...).
+  void initialize(Attributor &A) override {
+    Argument *Arg = cast<Argument>(getAssociatedValue());
+    if (Arg->hasNonNullAttr())
+      indicateOptimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override;
+};
+
+/// NonNull attribute for a call site argument.
+struct AANonNullCallSiteArgument : AANonNullImpl {
+
+  /// See AANonNullImpl::AANonNullImpl(...).
+  AANonNullCallSiteArgument(CallSite CS, unsigned ArgNo,
+                            InformationCache &InfoCache)
+      : AANonNullImpl(CS.getArgOperand(ArgNo), *CS.getInstruction(), InfoCache),
+        ArgNo(ArgNo) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    CallSite CS(&getAnchoredValue());
+    if (isKnownNonZero(getAssociatedValue(),
+                       getAnchorScope().getParent()->getDataLayout()) ||
+        CS.paramHasAttr(ArgNo, getAttrKind()))
+      indicateOptimisticFixpoint();
+  }
+
+  /// See AbstractAttribute::updateImpl(Attributor &A).
+  ChangeStatus updateImpl(Attributor &A) override;
+
+  /// See AbstractAttribute::getManifestPosition().
+  ManifestPosition getManifestPosition() const override {
+    return MP_CALL_SITE_ARGUMENT;
+  };
+
+  // Return argument index of associated value.
+  int getArgNo() const { return ArgNo; }
+
+private:
+  unsigned ArgNo;
+};
+ChangeStatus AANonNullArgument::updateImpl(Attributor &A) {
+  Function &F = getAnchorScope();
+  Argument &Arg = cast<Argument>(getAnchoredValue());
+
+  unsigned ArgNo = Arg.getArgNo();
+
+  // Callback function
+  std::function<bool(CallSite)> CallSiteCheck = [&](CallSite CS) {
+    assert(CS && "Sanity check: Call site was not initialized properly!");
+
+    auto *NonNullAA = A.getAAFor<AANonNull>(*this, *CS.getInstruction(), ArgNo);
+
+    // Check that NonNullAA is AANonNullCallSiteArgument.
+    if (NonNullAA) {
+      ImmutableCallSite ICS(&NonNullAA->getAnchoredValue());
+      if (ICS && CS.getInstruction() == ICS.getInstruction())
+        return NonNullAA->isAssumedNonNull();
+      return false;
+    }
+
+    if (CS.paramHasAttr(ArgNo, Attribute::NonNull))
+      return true;
+
+    Value *V = CS.getArgOperand(ArgNo);
+    if (isKnownNonZero(V, getAnchorScope().getParent()->getDataLayout()))
+      return true;
+
+    return false;
+  };
+  if (!A.checkForAllCallSites(F, CallSiteCheck, true)) {
+    indicatePessimisticFixpoint();
+    return ChangeStatus::CHANGED;
+  }
+  return ChangeStatus::UNCHANGED;
+}
+
+ChangeStatus AANonNullCallSiteArgument::updateImpl(Attributor &A) {
+  // NOTE: Never look at the argument of the callee in this method.
+  //       If we do this, "nonnull" is always deduced because of the assumption.
+
+  Value &V = *getAssociatedValue();
+
+  auto *NonNullAA = A.getAAFor<AANonNull>(*this, V);
+
+  if (!NonNullAA || !NonNullAA->isAssumedNonNull()) {
+    indicatePessimisticFixpoint();
+    return ChangeStatus::CHANGED;
+  }
+
+  return ChangeStatus::UNCHANGED;
+}
+
 /// ----------------------------------------------------------------------------
 ///                               Attributor
 /// ----------------------------------------------------------------------------
+
+bool Attributor::checkForAllCallSites(Function &F,
+                                      std::function<bool(CallSite)> &Pred,
+                                      bool RequireAllCallSites) {
+  // We can try to determine information from
+  // the call sites. However, this is only possible all call sites are known,
+  // hence the function has internal linkage.
+  if (RequireAllCallSites && !F.hasInternalLinkage()) {
+    LLVM_DEBUG(
+        dbgs()
+        << "Attributor: Function " << F.getName()
+        << " has no internal linkage, hence not all call sites are known\n");
+    return false;
+  }
+
+  for (const Use &U : F.uses()) {
+
+    CallSite CS(U.getUser());
+    dbgs() << *CS.getInstruction() << "\n";
+    if (!CS || !CS.isCallee(&U) || !CS.getCaller()->hasExactDefinition()) {
+      if (!RequireAllCallSites)
+        continue;
+
+      LLVM_DEBUG(dbgs() << "Attributor: User " << *U.getUser()
+                        << " is an invalid use of " << F.getName() << "\n");
+      return false;
+    }
+
+    if (Pred(CS))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Attributor: Call site callback failed for "
+                      << *CS.getInstruction() << "\n");
+    return false;
+  }
+
+  return true;
+}
 
 ChangeStatus Attributor::run() {
   // Initialize all abstract attributes.
@@ -1128,6 +1390,17 @@ void Attributor::identifyDefaultAbstractAttributes(
     // though it is an argument attribute.
     if (!Whitelist || Whitelist->count(AAReturnedValues::ID))
       registerAA(*new AAReturnedValuesImpl(F, InfoCache));
+
+    // Every function with pointer return type might be marked nonnull.
+    if (ReturnType->isPointerTy() &&
+        (!Whitelist || Whitelist->count(AANonNullReturned::ID)))
+      registerAA(*new AANonNullReturned(F, InfoCache));
+  }
+
+  // Every argument with pointer type might be marked nonnull.
+  for (Argument &Arg : F.args()) {
+    if (Arg.getType()->isPointerTy())
+      registerAA(*new AANonNullArgument(Arg, InfoCache));
   }
 
   // Walk all instructions to find more attribute opportunities and also
@@ -1163,6 +1436,17 @@ void Attributor::identifyDefaultAbstractAttributes(
       InstOpcodeMap[I.getOpcode()].push_back(&I);
     if (I.mayReadOrWriteMemory())
       ReadOrWriteInsts.push_back(&I);
+
+    CallSite CS(&I);
+    if (CS && CS.getCalledFunction()) {
+      for (int i = 0, e = CS.getCalledFunction()->arg_size(); i < e; i++) {
+        if (!CS.getArgument(i)->getType()->isPointerTy())
+          continue;
+
+        // Call site argument attribute "non-null".
+        registerAA(*new AANonNullCallSiteArgument(CS, i, InfoCache), i);
+      }
+    }
   }
 }
 

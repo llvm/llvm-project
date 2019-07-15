@@ -172,6 +172,7 @@ VALUE_LANGOPT(MaxTypeAlign  , 32, 0,
               "default maximum alignment for types")
 VALUE_LANGOPT(AlignDouble            , 1, 0, "Controls if doubles should be aligned to 8 bytes (x86 only)")
 VALUE_LANGOPT(LongDoubleSize        , 32, 0, "width of long double")
+LANGOPT(PPCIEEELongDouble            , 1, 0, "use IEEE 754 quadruple-precision for long double")
 COMPATIBLE_VALUE_LANGOPT(PICLevel    , 2, 0, "__PIC__ level")
 COMPATIBLE_VALUE_LANGOPT(PIE         , 1, 0, "is pie")
 LANGOPT(ROPI                         , 1, 0, "Read-only position independence")

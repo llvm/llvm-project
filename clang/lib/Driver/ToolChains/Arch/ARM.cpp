@@ -376,7 +376,11 @@ void arm::getARMTargetFeatures(const ToolChain &TC,
         Features.push_back(
             Args.MakeArgString((F.second ? "+" : "-") + F.first()));
   } else if (!CPUName.empty()) {
-    DecodeARMFeaturesFromCPU(D, CPUName, ExtensionFeatures);
+    // This sets the default features for the specified CPU. We certainly don't
+    // want to override the features that have been explicitly specified on the
+    // command line. Therefore, process them directly instead of appending them
+    // at the end later.
+    DecodeARMFeaturesFromCPU(D, CPUName, Features);
   }
 
   if (CPUArg)

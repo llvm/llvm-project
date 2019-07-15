@@ -51,4 +51,4 @@ Symbols:
 ## shn_xindex.o contains a symbol with st_shndx == SHN_XINDEX.
 ## We do not support it at this moment.
 # RUN: not obj2yaml %S/Inputs/shn_xindex.o 2>&1 | FileCheck %s --check-prefix=ERR
-# ERR: Error reading file: {{.*}}shn_xindex.o: Feature not yet implemented.
+# ERR: Error reading file: {{.*}}shn_xindex.o: SHN_XINDEX symbols are not supported

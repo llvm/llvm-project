@@ -12192,7 +12192,7 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
 
   // Cache the result of checking for constant initialization.
   Optional<bool> CacheHasConstInit;
-  const Expr *CacheCulprit;
+  const Expr *CacheCulprit = nullptr;
   auto checkConstInit = [&]() mutable {
     if (!CacheHasConstInit)
       CacheHasConstInit = var->getInit()->isConstantInitializer(

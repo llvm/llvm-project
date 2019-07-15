@@ -2465,6 +2465,10 @@ Which compiles to (on X86-32):
           movl    %gs:(%eax), %eax
           ret
 
+You can also use the GCC compatibility macros ``__seg_fs`` and ``__seg_gs`` for
+the same purpose. The preprocessor symbols ``__SEG_FS`` and ``__SEG_GS``
+indicate their support.
+
 PowerPC Language Extensions
 ------------------------------
 

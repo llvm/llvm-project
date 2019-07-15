@@ -80,13 +80,13 @@ protected:
     std::string Code = getCode() + getCode();
     auto Pattern = getPattern();
 
-    TranslationUnitDecl *FromTu = getTuDecl(Code, Lang_CXX, "input0.cc");
+    TranslationUnitDecl *FromTu = getTuDecl(Code, Lang_CXX14, "input0.cc");
 
     auto *FromD0 = FirstDeclMatcher<DeclTy>().match(FromTu, Pattern);
     auto *FromD1 = LastDeclMatcher<DeclTy>().match(FromTu, Pattern);
 
-    auto *ToD0 = Import(FromD0, Lang_CXX);
-    auto *ToD1 = Import(FromD1, Lang_CXX);
+    auto *ToD0 = Import(FromD0, Lang_CXX14);
+    auto *ToD1 = Import(FromD1, Lang_CXX14);
 
     EXPECT_TRUE(ToD0);
     ASSERT_TRUE(ToD1);
@@ -157,13 +157,14 @@ protected:
   BindableMatcher<Decl> getPattern() const { return PatternFactory()(); }
 
   void TypedTest_ImportAfter() {
-    TranslationUnitDecl *ToTu = getToTuDecl(getCode0(), Lang_CXX);
-    TranslationUnitDecl *FromTu = getTuDecl(getCode1(), Lang_CXX, "input1.cc");
+    TranslationUnitDecl *ToTu = getToTuDecl(getCode0(), Lang_CXX14);
+    TranslationUnitDecl *FromTu =
+        getTuDecl(getCode1(), Lang_CXX14, "input1.cc");
 
     auto *ToD0 = FirstDeclMatcher<DeclTy>().match(ToTu, getPattern());
     auto *FromD1 = FirstDeclMatcher<DeclTy>().match(FromTu, getPattern());
 
-    auto *ToD1 = Import(FromD1, Lang_CXX);
+    auto *ToD1 = Import(FromD1, Lang_CXX14);
 
     ASSERT_TRUE(ToD0);
     ASSERT_TRUE(ToD1);
@@ -176,12 +177,14 @@ protected:
   }
 
   void TypedTest_ImportAfterImport() {
-    TranslationUnitDecl *FromTu0 = getTuDecl(getCode0(), Lang_CXX, "input0.cc");
-    TranslationUnitDecl *FromTu1 = getTuDecl(getCode1(), Lang_CXX, "input1.cc");
+    TranslationUnitDecl *FromTu0 =
+        getTuDecl(getCode0(), Lang_CXX14, "input0.cc");
+    TranslationUnitDecl *FromTu1 =
+        getTuDecl(getCode1(), Lang_CXX14, "input1.cc");
     auto *FromD0 = FirstDeclMatcher<DeclTy>().match(FromTu0, getPattern());
     auto *FromD1 = FirstDeclMatcher<DeclTy>().match(FromTu1, getPattern());
-    auto *ToD0 = Import(FromD0, Lang_CXX);
-    auto *ToD1 = Import(FromD1, Lang_CXX);
+    auto *ToD0 = Import(FromD0, Lang_CXX14);
+    auto *ToD1 = Import(FromD1, Lang_CXX14);
     ASSERT_TRUE(ToD0);
     ASSERT_TRUE(ToD1);
     EXPECT_NE(ToD0, ToD1);
@@ -192,13 +195,14 @@ protected:
   }
 
   void TypedTest_ImportAfterWithMerge() {
-    TranslationUnitDecl *ToTu = getToTuDecl(getCode0(), Lang_CXX);
-    TranslationUnitDecl *FromTu = getTuDecl(getCode1(), Lang_CXX, "input1.cc");
+    TranslationUnitDecl *ToTu = getToTuDecl(getCode0(), Lang_CXX14);
+    TranslationUnitDecl *FromTu =
+        getTuDecl(getCode1(), Lang_CXX14, "input1.cc");
 
     auto *ToF0 = FirstDeclMatcher<DeclTy>().match(ToTu, getPattern());
     auto *FromF1 = FirstDeclMatcher<DeclTy>().match(FromTu, getPattern());
 
-    auto *ToF1 = Import(FromF1, Lang_CXX);
+    auto *ToF1 = Import(FromF1, Lang_CXX14);
 
     ASSERT_TRUE(ToF0);
     ASSERT_TRUE(ToF1);
@@ -213,12 +217,14 @@ protected:
   }
 
   void TypedTest_ImportAfterImportWithMerge() {
-    TranslationUnitDecl *FromTu0 = getTuDecl(getCode0(), Lang_CXX, "input0.cc");
-    TranslationUnitDecl *FromTu1 = getTuDecl(getCode1(), Lang_CXX, "input1.cc");
+    TranslationUnitDecl *FromTu0 =
+        getTuDecl(getCode0(), Lang_CXX14, "input0.cc");
+    TranslationUnitDecl *FromTu1 =
+        getTuDecl(getCode1(), Lang_CXX14, "input1.cc");
     auto *FromF0 = FirstDeclMatcher<DeclTy>().match(FromTu0, getPattern());
     auto *FromF1 = FirstDeclMatcher<DeclTy>().match(FromTu1, getPattern());
-    auto *ToF0 = Import(FromF0, Lang_CXX);
-    auto *ToF1 = Import(FromF1, Lang_CXX);
+    auto *ToF0 = Import(FromF0, Lang_CXX14);
+    auto *ToF1 = Import(FromF1, Lang_CXX14);
     ASSERT_TRUE(ToF0);
     ASSERT_TRUE(ToF1);
     if (shouldBeLinked())
