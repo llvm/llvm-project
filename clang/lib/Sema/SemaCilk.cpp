@@ -31,6 +31,12 @@ static bool isValidCilkContext(Sema &S, SourceLocation Loc, StringRef Keyword) {
     return false;
   }
 
+  // A spawn cannot appear in a control scope.
+  if (S.getCurScope()->getFlags() & Scope::ControlScope) {
+    S.Diag(Loc, diag::err_spawn_invalid_scope) << Keyword;
+    return false;
+  }
+
   // TODO: Add more checks for the validity of the current context for Cilk.
   // (See isValidCoroutineContext for example code.)
   return true;
@@ -43,7 +49,6 @@ static FunctionScopeInfo *checkCilkContext(Sema &S, SourceLocation Loc,
     return nullptr;
 
   assert(isa<FunctionDecl>(S.CurContext) && "not in a function scope");
-  // FunctionDecl *FD = cast<FunctionDecl>(S.CurContext);
   FunctionScopeInfo *ScopeInfo = S.getCurFunction();
   assert(ScopeInfo && "missing function scope for function");
 
@@ -57,10 +62,9 @@ Sema::ActOnCilkSpawnStmt(SourceLocation SpawnLoc, Stmt *SubStmt) {
 
   DiagnoseUnusedExprResult(SubStmt);
 
-  PushFunctionScope();
-  // TODO: Figure out how to prevent jumps into and out of the spawned
-  // substatement.
   setFunctionHasBranchProtectedScope();
+
+  PushFunctionScope();
   PushExpressionEvaluationContext(
       ExpressionEvaluationContext::PotentiallyEvaluated);
 
@@ -85,19 +89,9 @@ ExprResult Sema::ActOnCilkSpawnExpr(SourceLocation Loc, Expr *E) {
     CorrectDelayedTyposInExpr(E);
     return ExprError();
   }
-  if (E->getType()->isPlaceholderType()) {
-    ExprResult R = CheckPlaceholderExpr(E);
-    if (R.isInvalid()) return ExprError();
-    E = R.get();
-  }
 
-  return BuildCilkSpawnExpr(Loc, E);
-}
-
-ExprResult Sema::BuildCilkSpawnExpr(SourceLocation Loc, Expr *E) {
-  FunctionScopeInfo *CilkCtx = checkCilkContext(*this, Loc, "_Cilk_spawn");
-  if (!CilkCtx)
-    return ExprError();
+  PushExpressionEvaluationContext(
+      ExpressionEvaluationContext::PotentiallyEvaluated);
 
   if (E->getType()->isPlaceholderType()) {
     ExprResult R = CheckPlaceholderExpr(E);
@@ -105,5 +99,10 @@ ExprResult Sema::BuildCilkSpawnExpr(SourceLocation Loc, Expr *E) {
     E = R.get();
   }
 
-  return new (Context) CilkSpawnExpr(Loc, E);
+  PopExpressionEvaluationContext();
+
+  ExprResult Result =
+    new (Context) CilkSpawnExpr(Loc, MaybeCreateExprWithCleanups(E));
+
+  return Result;
 }

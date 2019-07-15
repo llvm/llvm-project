@@ -8855,7 +8855,7 @@ def err_pragma_cilk_precedes_noncilk : Error<
 def err_not_a_call : Error<
   "the argument to _Cilk_spawn must be a function call">;
 def err_spawn_invalid_scope : Error<
-  "_Cilk_spawn not allowed in this scope">;
+  "'_Cilk_spawn' not allowed in this scope">;
 def err_spawn_invalid_decl : Error<
   "_Cilk_spawn not supported in a '%0Decl'">;
 def err_spawn_spawn : Error<
@@ -8932,10 +8932,6 @@ def note_cilk_for_loop_control_var_declared_here: Note<
 def warn_empty_cilk_for_body : Warning<
   "Cilk for loop has empty body">, InGroup<EmptyBody>;
 
-def note_cilk_for_begin_expr: Note<
-  "loop begin expression here">;
-def note_cilk_for_end_expr: Note<
-  "loop end expression here">;
 def note_constant_stride: Note<
   "constant stride is %0">;
 def warn_cilk_for_cond_user_defined_conv: Warning<

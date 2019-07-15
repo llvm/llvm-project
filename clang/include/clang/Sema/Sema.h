@@ -4034,7 +4034,6 @@ public:
   StmtResult ActOnCilkSyncStmt(SourceLocation SyncLoc);
   StmtResult ActOnCilkSpawnStmt(SourceLocation SpawnLoc, Stmt *S);
   ExprResult ActOnCilkSpawnExpr(SourceLocation SpawnLoc, Expr *E);
-  ExprResult BuildCilkSpawnExpr(SourceLocation SpawnLoc, Expr *E);
   StmtResult HandleSimpleCilkForStmt(SourceLocation CilkForLoc,
                                      SourceLocation LParenLoc,
                                      Stmt *First,

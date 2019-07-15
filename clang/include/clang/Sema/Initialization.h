@@ -939,6 +939,10 @@ private:
   /// The kind of initialization sequence computed.
   enum SequenceKind SequenceKind;
 
+  /// Whether this initialization sequence is spawned.
+  bool IsSpawned = false;
+  SourceLocation SpawnLoc;
+
   /// Steps taken by this initialization.
   SmallVector<Step, 4> Steps;
 

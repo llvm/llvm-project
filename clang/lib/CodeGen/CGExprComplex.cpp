@@ -129,6 +129,7 @@ public:
     return Visit(E->getSubExpr());
   }
   ComplexPairTy VisitCilkSpawnExpr(CilkSpawnExpr *CSE) {
+    CGF.IsSpawned = true;
     CGF.PushDetachScope();
     ComplexPairTy C = Visit(CSE->getSpawnedExpr());
     if (DoSpawnedInit) {
@@ -245,7 +246,16 @@ public:
   ComplexPairTy VisitExprWithCleanups(ExprWithCleanups *E) {
     CGF.enterFullExpression(E);
     CodeGenFunction::RunCleanupsScope Scope(CGF);
+    // If this expression is spawned, associate these cleanups with the detach
+    // scope.
+    bool CleanupsSaved = false;
+    if (CGF.IsSpawned)
+      CleanupsSaved = CGF.CurDetachScope->MaybeSaveCleanupsScope(&Scope);
     ComplexPairTy Vals = Visit(E->getSubExpr());
+    // If this expression was spawned, then we must clean up the detach before
+    // forcing the scope's cleanup.
+    if (CleanupsSaved)
+      CGF.CurDetachScope->CleanupDetach();
     // Defend against dominance problems caused by jumps out of expression
     // evaluation through the shared cleanup block.
     Scope.ForceCleanup({&Vals.first, &Vals.second});
@@ -1159,7 +1169,7 @@ void CodeGenFunction::EmitComplexExprIntoLValue(const Expr *E, LValue dest,
                                                 bool isInit) {
   assert(E && getComplexType(E->getType()) &&
          "Invalid complex expression to emit");
-  if (IsSpawned && isInit) {
+  if (isa<CilkSpawnExpr>(E) && isInit) {
     ComplexExprEmitter(*this, dest).Visit(const_cast<Expr*>(E));
     return;
   }

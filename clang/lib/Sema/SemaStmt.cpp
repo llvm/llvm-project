@@ -204,6 +204,10 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S) {
   if (!E)
     return;
 
+  // Ignore _Cilk_spawn when diagnosing unused expression.
+  if (const CilkSpawnExpr *CSE = dyn_cast<CilkSpawnExpr>(E))
+    E = CSE->getSpawnedExpr()->IgnoreImplicit();
+
   // If we are in an unevaluated expression context, then there can be no unused
   // results because the results aren't expected to be used in the first place.
   if (isUnevaluatedContext())
@@ -3492,6 +3496,8 @@ Sema::ActOnCilkForStmt(SourceLocation CilkForLoc, SourceLocation LParenLoc,
     Diag(CilkForLoc, diag::err_cilk_for_cannot_break);
   // TODO: Check for other illegal statements in the _Cilk_for body, such as
   // goto statements that leave the _Cilk_for body.
+
+  setFunctionHasBranchProtectedScope();
 
   if (LoopVar)
     return new (Context) CilkForStmt(Context, First, Limit,

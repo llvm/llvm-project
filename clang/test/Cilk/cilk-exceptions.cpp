@@ -12,6 +12,7 @@ public:
 
 int bar(Foo *f);
 int quuz(int i) noexcept;
+int baz(const Foo &f);
 __attribute__((always_inline))
 int foo(Foo *f) {
   try
@@ -197,13 +198,17 @@ void spawn_except(int n) {
   // CHECK: %[[SYNCREG:.+]] = call token @llvm.syncregion.start()
   // CHECK: detach within %[[SYNCREG]], label %[[DETACHED:.+]], label %{{.+}} unwind label %[[DUNWIND:.+]]
   // CHECK: [[DETACHED]]:
-  // CHECK: invoke i32 @_Z3barP3Foo(
+  // CHECK-NEXT: %[[EXN:.+]] = alloca i8*
+  // CHECK-NEXT: %[[EHSELECTOR:.+]] = alloca i32
+  // CHECK-NEXT: invoke i32 @_Z3barP3Foo(
   // CHECK-NEXT: to label %[[INVOKECONT:.+]] unwind label %[[TASKLPAD:.+]]
   // CHECK: [[INVOKECONT]]:
   // CHECK-NEXT: reattach within %[[SYNCREG]]
   // CHECK: [[TASKLPAD]]:
   // CHECK-NEXT: landingpad [[LPADTYPE:.+]]
   // CHECK-NEXT: catch {{.+}} null
+  // CHECK: store i8* %{{.+}}, i8** %[[EXN]]
+  // CHECK: store i32 %{{.+}}, i32* %[[EHSELECTOR]]
   // CHECK: invoke void @llvm.detached.rethrow
   // CHECK: (token %[[SYNCREG]], [[LPADTYPE]] {{.+}})
   // CHECK-NEXT: to label {{.+}} unwind label %[[DUNWIND]]
@@ -212,6 +217,107 @@ void spawn_except(int n) {
   // CHECK: sync within %[[SYNCREG]]
   _Cilk_spawn bar(new Foo());
   quuz(n);
+}
+
+// CHECK-LABEL: @_Z21spawn_stmt_destructori(
+void spawn_stmt_destructor(int n) {
+  // CHECK: %[[SYNCREG:.+]] = call token @llvm.syncregion.start()
+  // CHECK: call void @_ZN3FooC1Ev(%class.Foo* %[[REFTMP:.+]])
+  // CHECK: detach within %[[SYNCREG]], label %[[DETACHED:.+]], label %{{.+}} unwind label %[[DUNWIND:.+]]
+  // CHECK: [[DETACHED]]:
+  // CHECK-NEXT: %[[EXN:.+]] = alloca i8*
+  // CHECK-NEXT: %[[EHSELECTOR:.+]] = alloca i32
+  // CHECK-NEXT: invoke i32 @_Z3bazRK3Foo(
+  // CHECK-NEXT: to label %[[INVOKECONT:.+]] unwind label %[[TASKLPAD:.+]]
+  // CHECK: [[INVOKECONT]]:
+  // CHECK-NEXT: call void @_ZN3FooD1Ev(%class.Foo* %[[REFTMP]])
+  // CHECK-NEXT: reattach within %[[SYNCREG]]
+  // CHECK: [[TASKLPAD]]:
+  // CHECK-NEXT: landingpad [[LPADTYPE:.+]]
+  // CHECK-NEXT: catch {{.+}} null
+  // CHECK: store i8* %{{.+}}, i8** %[[EXN]]
+  // CHECK: store i32 %{{.+}}, i32* %[[EHSELECTOR]]
+  // CHECK: call void @_ZN3FooD1Ev(%class.Foo* %[[REFTMP]])
+  // CHECK: invoke void @llvm.detached.rethrow
+  // CHECK: (token %[[SYNCREG]], [[LPADTYPE]] {{.+}})
+  // CHECK-NEXT: to label {{.+}} unwind label %[[DUNWIND]]
+  // CHECK: [[DUNWIND]]:
+  // CHECK: landingpad [[LPADTYPE]]
+  // CHECK: sync within %[[SYNCREG]]
+  _Cilk_spawn baz(Foo());
+  quuz(n);
+}
+
+// CHECK-LABEL: @_Z21spawn_decl_destructori(
+void spawn_decl_destructor(int n) {
+  // CHECK: %[[SYNCREG:.+]] = call token @llvm.syncregion.start()
+  // CHECK: call void @_ZN3FooC1Ev(%class.Foo* %[[REFTMP:.+]])
+  // CHECK: detach within %[[SYNCREG]], label %[[DETACHED:.+]], label %{{.+}} unwind label %[[DUNWIND:.+]]
+  // CHECK: [[DETACHED]]:
+  // CHECK-NEXT: %[[EXN:.+]] = alloca i8*
+  // CHECK-NEXT: %[[EHSELECTOR:.+]] = alloca i32
+  // CHECK: %[[CALL:.+]] = invoke i32 @_Z3bazRK3Foo(
+  // CHECK-NEXT: to label %[[INVOKECONT:.+]] unwind label %[[TASKLPAD:.+]]
+  // CHECK: [[INVOKECONT]]:
+  // CHECK-NEXT: call void @_ZN3FooD1Ev(%class.Foo* %[[REFTMP]])
+  // CHECK-NEXT: store i32 %[[CALL]]
+  // CHECK-NEXT: reattach within %[[SYNCREG]]
+  // CHECK: [[TASKLPAD]]:
+  // CHECK-NEXT: landingpad [[LPADTYPE:.+]]
+  // CHECK-NEXT: catch {{.+}} null
+  // CHECK: store i8* %{{.+}}, i8** %[[EXN]]
+  // CHECK: store i32 %{{.+}}, i32* %[[EHSELECTOR]]
+  // CHECK: call void @_ZN3FooD1Ev(%class.Foo* %[[REFTMP]])
+  // CHECK: invoke void @llvm.detached.rethrow
+  // CHECK: (token %[[SYNCREG]], [[LPADTYPE]] {{.+}})
+  // CHECK-NEXT: to label {{.+}} unwind label %[[DUNWIND]]
+  // CHECK: [[DUNWIND]]:
+  // CHECK: landingpad [[LPADTYPE]]
+  // CHECK: sync within %[[SYNCREG]]
+  int result = _Cilk_spawn baz(Foo());
+  quuz(n);
+}
+
+// Technically this code has a potential race between the spawned execution of
+// baz and the destructor for f.  I see two ways around this problem.  1) Leave
+// it to the user to resolve these races.  2) Delegate the execution of
+// destructors to the runtime system and ensure that the runtime system executes
+// destructors only on when the leftmost child returns.  I don't see a way the
+// compiler can solve this on its own, particularly when spawns and syncs can
+// happen dynamically.
+
+// CHECK-LABEL: @_Z22spawn_block_destructori(
+void spawn_block_destructor(int n) {
+  // CHECK: %[[SYNCREG:.+]] = call token @llvm.syncregion.start()
+  // CHECK: call void @_ZN3FooC1Ev(%class.Foo* %[[REFTMP:.+]])
+  // CHECK: detach within %[[SYNCREG]], label %[[DETACHED:.+]], label %[[DETCONT:.+]] unwind label %[[DUNWIND:.+]]
+  // CHECK: [[DETACHED]]:
+  // CHECK-NEXT: %[[EXN:.+]] = alloca i8*
+  // CHECK-NEXT: %[[EHSELECTOR:.+]] = alloca i32
+  // CHECK: %[[CALL:.+]] = invoke i32 @_Z3bazRK3Foo(
+  // CHECK-NEXT: to label %[[INVOKECONT:.+]] unwind label %[[TASKLPAD:.+]]
+  // CHECK: [[INVOKECONT]]:
+  // CHECK-NEXT: store i32 %[[CALL]]
+  // CHECK-NEXT: reattach within %[[SYNCREG]], label %[[DETCONT]]
+  // CHECK: [[DETCONT]]:
+  // CHECK: call i32 @_Z4quuzi(
+  // CHECK-NEXT: call void @_ZN3FooD1Ev(
+  // CHECK: [[TASKLPAD]]:
+  // CHECK-NEXT: landingpad [[LPADTYPE:.+]]
+  // CHECK-NEXT: catch {{.+}} null
+  // CHECK: store i8* %{{.+}}, i8** %[[EXN]]
+  // CHECK: store i32 %{{.+}}, i32* %[[EHSELECTOR]]
+  // CHECK: invoke void @llvm.detached.rethrow
+  // CHECK: (token %[[SYNCREG]], [[LPADTYPE]] {{.+}})
+  // CHECK-NEXT: to label {{.+}} unwind label %[[DUNWIND]]
+  // CHECK: [[DUNWIND]]:
+  // CHECK: landingpad [[LPADTYPE]]
+  // CHECK: sync within %[[SYNCREG]]
+  {
+    auto f = Foo();
+    int result = _Cilk_spawn baz(f);
+    quuz(n);
+  }
 }
 
 // CHECK-LABEL: @_Z18spawn_throw_inlinei(

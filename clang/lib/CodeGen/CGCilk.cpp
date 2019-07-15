@@ -29,20 +29,23 @@ static void EmitIfUsed(CodeGenFunction &CGF, llvm::BasicBlock *BB) {
 }
 
 CodeGenFunction::IsSpawnedScope::IsSpawnedScope(CodeGenFunction *CGF)
-    : CGF(CGF), OldIsSpawned(CGF->IsSpawned) {
+    : CGF(CGF), OldIsSpawned(CGF->IsSpawned),
+      OldSpawnedCleanup(CGF->SpawnedCleanup) {
   CGF->IsSpawned = false;
+  CGF->SpawnedCleanup = OldIsSpawned;
 }
 
 CodeGenFunction::IsSpawnedScope::~IsSpawnedScope() {
   RestoreOldScope();
 }
 
-bool CodeGenFunction::IsSpawnedScope::OldScopeIsSpawned() {
+bool CodeGenFunction::IsSpawnedScope::OldScopeIsSpawned() const {
   return OldIsSpawned;
 }
 
 void CodeGenFunction::IsSpawnedScope::RestoreOldScope() {
   CGF->IsSpawned = OldIsSpawned;
+  CGF->SpawnedCleanup = OldSpawnedCleanup;
 }
 
 llvm::BasicBlock *CodeGenFunction::DetachedRethrowHandler::get() {
@@ -119,16 +122,33 @@ void CodeGenFunction::DetachScope::RestoreDetachScope() {
   CGF.AllocaInsertPt = SavedDetachedAllocaInsertPt;
 }
 
+void CodeGenFunction::DetachScope::PushSpawnedTaskTerminate() {
+  // TODO: Replace this cleanup with the actual cleanup we want.
+  CGF.pushFullExprCleanupImpl<ImplicitSyncCleanup>(
+      EHCleanup, CGF.CurSyncRegion->getSyncRegionStart());
+
+  // Create an EH scope for catching exceptions from the detached task.
+  // Ultimately, the detached task might be outlined into a separate helper
+  // function.  Hence, if an exception might propagate from the task to its
+  // parent, then it needs to be rethrown from this helper.  The
+  // detached-rethrow handler models this pattern of rethrowing the exception
+  // before outlining occurs.
+  EHCatchScope *CatchScope = CGF.EHStack.pushCatch(1);
+  CatchScope->setCatchAllHandler(0, DetRethrow.get());
+}
+
 void CodeGenFunction::DetachScope::StartDetach() {
   if (!DetachInitialized)
     InitDetachScope();
   else
     RestoreDetachScope();
 
+  if (StmtCleanupsScope)
+    StmtCleanupsScope->DoDetach();
+  else
+    PushSpawnedTaskTerminate();
+
   // Create the detach
-  CleanupsScope = new RunCleanupsScope(CGF);
-  CGF.pushCleanupAfterFullExpr<ImplicitSyncCleanup>(
-      EHCleanup, CGF.CurSyncRegion->getSyncRegionStart());
   Detach = CGF.Builder.CreateDetach(DetachedBlock, ContinueBlock,
                                     CGF.CurSyncRegion->getSyncRegionStart());
 
@@ -144,17 +164,6 @@ void CodeGenFunction::DetachScope::StartDetach() {
 
   // Emit the detached block.
   CGF.EmitBlock(DetachedBlock);
-
-  // Create an EH scope for catching exceptions from the detached task.
-  // Ultimately, the detached task might be outlined into a separate helper
-  // function.  Hence, if an exception might propagate from the task to its
-  // parent, then it needs to be rethrown from this helper.  The
-  // detached-rethrow handler models this pattern of rethrowing the exception
-  // before outlining occurs.
-  EHCatchScope *CatchScope = CGF.EHStack.pushCatch(1);
-  CatchScope->setCatchAllHandler(0, DetRethrow.get());
-
-  ExnCleanupsScope = new RunCleanupsScope(CGF);
 
   CGF.PushSyncRegion();
 
@@ -186,18 +195,25 @@ void CodeGenFunction::DetachScope::StartDetach() {
   DetachStarted = true;
 }
 
+void CodeGenFunction::DetachScope::CleanupDetach() {
+  if (DetachCleanedUp)
+    return;
+  // Pop the sync region for the detached task.
+  CGF.PopSyncRegion();
+  DetachCleanedUp = true;
+}
+
 void CodeGenFunction::DetachScope::FinishDetach() {
   assert(DetachStarted &&
          "Attempted to finish a detach that was not started.");
 
-  CGF.PopSyncRegion();
-
-  ExnCleanupsScope->ForceCleanup();
+  CleanupDetach();
   CGF.popCatchScope();
 
   // The CFG path into the spawned statement should terminate with a `reattach'.
-  CGF.Builder.CreateReattach(ContinueBlock,
-                             CGF.CurSyncRegion->getSyncRegionStart());
+  if (CGF.HaveInsertPoint())
+    CGF.Builder.CreateReattach(ContinueBlock,
+                               CGF.CurSyncRegion->getSyncRegionStart());
 
   // Restore the alloca insertion point.
   llvm::Instruction *Ptr = CGF.AllocaInsertPt;
@@ -216,7 +232,6 @@ void CodeGenFunction::DetachScope::FinishDetach() {
   CGF.NormalCleanupDest = OldNormalCleanupDest;
 
   // Emit the continue block.
-  CleanupsScope->ForceCleanup();
   CGF.EmitBlock(ContinueBlock);
 
   DetRethrow.emitIfUsed(DetExnSlot, DetSelSlot,
@@ -287,10 +302,21 @@ void CodeGenFunction::EmitCilkSyncStmt(const CilkSyncStmt &S) {
   EmitBlock(ContinueBlock);
 }
 
+static const Stmt *IgnoreImplicitAndCleanups(const Stmt *S) {
+  const Stmt *Current = S->IgnoreImplicit();
+  const Stmt *Lasts = nullptr;
+  while (Current != Lasts) {
+    Lasts = Current;
+    if (const auto *EWC = dyn_cast<ExprWithCleanups>(Current))
+      Current = EWC->getSubExpr()->IgnoreImplicit();
+  }
+  return Current;
+}
+
 void CodeGenFunction::EmitCilkSpawnStmt(const CilkSpawnStmt &S) {
   // Handle spawning of calls in a special manner, to evaluate
   // arguments before spawn.
-  if (const CallExpr *CE = dyn_cast<CallExpr>(S.getSpawnedStmt())) {
+  if (isa<CallExpr>(IgnoreImplicitAndCleanups(S.getSpawnedStmt()))) {
     // Set up to perform a detach.
     assert(!IsSpawned &&
            "_Cilk_spawn statement found in spawning environment.");
@@ -298,13 +324,15 @@ void CodeGenFunction::EmitCilkSpawnStmt(const CilkSpawnStmt &S) {
     PushDetachScope();
 
     // Emit the call.
-    EmitCallExpr(CE);
+    EmitStmt(S.getSpawnedStmt());
 
     // Finish the detach.
-    assert(CurDetachScope->IsDetachStarted() &&
-           "Processing _Cilk_spawn of expression did not produce a detach.");
-    IsSpawned = false;
-    PopDetachScope();
+    if (IsSpawned) {
+      assert(CurDetachScope->IsDetachStarted() &&
+             "Processing _Cilk_spawn of expression did not produce a detach.");
+      IsSpawned = false;
+      PopDetachScope();
+    }
 
     return;
   }
@@ -320,6 +348,26 @@ void CodeGenFunction::EmitCilkSpawnStmt(const CilkSpawnStmt &S) {
 
   // Finish the detach.
   PopDetachScope();
+}
+
+LValue CodeGenFunction::EmitCilkSpawnExprLValue(const CilkSpawnExpr *E) {
+  assert(isa<CallExpr>(IgnoreImplicitAndCleanups(E->getSpawnedExpr())) &&
+         "SpawnExprLValue does not spawn a call.");
+  assert(!IsSpawned &&
+         "_Cilk_spawn statement found in spawning environment.");
+  IsSpawned = true;
+  PushDetachScope();
+
+  LValue LV = EmitLValue(E->getSpawnedExpr());
+
+  // Finish the detach.
+  if (IsSpawned) {
+    assert(CurDetachScope->IsDetachStarted() &&
+           "Processing _Cilk_spawn of expression did not produce a detach.");
+    IsSpawned = false;
+    PopDetachScope();
+  }
+  return LV;
 }
 
 void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
@@ -418,7 +466,6 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
     //   EmitAutoVarDecl(*S.getConditionVariable());
     // }
 
-    // llvm::BasicBlock *ExitBlock = LoopExit.getBlock();
     // If there are any cleanups between here and the loop-exit scope,
     // create a block to stage a loop exit along.
     if (ForScope.requiresCleanups())
@@ -431,19 +478,6 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
     ForBodyEntry = createBasicBlock("pfor.body.entry");
     ForBody = createBasicBlock("pfor.body");
 
-    // // C99 6.8.5p2/p4: The first substatement is executed if the expression
-    // // compares unequal to 0.  The condition must be a scalar type.
-    // //
-    // // TODO: Move this check to the increment block.
-    // llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());
-    // Builder.CreateCondBr(
-    //     BoolCondVal, DetachBlock, ExitBlock,
-    //     createProfileWeightsForLoop(S.getCond(), getProfileCount(S.getBody())));
-
-    // if (ExitBlock != LoopExit.getBlock()) {
-    //   EmitBlock(ExitBlock);
-    //   EmitBranchThroughCleanup(LoopExit);
-    // }
     EmitBranch(DetachBlock);
 
     EmitBlock(DetachBlock);
@@ -562,7 +596,6 @@ void CodeGenFunction::EmitCilkForStmt(const CilkForStmt &S,
 
   EmitStopPoint(&S);
 
-  // EmitBranch(CondBlock);
   // C99 6.8.5p2/p4: The first substatement is executed if the expression
   // compares unequal to 0.  The condition must be a scalar type.
   llvm::Value *BoolCondVal = EvaluateExprAsBool(S.getCond());

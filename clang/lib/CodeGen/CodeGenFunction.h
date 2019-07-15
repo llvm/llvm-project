@@ -606,6 +606,18 @@ public:
   /// we're currently inside a conditionally-evaluated expression.
   template <class T, class... As>
   void pushFullExprCleanup(CleanupKind kind, As... A) {
+    if (SpawnedCleanup) {
+      if (kind & EHCleanup)
+        pushFullExprCleanupImpl<T>(
+            static_cast<CleanupKind>(kind & ~NormalCleanup), A...);
+      pushCleanupAfterFullExpr<T>(kind, A...);
+      return;
+    }
+    pushFullExprCleanupImpl<T>(kind, A...);
+  }
+
+  template <class T, class... As>
+  void pushFullExprCleanupImpl(CleanupKind kind, As... A) {
     // If we're not in a conditional branch, or if none of the
     // arguments requires saving, then use the unconditional cleanup.
     if (!isInConditionalBranch())
@@ -758,6 +770,60 @@ public:
                            ValuesToReload);
       PerformCleanup = false;
       CGF.CurrentCleanupScopeDepth = OldCleanupScopeDepth;
+    }
+
+    /// Pops cleanup blocks until the given savepoint is reached, then add the
+    /// cleanups from the given savepoint in the lifetime-extended cleanups
+    /// stack.
+    void PopCleanupBlocksAndDetach(
+        std::initializer_list<llvm::Value **> ValuesToReload) {
+      size_t OldLifetimeExtendedSize = LifetimeExtendedCleanupStackSize;
+      CGF.PopCleanupBlocks(CleanupStackDepth, ValuesToReload);
+
+      // Do the detach, and get the new cleanup stack depth.
+      CGF.CurDetachScope->PushSpawnedTaskTerminate();
+      CleanupStackDepth = CGF.EHStack.stable_begin();
+
+      // Move our deferred cleanups onto the EH stack.  This scope will deal
+      // with these deferred cleanups when it is destroyed.
+      for (size_t I = OldLifetimeExtendedSize,
+             E = CGF.LifetimeExtendedCleanupStack.size(); I != E; /**/) {
+        // Alignment should be guaranteed by the vptrs in the individual cleanups.
+        assert((I % alignof(LifetimeExtendedCleanupHeader) == 0) &&
+               "misaligned cleanup stack entry");
+
+        LifetimeExtendedCleanupHeader &Header =
+          reinterpret_cast<LifetimeExtendedCleanupHeader&>(
+              CGF.LifetimeExtendedCleanupStack[I]);
+        I += sizeof(Header);
+
+        CGF.EHStack.pushCopyOfCleanup(Header.getKind(),
+                                      &CGF.LifetimeExtendedCleanupStack[I],
+                                      Header.getSize());
+        I += Header.getSize();
+
+        if (Header.isConditional()) {
+          Address ActiveFlag =
+            reinterpret_cast<Address &>(CGF.LifetimeExtendedCleanupStack[I]);
+          CGF.initFullExprCleanupWithFlag(ActiveFlag);
+          I += sizeof(ActiveFlag);
+        }
+      }
+      CGF.LifetimeExtendedCleanupStack.resize(OldLifetimeExtendedSize);
+    }
+
+    void DoDetach(std::initializer_list<llvm::Value**> ValuesToReload = {}) {
+      IsSpawnedScope SpawnedScp(&CGF);
+      CGF.DidCallStackSave = OldDidCallStackSave;
+
+      PopCleanupBlocksAndDetach(ValuesToReload);
+
+      LifetimeExtendedCleanupStackSize =
+        CGF.LifetimeExtendedCleanupStack.size();
+      OldDidCallStackSave = CGF.DidCallStackSave;
+      CGF.DidCallStackSave = false;
+      OldCleanupScopeDepth = CGF.CurrentCleanupScopeDepth;
+      CGF.CurrentCleanupScopeDepth = CleanupStackDepth;
     }
   };
 
@@ -950,16 +1016,17 @@ public:
 
   /// In Cilk, flag indicating whether the current call/invoke is spawned.
   bool IsSpawned = false;
+  bool SpawnedCleanup = false;
 
-  /// \brief RAII object to set/unset CodeGenFunction::IsSpawned.
+  /// RAII object to set/unset CodeGenFunction::IsSpawned.
   class IsSpawnedScope {
     CodeGenFunction *CGF;
     bool OldIsSpawned;
-
+    bool OldSpawnedCleanup;
   public:
     IsSpawnedScope(CodeGenFunction *CGF);
     ~IsSpawnedScope();
-    bool OldScopeIsSpawned();
+    bool OldScopeIsSpawned() const;
     void RestoreOldScope();
   };
 
@@ -997,7 +1064,7 @@ public:
     }
   };
 
-  /// \brief Cleanup to ensure parent stack frame is synced.
+  /// Cleanup to ensure parent stack frame is synced.
   struct ImplicitSyncCleanup final : public EHScopeStack::Cleanup {
     llvm::Instruction *SyncRegion;
   public:
@@ -1038,8 +1105,8 @@ public:
       CurSyncRegion->setSyncRegionStart(EmitSyncRegionStart());
   }
 
-  /// \brief Class for handling exceptions thrown from within a detached scope
-  /// that should be caught by the parent of that scope.
+  /// Class for handling exceptions thrown from within a detached scope that
+  /// should be caught by the parent of that scope.
   ///
   /// This class provides a catch-all handler for a catch scope enclosing a
   /// detached scope.
@@ -1059,17 +1126,17 @@ public:
                     llvm::Value *SyncRegion);
   };
 
-  /// \brief RAII object to manage creation of detach/reattach instructions.
+  /// RAII object to manage creation of detach/reattach instructions.
   class DetachScope {
     CodeGenFunction &CGF;
     bool DetachStarted = false;
     bool DetachInitialized = false;
+    bool DetachCleanedUp = false;
     llvm::DetachInst *Detach = nullptr;
     llvm::BasicBlock *DetachedBlock = nullptr;
     llvm::BasicBlock *ContinueBlock = nullptr;
 
-    RunCleanupsScope *CleanupsScope = nullptr;
-    RunCleanupsScope *ExnCleanupsScope = nullptr;
+    RunCleanupsScope *StmtCleanupsScope = nullptr;
     DetachScope *ParentScope;
 
     DetachedRethrowHandler DetRethrow;
@@ -1096,41 +1163,47 @@ public:
     void operator=(const DetachScope &) = delete;
 
   public:
-    /// \brief Enter a new detach scope
+    /// Enter a new detach scope
     explicit DetachScope(CodeGenFunction &CGF)
         : CGF(CGF), ParentScope(CGF.CurDetachScope), DetRethrow(CGF),
           RefTmp(nullptr, CharUnits()) {
       CGF.CurDetachScope = this;
     }
 
-    // \brief Exit this detach scope.
+    /// Exit this detach scope.
     ~DetachScope() {
-      delete CleanupsScope;
-      delete ExnCleanupsScope;
       CGF.CurDetachScope = ParentScope;
     }
 
+    bool MaybeSaveCleanupsScope(RunCleanupsScope *Scope) {
+      if (!StmtCleanupsScope) {
+        StmtCleanupsScope = Scope;
+        return true;
+      }
+      return false;
+    }
     void StartDetach();
+    void PushSpawnedTaskTerminate();
+    void CleanupDetach();
     void FinishDetach();
 
     Address CreateDetachedMemTemp(QualType Ty, StorageDuration SD,
                                   const Twine &Name = "det.tmp");
 
-    bool IsDetachStarted() { return DetachStarted; }
+    bool IsDetachStarted() const { return DetachStarted; }
   };
 
   /// The current detach scope.
   DetachScope *CurDetachScope = nullptr;
 
-  /// \brief Push a new detach scope onto the stack, but do not begin the
-  /// detach.
+  /// Push a new detach scope onto the stack, but do not begin the detach.
   void PushDetachScope() {
     EnsureSyncRegion();
     if (!CurDetachScope || CurDetachScope->IsDetachStarted())
       CurDetachScope = new DetachScope(*this);
   }
 
-  /// \brief Finish the current detach scope and pop it off the stack.
+  /// Finish the current detach scope and pop it off the stack.
   void PopDetachScope() {
     CurDetachScope->FinishDetach();
     delete CurDetachScope;
@@ -1149,6 +1222,11 @@ public:
   PopCleanupBlocks(EHScopeStack::stable_iterator OldCleanupStackSize,
                    size_t OldLifetimeExtendedStackSize,
                    std::initializer_list<llvm::Value **> ValuesToReload = {});
+
+  void PopCleanupBlocksAndDetach(
+      EHScopeStack::stable_iterator OldCleanupStackSize,
+      size_t OldLifetimeExtendedStackSize,
+      std::initializer_list<llvm::Value **> ValuesToReload = {});
 
   void ResolveBranchFixups(llvm::BasicBlock *Target);
 
@@ -3086,6 +3164,7 @@ public:
   void EmitCilkSyncStmt(const CilkSyncStmt &S);
   void EmitCilkForStmt(const CilkForStmt &S,
                        ArrayRef<const Attr *> Attrs = None);
+  LValue EmitCilkSpawnExprLValue(const CilkSpawnExpr *E);
 
   void EmitObjCForCollectionStmt(const ObjCForCollectionStmt &S);
   void EmitObjCAtTryStmt(const ObjCAtTryStmt &S);

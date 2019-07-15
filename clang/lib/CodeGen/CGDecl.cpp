@@ -722,38 +722,6 @@ static void drillIntoBlockVariable(CodeGenFunction &CGF,
   lvalue.setAddress(CGF.emitBlockByrefAddress(lvalue.getAddress(), var));
 }
 
-namespace {
-class SpawnedInitRAII {
-  CodeGenFunction &CGF;
-  bool InitIsSpawned = false;
-  CodeGenFunction::DetachScope *DetachScpBefore = nullptr;
-public:
-  SpawnedInitRAII(CodeGenFunction &CGF) : CGF(CGF) {}
-  ~SpawnedInitRAII() {
-    if (InitIsSpawned && (CGF.CurDetachScope != DetachScpBefore)) {
-      // Finish the detach.
-      assert(CGF.CurDetachScope && CGF.CurDetachScope->IsDetachStarted() &&
-             "Processing _Cilk_spawn of expression did not produce detach.");
-      CGF.IsSpawned = false;
-      CGF.PopDetachScope();
-    }
-    DetachScpBefore = nullptr;
-  }
-
-  void setInitIsSpawned() {
-    InitIsSpawned = true;
-    assert(!CGF.IsSpawned &&
-           "_Cilk_spawn statement found in spawning environment.");
-
-    // Prepare to detach.
-    CGF.IsSpawned = true;
-    DetachScpBefore = CGF.CurDetachScope;
-  }
-
-  bool getInitIsSpawned() const { return InitIsSpawned; }
-};
-} // end anonymous namespace
-
 void CodeGenFunction::EmitNullabilityCheck(LValue LHS, llvm::Value *RHS,
                                            SourceLocation Loc) {
   if (!SanOpts.has(SanitizerKind::NullabilityAssign))
@@ -779,7 +747,7 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
                                      LValue lvalue, bool capturedByInit) {
   Qualifiers::ObjCLifetime lifetime = lvalue.getObjCLifetime();
   if (!lifetime) {
-    if (IsSpawned) {
+    if (isa<CilkSpawnExpr>(init)) {
       EmitScalarExprIntoLValue(init, lvalue, /*isInit*/ true);
       return;
     }
@@ -1894,29 +1862,6 @@ void CodeGenFunction::EmitAutoVarInit(const AutoVarEmission &emission) {
       type.isVolatileQualified(), Builder, constant);
 }
 
-static bool InitIsSpawned(const Expr *init) {
-  switch (init->getStmtClass()) {
-  default: return false;
-  case Expr::CilkSpawnExprClass: return true;
-    // Ignore implicit expressions
-  case Expr::ExprWithCleanupsClass:
-    return InitIsSpawned(cast<ExprWithCleanups>(init)->getSubExpr());
-  case Expr::MaterializeTemporaryExprClass:
-    return InitIsSpawned(cast<MaterializeTemporaryExpr>(init)->
-                         GetTemporaryExpr());
-  case Expr::CXXBindTemporaryExprClass:
-    return InitIsSpawned(cast<CXXBindTemporaryExpr>(init)->getSubExpr());
-  case Expr::ImplicitCastExprClass:
-    return InitIsSpawned(cast<ImplicitCastExpr>(init)->getSubExpr());
-    // Ignore the C++ copy constructor
-  case Expr::CXXConstructExprClass:
-    const CXXConstructExpr *CE = cast<CXXConstructExpr>(init);
-    if (CE->getNumArgs() > 0)
-      return InitIsSpawned(CE->getArg(0));
-    return false;
-  }
-}
-
 /// Emit an expression as an initializer for an object (variable, field, etc.)
 /// at the given location.  The expression is not necessarily the normal
 /// initializer for the object, and the address is not necessarily
@@ -1941,18 +1886,12 @@ void CodeGenFunction::EmitExprAsInit(const Expr *init, const ValueDecl *D,
     return;
   }
 
-  // Determine whether this initialization is spanwed, so the emission routines
-  // can properly handle the spawned store of the initialized value.
-  SpawnedInitRAII SpawnedInit(*this);
-  if (InitIsSpawned(init))
-    SpawnedInit.setInitIsSpawned();
-
   switch (getEvaluationKind(type)) {
   case TEK_Scalar:
     EmitScalarInit(init, D, lvalue, capturedByInit);
     return;
   case TEK_Complex: {
-    if (SpawnedInit.getInitIsSpawned()) {
+    if (isa<CilkSpawnExpr>(init)) {
       EmitComplexExprIntoLValue(init, lvalue, /*init*/ true);
       return;
     }
@@ -2138,6 +2077,9 @@ void CodeGenFunction::pushDestroy(QualType::DestructionKind dtorKind,
 void CodeGenFunction::pushDestroy(CleanupKind cleanupKind, Address addr,
                                   QualType type, Destroyer *destroyer,
                                   bool useEHCleanupForArray) {
+  if (SpawnedCleanup)
+    return pushLifetimeExtendedDestroy(cleanupKind, addr, type, destroyer,
+                                       useEHCleanupForArray);
   pushFullExprCleanup<DestroyObject>(cleanupKind, addr, type,
                                      destroyer, useEHCleanupForArray);
 }
