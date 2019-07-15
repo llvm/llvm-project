@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 #include "clang/AST/Type.h"
 
+#include "ObjCLanguageRuntime.h"
+
 #include "lldb/Core/MappedHash.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -17,7 +19,6 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/Variable.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"

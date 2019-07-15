@@ -59,6 +59,7 @@ add_lldb_library(lldbSymbol
     lldbPluginSymbolFileDWARF
     lldbPluginSymbolFilePDB
     lldbPluginObjCLanguage
+    lldbPluginObjCRuntime
 
   LINK_COMPONENTS
     Support
