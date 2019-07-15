@@ -78,7 +78,6 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadPlanCallFunction.h"
@@ -89,6 +88,8 @@
 #include "lldb/Utility/Stream.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/StringList.h"
+
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 #include <cctype>
 #include <memory>
