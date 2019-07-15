@@ -233,10 +233,6 @@ public:
 
   // Defaults to GetTypeName(type).  Override if your language desires
   // specialized behavior.
-  virtual ConstString GetTypeSymbolName(lldb::opaque_compiler_type_t type);
-
-  // Defaults to GetTypeName(type).  Override if your language desires
-  // specialized behavior.
   virtual ConstString GetMangledTypeName(lldb::opaque_compiler_type_t type);
 
   virtual uint32_t
