@@ -833,11 +833,11 @@ static bool GetGeneralAccesses(
 
   // Handle memory intrinsics.
   if (MemIntrinsic *MI = dyn_cast<MemIntrinsic>(I)) {
-    GA.Type = GeneralAccess::WRITE;
+    GA.ModRef = setMod(GA.ModRef);
     GA.Loc = MemoryLocation::getForDest(MI);
     AccI.push_back(GA);
-    if (MemTransferInst *MTI = dyn_cast<MemTransferInst>(I)) {
-      GA.Type = GeneralAccess::READ;
+    if (AnyMemTransferInst *MTI = dyn_cast<AnyMemTransferInst>(I)) {
+      GA.ModRef = setRef(GA.ModRef);
       GA.Loc = MemoryLocation::getForSource(MTI);
       AccI.push_back(GA);
     }
@@ -847,7 +847,7 @@ static bool GetGeneralAccesses(
   // Handle more standard memory operations.
   if (Optional<MemoryLocation> MLoc = MemoryLocation::getOrNone(I)) {
     GA.Loc = *MLoc;
-    GA.Type = isa<LoadInst>(I) ? GeneralAccess::READ : GeneralAccess::WRITE;
+    GA.ModRef = isa<LoadInst>(I) ? setRef(GA.ModRef) : setMod(GA.ModRef);
     AccI.push_back(GA);
     return true;
   }
@@ -867,9 +867,9 @@ static bool GetGeneralAccesses(
       GA.Loc = Loc;
       auto MRI = AA->getArgModRefInfo(CS, ArgIdx);
       if (isModSet(MRI))
-        GA.Type = GeneralAccess::WRITE;
+        GA.ModRef = setMod(GA.ModRef);
       else if (isRefSet(MRI))
-        GA.Type = GeneralAccess::READ;
+        GA.ModRef = setRef(GA.ModRef);
 
       AccI.push_back(GA);
     }
@@ -1130,26 +1130,23 @@ static RaceType InstrsMightRace(Instruction *I, Instruction *MPI,
   for (GeneralAccess GA1 : AccI) {
     // If processing a memory transfer intrinsic, check if we should skip
     // checking the read or write access.
-    if (SkipRead && isa<MemTransferInst>(I) &&
-        (GeneralAccess::READ == GA1.Type))
+    if (SkipRead && isa<MemTransferInst>(I) && GA1.isRef())
       continue;
-    if (SkipWrite && isa<MemTransferInst>(I) &&
-        (GeneralAccess::WRITE == GA1.Type))
+    if (SkipWrite && isa<MemTransferInst>(I) && GA1.isMod())
       continue;
 
     for (GeneralAccess GA2 : AccMPI) {
       // Two parallel loads cannot race.
-      if (GeneralAccess::READ == GA1.Type && GeneralAccess::READ == GA2.Type)
+      if (!GA1.isMod() && !GA2.isMod())
         continue;
       LLVM_DEBUG(dbgs() << "Checking addresses " << *GA1.Loc->Ptr << " vs " <<
                  *GA2.Loc->Ptr << "\n");
       if (DependenceMightRace(
               DI.depends(&GA1, &GA2, true), GA1.I, GA2.I,
-              const_cast<Value *>(GA1.Loc->Ptr),
-              const_cast<Value *>(GA2.Loc->Ptr), MPTasks, MPTasksInLoop,
+              const_cast<Value *>(GA1.getPtr()),
+              const_cast<Value *>(GA2.getPtr()), MPTasks, MPTasksInLoop,
               DT, TI, LI, DL))
-        return getRaceType((GeneralAccess::WRITE == GA1.Type),
-                           (GeneralAccess::WRITE == GA2.Type));
+        return getRaceType(GA1.isMod(), GA2.isMod());
     }
   }
   return RaceType::None;

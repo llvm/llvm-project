@@ -267,15 +267,27 @@ template <typename T> class ArrayRef;
   };
 
   struct GeneralAccess {
-    enum {
-          READ = 0,
-          WRITE = 1,
-    } Type;
     Instruction *I = nullptr;
     Optional<MemoryLocation> Loc;
+    ModRefInfo ModRef = ModRefInfo::NoModRef;
+
+    GeneralAccess() = default;
+    GeneralAccess(Instruction *I, Optional<MemoryLocation> Loc, ModRefInfo MRI)
+        : I(I), Loc(Loc), ModRef(MRI) {}
 
     bool isValid() const {
       return (I && Loc);
+    }
+    const Value *getPtr() const {
+      if (!Loc)
+        return nullptr;
+      return Loc->Ptr;
+    }
+    bool isRef() const {
+      return isRefSet(ModRef);
+    }
+    bool isMod() const {
+      return isModSet(ModRef);
     }
   };
 
