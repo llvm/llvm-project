@@ -800,6 +800,21 @@ enum {
 #include "ELFRelocs/DPU.def"
 };
 
+// DPU Specific e_flags
+enum : unsigned {
+  EF_DPU_EABI_SET = 0x00800000U,
+  EF_DPU_EABIMASK = 0xFF000000U,
+};
+
+#define EF_EABI_DPU_SET(e_flags, eabi)                                         \
+  ((((e_flags) | llvm::ELF::EF_DPU_EABI_SET) &                                 \
+    (~llvm::ELF::EF_DPU_EABIMASK)) |                                           \
+   (((eabi) << __builtin_ctz(llvm::ELF::EF_DPU_EABIMASK)) &                    \
+    llvm::ELF::EF_DPU_EABIMASK))
+#define EF_EABI_DPU_GET(e_flags)                                               \
+  (((e_flags)&llvm::ELF::EF_DPU_EABIMASK) >>                                   \
+   __builtin_ctz(llvm::ELF::EF_DPU_EABIMASK))
+
 #undef ELF_RELOC
 
 // Section header.
