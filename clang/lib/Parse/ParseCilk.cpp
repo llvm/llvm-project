@@ -31,12 +31,26 @@ StmtResult Parser::ParseCilkSpawnStatement() {
   assert(Tok.is(tok::kw__Cilk_spawn) && "Not a _Cilk_spawn stmt!");
   SourceLocation SpawnLoc = ConsumeToken();  // eat the '_Cilk_spawn'.
 
+  unsigned ScopeFlags = Scope::BlockScope | Scope::FnScope | Scope::DeclScope;
+
+  if (Tok.is(tok::l_brace)) {
+    StmtResult SubStmt = ParseCompoundStatement(false, ScopeFlags |
+                                                Scope::CompoundStmtScope);
+    if (SubStmt.isInvalid())
+      return StmtError();
+
+    return Actions.ActOnCilkSpawnStmt(SpawnLoc, SubStmt.get());
+  }
+
+  ParseScope CilkSpawnScope(this, ScopeFlags);
+
   // Parse statement of spawned child
   StmtResult SubStmt = ParseStatement();
-  if (SubStmt.isInvalid()) {
-    SkipUntil(tok::semi);
+  CilkSpawnScope.Exit();
+
+  if (SubStmt.isInvalid())
     return StmtError();
-  }
+
   return Actions.ActOnCilkSpawnStmt(SpawnLoc, SubStmt.get());
 }
 
@@ -76,9 +90,6 @@ StmtResult Parser::ParseCilkForStatement(SourceLocation *TrailingElseLoc) {
   // as those declared in the condition.
   //
   unsigned ScopeFlags = Scope::DeclScope | Scope::ControlScope;
-  // unsigned ScopeFlags = 0;
-  // if (C99orCXXorObjC)
-  //   ScopeFlags = Scope::DeclScope | Scope::ControlScope;
 
   ParseScope CilkForScope(this, ScopeFlags);
 

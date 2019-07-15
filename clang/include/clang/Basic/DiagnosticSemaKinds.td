@@ -8872,6 +8872,12 @@ def err_multiple_spawns: Error<
   "multiple spawn calls within a full expression">;
 def note_multiple_spawns: Note<
   "another spawn here">;
+def note_protected_by_spawn: Note<
+  "jump bypasses '_Cilk_spawn'">;
+def note_exits_spawn : Note<
+  "jump exits the scope of a '_Cilk_spawn'">;
+def err_jump_out_of_spawn : Error<
+  "cannot jump out of '_Cilk_spawn' statement">;
 
 // cilk_for
 def err_cilk_for_initializer_expected_variable : Error<
@@ -8957,6 +8963,13 @@ def warn_cilk_for_wraparound: Warning<
 
 def note_cilk_for_wraparound_undefined: Note<
   "wraparounds cause undefined behavior in Cilk for">;
+
+def note_protected_by_cilk_for: Note<
+  "jump bypasses '_Cilk_for'">;
+def note_exits_cilk_for : Note<
+  "jump exits the scope of a '_Cilk_for'">;
+def err_jump_out_of_cilk_for : Error<
+  "cannot jump out of '_Cilk_for' statement">;
 } // end of Cilk category
 
 let CategoryName = "OpenMP Issue" in {
