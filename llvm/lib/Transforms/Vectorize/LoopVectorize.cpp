@@ -1179,7 +1179,7 @@ public:
   /// VF. Return the cost of the instruction, including scalarization overhead
   /// if it's needed. The flag NeedToScalarize shows if the call needs to be
   /// scalarized -
-  // i.e. either vector version isn't available, or is too expensive.
+  /// i.e. either vector version isn't available, or is too expensive.
   unsigned getVectorCallCost(CallInst *CI, unsigned VF, bool &NeedToScalarize);
 
 private:
@@ -1331,6 +1331,30 @@ private:
                                 std::pair<InstWidening, unsigned>>;
 
   DecisionList WideningDecisions;
+
+  /// Returns true if \p V is expected to be vectorized and it needs to be
+  /// extracted.
+  bool needsExtract(Value *V, unsigned VF) const {
+    Instruction *I = dyn_cast<Instruction>(V);
+    if (VF == 1 || !I || !TheLoop->contains(I) || TheLoop->isLoopInvariant(I))
+      return false;
+
+    // Assume we can vectorize V (and hence we need extraction) if the
+    // scalars are not computed yet. This can happen, because it is called
+    // via getScalarizationOverhead from setCostBasedWideningDecision, before
+    // the scalars are collected. That should be a safe assumption in most
+    // cases, because we check if the operands have vectorizable types
+    // beforehand in LoopVectorizationLegality.
+    return Scalars.find(VF) == Scalars.end() ||
+           !isScalarAfterVectorization(I, VF);
+  };
+
+  /// Returns a range containing only operands needing to be extracted.
+  SmallVector<Value *, 4> filterExtractingOperands(Instruction::op_range Ops,
+                                                   unsigned VF) {
+    return SmallVector<Value *, 4>(make_filter_range(
+        Ops, [this, VF](Value *V) { return this->needsExtract(V, VF); }));
+  }
 
 public:
   /// The loop that we evaluate.
@@ -5346,15 +5370,6 @@ int LoopVectorizationCostModel::computePredInstDiscount(
     return true;
   };
 
-  // Returns true if an operand that cannot be scalarized must be extracted
-  // from a vector. We will account for this scalarization overhead below. Note
-  // that the non-void predicated instructions are placed in their own blocks,
-  // and their return values are inserted into vectors. Thus, an extract would
-  // still be required.
-  auto needsExtract = [&](Instruction *I) -> bool {
-    return TheLoop->contains(I) && !isScalarAfterVectorization(I, VF);
-  };
-
   // Compute the expected cost discount from scalarizing the entire expression
   // feeding the predicated instruction. We currently only consider expressions
   // that are single-use instruction chains.
@@ -5394,7 +5409,7 @@ int LoopVectorizationCostModel::computePredInstDiscount(
                "Instruction has non-scalar type");
         if (canBeScalarized(J))
           Worklist.push_back(J);
-        else if (needsExtract(J))
+        else if (needsExtract(J, VF))
           ScalarCost += TTI.getScalarizationOverhead(
                               ToVectorTy(J->getType(),VF), false, true);
       }
@@ -5684,16 +5699,18 @@ unsigned LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   if (isa<LoadInst>(I) && !TTI.prefersVectorizedAddressing())
     return Cost;
 
-  if (CallInst *CI = dyn_cast<CallInst>(I)) {
-    SmallVector<const Value *, 4> Operands(CI->arg_operands());
-    Cost += TTI.getOperandsScalarizationOverhead(Operands, VF);
-  } else if (!isa<StoreInst>(I) ||
-             !TTI.supportsEfficientVectorElementLoadStore()) {
-    SmallVector<const Value *, 4> Operands(I->operand_values());
-    Cost += TTI.getOperandsScalarizationOverhead(Operands, VF);
-  }
+  // Some targets support efficient element stores.
+  if (isa<StoreInst>(I) && TTI.supportsEfficientVectorElementLoadStore())
+    return Cost;
 
-  return Cost;
+  // Collect operands to consider.
+  CallInst *CI = dyn_cast<CallInst>(I);
+  Instruction::op_range Ops = CI ? CI->arg_operands() : I->operands();
+
+  // Skip operands that do not require extraction/scalarization and do not incur
+  // any overhead.
+  return Cost + TTI.getOperandsScalarizationOverhead(
+                    filterExtractingOperands(Ops, VF), VF);
 }
 
 void LoopVectorizationCostModel::setCostBasedWideningDecision(unsigned VF) {

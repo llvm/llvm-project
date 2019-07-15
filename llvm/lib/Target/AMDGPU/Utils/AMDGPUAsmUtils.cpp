@@ -23,7 +23,7 @@ const char* const IdSymbolic[] = {
   nullptr,
   nullptr,
   "MSG_GS_ALLOC_REQ",
-  nullptr,
+  "MSG_GET_DOORBELL",
   nullptr,
   nullptr,
   nullptr,

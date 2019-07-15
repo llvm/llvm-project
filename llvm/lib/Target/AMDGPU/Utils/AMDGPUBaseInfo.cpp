@@ -731,9 +731,14 @@ static bool isValidMsgId(int64_t MsgId) {
 }
 
 bool isValidMsgId(int64_t MsgId, const MCSubtargetInfo &STI, bool Strict) {
-  return Strict ?
-         isValidMsgId(MsgId) && (MsgId != ID_GS_ALLOC_REQ || isGFX9(STI) || isGFX10(STI)) :
-         0 <= MsgId && isUInt<ID_WIDTH_>(MsgId);
+  if (Strict) {
+    if (MsgId == ID_GS_ALLOC_REQ || MsgId == ID_GET_DOORBELL)
+      return isGFX9(STI) || isGFX10(STI);
+    else
+      return isValidMsgId(MsgId);
+  } else {
+    return 0 <= MsgId && isUInt<ID_WIDTH_>(MsgId);
+  }
 }
 
 StringRef getMsgName(int64_t MsgId) {

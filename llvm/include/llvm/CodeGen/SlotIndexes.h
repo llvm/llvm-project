@@ -347,7 +347,7 @@ class raw_ostream;
   public:
     static char ID;
 
-    SlotIndexes() : MachineFunctionPass(ID) {
+    SlotIndexes() : MachineFunctionPass(ID), mf(nullptr) {
       initializeSlotIndexesPass(*PassRegistry::getPassRegistry());
     }
 

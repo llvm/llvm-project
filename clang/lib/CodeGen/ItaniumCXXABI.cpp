@@ -2284,8 +2284,19 @@ static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
   llvm::Type *dtorTy =
     llvm::FunctionType::get(CGF.VoidTy, CGF.Int8PtrTy, false)->getPointerTo();
 
+  // Preserve address space of addr.
+  auto AddrAS = addr ? addr->getType()->getPointerAddressSpace() : 0;
+  auto AddrInt8PtrTy =
+      AddrAS ? CGF.Int8Ty->getPointerTo(AddrAS) : CGF.Int8PtrTy;
+
+  // Create a variable that binds the atexit to this shared object.
+  llvm::Constant *handle =
+      CGF.CGM.CreateRuntimeVariable(CGF.Int8Ty, "__dso_handle");
+  auto *GV = cast<llvm::GlobalValue>(handle->stripPointerCasts());
+  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
+
   // extern "C" int __cxa_atexit(void (*f)(void *), void *p, void *d);
-  llvm::Type *paramTys[] = { dtorTy, CGF.Int8PtrTy, CGF.Int8PtrTy };
+  llvm::Type *paramTys[] = {dtorTy, AddrInt8PtrTy, handle->getType()};
   llvm::FunctionType *atexitTy =
     llvm::FunctionType::get(CGF.IntTy, paramTys, false);
 
@@ -2293,12 +2304,6 @@ static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
   llvm::FunctionCallee atexit = CGF.CGM.CreateRuntimeFunction(atexitTy, Name);
   if (llvm::Function *fn = dyn_cast<llvm::Function>(atexit.getCallee()))
     fn->setDoesNotThrow();
-
-  // Create a variable that binds the atexit to this shared object.
-  llvm::Constant *handle =
-      CGF.CGM.CreateRuntimeVariable(CGF.Int8Ty, "__dso_handle");
-  auto *GV = cast<llvm::GlobalValue>(handle->stripPointerCasts());
-  GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
 
   if (!addr)
     // addr is null when we are trying to register a dtor annotated with
@@ -2309,7 +2314,7 @@ static void emitGlobalDtorWithCXAAtExit(CodeGenFunction &CGF,
 
   llvm::Value *args[] = {llvm::ConstantExpr::getBitCast(
                              cast<llvm::Constant>(dtor.getCallee()), dtorTy),
-                         llvm::ConstantExpr::getBitCast(addr, CGF.Int8PtrTy),
+                         llvm::ConstantExpr::getBitCast(addr, AddrInt8PtrTy),
                          handle};
   CGF.EmitNounwindRuntimeCall(atexit, args);
 }

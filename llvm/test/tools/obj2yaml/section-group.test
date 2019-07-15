@@ -1,6 +1,6 @@
 ## Checks that the tool is able to read section groups from ELF.
 
-# RUN: yaml2obj %s > %t1.o
+# RUN: yaml2obj --docnum=1 %s > %t1.o
 # RUN: llvm-readobj --elf-section-groups %t1.o | FileCheck %s -check-prefix=OBJ
 # RUN: obj2yaml %t1.o | FileCheck %s --check-prefix YAML
 
@@ -46,3 +46,25 @@ Symbols:
   - Name:    signature
     Type:    STT_OBJECT
     Section: .rodata
+
+## Check obj2yaml report an error when sh_info field of
+## group section contains invalid (too large) signature symbol index.
+
+# RUN: yaml2obj --docnum=2 %s > %t2.o
+# RUN: not obj2yaml %t2.o 2>&1 | FileCheck %s --check-prefix ERR
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .group
+    Type: SHT_GROUP
+    Link: .symtab
+    Info: 0xFF
+    Members:
+      - SectionOrType: GRP_COMDAT
+
+# ERR: Error reading file: {{.*}}2.o: unable to get symbol from section [index 2]: invalid symbol index (255)

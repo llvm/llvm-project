@@ -95,21 +95,25 @@ bool LoopBase<BlockT, LoopT>::hasDedicatedExits() const {
   return true;
 }
 
-template <class BlockT, class LoopT>
-void LoopBase<BlockT, LoopT>::getUniqueExitBlocks(
-    SmallVectorImpl<BlockT *> &ExitBlocks) const {
+// Helper function to get unique loop exits. Pred is a predicate pointing to
+// BasicBlocks in a loop which should be considered to find loop exits.
+template <class BlockT, class LoopT, typename PredicateT>
+void getUniqueExitBlocksHelper(const LoopT *L,
+                               SmallVectorImpl<BlockT *> &ExitBlocks,
+                               PredicateT Pred) {
   typedef GraphTraits<BlockT *> BlockTraits;
   typedef GraphTraits<Inverse<BlockT *>> InvBlockTraits;
 
-  assert(hasDedicatedExits() &&
+  assert(L->hasDedicatedExits() &&
          "getUniqueExitBlocks assumes the loop has canonical form exits!");
 
   SmallVector<BlockT *, 32> SwitchExitBlocks;
-  for (BlockT *Block : this->blocks()) {
+  auto Filtered = make_filter_range(L->blocks(), Pred);
+  for (BlockT *Block : Filtered) {
     SwitchExitBlocks.clear();
     for (BlockT *Successor : children<BlockT *>(Block)) {
       // If block is inside the loop then it is not an exit block.
-      if (contains(Successor))
+      if (L->contains(Successor))
         continue;
 
       BlockT *FirstPred = *InvBlockTraits::child_begin(Successor);
@@ -138,6 +142,22 @@ void LoopBase<BlockT, LoopT>::getUniqueExitBlocks(
       }
     }
   }
+}
+
+template <class BlockT, class LoopT>
+void LoopBase<BlockT, LoopT>::getUniqueExitBlocks(
+    SmallVectorImpl<BlockT *> &ExitBlocks) const {
+  getUniqueExitBlocksHelper(this, ExitBlocks,
+                            [](const BlockT *BB) { return true; });
+}
+
+template <class BlockT, class LoopT>
+void LoopBase<BlockT, LoopT>::getUniqueNonLatchExitBlocks(
+    SmallVectorImpl<BlockT *> &ExitBlocks) const {
+  const BlockT *Latch = getLoopLatch();
+  assert(Latch && "Latch block must exists");
+  getUniqueExitBlocksHelper(this, ExitBlocks,
+                            [Latch](const BlockT *BB) { return BB != Latch; });
 }
 
 template <class BlockT, class LoopT>
