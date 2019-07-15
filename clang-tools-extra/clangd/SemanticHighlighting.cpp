@@ -40,6 +40,16 @@ public:
     return true;
   }
 
+  bool VisitMemberExpr(MemberExpr *ME) {
+    const auto *MD = ME->getMemberDecl();
+    if (isa<CXXDestructorDecl>(MD))
+      // When calling the destructor manually like: AAA::~A(); The ~ is a
+      // MemberExpr. Other methods should still be highlighted though.
+      return true;
+    addToken(ME->getMemberLoc(), MD);
+    return true;
+  }
+
   bool VisitNamedDecl(NamedDecl *ND) {
     // UsingDirectiveDecl's namespaces do not show up anywhere else in the
     // Visit/Traverse mehods. But they should also be highlighted as a
@@ -115,8 +125,20 @@ private:
       addToken(Loc, HighlightingKind::Class);
       return;
     }
+    if (isa<CXXMethodDecl>(D)) {
+      addToken(Loc, HighlightingKind::Method);
+      return;
+    }
+    if (isa<FieldDecl>(D)) {
+      addToken(Loc, HighlightingKind::Field);
+      return;
+    }
     if (isa<EnumDecl>(D)) {
       addToken(Loc, HighlightingKind::Enum);
+      return;
+    }
+    if (isa<EnumConstantDecl>(D)) {
+      addToken(Loc, HighlightingKind::EnumConstant);
       return;
     }
     if (isa<VarDecl>(D)) {
@@ -243,12 +265,18 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
   switch (Kind) {
   case HighlightingKind::Function:
     return "entity.name.function.cpp";
+  case HighlightingKind::Method:
+    return "entity.name.function.method.cpp";
   case HighlightingKind::Variable:
-    return "variable.cpp";
+    return "variable.other.cpp";
+  case HighlightingKind::Field:
+    return "variable.other.field.cpp";
   case HighlightingKind::Class:
     return "entity.name.type.class.cpp";
   case HighlightingKind::Enum:
     return "entity.name.type.enum.cpp";
+  case HighlightingKind::EnumConstant:
+    return "variable.other.enummember.cpp";
   case HighlightingKind::Namespace:
     return "entity.name.namespace.cpp";
   case HighlightingKind::NumKinds:

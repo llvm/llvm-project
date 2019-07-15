@@ -37,7 +37,10 @@ void checkHighlightings(llvm::StringRef Code) {
       {HighlightingKind::Function, "Function"},
       {HighlightingKind::Class, "Class"},
       {HighlightingKind::Enum, "Enum"},
-      {HighlightingKind::Namespace, "Namespace"}};
+      {HighlightingKind::Namespace, "Namespace"},
+      {HighlightingKind::EnumConstant, "EnumConstant"},
+      {HighlightingKind::Field, "Field"},
+      {HighlightingKind::Method, "Method"}};
   std::vector<HighlightingToken> ExpectedTokens;
   for (const auto &KindString : KindToString) {
     std::vector<HighlightingToken> Toks = makeHighlightingTokens(
@@ -53,14 +56,14 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
   const char *TestCases[] = {
     R"cpp(
       struct $Class[[AS]] {
-        double SomeMember;
+        double $Field[[SomeMember]];
       };
       struct {
       } $Variable[[S]];
       void $Function[[foo]](int $Variable[[A]], $Class[[AS]] $Variable[[As]]) {
         auto $Variable[[VeryLongVariableName]] = 12312;
         $Class[[AS]]     $Variable[[AA]];
-        auto $Variable[[L]] = $Variable[[AA]].SomeMember + $Variable[[A]];
+        auto $Variable[[L]] = $Variable[[AA]].$Field[[SomeMember]] + $Variable[[A]];
         auto $Variable[[FN]] = [ $Variable[[AA]]](int $Variable[[A]]) -> void {};
         $Variable[[FN]](12312);
       }
@@ -72,19 +75,19 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         auto $Variable[[Bou]] = $Function[[Gah]];
       }
       struct $Class[[A]] {
-        void $Function[[abc]]();
+        void $Method[[abc]]();
       };
     )cpp",
     R"cpp(
       namespace $Namespace[[abc]] {
         template<typename T>
         struct $Class[[A]] {
-          T t;
+          T $Field[[t]];
         };
       }
       template<typename T>
       struct $Class[[C]] : $Namespace[[abc]]::A<T> {
-        typename T::A* D;
+        typename T::A* $Field[[D]];
       };
       $Namespace[[abc]]::$Class[[A]]<int> $Variable[[AA]];
       typedef $Namespace[[abc]]::$Class[[A]]<int> AAA;
@@ -92,7 +95,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Class[[B]]();
         ~$Class[[B]]();
         void operator<<($Class[[B]]);
-        $Class[[AAA]] AA;
+        $Class[[AAA]] $Field[[AA]];
       };
       $Class[[B]]::$Class[[B]]() {}
       $Class[[B]]::~$Class[[B]]() {}
@@ -103,12 +106,19 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       }
     )cpp",
     R"cpp(
-      enum class $Enum[[E]] {};
-      enum $Enum[[EE]] {};
-      struct $Class[[A]] {
-        $Enum[[E]] EEE;
-        $Enum[[EE]] EEEE;
+      enum class $Enum[[E]] {
+        $EnumConstant[[A]],
+        $EnumConstant[[B]],
       };
+      enum $Enum[[EE]] {
+        $EnumConstant[[Hi]],
+      };
+      struct $Class[[A]] {
+        $Enum[[E]] $Field[[EEE]];
+        $Enum[[EE]] $Field[[EEEE]];
+      };
+      int $Variable[[I]] = $EnumConstant[[Hi]];
+      $Enum[[E]] $Variable[[L]] = $Enum[[E]]::$EnumConstant[[B]];
     )cpp",
     R"cpp(
       namespace $Namespace[[abc]] {
@@ -118,7 +128,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
           namespace $Namespace[[cde]] {
             struct $Class[[A]] {
               enum class $Enum[[B]] {
-                Hi,
+                $EnumConstant[[Hi]],
               };
             };
           }
@@ -129,9 +139,33 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
             $Namespace[[abc]]::$Namespace[[bcd]]::$Namespace[[cde]];
       $Namespace[[abc]]::$Namespace[[bcd]]::$Class[[A]] $Variable[[AA]];
       $Namespace[[vwz]]::$Class[[A]]::$Enum[[B]] $Variable[[AAA]] =
-            $Namespace[[vwz]]::$Class[[A]]::$Enum[[B]]::Hi;
+            $Namespace[[vwz]]::$Class[[A]]::$Enum[[B]]::$EnumConstant[[Hi]];
       ::$Namespace[[vwz]]::$Class[[A]] $Variable[[B]];
       ::$Namespace[[abc]]::$Namespace[[bcd]]::$Class[[A]] $Variable[[BB]];
+    )cpp",
+    R"cpp(
+      struct $Class[[D]] {
+        double $Field[[C]];
+      };
+      struct $Class[[A]] {
+        double $Field[[B]];
+        $Class[[D]] $Field[[E]];
+        static double $Variable[[S]];
+        void $Method[[foo]]() {
+          $Field[[B]] = 123;
+          this->$Field[[B]] = 156;
+          this->$Method[[foo]]();
+          $Method[[foo]]();
+          $Variable[[S]] = 90.1;
+        }
+      };
+      void $Function[[foo]]() {
+        $Class[[A]] $Variable[[AA]];
+        $Variable[[AA]].$Field[[B]] += 2;
+        $Variable[[AA]].$Method[[foo]]();
+        $Variable[[AA]].$Field[[E]].$Field[[C]];
+        $Class[[A]]::$Variable[[S]] = 90;
+      }
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);
