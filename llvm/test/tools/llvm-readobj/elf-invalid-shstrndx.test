@@ -1,0 +1,26 @@
+# RUN: yaml2obj %s -o %t
+# RUN: not llvm-readelf --headers -S 2>&1 %t | FileCheck %s -DFILE=%t --check-prefix=GNU
+# RUN: not llvm-readobj --headers -S 2>&1 %t | FileCheck %s -DFILE=%t --check-prefix=LLVM
+
+# GNU:      ELF Header:
+# GNU:        Section header string table index: 255
+# GNU-NEXT:   There are 4 section headers, starting at offset 0x40:
+# GNU:      Section Headers:
+# GNU-NEXT:  [Nr] Name
+# GNU-EMPTY:
+# GNU-NEXT:  error: '[[FILE]]': section header string table index 255 does not exist
+
+# LLVM:      ElfHeader {
+# LLVM:        StringTableSectionIndex: 255
+# LLVM-NEXT: }
+# LLVM-NEXT: Sections [
+# LLVM-EMPTY:
+# LLVM-NEXT: error: '[[FILE]]': section header string table index 255 does not exist
+
+--- !ELF
+FileHeader:
+  Class:     ELFCLASS64
+  Data:      ELFDATA2LSB
+  Type:      ET_REL
+  Machine:   EM_X86_64
+  SHStrNdx:  0xFF
