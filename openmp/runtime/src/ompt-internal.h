@@ -57,10 +57,8 @@ typedef struct {
   ompt_data_t task_data;
   struct kmp_taskdata *scheduling_parent;
   int thread_num;
-#if OMP_40_ENABLED
   int ndeps;
   ompt_dependence_t *deps;
-#endif /* OMP_40_ENABLED */
 } ompt_task_info_t;
 
 typedef struct {
@@ -88,7 +86,7 @@ typedef struct {
 
 extern ompt_callbacks_internal_t ompt_callbacks;
 
-#if OMP_40_ENABLED && OMPT_SUPPORT && OMPT_OPTIONAL
+#if OMPT_SUPPORT && OMPT_OPTIONAL
 #if USE_FAST_MEMORY
 #define KMP_OMPT_DEPS_ALLOC __kmp_fast_allocate
 #define KMP_OMPT_DEPS_FREE __kmp_fast_free
@@ -96,7 +94,7 @@ extern ompt_callbacks_internal_t ompt_callbacks;
 #define KMP_OMPT_DEPS_ALLOC __kmp_thread_malloc
 #define KMP_OMPT_DEPS_FREE __kmp_thread_free
 #endif
-#endif /* OMP_40_ENABLED && OMPT_SUPPORT && OMPT_OPTIONAL */
+#endif /* OMPT_SUPPORT && OMPT_OPTIONAL */
 
 #ifdef __cplusplus
 extern "C" {

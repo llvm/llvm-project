@@ -47,16 +47,16 @@
 ## Direct call
 ## foo - . = 0x11020-0x11000 = 32
 # DIS-NEXT:          auipc ra, 0
-# DIS-NEXT:   11004: jalr ra, ra, 32
+# DIS-NEXT:   11004: jalr 32(ra)
 ## bar@plt - . = 0x11050-0x1100c = 72
 # DIS-NEXT:          auipc ra, 0
-# DIS-NEXT:   1100c: jalr ra, ra, 72
+# DIS-NEXT:   1100c: jalr 72(ra)
 ## bar@plt - . = 0x11050-0x11014 = 64
 # DIS-NEXT:          auipc ra, 0
-# DIS-NEXT:   11014: jalr ra, ra, 64
+# DIS-NEXT:   11014: jalr 64(ra)
 ## weak@plt - . = 0x11060-0x1101c = 72
 # DIS-NEXT:          auipc ra, 0
-# DIS-NEXT:   1101c: jalr ra, ra, 72
+# DIS-NEXT:   1101c: jalr 72(ra)
 # DIS:      foo:
 # DIS-NEXT:   11020:
 
@@ -79,14 +79,14 @@
 # DIS:        11050: auipc t3, 2
 # DIS32-NEXT:   lw t3, -72(t3)
 # DIS64-NEXT:   ld t3, -64(t3)
-# DIS-NEXT:     jalr t1, t3, 0
+# DIS-NEXT:     jalr t1, t3
 # DIS-NEXT:     nop
 
 ## 32-bit: &.got.plt[weak]-. = 0x1300c-0x11060 = 4096*2-84
 # DIS:        11060: auipc t3, 2
 # DIS32-NEXT:   lw t3, -84(t3)
 # DIS64-NEXT:   ld t3, -72(t3)
-# DIS-NEXT:     jalr t1, t3, 0
+# DIS-NEXT:     jalr t1, t3
 # DIS-NEXT:     nop
 
 .global _start, foo, bar

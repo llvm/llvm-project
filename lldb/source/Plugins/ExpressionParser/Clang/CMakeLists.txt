@@ -19,6 +19,7 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
   ClangUserExpression.cpp
   ClangUtilityFunction.cpp
   IRForTarget.cpp
+  IRDynamicChecks.cpp
 
   DEPENDS
   ${tablegen_deps}
@@ -43,6 +44,7 @@ add_lldb_library(lldbPluginExpressionParserClang PLUGIN
     lldbTarget
     lldbUtility
     lldbPluginCPlusPlusLanguage
+    lldbPluginCPPRuntime
   LINK_COMPONENTS
     Core
     ExecutionEngine

@@ -69,7 +69,7 @@ static Symbol *getSymbol(SectionChunk *sc, uint32_t addr) {
 
   for (Symbol *s : sc->file->getSymbols()) {
     auto *d = dyn_cast_or_null<DefinedRegular>(s);
-    if (!d || d->getChunk() != sc || d->getValue() > addr ||
+    if (!d || !d->data || d->getChunk() != sc || d->getValue() > addr ||
         (candidate && d->getValue() < candidate->getValue()))
       continue;
 
@@ -192,7 +192,7 @@ bool SymbolTable::handleMinGWAutomaticImport(Symbol *sym, StringRef name) {
 
   // Replace the reference directly to a variable with a reference
   // to the import address table instead. This obviously isn't right,
-  // but we mark the symbol as IsRuntimePseudoReloc, and a later pass
+  // but we mark the symbol as isRuntimePseudoReloc, and a later pass
   // will add runtime pseudo relocations for every relocation against
   // this Symbol. The runtime pseudo relocation framework expects the
   // reference itself to point at the IAT entry.
@@ -293,7 +293,7 @@ void SymbolTable::reportRemainingUndefines() {
   if (undefs.empty() && localImports.empty())
     return;
 
-  for (Symbol *b : config->gCRoot) {
+  for (Symbol *b : config->gcroot) {
     if (undefs.count(b))
       errorOrWarn("<root>: undefined symbol: " + toString(*b));
     if (config->warnLocallyDefinedImported)

@@ -22,10 +22,8 @@ using namespace lldb_private;
 // CommandObjectSettingsSet
 
 static constexpr OptionDefinition g_settings_set_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_2, false, "global", 'g', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Apply the new value to the global default value." },
-  { LLDB_OPT_SET_2, false, "force",  'f', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Force an empty value to be accepted as the default." }
-    // clang-format on
+#define LLDB_OPTIONS_settings_set
+#include "CommandOptions.inc"
 };
 
 class CommandObjectSettingsSet : public CommandObjectRaw {
@@ -313,10 +311,8 @@ protected:
 // CommandObjectSettingsWrite -- Write settings to file
 
 static constexpr OptionDefinition g_settings_write_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_ALL, true,  "file",  'f', OptionParser::eRequiredArgument, nullptr, {}, CommandCompletions::eDiskFileCompletion, eArgTypeFilename,    "The file into which to write the settings." },
-  { LLDB_OPT_SET_ALL, false, "append",'a', OptionParser::eNoArgument,       nullptr, {}, 0,                                       eArgTypeNone,        "Append to saved settings file if it exists."},
-    // clang-format on
+#define LLDB_OPTIONS_settings_write
+#include "CommandOptions.inc"
 };
 
 class CommandObjectSettingsWrite : public CommandObjectParsed {
@@ -438,9 +434,8 @@ private:
 // CommandObjectSettingsRead -- Read settings from file
 
 static constexpr OptionDefinition g_settings_read_options[] = {
-    // clang-format off
-  {LLDB_OPT_SET_ALL, true, "file",'f', OptionParser::eRequiredArgument, nullptr, {}, CommandCompletions::eDiskFileCompletion, eArgTypeFilename,       "The file from which to read the breakpoints." },
-    // clang-format on
+#define LLDB_OPTIONS_settings_read
+#include "CommandOptions.inc"
 };
 
 class CommandObjectSettingsRead : public CommandObjectParsed {

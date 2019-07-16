@@ -55,7 +55,7 @@
 # LD32-NEXT:       addi a0, a0, 124
 # LD64-NEXT:       addi a0, a0, 248
 # LD-NEXT:         auipc ra, 0
-# LD-NEXT:         jalr ra, ra, 56
+# LD-NEXT:         jalr 56(ra)
 
 # NOREL: no relocations
 
@@ -74,7 +74,7 @@
 # LE32-NEXT:        addi a0, a0, 4
 # LE64-NEXT:        addi a0, a0, 8
 # LE-NEXT:          auipc ra, 0
-# LE-NEXT:          jalr ra, ra, 24
+# LE-NEXT:          jalr 24(ra)
 
 la.tls.gd a0, .LANCHOR0
 call __tls_get_addr@plt

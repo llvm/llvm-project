@@ -229,7 +229,7 @@ static std::string getSrcMsgAux(ObjFile<ELFT> &file, const Symbol &sym,
           file.getVariableLoc(sym.getName()))
     return createFileLineMsg(fileLine->first, fileLine->second);
 
-  // File.SourceFile contains STT_FILE symbol, and that is a last resort.
+  // File.sourceFile contains STT_FILE symbol, and that is a last resort.
   return file.sourceFile;
 }
 
@@ -269,7 +269,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
       continue;
     lineTables.push_back(lt);
 
-    // Loop over variable records and insert them to VariableLoc.
+    // Loop over variable records and insert them to variableLoc.
     for (const auto &entry : cu->dies()) {
       DWARFDie die(cu.get(), &entry);
       // Skip all tags that are not variables.
@@ -290,7 +290,7 @@ template <class ELFT> void ObjFile<ELFT>::initializeDwarf() {
       // Get the line number on which the variable is declared.
       unsigned line = dwarf::toUnsigned(die.find(dwarf::DW_AT_decl_line), 0);
 
-      // Here we want to take the variable name to add it into VariableLoc.
+      // Here we want to take the variable name to add it into variableLoc.
       // Variable can have regular and linkage name associated. At first, we try
       // to get linkage name as it can be different, for example when we have
       // two variables in different namespaces of the same object. Use common
@@ -320,7 +320,7 @@ ObjFile<ELFT>::getVariableLoc(StringRef name) {
   // Take file name string from line table.
   std::string fileName;
   if (!it->second.lt->getFileNameByIndex(
-          it->second.file, nullptr,
+          it->second.file, {},
           DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, fileName))
     return None;
 
@@ -450,7 +450,7 @@ template <class ELFT> ArrayRef<Symbol *> ObjFile<ELFT>::getGlobalSymbols() {
 }
 
 template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
-  // Read a section table. JustSymbols is usually false.
+  // Read a section table. justSymbols is usually false.
   if (this->justSymbols)
     initializeJustSymbols();
   else
@@ -466,9 +466,11 @@ template <class ELFT> void ObjFile<ELFT>::parse(bool ignoreComdats) {
 template <class ELFT>
 StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
                                               const Elf_Shdr &sec) {
-  const Elf_Sym *sym =
-      CHECK(object::getSymbol<ELFT>(this->getELFSyms<ELFT>(), sec.sh_info), this);
-  StringRef signature = CHECK(sym->getName(this->stringTable), this);
+  typename ELFT::SymRange symbols = this->getELFSyms<ELFT>();
+  if (sec.sh_info >= symbols.size())
+    fatal(toString(this) + ": invalid symbol index");
+  const typename ELFT::Sym &sym = symbols[sec.sh_info];
+  StringRef signature = CHECK(sym.getName(this->stringTable), this);
 
   // As a special case, if a symbol is a section symbol and has no name,
   // we use a section name as a signature.
@@ -477,7 +479,7 @@ StringRef ObjFile<ELFT>::getShtGroupSignature(ArrayRef<Elf_Shdr> sections,
   // standard, but GNU gold 1.14 (the newest version as of July 2017) or
   // older produce such sections as outputs for the -r option, so we need
   // a bug-compatibility.
-  if (signature.empty() && sym->getType() == STT_SECTION)
+  if (signature.empty() && sym.getType() == STT_SECTION)
     return getSectionName(sec);
   return signature;
 }
@@ -550,11 +552,11 @@ static void addDependentLibrary(StringRef specifier, const InputFile *f) {
   if (!config->dependentLibraries)
     return;
   if (fs::exists(specifier))
-    driver->addFile(specifier, /*WithLOption=*/false);
+    driver->addFile(specifier, /*withLOption=*/false);
   else if (Optional<std::string> s = findFromSearchPaths(specifier))
-    driver->addFile(*s, /*WithLOption=*/true);
+    driver->addFile(*s, /*withLOption=*/true);
   else if (Optional<std::string> s = searchLibraryBaseName(specifier))
-    driver->addFile(*s, /*WithLOption=*/true);
+    driver->addFile(*s, /*withLOption=*/true);
   else
     error(toString(f) +
           ": unable to find library from dependent library specifier: " +
@@ -1176,7 +1178,7 @@ static std::vector<const void *> parseVerdefs(const uint8_t *base,
   // We cannot determine the largest verdef identifier without inspecting
   // every Elf_Verdef, but both bfd and gold assign verdef identifiers
   // sequentially starting from 1, so we predict that the largest identifier
-  // will be VerdefCount.
+  // will be verdefCount.
   unsigned verdefCount = sec->sh_info;
   std::vector<const void *> verdefs(verdefCount + 1);
 
@@ -1260,7 +1262,7 @@ template <class ELFT> void SharedFile::parse() {
     return;
   }
 
-  // Search for a DT_SONAME tag to initialize this->SoName.
+  // Search for a DT_SONAME tag to initialize this->soName.
   for (const Elf_Dyn &dyn : dynamicTags) {
     if (dyn.d_tag == DT_NEEDED) {
       uint64_t val = dyn.getVal();

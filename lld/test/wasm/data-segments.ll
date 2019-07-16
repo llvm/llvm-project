@@ -41,7 +41,7 @@ target triple = "wasm32-unknown-unknown"
 
 @a = hidden global [6 x i8] c"hello\00", align 1
 @b = hidden global [8 x i8] c"goodbye\00", align 1
-@c = hidden global [9 x i8] c"whatever\00", align 1
+@c = hidden global [10000 x i8] zeroinitializer, align 1
 @d = hidden global i32 42, align 4
 
 @e = private constant [9 x i8] c"constant\00", align 1
@@ -59,14 +59,21 @@ target triple = "wasm32-unknown-unknown"
 ; ACTIVE-NEXT:      - SectionOffset:   7
 ; ACTIVE-NEXT:        InitFlags:       0
 ; ACTIVE-NEXT:        Offset:
-; ACTIVE-NEXT:        Opcode:          I32_CONST
-; ACTIVE-NEXT:        Value:           1024
-; ACTIVE-NEXT:        Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
-; ACTIVE-NEXT:      - SectionOffset:   41
+; ACTIVE-NEXT:          Opcode:          I32_CONST
+; ACTIVE-NEXT:          Value:           1024
+; ACTIVE-NEXT:        Content:         68656C6C6F00676F6F646279650000002A000000
+; ACTIVE-NEXT:      - SectionOffset:   34
 ; ACTIVE-NEXT:        InitFlags:       0
 ; ACTIVE-NEXT:        Offset:
-; ACTIVE-NEXT:        Opcode:          I32_CONST
-; ACTIVE-NEXT:        Value:           1052
+; ACTIVE-NEXT:          Opcode:          I32_CONST
+; ACTIVE-NEXT:          Value:           1044
+; ACTIVE-NEXT:        Content:         '0000000000
+; ACTIVE-SAME:                           0000000000'
+; ACTIVE-NEXT:      - SectionOffset:   10041
+; ACTIVE-NEXT:        InitFlags:       0
+; ACTIVE-NEXT:        Offset:
+; ACTIVE-NEXT:          Opcode:          I32_CONST
+; ACTIVE-NEXT:          Value:           11044
 ; ACTIVE-NEXT:        Content:         636F6E7374616E74000000002B
 ; ACTIVE-NEXT:  - Type:            CUSTOM
 ; ACTIVE-NEXT:    Name:            name
@@ -81,13 +88,17 @@ target triple = "wasm32-unknown-unknown"
 ; PASSIVE-NEXT:        Body:            10010B
 ; PASSIVE-NEXT:      - Index:           1
 ; PASSIVE-NEXT:        Locals:          []
-; PASSIVE-NEXT:        Body:            4180084100411CFC080000FC0900419C084100410DFC080100FC09010B
+; PASSIVE-NEXT:        Body:            41800841004114FC080000FC090041940841004190CE00FC080100FC090141A4D6004100410DFC080200FC09020B
 ; PASSIVE-NEXT:  - Type:            DATA
 ; PASSIVE-NEXT:    Segments:
 ; PASSIVE-NEXT:      - SectionOffset:   3
 ; PASSIVE-NEXT:        InitFlags:       1
-; PASSIVE-NEXT:        Content:         68656C6C6F00676F6F6462796500776861746576657200002A000000
-; PASSIVE-NEXT:      - SectionOffset:   33
+; PASSIVE-NEXT:        Content:         68656C6C6F00676F6F646279650000002A000000
+; PASSIVE-NEXT:      - SectionOffset:   26
+; PASSIVE-NEXT:        InitFlags:       1
+; PASSIVE-NEXT:        Content:         '0000000000
+; PASSIVE-SAME:                           0000000000'
+; PASSIVE-NEXT:      - SectionOffset:   10028
 ; PASSIVE-NEXT:        InitFlags:       1
 ; PASSIVE-NEXT:        Content:         636F6E7374616E74000000002B
 ; PASSIVE-NEXT:  - Type:            CUSTOM

@@ -335,7 +335,7 @@ void OutputSection::addContributingPartialSection(PartialSection *sec) {
 } // namespace lld
 
 // Check whether the target address S is in range from a relocation
-// of type RelType at address P.
+// of type relType at address P.
 static bool isInRange(uint16_t relType, uint64_t s, uint64_t p, int margin) {
   if (config->machine == ARMNT) {
     int64_t diff = AbsoluteDifference(s, p + 4) + margin;
@@ -427,7 +427,7 @@ static bool createThunks(OutputSection *os, int margin) {
 
       // The estimate of the source address P should be pretty accurate,
       // but we don't know whether the target Symbol address should be
-      // offset by ThunkSize or not (or by some of ThunksSize but not all of
+      // offset by thunksSize or not (or by some of thunksSize but not all of
       // it), giving us some uncertainty once we have added one thunk.
       uint64_t p = sc->getRVA() + rel.VirtualAddress + thunksSize;
 
@@ -1626,7 +1626,7 @@ void Writer::markSymbolsForRVATable(ObjFile *file,
 }
 
 // Replace the absolute table symbol with a synthetic symbol pointing to
-// TableChunk so that we can emit base relocations for it and resolve section
+// tableChunk so that we can emit base relocations for it and resolve section
 // relative relocations.
 void Writer::maybeAddRVATable(SymbolRVASet tableSymbols, StringRef tableSym,
                               StringRef countSym) {

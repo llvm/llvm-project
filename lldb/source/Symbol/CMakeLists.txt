@@ -68,6 +68,7 @@ add_lldb_library(lldbSymbol
     lldbPluginSymbolFilePDB
     lldbPluginObjCLanguage
     lldbPluginPlatformMacOSX
+    lldbPluginObjCRuntime
 
   LINK_COMPONENTS
     Support

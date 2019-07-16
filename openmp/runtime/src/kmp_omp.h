@@ -106,16 +106,14 @@ typedef struct {
       th_task_state; // alternating 0/1 for task team identification
   offset_and_size_t th_bar;
   offset_and_size_t th_b_worker_arrived; // the worker increases it by 1 when it
-// arrives to the barrier
+  // arrives to the barrier
 
-#if OMP_40_ENABLED
   /* teams information */
   offset_and_size_t th_teams_microtask; // entry address for teams construct
   offset_and_size_t th_teams_level; // initial level of teams construct
   offset_and_size_t th_teams_nteams; // number of teams in a league
   offset_and_size_t
       th_teams_nth; // number of threads in each team of the league
-#endif
 
   /* kmp_desc structure (for info field above) */
   kmp_int32 ds_sizeof_struct;
@@ -135,9 +133,7 @@ typedef struct {
   offset_and_size_t t_pkfn;
   offset_and_size_t t_task_team; // task team structure
   offset_and_size_t t_implicit_task; // taskdata for the thread's implicit task
-#if OMP_40_ENABLED
   offset_and_size_t t_cancel_request;
-#endif
   offset_and_size_t t_bar;
   offset_and_size_t
       t_b_master_arrived; // increased by 1 when master arrives to a barrier
@@ -203,7 +199,6 @@ typedef struct {
   offset_and_size_t
       td_taskwait_thread; // gtid + 1 of thread encountered taskwait
 
-#if OMP_40_ENABLED
   /* Taskgroup */
   offset_and_size_t td_taskgroup; // pointer to the current taskgroup
   offset_and_size_t
@@ -219,7 +214,6 @@ typedef struct {
   offset_and_size_t dn_task;
   offset_and_size_t dn_npredecessors;
   offset_and_size_t dn_nrefs;
-#endif
   offset_and_size_t dn_routine;
 
   /* kmp_thread_data_t */
