@@ -491,8 +491,6 @@ public:
 
   static FileSpecList GetDefaultDebugFileSearchPaths();
 
-  static FileSpecList GetDefaultClangModuleSearchPaths();
-
   static ArchSpec GetDefaultArchitecture();
 
   static void SetDefaultArchitecture(const ArchSpec &arch);
