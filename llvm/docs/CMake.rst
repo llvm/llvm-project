@@ -598,6 +598,9 @@ LLVM-specific variables
 **LLVM_USE_NEWPM**:BOOL
   If enabled, use the experimental new pass manager.
 
+**LLVM_ENABLE_BINDINGS**:BOOL
+  If disabled, do not try to build the OCaml and go bindings.
+
 CMake Caches
 ============
 

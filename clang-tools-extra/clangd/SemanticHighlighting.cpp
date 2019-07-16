@@ -93,6 +93,12 @@ public:
     return true;
   }
 
+  bool VisitTypedefNameDecl(TypedefNameDecl *TD) {
+    if(const auto *TSI = TD->getTypeSourceInfo())
+      addTypeLoc(TD->getLocation(), TSI->getTypeLoc());
+    return true;
+  }
+
   bool VisitTypeLoc(TypeLoc &TL) {
     // This check is for not getting two entries when there are anonymous
     // structs. It also makes us not highlight certain namespace qualifiers
@@ -101,9 +107,7 @@ public:
     if (TL.getTypeLocClass() == TypeLoc::TypeLocClass::Elaborated)
       return true;
 
-    if (const Type *TP = TL.getTypePtr())
-      if (const TagDecl *TD = TP->getAsTagDecl())
-        addToken(TL.getBeginLoc(), TD);
+    addTypeLoc(TL.getBeginLoc(), TL);
     return true;
   }
 
@@ -118,6 +122,12 @@ public:
   }
 
 private:
+  void addTypeLoc(SourceLocation Loc, const TypeLoc &TL) {
+    if (const Type *TP = TL.getTypePtr())
+      if (const TagDecl *TD = TP->getAsTagDecl())
+        addToken(Loc, TD);
+  }
+
   void addToken(SourceLocation Loc, const NamedDecl *D) {
     if (D->getDeclName().isIdentifier() && D->getName().empty())
       // Don't add symbols that don't have any length.

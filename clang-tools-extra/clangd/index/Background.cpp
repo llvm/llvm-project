@@ -127,7 +127,7 @@ BackgroundIndex::BackgroundIndex(
     BackgroundIndexStorage::Factory IndexStorageFactory, size_t ThreadPoolSize)
     : SwapIndex(llvm::make_unique<MemIndex>()), FSProvider(FSProvider),
       CDB(CDB), BackgroundContext(std::move(BackgroundContext)),
-      Rebuilder(this, &IndexedSymbols),
+      Rebuilder(this, &IndexedSymbols, ThreadPoolSize),
       IndexStorageFactory(std::move(IndexStorageFactory)),
       CommandsChanged(
           CDB.watch([&](const std::vector<std::string> &ChangedFiles) {

@@ -68,16 +68,16 @@ func:
 call func
 # CHECK-FIXUP: fixup A - offset: 0, value: func, kind: fixup_riscv_call
 # CHECK-INSTR: auipc   ra, 0
-# CHECK-INSTR: jalr    ra, ra, -100
+# CHECK-INSTR: jalr    ra, -100(ra)
 
 .fill 10000
 call func
 # CHECK-FIXUP: fixup A - offset: 0, value: func, kind: fixup_riscv_call
 # CHECK-INSTR: auipc   ra, 1048574
-# CHECK-INSTR: jalr    ra, ra, -1916
+# CHECK-INSTR: jalr    ra, -1916(ra)
 
 .fill 20888
 call func
 # CHECK-FIXUP: fixup A - offset: 0, value: func, kind: fixup_riscv_call
 # CHECK-INSTR: auipc   ra, 1048568
-# CHECK-INSTR: jalr    ra, ra, 1764
+# CHECK-INSTR: jalr    ra, 1764(ra)

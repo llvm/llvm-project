@@ -936,7 +936,7 @@ static void findKeepUniqueSections() {
   }
 }
 
-// link.exe replaces each %foo% in AltPath with the contents of environment
+// link.exe replaces each %foo% in altPath with the contents of environment
 // variable foo, and adds the two magic env vars _PDB (expands to the basename
 // of pdb's output path) and _EXT (expands to the extension of the output
 // binary).
@@ -952,9 +952,9 @@ static void parsePDBAltPath(StringRef altPath) {
     binaryExtension = binaryExtension.substr(1); // %_EXT% does not include '.'.
 
   // Invariant:
-  //   +--------- Cursor ('a...' might be the empty string).
-  //   |   +----- FirstMark
-  //   |   |   +- SecondMark
+  //   +--------- cursor ('a...' might be the empty string).
+  //   |   +----- firstMark
+  //   |   |   +- secondMark
   //   v   v   v
   //   a...%...%...
   size_t cursor = 0;

@@ -98,7 +98,7 @@ private:
   InputFunction *replaceWithUnreachable(Symbol *sym, const WasmSignature &sig,
                                         StringRef debugName);
 
-  // Maps symbol names to index into the SymVector.  -1 means that symbols
+  // Maps symbol names to index into the symVector.  -1 means that symbols
   // is to not yet in the vector but it should have tracing enabled if it is
   // ever added.
   llvm::DenseMap<llvm::CachedHashStringRef, int> symMap;

@@ -119,7 +119,7 @@ public:
   ///
   /// If the object does not use a type server PDB (compiled with /Z7), we merge
   /// all the type and item records from the .debug$S stream and fill in the
-  /// caller-provided ObjectIndexMap.
+  /// caller-provided objectIndexMap.
   Expected<const CVIndexMap &> mergeDebugT(ObjFile *file,
                                            CVIndexMap *objectIndexMap);
 
@@ -683,7 +683,7 @@ static void translateIdSymbols(MutableArrayRef<uint8_t> &recordData,
 
     TypeIndex *ti =
         reinterpret_cast<TypeIndex *>(content.data() + refs[0].Offset);
-    // `TI` is the index of a FuncIdRecord or MemberFuncIdRecord which lives in
+    // `ti` is the index of a FuncIdRecord or MemberFuncIdRecord which lives in
     // the IPI stream, whose `FunctionType` member refers to the TPI stream.
     // Note that LF_FUNC_ID and LF_MEMFUNC_ID have the same record layout, and
     // in both cases we just need the second type index.
@@ -1729,7 +1729,7 @@ static bool findLineTable(const SectionChunk *c, uint32_t addr,
     if (dbgC->getSectionName() != ".debug$S")
       continue;
 
-    // Build a mapping of SECREL relocations in DbgC that refer to C.
+    // Build a mapping of SECREL relocations in dbgC that refer to `c`.
     DenseMap<uint32_t, uint32_t> secrels;
     for (const coff_relocation &r : dbgC->getRelocs()) {
       if (r.Type != secrelReloc)

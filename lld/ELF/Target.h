@@ -73,7 +73,7 @@ public:
   virtual bool adjustPrologueForCrossSplitStack(uint8_t *loc, uint8_t *end,
                                                 uint8_t stOther) const;
 
-  // Return true if we can reach Dst from Src with Relocation RelocType
+  // Return true if we can reach dst from src with RelType type.
   virtual bool inBranchRange(RelType type, uint64_t src,
                              uint64_t dst) const;
 

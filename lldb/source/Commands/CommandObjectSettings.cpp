@@ -23,7 +23,7 @@ using namespace lldb_private;
 
 static constexpr OptionDefinition g_settings_set_options[] = {
 #define LLDB_OPTIONS_settings_set
-#include "Options.inc"
+#include "CommandOptions.inc"
 };
 
 class CommandObjectSettingsSet : public CommandObjectRaw {
@@ -312,7 +312,7 @@ protected:
 
 static constexpr OptionDefinition g_settings_write_options[] = {
 #define LLDB_OPTIONS_settings_write
-#include "Options.inc"
+#include "CommandOptions.inc"
 };
 
 class CommandObjectSettingsWrite : public CommandObjectParsed {
@@ -435,7 +435,7 @@ private:
 
 static constexpr OptionDefinition g_settings_read_options[] = {
 #define LLDB_OPTIONS_settings_read
-#include "Options.inc"
+#include "CommandOptions.inc"
 };
 
 class CommandObjectSettingsRead : public CommandObjectParsed {

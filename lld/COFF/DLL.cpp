@@ -567,7 +567,7 @@ void IdataContents::create() {
   // Create .idata contents for each DLL.
   for (std::vector<DefinedImportData *> &syms : v) {
     // Create lookup and address tables. If they have external names,
-    // we need to create HintName chunks to store the names.
+    // we need to create hintName chunks to store the names.
     // If they don't (if they are import-by-ordinals), we store only
     // ordinal values to the table.
     size_t base = lookups.size();

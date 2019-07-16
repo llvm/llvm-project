@@ -117,7 +117,7 @@ public:
   // True if this is an argument for --just-symbols. Usually false.
   bool justSymbols = false;
 
-  // OutSecOff of .got2 in the current file. This is used by PPC32 -fPIC/-fPIE
+  // outSecOff of .got2 in the current file. This is used by PPC32 -fPIC/-fPIE
   // to compute offsets in PLT call stubs.
   uint32_t ppc32Got2OutSecOff = 0;
 
@@ -132,7 +132,7 @@ public:
   // [.got, .got + 0xFFFC].
   bool ppc64SmallCodeModelTocRelocs = false;
 
-  // GroupId is used for --warn-backrefs which is an optional error
+  // groupId is used for --warn-backrefs which is an optional error
   // checking feature. All files within the same --{start,end}-group or
   // --{start,end}-lib get the same group ID. Otherwise, each file gets a new
   // group ID. For more info, see checkDependency() in SymbolTable.cpp.

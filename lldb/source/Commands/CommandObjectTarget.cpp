@@ -1968,7 +1968,7 @@ static constexpr OptionEnumValueElement g_sort_option_enumeration[] = {
 
 static constexpr OptionDefinition g_target_modules_dump_symtab_options[] = {
 #define LLDB_OPTIONS_target_modules_dump_symtab
-#include "Options.inc"
+#include "CommandOptions.inc"
 };
 
 class CommandObjectTargetModulesDumpSymtab

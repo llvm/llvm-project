@@ -139,13 +139,31 @@ jal foo
 # CHECK-OBJ: jal 0
 # CHECK-OBJ: R_RISCV_JAL a0
 jal a0
-# CHECK-S-OBJ-NOALIAS: jalr zero, s4, 0
+# CHECK-S-OBJ-NOALIAS: jalr zero, 0(s4)
 # CHECK-S-OBJ: jr s4
 jr x20
-# CHECK-S-OBJ-NOALIAS: jalr ra, s5, 0
-# CHECK-S-OBJ: jalr s5
-jalr x21
-# CHECK-S-OBJ-NOALIAS: jalr zero, ra, 0
+# CHECK-S-OBJ-NOALIAS: jalr zero, 6(s5)
+# CHECK-S-OBJ: jr 6(s5)
+jr 6(x21)
+# CHECK-S-OBJ-NOALIAS: jalr zero, 7(s6)
+# CHECK-S-OBJ: jr 7(s6)
+jr x22, 7
+# CHECK-S-OBJ-NOALIAS: jalr ra, 0(s4)
+# CHECK-S-OBJ: jalr s4
+jalr x20
+# CHECK-S-OBJ-NOALIAS: jalr ra, 8(s5)
+# CHECK-S-OBJ: jalr 8(s5)
+jalr 8(x21)
+# CHECK-S-OBJ-NOALIAS: jalr s6, 0(s7)
+# CHECK-S-OBJ: jalr s6, s7
+jalr x22, x23
+# CHECK-S-OBJ-NOALIAS: jalr ra, 9(s8)
+# CHECK-S-OBJ: jalr 9(s8)
+jalr x24, 9
+# CHECK-S-OBJ-NOALIAS: jalr s9, 11(s10)
+# CHECK-S-OBJ: jalr s9, 11(s10)
+jalr x25, x26, 11
+# CHECK-S-OBJ-NOALIAS: jalr zero, 0(ra)
 # CHECK-S-OBJ: ret
 ret
 # TODO call

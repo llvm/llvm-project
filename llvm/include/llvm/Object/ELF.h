@@ -466,9 +466,10 @@ ELFFile<ELFT>::getSectionStringTable(Elf_Shdr_Range Sections) const {
 
   if (!Index) // no section string table.
     return "";
+  // TODO: Test a case when the sh_link of the section with index 0 is broken.
   if (Index >= Sections.size())
-    // TODO: this error is untested.
-    return createError("invalid section index");
+    return createError("section header string table index " + Twine(Index) +
+                       " does not exist");
   return getStringTable(&Sections[Index]);
 }
 

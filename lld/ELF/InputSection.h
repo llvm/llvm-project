@@ -219,8 +219,8 @@ protected:
 
   mutable ArrayRef<uint8_t> rawData;
 
-  // This field stores the uncompressed size of the compressed data in RawData,
-  // or -1 if RawData is not compressed (either because the section wasn't
+  // This field stores the uncompressed size of the compressed data in rawData,
+  // or -1 if rawData is not compressed (either because the section wasn't
   // compressed in the first place, or because we ended up uncompressing it).
   // Since the feature is not used often, this is usually -1.
   mutable int64_t uncompressedSize = -1;

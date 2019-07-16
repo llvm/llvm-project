@@ -1,4 +1,4 @@
-lldb_tablegen(Options.inc -gen-lldb-option-defs
+lldb_tablegen(CommandOptions.inc -gen-lldb-option-defs
   SOURCE Options.td
   TARGET LLDBOptionsGen)
 

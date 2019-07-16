@@ -597,6 +597,14 @@ __crc32cd(uint32_t __a, uint64_t __b) {
 }
 #endif
 
+/* Armv8.3-A Javascript conversion intrinsic */
+#if __ARM_64BIT_STATE && defined(__ARM_FEATURE_JCVT)
+static __inline__ int32_t __attribute__((__always_inline__, __nodebug__))
+__jcvt(double __a) {
+  return __builtin_arm_jcvt(__a);
+}
+#endif
+
 /* 10.1 Special register intrinsics */
 #define __arm_rsr(sysreg) __builtin_arm_rsr(sysreg)
 #define __arm_rsr64(sysreg) __builtin_arm_rsr64(sysreg)
