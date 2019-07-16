@@ -1,10 +1,52 @@
-// RUN: %clangxx -std=c++17 -fsanitize=function %s -O3 -g -o %t
-// RUN: %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx -DDETERMINE_UNIQUE %s -o %t-unique
+// RUN: %clangxx -std=c++17 -fsanitize=function %s -O3 -g -DSHARED_LIB -fPIC -shared -o %t-so.so
+// RUN: %clangxx -std=c++17 -fsanitize=function %s -O3 -g -o %t %t-so.so
+// RUN: %run %t 2>&1 | FileCheck %s --check-prefix=CHECK $(%run %t-unique UNIQUE)
 // Verify that we can disable symbolization if needed:
-// RUN: %env_ubsan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
+// RUN: %env_ubsan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM $(%run %t-unique NOSYM-UNIQUE)
 // XFAIL: windows-msvc
 // Unsupported function flag
 // UNSUPPORTED: openbsd
+
+#ifdef DETERMINE_UNIQUE
+
+#include <iostream>
+
+#include "../../../../../lib/sanitizer_common/sanitizer_platform.h"
+
+int main(int, char **argv) {
+  if (!SANITIZER_NON_UNIQUE_TYPEINFO)
+    std::cout << "--check-prefix=" << argv[1];
+}
+
+#else
+
+struct Shared {};
+using FnShared = void (*)(Shared *);
+FnShared getShared();
+
+struct __attribute__((visibility("hidden"))) Hidden {};
+using FnHidden = void (*)(Hidden *);
+FnHidden getHidden();
+
+namespace {
+struct Private {};
+} // namespace
+using FnPrivate = void (*)(void *);
+FnPrivate getPrivate();
+
+#ifdef SHARED_LIB
+
+void fnShared(Shared *) {}
+FnShared getShared() { return fnShared; }
+
+void fnHidden(Hidden *) {}
+FnHidden getHidden() { return fnHidden; }
+
+void fnPrivate(Private *) {}
+FnPrivate getPrivate() { return reinterpret_cast<FnPrivate>(fnPrivate); }
+
+#else
 
 #include <stdint.h>
 
@@ -64,12 +106,31 @@ void check_noexcept_calls() {
   p2(0);
 }
 
+void check_cross_dso() {
+  getShared()(nullptr);
+
+  // UNIQUE: function.cpp:[[@LINE+2]]:3: runtime error: call to function fnHidden(Hidden*) through pointer to incorrect function type 'void (*)(Hidden *)'
+  // NOSYM-UNIQUE: function.cpp:[[@LINE+1]]:3: runtime error: call to function (unknown) through pointer to incorrect function type 'void (*)(Hidden *)'
+  getHidden()(nullptr);
+
+  // TODO: Unlike GCC, Clang fails to prefix the typeinfo name for the function
+  // type with "*", so this erroneously only fails for "*UNIQUE":
+  // UNIQUE: function.cpp:[[@LINE+2]]:3: runtime error: call to function fnPrivate((anonymous namespace)::Private*) through pointer to incorrect function type 'void (*)((anonymous namespace)::Private *)'
+  // NOSYM-UNIQUE: function.cpp:[[@LINE+1]]:3: runtime error: call to function (unknown) through pointer to incorrect function type 'void (*)((anonymous namespace)::Private *)'
+  reinterpret_cast<void (*)(Private *)>(getPrivate())(nullptr);
+}
+
 int main(void) {
   make_valid_call();
   make_invalid_call();
   check_noexcept_calls();
+  check_cross_dso();
   // Check that no more errors will be printed.
   // CHECK-NOT: runtime error: call to function
   // NOSYM-NOT: runtime error: call to function
   make_invalid_call();
 }
+
+#endif
+
+#endif

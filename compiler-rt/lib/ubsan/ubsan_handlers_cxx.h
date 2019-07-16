@@ -40,14 +40,15 @@ struct FunctionTypeMismatchData {
 };
 
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__ubsan_handle_function_type_mismatch(FunctionTypeMismatchData *Data,
-                                      ValueHandle Val, ValueHandle calleeRTTI,
-                                      ValueHandle fnRTTI);
+__ubsan_handle_function_type_mismatch_v1(FunctionTypeMismatchData *Data,
+                                         ValueHandle Val,
+                                         ValueHandle calleeRTTI,
+                                         ValueHandle fnRTTI);
 extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
-__ubsan_handle_function_type_mismatch_abort(FunctionTypeMismatchData *Data,
-                                            ValueHandle Val,
-                                            ValueHandle calleeRTTI,
-                                            ValueHandle fnRTTI);
+__ubsan_handle_function_type_mismatch_v1_abort(FunctionTypeMismatchData *Data,
+                                               ValueHandle Val,
+                                               ValueHandle calleeRTTI,
+                                               ValueHandle fnRTTI);
 }
 
 #endif // UBSAN_HANDLERS_H

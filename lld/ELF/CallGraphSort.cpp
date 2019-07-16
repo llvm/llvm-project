@@ -177,7 +177,7 @@ void CallGraphSort::groupClusters() {
   });
 
   for (int si : sortedSecs) {
-    // Clusters[SI] is the same as SecToClusters[SI] here because it has not
+    // clusters[si] is the same as secToClusters[si] here because it has not
     // been merged into another cluster yet.
     Cluster &c = clusters[si];
 
@@ -233,8 +233,8 @@ DenseMap<const InputSectionBase *, int> CallGraphSort::run() {
       return orderMap;
     }
 
-    // Print the symbols ordered by C3, in the order of increasing CurOrder
-    // Instead of sorting all the OrderMap, just repeat the loops above.
+    // Print the symbols ordered by C3, in the order of increasing curOrder
+    // Instead of sorting all the orderMap, just repeat the loops above.
     for (const Cluster &c : clusters)
       for (int secIndex : c.sections)
         // Search all the symbols in the file of the section

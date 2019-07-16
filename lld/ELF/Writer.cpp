@@ -504,7 +504,7 @@ template <class ELFT> static void createSyntheticSections() {
       config->isRela ? ".rela.plt" : ".rel.plt", /*sort=*/false);
   add(in.relaPlt);
 
-  // The RelaIplt immediately follows .rel.plt (.rel.dyn for ARM) to ensure
+  // The relaIplt immediately follows .rel.plt (.rel.dyn for ARM) to ensure
   // that the IRelative relocations are processed last by the dynamic loader.
   // We cannot place the iplt section in .rel.dyn when Android relocation
   // packing is enabled because that would cause a section type mismatch.
@@ -1023,7 +1023,7 @@ template <class ELFT> void Writer<ELFT>::addRelIpltSymbols() {
 
   // By default, __rela_iplt_{start,end} belong to a dummy section 0
   // because .rela.plt might be empty and thus removed from output.
-  // We'll override Out::ElfHeader with In.RelaIplt later when we are
+  // We'll override Out::elfHeader with In.relaIplt later when we are
   // sure that .rela.plt exists in output.
   ElfSym::relaIpltStart = addOptionalRegular(
       config->isRela ? "__rela_iplt_start" : "__rel_iplt_start",
@@ -1424,7 +1424,7 @@ template <class ELFT> void Writer<ELFT>::sortSections() {
       continue;
     os->sortRank = getSectionRank(os);
 
-    // We want to assign rude approximation values to OutSecOff fields
+    // We want to assign rude approximation values to outSecOff fields
     // to know the relative order of the input sections. We use it for
     // sorting SHF_LINK_ORDER sections. See resolveShfLinkOrder().
     uint64_t i = 0;
@@ -1884,7 +1884,7 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
   finalizeSynthetic(in.partIndex);
 
   // Dynamic section must be the last one in this list and dynamic
-  // symbol table section (DynSymTab) must be the first one.
+  // symbol table section (dynSymTab) must be the first one.
   for (Partition &part : partitions) {
     finalizeSynthetic(part.armExidx);
     finalizeSynthetic(part.dynSymTab);
