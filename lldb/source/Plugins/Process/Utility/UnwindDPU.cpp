@@ -38,6 +38,11 @@ void UnwindDPU::SetFrame(CursorSP &frame, lldb::addr_t cfa, lldb::addr_t pc,
 
 static void CleanLLDBAddr(lldb::addr_t &addr) { addr = addr & 0xffffffff; }
 
+#define NB_FRAME_MAX (8 * 1024)
+#define WRAM_SIZE (64 * 1024)
+#define NB_INSTRUCTION_MAX (4 * 1024)
+#define STACK_BACKTRACE_STOP_VALUE (0xdb9)
+
 uint32_t UnwindDPU::DoGetFrameCount() {
   if (!m_frames.empty())
     return m_frames.size();
@@ -63,9 +68,9 @@ uint32_t UnwindDPU::DoGetFrameCount() {
     CleanLLDBAddr(next_frame->cfa);
     CleanLLDBAddr(next_frame->pc);
 
-    if (next_frame->cfa == 0xdb9 || next_frame->cfa == 0 ||
-        next_frame->cfa > (64 * 1024) || next_frame->pc > (64 * 1024) ||
-        m_frames.size() > (8 * 1024))
+    if (next_frame->cfa == STACK_BACKTRACE_STOP_VALUE || next_frame->cfa == 0 ||
+        next_frame->cfa > WRAM_SIZE || next_frame->pc > NB_INSTRUCTION_MAX ||
+        m_frames.size() > NB_FRAME_MAX)
       break;
 
     SetFrame(next_frame, next_frame->cfa,
