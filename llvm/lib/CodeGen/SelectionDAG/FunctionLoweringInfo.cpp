@@ -151,7 +151,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           auto Iter = CatchObjects.find(AI);
           if (Iter != CatchObjects.end() && TLI->needsFixedCatchObjects()) {
             FrameIndex = MF->getFrameInfo().CreateFixedObject(
-                TySize, 0, /*Immutable=*/false, /*isAliased=*/true);
+                TySize, 0, /*IsImmutable=*/false, /*isAliased=*/true);
             MF->getFrameInfo().setObjectAlignment(FrameIndex, Align);
           } else {
             FrameIndex =

@@ -354,7 +354,7 @@ void HWAddressSanitizer::initializeModule(Module &M) {
 
   if (!TargetTriple.isAndroid()) {
     Constant *C = M.getOrInsertGlobal("__hwasan_tls", IntptrTy, [&] {
-      auto *GV = new GlobalVariable(M, IntptrTy, /*isConstantGlobal=*/false,
+      auto *GV = new GlobalVariable(M, IntptrTy, /*isConstant=*/false,
                                     GlobalValue::ExternalLinkage, nullptr,
                                     "__hwasan_tls", nullptr,
                                     GlobalVariable::InitialExecTLSModel);

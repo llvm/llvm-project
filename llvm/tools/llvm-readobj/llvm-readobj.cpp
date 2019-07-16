@@ -371,9 +371,16 @@ namespace opts {
 namespace llvm {
 
 LLVM_ATTRIBUTE_NORETURN void reportError(Twine Msg) {
+  fouts().flush();
   errs() << "\n";
   WithColor::error(errs()) << Msg << "\n";
   exit(1);
+}
+
+void reportError(StringRef Input, Error Err) {
+  if (Input == "-")
+    Input = "<stdin>";
+  error(createFileError(Input, std::move(Err)));
 }
 
 void reportWarning(Twine Msg) {
@@ -402,12 +409,6 @@ void error(std::error_code EC) {
 }
 
 } // namespace llvm
-
-static void reportError(StringRef Input, Error Err) {
-  if (Input == "-")
-    Input = "<stdin>";
-  error(createFileError(Input, std::move(Err)));
-}
 
 static void reportError(StringRef Input, std::error_code EC) {
   reportError(Input, errorCodeToError(EC));

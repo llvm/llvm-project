@@ -168,7 +168,7 @@ lw ra, 252(sp)
 # CHECK-ALIAS: ret
 # CHECK-INST: c.jr ra
 # CHECK: # encoding:  [0x82,0x80]
-jalr zero, ra, 0
+jalr zero, 0(ra)
 
 # CHECK-BYTES: 92 80
 # CHECK-ALIAS: add ra, zero, tp
@@ -192,7 +192,7 @@ ebreak
 # CHECK-ALIAS: jalr s0
 # CHECK-INST: c.jalr s0
 # CHECK: # encoding: [0x02,0x94]
-jalr ra, s0, 0
+jalr ra, 0(s0)
 
 # CHECK-BYTES: 3e 94
 # CHECK-ALIAS: add s0, s0, a5

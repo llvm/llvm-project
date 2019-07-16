@@ -108,8 +108,8 @@ define void @constrained_vector_fdiv_v3f64(<3 x double>* %a) {
 ; S390X-NEXT:    ldeb %f3, 0(%r1)
 ; S390X-NEXT:    larl %r1, .LCPI3_2
 ; S390X-NEXT:    ldeb %f4, 0(%r1)
-; S390X-NEXT:    ddb %f2, 0(%r2)
 ; S390X-NEXT:    ddbr %f3, %f1
+; S390X-NEXT:    ddb %f2, 0(%r2)
 ; S390X-NEXT:    ddbr %f4, %f0
 ; S390X-NEXT:    std %f4, 16(%r2)
 ; S390X-NEXT:    std %f3, 8(%r2)
@@ -659,16 +659,16 @@ entry:
 define void @constrained_vector_fmul_v3f64(<3 x double>* %a) {
 ; S390X-LABEL: constrained_vector_fmul_v3f64:
 ; S390X:       # %bb.0: # %entry
+; S390X-NEXT:    ld %f0, 8(%r2)
 ; S390X-NEXT:    larl %r1, .LCPI13_0
-; S390X-NEXT:    ld %f0, 0(%r1)
-; S390X-NEXT:    ld %f1, 8(%r2)
+; S390X-NEXT:    ld %f1, 0(%r1)
 ; S390X-NEXT:    ld %f2, 16(%r2)
-; S390X-NEXT:    ldr %f3, %f0
+; S390X-NEXT:    mdbr %f0, %f1
+; S390X-NEXT:    ldr %f3, %f1
 ; S390X-NEXT:    mdb %f3, 0(%r2)
-; S390X-NEXT:    mdbr %f1, %f0
-; S390X-NEXT:    mdbr %f2, %f0
+; S390X-NEXT:    mdbr %f2, %f1
 ; S390X-NEXT:    std %f2, 16(%r2)
-; S390X-NEXT:    std %f1, 8(%r2)
+; S390X-NEXT:    std %f0, 8(%r2)
 ; S390X-NEXT:    std %f3, 0(%r2)
 ; S390X-NEXT:    br %r14
 ;
@@ -832,16 +832,16 @@ entry:
 define void @constrained_vector_fadd_v3f64(<3 x double>* %a) {
 ; S390X-LABEL: constrained_vector_fadd_v3f64:
 ; S390X:       # %bb.0: # %entry
+; S390X-NEXT:    ld %f0, 8(%r2)
 ; S390X-NEXT:    larl %r1, .LCPI18_0
-; S390X-NEXT:    ld %f0, 0(%r1)
-; S390X-NEXT:    ld %f1, 8(%r2)
+; S390X-NEXT:    ld %f1, 0(%r1)
 ; S390X-NEXT:    ld %f2, 16(%r2)
-; S390X-NEXT:    ldr %f3, %f0
+; S390X-NEXT:    adbr %f0, %f1
+; S390X-NEXT:    ldr %f3, %f1
 ; S390X-NEXT:    adb %f3, 0(%r2)
-; S390X-NEXT:    adbr %f1, %f0
-; S390X-NEXT:    adbr %f2, %f0
+; S390X-NEXT:    adbr %f2, %f1
 ; S390X-NEXT:    std %f2, 16(%r2)
-; S390X-NEXT:    std %f1, 8(%r2)
+; S390X-NEXT:    std %f0, 8(%r2)
 ; S390X-NEXT:    std %f3, 0(%r2)
 ; S390X-NEXT:    br %r14
 ;
@@ -969,14 +969,14 @@ define <3 x float> @constrained_vector_fsub_v3f32() {
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    larl %r1, .LCPI22_0
 ; S390X-NEXT:    le %f0, 0(%r1)
-; S390X-NEXT:    lzer %f1
 ; S390X-NEXT:    ler %f4, %f0
-; S390X-NEXT:    sebr %f4, %f1
 ; S390X-NEXT:    larl %r1, .LCPI22_1
 ; S390X-NEXT:    ler %f2, %f0
 ; S390X-NEXT:    seb %f2, 0(%r1)
 ; S390X-NEXT:    larl %r1, .LCPI22_2
 ; S390X-NEXT:    seb %f0, 0(%r1)
+; S390X-NEXT:    lzer %f1
+; S390X-NEXT:    sebr %f4, %f1
 ; S390X-NEXT:    br %r14
 ;
 ; SZ13-LABEL: constrained_vector_fsub_v3f32:

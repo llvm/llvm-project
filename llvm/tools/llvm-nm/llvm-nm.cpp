@@ -34,7 +34,6 @@
 #include "llvm/Support/Format.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/Process.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
@@ -1752,12 +1751,6 @@ static bool checkMachOAndArchFlags(SymbolicFile *O, std::string &Filename) {
 }
 
 static void dumpSymbolNamesFromFile(std::string &Filename) {
-  if (Filename == "-" && sys::Process::StandardInIsUserInput()) {
-    WithColor::warning(errs(), ToolName) << "can't read from terminal\n";
-    cl::PrintHelpMessage();
-    HadError = true;
-    return;
-  }
   ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
       MemoryBuffer::getFileOrSTDIN(Filename);
   if (error(BufferOrErr.getError(), Filename))
@@ -2089,7 +2082,7 @@ int main(int argc, char **argv) {
   if (OutputFormat == sysv || SizeSort)
     PrintSize = true;
   if (InputFilenames.empty())
-    InputFilenames.push_back("-");
+    InputFilenames.push_back("a.out");
   if (InputFilenames.size() > 1)
     MultipleFiles = true;
 

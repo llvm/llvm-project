@@ -66,7 +66,7 @@ private:
     SIMachineFunctionInfo *MFI,
     MachineFunction &MF) const;
 
-  unsigned getReservedPrivateSegmentWaveByteOffsetReg(
+  std::pair<unsigned, bool> getReservedPrivateSegmentWaveByteOffsetReg(
       const GCNSubtarget &ST, const SIInstrInfo *TII, const SIRegisterInfo *TRI,
       SIMachineFunctionInfo *MFI, MachineFunction &MF) const;
 

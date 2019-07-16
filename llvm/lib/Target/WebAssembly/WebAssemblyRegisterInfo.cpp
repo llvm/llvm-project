@@ -81,7 +81,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
     if (static_cast<uint64_t>(Offset) <= std::numeric_limits<uint32_t>::max()) {
       MI.getOperand(OffsetOperandNum).setImm(Offset);
       MI.getOperand(FIOperandNum)
-          .ChangeToRegister(FrameRegister, /*IsDef=*/false);
+          .ChangeToRegister(FrameRegister, /*isDef=*/false);
       return;
     }
   }
@@ -102,7 +102,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
           MachineOperand &ImmMO = Def->getOperand(1);
           ImmMO.setImm(ImmMO.getImm() + uint32_t(FrameOffset));
           MI.getOperand(FIOperandNum)
-              .ChangeToRegister(FrameRegister, /*IsDef=*/false);
+              .ChangeToRegister(FrameRegister, /*isDef=*/false);
           return;
         }
       }
@@ -127,7 +127,7 @@ void WebAssemblyRegisterInfo::eliminateFrameIndex(
         .addReg(FrameRegister)
         .addReg(OffsetOp);
   }
-  MI.getOperand(FIOperandNum).ChangeToRegister(FIRegOperand, /*IsDef=*/false);
+  MI.getOperand(FIOperandNum).ChangeToRegister(FIRegOperand, /*isDef=*/false);
 }
 
 Register

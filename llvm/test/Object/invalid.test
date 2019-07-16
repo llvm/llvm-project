@@ -536,3 +536,19 @@ ProgramHeaders:
     FileSize: 0xffff0000
     Sections:
       - Section: .dynamic
+
+# RUN: yaml2obj --docnum=25 %s -o %t25
+# RUN: not obj2yaml 2>&1 %t25 | FileCheck %s -DFILE=%t25 --check-prefix=INVALID-SHSTRNDX
+
+# INVALID-SHSTRNDX: Error reading file: [[FILE]]: section header string table index 255 does not exist
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+  SHStrNdx: 0xFF
+Sections:
+  - Name: .foo
+    Type: SHT_PROGBITS

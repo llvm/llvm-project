@@ -1,0 +1,27 @@
+## Test the ADDMOD MRI command.
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: yaml2obj %s -o %t/f.o
+
+# RUN: echo "CREATE %t/addmod.a" > %t/addmod.mri
+# RUN: echo "ADDMOD %t/f.o" >> %t/addmod.mri
+# RUN: echo "SAVE" >> %t/addmod.mri
+# RUN: llvm-ar -M < %t/addmod.mri
+# RUN: llvm-nm --print-armap %t/addmod.a | FileCheck %s
+
+# CHECK: f in f.o
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+    - Name:    f
+      Binding: STB_GLOBAL
+      Section: .text
+...

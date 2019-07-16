@@ -1067,15 +1067,15 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
 
   auto parseAndCheckArgument = [&](const Optional<yaml::SIArgument> &A,
                                    const TargetRegisterClass &RC,
-                                   ArgDescriptor &Arg) {
+                                   ArgDescriptor &Arg, unsigned UserSGPRs,
+                                   unsigned SystemSGPRs) {
     // Skip parsing if it's not present.
     if (!A)
       return false;
 
     if (A->IsRegister) {
       unsigned Reg;
-      if (parseNamedRegisterReference(PFS, Reg, A->RegisterName.Value,
-                                      Error)) {
+      if (parseNamedRegisterReference(PFS, Reg, A->RegisterName.Value, Error)) {
         SourceRange = A->RegisterName.SourceRange;
         return true;
       }
@@ -1088,60 +1088,62 @@ bool GCNTargetMachine::parseMachineFunctionInfo(
     if (A->Mask)
       Arg = ArgDescriptor::createArg(Arg, A->Mask.getValue());
 
+    MFI->NumUserSGPRs += UserSGPRs;
+    MFI->NumSystemSGPRs += SystemSGPRs;
     return false;
   };
 
   if (YamlMFI.ArgInfo &&
       (parseAndCheckArgument(YamlMFI.ArgInfo->PrivateSegmentBuffer,
                              AMDGPU::SReg_128RegClass,
-                             MFI->ArgInfo.PrivateSegmentBuffer) ||
+                             MFI->ArgInfo.PrivateSegmentBuffer, 4, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->DispatchPtr,
-                             AMDGPU::SReg_64RegClass,
-                             MFI->ArgInfo.DispatchPtr) ||
+                             AMDGPU::SReg_64RegClass, MFI->ArgInfo.DispatchPtr,
+                             2, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->QueuePtr, AMDGPU::SReg_64RegClass,
-                             MFI->ArgInfo.QueuePtr) ||
+                             MFI->ArgInfo.QueuePtr, 2, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->KernargSegmentPtr,
                              AMDGPU::SReg_64RegClass,
-                             MFI->ArgInfo.KernargSegmentPtr) ||
+                             MFI->ArgInfo.KernargSegmentPtr, 2, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->DispatchID,
-                             AMDGPU::SReg_64RegClass,
-                             MFI->ArgInfo.DispatchID) ||
+                             AMDGPU::SReg_64RegClass, MFI->ArgInfo.DispatchID,
+                             2, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->FlatScratchInit,
                              AMDGPU::SReg_64RegClass,
-                             MFI->ArgInfo.FlatScratchInit) ||
+                             MFI->ArgInfo.FlatScratchInit, 2, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->PrivateSegmentSize,
                              AMDGPU::SGPR_32RegClass,
-                             MFI->ArgInfo.PrivateSegmentSize) ||
+                             MFI->ArgInfo.PrivateSegmentSize, 0, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkGroupIDX,
-                             AMDGPU::SGPR_32RegClass,
-                             MFI->ArgInfo.WorkGroupIDX) ||
+                             AMDGPU::SGPR_32RegClass, MFI->ArgInfo.WorkGroupIDX,
+                             0, 1) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkGroupIDY,
-                             AMDGPU::SGPR_32RegClass,
-                             MFI->ArgInfo.WorkGroupIDY) ||
+                             AMDGPU::SGPR_32RegClass, MFI->ArgInfo.WorkGroupIDY,
+                             0, 1) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkGroupIDZ,
-                             AMDGPU::SGPR_32RegClass,
-                             MFI->ArgInfo.WorkGroupIDZ) ||
+                             AMDGPU::SGPR_32RegClass, MFI->ArgInfo.WorkGroupIDZ,
+                             0, 1) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkGroupInfo,
                              AMDGPU::SGPR_32RegClass,
-                             MFI->ArgInfo.WorkGroupInfo) ||
+                             MFI->ArgInfo.WorkGroupInfo, 0, 1) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->PrivateSegmentWaveByteOffset,
                              AMDGPU::SGPR_32RegClass,
-                             MFI->ArgInfo.PrivateSegmentWaveByteOffset) ||
+                             MFI->ArgInfo.PrivateSegmentWaveByteOffset, 0, 1) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->ImplicitArgPtr,
                              AMDGPU::SReg_64RegClass,
-                             MFI->ArgInfo.ImplicitArgPtr) ||
+                             MFI->ArgInfo.ImplicitArgPtr, 0, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->ImplicitBufferPtr,
                              AMDGPU::SReg_64RegClass,
-                             MFI->ArgInfo.ImplicitBufferPtr) ||
+                             MFI->ArgInfo.ImplicitBufferPtr, 2, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkItemIDX,
                              AMDGPU::VGPR_32RegClass,
-                             MFI->ArgInfo.WorkItemIDX) ||
+                             MFI->ArgInfo.WorkItemIDX, 0, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkItemIDY,
                              AMDGPU::VGPR_32RegClass,
-                             MFI->ArgInfo.WorkItemIDY) ||
+                             MFI->ArgInfo.WorkItemIDY, 0, 0) ||
        parseAndCheckArgument(YamlMFI.ArgInfo->WorkItemIDZ,
                              AMDGPU::VGPR_32RegClass,
-                             MFI->ArgInfo.WorkItemIDZ)))
+                             MFI->ArgInfo.WorkItemIDZ, 0, 0)))
     return true;
 
   MFI->Mode.IEEE = YamlMFI.Mode.IEEE;

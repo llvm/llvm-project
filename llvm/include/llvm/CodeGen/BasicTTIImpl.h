@@ -1278,12 +1278,12 @@ public:
     case Intrinsic::experimental_vector_reduce_fmin:
       return ConcreteTTI->getMinMaxReductionCost(
           Tys[0], CmpInst::makeCmpResultType(Tys[0]), /*IsPairwiseForm=*/false,
-          /*IsSigned=*/true);
+          /*IsUnsigned=*/true);
     case Intrinsic::experimental_vector_reduce_umax:
     case Intrinsic::experimental_vector_reduce_umin:
       return ConcreteTTI->getMinMaxReductionCost(
           Tys[0], CmpInst::makeCmpResultType(Tys[0]), /*IsPairwiseForm=*/false,
-          /*IsSigned=*/false);
+          /*IsUnsigned=*/false);
     case Intrinsic::sadd_sat:
     case Intrinsic::ssub_sat: {
       Type *CondTy = Type::getInt1Ty(RetTy->getContext());
