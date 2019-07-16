@@ -165,7 +165,7 @@ void MachineFunction::init() {
                       !F.hasFnAttribute("no-realign-stack");
   FrameInfo = new (Allocator) MachineFrameInfo(
       getFnStackAlignment(STI, F), /*StackRealignable=*/CanRealignSP,
-      /*ForceRealign=*/CanRealignSP &&
+      /*ForcedRealign=*/CanRealignSP &&
           F.hasFnAttribute(Attribute::StackAlignment));
 
   if (F.hasFnAttribute(Attribute::StackAlignment))

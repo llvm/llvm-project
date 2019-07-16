@@ -55,6 +55,9 @@ SANITIZER("hwaddress", HWAddress)
 // Kernel Hardware-assisted AddressSanitizer (KHWASan)
 SANITIZER("kernel-hwaddress", KernelHWAddress)
 
+// A variant of AddressSanitizer using AArch64 MTE extension.
+SANITIZER("memtag", MemTag)
+
 // MemorySanitizer
 SANITIZER("memory", Memory)
 

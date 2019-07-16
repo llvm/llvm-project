@@ -249,8 +249,8 @@ entry:
 ; GCN-DAG: v_and_b32_e32 v1, [[U23_MASK]], v1
 ; GCN-DAG: v_mul_u32_u24_e32 v0, 0xea, v0
 ; GCN-DAG: v_mul_u32_u24_e32 v1, 0x39b, v1
-; GCN: v_and_b32_e32 v1, s4, v1
-; GCN: v_and_b32_e32 v0, 0x7ffffe, v0
+; GCN-DAG: v_and_b32_e32 v1, s4, v1
+; GCN-DAG: v_and_b32_e32 v0, 0x7ffffe, v0
 ; GCN: v_mul_u32_u24_e32 v0, v0, v1
 ; GCN: v_and_b32_e32 v0, 0x1fffe, v0
 ; GCN: v_mul_u32_u24_e32 v0, 0x63, v0

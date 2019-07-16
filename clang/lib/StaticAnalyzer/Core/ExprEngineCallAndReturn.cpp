@@ -327,30 +327,30 @@ void ExprEngine::processCallExit(ExplodedNode *CEBNode) {
       ExplodedNodeSet DstPostPostCallCallback;
       getCheckerManager().runCheckersForPostCall(DstPostPostCallCallback,
                                                  CEENode, *UpdatedCall, *this,
-                                                 /*WasInlined=*/true);
+                                                 /*wasInlined=*/true);
       for (auto I : DstPostPostCallCallback) {
         getCheckerManager().runCheckersForNewAllocator(
             CNE,
             *getObjectUnderConstruction(I->getState(), CNE,
                                         calleeCtx->getParent()),
             DstPostCall, I, *this,
-            /*WasInlined=*/true);
+            /*wasInlined=*/true);
       }
     } else {
       getCheckerManager().runCheckersForPostCall(DstPostCall, CEENode,
                                                  *UpdatedCall, *this,
-                                                 /*WasInlined=*/true);
+                                                 /*wasInlined=*/true);
     }
     ExplodedNodeSet Dst;
     if (const ObjCMethodCall *Msg = dyn_cast<ObjCMethodCall>(Call)) {
       getCheckerManager().runCheckersForPostObjCMessage(Dst, DstPostCall, *Msg,
                                                         *this,
-                                                        /*WasInlined=*/true);
+                                                        /*wasInlined=*/true);
     } else if (CE &&
                !(isa<CXXNewExpr>(CE) && // Called when visiting CXXNewExpr.
                  AMgr.getAnalyzerOptions().MayInlineCXXAllocator)) {
       getCheckerManager().runCheckersForPostStmt(Dst, DstPostCall, CE,
-                                                 *this, /*WasInlined=*/true);
+                                                 *this, /*wasInlined=*/true);
     } else {
       Dst.insert(DstPostCall);
     }
@@ -645,7 +645,7 @@ ProgramStateRef ExprEngine::bindReturnValue(const CallEvent &Call,
     ITraits.setTrait(TargetR,
         RegionAndSymbolInvalidationTraits::TK_DoNotInvalidateSuperRegion);
     State = State->invalidateRegions(TargetR, E, Count, LCtx,
-                                     /* CausedByPointerEscape=*/false, nullptr,
+                                     /* CausesPointerEscape=*/false, nullptr,
                                      &Call, &ITraits);
 
     R = State->getSVal(Target.castAs<Loc>(), E->getType());

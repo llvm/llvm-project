@@ -3787,7 +3787,7 @@ recurse:
     if (TypeSourceInfo *ScopeInfo = PDE->getScopeTypeInfo()) {
       if (Qualifier) {
         mangleUnresolvedPrefix(Qualifier,
-                               /*Recursive=*/true);
+                               /*recursive=*/true);
         mangleUnresolvedTypeOrSimpleId(ScopeInfo->getType());
         Out << 'E';
       } else {

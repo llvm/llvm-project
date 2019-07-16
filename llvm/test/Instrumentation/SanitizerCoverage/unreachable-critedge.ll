@@ -1,5 +1,4 @@
 ; RUN: opt < %s -S -sancov -sanitizer-coverage-level=3 | FileCheck %s
-; RUN: opt < %s -S -passes='module(sancov-module),function(sancov-func)' -sanitizer-coverage-level=3 | FileCheck %s
 
 ; The critical edges to unreachable_bb should not be split.
 define i32 @foo(i32 %c, i32 %d) {

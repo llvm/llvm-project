@@ -8428,8 +8428,8 @@ bool Sema::CheckFunctionTemplateSpecialization(
       // here that have a different target.
       if (LangOpts.CUDA &&
           IdentifyCUDATarget(Specialization,
-                             /* IgnoreImplicitHDAttributes = */ true) !=
-              IdentifyCUDATarget(FD, /* IgnoreImplicitHDAttributes = */ true)) {
+                             /* IgnoreImplicitHDAttr = */ true) !=
+              IdentifyCUDATarget(FD, /* IgnoreImplicitHDAttr = */ true)) {
         FailedCandidates.addCandidate().set(
             I.getPair(), FunTmpl->getTemplatedDecl(),
             MakeDeductionFailureInfo(Context, TDK_CUDATargetMismatch, Info));
@@ -9587,7 +9587,7 @@ DeclResult Sema::ActOnExplicitInstantiation(Scope *S,
     // have a different target.
     if (LangOpts.CUDA &&
         IdentifyCUDATarget(Specialization,
-                           /* IgnoreImplicitHDAttributes = */ true) !=
+                           /* IgnoreImplicitHDAttr = */ true) !=
             IdentifyCUDATarget(D.getDeclSpec().getAttributes())) {
       FailedCandidates.addCandidate().set(
           P.getPair(), FunTmpl->getTemplatedDecl(),

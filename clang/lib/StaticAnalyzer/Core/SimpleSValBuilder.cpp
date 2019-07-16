@@ -525,7 +525,7 @@ SVal SimpleSValBuilder::evalBinOpNN(ProgramStateRef state,
       case BO_Sub:
         if (resultTy->isIntegralOrEnumerationType())
           return makeIntVal(0, resultTy);
-        return evalCastFromNonLoc(makeIntVal(0, /*Unsigned=*/false), resultTy);
+        return evalCastFromNonLoc(makeIntVal(0, /*isUnsigned=*/false), resultTy);
       case BO_Or:
       case BO_And:
         return evalCastFromNonLoc(lhs, resultTy);

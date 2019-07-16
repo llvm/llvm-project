@@ -23,7 +23,7 @@
 0x11 0x80 0x01 0x00
 
 # CHECK: call 0
-# CHECK-NOT: except_ref.call 0
+# CHECK-NOT: exnref.call 0
 0x10 0x00
 
 # CHECK: local.get 128

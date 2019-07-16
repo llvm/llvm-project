@@ -319,7 +319,7 @@ public:
 
 Defined *Thunk::addSymbol(StringRef name, uint8_t type, uint64_t value,
                           InputSectionBase &section) {
-  Defined *d = addSyntheticLocal(name, type, value, /*Size=*/0, section);
+  Defined *d = addSyntheticLocal(name, type, value, /*size=*/0, section);
   syms.push_back(d);
   return d;
 }

@@ -206,7 +206,7 @@ namespace llvm {
                                // unspecified type.  The register class
                                // will be determined by the opcode.
 
-      ExceptRef      = 129,    // WebAssembly's except_ref type
+      exnref         =  129,   // WebAssembly's exnref type
 
       FIRST_VALUETYPE = 1,     // This is always the beginning of the list.
       LAST_VALUETYPE =  130,   // This always remains at the end of the list.
@@ -811,7 +811,7 @@ namespace llvm {
       case v1024f32:  return 32768;
       case v2048i32:
       case v2048f32:  return 65536;
-      case ExceptRef: return 0; // opaque type
+      case exnref: return 0; // opaque type
       }
     }
 

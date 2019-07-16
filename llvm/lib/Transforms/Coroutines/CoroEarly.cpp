@@ -113,7 +113,7 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
     StructType *FrameTy = StructType::create(C, "NoopCoro.Frame");
     auto *FramePtrTy = FrameTy->getPointerTo();
     auto *FnTy = FunctionType::get(Type::getVoidTy(C), FramePtrTy,
-                                   /*IsVarArgs=*/false);
+                                   /*isVarArg=*/false);
     auto *FnPtrTy = FnTy->getPointerTo();
     FrameTy->setBody({FnPtrTy, FnPtrTy});
 

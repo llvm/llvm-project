@@ -2801,14 +2801,14 @@ let AdditionalPredicates = [NotInMicroMips] in {
   def : MipsInstAlias<"bnez $rs,$offset",
                       (BNE GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>,
         ISA_MIPS1;
-  def : MipsInstAlias<"bnezl $rs,$offset",
-                      (BNEL GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>,
+  def : MipsInstAlias<"bnezl $rs, $offset",
+                      (BNEL GPR32Opnd:$rs, ZERO, brtarget:$offset), 1>,
         ISA_MIPS2;
   def : MipsInstAlias<"beqz $rs,$offset",
                       (BEQ GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>,
         ISA_MIPS1;
-  def : MipsInstAlias<"beqzl $rs,$offset",
-                      (BEQL GPR32Opnd:$rs, ZERO, brtarget:$offset), 0>,
+  def : MipsInstAlias<"beqzl $rs, $offset",
+                      (BEQL GPR32Opnd:$rs, ZERO, brtarget:$offset), 1>,
         ISA_MIPS2;
 
   def : MipsInstAlias<"syscall", (SYSCALL 0), 1>, ISA_MIPS1;

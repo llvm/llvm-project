@@ -11,7 +11,7 @@ entry:
   ret <16 x i8> <i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1, i8 1>
 }
 
-define arm_aapcs_vfpcc <16 x i8> @mov_int8_m1(i8 *%dest) {
+define arm_aapcs_vfpcc <16 x i8> @mov_int8_m1() {
 ; CHECK-LABEL: mov_int8_m1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i8 q0, #0xff
@@ -20,7 +20,7 @@ entry:
   ret <16 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1, i8 -1>
 }
 
-define arm_aapcs_vfpcc <8 x i16> @mov_int16_1(i16 *%dest) {
+define arm_aapcs_vfpcc <8 x i16> @mov_int16_1() {
 ; CHECK-LABEL: mov_int16_1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i16 q0, #0x1
@@ -29,7 +29,7 @@ entry:
   ret <8 x i16> <i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1, i16 1>
 }
 
-define arm_aapcs_vfpcc <8 x i16> @mov_int16_m1(i16 *%dest) {
+define arm_aapcs_vfpcc <8 x i16> @mov_int16_m1() {
 ; CHECK-LABEL: mov_int16_m1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i8 q0, #0xff
@@ -38,7 +38,7 @@ entry:
   ret <8 x i16> <i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1, i16 -1>
 }
 
-define arm_aapcs_vfpcc <8 x i16> @mov_int16_256(i16 *%dest) {
+define arm_aapcs_vfpcc <8 x i16> @mov_int16_256() {
 ; CHECK-LABEL: mov_int16_256:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i16 q0, #0x100
@@ -56,7 +56,7 @@ entry:
   ret <8 x i16> <i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257, i16 257>
 }
 
-define arm_aapcs_vfpcc <8 x i16> @mov_int16_258(i16 *%dest) {
+define arm_aapcs_vfpcc <8 x i16> @mov_int16_258() {
 ; CHECK-LABEL: mov_int16_258:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r0, .LCPI6_0
@@ -73,7 +73,7 @@ entry:
   ret <8 x i16> <i16 258, i16 258, i16 258, i16 258, i16 258, i16 258, i16 258, i16 258>
 }
 
-define arm_aapcs_vfpcc <4 x i32> @mov_int32_1(i32 *%dest) {
+define arm_aapcs_vfpcc <4 x i32> @mov_int32_1() {
 ; CHECK-LABEL: mov_int32_1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i32 q0, #0x1
@@ -82,7 +82,7 @@ entry:
   ret <4 x i32> <i32 1, i32 1, i32 1, i32 1>
 }
 
-define arm_aapcs_vfpcc <4 x i32> @mov_int32_256(i32 *%dest) {
+define arm_aapcs_vfpcc <4 x i32> @mov_int32_256() {
 ; CHECK-LABEL: mov_int32_256:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i32 q0, #0x100
@@ -91,7 +91,7 @@ entry:
   ret <4 x i32> <i32 256, i32 256, i32 256, i32 256>
 }
 
-define arm_aapcs_vfpcc <4 x i32> @mov_int32_65536(i32 *%dest) {
+define arm_aapcs_vfpcc <4 x i32> @mov_int32_65536() {
 ; CHECK-LABEL: mov_int32_65536:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i32 q0, #0x10000
@@ -100,7 +100,7 @@ entry:
   ret <4 x i32> <i32 65536, i32 65536, i32 65536, i32 65536>
 }
 
-define arm_aapcs_vfpcc <4 x i32> @mov_int32_16777216(i32 *%dest) {
+define arm_aapcs_vfpcc <4 x i32> @mov_int32_16777216() {
 ; CHECK-LABEL: mov_int32_16777216:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i32 q0, #0x1000000
@@ -109,7 +109,7 @@ entry:
   ret <4 x i32> <i32 16777216, i32 16777216, i32 16777216, i32 16777216>
 }
 
-define arm_aapcs_vfpcc <4 x i32> @mov_int32_16777217(i32 *%dest) {
+define arm_aapcs_vfpcc <4 x i32> @mov_int32_16777217() {
 ; CHECK-LABEL: mov_int32_16777217:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r0, .LCPI11_0
@@ -126,7 +126,7 @@ entry:
   ret <4 x i32> <i32 16777217, i32 16777217, i32 16777217, i32 16777217>
 }
 
-define arm_aapcs_vfpcc <4 x i32> @mov_int32_17919(i32 *%dest) {
+define arm_aapcs_vfpcc <4 x i32> @mov_int32_17919() {
 ; CHECK-LABEL: mov_int32_17919:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i32 q0, #0x45ff
@@ -135,7 +135,7 @@ entry:
   ret <4 x i32> <i32 17919, i32 17919, i32 17919, i32 17919>
 }
 
-define arm_aapcs_vfpcc <4 x i32> @mov_int32_4587519(i32 *%dest) {
+define arm_aapcs_vfpcc <4 x i32> @mov_int32_4587519() {
 ; CHECK-LABEL: mov_int32_4587519:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i32 q0, #0x45ffff
@@ -144,7 +144,7 @@ entry:
   ret <4 x i32> <i32 4587519, i32 4587519, i32 4587519, i32 4587519>
 }
 
-define arm_aapcs_vfpcc <4 x i32> @mov_int32_m1(i32 *%dest) {
+define arm_aapcs_vfpcc <4 x i32> @mov_int32_m1() {
 ; CHECK-LABEL: mov_int32_m1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i8 q0, #0xff
@@ -153,7 +153,7 @@ entry:
   ret <4 x i32> <i32 -1, i32 -1, i32 -1, i32 -1>
 }
 
-define arm_aapcs_vfpcc <4 x i32> @mov_int32_4294901760(i32 *%dest) {
+define arm_aapcs_vfpcc <4 x i32> @mov_int32_4294901760() {
 ; CHECK-LABEL: mov_int32_4294901760:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmvn.i32 q0, #0xffff
@@ -162,7 +162,7 @@ entry:
   ret <4 x i32> <i32 4294901760, i32 4294901760, i32 4294901760, i32 4294901760>
 }
 
-define arm_aapcs_vfpcc <4 x i32> @mov_int32_4278190335(i32 *%dest) {
+define arm_aapcs_vfpcc <4 x i32> @mov_int32_4278190335() {
 ; CHECK-LABEL: mov_int32_4278190335:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r0, .LCPI16_0
@@ -179,7 +179,7 @@ entry:
   ret <4 x i32> <i32 4278190335, i32 4278190335, i32 4278190335, i32 4278190335>
 }
 
-define arm_aapcs_vfpcc <4 x i32> @mov_int32_4278255615(i32 *%dest) {
+define arm_aapcs_vfpcc <4 x i32> @mov_int32_4278255615() {
 ; CHECK-LABEL: mov_int32_4278255615:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmvn.i32 q0, #0xff0000
@@ -188,8 +188,8 @@ entry:
   ret <4 x i32> <i32 4278255615, i32 4278255615, i32 4278255615, i32 4278255615>
 }
 
-define arm_aapcs_vfpcc <4 x float> @mov_float_1(float *%dest) {
-; CHECK-LABEL: mov_float_1:
+define arm_aapcs_vfpcc <2 x i64> @mov_int64_1() {
+; CHECK-LABEL: mov_int64_1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    adr r0, .LCPI18_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
@@ -197,6 +197,32 @@ define arm_aapcs_vfpcc <4 x float> @mov_float_1(float *%dest) {
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
 ; CHECK-NEXT:  .LCPI18_0:
+; CHECK-NEXT:    .long 1 @ double 4.9406564584124654E-324
+; CHECK-NEXT:    .long 0
+; CHECK-NEXT:    .long 1 @ double 4.9406564584124654E-324
+; CHECK-NEXT:    .long 0
+entry:
+  ret <2 x i64> <i64 1, i64 1>
+}
+
+define arm_aapcs_vfpcc <2 x i64> @mov_int64_m1() {
+; CHECK-LABEL: mov_int64_m1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i8 q0, #0xff
+; CHECK-NEXT:    bx lr
+entry:
+  ret <2 x i64> <i64 -1, i64 -1>
+}
+
+define arm_aapcs_vfpcc <4 x float> @mov_float_1() {
+; CHECK-LABEL: mov_float_1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    adr r0, .LCPI20_0
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI20_0:
 ; CHECK-NEXT:    .long 1065353216 @ double 0.007812501848093234
 ; CHECK-NEXT:    .long 1065353216
 ; CHECK-NEXT:    .long 1065353216 @ double 0.007812501848093234
@@ -205,15 +231,15 @@ entry:
   ret <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>
 }
 
-define arm_aapcs_vfpcc <4 x float> @mov_float_m3(float *%dest) {
+define arm_aapcs_vfpcc <4 x float> @mov_float_m3() {
 ; CHECK-LABEL: mov_float_m3:
 ; CHECK:       @ %bb.0: @ %entry
-; CHECK-NEXT:    adr r0, .LCPI19_0
+; CHECK-NEXT:    adr r0, .LCPI21_0
 ; CHECK-NEXT:    vldrw.u32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI19_0:
+; CHECK-NEXT:  .LCPI21_0:
 ; CHECK-NEXT:    .long 3225419776 @ double -32.000022917985916
 ; CHECK-NEXT:    .long 3225419776
 ; CHECK-NEXT:    .long 3225419776 @ double -32.000022917985916
@@ -222,7 +248,7 @@ entry:
   ret <4 x float> <float -3.000000e+00, float -3.000000e+00, float -3.000000e+00, float -3.000000e+00>
 }
 
-define arm_aapcs_vfpcc <8 x half> @mov_float16_1(half *%dest) {
+define arm_aapcs_vfpcc <8 x half> @mov_float16_1() {
 ; CHECK-LABEL: mov_float16_1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i16 q0, #0x3c00
@@ -232,7 +258,7 @@ entry:
   ret <8 x half> <half 1.000000e+00, half 1.000000e+00, half 1.000000e+00, half 1.000000e+00, half 1.000000e+00, half 1.000000e+00, half 1.000000e+00, half 1.000000e+00>
 }
 
-define arm_aapcs_vfpcc <8 x half> @mov_float16_m3(half *%dest) {
+define arm_aapcs_vfpcc <8 x half> @mov_float16_m3() {
 ; CHECK-LABEL: mov_float16_m3:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vmov.i16 q0, #0xc200
@@ -240,4 +266,21 @@ define arm_aapcs_vfpcc <8 x half> @mov_float16_m3(half *%dest) {
 
 entry:
   ret <8 x half> <half -3.000000e+00, half -3.000000e+00, half -3.000000e+00, half -3.000000e+00, half -3.000000e+00, half -3.000000e+00, half -3.000000e+00, half -3.000000e+00>
+}
+
+define arm_aapcs_vfpcc <2 x double> @mov_double_1() {
+; CHECK-LABEL: mov_double_1:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    adr r0, .LCPI24_0
+; CHECK-NEXT:    vldrw.u32 q0, [r0]
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI24_0:
+; CHECK-NEXT:    .long 0 @ double 1
+; CHECK-NEXT:    .long 1072693248
+; CHECK-NEXT:    .long 0 @ double 1
+; CHECK-NEXT:    .long 1072693248
+entry:
+  ret <2 x double> <double 1.000000e+00, double 1.000000e+00>
 }

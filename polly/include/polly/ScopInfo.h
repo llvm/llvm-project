@@ -51,7 +51,7 @@ extern bool UseInstructionNames;
 
 // The maximal number of basic sets we allow during domain construction to
 // be created. More complex scops will result in very high compile time and
-// are also unlikely to result in good code
+// are also unlikely to result in good code.
 extern int const MaxDisjunctsInDomain;
 
 /// Enumeration of assumptions Polly can take.

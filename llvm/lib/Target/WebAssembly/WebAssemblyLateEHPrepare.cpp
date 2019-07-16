@@ -131,8 +131,7 @@ bool WebAssemblyLateEHPrepare::addCatches(MachineFunction &MF) {
       auto InsertPos = MBB.begin();
       if (InsertPos->isEHLabel()) // EH pad starts with an EH label
         ++InsertPos;
-      unsigned DstReg =
-          MRI.createVirtualRegister(&WebAssembly::EXCEPT_REFRegClass);
+      unsigned DstReg = MRI.createVirtualRegister(&WebAssembly::EXNREFRegClass);
       BuildMI(MBB, InsertPos, MBB.begin()->getDebugLoc(),
               TII.get(WebAssembly::CATCH), DstReg);
     }
@@ -209,23 +208,23 @@ bool WebAssemblyLateEHPrepare::removeUnnecessaryUnreachables(
 }
 
 // Wasm uses 'br_on_exn' instruction to check the tag of an exception. It takes
-// except_ref type object returned by 'catch', and branches to the destination
-// if it matches a given tag. We currently use __cpp_exception symbol to
-// represent the tag for all C++ exceptions.
+// exnref type object returned by 'catch', and branches to the destination if it
+// matches a given tag. We currently use __cpp_exception symbol to represent the
+// tag for all C++ exceptions.
 //
 // block $l (result i32)
 //   ...
-//   ;; except_ref $e is on the stack at this point
+//   ;; exnref $e is on the stack at this point
 //   br_on_exn $l $e ;; branch to $l with $e's arguments
 //   ...
 // end
 // ;; Here we expect the extracted values are on top of the wasm value stack
 // ... Handle exception using values ...
 //
-// br_on_exn takes an except_ref object and branches if it matches the given
-// tag. There can be multiple br_on_exn instructions if we want to match for
-// another tag, but for now we only test for __cpp_exception tag, and if it does
-// not match, i.e., it is a foreign exception, we rethrow it.
+// br_on_exn takes an exnref object and branches if it matches the given tag.
+// There can be multiple br_on_exn instructions if we want to match for another
+// tag, but for now we only test for __cpp_exception tag, and if it does not
+// match, i.e., it is a foreign exception, we rethrow it.
 //
 // In the destination BB that's the target of br_on_exn, extracted exception
 // values (in C++'s case a single i32, which represents an exception pointer)
@@ -279,13 +278,13 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
 
     // - Before:
     // ehpad:
-    //   %exnref:except_ref = catch
+    //   %exnref:exnref = catch
     //   %exn:i32 = extract_exception
     //   ... use exn ...
     //
     // - After:
     // ehpad:
-    //   %exnref:except_ref = catch
+    //   %exnref:exnref = catch
     //   br_on_exn %thenbb, $__cpp_exception, %exnref
     //   br %elsebb
     // elsebb:
@@ -317,14 +316,14 @@ bool WebAssemblyLateEHPrepare::addExceptionExtraction(MachineFunction &MF) {
     //
     // - Before:
     // ehpad:
-    //   %exnref:except_ref = catch
+    //   %exnref:exnref = catch
     //   %exn:i32 = extract_exception
     //   call @__clang_call_terminate(%exn)
     //   unreachable
     //
     // - After:
     // ehpad:
-    //   %exnref:except_ref = catch
+    //   %exnref:exnref = catch
     //   br_on_exn %thenbb, $__cpp_exception, %exnref
     //   br %elsebb
     // elsebb:

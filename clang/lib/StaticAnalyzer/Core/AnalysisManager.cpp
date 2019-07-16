@@ -23,7 +23,7 @@ AnalysisManager::AnalysisManager(ASTContext &ASTCtx, DiagnosticsEngine &diags,
     : AnaCtxMgr(
           ASTCtx, Options.UnoptimizedCFG,
           Options.ShouldIncludeImplicitDtorsInCFG,
-          /*AddInitializers=*/true,
+          /*addInitializers=*/true,
           Options.ShouldIncludeTemporaryDtorsInCFG,
           Options.ShouldIncludeLifetimeInCFG,
           // Adding LoopExit elements to the CFG is a requirement for loop

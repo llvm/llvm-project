@@ -85,8 +85,8 @@ static unsigned getNonPseudoCallIndirectOpcode(const MachineInstr &MI) {
     return CALL_INDIRECT_v4f32;
   case PCALL_INDIRECT_v2f64:
     return CALL_INDIRECT_v2f64;
-  case PCALL_INDIRECT_ExceptRef:
-    return CALL_INDIRECT_ExceptRef;
+  case PCALL_INDIRECT_exnref:
+    return CALL_INDIRECT_exnref;
   case PRET_CALL_INDIRECT:
     return RET_CALL_INDIRECT;
   default:

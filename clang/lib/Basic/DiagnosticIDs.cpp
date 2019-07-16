@@ -311,11 +311,9 @@ namespace clang {
 // Common Diagnostic implementation
 //===----------------------------------------------------------------------===//
 
-DiagnosticIDs::DiagnosticIDs() { CustomDiagInfo = nullptr; }
+DiagnosticIDs::DiagnosticIDs() {}
 
-DiagnosticIDs::~DiagnosticIDs() {
-  delete CustomDiagInfo;
-}
+DiagnosticIDs::~DiagnosticIDs() {}
 
 /// getCustomDiagID - Return an ID for a diagnostic with the specified message
 /// and level.  If this is the first request for this diagnostic, it is
@@ -325,7 +323,7 @@ DiagnosticIDs::~DiagnosticIDs() {
 /// mapped to a unique DiagID.
 unsigned DiagnosticIDs::getCustomDiagID(Level L, StringRef FormatString) {
   if (!CustomDiagInfo)
-    CustomDiagInfo = new diag::CustomDiagInfo();
+    CustomDiagInfo.reset(new diag::CustomDiagInfo());
   return CustomDiagInfo->getOrCreateDiagID(L, FormatString, *this);
 }
 

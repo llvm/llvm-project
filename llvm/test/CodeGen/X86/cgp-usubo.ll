@@ -246,8 +246,8 @@ exit:
 define i32 @PR42571(i32 %x, i32 %y) {
 ; CHECK-LABEL: PR42571:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    subl $1, %eax
+; CHECK-NEXT:    # kill: def $edi killed $edi def $rdi
+; CHECK-NEXT:    leal -1(%rdi), %eax
 ; CHECK-NEXT:    andl %edi, %eax
 ; CHECK-NEXT:    cmpl $1, %edi
 ; CHECK-NEXT:    cmovbl %esi, %eax

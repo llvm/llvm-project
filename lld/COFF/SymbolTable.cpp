@@ -69,7 +69,7 @@ static Symbol *getSymbol(SectionChunk *sc, uint32_t addr) {
 
   for (Symbol *s : sc->file->getSymbols()) {
     auto *d = dyn_cast_or_null<DefinedRegular>(s);
-    if (!d || d->getChunk() != sc || d->getValue() > addr ||
+    if (!d || !d->data || d->getChunk() != sc || d->getValue() > addr ||
         (candidate && d->getValue() < candidate->getValue()))
       continue;
 

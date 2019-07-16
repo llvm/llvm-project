@@ -48,7 +48,42 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
                                             const MCFixup &Fixup,
                                             bool IsPCRel) const {
   // Determine the type of the relocation
-  switch ((unsigned)Fixup.getKind()) {
+  unsigned Kind = Fixup.getKind();
+  if (IsPCRel) {
+    switch (Kind) {
+    default:
+      llvm_unreachable("invalid fixup kind!");
+    case FK_Data_4:
+    case FK_PCRel_4:
+      return ELF::R_RISCV_32_PCREL;
+    case RISCV::fixup_riscv_pcrel_hi20:
+      return ELF::R_RISCV_PCREL_HI20;
+    case RISCV::fixup_riscv_pcrel_lo12_i:
+      return ELF::R_RISCV_PCREL_LO12_I;
+    case RISCV::fixup_riscv_pcrel_lo12_s:
+      return ELF::R_RISCV_PCREL_LO12_S;
+    case RISCV::fixup_riscv_got_hi20:
+      return ELF::R_RISCV_GOT_HI20;
+    case RISCV::fixup_riscv_tls_got_hi20:
+      return ELF::R_RISCV_TLS_GOT_HI20;
+    case RISCV::fixup_riscv_tls_gd_hi20:
+      return ELF::R_RISCV_TLS_GD_HI20;
+    case RISCV::fixup_riscv_jal:
+      return ELF::R_RISCV_JAL;
+    case RISCV::fixup_riscv_branch:
+      return ELF::R_RISCV_BRANCH;
+    case RISCV::fixup_riscv_rvc_jump:
+      return ELF::R_RISCV_RVC_JUMP;
+    case RISCV::fixup_riscv_rvc_branch:
+      return ELF::R_RISCV_RVC_BRANCH;
+    case RISCV::fixup_riscv_call:
+      return ELF::R_RISCV_CALL;
+    case RISCV::fixup_riscv_call_plt:
+      return ELF::R_RISCV_CALL_PLT;
+    }
+  }
+
+  switch (Kind) {
   default:
     llvm_unreachable("invalid fixup kind!");
   case FK_Data_4:
@@ -77,14 +112,6 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_LO12_I;
   case RISCV::fixup_riscv_lo12_s:
     return ELF::R_RISCV_LO12_S;
-  case RISCV::fixup_riscv_pcrel_hi20:
-    return ELF::R_RISCV_PCREL_HI20;
-  case RISCV::fixup_riscv_pcrel_lo12_i:
-    return ELF::R_RISCV_PCREL_LO12_I;
-  case RISCV::fixup_riscv_pcrel_lo12_s:
-    return ELF::R_RISCV_PCREL_LO12_S;
-  case RISCV::fixup_riscv_got_hi20:
-    return ELF::R_RISCV_GOT_HI20;
   case RISCV::fixup_riscv_tprel_hi20:
     return ELF::R_RISCV_TPREL_HI20;
   case RISCV::fixup_riscv_tprel_lo12_i:
@@ -93,22 +120,6 @@ unsigned RISCVELFObjectWriter::getRelocType(MCContext &Ctx,
     return ELF::R_RISCV_TPREL_LO12_S;
   case RISCV::fixup_riscv_tprel_add:
     return ELF::R_RISCV_TPREL_ADD;
-  case RISCV::fixup_riscv_tls_got_hi20:
-    return ELF::R_RISCV_TLS_GOT_HI20;
-  case RISCV::fixup_riscv_tls_gd_hi20:
-    return ELF::R_RISCV_TLS_GD_HI20;
-  case RISCV::fixup_riscv_jal:
-    return ELF::R_RISCV_JAL;
-  case RISCV::fixup_riscv_branch:
-    return ELF::R_RISCV_BRANCH;
-  case RISCV::fixup_riscv_rvc_jump:
-    return ELF::R_RISCV_RVC_JUMP;
-  case RISCV::fixup_riscv_rvc_branch:
-    return ELF::R_RISCV_RVC_BRANCH;
-  case RISCV::fixup_riscv_call:
-    return ELF::R_RISCV_CALL;
-  case RISCV::fixup_riscv_call_plt:
-    return ELF::R_RISCV_CALL_PLT;
   case RISCV::fixup_riscv_relax:
     return ELF::R_RISCV_RELAX;
   case RISCV::fixup_riscv_align:

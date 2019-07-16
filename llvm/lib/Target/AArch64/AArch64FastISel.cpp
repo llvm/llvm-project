@@ -2365,7 +2365,7 @@ bool AArch64FastISel::emitCompareAndBranch(const BranchInst *BI) {
                                         AArch64::sub_32);
 
   if ((BW < 32) && !IsBitTest)
-    SrcReg = emitIntExt(VT, SrcReg, MVT::i32, /*IsZExt=*/true);
+    SrcReg = emitIntExt(VT, SrcReg, MVT::i32, /*isZExt=*/true);
 
   // Emit the combined compare and branch instruction.
   SrcReg = constrainOperandRegClass(II, SrcReg,  II.getNumDefs());
@@ -4272,7 +4272,7 @@ unsigned AArch64FastISel::emitASR_rr(MVT RetVT, unsigned Op0Reg, bool Op0IsKill,
   const TargetRegisterClass *RC =
       (RetVT == MVT::i64) ? &AArch64::GPR64RegClass : &AArch64::GPR32RegClass;
   if (NeedTrunc) {
-    Op0Reg = emitIntExt(RetVT, Op0Reg, MVT::i32, /*IsZExt=*/false);
+    Op0Reg = emitIntExt(RetVT, Op0Reg, MVT::i32, /*isZExt=*/false);
     Op1Reg = emitAnd_ri(MVT::i32, Op1Reg, Op1IsKill, Mask);
     Op0IsKill = Op1IsKill = true;
   }
@@ -4952,7 +4952,7 @@ std::pair<unsigned, bool> AArch64FastISel::getRegForGEPIndex(const Value *Idx) {
   MVT PtrVT = TLI.getPointerTy(DL);
   EVT IdxVT = EVT::getEVT(Idx->getType(), /*HandleUnknown=*/false);
   if (IdxVT.bitsLT(PtrVT)) {
-    IdxN = emitIntExt(IdxVT.getSimpleVT(), IdxN, PtrVT, /*IsZExt=*/false);
+    IdxN = emitIntExt(IdxVT.getSimpleVT(), IdxN, PtrVT, /*isZExt=*/false);
     IdxNIsKill = true;
   } else if (IdxVT.bitsGT(PtrVT))
     llvm_unreachable("AArch64 FastISel doesn't support types larger than i64");

@@ -3194,15 +3194,15 @@ Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
         if (SuperLoc.isValid())
           Actions.CodeCompleteObjCSuperMessage(getCurScope(), SuperLoc,
                                                KeyIdents,
-                                               /*AtArgumentEpression=*/true);
+                                               /*AtArgumentExpression=*/true);
         else if (ReceiverType)
           Actions.CodeCompleteObjCClassMessage(getCurScope(), ReceiverType,
                                                KeyIdents,
-                                               /*AtArgumentEpression=*/true);
+                                               /*AtArgumentExpression=*/true);
         else
           Actions.CodeCompleteObjCInstanceMessage(getCurScope(), ReceiverExpr,
                                                   KeyIdents,
-                                                  /*AtArgumentEpression=*/true);
+                                                  /*AtArgumentExpression=*/true);
 
         cutOffParsing();
         return ExprError();
@@ -3232,15 +3232,15 @@ Parser::ParseObjCMessageExpressionBody(SourceLocation LBracLoc,
         if (SuperLoc.isValid())
           Actions.CodeCompleteObjCSuperMessage(getCurScope(), SuperLoc,
                                                KeyIdents,
-                                               /*AtArgumentEpression=*/false);
+                                               /*AtArgumentExpression=*/false);
         else if (ReceiverType)
           Actions.CodeCompleteObjCClassMessage(getCurScope(), ReceiverType,
                                                KeyIdents,
-                                               /*AtArgumentEpression=*/false);
+                                               /*AtArgumentExpression=*/false);
         else
           Actions.CodeCompleteObjCInstanceMessage(getCurScope(), ReceiverExpr,
                                                   KeyIdents,
-                                                /*AtArgumentEpression=*/false);
+                                                /*AtArgumentExpression=*/false);
         cutOffParsing();
         return ExprError();
       }

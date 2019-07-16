@@ -67,13 +67,13 @@
         # CHECK: beql $9, $6, 1332
         # CHECK: nop
         beql $9,$6,1332
-        # CHECK: beql $9, $zero, 1332
+        # CHECK: beqzl $9, 1332
         # CHECK: nop
         beqzl $9,1332
         # CHECK: bnel $9, $6, 1332
         # CHECK: nop
         bnel $9,$6,1332
-        # CHECK: bnel $9, $zero, 1332
+        # CHECK: bnezl $9, 1332
         # CHECK: nop
         bnezl $9,1332
         # CHECK: bgezl $6, 1332

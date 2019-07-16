@@ -8252,7 +8252,7 @@ void ASTReader::UpdateSema() {
   // Update the state of pragmas. Use the same API as if we had encountered the
   // pragma in the source.
   if(OptimizeOffPragmaLocation.isValid())
-    SemaObj->ActOnPragmaOptimize(/* IsOn = */ false, OptimizeOffPragmaLocation);
+    SemaObj->ActOnPragmaOptimize(/* On = */ false, OptimizeOffPragmaLocation);
   if (PragmaMSStructState != -1)
     SemaObj->ActOnPragmaMSStruct((PragmaMSStructKind)PragmaMSStructState);
   if (PointersToMembersPragmaLocation.isValid()) {

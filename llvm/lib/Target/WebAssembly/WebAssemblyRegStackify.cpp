@@ -834,9 +834,9 @@ bool WebAssemblyRegStackify::runOnMachineFunction(MachineFunction &MF) {
         // entering blocks, which is a part of multi-value proposal.
         //
         // Once we support live-in values of wasm blocks, this can be:
-        // catch                           ; push except_ref value onto stack
-        // block except_ref -> i32
-        // br_on_exn $__cpp_exception      ; pop the except_ref value
+        // catch                           ; push exnref value onto stack
+        // block exnref -> i32
+        // br_on_exn $__cpp_exception      ; pop the exnref value
         // end_block
         //
         // But because we don't support it yet, the catch instruction's dst

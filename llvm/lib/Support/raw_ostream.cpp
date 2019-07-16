@@ -612,7 +612,7 @@ raw_fd_ostream::~raw_fd_ostream() {
   // destructing raw_ostream objects which may have errors.
   if (has_error())
     report_fatal_error("IO failure on output stream: " + error().message(),
-                       /*GenCrashDiag=*/false);
+                       /*gen_crash_diag=*/false);
 }
 
 #if defined(_WIN32)

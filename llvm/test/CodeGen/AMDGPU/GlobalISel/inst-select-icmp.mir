@@ -1,5 +1,6 @@
-# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN
-# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck %s -check-prefixes=GCN
+# RUN: llc -march=amdgcn -mcpu=hawaii -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN -DVCCRC=sreg_64_xexec %s
+# RUN: llc -march=amdgcn -mcpu=fiji -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN -DVCCRC=sreg_64_xexec %s
+# RUN: llc -march=amdgcn -mcpu=gfx1010 -run-pass=instruction-select -verify-machineinstrs -o - %s | FileCheck -check-prefix=GCN -DVCCRC=sreg_32_xm0_xexec %s
 
 ---
 name:            icmp_s32_s_mix
@@ -129,8 +130,8 @@ regBankSelected: true
 # GCN: [[VGPR7:%[0-9]+]]:vgpr_32 = COPY $vgpr7
 # GCN: [[VGPR8:%[0-9]+]]:vgpr_32 = COPY $vgpr8
 # GCN: [[VGPR9:%[0-9]+]]:vgpr_32 = COPY $vgpr9
-# GCN: [[COND0:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[VGPR2]], [[VGPR3]]
-# GCN: [[COND1:%[0-9]+]]:sreg_64_xexec = V_CMP_NE_U32_e64 [[VGPR6]], [[VGPR7]]
+# GCN: [[COND0:%[0-9]+]]:[[VCCRC]] = V_CMP_NE_U32_e64 [[VGPR2]], [[VGPR3]]
+# GCN: [[COND1:%[0-9]+]]:[[VCCRC]] = V_CMP_NE_U32_e64 [[VGPR6]], [[VGPR7]]
 # GCN: V_CNDMASK_B32_e64 0, [[VGPR9]], 0, [[VGPR8]], [[COND0]]
 # GCN: V_CNDMASK_B32_e64 0, [[VGPR5]], 0, [[VGPR4]], [[COND1]]
 
@@ -339,8 +340,8 @@ legalized:       true
 regBankSelected: true
 
 # GCN-LABEL: name: icmp_eq_ne_p3_vv
-# GCN: %2:sreg_64_xexec = V_CMP_EQ_U32_e64 %0, %1, implicit $exec
-# GCN: %3:sreg_64_xexec = V_CMP_NE_U32_e64 %0, %1, implicit $exec
+# GCN: %2:[[VCCRC]] = V_CMP_EQ_U32_e64 %0, %1, implicit $exec
+# GCN: %3:[[VCCRC]] = V_CMP_NE_U32_e64 %0, %1, implicit $exec
 
 body: |
   bb.0:

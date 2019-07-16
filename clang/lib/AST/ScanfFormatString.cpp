@@ -142,7 +142,7 @@ static ScanfSpecifierResult ParseScanfSpecifier(FormatStringHandler &H,
   }
 
   // Look for the length modifier.
-  if (ParseLengthModifier(FS, I, E, LO, /*scanf=*/true) && I == E) {
+  if (ParseLengthModifier(FS, I, E, LO, /*IsScanf=*/true) && I == E) {
       // No more characters left?
     H.HandleIncompleteSpecifier(Start, E - Start);
     return true;

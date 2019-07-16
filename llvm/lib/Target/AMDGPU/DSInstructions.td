@@ -61,6 +61,7 @@ class DS_Real <DS_Pseudo ds> :
 
   // copy relevant pseudo op flags
   let SubtargetPredicate = ds.SubtargetPredicate;
+  let OtherPredicates = ds.OtherPredicates;
   let AsmMatchConverter  = ds.AsmMatchConverter;
 
   // encoding fields

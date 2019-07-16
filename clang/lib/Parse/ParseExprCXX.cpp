@@ -1334,10 +1334,10 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
     SourceLocation NoLoc;
     D.AddTypeInfo(DeclaratorChunk::getFunction(
-                      /*hasProto=*/true,
-                      /*isAmbiguous=*/false, LParenLoc, ParamInfo.data(),
+                      /*HasProto=*/true,
+                      /*IsAmbiguous=*/false, LParenLoc, ParamInfo.data(),
                       ParamInfo.size(), EllipsisLoc, RParenLoc,
-                      /*RefQualifierIsLValueRef=*/true,
+                      /*RefQualifierIsLvalueRef=*/true,
                       /*RefQualifierLoc=*/NoLoc, MutableLoc, ESpecType,
                       ESpecRange, DynamicExceptions.data(),
                       DynamicExceptionRanges.data(), DynamicExceptions.size(),
@@ -1394,14 +1394,14 @@ ExprResult Parser::ParseLambdaExpressionAfterIntroducer(
 
     SourceLocation NoLoc;
     D.AddTypeInfo(DeclaratorChunk::getFunction(
-                      /*hasProto=*/true,
-                      /*isAmbiguous=*/false,
+                      /*HasProto=*/true,
+                      /*IsAmbiguous=*/false,
                       /*LParenLoc=*/NoLoc,
                       /*Params=*/nullptr,
                       /*NumParams=*/0,
                       /*EllipsisLoc=*/NoLoc,
                       /*RParenLoc=*/NoLoc,
-                      /*RefQualifierIsLValueRef=*/true,
+                      /*RefQualifierIsLvalueRef=*/true,
                       /*RefQualifierLoc=*/NoLoc, MutableLoc, EST_None,
                       /*ESpecRange=*/SourceRange(),
                       /*Exceptions=*/nullptr,
@@ -1701,7 +1701,7 @@ Parser::ParseCXXPseudoDestructor(Expr *Base, SourceLocation OpLoc,
       ParseUnqualifiedIdTemplateId(SS, SourceLocation(),
                                    Name, NameLoc,
                                    false, ObjectType, SecondTypeName,
-                                   /*AssumeTemplateName=*/true))
+                                   /*AssumeTemplateId=*/true))
     return ExprError();
 
   return Actions.ActOnPseudoDestructorExpr(getCurScope(), Base, OpLoc, OpKind,
@@ -3061,7 +3061,7 @@ void Parser::ParseDirectNewDeclarator(Declarator &D) {
     MaybeParseCXX11Attributes(Attrs);
 
     D.AddTypeInfo(DeclaratorChunk::getArray(0,
-                                            /*static=*/false, /*star=*/false,
+                                            /*isStatic=*/false, /*isStar=*/false,
                                             Size.get(), T.getOpenLocation(),
                                             T.getCloseLocation()),
                   std::move(Attrs), T.getCloseLocation());

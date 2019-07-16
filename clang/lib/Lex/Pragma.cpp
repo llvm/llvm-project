@@ -1191,7 +1191,7 @@ public:
 
     std::string WarningName;
     if (!PP.FinishLexStringLiteral(Tok, WarningName, "pragma diagnostic",
-                                   /*MacroExpansion=*/false))
+                                   /*AllowMacroExpansion=*/false))
       return;
 
     if (Tok.isNot(tok::eod)) {
@@ -1389,7 +1389,7 @@ struct PragmaExecCharsetHandler : public PragmaHandler {
         std::string ExecCharset;
         if (!PP.FinishLexStringLiteral(Tok, ExecCharset,
                                        "pragma execution_character_set",
-                                       /*MacroExpansion=*/false))
+                                       /*AllowMacroExpansion=*/false))
           return;
 
         // MSVC supports either of these, but nothing else.
@@ -1490,7 +1490,7 @@ public:
 
     std::string MessageString;
     if (!PP.FinishLexStringLiteral(Tok, MessageString, PragmaKind(Kind),
-                                   /*MacroExpansion=*/true))
+                                   /*AllowMacroExpansion=*/true))
       return;
 
     if (ExpectClosingParen) {
@@ -1540,7 +1540,7 @@ struct PragmaModuleImportHandler : public PragmaHandler {
     // If we have a non-empty module path, load the named module.
     Module *Imported =
         PP.getModuleLoader().loadModule(ImportLoc, ModuleName, Module::Hidden,
-                                      /*IsIncludeDirective=*/false);
+                                      /*IsInclusionDirective=*/false);
     if (!Imported)
       return;
 
@@ -1666,7 +1666,7 @@ struct PragmaModuleLoadHandler : public PragmaHandler {
 
     // Load the module, don't make it visible.
     PP.getModuleLoader().loadModule(Loc, ModuleName, Module::Hidden,
-                                    /*IsIncludeDirective=*/false);
+                                    /*IsInclusionDirective=*/false);
   }
 };
 

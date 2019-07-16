@@ -1328,7 +1328,7 @@ static void addFunctionPointerConversion(Sema &S,
         S.Context.getTranslationUnitDecl(), From->getBeginLoc(),
         From->getLocation(), From->getIdentifier(), From->getType(),
         From->getTypeSourceInfo(), From->getStorageClass(),
-        /*DefaultArg=*/nullptr));
+        /*DefArg=*/nullptr));
     CallOpConvTL.setParam(I, From);
     CallOpConvNameTL.setParam(I, From);
   }
@@ -1376,7 +1376,7 @@ static void addFunctionPointerConversion(Sema &S,
   CXXMethodDecl *Invoke = CXXMethodDecl::Create(
       S.Context, Class, Loc, DeclarationNameInfo(InvokerName, Loc),
       InvokerFunctionTy, CallOperator->getTypeSourceInfo(), SC_Static,
-      /*IsInline=*/true, CSK_unspecified, CallOperator->getBody()->getEndLoc());
+      /*isInline=*/true, CSK_unspecified, CallOperator->getBody()->getEndLoc());
   for (unsigned I = 0, N = CallOperator->getNumParams(); I != N; ++I)
     InvokerParams[I]->setOwningFunction(Invoke);
   Invoke->setParams(InvokerParams);
@@ -1860,7 +1860,7 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
         Context, Block, From->getBeginLoc(), From->getLocation(),
         From->getIdentifier(), From->getType(), From->getTypeSourceInfo(),
         From->getStorageClass(),
-        /*DefaultArg=*/nullptr));
+        /*DefArg=*/nullptr));
   }
   Block->setParams(BlockParams);
 
@@ -1875,8 +1875,8 @@ ExprResult Sema::BuildBlockForLambdaConversion(SourceLocation CurrentLocation,
                                     ConvLocation, nullptr,
                                     Src->getType(), CapVarTSI,
                                     SC_None);
-  BlockDecl::Capture Capture(/*Variable=*/CapVar, /*ByRef=*/false,
-                             /*Nested=*/false, /*Copy=*/Init.get());
+  BlockDecl::Capture Capture(/*variable=*/CapVar, /*byRef=*/false,
+                             /*nested=*/false, /*copy=*/Init.get());
   Block->setCaptures(Context, Capture, /*CapturesCXXThis=*/false);
 
   // Add a fake function body to the block. IR generation is responsible

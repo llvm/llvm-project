@@ -658,8 +658,8 @@ llvm::Error GlobalModuleIndexBuilder::loadModuleFile(const FileEntry *File) {
 
         // Find the imported module file.
         const FileEntry *DependsOnFile
-          = FileMgr.getFile(ImportedFile, /*openFile=*/false,
-                            /*cacheFailure=*/false);
+          = FileMgr.getFile(ImportedFile, /*OpenFile=*/false,
+                            /*CacheFailure=*/false);
 
         if (!DependsOnFile)
           return llvm::createStringError(std::errc::bad_file_descriptor,
