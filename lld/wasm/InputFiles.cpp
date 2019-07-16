@@ -328,7 +328,7 @@ void ObjFile::parse(bool ignoreComdats) {
   for (const WasmEvent &e : wasmObj->events())
     events.emplace_back(make<InputEvent>(types[e.Type.SigIndex], e, this));
 
-  // Populate `Symbols` based on the WasmSymbols in the object.
+  // Populate `Symbols` based on the symbols in the object.
   symbols.reserve(wasmObj->getNumberOfSymbols());
   for (const SymbolRef &sym : wasmObj->symbols()) {
     const WasmSymbol &wasmSym = wasmObj->getWasmSymbol(sym.getRawDataRefImpl());

@@ -579,11 +579,9 @@ void EhFrameSection::writeTo(uint8_t *buf) {
 GotSection::GotSection()
     : SyntheticSection(SHF_ALLOC | SHF_WRITE, SHT_PROGBITS, config->wordsize,
                        ".got") {
-  // PPC64 saves the ElfSym::GlobalOffsetTable .TOC. as the first entry in the
-  // .got. If there are no references to .TOC. in the symbol table,
-  // ElfSym::GlobalOffsetTable will not be defined and we won't need to save
-  // .TOC. in the .got. When it is defined, we increase NumEntries by the number
-  // of entries used to emit ElfSym::GlobalOffsetTable.
+  // If ElfSym::globalOffsetTable is relative to .got and is referenced,
+  // increase numEntries by the number of entries used to emit
+  // ElfSym::globalOffsetTable.
   if (ElfSym::globalOffsetTable && !target->gotBaseSymInGotPlt)
     numEntries += target->gotHeaderEntriesNum;
 }
@@ -861,9 +859,9 @@ void MipsGotSection::build() {
     } else {
       // If this is the first time we failed to merge with the primary GOT,
       // MergedGots.back() will also be the primary GOT. We must make sure not
-      // to try to merge again with IsPrimary=false, as otherwise, if the
+      // to try to merge again with isPrimary=false, as otherwise, if the
       // inputs are just right, we could allow the primary GOT to become 1 or 2
-      // words too big due to ignoring the header size.
+      // words bigger due to ignoring the header size.
       if (mergedGots.size() == 1 ||
           !tryMergeGots(mergedGots.back(), srcGot, false)) {
         mergedGots.emplace_back();
@@ -888,7 +886,7 @@ void MipsGotSection::build() {
     for (std::pair<const OutputSection *, FileGot::PageBlock> &p :
          got.pagesMap) {
       // For each output section referenced by GOT page relocations calculate
-      // and save into PagesMap an upper bound of MIPS GOT entries required
+      // and save into pagesMap an upper bound of MIPS GOT entries required
       // to store page addresses of local symbols. We assume the worst case -
       // each 64kb page of the output section has at least one GOT relocation
       // against it. And take in account the case when the section intersects
@@ -910,7 +908,7 @@ void MipsGotSection::build() {
     }
   }
 
-  // Update Symbol::GotIndex field to use this
+  // Update Symbol::gotIndex field to use this
   // value later in the `sortMipsSymbols` function.
   for (auto &p : primGot->global)
     p.first->gotIndex = p.second;
@@ -936,7 +934,7 @@ void MipsGotSection::build() {
       } else {
         // When building a shared library we still need a dynamic relocation
         // for the module index. Therefore only checking for
-        // S->IsPreemptible is not sufficient (this happens e.g. for
+        // S->isPreemptible is not sufficient (this happens e.g. for
         // thread-locals that have been marked as local through a linker script)
         if (!s->isPreemptible && !config->isPic)
           continue;
@@ -1140,7 +1138,7 @@ StringTableSection::StringTableSection(StringRef name, bool dynamic)
   addString("");
 }
 
-// Adds a string to the string table. If HashIt is true we hash and check for
+// Adds a string to the string table. If `hashIt` is true we hash and check for
 // duplicates. It is optional because the name of global symbols are already
 // uniqued and hashing them again has a big cost for a small value: uniquing
 // them with some other string that happens to be the same.
@@ -1335,9 +1333,9 @@ template <class ELFT> void DynamicSection<ELFT>::finalizeContents() {
   }
   // .rel[a].plt section usually consists of two parts, containing plt and
   // iplt relocations. It is possible to have only iplt relocations in the
-  // output. In that case RelaPlt is empty and have zero offset, the same offset
-  // as RelaIplt have. And we still want to emit proper dynamic tags for that
-  // case, so here we always use RelaPlt as marker for the begining of
+  // output. In that case relaPlt is empty and have zero offset, the same offset
+  // as relaIplt has. And we still want to emit proper dynamic tags for that
+  // case, so here we always use relaPlt as marker for the begining of
   // .rel[a].plt section.
   if (isMain && (in.relaPlt->isNeeded() || in.relaIplt->isNeeded())) {
     addInSec(DT_JMPREL, in.relaPlt);
@@ -2365,7 +2363,7 @@ void PltSection::writeTo(uint8_t *buf) {
 
   RelocationBaseSection *relSec = isIplt ? in.relaIplt : in.relaPlt;
 
-  // The IPlt is immediately after the Plt, account for this in RelOff
+  // The IPlt is immediately after the Plt, account for this in relOff
   size_t pltOff = isIplt ? in.plt->getSize() : 0;
 
   for (size_t i = 0, e = entries.size(); i != e; ++i) {
@@ -2491,9 +2489,9 @@ readPubNamesAndTypes(const LLDDwarfObj<ELFT> &obj,
   for (const DWARFSection *pub : {&pubNames, &pubTypes}) {
     DWARFDebugPubTable table(obj, *pub, config->isLE, true);
     for (const DWARFDebugPubTable::Set &set : table.getData()) {
-      // The value written into the constant pool is Kind << 24 | CuIndex. As we
+      // The value written into the constant pool is kind << 24 | cuIndex. As we
       // don't know how many compilation units precede this object to compute
-      // CuIndex, we compute (Kind << 24 | CuIndexInThisObject) instead, and add
+      // cuIndex, we compute (kind << 24 | cuIndexInThisObject) instead, and add
       // the number of preceding compilation units later.
       uint32_t i =
           lower_bound(cUs, set.Offset,
@@ -2945,7 +2943,7 @@ void MergeTailSection::finalizeContents() {
 
   // finalize() fixed tail-optimized strings, so we can now get
   // offsets of strings. Get an offset for each string and save it
-  // to a corresponding StringPiece for easy access.
+  // to a corresponding SectionPiece for easy access.
   for (MergeInputSection *sec : sections)
     for (size_t i = 0, e = sec->pieces.size(); i != e; ++i)
       if (sec->pieces[i].live)
@@ -3330,7 +3328,7 @@ bool PPC32Got2Section::isNeeded() const {
 
 void PPC32Got2Section::finalizeContents() {
   // PPC32 may create multiple GOT sections for -fPIC/-fPIE, one per file in
-  // .got2 . This function computes OutSecOff of each .got2 to be used in
+  // .got2 . This function computes outSecOff of each .got2 to be used in
   // PPC32PltCallStub::writeTo(). The purpose of this empty synthetic section is
   // to collect input sections named ".got2".
   uint32_t offset = 0;

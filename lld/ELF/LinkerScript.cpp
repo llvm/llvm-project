@@ -115,7 +115,7 @@ void LinkerScript::expandMemoryRegions(uint64_t size) {
   if (ctx->memRegion)
     expandMemoryRegion(ctx->memRegion, size, ctx->memRegion->name,
                        ctx->outSec->name);
-  // Only expand the LMARegion if it is different from MemRegion.
+  // Only expand the LMARegion if it is different from memRegion.
   if (ctx->lmaRegion && ctx->memRegion != ctx->lmaRegion)
     expandMemoryRegion(ctx->lmaRegion, size, ctx->lmaRegion->name,
                        ctx->outSec->name);
@@ -1035,8 +1035,8 @@ static uint64_t getInitialDot() {
     return config->imageBase ? *config->imageBase : 0;
 
   uint64_t startAddr = UINT64_MAX;
-  // The Sections with -T<section> have been sorted in order of ascending
-  // address. We must lower StartAddr if the lowest -T<section address> as
+  // The sections with -T<section> have been sorted in order of ascending
+  // address. We must lower startAddr if the lowest -T<section address> as
   // calls to setDot() must be monotonically increasing.
   for (auto &kv : config->sectionStartMap)
     startAddr = std::min(startAddr, kv.second);

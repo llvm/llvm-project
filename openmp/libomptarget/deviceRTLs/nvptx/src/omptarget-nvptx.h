@@ -48,7 +48,9 @@
 // Macros for Cuda intrinsics
 // In Cuda 9.0, the *_sync() version takes an extra argument 'mask'.
 // Also, __ballot(1) in Cuda 8.0 is replaced with __activemask().
-#if defined(CUDART_VERSION) && CUDART_VERSION >= 9000
+#ifndef CUDA_VERSION
+#error CUDA_VERSION macro is undefined, something wrong with cuda.
+#elif CUDA_VERSION >= 9000
 #define __SHFL_SYNC(mask, var, srcLane) __shfl_sync((mask), (var), (srcLane))
 #define __SHFL_DOWN_SYNC(mask, var, delta, width)                              \
   __shfl_down_sync((mask), (var), (delta), (width))
@@ -58,7 +60,7 @@
 #define __SHFL_DOWN_SYNC(mask, var, delta, width)                              \
   __shfl_down((var), (delta), (width))
 #define __ACTIVEMASK() __ballot(1)
-#endif
+#endif // CUDA_VERSION
 
 #define __SYNCTHREADS_N(n) asm volatile("bar.sync %0;" : : "r"(n) : "memory");
 // Use original __syncthreads if compiled by nvcc or clang >= 9.0.

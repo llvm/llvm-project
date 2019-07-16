@@ -295,6 +295,7 @@ The typical usage through the C API is like the following:
     LLVMRemarkEntryRef Remark = NULL;
     while ((Remark = LLVMRemarkParserGetNext(Parser))) {
        // use Remark
+       LLVMRemarkEntryDispose(Remark); // Release memory.
     }
     bool HasError = LLVMRemarkParserHasError(Parser);
     LLVMRemarkParserDispose(Parser);

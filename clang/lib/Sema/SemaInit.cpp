@@ -5640,6 +5640,9 @@ void InitializationSequence::InitializeFrom(Sema &S,
   bool allowObjCWritebackConversion = S.getLangOpts().ObjCAutoRefCount &&
          Entity.isParameterKind();
 
+  if (TryOCLSamplerInitialization(S, *this, DestType, Initializer))
+    return;
+
   // We're at the end of the line for C: it's either a write-back conversion
   // or it's a C assignment. There's no need to check anything else.
   if (!S.getLangOpts().CPlusPlus) {
@@ -5648,9 +5651,6 @@ void InitializationSequence::InitializeFrom(Sema &S,
         tryObjCWritebackConversion(S, *this, Entity, Initializer)) {
       return;
     }
-
-    if (TryOCLSamplerInitialization(S, *this, DestType, Initializer))
-      return;
 
     if (TryOCLZeroOpaqueTypeInitialization(S, *this, DestType, Initializer))
       return;

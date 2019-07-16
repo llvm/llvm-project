@@ -717,7 +717,9 @@ let Predicates = [HasPA] in {
 // v8.3a floating point conversion for javascript
 let Predicates = [HasJS, HasFPARMv8] in
 def FJCVTZS  : BaseFPToIntegerUnscaled<0b01, 0b11, 0b110, FPR64, GPR32,
-                                      "fjcvtzs", []> {
+                                      "fjcvtzs",
+                                      [(set GPR32:$Rd,
+                                         (int_aarch64_fjcvtzs FPR64:$Rn))]> {
   let Inst{31} = 0;
 } // HasJS, HasFPARMv8
 

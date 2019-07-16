@@ -1,0 +1,48 @@
+# The END MRI command is optional. Scripts that omit
+# or include END should be handled by llvm-ar.
+RUN: rm -rf %t && mkdir -p %t
+
+# Empty File
+RUN: yaml2obj %S/Inputs/elf.yaml -o %t/elf.o
+
+RUN: touch %t/empty.mri
+RUN: llvm-ar -M < %t/empty.mri
+
+RUN: echo "END" > %t/empty-end.mri
+RUN: llvm-ar -M < %t/empty-end.mri
+
+# Comment only
+RUN: echo "; a comment" > %t/comment.mri
+RUN: llvm-ar -M < %t/comment.mri
+
+RUN: echo "; a comment" > %t/comment-end.mri
+RUN: echo "END" > %t/comment-end.mri
+RUN: llvm-ar -M < %t/comment-end.mri
+
+# Without Save
+RUN: echo "create %t/mri.ar" > %t/no-save.mri
+RUN: echo "addmod %t/elf.o" >> %t/no-save.mri
+RUN: llvm-ar -M < %t/no-save.mri
+RUN: test ! -e %t/mri.ar
+
+RUN: echo "create %t/mri.ar" > %t/no-save-end.mri
+RUN: echo "addmod %t/elf.o" >> %t/no-save-end.mri
+RUN: echo "END" > %t/no-save-end.mri
+RUN: llvm-ar -M < %t/no-save-end.mri
+RUN: test ! -e %t/mri.ar
+
+# With Save
+RUN: echo "create %t/mri.ar" > %t/save.mri
+RUN: echo "addmod %t/elf.o" >> %t/save.mri
+RUN: echo "save" >> %t/save.mri
+RUN: llvm-ar -M < %t/save.mri
+RUN: llvm-ar t %t/mri.ar | FileCheck %s
+
+RUN: echo "create %t/mri.ar" > %t/save-end.mri
+RUN: echo "addmod %t/elf.o" >> %t/save-end.mri
+RUN: echo "save" >> %t/save-end.mri
+RUN: echo "END" > %t/no-save-end.mri
+RUN: llvm-ar -M < %t/save-end.mri
+RUN: llvm-ar t %t/mri.ar | FileCheck %s
+
+CHECK: elf.o

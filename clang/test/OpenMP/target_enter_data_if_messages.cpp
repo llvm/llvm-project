@@ -9,6 +9,13 @@ bool foobool(int argc) {
   return argc;
 }
 
+void xxx(int argc) {
+  int cond; // expected-note {{initialize the variable 'cond' to silence this warning}}
+#pragma omp target enter data map(to:argc) if(cond) // expected-warning {{variable 'cond' is uninitialized when used here}}
+  for (int i = 0; i < 10; ++i)
+    ;
+}
+
 struct S1; // expected-note {{declared here}}
 
 int main(int argc, char **argv) {

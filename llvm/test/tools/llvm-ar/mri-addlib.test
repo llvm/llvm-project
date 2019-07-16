@@ -1,0 +1,45 @@
+## Test the ADDLIB MRI command.
+
+# RUN: rm -rf %t && mkdir -p %t
+# RUN: yaml2obj %s -o %t/f.o
+# RUN: llvm-ar r %t/f.a %t/f.o
+
+## Merge contents of archives.
+# RUN: echo "CREATE %t/addlib.a" > %t/addlib.mri
+# RUN: echo "ADDLIB %t/f.a" >> %t/addlib.mri
+# RUN: echo "SAVE" >> %t/addlib.mri
+# RUN: llvm-ar -M < %t/addlib.mri
+# RUN: llvm-nm --print-armap %t/addlib.a | FileCheck --check-prefix=SYMS %s
+# RUN: llvm-ar t %t/addlib.a | FileCheck --check-prefix=FILES %s
+
+# SYMS: f in {{.*}}
+# FILES: f.o
+
+## ADDLIB with non-archive file.
+# RUN: echo "CREATE %t/badlib.a" > %t/badlib.mri
+# RUN: echo "ADDLIB %s" >> %t/badlib.mri
+# RUN: echo "SAVE" >> %t/badlib.mri
+# RUN: not llvm-ar -M < %t/badlib.mri 2>&1 | FileCheck --check-prefix=PARSE %s
+# RUN: not ls %t/badlib.a
+
+# PARSE: Could not parse library
+
+## No create command.
+# RUN: echo "ADDLIB %t/f.a"  > %t/nocreate.mri
+# RUN: echo "SAVE" >> %t/nocreate.mri
+# RUN: not llvm-ar -M < %t/nocreate.mri
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name: .text
+    Type: SHT_PROGBITS
+Symbols:
+    - Name:    f
+      Binding: STB_GLOBAL
+      Section: .text
+...

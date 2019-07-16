@@ -36,7 +36,7 @@ private:
 
   void init();
 
-  // A cache of the mapping symbols defined by the InputSecion sorted in order
+  // A cache of the mapping symbols defined by the InputSection sorted in order
   // of ascending value with redundant symbols removed. These describe
   // the ranges of code and data in an executable InputSection.
   std::map<InputSection *, std::vector<const Defined *>> sectionMap;

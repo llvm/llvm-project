@@ -501,11 +501,10 @@ public:
     return const_child_range(&Condition, &Condition + 1);
   }
 
-  child_range used_children() {
-    return child_range(child_iterator(), child_iterator());
-  }
+  child_range used_children();
   const_child_range used_children() const {
-    return const_child_range(const_child_iterator(), const_child_iterator());
+    auto Children = const_cast<OMPIfClause *>(this)->used_children();
+    return const_child_range(Children.begin(), Children.end());
   }
 
   static bool classof(const OMPClause *T) {

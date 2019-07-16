@@ -829,7 +829,7 @@ public:
 
   // Translates offsets in input sections to offsets in output sections.
   // Given offset must increase monotonically. We assume that Piece is
-  // sorted by InputOff.
+  // sorted by inputOff.
   uint64_t get(uint64_t off) {
     if (pieces.empty())
       return off;
@@ -859,10 +859,10 @@ static void addRelativeReloc(InputSectionBase *isec, uint64_t offsetInSec,
                              RelType type) {
   Partition &part = isec->getPartition();
 
-  // Add a relative relocation. If RelrDyn section is enabled, and the
+  // Add a relative relocation. If relrDyn section is enabled, and the
   // relocation offset is guaranteed to be even, add the relocation to
-  // the RelrDyn section, otherwise add it to the RelaDyn section.
-  // RelrDyn sections don't support odd offsets. Also, RelrDyn sections
+  // the relrDyn section, otherwise add it to the relaDyn section.
+  // relrDyn sections don't support odd offsets. Also, relrDyn sections
   // don't store the addend values, so we must write it to the relocated
   // address.
   if (part.relrDyn && isec->alignment >= 2 && offsetInSec % 2 == 0) {
@@ -922,7 +922,7 @@ static bool canDefineSymbolInExecutable(Symbol &sym) {
   // executable will preempt it.
   // Note that we want the visibility of the shared symbol itself, not
   // the visibility of the symbol in the output file we are producing. That is
-  // why we use Sym.StOther.
+  // why we use Sym.stOther.
   if ((sym.stOther & 0x3) == STV_DEFAULT)
     return true;
 
@@ -1010,7 +1010,7 @@ static void processRelocAux(InputSectionBase &sec, RelExpr expr, RelType type,
   // Copy relocations (for STT_OBJECT) and canonical PLT (for STT_FUNC) are only
   // possible in an executable.
   //
-  // Among R_ABS relocatoin types, SymbolicRel has the same size as the word
+  // Among R_ABS relocatoin types, symbolicRel has the same size as the word
   // size. Others have fewer bits and may cause runtime overflow in -pie/-shared
   // mode. Disallow them.
   if (config->shared ||
@@ -1237,8 +1237,8 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
     //   GOT-generating or PLT-generating, the handling of an ifunc is
     //   relatively straightforward. We create a PLT entry in Iplt, which is
     //   usually at the end of .plt, which makes an indirect call using a
-    //   matching GOT entry in IgotPlt, which is usually at the end of .got.plt.
-    //   The GOT entry is relocated using an IRELATIVE relocation in RelaIplt,
+    //   matching GOT entry in igotPlt, which is usually at the end of .got.plt.
+    //   The GOT entry is relocated using an IRELATIVE relocation in relaIplt,
     //   which is usually at the end of .rela.plt. Unlike most relocations in
     //   .rela.plt, which may be evaluated lazily without -z now, dynamic
     //   loaders evaluate IRELATIVE relocs eagerly, which means that for
@@ -1274,13 +1274,13 @@ static void scanReloc(InputSectionBase &sec, OffsetGetter &getOffset, RelTy *&i,
     //   variable containing a pointer to the ifunc) needs to be relocated in
     //   the exact same way as a GOT entry, so we can avoid needing to make the
     //   PLT entry canonical by translating such relocations into IRELATIVE
-    //   relocations in the RelaIplt.
+    //   relocations in the relaIplt.
     if (!sym.isInPlt()) {
       // Create PLT and GOTPLT slots for the symbol.
       sym.isInIplt = true;
 
       // Create a copy of the symbol to use as the target of the IRELATIVE
-      // relocation in the IgotPlt. This is in case we make the PLT canonical
+      // relocation in the igotPlt. This is in case we make the PLT canonical
       // later, which would overwrite the original symbol.
       //
       // FIXME: Creating a copy of the symbol here is a bit of a hack. All
@@ -1526,7 +1526,7 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> outputSections) {
 
         // ISD->ThunkSections contains all created ThunkSections, including
         // those inserted in previous passes. Extract the Thunks created this
-        // pass and order them in ascending OutSecOff.
+        // pass and order them in ascending outSecOff.
         std::vector<ThunkSection *> newThunks;
         for (const std::pair<ThunkSection *, uint32_t> ts : isd->thunkSections)
           if (ts.second == pass)
@@ -1536,7 +1536,7 @@ void ThunkCreator::mergeThunks(ArrayRef<OutputSection *> outputSections) {
                             return a->outSecOff < b->outSecOff;
                           });
 
-        // Merge sorted vectors of Thunks and InputSections by OutSecOff
+        // Merge sorted vectors of Thunks and InputSections by outSecOff
         std::vector<InputSection *> tmp;
         tmp.reserve(isd->sections.size() + newThunks.size());
 

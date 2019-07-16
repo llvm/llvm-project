@@ -712,7 +712,6 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
   AAForDep = UseAA ? AA : nullptr;
 
   BarrierChain = nullptr;
-  SUnit *FPBarrierChain = nullptr;
 
   this->TrackLaneMasks = TrackLaneMasks;
   MISUnitMap.clear();
@@ -743,6 +742,14 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
   // therefore never unanalyzable, but this is conservatively not
   // done.
   Value2SUsMap NonAliasStores, NonAliasLoads(1 /*TrueMemOrderLatency*/);
+
+  // Track all instructions that may raise floating-point exceptions.
+  // These do not depend on one other (or normal loads or stores), but
+  // must not be rescheduled across global barriers.  Note that we don't
+  // really need a "map" here since we don't track those MIs by value;
+  // using the same Value2SUsMap data type here is simply a matter of
+  // convenience.
+  Value2SUsMap FPExceptions;
 
   // Remove any stale debug info; sometimes BuildSchedGraph is called again
   // without emitting the info from the previous call.
@@ -871,20 +878,24 @@ void ScheduleDAGInstrs::buildSchedGraph(AliasAnalysis *AA,
       addBarrierChain(Loads);
       addBarrierChain(NonAliasStores);
       addBarrierChain(NonAliasLoads);
-
-      // Add dependency against previous FP barrier and reset FP barrier.
-      if (FPBarrierChain)
-        FPBarrierChain->addPredBarrier(BarrierChain);
-      FPBarrierChain = BarrierChain;
+      addBarrierChain(FPExceptions);
 
       continue;
     }
 
-    // Instructions that may raise FP exceptions depend on each other.
+    // Instructions that may raise FP exceptions may not be moved
+    // across any global barriers.
     if (MI.mayRaiseFPException()) {
-      if (FPBarrierChain)
-        FPBarrierChain->addPredBarrier(SU);
-      FPBarrierChain = SU;
+      if (BarrierChain)
+        BarrierChain->addPredBarrier(SU);
+
+      FPExceptions.insert(SU, UnknownValue);
+
+      if (FPExceptions.size() >= HugeRegion) {
+        LLVM_DEBUG(dbgs() << "Reducing FPExceptions map.\n";);
+        Value2SUsMap empty;
+        reduceHugeMemNodeMaps(FPExceptions, empty, getReductionSize());
+      }
     }
 
     // If it's not a store or a variant load, we're done.

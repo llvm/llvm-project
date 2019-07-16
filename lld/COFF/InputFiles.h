@@ -119,7 +119,7 @@ public:
 
   ArrayRef<uint8_t> getDebugSection(StringRef secName);
 
-  // Returns a Symbol object for the SymbolIndex'th symbol in the
+  // Returns a Symbol object for the symbolIndex'th symbol in the
   // underlying object file.
   Symbol *getSymbol(uint32_t symbolIndex) {
     return symbols[symbolIndex];
