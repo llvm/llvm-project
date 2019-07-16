@@ -130,7 +130,7 @@ createMissedAnalysis(StringRef RemarkName, const Loop *TheLoop,
 bool TapirLoopInfo::collectIVs(PredicatedScalarEvolution &PSE,
                                OptimizationRemarkEmitter &ORE) {
   Loop *L = getLoop();
-  for (Instruction &I : *TheLoop->getHeader()) {
+  for (Instruction &I : *L->getHeader()) {
     if (auto *Phi = dyn_cast<PHINode>(&I)) {
       Type *PhiTy = Phi->getType();
       // Check that this PHI type is allowed.

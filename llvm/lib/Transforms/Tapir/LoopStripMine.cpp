@@ -675,11 +675,11 @@ Loop *llvm::StripMineLoop(
   TL.collectIVs(PSE, *ORE);
 
   // If no primary induction was found, just bail.
-  PHINode *PrimaryInduction = TL.getPrimaryInduction().first;
-  if (!PrimaryInduction) {
+  if (!TL.hasPrimaryInduction()) {
     LLVM_DEBUG(dbgs() << "No primary induction variable found in loop.");
     return nullptr;
   }
+  PHINode *PrimaryInduction = TL.getPrimaryInduction().first;
   LLVM_DEBUG(dbgs() << "\tPrimary induction " << *PrimaryInduction << "\n");
 
   Value *TripCount = TL.getOrCreateTripCount(PSE);

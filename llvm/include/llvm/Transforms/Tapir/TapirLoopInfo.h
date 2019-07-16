@@ -136,6 +136,11 @@ public:
   /// Returns the widest induction type.
   Type *getWidestInductionType() const { return WidestIndTy; }
 
+  /// Returns true if there is a primary induction variable for this Tapir loop.
+  bool hasPrimaryInduction() const {
+    return (nullptr != PrimaryInduction);
+  }
+
   /// Get the primary induction variable for this Tapir loop.
   const std::pair<PHINode *, InductionDescriptor> &getPrimaryInduction() const {
     assert(PrimaryInduction && "No primary induction.");
