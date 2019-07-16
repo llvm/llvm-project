@@ -802,7 +802,7 @@ struct __is_widenable_from_char_iter : false_type {};
 template <class _Iter>
 struct __is_widenable_from_char_iter <
     _Iter, true,
-    typename iterator_traits<_Iter>::value_type >
+    typename remove_reference<typename iterator_traits<_Iter>::value_type>::type >
     : true_type {
 
   static wstring __convert(_Iter __i, const locale& __loc) {

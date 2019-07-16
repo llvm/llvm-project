@@ -41,39 +41,37 @@ void RunTestCase(const char* TestPath, const char* Expect, std::locale Locale, A
     const std::string S(TestPath);
     path p(S, Locale, args...); 
     assert(p.native() == Expect);
-    assert(p.string<char>() == TestPath);
-    assert(p.string<char>() == S);
+    assert(p.string<char>() == Expect);
   }
   {
     const std::string_view S(TestPath);
     path p(S, Locale, args...); 
     assert(p.native() == Expect);
-    assert(p.string<char>() == TestPath);
-    assert(p.string<char>() == S);
+    assert(p.string<char>() == Expect);
   }
   // Char* pointers
   {
     path p(TestPath, Locale, args...);
     assert(p.native() == Expect);
-    assert(p.string<char>() == TestPath);
+    assert(p.string<char>() == Expect);
   }
   {
     path p(TestPath, TestPathEnd, Locale, args...);
     assert(p.native() == Expect);
-    assert(p.string<char>() == TestPath);
+    assert(p.string<char>() == Expect);
   }
   // Iterators
   {
     using It = input_iterator<const char*>;
     path p(It{TestPath}, Locale, args...);
     assert(p.native() == Expect);
-    assert(p.string<char>() == TestPath);
+    assert(p.string<char>() == Expect);
   }
   {
     using It = input_iterator<const char*>;
     path p(It{TestPath}, It{TestPathEnd}, Locale, args...);
     assert(p.native() == Expect);
-    assert(p.string<char>() == TestPath);
+    assert(p.string<char>() == Expect);
   }
 }
 
@@ -81,11 +79,11 @@ void test_sfinae() {
   using namespace fs;
   {
     using It = const char* const;
-    static_assert(std::is_constructible<path, It>::value, "");
+    static_assert(std::is_constructible<path, It, std::locale>::value, "");
   }
   {
     using It = input_iterator<const char*>;
-    static_assert(std::is_constructible<path, It>::value, "");
+    static_assert(std::is_constructible<path, It, std::locale>::value, "");
   }
   {
     struct Traits {
@@ -96,28 +94,47 @@ void test_sfinae() {
       using difference_type = std::ptrdiff_t;
     };
     using It = input_iterator<const char*, Traits>;
-    static_assert(std::is_constructible<path, It>::value, "");
+    static_assert(std::__is_input_iterator<It>::value, "");
+    //static_assert(std::is_constructible<path, It, std::locale>::value, "");
+  }
+  {
+    using It = const wchar_t* const;
+    static_assert(!std::is_constructible<path, It, std::locale>::value, "");
+  }
+  {
+    using It = input_iterator<const wchar_t*>;
+    static_assert(!std::is_constructible<path, It, std::locale>::value, "");
+  }
+  {
+    struct Traits {
+      using iterator_category = std::input_iterator_tag;
+      using value_type = const wchar_t;
+      using pointer = const wchar_t*;
+      using reference = const wchar_t&;
+      using difference_type = std::ptrdiff_t;
+    };
+    using It = input_iterator<const wchar_t*, Traits>;
+    static_assert(!std::is_constructible<path, It, std::locale>::value, "");
   }
   {
     using It = output_iterator<const char*>;
-    static_assert(!std::is_constructible<path, It>::value, "");
-
+    static_assert(!std::is_constructible<path, It, std::locale>::value, "");
   }
   {
-    static_assert(!std::is_constructible<path, int*>::value, "");
+    static_assert(!std::is_constructible<path, int*, std::locale>::value, "");
   }
 }
 
 struct CustomCodeCvt : std::codecvt<wchar_t, char, std::mbstate_t> {
 protected:
   result do_in(state_type&,
-               const extern_type* __frm, const extern_type* __frm_end, const extern_type*& __frm_nxt,
-               intern_type* __to, intern_type* __to_end, intern_type*& __to_nxt) const override {
-    for (; __frm < __frm_end && __to < __to_end; ++__frm, ++__to)
-      *__to = 'o';
+               const extern_type* from, const extern_type* from_end, const extern_type*& from_next,
+               intern_type* to, intern_type* to_end, intern_type*& to_next) const override {
+    for (; from < from_end && to < to_end; ++from, ++to)
+      *to = 'o';
     
-    __frm_nxt = __frm;
-    __to_nxt = __to;
+    from_next = from;
+    to_next = to;
 
     return result::ok;
   }
@@ -125,9 +142,9 @@ protected:
 
 int main(int, char**) {
   std::locale Locale;
-  std::locale CustomLocale(Locale, new CustomCodeCvt());
 
   // Ensure std::codecvt<wchar_t, char, std::mbstate_t> is used.
+  std::locale CustomLocale(Locale, new CustomCodeCvt());
   std::string TestPath("aaaa");
   std::string Expect("oooo");
   RunTestCase(TestPath.c_str(), Expect.c_str(), CustomLocale);
@@ -135,7 +152,6 @@ int main(int, char**) {
   RunTestCase(TestPath.c_str(), Expect.c_str(), CustomLocale, fs::path::format::native_format);
   RunTestCase(TestPath.c_str(), Expect.c_str(), CustomLocale, fs::path::format::generic_format);
 
-  // Test on paths with global locale.
   for (auto const& MS : PathList) {
     RunTestCase(MS, MS, Locale);
     RunTestCase(MS, MS, Locale, fs::path::format::auto_format);
