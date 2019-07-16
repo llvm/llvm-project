@@ -207,7 +207,7 @@ void BuiltinNameEmitter::GetOverloads() {
 }
 
 void BuiltinNameEmitter::EmitSignatureTable() {
-  OS << "OpenCLType OpenCLSignature[] = {\n";
+  OS << "static const OpenCLType OpenCLSignature[] = {\n";
   for (auto &P : SignatureSet) {
     OS << "// " << P.second << "\n";
     for (Record *R : P.first) {
@@ -222,7 +222,7 @@ void BuiltinNameEmitter::EmitSignatureTable() {
 }
 
 void BuiltinNameEmitter::EmitBuiltinTable() {
-  OS << "OpenCLBuiltinDecl OpenCLBuiltins[] = {\n";
+  OS << "static const OpenCLBuiltinDecl OpenCLBuiltins[] = {\n";
   for (auto &i : OverloadInfo) {
     StringRef Name = i.first;
     OS << "// " << Name << "\n";
@@ -255,7 +255,7 @@ void BuiltinNameEmitter::EmitStringMatcher() {
   OS << R"(
 // Return 0 if name is not a recognized OpenCL builtin, or an index
 // into a table of declarations if it is an OpenCL builtin.
-std::pair<unsigned, unsigned> isOpenCLBuiltin(llvm::StringRef name) {
+static std::pair<unsigned, unsigned> isOpenCLBuiltin(llvm::StringRef name) {
 
 )";
 

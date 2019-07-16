@@ -160,7 +160,7 @@ def x86mmx : ValueType<64 , 125>;   // X86 MMX value
 def FlagVT : ValueType<0  , 126>;   // Pre-RA sched glue
 def isVoid : ValueType<0  , 127>;   // Produces no value
 def untyped: ValueType<8  , 128>;   // Produces an untyped value
-def ExceptRef: ValueType<0, 129>;   // WebAssembly's except_ref type
+def exnref: ValueType<0, 129>;      // WebAssembly's exnref type
 def token  : ValueType<0  , 248>;   // TokenTy
 def MetadataVT: ValueType<0, 249>;  // Metadata
 

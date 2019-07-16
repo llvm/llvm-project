@@ -1,5 +1,5 @@
 ; RUN: opt < %s -instsimplify -S | FileCheck %s
-target datalayout = "p:32:32"
+target datalayout = "p:32:32-p1:64:64"
 
 define i1 @ptrtoint() {
 ; CHECK-LABEL: @ptrtoint(
@@ -1356,6 +1356,15 @@ define i1 @constant_fold_null_inttoptr() {
 ;
   %x = icmp eq i32* null, inttoptr (i64 32 to i32*)
   ret i1 %x
+}
+
+; CHECK-LABEL: @cmp_through_addrspacecast(
+; CHECK-NEXT: ret i1 true
+define i1 @cmp_through_addrspacecast(i32 addrspace(1)* %p1) {
+  %p0 = addrspacecast i32 addrspace(1)* %p1 to i32*
+  %p0.1 = getelementptr inbounds i32, i32* %p0, i64 1
+  %cmp = icmp ne i32* %p0, %p0.1
+  ret i1 %cmp
 }
 
 attributes #0 = { "null-pointer-is-valid"="true" }

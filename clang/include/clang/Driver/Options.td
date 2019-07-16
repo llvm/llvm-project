@@ -1270,7 +1270,7 @@ def flto_jobs_EQ : Joined<["-"], "flto-jobs=">,
            "of 0 means the number of threads will be derived from "
            "the number of CPUs detected)">;
 def fthinlto_index_EQ : Joined<["-"], "fthinlto-index=">,
-  Flags<[CC1Option]>, Group<f_Group>,
+  Flags<[CoreOption, CC1Option]>, Group<f_Group>,
   HelpText<"Perform ThinLTO importing using provided function summary index">;
 def fmacro_backtrace_limit_EQ : Joined<["-"], "fmacro-backtrace-limit=">,
                                 Group<f_Group>, Flags<[DriverOption, CoreOption]>;

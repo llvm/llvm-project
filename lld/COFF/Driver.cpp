@@ -1606,7 +1606,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // Handle generation of import library from a def file.
   if (!args.hasArg(OPT_INPUT)) {
     fixupExports();
-    createImportLibrary(/*AsLib=*/true);
+    createImportLibrary(/*asLib=*/true);
     return;
   }
 
@@ -1830,7 +1830,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // need to create a .lib file.
   if (!config->exports.empty() || config->dll) {
     fixupExports();
-    createImportLibrary(/*AsLib=*/false);
+    createImportLibrary(/*asLib=*/false);
     assignExportOrdinals();
   }
 

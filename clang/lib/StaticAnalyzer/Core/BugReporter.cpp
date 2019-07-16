@@ -1259,7 +1259,7 @@ generateEmptyDiagnosticForReport(BugReport *R, SourceManager &SM) {
   return llvm::make_unique<PathDiagnostic>(
       R->getBugType().getCheckName(), R->getDeclWithIssue(),
       R->getBugType().getName(), R->getDescription(),
-      R->getShortDescription(/*Fallback=*/false), BT.getCategory(),
+      R->getShortDescription(/*UseFallback=*/false), BT.getCategory(),
       R->getUniqueingLocation(), R->getUniqueingDecl(),
       findExecutedLines(SM, R->getErrorNode()));
 }

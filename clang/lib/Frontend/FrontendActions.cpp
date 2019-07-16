@@ -139,7 +139,7 @@ GeneratePCHAction::CreateOutputFile(CompilerInstance &CI, StringRef InFile,
   std::unique_ptr<raw_pwrite_stream> OS =
       CI.createOutputFile(CI.getFrontendOpts().OutputFile, /*Binary=*/true,
                           /*RemoveFileOnSignal=*/false, InFile,
-                          /*Extension=*/"", /*useTemporary=*/true);
+                          /*Extension=*/"", /*UseTemporary=*/true);
   if (!OS)
     return nullptr;
 
@@ -215,7 +215,7 @@ GenerateModuleFromModuleMapAction::CreateOutputFile(CompilerInstance &CI,
   // We use a temporary to avoid race conditions.
   return CI.createOutputFile(CI.getFrontendOpts().OutputFile, /*Binary=*/true,
                              /*RemoveFileOnSignal=*/false, InFile,
-                             /*Extension=*/"", /*useTemporary=*/true,
+                             /*Extension=*/"", /*UseTemporary=*/true,
                              /*CreateMissingDirectories=*/true);
 }
 

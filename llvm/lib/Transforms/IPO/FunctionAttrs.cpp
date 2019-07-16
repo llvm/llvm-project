@@ -261,12 +261,15 @@ static bool addReadAttrs(const SCCNodeSet &SCCNodes, AARGetterT &&AARGetter) {
     }
   }
 
+  // If the SCC contains both functions that read and functions that write, then
+  // we cannot add readonly attributes.
+  if (ReadsMemory && WritesMemory)
+    return false;
+
   // Success!  Functions in this SCC do not access memory, or only read memory.
   // Give them the appropriate attribute.
   bool MadeChange = false;
 
-  assert(!(ReadsMemory && WritesMemory) &&
-          "Function marked read-only and write-only");
   for (Function *F : SCCNodes) {
     if (F->doesNotAccessMemory())
       // Already perfect!

@@ -1296,6 +1296,9 @@ static uint64_t getRawAttributeMask(Attribute::AttrKind Val) {
   case Attribute::AllocSize:
     llvm_unreachable("allocsize not supported in raw format");
     break;
+  case Attribute::SanitizeMemTag:
+    llvm_unreachable("sanitize_memtag attribute not supported in raw format");
+    break;
   }
   llvm_unreachable("Unsupported attribute type");
 }
@@ -1305,7 +1308,8 @@ static void addRawAttributeValue(AttrBuilder &B, uint64_t Val) {
 
   for (Attribute::AttrKind I = Attribute::None; I != Attribute::EndAttrKinds;
        I = Attribute::AttrKind(I + 1)) {
-    if (I == Attribute::Dereferenceable ||
+    if (I == Attribute::SanitizeMemTag ||
+        I == Attribute::Dereferenceable ||
         I == Attribute::DereferenceableOrNull ||
         I == Attribute::ArgMemOnly ||
         I == Attribute::AllocSize ||
@@ -1534,6 +1538,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::ZExt;
   case bitc::ATTR_KIND_IMMARG:
     return Attribute::ImmArg;
+  case bitc::ATTR_KIND_SANITIZE_MEMTAG:
+    return Attribute::SanitizeMemTag;
   }
 }
 

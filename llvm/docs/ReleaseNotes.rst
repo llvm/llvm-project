@@ -76,6 +76,10 @@ Changes to the LLVM IR
   pointee type. In the next release we intend to make this parameter
   mandatory in preparation for opaque pointer types.
 
+* ``atomicrmw xchg`` now allows floating point types
+
+* ``atomicrmw`` now supports ``fadd`` and ``fsub``
+
 Changes to building LLVM
 ------------------------
 
@@ -107,7 +111,13 @@ Changes to the X86 Target
 Changes to the AMDGPU Target
 -----------------------------
 
- During this release ...
+* Function call support is now enabled by default
+
+* Improved support for 96-bit loads and stores
+
+* DPP combiner pass is now enabled by default
+
+* Support for gfx10
 
 Changes to the AVR Target
 -----------------------------

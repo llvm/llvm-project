@@ -379,27 +379,6 @@ class FlatStoreAddress : CodePatPred<[{
          AS == AMDGPUAS::GLOBAL_ADDRESS;
 }]>;
 
-class AZExtLoadBase <SDPatternOperator ld_node>: PatFrag<(ops node:$ptr),
-                                              (ld_node node:$ptr), [{
-  LoadSDNode *L = cast<LoadSDNode>(N);
-  return L->getExtensionType() == ISD::ZEXTLOAD ||
-         L->getExtensionType() == ISD::EXTLOAD;
-}]>;
-
-def az_extload : AZExtLoadBase <unindexedload>;
-
-def az_extloadi8 : PatFrag<(ops node:$ptr), (az_extload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i8;
-}]>;
-
-def az_extloadi16 : PatFrag<(ops node:$ptr), (az_extload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i16;
-}]>;
-
-def az_extloadi32 : PatFrag<(ops node:$ptr), (az_extload node:$ptr), [{
-  return cast<LoadSDNode>(N)->getMemoryVT() == MVT::i32;
-}]>;
-
 class PrivateLoad <SDPatternOperator op> : LoadFrag <op>, PrivateAddress;
 class PrivateStore <SDPatternOperator op> : StoreFrag <op>, PrivateAddress;
 
@@ -419,9 +398,11 @@ class ConstantLoad <SDPatternOperator op> : LoadFrag <op>, ConstantAddress;
 
 
 def load_private : PrivateLoad <load>;
-def az_extloadi8_private : PrivateLoad <az_extloadi8>;
+def extloadi8_private : PrivateLoad <extloadi8>;
+def zextloadi8_private : PrivateLoad <zextloadi8>;
 def sextloadi8_private : PrivateLoad <sextloadi8>;
-def az_extloadi16_private : PrivateLoad <az_extloadi16>;
+def extloadi16_private : PrivateLoad <extloadi16>;
+def zextloadi16_private : PrivateLoad <zextloadi16>;
 def sextloadi16_private : PrivateLoad <sextloadi16>;
 
 def store_private : PrivateStore <store>;
@@ -433,9 +414,11 @@ def truncstorei8_hi16_private : StoreHi16<truncstorei8>, PrivateAddress;
 
 def load_global : GlobalLoad <load>;
 def sextloadi8_global : GlobalLoad <sextloadi8>;
-def az_extloadi8_global : GlobalLoad <az_extloadi8>;
+def extloadi8_global : GlobalLoad <extloadi8>;
+def zextloadi8_global : GlobalLoad <zextloadi8>;
 def sextloadi16_global : GlobalLoad <sextloadi16>;
-def az_extloadi16_global : GlobalLoad <az_extloadi16>;
+def extloadi16_global : GlobalLoad <extloadi16>;
+def zextloadi16_global : GlobalLoad <zextloadi16>;
 def atomic_load_global : GlobalLoad<atomic_load>;
 
 def store_global : GlobalStore <store>;
@@ -479,9 +462,11 @@ def store_align16_local : Aligned16Bytes <
 >;
 
 def load_flat          : FlatLoad <load>;
-def az_extloadi8_flat  : FlatLoad <az_extloadi8>;
+def extloadi8_flat  : FlatLoad <extloadi8>;
+def zextloadi8_flat  : FlatLoad <zextloadi8>;
 def sextloadi8_flat    : FlatLoad <sextloadi8>;
-def az_extloadi16_flat : FlatLoad <az_extloadi16>;
+def extloadi16_flat : FlatLoad <extloadi16>;
+def zextloadi16_flat : FlatLoad <zextloadi16>;
 def sextloadi16_flat   : FlatLoad <sextloadi16>;
 def atomic_load_flat   : FlatLoad<atomic_load>;
 
@@ -495,9 +480,11 @@ def truncstorei16_hi16_flat : StoreHi16<truncstorei16>, FlatStoreAddress;
 
 def constant_load : ConstantLoad<load>;
 def sextloadi8_constant : ConstantLoad <sextloadi8>;
-def az_extloadi8_constant : ConstantLoad <az_extloadi8>;
+def extloadi8_constant : ConstantLoad <extloadi8>;
+def zextloadi8_constant : ConstantLoad <zextloadi8>;
 def sextloadi16_constant : ConstantLoad <sextloadi16>;
-def az_extloadi16_constant : ConstantLoad <az_extloadi16>;
+def extloadi16_constant : ConstantLoad <extloadi16>;
+def zextloadi16_constant : ConstantLoad <zextloadi16>;
 
 
 class local_binary_atomic_op<SDNode atomic_op> :

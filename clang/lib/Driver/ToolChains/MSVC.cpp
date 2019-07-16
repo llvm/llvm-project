@@ -626,11 +626,11 @@ std::unique_ptr<Command> visualstudio::Compiler::GetCommand(
   // FIXME: How can we ensure this stays in sync with relevant clang-cl options?
 
   if (Args.hasFlag(options::OPT__SLASH_GR_, options::OPT__SLASH_GR,
-                   /*default=*/false))
+                   /*Default=*/false))
     CmdArgs.push_back("/GR-");
 
   if (Args.hasFlag(options::OPT__SLASH_GS_, options::OPT__SLASH_GS,
-                   /*default=*/false))
+                   /*Default=*/false))
     CmdArgs.push_back("/GS-");
 
   if (Arg *A = Args.getLastArg(options::OPT_ffunction_sections,

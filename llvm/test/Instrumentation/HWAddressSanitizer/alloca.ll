@@ -17,28 +17,28 @@ define void @test_alloca() sanitize_hwaddress {
 ; CHECK: %[[BASE_TAG:[^ ]*]] = xor i64 %[[A]], %[[B]]
 
 ; CHECK: %[[X:[^ ]*]] = alloca { i32, [12 x i8] }, align 16
-; CHECK: %[[X_GEP:[^ ]*]] = getelementptr { i32, [12 x i8] }, { i32, [12 x i8] }* %[[X]], i32 0, i32 0
+; CHECK: %[[X_BC:[^ ]*]] = bitcast { i32, [12 x i8] }* %[[X]] to i32*
 ; CHECK: %[[X_TAG:[^ ]*]] = xor i64 %[[BASE_TAG]], 0
-; CHECK: %[[X1:[^ ]*]] = ptrtoint i32* %[[X_GEP]] to i64
+; CHECK: %[[X1:[^ ]*]] = ptrtoint i32* %[[X_BC]] to i64
 ; CHECK: %[[C:[^ ]*]] = shl i64 %[[X_TAG]], 56
 ; CHECK: %[[D:[^ ]*]] = or i64 %[[X1]], %[[C]]
 ; CHECK: %[[X_HWASAN:[^ ]*]] = inttoptr i64 %[[D]] to i32*
 
 ; CHECK: %[[X_TAG2:[^ ]*]] = trunc i64 %[[X_TAG]] to i8
-; CHECK: %[[E:[^ ]*]] = ptrtoint i32* %[[X_GEP]] to i64
+; CHECK: %[[E:[^ ]*]] = ptrtoint i32* %[[X_BC]] to i64
 ; CHECK: %[[F:[^ ]*]] = lshr i64 %[[E]], 4
 ; DYNAMIC-SHADOW: %[[X_SHADOW:[^ ]*]] = getelementptr i8, i8* %.hwasan.shadow, i64 %[[F]]
 ; ZERO-BASED-SHADOW: %[[X_SHADOW:[^ ]*]] = inttoptr i64 %[[F]] to i8*
 ; CHECK: %[[X_SHADOW_GEP:[^ ]*]] = getelementptr i8, i8* %[[X_SHADOW]], i32 0
 ; CHECK: store i8 4, i8* %[[X_SHADOW_GEP]]
-; CHECK: %[[X_I8:[^ ]*]] = bitcast i32* %[[X_GEP]] to i8*
+; CHECK: %[[X_I8:[^ ]*]] = bitcast i32* %[[X_BC]] to i8*
 ; CHECK: %[[X_I8_GEP:[^ ]*]] = getelementptr i8, i8* %[[X_I8]], i32 15
 ; CHECK: store i8 %[[X_TAG2]], i8* %[[X_I8_GEP]]
 ; CHECK: call void @use32(i32* nonnull %[[X_HWASAN]])
 
 ; UAR-TAGS: %[[BASE_TAG_COMPL:[^ ]*]] = xor i64 %[[BASE_TAG]], 255
 ; UAR-TAGS: %[[X_TAG_UAR:[^ ]*]] = trunc i64 %[[BASE_TAG_COMPL]] to i8
-; CHECK: %[[E2:[^ ]*]] = ptrtoint i32* %[[X_GEP]] to i64
+; CHECK: %[[E2:[^ ]*]] = ptrtoint i32* %[[X_BC]] to i64
 ; CHECK: %[[F2:[^ ]*]] = lshr i64 %[[E2]], 4
 ; DYNAMIC-SHADOW: %[[X_SHADOW2:[^ ]*]] = getelementptr i8, i8* %.hwasan.shadow, i64 %[[F2]]
 ; ZERO-BASED-SHADOW: %[[X_SHADOW2:[^ ]*]] = inttoptr i64 %[[F2]] to i8*

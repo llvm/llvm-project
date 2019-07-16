@@ -97,19 +97,17 @@ private:
   /// Value of numeric variable, if defined, or None otherwise.
   Optional<uint64_t> Value;
 
-  /// Line number where this variable is defined. Used to determine whether a
-  /// variable is defined on the same line as a given use.
-  size_t DefLineNumber;
+  /// Line number where this variable is defined, or None if defined before
+  /// input is parsed. Used to determine whether a variable is defined on the
+  /// same line as a given use.
+  Optional<size_t> DefLineNumber;
 
 public:
-  /// Constructor for a variable \p Name defined at line \p DefLineNumber.
-  FileCheckNumericVariable(size_t DefLineNumber, StringRef Name)
+  /// Constructor for a variable \p Name defined at line \p DefLineNumber or
+  /// defined before input is parsed if DefLineNumber is None.
+  FileCheckNumericVariable(StringRef Name,
+                           Optional<size_t> DefLineNumber = None)
       : Name(Name), DefLineNumber(DefLineNumber) {}
-
-  /// Constructor for numeric variable \p Name with a known \p Value at parse
-  /// time (e.g. the @LINE numeric variable).
-  FileCheckNumericVariable(StringRef Name, uint64_t Value)
-      : Name(Name), Value(Value), DefLineNumber(0) {}
 
   /// \returns name of this numeric variable.
   StringRef getName() const { return Name; }
@@ -125,8 +123,9 @@ public:
   /// currently defined or not.
   void clearValue();
 
-  /// \returns the line number where this variable is defined.
-  size_t getDefLineNumber() { return DefLineNumber; }
+  /// \returns the line number where this variable is defined, if any, or None
+  /// if defined before input is parsed.
+  Optional<size_t> getDefLineNumber() { return DefLineNumber; }
 };
 
 /// Class representing the use of a numeric variable in the AST of an
@@ -476,13 +475,14 @@ class FileCheckPattern {
 
   Check::FileCheckType CheckTy;
 
-  /// Line number for this CHECK pattern. Used to determine whether a variable
-  /// definition is made on an earlier line to the one with this CHECK.
-  size_t LineNumber;
+  /// Line number for this CHECK pattern or None if it is an implicit pattern.
+  /// Used to determine whether a variable definition is made on an earlier
+  /// line to the one with this CHECK.
+  Optional<size_t> LineNumber;
 
 public:
   FileCheckPattern(Check::FileCheckType Ty, FileCheckPatternContext *Context,
-                   size_t Line)
+                   Optional<size_t> Line = None)
       : Context(Context), CheckTy(Ty), LineNumber(Line) {}
 
   /// \returns the location in source code.
@@ -509,13 +509,13 @@ public:
   static Expected<VariableProperties> parseVariable(StringRef &Str,
                                                     const SourceMgr &SM);
   /// Parses \p Expr for the name of a numeric variable to be defined at line
-  /// \p LineNumber. \returns a pointer to the class instance representing that
-  /// variable, creating it if needed, or an error holding a diagnostic against
-  /// \p SM should defining such a variable be invalid.
-  static Expected<FileCheckNumericVariable *>
-  parseNumericVariableDefinition(StringRef &Expr,
-                                 FileCheckPatternContext *Context,
-                                 size_t LineNumber, const SourceMgr &SM);
+  /// \p LineNumber or before input is parsed if \p LineNumber is None.
+  /// \returns a pointer to the class instance representing that variable,
+  /// creating it if needed, or an error holding a diagnostic against \p SM
+  /// should defining such a variable be invalid.
+  static Expected<FileCheckNumericVariable *> parseNumericVariableDefinition(
+      StringRef &Expr, FileCheckPatternContext *Context,
+      Optional<size_t> LineNumber, const SourceMgr &SM);
   /// Parses \p Expr for a numeric substitution block. Parameter
   /// \p IsLegacyLineExpr indicates whether \p Expr should be a legacy @LINE
   /// expression. \returns a pointer to the class instance representing the AST

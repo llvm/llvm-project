@@ -14,7 +14,6 @@
 #include "lldb/Core/ValueObjectConstResult.h"
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/ClangASTContext.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/DataBufferHeap.h"
@@ -23,6 +22,7 @@
 #include "lldb/Utility/Stream.h"
 
 #include "Plugins/Language/ObjC/NSString.h"
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 using namespace lldb;
 using namespace lldb_private;

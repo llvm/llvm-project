@@ -10,7 +10,6 @@ add_lldb_library(lldbTarget
   Memory.cpp
   MemoryHistory.cpp
   ModuleCache.cpp
-  ObjCLanguageRuntime.cpp
   OperatingSystem.cpp
   PathMappingList.cpp
   Platform.cpp

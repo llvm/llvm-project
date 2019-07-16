@@ -90,6 +90,13 @@ test:
 	ret
 # NORELAX-RELOC-NOT: R_RISCV
 # C-EXT-NORELAX-RELOC-NOT: R_RISCV
+# Code alignment of a byte size less than the size of a nop must be treated
+# as no alignment. This used to trigger a fatal error with relaxation enabled
+# as the calculation to emit the worst-case sequence of nops would overflow.
+	.p2align        1
+	add	a0, a0, a1
+	.p2align        0
+	add	a0, a0, a1
 # We only need to insert R_RISCV_ALIGN for code section
 # when the linker relaxation enabled.
         .data

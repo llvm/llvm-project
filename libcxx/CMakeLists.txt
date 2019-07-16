@@ -151,8 +151,10 @@ set_property(CACHE LIBCXX_CXX_ABI PROPERTY STRINGS ;${CXXABIS})
 # Without this all the bots fail while building libc++
 if (DEFINED ENV{USER})
   if (("$ENV{USER}" STREQUAL "buildbot") OR (("$ENV{USER}" STREQUAL "llvmbb") OR ("$ENV{USER}" STREQUAL "buildslave")))
-    message(WARNING "OVERRIDING BUILDBOT CONFIG")
-    set(LIBCXX_CXX_ABI "default" CACHE STRING "FIXME" FORCE)
+    if (LIBCXX_CXX_ABI STREQUAL "libcxxabi" AND NOT DEFINED LIBCXX_CXX_ABI_INCLUDE_PATHS)
+      message(WARNING "OVERRIDING BUILDBOT CONFIG")
+      set(LIBCXX_CXX_ABI "default" CACHE STRING "FIXME" FORCE)
+    endif()
   endif()
 endif()
 # Setup the default options if LIBCXX_CXX_ABI is not specified.

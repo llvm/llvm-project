@@ -25,6 +25,7 @@ tail:
   ret void
 }
 
+; TODO: Extend simm12's MCOperandPredicate so the jalr zero is printed as a jr.
 define i32 @relax_jal(i1 %a) nounwind {
 ; CHECK-LABEL: relax_jal:
 ; CHECK:       # %bb.0:
@@ -32,7 +33,7 @@ define i32 @relax_jal(i1 %a) nounwind {
 ; CHECK-NEXT:    bnez a0, .LBB1_1
 ; CHECK-NEXT:  # %bb.3:
 ; CHECK-NEXT:    lui a0, %hi(.LBB1_2)
-; CHECK-NEXT:    jalr zero, a0, %lo(.LBB1_2)
+; CHECK-NEXT:    jalr zero, %lo(.LBB1_2)(a0)
 ; CHECK-NEXT:  .LBB1_1: # %iftrue
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP

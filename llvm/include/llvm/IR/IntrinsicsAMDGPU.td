@@ -1191,7 +1191,7 @@ def int_amdgcn_interp_mov :
   GCCBuiltin<"__builtin_amdgcn_interp_mov">,
   Intrinsic<[llvm_float_ty],
             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrNoMem, IntrSpeculatable]>;
+            [IntrNoMem, IntrSpeculatable, ImmArg<1>, ImmArg<2>]>;
 
 // __builtin_amdgcn_interp_p1 <i>, <attr_chan>, <attr>, <m0>
 // This intrinsic reads from lds, but the memory values are constant,
@@ -1200,14 +1200,14 @@ def int_amdgcn_interp_p1 :
   GCCBuiltin<"__builtin_amdgcn_interp_p1">,
   Intrinsic<[llvm_float_ty],
             [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrNoMem, IntrSpeculatable]>;
+            [IntrNoMem, IntrSpeculatable, ImmArg<1>, ImmArg<2>]>;
 
 // __builtin_amdgcn_interp_p2 <p1>, <j>, <attr_chan>, <attr>, <m0>
 def int_amdgcn_interp_p2 :
   GCCBuiltin<"__builtin_amdgcn_interp_p2">,
   Intrinsic<[llvm_float_ty],
             [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
-            [IntrNoMem, IntrSpeculatable]>;
+            [IntrNoMem, IntrSpeculatable, ImmArg<2>, ImmArg<3>]>;
           // See int_amdgcn_v_interp_p1 for why this is IntrNoMem.
 
 // __builtin_amdgcn_interp_p1_f16 <i>, <attr_chan>, <attr>, <high>, <m0>
@@ -1215,14 +1215,14 @@ def int_amdgcn_interp_p1_f16 :
   GCCBuiltin<"__builtin_amdgcn_interp_p1_f16">,
   Intrinsic<[llvm_float_ty],
             [llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],
-            [IntrNoMem, IntrSpeculatable]>;
+            [IntrNoMem, IntrSpeculatable, ImmArg<1>, ImmArg<2>, ImmArg<3>]>;
 
 // __builtin_amdgcn_interp_p2_f16 <p1>, <j>, <attr_chan>, <attr>, <high>, <m0>
 def int_amdgcn_interp_p2_f16 :
   GCCBuiltin<"__builtin_amdgcn_interp_p2_f16">,
   Intrinsic<[llvm_half_ty],
             [llvm_float_ty, llvm_float_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i32_ty],
-            [IntrNoMem, IntrSpeculatable]>;
+            [IntrNoMem, IntrSpeculatable, ImmArg<2>, ImmArg<3>, ImmArg<4>]>;
 
 // Pixel shaders only: whether the current pixel is live (i.e. not a helper
 // invocation for derivative computation).
@@ -1347,6 +1347,16 @@ def int_amdgcn_alignbit : Intrinsic<[llvm_i32_ty],
 
 def int_amdgcn_alignbyte : Intrinsic<[llvm_i32_ty],
   [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable]
+>;
+
+def int_amdgcn_mul_i24 : Intrinsic<[llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty],
+  [IntrNoMem, IntrSpeculatable]
+>;
+
+def int_amdgcn_mul_u24 : Intrinsic<[llvm_i32_ty],
+  [llvm_i32_ty, llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 

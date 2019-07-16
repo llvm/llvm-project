@@ -736,6 +736,17 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
     MI.eraseFromParent();
     return Legalized;
   }
+  case TargetOpcode::G_EXTRACT_VECTOR_ELT:
+  case TargetOpcode::G_INSERT_VECTOR_ELT: {
+    if (TypeIdx != 2)
+      return UnableToLegalize;
+
+    int OpIdx = MI.getOpcode() == TargetOpcode::G_EXTRACT_VECTOR_ELT ? 2 : 3;
+    Observer.changingInstr(MI);
+    narrowScalarSrc(MI, NarrowTy, OpIdx);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   }
 }
 

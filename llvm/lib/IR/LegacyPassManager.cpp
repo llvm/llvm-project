@@ -310,7 +310,7 @@ void PassManagerPrettyStackEntry::print(raw_ostream &OS) const {
     OS << "value";
 
   OS << " '";
-  V->printAsOperand(OS, /*PrintTy=*/false, M);
+  V->printAsOperand(OS, /*PrintType=*/false, M);
   OS << "'\n";
 }
 

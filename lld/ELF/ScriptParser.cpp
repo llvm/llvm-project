@@ -280,26 +280,26 @@ void ScriptParser::addFile(StringRef s) {
     SmallString<128> pathData;
     StringRef path = (config->sysroot + s).toStringRef(pathData);
     if (sys::fs::exists(path)) {
-      driver->addFile(saver.save(path), /*WithLOption=*/false);
+      driver->addFile(saver.save(path), /*withLOption=*/false);
       return;
     }
   }
 
   if (s.startswith("/")) {
-    driver->addFile(s, /*WithLOption=*/false);
+    driver->addFile(s, /*withLOption=*/false);
   } else if (s.startswith("=")) {
     if (config->sysroot.empty())
-      driver->addFile(s.substr(1), /*WithLOption=*/false);
+      driver->addFile(s.substr(1), /*withLOption=*/false);
     else
       driver->addFile(saver.save(config->sysroot + "/" + s.substr(1)),
-                      /*WithLOption=*/false);
+                      /*withLOption=*/false);
   } else if (s.startswith("-l")) {
     driver->addLibrary(s.substr(2));
   } else if (sys::fs::exists(s)) {
-    driver->addFile(s, /*WithLOption=*/false);
+    driver->addFile(s, /*withLOption=*/false);
   } else {
     if (Optional<std::string> path = findFromSearchPaths(s))
-      driver->addFile(saver.save(*path), /*WithLOption=*/true);
+      driver->addFile(saver.save(*path), /*withLOption=*/true);
     else
       setError("unable to find " + s);
   }

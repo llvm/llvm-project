@@ -370,6 +370,45 @@ bool InstructionSelector::executeMatchTable(
             return false;
       break;
     }
+    case GIM_CheckMemoryAddressSpace: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t MMOIdx = MatchTable[CurrentIdx++];
+      // This accepts a list of possible address spaces.
+      const int NumAddrSpace = MatchTable[CurrentIdx++];
+
+      if (State.MIs[InsnID]->getNumMemOperands() <= MMOIdx) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+        break;
+      }
+
+      // Need to still jump to the end of the list of address spaces if we find
+      // a match earlier.
+      const uint64_t LastIdx = CurrentIdx + NumAddrSpace;
+
+      const MachineMemOperand *MMO
+        = *(State.MIs[InsnID]->memoperands_begin() + MMOIdx);
+      const unsigned MMOAddrSpace = MMO->getAddrSpace();
+
+      bool Success = false;
+      for (int I = 0; I != NumAddrSpace; ++I) {
+        unsigned AddrSpace = MatchTable[CurrentIdx++];
+        DEBUG_WITH_TYPE(
+          TgtInstructionSelector::getName(),
+          dbgs() << "addrspace(" << MMOAddrSpace << ") vs "
+                 << AddrSpace << '\n');
+
+        if (AddrSpace == MMOAddrSpace) {
+          Success = true;
+          break;
+        }
+      }
+
+      CurrentIdx = LastIdx;
+      if (!Success && handleReject() == RejectAndGiveUp)
+        return false;
+      break;
+    }
     case GIM_CheckMemorySizeEqualTo: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t MMOIdx = MatchTable[CurrentIdx++];

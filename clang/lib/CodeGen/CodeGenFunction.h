@@ -2652,9 +2652,6 @@ public:
   /// Converts Location to a DebugLoc, if debug information is enabled.
   llvm::DebugLoc SourceLocToDebugLoc(SourceLocation Location);
 
-  /// Get the record field index as represented in debug info.
-  unsigned getDebugInfoFIndex(const RecordDecl *Rec, unsigned FieldIndex);
-
 
   //===--------------------------------------------------------------------===//
   //                            Declaration Emission

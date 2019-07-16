@@ -2335,7 +2335,7 @@ void RewriteObjC::SynthMsgSendFunctionDecl() {
   assert(!argT.isNull() && "Can't find 'SEL' type");
   ArgTys.push_back(argT);
   QualType msgSendType = getSimpleFunctionType(Context->getObjCIdType(),
-                                               ArgTys, /*isVariadic=*/true);
+                                               ArgTys, /*variadic=*/true);
   MsgSendFunctionDecl = FunctionDecl::Create(*Context, TUDecl,
                                              SourceLocation(),
                                              SourceLocation(),
@@ -2357,7 +2357,7 @@ void RewriteObjC::SynthMsgSendSuperFunctionDecl() {
   assert(!argT.isNull() && "Can't find 'SEL' type");
   ArgTys.push_back(argT);
   QualType msgSendType = getSimpleFunctionType(Context->getObjCIdType(),
-                                               ArgTys, /*isVariadic=*/true);
+                                               ArgTys, /*variadic=*/true);
   MsgSendSuperFunctionDecl = FunctionDecl::Create(*Context, TUDecl,
                                                   SourceLocation(),
                                                   SourceLocation(),
@@ -2376,7 +2376,7 @@ void RewriteObjC::SynthMsgSendStretFunctionDecl() {
   assert(!argT.isNull() && "Can't find 'SEL' type");
   ArgTys.push_back(argT);
   QualType msgSendType = getSimpleFunctionType(Context->getObjCIdType(),
-                                               ArgTys, /*isVariadic=*/true);
+                                               ArgTys, /*variadic=*/true);
   MsgSendStretFunctionDecl = FunctionDecl::Create(*Context, TUDecl,
                                                   SourceLocation(),
                                                   SourceLocation(),
@@ -2400,7 +2400,7 @@ void RewriteObjC::SynthMsgSendSuperStretFunctionDecl() {
   assert(!argT.isNull() && "Can't find 'SEL' type");
   ArgTys.push_back(argT);
   QualType msgSendType = getSimpleFunctionType(Context->getObjCIdType(),
-                                               ArgTys, /*isVariadic=*/true);
+                                               ArgTys, /*variadic=*/true);
   MsgSendSuperStretFunctionDecl = FunctionDecl::Create(*Context, TUDecl,
                                                        SourceLocation(),
                                                        SourceLocation(),
@@ -2420,7 +2420,7 @@ void RewriteObjC::SynthMsgSendFpretFunctionDecl() {
   assert(!argT.isNull() && "Can't find 'SEL' type");
   ArgTys.push_back(argT);
   QualType msgSendType = getSimpleFunctionType(Context->DoubleTy,
-                                               ArgTys, /*isVariadic=*/true);
+                                               ArgTys, /*variadic=*/true);
   MsgSendFpretFunctionDecl = FunctionDecl::Create(*Context, TUDecl,
                                                   SourceLocation(),
                                                   SourceLocation(),

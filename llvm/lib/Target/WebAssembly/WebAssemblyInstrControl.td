@@ -114,7 +114,7 @@ let isReturn = 1 in {
   defm "": RETURN<I64>;
   defm "": RETURN<F32>;
   defm "": RETURN<F64>;
-  defm "": RETURN<EXCEPT_REF>;
+  defm "": RETURN<EXNREF>;
   defm "": SIMD_RETURN<v16i8>;
   defm "": SIMD_RETURN<v8i16>;
   defm "": SIMD_RETURN<v4i32>;
@@ -144,8 +144,8 @@ defm THROW : I<(outs), (ins event_op:$tag, variable_ops),
                (outs), (ins event_op:$tag),
                [(WebAssemblythrow (WebAssemblywrapper texternalsym:$tag))],
                "throw   \t$tag", "throw   \t$tag", 0x08>;
-defm RETHROW : I<(outs), (ins EXCEPT_REF:$exn), (outs), (ins),
-                 [], "rethrow \t$exn", "rethrow", 0x09>;
+defm RETHROW : I<(outs), (ins EXNREF:$exn), (outs), (ins), [],
+                 "rethrow \t$exn", "rethrow", 0x09>;
 // Pseudo instruction to be the lowering target of int_wasm_rethrow_in_catch
 // intrinsic. Will be converted to the real rethrow instruction later.
 let isPseudo = 1 in
@@ -161,15 +161,15 @@ defm END_TRY : NRI<(outs), (ins), [], "end_try", 0x0b>;
 
 // Catching an exception: catch / extract_exception
 let hasCtrlDep = 1, hasSideEffects = 1 in
-defm CATCH : I<(outs EXCEPT_REF:$dst), (ins), (outs), (ins), [],
+defm CATCH : I<(outs EXNREF:$dst), (ins), (outs), (ins), [],
                "catch   \t$dst", "catch", 0x07>;
 
 // Querying / extracing exception: br_on_exn
-// br_on_exn queries an except_ref to see if it matches the corresponding
-// exception tag index. If true it branches to the given label and pushes the
+// br_on_exn queries an exnref to see if it matches the corresponding exception
+// tag index. If true it branches to the given label and pushes the
 // corresponding argument values of the exception onto the stack.
 let isBranch = 1, isTerminator = 1, hasCtrlDep = 1 in
-defm BR_ON_EXN : I<(outs), (ins bb_op:$dst, event_op:$tag, EXCEPT_REF:$exn),
+defm BR_ON_EXN : I<(outs), (ins bb_op:$dst, event_op:$tag, EXNREF:$exn),
                    (outs), (ins bb_op:$dst, event_op:$tag), [],
                    "br_on_exn \t$dst, $tag, $exn", "br_on_exn \t$dst, $tag",
                    0x0a>;

@@ -76,8 +76,7 @@ define i64 @test__blcs_u64(i64 %a0) {
 define i64 @test__blsfill_u64(i64 %a0) {
 ; X64-LABEL: test__blsfill_u64:
 ; X64:       # %bb.0:
-; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    subq $1, %rax
+; X64-NEXT:    leaq -1(%rdi), %rax
 ; X64-NEXT:    orq %rdi, %rax
 ; X64-NEXT:    retq
   %1 = sub i64 %a0, 1

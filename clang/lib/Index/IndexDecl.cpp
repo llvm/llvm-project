@@ -416,7 +416,7 @@ public:
     if (D->isThisDeclarationADefinition()) {
       TRY_DECL(D, IndexCtx.handleDecl(D));
       TRY_TO(handleReferencedProtocols(D->getReferencedProtocols(), D,
-                                       /*superLoc=*/SourceLocation()));
+                                       /*SuperLoc=*/SourceLocation()));
       TRY_TO(IndexCtx.indexDeclContext(D));
     } else {
       return IndexCtx.handleReference(D, D->getLocation(), nullptr,
@@ -466,7 +466,7 @@ public:
       CategoryLoc = D->getLocation();
     TRY_TO(IndexCtx.handleDecl(D, CategoryLoc));
     TRY_TO(handleReferencedProtocols(D->getReferencedProtocols(), D,
-                                     /*superLoc=*/SourceLocation()));
+                                     /*SuperLoc=*/SourceLocation()));
     TRY_TO(IndexCtx.indexDeclContext(D));
     return true;
   }

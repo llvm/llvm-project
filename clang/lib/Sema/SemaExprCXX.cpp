@@ -1254,7 +1254,7 @@ ExprResult Sema::ActOnCXXThis(SourceLocation Loc) {
   QualType ThisTy = getCurrentThisType();
   if (ThisTy.isNull())
     return Diag(Loc, diag::err_invalid_this_use);
-  return BuildCXXThisExpr(Loc, ThisTy, /*isImplicit=*/false);
+  return BuildCXXThisExpr(Loc, ThisTy, /*IsImplicit=*/false);
 }
 
 Expr *Sema::BuildCXXThisExpr(SourceLocation Loc, QualType Type,

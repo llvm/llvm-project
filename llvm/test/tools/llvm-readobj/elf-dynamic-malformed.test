@@ -20,6 +20,7 @@
 
 # WARN-GNU-NOT:  warning
 # WARN-GNU:      warning: invalid section size (4) or entity size (16)
+# WARN-GNU-EMPTY:
 # WARN-GNU-NEXT: ELF Header:
 # WARN-GNU:      Symbol table '.symtab' contains 1 entries:
 # WARN-GNU:        0:

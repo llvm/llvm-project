@@ -1568,7 +1568,7 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
           ProgramStateRef NewState =
             createTemporaryRegionIfNeeded(State, LCtx, OCE->getArg(0));
           if (NewState != State) {
-            Pred = Bldr.generateNode(OCE, Pred, NewState, /*Tag=*/nullptr,
+            Pred = Bldr.generateNode(OCE, Pred, NewState, /*tag=*/nullptr,
                                      ProgramPoint::PreStmtKind);
             // Did we cache out?
             if (!Pred)

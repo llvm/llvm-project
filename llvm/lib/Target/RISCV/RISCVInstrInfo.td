@@ -357,7 +357,7 @@ def JAL : RVInstJ<OPC_JAL, (outs GPR:$rd), (ins simm21_lsb0_jal:$imm20),
 let isCall = 1 in
 def JALR : RVInstI<0b000, OPC_JALR, (outs GPR:$rd),
                    (ins GPR:$rs1, simm12:$imm12),
-                   "jalr", "$rd, $rs1, $imm12">;
+                   "jalr", "$rd, ${imm12}(${rs1})">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 def BEQ  : BranchCC_rri<0b000, "beq">;
@@ -597,12 +597,23 @@ def : InstAlias<"bgtu $rs, $rt, $offset",
 def : InstAlias<"bleu $rs, $rt, $offset",
                 (BGEU GPR:$rt, GPR:$rs, simm13_lsb0:$offset), 0>;
 
-// "ret" has more weight since "ret" and "jr" alias the same "jalr" instruction.
-def : InstAlias<"j $offset",   (JAL  X0, simm21_lsb0_jal:$offset)>;
-def : InstAlias<"jal $offset", (JAL  X1, simm21_lsb0_jal:$offset)>;
-def : InstAlias<"jr $rs",      (JALR X0, GPR:$rs, 0)>;
-def : InstAlias<"jalr $rs",    (JALR X1, GPR:$rs, 0)>;
-def : InstAlias<"ret",         (JALR X0,      X1, 0), 2>;
+def : InstAlias<"j $offset",   (JAL X0, simm21_lsb0_jal:$offset)>;
+def : InstAlias<"jal $offset", (JAL X1, simm21_lsb0_jal:$offset)>;
+
+// Non-zero offset aliases of "jalr" are the lowest weight, followed by the
+// two-register form, then the one-register forms and finally "ret".
+def : InstAlias<"jr $rs",                (JALR      X0, GPR:$rs, 0), 3>;
+def : InstAlias<"jr ${offset}(${rs})",   (JALR      X0, GPR:$rs, simm12:$offset)>;
+def : InstAlias<"jalr $rs",              (JALR      X1, GPR:$rs, 0), 3>;
+def : InstAlias<"jalr ${offset}(${rs})", (JALR      X1, GPR:$rs, simm12:$offset)>;
+def : InstAlias<"jalr $rd, $rs",         (JALR GPR:$rd, GPR:$rs, 0), 2>;
+def : InstAlias<"ret",                   (JALR      X0,      X1, 0), 4>;
+
+// Non-canonical forms for jump targets also accepted by the assembler.
+def : InstAlias<"jr $rs, $offset",        (JALR      X0, GPR:$rs, simm12:$offset), 0>;
+def : InstAlias<"jalr $rs, $offset",      (JALR      X1, GPR:$rs, simm12:$offset), 0>;
+def : InstAlias<"jalr $rd, $rs, $offset", (JALR GPR:$rd, GPR:$rs, simm12:$offset), 0>;
+
 // TODO call
 // TODO tail
 
@@ -886,11 +897,11 @@ def PseudoCALLReg : Pseudo<(outs GPR:$rd), (ins call_symbol:$func), []> {
 // Define AsmString to print "call" when compile with -S flag.
 // Define isCodeGenOnly = 0 to support parsing assembly "call" instruction.
 let isCall = 1, Defs = [X1], isCodeGenOnly = 0 in
-def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func),
-                        [(riscv_call tglobaladdr:$func)]> {
+def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), []> {
   let AsmString = "call\t$func";
 }
 
+def : Pat<(riscv_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
 
 def : Pat<(riscv_uret_flag), (URET X0, X0)>;

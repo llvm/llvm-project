@@ -630,7 +630,8 @@ enum AttributeKindCodes {
   ATTR_KIND_IMMARG = 60,
   ATTR_KIND_WILLRETURN = 61,
   ATTR_KIND_NOFREE = 62,
-  ATTR_KIND_NOSYNC = 63
+  ATTR_KIND_NOSYNC = 63,
+  ATTR_KIND_SANITIZE_MEMTAG = 64,
 };
 
 enum ComdatSelectionKindCodes {

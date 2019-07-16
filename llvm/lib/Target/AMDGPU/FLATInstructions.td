@@ -767,11 +767,14 @@ class FlatSignedAtomicPat <FLAT_Pseudo inst, SDPatternOperator node, ValueType v
 
 let OtherPredicates = [HasFlatAddressSpace] in {
 
-def : FlatLoadPat <FLAT_LOAD_UBYTE, az_extloadi8_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, extloadi8_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, zextloadi8_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_SBYTE, sextloadi8_flat, i32>;
-def : FlatLoadPat <FLAT_LOAD_UBYTE, az_extloadi8_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, extloadi8_flat, i16>;
+def : FlatLoadPat <FLAT_LOAD_UBYTE, zextloadi8_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_SBYTE, sextloadi8_flat, i16>;
-def : FlatLoadPat <FLAT_LOAD_USHORT, az_extloadi16_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, extloadi16_flat, i32>;
+def : FlatLoadPat <FLAT_LOAD_USHORT, zextloadi16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_USHORT, load_flat, i16>;
 def : FlatLoadPat <FLAT_LOAD_SSHORT, sextloadi16_flat, i32>;
 def : FlatLoadPat <FLAT_LOAD_DWORD, load_flat, i32>;
@@ -849,11 +852,14 @@ def atomic_pk_fadd_global : global_binary_atomic_op_frag<SIglobal_atomic_pk_fadd
 
 let OtherPredicates = [HasFlatGlobalInsts], AddedComplexity = 10 in {
 
-def : FlatLoadSignedPat <GLOBAL_LOAD_UBYTE, az_extloadi8_global, i32>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_UBYTE, extloadi8_global, i32>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_UBYTE, zextloadi8_global, i32>;
 def : FlatLoadSignedPat <GLOBAL_LOAD_SBYTE, sextloadi8_global, i32>;
-def : FlatLoadSignedPat <GLOBAL_LOAD_UBYTE, az_extloadi8_global, i16>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_UBYTE, extloadi8_global, i16>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_UBYTE, zextloadi8_global, i16>;
 def : FlatLoadSignedPat <GLOBAL_LOAD_SBYTE, sextloadi8_global, i16>;
-def : FlatLoadSignedPat <GLOBAL_LOAD_USHORT, az_extloadi16_global, i32>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_USHORT, extloadi16_global, i32>;
+def : FlatLoadSignedPat <GLOBAL_LOAD_USHORT, zextloadi16_global, i32>;
 def : FlatLoadSignedPat <GLOBAL_LOAD_SSHORT, sextloadi16_global, i32>;
 def : FlatLoadSignedPat <GLOBAL_LOAD_USHORT, load_global, i16>;
 

@@ -2971,7 +2971,7 @@ static void RenderObjCOptions(const ToolChain &TC, const Driver &D,
     // We default off for Objective-C, on for Objective-C++.
     if (Args.hasFlag(options::OPT_fobjc_arc_exceptions,
                      options::OPT_fno_objc_arc_exceptions,
-                     /*default=*/types::isCXX(Input.getType())))
+                     /*Default=*/types::isCXX(Input.getType())))
       CmdArgs.push_back("-fobjc-arc-exceptions");
   }
 
@@ -3647,8 +3647,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (const Arg *A = Args.getLastArg(options::OPT_fthinlto_index_EQ)) {
     if (!types::isLLVMIR(Input.getType()))
-      D.Diag(diag::err_drv_argument_only_allowed_with) << A->getAsString(Args)
-                                                       << "-x ir";
+      D.Diag(diag::err_drv_arg_requires_bitcode_input) << A->getAsString(Args);
     Args.AddLastArg(CmdArgs, options::OPT_fthinlto_index_EQ);
   }
 
@@ -5703,7 +5702,7 @@ static EHFlags parseClangCLEHFlags(const Driver &D, const ArgList &Args) {
   // The default is that /GX is not specified.
   if (EHArgs.empty() &&
       Args.hasFlag(options::OPT__SLASH_GX, options::OPT__SLASH_GX_,
-                   /*default=*/false)) {
+                   /*Default=*/false)) {
     EH.Synch = true;
     EH.NoUnwindC = true;
   }
@@ -5772,13 +5771,13 @@ void Clang::AddClangCLArgs(const ArgList &Args, types::ID InputType,
 
   // This controls whether or not we emit RTTI data for polymorphic types.
   if (Args.hasFlag(options::OPT__SLASH_GR_, options::OPT__SLASH_GR,
-                   /*default=*/false))
+                   /*Default=*/false))
     CmdArgs.push_back("-fno-rtti-data");
 
   // This controls whether or not we emit stack-protector instrumentation.
   // In MSVC, Buffer Security Check (/GS) is on by default.
   if (Args.hasFlag(options::OPT__SLASH_GS, options::OPT__SLASH_GS_,
-                   /*default=*/true)) {
+                   /*Default=*/true)) {
     CmdArgs.push_back("-stack-protector");
     CmdArgs.push_back(Args.MakeArgString(Twine(LangOptions::SSPStrong)));
   }

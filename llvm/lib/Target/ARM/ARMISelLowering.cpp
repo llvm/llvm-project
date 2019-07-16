@@ -320,6 +320,10 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
     setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
   }
+  // We can do bitwise operations on v2i64 vectors
+  setOperationAction(ISD::AND, MVT::v2i64, Legal);
+  setOperationAction(ISD::OR, MVT::v2i64, Legal);
+  setOperationAction(ISD::XOR, MVT::v2i64, Legal);
 
   // It is legal to extload from v4i8 to v4i16 or v4i32.
   addAllExtLoads(MVT::v8i16, MVT::v8i8, Legal);
@@ -2255,7 +2259,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         unsigned TargetFlags = GV->hasDLLImportStorageClass()
                                    ? ARMII::MO_DLLIMPORT
                                    : ARMII::MO_NO_FLAG;
-        Callee = DAG.getTargetGlobalAddress(GV, dl, PtrVt, /*Offset=*/0,
+        Callee = DAG.getTargetGlobalAddress(GV, dl, PtrVt, /*offset=*/0,
                                             TargetFlags);
         if (GV->hasDLLImportStorageClass())
           Callee =
@@ -2910,7 +2914,7 @@ SDValue ARMTargetLowering::LowerConstantPool(SDValue Op,
     auto M = const_cast<Module*>(DAG.getMachineFunction().
                                  getFunction().getParent());
     auto GV = new GlobalVariable(
-                    *M, T, /*isConst=*/true, GlobalVariable::InternalLinkage, C,
+                    *M, T, /*isConstant=*/true, GlobalVariable::InternalLinkage, C,
                     Twine(DAG.getDataLayout().getPrivateGlobalPrefix()) + "CP" +
                     Twine(DAG.getMachineFunction().getFunctionNumber()) + "_" +
                     Twine(AFI->createPICLabelUId())
@@ -3463,7 +3467,7 @@ SDValue ARMTargetLowering::LowerGlobalAddressWindows(SDValue Op,
   // FIXME: Once remat is capable of dealing with instructions with register
   // operands, expand this into two nodes.
   Result = DAG.getNode(ARMISD::Wrapper, DL, PtrVT,
-                       DAG.getTargetGlobalAddress(GV, DL, PtrVT, /*Offset=*/0,
+                       DAG.getTargetGlobalAddress(GV, DL, PtrVT, /*offset=*/0,
                                                   TargetFlags));
   if (TargetFlags & (ARMII::MO_DLLIMPORT | ARMII::MO_COFFSTUB))
     Result = DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), Result,
@@ -12854,6 +12858,8 @@ static SDValue PerformShiftCombine(SDNode *N,
   // Nothing to be done for scalar shifts.
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   if (!VT.isVector() || !TLI.isTypeLegal(VT))
+    return SDValue();
+  if (ST->hasMVEIntegerOps() && VT == MVT::v2i64)
     return SDValue();
 
   int64_t Cnt;

@@ -7,6 +7,8 @@ struct A { int a; };
 struct B { struct A a; };
 struct C { struct B b; };
 struct D { struct C c; int n; };
+struct E { short e; };
+struct F { struct E e; int n; };
 
 int main(void)
 {
@@ -23,6 +25,9 @@ int main(void)
   struct C p = { 0 }; // no-warning
   struct C q = { 9 }; // warning suppressed for struct with single element
   struct D r = { 9 }; // expected-warning {{suggest braces around initialization of subobject}} expected-warning {{missing field 'n' initializer}}
+  struct F s = { 0 }; // no-warning
+  struct F t = { 9 }; // expected-warning {{suggest braces around initialization of subobject}} expected-warning {{missing field 'n' initializer}}
+
   f = (struct foo ) { 0 }; // no-warning
   g = (struct foo ) { 9 }; // expected-warning {{missing field 'y' initializer}}
   h = (struct foo ) { 9, 9 }; // no-warning
@@ -36,6 +41,8 @@ int main(void)
   p = (struct C) { 0 }; // no-warning
   q = (struct C) { 9 }; // warning suppressed for struct with single element
   r = (struct D) { 9 }; // expected-warning {{suggest braces around initialization of subobject}} expected-warning {{missing field 'n' initializer}}
+  s = (struct F) { 0 }; // no-warning
+  t = (struct F) { 9 }; // expected-warning {{suggest braces around initialization of subobject}} expected-warning {{missing field 'n' initializer}}
 
   return 0;
 }

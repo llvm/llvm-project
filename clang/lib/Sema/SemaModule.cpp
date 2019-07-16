@@ -206,7 +206,7 @@ Sema::ActOnModuleDecl(SourceLocation StartLoc, SourceLocation ModuleLoc,
         PP.getIdentifierInfo(ModuleName), Path[0].second);
     Mod = getModuleLoader().loadModule(ModuleLoc, {ModuleNameLoc},
                                        Module::AllVisible,
-                                       /*IsIncludeDirective=*/false);
+                                       /*IsInclusionDirective=*/false);
     if (!Mod) {
       Diag(ModuleLoc, diag::err_module_not_defined) << ModuleName;
       // Create an empty module interface unit for error recovery.
@@ -323,7 +323,7 @@ DeclResult Sema::ActOnModuleImport(SourceLocation StartLoc,
 
   Module *Mod =
       getModuleLoader().loadModule(ImportLoc, Path, Module::AllVisible,
-                                   /*IsIncludeDirective=*/false);
+                                   /*IsInclusionDirective=*/false);
   if (!Mod)
     return true;
 
