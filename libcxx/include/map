@@ -193,8 +193,8 @@ public:
         const_iterator find(const K& x) const;  // C++14
     template<typename K>
       size_type count(const K& x) const;        // C++14
-
     size_type      count(const key_type& k) const;
+        bool contains(const key_type& x) const; // C++20
           iterator lower_bound(const key_type& k);
     const_iterator lower_bound(const key_type& k) const;
     template<typename K>
@@ -407,8 +407,8 @@ public:
         const_iterator find(const K& x) const;  // C++14
     template<typename K>
       size_type count(const K& x) const;        // C++14
-
     size_type      count(const key_type& k) const;
+        bool contains(const key_type& x) const; // C++20
           iterator lower_bound(const key_type& k);
     const_iterator lower_bound(const key_type& k) const;
     template<typename K>
@@ -1398,6 +1398,12 @@ public:
     typename enable_if<__is_transparent<_Compare, _K2>::value,size_type>::type
     count(const _K2& __k) const {return __tree_.__count_multi(__k);}
 #endif
+
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY
+    bool contains(const key_type& __k) const {return find(__k) != end();}
+#endif // _LIBCPP_STD_VER > 17
+
     _LIBCPP_INLINE_VISIBILITY
     iterator lower_bound(const key_type& __k)
         {return __tree_.lower_bound(__k);}
@@ -2055,6 +2061,12 @@ public:
     typename enable_if<__is_transparent<_Compare, _K2>::value,size_type>::type
     count(const _K2& __k) const {return __tree_.__count_multi(__k);}
 #endif
+
+#if _LIBCPP_STD_VER > 17
+    _LIBCPP_INLINE_VISIBILITY
+    bool contains(const key_type& __k) const {return find(__k) != end();}
+#endif // _LIBCPP_STD_VER > 17
+
     _LIBCPP_INLINE_VISIBILITY
     iterator lower_bound(const key_type& __k)
         {return __tree_.lower_bound(__k);}

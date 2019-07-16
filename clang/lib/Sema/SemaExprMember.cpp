@@ -1106,7 +1106,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     SourceLocation Loc = R.getNameLoc();
     if (SS.getRange().isValid())
       Loc = SS.getRange().getBegin();
-    BaseExpr = BuildCXXThisExpr(Loc, BaseExprType, /*isImplicit=*/true);
+    BaseExpr = BuildCXXThisExpr(Loc, BaseExprType, /*IsImplicit=*/true);
   }
 
   // Check the use of this member.
@@ -1130,7 +1130,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
 
   if (VarDecl *Var = dyn_cast<VarDecl>(MemberDecl)) {
     return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Var,
-                           FoundDecl, /*MultipleCandidates=*/false,
+                           FoundDecl, /*HadMultipleCandidates=*/false,
                            MemberNameInfo, Var->getType().getNonReferenceType(),
                            VK_LValue, OK_Ordinary);
   }
@@ -1147,14 +1147,14 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
     }
 
     return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc,
-                           MemberFn, FoundDecl, /*MultipleCandidates=*/false,
+                           MemberFn, FoundDecl, /*HadMultipleCandidates=*/false,
                            MemberNameInfo, type, valueKind, OK_Ordinary);
   }
   assert(!isa<FunctionDecl>(MemberDecl) && "member function not C++ method?");
 
   if (EnumConstantDecl *Enum = dyn_cast<EnumConstantDecl>(MemberDecl)) {
     return BuildMemberExpr(BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Enum,
-                           FoundDecl, /*MultipleCandidates=*/false,
+                           FoundDecl, /*HadMultipleCandidates=*/false,
                            MemberNameInfo, Enum->getType(), VK_RValue,
                            OK_Ordinary);
   }
@@ -1163,7 +1163,7 @@ Sema::BuildMemberReferenceExpr(Expr *BaseExpr, QualType BaseExprType,
             *this, VarTempl, TemplateArgs, MemberNameInfo, TemplateKWLoc))
       return BuildMemberExpr(
           BaseExpr, IsArrow, OpLoc, &SS, TemplateKWLoc, Var, FoundDecl,
-          /*MultipleCandidates=*/false, MemberNameInfo,
+          /*HadMultipleCandidates=*/false, MemberNameInfo,
           Var->getType().getNonReferenceType(), VK_LValue, OK_Ordinary);
     return ExprError();
   }
@@ -1822,7 +1822,7 @@ Sema::BuildFieldReferenceExpr(Expr *BaseExpr, bool IsArrow,
 
   return BuildMemberExpr(Base.get(), IsArrow, OpLoc, &SS,
                          /*TemplateKWLoc=*/SourceLocation(), Field, FoundDecl,
-                         /*MultipleCandidates=*/false, MemberNameInfo,
+                         /*HadMultipleCandidates=*/false, MemberNameInfo,
                          MemberType, VK, OK);
 }
 
@@ -1851,7 +1851,7 @@ Sema::BuildImplicitMemberExpr(const CXXScopeSpec &SS,
     SourceLocation Loc = R.getNameLoc();
     if (SS.getRange().isValid())
       Loc = SS.getRange().getBegin();
-    baseExpr = BuildCXXThisExpr(loc, ThisTy, /*isImplicit=*/true);
+    baseExpr = BuildCXXThisExpr(loc, ThisTy, /*IsImplicit=*/true);
   }
 
   return BuildMemberReferenceExpr(baseExpr, ThisTy,

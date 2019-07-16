@@ -34,7 +34,7 @@ protected:
 
 LanaiELFObjectWriter::LanaiELFObjectWriter(uint8_t OSABI)
     : MCELFObjectTargetWriter(/*Is64Bit_=*/false, OSABI, ELF::EM_LANAI,
-                              /*HasRelocationAddend=*/true) {}
+                              /*HasRelocationAddend_=*/true) {}
 
 unsigned LanaiELFObjectWriter::getRelocType(MCContext & /*Ctx*/,
                                             const MCValue & /*Target*/,

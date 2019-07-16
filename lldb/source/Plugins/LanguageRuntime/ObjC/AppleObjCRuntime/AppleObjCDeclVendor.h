@@ -11,8 +11,9 @@
 
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/DeclVendor.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/lldb-private.h"
+
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 namespace lldb_private {
 

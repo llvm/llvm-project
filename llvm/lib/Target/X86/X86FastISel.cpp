@@ -289,7 +289,7 @@ bool X86FastISel::foldX86XALUIntrinsic(X86::CondCode &CC, const Instruction *I,
 }
 
 bool X86FastISel::isTypeLegal(Type *Ty, MVT &VT, bool AllowI1) {
-  EVT evt = TLI.getValueType(DL, Ty, /*HandleUnknown=*/true);
+  EVT evt = TLI.getValueType(DL, Ty, /*AllowUnknown=*/true);
   if (evt == MVT::Other || !evt.isSimple())
     // Unhandled type. Halt "fast" selection and bail.
     return false;

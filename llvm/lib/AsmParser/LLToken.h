@@ -176,6 +176,7 @@ enum Kind {
   kw_argmemonly,
   kw_sanitize_address,
   kw_sanitize_hwaddress,
+  kw_sanitize_memtag,
   kw_builtin,
   kw_byval,
   kw_inalloca,

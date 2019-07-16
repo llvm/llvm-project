@@ -32,6 +32,24 @@ entry:
   ret <4 x i32> %0
 }
 
+define arm_aapcs_vfpcc <2 x i64> @sext_v2i32_v2i64(<2 x i32> %src) {
+; CHECK-LABEL: sext_v2i32_v2i64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov r0, s0
+; CHECK-NEXT:    vmov.32 q1[0], r0
+; CHECK-NEXT:    asrs r0, r0, #31
+; CHECK-NEXT:    vmov.32 q1[1], r0
+; CHECK-NEXT:    vmov r0, s2
+; CHECK-NEXT:    vmov.32 q1[2], r0
+; CHECK-NEXT:    asrs r0, r0, #31
+; CHECK-NEXT:    vmov.32 q1[3], r0
+; CHECK-NEXT:    vmov q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = sext <2 x i32> %src to <2 x i64>
+  ret <2 x i64> %0
+}
+
 
 define arm_aapcs_vfpcc <8 x i16> @zext_v8i8_v8i16(<8 x i8> %src) {
 ; CHECK-LABEL: zext_v8i8_v8i16:
@@ -64,6 +82,25 @@ entry:
   ret <4 x i32> %0
 }
 
+define arm_aapcs_vfpcc <2 x i64> @zext_v2i32_v2i64(<2 x i32> %src) {
+; CHECK-LABEL: zext_v2i32_v2i64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    adr r0, .LCPI7_0
+; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vand q0, q0, q1
+; CHECK-NEXT:    bx lr
+; CHECK-NEXT:    .p2align 4
+; CHECK-NEXT:  @ %bb.1:
+; CHECK-NEXT:  .LCPI7_0:
+; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
+; CHECK-NEXT:    .long 0 @ 0x0
+; CHECK-NEXT:    .long 4294967295 @ 0xffffffff
+; CHECK-NEXT:    .long 0 @ 0x0
+entry:
+  %0 = zext <2 x i32> %src to <2 x i64>
+  ret <2 x i64> %0
+}
+
 
 define arm_aapcs_vfpcc <8 x i8> @trunc_v8i16_v8i8(<8 x i16> %src) {
 ; CHECK-LABEL: trunc_v8i16_v8i8:
@@ -91,3 +128,13 @@ entry:
   %0 = trunc <4 x i32> %src to <4 x i8>
   ret <4 x i8> %0
 }
+
+define arm_aapcs_vfpcc <2 x i32> @trunc_v2i64_v2i32(<2 x i64> %src) {
+; CHECK-LABEL: trunc_v2i64_v2i32:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = trunc <2 x i64> %src to <2 x i32>
+  ret <2 x i32> %0
+}
+

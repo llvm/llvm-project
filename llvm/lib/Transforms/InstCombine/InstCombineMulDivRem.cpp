@@ -624,7 +624,7 @@ static bool isMultiple(const APInt &C1, const APInt &C2, APInt &Quotient,
   if (IsSigned && C1.isMinSignedValue() && C2.isAllOnesValue())
     return false;
 
-  APInt Remainder(C1.getBitWidth(), /*Val=*/0ULL, IsSigned);
+  APInt Remainder(C1.getBitWidth(), /*val=*/0ULL, IsSigned);
   if (IsSigned)
     APInt::sdivrem(C1, C2, Quotient, Remainder);
   else
@@ -661,7 +661,7 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
     // (X / C1) / C2  -> X / (C1*C2)
     if ((IsSigned && match(Op0, m_SDiv(m_Value(X), m_APInt(C1)))) ||
         (!IsSigned && match(Op0, m_UDiv(m_Value(X), m_APInt(C1))))) {
-      APInt Product(C1->getBitWidth(), /*Val=*/0ULL, IsSigned);
+      APInt Product(C1->getBitWidth(), /*val=*/0ULL, IsSigned);
       if (!multiplyOverflows(*C1, *C2, Product, IsSigned))
         return BinaryOperator::Create(I.getOpcode(), X,
                                       ConstantInt::get(Ty, Product));
@@ -669,7 +669,7 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
 
     if ((IsSigned && match(Op0, m_NSWMul(m_Value(X), m_APInt(C1)))) ||
         (!IsSigned && match(Op0, m_NUWMul(m_Value(X), m_APInt(C1))))) {
-      APInt Quotient(C1->getBitWidth(), /*Val=*/0ULL, IsSigned);
+      APInt Quotient(C1->getBitWidth(), /*val=*/0ULL, IsSigned);
 
       // (X * C1) / C2 -> X / (C2 / C1) if C2 is a multiple of C1.
       if (isMultiple(*C2, *C1, Quotient, IsSigned)) {
@@ -693,7 +693,7 @@ Instruction *InstCombiner::commonIDivTransforms(BinaryOperator &I) {
     if ((IsSigned && match(Op0, m_NSWShl(m_Value(X), m_APInt(C1))) &&
          *C1 != C1->getBitWidth() - 1) ||
         (!IsSigned && match(Op0, m_NUWShl(m_Value(X), m_APInt(C1))))) {
-      APInt Quotient(C1->getBitWidth(), /*Val=*/0ULL, IsSigned);
+      APInt Quotient(C1->getBitWidth(), /*val=*/0ULL, IsSigned);
       APInt C1Shifted = APInt::getOneBitSet(
           C1->getBitWidth(), static_cast<unsigned>(C1->getLimitedValue()));
 

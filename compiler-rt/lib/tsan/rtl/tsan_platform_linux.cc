@@ -302,26 +302,8 @@ void InitializePlatform() {
       CHECK_NE(personality(old_personality | ADDR_NO_RANDOMIZE), -1);
       reexec = true;
     }
-    // Initialize the guard pointer used in {sig}{set,long}jump.
-    longjmp_xor_key = InitializeGuardPtr();
-    // uptr old_value = longjmp_xor_key;
-    // InitializeLongjmpXorKey();
-    // CHECK_EQ(longjmp_xor_key, old_value);
-    // If the above check fails for you, please contact me (jlettner@apple.com)
-    // and let me know the values of the two differing keys.  Please also set a
-    // breakpoint on `InitializeGuardPtr` and `InitializeLongjmpXorKey` and tell
-    // me the stack pointer (SP) values that go into the XOR operation (where we
-    // derive the key):
-    //
-    //   InitializeLongjmpXorKey:
-    //     uptr sp = (uptr)__builtin_frame_address(0);
-    //
-    //   InitializeGuardPtr (in tsan_rtl_aarch64.S):
-    //       mov  x0, sp
-    //       ...
-    //       eor  x0, x0, x1
-    //
-    // Then feel free to comment out the call to `InitializeLongjmpXorKey`.
+    // Initialize the xor key used in {sig}{set,long}jump.
+    InitializeLongjmpXorKey();
 #endif
     if (reexec)
       ReExec();
@@ -437,9 +419,10 @@ static void InitializeLongjmpXorKey() {
   jmp_buf env;
   REAL(_setjmp)(env);
 
-  // 2. Retrieve mangled/vanilla SP.
+  // 2. Retrieve vanilla/mangled SP.
+  uptr sp;
+  asm("mov  %0, sp" : "=r" (sp));
   uptr mangled_sp = ((uptr *)&env)[LONG_JMP_SP_ENV_SLOT];
-  uptr sp = (uptr)__builtin_frame_address(0);
 
   // 3. xor SPs to obtain key.
   longjmp_xor_key = mangled_sp ^ sp;

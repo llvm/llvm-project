@@ -14,6 +14,8 @@ test0:
     i32.const   -1
     f64.const   0x1.999999999999ap1
     f32.const   -1.0
+    f32.const   -infinity
+    f32.const   nan
     v128.const  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
     v128.const  0, 1, 2, 3, 4, 5, 6, 7
     # Indirect addressing:
@@ -68,7 +70,7 @@ test0:
     # TODO: enable once instruction has been added.
     #i32x4.trunc_sat_f32x4_s
     i32.trunc_f32_s
-    try         except_ref
+    try         exnref
     i32.atomic.load 0
     atomic.notify 0
 .LBB0_3:
@@ -101,6 +103,10 @@ test0:
     .int32      2000000000
     .size       .L.str, 28
 
+    .section    .init_array.42,"",@
+    .p2align    2
+    .int32      test0
+
     .ident      "clang version 9.0.0 (trunk 364502) (llvm/trunk 364571)"
     .globaltype __stack_pointer, i32
 
@@ -114,6 +120,8 @@ test0:
 # CHECK-NEXT:      i32.const   -1
 # CHECK-NEXT:      f64.const   0x1.999999999999ap1
 # CHECK-NEXT:      f32.const   -0x1p0
+# CHECK-NEXT:      f32.const   -infinity
+# CHECK-NEXT:      f32.const   nan
 # CHECK-NEXT:      v128.const  0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
 # CHECK-NEXT:      v128.const  0, 1, 2, 3, 4, 5, 6, 7
 # CHECK-NEXT:      local.get   0
@@ -164,7 +172,7 @@ test0:
 # CHECK-NEXT:      end_if
 # CHECK-NEXT:      f32x4.add
 # CHECK-NEXT:      i32.trunc_f32_s
-# CHECK-NEXT:      try         except_ref
+# CHECK-NEXT:      try         exnref
 # CHECK-NEXT:      i32.atomic.load 0
 # CHECK-NEXT:      atomic.notify 0
 # CHECK-NEXT:  .LBB0_3:
@@ -190,8 +198,13 @@ test0:
 # CHECK-NEXT:  .L.str:
 # CHECK-NEXT:      .int8       72
 # CHECK-NEXT:      .asciz      "ello, World!"
-# CHECK-NEXT:      .int16       1234
-# CHECK-NEXT:      .int64       5000000000
-# CHECK-NEXT:      .int32       2000000000
+# CHECK-NEXT:      .int16      1234
+# CHECK-NEXT:      .int64      5000000000
+# CHECK-NEXT:      .int32      2000000000
+# CHECK-NEXT:      .size       .L.str, 28
+
+# CHECK:           .section    .init_array.42,"",@
+# CHECK-NEXT:      .p2align    2
+# CHECK-NEXT:      .int32      test0
 
 # CHECK:           .globaltype __stack_pointer, i32

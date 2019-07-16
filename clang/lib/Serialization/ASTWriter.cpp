@@ -1447,7 +1447,7 @@ ASTFileSignature ASTWriter::writeUnhashedControlBlock(Preprocessor &PP,
   Stream.EmitRecord(DIAGNOSTIC_OPTIONS, Record);
 
   // Write out the diagnostic/pragma mappings.
-  WritePragmaDiagnosticMappings(Diags, /* IsModule = */ WritingModule);
+  WritePragmaDiagnosticMappings(Diags, /* isModule = */ WritingModule);
 
   // Leave the options block.
   Stream.ExitBlock();

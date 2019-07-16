@@ -293,7 +293,7 @@ static CallExpr *create_call_once_lambda_call(ASTContext &C, ASTMaker M,
 
   return CXXOperatorCallExpr::Create(
       /*AstContext=*/C, OO_Call, callOperatorDeclRef,
-      /*args=*/CallArgs,
+      /*Args=*/CallArgs,
       /*QualType=*/C.VoidTy,
       /*ExprValueType=*/VK_RValue,
       /*SourceLocation=*/SourceLocation(), FPOptions());
@@ -465,10 +465,10 @@ static Stmt *create_call_once(ASTContext &C, const FunctionDecl *D) {
   auto *Out =
       IfStmt::Create(C, SourceLocation(),
                      /* IsConstexpr=*/false,
-                     /* init=*/nullptr,
-                     /* var=*/nullptr,
-                     /* cond=*/FlagCheck,
-                     /* then=*/M.makeCompound({CallbackCall, FlagAssignment}));
+                     /* Init=*/nullptr,
+                     /* Var=*/nullptr,
+                     /* Cond=*/FlagCheck,
+                     /* Then=*/M.makeCompound({CallbackCall, FlagAssignment}));
 
   return Out;
 }
@@ -511,7 +511,7 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
   CallExpr *CE = CallExpr::Create(
       /*ASTContext=*/C,
       /*StmtClass=*/M.makeLvalueToRvalue(/*Expr=*/Block),
-      /*args=*/None,
+      /*Args=*/None,
       /*QualType=*/C.VoidTy,
       /*ExprValueType=*/VK_RValue,
       /*SourceLocation=*/SourceLocation());
@@ -549,10 +549,10 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
   // (5) Create the 'if' statement.
   auto *If = IfStmt::Create(C, SourceLocation(),
                             /* IsConstexpr=*/false,
-                            /* init=*/nullptr,
-                            /* var=*/nullptr,
-                            /* cond=*/GuardCondition,
-                            /* then=*/CS);
+                            /* Init=*/nullptr,
+                            /* Var=*/nullptr,
+                            /* Cond=*/GuardCondition,
+                            /* Then=*/CS);
   return If;
 }
 
@@ -657,8 +657,8 @@ static Stmt *create_OSAtomicCompareAndSwap(ASTContext &C, const FunctionDecl *D)
   /// Construct the If.
   auto *If = IfStmt::Create(C, SourceLocation(),
                             /* IsConstexpr=*/false,
-                            /* init=*/nullptr,
-                            /* var=*/nullptr, Comparison, Body,
+                            /* Init=*/nullptr,
+                            /* Var=*/nullptr, Comparison, Body,
                             SourceLocation(), Else);
 
   return If;

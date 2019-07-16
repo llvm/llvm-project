@@ -17,7 +17,6 @@
 #include "lldb/Host/Time.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Target/Language.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessStructReader.h"
 #include "lldb/Target/Target.h"

@@ -3021,7 +3021,7 @@ X86TargetLowering::LowerMemArgument(SDValue Chain, CallingConv::ID CallConv,
       // load from our portion of it. This assumes that if the first part of an
       // argument is in memory, the rest will also be in memory.
       int FI = MFI.CreateFixedObject(ArgVT.getStoreSize(), VA.getLocMemOffset(),
-                                     /*Immutable=*/false);
+                                     /*IsImmutable=*/false);
       PartAddr = DAG.getFrameIndex(FI, PtrVT);
       return DAG.getLoad(
           ValVT, dl, Chain, PartAddr,
@@ -23719,7 +23719,7 @@ SDValue X86TargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
       // Set up a frame object for the return address.
       unsigned SlotSize = RegInfo->getSlotSize();
       FrameAddrIndex = MF.getFrameInfo().CreateFixedObject(
-          SlotSize, /*Offset=*/0, /*IsImmutable=*/false);
+          SlotSize, /*SPOffset=*/0, /*IsImmutable=*/false);
       FuncInfo->setFAIndex(FrameAddrIndex);
     }
     return DAG.getFrameIndex(FrameAddrIndex, VT);
@@ -25033,8 +25033,11 @@ static SDValue LowerScalarImmediateShift(SDValue Op, SelectionDAG &DAG,
   APInt APIntShiftAmt;
   if (!isConstantSplat(Amt, APIntShiftAmt))
     return SDValue();
-  assert(APIntShiftAmt.ult(VT.getScalarSizeInBits()) &&
-         "Out of range shift amount");
+
+  // If the shift amount is out of range, return undef.
+  if (APIntShiftAmt.uge(VT.getScalarSizeInBits()))
+    return DAG.getUNDEF(VT);
+
   uint64_t ShiftAmt = APIntShiftAmt.getZExtValue();
 
   if (SupportedVectorShiftWithImm(VT, Subtarget, Op.getOpcode()))
@@ -42427,6 +42430,41 @@ static SDValue combineVectorCompareAndMaskUnaryOp(SDNode *N,
   return SDValue();
 }
 
+/// If we are converting a value to floating-point, try to replace scalar
+/// truncate of an extracted vector element with a bitcast. This tries to keep
+/// the sequence on XMM registers rather than moving between vector and GPRs.
+static SDValue combineToFPTruncExtElt(SDNode *N, SelectionDAG &DAG) {
+  // TODO: This is currently only used by combineSIntToFP, but it is generalized
+  //       to allow being called by any similar cast opcode.
+  // TODO: Consider merging this into lowering: vectorizeExtractedCast().
+  SDValue Trunc = N->getOperand(0);
+  if (!Trunc.hasOneUse() || Trunc.getOpcode() != ISD::TRUNCATE)
+    return SDValue();
+
+  SDValue ExtElt = Trunc.getOperand(0);
+  if (!ExtElt.hasOneUse() || ExtElt.getOpcode() != ISD::EXTRACT_VECTOR_ELT ||
+      !isNullConstant(ExtElt.getOperand(1)))
+    return SDValue();
+
+  EVT TruncVT = Trunc.getValueType();
+  EVT SrcVT = ExtElt.getValueType();
+  unsigned DestWidth = TruncVT.getSizeInBits();
+  unsigned SrcWidth = SrcVT.getSizeInBits();
+  if (SrcWidth % DestWidth != 0)
+    return SDValue();
+
+  // inttofp (trunc (extelt X, 0)) --> inttofp (extelt (bitcast X), 0)
+  EVT SrcVecVT = ExtElt.getOperand(0).getValueType();
+  unsigned VecWidth = SrcVecVT.getSizeInBits();
+  unsigned NumElts = VecWidth / DestWidth;
+  EVT BitcastVT = EVT::getVectorVT(*DAG.getContext(), TruncVT, NumElts);
+  SDValue BitcastVec = DAG.getBitcast(BitcastVT, ExtElt.getOperand(0));
+  SDLoc DL(N);
+  SDValue NewExtElt = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, TruncVT,
+                                  BitcastVec, ExtElt.getOperand(1));
+  return DAG.getNode(N->getOpcode(), DL, N->getValueType(0), NewExtElt);
+}
+
 static SDValue combineUIntToFP(SDNode *N, SelectionDAG &DAG,
                                const X86Subtarget &Subtarget) {
   SDValue Op0 = N->getOperand(0);
@@ -42520,6 +42558,10 @@ static SDValue combineSIntToFP(SDNode *N, SelectionDAG &DAG,
       return FILDChain;
     }
   }
+
+  if (SDValue V = combineToFPTruncExtElt(N, DAG))
+    return V;
+
   return SDValue();
 }
 

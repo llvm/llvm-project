@@ -5136,7 +5136,7 @@ QualType Sema::ProduceCallSignatureHelp(Scope *S, Expr *Fn,
     Decls.append(UME->decls_begin(), UME->decls_end());
     const bool FirstArgumentIsBase = !UME->isImplicitAccess() && UME->getBase();
     AddFunctionCandidates(Decls, ArgExprs, CandidateSet, TemplateArgs,
-                          /*SuppressUsedConversions=*/false,
+                          /*SuppressUserConversions=*/false,
                           /*PartialOverloading=*/true, FirstArgumentIsBase);
   } else {
     FunctionDecl *FD = nullptr;
@@ -5151,7 +5151,7 @@ QualType Sema::ProduceCallSignatureHelp(Scope *S, Expr *Fn,
       else
         AddOverloadCandidate(FD, DeclAccessPair::make(FD, FD->getAccess()),
                              Args, CandidateSet,
-                             /*SuppressUsedConversions=*/false,
+                             /*SuppressUserConversions=*/false,
                              /*PartialOverloading=*/true);
 
     } else if (auto DC = NakedFn->getType()->getAsCXXRecordDecl()) {
@@ -5168,7 +5168,7 @@ QualType Sema::ProduceCallSignatureHelp(Scope *S, Expr *Fn,
         ArgExprs.append(Args.begin(), Args.end());
         AddFunctionCandidates(R.asUnresolvedSet(), ArgExprs, CandidateSet,
                               /*ExplicitArgs=*/nullptr,
-                              /*SuppressUsedConversions=*/false,
+                              /*SuppressUserConversions=*/false,
                               /*PartialOverloading=*/true);
       }
     } else {
@@ -5216,14 +5216,14 @@ QualType Sema::ProduceConstructorSignatureHelp(Scope *S, QualType Type,
     if (auto *FD = dyn_cast<FunctionDecl>(C)) {
       AddOverloadCandidate(FD, DeclAccessPair::make(FD, C->getAccess()), Args,
                            CandidateSet,
-                           /*SuppressUsedConversions=*/false,
+                           /*SuppressUserConversions=*/false,
                            /*PartialOverloading=*/true,
                            /*AllowExplicit*/ true);
     } else if (auto *FTD = dyn_cast<FunctionTemplateDecl>(C)) {
       AddTemplateOverloadCandidate(
           FTD, DeclAccessPair::make(FTD, C->getAccess()),
           /*ExplicitTemplateArgs=*/nullptr, Args, CandidateSet,
-          /*SuppressUsedConversions=*/false,
+          /*SuppressUserConversions=*/false,
           /*PartialOverloading=*/true);
     }
   }

@@ -31,11 +31,11 @@ define void @test_throw(i8* %p) {
 ; CHECK:     global.get  ${{.+}}=, __stack_pointer
 ; CHECK:     try
 ; CHECK:       call      foo
-; CHECK:     catch     $[[EXCEPT_REF:[0-9]+]]=
+; CHECK:     catch     $[[EXNREF:[0-9]+]]=
 ; CHECK:       global.set  __stack_pointer
 ; CHECK:       block i32
-; CHECK:         br_on_exn 0, __cpp_exception, $[[EXCEPT_REF]]
-; CHECK:         rethrow   $[[EXCEPT_REF]]
+; CHECK:         br_on_exn 0, __cpp_exception, $[[EXNREF]]
+; CHECK:         rethrow   $[[EXNREF]]
 ; CHECK:       end_block
 ; CHECK:       extract_exception $[[EXN:[0-9]+]]=
 ; CHECK-DAG:   i32.store  __wasm_lpad_context
@@ -47,7 +47,7 @@ define void @test_throw(i8* %p) {
 ; CHECK:         call      __cxa_end_catch
 ; CHECK:         br        1
 ; CHECK:       end_block
-; CHECK:       rethrow   $[[EXCEPT_REF]]
+; CHECK:       rethrow   $[[EXNREF]]
 ; CHECK:     end_try
 define void @test_catch() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:
@@ -92,10 +92,10 @@ try.cont:                                         ; preds = %entry, %catch
 ; CHECK-LABEL: test_cleanup:
 ; CHECK: try
 ; CHECK:   call      foo
-; CHECK: catch     $[[EXCEPT_REF:[0-9]+]]=
+; CHECK: catch     $[[EXNREF:[0-9]+]]=
 ; CHECK:   global.set  __stack_pointer
 ; CHECK:   i32.call  $drop=, _ZN4TempD2Ev
-; CHECK:   rethrow   $[[EXCEPT_REF]]
+; CHECK:   rethrow   $[[EXNREF]]
 ; CHECK: end_try
 define void @test_cleanup() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
 entry:

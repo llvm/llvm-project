@@ -833,7 +833,7 @@ public:
     LineState State =
         Indenter->getInitialState(FirstIndent, FirstStartColumn, &Line, DryRun);
     while (State.NextToken) {
-      formatChildren(State, /*Newline=*/false, DryRun, Penalty);
+      formatChildren(State, /*NewLine=*/false, DryRun, Penalty);
       Indenter->addTokenToState(
           State, /*Newline=*/State.NextToken->MustBreakBefore, DryRun);
     }

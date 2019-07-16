@@ -4080,7 +4080,7 @@ CXXRecordDecl *MemberPointerType::getMostRecentCXXRecordDecl() const {
 void clang::FixedPointValueToString(SmallVectorImpl<char> &Str,
                                     llvm::APSInt Val, unsigned Scale) {
   FixedPointSemantics FXSema(Val.getBitWidth(), Scale, Val.isSigned(),
-                             /*isSaturated=*/false,
-                             /*hasUnsignedPadding=*/false);
+                             /*IsSaturated=*/false,
+                             /*HasUnsignedPadding=*/false);
   APFixedPoint(Val, FXSema).toString(Str);
 }

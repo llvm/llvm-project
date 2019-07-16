@@ -36,8 +36,8 @@ protected:
 } // end anonymous namespace
 
 SystemZObjectWriter::SystemZObjectWriter(uint8_t OSABI)
-  : MCELFObjectTargetWriter(/*Is64Bit=*/true, OSABI, ELF::EM_S390,
-                            /*HasRelocationAddend=*/ true) {}
+  : MCELFObjectTargetWriter(/*Is64Bit_=*/true, OSABI, ELF::EM_S390,
+                            /*HasRelocationAddend_=*/ true) {}
 
 // Return the relocation type for an absolute value of MCFixupKind Kind.
 static unsigned getAbsoluteReloc(unsigned Kind) {

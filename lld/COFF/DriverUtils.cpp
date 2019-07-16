@@ -348,7 +348,7 @@ public:
     // IsVolatileSize=true forces MemoryBuffer to not use mmap().
     return CHECK(MemoryBuffer::getFile(path, /*FileSize=*/-1,
                                        /*RequiresNullTerminator=*/false,
-                                       /*IsVolatileSize=*/true),
+                                       /*IsVolatile=*/true),
                  "could not open " + path);
   }
 

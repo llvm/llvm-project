@@ -100,14 +100,14 @@ body: |
   ; predecessors: %bb.0
     successors: %bb.3, %bb.9
     liveins: $value_stack
-    %0:except_ref = CATCH implicit-def $arguments
+    %0:exnref = CATCH implicit-def $arguments
     CLEANUPRET implicit-def dead $arguments
 
   bb.3 (landing-pad):
   ; predecessors: %bb.2
     successors: %bb.4, %bb.6
     liveins: $value_stack
-    %1:except_ref = CATCH implicit-def $arguments
+    %1:exnref = CATCH implicit-def $arguments
     BR_IF %bb.4, %58:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
     BR %bb.6, implicit-def $arguments
 
@@ -138,13 +138,13 @@ body: |
   ; predecessors: %bb.4
     successors: %bb.9
     liveins: $value_stack
-    %2:except_ref = CATCH implicit-def $arguments
+    %2:exnref = CATCH implicit-def $arguments
     CLEANUPRET implicit-def dead $arguments
 
   bb.9 (landing-pad):
   ; predecessors: %bb.2, %bb.6, %bb.8
     liveins: $value_stack
-    %3:except_ref = CATCH implicit-def $arguments
+    %3:exnref = CATCH implicit-def $arguments
     CLEANUPRET implicit-def dead $arguments
 
   bb.10:
@@ -257,7 +257,7 @@ body: |
   ; predecessors: %bb.0
     successors: %bb.2, %bb.8
     liveins: $value_stack
-    %0:except_ref = CATCH implicit-def $arguments
+    %0:exnref = CATCH implicit-def $arguments
     BR_IF %bb.2, %32:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
     BR %bb.8, implicit-def $arguments
 
@@ -271,7 +271,7 @@ body: |
   ; predecessors: %bb.2
     successors: %bb.4, %bb.6
     liveins: $value_stack
-    %1:except_ref = CATCH implicit-def $arguments
+    %1:exnref = CATCH implicit-def $arguments
     BR_IF %bb.4, %43:i32, implicit-def $arguments, implicit-def $value_stack, implicit $value_stack
     BR %bb.6, implicit-def $arguments
 
@@ -313,13 +313,13 @@ body: |
   ; predecessors: %bb.4
     successors: %bb.11
     liveins: $value_stack
-    %2:except_ref = CATCH implicit-def $arguments
+    %2:exnref = CATCH implicit-def $arguments
     CLEANUPRET implicit-def dead $arguments
 
   bb.11 (landing-pad):
   ; predecessors: %bb.2, %bb.6, %bb.10
     liveins: $value_stack
-    %3:except_ref = CATCH implicit-def $arguments
+    %3:exnref = CATCH implicit-def $arguments
     CLEANUPRET implicit-def dead $arguments
 
   bb.12:

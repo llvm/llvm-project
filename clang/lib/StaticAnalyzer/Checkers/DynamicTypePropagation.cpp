@@ -144,7 +144,7 @@ static void recordFixedType(const MemRegion *Region, const CXXMethodDecl *MD,
   QualType Ty = Ctx.getPointerType(Ctx.getRecordType(MD->getParent()));
 
   ProgramStateRef State = C.getState();
-  State = setDynamicTypeInfo(State, Region, Ty, /*CanBeSubclass=*/false);
+  State = setDynamicTypeInfo(State, Region, Ty, /*CanBeSubClassed=*/false);
   C.addTransition(State);
 }
 
@@ -307,7 +307,7 @@ void DynamicTypePropagation::checkPostStmt(const CXXNewExpr *NewE,
     return;
 
   C.addTransition(setDynamicTypeInfo(C.getState(), MR, NewE->getType(),
-                                     /*CanBeSubclass=*/false));
+                                     /*CanBeSubClassed=*/false));
 }
 
 const ObjCObjectType *
@@ -887,7 +887,7 @@ void DynamicTypePropagation::checkPostObjCMessage(const ObjCMethodCall &M,
     // MostSpecializedTypeArgsMap. We should only store anything in the later if
     // the stored data differs from the one stored in the former.
     State = setDynamicTypeInfo(State, RetRegion, ResultType,
-                               /*CanBeSubclass=*/true);
+                               /*CanBeSubClassed=*/true);
     Pred = C.addTransition(State);
   }
 

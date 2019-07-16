@@ -951,7 +951,7 @@ bool RetainCountChecker::evalCall(const CallEvent &Call,
       // And on the original branch assume that both input and
       // output are non-zero.
       if (auto L = RetVal.getAs<DefinedOrUnknownSVal>())
-        state = state->assume(*L, /*Assumption=*/true);
+        state = state->assume(*L, /*assumption=*/true);
 
     }
   }

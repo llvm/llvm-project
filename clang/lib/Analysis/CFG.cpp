@@ -2931,8 +2931,8 @@ CFGBlock *CFGBuilder::VisitIfStmt(IfStmt *I) {
 
     // Add the successors.  If we know that specific branches are
     // unreachable, inform addSuccessor() of that knowledge.
-    addSuccessor(Block, ThenBlock, /* isReachable = */ !KnownVal.isFalse());
-    addSuccessor(Block, ElseBlock, /* isReachable = */ !KnownVal.isTrue());
+    addSuccessor(Block, ThenBlock, /* IsReachable = */ !KnownVal.isFalse());
+    addSuccessor(Block, ElseBlock, /* IsReachable = */ !KnownVal.isTrue());
 
     // Add the condition as the last statement in the new block.  This may
     // create new blocks as the condition may contain control-flow.  Any newly

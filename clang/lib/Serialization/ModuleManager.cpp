@@ -42,8 +42,8 @@ using namespace clang;
 using namespace serialization;
 
 ModuleFile *ModuleManager::lookupByFileName(StringRef Name) const {
-  const FileEntry *Entry = FileMgr.getFile(Name, /*openFile=*/false,
-                                           /*cacheFailure=*/false);
+  const FileEntry *Entry = FileMgr.getFile(Name, /*OpenFile=*/false,
+                                           /*CacheFailure=*/false);
   if (Entry)
     return lookup(Entry);
 
@@ -68,8 +68,8 @@ ModuleFile *ModuleManager::lookup(const FileEntry *File) const {
 
 std::unique_ptr<llvm::MemoryBuffer>
 ModuleManager::lookupBuffer(StringRef Name) {
-  const FileEntry *Entry = FileMgr.getFile(Name, /*openFile=*/false,
-                                           /*cacheFailure=*/false);
+  const FileEntry *Entry = FileMgr.getFile(Name, /*OpenFile=*/false,
+                                           /*CacheFailure=*/false);
   return std::move(InMemoryBuffers[Entry]);
 }
 
@@ -184,7 +184,7 @@ ModuleManager::addModule(StringRef FileName, ModuleKind Type,
     } else {
       // Get a buffer of the file and close the file descriptor when done.
       Buf = FileMgr.getBufferForFile(NewModule->File,
-                                     /*IsVolatile=*/false,
+                                     /*isVolatile=*/false,
                                      /*ShouldClose=*/true);
     }
 
@@ -447,7 +447,7 @@ bool ModuleManager::lookupModuleFile(StringRef FileName,
 
   // Open the file immediately to ensure there is no race between stat'ing and
   // opening the file.
-  File = FileMgr.getFile(FileName, /*openFile=*/true, /*cacheFailure=*/false);
+  File = FileMgr.getFile(FileName, /*OpenFile=*/true, /*CacheFailure=*/false);
   if (!File)
     return false;
 

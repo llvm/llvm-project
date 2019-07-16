@@ -2119,6 +2119,12 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
               Diag(clang::diag::warn_drv_treating_input_as_cxx)
                   << getTypeName(OldTy) << getTypeName(Ty);
           }
+
+          // If running with -fthinlto-index=, extensions that normally identify
+          // native object files actually identify LLVM bitcode files.
+          if (Args.hasArgNoClaim(options::OPT_fthinlto_index_EQ) &&
+              Ty == types::TY_Object)
+            Ty = types::TY_LLVM_BC;
         }
 
         // -ObjC and -ObjC++ override the default language, but only for "source
@@ -4017,9 +4023,9 @@ InputInfo Driver::BuildJobsForActionNoCache(
     Input.claim();
     if (Input.getOption().matches(options::OPT_INPUT)) {
       const char *Name = Input.getValue();
-      return InputInfo(A, Name, /* BaseInput = */ Name);
+      return InputInfo(A, Name, /* _BaseInput = */ Name);
     }
-    return InputInfo(A, &Input, /* BaseInput = */ "");
+    return InputInfo(A, &Input, /* _BaseInput = */ "");
   }
 
   if (const BindArchAction *BAA = dyn_cast<BindArchAction>(A)) {

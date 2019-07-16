@@ -41,8 +41,8 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}v_mul_v2i16:
-; SI: v_mul_lo_u32
-; SI: v_mul_lo_u32
+; SI: v_mul_u32_u24
+; SI: v_mul_u32_u24
 
 ; VI: v_mul_lo_u16_sdwa
 ; VI: v_mul_lo_u16_e32
@@ -59,9 +59,9 @@ define <2 x i16> @v_mul_v2i16(<2 x i16> %a, <2 x i16> %b) {
 
 ; FIXME: Unpack garbage on gfx9
 ; GCN-LABEL: {{^}}v_mul_v3i16:
-; SI: v_mul_lo_u32
-; SI: v_mul_lo_u32
-; SI: v_mul_lo_u32
+; SI: v_mul_u32_u24
+; SI: v_mul_u32_u24
+; SI: v_mul_u32_u24
 
 ; VI: v_mul_lo_u16
 ; VI: v_mul_lo_u16
@@ -77,10 +77,10 @@ define <3 x i16> @v_mul_v3i16(<3 x i16> %a, <3 x i16> %b) {
 }
 
 ; GCN-LABEL: {{^}}v_mul_v4i16:
-; SI: v_mul_lo_u32
-; SI: v_mul_lo_u32
-; SI: v_mul_lo_u32
-; SI: v_mul_lo_u32
+; SI: v_mul_u32_u24
+; SI: v_mul_u32_u24
+; SI: v_mul_u32_u24
+; SI: v_mul_u32_u24
 
 ; VI: v_mul_lo_u16_sdwa
 ; VI: v_mul_lo_u16_e32

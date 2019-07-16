@@ -954,13 +954,33 @@ std::string TreePredicateFn::getPredCode() const {
   }
 
   if (isLoad() || isStore() || isAtomic()) {
-    StringRef SDNodeName =
-        isLoad() ? "LoadSDNode" : isStore() ? "StoreSDNode" : "AtomicSDNode";
+    if (ListInit *AddressSpaces = getAddressSpaces()) {
+      Code += "unsigned AddrSpace = cast<MemSDNode>(N)->getAddressSpace();\n"
+        " if (";
+
+      bool First = true;
+      for (Init *Val : AddressSpaces->getValues()) {
+        if (First)
+          First = false;
+        else
+          Code += " && ";
+
+        IntInit *IntVal = dyn_cast<IntInit>(Val);
+        if (!IntVal) {
+          PrintFatalError(getOrigPatFragRecord()->getRecord()->getLoc(),
+                          "AddressSpaces element must be integer");
+        }
+
+        Code += "AddrSpace != " + utostr(IntVal->getValue());
+      }
+
+      Code += ")\nreturn false;\n";
+    }
 
     Record *MemoryVT = getMemoryVT();
 
     if (MemoryVT)
-      Code += ("if (cast<" + SDNodeName + ">(N)->getMemoryVT() != MVT::" +
+      Code += ("if (cast<MemSDNode>(N)->getMemoryVT() != MVT::" +
                MemoryVT->getName() + ") return false;\n")
                   .str();
   }
@@ -1149,6 +1169,14 @@ Record *TreePredicateFn::getMemoryVT() const {
     return nullptr;
   return R->getValueAsDef("MemoryVT");
 }
+
+ListInit *TreePredicateFn::getAddressSpaces() const {
+  Record *R = getOrigPatFragRecord()->getRecord();
+  if (R->isValueUnset("AddressSpaces"))
+    return nullptr;
+  return R->getValueAsListInit("AddressSpaces");
+}
+
 Record *TreePredicateFn::getScalarMemoryVT() const {
   Record *R = getOrigPatFragRecord()->getRecord();
   if (R->isValueUnset("ScalarMemoryVT"))

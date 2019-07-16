@@ -604,10 +604,9 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
   // Support for #pragma redefine_extname (Sun compatibility)
   Builder.defineMacro("__PRAGMA_REDEFINE_EXTNAME", "1");
 
-  // As sad as it is, enough software depends on the __VERSION__ for version
-  // checks that it is necessary to report 4.2.1 (the base GCC version we claim
-  // compatibility with) first.
-  Builder.defineMacro("__VERSION__", "\"4.2.1 Compatible " +
+  // Previously this macro was set to a string aiming to achieve compatibility
+  // with GCC 4.2.1. Now, just return the full Clang version
+  Builder.defineMacro("__VERSION__", "\"" +
                       Twine(getClangFullCPPVersion()) + "\"");
 
   // Initialize language-specific preprocessor defines.
