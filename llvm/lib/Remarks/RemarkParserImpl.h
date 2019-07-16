@@ -19,13 +19,13 @@ namespace llvm {
 namespace remarks {
 /// This is used as a base for any parser implementation.
 struct ParserImpl {
-  explicit ParserImpl(ParserFormat Format) : Format(Format) {}
+  explicit ParserImpl(Format ParserFormat) : ParserFormat(ParserFormat) {}
   // Virtual destructor prevents mismatched deletes
   virtual ~ParserImpl() {}
 
   // The parser format. This is used as a tag to safely cast between
   // implementations.
-  ParserFormat Format;
+  Format ParserFormat;
 };
 } // end namespace remarks
 } // end namespace llvm

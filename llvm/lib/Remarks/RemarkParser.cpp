@@ -20,29 +20,35 @@
 using namespace llvm;
 using namespace llvm::remarks;
 
-static std::unique_ptr<ParserImpl> formatToParserImpl(ParserFormat Format,
+static std::unique_ptr<ParserImpl> formatToParserImpl(Format ParserFormat,
                                                       StringRef Buf) {
-  switch (Format) {
-  case ParserFormat::YAML:
+  switch (ParserFormat) {
+  case Format::YAML:
     return llvm::make_unique<YAMLParserImpl>(Buf);
+  case Format::Unknown:
+    llvm_unreachable("Unhandled llvm::remarks::ParserFormat enum");
+    return nullptr;
   };
 }
 
 static std::unique_ptr<ParserImpl>
-formatToParserImpl(ParserFormat Format, StringRef Buf,
+formatToParserImpl(Format ParserFormat, StringRef Buf,
                    const ParsedStringTable &StrTab) {
-  switch (Format) {
-  case ParserFormat::YAML:
+  switch (ParserFormat) {
+  case Format::YAML:
     return llvm::make_unique<YAMLParserImpl>(Buf, &StrTab);
+  case Format::Unknown:
+    llvm_unreachable("Unhandled llvm::remarks::ParserFormat enum");
+    return nullptr;
   };
 }
 
-Parser::Parser(ParserFormat Format, StringRef Buf)
-    : Impl(formatToParserImpl(Format, Buf)) {}
+Parser::Parser(Format ParserFormat, StringRef Buf)
+    : Impl(formatToParserImpl(ParserFormat, Buf)) {}
 
-Parser::Parser(ParserFormat Format, StringRef Buf,
+Parser::Parser(Format ParserFormat, StringRef Buf,
                const ParsedStringTable &StrTab)
-    : Impl(formatToParserImpl(Format, Buf, StrTab)) {}
+    : Impl(formatToParserImpl(ParserFormat, Buf, StrTab)) {}
 
 Parser::~Parser() = default;
 
@@ -108,9 +114,8 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(remarks::Parser, LLVMRemarkParserRef)
 
 extern "C" LLVMRemarkParserRef LLVMRemarkParserCreateYAML(const void *Buf,
                                                           uint64_t Size) {
-  return wrap(
-      new remarks::Parser(remarks::ParserFormat::YAML,
-                          StringRef(static_cast<const char *>(Buf), Size)));
+  return wrap(new remarks::Parser(
+      remarks::Format::YAML, StringRef(static_cast<const char *>(Buf), Size)));
 }
 
 static void handleYAMLError(remarks::YAMLParserImpl &Impl, Error E) {

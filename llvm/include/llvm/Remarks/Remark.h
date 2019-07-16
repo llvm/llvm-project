@@ -24,7 +24,6 @@ namespace llvm {
 namespace remarks {
 
 constexpr uint64_t Version = 0;
-constexpr StringRef Magic("REMARKS", 7);
 
 /// The debug location used to track a remark back to the source file.
 struct RemarkLocation {

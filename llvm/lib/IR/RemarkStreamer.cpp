@@ -15,6 +15,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
+#include "llvm/Remarks/RemarkFormat.h"
 
 using namespace llvm;
 
@@ -112,28 +113,14 @@ char RemarkSetupPatternError::ID = 0;
 char RemarkSetupFormatError::ID = 0;
 
 static std::unique_ptr<remarks::Serializer>
-formatToSerializer(RemarksSerializerFormat RemarksFormat, raw_ostream &OS) {
+formatToSerializer(remarks::Format RemarksFormat, raw_ostream &OS) {
   switch (RemarksFormat) {
   default:
     llvm_unreachable("Unknown remark serializer format.");
     return nullptr;
-  case RemarksSerializerFormat::YAML:
+  case remarks::Format::YAML:
     return llvm::make_unique<remarks::YAMLSerializer>(OS);
   };
-}
-
-Expected<RemarksSerializerFormat>
-llvm::parseSerializerFormat(StringRef StrFormat) {
-  auto Format = StringSwitch<RemarksSerializerFormat>(StrFormat)
-                    .Cases("", "yaml", RemarksSerializerFormat::YAML)
-                    .Default(RemarksSerializerFormat::Unknown);
-
-  if (Format == RemarksSerializerFormat::Unknown)
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "Unknown remark serializer format: '%s'",
-                             StrFormat.data());
-
-  return Format;
 }
 
 Expected<std::unique_ptr<ToolOutputFile>>
@@ -158,8 +145,7 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
   if (EC)
     return make_error<RemarkSetupFileError>(errorCodeToError(EC));
 
-  Expected<RemarksSerializerFormat> Format =
-      parseSerializerFormat(RemarksFormat);
+  Expected<remarks::Format> Format = remarks::parseFormat(RemarksFormat);
   if (Error E = Format.takeError())
     return make_error<RemarkSetupFormatError>(std::move(E));
 

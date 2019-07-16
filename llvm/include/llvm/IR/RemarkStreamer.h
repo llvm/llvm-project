@@ -90,10 +90,6 @@ struct RemarkSetupFormatError : RemarkSetupErrorInfo<RemarkSetupFormatError> {
   using RemarkSetupErrorInfo<RemarkSetupFormatError>::RemarkSetupErrorInfo;
 };
 
-enum class RemarksSerializerFormat { Unknown, YAML };
-
-Expected<RemarksSerializerFormat> parseSerializerFormat(StringRef Format);
-
 /// Setup optimization remarks.
 Expected<std::unique_ptr<ToolOutputFile>>
 setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
