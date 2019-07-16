@@ -101,6 +101,11 @@ bool InputStream::read_full(std::ofstream *log, size_t length,
     else
       bytes_read = ::read(descriptor.m_fd, ptr, length);
 
+    if (bytes_read == 0) {
+      if (log)
+        *log << "End of file (EOF) reading from input file.\n";
+      return false;
+    }
     if (bytes_read < 0) {
       int reason = 0;
 #if defined(_WIN32)

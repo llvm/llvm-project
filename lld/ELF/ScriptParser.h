@@ -16,7 +16,7 @@ namespace lld {
 namespace elf {
 
 // Parses a linker script. Calling this function updates
-// Config and ScriptConfig.
+// lld::elf::config and lld::elf::script.
 void readLinkerScript(MemoryBufferRef mb);
 
 // Parses a version script.

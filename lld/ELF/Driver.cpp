@@ -1255,7 +1255,7 @@ static uint64_t getCommonPageSize(opt::InputArgList &args) {
       warn("-z common-page-size set, but paging disabled by omagic or nmagic");
     return 1;
   }
-  // CommonPageSize can't be larger than MaxPageSize.
+  // commonPageSize can't be larger than maxPageSize.
   if (val > config->maxPageSize)
     val = config->maxPageSize;
   return val;
@@ -1263,7 +1263,7 @@ static uint64_t getCommonPageSize(opt::InputArgList &args) {
 
 // Parses -image-base option.
 static Optional<uint64_t> getImageBase(opt::InputArgList &args) {
-  // Because we are using "Config->MaxPageSize" here, this function has to be
+  // Because we are using "Config->maxPageSize" here, this function has to be
   // called after the variable is initialized.
   auto *arg = args.getLastArg(OPT_image_base);
   if (!arg)
@@ -1406,8 +1406,8 @@ static void demoteSharedSymbols() {
   });
 }
 
-// The section referred to by S is considered address-significant. Set the
-// KeepUnique flag on the section if appropriate.
+// The section referred to by `s` is considered address-significant. Set the
+// keepUnique flag on the section if appropriate.
 static void markAddrsig(Symbol *s) {
   if (auto *d = dyn_cast_or_null<Defined>(s))
     if (d->section)
@@ -1772,7 +1772,7 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   if (args.hasArg(OPT_exclude_libs))
     excludeLibs(args);
 
-  // Create ElfHeader early. We need a dummy section in
+  // Create elfHeader early. We need a dummy section in
   // addReservedSymbols to mark the created symbols as not absolute.
   Out::elfHeader = make<OutputSection>("", 0, SHF_ALLOC);
   Out::elfHeader->size = sizeof(typename ELFT::Ehdr);
@@ -1854,14 +1854,14 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
   target = getTarget();
 
   config->eflags = target->calcEFlags();
-  // MaxPageSize (sometimes called abi page size) is the maximum page size that
+  // maxPageSize (sometimes called abi page size) is the maximum page size that
   // the output can be run on. For example if the OS can use 4k or 64k page
-  // sizes then MaxPageSize must be 64 for the output to be useable on both.
+  // sizes then maxPageSize must be 64k for the output to be useable on both.
   // All important alignment decisions must use this value.
   config->maxPageSize = getMaxPageSize(args);
-  // CommonPageSize is the most common page size that the output will be run on.
+  // commonPageSize is the most common page size that the output will be run on.
   // For example if an OS can use 4k or 64k page sizes and 4k is more common
-  // than 64k then CommonPageSize is set to 4k. CommonPageSize can be used for
+  // than 64k then commonPageSize is set to 4k. commonPageSize can be used for
   // optimizations such as DATA_SEGMENT_ALIGN in linker scripts. LLD's use of it
   // is limited to writing trap instructions on the last executable segment.
   config->commonPageSize = getCommonPageSize(args);

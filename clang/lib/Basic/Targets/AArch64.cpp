@@ -118,6 +118,28 @@ void AArch64TargetInfo::getTargetDefinesARMV82A(const LangOptions &Opts,
   getTargetDefinesARMV81A(Opts, Builder);
 }
 
+void AArch64TargetInfo::getTargetDefinesARMV83A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  Builder.defineMacro("__ARM_FEATURE_JCVT", "1");
+  // Also include the Armv8.2 defines
+  getTargetDefinesARMV82A(Opts, Builder);
+}
+
+void AArch64TargetInfo::getTargetDefinesARMV84A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Also include the Armv8.3 defines
+  // FIXME: Armv8.4 makes some extensions mandatory. Handle them here.
+  getTargetDefinesARMV83A(Opts, Builder);
+}
+
+void AArch64TargetInfo::getTargetDefinesARMV85A(const LangOptions &Opts,
+                                                MacroBuilder &Builder) const {
+  // Also include the Armv8.4 defines
+  // FIXME: Armv8.5 makes some extensions mandatory. Handle them here.
+  getTargetDefinesARMV84A(Opts, Builder);
+}
+
+
 void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
                                          MacroBuilder &Builder) const {
   // Target identification.
@@ -209,6 +231,15 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   case llvm::AArch64::ArchKind::ARMV8_2A:
     getTargetDefinesARMV82A(Opts, Builder);
     break;
+  case llvm::AArch64::ArchKind::ARMV8_3A:
+    getTargetDefinesARMV83A(Opts, Builder);
+    break;
+  case llvm::AArch64::ArchKind::ARMV8_4A:
+    getTargetDefinesARMV84A(Opts, Builder);
+    break;
+  case llvm::AArch64::ArchKind::ARMV8_5A:
+    getTargetDefinesARMV85A(Opts, Builder);
+    break;
   }
 
   // All of the __sync_(bool|val)_compare_and_swap_(1|2|4|8) builtins work.
@@ -256,6 +287,12 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       ArchKind = llvm::AArch64::ArchKind::ARMV8_1A;
     if (Feature == "+v8.2a")
       ArchKind = llvm::AArch64::ArchKind::ARMV8_2A;
+    if (Feature == "+v8.3a")
+      ArchKind = llvm::AArch64::ArchKind::ARMV8_3A;
+    if (Feature == "+v8.4a")
+      ArchKind = llvm::AArch64::ArchKind::ARMV8_4A;
+    if (Feature == "+v8.5a")
+      ArchKind = llvm::AArch64::ArchKind::ARMV8_5A;
     if (Feature == "+fullfp16")
       HasFullFP16 = 1;
     if (Feature == "+dotprod")

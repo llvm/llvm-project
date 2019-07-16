@@ -304,7 +304,7 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
   if (TotalLength == UINT32_MAX) {
     FormParams.Format = dwarf::DWARF64;
     TotalLength = DebugLineData.getU64(OffsetPtr);
-  } else if (TotalLength >= 0xffffff00) {
+  } else if (TotalLength >= 0xfffffff0) {
     return createStringError(errc::invalid_argument,
         "parsing line table prologue at offset 0x%8.8" PRIx64
         " unsupported reserved unit length found of value 0x%8.8" PRIx64,
@@ -758,7 +758,7 @@ Error DWARFDebugLine::LineTable::parse(
           State.Row.Address.Address += PCOffset;
           if (OS)
             *OS
-                << format(" (0x%16.16" PRIx64 ")", PCOffset);
+                << format(" (0x%4.4" PRIx16 ")", PCOffset);
         }
         break;
 
@@ -1091,7 +1091,7 @@ DWARFDebugLine::SectionParser::SectionParser(DWARFDataExtractor &Data,
 }
 
 bool DWARFDebugLine::Prologue::totalLengthIsValid() const {
-  return TotalLength == 0xffffffff || TotalLength < 0xffffff00;
+  return TotalLength == 0xffffffff || TotalLength < 0xfffffff0;
 }
 
 DWARFDebugLine::LineTable DWARFDebugLine::SectionParser::parseNext(

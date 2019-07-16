@@ -4746,8 +4746,9 @@ CFGBlock *CFGBuilder::VisitOMPExecutableDirective(OMPExecutableDirective *D,
 
   // Reverse the elements to process them in natural order. Iterators are not
   // bidirectional, so we need to create temp vector.
-  for (Stmt *S : llvm::reverse(llvm::to_vector<8>(
-           OMPExecutableDirective::used_clauses_children(D->clauses())))) {
+  SmallVector<Stmt *, 8> Used(
+      OMPExecutableDirective::used_clauses_children(D->clauses()));
+  for (Stmt *S : llvm::reverse(Used)) {
     assert(S && "Expected non-null used-in-clause child.");
     if (CFGBlock *R = Visit(S))
       B = R;

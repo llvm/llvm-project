@@ -67,11 +67,6 @@ extern "C" void *__libc_stack_end;
 void *__libc_stack_end = 0;
 #endif
 
-#if SANITIZER_LINUX && defined(__aarch64__)
-__tsan::uptr InitializeGuardPtr() __attribute__((visibility("hidden")));
-extern "C" __tsan::uptr _tsan_pointer_chk_guard;
-#endif
-
 #if SANITIZER_LINUX && defined(__aarch64__) && !SANITIZER_GO
 # define INIT_LONGJMP_XOR_KEY 1
 #else

@@ -90,37 +90,29 @@ entry:
 define %S @sub(%S* nocapture readonly %this, %S %arg.b) local_unnamed_addr {
 ; CHECK-LABEL: sub:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    pushq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    .cfi_offset %rbx, -16
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    movq (%rsi), %r10
 ; CHECK-NEXT:    movq 8(%rsi), %rdi
-; CHECK-NEXT:    movq %r10, %r11
-; CHECK-NEXT:    subq %rdx, %r11
-; CHECK-NEXT:    notq %rdx
-; CHECK-NEXT:    movb $1, %bl
-; CHECK-NEXT:    addb $-1, %bl
-; CHECK-NEXT:    adcq %r10, %rdx
+; CHECK-NEXT:    subq %rdx, %r10
+; CHECK-NEXT:    setae %dl
+; CHECK-NEXT:    addb $-1, %dl
 ; CHECK-NEXT:    adcq $0, %rdi
 ; CHECK-NEXT:    setb %dl
-; CHECK-NEXT:    movzbl %dl, %edx
+; CHECK-NEXT:    movzbl %dl, %r11d
 ; CHECK-NEXT:    notq %rcx
 ; CHECK-NEXT:    addq %rdi, %rcx
-; CHECK-NEXT:    adcq 16(%rsi), %rdx
-; CHECK-NEXT:    setb %bl
-; CHECK-NEXT:    movzbl %bl, %edi
+; CHECK-NEXT:    adcq 16(%rsi), %r11
+; CHECK-NEXT:    setb %dl
+; CHECK-NEXT:    movzbl %dl, %edx
 ; CHECK-NEXT:    notq %r8
-; CHECK-NEXT:    addq %rdx, %r8
-; CHECK-NEXT:    adcq 24(%rsi), %rdi
+; CHECK-NEXT:    addq %r11, %r8
+; CHECK-NEXT:    adcq 24(%rsi), %rdx
 ; CHECK-NEXT:    notq %r9
-; CHECK-NEXT:    addq %rdi, %r9
-; CHECK-NEXT:    movq %r11, (%rax)
+; CHECK-NEXT:    addq %rdx, %r9
+; CHECK-NEXT:    movq %r10, (%rax)
 ; CHECK-NEXT:    movq %rcx, 8(%rax)
 ; CHECK-NEXT:    movq %r8, 16(%rax)
 ; CHECK-NEXT:    movq %r9, 24(%rax)
-; CHECK-NEXT:    popq %rbx
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
   %0 = extractvalue %S %arg.b, 0

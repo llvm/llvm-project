@@ -291,10 +291,13 @@ bool AMDGPUInstructionSelector::selectG_AND_OR_XOR(MachineInstr &I) const {
   // TODO: Should this allow an SCC bank result, and produce a copy from SCC for
   // the result?
   if (DstRB->getID() == AMDGPU::SGPRRegBankID) {
-    const TargetRegisterClass *RC
-      = TRI.getConstrainedRegClassForOperand(Dst, MRI);
     unsigned InstOpc = getLogicalBitOpcode(I.getOpcode(), Size > 32);
     I.setDesc(TII.get(InstOpc));
+
+    const TargetRegisterClass *RC
+      = TRI.getConstrainedRegClassForOperand(Dst, MRI);
+    if (!RC)
+      return false;
     return RBI.constrainGenericRegister(DstReg, *RC, MRI) &&
            RBI.constrainGenericRegister(Src0.getReg(), *RC, MRI) &&
            RBI.constrainGenericRegister(Src1.getReg(), *RC, MRI);

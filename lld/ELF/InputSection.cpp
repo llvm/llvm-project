@@ -206,9 +206,9 @@ OutputSection *SectionBase::getOutputSection() {
   return sec ? sec->getParent() : nullptr;
 }
 
-// When a section is compressed, `RawData` consists with a header followed
+// When a section is compressed, `rawData` consists with a header followed
 // by zlib-compressed data. This function parses a header to initialize
-// `UncompressedSize` member and remove the header from `RawData`.
+// `uncompressedSize` member and remove the header from `rawData`.
 void InputSectionBase::parseCompressedHeader() {
   using Chdr64 = typename ELF64LE::Chdr;
   using Chdr32 = typename ELF32LE::Chdr;
@@ -306,7 +306,7 @@ std::string InputSectionBase::getLocation(uint64_t offset) {
     return info->FileName + ":" + std::to_string(info->Line) + ":(" +
            secAndOffset + ")";
 
-  // File->SourceFile contains STT_FILE symbol that contains a
+  // File->sourceFile contains STT_FILE symbol that contains a
   // source file name. If it's missing, we use an object file name.
   std::string srcFile = getFile<ELFT>()->sourceFile;
   if (srcFile.empty())

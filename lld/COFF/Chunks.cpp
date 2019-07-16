@@ -31,10 +31,10 @@ namespace coff {
 
 SectionChunk::SectionChunk(ObjFile *f, const coff_section *h)
     : Chunk(SectionKind), file(f), header(h), repl(this) {
-  // Initialize Relocs.
+  // Initialize relocs.
   setRelocs(file->getCOFFObj()->getRelocations(header));
 
-  // Initialize SectionName.
+  // Initialize sectionName.
   StringRef sectionName;
   if (Expected<StringRef> e = file->getCOFFObj()->getSectionName(header))
     sectionName = *e;
@@ -218,7 +218,7 @@ void applyArm64Addr(uint8_t *off, uint64_t s, uint64_t p, int shift) {
 
 // Update the immediate field in a AARCH64 ldr, str, and add instruction.
 // Optionally limit the range of the written immediate by one or more bits
-// (RangeLimit).
+// (rangeLimit).
 void applyArm64Imm(uint8_t *off, uint64_t imm, uint32_t rangeLimit) {
   uint32_t orig = read32le(off);
   imm += (orig >> 10) & 0xFFF;
@@ -561,7 +561,7 @@ void SectionChunk::getRuntimePseudoRelocs(
             toString(file));
       continue;
     }
-    // SizeInBits is used to initialize the Flags field; currently no
+    // sizeInBits is used to initialize the Flags field; currently no
     // other flags are defined.
     res.emplace_back(
         RuntimePseudoReloc(target, this, rel.VirtualAddress, sizeInBits));
