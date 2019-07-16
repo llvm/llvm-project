@@ -374,7 +374,18 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
       bool got_line = false;
       m_editing = true;
       while (!done) {
+#ifdef _WIN32
+        // ReadFile on Windows is supposed to set ERROR_OPERATION_ABORTED
+        // according to the docs on MSDN. However, this has evidently been a
+        // known bug since Windows 8. Therefore, we can't detect if a signal
+        // interrupted in the fgets. So pressing ctrl-c causes the repl to end
+        // and the process to exit. A temporary workaround is just to attempt to
+        // fgets twice until this bug is fixed.
+        if (fgets(buffer, sizeof(buffer), in) == nullptr &&
+            fgets(buffer, sizeof(buffer), in) == nullptr) {
+#else
         if (fgets(buffer, sizeof(buffer), in) == nullptr) {
+#endif
           const int saved_errno = errno;
           if (feof(in))
             done = true;
