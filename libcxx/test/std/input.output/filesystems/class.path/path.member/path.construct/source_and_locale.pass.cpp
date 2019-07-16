@@ -22,7 +22,6 @@
 #include <locale>
 #include <type_traits>
 #include <cassert>
-#include <iostream>
 
 #include "test_macros.h"
 #include "test_iterators.h"
