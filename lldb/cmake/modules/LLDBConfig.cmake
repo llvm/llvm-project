@@ -185,7 +185,6 @@ function(find_python_libs_windows)
 endfunction(find_python_libs_windows)
 
 if (NOT LLDB_DISABLE_PYTHON)
-
   if ("${CMAKE_SYSTEM_NAME}" STREQUAL "Windows")
     find_python_libs_windows()
 
@@ -194,8 +193,12 @@ if (NOT LLDB_DISABLE_PYTHON)
       add_definitions( -DLLDB_PYTHON_HOME="${LLDB_PYTHON_HOME}" )
     endif()
   else()
-    find_package(PythonInterp)
-    find_package(PythonLibs)
+    find_package(PythonInterp REQUIRED)
+    find_package(PythonLibs REQUIRED)
+  endif()
+
+  if (NOT PYTHON_VERSION_STRING VERSION_EQUAL PYTHONLIBS_VERSION_STRING)
+    message(FATAL_ERROR "Found incompatible Python interpreter (${PYTHON_VERSION_STRING}) and Python libraries (${PYTHONLIBS_VERSION_STRING})")
   endif()
 
   if (PYTHON_INCLUDE_DIR)
