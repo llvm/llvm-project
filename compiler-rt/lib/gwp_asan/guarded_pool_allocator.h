@@ -132,6 +132,10 @@ public:
   // occur.
   static void reportError(uintptr_t AccessPtr, Error E = Error::UNKNOWN);
 
+  // Get the current thread ID, or kInvalidThreadID if failure. Note: This
+  // implementation is platform-specific.
+  static uint64_t getThreadID();
+
 private:
   static constexpr size_t kInvalidSlotID = SIZE_MAX;
 
@@ -145,10 +149,6 @@ private:
   void *mapMemory(size_t Size) const;
   void markReadWrite(void *Ptr, size_t Size) const;
   void markInaccessible(void *Ptr, size_t Size) const;
-
-  // Get the current thread ID, or kInvalidThreadID if failure. Note: This
-  // implementation is platform-specific.
-  static uint64_t getThreadID();
 
   // Get the page size from the platform-specific implementation. Only needs to
   // be called once, and the result should be cached in PageSize in this class.
