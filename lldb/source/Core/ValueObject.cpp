@@ -350,7 +350,7 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
         CompilerType module_type =
             ClangASTContext::GetTypeForDecl(decls.front());
         m_override_type =
-            make_pointer_if_needed(module_type, is_pointer_type);
+            is_pointer_type ? module_type.GetPointerType() : module_type;
       }
 
       if (m_override_type.IsValid())
@@ -367,7 +367,7 @@ CompilerType ValueObject::MaybeCalculateCompleteType() {
       CompilerType runtime_type =
           ClangASTContext::GetTypeForDecl(decls.front());
       m_override_type =
-          make_pointer_if_needed(runtime_type, is_pointer_type);
+          is_pointer_type ? runtime_type.GetPointerType() : runtime_type;
     }
 
     if (m_override_type.IsValid())
