@@ -146,6 +146,7 @@ public:
     iterator       find(const key_type& k);
     const_iterator find(const key_type& k) const;
     size_type count(const key_type& k) const;
+    bool contains(const key_type& k) const; // C++20
     pair<iterator, iterator>             equal_range(const key_type& k);
     pair<const_iterator, const_iterator> equal_range(const key_type& k) const;
 
@@ -310,6 +311,7 @@ public:
     iterator       find(const key_type& k);
     const_iterator find(const key_type& k) const;
     size_type count(const key_type& k) const;
+    bool contains(const key_type& k) const; // C++20
     pair<iterator, iterator>             equal_range(const key_type& k);
     pair<const_iterator, const_iterator> equal_range(const key_type& k) const;
 
@@ -677,6 +679,10 @@ public:
     const_iterator find(const key_type& __k) const {return __table_.find(__k);}
     _LIBCPP_INLINE_VISIBILITY
     size_type count(const key_type& __k) const {return __table_.__count_unique(__k);}
+    #if _LIBCPP_STD_VER > 17
+        _LIBCPP_INLINE_VISIBILITY
+        bool contains(const key_type& __k) const {return find(__k) != end();}
+    #endif // _LIBCPP_STD_VER > 17
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, iterator>             equal_range(const key_type& __k)
         {return __table_.__equal_range_unique(__k);}
@@ -1304,6 +1310,10 @@ public:
     const_iterator find(const key_type& __k) const {return __table_.find(__k);}
     _LIBCPP_INLINE_VISIBILITY
     size_type count(const key_type& __k) const {return __table_.__count_multi(__k);}
+    #if _LIBCPP_STD_VER > 17
+        _LIBCPP_INLINE_VISIBILITY
+        bool contains(const key_type& __k) const {return find(__k) != end();}
+    #endif // _LIBCPP_STD_VER > 17
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, iterator>             equal_range(const key_type& __k)
         {return __table_.__equal_range_multi(__k);}

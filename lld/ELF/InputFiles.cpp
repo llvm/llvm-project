@@ -320,7 +320,7 @@ ObjFile<ELFT>::getVariableLoc(StringRef name) {
   // Take file name string from line table.
   std::string fileName;
   if (!it->second.lt->getFileNameByIndex(
-          it->second.file, nullptr,
+          it->second.file, {},
           DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath, fileName))
     return None;
 
