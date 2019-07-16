@@ -2044,9 +2044,6 @@ private:
   void addUserAssumptions(AssumptionCache &AC, DominatorTree &DT, LoopInfo &LI,
                           DenseMap<BasicBlock *, isl::set> &InvalidDomainMap);
 
-  /// Add user provided parameter constraints to context (command line).
-  void addUserContext();
-
   /// Add the bounds of the parameters to the context.
   void addParameterBounds();
 
@@ -2257,6 +2254,12 @@ public:
   Scop(const Scop &) = delete;
   Scop &operator=(const Scop &) = delete;
   ~Scop();
+
+  /// Increment actual number of aliasing assumptions taken
+  ///
+  /// @param Step    Number of new aliasing assumptions which should be added to
+  /// the number of already taken assumptions.
+  static void incrementNumberOfAliasingAssumptions(unsigned Step);
 
   /// Get the count of copy statements added to this Scop.
   ///
@@ -2589,59 +2592,17 @@ public:
   /// Return true if and only if the InvalidContext is trivial (=empty).
   bool hasTrivialInvalidContext() const { return InvalidContext.is_empty(); }
 
-  /// A vector of memory accesses that belong to an alias group.
-  using AliasGroupTy = SmallVector<MemoryAccess *, 4>;
-
-  /// A vector of alias groups.
-  using AliasGroupVectorTy = SmallVector<Scop::AliasGroupTy, 4>;
-
-  /// Build the alias checks for this SCoP.
-  bool buildAliasChecks(AliasAnalysis &AA);
-
-  /// Build all alias groups for this SCoP.
-  ///
-  /// @returns True if __no__ error occurred, false otherwise.
-  bool buildAliasGroups(AliasAnalysis &AA);
-
-  /// Build alias groups for all memory accesses in the Scop.
-  ///
-  /// Using the alias analysis and an alias set tracker we build alias sets
-  /// for all memory accesses inside the Scop. For each alias set we then map
-  /// the aliasing pointers back to the memory accesses we know, thus obtain
-  /// groups of memory accesses which might alias. We also collect the set of
-  /// arrays through which memory is written.
-  ///
-  /// @param AA A reference to the alias analysis.
-  ///
-  /// @returns A pair consistent of a vector of alias groups and a set of arrays
-  ///          through which memory is written.
-  std::tuple<AliasGroupVectorTy, DenseSet<const ScopArrayInfo *>>
-  buildAliasGroupsForAccesses(AliasAnalysis &AA);
-
-  ///  Split alias groups by iteration domains.
-  ///
-  ///  We split each group based on the domains of the minimal/maximal accesses.
-  ///  That means two minimal/maximal accesses are only in a group if their
-  ///  access domains intersect. Otherwise, they are in different groups.
-  ///
-  ///  @param AliasGroups The alias groups to split
-  void splitAliasGroupsByDomain(AliasGroupVectorTy &AliasGroups);
-
-  /// Build a given alias group and its access data.
-  ///
-  /// @param AliasGroup     The alias group to build.
-  /// @param HasWriteAccess A set of arrays through which memory is not only
-  ///                       read, but also written.
-  ///
-  /// @returns True if __no__ error occurred, false otherwise.
-  bool buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
-                       DenseSet<const ScopArrayInfo *> HasWriteAccess);
-
   /// Return all alias groups for this SCoP.
   const MinMaxVectorPairVectorTy &getAliasGroups() const {
     return MinMaxAliasGroups;
   }
 
+  void addAliasGroup(MinMaxVectorTy &MinMaxAccessesReadWrite,
+                     MinMaxVectorTy &MinMaxAccessesReadOnly) {
+    MinMaxAliasGroups.emplace_back();
+    MinMaxAliasGroups.back().first = MinMaxAccessesReadWrite;
+    MinMaxAliasGroups.back().second = MinMaxAccessesReadOnly;
+  }
   /// Get an isl string representing the context.
   std::string getContextStr() const;
 

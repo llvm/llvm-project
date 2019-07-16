@@ -27,11 +27,14 @@ using namespace lld::wasm;
 DefinedFunction *WasmSym::callCtors;
 DefinedFunction *WasmSym::initMemory;
 DefinedFunction *WasmSym::applyRelocs;
+DefinedFunction *WasmSym::initTLS;
 DefinedData *WasmSym::dsoHandle;
 DefinedData *WasmSym::dataEnd;
 DefinedData *WasmSym::globalBase;
 DefinedData *WasmSym::heapBase;
 GlobalSymbol *WasmSym::stackPointer;
+GlobalSymbol *WasmSym::tlsBase;
+GlobalSymbol *WasmSym::tlsSize;
 UndefinedGlobal *WasmSym::tableBase;
 UndefinedGlobal *WasmSym::memoryBase;
 
@@ -200,8 +203,14 @@ DefinedFunction::DefinedFunction(StringRef name, uint32_t flags, InputFile *f,
 
 uint32_t DefinedData::getVirtualAddress() const {
   LLVM_DEBUG(dbgs() << "getVirtualAddress: " << getName() << "\n");
-  if (segment)
+  if (segment) {
+    // For thread local data, the symbol location is relative to the start of
+    // the .tdata section, since they are used as offsets from __tls_base.
+    // Hence, we do not add in segment->outputSeg->startVA.
+    if (segment->outputSeg->name == ".tdata")
+      return segment->outputSegmentOffset + offset;
     return segment->outputSeg->startVA + segment->outputSegmentOffset + offset;
+  }
   return offset;
 }
 
