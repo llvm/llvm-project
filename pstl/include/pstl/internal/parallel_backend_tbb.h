@@ -862,8 +862,8 @@ class __stable_sort_task : public tbb::task
     __stable_sort_task(_RandomAccessIterator1 __xs, _RandomAccessIterator1 __xe, _RandomAccessIterator2 __zs,
                        bool __root, _Compare __comp, _LeafSort __leaf_sort, _SizeType __nsort,
                        _RandomAccessIterator1 __x_beg, _RandomAccessIterator2 __z_beg)
-        : _M_xs(__xs), _M_xe(__xe), _M_x_beg(__x_beg), _M_zs(__zs), _M_z_beg(__z_beg), _M_root(__root), _M_comp(__comp),
-          _M_leaf_sort(__leaf_sort), _M_nsort(__nsort)
+        : _M_xs(__xs), _M_xe(__xe), _M_x_beg(__x_beg), _M_zs(__zs), _M_z_beg(__z_beg), _M_comp(__comp),
+          _M_leaf_sort(__leaf_sort), _M_root(__root), _M_nsort(__nsort)
     {
     }
 };
