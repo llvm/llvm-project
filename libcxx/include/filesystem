@@ -735,11 +735,111 @@ struct _PathCVT<char> {
   }
 };
 
+inline _LIBCPP_INLINE_VISIBILITY
+wstring __widen_from_char_iter_pair(const char* __b, const char* __e, const locale& __loc) {
+  wstring __r;
+  if (!has_facet<codecvt<wchar_t, char, mbstate_t>>(__loc))
+    return __r;
+  __r.reserve(__e - __b);
+  __widen_using_codecvt(use_facet<codecvt<wchar_t, char, mbstate_t>>(__loc) , back_inserter(__r), __b, __e);
+  return __r;
+}
+
+template <class _InputIt, 
+         class = typename enable_if<!is_constructible<const char*, _InputIt>::value>::type>
+inline _LIBCPP_INLINE_VISIBILITY
+wstring __widen_from_char_iter_pair(_InputIt __b, _InputIt __e, const locale& __loc) {
+  const string __s(__b, __e);
+  return __widen_from_char_iter_pair(__s.data(), __s.data() + __s.size(), __loc);
+}
+
+template <class _Tp>
+struct __is_widenable_from_char_string : public false_type {};
+
+template <class _Traits, class _Alloc>
+struct __is_widenable_from_char_string<
+    basic_string<char, _Traits, _Alloc>>
+    : true_type {
+  using _Str = basic_string<char, _Traits, _Alloc>; 
+
+  static wstring __convert(_Str const& __s, const locale& __loc) {
+    return __widen_from_char_iter_pair(__s.data(), __s.data() + __s.size(), __loc);
+  }
+};
+
+template <class _Traits>
+struct __is_widenable_from_char_string<
+    basic_string_view<char, _Traits>>
+    : true_type {
+  using _Str = basic_string_view<char, _Traits>; 
+  static wstring __convert(_Str const& __sv, const locale& __loc) {
+    return __widen_from_char_iter_pair(__sv.data(), __sv.data() + __sv.size(), __loc);
+  }
+};
+
+template <class _Source, class _DS = typename decay<_Source>::type,
+          class _UnqualPtrType =
+              typename remove_const<typename remove_pointer<_DS>::type>::type>
+struct __is_widenable_from_char_array : false_type {};
+
+template <class _Source, class _ECharT>
+struct __is_widenable_from_char_array<_Source, _ECharT*, char>
+    : true_type {
+
+  static wstring __convert(const char* __b, const locale& __loc) {
+    const char __sentinal = char{};
+    const char* __e = __b;
+    for (; *__e != __sentinal; ++__e)
+      ;
+    return __widen_from_char_iter_pair(__b, __e, __loc);
+  }
+};
+
+template <class _Iter, bool _IsIt = __is_input_iterator<_Iter>::value,
+          class = char>
+struct __is_widenable_from_char_iter : false_type {};
+
+template <class _Iter>
+struct __is_widenable_from_char_iter <
+    _Iter, true,
+    typename remove_reference<typename iterator_traits<_Iter>::value_type>::type >
+    : true_type {
+
+  static wstring __convert(_Iter __i, const locale& __loc) {
+    const char __sentinal = char{};
+    string __s;
+    for (; *__i != __sentinal; ++__i)
+      __s.push_back(*__i);
+    return __widen_from_char_iter_pair(__s.data(), __s.data() + __s.size(), __loc);
+  }
+};
+
+template <class _Tp, bool _IsStringT = __is_widenable_from_char_string<_Tp>::value,
+          bool IsCharArray = __is_widenable_from_char_array<_Tp>::value,
+          bool _IsIterT = !IsCharArray && __is_widenable_from_char_iter<_Tp>::value>
+struct __is_widenable_from_char_source : false_type {
+  static_assert(!_IsStringT && !IsCharArray && !_IsIterT, "Must all be false");
+};
+
+template <class _Tp>
+struct __is_widenable_from_char_source<_Tp, true, false, false> : __is_widenable_from_char_string<_Tp> {};
+
+template <class _Tp>
+struct __is_widenable_from_char_source<_Tp, false, true, false> : __is_widenable_from_char_array<_Tp> {
+};
+
+template <class _Tp>
+struct __is_widenable_from_char_source<_Tp, false, false, true> : __is_widenable_from_char_iter<_Tp> {};
+
 class _LIBCPP_TYPE_VIS path {
   template <class _SourceOrIter, class _Tp = path&>
   using _EnableIfPathable =
       typename enable_if<__is_pathable<_SourceOrIter>::value, _Tp>::type;
 
+  template <class _SourceOrIter, class _Tp = path&>
+  using _EnableIfWidenableFromCharSource =
+      typename enable_if<__is_widenable_from_char_source<_SourceOrIter>::value, _Tp>::type;
+  
   template <class _Tp>
   using _SourceChar = typename __is_pathable<_Tp>::__char_type;
 
@@ -779,12 +879,18 @@ public:
     _PathCVT<_ItVal>::__append_range(__pn_, __first, __last);
   }
 
-  // TODO Implement locale conversions.
-  template <class _Source, class = _EnableIfPathable<_Source, void> >
-  path(const _Source& __src, const locale& __loc, format = format::auto_format);
+  template <class _Source, class = _EnableIfWidenableFromCharSource<_Source> >
+  path(const _Source& __src, const locale& __loc, 
+       format = format::auto_format) {
+    using _Widener = __is_widenable_from_char_source<_Source>;
+    _SourceCVT<_VSTD::wstring>::__append_source(__pn_, _Widener::__convert(__src, __loc));
+  }
+
   template <class _InputIt>
-  path(_InputIt __first, _InputIt _last, const locale& __loc,
-       format = format::auto_format);
+  path(_InputIt __first, _InputIt __last, const locale& __loc,
+       format = format::auto_format) {
+    _SourceCVT<_VSTD::wstring>::__append_source(__pn_, __widen_from_char_iter_pair(__first, __last, __loc));
+  }
 
   _LIBCPP_INLINE_VISIBILITY
   ~path() = default;

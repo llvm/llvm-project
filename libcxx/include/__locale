@@ -1352,6 +1352,32 @@ struct _LIBCPP_TEMPLATE_VIS __narrow_to_utf8<32>
     }
 };
 
+template<class _InternT, class _ExternT, class _StateT, class _OutputIterator>
+inline _LIBCPP_INLINE_VISIBILITY
+_OutputIterator 
+__widen_using_codecvt(codecvt<_InternT, _ExternT, _StateT> const& __cvt, 
+                             _OutputIterator __s, 
+                             const char* __nb, const char* __ne)
+{
+    codecvt_base::result __r = codecvt_base::ok;
+    mbstate_t __mb;
+    while (__nb < __ne && __r != codecvt_base::error)
+    {
+        const int __sz = 32;
+        _InternT __buf[__sz];
+        _InternT* __bn;
+        const char* __nn = __nb;
+        __r = __cvt.in(__mb, __nb, __ne - __nb > __sz ? __nb+__sz : __ne, __nn,
+                    __buf, __buf+__sz, __bn);
+        if (__r == codecvt_base::error || __nn == __nb)
+            __throw_runtime_error("locale not supported");
+        for (const _InternT* __p = __buf; __p < __bn; ++__p, ++__s)
+            *__s = (wchar_t)*__p;
+        __nb = __nn;
+    }
+    return __s;
+}
+
 template <size_t _Np>
 struct __widen_from_utf8
 {
@@ -1388,23 +1414,7 @@ struct _LIBCPP_TEMPLATE_VIS __widen_from_utf8<16>
     _OutputIterator
     operator()(_OutputIterator __s, const char* __nb, const char* __ne) const
     {
-        result __r = ok;
-        mbstate_t __mb;
-        while (__nb < __ne && __r != error)
-        {
-            const int __sz = 32;
-            char16_t __buf[__sz];
-            char16_t* __bn;
-            const char* __nn = __nb;
-            __r = do_in(__mb, __nb, __ne - __nb > __sz ? __nb+__sz : __ne, __nn,
-                        __buf, __buf+__sz, __bn);
-            if (__r == codecvt_base::error || __nn == __nb)
-                __throw_runtime_error("locale not supported");
-            for (const char16_t* __p = __buf; __p < __bn; ++__p, ++__s)
-                *__s = (wchar_t)*__p;
-            __nb = __nn;
-        }
-        return __s;
+        return __widen_using_codecvt(*this, __s, __nb, __ne);
     }
 };
 
@@ -1422,23 +1432,7 @@ struct _LIBCPP_TEMPLATE_VIS __widen_from_utf8<32>
     _OutputIterator
     operator()(_OutputIterator __s, const char* __nb, const char* __ne) const
     {
-        result __r = ok;
-        mbstate_t __mb;
-        while (__nb < __ne && __r != error)
-        {
-            const int __sz = 32;
-            char32_t __buf[__sz];
-            char32_t* __bn;
-            const char* __nn = __nb;
-            __r = do_in(__mb, __nb, __ne - __nb > __sz ? __nb+__sz : __ne, __nn,
-                        __buf, __buf+__sz, __bn);
-            if (__r == codecvt_base::error || __nn == __nb)
-                __throw_runtime_error("locale not supported");
-            for (const char32_t* __p = __buf; __p < __bn; ++__p, ++__s)
-                *__s = (wchar_t)*__p;
-            __nb = __nn;
-        }
-        return __s;
+        return __widen_using_codecvt(*this, __s, __nb, __ne);
     }
 };
 
