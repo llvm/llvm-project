@@ -72,9 +72,6 @@ toRemarkLocation(const DiagnosticLocation &DL) {
 /// LLVM Diagnostic -> Remark
 remarks::Remark
 RemarkStreamer::toRemark(const DiagnosticInfoOptimizationBase &Diag) {
-  // Re-use the buffer.
-  TmpArgs.clear();
-
   remarks::Remark R; // The result.
   R.RemarkType = toRemarkType(static_cast<DiagnosticKind>(Diag.getKind()));
   R.PassName = Diag.getPassName();
@@ -84,15 +81,12 @@ RemarkStreamer::toRemark(const DiagnosticInfoOptimizationBase &Diag) {
   R.Loc = toRemarkLocation(Diag.getLocation());
   R.Hotness = Diag.getHotness();
 
-  // Use TmpArgs to build the list of arguments and re-use the memory allocated
-  // from previous remark conversions.
   for (const DiagnosticInfoOptimizationBase::Argument &Arg : Diag.getArgs()) {
-    TmpArgs.emplace_back();
-    TmpArgs.back().Key = Arg.Key;
-    TmpArgs.back().Val = Arg.Val;
-    TmpArgs.back().Loc = toRemarkLocation(Arg.Loc);
+    R.Args.emplace_back();
+    R.Args.back().Key = Arg.Key;
+    R.Args.back().Val = Arg.Val;
+    R.Args.back().Loc = toRemarkLocation(Arg.Loc);
   }
-  R.Args = TmpArgs; // This is valid until the next call to this function.
 
   return R;
 }
