@@ -842,7 +842,7 @@ OCKL_MANGLE_T(image_gather4a,2D)(TSHARP i, SSHARP s, float2 c)
 // and fills words 8, 9, and 10 with the data we need to answer all of the queries
 
 #define ARRAY_SIZE(I) \
-    if (__oclc_ISA_version < 900) { \
+    if (__oclc_ISA_version < 9000) { \
         return FIELD(I, 173, 13) + 1U; \
     } else { \
         return FIELD(I, 128, 13) + 1U; \

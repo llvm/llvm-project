@@ -32,7 +32,7 @@ extern __attribute__((const)) int __llvm_amdgcn_sdot8(int a, int b, int c, bool 
 // __builtin_amdgcn_udot8
 extern __attribute__((const)) uint __llvm_amdgcn_udot8(uint a, uint b, uint c, bool s) __asm("llvm.amdgcn.udot8");
 
-#define SWDOT __oclc_ISA_version < 906 || __oclc_ISA_version == 909
+#define SWDOT __oclc_ISA_version < 9006 || __oclc_ISA_version == 9009 || __oclc_ISA_version == 10100
 #define AS_INT(X) __builtin_astype(X, int)
 #define AS_UINT(X) __builtin_astype(X, uint)
 #define ATTR __attribute__((const))

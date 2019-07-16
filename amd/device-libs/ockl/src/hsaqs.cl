@@ -150,7 +150,7 @@ OCKL_MANGLE_T(hsa_signal,store)(hsa_signal_t sig, long value, __ockl_memory_orde
     if (s->kind == AMD_SIGNAL_KIND_USER) {
         AS((__global atomic_long *)&s->value, value, mem_order, memory_scope_all_svm_devices);
         update_mbox(s);
-    } else if (__oclc_ISA_version >= 900) {
+    } else if (__oclc_ISA_version >= 9000) {
         // Hardware doorbell supports AQL semantics.
         AS((__global atomic_ulong *)s->hardware_doorbell_ptr, (ulong)value, memory_order_release, memory_scope_all_svm_devices);
     } else {
@@ -169,7 +169,7 @@ OCKL_MANGLE_T(hsa_signal,store)(hsa_signal_t sig, long value, __ockl_memory_orde
             if (legacy_dispatch_id > q->max_legacy_doorbell_dispatch_id_plus_1) {
                 AS((__global atomic_ulong *)&q->max_legacy_doorbell_dispatch_id_plus_1, legacy_dispatch_id, memory_order_relaxed, memory_scope_all_svm_devices);
 
-                if (__oclc_ISA_version < 800) {
+                if (__oclc_ISA_version < 8000) {
                     legacy_dispatch_id = (ulong)(((uint)legacy_dispatch_id & ((q->hsa_queue.size << 1) - 1)) * 16);
                 }
 

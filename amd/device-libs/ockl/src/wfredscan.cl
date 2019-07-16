@@ -478,13 +478,13 @@ IATTR T \
 C(__ockl_wfred_,C(OP,T##_suf))(T x) \
 { \
     T r; \
-    if (__oclc_ISA_version < 800) { \
+    if (__oclc_ISA_version < 8000) { \
          if (fullwave()) { \
              RED_GFX7_FULL(T,OP); \
          } else { \
               RED_GFX7_PART(T,OP,ID); \
          } \
-    } else if (__oclc_ISA_version < 1000) { \
+    } else if (__oclc_ISA_version < 10000) { \
         RED_GFX89(T,OP,ID); \
     } else { \
         RED_GFX10(T,OP,ID); \
@@ -499,18 +499,18 @@ C(__ockl_wfscan_,C(OP,T##_suf))(T x, bool inclusive) \
     T s; \
     uint l = __ockl_lane_u32(); \
  \
-    if (__oclc_ISA_version < 800) { \
+    if (__oclc_ISA_version < 8000) { \
         ISCAN_GFX7(T,OP,ID); \
-    } else  if (__oclc_ISA_version < 1000)  { \
+    } else  if (__oclc_ISA_version < 10000)  { \
         ISCAN_GFX89(T,OP,ID); \
     } else { \
         ISCAN_GFX10(T,OP,ID); \
     } \
  \
     if (!inclusive) { \
-        if (__oclc_ISA_version < 800) { \
+        if (__oclc_ISA_version < 8000) { \
             SR1_SWIZZLE(T,ID); \
-        } else  if (__oclc_ISA_version < 1000)  { \
+        } else  if (__oclc_ISA_version < 10000)  { \
             SR1_GFX89(T,ID); \
         } else { \
             SR1_GFX10(T,ID); \

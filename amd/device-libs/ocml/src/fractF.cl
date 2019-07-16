@@ -13,7 +13,7 @@ MATH_MANGLE(fract)(float x, __private float *ip)
     float i = BUILTIN_FLOOR_F32(x);
 
     float f;
-    if (__oclc_ISA_version < 800) {
+    if (__oclc_ISA_version < 8000) {
         f = BUILTIN_MIN_F32(x - i, 0x1.fffffep-1f);
         if (!FINITE_ONLY_OPT()) {
             f = BUILTIN_ISNAN_F32(x) ? x : f;

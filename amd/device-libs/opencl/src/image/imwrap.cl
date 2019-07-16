@@ -626,7 +626,7 @@ FATTR int4
 amd_fetch4_if(read_only image2d_t im, float2 coord, int comp)
 {
     sampler_t s = CLK_NORMALIZED_COORDS_FALSE | CLK_FILTER_NEAREST | CLK_ADDRESS_NONE;
-    if (__oclc_ISA_version < 900) {
+    if (__oclc_ISA_version < 9000) {
         coord -= 0.5f;
     }
     switch (comp) {
@@ -640,7 +640,7 @@ amd_fetch4_if(read_only image2d_t im, float2 coord, int comp)
 FATTR int4
 amd_fetch4_isf(read_only image2d_t im, sampler_t s, float2 coord, int comp)
 {
-    if (__oclc_ISA_version < 900) {
+    if (__oclc_ISA_version < 9000) {
         coord -= 0.5f;
     }
     switch (comp) {
@@ -656,7 +656,7 @@ amd_fetch4_ii(read_only image2d_t im, int2 coord, int comp)
 {
     sampler_t s = CLK_NORMALIZED_COORDS_FALSE | CLK_FILTER_NEAREST | CLK_ADDRESS_NONE;
     float2 fcoord = convert_float2(coord);
-    if (__oclc_ISA_version < 900) {
+    if (__oclc_ISA_version < 9000) {
         fcoord -= 0.5f;
     }
     switch (comp) {
@@ -671,7 +671,7 @@ FATTR int4
 amd_fetch4_isi(read_only image2d_t im, sampler_t s, int2 coord, int comp)
 {
     float2 fcoord = convert_float2(coord);
-    if (__oclc_ISA_version < 900) {
+    if (__oclc_ISA_version < 9000) {
         fcoord -= 0.5f;
     }
     switch (comp) {

@@ -99,9 +99,9 @@ typedef struct { int x, y, z, w; } __sampler_t;
 __attribute__((const)) __constant __sampler_t *
 __translate_sampler_initializer(int i)
 {
-    if (__oclc_ISA_version < 900) {
+    if (__oclc_ISA_version < 9000) {
         return (__constant __sampler_t *)&SI_samplers[(i - 16) << 2];
-    } else if (__oclc_ISA_version < 1000) {
+    } else if (__oclc_ISA_version < 10000) {
         return (__constant __sampler_t *)&GFX9_samplers[(i - 16) << 2];
     } else {
         return (__constant __sampler_t *)&GFX10_samplers[(i - 16) << 2];

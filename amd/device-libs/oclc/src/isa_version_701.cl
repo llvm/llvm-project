@@ -7,5 +7,5 @@
 
 #include "oclc.h"
 
-const __constant int __oclc_ISA_version = 701;
+const __constant int __oclc_ISA_version = 7001;
 

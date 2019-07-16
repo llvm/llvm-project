@@ -84,7 +84,7 @@ static inline half median3_f16_gfx9_impl(half a, half b, half c)
 CATTR half
 OCKL_MANGLE_F16(median3)(half a, half b, half c)
 {
-    if (__oclc_ISA_version >= 900)
+    if (__oclc_ISA_version >= 9000)
         return median3_f16_gfx9_impl(a, b, c);
 
     half a1 = __llvm_minnum_f16(a, b);
