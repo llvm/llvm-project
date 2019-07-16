@@ -269,7 +269,7 @@ static void checkAllAtProps(MigrationContext &MigrateCtx,
     StringRef toAttr = "strong";
     if (hasWeak) {
       if (canApplyWeak(MigrateCtx.Pass.Ctx, IndProps.front()->getType(),
-                       /*AllowOnUnkwownClass=*/true))
+                       /*AllowOnUnknownClass=*/true))
         toAttr = "weak";
       else
         toAttr = "unsafe_unretained";

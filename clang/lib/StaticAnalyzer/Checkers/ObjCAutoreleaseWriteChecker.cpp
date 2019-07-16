@@ -136,7 +136,7 @@ static void emitDiagnostics(BoundNodes &Match, const Decl *D, BugReporter &BR,
       ADC->getDecl(), Checker,
       /*Name=*/(llvm::Twine(ActionMsg)
                 + " autoreleasing out parameter inside autorelease pool").str(),
-      /*Category=*/"Memory",
+      /*BugCategory=*/"Memory",
       (llvm::Twine(ActionMsg) + " autoreleasing out parameter " +
        (IsCapture ? "'" + PVD->getName() + "'" + " " : "") + "inside " +
        "autorelease pool that may exit before " + Name + " returns; consider "

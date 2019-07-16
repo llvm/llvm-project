@@ -1417,7 +1417,7 @@ void Preprocessor::HandleMacroPublicDirective(Token &Tok) {
 
   // Note that this macro has now been exported.
   appendMacroDirective(II, AllocateVisibilityMacroDirective(
-                                MacroNameTok.getLocation(), /*IsPublic=*/true));
+                                MacroNameTok.getLocation(), /*isPublic=*/true));
 }
 
 /// Handle a #private directive.
@@ -1444,7 +1444,7 @@ void Preprocessor::HandleMacroPrivateDirective() {
 
   // Note that this macro has now been marked private.
   appendMacroDirective(II, AllocateVisibilityMacroDirective(
-                               MacroNameTok.getLocation(), /*IsPublic=*/false));
+                               MacroNameTok.getLocation(), /*isPublic=*/false));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1935,7 +1935,7 @@ Preprocessor::ImportAction Preprocessor::HandleHeaderIncludeOrImport(
     // and making the module loader convert it back again.
     ModuleLoadResult Imported = TheModuleLoader.loadModule(
         IncludeTok.getLocation(), Path, Module::Hidden,
-        /*IsIncludeDirective=*/true);
+        /*IsInclusionDirective=*/true);
     assert((Imported == nullptr || Imported == SuggestedModule.getModule()) &&
            "the imported module is different than the suggested one");
 

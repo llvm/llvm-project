@@ -3603,7 +3603,7 @@ static void emitSimpleAtomicStore(CodeGenFunction &CGF, bool IsSeqCst,
     CGF.EmitAtomicStore(RVal, LVal,
                         IsSeqCst ? llvm::AtomicOrdering::SequentiallyConsistent
                                  : llvm::AtomicOrdering::Monotonic,
-                        LVal.isVolatile(), /*IsInit=*/false);
+                        LVal.isVolatile(), /*isInit=*/false);
   }
 }
 
@@ -4095,7 +4095,7 @@ static void emitCommonOMPTargetDirective(CodeGenFunction &CGF,
     // Emit calculation of the iterations count.
     llvm::Value *NumIterations = CGF.EmitScalarExpr(D.getNumIterations());
     NumIterations = CGF.Builder.CreateIntCast(NumIterations, CGF.Int64Ty,
-                                              /*IsSigned=*/false);
+                                              /*isSigned=*/false);
     return NumIterations;
   };
   if (IsOffloadEntry)

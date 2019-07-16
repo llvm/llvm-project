@@ -552,11 +552,11 @@ static void addDependentLibrary(StringRef specifier, const InputFile *f) {
   if (!config->dependentLibraries)
     return;
   if (fs::exists(specifier))
-    driver->addFile(specifier, /*WithLOption=*/false);
+    driver->addFile(specifier, /*withLOption=*/false);
   else if (Optional<std::string> s = findFromSearchPaths(specifier))
-    driver->addFile(*s, /*WithLOption=*/true);
+    driver->addFile(*s, /*withLOption=*/true);
   else if (Optional<std::string> s = searchLibraryBaseName(specifier))
-    driver->addFile(*s, /*WithLOption=*/true);
+    driver->addFile(*s, /*withLOption=*/true);
   else
     error(toString(f) +
           ": unable to find library from dependent library specifier: " +

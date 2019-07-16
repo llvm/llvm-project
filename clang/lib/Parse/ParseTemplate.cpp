@@ -303,7 +303,7 @@ Decl *Parser::ParseSingleDeclarationAfterTemplate(
         return ParseFunctionDefinition(
             DeclaratorInfo, ParsedTemplateInfo(&FakedParamLists,
                                                /*isSpecialization=*/true,
-                                               /*LastParamListWasEmpty=*/true),
+                                               /*lastParameterListWasEmpty=*/true),
             &LateParsedAttrs);
       }
     }

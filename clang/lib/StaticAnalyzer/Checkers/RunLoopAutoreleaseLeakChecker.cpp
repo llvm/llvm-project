@@ -115,7 +115,7 @@ static void emitDiagnostics(BoundNodes &Match,
 
   BR.EmitBasicReport(ADC->getDecl(), Checker,
                      /*Name=*/"Memory leak inside autorelease pool",
-                     /*Category=*/"Memory",
+                     /*BugCategory=*/"Memory",
                      /*Name=*/
                      (Twine("Temporary objects allocated in the") +
                       " autorelease pool " +

@@ -169,7 +169,7 @@ public:
 
 private:
   /// Information for uniquing and looking up custom diags.
-  diag::CustomDiagInfo *CustomDiagInfo;
+  std::unique_ptr<diag::CustomDiagInfo> CustomDiagInfo;
 
 public:
   DiagnosticIDs();

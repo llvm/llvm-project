@@ -36,7 +36,7 @@ DynamicTypeInfo getDynamicTypeInfo(ProgramStateRef State,
 
   // Otherwise, fall back to what we know about the region.
   if (const auto *TR = dyn_cast<TypedRegion>(Reg))
-    return DynamicTypeInfo(TR->getLocationType(), /*CanBeSubclass=*/false);
+    return DynamicTypeInfo(TR->getLocationType(), /*CanBeSub=*/false);
 
   if (const auto *SR = dyn_cast<SymbolicRegion>(Reg)) {
     SymbolRef Sym = SR->getSymbol();

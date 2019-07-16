@@ -110,7 +110,7 @@ public:
     if (!Summaries)
       Summaries.reset(new RetainSummaryManager(Ctx,
                                                /*TrackNSCFObjects=*/true,
-                                               /*TrackOSObjects=*/false));
+                                               /*trackOSObjects=*/false));
     return *Summaries;
   }
 
@@ -216,7 +216,7 @@ ObjCMigrateAction::CreateASTConsumer(CompilerInstance &CI, StringRef InFile) {
 
 bool ObjCMigrateAction::BeginInvocation(CompilerInstance &CI) {
   Remapper.initFromDisk(MigrateDir, CI.getDiagnostics(),
-                        /*ignoreIfFilesChanges=*/true);
+                        /*ignoreIfFilesChanged=*/true);
   CompInst = &CI;
   CI.getDiagnostics().setIgnoreAllWarnings(true);
   return true;

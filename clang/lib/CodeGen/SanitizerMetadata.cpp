@@ -20,14 +20,17 @@ using namespace CodeGen;
 
 SanitizerMetadata::SanitizerMetadata(CodeGenModule &CGM) : CGM(CGM) {}
 
+static bool isAsanHwasanOrMemTag(const SanitizerSet& SS) {
+  return SS.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress |
+                     SanitizerKind::HWAddress | SanitizerKind::KernelHWAddress |
+                     SanitizerKind::MemTag);
+}
+
 void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
                                            SourceLocation Loc, StringRef Name,
                                            QualType Ty, bool IsDynInit,
                                            bool IsBlacklisted) {
-  if (!CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::Address |
-                                           SanitizerKind::KernelAddress |
-                                           SanitizerKind::HWAddress |
-                                           SanitizerKind::KernelHWAddress))
+  if (!isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
     return;
   IsDynInit &= !CGM.isInSanitizerBlacklist(GV, Loc, Ty, "init");
   IsBlacklisted |= CGM.isInSanitizerBlacklist(GV, Loc, Ty);
@@ -58,10 +61,7 @@ void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
 
 void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
                                            const VarDecl &D, bool IsDynInit) {
-  if (!CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::Address |
-                                           SanitizerKind::KernelAddress |
-                                           SanitizerKind::HWAddress |
-                                           SanitizerKind::KernelHWAddress))
+  if (!isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
     return;
   std::string QualName;
   llvm::raw_string_ostream OS(QualName);
@@ -78,10 +78,7 @@ void SanitizerMetadata::reportGlobalToASan(llvm::GlobalVariable *GV,
 void SanitizerMetadata::disableSanitizerForGlobal(llvm::GlobalVariable *GV) {
   // For now, just make sure the global is not modified by the ASan
   // instrumentation.
-  if (CGM.getLangOpts().Sanitize.hasOneOf(SanitizerKind::Address |
-                                          SanitizerKind::KernelAddress |
-                                          SanitizerKind::HWAddress |
-                                          SanitizerKind::KernelHWAddress))
+  if (isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
     reportGlobalToASan(GV, SourceLocation(), "", QualType(), false, true);
 }
 

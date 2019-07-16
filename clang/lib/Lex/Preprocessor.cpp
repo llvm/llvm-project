@@ -1263,7 +1263,7 @@ bool Preprocessor::LexAfterModuleImport(Token &Result) {
     Imported = TheModuleLoader.loadModule(ModuleImportLoc,
                                           ModuleImportPath,
                                           Module::Hidden,
-                                          /*IsIncludeDirective=*/false);
+                                          /*IsInclusionDirective=*/false);
     if (Imported)
       makeModuleVisible(Imported, SemiLoc);
   }

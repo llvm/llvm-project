@@ -239,7 +239,7 @@ llvm::FunctionCallee CodeGenModule::getAddrAndTypeOfCXXStructor(
 
   llvm::Constant *Ptr = GetOrCreateLLVMFunction(
       getMangledName(GD), FnType, GD, /*ForVTable=*/false, DontDefer,
-      /*isThunk=*/false, /*ExtraAttrs=*/llvm::AttributeList(), IsForDefinition);
+      /*IsThunk=*/false, /*ExtraAttrs=*/llvm::AttributeList(), IsForDefinition);
   return {FnType, Ptr};
 }
 

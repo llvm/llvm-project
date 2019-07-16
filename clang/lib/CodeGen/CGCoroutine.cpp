@@ -405,7 +405,7 @@ struct CallCoroEnd final : public EHScopeStack::Cleanup {
     if (Bundles.empty()) {
       // Otherwise, (landingpad model), create a conditional branch that leads
       // either to a cleanup block or a block with EH resume instruction.
-      auto *ResumeBB = CGF.getEHResumeBlock(/*cleanup=*/true);
+      auto *ResumeBB = CGF.getEHResumeBlock(/*isCleanup=*/true);
       auto *CleanupContBB = CGF.createBasicBlock("cleanup.cont");
       CGF.Builder.CreateCondBr(CoroEnd, ResumeBB, CleanupContBB);
       CGF.EmitBlock(CleanupContBB);

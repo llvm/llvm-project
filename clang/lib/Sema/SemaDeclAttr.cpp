@@ -900,7 +900,7 @@ static void handleAllocSizeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const Expr *SizeExpr = AL.getArgAsExpr(0);
   int SizeArgNoVal;
   // Parameter indices are 1-indexed, hence Index=1
-  if (!checkPositiveIntArgument(S, AL, SizeExpr, SizeArgNoVal, /*Index=*/1))
+  if (!checkPositiveIntArgument(S, AL, SizeExpr, SizeArgNoVal, /*Idx=*/1))
     return;
   if (!checkParamIsIntegerType(S, FD, AL, /*AttrArgNo=*/0))
     return;
@@ -911,7 +911,7 @@ static void handleAllocSizeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     const Expr *NumberExpr = AL.getArgAsExpr(1);
     int Val;
     // Parameter indices are 1-based, hence Index=2
-    if (!checkPositiveIntArgument(S, AL, NumberExpr, Val, /*Index=*/2))
+    if (!checkPositiveIntArgument(S, AL, NumberExpr, Val, /*Idx=*/2))
       return;
     if (!checkParamIsIntegerType(S, FD, AL, /*AttrArgNo=*/1))
       return;
@@ -1673,7 +1673,7 @@ void Sema::AddAllocAlignAttr(SourceRange AttrRange, Decl *D, Expr *ParamExpr,
   ParamIdx Idx;
   const auto *FuncDecl = cast<FunctionDecl>(D);
   if (!checkFunctionOrMethodParameterIndex(*this, FuncDecl, TmpAttr,
-                                           /*AttrArgNo=*/1, ParamExpr, Idx))
+                                           /*AttrArgNum=*/1, ParamExpr, Idx))
     return;
 
   QualType Ty = getFunctionOrMethodParamType(D, Idx.getASTIndex());
