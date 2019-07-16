@@ -67,7 +67,7 @@ CommandObjectHelp::~CommandObjectHelp() = default;
 
 static constexpr OptionDefinition g_help_options[] = {
 #define LLDB_OPTIONS_help
-#include "Options.inc"
+#include "CommandOptions.inc"
 };
 
 llvm::ArrayRef<OptionDefinition>

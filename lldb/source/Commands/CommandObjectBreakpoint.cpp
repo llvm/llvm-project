@@ -1156,7 +1156,7 @@ protected:
 #pragma mark List::CommandOptions
 static constexpr OptionDefinition g_breakpoint_list_options[] = {
 #define LLDB_OPTIONS_breakpoint_list
-#include "Options.inc"
+#include "CommandOptions.inc"
 };
 
 #pragma mark List
