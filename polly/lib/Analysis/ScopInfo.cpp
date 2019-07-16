@@ -117,33 +117,10 @@ int const polly::MaxDisjunctsInDomain = 20;
 // number of disjunct when adding non-convex sets to the context.
 static int const MaxDisjunctsInContext = 4;
 
-static cl::opt<int>
-    OptComputeOut("polly-analysis-computeout",
-                  cl::desc("Bound the scop analysis by a maximal amount of "
-                           "computational steps (0 means no bound)"),
-                  cl::Hidden, cl::init(800000), cl::ZeroOrMore,
-                  cl::cat(PollyCategory));
-
 static cl::opt<bool> PollyRemarksMinimal(
     "polly-remarks-minimal",
     cl::desc("Do not emit remarks about assumptions that are known"),
     cl::Hidden, cl::ZeroOrMore, cl::init(false), cl::cat(PollyCategory));
-
-static cl::opt<int> RunTimeChecksMaxAccessDisjuncts(
-    "polly-rtc-max-array-disjuncts",
-    cl::desc("The maximal number of disjunts allowed in memory accesses to "
-             "to build RTCs."),
-    cl::Hidden, cl::ZeroOrMore, cl::init(8), cl::cat(PollyCategory));
-
-static cl::opt<unsigned> RunTimeChecksMaxParameters(
-    "polly-rtc-max-parameters",
-    cl::desc("The maximal number of parameters allowed in RTCs."), cl::Hidden,
-    cl::ZeroOrMore, cl::init(8), cl::cat(PollyCategory));
-
-static cl::opt<unsigned> RunTimeChecksMaxArraysPerGroup(
-    "polly-rtc-max-arrays-per-group",
-    cl::desc("The maximal number of arrays to compare in each alias group."),
-    cl::Hidden, cl::ZeroOrMore, cl::init(20), cl::cat(PollyCategory));
 
 static cl::opt<std::string> UserContextStr(
     "polly-context", cl::value_desc("isl parameter set"),
@@ -1963,11 +1940,6 @@ isl::id Scop::getIdForParam(const SCEV *Parameter) const {
   return ParameterIds.lookup(Parameter);
 }
 
-isl::set Scop::addNonEmptyDomainConstraints(isl::set C) const {
-  isl::set DomainContext = getDomains().params();
-  return C.intersect_params(DomainContext);
-}
-
 bool Scop::isDominatedBy(const DominatorTree &DT, BasicBlock *BB) const {
   return DT.dominates(BB, getEntry());
 }
@@ -2203,105 +2175,6 @@ void Scop::simplifyContexts() {
   //   only executed for the case m >= 0, it is sufficient to assume p >= 0.
   AssumedContext = simplifyAssumptionContext(AssumedContext, *this);
   InvalidContext = InvalidContext.align_params(getParamSpace());
-}
-
-/// Add the minimal/maximal access in @p Set to @p User.
-///
-/// @return True if more accesses should be added, false if we reached the
-///         maximal number of run-time checks to be generated.
-static bool buildMinMaxAccess(isl::set Set,
-                              Scop::MinMaxVectorTy &MinMaxAccesses, Scop &S) {
-  isl::pw_multi_aff MinPMA, MaxPMA;
-  isl::pw_aff LastDimAff;
-  isl::aff OneAff;
-  unsigned Pos;
-
-  Set = Set.remove_divs();
-  polly::simplify(Set);
-
-  if (Set.n_basic_set() > RunTimeChecksMaxAccessDisjuncts)
-    Set = Set.simple_hull();
-
-  // Restrict the number of parameters involved in the access as the lexmin/
-  // lexmax computation will take too long if this number is high.
-  //
-  // Experiments with a simple test case using an i7 4800MQ:
-  //
-  //  #Parameters involved | Time (in sec)
-  //            6          |     0.01
-  //            7          |     0.04
-  //            8          |     0.12
-  //            9          |     0.40
-  //           10          |     1.54
-  //           11          |     6.78
-  //           12          |    30.38
-  //
-  if (isl_set_n_param(Set.get()) > RunTimeChecksMaxParameters) {
-    unsigned InvolvedParams = 0;
-    for (unsigned u = 0, e = isl_set_n_param(Set.get()); u < e; u++)
-      if (Set.involves_dims(isl::dim::param, u, 1))
-        InvolvedParams++;
-
-    if (InvolvedParams > RunTimeChecksMaxParameters)
-      return false;
-  }
-
-  MinPMA = Set.lexmin_pw_multi_aff();
-  MaxPMA = Set.lexmax_pw_multi_aff();
-
-  MinPMA = MinPMA.coalesce();
-  MaxPMA = MaxPMA.coalesce();
-
-  // Adjust the last dimension of the maximal access by one as we want to
-  // enclose the accessed memory region by MinPMA and MaxPMA. The pointer
-  // we test during code generation might now point after the end of the
-  // allocated array but we will never dereference it anyway.
-  assert((!MaxPMA || MaxPMA.dim(isl::dim::out)) &&
-         "Assumed at least one output dimension");
-
-  Pos = MaxPMA.dim(isl::dim::out) - 1;
-  LastDimAff = MaxPMA.get_pw_aff(Pos);
-  OneAff = isl::aff(isl::local_space(LastDimAff.get_domain_space()));
-  OneAff = OneAff.add_constant_si(1);
-  LastDimAff = LastDimAff.add(OneAff);
-  MaxPMA = MaxPMA.set_pw_aff(Pos, LastDimAff);
-
-  if (!MinPMA || !MaxPMA)
-    return false;
-
-  MinMaxAccesses.push_back(std::make_pair(MinPMA, MaxPMA));
-
-  return true;
-}
-
-static isl::set getAccessDomain(MemoryAccess *MA) {
-  isl::set Domain = MA->getStatement()->getDomain();
-  Domain = Domain.project_out(isl::dim::set, 0, Domain.n_dim());
-  return Domain.reset_tuple_id();
-}
-
-/// Wrapper function to calculate minimal/maximal accesses to each array.
-static bool calculateMinMaxAccess(Scop::AliasGroupTy AliasGroup, Scop &S,
-                                  Scop::MinMaxVectorTy &MinMaxAccesses) {
-  MinMaxAccesses.reserve(AliasGroup.size());
-
-  isl::union_set Domains = S.getDomains();
-  isl::union_map Accesses = isl::union_map::empty(S.getParamSpace());
-
-  for (MemoryAccess *MA : AliasGroup)
-    Accesses = Accesses.add_map(MA->getAccessRelation());
-
-  Accesses = Accesses.intersect_domain(Domains);
-  isl::union_set Locations = Accesses.range();
-
-  bool LimitReached = false;
-  for (isl::set Set : Locations.get_set_list()) {
-    LimitReached |= !buildMinMaxAccess(Set, MinMaxAccesses, S);
-    if (LimitReached)
-      break;
-  }
-
-  return !LimitReached;
 }
 
 /// Helper to treat non-affine regions and basic blocks the same.
@@ -2960,225 +2833,6 @@ bool Scop::addLoopBoundsToHeaderDomain(
   return true;
 }
 
-MemoryAccess *Scop::lookupBasePtrAccess(MemoryAccess *MA) {
-  Value *PointerBase = MA->getOriginalBaseAddr();
-
-  auto *PointerBaseInst = dyn_cast<Instruction>(PointerBase);
-  if (!PointerBaseInst)
-    return nullptr;
-
-  auto *BasePtrStmt = getStmtFor(PointerBaseInst);
-  if (!BasePtrStmt)
-    return nullptr;
-
-  return BasePtrStmt->getArrayAccessOrNULLFor(PointerBaseInst);
-}
-
-bool Scop::buildAliasChecks(AliasAnalysis &AA) {
-  if (!PollyUseRuntimeAliasChecks)
-    return true;
-
-  if (buildAliasGroups(AA)) {
-    // Aliasing assumptions do not go through addAssumption but we still want to
-    // collect statistics so we do it here explicitly.
-    if (MinMaxAliasGroups.size())
-      AssumptionsAliasing++;
-    return true;
-  }
-
-  // If a problem occurs while building the alias groups we need to delete
-  // this SCoP and pretend it wasn't valid in the first place. To this end
-  // we make the assumed context infeasible.
-  invalidate(ALIASING, DebugLoc());
-
-  LLVM_DEBUG(
-      dbgs() << "\n\nNOTE: Run time checks for " << getNameStr()
-             << " could not be created as the number of parameters involved "
-                "is too high. The SCoP will be "
-                "dismissed.\nUse:\n\t--polly-rtc-max-parameters=X\nto adjust "
-                "the maximal number of parameters but be advised that the "
-                "compile time might increase exponentially.\n\n");
-  return false;
-}
-
-std::tuple<Scop::AliasGroupVectorTy, DenseSet<const ScopArrayInfo *>>
-Scop::buildAliasGroupsForAccesses(AliasAnalysis &AA) {
-  AliasSetTracker AST(AA);
-
-  DenseMap<Value *, MemoryAccess *> PtrToAcc;
-  DenseSet<const ScopArrayInfo *> HasWriteAccess;
-  for (ScopStmt &Stmt : *this) {
-
-    isl::set StmtDomain = Stmt.getDomain();
-    bool StmtDomainEmpty = StmtDomain.is_empty();
-
-    // Statements with an empty domain will never be executed.
-    if (StmtDomainEmpty)
-      continue;
-
-    for (MemoryAccess *MA : Stmt) {
-      if (MA->isScalarKind())
-        continue;
-      if (!MA->isRead())
-        HasWriteAccess.insert(MA->getScopArrayInfo());
-      MemAccInst Acc(MA->getAccessInstruction());
-      if (MA->isRead() && isa<MemTransferInst>(Acc))
-        PtrToAcc[cast<MemTransferInst>(Acc)->getRawSource()] = MA;
-      else
-        PtrToAcc[Acc.getPointerOperand()] = MA;
-      AST.add(Acc);
-    }
-  }
-
-  AliasGroupVectorTy AliasGroups;
-  for (AliasSet &AS : AST) {
-    if (AS.isMustAlias() || AS.isForwardingAliasSet())
-      continue;
-    AliasGroupTy AG;
-    for (auto &PR : AS)
-      AG.push_back(PtrToAcc[PR.getValue()]);
-    if (AG.size() < 2)
-      continue;
-    AliasGroups.push_back(std::move(AG));
-  }
-
-  return std::make_tuple(AliasGroups, HasWriteAccess);
-}
-
-void Scop::splitAliasGroupsByDomain(AliasGroupVectorTy &AliasGroups) {
-  for (unsigned u = 0; u < AliasGroups.size(); u++) {
-    AliasGroupTy NewAG;
-    AliasGroupTy &AG = AliasGroups[u];
-    AliasGroupTy::iterator AGI = AG.begin();
-    isl::set AGDomain = getAccessDomain(*AGI);
-    while (AGI != AG.end()) {
-      MemoryAccess *MA = *AGI;
-      isl::set MADomain = getAccessDomain(MA);
-      if (AGDomain.is_disjoint(MADomain)) {
-        NewAG.push_back(MA);
-        AGI = AG.erase(AGI);
-      } else {
-        AGDomain = AGDomain.unite(MADomain);
-        AGI++;
-      }
-    }
-    if (NewAG.size() > 1)
-      AliasGroups.push_back(std::move(NewAG));
-  }
-}
-
-bool Scop::buildAliasGroups(AliasAnalysis &AA) {
-  // To create sound alias checks we perform the following steps:
-  //   o) We partition each group into read only and non read only accesses.
-  //   o) For each group with more than one base pointer we then compute minimal
-  //      and maximal accesses to each array of a group in read only and non
-  //      read only partitions separately.
-  AliasGroupVectorTy AliasGroups;
-  DenseSet<const ScopArrayInfo *> HasWriteAccess;
-
-  std::tie(AliasGroups, HasWriteAccess) = buildAliasGroupsForAccesses(AA);
-
-  splitAliasGroupsByDomain(AliasGroups);
-
-  for (AliasGroupTy &AG : AliasGroups) {
-    if (!hasFeasibleRuntimeContext())
-      return false;
-
-    {
-      IslMaxOperationsGuard MaxOpGuard(getIslCtx().get(), OptComputeOut);
-      bool Valid = buildAliasGroup(AG, HasWriteAccess);
-      if (!Valid)
-        return false;
-    }
-    if (isl_ctx_last_error(getIslCtx().get()) == isl_error_quota) {
-      invalidate(COMPLEXITY, DebugLoc());
-      return false;
-    }
-  }
-
-  return true;
-}
-
-bool Scop::buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
-                           DenseSet<const ScopArrayInfo *> HasWriteAccess) {
-  AliasGroupTy ReadOnlyAccesses;
-  AliasGroupTy ReadWriteAccesses;
-  SmallPtrSet<const ScopArrayInfo *, 4> ReadWriteArrays;
-  SmallPtrSet<const ScopArrayInfo *, 4> ReadOnlyArrays;
-
-  if (AliasGroup.size() < 2)
-    return true;
-
-  for (MemoryAccess *Access : AliasGroup) {
-    ORE.emit(OptimizationRemarkAnalysis(DEBUG_TYPE, "PossibleAlias",
-                                        Access->getAccessInstruction())
-             << "Possibly aliasing pointer, use restrict keyword.");
-    const ScopArrayInfo *Array = Access->getScopArrayInfo();
-    if (HasWriteAccess.count(Array)) {
-      ReadWriteArrays.insert(Array);
-      ReadWriteAccesses.push_back(Access);
-    } else {
-      ReadOnlyArrays.insert(Array);
-      ReadOnlyAccesses.push_back(Access);
-    }
-  }
-
-  // If there are no read-only pointers, and less than two read-write pointers,
-  // no alias check is needed.
-  if (ReadOnlyAccesses.empty() && ReadWriteArrays.size() <= 1)
-    return true;
-
-  // If there is no read-write pointer, no alias check is needed.
-  if (ReadWriteArrays.empty())
-    return true;
-
-  // For non-affine accesses, no alias check can be generated as we cannot
-  // compute a sufficiently tight lower and upper bound: bail out.
-  for (MemoryAccess *MA : AliasGroup) {
-    if (!MA->isAffine()) {
-      invalidate(ALIASING, MA->getAccessInstruction()->getDebugLoc(),
-                 MA->getAccessInstruction()->getParent());
-      return false;
-    }
-  }
-
-  // Ensure that for all memory accesses for which we generate alias checks,
-  // their base pointers are available.
-  for (MemoryAccess *MA : AliasGroup) {
-    if (MemoryAccess *BasePtrMA = lookupBasePtrAccess(MA))
-      addRequiredInvariantLoad(
-          cast<LoadInst>(BasePtrMA->getAccessInstruction()));
-  }
-
-  MinMaxAliasGroups.emplace_back();
-  MinMaxVectorPairTy &pair = MinMaxAliasGroups.back();
-  MinMaxVectorTy &MinMaxAccessesReadWrite = pair.first;
-  MinMaxVectorTy &MinMaxAccessesReadOnly = pair.second;
-
-  bool Valid;
-
-  Valid =
-      calculateMinMaxAccess(ReadWriteAccesses, *this, MinMaxAccessesReadWrite);
-
-  if (!Valid)
-    return false;
-
-  // Bail out if the number of values we need to compare is too large.
-  // This is important as the number of comparisons grows quadratically with
-  // the number of values we need to compare.
-  if (MinMaxAccessesReadWrite.size() + ReadOnlyArrays.size() >
-      RunTimeChecksMaxArraysPerGroup)
-    return false;
-
-  Valid =
-      calculateMinMaxAccess(ReadOnlyAccesses, *this, MinMaxAccessesReadOnly);
-
-  if (!Valid)
-    return false;
-
-  return true;
-}
-
 /// Get the smallest loop that contains @p S but is not in @p S.
 static Loop *getLoopSurroundingScop(Scop &S, LoopInfo &LI) {
   // Start with the smallest loop containing the entry and expand that
@@ -3647,9 +3301,28 @@ bool Scop::hasFeasibleRuntimeContext() const {
 
   auto DomainContext = getDomains().params();
   IsFeasible = !DomainContext.is_subset(NegativeContext);
-  IsFeasible &= !Context.is_subset(NegativeContext);
+  IsFeasible &= !getContext().is_subset(NegativeContext);
 
   return IsFeasible;
+}
+
+isl::set Scop::addNonEmptyDomainConstraints(isl::set C) const {
+  isl::set DomainContext = getDomains().params();
+  return C.intersect_params(DomainContext);
+}
+
+MemoryAccess *Scop::lookupBasePtrAccess(MemoryAccess *MA) {
+  Value *PointerBase = MA->getOriginalBaseAddr();
+
+  auto *PointerBaseInst = dyn_cast<Instruction>(PointerBase);
+  if (!PointerBaseInst)
+    return nullptr;
+
+  auto *BasePtrStmt = getStmtFor(PointerBaseInst);
+  if (!BasePtrStmt)
+    return nullptr;
+
+  return BasePtrStmt->getArrayAccessOrNULLFor(PointerBaseInst);
 }
 
 static std::string toString(AssumptionKind Kind) {
@@ -3777,39 +3450,6 @@ void Scop::recordAssumption(AssumptionKind Kind, isl::set Set, DebugLoc Loc,
   assert((Set.is_params() || BB) &&
          "Assumptions without a basic block must be parameter sets");
   RecordedAssumptions.push_back({Kind, Sign, Set, Loc, BB});
-}
-
-void Scop::addRecordedAssumptions() {
-  while (!RecordedAssumptions.empty()) {
-    Assumption AS = RecordedAssumptions.pop_back_val();
-
-    if (!AS.BB) {
-      addAssumption(AS.Kind, AS.Set, AS.Loc, AS.Sign, nullptr /* BasicBlock */);
-      continue;
-    }
-
-    // If the domain was deleted the assumptions are void.
-    isl_set *Dom = getDomainConditions(AS.BB).release();
-    if (!Dom)
-      continue;
-
-    // If a basic block was given use its domain to simplify the assumption.
-    // In case of restrictions we know they only have to hold on the domain,
-    // thus we can intersect them with the domain of the block. However, for
-    // assumptions the domain has to imply them, thus:
-    //                     _              _____
-    //   Dom => S   <==>   A v B   <==>   A - B
-    //
-    // To avoid the complement we will register A - B as a restriction not an
-    // assumption.
-    isl_set *S = AS.Set.copy();
-    if (AS.Sign == AS_RESTRICTION)
-      S = isl_set_params(isl_set_intersect(S, Dom));
-    else /* (AS.Sign == AS_ASSUMPTION) */
-      S = isl_set_params(isl_set_subtract(Dom, S));
-
-    addAssumption(AS.Kind, isl::manage(S), AS.Loc, AS_RESTRICTION, AS.BB);
-  }
 }
 
 void Scop::invalidate(AssumptionKind Kind, DebugLoc Loc, BasicBlock *BB) {
@@ -4411,6 +4051,10 @@ bool Scop::isEscaping(Instruction *Inst) {
       return true;
   }
   return false;
+}
+
+void Scop::incrementNumberOfAliasingAssumptions(unsigned step) {
+  AssumptionsAliasing += step;
 }
 
 Scop::ScopStatistics Scop::getStatistics() const {

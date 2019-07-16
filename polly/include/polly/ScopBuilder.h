@@ -30,6 +30,7 @@ extern bool ModelReadOnlyScalars;
 
 /// Build the Polly IR (Scop and ScopStmt) on a Region.
 class ScopBuilder {
+
   /// The AliasAnalysis to build AliasSetTracker.
   AliasAnalysis &AA;
 
@@ -47,6 +48,9 @@ class ScopBuilder {
 
   /// The ScalarEvolution to help building Scop.
   ScalarEvolution &SE;
+
+  /// An optimization diagnostic interface to add optimization remarks.
+  OptimizationRemarkEmitter &ORE;
 
   /// Set of instructions that might read any memory location.
   SmallVector<std::pair<ScopStmt *, Instruction *>, 16> GlobalReads;
@@ -117,8 +121,7 @@ class ScopBuilder {
   // @}
 
   // Build the SCoP for Region @p R.
-  void buildScop(Region &R, AssumptionCache &AC,
-                 OptimizationRemarkEmitter &ORE);
+  void buildScop(Region &R, AssumptionCache &AC);
 
   /// Create equivalence classes for required invariant accesses.
   ///
@@ -174,6 +177,52 @@ class ScopBuilder {
   /// @param Inst       The Load/Store instruction that access the memory
   /// @param Stmt       The parent statement of the instruction
   void buildAccessSingleDim(MemAccInst Inst, ScopStmt *Stmt);
+
+  /// Build the alias checks for this SCoP.
+  bool buildAliasChecks();
+
+  /// A vector of memory accesses that belong to an alias group.
+  using AliasGroupTy = SmallVector<MemoryAccess *, 4>;
+
+  /// A vector of alias groups.
+  using AliasGroupVectorTy = SmallVector<AliasGroupTy, 4>;
+
+  /// Build a given alias group and its access data.
+  ///
+  /// @param AliasGroup     The alias group to build.
+  /// @param HasWriteAccess A set of arrays through which memory is not only
+  ///                       read, but also written.
+  //
+  /// @returns True if __no__ error occurred, false otherwise.
+  bool buildAliasGroup(AliasGroupTy &AliasGroup,
+                       DenseSet<const ScopArrayInfo *> HasWriteAccess);
+
+  /// Build all alias groups for this SCoP.
+  ///
+  /// @returns True if __no__ error occurred, false otherwise.
+  bool buildAliasGroups();
+
+  /// Build alias groups for all memory accesses in the Scop.
+  ///
+  /// Using the alias analysis and an alias set tracker we build alias sets
+  /// for all memory accesses inside the Scop. For each alias set we then map
+  /// the aliasing pointers back to the memory accesses we know, thus obtain
+  /// groups of memory accesses which might alias. We also collect the set of
+  /// arrays through which memory is written.
+  ///
+  /// @returns A pair consistent of a vector of alias groups and a set of arrays
+  ///          through which memory is written.
+  std::tuple<AliasGroupVectorTy, DenseSet<const ScopArrayInfo *>>
+  buildAliasGroupsForAccesses();
+
+  ///  Split alias groups by iteration domains.
+  ///
+  ///  We split each group based on the domains of the minimal/maximal accesses.
+  ///  That means two minimal/maximal accesses are only in a group if their
+  ///  access domains intersect. Otherwise, they are in different groups.
+  ///
+  ///  @param AliasGroups The alias groups to split
+  void splitAliasGroupsByDomain(AliasGroupVectorTy &AliasGroups);
 
   /// Build an instance of MemoryAccess from the Load/Store instruction.
   ///
@@ -327,6 +376,9 @@ class ScopBuilder {
                       BasicBlock *IncomingBlock, Value *IncomingValue,
                       bool IsExitBlock);
 
+  /// Add all recorded assumptions to the assumed context.
+  void addRecordedAssumptions();
+
   /// Create a MemoryAccess for reading the value of a phi.
   ///
   /// The modeling assumes that all incoming blocks write their incoming value
@@ -341,6 +393,9 @@ class ScopBuilder {
   /// @see MemoryKind
   void addPHIReadAccess(ScopStmt *PHIStmt, PHINode *PHI);
 
+  /// Wrapper function to calculate minimal/maximal accesses to each array.
+  bool calculateMinMaxAccess(AliasGroupTy AliasGroup,
+                             Scop::MinMaxVectorTy &MinMaxAccesses);
   /// Build the domain of @p Stmt.
   void buildDomain(ScopStmt &Stmt);
 

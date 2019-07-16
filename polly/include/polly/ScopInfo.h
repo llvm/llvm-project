@@ -1624,6 +1624,24 @@ public:
 /// Print ScopStmt S to raw_ostream OS.
 raw_ostream &operator<<(raw_ostream &OS, const ScopStmt &S);
 
+/// Helper struct to remember assumptions.
+struct Assumption {
+  /// The kind of the assumption (e.g., WRAPPING).
+  AssumptionKind Kind;
+
+  /// Flag to distinguish assumptions and restrictions.
+  AssumptionSign Sign;
+
+  /// The valid/invalid context if this is an assumption/restriction.
+  isl::set Set;
+
+  /// The location that caused this assumption.
+  DebugLoc Loc;
+
+  /// An optional block whose domain can simplify the assumption.
+  BasicBlock *BB;
+};
+
 /// Static Control Part
 ///
 /// A Scop is the polyhedral representation of a control flow region detected
@@ -1782,24 +1800,7 @@ private:
   /// need to be "false". Otherwise they behave the same.
   isl::set InvalidContext;
 
-  /// Helper struct to remember assumptions.
-  struct Assumption {
-    /// The kind of the assumption (e.g., WRAPPING).
-    AssumptionKind Kind;
-
-    /// Flag to distinguish assumptions and restrictions.
-    AssumptionSign Sign;
-
-    /// The valid/invalid context if this is an assumption/restriction.
-    isl::set Set;
-
-    /// The location that caused this assumption.
-    DebugLoc Loc;
-
-    /// An optional block whose domain can simplify the assumption.
-    BasicBlock *BB;
-  };
-
+  using RecordedAssumptionsTy = SmallVector<Assumption, 8>;
   /// Collection to hold taken assumptions.
   ///
   /// There are two reasons why we want to record assumptions first before we
@@ -1810,7 +1811,7 @@ private:
   ///      construction (basically after we know all parameters), thus the user
   ///      might see overly complicated assumptions to be taken while they will
   ///      only be simplified later on.
-  SmallVector<Assumption, 8> RecordedAssumptions;
+  RecordedAssumptionsTy RecordedAssumptions;
 
   /// The schedule of the SCoP
   ///
@@ -2257,6 +2258,12 @@ public:
   Scop &operator=(const Scop &) = delete;
   ~Scop();
 
+  /// Increment actual number of aliasing assumptions taken
+  ///
+  /// @param Step    Number of new aliasing assumptions which should be added to
+  /// the number of already taken assumptions.
+  static void incrementNumberOfAliasingAssumptions(unsigned Step);
+
   /// Get the count of copy statements added to this Scop.
   ///
   /// @return The count of copy statements added to this Scop.
@@ -2336,6 +2343,12 @@ public:
   iterator_range<InvariantEquivClassesTy::iterator> invariantEquivClasses() {
     return make_range(InvariantEquivClasses.begin(),
                       InvariantEquivClasses.end());
+  }
+
+  /// Return an iterator range containing hold assumptions.
+  iterator_range<RecordedAssumptionsTy::const_iterator>
+  recorded_assumptions() const {
+    return make_range(RecordedAssumptions.begin(), RecordedAssumptions.end());
   }
 
   /// Return whether this scop is empty, i.e. contains no statements that
@@ -2494,6 +2507,9 @@ public:
   /// @returns True if the optimized SCoP can be executed.
   bool hasFeasibleRuntimeContext() const;
 
+  /// Clear assumptions which have been already processed.
+  void clearRecordedAssumptions() { return RecordedAssumptions.clear(); }
+
   /// Check if the assumption in @p Set is trivial or not.
   ///
   /// @param Set  The relations between parameters that are assumed to hold.
@@ -2559,9 +2575,6 @@ public:
   void recordAssumption(AssumptionKind Kind, isl::set Set, DebugLoc Loc,
                         AssumptionSign Sign, BasicBlock *BB = nullptr);
 
-  /// Add all recorded assumptions to the assumed context.
-  void addRecordedAssumptions();
-
   /// Mark the scop as invalid.
   ///
   /// This method adds an assumption to the scop that is always invalid. As a
@@ -2582,59 +2595,17 @@ public:
   /// Return true if and only if the InvalidContext is trivial (=empty).
   bool hasTrivialInvalidContext() const { return InvalidContext.is_empty(); }
 
-  /// A vector of memory accesses that belong to an alias group.
-  using AliasGroupTy = SmallVector<MemoryAccess *, 4>;
-
-  /// A vector of alias groups.
-  using AliasGroupVectorTy = SmallVector<Scop::AliasGroupTy, 4>;
-
-  /// Build the alias checks for this SCoP.
-  bool buildAliasChecks(AliasAnalysis &AA);
-
-  /// Build all alias groups for this SCoP.
-  ///
-  /// @returns True if __no__ error occurred, false otherwise.
-  bool buildAliasGroups(AliasAnalysis &AA);
-
-  /// Build alias groups for all memory accesses in the Scop.
-  ///
-  /// Using the alias analysis and an alias set tracker we build alias sets
-  /// for all memory accesses inside the Scop. For each alias set we then map
-  /// the aliasing pointers back to the memory accesses we know, thus obtain
-  /// groups of memory accesses which might alias. We also collect the set of
-  /// arrays through which memory is written.
-  ///
-  /// @param AA A reference to the alias analysis.
-  ///
-  /// @returns A pair consistent of a vector of alias groups and a set of arrays
-  ///          through which memory is written.
-  std::tuple<AliasGroupVectorTy, DenseSet<const ScopArrayInfo *>>
-  buildAliasGroupsForAccesses(AliasAnalysis &AA);
-
-  ///  Split alias groups by iteration domains.
-  ///
-  ///  We split each group based on the domains of the minimal/maximal accesses.
-  ///  That means two minimal/maximal accesses are only in a group if their
-  ///  access domains intersect. Otherwise, they are in different groups.
-  ///
-  ///  @param AliasGroups The alias groups to split
-  void splitAliasGroupsByDomain(AliasGroupVectorTy &AliasGroups);
-
-  /// Build a given alias group and its access data.
-  ///
-  /// @param AliasGroup     The alias group to build.
-  /// @param HasWriteAccess A set of arrays through which memory is not only
-  ///                       read, but also written.
-  ///
-  /// @returns True if __no__ error occurred, false otherwise.
-  bool buildAliasGroup(Scop::AliasGroupTy &AliasGroup,
-                       DenseSet<const ScopArrayInfo *> HasWriteAccess);
-
   /// Return all alias groups for this SCoP.
   const MinMaxVectorPairVectorTy &getAliasGroups() const {
     return MinMaxAliasGroups;
   }
 
+  void addAliasGroup(MinMaxVectorTy &MinMaxAccessesReadWrite,
+                     MinMaxVectorTy &MinMaxAccessesReadOnly) {
+    MinMaxAliasGroups.emplace_back();
+    MinMaxAliasGroups.back().first = MinMaxAccessesReadWrite;
+    MinMaxAliasGroups.back().second = MinMaxAccessesReadOnly;
+  }
   /// Get an isl string representing the context.
   std::string getContextStr() const;
 
