@@ -2598,13 +2598,6 @@ FileSpecList Target::GetDefaultDebugFileSearchPaths() {
   return FileSpecList();
 }
 
-FileSpecList Target::GetDefaultClangModuleSearchPaths() {
-  TargetPropertiesSP properties_sp(Target::GetGlobalProperties());
-  if (properties_sp)
-    return properties_sp->GetClangModuleSearchPaths();
-  return FileSpecList();
-}
-
 ArchSpec Target::GetDefaultArchitecture() {
   TargetPropertiesSP properties_sp(Target::GetGlobalProperties());
   if (properties_sp)

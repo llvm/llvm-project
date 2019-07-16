@@ -345,10 +345,10 @@ public:
   // so it is safe to remove the file immediately after this function
   // is called (you cannot remove an opened file on Windows.)
   std::unique_ptr<MemoryBuffer> getMemoryBuffer() {
-    // IsVolatileSize=true forces MemoryBuffer to not use mmap().
+    // IsVolatile=true forces MemoryBuffer to not use mmap().
     return CHECK(MemoryBuffer::getFile(path, /*FileSize=*/-1,
                                        /*RequiresNullTerminator=*/false,
-                                       /*IsVolatileSize=*/true),
+                                       /*IsVolatile=*/true),
                  "could not open " + path);
   }
 

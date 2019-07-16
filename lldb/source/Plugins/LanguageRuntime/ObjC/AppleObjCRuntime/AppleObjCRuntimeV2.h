@@ -14,8 +14,9 @@
 #include <mutex>
 
 #include "AppleObjCRuntime.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/lldb-private.h"
+
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 class RemoteNXMapTable;
 

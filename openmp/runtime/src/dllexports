@@ -279,16 +279,12 @@
     __kmpc_reduce                           189
     __kmpc_end_reduce                       190
 
-# OpenMP 3.0
-
-%ifdef OMP_30
     __kmpc_omp_task_alloc                   191
     __kmpc_omp_task                         192
     __kmpc_omp_taskwait                     193
     __kmpc_omp_task_begin_if0               196
     __kmpc_omp_task_complete_if0            197
     __kmpc_omp_task_parts                   198
-%endif # OMP_30
 
 #   __omp_collector_api                  199
 
@@ -320,9 +316,7 @@ kmpc_set_stacksize_s                        222
 # kmpc_set_stats                              217
 kmpc_set_defaults                           224
 
-# OMP 3.0 entry points for unsigned loop iteration variables
 %ifndef stub
-    %ifdef OMP_30
         __kmpc_for_static_init_8u           225
         __kmpc_dispatch_init_8u             226
         __kmpc_dispatch_next_8u             227
@@ -331,7 +325,6 @@ kmpc_set_defaults                           224
         __kmpc_dispatch_init_4u             230
         __kmpc_dispatch_next_4u             231
         __kmpc_dispatch_fini_4u             232
-    %endif # OMP_30
 %endif
 
 %ifndef stub
@@ -339,17 +332,12 @@ kmpc_set_defaults                           224
     __kmpc_get_parent_taskid                234
 %endif
 
-# OpenMP 3.1 entry points
 %ifndef stub
-    %ifdef OMP_30
         __kmpc_omp_taskyield                235
-    %endif # OMP_30
 #    __kmpc_place_threads                    236
 %endif
 
-# OpenMP 4.0 entry points
 %ifndef stub
-    %ifdef OMP_40
         __kmpc_push_proc_bind               237
         __kmpc_taskgroup                    238
         __kmpc_end_taskgroup                239
@@ -372,12 +360,9 @@ kmpc_set_defaults                           224
         __kmpc_team_static_init_4u          256
         __kmpc_team_static_init_8           257
         __kmpc_team_static_init_8u          258
-    %endif # OMP_40
 %endif
 
-# OpenMP 4.5 entry points
 %ifndef stub
-    %ifdef OMP_45
         __kmpc_proxy_task_completed         259
         __kmpc_proxy_task_completed_ooo     260
         __kmpc_doacross_init                261
@@ -386,17 +371,14 @@ kmpc_set_defaults                           224
         __kmpc_doacross_fini                264
         __kmpc_taskloop                     266
         __kmpc_critical_with_hint           270
-    %endif
 %endif
 kmpc_aligned_malloc                         265
 kmpc_set_disp_num_buffers                   267
 
-# OpenMP 5.0 entry points
 %ifndef stub
-    %ifdef OMP_50
         __kmpc_task_reduction_init          268
         __kmpc_task_reduction_get_th_data   269
-# USED FOR 4.5 __kmpc_critical_with_hint    270
+# USED ABOVE __kmpc_critical_with_hint    270
         __kmpc_get_target_offload           271
         __kmpc_omp_reg_task_with_affinity   272
         __kmpc_pause_resource               273
@@ -405,7 +387,6 @@ kmpc_set_disp_num_buffers                   267
         __kmpc_task_allow_completion_event  276
         __kmpc_taskred_init                 277
         __kmpc_taskred_modifier_init        278
-    %endif
 %endif
 
 # User API entry points that have both lower- and upper- case versions for Fortran.
@@ -463,7 +444,6 @@ kmp_aligned_malloc                          747
 kmp_set_warnings_on                         779
 kmp_set_warnings_off                        780
 
-%ifdef OMP_30
     omp_get_active_level                    789
     omp_get_level                           790
     omp_get_ancestor_thread_num             791
@@ -488,17 +468,9 @@ kmp_set_warnings_off                        780
     kmpc_unset_affinity_mask_proc           858
     kmp_get_affinity_mask_proc              859
     kmpc_get_affinity_mask_proc             860
-%endif # OMP_30
 
-# OpenMP 3.1
-
-%ifdef OMP_30
     omp_in_final                            861
-%endif # OMP_30
 
-# OpenMP 40
-
-%ifdef OMP_40
     omp_get_proc_bind                       862
    #omp_set_proc_bind                       863
    #omp_curr_proc_bind                      864
@@ -510,11 +482,7 @@ kmp_set_warnings_off                        780
     omp_set_default_device                  879
     omp_get_default_device                  880
     omp_get_num_devices                     881
-%endif # OMP_40
 
-# OpenMP 45
-
-%ifdef OMP_45
     omp_init_lock_with_hint                 870
     omp_init_nest_lock_with_hint            871
     omp_get_max_task_priority               872
@@ -534,11 +502,9 @@ kmp_set_warnings_off                        780
         omp_target_associate_ptr            888
         omp_target_disassociate_ptr         889
     %endif
-%endif # OMP_45
 
 kmp_set_disp_num_buffers                    890
 
-%ifdef OMP_50
     omp_control_tool                        891
     omp_set_default_allocator               892
     omp_get_default_allocator               893
@@ -583,7 +549,6 @@ kmp_set_disp_num_buffers                    890
     omp_const_mem_space                    DATA
     omp_high_bw_mem_space                  DATA
     omp_low_lat_mem_space                  DATA
-%endif # OMP_50
 
 %ifndef stub
     # Ordinals between 900 and 999 are reserved
@@ -1033,8 +998,6 @@ kmp_set_disp_num_buffers                    890
         __kmpc_atomic_float10_div_cpt_fp
         %endif
 
-        %ifdef OMP_40
-
             # ATOMIC extensions for OpenMP 4.0 spec (x86 and x64 only)
 
             __kmpc_atomic_fixed1_swp           2412
@@ -1209,8 +1172,6 @@ kmp_set_disp_num_buffers                    890
             __kmpc_atomic_float10_sub_cpt_rev_fp
             __kmpc_atomic_float10_div_cpt_rev_fp
             %endif
-        %endif   # OMP_40
-
 
     %endif   # arch_64
 

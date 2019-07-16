@@ -16,12 +16,13 @@
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompilerType.h"
-#include "lldb/Target/ObjCLanguageRuntime.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/Support/Threading.h"
+
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
 #include "CF.h"
 #include "Cocoa.h"

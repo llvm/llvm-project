@@ -15,6 +15,10 @@ endif()
 
 find_package(SWIG)
 if(${SWIG_FOUND})
+  set(SWIG_MIN_VERSION "2.0.0")
+  if (${SWIG_VERSION} VERSION_LESS ${SWIG_MIN_VERSION})
+    message(FATAL_ERROR "LLDB requires swig ${SWIG_MIN_VERSION}, your version is ${SWIG_VERSION}.")
+  endif()
   set(PREPARE_BINDINGS_ARGS
     "--swig-executable=${SWIG_EXECUTABLE}")
 elseif(${LLDB_ALLOW_STATIC_BINDINGS})

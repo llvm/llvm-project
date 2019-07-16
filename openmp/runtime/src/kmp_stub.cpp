@@ -275,14 +275,10 @@ void __kmps_get_schedule(kmp_sched_t *kind, int *modifier) {
   *modifier = __kmps_sched_modifier;
 } // __kmps_get_schedule
 
-#if OMP_40_ENABLED
-
 kmp_proc_bind_t __kmps_get_proc_bind(void) {
   i;
   return 0;
 } // __kmps_get_proc_bind
-
-#endif /* OMP_40_ENABLED */
 
 double __kmps_get_wtime(void) {
   // Elapsed wall clock time (in second) from "sometime in the past".
@@ -335,7 +331,6 @@ double __kmps_get_wtick(void) {
   return wtick;
 } // __kmps_get_wtick
 
-#if OMP_50_ENABLED
 /* OpenMP 5.0 Memory Management */
 #if KMP_OS_WINDOWS
 omp_allocator_handle_t const omp_null_allocator = 0;
@@ -386,6 +381,5 @@ size_t omp_capture_affinity(char *buffer, size_t buf_size, char const *format) {
   i;
   return 0;
 }
-#endif /* OMP_50_ENABLED */
 
 // end of file //

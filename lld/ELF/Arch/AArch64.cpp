@@ -517,7 +517,7 @@ void AArch64BtiPac::writePltHeader(uint8_t *buf) const {
   uint64_t plt = in.plt->getVA();
 
   if (btiHeader) {
-    // PltHeader is called indirectly by Plt[N]. Prefix PltData with a BTI C
+    // PltHeader is called indirectly by plt[N]. Prefix pltData with a BTI C
     // instruction.
     memcpy(buf, btiData, sizeof(btiData));
     buf += sizeof(btiData);
@@ -538,7 +538,7 @@ void AArch64BtiPac::writePlt(uint8_t *buf, uint64_t gotPltEntryAddr,
                              uint64_t pltEntryAddr, int32_t index,
                              unsigned relOff) const {
   // The PLT entry is of the form:
-  // [BtiData] AddrInst (PacBr | StdBr) [NopData]
+  // [btiData] addrInst (pacBr | stdBr) [nopData]
   const uint8_t btiData[] = { 0x5f, 0x24, 0x03, 0xd5 }; // bti c
   const uint8_t addrInst[] = {
       0x10, 0x00, 0x00, 0x90,  // adrp x16, Page(&(.plt.got[n]))

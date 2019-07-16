@@ -497,7 +497,7 @@ Symbol *LinkerDriver::addUndefined(StringRef name) {
   Symbol *b = symtab->addUndefined(name);
   if (!b->isGCRoot) {
     b->isGCRoot = true;
-    config->gCRoot.push_back(b);
+    config->gcroot.push_back(b);
   }
   return b;
 }
@@ -936,7 +936,7 @@ static void findKeepUniqueSections() {
   }
 }
 
-// link.exe replaces each %foo% in AltPath with the contents of environment
+// link.exe replaces each %foo% in altPath with the contents of environment
 // variable foo, and adds the two magic env vars _PDB (expands to the basename
 // of pdb's output path) and _EXT (expands to the extension of the output
 // binary).
@@ -952,9 +952,9 @@ static void parsePDBAltPath(StringRef altPath) {
     binaryExtension = binaryExtension.substr(1); // %_EXT% does not include '.'.
 
   // Invariant:
-  //   +--------- Cursor ('a...' might be the empty string).
-  //   |   +----- FirstMark
-  //   |   |   +- SecondMark
+  //   +--------- cursor ('a...' might be the empty string).
+  //   |   +----- firstMark
+  //   |   |   +- secondMark
   //   v   v   v
   //   a...%...%...
   size_t cursor = 0;
@@ -1606,7 +1606,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // Handle generation of import library from a def file.
   if (!args.hasArg(OPT_INPUT)) {
     fixupExports();
-    createImportLibrary(/*AsLib=*/true);
+    createImportLibrary(/*asLib=*/true);
     return;
   }
 
@@ -1830,7 +1830,7 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   // need to create a .lib file.
   if (!config->exports.empty() || config->dll) {
     fixupExports();
-    createImportLibrary(/*AsLib=*/false);
+    createImportLibrary(/*asLib=*/false);
     assignExportOrdinals();
   }
 
