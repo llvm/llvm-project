@@ -317,3 +317,111 @@ entry:
   %out = fptoui <8 x half> %src to <8 x i16>
   ret <8 x i16> %out
 }
+
+define arm_aapcs_vfpcc <2 x double> @foo_float_int64(<2 x i64> %src) {
+; CHECK-LABEL: foo_float_int64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vmov r1, s19
+; CHECK-NEXT:    bl __aeabi_l2d
+; CHECK-NEXT:    vmov r2, s16
+; CHECK-NEXT:    vmov r3, s17
+; CHECK-NEXT:    vmov d9, r0, r1
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    bl __aeabi_l2d
+; CHECK-NEXT:    vmov d8, r0, r1
+; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %out = sitofp <2 x i64> %src to <2 x double>
+  ret <2 x double> %out
+}
+
+define arm_aapcs_vfpcc <2 x double> @foo_float_uint64(<2 x i64> %src) {
+; CHECK-LABEL: foo_float_uint64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov r0, s18
+; CHECK-NEXT:    vmov r1, s19
+; CHECK-NEXT:    bl __aeabi_ul2d
+; CHECK-NEXT:    vmov r2, s16
+; CHECK-NEXT:    vmov r3, s17
+; CHECK-NEXT:    vmov d9, r0, r1
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    bl __aeabi_ul2d
+; CHECK-NEXT:    vmov d8, r0, r1
+; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %out = uitofp <2 x i64> %src to <2 x double>
+  ret <2 x double> %out
+}
+
+define arm_aapcs_vfpcc <2 x i64> @foo_int64_float(<2 x double> %src) {
+; CHECK-LABEL: foo_int64_float:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov r0, r1, d8
+; CHECK-NEXT:    bl __aeabi_d2lz
+; CHECK-NEXT:    vmov r2, r3, d9
+; CHECK-NEXT:    vmov.32 q4[0], r0
+; CHECK-NEXT:    lsrl r0, r1, #32
+; CHECK-NEXT:    vmov.32 q4[1], r0
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    bl __aeabi_d2lz
+; CHECK-NEXT:    vmov.32 q4[2], r0
+; CHECK-NEXT:    lsrl r0, r1, #32
+; CHECK-NEXT:    vmov.32 q4[3], r0
+; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %out = fptosi <2 x double> %src to <2 x i64>
+  ret <2 x i64> %out
+}
+
+define arm_aapcs_vfpcc <2 x i64> @foo_uint64_float(<2 x double> %src) {
+; CHECK-LABEL: foo_uint64_float:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    .save {r7, lr}
+; CHECK-NEXT:    push {r7, lr}
+; CHECK-NEXT:    .vsave {d8, d9}
+; CHECK-NEXT:    vpush {d8, d9}
+; CHECK-NEXT:    vmov q4, q0
+; CHECK-NEXT:    vmov r0, r1, d8
+; CHECK-NEXT:    bl __aeabi_d2ulz
+; CHECK-NEXT:    vmov r2, r3, d9
+; CHECK-NEXT:    vmov.32 q4[0], r0
+; CHECK-NEXT:    lsrl r0, r1, #32
+; CHECK-NEXT:    vmov.32 q4[1], r0
+; CHECK-NEXT:    mov r0, r2
+; CHECK-NEXT:    mov r1, r3
+; CHECK-NEXT:    bl __aeabi_d2ulz
+; CHECK-NEXT:    vmov.32 q4[2], r0
+; CHECK-NEXT:    lsrl r0, r1, #32
+; CHECK-NEXT:    vmov.32 q4[3], r0
+; CHECK-NEXT:    vmov q0, q4
+; CHECK-NEXT:    vpop {d8, d9}
+; CHECK-NEXT:    pop {r7, pc}
+entry:
+  %out = fptoui <2 x double> %src to <2 x i64>
+  ret <2 x i64> %out
+}

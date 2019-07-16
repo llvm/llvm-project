@@ -66,6 +66,26 @@ void DWARFDebugLine::ContentTypeTracker::trackContentType(
 
 DWARFDebugLine::Prologue::Prologue() { clear(); }
 
+bool DWARFDebugLine::Prologue::hasFileAtIndex(uint64_t FileIndex) const {
+  uint16_t DwarfVersion = getVersion();
+  assert(DwarfVersion != 0 &&
+         "line table prologue has no dwarf version information");
+  if (DwarfVersion >= 5)
+    return FileIndex < FileNames.size();
+  return FileIndex != 0 && FileIndex <= FileNames.size();
+}
+
+const llvm::DWARFDebugLine::FileNameEntry &
+DWARFDebugLine::Prologue::getFileNameEntry(uint64_t Index) const {
+  uint16_t DwarfVersion = getVersion();
+  assert(DwarfVersion != 0 &&
+         "line table prologue has no dwarf version information");
+  // In DWARF v5 the file names are 0-indexed.
+  if (DwarfVersion >= 5)
+    return FileNames[Index];
+  return FileNames[Index - 1];
+}
+
 void DWARFDebugLine::Prologue::clear() {
   TotalLength = PrologueLength = 0;
   SegSelectorSize = 0;
@@ -968,30 +988,11 @@ bool DWARFDebugLine::LineTable::lookupAddressRangeImpl(
   return true;
 }
 
-bool DWARFDebugLine::LineTable::hasFileAtIndex(uint64_t FileIndex) const {
-  uint16_t DwarfVersion = Prologue.getVersion();
-  assert(DwarfVersion != 0 && "LineTable has no dwarf version information");
-  if (DwarfVersion >= 5)
-    return FileIndex < Prologue.FileNames.size();
-  return FileIndex != 0 && FileIndex <= Prologue.FileNames.size();
-}
-
-const llvm::DWARFDebugLine::FileNameEntry &
-DWARFDebugLine::LineTable::getFileNameEntry(uint64_t Index) const {
-  uint16_t DwarfVersion = Prologue.getVersion();
-  assert(DwarfVersion != 0 && "LineTable has no dwarf version information");
-  // In DWARF v5 the file names are 0-indexed.
-  if (DwarfVersion >= 5)
-    return Prologue.FileNames[Index];
-  else
-    return Prologue.FileNames[Index - 1];
-}
-
 Optional<StringRef> DWARFDebugLine::LineTable::getSourceByIndex(uint64_t FileIndex,
                                                                 FileLineInfoKind Kind) const {
-  if (Kind == FileLineInfoKind::None || !hasFileAtIndex(FileIndex))
+  if (Kind == FileLineInfoKind::None || !Prologue.hasFileAtIndex(FileIndex))
     return None;
-  const FileNameEntry &Entry = getFileNameEntry(FileIndex);
+  const FileNameEntry &Entry = Prologue.getFileNameEntry(FileIndex);
   if (Optional<const char *> source = Entry.Source.getAsCString())
     return StringRef(*source);
   return None;
@@ -1005,10 +1006,10 @@ static bool isPathAbsoluteOnWindowsOrPosix(const Twine &Path) {
          sys::path::is_absolute(Path, sys::path::Style::windows);
 }
 
-bool DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
-                                                   const char *CompDir,
-                                                   FileLineInfoKind Kind,
-                                                   std::string &Result) const {
+bool DWARFDebugLine::Prologue::getFileNameByIndex(uint64_t FileIndex,
+                                                  StringRef CompDir,
+                                                  FileLineInfoKind Kind,
+                                                  std::string &Result) const {
   if (Kind == FileLineInfoKind::None || !hasFileAtIndex(FileIndex))
     return false;
   const FileNameEntry &Entry = getFileNameEntry(FileIndex);
@@ -1022,20 +1023,18 @@ bool DWARFDebugLine::LineTable::getFileNameByIndex(uint64_t FileIndex,
   SmallString<16> FilePath;
   StringRef IncludeDir;
   // Be defensive about the contents of Entry.
-  if (Prologue.getVersion() >= 5) {
-    if (Entry.DirIdx < Prologue.IncludeDirectories.size())
-      IncludeDir =
-          Prologue.IncludeDirectories[Entry.DirIdx].getAsCString().getValue();
+  if (getVersion() >= 5) {
+    if (Entry.DirIdx < IncludeDirectories.size())
+      IncludeDir = IncludeDirectories[Entry.DirIdx].getAsCString().getValue();
   } else {
-    if (0 < Entry.DirIdx && Entry.DirIdx <= Prologue.IncludeDirectories.size())
-      IncludeDir = Prologue.IncludeDirectories[Entry.DirIdx - 1]
-                       .getAsCString()
-                       .getValue();
+    if (0 < Entry.DirIdx && Entry.DirIdx <= IncludeDirectories.size())
+      IncludeDir =
+          IncludeDirectories[Entry.DirIdx - 1].getAsCString().getValue();
 
     // We may still need to append compilation directory of compile unit.
     // We know that FileName is not absolute, the only way to have an
     // absolute path at this point would be if IncludeDir is absolute.
-    if (CompDir && !isPathAbsoluteOnWindowsOrPosix(IncludeDir))
+    if (!CompDir.empty() && !isPathAbsoluteOnWindowsOrPosix(IncludeDir))
       sys::path::append(FilePath, CompDir);
   }
 

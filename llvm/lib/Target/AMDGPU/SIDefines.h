@@ -263,6 +263,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_GS,
   ID_GS_DONE,
   ID_GS_ALLOC_REQ = 9,
+  ID_GET_DOORBELL = 10,
   ID_SYSMSG = 15,
   ID_GAPS_LAST_, // Indicate that sequence has gaps.
   ID_GAPS_FIRST_ = ID_INTERRUPT,

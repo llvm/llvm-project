@@ -75,6 +75,8 @@ void WebAssemblyInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     CopyOpcode = WebAssembly::COPY_F64;
   else if (RC == &WebAssembly::V128RegClass)
     CopyOpcode = WebAssembly::COPY_V128;
+  else if (RC == &WebAssembly::EXNREFRegClass)
+    CopyOpcode = WebAssembly::COPY_EXNREF;
   else
     llvm_unreachable("Unexpected register class");
 
@@ -192,7 +194,7 @@ unsigned WebAssemblyInstrInfo::insertBranch(
   MachineFunction &MF = *MBB.getParent();
   auto &MRI = MF.getRegInfo();
   bool IsBrOnExn = Cond[1].isReg() && MRI.getRegClass(Cond[1].getReg()) ==
-                                          &WebAssembly::EXCEPT_REFRegClass;
+                                          &WebAssembly::EXNREFRegClass;
 
   if (Cond[0].getImm()) {
     if (IsBrOnExn) {
@@ -222,7 +224,7 @@ bool WebAssemblyInstrInfo::reverseBranchCondition(
   MachineFunction &MF = *Cond[1].getParent()->getParent()->getParent();
   auto &MRI = MF.getRegInfo();
   if (Cond[1].isReg() &&
-      MRI.getRegClass(Cond[1].getReg()) == &WebAssembly::EXCEPT_REFRegClass)
+      MRI.getRegClass(Cond[1].getReg()) == &WebAssembly::EXNREFRegClass)
     return true;
 
   Cond.front() = MachineOperand::CreateImm(!Cond.front().getImm());

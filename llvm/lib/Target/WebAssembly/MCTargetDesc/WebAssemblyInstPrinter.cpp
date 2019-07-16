@@ -282,8 +282,8 @@ const char *llvm::WebAssembly::anyTypeToString(unsigned Ty) {
     return "funcref";
   case wasm::WASM_TYPE_FUNC:
     return "func";
-  case wasm::WASM_TYPE_EXCEPT_REF:
-    return "except_ref";
+  case wasm::WASM_TYPE_EXNREF:
+    return "exnref";
   case wasm::WASM_TYPE_NORESULT:
     return "void";
   default:

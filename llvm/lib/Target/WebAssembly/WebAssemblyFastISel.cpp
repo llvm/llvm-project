@@ -129,7 +129,7 @@ private:
     case MVT::i64:
     case MVT::f32:
     case MVT::f64:
-    case MVT::ExceptRef:
+    case MVT::exnref:
       return VT;
     case MVT::f16:
       return MVT::f32;
@@ -698,9 +698,9 @@ bool WebAssemblyFastISel::fastLowerArguments() {
       Opc = WebAssembly::ARGUMENT_v2f64;
       RC = &WebAssembly::V128RegClass;
       break;
-    case MVT::ExceptRef:
-      Opc = WebAssembly::ARGUMENT_ExceptRef;
-      RC = &WebAssembly::EXCEPT_REFRegClass;
+    case MVT::exnref:
+      Opc = WebAssembly::ARGUMENT_exnref;
+      RC = &WebAssembly::EXNREFRegClass;
       break;
     default:
       return false;
@@ -815,10 +815,10 @@ bool WebAssemblyFastISel::selectCall(const Instruction *I) {
                      : WebAssembly::PCALL_INDIRECT_v2f64;
       ResultReg = createResultReg(&WebAssembly::V128RegClass);
       break;
-    case MVT::ExceptRef:
-      Opc = IsDirect ? WebAssembly::CALL_ExceptRef
-                     : WebAssembly::PCALL_INDIRECT_ExceptRef;
-      ResultReg = createResultReg(&WebAssembly::EXCEPT_REFRegClass);
+    case MVT::exnref:
+      Opc = IsDirect ? WebAssembly::CALL_exnref
+                     : WebAssembly::PCALL_INDIRECT_exnref;
+      ResultReg = createResultReg(&WebAssembly::EXNREFRegClass);
       break;
     default:
       return false;
@@ -921,9 +921,9 @@ bool WebAssemblyFastISel::selectSelect(const Instruction *I) {
     Opc = WebAssembly::SELECT_F64;
     RC = &WebAssembly::F64RegClass;
     break;
-  case MVT::ExceptRef:
-    Opc = WebAssembly::SELECT_EXCEPT_REF;
-    RC = &WebAssembly::EXCEPT_REFRegClass;
+  case MVT::exnref:
+    Opc = WebAssembly::SELECT_EXNREF;
+    RC = &WebAssembly::EXNREFRegClass;
     break;
   default:
     return false;
@@ -1341,8 +1341,8 @@ bool WebAssemblyFastISel::selectRet(const Instruction *I) {
   case MVT::v2f64:
     Opc = WebAssembly::RETURN_v2f64;
     break;
-  case MVT::ExceptRef:
-    Opc = WebAssembly::RETURN_EXCEPT_REF;
+  case MVT::exnref:
+    Opc = WebAssembly::RETURN_EXNREF;
     break;
   default:
     return false;
