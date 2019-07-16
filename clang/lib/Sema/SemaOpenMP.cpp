@@ -6000,7 +6000,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
         CollapseLoopCountExpr->EvaluateAsInt(Result, SemaRef.getASTContext())) {
       NestedLoopCount = Result.Val.getInt().getLimitedValue();
     } else {
-      Built.clear(/*size=*/1);
+      Built.clear(/*Size=*/1);
       return 1;
     }
   }
@@ -6022,7 +6022,7 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
       }
       OrderedLoopCount = Result.getLimitedValue();
     } else {
-      Built.clear(/*size=*/1);
+      Built.clear(/*Size=*/1);
       return 1;
     }
   }

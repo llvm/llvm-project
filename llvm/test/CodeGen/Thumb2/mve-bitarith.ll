@@ -31,6 +31,16 @@ entry:
   ret <4 x i32> %0
 }
 
+define arm_aapcs_vfpcc <2 x i64> @and_int64_t(<2 x i64> %src1, <2 x i64> %src2) {
+; CHECK-LABEL: and_int64_t:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vand q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = and <2 x i64> %src1, %src2
+  ret <2 x i64> %0
+}
+
 
 define arm_aapcs_vfpcc <16 x i8> @or_int8_t(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-LABEL: or_int8_t:
@@ -60,6 +70,16 @@ define arm_aapcs_vfpcc <4 x i32> @or_int32_t(<4 x i32> %src1, <4 x i32> %src2) {
 entry:
   %0 = or <4 x i32> %src1, %src2
   ret <4 x i32> %0
+}
+
+define arm_aapcs_vfpcc <2 x i64> @or_int64_t(<2 x i64> %src1, <2 x i64> %src2) {
+; CHECK-LABEL: or_int64_t:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = or <2 x i64> %src1, %src2
+  ret <2 x i64> %0
 }
 
 
@@ -93,6 +113,16 @@ entry:
   ret <4 x i32> %0
 }
 
+define arm_aapcs_vfpcc <2 x i64> @xor_int64_t(<2 x i64> %src1, <2 x i64> %src2) {
+; CHECK-LABEL: xor_int64_t:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    veor q0, q0, q1
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = xor <2 x i64> %src1, %src2
+  ret <2 x i64> %0
+}
+
 define arm_aapcs_vfpcc <16 x i8> @v_mvn_i8(<16 x i8> %src) {
 ; CHECK-LABEL: v_mvn_i8:
 ; CHECK:       @ %bb.0: @ %entry
@@ -122,6 +152,17 @@ entry:
   %0 = xor <4 x i32> %src, <i32 -1, i32 -1, i32 -1, i32 -1>
   ret <4 x i32> %0
 }
+
+define arm_aapcs_vfpcc <2 x i64> @v_mvn_i64(<2 x i64> %src) {
+; CHECK-LABEL: v_mvn_i64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmvn q0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = xor <2 x i64> %src, <i64 -1, i64 -1>
+  ret <2 x i64> %0
+}
+
 
 define arm_aapcs_vfpcc <16 x i8> @v_bic_i8(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-LABEL: v_bic_i8:
@@ -156,6 +197,18 @@ entry:
   ret <4 x i32> %1
 }
 
+define arm_aapcs_vfpcc <2 x i64> @v_bic_i64(<2 x i64> %src1, <2 x i64> %src2) {
+; CHECK-LABEL: v_bic_i64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vbic q0, q1, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = xor <2 x i64> %src1, <i64 -1, i64 -1>
+  %1 = and <2 x i64> %src2, %0
+  ret <2 x i64> %1
+}
+
+
 define arm_aapcs_vfpcc <16 x i8> @v_or_i8(<16 x i8> %src1, <16 x i8> %src2) {
 ; CHECK-LABEL: v_or_i8:
 ; CHECK:       @ %bb.0: @ %entry
@@ -188,3 +241,15 @@ entry:
   %1 = or <4 x i32> %src2, %0
   ret <4 x i32> %1
 }
+
+define arm_aapcs_vfpcc <2 x i64> @v_or_i64(<2 x i64> %src1, <2 x i64> %src2) {
+; CHECK-LABEL: v_or_i64:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vorn q0, q1, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %0 = xor <2 x i64> %src1, <i64 -1, i64 -1>
+  %1 = or <2 x i64> %src2, %0
+  ret <2 x i64> %1
+}
+

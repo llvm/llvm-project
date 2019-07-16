@@ -679,7 +679,7 @@ class SourceManager : public RefCountedBase<SourceManager> {
   /// Holds information for \#line directives.
   ///
   /// This is referenced by indices from SLocEntryTable.
-  LineTableInfo *LineTable = nullptr;
+  std::unique_ptr<LineTableInfo> LineTable;
 
   /// These ivars serve as a cache used in the getLineNumber
   /// method which is used to speedup getLineNumber calls to nearby locations.

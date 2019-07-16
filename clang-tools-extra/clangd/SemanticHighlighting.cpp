@@ -31,6 +31,14 @@ public:
   std::vector<HighlightingToken> collectTokens() {
     Tokens.clear();
     TraverseAST(Ctx);
+    // Initializer lists can give duplicates of tokens, therefore all tokens
+    // must be deduplicated.
+    llvm::sort(Tokens,
+               [](const HighlightingToken &L, const HighlightingToken &R) {
+                 return std::tie(L.R, L.Kind) < std::tie(R.R, R.Kind);
+               });
+    auto Last = std::unique(Tokens.begin(), Tokens.end());
+    Tokens.erase(Last, Tokens.end());
     return Tokens;
   }
 

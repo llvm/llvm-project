@@ -1,3 +1,4 @@
+; REQUIRES: asserts
 ; RUN: opt < %s -S -debug-only=loop-unroll -loop-unroll -unroll-runtime -unroll-peel-multi-deopt-exit 2>&1 | FileCheck %s
 ; RUN: opt < %s -S -debug-only=loop-unroll -unroll-peel-multi-deopt-exit -passes='require<profile-summary>,function(require<opt-remark-emit>,unroll)' 2>&1 | FileCheck %s
 

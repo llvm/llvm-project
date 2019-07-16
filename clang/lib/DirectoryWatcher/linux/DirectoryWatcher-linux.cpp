@@ -24,6 +24,7 @@
 #include <vector>
 
 #include <fcntl.h>
+#include <linux/version.h>
 #include <sys/epoll.h>
 #include <sys/inotify.h>
 #include <unistd.h>
@@ -332,8 +333,12 @@ std::unique_ptr<DirectoryWatcher> clang::DirectoryWatcher::create(
 
   const int InotifyWD = inotify_add_watch(
       InotifyFD, Path.str().c_str(),
-      IN_CREATE | IN_DELETE | IN_DELETE_SELF | IN_EXCL_UNLINK | IN_MODIFY |
-          IN_MOVED_FROM | IN_MOVE_SELF | IN_MOVED_TO | IN_ONLYDIR | IN_IGNORED);
+      IN_CREATE | IN_DELETE | IN_DELETE_SELF | IN_MODIFY |
+      IN_MOVED_FROM | IN_MOVE_SELF | IN_MOVED_TO | IN_ONLYDIR | IN_IGNORED
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,36)
+      | IN_EXCL_UNLINK
+#endif
+      );
   if (InotifyWD == -1)
     return nullptr;
 

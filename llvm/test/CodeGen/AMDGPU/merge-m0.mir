@@ -47,13 +47,7 @@
 # GCN-NEXT: DS_WRITE_B32
 
 ---
-name:            test
-alignment:       0
-exposesReturnsTwice: false
-legalized:       false
-regBankSelected: false
-selected:        false
-tracksRegLiveness: true
+name:            merge-m0-many-init
 registers:
   - { id: 0, class: vgpr_32 }
   - { id: 1, class: vgpr_32 }
@@ -128,4 +122,104 @@ body:             |
     S_CBRANCH_VCCZ %bb.6, implicit undef $vcc
     S_BRANCH %bb.0.entry
 
+...
+
+# GCN:    bb.0.entry:
+# GCN:      SI_INIT_M0 65536
+# GCN-NEXT: DS_WRITE_B32
+
+#GCN:     bb.1:
+#GCN-NOT:   SI_INIT_M0 65536
+#GCN-NOT:   SI_INIT_M0 -1
+
+#GCN:     bb.2:
+#GCN:       SI_INIT_M0 -1
+
+#GCN:     bb.3:
+#GCN:       SI_INIT_M0 -1
+
+---
+name:            merge-m0-dont-hoist-past-init-with-different-initializer
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1
+
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    SI_INIT_M0 65536, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.3
+
+    SI_INIT_M0 65536, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_CBRANCH_VCCZ %bb.2, implicit undef $vcc
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.4
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.4
+
+  bb.3:
+    successors: %bb.4
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.4
+
+  bb.4:
+    S_ENDPGM 0
+...
+
+# GCN:    bb.0.entry:
+# GCN-NOT:  SI_INIT_M0
+# GCN:      S_OR_B64
+# GCN-NEXT: SI_INIT_M0
+
+#GCN:     bb.1:
+#GCN-NOT:   SI_INIT_M0 -1
+
+#GCN:     bb.2:
+#GCN-NOT:   SI_INIT_MO -1
+
+---
+name:            merge-m0-after-prologue
+registers:
+  - { id: 0, class: vgpr_32 }
+  - { id: 1, class: vgpr_32 }
+body:             |
+  bb.0.entry:
+    successors: %bb.1, %bb.2
+    liveins: $sgpr0_sgpr1
+
+    $exec = S_OR_B64 $exec, killed $sgpr0_sgpr1, implicit-def $scc
+    %0 = IMPLICIT_DEF
+    %1 = IMPLICIT_DEF
+    S_CBRANCH_VCCZ %bb.1, implicit undef $vcc
+    S_BRANCH %bb.2
+
+  bb.1:
+    successors: %bb.3
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.2:
+    successors: %bb.3
+
+    SI_INIT_M0 -1, implicit-def $m0
+    DS_WRITE_B32 %0, %1, 0, 0, implicit $m0, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    S_ENDPGM 0
 ...

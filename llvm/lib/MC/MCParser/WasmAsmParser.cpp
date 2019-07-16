@@ -120,6 +120,9 @@ public:
                     .StartsWith(".text", SectionKind::getText())
                     .StartsWith(".custom_section", SectionKind::getMetadata())
                     .StartsWith(".bss", SectionKind::getBSS())
+                    // See use of .init_array in WasmObjectWriter and
+                    // TargetLoweringObjectFileWasm
+                    .StartsWith(".init_array", SectionKind::getData())
                     .Default(Optional<SectionKind>());
     if (!Kind.hasValue())
       return Parser->Error(Lexer->getLoc(), "unknown section kind: " + Name);

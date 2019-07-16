@@ -378,7 +378,7 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   StructType *FrameTy = StructType::create(C, Name);
   auto *FramePtrTy = FrameTy->getPointerTo();
   auto *FnTy = FunctionType::get(Type::getVoidTy(C), FramePtrTy,
-                                 /*IsVarArgs=*/false);
+                                 /*isVarArg=*/false);
   auto *FnPtrTy = FnTy->getPointerTo();
 
   // Figure out how wide should be an integer type storing the suspend index.

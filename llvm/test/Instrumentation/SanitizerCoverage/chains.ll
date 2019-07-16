@@ -1,5 +1,4 @@
 ; RUN: opt < %s -sancov -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc -sanitizer-coverage-prune-blocks=1  -S | FileCheck %s
-; RUN: opt < %s -passes='module(sancov-module),function(sancov-func)' -sanitizer-coverage-level=4 -sanitizer-coverage-trace-pc -sanitizer-coverage-prune-blocks=1  -S | FileCheck %s
 
 define i32 @blah(i32) #0 {
   %2 = icmp sgt i32 %0, 1

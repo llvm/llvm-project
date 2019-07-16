@@ -16,14 +16,14 @@ define i32 @test1(i32 inreg %a) nounwind {
 ;
 ; X64-LINUX-LABEL: test1:
 ; X64-LINUX:       # %bb.0: # %entry
-; X64-LINUX-NEXT:    movl %edi, %eax
-; X64-LINUX-NEXT:    subl $-128, %eax
+; X64-LINUX-NEXT:    # kill: def $edi killed $edi def $rdi
+; X64-LINUX-NEXT:    leal 128(%rdi), %eax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test1:
 ; X64-WIN32:       # %bb.0: # %entry
-; X64-WIN32-NEXT:    movl %ecx, %eax
-; X64-WIN32-NEXT:    subl $-128, %eax
+; X64-WIN32-NEXT:    # kill: def $ecx killed $ecx def $rcx
+; X64-WIN32-NEXT:    leal 128(%rcx), %eax
 ; X64-WIN32-NEXT:    retq
 entry:
   %b = add i32 %a, 128
@@ -86,14 +86,12 @@ define i64 @test3(i64 inreg %a) nounwind {
 ;
 ; X64-LINUX-LABEL: test3:
 ; X64-LINUX:       # %bb.0: # %entry
-; X64-LINUX-NEXT:    movq %rdi, %rax
-; X64-LINUX-NEXT:    subq $-128, %rax
+; X64-LINUX-NEXT:    leaq 128(%rdi), %rax
 ; X64-LINUX-NEXT:    retq
 ;
 ; X64-WIN32-LABEL: test3:
 ; X64-WIN32:       # %bb.0: # %entry
-; X64-WIN32-NEXT:    movq %rcx, %rax
-; X64-WIN32-NEXT:    subq $-128, %rax
+; X64-WIN32-NEXT:    leaq 128(%rcx), %rax
 ; X64-WIN32-NEXT:    retq
 entry:
   %b = add i64 %a, 128

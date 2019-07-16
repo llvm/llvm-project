@@ -182,8 +182,8 @@ std::string lld::toString(ValType type) {
     return "f64";
   case ValType::V128:
     return "v128";
-  case ValType::EXCEPT_REF:
-    return "except_ref";
+  case ValType::EXNREF:
+    return "exnref";
   }
   llvm_unreachable("Invalid wasm::ValType");
 }

@@ -924,11 +924,12 @@ class BinOpAI_F<bits<8> opcode, string mnemonic, X86TypeInfo typeinfo,
 multiclass ArithBinOp_RF<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
                          string mnemonic, Format RegMRM, Format MemMRM,
                          SDNode opnodeflag, SDNode opnode,
-                         bit CommutableRR, bit ConvertibleToThreeAddress> {
+                         bit CommutableRR, bit ConvertibleToThreeAddress,
+                         bit ConvertibleToThreeAddressRR> {
   let Defs = [EFLAGS] in {
     let Constraints = "$src1 = $dst" in {
       let isCommutable = CommutableRR in {
-        let isConvertibleToThreeAddress = ConvertibleToThreeAddress in {
+        let isConvertibleToThreeAddress = ConvertibleToThreeAddressRR in {
           def NAME#8rr  : BinOpRR_RF<BaseOpc, mnemonic, Xi8 , opnodeflag>;
           def NAME#16rr : BinOpRR_RF<BaseOpc, mnemonic, Xi16, opnodeflag>;
           def NAME#32rr : BinOpRR_RF<BaseOpc, mnemonic, Xi32, opnodeflag>;
@@ -1169,16 +1170,16 @@ multiclass ArithBinOp_F<bits<8> BaseOpc, bits<8> BaseOpc2, bits<8> BaseOpc4,
 
 
 defm AND : ArithBinOp_RF<0x20, 0x22, 0x24, "and", MRM4r, MRM4m,
-                         X86and_flag, and, 1, 0>;
+                         X86and_flag, and, 1, 0, 0>;
 defm OR  : ArithBinOp_RF<0x08, 0x0A, 0x0C, "or", MRM1r, MRM1m,
-                         X86or_flag, or, 1, 0>;
+                         X86or_flag, or, 1, 0, 0>;
 defm XOR : ArithBinOp_RF<0x30, 0x32, 0x34, "xor", MRM6r, MRM6m,
-                         X86xor_flag, xor, 1, 0>;
+                         X86xor_flag, xor, 1, 0, 0>;
 defm ADD : ArithBinOp_RF<0x00, 0x02, 0x04, "add", MRM0r, MRM0m,
-                         X86add_flag, add, 1, 1>;
+                         X86add_flag, add, 1, 1, 1>;
 let isCompare = 1 in {
 defm SUB : ArithBinOp_RF<0x28, 0x2A, 0x2C, "sub", MRM5r, MRM5m,
-                         X86sub_flag, sub, 0, 0>;
+                         X86sub_flag, sub, 0, 1, 0>;
 }
 
 // Arithmetic.

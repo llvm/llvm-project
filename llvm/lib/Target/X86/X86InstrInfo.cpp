@@ -1078,6 +1078,51 @@ X86InstrInfo::convertToThreeAddress(MachineFunction::iterator &MFI,
   case X86::ADD16ri_DB:
   case X86::ADD16ri8_DB:
     return convertToThreeAddressWithLEA(MIOpc, MFI, MI, LV, Is8BitOp);
+  case X86::SUB8ri:
+  case X86::SUB16ri8:
+  case X86::SUB16ri:
+    /// FIXME: Support these similar to ADD8ri/ADD16ri*.
+    return nullptr;
+  case X86::SUB32ri8:
+  case X86::SUB32ri: {
+    int64_t Imm = MI.getOperand(2).getImm();
+    if (!isInt<32>(-Imm))
+      return nullptr;
+
+    assert(MI.getNumOperands() >= 3 && "Unknown add instruction!");
+    unsigned Opc = Is64Bit ? X86::LEA64_32r : X86::LEA32r;
+
+    bool isKill;
+    unsigned SrcReg;
+    MachineOperand ImplicitOp = MachineOperand::CreateReg(0, false);
+    if (!classifyLEAReg(MI, Src, Opc, /*AllowSP=*/ true,
+                        SrcReg, isKill, ImplicitOp, LV))
+      return nullptr;
+
+    MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(), get(Opc))
+                                  .add(Dest)
+                                  .addReg(SrcReg, getKillRegState(isKill));
+    if (ImplicitOp.getReg() != 0)
+      MIB.add(ImplicitOp);
+
+    NewMI = addOffset(MIB, -Imm);
+    break;
+  }
+
+  case X86::SUB64ri8:
+  case X86::SUB64ri32: {
+    int64_t Imm = MI.getOperand(2).getImm();
+    if (!isInt<32>(-Imm))
+      return nullptr;
+
+    assert(MI.getNumOperands() >= 3 && "Unknown sub instruction!");
+
+    MachineInstrBuilder MIB = BuildMI(MF, MI.getDebugLoc(),
+                                      get(X86::LEA64r)).add(Dest).add(Src);
+    NewMI = addOffset(MIB, -Imm);
+    break;
+  }
+
   case X86::VMOVDQU8Z128rmk:
   case X86::VMOVDQU8Z256rmk:
   case X86::VMOVDQU8Zrmk:

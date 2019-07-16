@@ -2872,7 +2872,7 @@ Sema::DeduceTemplateArguments(ClassTemplatePartialSpecializationDecl *Partial,
     return Sema::TDK_SubstitutionFailure;
 
   return ::FinishTemplateArgumentDeduction(
-      *this, Partial, /*PartialOrdering=*/false, TemplateArgs, Deduced, Info);
+      *this, Partial, /*IsPartialOrdering=*/false, TemplateArgs, Deduced, Info);
 }
 
 /// Perform template argument deduction to determine whether
@@ -2913,7 +2913,7 @@ Sema::DeduceTemplateArguments(VarTemplatePartialSpecializationDecl *Partial,
     return Sema::TDK_SubstitutionFailure;
 
   return ::FinishTemplateArgumentDeduction(
-      *this, Partial, /*PartialOrdering=*/false, TemplateArgs, Deduced, Info);
+      *this, Partial, /*IsPartialOrdering=*/false, TemplateArgs, Deduced, Info);
 }
 
 /// Determine whether the given type T is a simple-template-id type.
@@ -5067,7 +5067,7 @@ static bool isAtLeastAsSpecializedAs(Sema &S, QualType T1, QualType T2,
                                    Info);
   auto *TST1 = T1->castAs<TemplateSpecializationType>();
   if (FinishTemplateArgumentDeduction(
-          S, P2, /*PartialOrdering=*/true,
+          S, P2, /*IsPartialOrdering=*/true,
           TemplateArgumentList(TemplateArgumentList::OnStack,
                                TST1->template_arguments()),
           Deduced, Info))

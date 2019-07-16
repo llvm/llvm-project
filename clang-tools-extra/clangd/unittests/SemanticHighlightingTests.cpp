@@ -166,6 +166,13 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         $Variable[[AA]].$Field[[E]].$Field[[C]];
         $Class[[A]]::$Variable[[S]] = 90;
       }
+    )cpp",
+    R"cpp(
+      struct $Class[[AA]] {
+        int $Field[[A]];
+      }
+      int $Variable[[B]];
+      $Class[[AA]] $Variable[[A]]{$Variable[[B]]};
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);

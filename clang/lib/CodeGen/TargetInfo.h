@@ -267,6 +267,11 @@ public:
                                                LangAS SrcAddr, LangAS DestAddr,
                                                llvm::Type *DestTy) const;
 
+  /// Get address space of pointer parameter for __cxa_atexit.
+  virtual LangAS getAddrSpaceOfCxaAtexitPtrParam() const {
+    return LangAS::Default;
+  }
+
   /// Get the syncscope used in LLVM IR.
   virtual llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
                                                  SyncScope Scope,

@@ -174,6 +174,7 @@ public:
     iterator       find(const key_type& k);
     const_iterator find(const key_type& k) const;
     size_type count(const key_type& k) const;
+    bool contains(const key_type& k) const; // C++20
     pair<iterator, iterator>             equal_range(const key_type& k);
     pair<const_iterator, const_iterator> equal_range(const key_type& k) const;
 
@@ -355,6 +356,7 @@ public:
     iterator       find(const key_type& k);
     const_iterator find(const key_type& k) const;
     size_type count(const key_type& k) const;
+    bool contains(const key_type& k) const; // C++20
     pair<iterator, iterator>             equal_range(const key_type& k);
     pair<const_iterator, const_iterator> equal_range(const key_type& k) const;
 
@@ -844,9 +846,9 @@ public:
     // types
     typedef _Key                                           key_type;
     typedef _Tp                                            mapped_type;
-    typedef _Hash                                          hasher;
-    typedef _Pred                                          key_equal;
-    typedef _Alloc                                         allocator_type;
+    typedef typename __identity<_Hash>::type               hasher;
+    typedef typename __identity<_Pred>::type               key_equal;
+    typedef typename __identity<_Alloc>::type              allocator_type;
     typedef pair<const key_type, mapped_type>              value_type;
     typedef value_type&                                    reference;
     typedef const value_type&                              const_reference;
@@ -1278,6 +1280,10 @@ public:
     const_iterator find(const key_type& __k) const {return __table_.find(__k);}
     _LIBCPP_INLINE_VISIBILITY
     size_type count(const key_type& __k) const {return __table_.__count_unique(__k);}
+    #if _LIBCPP_STD_VER > 17
+        _LIBCPP_INLINE_VISIBILITY
+        bool contains(const key_type& __k) const {return find(__k) != end();}
+    #endif // _LIBCPP_STD_VER > 17
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, iterator>             equal_range(const key_type& __k)
         {return __table_.__equal_range_unique(__k);}
@@ -1347,6 +1353,73 @@ private:
     __node_holder __construct_node_with_key(const key_type& __k);
 #endif
 };
+
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _InputIterator,
+         class _Hash = hash<__iter_key_type<_InputIterator>>,
+         class _Pred = equal_to<__iter_key_type<_InputIterator>>,
+         class _Allocator = allocator<__iter_to_alloc_type<_InputIterator>>,
+         class = _EnableIf<!__is_allocator<_Hash>::value>,
+         class = _EnableIf<!is_integral<_Hash>::value>,
+         class = _EnableIf<!__is_allocator<_Pred>::value>,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_map(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type = 0,
+              _Hash = _Hash(), _Pred = _Pred(), _Allocator = _Allocator())
+  -> unordered_map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Hash, _Pred, _Allocator>;
+
+template<class _Key, class _Tp, class _Hash = hash<remove_const_t<_Key>>,
+         class _Pred = equal_to<remove_const_t<_Key>>,
+         class _Allocator = allocator<pair<const _Key, _Tp>>,
+         class = _EnableIf<!__is_allocator<_Hash>::value>,
+         class = _EnableIf<!is_integral<_Hash>::value>,
+         class = _EnableIf<!__is_allocator<_Pred>::value>,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_map(initializer_list<pair<_Key, _Tp>>, typename allocator_traits<_Allocator>::size_type = 0,
+              _Hash = _Hash(), _Pred = _Pred(), _Allocator = _Allocator())
+  -> unordered_map<remove_const_t<_Key>, _Tp, _Hash, _Pred, _Allocator>;
+
+template<class _InputIterator, class _Allocator,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_map(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Allocator)
+  -> unordered_map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>,
+                   hash<__iter_key_type<_InputIterator>>, equal_to<__iter_key_type<_InputIterator>>, _Allocator>;
+
+template<class _InputIterator, class _Allocator,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_map(_InputIterator, _InputIterator, _Allocator)
+  -> unordered_map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>,
+                   hash<__iter_key_type<_InputIterator>>, equal_to<__iter_key_type<_InputIterator>>, _Allocator>;
+
+template<class _InputIterator, class _Hash, class _Allocator,
+         class = _EnableIf<!__is_allocator<_Hash>::value>,
+         class = _EnableIf<!is_integral<_Hash>::value>,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_map(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
+  -> unordered_map<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>,
+                   _Hash, equal_to<__iter_key_type<_InputIterator>>, _Allocator>;
+
+template<class _Key, class _Tp, class _Allocator,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_map(initializer_list<pair<_Key, _Tp>>, typename allocator_traits<_Allocator>::size_type, _Allocator)
+  -> unordered_map<remove_const_t<_Key>, _Tp,
+                   hash<remove_const_t<_Key>>,
+                   equal_to<remove_const_t<_Key>>, _Allocator>;
+
+template<class _Key, class _Tp, class _Allocator,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_map(initializer_list<pair<_Key, _Tp>>, _Allocator)
+  -> unordered_map<remove_const_t<_Key>, _Tp,
+                   hash<remove_const_t<_Key>>,
+                   equal_to<remove_const_t<_Key>>, _Allocator>;
+
+template<class _Key, class _Tp, class _Hash, class _Allocator,
+         class = _EnableIf<!__is_allocator<_Hash>::value>,
+         class = _EnableIf<!is_integral<_Hash>::value>,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_map(initializer_list<pair<_Key, _Tp>>, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
+  -> unordered_map<remove_const_t<_Key>, _Tp, _Hash,
+                   equal_to<remove_const_t<_Key>>, _Allocator>;
+#endif
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_map<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_map(
@@ -1673,9 +1746,9 @@ public:
     // types
     typedef _Key                                           key_type;
     typedef _Tp                                            mapped_type;
-    typedef _Hash                                          hasher;
-    typedef _Pred                                          key_equal;
-    typedef _Alloc                                         allocator_type;
+    typedef typename __identity<_Hash>::type               hasher;
+    typedef typename __identity<_Pred>::type               key_equal;
+    typedef typename __identity<_Alloc>::type              allocator_type;
     typedef pair<const key_type, mapped_type>              value_type;
     typedef value_type&                                    reference;
     typedef const value_type&                              const_reference;
@@ -1982,6 +2055,10 @@ public:
     const_iterator find(const key_type& __k) const {return __table_.find(__k);}
     _LIBCPP_INLINE_VISIBILITY
     size_type count(const key_type& __k) const {return __table_.__count_multi(__k);}
+    #if _LIBCPP_STD_VER > 17
+        _LIBCPP_INLINE_VISIBILITY
+        bool contains(const key_type& __k) const {return find(__k) != end();}
+    #endif // _LIBCPP_STD_VER > 17
     _LIBCPP_INLINE_VISIBILITY
     pair<iterator, iterator>             equal_range(const key_type& __k)
         {return __table_.__equal_range_multi(__k);}
@@ -2040,6 +2117,73 @@ public:
 
 
 };
+
+#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
+template<class _InputIterator,
+         class _Hash = hash<__iter_key_type<_InputIterator>>,
+         class _Pred = equal_to<__iter_key_type<_InputIterator>>,
+         class _Allocator = allocator<__iter_to_alloc_type<_InputIterator>>,
+         class = _EnableIf<!__is_allocator<_Hash>::value>,
+         class = _EnableIf<!is_integral<_Hash>::value>,
+         class = _EnableIf<!__is_allocator<_Pred>::value>,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_multimap(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type = 0,
+                   _Hash = _Hash(), _Pred = _Pred(), _Allocator = _Allocator())
+  -> unordered_multimap<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>, _Hash, _Pred, _Allocator>;
+
+template<class _Key, class _Tp, class _Hash = hash<remove_const_t<_Key>>,
+         class _Pred = equal_to<remove_const_t<_Key>>,
+         class _Allocator = allocator<pair<const _Key, _Tp>>,
+         class = _EnableIf<!__is_allocator<_Hash>::value>,
+         class = _EnableIf<!is_integral<_Hash>::value>,
+         class = _EnableIf<!__is_allocator<_Pred>::value>,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_multimap(initializer_list<pair<_Key, _Tp>>, typename allocator_traits<_Allocator>::size_type = 0,
+                   _Hash = _Hash(), _Pred = _Pred(), _Allocator = _Allocator())
+  -> unordered_multimap<remove_const_t<_Key>, _Tp, _Hash, _Pred, _Allocator>;
+
+template<class _InputIterator, class _Allocator,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_multimap(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Allocator)
+  -> unordered_multimap<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>,
+                        hash<__iter_key_type<_InputIterator>>, equal_to<__iter_key_type<_InputIterator>>, _Allocator>;
+
+template<class _InputIterator, class _Allocator,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_multimap(_InputIterator, _InputIterator, _Allocator)
+  -> unordered_multimap<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>,
+                        hash<__iter_key_type<_InputIterator>>, equal_to<__iter_key_type<_InputIterator>>, _Allocator>;
+
+template<class _InputIterator, class _Hash, class _Allocator,
+         class = _EnableIf<!__is_allocator<_Hash>::value>,
+         class = _EnableIf<!is_integral<_Hash>::value>,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_multimap(_InputIterator, _InputIterator, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
+  -> unordered_multimap<__iter_key_type<_InputIterator>, __iter_mapped_type<_InputIterator>,
+                        _Hash, equal_to<__iter_key_type<_InputIterator>>, _Allocator>;
+
+template<class _Key, class _Tp, class _Allocator,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_multimap(initializer_list<pair<_Key, _Tp>>, typename allocator_traits<_Allocator>::size_type, _Allocator)
+  -> unordered_multimap<remove_const_t<_Key>, _Tp,
+                        hash<remove_const_t<_Key>>,
+                        equal_to<remove_const_t<_Key>>, _Allocator>;
+
+template<class _Key, class _Tp, class _Allocator,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_multimap(initializer_list<pair<_Key, _Tp>>, _Allocator)
+  -> unordered_multimap<remove_const_t<_Key>, _Tp,
+                        hash<remove_const_t<_Key>>,
+                        equal_to<remove_const_t<_Key>>, _Allocator>;
+
+template<class _Key, class _Tp, class _Hash, class _Allocator,
+         class = _EnableIf<!__is_allocator<_Hash>::value>,
+         class = _EnableIf<!is_integral<_Hash>::value>,
+         class = _EnableIf<__is_allocator<_Allocator>::value>>
+unordered_multimap(initializer_list<pair<_Key, _Tp>>, typename allocator_traits<_Allocator>::size_type, _Hash, _Allocator)
+  -> unordered_multimap<remove_const_t<_Key>, _Tp, _Hash,
+                        equal_to<remove_const_t<_Key>>, _Allocator>;
+#endif
 
 template <class _Key, class _Tp, class _Hash, class _Pred, class _Alloc>
 unordered_multimap<_Key, _Tp, _Hash, _Pred, _Alloc>::unordered_multimap(

@@ -16,7 +16,7 @@ Use-cases
 =========
 
 ORC provides a modular API for building JIT compilers. There are a range
-of use cases for such an API:
+of use cases for such an API. For example:
 
 1. The LLVM tutorials use a simple ORC-based JIT class to execute expressions
 compiled from a toy languge: Kaleidoscope.
@@ -56,11 +56,11 @@ ORC provides the following features:
   deferring compilation until first call.
 
 - *Support for custom compilers and program representations*. Clients can supply
-   custom compilers for each symbol that they define in their JIT session. ORC
-   will run the user-supplied compiler when the a definition of a symbol is
-   needed. ORC is actually fully language agnostic: LLVM IR is not treated
-   specially, and is supported via the same wrapper mechanism (the
-   ``MaterializationUnit`` class) that is used for custom compilers.
+  custom compilers for each symbol that they define in their JIT session. ORC
+  will run the user-supplied compiler when the a definition of a symbol is
+  needed. ORC is actually fully language agnostic: LLVM IR is not treated
+  specially, and is supported via the same wrapper mechanism (the
+  ``MaterializationUnit`` class) that is used for custom compilers.
 
 - *Concurrent JIT'd code* and *concurrent compilation*. JIT'd code may spawn
   multiple threads, and may re-enter the JIT (e.g. for lazy compilation)
@@ -311,10 +311,129 @@ Supporting Custom Compilers
 
 TBD.
 
-Low Level (MCJIT style) Use
-===========================
+Transitioning from ORCv1 to ORCv2
+=================================
 
-TBD.
+Since LLVM 7.0 new ORC developement has focused on adding support for concurrent
+compilation. In order to enable concurrency new APIs were introduced
+(ExecutionSession, JITDylib, etc.) and new implementations of existing layers
+were written. In LLVM 8.0 the old layer implementations, which do not support
+concurrency, were renamed (with a "Legacy" prefix), but remained in tree.  In
+LLVM 9.0 we have added a deprecation warning for the old layers and utilities,
+and in LLVM 10.0 the old layers and utilities will be removed.
+
+Clients currently using the legacy (ORCv1) layers and utilities will usually
+find it easy to transition to the newer (ORCv2) variants. Most of the ORCv1
+layers and utilities have ORCv2 counterparts[2]_ that can be
+substituted. However there are some differences between ORCv1 and ORCv2 to be
+aware of:
+
+  1. All JIT stacks now need an ExecutionSession instance which manages the
+     string pool, error reporting, synchronization, and symbol lookup.
+
+  2. ORCv2 uses uniqued strings (``SymbolStringPtr`` instances) to reduce memory
+     overhead and improve lookup performance. To get a uniqued string, call
+     ``intern`` on your ExecutionSession instance:
+
+     .. code-block:: c++
+
+       ExecutionSession ES;
+
+       /// ...
+
+       auto MainSymbolName = ES.intern("main");
+
+  3. Program representations (Modules, Object Files, etc.) are no longer added
+     *to* layers. Instead they are added *to* JITDylibs *by* layers. The layer
+     determines how the program representation will be compiled if it is needed.
+     The JITDylib provides the symbol table, enforces linkage rules (e.g.
+     rejecting duplicate definitions), and synchronizes concurrent compiles.
+
+     Most ORCv1 clients (or MCJIT clients wanting to try out ORCv2) should
+     simply add code to the default *main* JITDylib provided by the
+     ExecutionSession:
+
+     .. code-block:: c++
+
+       ExecutionSession ES;
+       RTDyldObjectLinkingLayer ObjLinkingLayer(
+         ES, []() { return llvm::make_unique<SectionMemoryManager>(); });
+       IRCompileLayer CompileLayer(ES, ObjLinkingLayer, SimpleIRCompiler(TM));
+
+       auto M = loadModule(...);
+
+       if (auto Err = CompileLayer.add(ES.getMainJITDylib(), M))
+         return Err;
+
+  4. IR layers require ThreadSafeModule instances, rather than
+     std::unique_ptr<Module>s. A ThreadSafeModule instance is a pair of a
+     std::unique_ptr<Module> and a ThreadSafeContext, which is in turn a
+     pair of a std::unique_ptr<LLVMContext> and a lock. This allows the JIT
+     to ensure that the LLVMContext for a module is locked before the module
+     is accessed. Multiple ThreadSafeModules may share a ThreadSafeContext
+     value, but in that case the modules will not be able to be compiled
+     concurrently[3]_.
+
+     ThreadSafeContexts may be constructed explicitly:
+
+     .. code-block:: c++
+
+       // ThreadSafeContext shared between two modules.
+       ThreadSafeContext TSCtx(llvm::make_unique<LLVMContext>());
+       ThreadSafeModule TSM1(
+         llvm::make_unique<Module>("M1", *TSCtx.getContext()), TSCtx);
+       ThreadSafeModule TSM2(
+         llvm::make_unique<Module>("M2", *TSCtx.getContext()), TSCtx);
+
+     , or they can be created implicitly by passing a new LLVMContext to the
+     ThreadSafeModuleConstructor:
+
+     .. code-block:: c++
+
+       // Constructing a ThreadSafeModule (and implicitly a ThreadSafeContext)
+       // from a pair of a Module and a Context.
+       auto Ctx = llvm::make_unique<LLVMContext>();
+       auto M = llvm::make_unique<Module>("M", *Ctx);
+       return ThreadSafeModule(std::move(M), std::move(Ctx));
+
+  5. The symbol resolution and lookup scheme have been fundamentally changed.
+     Symbol lookup has been removed from the layer interface. Instead,
+     symbols are looked up via the ``ExecutionSession::lookup`` method by
+     scanning a list of JITDylibs.
+
+     SymbolResolvers have been removed entirely. Resolution rules now follow the
+     linkage relationship between JITDylibs. For example, to resolve a reference
+     to a symbol *F* from a module *M* that has been added to JITDylib *J1* we
+     would first search for a definition of *F* in *J1* then (if no definition
+     was found) search each of the JITDylibs that *J1* links against.
+
+     While the new resolution scheme is, strictly speaking, less flexible than
+     the old scheme of customizable resolvers this has not yet led to problems
+     in practice. Instead, using standard linker rules has removed a lot of
+     boilerplate while providing correct[4]_ behavior for common and weak symbols.
+
+     One notable difference is in exposing in-process symbols to the JIT. To
+     support this (without requiring the set of symbols to be enumerated up
+     front), JITDylibs allow for a *GeneratorFunction* to be attached to
+     generate new definitions upon lookup. Reflecting the processes symbols into
+     the JIT can be done by writing:
+
+     .. code-block:: c++
+
+       ExecutionSession ES;
+       const auto DataLayout &DL = ...;
+
+       {
+         auto ProcessSymbolsGenerator =
+           DynamicLibrarySearchGenerator::GetForCurrentProcess(DL.getGlobalPrefix());
+         if (!ProcessSymbolsGenerator)
+           return ProcessSymbolsGenerator.takeError();
+         ES.getMainJITDylib().setGenerator(std::move(*ProcessSymbolsGenerator));
+       }
+
+  6. Module removal is not yet supported. There is no equivalent of the
+     layer concept removeModule/removeObject methods. Work on resource tracking
+     and removal in ORCv2 is ongoing.
 
 Future Features
 ===============
@@ -323,3 +442,23 @@ TBD: Speculative compilation. Object Caches.
 
 .. [1] Formats/architectures vary in terms of supported features. MachO and
        ELF tend to have better support than COFF. Patches very welcome!
+
+.. [2] The ``LazyEmittingLayer``, ``RemoteObjectClientLayer`` and
+       ``RemoteObjectServerLayer`` do not have counterparts in the new
+       system. In the case of ``LazyEmittingLayer`` it was simply no longer
+       needed: in ORCv2, deferring compilation until symbols are looked up is
+       the default. The removal of ``RemoteObjectClientLayer`` and
+       ``RemoteObjectServerLayer`` means that JIT stacks can no longer be split
+       across processes, however this functionality appears not to have been
+       used.
+
+.. [3] Sharing ThreadSafeModules in a concurrent compilation can be dangerous:
+       if interdependent modules are loaded on the same context, but compiled
+       on different threads a deadlock may occur (with each compile waiting for
+       the other(s) to complete, and the other(s) unable to proceed because the
+       context is locked).
+
+.. [4] Mostly. Weak definitions are handled correctly within dylibs, but if
+       multiple dylibs provide a weak definition of a symbol each will end up
+       with its own definition (similar to how weak symbols in Windows DLLs
+       behave). This will be fixed in the future.

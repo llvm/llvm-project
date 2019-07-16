@@ -514,7 +514,7 @@ MigrationProcess::MigrationProcess(
     IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       new DiagnosticsEngine(DiagID, &CI.getDiagnosticOpts(),
                             DiagClient, /*ShouldOwnClient=*/false));
-    Remapper.initFromDisk(outputDir, *Diags, /*ignoreIfFilesChanges=*/true);
+    Remapper.initFromDisk(outputDir, *Diags, /*ignoreIfFilesChanged=*/true);
   }
 }
 

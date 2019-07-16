@@ -190,12 +190,12 @@ local_label:
 
   bltl $7,$8,local_label
 # CHECK: slt $1, $7, $8                 # encoding: [0x00,0xe8,0x08,0x2a]
-# CHECK: bnel $1, $zero, local_label    # encoding: [0x54,0x20,A,A]
+# CHECK: bnezl $1, local_label          # encoding: [0x54,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: local_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bltl $7,$8,global_label
 # CHECK: slt $1, $7, $8                 # encoding: [0x00,0xe8,0x08,0x2a]
-# CHECK: bnel $1, $zero, global_label   # encoding: [0x54,0x20,A,A]
+# CHECK: bnezl $1, global_label         # encoding: [0x54,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: global_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bltl $7,$0,local_label
@@ -211,12 +211,12 @@ local_label:
 
   blel $7,$8,local_label
 # CHECK: slt $1, $8, $7                 # encoding: [0x01,0x07,0x08,0x2a]
-# CHECK: beql $1, $zero, local_label    # encoding: [0x50,0x20,A,A]
+# CHECK: beqzl $1, local_label          # encoding: [0x50,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: local_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   blel $7,$8,global_label
 # CHECK: slt $1, $8, $7                 # encoding: [0x01,0x07,0x08,0x2a]
-# CHECK: beql $1, $zero, global_label   # encoding: [0x50,0x20,A,A]
+# CHECK: beqzl $1, global_label         # encoding: [0x50,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: global_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   blel $7,$0,local_label
@@ -235,12 +235,12 @@ local_label:
 
   bgel $7,$8,local_label
 # CHECK: slt $1, $7, $8                 # encoding: [0x00,0xe8,0x08,0x2a]
-# CHECK: beql $1, $zero, local_label    # encoding: [0x50,0x20,A,A]
+# CHECK: beqzl $1, local_label          # encoding: [0x50,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: local_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bgel $7,$8,global_label
 # CHECK: slt $1, $7, $8                 # encoding: [0x00,0xe8,0x08,0x2a]
-# CHECK: beql $1, $zero, global_label   # encoding: [0x50,0x20,A,A]
+# CHECK: beqzl $1, global_label         # encoding: [0x50,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: global_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bgel $7,$0,local_label
@@ -259,12 +259,12 @@ local_label:
 
   bgtl $7,$8,local_label
 # CHECK: slt $1, $8, $7                 # encoding: [0x01,0x07,0x08,0x2a]
-# CHECK: bnel $1, $zero, local_label    # encoding: [0x54,0x20,A,A]
+# CHECK: bnezl $1, local_label          # encoding: [0x54,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: local_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bgtl $7,$8,global_label
 # CHECK: slt $1, $8, $7                 # encoding: [0x01,0x07,0x08,0x2a]
-# CHECK: bnel $1, $zero, global_label   # encoding: [0x54,0x20,A,A]
+# CHECK: bnezl $1, global_label         # encoding: [0x54,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: global_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bgtl $7,$0,local_label
@@ -280,12 +280,12 @@ local_label:
 
   bltul $7,$8,local_label
 # CHECK: sltu $1, $7, $8                # encoding: [0x00,0xe8,0x08,0x2b]
-# CHECK: bnel $1, $zero, local_label    # encoding: [0x54,0x20,A,A]
+# CHECK: bnezl $1, local_label          # encoding: [0x54,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: local_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bltul $7,$8,global_label
 # CHECK: sltu $1, $7, $8                # encoding: [0x00,0xe8,0x08,0x2b]
-# CHECK: bnel $1, $zero, global_label   # encoding: [0x54,0x20,A,A]
+# CHECK: bnezl $1, global_label         # encoding: [0x54,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: global_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bltul $7,$0,local_label
@@ -301,12 +301,12 @@ local_label:
 
   bleul $7,$8,local_label
 # CHECK: sltu $1, $8, $7                # encoding: [0x01,0x07,0x08,0x2b]
-# CHECK: beql $1, $zero, local_label    # encoding: [0x50,0x20,A,A]
+# CHECK: beqzl $1, local_label          # encoding: [0x50,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: local_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bleul $7,$8,global_label
 # CHECK: sltu $1, $8, $7                # encoding: [0x01,0x07,0x08,0x2b]
-# CHECK: beql $1, $zero, global_label   # encoding: [0x50,0x20,A,A]
+# CHECK: beqzl $1, global_label         # encoding: [0x50,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: global_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bleul $7,$0,local_label
@@ -325,12 +325,12 @@ local_label:
 
   bgeul $7,$8,local_label
 # CHECK: sltu $1, $7, $8                # encoding: [0x00,0xe8,0x08,0x2b]
-# CHECK: beql $1, $zero, local_label    # encoding: [0x50,0x20,A,A]
+# CHECK: beqzl $1, local_label          # encoding: [0x50,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: local_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bgeul $7,$8,global_label
 # CHECK: sltu $1, $7, $8                # encoding: [0x00,0xe8,0x08,0x2b]
-# CHECK: beql $1, $zero, global_label   # encoding: [0x50,0x20,A,A]
+# CHECK: beqzl $1, global_label         # encoding: [0x50,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: global_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bgeul $7,$0,local_label
@@ -349,12 +349,12 @@ local_label:
 
   bgtul $7,$8,local_label
 # CHECK: sltu $1, $8, $7                # encoding: [0x01,0x07,0x08,0x2b]
-# CHECK: bnel $1, $zero, local_label    # encoding: [0x54,0x20,A,A]
+# CHECK: bnezl $1, local_label          # encoding: [0x54,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: local_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bgtul $7,$8,global_label
 # CHECK: sltu $1, $8, $7                # encoding: [0x01,0x07,0x08,0x2b]
-# CHECK: bnel $1, $zero, global_label   # encoding: [0x54,0x20,A,A]
+# CHECK: bnezl $1, global_label         # encoding: [0x54,0x20,A,A]
 # CHECK:                                #   fixup A - offset: 0, value: global_label-4, kind: fixup_Mips_PC16
 # CHECK: nop                            # encoding: [0x00,0x00,0x00,0x00]
   bgtul $7,$0,local_label

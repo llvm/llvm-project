@@ -263,7 +263,7 @@ public:
         Addr.getElementType(), Addr.getPointer(), Idx0, Idx1, Name));
     llvm::APInt Offset(
         DL.getIndexSizeInBits(Addr.getType()->getPointerAddressSpace()), 0,
-        /*IsSigned=*/true);
+        /*isSigned=*/true);
     if (!GEP->accumulateConstantOffset(DL, Offset))
       llvm_unreachable("offset of GEP with constants is always computable");
     return Address(GEP, Addr.getAlignment().alignmentAtOffset(

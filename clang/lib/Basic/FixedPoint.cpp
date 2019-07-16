@@ -190,12 +190,12 @@ void APFixedPoint::toString(llvm::SmallVectorImpl<char> &Str) const {
   llvm::APInt FractPartMask = llvm::APInt::getAllOnesValue(Scale).zext(Width);
   llvm::APInt RadixInt = llvm::APInt(Width, 10);
 
-  IntPart.toString(Str, /*radix=*/10);
+  IntPart.toString(Str, /*Radix=*/10);
   Str.push_back('.');
   do {
     (FractPart * RadixInt)
         .lshr(Scale)
-        .toString(Str, /*radix=*/10, Val.isSigned());
+        .toString(Str, /*Radix=*/10, Val.isSigned());
     FractPart = (FractPart * RadixInt) & FractPartMask;
   } while (FractPart != 0);
 }

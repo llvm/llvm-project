@@ -688,7 +688,7 @@ static void InsertOCLBuiltinDeclarations(Sema &S, LookupResult &LR,
                                          unsigned Len) {
 
   for (unsigned i = 0; i < Len; ++i) {
-    OpenCLBuiltinDecl &Decl = OpenCLBuiltins[Index - 1 + i];
+    const OpenCLBuiltinDecl &Decl = OpenCLBuiltins[Index - 1 + i];
     ASTContext &Context = S.Context;
 
     // Ignore this BIF if the version is incorrect.

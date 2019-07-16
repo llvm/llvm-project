@@ -30,3 +30,8 @@ int f5() __attribute__((no_sanitize("address", "thread", "hwaddress")));
 // DUMP: NoSanitizeAttr {{.*}} unknown
 // PRINT: int f6() __attribute__((no_sanitize("unknown")))
 int f6() __attribute__((no_sanitize("unknown"))); // expected-warning{{unknown sanitizer 'unknown' ignored}}
+
+// DUMP-LABEL: FunctionDecl {{.*}} f7
+// DUMP: NoSanitizeAttr {{.*}} memtag
+// PRINT: int f7() {{\[\[}}clang::no_sanitize("memtag")]]
+[[clang::no_sanitize("memtag")]] int f7();

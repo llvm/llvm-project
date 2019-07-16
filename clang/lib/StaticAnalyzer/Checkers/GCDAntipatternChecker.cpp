@@ -196,7 +196,7 @@ static void emitDiagnostics(const BoundNodes &Nodes,
     ADC->getDecl(),
     Checker,
     /*Name=*/"GCD performance anti-pattern",
-    /*Category=*/"Performance",
+    /*BugCategory=*/"Performance",
     OS.str(),
     PathDiagnosticLocation::createBegin(SW, BR.getSourceManager(), ADC),
     SW->getSourceRange());
