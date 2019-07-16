@@ -31,6 +31,8 @@ using namespace llvm;
 #define DEBUG_TYPE "mem2reg"
 
 STATISTIC(NumPromoted, "Number of alloca's promoted");
+STATISTIC(NumNotParallelPromotable, "Number of alloca's not promotable due to "
+          "Tapir instructions");
 
 static bool promoteMemoryToRegister(Function &F, DominatorTree &DT,
                                     AssumptionCache &AC, TaskInfo &TI) {
@@ -52,9 +54,14 @@ static bool promoteMemoryToRegister(Function &F, DominatorTree &DT,
     // the entry node
     for (BasicBlock *BB : EntryBlocks)
       for (BasicBlock::iterator I = BB->begin(), E = --BB->end(); I != E; ++I)
-        if (AllocaInst *AI = dyn_cast<AllocaInst>(I))       // Is it an alloca?
-          if (isAllocaPromotable(AI) && TI.isAllocaParallelPromotable(AI))
-            Allocas.push_back(AI);
+        if (AllocaInst *AI = dyn_cast<AllocaInst>(I)) {      // Is it an alloca?
+          if (isAllocaPromotable(AI)) {
+            if (TI.isAllocaParallelPromotable(AI))
+              Allocas.push_back(AI);
+            else
+              ++NumNotParallelPromotable;
+          }
+        }
 
     if (Allocas.empty())
       break;

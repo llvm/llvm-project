@@ -17,6 +17,7 @@
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/IteratedDominanceFrontier.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -37,6 +38,12 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "task-info"
+
+// Statistics
+STATISTIC(NumTasks, "Number of tasks found in this function.");
+STATISTIC(NumSpindles, "Number of spindles found in this function.");
+STATISTIC(NumSharedEHSpindles, "Number of shared exception-handling spindles "
+          "found in this function.");
 
 // Always verify taskinfo if expensive checking is enabled.
 #ifdef EXPENSIVE_CHECKS
@@ -215,13 +222,15 @@ AssociateWithTask(TaskInfo *TI, Task *T,
   // We can have remaining unassociated spindles when subtasks share
   // exception-handling spindles.
   for (Spindle *S : UnassocSpindles)
-    if (!Visited.count(S))
+    if (!Visited.count(S)) {
       TI->addEHSpindleToTask(S, T);
+      ++NumSharedEHSpindles;
+    }
 
   assert(T->getNumSpindles() + T->getNumSharedEHSpindles() ==
          UnassocSpindles.size() + 1 &&
          "Not all unassociated spindles were associated with task.");
-  
+  ++NumTasks;
 }
 
 // Add the unassociated blocks to the spindle S in order of a DFS CFG traversal
@@ -254,6 +263,7 @@ AssociateWithSpindle(TaskInfo *TI, Spindle *S,
 
   assert(S->getNumBlocks() == UnassocBlocks.size() + 1 &&
          "Not all unassociated blocks were associated with spindle.");
+  ++NumSpindles;
 }
 
 // Helper function to add spindle edges to spindles.
@@ -611,6 +621,8 @@ static bool needPhiInTaskContinue(
       const BasicBlock *P = *PI;
       if (TI.getSpindleFor(BB) && TI.getSpindleFor(P) &&
           TI.getSpindleFor(BB)->predInDifferentTask(TI.getSpindleFor(P))) {
+        // TODO: Check if there's a store to this alloca in the task enclosing
+        // P.
         LLVM_DEBUG(dbgs() << "Alloca " << *AI << " has use reattached from " <<
                    P->getName() << "\n");
         return true;
