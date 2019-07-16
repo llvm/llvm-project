@@ -99,6 +99,6 @@ add_lldb_tool(lldb-server-dpu INCLUDE_IN_SUITE
       Support
 )
 
-target_link_libraries(lldb-server-dpu PRIVATE ${LLDB_SYSTEM_LIBS} "${CMAKE_CURRENT_SOURCE_DIR}/../../../../../backends/build/api/libdpu-2019.3.0.so")
+target_link_libraries(lldb-server-dpu PRIVATE ${LLDB_SYSTEM_LIBS} "${UPMEM_API_LIB}libdpu-2019.3.0.so")
 target_compile_options(lldb-server-dpu PRIVATE -DUSE_DPU)
 endif()

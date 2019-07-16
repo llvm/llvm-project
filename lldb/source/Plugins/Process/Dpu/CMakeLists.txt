@@ -1,5 +1,4 @@
-set(UPMEM_INC $ENV{UPMEM_HOME}/usr/share/upmem/include/host)
-include_directories(${UPMEM_INC})
+include_directories(${UPMEM_API_HEADERS})
 
 add_lldb_library(lldbPluginProcessDpu PLUGIN
   DpuRank.cpp
@@ -20,5 +19,3 @@ add_lldb_library(lldbPluginProcessDpu PLUGIN
     Support
   EXTRA_CXXFLAGS -g
   )
-
-lldb_append_link_flags(lldbPluginProcessDpu "-L${CMAKE_CURRENT_SOURCE_DIR}/../../../../../../../backends/build/api -ldpu-2019.2.0")
