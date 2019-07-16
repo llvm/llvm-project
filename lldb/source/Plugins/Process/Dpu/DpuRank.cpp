@@ -198,6 +198,7 @@ bool Dpu::StepThread(uint32_t thread_index) {
 
   int ret = DPU_API_SUCCESS;
   ret |= dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, &m_context);
+  ret |= dpu_extract_context_for_dpu(m_dpu, &m_context);
 
   return ret == DPU_API_SUCCESS;
 }
