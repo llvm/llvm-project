@@ -764,11 +764,11 @@ File Bug</h3>
             variables['report'] = m.group(2)
 
         try:
-            f = open(path,'r')
+            f = open(path,'rb')
         except IOError:
             return self.send_404()
         fs = os.fstat(f.fileno())
-        data = f.read()
+        data = f.read().decode('utf-8')
         for a,b in kReportReplacements:
             data = a.sub(b % variables, data)
         return self.send_string(data, ctype, mtime=fs.st_mtime)

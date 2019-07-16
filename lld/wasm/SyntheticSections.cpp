@@ -474,8 +474,8 @@ void NameSection::writeBody() {
   SubSection sub(WASM_NAMES_FUNCTION);
   writeUleb128(sub.os, numNames(), "name count");
 
-  // Names must appear in function index order.  As it happens ImportedSymbols
-  // and InputFunctions are numbered in order with imported functions coming
+  // Names must appear in function index order.  As it happens importedSymbols
+  // and inputFunctions are numbered in order with imported functions coming
   // first.
   for (const Symbol *s : out.importSec->importedSymbols) {
     if (auto *f = dyn_cast<FunctionSymbol>(s)) {

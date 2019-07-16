@@ -112,7 +112,7 @@ public:
 private:
   /// Inserts symbol if not already present.
   std::pair<Symbol *, bool> insert(StringRef name);
-  /// Same as insert(Name), but also sets IsUsedInRegularObj.
+  /// Same as insert(Name), but also sets isUsedInRegularObj.
   std::pair<Symbol *, bool> insert(StringRef name, InputFile *f);
 
   std::vector<Symbol *> getSymsWithPrefix(StringRef prefix);

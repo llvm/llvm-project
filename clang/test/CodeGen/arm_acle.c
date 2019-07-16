@@ -2,6 +2,9 @@
 // RUN: %clang_cc1 -ffreestanding -triple armv8-eabi -target-cpu cortex-a57 -O2  -fexperimental-new-pass-manager -S -emit-llvm -o - %s | FileCheck %s -check-prefix=ARM -check-prefix=AArch32 -check-prefix=ARM-NEWPM -check-prefix=AArch32-NEWPM
 // RUN: %clang_cc1 -ffreestanding -triple aarch64-eabi -target-cpu cortex-a57 -target-feature +neon -target-feature +crc -target-feature +crypto -O2 -fno-experimental-new-pass-manager -S -emit-llvm -o - %s | FileCheck %s -check-prefix=ARM -check-prefix=AArch64 -check-prefix=ARM-LEGACY -check-prefix=AArch64-LEGACY
 // RUN: %clang_cc1 -ffreestanding -triple aarch64-eabi -target-cpu cortex-a57 -target-feature +neon -target-feature +crc -target-feature +crypto -O2 -fexperimental-new-pass-manager -S -emit-llvm -o - %s | FileCheck %s -check-prefix=ARM -check-prefix=AArch64 -check-prefix=ARM-NEWPM -check-prefix=AArch64-NEWPM
+// RUN: %clang_cc1 -ffreestanding -triple aarch64-eabi -target-cpu cortex-a57 -target-feature +v8.3a -O2 -fexperimental-new-pass-manager -S -emit-llvm -o - %s | FileCheck %s -check-prefix=AArch64-v8_3
+// RUN: %clang_cc1 -ffreestanding -triple aarch64-eabi -target-cpu cortex-a57 -target-feature +v8.4a -O2 -fexperimental-new-pass-manager -S -emit-llvm -o - %s | FileCheck %s -check-prefix=AArch64-v8_3
+// RUN: %clang_cc1 -ffreestanding -triple aarch64-eabi -target-cpu cortex-a57 -target-feature +v8.5a -O2 -fexperimental-new-pass-manager -S -emit-llvm -o - %s | FileCheck %s -check-prefix=AArch64-v8_3
 
 #include <arm_acle.h>
 
@@ -823,3 +826,11 @@ void test_wsrp(void *v) {
 
 // AArch64: ![[M0]] = !{!"1:2:3:4:5"}
 // AArch64: ![[M1]] = !{!"sysreg"}
+
+// AArch64-v8_3-LABEL: @test_jcvt(
+// AArch64-v8_3: call i32 @llvm.aarch64.fjcvtzs
+#ifdef __ARM_64BIT_STATE
+int32_t test_jcvt(double v) {
+  return __jcvt(v);
+}
+#endif

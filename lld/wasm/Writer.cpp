@@ -191,7 +191,7 @@ void Writer::writeSections() {
 // to each of the input data sections as well as the explicit stack region.
 // The default memory layout is as follows, from low to high.
 //
-//  - initialized data (starting at Config->GlobalBase)
+//  - initialized data (starting at Config->globalBase)
 //  - BSS data (not currently implemented in llvm)
 //  - explicit stack (Config->ZStackSize)
 //  - heap start / unallocated

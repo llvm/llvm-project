@@ -46,9 +46,9 @@ void lld::wasm::markLive() {
     if (InputChunk *chunk = sym->getChunk())
       q.push_back(chunk);
 
-    // The ctor functions are all referenced by the synthetic CallCtors
+    // The ctor functions are all referenced by the synthetic callCtors
     // function.  However, this function does not contain relocations so we
-    // have to manually mark the ctors as live if CallCtors itself is live.
+    // have to manually mark the ctors as live if callCtors itself is live.
     if (sym == WasmSym::callCtors) {
       if (config->passiveSegments)
         enqueue(WasmSym::initMemory);

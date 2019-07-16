@@ -1249,7 +1249,7 @@ static constexpr OptionDefinition g_breakpoint_list_options[] = {
   // FIXME: We need to add an "internal" command, and then add this sort of
   // thing to it. But I need to see it for now, and don't want to wait.
 #define LLDB_OPTIONS_breakpoint_list
-#include "Options.inc"
+#include "CommandOptions.inc"
 };
 
 #pragma mark List
