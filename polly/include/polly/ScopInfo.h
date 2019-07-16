@@ -1624,6 +1624,24 @@ public:
 /// Print ScopStmt S to raw_ostream OS.
 raw_ostream &operator<<(raw_ostream &OS, const ScopStmt &S);
 
+/// Helper struct to remember assumptions.
+struct Assumption {
+  /// The kind of the assumption (e.g., WRAPPING).
+  AssumptionKind Kind;
+
+  /// Flag to distinguish assumptions and restrictions.
+  AssumptionSign Sign;
+
+  /// The valid/invalid context if this is an assumption/restriction.
+  isl::set Set;
+
+  /// The location that caused this assumption.
+  DebugLoc Loc;
+
+  /// An optional block whose domain can simplify the assumption.
+  BasicBlock *BB;
+};
+
 /// Static Control Part
 ///
 /// A Scop is the polyhedral representation of a control flow region detected
@@ -1782,24 +1800,7 @@ private:
   /// need to be "false". Otherwise they behave the same.
   isl::set InvalidContext;
 
-  /// Helper struct to remember assumptions.
-  struct Assumption {
-    /// The kind of the assumption (e.g., WRAPPING).
-    AssumptionKind Kind;
-
-    /// Flag to distinguish assumptions and restrictions.
-    AssumptionSign Sign;
-
-    /// The valid/invalid context if this is an assumption/restriction.
-    isl::set Set;
-
-    /// The location that caused this assumption.
-    DebugLoc Loc;
-
-    /// An optional block whose domain can simplify the assumption.
-    BasicBlock *BB;
-  };
-
+  using RecordedAssumptionsTy = SmallVector<Assumption, 8>;
   /// Collection to hold taken assumptions.
   ///
   /// There are two reasons why we want to record assumptions first before we
@@ -1810,7 +1811,7 @@ private:
   ///      construction (basically after we know all parameters), thus the user
   ///      might see overly complicated assumptions to be taken while they will
   ///      only be simplified later on.
-  SmallVector<Assumption, 8> RecordedAssumptions;
+  RecordedAssumptionsTy RecordedAssumptions;
 
   /// The schedule of the SCoP
   ///
@@ -2338,6 +2339,12 @@ public:
                       InvariantEquivClasses.end());
   }
 
+  /// Return an iterator range containing hold assumptions.
+  iterator_range<RecordedAssumptionsTy::const_iterator>
+  recorded_assumptions() const {
+    return make_range(RecordedAssumptions.begin(), RecordedAssumptions.end());
+  }
+
   /// Return whether this scop is empty, i.e. contains no statements that
   /// could be executed.
   bool isEmpty() const { return Stmts.empty(); }
@@ -2494,6 +2501,9 @@ public:
   /// @returns True if the optimized SCoP can be executed.
   bool hasFeasibleRuntimeContext() const;
 
+  /// Clear assumptions which have been already processed.
+  void clearRecordedAssumptions() { return RecordedAssumptions.clear(); }
+
   /// Check if the assumption in @p Set is trivial or not.
   ///
   /// @param Set  The relations between parameters that are assumed to hold.
@@ -2558,9 +2568,6 @@ public:
   ///             if the assumption was created prior to the domain.
   void recordAssumption(AssumptionKind Kind, isl::set Set, DebugLoc Loc,
                         AssumptionSign Sign, BasicBlock *BB = nullptr);
-
-  /// Add all recorded assumptions to the assumed context.
-  void addRecordedAssumptions();
 
   /// Mark the scop as invalid.
   ///

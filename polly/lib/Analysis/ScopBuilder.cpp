@@ -385,6 +385,40 @@ Value *ScopBuilder::findFADAllocationInvisible(MemAccInst Inst) {
   return Descriptor;
 }
 
+void ScopBuilder::addRecordedAssumptions() {
+  for (auto &AS : llvm::reverse(scop->recorded_assumptions())) {
+
+    if (!AS.BB) {
+      scop->addAssumption(AS.Kind, AS.Set, AS.Loc, AS.Sign,
+                          nullptr /* BasicBlock */);
+      continue;
+    }
+
+    // If the domain was deleted the assumptions are void.
+    isl_set *Dom = scop->getDomainConditions(AS.BB).release();
+    if (!Dom)
+      continue;
+
+    // If a basic block was given use its domain to simplify the assumption.
+    // In case of restrictions we know they only have to hold on the domain,
+    // thus we can intersect them with the domain of the block. However, for
+    // assumptions the domain has to imply them, thus:
+    //                     _              _____
+    //   Dom => S   <==>   A v B   <==>   A - B
+    //
+    // To avoid the complement we will register A - B as a restriction not an
+    // assumption.
+    isl_set *S = AS.Set.copy();
+    if (AS.Sign == AS_RESTRICTION)
+      S = isl_set_params(isl_set_intersect(S, Dom));
+    else /* (AS.Sign == AS_ASSUMPTION) */
+      S = isl_set_params(isl_set_subtract(Dom, S));
+
+    scop->addAssumption(AS.Kind, isl::manage(S), AS.Loc, AS_RESTRICTION, AS.BB);
+  }
+  scop->clearRecordedAssumptions();
+}
+
 bool ScopBuilder::buildAccessMultiDimFixed(MemAccInst Inst, ScopStmt *Stmt) {
   Value *Val = Inst.getValueOperand();
   Type *ElementType = Val->getType();
@@ -1972,7 +2006,7 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC,
   // After the context was fully constructed, thus all our knowledge about
   // the parameters is in there, we add all recorded assumptions to the
   // assumed/invalid context.
-  scop->addRecordedAssumptions();
+  addRecordedAssumptions();
 
   scop->simplifyContexts();
   if (!scop->buildAliasChecks(AA)) {

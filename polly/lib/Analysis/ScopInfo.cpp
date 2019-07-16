@@ -3779,39 +3779,6 @@ void Scop::recordAssumption(AssumptionKind Kind, isl::set Set, DebugLoc Loc,
   RecordedAssumptions.push_back({Kind, Sign, Set, Loc, BB});
 }
 
-void Scop::addRecordedAssumptions() {
-  while (!RecordedAssumptions.empty()) {
-    Assumption AS = RecordedAssumptions.pop_back_val();
-
-    if (!AS.BB) {
-      addAssumption(AS.Kind, AS.Set, AS.Loc, AS.Sign, nullptr /* BasicBlock */);
-      continue;
-    }
-
-    // If the domain was deleted the assumptions are void.
-    isl_set *Dom = getDomainConditions(AS.BB).release();
-    if (!Dom)
-      continue;
-
-    // If a basic block was given use its domain to simplify the assumption.
-    // In case of restrictions we know they only have to hold on the domain,
-    // thus we can intersect them with the domain of the block. However, for
-    // assumptions the domain has to imply them, thus:
-    //                     _              _____
-    //   Dom => S   <==>   A v B   <==>   A - B
-    //
-    // To avoid the complement we will register A - B as a restriction not an
-    // assumption.
-    isl_set *S = AS.Set.copy();
-    if (AS.Sign == AS_RESTRICTION)
-      S = isl_set_params(isl_set_intersect(S, Dom));
-    else /* (AS.Sign == AS_ASSUMPTION) */
-      S = isl_set_params(isl_set_subtract(Dom, S));
-
-    addAssumption(AS.Kind, isl::manage(S), AS.Loc, AS_RESTRICTION, AS.BB);
-  }
-}
-
 void Scop::invalidate(AssumptionKind Kind, DebugLoc Loc, BasicBlock *BB) {
   LLVM_DEBUG(dbgs() << "Invalidate SCoP because of reason " << Kind << "\n");
   addAssumption(Kind, isl::set::empty(getParamSpace()), Loc, AS_ASSUMPTION, BB);

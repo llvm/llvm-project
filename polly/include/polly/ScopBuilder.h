@@ -327,6 +327,9 @@ class ScopBuilder {
                       BasicBlock *IncomingBlock, Value *IncomingValue,
                       bool IsExitBlock);
 
+  /// Add all recorded assumptions to the assumed context.
+  void addRecordedAssumptions();
+
   /// Create a MemoryAccess for reading the value of a phi.
   ///
   /// The modeling assumes that all incoming blocks write their incoming value
