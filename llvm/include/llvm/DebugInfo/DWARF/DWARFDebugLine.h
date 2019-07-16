@@ -121,6 +121,17 @@ public:
       return LineBase + (int8_t)LineRange - 1;
     }
 
+    /// Get DWARF-version aware access to the file name entry at the provided
+    /// index.
+    const llvm::DWARFDebugLine::FileNameEntry &
+    getFileNameEntry(uint64_t Index) const;
+
+    bool hasFileAtIndex(uint64_t FileIndex) const;
+
+    bool getFileNameByIndex(uint64_t FileIndex, StringRef CompDir,
+                            DILineInfoSpecifier::FileLineInfoKind Kind,
+                            std::string &Result) const;
+
     void clear();
     void dump(raw_ostream &OS, DIDumpOptions DumpOptions) const;
     Error parse(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
@@ -240,16 +251,20 @@ public:
     bool lookupAddressRange(object::SectionedAddress Address, uint64_t Size,
                             std::vector<uint32_t> &Result) const;
 
-    bool hasFileAtIndex(uint64_t FileIndex) const;
+    bool hasFileAtIndex(uint64_t FileIndex) const {
+      return Prologue.hasFileAtIndex(FileIndex);
+    }
 
     /// Extracts filename by its index in filename table in prologue.
     /// In Dwarf 4, the files are 1-indexed and the current compilation file
     /// name is not represented in the list. In DWARF v5, the files are
     /// 0-indexed and the primary source file has the index 0.
     /// Returns true on success.
-    bool getFileNameByIndex(uint64_t FileIndex, const char *CompDir,
+    bool getFileNameByIndex(uint64_t FileIndex, StringRef CompDir,
                             DILineInfoSpecifier::FileLineInfoKind Kind,
-                            std::string &Result) const;
+                            std::string &Result) const {
+      return Prologue.getFileNameByIndex(FileIndex, CompDir, Kind, Result);
+    }
 
     /// Fills the Result argument with the file and line information
     /// corresponding to Address. Returns true on success.
@@ -267,11 +282,6 @@ public:
         const DWARFContext &Ctx, const DWARFUnit *U,
         std::function<void(Error)> RecoverableErrorCallback,
         raw_ostream *OS = nullptr);
-
-    /// Get DWARF-version aware access to the file name entry at the provided
-    /// index.
-    const llvm::DWARFDebugLine::FileNameEntry &
-        getFileNameEntry(uint64_t Index) const;
 
     using RowVector = std::vector<Row>;
     using RowIter = RowVector::const_iterator;
