@@ -217,6 +217,7 @@ extern "C" void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPULowerIntrinsicsPass(*PR);
   initializeAMDGPUOpenCLEnqueuedBlockLoweringPass(*PR);
   initializeAMDGPUPromoteAllocaPass(*PR);
+  initializeAMDGPUPromotePointerKernArgsToGlobalPass(*PR);
   initializeAMDGPUCodeGenPreparePass(*PR);
   initializeAMDGPUPropagateAttributesEarlyPass(*PR);
   initializeAMDGPUPropagateAttributesLatePass(*PR);
@@ -447,6 +448,9 @@ void AMDGPUTargetMachine::adjustPassManager(PassManagerBuilder &Builder) {
   Builder.addExtension(
     PassManagerBuilder::EP_CGSCCOptimizerLate,
     [](const PassManagerBuilder &, legacy::PassManagerBase &PM) {
+      // Premote generic pointer kernel arguments to global ones.
+      PM.add(llvm::createAMDGPUPromotePointerKernArgsToGlobalPass());
+
       // Add infer address spaces pass to the opt pipeline after inlining
       // but before SROA to increase SROA opportunities.
       PM.add(createInferAddressSpacesPass());
