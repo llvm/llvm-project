@@ -8,6 +8,7 @@
 
 #include "lldb/Core/ValueObject.h"
 
+#include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 #include "lldb/Core/Address.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ValueObjectCast.h"
