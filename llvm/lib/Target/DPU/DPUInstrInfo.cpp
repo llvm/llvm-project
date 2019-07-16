@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DPUInstrInfo.h"
+#include "DPUTargetMachine.h"
 
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
@@ -190,7 +191,7 @@ bool DPUInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       BuildMI(MBB, MI, MI.getDebugLoc(), get(DPU::SUBrrif))
           .addReg(ResultReg)
           .addReg(DPU::STKP)
-          .addImm(StackSize + 8)
+          .addImm(StackSize + STACK_SIZE_FOR_D22)
           .addImm(DPUAsmCondition::Condition::False);
       break;
   }

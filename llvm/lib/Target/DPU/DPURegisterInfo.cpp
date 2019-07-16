@@ -98,15 +98,20 @@ void DPURegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
 
   unsigned FrameReg = getFrameRegister(MF);
   int FrameIndex = MI.getOperand(FIOperandNum).getIndex();
-  unsigned int StackSize = MF.getFrameInfo().getStackSize();
-  int Offset = MF.getFrameInfo().getObjectOffset(FrameIndex) - StackSize;
-
-  // Call Args from DPUTargetLowering::LowerFormalArguments
-  // We couldn't add the space for D22 in the lowering without seen the stack
-  // reducing wrongly for no obvious reason. It represents the size in the stack
-  // reserved manually in DPUFrameLowering::emitPrologue.
-  if (FrameIndex < 0)
-    Offset -= STACK_SIZE_FOR_D22;
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  int StackSize = MFI.getStackSize();
+  int Offset = MFI.getObjectOffset(FrameIndex);
+  if ((FrameIndex < 0) && (Offset >= -(STACK_SIZE_FOR_D22 + StackSize))) {
+    // Call Args from DPUTargetLowering::LowerFormalArguments
+    // We couldn't add the space for D22 in the lowering without seen the stack
+    // reducing wrongly for no obvious reason. It represents the size in the
+    // stack reserved manually in DPUFrameLowering::emitPrologue.
+    Offset -= (STACK_SIZE_FOR_D22 + StackSize);
+    MFI.setObjectOffset(FrameIndex, Offset);
+  } else if (Offset >= 0) {
+    Offset -= StackSize;
+    MFI.setObjectOffset(FrameIndex, Offset);
+  }
 
   LLVM_DEBUG({
       dbgs() << "DPU/Reg - eliminating frame index in instruction (index= "<< FrameIndex << ") ";
