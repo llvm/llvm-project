@@ -1556,6 +1556,11 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   }
   config->wordsize = config->is64() ? 8 : 4;
 
+  // Handle /safeseh, x86 only, on by default, except for mingw.
+  if (config->machine == I386 &&
+      args.hasFlag(OPT_safeseh, OPT_safeseh_no, !config->mingw))
+    config->safeSEH = true;
+
   // Handle /functionpadmin
   for (auto *arg : args.filtered(OPT_functionpadmin, OPT_functionpadmin_opt))
     parseFunctionPadMin(arg, config->machine);
@@ -1794,15 +1799,6 @@ void LinkerDriver::link(ArrayRef<const char *> argsArr) {
   symtab->reportRemainingUndefines();
   if (errorCount())
     return;
-
-  // Handle /safeseh.
-  if (args.hasFlag(OPT_safeseh, OPT_safeseh_no, false)) {
-    for (ObjFile *file : ObjFile::instances)
-      if (!file->hasSafeSEH())
-        error("/safeseh: " + file->getName() + " is not compatible with SEH");
-    if (errorCount())
-      return;
-  }
 
   if (config->mingw) {
     // In MinGW, all symbols are automatically exported if no symbols

@@ -917,7 +917,7 @@ void Writer::createMiscChunks() {
   }
 
   // Create SEH table. x86-only.
-  if (config->machine == I386)
+  if (config->safeSEH)
     createSEHTable();
 
   // Create /guard:cf tables if requested.
@@ -1428,23 +1428,15 @@ void Writer::openFile(StringRef path) {
 }
 
 void Writer::createSEHTable() {
-  // Set the no SEH characteristic on x86 binaries unless we find exception
-  // handlers.
-  setNoSEHCharacteristic = true;
-
   SymbolRVASet handlers;
   for (ObjFile *file : ObjFile::instances) {
-    // FIXME: We should error here instead of earlier unless /safeseh:no was
-    // passed.
     if (!file->hasSafeSEH())
-      return;
-
+      error("/safeseh: " + file->getName() + " is not compatible with SEH");
     markSymbolsForRVATable(file, file->getSXDataChunks(), handlers);
   }
 
-  // Remove the "no SEH" characteristic if all object files were built with
-  // safeseh, we found some exception handlers, and there is a load config in
-  // the object.
+  // Set the "no SEH" characteristic if there really were no handlers, or if
+  // there is no load config object to point to the table of handlers.
   setNoSEHCharacteristic =
       handlers.empty() || !symtab->findUnderscore("_load_config_used");
 
