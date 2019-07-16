@@ -2927,7 +2927,7 @@ enum class CheckRecoverableKind {
 
 static CheckRecoverableKind getRecoverableKind(SanitizerMask Kind) {
   assert(Kind.countPopulation() == 1);
-  if (Kind == SanitizerKind::Vptr)
+  if (Kind == SanitizerKind::Function || Kind == SanitizerKind::Vptr)
     return CheckRecoverableKind::AlwaysRecoverable;
   else if (Kind == SanitizerKind::Return || Kind == SanitizerKind::Unreachable)
     return CheckRecoverableKind::Unrecoverable;

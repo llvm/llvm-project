@@ -14,7 +14,7 @@ auipc x1, 2
 
 # CHECK-ASM-AND-OBJ: jal sp, 4
 jal x2, 4
-# CHECK-ASM-AND-OBJ: jalr gp, gp, 4
+# CHECK-ASM-AND-OBJ: jalr gp, 4(gp)
 jalr x3, x3, 4
 
 # CHECK-ASM-AND-OBJ: beq tp, t0, 8

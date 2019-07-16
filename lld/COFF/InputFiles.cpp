@@ -556,8 +556,8 @@ Optional<Symbol *> ObjFile::createDefined(
   // The second symbol entry has the name of the comdat symbol, called the
   // "comdat leader".
   // When this function is called for the first symbol entry of a comdat,
-  // it sets ComdatDefs and returns None, and when it's called for the second
-  // symbol entry it reads ComdatDefs and then sets it back to nullptr.
+  // it sets comdatDefs and returns None, and when it's called for the second
+  // symbol entry it reads comdatDefs and then sets it back to nullptr.
 
   // Handle comdat leader.
   if (const coff_aux_section_definition *def = comdatDefs[sectionNumber]) {
@@ -626,7 +626,7 @@ ArrayRef<uint8_t> ObjFile::getDebugSection(StringRef secName) {
 // even if the TU was compiled with no debug info. At least two records are
 // always there. S_OBJNAME stores a 32-bit signature, which is loaded into the
 // PCHSignature member. S_COMPILE3 stores compile-time cmd-line flags. This is
-// currently used to initialize the HotPatchable member.
+// currently used to initialize the hotPatchable member.
 void ObjFile::initializeFlags() {
   ArrayRef<uint8_t> data = getDebugSection(".debug$S");
   if (data.empty())
@@ -764,7 +764,7 @@ void ImportFile::parse() {
 
   impSym = symtab->addImportData(impName, this);
   // If this was a duplicate, we logged an error but may continue;
-  // in this case, ImpSym is nullptr.
+  // in this case, impSym is nullptr.
   if (!impSym)
     return;
 

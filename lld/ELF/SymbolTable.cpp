@@ -99,7 +99,7 @@ Symbol *SymbolTable::find(StringRef name) {
   return sym;
 }
 
-// Initialize DemangledSyms with a map from demangled symbols to symbol
+// Initialize demangledSyms with a map from demangled symbols to symbol
 // objects. Used to handle "extern C++" directive in version scripts.
 //
 // The map will contain all demangled symbols. That can be very large,
@@ -225,7 +225,7 @@ void SymbolTable::assignWildcardVersion(SymbolVersion ver, uint16_t versionId) {
       b->versionId = versionId;
 }
 
-// This function processes version scripts by updating VersionId
+// This function processes version scripts by updating the versionId
 // member of symbols.
 // If there's only one anonymous version definition in a version
 // script file, the script does not actually define any symbol version,

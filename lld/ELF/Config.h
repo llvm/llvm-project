@@ -249,7 +249,7 @@ struct Configuration {
   // True if the target is little-endian. False if big-endian.
   bool isLE;
 
-  // endianness::little if IsLE is true. endianness::big otherwise.
+  // endianness::little if isLE is true. endianness::big otherwise.
   llvm::support::endianness endianness;
 
   // True if the target is the little-endian MIPS64.

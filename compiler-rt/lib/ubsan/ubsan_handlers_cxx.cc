@@ -185,18 +185,17 @@ static bool handleFunctionTypeMismatch(FunctionTypeMismatchData *Data,
   return true;
 }
 
-void __ubsan_handle_function_type_mismatch(FunctionTypeMismatchData *Data,
-                                           ValueHandle Function,
-                                           ValueHandle calleeRTTI,
-                                           ValueHandle fnRTTI) {
+void __ubsan_handle_function_type_mismatch_v1(FunctionTypeMismatchData *Data,
+                                              ValueHandle Function,
+                                              ValueHandle calleeRTTI,
+                                              ValueHandle fnRTTI) {
   GET_REPORT_OPTIONS(false);
   handleFunctionTypeMismatch(Data, Function, calleeRTTI, fnRTTI, Opts);
 }
 
-void __ubsan_handle_function_type_mismatch_abort(FunctionTypeMismatchData *Data,
-                                                 ValueHandle Function,
-                                                 ValueHandle calleeRTTI,
-                                                 ValueHandle fnRTTI) {
+void __ubsan_handle_function_type_mismatch_v1_abort(
+    FunctionTypeMismatchData *Data, ValueHandle Function,
+    ValueHandle calleeRTTI, ValueHandle fnRTTI) {
   GET_REPORT_OPTIONS(true);
   if (handleFunctionTypeMismatch(Data, Function, calleeRTTI, fnRTTI, Opts))
     Die();

@@ -434,8 +434,8 @@ public:
   uint32_t getSymIndex(SymbolTableBaseSection *symTab) const;
 
   // Computes the addend of the dynamic relocation. Note that this is not the
-  // same as the Addend member variable as it also includes the symbol address
-  // if UseSymVA is true.
+  // same as the addend member variable as it also includes the symbol address
+  // if useSymVA is true.
   int64_t computeAddend() const;
 
   RelType type;
@@ -1026,7 +1026,7 @@ private:
 // thunks including ARM interworking and Mips LA25 PI to non-PI thunks.
 class ThunkSection : public SyntheticSection {
 public:
-  // ThunkSection in OS, with desired OutSecOff of Off
+  // ThunkSection in OS, with desired outSecOff of Off
   ThunkSection(OutputSection *os, uint64_t off);
 
   // Add a newly created Thunk to this container:
@@ -1044,7 +1044,7 @@ private:
   size_t size = 0;
 };
 
-// Used to compute OutSecOff of .got2 in each object file. This is needed to
+// Used to compute outSecOff of .got2 in each object file. This is needed to
 // synthesize PLT entries for PPC32 Secure PLT ABI.
 class PPC32Got2Section final : public SyntheticSection {
 public:

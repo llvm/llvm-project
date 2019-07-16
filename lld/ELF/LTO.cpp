@@ -124,11 +124,11 @@ static lto::Config createConfig() {
 }
 
 BitcodeCompiler::BitcodeCompiler() {
-  // Initialize IndexFile.
+  // Initialize indexFile.
   if (!config->thinLTOIndexOnlyArg.empty())
     indexFile = openFile(config->thinLTOIndexOnlyArg);
 
-  // Initialize LTOObj.
+  // Initialize ltoObj.
   lto::ThinBackend backend;
   if (config->thinLTOIndexOnly) {
     auto onIndexWrite = [&](StringRef s) { thinIndices.erase(s); };
@@ -142,7 +142,7 @@ BitcodeCompiler::BitcodeCompiler() {
   ltoObj = llvm::make_unique<lto::LTO>(createConfig(), backend,
                                        config->ltoPartitions);
 
-  // Initialize UsedStartStop.
+  // Initialize usedStartStop.
   symtab->forEachSymbol([&](Symbol *sym) {
     StringRef s = sym->getName();
     for (StringRef prefix : {"__start_", "__stop_"})

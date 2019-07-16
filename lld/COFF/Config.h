@@ -49,7 +49,7 @@ struct Export {
 
   // If an export is a form of /export:foo=dllname.bar, that means
   // that foo should be exported as an alias to bar in the DLL.
-  // ForwardTo is set to "dllname.bar" part. Usually empty.
+  // forwardTo is set to "dllname.bar" part. Usually empty.
   StringRef forwardTo;
   StringChunk *forwardChunk = nullptr;
 
