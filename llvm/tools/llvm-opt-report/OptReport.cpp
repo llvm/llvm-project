@@ -150,20 +150,32 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
     return false;
   }
 
-  remarks::Parser Parser(remarks::ParserFormat::YAML, (*Buf)->getBuffer());
+  Expected<std::unique_ptr<remarks::Parser>> MaybeParser =
+      remarks::createRemarkParser(remarks::Format::YAML, (*Buf)->getBuffer());
+  if (!MaybeParser) {
+    handleAllErrors(MaybeParser.takeError(), [&](const ErrorInfoBase &PE) {
+      PE.log(WithColor::error());
+    });
+    return false;
+  }
+  remarks::Parser &Parser = **MaybeParser;
 
   while (true) {
-    Expected<const remarks::Remark *> RemarkOrErr = Parser.getNext();
-    if (!RemarkOrErr) {
-      handleAllErrors(RemarkOrErr.takeError(), [&](const ErrorInfoBase &PE) {
+    Expected<std::unique_ptr<remarks::Remark>> MaybeRemark = Parser.next();
+    if (!MaybeRemark) {
+      Error E = MaybeRemark.takeError();
+      if (E.isA<remarks::EndOfFileError>()) {
+        // EOF.
+        consumeError(std::move(E));
+        break;
+      }
+      handleAllErrors(MaybeRemark.takeError(), [&](const ErrorInfoBase &PE) {
         PE.log(WithColor::error());
       });
       return false;
     }
-    if (!*RemarkOrErr) // End of file.
-      break;
 
-    const remarks::Remark &Remark = **RemarkOrErr;
+    const remarks::Remark &Remark = **MaybeRemark;
 
     bool Transformed = Remark.RemarkType == remarks::Type::Passed;
 

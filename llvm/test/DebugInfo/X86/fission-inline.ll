@@ -71,6 +71,8 @@
 ; CHECK:     DW_AT_call_file
 ; CHECK-NEXT:     DW_AT_call_line {{.*}} (18)
 ; CHECK-NEXT:     DW_AT_call_column {{.*}} (0x05)
+; CHECK:     DW_AT_call_file
+; CHECK-NEXT:     DW_AT_call_line {{.*}} (21)
 ; CHECK-NOT: DW_
 ; CHECK: .debug_info.dwo contents:
 
@@ -82,6 +84,7 @@ entry:
   call void @_Z2f1v(), !dbg !26
   call void @_Z2f1v(), !dbg !25
   call void @_Z2f1v(), !dbg !28
+  call void @_Z2f1v(), !dbg !29
   ret void, !dbg !29
 }
 
@@ -122,4 +125,5 @@ attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "n
 !26 = !DILocation(line: 11, column: 3, scope: !11, inlinedAt: !27)
 !27 = !DILocation(line: 18, column: 5, scope: !20)
 !28 = !DILocation(line: 12, column: 3, scope: !11, inlinedAt: !27)
-!29 = !DILocation(line: 21, column: 1, scope: !10)
+!29 = !DILocation(line: 12, column: 3, scope: !11, inlinedAt: !30)
+!30 = !DILocation(line: 21, column: 0, scope: !10)

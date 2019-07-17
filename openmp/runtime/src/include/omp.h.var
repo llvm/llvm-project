@@ -15,6 +15,9 @@
 #ifndef __OMP_H
 #   define __OMP_H
 
+#   include <stdlib.h>
+#   include <stdint.h>
+
 #   define KMP_VERSION_MAJOR    @LIBOMP_VERSION_MAJOR@
 #   define KMP_VERSION_MINOR    @LIBOMP_VERSION_MINOR@
 #   define KMP_VERSION_BUILD    @LIBOMP_VERSION_BUILD@
@@ -134,8 +137,6 @@
     extern int  __KAI_KMPC_CONVENTION  omp_get_team_num (void);
     extern int  __KAI_KMPC_CONVENTION  omp_get_cancellation (void);
 
-#   include <stdlib.h>
-#   include <stdint.h>
     /* OpenMP 4.5 */
     extern int   __KAI_KMPC_CONVENTION  omp_get_initial_device (void);
     extern void* __KAI_KMPC_CONVENTION  omp_target_alloc(size_t, int);

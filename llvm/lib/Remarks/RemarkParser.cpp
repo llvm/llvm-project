@@ -20,65 +20,7 @@
 using namespace llvm;
 using namespace llvm::remarks;
 
-static std::unique_ptr<ParserImpl> formatToParserImpl(ParserFormat Format,
-                                                      StringRef Buf) {
-  switch (Format) {
-  case ParserFormat::YAML:
-    return llvm::make_unique<YAMLParserImpl>(Buf);
-  };
-  llvm_unreachable("Unhandled llvm::remarks::ParserFormat enum");
-}
-
-static std::unique_ptr<ParserImpl>
-formatToParserImpl(ParserFormat Format, StringRef Buf,
-                   const ParsedStringTable &StrTab) {
-  switch (Format) {
-  case ParserFormat::YAML:
-    return llvm::make_unique<YAMLParserImpl>(Buf, &StrTab);
-  };
-  llvm_unreachable("Unhandled llvm::remarks::ParserFormat enum");
-}
-
-Parser::Parser(ParserFormat Format, StringRef Buf)
-    : Impl(formatToParserImpl(Format, Buf)) {}
-
-Parser::Parser(ParserFormat Format, StringRef Buf,
-               const ParsedStringTable &StrTab)
-    : Impl(formatToParserImpl(Format, Buf, StrTab)) {}
-
-Parser::~Parser() = default;
-
-static Expected<const Remark *> getNextYAML(YAMLParserImpl &Impl) {
-  YAMLRemarkParser &YAMLParser = Impl.YAMLParser;
-  // Check for EOF.
-  if (Impl.YAMLIt == Impl.YAMLParser.Stream.end())
-    return nullptr;
-
-  auto CurrentIt = Impl.YAMLIt;
-
-  // Try to parse an entry.
-  if (Error E = YAMLParser.parseYAMLElement(*CurrentIt)) {
-    // Set the iterator to the end, in case the user calls getNext again.
-    Impl.YAMLIt = Impl.YAMLParser.Stream.end();
-    return std::move(E);
-  }
-
-  // Move on.
-  ++Impl.YAMLIt;
-
-  // Return the just-parsed remark.
-  if (const Optional<YAMLRemarkParser::ParseState> &State = YAMLParser.State)
-    return &State->TheRemark;
-  else
-    return createStringError(std::make_error_code(std::errc::invalid_argument),
-                             "unexpected error while parsing.");
-}
-
-Expected<const Remark *> Parser::getNext() const {
-  if (auto *Impl = dyn_cast<YAMLParserImpl>(this->Impl.get()))
-    return getNextYAML(*Impl);
-  llvm_unreachable("Get next called with an unknown parsing implementation.");
-}
+char EndOfFileError::ID = 0;
 
 ParsedStringTable::ParsedStringTable(StringRef InBuffer) : Buffer(InBuffer) {
   while (!InBuffer.empty()) {
@@ -105,60 +47,71 @@ Expected<StringRef> ParsedStringTable::operator[](size_t Index) const {
   return StringRef(Buffer.data() + Offset, NextOffset - Offset - 1);
 }
 
+Expected<std::unique_ptr<Parser>>
+llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf,
+                                  Optional<const ParsedStringTable *> StrTab) {
+  switch (ParserFormat) {
+  case Format::YAML:
+    return llvm::make_unique<YAMLRemarkParser>(Buf, StrTab);
+  case Format::Unknown:
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "Unknown remark parser format.");
+  }
+  llvm_unreachable("unknown format");
+}
+
+// Wrapper that holds the state needed to interact with the C API.
+struct CParser {
+  std::unique_ptr<Parser> TheParser;
+  Optional<std::string> Err;
+
+  CParser(Format ParserFormat, StringRef Buf,
+          Optional<const ParsedStringTable *> StrTab = None)
+      : TheParser(cantFail(createRemarkParser(ParserFormat, Buf, StrTab))) {}
+
+  void handleError(Error E) { Err.emplace(toString(std::move(E))); }
+  bool hasError() const { return Err.hasValue(); }
+  const char *getMessage() const { return Err ? Err->c_str() : nullptr; };
+};
+
 // Create wrappers for C Binding types (see CBindingWrapping.h).
-DEFINE_SIMPLE_CONVERSION_FUNCTIONS(remarks::Parser, LLVMRemarkParserRef)
+DEFINE_SIMPLE_CONVERSION_FUNCTIONS(CParser, LLVMRemarkParserRef)
 
 extern "C" LLVMRemarkParserRef LLVMRemarkParserCreateYAML(const void *Buf,
                                                           uint64_t Size) {
-  return wrap(
-      new remarks::Parser(remarks::ParserFormat::YAML,
+  return wrap(new CParser(Format::YAML,
                           StringRef(static_cast<const char *>(Buf), Size)));
-}
-
-static void handleYAMLError(remarks::YAMLParserImpl &Impl, Error E) {
-  handleAllErrors(
-      std::move(E),
-      [&](const YAMLParseError &PE) {
-        Impl.YAMLParser.Stream.printError(&PE.getNode(),
-                                          Twine(PE.getMessage()) + Twine('\n'));
-      },
-      [&](const ErrorInfoBase &EIB) { EIB.log(Impl.YAMLParser.ErrorStream); });
-  Impl.HasErrors = true;
 }
 
 extern "C" LLVMRemarkEntryRef
 LLVMRemarkParserGetNext(LLVMRemarkParserRef Parser) {
-  remarks::Parser &TheParser = *unwrap(Parser);
+  CParser &TheCParser = *unwrap(Parser);
+  remarks::Parser &TheParser = *TheCParser.TheParser;
 
-  Expected<const remarks::Remark *> RemarkOrErr = TheParser.getNext();
-  if (!RemarkOrErr) {
-    // Error during parsing.
-    if (auto *Impl = dyn_cast<remarks::YAMLParserImpl>(TheParser.Impl.get()))
-      handleYAMLError(*Impl, RemarkOrErr.takeError());
-    else
-      llvm_unreachable("unkown parser implementation.");
+  Expected<std::unique_ptr<Remark>> MaybeRemark = TheParser.next();
+  if (Error E = MaybeRemark.takeError()) {
+    if (E.isA<EndOfFileError>()) {
+      consumeError(std::move(E));
+      return nullptr;
+    }
+
+    // Handle the error. Allow it to be checked through HasError and
+    // GetErrorMessage.
+    TheCParser.handleError(std::move(E));
     return nullptr;
   }
 
-  if (*RemarkOrErr == nullptr)
-    return nullptr;
   // Valid remark.
-  return wrap(*RemarkOrErr);
+  return wrap(MaybeRemark->release());
 }
 
 extern "C" LLVMBool LLVMRemarkParserHasError(LLVMRemarkParserRef Parser) {
-  if (auto *Impl =
-          dyn_cast<remarks::YAMLParserImpl>(unwrap(Parser)->Impl.get()))
-    return Impl->HasErrors;
-  llvm_unreachable("unkown parser implementation.");
+  return unwrap(Parser)->hasError();
 }
 
 extern "C" const char *
 LLVMRemarkParserGetErrorMessage(LLVMRemarkParserRef Parser) {
-  if (auto *Impl =
-          dyn_cast<remarks::YAMLParserImpl>(unwrap(Parser)->Impl.get()))
-    return Impl->YAMLParser.ErrorStream.str().c_str();
-  llvm_unreachable("unkown parser implementation.");
+  return unwrap(Parser)->getMessage();
 }
 
 extern "C" void LLVMRemarkParserDispose(LLVMRemarkParserRef Parser) {

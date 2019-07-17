@@ -52,10 +52,19 @@ void A::operator delete(A* a, std::destroying_delete_t) {
   ::operator delete(a);
 }
 
-#ifndef __cpp_lib_destroying_delete
-#error "Expected __cpp_lib_destroying_delete to be defined"
-#elif __cpp_lib_destroying_delete < 201806L
-#error "Unexpected value of __cpp_lib_destroying_delete"
+// Only test the definition of the library feature-test macro when the compiler
+// supports the feature -- otherwise we don't define the library feature-test
+// macro.
+#if defined(__cpp_impl_destroying_delete)
+#  if !defined(__cpp_lib_destroying_delete)
+#    error "Expected __cpp_lib_destroying_delete to be defined"
+#  elif __cpp_lib_destroying_delete < 201806L
+#    error "Unexpected value of __cpp_lib_destroying_delete"
+#  endif
+#else
+#  if defined(__cpp_lib_destroying_delete)
+#    error "The library feature-test macro for destroying delete shouldn't be defined when the compiler doesn't support the language feature"
+#  endif
 #endif
 
 int main() {

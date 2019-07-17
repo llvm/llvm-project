@@ -16,6 +16,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Remarks/Remark.h"
+#include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/Error.h"
 #include <memory>
 
@@ -25,29 +26,33 @@ namespace remarks {
 struct ParserImpl;
 struct ParsedStringTable;
 
-enum class ParserFormat { YAML };
+class EndOfFileError : public ErrorInfo<EndOfFileError> {
+public:
+  static char ID;
+
+  EndOfFileError() {}
+
+  void log(raw_ostream &OS) const override { OS << "End of file reached."; }
+  std::error_code convertToErrorCode() const override {
+    return inconvertibleErrorCode();
+  }
+};
 
 /// Parser used to parse a raw buffer to remarks::Remark objects.
 struct Parser {
-  /// The hidden implementation of the parser.
-  std::unique_ptr<ParserImpl> Impl;
+  /// The format of the parser.
+  Format ParserFormat;
 
-  /// Create a parser parsing \p Buffer to Remark objects.
-  /// This constructor should be only used for parsing remarks without a string
-  /// table.
-  Parser(ParserFormat Format, StringRef Buffer);
+  Parser(Format ParserFormat) : ParserFormat(ParserFormat) {}
 
-  /// Create a parser parsing \p Buffer to Remark objects, using \p StrTab as a
-  /// string table.
-  Parser(ParserFormat Format, StringRef Buffer,
-         const ParsedStringTable &StrTab);
+  /// If no error occurs, this returns a valid Remark object.
+  /// If an error of type EndOfFileError occurs, it is safe to recover from it
+  /// by stopping the parsing.
+  /// If any other error occurs, it should be propagated to the user.
+  /// The pointer should never be null.
+  virtual Expected<std::unique_ptr<Remark>> next() = 0;
 
-  // Needed because ParserImpl is an incomplete type.
-  ~Parser();
-
-  /// Returns an empty Optional if it reached the end.
-  /// Returns a valid remark otherwise.
-  Expected<const Remark *> getNext() const;
+  virtual ~Parser() = default;
 };
 
 /// In-memory representation of the string table parsed from a buffer (e.g. the
@@ -61,6 +66,10 @@ struct ParsedStringTable {
   Expected<StringRef> operator[](size_t Index) const;
   ParsedStringTable(StringRef Buffer);
 };
+
+Expected<std::unique_ptr<Parser>>
+createRemarkParser(Format ParserFormat, StringRef Buf,
+                   Optional<const ParsedStringTable *> StrTab = None);
 
 } // end namespace remarks
 } // end namespace llvm

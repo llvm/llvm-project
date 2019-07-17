@@ -5,6 +5,10 @@
 
 typedef unsigned long ulong;
 typedef unsigned int uint;
+typedef unsigned short ushort;
+typedef half __attribute__((ext_vector_type(2))) half2;
+typedef short __attribute__((ext_vector_type(2))) short2;
+typedef ushort __attribute__((ext_vector_type(2))) ushort2;
 
 // CHECK-LABEL: @test_div_scale_f64
 // CHECK: call { double, i1 } @llvm.amdgcn.div.scale.f64(double %a, double %b, i1 true)
@@ -588,6 +592,66 @@ kernel void test_mbcnt_lo(global uint* out, uint src0, uint src1) {
 // CHECK: call i32 @llvm.amdgcn.mbcnt.hi(i32 %src0, i32 %src1)
 kernel void test_mbcnt_hi(global uint* out, uint src0, uint src1) {
   *out = __builtin_amdgcn_mbcnt_hi(src0, src1);
+}
+
+// CHECK-LABEL: @test_alignbit(
+// CHECK: tail call i32 @llvm.amdgcn.alignbit(i32 %src0, i32 %src1, i32 %src2)
+kernel void test_alignbit(global uint* out, uint src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_alignbit(src0, src1, src2);
+}
+
+// CHECK-LABEL: @test_alignbyte(
+// CHECK: tail call i32 @llvm.amdgcn.alignbyte(i32 %src0, i32 %src1, i32 %src2)
+kernel void test_alignbyte(global uint* out, uint src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_alignbyte(src0, src1, src2);
+}
+
+// CHECK-LABEL: @test_ubfe(
+// CHECK: tail call i32 @llvm.amdgcn.ubfe.i32(i32 %src0, i32 %src1, i32 %src2)
+kernel void test_ubfe(global uint* out, uint src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_ubfe(src0, src1, src2);
+}
+
+// CHECK-LABEL: @test_sbfe(
+// CHECK: tail call i32 @llvm.amdgcn.sbfe.i32(i32 %src0, i32 %src1, i32 %src2)
+kernel void test_sbfe(global uint* out, uint src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_sbfe(src0, src1, src2);
+}
+
+// CHECK-LABEL: @test_cvt_pkrtz(
+// CHECK: tail call <2 x half> @llvm.amdgcn.cvt.pkrtz(float %src0, float %src1)
+kernel void test_cvt_pkrtz(global half2* out, float src0, float src1) {
+  *out = __builtin_amdgcn_cvt_pkrtz(src0, src1);
+}
+
+// CHECK-LABEL: @test_cvt_pknorm_i16(
+// CHECK: tail call <2 x i16> @llvm.amdgcn.cvt.pknorm.i16(float %src0, float %src1)
+kernel void test_cvt_pknorm_i16(global short2* out, float src0, float src1) {
+  *out = __builtin_amdgcn_cvt_pknorm_i16(src0, src1);
+}
+
+// CHECK-LABEL: @test_cvt_pknorm_u16(
+// CHECK: tail call <2 x i16> @llvm.amdgcn.cvt.pknorm.u16(float %src0, float %src1)
+kernel void test_cvt_pknorm_u16(global ushort2* out, float src0, float src1) {
+  *out = __builtin_amdgcn_cvt_pknorm_u16(src0, src1);
+}
+
+// CHECK-LABEL: @test_cvt_pk_i16(
+// CHECK: tail call <2 x i16> @llvm.amdgcn.cvt.pk.i16(i32 %src0, i32 %src1)
+kernel void test_cvt_pk_i16(global short2* out, int src0, int src1) {
+  *out = __builtin_amdgcn_cvt_pk_i16(src0, src1);
+}
+
+// CHECK-LABEL: @test_cvt_pk_u16(
+// CHECK: tail call <2 x i16> @llvm.amdgcn.cvt.pk.u16(i32 %src0, i32 %src1)
+kernel void test_cvt_pk_u16(global ushort2* out, uint src0, uint src1) {
+  *out = __builtin_amdgcn_cvt_pk_u16(src0, src1);
+}
+
+// CHECK-LABEL: @test_cvt_pk_u8_f32
+// CHECK: tail call i32 @llvm.amdgcn.cvt.pk.u8.f32(float %src0, i32 %src1, i32 %src2)
+kernel void test_cvt_pk_u8_f32(global uint* out, float src0, uint src1, uint src2) {
+  *out = __builtin_amdgcn_cvt_pk_u8_f32(src0, src1, src2);
 }
 
 // CHECK-DAG: [[$WI_RANGE]] = !{i32 0, i32 1024}

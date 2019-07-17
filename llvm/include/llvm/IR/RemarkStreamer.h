@@ -32,15 +32,9 @@ class RemarkStreamer {
   /// The object used to serialize the remarks to a specific format.
   std::unique_ptr<remarks::Serializer> Serializer;
 
-  /// Temporary buffer for converting diagnostics into remark objects. This is
-  /// used for the remark arguments that are converted from a vector of
-  /// diagnostic arguments to a vector of remark arguments.
-  SmallVector<remarks::Argument, 8> TmpArgs;
-  /// Convert diagnostics into remark objects. The result uses \p TmpArgs as a
-  /// temporary buffer for the remark arguments, and relies on all the strings
-  /// to be kept in memory until the next call to `toRemark`.
-  /// The lifetime of the members of the result is bound to the lifetime of both
-  /// the remark streamer and the LLVM diagnostics.
+  /// Convert diagnostics into remark objects.
+  /// The lifetime of the members of the result is bound to the lifetime of
+  /// the LLVM diagnostics.
   remarks::Remark toRemark(const DiagnosticInfoOptimizationBase &Diag);
 
 public:
@@ -89,10 +83,6 @@ struct RemarkSetupFormatError : RemarkSetupErrorInfo<RemarkSetupFormatError> {
   static char ID;
   using RemarkSetupErrorInfo<RemarkSetupFormatError>::RemarkSetupErrorInfo;
 };
-
-enum class RemarksSerializerFormat { Unknown, YAML };
-
-Expected<RemarksSerializerFormat> parseSerializerFormat(StringRef Format);
 
 /// Setup optimization remarks.
 Expected<std::unique_ptr<ToolOutputFile>>

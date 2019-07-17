@@ -2706,7 +2706,19 @@ static SDValue flipBoolean(SDValue V, const SDLoc &DL,
   return DAG.getNode(ISD::XOR, DL, VT, V, Cst);
 }
 
-static SDValue extractBooleanFlip(SDValue V, const TargetLowering &TLI) {
+/**
+ * Flips a boolean if it is cheaper to compute. If the Force parameters is set,
+ * then the flip also occurs if computing the inverse is the same cost.
+ * This function returns an empty SDValue in case it cannot flip the boolean
+ * without increasing the cost of the computation. If you want to flip a boolean
+ * no matter what, use flipBoolean.
+ */
+static SDValue extractBooleanFlip(SDValue V, SelectionDAG &DAG,
+                                  const TargetLowering &TLI,
+                                  bool Force) {
+  if (Force && isa<ConstantSDNode>(V))
+    return flipBoolean(V, SDLoc(V), DAG, TLI);
+
   if (V.getOpcode() != ISD::XOR)
     return SDValue();
 
@@ -2731,6 +2743,8 @@ static SDValue extractBooleanFlip(SDValue V, const TargetLowering &TLI) {
 
   if (IsFlip)
     return V.getOperand(0);
+  if (Force)
+    return flipBoolean(V, SDLoc(V), DAG, TLI);
   return SDValue();
 }
 
@@ -2843,27 +2857,15 @@ SDValue DAGCombiner::visitADDCARRY(SDNode *N) {
       return DAG.getNode(ISD::UADDO, DL, N->getVTList(), N0, N1);
   }
 
-  EVT CarryVT = CarryIn.getValueType();
-
   // fold (addcarry 0, 0, X) -> (and (ext/trunc X), 1) and no carry.
   if (isNullConstant(N0) && isNullConstant(N1)) {
     EVT VT = N0.getValueType();
+    EVT CarryVT = CarryIn.getValueType();
     SDValue CarryExt = DAG.getBoolExtOrTrunc(CarryIn, DL, VT, CarryVT);
     AddToWorklist(CarryExt.getNode());
     return CombineTo(N, DAG.getNode(ISD::AND, DL, VT, CarryExt,
                                     DAG.getConstant(1, DL, VT)),
                      DAG.getConstant(0, DL, CarryVT));
-  }
-
-  // fold (addcarry (xor a, -1), 0, !b) -> (subcarry 0, a, b) and flip carry.
-  if (isBitwiseNot(N0) && isNullConstant(N1)) {
-    if (SDValue B = extractBooleanFlip(CarryIn, TLI)) {
-      SDValue Sub = DAG.getNode(ISD::SUBCARRY, DL, N->getVTList(),
-                                DAG.getConstant(0, DL, N0.getValueType()),
-                                N0.getOperand(0), B);
-      return CombineTo(N, Sub,
-                       flipBoolean(Sub.getValue(1), DL, DAG, TLI));
-    }
   }
 
   if (SDValue Combined = visitADDCARRYLike(N0, N1, CarryIn, N))
@@ -2964,6 +2966,16 @@ static SDValue combineADDCARRYDiamond(DAGCombiner &Combiner, SelectionDAG &DAG,
 
 SDValue DAGCombiner::visitADDCARRYLike(SDValue N0, SDValue N1, SDValue CarryIn,
                                        SDNode *N) {
+  // fold (addcarry (xor a, -1), b, c) -> (subcarry b, a, !c) and flip carry.
+  if (isBitwiseNot(N0))
+    if (SDValue NotC = extractBooleanFlip(CarryIn, DAG, TLI, true)) {
+      SDLoc DL(N);
+      SDValue Sub = DAG.getNode(ISD::SUBCARRY, DL, N->getVTList(), N1,
+                                N0.getOperand(0), NotC);
+      return CombineTo(N, Sub,
+                       flipBoolean(Sub.getValue(1), DL, DAG, TLI));
+    }
+
   // Iff the flag result is dead:
   // (addcarry (add|uaddo X, Y), 0, Carry) -> (addcarry X, Y, Carry)
   // Don't do this if the Carry comes from the uaddo. It won't remove the uaddo
@@ -8302,7 +8314,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   }
 
   // select (not Cond), N1, N2 -> select Cond, N2, N1
-  if (SDValue F = extractBooleanFlip(N0, TLI)) {
+  if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false)) {
     SDValue SelectOp = DAG.getSelect(DL, VT, F, N2, N1);
     SelectOp->setFlags(Flags);
     return SelectOp;
@@ -8797,7 +8809,7 @@ SDValue DAGCombiner::visitVSELECT(SDNode *N) {
     return V;
 
   // vselect (not Cond), N1, N2 -> vselect Cond, N2, N1
-  if (SDValue F = extractBooleanFlip(N0, TLI))
+  if (SDValue F = extractBooleanFlip(N0, DAG, TLI, false))
     return DAG.getSelect(DL, VT, F, N2, N1);
 
   // Canonicalize integer abs.

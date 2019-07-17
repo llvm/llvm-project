@@ -152,8 +152,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   }
 
   if (Subtarget->hasMAIInsts()) {
-    addRegisterClass(MVT::v32i32, &AMDGPU::AReg_1024RegClass);
-    addRegisterClass(MVT::v32f32, &AMDGPU::AReg_1024RegClass);
+    addRegisterClass(MVT::v32i32, &AMDGPU::VReg_1024RegClass);
+    addRegisterClass(MVT::v32f32, &AMDGPU::VReg_1024RegClass);
   }
 
   computeRegisterProperties(Subtarget->getRegisterInfo());

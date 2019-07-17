@@ -100,6 +100,7 @@
 #include "llvm/MC/SectionKind.h"
 #include "llvm/Pass.h"
 #include "llvm/Remarks/Remark.h"
+#include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkStringTable.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"

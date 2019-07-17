@@ -128,7 +128,7 @@ EXTERN void __tgt_target_data_begin_nowait(int64_t device_id, int32_t arg_num,
     int32_t depNum, void *depList, int32_t noAliasDepNum,
     void *noAliasDepList) {
   if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(NULL, 0);
+    __kmpc_omp_taskwait(NULL, __kmpc_global_thread_num(NULL));
 
   __tgt_target_data_begin(device_id, arg_num, args_base, args, arg_sizes,
                           arg_types);
@@ -181,7 +181,7 @@ EXTERN void __tgt_target_data_end_nowait(int64_t device_id, int32_t arg_num,
     int32_t depNum, void *depList, int32_t noAliasDepNum,
     void *noAliasDepList) {
   if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(NULL, 0);
+    __kmpc_omp_taskwait(NULL, __kmpc_global_thread_num(NULL));
 
   __tgt_target_data_end(device_id, arg_num, args_base, args, arg_sizes,
                         arg_types);
@@ -214,7 +214,7 @@ EXTERN void __tgt_target_data_update_nowait(
     int64_t *arg_sizes, int64_t *arg_types, int32_t depNum, void *depList,
     int32_t noAliasDepNum, void *noAliasDepList) {
   if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(NULL, 0);
+    __kmpc_omp_taskwait(NULL, __kmpc_global_thread_num(NULL));
 
   __tgt_target_data_update(device_id, arg_num, args_base, args, arg_sizes,
                            arg_types);
@@ -255,7 +255,7 @@ EXTERN int __tgt_target_nowait(int64_t device_id, void *host_ptr,
     int64_t *arg_types, int32_t depNum, void *depList, int32_t noAliasDepNum,
     void *noAliasDepList) {
   if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(NULL, 0);
+    __kmpc_omp_taskwait(NULL, __kmpc_global_thread_num(NULL));
 
   return __tgt_target(device_id, host_ptr, arg_num, args_base, args, arg_sizes,
                       arg_types);
@@ -298,7 +298,7 @@ EXTERN int __tgt_target_teams_nowait(int64_t device_id, void *host_ptr,
     int64_t *arg_types, int32_t team_num, int32_t thread_limit, int32_t depNum,
     void *depList, int32_t noAliasDepNum, void *noAliasDepList) {
   if (depNum + noAliasDepNum > 0)
-    __kmpc_omp_taskwait(NULL, 0);
+    __kmpc_omp_taskwait(NULL, __kmpc_global_thread_num(NULL));
 
   return __tgt_target_teams(device_id, host_ptr, arg_num, args_base, args,
                             arg_sizes, arg_types, team_num, thread_limit);

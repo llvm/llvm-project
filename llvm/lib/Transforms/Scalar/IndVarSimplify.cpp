@@ -2810,7 +2810,12 @@ bool IndVarSimplify::run(Loop *L) {
       if (isa<SCEVCouldNotCompute>(ExitCount))
         continue;
 
-      assert(!ExitCount->isZero() && "Should have been folded above");
+      // This was handled above, but as we form SCEVs, we can sometimes refine
+      // existing ones; this allows exit counts to be folded to zero which
+      // weren't when optimizeLoopExits saw them.  Arguably, we should iterate
+      // until stable to handle cases like this better.
+      if (ExitCount->isZero())
+        continue;
       
       PHINode *IndVar = FindLoopCounter(L, ExitingBB, ExitCount, SE, DT);
       if (!IndVar)

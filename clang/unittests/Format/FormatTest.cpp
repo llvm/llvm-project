@@ -7027,6 +7027,12 @@ TEST_F(FormatTest, UnderstandsSquareAttributes) {
   // On the other hand, we still need to correctly find array subscripts.
   verifyFormat("int a = std::vector<int>{1, 2, 3}[0];");
 
+  // Make sure that we do not mistake Objective-C method inside array literals
+  // as attributes, even if those method names are also keywords.
+  verifyFormat("@[ [foo bar] ];");
+  verifyFormat("@[ [NSArray class] ];");
+  verifyFormat("@[ [foo enum] ];");
+
   // Make sure we do not parse attributes as lambda introducers.
   FormatStyle MultiLineFunctions = getLLVMStyle();
   MultiLineFunctions.AllowShortFunctionsOnASingleLine = FormatStyle::SFS_None;
