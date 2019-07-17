@@ -632,21 +632,16 @@ ClangModulesDeclVendor::Create(Target &target) {
       clang::CompilerInstance::createDiagnostics(new clang::DiagnosticOptions,
                                                  new StoringDiagnosticConsumer);
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
-  if (log)
-    log->PutString("ClangModulesDeclVendor::Create()");
   std::vector<const char *> compiler_invocation_argument_cstrs;
   compiler_invocation_argument_cstrs.reserve(
       compiler_invocation_arguments.size());
-  for (const std::string &arg : compiler_invocation_arguments) {
+  for (const std::string &arg : compiler_invocation_arguments)
     compiler_invocation_argument_cstrs.push_back(arg.c_str());
-    if (log) {
-      log->PutString("\n  ");
-      log->PutString(arg);
-    }
-  }
-  if (log)
-    log->PutString("\n");
+
+  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
+  LLDB_LOG(log, "ClangModulesDeclVendor's compiler flags {0:$[ ]}",
+           llvm::make_range(compiler_invocation_arguments.begin(),
+                            compiler_invocation_arguments.end()));
 
   std::shared_ptr<clang::CompilerInvocation> invocation =
       clang::createInvocationFromCommandLine(compiler_invocation_argument_cstrs,
