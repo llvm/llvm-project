@@ -22,5 +22,5 @@ dylib2.o: dylib.h $(SRCDIR)/dylib.c
 	$(CC)  $(CFLAGS) -c $(SRCDIR)/dylib.c -o dylib2.o
 
 main.o: dylib.h $(SRCDIR)/main.c
-	$(CC)  $(CFLAGS) -c $(SRCDIR)/main.c -fmodules
+	$(CC)  $(CFLAGS) -c $(SRCDIR)/main.c -fmodules -fmodules-cache-path=$(CLANG_MODULE_CACHE_DIR)
 
