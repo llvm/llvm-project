@@ -51,7 +51,6 @@ class TestKernVerStrLCNOTE(TestBase):
                 'ret=0',
                 'echo "<?xml version=\\"1.0\\" encoding=\\"UTF-8\\"?>"',
                 'echo "<!DOCTYPE plist PUBLIC \\"-//Apple//DTD PLIST 1.0//EN\\" \\"http://www.apple.com/DTDs/PropertyList-1.0.dtd\\">"',
-                'date >> /tmp/log',
                 'echo "<plist version=\\"1.0\\">"',
                 '',
                 '# the last arugment is probably the uuid',
