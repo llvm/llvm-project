@@ -53,7 +53,7 @@ public:
   // Constructors and Destructors
   PdbAstBuilder(ObjectFile &obj, PdbIndex &index);
 
-  clang::DeclContext &GetTranslationUnitDecl();
+  lldb_private::CompilerDeclContext GetTranslationUnitDecl();
 
   clang::Decl *GetOrCreateDeclForUid(PdbSymUid uid);
   clang::DeclContext *GetOrCreateDeclContextForUid(PdbSymUid uid);
