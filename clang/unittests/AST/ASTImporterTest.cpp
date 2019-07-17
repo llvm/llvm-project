@@ -5175,6 +5175,22 @@ TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionParam) {
   EXPECT_EQ(ToLSize, FromLSize);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, LambdaInGlobalScope) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      auto l1 = [](unsigned lp) { return 1; };
+      auto l2 = [](int lp) { return 2; };
+      int f(int p) {
+        return l1(p) + l2(p);
+      }
+      )",
+      Lang_CXX11, "input0.cc");
+  FunctionDecl *FromF = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("f")));
+  FunctionDecl *ToF = Import(FromF, Lang_CXX11);
+  EXPECT_TRUE(ToF);
+}
+
 struct LLDBLookupTest : ASTImporterOptionSpecificTestBase {
   LLDBLookupTest() {
     Creator = [](ASTContext &ToContext, FileManager &ToFileManager,
