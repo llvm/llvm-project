@@ -1851,6 +1851,10 @@ static bool IsStandardConversion(Sema &S, Expr* From, QualType ToType,
              (From->EvaluateKnownConstInt(S.getASTContext()) == 0)) {
     SCS.Second = ICK_Zero_Queue_Conversion;
     FromType = ToType;
+  } else if (ToType->isSamplerT() &&
+             From->isIntegerConstantExpr(S.getASTContext())) {
+    SCS.Second = ICK_Compatible_Conversion;
+    FromType = ToType;
   } else {
     // No second conversion required.
     SCS.Second = ICK_Identity;

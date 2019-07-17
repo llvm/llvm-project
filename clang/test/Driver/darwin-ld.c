@@ -5,9 +5,9 @@
 
 // Make sure we run dsymutil on source input files.
 // RUN: %clang -target i386-apple-darwin9 -### -g %s -o BAR 2> %t.log
-// RUN: grep '".*dsymutil" "-o" "BAR.dSYM" "BAR"' %t.log
+// RUN: grep '".*dsymutil\(.exe\)\?" "-o" "BAR.dSYM" "BAR"' %t.log
 // RUN: %clang -target i386-apple-darwin9 -### -g -filelist FOO %s -o BAR 2> %t.log
-// RUN: grep '".*dsymutil" "-o" "BAR.dSYM" "BAR"' %t.log
+// RUN: grep '".*dsymutil\(.exe\)\?" "-o" "BAR.dSYM" "BAR"' %t.log
 
 // Check linker changes that came with new linkedit format.
 // RUN: touch %t.o

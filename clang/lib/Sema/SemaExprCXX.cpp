@@ -4216,17 +4216,12 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     break;
 
   case ICK_Block_Pointer_Conversion: {
-    QualType LHSType = Context.getCanonicalType(ToType).getUnqualifiedType();
-    QualType RHSType = Context.getCanonicalType(FromType).getUnqualifiedType();
-
-    // Assumptions based on Sema::IsBlockPointerConversion.
-    assert(isa<BlockPointerType>(LHSType) && "BlockPointerType expected");
-    assert(isa<BlockPointerType>(RHSType) && "BlockPointerType expected");
-
     LangAS AddrSpaceL =
-        LHSType->getAs<BlockPointerType>()->getPointeeType().getAddressSpace();
+        ToType->castAs<BlockPointerType>()->getPointeeType().getAddressSpace();
     LangAS AddrSpaceR =
-        RHSType->getAs<BlockPointerType>()->getPointeeType().getAddressSpace();
+        FromType->castAs<BlockPointerType>()->getPointeeType().getAddressSpace();
+    assert(Qualifiers::isAddressSpaceSupersetOf(AddrSpaceL, AddrSpaceR) &&
+           "Invalid cast");
     CastKind Kind =
         AddrSpaceL != AddrSpaceR ? CK_AddressSpaceConversion : CK_BitCast;
     From = ImpCastExprToType(From, ToType.getUnqualifiedType(), Kind,
