@@ -2,16 +2,8 @@ project(lldb)
 
 option(LLVM_INSTALL_TOOLCHAIN_ONLY "Only include toolchain files in the 'install' target." OFF)
 
-set(LLDB_PATH_TO_LLVM_BUILD "" CACHE PATH "Path to LLVM build tree")
-set(LLDB_PATH_TO_CLANG_BUILD "${LLDB_PATH_TO_LLVM_BUILD}" CACHE PATH "Path to Clang build tree")
-
-file(TO_CMAKE_PATH "${LLDB_PATH_TO_LLVM_BUILD}" LLDB_PATH_TO_LLVM_BUILD)
-file(TO_CMAKE_PATH "${LLDB_PATH_TO_CLANG_BUILD}" LLDB_PATH_TO_CLANG_BUILD)
-
-find_package(LLVM REQUIRED CONFIG
-  HINTS "${LLDB_PATH_TO_LLVM_BUILD}" NO_CMAKE_FIND_ROOT_PATH)
-find_package(Clang REQUIRED CONFIG
-  HINTS "${LLDB_PATH_TO_CLANG_BUILD}" NO_CMAKE_FIND_ROOT_PATH)
+find_package(LLVM REQUIRED CONFIG HINTS "${LLVM_DIR}" NO_CMAKE_FIND_ROOT_PATH)
+find_package(Clang REQUIRED CONFIG HINTS "${Clang_DIR}" NO_CMAKE_FIND_ROOT_PATH)
 
 # We set LLVM_CMAKE_PATH so that GetSVN.cmake is found correctly when building SVNVersion.inc
 set(LLVM_CMAKE_PATH ${LLVM_CMAKE_DIR} CACHE PATH "Path to LLVM CMake modules")
@@ -40,7 +32,7 @@ find_program(lit_full_path ${lit_file_name} ${config_dirs} NO_DEFAULT_PATH)
 set(LLVM_DEFAULT_EXTERNAL_LIT ${lit_full_path} CACHE PATH "Path to llvm-lit")
 
 if(CMAKE_CROSSCOMPILING)
-  set(LLVM_NATIVE_BUILD "${LLDB_PATH_TO_LLVM_BUILD}/NATIVE")
+  set(LLVM_NATIVE_BUILD "${LLVM_BINARY_DIR}/NATIVE")
   if (NOT EXISTS "${LLVM_NATIVE_BUILD}")
     message(FATAL_ERROR
       "Attempting to cross-compile LLDB standalone but no native LLVM build
