@@ -39,7 +39,7 @@ ASM_TYPE_FUNCTION(ASM_SYMBOL_INTERCEPTOR(setjmp))
 ASM_SYMBOL_INTERCEPTOR(setjmp):
   CFI_STARTPROC
 
-  // save env parameters for function call
+  // Save frame/link register
   stp     x29, x30, [sp, -32]!
   CFI_DEF_CFA_OFFSET (32)
   CFI_OFFSET (29, -32)
@@ -49,10 +49,9 @@ ASM_SYMBOL_INTERCEPTOR(setjmp):
   add     x29, sp, 0
   CFI_DEF_CFA_REGISTER (29)
 
-  // Save jmp_buf
-  str     x19, [sp, 16]
-  CFI_OFFSET (19, -16)
-  mov     x19, x0
+  // Save env parameter
+  str     x0, [sp, 16]
+  CFI_OFFSET (0, -16)
 
   // Obtain SP, first argument to `void __tsan_setjmp(uptr sp)`
   add     x0, x29, 32
@@ -60,12 +59,14 @@ ASM_SYMBOL_INTERCEPTOR(setjmp):
   // call tsan interceptor
   bl      ASM_SYMBOL(__tsan_setjmp)
 
-  // restore env parameter
-  mov     x0, x19
-  ldr     x19, [sp, 16]
+  // Restore env parameter
+  ldr     x0, [sp, 16]
+  CFI_RESTORE (0)
+
+  // Restore frame/link register
   ldp     x29, x30, [sp], 32
+  CFI_RESTORE (29)
   CFI_RESTORE (30)
-  CFI_RESTORE (19)
   CFI_DEF_CFA (31, 0)
 
   // tail jump to libc setjmp
@@ -89,7 +90,7 @@ ASM_TYPE_FUNCTION(ASM_SYMBOL_INTERCEPTOR(_setjmp))
 ASM_SYMBOL_INTERCEPTOR(_setjmp):
   CFI_STARTPROC
 
-  // save env parameters for function call
+  // Save frame/link register
   stp     x29, x30, [sp, -32]!
   CFI_DEF_CFA_OFFSET (32)
   CFI_OFFSET (29, -32)
@@ -99,10 +100,9 @@ ASM_SYMBOL_INTERCEPTOR(_setjmp):
   add     x29, sp, 0
   CFI_DEF_CFA_REGISTER (29)
 
-  // Save jmp_buf
-  str     x19, [sp, 16]
-  CFI_OFFSET (19, -16)
-  mov     x19, x0
+  // Save env parameter
+  str     x0, [sp, 16]
+  CFI_OFFSET (0, -16)
 
   // Obtain SP, first argument to `void __tsan_setjmp(uptr sp)`
   add     x0, x29, 32
@@ -110,12 +110,14 @@ ASM_SYMBOL_INTERCEPTOR(_setjmp):
   // call tsan interceptor
   bl      ASM_SYMBOL(__tsan_setjmp)
 
-  // Restore jmp_buf parameter
-  mov     x0, x19
-  ldr     x19, [sp, 16]
+  // Restore env parameter
+  ldr     x0, [sp, 16]
+  CFI_RESTORE (0)
+
+  // Restore frame/link register
   ldp     x29, x30, [sp], 32
+  CFI_RESTORE (29)
   CFI_RESTORE (30)
-  CFI_RESTORE (19)
   CFI_DEF_CFA (31, 0)
 
   // tail jump to libc setjmp
@@ -139,7 +141,7 @@ ASM_TYPE_FUNCTION(ASM_SYMBOL_INTERCEPTOR(sigsetjmp))
 ASM_SYMBOL_INTERCEPTOR(sigsetjmp):
   CFI_STARTPROC
 
-  // save env parameters for function call
+  // Save frame/link register
   stp     x29, x30, [sp, -32]!
   CFI_DEF_CFA_OFFSET (32)
   CFI_OFFSET (29, -32)
@@ -149,12 +151,10 @@ ASM_SYMBOL_INTERCEPTOR(sigsetjmp):
   add     x29, sp, 0
   CFI_DEF_CFA_REGISTER (29)
 
-  // Save jmp_buf and savesigs
-  stp     x19, x20, [sp, 16]
-  CFI_OFFSET (19, -16)
-  CFI_OFFSET (20, -8)
-  mov     w20, w1
-  mov     x19, x0
+  // Save env and savesigs parameter
+  stp     x0, x1, [sp, 16]
+  CFI_OFFSET (0, -16)
+  CFI_OFFSET (1, -8)
 
   // Obtain SP, first argument to `void __tsan_setjmp(uptr sp)`
   add     x0, x29, 32
@@ -162,15 +162,15 @@ ASM_SYMBOL_INTERCEPTOR(sigsetjmp):
   // call tsan interceptor
   bl      ASM_SYMBOL(__tsan_setjmp)
 
-  // restore env parameter
-  mov     w1, w20
-  mov     x0, x19
-  ldp     x19, x20, [sp, 16]
+  // Restore env and savesigs parameter
+  ldp     x0, x1, [sp, 16]
+  CFI_RESTORE (0)
+  CFI_RESTORE (1)
+
+  // Restore frame/link register
   ldp     x29, x30, [sp], 32
-  CFI_RESTORE (30)
   CFI_RESTORE (29)
-  CFI_RESTORE (19)
-  CFI_RESTORE (20)
+  CFI_RESTORE (30)
   CFI_DEF_CFA (31, 0)
 
   // tail jump to libc sigsetjmp
@@ -194,7 +194,7 @@ ASM_TYPE_FUNCTION(ASM_SYMBOL_INTERCEPTOR(__sigsetjmp))
 ASM_SYMBOL_INTERCEPTOR(__sigsetjmp):
   CFI_STARTPROC
 
-  // save env parameters for function call
+  // Save frame/link register
   stp     x29, x30, [sp, -32]!
   CFI_DEF_CFA_OFFSET (32)
   CFI_OFFSET (29, -32)
@@ -204,12 +204,10 @@ ASM_SYMBOL_INTERCEPTOR(__sigsetjmp):
   add     x29, sp, 0
   CFI_DEF_CFA_REGISTER (29)
 
-  // Save jmp_buf and savesigs
-  stp     x19, x20, [sp, 16]
-  CFI_OFFSET (19, -16)
-  CFI_OFFSET (20, -8)
-  mov     w20, w1
-  mov     x19, x0
+  // Save env and savesigs parameter
+  stp     x0, x1, [sp, 16]
+  CFI_OFFSET (0, -16)
+  CFI_OFFSET (1, -8)
 
   // Obtain SP, first argument to `void __tsan_setjmp(uptr sp)`
   add     x0, x29, 32
@@ -217,14 +215,15 @@ ASM_SYMBOL_INTERCEPTOR(__sigsetjmp):
   // call tsan interceptor
   bl      ASM_SYMBOL(__tsan_setjmp)
 
-  mov     w1, w20
-  mov     x0, x19
-  ldp     x19, x20, [sp, 16]
+  // Restore env and savesigs parameter
+  ldp     x0, x1, [sp, 16]
+  CFI_RESTORE (0)
+  CFI_RESTORE (1)
+
+  // Restore frame/link register
   ldp     x29, x30, [sp], 32
-  CFI_RESTORE (30)
   CFI_RESTORE (29)
-  CFI_RESTORE (19)
-  CFI_RESTORE (20)
+  CFI_RESTORE (30)
   CFI_DEF_CFA (31, 0)
 
   // tail jump to libc __sigsetjmp

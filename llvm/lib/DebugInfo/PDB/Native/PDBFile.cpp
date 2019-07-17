@@ -14,6 +14,7 @@
 #include "llvm/DebugInfo/PDB/Native/DbiStream.h"
 #include "llvm/DebugInfo/PDB/Native/GlobalsStream.h"
 #include "llvm/DebugInfo/PDB/Native/InfoStream.h"
+#include "llvm/DebugInfo/PDB/Native/InjectedSourceStream.h"
 #include "llvm/DebugInfo/PDB/Native/PDBStringTable.h"
 #include "llvm/DebugInfo/PDB/Native/PublicsStream.h"
 #include "llvm/DebugInfo/PDB/Native/RawError.h"
@@ -365,16 +366,7 @@ Expected<SymbolStream &> PDBFile::getPDBSymbolStream() {
 
 Expected<PDBStringTable &> PDBFile::getStringTable() {
   if (!Strings) {
-    auto IS = getPDBInfoStream();
-    if (!IS)
-      return IS.takeError();
-
-    Expected<uint32_t> ExpectedNSI = IS->getNamedStreamIndex("/names");
-    if (!ExpectedNSI)
-      return ExpectedNSI.takeError();
-    uint32_t NameStreamIndex = *ExpectedNSI;
-
-    auto NS = safelyCreateIndexedStream(NameStreamIndex);
+    auto NS = safelyCreateNamedStream("/names");
     if (!NS)
       return NS.takeError();
 
@@ -387,6 +379,24 @@ Expected<PDBStringTable &> PDBFile::getStringTable() {
     Strings = std::move(N);
   }
   return *Strings;
+}
+
+Expected<InjectedSourceStream &> PDBFile::getInjectedSourceStream() {
+  if (!InjectedSources) {
+    auto IJS = safelyCreateNamedStream("/src/headerblock");
+    if (!IJS)
+      return IJS.takeError();
+
+    auto Strings = getStringTable();
+    if (!Strings)
+      return Strings.takeError();
+
+    auto IJ = llvm::make_unique<InjectedSourceStream>(std::move(*IJS));
+    if (auto EC = IJ->reload(*Strings))
+      return std::move(EC);
+    InjectedSources = std::move(IJ);
+  }
+  return *InjectedSources;
 }
 
 uint32_t PDBFile::getPointerSize() {
@@ -457,6 +467,19 @@ bool PDBFile::hasPDBStringTable() {
   return true;
 }
 
+bool PDBFile::hasPDBInjectedSourceStream() {
+  auto IS = getPDBInfoStream();
+  if (!IS)
+    return false;
+  Expected<uint32_t> ExpectedNSI = IS->getNamedStreamIndex("/src/headerblock");
+  if (!ExpectedNSI) {
+    consumeError(ExpectedNSI.takeError());
+    return false;
+  }
+  assert(*ExpectedNSI < getNumStreams());
+  return true;
+}
+
 /// Wrapper around MappedBlockStream::createIndexedStream() that checks if a
 /// stream with that index actually exists.  If it does not, the return value
 /// will have an MSFError with code msf_error_code::no_stream.  Else, the return
@@ -467,4 +490,18 @@ PDBFile::safelyCreateIndexedStream(uint32_t StreamIndex) const {
     // This rejects kInvalidStreamIndex with an error as well.
     return make_error<RawError>(raw_error_code::no_stream);
   return createIndexedStream(StreamIndex);
+}
+
+Expected<std::unique_ptr<MappedBlockStream>>
+PDBFile::safelyCreateNamedStream(StringRef Name) {
+  auto IS = getPDBInfoStream();
+  if (!IS)
+    return IS.takeError();
+
+  Expected<uint32_t> ExpectedNSI = IS->getNamedStreamIndex(Name);
+  if (!ExpectedNSI)
+    return ExpectedNSI.takeError();
+  uint32_t NameStreamIndex = *ExpectedNSI;
+
+  return safelyCreateIndexedStream(NameStreamIndex);
 }

@@ -970,6 +970,12 @@ public:
     return isUInt<12>(Imm);
   }
 
+  /// Returns if \p Offset is legal for the subtarget as the offset to a FLAT
+  /// encoded instruction. If \p Signed, this is for an instruction that
+  /// interprets the offset as signed.
+  bool isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
+                         bool Signed) const;
+
   /// \brief Return a target-specific opcode if Opcode is a pseudo instruction.
   /// Return -1 if the target-specific opcode for the pseudo instruction does
   /// not exist. If Opcode is not a pseudo instruction, this is identity.

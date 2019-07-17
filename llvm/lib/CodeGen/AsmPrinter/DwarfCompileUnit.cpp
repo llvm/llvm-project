@@ -543,7 +543,8 @@ DIE *DwarfCompileUnit::constructInlinedScopeDIE(LexicalScope *Scope) {
   addUInt(*ScopeDIE, dwarf::DW_AT_call_file, None,
           getOrCreateSourceID(IA->getFile()));
   addUInt(*ScopeDIE, dwarf::DW_AT_call_line, None, IA->getLine());
-  addUInt(*ScopeDIE, dwarf::DW_AT_call_column, None, IA->getColumn());
+  if (IA->getColumn())
+    addUInt(*ScopeDIE, dwarf::DW_AT_call_column, None, IA->getColumn());
   if (IA->getDiscriminator() && DD->getDwarfVersion() >= 4)
     addUInt(*ScopeDIE, dwarf::DW_AT_GNU_discriminator, None,
             IA->getDiscriminator());

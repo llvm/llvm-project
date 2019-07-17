@@ -124,4 +124,13 @@ def int_wasm_data_drop :
             [llvm_i32_ty],
             [IntrNoDuplicate, IntrHasSideEffects, ImmArg<0>]>;
 
+//===----------------------------------------------------------------------===//
+// Thread-local storage intrinsics
+//===----------------------------------------------------------------------===//
+
+def int_wasm_tls_size :
+  Intrinsic<[llvm_anyint_ty],
+            [],
+            [IntrNoMem, IntrSpeculatable]>;
+
 } // TargetPrefix = "wasm"

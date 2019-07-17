@@ -3,7 +3,7 @@
 
 # REQUIRES: x86
 # RUN: llvm-mc -triple=i386-pc-win32 -filetype=obj -o %t.obj %s
-# RUN: lld-link -subsystem:console -debug -nodefaultlib -entry:foo -out:%t.exe -pdb:%t.pdb %t.obj 2>&1 | FileCheck %s --check-prefix=WARNING
+# RUN: lld-link -safeseh:no -subsystem:console -debug -nodefaultlib -entry:foo -out:%t.exe -pdb:%t.pdb %t.obj 2>&1 | FileCheck %s --check-prefix=WARNING
 # RUN: llvm-pdbutil dump -symbols %t.pdb | FileCheck %s
 
 # WARNING-NOT: ignoring unknown

@@ -5,6 +5,7 @@ add_clang_library(clangTidyReadabilityModule
   BracesAroundStatementsCheck.cpp
   ConstReturnTypeCheck.cpp
   ContainerSizeEmptyCheck.cpp
+  ConvertMemberFunctionsToStatic.cpp
   DeleteNullPointerCheck.cpp
   DeletedDefaultCheck.cpp
   ElseAfterReturnCheck.cpp

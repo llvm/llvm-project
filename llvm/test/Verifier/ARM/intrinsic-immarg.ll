@@ -100,3 +100,12 @@ define void @mcrr2(i32 %arg0, i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4) {
   call void @llvm.arm.mcrr2(i32 0, i32 1, i32 2, i32 3, i32 %arg4)
   ret void
 }
+
+declare i32 @llvm.arm.space(i32, i32) nounwind
+define i32 @space(i32 %arg0, i32 %arg1) {
+  ; CHECK: immarg operand has non-immediate parameter
+  ; CHECK-NEXT: i32 %arg0
+  ; CHECK-NEXT: call i32 @llvm.arm.space(i32 %arg0, i32 %arg1)
+  %space = call i32 @llvm.arm.space(i32 %arg0, i32 %arg1)
+  ret i32 %space
+}

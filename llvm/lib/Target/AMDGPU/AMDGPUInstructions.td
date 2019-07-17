@@ -11,6 +11,18 @@
 //
 //===----------------------------------------------------------------------===//
 
+class AddressSpacesImpl {
+  int Flat = 0;
+  int Global = 1;
+  int Region = 2;
+  int Local = 3;
+  int Constant = 4;
+  int Private = 5;
+}
+
+def AddrSpaces : AddressSpacesImpl;
+
+
 class AMDGPUInst <dag outs, dag ins, string asm = "",
   list<dag> pattern = []> : Instruction {
   field bit isRegisterLoad = 0;
@@ -323,6 +335,10 @@ def TEX_SHADOW_ARRAY : PatLeaf<
 // Load/Store Pattern Fragments
 //===----------------------------------------------------------------------===//
 
+class AddressSpaceList<list<int> AS> {
+  list<int> AddrSpaces = AS;
+}
+
 class Aligned8Bytes <dag ops, dag frag> : PatFrag <ops, frag, [{
   return cast<MemSDNode>(N)->getAlignment() % 8 == 0;
 }]>;
@@ -341,25 +357,25 @@ class StoreHi16<SDPatternOperator op> : PatFrag <
   (ops node:$value, node:$ptr), (op (srl node:$value, (i32 16)), node:$ptr)
 >;
 
-class PrivateAddress : CodePatPred<[{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS;
-}]>;
+def LoadAddress_constant : AddressSpaceList<[  AddrSpaces.Constant ]>;
+def LoadAddress_global : AddressSpaceList<[  AddrSpaces.Global, AddrSpaces.Constant ]>;
+def StoreAddress_global : AddressSpaceList<[ AddrSpaces.Global ]>;
 
-class ConstantAddress : CodePatPred<[{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::CONSTANT_ADDRESS;
-}]>;
+def LoadAddress_flat : AddressSpaceList<[  AddrSpaces.Flat,
+                                           AddrSpaces.Global,
+                                           AddrSpaces.Constant ]>;
+def StoreAddress_flat : AddressSpaceList<[ AddrSpaces.Flat, AddrSpaces.Global ]>;
 
-class LocalAddress : CodePatPred<[{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
-}]>;
+def LoadAddress_private : AddressSpaceList<[ AddrSpaces.Private ]>;
+def StoreAddress_private : AddressSpaceList<[ AddrSpaces.Private ]>;
 
-class RegionAddress : CodePatPred<[{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::REGION_ADDRESS;
-}]>;
+def LoadAddress_local : AddressSpaceList<[ AddrSpaces.Local ]>;
+def StoreAddress_local : AddressSpaceList<[ AddrSpaces.Local ]>;
 
-class GlobalAddress : CodePatPred<[{
-  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
-}]>;
+def LoadAddress_region : AddressSpaceList<[ AddrSpaces.Region ]>;
+def StoreAddress_region : AddressSpaceList<[ AddrSpaces.Region ]>;
+
+
 
 class GlobalLoadAddress : CodePatPred<[{
   auto AS = cast<MemSDNode>(N)->getAddressSpace();
@@ -373,74 +389,126 @@ class FlatLoadAddress : CodePatPred<[{
          AS == AMDGPUAS::CONSTANT_ADDRESS;
 }]>;
 
+class GlobalAddress : CodePatPred<[{
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::GLOBAL_ADDRESS;
+}]>;
+
+class PrivateAddress : CodePatPred<[{
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS;
+}]>;
+
+class LocalAddress : CodePatPred<[{
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::LOCAL_ADDRESS;
+}]>;
+
+class RegionAddress : CodePatPred<[{
+  return cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::REGION_ADDRESS;
+}]>;
+
 class FlatStoreAddress : CodePatPred<[{
   const auto AS = cast<MemSDNode>(N)->getAddressSpace();
   return AS == AMDGPUAS::FLAT_ADDRESS ||
          AS == AMDGPUAS::GLOBAL_ADDRESS;
 }]>;
 
-class PrivateLoad <SDPatternOperator op> : LoadFrag <op>, PrivateAddress;
+// TODO: Remove these when stores to new PatFrag format.
 class PrivateStore <SDPatternOperator op> : StoreFrag <op>, PrivateAddress;
-
-class LocalLoad <SDPatternOperator op> : LoadFrag <op>, LocalAddress;
 class LocalStore <SDPatternOperator op> : StoreFrag <op>, LocalAddress;
-
-class RegionLoad <SDPatternOperator op> : LoadFrag <op>, RegionAddress;
 class RegionStore <SDPatternOperator op> : StoreFrag <op>, RegionAddress;
-
-class GlobalLoad <SDPatternOperator op> : LoadFrag<op>, GlobalLoadAddress;
 class GlobalStore <SDPatternOperator op> : StoreFrag<op>, GlobalAddress;
-
-class FlatLoad <SDPatternOperator op> : LoadFrag <op>, FlatLoadAddress;
 class FlatStore <SDPatternOperator op> : StoreFrag <op>, FlatStoreAddress;
 
-class ConstantLoad <SDPatternOperator op> : LoadFrag <op>, ConstantAddress;
+
+foreach as = [ "global", "flat", "constant", "local", "private", "region" ] in {
+let AddressSpaces = !cast<AddressSpaceList>("LoadAddress_"#as).AddrSpaces in {
+
+def load_#as : PatFrag<(ops node:$ptr), (unindexedload node:$ptr)> {
+  let IsLoad = 1;
+  let IsNonExtLoad = 1;
+}
+
+def extloadi8_#as  : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
+  let IsLoad = 1;
+  let MemoryVT = i8;
+}
+
+def extloadi16_#as : PatFrag<(ops node:$ptr), (extload node:$ptr)> {
+  let IsLoad = 1;
+  let MemoryVT = i16;
+}
+
+def sextloadi8_#as  : PatFrag<(ops node:$ptr), (sextload node:$ptr)> {
+  let IsLoad = 1;
+  let MemoryVT = i8;
+}
+
+def sextloadi16_#as : PatFrag<(ops node:$ptr), (sextload node:$ptr)> {
+  let IsLoad = 1;
+  let MemoryVT = i16;
+}
+
+def zextloadi8_#as  : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
+  let IsLoad = 1;
+  let MemoryVT = i8;
+}
+
+def zextloadi16_#as : PatFrag<(ops node:$ptr), (zextload node:$ptr)> {
+  let IsLoad = 1;
+  let MemoryVT = i16;
+}
+
+def atomic_load_32_#as : PatFrag<(ops node:$ptr), (atomic_load_32 node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i32;
+}
+
+def atomic_load_64_#as : PatFrag<(ops node:$ptr), (atomic_load_64 node:$ptr)> {
+  let IsAtomic = 1;
+  let MemoryVT = i64;
+}
+
+def store_#as : PatFrag<(ops node:$val, node:$ptr),
+                    (unindexedstore node:$val, node:$ptr)> {
+  let IsStore = 1;
+  let IsTruncStore = 0;
+}
+
+// truncstore fragments.
+def truncstore_#as : PatFrag<(ops node:$val, node:$ptr),
+                             (unindexedstore node:$val, node:$ptr)> {
+  let IsStore = 1;
+  let IsTruncStore = 1;
+}
+
+// TODO: We don't really need the truncstore here. We can use
+// unindexedstore with MemoryVT directly, which will save an
+// unnecessary check that the memory size is less than the value type
+// in the generated matcher table.
+def truncstorei8_#as : PatFrag<(ops node:$val, node:$ptr),
+                               (truncstore node:$val, node:$ptr)> {
+  let IsStore = 1;
+  let MemoryVT = i8;
+}
+
+def truncstorei16_#as : PatFrag<(ops node:$val, node:$ptr),
+                                (truncstore node:$val, node:$ptr)> {
+  let IsStore = 1;
+  let MemoryVT = i16;
+}
+
+defm atomic_store_#as : binary_atomic_op<atomic_store>;
+
+} // End let AddressSpaces = ...
+} // End foreach AddrSpace
 
 
-def load_private : PrivateLoad <load>;
-def extloadi8_private : PrivateLoad <extloadi8>;
-def zextloadi8_private : PrivateLoad <zextloadi8>;
-def sextloadi8_private : PrivateLoad <sextloadi8>;
-def extloadi16_private : PrivateLoad <extloadi16>;
-def zextloadi16_private : PrivateLoad <zextloadi16>;
-def sextloadi16_private : PrivateLoad <sextloadi16>;
-
-def store_private : PrivateStore <store>;
-def truncstorei8_private : PrivateStore<truncstorei8>;
-def truncstorei16_private : PrivateStore <truncstorei16>;
 def store_hi16_private : StoreHi16 <truncstorei16>, PrivateAddress;
 def truncstorei8_hi16_private : StoreHi16<truncstorei8>, PrivateAddress;
 
-
-def load_global : GlobalLoad <load>;
-def sextloadi8_global : GlobalLoad <sextloadi8>;
-def extloadi8_global : GlobalLoad <extloadi8>;
-def zextloadi8_global : GlobalLoad <zextloadi8>;
-def sextloadi16_global : GlobalLoad <sextloadi16>;
-def extloadi16_global : GlobalLoad <extloadi16>;
-def zextloadi16_global : GlobalLoad <zextloadi16>;
-def atomic_load_global : GlobalLoad<atomic_load>;
-
-def store_global : GlobalStore <store>;
-def truncstorei8_global : GlobalStore <truncstorei8>;
-def truncstorei16_global : GlobalStore <truncstorei16>;
 def store_atomic_global : GlobalStore<atomic_store>;
 def truncstorei8_hi16_global : StoreHi16 <truncstorei8>, GlobalAddress;
 def truncstorei16_hi16_global : StoreHi16 <truncstorei16>, GlobalAddress;
 
-def load_local : LocalLoad <load>;
-def extloadi8_local : LocalLoad <extloadi8>;
-def zextloadi8_local : LocalLoad <zextloadi8>;
-def sextloadi8_local : LocalLoad <sextloadi8>;
-def extloadi16_local : LocalLoad <extloadi16>;
-def zextloadi16_local : LocalLoad <zextloadi16>;
-def sextloadi16_local : LocalLoad <sextloadi16>;
-def atomic_load_32_local : LocalLoad<atomic_load_32>;
-def atomic_load_64_local : LocalLoad<atomic_load_64>;
-
-def store_local : LocalStore <store>;
-def truncstorei8_local : LocalStore <truncstorei8>;
-def truncstorei16_local : LocalStore <truncstorei16>;
 def store_local_hi16 : StoreHi16 <truncstorei16>, LocalAddress;
 def truncstorei8_local_hi16 : StoreHi16<truncstorei8>, LocalAddress;
 def atomic_store_local : LocalStore <atomic_store>;
@@ -461,30 +529,9 @@ def store_align16_local : Aligned16Bytes <
   (ops node:$val, node:$ptr), (store_local node:$val, node:$ptr)
 >;
 
-def load_flat          : FlatLoad <load>;
-def extloadi8_flat  : FlatLoad <extloadi8>;
-def zextloadi8_flat  : FlatLoad <zextloadi8>;
-def sextloadi8_flat    : FlatLoad <sextloadi8>;
-def extloadi16_flat : FlatLoad <extloadi16>;
-def zextloadi16_flat : FlatLoad <zextloadi16>;
-def sextloadi16_flat   : FlatLoad <sextloadi16>;
-def atomic_load_flat   : FlatLoad<atomic_load>;
-
-def store_flat         : FlatStore <store>;
-def truncstorei8_flat  : FlatStore <truncstorei8>;
-def truncstorei16_flat : FlatStore <truncstorei16>;
 def atomic_store_flat  : FlatStore <atomic_store>;
 def truncstorei8_hi16_flat  : StoreHi16<truncstorei8>, FlatStoreAddress;
 def truncstorei16_hi16_flat : StoreHi16<truncstorei16>, FlatStoreAddress;
-
-
-def constant_load : ConstantLoad<load>;
-def sextloadi8_constant : ConstantLoad <sextloadi8>;
-def extloadi8_constant : ConstantLoad <extloadi8>;
-def zextloadi8_constant : ConstantLoad <zextloadi8>;
-def sextloadi16_constant : ConstantLoad <sextloadi16>;
-def extloadi16_constant : ConstantLoad <extloadi16>;
-def zextloadi16_constant : ConstantLoad <zextloadi16>;
 
 
 class local_binary_atomic_op<SDNode atomic_op> :

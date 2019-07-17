@@ -16,6 +16,7 @@
 #include "AMDGPUSubtarget.h"
 #include "SIInstrInfo.h"
 #include "SIMachineFunctionInfo.h"
+#include "MCTargetDesc/AMDGPUInstPrinter.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -1346,65 +1347,6 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 }
 
 StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
-  #define AMDGPU_REG_ASM_NAMES
-  #include "AMDGPURegAsmNames.inc.cpp"
-
-  #define REG_RANGE(BeginReg, EndReg, RegTable)            \
-    if (Reg >= BeginReg && Reg <= EndReg) {                \
-      unsigned Index = Reg - BeginReg;                     \
-      assert(Index < array_lengthof(RegTable));            \
-      return RegTable[Index];                              \
-    }
-
-  REG_RANGE(AMDGPU::VGPR0, AMDGPU::VGPR255, VGPR32RegNames);
-  REG_RANGE(AMDGPU::SGPR0, AMDGPU::SGPR105, SGPR32RegNames);
-  REG_RANGE(AMDGPU::AGPR0, AMDGPU::AGPR255, AGPR32RegNames);
-  REG_RANGE(AMDGPU::VGPR0_VGPR1, AMDGPU::VGPR254_VGPR255, VGPR64RegNames);
-  REG_RANGE(AMDGPU::SGPR0_SGPR1, AMDGPU::SGPR104_SGPR105, SGPR64RegNames);
-  REG_RANGE(AMDGPU::AGPR0_AGPR1, AMDGPU::AGPR254_AGPR255, AGPR64RegNames);
-  REG_RANGE(AMDGPU::VGPR0_VGPR1_VGPR2, AMDGPU::VGPR253_VGPR254_VGPR255,
-            VGPR96RegNames);
-
-  REG_RANGE(AMDGPU::VGPR0_VGPR1_VGPR2_VGPR3,
-            AMDGPU::VGPR252_VGPR253_VGPR254_VGPR255,
-            VGPR128RegNames);
-  REG_RANGE(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3,
-            AMDGPU::SGPR100_SGPR101_SGPR102_SGPR103,
-            SGPR128RegNames);
-  REG_RANGE(AMDGPU::AGPR0_AGPR1_AGPR2_AGPR3,
-            AMDGPU::AGPR252_AGPR253_AGPR254_AGPR255,
-            AGPR128RegNames);
-
-  REG_RANGE(AMDGPU::VGPR0_VGPR1_VGPR2_VGPR3_VGPR4_VGPR5_VGPR6_VGPR7,
-            AMDGPU::VGPR248_VGPR249_VGPR250_VGPR251_VGPR252_VGPR253_VGPR254_VGPR255,
-            VGPR256RegNames);
-
-  REG_RANGE(
-    AMDGPU::VGPR0_VGPR1_VGPR2_VGPR3_VGPR4_VGPR5_VGPR6_VGPR7_VGPR8_VGPR9_VGPR10_VGPR11_VGPR12_VGPR13_VGPR14_VGPR15,
-    AMDGPU::VGPR240_VGPR241_VGPR242_VGPR243_VGPR244_VGPR245_VGPR246_VGPR247_VGPR248_VGPR249_VGPR250_VGPR251_VGPR252_VGPR253_VGPR254_VGPR255,
-    VGPR512RegNames);
-  REG_RANGE(
-    AMDGPU::AGPR0_AGPR1_AGPR2_AGPR3_AGPR4_AGPR5_AGPR6_AGPR7_AGPR8_AGPR9_AGPR10_AGPR11_AGPR12_AGPR13_AGPR14_AGPR15,
-    AMDGPU::AGPR240_AGPR241_AGPR242_AGPR243_AGPR244_AGPR245_AGPR246_AGPR247_AGPR248_AGPR249_AGPR250_AGPR251_AGPR252_AGPR253_AGPR254_AGPR255,
-    AGPR512RegNames);
-
-  REG_RANGE(AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3_SGPR4_SGPR5_SGPR6_SGPR7,
-            AMDGPU::SGPR96_SGPR97_SGPR98_SGPR99_SGPR100_SGPR101_SGPR102_SGPR103,
-            SGPR256RegNames);
-
-  REG_RANGE(
-    AMDGPU::SGPR0_SGPR1_SGPR2_SGPR3_SGPR4_SGPR5_SGPR6_SGPR7_SGPR8_SGPR9_SGPR10_SGPR11_SGPR12_SGPR13_SGPR14_SGPR15,
-    AMDGPU::SGPR88_SGPR89_SGPR90_SGPR91_SGPR92_SGPR93_SGPR94_SGPR95_SGPR96_SGPR97_SGPR98_SGPR99_SGPR100_SGPR101_SGPR102_SGPR103,
-    SGPR512RegNames
-  );
-
-  REG_RANGE(
-    AMDGPU::AGPR0_AGPR1_AGPR2_AGPR3_AGPR4_AGPR5_AGPR6_AGPR7_AGPR8_AGPR9_AGPR10_AGPR11_AGPR12_AGPR13_AGPR14_AGPR15_AGPR16_AGPR17_AGPR18_AGPR19_AGPR20_AGPR21_AGPR22_AGPR23_AGPR24_AGPR25_AGPR26_AGPR27_AGPR28_AGPR29_AGPR30_AGPR31,
-    AMDGPU::AGPR224_AGPR225_AGPR226_AGPR227_AGPR228_AGPR229_AGPR230_AGPR231_AGPR232_AGPR233_AGPR234_AGPR235_AGPR236_AGPR237_AGPR238_AGPR239_AGPR240_AGPR241_AGPR242_AGPR243_AGPR244_AGPR245_AGPR246_AGPR247_AGPR248_AGPR249_AGPR250_AGPR251_AGPR252_AGPR253_AGPR254_AGPR255,
-    AGPR1024RegNames);
-
-#undef REG_RANGE
-
   // FIXME: Rename flat_scr so we don't need to special case this.
   switch (Reg) {
   case AMDGPU::FLAT_SCR:
@@ -1414,9 +1356,24 @@ StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
   case AMDGPU::FLAT_SCR_HI:
     return "flat_scratch_hi";
   default:
-    // For the special named registers the default is fine.
-    return TargetRegisterInfo::getRegAsmName(Reg);
+    break;
   }
+
+  const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg);
+  unsigned Size = getRegSizeInBits(*RC);
+  unsigned AltName = AMDGPU::NoRegAltName;
+
+  switch (Size) {
+  case 32:   AltName = AMDGPU::Reg32; break;
+  case 64:   AltName = AMDGPU::Reg64; break;
+  case 96:   AltName = AMDGPU::Reg96; break;
+  case 128:  AltName = AMDGPU::Reg128; break;
+  case 160:  AltName = AMDGPU::Reg160; break;
+  case 256:  AltName = AMDGPU::Reg256; break;
+  case 512:  AltName = AMDGPU::Reg512; break;
+  case 1024: AltName = AMDGPU::Reg1024; break;
+  }
+  return AMDGPUInstPrinter::getRegisterName(Reg, AltName);
 }
 
 // FIXME: This is very slow. It might be worth creating a map from physreg to

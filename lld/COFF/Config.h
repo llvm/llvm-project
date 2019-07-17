@@ -132,6 +132,7 @@ struct Configuration {
   GuardCFLevel guardCF = GuardCFLevel::Off;
 
   // Used for SafeSEH.
+  bool safeSEH = false;
   Symbol *sehTable = nullptr;
   Symbol *sehCount = nullptr;
 

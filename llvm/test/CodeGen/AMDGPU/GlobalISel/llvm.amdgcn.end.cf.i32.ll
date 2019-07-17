@@ -12,15 +12,11 @@ define amdgpu_kernel void @test_wave32(i32 %arg0, [8 x i32], i32 %saved) {
 ; GCN-NEXT:    s_cbranch_scc0 BB0_2
 ; GCN-NEXT:  ; %bb.1: ; %mid
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-NEXT:    flat_store_dword v[0:1], v0
+; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:  BB0_2: ; %bb
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
-; GCN-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-NEXT:    flat_store_dword v[0:1], v0
+; GCN-NEXT:    global_store_dword v[0:1], v0, off
 ; GCN-NEXT:    s_endpgm
 entry:
   %cond = icmp eq i32 %arg0, 0
