@@ -90,7 +90,7 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
         typename T::A* $Field[[D]];
       };
       $Namespace[[abc]]::$Class[[A]]<int> $Variable[[AA]];
-      typedef $Namespace[[abc]]::$Class[[A]]<int> AAA;
+      typedef $Namespace[[abc]]::$Class[[A]]<int> $Class[[AAA]];
       struct $Class[[B]] {
         $Class[[B]]();
         ~$Class[[B]]();
@@ -173,6 +173,19 @@ TEST(SemanticHighlighting, GetsCorrectTokens) {
       }
       int $Variable[[B]];
       $Class[[AA]] $Variable[[A]]{$Variable[[B]]};
+    )cpp",
+    R"cpp(
+      namespace $Namespace[[a]] {
+        struct $Class[[A]] {};
+      }
+      typedef $Namespace[[a]]::$Class[[A]] $Class[[B]];
+      using $Class[[BB]] = $Namespace[[a]]::$Class[[A]];
+      enum class $Enum[[E]] {};
+      typedef $Enum[[E]] $Enum[[C]];
+      typedef $Enum[[C]] $Enum[[CC]];
+      using $Enum[[CD]] = $Enum[[CC]];
+      $Enum[[CC]] $Function[[f]]($Class[[B]]);
+      $Enum[[CD]] $Function[[f]]($Class[[BB]]);
     )cpp"};
   for (const auto &TestCase : TestCases) {
     checkHighlightings(TestCase);

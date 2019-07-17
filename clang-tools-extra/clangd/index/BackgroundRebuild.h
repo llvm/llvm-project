@@ -16,6 +16,7 @@
 
 #include "index/FileIndex.h"
 #include "index/Index.h"
+#include "llvm/Support/Threading.h"
 
 namespace clang {
 namespace clangd {
@@ -45,12 +46,9 @@ namespace clangd {
 // This class is exposed in the header so it can be tested.
 class BackgroundIndexRebuilder {
 public:
-  // Thresholds for rebuilding as TUs get indexed.
-  static constexpr unsigned TUsBeforeFirstBuild = 5;
-  static constexpr unsigned TUsBeforeRebuild = 100;
-
-  BackgroundIndexRebuilder(SwapIndex *Target, FileSymbols *Source)
-      : Target(Target), Source(Source) {}
+  BackgroundIndexRebuilder(SwapIndex *Target, FileSymbols *Source,
+                           unsigned Threads)
+      : TUsBeforeFirstBuild(Threads), Target(Target), Source(Source) {}
 
   // Called to indicate a TU has been indexed.
   // May rebuild, if enough TUs have been indexed.
@@ -70,6 +68,10 @@ public:
 
   // Ensures we won't start any more rebuilds.
   void shutdown();
+
+  // Thresholds for rebuilding as TUs get indexed.
+  const unsigned TUsBeforeFirstBuild; // Typically one per worker thread.
+  const unsigned TUsBeforeRebuild = 100;
 
 private:
   // Run Check under the lock, and rebuild if it returns true.
