@@ -274,7 +274,8 @@ static bool isInInlineFunction(const DeclContext *DC) {
 
 MangleNumberingContext *
 Sema::getCurrentMangleNumberContext(const DeclContext *DC,
-                                    Decl *&ManglingContextDecl) {
+                                    Decl *&ManglingContextDecl,
+                                    bool SkpNoODRChk, bool *Forced) {
   // Compute the context for allocating mangling numbers in the current
   // expression, if the ABI requires them.
   ManglingContextDecl = ExprEvalContexts.back().ManglingContextDecl;
@@ -322,9 +323,14 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
   case Normal: {
     //  -- the bodies of non-exported nonspecialized template functions
     //  -- the bodies of inline functions
-    if ((IsInNonspecializedTemplate &&
+    bool NeedODR =
+        (IsInNonspecializedTemplate &&
          !(ManglingContextDecl && isa<ParmVarDecl>(ManglingContextDecl))) ||
-        isInInlineFunction(CurContext)) {
+        isInInlineFunction(CurContext);
+    if (NeedODR || SkpNoODRChk) {
+      // Set forced if it don't need to follow ODR originally.
+      if (SkpNoODRChk && Forced)
+        *Forced = !NeedODR;
       ManglingContextDecl = nullptr;
       while (auto *CD = dyn_cast<CapturedDecl>(DC))
         DC = CD->getParent();
@@ -337,10 +343,13 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC,
 
   case StaticDataMember:
     //  -- the initializers of nonspecialized static members of template classes
-    if (!IsInNonspecializedTemplate) {
+    if (!SkpNoODRChk && !IsInNonspecializedTemplate) {
       ManglingContextDecl = nullptr;
       return nullptr;
     }
+    // Set forced if it don't need to follow ODR originally.
+    if (SkpNoODRChk && Forced)
+      *Forced = !IsInNonspecializedTemplate;
     // Fall through to get the current context.
     LLVM_FALLTHROUGH;
 
@@ -437,11 +446,12 @@ CXXMethodDecl *Sema::startLambdaDefinition(
     Class->setLambdaMangling(Mangling->first, Mangling->second);
   } else {
     Decl *ManglingContextDecl;
-    if (MangleNumberingContext *MCtx =
-            getCurrentMangleNumberContext(Class->getDeclContext(),
-                                          ManglingContextDecl)) {
+    bool Forced = false;
+    if (MangleNumberingContext *MCtx = getCurrentMangleNumberContext(
+            Class->getDeclContext(), ManglingContextDecl,
+            getLangOpts().CUDAForceLambdaODR, &Forced)) {
       unsigned ManglingNumber = MCtx->getManglingNumber(Method);
-      Class->setLambdaMangling(ManglingNumber, ManglingContextDecl);
+      Class->setLambdaMangling(ManglingNumber, ManglingContextDecl, Forced);
     }
   }
 

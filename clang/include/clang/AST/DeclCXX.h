@@ -632,6 +632,10 @@ class CXXRecordDecl : public RecordDecl {
     /// mangling in the Itanium C++ ABI.
     unsigned ManglingNumber = 0;
 
+    /// The mangling number is enforced to ensure ODR naming.
+    // FIXME: Save bit from `NumCaptures` to minimize `LambdaDefinitionData`.
+    bool ForcedNumbering = false;
+
     /// The declaration that provides context for this lambda, if the
     /// actual DeclContext does not suffice. This is used for lambdas that
     /// occur within default arguments of function parameters within the class
@@ -1927,6 +1931,11 @@ public:
     return getLambdaData().ManglingNumber;
   }
 
+  bool hasForcedLambdaManglingNumber() const {
+    assert(isLambda() && "Not a lambda closure type!");
+    return getLambdaData().ForcedNumbering;
+  }
+
   /// Retrieve the declaration that provides additional context for a
   /// lambda, when the normal declaration context is not specific enough.
   ///
@@ -1940,8 +1949,10 @@ public:
 
   /// Set the mangling number and context declaration for a lambda
   /// class.
-  void setLambdaMangling(unsigned ManglingNumber, Decl *ContextDecl) {
+  void setLambdaMangling(unsigned ManglingNumber, Decl *ContextDecl,
+                         bool Forced = false) {
     getLambdaData().ManglingNumber = ManglingNumber;
+    getLambdaData().ForcedNumbering = Forced;
     getLambdaData().ContextDecl = ContextDecl;
   }
 

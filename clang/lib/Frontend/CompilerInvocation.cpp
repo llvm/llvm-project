@@ -2469,6 +2469,9 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
   if (Args.hasArg(OPT_fno_cuda_host_device_constexpr))
     Opts.CUDAHostDeviceConstexpr = 0;
 
+  if (Args.hasArg(OPT_fcuda_force_lambda_odr))
+    Opts.CUDAForceLambdaODR = 1;
+
   if (Opts.CUDAIsDevice && Args.hasArg(OPT_fcuda_approx_transcendentals))
     Opts.CUDADeviceApproxTranscendentals = 1;
 

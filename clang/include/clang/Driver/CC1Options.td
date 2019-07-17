@@ -863,6 +863,8 @@ def fcuda_allow_variadic_functions : Flag<["-"], "fcuda-allow-variadic-functions
   HelpText<"Allow variadic functions in CUDA device code.">;
 def fno_cuda_host_device_constexpr : Flag<["-"], "fno-cuda-host-device-constexpr">,
   HelpText<"Don't treat unattributed constexpr functions as __host__ __device__.">;
+def fcuda_force_lambda_odr : Flag<["-"], "fcuda-force-lambda-odr">,
+  HelpText<"Force lambda naming following one definition rule (ODR).">;
 
 //===----------------------------------------------------------------------===//
 // OpenMP Options

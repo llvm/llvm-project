@@ -1099,10 +1099,11 @@ public:
   /// block literal.
   /// \param[out] ManglingContextDecl - Returns the ManglingContextDecl
   /// associated with the context, if relevant.
-  MangleNumberingContext *getCurrentMangleNumberContext(
-    const DeclContext *DC,
-    Decl *&ManglingContextDecl);
-
+  MangleNumberingContext *
+  getCurrentMangleNumberContext(const DeclContext *DC,
+                                Decl *&ManglingContextDecl,
+                                bool SkpNoODRChk = false,
+                                bool *Forced = nullptr);
 
   /// SpecialMemberOverloadResult - The overloading result for a special member
   /// function.

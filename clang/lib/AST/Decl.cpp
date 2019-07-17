@@ -1385,8 +1385,10 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
     case Decl::CXXRecord: {
       const auto *Record = cast<CXXRecordDecl>(D);
       if (Record->isLambda()) {
-        if (!Record->getLambdaManglingNumber()) {
-          // This lambda has no mangling number, so it's internal.
+        if (!Record->getLambdaManglingNumber() ||
+            Record->hasForcedLambdaManglingNumber()) {
+          // This lambda has no mangling number or that number is forced, so
+          // it's internal.
           return getInternalLinkageFor(D);
         }
 
@@ -1402,7 +1404,8 @@ LinkageInfo LinkageComputer::computeLVForDecl(const NamedDecl *D,
         //  };
         const CXXRecordDecl *OuterMostLambda =
             getOutermostEnclosingLambda(Record);
-        if (!OuterMostLambda->getLambdaManglingNumber())
+        if (!OuterMostLambda->getLambdaManglingNumber() ||
+            OuterMostLambda->hasForcedLambdaManglingNumber())
           return getInternalLinkageFor(D);
 
         return getLVForClosure(
