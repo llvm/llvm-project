@@ -19,6 +19,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
+#include "lldb/Symbol/LocateSymbolFile.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
@@ -322,6 +323,60 @@ Status ProcessMachCore::DoLoadCore() {
             " from LC_IDENT/LC_NOTE 'kern ver str' string: '%s'",
             addr, corefile_identifier.c_str());
     }
+  }
+  if (found_main_binary_definitively == false 
+      && corefile_identifier.find("EFI ") != std::string::npos) {
+      UUID uuid;
+      if (corefile_identifier.find("UUID=") != std::string::npos) {
+          size_t p = corefile_identifier.find("UUID=") + strlen("UUID=");
+          std::string uuid_str = corefile_identifier.substr(p, 36);
+          uuid.SetFromStringRef(uuid_str);
+      }
+      if (uuid.IsValid()) {
+        if (log)
+          log->Printf("ProcessMachCore::DoLoadCore: Using the EFI "
+                      "from LC_IDENT/LC_NOTE 'kern ver str' string: '%s'", 
+                      corefile_identifier.c_str());
+
+          // We're only given a UUID here, not a load address.
+          // But there are python scripts in the EFI binary's dSYM which
+          // know how to relocate the binary to the correct load address.
+          // lldb only needs to locate & load the binary + dSYM.
+          ModuleSpec module_spec;
+          module_spec.GetUUID() = uuid;
+          module_spec.GetArchitecture() = GetTarget().GetArchitecture();
+
+          // Lookup UUID locally, before attempting dsymForUUID like action
+          FileSpecList search_paths =
+              Target::GetDefaultDebugFileSearchPaths();
+          module_spec.GetSymbolFileSpec() =
+              Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+          if (module_spec.GetSymbolFileSpec()) {
+            ModuleSpec executable_module_spec =
+                Symbols::LocateExecutableObjectFile(module_spec);
+            if (FileSystem::Instance().Exists(executable_module_spec.GetFileSpec())) {
+              module_spec.GetFileSpec() =
+                  executable_module_spec.GetFileSpec();
+            }
+          }
+
+          // Force a a dsymForUUID lookup, if that tool is available.
+          if (!module_spec.GetSymbolFileSpec())
+            Symbols::DownloadObjectAndSymbolFile(module_spec, true);
+
+          if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
+            ModuleSP module_sp(new Module(module_spec));
+            if (module_sp.get() && module_sp->GetObjectFile()) {
+              // Get the current target executable
+              ModuleSP exe_module_sp(GetTarget().GetExecutableModule());
+
+              // Make sure you don't already have the right module loaded
+              // and they will be uniqued
+              if (exe_module_sp.get() != module_sp.get())
+                GetTarget().SetExecutableModule(module_sp, eLoadDependentsNo);
+            }
+          }
+      }
   }
 
   if (!found_main_binary_definitively &&
