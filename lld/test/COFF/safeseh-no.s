@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -triple i686-windows-msvc %s -filetype=obj -o %t.obj
 # RUN: not lld-link %t.obj -safeseh -out:%t.exe -entry:main 2>&1 | FileCheck %s --check-prefix=ERROR
 # safe seh should be on by default.

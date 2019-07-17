@@ -376,6 +376,9 @@ class ScopBuilder {
                       BasicBlock *IncomingBlock, Value *IncomingValue,
                       bool IsExitBlock);
 
+  /// Add user provided parameter constraints to context (command line).
+  void addUserContext();
+
   /// Add all recorded assumptions to the assumed context.
   void addRecordedAssumptions();
 

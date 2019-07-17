@@ -15,6 +15,7 @@
 #include "WebAssembly.h"
 #include "WebAssemblyTargetMachine.h"
 #include "llvm/CodeGen/SelectionDAGISel.h"
+#include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Function.h" // To access function attributes.
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/KnownBits.h"
@@ -169,6 +170,62 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     default:
       llvm_unreachable("Unknown scope!");
     }
+  }
+
+  case ISD::GlobalTLSAddress: {
+    const auto *GA = cast<GlobalAddressSDNode>(Node);
+
+    if (!MF.getSubtarget<WebAssemblySubtarget>().hasBulkMemory())
+      report_fatal_error("cannot use thread-local storage without bulk memory",
+                         false);
+
+    // Currently Emscripten does not support dynamic linking with threads.
+    // Therefore, if we have thread-local storage, only the local-exec model
+    // is possible.
+    // TODO: remove this and implement proper TLS models once Emscripten
+    // supports dynamic linking with threads.
+    if (GA->getGlobal()->getThreadLocalMode() !=
+            GlobalValue::LocalExecTLSModel &&
+        !Subtarget->getTargetTriple().isOSEmscripten()) {
+      report_fatal_error("only -ftls-model=local-exec is supported for now on "
+                         "non-Emscripten OSes: variable " +
+                             GA->getGlobal()->getName(),
+                         false);
+    }
+
+    MVT PtrVT = TLI->getPointerTy(CurDAG->getDataLayout());
+    assert(PtrVT == MVT::i32 && "only wasm32 is supported for now");
+
+    SDValue TLSBaseSym = CurDAG->getTargetExternalSymbol("__tls_base", PtrVT);
+    SDValue TLSOffsetSym = CurDAG->getTargetGlobalAddress(
+        GA->getGlobal(), DL, PtrVT, GA->getOffset(), 0);
+
+    MachineSDNode *TLSBase = CurDAG->getMachineNode(WebAssembly::GLOBAL_GET_I32,
+                                                    DL, MVT::i32, TLSBaseSym);
+    MachineSDNode *TLSOffset = CurDAG->getMachineNode(
+        WebAssembly::CONST_I32, DL, MVT::i32, TLSOffsetSym);
+    MachineSDNode *TLSAddress =
+        CurDAG->getMachineNode(WebAssembly::ADD_I32, DL, MVT::i32,
+                               SDValue(TLSBase, 0), SDValue(TLSOffset, 0));
+    ReplaceNode(Node, TLSAddress);
+    return;
+  }
+
+  case ISD::INTRINSIC_WO_CHAIN: {
+    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(0))->getZExtValue();
+    switch (IntNo) {
+    case Intrinsic::wasm_tls_size: {
+      MVT PtrVT = TLI->getPointerTy(CurDAG->getDataLayout());
+      assert(PtrVT == MVT::i32 && "only wasm32 is supported for now");
+
+      MachineSDNode *TLSSize = CurDAG->getMachineNode(
+          WebAssembly::GLOBAL_GET_I32, DL, PtrVT,
+          CurDAG->getTargetExternalSymbol("__tls_size", MVT::i32));
+      ReplaceNode(Node, TLSSize);
+      return;
+    }
+    }
+    break;
   }
 
   default:

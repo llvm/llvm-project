@@ -114,6 +114,11 @@ static cl::opt<bool> UnprofitableScalarAccs(
     cl::desc("Count statements with scalar accesses as not optimizable"),
     cl::Hidden, cl::init(false), cl::cat(PollyCategory));
 
+static cl::opt<std::string> UserContextStr(
+    "polly-context", cl::value_desc("isl parameter set"),
+    cl::desc("Provide additional constraints on the context parameters"),
+    cl::init(""), cl::cat(PollyCategory));
+
 static cl::opt<bool> DetectFortranArrays(
     "polly-detect-fortran-arrays",
     cl::desc("Detect Fortran arrays and use this for code generation"),
@@ -1454,6 +1459,45 @@ bool ScopBuilder::hasNonHoistableBasePtrInScop(MemoryAccess *MA,
   return false;
 }
 
+void ScopBuilder::addUserContext() {
+  if (UserContextStr.empty())
+    return;
+
+  isl::set UserContext = isl::set(scop->getIslCtx(), UserContextStr.c_str());
+  isl::space Space = scop->getParamSpace();
+  if (Space.dim(isl::dim::param) != UserContext.dim(isl::dim::param)) {
+    std::string SpaceStr = Space.to_str();
+    errs() << "Error: the context provided in -polly-context has not the same "
+           << "number of dimensions than the computed context. Due to this "
+           << "mismatch, the -polly-context option is ignored. Please provide "
+           << "the context in the parameter space: " << SpaceStr << ".\n";
+    return;
+  }
+
+  for (unsigned i = 0; i < Space.dim(isl::dim::param); i++) {
+    std::string NameContext =
+        scop->getContext().get_dim_name(isl::dim::param, i);
+    std::string NameUserContext = UserContext.get_dim_name(isl::dim::param, i);
+
+    if (NameContext != NameUserContext) {
+      std::string SpaceStr = Space.to_str();
+      errs() << "Error: the name of dimension " << i
+             << " provided in -polly-context "
+             << "is '" << NameUserContext << "', but the name in the computed "
+             << "context is '" << NameContext
+             << "'. Due to this name mismatch, "
+             << "the -polly-context option is ignored. Please provide "
+             << "the context in the parameter space: " << SpaceStr << ".\n";
+      return;
+    }
+
+    UserContext = UserContext.set_dim_id(isl::dim::param, i,
+                                         Space.get_dim_id(isl::dim::param, i));
+  }
+  isl::set newContext = scop->getContext().intersect(UserContext);
+  scop->setContext(newContext);
+}
+
 isl::set ScopBuilder::getNonHoistableCtx(MemoryAccess *Access,
                                          isl::union_map Writes) {
   // TODO: Loads that are not loop carried, hence are in a statement with
@@ -2326,7 +2370,7 @@ void ScopBuilder::buildScop(Region &R, AssumptionCache &AC) {
   scop->finalizeAccesses();
 
   scop->realignParams();
-  scop->addUserContext();
+  addUserContext();
 
   // After the context was fully constructed, thus all our knowledge about
   // the parameters is in there, we add all recorded assumptions to the

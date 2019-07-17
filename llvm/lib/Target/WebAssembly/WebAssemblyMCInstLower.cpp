@@ -77,9 +77,11 @@ MCSymbol *WebAssemblyMCInstLower::GetExternalSymbolSymbol(
   // functions. It's OK to hardcode knowledge of specific symbols here; this
   // method is precisely there for fetching the signatures of known
   // Clang-provided symbols.
-  if (strcmp(Name, "__stack_pointer") == 0 ||
-      strcmp(Name, "__memory_base") == 0 || strcmp(Name, "__table_base") == 0) {
-    bool Mutable = strcmp(Name, "__stack_pointer") == 0;
+  if (strcmp(Name, "__stack_pointer") == 0 || strcmp(Name, "__tls_base") == 0 ||
+      strcmp(Name, "__memory_base") == 0 || strcmp(Name, "__table_base") == 0 ||
+      strcmp(Name, "__tls_size") == 0) {
+    bool Mutable =
+        strcmp(Name, "__stack_pointer") == 0 || strcmp(Name, "__tls_base") == 0;
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_GLOBAL);
     WasmSym->setGlobalType(wasm::WasmGlobalType{
         uint8_t(Subtarget.hasAddr64() ? wasm::WASM_TYPE_I64

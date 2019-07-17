@@ -40,7 +40,7 @@ enum DPP_CTRL {
 
 struct ReplacementInfo {
   Instruction *I;
-  Instruction::BinaryOps Op;
+  AtomicRMWInst::BinOp Op;
   unsigned ValIdx;
   bool ValDivergent;
 };
@@ -55,8 +55,8 @@ private:
   bool HasDPP;
   bool IsPixelShader;
 
-  void optimizeAtomic(Instruction &I, Instruction::BinaryOps Op,
-                      unsigned ValIdx, bool ValDivergent) const;
+  void optimizeAtomic(Instruction &I, AtomicRMWInst::BinOp Op, unsigned ValIdx,
+                      bool ValDivergent) const;
 
 public:
   static char ID;
@@ -120,16 +120,17 @@ void AMDGPUAtomicOptimizer::visitAtomicRMWInst(AtomicRMWInst &I) {
     break;
   }
 
-  Instruction::BinaryOps Op;
+  AtomicRMWInst::BinOp Op = I.getOperation();
 
-  switch (I.getOperation()) {
+  switch (Op) {
   default:
     return;
   case AtomicRMWInst::Add:
-    Op = Instruction::Add;
-    break;
   case AtomicRMWInst::Sub:
-    Op = Instruction::Sub;
+  case AtomicRMWInst::Max:
+  case AtomicRMWInst::Min:
+  case AtomicRMWInst::UMax:
+  case AtomicRMWInst::UMin:
     break;
   }
 
@@ -161,7 +162,7 @@ void AMDGPUAtomicOptimizer::visitAtomicRMWInst(AtomicRMWInst &I) {
 }
 
 void AMDGPUAtomicOptimizer::visitIntrinsicInst(IntrinsicInst &I) {
-  Instruction::BinaryOps Op;
+  AtomicRMWInst::BinOp Op;
 
   switch (I.getIntrinsicID()) {
   default:
@@ -169,12 +170,32 @@ void AMDGPUAtomicOptimizer::visitIntrinsicInst(IntrinsicInst &I) {
   case Intrinsic::amdgcn_buffer_atomic_add:
   case Intrinsic::amdgcn_struct_buffer_atomic_add:
   case Intrinsic::amdgcn_raw_buffer_atomic_add:
-    Op = Instruction::Add;
+    Op = AtomicRMWInst::Add;
     break;
   case Intrinsic::amdgcn_buffer_atomic_sub:
   case Intrinsic::amdgcn_struct_buffer_atomic_sub:
   case Intrinsic::amdgcn_raw_buffer_atomic_sub:
-    Op = Instruction::Sub;
+    Op = AtomicRMWInst::Sub;
+    break;
+  case Intrinsic::amdgcn_buffer_atomic_smin:
+  case Intrinsic::amdgcn_struct_buffer_atomic_smin:
+  case Intrinsic::amdgcn_raw_buffer_atomic_smin:
+    Op = AtomicRMWInst::Min;
+    break;
+  case Intrinsic::amdgcn_buffer_atomic_umin:
+  case Intrinsic::amdgcn_struct_buffer_atomic_umin:
+  case Intrinsic::amdgcn_raw_buffer_atomic_umin:
+    Op = AtomicRMWInst::UMin;
+    break;
+  case Intrinsic::amdgcn_buffer_atomic_smax:
+  case Intrinsic::amdgcn_struct_buffer_atomic_smax:
+  case Intrinsic::amdgcn_raw_buffer_atomic_smax:
+    Op = AtomicRMWInst::Max;
+    break;
+  case Intrinsic::amdgcn_buffer_atomic_umax:
+  case Intrinsic::amdgcn_struct_buffer_atomic_umax:
+  case Intrinsic::amdgcn_raw_buffer_atomic_umax:
+    Op = AtomicRMWInst::UMax;
     break;
   }
 
@@ -206,8 +227,57 @@ void AMDGPUAtomicOptimizer::visitIntrinsicInst(IntrinsicInst &I) {
   ToReplace.push_back(Info);
 }
 
+// Use the builder to create the non-atomic counterpart of the specified
+// atomicrmw binary op.
+static Value *buildNonAtomicBinOp(IRBuilder<> &B, AtomicRMWInst::BinOp Op,
+                                  Value *LHS, Value *RHS) {
+  CmpInst::Predicate Pred;
+
+  switch (Op) {
+  default:
+    llvm_unreachable("Unhandled atomic op");
+  case AtomicRMWInst::Add:
+    return B.CreateBinOp(Instruction::Add, LHS, RHS);
+  case AtomicRMWInst::Sub:
+    return B.CreateBinOp(Instruction::Sub, LHS, RHS);
+
+  case AtomicRMWInst::Max:
+    Pred = CmpInst::ICMP_SGT;
+    break;
+  case AtomicRMWInst::Min:
+    Pred = CmpInst::ICMP_SLT;
+    break;
+  case AtomicRMWInst::UMax:
+    Pred = CmpInst::ICMP_UGT;
+    break;
+  case AtomicRMWInst::UMin:
+    Pred = CmpInst::ICMP_ULT;
+    break;
+  }
+  Value *Cond = B.CreateICmp(Pred, LHS, RHS);
+  return B.CreateSelect(Cond, LHS, RHS);
+}
+
+static APInt getIdentityValueForAtomicOp(AtomicRMWInst::BinOp Op,
+                                         unsigned BitWidth) {
+  switch (Op) {
+  default:
+    llvm_unreachable("Unhandled atomic op");
+  case AtomicRMWInst::Add:
+  case AtomicRMWInst::Sub:
+  case AtomicRMWInst::UMax:
+    return APInt::getMinValue(BitWidth);
+  case AtomicRMWInst::UMin:
+    return APInt::getMaxValue(BitWidth);
+  case AtomicRMWInst::Max:
+    return APInt::getSignedMinValue(BitWidth);
+  case AtomicRMWInst::Min:
+    return APInt::getSignedMaxValue(BitWidth);
+  }
+}
+
 void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
-                                           Instruction::BinaryOps Op,
+                                           AtomicRMWInst::BinOp Op,
                                            unsigned ValIdx,
                                            bool ValDivergent) const {
   // Start building just before the instruction.
@@ -266,16 +336,16 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
 
   Value *const MbcntCast = B.CreateIntCast(Mbcnt, Ty, false);
 
-  Value *LaneOffset = nullptr;
+  Value *const Identity = B.getInt(getIdentityValueForAtomicOp(Op, TyBitWidth));
+
+  Value *ExclScan = nullptr;
   Value *NewV = nullptr;
 
   // If we have a divergent value in each lane, we need to combine the value
   // using DPP.
   if (ValDivergent) {
-    Value *const Identity = B.getIntN(TyBitWidth, 0);
-
-    // First we need to set all inactive invocations to 0, so that they can
-    // correctly contribute to the final result.
+    // First we need to set all inactive invocations to the identity value, so
+    // that they can correctly contribute to the final result.
     CallInst *const SetInactive =
         B.CreateIntrinsic(Intrinsic::amdgcn_set_inactive, Ty, {V, Identity});
 
@@ -283,7 +353,7 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
         B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, Ty,
                           {Identity, SetInactive, B.getInt32(DPP_WF_SR1),
                            B.getInt32(0xf), B.getInt32(0xf), B.getFalse()});
-    NewV = FirstDPP;
+    ExclScan = FirstDPP;
 
     const unsigned Iters = 7;
     const unsigned DPPCtrl[Iters] = {
@@ -295,21 +365,20 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
     // This loop performs an exclusive scan across the wavefront, with all lanes
     // active (by using the WWM intrinsic).
     for (unsigned Idx = 0; Idx < Iters; Idx++) {
-      Value *const UpdateValue = Idx < 3 ? FirstDPP : NewV;
+      Value *const UpdateValue = Idx < 3 ? FirstDPP : ExclScan;
       CallInst *const DPP = B.CreateIntrinsic(
           Intrinsic::amdgcn_update_dpp, Ty,
           {Identity, UpdateValue, B.getInt32(DPPCtrl[Idx]),
            B.getInt32(RowMask[Idx]), B.getInt32(BankMask[Idx]), B.getFalse()});
 
-      NewV = B.CreateBinOp(Op, NewV, DPP);
+      ExclScan = buildNonAtomicBinOp(B, Op, ExclScan, DPP);
     }
 
-    LaneOffset = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, NewV);
-    NewV = B.CreateBinOp(Op, SetInactive, NewV);
+    NewV = buildNonAtomicBinOp(B, Op, SetInactive, ExclScan);
 
     // Read the value from the last lane, which has accumlated the values of
-    // each active lane in the wavefront. This will be our new value with which
-    // we will provide to the atomic operation.
+    // each active lane in the wavefront. This will be our new value which we
+    // will provide to the atomic operation.
     if (TyBitWidth == 64) {
       Value *const ExtractLo = B.CreateTrunc(NewV, B.getInt32Ty());
       Value *const ExtractHi =
@@ -324,9 +393,8 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
           B.CreateInsertElement(PartialInsert, ReadLaneHi, B.getInt32(1));
       NewV = B.CreateBitCast(Insert, Ty);
     } else if (TyBitWidth == 32) {
-      CallInst *const ReadLane = B.CreateIntrinsic(Intrinsic::amdgcn_readlane,
-                                                   {}, {NewV, B.getInt32(63)});
-      NewV = ReadLane;
+      NewV = B.CreateIntrinsic(Intrinsic::amdgcn_readlane, {},
+                               {NewV, B.getInt32(63)});
     } else {
       llvm_unreachable("Unhandled atomic bit width");
     }
@@ -334,14 +402,32 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
     // Finally mark the readlanes in the WWM section.
     NewV = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, NewV);
   } else {
-    // Get the total number of active lanes we have by using popcount.
-    Instruction *const Ctpop = B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot);
-    Value *const CtpopCast = B.CreateIntCast(Ctpop, Ty, false);
+    switch (Op) {
+    default:
+      llvm_unreachable("Unhandled atomic op");
 
-    // Calculate the new value we will be contributing to the atomic operation
-    // for the entire wavefront.
-    NewV = B.CreateMul(V, CtpopCast);
-    LaneOffset = B.CreateMul(V, MbcntCast);
+    case AtomicRMWInst::Add:
+    case AtomicRMWInst::Sub: {
+      // Get the total number of active lanes we have by using popcount.
+      Instruction *const Ctpop =
+          B.CreateUnaryIntrinsic(Intrinsic::ctpop, Ballot);
+      Value *const CtpopCast = B.CreateIntCast(Ctpop, Ty, false);
+
+      // Calculate the new value we will be contributing to the atomic operation
+      // for the entire wavefront.
+      NewV = B.CreateMul(V, CtpopCast);
+      break;
+    }
+
+    case AtomicRMWInst::Max:
+    case AtomicRMWInst::Min:
+    case AtomicRMWInst::UMax:
+    case AtomicRMWInst::UMin:
+      // Max/min with a uniform value is idempotent: doing the atomic operation
+      // multiple times has the same effect as doing it once.
+      NewV = V;
+      break;
+    }
   }
 
   // We only want a single lane to enter our new control flow, and we do this
@@ -407,7 +493,26 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
   // get our individual lane's slice into the result. We use the lane offset we
   // previously calculated combined with the atomic result value we got from the
   // first lane, to get our lane's index into the atomic result.
-  Value *const Result = B.CreateBinOp(Op, BroadcastI, LaneOffset);
+  Value *LaneOffset = nullptr;
+  if (ValDivergent) {
+    LaneOffset = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, ExclScan);
+  } else {
+    switch (Op) {
+    default:
+      llvm_unreachable("Unhandled atomic op");
+    case AtomicRMWInst::Add:
+    case AtomicRMWInst::Sub:
+      LaneOffset = B.CreateMul(V, MbcntCast);
+      break;
+    case AtomicRMWInst::Max:
+    case AtomicRMWInst::Min:
+    case AtomicRMWInst::UMax:
+    case AtomicRMWInst::UMin:
+      LaneOffset = B.CreateSelect(Cond, Identity, V);
+      break;
+    }
+  }
+  Value *const Result = buildNonAtomicBinOp(B, Op, BroadcastI, LaneOffset);
 
   if (IsPixelShader) {
     // Need a final PHI to reconverge to above the helper lane branch mask.

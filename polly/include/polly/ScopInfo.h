@@ -2044,9 +2044,6 @@ private:
   void addUserAssumptions(AssumptionCache &AC, DominatorTree &DT, LoopInfo &LI,
                           DenseMap<BasicBlock *, isl::set> &InvalidDomainMap);
 
-  /// Add user provided parameter constraints to context (command line).
-  void addUserContext();
-
   /// Add the bounds of the parameters to the context.
   void addParameterBounds();
 

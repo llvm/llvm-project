@@ -27,6 +27,7 @@
 
 namespace llvm {
 
+class CCState;
 class DataLayout;
 class Function;
 class MachineIRBuilder;
@@ -163,7 +164,10 @@ protected:
   /// \return True if everything has succeeded, false otherwise.
   bool handleAssignments(MachineIRBuilder &MIRBuilder, ArrayRef<ArgInfo> Args,
                          ValueHandler &Handler) const;
-
+  bool handleAssignments(CCState &CCState,
+                         SmallVectorImpl<CCValAssign> &ArgLocs,
+                         MachineIRBuilder &MIRBuilder, ArrayRef<ArgInfo> Args,
+                         ValueHandler &Handler) const;
 public:
   CallLowering(const TargetLowering *TLI) : TLI(TLI) {}
   virtual ~CallLowering() = default;

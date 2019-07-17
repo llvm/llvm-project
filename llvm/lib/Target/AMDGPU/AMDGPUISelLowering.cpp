@@ -2937,18 +2937,11 @@ bool AMDGPUTargetLowering::SelectFlatOffset(bool IsSigned,
     SDValue N1 = Addr.getOperand(1);
     int64_t COffsetVal = cast<ConstantSDNode>(N1)->getSExtValue();
 
-    if (ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
-      if ((IsSigned && isInt<12>(COffsetVal)) ||
-          (!IsSigned && isUInt<11>(COffsetVal))) {
-        Addr = N0;
-        OffsetVal = COffsetVal;
-      }
-    } else {
-      if ((IsSigned && isInt<13>(COffsetVal)) ||
-          (!IsSigned && isUInt<12>(COffsetVal))) {
-        Addr = N0;
-        OffsetVal = COffsetVal;
-      }
+    const SIInstrInfo *TII = ST.getInstrInfo();
+    if (TII->isLegalFLATOffset(COffsetVal, findMemSDNode(N)->getAddressSpace(),
+                               IsSigned)) {
+      Addr = N0;
+      OffsetVal = COffsetVal;
     }
   }
 

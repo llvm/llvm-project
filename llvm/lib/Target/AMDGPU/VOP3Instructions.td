@@ -393,9 +393,9 @@ def V_MULLIT_F32 : VOP3Inst <"v_mullit_f32", VOP3_Profile<VOP_F32_F32_F32_F32>>;
 } // End SubtargetPredicate = isGFX6GFX7GFX10, Predicates = [isGFX6GFX7GFX10]
 
 let SubtargetPredicate = isGFX8Plus in {
-def V_LSHLREV_B64 : VOP3Inst <"v_lshlrev_b64", VOP3_Profile<VOP_I64_I32_I64>>;
-def V_LSHRREV_B64 : VOP3Inst <"v_lshrrev_b64", VOP3_Profile<VOP_I64_I32_I64>>;
-def V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>>;
+def V_LSHLREV_B64 : VOP3Inst <"v_lshlrev_b64", VOP3_Profile<VOP_I64_I32_I64>, lshl_rev>;
+def V_LSHRREV_B64 : VOP3Inst <"v_lshrrev_b64", VOP3_Profile<VOP_I64_I32_I64>, lshr_rev>;
+def V_ASHRREV_I64 : VOP3Inst <"v_ashrrev_i64", VOP3_Profile<VOP_I64_I32_I64>, ashr_rev>;
 } // End SubtargetPredicate = isGFX8Plus
 } // End SchedRW = [Write64Bit]
 

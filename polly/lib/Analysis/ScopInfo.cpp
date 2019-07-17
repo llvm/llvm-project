@@ -122,11 +122,6 @@ static cl::opt<bool> PollyRemarksMinimal(
     cl::desc("Do not emit remarks about assumptions that are known"),
     cl::Hidden, cl::ZeroOrMore, cl::init(false), cl::cat(PollyCategory));
 
-static cl::opt<std::string> UserContextStr(
-    "polly-context", cl::value_desc("isl parameter set"),
-    cl::desc("Provide additional constraints on the context parameters"),
-    cl::init(""), cl::cat(PollyCategory));
-
 static cl::opt<bool>
     IslOnErrorAbort("polly-on-isl-error-abort",
                     cl::desc("Abort if an isl error is encountered"),
@@ -2015,44 +2010,6 @@ void Scop::addUserAssumptions(
              << "Use user assumption: " << stringFromIslObj(AssumptionCtx));
     Context = Context.intersect(isl::manage(AssumptionCtx));
   }
-}
-
-void Scop::addUserContext() {
-  if (UserContextStr.empty())
-    return;
-
-  isl::set UserContext = isl::set(getIslCtx(), UserContextStr.c_str());
-  isl::space Space = getParamSpace();
-  if (Space.dim(isl::dim::param) != UserContext.dim(isl::dim::param)) {
-    std::string SpaceStr = Space.to_str();
-    errs() << "Error: the context provided in -polly-context has not the same "
-           << "number of dimensions than the computed context. Due to this "
-           << "mismatch, the -polly-context option is ignored. Please provide "
-           << "the context in the parameter space: " << SpaceStr << ".\n";
-    return;
-  }
-
-  for (unsigned i = 0; i < Space.dim(isl::dim::param); i++) {
-    std::string NameContext = Context.get_dim_name(isl::dim::param, i);
-    std::string NameUserContext = UserContext.get_dim_name(isl::dim::param, i);
-
-    if (NameContext != NameUserContext) {
-      std::string SpaceStr = Space.to_str();
-      errs() << "Error: the name of dimension " << i
-             << " provided in -polly-context "
-             << "is '" << NameUserContext << "', but the name in the computed "
-             << "context is '" << NameContext
-             << "'. Due to this name mismatch, "
-             << "the -polly-context option is ignored. Please provide "
-             << "the context in the parameter space: " << SpaceStr << ".\n";
-      return;
-    }
-
-    UserContext = UserContext.set_dim_id(isl::dim::param, i,
-                                         Space.get_dim_id(isl::dim::param, i));
-  }
-
-  Context = Context.intersect(UserContext);
 }
 
 void Scop::buildContext() {

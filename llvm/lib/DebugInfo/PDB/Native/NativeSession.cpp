@@ -13,6 +13,7 @@
 #include "llvm/DebugInfo/PDB/IPDBEnumChildren.h"
 #include "llvm/DebugInfo/PDB/IPDBSourceFile.h"
 #include "llvm/DebugInfo/PDB/Native/NativeCompilandSymbol.h"
+#include "llvm/DebugInfo/PDB/Native/NativeEnumInjectedSources.h"
 #include "llvm/DebugInfo/PDB/Native/NativeEnumTypes.h"
 #include "llvm/DebugInfo/PDB/Native/NativeExeSymbol.h"
 #include "llvm/DebugInfo/PDB/Native/NativeTypeBuiltin.h"
@@ -191,7 +192,17 @@ std::unique_ptr<IPDBEnumTables> NativeSession::getEnumTables() const {
 
 std::unique_ptr<IPDBEnumInjectedSources>
 NativeSession::getInjectedSources() const {
-  return nullptr;
+  auto ISS = Pdb->getInjectedSourceStream();
+  if (!ISS) {
+    consumeError(ISS.takeError());
+    return nullptr;
+  }
+  auto Strings = Pdb->getStringTable();
+  if (!Strings) {
+    consumeError(Strings.takeError());
+    return nullptr;
+  }
+  return make_unique<NativeEnumInjectedSources>(*Pdb, *ISS, *Strings);
 }
 
 std::unique_ptr<IPDBEnumSectionContribs>

@@ -72,6 +72,12 @@ public:
     assert(Map->Present.test(Index));
     return Map->Buckets[Index];
   }
+
+  // Implement postfix op++ in terms of prefix op++ by using the superclass
+  // implementation.
+  using iterator_facade_base<HashTableIterator<ValueT>,
+                             std::forward_iterator_tag,
+                             const std::pair<uint32_t, ValueT>>::operator++;
   HashTableIterator &operator++() {
     while (Index < Map->Buckets.size()) {
       ++Index;
@@ -94,9 +100,6 @@ private:
 
 template <typename ValueT>
 class HashTable {
-  using const_iterator = HashTableIterator<ValueT>;
-  friend const_iterator;
-
   struct Header {
     support::ulittle32_t Size;
     support::ulittle32_t Capacity;
@@ -105,6 +108,9 @@ class HashTable {
   using BucketList = std::vector<std::pair<uint32_t, ValueT>>;
 
 public:
+  using const_iterator = HashTableIterator<ValueT>;
+  friend const_iterator;
+
   HashTable() { Buckets.resize(8); }
   explicit HashTable(uint32_t Capacity) {
     Buckets.resize(Capacity);

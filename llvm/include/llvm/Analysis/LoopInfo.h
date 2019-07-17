@@ -270,16 +270,12 @@ public:
 
   /// Return all unique successor blocks of this loop.
   /// These are the blocks _outside of the current loop_ which are branched to.
-  /// This assumes that loop exits are in canonical form, i.e. all exits are
-  /// dedicated exits.
   void getUniqueExitBlocks(SmallVectorImpl<BlockT *> &ExitBlocks) const;
 
   /// Return all unique successor blocks of this loop except successors from
   /// Latch block are not considered. If the exit comes from Latch has also
   /// non Latch predecessor in a loop it will be added to ExitBlocks.
   /// These are the blocks _outside of the current loop_ which are branched to.
-  /// This assumes that loop exits are in canonical form, i.e. all exits are
-  /// dedicated exits.
   void getUniqueNonLatchExitBlocks(SmallVectorImpl<BlockT *> &ExitBlocks) const;
 
   /// If getUniqueExitBlocks would return exactly one block, return that block.
