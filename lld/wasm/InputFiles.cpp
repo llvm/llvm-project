@@ -380,22 +380,20 @@ Symbol *ObjFile::createDefined(const WasmSymbol &sym) {
   case WASM_SYMBOL_TYPE_FUNCTION: {
     InputFunction *func =
         functions[sym.Info.ElementIndex - wasmObj->getNumImportedFunctions()];
-    if (func->discarded)
-      return nullptr;
     if (sym.isBindingLocal())
       return make<DefinedFunction>(name, flags, this, func);
+    if (func->discarded)
+      return nullptr;
     return symtab->addDefinedFunction(name, flags, this, func);
   }
   case WASM_SYMBOL_TYPE_DATA: {
     InputSegment *seg = segments[sym.Info.DataRef.Segment];
-    if (seg->discarded)
-      return nullptr;
-
     uint32_t offset = sym.Info.DataRef.Offset;
     uint32_t size = sym.Info.DataRef.Size;
-
     if (sym.isBindingLocal())
       return make<DefinedData>(name, flags, this, seg, offset, size);
+    if (seg->discarded)
+      return nullptr;
     return symtab->addDefinedData(name, flags, this, seg, offset, size);
   }
   case WASM_SYMBOL_TYPE_GLOBAL: {

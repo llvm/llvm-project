@@ -2,21 +2,14 @@ project(lldb)
 
 option(LLVM_INSTALL_TOOLCHAIN_ONLY "Only include toolchain files in the 'install' target." OFF)
 
-set(LLDB_PATH_TO_LLVM_BUILD "" CACHE PATH "Path to LLVM build tree")
-set(LLDB_PATH_TO_CLANG_BUILD "${LLDB_PATH_TO_LLVM_BUILD}" CACHE PATH "Path to Clang build tree")
 set(LLDB_PATH_TO_SWIFT_BUILD "" CACHE PATH "Path to Swift build tree")
 set(LLDB_PATH_TO_SWIFT_SOURCE "" CACHE PATH "Path to Swift source tree")
 
-file(TO_CMAKE_PATH "${LLDB_PATH_TO_LLVM_BUILD}" LLDB_PATH_TO_LLVM_BUILD)
-file(TO_CMAKE_PATH "${LLDB_PATH_TO_CLANG_BUILD}" LLDB_PATH_TO_CLANG_BUILD)
 file(TO_CMAKE_PATH "${LLDB_PATH_TO_SWIFT_BUILD}" LLDB_PATH_TO_SWIFT_BUILD)
-
 file(TO_CMAKE_PATH "${LLDB_PATH_TO_SWIFT_SOURCE}" LLDB_PATH_TO_SWIFT_SOURCE)
 
-find_package(LLVM REQUIRED CONFIG
-  HINTS "${LLDB_PATH_TO_LLVM_BUILD}" NO_CMAKE_FIND_ROOT_PATH)
-find_package(Clang REQUIRED CONFIG
-  HINTS "${LLDB_PATH_TO_CLANG_BUILD}" NO_CMAKE_FIND_ROOT_PATH)
+find_package(LLVM REQUIRED CONFIG HINTS "${LLVM_DIR}" NO_CMAKE_FIND_ROOT_PATH)
+find_package(Clang REQUIRED CONFIG HINTS "${Clang_DIR}" NO_CMAKE_FIND_ROOT_PATH)
 
 # We set LLVM_CMAKE_PATH so that GetSVN.cmake is found correctly when building SVNVersion.inc
 set(LLVM_CMAKE_PATH ${LLVM_CMAKE_DIR} CACHE PATH "Path to LLVM CMake modules")
@@ -39,13 +32,12 @@ function(append_configuration_directories input_dir output_dirs)
   set(${output_dirs} ${dirs_list} PARENT_SCOPE)
 endfunction()
 
-
 append_configuration_directories(${LLVM_TOOLS_BINARY_DIR} config_dirs)
 find_program(lit_full_path ${lit_file_name} ${config_dirs} NO_DEFAULT_PATH)
 set(LLVM_DEFAULT_EXTERNAL_LIT ${lit_full_path} CACHE PATH "Path to llvm-lit")
 
 if(CMAKE_CROSSCOMPILING)
-  set(LLVM_NATIVE_BUILD "${LLDB_PATH_TO_LLVM_BUILD}/NATIVE")
+  set(LLVM_NATIVE_BUILD "${LLVM_BINARY_DIR}/NATIVE")
   if (NOT EXISTS "${LLVM_NATIVE_BUILD}")
     message(FATAL_ERROR
       "Attempting to cross-compile LLDB standalone but no native LLVM build
@@ -89,25 +81,10 @@ include(AddLLVM)
 include(TableGen)
 include(HandleLLVMOptions)
 include(CheckAtomic)
-
-if (PYTHON_EXECUTABLE STREQUAL "")
-  set(Python_ADDITIONAL_VERSIONS 3.7. 3.6 3.4 2.7)
-  include(FindPythonInterp)
-  if( NOT PYTHONINTERP_FOUND )
-    message(FATAL_ERROR
-            "Unable to find Python interpreter, required for builds and testing.
-              Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
-  endif()
-else()
-  message(STATUS "Found PythonInterp: ${PYTHON_EXECUTABLE}")
-endif()
-
-# Start Swift Mods
-find_package(Swift REQUIRED CONFIG
-  HINTS "${LLDB_PATH_TO_SWIFT_BUILD}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-# End Swift Mods
+include(LLVMDistributionSupport)
 
 set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
+set(LLVM_INCLUDE_TESTS ON CACHE INTERNAL "")
 
 option(LLVM_USE_FOLDERS "Enable solution folders in Visual Studio. Disable for Express versions." ON)
 if(LLVM_USE_FOLDERS)

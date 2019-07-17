@@ -1354,6 +1354,10 @@ PdbAstBuilder::ToCompilerDeclContext(clang::DeclContext &context) {
   return {&m_clang, &context};
 }
 
+clang::Decl * PdbAstBuilder::FromCompilerDecl(CompilerDecl decl) {
+  return static_cast<clang::Decl *>(decl.GetOpaqueDecl());
+}
+
 clang::DeclContext *
 PdbAstBuilder::FromCompilerDeclContext(CompilerDeclContext context) {
   return static_cast<clang::DeclContext *>(context.GetOpaqueDeclContext());
