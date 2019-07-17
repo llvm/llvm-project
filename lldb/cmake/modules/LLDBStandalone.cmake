@@ -77,18 +77,6 @@ include(HandleLLVMOptions)
 include(CheckAtomic)
 include(LLVMDistributionSupport)
 
-set(Python_ADDITIONAL_VERSIONS 3.7 3.6 3.5 2.7)
-if (PYTHON_EXECUTABLE STREQUAL "")
-  include(FindPythonInterp)
-  if( NOT PYTHONINTERP_FOUND )
-    message(FATAL_ERROR
-            "Unable to find Python interpreter, required for builds and testing.
-              Please install Python or specify the PYTHON_EXECUTABLE CMake variable.")
-  endif()
-else()
-  message(STATUS "Found PythonInterp: ${PYTHON_EXECUTABLE}")
-endif()
-
 set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
 set(LLVM_INCLUDE_TESTS ON CACHE INTERNAL "")
 
