@@ -51,3 +51,41 @@ let Command = "breakpoint list" in {
     Desc<"List Dummy breakpoints - i.e. breakpoints set before a file is "
     "provided, which prime new targets.">;
 }
+
+let Command = "watchpoint list" in {
+  def watchpoint_list_brief : Option<"brief", "b">, Group<1>, Desc<"Give a "
+    "brief description of the watchpoint (no location info).">;
+  def watchpoint_list_full : Option<"full", "f">, Group<2>, Desc<"Give a full "
+    "description of the watchpoint and its locations.">;
+  def watchpoint_list_verbose : Option<"verbose", "v">, Group<3>, Desc<"Explain"
+    "everything we know about the watchpoint (for debugging debugger bugs).">;
+}
+
+let Command = "watchpoint ignore" in {
+  def watchpoint_ignore_ignore_count : Option<"ignore-count", "i">,
+    Arg<"Count">, Required, Desc<"Set the number of times this watchpoint is"
+    " skipped before stopping.">;
+}
+
+let Command = "watchpoint modify" in {
+  def watchpoint_modify_condition : Option<"condition", "c">, Arg<"Expression">,
+    Desc<"The watchpoint stops only if this condition expression evaluates "
+    "to true.">;
+}
+
+let Command = "watchpoint command add" in {
+  def watchpoint_command_add_one_liner : Option<"one-liner", "o">, Group<1>,
+    Arg<"OneLiner">, Desc<"Specify a one-line watchpoint command inline. Be "
+    "sure to surround it with quotes.">;
+  def watchpoint_command_add_stop_on_error : Option<"stop-on-error", "e">,
+    Arg<"Boolean">, Desc<"Specify whether watchpoint command execution should "
+    "terminate on error.">;
+  def watchpoint_command_add_script_type : Option<"script-type", "s">,
+    EnumArg<"None", "ScriptOptionEnum()">, Desc<"Specify the language for the"
+    " commands - if none is specified, the lldb command interpreter will be "
+    "used.">;
+  def watchpoint_command_add_python_function : Option<"python-function", "F">,
+    Group<2>, Arg<"PythonFunction">, Desc<"Give the name of a Python function "
+    "to run as command for this watchpoint. Be sure to give a module name if "
+    "appropriate.">;
+}
