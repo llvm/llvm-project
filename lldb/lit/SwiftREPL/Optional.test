@@ -21,5 +21,18 @@ let y : Optional<Test> = Test(a: 1, b: Patatino.first)
 // CHECK-NEXT: b = first
 // CHECK-NEXT: }
 
+class A {
+  var x : Int
+  init(_ x : Int) {
+    self.x = x
+  }
+}
+
+var q : A? = A(23)
+
+// CHECK-NEXT: {{q}}: A? = 0x{{.*}} {
+// CHECK-NEXT:   x = 23
+// CHECK-NEXT: }
+
 let tinky : UInt8? = 250
 // CHECK-NEXT: {{tinky}}: UInt8? = 250
