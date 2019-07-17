@@ -47,6 +47,10 @@ class CModulesTestCase(TestBase):
         self.expect("breakpoint list -f", BREAKPOINT_HIT_ONCE,
                     substrs=[' resolved, hit count = 1'])
 
+        # Enable logging of the imported AST.
+        log_file = os.path.join(self.getBuildDir(), "lldb-ast-log.txt")
+        self.runCmd("log enable lldb ast -f '%s'" % log_file)
+
         self.expect(
             "expr -l objc++ -- @import Darwin; 3",
             VARIABLES_DISPLAYED_CORRECTLY,
@@ -54,12 +58,22 @@ class CModulesTestCase(TestBase):
                 "int",
                 "3"])
 
+        # This expr command imports __sFILE with definition
+        # (FILE is a typedef to __sFILE.)
         self.expect(
             "expr *fopen(\"/dev/zero\", \"w\")",
             VARIABLES_DISPLAYED_CORRECTLY,
             substrs=[
                 "FILE",
                 "_close"])
+
+        # Check that the AST log contains exactly one definition of __sFILE.
+        f = open(log_file)
+        log_lines = f.readlines()
+        f.close()
+        os.remove(log_file)
+        self.assertEqual(" ".join(log_lines).count("struct __sFILE definition"),
+                         1)
 
         self.expect("expr *myFile", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["a", "5", "b", "9"])
