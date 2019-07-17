@@ -902,7 +902,7 @@ TEST_F(FileCheckTest, ParseNumericSubstitutionBlock) {
   Tester.initNextPattern();
 
   // Invalid variable name.
-  expectDiagnosticError("invalid operand format '%VAR'",
+  expectDiagnosticError("invalid matching constraint or operand format",
                         Tester.parseSubst("%VAR").takeError());
 
   expectDiagnosticError("invalid pseudo numeric variable '@FOO'",
@@ -937,6 +937,10 @@ TEST_F(FileCheckTest, ParseNumericSubstitutionBlock) {
   // Valid empty expression.
   EXPECT_THAT_EXPECTED(Tester.parseSubst(""), Succeeded());
 
+  // Invalid equality matching constraint with empty expression.
+  expectDiagnosticError("empty numeric expression should not have a constraint",
+                        Tester.parseSubst("==").takeError());
+
   // Valid single operand expression.
   EXPECT_THAT_EXPECTED(Tester.parseSubst("FOO"), Succeeded());
   EXPECT_THAT_EXPECTED(Tester.parseSubst("18"), Succeeded());
@@ -946,6 +950,13 @@ TEST_F(FileCheckTest, ParseNumericSubstitutionBlock) {
   EXPECT_THAT_EXPECTED(Tester.parseSubst("-30"), Succeeded());
   EXPECT_THAT_EXPECTED(Tester.parseSubst(std::to_string(MinInt64)),
                        Succeeded());
+
+  // Valid optional matching constraint.
+  EXPECT_THAT_EXPECTED(Tester.parseSubst("==FOO"), Succeeded());
+
+  // Invalid matching constraint.
+  expectDiagnosticError("invalid matching constraint or operand format",
+                        Tester.parseSubst("+=FOO").takeError());
 
   // Invalid format.
   expectDiagnosticError("invalid matching format specification in expression",
@@ -968,12 +979,12 @@ TEST_F(FileCheckTest, ParseNumericSubstitutionBlock) {
 
   // Errors in RHS operand are bubbled up by parseBinop() to
   // parseNumericSubstitutionBlock().
-  expectDiagnosticError("invalid operand format '%VAR'",
+  expectDiagnosticError("invalid operand format",
                         Tester.parseSubst("@LINE+%VAR").takeError());
 
   // Invalid legacy @LINE expression with non literal rhs.
   expectDiagnosticError(
-      "invalid operand format '@LINE'",
+      "invalid operand format",
       Tester.parseSubst("@LINE+@LINE", /*IsLegacyNumExpr=*/true).takeError());
 
   // Invalid legacy @LINE expression made of a single literal.
@@ -1046,7 +1057,7 @@ TEST_F(FileCheckTest, ParseNumericSubstitutionBlock) {
 
   // Test more closing than opening parentheses. The diagnostic messages are
   // not ideal, but for now simply check that we reject invalid input.
-  expectDiagnosticError("invalid operand format ')'",
+  expectDiagnosticError("invalid matching constraint or operand format",
                         Tester.parseSubst(")").takeError());
   expectDiagnosticError("unsupported operation ')'",
                         Tester.parseSubst("1)").takeError());
