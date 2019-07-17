@@ -1615,10 +1615,11 @@ clang::FunctionTemplateDecl *ClangASTContext::CreateFunctionTemplateDecl(
 void ClangASTContext::CreateFunctionTemplateSpecializationInfo(
     FunctionDecl *func_decl, clang::FunctionTemplateDecl *func_tmpl_decl,
     const TemplateParameterInfos &infos) {
-  TemplateArgumentList template_args(TemplateArgumentList::OnStack, infos.args);
+  TemplateArgumentList *template_args_ptr =
+      TemplateArgumentList::CreateCopy(func_decl->getASTContext(), infos.args);
 
-  func_decl->setFunctionTemplateSpecialization(func_tmpl_decl, &template_args,
-                                               nullptr);
+  func_decl->setFunctionTemplateSpecialization(func_tmpl_decl,
+                                               template_args_ptr, nullptr);
 }
 
 ClassTemplateDecl *ClangASTContext::CreateClassTemplateDecl(
