@@ -1,5 +1,4 @@
 // RUN: %libomp-compile-and-run
-// REQUIRES: openmp-4.5
 // The runtime currently does not get dependency information from GCC.
 // UNSUPPORTED: gcc
 

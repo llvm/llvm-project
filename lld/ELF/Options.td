@@ -416,6 +416,9 @@ defm wrap: Eq<"wrap", "Use wrapper functions for symbol">,
 def z: JoinedOrSeparate<["-"], "z">, MetaVarName<"<option>">,
   HelpText<"Linker option extensions">;
 
+def visual_studio_diagnostics_format : F<"vs-diagnostics">,
+HelpText<"Format diagnostics for Visual Studio compatiblity">;
+
 // Aliases
 def: Separate<["-"], "f">, Alias<auxiliary>, HelpText<"Alias for --auxiliary">;
 def: F<"call_shared">, Alias<Bdynamic>, HelpText<"Alias for --Bdynamic">;

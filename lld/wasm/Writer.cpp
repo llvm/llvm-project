@@ -821,6 +821,7 @@ void Writer::calculateInitFunctions() {
       assert(sym->isLive());
       if (*sym->signature != WasmSignature{{}, {}})
         error("invalid signature for init func: " + toString(*sym));
+      LLVM_DEBUG(dbgs() << "initFunctions: " << toString(*sym) << "\n");
       initFunctions.emplace_back(WasmInitEntry{sym, f.Priority});
     }
   }
