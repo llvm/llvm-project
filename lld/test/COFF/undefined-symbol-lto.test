@@ -1,3 +1,5 @@
+REQUIRES: x86
+
 RUN: rm -rf %t && mkdir -p %t && cd %t
 RUN: llvm-as %S/Inputs/undefined-symbol-lto-a.ll -o t.obj
 RUN: llvm-as %S/Inputs/undefined-symbol-lto-b.ll -o b.obj

@@ -934,7 +934,7 @@ static std::string stringOr(std::string Str, std::string IfEmpty) {
 
 static void dumpInjectedSources(LinePrinter &Printer, IPDBSession &Session) {
   auto Sources = Session.getInjectedSources();
-  if (0 == Sources->getChildCount()) {
+  if (!Sources || !Sources->getChildCount()) {
     Printer.printLine("There are no injected sources.");
     return;
   }
@@ -1279,12 +1279,7 @@ static void dumpPretty(StringRef Path) {
     WithColor(Printer, PDB_ColorItem::SectionHeader).get()
         << "---INJECTED SOURCES---";
     AutoIndent Indent1(Printer);
-
-    if (ReaderType == PDB_ReaderType::Native)
-      Printer.printLine(
-          "Injected sources are not supported with the native reader.");
-    else
-      dumpInjectedSources(Printer, *Session);
+    dumpInjectedSources(Printer, *Session);
   }
 
   Printer.NewLine();

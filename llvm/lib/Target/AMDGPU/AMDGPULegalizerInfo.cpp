@@ -497,6 +497,9 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .custom();
   }
 
+  // TODO: Should load to s16 be legal? Most loads extend to 32-bits, but we
+  // handle some operations by just promoting the register during
+  // selection. There are also d16 loads on GFX9+ which preserve the high bits.
   getActionDefinitionsBuilder({G_LOAD, G_STORE})
     .narrowScalarIf([](const LegalityQuery &Query) {
         unsigned Size = Query.Types[0].getSizeInBits();

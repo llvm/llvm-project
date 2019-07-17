@@ -108,6 +108,16 @@ BUILTIN(__builtin_amdgcn_ds_fminf, "ff*3fIiIiIb", "n")
 BUILTIN(__builtin_amdgcn_ds_fmaxf, "ff*3fIiIiIb", "n")
 BUILTIN(__builtin_amdgcn_ds_append, "ii*3", "n")
 BUILTIN(__builtin_amdgcn_ds_consume, "ii*3", "n")
+BUILTIN(__builtin_amdgcn_alignbit, "UiUiUiUi", "nc")
+BUILTIN(__builtin_amdgcn_alignbyte, "UiUiUiUi", "nc")
+BUILTIN(__builtin_amdgcn_ubfe, "UiUiUiUi", "nc")
+BUILTIN(__builtin_amdgcn_sbfe, "UiUiUiUi", "nc")
+BUILTIN(__builtin_amdgcn_cvt_pkrtz, "E2hff", "nc")
+BUILTIN(__builtin_amdgcn_cvt_pknorm_i16, "E2sff", "nc")
+BUILTIN(__builtin_amdgcn_cvt_pknorm_u16, "E2Usff", "nc")
+BUILTIN(__builtin_amdgcn_cvt_pk_i16, "E2sii", "nc")
+BUILTIN(__builtin_amdgcn_cvt_pk_u16, "E2UsUiUi", "nc")
+BUILTIN(__builtin_amdgcn_cvt_pk_u8_f32, "UifUiUi", "nc")
 
 //===----------------------------------------------------------------------===//
 // CI+ only builtins.
@@ -161,6 +171,13 @@ TARGET_BUILTIN(__builtin_amdgcn_sdot4, "SiSiSiSiIb", "nc", "dot1-insts")
 TARGET_BUILTIN(__builtin_amdgcn_udot4, "UiUiUiUiIb", "nc", "dot2-insts")
 TARGET_BUILTIN(__builtin_amdgcn_sdot8, "SiSiSiSiIb", "nc", "dot1-insts")
 TARGET_BUILTIN(__builtin_amdgcn_udot8, "UiUiUiUiIb", "nc", "dot2-insts")
+
+//===----------------------------------------------------------------------===//
+// GFX10+ only builtins.
+//===----------------------------------------------------------------------===//
+TARGET_BUILTIN(__builtin_amdgcn_permlane16, "UiUiUiUiUiIbIb", "nc", "gfx10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_permlanex16, "UiUiUiUiUiIbIb", "nc", "gfx10-insts")
+TARGET_BUILTIN(__builtin_amdgcn_mov_dpp8, "UiUiIUi", "nc", "gfx10-insts")
 
 //===----------------------------------------------------------------------===//
 // Special builtins.

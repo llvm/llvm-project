@@ -254,8 +254,7 @@ define i32 @test_v4i32(<4 x i32> %a0) {
 ;
 ; AVX1-FAST-LABEL: test_v4i32:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX1-FAST-NEXT:    retq
@@ -307,9 +306,8 @@ define i32 @test_v8i32(<8 x i32> %a0) {
 ; AVX1-FAST-LABEL: test_v8i32:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX1-FAST-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm1, %xmm0
+; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddd %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX1-FAST-NEXT:    vzeroupper
@@ -635,10 +633,8 @@ define i16 @test_v8i16(<8 x i16> %a0) {
 ;
 ; AVX1-FAST-LABEL: test_v8i16:
 ; AVX1-FAST:       # %bb.0:
-; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX1-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX1-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX1-FAST-NEXT:    # kill: def $ax killed $ax killed $eax
@@ -704,11 +700,9 @@ define i16 @test_v16i16(<16 x i16> %a0) {
 ; AVX1-FAST-LABEL: test_v16i16:
 ; AVX1-FAST:       # %bb.0:
 ; AVX1-FAST-NEXT:    vextractf128 $1, %ymm0, %xmm1
-; AVX1-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,0,1]
-; AVX1-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
-; AVX1-FAST-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,2,3]
-; AVX1-FAST-NEXT:    vpaddw %xmm1, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm1, %xmm0
+; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
+; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vphaddw %xmm0, %xmm0, %xmm0
 ; AVX1-FAST-NEXT:    vmovd %xmm0, %eax
 ; AVX1-FAST-NEXT:    # kill: def $ax killed $ax killed $eax

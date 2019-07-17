@@ -57,6 +57,7 @@ private:
   void createInitMemoryFunction();
   void createApplyRelocationsFunction();
   void createCallCtorsFunction();
+  void createInitTLSFunction();
 
   void assignIndexes();
   void populateSymtab();
@@ -242,6 +243,11 @@ void Writer::layoutMemory() {
     log(formatv("mem: {0,-15} offset={1,-8} size={2,-8} align={3}", seg->name,
                 memoryPtr, seg->size, seg->alignment));
     memoryPtr += seg->size;
+
+    if (WasmSym::tlsSize && seg->name == ".tdata") {
+      auto *tlsSize = cast<DefinedGlobal>(WasmSym::tlsSize);
+      tlsSize->global->global.InitExpr.Value.Int32 = seg->size;
+    }
   }
 
   // TODO: Add .bss space here.
@@ -353,6 +359,7 @@ void Writer::populateTargetFeatures() {
   StringMap<std::string> used;
   StringMap<std::string> required;
   StringMap<std::string> disallowed;
+  bool tlsUsed = false;
 
   // Only infer used features if user did not specify features
   bool inferFeatures = !config->features.hasValue();
@@ -385,6 +392,14 @@ void Writer::populateTargetFeatures() {
               std::to_string(feature.Prefix));
       }
     }
+
+    for (InputSegment *segment : file->segments) {
+      if (!segment->live)
+        continue;
+      StringRef name = segment->getName();
+      if (name.startswith(".tdata") || name.startswith(".tbss"))
+        tlsUsed = true;
+    }
   }
 
   if (inferFeatures)
@@ -410,6 +425,10 @@ void Writer::populateTargetFeatures() {
   if (!used.count("bulk-memory") && config->passiveSegments)
     error("'bulk-memory' feature must be used in order to emit passive "
           "segments");
+
+  if (!used.count("bulk-memory") && tlsUsed)
+    error("'bulk-memory' feature must be used in order to use thread-local "
+          "storage");
 
   // Validate that used features are allowed in output
   if (!inferFeatures) {
@@ -492,8 +511,8 @@ void Writer::calculateExports() {
       // implement in all major browsers.
       // See: https://github.com/WebAssembly/mutable-global
       if (g->getGlobalType()->Mutable) {
-        // Only the __stack_pointer should ever be create as mutable.
-        assert(g == WasmSym::stackPointer);
+        // Only __stack_pointer and __tls_base should ever be create as mutable.
+        assert(g == WasmSym::stackPointer || g == WasmSym::tlsBase);
         continue;
       }
       export_ = {name, WASM_EXTERNAL_GLOBAL, g->getGlobalIndex()};
@@ -602,6 +621,11 @@ static StringRef getOutputDataSegmentName(StringRef name) {
   // we only have a single __memory_base to use as our base address.
   if (config->isPic)
     return ".data";
+  // We only support one thread-local segment, so we must merge the segments
+  // despite --no-merge-data-segments.
+  // We also need to merge .tbss into .tdata so they share the same offsets.
+  if (name.startswith(".tdata") || name.startswith(".tbss"))
+    return ".tdata";
   if (!config->mergeDataSegments)
     return name;
   if (name.startswith(".text."))
@@ -625,7 +649,7 @@ void Writer::createOutputSegments() {
       if (s == nullptr) {
         LLVM_DEBUG(dbgs() << "new segment: " << name << "\n");
         s = make<OutputSegment>(name, segments.size());
-        if (config->passiveSegments)
+        if (config->passiveSegments || name == ".tdata")
           s->initFlags = WASM_SEGMENT_IS_PASSIVE;
         segments.push_back(s);
       }
@@ -655,7 +679,7 @@ void Writer::createInitMemoryFunction() {
 
     // initialize passive data segments
     for (const OutputSegment *s : segments) {
-      if (s->initFlags & WASM_SEGMENT_IS_PASSIVE) {
+      if (s->initFlags & WASM_SEGMENT_IS_PASSIVE && s->name != ".tdata") {
         // destination address
         writeU8(os, WASM_OPCODE_I32_CONST, "i32.const");
         writeSleb128(os, s->startVA, "destination address");
@@ -735,6 +759,49 @@ void Writer::createCallCtorsFunction() {
   }
 
   createFunction(WasmSym::callCtors, bodyContent);
+}
+
+void Writer::createInitTLSFunction() {
+  if (!WasmSym::initTLS->isLive())
+    return;
+
+  std::string bodyContent;
+  {
+    raw_string_ostream os(bodyContent);
+
+    OutputSegment *tlsSeg = nullptr;
+    for (auto *seg : segments) {
+      if (seg->name == ".tdata")
+        tlsSeg = seg;
+      break;
+    }
+
+    writeUleb128(os, 0, "num locals");
+    if (tlsSeg) {
+      writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
+      writeUleb128(os, 0, "local index");
+
+      writeU8(os, WASM_OPCODE_GLOBAL_SET, "global.set");
+      writeUleb128(os, WasmSym::tlsBase->getGlobalIndex(), "global index");
+
+      writeU8(os, WASM_OPCODE_LOCAL_GET, "local.get");
+      writeUleb128(os, 0, "local index");
+
+      writeU8(os, WASM_OPCODE_I32_CONST, "i32.const");
+      writeSleb128(os, 0, "segment offset");
+
+      writeU8(os, WASM_OPCODE_I32_CONST, "i32.const");
+      writeSleb128(os, tlsSeg->size, "memory region size");
+
+      writeU8(os, WASM_OPCODE_MISC_PREFIX, "bulk-memory prefix");
+      writeUleb128(os, WASM_OPCODE_MEMORY_INIT, "MEMORY.INIT");
+      writeUleb128(os, tlsSeg->index, "segment index immediate");
+      writeU8(os, 0, "memory index immediate");
+    }
+    writeU8(os, WASM_OPCODE_END, "end function");
+  }
+
+  createFunction(WasmSym::initTLS, bodyContent);
 }
 
 // Populate InitFunctions vector with init functions from all input objects.
@@ -828,6 +895,12 @@ void Writer::run() {
       createApplyRelocationsFunction();
     createCallCtorsFunction();
   }
+
+  if (config->sharedMemory && !config->shared)
+    createInitTLSFunction();
+
+  if (errorCount())
+    return;
 
   log("-- calculateTypes");
   calculateTypes();
