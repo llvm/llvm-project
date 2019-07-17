@@ -257,6 +257,7 @@ Clang-Tidy Checks
    readability-braces-around-statements
    readability-const-return-type
    readability-container-size-empty
+   readability-convert-member-functions-to-static
    readability-delete-null-pointer
    readability-deleted-default
    readability-else-after-return

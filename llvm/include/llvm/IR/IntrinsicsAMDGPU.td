@@ -296,29 +296,33 @@ def int_amdgcn_fract : Intrinsic<
   [llvm_anyfloat_ty], [LLVMMatchType<0>], [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_cvt_pkrtz : Intrinsic<
-  [llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty],
-  [IntrNoMem, IntrSpeculatable]
+def int_amdgcn_cvt_pkrtz : GCCBuiltin<"__builtin_amdgcn_cvt_pkrtz">,
+  Intrinsic<[llvm_v2f16_ty], [llvm_float_ty, llvm_float_ty],
+            [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_cvt_pknorm_i16 : Intrinsic<
-  [llvm_v2i16_ty], [llvm_float_ty, llvm_float_ty],
-  [IntrNoMem, IntrSpeculatable]
+def int_amdgcn_cvt_pknorm_i16 :
+  GCCBuiltin<"__builtin_amdgcn_cvt_pknorm_i16">,
+  Intrinsic<[llvm_v2i16_ty], [llvm_float_ty, llvm_float_ty],
+            [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_cvt_pknorm_u16 : Intrinsic<
-  [llvm_v2i16_ty], [llvm_float_ty, llvm_float_ty],
-  [IntrNoMem, IntrSpeculatable]
+def int_amdgcn_cvt_pknorm_u16 :
+  GCCBuiltin<"__builtin_amdgcn_cvt_pknorm_u16">,
+  Intrinsic<[llvm_v2i16_ty], [llvm_float_ty, llvm_float_ty],
+            [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_cvt_pk_i16 : Intrinsic<
+def int_amdgcn_cvt_pk_i16 :
+    GCCBuiltin<"__builtin_amdgcn_cvt_pk_i16">,
+    Intrinsic<
   [llvm_v2i16_ty], [llvm_i32_ty, llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_cvt_pk_u16 : Intrinsic<
-  [llvm_v2i16_ty], [llvm_i32_ty, llvm_i32_ty],
-  [IntrNoMem, IntrSpeculatable]
+def int_amdgcn_cvt_pk_u16 : GCCBuiltin<"__builtin_amdgcn_cvt_pk_u16">,
+  Intrinsic<[llvm_v2i16_ty], [llvm_i32_ty, llvm_i32_ty],
+    [IntrNoMem, IntrSpeculatable]
 >;
 
 def int_amdgcn_class : Intrinsic<
@@ -1246,13 +1250,13 @@ def int_amdgcn_ds_swizzle :
             [IntrNoMem, IntrConvergent, ImmArg<1>]>;
 
 def int_amdgcn_ubfe : Intrinsic<[llvm_anyint_ty],
-  [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
-  [IntrNoMem, IntrSpeculatable]
+    [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
+    [IntrNoMem, IntrSpeculatable]
 >;
 
 def int_amdgcn_sbfe : Intrinsic<[llvm_anyint_ty],
-  [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
-  [IntrNoMem, IntrSpeculatable]
+    [LLVMMatchType<0>, llvm_i32_ty, llvm_i32_ty],
+    [IntrNoMem, IntrSpeculatable]
 >;
 
 def int_amdgcn_lerp :
@@ -1340,13 +1344,14 @@ def int_amdgcn_writelane :
   [IntrNoMem, IntrConvergent]
 >;
 
-def int_amdgcn_alignbit : Intrinsic<[llvm_i32_ty],
+def int_amdgcn_alignbit :
+  GCCBuiltin<"__builtin_amdgcn_alignbit">, Intrinsic<[llvm_i32_ty],
   [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 
-def int_amdgcn_alignbyte : Intrinsic<[llvm_i32_ty],
-  [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+def int_amdgcn_alignbyte : GCCBuiltin<"__builtin_amdgcn_alignbyte">,
+  Intrinsic<[llvm_i32_ty], [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
   [IntrNoMem, IntrSpeculatable]
 >;
 
@@ -1515,13 +1520,13 @@ def int_amdgcn_ds_bpermute :
 //===----------------------------------------------------------------------===//
 
 // llvm.amdgcn.permlane16 <old> <src0> <src1> <src2> <fi> <bound_control>
-def int_amdgcn_permlane16 :
+def int_amdgcn_permlane16 : GCCBuiltin<"__builtin_amdgcn_permlane16">,
   Intrinsic<[llvm_i32_ty],
             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
             [IntrNoMem, IntrConvergent, ImmArg<4>, ImmArg<5>]>;
 
 // llvm.amdgcn.permlanex16 <old> <src0> <src1> <src2> <fi> <bound_control>
-def int_amdgcn_permlanex16 :
+def int_amdgcn_permlanex16 : GCCBuiltin<"__builtin_amdgcn_permlanex16">,
   Intrinsic<[llvm_i32_ty],
             [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty, llvm_i1_ty, llvm_i1_ty],
             [IntrNoMem, IntrConvergent, ImmArg<4>, ImmArg<5>]>;
@@ -1675,83 +1680,103 @@ def int_amdgcn_global_atomic_fadd    : AMDGPUGlobalAtomicNoRtn;
 // llvm.amdgcn.mfma.f32.* vdst, srcA, srcB, srcC, cbsz, abid, blgp
 def int_amdgcn_mfma_f32_32x32x1f32 : Intrinsic<[llvm_v32f32_ty],
   [llvm_float_ty, llvm_float_ty, llvm_v32f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_16x16x1f32 : Intrinsic<[llvm_v16f32_ty],
   [llvm_float_ty, llvm_float_ty, llvm_v16f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_4x4x1f32 : Intrinsic<[llvm_v4f32_ty],
   [llvm_float_ty, llvm_float_ty, llvm_v4f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_32x32x2f32 : Intrinsic<[llvm_v16f32_ty],
   [llvm_float_ty, llvm_float_ty, llvm_v16f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_16x16x4f32 : Intrinsic<[llvm_v4f32_ty],
   [llvm_float_ty, llvm_float_ty, llvm_v4f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_32x32x4f16 : Intrinsic<[llvm_v32f32_ty],
   [llvm_v4f16_ty, llvm_v4f16_ty, llvm_v32f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_16x16x4f16 : Intrinsic<[llvm_v16f32_ty],
   [llvm_v4f16_ty, llvm_v4f16_ty, llvm_v16f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_4x4x4f16 : Intrinsic<[llvm_v4f32_ty],
   [llvm_v4f16_ty, llvm_v4f16_ty, llvm_v4f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_32x32x8f16 : Intrinsic<[llvm_v16f32_ty],
   [llvm_v4f16_ty, llvm_v4f16_ty, llvm_v16f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_16x16x16f16 : Intrinsic<[llvm_v4f32_ty],
   [llvm_v4f16_ty, llvm_v4f16_ty, llvm_v4f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_i32_32x32x4i8 : Intrinsic<[llvm_v32i32_ty],
   [llvm_i32_ty, llvm_i32_ty, llvm_v32i32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_i32_16x16x4i8 : Intrinsic<[llvm_v16i32_ty],
   [llvm_i32_ty, llvm_i32_ty, llvm_v16i32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_i32_4x4x4i8 : Intrinsic<[llvm_v4i32_ty],
   [llvm_i32_ty, llvm_i32_ty, llvm_v4i32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_i32_32x32x8i8 : Intrinsic<[llvm_v16i32_ty],
   [llvm_i32_ty, llvm_i32_ty, llvm_v16i32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_i32_16x16x16i8 : Intrinsic<[llvm_v4i32_ty],
   [llvm_i32_ty, llvm_i32_ty, llvm_v4i32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_32x32x2bf16 : Intrinsic<[llvm_v32f32_ty],
   [llvm_v2i16_ty, llvm_v2i16_ty, llvm_v32f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_16x16x2bf16 : Intrinsic<[llvm_v16f32_ty],
   [llvm_v2i16_ty, llvm_v2i16_ty, llvm_v16f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_4x4x2bf16 : Intrinsic<[llvm_v4f32_ty],
   [llvm_v2i16_ty, llvm_v2i16_ty, llvm_v4f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_32x32x4bf16 : Intrinsic<[llvm_v16f32_ty],
   [llvm_v2i16_ty, llvm_v2i16_ty, llvm_v16f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 def int_amdgcn_mfma_f32_16x16x8bf16 : Intrinsic<[llvm_v4f32_ty],
   [llvm_v2i16_ty, llvm_v2i16_ty, llvm_v4f32_ty,
-   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty], [IntrConvergent, IntrNoMem]>;
+   llvm_i32_ty, llvm_i32_ty, llvm_i32_ty],
+   [IntrConvergent, IntrNoMem, ImmArg<3>, ImmArg<4>, ImmArg<5>]>;
 
 //===----------------------------------------------------------------------===//
 // Special Intrinsics for backend internal use only. No frontend

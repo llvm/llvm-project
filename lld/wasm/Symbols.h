@@ -426,6 +426,15 @@ struct WasmSym {
   // linear memory.
   static GlobalSymbol *stackPointer;
 
+  // __tls_base
+  // Global that holds the address of the base of the current thread's
+  // TLS block.
+  static GlobalSymbol *tlsBase;
+
+  // __tls_size
+  // Symbol whose value is the size of the TLS block.
+  static GlobalSymbol *tlsSize;
+
   // __data_end
   // Symbol marking the end of the data and bss.
   static DefinedData *dataEnd;
@@ -447,6 +456,10 @@ struct WasmSym {
   // __wasm_apply_relocs
   // Function that applies relocations to data segment post-instantiation.
   static DefinedFunction *applyRelocs;
+
+  // __wasm_init_tls
+  // Function that allocates thread-local storage and initializes it.
+  static DefinedFunction *initTLS;
 
   // __dso_handle
   // Symbol used in calls to __cxa_atexit to determine current DLL

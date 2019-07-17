@@ -186,13 +186,21 @@ public:
     for (auto &F : M)
       replaceFeatures(F, FeatureStr);
 
-    bool Stripped = false;
-    if (!Features[WebAssembly::FeatureAtomics]) {
-      Stripped |= stripAtomics(M);
-      Stripped |= stripThreadLocals(M);
-    }
+    bool StrippedAtomics = false;
+    bool StrippedTLS = false;
 
-    recordFeatures(M, Features, Stripped);
+    if (!Features[WebAssembly::FeatureAtomics])
+      StrippedAtomics = stripAtomics(M);
+
+    if (!Features[WebAssembly::FeatureBulkMemory])
+      StrippedTLS = stripThreadLocals(M);
+
+    if (StrippedAtomics && !StrippedTLS)
+      stripThreadLocals(M);
+    else if (StrippedTLS && !StrippedAtomics)
+      stripAtomics(M);
+
+    recordFeatures(M, Features, StrippedAtomics || StrippedTLS);
 
     // Conservatively assume we have made some change
     return true;
@@ -271,7 +279,8 @@ private:
         // "atomics" is special: code compiled without atomics may have had its
         // atomics lowered to nonatomic operations. In that case, atomics is
         // disallowed to prevent unsafe linking with atomics-enabled objects.
-        assert(!Features[WebAssembly::FeatureAtomics]);
+        assert(!Features[WebAssembly::FeatureAtomics] ||
+               !Features[WebAssembly::FeatureBulkMemory]);
         M.addModuleFlag(Module::ModFlagBehavior::Error, MDKey,
                         wasm::WASM_FEATURE_PREFIX_DISALLOWED);
       } else if (Features[KV.Value]) {

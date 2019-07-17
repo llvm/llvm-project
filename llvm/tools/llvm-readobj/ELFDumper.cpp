@@ -183,6 +183,8 @@ public:
 
   void printELFLinkerOptions() override;
 
+  const object::ELFObjectFile<ELFT> *getElfObject() const { return ObjF; };
+
 private:
   std::unique_ptr<DumpStyle<ELFT>> ELFDumperStyle;
 
@@ -3009,15 +3011,19 @@ static std::string getSectionTypeString(unsigned Arch, unsigned Type) {
 
 template <class ELFT>
 static StringRef getSectionName(const typename ELFT::Shdr &Sec,
-                                const ELFFile<ELFT> &Obj,
+                                const ELFObjectFile<ELFT> &ElfObj,
                                 ArrayRef<typename ELFT::Shdr> Sections) {
+  const ELFFile<ELFT> &Obj = *ElfObj.getELFFile();
   uint32_t Index = Obj.getHeader()->e_shstrndx;
   if (Index == ELF::SHN_XINDEX)
     Index = Sections[0].sh_link;
   if (!Index) // no section string table.
     return "";
+  // TODO: Test a case when the sh_link of the section with index 0 is broken.
   if (Index >= Sections.size())
-    reportError("invalid section index");
+    reportError(ElfObj.getFileName(),
+                createError("section header string table index " +
+                            Twine(Index) + " does not exist"));
   StringRef Data = toStringRef(unwrapOrError(
       Obj.template getSectionContentsAsArray<uint8_t>(&Sections[Index])));
   return unwrapOrError(Obj.getSectionName(&Sec, Data));
@@ -3040,10 +3046,11 @@ void GNUStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
     printField(F);
   OS << "\n";
 
+  const ELFObjectFile<ELFT> *ElfObj = this->dumper()->getElfObject();
   size_t SectionIndex = 0;
   for (const Elf_Shdr &Sec : Sections) {
     Fields[0].Str = to_string(SectionIndex);
-    Fields[1].Str = getSectionName(Sec, *Obj, Sections);
+    Fields[1].Str = getSectionName(Sec, *ElfObj, Sections);
     Fields[2].Str =
         getSectionTypeString(Obj->getHeader()->e_machine, Sec.sh_type);
     Fields[3].Str =
@@ -4590,8 +4597,9 @@ void LLVMStyle<ELFT>::printSectionHeaders(const ELFO *Obj) {
 
   int SectionIndex = -1;
   ArrayRef<Elf_Shdr> Sections = unwrapOrError(Obj->sections());
+  const ELFObjectFile<ELFT> *ElfObj = this->dumper()->getElfObject();
   for (const Elf_Shdr &Sec : Sections) {
-    StringRef Name = getSectionName(Sec, *Obj, Sections);
+    StringRef Name = getSectionName(Sec, *ElfObj, Sections);
     DictScope SectionD(W, "Section");
     W.printNumber("Index", ++SectionIndex);
     W.printNumber("Name", Name, Sec.sh_name);

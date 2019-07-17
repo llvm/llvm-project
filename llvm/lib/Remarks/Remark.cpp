@@ -66,6 +66,10 @@ LLVMRemarkArgGetDebugLoc(LLVMRemarkArgRef Arg) {
   return nullptr;
 }
 
+extern "C" void LLVMRemarkEntryDispose(LLVMRemarkEntryRef Remark) {
+  delete unwrap(Remark);
+}
+
 extern "C" LLVMRemarkType LLVMRemarkEntryGetType(LLVMRemarkEntryRef Remark) {
   // Assume here that the enums can be converted both ways.
   return static_cast<LLVMRemarkType>(unwrap(Remark)->RemarkType);

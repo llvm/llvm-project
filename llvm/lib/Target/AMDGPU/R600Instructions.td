@@ -296,6 +296,8 @@ class VTX_READ <string name, dag outs, list<dag> pattern>
 }
 
 // FIXME: Deprecated.
+class LocalLoad <SDPatternOperator op> : LoadFrag <op>, LocalAddress;
+
 class AZExtLoadBase <SDPatternOperator ld_node>: PatFrag<(ops node:$ptr),
                                               (ld_node node:$ptr), [{
   LoadSDNode *L = cast<LoadSDNode>(N);

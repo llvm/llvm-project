@@ -58,6 +58,12 @@ void prefetch() {
 // CHECK: call {{.*}} @llvm.prefetch(i8* null, i32 0, i32 3, i32 0)
 }
 
+int32_t jcvt(double v) {
+  //CHECK-LABEL: @jcvt(
+  //CHECK: call i32 @llvm.aarch64.fjcvtzs
+  return __builtin_arm_jcvt(v);
+}
+
 __typeof__(__builtin_arm_rsr("1:2:3:4:5")) rsr(void);
 
 uint32_t rsr() {

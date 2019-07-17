@@ -13,8 +13,9 @@ DESCRIPTION
 
 The :program:`llvm-nm` utility lists the names of symbols from LLVM bitcode
 files, object files, and archives. Each symbol is listed along with some simple
-information about its provenance. If no filename is specified, or *-* is used as
-a filename, :program:`llvm-nm` will read a file from its standard input stream.
+information about its provenance. If no filename is specified, *a.out* is used
+as the input. If *-* is used as a filename, :program:`llvm-nm` will read a file
+from its standard input stream.
 
 :program:`llvm-nm`'s default output format is the traditional BSD :program:`nm`
 output format. Each such output record consists of an (optional) 8-digit

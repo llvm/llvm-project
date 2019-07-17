@@ -233,6 +233,8 @@ bool WebAssemblyFastISel::computeAddress(const Value *Obj, Address &Addr) {
       return false;
     if (Addr.getGlobalValue())
       return false;
+    if (GV->isThreadLocal())
+      return false;
     Addr.setGlobalValue(GV);
     return true;
   }
@@ -613,6 +615,8 @@ unsigned WebAssemblyFastISel::fastMaterializeAlloca(const AllocaInst *AI) {
 unsigned WebAssemblyFastISel::fastMaterializeConstant(const Constant *C) {
   if (const GlobalValue *GV = dyn_cast<GlobalValue>(C)) {
     if (TLI.isPositionIndependent())
+      return 0;
+    if (GV->isThreadLocal())
       return 0;
     unsigned ResultReg =
         createResultReg(Subtarget->hasAddr64() ? &WebAssembly::I64RegClass

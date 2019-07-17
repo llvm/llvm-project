@@ -209,6 +209,25 @@ const OMPClauseWithPostUpdate *OMPClauseWithPostUpdate::get(const OMPClause *C) 
   return nullptr;
 }
 
+/// Gets the address of the original, non-captured, expression used in the
+/// clause as the preinitializer.
+static Stmt **getAddrOfExprAsWritten(Stmt *S) {
+  if (!S)
+    return nullptr;
+  if (auto *DS = dyn_cast<DeclStmt>(S)) {
+    assert(DS->isSingleDecl() && "Only single expression must be captured.");
+    if (auto *OED = dyn_cast<OMPCapturedExprDecl>(DS->getSingleDecl()))
+      return OED->getInitAddress();
+  }
+  return nullptr;
+}
+
+OMPClause::child_range OMPIfClause::used_children() {
+  if (Stmt **C = getAddrOfExprAsWritten(getPreInitStmt()))
+    return child_range(C, C + 1);
+  return child_range(&Condition, &Condition + 1);
+}
+
 OMPOrderedClause *OMPOrderedClause::Create(const ASTContext &C, Expr *Num,
                                            unsigned NumLoops,
                                            SourceLocation StartLoc,

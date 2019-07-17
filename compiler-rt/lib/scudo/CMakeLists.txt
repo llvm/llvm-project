@@ -14,10 +14,6 @@ append_list_if(COMPILER_RT_HAS_LIBPTHREAD pthread SCUDO_MINIMAL_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_LIBLOG log SCUDO_MINIMAL_DYNAMIC_LIBS)
 append_list_if(COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG -fno-omit-frame-pointer
                SCUDO_CFLAGS)
-if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang")
-  append_list_if(COMPILER_RT_HAS_OMIT_FRAME_POINTER_FLAG
-                 -mno-omit-leaf-frame-pointer SCUDO_CFLAGS)
-endif()
 
 set(SCUDO_DYNAMIC_LINK_FLAGS ${SANITIZER_COMMON_LINK_FLAGS})
 # Use gc-sections by default to avoid unused code being pulled in.

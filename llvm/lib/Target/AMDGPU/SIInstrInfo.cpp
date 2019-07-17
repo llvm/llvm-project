@@ -6118,6 +6118,25 @@ bool SIInstrInfo::isBufferSMRD(const MachineInstr &MI) const {
   return RCID == AMDGPU::SReg_128RegClassID;
 }
 
+bool SIInstrInfo::isLegalFLATOffset(int64_t Offset, unsigned AddrSpace,
+                                    bool Signed) const {
+  // TODO: Should 0 be special cased?
+  if (!ST.hasFlatInstOffsets())
+    return false;
+
+  if (ST.hasFlatSegmentOffsetBug() && AddrSpace == AMDGPUAS::FLAT_ADDRESS)
+    return false;
+
+  if (ST.getGeneration() >= AMDGPUSubtarget::GFX10) {
+    return (Signed && isInt<12>(Offset)) ||
+           (!Signed && isUInt<11>(Offset));
+  }
+
+  return (Signed && isInt<13>(Offset)) ||
+         (!Signed && isUInt<12>(Offset));
+}
+
+
 // This must be kept in sync with the SIEncodingFamily class in SIInstrInfo.td
 enum SIEncodingFamily {
   SI = 0,

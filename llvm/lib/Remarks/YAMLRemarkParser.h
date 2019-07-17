@@ -13,7 +13,6 @@
 #ifndef LLVM_REMARKS_YAML_REMARK_PARSER_H
 #define LLVM_REMARKS_YAML_REMARK_PARSER_H
 
-#include "RemarkParserImpl.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Remarks/Remark.h"
@@ -27,112 +26,69 @@
 
 namespace llvm {
 namespace remarks {
-/// Parses and holds the state of the latest parsed remark.
-struct YAMLRemarkParser {
-  /// Source manager for better error messages.
-  SourceMgr SM;
-  /// Stream for yaml parsing.
-  yaml::Stream Stream;
-  /// Storage for the error stream.
-  std::string ErrorString;
-  /// The error stream.
-  raw_string_ostream ErrorStream;
-  /// Temporary parsing buffer for the arguments.
-  SmallVector<Argument, 8> TmpArgs;
-  /// The string table used for parsing strings.
-  Optional<const ParsedStringTable *> StrTab;
-  /// The state used by the parser to parse a remark entry. Invalidated with
-  /// every call to `parseYAMLElement`.
-  struct ParseState {
-    /// Temporary parsing buffer for the arguments.
-    /// The parser itself is owning this buffer in order to reduce the number of
-    /// allocations.
-    SmallVectorImpl<Argument> &Args;
-    Remark TheRemark;
-
-    ParseState(SmallVectorImpl<Argument> &Args) : Args(Args) {}
-    /// Use Args only as a **temporary** buffer.
-    ~ParseState() { Args.clear(); }
-  };
-
-  /// The current state of the parser. If the parsing didn't start yet, it will
-  /// not be containing any value.
-  Optional<ParseState> State;
-
-  YAMLRemarkParser(StringRef Buf,
-                   Optional<const ParsedStringTable *> StrTab = None)
-      : SM(), Stream(Buf, SM), ErrorString(), ErrorStream(ErrorString),
-        TmpArgs(), StrTab(StrTab) {
-    SM.setDiagHandler(YAMLRemarkParser::HandleDiagnostic, this);
-  }
-
-  /// Parse a YAML element.
-  Error parseYAMLElement(yaml::Document &Remark);
-
-private:
-  /// Parse one key to a string.
-  /// otherwise.
-  Error parseKey(StringRef &Result, yaml::KeyValueNode &Node);
-  /// Parse one value to a string.
-  template <typename T> Error parseStr(T &Result, yaml::KeyValueNode &Node);
-  /// Parse one value to an unsigned.
-  template <typename T>
-  Error parseUnsigned(T &Result, yaml::KeyValueNode &Node);
-  /// Parse the type of a remark to an enum type.
-  Error parseType(Type &Result, yaml::MappingNode &Node);
-  /// Parse a debug location.
-  Error parseDebugLoc(Optional<RemarkLocation> &Result,
-                      yaml::KeyValueNode &Node);
-  /// Parse a remark field and update the parsing state.
-  Error parseRemarkField(yaml::KeyValueNode &RemarkField);
-  /// Parse an argument.
-  Error parseArg(SmallVectorImpl<Argument> &TmpArgs, yaml::Node &Node);
-  /// Parse an entry from the contents of an argument.
-  Error parseArgEntry(yaml::KeyValueNode &ArgEntry, StringRef &KeyStr,
-                      StringRef &ValueStr, Optional<RemarkLocation> &Loc);
-
-  /// Handle a diagnostic from the YAML stream. Records the error in the
-  /// YAMLRemarkParser class.
-  static void HandleDiagnostic(const SMDiagnostic &Diag, void *Ctx);
-};
 
 class YAMLParseError : public ErrorInfo<YAMLParseError> {
 public:
   static char ID;
 
-  YAMLParseError(StringRef Message, yaml::Node &Node)
-      : Message(Message), Node(Node) {}
+  YAMLParseError(StringRef Message, SourceMgr &SM, yaml::Stream &Stream,
+                 yaml::Node &Node);
+
+  YAMLParseError(StringRef Message) : Message(Message) {}
 
   void log(raw_ostream &OS) const override { OS << Message; }
   std::error_code convertToErrorCode() const override {
     return inconvertibleErrorCode();
   }
 
-  StringRef getMessage() const { return Message; }
-  yaml::Node &getNode() const { return Node; }
-
 private:
-  StringRef Message; // No need to hold a full copy of the buffer.
-  yaml::Node &Node;
+  std::string Message;
 };
 
 /// Regular YAML to Remark parser.
-struct YAMLParserImpl : public ParserImpl {
-  /// The object parsing the YAML.
-  YAMLRemarkParser YAMLParser;
+struct YAMLRemarkParser : public Parser {
+  /// The string table used for parsing strings.
+  Optional<const ParsedStringTable *> StrTab;
+  /// Last error message that can come from the YAML parser diagnostics.
+  /// We need this for catching errors in the constructor.
+  std::string LastErrorMessage;
+  /// Source manager for better error messages.
+  SourceMgr SM;
+  /// Stream for yaml parsing.
+  yaml::Stream Stream;
   /// Iterator in the YAML stream.
   yaml::document_iterator YAMLIt;
-  /// Set to `true` if we had any errors during parsing.
-  bool HasErrors = false;
 
-  YAMLParserImpl(StringRef Buf,
-                 Optional<const ParsedStringTable *> StrTab = None)
-      : ParserImpl{ParserFormat::YAML}, YAMLParser(Buf, StrTab),
-        YAMLIt(YAMLParser.Stream.begin()), HasErrors(false) {}
+  YAMLRemarkParser(StringRef Buf,
+                   Optional<const ParsedStringTable *> StrTab = None);
 
-  static bool classof(const ParserImpl *PI) {
-    return PI->Format == ParserFormat::YAML;
+  Expected<std::unique_ptr<Remark>> next() override;
+
+  static bool classof(const Parser *P) {
+    return P->ParserFormat == Format::YAML;
   }
+
+private:
+  /// Create a YAMLParseError error from an existing error generated by the YAML
+  /// parser.
+  /// If there is no error, this returns Success.
+  Error error();
+  /// Create a YAMLParseError error referencing a specific node.
+  Error error(StringRef Message, yaml::Node &Node);
+  /// Parse a YAML remark to a remarks::Remark object.
+  Expected<std::unique_ptr<Remark>> parseRemark(yaml::Document &Remark);
+  /// Parse the type of a remark to an enum type.
+  Expected<Type> parseType(yaml::MappingNode &Node);
+  /// Parse one key to a string.
+  Expected<StringRef> parseKey(yaml::KeyValueNode &Node);
+  /// Parse one value to a string.
+  Expected<StringRef> parseStr(yaml::KeyValueNode &Node);
+  /// Parse one value to an unsigned.
+  Expected<unsigned> parseUnsigned(yaml::KeyValueNode &Node);
+  /// Parse a debug location.
+  Expected<RemarkLocation> parseDebugLoc(yaml::KeyValueNode &Node);
+  /// Parse an argument.
+  Expected<Argument> parseArg(yaml::Node &Node);
 };
 } // end namespace remarks
 } // end namespace llvm
