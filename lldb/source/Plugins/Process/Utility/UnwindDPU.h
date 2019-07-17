@@ -58,8 +58,14 @@ private:
   typedef std::shared_ptr<Cursor> CursorSP;
   std::vector<CursorSP> m_frames;
 
-  void SetFrame(CursorSP &frame, lldb::addr_t cfa, lldb::addr_t pc,
+  void SetFrame(CursorSP *prev_frame, lldb::addr_t cfa, lldb::addr_t pc,
                 lldb::RegisterContextSP reg_ctx_sp);
+
+  void GetFunction(Function **fct, lldb::addr_t pc);
+
+  lldb::addr_t ReadMemory(lldb::addr_t src_addr);
+
+  bool PCIsInstructionReturn(Function *fct, lldb::addr_t pc);
 };
 } // namespace lldb_private
 #endif /* dpu_UnwindDPU_h_ */
