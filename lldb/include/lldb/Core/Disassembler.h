@@ -311,6 +311,8 @@ public:
 
   uint32_t GetIndexOfInstructionAtAddress(const Address &addr);
 
+  lldb::InstructionSP GetInstructionAtOffset(const lldb::addr_t offset);
+
   void Clear();
 
   void Append(lldb::InstructionSP &inst_sp);

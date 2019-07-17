@@ -1026,6 +1026,23 @@ InstructionList::GetIndexOfInstructionAtAddress(const Address &address) {
   return index;
 }
 
+InstructionSP
+InstructionList::GetInstructionAtOffset(const lldb::addr_t offset) {
+  InstructionSP instruction_sp;
+  size_t num_instructions = m_instructions.size();
+  uint32_t index = UINT32_MAX;
+  for (size_t i = 0; i < num_instructions; i++) {
+    if (m_instructions[i]->GetAddress().GetOffset() == offset) {
+      index = i;
+      break;
+    }
+  }
+  if (index != UINT32_MAX) {
+    instruction_sp = m_instructions[index];
+  }
+  return instruction_sp;
+}
+
 uint32_t
 InstructionList::GetIndexOfInstructionAtLoadAddress(lldb::addr_t load_addr,
                                                     Target &target) {
