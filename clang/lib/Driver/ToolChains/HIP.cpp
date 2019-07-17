@@ -280,6 +280,7 @@ void HIPToolChain::addClangTargetOptions(
     CC1Args.push_back("-fgpu-rdc");
 
   CC1Args.push_back("-fcuda-allow-variadic-functions");
+  CC1Args.push_back("-fcuda-force-lambda-odr");
 
   // Default to "hidden" visibility, as object level linking will not be
   // supported for the foreseeable future.
