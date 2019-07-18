@@ -42,15 +42,14 @@ endif ()
 if(CMAKE_CROSSCOMPILING AND LLDB_BUILT_STANDALONE)
   set(LLVM_USE_HOST_TOOLS ON)
   include(CrossCompile)
-  if (NOT LLDB_PATH_TO_NATIVE_LLVM_BUILD OR
-      NOT LLDB_PATH_TO_NATIVE_CLANG_BUILD)
+  if (NOT NATIVE_LLVM_DIR OR NOT NATIVE_Clang_DIR)
     message(FATAL_ERROR
-      "Crosscompiling standalone requires the variables LLDB_PATH_TO_NATIVE_{CLANG,LLVM}_BUILD
+      "Crosscompiling standalone requires the variables NATIVE_{CLANG,LLVM}_DIR
       for building the native lldb-tblgen used during the build process.")
   endif()
   llvm_create_cross_target(lldb NATIVE "" Release
-    -DLLDB_PATH_TO_LLVM_BUILD=${LLDB_PATH_TO_NATIVE_LLVM_BUILD}
-    -DLLDB_PATH_TO_CLANG_BUILD=${LLDB_PATH_TO_NATIVE_CLANG_BUILD})
+    -DLLVM_DIR=${NATIVE_LLVM_DIR}
+    -DClang_DIR=${NATIVE_Clang_DIR})
 endif()
 
 add_subdirectory(utils/TableGen)
