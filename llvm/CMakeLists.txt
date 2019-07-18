@@ -16,7 +16,7 @@ if(POLICY CMP0077)
 endif()
 
 if(NOT DEFINED LLVM_VERSION_MAJOR)
-  set(LLVM_VERSION_MAJOR 9)
+  set(LLVM_VERSION_MAJOR 10)
 endif()
 if(NOT DEFINED LLVM_VERSION_MINOR)
   set(LLVM_VERSION_MINOR 0)
@@ -642,8 +642,6 @@ option(LLVM_ENABLE_PLUGINS "Enable plugin support" ${LLVM_ENABLE_PLUGINS_default
 
 include(HandleLLVMOptions)
 
-# We support both Python 2 and 3.
-set(Python_ADDITIONAL_VERSIONS 3.7 3.6 3.5 2.7)
 include(FindPythonInterp)
 if( NOT PYTHONINTERP_FOUND )
   message(FATAL_ERROR

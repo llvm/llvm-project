@@ -949,8 +949,7 @@ TEST_F(GISelMITest, LowerMergeValues) {
   for (int I = 0; I != 2; ++I)
     Merge2Ops.push_back(B.buildConstant(S8, I).getReg(0));
 
-    auto Merge2 = B.buildMerge(S16, Merge2Ops);
-
+  auto Merge2 = B.buildMerge(S16, Merge2Ops);
 
   EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
             Helper.widenScalar(*Merge0, 1, S9));

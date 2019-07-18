@@ -4,7 +4,7 @@ RUN: FileCheck --input-file %s %s
 
 ; Numeric variable definition without spaces.
 DEF NO SPC
-11
+10
 CHECK-LABEL: DEF NO SPC
 CHECK-NEXT: [[#VAR1:]]
 
@@ -17,6 +17,12 @@ CHECK-LABEL: DEF SPC
 CHECK-NEXT: [[# VAR1a:]]
 CHECK-NEXT: [[# VAR1b :]]
 CHECK-NEXT: [[# VAR1c : ]]
+
+; Numeric variable redefinition.
+REDEF NO SPC
+11
+CHECK-LABEL: REDEF
+CHECK-NEXT: [[#VAR1:]]
 
 ; Numeric expressions using variables defined on other lines without spaces.
 USE NO SPC
