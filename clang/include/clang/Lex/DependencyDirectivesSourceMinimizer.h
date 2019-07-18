@@ -38,6 +38,7 @@ enum TokenKind {
   pp_undef,
   pp_import,
   pp_pragma_import,
+  pp_pragma_once,
   pp_include_next,
   pp_if,
   pp_ifdef,
