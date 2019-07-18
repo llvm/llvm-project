@@ -58,12 +58,13 @@ namespace {
 
 std::vector<std::string> parseDriverOutput(llvm::StringRef Output) {
   std::vector<std::string> SystemIncludes;
-  constexpr char const *SIS = "#include <...> search starts here:";
+  const char SIS[] = "#include <...> search starts here:";
   constexpr char const *SIE = "End of search list.";
   llvm::SmallVector<llvm::StringRef, 8> Lines;
   Output.split(Lines, '\n', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
 
-  auto StartIt = std::find(Lines.begin(), Lines.end(), SIS);
+  auto StartIt = llvm::find_if(
+      Lines, [SIS](llvm::StringRef Line) { return Line.trim() == SIS; });
   if (StartIt == Lines.end()) {
     elog("System include extraction: start marker not found: {0}", Output);
     return {};

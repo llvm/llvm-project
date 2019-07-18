@@ -57,7 +57,7 @@ The improvements are...
 Improvements to clang-query
 ---------------------------
 
-- ...
+The improvements are...
 
 Improvements to clang-rename
 ----------------------------
@@ -109,14 +109,7 @@ Improvements to clang-tidy
 - New :doc:`android-cloexec-pipe2
   <clang-tidy/checks/android-cloexec-pipe2>` check.
 
-  This checks ensures that ``pipe2()`` is called with the O_CLOEXEC flag.
-
-- New :doc:`bugprone-unhandled-self-assignment
-  <clang-tidy/checks/bugprone-unhandled-self-assignment>` check.
-
-  Finds user-defined copy assignment operators which do not protect the code
-  against self-assignment either by checking self-assignment explicitly or
-  using the copy-and-swap or the copy-and-move method.
+  This checks ensures that ``pipe2()`` is called with the ``O_CLOEXEC`` flag.
 
 - New :doc:`bugprone-branch-clone
   <clang-tidy/checks/bugprone-branch-clone>` check.
@@ -131,6 +124,13 @@ Improvements to clang-tidy
   Checks if any calls to POSIX functions (except ``posix_openpt``) expect negative
   return values.
 
+- New :doc:`bugprone-unhandled-self-assignment
+  <clang-tidy/checks/bugprone-unhandled-self-assignment>` check.
+
+  Finds user-defined copy assignment operators which do not protect the code
+  against self-assignment either by checking self-assignment explicitly or
+  using the copy-and-swap or the copy-and-move method.
+
 - New :doc:`fuchsia-default-arguments-calls
   <clang-tidy/checks/fuchsia-default-arguments-calls>` check.
 
@@ -138,12 +138,18 @@ Improvements to clang-tidy
   This was previously done by `fuchsia-default-arguments check`, which has been
   removed.
 
-- New :doc:`fuchsia-default-arguments-calls
-  <clang-tidy/checks/fuchsia-default-arguments-calls>` check.
+- New :doc:`fuchsia-default-arguments-declarations
+  <clang-tidy/checks/fuchsia-default-arguments-declarations>` check.
 
   Warns if a function or method is declared with default parameters.
   This was previously done by `fuchsia-default-arguments check` check, which has
   been removed.
+
+- New :doc:`google-objc-avoid-nsobject-new
+  <clang-tidy/checks/google-objc-avoid-nsobject-new>` check.
+
+  Checks for calls to ``+new`` or overrides of it, which are prohibited by the
+  Google Objective-C style guide.
 
 - New :doc:`google-readability-avoid-underscore-in-googletest-name
   <clang-tidy/checks/google-readability-avoid-underscore-in-googletest-name>`
@@ -152,17 +158,43 @@ Improvements to clang-tidy
   Checks whether there are underscores in googletest test and test case names in
   test macros, which is prohibited by the Googletest FAQ.
 
-- New :doc:`google-objc-avoid-nsobject-new
-  <clang-tidy/checks/google-objc-avoid-nsobject-new>` check.
+- New :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
+  <clang-tidy/checks/llvm-prefer-isa-or-dyn-cast-in-conditionals>` check.
 
-  Checks for calls to ``+new`` or overrides of it, which are prohibited by the
-  Google Objective-C style guide.
+  Looks at conditionals and finds and replaces cases of ``cast<>``,
+  which will assert rather than return a null pointer, and
+  ``dyn_cast<>`` where the return value is not captured. Additionally,
+  finds and replaces cases that match the pattern ``var &&
+  isa<X>(var)``, where ``var`` is evaluated twice.
+
+- New :doc:`modernize-use-trailing-return-type
+  <clang-tidy/checks/modernize-use-trailing-return-type>` check.
+
+  Rewrites function signatures to use a trailing return type.
 
 - New :doc:`objc-super-self <clang-tidy/checks/objc-super-self>` check.
 
   Finds invocations of ``-self`` on super instances in initializers of
   subclasses of ``NSObject`` and recommends calling a superclass initializer
   instead.
+
+- New :doc:`openmp-exception-escape
+  <clang-tidy/checks/openmp-exception-escape>` check.
+
+  Analyzes OpenMP Structured Blocks and checks that no exception escapes
+  out of the Structured Block it was thrown in.
+
+- New :doc:`openmp-use-default-none
+  <clang-tidy/checks/openmp-use-default-none>` check.
+
+  Finds OpenMP directives that are allowed to contain a ``default`` clause,
+  but either don't specify it or the clause is specified but with the kind
+  other than ``none``, and suggests to use the ``default(none)`` clause.
+
+- New :doc:`readability-convert-member-functions-to-static
+  <clang-tidy/checks/readability-convert-member-functions-to-static>` check.
+
+  Finds non-static member functions that can be made ``static``.
 
 - New alias :doc:`cert-oop54-cpp
   <clang-tidy/checks/cert-oop54-cpp>` to
@@ -186,70 +218,41 @@ Improvements to clang-tidy
   which greatly reduces warnings related to loops which are unlikely to
   cause an actual functional bug.
 
-- The ‘fuchsia-default-arguments’ check has been removed.
-
-  Warnings of function or method calls and declarations with default arguments
-  were moved to :doc:`fuchsia-default-arguments-calls
-  <clang-tidy/checks/fuchsia-default-arguments-calls>` and
-  :doc:`fuchsia-default-arguments-calls
-  <clang-tidy/checks/fuchsia-default-arguments-calls>` checks respectively.
-
-- The :doc:`google-runtime-int <clang-tidy/checks/google-runtime-int>`
-  check has been disabled in Objective-C++.
-
-- The `Acronyms` and `IncludeDefaultAcronyms` options for the
-  :doc:`objc-property-declaration <clang-tidy/checks/objc-property-declaration>`
-  check have been removed.
-
-- The :doc:`modernize-use-override
-  <clang-tidy/checks/modernize-use-override>` now supports `OverrideSpelling`
-  and `FinalSpelling` options.
-
-- New :doc:`llvm-prefer-isa-or-dyn-cast-in-conditionals
-  <clang-tidy/checks/llvm-prefer-isa-or-dyn-cast-in-conditionals>` check.
-
-  Looks at conditionals and finds and replaces cases of ``cast<>``,
-  which will assert rather than return a null pointer, and
-  ``dyn_cast<>`` where the return value is not captured. Additionally,
-  finds and replaces cases that match the pattern ``var &&
-  isa<X>(var)``, where ``var`` is evaluated twice.
-
-- New :doc:`modernize-use-trailing-return-type
-  <clang-tidy/checks/modernize-use-trailing-return-type>` check.
-
-  Rewrites function signatures to use a trailing return type.
-
-- The :doc:`misc-throw-by-value-catch-by-reference
-  <clang-tidy/checks/misc-throw-by-value-catch-by-reference>` now supports
-  `WarnOnLargeObject` and `MaxSize` options to warn on any large trivial
-  object caught by value.
-
 - Added `UseAssignment` option to :doc:`cppcoreguidelines-pro-type-member-init
   <clang-tidy/checks/cppcoreguidelines-pro-type-member-init>`
 
   If set to true, the check will provide fix-its with literal initializers
   (``int i = 0;``) instead of curly braces (``int i{};``).
 
-- New :doc:`readability-convert-member-functions-to-static
-  <clang-tidy/checks/readability-convert-member-functions-to-static>` check.
+- The `fuchsia-default-arguments` check has been removed.
 
-  Finds non-static member functions that can be made ``static``.
+  Warnings of function or method calls and declarations with default arguments
+  were moved to :doc:`fuchsia-default-arguments-calls
+  <clang-tidy/checks/fuchsia-default-arguments-calls>` and
+  :doc:`fuchsia-default-arguments-declarations
+  <clang-tidy/checks/fuchsia-default-arguments-declarations>` checks
+  respectively.
+
+- The :doc:`google-runtime-int <clang-tidy/checks/google-runtime-int>`
+  check has been disabled in Objective-C++.
+
+- The :doc:`modernize-use-override
+  <clang-tidy/checks/modernize-use-override>` now supports `OverrideSpelling`
+  and `FinalSpelling` options.
+
+- The :doc:`misc-throw-by-value-catch-by-reference
+  <clang-tidy/checks/misc-throw-by-value-catch-by-reference>` now supports
+  `WarnOnLargeObject` and `MaxSize` options to warn on any large trivial
+  object caught by value.
+
+- The `Acronyms` and `IncludeDefaultAcronyms` options for the
+  :doc:`objc-property-declaration <clang-tidy/checks/objc-property-declaration>`
+  check have been removed.
 
 Improvements to include-fixer
 -----------------------------
 
-- New :doc:`openmp-exception-escape
-  <clang-tidy/checks/openmp-exception-escape>` check.
-
-  Analyzes OpenMP Structured Blocks and checks that no exception escapes
-  out of the Structured Block it was thrown in.
-
-- New :doc:`openmp-use-default-none
-  <clang-tidy/checks/openmp-use-default-none>` check.
-
-  Finds OpenMP directives that are allowed to contain a ``default`` clause,
-  but either don't specify it or the clause is specified but with the kind
-  other than ``none``, and suggests to use the ``default(none)`` clause.
+The improvements are...
 
 Improvements to clang-include-fixer
 -----------------------------------

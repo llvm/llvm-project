@@ -93,7 +93,8 @@ void MultipleInheritanceCheck::registerMatchers(MatchFinder *Finder) {
     return;
 
   // Match declarations which have bases.
-  Finder->addMatcher(cxxRecordDecl(hasBases()).bind("decl"), this);
+  Finder->addMatcher(
+      cxxRecordDecl(allOf(hasBases(), isDefinition())).bind("decl"), this);
 }
 
 void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {

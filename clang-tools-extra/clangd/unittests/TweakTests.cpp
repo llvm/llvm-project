@@ -17,6 +17,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
+#include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cassert>
@@ -134,10 +135,9 @@ void checkApplyContainsError(llvm::StringRef ID, llvm::StringRef Input,
   auto Result = apply(ID, Input);
   ASSERT_FALSE(Result) << "expected error message:\n   " << ErrorMessage <<
                        "\non input:" << Input;
-  EXPECT_NE(std::string::npos,
-            llvm::toString(Result.takeError()).find(ErrorMessage))
-            << "Wrong error message:\n  " << llvm::toString(Result.takeError())
-            << "\nexpected:\n  " << ErrorMessage;
+  EXPECT_THAT(llvm::toString(Result.takeError()),
+              testing::HasSubstr(ErrorMessage))
+      << Input;
 }
 
 TEST(TweakTest, SwapIfBranches) {

@@ -1132,15 +1132,9 @@ static void fillSubTypes(const SymbolID &ID,
 
 using RecursionProtectionSet = llvm::SmallSet<const CXXRecordDecl *, 4>;
 
-static Optional<TypeHierarchyItem>
-getTypeAncestors(const CXXRecordDecl &CXXRD, ASTContext &ASTCtx,
-                 RecursionProtectionSet &RPSet) {
-  Optional<TypeHierarchyItem> Result = declToTypeHierarchyItem(ASTCtx, CXXRD);
-  if (!Result)
-    return Result;
-
-  Result->parents.emplace();
-
+static void fillSuperTypes(const CXXRecordDecl &CXXRD, ASTContext &ASTCtx,
+                           std::vector<TypeHierarchyItem> &SuperTypes,
+                           RecursionProtectionSet &RPSet) {
   // typeParents() will replace dependent template specializations
   // with their class template, so to avoid infinite recursion for
   // certain types of hierarchies, keep the templates encountered
@@ -1149,22 +1143,22 @@ getTypeAncestors(const CXXRecordDecl &CXXRD, ASTContext &ASTCtx,
   auto *Pattern = CXXRD.getDescribedTemplate() ? &CXXRD : nullptr;
   if (Pattern) {
     if (!RPSet.insert(Pattern).second) {
-      return Result;
+      return;
     }
   }
 
   for (const CXXRecordDecl *ParentDecl : typeParents(&CXXRD)) {
     if (Optional<TypeHierarchyItem> ParentSym =
-            getTypeAncestors(*ParentDecl, ASTCtx, RPSet)) {
-      Result->parents->emplace_back(std::move(*ParentSym));
+            declToTypeHierarchyItem(ASTCtx, *ParentDecl)) {
+      ParentSym->parents.emplace();
+      fillSuperTypes(*ParentDecl, ASTCtx, *ParentSym->parents, RPSet);
+      SuperTypes.emplace_back(std::move(*ParentSym));
     }
   }
 
   if (Pattern) {
     RPSet.erase(Pattern);
   }
-
-  return Result;
 }
 
 const CXXRecordDecl *findRecordTypeAt(ParsedAST &AST, Position Pos) {
@@ -1231,11 +1225,18 @@ getTypeHierarchy(ParsedAST &AST, Position Pos, int ResolveLevels,
   if (!CXXRD)
     return llvm::None;
 
-  RecursionProtectionSet RPSet;
   Optional<TypeHierarchyItem> Result =
-      getTypeAncestors(*CXXRD, AST.getASTContext(), RPSet);
+      declToTypeHierarchyItem(AST.getASTContext(), *CXXRD);
   if (!Result)
     return Result;
+
+  if (Direction == TypeHierarchyDirection::Parents ||
+      Direction == TypeHierarchyDirection::Both) {
+    Result->parents.emplace();
+
+    RecursionProtectionSet RPSet;
+    fillSuperTypes(*CXXRD, AST.getASTContext(), *Result->parents, RPSet);
+  }
 
   if ((Direction == TypeHierarchyDirection::Children ||
        Direction == TypeHierarchyDirection::Both) &&
