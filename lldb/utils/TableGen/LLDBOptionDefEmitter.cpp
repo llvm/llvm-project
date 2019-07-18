@@ -44,7 +44,6 @@ static void emitOption(Record *Option, raw_ostream &OS) {
     auto Groups = Option->getValueAsListOfInts("Groups");
     for (int Group : Groups)
       GroupsArg.push_back("LLDB_OPT_SET_" + std::to_string(Group));
-    OS << llvm::join(GroupsArg.begin(), GroupsArg.end(), " | ");
   } else if (Option->getValue("GroupStart")) {
     // The user specified a range of groups (with potentially only one element).
     int GroupStart = Option->getValueAsInt("GroupStart");
