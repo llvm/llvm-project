@@ -401,11 +401,11 @@ void DWARFContext::dump(
   }
 
   if (const auto *Off = shouldDump(Explicit, ".debug_frame", DIDT_ID_DebugFrame,
-                                   DObj->getDebugFrameSection()))
+                                   DObj->getDebugFrameSection().Data))
     getDebugFrame()->dump(OS, getRegisterInfo(), *Off);
 
   if (const auto *Off = shouldDump(Explicit, ".eh_frame", DIDT_ID_DebugFrame,
-                                   DObj->getEHFrameSection()))
+                                   DObj->getEHFrameSection().Data))
     getEHFrame()->dump(OS, getRegisterInfo(), *Off);
 
   if (DumpType & DIDT_DebugMacro) {
@@ -765,7 +765,7 @@ const DWARFDebugFrame *DWARFContext::getDebugFrame() {
   // provides this information). This problem is fixed in DWARFv4
   // See this dwarf-discuss discussion for more details:
   // http://lists.dwarfstd.org/htdig.cgi/dwarf-discuss-dwarfstd.org/2011-December/001173.html
-  DWARFDataExtractor debugFrameData(DObj->getDebugFrameSection(),
+  DWARFDataExtractor debugFrameData(*DObj, DObj->getDebugFrameSection(),
                                     isLittleEndian(), DObj->getAddressSize());
   DebugFrame.reset(new DWARFDebugFrame(getArch(), false /* IsEH */));
   DebugFrame->parse(debugFrameData);
@@ -776,8 +776,8 @@ const DWARFDebugFrame *DWARFContext::getEHFrame() {
   if (EHFrame)
     return EHFrame.get();
 
-  DWARFDataExtractor debugFrameData(DObj->getEHFrameSection(), isLittleEndian(),
-                                    DObj->getAddressSize());
+  DWARFDataExtractor debugFrameData(*DObj, DObj->getEHFrameSection(),
+                                    isLittleEndian(), DObj->getAddressSize());
   DebugFrame.reset(new DWARFDebugFrame(getArch(), true /* IsEH */));
   DebugFrame->parse(debugFrameData);
   return DebugFrame.get();
@@ -1266,6 +1266,8 @@ class DWARFObjInMemory final : public DWARFObject {
   DWARFSectionMap RnglistsSection;
   DWARFSectionMap StringOffsetSection;
   DWARFSectionMap LineDWOSection;
+  DWARFSectionMap DebugFrameSection;
+  DWARFSectionMap EHFrameSection;
   DWARFSectionMap LocDWOSection;
   DWARFSectionMap StringOffsetDWOSection;
   DWARFSectionMap RangeDWOSection;
@@ -1286,6 +1288,8 @@ class DWARFObjInMemory final : public DWARFObject {
         .Case("debug_loc", &LocSection)
         .Case("debug_loclists", &LocListsSection)
         .Case("debug_line", &LineSection)
+        .Case("debug_frame", &DebugFrameSection)
+        .Case("eh_frame", &EHFrameSection)
         .Case("debug_str_offsets", &StringOffsetSection)
         .Case("debug_ranges", &RangeSection)
         .Case("debug_rnglists", &RnglistsSection)
@@ -1309,8 +1313,6 @@ class DWARFObjInMemory final : public DWARFObject {
 
   StringRef AbbrevSection;
   StringRef ARangeSection;
-  StringRef DebugFrameSection;
-  StringRef EHFrameSection;
   StringRef StringSection;
   StringRef MacinfoSection;
   StringRef AbbrevDWOSection;
@@ -1330,8 +1332,6 @@ class DWARFObjInMemory final : public DWARFObject {
     return StringSwitch<StringRef *>(Name)
         .Case("debug_abbrev", &AbbrevSection)
         .Case("debug_aranges", &ARangeSection)
-        .Case("debug_frame", &DebugFrameSection)
-        .Case("eh_frame", &EHFrameSection)
         .Case("debug_str", &StringSection)
         .Case("debug_macinfo", &MacinfoSection)
         .Case("debug_abbrev.dwo", &AbbrevDWOSection)
@@ -1628,8 +1628,12 @@ public:
   const DWARFSection &getLocSection() const override { return LocSection; }
   const DWARFSection &getLoclistsSection() const override { return LocListsSection; }
   StringRef getARangeSection() const override { return ARangeSection; }
-  StringRef getDebugFrameSection() const override { return DebugFrameSection; }
-  StringRef getEHFrameSection() const override { return EHFrameSection; }
+  const DWARFSection &getDebugFrameSection() const override {
+    return DebugFrameSection;
+  }
+  const DWARFSection &getEHFrameSection() const override {
+    return EHFrameSection;
+  }
   const DWARFSection &getLineSection() const override { return LineSection; }
   StringRef getStringSection() const override { return StringSection; }
   const DWARFSection &getRangeSection() const override { return RangeSection; }

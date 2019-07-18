@@ -1897,26 +1897,54 @@ void MCDwarfFrameEmitter::EmitAdvanceLoc(MCObjectStreamer &Streamer,
 }
 
 void MCDwarfFrameEmitter::EncodeAdvanceLoc(MCContext &Context,
-                                           uint64_t AddrDelta,
-                                           raw_ostream &OS) {
+                                           uint64_t AddrDelta, raw_ostream &OS,
+                                           uint32_t *Offset, uint32_t *Size) {
   // Scale the address delta by the minimum instruction length.
   AddrDelta = ScaleAddrDelta(Context, AddrDelta);
+
+  bool WithFixups = false;
+  if (Offset && Size)
+    WithFixups = true;
 
   support::endianness E =
       Context.getAsmInfo()->isLittleEndian() ? support::little : support::big;
   if (AddrDelta == 0) {
+    if (WithFixups) {
+      *Offset = 0;
+      *Size = 0;
+    }
   } else if (isUIntN(6, AddrDelta)) {
     uint8_t Opcode = dwarf::DW_CFA_advance_loc | AddrDelta;
-    OS << Opcode;
+    if (WithFixups) {
+      *Offset = OS.tell();
+      *Size = 6;
+      OS << uint8_t(dwarf::DW_CFA_advance_loc);
+    } else
+      OS << Opcode;
   } else if (isUInt<8>(AddrDelta)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc1);
-    OS << uint8_t(AddrDelta);
+    if (WithFixups) {
+      *Offset = OS.tell();
+      *Size = 8;
+      OS.write_zeros(1);
+    } else
+      OS << uint8_t(AddrDelta);
   } else if (isUInt<16>(AddrDelta)) {
     OS << uint8_t(dwarf::DW_CFA_advance_loc2);
-    support::endian::write<uint16_t>(OS, AddrDelta, E);
+    if (WithFixups) {
+      *Offset = OS.tell();
+      *Size = 16;
+      OS.write_zeros(2);
+    } else
+      support::endian::write<uint16_t>(OS, AddrDelta, E);
   } else {
     assert(isUInt<32>(AddrDelta));
     OS << uint8_t(dwarf::DW_CFA_advance_loc4);
-    support::endian::write<uint32_t>(OS, AddrDelta, E);
+    if (WithFixups) {
+      *Offset = OS.tell();
+      *Size = 32;
+      OS.write_zeros(4);
+    } else
+      support::endian::write<uint32_t>(OS, AddrDelta, E);
   }
 }
