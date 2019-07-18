@@ -13,7 +13,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectMemory.h"
 #include "lldb/Expression/UserExpression.h"
-#include "lldb/Symbol/ClangASTContext.h"
+#include "lldb/Symbol/TypeSystem.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/ThreadSpec.h"
@@ -35,7 +35,8 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
   else {
     // If we don't have a known type, then we force it to unsigned int of the
     // right size.
-    ClangASTContext *ast_context = target.GetScratchClangASTContext();
+    TypeSystem *ast_context =
+        target.GetScratchTypeSystemForLanguage(nullptr, eLanguageTypeC);
     m_type = ast_context->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint,
                                                               8 * size);
   }
