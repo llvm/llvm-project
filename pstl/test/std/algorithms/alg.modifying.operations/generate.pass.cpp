@@ -58,8 +58,7 @@ struct test_generate
             const auto m = n / 2;
             auto actual_last = generate_n(exec, first, m, g);
             Size count = std::count(first, actual_last, g.default_value());
-            EXPECT_TRUE(count == m && actual_last == std::next(first, m),
-                        "generate_n wrong result for generate_n");
+            EXPECT_TRUE(count == m && actual_last == std::next(first, m), "generate_n wrong result for generate_n");
             std::fill(first, actual_last, T(0));
         }
     }
@@ -91,7 +90,7 @@ struct test_non_const
     }
 };
 
-int32_t
+int
 main()
 {
 

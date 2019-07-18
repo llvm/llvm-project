@@ -84,7 +84,7 @@ struct test_non_const
     }
 };
 
-int32_t
+int
 main()
 {
     test<float64_t>([](const float64_t x) { return x < 0; });

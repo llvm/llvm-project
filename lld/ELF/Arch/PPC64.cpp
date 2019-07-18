@@ -946,6 +946,7 @@ void PPC64::relaxTlsGdToIe(uint8_t *loc, RelType type, uint64_t val) const {
     //                      addis rT, r2, sym@got@tprel@ha.
     relocateOne(loc, R_PPC64_GOT_TPREL16_HA, val);
     return;
+  case R_PPC64_GOT_TLSGD16:
   case R_PPC64_GOT_TLSGD16_LO: {
     // Relax from addi  r3, rA, sym@got@tlsgd@l to
     //            ld r3, sym@got@tprel@l(rA)
