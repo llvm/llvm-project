@@ -30,6 +30,9 @@
 using namespace lldb_private;
 
 const char *ClangExpressionSourceCode::g_expression_prefix = R"(
+#ifndef offsetof
+#define offsetof(t, d) __builtin_offsetof(t, d)
+#endif
 #ifndef NULL
 #define NULL (__null)
 #endif
