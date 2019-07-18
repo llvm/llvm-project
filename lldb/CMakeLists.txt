@@ -113,10 +113,6 @@ if(LLDB_INCLUDE_TESTS)
     list(APPEND LLDB_TEST_DEPS lldb-server)
   endif()
 
-  if(TARGET debugserver)
-    list(APPEND LLDB_TEST_DEPS debugserver)
-  endif()
-
   if(TARGET lldb-vscode)
     list(APPEND LLDB_TEST_DEPS lldb-vscode)
   endif()
