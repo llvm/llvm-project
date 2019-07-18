@@ -39,6 +39,20 @@ if (NOT LLDB_DISABLE_PYTHON)
   add_subdirectory(scripts)
 endif ()
 
+if(CMAKE_CROSSCOMPILING AND LLDB_BUILT_STANDALONE)
+  set(LLVM_USE_HOST_TOOLS ON)
+  include(CrossCompile)
+  if (NOT LLDB_PATH_TO_NATIVE_LLVM_BUILD OR
+      NOT LLDB_PATH_TO_NATIVE_CLANG_BUILD)
+    message(FATAL_ERROR
+      "Crosscompiling standalone requires the variables LLDB_PATH_TO_NATIVE_{CLANG,LLVM}_BUILD
+      for building the native lldb-tblgen used during the build process.")
+  endif()
+  llvm_create_cross_target(lldb NATIVE "" Release
+    -DLLDB_PATH_TO_LLVM_BUILD=${LLDB_PATH_TO_NATIVE_LLVM_BUILD}
+    -DLLDB_PATH_TO_CLANG_BUILD=${LLDB_PATH_TO_NATIVE_CLANG_BUILD})
+endif()
+
 add_subdirectory(utils/TableGen)
 add_subdirectory(source)
 add_subdirectory(tools)
