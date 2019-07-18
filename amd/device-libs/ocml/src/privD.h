@@ -57,6 +57,7 @@
     double _fsqrt_s1 = BUILTIN_FMA_F64(_fsqrt_s0, _fsqrt_r0, _fsqrt_s0); \
     double _fsqrt_d0 = BUILTIN_FMA_F64(-_fsqrt_s1, _fsqrt_s1, _fsqrt_x); \
     double _fsqrt_ret = BUILTIN_FMA_F64(_fsqrt_d0, _fsqrt_h1, _fsqrt_s1); \
+    _fsqrt_ret = _fsqrt_x == 0.0 ? _fsqrt_x : _fsqrt_ret; \
     _fsqrt_ret; \
 })
 

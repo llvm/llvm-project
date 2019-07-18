@@ -670,6 +670,24 @@ DECL_CONST_OCML_UNARY_F16(native_log2)
 extern __attribute__((const)) float OCML_MANGLE_F32(cabs)(float2);
 extern __attribute__((const)) double OCML_MANGLE_F64(cabs)(double2);
 
+extern __attribute__((const)) float2 OCML_MANGLE_F32(cacos)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(cacos)(double2);
+
+extern __attribute__((const)) float2 OCML_MANGLE_F32(cacosh)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(cacosh)(double2);
+
+extern __attribute__((const)) float2 OCML_MANGLE_F32(casin)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(casin)(double2);
+
+extern __attribute__((const)) float2 OCML_MANGLE_F32(casinh)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(casinh)(double2);
+
+extern __attribute__((const)) float2 OCML_MANGLE_F32(catan)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(catan)(double2);
+
+extern __attribute__((const)) float2 OCML_MANGLE_F32(catanh)(float2);
+extern __attribute__((const)) double2 OCML_MANGLE_F64(catanh)(double2);
+
 extern __attribute__((const)) float2 OCML_MANGLE_F32(cexp)(float2);
 extern __attribute__((const)) double2 OCML_MANGLE_F64(cexp)(double2);
 

@@ -21,8 +21,6 @@ MATH_MANGLE(acosh)(double x)
     double2 a = add(sx, root2(sub(sqr(sx), s*s)));
     double z = MATH_PRIVATE(lnep)(a, b ? 512 : 0);
 
-    z = x == 1.0 ? 0.0 : z;
-
     if (!FINITE_ONLY_OPT()) {
         z = BUILTIN_CLASS_F64(x, CLASS_PINF) ? x : z;
         z = x < 1.0 ? AS_DOUBLE(QNANBITPATT_DP64) : z;

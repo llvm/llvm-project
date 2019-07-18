@@ -17,7 +17,6 @@ MATH_MANGLE(hypot)(double x, double y)
     a = BUILTIN_FLDEXP_F64(a, -e);
     b = BUILTIN_FLDEXP_F64(b, -e);
     double ret = BUILTIN_FLDEXP_F64(MATH_FAST_SQRT(MATH_MAD(a, a, b*b)), e);
-    ret = t == 0.0 ? 0.0 : ret;
 
     if (!FINITE_ONLY_OPT()) {
         ret = BUILTIN_ISNAN_F64(x) |

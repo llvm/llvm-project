@@ -21,8 +21,6 @@ MATH_MANGLE(acosh)(float x)
     float2 a = add(sx, root2(sub(sqr(sx), s*s)));
     float z = MATH_PRIVATE(lnep)(a, b ? 64 : 0);
 
-    z = x == 1.0f ? 0.0f : z;
-
     if (!FINITE_ONLY_OPT()) {
         z = BUILTIN_CLASS_F32(x, CLASS_PINF) ? x : z;
         z = x < 1.0f ? AS_FLOAT(QNANBITPATT_SP32) : z;

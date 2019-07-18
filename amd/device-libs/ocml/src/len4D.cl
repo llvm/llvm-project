@@ -37,7 +37,6 @@ MATH_MANGLE(len4)(double x, double y, double z, double w)
     d = BUILTIN_FLDEXP_F64(d, -e);
 
     double ret = BUILTIN_FLDEXP_F64(MATH_FAST_SQRT(MATH_MAD(a, a, MATH_MAD(b, b, MATH_MAD(c, c, d*d)))), e);
-    ret = a == 0.0 ? 0.0 : ret;
 
     if (!FINITE_ONLY_OPT()) {
         ret = (BUILTIN_ISNAN_F64(x) | BUILTIN_ISNAN_F64(y) |

@@ -12,7 +12,8 @@
 #define ISINF(X) BUILTIN_ISINF_F32(X)
 #define USE_FMA HAVE_FAST_FMA32()
 #define HIGH(X) AS_FLOAT(AS_UINT(X) & 0xfffff000U)
-#define COPYSIGN BUILTIN_COPYSIGN_F64
+#define SIGNBIT(X) (AS_INT(X) < 0)
+#define SAMESIGN(X,Y) ((AS_INT(X)& 0x80000000) == (AS_INT(Y) & 0x80000000))
 #endif
 
 #if defined DOUBLE_SPECIALIZATION
@@ -26,7 +27,8 @@
 #define ISINF(X) BUILTIN_ISINF_F64(X)
 #define USE_FMA true
 #define HIGH(X) AS_DOUBLE(AS_ULONG(X) & 0xfffffffff8000000UL)
-#define COPYSIGN BUILTIN_COPYSIGN_F32
+#define SIGNBIT(X) (AS_INT2(X).hi < 0)
+#define SAMESIGN(X,Y) ((AS_INT2(X).hi & 0x80000000) == (AS_INT2(Y).hi & 0x80000000))
 #endif
 
 #if defined HALF_SPECIALIZATION
@@ -40,25 +42,26 @@
 #define ISINF(X) BUILTIN_ISINF_F16(X)
 #define USE_FMA true
 #define HIGH(X) AS_HALF(AS_USHORT(X) & (ushort)0xffc0U)
-#define COPYSIGN BUILTIN_COPYSIGN_F16
+#define SIGNBIT(X) (AS_SHORT(X) < (short)0)
+#define SAMESIGN(X,Y) ((AS_USHORT(X) & (ushort)0x8000) == (AS_USHORT(Y) & (ushort)0x8000))
 #endif
 
 static ATTR T2
-con(T a, T b)
+absv(T2 a)
 {
-    return (T2)(b, a);
-}
-
-static ATTR T2
-csgn(T2 a, T b)
-{
-    return con(COPYSIGN(a.hi, b), COPYSIGN(a.lo, b));
+    return SIGNBIT(a.hi) ? -a : a;
 }
 
 static ATTR T2
 csgn(T2 a, T2 b)
 {
-    return con(COPYSIGN(a.hi, b.hi), COPYSIGN(a.lo, b.lo));
+    return SAMESIGN(a.hi, b.hi) ? a : -a;
+}
+
+static ATTR T2
+con(T a, T b)
+{
+    return (T2)(b, a);
 }
 
 static ATTR T2
@@ -430,7 +433,7 @@ root2(T a)
     T shi = SQRT(a);
     T2 e = fsub(a, sqr(shi));
     T slo = DIV(e.hi, (T)2 * shi);
-    return fadd(shi, slo);
+    return fadd(shi, a == (T)0 ? (T)0 : slo);
 }
 
 static ATTR T2
@@ -439,7 +442,7 @@ root2(T2 a)
     T shi = SQRT(a.hi);
     T2 e = fsub(a, sqr(shi));
     T slo = DIV(e.hi, (T)2 * shi);
-    return fadd(shi, slo);
+    return fadd(shi, a.hi == (T)0 ? (T)0 : slo);
 }
 
 #undef ATTR
@@ -454,4 +457,6 @@ root2(T2 a)
 #undef USE_FMA
 #undef HIGH
 #undef COPYSIGN
+#undef SIGNBIT
+#undef SAMESIGN
 
