@@ -1,6 +1,3 @@
-if(LLDB_TOOL_LLDB_MI_BUILD)
-  add_subdirectory(lldb-mi)
-endif()
 if(LLDB_TOOL_LLDB_SERVER_BUILD)
   add_subdirectory(lldb-server)
 endif()
