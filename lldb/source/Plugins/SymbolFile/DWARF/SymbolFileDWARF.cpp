@@ -833,7 +833,7 @@ SymbolFileDWARF::GetTypeUnitSupportFiles(DWARFTypeUnit &tu) {
   auto iter_bool = m_type_unit_support_files.try_emplace(offset);
   FileSpecList &list = iter_bool.first->second;
   if (iter_bool.second) {
-    list.Append(FileSpec());
+    list.EmplaceBack();
     DWARFDebugLine::ParseSupportFiles(GetObjectFile()->GetModule(),
                                       m_context.getOrLoadLineData(), offset,
                                       list, &tu);

@@ -946,10 +946,10 @@ uint32_t ObjectFilePECOFF::ParseDependentModules() {
     dll_specs.GetDirectory().SetString(m_file.GetDirectory().GetCString());
 
     if (!llvm::sys::fs::real_path(dll_specs.GetPath(), dll_fullpath))
-      m_deps_filespec->Append(FileSpec(dll_fullpath));
+      m_deps_filespec->EmplaceBack(dll_fullpath);
     else {
       // Known DLLs or DLL not found in the object file directory.
-      m_deps_filespec->Append(FileSpec(dll_name));
+      m_deps_filespec->EmplaceBack(dll_name);
     }
   }
   return m_deps_filespec->GetSize();

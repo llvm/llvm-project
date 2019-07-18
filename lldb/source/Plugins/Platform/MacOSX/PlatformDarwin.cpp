@@ -1227,7 +1227,7 @@ BreakpointSP PlatformDarwin::SetThreadCreationBreakpoint(Target &target) {
   FileSpecList bp_modules;
   for (size_t i = 0; i < llvm::array_lengthof(g_bp_modules); i++) {
     const char *bp_module = g_bp_modules[i];
-    bp_modules.Append(FileSpec(bp_module));
+    bp_modules.EmplaceBack(bp_module);
   }
 
   bool internal = true;

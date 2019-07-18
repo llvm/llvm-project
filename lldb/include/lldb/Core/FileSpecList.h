@@ -76,6 +76,15 @@ public:
   ///     \b true if the file was appended, \b false otherwise.
   bool AppendIfUnique(const FileSpec &file);
 
+  /// Inserts a new FileSpec into the FileSpecList constructed in-place with
+  /// the given arguments.
+  ///
+  /// \param[in] args
+  ///     Arguments to create the FileSpec
+  template <class... Args> void EmplaceBack(Args &&... args) {
+    m_files.emplace_back(std::forward<Args>(args)...);
+  }
+
   /// Clears the file list.
   void Clear();
 

@@ -471,8 +471,8 @@ lldb::SearchFilterSP ItaniumABILanguageRuntime::CreateExceptionSearchFilter() {
   if (target.GetArchitecture().GetTriple().getVendor() == llvm::Triple::Apple) {
     // Limit the number of modules that are searched for these breakpoints for
     // Apple binaries.
-    filter_modules.Append(FileSpec("libc++abi.dylib"));
-    filter_modules.Append(FileSpec("libSystem.B.dylib"));
+    filter_modules.EmplaceBack("libc++abi.dylib");
+    filter_modules.EmplaceBack("libSystem.B.dylib");
   }
   return target.GetSearchFilterForModuleList(&filter_modules);
 }
