@@ -610,28 +610,52 @@ bool MachineRegisterInfo::isPhysRegUsed(MCRegister PhysReg) const {
   return false;
 }
 
-void MachineRegisterInfo::disableCalleeSavedRegister(unsigned Reg) {
+void MachineRegisterInfo::initUpdatedCSRs() {
+  if (IsUpdatedCSRsInitialized)
+    return;
 
+  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+  const MCPhysReg *CSR = TRI->getCalleeSavedRegs(MF);
+  for (const MCPhysReg *I = CSR; *I; ++I)
+    UpdatedCSRs.push_back(*I);
+
+  // Zero value represents the end of the register list
+  // (no more registers should be pushed).
+  UpdatedCSRs.push_back(0);
+
+  IsUpdatedCSRsInitialized = true;
+}
+
+void MachineRegisterInfo::disableCalleeSavedRegister(Register Reg) {
   const TargetRegisterInfo *TRI = getTargetRegisterInfo();
   assert(Reg && (Reg < TRI->getNumRegs()) &&
          "Trying to disable an invalid register");
 
-  if (!IsUpdatedCSRsInitialized) {
-    const MCPhysReg *CSR = TRI->getCalleeSavedRegs(MF);
-    for (const MCPhysReg *I = CSR; *I; ++I)
-      UpdatedCSRs.push_back(*I);
+  initUpdatedCSRs();
 
-    // Zero value represents the end of the register list
-    // (no more registers should be pushed).
-    UpdatedCSRs.push_back(0);
-
-    IsUpdatedCSRsInitialized = true;
-  }
-
-  // Remove the register (and its aliases from the list).
+  // Remove the register (and its aliases) from the CSR list.
   for (MCRegAliasIterator AI(Reg, TRI, true); AI.isValid(); ++AI)
     UpdatedCSRs.erase(std::remove(UpdatedCSRs.begin(), UpdatedCSRs.end(), *AI),
                       UpdatedCSRs.end());
+}
+
+void MachineRegisterInfo::enableCalleeSavedRegister(Register Reg) {
+  const TargetRegisterInfo *TRI = getTargetRegisterInfo();
+  assert(Reg && (Reg < TRI->getNumRegs()) &&
+         "Trying to disable an invalid register");
+
+  initUpdatedCSRs();
+
+  // Remove the null terminator from the end of the list.
+  assert(UpdatedCSRs.back() == 0);
+  UpdatedCSRs.pop_back();
+
+  // Add the register (and its sub-registers) to the CSR list.
+  for (MCSubRegIterator SRI(Reg, TRI, true); SRI.isValid(); ++SRI)
+    UpdatedCSRs.push_back(*SRI);
+
+  // Put the null terminator back.
+  UpdatedCSRs.push_back(0);
 }
 
 const MCPhysReg *MachineRegisterInfo::getCalleeSavedRegs() const {
