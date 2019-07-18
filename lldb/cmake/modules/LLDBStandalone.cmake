@@ -10,6 +10,10 @@ file(TO_CMAKE_PATH "${LLDB_PATH_TO_SWIFT_SOURCE}" LLDB_PATH_TO_SWIFT_SOURCE)
 
 find_package(LLVM REQUIRED CONFIG HINTS "${LLVM_DIR}" NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang REQUIRED CONFIG HINTS "${Clang_DIR}" NO_CMAKE_FIND_ROOT_PATH)
+# Start Swift Mods
+find_package(Swift REQUIRED CONFIG
+  HINTS "${LLDB_PATH_TO_SWIFT_BUILD}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
+# End Swift Mods
 
 # We set LLVM_CMAKE_PATH so that GetSVN.cmake is found correctly when building SVNVersion.inc
 set(LLVM_CMAKE_PATH ${LLVM_CMAKE_DIR} CACHE PATH "Path to LLVM CMake modules")
