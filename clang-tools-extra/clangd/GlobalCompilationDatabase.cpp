@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "GlobalCompilationDatabase.h"
+#include "FS.h"
 #include "Logger.h"
 #include "Path.h"
 #include "clang/Frontend/CompilerInvocation.h"
@@ -15,6 +16,7 @@
 #include "llvm/ADT/None.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
 #include <string>
@@ -147,12 +149,15 @@ DirectoryBasedGlobalCompilationDatabase::lookupCDB(
           getCDBInDirLocked(*CompileCommandsDir);
       Result.PI.SourceRoot = *CompileCommandsDir;
     } else {
-      actOnAllParentDirectories(
-          Request.FileName, [this, &SentBroadcast, &Result](PathRef Path) {
-            std::tie(Result.CDB, SentBroadcast) = getCDBInDirLocked(Path);
-            Result.PI.SourceRoot = Path;
-            return Result.CDB != nullptr;
-          });
+      // Traverse the canonical version to prevent false positives. i.e.:
+      // src/build/../a.cc can detect a CDB in /src/build if not canonicalized.
+      actOnAllParentDirectories(removeDots(Request.FileName),
+                                [this, &SentBroadcast, &Result](PathRef Path) {
+                                  std::tie(Result.CDB, SentBroadcast) =
+                                      getCDBInDirLocked(Path);
+                                  Result.PI.SourceRoot = Path;
+                                  return Result.CDB != nullptr;
+                                });
     }
 
     if (!Result.CDB)
@@ -209,7 +214,8 @@ void DirectoryBasedGlobalCompilationDatabase::broadcastCDB(
     actOnAllParentDirectories(File, [&](PathRef Path) {
       if (DirectoryHasCDB.lookup(Path)) {
         if (Path == Result.PI.SourceRoot)
-          GovernedFiles.push_back(File);
+          // Make sure listeners always get a canonical path for the file.
+          GovernedFiles.push_back(removeDots(File));
         // Stop as soon as we hit a CDB.
         return true;
       }
@@ -248,7 +254,7 @@ OverlayCDB::getCompileCommand(PathRef File) const {
   llvm::Optional<tooling::CompileCommand> Cmd;
   {
     std::lock_guard<std::mutex> Lock(Mutex);
-    auto It = Commands.find(File);
+    auto It = Commands.find(removeDots(File));
     if (It != Commands.end())
       Cmd = It->second;
   }
@@ -272,20 +278,24 @@ tooling::CompileCommand OverlayCDB::getFallbackCommand(PathRef File) const {
 
 void OverlayCDB::setCompileCommand(
     PathRef File, llvm::Optional<tooling::CompileCommand> Cmd) {
+  // We store a canonical version internally to prevent mismatches between set
+  // and get compile commands. Also it assures clients listening to broadcasts
+  // doesn't receive different names for the same file.
+  std::string CanonPath = removeDots(File);
   {
     std::unique_lock<std::mutex> Lock(Mutex);
     if (Cmd)
-      Commands[File] = std::move(*Cmd);
+      Commands[CanonPath] = std::move(*Cmd);
     else
-      Commands.erase(File);
+      Commands.erase(CanonPath);
   }
-  OnCommandChanged.broadcast({File});
+  OnCommandChanged.broadcast({CanonPath});
 }
 
 llvm::Optional<ProjectInfo> OverlayCDB::getProjectInfo(PathRef File) const {
   {
     std::lock_guard<std::mutex> Lock(Mutex);
-    auto It = Commands.find(File);
+    auto It = Commands.find(removeDots(File));
     if (It != Commands.end())
       return ProjectInfo{};
   }

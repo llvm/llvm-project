@@ -111,5 +111,11 @@ PreambleFileStatusCache::getConsumingFS(
   return llvm::IntrusiveRefCntPtr<CacheVFS>(new CacheVFS(std::move(FS), *this));
 }
 
+Path removeDots(PathRef File) {
+  llvm::SmallString<128> CanonPath(File);
+  llvm::sys::path::remove_dots(CanonPath, /*remove_dot_dot=*/true);
+  return CanonPath.str().str();
+}
+
 } // namespace clangd
 } // namespace clang
