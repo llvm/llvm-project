@@ -1,0 +1,36 @@
+// RUN: %lldb --repl < %s 2>&1 | FileCheck %s
+
+@propertyWrapper struct A<T> {
+    var value: T
+
+    var wrappedValue: T {
+        get {
+            print("getting A")
+            return value
+        }
+        set {
+            print("setting A")
+            value = newValue
+        }
+    }
+}
+
+@propertyWrapper struct B<T> {
+    var value: T
+
+    var wrappedValue: T {
+        get {
+            print("getting B")
+            return value
+        }
+        set {
+            print("setting B")
+            value = newValue
+        }
+    }
+}
+
+@A var anA: Int = 1
+
+// CHECK: error: property wrappers are not yet supported in top-level code
+// CHECK-NEXT: @A var anA: Int = 1
