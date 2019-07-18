@@ -110,7 +110,8 @@ LLDDwarfObj<ELFT>::findAux(const InputSectionBase &Sec, uint64_t Pos,
   DataRefImpl D;
   D.p = getAddend<ELFT>(Rel);
   return RelocAddrEntry{SecIndex, RelocationRef(D, nullptr),
-                        LLDRelocationResolver<RelTy>::Resolve, Val};
+                        Val,      Optional<object::RelocationRef>(),
+                        0,        LLDRelocationResolver<RelTy>::Resolve};
 }
 
 template <class ELFT>
