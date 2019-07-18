@@ -25,7 +25,7 @@ Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
                        "%s table length at offset 0x%" PRIx32,
                        SectionName.data(), *OffsetPtr);
   // TODO: Add support for DWARF64.
-  HeaderData.Length = Data.getU32(OffsetPtr);
+  HeaderData.Length = Data.getRelocatedValue(4, OffsetPtr);
   if (HeaderData.Length == 0xffffffffu)
     return createStringError(errc::not_supported,
                        "DWARF64 is not supported in %s at offset 0x%" PRIx32,
@@ -73,7 +73,7 @@ Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
         SectionName.data(), HeaderOffset, HeaderData.OffsetEntryCount);
   Data.setAddressSize(HeaderData.AddrSize);
   for (uint32_t I = 0; I < HeaderData.OffsetEntryCount; ++I)
-    Offsets.push_back(Data.getU32(OffsetPtr));
+    Offsets.push_back(Data.getRelocatedValue(4, OffsetPtr));
   return Error::success();
 }
 

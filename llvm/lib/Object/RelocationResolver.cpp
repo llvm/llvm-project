@@ -330,6 +330,55 @@ static uint64_t resolveHexagon(RelocationRef R, uint64_t S, uint64_t A) {
   llvm_unreachable("Invalid relocation type");
 }
 
+static bool supportsRISCV(uint64_t Type) {
+  switch (Type) {
+  case ELF::R_RISCV_NONE:
+  case ELF::R_RISCV_32:
+  case ELF::R_RISCV_64:
+  case ELF::R_RISCV_ADD8:
+  case ELF::R_RISCV_SUB8:
+  case ELF::R_RISCV_ADD16:
+  case ELF::R_RISCV_SUB16:
+  case ELF::R_RISCV_ADD32:
+  case ELF::R_RISCV_SUB32:
+  case ELF::R_RISCV_ADD64:
+  case ELF::R_RISCV_SUB64:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static uint64_t resolveRISCV(RelocationRef R, uint64_t S, uint64_t A) {
+  int64_t RA = getELFAddend(R);
+  switch (R.getType()) {
+  case ELF::R_RISCV_NONE:
+    return A;
+  case ELF::R_RISCV_32:
+    return (S + RA) & 0xFFFFFFFF;
+  case ELF::R_RISCV_64:
+    return S + RA;
+  case ELF::R_RISCV_ADD8:
+    return (A + (S + RA)) & 0xFF;
+  case ELF::R_RISCV_SUB8:
+    return (A - (S + RA)) & 0xFF;
+  case ELF::R_RISCV_ADD16:
+    return (A + (S + RA)) & 0xFFFF;
+  case ELF::R_RISCV_SUB16:
+    return (A - (S + RA)) & 0xFFFF;
+  case ELF::R_RISCV_ADD32:
+    return (A + (S + RA)) & 0xFFFFFFFF;
+  case ELF::R_RISCV_SUB32:
+    return (A - (S + RA)) & 0xFFFFFFFF;
+  case ELF::R_RISCV_ADD64:
+    return (A + (S + RA));
+  case ELF::R_RISCV_SUB64:
+    return (A - (S + RA));
+  default:
+    llvm_unreachable("Invalid relocation type");
+  }
+}
+
 static bool supportsCOFFX86(uint64_t Type) {
   switch (Type) {
   case COFF::IMAGE_REL_I386_SECREL:
@@ -449,6 +498,8 @@ getRelocationResolver(const ObjectFile &Obj) {
         return {supportsSparc64, resolveSparc64};
       case Triple::amdgcn:
         return {supportsAmdgpu, resolveAmdgpu};
+      case Triple::riscv64:
+        return {supportsRISCV, resolveRISCV};
       default:
         return {nullptr, nullptr};
       }
@@ -477,6 +528,8 @@ getRelocationResolver(const ObjectFile &Obj) {
       return {supportsSparc32, resolveSparc32};
     case Triple::hexagon:
       return {supportsHexagon, resolveHexagon};
+    case Triple::riscv32:
+      return {supportsRISCV, resolveRISCV};
     default:
       return {nullptr, nullptr};
     }
