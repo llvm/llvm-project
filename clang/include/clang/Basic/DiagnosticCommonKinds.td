@@ -132,8 +132,8 @@ def err_nullability_conflicting : Error<
 
 // OpenCL Section 6.8.g
 def err_opencl_unknown_type_specifier : Error<
-  "OpenCL %select{C|C++}0 version %1 does not support the '%2' "
-  "%select{type qualifier|storage class specifier}3">;
+  "%select{OpenCL C|C++ for OpenCL}0 version %1 does not support the "
+  "'%2' %select{type qualifier|storage class specifier}3">;
 
 def warn_unknown_attribute_ignored : Warning<
   "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;
@@ -304,9 +304,9 @@ def warn_apinotes_private_case : NonportablePrivateAPINotesPath,
 def warn_apinotes_private_case_system : NonportablePrivateAPINotesPath, 
   DefaultIgnore, InGroup<DiagGroup<"nonportable-private-system-apinotes-path">>;
 
-// OpenCL C++.
+// C++ for OpenCL.
 def err_openclcxx_not_supported : Error<
-  "'%0' is not supported in OpenCL C++">;
+  "'%0' is not supported in C++ for OpenCL">;
 
 // OpenMP
 def err_omp_more_one_clause : Error<

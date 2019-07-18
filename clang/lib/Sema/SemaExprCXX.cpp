@@ -529,7 +529,7 @@ ExprResult Sema::BuildCXXTypeId(QualType TypeInfoType,
 ExprResult
 Sema::ActOnCXXTypeid(SourceLocation OpLoc, SourceLocation LParenLoc,
                      bool isType, void *TyOrExpr, SourceLocation RParenLoc) {
-  // OpenCL C++ 1.0 s2.9: typeid is not supported.
+  // typeid is not supported in OpenCL.
   if (getLangOpts().OpenCLCPlusPlus) {
     return ExprError(Diag(OpLoc, diag::err_openclcxx_not_supported)
                      << "typeid");
@@ -2656,8 +2656,8 @@ void Sema::DeclareGlobalNewDelete() {
   if (GlobalNewDeleteDeclared)
     return;
 
-  // OpenCL C++ 1.0 s2.9: the implicitly declared new and delete operators
-  // are not supported.
+  // The implicitly declared new and delete operators
+  // are not supported in OpenCL.
   if (getLangOpts().OpenCLCPlusPlus)
     return;
 

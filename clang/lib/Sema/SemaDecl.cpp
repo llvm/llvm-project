@@ -6434,8 +6434,8 @@ NamedDecl *Sema::ActOnVariableDeclarator(
       }
     }
 
-    // OpenCL C++ 1.0 s2.9: the thread_local storage qualifier is not
-    // supported.  OpenCL C does not support thread_local either, and
+    // C++ for OpenCL does not allow the thread_local storage qualifier.
+    // OpenCL C does not support thread_local either, and
     // also reject all other thread storage class specifiers.
     DeclSpec::TSCS TSC = D.getDeclSpec().getThreadStorageClassSpec();
     if (TSC != TSCS_unspecified) {
@@ -7441,9 +7441,8 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
     // OpenCL C v2.0 s6.5.1 - Variables defined at program scope and static
     // variables inside a function can also be declared in the global
     // address space.
-    // OpenCL C++ v1.0 s2.5 inherits rule from OpenCL C v2.0 and allows local
-    // address space additionally.
-    // FIXME: Add local AS for OpenCL C++.
+    // C++ for OpenCL inherits rule from OpenCL C v2.0.
+    // FIXME: Adding local AS in C++ for OpenCL might make sense.
     if (NewVD->isFileVarDecl() || NewVD->isStaticLocal() ||
         NewVD->hasExternalStorage()) {
       if (!T->isSamplerT() &&
@@ -11596,7 +11595,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
       // do nothing
 
     // OpenCL v1.2 s6.5.3: __constant locals must be constant-initialized.
-    // This is true even in OpenCL C++.
+    // This is true even in C++ for OpenCL.
     } else if (VDecl->getType().getAddressSpace() == LangAS::opencl_constant) {
       CheckForConstantInitializer(Init, DclT);
 
