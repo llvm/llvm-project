@@ -180,13 +180,13 @@ Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
   assert(action->tid == thread_id || action->tid == LLDB_INVALID_THREAD_ID);
   switch (action->state) {
   case lldb::StateType::eStateRunning:
+    SetState(lldb::StateType::eStateRunning, true);
     if (!m_dpu->ResumeThreads())
       return Status("CNI cannot resume");
     break;
   case lldb::StateType::eStateStepping: {
     ThreadDpu * thread = GetThreadByID(thread_id);
     uint32_t thread_index = thread->GetIndex();
-    thread->SetThreadStepping();
     SetState(lldb::StateType::eStateStepping, true);
     LLDB_LOG(log, "stepping thread {0} with signal {1}", thread_index, action->signal);
     if (!m_dpu->StepThread(thread_index))
@@ -313,7 +313,7 @@ ProcessDpu::GetSoftwareBreakpointTrapOpcode(size_t trap_opcode_size_hint,
 Status ProcessDpu::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                               size_t &bytes_read) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_MEMORY));
-  LLDB_LOG(log, "addr = {0}, buf = {1}, size = {2}", addr, buf, size);
+  LLDB_LOG(log, "addr = {0:X}, buf = {1}, size = {2}", addr, buf, size);
 
   if (addr >= k_dpu_iram_base) {
     if (!m_dpu->ReadIRAM(addr - k_dpu_iram_base, buf, size))
@@ -342,7 +342,7 @@ Status ProcessDpu::ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf,
 Status ProcessDpu::WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
                                size_t &bytes_written) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_MEMORY));
-  LLDB_LOG(log, "addr = {0}, buf = {1}, size = {2}", addr, buf, size);
+  LLDB_LOG(log, "addr = {0:X}, buf = {1}, size = {2}", addr, buf, size);
 
   if (addr >= k_dpu_iram_base) {
     if (!m_dpu->WriteIRAM(addr - k_dpu_iram_base, buf, size))

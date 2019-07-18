@@ -32,8 +32,6 @@ public:
 
   lldb::StateType GetState() override;
 
-  void SetThreadStepping();
-
   bool GetStopReason(ThreadStopInfo &stop_info,
                      std::string &description) override;
 

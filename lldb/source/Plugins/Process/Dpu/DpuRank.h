@@ -68,6 +68,7 @@ public:
   lldb::StateType PollStatus(unsigned int *exit_status);
   bool ResumeThreads();
   bool StopThreads();
+  bool StopThreadsUnlock();
 
   bool StepThread(uint32_t thread_index);
 
