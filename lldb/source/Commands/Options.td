@@ -52,6 +52,63 @@ let Command = "breakpoint list" in {
     "provided, which prime new targets.">;
 }
 
+let Command = "history" in {
+  def history_count : Option<"count", "c">, Group<1>, Arg<"UnsignedInteger">,
+    Desc<"How many history commands to print.">;
+  def history_start_index : Option<"start-index", "s">, Group<1>,
+    Arg<"UnsignedInteger">, Desc<"Index at which to start printing history "
+    "commands (or end to mean tail mode).">;
+  def history_end_index : Option<"end-index", "e">, Group<1>,
+    Arg<"UnsignedInteger">,
+    Desc<"Index at which to stop printing history commands.">;
+  def history_clear : Option<"clear", "C">, Group<2>,
+    Desc<"Clears the current command history.">;
+}
+
+let Command = "source" in {
+  def source_stop_on_error : Option<"stop-on-error", "e">, Arg<"Boolean">,
+    Desc<"If true, stop executing commands on error.">;
+  def source_stop_on_continue : Option<"stop-on-continue", "c">, Arg<"Boolean">,
+    Desc<"If true, stop executing commands on continue.">;
+  def source_silent_run : Option<"silent-run", "s">, Arg<"Boolean">,
+    Desc<"If true don't echo commands while executing.">;
+}
+
+let Command = "alias" in {
+  def alias_help : Option<"help", "h">, Arg<"HelpText">,
+    Desc<"Help text for this command">;
+  def alias_long_help : Option<"long-help", "H">, Arg<"HelpText">,
+    Desc<"Long help text for this command">;
+}
+
+let Command = "regex" in {
+  def regex_help : Option<"help", "h">, Group<1>, Arg<"None">,
+    Desc<"The help text to display for this command.">;
+  def regex_syntax : Option<"syntax", "s">, Group<1>, Arg<"None">,
+    Desc<"A syntax string showing the typical usage syntax.">;
+}
+
+let Command = "script import" in {
+  def script_import_allow_reload : Option<"allow-reload", "r">, Group<1>,
+    Desc<"Allow the script to be loaded even if it was already loaded before. "
+    "This argument exists for backwards compatibility, but reloading is always "
+    "allowed, whether you specify it or not.">;
+}
+
+let Command = "script add" in {
+  def script_add_function : Option<"function", "f">, Group<1>,
+    Arg<"PythonFunction">,
+    Desc<"Name of the Python function to bind to this command name.">;
+  def script_add_class : Option<"class", "c">, Group<2>, Arg<"PythonClass">,
+  Desc<"Name of the Python class to bind to this command name.">;
+  def script_add_help : Option<"help", "h">, Group<1>, Arg<"HelpText">,
+  Desc<"The help text to display for this command.">;
+  def script_add_synchronicity : Option<"synchronicity", "s">,
+    EnumArg<"ScriptedCommandSynchronicity", "ScriptSynchroType()">,
+    Desc<"Set the synchronicity of this command's executions with regard to "
+    "LLDB event system.">;
+}
+
 let Command = "thread backtrace" in {
   def thread_backtrace_count : Option<"count", "c">, Group<1>, Arg<"Count">,
   Desc<"How many frames to display (-1 for all)">;
