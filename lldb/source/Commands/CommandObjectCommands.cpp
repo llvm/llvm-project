@@ -32,12 +32,8 @@ using namespace lldb_private;
 // CommandObjectCommandsSource
 
 static constexpr OptionDefinition g_history_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "count",       'c', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger, "How many history commands to print." },
-  { LLDB_OPT_SET_1, false, "start-index", 's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger, "Index at which to start printing history commands (or end to mean tail mode)." },
-  { LLDB_OPT_SET_1, false, "end-index",   'e', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeUnsignedInteger, "Index at which to stop printing history commands." },
-  { LLDB_OPT_SET_2, false, "clear",       'C', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeBoolean,         "Clears the current command history." },
-    // clang-format on
+#define LLDB_OPTIONS_history
+#include "CommandOptions.inc"
 };
 
 class CommandObjectCommandsHistory : public CommandObjectParsed {
@@ -189,11 +185,8 @@ protected:
 // CommandObjectCommandsSource
 
 static constexpr OptionDefinition g_source_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_ALL, false, "stop-on-error",    'e', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean, "If true, stop executing commands on error." },
-  { LLDB_OPT_SET_ALL, false, "stop-on-continue", 'c', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean, "If true, stop executing commands on continue." },
-  { LLDB_OPT_SET_ALL, false, "silent-run",       's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeBoolean, "If true don't echo commands while executing." },
-    // clang-format on
+#define LLDB_OPTIONS_source
+#include "CommandOptions.inc"
 };
 
 class CommandObjectCommandsSource : public CommandObjectParsed {
@@ -344,10 +337,8 @@ protected:
 // CommandObjectCommandsAlias
 
 static constexpr OptionDefinition g_alias_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_ALL, false, "help",      'h', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeHelpText, "Help text for this command" },
-  { LLDB_OPT_SET_ALL, false, "long-help", 'H', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeHelpText, "Long help text for this command" },
-    // clang-format on
+#define LLDB_OPTIONS_alias
+#include "CommandOptions.inc"
 };
 
 static const char *g_python_command_instructions =
@@ -912,10 +903,8 @@ protected:
 // CommandObjectCommandsAddRegex
 
 static constexpr OptionDefinition g_regex_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "help"  , 'h', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeNone, "The help text to display for this command." },
-  { LLDB_OPT_SET_1, false, "syntax", 's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeNone, "A syntax string showing the typical usage syntax." },
-    // clang-format on
+#define LLDB_OPTIONS_regex
+#include "CommandOptions.inc"
 };
 
 #pragma mark CommandObjectCommandsAddRegex
@@ -1387,9 +1376,8 @@ private:
 // CommandObjectCommandsScriptImport
 
 static constexpr OptionDefinition g_script_import_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "allow-reload", 'r', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Allow the script to be loaded even if it was already loaded before. This argument exists for backwards compatibility, but reloading is always allowed, whether you specify it or not." },
-    // clang-format on
+#define LLDB_OPTIONS_script_import
+#include "CommandOptions.inc"
 };
 
 class CommandObjectCommandsScriptImport : public CommandObjectParsed {
@@ -1521,12 +1509,8 @@ static constexpr OptionEnumValues ScriptSynchroType() {
 }
 
 static constexpr OptionDefinition g_script_add_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1,   false, "function",      'f', OptionParser::eRequiredArgument, nullptr, {},                  0, eArgTypePythonFunction,               "Name of the Python function to bind to this command name." },
-  { LLDB_OPT_SET_2,   false, "class",         'c', OptionParser::eRequiredArgument, nullptr, {},                  0, eArgTypePythonClass,                  "Name of the Python class to bind to this command name." },
-  { LLDB_OPT_SET_1,   false, "help"  ,        'h', OptionParser::eRequiredArgument, nullptr, {},                  0, eArgTypeHelpText,                     "The help text to display for this command." },
-  { LLDB_OPT_SET_ALL, false, "synchronicity", 's', OptionParser::eRequiredArgument, nullptr, ScriptSynchroType(), 0, eArgTypeScriptedCommandSynchronicity, "Set the synchronicity of this command's executions with regard to LLDB event system." },
-    // clang-format on
+#define LLDB_OPTIONS_script_add
+#include "CommandOptions.inc"
 };
 
 class CommandObjectCommandsScriptAdd : public CommandObjectParsed,
