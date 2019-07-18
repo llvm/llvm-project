@@ -1241,7 +1241,8 @@ INTERCEPTOR_WITH_SUFFIX(int, fputs, char *s, void *file) {
   // libc file streams can call user-supplied functions, see fopencookie.
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, fputs, s, file);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, s, REAL(strlen)(s) + 1);
+  if (!SANITIZER_MAC || s)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, s, REAL(strlen)(s) + 1);
   return REAL(fputs)(s, file);
 }
 #define INIT_FPUTS COMMON_INTERCEPT_FUNCTION(fputs)
@@ -1254,7 +1255,8 @@ INTERCEPTOR(int, puts, char *s) {
   // libc file streams can call user-supplied functions, see fopencookie.
   void *ctx;
   COMMON_INTERCEPTOR_ENTER(ctx, puts, s);
-  COMMON_INTERCEPTOR_READ_RANGE(ctx, s, REAL(strlen)(s) + 1);
+  if (!SANITIZER_MAC || s)
+    COMMON_INTERCEPTOR_READ_RANGE(ctx, s, REAL(strlen)(s) + 1);
   return REAL(puts)(s);
 }
 #define INIT_PUTS COMMON_INTERCEPT_FUNCTION(puts)
