@@ -278,88 +278,8 @@ void AMDGPUInstPrinter::printFORMAT(const MCInst *MI, unsigned OpNo,
 
 void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
                                         const MCRegisterInfo &MRI) {
+#if !defined(NDEBUG)
   switch (RegNo) {
-  case AMDGPU::VCC:
-    O << "vcc";
-    return;
-  case AMDGPU::SRC_VCCZ:
-    O << "src_vccz";
-    return;
-  case AMDGPU::SRC_EXECZ:
-    O << "src_execz";
-    return;
-  case AMDGPU::SRC_SCC:
-    O << "src_scc";
-    return;
-  case AMDGPU::EXEC:
-    O << "exec";
-    return;
-  case AMDGPU::M0:
-    O << "m0";
-    return;
-  case AMDGPU::SGPR_NULL:
-    O << "null";
-    return;
-  case AMDGPU::FLAT_SCR:
-    O << "flat_scratch";
-    return;
-  case AMDGPU::XNACK_MASK:
-    O << "xnack_mask";
-    return;
-  case AMDGPU::SRC_SHARED_BASE:
-    O << "src_shared_base";
-    return;
-  case AMDGPU::SRC_SHARED_LIMIT:
-    O << "src_shared_limit";
-    return;
-  case AMDGPU::SRC_PRIVATE_BASE:
-    O << "src_private_base";
-    return;
-  case AMDGPU::SRC_PRIVATE_LIMIT:
-    O << "src_private_limit";
-    return;
-  case AMDGPU::SRC_POPS_EXITING_WAVE_ID:
-    O << "src_pops_exiting_wave_id";
-    return;
-  case AMDGPU::LDS_DIRECT:
-    O << "src_lds_direct";
-    return;
-  case AMDGPU::VCC_LO:
-    O << "vcc_lo";
-    return;
-  case AMDGPU::VCC_HI:
-    O << "vcc_hi";
-    return;
-  case AMDGPU::TBA_LO:
-    O << "tba_lo";
-    return;
-  case AMDGPU::TBA_HI:
-    O << "tba_hi";
-    return;
-  case AMDGPU::TMA_LO:
-    O << "tma_lo";
-    return;
-  case AMDGPU::TMA_HI:
-    O << "tma_hi";
-    return;
-  case AMDGPU::EXEC_LO:
-    O << "exec_lo";
-    return;
-  case AMDGPU::EXEC_HI:
-    O << "exec_hi";
-    return;
-  case AMDGPU::FLAT_SCR_LO:
-    O << "flat_scratch_lo";
-    return;
-  case AMDGPU::FLAT_SCR_HI:
-    O << "flat_scratch_hi";
-    return;
-  case AMDGPU::XNACK_MASK_LO:
-    O << "xnack_mask_lo";
-    return;
-  case AMDGPU::XNACK_MASK_HI:
-    O << "xnack_mask_hi";
-    return;
   case AMDGPU::FP_REG:
   case AMDGPU::SP_REG:
   case AMDGPU::SCRATCH_WAVE_OFFSET_REG:
@@ -370,77 +290,37 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   default:
     break;
   }
+#endif
 
-  // The low 8 bits of the encoding value is the register index, for both VGPRs
-  // and SGPRs.
-  unsigned RegIdx = MRI.getEncodingValue(RegNo) & ((1 << 8) - 1);
+  unsigned AltName = AMDGPU::Reg32;
 
-  unsigned NumRegs;
-  if (MRI.getRegClass(AMDGPU::VGPR_32RegClassID).contains(RegNo)) {
-    O << 'v';
-    NumRegs = 1;
-  } else  if (MRI.getRegClass(AMDGPU::SGPR_32RegClassID).contains(RegNo)) {
-    O << 's';
-    NumRegs = 1;
-  } else if (MRI.getRegClass(AMDGPU::VReg_64RegClassID).contains(RegNo)) {
-    O <<'v';
-    NumRegs = 2;
-  } else  if (MRI.getRegClass(AMDGPU::SGPR_64RegClassID).contains(RegNo)) {
-    O << 's';
-    NumRegs = 2;
-  } else if (MRI.getRegClass(AMDGPU::VReg_128RegClassID).contains(RegNo)) {
-    O << 'v';
-    NumRegs = 4;
-  } else  if (MRI.getRegClass(AMDGPU::SGPR_128RegClassID).contains(RegNo)) {
-    O << 's';
-    NumRegs = 4;
-  } else if (MRI.getRegClass(AMDGPU::VReg_96RegClassID).contains(RegNo)) {
-    O << 'v';
-    NumRegs = 3;
-  } else if (MRI.getRegClass(AMDGPU::SReg_96RegClassID).contains(RegNo)) {
-    O << 's';
-    NumRegs = 3;
-  } else if (MRI.getRegClass(AMDGPU::VReg_160RegClassID).contains(RegNo)) {
-    O << 'v';
-    NumRegs = 5;
-  } else if (MRI.getRegClass(AMDGPU::VReg_256RegClassID).contains(RegNo)) {
-    O << 'v';
-    NumRegs = 8;
-  } else if (MRI.getRegClass(AMDGPU::SGPR_256RegClassID).contains(RegNo)) {
-    O << 's';
-    NumRegs = 8;
-  } else if (MRI.getRegClass(AMDGPU::VReg_512RegClassID).contains(RegNo)) {
-    O << 'v';
-    NumRegs = 16;
-  } else if (MRI.getRegClass(AMDGPU::SGPR_512RegClassID).contains(RegNo)) {
-    O << 's';
-    NumRegs = 16;
-  } else  if (MRI.getRegClass(AMDGPU::AGPR_32RegClassID).contains(RegNo)) {
-    O << 'a';
-    NumRegs = 1;
-  } else  if (MRI.getRegClass(AMDGPU::AReg_64RegClassID).contains(RegNo)) {
-    O << 'a';
-    NumRegs = 2;
-  } else  if (MRI.getRegClass(AMDGPU::AReg_128RegClassID).contains(RegNo)) {
-    O << 'a';
-    NumRegs = 4;
-  } else  if (MRI.getRegClass(AMDGPU::AReg_512RegClassID).contains(RegNo)) {
-    O << 'a';
-    NumRegs = 16;
-  } else  if (MRI.getRegClass(AMDGPU::AReg_1024RegClassID).contains(RegNo)) {
-    O << 'a';
-    NumRegs = 32;
-  } else {
-    O << getRegisterName(RegNo);
-    return;
-  }
+  if (MRI.getRegClass(AMDGPU::VReg_64RegClassID).contains(RegNo) ||
+      MRI.getRegClass(AMDGPU::SGPR_64RegClassID).contains(RegNo) ||
+      MRI.getRegClass(AMDGPU::AReg_64RegClassID).contains(RegNo))
+    AltName = AMDGPU::Reg64;
+  else if (MRI.getRegClass(AMDGPU::VReg_128RegClassID).contains(RegNo) ||
+           MRI.getRegClass(AMDGPU::SGPR_128RegClassID).contains(RegNo) ||
+           MRI.getRegClass(AMDGPU::AReg_128RegClassID).contains(RegNo))
+    AltName = AMDGPU::Reg128;
+  else if (MRI.getRegClass(AMDGPU::VReg_96RegClassID).contains(RegNo) ||
+           MRI.getRegClass(AMDGPU::SReg_96RegClassID).contains(RegNo))
+    AltName = AMDGPU::Reg96;
+  else if (MRI.getRegClass(AMDGPU::VReg_160RegClassID).contains(RegNo) ||
+           MRI.getRegClass(AMDGPU::SReg_160RegClassID).contains(RegNo))
+    AltName = AMDGPU::Reg160;
+  else if (MRI.getRegClass(AMDGPU::VReg_256RegClassID).contains(RegNo) ||
+           MRI.getRegClass(AMDGPU::SGPR_256RegClassID).contains(RegNo))
+    AltName = AMDGPU::Reg256;
+  else if (MRI.getRegClass(AMDGPU::VReg_512RegClassID).contains(RegNo) ||
+           MRI.getRegClass(AMDGPU::SGPR_512RegClassID).contains(RegNo) ||
+           MRI.getRegClass(AMDGPU::AReg_512RegClassID).contains(RegNo))
+    AltName = AMDGPU::Reg512;
+  else if (MRI.getRegClass(AMDGPU::VReg_1024RegClassID).contains(RegNo) ||
+           MRI.getRegClass(AMDGPU::SReg_1024RegClassID).contains(RegNo) ||
+           MRI.getRegClass(AMDGPU::AReg_1024RegClassID).contains(RegNo))
+    AltName = AMDGPU::Reg1024;
 
-  if (NumRegs == 1) {
-    O << RegIdx;
-    return;
-  }
-
-  O << '[' << RegIdx << ':' << (RegIdx + NumRegs - 1) << ']';
+  O << getRegisterName(RegNo, AltName);
 }
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,

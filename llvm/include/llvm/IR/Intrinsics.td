@@ -94,6 +94,8 @@ class ReadNone<int argNo> : IntrinsicProperty {
 
 def IntrNoReturn : IntrinsicProperty;
 
+def IntrWillReturn : IntrinsicProperty;
+
 // IntrCold - Calls to this intrinsic are cold.
 // Parallels the cold attribute on LLVM IR functions.
 def IntrCold : IntrinsicProperty;

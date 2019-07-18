@@ -147,13 +147,13 @@ define i128 @v_lshr_i128_kv(i128 %rhs) {
 ; GCN-LABEL: v_lshr_i128_kv:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s5, 0
-; GCN-NEXT:    s_movk_i32 s4, 0x41
-; GCN-NEXT:    v_lshr_b64 v[2:3], s[4:5], v0
+; GCN-NEXT:    s_mov_b32 s7, 0
+; GCN-NEXT:    s_movk_i32 s6, 0x41
+; GCN-NEXT:    v_lshr_b64 v[2:3], s[6:7], v0
 ; GCN-NEXT:    v_cmp_gt_u32_e32 vcc, 64, v0
 ; GCN-NEXT:    v_cmp_ne_u32_e64 s[4:5], 0, v0
 ; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
-; GCN-NEXT:    v_mov_b32_e32 v2, 0x41
+; GCN-NEXT:    v_mov_b32_e32 v2, s6
 ; GCN-NEXT:    v_cndmask_b32_e32 v1, 0, v3, vcc
 ; GCN-NEXT:    v_cndmask_b32_e64 v0, v2, v0, s[4:5]
 ; GCN-NEXT:    v_mov_b32_e32 v2, 0

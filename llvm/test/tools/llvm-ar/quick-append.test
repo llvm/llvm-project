@@ -46,11 +46,9 @@
 
 ## Append without member:
 # RUN: llvm-ar qc %t/without.a
-# RUN: llvm-ar t %t/without.a \
-# RUN:   | FileCheck /dev/null --allow-empty --implicit-check-not={{.}}
+# RUN: llvm-ar t %t/without.a | count 0
 
-# RUN: llvm-nm --print-armap %t/without.a \
-# RUN:   | FileCheck /dev/null --allow-empty --implicit-check-not={{.}}
+# RUN: llvm-nm --print-armap %t/without.a | count 0
 
 ## No archive:
 # RUN: not llvm-ar qc 2>&1 \

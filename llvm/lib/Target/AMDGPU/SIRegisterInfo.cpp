@@ -1347,18 +1347,6 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 }
 
 StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
-  // FIXME: Rename flat_scr so we don't need to special case this.
-  switch (Reg) {
-  case AMDGPU::FLAT_SCR:
-    return "flat_scratch";
-  case AMDGPU::FLAT_SCR_LO:
-    return "flat_scratch_lo";
-  case AMDGPU::FLAT_SCR_HI:
-    return "flat_scratch_hi";
-  default:
-    break;
-  }
-
   const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg);
   unsigned Size = getRegSizeInBits(*RC);
   unsigned AltName = AMDGPU::NoRegAltName;

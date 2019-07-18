@@ -821,7 +821,7 @@ T value:
 
 Like the ExitOnError utility, cantFail simplifies control flow. Their treatment
 of error cases is very different however: Where ExitOnError is guaranteed to
-terminate the program on an error input, cantFile simply asserts that the result
+terminate the program on an error input, cantFail simply asserts that the result
 is success. In debug builds this will result in an assertion failure if an error
 is encountered. In release builds the behavior of cantFail for failure values is
 undefined. As such, care must be taken in the use of cantFail: clients must be

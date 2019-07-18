@@ -76,7 +76,7 @@ TEST(LegacyCompileOnDemandLayerTest, FindSymbol) {
   };
 
   llvm::orc::LegacyCompileOnDemandLayer<decltype(TestBaseLayer)> COD(
-      ES, TestBaseLayer, GetResolver, SetResolver,
+      AcknowledgeORCv1Deprecation, ES, TestBaseLayer, GetResolver, SetResolver,
       [](Function &F) { return std::set<Function *>{&F}; }, CallbackMgr,
       [] { return llvm::make_unique<DummyStubsManager>(); }, true);
 

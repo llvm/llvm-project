@@ -103,7 +103,7 @@ def VCC : SIRegisterWithSubRegs<"vcc", [VCC_LO, VCC_HI]>,
 def EXEC_LO : SIReg<"exec_lo", 126>;
 def EXEC_HI : SIReg<"exec_hi", 127>;
 
-def EXEC : SIRegisterWithSubRegs<"EXEC", [EXEC_LO, EXEC_HI]>,
+def EXEC : SIRegisterWithSubRegs<"exec", [EXEC_LO, EXEC_HI]>,
            DwarfRegAlias<EXEC_LO> {
   let Namespace = "AMDGPU";
   let SubRegIndices = [sub0, sub1];
@@ -129,7 +129,7 @@ def SRC_PRIVATE_BASE : SIReg<"src_private_base", 237>;
 def SRC_PRIVATE_LIMIT : SIReg<"src_private_limit", 238>;
 def SRC_POPS_EXITING_WAVE_ID : SIReg<"src_pops_exiting_wave_id", 239>;
 
-def LDS_DIRECT : SIReg <"lds_direct", 254>;
+def LDS_DIRECT : SIReg <"src_lds_direct", 254>;
 
 def XNACK_MASK_LO : SIReg<"xnack_mask_lo", 104>;
 def XNACK_MASK_HI : SIReg<"xnack_mask_hi", 105>;
@@ -171,7 +171,7 @@ foreach Index = 0-15 in {
 multiclass FLAT_SCR_LOHI_m <string n, bits<16> ci_e, bits<16> vi_e> {
   def _ci : SIReg<n, ci_e>;
   def _vi : SIReg<n, vi_e>;
-  def "" : SIReg<"", 0>;
+  def "" : SIReg<n, 0>;
 }
 
 class FlatReg <Register lo, Register hi, bits<16> encoding> :
@@ -191,19 +191,19 @@ def FLAT_SCR : FlatReg<FLAT_SCR_LO, FLAT_SCR_HI, 0>;
 
 // SGPR registers
 foreach Index = 0-105 in {
-  def SGPR#Index : SIReg <"SGPR"#Index, Index, "S">;
+  def SGPR#Index : SIReg <"SGPR"#Index, Index, "s">;
 }
 
 // VGPR registers
 foreach Index = 0-255 in {
-  def VGPR#Index : SIReg <"VGPR"#Index, Index, "V"> {
+  def VGPR#Index : SIReg <"VGPR"#Index, Index, "v"> {
     let HWEncoding{8} = 1;
   }
 }
 
 // AccVGPR registers
 foreach Index = 0-255 in {
-  def AGPR#Index : SIReg <"AGPR"#Index, Index, "A"> {
+  def AGPR#Index : SIReg <"AGPR"#Index, Index, "a"> {
     let HWEncoding{8} = 1;
   }
 }

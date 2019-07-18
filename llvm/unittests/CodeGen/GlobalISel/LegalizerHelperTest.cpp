@@ -9,6 +9,10 @@
 
 #include "GISelMITest.h"
 
+using namespace LegalizeActions;
+using namespace LegalizeMutations;
+using namespace LegalityPredicates;
+
 namespace {
 
 class DummyGISelObserver : public GISelChangeObserver {
@@ -900,4 +904,105 @@ TEST_F(GISelMITest, WidenScalarBuildVector) {
   EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
 }
 
+TEST_F(GISelMITest, LowerMergeValues) {
+  if (!TM)
+    return;
+
+  const LLT S32 = LLT::scalar(32);
+  const LLT S24 = LLT::scalar(24);
+  const LLT S21 = LLT::scalar(21);
+  const LLT S16 = LLT::scalar(16);
+  const LLT S9 = LLT::scalar(9);
+  const LLT S8 = LLT::scalar(8);
+  const LLT S3 = LLT::scalar(3);
+
+  DefineLegalizerInfo(A, {
+    getActionDefinitionsBuilder(G_UNMERGE_VALUES)
+      .widenScalarIf(typeIs(1, LLT::scalar(3)), changeTo(1, LLT::scalar(9)));
+  });
+
+  AInfo Info(MF->getSubtarget());
+  DummyGISelObserver Observer;
+  LegalizerHelper Helper(*MF, Info, Observer, B);
+  B.setInsertPt(*EntryMBB, EntryMBB->end());
+
+  // 24 = 3 3 3   3 3 3   3 3
+  //     => 9
+  //
+  // This can do 3 merges, but need an extra implicit_def.
+  SmallVector<Register, 8> Merge0Ops;
+  for (int I = 0; I != 8; ++I)
+    Merge0Ops.push_back(B.buildConstant(S3, I).getReg(0));
+
+  auto Merge0 = B.buildMerge(S24, Merge0Ops);
+
+  // 21 = 3 3 3   3 3 3   3
+  //     => 9, 2 extra implicit_def needed
+  //
+  SmallVector<Register, 8> Merge1Ops;
+  for (int I = 0; I != 7; ++I)
+    Merge1Ops.push_back(B.buildConstant(S3, I).getReg(0));
+
+  auto Merge1 = B.buildMerge(S21, Merge1Ops);
+
+  SmallVector<Register, 8> Merge2Ops;
+  for (int I = 0; I != 2; ++I)
+    Merge2Ops.push_back(B.buildConstant(S8, I).getReg(0));
+
+    auto Merge2 = B.buildMerge(S16, Merge2Ops);
+
+
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*Merge0, 1, S9));
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*Merge1, 1, S9));
+
+  // Request a source size greater than the original destination size.
+  EXPECT_EQ(LegalizerHelper::LegalizeResult::Legalized,
+            Helper.widenScalar(*Merge2, 1, S32));
+
+  auto CheckStr = R"(
+  CHECK: [[K0:%[0-9]+]]:_(s3) = G_CONSTANT i3 0
+  CHECK-NEXT: [[K1:%[0-9]+]]:_(s3) = G_CONSTANT i3 1
+  CHECK-NEXT: [[K2:%[0-9]+]]:_(s3) = G_CONSTANT i3 2
+  CHECK-NEXT: [[K3:%[0-9]+]]:_(s3) = G_CONSTANT i3 3
+  CHECK-NEXT: [[K4:%[0-9]+]]:_(s3) = G_CONSTANT i3 -4
+  CHECK-NEXT: [[K5:%[0-9]+]]:_(s3) = G_CONSTANT i3 -3
+  CHECK-NEXT: [[K6:%[0-9]+]]:_(s3) = G_CONSTANT i3 -2
+  CHECK-NEXT: [[K7:%[0-9]+]]:_(s3) = G_CONSTANT i3 -1
+  CHECK-NEXT: [[IMPDEF0:%[0-9]+]]:_(s3) = G_IMPLICIT_DEF
+  CHECK-NEXT: [[MERGE0:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K0]]:_(s3), [[K1]]:_(s3), [[K2]]:_(s3)
+  CHECK-NEXT: [[MERGE1:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K3]]:_(s3), [[K4]]:_(s3), [[K5]]:_(s3)
+  CHECK-NEXT: [[MERGE2:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K6]]:_(s3), [[K7]]:_(s3), [[IMPDEF0]]:_(s3)
+  CHECK-NEXT: [[MERGE3:%[0-9]+]]:_(s27) = G_MERGE_VALUES [[MERGE0]]:_(s9), [[MERGE1]]:_(s9), [[MERGE2]]:_(s9)
+  CHECK-NEXT: (s24) = G_TRUNC [[MERGE3]]:_(s27)
+
+
+  CHECK: [[K8:%[0-9]+]]:_(s3) = G_CONSTANT i3 0
+  CHECK-NEXT: [[K9:%[0-9]+]]:_(s3) = G_CONSTANT i3 1
+  CHECK-NEXT: [[K10:%[0-9]+]]:_(s3) = G_CONSTANT i3 2
+  CHECK-NEXT: [[K11:%[0-9]+]]:_(s3) = G_CONSTANT i3 3
+  CHECK-NEXT: [[K12:%[0-9]+]]:_(s3) = G_CONSTANT i3 -4
+  CHECK-NEXT: [[K13:%[0-9]+]]:_(s3) = G_CONSTANT i3 -3
+  CHECK-NEXT: [[K14:%[0-9]+]]:_(s3) = G_CONSTANT i3 -2
+  CHECK-NEXT: [[IMPDEF1:%[0-9]+]]:_(s3) = G_IMPLICIT_DEF
+  CHECK-NEXT: [[MERGE4:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K8]]:_(s3), [[K9]]:_(s3), [[K10]]:_(s3)
+  CHECK-NEXT: [[MERGE5:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K11]]:_(s3), [[K12]]:_(s3), [[K13]]:_(s3)
+  CHECK-NEXT: [[MERGE6:%[0-9]+]]:_(s9) = G_MERGE_VALUES [[K14]]:_(s3), [[IMPDEF1]]:_(s3), [[IMPDEF1]]:_(s3)
+  CHECK-NEXT: [[MERGE7:%[0-9]+]]:_(s27) = G_MERGE_VALUES [[MERGE4]]:_(s9), [[MERGE5]]:_(s9), [[MERGE6]]:_(s9)
+  CHECK-NEXT: (s21) = G_TRUNC [[MERGE7]]:_(s27)
+
+
+  CHECK: [[K15:%[0-9]+]]:_(s8) = G_CONSTANT i8 0
+  CHECK-NEXT: [[K16:%[0-9]+]]:_(s8) = G_CONSTANT i8 1
+  CHECK-NEXT: [[ZEXT_K15:[0-9]+]]:_(s32) = G_ZEXT [[K15]]:_(s8)
+  CHECK-NEXT: [[ZEXT_K16:[0-9]+]]:_(s32) = G_ZEXT [[K16]]:_(s8)
+  [[K16:%[0-9]+]]:_(s32) = G_CONSTANT i32 8
+  [[SHL:%[0-9]+]]:_(s32) = G_SHL [[ZEXT_K16]]:_, [[K16]]:_(s32)
+  [[OR:%[0-9]+]]:_(s32) = G_OR [[ZEXT_K16]]:_, [[SHL]]:_
+  (s16) = G_TRUNC [[OR]]:_(s32)
+  )";
+
+  EXPECT_TRUE(CheckMachineFunction(*MF, CheckStr)) << *MF;
+}
 } // namespace

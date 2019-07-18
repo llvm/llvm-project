@@ -81,7 +81,8 @@ MipsLegalizerInfo::MipsLegalizerInfo(const MipsSubtarget &ST) {
     .minScalar(1, s32);
 
   getActionDefinitionsBuilder(G_ICMP)
-      .legalFor({{s32, s32}})
+      .legalForCartesianProduct({s32}, {s32, p0})
+      .clampScalar(1, s32, s32)
       .minScalar(0, s32);
 
   getActionDefinitionsBuilder(G_CONSTANT)

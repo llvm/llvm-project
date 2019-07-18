@@ -241,7 +241,7 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
   IndexEntry = Entry;
   if (!IndexEntry && Index)
     IndexEntry = Index->getFromOffset(*offset_ptr);
-  Length = debug_info.getU32(offset_ptr);
+  Length = debug_info.getRelocatedValue(4, offset_ptr);
   FormParams.Format = DWARF32;
   unsigned SizeOfLength = 4;
   if (Length == 0xffffffff) {

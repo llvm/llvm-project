@@ -1039,7 +1039,7 @@ void LoopInfoWrapperPass::verifyAnalysis() const {
 
 void LoopInfoWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
-  AU.addRequired<DominatorTreeWrapperPass>();
+  AU.addRequiredTransitive<DominatorTreeWrapperPass>();
 }
 
 void LoopInfoWrapperPass::print(raw_ostream &OS, const Module *) const {

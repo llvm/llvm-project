@@ -1651,9 +1651,25 @@ public:
         //
         // TODO Don't store Resolver in every RelocAddrEntry.
         if (Supports && Supports(Reloc.getType())) {
-          Map->try_emplace(Reloc.getOffset(),
-                           RelocAddrEntry{SymInfoOrErr->SectionIndex, Reloc,
-                                          Resolver, SymInfoOrErr->Address});
+          auto I = Map->try_emplace(
+              Reloc.getOffset(),
+              RelocAddrEntry{SymInfoOrErr->SectionIndex, Reloc,
+                             SymInfoOrErr->Address,
+                             Optional<object::RelocationRef>(), 0, Resolver});
+          // If we didn't successfully insert that's because we already had a
+          // relocation for that offset. Store it as a second relocation in the
+          // same RelocAddrEntry instead.
+          if (!I.second) {
+            RelocAddrEntry &entry = I.first->getSecond();
+            if (entry.Reloc2) {
+              ErrorPolicy EP = HandleError(createError(
+                  "At most two relocations per offset are supported"));
+              if (EP == ErrorPolicy::Halt)
+                return;
+            }
+            entry.Reloc2 = Reloc;
+            entry.SymbolValue2 = SymInfoOrErr->Address;
+          }
         } else {
           SmallString<32> Type;
           Reloc.getTypeName(Type);

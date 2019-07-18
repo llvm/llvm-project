@@ -8,6 +8,7 @@
 
 #include "llvm/MC/MCExpr.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/MC/MCAsmBackend.h"
@@ -42,10 +43,15 @@ void MCExpr::print(raw_ostream &OS, const MCAsmInfo *MAI, bool InParens) const {
   switch (getKind()) {
   case MCExpr::Target:
     return cast<MCTargetExpr>(this)->printImpl(OS, MAI);
-  case MCExpr::Constant:
-    OS << cast<MCConstantExpr>(*this).getValue();
+  case MCExpr::Constant: {
+    auto Value = cast<MCConstantExpr>(*this).getValue();
+    auto PrintInHex = cast<MCConstantExpr>(*this).useHexFormat();
+    if (PrintInHex)
+      OS << "0x" << Twine::utohexstr(Value);
+    else
+      OS << Value;
     return;
-
+  }
   case MCExpr::SymbolRef: {
     const MCSymbolRefExpr &SRE = cast<MCSymbolRefExpr>(*this);
     const MCSymbol &Sym = SRE.getSymbol();
@@ -160,8 +166,9 @@ const MCUnaryExpr *MCUnaryExpr::create(Opcode Opc, const MCExpr *Expr,
   return new (Ctx) MCUnaryExpr(Opc, Expr, Loc);
 }
 
-const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx) {
-  return new (Ctx) MCConstantExpr(Value);
+const MCConstantExpr *MCConstantExpr::create(int64_t Value, MCContext &Ctx,
+                                             bool PrintInHex) {
+  return new (Ctx) MCConstantExpr(Value, PrintInHex);
 }
 
 /* *** */

@@ -103,10 +103,12 @@ public:
   void EmitBytes(StringRef Data) { OS->EmitBytes(Data); }
 
   void EmitIntValue(uint64_t Value, unsigned Size) {
-    OS->EmitIntValue(Value, Size);
+    OS->EmitIntValueInHex(Value, Size);
   }
 
   void EmitBinaryData(StringRef Data) { OS->EmitBinaryData(Data); }
+
+  void AddComment(const Twine &T) { OS->AddComment(T); }
 
 private:
   MCStreamer *OS = nullptr;
@@ -615,6 +617,13 @@ emitNullTerminatedSymbolName(MCStreamer &OS, StringRef S,
   OS.EmitBytes(NullTerminatedString);
 }
 
+static StringRef getTypeLeafName(TypeLeafKind TypeKind) {
+  for (const EnumEntry<TypeLeafKind> &EE : getTypeLeafNames())
+    if (EE.Value == TypeKind)
+      return EE.Name;
+  return "";
+}
+
 void CodeViewDebug::emitTypeInformation() {
   if (TypeTable.empty())
     return;
@@ -659,8 +668,12 @@ void CodeViewDebug::emitTypeInformation() {
 
     auto RecordLen = Record.length();
     auto RecordKind = Record.kind();
-    OS.EmitIntValue(RecordLen - 2, 2);
-    OS.EmitIntValue(RecordKind, sizeof(RecordKind));
+    if (OS.isVerboseAsm())
+      CVMCOS.AddComment("Record length");
+    CVMCOS.EmitIntValue(RecordLen - 2, 2);
+    if (OS.isVerboseAsm())
+      CVMCOS.AddComment("Record kind: " + getTypeLeafName(RecordKind));
+    CVMCOS.EmitIntValue(RecordKind, sizeof(RecordKind));
 
     Error E = codeview::visitTypeRecord(Record, *B, Pipeline);
 

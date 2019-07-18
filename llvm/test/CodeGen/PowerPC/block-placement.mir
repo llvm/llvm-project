@@ -209,7 +209,12 @@ body:             |
     BLR8 implicit $lr8, implicit $rm, implicit killed $x3
 
   ; CHECK:      bb.5.if.else.i:
-  ; CHECK:      B %bb.11
+  ; CHECK:        successors: %bb.11(0x80000000)
+  ; CHECK:        B %bb.11
+
+  ; CHECK:      bb.8.while.body.i (align 4):
+  ; CHECK:        successors: %bb.11(0x04000000), %bb.9(0x7c000000)
+  ; CHECK:        BCC 76, killed renamable $cr0, %bb.11
 
   ; CHECK:      bb.11:
   ; CHECK:        renamable $x3 = LI8 1

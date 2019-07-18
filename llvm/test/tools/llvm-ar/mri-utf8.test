@@ -1,0 +1,19 @@
+# Test non-ascii archive members
+# XFAIL: darwin
+
+RUN: rm -rf %t && mkdir -p %t/extracted
+
+RUN: echo "contents" > %t/£.txt
+
+RUN: echo "CREATE %t/mri.ar" > %t/script.mri
+RUN: echo "ADDMOD %t/£.txt" >> %t/script.mri
+RUN: echo "SAVE" >> %t/script.mri
+
+RUN: llvm-ar -M < %t/script.mri
+RUN: cd %t/extracted && llvm-ar x %t/mri.ar
+
+# This works around problems launching processess that
+# include arguments with non-ascii characters.
+# Python on Linux defaults to ASCII encoding unless the
+# environment specifies otherwise, so it is explicitly set.
+RUN: env LANG=en_US.UTF-8 %python -c "assert open(u'\U000000A3.txt', 'rb').read() == b'contents\n'"

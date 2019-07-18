@@ -68,10 +68,11 @@ TEST(LegacyRTDyldObjectLinkingLayerTest, TestSetProcessAllSections) {
 
   ExecutionSession ES;
 
-  LegacyRTDyldObjectLinkingLayer ObjLayer(ES, [&MM](VModuleKey) {
-    return LegacyRTDyldObjectLinkingLayer::Resources{
-        MM, std::make_shared<NullResolver>()};
-  });
+  LegacyRTDyldObjectLinkingLayer ObjLayer(
+      AcknowledgeORCv1Deprecation, ES, [&MM](VModuleKey) {
+        return LegacyRTDyldObjectLinkingLayer::Resources{
+            MM, std::make_shared<NullResolver>()};
+      });
 
   LLVMContext Context;
   auto M = llvm::make_unique<Module>("", Context);
@@ -130,13 +131,14 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoDuplicateFinalization) {
 
   std::map<orc::VModuleKey, std::shared_ptr<orc::SymbolResolver>> Resolvers;
 
-  LegacyRTDyldObjectLinkingLayer ObjLayer(ES, [&](VModuleKey K) {
-    auto I = Resolvers.find(K);
-    assert(I != Resolvers.end() && "Missing resolver");
-    auto R = std::move(I->second);
-    Resolvers.erase(I);
-    return LegacyRTDyldObjectLinkingLayer::Resources{MM, std::move(R)};
-  });
+  LegacyRTDyldObjectLinkingLayer ObjLayer(
+      AcknowledgeORCv1Deprecation, ES, [&](VModuleKey K) {
+        auto I = Resolvers.find(K);
+        assert(I != Resolvers.end() && "Missing resolver");
+        auto R = std::move(I->second);
+        Resolvers.erase(I);
+        return LegacyRTDyldObjectLinkingLayer::Resources{MM, std::move(R)};
+      });
   SimpleCompiler Compile(*TM);
 
   // Create a pair of modules that will trigger recursive finalization:
@@ -217,10 +219,11 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
 
   auto MM = std::make_shared<SectionMemoryManagerWrapper>();
 
-  LegacyRTDyldObjectLinkingLayer ObjLayer(ES, [&MM](VModuleKey K) {
-    return LegacyRTDyldObjectLinkingLayer::Resources{
-        MM, std::make_shared<NullResolver>()};
-  });
+  LegacyRTDyldObjectLinkingLayer ObjLayer(
+      AcknowledgeORCv1Deprecation, ES, [&MM](VModuleKey K) {
+        return LegacyRTDyldObjectLinkingLayer::Resources{
+            MM, std::make_shared<NullResolver>()};
+      });
   SimpleCompiler Compile(*TM);
 
   // Create a pair of unrelated modules:
@@ -278,7 +281,7 @@ TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, NoPrematureAllocation) {
 TEST_F(LegacyRTDyldObjectLinkingLayerExecutionTest, TestNotifyLoadedSignature) {
   ExecutionSession ES;
   LegacyRTDyldObjectLinkingLayer ObjLayer(
-      ES,
+      AcknowledgeORCv1Deprecation, ES,
       [](VModuleKey) {
         return LegacyRTDyldObjectLinkingLayer::Resources{
             nullptr, std::make_shared<NullResolver>()};

@@ -4067,12 +4067,12 @@ multiclass MemTagStore<bits<2> opc1, string insn> {
                     (outs), (ins GPR64sp:$Rt, GPR64sp:$Rn, simm9s16:$offset)>;
   def PreIndex :
     BaseMemTagStore<opc1, 0b11, insn, "\t$Rt, [$Rn, $offset]!",
-                    "$Rn = $wback,@earlyclobber $wback",
+                    "$Rn = $wback",
                     (outs GPR64sp:$wback),
                     (ins GPR64sp:$Rt, GPR64sp:$Rn, simm9s16:$offset)>;
   def PostIndex :
     BaseMemTagStore<opc1, 0b01, insn, "\t$Rt, [$Rn], $offset",
-                    "$Rn = $wback,@earlyclobber $wback",
+                    "$Rn = $wback",
                     (outs GPR64sp:$wback),
                     (ins GPR64sp:$Rt, GPR64sp:$Rn, simm9s16:$offset)>;
 

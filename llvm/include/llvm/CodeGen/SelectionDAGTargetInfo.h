@@ -147,6 +147,14 @@ public:
     return std::make_pair(SDValue(), SDValue());
   }
 
+  virtual SDValue EmitTargetCodeForSetTag(SelectionDAG &DAG, const SDLoc &dl,
+                                          SDValue Chain, SDValue Addr,
+                                          SDValue Size,
+                                          MachinePointerInfo DstPtrInfo,
+                                          bool ZeroData) const {
+    return SDValue();
+  }
+
   // Return true when the decision to generate FMA's (or FMS, FMLA etc) rather
   // than FMUL and ADD is delegated to the machine combiner.
   virtual bool generateFMAsInMachineCombiner(CodeGenOpt::Level OptLevel) const {

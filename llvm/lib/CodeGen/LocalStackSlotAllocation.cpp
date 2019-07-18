@@ -199,19 +199,27 @@ void LocalStackSlotPass::calculateFrameObjectOffsets(MachineFunction &Fn) {
   // Make sure that the stack protector comes before the local variables on the
   // stack.
   SmallSet<int, 16> ProtectedObjs;
-  if (MFI.getStackProtectorIndex() >= 0) {
+  if (MFI.hasStackProtectorIndex()) {
+    int StackProtectorFI = MFI.getStackProtectorIndex();
+
+    // We need to make sure we didn't pre-allocate the stack protector when
+    // doing this.
+    // If we already have a stack protector, this will re-assign it to a slot
+    // that is **not** covering the protected objects.
+    assert(!MFI.isObjectPreAllocated(StackProtectorFI) &&
+           "Stack protector pre-allocated in LocalStackSlotAllocation");
+
     StackObjSet LargeArrayObjs;
     StackObjSet SmallArrayObjs;
     StackObjSet AddrOfObjs;
 
-    AdjustStackOffset(MFI, MFI.getStackProtectorIndex(), Offset,
-                      StackGrowsDown, MaxAlign);
+    AdjustStackOffset(MFI, StackProtectorFI, Offset, StackGrowsDown, MaxAlign);
 
     // Assign large stack objects first.
     for (unsigned i = 0, e = MFI.getObjectIndexEnd(); i != e; ++i) {
       if (MFI.isDeadObjectIndex(i))
         continue;
-      if (MFI.getStackProtectorIndex() == (int)i)
+      if (StackProtectorFI == (int)i)
         continue;
 
       switch (MFI.getObjectSSPLayout(i)) {

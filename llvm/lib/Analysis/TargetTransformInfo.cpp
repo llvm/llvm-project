@@ -176,6 +176,10 @@ unsigned TargetTransformInfo::getInliningThresholdMultiplier() const {
   return TTIImpl->getInliningThresholdMultiplier();
 }
 
+int TargetTransformInfo::getInlinerVectorBonusPercent() const {
+  return TTIImpl->getInlinerVectorBonusPercent();
+}
+
 int TargetTransformInfo::getGEPCost(Type *PointeeType, const Value *Ptr,
                                     ArrayRef<const Value *> Operands) const {
   return TTIImpl->getGEPCost(PointeeType, Ptr, Operands);

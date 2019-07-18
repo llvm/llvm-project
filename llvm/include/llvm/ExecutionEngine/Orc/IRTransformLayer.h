@@ -56,9 +56,17 @@ class LegacyIRTransformLayer {
 public:
 
   /// Construct an LegacyIRTransformLayer with the given BaseLayer
-  LegacyIRTransformLayer(BaseLayerT &BaseLayer,
-                   TransformFtor Transform = TransformFtor())
-    : BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
+  LLVM_ATTRIBUTE_DEPRECATED(
+      LegacyIRTransformLayer(BaseLayerT &BaseLayer,
+                             TransformFtor Transform = TransformFtor()),
+      "ORCv1 layers (layers with the 'Legacy' prefix) are deprecated. Please "
+      "use "
+      "the ORCv2 IRTransformLayer instead");
+
+  /// Legacy layer constructor with deprecation acknowledgement.
+  LegacyIRTransformLayer(ORCv1DeprecationAcknowledgement, BaseLayerT &BaseLayer,
+                         TransformFtor Transform = TransformFtor())
+      : BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
 
   /// Apply the transform functor to the module, then add the module to
   ///        the layer below, along with the memory manager and symbol resolver.
@@ -107,6 +115,11 @@ private:
   BaseLayerT &BaseLayer;
   TransformFtor Transform;
 };
+
+template <typename BaseLayerT, typename TransformFtor>
+LegacyIRTransformLayer<BaseLayerT, TransformFtor>::LegacyIRTransformLayer(
+    BaseLayerT &BaseLayer, TransformFtor Transform)
+    : BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
 
 } // end namespace orc
 } // end namespace llvm

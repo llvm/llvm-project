@@ -1267,7 +1267,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
 
     for (auto VT : { MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64,
                      MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64 }) {
-      setOperationAction(ISD::MLOAD,  VT, Custom);
+      setOperationAction(ISD::MLOAD,  VT, Subtarget.hasVLX() ? Legal : Custom);
       setOperationAction(ISD::MSTORE, VT, Legal);
     }
 
@@ -1416,10 +1416,12 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     // With 512-bit vectors and no VLX, we prefer to widen MLOAD/MSTORE
     // to 512-bit rather than use the AVX2 instructions so that we can use
     // k-masks.
-    for (auto VT : {MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64,
-         MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64}) {
-      setOperationAction(ISD::MLOAD,  VT, Subtarget.hasVLX() ? Legal : Custom);
-      setOperationAction(ISD::MSTORE, VT, Subtarget.hasVLX() ? Legal : Custom);
+    if (!Subtarget.hasVLX()) {
+      for (auto VT : {MVT::v4i32, MVT::v8i32, MVT::v2i64, MVT::v4i64,
+           MVT::v4f32, MVT::v8f32, MVT::v2f64, MVT::v4f64}) {
+        setOperationAction(ISD::MLOAD,  VT, Custom);
+        setOperationAction(ISD::MSTORE, VT, Custom);
+      }
     }
 
     setOperationAction(ISD::TRUNCATE,           MVT::v8i32, Custom);
@@ -43727,6 +43729,10 @@ static SDValue combineConcatVectors(SDNode *N, SelectionDAG &DAG,
   EVT VT = N->getValueType(0);
   EVT SrcVT = N->getOperand(0).getValueType();
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // Don't do anything for i1 vectors.
+  if (VT.getVectorElementType() == MVT::i1)
+    return SDValue();
 
   if (Subtarget.hasAVX() && TLI.isTypeLegal(VT) && TLI.isTypeLegal(SrcVT)) {
     SmallVector<SDValue, 4> Ops(N->op_begin(), N->op_end());

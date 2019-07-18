@@ -15,6 +15,7 @@
 
 #include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
+#include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
@@ -74,6 +75,9 @@ private:
   bool expandCMP_SWAP_128(MachineBasicBlock &MBB,
                           MachineBasicBlock::iterator MBBI,
                           MachineBasicBlock::iterator &NextMBBI);
+  bool expandSetTagLoop(MachineBasicBlock &MBB,
+                        MachineBasicBlock::iterator MBBI,
+                        MachineBasicBlock::iterator &NextMBBI);
 };
 
 } // end anonymous namespace
@@ -336,6 +340,64 @@ bool AArch64ExpandPseudo::expandCMP_SWAP_128(
   return true;
 }
 
+bool AArch64ExpandPseudo::expandSetTagLoop(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
+    MachineBasicBlock::iterator &NextMBBI) {
+  MachineInstr &MI = *MBBI;
+  DebugLoc DL = MI.getDebugLoc();
+  Register SizeReg = MI.getOperand(2).getReg();
+  Register AddressReg = MI.getOperand(3).getReg();
+
+  MachineFunction *MF = MBB.getParent();
+
+  bool ZeroData = MI.getOpcode() == AArch64::STZGloop;
+  const unsigned OpCode =
+      ZeroData ? AArch64::STZ2GPostIndex : AArch64::ST2GPostIndex;
+
+  auto LoopBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+  auto DoneBB = MF->CreateMachineBasicBlock(MBB.getBasicBlock());
+
+  MF->insert(++MBB.getIterator(), LoopBB);
+  MF->insert(++LoopBB->getIterator(), DoneBB);
+
+  BuildMI(LoopBB, DL, TII->get(OpCode))
+      .addDef(AddressReg)
+      .addReg(AddressReg)
+      .addReg(AddressReg)
+      .addImm(2)
+      .cloneMemRefs(MI)
+      .setMIFlags(MI.getFlags());
+  BuildMI(LoopBB, DL, TII->get(AArch64::SUBXri))
+      .addDef(SizeReg)
+      .addReg(SizeReg)
+      .addImm(16 * 2)
+      .addImm(0);
+  BuildMI(LoopBB, DL, TII->get(AArch64::CBNZX)).addUse(SizeReg).addMBB(LoopBB);
+
+  LoopBB->addSuccessor(LoopBB);
+  LoopBB->addSuccessor(DoneBB);
+
+  DoneBB->splice(DoneBB->end(), &MBB, MI, MBB.end());
+  DoneBB->transferSuccessors(&MBB);
+
+  MBB.addSuccessor(LoopBB);
+
+  NextMBBI = MBB.end();
+  MI.eraseFromParent();
+  // Recompute liveness bottom up.
+  LivePhysRegs LiveRegs;
+  computeAndAddLiveIns(LiveRegs, *DoneBB);
+  computeAndAddLiveIns(LiveRegs, *LoopBB);
+  // Do an extra pass in the loop to get the loop carried dependencies right.
+  // FIXME: is this necessary?
+  LoopBB->clearLiveIns();
+  computeAndAddLiveIns(LiveRegs, *LoopBB);
+  DoneBB->clearLiveIns();
+  computeAndAddLiveIns(LiveRegs, *DoneBB);
+
+  return true;
+}
+
 /// If MBBI references a pseudo instruction that should be expanded here,
 /// do the expansion and return true.  Otherwise return false.
 bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
@@ -569,6 +631,46 @@ bool AArch64ExpandPseudo::expandMI(MachineBasicBlock &MBB,
     MI.eraseFromParent();
     return true;
    }
+   case AArch64::IRGstack: {
+     MachineFunction &MF = *MBB.getParent();
+     const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+     const AArch64FrameLowering *TFI =
+         MF.getSubtarget<AArch64Subtarget>().getFrameLowering();
+
+     // IRG does not allow immediate offset. getTaggedBasePointerOffset should
+     // almost always point to SP-after-prologue; if not, emit a longer
+     // instruction sequence.
+     int BaseOffset = -AFI->getTaggedBasePointerOffset();
+     unsigned FrameReg;
+     int FrameRegOffset = TFI->resolveFrameOffsetReference(
+         MF, BaseOffset, false /*isFixed*/, FrameReg, /*PreferFP=*/false,
+         /*ForSimm=*/true);
+     Register SrcReg = FrameReg;
+     if (FrameRegOffset != 0) {
+       // Use output register as temporary.
+       SrcReg = MI.getOperand(0).getReg();
+       emitFrameOffset(MBB, &MI, MI.getDebugLoc(), SrcReg, FrameReg,
+                       FrameRegOffset, TII);
+     }
+     BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::IRG))
+         .add(MI.getOperand(0))
+         .addUse(SrcReg)
+         .add(MI.getOperand(2));
+     MI.eraseFromParent();
+     return true;
+   }
+   case AArch64::TAGPstack: {
+     BuildMI(MBB, MBBI, MI.getDebugLoc(), TII->get(AArch64::ADDG))
+         .add(MI.getOperand(0))
+         .add(MI.getOperand(1))
+         .add(MI.getOperand(2))
+         .add(MI.getOperand(4));
+     MI.eraseFromParent();
+     return true;
+   }
+   case AArch64::STGloop:
+   case AArch64::STZGloop:
+     return expandSetTagLoop(MBB, MBBI, NextMBBI);
   }
   return false;
 }
