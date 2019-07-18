@@ -52,6 +52,92 @@ let Command = "breakpoint list" in {
     "provided, which prime new targets.">;
 }
 
+let Command = "thread backtrace" in {
+  def thread_backtrace_count : Option<"count", "c">, Group<1>, Arg<"Count">,
+  Desc<"How many frames to display (-1 for all)">;
+  def thread_backtrace_start : Option<"start", "s">, Group<1>,
+  Arg<"FrameIndex">, Desc<"Frame in which to start the backtrace">;
+  def thread_backtrace_extended : Option<"extended", "e">, Group<1>,
+  Arg<"Boolean">, Desc<"Show the extended backtrace, if available">;
+}
+
+let Command = "thread step scope" in {
+  def thread_step_scope_step_in_avoids_no_debug :
+    Option<"step-in-avoids-no-debug", "a">, Group<1>, Arg<"Boolean">,
+    Desc<"A boolean value that sets whether stepping into functions will step "
+    "over functions with no debug information.">;
+  def thread_step_scope_step_out_avoids_no_debug :
+    Option<"step-out-avoids-no-debug", "A">, Group<1>, Arg<"Boolean">,
+    Desc<"A boolean value, if true stepping out of functions will continue to"
+    " step out till it hits a function with debug information.">;
+  def thread_step_scope_count : Option<"count", "c">, Group<1>, Arg<"Count">,
+    Desc<"How many times to perform the stepping operation - currently only "
+    "supported for step-inst and next-inst.">;
+  def thread_step_scope_end_linenumber : Option<"end-linenumber", "e">,
+    Group<1>, Arg<"LineNum">, Desc<"The line at which to stop stepping - "
+      "defaults to the next line and only supported for step-in and step-over."
+      "  You can also pass the string 'block' to step to the end of the current"
+      " block.  This is particularly use  in conjunction with --step-target to"
+      " step through a complex calling sequence.">;
+  def thread_step_scope_run_mode : Option<"run-mode", "m">, Group<1>,
+    EnumArg<"RunMode", "TriRunningModes()">, Desc<"Determine how to run other "
+    "threads while stepping the current thread.">;
+  def thread_step_scope_step_over_regexp : Option<"step-over-regexp", "r">,
+    Group<1>, Arg<"RegularExpression">, Desc<"A regular expression that defines"
+    "function names to not to stop at when stepping in.">;
+  def thread_step_scope_step_in_target : Option<"step-in-target", "t">,
+    Group<1>, Arg<"FunctionName">, Desc<"The name of the directly called "
+    "function step in should stop at when stepping into.">;
+  def thread_step_scope_python_class : Option<"python-class", "C">, Group<2>,
+    Arg<"PythonClass">, Desc<"The name of the class that will manage this step "
+    "- only supported for Scripted Step.">;
+}
+
+let Command = "thread until" in {
+  def thread_until_frame : Option<"frame", "f">, Group<1>, Arg<"FrameIndex">,
+    Desc<"Frame index for until operation - defaults to 0">;
+  def thread_until_thread : Option<"thread", "t">, Group<1>, Arg<"ThreadIndex">,
+    Desc<"Thread index for the thread for until operation">;
+  def thread_until_run_mode : Option<"run-mode", "m">, Group<1>,
+    EnumArg<"RunMode", "DuoRunningModes()">, Desc<"Determine how to run other"
+    "threads while stepping this one">;
+  def thread_until_address : Option<"address", "a">, Group<1>,
+    Arg<"AddressOrExpression">, Desc<"Run until we reach the specified address,"
+    "or leave the function - can be specified multiple times.">;
+}
+
+let Command = "thread info" in {
+  def thread_info_json : Option<"json", "j">, Desc<"Display the thread info in"
+    " JSON format.">;
+  def thread_info_stop_info : Option<"stop-info", "s">, Desc<"Display the "
+    "extended stop info in JSON format.">;
+}
+
+let Command = "thread return" in {
+  def thread_return_from_expression : Option<"from-expression", "x">,
+    Desc<"Return from the innermost expression evaluation.">;
+}
+
+let Command = "thread jump" in {
+  def thread_jump_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
+    Completion<"SourceFile">, Desc<"Specifies the source file to jump to.">;
+  def thread_jump_line : Option<"line", "l">, Group<1>, Arg<"LineNum">,
+    Required, Desc<"Specifies the line number to jump to.">;
+  def thread_jump_by : Option<"by", "b">, Group<2>, Arg<"Offset">, Required,
+    Desc<"Jumps by a relative line offset from the current line.">;
+  def thread_jump_address : Option<"address", "a">, Group<3>,
+    Arg<"AddressOrExpression">, Required, Desc<"Jumps to a specific address.">;
+  def thread_jump_force : Option<"force", "r">, Groups<[1,2,3]>,
+    Desc<"Allows the PC to leave the current function.">;
+}
+
+let Command = "thread plan list" in {
+  def thread_plan_list_verbose : Option<"verbose", "v">, Group<1>,
+    Desc<"Display more information about the thread plans">;
+  def thread_plan_list_internal : Option<"internal", "i">, Group<1>,
+    Desc<"Display internal as well as user thread plans">;
+}
+
 let Command = "type summary add" in {
   def type_summary_add_category : Option<"category", "w">, Arg<"Name">, Desc<"Add this to the given category instead of the default one.">;
   def type_summary_add_cascade : Option<"cascade", "C">, Arg<"Boolean">, Desc<"If true, cascade through typedef chains.">;
