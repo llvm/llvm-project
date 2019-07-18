@@ -1,0 +1,36 @@
+# REQUIRES: aarch64
+# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %s -o %t
+# RUN: echo '.globl zero; zero = 0' | llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd -o %t2.o
+# RUN: not ld.lld %t %t2.o -o /dev/null 2>&1 | FileCheck %s
+
+# CHECK: relocation R_AARCH64_MOVW_UABS_G0 out of range: 65536 is not in [0, 65535]
+movn x0, #:abs_g0:zero+0x10000
+# CHECK: relocation R_AARCH64_MOVW_UABS_G1 out of range: 4294967296 is not in [0, 4294967295]
+movn x0, #:abs_g1:zero+0x100000000
+# CHECK: relocation R_AARCH64_MOVW_UABS_G2 out of range: 281474976710656 is not in [0, 281474976710655]
+movn x0, #:abs_g2:zero+0x1000000000000
+# CHECK: relocation R_AARCH64_MOVW_SABS_G0 out of range: 65536 is not in [-65536, 65535]
+movn x0, #:abs_g0_s:zero+0x10000
+# CHECK: relocation R_AARCH64_MOVW_SABS_G1 out of range: 4294967296 is not in [-4294967296, 4294967295]
+movn x0, #:abs_g1_s:zero+0x100000000
+# CHECK: relocation R_AARCH64_MOVW_SABS_G2 out of range: 281474976710656 is not in [-281474976710656, 281474976710655]
+movn x0, #:abs_g2_s:zero+0x1000000000000
+# CHECK: relocation R_AARCH64_MOVW_SABS_G0 out of range: -65537 is not in [-65536, 65535]
+movn x0, #:abs_g0_s:zero-0x10001
+# CHECK: relocation R_AARCH64_MOVW_SABS_G1 out of range: -4295032832 is not in [-4294967296, 4294967295]
+movn x0, #:abs_g1_s:zero-0x100010000
+# CHECK: relocation R_AARCH64_MOVW_SABS_G2 out of range: -281479271677952 is not in [-281474976710656, 281474976710655]
+movn x0, #:abs_g2_s:zero-0x1000100000000
+
+# CHECK: relocation R_AARCH64_MOVW_PREL_G0 out of range: 65536 is not in [-65536, 65535]
+movn x0, #:prel_g0:.+0x10000
+# CHECK: relocation R_AARCH64_MOVW_PREL_G1 out of range: 4294967296 is not in [-4294967296, 4294967295]
+movn x0, #:prel_g1:.+0x100000000
+# CHECK: relocation R_AARCH64_MOVW_PREL_G2 out of range: 281474976710656 is not in [-281474976710656, 281474976710655]
+movn x0, #:prel_g2:.+0x1000000000000
+# CHECK: relocation R_AARCH64_MOVW_PREL_G0 out of range: -65537 is not in [-65536, 65535]
+movn x0, #:prel_g0:.-0x10001
+# CHECK: relocation R_AARCH64_MOVW_PREL_G1 out of range: -4295032832 is not in [-4294967296, 4294967295]
+movn x0, #:prel_g1:.-0x100010000
+# CHECK: relocation R_AARCH64_MOVW_PREL_G2 out of range: -281479271677952 is not in [-281474976710656, 281474976710655]
+movn x0, #:prel_g2:.-0x1000100000000

@@ -234,6 +234,6 @@ if (NOT LLDB_DISABLE_PYTHON)
     endif ()
 endif ()
 
-if(LLDB_BUILT_STANDALONE)
+if(LLDB_BUILT_STANDALONE AND NOT LLVM_ENABLE_IDE)
   llvm_distribution_add_targets()
 endif()
