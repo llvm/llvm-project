@@ -1116,6 +1116,24 @@ public:
 
   lldb::addr_t GetPersistentSymbol(ConstString name);
 
+  /// This method will return the address of the starting function for
+  /// this binary, e.g. main() or its equivalent.  This can be used as
+  /// an address of a function that is not called once a binary has 
+  /// started running - e.g. as a return address for inferior function
+  /// calls that are unambiguous completion of the function call, not
+  /// called during the course of the inferior function code running.
+  ///
+  /// If no entry point can be found, an invalid address is returned.
+  ///
+  /// \param [out] err
+  ///     This object will be set to failure if no entry address could
+  ///     be found, and may contain a helpful error message.
+  //
+  /// \return
+  ///     Returns the entry address for this program, LLDB_INVALID_ADDRESS
+  ///     if none can be found.
+  lldb_private::Address GetEntryPointAddress(Status &err);
+
   // Target Stop Hooks
   class StopHook : public UserID {
   public:
