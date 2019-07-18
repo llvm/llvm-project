@@ -63,3 +63,18 @@ public:
 //CHECK: -CXXConstructorDecl {{.*}} x3<T> 'void (const x3<T> &){{( __attribute__.*)?}} __generic'
 template <typename T>
 x3<T>::x3(const x3<T> &t) {}
+
+template <class T>
+T xxx(T *in) {
+  // This pointer can't be deduced to generic because addr space
+  // will be taken from the template argument.
+  //CHECK: `-VarDecl {{.*}} i 'T *' cinit
+  T *i = in;
+  T ii;
+  return *i;
+}
+
+__kernel void test() {
+  int foo[10];
+  xxx(&foo[0]);
+}

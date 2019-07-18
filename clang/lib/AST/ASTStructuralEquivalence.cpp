@@ -1085,6 +1085,19 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
   return true;
 }
 
+/// Determine structural equivalence of two lambda classes.
+static bool
+IsStructurallyEquivalentLambdas(StructuralEquivalenceContext &Context,
+                                CXXRecordDecl *D1, CXXRecordDecl *D2) {
+  assert(D1->isLambda() && D2->isLambda() &&
+         "Must be called on lambda classes");
+  if (!IsStructurallyEquivalent(Context, D1->getLambdaCallOperator(),
+                                D2->getLambdaCallOperator()))
+    return false;
+
+  return true;
+}
+
 /// Determine structural equivalence of two records.
 static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
                                      RecordDecl *D1, RecordDecl *D2) {
@@ -1164,6 +1177,13 @@ static bool IsStructurallyEquivalent(StructuralEquivalenceContext &Context,
       if (D1CXX->hasExternalLexicalStorage() &&
           !D1CXX->isCompleteDefinition()) {
         D1CXX->getASTContext().getExternalSource()->CompleteType(D1CXX);
+      }
+
+      if (D1CXX->isLambda() != D2CXX->isLambda())
+        return false;
+      if (D1CXX->isLambda()) {
+        if (!IsStructurallyEquivalentLambdas(Context, D1CXX, D2CXX))
+          return false;
       }
 
       if (D1CXX->getNumBases() != D2CXX->getNumBases()) {

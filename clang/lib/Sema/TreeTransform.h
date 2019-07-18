@@ -5392,13 +5392,6 @@ QualType TreeTransform<Derived>::TransformFunctionProtoType(
     if (ResultType.isNull())
       return QualType();
 
-    // Return type can not be qualified with an address space.
-    if (ResultType.getAddressSpace() != LangAS::Default) {
-      SemaRef.Diag(TL.getReturnLoc().getBeginLoc(),
-                   diag::err_attribute_address_function_type);
-      return QualType();
-    }
-
     if (getDerived().TransformFunctionTypeParams(
             TL.getBeginLoc(), TL.getParams(),
             TL.getTypePtr()->param_type_begin(),

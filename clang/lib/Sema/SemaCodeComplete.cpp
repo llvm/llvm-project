@@ -8561,8 +8561,7 @@ void Sema::CodeCompletePreprocessorExpression() {
 
   if (!CodeCompleter || CodeCompleter->includeMacros())
     AddMacroResults(PP, Results,
-                    CodeCompleter ? CodeCompleter->loadExternal() : false,
-                    true);
+                    !CodeCompleter || CodeCompleter->loadExternal(), true);
 
   // defined (<macro>)
   Results.EnterNewScope();
@@ -8759,8 +8758,7 @@ void Sema::GatherGlobalCodeCompletions(
 
   if (!CodeCompleter || CodeCompleter->includeMacros())
     AddMacroResults(PP, Builder,
-                    CodeCompleter ? CodeCompleter->loadExternal() : false,
-                    true);
+                    !CodeCompleter || CodeCompleter->loadExternal(), true);
 
   Results.clear();
   Results.insert(Results.end(), Builder.data(),

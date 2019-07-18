@@ -4992,7 +4992,8 @@ public:
   bool VisitMemberExpr(const MemberExpr *E) {
     if (isa<CXXThisExpr>(E->getBase()->IgnoreParens())) {
       const ValueDecl *VD = E->getMemberDecl();
-      return checkDecl(E, VD);
+      if (isa<VarDecl>(VD) || isa<FieldDecl>(VD))
+        return checkDecl(E, VD);
     }
     return false;
   }

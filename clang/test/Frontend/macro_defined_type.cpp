@@ -17,5 +17,5 @@ void Func() {
 // Added test for fix for P41835
 #define _LIBCPP_FLOAT_ABI __attribute__((pcs("aapcs")))
 struct A {
-  _LIBCPP_FLOAT_ABI int operator()() throw(); // expected-warning{{'pcs' calling convention ignored for this target}}
+  _LIBCPP_FLOAT_ABI int operator()() throw(); // expected-warning{{'pcs' calling convention is not supported for this target}}
 };

@@ -3171,7 +3171,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD,
       // Calling Conventions on a Builtin aren't really useful and setting a
       // default calling convention and cdecl'ing some builtin redeclarations is
       // common, so warn and ignore the calling convention on the redeclaration.
-      Diag(New->getLocation(), diag::warn_cconv_ignored)
+      Diag(New->getLocation(), diag::warn_cconv_unsupported)
           << FunctionType::getNameForCallConv(NewTypeInfo.getCC())
           << (int)CallingConventionIgnoredReason::BuiltinFunction;
       NewTypeInfo = NewTypeInfo.withCallingConv(OldTypeInfo.getCC());
@@ -7497,7 +7497,10 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
             return;
           }
         }
-      } else if (T.getAddressSpace() != LangAS::opencl_private) {
+      } else if (T.getAddressSpace() != LangAS::opencl_private &&
+                 // If we are parsing a template we didn't deduce an addr
+                 // space yet.
+                 T.getAddressSpace() != LangAS::Default) {
         // Do not allow other address spaces on automatic variable.
         Diag(NewVD->getLocation(), diag::err_as_qualified_auto_decl) << 1;
         NewVD->setInvalidDecl();

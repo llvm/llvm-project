@@ -968,17 +968,6 @@ static void addSanitizersAtO0(ModulePassManager &MPM,
   if (LangOpts.Sanitize.has(SanitizerKind::Thread)) {
     MPM.addPass(createModuleToFunctionPassAdaptor(ThreadSanitizerPass()));
   }
-
-  if (LangOpts.Sanitize.has(SanitizerKind::HWAddress)) {
-    bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::HWAddress);
-    MPM.addPass(createModuleToFunctionPassAdaptor(
-        HWAddressSanitizerPass(/*CompileKernel=*/false, Recover)));
-  }
-
-  if (LangOpts.Sanitize.has(SanitizerKind::KernelHWAddress)) {
-    MPM.addPass(createModuleToFunctionPassAdaptor(
-        HWAddressSanitizerPass(/*CompileKernel=*/true, /*Recover=*/true)));
-  }
 }
 
 /// A clean version of `EmitAssembly` that uses the new pass manager.
@@ -1180,23 +1169,6 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
                   UseOdrIndicator));
             });
       }
-      if (LangOpts.Sanitize.has(SanitizerKind::HWAddress)) {
-        bool Recover =
-            CodeGenOpts.SanitizeRecover.has(SanitizerKind::HWAddress);
-        PB.registerOptimizerLastEPCallback(
-            [Recover](FunctionPassManager &FPM,
-                      PassBuilder::OptimizationLevel Level) {
-              FPM.addPass(HWAddressSanitizerPass(
-                  /*CompileKernel=*/false, Recover));
-            });
-      }
-      if (LangOpts.Sanitize.has(SanitizerKind::KernelHWAddress)) {
-        PB.registerOptimizerLastEPCallback(
-            [](FunctionPassManager &FPM, PassBuilder::OptimizationLevel Level) {
-              FPM.addPass(HWAddressSanitizerPass(
-                  /*CompileKernel=*/true, /*Recover=*/true));
-            });
-      }
       if (Optional<GCOVOptions> Options = getGCOVOptions(CodeGenOpts))
         PB.registerPipelineStartEPCallback([Options](ModulePassManager &MPM) {
           MPM.addPass(GCOVProfilerPass(*Options));
@@ -1221,6 +1193,16 @@ void EmitAssemblyHelper::EmitAssemblyWithNewPassManager(
         MPM = PB.buildPerModuleDefaultPipeline(Level,
                                                CodeGenOpts.DebugPassManager);
       }
+    }
+
+    if (LangOpts.Sanitize.has(SanitizerKind::HWAddress)) {
+      bool Recover = CodeGenOpts.SanitizeRecover.has(SanitizerKind::HWAddress);
+      MPM.addPass(HWAddressSanitizerPass(
+          /*CompileKernel=*/false, Recover));
+    }
+    if (LangOpts.Sanitize.has(SanitizerKind::KernelHWAddress)) {
+      MPM.addPass(HWAddressSanitizerPass(
+          /*CompileKernel=*/true, /*Recover=*/true));
     }
 
     if (CodeGenOpts.OptimizationLevel == 0)
