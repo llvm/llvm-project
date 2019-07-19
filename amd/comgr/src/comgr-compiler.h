@@ -67,23 +67,23 @@ public:
 /// @warning No more than one public method should be called on a constructed
 /// object before it is destructed.
 class AMDGPUCompiler {
-  struct AMDGPUCompilerDiagnosticHandler : public DiagnosticHandler {
+  struct AMDGPUCompilerDiagnosticHandler : public llvm::DiagnosticHandler {
     AMDGPUCompiler *Compiler = nullptr;
 
     AMDGPUCompilerDiagnosticHandler(AMDGPUCompiler *Compiler)
         : Compiler(Compiler) {}
 
-    bool handleDiagnostics(const DiagnosticInfo &DI) override {
+    bool handleDiagnostics(const llvm::DiagnosticInfo &DI) override {
       assert(Compiler && "Compiler cannot be nullptr");
       unsigned Severity = DI.getSeverity();
       switch (Severity) {
-      case DS_Error:
+      case llvm::DS_Error:
         Compiler->LogS << "ERROR: ";
         break;
       default:
         llvm_unreachable("Only expecting errors");
       }
-      DiagnosticPrinterRawOStream DP(Compiler->LogS);
+      llvm::DiagnosticPrinterRawOStream DP(Compiler->LogS);
       DI.print(DP);
       Compiler->LogS << "\n";
       return true;
@@ -119,7 +119,7 @@ class AMDGPUCompiler {
 
 public:
   AMDGPUCompiler(DataAction *ActionInfo, DataSet *InSet, DataSet *OutSet,
-                 raw_ostream &LogS);
+                 llvm::raw_ostream &LogS);
   ~AMDGPUCompiler();
 
   amd_comgr_status_t preprocessToSource();

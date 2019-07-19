@@ -46,6 +46,7 @@
 #include <iostream>
 
 using namespace llvm;
+using namespace llvm::object;
 
 namespace COMGR {
 namespace metadata {
@@ -144,7 +145,7 @@ static amd_comgr_status_t getElfMetadataRoot(const ELFObjectFile<ELFT> *Obj,
                 Note.getType() == PAL_METADATA_NOTE_TYPE) ||
                (Note.getName() == "AMDGPU" &&
                 Note.getType() == ELF::NT_AMDGPU_METADATA)) {
-      msgpack::Reader MPReader(DescString);
+      llvm::msgpack::Reader MPReader(DescString);
       NoteStatus = COMGR::msgpack::parse(MPReader, MetaP->MsgPackNode);
       return true;
     }

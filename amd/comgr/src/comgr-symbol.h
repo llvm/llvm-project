@@ -39,8 +39,6 @@
 #include "amd_comgr.h"
 #include "llvm/Object/ObjectFile.h"
 
-using namespace llvm::object;
-
 namespace COMGR {
 
 struct SymbolContext {
@@ -59,10 +57,11 @@ struct SymbolContext {
 class SymbolHelper {
 
 public:
-  amd_comgr_symbol_type_t mapToComgrSymbolType(SymbolRef::Type SymType,
-                                               uint64_t Flags);
+  amd_comgr_symbol_type_t
+  mapToComgrSymbolType(llvm::object::SymbolRef::Type SymType, uint64_t Flags);
 
-  llvm::Expected<OwningBinary<Binary>> createBinary(llvm::StringRef InBuffer);
+  llvm::Expected<llvm::object::OwningBinary<llvm::object::Binary>>
+  createBinary(llvm::StringRef InBuffer);
 
   SymbolContext *createBinary(llvm::StringRef InBuffer, const char *Name,
                               amd_comgr_data_kind_t Kind);

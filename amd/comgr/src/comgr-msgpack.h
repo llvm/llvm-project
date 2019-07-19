@@ -36,8 +36,8 @@
 #ifndef COMGR_MSGPACK_H
 #define COMGR_MSGPACK_H
 
-#include "MsgPackReader.h"
 #include "amd_comgr.h"
+#include "llvm/BinaryFormat/MsgPackReader.h"
 #include "llvm/Support/Casting.h"
 #include <map>
 #include <memory>
@@ -111,7 +111,8 @@ public:
   }
 };
 
-amd_comgr_status_t parse(msgpack::Reader &MPReader, std::shared_ptr<Node> &Out);
+amd_comgr_status_t parse(llvm::msgpack::Reader &MPReader,
+                         std::shared_ptr<Node> &Out);
 
 } // namespace msgpack
 } // namespace COMGR

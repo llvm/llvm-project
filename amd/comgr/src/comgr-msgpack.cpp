@@ -43,7 +43,8 @@ void String::anchor() {}
 void Map::anchor() {}
 void List::anchor() {}
 
-amd_comgr_status_t parseArray(msgpack::Object &Obj, msgpack::Reader &MPReader,
+amd_comgr_status_t parseArray(llvm::msgpack::Object &Obj,
+                              llvm::msgpack::Reader &MPReader,
                               std::shared_ptr<Node> &Out) {
   std::shared_ptr<List> L = std::shared_ptr<List>(new List(Obj.Length));
   for (size_t I = 0; I < Obj.Length; ++I)
@@ -53,7 +54,8 @@ amd_comgr_status_t parseArray(msgpack::Object &Obj, msgpack::Reader &MPReader,
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t parseMap(msgpack::Object &Obj, msgpack::Reader &MPReader,
+amd_comgr_status_t parseMap(llvm::msgpack::Object &Obj,
+                            llvm::msgpack::Reader &MPReader,
                             std::shared_ptr<Node> &Out) {
   std::shared_ptr<Map> M = std::shared_ptr<Map>(new Map());
   for (size_t I = 0; I < Obj.Length; ++I) {
@@ -69,46 +71,48 @@ amd_comgr_status_t parseMap(msgpack::Object &Obj, msgpack::Reader &MPReader,
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-amd_comgr_status_t msgpack::parse(msgpack::Reader &MPReader,
+amd_comgr_status_t msgpack::parse(llvm::msgpack::Reader &MPReader,
                                   std::shared_ptr<Node> &Out) {
-  msgpack::Object Obj;
+  llvm::msgpack::Object Obj;
 
-  if (MPReader.read(Obj)) {
+  auto ReadResult = MPReader.read(Obj);
+  if (errorToBool(ReadResult.takeError()))
+    return AMD_COMGR_STATUS_ERROR;
+
+  if (*ReadResult) {
     switch (Obj.Kind) {
-    case msgpack::Type::Nil:
+    case llvm::msgpack::Type::Nil:
       Out.reset(new Null());
       break;
-    case msgpack::Type::Int:
+    case llvm::msgpack::Type::Int:
       Out.reset(new String(std::to_string(Obj.Int)));
       break;
-    case msgpack::Type::UInt:
+    case llvm::msgpack::Type::UInt:
       Out.reset(new String(std::to_string(Obj.UInt)));
       break;
-    case msgpack::Type::Boolean:
+    case llvm::msgpack::Type::Boolean:
       Out.reset(new String(std::to_string(Obj.Bool)));
       break;
-    case msgpack::Type::Float:
+    case llvm::msgpack::Type::Float:
       Out.reset(new String(std::to_string(Obj.Float)));
       break;
-    case msgpack::Type::String:
-    case msgpack::Type::Binary:
+    case llvm::msgpack::Type::String:
+    case llvm::msgpack::Type::Binary:
       Out.reset(new String(Obj.Raw.str()));
       break;
-    case msgpack::Type::Extension:
+    case llvm::msgpack::Type::Extension:
       Out.reset(new String(Obj.Extension.Bytes.str()));
       break;
-    case msgpack::Type::Array:
+    case llvm::msgpack::Type::Array:
       if (auto Status = parseArray(Obj, MPReader, Out))
         return Status;
       break;
-    case msgpack::Type::Map:
+    case llvm::msgpack::Type::Map:
       if (auto Status = parseMap(Obj, MPReader, Out))
         return Status;
       break;
     }
   }
-  if (MPReader.getFailed())
-    return AMD_COMGR_STATUS_ERROR;
 
   return AMD_COMGR_STATUS_SUCCESS;
 }

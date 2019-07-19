@@ -46,6 +46,7 @@
 #include <iostream>
 
 using namespace llvm;
+using namespace llvm::object;
 using namespace llvm::support;
 using namespace COMGR;
 

@@ -222,7 +222,7 @@ struct DataAction {
   // string. If splitting, ' ' is used as a delimiter if IsDeviceLibs is false,
   // otherwise ',' is used. The returned array reference is only valid as long
   // as no other option APIs are called.
-  ArrayRef<std::string> getOptions(bool IsDeviceLibs = false);
+  llvm::ArrayRef<std::string> getOptions(bool IsDeviceLibs = false);
 
   char *IsaName;
   char *Path;
