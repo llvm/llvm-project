@@ -13,7 +13,6 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/StringConvert.h"
 #include "lldb/Symbol/Block.h"
-#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/Symbol.h"
@@ -22,6 +21,7 @@
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/StreamString.h"
 
 using namespace lldb;
 using namespace lldb_private;
