@@ -472,20 +472,30 @@ void RegisterContextLLDB::InitializeNonZerothFrame() {
     m_sym_ctx_valid = false;
   }
 
-  bool decr_pc_and_recompute_addr_range = false;
+  bool decr_pc_and_recompute_addr_range;
 
-  // If the symbol lookup failed...
-  if (!m_sym_ctx_valid)
+  if (!m_sym_ctx_valid) {
+    // Always decrement and recompute if the symbol lookup failed
     decr_pc_and_recompute_addr_range = true;
-
-  // Or if we're in the middle of the stack (and not "above" an asynchronous
-  // event like sigtramp), and our "current" pc is the start of a function...
-  if (GetNextFrame()->m_frame_type != eTrapHandlerFrame &&
-      GetNextFrame()->m_frame_type != eDebuggerFrame &&
-      (!m_sym_ctx_valid ||
-       (addr_range.GetBaseAddress().IsValid() &&
-        addr_range.GetBaseAddress().GetSection() == m_current_pc.GetSection() &&
-        addr_range.GetBaseAddress().GetOffset() == m_current_pc.GetOffset()))) {
+  } else if (GetNextFrame()->m_frame_type == eTrapHandlerFrame ||
+             GetNextFrame()->m_frame_type == eDebuggerFrame) {
+    // Don't decrement if we're "above" an asynchronous event like
+    // sigtramp.
+    decr_pc_and_recompute_addr_range = false;
+  } else if (!addr_range.GetBaseAddress().IsValid() ||
+             addr_range.GetBaseAddress().GetSection() != m_current_pc.GetSection() ||
+             addr_range.GetBaseAddress().GetOffset() != m_current_pc.GetOffset()) {
+    // If our "current" pc isn't the start of a function, no need
+    // to decrement and recompute.
+    decr_pc_and_recompute_addr_range = false;
+  } else if (IsTrapHandlerSymbol(process, m_sym_ctx)) {
+    // Signal dispatch may set the return address of the handler it calls to
+    // point to the first byte of a return trampoline (like __kernel_rt_sigreturn),
+    // so do not decrement and recompute if the symbol we already found is a trap
+    // handler.
+    decr_pc_and_recompute_addr_range = false;
+  } else {
+    // Decrement to find the function containing the call.
     decr_pc_and_recompute_addr_range = true;
   }
 

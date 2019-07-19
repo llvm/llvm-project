@@ -19,6 +19,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timer.h"
 #include <list>
+#include <cstring>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -601,6 +602,9 @@ bool DWARFCallFrameInfo::FDEToUnwindPlan(dw_offset_t dwarf_offset,
     }
     offset += aug_data_len;
   }
+  unwind_plan.SetUnwindPlanForSignalTrap(
+    strchr(cie->augmentation, 'S') ? eLazyBoolYes : eLazyBoolNo);
+
   Address lsda_data;
   Address personality_function_ptr;
 

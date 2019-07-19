@@ -495,6 +495,7 @@ SymbolFileBreakpad::GetUnwindPlan(const Address &address,
   auto plan_sp = std::make_shared<UnwindPlan>(lldb::eRegisterKindLLDB);
   plan_sp->SetSourceName("breakpad STACK CFI");
   plan_sp->SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  plan_sp->SetUnwindPlanForSignalTrap(eLazyBoolNo);
   plan_sp->SetSourcedFromCompiler(eLazyBoolYes);
   plan_sp->SetPlanValidAddressRange(
       AddressRange(base + init_record->Address, *init_record->Size,
