@@ -2484,8 +2484,8 @@
 		AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetBSDSignals.h; path = Utility/NetBSDSignals.h; sourceTree = "<group>"; };
 		94B6385E1B8FB7A2004FE1E4 /* ObjCLanguage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ObjCLanguage.cpp; path = Language/ObjC/ObjCLanguage.cpp; sourceTree = "<group>"; };
 		94B6385F1B8FB7A2004FE1E4 /* ObjCLanguage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ObjCLanguage.h; path = Language/ObjC/ObjCLanguage.h; sourceTree = "<group>"; };
-		4CB443F212499B5000C13DC2 /* ObjCLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ObjCLanguageRuntime.cpp; path = source/Target/ObjCLanguageRuntime.cpp; sourceTree = "<group>"; };
-		4CB443F612499B6E00C13DC2 /* ObjCLanguageRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ObjCLanguageRuntime.h; path = include/lldb/Target/ObjCLanguageRuntime.h; sourceTree = "<group>"; };
+		4CB443F212499B5000C13DC2 /* ObjCLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ObjCLanguageRuntime.cpp; sourceTree = "<group>"; };
+		4CB443F612499B6E00C13DC2 /* ObjCLanguageRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObjCLanguageRuntime.h; sourceTree = "<group>"; };
 		94B638621B8FB7F1004FE1E4 /* ObjCPlusPlusLanguage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ObjCPlusPlusLanguage.cpp; path = Language/ObjCPlusPlus/ObjCPlusPlusLanguage.cpp; sourceTree = "<group>"; };
 		94B638611B8FB7E9004FE1E4 /* ObjCPlusPlusLanguage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ObjCPlusPlusLanguage.h; path = Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h; sourceTree = "<group>"; };
 		940B80161BA9EECE008A39CB /* ObjCRuntimeSyntheticProvider.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ObjCRuntimeSyntheticProvider.cpp; path = Language/Swift/ObjCRuntimeSyntheticProvider.cpp; sourceTree = "<group>"; };
@@ -2585,7 +2585,9 @@
 		26BC7E8610F1B85900F91463 /* Options.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Options.cpp; path = source/Interpreter/Options.cpp; sourceTree = "<group>"; };
 		26BC7D6D10F1B77400F91463 /* Options.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Options.h; path = include/lldb/Interpreter/Options.h; sourceTree = "<group>"; };
 		DD5F951A21ADE5BD00B8265A /* Options.inc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.pascal; name = Options.inc; path = build/Debug/include/Options.inc; sourceTree = "<group>"; };
+		4C62E60922E10858002037B7 /* Options.td */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Options.td; path = source/Commands/Options.td; sourceTree = "<group>"; };
 		DD5F951B21ADE5F000B8265A /* Options.td */ = {isa = PBXFileReference; lastKnownFileType = text; name = Options.td; path = tools/driver/Options.td; sourceTree = "<group>"; };
+		4C62E60822E10858002037B7 /* OptionsBase.td */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = OptionsBase.td; path = source/Commands/OptionsBase.td; sourceTree = "<group>"; };
 		4C639EC321FA684700A7B957 /* OptionsWithRawTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OptionsWithRawTest.cpp; sourceTree = "<group>"; };
 		4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PDBASTParser.cpp; path = PDB/PDBASTParser.cpp; sourceTree = "<group>"; };
 		4C562CC31CC07DDD00C52EAC /* PDBASTParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PDBASTParser.h; path = PDB/PDBASTParser.h; sourceTree = "<group>"; };
@@ -5541,6 +5543,8 @@
 		26BC7D0D10F1B71D00F91463 /* Commands */ = {
 			isa = PBXGroup;
 			children = (
+				4C62E60922E10858002037B7 /* Options.td */,
+				4C62E60822E10858002037B7 /* OptionsBase.td */,
 				4CA9637A11B6E99A00780E28 /* CommandObjectApropos.h */,
 				4CA9637911B6E99A00780E28 /* CommandObjectApropos.cpp */,
 				26BC7D1410F1B76300F91463 /* CommandObjectBreakpoint.h */,
@@ -5829,8 +5833,6 @@
 				2360092C193FB21500189DB1 /* MemoryRegionInfo.h */,
 				2654A6811E54D5A200DA1013 /* ModuleCache.h */,
 				2654A67F1E54D59400DA1013 /* ModuleCache.cpp */,
-				4CB443F612499B6E00C13DC2 /* ObjCLanguageRuntime.h */,
-				4CB443F212499B5000C13DC2 /* ObjCLanguageRuntime.cpp */,
 				495BBACF119A0DE700418BEA /* PathMappingList.h */,
 				495BBACB119A0DBE00418BEA /* PathMappingList.cpp */,
 				264A43BB1320B3B4005B4096 /* Platform.h */,
@@ -6462,6 +6464,8 @@
 		4CCA644013B40B82003BDF98 /* ObjC */ = {
 			isa = PBXGroup;
 			children = (
+				4CB443F612499B6E00C13DC2 /* ObjCLanguageRuntime.h */,
+				4CB443F212499B5000C13DC2 /* ObjCLanguageRuntime.cpp */,
 				4CCA644113B40B82003BDF98 /* AppleObjCRuntime */,
 			);
 			path = ObjC;
@@ -7508,6 +7512,7 @@
 			buildPhases = (
 				232172E11BFEA17C0018FE4B /* Stamp VCS Revision */,
 				261EECA21337D399001D193C /* Build llvm and clang */,
+				4C62E60A22E108E0002037B7 /* Run Tablegen */,
 				2689FFC613353D7A00698AC0 /* Sources */,
 				2689FFC813353D7A00698AC0 /* Headers */,
 				94C8C91C1D6F9249000EA446 /* Check AST Context */,
@@ -7716,13 +7721,8 @@
 				26579F67126A25920007C5CB /* darwin-debug */,
 				2689FFC913353D7A00698AC0 /* lldb-core */,
 				26DC6A0F1337FE6900FF7998 /* lldb-server */,
-<<<<<<< HEAD
-				2687EAC51508110B00DD8C2E /* install-headers */,
-				AF6967871B4609A80014D221 /* install-headers-mini */,
 				26F8EA1618F6096400EFD6B1 /* repl_swift */,
 				A54A7D0B1A0D99BB001912FE /* LLDB_Automation_Testing */,
-=======
->>>>>>> mirror/master
 				2690CD161A6DC0D000E717C8 /* lldb-mi */,
 				941E2F521AE81CA100AAA711 /* PrebuiltSwiftDebugBuild */,
 				942829BF1A89835300521B30 /* lldb-argdumper */,
@@ -7947,7 +7947,27 @@
 			shellPath = /bin/sh;
 			shellScript = "if [ -e \"${BUILT_PRODUCTS_DIR}/repl_swift\" ]\nthen\n    cp \"${BUILT_PRODUCTS_DIR}/repl_swift\" \"${BUILT_PRODUCTS_DIR}/LLDB.framework/Resources\"\nfi";
 		};
-		49DD45051B4EDB4A00DB3579 /* Install Swift compiler resources */ = {
+		4C62E60A22E108E0002037B7 /* Run Tablegen */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/source/Commands/Options.td",
+			);
+			name = "Run Tablegen";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				$BUILT_PRODUCTS_DIR/include/CommandOptions.inc,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p $BUILT_PRODUCTS_DIR/include\n$LLVM_BUILD_DIR/x86_64/bin/llvm-tblgen -I$LLVM_SOURCE_DIR/include -I$SRCROOT/source/Commands -I$SRCROOT/include/lldb/Interpreter -d $SRCROOT/include/lldb/Interpreter/Options.h -gen-opt-parser-defs $SRCROOT/source/Commands/Options.td -o $BUILT_PRODUCTS_DIR/include/CommandOptions.inc\n";
+		};
+		940B04E21A89871F0045D5F7 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -13301,24 +13321,7 @@
 			};
 			name = DebugPresubmission;
 		};
-<<<<<<< HEAD
-		9448C4671B1FC0AD00414490 /* DebugPresubmission */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				FRAMEWORK_SEARCH_PATHS = /System/Library/PrivateFrameworks;
-				GCC_DYNAMIC_NO_PIC = NO;
-				GCC_OPTIMIZATION_LEVEL = 0;
-				INSTALL_PATH = "$(LLDB_TOOLS_INSTALL_DIR)";
-				ONLY_ACTIVE_ARCH = NO;
-				PRODUCT_NAME = "darwin-debug";
-				SKIP_INSTALL = YES;
-			};
-			name = DebugPresubmission;
-		};
-		9448C4681B1FC0AD00414490 /* DebugPresubmission */ = {
-=======
 		2689FFD513353D7A00698AC0 /* Debug */ = {
->>>>>>> mirror/master
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				CLANG_SOURCE_DIR = "$(SRCROOT)/llvm/tools/clang";
@@ -15110,27 +15113,7 @@
 			};
 			name = "CustomSwift-Release";
 		};
-<<<<<<< HEAD
-		94DF55E91ADDBF2C0030B937 /* CustomSwift-Release */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
-				COMBINE_HIDPI_IMAGES = YES;
-				COPY_PHASE_STRIP = YES;
-				CURRENT_PROJECT_VERSION = 360.0.0;
-				GCC_ENABLE_OBJC_EXCEPTIONS = YES;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				OTHER_CFLAGS = "";
-				OTHER_LDFLAGS = "";
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				SDKROOT = macosx;
-			};
-			name = "CustomSwift-Release";
-		};
-		94DF55EA1ADDBF2C0030B937 /* CustomSwift-Release */ = {
-=======
 		942829C51A89835400521B30 /* Debug */ = {
->>>>>>> mirror/master
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				AXLE_ENABLE_DEBUG_INFO = NO;
@@ -15809,24 +15792,6 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = BuildAndIntegration;
 		};
-<<<<<<< HEAD
-		2687EAC61508110B00DD8C2E /* Build configuration list for PBXLegacyTarget "install-headers" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				2687EAC71508110B00DD8C2E /* Debug */,
-				49BB8F3F1611172B00BDD462 /* DebugClang */,
-				9448C46C1B1FC0AD00414490 /* DebugPresubmission */,
-				94DF55D71ADDBF240030B937 /* CustomSwift-Debug */,
-				2687EAC81508110B00DD8C2E /* Release */,
-				94DF55E91ADDBF2C0030B937 /* CustomSwift-Release */,
-				237965F21C12369B008D490F /* CustomSwift-RelWithDebInfo */,
-				2687EAC91508110B00DD8C2E /* BuildAndIntegration */,
-			);
-			defaultConfigurationIsVisible = 0;
-			defaultConfigurationName = BuildAndIntegration;
-		};
-=======
->>>>>>> mirror/master
 		2689FFD813353D7A00698AC0 /* Build configuration list for PBXNativeTarget "lldb-core" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

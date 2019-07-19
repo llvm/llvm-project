@@ -51,8 +51,8 @@ if(CMAKE_CROSSCOMPILING AND LLDB_BUILT_STANDALONE)
   set(LLVM_USE_HOST_TOOLS ON)
   include(CrossCompile)
   if (NOT LLDB_PATH_TO_NATIVE_SWIFT_BUILD OR
-      NOT LLDB_PATH_TO_NATIVE_LLVM_BUILD OR
-      NOT LLDB_PATH_TO_NATIVE_CLANG_BUILD)
+      NOT NATIVE_LLVM_DIR OR
+      NOT NATIVE_Clang_DIR)
     message(FATAL_ERROR
       "Crosscompiling standalone requires the variables LLDB_PATH_TO_NATIVE_{SWIFT,CLANG,LLVM}_BUILD
       for building the native lldb-tblgen used during the build process.")
@@ -60,9 +60,8 @@ if(CMAKE_CROSSCOMPILING AND LLDB_BUILT_STANDALONE)
   llvm_create_cross_target(lldb NATIVE "" Release
     -DLLDB_PATH_TO_SWIFT_SOURCE=${LLDB_PATH_TO_NATIVE_SWIFT_SOURCE}
     -DLLDB_PATH_TO_SWIFT_BUILD=${LLDB_PATH_TO_NATIVE_SWIFT_BUILD}
-    -DLLDB_PATH_TO_LLVM_BUILD=${LLDB_PATH_TO_NATIVE_LLVM_BUILD}
-    -DLLDB_PATH_TO_CLANG_BUILD=${LLDB_PATH_TO_NATIVE_CLANG_BUILD})
-endif()
+    -DLLVM_DIR=${NATIVE_LLVM_DIR}
+    -DClang_DIR=${NATIVE_Clang_DIR})
 
 add_subdirectory(utils/TableGen)
 add_subdirectory(source)

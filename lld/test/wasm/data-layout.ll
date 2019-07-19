@@ -76,7 +76,7 @@ target triple = "wasm32-unknown-unknown"
 
 ; RUN: wasm-ld -no-gc-sections --allow-undefined --no-entry --shared-memory \
 ; RUN:     --initial-memory=131072 --max-memory=131072 -o %t_max.wasm %t.o \
-; RUN:     %t.hello.o
+; RUN:     --active-segments %t.hello.o
 ; RUN: obj2yaml %t_max.wasm | FileCheck %s -check-prefix=CHECK-SHARED
 
 ; CHECK-SHARED:        - Type:            MEMORY

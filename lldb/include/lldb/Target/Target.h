@@ -131,7 +131,7 @@ public:
 
   FileSpecList GetExecutableSearchPaths();
 
-  void AppendExecutableSearchPaths(const FileSpec&);
+  void AppendExecutableSearchPaths(const FileSpec &);
 
   FileSpec &GetSDKPath();
 
@@ -536,7 +536,7 @@ public:
 
   static void SetDefaultArchitecture(const ArchSpec &arch);
 
-  /// Find a binary on the system and return its Module, 
+  /// Find a binary on the system and return its Module,
   /// or return an existing Module that is already in the Target.
   ///
   /// Given a ModuleSpec, find a binary satisifying that specification,
@@ -548,27 +548,26 @@ public:
   ///     e.g. UUID, architecture, file path.
   ///
   /// \param[in] notify
-  ///     If notify is true, and the Module is new to this Target, 
-  ///     Target::ModulesDidLoad will be called.  
-  ///     If notify is false, it is assumed that the caller is adding 
-  ///     multiple Modules and will call ModulesDidLoad with the 
+  ///     If notify is true, and the Module is new to this Target,
+  ///     Target::ModulesDidLoad will be called.
+  ///     If notify is false, it is assumed that the caller is adding
+  ///     multiple Modules and will call ModulesDidLoad with the
   ///     full list at the end.
   ///     ModulesDidLoad must be called when a Module/Modules have
   ///     been added to the target, one way or the other.
   ///
   /// \param[out] error_ptr
-  ///     Optional argument, pointing to a Status object to fill in 
+  ///     Optional argument, pointing to a Status object to fill in
   ///     with any results / messages while attempting to find/load
   ///     this binary.  Many callers will be internal functions that
   ///     will handle / summarize the failures in a custom way and
   ///     don't use these messages.
   ///
-  /// \return 
+  /// \return
   ///     An empty ModuleSP will be returned if no matching file
   ///     was found.  If error_ptr was non-nullptr, an error message
   ///     will likely be provided.
-  lldb::ModuleSP GetOrCreateModule(const ModuleSpec &module_spec,
-                                   bool notify,
+  lldb::ModuleSP GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
                                    Status *error_ptr = nullptr);
 
   // Settings accessors
@@ -685,14 +684,11 @@ public:
                             Args *additional_args = nullptr,
                             Status *additional_args_error = nullptr);
 
-  lldb::BreakpointSP
-  CreateScriptedBreakpoint(const llvm::StringRef class_name,
-                           const FileSpecList *containingModules,
-                           const FileSpecList *containingSourceFiles,
-                           bool internal,
-                           bool request_hardware,
-                           StructuredData::ObjectSP extra_args_sp,
-                           Status *creation_error = nullptr);
+  lldb::BreakpointSP CreateScriptedBreakpoint(
+      const llvm::StringRef class_name, const FileSpecList *containingModules,
+      const FileSpecList *containingSourceFiles, bool internal,
+      bool request_hardware, StructuredData::ObjectSP extra_args_sp,
+      Status *creation_error = nullptr);
 
   // This is the same as the func_name breakpoint except that you can specify a
   // vector of names.  This is cheaper than a regular expression breakpoint in
@@ -731,43 +727,42 @@ public:
   }
 
   WatchpointList &GetWatchpointList() { return m_watchpoint_list; }
-  
+
   // Manages breakpoint names:
   void AddNameToBreakpoint(BreakpointID &id, const char *name, Status &error);
-  
-  void AddNameToBreakpoint(lldb::BreakpointSP &bp_sp, const char *name, 
+
+  void AddNameToBreakpoint(lldb::BreakpointSP &bp_sp, const char *name,
                            Status &error);
-  
-  void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp, 
-                                ConstString name);
-  
-  BreakpointName *FindBreakpointName(ConstString name, bool can_create, 
+
+  void RemoveNameFromBreakpoint(lldb::BreakpointSP &bp_sp, ConstString name);
+
+  BreakpointName *FindBreakpointName(ConstString name, bool can_create,
                                      Status &error);
-                                     
+
   void DeleteBreakpointName(ConstString name);
-  
+
   void ConfigureBreakpointName(BreakpointName &bp_name,
                                const BreakpointOptions &options,
                                const BreakpointName::Permissions &permissions);
- void ApplyNameToBreakpoints(BreakpointName &bp_name);
-  
+  void ApplyNameToBreakpoints(BreakpointName &bp_name);
+
   // This takes ownership of the name obj passed in.
   void AddBreakpointName(BreakpointName *bp_name);
-  
+
   void GetBreakpointNames(std::vector<std::string> &names);
-                               
-  //This call removes ALL breakpoints regardless of permission.
+
+  // This call removes ALL breakpoints regardless of permission.
   void RemoveAllBreakpoints(bool internal_also = false);
-  
+
   // This removes all the breakpoints, but obeys the ePermDelete on them.
   void RemoveAllowedBreakpoints();
 
   void DisableAllBreakpoints(bool internal_also = false);
-  
+
   void DisableAllowedBreakpoints();
 
   void EnableAllBreakpoints(bool internal_also = false);
-  
+
   void EnableAllowedBreakpoints();
 
   bool DisableBreakpointByID(lldb::break_id_t break_id);
@@ -1119,12 +1114,13 @@ public:
   // parameters have the same meaning as for the UserExpression constructor.
   // Returns a new-ed object which the caller owns.
 
-  UserExpression *GetUserExpressionForLanguage(
-      ExecutionContext &exe_ctx,
-      llvm::StringRef expr, llvm::StringRef prefix, lldb::LanguageType language,
-      Expression::ResultType desired_type,
-      const EvaluateExpressionOptions &options,
-      ValueObject *ctx_obj, Status &error);
+  UserExpression *
+  GetUserExpressionForLanguage(ExecutionContext &exe_ctx,
+                               llvm::StringRef expr, llvm::StringRef prefix,
+                               lldb::LanguageType language,
+                               Expression::ResultType desired_type,
+                               const EvaluateExpressionOptions &options,
+                               ValueObject *ctx_obj, Status &error);
 
   // Creates a FunctionCaller for the given language, the rest of the
   // parameters have the same meaning as for the FunctionCaller constructor.
@@ -1212,8 +1208,7 @@ public:
       llvm::StringRef expression, ExecutionContextScope *exe_scope,
       lldb::ValueObjectSP &result_valobj_sp,
       const EvaluateExpressionOptions &options = EvaluateExpressionOptions(),
-      std::string *fixed_expression = nullptr,
-      ValueObject *ctx_obj = nullptr);
+      std::string *fixed_expression = nullptr, ValueObject *ctx_obj = nullptr);
 
   // Look up a symbol by name and type in both the target's symbols and the
   // persistent symbols from the
@@ -1234,7 +1229,7 @@ public:
 
   /// This method will return the address of the starting function for
   /// this binary, e.g. main() or its equivalent.  This can be used as
-  /// an address of a function that is not called once a binary has 
+  /// an address of a function that is not called once a binary has
   /// started running - e.g. as a return address for inferior function
   /// calls that are unambiguous completion of the function call, not
   /// called during the course of the inferior function code running.
@@ -1246,9 +1241,9 @@ public:
   ///     be found, and may contain a helpful error message.
   //
   /// \return
-  ///     Returns the entry address for this program, LLDB_INVALID_ADDRESS
+  ///     Returns the entry address for this program, or an error
   ///     if none can be found.
-  lldb_private::Address GetEntryPointAddress(Status &err);
+  llvm::Expected<lldb_private::Address> GetEntryPointAddress();
 
   // Target Stop Hooks
   class StopHook : public UserID {
@@ -1281,7 +1276,9 @@ public:
 
     void SetIsActive(bool is_active) { m_active = is_active; }
 
-    void SetAutoContinue(bool auto_continue) {m_auto_continue = auto_continue;}
+    void SetAutoContinue(bool auto_continue) {
+      m_auto_continue = auto_continue;
+    }
 
     bool GetAutoContinue() const { return m_auto_continue; }
 
@@ -1394,7 +1391,7 @@ protected:
                          const lldb::ModuleSP &module_sp) override;
 
   void NotifyModuleRemoved(const ModuleList &module_list,
-                         const lldb::ModuleSP &module_sp) override;
+                           const lldb::ModuleSP &module_sp) override;
 
   void NotifyModuleUpdated(const ModuleList &module_list,
                            const lldb::ModuleSP &old_module_sp,
@@ -1429,7 +1426,7 @@ protected:
   BreakpointList m_internal_breakpoint_list;
   using BreakpointNameList = std::map<ConstString, BreakpointName *>;
   BreakpointNameList m_breakpoint_names;
-  
+
   lldb::BreakpointSP m_last_created_breakpoint;
   WatchpointList m_watchpoint_list;
   lldb::WatchpointSP m_last_created_watchpoint;

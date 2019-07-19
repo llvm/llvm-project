@@ -771,9 +771,10 @@ void Writer::createInitTLSFunction() {
 
     OutputSegment *tlsSeg = nullptr;
     for (auto *seg : segments) {
-      if (seg->name == ".tdata")
+      if (seg->name == ".tdata") {
         tlsSeg = seg;
-      break;
+        break;
+      }
     }
 
     writeUleb128(os, 0, "num locals");

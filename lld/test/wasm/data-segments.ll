@@ -2,9 +2,8 @@
 ; RUN: llc -filetype=obj %s -o %t.bulk-mem.o -mattr=+bulk-memory
 ; RUN: llc -filetype=obj %s -o %t.atomics.bulk-mem.o -mattr=+atomics,+bulk-memory
 
-; atomics => active segments (TODO: error)
-; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.o -o %t.atomics.wasm
-; RUN: obj2yaml %t.atomics.wasm | FileCheck %s --check-prefixes ACTIVE,ACTIVE-TLS
+; atomics => error
+; RUN: not wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.o -o %t.atomics.wasm 2>&1 | FileCheck %s --check-prefix ERROR
 
 ; atomics, active segments => active segments
 ; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 --active-segments %t.atomics.o -o %t.atomics.active.wasm
@@ -25,15 +24,15 @@
 ; RUN: wasm-ld -no-gc-sections --no-entry --passive-segments %t.bulk-mem.o -o %t.bulk-mem.passive.wasm
 ; RUN: obj2yaml %t.bulk-mem.passive.wasm | FileCheck %s --check-prefix PASSIVE
 
-; atomics, bulk memory => active segments (TODO: passive)
+; atomics, bulk memory => passive segments
 ; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 %t.atomics.bulk-mem.o -o %t.atomics.bulk-mem.wasm
-; RUN: obj2yaml %t.atomics.bulk-mem.wasm | FileCheck %s --check-prefixes ACTIVE,ACTIVE-TLS
+; RUN: obj2yaml %t.atomics.bulk-mem.wasm | FileCheck %s --check-prefixes PASSIVE,PASSIVE-TLS
 
-; atomics, bulk memory, active segments   => active segments
+; atomics, bulk memory, active segments => active segments
 ; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 --active-segments %t.atomics.bulk-mem.o -o %t.atomics.bulk-mem.active.wasm
 ; RUN: obj2yaml %t.atomics.bulk-mem.active.wasm | FileCheck %s --check-prefixes ACTIVE,ACTIVE-TLS
 
-; atomics, bulk memory, passive segments  => passive segments
+; atomics, bulk memory, passive segments => passive segments
 ; RUN: wasm-ld -no-gc-sections --no-entry --shared-memory --max-memory=131072 --passive-segments %t.atomics.bulk-mem.o -o %t.atomics.bulk-mem.passive.wasm
 ; RUN: obj2yaml %t.atomics.bulk-mem.passive.wasm | FileCheck %s --check-prefixes PASSIVE,PASSIVE-TLS
 
