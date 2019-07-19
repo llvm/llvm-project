@@ -19,7 +19,7 @@
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Host/Host.h"
-#include "lldb/Symbol/LocateSymbolFile.h"
+#include "lldb/Host/Symbols.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
@@ -355,14 +355,13 @@ Status ProcessMachCore::DoLoadCore() {
           module_spec.GetArchitecture() = GetTarget().GetArchitecture();
 
           // Lookup UUID locally, before attempting dsymForUUID like action
-          FileSpecList search_paths =
-              Target::GetDefaultDebugFileSearchPaths();
           module_spec.GetSymbolFileSpec() =
-              Symbols::LocateExecutableSymbolFile(module_spec, search_paths);
+              Symbols::LocateExecutableSymbolFile(module_spec);
           if (module_spec.GetSymbolFileSpec()) {
             ModuleSpec executable_module_spec =
                 Symbols::LocateExecutableObjectFile(module_spec);
-            if (FileSystem::Instance().Exists(executable_module_spec.GetFileSpec())) {
+            if (FileSystem::Instance().Exists(
+                    executable_module_spec.GetFileSpec())) {
               module_spec.GetFileSpec() =
                   executable_module_spec.GetFileSpec();
             }
