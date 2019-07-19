@@ -28,7 +28,7 @@ MATH_MANGLE(clog)(float2 z)
     
 
     if (!FINITE_ONLY_OPT()) {
-        rr = x == 0.0f ? AS_FLOAT(NINFBITPATT_SP32) : rr;
+        rr = ((x == 0.0f) & (y == 0.0f)) ? AS_FLOAT(NINFBITPATT_SP32) : rr;
         rr = (BUILTIN_ISINF_F32(x) | BUILTIN_ISINF_F32(y)) ? AS_FLOAT(PINFBITPATT_SP32) : rr;
     }
 

@@ -14,7 +14,7 @@ MATH_MANGLE(ilogb)(double x)
 
     if (!FINITE_ONLY_OPT()) {
         r = BUILTIN_ISNAN_F64(x) ? FP_ILOGBNAN : r;
-        r = BUILTIN_ISNAN_F64(x) ? INT_MAX : r;
+        r = BUILTIN_ISINF_F64(x) ? INT_MAX : r;
     }
 
     r = x == 0.0 ? FP_ILOGB0 : r;

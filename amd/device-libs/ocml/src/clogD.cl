@@ -28,7 +28,7 @@ MATH_MANGLE(clog)(double2 z)
     
 
     if (!FINITE_ONLY_OPT()) {
-        rr = x == 0.0 ? AS_DOUBLE(NINFBITPATT_DP64) : rr;
+        rr = ((x == 0.0) & (y == 0.0)) ? AS_DOUBLE(NINFBITPATT_DP64) : rr;
         rr = (BUILTIN_ISINF_F64(x) | BUILTIN_ISINF_F64(y)) ? AS_DOUBLE(PINFBITPATT_DP64) : rr;
     }
 
