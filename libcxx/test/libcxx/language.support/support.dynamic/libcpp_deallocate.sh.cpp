@@ -32,7 +32,7 @@
 
 // AppleClang < 10 incorrectly warns that aligned allocation is not supported
 // even when it is supported.
-// XFAIL: apple-clang-9
+// UNSUPPORTED: apple-clang-9
 
 // XFAIL: sanitizer-new-delete, ubsan
 
