@@ -124,7 +124,6 @@ protected:
   uint64_t m_byte_size;
 
   ValueObjectConstResultImpl m_impl;
-  bool m_is_swift_fixed_value_buffer;
 
 private:
   friend class ValueObjectConstResultImpl;
