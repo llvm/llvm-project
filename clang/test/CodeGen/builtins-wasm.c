@@ -44,6 +44,11 @@ __SIZE_TYPE__ tls_size() {
   // WEBASSEMBLY64: call i64 @llvm.wasm.tls.size.i64()
 }
 
+void *tls_base() {
+  return __builtin_wasm_tls_base();
+  // WEBASSEMBLY: call i8* @llvm.wasm.tls.base()
+}
+
 void throw(void *obj) {
   return __builtin_wasm_throw(0, obj);
   // WEBASSEMBLY32: call void @llvm.wasm.throw(i32 0, i8* %{{.*}})

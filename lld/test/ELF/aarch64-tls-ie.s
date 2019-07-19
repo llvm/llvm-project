@@ -1,7 +1,7 @@
 # REQUIRES: aarch64
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %p/Inputs/aarch64-tls-ie.s -o %tdso.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %s -o %tmain.o
-# RUN: ld.lld -shared %tdso.o -o %tdso.so
+# RUN: ld.lld -shared -soname=tdso.so %tdso.o -o %tdso.so
 # RUN: ld.lld --hash-style=sysv %tmain.o %tdso.so -o %tout
 # RUN: llvm-objdump -d --no-show-raw-insn %tout | FileCheck %s
 # RUN: llvm-readobj -S -r %tout | FileCheck -check-prefix=RELOC %s

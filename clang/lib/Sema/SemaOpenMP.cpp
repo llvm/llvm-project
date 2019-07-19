@@ -139,6 +139,7 @@ private:
     /// clause, false otherwise.
     llvm::Optional<std::pair<const Expr *, OMPOrderedClause *>> OrderedRegion;
     unsigned AssociatedLoops = 1;
+    bool HasMutipleLoops = false;
     const Decl *PossiblyLoopCounter = nullptr;
     bool NowaitRegion = false;
     bool CancelRegion = false;
@@ -678,11 +679,18 @@ public:
   /// Set collapse value for the region.
   void setAssociatedLoops(unsigned Val) {
     getTopOfStack().AssociatedLoops = Val;
+    if (Val > 1)
+      getTopOfStack().HasMutipleLoops = true;
   }
   /// Return collapse value for region.
   unsigned getAssociatedLoops() const {
     const SharingMapTy *Top = getTopOfStackOrNull();
     return Top ? Top->AssociatedLoops : 0;
+  }
+  /// Returns true if the construct is associated with multiple loops.
+  bool hasMutipleLoops() const {
+    const SharingMapTy *Top = getTopOfStackOrNull();
+    return Top ? Top->HasMutipleLoops : false;
   }
 
   /// Marks current target region as one with closely nested teams
@@ -1872,6 +1880,13 @@ bool Sema::isOpenMPPrivateDecl(const ValueDecl *D, unsigned Level) const {
         !DSAStack->hasExplicitDSA(
             D, [](OpenMPClauseKind K) { return K != OMPC_private; }, Level) &&
         !isOpenMPSimdDirective(DSAStack->getCurrentDirective()))
+      return true;
+  }
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (DSAStack->isThreadPrivate(const_cast<VarDecl *>(VD)) &&
+        DSAStack->isForceVarCapturing() &&
+        !DSAStack->hasExplicitDSA(
+            D, [](OpenMPClauseKind K) { return K == OMPC_copyin; }, Level))
       return true;
   }
   return DSAStack->hasExplicitDSA(
@@ -5604,13 +5619,14 @@ void Sema::ActOnOpenMPLoopInitialization(SourceLocation ForLoc, Stmt *Init) {
     if (!ISC.checkAndSetInit(Init, /*EmitDiags=*/false)) {
       if (ValueDecl *D = ISC.getLoopDecl()) {
         auto *VD = dyn_cast<VarDecl>(D);
+        DeclRefExpr *PrivateRef = nullptr;
         if (!VD) {
           if (VarDecl *Private = isOpenMPCapturedDecl(D)) {
             VD = Private;
           } else {
-            DeclRefExpr *Ref = buildCapture(*this, D, ISC.getLoopDeclRefExpr(),
-                                            /*WithInit=*/false);
-            VD = cast<VarDecl>(Ref->getDecl());
+            PrivateRef = buildCapture(*this, D, ISC.getLoopDeclRefExpr(),
+                                      /*WithInit=*/false);
+            VD = cast<VarDecl>(PrivateRef->getDecl());
           }
         }
         DSAStack->addLoopControlVariable(D, VD);
@@ -5622,6 +5638,49 @@ void Sema::ActOnOpenMPLoopInitialization(SourceLocation ForLoc, Stmt *Init) {
                 buildDeclRefExpr(*this, const_cast<VarDecl *>(Var),
                                  Var->getType().getNonLValueExprType(Context),
                                  ForLoc, /*RefersToCapture=*/true));
+        }
+        OpenMPDirectiveKind DKind = DSAStack->getCurrentDirective();
+        // OpenMP [2.14.1.1, Data-sharing Attribute Rules for Variables
+        // Referenced in a Construct, C/C++]. The loop iteration variable in the
+        // associated for-loop of a simd construct with just one associated
+        // for-loop may be listed in a linear clause with a constant-linear-step
+        // that is the increment of the associated for-loop. The loop iteration
+        // variable(s) in the associated for-loop(s) of a for or parallel for
+        // construct may be listed in a private or lastprivate clause.
+        DSAStackTy::DSAVarData DVar =
+            DSAStack->getTopDSA(D, /*FromParent=*/false);
+        // If LoopVarRefExpr is nullptr it means the corresponding loop variable
+        // is declared in the loop and it is predetermined as a private.
+        Expr *LoopDeclRefExpr = ISC.getLoopDeclRefExpr();
+        OpenMPClauseKind PredeterminedCKind =
+            isOpenMPSimdDirective(DKind)
+                ? (DSAStack->hasMutipleLoops() ? OMPC_lastprivate : OMPC_linear)
+                : OMPC_private;
+        if (((isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
+              DVar.CKind != PredeterminedCKind && DVar.RefExpr &&
+              (LangOpts.OpenMP <= 45 || (DVar.CKind != OMPC_lastprivate &&
+                                         DVar.CKind != OMPC_private))) ||
+             ((isOpenMPWorksharingDirective(DKind) || DKind == OMPD_taskloop ||
+               isOpenMPDistributeDirective(DKind)) &&
+              !isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
+              DVar.CKind != OMPC_private && DVar.CKind != OMPC_lastprivate)) &&
+            (DVar.CKind != OMPC_private || DVar.RefExpr)) {
+          Diag(Init->getBeginLoc(), diag::err_omp_loop_var_dsa)
+              << getOpenMPClauseName(DVar.CKind)
+              << getOpenMPDirectiveName(DKind)
+              << getOpenMPClauseName(PredeterminedCKind);
+          if (DVar.RefExpr == nullptr)
+            DVar.CKind = PredeterminedCKind;
+          reportOriginalDsa(*this, DSAStack, D, DVar,
+                            /*IsLoopIterVar=*/true);
+        } else if (LoopDeclRefExpr) {
+          // Make the loop iteration variable private (for worksharing
+          // constructs), linear (for simd directives with the only one
+          // associated loop) or lastprivate (for simd directives with several
+          // collapsed or ordered loops).
+          if (DVar.CKind == OMPC_unknown)
+            DSAStack->addDSA(D, LoopDeclRefExpr, PredeterminedCKind,
+                             PrivateRef);
         }
       }
     }
@@ -5677,8 +5736,6 @@ static bool checkOpenMPIterationSpace(
 
   // Check loop variable's type.
   if (ValueDecl *LCDecl = ISC.getLoopDecl()) {
-    Expr *LoopDeclRefExpr = ISC.getLoopDeclRefExpr();
-
     // OpenMP [2.6, Canonical Loop Form]
     // Var is one of the following:
     //   A variable of signed or unsigned integer type.
@@ -5703,46 +5760,6 @@ static bool checkOpenMPIterationSpace(
     // Exclude loop var from the list of variables with implicitly defined data
     // sharing attributes.
     VarsWithImplicitDSA.erase(LCDecl);
-
-    // OpenMP [2.14.1.1, Data-sharing Attribute Rules for Variables Referenced
-    // in a Construct, C/C++].
-    // The loop iteration variable in the associated for-loop of a simd
-    // construct with just one associated for-loop may be listed in a linear
-    // clause with a constant-linear-step that is the increment of the
-    // associated for-loop.
-    // The loop iteration variable(s) in the associated for-loop(s) of a for or
-    // parallel for construct may be listed in a private or lastprivate clause.
-    DSAStackTy::DSAVarData DVar = DSA.getTopDSA(LCDecl, false);
-    // If LoopVarRefExpr is nullptr it means the corresponding loop variable is
-    // declared in the loop and it is predetermined as a private.
-    OpenMPClauseKind PredeterminedCKind =
-        isOpenMPSimdDirective(DKind)
-            ? ((NestedLoopCount == 1) ? OMPC_linear : OMPC_lastprivate)
-            : OMPC_private;
-    if (((isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
-          DVar.CKind != PredeterminedCKind && DVar.RefExpr &&
-          (SemaRef.getLangOpts().OpenMP <= 45 ||
-           (DVar.CKind != OMPC_lastprivate && DVar.CKind != OMPC_private))) ||
-         ((isOpenMPWorksharingDirective(DKind) || DKind == OMPD_taskloop ||
-           isOpenMPDistributeDirective(DKind)) &&
-          !isOpenMPSimdDirective(DKind) && DVar.CKind != OMPC_unknown &&
-          DVar.CKind != OMPC_private && DVar.CKind != OMPC_lastprivate)) &&
-        (DVar.CKind != OMPC_private || DVar.RefExpr)) {
-      SemaRef.Diag(Init->getBeginLoc(), diag::err_omp_loop_var_dsa)
-          << getOpenMPClauseName(DVar.CKind) << getOpenMPDirectiveName(DKind)
-          << getOpenMPClauseName(PredeterminedCKind);
-      if (DVar.RefExpr == nullptr)
-        DVar.CKind = PredeterminedCKind;
-      reportOriginalDsa(SemaRef, &DSA, LCDecl, DVar, /*IsLoopIterVar=*/true);
-      HasErrors = true;
-    } else if (LoopDeclRefExpr != nullptr) {
-      // Make the loop iteration variable private (for worksharing constructs),
-      // linear (for simd directives with the only one associated loop) or
-      // lastprivate (for simd directives with several collapsed or ordered
-      // loops).
-      if (DVar.CKind == OMPC_unknown)
-        DSA.addDSA(LCDecl, LoopDeclRefExpr, PredeterminedCKind);
-    }
 
     assert(isOpenMPLoopDirective(DKind) && "DSA for non-loop vars");
 

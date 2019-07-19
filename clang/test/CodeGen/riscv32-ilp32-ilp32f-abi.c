@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -triple riscv32 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple riscv32 -target-feature +f -target-abi ilp32f -emit-llvm %s -o - \
+// RUN:     | FileCheck %s
 
 // This file contains test cases that will have the same output for the ilp32
 // and ilp32f ABIs.
@@ -35,8 +37,8 @@ int f_scalar_stack_1(int32_t a, int64_t b, int32_t c, double d, long double e,
 // the presence of large return values that consume a register due to the need
 // to pass a pointer.
 
-// CHECK-LABEL: define void @f_scalar_stack_2(%struct.large* noalias sret %agg.result, i32 %a, i64 %b, i64 %c, fp128 %d, i8 zeroext %e, i8 %f, i8 %g)
-struct large f_scalar_stack_2(int32_t a, int64_t b, int64_t c, long double d,
+// CHECK-LABEL: define void @f_scalar_stack_2(%struct.large* noalias sret %agg.result, i32 %a, i64 %b, double %c, fp128 %d, i8 zeroext %e, i8 %f, i8 %g)
+struct large f_scalar_stack_2(int32_t a, int64_t b, double c, long double d,
                               uint8_t e, int8_t f, uint8_t g) {
   return (struct large){a, e, f, g};
 }

@@ -1,4 +1,6 @@
 // RUN: %clang_cc1 -triple riscv64 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple riscv64 -target-feature +f -target-abi lp64f -emit-llvm %s -o - \
+// RUN:     | FileCheck %s
 
 // This file contains test cases that will have the same output for the lp64
 // and lp64f ABIs.
