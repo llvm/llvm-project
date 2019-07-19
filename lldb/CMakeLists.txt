@@ -62,6 +62,7 @@ if(CMAKE_CROSSCOMPILING AND LLDB_BUILT_STANDALONE)
     -DLLDB_PATH_TO_SWIFT_BUILD=${LLDB_PATH_TO_NATIVE_SWIFT_BUILD}
     -DLLVM_DIR=${NATIVE_LLVM_DIR}
     -DClang_DIR=${NATIVE_Clang_DIR})
+endif()
 
 add_subdirectory(utils/TableGen)
 add_subdirectory(source)
