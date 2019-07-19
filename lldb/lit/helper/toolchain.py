@@ -16,11 +16,6 @@ def use_lldb_substitutions(config):
 
     dsname = 'debugserver' if platform.system() in ['Darwin'] else 'lldb-server'
     dsargs = [] if platform.system() in ['Darwin'] else ['gdbserver']
-    lldbmi = ToolSubst('%lldbmi',
-                       command=FindTool('lldb-mi'),
-                       extra_args=['--synchronous'],
-                       unresolved='ignore')
-
 
     build_script = os.path.dirname(__file__)
     build_script = os.path.join(build_script, 'build.py')
@@ -43,7 +38,6 @@ def use_lldb_substitutions(config):
         ToolSubst('%lldb-init',
                   command=FindTool('lldb'),
                   extra_args=['-S', lldb_init]),
-        lldbmi,
         ToolSubst('%debugserver',
                   command=FindTool(dsname),
                   extra_args=dsargs,
@@ -61,9 +55,6 @@ def use_lldb_substitutions(config):
 
     llvm_config.add_tool_substitutions(primary_tools,
                                        [config.lldb_tools_dir])
-    # lldb-mi always fails without Python support
-    if lldbmi.was_resolved and not config.lldb_disable_python:
-        config.available_features.add('lldb-mi')
 
 def _use_msvc_substitutions(config):
     # If running from a Visual Studio Command prompt (e.g. vcvars), this will

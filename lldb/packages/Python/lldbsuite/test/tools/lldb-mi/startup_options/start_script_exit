@@ -1,7 +1,0 @@
--file-exec-and-symbols a.out
--break-insert -f main
--exec-run
--break-insert main.cpp:14
--exec-continue
--data-evaluate-expression a
--gdb-exit
