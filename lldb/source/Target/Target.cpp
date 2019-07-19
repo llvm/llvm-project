@@ -3938,7 +3938,7 @@ static constexpr PropertyDefinition g_experimental_properties[]{
      "But it can make expressions run much more slowly."},
     {"swift-create-module-contexts-in-parallel", OptionValue::eTypeBoolean,
      false, true, nullptr, {},
-     "Create the per-module Swift AST contexts in parallel."}};
+     "Create the per-module Swift AST contexts in parallel."},
     {"use-modern-type-lookup",
      OptionValue::eTypeBoolean,
      true,
