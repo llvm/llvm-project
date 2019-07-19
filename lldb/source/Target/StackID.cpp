@@ -7,9 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/StackID.h"
+#include "lldb/Core/Module.h"
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
@@ -70,8 +72,15 @@ bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {
   // constructor. But I'm not going to waste a bool per StackID on this till we
   // need it.
 
-  if (lhs_cfa != rhs_cfa)
-    return lhs_cfa < rhs_cfa;
+  if (lhs_cfa != rhs_cfa) {
+    ArchSpec dpu_arch("dpu-upmem-dpurte");
+    if (lhs.GetSymbolContextScope()
+            ->CalculateSymbolContextModule()
+            ->GetArchitecture() == dpu_arch)
+      return lhs_cfa > rhs_cfa;
+    else
+      return lhs_cfa < rhs_cfa;
+  }
 
   SymbolContextScope *lhs_scope = lhs.GetSymbolContextScope();
   SymbolContextScope *rhs_scope = rhs.GetSymbolContextScope();
