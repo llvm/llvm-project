@@ -19,8 +19,8 @@ class B {
 // There are no global user-defined new operators at this point. Test that clang
 // rejects these gracefully.
 void test_default_new_delete(void *buffer, A **pa) {
-  A *a = new A;         // expected-error {{'default new' is not supported in OpenCL C++}}
-  delete a;             // expected-error {{'default delete' is not supported in OpenCL C++}}
+  A *a = new A;         // expected-error {{'default new' is not supported in C++ for OpenCL}}
+  delete a;             // expected-error {{'default delete' is not supported in C++ for OpenCL}}
   *pa = new (buffer) A; // expected-error {{use of placement new requires explicit declaration}}
 }
 
@@ -36,10 +36,10 @@ void *operator new[](size_t _s, void *ptr) noexcept {
 
 void test_new_delete(void *buffer, A **a, B **b) {
   *a = new A; // expected-error {{no matching function for call to 'operator new'}}
-  delete a;   // expected-error {{'default delete' is not supported in OpenCL C++}}
+  delete a;   // expected-error {{'default delete' is not supported in C++ for OpenCL}}
 
   *a = new A[20]; // expected-error {{no matching function for call to 'operator new[]'}}
-  delete[] *a;    // expected-error {{'default delete' is not supported in OpenCL C++}}
+  delete[] *a;    // expected-error {{'default delete' is not supported in C++ for OpenCL}}
 
   // User-defined placement new is supported.
   *a = new (buffer) A;

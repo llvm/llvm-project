@@ -24,7 +24,10 @@ uint64_t DWARFDataExtractor::getRelocatedValue(uint32_t Size, uint32_t *Off,
     return A;
   if (SecNdx)
     *SecNdx = E->SectionIndex;
-  return E->Resolver(E->Reloc, E->SymbolValue, A);
+  uint64_t R = E->Resolver(E->Reloc, E->SymbolValue, A);
+  if (E->Reloc2)
+    R = E->Resolver(*E->Reloc2, E->SymbolValue2, R);
+  return R;
 }
 
 Optional<uint64_t>

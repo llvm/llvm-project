@@ -1531,7 +1531,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     break;
   }
   case TargetOpcode::BUNDLE: {
-    if (!MI.mayLoad())
+    if (!MI.mayLoad() || MI.hasUnmodeledSideEffects())
       return false;
 
     // If it is a load it must be a memory clause

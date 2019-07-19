@@ -693,16 +693,11 @@ def setupSysPath():
     os.environ["LLDB_SRC"] = lldbsuite.lldb_root
 
     pluginPath = os.path.join(scriptPath, 'plugins')
-    toolsLLDBMIPath = os.path.join(scriptPath, 'tools', 'lldb-mi')
     toolsLLDBVSCode = os.path.join(scriptPath, 'tools', 'lldb-vscode')
     toolsLLDBServerPath = os.path.join(scriptPath, 'tools', 'lldb-server')
 
-    # Insert script dir, plugin dir, lldb-mi dir and lldb-server dir to the
-    # sys.path.
+    # Insert script dir, plugin dir and lldb-server dir to the sys.path.
     sys.path.insert(0, pluginPath)
-    # Adding test/tools/lldb-mi to the path makes it easy
-    sys.path.insert(0, toolsLLDBMIPath)
-    # to "import lldbmi_testcase" from the MI tests
     # Adding test/tools/lldb-vscode to the path makes it easy to
     # "import lldb_vscode_testcase" from the VSCode tests
     sys.path.insert(0, toolsLLDBVSCode)
@@ -761,19 +756,7 @@ def setupSysPath():
     print("LLDB import library dir:", os.environ["LLDB_IMPLIB_DIR"])
     os.system('%s -v' % lldbtest_config.lldbExec)
 
-    # Assume lldb-mi is in same place as lldb
-    # If not found, disable the lldb-mi tests
-    # TODO: Append .exe on Windows
-    #   - this will be in a separate commit in case the mi tests fail horribly
     lldbDir = os.path.dirname(lldbtest_config.lldbExec)
-    lldbMiExec = os.path.join(lldbDir, "lldb-mi")
-    if is_exe(lldbMiExec):
-        os.environ["LLDBMI_EXEC"] = lldbMiExec
-    else:
-        if not configuration.shouldSkipBecauseOfCategories(["lldb-mi"]):
-            print(
-                "The 'lldb-mi' executable cannot be located.  The lldb-mi tests can not be run as a result.")
-            configuration.skipCategories.append("lldb-mi")
 
     lldbVSCodeExec = os.path.join(lldbDir, "lldb-vscode")
     if is_exe(lldbVSCodeExec):

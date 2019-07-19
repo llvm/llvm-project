@@ -232,24 +232,24 @@ public:
   OrcMCJITReplacement(std::shared_ptr<MCJITMemoryManager> MemMgr,
                       std::shared_ptr<LegacyJITSymbolResolver> ClientResolver,
                       std::unique_ptr<TargetMachine> TM)
-      : ExecutionEngine(TM->createDataLayout()),
-        TM(std::move(TM)),
+      : ExecutionEngine(TM->createDataLayout()), TM(std::move(TM)),
         MemMgr(
             std::make_shared<MCJITReplacementMemMgr>(*this, std::move(MemMgr))),
         Resolver(std::make_shared<LinkingORCResolver>(*this)),
         ClientResolver(std::move(ClientResolver)), NotifyObjectLoaded(*this),
         NotifyFinalized(*this),
         ObjectLayer(
-            ES,
+            AcknowledgeORCv1Deprecation, ES,
             [this](VModuleKey K) {
               return ObjectLayerT::Resources{this->MemMgr, this->Resolver};
             },
             NotifyObjectLoaded, NotifyFinalized),
-        CompileLayer(ObjectLayer, SimpleCompiler(*this->TM),
+        CompileLayer(AcknowledgeORCv1Deprecation, ObjectLayer,
+                     SimpleCompiler(*this->TM),
                      [this](VModuleKey K, std::unique_ptr<Module> M) {
                        Modules.push_back(std::move(M));
                      }),
-        LazyEmitLayer(CompileLayer) {}
+        LazyEmitLayer(AcknowledgeORCv1Deprecation, CompileLayer) {}
 
   static void Register() {
     OrcMCJITReplacementCtor = createOrcMCJITReplacement;

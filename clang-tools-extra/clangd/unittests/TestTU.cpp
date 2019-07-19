@@ -38,6 +38,10 @@ ParsedAST TestTU::build() const {
     Cmd.push_back("-include");
     Cmd.push_back(ImplicitHeaderGuard ? ImportThunk.c_str()
                                       : FullHeaderName.c_str());
+    // ms-compatibility changes the meaning of #import.
+    // The default is OS-dependent (on on windows), ensure it's off.
+    if (ImplicitHeaderGuard)
+      Cmd.push_back("-fno-ms-compatibility");
   }
   Cmd.insert(Cmd.end(), ExtraArgs.begin(), ExtraArgs.end());
   // Put the file name at the end -- this allows the extra arg (-xc++) to

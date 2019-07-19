@@ -543,6 +543,12 @@ public:
     emitDwarfStringOffset(S.getEntry());
   }
 
+  /// Emit reference to a call site with a specified encoding
+  void EmitCallSiteOffset(const MCSymbol *Hi, const MCSymbol *Lo,
+                          unsigned Encoding) const;
+  /// Emit an integer value corresponding to the call site encoding
+  void EmitCallSiteValue(uint64_t Value, unsigned Encoding) const;
+
   /// Get the value for DW_AT_APPLE_isa. Zero if no isa encoding specified.
   virtual unsigned getISAEncoding() { return 0; }
 

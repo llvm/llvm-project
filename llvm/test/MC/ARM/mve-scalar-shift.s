@@ -111,9 +111,13 @@ sqrshr  lr, r12
 # ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: instruction requires: mve
 sqrshr  r11, r12
 
-# CHECK: sqrshrl lr, r3, r8  @ encoding: [0x5f,0xea,0x2d,0x83]
+# CHECK: sqrshrl lr, r3, #64, r8  @ encoding: [0x5f,0xea,0x2d,0x83]
 # ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: instruction requires: mve
-sqrshrl lr, r3, r8
+sqrshrl lr, r3, #64, r8
+
+# ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: saturate operand must be 48 or 64
+# ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+sqrshrl lr, r3, #32, r8
 
 # CHECK: sqshl   lr, #17  @ encoding: [0x5e,0xea,0x7f,0x4f]
 # ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: instruction requires: mve
@@ -135,9 +139,13 @@ srshrl  lr, r11, #23
 # ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: instruction requires: mve
 uqrshl  lr, r1
 
-# CHECK: uqrshll lr, r1, r4  @ encoding: [0x5f,0xea,0x0d,0x41]
+# CHECK: uqrshll lr, r1, #48, r4  @ encoding: [0x5f,0xea,0x8d,0x41]
 # ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: instruction requires: mve
-uqrshll lr, r1, r4
+uqrshll lr, r1, #48, r4
+
+# ERROR: [[@LINE+2]]:{{[0-9]+}}: {{error|note}}: saturate operand must be 48 or 64
+# ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: invalid instruction
+uqrshll lr, r1, #0, r4
 
 # CHECK: uqshl   r0, #1  @ encoding: [0x50,0xea,0x4f,0x0f]
 # ERROR-NOMVE: [[@LINE+1]]:{{[0-9]+}}: error: instruction requires: mve

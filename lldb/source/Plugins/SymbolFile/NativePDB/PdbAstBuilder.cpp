@@ -214,8 +214,8 @@ PdbAstBuilder::PdbAstBuilder(ObjectFile &obj, PdbIndex &index)
   BuildParentMap();
 }
 
-clang::DeclContext &PdbAstBuilder::GetTranslationUnitDecl() {
-  return *m_clang.GetTranslationUnitDecl();
+lldb_private::CompilerDeclContext PdbAstBuilder::GetTranslationUnitDecl() {
+  return ToCompilerDeclContext(*m_clang.GetTranslationUnitDecl());
 }
 
 std::pair<clang::DeclContext *, std::string>
@@ -492,7 +492,7 @@ clang::Decl *PdbAstBuilder::GetOrCreateDeclForUid(PdbSymUid uid) {
 clang::DeclContext *PdbAstBuilder::GetOrCreateDeclContextForUid(PdbSymUid uid) {
   if (uid.kind() == PdbSymUidKind::CompilandSym) {
     if (uid.asCompilandSym().offset == 0)
-      return &GetTranslationUnitDecl();
+      return FromCompilerDeclContext(GetTranslationUnitDecl());
   }
 
   clang::Decl *decl = GetOrCreateDeclForUid(uid);
@@ -507,7 +507,7 @@ PdbAstBuilder::CreateDeclInfoForUndecoratedName(llvm::StringRef name) {
   MSVCUndecoratedNameParser parser(name);
   llvm::ArrayRef<MSVCUndecoratedNameSpecifier> specs = parser.GetSpecifiers();
 
-  clang::DeclContext *context = &GetTranslationUnitDecl();
+  auto context = FromCompilerDeclContext(GetTranslationUnitDecl());
 
   llvm::StringRef uname = specs.back().GetBaseName();
   specs = specs.drop_back();
@@ -548,7 +548,7 @@ PdbAstBuilder::GetParentDeclContextForSymbol(const CVSymbol &sym) {
   StringView name{pub->Name.begin(), pub->Name.size()};
   llvm::ms_demangle::SymbolNode *node = demangler.parse(name);
   if (!node)
-    return &GetTranslationUnitDecl();
+    return FromCompilerDeclContext(GetTranslationUnitDecl());
   llvm::ArrayRef<llvm::ms_demangle::Node *> name_components{
       node->Name->Components->Nodes, node->Name->Components->Count - 1};
 
@@ -569,7 +569,7 @@ PdbAstBuilder::GetParentDeclContextForSymbol(const CVSymbol &sym) {
   }
 
   // It's not a type.  It must be a series of namespaces.
-  clang::DeclContext *context = &GetTranslationUnitDecl();
+  auto context = FromCompilerDeclContext(GetTranslationUnitDecl());
   while (!name_components.empty()) {
     std::string ns = name_components.front()->toString();
     context = GetOrCreateNamespaceDecl(ns.c_str(), *context);
@@ -597,7 +597,7 @@ clang::DeclContext *PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
     PdbTypeSymId type_id = uid.asTypeSym();
     auto iter = m_parent_types.find(type_id.index);
     if (iter == m_parent_types.end())
-      return &GetTranslationUnitDecl();
+      return FromCompilerDeclContext(GetTranslationUnitDecl());
     return GetOrCreateDeclContextForUid(PdbTypeSymId(iter->second));
   }
   case PdbSymUidKind::FieldListMember:
@@ -635,7 +635,7 @@ clang::DeclContext *PdbAstBuilder::GetParentDeclContext(PdbSymUid uid) {
   default:
     break;
   }
-  return &GetTranslationUnitDecl();
+  return FromCompilerDeclContext(GetTranslationUnitDecl());
 }
 
 bool PdbAstBuilder::CompleteType(clang::QualType qt) {
@@ -866,7 +866,8 @@ clang::VarDecl *PdbAstBuilder::GetOrCreateVariableDecl(PdbGlobalSymId var_id) {
     return llvm::dyn_cast<clang::VarDecl>(decl);
 
   CVSymbol sym = m_index.ReadSymbolRecord(var_id);
-  return CreateVariableDecl(PdbSymUid(var_id), sym, GetTranslationUnitDecl());
+  auto context = FromCompilerDeclContext(GetTranslationUnitDecl());
+  return CreateVariableDecl(PdbSymUid(var_id), sym, *context);
 }
 
 clang::TypedefNameDecl *
@@ -1351,6 +1352,10 @@ CompilerType PdbAstBuilder::ToCompilerType(clang::QualType qt) {
 CompilerDeclContext
 PdbAstBuilder::ToCompilerDeclContext(clang::DeclContext &context) {
   return {&m_clang, &context};
+}
+
+clang::Decl * PdbAstBuilder::FromCompilerDecl(CompilerDecl decl) {
+  return static_cast<clang::Decl *>(decl.GetOpaqueDecl());
 }
 
 clang::DeclContext *

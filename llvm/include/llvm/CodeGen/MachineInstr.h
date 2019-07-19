@@ -1607,6 +1607,12 @@ public:
   /// to a register def in this instruction and point them to \p Reg instead.
   void changeDebugValuesDefReg(unsigned Reg);
 
+  /// Returns the Intrinsic::ID for this instruction.
+  /// \pre Must have an intrinsic ID operand.
+  unsigned getIntrinsicID() const {
+    return getOperand(getNumExplicitDefs()).getIntrinsicID();
+  }
+
 private:
   /// If this instruction is embedded into a MachineFunction, return the
   /// MachineRegisterInfo object for the current function, otherwise

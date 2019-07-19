@@ -611,7 +611,7 @@ define void @test_nostack() #0 {
 ; X32-Linux-NOT:   calll __morestack
 
 ; X64-Linux-LABEL: test_nostack:
-; X32-Linux-NOT:   callq __morestack
+; X64-Linux-NOT:   callq __morestack
 
 ; X32ABI-LABEL: test_nostack:
 ; X32ABI-NOT:   callq __morestack
@@ -685,6 +685,45 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 
 ; X64-DFlyBSD-LABEL:       test_sibling_call_empty_frame:
 ; X64-DFlyBSD:  callq __morestack
+
+}
+
+; Test that unused nested argument doesn't need saving/restoring.
+
+define i32 @test_nested_unused(i32 * nest %unused) #0 {
+       %mem = alloca i32, i32 10
+       call void @dummy_use (i32* %mem, i32 10)
+       ret i32 123
+
+; X64-Linux-LABEL: test_nested_unused:
+; X64-Linux-NOT:   movq %r10, %rax
+; X64-Linux:       callq __morestack
+; X64-Linux-NOT:   movq %rax, %r10
+
+; X64-Darwin-LABEL: test_nested_unused:
+; X64-Darwin-NOT:   movq %r10, %rax
+; X64-Darwin:       callq ___morestack
+; X64-Darwin-NOT:   movq %rax, %r10
+
+; X64-FreeBSD-LABEL: test_nested_unused:
+; X64-FreeBSD-NOT:   movq %r10, %rax
+; X64-FreeBSD:       callq __morestack
+; X64-FreeBSD-NOT:   movq %rax, %r10
+
+; X64-DFlyBSD-LABEL: test_nested_unused:
+; X64-DFlyBSD-NOT:   movq %r10, %rax
+; X64-DFlyBSD:       callq __morestack
+; X64-DFlyBSD-NOT:   movq %rax, %r10
+
+; X64-MinGW-LABEL: test_nested_unused:
+; X64-MinGW-NOT:   movq %r10, %rax
+; X64-MinGW:       callq __morestack
+; X64-MinGW-NOT:   movq %rax, %r10
+
+; X32ABI-LABEL: test_nested_unused:
+; X32ABI-NOT:   movl %r10d, %eax
+; X32ABI:       callq __morestack
+; X32ABI-NOT:   movq %rax, %r10
 
 }
 

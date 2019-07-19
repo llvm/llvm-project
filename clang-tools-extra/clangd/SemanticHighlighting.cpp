@@ -99,6 +99,19 @@ public:
     return true;
   }
 
+  bool VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc &TL) {
+    // TemplateTypeParmTypeLoc does not have a TagDecl in its type ptr.
+    addToken(TL.getBeginLoc(), TL.getDecl());
+    return true;
+  }
+
+  bool VisitTemplateSpecializationTypeLoc(TemplateSpecializationTypeLoc &TL) {
+    if (const TemplateDecl *TD =
+            TL.getTypePtr()->getTemplateName().getAsTemplateDecl())
+      addToken(TL.getBeginLoc(), TD);
+    return true;
+  }
+
   bool VisitTypeLoc(TypeLoc &TL) {
     // This check is for not getting two entries when there are anonymous
     // structs. It also makes us not highlight certain namespace qualifiers
@@ -135,6 +148,10 @@ private:
     // We highlight class decls, constructor decls and destructor decls as
     // `Class` type. The destructor decls are handled in `VisitTypeLoc` (we will
     // visit a TypeLoc where the underlying Type is a CXXRecordDecl).
+    if (isa<ClassTemplateDecl>(D)) {
+      addToken(Loc, HighlightingKind::Class);
+      return;
+    }
     if (isa<RecordDecl>(D)) {
       addToken(Loc, HighlightingKind::Class);
       return;
@@ -173,6 +190,14 @@ private:
     }
     if (isa<NamespaceAliasDecl>(D)) {
       addToken(Loc, HighlightingKind::Namespace);
+      return;
+    }
+    if (isa<TemplateTemplateParmDecl>(D)) {
+      addToken(Loc, HighlightingKind::TemplateParameter);
+      return;
+    }
+    if (isa<TemplateTypeParmDecl>(D)) {
+      addToken(Loc, HighlightingKind::TemplateParameter);
       return;
     }
   }
@@ -297,6 +322,8 @@ llvm::StringRef toTextMateScope(HighlightingKind Kind) {
     return "variable.other.enummember.cpp";
   case HighlightingKind::Namespace:
     return "entity.name.namespace.cpp";
+  case HighlightingKind::TemplateParameter:
+    return "entity.name.type.template.cpp";
   case HighlightingKind::NumKinds:
     llvm_unreachable("must not pass NumKinds to the function");
   }

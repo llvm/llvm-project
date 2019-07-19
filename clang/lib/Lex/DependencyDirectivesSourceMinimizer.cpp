@@ -612,7 +612,21 @@ bool Minimizer::lexDefine(const char *&First, const char *const End) {
 
 bool Minimizer::lexPragma(const char *&First, const char *const End) {
   // #pragma.
-  if (!isNextIdentifier("clang", First, End)) {
+  skipWhitespace(First, End);
+  if (First == End || !isIdentifierHead(*First))
+    return false;
+
+  IdInfo FoundId = lexIdentifier(First, End);
+  First = FoundId.Last;
+  if (FoundId.Name == "once") {
+    // #pragma once
+    skipLine(First, End);
+    makeToken(pp_pragma_once);
+    append("#pragma once\n");
+    return false;
+  }
+
+  if (FoundId.Name != "clang") {
     skipLine(First, End);
     return false;
   }

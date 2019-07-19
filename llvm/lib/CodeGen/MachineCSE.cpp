@@ -21,6 +21,7 @@
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/CFG.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
+#include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -66,6 +67,7 @@ namespace {
     AliasAnalysis *AA;
     MachineDominatorTree *DT;
     MachineRegisterInfo *MRI;
+    MachineBlockFrequencyInfo *MBFI;
 
   public:
     static char ID; // Pass identification
@@ -83,6 +85,8 @@ namespace {
       AU.addPreservedID(MachineLoopInfoID);
       AU.addRequired<MachineDominatorTree>();
       AU.addPreserved<MachineDominatorTree>();
+      AU.addRequired<MachineBlockFrequencyInfo>();
+      AU.addPreserved<MachineBlockFrequencyInfo>();
     }
 
     void releaseMemory() override {
@@ -133,6 +137,11 @@ namespace {
     bool isPRECandidate(MachineInstr *MI);
     bool ProcessBlockPRE(MachineDominatorTree *MDT, MachineBasicBlock *MBB);
     bool PerformSimplePRE(MachineDominatorTree *DT);
+    /// Heuristics to see if it's beneficial to move common computations of MBB
+    /// and MBB1 to CandidateBB.
+    bool isBeneficalToHoistInto(MachineBasicBlock *CandidateBB,
+                                MachineBasicBlock *MBB,
+                                MachineBasicBlock *MBB1);
   };
 
 } // end anonymous namespace
@@ -802,6 +811,9 @@ bool MachineCSE::ProcessBlockPRE(MachineDominatorTree *DT,
     if (!CMBB->isLegalToHoistInto())
       continue;
 
+    if (!isBeneficalToHoistInto(CMBB, MBB, MBB1))
+      continue;
+
     // Two instrs are partial redundant if their basic blocks are reachable
     // from one to another but one doesn't dominate another.
     if (CMBB != MBB1) {
@@ -854,6 +866,18 @@ bool MachineCSE::PerformSimplePRE(MachineDominatorTree *DT) {
   return Changed;
 }
 
+bool MachineCSE::isBeneficalToHoistInto(MachineBasicBlock *CandidateBB,
+                                        MachineBasicBlock *MBB,
+                                        MachineBasicBlock *MBB1) {
+  if (CandidateBB->getParent()->getFunction().hasMinSize())
+    return true;
+  assert(DT->dominates(CandidateBB, MBB) && "CandidateBB should dominate MBB");
+  assert(DT->dominates(CandidateBB, MBB1) &&
+         "CandidateBB should dominate MBB1");
+  return MBFI->getBlockFreq(CandidateBB) <=
+         MBFI->getBlockFreq(MBB) + MBFI->getBlockFreq(MBB1);
+}
+
 bool MachineCSE::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()))
     return false;
@@ -863,6 +887,7 @@ bool MachineCSE::runOnMachineFunction(MachineFunction &MF) {
   MRI = &MF.getRegInfo();
   AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
   DT = &getAnalysis<MachineDominatorTree>();
+  MBFI = &getAnalysis<MachineBlockFrequencyInfo>();
   LookAheadLimit = TII->getMachineCSELookAheadLimit();
   bool ChangedPRE, ChangedCSE;
   ChangedPRE = PerformSimplePRE(DT);

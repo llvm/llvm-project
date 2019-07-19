@@ -37,15 +37,15 @@ SelectionTree makeSelectionTree(const StringRef MarkedCode, ParsedAST &AST) {
 Range nodeRange(const SelectionTree::Node *N, ParsedAST &AST) {
   if (!N)
     return Range{};
-  SourceManager &SM = AST.getSourceManager();
+  const SourceManager &SM = AST.getSourceManager();
+  const LangOptions &LangOpts = AST.getASTContext().getLangOpts();
   StringRef Buffer = SM.getBufferData(SM.getMainFileID());
-  SourceRange SR = N->ASTNode.getSourceRange();
-  SR.setBegin(SM.getFileLoc(SR.getBegin()));
-  SR.setEnd(SM.getFileLoc(SR.getEnd()));
-  CharSourceRange R =
-      Lexer::getAsCharRange(SR, SM, AST.getASTContext().getLangOpts());
-  return Range{offsetToPosition(Buffer, SM.getFileOffset(R.getBegin())),
-               offsetToPosition(Buffer, SM.getFileOffset(R.getEnd()))};
+  auto FileRange =
+      toHalfOpenFileRange(SM, LangOpts, N->ASTNode.getSourceRange());
+  assert(FileRange && "We should be able to get the File Range");
+  return Range{
+      offsetToPosition(Buffer, SM.getFileOffset(FileRange->getBegin())),
+      offsetToPosition(Buffer, SM.getFileOffset(FileRange->getEnd()))};
 }
 
 std::string nodeKind(const SelectionTree::Node *N) {
@@ -144,17 +144,17 @@ TEST(SelectionTest, CommonAncestor) {
           R"cpp(
             void foo();
             #define CALL_FUNCTION(X) X()
-            void bar() [[{ CALL_FUNC^TION(fo^o); }]]
+            void bar() { [[CALL_FUNC^TION(fo^o)]]; }
           )cpp",
-          "CompoundStmt",
+          "CallExpr",
       },
       {
           R"cpp(
             void foo();
             #define CALL_FUNCTION(X) X()
-            void bar() [[{ C^ALL_FUNC^TION(foo); }]]
+            void bar() { [[C^ALL_FUNC^TION(foo)]]; }
           )cpp",
-          "CompoundStmt",
+          "CallExpr",
       },
       {
           R"cpp(
@@ -289,6 +289,9 @@ TEST(SelectionTest, InjectedClassName) {
   EXPECT_FALSE(D->isInjectedClassName());
 }
 
+// FIXME: Doesn't select the binary operator node in
+//          #define FOO(X) X + 1
+//          int a, b = [[FOO(a)]];
 TEST(SelectionTest, Selected) {
   // Selection with ^marks^.
   // Partially selected nodes marked with a [[range]].
@@ -308,7 +311,12 @@ TEST(SelectionTest, Selected) {
       R"cpp(
           template <class T>
           struct unique_ptr {};
-          void foo(^$C[[unique_ptr<unique_ptr<$C[[int]]>>]]^ a) {}
+          void foo(^$C[[unique_ptr<$C[[unique_ptr<$C[[int]]>]]>]]^ a) {}
+      )cpp",
+      R"cpp(int a = [[5 >^> 1]];)cpp",
+      R"cpp(
+        #define ECHO(X) X
+        ECHO(EC^HO([[$C[[int]]) EC^HO(a]]));
       )cpp",
   };
   for (const char *C : Cases) {

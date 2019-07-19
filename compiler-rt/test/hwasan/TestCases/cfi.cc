@@ -1,4 +1,4 @@
-// RUN: %clang_hwasan -fsanitize=cfi -fno-sanitize-trap=cfi -flto -fvisibility=hidden -fuse-ld=lld %s -o %t
+// RUN: %clangxx_hwasan -fsanitize=cfi -fno-sanitize-trap=cfi -flto -fvisibility=hidden -fuse-ld=lld %s -o %t
 // RUN: not %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: android

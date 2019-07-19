@@ -88,7 +88,7 @@ int bar(int n){
 // CHECK: br label {{%?}}[[AWAIT_WORK:.+]]
 //
 // CHECK: [[AWAIT_WORK]]
-// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0)
+// CHECK: call void @__kmpc_barrier_simple_spmd(%struct.ident_t* null, i32 0) #[[#BARRIER_ATTRS:]]
 // CHECK: [[KPR:%.+]] = call i1 @__kmpc_kernel_parallel(i8** [[OMP_WORK_FN]]
 // CHECK: [[KPRB:%.+]] = zext i1 [[KPR]] to i8
 // store i8 [[KPRB]], i8* [[OMP_EXEC_STATUS]], align 1
@@ -318,10 +318,10 @@ int bar(int n){
 // CHECK: define internal void [[PARALLEL_FN4]](
 // CHECK: [[A:%.+]] = alloca i[[SZ:32|64]],
 // CHECK: store i[[SZ]] 45, i[[SZ]]* %a,
-// CHECK: call void @__kmpc_barrier(%struct.ident_t* @{{.+}}, i32 %{{.+}})
+// CHECK: call void @__kmpc_barrier(%struct.ident_t* @{{.+}}, i32 %{{.+}}) #[[#BARRIER_ATTRS]]
 // CHECK: ret void
 
-// CHECK: declare void @__kmpc_barrier(%struct.ident_t*, i32) #[[BARRIER_ATTRS:.+]]
+// CHECK: declare void @__kmpc_barrier(%struct.ident_t*, i32) #[[#BARRIER_ATTRS]]
 
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l55}}_worker()
 // CHECK-LABEL: define {{.*}}void {{@__omp_offloading_.+template.+l55}}(
@@ -367,6 +367,6 @@ int bar(int n){
 // CHECK:  store i32 [[NEW_CC_VAL]], i32* [[CC]],
 // CHECK:  br label
 
-// CHECK: attributes #[[BARRIER_ATTRS]] = {{.*}} convergent {{.*}}
+// CHECK: attributes #[[#BARRIER_ATTRS]] = {{.*}} convergent {{.*}}
 
 #endif

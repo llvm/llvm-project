@@ -47,14 +47,11 @@ private:
                       ArrayRef<Register> VRegs,
                       MachineInstrBuilder &Ret) const;
 
-  using SplitArgTy = std::function<void(unsigned Reg)>;
-
   /// Split an argument into one or more arguments that the CC lowering can cope
-  /// with (e.g. replace pointers with integers).
+  /// with.
   void splitToValueTypes(const ArgInfo &OrigArg,
                          SmallVectorImpl<ArgInfo> &SplitArgs,
-                         MachineFunction &MF,
-                         const SplitArgTy &PerformArgSplit) const;
+                         MachineFunction &MF) const;
 };
 
 } // end namespace llvm

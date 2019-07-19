@@ -41,11 +41,11 @@ std::string DIAInjectedSource::getVirtualFileName() const {
                           &IDiaInjectedSource::get_virtualFilename);
 }
 
-PDB_SourceCompression DIAInjectedSource::getCompression() const {
+uint32_t DIAInjectedSource::getCompression() const {
   DWORD Compression = 0;
   if (S_OK != SourceFile->get_sourceCompression(&Compression))
     return PDB_SourceCompression::None;
-  return static_cast<PDB_SourceCompression>(Compression);
+  return static_cast<uint32_t>(Compression);
 }
 
 std::string DIAInjectedSource::getCode() const {

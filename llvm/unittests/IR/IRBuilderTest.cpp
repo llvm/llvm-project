@@ -125,10 +125,14 @@ TEST_F(IRBuilderTest, Intrinsics) {
 TEST_F(IRBuilderTest, ConstrainedFP) {
   IRBuilder<> Builder(BB);
   Value *V;
+  Value *VDouble;
   CallInst *Call;
   IntrinsicInst *II;
+  GlobalVariable *GVDouble = new GlobalVariable(*M, Type::getDoubleTy(Ctx),
+                            true, GlobalValue::ExternalLinkage, nullptr);
 
   V = Builder.CreateLoad(GV->getValueType(), GV);
+  VDouble = Builder.CreateLoad(GVDouble->getValueType(), GVDouble);
 
   // See if we get constrained intrinsics instead of non-constrained
   // instructions.
@@ -158,6 +162,16 @@ TEST_F(IRBuilderTest, ConstrainedFP) {
   ASSERT_TRUE(isa<IntrinsicInst>(V));
   II = cast<IntrinsicInst>(V);
   EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_frem);
+
+  V = Builder.CreateFPTrunc(VDouble, Type::getFloatTy(Ctx));
+  ASSERT_TRUE(isa<IntrinsicInst>(V));
+  II = cast<IntrinsicInst>(V);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fptrunc);
+
+  VDouble = Builder.CreateFPExt(V, Type::getDoubleTy(Ctx));
+  ASSERT_TRUE(isa<IntrinsicInst>(VDouble));
+  II = cast<IntrinsicInst>(VDouble);
+  EXPECT_EQ(II->getIntrinsicID(), Intrinsic::experimental_constrained_fpext);
 
   // Verify the codepaths for setting and overriding the default metadata.
   V = Builder.CreateFAdd(V, V);

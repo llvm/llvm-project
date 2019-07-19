@@ -236,6 +236,11 @@ createLibcall(MachineIRBuilder &MIRBuilder, RTLIB::Libcall Libcall,
               const CallLowering::ArgInfo &Result,
               ArrayRef<CallLowering::ArgInfo> Args);
 
+/// Create a libcall to memcpy et al.
+LegalizerHelper::LegalizeResult createMemLibcall(MachineIRBuilder &MIRBuilder,
+                                                 MachineRegisterInfo &MRI,
+                                                 MachineInstr &MI);
+
 } // End namespace llvm.
 
 #endif

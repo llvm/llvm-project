@@ -32,6 +32,7 @@ public:
   virtual void EmitBytes(StringRef Data) = 0;
   virtual void EmitIntValue(uint64_t Value, unsigned Size) = 0;
   virtual void EmitBinaryData(StringRef Data) = 0;
+  virtual void AddComment(const Twine &T) = 0;
   virtual ~CodeViewRecordStreamer() = default;
 };
 
@@ -59,7 +60,7 @@ public:
   Error beginRecord(Optional<uint32_t> MaxLength);
   Error endRecord();
 
-  Error mapInteger(TypeIndex &TypeInd);
+  Error mapInteger(TypeIndex &TypeInd, const Twine &Comment = "");
 
   bool isStreaming() const {
     return (Streamer != nullptr) && (Reader == nullptr) && (Writer == nullptr);
@@ -92,8 +93,9 @@ public:
     return Error::success();
   }
 
-  template <typename T> Error mapInteger(T &Value) {
+  template <typename T> Error mapInteger(T &Value, const Twine &Comment = "") {
     if (isStreaming()) {
+      emitComment(Comment);
       Streamer->EmitIntValue((int)Value, sizeof(T));
       incrStreamedLen(sizeof(T));
       return Error::success();
@@ -105,7 +107,7 @@ public:
     return Reader->readInteger(Value);
   }
 
-  template <typename T> Error mapEnum(T &Value) {
+  template <typename T> Error mapEnum(T &Value, const Twine &Comment = "") {
     if (!isStreaming() && sizeof(Value) > maxFieldLength())
       return make_error<CodeViewError>(cv_error_code::insufficient_buffer);
 
@@ -115,7 +117,7 @@ public:
     if (isWriting() || isStreaming())
       X = static_cast<U>(Value);
 
-    if (auto EC = mapInteger(X))
+    if (auto EC = mapInteger(X, Comment))
       return EC;
 
     if (isReading())
@@ -124,19 +126,22 @@ public:
     return Error::success();
   }
 
-  Error mapEncodedInteger(int64_t &Value);
-  Error mapEncodedInteger(uint64_t &Value);
-  Error mapEncodedInteger(APSInt &Value);
-  Error mapStringZ(StringRef &Value);
-  Error mapGuid(GUID &Guid);
+  Error mapEncodedInteger(int64_t &Value, const Twine &Comment = "");
+  Error mapEncodedInteger(uint64_t &Value, const Twine &Comment = "");
+  Error mapEncodedInteger(APSInt &Value, const Twine &Comment = "");
+  Error mapStringZ(StringRef &Value, const Twine &Comment = "");
+  Error mapGuid(GUID &Guid, const Twine &Comment = "");
 
-  Error mapStringZVectorZ(std::vector<StringRef> &Value);
+  Error mapStringZVectorZ(std::vector<StringRef> &Value,
+                          const Twine &Comment = "");
 
   template <typename SizeType, typename T, typename ElementMapper>
-  Error mapVectorN(T &Items, const ElementMapper &Mapper) {
+  Error mapVectorN(T &Items, const ElementMapper &Mapper,
+                   const Twine &Comment = "") {
     SizeType Size;
     if (isStreaming()) {
       Size = static_cast<SizeType>(Items.size());
+      emitComment(Comment);
       Streamer->EmitIntValue(Size, sizeof(Size));
       incrStreamedLen(sizeof(Size)); // add 1 for the delimiter
 
@@ -168,7 +173,9 @@ public:
   }
 
   template <typename T, typename ElementMapper>
-  Error mapVectorTail(T &Items, const ElementMapper &Mapper) {
+  Error mapVectorTail(T &Items, const ElementMapper &Mapper,
+                      const Twine &Comment = "") {
+    emitComment(Comment);
     if (isStreaming() || isWriting()) {
       for (auto &Item : Items) {
         if (auto EC = Mapper(*this, Item))
@@ -186,8 +193,9 @@ public:
     return Error::success();
   }
 
-  Error mapByteVectorTail(ArrayRef<uint8_t> &Bytes);
-  Error mapByteVectorTail(std::vector<uint8_t> &Bytes);
+  Error mapByteVectorTail(ArrayRef<uint8_t> &Bytes, const Twine &Comment = "");
+  Error mapByteVectorTail(std::vector<uint8_t> &Bytes,
+                          const Twine &Comment = "");
 
   Error padToAlignment(uint32_t Align);
   Error skipPadding();
@@ -199,8 +207,10 @@ public:
   }
 
 private:
-  void emitEncodedSignedInteger(const int64_t &Value);
-  void emitEncodedUnsignedInteger(const uint64_t &Value);
+  void emitEncodedSignedInteger(const int64_t &Value,
+                                const Twine &Comment = "");
+  void emitEncodedUnsignedInteger(const uint64_t &Value,
+                                  const Twine &Comment = "");
   Error writeEncodedSignedInteger(const int64_t &Value);
   Error writeEncodedUnsignedInteger(const uint64_t &Value);
 
@@ -212,6 +222,13 @@ private:
   void resetStreamedLen() {
     if (isStreaming())
       StreamedLen = 4; // The record prefix is 4 bytes long
+  }
+
+  void emitComment(const Twine &Comment) {
+    if (isStreaming()) {
+      Twine TComment(Comment);
+      Streamer->AddComment(TComment);
+    }
   }
 
   struct RecordLimit {

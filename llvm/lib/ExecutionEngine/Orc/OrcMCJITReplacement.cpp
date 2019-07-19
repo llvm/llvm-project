@@ -127,7 +127,8 @@ void OrcMCJITReplacement::runStaticConstructorsDestructors(bool isDtors) {
   auto &CtorDtorsMap = isDtors ? UnexecutedDestructors : UnexecutedConstructors;
 
   for (auto &KV : CtorDtorsMap)
-    cantFail(LegacyCtorDtorRunner<LazyEmitLayerT>(std::move(KV.second), KV.first)
+    cantFail(LegacyCtorDtorRunner<LazyEmitLayerT>(
+                 AcknowledgeORCv1Deprecation, std::move(KV.second), KV.first)
                  .runViaLayer(LazyEmitLayer));
 
   CtorDtorsMap.clear();

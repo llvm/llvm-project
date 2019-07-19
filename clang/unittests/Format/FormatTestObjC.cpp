@@ -886,6 +886,18 @@ TEST_F(FormatTestObjC, FormatObjCMethodExpr) {
                "                 bb:42\n"
                "                 cc:42];");
 
+  // Avoid breaking between unary operators and ObjC method expressions.
+  Style.ColumnLimit = 45;
+  verifyFormat("if (a012345678901234567890123 &&\n"
+               "    ![foo bar]) {\n"
+               "}");
+  verifyFormat("if (a012345678901234567890123 &&\n"
+               "    +[foo bar]) {\n"
+               "}");
+  verifyFormat("if (a012345678901234567890123 &&\n"
+               "    -[foo bar]) {\n"
+               "}");
+
   Style.ColumnLimit = 70;
   verifyFormat(
       "void f() {\n"

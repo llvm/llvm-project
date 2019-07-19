@@ -15,6 +15,7 @@
 #include "Threading.h"
 #include "index/CanonicalIncludes.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <future>
@@ -98,6 +99,10 @@ public:
   virtual void onPreambleAST(PathRef Path, ASTContext &Ctx,
                              std::shared_ptr<clang::Preprocessor> PP,
                              const CanonicalIncludes &) {}
+
+  /// The argument function is run under the critical section guarding against
+  /// races when closing the files.
+  using PublishFn = llvm::function_ref<void(llvm::function_ref<void()>)>;
   /// Called on the AST built for the file itself. Note that preamble AST nodes
   /// are not deserialized and should be processed in the onPreambleAST call
   /// instead.
@@ -108,10 +113,17 @@ public:
   /// etc. Clients are expected to process only the AST nodes from the main file
   /// in this callback (obtained via ParsedAST::getLocalTopLevelDecls) to obtain
   /// optimal performance.
-  virtual void onMainAST(PathRef Path, ParsedAST &AST) {}
-
-  /// Called whenever the diagnostics for \p File are produced.
-  virtual void onDiagnostics(PathRef File, std::vector<Diag> Diags) {}
+  ///
+  /// When information about the file (diagnostics, syntax highlighting) is
+  /// published to clients, this should be wrapped in Publish, e.g.
+  ///   void onMainAST(...) {
+  ///     Highlights = computeHighlights();
+  ///     Publish([&] { notifyHighlights(Path, Highlights); });
+  ///   }
+  /// This guarantees that clients will see results in the correct sequence if
+  /// the file is concurrently closed and/or reopened. (The lambda passed to
+  /// Publish() may never run in this case).
+  virtual void onMainAST(PathRef Path, ParsedAST &AST, PublishFn Publish) {}
 
   /// Called whenever the TU status is updated.
   virtual void onFileUpdated(PathRef File, const TUStatus &Status) {}

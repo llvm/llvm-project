@@ -94,7 +94,7 @@ test_includes(Compare compare)
     }
 }
 
-int32_t
+int
 main()
 {
 

@@ -263,6 +263,18 @@ public:
   /// individual classes of instructions would be better.
   unsigned getInliningThresholdMultiplier() const;
 
+  /// \returns Vector bonus in percent.
+  ///
+  /// Vector bonuses: We want to more aggressively inline vector-dense kernels
+  /// and apply this bonus based on the percentage of vector instructions. A
+  /// bonus is applied if the vector instructions exceed 50% and half that amount
+  /// is applied if it exceeds 10%. Note that these bonuses are some what
+  /// arbitrary and evolved over time by accident as much as because they are
+  /// principled bonuses.
+  /// FIXME: It would be nice to base the bonus values on something more
+  /// scientific. A target may has no bonus on vector instructions.
+  int getInlinerVectorBonusPercent() const;
+
   /// Estimate the cost of an intrinsic when lowered.
   ///
   /// Mirrors the \c getCallCost method but uses an intrinsic identifier.
@@ -1128,6 +1140,7 @@ public:
   virtual int getCallCost(const Function *F,
                           ArrayRef<const Value *> Arguments, const User *U) = 0;
   virtual unsigned getInliningThresholdMultiplier() = 0;
+  virtual int getInlinerVectorBonusPercent() = 0;
   virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
                                ArrayRef<Type *> ParamTys, const User *U) = 0;
   virtual int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
@@ -1350,6 +1363,9 @@ public:
   }
   unsigned getInliningThresholdMultiplier() override {
     return Impl.getInliningThresholdMultiplier();
+  }
+  int getInlinerVectorBonusPercent() override {
+    return Impl.getInlinerVectorBonusPercent();
   }
   int getIntrinsicCost(Intrinsic::ID IID, Type *RetTy,
                        ArrayRef<Type *> ParamTys, const User *U = nullptr) override {

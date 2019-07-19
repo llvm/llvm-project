@@ -561,6 +561,10 @@ public:
       break;
     }
   }
+  TargetInfo::CallingConvCheckResult
+  checkCallingConvention(CallingConv CC) const override {
+    return (CC == CC_C) ? TargetInfo::CCCR_OK : TargetInfo::CCCR_Error;
+  }
 };
 
 // RTEMS Target

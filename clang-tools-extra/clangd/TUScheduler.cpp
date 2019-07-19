@@ -249,9 +249,8 @@ private:
   TUStatus Status;
 
   Semaphore &Barrier;
-  /// Whether the diagnostics for the current FileInputs were reported to the
-  /// users before.
-  bool DiagsWereReported = false;
+  /// Whether the 'onMainAST' callback ran for the current FileInputs.
+  bool RanASTCallback = false;
   /// Guards members used by both TUScheduler and the worker thread.
   mutable std::mutex Mutex;
   /// File inputs, currently being used by the worker.
@@ -265,15 +264,16 @@ private:
   bool Done;                    /* GUARDED_BY(Mutex) */
   std::deque<Request> Requests; /* GUARDED_BY(Mutex) */
   mutable std::condition_variable RequestsCV;
-  // FIXME: rename it to better fix the current usage, we also use it to guard
-  // emitting TUStatus.
-  /// Guards a critical section for running the diagnostics callbacks.
-  std::mutex DiagsMu;
-  // Used to prevent remove document + leading to out-of-order diagnostics:
+  /// Guards the callback that publishes results of AST-related computations
+  /// (diagnostics, highlightings) and file statuses.
+  std::mutex PublishMu;
+  // Used to prevent remove document + add document races that lead to
+  // out-of-order callbacks for publishing results of onMainAST callback.
+  //
   // The lifetime of the old/new ASTWorkers will overlap, but their handles
   // don't. When the old handle is destroyed, the old worker will stop reporting
-  // diagnostics.
-  bool ReportDiagnostics = true; /* GUARDED_BY(DiagsMu) */
+  // any results to the user.
+  bool CanPublishResults = true; /* GUARDED_BY(PublishMu) */
 };
 
 /// A smart-pointer-like class that points to an active ASTWorker.
@@ -381,12 +381,12 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
         std::tie(Inputs.CompileCommand, Inputs.Contents);
 
     tooling::CompileCommand OldCommand = PrevInputs->CompileCommand;
-    bool PrevDiagsWereReported = DiagsWereReported;
+    bool RanCallbackForPrevInputs = RanASTCallback;
     {
       std::lock_guard<std::mutex> Lock(Mutex);
       FileInputs = std::make_shared<ParseInputs>(Inputs);
     }
-    DiagsWereReported = false;
+    RanASTCallback = false;
     emitTUStatus({TUAction::BuildingPreamble, TaskName});
     log("Updating file {0} with command {1}\n[{2}]\n{3}", FileName,
         Inputs.CompileCommand.Heuristic,
@@ -432,10 +432,9 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     if (!CanReuseAST) {
       IdleASTs.take(this); // Remove the old AST if it's still in cache.
     } else {
-      // Since we don't need to rebuild the AST, we might've already reported
-      // the diagnostics for it.
-      if (PrevDiagsWereReported) {
-        DiagsWereReported = true;
+      // We don't need to rebuild the AST, check if we need to run the callback.
+      if (RanCallbackForPrevInputs) {
+        RanASTCallback = true;
         // Take a shortcut and don't report the diagnostics, since they should
         // not changed. All the clients should handle the lack of OnUpdated()
         // call anyway to handle empty result from buildAST.
@@ -457,10 +456,10 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
       return;
 
     {
-      std::lock_guard<std::mutex> Lock(DiagsMu);
+      std::lock_guard<std::mutex> Lock(PublishMu);
       // No need to rebuild the AST if we won't send the diagnotics. However,
       // note that we don't prevent preamble rebuilds.
-      if (!ReportDiagnostics)
+      if (!CanPublishResults)
         return;
     }
 
@@ -486,14 +485,17 @@ void ASTWorker::update(ParseInputs Inputs, WantDiagnostics WantDiags) {
     // spam us with updates.
     // Note *AST can still be null if buildAST fails.
     if (*AST) {
-      {
-        std::lock_guard<std::mutex> Lock(DiagsMu);
-        if (ReportDiagnostics)
-          Callbacks.onDiagnostics(FileName, (*AST)->getDiagnostics());
-      }
       trace::Span Span("Running main AST callback");
-      Callbacks.onMainAST(FileName, **AST);
-      DiagsWereReported = true;
+      auto RunPublish = [&](llvm::function_ref<void()> Publish) {
+        // Ensure we only publish results from the worker if the file was not
+        // removed, making sure there are not race conditions.
+        std::lock_guard<std::mutex> Lock(PublishMu);
+        if (CanPublishResults)
+          Publish();
+      };
+
+      Callbacks.onMainAST(FileName, **AST, RunPublish);
+      RanASTCallback = true;
     }
     // Stash the AST in the cache for further use.
     IdleASTs.put(this, std::move(*AST));
@@ -594,8 +596,8 @@ bool ASTWorker::isASTCached() const { return IdleASTs.getUsedBytes(this) != 0; }
 
 void ASTWorker::stop() {
   {
-    std::lock_guard<std::mutex> Lock(DiagsMu);
-    ReportDiagnostics = false;
+    std::lock_guard<std::mutex> Lock(PublishMu);
+    CanPublishResults = false;
   }
   {
     std::lock_guard<std::mutex> Lock(Mutex);
@@ -630,9 +632,9 @@ void ASTWorker::emitTUStatus(TUAction Action,
   Status.Action = std::move(Action);
   if (Details)
     Status.Details = *Details;
-  std::lock_guard<std::mutex> Lock(DiagsMu);
+  std::lock_guard<std::mutex> Lock(PublishMu);
   // Do not emit TU statuses when the ASTWorker is shutting down.
-  if (ReportDiagnostics) {
+  if (CanPublishResults) {
     Callbacks.onFileUpdated(FileName, Status);
   }
 }

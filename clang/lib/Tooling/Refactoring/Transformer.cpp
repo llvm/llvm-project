@@ -36,37 +36,6 @@ using llvm::StringError;
 
 using MatchResult = MatchFinder::MatchResult;
 
-// Did the text at this location originate in a macro definition (aka. body)?
-// For example,
-//
-//   #define NESTED(x) x
-//   #define MACRO(y) { int y  = NESTED(3); }
-//   if (true) MACRO(foo)
-//
-// The if statement expands to
-//
-//   if (true) { int foo = 3; }
-//                   ^     ^
-//                   Loc1  Loc2
-//
-// For SourceManager SM, SM.isMacroArgExpansion(Loc1) and
-// SM.isMacroArgExpansion(Loc2) are both true, but isOriginMacroBody(sm, Loc1)
-// is false, because "foo" originated in the source file (as an argument to a
-// macro), whereas isOriginMacroBody(SM, Loc2) is true, because "3" originated
-// in the definition of MACRO.
-static bool isOriginMacroBody(const clang::SourceManager &SM,
-                              clang::SourceLocation Loc) {
-  while (Loc.isMacroID()) {
-    if (SM.isMacroBodyExpansion(Loc))
-      return true;
-    // Otherwise, it must be in an argument, so we continue searching up the
-    // invocation stack. getImmediateMacroCallerLoc() gives the location of the
-    // argument text, inside the call text.
-    Loc = SM.getImmediateMacroCallerLoc(Loc);
-  }
-  return false;
-}
-
 Expected<SmallVector<tooling::detail::Transformation, 1>>
 tooling::detail::translateEdits(const MatchResult &Result,
                                 llvm::ArrayRef<ASTEdit> Edits) {
@@ -75,14 +44,17 @@ tooling::detail::translateEdits(const MatchResult &Result,
     Expected<CharSourceRange> Range = Edit.TargetRange(Result);
     if (!Range)
       return Range.takeError();
-    if (Range->isInvalid() ||
-        isOriginMacroBody(*Result.SourceManager, Range->getBegin()))
+    llvm::Optional<CharSourceRange> EditRange =
+        getRangeForEdit(*Range, *Result.Context);
+    // FIXME: let user specify whether to treat this case as an error or ignore
+    // it as is currently done.
+    if (!EditRange)
       return SmallVector<Transformation, 0>();
     auto Replacement = Edit.Replacement(Result);
     if (!Replacement)
       return Replacement.takeError();
     tooling::detail::Transformation T;
-    T.Range = *Range;
+    T.Range = *EditRange;
     T.Replacement = std::move(*Replacement);
     Transformations.push_back(std::move(T));
   }

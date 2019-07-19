@@ -1,9 +1,9 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %S/Inputs/shared2.s -o %t1.o
-// RUN: ld.lld %t1.o --shared -o %t.so
+// RUN: ld.lld %t1.o --shared --soname=t.so -o %t.so
 // RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s -o %t.o
 // RUN: ld.lld --hash-style=sysv %t.so %t.o -o %tout
-// RUN: llvm-objdump -d %tout | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump -d --no-show-raw-insn %tout | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-objdump -s %tout | FileCheck %s --check-prefix=GOTPLT
 // RUN: llvm-readobj -r --dynamic-table %tout | FileCheck %s
 
@@ -32,46 +32,46 @@
 // DISASM: Disassembly of section .text:
 // DISASM-EMPTY:
 // DISASM-NEXT: foo:
-// DISASM-NEXT:    210000: {{.*}} ret
+// DISASM-NEXT:    210000: ret
 // DISASM:      bar:
-// DISASM-NEXT:    210004: {{.*}} ret
+// DISASM-NEXT:    210004: ret
 // DISASM:      _start:
-// DISASM-NEXT:    210008: {{.*}} bl      #88
-// DISASM-NEXT:    21000c: {{.*}} bl      #100
-// DISASM-NEXT:    210010: {{.*}} bl      #48
-// DISASM-NEXT:    210014: {{.*}} bl      #60
+// DISASM-NEXT:    210008: bl      #88
+// DISASM-NEXT:    21000c: bl      #100
+// DISASM-NEXT:    210010: bl      #48
+// DISASM-NEXT:    210014: bl      #60
 // DISASM-EMPTY:
 // DISASM-NEXT: Disassembly of section .plt:
 // DISASM-EMPTY:
 // DISASM-NEXT: .plt:
-// DISASM-NEXT:    210020: {{.*}} stp     x16, x30, [sp, #-16]!
-// DISASM-NEXT:    210024: {{.*}} adrp    x16, #131072
-// DISASM-NEXT:    210028: {{.*}} ldr     x17, [x16, #16]
-// DISASM-NEXT:    21002c: {{.*}} add     x16, x16, #16
-// DISASM-NEXT:    210030: {{.*}} br      x17
-// DISASM-NEXT:    210034: {{.*}} nop
-// DISASM-NEXT:    210038: {{.*}} nop
-// DISASM-NEXT:    21003c: {{.*}} nop
+// DISASM-NEXT:    210020: stp     x16, x30, [sp, #-16]!
+// DISASM-NEXT:    210024: adrp    x16, #131072
+// DISASM-NEXT:    210028: ldr     x17, [x16, #16]
+// DISASM-NEXT:    21002c: add     x16, x16, #16
+// DISASM-NEXT:    210030: br      x17
+// DISASM-NEXT:    210034: nop
+// DISASM-NEXT:    210038: nop
+// DISASM-NEXT:    21003c: nop
 // DISASM-EMPTY:
 // DISASM-NEXT:   bar2@plt:
-// DISASM-NEXT:    210040: {{.*}} adrp    x16, #131072
-// DISASM-NEXT:    210044: {{.*}} ldr     x17, [x16, #24]
-// DISASM-NEXT:    210048: {{.*}} add     x16, x16, #24
-// DISASM-NEXT:    21004c: {{.*}} br      x17
+// DISASM-NEXT:    210040: adrp    x16, #131072
+// DISASM-NEXT:    210044: ldr     x17, [x16, #24]
+// DISASM-NEXT:    210048: add     x16, x16, #24
+// DISASM-NEXT:    21004c: br      x17
 // DISASM-EMPTY:
 // DISASM-NEXT:   zed2@plt:
-// DISASM-NEXT:    210050: {{.*}} adrp    x16, #131072
-// DISASM-NEXT:    210054: {{.*}} ldr     x17, [x16, #32]
-// DISASM-NEXT:    210058: {{.*}} add     x16, x16, #32
-// DISASM-NEXT:    21005c: {{.*}} br      x17
-// DISASM-NEXT:    210060: {{.*}} adrp    x16, #131072
-// DISASM-NEXT:    210064: {{.*}} ldr     x17, [x16, #40]
-// DISASM-NEXT:    210068: {{.*}} add     x16, x16, #40
-// DISASM-NEXT:    21006c: {{.*}} br      x17
-// DISASM-NEXT:    210070: {{.*}} adrp    x16, #131072
-// DISASM-NEXT:    210074: {{.*}} ldr     x17, [x16, #48]
-// DISASM-NEXT:    210078: {{.*}} add     x16, x16, #48
-// DISASM-NEXT:    21007c: {{.*}} br      x17
+// DISASM-NEXT:    210050: adrp    x16, #131072
+// DISASM-NEXT:    210054: ldr     x17, [x16, #32]
+// DISASM-NEXT:    210058: add     x16, x16, #32
+// DISASM-NEXT:    21005c: br      x17
+// DISASM-NEXT:    210060: adrp    x16, #131072
+// DISASM-NEXT:    210064: ldr     x17, [x16, #40]
+// DISASM-NEXT:    210068: add     x16, x16, #40
+// DISASM-NEXT:    21006c: br      x17
+// DISASM-NEXT:    210070: adrp    x16, #131072
+// DISASM-NEXT:    210074: ldr     x17, [x16, #48]
+// DISASM-NEXT:    210078: add     x16, x16, #48
+// DISASM-NEXT:    21007c: br      x17
 
 .text
 .type foo STT_GNU_IFUNC

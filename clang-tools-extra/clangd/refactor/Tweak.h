@@ -46,7 +46,12 @@ public:
     /// Parsed AST of the active file.
     ParsedAST &AST;
     /// A location of the cursor in the editor.
+    // FIXME: Cursor is redundant and should be removed
     SourceLocation Cursor;
+    /// The begin offset of the selection
+    unsigned SelectionBegin;
+    /// The end offset of the selection
+    unsigned SelectionEnd;
     /// The AST nodes that were selected.
     SelectionTree ASTSelection;
     // FIXME: provide a way to get sources and ASTs for other files.

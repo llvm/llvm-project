@@ -13,9 +13,10 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_REMOTEOBJECTLAYER_H
 #define LLVM_EXECUTIONENGINE_ORC_REMOTEOBJECTLAYER_H
 
+#include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include "llvm/ExecutionEngine/Orc/OrcRemoteTargetRPCAPI.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
 #include <map>
 
 namespace llvm {
@@ -312,7 +313,14 @@ public:
   ///
   /// The ReportError functor can be used locally log errors that are intended
   /// to be sent  sent
-  RemoteObjectClientLayer(RPCEndpoint &Remote,
+  LLVM_ATTRIBUTE_DEPRECATED(
+      RemoteObjectClientLayer(RPCEndpoint &Remote,
+                              std::function<void(Error)> ReportError),
+      "ORCv1 layers (including RemoteObjectClientLayer) are deprecated. Please "
+      "use "
+      "ORCv2 (see docs/ORCv2.rst)");
+
+  RemoteObjectClientLayer(ORCv1DeprecationAcknowledgement, RPCEndpoint &Remote,
                           std::function<void(Error)> ReportError)
       : RemoteObjectLayer<RPCEndpoint>(Remote, std::move(ReportError)) {
     using ThisT = RemoteObjectClientLayer<RPCEndpoint>;
@@ -417,11 +425,18 @@ public:
 
   /// Create a RemoteObjectServerLayer with the given base layer (which must be
   /// an object layer), RPC endpoint, and error reporter function.
-  RemoteObjectServerLayer(BaseLayerT &BaseLayer,
-                          RPCEndpoint &Remote,
+  LLVM_ATTRIBUTE_DEPRECATED(
+      RemoteObjectServerLayer(BaseLayerT &BaseLayer, RPCEndpoint &Remote,
+                              std::function<void(Error)> ReportError),
+      "ORCv1 layers (including RemoteObjectServerLayer) are deprecated. Please "
+      "use "
+      "ORCv2 (see docs/ORCv2.rst)");
+
+  RemoteObjectServerLayer(ORCv1DeprecationAcknowledgement,
+                          BaseLayerT &BaseLayer, RPCEndpoint &Remote,
                           std::function<void(Error)> ReportError)
-    : RemoteObjectLayer<RPCEndpoint>(Remote, std::move(ReportError)),
-      BaseLayer(BaseLayer), HandleIdMgr(1) {
+      : RemoteObjectLayer<RPCEndpoint>(Remote, std::move(ReportError)),
+        BaseLayer(BaseLayer), HandleIdMgr(1) {
     using ThisT = RemoteObjectServerLayer<BaseLayerT, RPCEndpoint>;
 
     Remote.template addHandler<AddObject>(*this, &ThisT::addObject);
@@ -462,6 +477,7 @@ private:
     assert(!BaseLayerHandles.count(Id) && "Id already in use?");
 
     auto Resolver = createLambdaResolver(
+        AcknowledgeORCv1Deprecation,
         [this, Id](const std::string &Name) { return lookup(Id, Name); },
         [this, Id](const std::string &Name) {
           return lookupInLogicalDylib(Id, Name);
@@ -521,6 +537,31 @@ private:
   remote::ResourceIdMgr HandleIdMgr;
   std::map<ObjHandleT, typename BaseLayerT::ObjHandleT> BaseLayerHandles;
 };
+
+template <typename RPCEndpoint>
+RemoteObjectClientLayer<RPCEndpoint>::RemoteObjectClientLayer(
+    RPCEndpoint &Remote, std::function<void(Error)> ReportError)
+    : RemoteObjectLayer<RPCEndpoint>(Remote, std::move(ReportError)) {
+  using ThisT = RemoteObjectClientLayer<RPCEndpoint>;
+  Remote.template addHandler<Lookup>(*this, &ThisT::lookup);
+  Remote.template addHandler<LookupInLogicalDylib>(
+      *this, &ThisT::lookupInLogicalDylib);
+}
+
+template <typename BaseLayerT, typename RPCEndpoint>
+RemoteObjectServerLayer<BaseLayerT, RPCEndpoint>::RemoteObjectServerLayer(
+    BaseLayerT &BaseLayer, RPCEndpoint &Remote,
+    std::function<void(Error)> ReportError)
+    : RemoteObjectLayer<RPCEndpoint>(Remote, std::move(ReportError)),
+      BaseLayer(BaseLayer), HandleIdMgr(1) {
+  using ThisT = RemoteObjectServerLayer<BaseLayerT, RPCEndpoint>;
+
+  Remote.template addHandler<AddObject>(*this, &ThisT::addObject);
+  Remote.template addHandler<RemoveObject>(*this, &ThisT::removeObject);
+  Remote.template addHandler<FindSymbol>(*this, &ThisT::findSymbol);
+  Remote.template addHandler<FindSymbolIn>(*this, &ThisT::findSymbolIn);
+  Remote.template addHandler<EmitAndFinalize>(*this, &ThisT::emitAndFinalize);
+}
 
 } // end namespace orc
 } // end namespace llvm

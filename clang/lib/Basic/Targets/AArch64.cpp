@@ -199,13 +199,13 @@ void AArch64TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (FPU & SveMode)
     Builder.defineMacro("__ARM_FEATURE_SVE", "1");
 
-  if (CRC)
+  if (HasCRC)
     Builder.defineMacro("__ARM_FEATURE_CRC32", "1");
 
-  if (Crypto)
+  if (HasCrypto)
     Builder.defineMacro("__ARM_FEATURE_CRYPTO", "1");
 
-  if (Unaligned)
+  if (HasUnaligned)
     Builder.defineMacro("__ARM_FEATURE_UNALIGNED", "1");
 
   if ((FPU & NeonMode) && HasFullFP16)
@@ -263,13 +263,13 @@ bool AArch64TargetInfo::hasFeature(StringRef Feature) const {
 bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
                                              DiagnosticsEngine &Diags) {
   FPU = FPUMode;
-  CRC = 0;
-  Crypto = 0;
-  Unaligned = 1;
-  HasFullFP16 = 0;
-  HasDotProd = 0;
-  HasFP16FML = 0;
-  HasMTE = 0;
+  HasCRC = false;
+  HasCrypto = false;
+  HasUnaligned = true;
+  HasFullFP16 = false;
+  HasDotProd = false;
+  HasFP16FML = false;
+  HasMTE = false;
   ArchKind = llvm::AArch64::ArchKind::ARMV8A;
 
   for (const auto &Feature : Features) {
@@ -278,11 +278,11 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+sve")
       FPU |= SveMode;
     if (Feature == "+crc")
-      CRC = 1;
+      HasCRC = true;
     if (Feature == "+crypto")
-      Crypto = 1;
+      HasCrypto = true;
     if (Feature == "+strict-align")
-      Unaligned = 0;
+      HasUnaligned = false;
     if (Feature == "+v8.1a")
       ArchKind = llvm::AArch64::ArchKind::ARMV8_1A;
     if (Feature == "+v8.2a")
@@ -294,13 +294,13 @@ bool AArch64TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
     if (Feature == "+v8.5a")
       ArchKind = llvm::AArch64::ArchKind::ARMV8_5A;
     if (Feature == "+fullfp16")
-      HasFullFP16 = 1;
+      HasFullFP16 = true;
     if (Feature == "+dotprod")
-      HasDotProd = 1;
+      HasDotProd = true;
     if (Feature == "+fp16fml")
-      HasFP16FML = 1;
+      HasFP16FML = true;
     if (Feature == "+mte")
-      HasMTE = 1;
+      HasMTE = true;
   }
 
   setDataLayout();

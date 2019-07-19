@@ -573,7 +573,7 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
   this->sectionStringTable =
       CHECK(obj.getSectionStringTable(objSections), this);
 
-  for (size_t i = 0, e = objSections.size(); i < e; i++) {
+  for (size_t i = 0, e = objSections.size(); i < e; ++i) {
     if (this->sections[i] == &InputSection::discarded)
       continue;
     const Elf_Shdr &sec = objSections[i];
@@ -652,25 +652,29 @@ void ObjFile<ELFT>::initializeSections(bool ignoreComdats) {
     default:
       this->sections[i] = createInputSection(sec);
     }
+  }
+
+  for (size_t i = 0, e = objSections.size(); i < e; ++i) {
+    if (this->sections[i] == &InputSection::discarded)
+      continue;
+    const Elf_Shdr &sec = objSections[i];
+    if (!(sec.sh_flags & SHF_LINK_ORDER))
+      continue;
 
     // .ARM.exidx sections have a reverse dependency on the InputSection they
     // have a SHF_LINK_ORDER dependency, this is identified by the sh_link.
-    if (sec.sh_flags & SHF_LINK_ORDER) {
-      InputSectionBase *linkSec = nullptr;
-      if (sec.sh_link < this->sections.size())
-        linkSec = this->sections[sec.sh_link];
-      if (!linkSec)
-        fatal(toString(this) +
-              ": invalid sh_link index: " + Twine(sec.sh_link));
+    InputSectionBase *linkSec = nullptr;
+    if (sec.sh_link < this->sections.size())
+      linkSec = this->sections[sec.sh_link];
+    if (!linkSec)
+      fatal(toString(this) + ": invalid sh_link index: " + Twine(sec.sh_link));
 
-      InputSection *isec = cast<InputSection>(this->sections[i]);
-      linkSec->dependentSections.push_back(isec);
-      if (!isa<InputSection>(linkSec))
-        error("a section " + isec->name +
-              " with SHF_LINK_ORDER should not refer a non-regular "
-              "section: " +
-              toString(linkSec));
-    }
+    InputSection *isec = cast<InputSection>(this->sections[i]);
+    linkSec->dependentSections.push_back(isec);
+    if (!isa<InputSection>(linkSec))
+      error("a section " + isec->name +
+            " with SHF_LINK_ORDER should not refer a non-regular section: " +
+            toString(linkSec));
   }
 }
 

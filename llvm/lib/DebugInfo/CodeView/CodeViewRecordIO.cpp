@@ -97,8 +97,10 @@ Error CodeViewRecordIO::skipPadding() {
   return Reader->skip(BytesToAdvance);
 }
 
-Error CodeViewRecordIO::mapByteVectorTail(ArrayRef<uint8_t> &Bytes) {
+Error CodeViewRecordIO::mapByteVectorTail(ArrayRef<uint8_t> &Bytes,
+                                          const Twine &Comment) {
   if (isStreaming()) {
+    emitComment(Comment);
     Streamer->EmitBinaryData(toStringRef(Bytes));
     incrStreamedLen(Bytes.size());
   } else if (isWriting()) {
@@ -111,9 +113,10 @@ Error CodeViewRecordIO::mapByteVectorTail(ArrayRef<uint8_t> &Bytes) {
   return Error::success();
 }
 
-Error CodeViewRecordIO::mapByteVectorTail(std::vector<uint8_t> &Bytes) {
+Error CodeViewRecordIO::mapByteVectorTail(std::vector<uint8_t> &Bytes,
+                                          const Twine &Comment) {
   ArrayRef<uint8_t> BytesRef(Bytes);
-  if (auto EC = mapByteVectorTail(BytesRef))
+  if (auto EC = mapByteVectorTail(BytesRef, Comment))
     return EC;
   if (!isWriting())
     Bytes.assign(BytesRef.begin(), BytesRef.end());
@@ -121,8 +124,9 @@ Error CodeViewRecordIO::mapByteVectorTail(std::vector<uint8_t> &Bytes) {
   return Error::success();
 }
 
-Error CodeViewRecordIO::mapInteger(TypeIndex &TypeInd) {
+Error CodeViewRecordIO::mapInteger(TypeIndex &TypeInd, const Twine &Comment) {
   if (isStreaming()) {
+    emitComment(Comment);
     Streamer->EmitIntValue(TypeInd.getIndex(), sizeof(TypeInd.getIndex()));
     incrStreamedLen(sizeof(TypeInd.getIndex()));
   } else if (isWriting()) {
@@ -137,12 +141,13 @@ Error CodeViewRecordIO::mapInteger(TypeIndex &TypeInd) {
   return Error::success();
 }
 
-Error CodeViewRecordIO::mapEncodedInteger(int64_t &Value) {
+Error CodeViewRecordIO::mapEncodedInteger(int64_t &Value,
+                                          const Twine &Comment) {
   if (isStreaming()) {
     if (Value >= 0)
-      emitEncodedUnsignedInteger(static_cast<uint64_t>(Value));
+      emitEncodedUnsignedInteger(static_cast<uint64_t>(Value), Comment);
     else
-      emitEncodedSignedInteger(Value);
+      emitEncodedSignedInteger(Value, Comment);
   } else if (isWriting()) {
     if (Value >= 0) {
       if (auto EC = writeEncodedUnsignedInteger(static_cast<uint64_t>(Value)))
@@ -161,9 +166,10 @@ Error CodeViewRecordIO::mapEncodedInteger(int64_t &Value) {
   return Error::success();
 }
 
-Error CodeViewRecordIO::mapEncodedInteger(uint64_t &Value) {
+Error CodeViewRecordIO::mapEncodedInteger(uint64_t &Value,
+                                          const Twine &Comment) {
   if (isStreaming())
-    emitEncodedUnsignedInteger(Value);
+    emitEncodedUnsignedInteger(Value, Comment);
   else if (isWriting()) {
     if (auto EC = writeEncodedUnsignedInteger(Value))
       return EC;
@@ -176,12 +182,12 @@ Error CodeViewRecordIO::mapEncodedInteger(uint64_t &Value) {
   return Error::success();
 }
 
-Error CodeViewRecordIO::mapEncodedInteger(APSInt &Value) {
+Error CodeViewRecordIO::mapEncodedInteger(APSInt &Value, const Twine &Comment) {
   if (isStreaming()) {
     if (Value.isSigned())
-      emitEncodedSignedInteger(Value.getSExtValue());
+      emitEncodedSignedInteger(Value.getSExtValue(), Comment);
     else
-      emitEncodedUnsignedInteger(Value.getZExtValue());
+      emitEncodedUnsignedInteger(Value.getZExtValue(), Comment);
   } else if (isWriting()) {
     if (Value.isSigned())
       return writeEncodedSignedInteger(Value.getSExtValue());
@@ -191,9 +197,10 @@ Error CodeViewRecordIO::mapEncodedInteger(APSInt &Value) {
   return Error::success();
 }
 
-Error CodeViewRecordIO::mapStringZ(StringRef &Value) {
+Error CodeViewRecordIO::mapStringZ(StringRef &Value, const Twine &Comment) {
   if (isStreaming()) {
     auto NullTerminatedString = StringRef(Value.data(), Value.size() + 1);
+    emitComment(Comment);
     Streamer->EmitBytes(NullTerminatedString);
     incrStreamedLen(NullTerminatedString.size());
   } else if (isWriting()) {
@@ -208,12 +215,13 @@ Error CodeViewRecordIO::mapStringZ(StringRef &Value) {
   return Error::success();
 }
 
-Error CodeViewRecordIO::mapGuid(GUID &Guid) {
+Error CodeViewRecordIO::mapGuid(GUID &Guid, const Twine &Comment) {
   constexpr uint32_t GuidSize = 16;
 
   if (isStreaming()) {
     StringRef GuidSR =
         StringRef((reinterpret_cast<const char *>(&Guid)), GuidSize);
+    emitComment(Comment);
     Streamer->EmitBytes(GuidSR);
     incrStreamedLen(GuidSize);
     return Error::success();
@@ -234,9 +242,11 @@ Error CodeViewRecordIO::mapGuid(GUID &Guid) {
   return Error::success();
 }
 
-Error CodeViewRecordIO::mapStringZVectorZ(std::vector<StringRef> &Value) {
+Error CodeViewRecordIO::mapStringZVectorZ(std::vector<StringRef> &Value,
+                                          const Twine &Comment) {
 
   if (!isReading()) {
+    emitComment(Comment);
     for (auto V : Value) {
       if (auto EC = mapStringZ(V))
         return EC;
@@ -257,41 +267,51 @@ Error CodeViewRecordIO::mapStringZVectorZ(std::vector<StringRef> &Value) {
   return Error::success();
 }
 
-void CodeViewRecordIO::emitEncodedSignedInteger(const int64_t &Value) {
+void CodeViewRecordIO::emitEncodedSignedInteger(const int64_t &Value,
+                                                const Twine &Comment) {
   assert(Value < 0 && "Encoded integer is not signed!");
   if (Value >= std::numeric_limits<int8_t>::min()) {
     Streamer->EmitIntValue(LF_CHAR, 2);
+    emitComment(Comment);
     Streamer->EmitIntValue(Value, 1);
     incrStreamedLen(3);
   } else if (Value >= std::numeric_limits<int16_t>::min()) {
     Streamer->EmitIntValue(LF_SHORT, 2);
+    emitComment(Comment);
     Streamer->EmitIntValue(Value, 2);
     incrStreamedLen(4);
   } else if (Value >= std::numeric_limits<int32_t>::min()) {
     Streamer->EmitIntValue(LF_LONG, 2);
+    emitComment(Comment);
     Streamer->EmitIntValue(Value, 4);
     incrStreamedLen(6);
   } else {
     Streamer->EmitIntValue(LF_QUADWORD, 2);
+    emitComment(Comment);
     Streamer->EmitIntValue(Value, 4);
     incrStreamedLen(6);
   }
 }
 
-void CodeViewRecordIO::emitEncodedUnsignedInteger(const uint64_t &Value) {
+void CodeViewRecordIO::emitEncodedUnsignedInteger(const uint64_t &Value,
+                                                  const Twine &Comment) {
   if (Value < LF_NUMERIC) {
+    emitComment(Comment);
     Streamer->EmitIntValue(Value, 2);
     incrStreamedLen(2);
   } else if (Value <= std::numeric_limits<uint16_t>::max()) {
     Streamer->EmitIntValue(LF_USHORT, 2);
+    emitComment(Comment);
     Streamer->EmitIntValue(Value, 2);
     incrStreamedLen(4);
   } else if (Value <= std::numeric_limits<uint32_t>::max()) {
     Streamer->EmitIntValue(LF_ULONG, 2);
+    emitComment(Comment);
     Streamer->EmitIntValue(Value, 4);
     incrStreamedLen(6);
   } else {
     Streamer->EmitIntValue(LF_UQUADWORD, 2);
+    emitComment(Comment);
     Streamer->EmitIntValue(Value, 8);
     incrStreamedLen(6);
   }

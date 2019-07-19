@@ -28,7 +28,10 @@ void test_variadic() {
 // RUN: c-index-test -code-completion-at=%s:7:1 %s -I%S | FileCheck -check-prefix=CHECK-CC0 %s
 // CHECK-CC0-NOT: FOO
 // RUN: env CINDEXTEST_EDITING=1 CINDEXTEST_COMPLETION_CACHING=1 c-index-test -code-completion-at=%s:7:1 %s -I%S | FileCheck -check-prefix=CHECK-CC1 %s
+// (we had a regression that only occurred when parsing as C++, so check that too)
+// RUN: env CINDEXTEST_EDITING=1 CINDEXTEST_COMPLETION_CACHING=1 c-index-test -code-completion-at=%s:7:1 -x c++ %s -I%S | FileCheck -check-prefix=CHECK-CC1 %s
 // CHECK-CC1: macro definition:{TypedText FOO} (70)
+// CHECK-CC1: macro definition:{TypedText MACRO_IN_HEADER} (70)
 // RUN: c-index-test -code-completion-at=%s:13:13 %s -I%S | FileCheck -check-prefix=CHECK-CC2 %s
 // RUN: c-index-test -code-completion-at=%s:14:8 %s -I%S | FileCheck -check-prefix=CHECK-CC2 %s
 // RUN: env CINDEXTEST_EDITING=1 CINDEXTEST_COMPLETION_CACHING=1 c-index-test -code-completion-at=%s:14:8 %s -I%S | FileCheck -check-prefix=CHECK-CC2 %s

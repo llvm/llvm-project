@@ -740,6 +740,50 @@ struct AANonNull : public AbstractAttribute {
   /// The identifier used by the Attributor for this class of attributes.
   static constexpr Attribute::AttrKind ID = Attribute::NonNull;
 };
+
+/// An abstract attribute for norecurse.
+struct AANoRecurse : public AbstractAttribute {
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AANoRecurse(Value &V, InformationCache &InfoCache)
+      : AbstractAttribute(V, InfoCache) {}
+
+  /// See AbstractAttribute::getAttrKind()
+  virtual Attribute::AttrKind getAttrKind() const override {
+    return Attribute::NoRecurse;
+  }
+
+  /// Return true if "norecurse" is known.
+  virtual bool isKnownNoRecurse() const = 0;
+
+  /// Return true if "norecurse" is assumed.
+  virtual bool isAssumedNoRecurse() const = 0;
+
+  /// The identifier used by the Attributor for this class of attributes.
+  static constexpr Attribute::AttrKind ID = Attribute::NoRecurse;
+};
+
+/// An abstract attribute for willreturn.
+struct AAWillReturn : public AbstractAttribute {
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AAWillReturn(Value &V, InformationCache &InfoCache)
+      : AbstractAttribute(V, InfoCache) {}
+
+  /// See AbstractAttribute::getAttrKind()
+  virtual Attribute::AttrKind getAttrKind() const override {
+    return Attribute::WillReturn;
+  }
+
+  /// Return true if "willreturn" is known.
+  virtual bool isKnownWillReturn() const = 0;
+
+  /// Return true if "willreturn" is assumed.
+  virtual bool isAssumedWillReturn() const = 0;
+
+  /// The identifier used by the Attributor for this class of attributes.
+  static constexpr Attribute::AttrKind ID = Attribute::WillReturn;
+};
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H

@@ -37,13 +37,12 @@ raw_ostream &operator<<(raw_ostream &OS, const PDB_SymType &Tag);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_MemberAccess &Access);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_UdtType &Type);
 raw_ostream &operator<<(raw_ostream &OS, const PDB_Machine &Machine);
-raw_ostream &operator<<(raw_ostream &OS,
-                        const PDB_SourceCompression &Compression);
 
 raw_ostream &operator<<(raw_ostream &OS, const Variant &Value);
 raw_ostream &operator<<(raw_ostream &OS, const VersionInfo &Version);
 raw_ostream &operator<<(raw_ostream &OS, const TagStats &Stats);
 
+raw_ostream& dumpPDBSourceCompression(raw_ostream& OS, uint32_t Compression);
 
 template <typename T>
 void dumpSymbolField(raw_ostream &OS, StringRef Name, T Value, int Indent) {

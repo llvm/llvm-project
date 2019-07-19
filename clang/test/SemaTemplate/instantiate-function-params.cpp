@@ -88,7 +88,7 @@ namespace InstantiateFunctionTypedef {
     __attribute__((stdcall)) functype stdfunc1;
     stdfunctype stdfunc2;
 
-    __attribute__((pcs("aapcs"))) functype pcsfunc; // expected-warning {{'pcs' calling convention ignored for this target}}
+    __attribute__((pcs("aapcs"))) functype pcsfunc; // expected-warning {{'pcs' calling convention is not supported for this target}}
   };
 
   void f(X<int> x) {

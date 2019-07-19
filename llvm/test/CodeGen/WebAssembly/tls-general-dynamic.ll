@@ -75,6 +75,26 @@ define i32 @tls_size() {
   ret i32 %1
 }
 
+; CHECK-LABEL: tls_base:
+; CHECK-NEXT: .functype tls_base () -> (i32)
+define i8* @tls_base() {
+; CHECK-NEXT: global.get __tls_base
+; CHECK-NEXT: return
+  %1 = call i8* @llvm.wasm.tls.base()
+  ret i8* %1
+}
+
+; CHECK-LABEL: tls_base_write:
+; CHECK-NEXT: .functype tls_base_write (i32) -> ()
+define void @tls_base_write(i8** %output) {
+; CHECK-NEXT: global.get __tls_base
+; CHECK-NEXT: i32.store 0
+; CHECK-NEXT: return
+  %1 = call i8* @llvm.wasm.tls.base()
+  store i8* %1, i8** %output
+  ret void
+}
+
 ; CHECK: .type tls,@object
 ; TLS-NEXT: .section .tbss.tls,"",@
 ; NO-TLS-NEXT: .section .bss.tls,"",@
@@ -84,3 +104,4 @@ define i32 @tls_size() {
 @tls = internal thread_local global i32 0
 
 declare i32 @llvm.wasm.tls.size.i32()
+declare i8* @llvm.wasm.tls.base()

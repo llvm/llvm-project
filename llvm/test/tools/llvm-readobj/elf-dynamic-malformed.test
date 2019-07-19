@@ -98,22 +98,22 @@ ProgramHeaders:
 # RUN: llvm-readelf --dynamic-table %t.bad-string | FileCheck %s --check-prefix BAD-STRING-GNU
 
 # BAD-STRING-LLVM: 0x000000000000000A STRSZ         1 (bytes)
-# BAD-STRING-LLVM: 0x0000000000000001 NEEDED        Shared library: <Invalid offset 0x1>
-# BAD-STRING-LLVM: 0x000000007FFFFFFF FILTER        Filter library: <Invalid offset 0x1>
-# BAD-STRING-LLVM: 0x000000007FFFFFFD AUXILIARY     Auxiliary library: <Invalid offset 0x1>
-# BAD-STRING-LLVM: 0x000000007FFFFFFE USED          Not needed object: <Invalid offset 0x1>
-# BAD-STRING-LLVM: 0x000000000000000E SONAME        Library soname: <Invalid offset 0x1>
-# BAD-STRING-LLVM: 0x000000000000000F RPATH         Library rpath: <Invalid offset 0x1>
-# BAD-STRING-LLVM: 0x000000000000001D RUNPATH       Library runpath: <Invalid offset 0x1>
+# BAD-STRING-LLVM: 0x0000000000000001 NEEDED        Shared library: [<Invalid offset 0x1>]
+# BAD-STRING-LLVM: 0x000000007FFFFFFF FILTER        Filter library: [<Invalid offset 0x1>]
+# BAD-STRING-LLVM: 0x000000007FFFFFFD AUXILIARY     Auxiliary library: [<Invalid offset 0x1>]
+# BAD-STRING-LLVM: 0x000000007FFFFFFE USED          Not needed object: [<Invalid offset 0x1>]
+# BAD-STRING-LLVM: 0x000000000000000E SONAME        Library soname: [<Invalid offset 0x1>]
+# BAD-STRING-LLVM: 0x000000000000000F RPATH         Library rpath: [<Invalid offset 0x1>]
+# BAD-STRING-LLVM: 0x000000000000001D RUNPATH       Library runpath: [<Invalid offset 0x1>]
 
 # BAD-STRING-GNU:  0x000000000000000a (STRSZ)       1 (bytes)
-# BAD-STRING-GNU:  0x0000000000000001 (NEEDED)      Shared library: <Invalid offset 0x1>
-# BAD-STRING-GNU:  0x000000007fffffff (FILTER)      Filter library: <Invalid offset 0x1>
-# BAD-STRING-GNU:  0x000000007ffffffd (AUXILIARY)   Auxiliary library: <Invalid offset 0x1>
-# BAD-STRING-GNU:  0x000000007ffffffe (USED)        Not needed object: <Invalid offset 0x1>
-# BAD-STRING-GNU:  0x000000000000000e (SONAME)      Library soname: <Invalid offset 0x1>
-# BAD-STRING-GNU:  0x000000000000000f (RPATH)       Library rpath: <Invalid offset 0x1>
-# BAD-STRING-GNU:  0x000000000000001d (RUNPATH)     Library runpath: <Invalid offset 0x1>
+# BAD-STRING-GNU:  0x0000000000000001 (NEEDED)      Shared library: [<Invalid offset 0x1>]
+# BAD-STRING-GNU:  0x000000007fffffff (FILTER)      Filter library: [<Invalid offset 0x1>]
+# BAD-STRING-GNU:  0x000000007ffffffd (AUXILIARY)   Auxiliary library: [<Invalid offset 0x1>]
+# BAD-STRING-GNU:  0x000000007ffffffe (USED)        Not needed object: [<Invalid offset 0x1>]
+# BAD-STRING-GNU:  0x000000000000000e (SONAME)      Library soname: [<Invalid offset 0x1>]
+# BAD-STRING-GNU:  0x000000000000000f (RPATH)       Library rpath: [<Invalid offset 0x1>]
+# BAD-STRING-GNU:  0x000000000000001d (RUNPATH)     Library runpath: [<Invalid offset 0x1>]
 
 --- !ELF
 FileHeader:
@@ -169,11 +169,11 @@ ProgramHeaders:
 
 # RUN: llvm-readobj --dynamic-table --needed-libs %t.bad-strtab | FileCheck %s --check-prefixes=BAD-STRTAB,BAD-STRTAB-LLVM
 # RUN: llvm-readelf --dynamic-table --needed-libs %t.bad-strtab | FileCheck %s --check-prefixes=BAD-STRTAB,BAD-STRTAB-GNU
-# BAD-STRTAB-LLVM: LoadName: <Not found>
-# BAD-STRTAB-LLVM: 0x0000000000000001  NEEDED   Shared library: <String table is empty or was not found>
-# BAD-STRTAB-GNU:  0x0000000000000001 (NEEDED)  Shared library: <String table is empty or was not found>
+# BAD-STRTAB-LLVM: LoadName: <String table is empty or was not found>
+# BAD-STRTAB-LLVM: 0x0000000000000001  NEEDED   Shared library: [<String table is empty or was not found>]
+# BAD-STRTAB-GNU:  0x0000000000000001 (NEEDED)  Shared library: [<String table is empty or was not found>]
 # BAD-STRTAB:      NeededLibraries [
-# BAD-STRTAB:        <Library name index out of range>
+# BAD-STRTAB:        <String table is empty or was not found>
 # BAD-STRTAB:      ]
 
 --- !ELF

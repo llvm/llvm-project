@@ -732,8 +732,11 @@ int target(int64_t device_id, void *host_ptr, int32_t arg_num,
   uint64_t ltc = 0;
   TblMapMtx.lock();
   auto I = Device.LoopTripCnt.find(__kmpc_global_thread_num(NULL));
-  if (I != Device.LoopTripCnt.end())
-    std::swap(ltc, I->second);
+  if (I != Device.LoopTripCnt.end()) {
+    ltc = I->second;
+    Device.LoopTripCnt.erase(I);
+    DP("loop trip count is %lu.\n", ltc);
+  }
   TblMapMtx.unlock();
 
   // Launch device execution.

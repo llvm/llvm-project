@@ -159,30 +159,39 @@ PPCRegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
   if (TM.isPPC64() && MF->getInfo<PPCFunctionInfo>()->isSplitCSR())
     return CSR_SRV464_TLS_PE_SaveList;
 
-  if (Subtarget.hasSPE())
-    return CSR_SVR432_SPE_SaveList;
-
   // On PPC64, we might need to save r2 (but only if it is not reserved).
   bool SaveR2 = MF->getRegInfo().isAllocatable(PPC::X2);
 
+  // Cold calling convention CSRs.
   if (MF->getFunction().getCallingConv() == CallingConv::Cold) {
-    return TM.isPPC64()
-               ? (Subtarget.hasAltivec()
-                      ? (SaveR2 ? CSR_SVR64_ColdCC_R2_Altivec_SaveList
-                                : CSR_SVR64_ColdCC_Altivec_SaveList)
-                      : (SaveR2 ? CSR_SVR64_ColdCC_R2_SaveList
-                                : CSR_SVR64_ColdCC_SaveList))
-               : (Subtarget.hasAltivec() ? CSR_SVR32_ColdCC_Altivec_SaveList
-                                         : CSR_SVR32_ColdCC_SaveList);
+    if (TM.isPPC64()) {
+      if (Subtarget.hasAltivec())
+        return SaveR2 ? CSR_SVR64_ColdCC_R2_Altivec_SaveList
+                      : CSR_SVR64_ColdCC_Altivec_SaveList;
+      return SaveR2 ? CSR_SVR64_ColdCC_R2_SaveList
+                    : CSR_SVR64_ColdCC_SaveList;
+    }
+    // 32-bit targets.
+    if (Subtarget.hasAltivec())
+      return CSR_SVR32_ColdCC_Altivec_SaveList;
+    else if (Subtarget.hasSPE())
+      return CSR_SVR32_ColdCC_SPE_SaveList;
+    return CSR_SVR32_ColdCC_SaveList;
   }
-
-  return TM.isPPC64()
-             ? (Subtarget.hasAltivec()
-                    ? (SaveR2 ? CSR_SVR464_R2_Altivec_SaveList
-                              : CSR_SVR464_Altivec_SaveList)
-                    : (SaveR2 ? CSR_SVR464_R2_SaveList : CSR_SVR464_SaveList))
-             : (Subtarget.hasAltivec() ? CSR_SVR432_Altivec_SaveList
-                                       : CSR_SVR432_SaveList);
+  // Standard calling convention CSRs.
+  if (TM.isPPC64()) {
+    if (Subtarget.hasAltivec())
+      return SaveR2 ? CSR_SVR464_R2_Altivec_SaveList
+                    : CSR_SVR464_Altivec_SaveList;
+    return SaveR2 ? CSR_SVR464_R2_SaveList
+                  : CSR_SVR464_SaveList;
+  }
+  // 32-bit targets.
+  if (Subtarget.hasAltivec())
+    return CSR_SVR432_Altivec_SaveList;
+  else if (Subtarget.hasSPE())
+    return CSR_SVR432_SPE_SaveList;
+  return CSR_SVR432_SaveList;
 }
 
 const MCPhysReg *
@@ -236,13 +245,17 @@ PPCRegisterInfo::getCallPreservedMask(const MachineFunction &MF,
     return TM.isPPC64() ? (Subtarget.hasAltivec() ? CSR_SVR64_ColdCC_Altivec_RegMask
                                                   : CSR_SVR64_ColdCC_RegMask)
                         : (Subtarget.hasAltivec() ? CSR_SVR32_ColdCC_Altivec_RegMask
-                                                  : CSR_SVR32_ColdCC_RegMask);
+                                                  : (Subtarget.hasSPE()
+                                                  ? CSR_SVR32_ColdCC_SPE_RegMask
+                                                  : CSR_SVR32_ColdCC_RegMask));
   }
 
   return TM.isPPC64() ? (Subtarget.hasAltivec() ? CSR_SVR464_Altivec_RegMask
                                                 : CSR_SVR464_RegMask)
                       : (Subtarget.hasAltivec() ? CSR_SVR432_Altivec_RegMask
-                                                : CSR_SVR432_RegMask);
+                                                : (Subtarget.hasSPE()
+                                                  ? CSR_SVR432_SPE_RegMask
+                                                  : CSR_SVR432_RegMask));
 }
 
 const uint32_t*
@@ -938,6 +951,9 @@ static unsigned offsetMinAlignForOpcode(unsigned OpC) {
   case PPC::STXSD:
   case PPC::STXSSP:
     return 4;
+  case PPC::EVLDD:
+  case PPC::EVSTDD:
+    return 8;
   case PPC::LXV:
   case PPC::STXV:
     return 16;
@@ -1060,7 +1076,10 @@ PPCRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   // happen in invalid code.
   assert(OpC != PPC::DBG_VALUE &&
          "This should be handled in a target-independent way");
-  if (!noImmForm && ((isInt<16>(Offset) &&
+  bool OffsetFitsMnemonic = (OpC == PPC::EVSTDD || OpC == PPC::EVLDD) ?
+                            isUInt<8>(Offset) :
+                            isInt<16>(Offset);
+  if (!noImmForm && ((OffsetFitsMnemonic &&
                       ((Offset % offsetMinAlign(MI)) == 0)) ||
                      OpC == TargetOpcode::STACKMAP ||
                      OpC == TargetOpcode::PATCHPOINT)) {

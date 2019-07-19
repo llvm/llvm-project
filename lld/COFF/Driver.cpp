@@ -268,13 +268,12 @@ void LinkerDriver::addArchiveBuffer(MemoryBufferRef mb, StringRef symName,
 }
 
 void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
-                                        StringRef symName,
+                                        const Archive::Symbol &sym,
                                         StringRef parentName) {
 
-  auto reportBufferError = [=](Error &&e,
-                              StringRef childName) {
+  auto reportBufferError = [=](Error &&e, StringRef childName) {
     fatal("could not get the buffer for the member defining symbol " +
-          symName + ": " + parentName + "(" + childName + "): " +
+          toString(sym) + ": " + parentName + "(" + childName + "): " +
           toString(std::move(e)));
   };
 
@@ -285,7 +284,7 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
       reportBufferError(mbOrErr.takeError(), check(c.getFullName()));
     MemoryBufferRef mb = mbOrErr.get();
     enqueueTask([=]() {
-      driver->addArchiveBuffer(mb, symName, parentName, offsetInArchive);
+      driver->addArchiveBuffer(mb, toString(sym), parentName, offsetInArchive);
     });
     return;
   }
@@ -293,15 +292,15 @@ void LinkerDriver::enqueueArchiveMember(const Archive::Child &c,
   std::string childName = CHECK(
       c.getFullName(),
       "could not get the filename for the member defining symbol " +
-      symName);
+      toString(sym));
   auto future = std::make_shared<std::future<MBErrPair>>(
       createFutureForFile(childName));
   enqueueTask([=]() {
     auto mbOrErr = future->get();
     if (mbOrErr.second)
       reportBufferError(errorCodeToError(mbOrErr.second), childName);
-    driver->addArchiveBuffer(takeBuffer(std::move(mbOrErr.first)), symName,
-                             parentName, /* OffsetInArchive */ 0);
+    driver->addArchiveBuffer(takeBuffer(std::move(mbOrErr.first)),
+                             toString(sym), parentName, /*OffsetInArchive=*/0);
   });
 }
 
