@@ -1118,7 +1118,7 @@ public:
 
   /// This method will return the address of the starting function for
   /// this binary, e.g. main() or its equivalent.  This can be used as
-  /// an address of a function that is not called once a binary has 
+  /// an address of a function that is not called once a binary has
   /// started running - e.g. as a return address for inferior function
   /// calls that are unambiguous completion of the function call, not
   /// called during the course of the inferior function code running.
@@ -1130,9 +1130,9 @@ public:
   ///     be found, and may contain a helpful error message.
   //
   /// \return
-  ///     Returns the entry address for this program, LLDB_INVALID_ADDRESS
+  ///     Returns the entry address for this program, or an error
   ///     if none can be found.
-  lldb_private::Address GetEntryPointAddress(Status &err);
+  llvm::Expected<lldb_private::Address> GetEntryPointAddress();
 
   // Target Stop Hooks
   class StopHook : public UserID {

@@ -65,19 +65,17 @@ bool ThreadPlanCallFunction::ConstructorSetup(
     return false;
   }
 
-  m_start_addr = GetTarget().GetEntryPointAddress(error);
-
-  if (log && error.Fail()) {
-    m_constructor_errors.Printf("%s", error.AsCString());
-    log->Printf("ThreadPlanCallFunction(%p): %s.", static_cast<void *>(this),
-                 m_constructor_errors.GetData());
+  llvm::Expected<Address> start_address = GetTarget().GetEntryPointAddress();
+  if (!start_address) {
+    m_constructor_errors.Printf(
+        "%s", llvm::toString(start_address.takeError()).c_str());
+    if (log)
+      log->Printf("ThreadPlanCallFunction(%p): %s.", static_cast<void *>(this),
+                  m_constructor_errors.GetData());
     return false;
   }
 
-  if (!m_start_addr.IsValid()) {
-    return false;
-  }
-
+  m_start_addr = *start_address;
   start_load_addr = m_start_addr.GetLoadAddress(&GetTarget());
 
   // Checkpoint the thread state so we can restore it later.
