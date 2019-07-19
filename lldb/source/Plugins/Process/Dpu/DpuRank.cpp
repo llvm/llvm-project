@@ -150,6 +150,10 @@ bool Dpu::StopThreadsUnlock() {
 
 }
 
+static void SetExitStatus(unsigned int *exit_status, struct _dpu_context_t *context) {
+  *exit_status = context->registers[lldb_private::r21_dpu];
+}
+
 StateType Dpu::PollStatus(unsigned int *exit_status) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
   bool dpu_is_in_fault;
@@ -168,7 +172,7 @@ StateType Dpu::PollStatus(unsigned int *exit_status) {
   }
 
   StopThreadsUnlock();
-  *exit_status = m_context.registers[lldb_private::r21_dpu];
+  SetExitStatus(exit_status, &m_context);
 
   return result_state;
 }
@@ -197,17 +201,23 @@ bool Dpu::ResumeThreads() {
   return ret == DPU_API_SUCCESS;
 }
 
-bool Dpu::StepThread(uint32_t thread_index) {
+StateType Dpu::StepThread(uint32_t thread_index, unsigned int *exit_status) {
   std::lock_guard<std::mutex> guard(m_rank->GetLock());
 
   if (!IsContextReadyForResumeOrStep(&m_context))
-    return false;
+    return StateType::eStateCrashed;
 
   int ret = DPU_API_SUCCESS;
   ret |= dpu_execute_thread_step_in_fault_for_dpu(m_dpu, thread_index, &m_context);
   ret |= dpu_extract_context_for_dpu(m_dpu, &m_context);
 
-  return ret == DPU_API_SUCCESS;
+  if (ret != DPU_API_SUCCESS)
+    return StateType::eStateCrashed;
+  if (m_context.nr_of_running_threads == 0) {
+    SetExitStatus(exit_status, &m_context);
+    return StateType::eStateExited;
+  }
+  return StateType::eStateStopped;
 }
 
 bool Dpu::WriteWRAM(uint32_t offset, const void *buf, size_t size) {

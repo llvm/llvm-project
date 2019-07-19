@@ -170,7 +170,7 @@ bool ProcessDpu::SupportHardwareSingleStepping() const { return true; }
 Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_PROCESS));
   lldb::tid_t thread_id = GetID();
-  LLDB_LOG(log, "pid {0}", thread_id);
+  uint32_t thread_index = GetThreadByID(thread_id)->GetIndex();
 
   const ResumeAction *action =
       resume_actions.GetActionForThread(thread_id, true);
@@ -181,17 +181,19 @@ Status ProcessDpu::Resume(const ResumeActionList &resume_actions) {
   switch (action->state) {
   case lldb::StateType::eStateRunning:
     SetState(lldb::StateType::eStateRunning, true);
+    LLDB_LOG(log, "resuming thread {0} (pid {1})", thread_index, thread_id);
     if (!m_dpu->ResumeThreads())
       return Status("CNI cannot resume");
     break;
   case lldb::StateType::eStateStepping: {
-    ThreadDpu * thread = GetThreadByID(thread_id);
-    uint32_t thread_index = thread->GetIndex();
+    unsigned int exit_status;
+    lldb::StateType ret_state_type;
     SetState(lldb::StateType::eStateStepping, true);
-    LLDB_LOG(log, "stepping thread {0} with signal {1}", thread_index, action->signal);
-    if (!m_dpu->StepThread(thread_index))
-      return Status("CNI cannot step");
-    SetState(lldb::StateType::eStateStopped, true);
+    LLDB_LOG(log, "stepping thread {0} (pid {1})", thread_index, thread_id);
+    ret_state_type = m_dpu->StepThread(thread_index, &exit_status);
+    if (ret_state_type == lldb::StateType::eStateExited)
+      SetExitStatus(WaitStatus(WaitStatus::Exit, (uint8_t)exit_status), true);
+    SetState(ret_state_type, true);
   } break;
   default:
     return Status("Unknown resume action!");

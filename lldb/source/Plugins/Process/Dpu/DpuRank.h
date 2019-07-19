@@ -70,7 +70,7 @@ public:
   bool StopThreads();
   bool StopThreadsUnlock();
 
-  bool StepThread(uint32_t thread_index);
+  lldb::StateType StepThread(uint32_t thread_index, unsigned int *exit_status);
 
   bool WriteWRAM(uint32_t offset, const void *buf, size_t size);
   bool ReadWRAM(uint32_t offset, void *buf, size_t size);
