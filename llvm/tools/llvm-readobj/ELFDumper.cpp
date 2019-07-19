@@ -3205,7 +3205,7 @@ void GNUStyle<ELFT>::printHashedSymbol(const ELFO *Obj, const Elf_Sym *FirstSym,
 
   const auto Symbol = FirstSym + Sym;
   Fields[2].Str = to_string(
-      format_hex_no_prefix(Symbol->st_value, ELFT::Is64Bits ? 18 : 8));
+      format_hex_no_prefix(Symbol->st_value, ELFT::Is64Bits ? 16 : 8));
   Fields[3].Str = to_string(format_decimal(Symbol->st_size, 5));
 
   unsigned char SymbolType = Symbol->getType();
