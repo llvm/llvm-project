@@ -40,8 +40,8 @@ public:
   virtual const DWARFSection &getLocSection() const { return Dummy; }
   virtual const DWARFSection &getLoclistsSection() const { return Dummy; }
   virtual StringRef getARangeSection() const { return ""; }
-  virtual StringRef getDebugFrameSection() const { return ""; }
-  virtual StringRef getEHFrameSection() const { return ""; }
+  virtual const DWARFSection &getDebugFrameSection() const { return Dummy; }
+  virtual const DWARFSection &getEHFrameSection() const { return Dummy; }
   virtual const DWARFSection &getLineSection() const { return Dummy; }
   virtual StringRef getLineStringSection() const { return ""; }
   virtual StringRef getStringSection() const { return ""; }

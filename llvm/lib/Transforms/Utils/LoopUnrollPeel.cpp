@@ -62,7 +62,7 @@ static cl::opt<unsigned> UnrollForcePeelCount(
     cl::desc("Force a peel count regardless of profiling information."));
 
 static cl::opt<bool> UnrollPeelMultiDeoptExit(
-    "unroll-peel-multi-deopt-exit", cl::init(false), cl::Hidden,
+    "unroll-peel-multi-deopt-exit", cl::init(true), cl::Hidden,
     cl::desc("Allow peeling of loops with multiple deopt exits."));
 
 // Designates that a Phi is estimated to become invariant after an "infinite"

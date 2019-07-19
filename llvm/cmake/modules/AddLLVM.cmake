@@ -1682,7 +1682,7 @@ function(llvm_codesign name)
         XCODE_ATTRIBUTE_CODE_SIGN_ENTITLEMENTS ${ARG_ENTITLEMENTS}
       )
     endif()
-  elseif(APPLE)
+  elseif(APPLE AND CMAKE_HOST_SYSTEM_NAME MATCHES Darwin)
     if(NOT CMAKE_CODESIGN)
       set(CMAKE_CODESIGN xcrun codesign)
     endif()

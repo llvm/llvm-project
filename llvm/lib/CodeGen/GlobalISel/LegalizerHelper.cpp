@@ -317,6 +317,55 @@ simpleLibcall(MachineInstr &MI, MachineIRBuilder &MIRBuilder, unsigned Size,
                        Args);
 }
 
+LegalizerHelper::LegalizeResult
+llvm::createMemLibcall(MachineIRBuilder &MIRBuilder, MachineRegisterInfo &MRI,
+                       MachineInstr &MI) {
+  assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS);
+  auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
+
+  SmallVector<CallLowering::ArgInfo, 3> Args;
+  for (unsigned i = 1; i < MI.getNumOperands(); i++) {
+    Register Reg = MI.getOperand(i).getReg();
+
+    // Need derive an IR type for call lowering.
+    LLT OpLLT = MRI.getType(Reg);
+    Type *OpTy = nullptr;
+    if (OpLLT.isPointer())
+      OpTy = Type::getInt8PtrTy(Ctx, OpLLT.getAddressSpace());
+    else
+      OpTy = IntegerType::get(Ctx, OpLLT.getSizeInBits());
+    Args.push_back({Reg, OpTy});
+  }
+
+  auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
+  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
+  Intrinsic::ID ID = MI.getOperand(0).getIntrinsicID();
+  RTLIB::Libcall RTLibcall;
+  switch (ID) {
+  case Intrinsic::memcpy:
+    RTLibcall = RTLIB::MEMCPY;
+    break;
+  case Intrinsic::memset:
+    RTLibcall = RTLIB::MEMSET;
+    break;
+  case Intrinsic::memmove:
+    RTLibcall = RTLIB::MEMMOVE;
+    break;
+  default:
+    return LegalizerHelper::UnableToLegalize;
+  }
+  const char *Name = TLI.getLibcallName(RTLibcall);
+
+  MIRBuilder.setInstr(MI);
+  MIRBuilder.getMF().getFrameInfo().setHasCalls(true);
+  if (!CLI.lowerCall(MIRBuilder, TLI.getLibcallCallingConv(RTLibcall),
+                     MachineOperand::CreateES(Name),
+                     CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx)), Args))
+    return LegalizerHelper::UnableToLegalize;
+
+  return LegalizerHelper::Legalized;
+}
+
 static RTLIB::Libcall getConvRTLibDesc(unsigned Opcode, Type *ToType,
                                        Type *FromType) {
   auto ToMVT = MVT::getVT(ToType);

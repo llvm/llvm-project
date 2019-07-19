@@ -292,7 +292,7 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   }
 #endif
 
-  unsigned AltName = AMDGPU::Reg32;
+  unsigned AltName = AMDGPU::NoRegAltName;
 
   if (MRI.getRegClass(AMDGPU::VReg_64RegClassID).contains(RegNo) ||
       MRI.getRegClass(AMDGPU::SGPR_64RegClassID).contains(RegNo) ||

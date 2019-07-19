@@ -376,26 +376,24 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
     CallInst *const SetInactive =
         B.CreateIntrinsic(Intrinsic::amdgcn_set_inactive, Ty, {V, Identity});
 
-    CallInst *const FirstDPP =
+    ExclScan =
         B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, Ty,
                           {Identity, SetInactive, B.getInt32(DPP_WF_SR1),
                            B.getInt32(0xf), B.getInt32(0xf), B.getFalse()});
-    ExclScan = FirstDPP;
 
-    const unsigned Iters = 7;
-    const unsigned DPPCtrl[Iters] = {
-        DPP_ROW_SR1, DPP_ROW_SR2,     DPP_ROW_SR3,    DPP_ROW_SR4,
-        DPP_ROW_SR8, DPP_ROW_BCAST15, DPP_ROW_BCAST31};
-    const unsigned RowMask[Iters] = {0xf, 0xf, 0xf, 0xf, 0xf, 0xa, 0xc};
-    const unsigned BankMask[Iters] = {0xf, 0xf, 0xf, 0xe, 0xc, 0xf, 0xf};
+    const unsigned Iters = 6;
+    const unsigned DPPCtrl[Iters] = {DPP_ROW_SR1,     DPP_ROW_SR2,
+                                     DPP_ROW_SR4,     DPP_ROW_SR8,
+                                     DPP_ROW_BCAST15, DPP_ROW_BCAST31};
+    const unsigned RowMask[Iters] = {0xf, 0xf, 0xf, 0xf, 0xa, 0xc};
+    const unsigned BankMask[Iters] = {0xf, 0xf, 0xe, 0xc, 0xf, 0xf};
 
     // This loop performs an exclusive scan across the wavefront, with all lanes
     // active (by using the WWM intrinsic).
     for (unsigned Idx = 0; Idx < Iters; Idx++) {
-      Value *const UpdateValue = Idx < 3 ? FirstDPP : ExclScan;
       CallInst *const DPP = B.CreateIntrinsic(
           Intrinsic::amdgcn_update_dpp, Ty,
-          {Identity, UpdateValue, B.getInt32(DPPCtrl[Idx]),
+          {Identity, ExclScan, B.getInt32(DPPCtrl[Idx]),
            B.getInt32(RowMask[Idx]), B.getInt32(BankMask[Idx]), B.getFalse()});
 
       ExclScan = buildNonAtomicBinOp(B, Op, ExclScan, DPP);

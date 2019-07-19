@@ -846,6 +846,7 @@ include_directories( ${LLVM_INCLUDE_DIR} ${LLVM_MAIN_INCLUDE_DIR})
 # when crosscompiling import the executable targets from a file
 if(LLVM_USE_HOST_TOOLS)
   include(CrossCompile)
+  llvm_create_cross_target(LLVM NATIVE "" Release)
 endif(LLVM_USE_HOST_TOOLS)
 if(LLVM_TARGET_IS_CROSSCOMPILE_HOST)
 # Dummy use to avoid CMake Warning: Manually-specified variables were not used

@@ -34,10 +34,10 @@ using namespace dwarf;
 const uint8_t DWARF_CFI_PRIMARY_OPCODE_MASK = 0xc0;
 const uint8_t DWARF_CFI_PRIMARY_OPERAND_MASK = 0x3f;
 
-Error CFIProgram::parse(DataExtractor Data, uint32_t *Offset,
+Error CFIProgram::parse(DWARFDataExtractor Data, uint32_t *Offset,
                         uint32_t EndOffset) {
   while (*Offset < EndOffset) {
-    uint8_t Opcode = Data.getU8(Offset);
+    uint8_t Opcode = Data.getRelocatedValue(1, Offset);
     // Some instructions have a primary opcode encoded in the top bits.
     uint8_t Primary = Opcode & DWARF_CFI_PRIMARY_OPCODE_MASK;
 
@@ -74,19 +74,19 @@ Error CFIProgram::parse(DataExtractor Data, uint32_t *Offset,
         break;
       case DW_CFA_set_loc:
         // Operands: Address
-        addInstruction(Opcode, Data.getAddress(Offset));
+        addInstruction(Opcode, Data.getRelocatedAddress(Offset));
         break;
       case DW_CFA_advance_loc1:
         // Operands: 1-byte delta
-        addInstruction(Opcode, Data.getU8(Offset));
+        addInstruction(Opcode, Data.getRelocatedValue(1, Offset));
         break;
       case DW_CFA_advance_loc2:
         // Operands: 2-byte delta
-        addInstruction(Opcode, Data.getU16(Offset));
+        addInstruction(Opcode, Data.getRelocatedValue(2, Offset));
         break;
       case DW_CFA_advance_loc4:
         // Operands: 4-byte delta
-        addInstruction(Opcode, Data.getU32(Offset));
+        addInstruction(Opcode, Data.getRelocatedValue(4, Offset));
         break;
       case DW_CFA_restore_extended:
       case DW_CFA_undefined:
@@ -361,7 +361,7 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
     uint32_t StartOffset = Offset;
 
     bool IsDWARF64 = false;
-    uint64_t Length = Data.getU32(&Offset);
+    uint64_t Length = Data.getRelocatedValue(4, &Offset);
     uint64_t Id;
 
     if (Length == UINT32_MAX) {
@@ -369,7 +369,7 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
       // field being 0xffffffff. Then, the next 64 bits are the actual entry
       // length.
       IsDWARF64 = true;
-      Length = Data.getU64(&Offset);
+      Length = Data.getRelocatedValue(8, &Offset);
     }
 
     // At this point, Offset points to the next field after Length.
@@ -512,8 +512,8 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
             ReportError(StartOffset, "Parsing augmentation data at %lx failed");
         }
       } else {
-        InitialLocation = Data.getAddress(&Offset);
-        AddressRange = Data.getAddress(&Offset);
+        InitialLocation = Data.getRelocatedAddress(&Offset);
+        AddressRange = Data.getRelocatedAddress(&Offset);
       }
 
       Entries.emplace_back(new FDE(StartOffset, Length, CIEPointer,

@@ -227,6 +227,23 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
     }
     break;
   }
+  case ISD::INTRINSIC_W_CHAIN: {
+    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    switch (IntNo) {
+    case Intrinsic::wasm_tls_base: {
+      MVT PtrVT = TLI->getPointerTy(CurDAG->getDataLayout());
+      assert(PtrVT == MVT::i32 && "only wasm32 is supported for now");
+
+      MachineSDNode *TLSBase = CurDAG->getMachineNode(
+          WebAssembly::GLOBAL_GET_I32, DL, MVT::i32, MVT::Other,
+          CurDAG->getTargetExternalSymbol("__tls_base", PtrVT),
+          Node->getOperand(0));
+      ReplaceNode(Node, TLSBase);
+      return;
+    }
+    }
+    break;
+  }
 
   default:
     break;

@@ -153,3 +153,20 @@ bool MipsLegalizerInfo::legalizeCustom(MachineInstr &MI,
 
   return false;
 }
+
+bool MipsLegalizerInfo::legalizeIntrinsic(MachineInstr &MI, MachineRegisterInfo &MRI,
+                                          MachineIRBuilder &MIRBuilder) const {
+  switch (MI.getIntrinsicID()) {
+  case Intrinsic::memcpy:
+  case Intrinsic::memset:
+  case Intrinsic::memmove:
+    if (createMemLibcall(MIRBuilder, MRI, MI) ==
+        LegalizerHelper::UnableToLegalize)
+      return false;
+    MI.eraseFromParent();
+    return true;
+  default:
+    break;
+  }
+  return true;
+}

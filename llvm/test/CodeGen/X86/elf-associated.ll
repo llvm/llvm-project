@@ -33,7 +33,7 @@
 ; CHECK-DAG: .section	bbb,"awo",@progbits,h,unique,2
 ; CHECK-DAG: .section	.data.k,"awo",@progbits,h
 
-; Non-GlobalObject metadata.
+; Non-GlobalValue metadata.
 @l = global i32 1, section "ccc", !associated !5
 !5 = !{i32* null}
 ; CHECK-DAG: .section	ccc,"aw",@progbits
@@ -42,3 +42,9 @@
 @m = global i32 1, section "ddd", !associated !6
 !6 = distinct !{null}
 ; CHECK-DAG: .section	ddd,"aw",@progbits
+
+; Aliases are OK.
+@n = alias i32, i32* inttoptr (i64 add (i64 ptrtoint (i32* @a to i64), i64 1297036692682702848) to i32*)
+@o = global i32 1, section "eee", !associated !7
+!7 = !{i32* @n}
+; CHECK-DAG: .section	eee,"awo",@progbits,n,unique,3

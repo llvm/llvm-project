@@ -316,7 +316,8 @@ public:
     if (auto Err = CtorRunner.runViaLayer(*this))
       return std::move(Err);
 
-    IRStaticDestructorRunners.emplace_back(std::move(DtorNames), K);
+    IRStaticDestructorRunners.emplace_back(AcknowledgeORCv1Deprecation,
+                                           std::move(DtorNames), K);
 
     return K;
   }

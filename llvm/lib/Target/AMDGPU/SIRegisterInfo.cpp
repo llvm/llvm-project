@@ -1352,7 +1352,6 @@ StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
   unsigned AltName = AMDGPU::NoRegAltName;
 
   switch (Size) {
-  case 32:   AltName = AMDGPU::Reg32; break;
   case 64:   AltName = AMDGPU::Reg64; break;
   case 96:   AltName = AMDGPU::Reg96; break;
   case 128:  AltName = AMDGPU::Reg128; break;

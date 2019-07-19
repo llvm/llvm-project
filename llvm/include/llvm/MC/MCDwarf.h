@@ -629,7 +629,8 @@ public:
   static void Emit(MCObjectStreamer &streamer, MCAsmBackend *MAB, bool isEH);
   static void EmitAdvanceLoc(MCObjectStreamer &Streamer, uint64_t AddrDelta);
   static void EncodeAdvanceLoc(MCContext &Context, uint64_t AddrDelta,
-                               raw_ostream &OS);
+                               raw_ostream &OS, uint32_t *Offset = nullptr,
+                               uint32_t *Size = nullptr);
 };
 
 } // end namespace llvm

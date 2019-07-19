@@ -1135,7 +1135,7 @@ void CodeViewDebug::emitDebugInfoForFunction(const Function *GV,
       if (!BeginLabel->isDefined() || !EndLabel->isDefined())
         continue;
 
-      DIType *DITy = std::get<2>(HeapAllocSite);
+      const DIType *DITy = std::get<2>(HeapAllocSite);
       MCSymbol *HeapAllocEnd = beginSymbolRecord(SymbolKind::S_HEAPALLOCSITE);
       OS.AddComment("Call site offset");
       OS.EmitCOFFSecRel32(BeginLabel, /*Offset=*/0);

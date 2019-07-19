@@ -480,76 +480,40 @@ def BranchTarget14Operand : BranchTarget<14>;
 def BranchTarget26Operand : BranchTarget<26>;
 def PCRelLabel19Operand   : PCRelLabel<19>;
 
-def MovZSymbolG3AsmOperand : AsmOperandClass {
-  let Name = "MovZSymbolG3";
+def MovWSymbolG3AsmOperand : AsmOperandClass {
+  let Name = "MovWSymbolG3";
   let RenderMethod = "addImmOperands";
 }
 
-def movz_symbol_g3 : Operand<i32> {
-  let ParserMatchClass = MovZSymbolG3AsmOperand;
+def movw_symbol_g3 : Operand<i32> {
+  let ParserMatchClass = MovWSymbolG3AsmOperand;
 }
 
-def MovZSymbolG2AsmOperand : AsmOperandClass {
-  let Name = "MovZSymbolG2";
+def MovWSymbolG2AsmOperand : AsmOperandClass {
+  let Name = "MovWSymbolG2";
   let RenderMethod = "addImmOperands";
 }
 
-def movz_symbol_g2 : Operand<i32> {
-  let ParserMatchClass = MovZSymbolG2AsmOperand;
+def movw_symbol_g2 : Operand<i32> {
+  let ParserMatchClass = MovWSymbolG2AsmOperand;
 }
 
-def MovZSymbolG1AsmOperand : AsmOperandClass {
-  let Name = "MovZSymbolG1";
+def MovWSymbolG1AsmOperand : AsmOperandClass {
+  let Name = "MovWSymbolG1";
   let RenderMethod = "addImmOperands";
 }
 
-def movz_symbol_g1 : Operand<i32> {
-  let ParserMatchClass = MovZSymbolG1AsmOperand;
+def movw_symbol_g1 : Operand<i32> {
+  let ParserMatchClass = MovWSymbolG1AsmOperand;
 }
 
-def MovZSymbolG0AsmOperand : AsmOperandClass {
-  let Name = "MovZSymbolG0";
+def MovWSymbolG0AsmOperand : AsmOperandClass {
+  let Name = "MovWSymbolG0";
   let RenderMethod = "addImmOperands";
 }
 
-def movz_symbol_g0 : Operand<i32> {
-  let ParserMatchClass = MovZSymbolG0AsmOperand;
-}
-
-def MovKSymbolG3AsmOperand : AsmOperandClass {
-  let Name = "MovKSymbolG3";
-  let RenderMethod = "addImmOperands";
-}
-
-def movk_symbol_g3 : Operand<i32> {
-  let ParserMatchClass = MovKSymbolG3AsmOperand;
-}
-
-def MovKSymbolG2AsmOperand : AsmOperandClass {
-  let Name = "MovKSymbolG2";
-  let RenderMethod = "addImmOperands";
-}
-
-def movk_symbol_g2 : Operand<i32> {
-  let ParserMatchClass = MovKSymbolG2AsmOperand;
-}
-
-def MovKSymbolG1AsmOperand : AsmOperandClass {
-  let Name = "MovKSymbolG1";
-  let RenderMethod = "addImmOperands";
-}
-
-def movk_symbol_g1 : Operand<i32> {
-  let ParserMatchClass = MovKSymbolG1AsmOperand;
-}
-
-def MovKSymbolG0AsmOperand : AsmOperandClass {
-  let Name = "MovKSymbolG0";
-  let RenderMethod = "addImmOperands";
-}
-
-def movk_symbol_g0 : Operand<i32> {
-  let ParserMatchClass = MovKSymbolG0AsmOperand;
+def movw_symbol_g0 : Operand<i32> {
+  let ParserMatchClass = MovWSymbolG0AsmOperand;
 }
 
 class fixedpoint_i32<ValueType FloatVT>

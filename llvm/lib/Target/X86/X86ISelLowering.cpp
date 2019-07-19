@@ -7504,46 +7504,6 @@ static SDValue LowerAsSplatVectorLoad(SDValue SrcOp, MVT VT, const SDLoc &dl,
   return SDValue();
 }
 
-// Recurse to find a LoadSDNode source and the accumulated ByteOffest.
-static bool findEltLoadSrc(SDValue Elt, LoadSDNode *&Ld, int64_t &ByteOffset) {
-  if (ISD::isNON_EXTLoad(Elt.getNode())) {
-    Ld = cast<LoadSDNode>(Elt);
-    ByteOffset = 0;
-    return true;
-  }
-
-  switch (Elt.getOpcode()) {
-  case ISD::BITCAST:
-  case ISD::TRUNCATE:
-  case ISD::SCALAR_TO_VECTOR:
-    return findEltLoadSrc(Elt.getOperand(0), Ld, ByteOffset);
-  case ISD::SRL:
-    if (isa<ConstantSDNode>(Elt.getOperand(1))) {
-      uint64_t Idx = Elt.getConstantOperandVal(1);
-      if ((Idx % 8) == 0 && findEltLoadSrc(Elt.getOperand(0), Ld, ByteOffset)) {
-        ByteOffset += Idx / 8;
-        return true;
-      }
-    }
-    break;
-  case ISD::EXTRACT_VECTOR_ELT:
-    if (isa<ConstantSDNode>(Elt.getOperand(1))) {
-      SDValue Src = Elt.getOperand(0);
-      unsigned SrcSizeInBits = Src.getScalarValueSizeInBits();
-      unsigned DstSizeInBits = Elt.getScalarValueSizeInBits();
-      if (DstSizeInBits == SrcSizeInBits && (SrcSizeInBits % 8) == 0 &&
-          findEltLoadSrc(Src, Ld, ByteOffset)) {
-        uint64_t Idx = Elt.getConstantOperandVal(1);
-        ByteOffset += Idx * (SrcSizeInBits / 8);
-        return true;
-      }
-    }
-    break;
-  }
-
-  return false;
-}
-
 /// Given the initializing elements 'Elts' of a vector of type 'VT', see if the
 /// elements can be replaced by a single large load which has the same value as
 /// a build_vector or insert_subvector whose loaded operands are 'Elts'.
@@ -7561,7 +7521,6 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   APInt UndefMask = APInt::getNullValue(NumElems);
 
   SmallVector<LoadSDNode*, 8> Loads(NumElems, nullptr);
-  SmallVector<int64_t, 8> ByteOffsets(NumElems, 0);
 
   // For each element in the initializer, see if we've found a load, zero or an
   // undef.
@@ -7580,17 +7539,13 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
 
     // Each loaded element must be the correct fractional portion of the
     // requested vector load.
-    unsigned EltSizeInBits = Elt.getValueSizeInBits();
-    if ((NumElems * EltSizeInBits) != VT.getSizeInBits())
+    if ((NumElems * Elt.getValueSizeInBits()) != VT.getSizeInBits())
       return SDValue();
 
-    if (!findEltLoadSrc(Elt, Loads[i], ByteOffsets[i]))
+    if (!ISD::isNON_EXTLoad(Elt.getNode()))
       return SDValue();
-    assert(0 <= ByteOffsets[i] &&
-           ((ByteOffsets[i] * 8) + EltSizeInBits) <=
-               Loads[i]->getValueSizeInBits(0) &&
-           "Element offset outside of load bounds");
 
+    Loads[i] = cast<LoadSDNode>(Elt);
     LoadMask.setBit(i);
     LastLoadedElt = i;
   }
@@ -7620,20 +7575,6 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   int LoadSizeInBits = (1 + LastLoadedElt - FirstLoadedElt) * BaseSizeInBits;
   assert((BaseSizeInBits % 8) == 0 && "Sub-byte element loads detected");
 
-  // Check to see if the element's load is consecutive to the base load
-  // or offset from a previous (already checked) load.
-  auto CheckConsecutiveLoad = [&](LoadSDNode *Base, int EltIdx) {
-    LoadSDNode *Ld = Loads[EltIdx];
-    int64_t ByteOffset = ByteOffsets[EltIdx];
-    if (ByteOffset && (ByteOffset % BaseSizeInBytes) == 0) {
-      int64_t BaseIdx = EltIdx - (ByteOffset / BaseSizeInBytes);
-      return (0 <= BaseIdx && BaseIdx < (int)NumElems && LoadMask[BaseIdx] &&
-              Loads[BaseIdx] == Ld && ByteOffsets[BaseIdx] == 0);
-    }
-    return DAG.areNonVolatileConsecutiveLoads(Ld, Base, BaseSizeInBytes,
-                                              EltIdx - FirstLoadedElt);
-  };
-
   // Consecutive loads can contain UNDEFS but not ZERO elements.
   // Consecutive loads with UNDEFs and ZEROs elements require a
   // an additional shuffle stage to clear the ZERO elements.
@@ -7641,7 +7582,8 @@ static SDValue EltsFromConsecutiveLoads(EVT VT, ArrayRef<SDValue> Elts,
   bool IsConsecutiveLoadWithZeros = true;
   for (int i = FirstLoadedElt + 1; i <= LastLoadedElt; ++i) {
     if (LoadMask[i]) {
-      if (!CheckConsecutiveLoad(LDBase, i)) {
+      if (!DAG.areNonVolatileConsecutiveLoads(Loads[i], LDBase, BaseSizeInBytes,
+                                              i - FirstLoadedElt)) {
         IsConsecutiveLoad = false;
         IsConsecutiveLoadWithZeros = false;
         break;

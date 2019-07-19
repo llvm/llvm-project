@@ -16,6 +16,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/OrcV1Deprecation.h"
 #include <memory>
 
 namespace llvm {

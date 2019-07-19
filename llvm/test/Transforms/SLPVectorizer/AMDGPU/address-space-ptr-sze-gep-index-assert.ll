@@ -147,3 +147,16 @@ bb:
   store i32 %sub1, i32* undef
   ret void
 }
+
+; CHECK-LABEL: slp_crash_on_addrspacecast
+; CHECK: ret void
+define void @slp_crash_on_addrspacecast() {
+entry:
+  %0 = getelementptr inbounds i64, i64 addrspace(3)* undef, i32 undef
+  %p0 = addrspacecast i64 addrspace(3)* %0 to i64*
+  store i64 undef, i64* %p0, align 8
+  %1 = getelementptr inbounds i64, i64 addrspace(3)* undef, i32 undef
+  %p1 = addrspacecast i64 addrspace(3)* %1 to i64*
+  store i64 undef, i64* %p1, align 8
+  ret void
+}
