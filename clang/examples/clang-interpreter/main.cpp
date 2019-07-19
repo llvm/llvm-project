@@ -18,6 +18,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
+#include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
@@ -50,64 +51,68 @@ namespace orc {
 class SimpleJIT {
 private:
   ExecutionSession ES;
-  std::shared_ptr<SymbolResolver> Resolver;
   std::unique_ptr<TargetMachine> TM;
   const DataLayout DL;
-  LegacyRTDyldObjectLinkingLayer ObjectLayer;
-  LegacyIRCompileLayer<decltype(ObjectLayer), SimpleCompiler> CompileLayer;
+  MangleAndInterner Mangle{ES, DL};
+  RTDyldObjectLinkingLayer ObjectLayer{ES, createMemMgr};
+  IRCompileLayer CompileLayer{ES, ObjectLayer, SimpleCompiler(*TM)};
+
+  static std::unique_ptr<SectionMemoryManager> createMemMgr() {
+    return llvm::make_unique<SectionMemoryManager>();
+  }
+
+  SimpleJIT(std::unique_ptr<TargetMachine> TM, DataLayout DL,
+            DynamicLibrarySearchGenerator ProcessSymbolsGenerator)
+      : TM(std::move(TM)), DL(std::move(DL)) {
+    llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
+    ES.getMainJITDylib().setGenerator(std::move(ProcessSymbolsGenerator));
+  }
 
 public:
-  SimpleJIT()
-      : Resolver(createLegacyLookupResolver(
-            ES,
-            [this](const std::string &Name) -> JITSymbol {
-              if (auto Sym = CompileLayer.findSymbol(Name, false))
-                return Sym;
-              else if (auto Err = Sym.takeError())
-                return std::move(Err);
-              if (auto SymAddr =
-                      RTDyldMemoryManager::getSymbolAddressInProcess(Name))
-                return JITSymbol(SymAddr, JITSymbolFlags::Exported);
-              return nullptr;
-            },
-            [](Error Err) { cantFail(std::move(Err), "lookupFlags failed"); })),
-        TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-        ObjectLayer(ES,
-                    [this](VModuleKey) {
-                      return LegacyRTDyldObjectLinkingLayer::Resources{
-                          std::make_shared<SectionMemoryManager>(), Resolver};
-                    }),
-        CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {
-    llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
+  static Expected<std::unique_ptr<SimpleJIT>> Create() {
+    auto JTMB = JITTargetMachineBuilder::detectHost();
+    if (!JTMB)
+      return JTMB.takeError();
+
+    auto TM = JTMB->createTargetMachine();
+    if (!TM)
+      return TM.takeError();
+
+    auto DL = (*TM)->createDataLayout();
+
+    auto ProcessSymbolsGenerator =
+        DynamicLibrarySearchGenerator::GetForCurrentProcess(
+            DL.getGlobalPrefix());
+
+    if (!ProcessSymbolsGenerator)
+      return ProcessSymbolsGenerator.takeError();
+
+    return std::unique_ptr<SimpleJIT>(new SimpleJIT(
+        std::move(*TM), std::move(DL), std::move(*ProcessSymbolsGenerator)));
   }
 
   const TargetMachine &getTargetMachine() const { return *TM; }
 
-  VModuleKey addModule(std::unique_ptr<Module> M) {
-    // Add the module to the JIT with a new VModuleKey.
-    auto K = ES.allocateVModule();
-    cantFail(CompileLayer.addModule(K, std::move(M)));
-    return K;
+  Error addModule(ThreadSafeModule M) {
+    return CompileLayer.add(ES.getMainJITDylib(), std::move(M));
   }
 
-  JITSymbol findSymbol(const StringRef &Name) {
-    std::string MangledName;
-    raw_string_ostream MangledNameStream(MangledName);
-    Mangler::getNameWithPrefix(MangledNameStream, Name, DL);
-    return CompileLayer.findSymbol(MangledNameStream.str(), true);
+  Expected<JITEvaluatedSymbol> findSymbol(const StringRef &Name) {
+    return ES.lookup({&ES.getMainJITDylib()}, Mangle(Name));
   }
 
-  JITTargetAddress getSymbolAddress(const StringRef &Name) {
-    return cantFail(findSymbol(Name).getAddress());
-  }
-
-  void removeModule(VModuleKey K) {
-    cantFail(CompileLayer.removeModule(K));
+  Expected<JITTargetAddress> getSymbolAddress(const StringRef &Name) {
+    auto Sym = findSymbol(Name);
+    if (!Sym)
+      return Sym.takeError();
+    return Sym->getAddress();
   }
 };
 
 } // end namespace orc
 } // end namespace llvm
+
+llvm::ExitOnError ExitOnErr;
 
 int main(int argc, const char **argv) {
   // This just needs to be some symbol in the binary; C++ doesn't
@@ -129,6 +134,8 @@ int main(int argc, const char **argv) {
   if (T.isOSBinFormatCOFF())
     T.setObjectFormat(llvm::Triple::ELF);
 #endif
+
+  ExitOnErr.setBanner("clang interpreter");
 
   Driver TheDriver(Path, T.str(), Diags);
   TheDriver.setTitle("clang interpreter");
@@ -204,14 +211,16 @@ int main(int argc, const char **argv) {
   llvm::InitializeNativeTargetAsmPrinter();
 
   int Res = 255;
+  std::unique_ptr<llvm::LLVMContext> Ctx(Act->takeLLVMContext());
   std::unique_ptr<llvm::Module> Module = Act->takeModule();
 
   if (Module) {
-    llvm::orc::SimpleJIT J;
-    auto H = J.addModule(std::move(Module));
-    auto Main = (int(*)(...))J.getSymbolAddress("main");
+    auto J = ExitOnErr(llvm::orc::SimpleJIT::Create());
+
+    ExitOnErr(J->addModule(
+        llvm::orc::ThreadSafeModule(std::move(Module), std::move(Ctx))));
+    auto Main = (int (*)(...))ExitOnErr(J->getSymbolAddress("main"));
     Res = Main();
-    J.removeModule(H);
   }
 
   // Shutdown.
