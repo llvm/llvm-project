@@ -62,7 +62,6 @@ set(files
   deque
   errno.h
   exception
-  execution
   experimental/__config
   experimental/__memory
   experimental/algorithm

@@ -33,7 +33,6 @@ config.use_libatomic            = @LIBCXX_HAVE_CXX_ATOMICS_WITH_LIB@
 config.debug_build              = @LIBCXX_DEBUG_BUILD@
 config.libcxxabi_shared         = @LIBCXXABI_ENABLE_SHARED@
 config.cxx_ext_threads          = @LIBCXX_BUILD_EXTERNAL_THREAD_LIBRARY@
-config.pstl_root                = "@ParallelSTL_SOURCE_DIR@" if @LIBCXX_ENABLE_PARALLEL_ALGORITHMS@ else None
 
 # Let the main config do the real work.
 config.loaded_site_config = True

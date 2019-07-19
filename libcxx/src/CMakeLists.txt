@@ -196,11 +196,6 @@ function(cxx_link_system_libraries target)
   endif()
 endfunction()
 
-find_package(ParallelSTL QUIET)
-if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS AND NOT TARGET pstl::ParallelSTL)
-  message(FATAL_ERROR "Could not find ParallelSTL")
-endif()
-
 function(cxx_set_common_defines name)
   if(LIBCXX_CXX_ABI_HEADER_TARGET)
     add_dependencies(${name} ${LIBCXX_CXX_ABI_HEADER_TARGET})
@@ -226,10 +221,6 @@ function(cxx_set_common_defines name)
                                  # Use the ISO conforming behaviour for conversion
                                  # in printf, scanf.
                                  _CRT_STDIO_ISO_WIDE_SPECIFIERS)
-  endif()
-
-  if (LIBCXX_ENABLE_PARALLEL_ALGORITHMS)
-    target_link_libraries(${name} PUBLIC pstl::ParallelSTL)
   endif()
 endfunction()
 
