@@ -17,6 +17,7 @@
 #include "index/FileIndex.h"
 #include "index/Index.h"
 #include "llvm/Support/Threading.h"
+#include <cstddef>
 
 namespace clang {
 namespace clangd {
@@ -61,7 +62,7 @@ public:
   // sessions may happen concurrently.
   void startLoading();
   // Called to indicate some shards were actually loaded from disk.
-  void loadedTU();
+  void loadedShard(size_t ShardCount);
   // Called to indicate we're finished loading shards from disk.
   // May rebuild (if any were loaded).
   void doneLoading();
@@ -89,7 +90,7 @@ private:
   unsigned IndexedTUsAtLastRebuild = 0;
   // Are we loading shards? May be multiple concurrent sessions.
   unsigned Loading = 0;
-  unsigned LoadedTUs; // In the current loading session.
+  unsigned LoadedShards; // In the current loading session.
 
   SwapIndex *Target;
   FileSymbols *Source;

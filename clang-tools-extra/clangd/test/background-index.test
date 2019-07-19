@@ -5,7 +5,8 @@
 # RUN: rm -rf %t
 # RUN: cp -r %S/Inputs/background-index %t
 # Need to embed the correct temp path in the actual JSON-RPC requests.
-# RUN: sed -i -e "s|DIRECTORY|%t|" %t/*
+# RUN: sed -i -e "s|DIRECTORY|%t|" %t/definition.jsonrpc
+# RUN: sed -i -e "s|DIRECTORY|%t|" %t/compile_commands.json
 
 # We're editing bar.cpp, which includes foo.h.
 # foo() is declared in foo.h and defined in foo.cpp.
@@ -14,6 +15,7 @@
 
 # Test that the index is writing files in the expected location.
 # RUN: ls %t/.clangd/index/foo.cpp.*.idx
+# RUN: ls %t/sub_dir/.clangd/index/foo.h.*.idx
 
 # Test the index is read from disk: delete code and restart clangd.
 # RUN: rm %t/foo.cpp

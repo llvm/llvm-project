@@ -355,8 +355,12 @@ int main(int argc, char *argv[]) {
     InputStyle = JSONStreamStyle::Delimited;
     LogLevel = Logger::Verbose;
     PrettyPrint = true;
+    // Disable background index on lit tests by default to prevent disk writes.
+    if (!EnableBackgroundIndex.getNumOccurrences())
+      EnableBackgroundIndex = false;
     // Ensure background index makes progress.
-    BackgroundQueue::preventThreadStarvationInTests();
+    else if (EnableBackgroundIndex)
+      BackgroundQueue::preventThreadStarvationInTests();
   }
   if (Test || EnableTestScheme) {
     static URISchemeRegistry::Add<TestScheme> X(

@@ -8,10 +8,13 @@
 
 #include "Selection.h"
 #include "ClangdUnit.h"
+#include "SourceCode.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/STLExtras.h"
 #include <algorithm>
 
@@ -239,26 +242,23 @@ private:
   SelectionTree::Selection claimRange(SourceRange S) {
     if (!S.isValid())
       return SelectionTree::Unselected;
-    // getTopMacroCallerLoc() allows selection of constructs in macro args. e.g:
+    // toHalfOpenFileRange() allows selection of constructs in macro args. e.g:
     //   #define LOOP_FOREVER(Body) for(;;) { Body }
     //   void IncrementLots(int &x) {
     //     LOOP_FOREVER( ++x; )
     //   }
     // Selecting "++x" or "x" will do the right thing.
-    auto B = SM.getDecomposedLoc(SM.getTopMacroCallerLoc(S.getBegin()));
-    auto E = SM.getDecomposedLoc(SM.getTopMacroCallerLoc(S.getEnd()));
+    auto Range = toHalfOpenFileRange(SM, LangOpts, S);
+    assert(Range && "We should be able to get the File Range");
+    auto B = SM.getDecomposedLoc(Range->getBegin());
+    auto E = SM.getDecomposedLoc(Range->getEnd());
     // Otherwise, nodes in macro expansions can't be selected.
     if (B.first != SelFile || E.first != SelFile)
       return SelectionTree::Unselected;
-    // Cheap test: is there any overlap at all between the selection and range?
-    // Note that E.second is the *start* of the last token, which is why we
-    // compare against the "rounded-down" SelBegin.
-    if (B.second >= SelEnd || E.second < SelBeginTokenStart)
+    // Is there any overlap at all between the selection and range?
+    if (B.second >= SelEnd || E.second < SelBegin)
       return SelectionTree::Unselected;
-
-    // We may have hit something, need some more precise checks.
-    // Adjust [B, E) to be a half-open character range.
-    E.second += Lexer::MeasureTokenLength(S.getEnd(), SM, LangOpts);
+    // We may have hit something.
     auto PreciseBounds = std::make_pair(B.second, E.second);
     // Trim range using the selection, drop it if empty.
     B.second = std::max(B.second, SelBegin);

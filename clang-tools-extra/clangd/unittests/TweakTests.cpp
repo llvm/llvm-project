@@ -398,12 +398,29 @@ TEST(TweakTest, ExtractVariable) {
                        }
                  })cpp"},*/
           // ensure InsertionPoint isn't inside a macro
-          {R"cpp(#define LOOP(x) {int a = x + 1;}
+          {R"cpp(#define LOOP(x) while (1) {a = x;}
                  void f(int a) {
                    if(1)
                     LOOP(5 + [[3]])
                  })cpp",
-           R"cpp(#define LOOP(x) {int a = x + 1;}
+           /*FIXME: It should be extracted like this. SelectionTree needs to be
+            * fixed for macros.
+         R"cpp(#define LOOP(x) while (1) {a = x;}
+               void f(int a) {
+                 auto dummy = 3; if(1)
+                  LOOP(5 + dummy)
+               })cpp"},*/
+           R"cpp(#define LOOP(x) while (1) {a = x;}
+                 void f(int a) {
+                   auto dummy = LOOP(5 + 3); if(1)
+                    dummy
+                 })cpp"},
+          {R"cpp(#define LOOP(x) do {x;} while(1);
+                 void f(int a) {
+                   if(1)
+                    LOOP(5 + [[3]])
+                 })cpp",
+           R"cpp(#define LOOP(x) do {x;} while(1);
                  void f(int a) {
                    auto dummy = 3; if(1)
                     LOOP(5 + dummy)
@@ -415,15 +432,15 @@ TEST(TweakTest, ExtractVariable) {
            R"cpp(void f(int a) {
                     auto dummy = 1; label: [ [gsl::suppress("type")] ] for (;;) a = dummy;
                  })cpp"},
-          // FIXME: Doesn't work because bug in selection tree
-          /*{R"cpp(#define PLUS(x) x++
+          // macro testing
+          {R"cpp(#define PLUS(x) x++
                  void f(int a) {
                    PLUS([[a]]);
                  })cpp",
            R"cpp(#define PLUS(x) x++
                  void f(int a) {
                    auto dummy = a; PLUS(dummy);
-                 })cpp"},*/
+                 })cpp"},
           // FIXME: Doesn't work correctly for \[\[clang::uninitialized\]\] int
           // b = [[1]]; since the attr is inside the DeclStmt and the bounds of
           // DeclStmt don't cover the attribute
