@@ -3502,7 +3502,7 @@ struct DestroyUnpassedArg final : EHScopeStack::Cleanup {
       const CXXDestructorDecl *Dtor = Ty->getAsCXXRecordDecl()->getDestructor();
       assert(!Dtor->isTrivial());
       CGF.EmitCXXDestructorCall(Dtor, Dtor_Complete, /*for vbase*/ false,
-                                /*Delegating=*/false, Addr, Ty);
+                                /*Delegating=*/false, Addr);
     } else {
       CGF.callCStructDestructor(CGF.MakeAddrLValue(Addr, Ty));
     }

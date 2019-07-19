@@ -5093,10 +5093,12 @@ TryObjectArgumentInitialization(Sema &S, SourceLocation Loc, QualType FromType,
   QualType ClassType = S.Context.getTypeDeclType(ActingContext);
   // [class.dtor]p2: A destructor can be invoked for a const, volatile or
   //                 const volatile object.
-  Qualifiers Quals = Method->getMethodQualifiers();
+  Qualifiers Quals;
   if (isa<CXXDestructorDecl>(Method)) {
     Quals.addConst();
     Quals.addVolatile();
+  } else {
+    Quals = Method->getMethodQualifiers();
   }
 
   QualType ImplicitParamType = S.Context.getQualifiedType(ClassType, Quals);

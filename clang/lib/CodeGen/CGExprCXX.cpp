@@ -10,13 +10,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenFunction.h"
 #include "CGCUDARuntime.h"
 #include "CGCXXABI.h"
 #include "CGDebugInfo.h"
 #include "CGObjCRuntime.h"
-#include "CodeGenFunction.h"
 #include "ConstantEmitter.h"
-#include "TargetInfo.h"
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/CodeGen/CGFunctionInfo.h"
 #include "llvm/IR/Intrinsics.h"
@@ -91,26 +90,12 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorCall(
 }
 
 RValue CodeGenFunction::EmitCXXDestructorCall(
-    GlobalDecl Dtor, const CGCallee &Callee, llvm::Value *This, QualType ThisTy,
+    GlobalDecl Dtor, const CGCallee &Callee, llvm::Value *This,
     llvm::Value *ImplicitParam, QualType ImplicitParamTy, const CallExpr *CE) {
-  const CXXMethodDecl *DtorDecl = cast<CXXMethodDecl>(Dtor.getDecl());
-
-  assert(!ThisTy.isNull());
-  assert(ThisTy->getAsCXXRecordDecl() == DtorDecl->getParent() &&
-         "Pointer/Object mixup");
-
-  LangAS SrcAS = ThisTy.getAddressSpace();
-  LangAS DstAS = DtorDecl->getMethodQualifiers().getAddressSpace();
-  if (SrcAS != DstAS) {
-    QualType DstTy = DtorDecl->getThisType();
-    llvm::Type *NewType = CGM.getTypes().ConvertType(DstTy);
-    This = getTargetHooks().performAddrSpaceCast(*this, This, SrcAS, DstAS,
-                                                 NewType);
-  }
-
   CallArgList Args;
-  commonEmitCXXMemberOrOperatorCall(*this, DtorDecl, This, ImplicitParam,
-                                    ImplicitParamTy, CE, Args, nullptr);
+  commonEmitCXXMemberOrOperatorCall(*this, cast<CXXMethodDecl>(Dtor.getDecl()),
+                                    This, ImplicitParam, ImplicitParamTy, CE,
+                                    Args, nullptr);
   return EmitCall(CGM.getTypes().arrangeCXXStructorDeclaration(Dtor), Callee,
                   ReturnValueSlot(), Args);
 }
@@ -360,9 +345,7 @@ RValue CodeGenFunction::EmitCXXMemberOrOperatorMemberCallExpr(
         Callee = CGCallee::forDirect(CGM.GetAddrOfFunction(GD, Ty), GD);
       }
 
-      QualType ThisTy =
-          IsArrow ? Base->getType()->getPointeeType() : Base->getType();
-      EmitCXXDestructorCall(GD, Callee, This.getPointer(), ThisTy,
+      EmitCXXDestructorCall(GD, Callee, This.getPointer(),
                             /*ImplicitParam=*/nullptr,
                             /*ImplicitParamTy=*/QualType(), nullptr);
     }
@@ -1900,7 +1883,7 @@ static void EmitObjectDelete(CodeGenFunction &CGF,
     CGF.EmitCXXDestructorCall(Dtor, Dtor_Complete,
                               /*ForVirtualBase=*/false,
                               /*Delegating=*/false,
-                              Ptr, ElementType);
+                              Ptr);
   else if (auto Lifetime = ElementType.getObjCLifetime()) {
     switch (Lifetime) {
     case Qualifiers::OCL_None:

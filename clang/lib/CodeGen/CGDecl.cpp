@@ -480,12 +480,11 @@ namespace {
 
   template <class Derived>
   struct DestroyNRVOVariable : EHScopeStack::Cleanup {
-    DestroyNRVOVariable(Address addr, QualType type, llvm::Value *NRVOFlag)
-        : NRVOFlag(NRVOFlag), Loc(addr), Ty(type) {}
+    DestroyNRVOVariable(Address addr, llvm::Value *NRVOFlag)
+        : NRVOFlag(NRVOFlag), Loc(addr) {}
 
     llvm::Value *NRVOFlag;
     Address Loc;
-    QualType Ty;
 
     void Emit(CodeGenFunction &CGF, Flags flags) override {
       // Along the exceptions path we always execute the dtor.
@@ -512,24 +511,26 @@ namespace {
 
   struct DestroyNRVOVariableCXX final
       : DestroyNRVOVariable<DestroyNRVOVariableCXX> {
-    DestroyNRVOVariableCXX(Address addr, QualType type,
-                           const CXXDestructorDecl *Dtor, llvm::Value *NRVOFlag)
-        : DestroyNRVOVariable<DestroyNRVOVariableCXX>(addr, type, NRVOFlag),
-          Dtor(Dtor) {}
+    DestroyNRVOVariableCXX(Address addr, const CXXDestructorDecl *Dtor,
+                           llvm::Value *NRVOFlag)
+      : DestroyNRVOVariable<DestroyNRVOVariableCXX>(addr, NRVOFlag),
+        Dtor(Dtor) {}
 
     const CXXDestructorDecl *Dtor;
 
     void emitDestructorCall(CodeGenFunction &CGF) {
       CGF.EmitCXXDestructorCall(Dtor, Dtor_Complete,
                                 /*ForVirtualBase=*/false,
-                                /*Delegating=*/false, Loc, Ty);
+                                /*Delegating=*/false, Loc);
     }
   };
 
   struct DestroyNRVOVariableC final
       : DestroyNRVOVariable<DestroyNRVOVariableC> {
     DestroyNRVOVariableC(Address addr, llvm::Value *NRVOFlag, QualType Ty)
-        : DestroyNRVOVariable<DestroyNRVOVariableC>(addr, Ty, NRVOFlag) {}
+        : DestroyNRVOVariable<DestroyNRVOVariableC>(addr, NRVOFlag), Ty(Ty) {}
+
+    QualType Ty;
 
     void emitDestructorCall(CodeGenFunction &CGF) {
       CGF.destroyNonTrivialCStruct(CGF, Loc, Ty);
@@ -1939,7 +1940,7 @@ void CodeGenFunction::emitAutoVarTypeCleanup(
     if (emission.NRVOFlag) {
       assert(!type->isArrayType());
       CXXDestructorDecl *dtor = type->getAsCXXRecordDecl()->getDestructor();
-      EHStack.pushCleanup<DestroyNRVOVariableCXX>(cleanupKind, addr, type, dtor,
+      EHStack.pushCleanup<DestroyNRVOVariableCXX>(cleanupKind, addr, dtor,
                                                   emission.NRVOFlag);
       return;
     }
