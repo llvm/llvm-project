@@ -1034,6 +1034,7 @@ bool ABISysV_x86_64::CreateDefaultUnwindPlan(UnwindPlan &unwind_plan) {
   unwind_plan.SetSourceName("x86_64 default unwind plan");
   unwind_plan.SetSourcedFromCompiler(eLazyBoolNo);
   unwind_plan.SetUnwindPlanValidAtAllInstructions(eLazyBoolNo);
+  unwind_plan.SetUnwindPlanForSignalTrap(eLazyBoolNo);
   return true;
 }
 

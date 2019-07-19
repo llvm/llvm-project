@@ -586,4 +586,8 @@ _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
 
+#if !defined(_LIBCPP_HAS_NO_PARALLEL_ALGORITHMS) && _LIBCPP_STD_VER >= 17
+#   include <pstl/internal/glue_numeric_impl.h>
+#endif
+
 #endif  // _LIBCPP_NUMERIC
