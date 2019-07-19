@@ -72,7 +72,7 @@ bool UnwindDPU::PCIsInstructionReturn(Function *fct, lldb::addr_t pc) {
 #define NB_INSTRUCTION_MAX (4 * 1024)
 #define STACK_BACKTRACE_STOP_VALUE (0xdb9)
 
-#define FORMAT_PC(pc) (0x80000000 | (((pc)-1) * 8))
+#define FORMAT_PC(pc) (0x80000000 | ((pc) * 8))
 
 uint32_t UnwindDPU::DoGetFrameCount() {
   if (!m_frames.empty())
