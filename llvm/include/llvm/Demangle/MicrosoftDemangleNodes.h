@@ -16,6 +16,8 @@
 #include "llvm/Demangle/DemangleConfig.h"
 #include "llvm/Demangle/StringView.h"
 #include <array>
+#include <cstdint>
+#include <string>
 
 namespace llvm {
 namespace itanium_demangle {
