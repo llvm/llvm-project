@@ -65,40 +65,17 @@ bool ThreadPlanCallFunction::ConstructorSetup(
     return false;
   }
 
-  Module *exe_module = GetTarget().GetExecutableModulePointer();
-
-  if (exe_module == nullptr) {
+  llvm::Expected<Address> start_address = GetTarget().GetEntryPointAddress();
+  if (!start_address) {
     m_constructor_errors.Printf(
-        "Can't execute code without an executable module.");
+        "%s", llvm::toString(start_address.takeError()).c_str());
     if (log)
       log->Printf("ThreadPlanCallFunction(%p): %s.", static_cast<void *>(this),
                   m_constructor_errors.GetData());
     return false;
-  } else {
-    ObjectFile *objectFile = exe_module->GetObjectFile();
-    if (!objectFile) {
-      m_constructor_errors.Printf(
-          "Could not find object file for module \"%s\".",
-          exe_module->GetFileSpec().GetFilename().AsCString());
-
-      if (log)
-        log->Printf("ThreadPlanCallFunction(%p): %s.",
-                    static_cast<void *>(this), m_constructor_errors.GetData());
-      return false;
-    }
-
-    m_start_addr = objectFile->GetEntryPointAddress();
-    if (!m_start_addr.IsValid()) {
-      m_constructor_errors.Printf(
-          "Could not find entry point address for executable module \"%s\".",
-          exe_module->GetFileSpec().GetFilename().AsCString());
-      if (log)
-        log->Printf("ThreadPlanCallFunction(%p): %s.",
-                    static_cast<void *>(this), m_constructor_errors.GetData());
-      return false;
-    }
   }
 
+  m_start_addr = *start_address;
   start_load_addr = m_start_addr.GetLoadAddress(&GetTarget());
 
   // Checkpoint the thread state so we can restore it later.

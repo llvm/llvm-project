@@ -189,8 +189,8 @@ struct test_sort_with_compare
               typename Compare>
     typename std::enable_if<!is_same_iterator_category<InputIterator, std::random_access_iterator_tag>::value,
                             void>::type
-    operator()(Policy&&, OutputIterator, OutputIterator, OutputIterator2,
-               OutputIterator2, InputIterator, InputIterator, Size, Compare)
+    operator()(Policy&&, OutputIterator, OutputIterator, OutputIterator2, OutputIterator2, InputIterator, InputIterator,
+               Size, Compare)
     {
     }
 };
@@ -224,7 +224,7 @@ struct test_non_const
     }
 };
 
-int32_t
+int
 main()
 {
     std::srand(42);
