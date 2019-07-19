@@ -109,6 +109,150 @@ let Command = "script add" in {
     "LLDB event system.">;
 }
 
+let Command = "target dependents" in {
+  def dependents_no_dependents : Option<"no-dependents", "d">, Group<1>,
+    OptionalEnumArg<"Value", "OptionEnumValues(g_dependents_enumaration)">,
+    Desc<"Whether or not to load dependents when creating a target. If the "
+         "option is not specified, the value is implicitly 'default'. If the "
+         "option is specified but without a value, the value is implicitly "
+         "'true'.">;
+}
+
+let Command = "target modules dump" in {
+  def target_modules_dump_verbose : Option<"verbose", "v">,
+    Desc<"Enable verbose dump.">;
+}
+
+let Command = "target modules list" in {
+  def target_modules_list_address : Option<"address", "a">, Group<1>,
+    Arg<"AddressOrExpression">, Desc<"Display the image at this address.">;
+  def target_modules_list_arch : Option<"arch", "A">, Group<1>,
+    OptionalArg<"Width">, Desc<"Display the architecture when listing images.">;
+  def target_modules_list_triple : Option<"triple", "t">, Group<1>,
+    OptionalArg<"Width">, Desc<"Display the triple when listing images.">;
+  def target_modules_list_header : Option<"header", "h">, Group<1>,
+    Desc<"Display the image base address as a load address if debugging, a file"
+    " address otherwise.">;
+  def target_modules_list_offset : Option<"offset", "o">, Group<1>,
+    Desc<"Display the image load address offset from the base file address "
+    "(the slide amount).">;
+  def target_modules_list_uuid : Option<"uuid", "u">, Group<1>,
+    Desc<"Display the UUID when listing images.">;
+  def target_modules_list_fullpath : Option<"fullpath", "f">, Group<1>,
+    OptionalArg<"Width">,
+    Desc<"Display the fullpath to the image object file.">;
+  def target_modules_list_directory : Option<"directory", "d">, Group<1>,
+    OptionalArg<"Width">, Desc<"Display the directory with optional width for "
+    "the image object file.">;
+  def target_modules_list_basename : Option<"basename", "b">, Group<1>,
+    OptionalArg<"Width">, Desc<"Display the basename with optional width for "
+    "the image object file.">;
+  def target_modules_list_symfile : Option<"symfile", "s">, Group<1>,
+    OptionalArg<"Width">, Desc<"Display the fullpath to the image symbol file "
+    "with optional width.">;
+  def target_modules_list_symfile_unique : Option<"symfile-unique", "S">,
+    Group<1>, OptionalArg<"Width">, Desc<"Display the symbol file with optional"
+    " width only if it is different from the executable object file.">;
+  def target_modules_list_mod_time : Option<"mod-time", "m">, Group<1>,
+    OptionalArg<"Width">, Desc<"Display the modification time with optional "
+    "width of the module.">;
+  def target_modules_list_ref_count : Option<"ref-count", "r">, Group<1>,
+    OptionalArg<"Width">, Desc<"Display the reference count if the module is "
+    "still in the shared module cache.">;
+  def target_modules_list_pointer : Option<"pointer", "p">, Group<1>,
+    OptionalArg<"None">, Desc<"Display the module pointer.">;
+  def target_modules_list_global : Option<"global", "g">, Group<1>,
+    Desc<"Display the modules from the global module list, not just the "
+    "current target.">;
+}
+
+let Command = "target modules show unwind" in {
+  def target_modules_show_unwind_name : Option<"name", "n">, Group<1>,
+    Arg<"FunctionName">,
+    Desc<"Show unwind instructions for a function or symbol name.">;
+  def target_modules_show_unwind_address : Option<"address", "a">, Group<2>,
+    Arg<"AddressOrExpression">, Desc<"Show unwind instructions for a function "
+    "or symbol containing an address">;
+}
+
+let Command = "target modules lookup" in {
+  def target_modules_lookup_address : Option<"address", "a">, Group<1>,
+    Arg<"AddressOrExpression">, Required, Desc<"Lookup an address in one or "
+    "more target modules.">;
+  def target_modules_lookup_offset : Option<"offset", "o">, Group<1>,
+    Arg<"Offset">, Desc<"When looking up an address subtract <offset> from any "
+    "addresses before doing the lookup.">;
+  // FIXME: re-enable regex for types when the LookupTypeInModule actually uses
+  // the regex option by adding to group 6.
+  def target_modules_lookup_regex : Option<"regex", "r">, Groups<[2,4,5]>,
+    Desc<"The <name> argument for name lookups are regular expressions.">;
+  def target_modules_lookup_symbol : Option<"symbol", "s">, Group<2>,
+    Arg<"Symbol">, Required, Desc<"Lookup a symbol by name in the symbol tables"
+    " in one or more target modules.">;
+  def target_modules_lookup_file : Option<"file", "f">, Group<3>,
+    Arg<"Filename">, Required, Desc<"Lookup a file by fullpath or basename in "
+    "one or more target modules.">;
+  def target_modules_lookup_line : Option<"line", "l">, Group<3>,
+    Arg<"LineNum">, Desc<"Lookup a line number in a file (must be used in "
+    "conjunction with --file).">;
+  def target_modules_lookup_no_inlines : Option<"no-inlines", "i">,
+    GroupRange<3,5>,
+    Desc<"Ignore inline entries (must be used in conjunction with --file or "
+    "--function).">;
+  def target_modules_lookup_function : Option<"function", "F">, Group<4>,
+    Arg<"FunctionName">, Required, Desc<"Lookup a function by name in the debug"
+    " symbols in one or more target modules.">;
+  def target_modules_lookup_name : Option<"name", "n">, Group<5>,
+    Arg<"FunctionOrSymbol">, Required, Desc<"Lookup a function or symbol by "
+    "name in one or more target modules.">;
+  def target_modules_lookup_type : Option<"type", "t">, Group<6>, Arg<"Name">,
+    Required, Desc<"Lookup a type by name in the debug symbols in one or more "
+    "target modules.">;
+  def target_modules_lookup_verbose : Option<"verbose", "v">,
+    Desc<"Enable verbose lookup information.">;
+  def target_modules_lookup_all : Option<"all", "A">, Desc<"Print all matches, "
+    "not just the best match, if a best match is available.">;
+}
+
+let Command = "target stop hook add" in {
+  def target_stop_hook_add_one_liner : Option<"one-liner", "o">,
+    Arg<"OneLiner">, Desc<"Add a command for the stop hook.  Can be specified "
+    "more than once, and commands will be run in the order they appear.">;
+  def target_stop_hook_add_shlib : Option<"shlib", "s">, Arg<"ShlibName">,
+    Completion<"Module">,
+    Desc<"Set the module within which the stop-hook is to be run.">;
+  def target_stop_hook_add_thread_index : Option<"thread-index", "x">,
+    Arg<"ThreadIndex">, Desc<"The stop hook is run only for the thread whose "
+    "index matches this argument.">;
+  def target_stop_hook_add_thread_id : Option<"thread-id", "t">,
+    Arg<"ThreadID">, Desc<"The stop hook is run only for the thread whose TID "
+    "matches this argument.">;
+  def target_stop_hook_add_thread_name : Option<"thread-name", "T">,
+    Arg<"ThreadName">, Desc<"The stop hook is run only for the thread whose "
+    "thread name matches this argument.">;
+  def target_stop_hook_add_queue_name : Option<"queue-name", "q">,
+    Arg<"QueueName">, Desc<"The stop hook is run only for threads in the queue "
+    "whose name is given by this argument.">;
+  def target_stop_hook_add_file : Option<"file", "f">, Group<1>,
+    Arg<"Filename">, Desc<"Specify the source file within which the stop-hook "
+    "is to be run.">, Completion<"SourceFile">;
+  def target_stop_hook_add_start_line : Option<"start-line", "l">, Group<1>,
+    Arg<"LineNum">, Desc<"Set the start of the line range for which the "
+    "stop-hook is to be run.">;
+  def target_stop_hook_add_end_line : Option<"end-line", "e">, Group<1>,
+    Arg<"LineNum">, Desc<"Set the end of the line range for which the stop-hook"
+    " is to be run.">;
+  def target_stop_hook_add_classname : Option<"classname", "c">, Group<2>,
+    Arg<"ClassName">,
+    Desc<"Specify the class within which the stop-hook is to be run.">;
+  def target_stop_hook_add_name : Option<"name", "n">, Group<3>,
+    Arg<"FunctionName">, Desc<"Set the function name within which the stop hook"
+    " will be run.">, Completion<"Symbol">;
+  def target_stop_hook_add_auto_continue : Option<"auto-continue", "G">,
+    Arg<"Boolean">, Desc<"The breakpoint will auto-continue after running its"
+    " commands.">;
+}
+
 let Command = "thread backtrace" in {
   def thread_backtrace_count : Option<"count", "c">, Group<1>, Arg<"Count">,
   Desc<"How many frames to display (-1 for all)">;
