@@ -140,15 +140,11 @@ void adjustDiagFromHeader(Diag &D, const clang::Diagnostic &Info,
   D.Message = llvm::Twine("in included file: ", D.Message).str();
 }
 
-bool isInsideMainFile(const SourceLocation Loc, const SourceManager &M) {
-  return Loc.isValid() && M.isWrittenInMainFile(M.getFileLoc(Loc));
-}
-
 bool isInsideMainFile(const clang::Diagnostic &D) {
   if (!D.hasSourceManager())
     return false;
 
-  return isInsideMainFile(D.getLocation(), D.getSourceManager());
+  return clangd::isInsideMainFile(D.getLocation(), D.getSourceManager());
 }
 
 bool isNote(DiagnosticsEngine::Level L) {

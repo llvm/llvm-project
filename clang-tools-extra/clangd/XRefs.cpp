@@ -406,7 +406,7 @@ public:
     assert(D->isCanonicalDecl() && "expect D to be a canonical declaration");
     const SourceManager &SM = AST.getSourceManager();
     Loc = SM.getFileLoc(Loc);
-    if (SM.isWrittenInMainFile(Loc) && CanonicalTargets.count(D))
+    if (isInsideMainFile(Loc, SM) && CanonicalTargets.count(D))
       References.push_back({D, Loc, Roles});
     return true;
   }
