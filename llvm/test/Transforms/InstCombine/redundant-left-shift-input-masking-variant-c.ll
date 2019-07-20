@@ -237,10 +237,36 @@ define i32 @t10_nuw_nsw(i32 %x, i32 %nbits) {
   ret i32 %t2
 }
 
+; Special test
+
+declare void @llvm.assume(i1 %cond)
+
+; We can't simplify (%shiftnbits-%masknbits) but we have an assumption.
+define i32 @t11_assume_uge(i32 %x, i32 %masknbits, i32 %shiftnbits) {
+; CHECK-LABEL: @t11_assume_uge(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[SHIFTNBITS:%.*]], [[MASKNBITS:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[T0:%.*]] = lshr i32 -1, [[MASKNBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[X:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[T0]])
+; CHECK-NEXT:    call void @use32(i32 [[T1]])
+; CHECK-NEXT:    [[T2:%.*]] = shl i32 [[T1]], [[SHIFTNBITS]]
+; CHECK-NEXT:    ret i32 [[T2]]
+;
+  %cmp = icmp uge i32 %shiftnbits, %masknbits
+  call void @llvm.assume(i1 %cmp)
+  %t0 = lshr i32 -1, %masknbits
+  %t1 = and i32 %t0, %x
+  call void @use32(i32 %t0)
+  call void @use32(i32 %t1)
+  %t2 = shl i32 %t1, %shiftnbits
+  ret i32 %t2
+}
+
 ; Negative tests
 
-define i32 @n11_not_minus_one(i32 %x, i32 %nbits) {
-; CHECK-LABEL: @n11_not_minus_one(
+define i32 @n12_not_minus_one(i32 %x, i32 %nbits) {
+; CHECK-LABEL: @n12_not_minus_one(
 ; CHECK-NEXT:    [[T0:%.*]] = lshr i32 -2, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[X:%.*]]
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
@@ -256,8 +282,8 @@ define i32 @n11_not_minus_one(i32 %x, i32 %nbits) {
   ret i32 %t2
 }
 
-define i32 @n12_shamt_is_smaller(i32 %x, i32 %nbits) {
-; CHECK-LABEL: @n12_shamt_is_smaller(
+define i32 @n13_shamt_is_smaller(i32 %x, i32 %nbits) {
+; CHECK-LABEL: @n13_shamt_is_smaller(
 ; CHECK-NEXT:    [[T0:%.*]] = lshr i32 -1, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[X:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = add i32 [[NBITS]], -1

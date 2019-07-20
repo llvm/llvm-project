@@ -35,11 +35,6 @@ def CC_SI : CallingConv<[
     SGPR104, SGPR105
   ]>>>,
 
-  // We have no way of referring to the generated register tuples
-  // here, so use a custom function.
-  CCIfInReg<CCIfType<[i64], CCCustom<"allocateSGPRTuple">>>,
-  CCIfByVal<CCIfType<[i64], CCCustom<"allocateSGPRTuple">>>,
-
   // 32*4 + 4 is the minimum for a fetch shader consumer with 32 inputs.
   CCIfNotInReg<CCIfType<[f32, i32, f16, v2i16, v2f16] , CCAssignToReg<[
     VGPR0, VGPR1, VGPR2, VGPR3, VGPR4, VGPR5, VGPR6, VGPR7,
@@ -138,7 +133,6 @@ def CC_AMDGPU_Func : CallingConv<[
     VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,
     VGPR16, VGPR17, VGPR18, VGPR19, VGPR20, VGPR21, VGPR22, VGPR23,
     VGPR24, VGPR25, VGPR26, VGPR27, VGPR28, VGPR29, VGPR30, VGPR31]>>,
-  CCIfType<[i64, f64, v2i32, v2f32, v3i32, v3f32, v4i32, v4f32, v5i32, v5f32, v8i32, v8f32, v16i32, v16f32, v2i64, v2f64, v4i16, v4f16], CCCustom<"allocateVGPRTuple">>,
   CCIfType<[i32, f32, v2i16, v2f16, i16, f16, i1], CCAssignToStack<4, 4>>,
   CCIfType<[i64, f64, v2i32, v2f32], CCAssignToStack<8, 4>>,
   CCIfType<[v3i32, v3f32], CCAssignToStack<12, 4>>,
@@ -157,7 +151,6 @@ def RetCC_AMDGPU_Func : CallingConv<[
     VGPR8, VGPR9, VGPR10, VGPR11, VGPR12, VGPR13, VGPR14, VGPR15,
     VGPR16, VGPR17, VGPR18, VGPR19, VGPR20, VGPR21, VGPR22, VGPR23,
     VGPR24, VGPR25, VGPR26, VGPR27, VGPR28, VGPR29, VGPR30, VGPR31]>>,
-  CCIfType<[i64, f64, v2i32, v2f32, v4i32, v4f32, v8i32, v8f32, v16i32, v16f32, v2i64, v2f64, v4i16, v4f16], CCCustom<"allocateVGPRTuple">>
 ]>;
 
 def CC_AMDGPU : CallingConv<[

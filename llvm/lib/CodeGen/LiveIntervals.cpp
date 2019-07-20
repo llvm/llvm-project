@@ -1439,7 +1439,10 @@ private:
 };
 
 void LiveIntervals::handleMove(MachineInstr &MI, bool UpdateFlags) {
-  assert(!MI.isBundled() && "Can't handle bundled instructions yet.");
+  // It is fine to move a bundle as a whole, but not an individual instruction
+  // inside it.
+  assert((!MI.isBundled() || MI.getOpcode() == TargetOpcode::BUNDLE) &&
+         "Cannot move instruction in bundle");
   SlotIndex OldIndex = Indexes->getInstructionIndex(MI);
   Indexes->removeMachineInstrFromMaps(MI);
   SlotIndex NewIndex = Indexes->insertMachineInstrInMaps(MI);

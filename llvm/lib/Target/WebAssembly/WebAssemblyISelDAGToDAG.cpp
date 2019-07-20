@@ -224,6 +224,16 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       ReplaceNode(Node, TLSSize);
       return;
     }
+    case Intrinsic::wasm_tls_align: {
+      MVT PtrVT = TLI->getPointerTy(CurDAG->getDataLayout());
+      assert(PtrVT == MVT::i32 && "only wasm32 is supported for now");
+
+      MachineSDNode *TLSAlign = CurDAG->getMachineNode(
+          WebAssembly::GLOBAL_GET_I32, DL, PtrVT,
+          CurDAG->getTargetExternalSymbol("__tls_align", MVT::i32));
+      ReplaceNode(Node, TLSAlign);
+      return;
+    }
     }
     break;
   }

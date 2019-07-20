@@ -382,3 +382,15 @@ s_endpgm_saved
 s_wakeup
 // VI: s_wakeup ; encoding: [0x00,0x00,0x83,0xbf]
 // NOSICI: error: instruction not supported on this GPU
+
+//===----------------------------------------------------------------------===//
+// absolute expressions as branch offsets
+//===----------------------------------------------------------------------===//
+
+offset = 3
+s_branch 1+offset
+// GCN: s_branch 4 ; encoding: [0x04,0x00,0x82,0xbf]
+
+offset = 3
+s_branch offset+1
+// GCN: s_branch 4 ; encoding: [0x04,0x00,0x82,0xbf]

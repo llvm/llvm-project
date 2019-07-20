@@ -69,6 +69,10 @@ private:
   bool earlySelectSHL(MachineInstr &I, MachineRegisterInfo &MRI) const;
   bool earlySelectLoad(MachineInstr &I, MachineRegisterInfo &MRI) const;
 
+  /// Eliminate same-sized cross-bank copies into stores before selectImpl().
+  void contractCrossBankCopyIntoStore(MachineInstr &I,
+                                      MachineRegisterInfo &MRI) const;
+
   bool selectVaStartAAPCS(MachineInstr &I, MachineFunction &MF,
                           MachineRegisterInfo &MRI) const;
   bool selectVaStartDarwin(MachineInstr &I, MachineFunction &MF,
@@ -1120,6 +1124,9 @@ void AArch64InstructionSelector::preISelLower(MachineInstr &I) const {
     }
     return;
   }
+  case TargetOpcode::G_STORE:
+    contractCrossBankCopyIntoStore(I, MRI);
+    return;
   default:
     return;
   }
@@ -1158,6 +1165,48 @@ bool AArch64InstructionSelector::earlySelectSHL(
 
   I.eraseFromParent();
   return constrainSelectedInstRegOperands(*NewI, TII, TRI, RBI);
+}
+
+void AArch64InstructionSelector::contractCrossBankCopyIntoStore(
+    MachineInstr &I, MachineRegisterInfo &MRI) const {
+  assert(I.getOpcode() == TargetOpcode::G_STORE && "Expected G_STORE");
+  // If we're storing a scalar, it doesn't matter what register bank that
+  // scalar is on. All that matters is the size.
+  //
+  // So, if we see something like this (with a 32-bit scalar as an example):
+  //
+  // %x:gpr(s32) = ... something ...
+  // %y:fpr(s32) = COPY %x:gpr(s32)
+  // G_STORE %y:fpr(s32)
+  //
+  // We can fix this up into something like this:
+  //
+  // G_STORE %x:gpr(s32)
+  //
+  // And then continue the selection process normally.
+  MachineInstr *Def = getDefIgnoringCopies(I.getOperand(0).getReg(), MRI);
+  if (!Def)
+    return;
+  Register DefDstReg = Def->getOperand(0).getReg();
+  LLT DefDstTy = MRI.getType(DefDstReg);
+  Register StoreSrcReg = I.getOperand(0).getReg();
+  LLT StoreSrcTy = MRI.getType(StoreSrcReg);
+
+  // If we get something strange like a physical register, then we shouldn't
+  // go any further.
+  if (!DefDstTy.isValid())
+    return;
+
+  // Are the source and dst types the same size?
+  if (DefDstTy.getSizeInBits() != StoreSrcTy.getSizeInBits())
+    return;
+
+  if (RBI.getRegBank(StoreSrcReg, MRI, TRI) ==
+      RBI.getRegBank(DefDstReg, MRI, TRI))
+    return;
+
+  // We have a cross-bank copy, which is entering a store. Let's fold it.
+  I.getOperand(0).setReg(DefDstReg);
 }
 
 bool AArch64InstructionSelector::earlySelectLoad(

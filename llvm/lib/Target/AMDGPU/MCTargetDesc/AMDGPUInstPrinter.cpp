@@ -292,35 +292,7 @@ void AMDGPUInstPrinter::printRegOperand(unsigned RegNo, raw_ostream &O,
   }
 #endif
 
-  unsigned AltName = AMDGPU::NoRegAltName;
-
-  if (MRI.getRegClass(AMDGPU::VReg_64RegClassID).contains(RegNo) ||
-      MRI.getRegClass(AMDGPU::SGPR_64RegClassID).contains(RegNo) ||
-      MRI.getRegClass(AMDGPU::AReg_64RegClassID).contains(RegNo))
-    AltName = AMDGPU::Reg64;
-  else if (MRI.getRegClass(AMDGPU::VReg_128RegClassID).contains(RegNo) ||
-           MRI.getRegClass(AMDGPU::SGPR_128RegClassID).contains(RegNo) ||
-           MRI.getRegClass(AMDGPU::AReg_128RegClassID).contains(RegNo))
-    AltName = AMDGPU::Reg128;
-  else if (MRI.getRegClass(AMDGPU::VReg_96RegClassID).contains(RegNo) ||
-           MRI.getRegClass(AMDGPU::SReg_96RegClassID).contains(RegNo))
-    AltName = AMDGPU::Reg96;
-  else if (MRI.getRegClass(AMDGPU::VReg_160RegClassID).contains(RegNo) ||
-           MRI.getRegClass(AMDGPU::SReg_160RegClassID).contains(RegNo))
-    AltName = AMDGPU::Reg160;
-  else if (MRI.getRegClass(AMDGPU::VReg_256RegClassID).contains(RegNo) ||
-           MRI.getRegClass(AMDGPU::SGPR_256RegClassID).contains(RegNo))
-    AltName = AMDGPU::Reg256;
-  else if (MRI.getRegClass(AMDGPU::VReg_512RegClassID).contains(RegNo) ||
-           MRI.getRegClass(AMDGPU::SGPR_512RegClassID).contains(RegNo) ||
-           MRI.getRegClass(AMDGPU::AReg_512RegClassID).contains(RegNo))
-    AltName = AMDGPU::Reg512;
-  else if (MRI.getRegClass(AMDGPU::VReg_1024RegClassID).contains(RegNo) ||
-           MRI.getRegClass(AMDGPU::SReg_1024RegClassID).contains(RegNo) ||
-           MRI.getRegClass(AMDGPU::AReg_1024RegClassID).contains(RegNo))
-    AltName = AMDGPU::Reg1024;
-
-  O << getRegisterName(RegNo, AltName);
+  O << getRegisterName(RegNo);
 }
 
 void AMDGPUInstPrinter::printVOPDst(const MCInst *MI, unsigned OpNo,

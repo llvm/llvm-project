@@ -416,7 +416,7 @@ buildFatArchList(ArrayRef<Slice> Slices) {
       sizeof(MachO::fat_header) + Slices.size() * sizeof(MachO::fat_arch);
 
   for (size_t Index = 0, Size = Slices.size(); Index < Size; ++Index) {
-    Offset = alignTo(Offset, 1 << Slices[Index].Alignment);
+    Offset = alignTo(Offset, 1ull << Slices[Index].Alignment);
     const MachOObjectFile *ObjectFile = Slices[Index].ObjectFile;
     if (Offset > UINT32_MAX)
       reportError("fat file too large to be created because the offset "

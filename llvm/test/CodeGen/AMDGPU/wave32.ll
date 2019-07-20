@@ -920,7 +920,7 @@ main_body:
 
 ; GCN-LABEL: {{^}}test_vgprblocks_w64_attr:
 ; Test that the wave size can be overridden in function attributes and that the block size is correct as a result
-; GFX10DEFWAVE: ; VGPRBlocks: 2
+; GFX10DEFWAVE: ; VGPRBlocks: 11
 define amdgpu_gs float @test_vgprblocks_w64_attr(float %a, float %b, float %c, float %d, float %e,
                                         float %f, float %g, float %h, float %i, float %j, float %k, float %l) #4 {
 main_body:
