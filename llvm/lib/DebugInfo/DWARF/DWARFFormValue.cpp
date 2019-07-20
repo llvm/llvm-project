@@ -299,7 +299,7 @@ bool DWARFFormValue::extractValue(const DWARFDataExtractor &Data,
     case DW_FORM_data8:
     case DW_FORM_ref8:
     case DW_FORM_ref_sup8:
-      Value.uval = Data.getU64(OffsetPtr);
+      Value.uval = Data.getRelocatedValue(8, OffsetPtr);
       break;
     case DW_FORM_data16:
       // Treat this like a 16-byte block.

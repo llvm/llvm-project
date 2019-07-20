@@ -797,6 +797,58 @@ TEST_F(StructuralEquivalenceRecordTest, RecordsWithDifferentBody) {
   EXPECT_FALSE(testStructuralMatch(t));
 }
 
+struct StructuralEquivalenceLambdaTest : StructuralEquivalenceTest {};
+
+TEST_F(StructuralEquivalenceLambdaTest, LambdaClassesWithDifferentMethods) {
+  // Get the LambdaExprs, unfortunately we can't match directly the underlying
+  // implicit CXXRecordDecl of the Lambda classes.
+  auto t = makeDecls<LambdaExpr>(
+      "void f() { auto L0 = [](int){}; }",
+      "void f() { auto L1 = [](){}; }",
+      Lang_CXX11,
+      lambdaExpr(),
+      lambdaExpr());
+  CXXRecordDecl *L0 = get<0>(t)->getLambdaClass();
+  CXXRecordDecl *L1 = get<1>(t)->getLambdaClass();
+  EXPECT_FALSE(testStructuralMatch(L0, L1));
+}
+
+TEST_F(StructuralEquivalenceLambdaTest, LambdaClassesWithEqMethods) {
+  auto t = makeDecls<LambdaExpr>(
+      "void f() { auto L0 = [](int){}; }",
+      "void f() { auto L1 = [](int){}; }",
+      Lang_CXX11,
+      lambdaExpr(),
+      lambdaExpr());
+  CXXRecordDecl *L0 = get<0>(t)->getLambdaClass();
+  CXXRecordDecl *L1 = get<1>(t)->getLambdaClass();
+  EXPECT_TRUE(testStructuralMatch(L0, L1));
+}
+
+TEST_F(StructuralEquivalenceLambdaTest, LambdaClassesWithDifferentFields) {
+  auto t = makeDecls<LambdaExpr>(
+      "void f() { char* X; auto L0 = [X](){}; }",
+      "void f() { float X; auto L1 = [X](){}; }",
+      Lang_CXX11,
+      lambdaExpr(),
+      lambdaExpr());
+  CXXRecordDecl *L0 = get<0>(t)->getLambdaClass();
+  CXXRecordDecl *L1 = get<1>(t)->getLambdaClass();
+  EXPECT_FALSE(testStructuralMatch(L0, L1));
+}
+
+TEST_F(StructuralEquivalenceLambdaTest, LambdaClassesWithEqFields) {
+  auto t = makeDecls<LambdaExpr>(
+      "void f() { float X; auto L0 = [X](){}; }",
+      "void f() { float X; auto L1 = [X](){}; }",
+      Lang_CXX11,
+      lambdaExpr(),
+      lambdaExpr());
+  CXXRecordDecl *L0 = get<0>(t)->getLambdaClass();
+  CXXRecordDecl *L1 = get<1>(t)->getLambdaClass();
+  EXPECT_TRUE(testStructuralMatch(L0, L1));
+}
+
 TEST_F(StructuralEquivalenceTest, CompareSameDeclWithMultiple) {
   auto t = makeNamedDecls(
       "struct A{ }; struct B{ }; void foo(A a, A b);",

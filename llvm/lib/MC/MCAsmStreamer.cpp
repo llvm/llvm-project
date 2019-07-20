@@ -188,6 +188,7 @@ public:
   void EmitValueImpl(const MCExpr *Value, unsigned Size,
                      SMLoc Loc = SMLoc()) override;
   void EmitIntValue(uint64_t Value, unsigned Size) override;
+  void EmitIntValueInHex(uint64_t Value, unsigned Size) override;
 
   void EmitULEB128Value(const MCExpr *Value) override;
 
@@ -921,6 +922,10 @@ void MCAsmStreamer::EmitBinaryData(StringRef Data) {
 
 void MCAsmStreamer::EmitIntValue(uint64_t Value, unsigned Size) {
   EmitValue(MCConstantExpr::create(Value, getContext()), Size);
+}
+
+void MCAsmStreamer::EmitIntValueInHex(uint64_t Value, unsigned Size) {
+  EmitValue(MCConstantExpr::create(Value, getContext(), true), Size);
 }
 
 void MCAsmStreamer::EmitValueImpl(const MCExpr *Value, unsigned Size,

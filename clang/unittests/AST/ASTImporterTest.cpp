@@ -5122,6 +5122,67 @@ TEST_P(ASTImporterOptionSpecificTestBase, LambdaInFunctionParam) {
   EXPECT_EQ(ToLSize, FromLSize);
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, LambdaInGlobalScope) {
+  Decl *FromTU = getTuDecl(
+      R"(
+      auto l1 = [](unsigned lp) { return 1; };
+      auto l2 = [](int lp) { return 2; };
+      int f(int p) {
+        return l1(p) + l2(p);
+      }
+      )",
+      Lang_CXX11, "input0.cc");
+  FunctionDecl *FromF = FirstDeclMatcher<FunctionDecl>().match(
+      FromTU, functionDecl(hasName("f")));
+  FunctionDecl *ToF = Import(FromF, Lang_CXX11);
+  EXPECT_TRUE(ToF);
+}
+
+struct LLDBLookupTest : ASTImporterOptionSpecificTestBase {
+  LLDBLookupTest() {
+    Creator = [](ASTContext &ToContext, FileManager &ToFileManager,
+                 ASTContext &FromContext, FileManager &FromFileManager,
+                 bool MinimalImport,
+                 const std::shared_ptr<ASTImporterSharedState> &SharedState) {
+      return new ASTImporter(ToContext, ToFileManager, FromContext,
+                             FromFileManager, MinimalImport,
+                             // We use the regular lookup.
+                             /*SharedState=*/nullptr);
+    };
+  }
+};
+
+TEST_P(LLDBLookupTest, ImporterShouldFindInTransparentContext) {
+  TranslationUnitDecl *ToTU = getToTuDecl(
+      R"(
+      extern "C" {
+        class X{};
+      };
+      )",
+      Lang_CXX);
+  auto *ToX = FirstDeclMatcher<CXXRecordDecl>().match(
+      ToTU, cxxRecordDecl(hasName("X")));
+
+  // Set up a stub external storage.
+  ToTU->setHasExternalLexicalStorage(true);
+  // Set up DeclContextBits.HasLazyExternalLexicalLookups to true.
+  ToTU->setMustBuildLookupTable();
+  struct TestExternalASTSource : ExternalASTSource {};
+  ToTU->getASTContext().setExternalSource(new TestExternalASTSource());
+
+  Decl *FromTU = getTuDecl(
+      R"(
+        class X;
+      )",
+      Lang_CXX);
+  auto *FromX = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("X")));
+  auto *ImportedX = Import(FromX, Lang_CXX);
+  // The lookup must find the existing class definition in the LinkageSpecDecl.
+  // Then the importer renders the existing and the new decl into one chain.
+  EXPECT_EQ(ImportedX->getCanonicalDecl(), ToX->getCanonicalDecl());
+}
+
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ASTImporterLookupTableTest,
                         DefaultTestValuesForRunOptions, );
 
@@ -5166,6 +5227,9 @@ INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportImplicitMethods,
                         DefaultTestValuesForRunOptions, );
 
 INSTANTIATE_TEST_CASE_P(ParameterizedTests, ImportVariables,
+                        DefaultTestValuesForRunOptions, );
+
+INSTANTIATE_TEST_CASE_P(ParameterizedTests, LLDBLookupTest,
                         DefaultTestValuesForRunOptions, );
 
 } // end namespace ast_matchers

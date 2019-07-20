@@ -1347,33 +1347,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 }
 
 StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
-  // FIXME: Rename flat_scr so we don't need to special case this.
-  switch (Reg) {
-  case AMDGPU::FLAT_SCR:
-    return "flat_scratch";
-  case AMDGPU::FLAT_SCR_LO:
-    return "flat_scratch_lo";
-  case AMDGPU::FLAT_SCR_HI:
-    return "flat_scratch_hi";
-  default:
-    break;
-  }
-
-  const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg);
-  unsigned Size = getRegSizeInBits(*RC);
-  unsigned AltName = AMDGPU::NoRegAltName;
-
-  switch (Size) {
-  case 32:   AltName = AMDGPU::Reg32; break;
-  case 64:   AltName = AMDGPU::Reg64; break;
-  case 96:   AltName = AMDGPU::Reg96; break;
-  case 128:  AltName = AMDGPU::Reg128; break;
-  case 160:  AltName = AMDGPU::Reg160; break;
-  case 256:  AltName = AMDGPU::Reg256; break;
-  case 512:  AltName = AMDGPU::Reg512; break;
-  case 1024: AltName = AMDGPU::Reg1024; break;
-  }
-  return AMDGPUInstPrinter::getRegisterName(Reg, AltName);
+  return AMDGPUInstPrinter::getRegisterName(Reg);
 }
 
 // FIXME: This is very slow. It might be worth creating a map from physreg to

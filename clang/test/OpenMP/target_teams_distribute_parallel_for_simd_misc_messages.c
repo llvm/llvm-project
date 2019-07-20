@@ -164,8 +164,8 @@ void test_collapse() {
     ;
 
 // expected-error@+4 {{OpenMP constructs may not be nested inside a simd region}}
-#pragma omp target teams distribute parallel for simd collapse(2) firstprivate(i)
-  for (i = 0; i < 16; ++i)
+#pragma omp target teams distribute parallel for simd collapse(2) firstprivate(i) // expected-note {{defined as firstprivate}}
+  for (i = 0; i < 16; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp target teams distribute parallel for simd' directive may not be firstprivate, predetermined as lastprivate}}
     for (int j = 0; j < 16; ++j)
 #pragma omp parallel for reduction(+ : i, j)
       for (int k = 0; k < 16; ++k)

@@ -83,7 +83,7 @@ public:
   Symbol *addAbsolute(StringRef n, uint64_t va);
 
   Symbol *addUndefined(StringRef name, InputFile *f, bool isWeakAlias);
-  void addLazy(ArchiveFile *f, const Archive::Symbol sym);
+  void addLazy(ArchiveFile *f, const Archive::Symbol &sym);
   Symbol *addAbsolute(StringRef n, COFFSymbolRef s);
   Symbol *addRegular(InputFile *f, StringRef n,
                      const llvm::object::coff_symbol_generic *s = nullptr,

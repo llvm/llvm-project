@@ -115,13 +115,12 @@ public:
   /// \returns this variable's value.
   Optional<uint64_t> getValue() const { return Value; }
 
-  /// Sets value of this numeric variable, if undefined. Triggers an assertion
-  /// failure if the variable is actually defined.
-  void setValue(uint64_t Value);
+  /// Sets value of this numeric variable to \p NewValue.
+  void setValue(uint64_t NewValue) { Value = NewValue; }
 
   /// Clears value of this numeric variable, regardless of whether it is
   /// currently defined or not.
-  void clearValue();
+  void clearValue() { Value = None; }
 
   /// \returns the line number where this variable is defined, if any, or None
   /// if defined before input is parsed.

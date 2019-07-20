@@ -1144,6 +1144,10 @@ bool ObjectFileMachO::IsExecutable() const {
   return m_header.filetype == MH_EXECUTE;
 }
 
+bool ObjectFileMachO::IsDynamicLoader() const {
+  return m_header.filetype == MH_DYLINKER;
+}
+
 uint32_t ObjectFileMachO::GetAddressByteSize() const {
   return m_data.GetAddressByteSize();
 }
@@ -5177,8 +5181,10 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
   // return that. If m_entry_point_address is valid it means we've found it
   // already, so return the cached value.
 
-  if (!IsExecutable() || m_entry_point_address.IsValid())
+  if ((!IsExecutable() && !IsDynamicLoader()) || 
+      m_entry_point_address.IsValid()) {
     return m_entry_point_address;
+  }
 
   // Otherwise, look for the UnixThread or Thread command.  The data for the
   // Thread command is given in /usr/include/mach-o.h, but it is basically:
@@ -5298,6 +5304,17 @@ lldb_private::Address ObjectFileMachO::GetEntryPointAddress() {
 
       // Go to the next load command:
       offset = cmd_offset + load_cmd.cmdsize;
+    }
+
+    if (start_address == LLDB_INVALID_ADDRESS && IsDynamicLoader()) {
+      if (GetSymtab()) {
+        Symbol *dyld_start_sym = GetSymtab()->FindFirstSymbolWithNameAndType(
+                      ConstString("_dyld_start"), SymbolType::eSymbolTypeCode, 
+                      Symtab::eDebugAny, Symtab::eVisibilityAny);
+        if (dyld_start_sym && dyld_start_sym->GetAddress().IsValid()) {
+          start_address = dyld_start_sym->GetAddress().GetFileAddress();
+        }
+      }
     }
 
     if (start_address != LLDB_INVALID_ADDRESS) {

@@ -591,25 +591,12 @@ unsigned GCNSubtarget::getOccupancyWithNumSGPRs(unsigned SGPRs) const {
 }
 
 unsigned GCNSubtarget::getOccupancyWithNumVGPRs(unsigned VGPRs) const {
-  if (VGPRs <= 24)
-    return 10;
-  if (VGPRs <= 28)
-    return 9;
-  if (VGPRs <= 32)
-    return 8;
-  if (VGPRs <= 36)
-    return 7;
-  if (VGPRs <= 40)
-    return 6;
-  if (VGPRs <= 48)
-    return 5;
-  if (VGPRs <= 64)
-    return 4;
-  if (VGPRs <= 84)
-    return 3;
-  if (VGPRs <= 128)
-    return 2;
-  return 1;
+  unsigned MaxWaves = getMaxWavesPerEU();
+  unsigned Granule = getVGPRAllocGranule();
+  if (VGPRs < Granule)
+    return MaxWaves;
+  unsigned RoundedRegs = ((VGPRs + Granule - 1) / Granule) * Granule;
+  return std::min(getTotalNumVGPRs() / RoundedRegs, MaxWaves);
 }
 
 unsigned GCNSubtarget::getReservedNumSGPRs(const MachineFunction &MF) const {

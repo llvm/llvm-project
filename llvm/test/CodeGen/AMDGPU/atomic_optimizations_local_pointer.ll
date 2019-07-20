@@ -195,6 +195,42 @@ entry:
   ret void
 }
 
+; GCN-LABEL: and_i32_varying:
+; GFX8MORE: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 63
+; GFX8MORE: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
+; GFX8MORE: ds_and_rtn_b32 v{{[0-9]+}}, v{{[0-9]+}}, v[[value]]
+define amdgpu_kernel void @and_i32_varying(i32 addrspace(1)* %out) {
+entry:
+  %lane = call i32 @llvm.amdgcn.workitem.id.x()
+  %old = atomicrmw and i32 addrspace(3)* @local_var32, i32 %lane acq_rel
+  store i32 %old, i32 addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: or_i32_varying:
+; GFX8MORE: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 63
+; GFX8MORE: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
+; GFX8MORE: ds_or_rtn_b32 v{{[0-9]+}}, v{{[0-9]+}}, v[[value]]
+define amdgpu_kernel void @or_i32_varying(i32 addrspace(1)* %out) {
+entry:
+  %lane = call i32 @llvm.amdgcn.workitem.id.x()
+  %old = atomicrmw or i32 addrspace(3)* @local_var32, i32 %lane acq_rel
+  store i32 %old, i32 addrspace(1)* %out
+  ret void
+}
+
+; GCN-LABEL: xor_i32_varying:
+; GFX8MORE: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 63
+; GFX8MORE: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]
+; GFX8MORE: ds_xor_rtn_b32 v{{[0-9]+}}, v{{[0-9]+}}, v[[value]]
+define amdgpu_kernel void @xor_i32_varying(i32 addrspace(1)* %out) {
+entry:
+  %lane = call i32 @llvm.amdgcn.workitem.id.x()
+  %old = atomicrmw xor i32 addrspace(3)* @local_var32, i32 %lane acq_rel
+  store i32 %old, i32 addrspace(1)* %out
+  ret void
+}
+
 ; GCN-LABEL: max_i32_varying:
 ; GFX8MORE: v_readlane_b32 s[[scalar_value:[0-9]+]], v{{[0-9]+}}, 63
 ; GFX8MORE: v_mov_b32{{(_e[0-9]+)?}} v[[value:[0-9]+]], s[[scalar_value]]

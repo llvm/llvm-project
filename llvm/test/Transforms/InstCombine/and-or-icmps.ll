@@ -253,3 +253,88 @@ define void @simplify_before_foldAndOfICmps() {
   ret void
 }
 
+define i1 @PR42691_1(i32 %x) {
+; CHECK-LABEL: @PR42691_1(
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 %x, 0
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 %x, 2147483647
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c1 = icmp slt i32 %x, 0
+  %c2 = icmp eq i32 %x, 2147483647
+  %c = or i1 %c1, %c2
+  ret i1 %c
+}
+
+define i1 @PR42691_2(i32 %x) {
+; CHECK-LABEL: @PR42691_2(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt i32 %x, -2
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %c1 = icmp ult i32 %x, 2147483648
+  %c2 = icmp eq i32 %x, 4294967295
+  %c = or i1 %c1, %c2
+  ret i1 %c
+}
+
+define i1 @PR42691_3(i32 %x) {
+; CHECK-LABEL: @PR42691_3(
+; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 %x, -1
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 %x, -2147483648
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c1 = icmp sge i32 %x, 0
+  %c2 = icmp eq i32 %x, -2147483648
+  %c = or i1 %c1, %c2
+  ret i1 %c
+}
+
+define i1 @PR42691_4(i32 %x) {
+; CHECK-LABEL: @PR42691_4(
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 %x, 1
+; CHECK-NEXT:    ret i1 [[TMP1]]
+;
+  %c1 = icmp uge i32 %x, 2147483648
+  %c2 = icmp eq i32 %x, 0
+  %c = or i1 %c1, %c2
+  ret i1 %c
+}
+
+define i1 @PR42691_5(i32 %x) {
+; CHECK-LABEL: @PR42691_5(
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 %x, 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 %x, 2147483647
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c1 = icmp slt i32 %x, 1
+  %c2 = icmp eq i32 %x, 2147483647
+  %c = or i1 %c1, %c2
+  ret i1 %c
+}
+
+define i1 @PR42691_6(i32 %x) {
+; CHECK-LABEL: @PR42691_6(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ult i32 %x, -2147483647
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 %x, -1
+; CHECK-NEXT:    [[C:%.*]] = or i1 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c1 = icmp ult i32 %x, 2147483649
+  %c2 = icmp eq i32 %x, 4294967295
+  %c = or i1 %c1, %c2
+  ret i1 %c
+}
+
+define i1 @PR42691_7(i32 %x) {
+; CHECK-LABEL: @PR42691_7(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 %x, -1
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[TMP2]]
+;
+  %c1 = icmp uge i32 %x, 2147483649
+  %c2 = icmp eq i32 %x, 0
+  %c = or i1 %c1, %c2
+  ret i1 %c
+}

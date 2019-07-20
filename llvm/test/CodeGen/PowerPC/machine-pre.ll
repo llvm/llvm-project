@@ -8,25 +8,25 @@ define i32 @t(i32 %n, i32 %delta, i32 %a) {
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    lis r7, 0
 ; CHECK-P9-NEXT:    li r6, 0
+; CHECK-P9-NEXT:    li r8, 0
 ; CHECK-P9-NEXT:    li r9, 0
-; CHECK-P9-NEXT:    li r10, 0
 ; CHECK-P9-NEXT:    ori r7, r7, 65535
 ; CHECK-P9-NEXT:    .p2align 5
 ; CHECK-P9-NEXT:  .LBB0_1: # %header
 ; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    addi r10, r10, 1
-; CHECK-P9-NEXT:    cmpw r10, r3
-; CHECK-P9-NEXT:    addi r8, r5, 1024
+; CHECK-P9-NEXT:    addi r9, r9, 1
+; CHECK-P9-NEXT:    cmpw r9, r3
 ; CHECK-P9-NEXT:    blt cr0, .LBB0_4
 ; CHECK-P9-NEXT:  # %bb.2: # %cont
 ; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    add r9, r9, r4
-; CHECK-P9-NEXT:    cmpw r9, r7
+; CHECK-P9-NEXT:    add r8, r8, r4
+; CHECK-P9-NEXT:    cmpw r8, r7
 ; CHECK-P9-NEXT:    bgt cr0, .LBB0_1
 ; CHECK-P9-NEXT:  # %bb.3: # %cont.1
-; CHECK-P9-NEXT:    mr r6, r8
+; CHECK-P9-NEXT:    addi r6, r5, 1024
 ; CHECK-P9-NEXT:  .LBB0_4: # %return
-; CHECK-P9-NEXT:    mullw r3, r6, r8
+; CHECK-P9-NEXT:    addi r3, r5, 1024
+; CHECK-P9-NEXT:    mullw r3, r6, r3
 ; CHECK-P9-NEXT:    blr
 entry:
   br label %header
@@ -75,16 +75,19 @@ define dso_local signext i32 @foo(i32 signext %x, i32 signext %y) local_unnamed_
 ; CHECK-P9-NEXT:    lis r3, 21845
 ; CHECK-P9-NEXT:    add r28, r30, r29
 ; CHECK-P9-NEXT:    ori r27, r3, 21846
-; CHECK-P9-NEXT:    b .LBB1_3
+; CHECK-P9-NEXT:    b .LBB1_4
 ; CHECK-P9-NEXT:    .p2align 4
 ; CHECK-P9-NEXT:  .LBB1_1: # %sw.bb3
 ; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    add r28, r3, r28
+; CHECK-P9-NEXT:    mulli r3, r30, 23
 ; CHECK-P9-NEXT:  .LBB1_2: # %sw.epilog
 ; CHECK-P9-NEXT:    #
+; CHECK-P9-NEXT:    add r28, r3, r28
+; CHECK-P9-NEXT:  .LBB1_3: # %sw.epilog
+; CHECK-P9-NEXT:    #
 ; CHECK-P9-NEXT:    cmpwi r28, 1025
-; CHECK-P9-NEXT:    bge cr0, .LBB1_6
-; CHECK-P9-NEXT:  .LBB1_3: # %while.cond
+; CHECK-P9-NEXT:    bge cr0, .LBB1_7
+; CHECK-P9-NEXT:  .LBB1_4: # %while.cond
 ; CHECK-P9-NEXT:    #
 ; CHECK-P9-NEXT:    extsw r3, r29
 ; CHECK-P9-NEXT:    bl bar
@@ -101,41 +104,40 @@ define dso_local signext i32 @foo(i32 signext %x, i32 signext %y) local_unnamed_
 ; CHECK-P9-NEXT:    add r4, r4, r5
 ; CHECK-P9-NEXT:    slwi r5, r4, 1
 ; CHECK-P9-NEXT:    add r4, r4, r5
-; CHECK-P9-NEXT:    subf r5, r4, r3
-; CHECK-P9-NEXT:    mulli r4, r29, 13
-; CHECK-P9-NEXT:    mulli r3, r30, 23
-; CHECK-P9-NEXT:    cmplwi r5, 1
+; CHECK-P9-NEXT:    subf r3, r4, r3
+; CHECK-P9-NEXT:    cmplwi r3, 1
 ; CHECK-P9-NEXT:    beq cr0, .LBB1_1
-; CHECK-P9-NEXT:  # %bb.4: # %while.cond
+; CHECK-P9-NEXT:  # %bb.5: # %while.cond
 ; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    cmplwi r5, 0
-; CHECK-P9-NEXT:    bne cr0, .LBB1_2
-; CHECK-P9-NEXT:  # %bb.5: # %sw.bb
+; CHECK-P9-NEXT:    cmplwi r3, 0
+; CHECK-P9-NEXT:    bne cr0, .LBB1_3
+; CHECK-P9-NEXT:  # %bb.6: # %sw.bb
 ; CHECK-P9-NEXT:    #
-; CHECK-P9-NEXT:    add r28, r4, r28
-; CHECK-P9-NEXT:    cmpwi r28, 1025
-; CHECK-P9-NEXT:    blt cr0, .LBB1_3
-; CHECK-P9-NEXT:  .LBB1_6: # %while.end
-; CHECK-P9-NEXT:    lis r5, -13108
-; CHECK-P9-NEXT:    ori r5, r5, 52429
-; CHECK-P9-NEXT:    mullw r5, r28, r5
-; CHECK-P9-NEXT:    lis r6, 13107
-; CHECK-P9-NEXT:    ori r6, r6, 13108
-; CHECK-P9-NEXT:    cmplw r5, r6
-; CHECK-P9-NEXT:    blt cr0, .LBB1_8
-; CHECK-P9-NEXT:  # %bb.7: # %if.then8
-; CHECK-P9-NEXT:    extsw r4, r4
-; CHECK-P9-NEXT:    extsw r5, r28
+; CHECK-P9-NEXT:    mulli r3, r29, 13
+; CHECK-P9-NEXT:    b .LBB1_2
+; CHECK-P9-NEXT:  .LBB1_7: # %while.end
+; CHECK-P9-NEXT:    lis r3, -13108
+; CHECK-P9-NEXT:    ori r3, r3, 52429
+; CHECK-P9-NEXT:    mullw r3, r28, r3
+; CHECK-P9-NEXT:    lis r4, 13107
+; CHECK-P9-NEXT:    ori r4, r4, 13108
+; CHECK-P9-NEXT:    cmplw r3, r4
+; CHECK-P9-NEXT:    blt cr0, .LBB1_9
+; CHECK-P9-NEXT:  # %bb.8: # %if.then8
+; CHECK-P9-NEXT:    mulli r3, r29, 13
+; CHECK-P9-NEXT:    mulli r5, r30, 23
+; CHECK-P9-NEXT:    extsw r4, r28
 ; CHECK-P9-NEXT:    extsw r3, r3
+; CHECK-P9-NEXT:    extsw r5, r5
+; CHECK-P9-NEXT:    sub r3, r4, r3
 ; CHECK-P9-NEXT:    sub r4, r5, r4
-; CHECK-P9-NEXT:    sub r3, r3, r5
-; CHECK-P9-NEXT:    rldicl r4, r4, 1, 63
 ; CHECK-P9-NEXT:    rldicl r3, r3, 1, 63
-; CHECK-P9-NEXT:    or r3, r4, r3
-; CHECK-P9-NEXT:    b .LBB1_9
-; CHECK-P9-NEXT:  .LBB1_8: # %cleanup20
-; CHECK-P9-NEXT:    li r3, 0
+; CHECK-P9-NEXT:    rldicl r4, r4, 1, 63
+; CHECK-P9-NEXT:    or r3, r3, r4
+; CHECK-P9-NEXT:    b .LBB1_10
 ; CHECK-P9-NEXT:  .LBB1_9: # %cleanup20
+; CHECK-P9-NEXT:    li r3, 0
+; CHECK-P9-NEXT:  .LBB1_10: # %cleanup20
 ; CHECK-P9-NEXT:    addi r1, r1, 80
 ; CHECK-P9-NEXT:    ld r0, 16(r1)
 ; CHECK-P9-NEXT:    mtlr r0

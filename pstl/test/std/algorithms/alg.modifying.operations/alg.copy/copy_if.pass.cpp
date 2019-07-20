@@ -44,8 +44,8 @@ struct run_copy_if
               typename Predicate, typename T>
     void
     operator()(Policy&& exec, InputIterator first, InputIterator last, OutputIterator out_first,
-               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2, Size n,
-               Predicate pred, T trash)
+               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2, Size n, Predicate pred,
+               T trash)
     {
         // Cleaning
         std::fill_n(expected_first, n, trash);
@@ -123,7 +123,7 @@ struct test_non_const
     }
 };
 
-int32_t
+int
 main()
 {
     test<float64_t>(-666.0, [](const float64_t& x) { return x * x <= 1024; },

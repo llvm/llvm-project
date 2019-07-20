@@ -146,11 +146,69 @@ enum class PDB_Machine {
   WceMipsV2 = 0x169
 };
 
-enum class PDB_SourceCompression {
-  None,
-  RunLengthEncoded,
-  Huffman,
-  LZ,
+// A struct with an inner unnamed enum with explicit underlying type resuls
+// in an enum class that can implicitly convert to the underlying type, which
+// is convenient for this enum.
+struct PDB_SourceCompression {
+  enum : uint32_t {
+    // No compression. Produced e.g. by `link.exe /natvis:foo.natvis`.
+    None,
+    // Not known what produces this.
+    RunLengthEncoded,
+    // Not known what produces this.
+    Huffman,
+    // Not known what produces this.
+    LZ,
+    // Produced e.g. by `csc /debug`. The encoded data is its own mini-stream
+    // with the following layout (in little endian):
+    //   GUID LanguageTypeGuid;
+    //   GUID LanguageVendorGuid;
+    //   GUID DocumentTypeGuid;
+    //   GUID HashFunctionGuid;
+    //   uint32_t HashDataSize;
+    //   uint32_t CompressedDataSize;
+    // Followed by HashDataSize bytes containing a hash checksum,
+    // followed by CompressedDataSize bytes containing source contents.
+    //
+    // CompressedDataSize can be 0, in this case only the hash data is present.
+    // (CompressedDataSize is != 0 e.g. if `/embed` is passed to csc.exe.)
+    // The compressed data format is:
+    //   uint32_t UncompressedDataSize;
+    // If UncompressedDataSize is 0, the data is stored uncompressed and
+    // CompressedDataSize stores the uncompressed size.
+    // If UncompressedDataSize is != 0, then the data is in raw deflate
+    // encoding as described in rfc1951.
+    //
+    // A GUID is 16 bytes, stored in the usual
+    //   uint32_t
+    //   uint16_t
+    //   uint16_t
+    //   uint8_t[24]
+    // layout.
+    //
+    // Well-known GUIDs for LanguageTypeGuid are:
+    //   63a08714-fc37-11d2-904c-00c04fa302a1 C
+    //   3a12d0b7-c26c-11d0-b442-00a0244a1dd2 C++
+    //   3f5162f8-07c6-11d3-9053-00c04fa302a1 C#
+    //   af046cd1-d0e1-11d2-977c-00a0c9b4d50c Cobol
+    //   ab4f38c9-b6e6-43ba-be3b-58080b2ccce3 F#
+    //   3a12d0b4-c26c-11d0-b442-00a0244a1dd2 Java
+    //   3a12d0b6-c26c-11d0-b442-00a0244a1dd2 JScript
+    //   af046cd2-d0e1-11d2-977c-00a0c9b4d50c Pascal
+    //   3a12d0b8-c26c-11d0-b442-00a0244a1dd2 Visual Basic
+    //
+    // Well-known GUIDs for LanguageVendorGuid are:
+    //   994b45c4-e6e9-11d2-903f-00c04fa302a1 Microsoft
+    //
+    // Well-known GUIDs for DocumentTypeGuid are:
+    //   5a869d0b-6611-11d3-bd2a-0000f80849bd Text
+    //
+    // Well-known GUIDs for HashFunctionGuid are:
+    //   406ea660-64cf-4c82-b6f0-42d48172a799 MD5    (HashDataSize is 16)
+    //   ff1816ec-aa5e-4d10-87f7-6f4963833460 SHA1   (HashDataSize is 20)
+    //   8829d00f-11b8-4213-878b-770e8597ac16 SHA256 (HashDataSize is 32)
+    DotNet = 101,
+  };
 };
 
 /// These values correspond to the CV_call_e enumeration, and are documented

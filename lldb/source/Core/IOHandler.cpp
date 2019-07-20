@@ -383,6 +383,9 @@ bool IOHandlerEditline::GetLine(std::string &line, bool &interrupted) {
         // fgets twice until this bug is fixed.
         if (fgets(buffer, sizeof(buffer), in) == nullptr &&
             fgets(buffer, sizeof(buffer), in) == nullptr) {
+          // this is the equivalent of EINTR for Windows
+          if (GetLastError() == ERROR_OPERATION_ABORTED)
+            continue;
 #else
         if (fgets(buffer, sizeof(buffer), in) == nullptr) {
 #endif

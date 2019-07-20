@@ -150,11 +150,11 @@ int foomain(int argc, char **argv) {
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel private(i)
-#pragma omp taskloop firstprivate(i) // expected-note {{defined as firstprivate}}
-  for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp taskloop' directive may not be firstprivate, predetermined as private}}
+#pragma omp taskloop firstprivate(i) // expected-note 2 {{defined as firstprivate}}
+  for (i = 0; i < argc; ++i) // expected-error 2 {{loop iteration variable in the associated loop of 'omp taskloop' directive may not be firstprivate, predetermined as private}}
     foo();
-#pragma omp parallel reduction(+ : i)
-#pragma omp taskloop firstprivate(i) // expected-note {{defined as firstprivate}}
+#pragma omp parallel reduction(+ : i)  // expected-note {{defined as reduction}}
+#pragma omp taskloop firstprivate(i) // expected-note {{defined as firstprivate}} expected-error {{argument of a reduction clause of a parallel construct must not appear in a firstprivate clause on a task construct}}
   for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp taskloop' directive may not be firstprivate, predetermined as private}}
     foo();
   return 0;

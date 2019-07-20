@@ -129,12 +129,12 @@ int foomain(int argc, char **argv) {
   for (i = 0; i < argc; ++i)
     foo();
 #pragma omp parallel private(i)
-#pragma omp parallel for simd firstprivate(i) // expected-note {{defined as firstprivate}}
-  for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp parallel for simd' directive may not be firstprivate, predetermined as linear}}
+#pragma omp parallel for simd firstprivate(i) // expected-note 2 {{defined as firstprivate}}
+  for (i = 0; i < argc; ++i) // expected-error 2 {{loop iteration variable in the associated loop of 'omp parallel for simd' directive may not be firstprivate, predetermined as linear}}
     foo();
 #pragma omp parallel reduction(+ : i)
-#pragma omp parallel for simd firstprivate(i) // expected-note {{defined as firstprivate}}
-  for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp parallel for simd' directive may not be firstprivate, predetermined as linear}}
+#pragma omp parallel for simd firstprivate(i) // expected-note 2 {{defined as firstprivate}}
+  for (i = 0; i < argc; ++i) // expected-error 2 {{loop iteration variable in the associated loop of 'omp parallel for simd' directive may not be firstprivate, predetermined as linear}}
     foo();
   return 0;
 }

@@ -241,7 +241,7 @@ unsigned getMaxWorkGroupsPerCU(const MCSubtargetInfo *STI,
 }
 
 unsigned getMaxWavesPerCU(const MCSubtargetInfo *STI) {
-  return getMaxWavesPerEU() * getEUsPerCU(STI);
+  return getMaxWavesPerEU(STI) * getEUsPerCU(STI);
 }
 
 unsigned getMaxWavesPerCU(const MCSubtargetInfo *STI,
@@ -253,9 +253,11 @@ unsigned getMinWavesPerEU(const MCSubtargetInfo *STI) {
   return 1;
 }
 
-unsigned getMaxWavesPerEU() {
+unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI) {
   // FIXME: Need to take scratch memory into account.
-  return 10;
+  if (!isGFX10(*STI))
+    return 10;
+  return 20;
 }
 
 unsigned getMaxWavesPerEU(const MCSubtargetInfo *STI,
@@ -317,7 +319,7 @@ unsigned getMinNumSGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
   if (Version.Major >= 10)
     return 0;
 
-  if (WavesPerEU >= getMaxWavesPerEU())
+  if (WavesPerEU >= getMaxWavesPerEU(STI))
     return 0;
 
   unsigned MinNumSGPRs = getTotalNumSGPRs(STI) / (WavesPerEU + 1);
@@ -394,17 +396,19 @@ unsigned getVGPREncodingGranule(const MCSubtargetInfo *STI,
 }
 
 unsigned getTotalNumVGPRs(const MCSubtargetInfo *STI) {
-  return 256;
+  if (!isGFX10(*STI))
+    return 256;
+  return STI->getFeatureBits().test(FeatureWavefrontSize32) ? 1024 : 512;
 }
 
 unsigned getAddressableNumVGPRs(const MCSubtargetInfo *STI) {
-  return getTotalNumVGPRs(STI);
+  return 256;
 }
 
 unsigned getMinNumVGPRs(const MCSubtargetInfo *STI, unsigned WavesPerEU) {
   assert(WavesPerEU != 0);
 
-  if (WavesPerEU >= getMaxWavesPerEU())
+  if (WavesPerEU >= getMaxWavesPerEU(STI))
     return 0;
   unsigned MinNumVGPRs =
       alignDown(getTotalNumVGPRs(STI) / (WavesPerEU + 1),

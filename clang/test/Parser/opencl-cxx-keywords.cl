@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=c++ -verify -fsyntax-only -fexceptions -fcxx-exceptions
 
 // This test checks that various C++ and OpenCL C keywords are not available
-// in OpenCL C++, according to OpenCL C++ 1.0 Specification Section 2.9.
+// in OpenCL.
 
 // Test that exceptions are disabled despite passing -fcxx-exceptions.
 kernel void test_exceptions() {

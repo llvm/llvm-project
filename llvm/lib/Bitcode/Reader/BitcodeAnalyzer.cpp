@@ -539,8 +539,11 @@ BitcodeAnalyzer::BitcodeAnalyzer(StringRef Buffer,
 
 Error BitcodeAnalyzer::analyze(Optional<BCDumpOptions> O,
                                Optional<StringRef> CheckHash) {
-  if (Expected<CurStreamTypeType> H = analyzeHeader(O, Stream))
-    CurStreamType = *H;
+  Expected<CurStreamTypeType> MaybeType = analyzeHeader(O, Stream);
+  if (!MaybeType)
+    return MaybeType.takeError();
+  else
+    CurStreamType = *MaybeType;
 
   Stream.setBlockInfo(&BlockInfo);
 

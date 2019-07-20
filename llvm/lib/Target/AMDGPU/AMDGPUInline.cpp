@@ -39,7 +39,7 @@ using namespace llvm;
 #define DEBUG_TYPE "inline"
 
 static cl::opt<int>
-ArgAllocaCost("amdgpu-inline-arg-alloca-cost", cl::Hidden, cl::init(2200),
+ArgAllocaCost("amdgpu-inline-arg-alloca-cost", cl::Hidden, cl::init(1500),
               cl::desc("Cost of alloca argument"));
 
 // If the amount of scratch memory to eliminate exceeds our ability to allocate

@@ -15717,7 +15717,7 @@ bool __ovld is_valid_reserve_id(reserve_id_t reserve_id);
 #define CLK_OUT_OF_RESOURCES                        -5
 
 #define CLK_NULL_QUEUE                              0
-#define CLK_NULL_EVENT (__builtin_astype(((void*)(__SIZE_MAX__)), clk_event_t))
+#define CLK_NULL_EVENT (__builtin_astype(((__SIZE_MAX__)), clk_event_t))
 
 // execution model related definitions
 #define CLK_ENQUEUE_FLAGS_NO_WAIT                   0x0

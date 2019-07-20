@@ -5,7 +5,7 @@
 
 namespace i {
 }
-// CHECK: :[[@LINE-1]]:2: warning: namespace 'i' not terminated with a closing comment [llvm-namespace-comment]
+// CHECK: :[[@LINE-1]]:1: warning: namespace 'i' not terminated with a closing comment [llvm-namespace-comment]
 
 // Expect no warnings from the google-explicit-constructor check:
 class A { A(int i); };

@@ -72,6 +72,19 @@ StringRef getExtendedText(const T &Node, tok::TokenKind Next,
                           ASTContext &Context) {
   return getText(getExtendedRange(Node, Next, Context), Context);
 }
+
+// Attempts to resolve the given range to one that can be edited by a rewrite;
+// generally, one that starts and ends within a particular file. It supports
+// a limited set of cases involving source locations in macro expansions.
+llvm::Optional<CharSourceRange>
+getRangeForEdit(const CharSourceRange &EditRange, const SourceManager &SM,
+                const LangOptions &LangOpts);
+
+inline llvm::Optional<CharSourceRange>
+getRangeForEdit(const CharSourceRange &EditRange, const ASTContext &Context) {
+  return getRangeForEdit(EditRange, Context.getSourceManager(),
+                         Context.getLangOpts());
+}
 } // namespace tooling
 } // namespace clang
 #endif // LLVM_CLANG_TOOLING_REFACTOR_SOURCE_CODE_H

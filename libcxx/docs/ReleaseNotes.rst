@@ -1,6 +1,6 @@
-========================================
-Libc++ 9.0.0 (In-Progress) Release Notes
-========================================
+=========================================
+Libc++ 10.0.0 (In-Progress) Release Notes
+=========================================
 
 .. contents::
    :local:
@@ -10,7 +10,7 @@ Written by the `Libc++ Team <https://libcxx.llvm.org>`_
 
 .. warning::
 
-   These are in-progress notes for the upcoming libc++ 9 release.
+   These are in-progress notes for the upcoming libc++ 10 release.
    Release notes for previous releases can be found on
    `the Download Page <https://releases.llvm.org/download.html>`_.
 
@@ -18,7 +18,7 @@ Introduction
 ============
 
 This document contains the release notes for the libc++ C++ Standard Library,
-part of the LLVM Compiler Infrastructure, release 9.0.0. Here we describe the
+part of the LLVM Compiler Infrastructure, release 10.0.0. Here we describe the
 status of libc++ in some detail, including major improvements from the previous
 release and new feature work. For the general LLVM release notes, see `the LLVM
 documentation <https://llvm.org/docs/ReleaseNotes.html>`_. All LLVM releases may
@@ -32,8 +32,8 @@ main Libc++ web page, this document applies to the *next* release, not
 the current one. To see the release notes for a specific release, please
 see the `releases page <https://llvm.org/releases/>`_.
 
-What's New in Libc++ 9.0.0?
-===========================
+What's New in Libc++ 10.0.0?
+============================
 
 New Features
 ------------

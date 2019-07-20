@@ -1772,6 +1772,7 @@ unsigned AArch64InstrInfo::getLoadStoreImmIdx(unsigned Opc) {
   case AArch64::STNPWi:
   case AArch64::STNPSi:
   case AArch64::LDG:
+  case AArch64::STGPi:
     return 3;
   case AArch64::ADDG:
   case AArch64::STGOffset:
@@ -2151,6 +2152,7 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, unsigned &Scale,
     MaxOffset = 4095;
     break;
   case AArch64::ADDG:
+  case AArch64::TAGPstack:
     Scale = 16;
     Width = 0;
     MinOffset = 0;
@@ -2158,9 +2160,22 @@ bool AArch64InstrInfo::getMemOpInfo(unsigned Opcode, unsigned &Scale,
     break;
   case AArch64::LDG:
   case AArch64::STGOffset:
+  case AArch64::STZGOffset:
     Scale = Width = 16;
     MinOffset = -256;
     MaxOffset = 255;
+    break;
+  case AArch64::ST2GOffset:
+  case AArch64::STZ2GOffset:
+    Scale = 16;
+    Width = 32;
+    MinOffset = -256;
+    MaxOffset = 255;
+    break;
+  case AArch64::STGPi:
+    Scale = Width = 16;
+    MinOffset = -64;
+    MaxOffset = 63;
     break;
   }
 
@@ -3257,6 +3272,8 @@ int llvm::isAArch64FrameOffsetLegal(const MachineInstr &MI, int &Offset,
   case AArch64::ST1Twov1d:
   case AArch64::ST1Threev1d:
   case AArch64::ST1Fourv1d:
+  case AArch64::IRG:
+  case AArch64::IRGstack:
     return AArch64FrameOffsetCannotUpdate;
   }
 

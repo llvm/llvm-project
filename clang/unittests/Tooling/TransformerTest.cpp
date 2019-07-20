@@ -137,7 +137,7 @@ protected:
   TransformerTest() { appendToHeader(KHeaderContents); }
 };
 
-// Given string s, change strlen($s.c_str()) to $s.size().
+// Given string s, change strlen($s.c_str()) to REPLACED.
 static RewriteRule ruleStrlenSize() {
   StringRef StringExpr = "strexpr";
   auto StringType = namedDecl(hasAnyName("::basic_string", "::string"));
@@ -161,17 +161,6 @@ TEST_F(TransformerTest, StrlenSize) {
 TEST_F(TransformerTest, NoMatch) {
   std::string Input = "int f(string s) { return s.size(); }";
   testRule(ruleStrlenSize(), Input, Input);
-}
-
-// Tests that expressions in macro arguments are rewritten (when applicable).
-TEST_F(TransformerTest, StrlenSizeMacro) {
-  std::string Input = R"cc(
-#define ID(e) e
-    int f(string s) { return ID(strlen(s.c_str())); })cc";
-  std::string Expected = R"cc(
-#define ID(e) e
-    int f(string s) { return ID(REPLACED); })cc";
-  testRule(ruleStrlenSize(), Input, Expected);
 }
 
 // Tests replacing an expression.
@@ -619,23 +608,114 @@ TEST_F(TransformerTest, ErrorOccurredMatchSkipped) {
   EXPECT_EQ(ErrorCount, 0);
 }
 
-TEST_F(TransformerTest, NoTransformationInMacro) {
+// Transformation of macro source text when the change encompasses the entirety
+// of the expanded text.
+TEST_F(TransformerTest, SimpleMacro) {
   std::string Input = R"cc(
-#define MACRO(str) strlen((str).c_str())
-    int f(string s) { return MACRO(s); })cc";
-  testRule(ruleStrlenSize(), Input, Input);
+#define ZERO 0
+    int f(string s) { return ZERO; }
+  )cc";
+  std::string Expected = R"cc(
+#define ZERO 0
+    int f(string s) { return 999; }
+  )cc";
+
+  StringRef zero = "zero";
+  RewriteRule R = makeRule(integerLiteral(equals(0)).bind(zero),
+                           change(node(zero), text("999")));
+  testRule(R, Input, Expected);
 }
 
-// This test handles the corner case where a macro called within another macro
-// expands to matching code, but the matched code is an argument to the nested
-// macro.  A simple check of isMacroArgExpansion() vs. isMacroBodyExpansion()
-// will get this wrong, and transform the code. This test verifies that no such
-// transformation occurs.
-TEST_F(TransformerTest, NoTransformationInNestedMacro) {
+// Transformation of macro source text when the change encompasses the entirety
+// of the expanded text, for the case of function-style macros.
+TEST_F(TransformerTest, FunctionMacro) {
+  std::string Input = R"cc(
+#define MACRO(str) strlen((str).c_str())
+    int f(string s) { return MACRO(s); }
+  )cc";
+  std::string Expected = R"cc(
+#define MACRO(str) strlen((str).c_str())
+    int f(string s) { return REPLACED; }
+  )cc";
+
+  testRule(ruleStrlenSize(), Input, Expected);
+}
+
+// Tests that expressions in macro arguments can be rewritten.
+TEST_F(TransformerTest, MacroArg) {
+  std::string Input = R"cc(
+#define PLUS(e) e + 1
+    int f(string s) { return PLUS(strlen(s.c_str())); }
+  )cc";
+  std::string Expected = R"cc(
+#define PLUS(e) e + 1
+    int f(string s) { return PLUS(REPLACED); }
+  )cc";
+
+  testRule(ruleStrlenSize(), Input, Expected);
+}
+
+// Tests that expressions in macro arguments can be rewritten, even when the
+// macro call occurs inside another macro's definition.
+TEST_F(TransformerTest, MacroArgInMacroDef) {
   std::string Input = R"cc(
 #define NESTED(e) e
 #define MACRO(str) NESTED(strlen((str).c_str()))
-    int f(string s) { return MACRO(s); })cc";
+    int f(string s) { return MACRO(s); }
+  )cc";
+  std::string Expected = R"cc(
+#define NESTED(e) e
+#define MACRO(str) NESTED(strlen((str).c_str()))
+    int f(string s) { return REPLACED; }
+  )cc";
+
+  testRule(ruleStrlenSize(), Input, Expected);
+}
+
+// Tests the corner case of the identity macro, specifically that it is
+// discarded in the rewrite rather than preserved (like PLUS is preserved in the
+// previous test).  This behavior is of dubious value (and marked with a FIXME
+// in the code), but we test it to verify (and demonstrate) how this case is
+// handled.
+TEST_F(TransformerTest, IdentityMacro) {
+  std::string Input = R"cc(
+#define ID(e) e
+    int f(string s) { return ID(strlen(s.c_str())); }
+  )cc";
+  std::string Expected = R"cc(
+#define ID(e) e
+    int f(string s) { return REPLACED; }
+  )cc";
+
+  testRule(ruleStrlenSize(), Input, Expected);
+}
+
+// No rewrite is applied when the changed text does not encompass the entirety
+// of the expanded text. That is, the edit would have to be applied to the
+// macro's definition to succeed and editing the expansion point would not
+// suffice.
+TEST_F(TransformerTest, NoPartialRewriteOMacroExpansion) {
+  std::string Input = R"cc(
+#define ZERO_PLUS 0 + 3
+    int f(string s) { return ZERO_PLUS; })cc";
+
+  StringRef zero = "zero";
+  RewriteRule R = makeRule(integerLiteral(equals(0)).bind(zero),
+                           change(node(zero), text("0")));
+  testRule(R, Input, Input);
+}
+
+// This test handles the corner case where a macro expands within another macro
+// to matching code, but that code is an argument to the nested macro call.  A
+// simple check of isMacroArgExpansion() vs. isMacroBodyExpansion() will get
+// this wrong, and transform the code.
+TEST_F(TransformerTest, NoPartialRewriteOfMacroExpansionForMacroArgs) {
+  std::string Input = R"cc(
+#define NESTED(e) e
+#define MACRO(str) 1 + NESTED(strlen((str).c_str()))
+    int f(string s) { return MACRO(s); }
+  )cc";
+
   testRule(ruleStrlenSize(), Input, Input);
 }
 } // namespace

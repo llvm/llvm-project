@@ -91,6 +91,7 @@ public:
   bool exitEarly = true;
   bool fatalWarnings = false;
   bool verbose = false;
+  bool vsDiagnostics = false;
 
   void error(const Twine &msg);
   LLVM_ATTRIBUTE_NORETURN void fatal(const Twine &msg);
@@ -101,7 +102,7 @@ public:
   std::unique_ptr<llvm::FileOutputBuffer> outputBuffer;
 
 private:
-  void print(StringRef s, raw_ostream::Colors c);
+  void printHeader(StringRef s, raw_ostream::Colors c, const Twine &msg);
 };
 
 /// Returns the default error handler.

@@ -80,7 +80,6 @@ if (COMPILER_RT_STANDALONE_BUILD)
   endif()
 
   # Find Python interpreter.
-  set(Python_ADDITIONAL_VERSIONS 2.7 2.6 2.5)
   include(FindPythonInterp)
   if(NOT PYTHONINTERP_FOUND)
     message(FATAL_ERROR "

@@ -92,6 +92,7 @@ body:             |
 ...
 # GCN-LABEL: name: vmem_write_exec_impread
 # GCN:      BUFFER_LOAD_DWORD_OFFEN
+# GCN:      V_NOP
 # GCN-NEXT: S_MOV_B64
 ---
 name:            vmem_write_exec_impread
@@ -207,4 +208,17 @@ body:             |
   bb.1:
     $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4, 0, 0, 0, 0, 0, implicit $exec
     S_BRANCH %bb.0
+...
+# GCN-LABEL: name: ds_write_exec
+# GCN:      DS_WRITE_B32_gfx9
+# GCN-NEXT: V_NOP
+# GCN-NEXT: S_MOV_B32
+---
+name:            ds_write_exec
+body:             |
+  bb.0:
+    $vgpr0 = IMPLICIT_DEF
+    $vgpr1 = IMPLICIT_DEF
+    DS_WRITE_B32_gfx9 $vgpr0, $vgpr1, 0, 0, implicit $exec
+    $exec_lo = S_MOV_B32 -1
 ...

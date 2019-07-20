@@ -1,8 +1,8 @@
 --- !fat-mach-o
-FatHeader:       
+FatHeader:
   magic:           0xCAFEBABE
   nfat_arch:       2
-FatArchs:        
+FatArchs:
   - cputype:         0x00000007
     cpusubtype:      0x00000003
     offset:          0x0000000000001000
@@ -13,9 +13,9 @@ FatArchs:
     offset:          0x0000000000002000
     size:            488
     align:           12
-Slices:          
+Slices:
   - !mach-o
-    FileHeader:      
+    FileHeader:
       magic:           0xFEEDFACE
       cputype:         0x00000007
       cpusubtype:      0x00000003
@@ -23,7 +23,7 @@ Slices:
       ncmds:           4
       sizeofcmds:      312
       flags:           0x00002000
-    LoadCommands:    
+    LoadCommands:
       - cmd:             LC_SEGMENT
         cmdsize:         192
         segname:         ''
@@ -35,7 +35,7 @@ Slices:
         initprot:        7
         nsects:          2
         flags:           0
-        Sections:        
+        Sections:
           - sectname:        __text
             segname:         __TEXT
             addr:            0x0000000000000000
@@ -90,19 +90,19 @@ Slices:
         nextrel:         0
         locreloff:       0
         nlocrel:         0
-    LinkEditData:    
-      NameList:        
+    LinkEditData:
+      NameList:
         - n_strx:          1
           n_type:          0x0F
           n_sect:          1
           n_desc:          0
           n_value:         0
-      StringTable:     
+      StringTable:
         - ''
         - _main
         - ''
   - !mach-o
-    FileHeader:      
+    FileHeader:
       magic:           0xFEEDFACF
       cputype:         0x01000007
       cpusubtype:      0x00000003
@@ -111,7 +111,7 @@ Slices:
       sizeofcmds:      352
       flags:           0x00002000
       reserved:        0x00000000
-    LoadCommands:    
+    LoadCommands:
       - cmd:             LC_SEGMENT_64
         cmdsize:         232
         segname:         ''
@@ -123,7 +123,7 @@ Slices:
         initprot:        7
         nsects:          2
         flags:           0
-        Sections:        
+        Sections:
           - sectname:        __text
             segname:         __TEXT
             addr:            0x0000000000000000
@@ -178,14 +178,14 @@ Slices:
         nextrel:         0
         locreloff:       0
         nlocrel:         0
-    LinkEditData:    
-      NameList:        
+    LinkEditData:
+      NameList:
         - n_strx:          1
           n_type:          0x0F
           n_sect:          1
           n_desc:          0
           n_value:         0
-      StringTable:     
+      StringTable:
         - ''
         - _main
         - ''

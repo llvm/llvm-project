@@ -90,7 +90,7 @@ struct test_non_const
     }
 };
 
-int32_t
+int
 main()
 {
     test<int32_t>(42, IsEqual<int32_t>(50, OddTag()), [](int32_t j) { return j; });

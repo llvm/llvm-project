@@ -32,6 +32,7 @@ enum class HighlightingKind {
   Enum,
   EnumConstant,
   Namespace,
+  TemplateParameter,
 
   NumKinds,
 };

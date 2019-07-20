@@ -711,11 +711,6 @@ class Base(unittest2.TestCase):
         else:
             self.libcxxPath = None
 
-        if "LLDBMI_EXEC" in os.environ:
-            self.lldbMiExec = os.environ["LLDBMI_EXEC"]
-        else:
-            self.lldbMiExec = None
-
         if "LLDBVSCODE_EXEC" in os.environ:
             self.lldbVSCodeExec = os.environ["LLDBVSCODE_EXEC"]
         else:
@@ -1868,6 +1863,9 @@ class TestBase(Base):
         # different binaries with the same UUID, because they only
         # differ in the debug info, which is not being hashed.
         self.runCmd('settings set symbols.enable-external-lookup false')
+
+        # Disable color.
+        self.runCmd("settings set use-color false")
 
         # Make sure that a sanitizer LLDB's environment doesn't get passed on.
         if 'DYLD_LIBRARY_PATH' in os.environ:

@@ -41,6 +41,9 @@ public:
   virtual int baz() = 0;
 };
 
+// Shouldn't warn on forward declarations.
+class Bad_Child1;
+
 // Inherits from multiple concrete classes.
 // CHECK-MESSAGES: [[@LINE+2]]:1: warning: inheriting mulitple classes that aren't pure virtual is discouraged [fuchsia-multiple-inheritance]
 // CHECK-NEXT: class Bad_Child1 : public Base_A, Base_B {};

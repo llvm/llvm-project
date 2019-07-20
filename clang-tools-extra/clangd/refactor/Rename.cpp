@@ -104,8 +104,7 @@ llvm::Optional<ReasonToReject> renamableWithinFile(const Decl &RenameDecl,
   auto &ASTCtx = RenameDecl.getASTContext();
   const auto &SM = ASTCtx.getSourceManager();
   bool MainFileIsHeader = ASTCtx.getLangOpts().IsHeaderFile;
-  bool DeclaredInMainFile =
-      SM.isWrittenInMainFile(SM.getExpansionLoc(RenameDecl.getLocation()));
+  bool DeclaredInMainFile = isInsideMainFile(RenameDecl.getBeginLoc(), SM);
 
   // If the symbol is declared in the main file (which is not a header), we
   // rename it.

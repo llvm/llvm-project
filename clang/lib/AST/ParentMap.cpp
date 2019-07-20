@@ -83,6 +83,18 @@ static void BuildParentMap(MapTy& M, Stmt* S,
     }
     break;
   }
+  case Stmt::CapturedStmtClass:
+    for (Stmt *SubStmt : S->children()) {
+      if (SubStmt) {
+        M[SubStmt] = S;
+        BuildParentMap(M, SubStmt, OVMode);
+      }
+    }
+    if (Stmt *SubStmt = cast<CapturedStmt>(S)->getCapturedStmt()) {
+      M[SubStmt] = S;
+      BuildParentMap(M, SubStmt, OVMode);
+    }
+    break;
   default:
     for (Stmt *SubStmt : S->children()) {
       if (SubStmt) {

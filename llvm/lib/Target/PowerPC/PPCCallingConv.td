@@ -366,14 +366,21 @@ def CSR_NoRegs : CalleeSavedRegs<(add)>;
 // and value may be altered by inter-library calls.
 // Do not include r12 as it is used as a scratch register.
 // Do not include return registers r3, f1, v2.
-def CSR_SVR32_ColdCC : CalleeSavedRegs<(add (sequence "R%u", 4, 10),
-                                          (sequence "R%u", 14, 31),
-                                          F0, (sequence "F%u", 2, 31),
-                                          (sequence "CR%u", 0, 7))>;
+def CSR_SVR32_ColdCC_Common : CalleeSavedRegs<(add (sequence "R%u", 4, 10),
+                                                (sequence "R%u", 14, 31),
+                                                (sequence "CR%u", 0, 7))>;
+
+def CSR_SVR32_ColdCC : CalleeSavedRegs<(add CSR_SVR32_ColdCC_Common,
+                                          F0, (sequence "F%u", 2, 31))>;
+
 
 def CSR_SVR32_ColdCC_Altivec : CalleeSavedRegs<(add CSR_SVR32_ColdCC,
                                             (sequence "V%u", 0, 1),
                                             (sequence "V%u", 3, 31))>;
+
+def CSR_SVR32_ColdCC_SPE : CalleeSavedRegs<(add CSR_SVR32_ColdCC_Common,
+                                            (sequence "S%u", 4, 10),
+                                            (sequence "S%u", 14, 31))>;
 
 def CSR_SVR64_ColdCC : CalleeSavedRegs<(add  (sequence "X%u", 4, 10),
                                              (sequence "X%u", 14, 31),

@@ -330,3 +330,13 @@ s_call_b64 s[100:101], 12609
 s_call_b64 s[10:11], 49617
 // GFX9:     s_call_b64 s[10:11], 49617 ; encoding: [0xd1,0xc1,0x8a,0xba]
 // NOSICIVI: error: instruction not supported on this GPU
+
+offset = 4
+s_call_b64 s[0:1], offset + 4
+// GFX9:     s_call_b64 s[0:1], 8            ; encoding: [0x08,0x00,0x80,0xba]
+// NOSICIVI: error: instruction not supported on this GPU
+
+offset = 4
+s_call_b64 s[0:1], 4 + offset
+// GFX9:     s_call_b64 s[0:1], 8            ; encoding: [0x08,0x00,0x80,0xba]
+// NOSICIVI: error: instruction not supported on this GPU

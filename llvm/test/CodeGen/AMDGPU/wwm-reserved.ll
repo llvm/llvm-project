@@ -136,8 +136,8 @@ define amdgpu_kernel void @call_i64(<4 x i32> inreg %tmp14, i64 inreg %arg) {
 ; GFX9-O0: buffer_store_dword v1
 ; GFX9: s_swappc_b64
   %tmp134 = call i64 @called_i64(i64 %tmp107)
-; GFX9-O0: buffer_load_dword v3
-; GFX9-O0: buffer_load_dword v4
+; GFX9-O0: buffer_load_dword v6
+; GFX9-O0: buffer_load_dword v7
   %tmp136 = add i64 %tmp134, %tmp107
   %tmp137 = tail call i64 @llvm.amdgcn.wwm.i64(i64 %tmp136)
   %tmp138 = bitcast i64 %tmp137 to <2 x i32>
@@ -183,6 +183,6 @@ declare void @llvm.amdgcn.raw.buffer.store.f32(float, <4 x i32>, i32, i32, i32)
 declare void @llvm.amdgcn.raw.buffer.store.i32(i32, <4 x i32>, i32, i32, i32)
 declare void @llvm.amdgcn.raw.buffer.store.v2i32(<2 x i32>, <4 x i32>, i32, i32, i32)
 declare void @llvm.amdgcn.raw.buffer.store.v2f32(<2 x float>, <4 x i32>, i32, i32, i32)
-declare void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32) 
+declare void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float>, <4 x i32>, i32, i32, i32)
 declare <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32>, i32, i32)
 declare <4 x i32> @llvm.amdgcn.s.buffer.load.v4i32(<4 x i32>, i32, i32)

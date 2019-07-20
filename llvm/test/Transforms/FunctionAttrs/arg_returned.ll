@@ -744,7 +744,7 @@ unreachableblock2:
 attributes #0 = { noinline nounwind uwtable }
 
 ; BOTH-NOT: attributes #
-; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline norecurse nosync nounwind readnone uwtable }
+; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline norecurse nosync nounwind readnone uwtable willreturn }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline nosync nounwind readnone uwtable }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { nofree noinline nosync nounwind readonly uwtable }
 ; BOTH-DAG: attributes #{{[0-9]*}} = { noinline nounwind uwtable }

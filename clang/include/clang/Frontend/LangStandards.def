@@ -166,7 +166,7 @@ LANGSTANDARD(opencl20, "cl2.0",
              OpenCL, "OpenCL 2.0",
              LineComment | C99 | Digraphs | HexFloat | OpenCL)
 LANGSTANDARD(openclcpp, "c++",
-             OpenCL, "OpenCL C++ 1.0",
+             OpenCL, "C++ for OpenCL",
              LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | CPlusPlus17 |
              Digraphs | HexFloat | OpenCL)
 

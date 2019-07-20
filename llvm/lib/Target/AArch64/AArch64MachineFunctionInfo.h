@@ -105,6 +105,12 @@ class AArch64FunctionInfo final : public MachineFunctionInfo {
   /// ForwardedMustTailRegParms - A list of virtual and physical registers
   /// that must be forwarded to every musttail call.
   SmallVector<ForwardedRegister, 1> ForwardedMustTailRegParms;
+
+  // Offset from SP-at-entry to the tagged base pointer.
+  // Tagged base pointer is set up to point to the first (lowest address) tagged
+  // stack slot.
+  unsigned TaggedBasePointerOffset;
+
 public:
   AArch64FunctionInfo() = default;
 
@@ -222,6 +228,13 @@ public:
 
   SmallVectorImpl<ForwardedRegister> &getForwardedMustTailRegParms() {
     return ForwardedMustTailRegParms;
+  }
+
+  unsigned getTaggedBasePointerOffset() const {
+    return TaggedBasePointerOffset;
+  }
+  void setTaggedBasePointerOffset(unsigned Offset) {
+    TaggedBasePointerOffset = Offset;
   }
 
 private:

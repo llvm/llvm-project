@@ -67,7 +67,8 @@ llvm::Optional<SymbolID> getSymbolID(const IdentifierInfo &II,
                                      const MacroInfo *MI,
                                      const SourceManager &SM);
 
-/// Returns a QualType as string.
+/// Returns a QualType as string. The result doesn't contain unwritten scopes
+/// like annoymous/inline namespace.
 std::string printType(const QualType QT, const DeclContext & Context);
 
 /// Try to shorten the OriginalName by removing namespaces from the left of

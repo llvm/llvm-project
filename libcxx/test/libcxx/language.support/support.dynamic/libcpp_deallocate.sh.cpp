@@ -30,6 +30,10 @@
 // XFAIL: availability=macosx10.8
 // XFAIL: availability=macosx10.7
 
+// AppleClang < 10 incorrectly warns that aligned allocation is not supported
+// even when it is supported.
+// UNSUPPORTED: apple-clang-9
+
 // XFAIL: sanitizer-new-delete, ubsan
 
 // GCC doesn't support the aligned-allocation flags.

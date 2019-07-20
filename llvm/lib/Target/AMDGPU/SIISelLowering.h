@@ -315,6 +315,7 @@ public:
   MachineBasicBlock *splitKillBlock(MachineInstr &MI,
                                     MachineBasicBlock *BB) const;
 
+  void bundleInstWithWaitcnt(MachineInstr &MI) const;
   MachineBasicBlock *emitGWSMemViolTestLoop(MachineInstr &MI,
                                             MachineBasicBlock *BB) const;
 
@@ -375,6 +376,33 @@ public:
   AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
 
   unsigned getPrefLoopAlignment(MachineLoop *ML) const override;
+
+
+  void allocateHSAUserSGPRs(CCState &CCInfo,
+                            MachineFunction &MF,
+                            const SIRegisterInfo &TRI,
+                            SIMachineFunctionInfo &Info) const;
+
+  void allocateSystemSGPRs(CCState &CCInfo,
+                           MachineFunction &MF,
+                           SIMachineFunctionInfo &Info,
+                           CallingConv::ID CallConv,
+                           bool IsShader) const;
+
+  void allocateSpecialEntryInputVGPRs(CCState &CCInfo,
+                                      MachineFunction &MF,
+                                      const SIRegisterInfo &TRI,
+                                      SIMachineFunctionInfo &Info) const;
+  void allocateSpecialInputSGPRs(
+    CCState &CCInfo,
+    MachineFunction &MF,
+    const SIRegisterInfo &TRI,
+    SIMachineFunctionInfo &Info) const;
+
+  void allocateSpecialInputVGPRs(CCState &CCInfo,
+                                 MachineFunction &MF,
+                                 const SIRegisterInfo &TRI,
+                                 SIMachineFunctionInfo &Info) const;
 };
 
 } // End namespace llvm

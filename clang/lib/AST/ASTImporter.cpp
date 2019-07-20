@@ -1707,6 +1707,17 @@ static Error setTypedefNameForAnonDecl(TagDecl *From, TagDecl *To,
 
 Error ASTNodeImporter::ImportDefinition(
     RecordDecl *From, RecordDecl *To, ImportDefinitionKind Kind) {
+  auto DefinitionCompleter = [To]() {
+    // There are cases in LLDB when we first import a class without its
+    // members. The class will have DefinitionData, but no members. Then,
+    // importDefinition is called from LLDB, which tries to get the members, so
+    // when we get here, the class already has the DefinitionData set, so we
+    // must unset the CompleteDefinition here to be able to complete again the
+    // definition.
+    To->setCompleteDefinition(false);
+    To->completeDefinition();
+  };
+
   if (To->getDefinition() || To->isBeingDefined()) {
     if (Kind == IDK_Everything ||
         // In case of lambdas, the class already has a definition ptr set, but
@@ -1717,7 +1728,7 @@ Error ASTNodeImporter::ImportDefinition(
       Error Result = ImportDeclContext(From, /*ForceImport=*/true);
       // Finish the definition of the lambda, set isBeingDefined to false.
       if (To->isLambda())
-        To->completeDefinition();
+        DefinitionCompleter();
       return Result;
     }
 
@@ -1728,8 +1739,8 @@ Error ASTNodeImporter::ImportDefinition(
   // Complete the definition even if error is returned.
   // The RecordDecl may be already part of the AST so it is better to
   // have it in complete state even if something is wrong with it.
-  auto DefinitionCompleter =
-      llvm::make_scope_exit([To]() { To->completeDefinition(); });
+  auto DefinitionCompleterScopeExit =
+      llvm::make_scope_exit(DefinitionCompleter);
 
   if (Error Err = setTypedefNameForAnonDecl(From, To, Importer))
     return Err;
@@ -7757,10 +7768,20 @@ ASTImporter::findDeclsInToCtx(DeclContext *DC, DeclarationName Name) {
         SharedState->getLookupTable()->lookup(ReDC, Name);
     return FoundDeclsTy(LookupResult.begin(), LookupResult.end());
   } else {
-    // FIXME Can we remove this kind of lookup?
-    // Or lldb really needs this C/C++ lookup?
-    FoundDeclsTy Result;
-    ReDC->localUncachedLookup(Name, Result);
+    DeclContext::lookup_result NoloadLookupResult = ReDC->noload_lookup(Name);
+    FoundDeclsTy Result(NoloadLookupResult.begin(), NoloadLookupResult.end());
+    // We must search by the slow case of localUncachedLookup because that is
+    // working even if there is no LookupPtr for the DC. We could use
+    // DC::buildLookup() to create the LookupPtr, but that would load external
+    // decls again, we must avoid that case.
+    // Also, even if we had the LookupPtr, we must find Decls which are not
+    // in the LookupPtr, so we need the slow case.
+    // These cases are handled in ASTImporterLookupTable, but we cannot use
+    // that with LLDB since that traverses through the AST which initiates the
+    // load of external decls again via DC::decls().  And again, we must avoid
+    // loading external decls during the import.
+    if (Result.empty())
+      ReDC->localUncachedLookup(Name, Result);
     return Result;
   }
 }
