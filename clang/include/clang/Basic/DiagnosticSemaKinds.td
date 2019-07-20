@@ -2972,6 +2972,7 @@ def warn_cconv_unsupported : Warning<
   "|on builtin function"
   "}1">,
   InGroup<IgnoredAttributes>;
+def error_cconv_unsupported : Error<warn_cconv_unsupported.Text>;
 def err_cconv_knr : Error<
   "function with no prototype cannot use the %0 calling convention">;
 def warn_cconv_knr : Warning<
@@ -5788,6 +5789,9 @@ def err_arithmetic_nonfragile_interface : Error<
   "arithmetic on pointer to interface %0, which is not a constant size for "
   "this architecture and platform">;
 
+def warn_deprecated_comma_subscript : Warning<
+  "top-level comma expression in array subscript is deprecated">,
+  InGroup<DeprecatedCommaSubscript>;
 
 def ext_subscript_non_lvalue : Extension<
   "ISO C90 does not allow subscripting non-lvalue array">;
@@ -7505,6 +7509,9 @@ def warn_side_effects_typeid : Warning<
 def warn_unused_result : Warning<
   "ignoring return value of function declared with %0 attribute">,
   InGroup<UnusedResult>;
+def warn_unused_result_msg : Warning<
+  "ignoring return value of function declared with %0 attribute: %1">,
+  InGroup<UnusedResult>;
 def warn_unused_volatile : Warning<
   "expression result unused; assign into a variable to force a volatile load">,
   InGroup<DiagGroup<"unused-volatile-lvalue">>;
@@ -7513,6 +7520,8 @@ def ext_cxx14_attr : Extension<
   "use of the %0 attribute is a C++14 extension">, InGroup<CXX14>;
 def ext_cxx17_attr : Extension<
   "use of the %0 attribute is a C++17 extension">, InGroup<CXX17>;
+def ext_cxx2a_attr : Extension<
+  "use of the %0 attribute is a C++2a extension">, InGroup<CXX2a>;
 
 def warn_unused_comparison : Warning<
   "%select{equality|inequality|relational|three-way}0 comparison result unused">,

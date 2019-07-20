@@ -63,7 +63,7 @@ CXX11(unlikely)
 // CHECK: maybe_unused: 201603L
 // ITANIUM: no_unique_address: 201803L
 // WINDOWS: no_unique_address: 0
-// CHECK: nodiscard: 201603L
+// CHECK: nodiscard: 201907L
 // CHECK: noreturn: 200809L
 // FIXME(201803L) CHECK: unlikely: 0
 
