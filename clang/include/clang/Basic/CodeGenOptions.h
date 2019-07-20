@@ -117,6 +117,12 @@ public:
 
   enum SignReturnAddressKeyValue { AKey, BKey };
 
+  enum class FramePointerKind {
+    None,        // Omit all frame pointers.
+    NonLeaf,     // Keep non-leaf frame pointers.
+    All,         // Keep all frame pointers.
+  };
+
   /// The code model to use (-mcmodel).
   std::string CodeModel;
 
