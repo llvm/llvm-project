@@ -75,6 +75,15 @@ define i32 @tls_size() {
   ret i32 %1
 }
 
+; CHECK-LABEL: tls_align:
+; CHECK-NEXT: .functype tls_align () -> (i32)
+define i32 @tls_align() {
+; CHECK-NEXT: global.get __tls_align
+; CHECK-NEXT: return
+  %1 = call i32 @llvm.wasm.tls.align.i32()
+  ret i32 %1
+}
+
 ; CHECK-LABEL: tls_base:
 ; CHECK-NEXT: .functype tls_base () -> (i32)
 define i8* @tls_base() {
@@ -104,4 +113,5 @@ define void @tls_base_write(i8** %output) {
 @tls = internal thread_local global i32 0
 
 declare i32 @llvm.wasm.tls.size.i32()
+declare i32 @llvm.wasm.tls.align.i32()
 declare i8* @llvm.wasm.tls.base()

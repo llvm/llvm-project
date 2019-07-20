@@ -133,6 +133,11 @@ def int_wasm_tls_size :
             [],
             [IntrNoMem, IntrSpeculatable]>;
 
+def int_wasm_tls_align :
+  Intrinsic<[llvm_anyint_ty],
+            [],
+            [IntrNoMem, IntrSpeculatable]>;
+
 def int_wasm_tls_base :
   Intrinsic<[llvm_ptr_ty],
             [],
