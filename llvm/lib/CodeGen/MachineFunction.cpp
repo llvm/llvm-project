@@ -823,13 +823,14 @@ try_next:;
   return FilterID;
 }
 
-void MachineFunction::addCodeViewHeapAllocSite(MachineInstr *I, MDNode *MD) {
+void MachineFunction::addCodeViewHeapAllocSite(MachineInstr *I,
+                                               const MDNode *MD) {
   MCSymbol *BeginLabel = Ctx.createTempSymbol("heapallocsite", true);
   MCSymbol *EndLabel = Ctx.createTempSymbol("heapallocsite", true);
   I->setPreInstrSymbol(*this, BeginLabel);
   I->setPostInstrSymbol(*this, EndLabel);
 
-  DIType *DI = dyn_cast<DIType>(MD);
+  const DIType *DI = dyn_cast<DIType>(MD);
   CodeViewHeapAllocSites.push_back(std::make_tuple(BeginLabel, EndLabel, DI));
 }
 

@@ -10,8 +10,8 @@
 
 ; CHECK-LABEL: {{^}}main:
 ; CHECK: s_wqm
-; CHECK: s_load_dwordx4
 ; CHECK: s_load_dwordx8
+; CHECK: s_load_dwordx4
 ; CHECK: s_waitcnt lgkmcnt(0)
 ; CHECK: image_sample
 ; CHECK: s_waitcnt vmcnt(0)

@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_PDB_IPDBINJECTEDSOURCE_H
 #define LLVM_DEBUGINFO_PDB_IPDBINJECTEDSOURCE_H
 
-#include "PDBTypes.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 #include <string>
@@ -32,7 +31,10 @@ public:
   virtual std::string getFileName() const = 0;
   virtual std::string getObjectFileName() const = 0;
   virtual std::string getVirtualFileName() const = 0;
-  virtual PDB_SourceCompression getCompression() const = 0;
+  // The returned value depends on the PDB producer,
+  // but 0 is guaranteed to mean "no compression".
+  // The enum PDB_SourceCompression lists known return values.
+  virtual uint32_t getCompression() const = 0;
   virtual std::string getCode() const = 0;
 };
 } // namespace pdb

@@ -216,14 +216,15 @@ public:
     if (Kind == Token)
       return true;
 
-    if (Kind != Expression || !Expr)
-      return false;
-
     // When parsing operands, we can't always tell if something was meant to be
     // a token, like 'gds', or an expression that references a global variable.
     // In this case, we assume the string is an expression, and if we need to
     // interpret is a token, then we treat the symbol name as the token.
-    return isa<MCSymbolRefExpr>(Expr);
+    return isSymbolRefExpr();
+  }
+
+  bool isSymbolRefExpr() const {
+    return isExpr() && Expr && isa<MCSymbolRefExpr>(Expr);
   }
 
   bool isImm() const override {
@@ -1321,6 +1322,7 @@ private:
   void peekTokens(MutableArrayRef<AsmToken> Tokens);
   AsmToken::TokenKind getTokenKind() const;
   bool parseExpr(int64_t &Imm);
+  bool parseExpr(OperandVector &Operands);
   StringRef getTokenStr() const;
   AsmToken peekToken();
   AsmToken getToken() const;
@@ -5225,6 +5227,23 @@ AMDGPUAsmParser::parseExpr(int64_t &Imm) {
 }
 
 bool
+AMDGPUAsmParser::parseExpr(OperandVector &Operands) {
+  SMLoc S = getLoc();
+
+  const MCExpr *Expr;
+  if (Parser.parseExpression(Expr))
+    return false;
+
+  int64_t IntVal;
+  if (Expr->evaluateAsAbsolute(IntVal)) {
+    Operands.push_back(AMDGPUOperand::CreateImm(this, IntVal, S));
+  } else {
+    Operands.push_back(AMDGPUOperand::CreateExpr(this, Expr, S));
+  }
+  return true;
+}
+
+bool
 AMDGPUAsmParser::parseString(StringRef &Val, const StringRef ErrMsg) {
   if (isToken(AsmToken::String)) {
     Val = getToken().getStringContents();
@@ -5605,25 +5624,29 @@ bool AMDGPUOperand::isGPRIdxMode() const {
 
 OperandMatchResultTy
 AMDGPUAsmParser::parseSOppBrTarget(OperandVector &Operands) {
-  SMLoc S = Parser.getTok().getLoc();
 
-  switch (getLexer().getKind()) {
-    default: return MatchOperand_ParseFail;
-    case AsmToken::Integer: {
-      int64_t Imm;
-      if (getParser().parseAbsoluteExpression(Imm))
-        return MatchOperand_ParseFail;
-      Operands.push_back(AMDGPUOperand::CreateImm(this, Imm, S));
-      return MatchOperand_Success;
+  // Make sure we are not parsing something
+  // that looks like a label or an expression but is not.
+  // This will improve error messages.
+  if (isRegister() || isModifier())
+    return MatchOperand_NoMatch;
+
+  if (parseExpr(Operands)) {
+
+    AMDGPUOperand &Opr = ((AMDGPUOperand &)*Operands[Operands.size() - 1]);
+    assert(Opr.isImm() || Opr.isExpr());
+    SMLoc Loc = Opr.getStartLoc();
+
+    // Currently we do not support arbitrary expressions as branch targets.
+    // Only labels and absolute expressions are accepted.
+    if (Opr.isExpr() && !Opr.isSymbolRefExpr()) {
+      Error(Loc, "expected an absolute expression or a label");
+    } else if (Opr.isImm() && !Opr.isS16Imm()) {
+      Error(Loc, "expected a 16-bit signed jump offset");
     }
-
-    case AsmToken::Identifier:
-      Operands.push_back(AMDGPUOperand::CreateExpr(this,
-          MCSymbolRefExpr::create(getContext().getOrCreateSymbol(
-                                  Parser.getTok().getString()), getContext()), S));
-      Parser.Lex();
-      return MatchOperand_Success;
   }
+
+  return MatchOperand_Success; // avoid excessive error messages
 }
 
 //===----------------------------------------------------------------------===//

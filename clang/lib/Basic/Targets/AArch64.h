@@ -28,13 +28,14 @@ class LLVM_LIBRARY_VISIBILITY AArch64TargetInfo : public TargetInfo {
   enum FPUModeEnum { FPUMode, NeonMode = (1 << 0), SveMode = (1 << 1) };
 
   unsigned FPU;
-  unsigned CRC;
-  unsigned Crypto;
-  unsigned Unaligned;
-  unsigned HasFullFP16;
-  unsigned HasDotProd;
-  unsigned HasFP16FML;
-  unsigned HasMTE;
+  bool HasCRC;
+  bool HasCrypto;
+  bool HasUnaligned;
+  bool HasFullFP16;
+  bool HasDotProd;
+  bool HasFP16FML;
+  bool HasMTE;
+
   llvm::AArch64::ArchKind ArchKind;
 
   static const Builtin::Info BuiltinInfo[];

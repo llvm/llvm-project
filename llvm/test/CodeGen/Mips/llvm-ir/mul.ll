@@ -155,6 +155,9 @@ entry:
   ; M2:         mult    $4, $5
   ; M2:         mflo    $2
 
+  ; M4:         mult    $4, $5
+  ; M4:         mflo    $1
+
   ; 32R1-R5:    mul     $2, $4, $5
   ; 32R6:       mul     $2, $4, $5
 

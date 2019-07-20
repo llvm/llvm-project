@@ -37,6 +37,3 @@ s_branch 32768
 
 s_branch 32767
 // BIN: s_branch 32767 // 000000000024: BF827FFF <keep_symbol+0x20018>
-
-s_branch 0x80000000ffff
-// BIN: s_branch 65535 // 000000000028: BF82FFFF <keep_symbol+0x1c>

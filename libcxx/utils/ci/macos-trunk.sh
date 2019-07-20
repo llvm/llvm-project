@@ -13,7 +13,8 @@ This script is used to continually test libc++ and libc++abi trunk on MacOS.
   --std               Version of the C++ Standard to run the tests under (c++03, c++11, etc..).
   --arch              Architecture to build the tests for (32, 64).
   --libcxx-exceptions Whether to enable exceptions when building libc++ and running the libc++ tests. libc++abi is always built with support for exceptions because other libraries in the runtime depend on it (like libobjc). This must be ON or OFF.
-  [--lit-args]        Additional arguments to pass to lit (optional). If there are multiple arguments, quote them to pass them as a single argument to this script.
+  [--cmake-args]      Additional arguments to pass to CMake (both the libc++ and the libc++abi configuration). If there are multiple arguments, quote them to paass them as a single argument to this script.
+  [--lit-args]        Additional arguments to pass to lit. If there are multiple arguments, quote them to pass them as a single argument to this script.
   [--no-cleanup]      Do not cleanup the temporary directory that was used for testing at the end. This can be useful to debug failures. Make sure to clean up manually after.
   [-h, --help]        Print this help.
 EOM
@@ -51,6 +52,10 @@ while [[ $# -gt 0 ]]; do
     LIBCXX_EXCEPTIONS="${2}"
     shift; shift
     ;;
+    --cmake-args)
+    ADDITIONAL_CMAKE_ARGS="${2}"
+    shift; shift
+    ;;
     --lit-args)
     ADDITIONAL_LIT_ARGS="${2}"
     shift; shift
@@ -76,6 +81,7 @@ if [[ -z ${LIBCXXABI_ROOT+x} ]]; then echo "--libcxxabi-root is a required param
 if [[ -z ${STD+x} ]]; then echo "--std is a required parameter"; usage; exit 1; fi
 if [[ -z ${ARCH+x} ]]; then echo "--arch is a required parameter"; usage; exit 1; fi
 if [[ "${LIBCXX_EXCEPTIONS}" != "ON" && "${LIBCXX_EXCEPTIONS}" != "OFF" ]]; then echo "--libcxx-exceptions is a required parameter and must be either ON or OFF"; usage; exit 1; fi
+if [[ -z ${ADDITIONAL_CMAKE_ARGS+x} ]]; then ADDITIONAL_CMAKE_ARGS=""; fi
 if [[ -z ${ADDITIONAL_LIT_ARGS+x} ]]; then ADDITIONAL_LIT_ARGS=""; fi
 
 
@@ -122,6 +128,7 @@ mkdir -p "${LIBCXX_BUILD_DIR}"
     -DCMAKE_INSTALL_PREFIX="${LIBCXX_INSTALL_DIR}" \
     -DLIBCXX_ENABLE_EXCEPTIONS="${LIBCXX_EXCEPTIONS}" \
     -DLIBCXX_ENABLE_NEW_DELETE_DEFINITIONS=OFF \
+    ${ADDITIONAL_CMAKE_ARGS} \
     -DLLVM_LIT_ARGS="${LIT_FLAGS}" \
     -DCMAKE_OSX_ARCHITECTURES="i386;x86_64" # Build a universal dylib
 )
@@ -137,6 +144,7 @@ mkdir -p "${LIBCXXABI_BUILD_DIR}"
     -DCMAKE_INSTALL_PREFIX="${LIBCXXABI_INSTALL_DIR}" \
     -DLIBCXXABI_ENABLE_EXCEPTIONS=ON \
     -DLIBCXXABI_ENABLE_NEW_DELETE_DEFINITIONS=ON \
+    ${ADDITIONAL_CMAKE_ARGS} \
     -DLLVM_LIT_ARGS="${LIT_FLAGS}" \
     -DCMAKE_OSX_ARCHITECTURES="i386;x86_64" # Build a universal dylib
 )

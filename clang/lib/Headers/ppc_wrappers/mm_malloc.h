@@ -25,12 +25,8 @@ _mm_malloc (size_t size, size_t alignment)
 {
   /* PowerPC64 ELF V2 ABI requires quadword alignment.  */
   size_t vec_align = sizeof (__vector float);
-  /* Linux GLIBC malloc alignment is at least 2 X ptr size.  */
-  size_t malloc_align = (sizeof (void *) + sizeof (void *));
   void *ptr;
 
-  if (alignment == malloc_align && alignment == vec_align)
-    return malloc (size);
   if (alignment < vec_align)
     alignment = vec_align;
   if (posix_memalign (&ptr, alignment, size) == 0)

@@ -1518,6 +1518,275 @@ parameters of protocol-qualified type.
 Query the presence of this new mangling with
 ``__has_feature(objc_protocol_qualifier_mangling)``.
 
+
+OpenCL Features
+===============
+
+C++ for OpenCL
+--------------
+
+This functionality is built on top of OpenCL C v2.0 and C++17. Regular C++
+features can be used in OpenCL kernel code. All functionality from OpenCL C
+is inherited. This section describes minor differences to OpenCL C and any
+limitations related to C++ support as well as interactions between OpenCL and
+C++ features that are not documented elsewhere.
+
+Restrictions to C++17
+^^^^^^^^^^^^^^^^^^^^^
+
+The following features are not supported:
+
+- Virtual functions
+- ``dynamic_cast`` operator
+- Non-placement ``new``/``delete`` operators
+- Standard C++ libraries. Currently there is no solution for alternative C++
+  libraries provided. Future release will feature library support.
+
+
+Interplay of OpenCL and C++ features
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Address space behavior
+""""""""""""""""""""""
+
+Address spaces are part of the type qualifiers; many rules are just inherited
+from the qualifier behavior documented in OpenCL C v2.0 s6.5 and Embedded C
+extension ISO/IEC JTC1 SC22 WG14 N1021 s3.1. Note that since the address space
+behavior in C++ is not documented formally yet, Clang extends existing concept
+from C and OpenCL. For example conversion rules are extended from qualification
+conversion but the compatibility is determined using sets and overlapping from
+Embedded C (ISO/IEC JTC1 SC22 WG14 N1021 s3.1.3). For OpenCL it means that
+implicit conversions are allowed from named to ``__generic`` but not vice versa
+(OpenCL C v2.0 s6.5.5) except for ``__constant`` address space. Most of the
+rules are built on top of this behavior.
+
+**Casts**
+
+C style cast will follow OpenCL C v2.0 rules (s6.5.5). All cast operators will
+permit implicit conversion to ``__generic``. However converting from named
+address spaces to ``__generic`` can only be done using ``addrspace_cast``. Note
+that conversions between ``__constant`` and any other is still disallowed.
+
+.. _opencl_cpp_addrsp_deduction:
+
+**Deduction**
+
+Address spaces are not deduced for:
+
+- non-pointer/non-reference template parameters or any dependent types except
+  for template specializations.
+- non-pointer/non-reference class members except for static data members that are
+  deduced to ``__global`` address space.
+- non-pointer/non-reference alias declarations.
+- ``decltype`` expression.
+
+.. code-block:: c++
+
+  template <typename T>
+  void foo() {
+    T m; // address space of m will be known at template instantiation time.
+    T * ptr; // ptr points to __generic address space object.
+    T & ref = ...; // ref references an object in __generic address space.
+  };
+
+  template <int N>
+  struct S {
+    int i; // i has no address space
+    static int ii; // ii is in global address space
+    int * ptr; // ptr points to __generic address space int.
+    int & ref = ...; // ref references int in __generic address space.
+  };
+
+  template <int N>
+  void bar()
+  {
+    S<N> s; // s is in __private address space
+  }
+
+TODO: Add example for type alias and decltype!
+
+**References**
+
+References types can be qualified with an address space.
+
+.. code-block:: c++
+
+  __private int & ref = ...; // references int in __private address space
+
+By default references will refer to ``__generic`` address space objects, except
+for dependent types that are not template specializations
+(see :ref:`Deduction <opencl_cpp_addrsp_deduction>`). Address space compatibility
+checks are performed when references are bound to values. The logic follows the
+rules from address space pointer conversion (OpenCL v2.0 s6.5.5).
+
+**Default address space**
+
+All non-static member functions take an implicit object parameter ``this`` that
+is a pointer type. By default this pointer parameter is in ``__generic`` address
+space. All concrete objects passed as an argument to ``this`` parameter will be
+converted to ``__generic`` address space first if the conversion is valid.
+Therefore programs using objects in ``__constant`` address space won't be compiled
+unless address space is explicitly specified using address space qualifiers on
+member functions
+(see :ref:`Member function qualifier <opencl_cpp_addrspace_method_qual>`) as the
+conversion between ``__constant`` and ``__generic`` is disallowed. Member function
+qualifiers can also be used in case conversion to ``__generic`` address space is
+undesirable (even if it is legal), for example to take advantage of memory bank
+accesses. Note this not only applies to regular member functions but to
+constructors and destructors too.
+
+.. _opencl_cpp_addrspace_method_qual:
+
+**Member function qualifier**
+
+Clang allows specifying address space qualifier on member functions to signal that
+they are to be used with objects constructed in some specific address space. This
+works just the same as qualifying member functions with ``const`` or any other
+qualifiers. The overloading resolution will select overload with most specific
+address space if multiple candidates are provided. If there is no conversion to
+to an address space among existing overloads compilation will fail with a
+diagnostic.
+
+.. code-block:: c++
+
+ struct C {
+    void foo() __local;
+    void foo();
+ };
+
+ __kernel void bar() {
+   __local C c1;
+   C c2;
+   __constant C c3;
+   c1.foo(); // will resolve to the first foo
+   c2.foo(); // will resolve to the second foo
+   c3.foo(); // error due to mismatching address spaces - can't convert to
+             // __local or __generic
+ }
+
+**Implicit special members**
+
+All implicit special members (default, copy, or move constructor, copy or move
+assignment, destructor) will be generated with ``__generic`` address space.
+
+.. code-block:: c++
+
+  class C {
+    // Has the following implicit definition
+    // void C() __generic;
+    // void C(const __generic C &) __generic;
+    // void C(__generic C &&) __generic;
+    // operator= '__generic C &(__generic C &&)'
+    // operator= '__generic C &(const __generic C &) __generic
+  }
+
+**Builtin operators**
+
+All builtin operators are available in the specific address spaces, thus no conversion
+to ``__generic`` is performed.
+
+**Templates**
+
+There is no deduction of address spaces in non-pointer/non-reference template parameters
+and dependent types (see :ref:`Deduction <opencl_cpp_addrsp_deduction>`). The address
+space of template parameter is deduced during the type deduction if it's not explicitly
+provided in instantiation.
+
+.. code-block:: c++
+
+  1 template<typename T>
+  2 void foo(T* i){
+  3   T var;
+  4 }
+  5
+  6 __global int g;
+  7 void bar(){
+  8   foo(&g); // error: template instantiation failed as function scope variable appears to
+  9            // be declared in __global address space (see line 3)
+ 10 }
+
+It is not legal to specify multiple different address spaces between template definition and
+instantiation. If multiple different address spaces are specified in template definition and
+instantiation compilation of such program will fail with a diagnostic.
+
+.. code-block:: c++
+
+  template <typename T>
+  void foo() {
+    __private T var;
+  }
+
+  void bar() {
+    foo<__global int>(); // error: conflicting address space qualifiers are provided __global
+                         // and __private
+  }
+
+Once template is instantiated regular restrictions for address spaces will apply.
+
+.. code-block:: c++
+
+  template<typename T>
+  void foo(){
+    T var;
+  }
+
+  void bar(){
+    foo<__global int>(); // error: function scope variable cannot be declared in __global
+                         // address space
+  }
+
+**Temporary materialization**
+
+All temporaries are materialized in ``__private`` address space. If a reference with some
+other address space is bound to them, the conversion will be generated in case it's valid
+otherwise compilation will fail with a diagnostic.
+
+.. code-block:: c++
+
+  int bar(const unsigned int &i);
+
+  void foo() {
+    bar(1); // temporary is created in __private address space but converted
+            // to __generic address space of parameter reference
+  }
+
+  __global const int& f(__global float &ref) {
+    return ref; // error: address space mismatch between temporary object
+                // created to hold value converted float->int and return
+                // value type (can't convert from __private to __global)
+  }
+
+**Initialization of local and constant address space objects**
+
+TODO
+
+Constructing and destroying global objects
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Global objects are constructed before the first kernel using the global
+objects is executed and destroyed just after the last kernel using the
+program objects is executed. In OpenCL v2.0 drivers there is no specific
+API for invoking global constructors. However, an easy workaround would be
+to enqueue constructor initialization kernel that has a name
+``@_GLOBAL__sub_I_<compiled file name>``. This kernel is only present if there
+are any global objects to be initialized in the compiled binary. One way to
+check this is by passing ``CL_PROGRAM_KERNEL_NAMES`` to ``clGetProgramInfo``
+(OpenCL v2.0 s5.8.7).
+
+Note that if multiple files are compiled and linked into libraries multiple
+kernels that initialize global objects for multiple modules would have to be
+invoked.
+
+.. code-block:: console
+
+ clang -cl-std=c++ test.cl
+
+If there are any global objects to be initialized the final binary will
+contain ``@_GLOBAL__sub_I_test.cl`` kernel to be enqueued.
+
+Global destructors can not be invoked in OpenCL v2.0 drivers. However, all
+memory used for program scope objects is released on ``clReleaseProgram``.
+
 Initializer lists for complex numbers in C
 ==========================================
 

@@ -630,7 +630,8 @@ struct Child2b : Child1 {};
   ASSERT_TRUE(bool(Result));
   EXPECT_THAT(
       *Result,
-      AllOf(WithName("Parent"), WithKind(SymbolKind::Struct), Parents(),
+      AllOf(WithName("Parent"), WithKind(SymbolKind::Struct),
+            ParentsNotResolved(),
             Children(AllOf(WithName("Child1"), WithKind(SymbolKind::Struct),
                            ParentsNotResolved(), ChildrenNotResolved()))));
 

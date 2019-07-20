@@ -140,6 +140,8 @@ public:
 
   unsigned getInliningThresholdMultiplier() { return 1; }
 
+  int getInlinerVectorBonusPercent() { return 150; }
+
   unsigned getMemcpyCost(const Instruction *I) {
     return TTI::TCC_Expensive;
   }

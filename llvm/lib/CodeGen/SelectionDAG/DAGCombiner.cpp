@@ -18002,6 +18002,23 @@ SDValue DAGCombiner::visitCONCAT_VECTORS(SDNode *N) {
   return SDValue();
 }
 
+// Helper that peeks through INSERT_SUBVECTOR/CONCAT_VECTORS to find
+// if the subvector can be sourced for free.
+static SDValue getSubVectorSrc(SDValue V, SDValue Index, EVT SubVT) {
+  if (V.getOpcode() == ISD::INSERT_SUBVECTOR &&
+      V.getOperand(1).getValueType() == SubVT && V.getOperand(2) == Index) {
+    return V.getOperand(1);
+  }
+  auto *IndexC = dyn_cast<ConstantSDNode>(Index);
+  if (IndexC && V.getOpcode() == ISD::CONCAT_VECTORS &&
+      V.getOperand(0).getValueType() == SubVT &&
+      (IndexC->getZExtValue() % SubVT.getVectorNumElements()) == 0) {
+    uint64_t SubIdx = IndexC->getZExtValue() / SubVT.getVectorNumElements();
+    return V.getOperand(SubIdx);
+  }
+  return SDValue();
+}
+
 static SDValue narrowInsertExtractVectorBinOp(SDNode *Extract,
                                               SelectionDAG &DAG) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -18012,37 +18029,20 @@ static SDValue narrowInsertExtractVectorBinOp(SDNode *Extract,
 
   SDValue Bop0 = BinOp.getOperand(0), Bop1 = BinOp.getOperand(1);
   SDValue Index = Extract->getOperand(1);
-  EVT VT = Extract->getValueType(0);
-
-  // Helper that peeks through INSERT_SUBVECTOR/CONCAT_VECTORS to find
-  // if the source subvector is the same type as the one being extracted.
-  auto GetSubVector = [VT, Index](SDValue V) -> SDValue {
-    if (V.getOpcode() == ISD::INSERT_SUBVECTOR &&
-        V.getOperand(1).getValueType() == VT && V.getOperand(2) == Index) {
-      return V.getOperand(1);
-    }
-    auto *IndexC = dyn_cast<ConstantSDNode>(Index);
-    if (IndexC && V.getOpcode() == ISD::CONCAT_VECTORS &&
-        V.getOperand(0).getValueType() == VT &&
-        (IndexC->getZExtValue() % VT.getVectorNumElements()) == 0) {
-      uint64_t SubIdx = IndexC->getZExtValue() / VT.getVectorNumElements();
-      return V.getOperand(SubIdx);
-    }
-    return SDValue();
-  };
-  SDValue Sub0 = GetSubVector(Bop0);
-  SDValue Sub1 = GetSubVector(Bop1);
+  EVT SubVT = Extract->getValueType(0);
+  SDValue Sub0 = getSubVectorSrc(Bop0, Index, SubVT);
+  SDValue Sub1 = getSubVectorSrc(Bop1, Index, SubVT);
 
   // TODO: We could handle the case where only 1 operand is being inserted by
   //       creating an extract of the other operand, but that requires checking
   //       number of uses and/or costs.
-  if (!Sub0 || !Sub1 || !TLI.isOperationLegalOrCustom(BinOpcode, VT))
+  if (!Sub0 || !Sub1 || !TLI.isOperationLegalOrCustom(BinOpcode, SubVT))
     return SDValue();
 
   // We are inserting both operands of the wide binop only to extract back
   // to the narrow vector size. Eliminate all of the insert/extract:
   // ext (binop (ins ?, X, Index), (ins ?, Y, Index)), Index --> binop X, Y
-  return DAG.getNode(BinOpcode, SDLoc(Extract), VT, Sub0, Sub1,
+  return DAG.getNode(BinOpcode, SDLoc(Extract), SubVT, Sub0, Sub1,
                      BinOp->getFlags());
 }
 

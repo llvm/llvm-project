@@ -20,8 +20,10 @@ namespace llvm {
 struct RelocAddrEntry {
   uint64_t SectionIndex;
   object::RelocationRef Reloc;
-  object::RelocationResolver Resolver;
   uint64_t SymbolValue;
+  Optional<object::RelocationRef> Reloc2;
+  uint64_t SymbolValue2;
+  object::RelocationResolver Resolver;
 };
 
 /// In place of applying the relocations to the data we've read from disk we use

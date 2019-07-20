@@ -1,0 +1,22 @@
+## Test extract operation.
+# XFAIL: darwin
+
+RUN: rm -rf %t && mkdir -p %t/extracted/
+
+# Extracting from an empty archive should not warn or error:
+RUN: llvm-ar cr %t/empty.a
+RUN: llvm-ar x %t/empty.a 2>&1 | count 0
+
+RUN: echo filea > %t/a.txt
+RUN: echo fileb > %t/b.txt
+RUN: llvm-ar rc %t/archive.a %t/a.txt %t/b.txt
+
+# Single member:
+RUN: cd %t/extracted && llvm-ar x %t/archive.a a.txt
+RUN: diff %t/a.txt %t/extracted/a.txt 
+
+# All members:
+RUN: rm %t/extracted/a.txt
+RUN: cd %t/extracted && llvm-ar x %t/archive.a
+RUN: diff %t/a.txt %t/extracted/a.txt 
+RUN: diff %t/b.txt %t/extracted/b.txt 

@@ -81,11 +81,11 @@ struct test_brick_partial_sort
             if (m1 - first > 1)
             {
 #ifdef _DEBUG
-#   if defined(_PSTL_PAR_BACKEND_TBB)
+#    if defined(_PSTL_PAR_BACKEND_TBB)
                 auto p = tbb::this_task_arena::max_concurrency();
-#   else
+#    else
                 auto p = 1;
-#   endif
+#    endif
                 auto complex = std::ceil(n * std::log(float32_t(m1 - first)));
                 if (count_comp > complex * p)
                 {
@@ -99,8 +99,7 @@ struct test_brick_partial_sort
     template <typename Policy, typename InputIterator, typename Compare>
     typename std::enable_if<!is_same_iterator_category<InputIterator, std::random_access_iterator_tag>::value,
                             void>::type
-    operator()(Policy&&, InputIterator, InputIterator, InputIterator, InputIterator,
-               Compare)
+    operator()(Policy&&, InputIterator, InputIterator, InputIterator, InputIterator, Compare)
     {
     }
 };
@@ -131,7 +130,7 @@ struct test_non_const
     }
 };
 
-int32_t
+int
 main()
 {
     count_val = 0;

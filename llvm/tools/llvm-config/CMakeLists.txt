@@ -60,6 +60,7 @@ llvm_canonicalize_cmake_booleans(
   LLVM_HAS_RTTI
   LLVM_HAS_GLOBAL_ISEL
   BUILD_SHARED_LIBS)
+llvm_expand_pseudo_components(LLVM_DYLIB_COMPONENTS_expanded "${LLVM_DYLIB_COMPONENTS}")
 configure_file(${BUILDVARIABLES_SRCPATH} ${BUILDVARIABLES_OBJPATH} @ONLY)
 
 # Set build-time environment(s).

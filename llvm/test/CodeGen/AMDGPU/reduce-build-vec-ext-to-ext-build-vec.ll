@@ -8,9 +8,9 @@
 
 ; GCN-LABEL: {{^}}v2i16_to_i64:
 ; GFX9: s_waitcnt
-; GFX9-NEXT: v_pk_add_u16 v0, v0, v1
-; GFX9-NEXT: v_lshrrev_b32_e32 v1, 16, v0
-; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, v0
+; GFX9-NEXT: v_pk_add_u16 v1, v0, v1
+; GFX9-NEXT: v_and_b32_e32 v0, 0xffff, v1
+; GFX9-NEXT: v_lshrrev_b32_e32 v1, 16, v1
 ; GFX9-NEXT: s_setpc_b64
 define i64 @v2i16_to_i64(<2 x i16> %x, <2 x i16> %y) {
   %x.add = add <2 x i16> %x, %y

@@ -185,8 +185,7 @@ getTokenLocation(SourceLocation TokLoc, const SourceManager &SM,
 bool isPreferredDeclaration(const NamedDecl &ND, index::SymbolRoleSet Roles) {
   const auto &SM = ND.getASTContext().getSourceManager();
   return (Roles & static_cast<unsigned>(index::SymbolRole::Definition)) &&
-         isa<TagDecl>(&ND) &&
-         !SM.isWrittenInMainFile(SM.getExpansionLoc(ND.getLocation()));
+         isa<TagDecl>(&ND) && !isInsideMainFile(ND.getLocation(), SM);
 }
 
 RefKind toRefKind(index::SymbolRoleSet Roles) {

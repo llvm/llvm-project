@@ -1,5 +1,5 @@
 --- !mach-o
-FileHeader:      
+FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x00000007
   cpusubtype:      0x00000003
@@ -7,7 +7,7 @@ FileHeader:
   ncmds:           4
   sizeofcmds:      312
   flags:           0x00002000
-LoadCommands:    
+LoadCommands:
   - cmd:             LC_SEGMENT
     cmdsize:         192
     segname:         ''
@@ -19,7 +19,7 @@ LoadCommands:
     initprot:        7
     nsects:          2
     flags:           0
-    Sections:        
+    Sections:
       - sectname:        __text
         segname:         __TEXT
         addr:            0x0000000000000000
@@ -74,14 +74,14 @@ LoadCommands:
     nextrel:         0
     locreloff:       0
     nlocrel:         0
-LinkEditData:    
-  NameList:        
+LinkEditData:
+  NameList:
     - n_strx:          1
       n_type:          0x0F
       n_sect:          1
       n_desc:          0
       n_value:         0
-  StringTable:     
+  StringTable:
     - ''
     - _main
     - ''

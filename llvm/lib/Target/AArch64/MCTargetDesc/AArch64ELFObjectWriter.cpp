@@ -394,6 +394,20 @@ unsigned AArch64ELFObjectWriter::getRelocType(MCContext &Ctx,
         return R_CLS(MOVW_SABS_G0);
       if (RefKind == AArch64MCExpr::VK_ABS_G0_NC)
         return R_CLS(MOVW_UABS_G0_NC);
+      if (RefKind == AArch64MCExpr::VK_PREL_G3)
+        return ELF::R_AARCH64_MOVW_PREL_G3;
+      if (RefKind == AArch64MCExpr::VK_PREL_G2)
+        return ELF::R_AARCH64_MOVW_PREL_G2;
+      if (RefKind == AArch64MCExpr::VK_PREL_G2_NC)
+        return ELF::R_AARCH64_MOVW_PREL_G2_NC;
+      if (RefKind == AArch64MCExpr::VK_PREL_G1)
+        return R_CLS(MOVW_PREL_G1);
+      if (RefKind == AArch64MCExpr::VK_PREL_G1_NC)
+        return ELF::R_AARCH64_MOVW_PREL_G1_NC;
+      if (RefKind == AArch64MCExpr::VK_PREL_G0)
+        return R_CLS(MOVW_PREL_G0);
+      if (RefKind == AArch64MCExpr::VK_PREL_G0_NC)
+        return R_CLS(MOVW_PREL_G0_NC);
       if (RefKind == AArch64MCExpr::VK_DTPREL_G2)
         return ELF::R_AARCH64_TLSLD_MOVW_DTPREL_G2;
       if (RefKind == AArch64MCExpr::VK_DTPREL_G1)

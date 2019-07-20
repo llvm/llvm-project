@@ -153,12 +153,7 @@ define void @call_symbol(i8* nocapture readonly %src, i8* nocapture %dest, i32 s
   ; MIPS32:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
   ; MIPS32:   [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
   ; MIPS32:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-  ; MIPS32:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-  ; MIPS32:   $a0 = COPY [[COPY1]](p0)
-  ; MIPS32:   $a1 = COPY [[COPY]](p0)
-  ; MIPS32:   $a2 = COPY [[COPY2]](s32)
-  ; MIPS32:   JAL &memcpy, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2
-  ; MIPS32:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+  ; MIPS32:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[COPY1]](p0), [[COPY]](p0), [[COPY2]](s32) :: (store 1 into %ir.dest), (load 1 from %ir.src)
   ; MIPS32:   RetRA
   ; MIPS32_PIC-LABEL: name: call_symbol
   ; MIPS32_PIC: bb.1.entry:
@@ -166,12 +161,7 @@ define void @call_symbol(i8* nocapture readonly %src, i8* nocapture %dest, i32 s
   ; MIPS32_PIC:   [[COPY:%[0-9]+]]:_(p0) = COPY $a0
   ; MIPS32_PIC:   [[COPY1:%[0-9]+]]:_(p0) = COPY $a1
   ; MIPS32_PIC:   [[COPY2:%[0-9]+]]:_(s32) = COPY $a2
-  ; MIPS32_PIC:   ADJCALLSTACKDOWN 16, 0, implicit-def $sp, implicit $sp
-  ; MIPS32_PIC:   $a0 = COPY [[COPY1]](p0)
-  ; MIPS32_PIC:   $a1 = COPY [[COPY]](p0)
-  ; MIPS32_PIC:   $a2 = COPY [[COPY2]](s32)
-  ; MIPS32_PIC:   JAL &memcpy, csr_o32, implicit-def $ra, implicit-def $sp, implicit $a0, implicit $a1, implicit $a2
-  ; MIPS32_PIC:   ADJCALLSTACKUP 16, 0, implicit-def $sp, implicit $sp
+  ; MIPS32_PIC:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[COPY1]](p0), [[COPY]](p0), [[COPY2]](s32) :: (store 1 into %ir.dest), (load 1 from %ir.src)
   ; MIPS32_PIC:   RetRA
 entry:
   call void @llvm.memcpy.p0i8.p0i8.i32(i8* align 1 %dest, i8* align 1 %src, i32 %length, i1 false)

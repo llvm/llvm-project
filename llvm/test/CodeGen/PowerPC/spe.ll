@@ -523,18 +523,37 @@ entry:
 ; CHECK: #NO_APP
 }
 
-define double @test_spill(double %a) nounwind {
+declare double @test_spill_spe_regs(double, double);
+define dso_local void @test_func2() #0 {
 entry:
+  ret void
+}
+
+declare void @test_memset(i8* nocapture writeonly, i8, i32, i1)
+@global_var1 = global i32 0, align 4
+define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* %a5) nounwind {
+entry:
+  %v1 = alloca [13 x i32], align 4
+  %v2 = alloca [11 x i32], align 4
   %0 = fadd double %a, %a
-  call void asm sideeffect "","~{r0},~{r3},~{s4},~{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{r16},~{r17},~{r18},~{r19},~{r20},~{r21},~{r22},~{r23},~{r24},~{r25},~{r26},~{r27},~{r28},~{r29},~{r30},~{r31}"() nounwind
+  call void asm sideeffect "","~{s0},~{s3},~{s4},~{s5},~{s6},~{s7},~{s8},~{s9},~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19},~{s20},~{s21},~{s22},~{s23},~{s24},~{s25},~{s26},~{s27},~{s28},~{s29},~{s30},~{s31}"() nounwind
   %1 = fadd double %0, 3.14159
+  %2 = bitcast [13 x i32]* %v1 to i8*
+  call void @test_memset(i8* align 4 %2, i8 0, i32 24, i1 true)
+  store i32 0, i32* %a5, align 4
+  call void @test_func2()
+  %3 = bitcast [11 x i32]* %v2 to i8*
+  call void @test_memset(i8* align 4 %3, i8 0, i32 20, i1 true)
   br label %return
 
 return:
   ret double %1
 
 ; CHECK-LABEL: test_spill
-; CHECK: efdadd
+; CHECK: li [[VREG:[0-9]+]], 256
+; CHECK: evstddx {{[0-9]+}}, {{[0-9]+}}, [[VREG]]
+; CHECK-NOT: evstdd {{[0-9]+}}, 256({{[0-9]+}}
 ; CHECK: evstdd
+; CHECK: efdadd
 ; CHECK: evldd
 }

@@ -48,7 +48,16 @@ template <typename BaseLayerT, typename TransformFtor>
 class LegacyObjectTransformLayer {
 public:
   /// Construct an ObjectTransformLayer with the given BaseLayer
-  LegacyObjectTransformLayer(BaseLayerT &BaseLayer,
+  LLVM_ATTRIBUTE_DEPRECATED(
+      LegacyObjectTransformLayer(BaseLayerT &BaseLayer,
+                                 TransformFtor Transform = TransformFtor()),
+      "ORCv1 layers (layers with the 'Legacy' prefix) are deprecated. Please "
+      "use "
+      "the ORCv2 ObjectTransformLayer instead");
+
+  /// Legacy layer constructor with deprecation acknowledgement.
+  LegacyObjectTransformLayer(ORCv1DeprecationAcknowledgement,
+                             BaseLayerT &BaseLayer,
                              TransformFtor Transform = TransformFtor())
       : BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
 
@@ -106,6 +115,11 @@ private:
   BaseLayerT &BaseLayer;
   TransformFtor Transform;
 };
+
+template <typename BaseLayerT, typename TransformFtor>
+LegacyObjectTransformLayer<BaseLayerT, TransformFtor>::
+    LegacyObjectTransformLayer(BaseLayerT &BaseLayer, TransformFtor Transform)
+    : BaseLayer(BaseLayer), Transform(std::move(Transform)) {}
 
 } // end namespace orc
 } // end namespace llvm

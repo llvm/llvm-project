@@ -61,7 +61,7 @@ struct test_one_policy
     Iterator data_e;
     test_one_policy(Iterator b, Iterator e) : data_b(b), data_e(e) {}
 
-#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                            \
+#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                             \
     _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN // dummy specialization by policy type, in case of broken configuration
     template <typename Iterator1>
     typename std::enable_if<is_same_iterator_category<Iterator1, std::random_access_iterator_tag>::value, void>::type
@@ -117,7 +117,7 @@ test()
     }
 }
 
-int32_t
+int
 main()
 {
     // clang-3.8 fails to correctly auto vectorize the loop in some cases of different types of container's elements,

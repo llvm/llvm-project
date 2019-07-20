@@ -842,6 +842,10 @@ void AArch64FrameLowering::emitPrologue(MachineFunction &MF,
   if (MF.getFunction().getCallingConv() == CallingConv::GHC)
     return;
 
+  // Set tagged base pointer to the bottom of the stack frame.
+  // Ideally it should match SP value after prologue.
+  AFI->setTaggedBasePointerOffset(MFI.getStackSize());
+
   // getStackSize() includes all the locals in its size calculation. We don't
   // include these locals when computing the stack size of a funclet, as they
   // are allocated in the parent's stack frame and accessed via the frame

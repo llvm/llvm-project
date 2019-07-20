@@ -24,7 +24,7 @@ struct Foo<T()> {};
 // expected-no-diagnostics
 #else
 // expected-error@+4 {{redefinition of 'Foo}}
-// expected-warning@+3 {{'__fastcall' calling convention ignored}}
+// expected-warning@+3 {{'__fastcall' calling convention is not supported}}
 #endif
 template <class T>
 struct Foo<T __fastcall()> {};

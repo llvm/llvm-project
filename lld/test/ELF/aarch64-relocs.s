@@ -1,6 +1,6 @@
 # REQUIRES: aarch64
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %s -o %t
-# RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %p/Inputs/uabs_label.s -o %t2.o
+# RUN: echo '.globl zero; zero = 0' | llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd -o %t2.o
 # RUN: ld.lld %t %t2.o -o %t2
 # RUN: llvm-objdump -d %t2 | FileCheck %s
 
@@ -169,18 +169,89 @@ foo16:
 
 .section .R_AARCH64_MOVW_UABS,"ax",@progbits
 movz1:
-   movk x12, #:abs_g0_nc:uabs_label
-   movk x13, #:abs_g1_nc:uabs_label
-   movk x14, #:abs_g2_nc:uabs_label
-   movz x15, #:abs_g3:uabs_label
-   movk x16, #:abs_g3:uabs_label
+   movk x12, #:abs_g0:zero+0xC
+   movk x12, #:abs_g0_nc:zero+0xF000E000D000C
+   movk x13, #:abs_g1:zero+0xD000C
+   movk x13, #:abs_g1_nc:zero+0xF000E000D000C
+   movk x14, #:abs_g2:zero+0xE000D000C
+   movk x14, #:abs_g2_nc:zero+0xF000E000D000C
+   movz x15, #:abs_g3:zero+0xF000E000D000C
+   movk x16, #:abs_g3:zero+0xF000E000D000C
 
 ## 4222124650659840 == (0xF << 48)
 # CHECK: Disassembly of section .R_AARCH64_MOVW_UABS:
 # CHECK-EMPTY:
 # CHECK-NEXT: movz1:
 # CHECK-NEXT: 8c 01 80 f2   movk  x12, #12
+# CHECK-NEXT: 8c 01 80 f2   movk  x12, #12
 # CHECK-NEXT: ad 01 a0 f2   movk  x13, #13, lsl #16
+# CHECK-NEXT: ad 01 a0 f2   movk  x13, #13, lsl #16
+# CHECK-NEXT: ce 01 c0 f2   movk  x14, #14, lsl #32
 # CHECK-NEXT: ce 01 c0 f2   movk  x14, #14, lsl #32
 # CHECK-NEXT: ef 01 e0 d2   mov x15, #4222124650659840
 # CHECK-NEXT: f0 01 e0 f2   movk  x16, #15, lsl #48
+
+.section .R_AARCH64_MOVW_SABS,"ax",@progbits
+   movz x1, #:abs_g0_s:zero+1
+   movz x1, #:abs_g0_s:zero-1
+   movz x2, #:abs_g1_s:zero+0x20000
+   movz x2, #:abs_g1_s:zero-0x20000
+   movz x3, #:abs_g2_s:zero+0x300000000
+   movz x3, #:abs_g2_s:zero-0x300000000
+
+# CHECK: Disassembly of section .R_AARCH64_MOVW_SABS:
+# CHECK-EMPTY:
+# CHECK-NEXT: :
+# CHECK-NEXT: 21 00 80 d2   mov x1, #1
+# CHECK-NEXT: 01 00 80 92   mov x1, #-1
+# CHECK-NEXT: 42 00 a0 d2   mov x2, #131072
+## -65537 = 0xfffffffffffeffff
+# CHECK-NEXT: 22 00 a0 92   mov x2, #-65537
+## 12884901888 = 0x300000000
+# CHECK-NEXT: 63 00 c0 d2   mov x3, #12884901888
+## -8589934593 = #0xfffffffdffffffff
+# CHECK-NEXT: 43 00 c0 92   mov x3, #-8589934593
+
+.section .R_AARCH64_MOVW_PREL,"ax",@progbits
+   movz x1, #:prel_g0:.+1
+   movz x1, #:prel_g0_nc:.-1
+   movk x1, #:prel_g0:.+1
+   movk x1, #:prel_g0_nc:.-1
+   movz x2, #:prel_g1:.+0x20000
+   movz x2, #:prel_g1_nc:.-0x20000
+   movk x2, #:prel_g1:.+0x20000
+   movk x2, #:prel_g1_nc:.-0x20000
+   movz x3, #:prel_g2:.+0x300000000
+   movz x3, #:prel_g2_nc:.-0x300000000
+   movk x3, #:prel_g2:.+0x300000000
+   movk x3, #:prel_g2_nc:.-0x300000000
+   movz x3, #:prel_g2:.+0x300000000
+   movz x4, #:prel_g3:.+0x4000000000000
+   movz x4, #:prel_g3:.-0x4000000000000
+   movk x4, #:prel_g3:.+0x4000000000000
+   movk x4, #:prel_g3:.-0x4000000000000
+
+# CHECK: Disassembly of section .R_AARCH64_MOVW_PREL:
+# CHECK-EMPTY:
+# CHECK-NEXT: :
+# CHECK-NEXT: 21009c: 21 00 80 d2  mov	x1, #1
+# CHECK-NEXT: 2100a0: 01 00 80 92  mov	x1, #-1
+# CHECK-NEXT: 2100a4: 21 00 80 f2  movk	x1, #1
+# CHECK-NEXT: 2100a8: e1 ff 9f f2  movk	x1, #65535
+# CHECK-NEXT: 2100ac: 42 00 a0 d2  mov	x2, #131072
+## -65537 = 0xfffffffffffeffff
+# CHECK-NEXT: 2100b0: 22 00 a0 92  mov	x2, #-65537
+# CHECK-NEXT: 2100b4: 42 00 a0 f2  movk	x2, #2, lsl #16
+# CHECK-NEXT: 2100b8: c2 ff bf f2  movk	x2, #65534, lsl #16
+## 12884901888 = 0x300000000
+# CHECK-NEXT: 2100bc: 63 00 c0 d2  mov	x3, #12884901888
+## -8589934593 = #0xfffffffdffffffff
+# CHECK-NEXT: 2100c0: 43 00 c0 92  mov	x3, #-8589934593
+# CHECK-NEXT: 2100c4: 63 00 c0 f2  movk	x3, #3, lsl #32
+# CHECK-NEXT: 2100c8: a3 ff df f2  movk	x3, #65533, lsl #32
+# CHECK-NEXT: 2100cc: 63 00 c0 d2  mov	x3, #12884901888
+## 1125899906842624 = 0x4000000000000
+# CHECK-NEXT: 2100d0: 84 00 e0 d2  mov	x4, #1125899906842624
+# CHECK-NEXT: 2100d4: 84 ff ff d2  mov	x4, #-1125899906842624
+# CHECK-NEXT: 2100d8: 84 00 e0 f2  movk	x4, #4, lsl #48
+# CHECK-NEXT: 2100dc: 84 ff ff f2  movk	x4, #65532, lsl #48

@@ -468,10 +468,19 @@ void AArch64RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     return;
   }
 
-  // Modify MI as necessary to handle as much of 'Offset' as possible
-  Offset = TFI->resolveFrameIndexReference(
-      MF, FrameIndex, FrameReg, /*PreferFP=*/false, /*ForSimm=*/true);
+  if (MI.getOpcode() == AArch64::TAGPstack) {
+    // TAGPstack must use the virtual frame register in its 3rd operand.
+    const MachineFrameInfo &MFI = MF.getFrameInfo();
+    const AArch64FunctionInfo *AFI = MF.getInfo<AArch64FunctionInfo>();
+    FrameReg = MI.getOperand(3).getReg();
+    Offset =
+        MFI.getObjectOffset(FrameIndex) + AFI->getTaggedBasePointerOffset();
+  } else {
+    Offset = TFI->resolveFrameIndexReference(
+        MF, FrameIndex, FrameReg, /*PreferFP=*/false, /*ForSimm=*/true);
+  }
 
+  // Modify MI as necessary to handle as much of 'Offset' as possible
   if (rewriteAArch64FrameIndex(MI, FIOperandNum, FrameReg, Offset, TII))
     return;
 

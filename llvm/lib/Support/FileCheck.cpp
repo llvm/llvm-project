@@ -24,17 +24,6 @@
 
 using namespace llvm;
 
-void FileCheckNumericVariable::setValue(uint64_t NewValue) {
-  assert(!Value && "Overwriting numeric variable's value is not allowed");
-  Value = NewValue;
-}
-
-void FileCheckNumericVariable::clearValue() {
-  if (!Value)
-    return;
-  Value = None;
-}
-
 Expected<uint64_t> FileCheckNumericVariableUse::eval() const {
   Optional<uint64_t> Value = NumericVariable->getValue();
   if (Value)
@@ -631,10 +620,8 @@ Expected<size_t> FileCheckPattern::match(StringRef Buffer, size_t &MatchLen,
     for (const auto &Substitution : Substitutions) {
       // Substitute and check for failure (e.g. use of undefined variable).
       Expected<std::string> Value = Substitution->getResult();
-      if (!Value) {
-        Context->LineVariable->clearValue();
+      if (!Value)
         return Value.takeError();
-      }
 
       // Plop it into the regex at the adjusted offset.
       TmpStr.insert(TmpStr.begin() + Substitution->getIndex() + InsertOffset,
@@ -644,7 +631,6 @@ Expected<size_t> FileCheckPattern::match(StringRef Buffer, size_t &MatchLen,
 
     // Match the newly constructed regex.
     RegExToMatch = TmpStr;
-    Context->LineVariable->clearValue();
   }
 
   SmallVector<StringRef, 4> MatchInfo;

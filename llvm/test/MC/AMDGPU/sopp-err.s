@@ -157,3 +157,21 @@ s_waitcnt x
 
 s_waitcnt vmcnt(0
 // GCN: error: expected a closing parenthesis
+
+s_branch 0x80000000ffff
+// GCN: error: expected a 16-bit signed jump offset
+
+s_branch 0x10000
+// GCN: error: expected a 16-bit signed jump offset
+
+s_branch -32769
+// GCN: error: expected a 16-bit signed jump offset
+
+s_branch 1.0
+// GCN: error: expected a 16-bit signed jump offset
+
+s_branch s0
+// GCN: error: invalid operand for instruction
+
+s_branch offset:1
+// GCN: error: not a valid operand

@@ -6,13 +6,14 @@
 
 ; GCN-LABEL: {{^}}gws_sema_br_offset0:
 ; NOLOOP-DAG: s_load_dword [[BAR_NUM:s[0-9]+]]
-; NOLOOP-DAG: s_mov_b32 m0, -1{{$}}
+; NOLOOP-DAG: s_mov_b32 m0, 0{{$}}
 ; NOLOOP: v_mov_b32_e32 v0, [[BAR_NUM]]
-; NOLOOP: ds_gws_sema_br v0 offset:1 gds{{$}}
+; NOLOOP: ds_gws_sema_br v0 gds{{$}}
 
+; LOOP: s_mov_b32 m0, 0{{$}}
 ; LOOP: [[LOOP:BB[0-9]+_[0-9]+]]:
 ; LOOP-NEXT: s_setreg_imm32_b32 hwreg(HW_REG_TRAPSTS, 8, 1), 0
-; LOOP-NEXT: ds_gws_sema_br v0 offset:1 gds
+; LOOP-NEXT: ds_gws_sema_br v0 gds
 ; LOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; LOOP-NEXT: s_getreg_b32 [[GETREG:s[0-9]+]], hwreg(HW_REG_TRAPSTS, 8, 1)
 ; LOOP-NEXT: s_cmp_lg_u32 [[GETREG]], 0

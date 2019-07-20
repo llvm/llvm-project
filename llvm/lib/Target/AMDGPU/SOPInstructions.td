@@ -853,13 +853,13 @@ class SOPC_Base <bits<7> op, RegisterOperand rc0, RegisterOperand rc1,
   let Defs = [SCC];
 }
 class SOPC_Helper <bits<7> op, RegisterOperand rc, ValueType vt,
-                    string opName, PatLeaf cond> : SOPC_Base <
+                    string opName, SDPatternOperator cond> : SOPC_Base <
   op, rc, rc, opName,
   [(set SCC, (si_setcc_uniform vt:$src0, vt:$src1, cond))] > {
 }
 
 class SOPC_CMP_32<bits<7> op, string opName,
-                  PatLeaf cond = COND_NULL, string revOp = opName>
+                  SDPatternOperator cond = COND_NULL, string revOp = opName>
   : SOPC_Helper<op, SSrc_b32, i32, opName, cond>,
     Commutable_REV<revOp, !eq(revOp, opName)>,
     SOPKInstTable<0, opName> {
@@ -868,7 +868,7 @@ class SOPC_CMP_32<bits<7> op, string opName,
 }
 
 class SOPC_CMP_64<bits<7> op, string opName,
-                  PatLeaf cond = COND_NULL, string revOp = opName>
+                  SDPatternOperator cond = COND_NULL, string revOp = opName>
   : SOPC_Helper<op, SSrc_b64, i64, opName, cond>,
     Commutable_REV<revOp, !eq(revOp, opName)> {
   let isCompare = 1;

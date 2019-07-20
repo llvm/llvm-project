@@ -300,7 +300,7 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
   const uint64_t PrologueOffset = *OffsetPtr;
 
   clear();
-  TotalLength = DebugLineData.getU32(OffsetPtr);
+  TotalLength = DebugLineData.getRelocatedValue(4, OffsetPtr);
   if (TotalLength == UINT32_MAX) {
     FormParams.Format = dwarf::DWARF64;
     TotalLength = DebugLineData.getU64(OffsetPtr);
@@ -325,7 +325,8 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
     SegSelectorSize = DebugLineData.getU8(OffsetPtr);
   }
 
-  PrologueLength = DebugLineData.getUnsigned(OffsetPtr, sizeofPrologueLength());
+  PrologueLength =
+      DebugLineData.getRelocatedValue(sizeofPrologueLength(), OffsetPtr);
   const uint64_t EndPrologueOffset = PrologueLength + *OffsetPtr;
   MinInstLength = DebugLineData.getU8(OffsetPtr);
   if (getVersion() >= 4)
@@ -754,7 +755,7 @@ Error DWARFDebugLine::LineTable::parse(
         // requires the use of DW_LNS_advance_pc. Such assemblers, however,
         // can use DW_LNS_fixed_advance_pc instead, sacrificing compression.
         {
-          uint16_t PCOffset = DebugLineData.getU16(OffsetPtr);
+          uint16_t PCOffset = DebugLineData.getRelocatedValue(2, OffsetPtr);
           State.Row.Address.Address += PCOffset;
           if (OS)
             *OS

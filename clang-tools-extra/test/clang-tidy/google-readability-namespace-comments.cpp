@@ -7,9 +7,9 @@ namespace n2 {
 void f(); // So that the namespace isn't empty.
 
 
-// CHECK-MESSAGES: :[[@LINE+4]]:2: warning: namespace 'n2' not terminated with a closing comment [google-readability-namespace-comments]
+// CHECK-MESSAGES: :[[@LINE+4]]:1: warning: namespace 'n2' not terminated with a closing comment [google-readability-namespace-comments]
 // CHECK-MESSAGES: :[[@LINE-7]]:11: note: namespace 'n2' starts here
-// CHECK-MESSAGES: :[[@LINE+2]]:3: warning: namespace 'n1' not terminated with
+// CHECK-MESSAGES: :[[@LINE+2]]:2: warning: namespace 'n1' not terminated with
 // CHECK-MESSAGES: :[[@LINE-10]]:11: note: namespace 'n1' starts here
 }}
 // CHECK-FIXES: }  // namespace n2
@@ -25,7 +25,7 @@ void f(); // So that the namespace isn't empty.
 // 5
 // 6
 // 7
-// CHECK-MESSAGES: :[[@LINE+2]]:2: warning: namespace 'macro_expansion' not terminated with
+// CHECK-MESSAGES: :[[@LINE+2]]:1: warning: namespace 'macro_expansion' not terminated with
 // CHECK-MESSAGES: :[[@LINE-10]]:11: note: namespace 'macro_expansion' starts here
 }
 // CHECK-FIXES: }  // namespace macro_expansion

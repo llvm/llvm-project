@@ -17,6 +17,7 @@
 #include "clang/AST/ParentMap.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/Lexer.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/BugType.h"
 #include "clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
@@ -358,6 +359,11 @@ private:
 
   /// Check if the memory associated with this symbol was released.
   bool isReleased(SymbolRef Sym, CheckerContext &C) const;
+
+  /// See if deallocation happens in a suspicious context. If so, escape the
+  /// pointers that otherwise would have been deallocated and return true.
+  bool suppressDeallocationsInSuspiciousContexts(const CallExpr *CE,
+                                                 CheckerContext &C) const;
 
   bool checkUseAfterFree(SymbolRef Sym, CheckerContext &C, const Stmt *S) const;
 
@@ -877,6 +883,9 @@ void MallocChecker::checkPostStmt(const CallExpr *CE, CheckerContext &C) const {
       State = ProcessZeroAllocation(C, CE, 0, State);
       State = ProcessZeroAllocation(C, CE, 1, State);
     } else if (FunI == II_free || FunI == II_g_free || FunI == II_kfree) {
+      if (suppressDeallocationsInSuspiciousContexts(CE, C))
+        return;
+
       State = FreeMemAux(C, CE, State, 0, false, ReleasedAllocatedMemory);
     } else if (FunI == II_strdup || FunI == II_win_strdup ||
                FunI == II_wcsdup || FunI == II_win_wcsdup) {
@@ -2532,6 +2541,35 @@ bool MallocChecker::isReleased(SymbolRef Sym, CheckerContext &C) const {
   return (RS && RS->isReleased());
 }
 
+bool MallocChecker::suppressDeallocationsInSuspiciousContexts(
+    const CallExpr *CE, CheckerContext &C) const {
+  if (CE->getNumArgs() == 0)
+    return false;
+
+  StringRef FunctionStr = "";
+  if (const auto *FD = dyn_cast<FunctionDecl>(C.getStackFrame()->getDecl()))
+    if (const Stmt *Body = FD->getBody())
+      if (Body->getBeginLoc().isValid())
+        FunctionStr =
+            Lexer::getSourceText(CharSourceRange::getTokenRange(
+                                     {FD->getBeginLoc(), Body->getBeginLoc()}),
+                                 C.getSourceManager(), C.getLangOpts());
+
+  // We do not model the Integer Set Library's retain-count based allocation.
+  if (!FunctionStr.contains("__isl_"))
+    return false;
+
+  ProgramStateRef State = C.getState();
+
+  for (const Expr *Arg : CE->arguments())
+    if (SymbolRef Sym = C.getSVal(Arg).getAsSymbol())
+      if (const RefState *RS = State->get<RegionState>(Sym))
+        State = State->set<RegionState>(Sym, RefState::getEscaped(RS));
+
+  C.addTransition(State);
+  return true;
+}
+
 bool MallocChecker::checkUseAfterFree(SymbolRef Sym, CheckerContext &C,
                                       const Stmt *S) const {
 
@@ -2833,7 +2871,6 @@ ProgramStateRef MallocChecker::checkPointerEscapeAux(ProgramStateRef State,
     if (const RefState *RS = State->get<RegionState>(sym)) {
       if ((RS->isAllocated() || RS->isAllocatedOfSizeZero()) &&
           CheckRefState(RS)) {
-        State = State->remove<RegionState>(sym);
         State = State->set<RegionState>(sym, RefState::getEscaped(RS));
       }
     }

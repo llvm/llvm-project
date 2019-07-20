@@ -7,13 +7,14 @@
 ; GFX6ERR: LLVM ERROR: Cannot select: intrinsic %llvm.amdgcn.ds.gws.sema.release.all
 
 ; GCN-LABEL: {{^}}gws_sema_release_all_offset0:
-; NOLOOP-DAG: s_mov_b32 m0, -1{{$}}
-; NOLOOP: ds_gws_sema_release_all offset:1 gds{{$}}
+; NOLOOP-DAG: s_mov_b32 m0, 0{{$}}
+; NOLOOP: ds_gws_sema_release_all gds{{$}}
 
+; LOOP: s_mov_b32 m0, 0{{$}}
 ; LOOP: [[LOOP:BB[0-9]+_[0-9]+]]:
 ; LOOP-NEXT: s_setreg_imm32_b32 hwreg(HW_REG_TRAPSTS, 8, 1), 0
 ; GFX8-NEXT: s_nop 0
-; LOOP-NEXT: ds_gws_sema_release_all offset:1 gds
+; LOOP-NEXT: ds_gws_sema_release_all gds
 ; LOOP-NEXT: s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; LOOP-NEXT: s_getreg_b32 [[GETREG:s[0-9]+]], hwreg(HW_REG_TRAPSTS, 8, 1)
 ; LOOP-NEXT: s_cmp_lg_u32 [[GETREG]], 0

@@ -64,7 +64,7 @@ void generateInstSeq(int64_t Val, bool IsRV64, InstSeq &Res) {
   // performed when the recursion returns.
 
   int64_t Lo12 = SignExtend64<12>(Val);
-  int64_t Hi52 = (Val + 0x800) >> 12;
+  int64_t Hi52 = ((uint64_t)Val + 0x800ull) >> 12;
   int ShiftAmount = 12 + findFirstSet((uint64_t)Hi52);
   Hi52 = SignExtend64(Hi52 >> (ShiftAmount - 12), 64 - ShiftAmount);
 

@@ -184,22 +184,21 @@ struct OutgoingValueHandler : public CallLowering::ValueHandler {
 
 } // end anonymous namespace
 
-void ARMCallLowering::splitToValueTypes(
-    const ArgInfo &OrigArg, SmallVectorImpl<ArgInfo> &SplitArgs,
-    MachineFunction &MF, const SplitArgTy &PerformArgSplit) const {
+void ARMCallLowering::splitToValueTypes(const ArgInfo &OrigArg,
+                                        SmallVectorImpl<ArgInfo> &SplitArgs,
+                                        MachineFunction &MF) const {
   const ARMTargetLowering &TLI = *getTLI<ARMTargetLowering>();
   LLVMContext &Ctx = OrigArg.Ty->getContext();
   const DataLayout &DL = MF.getDataLayout();
-  MachineRegisterInfo &MRI = MF.getRegInfo();
   const Function &F = MF.getFunction();
 
   SmallVector<EVT, 4> SplitVTs;
   ComputeValueVTs(TLI, DL, OrigArg.Ty, SplitVTs, nullptr, nullptr, 0);
+  assert(OrigArg.Regs.size() == SplitVTs.size() && "Regs / types mismatch");
 
   if (SplitVTs.size() == 1) {
     // Even if there is no splitting to do, we still want to replace the
     // original type (e.g. pointer type -> integer).
-    assert(OrigArg.Regs.size() == 1 && "Regs / types mismatch");
     auto Flags = OrigArg.Flags;
     unsigned OriginalAlignment = DL.getABITypeAlignment(OrigArg.Ty);
     Flags.setOrigAlign(OriginalAlignment);
@@ -208,34 +207,7 @@ void ARMCallLowering::splitToValueTypes(
     return;
   }
 
-  if (OrigArg.Regs.size() > 1) {
-    // Create one ArgInfo for each virtual register.
-    assert(OrigArg.Regs.size() == SplitVTs.size() && "Regs / types mismatch");
-    for (unsigned i = 0, e = SplitVTs.size(); i != e; ++i) {
-      EVT SplitVT = SplitVTs[i];
-      Type *SplitTy = SplitVT.getTypeForEVT(Ctx);
-      auto Flags = OrigArg.Flags;
-
-      unsigned OriginalAlignment = DL.getABITypeAlignment(SplitTy);
-      Flags.setOrigAlign(OriginalAlignment);
-
-      bool NeedsConsecutiveRegisters =
-          TLI.functionArgumentNeedsConsecutiveRegisters(
-              SplitTy, F.getCallingConv(), F.isVarArg());
-      if (NeedsConsecutiveRegisters) {
-        Flags.setInConsecutiveRegs();
-        if (i == e - 1)
-          Flags.setInConsecutiveRegsLast();
-      }
-
-      // FIXME: We also want to split SplitTy further.
-      Register PartReg = OrigArg.Regs[i];
-      SplitArgs.emplace_back(PartReg, SplitTy, Flags, OrigArg.IsFixed);
-    }
-
-    return;
-  }
-
+  // Create one ArgInfo for each virtual register.
   for (unsigned i = 0, e = SplitVTs.size(); i != e; ++i) {
     EVT SplitVT = SplitVTs[i];
     Type *SplitTy = SplitVT.getTypeForEVT(Ctx);
@@ -253,10 +225,9 @@ void ARMCallLowering::splitToValueTypes(
         Flags.setInConsecutiveRegsLast();
     }
 
-    Register PartReg =
-        MRI.createGenericVirtualRegister(getLLTForType(*SplitTy, DL));
-    SplitArgs.push_back(ArgInfo{PartReg, SplitTy, Flags, OrigArg.IsFixed});
-    PerformArgSplit(PartReg);
+    // FIXME: We also want to split SplitTy further.
+    Register PartReg = OrigArg.Regs[i];
+    SplitArgs.emplace_back(PartReg, SplitTy, Flags, OrigArg.IsFixed);
   }
 }
 
@@ -277,29 +248,17 @@ bool ARMCallLowering::lowerReturnVal(MachineIRBuilder &MIRBuilder,
   if (!isSupportedType(DL, TLI, Val->getType()))
     return false;
 
-  SmallVector<EVT, 4> SplitEVTs;
-  ComputeValueVTs(TLI, DL, Val->getType(), SplitEVTs);
-  assert(VRegs.size() == SplitEVTs.size() &&
-         "For each split Type there should be exactly one VReg.");
+  ArgInfo OrigRetInfo(VRegs, Val->getType());
+  setArgFlags(OrigRetInfo, AttributeList::ReturnIndex, DL, F);
 
-  SmallVector<ArgInfo, 4> SplitVTs;
-  LLVMContext &Ctx = Val->getType()->getContext();
-  for (unsigned i = 0; i < SplitEVTs.size(); ++i) {
-    ArgInfo CurArgInfo(VRegs[i], SplitEVTs[i].getTypeForEVT(Ctx));
-    setArgFlags(CurArgInfo, AttributeList::ReturnIndex, DL, F);
-
-    SmallVector<Register, 4> Regs;
-    splitToValueTypes(CurArgInfo, SplitVTs, MF,
-                      [&](Register Reg) { Regs.push_back(Reg); });
-    if (Regs.size() > 1)
-      MIRBuilder.buildUnmerge(Regs, VRegs[i]);
-  }
+  SmallVector<ArgInfo, 4> SplitRetInfos;
+  splitToValueTypes(OrigRetInfo, SplitRetInfos, MF);
 
   CCAssignFn *AssignFn =
       TLI.CCAssignFnForReturn(F.getCallingConv(), F.isVarArg());
 
   OutgoingValueHandler RetHandler(MIRBuilder, MF.getRegInfo(), Ret, AssignFn);
-  return handleAssignments(MIRBuilder, SplitVTs, RetHandler);
+  return handleAssignments(MIRBuilder, SplitRetInfos, RetHandler);
 }
 
 bool ARMCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
@@ -489,11 +448,9 @@ bool ARMCallLowering::lowerFormalArguments(
   unsigned Idx = 0;
   for (auto &Arg : F.args()) {
     ArgInfo OrigArgInfo(VRegs[Idx], Arg.getType());
-    setArgFlags(OrigArgInfo, Idx + AttributeList::FirstArgIndex, DL, F);
 
-    splitToValueTypes(OrigArgInfo, SplitArgInfos, MF, [&](Register Reg) {
-      llvm_unreachable("Args should already be split");
-    });
+    setArgFlags(OrigArgInfo, Idx + AttributeList::FirstArgIndex, DL, F);
+    splitToValueTypes(OrigArgInfo, SplitArgInfos, MF);
 
     Idx++;
   }
@@ -596,9 +553,7 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (Arg.Flags.isByVal())
       return false;
 
-    splitToValueTypes(Arg, ArgInfos, MF, [&](Register Reg) {
-      llvm_unreachable("Function args should already be split");
-    });
+    splitToValueTypes(Arg, ArgInfos, MF);
   }
 
   auto ArgAssignFn = TLI.CCAssignFnForCall(CallConv, IsVarArg);
@@ -614,10 +569,7 @@ bool ARMCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       return false;
 
     ArgInfos.clear();
-    splitToValueTypes(OrigRet, ArgInfos, MF, [&](Register Reg) {
-      llvm_unreachable("Call results should already be split");
-    });
-
+    splitToValueTypes(OrigRet, ArgInfos, MF);
     auto RetAssignFn = TLI.CCAssignFnForReturn(CallConv, IsVarArg);
     CallReturnHandler RetHandler(MIRBuilder, MRI, MIB, RetAssignFn);
     if (!handleAssignments(MIRBuilder, ArgInfos, RetHandler))

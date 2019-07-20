@@ -9,18 +9,18 @@ int [[gnu::unused]] attr_on_type;
 int *[[gnu::unused]] attr_on_ptr;
 // expected-warning@-1 {{attribute 'unused' ignored, because it cannot be applied to a type}}
 [[gnu::fastcall]] void pr17424_1();
-// expected-warning@-1 {{'fastcall' calling convention ignored for this target}}
+// expected-warning@-1 {{'fastcall' calling convention is not supported for this target}}
 [[gnu::fastcall]] [[gnu::stdcall]] void pr17424_2();
-// expected-warning@-1 {{'fastcall' calling convention ignored for this target}}
-// expected-warning@-2 {{'stdcall' calling convention ignored for this target}}
+// expected-warning@-1 {{'fastcall' calling convention is not supported for this target}}
+// expected-warning@-2 {{'stdcall' calling convention is not supported for this target}}
 [[gnu::fastcall]] __stdcall void pr17424_3();
-// expected-warning@-1 {{'fastcall' calling convention ignored for this target}}
-// expected-warning@-2 {{'__stdcall' calling convention ignored for this target}}
+// expected-warning@-1 {{'fastcall' calling convention is not supported for this target}}
+// expected-warning@-2 {{'__stdcall' calling convention is not supported for this target}}
 [[gnu::fastcall]] void pr17424_4() [[gnu::stdcall]];
-// expected-warning@-1 {{'fastcall' calling convention ignored for this target}}
-// expected-warning@-2 {{'stdcall' calling convention ignored for this target}}
+// expected-warning@-1 {{'fastcall' calling convention is not supported for this target}}
+// expected-warning@-2 {{'stdcall' calling convention is not supported for this target}}
 void pr17424_5 [[gnu::fastcall]]();
-// expected-warning@-1 {{'fastcall' calling convention ignored for this target}}
+// expected-warning@-1 {{'fastcall' calling convention is not supported for this target}}
 
 // Valid cases.
 

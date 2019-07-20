@@ -11,7 +11,12 @@ set(CMAKE_MODULE_PATH
   "${CMAKE_CURRENT_SOURCE_DIR}/cmake/modules"
   )
 
-include(LLDBStandalone)
+# If we are not building as part of LLVM, build LLDB as a standalone project,
+# using LLVM as an external library.
+if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+  include(LLDBStandalone)
+endif()
+
 include(LLDBConfig)
 include(AddLLDB)
 
@@ -33,6 +38,19 @@ endif()
 if (NOT LLDB_DISABLE_PYTHON)
   add_subdirectory(scripts)
 endif ()
+
+if(CMAKE_CROSSCOMPILING AND LLDB_BUILT_STANDALONE)
+  set(LLVM_USE_HOST_TOOLS ON)
+  include(CrossCompile)
+  if (NOT NATIVE_LLVM_DIR OR NOT NATIVE_Clang_DIR)
+    message(FATAL_ERROR
+      "Crosscompiling standalone requires the variables NATIVE_{CLANG,LLVM}_DIR
+      for building the native lldb-tblgen used during the build process.")
+  endif()
+  llvm_create_cross_target(lldb NATIVE "" Release
+    -DLLVM_DIR=${NATIVE_LLVM_DIR}
+    -DClang_DIR=${NATIVE_Clang_DIR})
+endif()
 
 add_subdirectory(utils/TableGen)
 add_subdirectory(source)
@@ -86,14 +104,6 @@ if(LLDB_INCLUDE_TESTS)
 
   if(TARGET lldb-server)
     list(APPEND LLDB_TEST_DEPS lldb-server)
-  endif()
-
-  if(TARGET debugserver)
-    list(APPEND LLDB_TEST_DEPS debugserver)
-  endif()
-
-  if(TARGET lldb-mi)
-    list(APPEND LLDB_TEST_DEPS lldb-mi)
   endif()
 
   if(TARGET lldb-vscode)
@@ -219,6 +229,6 @@ if (NOT LLDB_DISABLE_PYTHON)
     endif ()
 endif ()
 
-if(LLDB_BUILT_STANDALONE)
+if(LLDB_BUILT_STANDALONE AND NOT LLVM_ENABLE_IDE)
   llvm_distribution_add_targets()
 endif()

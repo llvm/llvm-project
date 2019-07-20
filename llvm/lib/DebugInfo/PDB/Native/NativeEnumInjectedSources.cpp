@@ -17,14 +17,15 @@ namespace pdb {
 
 namespace {
 
-Expected<std::string> readStreamData(BinaryStream &Stream) {
-  uint32_t Offset = 0, DataLength = Stream.getLength();
+Expected<std::string> readStreamData(BinaryStream &Stream, uint32_t Limit) {
+  uint32_t Offset = 0, DataLength = std::min(Limit, Stream.getLength());
   std::string Result;
   Result.reserve(DataLength);
   while (Offset < DataLength) {
     ArrayRef<uint8_t> Data;
     if (auto E = Stream.readLongestContiguousChunk(Offset, Data))
       return std::move(E);
+    Data = Data.take_front(DataLength - Offset);
     Offset += Data.size();
     Result += toStringRef(Data);
   }
@@ -62,9 +63,7 @@ public:
     return *VName;
   }
 
-  PDB_SourceCompression getCompression() const override {
-    return static_cast<PDB_SourceCompression>(Entry.Compression);
-  }
+  uint32_t getCompression() const override { return Entry.Compression; }
 
   std::string getCode() const override {
     // Get name of stream storing the data.
@@ -81,7 +80,7 @@ public:
       return "(failed to open data stream)";
     }
 
-    auto Data = readStreamData(**ExpectedFileStream);
+    auto Data = readStreamData(**ExpectedFileStream, Entry.FileSize);
     if (!Data) {
       consumeError(Data.takeError());
       return "(failed to read data)";

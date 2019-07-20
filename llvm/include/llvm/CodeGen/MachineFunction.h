@@ -322,7 +322,7 @@ class MachineFunction {
   std::vector<std::pair<MCSymbol *, MDNode *>> CodeViewAnnotations;
 
   /// CodeView heapallocsites.
-  std::vector<std::tuple<MCSymbol*, MCSymbol*, DIType*>>
+  std::vector<std::tuple<MCSymbol *, MCSymbol *, const DIType *>>
       CodeViewHeapAllocSites;
 
   bool CallsEHReturn = false;
@@ -935,10 +935,10 @@ public:
   }
 
   /// Record heapallocsites
-  void addCodeViewHeapAllocSite(MachineInstr *I, MDNode *MD);
+  void addCodeViewHeapAllocSite(MachineInstr *I, const MDNode *MD);
 
-  ArrayRef<std::tuple<MCSymbol*, MCSymbol*, DIType*>>
-      getCodeViewHeapAllocSites() const {
+  ArrayRef<std::tuple<MCSymbol *, MCSymbol *, const DIType *>>
+  getCodeViewHeapAllocSites() const {
     return CodeViewHeapAllocSites;
   }
 
