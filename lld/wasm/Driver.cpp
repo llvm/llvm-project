@@ -450,6 +450,16 @@ createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
   return sym;
 }
 
+static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable) {
+  llvm::wasm::WasmGlobal wasmGlobal;
+  wasmGlobal.Type = {WASM_TYPE_I32, isMutable};
+  wasmGlobal.InitExpr.Value.Int32 = 0;
+  wasmGlobal.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
+  wasmGlobal.SymbolName = name;
+  return symtab->addSyntheticGlobal(name, WASM_SYMBOL_VISIBILITY_HIDDEN,
+                                    make<InputGlobal>(wasmGlobal, nullptr));
+}
+
 // Create ABI-defined synthetic symbols
 static void createSyntheticSymbols() {
   static WasmSignature nullSignature = {{}, {}};
@@ -517,24 +527,9 @@ static void createSyntheticSymbols() {
   }
 
   if (config->sharedMemory && !config->shared) {
-    llvm::wasm::WasmGlobal tlsBaseGlobal;
-    tlsBaseGlobal.Type = {WASM_TYPE_I32, true};
-    tlsBaseGlobal.InitExpr.Value.Int32 = 0;
-    tlsBaseGlobal.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-    tlsBaseGlobal.SymbolName = "__tls_base";
-    WasmSym::tlsBase =
-        symtab->addSyntheticGlobal("__tls_base", WASM_SYMBOL_VISIBILITY_HIDDEN,
-                                   make<InputGlobal>(tlsBaseGlobal, nullptr));
-
-    llvm::wasm::WasmGlobal tlsSizeGlobal;
-    tlsSizeGlobal.Type = {WASM_TYPE_I32, false};
-    tlsSizeGlobal.InitExpr.Value.Int32 = 0;
-    tlsSizeGlobal.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
-    tlsSizeGlobal.SymbolName = "__tls_size";
-    WasmSym::tlsSize =
-        symtab->addSyntheticGlobal("__tls_size", WASM_SYMBOL_VISIBILITY_HIDDEN,
-                                   make<InputGlobal>(tlsSizeGlobal, nullptr));
-
+    WasmSym::tlsBase = createGlobalVariable("__tls_base", true);
+    WasmSym::tlsSize = createGlobalVariable("__tls_size", false);
+    WasmSym::tlsAlign = createGlobalVariable("__tls_align", false);
     WasmSym::initTLS = symtab->addSyntheticFunction(
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(i32ArgSignature, "__wasm_init_tls"));

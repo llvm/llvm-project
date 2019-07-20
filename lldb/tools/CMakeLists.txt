@@ -11,8 +11,8 @@ add_lldb_tool_subdirectory(lldb-instr)
 add_lldb_tool_subdirectory(lldb-vscode)
 
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
-  add_subdirectory(darwin-debug)
-  add_subdirectory(debugserver)
+  add_lldb_tool_subdirectory(darwin-debug)
+  add_lldb_tool_subdirectory(debugserver)
 endif()
 
 if (LLDB_CAN_USE_LLDB_SERVER)
