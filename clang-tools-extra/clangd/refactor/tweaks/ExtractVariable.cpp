@@ -219,7 +219,8 @@ bool ExtractVariable::prepare(const Selection &Inputs) {
   const ASTContext &Ctx = Inputs.AST.getASTContext();
   const SourceManager &SM = Inputs.AST.getSourceManager();
   const SelectionTree::Node *N = Inputs.ASTSelection.commonAncestor();
-  if (!N)
+  // we don't trigger on empty selections for now
+  if (!N || Inputs.SelectionBegin == Inputs.SelectionEnd)
     return false;
   Target = llvm::make_unique<ExtractionContext>(N, SM, Ctx);
   return Target->isExtractable();

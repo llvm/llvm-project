@@ -192,6 +192,7 @@ std::string shortenNamespace(const llvm::StringRef OriginalName,
 
 std::string printType(const QualType QT, const DeclContext & Context){
   PrintingPolicy PP(Context.getParentASTContext().getPrintingPolicy());
+  PP.SuppressUnwrittenScope = 1;
   PP.SuppressTagKeyword = 1;
   return shortenNamespace(
       QT.getAsString(PP),

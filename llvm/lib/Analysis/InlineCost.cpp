@@ -880,15 +880,6 @@ void CallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
   // basic block at the given callsite context. This is speculatively applied
   // and withdrawn if more than one basic block is seen.
   //
-  // Vector bonuses: We want to more aggressively inline vector-dense kernels
-  // and apply this bonus based on the percentage of vector instructions. A
-  // bonus is applied if the vector instructions exceed 50% and half that amount
-  // is applied if it exceeds 10%. Note that these bonuses are some what
-  // arbitrary and evolved over time by accident as much as because they are
-  // principled bonuses.
-  // FIXME: It would be nice to base the bonus values on something more
-  // scientific.
-  //
   // LstCallToStaticBonus: This large bonus is applied to ensure the inlining
   // of the last call to a static function as inlining such functions is
   // guaranteed to reduce code size.
@@ -896,7 +887,7 @@ void CallAnalyzer::updateThreshold(CallBase &Call, Function &Callee) {
   // These bonus percentages may be set to 0 based on properties of the caller
   // and the callsite.
   int SingleBBBonusPercent = 50;
-  int VectorBonusPercent = 150;
+  int VectorBonusPercent = TTI.getInlinerVectorBonusPercent();
   int LastCallToStaticBonus = InlineConstants::LastCallToStaticBonus;
 
   // Lambda to set all the above bonus and bonus percentages to 0.

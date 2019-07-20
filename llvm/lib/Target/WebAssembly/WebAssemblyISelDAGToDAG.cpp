@@ -179,9 +179,17 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
       report_fatal_error("cannot use thread-local storage without bulk memory",
                          false);
 
+    // Currently Emscripten does not support dynamic linking with threads.
+    // Therefore, if we have thread-local storage, only the local-exec model
+    // is possible.
+    // TODO: remove this and implement proper TLS models once Emscripten
+    // supports dynamic linking with threads.
     if (GA->getGlobal()->getThreadLocalMode() !=
-        GlobalValue::LocalExecTLSModel) {
-      report_fatal_error("only -ftls-model=local-exec is supported for now",
+            GlobalValue::LocalExecTLSModel &&
+        !Subtarget->getTargetTriple().isOSEmscripten()) {
+      report_fatal_error("only -ftls-model=local-exec is supported for now on "
+                         "non-Emscripten OSes: variable " +
+                             GA->getGlobal()->getName(),
                          false);
     }
 
@@ -214,6 +222,23 @@ void WebAssemblyDAGToDAGISel::Select(SDNode *Node) {
           WebAssembly::GLOBAL_GET_I32, DL, PtrVT,
           CurDAG->getTargetExternalSymbol("__tls_size", MVT::i32));
       ReplaceNode(Node, TLSSize);
+      return;
+    }
+    }
+    break;
+  }
+  case ISD::INTRINSIC_W_CHAIN: {
+    unsigned IntNo = cast<ConstantSDNode>(Node->getOperand(1))->getZExtValue();
+    switch (IntNo) {
+    case Intrinsic::wasm_tls_base: {
+      MVT PtrVT = TLI->getPointerTy(CurDAG->getDataLayout());
+      assert(PtrVT == MVT::i32 && "only wasm32 is supported for now");
+
+      MachineSDNode *TLSBase = CurDAG->getMachineNode(
+          WebAssembly::GLOBAL_GET_I32, DL, MVT::i32, MVT::Other,
+          CurDAG->getTargetExternalSymbol("__tls_base", PtrVT),
+          Node->getOperand(0));
+      ReplaceNode(Node, TLSBase);
       return;
     }
     }

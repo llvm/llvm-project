@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -filetype=obj -triple=aarch64-pc-linux %s -o %t.o
 // RUN: ld.lld --hash-style=sysv -shared %t.o -o %t.so
-// RUN: llvm-objdump -d %t.so | FileCheck %s
+// RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s
 // RUN: llvm-readobj -r %t.so | FileCheck --check-prefix=REL %s
 
 	.text
@@ -15,10 +15,10 @@
 // create target specific dynamic TLSDESC relocation where addend is
 // the symbol VMA in tls block.
 
-// CHECK:      10000: {{.*}}  adrp    x0, #65536
-// CHECK-NEXT: 10004: {{.*}}  ldr     x1, [x0, #144]
-// CHECK-NEXT: 10008: {{.*}}  add     x0, x0, #144
-// CHECK-NEXT: 1000c: {{.*}}  blr     x1
+// CHECK:      10000: adrp    x0, #65536
+// CHECK-NEXT: 10004: ldr     x1, [x0, #144]
+// CHECK-NEXT: 10008: add     x0, x0, #144
+// CHECK-NEXT: 1000c: blr     x1
 
 	adrp	x0, :tlsdesc:local1
 	ldr	x1, [x0, :tlsdesc_lo12:local1]
@@ -26,10 +26,10 @@
         .tlsdesccall a
         blr     x1
 
-// CHECK:      10010: {{.*}}  adrp    x0, #65536
-// CHECK-NEXT: 10014: {{.*}}  ldr     x1, [x0, #160]
-// CHECK-NEXT: 10018: {{.*}}  add     x0, x0, #160
-// CHECK-NEXT: 1001c: {{.*}}  blr     x1
+// CHECK:      10010: adrp    x0, #65536
+// CHECK-NEXT: 10014: ldr     x1, [x0, #160]
+// CHECK-NEXT: 10018: add     x0, x0, #160
+// CHECK-NEXT: 1001c: blr     x1
 
 	adrp	x0, :tlsdesc:local2
 	ldr	x1, [x0, :tlsdesc_lo12:local2]
@@ -37,10 +37,10 @@
         .tlsdesccall a
         blr     x1
 
-// CHECK:      10020: {{.*}}  adrp    x0, #65536
-// CHECK-NEXT: 10024: {{.*}}  ldr     x1, [x0, #176]
-// CHECK-NEXT: 10028: {{.*}}  add     x0, x0, #176
-// CHECK-NEXT: 1002c: {{.*}}  blr     x1
+// CHECK:      10020: adrp    x0, #65536
+// CHECK-NEXT: 10024: ldr     x1, [x0, #176]
+// CHECK-NEXT: 10028: add     x0, x0, #176
+// CHECK-NEXT: 1002c: blr     x1
 
         .section .tbss,"awT",@nobits
         .type   local1,@object

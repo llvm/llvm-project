@@ -77,7 +77,7 @@ struct S {
 
   // Structors can't be other than default in MS ABI environment
 #ifdef MSABI
-  __vectorcall S(); // expected-warning {{vectorcall calling convention ignored on constructor/destructor}}
+  __vectorcall S(); // expected-warning {{vectorcall calling convention is not supported on constructor/destructor}}
 #endif
 };
 

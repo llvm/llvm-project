@@ -2328,8 +2328,8 @@
 		AF33B4BD1C1FA441001B28D9 /* NetBSDSignals.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = NetBSDSignals.h; path = Utility/NetBSDSignals.h; sourceTree = "<group>"; };
 		94B6385E1B8FB7A2004FE1E4 /* ObjCLanguage.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; name = ObjCLanguage.cpp; path = Language/ObjC/ObjCLanguage.cpp; sourceTree = "<group>"; };
 		94B6385F1B8FB7A2004FE1E4 /* ObjCLanguage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ObjCLanguage.h; path = Language/ObjC/ObjCLanguage.h; sourceTree = "<group>"; };
-		4CB443F212499B5000C13DC2 /* ObjCLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ObjCLanguageRuntime.cpp; path = source/Target/ObjCLanguageRuntime.cpp; sourceTree = "<group>"; };
-		4CB443F612499B6E00C13DC2 /* ObjCLanguageRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ObjCLanguageRuntime.h; path = include/lldb/Target/ObjCLanguageRuntime.h; sourceTree = "<group>"; };
+		4CB443F212499B5000C13DC2 /* ObjCLanguageRuntime.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = ObjCLanguageRuntime.cpp; sourceTree = "<group>"; };
+		4CB443F612499B6E00C13DC2 /* ObjCLanguageRuntime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = ObjCLanguageRuntime.h; sourceTree = "<group>"; };
 		94B638621B8FB7F1004FE1E4 /* ObjCPlusPlusLanguage.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = ObjCPlusPlusLanguage.cpp; path = Language/ObjCPlusPlus/ObjCPlusPlusLanguage.cpp; sourceTree = "<group>"; };
 		94B638611B8FB7E9004FE1E4 /* ObjCPlusPlusLanguage.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = ObjCPlusPlusLanguage.h; path = Language/ObjCPlusPlus/ObjCPlusPlusLanguage.h; sourceTree = "<group>"; };
 		26BC7C5D10F1B6E900F91463 /* ObjectContainer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ObjectContainer.h; path = include/lldb/Symbol/ObjectContainer.h; sourceTree = "<group>"; };
@@ -2427,7 +2427,9 @@
 		26BC7E8610F1B85900F91463 /* Options.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = Options.cpp; path = source/Interpreter/Options.cpp; sourceTree = "<group>"; };
 		26BC7D6D10F1B77400F91463 /* Options.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = Options.h; path = include/lldb/Interpreter/Options.h; sourceTree = "<group>"; };
 		DD5F951A21ADE5BD00B8265A /* Options.inc */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.pascal; name = Options.inc; path = build/Debug/include/Options.inc; sourceTree = "<group>"; };
+		4C62E60922E10858002037B7 /* Options.td */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = Options.td; path = source/Commands/Options.td; sourceTree = "<group>"; };
 		DD5F951B21ADE5F000B8265A /* Options.td */ = {isa = PBXFileReference; lastKnownFileType = text; name = Options.td; path = tools/driver/Options.td; sourceTree = "<group>"; };
+		4C62E60822E10858002037B7 /* OptionsBase.td */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = OptionsBase.td; path = source/Commands/OptionsBase.td; sourceTree = "<group>"; };
 		4C639EC321FA684700A7B957 /* OptionsWithRawTest.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = OptionsWithRawTest.cpp; sourceTree = "<group>"; };
 		4C562CC21CC07DDD00C52EAC /* PDBASTParser.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = PDBASTParser.cpp; path = PDB/PDBASTParser.cpp; sourceTree = "<group>"; };
 		4C562CC31CC07DDD00C52EAC /* PDBASTParser.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = PDBASTParser.h; path = PDB/PDBASTParser.h; sourceTree = "<group>"; };
@@ -5406,6 +5408,8 @@
 		26BC7D0D10F1B71D00F91463 /* Commands */ = {
 			isa = PBXGroup;
 			children = (
+				4C62E60922E10858002037B7 /* Options.td */,
+				4C62E60822E10858002037B7 /* OptionsBase.td */,
 				4CA9637A11B6E99A00780E28 /* CommandObjectApropos.h */,
 				4CA9637911B6E99A00780E28 /* CommandObjectApropos.cpp */,
 				26BC7D1410F1B76300F91463 /* CommandObjectBreakpoint.h */,
@@ -5693,8 +5697,6 @@
 				2360092C193FB21500189DB1 /* MemoryRegionInfo.h */,
 				2654A6811E54D5A200DA1013 /* ModuleCache.h */,
 				2654A67F1E54D59400DA1013 /* ModuleCache.cpp */,
-				4CB443F612499B6E00C13DC2 /* ObjCLanguageRuntime.h */,
-				4CB443F212499B5000C13DC2 /* ObjCLanguageRuntime.cpp */,
 				495BBACF119A0DE700418BEA /* PathMappingList.h */,
 				495BBACB119A0DBE00418BEA /* PathMappingList.cpp */,
 				264A43BB1320B3B4005B4096 /* Platform.h */,
@@ -6282,6 +6284,8 @@
 		4CCA644013B40B82003BDF98 /* ObjC */ = {
 			isa = PBXGroup;
 			children = (
+				4CB443F612499B6E00C13DC2 /* ObjCLanguageRuntime.h */,
+				4CB443F212499B5000C13DC2 /* ObjCLanguageRuntime.cpp */,
 				4CCA644113B40B82003BDF98 /* AppleObjCRuntime */,
 			);
 			path = ObjC;
@@ -7258,6 +7262,7 @@
 			buildConfigurationList = 2689FFD813353D7A00698AC0 /* Build configuration list for PBXNativeTarget "lldb-core" */;
 			buildPhases = (
 				261EECA21337D399001D193C /* Build llvm and clang */,
+				4C62E60A22E108E0002037B7 /* Run Tablegen */,
 				2689FFC613353D7A00698AC0 /* Sources */,
 				2689FFC713353D7A00698AC0 /* Frameworks */,
 				2689FFC813353D7A00698AC0 /* Headers */,
@@ -7611,6 +7616,26 @@
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
 			shellScript = "if [ \"${CONFIGURATION}\" != BuildAndIntegration ]\nthen\n    if [ \"${DEBUGSERVER_USE_FROM_SYSTEM}\" == \"\" ]\n    then\n        if [ \"${DEBUGSERVER_DISABLE_CODESIGN}\" == \"\" ]\n        then\n            codesign -f -s lldb_codesign --entitlements ${SRCROOT}/resources/debugserver-macosx-entitlements.plist \"${TARGET_BUILD_DIR}/${TARGET_NAME}\"\n        fi\n    fi\nfi\n";
+		};
+		4C62E60A22E108E0002037B7 /* Run Tablegen */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/source/Commands/Options.td",
+			);
+			name = "Run Tablegen";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				$BUILT_PRODUCTS_DIR/include/CommandOptions.inc,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "mkdir -p $BUILT_PRODUCTS_DIR/include\n$LLVM_BUILD_DIR/x86_64/bin/llvm-tblgen -I$LLVM_SOURCE_DIR/include -I$SRCROOT/source/Commands -I$SRCROOT/include/lldb/Interpreter -d $SRCROOT/include/lldb/Interpreter/Options.h -gen-opt-parser-defs $SRCROOT/source/Commands/Options.td -o $BUILT_PRODUCTS_DIR/include/CommandOptions.inc\n";
 		};
 		940B04E21A89871F0045D5F7 /* ShellScript */ = {
 			isa = PBXShellScriptBuildPhase;

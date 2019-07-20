@@ -403,18 +403,17 @@ class MVE_ScalarShiftDRegImm<string iname, bits<2> op5_4, bit op16,
   let Inst{3-0} = 0b1111;
 }
 
-class MVE_ScalarShiftDRegReg<string iname, bit op5, bit op16,
-                             list<dag> pattern=[]>
+class MVE_ScalarShiftDRegRegBase<string iname, dag iops, string asm,
+                                 bit op5, bit op16, list<dag> pattern=[]>
   : MVE_ScalarShiftDoubleReg<
-     iname, (ins tGPREven:$RdaLo_src, tGPROdd:$RdaHi_src, rGPR:$Rm),
-     "$RdaLo, $RdaHi, $Rm", "@earlyclobber $RdaHi,@earlyclobber $RdaLo,"
-                            "$RdaLo = $RdaLo_src,$RdaHi = $RdaHi_src",
+     iname, iops, asm, "@earlyclobber $RdaHi,@earlyclobber $RdaLo,"
+                       "$RdaLo = $RdaLo_src,$RdaHi = $RdaHi_src",
      pattern> {
   bits<4> Rm;
 
   let Inst{16} = op16;
   let Inst{15-12} = Rm{3-0};
-  let Inst{7-6} = 0b00;
+  let Inst{6} = 0b0;
   let Inst{5} = op5;
   let Inst{4} = 0b0;
   let Inst{3-0} = 0b1101;
@@ -427,13 +426,30 @@ class MVE_ScalarShiftDRegReg<string iname, bit op5, bit op16,
   let DecoderMethod = "DecodeMVEOverlappingLongShift";
 }
 
-def MVE_ASRLr   : MVE_ScalarShiftDRegReg<"asrl",    0b1,  0b0, [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
+class MVE_ScalarShiftDRegReg<string iname, bit op5, list<dag> pattern=[]>
+  : MVE_ScalarShiftDRegRegBase<
+     iname, (ins tGPREven:$RdaLo_src, tGPROdd:$RdaHi_src, rGPR:$Rm),
+     "$RdaLo, $RdaHi, $Rm", op5, 0b0, pattern> {
+
+  let Inst{7} = 0b0;
+}
+
+class MVE_ScalarShiftDRegRegWithSat<string iname, bit op5, list<dag> pattern=[]>
+  : MVE_ScalarShiftDRegRegBase<
+     iname, (ins tGPREven:$RdaLo_src, tGPROdd:$RdaHi_src, rGPR:$Rm, saturateop:$sat),
+     "$RdaLo, $RdaHi, $sat, $Rm", op5, 0b1, pattern> {
+  bit sat;
+
+  let Inst{7} = sat;
+}
+
+def MVE_ASRLr   : MVE_ScalarShiftDRegReg<"asrl",    0b1,  [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
                                         (ARMasrl tGPREven:$RdaLo_src,
                                         tGPROdd:$RdaHi_src, rGPR:$Rm))]>;
 def MVE_ASRLi   : MVE_ScalarShiftDRegImm<"asrl",    0b10, ?, [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
                                         (ARMasrl tGPREven:$RdaLo_src,
                                         tGPROdd:$RdaHi_src, (i32 imm:$imm)))]>;
-def MVE_LSLLr   : MVE_ScalarShiftDRegReg<"lsll",    0b0,  0b0, [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
+def MVE_LSLLr   : MVE_ScalarShiftDRegReg<"lsll",    0b0,  [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
                                         (ARMlsll tGPREven:$RdaLo_src,
                                         tGPROdd:$RdaHi_src, rGPR:$Rm))]>;
 def MVE_LSLLi   : MVE_ScalarShiftDRegImm<"lsll",    0b00, ?, [(set tGPREven:$RdaLo, tGPROdd:$RdaHi,
@@ -443,11 +459,11 @@ def MVE_LSRL    : MVE_ScalarShiftDRegImm<"lsrl",    0b01, ?, [(set tGPREven:$Rda
                                         (ARMlsrl tGPREven:$RdaLo_src,
                                         tGPROdd:$RdaHi_src, (i32 imm:$imm)))]>;
 
-def MVE_SQRSHRL : MVE_ScalarShiftDRegReg<"sqrshrl", 0b1,  0b1>;
+def MVE_SQRSHRL : MVE_ScalarShiftDRegRegWithSat<"sqrshrl", 0b1>;
 def MVE_SQSHLL  : MVE_ScalarShiftDRegImm<"sqshll",  0b11, 0b1>;
 def MVE_SRSHRL  : MVE_ScalarShiftDRegImm<"srshrl",  0b10, 0b1>;
 
-def MVE_UQRSHLL : MVE_ScalarShiftDRegReg<"uqrshll", 0b0,  0b1>;
+def MVE_UQRSHLL : MVE_ScalarShiftDRegRegWithSat<"uqrshll", 0b0>;
 def MVE_UQSHLL  : MVE_ScalarShiftDRegImm<"uqshll",  0b00, 0b1>;
 def MVE_URSHRL  : MVE_ScalarShiftDRegImm<"urshrl",  0b01, 0b1>;
 

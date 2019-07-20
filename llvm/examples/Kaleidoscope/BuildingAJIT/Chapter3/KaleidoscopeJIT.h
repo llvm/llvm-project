@@ -64,28 +64,30 @@ private:
 public:
   KaleidoscopeJIT()
       : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-        ObjectLayer(ES,
+        ObjectLayer(AcknowledgeORCv1Deprecation, ES,
                     [this](VModuleKey K) {
                       return LegacyRTDyldObjectLinkingLayer::Resources{
                           std::make_shared<SectionMemoryManager>(),
                           Resolvers[K]};
                     }),
-        CompileLayer(ObjectLayer, SimpleCompiler(*TM)),
-        OptimizeLayer(CompileLayer,
+        CompileLayer(AcknowledgeORCv1Deprecation, ObjectLayer,
+                     SimpleCompiler(*TM)),
+        OptimizeLayer(AcknowledgeORCv1Deprecation, CompileLayer,
                       [this](std::unique_ptr<Module> M) {
                         return optimizeModule(std::move(M));
                       }),
         CompileCallbackManager(cantFail(orc::createLocalCompileCallbackManager(
             TM->getTargetTriple(), ES, 0))),
-        CODLayer(ES, OptimizeLayer,
-                 [&](orc::VModuleKey K) { return Resolvers[K]; },
-                 [&](orc::VModuleKey K, std::shared_ptr<SymbolResolver> R) {
-                   Resolvers[K] = std::move(R);
-                 },
-                 [](Function &F) { return std::set<Function *>({&F}); },
-                 *CompileCallbackManager,
-                 orc::createLocalIndirectStubsManagerBuilder(
-                     TM->getTargetTriple())) {
+        CODLayer(
+            AcknowledgeORCv1Deprecation, ES, OptimizeLayer,
+            [&](orc::VModuleKey K) { return Resolvers[K]; },
+            [&](orc::VModuleKey K, std::shared_ptr<SymbolResolver> R) {
+              Resolvers[K] = std::move(R);
+            },
+            [](Function &F) { return std::set<Function *>({&F}); },
+            *CompileCallbackManager,
+            orc::createLocalIndirectStubsManagerBuilder(
+                TM->getTargetTriple())) {
     llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
   }
 

@@ -1869,6 +1869,9 @@ class TestBase(Base):
         # differ in the debug info, which is not being hashed.
         self.runCmd('settings set symbols.enable-external-lookup false')
 
+        # Disable color.
+        self.runCmd("settings set use-color false")
+
         # Make sure that a sanitizer LLDB's environment doesn't get passed on.
         if 'DYLD_LIBRARY_PATH' in os.environ:
             self.runCmd('settings set target.env-vars DYLD_LIBRARY_PATH=')

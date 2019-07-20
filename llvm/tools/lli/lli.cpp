@@ -83,18 +83,15 @@ namespace {
                                  cl::desc("Force interpretation: disable JIT"),
                                  cl::init(false));
 
-  cl::opt<JITKind> UseJITKind("jit-kind",
-                              cl::desc("Choose underlying JIT kind."),
-                              cl::init(JITKind::MCJIT),
-                              cl::values(
-                                clEnumValN(JITKind::MCJIT, "mcjit",
-                                           "MCJIT"),
-                                clEnumValN(JITKind::OrcMCJITReplacement,
-                                           "orc-mcjit",
-                                           "Orc-based MCJIT replacement"),
-                                clEnumValN(JITKind::OrcLazy,
-                                           "orc-lazy",
-                                           "Orc-based lazy JIT.")));
+  cl::opt<JITKind> UseJITKind(
+      "jit-kind", cl::desc("Choose underlying JIT kind."),
+      cl::init(JITKind::MCJIT),
+      cl::values(clEnumValN(JITKind::MCJIT, "mcjit", "MCJIT"),
+                 clEnumValN(JITKind::OrcMCJITReplacement, "orc-mcjit",
+                            "Orc-based MCJIT replacement "
+                            "(deprecated)"),
+                 clEnumValN(JITKind::OrcLazy, "orc-lazy",
+                            "Orc-based lazy JIT.")));
 
   cl::opt<unsigned>
   LazyJITCompileThreads("compile-threads",
@@ -419,7 +416,8 @@ int main(int argc, char **argv, char * const *envp) {
   builder.setEngineKind(ForceInterpreter
                         ? EngineKind::Interpreter
                         : EngineKind::JIT);
-  builder.setUseOrcMCJITReplacement(UseJITKind == JITKind::OrcMCJITReplacement);
+  builder.setUseOrcMCJITReplacement(AcknowledgeORCv1Deprecation,
+                                    UseJITKind == JITKind::OrcMCJITReplacement);
 
   // If we are supposed to override the target triple, do so now.
   if (!TargetTriple.empty())
@@ -665,6 +663,7 @@ int main(int argc, char **argv, char * const *envp) {
     // Forward MCJIT's symbol resolution calls to the remote.
     static_cast<ForwardingMemoryManager *>(RTDyldMM)->setResolver(
         orc::createLambdaResolver(
+            AcknowledgeORCv1Deprecation,
             [](const std::string &Name) { return nullptr; },
             [&](const std::string &Name) {
               if (auto Addr = ExitOnErr(R->getSymbolAddress(Name)))

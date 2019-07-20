@@ -2724,6 +2724,16 @@ def complexrotateopodd : Operand<i32> {
   let PrintMethod = "printComplexRotationOp<180, 90>";
 }
 
+def MveSaturateOperand : AsmOperandClass {
+  let PredicateMethod = "isMveSaturateOp";
+  let DiagnosticString = "saturate operand must be 48 or 64";
+  let Name = "MveSaturate";
+}
+def saturateop : Operand<i32> {
+  let ParserMatchClass = MveSaturateOperand;
+  let PrintMethod = "printMveSaturateOp";
+}
+
 // Data type suffix token aliases. Implements Table A7-3 in the ARM ARM.
 def : TokenAlias<".s8", ".i8">;
 def : TokenAlias<".u8", ".i8">;

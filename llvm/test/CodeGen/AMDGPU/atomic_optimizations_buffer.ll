@@ -47,7 +47,6 @@ entry:
 ; GFX8MORE: v_mov_b32_dpp v[[wave_shr1:[0-9]+]], v{{[0-9]+}} wave_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v[[wave_shr1]] row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v[[wave_shr1]] row_shr:2 row_mask:0xf bank_mask:0xf
-; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v[[wave_shr1]] row_shr:3 row_mask:0xf bank_mask:0xf
 ; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_shr:4 row_mask:0xf bank_mask:0xe
 ; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_shr:8 row_mask:0xf bank_mask:0xc
 ; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_bcast:15 row_mask:0xa bank_mask:0xf
@@ -115,7 +114,6 @@ entry:
 ; GFX8MORE: v_mov_b32_dpp v[[wave_shr1:[0-9]+]], v{{[0-9]+}} wave_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v[[wave_shr1]] row_shr:1 row_mask:0xf bank_mask:0xf
 ; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v[[wave_shr1]] row_shr:2 row_mask:0xf bank_mask:0xf
-; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v[[wave_shr1]] row_shr:3 row_mask:0xf bank_mask:0xf
 ; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_shr:4 row_mask:0xf bank_mask:0xe
 ; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_shr:8 row_mask:0xf bank_mask:0xc
 ; GFX8MORE: v_mov_b32_dpp v{{[0-9]+}}, v{{[0-9]+}} row_bcast:15 row_mask:0xa bank_mask:0xf

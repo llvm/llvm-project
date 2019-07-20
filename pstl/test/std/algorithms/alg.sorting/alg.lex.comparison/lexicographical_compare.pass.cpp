@@ -156,7 +156,7 @@ struct test_non_const
     }
 };
 
-int32_t
+int
 main()
 {
     test<uint16_t, float64_t>(std::less<float64_t>());

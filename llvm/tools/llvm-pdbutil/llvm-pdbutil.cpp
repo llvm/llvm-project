@@ -947,9 +947,6 @@ static void dumpInjectedSources(LinePrinter &Printer, IPDBSession &Session) {
     std::string VFName = stringOr(IS->getVirtualFileName(), "<null>");
     uint32_t CRC = IS->getCrc32();
 
-    std::string CompressionStr;
-    llvm::raw_string_ostream Stream(CompressionStr);
-    Stream << IS->getCompression();
     WithColor(Printer, PDB_ColorItem::Path).get() << File;
     Printer << " (";
     WithColor(Printer, PDB_ColorItem::LiteralValue).get() << Size;
@@ -968,7 +965,9 @@ static void dumpInjectedSources(LinePrinter &Printer, IPDBSession &Session) {
     Printer << ", ";
     WithColor(Printer, PDB_ColorItem::Keyword).get() << "compression";
     Printer << "=";
-    WithColor(Printer, PDB_ColorItem::LiteralValue).get() << Stream.str();
+    dumpPDBSourceCompression(
+        WithColor(Printer, PDB_ColorItem::LiteralValue).get(),
+        IS->getCompression());
 
     if (!opts::pretty::ShowInjectedSourceContent)
       continue;
@@ -977,7 +976,12 @@ static void dumpInjectedSources(LinePrinter &Printer, IPDBSession &Session) {
     int Indent = Printer.getIndentLevel();
     Printer.Unindent(Indent);
 
-    Printer.printLine(IS->getCode());
+    if (IS->getCompression() == PDB_SourceCompression::None)
+      Printer.printLine(IS->getCode());
+    else
+      Printer.formatBinary("Compressed data",
+                           arrayRefFromStringRef(IS->getCode()),
+                           /*StartOffset=*/0);
 
     // Re-indent back to the original level.
     Printer.Indent(Indent);

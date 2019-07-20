@@ -68,7 +68,7 @@ public:
   bool HandleTopLevelDecl(DeclGroupRef DG) override {
     for (Decl *D : DG) {
       auto &SM = D->getASTContext().getSourceManager();
-      if (!SM.isWrittenInMainFile(SM.getExpansionLoc(D->getLocation())))
+      if (!isInsideMainFile(D->getLocation(), SM))
         continue;
 
       // ObjCMethodDecl are not actually top-level decls.
@@ -355,8 +355,7 @@ ParsedAST::build(std::unique_ptr<CompilerInvocation> CI,
           // those might take us into a preamble file as well.
           bool IsInsideMainFile =
               Info.hasSourceManager() &&
-              Info.getSourceManager().isWrittenInMainFile(
-                  Info.getSourceManager().getFileLoc(Info.getLocation()));
+              isInsideMainFile(Info.getLocation(), Info.getSourceManager());
           if (IsInsideMainFile && tidy::ShouldSuppressDiagnostic(
                                       DiagLevel, Info, *CTContext,
                                       /* CheckMacroExpansion = */ false)) {

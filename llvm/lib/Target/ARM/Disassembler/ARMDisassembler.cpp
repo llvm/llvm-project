@@ -6503,6 +6503,13 @@ static DecodeStatus DecodeMVEOverlappingLongShift(
   if (!Check(S, DecoderGPRRegisterClass(Inst, Rm, Address, Decoder)))
     return MCDisassembler::Fail;
 
+  if (Inst.getOpcode() == ARM::MVE_SQRSHRL ||
+      Inst.getOpcode() == ARM::MVE_UQRSHLL) {
+    unsigned Saturate = fieldFromInstruction(Insn, 7, 1);
+    // Saturate, the bit position for saturation
+    Inst.addOperand(MCOperand::createImm(Saturate));
+  }
+
   return S;
 }
 

@@ -204,6 +204,7 @@ def do_swig_rebuild(options, dependency_file, config_build_dir, settings):
             "-c++",
             "-shadow",
             "-python",
+            "-features", "autodoc",
             "-threads",
             "-I" + os.path.normpath(os.path.join(options.src_root, "include")),
             "-I" + os.path.curdir,

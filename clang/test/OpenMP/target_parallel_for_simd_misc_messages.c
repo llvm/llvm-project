@@ -163,8 +163,8 @@ void test_collapse() {
   for (i = 0; i < 16; ++i)
     ;
 // expected-note@+1 {{defined as firstprivate}}
-#pragma omp target parallel for simd collapse(2) firstprivate(i)
-  for (i = 0; i < 16; ++i)
+#pragma omp target parallel for simd collapse(2) firstprivate(i) // expected-note {{defined as firstprivate}}
+  for (i = 0; i < 16; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp target parallel for simd' directive may not be firstprivate, predetermined as lastprivate}}
 // expected-note@+1 {{variable with automatic storage duration is predetermined as private; perhaps you forget to enclose 'omp for' directive into a parallel or another task region?}}
     for (int j = 0; j < 16; ++j)
 // expected-error@+2 2 {{reduction variable must be shared}}

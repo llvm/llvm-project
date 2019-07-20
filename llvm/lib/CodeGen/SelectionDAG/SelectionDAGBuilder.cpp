@@ -6805,6 +6805,19 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     // MachineFunction in SelectionDAGISel::PrepareEHLandingPad. We can safely
     // delete it now.
     return;
+
+  case Intrinsic::aarch64_settag:
+  case Intrinsic::aarch64_settag_zero: {
+    const SelectionDAGTargetInfo &TSI = DAG.getSelectionDAGInfo();
+    bool ZeroMemory = Intrinsic == Intrinsic::aarch64_settag_zero;
+    SDValue Val = TSI.EmitTargetCodeForSetTag(
+        DAG, getCurSDLoc(), getRoot(), getValue(I.getArgOperand(0)),
+        getValue(I.getArgOperand(1)), MachinePointerInfo(I.getArgOperand(0)),
+        ZeroMemory);
+    DAG.setRoot(Val);
+    setValue(&I, Val);
+    return;
+  }
   }
 }
 

@@ -101,47 +101,14 @@ template <class BlockT, class LoopT, typename PredicateT>
 void getUniqueExitBlocksHelper(const LoopT *L,
                                SmallVectorImpl<BlockT *> &ExitBlocks,
                                PredicateT Pred) {
-  typedef GraphTraits<BlockT *> BlockTraits;
-  typedef GraphTraits<Inverse<BlockT *>> InvBlockTraits;
-
-  assert(L->hasDedicatedExits() &&
-         "getUniqueExitBlocks assumes the loop has canonical form exits!");
-
-  SmallVector<BlockT *, 32> SwitchExitBlocks;
+  assert(!L->isInvalid() && "Loop not in a valid state!");
+  SmallPtrSet<BlockT *, 32> Visited;
   auto Filtered = make_filter_range(L->blocks(), Pred);
-  for (BlockT *Block : Filtered) {
-    SwitchExitBlocks.clear();
-    for (BlockT *Successor : children<BlockT *>(Block)) {
-      // If block is inside the loop then it is not an exit block.
-      if (L->contains(Successor))
-        continue;
-
-      BlockT *FirstPred = *InvBlockTraits::child_begin(Successor);
-
-      // If current basic block is this exit block's first predecessor then only
-      // insert exit block in to the output ExitBlocks vector. This ensures that
-      // same exit block is not inserted twice into ExitBlocks vector.
-      if (Block != FirstPred)
-        continue;
-
-      // If a terminator has more then two successors, for example SwitchInst,
-      // then it is possible that there are multiple edges from current block to
-      // one exit block.
-      if (std::distance(BlockTraits::child_begin(Block),
-                        BlockTraits::child_end(Block)) <= 2) {
-        ExitBlocks.push_back(Successor);
-        continue;
-      }
-
-      // In case of multiple edges from current block to exit block, collect
-      // only one edge in ExitBlocks. Use switchExitBlocks to keep track of
-      // duplicate edges.
-      if (!is_contained(SwitchExitBlocks, Successor)) {
-        SwitchExitBlocks.push_back(Successor);
-        ExitBlocks.push_back(Successor);
-      }
-    }
-  }
+  for (BlockT *BB : Filtered)
+    for (BlockT *Successor : children<BlockT *>(BB))
+      if (!L->contains(Successor))
+        if (Visited.insert(Successor).second)
+          ExitBlocks.push_back(Successor);
 }
 
 template <class BlockT, class LoopT>

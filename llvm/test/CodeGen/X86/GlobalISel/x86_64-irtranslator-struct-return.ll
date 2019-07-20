@@ -19,12 +19,7 @@ define float @test_return_f1(float %f.coerce) {
   ; ALL:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.f
   ; ALL:   G_STORE [[TRUNC]](s32), [[FRAME_INDEX1]](p0) :: (store 4 into %ir.coerce.dive2)
-  ; ALL:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
-  ; ALL:   $rdi = COPY [[FRAME_INDEX]](p0)
-  ; ALL:   $rsi = COPY [[FRAME_INDEX1]](p0)
-  ; ALL:   $rdx = COPY [[C]](s64)
-  ; ALL:   CALL64pcrel32 &memcpy, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx
-  ; ALL:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64) :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %ir.coerce.dive13)
   ; ALL:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[LOAD]](s32)
   ; ALL:   $xmm0 = COPY [[ANYEXT]](s128)
@@ -54,12 +49,7 @@ define double @test_return_d1(double %d.coerce) {
   ; ALL:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.d
   ; ALL:   G_STORE [[TRUNC]](s64), [[FRAME_INDEX1]](p0) :: (store 8 into %ir.coerce.dive2)
-  ; ALL:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
-  ; ALL:   $rdi = COPY [[FRAME_INDEX]](p0)
-  ; ALL:   $rsi = COPY [[FRAME_INDEX1]](p0)
-  ; ALL:   $rdx = COPY [[C]](s64)
-  ; ALL:   CALL64pcrel32 &memcpy, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx
-  ; ALL:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64) :: (store 1 into %ir.0, align 8), (load 1 from %ir.1, align 8)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load 8 from %ir.coerce.dive13)
   ; ALL:   [[ANYEXT:%[0-9]+]]:_(s128) = G_ANYEXT [[LOAD]](s64)
   ; ALL:   $xmm0 = COPY [[ANYEXT]](s128)
@@ -92,12 +82,7 @@ define { double, double } @test_return_d2(double %d.coerce0, double %d.coerce1) 
   ; ALL:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; ALL:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[FRAME_INDEX1]], [[C1]](s64)
   ; ALL:   G_STORE [[TRUNC1]](s64), [[GEP]](p0) :: (store 8 into %ir.2)
-  ; ALL:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
-  ; ALL:   $rdi = COPY [[FRAME_INDEX]](p0)
-  ; ALL:   $rsi = COPY [[FRAME_INDEX1]](p0)
-  ; ALL:   $rdx = COPY [[C]](s64)
-  ; ALL:   CALL64pcrel32 &memcpy, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx
-  ; ALL:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64) :: (store 1 into %ir.3, align 8), (load 1 from %ir.4, align 8)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load 8 from %ir.5)
   ; ALL:   [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[FRAME_INDEX]], [[C1]](s64)
   ; ALL:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP1]](p0) :: (load 8 from %ir.5 + 8)
@@ -131,12 +116,7 @@ define i32 @test_return_i1(i32 %i.coerce) {
   ; ALL:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.i
   ; ALL:   G_STORE [[COPY]](s32), [[FRAME_INDEX1]](p0) :: (store 4 into %ir.coerce.dive2)
-  ; ALL:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
-  ; ALL:   $rdi = COPY [[FRAME_INDEX]](p0)
-  ; ALL:   $rsi = COPY [[FRAME_INDEX1]](p0)
-  ; ALL:   $rdx = COPY [[C]](s64)
-  ; ALL:   CALL64pcrel32 &memcpy, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx
-  ; ALL:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64) :: (store 1 into %ir.0, align 4), (load 1 from %ir.1, align 4)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[FRAME_INDEX]](p0) :: (load 4 from %ir.coerce.dive13)
   ; ALL:   $eax = COPY [[LOAD]](s32)
   ; ALL:   RET 0, implicit $eax
@@ -162,12 +142,7 @@ define i64 @test_return_i2(i64 %i.coerce) {
   ; ALL:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; ALL:   [[FRAME_INDEX1:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.1.i
   ; ALL:   G_STORE [[COPY]](s64), [[FRAME_INDEX1]](p0) :: (store 8 into %ir.0, align 4)
-  ; ALL:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
-  ; ALL:   $rdi = COPY [[FRAME_INDEX]](p0)
-  ; ALL:   $rsi = COPY [[FRAME_INDEX1]](p0)
-  ; ALL:   $rdx = COPY [[C]](s64)
-  ; ALL:   CALL64pcrel32 &memcpy, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx
-  ; ALL:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64) :: (store 1 into %ir.1, align 4), (load 1 from %ir.2, align 4)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load 8 from %ir.3, align 4)
   ; ALL:   $rax = COPY [[LOAD]](s64)
   ; ALL:   RET 0, implicit $rax
@@ -199,24 +174,9 @@ define { i64, i32 } @test_return_i3(i64 %i.coerce0, i32 %i.coerce1) {
   ; ALL:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; ALL:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[FRAME_INDEX2]], [[C1]](s64)
   ; ALL:   G_STORE [[COPY1]](s32), [[GEP]](p0) :: (store 4 into %ir.1)
-  ; ALL:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
-  ; ALL:   $rdi = COPY [[FRAME_INDEX1]](p0)
-  ; ALL:   $rsi = COPY [[FRAME_INDEX2]](p0)
-  ; ALL:   $rdx = COPY [[C]](s64)
-  ; ALL:   CALL64pcrel32 &memcpy, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx
-  ; ALL:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
-  ; ALL:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
-  ; ALL:   $rdi = COPY [[FRAME_INDEX]](p0)
-  ; ALL:   $rsi = COPY [[FRAME_INDEX1]](p0)
-  ; ALL:   $rdx = COPY [[C]](s64)
-  ; ALL:   CALL64pcrel32 &memcpy, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx
-  ; ALL:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
-  ; ALL:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
-  ; ALL:   $rdi = COPY [[FRAME_INDEX3]](p0)
-  ; ALL:   $rsi = COPY [[FRAME_INDEX]](p0)
-  ; ALL:   $rdx = COPY [[C]](s64)
-  ; ALL:   CALL64pcrel32 &memcpy, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx
-  ; ALL:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX1]](p0), [[FRAME_INDEX2]](p0), [[C]](s64) :: (store 1 into %ir.2, align 4), (load 1 from %ir.3, align 4)
+  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64) :: (store 1 into %ir.4, align 4), (load 1 from %ir.5, align 4)
+  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX3]](p0), [[FRAME_INDEX]](p0), [[C]](s64) :: (store 1 into %ir.6, align 8), (load 1 from %ir.7, align 4)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX3]](p0) :: (load 8 from %ir.tmp)
   ; ALL:   [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[FRAME_INDEX3]], [[C1]](s64)
   ; ALL:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p0) :: (load 4 from %ir.tmp + 8, align 8)
@@ -258,12 +218,7 @@ define { i64, i64 } @test_return_i4(i64 %i.coerce0, i64 %i.coerce1) {
   ; ALL:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; ALL:   [[GEP:%[0-9]+]]:_(p0) = G_GEP [[FRAME_INDEX1]], [[C1]](s64)
   ; ALL:   G_STORE [[COPY1]](s64), [[GEP]](p0) :: (store 8 into %ir.2, align 4)
-  ; ALL:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
-  ; ALL:   $rdi = COPY [[FRAME_INDEX]](p0)
-  ; ALL:   $rsi = COPY [[FRAME_INDEX1]](p0)
-  ; ALL:   $rdx = COPY [[C]](s64)
-  ; ALL:   CALL64pcrel32 &memcpy, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $rsi, implicit $rdx
-  ; ALL:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; ALL:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.memcpy), [[FRAME_INDEX]](p0), [[FRAME_INDEX1]](p0), [[C]](s64) :: (store 1 into %ir.3, align 4), (load 1 from %ir.4, align 4)
   ; ALL:   [[LOAD:%[0-9]+]]:_(s64) = G_LOAD [[FRAME_INDEX]](p0) :: (load 8 from %ir.5, align 4)
   ; ALL:   [[GEP1:%[0-9]+]]:_(p0) = G_GEP [[FRAME_INDEX]], [[C1]](s64)
   ; ALL:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP1]](p0) :: (load 8 from %ir.5 + 8, align 4)

@@ -100,7 +100,7 @@ struct test_non_const
     }
 };
 
-int32_t
+int
 main()
 {
     test<int32_t>(8 * sizeof(int32_t));

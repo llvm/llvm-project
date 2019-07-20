@@ -9,6 +9,7 @@
 #include "NamespaceCommentCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/StringExtras.h"
 
@@ -181,7 +182,13 @@ void NamespaceCommentCheck::check(const MatchFinder::MatchResult &Result) {
           ? "anonymous namespace"
           : ("namespace '" + NestedNamespaceName.str() + "'");
 
-  diag(AfterRBrace, Message)
+  // Place diagnostic at an old comment, or closing brace if we did not have it.
+  SourceLocation DiagLoc =
+      OldCommentRange.getBegin() != OldCommentRange.getEnd()
+          ? OldCommentRange.getBegin()
+          : ND->getRBraceLoc();
+
+  diag(DiagLoc, Message)
       << NamespaceName
       << FixItHint::CreateReplacement(
              CharSourceRange::getCharRange(OldCommentRange),

@@ -24,30 +24,14 @@ test_mm_malloc() {
 // CHECK: store i64 [[REG1]], i64* [[REG4:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-NEXT: store i64 [[REG2]], i64* [[REG5:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-NEXT: store i64 16, i64* [[REG6:[0-9a-zA-Z_%.]+]], align 8
-// CHECK-NEXT: store i64 16, i64* [[REG7:[0-9a-zA-Z_%.]+]], align 8
 // CHECK-NEXT: [[REG8:[0-9a-zA-Z_%.]+]] = load i64, i64* [[REG5]], align 8
-// CHECK-NEXT: [[REG9:[0-9a-zA-Z_%.]+]] = load i64, i64* [[REG7]], align 8
-// CHECK-NEXT: [[REG10:[0-9a-zA-Z_%.]+]] = icmp eq i64 [[REG8]], [[REG9]]
-// CHECK-NEXT: br i1 [[REG10]], label %[[REG11:[0-9a-zA-Z_%.]+]], label %[[REG12:[0-9a-zA-Z_%.]+]]
-// CHECK: [[REG11]]:
-// CHECK-NEXT: [[REG13:[0-9a-zA-Z_%.]+]] = load i64, i64* [[REG5]], align 8
-// CHECK-NEXT: [[REG14:[0-9a-zA-Z_%.]+]] = load i64, i64* [[REG6]], align 8
-// CHECK-NEXT: [[REG15:[0-9a-zA-Z_%.]+]] = icmp eq i64 [[REG13]], [[REG14]]
-// CHECK-NEXT: br i1 [[REG15]], label %[[REG16:[0-9a-zA-Z_%.]+]], label %[[REG12:[0-9a-zA-Z_%.]+]]
-// CHECK: [[REG16]]:
-// CHECK-NEXT: [[REG17:[0-9a-zA-Z_%.]+]] = load i64, i64* [[REG4]], align 8
-// CHECK-NEXT: [[REG18:[0-9a-zA-Z_%.]+]] = call noalias i8* @malloc(i64 [[REG17]])
-// CHECK-NEXT: store i8* [[REG18]], i8** [[REG3]], align 8
-// CHECK-NEXT: br label %[[REG19:[0-9a-zA-Z_%.]+]]
-// CHECK: [[REG12]]:
-// CHECK-NEXT: [[REG20:[0-9a-zA-Z_%.]+]] = load i64, i64* [[REG5]], align 8
-// CHECK-NEXT: [[REG21:[0-9a-zA-Z_%.]+]] = load i64, i64* [[REG6]], align 8
-// CHECK-NEXT: [[REG22:[0-9a-zA-Z_%.]+]] = icmp ult i64 [[REG20]], [[REG21]]
-// CHECK-NEXT: br i1 [[REG22]], label %[[REG23:[0-9a-zA-Z_%.]+]], label %[[REG24:[0-9a-zA-Z_%.]+]]
+// CHECK-NEXT: [[REG9:[0-9a-zA-Z_%.]+]] = load i64, i64* [[REG6]], align 8
+// CHECK-NEXT: [[REG10:[0-9a-zA-Z_%.]+]] = icmp ult i64 [[REG8]], [[REG9]]
+// CHECK-NEXT: br i1 [[REG10]], label %[[REG23:[0-9a-zA-Z_%.]+]], label %[[REG24:[0-9a-zA-Z_%.]+]]
 // CHECK: [[REG23]]:
 // CHECK-NEXT: [[REG25:[0-9a-zA-Z_%.]+]] = load i64, i64* [[REG6]], align 8
 // CHECK-NEXT: store i64 [[REG25]], i64* [[REG5]], align 8
-// CHECK-NEXT: br label %[[REG12:[0-9a-zA-Z_%.]+]]4
+// CHECK-NEXT: br label %[[REG24:[0-9a-zA-Z_%.]+]]
 // CHECK: [[REG24]]:
 // CHECK-NEXT: [[REG26:[0-9a-zA-Z_%.]+]] = load i64, i64* [[REG5]], align 8
 // CHECK-NEXT: [[REG27:[0-9a-zA-Z_%.]+]] = load i64, i64* [[REG4]], align 8

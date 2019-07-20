@@ -620,10 +620,10 @@ MachineSDNode *AMDGPUDAGToDAGISel::buildSMovImm64(SDLoc &DL, uint64_t Imm,
                                                   EVT VT) const {
   SDNode *Lo = CurDAG->getMachineNode(
       AMDGPU::S_MOV_B32, DL, MVT::i32,
-      CurDAG->getConstant(Imm & 0xFFFFFFFF, DL, MVT::i32));
+      CurDAG->getTargetConstant(Imm & 0xFFFFFFFF, DL, MVT::i32));
   SDNode *Hi =
       CurDAG->getMachineNode(AMDGPU::S_MOV_B32, DL, MVT::i32,
-                             CurDAG->getConstant(Imm >> 32, DL, MVT::i32));
+                             CurDAG->getTargetConstant(Imm >> 32, DL, MVT::i32));
   const SDValue Ops[] = {
       CurDAG->getTargetConstant(AMDGPU::SReg_64RegClassID, DL, MVT::i32),
       SDValue(Lo, 0), CurDAG->getTargetConstant(AMDGPU::sub0, DL, MVT::i32),

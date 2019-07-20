@@ -706,3 +706,16 @@ define void @mul512(<64 x i8>* %a, <64 x i8>* %b, <64 x i8>* %c) "min-legal-vect
   store <64 x i8> %f, <64 x i8>* %c
   ret void
 }
+
+; This threw an assertion at one point.
+define <4 x i32> @mload_v4i32(<4 x i32> %trigger, <4 x i32>* %addr, <4 x i32> %dst) "min-legal-vector-width"="256" {
+; CHECK-LABEL: mload_v4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vptestnmd %xmm0, %xmm0, %k1
+; CHECK-NEXT:    vpblendmd (%rdi), %xmm1, %xmm0 {%k1}
+; CHECK-NEXT:    retq
+  %mask = icmp eq <4 x i32> %trigger, zeroinitializer
+  %res = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %addr, i32 4, <4 x i1> %mask, <4 x i32> %dst)
+  ret <4 x i32> %res
+}
+declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32, <4 x i1>, <4 x i32>)

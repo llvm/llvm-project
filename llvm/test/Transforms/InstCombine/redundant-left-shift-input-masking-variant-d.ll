@@ -23,7 +23,7 @@ define i32 @t0_basic(i32 %x, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
 ; CHECK-NEXT:    call void @use32(i32 [[T2]])
-; CHECK-NEXT:    [[T4:%.*]] = shl i32 [[T2]], [[NBITS]]
+; CHECK-NEXT:    [[T4:%.*]] = shl i32 [[X]], [[NBITS]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %t0 = shl i32 -1, %nbits
@@ -46,7 +46,7 @@ define i32 @t1_bigger_shift(i32 %x, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
 ; CHECK-NEXT:    call void @use32(i32 [[T2]])
 ; CHECK-NEXT:    call void @use32(i32 [[T3]])
-; CHECK-NEXT:    [[T4:%.*]] = shl i32 [[T2]], [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = shl i32 [[X]], [[T3]]
 ; CHECK-NEXT:    ret i32 [[T4]]
 ;
   %t0 = shl i32 -1, %nbits
@@ -75,7 +75,7 @@ define <3 x i32> @t2_vec_splat(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T1]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T2]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T3]])
-; CHECK-NEXT:    [[T4:%.*]] = shl <3 x i32> [[T2]], [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = shl <3 x i32> [[X]], [[T3]]
 ; CHECK-NEXT:    ret <3 x i32> [[T4]]
 ;
   %t0 = shl <3 x i32> <i32 -1, i32 -1, i32 -1>, %nbits
@@ -100,7 +100,7 @@ define <3 x i32> @t3_vec_nonsplat(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T1]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T2]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T3]])
-; CHECK-NEXT:    [[T4:%.*]] = shl <3 x i32> [[T2]], [[T3]]
+; CHECK-NEXT:    [[T4:%.*]] = shl <3 x i32> [[X]], [[T3]]
 ; CHECK-NEXT:    ret <3 x i32> [[T4]]
 ;
   %t0 = shl <3 x i32> <i32 -1, i32 -1, i32 -1>, %nbits
@@ -124,7 +124,7 @@ define <3 x i32> @t4_vec_undef(<3 x i32> %x, <3 x i32> %nbits) {
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T1]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[T2]])
 ; CHECK-NEXT:    call void @use3xi32(<3 x i32> [[NBITS]])
-; CHECK-NEXT:    [[T4:%.*]] = shl <3 x i32> [[T2]], [[NBITS]]
+; CHECK-NEXT:    [[T4:%.*]] = shl <3 x i32> [[X]], [[NBITS]]
 ; CHECK-NEXT:    ret <3 x i32> [[T4]]
 ;
   %t0 = shl <3 x i32> <i32 -1, i32 undef, i32 -1>, %nbits
@@ -152,7 +152,7 @@ define i32 @t5_commutativity0(i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
 ; CHECK-NEXT:    call void @use32(i32 [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[T2]], [[NBITS]]
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[X]], [[NBITS]]
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %x = call i32 @gen32()
@@ -178,7 +178,7 @@ define i32 @t6_commutativity1(i32 %nbits0, i32 %nbits1) {
 ; CHECK-NEXT:    call void @use32(i32 [[T2]])
 ; CHECK-NEXT:    call void @use32(i32 [[T3]])
 ; CHECK-NEXT:    call void @use32(i32 [[T4]])
-; CHECK-NEXT:    [[T5:%.*]] = shl i32 [[T4]], [[NBITS0]]
+; CHECK-NEXT:    [[T5:%.*]] = shl i32 [[T3]], [[NBITS0]]
 ; CHECK-NEXT:    ret i32 [[T5]]
 ;
   %t0 = shl i32 -1, %nbits0
@@ -233,7 +233,7 @@ define i32 @t8_nuw(i32 %x, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
 ; CHECK-NEXT:    call void @use32(i32 [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = shl nuw i32 [[T2]], [[NBITS]]
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[X]], [[NBITS]]
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = shl i32 -1, %nbits
@@ -254,7 +254,7 @@ define i32 @t9_nsw(i32 %x, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
 ; CHECK-NEXT:    call void @use32(i32 [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = shl nsw i32 [[T2]], [[NBITS]]
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[X]], [[NBITS]]
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = shl i32 -1, %nbits
@@ -275,7 +275,7 @@ define i32 @t10_nuw_nsw(i32 %x, i32 %nbits) {
 ; CHECK-NEXT:    call void @use32(i32 [[T0]])
 ; CHECK-NEXT:    call void @use32(i32 [[T1]])
 ; CHECK-NEXT:    call void @use32(i32 [[T2]])
-; CHECK-NEXT:    [[T3:%.*]] = shl nuw nsw i32 [[T2]], [[NBITS]]
+; CHECK-NEXT:    [[T3:%.*]] = shl i32 [[X]], [[NBITS]]
 ; CHECK-NEXT:    ret i32 [[T3]]
 ;
   %t0 = shl i32 -1, %nbits
@@ -288,10 +288,40 @@ define i32 @t10_nuw_nsw(i32 %x, i32 %nbits) {
   ret i32 %t3
 }
 
+; Special test
+
+declare void @llvm.assume(i1 %cond)
+
+; We can't simplify (%shiftnbits-%masknbits) but we have an assumption.
+define i32 @t11_assume_uge(i32 %x, i32 %masknbits, i32 %shiftnbits) {
+; CHECK-LABEL: @t11_assume_uge(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp uge i32 [[SHIFTNBITS:%.*]], [[MASKNBITS:%.*]]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
+; CHECK-NEXT:    [[T0:%.*]] = shl i32 -1, [[MASKNBITS]]
+; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[T0]], [[MASKNBITS]]
+; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], [[X:%.*]]
+; CHECK-NEXT:    call void @use32(i32 [[T0]])
+; CHECK-NEXT:    call void @use32(i32 [[T1]])
+; CHECK-NEXT:    call void @use32(i32 [[T2]])
+; CHECK-NEXT:    [[T4:%.*]] = shl i32 [[T2]], [[SHIFTNBITS]]
+; CHECK-NEXT:    ret i32 [[T4]]
+;
+  %cmp = icmp uge i32 %shiftnbits, %masknbits
+  call void @llvm.assume(i1 %cmp)
+  %t0 = shl i32 -1, %masknbits
+  %t1 = lshr i32 %t0, %masknbits
+  %t2 = and i32 %t1, %x
+  call void @use32(i32 %t0)
+  call void @use32(i32 %t1)
+  call void @use32(i32 %t2)
+  %t4 = shl i32 %t2, %shiftnbits
+  ret i32 %t4
+}
+
 ; Negative tests
 
-define i32 @n11_different_shamts0(i32 %x, i32 %nbits0, i32 %nbits1) {
-; CHECK-LABEL: @n11_different_shamts0(
+define i32 @n12_different_shamts0(i32 %x, i32 %nbits0, i32 %nbits1) {
+; CHECK-LABEL: @n12_different_shamts0(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], [[NBITS0:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[T0]], [[NBITS1:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], [[X]]
@@ -311,8 +341,8 @@ define i32 @n11_different_shamts0(i32 %x, i32 %nbits0, i32 %nbits1) {
   ret i32 %t3
 }
 
-define i32 @n12_different_shamts1(i32 %x, i32 %nbits0, i32 %nbits1) {
-; CHECK-LABEL: @n12_different_shamts1(
+define i32 @n13_different_shamts1(i32 %x, i32 %nbits0, i32 %nbits1) {
+; CHECK-LABEL: @n13_different_shamts1(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[X:%.*]], [[NBITS0:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[T0]], [[NBITS1:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], [[X]]
@@ -332,8 +362,8 @@ define i32 @n12_different_shamts1(i32 %x, i32 %nbits0, i32 %nbits1) {
   ret i32 %t3
 }
 
-define i32 @n13_shamt_is_smaller(i32 %x, i32 %nbits) {
-; CHECK-LABEL: @n13_shamt_is_smaller(
+define i32 @n14_shamt_is_smaller(i32 %x, i32 %nbits) {
+; CHECK-LABEL: @n14_shamt_is_smaller(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 -1, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = lshr i32 [[T0]], [[NBITS]]
 ; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], [[X:%.*]]

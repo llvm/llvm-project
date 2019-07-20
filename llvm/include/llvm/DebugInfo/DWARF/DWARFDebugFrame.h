@@ -69,7 +69,7 @@ public:
   /// starting at *Offset and ending at EndOffset. *Offset is updated
   /// to EndOffset upon successful parsing, or indicates the offset
   /// where a problem occurred in case an error is returned.
-  Error parse(DataExtractor Data, uint32_t *Offset, uint32_t EndOffset);
+  Error parse(DWARFDataExtractor Data, uint32_t *Offset, uint32_t EndOffset);
 
   void dump(raw_ostream &OS, const MCRegisterInfo *MRI, bool IsEH,
             unsigned IndentLevel = 1) const;

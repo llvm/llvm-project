@@ -63,18 +63,6 @@ void TargetMachine::resetTargetOptions(const Function &F) const {
   RESET_OPTION(NoInfsFPMath, "no-infs-fp-math");
   RESET_OPTION(NoNaNsFPMath, "no-nans-fp-math");
   RESET_OPTION(NoSignedZerosFPMath, "no-signed-zeros-fp-math");
-  RESET_OPTION(NoTrappingFPMath, "no-trapping-math");
-
-  StringRef Denormal =
-    F.getFnAttribute("denormal-fp-math").getValueAsString();
-  if (Denormal == "ieee")
-    Options.FPDenormalMode = FPDenormal::IEEE;
-  else if (Denormal == "preserve-sign")
-    Options.FPDenormalMode = FPDenormal::PreserveSign;
-  else if (Denormal == "positive-zero")
-    Options.FPDenormalMode = FPDenormal::PositiveZero;
-  else
-    Options.FPDenormalMode = DefaultOptions.FPDenormalMode;
 }
 
 /// Returns the code generation relocation model. The choices are static, PIC,

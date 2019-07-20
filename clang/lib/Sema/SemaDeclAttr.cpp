@@ -4669,7 +4669,7 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     break;
 
   case TargetInfo::CCCR_Warning: {
-    Diag(Attrs.getLoc(), diag::warn_cconv_ignored)
+    Diag(Attrs.getLoc(), diag::warn_cconv_unsupported)
         << Attrs << (int)CallingConventionIgnoredReason::ForThisTarget;
 
     // This convention is not valid for the target. Use the default function or

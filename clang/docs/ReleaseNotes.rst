@@ -1,6 +1,6 @@
-=======================================
-Clang 9.0.0 (In-Progress) Release Notes
-=======================================
+========================================
+Clang 10.0.0 (In-Progress) Release Notes
+========================================
 
 .. contents::
    :local:
@@ -10,7 +10,7 @@ Written by the `LLVM Team <https://llvm.org/>`_
 
 .. warning::
 
-   These are in-progress notes for the upcoming Clang 9 release.
+   These are in-progress notes for the upcoming Clang 10 release.
    Release notes for previous releases can be found on
    `the Download Page <https://releases.llvm.org/download.html>`_.
 
@@ -18,7 +18,7 @@ Introduction
 ============
 
 This document contains the release notes for the Clang C/C++/Objective-C
-frontend, part of the LLVM Compiler Infrastructure, release 9.0.0. Here we
+frontend, part of the LLVM Compiler Infrastructure, release 10.0.0. Here we
 describe the status of Clang in some detail, including major
 improvements from the previous release and new feature work. For the
 general LLVM release notes, see `the LLVM
@@ -35,8 +35,8 @@ main Clang web page, this document applies to the *next* release, not
 the current one. To see the release notes for a specific release, please
 see the `releases page <https://llvm.org/releases/>`_.
 
-What's New in Clang 9.0.0?
-==========================
+What's New in Clang 10.0.0?
+===========================
 
 Some of the major new features and improvements to Clang are listed
 here. Generic improvements to Clang as a whole or to its underlying
@@ -55,12 +55,6 @@ Improvements to Clang's diagnostics
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
-
-- The ``__VERSION__`` macro has been updated.
-  Previously this macro contained the string '4.2.1 Compatible' to achieve
-  compatibility with GCC 4.2.1, but that should no longer be necessary.
-  However, to retrieve Clang's version, please favor the one of the macro
-  defined in :ref:`clang namespaced version macros <languageextensions-builtin-macros>`.
 
 - ...
 
@@ -81,8 +75,6 @@ future versions of Clang.
 Modified Compiler Flags
 -----------------------
 
-- ``clang -dumpversion`` now returns the version of Clang itself.
-
 - ...
 
 New Pragmas in Clang
@@ -98,18 +90,10 @@ Attribute Changes in Clang
 Windows Support
 ---------------
 
-- clang-cl now treats non-existent files as possible typos for flags,
-  ``clang-cl /diagnostic:caret /c test.cc`` for example now produces
-  ``clang: error: no such file or directory: '/diagnostic:caret'; did you mean '/diagnostics:caret'?``
-
-
+- ...
 
 C Language Changes in Clang
 ---------------------------
-
-- ``__FILE_NAME__`` macro has been added as a Clang specific extension supported
-  in all C-family languages. This macro is similar to ``__FILE__`` except it
-  will always provide the last path component when possible.
 
 - ...
 
@@ -131,14 +115,7 @@ C++1z Feature Support
 Objective-C Language Changes in Clang
 -------------------------------------
 
-- Fixed encoding of ObjC pointer types that are pointers to typedefs.
-
-.. code-block:: objc
-
-      typedef NSArray<NSObject *> MyArray;
-
-      // clang used to encode this as "^{NSArray=#}" instead of "@".
-      const char *s0 = @encode(MyArray *);
+- ...
 
 OpenCL C Language Changes in Clang
 ----------------------------------
@@ -153,24 +130,24 @@ ABI Changes in Clang
 OpenMP Support in Clang
 -----------------------
 
-- Added emission of the debug information for NVPTX target devices.
+- ...
 
 CUDA Support in Clang
 ---------------------
 
-- Added emission of the debug information for the device code.
+- ...
 
 Internal API Changes
 --------------------
 
-These are major API changes that have happened since the 8.0.0 release of
+These are major API changes that have happened since the 9.0.0 release of
 Clang. If upgrading an external codebase that uses Clang as a library,
 this section should help get you past the largest hurdles of upgrading.
 
 Build System Changes
 --------------------
 
-These are major changes to the build system that have happened since the 8.0.0
+These are major changes to the build system that have happened since the 9.0.0
 release of Clang. Users of the build system should adjust accordingly.
 
 - In 8.0.0 and below, the install-clang-headers target would install clang's
@@ -190,30 +167,18 @@ AST Matchers
 clang-format
 ------------
 
-- Add language support for clang-formatting C# files.
-- Add Microsoft coding style to encapsulate default C# formatting style.
-- Added new option `PPDIS_BeforeHash` (in configuration: `BeforeHash`) to
-  `IndentPPDirectives` which indents preprocessor directives before the hash.
-- Added new option `AlignConsecutiveMacros` to align the C/C++ preprocessor
-  macros of consecutive lines.
+- ...
 
 libclang
 --------
 
-- When `CINDEXTEST_INCLUDE_ATTRIBUTED_TYPES` is not provided when making a
-  CXType, the equivalent type of the AttributedType is returned instead of the
-  modified type if the user does not want attribute sugar. The equivalent type
-  represents the minimally-desugared type which the AttributedType is
-  canonically equivalent to.
+- ...
 
 
 Static Analyzer
 ---------------
 
-- The UninitializedObject checker is now considered as stable.
-  (moved from the 'alpha.cplusplus' to the 'optin.cplusplus' package)
-
-...
+- ...
 
 .. _release-notes-ubsan:
 

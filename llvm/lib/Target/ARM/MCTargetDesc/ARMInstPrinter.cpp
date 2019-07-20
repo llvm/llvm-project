@@ -1676,3 +1676,11 @@ void ARMInstPrinter::printExpandedImmOperand(const MCInst *MI, unsigned OpNum,
   O.write_hex(Val);
   O << markup(">");
 }
+
+void ARMInstPrinter::printMveSaturateOp(const MCInst *MI, unsigned OpNum,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  uint32_t Val = MI->getOperand(OpNum).getImm();
+  assert(Val <= 1 && "Invalid MVE saturate operand");
+  O << "#" << (Val == 1 ? 48 : 64);
+}

@@ -149,6 +149,7 @@ public:
     case MCFragment::FT_CompactEncodedInst:
     case MCFragment::FT_Data:
     case MCFragment::FT_Dwarf:
+    case MCFragment::FT_DwarfFrame:
       return true;
     }
   }
@@ -232,7 +233,8 @@ public:
   static bool classof(const MCFragment *F) {
     MCFragment::FragmentType Kind = F->getKind();
     return Kind == MCFragment::FT_Relaxable || Kind == MCFragment::FT_Data ||
-           Kind == MCFragment::FT_CVDefRange || Kind == MCFragment::FT_Dwarf;;
+           Kind == MCFragment::FT_CVDefRange || Kind == MCFragment::FT_Dwarf ||
+           Kind == MCFragment::FT_DwarfFrame;
   }
 };
 
@@ -543,26 +545,20 @@ public:
   }
 };
 
-class MCDwarfCallFrameFragment : public MCFragment {
+class MCDwarfCallFrameFragment : public MCEncodedFragmentWithFixups<8, 1> {
   /// AddrDelta - The expression for the difference of the two symbols that
   /// make up the address delta between two .cfi_* dwarf directives.
   const MCExpr *AddrDelta;
 
-  SmallString<8> Contents;
-
 public:
   MCDwarfCallFrameFragment(const MCExpr &AddrDelta, MCSection *Sec = nullptr)
-      : MCFragment(FT_DwarfFrame, false, Sec), AddrDelta(&AddrDelta) {
-    Contents.push_back(0);
-  }
+      : MCEncodedFragmentWithFixups<8, 1>(FT_DwarfFrame, false, Sec),
+        AddrDelta(&AddrDelta) {}
 
   /// \name Accessors
   /// @{
 
   const MCExpr &getAddrDelta() const { return *AddrDelta; }
-
-  SmallString<8> &getContents() { return Contents; }
-  const SmallString<8> &getContents() const { return Contents; }
 
   /// @}
 

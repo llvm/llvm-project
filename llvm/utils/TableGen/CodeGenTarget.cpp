@@ -557,6 +557,7 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
   isCommutative = false;
   canThrow = false;
   isNoReturn = false;
+  isWillReturn = false;
   isCold = false;
   isNoDuplicate = false;
   isConvergent = false;
@@ -721,6 +722,8 @@ CodeGenIntrinsic::CodeGenIntrinsic(Record *R) {
       isConvergent = true;
     else if (Property->getName() == "IntrNoReturn")
       isNoReturn = true;
+    else if (Property->getName() == "IntrWillReturn")
+      isWillReturn = true;
     else if (Property->getName() == "IntrCold")
       isCold = true;
     else if (Property->getName() == "IntrSpeculatable")

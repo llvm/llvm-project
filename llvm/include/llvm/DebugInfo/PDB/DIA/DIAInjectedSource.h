@@ -25,7 +25,7 @@ public:
   std::string getFileName() const override;
   std::string getObjectFileName() const override;
   std::string getVirtualFileName() const override;
-  PDB_SourceCompression getCompression() const override;
+  uint32_t getCompression() const override;
   std::string getCode() const override;
 
 private:

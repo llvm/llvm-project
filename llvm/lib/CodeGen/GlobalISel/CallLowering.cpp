@@ -163,10 +163,19 @@ bool CallLowering::handleAssignments(MachineIRBuilder &MIRBuilder,
                                      ValueHandler &Handler) const {
   MachineFunction &MF = MIRBuilder.getMF();
   const Function &F = MF.getFunction();
-  const DataLayout &DL = F.getParent()->getDataLayout();
-
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(F.getCallingConv(), F.isVarArg(), MF, ArgLocs, F.getContext());
+  return handleAssignments(CCInfo, ArgLocs, MIRBuilder, Args, Handler);
+}
+
+bool CallLowering::handleAssignments(CCState &CCInfo,
+                                     SmallVectorImpl<CCValAssign> &ArgLocs,
+                                     MachineIRBuilder &MIRBuilder,
+                                     ArrayRef<ArgInfo> Args,
+                                     ValueHandler &Handler) const {
+  MachineFunction &MF = MIRBuilder.getMF();
+  const Function &F = MF.getFunction();
+  const DataLayout &DL = F.getParent()->getDataLayout();
 
   unsigned NumArgs = Args.size();
   for (unsigned i = 0; i != NumArgs; ++i) {

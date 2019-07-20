@@ -207,5 +207,14 @@ void RTDyldObjectLinkingLayer::onObjEmit(
     NotifyEmitted(K, std::move(ObjBuffer));
 }
 
+LegacyRTDyldObjectLinkingLayer::LegacyRTDyldObjectLinkingLayer(
+    ExecutionSession &ES, ResourcesGetter GetResources,
+    NotifyLoadedFtor NotifyLoaded, NotifyFinalizedFtor NotifyFinalized,
+    NotifyFreedFtor NotifyFreed)
+    : ES(ES), GetResources(std::move(GetResources)),
+      NotifyLoaded(std::move(NotifyLoaded)),
+      NotifyFinalized(std::move(NotifyFinalized)),
+      NotifyFreed(std::move(NotifyFreed)), ProcessAllSections(false) {}
+
 } // End namespace orc.
 } // End namespace llvm.

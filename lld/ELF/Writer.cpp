@@ -2223,25 +2223,6 @@ template <class ELFT> void Writer<ELFT>::fixSectionAlignments() {
     for (const PhdrEntry *p : part.phdrs)
       if (p->p_type == PT_LOAD && p->firstSec)
         pageAlign(p->firstSec);
-
-    for (const PhdrEntry *p : part.phdrs) {
-      if (p->p_type != PT_GNU_RELRO)
-        continue;
-
-      if (p->firstSec)
-        pageAlign(p->firstSec);
-
-      // Find the first section after PT_GNU_RELRO. If it is in a PT_LOAD we
-      // have to align it to a page.
-      auto end = outputSections.end();
-      auto i = llvm::find(outputSections, p->lastSec);
-      if (i == end || (i + 1) == end)
-        continue;
-
-      OutputSection *cmd = (*(i + 1));
-      if (needsPtLoad(cmd))
-        pageAlign(cmd);
-    }
   }
 }
 

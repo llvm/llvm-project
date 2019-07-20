@@ -56,13 +56,13 @@ void AMDGPUAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 // These arrays are indexed by address space value enum elements 0 ... to 7
 static const AliasResult ASAliasRules[8][8] = {
   /*                    Flat       Global    Region    Group     Constant  Private   Constant 32-bit  Buffer Fat Ptr */
-  /* Flat     */        {MayAlias, MayAlias, MayAlias, MayAlias, MayAlias, MayAlias, MayAlias,        MayAlias},
+  /* Flat     */        {MayAlias, MayAlias, NoAlias,  MayAlias, MayAlias, MayAlias, MayAlias,        MayAlias},
   /* Global   */        {MayAlias, MayAlias, NoAlias , NoAlias , MayAlias, NoAlias , MayAlias,        MayAlias},
-  /* Region   */        {MayAlias, NoAlias , NoAlias , NoAlias , MayAlias, NoAlias , MayAlias,        NoAlias},
+  /* Region   */        {NoAlias,  NoAlias , MayAlias, NoAlias , NoAlias,  NoAlias , NoAlias,         NoAlias},
   /* Group    */        {MayAlias, NoAlias , NoAlias , MayAlias, NoAlias , NoAlias , NoAlias ,        NoAlias},
-  /* Constant */        {MayAlias, MayAlias, MayAlias, NoAlias , NoAlias , NoAlias , MayAlias,        MayAlias},
+  /* Constant */        {MayAlias, MayAlias, NoAlias,  NoAlias , NoAlias , NoAlias , MayAlias,        MayAlias},
   /* Private  */        {MayAlias, NoAlias , NoAlias , NoAlias , NoAlias , MayAlias, NoAlias ,        NoAlias},
-  /* Constant 32-bit */ {MayAlias, MayAlias, MayAlias, NoAlias , MayAlias, NoAlias , NoAlias ,        MayAlias},
+  /* Constant 32-bit */ {MayAlias, MayAlias, NoAlias,  NoAlias , MayAlias, NoAlias , NoAlias ,        MayAlias},
   /* Buffer Fat Ptr  */ {MayAlias, MayAlias, NoAlias , NoAlias , MayAlias, NoAlias , MayAlias,        MayAlias}
 };
 

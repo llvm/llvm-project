@@ -920,7 +920,7 @@ bool GCNHazardRecognizer::fixVMEMtoScalarWriteHazards(MachineInstr *MI) {
 
     for (const MachineOperand &Def : MI->defs()) {
       MachineOperand *Op = I->findRegisterUseOperand(Def.getReg(), false, TRI);
-      if (!Op || (Op->isImplicit() && Op->getReg() == AMDGPU::EXEC))
+      if (!Op)
         continue;
       return true;
     }

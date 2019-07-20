@@ -252,9 +252,8 @@ PUNCTUATOR(caretcaret,            "^^")
 //   KEYNOMS18 - This is a keyword that must never be enabled under
 //               MSVC <= v18.
 //   KEYOPENCLC   - This is a keyword in OpenCL C
-//   KEYOPENCLCXX - This is a keyword in OpenCL C++
-//   KEYNOOPENCL  - This is a keyword that is not supported in OpenCL C
-//                  nor in OpenCL C++.
+//   KEYOPENCLCXX - This is a keyword in C++ for OpenCL
+//   KEYNOOPENCL  - This is a keyword that is not supported in OpenCL
 //   KEYALTIVEC - This is a keyword in AltiVec
 //   KEYZVECTOR - This is a keyword for the System z vector extensions,
 //                which are heavily based on AltiVec

@@ -510,8 +510,8 @@ public:
                                std::move(Emitter), RelaxAll);
       break;
     case Triple::XCOFF:
-        S = createXCOFFStreamer(Ctx, std::move(TAB), std::move(OW),
-                                std::move(Emitter), RelaxAll);
+      S = createXCOFFStreamer(Ctx, std::move(TAB), std::move(OW),
+                              std::move(Emitter), RelaxAll);
       break;
     }
     if (ObjectTargetStreamerCtorFn)

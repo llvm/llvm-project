@@ -70,7 +70,7 @@ return:
 ; CHECK-NEXT:     Stmt_reduction_preheader
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [Start] -> { Stmt_reduction_preheader[i0] -> MemRef_phi__phi[] };
-; CHECK-NEXT:            new: [Start] -> { Stmt_reduction_preheader[i0] -> MemRef_A[i0] : Start >= 2147483648 or Start <= 2147483646 };
+; CHECK-NEXT:            new: [Start] -> { Stmt_reduction_preheader[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:     Stmt_reduction_for
 ; CHECK-NEXT:             ReadAccess :=    [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [Start] -> { Stmt_reduction_for[i0, i1] -> MemRef_phi__phi[] };

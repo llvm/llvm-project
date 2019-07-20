@@ -15,6 +15,7 @@
 
 #include "llvm/Transforms/IPO/Attributor.h"
 
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -23,6 +24,7 @@
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
+#include "llvm/IR/CFG.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CommandLine.h"
@@ -56,6 +58,7 @@ STATISTIC(NumFnReturnedNonNull,
           "Number of function return values marked nonnull");
 STATISTIC(NumFnArgumentNonNull, "Number of function arguments marked nonnull");
 STATISTIC(NumCSArgumentNonNull, "Number of call site arguments marked nonnull");
+STATISTIC(NumFnWillReturn, "Number of functions marked willreturn");
 
 // TODO: Determine a good default value.
 //
@@ -127,6 +130,9 @@ static void bookkeeping(AbstractAttribute::ManifestPosition MP,
     default:
       break;
     }
+    break;
+  case Attribute::WillReturn:
+    NumFnWillReturn++;
     break;
   default:
     return;
@@ -1194,6 +1200,117 @@ ChangeStatus AANonNullCallSiteArgument::updateImpl(Attributor &A) {
   return ChangeStatus::UNCHANGED;
 }
 
+/// ------------------------ Will-Return Attributes ----------------------------
+
+struct AAWillReturnImpl : public AAWillReturn, BooleanState {
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AAWillReturnImpl(Function &F, InformationCache &InfoCache)
+      : AAWillReturn(F, InfoCache) {}
+
+  /// See AAWillReturn::isKnownWillReturn().
+  bool isKnownWillReturn() const override { return getKnown(); }
+
+  /// See AAWillReturn::isAssumedWillReturn().
+  bool isAssumedWillReturn() const override { return getAssumed(); }
+
+  /// See AbstractAttribute::getState(...).
+  AbstractState &getState() override { return *this; }
+
+  /// See AbstractAttribute::getState(...).
+  const AbstractState &getState() const override { return *this; }
+
+  /// See AbstractAttribute::getAsStr()
+  const std::string getAsStr() const override {
+    return getAssumed() ? "willreturn" : "may-noreturn";
+  }
+};
+
+struct AAWillReturnFunction final : AAWillReturnImpl {
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AAWillReturnFunction(Function &F, InformationCache &InfoCache)
+      : AAWillReturnImpl(F, InfoCache) {}
+
+  /// See AbstractAttribute::getManifestPosition().
+  ManifestPosition getManifestPosition() const override {
+    return MP_FUNCTION;
+  }
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override;
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override;
+};
+
+// Helper function that checks whether a function has any cycle.
+// TODO: Replace with more efficent code
+bool containsCycle(Function &F) {
+  SmallPtrSet<BasicBlock *, 32> Visited;
+
+  // Traverse BB by dfs and check whether successor is already visited.
+  for (BasicBlock *BB : depth_first(&F)) {
+    Visited.insert(BB);
+    for (auto *SuccBB : successors(BB)) {
+      if (Visited.count(SuccBB))
+        return true;
+    }
+  }
+  return false;
+}
+
+// Helper function that checks the function have a loop which might become an
+// endless loop
+// FIXME: Any cycle is regarded as endless loop for now.
+//        We have to allow some patterns.
+bool containsPossiblyEndlessLoop(Function &F) { return containsCycle(F); }
+
+void AAWillReturnFunction::initialize(Attributor &A) {
+  Function &F = getAnchorScope();
+
+  if (containsPossiblyEndlessLoop(F))
+    indicatePessimisticFixpoint();
+}
+
+ChangeStatus AAWillReturnFunction::updateImpl(Attributor &A) {
+  Function &F = getAnchorScope();
+
+  // The map from instruction opcodes to those instructions in the function.
+  auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(F);
+
+  for (unsigned Opcode :
+       {(unsigned)Instruction::Invoke, (unsigned)Instruction::CallBr,
+        (unsigned)Instruction::Call}) {
+    for (Instruction *I : OpcodeInstMap[Opcode]) {
+      auto ICS = ImmutableCallSite(I);
+
+      if (ICS.hasFnAttr(Attribute::WillReturn))
+        continue;
+
+      auto *WillReturnAA = A.getAAFor<AAWillReturn>(*this, *I);
+      if (!WillReturnAA || !WillReturnAA->isAssumedWillReturn()) {
+        indicatePessimisticFixpoint();
+        return ChangeStatus::CHANGED;
+      }
+
+      auto *NoRecurseAA = A.getAAFor<AANoRecurse>(*this, *I);
+
+      // FIXME: (i) Prohibit any recursion for now.
+      //        (ii) AANoRecurse isn't implemented yet so currently any call is
+      //        regarded as having recursion.
+      //       Code below should be
+      //       if ((!NoRecurseAA || !NoRecurseAA->isAssumedNoRecurse()) &&
+      if (!NoRecurseAA && !ICS.hasFnAttr(Attribute::NoRecurse)) {
+        indicatePessimisticFixpoint();
+        return ChangeStatus::CHANGED;
+      }
+    }
+  }
+
+  return ChangeStatus::UNCHANGED;
+}
+
 /// ----------------------------------------------------------------------------
 ///                               Attributor
 /// ----------------------------------------------------------------------------
@@ -1215,7 +1332,6 @@ bool Attributor::checkForAllCallSites(Function &F,
   for (const Use &U : F.uses()) {
 
     CallSite CS(U.getUser());
-    dbgs() << *CS.getInstruction() << "\n";
     if (!CS || !CS.isCallee(&U) || !CS.getCaller()->hasExactDefinition()) {
       if (!RequireAllCallSites)
         continue;
@@ -1402,6 +1518,9 @@ void Attributor::identifyDefaultAbstractAttributes(
     if (Arg.getType()->isPointerTy())
       registerAA(*new AANonNullArgument(Arg, InfoCache));
   }
+
+  // Every function might be "will-return".
+  registerAA(*new AAWillReturnFunction(F, InfoCache));
 
   // Walk all instructions to find more attribute opportunities and also
   // interesting instructions that might be queried by abstract attributes

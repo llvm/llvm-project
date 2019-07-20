@@ -353,17 +353,27 @@ public:
 
   /// Construct an ObjectLinkingLayer with the given NotifyLoaded,
   ///        and NotifyFinalized functors.
+  LLVM_ATTRIBUTE_DEPRECATED(
+      LegacyRTDyldObjectLinkingLayer(
+          ExecutionSession &ES, ResourcesGetter GetResources,
+          NotifyLoadedFtor NotifyLoaded = NotifyLoadedFtor(),
+          NotifyFinalizedFtor NotifyFinalized = NotifyFinalizedFtor(),
+          NotifyFreedFtor NotifyFreed = NotifyFreedFtor()),
+      "ORCv1 layers (layers with the 'Legacy' prefix) are deprecated. Please "
+      "use "
+      "ORCv2 (see docs/ORCv2.rst)");
+
+  // Legacy layer constructor with deprecation acknowledgement.
   LegacyRTDyldObjectLinkingLayer(
-      ExecutionSession &ES, ResourcesGetter GetResources,
+      ORCv1DeprecationAcknowledgement, ExecutionSession &ES,
+      ResourcesGetter GetResources,
       NotifyLoadedFtor NotifyLoaded = NotifyLoadedFtor(),
       NotifyFinalizedFtor NotifyFinalized = NotifyFinalizedFtor(),
       NotifyFreedFtor NotifyFreed = NotifyFreedFtor())
       : ES(ES), GetResources(std::move(GetResources)),
         NotifyLoaded(std::move(NotifyLoaded)),
         NotifyFinalized(std::move(NotifyFinalized)),
-        NotifyFreed(std::move(NotifyFreed)),
-        ProcessAllSections(false) {
-  }
+        NotifyFreed(std::move(NotifyFreed)), ProcessAllSections(false) {}
 
   /// Set the 'ProcessAllSections' flag.
   ///

@@ -2957,8 +2957,8 @@ def err_attribute_vecreturn_only_pod_record : Error<
 def err_cconv_change : Error<
   "function declared '%0' here was previously declared "
   "%select{'%2'|without calling convention}1">;
-def warn_cconv_ignored : Warning<
-  "%0 calling convention ignored %select{"
+def warn_cconv_unsupported : Warning<
+  "%0 calling convention is not supported %select{"
   // Use CallingConventionIgnoredReason Enum to specify these.
   "for this target"
   "|on variadic function"

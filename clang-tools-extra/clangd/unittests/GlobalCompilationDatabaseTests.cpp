@@ -10,6 +10,7 @@
 
 #include "Path.h"
 #include "TestFS.h"
+#include "clang/Tooling/CompilationDatabase.h"
 #include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
@@ -31,6 +32,7 @@ using ::testing::AllOf;
 using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::EndsWith;
+using ::testing::HasSubstr;
 using ::testing::IsEmpty;
 using ::testing::Not;
 using ::testing::StartsWith;
@@ -247,9 +249,10 @@ TEST(GlobalCompilationDatabaseTest, DiscoveryWithNestedCDBs) {
         });
 
     File = FS.Root;
-    llvm::sys::path::append(File, "a.cc");
+    llvm::sys::path::append(File, "build", "..", "a.cc");
     DB.getCompileCommand(File.str());
-    EXPECT_THAT(DiscoveredFiles, UnorderedElementsAre(EndsWith("a.cc")));
+    EXPECT_THAT(DiscoveredFiles, UnorderedElementsAre(AllOf(
+                                     EndsWith("a.cc"), Not(HasSubstr("..")))));
     DiscoveredFiles.clear();
 
     File = FS.Root;
@@ -280,6 +283,27 @@ TEST(GlobalCompilationDatabaseTest, DiscoveryWithNestedCDBs) {
     DB.getCompileCommand(File.str());
     EXPECT_THAT(DiscoveredFiles, IsEmpty());
   }
+}
+
+TEST(GlobalCompilationDatabaseTest, NonCanonicalFilenames) {
+  OverlayCDB DB(nullptr);
+  std::vector<std::string> DiscoveredFiles;
+  auto Sub =
+      DB.watch([&DiscoveredFiles](const std::vector<std::string> Changes) {
+        DiscoveredFiles = Changes;
+      });
+
+  llvm::SmallString<128> Root(testRoot());
+  llvm::sys::path::append(Root, "build", "..", "a.cc");
+  DB.setCompileCommand(Root.str(), tooling::CompileCommand());
+  EXPECT_THAT(DiscoveredFiles, UnorderedElementsAre(testPath("a.cc")));
+  DiscoveredFiles.clear();
+
+  llvm::SmallString<128> File(testRoot());
+  llvm::sys::path::append(File, "blabla", "..", "a.cc");
+
+  EXPECT_TRUE(DB.getCompileCommand(File));
+  EXPECT_TRUE(DB.getProjectInfo(File));
 }
 
 } // namespace

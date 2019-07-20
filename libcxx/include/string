@@ -812,9 +812,7 @@ public:
     basic_string(basic_string&& __str, const allocator_type& __a);
 #endif  // _LIBCPP_CXX03_LANG
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
     template <class = typename enable_if<__is_allocator<_Allocator>::value, nullptr_t>::type>
-#endif
     _LIBCPP_INLINE_VISIBILITY
     basic_string(const _CharT* __s) {
       _LIBCPP_ASSERT(__s != nullptr, "basic_string(const char*) detected nullptr");
@@ -824,9 +822,7 @@ public:
 #   endif
     }
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
     template <class = typename enable_if<__is_allocator<_Allocator>::value, nullptr_t>::type>
-#endif
         _LIBCPP_INLINE_VISIBILITY
         basic_string(const _CharT* __s, const _Allocator& __a);
 
@@ -837,9 +833,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     basic_string(size_type __n, _CharT __c);
 
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
     template <class = typename enable_if<__is_allocator<_Allocator>::value, nullptr_t>::type>
-#endif
         _LIBCPP_INLINE_VISIBILITY
         basic_string(size_type __n, _CharT __c, const _Allocator& __a);
 
@@ -1800,9 +1794,7 @@ basic_string<_CharT, _Traits, _Allocator>::__init(const value_type* __s, size_ty
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template <class>
-#endif
 basic_string<_CharT, _Traits, _Allocator>::basic_string(const _CharT* __s, const _Allocator& __a)
     : __r_(__second_tag(), __a)
 {
@@ -1939,9 +1931,7 @@ basic_string<_CharT, _Traits, _Allocator>::basic_string(size_type __n, _CharT __
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-#ifndef _LIBCPP_HAS_NO_DEDUCTION_GUIDES
 template <class>
-#endif
 basic_string<_CharT, _Traits, _Allocator>::basic_string(size_type __n, _CharT __c, const _Allocator& __a)
     : __r_(__second_tag(), __a)
 {

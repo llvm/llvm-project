@@ -833,7 +833,10 @@ std::error_code detail::directory_iterator_destruct(detail::DirIterState &it) {
 static file_type direntType(dirent* Entry) {
   // Most platforms provide the file type in the dirent: Linux/BSD/Mac.
   // The DTTOIF macro lets us reuse our status -> type conversion.
-#if defined(_DIRENT_HAVE_D_TYPE) && defined(DTTOIF)
+  // Note that while glibc provides a macro to see if this is supported,
+  // _DIRENT_HAVE_D_TYPE, it's not defined on BSD/Mac, so we test for the
+  // d_type-to-mode_t conversion macro instead.
+#if defined(DTTOIF)
   return typeForMode(DTTOIF(Entry->d_type));
 #else
   // Other platforms such as Solaris require a stat() to get the type.

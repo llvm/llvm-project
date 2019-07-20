@@ -22,7 +22,7 @@ using namespace TestUtils;
 struct run_copy
 {
 
-#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                            \
+#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                             \
     _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specialization by policy type, in case of broken configuration
     template <typename InputIterator, typename OutputIterator, typename OutputIterator2, typename Size, typename T>
     void
@@ -45,8 +45,7 @@ struct run_copy
               typename T>
     void
     operator()(Policy&& exec, InputIterator first, InputIterator last, OutputIterator out_first,
-               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2, Size size,
-               Size n, T trash)
+               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2, Size size, Size n, T trash)
     {
         // Cleaning
         std::fill_n(expected_first, size, trash);
@@ -75,7 +74,7 @@ template <typename T>
 struct run_move
 {
 
-#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                            \
+#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                             \
     _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specialization by policy type, in case of broken configuration
     template <typename InputIterator, typename OutputIterator, typename OutputIterator2, typename Size>
     void
@@ -97,8 +96,7 @@ struct run_move
     template <typename Policy, typename InputIterator, typename OutputIterator, typename OutputIterator2, typename Size>
     void
     operator()(Policy&& exec, InputIterator first, InputIterator last, OutputIterator out_first,
-               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2, Size size,
-               Size, T trash)
+               OutputIterator out_last, OutputIterator2 expected_first, OutputIterator2, Size size, Size, T trash)
     {
         // Cleaning
         std::fill_n(expected_first, size, trash);
@@ -118,7 +116,7 @@ template <typename T>
 struct run_move<Wrapper<T>>
 {
 
-#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                            \
+#if _PSTL_ICC_17_VC141_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN ||                                                             \
     _PSTL_ICC_16_VC14_TEST_SIMD_LAMBDA_DEBUG_32_BROKEN //dummy specialization by policy type, in case of broken configuration
     template <typename InputIterator, typename OutputIterator, typename OutputIterator2, typename Size>
     void
@@ -140,8 +138,7 @@ struct run_move<Wrapper<T>>
     template <typename Policy, typename InputIterator, typename OutputIterator, typename OutputIterator2, typename Size>
     void
     operator()(Policy&& exec, InputIterator first, InputIterator last, OutputIterator out_first,
-               OutputIterator out_last, OutputIterator2, OutputIterator2, Size size,
-               Size, Wrapper<T> trash)
+               OutputIterator out_last, OutputIterator2, OutputIterator2, Size size, Size, Wrapper<T> trash)
     {
         // Cleaning
         std::fill_n(out_first, size, trash);
@@ -185,7 +182,7 @@ test(T trash, Convert convert)
     }
 }
 
-int32_t
+int
 main()
 {
     test<int32_t>(-666, [](size_t j) { return int32_t(j); });
