@@ -22,6 +22,7 @@
 #include "InputInfo.h"
 #include "PS4CPU.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/ObjCRuntime.h"
 #include "clang/Basic/Version.h"
@@ -501,8 +502,6 @@ static codegenoptions::DebugInfoKind DebugLevelToInfoKind(const Arg &A) {
   return codegenoptions::LimitedDebugInfo;
 }
 
-enum class FramePointerKind { None, NonLeaf, All };
-
 static bool mustUseNonLeafFramePointerForTarget(const llvm::Triple &Triple) {
   switch (Triple.getArch()){
   default:
@@ -592,8 +591,8 @@ static bool useFramePointerForTargetByDefault(const ArgList &Args,
   return true;
 }
 
-static FramePointerKind getFramePointerKind(const ArgList &Args,
-                                            const llvm::Triple &Triple) {
+static CodeGenOptions::FramePointerKind
+getFramePointerKind(const ArgList &Args, const llvm::Triple &Triple) {
   Arg *A = Args.getLastArg(options::OPT_fomit_frame_pointer,
                            options::OPT_fno_omit_frame_pointer);
   bool OmitFP = A && A->getOption().matches(options::OPT_fomit_frame_pointer);
@@ -604,10 +603,10 @@ static FramePointerKind getFramePointerKind(const ArgList &Args,
     if (Args.hasFlag(options::OPT_momit_leaf_frame_pointer,
                      options::OPT_mno_omit_leaf_frame_pointer,
                      Triple.isPS4CPU()))
-      return FramePointerKind::NonLeaf;
-    return FramePointerKind::All;
+      return CodeGenOptions::FramePointerKind::NonLeaf;
+    return CodeGenOptions::FramePointerKind::All;
   }
-  return FramePointerKind::None;
+  return CodeGenOptions::FramePointerKind::None;
 }
 
 /// Add a CC1 option to specify the debug compilation directory.
@@ -3950,12 +3949,23 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasFlag(options::OPT_mrtd, options::OPT_mno_rtd, false))
     CmdArgs.push_back("-fdefault-calling-conv=stdcall");
 
-  FramePointerKind FPKeepKind = getFramePointerKind(Args, RawTriple);
-  if (FPKeepKind != FramePointerKind::None) {
-    CmdArgs.push_back("-mdisable-fp-elim");
-    if (FPKeepKind == FramePointerKind::NonLeaf)
-      CmdArgs.push_back("-momit-leaf-frame-pointer");
+  CodeGenOptions::FramePointerKind FPKeepKind =
+                  getFramePointerKind(Args, RawTriple);
+  const char *FPKeepKindStr = nullptr;
+  switch (FPKeepKind) {
+  case CodeGenOptions::FramePointerKind::None:
+    FPKeepKindStr = "-mframe-pointer=none";
+    break;
+  case CodeGenOptions::FramePointerKind::NonLeaf:
+    FPKeepKindStr = "-mframe-pointer=non-leaf";
+    break;
+  case CodeGenOptions::FramePointerKind::All:
+    FPKeepKindStr = "-mframe-pointer=all";
+    break;
   }
+  assert(FPKeepKindStr && "unknown FramePointerKind");
+  CmdArgs.push_back(FPKeepKindStr);
+
   if (!Args.hasFlag(options::OPT_fzero_initialized_in_bss,
                     options::OPT_fno_zero_initialized_in_bss))
     CmdArgs.push_back("-mno-zero-initialized-in-bss");
@@ -5524,7 +5534,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (Arg *A = Args.getLastArg(options::OPT_pg))
-    if (FPKeepKind == FramePointerKind::None)
+    if (FPKeepKind == CodeGenOptions::FramePointerKind::None)
       D.Diag(diag::err_drv_argument_not_allowed_with) << "-fomit-frame-pointer"
                                                       << A->getAsString(Args);
 

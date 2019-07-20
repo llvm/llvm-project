@@ -34,7 +34,7 @@
 // RUN: %clang -target armv7-windows-itanium -fno-omit-frame-pointer -### -S %s -O3 -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-NO-FPO
 // RUN: %clang -target armv7-windows-itanium -fno-omit-frame-pointer -### -S %s -Os -o /dev/null 2>&1 | FileCheck %s -check-prefix CHECK-NO-FPO
 
-// CHECK-DEFAULT: "-mdisable-fp-elim"
-// CHECK-FPO-NOT: "-mdisable-fp-elim"
-// CHECK-NO-FPO: "-mdisable-fp-elim"
+// CHECK-DEFAULT: "-mframe-pointer=all"
+// CHECK-FPO-NOT: "-mframe-pointer=all"
+// CHECK-NO-FPO: "-mframe-pointer=all"
 

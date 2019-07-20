@@ -138,5 +138,4 @@ char testchar (void) {
   return (char)-1;
 }
 
-// CHECK: "no-frame-pointer-elim"="false"
-// CHECK-NOT: "no-frame-pointer-elim-non-leaf"
+// CHECK: "frame-pointer"="none"

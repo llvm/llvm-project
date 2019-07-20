@@ -3,9 +3,8 @@
 // RUN: %clang -target xcore -x c++ %s -fexceptions -### -o %t.o 2>&1 | FileCheck -check-prefix CHECK-EXCEP %s
 // RUN: %clang -target xcore %s -g0 -### -o %t.o 2>&1 | FileCheck -check-prefix CHECK-G0 %s
 
+// CHECK: "-mframe-pointer=none"
 // CHECK: "-nostdsysteminc"
-// CHECK-NOT: "-mdisable-fp-elim"
-// CHECK-NOT: "-momit-leaf-frame-pointer"
 // CHECK: "-fno-signed-char"
 // CHECK: "-fno-use-cxa-atexit"
 // CHECK-NOT: "-fcxx-exceptions"

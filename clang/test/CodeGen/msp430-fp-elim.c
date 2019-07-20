@@ -1,5 +1,5 @@
 // REQUIRES: msp430-registered-target
-// RUN: %clang_cc1 -mdisable-fp-elim -triple msp430 -S %s -o - | FileCheck %s --check-prefix=FP_ENFORCED
+// RUN: %clang_cc1 -mframe-pointer=all -triple msp430 -S %s -o - | FileCheck %s --check-prefix=FP_ENFORCED
 // RUN: %clang_cc1 -triple msp430 -S %s -o - | FileCheck %s --check-prefix=FP_DEFAULT
 
 // Check the frame pointer is not used on MSP430 by default, but can be forcibly turned on.
