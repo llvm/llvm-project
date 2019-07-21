@@ -465,9 +465,9 @@ clang::Decl *PdbAstBuilder::GetOrCreateSymbolForId(PdbCompilandSymId id) {
   }
 }
 
-clang::Decl *PdbAstBuilder::GetOrCreateDeclForUid(PdbSymUid uid) {
+llvm::Optional<CompilerDecl> PdbAstBuilder::GetOrCreateDeclForUid(PdbSymUid uid) {
   if (clang::Decl *result = TryGetDecl(uid))
-    return result;
+    return ToCompilerDecl(*result);
 
   clang::Decl *result = nullptr;
   switch (uid.kind()) {
@@ -480,13 +480,13 @@ clang::Decl *PdbAstBuilder::GetOrCreateDeclForUid(PdbSymUid uid) {
       result = tag;
       break;
     }
-    return nullptr;
+    return llvm::None;
   }
   default:
-    return nullptr;
+    return llvm::None;
   }
   m_uid_to_decl[toOpaqueUid(uid)] = result;
-  return result;
+  return ToCompilerDecl(*result);
 }
 
 clang::DeclContext *PdbAstBuilder::GetOrCreateDeclContextForUid(PdbSymUid uid) {
@@ -494,8 +494,10 @@ clang::DeclContext *PdbAstBuilder::GetOrCreateDeclContextForUid(PdbSymUid uid) {
     if (uid.asCompilandSym().offset == 0)
       return FromCompilerDeclContext(GetTranslationUnitDecl());
   }
-
-  clang::Decl *decl = GetOrCreateDeclForUid(uid);
+  auto option = GetOrCreateDeclForUid(uid);
+  if (!option)
+    return nullptr;
+  clang::Decl *decl = FromCompilerDecl(option.getValue());
   if (!decl)
     return nullptr;
 
