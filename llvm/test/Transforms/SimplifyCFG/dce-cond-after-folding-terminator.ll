@@ -37,10 +37,7 @@ define void @test_indirectbr(i32 %x) {
 entry:
 ; CHECK-LABEL: @test_indirectbr(
 ; CHECK-NEXT: entry:
-; Ideally this should now check:
-;   CHK-NEXT: ret void
-; But that doesn't happen yet. Instead:
-; CHECK-NEXT: br label %L1
+; CHECK-NEXT:   ret void
 
   %label = bitcast i8* blockaddress(@test_indirectbr, %L1) to i8*
   indirectbr i8* %label, [label %L1, label %L2]
