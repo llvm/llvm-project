@@ -60,6 +60,10 @@ class ObjCModulesTestCase(TestBase):
                 "int",
                 "4"])
 
+        # Type lookup should still work and print something reasonable
+        # for types from the module.
+        self.expect("type lookup NSObject", substrs=["instanceMethod"])
+
         self.expect("expr string.length", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["NSUInteger", "5"])
 

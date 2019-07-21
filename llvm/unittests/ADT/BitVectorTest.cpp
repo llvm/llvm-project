@@ -228,6 +228,38 @@ TYPED_TEST(BitVectorTest, SimpleFindOpsMultiWord) {
   EXPECT_EQ(99, A.find_next_unset(98));
 }
 
+// Test finding next set and unset bits in a BitVector/SmallBitVector within a
+// uintptr_t - check both 32-bit (Multi) and 64-bit (Small) targets.
+TYPED_TEST(BitVectorTest, SimpleFindOps64Bit) {
+  TypeParam A;
+
+  A.resize(57);
+  A.set(12);
+  A.set(13);
+  A.set(47);
+
+  EXPECT_EQ(47, A.find_last());
+  EXPECT_EQ(12, A.find_first());
+  EXPECT_EQ(13, A.find_next(12));
+  EXPECT_EQ(47, A.find_next(13));
+  EXPECT_EQ(-1, A.find_next(47));
+
+  EXPECT_EQ(-1, A.find_prev(12));
+  EXPECT_EQ(12, A.find_prev(13));
+  EXPECT_EQ(13, A.find_prev(47));
+  EXPECT_EQ(47, A.find_prev(56));
+
+  EXPECT_EQ(0, A.find_first_unset());
+  EXPECT_EQ(56, A.find_last_unset());
+  EXPECT_EQ(14, A.find_next_unset(11));
+  EXPECT_EQ(14, A.find_next_unset(12));
+  EXPECT_EQ(14, A.find_next_unset(13));
+  EXPECT_EQ(16, A.find_next_unset(15));
+  EXPECT_EQ(48, A.find_next_unset(46));
+  EXPECT_EQ(48, A.find_next_unset(47));
+  EXPECT_EQ(-1, A.find_next_unset(56));
+}
+
 // Check if a SmallBitVector is in small mode. This check is used in tests
 // that run for both SmallBitVector and BitVector. This check doesn't apply
 // to BitVector so we provide an overload that returns true to get the tests
