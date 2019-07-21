@@ -2335,10 +2335,11 @@ def WarnUnused : InheritableAttr {
 }
 
 def WarnUnusedResult : InheritableAttr {
-  let Spellings = [CXX11<"", "nodiscard", 201603>, C2x<"", "nodiscard">,
+  let Spellings = [CXX11<"", "nodiscard", 201907>, C2x<"", "nodiscard">,
                    CXX11<"clang", "warn_unused_result">,
                    GCC<"warn_unused_result">];
   let Subjects = SubjectList<[ObjCMethod, Enum, Record, FunctionLike]>;
+  let Args = [StringArgument<"Message", 1>];
   let Documentation = [WarnUnusedResultsDocs];
 }
 

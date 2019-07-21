@@ -74,9 +74,13 @@ with <a href="http://libcxx.llvm.org/">libc++</a> or with gcc's libstdc++.
     <th>Available in Clang?</th>
  </tr>
      <tr>
-      <td>Rvalue references</td>
+      <td rowspan="2">Rvalue references</td>
       <td><a href="http://www.open-std.org/jtc1/sc22/wg21/docs/papers/2006/n2118.html">N2118</a></td>
       <td class="full" align="center">Clang 2.9</td>
+      <tr> <!-- from Kona 2019-->
+        <td><a href="http://wg21.link/p1825r0">P1825R0</a> (<a href="#dr">DR</a>)</td>
+        <td class="none" align="center">No</td>
+      </tr>
     </tr>
     <tr>
       <td>&nbsp;&nbsp;&nbsp;&nbsp;Rvalue references for <code>*this</code></td>
@@ -654,10 +658,14 @@ version 3.7.
       <td class="full" align="center">Clang 3.9</td>
     </tr>
     <tr>
-      <td><tt>[[nodiscard]]</tt> attribute</td>
+      <td rowspan="2"><tt>[[nodiscard]]</tt> attribute</td>
       <td><a href="http://wg21.link/p0189r1">P0189R1</a></td>
       <td class="full" align="center">Clang 3.9</td>
     </tr>
+      <tr> <!-- from Cologne 2019 -->
+        <td><a href="http://wg21.link/p1771r1">P1771R1</a> (<a href="#dr">DR</a>)</td>
+        <td class="none" align="center">No</td>
+      </tr>
     <tr>
       <td><tt>[[maybe_unused]]</tt> attribute</td>
       <td><a href="http://wg21.link/p0212r1">P0212R1</a></td>
@@ -871,9 +879,9 @@ as the draft C++2a standard evolves.
       <td class="svn" align="center">SVN</td>
     </tr>
     <tr id="p0734">
-      <td rowspan="4">Concepts</td>
+      <td rowspan="7">Concepts</td>
       <td><a href="http://wg21.link/p0734r0">P0734R0</a></td>
-      <td rowspan="4" class="none" align="center">No</td>
+      <td rowspan="7" class="none" align="center">No</td>
     </tr>
       <tr> <!-- from Albuquerque -->
         <td><a href="http://wg21.link/p0857r0">P0857R0</a></td>
@@ -883,6 +891,15 @@ as the draft C++2a standard evolves.
       </tr>
       <tr>
         <td><a href="http://wg21.link/p1141r2">P1414R2</a></td>
+      </tr>
+      <tr> <!-- from Cologne -->
+        <td><a href="http://wg21.link/p0848r3">P0848R3</a></td>
+      </tr>
+      <tr>
+        <td><a href="http://wg21.link/p1616r1">P1616R1</a></td>
+      </tr>
+      <tr>
+        <td><a href="http://wg21.link/p1452r2">P1452R2</a></td>
       </tr>
     <!-- Albuquerque papers -->
     <tr>
@@ -901,7 +918,7 @@ as the draft C++2a standard evolves.
       <td class="full" align="center">Clang 8</td>
     </tr>
     <tr>
-      <td rowspan="4">Consistent comparison (<tt>operator&lt;=&gt;</tt>)</td>
+      <td rowspan="6">Consistent comparison (<tt>operator&lt;=&gt;</tt>)</td>
       <td><a href="http://wg21.link/p0515r3">P0515R3</a></td>
       <td rowspan="3" class="partial" align="center">Partial</td>
     </tr>
@@ -913,7 +930,13 @@ as the draft C++2a standard evolves.
       </tr>
       <tr> <!-- from Kona 2019 -->
         <td><a href="http://wg21.link/p1185r2">P1185R2</a></td>
-        <td class="none" align="center">No</td>
+        <td rowspan="3" class="none" align="center">No</td>
+      </tr>
+      <tr> <!-- from Cologne -->
+        <td><a href="http://wg21.link/p1186r3">P1186R3</a></td>
+      </tr>
+      <tr>
+        <td><a href="http://wg21.link/p1630r1">P1630R1</a></td>
       </tr>
     <tr>
       <td>Access checking on specializations</td>
@@ -963,7 +986,7 @@ as the draft C++2a standard evolves.
       <td class="full" align="center">Clang 6</td>
     </tr>
     <tr>
-      <td rowspan=4>Relaxations of <tt>constexpr</tt> restrictions</td>
+      <td rowspan="7">Relaxations of <tt>constexpr</tt> restrictions</td>
       <td><a href="http://wg21.link/p1064r0">P1064R0</a></td>
       <td class="svn" align="center">SVN</td>
     </tr>
@@ -978,22 +1001,21 @@ as the draft C++2a standard evolves.
       <tr>
         <td><a href="http://wg21.link/p1330r0">P1330R0</a></td>
       </tr>
+      <tr> <!-- from Cologne -->
+        <td><a href="http://wg21.link/p1331r2">P1331R2</a></td>
+        <td rowspan="3" class="none" align="center">No</td>
+      </tr>
+      <tr>
+        <td><a href="http://wg21.link/p1668r1">P1668R1</a></td>
+      </tr>
+      <tr>
+        <td><a href="http://wg21.link/p0784r7">P0784R7</a></td>
+      </tr>
     <tr>
       <td>Prohibit aggregates with user-declared constructors</td>
       <td><a href="http://wg21.link/p1008r1">P1008R1</a></td>
       <td class="full" align="center">Clang 8</td>
     </tr>
-    <tr>
-      <td rowspan="3">Contracts</td>
-      <td><a href="http://wg21.link/p0542r5">P0542R5</a></td>
-      <td rowspan="3" class="none" align="center">No</td>
-    </tr>
-      <tr> <!-- from San Diego -->
-        <td><a href="http://wg21.link/p1289r1">P1289R1</a></td>
-      </tr>
-      <tr> <!-- from Kona 2019-->
-        <td><a href="http://wg21.link/p1323r2">P1323R2</a></td>
-      </tr>
     <tr>
       <td>Feature test macros</td>
       <td><a href="http://wg21.link/p0941r2">P0941R2</a></td>
@@ -1053,14 +1075,65 @@ as the draft C++2a standard evolves.
       <td class="none" align="center">No</td>
     </tr>
     <tr>
-      <td>Modules</td>
+      <td rowspan="4">Modules</td>
       <td><a href="http://wg21.link/p1103r3">P1103R3</a></td>
       <td class="partial" align="center">Partial</td>
     </tr>
+      <tr> <!-- from Cologne -->
+        <td><a href="http://wg21.link/p1766r1">P1766R1</a> (<a href="#dr">DR</a>)</td>
+        <td rowspan="3" class="none" align="center">No</td>
+      </tr>
+      <tr>
+        <td><a href="http://wg21.link/p1811r0">P1811R0</a></td>
+      </tr>
+      <tr>
+        <td><a href="http://wg21.link/p1703r1">P1703R1</a></td>
+      </tr>
     <tr>
       <td>Coroutines</td>
       <td><a href="http://wg21.link/p0912r5">P0912R5</a></td>
       <td class="partial" align="center">Partial</td>
+    </tr>
+    <!-- Cologne 2019 papers -->
+    <tr>
+      <td>Deprecate <tt>a[b,c]</tt></td>
+      <td><a href="http://wg21.link/p1161r3">P1161R3</a></td>
+      <td class="svn" align="center">SVN</td>
+    </tr>
+    <tr>
+      <td>Deprecate some problematic uses of <tt>volatile</tt></td>
+      <td><a href="http://wg21.link/p1152r4">P1152R4</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td><tt>[[nodiscard("with reason")]]</tt></td>
+      <td><a href="http://wg21.link/p1301r4">P1301R4</a></td>
+      <td class="svn" align="center">SVN</td>
+    </tr>
+    <tr>
+      <td><tt>using enum</tt></td>
+      <td><a href="http://wg21.link/p1099r5">P1099R5</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Class template argument deduction for aggregates</td>
+      <td><a href="http://wg21.link/p1816r0">P1816R0</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Class template argument deduction for alias templates</td>
+      <td><a href="http://wg21.link/p1814r0">P1814R0</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td>Permit conversions to arrays of unknown bound</td>
+      <td><a href="http://wg21.link/p0388r4">P0388R4</a></td>
+      <td class="none" align="center">No</td>
+    </tr>
+    <tr>
+      <td><tt>constinit</tt></td>
+      <td><a href="http://wg21.link/p1143r2">P1143R2</a></td>
+      <td class="none" align="center">No</td>
     </tr>
 </table>
 

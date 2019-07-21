@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -std=c++11 %s -Wdeprecated -verify -triple x86_64-linux-gnu
 // RUN: %clang_cc1 -std=c++14 %s -Wdeprecated -verify -triple x86_64-linux-gnu
 // RUN: %clang_cc1 -std=c++17 %s -Wdeprecated -verify -triple x86_64-linux-gnu
+// RUN: %clang_cc1 -std=c++2a %s -Wdeprecated -verify -triple x86_64-linux-gnu
 
 // RUN: %clang_cc1 -std=c++14 %s -Wdeprecated -verify -triple x86_64-linux-gnu -Wno-deprecated-register -DNO_DEPRECATED_FLAGS
 
@@ -98,6 +99,31 @@ namespace DeprecatedCopy {
   void g() { c1 = c2; } // expected-note {{implicit copy assignment operator for 'DeprecatedCopy::Dtor' first required here}}
 }
 #endif
+
+struct X {
+  friend int operator,(X, X);
+  void operator[](int);
+};
+void array_index_comma() {
+  int arr[123];
+  (void)arr[(void)1, 2];
+  (void)arr[X(), X()];
+  X()[(void)1, 2];
+  X()[X(), X()];
+#if __cplusplus > 201703L
+  // expected-warning@-5 {{deprecated}}
+  // expected-warning@-5 {{deprecated}}
+  // expected-warning@-5 {{deprecated}}
+  // expected-warning@-5 {{deprecated}}
+#endif
+
+  (void)arr[((void)1, 2)];
+  (void)arr[(X(), X())];
+  (void)((void)1,2)[arr];
+  (void)(X(), X())[arr];
+  X()[((void)1, 2)];
+  X()[(X(), X())];
+}
 
 # 1 "/usr/include/system-header.h" 1 3
 void system_header_function(void) throw();

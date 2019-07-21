@@ -35631,12 +35631,6 @@ static SDValue scalarizeExtEltFP(SDNode *ExtElt, SelectionDAG &DAG) {
 static SDValue combineReductionToHorizontal(SDNode *ExtElt, SelectionDAG &DAG,
                                             const X86Subtarget &Subtarget) {
   assert(ExtElt->getOpcode() == ISD::EXTRACT_VECTOR_ELT && "Unexpected caller");
-  bool OptForSize = DAG.getMachineFunction().getFunction().hasOptSize();
-  if (!Subtarget.hasFastHorizontalOps() && !OptForSize)
-    return SDValue();
-  SDValue Index = ExtElt->getOperand(1);
-  if (!isNullConstant(Index))
-    return SDValue();
 
   // TODO: Allow FADD with reduction and/or reassociation and no-signed-zeros.
   ISD::NodeType Opc;
@@ -35644,13 +35638,50 @@ static SDValue combineReductionToHorizontal(SDNode *ExtElt, SelectionDAG &DAG,
   if (!Rdx)
     return SDValue();
 
+  SDValue Index = ExtElt->getOperand(1);
+  assert(isNullConstant(Index) &&
+         "Reduction doesn't end in an extract from index 0");
+
   EVT VT = ExtElt->getValueType(0);
   EVT VecVT = ExtElt->getOperand(0).getValueType();
   if (VecVT.getScalarType() != VT)
     return SDValue();
 
-  unsigned HorizOpcode = Opc == ISD::ADD ? X86ISD::HADD : X86ISD::FHADD;
+  // Must be a >=128-bit vector with pow2 elements.
+  if ((VecVT.getSizeInBits() % 128) != 0 ||
+      !isPowerOf2_32(VecVT.getVectorNumElements()))
+    return SDValue();
+
   SDLoc DL(ExtElt);
+
+  // vXi8 reduction - sum lo/hi halves then use PSADBW.
+  if (VT == MVT::i8) {
+    while (Rdx.getValueSizeInBits() > 128) {
+      EVT RdxVT = Rdx.getValueType();
+      unsigned HalfSize = RdxVT.getSizeInBits() / 2;
+      unsigned HalfElts = RdxVT.getVectorNumElements() / 2;
+      SDValue Lo = extractSubVector(Rdx, 0, DAG, DL, HalfSize);
+      SDValue Hi = extractSubVector(Rdx, HalfElts, DAG, DL, HalfSize);
+      Rdx = DAG.getNode(ISD::ADD, DL, Lo.getValueType(), Lo, Hi);
+    }
+    assert(Rdx.getValueType() == MVT::v16i8 && "v16i8 reduction expected");
+
+    SDValue Hi = DAG.getVectorShuffle(
+        MVT::v16i8, DL, Rdx, Rdx,
+        {8, 9, 10, 11, 12, 13, 14, 15, -1, -1, -1, -1, -1, -1, -1, -1});
+    Rdx = DAG.getNode(ISD::ADD, DL, MVT::v16i8, Rdx, Hi);
+    Rdx = DAG.getNode(X86ISD::PSADBW, DL, MVT::v2i64, Rdx,
+                      getZeroVector(MVT::v16i8, Subtarget, DAG, DL));
+    Rdx = DAG.getBitcast(MVT::v16i8, Rdx);
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, VT, Rdx, Index);
+  }
+
+  // Only use (F)HADD opcodes if they aren't microcoded or minimizes codesize.
+  bool OptForSize = DAG.getMachineFunction().getFunction().hasOptSize();
+  if (!Subtarget.hasFastHorizontalOps() && !OptForSize)
+    return SDValue();
+
+  unsigned HorizOpcode = Opc == ISD::ADD ? X86ISD::HADD : X86ISD::FHADD;
 
   // 256-bit horizontal instructions operate on 128-bit chunks rather than
   // across the whole vector, so we need an extract + hop preliminary stage.

@@ -1482,6 +1482,13 @@ generated when a function or its return type is marked with ``[[nodiscard]]``
 potentially-evaluated discarded-value expression that is not explicitly cast to
 `void`.
 
+A string literal may optionally be provided to the attribute, which will be
+reproduced in any resulting diagnostics. Redeclarations using different forms
+of the attribute (with or without the string literal or with different string
+literal contents) are allowed. If there are redeclarations of the entity with
+differing string literals, it is unspecified which one will be used by Clang
+in any resulting diagnostics.
+
 .. code-block: c++
   struct [[nodiscard]] error_info { /*...*/ };
   error_info enable_missile_safety_mode();

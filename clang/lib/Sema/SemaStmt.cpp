@@ -258,8 +258,13 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S) {
     if (E->getType()->isVoidType())
       return;
 
-    if (const Attr *A = CE->getUnusedResultAttr(Context)) {
-      Diag(Loc, diag::warn_unused_result) << A << R1 << R2;
+    if (const auto *A = cast_or_null<WarnUnusedResultAttr>(
+            CE->getUnusedResultAttr(Context))) {
+      StringRef Msg = A->getMessage();
+      if (!Msg.empty())
+        Diag(Loc, diag::warn_unused_result_msg) << A << Msg << R1 << R2;
+      else
+        Diag(Loc, diag::warn_unused_result) << A << R1 << R2;
       return;
     }
 
@@ -290,7 +295,11 @@ void Sema::DiagnoseUnusedExprResult(const Stmt *S) {
     const ObjCMethodDecl *MD = ME->getMethodDecl();
     if (MD) {
       if (const auto *A = MD->getAttr<WarnUnusedResultAttr>()) {
-        Diag(Loc, diag::warn_unused_result) << A << R1 << R2;
+        StringRef Msg = A->getMessage();
+        if (!Msg.empty())
+          Diag(Loc, diag::warn_unused_result_msg) << A << Msg << R1 << R2;
+        else
+          Diag(Loc, diag::warn_unused_result) << A << R1 << R2;
         return;
       }
     }

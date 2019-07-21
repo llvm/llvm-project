@@ -2309,7 +2309,7 @@ def mno_backchain : Flag<["-"], "mno-backchain">, Group<m_Group>, Flags<[DriverO
 def mno_warn_nonportable_cfstrings : Flag<["-"], "mno-warn-nonportable-cfstrings">, Group<m_Group>;
 def mno_omit_leaf_frame_pointer : Flag<["-"], "mno-omit-leaf-frame-pointer">, Group<m_Group>;
 def momit_leaf_frame_pointer : Flag<["-"], "momit-leaf-frame-pointer">, Group<m_Group>,
-  HelpText<"Omit frame pointer setup for leaf functions">, Flags<[CC1Option]>;
+  HelpText<"Omit frame pointer setup for leaf functions">;
 def moslib_EQ : Joined<["-"], "moslib=">, Group<m_Group>;
 def mpascal_strings : Flag<["-"], "mpascal-strings">, Alias<fpascal_strings>;
 def mred_zone : Flag<["-"], "mred-zone">, Group<m_Group>;

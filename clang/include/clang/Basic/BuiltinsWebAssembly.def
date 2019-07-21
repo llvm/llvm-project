@@ -31,6 +31,7 @@ TARGET_BUILTIN(__builtin_wasm_data_drop, "vIUi", "", "bulk-memory")
 
 // Thread-local storage
 TARGET_BUILTIN(__builtin_wasm_tls_size, "z", "nc", "bulk-memory")
+TARGET_BUILTIN(__builtin_wasm_tls_align, "z", "nc", "bulk-memory")
 TARGET_BUILTIN(__builtin_wasm_tls_base, "v*", "nU", "bulk-memory")
 
 // Floating point min/max
