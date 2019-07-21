@@ -14,6 +14,13 @@ define i32* @tls2_addr() {
   ret i32* @tls2
 }
 
+define i32 @tls_align() {
+  %1 = call i32 @llvm.wasm.tls.align.i32()
+  ret i32 %1
+}
+
+declare i32 @llvm.wasm.tls.align.i32()
+
 ; RUN: wasm-ld -no-gc-sections --shared-memory --max-memory=131072 --no-entry -o %t.wasm %t.o
 ; RUN: obj2yaml %t.wasm | FileCheck %s
 
@@ -28,18 +35,30 @@ define i32* @tls2_addr() {
 ; CHECK-NEXT:       InitExpr:
 ; CHECK-NEXT:         Opcode:          I32_CONST
 ; CHECK-NEXT:         Value:           66576
+
+; __tls_base
 ; CHECK-NEXT:     - Index:           1
 ; CHECK-NEXT:       Type:            I32
 ; CHECK-NEXT:       Mutable:         true
 ; CHECK-NEXT:       InitExpr:
 ; CHECK-NEXT:         Opcode:          I32_CONST
 ; CHECK-NEXT:         Value:           0
+
+; __tls_size
 ; CHECK-NEXT:     - Index:           2
 ; CHECK-NEXT:       Type:            I32
 ; CHECK-NEXT:       Mutable:         false
 ; CHECK-NEXT:       InitExpr:
 ; CHECK-NEXT:         Opcode:          I32_CONST
 ; CHECK-NEXT:         Value:           8
+
+; __tls_align
+; CHECK-NEXT:     - Index:           3
+; CHECK-NEXT:       Type:            I32
+; CHECK-NEXT:       Mutable:         false
+; CHECK-NEXT:       InitExpr:
+; CHECK-NEXT:         Opcode:          I32_CONST
+; CHECK-NEXT:         Value:           4
 
 
 ; CHECK:      - Type:            CODE
@@ -76,4 +95,12 @@ define i32* @tls2_addr() {
 ;   global.get 1
 ;   i32.const 4
 ;   i32.add
+;   end
+
+; CHECK-NEXT:     - Index:           5
+; CHECK-NEXT:       Locals:          []
+; CHECK-NEXT:       Body:            2383808080000B
+
+; Expected body of tls1_addr:
+;   global.get 3
 ;   end

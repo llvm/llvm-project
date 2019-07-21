@@ -324,7 +324,13 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       Value *Address = IBI->getAddress();
       IBI->eraseFromParent();
       if (DeleteDeadConditions)
+        // Delete pointer cast instructions.
         RecursivelyDeleteTriviallyDeadInstructions(Address, TLI);
+
+      // Also zap the blockaddress constant if there are no users remaining,
+      // otherwise the destination is still marked as having its address taken.
+      if (BA->use_empty())
+        BA->destroyConstant();
 
       // If we didn't find our destination in the IBI successor list, then we
       // have undefined behavior.  Replace the unconditional branch with an

@@ -33,7 +33,7 @@ static int StrCmp(const char *s1, const char *s2) {
 }
 #endif
 
-static void *GetFuncAddr(const char *name) {
+static void *GetFuncAddr(const char *name, uptr wrapper_addr) {
 #if SANITIZER_NETBSD
   // FIXME: Find a better way to handle renames
   if (StrCmp(name, "sigaction"))
@@ -47,13 +47,18 @@ static void *GetFuncAddr(const char *name) {
     // want the address of the real definition, though, so look it up using
     // RTLD_DEFAULT.
     addr = dlsym(RTLD_DEFAULT, name);
+
+    // In case `name' is not loaded, dlsym ends up finding the actual wrapper.
+    // We don't want to intercept the wrapper and have it point to itself.
+    if ((uptr)addr == wrapper_addr)
+      addr = nullptr;
   }
   return addr;
 }
 
 bool InterceptFunction(const char *name, uptr *ptr_to_real, uptr func,
                        uptr wrapper) {
-  void *addr = GetFuncAddr(name);
+  void *addr = GetFuncAddr(name, wrapper);
   *ptr_to_real = (uptr)addr;
   return addr && (func == wrapper);
 }

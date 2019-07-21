@@ -160,33 +160,29 @@
 
 // RUN: %clang_cl /Os --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Os %s
 // RUN: %clang_cl /Os --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Os %s
-// Os-NOT: -mdisable-fp-elim
-// Os-NOT: -momit-leaf-frame-pointer
+// Os: -mframe-pointer=none
 // Os: -Os
 
 // RUN: %clang_cl /Ot --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ot %s
 // RUN: %clang_cl /Ot --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ot %s
-// Ot-NOT: -mdisable-fp-elim
-// Ot-NOT: -momit-leaf-frame-pointer
+// Ot: -mframe-pointer=none
 // Ot: -O2
 
 // RUN: %clang_cl /Ox --target=i686-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ox %s
 // RUN: %clang_cl /Ox --target=x86_64-pc-windows-msvc -### -- %s 2>&1 | FileCheck -check-prefix=Ox %s
-// Ox-NOT: -mdisable-fp-elim
-// Ox-NOT: -momit-leaf-frame-pointer
+// Ox: -mframe-pointer=none
 // Ox: -O2
 
 // RUN: %clang_cl --target=i686-pc-win32 /O2sy- -### -- %s 2>&1 | FileCheck -check-prefix=PR24003 %s
-// PR24003: -mdisable-fp-elim
-// PR24003-NOT: -momit-leaf-frame-pointer
+// PR24003: -mframe-pointer=all
 // PR24003: -Os
 
 // RUN: %clang_cl --target=i686-pc-win32 -Werror /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_2 %s
-// Oy_2-NOT: -momit-leaf-frame-pointer
+// Oy_2: -mframe-pointer=all
 // Oy_2: -O2
 
 // RUN: %clang_cl --target=aarch64-pc-windows-msvc -Werror /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_aarch64 %s
-// Oy_aarch64: -mdisable-fp-elim
+// Oy_aarch64: -mframe-pointer=all
 // Oy_aarch64: -O2
 
 // RUN: %clang_cl --target=i686-pc-win32 -Werror /O2 /O2 -### -- %s 2>&1 | FileCheck -check-prefix=O2O2 %s
@@ -195,7 +191,7 @@
 // RUN: %clang_cl /Zs -Werror /Oy -- %s 2>&1
 
 // RUN: %clang_cl --target=i686-pc-win32 -Werror /Oy- -### -- %s 2>&1 | FileCheck -check-prefix=Oy_ %s
-// Oy_: -mdisable-fp-elim
+// Oy_: -mframe-pointer=all
 
 // RUN: %clang_cl /Qvec -### -- %s 2>&1 | FileCheck -check-prefix=Qvec %s
 // Qvec: -vectorize-loops
