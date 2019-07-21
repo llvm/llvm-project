@@ -40,18 +40,11 @@ define <4 x i32> @test_urem_odd_allones_eq(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_odd_allones_eq:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI1_0
+; CHECK-NEXT:    adrp x9, .LCPI1_1
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI1_0]
-; CHECK-NEXT:    adrp x8, .LCPI1_1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI1_1]
-; CHECK-NEXT:    adrp x8, .LCPI1_2
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI1_2]
-; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
-; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    neg v2.4s, v2.4s
-; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    mls v0.4s, v1.4s, v3.4s
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI1_1]
+; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -64,19 +57,11 @@ define <4 x i32> @test_urem_odd_allones_ne(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_odd_allones_ne:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
+; CHECK-NEXT:    adrp x9, .LCPI2_1
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI2_0]
-; CHECK-NEXT:    adrp x8, .LCPI2_1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI2_1]
-; CHECK-NEXT:    adrp x8, .LCPI2_2
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI2_2]
-; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
-; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    neg v2.4s, v2.4s
-; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    mls v0.4s, v1.4s, v3.4s
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
-; CHECK-NEXT:    mvn v0.16b, v0.16b
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI2_1]
+; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -300,20 +285,11 @@ define <4 x i32> @test_urem_odd_one(<4 x i32> %X) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI10_0
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI10_0]
-; CHECK-NEXT:    adrp x8, .LCPI10_1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI10_1]
-; CHECK-NEXT:    adrp x8, .LCPI10_2
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI10_2]
-; CHECK-NEXT:    adrp x8, .LCPI10_3
-; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
-; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI10_3]
-; CHECK-NEXT:    neg v2.4s, v2.4s
-; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mls v0.4s, v3.4s, v4.4s
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    mov w8, #52429
+; CHECK-NEXT:    movk w8, #52428, lsl #16
+; CHECK-NEXT:    dup v2.4s, w8
+; CHECK-NEXT:    mul v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    cmhs v0.4s, v1.4s, v0.4s
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret
@@ -480,21 +456,11 @@ define <4 x i32> @test_urem_odd_allones_and_one(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_odd_allones_and_one:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    adrp x8, .LCPI16_0
+; CHECK-NEXT:    adrp x9, .LCPI16_1
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI16_0]
-; CHECK-NEXT:    adrp x8, .LCPI16_1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI16_1]
-; CHECK-NEXT:    adrp x8, .LCPI16_2
-; CHECK-NEXT:    ldr q3, [x8, :lo12:.LCPI16_2]
-; CHECK-NEXT:    adrp x8, .LCPI16_3
-; CHECK-NEXT:    umull2 v4.2d, v0.4s, v1.4s
-; CHECK-NEXT:    umull v1.2d, v0.2s, v1.2s
-; CHECK-NEXT:    uzp2 v1.4s, v1.4s, v4.4s
-; CHECK-NEXT:    ldr q4, [x8, :lo12:.LCPI16_3]
-; CHECK-NEXT:    neg v2.4s, v2.4s
-; CHECK-NEXT:    ushl v1.4s, v1.4s, v2.4s
-; CHECK-NEXT:    bsl v3.16b, v0.16b, v1.16b
-; CHECK-NEXT:    mls v0.4s, v3.4s, v4.4s
-; CHECK-NEXT:    cmeq v0.4s, v0.4s, #0
+; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI16_1]
+; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
 ; CHECK-NEXT:    movi v1.4s, #1
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    ret

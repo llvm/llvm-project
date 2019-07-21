@@ -2841,14 +2841,30 @@ static void handleWarnUnusedResult(Sema &S, Decl *D, const ParsedAttr &AL) {
       return;
     }
 
-  // If this is spelled as the standard C++17 attribute, but not in C++17, warn
-  // about using it as an extension.
-  if (!S.getLangOpts().CPlusPlus17 && AL.isCXX11Attribute() &&
-      !AL.getScopeName())
-    S.Diag(AL.getLoc(), diag::ext_cxx17_attr) << AL;
+  StringRef Str;
+  if ((AL.isCXX11Attribute() || AL.isC2xAttribute()) && !AL.getScopeName()) {
+    // If this is spelled as the standard C++17 attribute, but not in C++17,
+    // warn about using it as an extension. If there are attribute arguments,
+    // then claim it's a C++2a extension instead.
+    // FIXME: If WG14 does not seem likely to adopt the same feature, add an
+    // extension warning for C2x mode.
+    const LangOptions &LO = S.getLangOpts();
+    if (AL.getNumArgs() == 1) {
+      if (LO.CPlusPlus && !LO.CPlusPlus2a)
+        S.Diag(AL.getLoc(), diag::ext_cxx2a_attr) << AL;
+
+      // Since this this is spelled [[nodiscard]], get the optional string
+      // literal. If in C++ mode, but not in C++2a mode, diagnose as an
+      // extension.
+      // FIXME: C2x should support this feature as well, even as an extension.
+      if (!S.checkStringLiteralArgumentAttr(AL, 0, Str, nullptr))
+        return;
+    } else if (LO.CPlusPlus && !LO.CPlusPlus17)
+      S.Diag(AL.getLoc(), diag::ext_cxx17_attr) << AL;
+  }
 
   D->addAttr(::new (S.Context)
-             WarnUnusedResultAttr(AL.getRange(), S.Context,
+             WarnUnusedResultAttr(AL.getRange(), S.Context, Str,
                                   AL.getAttributeSpellingListIndex()));
 }
 
