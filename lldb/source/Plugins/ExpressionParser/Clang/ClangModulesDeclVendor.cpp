@@ -27,6 +27,7 @@
 #include "lldb/Core/ModuleList.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
+#include "lldb/Symbol/ClangASTContext.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Target/Target.h"
@@ -110,6 +111,9 @@ private:
   ImportedModuleMap m_imported_modules;
   ImportedModuleSet m_user_imported_modules;
   const clang::ExternalASTMerger::OriginMap m_origin_map;
+  // We assume that every ASTContext has an ClangASTContext, so we also store
+  // a custom ClangASTContext for our internal ASTContext.
+  std::unique_ptr<ClangASTContext> m_ast_context;
 };
 } // anonymous namespace
 
@@ -155,7 +159,13 @@ ClangModulesDeclVendorImpl::ClangModulesDeclVendorImpl(
     : m_diagnostics_engine(std::move(diagnostics_engine)),
       m_compiler_invocation(std::move(compiler_invocation)),
       m_compiler_instance(std::move(compiler_instance)),
-      m_parser(std::move(parser)), m_origin_map() {}
+      m_parser(std::move(parser)), m_origin_map() {
+
+  // Initialize our ClangASTContext.
+  auto target_opts = m_compiler_invocation->getTargetOpts();
+  m_ast_context.reset(new ClangASTContext(target_opts.Triple.c_str()));
+  m_ast_context->setASTContext(&m_compiler_instance->getASTContext());
+}
 
 void ClangModulesDeclVendorImpl::ReportModuleExportsHelper(
     std::set<ClangModulesDeclVendor::ModuleID> &exports,
