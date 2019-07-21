@@ -2158,10 +2158,12 @@ void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
   // offset field) % 64. Some versions of the programming guide omit the m0
   // part, or claim it's from offset 0.
   if (ConstantSDNode *ConstOffset = dyn_cast<ConstantSDNode>(BaseOffset)) {
-    // If we have a constant offset, try to use the default value for m0 as a
-    // base to possibly avoid setting it up.
-    glueCopyToM0(N, CurDAG->getTargetConstant(-1, SL, MVT::i32));
-    ImmOffset = ConstOffset->getZExtValue() + 1;
+    // If we have a constant offset, try to use the 0 in m0 as the base.
+    // TODO: Look into changing the default m0 initialization value. If the
+    // default -1 only set the low 16-bits, we could leave it as-is and add 1 to
+    // the immediate offset.
+    glueCopyToM0(N, CurDAG->getTargetConstant(0, SL, MVT::i32));
+    ImmOffset = ConstOffset->getZExtValue();
   } else {
     if (CurDAG->isBaseWithConstantOffset(BaseOffset)) {
       ImmOffset = BaseOffset.getConstantOperandVal(1);

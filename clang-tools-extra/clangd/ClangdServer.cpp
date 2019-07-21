@@ -14,6 +14,7 @@
 #include "FormattedString.h"
 #include "Headers.h"
 #include "Protocol.h"
+#include "SemanticHighlighting.h"
 #include "SourceCode.h"
 #include "TUScheduler.h"
 #include "Trace.h"
@@ -31,6 +32,7 @@
 #include "clang/Tooling/Core/Replacement.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
@@ -60,15 +62,20 @@ struct UpdateIndexCallbacks : public ParsingCallbacks {
       FIndex->updatePreamble(Path, Ctx, std::move(PP), CanonIncludes);
   }
 
-  void onMainAST(PathRef Path, ParsedAST &AST) override {
+  void onMainAST(PathRef Path, ParsedAST &AST, PublishFn Publish) override {
     if (FIndex)
       FIndex->updateMain(Path, AST);
-    if (SemanticHighlighting)
-      DiagConsumer.onHighlightingsReady(Path, getSemanticHighlightings(AST));
-  }
 
-  void onDiagnostics(PathRef File, std::vector<Diag> Diags) override {
-    DiagConsumer.onDiagnosticsReady(File, std::move(Diags));
+    std::vector<Diag> Diagnostics = AST.getDiagnostics();
+    std::vector<HighlightingToken> Highlightings;
+    if (SemanticHighlighting)
+      Highlightings = getSemanticHighlightings(AST);
+
+    Publish([&]() {
+      DiagConsumer.onDiagnosticsReady(Path, std::move(Diagnostics));
+      if (SemanticHighlighting)
+        DiagConsumer.onHighlightingsReady(Path, std::move(Highlightings));
+    });
   }
 
   void onFileUpdated(PathRef File, const TUStatus &Status) override {

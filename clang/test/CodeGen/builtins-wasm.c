@@ -44,6 +44,12 @@ __SIZE_TYPE__ tls_size() {
   // WEBASSEMBLY64: call i64 @llvm.wasm.tls.size.i64()
 }
 
+__SIZE_TYPE__ tls_align() {
+  return __builtin_wasm_tls_align();
+  // WEBASSEMBLY32: call i32 @llvm.wasm.tls.align.i32()
+  // WEBASSEMBLY64: call i64 @llvm.wasm.tls.align.i64()
+}
+
 void *tls_base() {
   return __builtin_wasm_tls_base();
   // WEBASSEMBLY: call i8* @llvm.wasm.tls.base()

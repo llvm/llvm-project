@@ -94,6 +94,16 @@ define i32 @i32_func_void() #0 {
   ret i32 %val
 }
 
+; GCN-LABEL: {{^}}i48_func_void:
+; GCN: buffer_load_dword v0, off
+; GCN-NEXT: buffer_load_ushort v1, off
+; GCN-NEXT: s_waitcnt vmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define i48 @i48_func_void() #0 {
+  %val = load i48, i48 addrspace(1)* undef, align 8
+  ret i48 %val
+}
+
 ; GCN-LABEL: {{^}}i64_func_void:
 ; GCN: buffer_load_dwordx2 v[0:1], off
 ; GCN-NEXT: s_waitcnt vmcnt(0)
@@ -101,6 +111,16 @@ define i32 @i32_func_void() #0 {
 define i64 @i64_func_void() #0 {
   %val = load i64, i64 addrspace(1)* undef
   ret i64 %val
+}
+
+; GCN-LABEL: {{^}}i65_func_void:
+; GCN-DAG: buffer_load_dwordx2 v[0:1], off
+; GCN-DAG: buffer_load_ubyte v2, off
+; GCN: s_waitcnt vmcnt(0)
+; GCN-NEXT: s_setpc_b64
+define i65 @i65_func_void() #0 {
+  %val = load i65, i65 addrspace(1)* undef
+  ret i65 %val
 }
 
 ; GCN-LABEL: {{^}}f32_func_void:

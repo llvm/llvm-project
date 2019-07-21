@@ -884,7 +884,7 @@ public:
   /// \returns Maximum number of waves per execution unit supported by the
   /// subtarget without any kind of limitation.
   unsigned getMaxWavesPerEU() const {
-    return AMDGPU::IsaInfo::getMaxWavesPerEU();
+    return AMDGPU::IsaInfo::getMaxWavesPerEU(this);
   }
 
   /// \returns Number of waves per work group supported by the subtarget and

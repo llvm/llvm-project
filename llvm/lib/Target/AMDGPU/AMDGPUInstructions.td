@@ -220,80 +220,48 @@ def hi_f16_elt : PatLeaf<
 // PatLeafs for floating-point comparisons
 //===----------------------------------------------------------------------===//
 
-def COND_OEQ : PatLeaf <
-  (cond),
-  [{return N->get() == ISD::SETOEQ || N->get() == ISD::SETEQ;}]
->;
-
-def COND_ONE : PatLeaf <
-  (cond),
-  [{return N->get() == ISD::SETONE || N->get() == ISD::SETNE;}]
->;
-
-def COND_OGT : PatLeaf <
-  (cond),
-  [{return N->get() == ISD::SETOGT || N->get() == ISD::SETGT;}]
->;
-
-def COND_OGE : PatLeaf <
-  (cond),
-  [{return N->get() == ISD::SETOGE || N->get() == ISD::SETGE;}]
->;
-
-def COND_OLT : PatLeaf <
-  (cond),
-  [{return N->get() == ISD::SETOLT || N->get() == ISD::SETLT;}]
->;
-
-def COND_OLE : PatLeaf <
-  (cond),
-  [{return N->get() == ISD::SETOLE || N->get() == ISD::SETLE;}]
->;
-
-def COND_O : PatLeaf <(cond), [{return N->get() == ISD::SETO;}]>;
-def COND_UO : PatLeaf <(cond), [{return N->get() == ISD::SETUO;}]>;
+def COND_OEQ : PatFrags<(ops), [(OtherVT SETOEQ), (OtherVT SETEQ)]>;
+def COND_ONE : PatFrags<(ops), [(OtherVT SETONE), (OtherVT SETNE)]>;
+def COND_OGT : PatFrags<(ops), [(OtherVT SETOGT), (OtherVT SETGT)]>;
+def COND_OGE : PatFrags<(ops), [(OtherVT SETOGE), (OtherVT SETGE)]>;
+def COND_OLT : PatFrags<(ops), [(OtherVT SETOLT), (OtherVT SETLT)]>;
+def COND_OLE : PatFrags<(ops), [(OtherVT SETOLE), (OtherVT SETLE)]>;
+def COND_O   : PatFrags<(ops), [(OtherVT SETO)]>;
+def COND_UO  : PatFrags<(ops), [(OtherVT SETUO)]>;
 
 //===----------------------------------------------------------------------===//
 // PatLeafs for unsigned / unordered comparisons
 //===----------------------------------------------------------------------===//
 
-def COND_UEQ : PatLeaf <(cond), [{return N->get() == ISD::SETUEQ;}]>;
-def COND_UNE : PatLeaf <(cond), [{return N->get() == ISD::SETUNE;}]>;
-def COND_UGT : PatLeaf <(cond), [{return N->get() == ISD::SETUGT;}]>;
-def COND_UGE : PatLeaf <(cond), [{return N->get() == ISD::SETUGE;}]>;
-def COND_ULT : PatLeaf <(cond), [{return N->get() == ISD::SETULT;}]>;
-def COND_ULE : PatLeaf <(cond), [{return N->get() == ISD::SETULE;}]>;
+def COND_UEQ : PatFrag<(ops), (OtherVT SETUEQ)>;
+def COND_UNE : PatFrag<(ops), (OtherVT SETUNE)>;
+def COND_UGT : PatFrag<(ops), (OtherVT SETUGT)>;
+def COND_UGE : PatFrag<(ops), (OtherVT SETUGE)>;
+def COND_ULT : PatFrag<(ops), (OtherVT SETULT)>;
+def COND_ULE : PatFrag<(ops), (OtherVT SETULE)>;
 
 // XXX - For some reason R600 version is preferring to use unordered
 // for setne?
-def COND_UNE_NE : PatLeaf <
-  (cond),
-  [{return N->get() == ISD::SETUNE || N->get() == ISD::SETNE;}]
->;
+def COND_UNE_NE  : PatFrags<(ops), [(OtherVT SETUNE), (OtherVT SETNE)]>;
 
 //===----------------------------------------------------------------------===//
 // PatLeafs for signed comparisons
 //===----------------------------------------------------------------------===//
 
-def COND_SGT : PatLeaf <(cond), [{return N->get() == ISD::SETGT;}]>;
-def COND_SGE : PatLeaf <(cond), [{return N->get() == ISD::SETGE;}]>;
-def COND_SLT : PatLeaf <(cond), [{return N->get() == ISD::SETLT;}]>;
-def COND_SLE : PatLeaf <(cond), [{return N->get() == ISD::SETLE;}]>;
+def COND_SGT : PatFrag<(ops), (OtherVT SETGT)>;
+def COND_SGE : PatFrag<(ops), (OtherVT SETGE)>;
+def COND_SLT : PatFrag<(ops), (OtherVT SETLT)>;
+def COND_SLE : PatFrag<(ops), (OtherVT SETLE)>;
 
 //===----------------------------------------------------------------------===//
 // PatLeafs for integer equality
 //===----------------------------------------------------------------------===//
 
-def COND_EQ : PatLeaf <
-  (cond),
-  [{return N->get() == ISD::SETEQ || N->get() == ISD::SETUEQ;}]
->;
+def COND_EQ : PatFrags<(ops), [(OtherVT SETEQ), (OtherVT SETUEQ)]>;
+def COND_NE : PatFrags<(ops), [(OtherVT SETNE), (OtherVT SETUNE)]>;
 
-def COND_NE : PatLeaf <
-  (cond),
-  [{return N->get() == ISD::SETNE || N->get() == ISD::SETUNE;}]
->;
-
+// FIXME: Should not need code predicate
+//def COND_NULL : PatLeaf<(OtherVT null_frag)>;
 def COND_NULL : PatLeaf <
   (cond),
   [{(void)N; return false;}]

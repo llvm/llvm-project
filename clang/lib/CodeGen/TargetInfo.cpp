@@ -9329,7 +9329,7 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
   if (const auto *RTy = Ty->getAs<RecordType>()) {
     // Structures with either a non-trivial destructor or a non-trivial
     // copy constructor are not eligible for the FP calling convention.
-    if (CGCXXABI::RecordArgABI RAA = getRecordArgABI(Ty, CGT.getCXXABI()))
+    if (getRecordArgABI(Ty, CGT.getCXXABI()))
       return false;
     if (isEmptyRecord(getContext(), Ty, true))
       return true;

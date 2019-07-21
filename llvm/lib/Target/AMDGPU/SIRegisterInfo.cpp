@@ -1347,20 +1347,7 @@ void SIRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
 }
 
 StringRef SIRegisterInfo::getRegAsmName(unsigned Reg) const {
-  const TargetRegisterClass *RC = getMinimalPhysRegClass(Reg);
-  unsigned Size = getRegSizeInBits(*RC);
-  unsigned AltName = AMDGPU::NoRegAltName;
-
-  switch (Size) {
-  case 64:   AltName = AMDGPU::Reg64; break;
-  case 96:   AltName = AMDGPU::Reg96; break;
-  case 128:  AltName = AMDGPU::Reg128; break;
-  case 160:  AltName = AMDGPU::Reg160; break;
-  case 256:  AltName = AMDGPU::Reg256; break;
-  case 512:  AltName = AMDGPU::Reg512; break;
-  case 1024: AltName = AMDGPU::Reg1024; break;
-  }
-  return AMDGPUInstPrinter::getRegisterName(Reg, AltName);
+  return AMDGPUInstPrinter::getRegisterName(Reg);
 }
 
 // FIXME: This is very slow. It might be worth creating a map from physreg to

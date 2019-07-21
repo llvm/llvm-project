@@ -430,13 +430,8 @@ static void EmitGCCInlineAsmStr(const char *AsmStr, const MachineInstr *MI,
           if (Modifier[0] == 'l') { // Labels are target independent.
             if (MI->getOperand(OpNo).isBlockAddress()) {
               const BlockAddress *BA = MI->getOperand(OpNo).getBlockAddress();
-              const BasicBlock *BB = BA->getBasicBlock();
-              const MachineFunction *MF = MI->getParent()->getParent();
-              for (const MachineBasicBlock &MBB : *MF)
-                if (BB == MBB.getBasicBlock()) {
-                  MBB.getSymbol()->print(OS, AP->MAI);
-                  break;
-                }
+              MCSymbol *Sym = AP->GetBlockAddressSymbol(BA);
+              Sym->print(OS, AP->MAI);
             } else if (MI->getOperand(OpNo).isMBB()) {
               const MCSymbol *Sym = MI->getOperand(OpNo).getMBB()->getSymbol();
               Sym->print(OS, AP->MAI);

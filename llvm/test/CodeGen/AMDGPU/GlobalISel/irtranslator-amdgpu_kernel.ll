@@ -8,13 +8,13 @@ define amdgpu_kernel void @i8_arg(i32 addrspace(1)* nocapture %out, i8 %in) noun
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 1 from `i8 addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 1 from `i8 addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s8)
   ; HSA-VI:   G_STORE [[ZEXT]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   %ext = zext i8 %in to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
@@ -27,13 +27,13 @@ define amdgpu_kernel void @i8_zext_arg(i32 addrspace(1)* nocapture %out, i8 zero
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 1 from `i8 addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 1 from `i8 addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s8)
   ; HSA-VI:   G_STORE [[ZEXT]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   %ext = zext i8 %in to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
@@ -46,13 +46,13 @@ define amdgpu_kernel void @i8_sext_arg(i32 addrspace(1)* nocapture %out, i8 sign
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 1 from `i8 addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 1 from `i8 addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD1]](s8)
   ; HSA-VI:   G_STORE [[SEXT]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   %ext = sext i8 %in to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
@@ -65,13 +65,13 @@ define amdgpu_kernel void @i16_arg(i32 addrspace(1)* nocapture %out, i16 %in) no
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 2 from `i16 addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 2 from `i16 addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s16)
   ; HSA-VI:   G_STORE [[ZEXT]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   %ext = zext i16 %in to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
@@ -84,13 +84,13 @@ define amdgpu_kernel void @i16_zext_arg(i32 addrspace(1)* nocapture %out, i16 ze
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 2 from `i16 addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 2 from `i16 addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s16)
   ; HSA-VI:   G_STORE [[ZEXT]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   %ext = zext i16 %in to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
@@ -103,13 +103,13 @@ define amdgpu_kernel void @i16_sext_arg(i32 addrspace(1)* nocapture %out, i16 si
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 2 from `i16 addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s16) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 2 from `i16 addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD1]](s16)
   ; HSA-VI:   G_STORE [[SEXT]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   %ext = sext i16 %in to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
@@ -122,12 +122,12 @@ define amdgpu_kernel void @i32_arg(i32 addrspace(1)* nocapture %out, i32 %in) no
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 4 from `i32 addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store i32 %in, i32 addrspace(1)* %out, align 4
   ret void
@@ -140,12 +140,12 @@ define amdgpu_kernel void @f32_arg(float addrspace(1)* nocapture %out, float %in
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `float addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `float addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 4 from `float addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s32) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 4 from `float addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store float %in, float addrspace(1)* %out, align 4
   ret void
@@ -158,12 +158,12 @@ define amdgpu_kernel void @v2i8_arg(<2 x i8> addrspace(1)* %out, <2 x i8> %in) {
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<2 x i8> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<2 x i8> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 2 from `<2 x i8> addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<2 x s8>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 2 from `<2 x i8> addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<2 x s8>), [[LOAD]](p1) :: (store 2 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <2 x i8> %in, <2 x i8> addrspace(1)* %out
   ret void
@@ -176,12 +176,12 @@ define amdgpu_kernel void @v2i16_arg(<2 x i16> addrspace(1)* %out, <2 x i16> %in
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<2 x i16> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<2 x i16> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 4 from `<2 x i16> addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<2 x s16>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 4 from `<2 x i16> addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<2 x s16>), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <2 x i16> %in, <2 x i16> addrspace(1)* %out
   ret void
@@ -194,12 +194,12 @@ define amdgpu_kernel void @v2i32_arg(<2 x i32> addrspace(1)* nocapture %out, <2 
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<2 x i32> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<2 x i32> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 8 from `<2 x i32> addrspace(4)* undef`, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 8 from `<2 x i32> addrspace(4)* undef`, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<2 x s32>), [[LOAD]](p1) :: (store 8 into %ir.out, align 4, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <2 x i32> %in, <2 x i32> addrspace(1)* %out, align 4
   ret void
@@ -212,12 +212,12 @@ define amdgpu_kernel void @v2f32_arg(<2 x float> addrspace(1)* nocapture %out, <
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<2 x float> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<2 x float> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 8 from `<2 x float> addrspace(4)* undef`, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<2 x s32>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 8 from `<2 x float> addrspace(4)* undef`, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<2 x s32>), [[LOAD]](p1) :: (store 8 into %ir.out, align 4, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <2 x float> %in, <2 x float> addrspace(1)* %out, align 4
   ret void
@@ -230,12 +230,12 @@ define amdgpu_kernel void @v3i8_arg(<3 x i8> addrspace(1)* nocapture %out, <3 x 
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<3 x i8> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<3 x i8> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 3 from `<3 x i8> addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<3 x s8>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 3 from `<3 x i8> addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<3 x s8>), [[LOAD]](p1) :: (store 3 into %ir.out, align 4, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <3 x i8> %in, <3 x i8> addrspace(1)* %out, align 4
   ret void
@@ -248,12 +248,12 @@ define amdgpu_kernel void @v3i16_arg(<3 x i16> addrspace(1)* nocapture %out, <3 
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<3 x i16> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<3 x i16> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<3 x s16>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 6 from `<3 x i16> addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<3 x s16>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 6 from `<3 x i16> addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<3 x s16>), [[LOAD]](p1) :: (store 6 into %ir.out, align 4, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <3 x i16> %in, <3 x i16> addrspace(1)* %out, align 4
   ret void
@@ -266,12 +266,12 @@ define amdgpu_kernel void @v3i32_arg(<3 x i32> addrspace(1)* nocapture %out, <3 
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<3 x i32> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<3 x i32> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<3 x s32>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 12 from `<3 x i32> addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<3 x s32>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 12 from `<3 x i32> addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<3 x s32>), [[LOAD]](p1) :: (store 12 into %ir.out, align 4, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <3 x i32> %in, <3 x i32> addrspace(1)* %out, align 4
   ret void
@@ -284,12 +284,12 @@ define amdgpu_kernel void @v3f32_arg(<3 x float> addrspace(1)* nocapture %out, <
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<3 x float> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<3 x float> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<3 x s32>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 12 from `<3 x float> addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<3 x s32>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 12 from `<3 x float> addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<3 x s32>), [[LOAD]](p1) :: (store 12 into %ir.out, align 4, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <3 x float> %in, <3 x float> addrspace(1)* %out, align 4
   ret void
@@ -302,12 +302,12 @@ define amdgpu_kernel void @v4i8_arg(<4 x i8> addrspace(1)* %out, <4 x i8> %in) {
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<4 x i8> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<4 x i8> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<4 x s8>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 4 from `<4 x i8> addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<4 x s8>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 4 from `<4 x i8> addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<4 x s8>), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <4 x i8> %in, <4 x i8> addrspace(1)* %out
   ret void
@@ -320,12 +320,12 @@ define amdgpu_kernel void @v4i16_arg(<4 x i16> addrspace(1)* %out, <4 x i16> %in
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<4 x i16> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<4 x i16> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 8 from `<4 x i16> addrspace(4)* undef`, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<4 x s16>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 8 from `<4 x i16> addrspace(4)* undef`, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<4 x s16>), [[LOAD]](p1) :: (store 8 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <4 x i16> %in, <4 x i16> addrspace(1)* %out
   ret void
@@ -338,12 +338,12 @@ define amdgpu_kernel void @v4i32_arg(<4 x i32> addrspace(1)* nocapture %out, <4 
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<4 x i32> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<4 x i32> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 16 from `<4 x i32> addrspace(4)* undef`, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 16 from `<4 x i32> addrspace(4)* undef`, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<4 x s32>), [[LOAD]](p1) :: (store 16 into %ir.out, align 4, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <4 x i32> %in, <4 x i32> addrspace(1)* %out, align 4
   ret void
@@ -356,12 +356,12 @@ define amdgpu_kernel void @v4f32_arg(<4 x float> addrspace(1)* nocapture %out, <
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<4 x float> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<4 x float> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 16 from `<4 x float> addrspace(4)* undef`, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<4 x s32>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 16 from `<4 x float> addrspace(4)* undef`, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<4 x s32>), [[LOAD]](p1) :: (store 16 into %ir.out, align 4, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <4 x float> %in, <4 x float> addrspace(1)* %out, align 4
   ret void
@@ -374,12 +374,12 @@ define amdgpu_kernel void @v8i8_arg(<8 x i8> addrspace(1)* %out, <8 x i8> %in) {
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<8 x i8> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<8 x i8> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<8 x s8>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 8 from `<8 x i8> addrspace(4)* undef`, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<8 x s8>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 8 from `<8 x i8> addrspace(4)* undef`, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<8 x s8>), [[LOAD]](p1) :: (store 8 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <8 x i8> %in, <8 x i8> addrspace(1)* %out
   ret void
@@ -392,12 +392,12 @@ define amdgpu_kernel void @v8i16_arg(<8 x i16> addrspace(1)* %out, <8 x i16> %in
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<8 x i16> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<8 x i16> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 16 from `<8 x i16> addrspace(4)* undef`, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<8 x s16>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 16 from `<8 x i16> addrspace(4)* undef`, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<8 x s16>), [[LOAD]](p1) :: (store 16 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <8 x i16> %in, <8 x i16> addrspace(1)* %out
   ret void
@@ -410,12 +410,12 @@ define amdgpu_kernel void @v8i32_arg(<8 x i32> addrspace(1)* nocapture %out, <8 
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<8 x i32> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<8 x i32> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<8 x s32>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 32 from `<8 x i32> addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<8 x s32>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 32 from `<8 x i32> addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<8 x s32>), [[LOAD]](p1) :: (store 32 into %ir.out, align 4, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <8 x i32> %in, <8 x i32> addrspace(1)* %out, align 4
   ret void
@@ -428,12 +428,12 @@ define amdgpu_kernel void @v8f32_arg(<8 x float> addrspace(1)* nocapture %out, <
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<8 x float> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<8 x float> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<8 x s32>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 32 from `<8 x float> addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<8 x s32>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 32 from `<8 x float> addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<8 x s32>), [[LOAD]](p1) :: (store 32 into %ir.out, align 4, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <8 x float> %in, <8 x float> addrspace(1)* %out, align 4
   ret void
@@ -446,12 +446,12 @@ define amdgpu_kernel void @v16i8_arg(<16 x i8> addrspace(1)* %out, <16 x i8> %in
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<16 x i8> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<16 x i8> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 16 from `<16 x i8> addrspace(4)* undef`, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<16 x s8>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 16 from `<16 x i8> addrspace(4)* undef`, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<16 x s8>), [[LOAD]](p1) :: (store 16 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <16 x i8> %in, <16 x i8> addrspace(1)* %out
   ret void
@@ -464,12 +464,12 @@ define amdgpu_kernel void @v16i16_arg(<16 x i16> addrspace(1)* %out, <16 x i16> 
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<16 x i16> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<16 x i16> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 32
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<16 x s16>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 32 from `<16 x i16> addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<16 x s16>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 32 from `<16 x i16> addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<16 x s16>), [[LOAD]](p1) :: (store 32 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <16 x i16> %in, <16 x i16> addrspace(1)* %out
   ret void
@@ -482,12 +482,12 @@ define amdgpu_kernel void @v16i32_arg(<16 x i32> addrspace(1)* nocapture %out, <
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<16 x i32> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<16 x i32> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 64 from `<16 x i32> addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 64 from `<16 x i32> addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<16 x s32>), [[LOAD]](p1) :: (store 64 into %ir.out, align 4, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <16 x i32> %in, <16 x i32> addrspace(1)* %out, align 4
   ret void
@@ -500,12 +500,12 @@ define amdgpu_kernel void @v16f32_arg(<16 x float> addrspace(1)* nocapture %out,
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `<16 x float> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `<16 x float> addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 64
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 64 from `<16 x float> addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(<16 x s32>) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 64 from `<16 x float> addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](<16 x s32>), [[LOAD]](p1) :: (store 64 into %ir.out, align 4, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store <16 x float> %in, <16 x float> addrspace(1)* %out, align 4
   ret void
@@ -518,12 +518,12 @@ define amdgpu_kernel void @kernel_arg_i64(i64 addrspace(1)* %out, i64 %a) nounwi
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `i64 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `i64 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 8 from `i64 addrspace(4)* undef`, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 8 from `i64 addrspace(4)* undef`, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](s64), [[LOAD]](p1) :: (store 8 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   store i64 %a, i64 addrspace(1)* %out, align 8
   ret void
 }
@@ -535,12 +535,12 @@ define amdgpu_kernel void @f64_kernel_arg(double addrspace(1)* %out, double  %in
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `double addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `double addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 8 from `double addrspace(4)* undef`, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s64) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 8 from `double addrspace(4)* undef`, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](s64), [[LOAD]](p1) :: (store 8 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
 entry:
   store double %in, double addrspace(1)* %out
   ret void
@@ -553,12 +553,12 @@ define amdgpu_kernel void @i1_arg(i1 addrspace(1)* %out, i1 %x) nounwind {
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `i1 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `i1 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s1) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 1 from `i1 addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s1) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 1 from `i1 addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   G_STORE [[LOAD1]](s1), [[LOAD]](p1) :: (store 1 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   store i1 %x, i1 addrspace(1)* %out, align 1
   ret void
 }
@@ -570,13 +570,13 @@ define amdgpu_kernel void @i1_arg_zext_i32(i32 addrspace(1)* %out, i1 %x) nounwi
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s1) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 1 from `i1 addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s1) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 1 from `i1 addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[LOAD1]](s1)
   ; HSA-VI:   G_STORE [[ZEXT]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   %ext = zext i1 %x to i32
   store i32 %ext, i32 addrspace(1)* %out, align 4
   ret void
@@ -589,13 +589,13 @@ define amdgpu_kernel void @i1_arg_zext_i64(i64 addrspace(1)* %out, i1 %x) nounwi
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `i64 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `i64 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s1) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 1 from `i1 addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s1) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 1 from `i1 addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[LOAD1]](s1)
   ; HSA-VI:   G_STORE [[ZEXT]](s64), [[LOAD]](p1) :: (store 8 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   %ext = zext i1 %x to i64
   store i64 %ext, i64 addrspace(1)* %out, align 8
   ret void
@@ -608,13 +608,13 @@ define amdgpu_kernel void @i1_arg_sext_i32(i32 addrspace(1)* %out, i1 %x) nounwi
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `i32 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s1) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 1 from `i1 addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s1) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 1 from `i1 addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   [[SEXT:%[0-9]+]]:_(s32) = G_SEXT [[LOAD1]](s1)
   ; HSA-VI:   G_STORE [[SEXT]](s32), [[LOAD]](p1) :: (store 4 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   %ext = sext i1 %x to i32
   store i32 %ext, i32addrspace(1)* %out, align 4
   ret void
@@ -627,13 +627,13 @@ define amdgpu_kernel void @i1_arg_sext_i64(i64 addrspace(1)* %out, i1 %x) nounwi
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 8 from `i64 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(p1) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 8 from `i64 addrspace(1)* addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 8
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s1) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 1 from `i1 addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s1) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 1 from `i1 addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD1]](s1)
   ; HSA-VI:   G_STORE [[SEXT]](s64), [[LOAD]](p1) :: (store 8 into %ir.out, addrspace 1)
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   %ext = sext i1 %x to i64
   store i64 %ext, i64 addrspace(1)* %out, align 8
   ret void
@@ -644,7 +644,7 @@ define amdgpu_kernel void @empty_struct_arg({} %in) nounwind {
   ; HSA-VI: bb.1 (%ir-block.0):
   ; HSA-VI:   liveins: $sgpr4_sgpr5
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   ret void
 }
 
@@ -674,18 +674,18 @@ define amdgpu_kernel void @struct_argument_alignment({i32, i64} %arg0, i8, {i32,
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 16 from `{ i32, i64 } addrspace(4)* undef`, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 16 from `{ i32, i64 } addrspace(4)* undef`, addrspace 4)
   ; HSA-VI:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](s128), 0
   ; HSA-VI:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD]](s128), 64
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 16
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 1 from `i8 addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 1 from `i8 addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 24
   ; HSA-VI:   [[GEP2:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C2]](s64)
-  ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[GEP2]](p4) :: (non-temporal invariant load 16 from `{ i32, i64 } addrspace(4)* undef`, align 8, addrspace 4)
+  ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(s128) = G_LOAD [[GEP2]](p4) :: (dereferenceable invariant load 16 from `{ i32, i64 } addrspace(4)* undef`, align 8, addrspace 4)
   ; HSA-VI:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD2]](s128), 0
   ; HSA-VI:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD2]](s128), 64
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   ret void
 }
 
@@ -706,17 +706,17 @@ define amdgpu_kernel void @packed_struct_argument_alignment(<{i32, i64}> %arg0, 
   ; HSA-VI:   [[COPY:%[0-9]+]]:_(p4) = COPY $sgpr4_sgpr5
   ; HSA-VI:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
   ; HSA-VI:   [[GEP:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C]](s64)
-  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(s96) = G_LOAD [[GEP]](p4) :: (non-temporal invariant load 12 from `<{ i32, i64 }> addrspace(4)* undef`, align 16, addrspace 4)
+  ; HSA-VI:   [[LOAD:%[0-9]+]]:_(s96) = G_LOAD [[GEP]](p4) :: (dereferenceable invariant load 12 from `<{ i32, i64 }> addrspace(4)* undef`, align 16, addrspace 4)
   ; HSA-VI:   [[EXTRACT:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD]](s96), 0
   ; HSA-VI:   [[EXTRACT1:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD]](s96), 32
   ; HSA-VI:   [[C1:%[0-9]+]]:_(s64) = G_CONSTANT i64 12
   ; HSA-VI:   [[GEP1:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C1]](s64)
-  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p4) :: (non-temporal invariant load 1 from `i8 addrspace(4)* undef`, align 4, addrspace 4)
+  ; HSA-VI:   [[LOAD1:%[0-9]+]]:_(s8) = G_LOAD [[GEP1]](p4) :: (dereferenceable invariant load 1 from `i8 addrspace(4)* undef`, align 4, addrspace 4)
   ; HSA-VI:   [[C2:%[0-9]+]]:_(s64) = G_CONSTANT i64 13
   ; HSA-VI:   [[GEP2:%[0-9]+]]:_(p4) = G_GEP [[COPY]], [[C2]](s64)
-  ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(s96) = G_LOAD [[GEP2]](p4) :: (non-temporal invariant load 12 from `<{ i32, i64 }> addrspace(4)* undef`, align 1, addrspace 4)
+  ; HSA-VI:   [[LOAD2:%[0-9]+]]:_(s96) = G_LOAD [[GEP2]](p4) :: (dereferenceable invariant load 12 from `<{ i32, i64 }> addrspace(4)* undef`, align 1, addrspace 4)
   ; HSA-VI:   [[EXTRACT2:%[0-9]+]]:_(s32) = G_EXTRACT [[LOAD2]](s96), 0
   ; HSA-VI:   [[EXTRACT3:%[0-9]+]]:_(s64) = G_EXTRACT [[LOAD2]](s96), 32
-  ; HSA-VI:   S_ENDPGM
+  ; HSA-VI:   S_ENDPGM 0
   ret void
 }

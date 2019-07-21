@@ -247,6 +247,9 @@ void Writer::layoutMemory() {
     if (WasmSym::tlsSize && seg->name == ".tdata") {
       auto *tlsSize = cast<DefinedGlobal>(WasmSym::tlsSize);
       tlsSize->global->global.InitExpr.Value.Int32 = seg->size;
+
+      auto *tlsAlign = cast<DefinedGlobal>(WasmSym::tlsAlign);
+      tlsAlign->global->global.InitExpr.Value.Int32 = 1U << seg->alignment;
     }
   }
 

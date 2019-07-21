@@ -4,7 +4,7 @@
 # RUN: llvm-lipo %t --verify_arch i386
 
 # RUN: not llvm-lipo %t -verify_arch aarch64
-# RUN: not llvm-lipo %t -verify_arch aarch64 i386 
+# RUN: not llvm-lipo %t -verify_arch aarch64 i386
 
 # INVALID_ARCH: Invalid architecture: aarch101
 # RUN: not llvm-lipo %t -verify_arch aarch101 2>&1 | FileCheck --check-prefix=INVALID_ARCH %s
@@ -20,7 +20,7 @@
 # RUN: not llvm-lipo %t %t -verify_arch i386 2>&1 | FileCheck --check-prefix=MULTIPLE_INPUT_OBJ %s
 
 --- !mach-o
-FileHeader:      
+FileHeader:
   magic:           0xFEEDFACE
   cputype:         0x00000007
   cpusubtype:      0x00000003

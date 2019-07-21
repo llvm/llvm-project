@@ -1,3 +1,4 @@
+# UNSUPPORTED: linux
 # RUN: not llvm-mc %s -triple=riscv64 -riscv-no-aliases 2>&1 | FileCheck %s
 # RUN: not llvm-mc %s -triple=riscv64 2>&1 | FileCheck %s
 

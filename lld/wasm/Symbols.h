@@ -435,6 +435,10 @@ struct WasmSym {
   // Symbol whose value is the size of the TLS block.
   static GlobalSymbol *tlsSize;
 
+  // __tls_size
+  // Symbol whose value is the alignment of the TLS block.
+  static GlobalSymbol *tlsAlign;
+
   // __data_end
   // Symbol marking the end of the data and bss.
   static DefinedData *dataEnd;
