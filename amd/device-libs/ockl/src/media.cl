@@ -24,25 +24,25 @@ OCKL_MANGLE_U32(bfm)(uint w, uint s)
 CATTR int
 OCKL_MANGLE_I32(bfe)(int a, uint s, uint w)
 {
-    return __llvm_amdgcn_sbfe_i32(a, s, w);
+    return __builtin_amdgcn_sbfe(a, s, w);
 }
 
 CATTR uint
 OCKL_MANGLE_U32(bfe)(uint a, uint s, uint w)
 {
-    return __llvm_amdgcn_ubfe_i32(a, s, w);
+    return __builtin_amdgcn_ubfe(a, s, w);
 }
 
 CATTR uint
 OCKL_MANGLE_U32(bitalign)(uint a, uint b, uint c)
 {
-    return __llvm_amdgcn_alignbit(a, b, c);
+    return __builtin_amdgcn_alignbit(a, b, c);
 }
 
 CATTR uint
 OCKL_MANGLE_U32(bytealign)(uint a, uint b, uint c)
 {
-    return __llvm_amdgcn_alignbyte(a, b, c);
+    return __builtin_amdgcn_alignbyte(a, b, c);
 }
 
 CATTR uint
@@ -160,10 +160,10 @@ OCKL_MANGLE_U64(mqsad)(ulong a, uint b, ulong c)
 CATTR uint
 OCKL_MANGLE_U32(pack)(float4 a)
 {
-    return __llvm_amdgcn_cvt_pk_u8_f32(a.s3, 3,
-             __llvm_amdgcn_cvt_pk_u8_f32(a.s2, 2,
-               __llvm_amdgcn_cvt_pk_u8_f32(a.s1, 1,
-                 __llvm_amdgcn_cvt_pk_u8_f32(a.s0, 0, 0))));
+    return __builtin_amdgcn_cvt_pk_u8_f32(a.s3, 3,
+             __builtin_amdgcn_cvt_pk_u8_f32(a.s2, 2,
+               __builtin_amdgcn_cvt_pk_u8_f32(a.s1, 1,
+                 __builtin_amdgcn_cvt_pk_u8_f32(a.s0, 0, 0))));
 }
 
 CATTR ulong
