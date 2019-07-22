@@ -224,7 +224,8 @@ public:
 
   void EmitDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *DD,
                           CXXDtorType Type, bool ForVirtualBase,
-                          bool Delegating, Address This) override;
+                          bool Delegating, Address This,
+                          QualType ThisTy) override;
 
   void emitVTableDefinitions(CodeGenVTables &CGVT,
                              const CXXRecordDecl *RD) override;
@@ -261,9 +262,8 @@ public:
 
   llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
                                          const CXXDestructorDecl *Dtor,
-                                         CXXDtorType DtorType,
-                                         Address This,
-                                         const CXXMemberCallExpr *CE) override;
+                                         CXXDtorType DtorType, Address This,
+                                         DeleteOrMemberCallExpr E) override;
 
   void emitVirtualInheritanceTables(const CXXRecordDecl *RD) override;
 
@@ -1127,7 +1127,7 @@ void ItaniumCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
   // FIXME: Provide a source location here even though there's no
   // CXXMemberCallExpr for dtor call.
   CXXDtorType DtorType = UseGlobalDelete ? Dtor_Complete : Dtor_Deleting;
-  EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, /*CE=*/nullptr);
+  EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE);
 
   if (UseGlobalDelete)
     CGF.PopCleanupBlock();
@@ -1538,7 +1538,8 @@ CGCXXABI::AddedStructorArgs ItaniumCXXABI::addImplicitConstructorArgs(
 void ItaniumCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
                                        const CXXDestructorDecl *DD,
                                        CXXDtorType Type, bool ForVirtualBase,
-                                       bool Delegating, Address This) {
+                                       bool Delegating, Address This,
+                                       QualType ThisTy) {
   GlobalDecl GD(DD, Type);
   llvm::Value *VTT = CGF.GetVTTParameter(GD, ForVirtualBase, Delegating);
   QualType VTTTy = getContext().getPointerType(getContext().VoidPtrTy);
@@ -1550,7 +1551,8 @@ void ItaniumCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
   else
     Callee = CGCallee::forDirect(CGM.getAddrOfCXXStructor(GD), GD);
 
-  CGF.EmitCXXDestructorCall(GD, Callee, This.getPointer(), VTT, VTTTy, nullptr);
+  CGF.EmitCXXDestructorCall(GD, Callee, This.getPointer(), ThisTy, VTT, VTTTy,
+                            nullptr);
 }
 
 void ItaniumCXXABI::emitVTableDefinitions(CodeGenVTables &CGVT,
@@ -1738,7 +1740,10 @@ CGCallee ItaniumCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
 llvm::Value *ItaniumCXXABI::EmitVirtualDestructorCall(
     CodeGenFunction &CGF, const CXXDestructorDecl *Dtor, CXXDtorType DtorType,
-    Address This, const CXXMemberCallExpr *CE) {
+    Address This, DeleteOrMemberCallExpr E) {
+  auto *CE = E.dyn_cast<const CXXMemberCallExpr *>();
+  auto *D = E.dyn_cast<const CXXDeleteExpr *>();
+  assert((CE != nullptr) ^ (D != nullptr));
   assert(CE == nullptr || CE->arg_begin() == CE->arg_end());
   assert(DtorType == Dtor_Deleting || DtorType == Dtor_Complete);
 
@@ -1748,8 +1753,15 @@ llvm::Value *ItaniumCXXABI::EmitVirtualDestructorCall(
   llvm::FunctionType *Ty = CGF.CGM.getTypes().GetFunctionType(*FInfo);
   CGCallee Callee = CGCallee::forVirtual(CE, GD, This, Ty);
 
-  CGF.EmitCXXDestructorCall(GD, Callee, This.getPointer(), nullptr, QualType(),
-                            nullptr);
+  QualType ThisTy;
+  if (CE) {
+    ThisTy = CE->getObjectType();
+  } else {
+    ThisTy = D->getDestroyedType();
+  }
+
+  CGF.EmitCXXDestructorCall(GD, Callee, This.getPointer(), ThisTy, nullptr,
+                            QualType(), nullptr);
   return nullptr;
 }
 

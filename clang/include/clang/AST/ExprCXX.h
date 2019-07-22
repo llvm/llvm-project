@@ -185,15 +185,20 @@ public:
   static CXXMemberCallExpr *CreateEmpty(const ASTContext &Ctx, unsigned NumArgs,
                                         EmptyShell Empty);
 
-  /// Retrieves the implicit object argument for the member call.
+  /// Retrieve the implicit object argument for the member call.
   ///
   /// For example, in "x.f(5)", this returns the sub-expression "x".
   Expr *getImplicitObjectArgument() const;
 
-  /// Retrieves the declaration of the called method.
+  /// Retrieve the type of the object argument.
+  ///
+  /// Note that this always returns a non-pointer type.
+  QualType getObjectType() const;
+
+  /// Retrieve the declaration of the called method.
   CXXMethodDecl *getMethodDecl() const;
 
-  /// Retrieves the CXXRecordDecl for the underlying type of
+  /// Retrieve the CXXRecordDecl for the underlying type of
   /// the implicit object argument.
   ///
   /// Note that this is may not be the same declaration as that of the class
