@@ -110,10 +110,10 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
   if (log)
     log->Printf("%p Target::Target()", static_cast<void *>(this));
   if (target_arch.IsValid()) {
-    LogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET,
-                          "Target::Target created with architecture %s (%s)",
-                          target_arch.GetArchitectureName(),
-                          target_arch.GetTriple().getTriple().c_str());
+    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET),
+             "Target::Target created with architecture %s (%s)",
+             target_arch.GetArchitectureName(),
+             target_arch.GetTriple().getTriple().c_str());
   }
 }
 
@@ -2319,11 +2319,10 @@ ArchSpec Target::GetDefaultArchitecture() {
 void Target::SetDefaultArchitecture(const ArchSpec &arch) {
   TargetPropertiesSP properties_sp(Target::GetGlobalProperties());
   if (properties_sp) {
-    LogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET,
-                          "Target::SetDefaultArchitecture setting target's "
-                          "default architecture to  %s (%s)",
-                          arch.GetArchitectureName(),
-                          arch.GetTriple().getTriple().c_str());
+    LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET),
+             "Target::SetDefaultArchitecture setting target's "
+             "default architecture to  %s (%s)",
+             arch.GetArchitectureName(), arch.GetTriple().getTriple().c_str());
     return properties_sp->SetDefaultArchitecture(arch);
   }
 }

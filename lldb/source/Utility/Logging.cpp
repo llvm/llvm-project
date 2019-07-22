@@ -62,13 +62,3 @@ Log *lldb_private::GetLogIfAllCategoriesSet(uint32_t mask) {
 Log *lldb_private::GetLogIfAnyCategoriesSet(uint32_t mask) {
   return g_log_channel.GetLogIfAny(mask);
 }
-
-
-void lldb_private::LogIfAnyCategoriesSet(uint32_t mask, const char *format, ...) {
-  if (Log *log = GetLogIfAnyCategoriesSet(mask)) {
-    va_list args;
-    va_start(args, format);
-    log->VAPrintf(format, args);
-    va_end(args);
-  }
-}
