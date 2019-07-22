@@ -130,6 +130,10 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// The amount the literal pool has been increasedby due to promoted globals.
   int PromotedGlobalsIncrease = 0;
 
+  /// True if r0 will be preserved by a call to this function (e.g. C++
+  /// con/destructors).
+  bool PreservesR0 = false;
+
 public:
   ARMFunctionInfo() = default;
 
@@ -247,6 +251,9 @@ public:
   }
 
   DenseMap<unsigned, unsigned> EHPrologueRemappedRegs;
+
+  void setPreservesR0() { PreservesR0 = true; }
+  bool getPreservesR0() const { return PreservesR0; }
 };
 
 } // end namespace llvm

@@ -20,7 +20,6 @@ Error CodeViewRecordIO::beginRecord(Optional<uint32_t> MaxLength) {
   Limit.MaxLength = MaxLength;
   Limit.BeginOffset = getCurrentOffset();
   Limits.push_back(Limit);
-  resetStreamedLen();
   return Error::success();
 }
 
@@ -50,6 +49,7 @@ Error CodeViewRecordIO::endRecord() {
       Streamer->EmitBytes(BytesSR);
       --PaddingBytes;
     }
+    resetStreamedLen();
   }
   return Error::success();
 }

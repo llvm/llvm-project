@@ -10,6 +10,14 @@ bool foobool(int argc) {
   return argc;
 }
 
+void xxx(int argc) {
+  int fp; // expected-note {{initialize the variable 'fp' to silence this warning}}
+#pragma omp target
+#pragma omp teams distribute parallel for simd firstprivate(fp) // expected-warning {{variable 'fp' is uninitialized when used here}}
+  for (int i = 0; i < 10; ++i)
+    ;
+}
+
 struct S1; // expected-note {{declared here}} expected-note{{forward declaration of 'S1'}}
 extern S1 a;
 class S2 {

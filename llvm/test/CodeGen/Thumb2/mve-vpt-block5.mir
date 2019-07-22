@@ -64,13 +64,13 @@ body:             |
     liveins: $q0, $q1, $q2, $r0
 
     ; CHECK:       BUNDLE {{.*}} {
-    ; CHECK-NEXT:    MVE_VPST 8, implicit-def $p0
+    ; CHECK-NEXT:    MVE_VPST 4, implicit-def $p0
     ; CHECK-NEXT:    renamable $q3 = nnan ninf nsz MVE_VMINNMf32 killed renamable $q1, renamable $q2, 1, renamable $vpr, killed renamable $q3
     ; CHECK-NEXT:    renamable $q1 = nnan ninf nsz MVE_VMINNMf32 internal killed renamable $q3, internal renamable $q3, 1, renamable $vpr, undef renamable $q1
     ; CHECK-NEXT:    $q3 = MVE_VORR $q0, $q0, 0, $noreg, internal undef $q3
     ; CHECK-NEXT:  }
     ; CHECK-NEXT:  BUNDLE {{.*}} {
-    ; CHECK-NEXT:    MVE_VPST 8, implicit-def $p0
+    ; CHECK-NEXT:    MVE_VPST 4, implicit-def $p0
     ; CHECK-NEXT:    renamable $q3 = nnan ninf nsz MVE_VMINNMf32 killed renamable $q1, renamable $q2, 1, renamable $vpr, killed renamable $q3
     ; CHECK-NEXT:    renamable $q0 = nnan ninf nsz MVE_VMINNMf32 internal killed renamable $q3, killed renamable $q2, 1, killed renamable $vpr, killed renamable $q0
     ; CHECK-NEXT:    tBX_RET 14, $noreg, implicit internal $q0

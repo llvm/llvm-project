@@ -97,7 +97,6 @@ public:
     // which is not the node itself.
     const DeclContext& getDeclContext() const;
   };
-
   // The most specific common ancestor of all the selected nodes.
   // If there is no selection, this is nullptr.
   const Node *commonAncestor() const;

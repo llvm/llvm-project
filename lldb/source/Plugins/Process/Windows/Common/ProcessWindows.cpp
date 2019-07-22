@@ -205,16 +205,6 @@ Status ProcessWindows::DoResume() {
              m_session_data->m_debugger->GetProcess().GetProcessId(),
              GetPrivateState());
 
-    ExceptionRecordSP active_exception =
-        m_session_data->m_debugger->GetActiveException().lock();
-    if (active_exception) {
-      // Resume the process and continue processing debug events.  Mask the
-      // exception so that from the process's view, there is no indication that
-      // anything happened.
-      m_session_data->m_debugger->ContinueAsyncException(
-          ExceptionResult::MaskException);
-    }
-
     LLDB_LOG(log, "resuming {0} threads.", m_thread_list.GetSize());
 
     bool failed = false;
@@ -233,9 +223,18 @@ Status ProcessWindows::DoResume() {
 
     if (failed) {
       error.SetErrorString("ProcessWindows::DoResume failed");
-      return error;
     } else {
       SetPrivateState(eStateRunning);
+    }
+
+    ExceptionRecordSP active_exception =
+        m_session_data->m_debugger->GetActiveException().lock();
+    if (active_exception) {
+      // Resume the process and continue processing debug events.  Mask the
+      // exception so that from the process's view, there is no indication that
+      // anything happened.
+      m_session_data->m_debugger->ContinueAsyncException(
+          ExceptionResult::MaskException);
     }
   } else {
     LLDB_LOG(log, "error: process {0} is in state {1}.  Returning...",

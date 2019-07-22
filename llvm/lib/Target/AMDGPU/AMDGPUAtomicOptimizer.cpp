@@ -491,77 +491,80 @@ void AMDGPUAtomicOptimizer::optimizeAtomic(Instruction &I,
   // original instruction.
   B.SetInsertPoint(&I);
 
-  // Create a PHI node to get our new atomic result into the exit block.
-  PHINode *const PHI = B.CreatePHI(Ty, 2);
-  PHI->addIncoming(UndefValue::get(Ty), EntryBB);
-  PHI->addIncoming(NewI, SingleLaneTerminator->getParent());
-
-  // We need to broadcast the value who was the lowest active lane (the first
-  // lane) to all other lanes in the wavefront. We use an intrinsic for this,
-  // but have to handle 64-bit broadcasts with two calls to this intrinsic.
-  Value *BroadcastI = nullptr;
-
-  if (TyBitWidth == 64) {
-    Value *const ExtractLo = B.CreateTrunc(PHI, B.getInt32Ty());
-    Value *const ExtractHi =
-        B.CreateTrunc(B.CreateLShr(PHI, B.getInt64(32)), B.getInt32Ty());
-    CallInst *const ReadFirstLaneLo =
-        B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractLo);
-    CallInst *const ReadFirstLaneHi =
-        B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractHi);
-    Value *const PartialInsert = B.CreateInsertElement(
-        UndefValue::get(VecTy), ReadFirstLaneLo, B.getInt32(0));
-    Value *const Insert =
-        B.CreateInsertElement(PartialInsert, ReadFirstLaneHi, B.getInt32(1));
-    BroadcastI = B.CreateBitCast(Insert, Ty);
-  } else if (TyBitWidth == 32) {
-
-    BroadcastI = B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, PHI);
-  } else {
-    llvm_unreachable("Unhandled atomic bit width");
-  }
-
-  // Now that we have the result of our single atomic operation, we need to
-  // get our individual lane's slice into the result. We use the lane offset we
-  // previously calculated combined with the atomic result value we got from the
-  // first lane, to get our lane's index into the atomic result.
-  Value *LaneOffset = nullptr;
-  if (ValDivergent) {
-    LaneOffset = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, ExclScan);
-  } else {
-    switch (Op) {
-    default:
-      llvm_unreachable("Unhandled atomic op");
-    case AtomicRMWInst::Add:
-    case AtomicRMWInst::Sub:
-      LaneOffset = B.CreateMul(V, Mbcnt);
-      break;
-    case AtomicRMWInst::And:
-    case AtomicRMWInst::Or:
-    case AtomicRMWInst::Max:
-    case AtomicRMWInst::Min:
-    case AtomicRMWInst::UMax:
-    case AtomicRMWInst::UMin:
-      LaneOffset = B.CreateSelect(Cond, Identity, V);
-      break;
-    case AtomicRMWInst::Xor:
-      LaneOffset = B.CreateMul(V, B.CreateAnd(Mbcnt, 1));
-      break;
-    }
-  }
-  Value *const Result = buildNonAtomicBinOp(B, Op, BroadcastI, LaneOffset);
-
-  if (IsPixelShader) {
-    // Need a final PHI to reconverge to above the helper lane branch mask.
-    B.SetInsertPoint(PixelExitBB->getFirstNonPHI());
-
+  const bool NeedResult = !I.use_empty();
+  if (NeedResult) {
+    // Create a PHI node to get our new atomic result into the exit block.
     PHINode *const PHI = B.CreatePHI(Ty, 2);
-    PHI->addIncoming(UndefValue::get(Ty), PixelEntryBB);
-    PHI->addIncoming(Result, I.getParent());
-    I.replaceAllUsesWith(PHI);
-  } else {
-    // Replace the original atomic instruction with the new one.
-    I.replaceAllUsesWith(Result);
+    PHI->addIncoming(UndefValue::get(Ty), EntryBB);
+    PHI->addIncoming(NewI, SingleLaneTerminator->getParent());
+
+    // We need to broadcast the value who was the lowest active lane (the first
+    // lane) to all other lanes in the wavefront. We use an intrinsic for this,
+    // but have to handle 64-bit broadcasts with two calls to this intrinsic.
+    Value *BroadcastI = nullptr;
+
+    if (TyBitWidth == 64) {
+      Value *const ExtractLo = B.CreateTrunc(PHI, B.getInt32Ty());
+      Value *const ExtractHi =
+          B.CreateTrunc(B.CreateLShr(PHI, B.getInt64(32)), B.getInt32Ty());
+      CallInst *const ReadFirstLaneLo =
+          B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractLo);
+      CallInst *const ReadFirstLaneHi =
+          B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, ExtractHi);
+      Value *const PartialInsert = B.CreateInsertElement(
+          UndefValue::get(VecTy), ReadFirstLaneLo, B.getInt32(0));
+      Value *const Insert =
+          B.CreateInsertElement(PartialInsert, ReadFirstLaneHi, B.getInt32(1));
+      BroadcastI = B.CreateBitCast(Insert, Ty);
+    } else if (TyBitWidth == 32) {
+
+      BroadcastI = B.CreateIntrinsic(Intrinsic::amdgcn_readfirstlane, {}, PHI);
+    } else {
+      llvm_unreachable("Unhandled atomic bit width");
+    }
+
+    // Now that we have the result of our single atomic operation, we need to
+    // get our individual lane's slice into the result. We use the lane offset
+    // we previously calculated combined with the atomic result value we got
+    // from the first lane, to get our lane's index into the atomic result.
+    Value *LaneOffset = nullptr;
+    if (ValDivergent) {
+      LaneOffset = B.CreateIntrinsic(Intrinsic::amdgcn_wwm, Ty, ExclScan);
+    } else {
+      switch (Op) {
+      default:
+        llvm_unreachable("Unhandled atomic op");
+      case AtomicRMWInst::Add:
+      case AtomicRMWInst::Sub:
+        LaneOffset = B.CreateMul(V, Mbcnt);
+        break;
+      case AtomicRMWInst::And:
+      case AtomicRMWInst::Or:
+      case AtomicRMWInst::Max:
+      case AtomicRMWInst::Min:
+      case AtomicRMWInst::UMax:
+      case AtomicRMWInst::UMin:
+        LaneOffset = B.CreateSelect(Cond, Identity, V);
+        break;
+      case AtomicRMWInst::Xor:
+        LaneOffset = B.CreateMul(V, B.CreateAnd(Mbcnt, 1));
+        break;
+      }
+    }
+    Value *const Result = buildNonAtomicBinOp(B, Op, BroadcastI, LaneOffset);
+
+    if (IsPixelShader) {
+      // Need a final PHI to reconverge to above the helper lane branch mask.
+      B.SetInsertPoint(PixelExitBB->getFirstNonPHI());
+
+      PHINode *const PHI = B.CreatePHI(Ty, 2);
+      PHI->addIncoming(UndefValue::get(Ty), PixelEntryBB);
+      PHI->addIncoming(Result, I.getParent());
+      I.replaceAllUsesWith(PHI);
+    } else {
+      // Replace the original atomic instruction with the new one.
+      I.replaceAllUsesWith(Result);
+    }
   }
 
   // And delete the original.

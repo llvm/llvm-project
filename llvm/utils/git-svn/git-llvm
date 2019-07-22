@@ -312,8 +312,8 @@ def svn_push_one_rev(svn_repo, rev, git_to_svn_mapping, dry_run):
 
     status = svn(svn_repo, 'status', '--no-ignore')
     if status:
-        die("Can't push git rev %s because svn status is not empty:\n%s" %
-            (rev, status))
+        die("Can't push git rev %s because status in svn staging dir (%s) is "
+            "not empty:\n%s" % (rev, svn_repo, status))
 
     svn_dirs_to_update = set()
     for sr, files in iteritems(subrepo_files):

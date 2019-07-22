@@ -14,7 +14,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @foo() {
 entry:
 ; CHECK-LABEL: define i32 @foo
-; CHECK-NOT: call i8* @llvm.frameaddress(i32 0)
+; CHECK-NOT: call i8* @llvm.frameaddress.p0i8(i32 0)
 ; CHECK-NOT: @__sancov_lowest_stack
 ; CHECK: ret i32 7
 
@@ -24,7 +24,7 @@ entry:
 define i32 @bar() {
 entry:
 ; CHECK-LABEL: define i32 @bar
-; CHECK: [[framePtr:%[^ \t]+]] = call i8* @llvm.frameaddress(i32 0)
+; CHECK: [[framePtr:%[^ \t]+]] = call i8* @llvm.frameaddress.p0i8(i32 0)
 ; CHECK: [[frameInt:%[^ \t]+]] = ptrtoint i8* [[framePtr]] to [[intType:i[0-9]+]]
 ; CHECK: [[lowest:%[^ \t]+]] = load [[intType]], [[intType]]* @__sancov_lowest_stack
 ; CHECK: [[cmp:%[^ \t]+]] = icmp ult [[intType]] [[frameInt]], [[lowest]]

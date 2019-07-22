@@ -3933,7 +3933,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
                Instruction::isCast(S.getAltOpcode()))) &&
              "Invalid Shuffle Vector Operand");
 
-      Value *LHS, *RHS;
+      Value *LHS = nullptr, *RHS = nullptr;
       if (Instruction::isBinaryOp(S.getOpcode())) {
         setInsertPointAfterBundle(E->Scalars, S);
         LHS = vectorizeTree(E->getOperand(0));
@@ -5571,7 +5571,7 @@ class HorizontalReduction {
     Value *createOp(IRBuilder<> &Builder, const Twine &Name) const {
       assert(isVectorizable() &&
              "Expected add|fadd or min/max reduction operation.");
-      Value *Cmp;
+      Value *Cmp = nullptr;
       switch (Kind) {
       case RK_Arithmetic:
         return Builder.CreateBinOp((Instruction::BinaryOps)Opcode, LHS, RHS,
@@ -6323,7 +6323,7 @@ private:
     IsPairwiseReduction = PairwiseRdxCost < SplittingRdxCost;
     int VecReduxCost = IsPairwiseReduction ? PairwiseRdxCost : SplittingRdxCost;
 
-    int ScalarReduxCost;
+    int ScalarReduxCost = 0;
     switch (ReductionData.getKind()) {
     case RK_Arithmetic:
       ScalarReduxCost =
