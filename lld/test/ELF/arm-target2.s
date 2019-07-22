@@ -1,12 +1,12 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t.o
-// RUN: ld.lld %t.o -o %t 2>&1
+// RUN: ld.lld %t.o -o %t
 // RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t | FileCheck %s
-// RUN: ld.lld %t.o --target2=got-rel -o %t2 2>&1
+// RUN: ld.lld %t.o --target2=got-rel -o %t2
 // RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
-// RUN: ld.lld %t.o --target2=abs -o %t3 2>&1
+// RUN: ld.lld %t.o --target2=abs -o %t3
 // RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t3 | FileCheck -check-prefix=CHECK-ABS %s
-// RUN: ld.lld %t.o --target2=rel -o %t4 2>&1
+// RUN: ld.lld %t.o --target2=rel -o %t4
 // RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t4 | FileCheck -check-prefix=CHECK-REL %s
 
 // The R_ARM_TARGET2 is present in .ARM.extab sections. It can be handled as

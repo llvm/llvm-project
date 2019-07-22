@@ -2415,10 +2415,6 @@ int __kmp_invoke_microtask(microtask_t pkfn, int gtid, int tid, int argc,
     break;
   }
 
-#if OMPT_SUPPORT
-  *exit_frame_ptr = 0;
-#endif
-
   return 1;
 }
 

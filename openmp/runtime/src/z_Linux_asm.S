@@ -495,13 +495,21 @@ __kmp_unnamed_critical_addr:
 # endif /* !KMP_ASM_INTRINS */
 
 //------------------------------------------------------------------------
-// typedef void	(*microtask_t)( int *gtid, int *tid, ... );
-//
 // int
-// __kmp_invoke_microtask( microtask_t pkfn, int gtid, int tid,
-//                         int argc, void *p_argv[] ) {
-//    (*pkfn)( & gtid, & gtid, argv[0], ... );
-//    return 1;
+// __kmp_invoke_microtask( void (*pkfn) (int gtid, int tid, ...),
+//                         int gtid, int tid,
+//                         int argc, void *p_argv[]
+// #if OMPT_SUPPORT
+//                         ,
+//                         void **exit_frame_ptr
+// #endif
+//                       ) {
+// #if OMPT_SUPPORT
+//   *exit_frame_ptr = OMPT_GET_FRAME_ADDRESS(0);
+// #endif
+//
+//   (*pkfn)( & gtid, & tid, argv[0], ... );
+//   return 1;
 // }
 
 // -- Begin __kmp_invoke_microtask
@@ -991,14 +999,21 @@ KMP_LABEL(invoke_3):
 # endif /* !KMP_ASM_INTRINS */
 
 //------------------------------------------------------------------------
-// typedef void	(*microtask_t)( int *gtid, int *tid, ... );
-//
 // int
 // __kmp_invoke_microtask( void (*pkfn) (int gtid, int tid, ...),
-//		           int gtid, int tid,
-//                         int argc, void *p_argv[] ) {
-//    (*pkfn)( & gtid, & tid, argv[0], ... );
-//    return 1;
+//                         int gtid, int tid,
+//                         int argc, void *p_argv[]
+// #if OMPT_SUPPORT
+//                         ,
+//                         void **exit_frame_ptr
+// #endif
+//                       ) {
+// #if OMPT_SUPPORT
+//   *exit_frame_ptr = OMPT_GET_FRAME_ADDRESS(0);
+// #endif
+//
+//   (*pkfn)( & gtid, & tid, argv[0], ... );
+//   return 1;
 // }
 //
 // note: at call to pkfn must have %rsp 128-byte aligned for compiler
@@ -1192,15 +1207,27 @@ KMP_LABEL(kmp_1_exit):
 #if (KMP_OS_LINUX || KMP_OS_DARWIN) && KMP_ARCH_AARCH64
 
 //------------------------------------------------------------------------
-//
-// typedef void	(*microtask_t)( int *gtid, int *tid, ... );
-//
 // int
 // __kmp_invoke_microtask( void (*pkfn) (int gtid, int tid, ...),
-//		           int gtid, int tid,
-//                         int argc, void *p_argv[] ) {
-//    (*pkfn)( & gtid, & tid, argv[0], ... );
-//    return 1;
+//                         int gtid, int tid,
+//                         int argc, void *p_argv[]
+// #if OMPT_SUPPORT
+//                         ,
+//                         void **exit_frame_ptr
+// #endif
+//                       ) {
+// #if OMPT_SUPPORT
+//   *exit_frame_ptr = OMPT_GET_FRAME_ADDRESS(0);
+// #endif
+//
+//   (*pkfn)( & gtid, & tid, argv[0], ... );
+//
+// // FIXME: This is done at call-site and can be removed here.
+// #if OMPT_SUPPORT
+//   *exit_frame_ptr = 0;
+// #endif
+//
+//   return 1;
 // }
 //
 // parameters:
@@ -1306,15 +1333,27 @@ KMP_LABEL(kmp_1):
 #if KMP_ARCH_PPC64
 
 //------------------------------------------------------------------------
-//
-// typedef void	(*microtask_t)( int *gtid, int *tid, ... );
-//
 // int
 // __kmp_invoke_microtask( void (*pkfn) (int gtid, int tid, ...),
-//		           int gtid, int tid,
-//                         int argc, void *p_argv[] ) {
-//    (*pkfn)( & gtid, & tid, argv[0], ... );
-//    return 1;
+//                         int gtid, int tid,
+//                         int argc, void *p_argv[]
+// #if OMPT_SUPPORT
+//                         ,
+//                         void **exit_frame_ptr
+// #endif
+//                       ) {
+// #if OMPT_SUPPORT
+//   *exit_frame_ptr = OMPT_GET_FRAME_ADDRESS(0);
+// #endif
+//
+//   (*pkfn)( & gtid, & tid, argv[0], ... );
+//
+// // FIXME: This is done at call-site and can be removed here.
+// #if OMPT_SUPPORT
+//   *exit_frame_ptr = 0;
+// #endif
+//
+//   return 1;
 // }
 //
 // parameters:

@@ -1,10 +1,10 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj -triple=armv7a-unknown-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump -d %t2 -triple=armv7a-unknown-linux-gnueabi | FileCheck %s
+// RUN: llvm-objdump -d %t2 -triple=armv7a-unknown-linux-gnueabi --no-show-raw-insn | FileCheck %s
 // RUN: llvm-mc -filetype=obj -triple=thumbv7a-unknown-linux-gnueabi %s -o %t3
 // RUN: ld.lld %t3 -o %t4
-// RUN: llvm-objdump -d %t4 -triple=thumbv7a-unknown-linux-gnueabi | FileCheck %s
+// RUN: llvm-objdump -d %t4 -triple=thumbv7a-unknown-linux-gnueabi --no-show-raw-insn | FileCheck %s
 
 // Test the R_ARM_MOVW_ABS_NC and R_ARM_MOVT_ABS relocations as well as
 // the R_ARM_THM_MOVW_ABS_NC and R_ARM_THM_MOVT_ABS relocations.
@@ -45,15 +45,15 @@ _start:
  movw r3, :lower16:label3 - .
  movw r4, :lower16:label3 + 0x103c - .
 // 0x20000 - 0x11028 = :lower16:0xefd8 (61400)
-// CHECK: 11028:  {{.*}}     movw    r0, #61400
+// CHECK: 11028:       movw    r0, #61400
 // 0x20004 = 0x1102c = :lower16:0xefd8 (61400)
-// CHECK: 1102c:  {{.*}}     movw    r1, #61400
+// CHECK: 1102c:       movw    r1, #61400
 // 0x20008 - 0x11030 + 4 = :lower16:0xefdc (61404)
-// CHECK: 11030:  {{.*}}     movw    r2, #61404
+// CHECK: 11030:       movw    r2, #61404
 // 0x2fffc - 0x11034 = :lower16:0x1efc8 (61384)
-// CHECK: 11034:  {{.*}}     movw    r3, #61384
+// CHECK: 11034:       movw    r3, #61384
 // 0x2fffc - 0x11038 +0x103c :lower16:0x20000 (0)
-// CHECK: 11038:  {{.*}}     movw    r4, #0
+// CHECK: 11038:       movw    r4, #0
 
 .section .R_ARM_MOVT_PREL, "ax",%progbits
  movt r0, :upper16:label - .
@@ -62,15 +62,15 @@ _start:
  movt r3, :upper16:label3 - .
  movt r4, :upper16:label3 + 0x1050 - .
 // 0x20000 - 0x1103c = :upper16:0xefc4  = 0
-// CHECK: 1103c:  {{.*}}     movt    r0, #0
+// CHECK: 1103c:       movt    r0, #0
 // 0x20004 - 0x11040 = :upper16:0xefc0 = 0
-// CHECK: 11040:  {{.*}}     movt    r1, #0
+// CHECK: 11040:       movt    r1, #0
 // 0x20008 - 0x11044 + 4 = :upper16:0xefc8 = 0
-// CHECK: 11044:  {{.*}}     movt    r2, #0
+// CHECK: 11044:       movt    r2, #0
 // 0x2fffc - 0x11048 = :upper16:0x1efb4 = 1
-// CHECK: 11048:  {{.*}}     movt    r3, #1
+// CHECK: 11048:       movt    r3, #1
 // 0x2fffc - 0x1104c + 0x1050 = :upper16:0x20000 = 2
-// CHECK: 1104c:  {{.*}}     movt    r4, #2
+// CHECK: 1104c:       movt    r4, #2
  .section .destination, "aw",%progbits
  .balign 65536
 // 0x20000

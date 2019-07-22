@@ -4,7 +4,7 @@
 // RUN:       . = SIZEOF_HEADERS; \
 // RUN:       .text_low : { *(.text_low) *(.text_low2) . = . + 0x2000000 ; *(.text_high) *(.text_high2) } \
 // RUN:       } " > %t.script
-// RUN: ld.lld --script %t.script %t -o %t2 2>&1
+// RUN: ld.lld --script %t.script %t -o %t2
 // RUN: llvm-objdump -d %t2 -start-address=148 -stop-address=188 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK1 %s
 // RUN: llvm-objdump -d %t2 -start-address=33554620 -stop-address=33554654 -triple=thumbv7a-linux-gnueabihf | FileCheck -check-prefix=CHECK2 %s
 // Test that range extension thunks can handle location expressions within
