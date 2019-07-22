@@ -879,7 +879,8 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     return true;
   }
 
-
+  const MDNode *Ranges =
+      Regs.size() == 1 ? LI.getMetadata(LLVMContext::MD_range) : nullptr;
   for (unsigned i = 0; i < Regs.size(); ++i) {
     Register Addr;
     MIRBuilder.materializeGEP(Addr, Base, OffsetTy, Offsets[i] / 8);
@@ -888,7 +889,7 @@ bool IRTranslator::translateLoad(const User &U, MachineIRBuilder &MIRBuilder) {
     unsigned BaseAlign = getMemOpAlignment(LI);
     auto MMO = MF->getMachineMemOperand(
         Ptr, Flags, (MRI->getType(Regs[i]).getSizeInBits() + 7) / 8,
-        MinAlign(BaseAlign, Offsets[i] / 8), AAMDNodes(), nullptr,
+        MinAlign(BaseAlign, Offsets[i] / 8), AAMDNodes(), Ranges,
         LI.getSyncScopeID(), LI.getOrdering());
     MIRBuilder.buildLoad(Regs[i], Addr, *MMO);
   }

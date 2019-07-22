@@ -701,6 +701,43 @@ define <2 x i1> @test25_vec(<2 x i32> %A) {
   ret <2 x i1> %C
 }
 
+define i1 @test26(i32 %A, i32 %B) {
+; CHECK-LABEL: @test26(
+; CHECK-NEXT:    [[C:%.*]] = shl nuw i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = srem i32 [[A:%.*]], [[C]]
+; CHECK-NEXT:    [[E:%.*]] = icmp ne i32 [[D]], 0
+; CHECK-NEXT:    ret i1 [[E]]
+;
+  %C = shl i32 1, %B ; not a constant
+  %D = srem i32 %A, %C
+  %E = icmp ne i32 %D, 0
+  ret i1 %E
+}
+
+define i1 @test27(i32 %A, i32* %remdst) {
+; CHECK-LABEL: @test27(
+; CHECK-NEXT:    [[B:%.*]] = srem i32 [[A:%.*]], -2147483648
+; CHECK-NEXT:    store i32 [[B]], i32* [[REMDST:%.*]], align 1
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[B]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %B = srem i32 %A, 2147483648 ; signbit
+  store i32 %B, i32* %remdst, align 1 ; extra use of rem
+  %C = icmp ne i32 %B, 0
+  ret i1 %C
+}
+
+define i1 @test28(i32 %A) {
+; CHECK-LABEL: @test28(
+; CHECK-NEXT:    [[B:%.*]] = srem i32 [[A:%.*]], -2147483648
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[B]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %B = srem i32 %A, 2147483648 ; signbit
+  %C = icmp eq i32 %B, 0 ; another equality predicate
+  ret i1 %C
+}
+
 ; FP division-by-zero is not UB.
 
 define double @PR34870(i1 %cond, double %x, double %y) {

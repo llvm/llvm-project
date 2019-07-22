@@ -290,7 +290,7 @@ public:
       ++Prev;
       uintptr_t Bits = getSmallBits();
       // Mask in previous bits.
-      uintptr_t Mask = (1 << Prev) - 1;
+      uintptr_t Mask = (uintptr_t(1) << Prev) - 1;
       Bits |= Mask;
 
       if (Bits == ~uintptr_t(0) || Prev + 1 >= getSmallSize())
