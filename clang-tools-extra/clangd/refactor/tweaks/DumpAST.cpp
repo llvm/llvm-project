@@ -128,6 +128,11 @@ public:
         TypeWithKeyword::getTagTypeKindName(Record->getTagKind()));
   }
   Intent intent() const override { return Info; }
+  // FIXME: this is interesting to most users. However:
+  //  - triggering is too broad (e.g. triggers on comments within a class)
+  //  - showMessage has inconsistent UX (e.g. newlines are stripped in VSCode)
+  //  - the output itself is a bit hard to decipher.
+  bool hidden() const override { return true; }
 
 private:
   const RecordDecl *Record = nullptr;
