@@ -9,18 +9,25 @@
 # RUN: touch %t
 # RUN: chmod 0755 %t
 # RUN: ls -l %t | cut -f 1 -d ' ' > %t.0755
-# RUN: chmod 0500 %t
-# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0500
-# RUN: chmod 0555 %t
-# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0555
+# RUN: chmod 0600 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0600
+# RUN: chmod 0655 %t
+# RUN: ls -l %t | cut -f 1 -d ' ' > %t.0655
 
-# RUN: rm -f %t; yaml2obj %s -o %t
+# RUN: yaml2obj %s -o %t
 
 # RUN: umask 0022
 # RUN: chmod 0777 %t
-# RUN: rm -f %t1; llvm-objcopy %t %t1
-# RUN: ls -l %t1 | cut -f 1 -d ' ' > %t1.perms
-# RUN: cmp %t1.perms %t.0755
+# RUN: llvm-objcopy %t %t1
+# RUN: ls -l %t1 | cut -f 1 -d ' ' | cmp - %t.0755
+
+# RUN: umask 0177
+# RUN: llvm-objcopy %t %t2
+# RUN: ls -l %t2 | cut -f 1 -d ' ' | cmp - %t.0600
+
+# RUN: umask 0122
+# RUN: llvm-objcopy %t %t3
+# RUN: ls -l %t3 | cut -f 1 -d ' ' | cmp - %t.0655
 
 --- !ELF
 FileHeader:
