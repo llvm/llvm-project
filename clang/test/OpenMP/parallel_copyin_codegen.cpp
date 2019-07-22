@@ -19,6 +19,7 @@
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -std=c++11 -DLAMBDA -triple x86_64-linux -emit-llvm %s -o - | FileCheck -check-prefix=TLS-LAMBDA %s
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -fblocks -DBLOCKS -triple x86_64-linux -emit-llvm %s -o - | FileCheck -check-prefix=TLS-BLOCKS %s
 // RUN: %clang_cc1 -verify -fopenmp -x c++ -std=c++11 -DARRAY -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck -check-prefix=TLS-ARRAY %s
+// RUN: %clang_cc1 -verify -fopenmp -x c++ -DNESTED -triple x86_64-linux -emit-llvm %s -o - | FileCheck %s -check-prefix=NESTED
 
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -triple x86_64-linux -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY1 %s
 // RUN: %clang_cc1 -fopenmp-simd -x c++ -std=c++11 -triple x86_64-linux -emit-pch -o %t %s
@@ -28,7 +29,7 @@
 // RUN: %clang_cc1 -verify -fopenmp-simd -x c++ -std=c++11 -DARRAY -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix SIMD-ONLY1 %s
 // SIMD-ONLY1-NOT: {{__kmpc|__tgt}}
 // expected-no-diagnostics
-#ifndef ARRAY
+#if !defined(ARRAY) && !defined(NESTED)
 #ifndef HEADER
 #define HEADER
 
@@ -493,7 +494,7 @@ int main() {
 // TLS-CHECK: ret void
 
 #endif
-#else
+#elif defined(ARRAY)
 // ARRAY-LABEL: array_func
 // TLS-ARRAY-LABEL: array_func
 
@@ -522,6 +523,24 @@ void array_func() {
 #pragma omp parallel copyin(a, s)
   ;
 }
-#endif
+#elif defined(NESTED)
+int t;
+#pragma omp threadprivate(t)
+// NESTED: foo
+void foo() {
+  // NESTED: call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.+}}, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* [[OUTLINED:@.+]] to void (i32*, i32*, ...)*))
+#pragma omp parallel
+#pragma omp parallel copyin(t)
+  ++t;
+}
+// NESTED: define {{.*}}void [[OUTLINED]](
+// NESTED: [[T:%.+]] = call i32* [[THRP_T:@.+]]()
+// NESTED:  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @{{.+}}, i32 1, void (i32*, i32*, ...)* bitcast (void (i32*, i32*, i32*)* [[OUTLINED1:@.+]] to void (i32*, i32*, ...)*), i32* [[T]])
 
+// NESTED: define {{.*}}void [[OUTLINED1]](
+// NESTED: [[T_MASTER:%.+]] = load i32*, i32** %
+// NESTED: [[T:%.+]] = call i32* [[THRP_T]]()
+// NESTED: [[T_MASTER_VAL:%.+]] = load i32, i32* [[T_MASTER]],
+// NESTED: store i32 [[T_MASTER_VAL]], i32* [[T]],
+#endif // NESTED
 

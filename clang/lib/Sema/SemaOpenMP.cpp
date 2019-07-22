@@ -1882,6 +1882,13 @@ bool Sema::isOpenMPPrivateDecl(const ValueDecl *D, unsigned Level) const {
         !isOpenMPSimdDirective(DSAStack->getCurrentDirective()))
       return true;
   }
+  if (const auto *VD = dyn_cast<VarDecl>(D)) {
+    if (DSAStack->isThreadPrivate(const_cast<VarDecl *>(VD)) &&
+        DSAStack->isForceVarCapturing() &&
+        !DSAStack->hasExplicitDSA(
+            D, [](OpenMPClauseKind K) { return K == OMPC_copyin; }, Level))
+      return true;
+  }
   return DSAStack->hasExplicitDSA(
              D, [](OpenMPClauseKind K) { return K == OMPC_private; }, Level) ||
          (DSAStack->isClauseParsingMode() &&
