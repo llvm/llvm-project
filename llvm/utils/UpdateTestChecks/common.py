@@ -182,10 +182,10 @@ def genericize_check_lines(lines, is_analyze):
     line = line.replace('%.', '%dot')
     # Ignore any comments, since the check lines will too.
     scrubbed_line = SCRUB_IR_COMMENT_RE.sub(r'', line)
-    if is_analyze == False:
-      lines[i] =  IR_VALUE_RE.sub(transform_line_vars, scrubbed_line)
+    if is_analyze:
+      lines[i] = scrubbed_line
     else:
-      lines[i] =  scrubbed_line
+      lines[i] = IR_VALUE_RE.sub(transform_line_vars, scrubbed_line)
   return lines
 
 
@@ -203,7 +203,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
 
       # Add some space between different check prefixes, but not after the last
       # check line (before the test code).
-      if is_asm == True:
+      if is_asm:
         if len(printed_prefixes) != 0:
           output_lines.append(comment_marker)
 
@@ -212,7 +212,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
       func_body = str(func_dict[checkprefix][func_name]).splitlines()
 
       # For ASM output, just emit the check lines.
-      if is_asm == True:
+      if is_asm:
         output_lines.append('%s %s:       %s' % (comment_marker, checkprefix, func_body[0]))
         for func_line in func_body[1:]:
           output_lines.append('%s %s-NEXT:  %s' % (comment_marker, checkprefix, func_line))
@@ -243,7 +243,7 @@ def add_checks(output_lines, comment_marker, prefix_list, func_dict, func_name, 
         func_line = SCRUB_IR_COMMENT_RE.sub(r'', func_line)
 
         # Skip blank lines instead of checking them.
-        if is_blank_line == True:
+        if is_blank_line:
           output_lines.append('{} {}:       {}'.format(
               comment_marker, checkprefix, func_line))
         else:

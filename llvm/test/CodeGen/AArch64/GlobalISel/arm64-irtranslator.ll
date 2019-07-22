@@ -351,7 +351,9 @@ define void @trunc(i64 %a) {
 ; CHECK: [[SUM2:%.*]]:_(s64) = G_ADD [[VAL1]], [[VAL2]]
 ; CHECK: [[VAL3:%[0-9]+]]:_(s64) = G_LOAD [[ADDR]](p0) :: (volatile load 8 from %ir.addr)
 ; CHECK: [[SUM3:%[0-9]+]]:_(s64) = G_ADD [[SUM2]], [[VAL3]]
-; CHECK: $x0 = COPY [[SUM3]]
+; CHECK: [[VAL4:%[0-9]+]]:_(s64) = G_LOAD [[ADDR]](p0) :: (load 8 from %ir.addr, !range !0)
+; CHECK: [[SUM4:%[0-9]+]]:_(s64) = G_ADD [[SUM3]], [[VAL4]]
+; CHECK: $x0 = COPY [[SUM4]]
 ; CHECK: RET_ReallyLR implicit $x0
 define i64 @load(i64* %addr, i64 addrspace(42)* %addr42) {
   %val1 = load i64, i64* %addr, align 16
@@ -361,7 +363,10 @@ define i64 @load(i64* %addr, i64 addrspace(42)* %addr42) {
 
   %val3 = load volatile i64, i64* %addr
   %sum3 = add i64 %sum2, %val3
-  ret i64 %sum3
+
+  %val4 = load i64, i64* %addr, !range !0
+  %sum4 = add i64 %sum3, %val4
+  ret i64 %sum4
 }
 
 ; CHECK-LABEL: name: store
@@ -2334,3 +2339,5 @@ define void @test_var_annotation(i8*, i8*, i8*, i32) {
   call void @llvm.var.annotation(i8* %0, i8* %1, i8* %2, i32 %3)
   ret void
 }
+
+!0 = !{ i64 0, i64 2 }

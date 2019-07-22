@@ -160,7 +160,7 @@ Instruction *InstCombiner::OptAndOp(BinaryOperator *Op,
 }
 
 /// Emit a computation of: (V >= Lo && V < Hi) if Inside is true, otherwise
-/// (V < Lo || V >= Hi). This method expects that Lo <= Hi. IsSigned indicates
+/// (V < Lo || V >= Hi). This method expects that Lo < Hi. IsSigned indicates
 /// whether to treat V, Lo, and Hi as signed or not.
 Value *InstCombiner::insertRangeTest(Value *V, const APInt &Lo, const APInt &Hi,
                                      bool isSigned, bool Inside) {
