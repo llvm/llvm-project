@@ -2,8 +2,8 @@
 
 target triple = "wasm32-unknown-unknown"
 
-@tls1 = thread_local(localexec) global i32 1, align 4
 @no_tls = global i32 0, align 4
+@tls1 = thread_local(localexec) global i32 1, align 4
 @tls2 = thread_local(localexec) global i32 1, align 4
 
 define i32* @tls1_addr() {
@@ -49,7 +49,7 @@ define i32* @tls2_addr() {
 ; CHECK-NEXT:       Body:            0B
 ; CHECK-NEXT:     - Index:           1
 ; CHECK-NEXT:       Locals:          []
-; CHECK-NEXT:       Body:            20002401200041004108FC0800000B
+; CHECK-NEXT:       Body:            20002401200041004108FC0801000B
 
 ; Expected body of __wasm_init_tls:
 ;   local.get 0
@@ -57,7 +57,7 @@ define i32* @tls2_addr() {
 ;   local.get 0
 ;   i32.const 0
 ;   i32.const 8
-;   memory.init 0, 0
+;   memory.init 1, 0
 ;   end
 
 ; CHECK-NEXT:     - Index:           2
