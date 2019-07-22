@@ -136,7 +136,7 @@ class MCConstantExpr : public MCExpr {
   int64_t Value;
   bool PrintInHex = false;
 
-  MCConstantExpr(int64_t Value)
+  explicit MCConstantExpr(int64_t Value)
       : MCExpr(MCExpr::Constant, SMLoc()), Value(Value) {}
 
   MCConstantExpr(int64_t Value, bool PrintInHex)

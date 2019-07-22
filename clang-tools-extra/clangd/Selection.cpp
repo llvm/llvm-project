@@ -8,15 +8,19 @@
 
 #include "Selection.h"
 #include "ClangdUnit.h"
+#include "Logger.h"
 #include "SourceCode.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/PrettyPrinter.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -59,6 +63,31 @@ private:
   std::vector<std::pair<unsigned, unsigned>> Ranges; // Always sorted.
 };
 
+// Dump a node for debugging.
+// DynTypedNode::print() doesn't include the kind of node, which is useful.
+void printNode(llvm::raw_ostream &OS, const DynTypedNode &N,
+               const PrintingPolicy &PP) {
+  if (const TypeLoc *TL = N.get<TypeLoc>()) {
+    // TypeLoc is a hierarchy, but has only a single ASTNodeKind.
+    // Synthesize the name from the Type subclass (except for QualifiedTypeLoc).
+    if (TL->getTypeLocClass() == TypeLoc::Qualified)
+      OS << "QualifiedTypeLoc";
+    else
+      OS << TL->getType()->getTypeClassName() << "TypeLoc";
+  } else {
+    OS << N.getNodeKind().asStringRef();
+  }
+  OS << " ";
+  N.print(OS, PP);
+}
+
+std::string printNodeToString(const DynTypedNode &N, const PrintingPolicy &PP) {
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+  printNode(OS, N, PP);
+  return std::move(OS.str());
+}
+
 // We find the selection by visiting written nodes in the AST, looking for nodes
 // that intersect with the selected character range.
 //
@@ -71,9 +100,9 @@ class SelectionVisitor : public RecursiveASTVisitor<SelectionVisitor> {
 public:
   // Runs the visitor to gather selected nodes and their ancestors.
   // If there is any selection, the root (TUDecl) is the first node.
-  static std::deque<Node> collect(ASTContext &AST, unsigned Begin,
-                                  unsigned End, FileID File) {
-    SelectionVisitor V(AST, Begin, End, File);
+  static std::deque<Node> collect(ASTContext &AST, const PrintingPolicy &PP,
+                                  unsigned Begin, unsigned End, FileID File) {
+    SelectionVisitor V(AST, PP, Begin, End, File);
     V.TraverseAST(AST);
     assert(V.Stack.size() == 1 && "Unpaired push/pop?");
     assert(V.Stack.top() == &V.Nodes.front());
@@ -114,9 +143,12 @@ public:
   }
   // Stmt is the same, but this form allows the data recursion optimization.
   bool dataTraverseStmtPre(Stmt *X) {
-    if (!X || canSafelySkipNode(X->getSourceRange()))
+    if (!X)
       return false;
-    push(DynTypedNode::create(*X));
+    auto N = DynTypedNode::create(*X);
+    if (canSafelySkipNode(N))
+      return false;
+    push(std::move(N));
     return true;
   }
   bool dataTraverseStmtPost(Stmt *X) {
@@ -130,10 +162,10 @@ public:
 private:
   using Base = RecursiveASTVisitor<SelectionVisitor>;
 
-  SelectionVisitor(ASTContext &AST, unsigned SelBegin, unsigned SelEnd,
-                   FileID SelFile)
+  SelectionVisitor(ASTContext &AST, const PrintingPolicy &PP, unsigned SelBegin,
+                   unsigned SelEnd, FileID SelFile)
       : SM(AST.getSourceManager()), LangOpts(AST.getLangOpts()),
-        SelBegin(SelBegin), SelEnd(SelEnd), SelFile(SelFile),
+        PrintPolicy(PP), SelBegin(SelBegin), SelEnd(SelEnd), SelFile(SelFile),
         SelBeginTokenStart(SM.getFileOffset(Lexer::GetBeginningOfToken(
             SM.getComposedLoc(SelFile, SelBegin), SM, LangOpts))) {
     // Ensure we have a node for the TU decl, regardless of traversal scope.
@@ -148,7 +180,10 @@ private:
   // Node is always a pointer so the generic code can handle any null checks.
   template <typename T, typename Func>
   bool traverseNode(T *Node, const Func &Body) {
-    if (Node == nullptr || canSafelySkipNode(Node->getSourceRange()))
+    if (Node == nullptr)
+      return true;
+    auto N = DynTypedNode::create(*Node);
+    if (canSafelySkipNode(N))
       return true;
     push(DynTypedNode::create(*Node));
     bool Ret = Body();
@@ -183,31 +218,41 @@ private:
 
   // An optimization for a common case: nodes outside macro expansions that
   // don't intersect the selection may be recursively skipped.
-  bool canSafelySkipNode(SourceRange S) {
+  bool canSafelySkipNode(const DynTypedNode &N) {
+    SourceRange S = N.getSourceRange();
     auto B = SM.getDecomposedLoc(S.getBegin());
     auto E = SM.getDecomposedLoc(S.getEnd());
+    // Node lies in a macro expansion?
     if (B.first != SelFile || E.first != SelFile)
       return false;
-    return B.second >= SelEnd || E.second < SelBeginTokenStart;
+    // Node intersects selection tokens?
+    if (B.second < SelEnd && E.second >= SelBeginTokenStart)
+      return false;
+    // Otherwise, allow skipping over the node.
+    dlog("{1}skip: {0}", printNodeToString(N, PrintPolicy), indent());
+    dlog("{1}skipped range = {0}", S.printToString(SM), indent(1));
+    return true;
   }
 
   // Pushes a node onto the ancestor stack. Pairs with pop().
   // Performs early hit detection for some nodes (on the earlySourceRange).
   void push(DynTypedNode Node) {
-    bool SelectedEarly = claimRange(earlySourceRange(Node));
+    SourceRange Early = earlySourceRange(Node);
+    dlog("{1}push: {0}", printNodeToString(Node, PrintPolicy), indent());
     Nodes.emplace_back();
     Nodes.back().ASTNode = std::move(Node);
     Nodes.back().Parent = Stack.top();
     // Early hit detection never selects the whole node.
-    Nodes.back().Selected =
-        SelectedEarly ? SelectionTree::Partial : SelectionTree::Unselected;
     Stack.push(&Nodes.back());
+    Nodes.back().Selected =
+        claimRange(Early) ? SelectionTree::Partial : SelectionTree::Unselected;
   }
 
   // Pops a node off the ancestor stack, and finalizes it. Pairs with push().
   // Performs primary hit detection.
   void pop() {
     Node &N = *Stack.top();
+    dlog("{1}pop: {0}", printNodeToString(N.ASTNode, PrintPolicy), indent(-1));
     if (auto Sel = claimRange(N.ASTNode.getSourceRange()))
       N.Selected = Sel;
     if (N.Selected || !N.Children.empty()) {
@@ -250,6 +295,7 @@ private:
     // Selecting "++x" or "x" will do the right thing.
     auto Range = toHalfOpenFileRange(SM, LangOpts, S);
     assert(Range && "We should be able to get the File Range");
+    dlog("{1}claimRange: {0}", Range->printToString(SM), indent());
     auto B = SM.getDecomposedLoc(Range->getBegin());
     auto E = SM.getDecomposedLoc(Range->getEnd());
     // Otherwise, nodes in macro expansions can't be selected.
@@ -269,6 +315,11 @@ private:
     // children were selected.
     if (!Claimed.add(B.second, E.second))
       return SelectionTree::Unselected;
+    dlog("{1}hit selection: {0}",
+         SourceRange(SM.getComposedLoc(B.first, B.second),
+                     SM.getComposedLoc(E.first, E.second))
+             .printToString(SM),
+         indent());
     // Some of our own characters are covered, this is a true hit.
     // Determine whether the node was completely covered.
     return (PreciseBounds.first >= SelBegin && PreciseBounds.second <= SelEnd)
@@ -276,8 +327,16 @@ private:
                : SelectionTree::Partial;
   }
 
+  std::string indent(int Offset = 0) {
+    // Cast for signed arithmetic.
+    int Amount = int(Stack.size()) + Offset;
+    assert(Amount >= 0);
+    return std::string(Amount, ' ');
+  }
+
   SourceManager &SM;
   const LangOptions &LangOpts;
+  const PrintingPolicy &PrintPolicy;
   std::stack<Node *> Stack;
   RangeSet Claimed;
   std::deque<Node> Nodes; // Stable pointers as we add more nodes.
@@ -302,18 +361,7 @@ void SelectionTree::print(llvm::raw_ostream &OS, const SelectionTree::Node &N,
                                                                     : '.');
   else
     OS.indent(Indent);
-  if (const TypeLoc *TL = N.ASTNode.get<TypeLoc>()) {
-    // TypeLoc is a hierarchy, but has only a single ASTNodeKind.
-    // Synthesize the name from the Type subclass (except for QualifiedTypeLoc).
-    if (TL->getTypeLocClass() == TypeLoc::Qualified)
-      OS << "QualifiedTypeLoc";
-    else
-      OS << TL->getType()->getTypeClassName() << "TypeLoc";
-  } else {
-    OS << N.ASTNode.getNodeKind().asStringRef();
-  }
-  OS << " ";
-  N.ASTNode.print(OS, PrintPolicy);
+  printNode(OS, N.ASTNode, PrintPolicy);
   OS << "\n";
   for (const Node *Child : N.Children)
     print(OS, *Child, Indent + 2);
@@ -342,14 +390,19 @@ SelectionTree::SelectionTree(ASTContext &AST, unsigned Begin, unsigned End)
     : PrintPolicy(AST.getLangOpts()) {
   // No fundamental reason the selection needs to be in the main file,
   // but that's all clangd has needed so far.
-  FileID FID = AST.getSourceManager().getMainFileID();
+  const SourceManager &SM = AST.getSourceManager();
+  FileID FID = SM.getMainFileID();
   if (Begin == End)
     std::tie(Begin, End) = pointBounds(Begin, FID, AST);
   PrintPolicy.TerseOutput = true;
   PrintPolicy.IncludeNewlines = false;
 
-  Nodes = SelectionVisitor::collect(AST, Begin, End, FID);
+  dlog("Computing selection for {0}",
+       SourceRange(SM.getComposedLoc(FID, Begin), SM.getComposedLoc(FID, End))
+           .printToString(SM));
+  Nodes = SelectionVisitor::collect(AST, PrintPolicy, Begin, End, FID);
   Root = Nodes.empty() ? nullptr : &Nodes.front();
+  dlog("Built selection tree\n{0}", *this);
 }
 
 SelectionTree::SelectionTree(ASTContext &AST, unsigned Offset)

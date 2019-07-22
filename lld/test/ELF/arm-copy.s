@@ -4,7 +4,7 @@
 // RUN: ld.lld -shared %t2.o -soname fixed-length-string.so -o %t2.so
 // RUN: ld.lld --hash-style=sysv %t.o %t2.so -o %t3
 // RUN: llvm-readobj -S -r --expand-relocs --symbols %t3 | FileCheck %s
-// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t3 | FileCheck -check-prefix=CODE %s
+// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi --no-show-raw-insn %t3 | FileCheck -check-prefix=CODE %s
 // RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi -section=.rodata %t3 | FileCheck -check-prefix=RODATA %s
 
 // Copy relocations R_ARM_COPY are required for y and z
@@ -69,12 +69,12 @@ _start:
 // CODE-NEXT: _start:
 // S(y) = 0x13000, A = 0
 // (S + A) & 0x0000ffff = 0x3000 = #12288
-// CODE-NEXT:   11000:  00 20 03 e3    movw    r2, #12288
+// CODE-NEXT:   11000:       movw    r2, #12288
 // S(y) = 0x13000, A = 0
 // ((S + A) & 0xffff0000) >> 16 = 0x1
-// CODE-NEXT:   11004:       01 20 40 e3    movt    r2, #1
-// CODE-NEXT:   11008:       04 30 9f e5    ldr     r3, [pc, #4]
-// CODE-NEXT:   1100c:       00 30 93 e5    ldr     r3, [r3]
+// CODE-NEXT:   11004:       movt    r2, #1
+// CODE-NEXT:   11008:       ldr     r3, [pc, #4]
+// CODE-NEXT:   1100c:       ldr     r3, [r3]
 
 
 // RODATA: Contents of section .rodata:

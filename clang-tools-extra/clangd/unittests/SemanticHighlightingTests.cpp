@@ -50,7 +50,8 @@ void checkHighlightings(llvm::StringRef Code) {
   }
 
   auto ActualTokens = getSemanticHighlightings(AST);
-  EXPECT_THAT(ActualTokens, testing::UnorderedElementsAreArray(ExpectedTokens));
+  EXPECT_THAT(ActualTokens, testing::UnorderedElementsAreArray(ExpectedTokens))
+   << "Inputs is:\n" << Code;
 }
 
 TEST(SemanticHighlighting, GetsCorrectTokens) {

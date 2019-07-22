@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj --arm-add-build-attributes -triple=armv7a-none-linux-gnueabi %s -o %t
-// RUN: ld.lld %t --no-merge-exidx-entries -o %t2 --gc-sections 2>&1
-// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
+// RUN: ld.lld %t --no-merge-exidx-entries -o %t2 --gc-sections
+// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi --no-show-raw-insn %t2 | FileCheck %s
 // RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-EXIDX %s
 
 // Test the behavior of .ARM.exidx sections under garbage collection
@@ -93,17 +93,17 @@ _start:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: _start:
-// CHECK-NEXT:   11000:       01 00 00 eb     bl      #4 <func1>
-// CHECK-NEXT:   11004:       01 00 00 eb     bl      #4 <func2>
-// CHECK-NEXT:   11008:       1e ff 2f e1     bx      lr
+// CHECK-NEXT:   11000:       bl      #4 <func1>
+// CHECK-NEXT:   11004:       bl      #4 <func2>
+// CHECK-NEXT:   11008:       bx      lr
 // CHECK: func1:
-// CHECK-NEXT:   1100c:       1e ff 2f e1     bx      lr
+// CHECK-NEXT:   1100c:       bx      lr
 // CHECK: func2:
-// CHECK-NEXT:   11010:       1e ff 2f e1     bx      lr
+// CHECK-NEXT:   11010:       bx      lr
 // CHECK: __gxx_personality_v0:
-// CHECK-NEXT:   11014:       1e ff 2f e1     bx      lr
+// CHECK-NEXT:   11014:       bx      lr
 // CHECK: __aeabi_unwind_cpp_pr0:
-// CHECK-NEXT:   11018:       1e ff 2f e1     bx      lr
+// CHECK-NEXT:   11018:       bx      lr
 
 // GC should have removed table entries for unusedfunc1, unusedfunc2
 // and __gxx_personality_v1

@@ -10,6 +10,7 @@
 #define LLVM_DEBUGINFO_CODEVIEW_TYPERECORDMAPPING_H
 
 #include "llvm/ADT/Optional.h"
+#include "llvm/DebugInfo/CodeView/CVTypeVisitor.h"
 #include "llvm/DebugInfo/CodeView/CodeViewRecordIO.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
 #include "llvm/Support/Error.h"

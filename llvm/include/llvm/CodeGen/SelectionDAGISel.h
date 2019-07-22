@@ -162,6 +162,7 @@ public:
     OPC_EmitMergeInputChains1_1,
     OPC_EmitMergeInputChains1_2,
     OPC_EmitCopyToReg,
+    OPC_EmitCopyToReg2,
     OPC_EmitNodeXForm,
     OPC_EmitNode,
     // Space-optimized forms that implicitly encode number of result VTs.

@@ -2,7 +2,7 @@
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %S/Inputs/arm-exidx-cantunwind.s -o %tcantunwind
 // Check that relocatable link maintains SHF_LINK_ORDER
-// RUN: ld.lld -r %t %tcantunwind -o %t4 2>&1
+// RUN: ld.lld -r %t %tcantunwind -o %t4
 // RUN: llvm-readobj -S %t4 | FileCheck %s
 
 // Each assembler created .ARM.exidx section has the SHF_LINK_ORDER flag set

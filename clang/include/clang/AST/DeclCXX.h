@@ -2232,20 +2232,20 @@ public:
 
   overridden_method_range overridden_methods() const;
 
-  /// Returns the parent of this method declaration, which
+  /// Return the parent of this method declaration, which
   /// is the class in which this method is defined.
   const CXXRecordDecl *getParent() const {
     return cast<CXXRecordDecl>(FunctionDecl::getParent());
   }
 
-  /// Returns the parent of this method declaration, which
+  /// Return the parent of this method declaration, which
   /// is the class in which this method is defined.
   CXXRecordDecl *getParent() {
     return const_cast<CXXRecordDecl *>(
              cast<CXXRecordDecl>(FunctionDecl::getParent()));
   }
 
-  /// Returns the type of the \c this pointer.
+  /// Return the type of the \c this pointer.
   ///
   /// Should only be called for instance (i.e., non-static) methods. Note
   /// that for the call operator of a lambda closure type, this returns the
@@ -2253,8 +2253,16 @@ public:
   /// 'this' type.
   QualType getThisType() const;
 
+  /// Return the type of the object pointed by \c this.
+  ///
+  /// See getThisType() for usage restriction.
+  QualType getThisObjectType() const;
+
   static QualType getThisType(const FunctionProtoType *FPT,
                               const CXXRecordDecl *Decl);
+
+  static QualType getThisObjectType(const FunctionProtoType *FPT,
+                                    const CXXRecordDecl *Decl);
 
   Qualifiers getMethodQualifiers() const {
     return getType()->getAs<FunctionProtoType>()->getMethodQuals();

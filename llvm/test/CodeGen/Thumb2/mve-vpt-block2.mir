@@ -64,7 +64,7 @@ body:             |
   bb.0.entry:
     liveins: $q0, $q1, $q2, $q3, $r0
 
-    ; CHECK:       MVE_VPST 8, implicit-def $p0
+    ; CHECK:       MVE_VPST 4, implicit-def $p0
     ; CHECK-NEXT:  renamable $q0 = nnan ninf nsz MVE_VMINNMf32
     ; CHECK-NEXT:  renamable $q1 = nnan ninf nsz MVE_VMINNMf32
 

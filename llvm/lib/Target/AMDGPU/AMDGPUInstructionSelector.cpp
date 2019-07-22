@@ -567,10 +567,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(
   MachineInstr &I, CodeGenCoverage &CoverageInfo) const {
   unsigned IntrinsicID =  I.getOperand(I.getNumExplicitDefs()).getIntrinsicID();
   switch (IntrinsicID) {
-  case Intrinsic::maxnum:
-  case Intrinsic::minnum:
-  case Intrinsic::amdgcn_cvt_pkrtz:
-    return selectImpl(I, CoverageInfo);
   case Intrinsic::amdgcn_if_break: {
     MachineBasicBlock *BB = I.getParent();
     MachineFunction *MF = BB->getParent();
