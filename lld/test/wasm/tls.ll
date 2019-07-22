@@ -44,10 +44,8 @@ define i32* @tls2_addr() {
 
 ; CHECK:      - Type:            CODE
 ; CHECK-NEXT:   Functions:
-; CHECK-NEXT:     - Index:           0
-; CHECK-NEXT:       Locals:          []
-; CHECK-NEXT:       Body:            0B
-; CHECK-NEXT:     - Index:           1
+; Skip __wasm_call_ctors and __wasm_init_memory
+; CHECK:          - Index:           2
 ; CHECK-NEXT:       Locals:          []
 ; CHECK-NEXT:       Body:            20002401200041004108FC0801000B
 
@@ -60,7 +58,7 @@ define i32* @tls2_addr() {
 ;   memory.init 1, 0
 ;   end
 
-; CHECK-NEXT:     - Index:           2
+; CHECK-NEXT:     - Index:           3
 ; CHECK-NEXT:       Locals:          []
 ; CHECK-NEXT:       Body:            2381808080004180808080006A0B
 
@@ -70,7 +68,7 @@ define i32* @tls2_addr() {
 ;   i32.add
 ;   end
 
-; CHECK-NEXT:     - Index:           3
+; CHECK-NEXT:     - Index:           4
 ; CHECK-NEXT:       Locals:          []
 ; CHECK-NEXT:       Body:            2381808080004184808080006A0B
 
