@@ -108,7 +108,7 @@ public:
            Data == X.Data;
   }
 
-  void dump() const;
+  LLVM_DUMP_METHOD void dump() const;
 };
 } // end anonymous namespace
 
@@ -135,7 +135,9 @@ static inline raw_ostream &operator<<(raw_ostream &Out, BindingKey K) {
 
 } // namespace llvm
 
-LLVM_DUMP_METHOD void BindingKey::dump() const { llvm::errs() << *this; }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void BindingKey::dump() const { llvm::errs() << *this; }
+#endif
 
 //===----------------------------------------------------------------------===//
 // Actual Store type.

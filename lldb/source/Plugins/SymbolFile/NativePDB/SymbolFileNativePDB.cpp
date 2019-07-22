@@ -1506,9 +1506,10 @@ size_t SymbolFileNativePDB::ParseVariablesForContext(const SymbolContext &sc) {
 }
 
 CompilerDecl SymbolFileNativePDB::GetDeclForUID(lldb::user_id_t uid) {
-  clang::Decl *decl = m_ast->GetOrCreateDeclForUid(PdbSymUid(uid));
-
-  return m_ast->ToCompilerDecl(*decl);
+  if (auto decl = m_ast->GetOrCreateDeclForUid(uid))
+    return decl.getValue();
+  else
+    return CompilerDecl();
 }
 
 CompilerDeclContext
