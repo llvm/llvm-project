@@ -1,0 +1,129 @@
+# RUN: yaml2obj %s --docnum=1 -o %t.i386
+# RUN: llvm-readobj -h %t.i386 | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.i386 --check-prefix I386
+
+#      I386:File: [[FILE]]
+# I386-NEXT:Format: ELF32-i386
+# I386-NEXT:Arch: i386
+# I386-NEXT:AddressSize: 32bit
+# I386-NEXT:LoadName: <Not found>
+# I386-NEXT:ElfHeader {
+# I386-NEXT:  Ident {
+# I386-NEXT:    Magic: (7F 45 4C 46)
+# I386-NEXT:    Class: 32-bit (0x1)
+# I386-NEXT:    DataEncoding: LittleEndian (0x1)
+# I386-NEXT:    FileVersion: 1
+# I386-NEXT:    OS/ABI: GNU/Linux (0x3)
+# I386-NEXT:    ABIVersion: 0
+# I386-NEXT:    Unused: (00 00 00 00 00 00 00)
+# I386-NEXT:  }
+# I386-NEXT:  Type: Relocatable (0x1)
+# I386-NEXT:  Machine: EM_386 (0x3)
+# I386-NEXT:  Version: 1
+# I386-NEXT:  Entry: 0x0
+# I386-NEXT:  ProgramHeaderOffset: 0x34
+# I386-NEXT:  SectionHeaderOffset: 0x34
+# I386-NEXT:  Flags [ (0x0)
+# I386-NEXT:  ]
+# I386-NEXT:  HeaderSize: 52
+# I386-NEXT:  ProgramHeaderEntrySize: 32
+# I386-NEXT:  ProgramHeaderCount: 0
+# I386-NEXT:  SectionHeaderEntrySize: 40
+# I386-NEXT:  SectionHeaderCount: 4
+# I386-NEXT:  StringTableSectionIndex: 3
+# I386-NEXT:}
+# I386-NOT:{{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_GNU
+  Type:    ET_REL
+  Machine: EM_386
+
+# RUN: yaml2obj %s --docnum=2 -o %t.x86-64
+# RUN: llvm-readobj -h %t.x86-64 \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.x86-64 --check-prefix X86-64
+
+#      X86-64:File: [[FILE]]
+# X86-64-NEXT:Format: ELF64-x86-64
+# X86-64-NEXT:Arch: x86_64
+# X86-64-NEXT:AddressSize: 64bit
+# X86-64-NEXT:LoadName: <Not found>
+# X86-64-NEXT:ElfHeader {
+# X86-64-NEXT:  Ident {
+# X86-64-NEXT:    Magic: (7F 45 4C 46)
+# X86-64-NEXT:    Class: 64-bit (0x2)
+# X86-64-NEXT:    DataEncoding: LittleEndian (0x1)
+# X86-64-NEXT:    FileVersion: 1
+# X86-64-NEXT:    OS/ABI: GNU/Linux (0x3)
+# X86-64-NEXT:    ABIVersion: 0
+# X86-64-NEXT:    Unused: (00 00 00 00 00 00 00)
+# X86-64-NEXT:  }
+# X86-64-NEXT:  Type: Relocatable (0x1)
+# X86-64-NEXT:  Machine: EM_X86_64 (0x3E)
+# X86-64-NEXT:  Version: 1
+# X86-64-NEXT:  Entry: 0x0
+# X86-64-NEXT:  ProgramHeaderOffset: 0x40
+# X86-64-NEXT:  SectionHeaderOffset: 0x40
+# X86-64-NEXT:  Flags [ (0x0)
+# X86-64-NEXT:  ]
+# X86-64-NEXT:  HeaderSize: 64
+# X86-64-NEXT:  ProgramHeaderEntrySize: 56
+# X86-64-NEXT:  ProgramHeaderCount: 0
+# X86-64-NEXT:  SectionHeaderEntrySize: 64
+# X86-64-NEXT:  SectionHeaderCount: 4
+# X86-64-NEXT:  StringTableSectionIndex: 3
+# X86-64-NEXT:}
+# X86-64-NOT:{{.}}
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  OSABI:   ELFOSABI_GNU
+  Type:    ET_REL
+  Machine: EM_X86_64
+
+# RUN: yaml2obj %s --docnum=3 -o %t.lanai
+# RUN: llvm-readobj -h %t.lanai \
+# RUN:  | FileCheck %s --strict-whitespace --match-full-lines -DFILE=%t.lanai --check-prefix LANAI
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS32
+  Data:    ELFDATA2MSB
+  Type:    ET_REL
+  Machine: EM_LANAI
+
+#      LANAI:File: [[FILE]]
+# LANAI-NEXT:Format: ELF32-lanai
+# LANAI-NEXT:Arch: lanai
+# LANAI-NEXT:AddressSize: 32bit
+# LANAI-NEXT:LoadName: <Not found>
+# LANAI-NEXT:ElfHeader {
+# LANAI-NEXT:  Ident {
+# LANAI-NEXT:    Magic: (7F 45 4C 46)
+# LANAI-NEXT:    Class: 32-bit (0x1)
+# LANAI-NEXT:    DataEncoding: BigEndian (0x2)
+# LANAI-NEXT:    FileVersion: 1
+# LANAI-NEXT:    OS/ABI: SystemV (0x0)
+# LANAI-NEXT:    ABIVersion: 0
+# LANAI-NEXT:    Unused: (00 00 00 00 00 00 00)
+# LANAI-NEXT:  }
+# LANAI-NEXT:  Type: Relocatable (0x1)
+# LANAI-NEXT:  Machine: EM_LANAI (0xF4)
+# LANAI-NEXT:  Version: 1
+# LANAI-NEXT:  Entry: 0x0
+# LANAI-NEXT:  ProgramHeaderOffset: 0x34
+# LANAI-NEXT:  SectionHeaderOffset: 0x34
+# LANAI-NEXT:  Flags [ (0x0)
+# LANAI-NEXT:  ]
+# LANAI-NEXT:  HeaderSize: 52
+# LANAI-NEXT:  ProgramHeaderEntrySize: 32
+# LANAI-NEXT:  ProgramHeaderCount: 0
+# LANAI-NEXT:  SectionHeaderEntrySize: 40
+# LANAI-NEXT:  SectionHeaderCount: 4
+# LANAI-NEXT:  StringTableSectionIndex: 3
+# LANAI-NEXT:}
+# LANAI-NOT:{{.}}
