@@ -56,8 +56,6 @@ struct ELFNote {
 /// the ObjectFile protocol.
 class ObjectFileELF : public lldb_private::ObjectFile {
 public:
-  ~ObjectFileELF() override;
-
   // Static Functions
   static void Initialize();
 
@@ -190,7 +188,7 @@ private:
 
   /// ELF .gnu_debuglink file and crc data if available.
   std::string m_gnu_debuglink_file;
-  uint32_t m_gnu_debuglink_crc;
+  uint32_t m_gnu_debuglink_crc = 0;
 
   /// Collection of program headers.
   ProgramHeaderColl m_program_headers;
