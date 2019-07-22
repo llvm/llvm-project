@@ -1,4 +1,4 @@
-// REQUIRES: arm, aarch64
+// REQUIRES: arm
 
 // RUN: llvm-mc -filetype=obj -triple=armv7a-none-linux-gnueabi %p/Inputs/arm-shared.s -o %t.so.o
 // RUN: ld.lld -shared %t.so.o -o %t.so

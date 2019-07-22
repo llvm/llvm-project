@@ -8,7 +8,7 @@
 // RUN:          .caller : { *(.text) } \
 // RUN:          .callee3 : { *(.callee_high) } \
 // RUN:          .callee4 : { *(.callee_arm_high) } } " > %t.script
-// RUN: ld.lld --script %t.script %t %tfar -o %t2 2>&1
+// RUN: ld.lld --script %t.script %t %tfar -o %t2
 // RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-ARM %s
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-THUMB %s
 

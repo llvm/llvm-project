@@ -38,6 +38,8 @@ let Command = "settings read" in {
 }
 
 let Command = "breakpoint list" in {
+  // FIXME: We need to add an "internal" command, and then add this sort of
+  // thing to it. But I need to see it for now, and don't want to wait.
   def blist_internal : Option<"internal", "i">,
     Desc<"Show debugger internal breakpoints">;
   def blist_brief : Option<"brief", "b">, Group<1>,
@@ -50,6 +52,247 @@ let Command = "breakpoint list" in {
   def blist_dummy_bp : Option<"dummy-breakpoints", "D">,
     Desc<"List Dummy breakpoints - i.e. breakpoints set before a file is "
     "provided, which prime new targets.">;
+}
+
+let Command = "breakpoint modify" in {
+  def breakpoint_modify_ignore_count : Option<"ignore-count", "i">, Group<1>,
+    Arg<"Count">,
+    Desc<"Set the number of times this breakpoint is skipped before stopping.">;
+  def breakpoint_modify_one_shot : Option<"one-shot", "o">, Group<1>,
+    Arg<"Boolean">,
+    Desc<"The breakpoint is deleted the first time it stop causes a stop.">;
+  def breakpoint_modify_thread_index : Option<"thread-index", "x">, Group<1>,
+    Arg<"ThreadIndex">, Desc<"The breakpoint stops only for the thread whose "
+    "index matches this argument.">;
+  def breakpoint_modify_thread_id : Option<"thread-id", "t">, Group<1>,
+    Arg<"ThreadID">, Desc<"The breakpoint stops only for the thread whose TID "
+    "matches this argument.">;
+  def breakpoint_modify_thread_name : Option<"thread-name", "T">, Group<1>,
+    Arg<"ThreadName">, Desc<"The breakpoint stops only for the thread whose "
+    "thread name matches this argument.">;
+  def breakpoint_modify_queue_name : Option<"queue-name", "q">, Group<1>,
+    Arg<"QueueName">, Desc<"The breakpoint stops only for threads in the queue "
+    "whose name is given by this argument.">;
+  def breakpoint_modify_condition : Option<"condition", "c">, Group<1>,
+    Arg<"Expression">, Desc<"The breakpoint stops only if this condition "
+    "expression evaluates to true.">;
+  def breakpoint_modify_auto_continue : Option<"auto-continue", "G">, Group<1>,
+    Arg<"Boolean">,
+    Desc<"The breakpoint will auto-continue after running its commands.">;
+  def breakpoint_modify_enable : Option<"enable", "e">, Group<2>,
+    Desc<"Enable the breakpoint.">;
+  def breakpoint_modify_disable : Option<"disable", "d">, Group<3>,
+    Desc<"Disable the breakpoint.">;
+  def breakpoint_modify_command : Option<"command", "C">, Group<4>,
+    Arg<"Command">,
+    Desc<"A command to run when the breakpoint is hit, can be provided more "
+    "than once, the commands will get run in order left to right.">;
+}
+
+let Command = "breakpoint dummy" in {
+  def breakpoint_dummy_options_dummy_breakpoints :
+    Option<"dummy-breakpoints", "D">, Group<1>,
+    Desc<"Act on Dummy breakpoints - i.e. breakpoints set before a file is "
+    "provided, which prime new targets.">;
+}
+
+let Command = "breakpoint set" in {
+  def breakpoint_set_shlib : Option<"shlib", "s">, Arg<"ShlibName">,
+    Completion<"Module">, Groups<[1,2,3,4,5,6,7,8,9,11]>, // *not* in group 10
+    Desc<"Set the breakpoint only in this shared library.  Can repeat this "
+    "option multiple times to specify multiple shared libraries.">;
+  def breakpoint_set_hardware : Option<"hardware", "H">,
+    Desc<"Require the breakpoint to use hardware breakpoints.">;
+  def breakpoint_set_file : Option<"file", "f">, Arg<"Filename">,
+    Completion<"SourceFile">, Groups<[1,3,4,5,6,7,8,9,11]>,
+    Desc<"Specifies the source file in which to set this breakpoint.  Note, by "
+    "default lldb only looks for files that are #included if they use the "
+    "standard include file extensions.  To set breakpoints on .c/.cpp/.m/.mm "
+    "files that are #included, set target.inline-breakpoint-strategy to "
+    "\"always\".">;
+  def breakpoint_set_line : Option<"line", "l">, Group<1>, Arg<"LineNum">,
+    Required,
+    Desc<"Specifies the line number on which to set this breakpoint.">;
+  def breakpoint_set_address : Option<"address", "a">, Group<2>,
+    Arg<"AddressOrExpression">, Required,
+    Desc<"Set the breakpoint at the specified address.  If the address maps "
+    "uniquely toa particular binary, then the address will be converted to "
+    "a \"file\"address, so that the breakpoint will track that binary+offset "
+    "no matter where the binary eventually loads.  Alternately, if you also "
+    "specify the module - with the -s option - then the address will be "
+    "treated as a file address in that module, and resolved accordingly.  "
+    "Again, this will allow lldb to track that offset on subsequent reloads. "
+    " The module need not have been loaded at the time you specify this "
+    "breakpoint, and will get resolved when the module is loaded.">;
+  def breakpoint_set_name : Option<"name", "n">, Group<3>, Arg<"FunctionName">,
+    Completion<"Symbol">, Required,
+    Desc<"Set the breakpoint by function name.  Can be repeated multiple times "
+    "to makeone breakpoint for multiple names">;
+  def breakpoint_set_source_regexp_function :
+    Option<"source-regexp-function", "X">, Group<9>, Arg<"FunctionName">,
+    Completion<"Symbol">,
+    Desc<"When used with '-p' limits the source regex to source contained in "
+    "the namedfunctions.  Can be repeated multiple times.">;
+  def breakpoint_set_fullname : Option<"fullname", "F">, Group<4>,
+    Arg<"FullName">, Required, Completion<"Symbol">,
+    Desc<"Set the breakpoint by fully qualified function names. For C++ this "
+    "means namespaces and all arguments, and for Objective-C this means a full "
+    "functionprototype with class and selector.  Can be repeated multiple times"
+    " to make one breakpoint for multiple names.">;
+  def breakpoint_set_selector : Option<"selector", "S">, Group<5>,
+    Arg<"Selector">, Required,
+    Desc<"Set the breakpoint by ObjC selector name. Can be repeated multiple "
+    "times tomake one breakpoint for multiple Selectors.">;
+  def breakpoint_set_method : Option<"method", "M">, Group<6>, Arg<"Method">,
+    Required, Desc<"Set the breakpoint by C++ method names.  Can be repeated "
+    "multiple times tomake one breakpoint for multiple methods.">;
+  def breakpoint_set_func_regex : Option<"func-regex", "r">, Group<7>,
+    Arg<"RegularExpression">, Required, Desc<"Set the breakpoint by function "
+    "name, evaluating a regular-expression to findthe function name(s).">;
+  def breakpoint_set_basename : Option<"basename", "b">, Group<8>,
+    Arg<"FunctionName">, Required, Completion<"Symbol">,
+    Desc<"Set the breakpoint by function basename (C++ namespaces and arguments"
+    " will beignored).  Can be repeated multiple times to make one breakpoint "
+    "for multiplesymbols.">;
+  def breakpoint_set_source_pattern_regexp :
+    Option<"source-pattern-regexp", "p">, Group<9>, Arg<"RegularExpression">,
+    Required, Desc<"Set the breakpoint by specifying a regular expression which"
+    " is matched against the source text in a source file or files specified "
+    "with the -f can be specified more than once.  If no source files "
+    "are specified, uses the current \"default source file\".  If you want to "
+    "match against all source files, pass the \"--all-files\" option.">;
+  def breakpoint_set_all_files : Option<"all-files", "A">, Group<9>,
+    Desc<"All files are searched for source pattern matches.">;
+  def breakpoint_set_python_class : Option<"python-class", "P">, Group<11>,
+    Arg<"PythonClass">, Required, Desc<"The name of the class that implement "
+    "a scripted breakpoint.">;
+  def breakpoint_set_python_class_key : Option<"python-class-key", "k">,
+    Group<11>, Arg<"None">,
+    Desc<"The key for a key/value pair passed to the class that implements a "
+    "scripted breakpoint.  Can be specified more than once.">;
+  def breakpoint_set_python_class_value : Option<"python-class-value", "v">,
+    Group<11>, Arg<"None">, Desc<"The value for the previous key in the pair "
+    "passed to the class that implements a scripted breakpoint. "
+    "Can be specified more than once.">;
+  def breakpoint_set_language_exception : Option<"language-exception", "E">,
+    Group<10>, Arg<"Language">, Required,
+    Desc<"Set the breakpoint on exceptions thrown by the specified language "
+    "(without options, on throw but not catch.)">;
+  def breakpoint_set_on_throw : Option<"on-throw", "w">, Group<10>,
+    Arg<"Boolean">, Desc<"Set the breakpoint on exception throW.">;
+  def breakpoint_set_on_catch : Option<"on-catch", "h">, Group<10>,
+    Arg<"Boolean">, Desc<"Set the breakpoint on exception catcH.">;
+  def breakpoint_set_language : Option<"language", "L">, GroupRange<3, 8>,
+    Arg<"Language">,
+    Desc<"Specifies the Language to use when interpreting the breakpoint's "
+    "expression (note: currently only implemented for setting breakpoints on "
+    "identifiers). If not set the target.language setting is used.">;
+  def breakpoint_set_skip_prologue : Option<"skip-prologue", "K">,
+    Arg<"Boolean">, Groups<[1,3,4,5,6,7,8]>,
+    Desc<"sKip the prologue if the breakpoint is at the beginning of a "
+    "function. If not set the target.skip-prologue setting is used.">;
+  def breakpoint_set_breakpoint_name : Option<"breakpoint-name", "N">,
+    Arg<"BreakpointName">,
+    Desc<"Adds this to the list of names for this breakpoint.">;
+  def breakpoint_set_address_slide : Option<"address-slide", "R">,
+    Arg<"Address">, Groups<[1,3,4,5,6,7,8]>,
+    Desc<"Add the specified offset to whatever address(es) the breakpoint "
+    "resolves to. At present this applies the offset directly as given, and "
+    "doesn't try to align it to instruction boundaries.">;
+  def breakpoint_set_move_to_nearest_code : Option<"move-to-nearest-code", "m">,
+    Groups<[1, 9]>, Arg<"Boolean">,
+    Desc<"Move breakpoints to nearest code. If not set the "
+    "target.move-to-nearest-codesetting is used.">;
+  /* Don't add this option till it actually does something useful...
+  def breakpoint_set_exception_typename : Option<"exception-typename", "O">,
+    Arg<"TypeName">, Desc<"The breakpoint will only stop if an "
+    "exception Object of this type is thrown.  Can be repeated multiple times "
+    "to stop for multiple object types">;
+   */
+}
+
+let Command = "breakpoint clear" in {
+  def breakpoint_clear_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
+    Completion<"SourceFile">,
+    Desc<"Specify the breakpoint by source location in this particular file.">;
+  def breakpoint_clear_line : Option<"line", "l">, Group<1>, Arg<"LineNum">,
+    Required,
+    Desc<"Specify the breakpoint by source location at this particular line.">;
+}
+
+let Command = "breakpoint delete" in {
+  def breakpoint_delete_force : Option<"force", "f">, Group<1>,
+    Desc<"Delete all breakpoints without querying for confirmation.">;
+  def breakpoint_delete_dummy_breakpoints : Option<"dummy-breakpoints", "D">,
+    Group<1>, Desc<"Delete Dummy breakpoints - i.e. breakpoints set before a "
+    "file is provided, which prime new targets.">;
+}
+
+let Command = "breakpoint name" in {
+  def breakpoint_name_name : Option<"name", "N">, Group<1>,
+    Arg<"BreakpointName">, Desc<"Specifies a breakpoint name to use.">;
+  def breakpoint_name_breakpoint_id : Option<"breakpoint-id", "B">, Group<2>,
+    Arg<"BreakpointID">, Desc<"Specify a breakpoint ID to use.">;
+  def breakpoint_name_dummy_breakpoints : Option<"dummy-breakpoints", "D">,
+    Group<3>, Desc<"Operate on Dummy breakpoints - i.e. breakpoints set before "
+    "a file is provided, which prime new targets.">;
+  def breakpoint_name_help_string : Option<"help-string", "H">, Group<4>,
+    Arg<"None">, Desc<"A help string describing the purpose of this name.">;
+}
+
+let Command = "breakpoint access" in {
+  def breakpoint_access_allow_list : Option<"allow-list", "L">, Group<1>,
+    Arg<"Boolean">, Desc<"Determines whether the breakpoint will show up in "
+    "break list if not referred to explicitly.">;
+  def breakpoint_access_allow_disable : Option<"allow-disable", "A">, Group<2>,
+    Arg<"Boolean">, Desc<"Determines whether the breakpoint can be disabled by "
+    "name or when all breakpoints are disabled.">;
+  def breakpoint_access_allow_delete : Option<"allow-delete", "D">, Group<3>,
+    Arg<"Boolean">, Desc<"Determines whether the breakpoint can be deleted by "
+    "name or when all breakpoints are deleted.">;
+}
+
+let Command = "breakpoint read" in {
+  def breakpoint_read_file : Option<"file", "f">, Arg<"Filename">, Required,
+    Completion<"DiskFile">,
+    Desc<"The file from which to read the breakpoints.">;
+  def breakpoint_read_breakpoint_name : Option<"breakpoint-name", "N">,
+    Arg<"BreakpointName">, Desc<"Only read in breakpoints with this name.">;
+}
+
+let Command = "breakpoint write" in {
+  def breakpoint_write_file : Option<"file", "f">, Arg<"Filename">, Required,
+    Completion<"DiskFile">,
+    Desc<"The file into which to write the breakpoints.">;
+  def breakpoint_write_append : Option<"append", "a">,
+    Desc<"Append to saved breakpoints file if it exists.">;
+}
+
+let Command = "breakpoint command add" in {
+  def breakpoint_add_one_liner : Option<"one-liner", "o">, Group<1>,
+    Arg<"OneLiner">, Desc<"Specify a one-line breakpoint command inline. Be "
+    "sure to surround it with quotes.">;
+  def breakpoint_add_stop_on_error : Option<"stop-on-error", "e">,
+    Arg<"Boolean">, Desc<"Specify whether breakpoint command execution should "
+    "terminate on error.">;
+  def breakpoint_add_script_type : Option<"script-type", "s">,
+    EnumArg<"None", "ScriptOptionEnum()">,
+    Desc<"Specify the language for the commands - if none is specified, the "
+    "lldb command interpreter will be used.">;
+  def breakpoint_add_python_function : Option<"python-function", "F">,
+    Group<2>, Arg<"PythonFunction">,
+    Desc<"Give the name of a Python function to run as command for this "
+    "breakpoint. Be sure to give a module name if appropriate.">;
+  def breakpoint_add_dummy_breakpoints : Option<"dummy-breakpoints", "D">,
+    Desc<"Sets Dummy breakpoints - i.e. breakpoints set before a file is "
+    "provided, which prime new targets.">;
+}
+
+let Command = "breakpoint command delete" in {
+  def breakpoint_command_delete_dummy_breakpoints :
+    Option<"dummy-breakpoints", "D">, Group<1>,
+    Desc<"Delete commands from Dummy breakpoints - i.e. breakpoints set before "
+    "a file is provided, which prime new targets.">;
 }
 
 let Command = "history" in {

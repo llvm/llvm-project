@@ -7,7 +7,7 @@
 // RUN:          .caller : { *(.text) } \
 // RUN:          .R_ARM_CALL24_callee3 : { *(.R_ARM_CALL24_callee_high) } \
 // RUN:          .R_ARM_CALL24_callee4 : { *(.R_ARM_CALL24_callee_thumb_high) } } " > %t.script
-// RUN: ld.lld --script %t.script %t %ttarget -o %t2 2>&1
+// RUN: ld.lld --script %t.script %t %ttarget -o %t2
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-THUMB %s
 // RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-ARM %s
 // Test BLX instruction is chosen for Thumb BL/BLX instruction and ARM callee

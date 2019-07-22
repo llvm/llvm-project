@@ -4,17 +4,22 @@
 
 ; Make sure we use the profile information correctly to peel-off 3 iterations
 ; from the loop, and update the branch weights for the peeled loop properly.
+; All side exits to deopt does not change weigths.
 
 ; CHECK: Loop Unroll: F[basic]
 ; CHECK: PEELING loop %for.body with iteration count 3!
 
 ; CHECK-LABEL: @basic
+; CHECK: br i1 %c, label %{{.*}}, label %side_exit, !prof !15
 ; CHECK: br i1 %{{.*}}, label %[[NEXT0:.*]], label %for.cond.for.end_crit_edge, !prof !16
 ; CHECK: [[NEXT0]]:
+; CHECK: br i1 %c, label %{{.*}}, label %side_exit, !prof !15
 ; CHECK: br i1 %{{.*}}, label %[[NEXT1:.*]], label %for.cond.for.end_crit_edge, !prof !17
 ; CHECK: [[NEXT1]]:
+; CHECK: br i1 %c, label %{{.*}}, label %side_exit, !prof !15
 ; CHECK: br i1 %{{.*}}, label %[[NEXT2:.*]], label %for.cond.for.end_crit_edge, !prof !18
 ; CHECK: [[NEXT2]]:
+; CHECK: br i1 %c, label %{{.*}}, label %side_exit.loopexit, !prof !15
 ; CHECK: br i1 %{{.*}}, label %for.body, label %{{.*}}, !prof !19
 
 define i32 @basic(i32* %p, i32 %k, i1 %c) #0 !prof !15 {
@@ -74,8 +79,11 @@ attributes #1 = { nounwind optsize }
 !16 = !{!"branch_weights", i32 3001, i32 1001}
 !17 = !{!"branch_weights", i32 1, i32 0}
 
-;CHECK: !16 = !{!"branch_weights", i32 900, i32 101}
-;CHECK: !17 = !{!"branch_weights", i32 540, i32 360}
-;CHECK: !18 = !{!"branch_weights", i32 162, i32 378}
-;CHECK: !19 = !{!"branch_weights", i32 1399, i32 162}
+; This is a weights of deopt side-exit.
+;CHECK: !15 = !{!"branch_weights", i32 1, i32 0}
+; This is a weights of latch and its copies.
+;CHECK: !16 = !{!"branch_weights", i32 3001, i32 1001}
+;CHECK: !17 = !{!"branch_weights", i32 2000, i32 1001}
+;CHECK: !18 = !{!"branch_weights", i32 999, i32 1001}
+;CHECK: !19 = !{!"branch_weights", i32 1, i32 1001}
 

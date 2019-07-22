@@ -17,16 +17,33 @@ namespace {
 class InitListExprPreOrderVisitor
     : public ExpectedLocationVisitor<InitListExprPreOrderVisitor> {
 public:
+  InitListExprPreOrderVisitor(bool VisitImplicitCode)
+      : VisitImplicitCode(VisitImplicitCode) {}
+
+  bool shouldVisitImplicitCode() const { return VisitImplicitCode; }
+
   bool VisitInitListExpr(InitListExpr *ILE) {
     Match(ILE->isSemanticForm() ? "semantic" : "syntactic", ILE->getBeginLoc());
     return true;
   }
+
+private:
+  bool VisitImplicitCode;
 };
 
 TEST(RecursiveASTVisitor, InitListExprIsPreOrderVisitedTwice) {
-  InitListExprPreOrderVisitor Visitor;
+  InitListExprPreOrderVisitor Visitor(/*VisitImplicitCode=*/true);
   Visitor.ExpectMatch("syntactic", 2, 21);
   Visitor.ExpectMatch("semantic", 2, 21);
+  EXPECT_TRUE(Visitor.runOver("struct S { int x; };\n"
+                              "static struct S s = {.x = 0};\n",
+                              InitListExprPreOrderVisitor::Lang_C));
+}
+
+TEST(RecursiveASTVisitor, InitListExprVisitedOnceWhenNoImplicit) {
+  InitListExprPreOrderVisitor Visitor(/*VisitImplicitCode=*/false);
+  Visitor.ExpectMatch("syntactic", 2, 21);
+  Visitor.DisallowMatch("semantic", 2, 21);
   EXPECT_TRUE(Visitor.runOver("struct S { int x; };\n"
                               "static struct S s = {.x = 0};\n",
                               InitListExprPreOrderVisitor::Lang_C));
