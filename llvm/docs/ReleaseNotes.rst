@@ -103,6 +103,27 @@ Changes to the PowerPC Target
 
  During this release ...
 
+Changes to the SystemZ Target
+-----------------------------
+
+* Support for the arch13 architecture has been added.  When using the
+  ``-march=arch13`` option, the compiler will generate code making use of
+  new instructions introduced with the vector enhancement facility 2
+  and the miscellaneous instruction extension facility 2.
+  The ``-mtune=arch13`` option enables arch13 specific instruction
+  scheduling and tuning without making use of new instructions.
+
+* Builtins for the new vector instructions have been added and can be
+  enabled using the ``-mzvector`` option.  Support for these builtins
+  is indicated by the compiler predefining the ``__VEC__`` macro to
+  the value ``10303``.
+
+* The compiler now supports and automatically generates alignment hints
+  on vector load and store instructions.
+
+* Various code-gen improvements, in particular related to improved
+  instruction selection and register allocation.
+
 Changes to the X86 Target
 -------------------------
 
