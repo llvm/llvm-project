@@ -35,6 +35,6 @@
 
 // clang shared.cl --target=amdgcn-amdhsa-opencl -mcpu=gfx803 -o shared.so
 
-void kernel bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz(global int *a) {
-  *a = 44;
+void kernel bazzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz(global int *a, const global int *b) {
+  *a = *b;
 }
