@@ -162,14 +162,14 @@ int foomain(int argc, char **argv) {
 #pragma omp parallel private(i)
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd firstprivate(i) // expected-note {{defined as firstprivate}}
-  for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp distribute simd' directive may not be firstprivate, predetermined as linear}}
+#pragma omp distribute simd firstprivate(i) // expected-note 2 {{defined as firstprivate}}
+  for (i = 0; i < argc; ++i) // expected-error 2 {{loop iteration variable in the associated loop of 'omp distribute simd' directive may not be firstprivate, predetermined as linear}}
     foo();
 #pragma omp parallel reduction(+ : i)
 #pragma omp target
 #pragma omp teams
-#pragma omp distribute simd firstprivate(i) // expected-note {{defined as firstprivate}}
-  for (i = 0; i < argc; ++i) // expected-error {{loop iteration variable in the associated loop of 'omp distribute simd' directive may not be firstprivate, predetermined as linear}}
+#pragma omp distribute simd firstprivate(i) // expected-note 2 {{defined as firstprivate}}
+  for (i = 0; i < argc; ++i) // expected-error 2 {{loop iteration variable in the associated loop of 'omp distribute simd' directive may not be firstprivate, predetermined as linear}}
     foo();
   return 0;
 }
