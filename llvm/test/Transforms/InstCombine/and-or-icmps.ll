@@ -338,3 +338,42 @@ define i1 @PR42691_7(i32 %x) {
   %c = or i1 %c1, %c2
   ret i1 %c
 }
+
+define i1 @PR42691_8(i32 %x) {
+; CHECK-LABEL: @PR42691_8(
+; CHECK-NEXT:    [[C1:%.*]] = icmp slt i32 %x, 14
+; CHECK-NEXT:    [[C2:%.*]] = icmp ne i32 %x, -2147483648
+; CHECK-NEXT:    [[C:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c1 = icmp slt i32 %x, 14
+  %c2 = icmp ne i32 %x, -2147483648
+  %c = and i1 %c1, %c2
+  ret i1 %c
+}
+
+define i1 @PR42691_9(i32 %x) {
+; CHECK-LABEL: @PR42691_9(
+; CHECK-NEXT:    [[C1:%.*]] = icmp sgt i32 %x, 13
+; CHECK-NEXT:    [[C2:%.*]] = icmp ne i32 %x, 2147483647
+; CHECK-NEXT:    [[C:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c1 = icmp sgt i32 %x, 13
+  %c2 = icmp ne i32 %x, 2147483647
+  %c = and i1 %c1, %c2
+  ret i1 %c
+}
+
+define i1 @PR42691_10(i32 %x) {
+; CHECK-LABEL: @PR42691_10(
+; CHECK-NEXT:    [[C1:%.*]] = icmp ugt i32 %x, 13
+; CHECK-NEXT:    [[C2:%.*]] = icmp ne i32 %x, -1
+; CHECK-NEXT:    [[C:%.*]] = and i1 [[C1]], [[C2]]
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %c1 = icmp ugt i32 %x, 13
+  %c2 = icmp ne i32 %x, 4294967295
+  %c = and i1 %c1, %c2
+  ret i1 %c
+}

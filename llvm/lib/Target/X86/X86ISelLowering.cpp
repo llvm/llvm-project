@@ -34062,25 +34062,6 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       return true;
     break;
   }
-  case X86ISD::SUBV_BROADCAST: {
-    // Reduce size of broadcast if we don't need the upper half.
-    unsigned HalfElts = NumElts / 2;
-    if (DemandedElts.extractBits(HalfElts, HalfElts).isNullValue()) {
-      SDValue Src = Op.getOperand(0);
-      MVT SrcVT = Src.getSimpleValueType();
-
-      SDValue Half = Src;
-      if (SrcVT.getVectorNumElements() != HalfElts) {
-        MVT HalfVT = MVT::getVectorVT(SrcVT.getScalarType(), HalfElts);
-        Half = TLO.DAG.getNode(X86ISD::SUBV_BROADCAST, SDLoc(Op), HalfVT, Src);
-      }
-
-      return TLO.CombineTo(Op, insertSubVector(TLO.DAG.getUNDEF(VT), Half, 0,
-                                               TLO.DAG, SDLoc(Op),
-                                               Half.getValueSizeInBits()));
-    }
-    break;
-  }
   case X86ISD::VPERMV: {
     SDValue Mask = Op.getOperand(0);
     APInt MaskUndef, MaskZero;
@@ -34134,6 +34115,19 @@ bool X86TargetLowering::SimplifyDemandedVectorEltsForTargetNode(
       SDValue Insert =
           insertSubVector(UndefVec, ExtOp, 0, TLO.DAG, DL, ExtSizeInBits);
       return TLO.CombineTo(Op, Insert);
+    }
+      // Subvector broadcast.
+    case X86ISD::SUBV_BROADCAST: {
+      SDLoc DL(Op);
+      SDValue Ext = Op.getOperand(0);
+      if (Ext.getValueSizeInBits() != ExtSizeInBits) {
+        MVT ExtSVT = Ext.getSimpleValueType().getScalarType();
+        MVT ExtVT =
+            MVT::getVectorVT(ExtSVT, ExtSizeInBits / ExtSVT.getSizeInBits());
+        Ext = TLO.DAG.getNode(X86ISD::SUBV_BROADCAST, DL, ExtVT, Ext);
+      }
+      return TLO.CombineTo(Op, insertSubVector(TLO.DAG.getUNDEF(VT), Ext, 0,
+                                               TLO.DAG, DL, ExtSizeInBits));
     }
       // Byte shifts by immediate.
     case X86ISD::VSHLDQ:
