@@ -296,35 +296,36 @@ TEST(TweakTest, ExtractVariable) {
   checkAvailable(ID, R"cpp(
     int xyz() {
       // return statement
-      return ^1;
+      return [[1]];
     }
     void f() {
-      int a = 5 + [[4 ^* ^xyz^()]];
+      int a = [[5 +]] [[4 * [[[[xyz]]()]]]];
       // multivariable initialization
       if(1)
-        int x = ^1, y = ^a + 1, a = ^1, z = a + 1;
+        int x = [[1]], y = [[a]] + 1, a = [[1]], z = a + 1;
       // if without else
-      if(^1) {}
+      if([[1]])
+        a = [[1]];
       // if with else
-      if(a < ^3)
-        if(a == ^4)
-          a = ^5;
+      if(a < [[3]])
+        if(a == [[4]])
+          a = [[5]];
         else
-          a = ^6;
-      else if (a < ^4)
-        a = ^4;
+          a = [[5]];
+      else if (a < [[4]])
+        a = [[4]];
       else
-        a = ^5;
+        a = [[5]];
       // for loop 
-      for(a = ^1; a > ^3^+^4; a++)
-        a = ^2;
+      for(a = [[1]]; a > [[[[3]] + [[4]]]]; a++)
+        a = [[2]];
       // while 
-      while(a < ^1)
-        ^a++;
+      while(a < [[1]])
+        [[a]]++;
       // do while 
       do
-        a = ^1;
-      while(a < ^3);
+        a = [[1]];
+      while(a < [[3]]);
     }
   )cpp");
   // Should not crash.
@@ -336,29 +337,31 @@ TEST(TweakTest, ExtractVariable) {
     };
   )cpp");
   checkNotAvailable(ID, R"cpp(
-    int xyz(int a = ^1) {
+    int xyz(int a = [[1]]) {
       return 1;
       class T {
-        T(int a = ^1) {};
-        int xyz = ^1;
+        T(int a = [[1]]) {};
+        int xyz = [[1]];
       };
     }
     // function default argument
-    void f(int b = ^1) {
+    void f(int b = [[1]]) {
+      // empty selection
+      int a = ^1 ^+ ^2;
       // void expressions
       auto i = new int, j = new int;
-      de^lete i^, del^ete j;
+      [[[[delete i]], delete j]];
       // if
       if(1)
-        int x = 1, y = a + 1, a = 1, z = ^a + 1;
+        int x = 1, y = a + 1, a = 1, z = [[a + 1]];
       if(int a = 1)
-        if(^a == 4)
-          a = ^a ^+ 1;
+        if([[a]] == 4)
+          a = [[[[a]] +]] 1;
       // for loop 
-      for(int a = 1, b = 2, c = 3; ^a > ^b ^+ ^c; ^a++)
-        a = ^a ^+ 1;
+      for(int a = 1, b = 2, c = 3; [[a]] > [[b + c]]; [[a]]++)
+        a = [[a + 1]];
       // lambda 
-      auto lamb = [&^a, &^b](int r = ^1) {return 1;}
+      auto lamb = [&[[a]], &[[b]]](int r = [[1]]) {return 1;}
     }
   )cpp");
   // vector of pairs of input and output strings
@@ -398,7 +401,7 @@ TEST(TweakTest, ExtractVariable) {
           {R"cpp(#define LOOP(x) {int a = x + 1;}
                  void f(int a) {
                    if(1)
-                    LOOP(5 + ^3)
+                    LOOP(5 + [[3]])
                  })cpp",
            R"cpp(#define LOOP(x) {int a = x + 1;}
                  void f(int a) {
@@ -407,7 +410,7 @@ TEST(TweakTest, ExtractVariable) {
                  })cpp"},
           // label and attribute testing
           {R"cpp(void f(int a) {
-                    label: [ [gsl::suppress("type")] ] for (;;) a = ^1;
+                    label: [ [gsl::suppress("type")] ] for (;;) a = [[1]];
                  })cpp",
            R"cpp(void f(int a) {
                     auto dummy = 1; label: [ [gsl::suppress("type")] ] for (;;) a = dummy;
@@ -415,14 +418,14 @@ TEST(TweakTest, ExtractVariable) {
           // FIXME: Doesn't work because bug in selection tree
           /*{R"cpp(#define PLUS(x) x++
                  void f(int a) {
-                   PLUS(^a);
+                   PLUS([[a]]);
                  })cpp",
            R"cpp(#define PLUS(x) x++
                  void f(int a) {
                    auto dummy = a; PLUS(dummy);
                  })cpp"},*/
-          // FIXME: Doesn't work correctly for \[\[clang::uninitialized\]\] int b
-          // = 1; since the attr is inside the DeclStmt and the bounds of
+          // FIXME: Doesn't work correctly for \[\[clang::uninitialized\]\] int
+          // b = [[1]]; since the attr is inside the DeclStmt and the bounds of
           // DeclStmt don't cover the attribute
       };
   for (const auto &IO : InputOutputs) {
