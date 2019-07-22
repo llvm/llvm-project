@@ -37,12 +37,11 @@
 #define COMGR_DATA_H_
 
 #include "amd_comgr.h"
-#include "comgr-msgpack.h"
 #include "comgr-symbol.h"
-#include "yaml-cpp/yaml.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Object/ObjectFile.h"
 
 namespace COMGR {
@@ -235,6 +234,19 @@ private:
   std::vector<std::string> ListOptions;
 };
 
+// Elements common to all DataMeta which refer to the same "document".
+struct MetaDocument {
+  // The MsgPack document, which owns all memory allocated during parsing.
+  llvm::msgpack::Document Document;
+  // The MsgPack parser is zero-copy, so we retain a copy of the input buffer.
+  std::string RawDocument;
+  // The old YAML parser would produce the strings "true" and "false" for
+  // booleans, whereas the old MsgPack parser produced "0" and "1". The new
+  // universal parser produces "true" and "false", but we need to remain
+  // backwards compatible, so we set a flag when parsing MsgPack.
+  bool EmitIntegerBooleans = false;
+};
+
 struct DataMeta {
   static amd_comgr_metadata_node_t convert(DataMeta *Meta) {
     amd_comgr_metadata_node_t Handle = {
@@ -254,8 +266,11 @@ struct DataMeta {
 
   amd_comgr_metadata_kind_t getMetadataKind();
 
-  YAML::Node YAMLNode;
-  std::shared_ptr<msgpack::Node> MsgPackNode;
+  // This DataMeta's "meta document", shared by all instances derived from the
+  // same metadata.
+  std::shared_ptr<MetaDocument> MetaDoc;
+  // This DataMeta's "view" into the shared llvm::msgpack::Document.
+  llvm::msgpack::DocNode DocNode;
 };
 
 struct DataSymbol {

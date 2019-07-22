@@ -34,9 +34,9 @@
  ******************************************************************************/
 
 #include "comgr-metadata.h"
-#include "comgr-msgpack.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/BinaryFormat/ELF.h"
+#include "llvm/BinaryFormat/MsgPackDocument.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Support/AMDGPUMetadata.h"
 #include "llvm/Support/MathExtras.h"
@@ -139,14 +139,22 @@ static amd_comgr_status_t getElfMetadataRoot(const ELFObjectFile<ELFT> *Obj,
                   Note.getDesc().size());
     if (Note.getName() == "AMD" &&
         Note.getType() == ELF::NT_AMD_AMDGPU_HSA_METADATA) {
-      MetaP->YAMLNode = YAML::Load(DescString);
+      MetaP->MetaDoc->EmitIntegerBooleans = false;
+      MetaP->MetaDoc->RawDocument.clear();
+      if (!MetaP->MetaDoc->Document.fromYAML(DescString))
+        return false;
+      MetaP->DocNode = MetaP->MetaDoc->Document.getRoot();
       return true;
     } else if (((Note.getName() == "AMD" || Note.getName() == "AMDGPU") &&
                 Note.getType() == PAL_METADATA_NOTE_TYPE) ||
                (Note.getName() == "AMDGPU" &&
                 Note.getType() == ELF::NT_AMDGPU_METADATA)) {
-      llvm::msgpack::Reader MPReader(DescString);
-      NoteStatus = COMGR::msgpack::parse(MPReader, MetaP->MsgPackNode);
+      MetaP->MetaDoc->EmitIntegerBooleans = true;
+      MetaP->MetaDoc->RawDocument = DescString;
+      if (!MetaP->MetaDoc->Document.readFromBlob(MetaP->MetaDoc->RawDocument,
+                                                 false))
+        return false;
+      MetaP->DocNode = MetaP->MetaDoc->Document.getRoot();
       return true;
     }
     return false;
@@ -528,7 +536,8 @@ size_t getIsaCount() { return sizeof(SupportedIsas) / sizeof(*SupportedIsas); }
 
 const char *getIsaName(size_t Index) { return SupportedIsas[Index]; }
 
-amd_comgr_status_t getIsaMetadata(StringRef IsaName, DataMeta *Meta) {
+amd_comgr_status_t getIsaMetadata(StringRef IsaName,
+                                  llvm::msgpack::Document &Doc) {
   auto IsaIterator = find(SupportedIsas, IsaName);
   if (IsaIterator == std::end(SupportedIsas))
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
@@ -538,60 +547,50 @@ amd_comgr_status_t getIsaMetadata(StringRef IsaName, DataMeta *Meta) {
   if (auto Status = parseTargetIdentifier(IsaName, Ident))
     return Status;
 
-  auto Root = std::make_shared<COMGR::msgpack::Map>();
-  Root->Elements[COMGR::msgpack::String::make("Name")] =
-      COMGR::msgpack::String::make(IsaName);
-  Root->Elements[COMGR::msgpack::String::make("Architecture")] =
-      COMGR::msgpack::String::make(Ident.Arch);
-  Root->Elements[COMGR::msgpack::String::make("Vendor")] =
-      COMGR::msgpack::String::make(Ident.Vendor);
-  Root->Elements[COMGR::msgpack::String::make("OS")] =
-      COMGR::msgpack::String::make(Ident.OS);
-  Root->Elements[COMGR::msgpack::String::make("Environment")] =
-      COMGR::msgpack::String::make(Ident.Environ);
-  Root->Elements[COMGR::msgpack::String::make("Processor")] =
-      COMGR::msgpack::String::make(Ident.Processor);
+  auto Root = Doc.getRoot().getMap(/*Convert=*/true);
+
+  Root["Name"] = Doc.getNode(IsaName, /*Copy=*/true);
+  Root["Architecture"] = Doc.getNode(Ident.Arch, /*Copy=*/true);
+  Root["Vendor"] = Doc.getNode(Ident.Vendor, /*Copy=*/true);
+  Root["OS"] = Doc.getNode(Ident.OS, /*Copy=*/true);
+  Root["Environment"] = Doc.getNode(Ident.Environ, /*Copy=*/true);
+  Root["Processor"] = Doc.getNode(Ident.Processor, /*Copy=*/true);
   auto XNACKEnabled = false;
-  auto FeaturesNode =
-      std::make_shared<COMGR::msgpack::List>(Ident.Features.size());
+  auto FeaturesNode = Doc.getArrayNode();
   for (size_t I = 0; I < Ident.Features.size(); ++I) {
-    FeaturesNode->Elements[I].reset(
-        new COMGR::msgpack::String(Ident.Features[I]));
+    FeaturesNode.push_back(Doc.getNode(Ident.Features[I], /*Copy=*/true));
     if (Ident.Features[I] == "xnack")
       XNACKEnabled = true;
   }
-  Root->Elements[COMGR::msgpack::String::make("Features")] = FeaturesNode;
+  Root["Features"] = FeaturesNode;
 
-  Root->Elements[COMGR::msgpack::String::make("XNACKEnabled")] =
-      COMGR::msgpack::String::make(std::to_string(XNACKEnabled));
+  Root["XNACKEnabled"] =
+      Doc.getNode(std::to_string(XNACKEnabled), /*Copy=*/true);
 
   auto Info = IsaInfos[IsaIndex];
-  Root->Elements[msgpack::String::make("TrapHandlerEnabled")] =
-      msgpack::String::make(std::to_string(Info.TrapHandlerEnabled));
-  Root->Elements[msgpack::String::make("LocalMemorySize")] =
-      msgpack::String::make(std::to_string(Info.LocalMemorySize));
-  Root->Elements[msgpack::String::make("EUsPerCU")] =
-      msgpack::String::make(std::to_string(Info.EUsPerCU));
-  Root->Elements[msgpack::String::make("MaxWavesPerCU")] =
-      msgpack::String::make(std::to_string(Info.MaxWavesPerCU));
-  Root->Elements[msgpack::String::make("MaxFlatWorkGroupSize")] =
-      msgpack::String::make(std::to_string(Info.MaxFlatWorkGroupSize));
-  Root->Elements[msgpack::String::make("SGPRAllocGranule")] =
-      msgpack::String::make(std::to_string(Info.SGPRAllocGranule));
-  Root->Elements[msgpack::String::make("TotalNumSGPRs")] =
-      msgpack::String::make(std::to_string(Info.TotalNumSGPRs));
-  Root->Elements[msgpack::String::make("AddressableNumSGPRs")] =
-      msgpack::String::make(std::to_string(Info.AddressableNumSGPRs));
-  Root->Elements[msgpack::String::make("VGPRAllocGranule")] =
-      msgpack::String::make(std::to_string(Info.VGPRAllocGranule));
-  Root->Elements[msgpack::String::make("TotalNumVGPRs")] =
-      msgpack::String::make(std::to_string(Info.TotalNumVGPRs));
-  Root->Elements[msgpack::String::make("AddressableNumVGPRs")] =
-      msgpack::String::make(std::to_string(Info.AddressableNumVGPRs));
-  Root->Elements[msgpack::String::make("LDSBankCount")] =
-      msgpack::String::make(std::to_string(Info.LDSBankCount));
-
-  Meta->MsgPackNode = Root;
+  Root["TrapHandlerEnabled"] =
+      Doc.getNode(std::to_string(Info.TrapHandlerEnabled), /*Copy=*/true);
+  Root["LocalMemorySize"] =
+      Doc.getNode(std::to_string(Info.LocalMemorySize), /*Copy=*/true);
+  Root["EUsPerCU"] = Doc.getNode(std::to_string(Info.EUsPerCU), /*Copy=*/true);
+  Root["MaxWavesPerCU"] =
+      Doc.getNode(std::to_string(Info.MaxWavesPerCU), /*Copy=*/true);
+  Root["MaxFlatWorkGroupSize"] =
+      Doc.getNode(std::to_string(Info.MaxFlatWorkGroupSize), /*Copy=*/true);
+  Root["SGPRAllocGranule"] =
+      Doc.getNode(std::to_string(Info.SGPRAllocGranule), /*Copy=*/true);
+  Root["TotalNumSGPRs"] =
+      Doc.getNode(std::to_string(Info.TotalNumSGPRs), /*Copy=*/true);
+  Root["AddressableNumSGPRs"] =
+      Doc.getNode(std::to_string(Info.AddressableNumSGPRs), /*Copy=*/true);
+  Root["VGPRAllocGranule"] =
+      Doc.getNode(std::to_string(Info.VGPRAllocGranule), /*Copy=*/true);
+  Root["TotalNumVGPRs"] =
+      Doc.getNode(std::to_string(Info.TotalNumVGPRs), /*Copy=*/true);
+  Root["AddressableNumVGPRs"] =
+      Doc.getNode(std::to_string(Info.AddressableNumVGPRs), /*Copy=*/true);
+  Root["LDSBankCount"] =
+      Doc.getNode(std::to_string(Info.LDSBankCount), /*Copy=*/true);
 
   return AMD_COMGR_STATUS_SUCCESS;
 }

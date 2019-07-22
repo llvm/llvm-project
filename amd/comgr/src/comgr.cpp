@@ -432,19 +432,15 @@ ArrayRef<std::string> DataAction::getOptions(bool IsDeviceLibs) {
 }
 
 amd_comgr_metadata_kind_t DataMeta::getMetadataKind() {
-  if (MsgPackNode)
-    return MsgPackNode->getKind();
-  else {
-    if (YAMLNode.IsScalar())
-      return AMD_COMGR_METADATA_KIND_STRING;
-    else if (YAMLNode.IsSequence())
-      return AMD_COMGR_METADATA_KIND_LIST;
-    else if (YAMLNode.IsMap())
-      return AMD_COMGR_METADATA_KIND_MAP;
-    else
-      // treat as NULL
-      return AMD_COMGR_METADATA_KIND_NULL;
-  }
+  if (DocNode.isScalar())
+    return AMD_COMGR_METADATA_KIND_STRING;
+  else if (DocNode.isArray())
+    return AMD_COMGR_METADATA_KIND_LIST;
+  else if (DocNode.isMap())
+    return AMD_COMGR_METADATA_KIND_MAP;
+  else
+    // treat as NULL
+    return AMD_COMGR_METADATA_KIND_NULL;
 }
 
 DataSymbol::DataSymbol(SymbolContext *DataSym) : DataSym(DataSym) {}
@@ -524,8 +520,16 @@ amd_comgr_status_t AMD_API
   if (!MetaP)
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 
-  if (auto Status = metadata::getIsaMetadata(IsaName, MetaP.get()))
+  std::unique_ptr<MetaDocument> MetaDoc(new (std::nothrow) MetaDocument());
+  if (!MetaDoc)
+    return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+
+  if (auto Status = metadata::getIsaMetadata(IsaName, MetaDoc->Document))
     return Status;
+
+  MetaP->MetaDoc.reset(MetaDoc.release());
+  MetaP->MetaDoc->EmitIntegerBooleans = true;
+  MetaP->DocNode = MetaP->MetaDoc->Document.getRoot();
 
   *MetadataNode = DataMeta::convert(MetaP.release());
 
@@ -1165,6 +1169,13 @@ amd_comgr_status_t AMD_API
   if (!MetaP)
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 
+  MetaDocument *MetaDoc = new (std::nothrow) MetaDocument();
+  if (!MetaDoc)
+    return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
+
+  MetaP->MetaDoc.reset(MetaDoc);
+  MetaP->DocNode = MetaP->MetaDoc->Document.getRoot();
+
   if (auto Status = metadata::getMetadataRoot(DataP, MetaP.get()))
     return Status;
 
@@ -1202,21 +1213,6 @@ amd_comgr_status_t AMD_API
   return AMD_COMGR_STATUS_SUCCESS;
 }
 
-static amd_comgr_status_t getMetadataStringYAML(DataMeta *MetaP, size_t *Size,
-                                                char *String) {
-  if (!Size || !MetaP->YAMLNode.IsDefined() ||
-      MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_STRING)
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-
-  std::string Str = MetaP->YAMLNode.as<std::string>();
-  if (String)
-    memcpy(String, Str.c_str(), *Size);
-  else
-    *Size = Str.size() + 1; // ensure null teminator
-
-  return AMD_COMGR_STATUS_SUCCESS;
-}
-
 amd_comgr_status_t AMD_API
     // NOLINTNEXTLINE(readability-identifier-naming)
     amd_comgr_get_metadata_string
@@ -1224,27 +1220,20 @@ amd_comgr_status_t AMD_API
     (amd_comgr_metadata_node_t MetadataNode, size_t *Size, char *String) {
   DataMeta *MetaP = DataMeta::convert(MetadataNode);
 
-  if (!MetaP->MsgPackNode)
-    return getMetadataStringYAML(MetaP, Size, String);
-
-  auto Str = dyn_cast_or_null<COMGR::msgpack::String>(MetaP->MsgPackNode.get());
-  if (!Str)
+  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_STRING || !Size)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+
+  std::string Str;
+  if (MetaP->MetaDoc->EmitIntegerBooleans &&
+      MetaP->DocNode.getKind() == msgpack::Type::Boolean)
+    Str = MetaP->DocNode.getBool() ? "1" : "0";
+  else
+    Str = MetaP->DocNode.toString();
 
   if (String)
-    memcpy(String, Str->Value.c_str(), *Size);
+    memcpy(String, Str.c_str(), *Size);
   else
-    *Size = Str->Value.size() + 1;
-
-  return AMD_COMGR_STATUS_SUCCESS;
-}
-
-static amd_comgr_status_t getMetadataMapSizeYAML(DataMeta *MetaP,
-                                                 size_t *Size) {
-  if (!Size || MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP)
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-
-  *Size = MetaP->YAMLNode.size();
+    *Size = Str.size() + 1;
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -1256,40 +1245,10 @@ amd_comgr_status_t AMD_API
     (amd_comgr_metadata_node_t MetadataNode, size_t *Size) {
   DataMeta *MetaP = DataMeta::convert(MetadataNode);
 
-  if (!MetaP->MsgPackNode)
-    return getMetadataMapSizeYAML(MetaP, Size);
-
-  auto Map = dyn_cast_or_null<COMGR::msgpack::Map>(MetaP->MsgPackNode.get());
-  if (!Map)
+  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP || !Size)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  *Size = Map->Elements.size();
-
-  return AMD_COMGR_STATUS_SUCCESS;
-}
-
-static amd_comgr_status_t iterateMapMetadataYAML(
-    DataMeta *MetaP,
-    amd_comgr_status_t (*Callback)(amd_comgr_metadata_node_t,
-                                   amd_comgr_metadata_node_t, void *),
-    void *UserData) {
-  if (!Callback || !MetaP->YAMLNode.IsDefined() ||
-      MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP)
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-
-  for (YAML::const_iterator IT = MetaP->YAMLNode.begin();
-       IT != MetaP->YAMLNode.end(); ++IT) {
-    if (!IT->first || !IT->second)
-      return AMD_COMGR_STATUS_ERROR;
-    std::unique_ptr<DataMeta> KeyP(new (std::nothrow) DataMeta());
-    std::unique_ptr<DataMeta> ValueP(new (std::nothrow) DataMeta());
-    if (!KeyP || !ValueP)
-      return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-    KeyP->YAMLNode = IT->first;
-    ValueP->YAMLNode = IT->second;
-    (*Callback)(DataMeta::convert(KeyP.get()), DataMeta::convert(ValueP.get()),
-                UserData);
-  }
+  *Size = MetaP->DocNode.getMap().size();
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -1304,44 +1263,25 @@ amd_comgr_status_t AMD_API
      void *UserData) {
   DataMeta *MetaP = DataMeta::convert(MetadataNode);
 
-  if (!MetaP->MsgPackNode)
-    return iterateMapMetadataYAML(MetaP, Callback, UserData);
-
-  auto Map = dyn_cast_or_null<COMGR::msgpack::Map>(MetaP->MsgPackNode.get());
-  if (!Map)
+  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP || !Callback)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  for (auto &KV : Map->Elements) {
-    if (!KV.first || !KV.second)
+  auto Map = MetaP->DocNode.getMap();
+
+  for (auto &KV : Map) {
+    if (KV.first.isEmpty() || KV.second.isEmpty())
       return AMD_COMGR_STATUS_ERROR;
     std::unique_ptr<DataMeta> KeyP(new (std::nothrow) DataMeta());
     std::unique_ptr<DataMeta> ValueP(new (std::nothrow) DataMeta());
     if (!KeyP || !ValueP)
       return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-    KeyP->MsgPackNode = KV.first;
-    ValueP->MsgPackNode = KV.second;
+    KeyP->MetaDoc = MetaP->MetaDoc;
+    KeyP->DocNode = KV.first;
+    ValueP->MetaDoc = MetaP->MetaDoc;
+    ValueP->DocNode = KV.second;
     (*Callback)(DataMeta::convert(KeyP.get()), DataMeta::convert(ValueP.get()),
                 UserData);
   }
-
-  return AMD_COMGR_STATUS_SUCCESS;
-}
-
-static amd_comgr_status_t metadataLookupYAML(DataMeta *MetaP, const char *Key,
-                                             amd_comgr_metadata_node_t *Value) {
-  if (!Key || !Value || !MetaP->YAMLNode.IsDefined() ||
-      MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP)
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-
-  if (!MetaP->YAMLNode[Key])
-    return AMD_COMGR_STATUS_ERROR;
-
-  DataMeta *NewMetaP = new (std::nothrow) DataMeta();
-  if (!NewMetaP)
-    return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-
-  NewMetaP->YAMLNode = MetaP->YAMLNode[Key];
-  *Value = DataMeta::convert(NewMetaP);
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -1354,39 +1294,22 @@ amd_comgr_status_t AMD_API
      amd_comgr_metadata_node_t *Value) {
   DataMeta *MetaP = DataMeta::convert(MetadataNode);
 
-  if (!MetaP->MsgPackNode)
-    return metadataLookupYAML(MetaP, Key, Value);
-
-  auto Map = dyn_cast_or_null<COMGR::msgpack::Map>(MetaP->MsgPackNode.get());
-  if (!Map)
+  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_MAP || !Key || !Value)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  for (auto &KV : Map->Elements) {
-    if (!KV.first || !KV.second)
-      return AMD_COMGR_STATUS_ERROR;
-    auto String = dyn_cast_or_null<COMGR::msgpack::String>(KV.first.get());
-    if (!String)
-      return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-    if (String->Value == Key) {
-      DataMeta *NewMetaP = new (std::nothrow) DataMeta();
-      if (!NewMetaP)
-        return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-      NewMetaP->MsgPackNode = KV.second;
-      *Value = DataMeta::convert(NewMetaP);
-      return AMD_COMGR_STATUS_SUCCESS;
-    }
-  }
+  auto Map = MetaP->DocNode.getMap();
 
-  return AMD_COMGR_STATUS_ERROR;
-}
+  auto Iter = Map.find(Key);
+  if (Iter == Map.end())
+    return AMD_COMGR_STATUS_ERROR;
 
-static amd_comgr_status_t getMetadataListSizeYAML(DataMeta *MetaP,
-                                                  size_t *Size) {
-  if (!Size || !MetaP->YAMLNode.IsDefined() ||
-      MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_LIST)
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
+  DataMeta *NewMetaP = new (std::nothrow) DataMeta();
+  if (!NewMetaP)
+    return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 
-  *Size = MetaP->YAMLNode.size();
+  NewMetaP->MetaDoc = MetaP->MetaDoc;
+  NewMetaP->DocNode = Iter->second;
+  *Value = DataMeta::convert(NewMetaP);
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -1398,35 +1321,10 @@ amd_comgr_status_t AMD_API
     (amd_comgr_metadata_node_t MetadataNode, size_t *Size) {
   DataMeta *MetaP = DataMeta::convert(MetadataNode);
 
-  if (!MetaP->MsgPackNode)
-    return getMetadataListSizeYAML(MetaP, Size);
-
-  auto List = dyn_cast_or_null<COMGR::msgpack::List>(MetaP->MsgPackNode.get());
-  if (!List)
+  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_LIST || !Size)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  *Size = List->Elements.size();
-
-  return AMD_COMGR_STATUS_SUCCESS;
-}
-
-static amd_comgr_status_t
-indexListMetadataYAML(DataMeta *MetaP, size_t Index,
-                      amd_comgr_metadata_node_t *Value) {
-  if (!Value || !MetaP->YAMLNode.IsDefined() ||
-      MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_LIST ||
-      Index >= MetaP->YAMLNode.size())
-    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
-
-  if (!MetaP->YAMLNode[Index])
-    return AMD_COMGR_STATUS_ERROR;
-
-  DataMeta *NewMetaP = new (std::nothrow) DataMeta();
-  if (!NewMetaP)
-    return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
-
-  NewMetaP->YAMLNode = MetaP->YAMLNode[Index];
-  *Value = DataMeta::convert(NewMetaP);
+  *Size = MetaP->DocNode.getArray().size();
 
   return AMD_COMGR_STATUS_SUCCESS;
 }
@@ -1439,21 +1337,20 @@ amd_comgr_status_t AMD_API
      amd_comgr_metadata_node_t *Value) {
   DataMeta *MetaP = DataMeta::convert(MetadataNode);
 
-  if (!MetaP->MsgPackNode)
-    return indexListMetadataYAML(MetaP, Index, Value);
-
-  auto List = dyn_cast_or_null<COMGR::msgpack::List>(MetaP->MsgPackNode.get());
-  if (!List)
+  if (MetaP->getMetadataKind() != AMD_COMGR_METADATA_KIND_LIST || !Value)
     return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
-  if (Index >= List->Elements.size())
-    return AMD_COMGR_STATUS_ERROR;
+  auto List = MetaP->DocNode.getArray();
+
+  if (Index >= List.size())
+    return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
 
   DataMeta *NewMetaP = new (std::nothrow) DataMeta();
   if (!NewMetaP)
     return AMD_COMGR_STATUS_ERROR_OUT_OF_RESOURCES;
 
-  NewMetaP->MsgPackNode = List->Elements[Index];
+  NewMetaP->MetaDoc = MetaP->MetaDoc;
+  NewMetaP->DocNode = List[Index];
   *Value = DataMeta::convert(NewMetaP);
 
   return AMD_COMGR_STATUS_SUCCESS;

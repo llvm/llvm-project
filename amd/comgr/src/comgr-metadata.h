@@ -50,7 +50,8 @@ size_t getIsaCount();
 
 const char *getIsaName(size_t Index);
 
-amd_comgr_status_t getIsaMetadata(llvm::StringRef IsaName, DataMeta *MetaP);
+amd_comgr_status_t getIsaMetadata(llvm::StringRef IsaName,
+                                  llvm::msgpack::Document &MetaP);
 
 bool isValidIsaName(llvm::StringRef IsaName);
 

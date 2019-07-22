@@ -92,12 +92,9 @@ if (UNIX)
         -Wl,--no-undefined)
     endif()
   endif()
-  # FIXME: Remove when yaml-cpp is removed from the build.
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
 else()
   list(APPEND AMD_COMGR_PRIVATE_COMPILE_OPTIONS "/W0" "/wd4244")
-  # FIXME: Make this private once yaml-cpp is removed from the build.
-  add_definitions(-D_HAS_EXCEPTIONS=0)
+  list(APPEND AMD_COMGR_PRIVATE_COMPILE_DEFINITIONS _HAS_EXCEPTIONS=0)
 endif()
 
 # Windows is strict about visibility of exports in shared libraries, so we ask
@@ -181,11 +178,6 @@ install(EXPORT amd_comgr_export
   DESTINATION "${AMD_COMGR_PACKAGE_PREFIX}"
   FILE "${AMD_COMGR_TARGETS_NAME}")
 
-set(YAML_CPP_BUILD_TESTS OFF CACHE BOOL "Enable testing" FORCE)
-set(YAML_CPP_BUILD_TOOLS OFF CACHE BOOL "Enable parse tools" FORCE)
-add_subdirectory(yaml-cpp EXCLUDE_FROM_ALL)
-include_directories(./yaml-cpp/include)
-
 set(CLANG_LIBS
   clangFrontendTool)
 
@@ -203,7 +195,6 @@ target_link_libraries(amd_comgr
     ${AMD_COMGR_PUBLIC_LINKER_OPTIONS}
   PRIVATE
     ${AMD_COMGR_PRIVATE_LINKER_OPTIONS}
-    yaml-cpp
     ${CLANG_LIBS}
     ${LLD_LIBS}
     ${LLVM_LIBS}
