@@ -1,6 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv6-none-linux-gnueabi %s -o %t
-// RUN: ld.lld %t -o %t2 2>&1
+// RUN: ld.lld %t -o %t2
 // RUN: llvm-objdump -d -triple=armv6-none-linux-gnueabi -start-address=69632 -stop-address=69640 %t2 | FileCheck -check-prefix=CHECK-ARM1 %s
 // RUN: llvm-objdump -d -triple=thumbv6-none-linux-gnueabi %t2 -start-address=69640 -stop-address=69644 | FileCheck -check-prefix=CHECK-THUMB1 %s
 // RUN: llvm-objdump -d -triple=armv6-none-linux-gnueabi -start-address=2166796 -stop-address=2166804 %t2 | FileCheck -check-prefix=CHECK-ARM2 %s

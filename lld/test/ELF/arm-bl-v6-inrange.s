@@ -4,7 +4,7 @@
 // RUN:          .callee1 0x100004 : { *(.callee_low) } \
 // RUN:          .caller  0x500000 : { *(.text) } \
 // RUN:          .callee2 0x900004 : { *(.callee_high) } } " > %t.script
-// RUN: ld.lld %t --script %t.script -o %t2 2>&1
+// RUN: ld.lld %t --script %t.script -o %t2
 // RUN: llvm-objdump -d -triple=thumbv6-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-THUMB %s
 // RUN: llvm-objdump -d -triple=armv6-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-ARM %s
 

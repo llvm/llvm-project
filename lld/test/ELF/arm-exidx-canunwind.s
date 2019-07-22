@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -filetype=obj --arm-add-build-attributes -triple=armv7a-none-linux-gnueabi %s -o %t
 // RUN: ld.lld %t -o %t2
-// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi %t2 | FileCheck %s
+// RUN: llvm-objdump -d -triple=armv7a-none-linux-gnueabi --no-show-raw-insn %t2 | FileCheck %s
 // RUN: llvm-objdump -s -triple=armv7a-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-EXIDX %s
 // RUN: llvm-readobj --program-headers --sections %t2 | FileCheck -check-prefix=CHECK-PT %s
 
@@ -55,17 +55,17 @@ _start:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: _start:
-// CHECK-NEXT:    11000:       01 00 00 eb     bl      #4 <func1>
-// CHECK-NEXT:    11004:       01 00 00 eb     bl      #4 <func2>
-// CHECK-NEXT:    11008:       1e ff 2f e1     bx      lr
+// CHECK-NEXT:    11000:       bl      #4 <func1>
+// CHECK-NEXT:    11004:       bl      #4 <func2>
+// CHECK-NEXT:    11008:       bx      lr
 // CHECK:      func1:
-// CHECK-NEXT:    1100c:       1e ff 2f e1     bx      lr
+// CHECK-NEXT:    1100c:       bx      lr
 // CHECK:      func2:
-// CHECK-NEXT:    11010:       1e ff 2f e1     bx      lr
+// CHECK-NEXT:    11010:       bx      lr
 // CHECK:      __gxx_personality_v0:
-// CHECK-NEXT:    11014:       1e ff 2f e1     bx      lr
+// CHECK-NEXT:    11014:       bx      lr
 // CHECK:      __aeabi_unwind_cpp_pr0:
-// CHECK-NEXT:    11018:       1e ff 2f e1     bx      lr
+// CHECK-NEXT:    11018:       bx      lr
 
 // 100d4 + f2c = 11000 = main (linker generated cantunwind)
 // 100dc + f30 = 1100c = func1 (inline unwinding data)
