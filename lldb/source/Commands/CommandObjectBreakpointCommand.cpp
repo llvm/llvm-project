@@ -45,13 +45,8 @@ static constexpr OptionEnumValues ScriptOptionEnum() {
 }
 
 static constexpr OptionDefinition g_breakpoint_add_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1,   false, "one-liner",         'o', OptionParser::eRequiredArgument, nullptr, {},                 0, eArgTypeOneLiner,       "Specify a one-line breakpoint command inline. Be sure to surround it with quotes." },
-  { LLDB_OPT_SET_ALL, false, "stop-on-error",     'e', OptionParser::eRequiredArgument, nullptr, {},                 0, eArgTypeBoolean,        "Specify whether breakpoint command execution should terminate on error." },
-  { LLDB_OPT_SET_ALL, false, "script-type",       's', OptionParser::eRequiredArgument, nullptr, ScriptOptionEnum(), 0, eArgTypeNone,           "Specify the language for the commands - if none is specified, the lldb command interpreter will be used." },
-  { LLDB_OPT_SET_2,   false, "python-function",   'F', OptionParser::eRequiredArgument, nullptr, {},                 0, eArgTypePythonFunction, "Give the name of a Python function to run as command for this breakpoint. Be sure to give a module name if appropriate." },
-  { LLDB_OPT_SET_ALL, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument,       nullptr, {},                 0, eArgTypeNone,           "Sets Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets." },
-    // clang-format on
+#define LLDB_OPTIONS_breakpoint_command_add
+#include "CommandOptions.inc"
 };
 
 class CommandObjectBreakpointCommandAdd : public CommandObjectParsed,
@@ -470,9 +465,8 @@ const char *CommandObjectBreakpointCommandAdd::g_reader_instructions =
 // CommandObjectBreakpointCommandDelete
 
 static constexpr OptionDefinition g_breakpoint_delete_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_1, false, "dummy-breakpoints", 'D', OptionParser::eNoArgument, nullptr, {}, 0, eArgTypeNone, "Delete commands from Dummy breakpoints - i.e. breakpoints set before a file is provided, which prime new targets." },
-    // clang-format on
+#define LLDB_OPTIONS_breakpoint_command_delete
+#include "CommandOptions.inc"
 };
 
 class CommandObjectBreakpointCommandDelete : public CommandObjectParsed {
