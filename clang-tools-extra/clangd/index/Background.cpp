@@ -10,6 +10,7 @@
 #include "ClangdUnit.h"
 #include "Compiler.h"
 #include "Context.h"
+#include "FSProvider.h"
 #include "Headers.h"
 #include "Logger.h"
 #include "Path.h"
@@ -18,6 +19,7 @@
 #include "Threading.h"
 #include "Trace.h"
 #include "URI.h"
+#include "index/BackgroundIndexLoader.h"
 #include "index/FileIndex.h"
 #include "index/IndexAction.h"
 #include "index/MemIndex.h"
@@ -28,6 +30,8 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Driver/Types.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
@@ -42,6 +46,7 @@
 #include <atomic>
 #include <chrono>
 #include <condition_variable>
+#include <cstddef>
 #include <memory>
 #include <mutex>
 #include <numeric>
@@ -49,6 +54,8 @@
 #include <random>
 #include <string>
 #include <thread>
+#include <utility>
+#include <vector>
 
 namespace clang {
 namespace clangd {
@@ -119,6 +126,18 @@ llvm::SmallString<128> getAbsolutePath(const tooling::CompileCommand &Cmd) {
   }
   return AbsolutePath;
 }
+
+bool shardIsStale(const LoadedShard &LS, llvm::vfs::FileSystem *FS) {
+  auto Buf = FS->getBufferForFile(LS.AbsolutePath);
+  if (!Buf) {
+    elog("Background-index: Couldn't read {0} to validate stored index: {1}",
+         LS.AbsolutePath, Buf.getError().message());
+    // There is no point in indexing an unreadable file.
+    return false;
+  }
+  return digest(Buf->get()->getBuffer()) != LS.Digest;
+}
+
 } // namespace
 
 BackgroundIndex::BackgroundIndex(
@@ -156,14 +175,14 @@ BackgroundQueue::Task BackgroundIndex::changedFilesTask(
     log("Enqueueing {0} commands for indexing", ChangedFiles.size());
     SPAN_ATTACH(Tracer, "files", int64_t(ChangedFiles.size()));
 
-    auto NeedsReIndexing = loadShards(std::move(ChangedFiles));
+    auto NeedsReIndexing = loadProject(std::move(ChangedFiles));
     // Run indexing for files that need to be updated.
     std::shuffle(NeedsReIndexing.begin(), NeedsReIndexing.end(),
                  std::mt19937(std::random_device{}()));
     std::vector<BackgroundQueue::Task> Tasks;
     Tasks.reserve(NeedsReIndexing.size());
-    for (auto &Elem : NeedsReIndexing)
-      Tasks.push_back(indexFileTask(std::move(Elem.first), Elem.second));
+    for (auto &Cmd : NeedsReIndexing)
+      Tasks.push_back(indexFileTask(std::move(Cmd)));
     Queue.append(std::move(Tasks));
   });
 
@@ -178,13 +197,12 @@ static llvm::StringRef filenameWithoutExtension(llvm::StringRef Path) {
 }
 
 BackgroundQueue::Task
-BackgroundIndex::indexFileTask(tooling::CompileCommand Cmd,
-                               BackgroundIndexStorage *Storage) {
-  BackgroundQueue::Task T([this, Storage, Cmd] {
+BackgroundIndex::indexFileTask(tooling::CompileCommand Cmd) {
+  BackgroundQueue::Task T([this, Cmd] {
     // We can't use llvm::StringRef here since we are going to
     // move from Cmd during the call below.
     const std::string FileName = Cmd.Filename;
-    if (auto Error = index(std::move(Cmd), Storage))
+    if (auto Error = index(std::move(Cmd)))
       elog("Indexing {0} failed: {1}", FileName, std::move(Error));
   });
   T.QueuePri = IndexFile;
@@ -207,7 +225,7 @@ void BackgroundIndex::boostRelated(llvm::StringRef Path) {
 void BackgroundIndex::update(
     llvm::StringRef MainFile, IndexFileIn Index,
     const llvm::StringMap<ShardVersion> &ShardVersionsSnapshot,
-    BackgroundIndexStorage *IndexStorage, bool HadErrors) {
+    bool HadErrors) {
   // Partition symbols/references into files.
   struct File {
     llvm::DenseSet<const Symbol *> Symbols;
@@ -291,22 +309,21 @@ void BackgroundIndex::update(
     // We need to store shards before updating the index, since the latter
     // consumes slabs.
     // FIXME: Also skip serializing the shard if it is already up-to-date.
-    if (IndexStorage) {
-      IndexFileOut Shard;
-      Shard.Symbols = SS.get();
-      Shard.Refs = RS.get();
-      Shard.Relations = RelS.get();
-      Shard.Sources = IG.get();
+    BackgroundIndexStorage *IndexStorage = IndexStorageFactory(Path);
+    IndexFileOut Shard;
+    Shard.Symbols = SS.get();
+    Shard.Refs = RS.get();
+    Shard.Relations = RelS.get();
+    Shard.Sources = IG.get();
 
-      // Only store command line hash for main files of the TU, since our
-      // current model keeps only one version of a header file.
-      if (Path == MainFile)
-        Shard.Cmd = Index.Cmd.getPointer();
+    // Only store command line hash for main files of the TU, since our
+    // current model keeps only one version of a header file.
+    if (Path == MainFile)
+      Shard.Cmd = Index.Cmd.getPointer();
 
-      if (auto Error = IndexStorage->storeShard(Path, Shard))
-        elog("Failed to write background-index shard for file {0}: {1}", Path,
-             std::move(Error));
-    }
+    if (auto Error = IndexStorage->storeShard(Path, Shard))
+      elog("Failed to write background-index shard for file {0}: {1}", Path,
+           std::move(Error));
 
     {
       std::lock_guard<std::mutex> Lock(ShardVersionsMu);
@@ -329,8 +346,7 @@ void BackgroundIndex::update(
   }
 }
 
-llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
-                                   BackgroundIndexStorage *IndexStorage) {
+llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   trace::Span Tracer("BackgroundIndex");
   SPAN_ATTACH(Tracer, "file", Cmd.Filename);
   auto AbsolutePath = getAbsolutePath(Cmd);
@@ -424,176 +440,78 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd,
     for (auto &It : *Index.Sources)
       It.second.Flags |= IncludeGraphNode::SourceFlag::HadErrors;
   }
-  update(AbsolutePath, std::move(Index), ShardVersionsSnapshot, IndexStorage,
-         HadErrors);
+  update(AbsolutePath, std::move(Index), ShardVersionsSnapshot, HadErrors);
 
   Rebuilder.indexedTU();
   return llvm::Error::success();
 }
 
-std::vector<BackgroundIndex::Source>
-BackgroundIndex::loadShard(const tooling::CompileCommand &Cmd,
-                           BackgroundIndexStorage *IndexStorage,
-                           llvm::StringSet<> &LoadedShards) {
-  struct ShardInfo {
-    std::string AbsolutePath;
-    std::unique_ptr<IndexFileIn> Shard;
-    FileDigest Digest = {};
-    bool CountReferences = false;
-    bool HadErrors = false;
-  };
-  std::vector<ShardInfo> IntermediateSymbols;
-  // Make sure we don't have duplicate elements in the queue. Keys are absolute
-  // paths.
-  llvm::StringSet<> InQueue;
-  auto FS = FSProvider.getFileSystem();
-  // Dependencies of this TU, paired with the information about whether they
-  // need to be re-indexed or not.
-  std::vector<Source> Dependencies;
-  std::queue<Source> ToVisit;
-  std::string AbsolutePath = getAbsolutePath(Cmd).str();
-  // Up until we load the shard related to a dependency it needs to be
-  // re-indexed.
-  ToVisit.emplace(AbsolutePath, true);
-  InQueue.insert(AbsolutePath);
-  // Goes over each dependency.
-  while (!ToVisit.empty()) {
-    Dependencies.push_back(std::move(ToVisit.front()));
-    // Dependencies is not modified during the rest of the loop, so it is safe
-    // to keep the reference.
-    auto &CurDependency = Dependencies.back();
-    ToVisit.pop();
-    // If we have already seen this shard before(either loaded or failed) don't
-    // re-try again. Since the information in the shard won't change from one TU
-    // to another.
-    if (!LoadedShards.try_emplace(CurDependency.Path).second) {
-      // If the dependency needs to be re-indexed, first occurence would already
-      // have detected that, so we don't need to issue it again.
-      CurDependency.NeedsReIndexing = false;
-      continue;
-    }
+// Restores shards for \p MainFiles from index storage. Then checks staleness of
+// those shards and returns a list of TUs that needs to be indexed to update
+// staleness.
+std::vector<tooling::CompileCommand>
+BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
+  std::vector<tooling::CompileCommand> NeedsReIndexing;
 
-    auto Shard = IndexStorage->loadShard(CurDependency.Path);
-    if (!Shard || !Shard->Sources) {
-      // File will be returned as requiring re-indexing to caller.
-      vlog("Failed to load shard: {0}", CurDependency.Path);
-      continue;
-    }
-    // These are the edges in the include graph for current dependency.
-    for (const auto &I : *Shard->Sources) {
-      auto U = URI::parse(I.getKey());
-      if (!U)
-        continue;
-      auto AbsolutePath = URI::resolve(*U, CurDependency.Path);
-      if (!AbsolutePath)
-        continue;
-      // Add file as dependency if haven't seen before.
-      if (InQueue.try_emplace(*AbsolutePath).second)
-        ToVisit.emplace(*AbsolutePath, true);
-      // The node contains symbol information only for current file, the rest is
-      // just edges.
-      if (*AbsolutePath != CurDependency.Path)
-        continue;
-
-      // We found source file info for current dependency.
-      assert(I.getValue().Digest != FileDigest{{0}} && "Digest is empty?");
-      ShardInfo SI;
-      SI.AbsolutePath = CurDependency.Path;
-      SI.Shard = std::move(Shard);
-      SI.Digest = I.getValue().Digest;
-      SI.CountReferences =
-          I.getValue().Flags & IncludeGraphNode::SourceFlag::IsTU;
-      SI.HadErrors =
-          I.getValue().Flags & IncludeGraphNode::SourceFlag::HadErrors;
-      IntermediateSymbols.push_back(std::move(SI));
-      // Check if the source needs re-indexing.
-      // Get the digest, skip it if file doesn't exist.
-      auto Buf = FS->getBufferForFile(CurDependency.Path);
-      if (!Buf) {
-        elog("Couldn't get buffer for file: {0}: {1}", CurDependency.Path,
-             Buf.getError().message());
-        continue;
-      }
-      // If digests match then dependency doesn't need re-indexing.
-      // FIXME: Also check for dependencies(sources) of this shard and compile
-      // commands for cache invalidation.
-      CurDependency.NeedsReIndexing =
-          digest(Buf->get()->getBuffer()) != I.getValue().Digest;
-    }
-  }
-  // Load shard information into background-index.
+  Rebuilder.startLoading();
+  // Load shards for all of the mainfiles.
+  const std::vector<LoadedShard> Result =
+      loadIndexShards(MainFiles, IndexStorageFactory, CDB);
+  size_t LoadedShards = 0;
   {
+    // Update in-memory state.
     std::lock_guard<std::mutex> Lock(ShardVersionsMu);
-    // This can override a newer version that is added in another thread,
-    // if this thread sees the older version but finishes later. This
-    // should be rare in practice.
-    for (const ShardInfo &SI : IntermediateSymbols) {
+    for (auto &LS : Result) {
+      if (!LS.Shard)
+        continue;
       auto SS =
-          SI.Shard->Symbols
-              ? llvm::make_unique<SymbolSlab>(std::move(*SI.Shard->Symbols))
+          LS.Shard->Symbols
+              ? llvm::make_unique<SymbolSlab>(std::move(*LS.Shard->Symbols))
               : nullptr;
-      auto RS = SI.Shard->Refs
-                    ? llvm::make_unique<RefSlab>(std::move(*SI.Shard->Refs))
+      auto RS = LS.Shard->Refs
+                    ? llvm::make_unique<RefSlab>(std::move(*LS.Shard->Refs))
                     : nullptr;
       auto RelS =
-          SI.Shard->Relations
-              ? llvm::make_unique<RelationSlab>(std::move(*SI.Shard->Relations))
+          LS.Shard->Relations
+              ? llvm::make_unique<RelationSlab>(std::move(*LS.Shard->Relations))
               : nullptr;
-      ShardVersion &SV = ShardVersions[SI.AbsolutePath];
-      SV.Digest = SI.Digest;
-      SV.HadErrors = SI.HadErrors;
+      ShardVersion &SV = ShardVersions[LS.AbsolutePath];
+      SV.Digest = LS.Digest;
+      SV.HadErrors = LS.HadErrors;
+      ++LoadedShards;
 
-      IndexedSymbols.update(SI.AbsolutePath, std::move(SS), std::move(RS),
-                            std::move(RelS), SI.CountReferences);
+      IndexedSymbols.update(LS.AbsolutePath, std::move(SS), std::move(RS),
+                            std::move(RelS), LS.CountReferences);
     }
   }
-  if (!IntermediateSymbols.empty())
-    Rebuilder.loadedTU();
+  Rebuilder.loadedShard(LoadedShards);
+  Rebuilder.doneLoading();
 
-  return Dependencies;
-}
+  auto FS = FSProvider.getFileSystem();
+  llvm::DenseSet<PathRef> TUsToIndex;
+  // We'll accept data from stale shards, but ensure the files get reindexed
+  // soon.
+  for (auto &LS : Result) {
+    if (!shardIsStale(LS, FS.get()))
+      continue;
+    PathRef TUForFile = LS.DependentTU;
+    assert(!TUForFile.empty() && "File without a TU!");
 
-// Goes over each changed file and loads them from index. Returns the list of
-// TUs that had out-of-date/no shards.
-std::vector<std::pair<tooling::CompileCommand, BackgroundIndexStorage *>>
-BackgroundIndex::loadShards(std::vector<std::string> ChangedFiles) {
-  std::vector<std::pair<tooling::CompileCommand, BackgroundIndexStorage *>>
-      NeedsReIndexing;
-  // Keeps track of the files that will be reindexed, to make sure we won't
-  // re-index same dependencies more than once. Keys are AbsolutePaths.
-  llvm::StringSet<> FilesToIndex;
-  // Keeps track of the loaded shards to make sure we don't perform redundant
-  // disk IO. Keys are absolute paths.
-  llvm::StringSet<> LoadedShards;
-  Rebuilder.startLoading();
-  for (const auto &File : ChangedFiles) {
-    auto Cmd = CDB.getCompileCommand(File);
+    // FIXME: Currently, we simply schedule indexing on a TU whenever any of
+    // its dependencies needs re-indexing. We might do it smarter by figuring
+    // out a minimal set of TUs that will cover all the stale dependencies.
+    // FIXME: Try looking at other TUs if no compile commands are available
+    // for this TU, i.e TU was deleted after we performed indexing.
+    TUsToIndex.insert(TUForFile);
+  }
+
+  for (PathRef TU : TUsToIndex) {
+    auto Cmd = CDB.getCompileCommand(TU);
     if (!Cmd)
       continue;
-
-    std::string ProjectRoot;
-    if (auto PI = CDB.getProjectInfo(File))
-      ProjectRoot = std::move(PI->SourceRoot);
-
-    BackgroundIndexStorage *IndexStorage = IndexStorageFactory(ProjectRoot);
-    auto Dependencies = loadShard(*Cmd, IndexStorage, LoadedShards);
-    for (const auto &Dependency : Dependencies) {
-      if (!Dependency.NeedsReIndexing || FilesToIndex.count(Dependency.Path))
-        continue;
-      // FIXME: Currently, we simply schedule indexing on a TU whenever any of
-      // its dependencies needs re-indexing. We might do it smarter by figuring
-      // out a minimal set of TUs that will cover all the stale dependencies.
-      vlog("Enqueueing TU {0} because its dependency {1} needs re-indexing.",
-           Cmd->Filename, Dependency.Path);
-      NeedsReIndexing.push_back({std::move(*Cmd), IndexStorage});
-      // Mark all of this TU's dependencies as to-be-indexed so that we won't
-      // try to re-index those.
-      for (const auto &Dependency : Dependencies)
-        FilesToIndex.insert(Dependency.Path);
-      break;
-    }
+    NeedsReIndexing.emplace_back(std::move(*Cmd));
   }
-  Rebuilder.doneLoading();
+
   return NeedsReIndexing;
 }
 

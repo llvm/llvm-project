@@ -18,7 +18,7 @@
       "uri": "file://DIRECTORY/bar.cpp",
       "languageId": "cpp",
       "version": 1,
-      "text": "#include \"foo.h\"\nint main(){\nreturn foo();\n}"
+      "text": "#include \"sub_dir/foo.h\"\nint main(){\nreturn foo();\n}"
     }
   }
 }
