@@ -1672,16 +1672,7 @@ bool ValueObject::IsRuntimeSupportValue() {
   if (!GetVariable() || !GetVariable()->IsArtificial())
     return false;
 
-  LanguageType lang = eLanguageTypeUnknown;
-  if (auto *sym_ctx_scope = GetSymbolContextScope()) {
-    if (auto *func = sym_ctx_scope->CalculateSymbolContextFunction())
-      lang = func->GetLanguage();
-    else if (auto *comp_unit =
-                 sym_ctx_scope->CalculateSymbolContextCompileUnit())
-      lang = comp_unit->GetLanguage();
-  }
-
-  if (auto *runtime = process->GetLanguageRuntime(lang))
+  if (auto *runtime = process->GetLanguageRuntime(GetVariable()->GetLanguage()))
     if (runtime->IsWhitelistedRuntimeValue(GetName()))
       return false;
 
