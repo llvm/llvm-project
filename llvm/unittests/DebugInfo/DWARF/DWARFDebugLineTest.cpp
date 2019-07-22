@@ -120,6 +120,16 @@ struct CommonFixture {
     checkError(ExpectedMsg, ExpectedLineTable.takeError());
   }
 
+  void checkGetOrParseLineTableEmitsError(ArrayRef<StringRef> ExpectedMsgs,
+                                          uint64_t Offset = 0) {
+    auto ExpectedLineTable = Line.getOrParseLineTable(
+        LineData, Offset, *Context, nullptr, RecordRecoverable);
+    EXPECT_FALSE(ExpectedLineTable);
+    EXPECT_FALSE(Recoverable);
+
+    checkError(ExpectedMsgs, ExpectedLineTable.takeError());
+  }
+
   std::unique_ptr<Generator> Gen;
   std::unique_ptr<DWARFContext> Context;
   DWARFDataExtractor LineData;
@@ -344,8 +354,9 @@ TEST_F(DebugLineBasicFixture, ErrorForInvalidV5IncludeDirTable) {
   generate();
 
   checkGetOrParseLineTableEmitsError(
-      "parsing line table prologue at 0x00000000 found an invalid directory or "
-      "file table description at 0x00000014");
+      {"parsing line table prologue at 0x00000000 found an invalid directory "
+       "or file table description at 0x00000014",
+       "failed to parse entry content descriptions because no path was found"});
 }
 
 TEST_P(DebugLineParameterisedFixture, ErrorForTooLargePrologueLength) {
