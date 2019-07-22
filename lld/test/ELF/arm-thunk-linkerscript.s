@@ -5,7 +5,7 @@
 // RUN:       .text_low : { *(.text_low) *(.text_low2) } \
 // RUN:       .text_high 0x2000000 : { *(.text_high) *(.text_high2) } \
 // RUN:       } " > %t.script
-// RUN: ld.lld --script %t.script %t -o %t2 2>&1
+// RUN: ld.lld --script %t.script %t -o %t2
 // RUN: llvm-objdump -d -triple=thumbv7a-none-linux-gnueabi %t2 | FileCheck %s
 // Simple test that we can support range extension thunks with linker scripts
  .syntax unified

@@ -1,6 +1,6 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv5-none-linux-gnueabi %s -o %t
-// RUN: ld.lld %t -o %t2 --shared 2>&1
+// RUN: ld.lld %t -o %t2 --shared
 // RUN: llvm-objdump --start-address=7340044 --stop-address=7340048 --triple=armv5-none-linux-gnueabi -d %t2 | FileCheck %s
 // RUN: llvm-objdump --start-address=8388620 --stop-address=8388624 --triple=thumbv5-none-linux-gnueabi -d %t2 | FileCheck %s -check-prefix=CHECK-CALL
 // RUN: llvm-objdump --start-address=13631520 --stop-address=13631584 --triple=armv5-none-linux-gnueabi -d %t2 | FileCheck %s -check-prefix=CHECK-PLT

@@ -103,8 +103,8 @@ attributes #1 = { nounwind optsize }
 !15 = !{!"function_entry_count", i64 1}
 !16 = !{!"branch_weights", i32 3001, i32 1001}
 
-;CHECK: !15 = !{!"branch_weights", i32 900, i32 101}
-;CHECK: !16 = !{!"branch_weights", i32 540, i32 360}
-;CHECK: !17 = !{!"branch_weights", i32 162, i32 378}
-;CHECK: !18 = !{!"branch_weights", i32 1399, i32 162}
+;CHECK: !15 = !{!"branch_weights", i32 3001, i32 1001}
+;CHECK: !16 = !{!"branch_weights", i32 2000, i32 1001}
+;CHECK: !17 = !{!"branch_weights", i32 999, i32 1001}
+;CHECK: !18 = !{!"branch_weights", i32 1, i32 1001}
 

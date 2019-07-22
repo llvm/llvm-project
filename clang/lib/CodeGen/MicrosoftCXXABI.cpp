@@ -258,7 +258,8 @@ public:
 
   void EmitDestructorCall(CodeGenFunction &CGF, const CXXDestructorDecl *DD,
                           CXXDtorType Type, bool ForVirtualBase,
-                          bool Delegating, Address This) override;
+                          bool Delegating, Address This,
+                          QualType ThisTy) override;
 
   void emitVTableTypeMetadata(const VPtrInfo &Info, const CXXRecordDecl *RD,
                               llvm::GlobalVariable *VTable);
@@ -296,9 +297,8 @@ public:
 
   llvm::Value *EmitVirtualDestructorCall(CodeGenFunction &CGF,
                                          const CXXDestructorDecl *Dtor,
-                                         CXXDtorType DtorType,
-                                         Address This,
-                                         const CXXMemberCallExpr *CE) override;
+                                         CXXDtorType DtorType, Address This,
+                                         DeleteOrMemberCallExpr E) override;
 
   void adjustCallArgsForDestructorThunk(CodeGenFunction &CGF, GlobalDecl GD,
                                         CallArgList &CallArgs) override {
@@ -844,8 +844,7 @@ void MicrosoftCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
   // CXXMemberCallExpr for dtor call.
   bool UseGlobalDelete = DE->isGlobalDelete();
   CXXDtorType DtorType = UseGlobalDelete ? Dtor_Complete : Dtor_Deleting;
-  llvm::Value *MDThis =
-      EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, /*CE=*/nullptr);
+  llvm::Value *MDThis = EmitVirtualDestructorCall(CGF, Dtor, DtorType, Ptr, DE);
   if (UseGlobalDelete)
     CGF.EmitDeleteCall(DE->getOperatorDelete(), MDThis, ElementType);
 }
@@ -1569,7 +1568,8 @@ CGCXXABI::AddedStructorArgs MicrosoftCXXABI::addImplicitConstructorArgs(
 void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
                                          const CXXDestructorDecl *DD,
                                          CXXDtorType Type, bool ForVirtualBase,
-                                         bool Delegating, Address This) {
+                                         bool Delegating, Address This,
+                                         QualType ThisTy) {
   // Use the base destructor variant in place of the complete destructor variant
   // if the class has no virtual bases. This effectively implements some of the
   // -mconstructor-aliases optimization, but as part of the MS C++ ABI.
@@ -1591,7 +1591,7 @@ void MicrosoftCXXABI::EmitDestructorCall(CodeGenFunction &CGF,
     BaseDtorEndBB = EmitDtorCompleteObjectHandler(CGF);
   }
 
-  CGF.EmitCXXDestructorCall(GD, Callee, This.getPointer(),
+  CGF.EmitCXXDestructorCall(GD, Callee, This.getPointer(), ThisTy,
                             /*ImplicitParam=*/nullptr,
                             /*ImplicitParamTy=*/QualType(), nullptr);
   if (BaseDtorEndBB) {
@@ -1900,7 +1900,10 @@ CGCallee MicrosoftCXXABI::getVirtualFunctionPointer(CodeGenFunction &CGF,
 
 llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
     CodeGenFunction &CGF, const CXXDestructorDecl *Dtor, CXXDtorType DtorType,
-    Address This, const CXXMemberCallExpr *CE) {
+    Address This, DeleteOrMemberCallExpr E) {
+  auto *CE = E.dyn_cast<const CXXMemberCallExpr *>();
+  auto *D = E.dyn_cast<const CXXDeleteExpr *>();
+  assert((CE != nullptr) ^ (D != nullptr));
   assert(CE == nullptr || CE->arg_begin() == CE->arg_end());
   assert(DtorType == Dtor_Deleting || DtorType == Dtor_Complete);
 
@@ -1917,8 +1920,15 @@ llvm::Value *MicrosoftCXXABI::EmitVirtualDestructorCall(
       llvm::IntegerType::getInt32Ty(CGF.getLLVMContext()),
       DtorType == Dtor_Deleting);
 
+  QualType ThisTy;
+  if (CE) {
+    ThisTy = CE->getObjectType();
+  } else {
+    ThisTy = D->getDestroyedType();
+  }
+
   This = adjustThisArgumentForVirtualFunctionCall(CGF, GD, This, true);
-  RValue RV = CGF.EmitCXXDestructorCall(GD, Callee, This.getPointer(),
+  RValue RV = CGF.EmitCXXDestructorCall(GD, Callee, This.getPointer(), ThisTy,
                                         ImplicitParam, Context.IntTy, CE);
   return RV.getScalarVal();
 }

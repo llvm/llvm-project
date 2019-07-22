@@ -651,6 +651,13 @@ Expr *CXXMemberCallExpr::getImplicitObjectArgument() const {
   return nullptr;
 }
 
+QualType CXXMemberCallExpr::getObjectType() const {
+  QualType Ty = getImplicitObjectArgument()->getType();
+  if (Ty->isPointerType())
+    Ty = Ty->getPointeeType();
+  return Ty;
+}
+
 CXXMethodDecl *CXXMemberCallExpr::getMethodDecl() const {
   if (const auto *MemExpr = dyn_cast<MemberExpr>(getCallee()->IgnoreParens()))
     return cast<CXXMethodDecl>(MemExpr->getMemberDecl());

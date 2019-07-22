@@ -7,7 +7,10 @@ misc-throw-by-value-catch-by-reference
 `cert-err61-cpp` redirects here as an alias for this check.
 
 Finds violations of the rule "Throw by value, catch by reference" presented for
-example in "C++ Coding Standards" by H. Sutter and A. Alexandrescu.
+example in "C++ Coding Standards" by H. Sutter and A. Alexandrescu, as well as
+the CERT C++ Coding Standard rule `ERR61-CPP. Catch exceptions by lvalue reference
+<https://wiki.sei.cmu.edu/confluence/display/cplusplus/ERR61-CPP.+Catch+exceptions+by+lvalue+reference>`_.
+
 
 Exceptions:
   * Throwing string literals will not be flagged despite being a pointer. They
@@ -28,8 +31,8 @@ Options
 
 .. option:: CheckThrowTemporaries
 
-   Triggers detection of violations of the rule `Throw anonymous temporaries
-   <https://www.securecoding.cert.org/confluence/display/cplusplus/ERR09-CPP.+Throw+anonymous+temporaries>`_.
+   Triggers detection of violations of the CERT recommendation ERR09-CPP. Throw
+   anonymous temporaries.
    Default is `1`.
 
 .. option:: WarnOnLargeObject

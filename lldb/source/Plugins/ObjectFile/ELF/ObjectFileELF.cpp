@@ -721,27 +721,16 @@ ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
                              DataBufferSP &data_sp, lldb::offset_t data_offset,
                              const FileSpec *file, lldb::offset_t file_offset,
                              lldb::offset_t length)
-    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset),
-      m_header(), m_uuid(), m_gnu_debuglink_file(), m_gnu_debuglink_crc(0),
-      m_program_headers(), m_section_headers(), m_dynamic_symbols(),
-      m_filespec_up(), m_entry_point_address(), m_arch_spec() {
+    : ObjectFile(module_sp, file, file_offset, length, data_sp, data_offset) {
   if (file)
     m_file = *file;
-  ::memset(&m_header, 0, sizeof(m_header));
 }
 
 ObjectFileELF::ObjectFileELF(const lldb::ModuleSP &module_sp,
                              DataBufferSP &header_data_sp,
                              const lldb::ProcessSP &process_sp,
                              addr_t header_addr)
-    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp),
-      m_header(), m_uuid(), m_gnu_debuglink_file(), m_gnu_debuglink_crc(0),
-      m_program_headers(), m_section_headers(), m_dynamic_symbols(),
-      m_filespec_up(), m_entry_point_address(), m_arch_spec() {
-  ::memset(&m_header, 0, sizeof(m_header));
-}
-
-ObjectFileELF::~ObjectFileELF() {}
+    : ObjectFile(module_sp, process_sp, header_addr, header_data_sp) {}
 
 bool ObjectFileELF::IsExecutable() const {
   return ((m_header.e_type & ET_EXEC) != 0) || (m_header.e_entry != 0);

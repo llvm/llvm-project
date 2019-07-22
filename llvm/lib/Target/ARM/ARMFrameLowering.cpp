@@ -2097,6 +2097,12 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
     AFI->setLRIsSpilledForFarJump(true);
   }
   AFI->setLRIsSpilled(SavedRegs.test(ARM::LR));
+
+  // If we have the "returned" parameter attribute which guarantees that we
+  // return the value which was passed in r0 unmodified (e.g. C++ 'structors),
+  // record that fact for IPRA.
+  if (AFI->getPreservesR0())
+    SavedRegs.set(ARM::R0);
 }
 
 MachineBasicBlock::iterator ARMFrameLowering::eliminateCallFramePseudoInstr(
