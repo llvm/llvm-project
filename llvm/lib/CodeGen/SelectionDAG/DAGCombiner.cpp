@@ -14829,13 +14829,7 @@ CheckForMaskedLoad(SDValue V, SDValue Ptr, SDValue Chain) {
   else if (Chain->getOpcode() == ISD::TokenFactor &&
            SDValue(LD, 1).hasOneUse()) {
     // LD has only 1 chain use so they are no indirect dependencies.
-    bool isOk = false;
-    for (const SDValue &ChainOp : Chain->op_values())
-      if (ChainOp.getNode() == LD) {
-        isOk = true;
-        break;
-      }
-    if (!isOk)
+    if (!LD->isOperandOf(Chain.getNode()))
       return Result;
   } else
     return Result; // Fail.
@@ -14848,7 +14842,7 @@ CheckForMaskedLoad(SDValue V, SDValue Ptr, SDValue Chain) {
 /// Check to see if IVal is something that provides a value as specified by
 /// MaskInfo. If so, replace the specified store with a narrower store of
 /// truncated IVal.
-static SDNode *
+static SDValue
 ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
                                 SDValue IVal, StoreSDNode *St,
                                 DAGCombiner *DC) {
@@ -14860,14 +14854,14 @@ ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
   // that uses this.  If not, this is not a replacement.
   APInt Mask = ~APInt::getBitsSet(IVal.getValueSizeInBits(),
                                   ByteShift*8, (ByteShift+NumBytes)*8);
-  if (!DAG.MaskedValueIsZero(IVal, Mask)) return nullptr;
+  if (!DAG.MaskedValueIsZero(IVal, Mask)) return SDValue();
 
   // Check that it is legal on the target to do this.  It is legal if the new
   // VT we're shrinking to (i8/i16/i32) is legal or we're still before type
   // legalization.
   MVT VT = MVT::getIntegerVT(NumBytes*8);
   if (!DC->isTypeLegal(VT))
-    return nullptr;
+    return SDValue();
 
   // Okay, we can do this!  Replace the 'St' store with a store of IVal that is
   // shifted by ByteShift and truncated down to NumBytes.
@@ -14901,8 +14895,7 @@ ShrinkLoadReplaceStoreWithStore(const std::pair<unsigned, unsigned> &MaskInfo,
   ++OpsNarrowed;
   return DAG
       .getStore(St->getChain(), SDLoc(St), IVal, Ptr,
-                St->getPointerInfo().getWithOffset(StOffset), NewAlign)
-      .getNode();
+                St->getPointerInfo().getWithOffset(StOffset), NewAlign);
 }
 
 /// Look for sequence of load / op / store where op is one of 'or', 'xor', and
@@ -14933,16 +14926,16 @@ SDValue DAGCombiner::ReduceLoadOpStoreWidth(SDNode *N) {
     std::pair<unsigned, unsigned> MaskedLoad;
     MaskedLoad = CheckForMaskedLoad(Value.getOperand(0), Ptr, Chain);
     if (MaskedLoad.first)
-      if (SDNode *NewST = ShrinkLoadReplaceStoreWithStore(MaskedLoad,
+      if (SDValue NewST = ShrinkLoadReplaceStoreWithStore(MaskedLoad,
                                                   Value.getOperand(1), ST,this))
-        return SDValue(NewST, 0);
+        return NewST;
 
     // Or is commutative, so try swapping X and Y.
     MaskedLoad = CheckForMaskedLoad(Value.getOperand(1), Ptr, Chain);
     if (MaskedLoad.first)
-      if (SDNode *NewST = ShrinkLoadReplaceStoreWithStore(MaskedLoad,
+      if (SDValue NewST = ShrinkLoadReplaceStoreWithStore(MaskedLoad,
                                                   Value.getOperand(0), ST,this))
-        return SDValue(NewST, 0);
+        return NewST;
   }
 
   if ((Opc != ISD::OR && Opc != ISD::XOR && Opc != ISD::AND) ||

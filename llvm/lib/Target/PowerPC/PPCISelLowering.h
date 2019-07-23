@@ -834,6 +834,18 @@ namespace llvm {
       return true;
     }
 
+    bool isDesirableToTransformToIntegerOp(unsigned Opc,
+                                           EVT VT) const override {
+      // Only handle float load/store pair because float(fpr) load/store
+      // instruction has more cycles than integer(gpr) load/store in PPC.
+      if (Opc != ISD::LOAD && Opc != ISD::STORE)
+        return false;
+      if (VT != MVT::f32 && VT != MVT::f64)
+        return false;
+
+      return true; 
+    }
+
     // Returns true if the address of the global is stored in TOC entry.
     bool isAccessedAsGotIndirect(SDValue N) const;
 

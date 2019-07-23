@@ -608,8 +608,8 @@ def : GCNPat <
 >;
 
 class DSReadPat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
-  (vt (frag (DS1Addr1Offset i32:$ptr, i32:$offset))),
-  (inst $ptr, (as_i16imm $offset), (i1 gds))
+  (vt (frag (DS1Addr1Offset i32:$ptr, i16:$offset))),
+  (inst $ptr, offset:$offset, (i1 gds))
 >;
 
 multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
@@ -624,8 +624,8 @@ multiclass DSReadPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
 }
 
 class DSReadPat_D16 <DS_Pseudo inst, PatFrag frag, ValueType vt> : GCNPat <
-  (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$in),
-  (inst $ptr, (as_i16imm $offset), (i1 0), $in)
+  (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$in),
+  (inst $ptr, offset:$offset, (i1 0), $in)
 >;
 
 defm : DSReadPat_mc <DS_READ_I8, i32, "sextloadi8_local">;
@@ -667,8 +667,8 @@ def : DSReadPat_D16<DS_READ_I8_D16, sextloadi8_d16_lo_local, v2f16>;
 }
 
 class DSWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag, int gds=0> : GCNPat <
-  (frag vt:$value, (DS1Addr1Offset i32:$ptr, i32:$offset)),
-  (inst $ptr, $value, (as_i16imm $offset), (i1 gds))
+  (frag vt:$value, (DS1Addr1Offset i32:$ptr, i16:$offset)),
+  (inst $ptr, $value, offset:$offset, (i1 gds))
 >;
 
 multiclass DSWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
@@ -684,8 +684,8 @@ multiclass DSWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
 // Irritatingly, atomic_store reverses the order of operands from a
 // normal store.
 class DSAtomicWritePat <DS_Pseudo inst, ValueType vt, PatFrag frag> : GCNPat <
-  (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),
-  (inst $ptr, $value, (as_i16imm $offset), (i1 0))
+  (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$value),
+  (inst $ptr, $value, offset:$offset, (i1 0))
 >;
 
 multiclass DSAtomicWritePat_mc <DS_Pseudo inst, ValueType vt, string frag> {
@@ -744,8 +744,8 @@ defm : DSWritePat_mc <DS_WRITE_B128, v4i32, "store_align16_local">;
 
 } // End AddedComplexity = 100
 class DSAtomicRetPat<DS_Pseudo inst, ValueType vt, PatFrag frag, bit gds=0> : GCNPat <
-  (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$value),
-  (inst $ptr, $value, (as_i16imm $offset), (i1 gds))
+  (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$value),
+  (inst $ptr, $value, offset:$offset, (i1 gds))
 >;
 
 multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
@@ -764,8 +764,8 @@ multiclass DSAtomicRetPat_mc<DS_Pseudo inst, ValueType vt, string frag> {
 
 
 class DSAtomicCmpXChg<DS_Pseudo inst, ValueType vt, PatFrag frag, bit gds=0> : GCNPat <
-  (frag (DS1Addr1Offset i32:$ptr, i32:$offset), vt:$cmp, vt:$swap),
-  (inst $ptr, $cmp, $swap, (as_i16imm $offset), (i1 gds))
+  (frag (DS1Addr1Offset i32:$ptr, i16:$offset), vt:$cmp, vt:$swap),
+  (inst $ptr, $cmp, $swap, offset:$offset, (i1 gds))
 >;
 
 multiclass DSAtomicCmpXChg_mc<DS_Pseudo inst, ValueType vt, string frag> {

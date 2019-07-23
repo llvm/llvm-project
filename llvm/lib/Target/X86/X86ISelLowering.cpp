@@ -14157,11 +14157,10 @@ static SDValue lowerV16I8Shuffle(const SDLoc &DL, ArrayRef<int> Mask,
     // First we need to zero all the dropped bytes.
     assert(NumEvenDrops <= 3 &&
            "No support for dropping even elements more than 3 times.");
-    // We use the mask type to pick which bytes are preserved based on how many
-    // elements are dropped.
-    MVT MaskVTs[] = { MVT::v8i16, MVT::v4i32, MVT::v2i64 };
-    SDValue ByteClearMask = DAG.getBitcast(
-        MVT::v16i8, DAG.getConstant(0xFF, DL, MaskVTs[NumEvenDrops - 1]));
+    SmallVector<SDValue, 16> ByteClearOps(16, DAG.getConstant(0, DL, MVT::i8));
+    for (unsigned i = 0; i != 16; i += 1 << NumEvenDrops)
+      ByteClearOps[i] = DAG.getConstant(0xFF, DL, MVT::i8);
+    SDValue ByteClearMask = DAG.getBuildVector(MVT::v16i8, DL, ByteClearOps);
     V1 = DAG.getNode(ISD::AND, DL, MVT::v16i8, V1, ByteClearMask);
     if (!IsSingleInput)
       V2 = DAG.getNode(ISD::AND, DL, MVT::v16i8, V2, ByteClearMask);

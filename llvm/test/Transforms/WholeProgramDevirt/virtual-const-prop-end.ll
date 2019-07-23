@@ -3,7 +3,7 @@
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: [[VT1DATA:@[^ ]*]] = private constant { [0 x i8], [4 x i8*], [8 x i8] } { [0 x i8] zeroinitializer, [4 x i8*] [i8* null, i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i32 (i8*)* @vf1i32 to i8*)], [8 x i8] c"\01\00\00\00\01\00\00\00" }, !type [[T8:![0-9]+]]
+; CHECK: [[VT1DATA:@[^ ]*]] = private constant { [0 x i8], [4 x i8*], [5 x i8] } { [0 x i8] zeroinitializer, [4 x i8*] [i8* null, i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i32 (i8*)* @vf1i32 to i8*)], [5 x i8] c"\01\00\00\00\01" }, !type [[T8:![0-9]+]]
 @vt1 = constant [4 x i8*] [
 i8* null,
 i8* bitcast (i1 (i8*)* @vf0i1 to i8*),
@@ -11,14 +11,14 @@ i8* bitcast (i1 (i8*)* @vf1i1 to i8*),
 i8* bitcast (i32 (i8*)* @vf1i32 to i8*)
 ], !type !1
 
-; CHECK: [[VT2DATA:@[^ ]*]] = private constant { [0 x i8], [3 x i8*], [8 x i8] } { [0 x i8] zeroinitializer, [3 x i8*] [i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i32 (i8*)* @vf2i32 to i8*)], [8 x i8] c"\02\00\00\00\02\00\00\00" }, !type [[T0:![0-9]+]]
+; CHECK: [[VT2DATA:@[^ ]*]] = private constant { [0 x i8], [3 x i8*], [5 x i8] } { [0 x i8] zeroinitializer, [3 x i8*] [i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i32 (i8*)* @vf2i32 to i8*)], [5 x i8] c"\02\00\00\00\02" }, !type [[T0:![0-9]+]]
 @vt2 = constant [3 x i8*] [
 i8* bitcast (i1 (i8*)* @vf1i1 to i8*),
 i8* bitcast (i1 (i8*)* @vf0i1 to i8*),
 i8* bitcast (i32 (i8*)* @vf2i32 to i8*)
 ], !type !0
 
-; CHECK: [[VT3DATA:@[^ ]*]] = private constant { [0 x i8], [4 x i8*], [8 x i8] } { [0 x i8] zeroinitializer, [4 x i8*] [i8* null, i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i32 (i8*)* @vf3i32 to i8*)], [8 x i8] c"\03\00\00\00\01\00\00\00" }, !type [[T8]]
+; CHECK: [[VT3DATA:@[^ ]*]] = private constant { [0 x i8], [4 x i8*], [5 x i8] } { [0 x i8] zeroinitializer, [4 x i8*] [i8* null, i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i32 (i8*)* @vf3i32 to i8*)], [5 x i8] c"\03\00\00\00\01" }, !type [[T8]]
 @vt3 = constant [4 x i8*] [
 i8* null,
 i8* bitcast (i1 (i8*)* @vf0i1 to i8*),
@@ -26,17 +26,17 @@ i8* bitcast (i1 (i8*)* @vf1i1 to i8*),
 i8* bitcast (i32 (i8*)* @vf3i32 to i8*)
 ], !type !1
 
-; CHECK: [[VT4DATA:@[^ ]*]] = private constant { [0 x i8], [3 x i8*], [8 x i8] } { [0 x i8] zeroinitializer, [3 x i8*] [i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i32 (i8*)* @vf4i32 to i8*)], [8 x i8] c"\04\00\00\00\02\00\00\00" }, !type [[T0]]
+; CHECK: [[VT4DATA:@[^ ]*]] = private constant { [0 x i8], [3 x i8*], [5 x i8] } { [0 x i8] zeroinitializer, [3 x i8*] [i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i32 (i8*)* @vf4i32 to i8*)], [5 x i8] c"\04\00\00\00\02" }, !type [[T0]]
 @vt4 = constant [3 x i8*] [
 i8* bitcast (i1 (i8*)* @vf1i1 to i8*),
 i8* bitcast (i1 (i8*)* @vf0i1 to i8*),
 i8* bitcast (i32 (i8*)* @vf4i32 to i8*)
 ], !type !0
 
-; CHECK: @vt1 = alias [4 x i8*], getelementptr inbounds ({ [0 x i8], [4 x i8*], [8 x i8] }, { [0 x i8], [4 x i8*], [8 x i8] }* [[VT1DATA]], i32 0, i32 1)
-; CHECK: @vt2 = alias [3 x i8*], getelementptr inbounds ({ [0 x i8], [3 x i8*], [8 x i8] }, { [0 x i8], [3 x i8*], [8 x i8] }* [[VT2DATA]], i32 0, i32 1)
-; CHECK: @vt3 = alias [4 x i8*], getelementptr inbounds ({ [0 x i8], [4 x i8*], [8 x i8] }, { [0 x i8], [4 x i8*], [8 x i8] }* [[VT3DATA]], i32 0, i32 1)
-; CHECK: @vt4 = alias [3 x i8*], getelementptr inbounds ({ [0 x i8], [3 x i8*], [8 x i8] }, { [0 x i8], [3 x i8*], [8 x i8] }* [[VT4DATA]], i32 0, i32 1)
+; CHECK: @vt1 = alias [4 x i8*], getelementptr inbounds ({ [0 x i8], [4 x i8*], [5 x i8] }, { [0 x i8], [4 x i8*], [5 x i8] }* [[VT1DATA]], i32 0, i32 1)
+; CHECK: @vt2 = alias [3 x i8*], getelementptr inbounds ({ [0 x i8], [3 x i8*], [5 x i8] }, { [0 x i8], [3 x i8*], [5 x i8] }* [[VT2DATA]], i32 0, i32 1)
+; CHECK: @vt3 = alias [4 x i8*], getelementptr inbounds ({ [0 x i8], [4 x i8*], [5 x i8] }, { [0 x i8], [4 x i8*], [5 x i8] }* [[VT3DATA]], i32 0, i32 1)
+; CHECK: @vt4 = alias [3 x i8*], getelementptr inbounds ({ [0 x i8], [3 x i8*], [5 x i8] }, { [0 x i8], [3 x i8*], [5 x i8] }* [[VT4DATA]], i32 0, i32 1)
 
 define i1 @vf0i1(i8* %this) readnone {
   ret i1 0

@@ -70,7 +70,7 @@ body:             |
   bb.0.entry:
     liveins: $x2
 
-    %0 = ADDIStocHA $x2, @b
+    %0 = ADDIStocHA8 $x2, @b
     %1 = LD target-flags(ppc-toc-lo) @b, killed %0 :: (load 8 from @b)
     %2 = LWZ 0, %1 :: (load 4 from %ir.0)
     %3 = LI 0

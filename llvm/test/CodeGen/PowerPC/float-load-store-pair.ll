@@ -54,27 +54,27 @@ define signext i32 @test() {
 ; CHECK-NEXT:    addis 3, 2, a10@toc@ha
 ; CHECK-NEXT:    lfd 10, a10@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, a11@toc@ha
+; CHECK-NEXT:    addis 6, 2, a17@toc@ha
+; CHECK-NEXT:    addis 5, 2, a16@toc@ha
+; CHECK-NEXT:    addi 6, 6, a17@toc@l
+; CHECK-NEXT:    addi 5, 5, a16@toc@l
+; CHECK-NEXT:    lxvx 34, 0, 6
+; CHECK-NEXT:    addis 4, 2, a15@toc@ha
+; CHECK-NEXT:    lxvx 0, 0, 5
+; CHECK-NEXT:    ld 4, a15@toc@l(4)
+; CHECK-NEXT:    li 5, 168
 ; CHECK-NEXT:    lfd 11, a11@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, a12@toc@ha
 ; CHECK-NEXT:    lfd 12, a12@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, a13@toc@ha
 ; CHECK-NEXT:    lfd 13, a13@toc@l(3)
 ; CHECK-NEXT:    addis 3, 2, a14@toc@ha
-; CHECK-NEXT:    lfd 0, a14@toc@l(3)
-; CHECK-NEXT:    addis 3, 2, a15@toc@ha
-; CHECK-NEXT:    addis 4, 2, a17@toc@ha
-; CHECK-NEXT:    addi 4, 4, a17@toc@l
-; CHECK-NEXT:    lxsd 2, a15@toc@l(3)
-; CHECK-NEXT:    addis 3, 2, a16@toc@ha
-; CHECK-NEXT:    addi 3, 3, a16@toc@l
-; CHECK-NEXT:    lxvx 36, 0, 4
-; CHECK-NEXT:    lxvx 35, 0, 3
-; CHECK-NEXT:    li 3, 168
-; CHECK-NEXT:    stxvx 36, 1, 3
-; CHECK-NEXT:    li 3, 152
-; CHECK-NEXT:    stxvx 35, 1, 3
-; CHECK-NEXT:    stxsd 2, 144(1)
-; CHECK-NEXT:    stfd 0, 136(1)
+; CHECK-NEXT:    ld 3, a14@toc@l(3)
+; CHECK-NEXT:    stxvx 34, 1, 5
+; CHECK-NEXT:    li 5, 152
+; CHECK-NEXT:    stxvx 0, 1, 5
+; CHECK-NEXT:    std 4, 144(1)
+; CHECK-NEXT:    std 3, 136(1)
 ; CHECK-NEXT:    bl _Z3fooddddddddddddddd
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    li 3, 0

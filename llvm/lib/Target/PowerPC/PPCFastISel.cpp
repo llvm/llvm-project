@@ -2031,8 +2031,8 @@ unsigned PPCFastISel::PPCMaterializeFP(const ConstantFP *CFP, MVT VT) {
     BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(Opc), DestReg)
       .addImm(0).addReg(TmpReg).addMemOperand(MMO);
   } else {
-    // Otherwise we generate LF[SD](Idx[lo], ADDIStocHA(X2, Idx)).
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::ADDIStocHA),
+    // Otherwise we generate LF[SD](Idx[lo], ADDIStocHA8(X2, Idx)).
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::ADDIStocHA8),
             TmpReg).addReg(PPC::X2).addConstantPoolIndex(Idx);
     // But for large code model, we must generate a LDtocL followed
     // by the LF[SD].
@@ -2085,12 +2085,12 @@ unsigned PPCFastISel::PPCMaterializeGV(const GlobalValue *GV, MVT VT) {
     // or externally available linkage, a non-local function address, or a
     // jump table address (not yet needed), or if we are generating code
     // for large code model, we generate:
-    //       LDtocL(GV, ADDIStocHA(%x2, GV))
+    //       LDtocL(GV, ADDIStocHA8(%x2, GV))
     // Otherwise we generate:
-    //       ADDItocL(ADDIStocHA(%x2, GV), GV)
-    // Either way, start with the ADDIStocHA:
+    //       ADDItocL(ADDIStocHA8(%x2, GV), GV)
+    // Either way, start with the ADDIStocHA8:
     unsigned HighPartReg = createResultReg(RC);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::ADDIStocHA),
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, DbgLoc, TII.get(PPC::ADDIStocHA8),
             HighPartReg).addReg(PPC::X2).addGlobalAddress(GV);
 
     unsigned char GVFlags = PPCSubTarget->classifyGlobalReference(GV);
