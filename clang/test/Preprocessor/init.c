@@ -9599,6 +9599,7 @@
 // X86-64-DECLSPEC: #define __declspec{{.*}}
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARCV9 %s
+// SPARCV9:#define __BIGGEST_ALIGNMENT__ 16
 // SPARCV9:#define __INT64_TYPE__ long int
 // SPARCV9:#define __INTMAX_C_SUFFIX__ L
 // SPARCV9:#define __INTMAX_TYPE__ long int

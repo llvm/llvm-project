@@ -498,7 +498,6 @@ define <4 x i32> @var_funnnel_v4i32(<4 x i32> %x, <4 x i32> %y, <4 x i32> %amt) 
 define <8 x i16> @var_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %amt) nounwind {
 ; SSE2-LABEL: var_funnnel_v8i16:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pand {{.*}}(%rip), %xmm2
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [16,16,16,16,16,16,16,16]
 ; SSE2-NEXT:    psubw %xmm2, %xmm3
 ; SSE2-NEXT:    psllw $12, %xmm3
@@ -531,6 +530,7 @@ define <8 x i16> @var_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %amt) 
 ; SSE2-NEXT:    pandn %xmm1, %xmm4
 ; SSE2-NEXT:    psrlw $1, %xmm1
 ; SSE2-NEXT:    pand %xmm3, %xmm1
+; SSE2-NEXT:    pand {{.*}}(%rip), %xmm2
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    movdqa %xmm2, %xmm5
 ; SSE2-NEXT:    punpckhwd {{.*#+}} xmm5 = xmm5[4],xmm3[4],xmm5[5],xmm3[5],xmm5[6],xmm3[6],xmm5[7],xmm3[7]
@@ -768,7 +768,6 @@ define <8 x i16> @var_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %amt) 
 ;
 ; X32-SSE-LABEL: var_funnnel_v8i16:
 ; X32-SSE:       # %bb.0:
-; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm2
 ; X32-SSE-NEXT:    movdqa {{.*#+}} xmm3 = [16,16,16,16,16,16,16,16]
 ; X32-SSE-NEXT:    psubw %xmm2, %xmm3
 ; X32-SSE-NEXT:    psllw $12, %xmm3
@@ -801,6 +800,7 @@ define <8 x i16> @var_funnnel_v8i16(<8 x i16> %x, <8 x i16> %y, <8 x i16> %amt) 
 ; X32-SSE-NEXT:    pandn %xmm1, %xmm4
 ; X32-SSE-NEXT:    psrlw $1, %xmm1
 ; X32-SSE-NEXT:    pand %xmm3, %xmm1
+; X32-SSE-NEXT:    pand {{\.LCPI.*}}, %xmm2
 ; X32-SSE-NEXT:    pxor %xmm3, %xmm3
 ; X32-SSE-NEXT:    movdqa %xmm2, %xmm5
 ; X32-SSE-NEXT:    punpckhwd {{.*#+}} xmm5 = xmm5[4],xmm3[4],xmm5[5],xmm3[5],xmm5[6],xmm3[6],xmm5[7],xmm3[7]

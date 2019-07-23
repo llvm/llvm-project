@@ -3065,6 +3065,14 @@ public:
   bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedMask,
                             DAGCombinerInfo &DCI) const;
 
+  /// More limited version of SimplifyDemandedBits that can be used to "look
+  /// through" ops that don't contribute to the DemandedBits/DemandedElts -
+  /// bitwise ops etc.
+  SDValue SimplifyMultipleUseDemandedBits(SDValue Op, const APInt &DemandedBits,
+                                          const APInt &DemandedElts,
+                                          SelectionDAG &DAG,
+                                          unsigned Depth) const;
+
   /// Look at Vector Op. At this point, we know that only the DemandedElts
   /// elements of the result of Op are ever used downstream.  If we can use
   /// this information to simplify Op, create a new simplified DAG node and
@@ -3138,6 +3146,13 @@ public:
                                                  KnownBits &Known,
                                                  TargetLoweringOpt &TLO,
                                                  unsigned Depth = 0) const;
+
+  /// More limited version of SimplifyDemandedBits that can be used to "look
+  /// through" ops that don't contribute to the DemandedBits/DemandedElts -
+  /// bitwise ops etc.
+  virtual SDValue SimplifyMultipleUseDemandedBitsForTargetNode(
+      SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
+      SelectionDAG &DAG, unsigned Depth) const;
 
   /// This method returns the constant pool value that will be loaded by LD.
   /// NOTE: You must check for implicit extensions of the constant by LD.

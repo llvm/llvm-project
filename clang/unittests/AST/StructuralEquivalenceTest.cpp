@@ -944,6 +944,67 @@ TEST_F(StructuralEquivalenceTemplateTest, ExplicitBoolDifference) {
   EXPECT_FALSE(testStructuralMatch(First, Second));
 }
 
+TEST_F(StructuralEquivalenceTemplateTest,
+       TemplateVsSubstTemplateTemplateParmInArgEq) {
+  auto t = makeDecls<ClassTemplateSpecializationDecl>(
+      R"(
+template <typename P1> class Arg { };
+template <template <typename PP1> class P1> class Primary { };
+
+void f() {
+  // Make specialization with simple template.
+  Primary <Arg> A;
+}
+      )",
+      R"(
+template <typename P1> class Arg { };
+template <template <typename PP1> class P1> class Primary { };
+
+template <template <typename PP1> class P1> class Templ {
+  void f() {
+    // Make specialization with substituted template template param.
+    Primary <P1> A;
+  };
+};
+
+// Instantiate with substitution Arg into P1.
+template class Templ <Arg>;
+      )",
+      Lang_CXX, classTemplateSpecializationDecl(hasName("Primary")));
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceTemplateTest,
+       TemplateVsSubstTemplateTemplateParmInArgNotEq) {
+  auto t = makeDecls<ClassTemplateSpecializationDecl>(
+      R"(
+template <typename P1> class Arg { };
+template <template <typename PP1> class P1> class Primary { };
+
+void f() {
+  // Make specialization with simple template.
+  Primary <Arg> A;
+}
+      )",
+      R"(
+// Arg is different from the other, this should cause non-equivalence.
+template <typename P1> class Arg { int X; };
+template <template <typename PP1> class P1> class Primary { };
+
+template <template <typename PP1> class P1> class Templ {
+  void f() {
+    // Make specialization with substituted template template param.
+    Primary <P1> A;
+  };
+};
+
+// Instantiate with substitution Arg into P1.
+template class Templ <Arg>;
+      )",
+      Lang_CXX, classTemplateSpecializationDecl(hasName("Primary")));
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
 struct StructuralEquivalenceDependentTemplateArgsTest
     : StructuralEquivalenceTemplateTest {};
 
@@ -1079,6 +1140,137 @@ TEST_F(StructuralEquivalenceDependentTemplateArgsTest,
       )",
                                            Lang_CXX,
                                            functionTemplateDecl(hasName("f")));
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(
+    StructuralEquivalenceTemplateTest,
+    ClassTemplSpecWithQualifiedAndNonQualifiedTypeArgsShouldBeEqual) {
+  auto t = makeDecls<ClassTemplateSpecializationDecl>(
+      R"(
+      template <class T> struct Primary {};
+      namespace N {
+        struct Arg;
+      }
+      // Explicit instantiation with qualified name.
+      template struct Primary<N::Arg>;
+      )",
+      R"(
+      template <class T> struct Primary {};
+      namespace N {
+        struct Arg;
+      }
+      using namespace N;
+      // Explicit instantiation with UNqualified name.
+      template struct Primary<Arg>;
+      )",
+      Lang_CXX,
+      classTemplateSpecializationDecl(hasName("Primary")));
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(
+    StructuralEquivalenceTemplateTest,
+    ClassTemplSpecWithInequivalentQualifiedAndNonQualifiedTypeArgs) {
+  auto t = makeDecls<ClassTemplateSpecializationDecl>(
+      R"(
+      template <class T> struct Primary {};
+      namespace N {
+        struct Arg { int a; };
+      }
+      // Explicit instantiation with qualified name.
+      template struct Primary<N::Arg>;
+      )",
+      R"(
+      template <class T> struct Primary {};
+      namespace N {
+        // This struct is not equivalent with the other in the prev TU.
+        struct Arg { double b; }; // -- Field mismatch.
+      }
+      using namespace N;
+      // Explicit instantiation with UNqualified name.
+      template struct Primary<Arg>;
+      )",
+      Lang_CXX,
+      classTemplateSpecializationDecl(hasName("Primary")));
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(
+    StructuralEquivalenceTemplateTest,
+    ClassTemplSpecWithQualifiedAndNonQualifiedTemplArgsShouldBeEqual) {
+  auto t = makeDecls<ClassTemplateSpecializationDecl>(
+      R"(
+      template <template <class> class T> struct Primary {};
+      namespace N {
+        template <class T> struct Arg;
+      }
+      // Explicit instantiation with qualified name.
+      template struct Primary<N::Arg>;
+      )",
+      R"(
+      template <template <class> class T> struct Primary {};
+      namespace N {
+        template <class T> struct Arg;
+      }
+      using namespace N;
+      // Explicit instantiation with UNqualified name.
+      template struct Primary<Arg>;
+      )",
+      Lang_CXX,
+      classTemplateSpecializationDecl(hasName("Primary")));
+  EXPECT_TRUE(testStructuralMatch(t));
+}
+
+TEST_F(
+    StructuralEquivalenceTemplateTest,
+    ClassTemplSpecWithInequivalentQualifiedAndNonQualifiedTemplArgs) {
+  auto t = makeDecls<ClassTemplateSpecializationDecl>(
+      R"(
+      template <template <class> class T> struct Primary {};
+      namespace N {
+        template <class T> struct Arg { int a; };
+      }
+      // Explicit instantiation with qualified name.
+      template struct Primary<N::Arg>;
+      )",
+      R"(
+      template <template <class> class T> struct Primary {};
+      namespace N {
+        // This template is not equivalent with the other in the prev TU.
+        template <class T> struct Arg { double b; }; // -- Field mismatch.
+      }
+      using namespace N;
+      // Explicit instantiation with UNqualified name.
+      template struct Primary<Arg>;
+      )",
+      Lang_CXX,
+      classTemplateSpecializationDecl(hasName("Primary")));
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(
+    StructuralEquivalenceTemplateTest,
+    ClassTemplSpecWithInequivalentShadowedTemplArg) {
+  auto t = makeDecls<ClassTemplateSpecializationDecl>(
+      R"(
+      template <template <class> class T> struct Primary {};
+      template <class T> struct Arg { int a; };
+      // Explicit instantiation with ::Arg
+      template struct Primary<Arg>;
+      )",
+      R"(
+      template <template <class> class T> struct Primary {};
+      template <class T> struct Arg { int a; };
+      namespace N {
+        // This template is not equivalent with the other in the global scope.
+        template <class T> struct Arg { double b; }; // -- Field mismatch.
+        // Explicit instantiation with N::Arg which shadows ::Arg
+        template struct Primary<Arg>;
+      }
+      )",
+      Lang_CXX,
+      classTemplateSpecializationDecl(hasName("Primary")));
   EXPECT_FALSE(testStructuralMatch(t));
 }
 

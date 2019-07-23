@@ -1334,12 +1334,12 @@ void ARMInstPrinter::printFPImmOperand(const MCInst *MI, unsigned OpNum,
     << markup(">");
 }
 
-void ARMInstPrinter::printNEONModImmOperand(const MCInst *MI, unsigned OpNum,
+void ARMInstPrinter::printVMOVModImmOperand(const MCInst *MI, unsigned OpNum,
                                             const MCSubtargetInfo &STI,
                                             raw_ostream &O) {
   unsigned EncodedImm = MI->getOperand(OpNum).getImm();
   unsigned EltBits;
-  uint64_t Val = ARM_AM::decodeNEONModImm(EncodedImm, EltBits);
+  uint64_t Val = ARM_AM::decodeVMOVModImm(EncodedImm, EltBits);
   O << markup("<imm:") << "#0x";
   O.write_hex(Val);
   O << markup(">");

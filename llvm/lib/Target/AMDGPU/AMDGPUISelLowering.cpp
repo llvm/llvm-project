@@ -4502,9 +4502,9 @@ void AMDGPUTargetLowering::computeKnownBitsForTargetNode(
         Known.One |= ((LHSKnown.One.getZExtValue() >> SelBits) & 0xff) << I;
         Known.Zero |= ((LHSKnown.Zero.getZExtValue() >> SelBits) & 0xff) << I;
       } else if (SelBits == 0x0c) {
-        Known.Zero |= 0xff << I;
+        Known.Zero |= 0xFFull << I;
       } else if (SelBits > 0x0c) {
-        Known.One |= 0xff << I;
+        Known.One |= 0xFFull << I;
       }
       Sel >>= 8;
     }

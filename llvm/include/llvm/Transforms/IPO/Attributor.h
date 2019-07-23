@@ -455,6 +455,27 @@ struct IntegerState : public AbstractState {
     return *this;
   }
 
+  /// Take minimum of assumed and \p Value.
+  IntegerState &takeAssumedMinimum(base_t Value) {
+    // Make sure we never loose "known value".
+    Assumed = std::max(std::min(Assumed, Value), Known);
+    return *this;
+  }
+
+  /// Take maximum of known and \p Value.
+  IntegerState &takeKnownMaximum(base_t Value) {
+    // Make sure we never loose "known value".
+    Assumed = std::max(Value, Assumed);
+    Known = std::max(Value, Known);
+    return *this;
+  }
+
+  /// Equality for IntegerState.
+  bool operator==(const IntegerState &R) const {
+    return this->getAssumed() == R.getAssumed() &&
+           this->getKnown() == R.getKnown();
+  }
+
 private:
   /// The known state encoding in an integer of type base_t.
   base_t Known = getWorstState();
@@ -843,6 +864,45 @@ struct AAIsDead : public AbstractAttribute {
 
   /// Returns true if \p BB is known dead.
   virtual bool isKnownDead(BasicBlock *BB) const = 0;
+};
+
+/// An abstract interface for all dereferenceable attribute.
+struct AADereferenceable : public AbstractAttribute {
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AADereferenceable(Value &V, InformationCache &InfoCache)
+      : AbstractAttribute(V, InfoCache) {}
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AADereferenceable(Value *AssociatedVal, Value &AnchoredValue,
+                    InformationCache &InfoCache)
+      : AbstractAttribute(AssociatedVal, AnchoredValue, InfoCache) {}
+
+  /// Return true if we assume that the underlying value is nonnull.
+  virtual bool isAssumedNonNull() const = 0;
+
+  /// Return true if we know that underlying value is nonnull.
+  virtual bool isKnownNonNull() const = 0;
+
+  /// Return true if we assume that underlying value is
+  /// dereferenceable(_or_null) globally.
+  virtual bool isAssumedGlobal() const = 0;
+
+  /// Return true if we know that underlying value is
+  /// dereferenceable(_or_null) globally.
+  virtual bool isKnownGlobal() const = 0;
+
+  /// Return assumed dereferenceable bytes.
+  virtual uint32_t getAssumedDereferenceableBytes() const = 0;
+
+  /// Return known dereferenceable bytes.
+  virtual uint32_t getKnownDereferenceableBytes() const = 0;
+
+  /// See AbastractState::getAttrKind().
+  Attribute::AttrKind getAttrKind() const override { return ID; }
+
+  /// The identifier used by the Attributor for this class of attributes.
+  static constexpr Attribute::AttrKind ID = Attribute::Dereferenceable;
 };
 
 } // end namespace llvm

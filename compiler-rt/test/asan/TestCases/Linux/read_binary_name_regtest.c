@@ -2,7 +2,7 @@
 // the binary name because of sandbox restrictions.
 // This test uses seccomp-BPF to restrict the readlink() system call and makes
 // sure ASan is still able to
-// RUN: not ls /usr/include/linux/seccomp.h || ( %clang_asan %s -o %t && not %run %t 2>&1 | FileCheck %s )
+// RUN: not ls /usr/include/linux/seccomp.h || ( %clang_asan %s -o %t && ( not %run %t 2>&1 ) | FileCheck %s )
 // REQUIRES: shell
 // UNSUPPORTED: android
 

@@ -518,10 +518,10 @@ namespace ARM_AM {
   // Valid alignments depend on the specific instruction.
 
   //===--------------------------------------------------------------------===//
-  // NEON Modified Immediates
+  // NEON/MVE Modified Immediates
   //===--------------------------------------------------------------------===//
   //
-  // Several NEON instructions (e.g., VMOV) take a "modified immediate"
+  // Several NEON and MVE instructions (e.g., VMOV) take a "modified immediate"
   // vector operand, where a small immediate encoded in the instruction
   // specifies a full NEON vector value.  These modified immediates are
   // represented here as encoded integers.  The low 8 bits hold the immediate
@@ -529,20 +529,20 @@ namespace ARM_AM {
   // the "Cmode" field of the instruction.  The interfaces below treat the
   // Op and Cmode values as a single 5-bit value.
 
-  inline unsigned createNEONModImm(unsigned OpCmode, unsigned Val) {
+  inline unsigned createVMOVModImm(unsigned OpCmode, unsigned Val) {
     return (OpCmode << 8) | Val;
   }
-  inline unsigned getNEONModImmOpCmode(unsigned ModImm) {
+  inline unsigned getVMOVModImmOpCmode(unsigned ModImm) {
     return (ModImm >> 8) & 0x1f;
   }
-  inline unsigned getNEONModImmVal(unsigned ModImm) { return ModImm & 0xff; }
+  inline unsigned getVMOVModImmVal(unsigned ModImm) { return ModImm & 0xff; }
 
-  /// decodeNEONModImm - Decode a NEON modified immediate value into the
+  /// decodeVMOVModImm - Decode a NEON/MVE modified immediate value into the
   /// element value and the element size in bits.  (If the element size is
   /// smaller than the vector, it is splatted into all the elements.)
-  inline uint64_t decodeNEONModImm(unsigned ModImm, unsigned &EltBits) {
-    unsigned OpCmode = getNEONModImmOpCmode(ModImm);
-    unsigned Imm8 = getNEONModImmVal(ModImm);
+  inline uint64_t decodeVMOVModImm(unsigned ModImm, unsigned &EltBits) {
+    unsigned OpCmode = getVMOVModImmOpCmode(ModImm);
+    unsigned Imm8 = getVMOVModImmVal(ModImm);
     uint64_t Val = 0;
 
     if (OpCmode == 0xe) {
@@ -572,7 +572,7 @@ namespace ARM_AM {
       }
       EltBits = 64;
     } else {
-      llvm_unreachable("Unsupported NEON immediate");
+      llvm_unreachable("Unsupported VMOV immediate");
     }
     return Val;
   }

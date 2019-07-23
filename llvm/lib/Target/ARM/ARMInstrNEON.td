@@ -15,22 +15,22 @@
 // NEON-specific Operands.
 //===----------------------------------------------------------------------===//
 def nModImm : Operand<i32> {
-  let PrintMethod = "printNEONModImmOperand";
+  let PrintMethod = "printVMOVModImmOperand";
 }
 
 def nImmSplatI8AsmOperand : AsmOperandClass { let Name = "NEONi8splat"; }
 def nImmSplatI8 : Operand<i32> {
-  let PrintMethod = "printNEONModImmOperand";
+  let PrintMethod = "printVMOVModImmOperand";
   let ParserMatchClass = nImmSplatI8AsmOperand;
 }
 def nImmSplatI16AsmOperand : AsmOperandClass { let Name = "NEONi16splat"; }
 def nImmSplatI16 : Operand<i32> {
-  let PrintMethod = "printNEONModImmOperand";
+  let PrintMethod = "printVMOVModImmOperand";
   let ParserMatchClass = nImmSplatI16AsmOperand;
 }
 def nImmSplatI32AsmOperand : AsmOperandClass { let Name = "NEONi32splat"; }
 def nImmSplatI32 : Operand<i32> {
-  let PrintMethod = "printNEONModImmOperand";
+  let PrintMethod = "printVMOVModImmOperand";
   let ParserMatchClass = nImmSplatI32AsmOperand;
 }
 def nImmSplatNotI16AsmOperand : AsmOperandClass { let Name = "NEONi16splatNot"; }
@@ -43,7 +43,7 @@ def nImmSplatNotI32 : Operand<i32> {
 }
 def nImmVMOVI32AsmOperand : AsmOperandClass { let Name = "NEONi32vmov"; }
 def nImmVMOVI32 : Operand<i32> {
-  let PrintMethod = "printNEONModImmOperand";
+  let PrintMethod = "printVMOVModImmOperand";
   let ParserMatchClass = nImmVMOVI32AsmOperand;
 }
 
@@ -62,18 +62,18 @@ class nImmVINVIAsmOperandReplicate<ValueType From, ValueType To>
 }
 
 class nImmVMOVIReplicate<ValueType From, ValueType To> : Operand<i32> {
-  let PrintMethod = "printNEONModImmOperand";
+  let PrintMethod = "printVMOVModImmOperand";
   let ParserMatchClass = nImmVMOVIAsmOperandReplicate<From, To>;
 }
 
 class nImmVINVIReplicate<ValueType From, ValueType To> : Operand<i32> {
-  let PrintMethod = "printNEONModImmOperand";
+  let PrintMethod = "printVMOVModImmOperand";
   let ParserMatchClass = nImmVINVIAsmOperandReplicate<From, To>;
 }
 
 def nImmVMOVI32NegAsmOperand : AsmOperandClass { let Name = "NEONi32vmovNeg"; }
 def nImmVMOVI32Neg : Operand<i32> {
-  let PrintMethod = "printNEONModImmOperand";
+  let PrintMethod = "printVMOVModImmOperand";
   let ParserMatchClass = nImmVMOVI32NegAsmOperand;
 }
 def nImmVMOVF32 : Operand<i32> {
@@ -82,7 +82,7 @@ def nImmVMOVF32 : Operand<i32> {
 }
 def nImmSplatI64AsmOperand : AsmOperandClass { let Name = "NEONi64splat"; }
 def nImmSplatI64 : Operand<i32> {
-  let PrintMethod = "printNEONModImmOperand";
+  let PrintMethod = "printVMOVModImmOperand";
   let ParserMatchClass = nImmSplatI64AsmOperand;
 }
 
@@ -559,14 +559,14 @@ def NEONvtbl2     : SDNode<"ARMISD::VTBL2", SDTARMVTBL2>;
 def NEONimmAllZerosV: PatLeaf<(ARMvmovImm (i32 timm)), [{
   ConstantSDNode *ConstVal = cast<ConstantSDNode>(N->getOperand(0));
   unsigned EltBits = 0;
-  uint64_t EltVal = ARM_AM::decodeNEONModImm(ConstVal->getZExtValue(), EltBits);
+  uint64_t EltVal = ARM_AM::decodeVMOVModImm(ConstVal->getZExtValue(), EltBits);
   return (EltBits == 32 && EltVal == 0);
 }]>;
 
 def NEONimmAllOnesV: PatLeaf<(ARMvmovImm (i32 timm)), [{
   ConstantSDNode *ConstVal = cast<ConstantSDNode>(N->getOperand(0));
   unsigned EltBits = 0;
-  uint64_t EltVal = ARM_AM::decodeNEONModImm(ConstVal->getZExtValue(), EltBits);
+  uint64_t EltVal = ARM_AM::decodeVMOVModImm(ConstVal->getZExtValue(), EltBits);
   return (EltBits == 8 && EltVal == 0xff);
 }]>;
 

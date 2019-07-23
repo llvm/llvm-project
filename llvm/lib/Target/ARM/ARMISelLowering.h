@@ -126,6 +126,8 @@ class VectorType;
       WIN__DBZCHK,  // Windows' divide by zero check
 
       WLS,          // Low-overhead loops, While Loop Start
+      LOOP_DEC,     // Really a part of LE, performs the sub
+      LE,           // Low-overhead loops, Loop End
 
       VCEQ,         // Vector compare equal.
       VCEQZ,        // Vector compare equal to zero.
@@ -838,7 +840,7 @@ class VectorType;
     void setAllExpand(MVT VT);
   };
 
-  enum NEONModImmType {
+  enum VMOVModImmType {
     VMOVModImm,
     VMVNModImm,
     MVEVMVNModImm,

@@ -88,7 +88,7 @@ entry:
 ; Other arguments are possible here due to the no-return behavior.
 ;
 ; FIXME: no-return missing
-; CHECK: define noalias nonnull i32* @srec16(i32* nocapture readnone %a)
+; CHECK: define noalias nonnull dereferenceable(4294967295) i32* @srec16(i32* nocapture readnone %a)
 define i32* @srec16(i32* %a) #0 {
 entry:
   %call = call i32* @srec16(i32* %a)

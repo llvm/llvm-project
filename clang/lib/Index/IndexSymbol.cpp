@@ -513,7 +513,7 @@ StringRef index::getSymbolKindString(SymbolKind K) {
   case SymbolKind::StaticProperty: return "static-property";
   case SymbolKind::Constructor: return "constructor";
   case SymbolKind::Destructor: return "destructor";
-  case SymbolKind::ConversionFunction: return "coversion-func";
+  case SymbolKind::ConversionFunction: return "conversion-func";
   case SymbolKind::Parameter: return "param";
   case SymbolKind::Using: return "using";
   }

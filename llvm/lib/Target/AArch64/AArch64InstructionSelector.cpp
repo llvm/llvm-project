@@ -187,7 +187,15 @@ private:
   ComplexRendererFns selectAddrModeIndexed(MachineOperand &Root) const {
     return selectAddrModeIndexed(Root, Width / 8);
   }
+
+  bool isWorthFoldingIntoExtendedReg(MachineInstr &MI,
+                                     const MachineRegisterInfo &MRI) const;
+  ComplexRendererFns
+  selectAddrModeShiftedExtendXReg(MachineOperand &Root,
+                                  unsigned SizeInBytes) const;
   ComplexRendererFns selectAddrModeRegisterOffset(MachineOperand &Root) const;
+  ComplexRendererFns selectAddrModeXRO(MachineOperand &Root,
+                                       unsigned SizeInBytes) const;
 
   void renderTruncImm(MachineInstrBuilder &MIB, const MachineInstr &MI) const;
 
@@ -1238,8 +1246,8 @@ bool AArch64InstructionSelector::earlySelectLoad(
   if (DstSize != 64)
     return false;
 
-  // Check if we can do any folding from GEPs etc. into the load.
-  auto ImmFn = selectAddrModeRegisterOffset(I.getOperand(1));
+  // Check if we can do any folding from GEPs/shifts etc. into the load.
+  auto ImmFn = selectAddrModeXRO(I.getOperand(1), MemBytes);
   if (!ImmFn)
     return false;
 
@@ -3995,6 +4003,98 @@ AArch64InstructionSelector::selectArithImmed(MachineOperand &Root) const {
   }};
 }
 
+/// Return true if it is worth folding MI into an extended register. That is,
+/// if it's safe to pull it into the addressing mode of a load or store as a
+/// shift.
+bool AArch64InstructionSelector::isWorthFoldingIntoExtendedReg(
+    MachineInstr &MI, const MachineRegisterInfo &MRI) const {
+  // Always fold if there is one use, or if we're optimizing for size.
+  Register DefReg = MI.getOperand(0).getReg();
+  if (MRI.hasOneUse(DefReg) ||
+      MI.getParent()->getParent()->getFunction().hasMinSize())
+    return true;
+
+  // It's better to avoid folding and recomputing shifts when we don't have a
+  // fastpath.
+  if (!STI.hasLSLFast())
+    return false;
+
+  // We have a fastpath, so folding a shift in and potentially computing it
+  // many times may be beneficial. Check if this is only used in memory ops.
+  // If it is, then we should fold.
+  return all_of(MRI.use_instructions(DefReg),
+                [](MachineInstr &Use) { return Use.mayLoadOrStore(); });
+}
+
+/// This is used for computing addresses like this:
+///
+/// ldr x1, [x2, x3, lsl #3]
+///
+/// Where x2 is the base register, and x3 is an offset register. The shift-left
+/// is a constant value specific to this load instruction. That is, we'll never
+/// see anything other than a 3 here (which corresponds to the size of the
+/// element being loaded.)
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectAddrModeShiftedExtendXReg(
+    MachineOperand &Root, unsigned SizeInBytes) const {
+  if (!Root.isReg())
+    return None;
+  MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
+
+  // Make sure that the memory op is a valid size.
+  int64_t LegalShiftVal = Log2_32(SizeInBytes);
+  if (LegalShiftVal == 0)
+    return None;
+
+  // We want to find something like this:
+  //
+  // val = G_CONSTANT LegalShiftVal
+  // shift = G_SHL off_reg val
+  // ptr = G_GEP base_reg shift
+  // x = G_LOAD ptr
+  //
+  // And fold it into this addressing mode:
+  //
+  // ldr x, [base_reg, off_reg, lsl #LegalShiftVal]
+
+  // Check if we can find the G_GEP.
+  MachineInstr *Gep = getOpcodeDef(TargetOpcode::G_GEP, Root.getReg(), MRI);
+  if (!Gep || !isWorthFoldingIntoExtendedReg(*Gep, MRI))
+    return None;
+
+  // Now try to match the G_SHL.
+  MachineInstr *Shl =
+      getOpcodeDef(TargetOpcode::G_SHL, Gep->getOperand(2).getReg(), MRI);
+  if (!Shl || !isWorthFoldingIntoExtendedReg(*Shl, MRI))
+    return None;
+
+  // Now, try to find the specific G_CONSTANT.
+  auto ValAndVReg =
+      getConstantVRegValWithLookThrough(Shl->getOperand(2).getReg(), MRI);
+  if (!ValAndVReg)
+    return None;
+
+  // The value must fit into 3 bits, and must be positive. Make sure that is
+  // true.
+  int64_t ImmVal = ValAndVReg->Value;
+  if ((ImmVal & 0x7) != ImmVal)
+    return None;
+
+  // We are only allowed to shift by LegalShiftVal. This shift value is built
+  // into the instruction, so we can't just use whatever we want.
+  if (ImmVal != LegalShiftVal)
+    return None;
+
+  // We can use the LHS of the GEP as the base, and the LHS of the shift as an
+  // offset. Signify that we are shifting by setting the shift flag to 1.
+  return {{
+      [=](MachineInstrBuilder &MIB) { MIB.add(Gep->getOperand(1)); },
+      [=](MachineInstrBuilder &MIB) { MIB.add(Shl->getOperand(1)); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(1); },
+  }};
+}
+
 /// This is used for computing addresses like this:
 ///
 /// ldr x1, [x2, x3]
@@ -4007,11 +4107,6 @@ InstructionSelector::ComplexRendererFns
 AArch64InstructionSelector::selectAddrModeRegisterOffset(
     MachineOperand &Root) const {
   MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
-
-  // If we have a constant offset, then we probably don't want to match a
-  // register offset.
-  if (isBaseWithConstantOffset(Root, MRI))
-    return None;
 
   // We need a GEP.
   MachineInstr *Gep = MRI.getVRegDef(Root.getReg());
@@ -4031,6 +4126,28 @@ AArch64InstructionSelector::selectAddrModeRegisterOffset(
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
   }};
+}
+
+/// This is intended to be equivalent to selectAddrModeXRO in
+/// AArch64ISelDAGtoDAG. It's used for selecting X register offset loads.
+InstructionSelector::ComplexRendererFns
+AArch64InstructionSelector::selectAddrModeXRO(MachineOperand &Root,
+                                              unsigned SizeInBytes) const {
+  MachineRegisterInfo &MRI = Root.getParent()->getMF()->getRegInfo();
+
+  // If we have a constant offset, then we probably don't want to match a
+  // register offset.
+  if (isBaseWithConstantOffset(Root, MRI))
+    return None;
+
+  // Try to fold shifts into the addressing mode.
+  auto AddrModeFns = selectAddrModeShiftedExtendXReg(Root, SizeInBytes);
+  if (AddrModeFns)
+    return AddrModeFns;
+
+  // If that doesn't work, see if it's possible to fold in registers from
+  // a GEP.
+  return selectAddrModeRegisterOffset(Root);
 }
 
 /// Select a "register plus unscaled signed 9-bit immediate" address.  This

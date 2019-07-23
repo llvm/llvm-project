@@ -581,12 +581,11 @@ define <2 x i64> @unsigned_sat_constant_v2i64_using_min(<2 x i64> %x) {
 ; SSE41-NEXT:    pxor %xmm1, %xmm0
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm3 = [9223372034707292117,9223372034707292117]
 ; SSE41-NEXT:    movdqa %xmm3, %xmm4
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm4
-; SSE41-NEXT:    pshufd {{.*#+}} xmm5 = xmm4[0,0,2,2]
-; SSE41-NEXT:    pcmpeqd %xmm3, %xmm0
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
-; SSE41-NEXT:    pand %xmm5, %xmm0
-; SSE41-NEXT:    por %xmm4, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm4
+; SSE41-NEXT:    pcmpgtd %xmm0, %xmm3
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm3[0,0,2,2]
+; SSE41-NEXT:    pand %xmm4, %xmm0
+; SSE41-NEXT:    por %xmm3, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm1, %xmm2
 ; SSE41-NEXT:    paddq {{.*}}(%rip), %xmm2
 ; SSE41-NEXT:    movdqa %xmm2, %xmm0
@@ -877,12 +876,11 @@ define <2 x i64> @unsigned_sat_variable_v2i64_using_min(<2 x i64> %x, <2 x i64> 
 ; SSE41-NEXT:    movdqa {{.*#+}} xmm4 = [9223372034707292159,9223372034707292159]
 ; SSE41-NEXT:    pxor %xmm1, %xmm4
 ; SSE41-NEXT:    movdqa %xmm4, %xmm5
-; SSE41-NEXT:    pcmpgtd %xmm0, %xmm5
-; SSE41-NEXT:    pshufd {{.*#+}} xmm6 = xmm5[0,0,2,2]
-; SSE41-NEXT:    pcmpeqd %xmm0, %xmm4
-; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[1,1,3,3]
-; SSE41-NEXT:    pand %xmm6, %xmm0
-; SSE41-NEXT:    por %xmm5, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm0, %xmm5
+; SSE41-NEXT:    pcmpgtd %xmm0, %xmm4
+; SSE41-NEXT:    pshufd {{.*#+}} xmm0 = xmm4[0,0,2,2]
+; SSE41-NEXT:    pand %xmm5, %xmm0
+; SSE41-NEXT:    por %xmm4, %xmm0
 ; SSE41-NEXT:    blendvpd %xmm0, %xmm2, %xmm3
 ; SSE41-NEXT:    paddq %xmm1, %xmm3
 ; SSE41-NEXT:    movdqa %xmm3, %xmm0

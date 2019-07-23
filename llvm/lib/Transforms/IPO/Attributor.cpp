@@ -23,6 +23,7 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/Attributes.h"
@@ -65,6 +66,12 @@ STATISTIC(NumFnArgumentNonNull, "Number of function arguments marked nonnull");
 STATISTIC(NumCSArgumentNonNull, "Number of call site arguments marked nonnull");
 STATISTIC(NumFnWillReturn, "Number of functions marked willreturn");
 STATISTIC(NumFnArgumentNoAlias, "Number of function arguments marked noalias");
+STATISTIC(NumFnReturnedDereferenceable,
+          "Number of function return values marked dereferenceable");
+STATISTIC(NumFnArgumentDereferenceable,
+          "Number of function arguments marked dereferenceable");
+STATISTIC(NumCSArgumentDereferenceable,
+          "Number of call site arguments marked dereferenceable");
 
 // TODO: Determine a good default value.
 //
@@ -107,9 +114,22 @@ static void bookkeeping(AbstractAttribute::ManifestPosition MP,
   if (!AreStatisticsEnabled())
     return;
 
-  if (!Attr.isEnumAttribute())
-    return;
   switch (Attr.getKindAsEnum()) {
+  case Attribute::Dereferenceable:
+    switch (MP) {
+    case AbstractAttribute::MP_RETURNED:
+      NumFnReturnedDereferenceable++;
+      break;
+    case AbstractAttribute::MP_ARGUMENT:
+      NumFnArgumentDereferenceable++;
+      break;
+    case AbstractAttribute::MP_CALL_SITE_ARGUMENT:
+      NumCSArgumentDereferenceable++;
+      break;
+    default:
+      break;
+    }
+    break;
   case Attribute::NoUnwind:
     NumFnNoUnwind++;
     return;
@@ -279,6 +299,15 @@ static bool addIfNotExistent(LLVMContext &Ctx, const Attribute &Attr,
     Attrs = Attrs.addAttribute(Ctx, AttrIdx, Attr);
     return true;
   }
+  if (Attr.isIntAttribute()) {
+    Attribute::AttrKind Kind = Attr.getKindAsEnum();
+    if (Attrs.hasAttribute(AttrIdx, Kind))
+      if (isEqualOrWorse(Attr, Attrs.getAttribute(AttrIdx, Kind)))
+        return false;
+    Attrs = Attrs.removeAttribute(Ctx, AttrIdx, Kind);
+    Attrs = Attrs.addAttribute(Ctx, AttrIdx, Attr);
+    return true;
+  }
 
   llvm_unreachable("Expected enum or string attribute!");
 }
@@ -378,6 +407,14 @@ Function &AbstractAttribute::getAnchorScope() {
 
 const Function &AbstractAttribute::getAnchorScope() const {
   return const_cast<AbstractAttribute *>(this)->getAnchorScope();
+}
+
+// Helper function that returns argument index of value.
+// If the value is not an argument, this returns -1.
+static int getArgNo(Value &V) {
+  if (auto *Arg = dyn_cast<Argument>(&V))
+    return Arg->getArgNo();
+  return -1;
 }
 
 /// -----------------------NoUnwind Function Attribute--------------------------
@@ -1080,7 +1117,9 @@ struct AANonNullReturned : AANonNullImpl {
 
     // Already nonnull.
     if (F.getAttributes().hasAttribute(AttributeList::ReturnIndex,
-                                       Attribute::NonNull))
+                                       Attribute::NonNull) ||
+        F.getAttributes().hasAttribute(AttributeList::ReturnIndex,
+                                       Attribute::Dereferenceable))
       indicateOptimisticFixpoint();
   }
 
@@ -1137,9 +1176,10 @@ struct AANonNullCallSiteArgument : AANonNullImpl {
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override {
     CallSite CS(&getAnchoredValue());
-    if (isKnownNonZero(getAssociatedValue(),
-                       getAnchorScope().getParent()->getDataLayout()) ||
-        CS.paramHasAttr(ArgNo, getAttrKind()))
+    if (CS.paramHasAttr(ArgNo, getAttrKind()) ||
+        CS.paramHasAttr(ArgNo, Attribute::Dereferenceable) ||
+        isKnownNonZero(getAssociatedValue(),
+                       getAnchorScope().getParent()->getDataLayout()))
       indicateOptimisticFixpoint();
   }
 
@@ -1242,9 +1282,7 @@ struct AAWillReturnFunction final : AAWillReturnImpl {
       : AAWillReturnImpl(F, InfoCache) {}
 
   /// See AbstractAttribute::getManifestPosition().
-  ManifestPosition getManifestPosition() const override {
-    return MP_FUNCTION;
-  }
+  ManifestPosition getManifestPosition() const override { return MP_FUNCTION; }
 
   /// See AbstractAttribute::initialize(...).
   void initialize(Attributor &A) override;
@@ -1392,8 +1430,8 @@ ChangeStatus AANoAliasReturned::updateImpl(Attributor &A) {
 
     auto *NoAliasAA = A.getAAFor<AANoAlias>(*this, RV);
 
-    if (!ICS.returnDoesNotAlias() && (!NoAliasAA ||
-        !NoAliasAA->isAssumedNoAlias()))
+    if (!ICS.returnDoesNotAlias() &&
+        (!NoAliasAA || !NoAliasAA->isAssumedNoAlias()))
       return false;
 
     /// FIXME: We can improve capture check in two ways:
@@ -1402,7 +1440,6 @@ ChangeStatus AANoAliasReturned::updateImpl(Attributor &A) {
     if (PointerMayBeCaptured(&RV, /* ReturnCaptures */ false,
                              /* StoreCaptures */ true))
       return false;
-
 
     return true;
   };
@@ -1523,7 +1560,7 @@ bool AAIsDeadFunction::explorePath(Attributor &A, Instruction *I) {
       }
 
       if (ICS.hasFnAttr(Attribute::NoReturn)) {
-        if(!NoReturnCalls.insert(I))
+        if (!NoReturnCalls.insert(I))
           return false;
 
         return true;
@@ -1573,12 +1610,368 @@ ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
       explorePath(A, ToBeExploredPaths[Size++]);
   }
 
-  LLVM_DEBUG(dbgs() << "[AAIsDead] AssumedLiveBlocks: "
-                    << AssumedLiveBlocks.size()
-                    << "Total number of blocks: "
-                    << getAnchorScope().size() << "\n");
+  LLVM_DEBUG(
+      dbgs() << "[AAIsDead] AssumedLiveBlocks: " << AssumedLiveBlocks.size()
+             << "Total number of blocks: " << getAnchorScope().size() << "\n");
 
   return Status;
+}
+
+/// -------------------- Dereferenceable Argument Attribute --------------------
+
+struct DerefState : AbstractState {
+
+  /// State representing for dereferenceable bytes.
+  IntegerState DerefBytesState;
+
+  /// State representing that whether the value is nonnull or global.
+  IntegerState NonNullGlobalState;
+
+  /// Bits encoding for NonNullGlobalState.
+  enum {
+    DEREF_NONNULL = 1 << 0,
+    DEREF_GLOBAL = 1 << 1,
+  };
+
+  /// See AbstractState::isValidState()
+  bool isValidState() const override { return DerefBytesState.isValidState(); }
+
+  // See AbstractState::isAtFixpoint()
+  bool isAtFixpoint() const override {
+    return DerefBytesState.isAtFixpoint() && NonNullGlobalState.isAtFixpoint();
+  }
+
+  /// See AbstractState::indicateOptimisticFixpoint(...)
+  void indicateOptimisticFixpoint() override {
+    DerefBytesState.indicateOptimisticFixpoint();
+    NonNullGlobalState.indicateOptimisticFixpoint();
+  }
+
+  /// See AbstractState::indicatePessimisticFixpoint(...)
+  void indicatePessimisticFixpoint() override {
+    DerefBytesState.indicatePessimisticFixpoint();
+    NonNullGlobalState.indicatePessimisticFixpoint();
+  }
+
+  /// Update known dereferenceable bytes.
+  void takeKnownDerefBytesMaximum(uint64_t Bytes) {
+    DerefBytesState.takeKnownMaximum(Bytes);
+  }
+
+  /// Update assumed dereferenceable bytes.
+  void takeAssumedDerefBytesMinimum(uint64_t Bytes) {
+    DerefBytesState.takeAssumedMinimum(Bytes);
+  }
+
+  /// Update assumed NonNullGlobalState
+  void updateAssumedNonNullGlobalState(bool IsNonNull, bool IsGlobal) {
+    if (!IsNonNull)
+      NonNullGlobalState.removeAssumedBits(DEREF_NONNULL);
+    if (!IsGlobal)
+      NonNullGlobalState.removeAssumedBits(DEREF_GLOBAL);
+  }
+
+  /// Equality for DerefState.
+  bool operator==(const DerefState &R) {
+    return this->DerefBytesState == R.DerefBytesState &&
+           this->NonNullGlobalState == R.NonNullGlobalState;
+  }
+};
+struct AADereferenceableImpl : AADereferenceable, DerefState {
+
+  AADereferenceableImpl(Value &V, InformationCache &InfoCache)
+      : AADereferenceable(V, InfoCache) {}
+
+  AADereferenceableImpl(Value *AssociatedVal, Value &AnchoredValue,
+                        InformationCache &InfoCache)
+      : AADereferenceable(AssociatedVal, AnchoredValue, InfoCache) {}
+
+  /// See AbstractAttribute::getState()
+  /// {
+  AbstractState &getState() override { return *this; }
+  const AbstractState &getState() const override { return *this; }
+  /// }
+
+  /// See AADereferenceable::getAssumedDereferenceableBytes().
+  uint32_t getAssumedDereferenceableBytes() const override {
+    return DerefBytesState.getAssumed();
+  }
+
+  /// See AADereferenceable::getKnownDereferenceableBytes().
+  uint32_t getKnownDereferenceableBytes() const override {
+    return DerefBytesState.getKnown();
+  }
+
+  // Helper function for syncing nonnull state.
+  void syncNonNull(const AANonNull *NonNullAA) {
+    if (!NonNullAA) {
+      NonNullGlobalState.removeAssumedBits(DEREF_NONNULL);
+      return;
+    }
+
+    if (NonNullAA->isKnownNonNull())
+      NonNullGlobalState.addKnownBits(DEREF_NONNULL);
+
+    if (!NonNullAA->isAssumedNonNull())
+      NonNullGlobalState.removeAssumedBits(DEREF_NONNULL);
+  }
+
+  /// See AADereferenceable::isAssumedGlobal().
+  bool isAssumedGlobal() const override {
+    return NonNullGlobalState.isAssumed(DEREF_GLOBAL);
+  }
+
+  /// See AADereferenceable::isKnownGlobal().
+  bool isKnownGlobal() const override {
+    return NonNullGlobalState.isKnown(DEREF_GLOBAL);
+  }
+
+  /// See AADereferenceable::isAssumedNonNull().
+  bool isAssumedNonNull() const override {
+    return NonNullGlobalState.isAssumed(DEREF_NONNULL);
+  }
+
+  /// See AADereferenceable::isKnownNonNull().
+  bool isKnownNonNull() const override {
+    return NonNullGlobalState.isKnown(DEREF_NONNULL);
+  }
+
+  void getDeducedAttributes(SmallVectorImpl<Attribute> &Attrs) const override {
+    LLVMContext &Ctx = AnchoredVal.getContext();
+
+    // TODO: Add *_globally support
+    if (isAssumedNonNull())
+      Attrs.emplace_back(Attribute::getWithDereferenceableBytes(
+          Ctx, getAssumedDereferenceableBytes()));
+    else
+      Attrs.emplace_back(Attribute::getWithDereferenceableOrNullBytes(
+          Ctx, getAssumedDereferenceableBytes()));
+  }
+  uint64_t computeAssumedDerefenceableBytes(Attributor &A, Value &V,
+                                            bool &IsNonNull, bool &IsGlobal);
+
+  void initialize(Attributor &A) override {
+    Function &F = getAnchorScope();
+    unsigned AttrIdx =
+        getAttrIndex(getManifestPosition(), getArgNo(getAnchoredValue()));
+
+    for (Attribute::AttrKind AK :
+         {Attribute::Dereferenceable, Attribute::DereferenceableOrNull})
+      if (F.getAttributes().hasAttribute(AttrIdx, AK))
+        takeKnownDerefBytesMaximum(F.getAttribute(AttrIdx, AK).getValueAsInt());
+  }
+
+  /// See AbstractAttribute::getAsStr().
+  const std::string getAsStr() const override {
+    if (!getAssumedDereferenceableBytes())
+      return "unknown-dereferenceable";
+    return std::string("dereferenceable") +
+           (isAssumedNonNull() ? "" : "_or_null") +
+           (isAssumedGlobal() ? "_globally" : "") + "<" +
+           std::to_string(getKnownDereferenceableBytes()) + "-" +
+           std::to_string(getAssumedDereferenceableBytes()) + ">";
+  }
+};
+
+struct AADereferenceableReturned : AADereferenceableImpl {
+  AADereferenceableReturned(Function &F, InformationCache &InfoCache)
+      : AADereferenceableImpl(F, InfoCache) {}
+
+  /// See AbstractAttribute::getManifestPosition().
+  ManifestPosition getManifestPosition() const override { return MP_RETURNED; }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override;
+};
+
+// Helper function that returns dereferenceable bytes.
+static uint64_t calcDifferenceIfBaseIsNonNull(int64_t DerefBytes,
+                                              int64_t Offset, bool IsNonNull) {
+  if (!IsNonNull)
+    return 0;
+  return std::max((int64_t)0, DerefBytes - Offset);
+}
+
+uint64_t AADereferenceableImpl::computeAssumedDerefenceableBytes(
+    Attributor &A, Value &V, bool &IsNonNull, bool &IsGlobal) {
+  // TODO: Tracking the globally flag.
+  IsGlobal = false;
+
+  // First, we try to get information about V from Attributor.
+  if (auto *DerefAA = A.getAAFor<AADereferenceable>(*this, V)) {
+    IsNonNull &= DerefAA->isAssumedNonNull();
+    return DerefAA->getAssumedDereferenceableBytes();
+  }
+
+  // Otherwise, we try to compute assumed bytes from base pointer.
+  const DataLayout &DL = getAnchorScope().getParent()->getDataLayout();
+  unsigned IdxWidth =
+      DL.getIndexSizeInBits(V.getType()->getPointerAddressSpace());
+  APInt Offset(IdxWidth, 0);
+  Value *Base = V.stripAndAccumulateInBoundsConstantOffsets(DL, Offset);
+
+  if (auto *BaseDerefAA = A.getAAFor<AADereferenceable>(*this, *Base)) {
+    IsNonNull &= Offset != 0;
+    return calcDifferenceIfBaseIsNonNull(
+        BaseDerefAA->getAssumedDereferenceableBytes(), Offset.getSExtValue(),
+        Offset != 0 || BaseDerefAA->isAssumedNonNull());
+  }
+
+  // Then, use IR information.
+
+  if (isDereferenceablePointer(Base, Base->getType(), DL))
+    return calcDifferenceIfBaseIsNonNull(
+        DL.getTypeStoreSize(Base->getType()->getPointerElementType()),
+        Offset.getSExtValue(),
+        !NullPointerIsDefined(&getAnchorScope(),
+                              V.getType()->getPointerAddressSpace()));
+
+  IsNonNull = false;
+  return 0;
+}
+ChangeStatus AADereferenceableReturned::updateImpl(Attributor &A) {
+  Function &F = getAnchorScope();
+  auto BeforeState = static_cast<DerefState>(*this);
+
+  syncNonNull(A.getAAFor<AANonNull>(*this, F));
+
+  auto *AARetVal = A.getAAFor<AAReturnedValues>(*this, F);
+  if (!AARetVal) {
+    indicatePessimisticFixpoint();
+    return ChangeStatus::CHANGED;
+  }
+
+  bool IsNonNull = isAssumedNonNull();
+  bool IsGlobal = isAssumedGlobal();
+
+  std::function<bool(Value &)> Pred = [&](Value &RV) -> bool {
+    takeAssumedDerefBytesMinimum(
+        computeAssumedDerefenceableBytes(A, RV, IsNonNull, IsGlobal));
+    return isValidState();
+  };
+
+  if (AARetVal->checkForallReturnedValues(Pred)) {
+    updateAssumedNonNullGlobalState(IsNonNull, IsGlobal);
+    return BeforeState == static_cast<DerefState>(*this)
+               ? ChangeStatus::UNCHANGED
+               : ChangeStatus::CHANGED;
+  }
+  indicatePessimisticFixpoint();
+  return ChangeStatus::CHANGED;
+}
+
+struct AADereferenceableArgument : AADereferenceableImpl {
+  AADereferenceableArgument(Argument &A, InformationCache &InfoCache)
+      : AADereferenceableImpl(A, InfoCache) {}
+
+  /// See AbstractAttribute::getManifestPosition().
+  ManifestPosition getManifestPosition() const override { return MP_ARGUMENT; }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override;
+};
+
+ChangeStatus AADereferenceableArgument::updateImpl(Attributor &A) {
+  Function &F = getAnchorScope();
+  Argument &Arg = cast<Argument>(getAnchoredValue());
+
+  auto BeforeState = static_cast<DerefState>(*this);
+
+  unsigned ArgNo = Arg.getArgNo();
+
+  syncNonNull(A.getAAFor<AANonNull>(*this, F, ArgNo));
+
+  bool IsNonNull = isAssumedNonNull();
+  bool IsGlobal = isAssumedGlobal();
+
+  // Callback function
+  std::function<bool(CallSite)> CallSiteCheck = [&](CallSite CS) -> bool {
+    assert(CS && "Sanity check: Call site was not initialized properly!");
+
+    // Check that DereferenceableAA is AADereferenceableCallSiteArgument.
+    if (auto *DereferenceableAA =
+            A.getAAFor<AADereferenceable>(*this, *CS.getInstruction(), ArgNo)) {
+      ImmutableCallSite ICS(&DereferenceableAA->getAnchoredValue());
+      if (ICS && CS.getInstruction() == ICS.getInstruction()) {
+        takeAssumedDerefBytesMinimum(
+            DereferenceableAA->getAssumedDereferenceableBytes());
+        IsNonNull &= DereferenceableAA->isAssumedNonNull();
+        IsGlobal &= DereferenceableAA->isAssumedGlobal();
+        return isValidState();
+      }
+    }
+
+    takeAssumedDerefBytesMinimum(computeAssumedDerefenceableBytes(
+        A, *CS.getArgOperand(ArgNo), IsNonNull, IsGlobal));
+
+    return isValidState();
+  };
+
+  if (!A.checkForAllCallSites(F, CallSiteCheck, true)) {
+    indicatePessimisticFixpoint();
+    return ChangeStatus::CHANGED;
+  }
+
+  updateAssumedNonNullGlobalState(IsNonNull, IsGlobal);
+
+  return BeforeState == static_cast<DerefState>(*this) ? ChangeStatus::UNCHANGED
+                                                       : ChangeStatus::CHANGED;
+}
+
+/// Dereferenceable attribute for a call site argument.
+struct AADereferenceableCallSiteArgument : AADereferenceableImpl {
+
+  /// See AADereferenceableImpl::AADereferenceableImpl(...).
+  AADereferenceableCallSiteArgument(CallSite CS, unsigned ArgNo,
+                                    InformationCache &InfoCache)
+      : AADereferenceableImpl(CS.getArgOperand(ArgNo), *CS.getInstruction(),
+                              InfoCache),
+        ArgNo(ArgNo) {}
+
+  /// See AbstractAttribute::initialize(...).
+  void initialize(Attributor &A) override {
+    CallSite CS(&getAnchoredValue());
+    if (CS.paramHasAttr(ArgNo, Attribute::Dereferenceable))
+      takeKnownDerefBytesMaximum(CS.getDereferenceableBytes(ArgNo));
+
+    if (CS.paramHasAttr(ArgNo, Attribute::DereferenceableOrNull))
+      takeKnownDerefBytesMaximum(CS.getDereferenceableOrNullBytes(ArgNo));
+  }
+
+  /// See AbstractAttribute::updateImpl(Attributor &A).
+  ChangeStatus updateImpl(Attributor &A) override;
+
+  /// See AbstractAttribute::getManifestPosition().
+  ManifestPosition getManifestPosition() const override {
+    return MP_CALL_SITE_ARGUMENT;
+  };
+
+  // Return argument index of associated value.
+  int getArgNo() const { return ArgNo; }
+
+private:
+  unsigned ArgNo;
+};
+
+ChangeStatus AADereferenceableCallSiteArgument::updateImpl(Attributor &A) {
+  // NOTE: Never look at the argument of the callee in this method.
+  //       If we do this, "dereferenceable" is always deduced because of the
+  //       assumption.
+
+  Value &V = *getAssociatedValue();
+
+  auto BeforeState = static_cast<DerefState>(*this);
+
+  syncNonNull(A.getAAFor<AANonNull>(*this, getAnchoredValue(), ArgNo));
+  bool IsNonNull = isAssumedNonNull();
+  bool IsGlobal = isKnownGlobal();
+
+  takeAssumedDerefBytesMinimum(
+      computeAssumedDerefenceableBytes(A, V, IsNonNull, IsGlobal));
+  updateAssumedNonNullGlobalState(IsNonNull, IsGlobal);
+
+  return BeforeState == static_cast<DerefState>(*this) ? ChangeStatus::UNCHANGED
+                                                       : ChangeStatus::CHANGED;
 }
 
 /// ----------------------------------------------------------------------------
@@ -1785,13 +2178,25 @@ void Attributor::identifyDefaultAbstractAttributes(
       // Every function with pointer return type might be marked noalias.
       if (!Whitelist || Whitelist->count(AANoAliasReturned::ID))
         registerAA(*new AANoAliasReturned(F, InfoCache));
+
+      // Every function with pointer return type might be marked
+      // dereferenceable.
+      if (ReturnType->isPointerTy() &&
+          (!Whitelist || Whitelist->count(AADereferenceableReturned::ID)))
+        registerAA(*new AADereferenceableReturned(F, InfoCache));
     }
   }
 
-  // Every argument with pointer type might be marked nonnull.
   for (Argument &Arg : F.args()) {
-    if (Arg.getType()->isPointerTy())
-      registerAA(*new AANonNullArgument(Arg, InfoCache));
+    if (Arg.getType()->isPointerTy()) {
+      // Every argument with pointer type might be marked nonnull.
+      if (!Whitelist || Whitelist->count(AANonNullArgument::ID))
+        registerAA(*new AANonNullArgument(Arg, InfoCache));
+
+      // Every argument with pointer type might be marked dereferenceable.
+      if (!Whitelist || Whitelist->count(AADereferenceableArgument::ID))
+        registerAA(*new AADereferenceableArgument(Arg, InfoCache));
+    }
   }
 
   // Every function might be "will-return".
@@ -1841,7 +2246,14 @@ void Attributor::identifyDefaultAbstractAttributes(
           continue;
 
         // Call site argument attribute "non-null".
-        registerAA(*new AANonNullCallSiteArgument(CS, i, InfoCache), i);
+        if (!Whitelist || Whitelist->count(AANonNullCallSiteArgument::ID))
+          registerAA(*new AANonNullCallSiteArgument(CS, i, InfoCache), i);
+
+        // Call site argument attribute "dereferenceable".
+        if (!Whitelist ||
+            Whitelist->count(AADereferenceableCallSiteArgument::ID))
+          registerAA(*new AADereferenceableCallSiteArgument(CS, i, InfoCache),
+                     i);
       }
     }
   }

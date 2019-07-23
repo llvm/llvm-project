@@ -45,12 +45,12 @@ define i1 @t3_commutative(i8 %x) {
 ; CHECK-LABEL: @t3_commutative(
 ; CHECK-NEXT:    [[T0:%.*]] = udiv i8 -1, [[X:%.*]]
 ; CHECK-NEXT:    [[Y:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[Y]], [[T0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[Y]], [[T0]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = udiv i8 -1, %x
   %y = call i8 @gen8()
-  %r = icmp ult i8 %y, %t0 ; swapped
+  %r = icmp ule i8 %y, %t0 ; swapped
   ret i1 %r
 }
 
@@ -89,19 +89,17 @@ define i1 @n6_wrong_pred0(i8 %x, i8 %y) {
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = udiv i8 -1, %x
-  %r = icmp ule i8 %t0, %y
+  %r = icmp ule i8 %t0, %y ; not uge
   ret i1 %r
 }
 
-define i1 @n6_wrong_pred1(i8 %x) {
+define i1 @n6_wrong_pred1(i8 %x, i8 %y) {
 ; CHECK-LABEL: @n6_wrong_pred1(
 ; CHECK-NEXT:    [[T0:%.*]] = udiv i8 -1, [[X:%.*]]
-; CHECK-NEXT:    [[Y:%.*]] = call i8 @gen8()
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[Y]], [[T0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[T0]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = udiv i8 -1, %x
-  %y = call i8 @gen8()
-  %r = icmp ugt i8 %y, %t0 ; swapped
+  %r = icmp ugt i8 %t0, %y ; not uge
   ret i1 %r
 }

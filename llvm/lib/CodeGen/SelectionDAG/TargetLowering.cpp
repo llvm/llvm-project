@@ -564,6 +564,84 @@ bool TargetLowering::SimplifyDemandedBits(SDValue Op, const APInt &DemandedBits,
                               AssumeSingleUse);
 }
 
+// TODO: Can we merge SelectionDAG::GetDemandedBits into this?
+// TODO: Under what circumstances can we create nodes? BITCAST? Constant?
+SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
+    SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
+    SelectionDAG &DAG, unsigned Depth) const {
+  KnownBits LHSKnown, RHSKnown;
+  switch (Op.getOpcode()) {
+  case ISD::AND: {
+    LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+
+    // If all of the demanded bits are known 1 on one side, return the other.
+    // These bits cannot contribute to the result of the 'and' in this
+    // context.
+    if (DemandedBits.isSubsetOf(LHSKnown.Zero | RHSKnown.One))
+      return Op.getOperand(0);
+    if (DemandedBits.isSubsetOf(RHSKnown.Zero | LHSKnown.One))
+      return Op.getOperand(1);
+    break;
+  }
+  case ISD::OR: {
+    LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+
+    // If all of the demanded bits are known zero on one side, return the
+    // other.  These bits cannot contribute to the result of the 'or' in this
+    // context.
+    if (DemandedBits.isSubsetOf(LHSKnown.One | RHSKnown.Zero))
+      return Op.getOperand(0);
+    if (DemandedBits.isSubsetOf(RHSKnown.One | LHSKnown.Zero))
+      return Op.getOperand(1);
+    break;
+  }
+  case ISD::XOR: {
+    LHSKnown = DAG.computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
+    RHSKnown = DAG.computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
+
+    // If all of the demanded bits are known zero on one side, return the
+    // other.
+    if (DemandedBits.isSubsetOf(RHSKnown.Zero))
+      return Op.getOperand(0);
+    if (DemandedBits.isSubsetOf(LHSKnown.Zero))
+      return Op.getOperand(1);
+    break;
+  }
+  case ISD::VECTOR_SHUFFLE: {
+    ArrayRef<int> ShuffleMask = cast<ShuffleVectorSDNode>(Op)->getMask();
+
+    // If all the demanded elts are from one operand and are inline,
+    // then we can use the operand directly.
+    bool AllUndef = true, IdentityLHS = true, IdentityRHS = true;
+    for (unsigned i = 0, NumElts = ShuffleMask.size(); i != NumElts; ++i) {
+      int M = ShuffleMask[i];
+      if (M < 0 || !DemandedElts[i])
+        continue;
+      AllUndef = false;
+      IdentityLHS &= (M == (int)i);
+      IdentityRHS &= ((M - NumElts) == i);
+    }
+
+    if (AllUndef)
+      return DAG.getUNDEF(Op.getValueType());
+    if (IdentityLHS)
+      return Op.getOperand(0);
+    if (IdentityRHS)
+      return Op.getOperand(1);
+    break;
+  }
+  default:
+    if (Op.getOpcode() >= ISD::BUILTIN_OP_END)
+      if (SDValue V = SimplifyMultipleUseDemandedBitsForTargetNode(
+              Op, DemandedBits, DemandedElts, DAG, Depth))
+        return V;
+    break;
+  }
+  return SDValue();
+}
+
 /// Look at Op. At this point, we know that only the OriginalDemandedBits of the
 /// result of Op are ever used downstream. If we can use this information to
 /// simplify Op, create a new simplified DAG node and return true, returning the
@@ -834,6 +912,20 @@ bool TargetLowering::SimplifyDemandedBits(
       return true;
     assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    if (!DemandedBits.isAllOnesValue() || !DemandedElts.isAllOnesValue()) {
+      SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
+          Op0, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
+      SDValue DemandedOp1 = SimplifyMultipleUseDemandedBits(
+          Op1, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
+      if (DemandedOp0 || DemandedOp1) {
+        Op0 = DemandedOp0 ? DemandedOp0 : Op0;
+        Op1 = DemandedOp1 ? DemandedOp1 : Op1;
+        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1);
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
+
     // If all of the demanded bits are known one on one side, return the other.
     // These bits cannot contribute to the result of the 'and'.
     if (DemandedBits.isSubsetOf(Known2.Zero | Known.One))
@@ -869,6 +961,20 @@ bool TargetLowering::SimplifyDemandedBits(
       return true;
     assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
 
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    if (!DemandedBits.isAllOnesValue() || !DemandedElts.isAllOnesValue()) {
+      SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
+          Op0, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
+      SDValue DemandedOp1 = SimplifyMultipleUseDemandedBits(
+          Op1, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
+      if (DemandedOp0 || DemandedOp1) {
+        Op0 = DemandedOp0 ? DemandedOp0 : Op0;
+        Op1 = DemandedOp1 ? DemandedOp1 : Op1;
+        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1);
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
+
     // If all of the demanded bits are known zero on one side, return the other.
     // These bits cannot contribute to the result of the 'or'.
     if (DemandedBits.isSubsetOf(Known2.One | Known.Zero))
@@ -900,6 +1006,20 @@ bool TargetLowering::SimplifyDemandedBits(
                              Depth + 1))
       return true;
     assert(!Known2.hasConflict() && "Bits known to be one AND zero?");
+
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    if (!DemandedBits.isAllOnesValue() || !DemandedElts.isAllOnesValue()) {
+      SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
+          Op0, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
+      SDValue DemandedOp1 = SimplifyMultipleUseDemandedBits(
+          Op1, DemandedBits, DemandedElts, TLO.DAG, Depth + 1);
+      if (DemandedOp0 || DemandedOp1) {
+        Op0 = DemandedOp0 ? DemandedOp0 : Op0;
+        Op1 = DemandedOp1 ? DemandedOp1 : Op1;
+        SDValue NewOp = TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1);
+        return TLO.CombineTo(Op, NewOp);
+      }
+    }
 
     // If all of the demanded bits are known zero on one side, return the other.
     // These bits cannot contribute to the result of the 'xor'.
@@ -1663,6 +1783,7 @@ bool TargetLowering::SimplifyDemandedBits(
     // Add, Sub, and Mul don't demand any bits in positions beyond that
     // of the highest bit demanded of them.
     SDValue Op0 = Op.getOperand(0), Op1 = Op.getOperand(1);
+    SDNodeFlags Flags = Op.getNode()->getFlags();
     unsigned DemandedBitsLZ = DemandedBits.countLeadingZeros();
     APInt LoMask = APInt::getLowBitsSet(BitWidth, BitWidth - DemandedBitsLZ);
     if (SimplifyDemandedBits(Op0, LoMask, DemandedElts, Known2, TLO,
@@ -1671,7 +1792,6 @@ bool TargetLowering::SimplifyDemandedBits(
                              Depth + 1) ||
         // See if the operation should be performed at a smaller bit width.
         ShrinkDemandedOp(Op, BitWidth, DemandedBits, TLO)) {
-      SDNodeFlags Flags = Op.getNode()->getFlags();
       if (Flags.hasNoSignedWrap() || Flags.hasNoUnsignedWrap()) {
         // Disable the nsw and nuw flags. We can no longer guarantee that we
         // won't wrap after simplification.
@@ -1682,6 +1802,23 @@ bool TargetLowering::SimplifyDemandedBits(
         return TLO.CombineTo(Op, NewOp);
       }
       return true;
+    }
+
+    // Attempt to avoid multi-use ops if we don't need anything from them.
+    if (!LoMask.isAllOnesValue() || !DemandedElts.isAllOnesValue()) {
+      SDValue DemandedOp0 = SimplifyMultipleUseDemandedBits(
+          Op0, LoMask, DemandedElts, TLO.DAG, Depth + 1);
+      SDValue DemandedOp1 = SimplifyMultipleUseDemandedBits(
+          Op1, LoMask, DemandedElts, TLO.DAG, Depth + 1);
+      if (DemandedOp0 || DemandedOp1) {
+        Flags.setNoSignedWrap(false);
+        Flags.setNoUnsignedWrap(false);
+        Op0 = DemandedOp0 ? DemandedOp0 : Op0;
+        Op1 = DemandedOp1 ? DemandedOp1 : Op1;
+        SDValue NewOp =
+            TLO.DAG.getNode(Op.getOpcode(), dl, VT, Op0, Op1, Flags);
+        return TLO.CombineTo(Op, NewOp);
+      }
     }
 
     // If we have a constant operand, we may be able to turn it into -1 if we
@@ -2355,6 +2492,19 @@ bool TargetLowering::SimplifyDemandedBitsForTargetNode(
          " is a target node!");
   computeKnownBitsForTargetNode(Op, Known, DemandedElts, TLO.DAG, Depth);
   return false;
+}
+
+SDValue TargetLowering::SimplifyMultipleUseDemandedBitsForTargetNode(
+    SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
+    SelectionDAG &DAG, unsigned Depth) const {
+  assert(
+      (Op.getOpcode() >= ISD::BUILTIN_OP_END ||
+       Op.getOpcode() == ISD::INTRINSIC_WO_CHAIN ||
+       Op.getOpcode() == ISD::INTRINSIC_W_CHAIN ||
+       Op.getOpcode() == ISD::INTRINSIC_VOID) &&
+      "Should use SimplifyMultipleUseDemandedBits if you don't know whether Op"
+      " is a target node!");
+  return SDValue();
 }
 
 const Constant *TargetLowering::getTargetConstantFromLoad(LoadSDNode*) const {

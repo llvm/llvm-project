@@ -64,19 +64,19 @@ STATISTIC(MaxCFGSize, "The maximum number of basic blocks in a function.");
 // Special PathDiagnosticConsumers.
 //===----------------------------------------------------------------------===//
 
-void ento::createPlistHTMLDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
-                                             PathDiagnosticConsumers &C,
-                                             const std::string &prefix,
-                                             const Preprocessor &PP) {
+void ento::createPlistHTMLDiagnosticConsumer(
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    const std::string &prefix, const Preprocessor &PP,
+    const cross_tu::CrossTranslationUnitContext &CTU) {
   createHTMLDiagnosticConsumer(AnalyzerOpts, C,
-                               llvm::sys::path::parent_path(prefix), PP);
-  createPlistMultiFileDiagnosticConsumer(AnalyzerOpts, C, prefix, PP);
+                               llvm::sys::path::parent_path(prefix), PP, CTU);
+  createPlistMultiFileDiagnosticConsumer(AnalyzerOpts, C, prefix, PP, CTU);
 }
 
-void ento::createTextPathDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
-                                            PathDiagnosticConsumers &C,
-                                            const std::string &Prefix,
-                                            const clang::Preprocessor &PP) {
+void ento::createTextPathDiagnosticConsumer(
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    const std::string &Prefix, const clang::Preprocessor &PP,
+    const cross_tu::CrossTranslationUnitContext &CTU) {
   llvm_unreachable("'text' consumer should be enabled on ClangDiags");
 }
 
@@ -249,7 +249,7 @@ public:
         default:
 #define ANALYSIS_DIAGNOSTICS(NAME, CMDFLAG, DESC, CREATEFN)                    \
   case PD_##NAME:                                                              \
-    CREATEFN(*Opts.get(), PathConsumers, OutDir, PP);                       \
+    CREATEFN(*Opts.get(), PathConsumers, OutDir, PP, CTU);                     \
     break;
 #include "clang/StaticAnalyzer/Core/Analyses.def"
         }

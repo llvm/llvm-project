@@ -208,6 +208,7 @@ public:
     // aligned. The SPARCv9 SCD 2.4.1 says 16-byte aligned.
     LongDoubleWidth = 128;
     LongDoubleAlign = 128;
+    SuitableAlign = 128;
     LongDoubleFormat = &llvm::APFloat::IEEEquad();
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
   }

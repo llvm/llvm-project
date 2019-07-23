@@ -669,8 +669,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM,
     addMVEVectorTypes(Subtarget->hasMVEFloatOps());
 
   // Combine low-overhead loop intrinsics so that we can lower i1 types.
-  if (Subtarget->hasLOB())
+  if (Subtarget->hasLOB()) {
     setTargetDAGCombine(ISD::BRCOND);
+    setTargetDAGCombine(ISD::BR_CC);
+  }
 
   if (Subtarget->hasNEON()) {
     addDRTypeForNEON(MVT::v2f32);
@@ -1589,6 +1591,8 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::VST3LN_UPD:    return "ARMISD::VST3LN_UPD";
   case ARMISD::VST4LN_UPD:    return "ARMISD::VST4LN_UPD";
   case ARMISD::WLS:           return "ARMISD::WLS";
+  case ARMISD::LE:            return "ARMISD::LE";
+  case ARMISD::LOOP_DEC:      return "ARMISD::LOOP_DEC";
   }
   return nullptr;
 }
@@ -5146,7 +5150,7 @@ SDValue ARMTargetLowering::LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const {
 
   if (UseNEON) {
     // Use VBSL to copy the sign bit.
-    unsigned EncodedVal = ARM_AM::createNEONModImm(0x6, 0x80);
+    unsigned EncodedVal = ARM_AM::createVMOVModImm(0x6, 0x80);
     SDValue Mask = DAG.getNode(ARMISD::VMOVIMM, dl, MVT::v2i32,
                                DAG.getTargetConstant(EncodedVal, dl, MVT::i32));
     EVT OpVT = (VT == MVT::f32) ? MVT::v2i32 : MVT::v1i64;
@@ -5169,7 +5173,7 @@ SDValue ARMTargetLowering::LowerFCOPYSIGN(SDValue Op, SelectionDAG &DAG) const {
     Tmp0 = DAG.getNode(ISD::BITCAST, dl, OpVT, Tmp0);
     Tmp1 = DAG.getNode(ISD::BITCAST, dl, OpVT, Tmp1);
 
-    SDValue AllOnes = DAG.getTargetConstant(ARM_AM::createNEONModImm(0xe, 0xff),
+    SDValue AllOnes = DAG.getTargetConstant(ARM_AM::createVMOVModImm(0xe, 0xff),
                                             dl, MVT::i32);
     AllOnes = DAG.getNode(ARMISD::VMOVIMM, dl, MVT::v8i8, AllOnes);
     SDValue MaskNot = DAG.getNode(ISD::XOR, dl, OpVT, Mask,
@@ -6033,13 +6037,13 @@ static SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) {
                      CCR, Chain.getValue(1));
 }
 
-/// isNEONModifiedImm - Check if the specified splat value corresponds to a
-/// valid vector constant for a NEON or MVE instruction with a "modified immediate"
-/// operand (e.g., VMOV).  If so, return the encoded value.
-static SDValue isNEONModifiedImm(uint64_t SplatBits, uint64_t SplatUndef,
+/// isVMOVModifiedImm - Check if the specified splat value corresponds to a
+/// valid vector constant for a NEON or MVE instruction with a "modified
+/// immediate" operand (e.g., VMOV).  If so, return the encoded value.
+static SDValue isVMOVModifiedImm(uint64_t SplatBits, uint64_t SplatUndef,
                                  unsigned SplatBitSize, SelectionDAG &DAG,
                                  const SDLoc &dl, EVT &VT, bool is128Bits,
-                                 NEONModImmType type) {
+                                 VMOVModImmType type) {
   unsigned OpCmode, Imm;
 
   // SplatBitSize is set to the smallest size that splats the vector, so a
@@ -6169,10 +6173,10 @@ static SDValue isNEONModifiedImm(uint64_t SplatBits, uint64_t SplatUndef,
   }
 
   default:
-    llvm_unreachable("unexpected size for isNEONModifiedImm");
+    llvm_unreachable("unexpected size for isVMOVModifiedImm");
   }
 
-  unsigned EncodedVal = ARM_AM::createNEONModImm(OpCmode, Imm);
+  unsigned EncodedVal = ARM_AM::createVMOVModImm(OpCmode, Imm);
   return DAG.getTargetConstant(EncodedVal, dl, MVT::i32);
 }
 
@@ -6252,7 +6256,7 @@ SDValue ARMTargetLowering::LowerConstantFP(SDValue Op, SelectionDAG &DAG,
     return SDValue();
 
   // Try a VMOV.i32 (FIXME: i8, i16, or i64 could work too).
-  SDValue NewVal = isNEONModifiedImm(iVal & 0xffffffffU, 0, 32, DAG, SDLoc(Op),
+  SDValue NewVal = isVMOVModifiedImm(iVal & 0xffffffffU, 0, 32, DAG, SDLoc(Op),
                                      VMovVT, false, VMOVModImm);
   if (NewVal != SDValue()) {
     SDLoc DL(Op);
@@ -6269,7 +6273,7 @@ SDValue ARMTargetLowering::LowerConstantFP(SDValue Op, SelectionDAG &DAG,
   }
 
   // Finally, try a VMVN.i32
-  NewVal = isNEONModifiedImm(~iVal & 0xffffffffU, 0, 32, DAG, SDLoc(Op), VMovVT,
+  NewVal = isVMOVModifiedImm(~iVal & 0xffffffffU, 0, 32, DAG, SDLoc(Op), VMovVT,
                              false, VMVNModImm);
   if (NewVal != SDValue()) {
     SDLoc DL(Op);
@@ -6694,7 +6698,7 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
         (ST->hasMVEIntegerOps() && SplatBitSize <= 32)) {
       // Check if an immediate VMOV works.
       EVT VmovVT;
-      SDValue Val = isNEONModifiedImm(SplatBits.getZExtValue(),
+      SDValue Val = isVMOVModifiedImm(SplatBits.getZExtValue(),
                                       SplatUndef.getZExtValue(), SplatBitSize,
                                       DAG, dl, VmovVT, VT.is128BitVector(),
                                       VMOVModImm);
@@ -6706,7 +6710,7 @@ SDValue ARMTargetLowering::LowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
 
       // Try an immediate VMVN.
       uint64_t NegatedImm = (~SplatBits).getZExtValue();
-      Val = isNEONModifiedImm(
+      Val = isVMOVModifiedImm(
           NegatedImm, SplatUndef.getZExtValue(), SplatBitSize,
           DAG, dl, VmovVT, VT.is128BitVector(),
           ST->hasMVEIntegerOps() ? MVEVMVNModImm : VMVNModImm);
@@ -11259,7 +11263,7 @@ static SDValue PerformANDCombine(SDNode *N,
       BVN->isConstantSplat(SplatBits, SplatUndef, SplatBitSize, HasAnyUndefs)) {
     if (SplatBitSize <= 64) {
       EVT VbicVT;
-      SDValue Val = isNEONModifiedImm((~SplatBits).getZExtValue(),
+      SDValue Val = isVMOVModifiedImm((~SplatBits).getZExtValue(),
                                       SplatUndef.getZExtValue(), SplatBitSize,
                                       DAG, dl, VbicVT, VT.is128BitVector(),
                                       OtherModImm);
@@ -11495,7 +11499,7 @@ static SDValue PerformORCombine(SDNode *N,
       BVN->isConstantSplat(SplatBits, SplatUndef, SplatBitSize, HasAnyUndefs)) {
     if (SplatBitSize <= 64) {
       EVT VorrVT;
-      SDValue Val = isNEONModifiedImm(SplatBits.getZExtValue(),
+      SDValue Val = isVMOVModifiedImm(SplatBits.getZExtValue(),
                                       SplatUndef.getZExtValue(), SplatBitSize,
                                       DAG, dl, VorrVT, VT.is128BitVector(),
                                       OtherModImm);
@@ -12338,7 +12342,7 @@ static SDValue PerformVDUPLANECombine(SDNode *N,
   // The canonical VMOV for a zero vector uses a 32-bit element size.
   unsigned Imm = cast<ConstantSDNode>(Op.getOperand(0))->getZExtValue();
   unsigned EltBits;
-  if (ARM_AM::decodeNEONModImm(Imm, EltBits) == 0)
+  if (ARM_AM::decodeVMOVModImm(Imm, EltBits) == 0)
     EltSize = 8;
   EVT VT = N->getValueType(0);
   if (EltSize > VT.getScalarSizeInBits())
@@ -13034,43 +13038,169 @@ SDValue ARMTargetLowering::PerformCMOVToBFICombine(SDNode *CMOV, SelectionDAG &D
   return V;
 }
 
+// Given N, the value controlling the conditional branch, search for the loop
+// intrinsic, returning it, along with how the value is used. We need to handle
+// patterns such as the following:
+// (brcond (xor (setcc (loop.decrement), 0, ne), 1), exit)
+// (brcond (setcc (loop.decrement), 0, eq), exit)
+// (brcond (setcc (loop.decrement), 0, ne), header)
+static SDValue SearchLoopIntrinsic(SDValue N, ISD::CondCode &CC, int &Imm,
+                                   bool &Negate) {
+  switch (N->getOpcode()) {
+  default:
+    break;
+  case ISD::XOR: {
+    if (!isa<ConstantSDNode>(N.getOperand(1)))
+      return SDValue();
+    if (!cast<ConstantSDNode>(N.getOperand(1))->isOne())
+      return SDValue();
+    Negate = !Negate;
+    return SearchLoopIntrinsic(N.getOperand(0), CC, Imm, Negate);
+  }
+  case ISD::SETCC: {
+    auto *Const = dyn_cast<ConstantSDNode>(N.getOperand(1));
+    if (!Const)
+      return SDValue();
+    if (Const->isNullValue())
+      Imm = 0;
+    else if (Const->isOne())
+      Imm = 1;
+    else
+      return SDValue();
+    CC = cast<CondCodeSDNode>(N.getOperand(2))->get();
+    return SearchLoopIntrinsic(N->getOperand(0), CC, Imm, Negate);
+  }
+  case ISD::INTRINSIC_W_CHAIN: {
+    unsigned IntOp = cast<ConstantSDNode>(N.getOperand(1))->getZExtValue();
+    if (IntOp != Intrinsic::test_set_loop_iterations &&
+        IntOp != Intrinsic::loop_decrement_reg)
+      return SDValue();
+    return N;
+  }
+  }
+  return SDValue();
+}
+
 static SDValue PerformHWLoopCombine(SDNode *N,
                                     TargetLowering::DAGCombinerInfo &DCI,
                                     const ARMSubtarget *ST) {
-  // Look for (brcond (xor test.set.loop.iterations, -1)
-  SDValue CC = N->getOperand(1);
-  unsigned Opc = CC->getOpcode();
-  SDValue Int;
 
-  if ((Opc == ISD::XOR || Opc == ISD::SETCC) &&
-      (CC->getOperand(0)->getOpcode() == ISD::INTRINSIC_W_CHAIN)) {
+  // The hwloop intrinsics that we're interested are used for control-flow,
+  // either for entering or exiting the loop:
+  // - test.set.loop.iterations will test whether its operand is zero. If it
+  //   is zero, the proceeding branch should not enter the loop.
+  // - loop.decrement.reg also tests whether its operand is zero. If it is
+  //   zero, the proceeding branch should not branch back to the beginning of
+  //   the loop.
+  // So here, we need to check that how the brcond is using the result of each
+  // of the intrinsics to ensure that we're branching to the right place at the
+  // right time.
 
-    assert((isa<ConstantSDNode>(CC->getOperand(1)) &&
-            cast<ConstantSDNode>(CC->getOperand(1))->isOne()) &&
-            "Expected to compare against 1");
+  ISD::CondCode CC;
+  SDValue Cond;
+  int Imm = 1;
+  bool Negate = false;
+  SDValue Chain = N->getOperand(0);
+  SDValue Dest;
 
-    Int = CC->getOperand(0);
-  } else if (CC->getOpcode() == ISD::INTRINSIC_W_CHAIN)
-    Int = CC;
-  else 
+  if (N->getOpcode() == ISD::BRCOND) {
+    CC = ISD::SETEQ;
+    Cond = N->getOperand(1);
+    Dest = N->getOperand(2);
+  } else {
+    assert(N->getOpcode() == ISD::BR_CC && "Expected BRCOND or BR_CC!");
+    CC = cast<CondCodeSDNode>(N->getOperand(1))->get();
+    Cond = N->getOperand(2);
+    Dest = N->getOperand(4);
+    if (auto *Const = dyn_cast<ConstantSDNode>(N->getOperand(3))) {
+      if (!Const->isOne() && !Const->isNullValue())
+        return SDValue();
+      Imm = Const->getZExtValue();
+    } else
+      return SDValue();
+  }
+
+  SDValue Int = SearchLoopIntrinsic(Cond, CC, Imm, Negate);
+  if (!Int)
     return SDValue();
 
-  unsigned IntOp = cast<ConstantSDNode>(Int.getOperand(1))->getZExtValue();
-  if (IntOp != Intrinsic::test_set_loop_iterations)
-    return SDValue();
+  if (Negate)
+    CC = ISD::getSetCCInverse(CC, true);
+
+  auto IsTrueIfZero = [](ISD::CondCode CC, int Imm) {
+    return (CC == ISD::SETEQ && Imm == 0) ||
+           (CC == ISD::SETNE && Imm == 1) ||
+           (CC == ISD::SETLT && Imm == 1) ||
+           (CC == ISD::SETULT && Imm == 1);
+  };
+
+  auto IsFalseIfZero = [](ISD::CondCode CC, int Imm) {
+    return (CC == ISD::SETEQ && Imm == 1) ||
+           (CC == ISD::SETNE && Imm == 0) ||
+           (CC == ISD::SETGT && Imm == 0) ||
+           (CC == ISD::SETUGT && Imm == 0) ||
+           (CC == ISD::SETGE && Imm == 1) ||
+           (CC == ISD::SETUGE && Imm == 1);
+  };
+
+  assert((IsTrueIfZero(CC, Imm) || IsFalseIfZero(CC, Imm)) &&
+         "unsupported condition");
 
   SDLoc dl(Int);
-  SDValue Chain = N->getOperand(0);
+  SelectionDAG &DAG = DCI.DAG;
   SDValue Elements = Int.getOperand(2);
-  SDValue ExitBlock = N->getOperand(2);
+  unsigned IntOp = cast<ConstantSDNode>(Int->getOperand(1))->getZExtValue();
+  assert((N->hasOneUse() && N->use_begin()->getOpcode() == ISD::BR)
+          && "expected single br user");
+  SDNode *Br = *N->use_begin();
+  SDValue OtherTarget = Br->getOperand(1);
 
-  // TODO: Once we start supporting tail predication, we can add another
-  // operand to WLS for the number of elements processed in a vector loop.
+  // Update the unconditional branch to branch to the given Dest.
+  auto UpdateUncondBr = [](SDNode *Br, SDValue Dest, SelectionDAG &DAG) {
+    SDValue NewBrOps[] = { Br->getOperand(0), Dest };
+    SDValue NewBr = DAG.getNode(ISD::BR, SDLoc(Br), MVT::Other, NewBrOps);
+    DAG.ReplaceAllUsesOfValueWith(SDValue(Br, 0), NewBr);
+  };
 
-  SDValue Ops[] = { Chain, Elements, ExitBlock };
-  SDValue Res = DCI.DAG.getNode(ARMISD::WLS, dl, MVT::Other, Ops);
-  DCI.DAG.ReplaceAllUsesOfValueWith(Int.getValue(1), Int.getOperand(0));
-  return Res;
+  if (IntOp == Intrinsic::test_set_loop_iterations) {
+    SDValue Res;
+    // We expect this 'instruction' to branch when the counter is zero.
+    if (IsTrueIfZero(CC, Imm)) {
+      SDValue Ops[] = { Chain, Elements, Dest };
+      Res = DAG.getNode(ARMISD::WLS, dl, MVT::Other, Ops);
+    } else {
+      // The logic is the reverse of what we need for WLS, so find the other
+      // basic block target: the target of the proceeding br.
+      UpdateUncondBr(Br, Dest, DAG);
+
+      SDValue Ops[] = { Chain, Elements, OtherTarget };
+      Res = DAG.getNode(ARMISD::WLS, dl, MVT::Other, Ops);
+    }
+    DAG.ReplaceAllUsesOfValueWith(Int.getValue(1), Int.getOperand(0));
+    return Res;
+  } else {
+    SDValue Size = DAG.getTargetConstant(
+      cast<ConstantSDNode>(Int.getOperand(3))->getZExtValue(), dl, MVT::i32);
+    SDValue Args[] = { Int.getOperand(0), Elements, Size, };
+    SDValue LoopDec = DAG.getNode(ARMISD::LOOP_DEC, dl,
+                                  DAG.getVTList(MVT::i32, MVT::Other), Args);
+    DAG.ReplaceAllUsesWith(Int.getNode(), LoopDec.getNode());
+
+    // We expect this instruction to branch when the count is not zero.
+    SDValue Target = IsFalseIfZero(CC, Imm) ? Dest : OtherTarget;
+
+    // Update the unconditional branch to target the loop preheader if we've
+    // found the condition has been reversed.
+    if (Target == OtherTarget)
+      UpdateUncondBr(Br, Dest, DAG);
+
+    Chain = DAG.getNode(ISD::TokenFactor, dl, MVT::Other,
+                        SDValue(LoopDec.getNode(), 1), Chain);
+
+    SDValue EndArgs[] = { Chain, SDValue(LoopDec.getNode(), 0), Target };
+    return DAG.getNode(ARMISD::LE, dl, MVT::Other, EndArgs);
+  }
+  return SDValue();
 }
 
 /// PerformBRCONDCombine - Target-specific DAG combining for ARMISD::BRCOND.
@@ -13304,7 +13434,8 @@ SDValue ARMTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::OR:         return PerformORCombine(N, DCI, Subtarget);
   case ISD::XOR:        return PerformXORCombine(N, DCI, Subtarget);
   case ISD::AND:        return PerformANDCombine(N, DCI, Subtarget);
-  case ISD::BRCOND:     return PerformHWLoopCombine(N, DCI, Subtarget);
+  case ISD::BRCOND:
+  case ISD::BR_CC:      return PerformHWLoopCombine(N, DCI, Subtarget);
   case ARMISD::ADDC:
   case ARMISD::SUBC:    return PerformAddcSubcCombine(N, DCI, Subtarget);
   case ARMISD::SUBE:    return PerformAddeSubeCombine(N, DCI, Subtarget);

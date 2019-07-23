@@ -1,4 +1,4 @@
-# RUN: not llvm-mc %s -triple=riscv64 2>&1 | FileCheck %s
+# RUN: not llvm-mc %s -triple=riscv32 2>&1 | FileCheck %s
 # RUN: not llvm-mc %s -triple=riscv64 2>&1 | FileCheck %s
 
 lla x1, 1234 # CHECK: :[[@LINE]]:9: error: operand must be a bare symbol name
