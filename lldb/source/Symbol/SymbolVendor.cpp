@@ -354,10 +354,12 @@ void SymbolVendor::Dump(Stream *s) {
       }
     }
     s->EOL();
+    s->PutCString("Types:\n");
+    m_type_list.Dump(s, show_context);
+    s->EOL();
     if (m_sym_file_up)
       m_sym_file_up->Dump(*s);
     s->IndentMore();
-    m_type_list.Dump(s, show_context);
 
     if (Symtab *symtab = GetSymtab())
       symtab->Dump(s, nullptr, eSortOrderNone);
