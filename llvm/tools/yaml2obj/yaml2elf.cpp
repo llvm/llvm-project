@@ -244,7 +244,7 @@ void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
   // Immediately following the ELF header and program headers.
   Header.e_shoff =
       Doc.Header.SHOffset
-          ? (uint16_t)*Doc.Header.SHOffset
+          ? (typename ELFT::uint)(*Doc.Header.SHOffset)
           : sizeof(Header) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
   Header.e_shnum =
       Doc.Header.SHNum ? (uint16_t)*Doc.Header.SHNum : SN2I.size() + 1;
