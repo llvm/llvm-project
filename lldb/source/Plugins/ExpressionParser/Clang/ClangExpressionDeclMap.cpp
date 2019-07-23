@@ -204,7 +204,11 @@ private:
   llvm::DenseSet<clang::Decl *> m_completed;
 
   bool ImportAndCheckCompletable(clang::Decl *decl) {
-    (void)m_exporter.Import(decl);
+    llvm::Expected<clang::Decl *> imported_decl = m_exporter.Import(decl);
+    if (!imported_decl) {
+      llvm::consumeError(imported_decl.takeError());
+      return false;
+    }
     if (m_completed.count(decl))
       return false;
     if (!llvm::isa<DeclContext>(decl))
@@ -225,7 +229,11 @@ private:
   void Complete(clang::Decl *decl) {
     m_completed.insert(decl);
     auto *decl_context = llvm::cast<DeclContext>(decl);
-    (void)m_exporter.Import(decl);
+    llvm::Expected<clang::Decl *> imported_decl = m_exporter.Import(decl);
+    if (!imported_decl) {
+      llvm::consumeError(imported_decl.takeError());
+      return;
+    }
     m_exporter.CompleteDecl(decl);
     for (Decl *child : decl_context->decls())
       if (ImportAndCheckCompletable(child))
