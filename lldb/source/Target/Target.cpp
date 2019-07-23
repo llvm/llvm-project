@@ -106,12 +106,11 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
 
   CheckInWithManager();
 
-  Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
-  if (log)
-    log->Printf("%p Target::Target()", static_cast<void *>(this));
+  LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT),
+           "{0} Target::Target()", static_cast<void *>(this));
   if (target_arch.IsValid()) {
     LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET),
-             "Target::Target created with architecture %s (%s)",
+             "Target::Target created with architecture {0} ({1})",
              target_arch.GetArchitectureName(),
              target_arch.GetTriple().getTriple().c_str());
   }
@@ -119,8 +118,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
 
 Target::~Target() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
-  if (log)
-    log->Printf("%p Target::~Target()", static_cast<void *>(this));
+  LLDB_LOG(log, "{0} Target::~Target()", static_cast<void *>(this));
   DeleteCurrentProcess();
 }
 
@@ -2321,8 +2319,8 @@ void Target::SetDefaultArchitecture(const ArchSpec &arch) {
   if (properties_sp) {
     LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET),
              "Target::SetDefaultArchitecture setting target's "
-             "default architecture to  %s (%s)",
-             arch.GetArchitectureName(), arch.GetTriple().getTriple().c_str());
+             "default architecture to  {0} ({1})",
+             arch.GetArchitectureName(), arch.GetTriple().getTriple());
     return properties_sp->SetDefaultArchitecture(arch);
   }
 }
