@@ -18,10 +18,10 @@
 #include "ProcessDpu.h"
 #include "RegisterContextDpu.h"
 
-#include "lldb/Core/State.h"
 #include "lldb/Host/HostNativeThread.h"
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/State.h"
 #include "lldb/lldb-enumerations.h"
 
 using namespace lldb;

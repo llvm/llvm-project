@@ -78,7 +78,7 @@ set(LLDB_PLUGINS)
 list(APPEND LLDB_PLUGINS lldbPluginProcessDpu)
 list(APPEND LLDB_PLUGINS lldbPluginObjectFileELF)
 
-add_lldb_tool(lldb-server-dpu INCLUDE_IN_SUITE
+add_lldb_tool(lldb-server-dpu
     Acceptor.cpp
     lldb-gdbserver.cpp
     lldb-platform.cpp

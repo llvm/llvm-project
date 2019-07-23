@@ -12,11 +12,11 @@
 #include "Plugins/Process/Dpu/ProcessDpu.h"
 #include "Plugins/Process/Dpu/RegisterInfo_dpu.h"
 #include "Plugins/Process/POSIX/ProcessPOSIXLog.h"
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
 #include "lldb/Host/common/NativeThreadProtocol.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/Log.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/Utility/Status.h"
 
 #include <elf.h>

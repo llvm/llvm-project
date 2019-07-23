@@ -24,21 +24,20 @@
 // Other libraries and framework includes
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
-#include "lldb/Core/RegisterValue.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Core/State.h"
 #include "lldb/Host/File.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostProcess.h"
 #include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Host/ThreadLauncher.h"
-#include "lldb/Host/common/NativeBreakpoint.h"
 #include "lldb/Host/common/NativeRegisterContext.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/ProcessLaunchInfo.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBAssert.h"
+#include "lldb/Utility/RegisterValue.h"
+#include "lldb/Utility/State.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StringExtractor.h"
 #include "llvm/Support/Errno.h"
@@ -300,18 +299,6 @@ Status ProcessDpu::RemoveBreakpoint(lldb::addr_t addr, bool hardware) {
     return NativeProcessProtocol::RemoveBreakpoint(addr);
 }
 
-Status
-ProcessDpu::GetSoftwareBreakpointTrapOpcode(size_t trap_opcode_size_hint,
-                                            size_t &actual_opcode_size,
-                                            const uint8_t *&trap_opcode_bytes) {
-  static const uint8_t g_dpu_breakpoint_opcode[] = {0x00, 0x00, 0x00, 0x20,
-                                                    0x63, 0x7e, 0x00, 0x00};
-
-  trap_opcode_bytes = g_dpu_breakpoint_opcode;
-  actual_opcode_size = sizeof(g_dpu_breakpoint_opcode);
-  return Status();
-}
-
 Status ProcessDpu::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
                               size_t &bytes_read) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_MEMORY));
@@ -331,14 +318,6 @@ Status ProcessDpu::ReadMemory(lldb::addr_t addr, void *buf, size_t size,
   bytes_read = size;
 
   return Status();
-}
-
-Status ProcessDpu::ReadMemoryWithoutTrap(lldb::addr_t addr, void *buf,
-                                         size_t size, size_t &bytes_read) {
-  Status error = ReadMemory(addr, buf, size, bytes_read);
-  if (error.Fail())
-    return error;
-  return m_breakpoint_list.RemoveTrapsFromBuffer(addr, buf, size);
 }
 
 Status ProcessDpu::WriteMemory(lldb::addr_t addr, const void *buf, size_t size,
