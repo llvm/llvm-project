@@ -1148,7 +1148,7 @@ void ArchiveFile::fetch(const Archive::Symbol &sym) {
   Archive::Child c =
       CHECK(sym.getMember(), toString(this) +
                                  ": could not get the member for symbol " +
-                                 sym.getName());
+                                 toELFString(sym));
 
   if (!seen.insert(c.getChildOffset()).second)
     return;
@@ -1157,7 +1157,7 @@ void ArchiveFile::fetch(const Archive::Symbol &sym) {
       CHECK(c.getMemoryBufferRef(),
             toString(this) +
                 ": could not get the buffer for the member defining symbol " +
-                sym.getName());
+                toELFString(sym));
 
   if (tar && c.getParent()->isThin())
     tar->append(relativeToRoot(CHECK(c.getFullName(), this)), mb.getBuffer());

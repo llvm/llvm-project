@@ -33,7 +33,9 @@ static std::string demangle(StringRef symName) {
   return symName;
 }
 std::string toString(coff::Symbol &b) { return demangle(b.getName()); }
-std::string toString(const Archive::Symbol &b) { return demangle(b.getName()); }
+std::string toCOFFString(const Archive::Symbol &b) {
+  return demangle(b.getName());
+}
 
 namespace coff {
 
