@@ -16,6 +16,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Remarks/RemarkFormat.h"
+#include "llvm/Remarks/YAMLRemarkSerializer.h"
 
 using namespace llvm;
 

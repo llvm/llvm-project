@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Remarks/Remark.h"
-#include "llvm/Remarks/RemarkSerializer.h"
+#include "llvm/Remarks/YAMLRemarkSerializer.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;

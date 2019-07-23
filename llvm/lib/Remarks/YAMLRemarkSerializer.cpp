@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Remarks/RemarkSerializer.h"
+#include "llvm/Remarks/YAMLRemarkSerializer.h"
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
