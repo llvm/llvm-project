@@ -400,6 +400,48 @@ let Command = "script add" in {
     Desc<"Set the synchronicity of this command's executions with regard to "
     "LLDB event system.">;
 }
+let Command = "source info" in {
+  def source_info_count : Option<"count", "c">, Arg<"Count">,
+    Desc<"The number of line entries to display.">;
+  def source_info_shlib : Option<"shlib", "s">, Groups<[1,2]>, Arg<"ShlibName">,
+    Completion<"Module">, Desc<"Look up the source in the given module or "
+    "shared library (can be specified more than once).">;
+  def source_info_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
+    Completion<"SourceFile">, Desc<"The file from which to display source.">;
+  def source_info_line : Option<"line", "l">, Group<1>, Arg<"LineNum">,
+    Desc<"The line number at which to start the displaying lines.">;
+  def source_info_end_line : Option<"end-line", "e">, Group<1>, Arg<"LineNum">,
+    Desc<"The line number at which to stop displaying lines.">;
+  def source_info_name : Option<"name", "n">, Group<2>, Arg<"Symbol">,
+    Completion<"Symbol">,
+    Desc<"The name of a function whose source to display.">;
+  def source_info_address : Option<"address", "a">, Group<3>,
+    Arg<"AddressOrExpression">, Desc<"Lookup the address and display the source"
+    " information for the corresponding file and line.">;
+}
+
+let Command = "source list" in {
+  def source_list_count : Option<"count", "c">, Arg<"Count">,
+    Desc<"The number of source lines to display.">;
+  def source_list_shlib : Option<"shlib", "s">, Groups<[1,2]>, Arg<"ShlibName">,
+    Completion<"Module">,
+    Desc<"Look up the source file in the given shared library.">;
+  def source_list_show_breakpoints : Option<"show-breakpoints", "b">,
+    Desc<"Show the line table locations from the debug information that "
+    "indicate valid places to set source level breakpoints.">;
+  def source_list_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
+    Completion<"SourceFile">, Desc<"The file from which to display source.">;
+  def source_list_line : Option<"line", "l">, Group<1>, Arg<"LineNum">,
+    Desc<"The line number at which to start the display source.">;
+  def source_list_name : Option<"name", "n">, Group<2>, Arg<"Symbol">,
+    Completion<"Symbol">,
+    Desc<"The name of a function whose source to display.">;
+  def source_list_address : Option<"address", "a">, Group<3>,
+    Arg<"AddressOrExpression">, Desc<"Lookup the address and display the source"
+    " information for the corresponding file and line.">;
+  def source_list_reverse : Option<"reverse", "r">, Group<4>, Desc<"Reverse the"
+    " listing to look backwards from the last displayed block of source.">;
+}
 
 let Command = "target dependents" in {
   def dependents_no_dependents : Option<"no-dependents", "d">, Group<1>,
