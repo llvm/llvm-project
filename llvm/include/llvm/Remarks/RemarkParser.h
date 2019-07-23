@@ -23,9 +23,6 @@
 namespace llvm {
 namespace remarks {
 
-struct ParserImpl;
-struct ParsedStringTable;
-
 class EndOfFileError : public ErrorInfo<EndOfFileError> {
 public:
   static char ID;
@@ -60,19 +57,28 @@ struct Parser {
 struct ParsedStringTable {
   /// The buffer mapped from the section contents.
   StringRef Buffer;
-  /// Collection of offsets in the buffer for each string entry.
-  SmallVector<size_t, 8> Offsets;
+  /// This object has high changes to be std::move'd around, so don't use a
+  /// SmallVector for once.
+  std::vector<size_t> Offsets;
 
-  Expected<StringRef> operator[](size_t Index) const;
   ParsedStringTable(StringRef Buffer);
+  /// Disable copy.
+  ParsedStringTable(const ParsedStringTable &) = delete;
+  ParsedStringTable &operator=(const ParsedStringTable &) = delete;
+  /// Should be movable.
+  ParsedStringTable(ParsedStringTable &&) = default;
+  ParsedStringTable &operator=(ParsedStringTable &&) = default;
+
+  size_t size() const { return Offsets.size(); }
+  Expected<StringRef> operator[](size_t Index) const;
 };
 
 Expected<std::unique_ptr<Parser>> createRemarkParser(Format ParserFormat,
                                                      StringRef Buf);
 
-Expected<std::unique_ptr<Parser>>
-createRemarkParser(Format ParserFormat, StringRef Buf,
-                   const ParsedStringTable &StrTab);
+Expected<std::unique_ptr<Parser>> createRemarkParser(Format ParserFormat,
+                                                     StringRef Buf,
+                                                     ParsedStringTable StrTab);
 
 } // end namespace remarks
 } // end namespace llvm

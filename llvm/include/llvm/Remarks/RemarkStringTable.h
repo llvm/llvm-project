@@ -18,7 +18,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Allocator.h"
+#include "llvm/Remarks/RemarkParser.h"
 #include <vector>
 
 namespace llvm {
@@ -31,15 +31,24 @@ namespace remarks {
 /// This table can be for example serialized in a section to be consumed after
 /// the compilation.
 struct StringTable {
-  /// Allocator holding all the memory used by the map.
-  BumpPtrAllocator Allocator;
   /// The string table containing all the unique strings used in the output.
   /// It maps a string to an unique ID.
-  StringMap<unsigned, BumpPtrAllocator &> StrTab;
+  StringMap<unsigned, BumpPtrAllocator> StrTab;
   /// Total size of the string table when serialized.
   size_t SerializedSize = 0;
 
-  StringTable() : Allocator(), StrTab(Allocator) {}
+  StringTable() = default;
+
+  /// Disable copy.
+  StringTable(const StringTable &) = delete;
+  StringTable &operator=(const StringTable &) = delete;
+  /// Should be movable.
+  StringTable(StringTable &&) = default;
+  StringTable &operator=(StringTable &&) = default;
+
+  /// Construct a string table from a ParsedStringTable.
+  StringTable(const ParsedStringTable &Other);
+
   /// Add a string to the table. It returns an unique ID of the string.
   std::pair<unsigned, StringRef> add(StringRef Str);
   /// Serialize the string table to a stream. It is serialized as a little

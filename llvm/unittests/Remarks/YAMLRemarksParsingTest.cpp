@@ -526,7 +526,8 @@ TEST(YAMLRemarks, ContentsStrTab) {
 
   remarks::ParsedStringTable StrTab(StrTabBuf);
   Expected<std::unique_ptr<remarks::Parser>> MaybeParser =
-      remarks::createRemarkParser(remarks::Format::YAMLStrTab, Buf, StrTab);
+      remarks::createRemarkParser(remarks::Format::YAMLStrTab, Buf,
+                                  std::move(StrTab));
   EXPECT_FALSE(errorToBool(MaybeParser.takeError()));
   EXPECT_TRUE(*MaybeParser != nullptr);
 
@@ -601,7 +602,8 @@ TEST(YAMLRemarks, ParsingBadStringTableIndex) {
 
   remarks::ParsedStringTable StrTab(StrTabBuf);
   Expected<std::unique_ptr<remarks::Parser>> MaybeParser =
-      remarks::createRemarkParser(remarks::Format::YAMLStrTab, Buf, StrTab);
+      remarks::createRemarkParser(remarks::Format::YAMLStrTab, Buf,
+                                  std::move(StrTab));
   EXPECT_FALSE(errorToBool(MaybeParser.takeError()));
   EXPECT_TRUE(*MaybeParser != nullptr);
 

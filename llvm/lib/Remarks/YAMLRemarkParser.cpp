@@ -58,8 +58,8 @@ YAMLRemarkParser::YAMLRemarkParser(StringRef Buf)
     : YAMLRemarkParser(Buf, None) {}
 
 YAMLRemarkParser::YAMLRemarkParser(StringRef Buf,
-                                   Optional<const ParsedStringTable *> StrTab)
-    : Parser{Format::YAML}, StrTab(StrTab), LastErrorMessage(),
+                                   Optional<ParsedStringTable> StrTab)
+    : Parser{Format::YAML}, StrTab(std::move(StrTab)), LastErrorMessage(),
       SM(setupSM(LastErrorMessage)), Stream(Buf, SM), YAMLIt(Stream.begin()) {}
 
 Error YAMLRemarkParser::error(StringRef Message, yaml::Node &Node) {
@@ -326,7 +326,7 @@ Expected<StringRef> YAMLStrTabRemarkParser::parseStr(yaml::KeyValueNode &Node) {
   else
     return MaybeStrID.takeError();
 
-  if (Expected<StringRef> Str = (**StrTab)[StrID])
+  if (Expected<StringRef> Str = (*StrTab)[StrID])
     Result = *Str;
   else
     return Str.takeError();
