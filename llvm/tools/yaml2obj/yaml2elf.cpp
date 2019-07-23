@@ -192,6 +192,12 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D) : Doc(D) {
     if (!D->Name.empty())
       DocSections.insert(D->Name);
 
+  // Insert SHT_NULL section implicitly.
+  Doc.Sections.insert(
+      Doc.Sections.begin(),
+      llvm::make_unique<ELFYAML::Section>(
+          ELFYAML::Section::SectionKind::RawContent, /*IsImplicit=*/true));
+
   std::vector<StringRef> ImplicitSections = {".symtab", ".strtab", ".shstrtab"};
   if (!Doc.DynamicSymbols.empty())
     ImplicitSections.insert(ImplicitSections.end(), {".dynsym", ".dynstr"});
@@ -317,13 +323,11 @@ bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
                                         ContiguousBlobAccumulator &CBA) {
   // Ensure SHN_UNDEF entry is present. An all-zero section header is a
   // valid SHN_UNDEF entry since SHT_NULL == 0.
-  SHeaders.resize(Doc.Sections.size() + 1);
-  zero(SHeaders[0]);
+  SHeaders.resize(Doc.Sections.size());
 
-  for (size_t I = 1; I < Doc.Sections.size() + 1; ++I) {
+  for (size_t I = 1; I < Doc.Sections.size(); ++I) {
     Elf_Shdr &SHeader = SHeaders[I];
-    zero(SHeader);
-    ELFYAML::Section *Sec = Doc.Sections[I - 1].get();
+    ELFYAML::Section *Sec = Doc.Sections[I].get();
 
     // We have a few sections like string or symbol tables that are usually
     // added implicitly to the end. However, if they are explicitly specified
@@ -944,13 +948,12 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 }
 
 template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
-  for (unsigned i = 0, e = Doc.Sections.size(); i != e; ++i) {
-    StringRef Name = Doc.Sections[i]->Name;
+  for (unsigned I = 1, E = Doc.Sections.size(); I != E; ++I) {
+    StringRef Name = Doc.Sections[I]->Name;
     DotShStrtab.add(dropUniqueSuffix(Name));
-    // "+ 1" to take into account the SHT_NULL entry.
-    if (!SN2I.addName(Name, i + 1)) {
+    if (!SN2I.addName(Name, I)) {
       WithColor::error() << "Repeated section name: '" << Name
-                         << "' at YAML section number " << i << ".\n";
+                         << "' at YAML section number " << I << ".\n";
       return false;
     }
   }
