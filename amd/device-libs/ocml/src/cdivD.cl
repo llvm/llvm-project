@@ -25,21 +25,25 @@ MATH_MANGLE(cdiv)(double2 zn, double2 zd)
     double zdx = zd.x;
     double zdy = zd.y;
     bool g = BUILTIN_ABS_F64(zdx) > BUILTIN_ABS_F64(zdy);
-    int de = BUILTIN_FREXP_EXP_F64(g ? zdx : zdy);
-    zdx = BUILTIN_FLDEXP_F64(zdx, -de);
-    zdy = BUILTIN_FLDEXP_F64(zdy, -de);
+    int ed = BUILTIN_FREXP_EXP_F64(g ? zdx : zdy);
+    int en = BUILTIN_FREXP_EXP_F64(BUILTIN_MAX_F64(BUILTIN_ABS_F64(zn.x), BUILTIN_ABS_F64(zn.y)));
+    int es1 = 1022 - ed;
+    int es2 = 1022 - ed - ed;
+    int es3 = 1022 - ed - en;
+    int es = BUILTIN_MIN_S32(BUILTIN_MIN_S32(es1, es2), es3) >> 1;
+
+    zdx = BUILTIN_FLDEXP_F64(zdx, es);
+    zdy = BUILTIN_FLDEXP_F64(zdy, es);
     double u = g ? zdx : zdy;
     double v = g ? zdy : zdx;
     double d2 = BUILTIN_FMA_F64(u, u, v*v);
+
+    zdx = BUILTIN_FLDEXP_F64(zdx, es);
+    zdy = BUILTIN_FLDEXP_F64(zdy, es);
     double tr = CP(zn.x,  zn.y, zdx, zdy);
     double ti = CP(zn.y, -zn.x, zdx, zdy);
-    double nr = BUILTIN_FREXP_MANT_F64(tr);
-    double ni = BUILTIN_FREXP_MANT_F64(ti);
-    int er = BUILTIN_FREXP_EXP_F64(tr);
-    int ei = BUILTIN_FREXP_EXP_F64(ti);
-
-    double rr = BUILTIN_FLDEXP_F64(MATH_DIV(nr, d2), er - de);
-    double ri = BUILTIN_FLDEXP_F64(MATH_DIV(ni, d2), ei - de);
+    double rr = MATH_DIV(tr, d2);
+    double ri = MATH_DIV(ti, d2);
 
     if (!FINITE_ONLY_OPT()) {
         if (BUILTIN_ISNAN_F64(rr) && BUILTIN_ISNAN_F64(ri)) {
