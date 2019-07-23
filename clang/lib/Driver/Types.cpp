@@ -9,8 +9,9 @@
 #include "clang/Driver/Types.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
+#include "llvm/ADT/SmallVector.h"
 #include <cassert>
-#include <string.h>
+#include <cstring>
 
 using namespace clang::driver;
 using namespace clang::driver::types;
@@ -20,11 +21,12 @@ struct TypeInfo {
   const char *Flags;
   const char *TempSuffix;
   ID PreprocessedType;
+  const llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> Phases;
 };
 
 static const TypeInfo TypeInfos[] = {
-#define TYPE(NAME, ID, PP_TYPE, TEMP_SUFFIX, FLAGS) \
-  { NAME, FLAGS, TEMP_SUFFIX, TY_##PP_TYPE, },
+#define TYPE(NAME, ID, PP_TYPE, TEMP_SUFFIX, FLAGS, ...) \
+  { NAME, FLAGS, TEMP_SUFFIX, TY_##PP_TYPE, { __VA_ARGS__ }, },
 #include "clang/Driver/Types.def"
 #undef TYPE
 };
@@ -264,6 +266,8 @@ types::ID types::lookupTypeForTypeSpecifier(const char *Name) {
 }
 
 // FIXME: Why don't we just put this list in the defs file, eh.
+// FIXME: The list is now in Types.def but for now this function will verify
+//        the old behavior and a subsequent change will delete most of the body.
 void types::getCompilationPhases(ID Id, llvm::SmallVectorImpl<phases::ID> &P) {
   if (Id != TY_Object) {
     if (getPreprocessedType(Id) != TY_INVALID) {
@@ -286,6 +290,18 @@ void types::getCompilationPhases(ID Id, llvm::SmallVectorImpl<phases::ID> &P) {
   if (!onlyPrecompileType(Id)) {
     P.push_back(phases::Link);
   }
+
+  // Check that the static Phase list matches.
+  // TODO: These will be deleted.
+  const llvm::SmallVectorImpl<phases::ID> &Phases = getInfo(Id).Phases;
+  assert(Phases.size() == P.size() &&
+         std::equal(Phases.begin(), Phases.end(), P.begin()) &&
+         "Invalid phase or size");
+
+  // TODO: This function is still being used to assert that the phase list in
+  //       Types.def is correct. Everything above this comment will be removed
+  //       in a subsequent NFC commit.
+  P = Phases;
   assert(0 < P.size() && "Not enough phases in list");
   assert(P.size() <= phases::MaxNumberOfPhases && "Too many phases in list");
 }

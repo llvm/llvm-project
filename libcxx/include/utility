@@ -70,10 +70,10 @@ struct pair
     pair(const pair&) = default;
     pair(pair&&) = default;
     constexpr pair();
-    pair(const T1& x, const T2& y);                          // constexpr in C++14
-    template <class U, class V> pair(U&& x, V&& y);          // constexpr in C++14
-    template <class U, class V> pair(const pair<U, V>& p);   // constexpr in C++14
-    template <class U, class V> pair(pair<U, V>&& p);        // constexpr in C++14
+    explicit(see-below) pair(const T1& x, const T2& y);                          // constexpr in C++14
+    template <class U, class V> explicit(see-below) pair(U&& x, V&& y);          // constexpr in C++14
+    template <class U, class V> explicit(see-below) pair(const pair<U, V>& p);   // constexpr in C++14
+    template <class U, class V> explicit(see-below) pair(pair<U, V>&& p);        // constexpr in C++14
     template <class... Args1, class... Args2>
         pair(piecewise_construct_t, tuple<Args1...> first_args,
              tuple<Args2...> second_args);

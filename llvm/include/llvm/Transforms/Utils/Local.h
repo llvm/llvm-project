@@ -271,6 +271,9 @@ inline unsigned getKnownAlignment(Value *V, const DataLayout &DL,
   return getOrEnforceKnownAlignment(V, 0, DL, CxtI, AC, DT);
 }
 
+/// This function converts the specified invoek into a normall call.
+void changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr);
+
 ///===---------------------------------------------------------------------===//
 ///  Dbg Intrinsic utilities
 ///

@@ -46,7 +46,7 @@ extern "C" {
 #include "abort_message.h"
 #include "fallback_malloc.h"
 
-#if defined(__unix__) &&  defined(__ELF__) && defined(_LIBCXXABI_HAS_COMMENT_LIB_PRAGMA)
+#if defined(__unix__) && !defined(__ANDROID__) && defined(__ELF__) && defined(_LIBCXXABI_HAS_COMMENT_LIB_PRAGMA)
 #pragma comment(lib, "pthread")
 #endif
 

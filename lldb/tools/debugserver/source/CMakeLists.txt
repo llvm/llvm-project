@@ -140,14 +140,6 @@ add_custom_command(OUTPUT ${generated_mach_interfaces}
 set(DEBUGSERVER_VERS_GENERATED_FILE ${CMAKE_CURRENT_BINARY_DIR}/debugserver_vers.c)
 set_source_files_properties(${DEBUGSERVER_VERS_GENERATED_FILE} PROPERTIES GENERATED 1)
 
-add_custom_command(OUTPUT ${DEBUGSERVER_VERS_GENERATED_FILE}
-  COMMAND ${LLDB_SOURCE_DIR}/scripts/generate-vers.pl
-          ${LLDB_SOURCE_DIR}/lldb.xcodeproj/project.pbxproj debugserver
-          > ${DEBUGSERVER_VERS_GENERATED_FILE}
-  DEPENDS ${LLDB_SOURCE_DIR}/scripts/generate-vers.pl
-          ${LLDB_SOURCE_DIR}/lldb.xcodeproj/project.pbxproj
-  )
-
 set(lldbDebugserverCommonSources
   DNBArch.cpp
   DNBBreakpoint.cpp

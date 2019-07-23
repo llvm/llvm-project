@@ -2,7 +2,7 @@ import("//compiler-rt/target.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
 
 declare_args() {
-  # Skip the atomic builtin (these should normally be provided by a shared library)
+  # Skip the atomic builtin (should normally be provided by a shared library).
   compiler_rt_exclude_atomic_builtin = true
 
   # Compile builtins for baremetal.
@@ -404,7 +404,8 @@ static_library("builtins") {
   }
 }
 
-# Currently unused but necessary to make the sync_source_lists_from_cmake.py happy.
+# Currently unused but necessary to make the sync_source_lists_from_cmake.py
+# happy.
 source_set("_unused") {
   sources = [
     # Thumb1

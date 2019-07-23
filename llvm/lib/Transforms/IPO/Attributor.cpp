@@ -16,10 +16,12 @@
 #include "llvm/Transforms/IPO/Attributor.h"
 
 #include "llvm/ADT/DepthFirstIterator.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
@@ -30,6 +32,9 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/Local.h"
+
 #include <cassert>
 
 using namespace llvm;
@@ -59,6 +64,7 @@ STATISTIC(NumFnReturnedNonNull,
 STATISTIC(NumFnArgumentNonNull, "Number of function arguments marked nonnull");
 STATISTIC(NumCSArgumentNonNull, "Number of call site arguments marked nonnull");
 STATISTIC(NumFnWillReturn, "Number of functions marked willreturn");
+STATISTIC(NumFnArgumentNoAlias, "Number of function arguments marked noalias");
 
 // TODO: Determine a good default value.
 //
@@ -134,6 +140,9 @@ static void bookkeeping(AbstractAttribute::ManifestPosition MP,
   case Attribute::WillReturn:
     NumFnWillReturn++;
     break;
+  case Attribute::NoAlias:
+    NumFnArgumentNoAlias++;
+    return;
   default:
     return;
   }
@@ -1311,6 +1320,267 @@ ChangeStatus AAWillReturnFunction::updateImpl(Attributor &A) {
   return ChangeStatus::UNCHANGED;
 }
 
+/// ------------------------ NoAlias Argument Attribute ------------------------
+
+struct AANoAliasImpl : AANoAlias, BooleanState {
+
+  AANoAliasImpl(Value &V, InformationCache &InfoCache)
+      : AANoAlias(V, InfoCache) {}
+
+  /// See AbstractAttribute::getState()
+  /// {
+  AbstractState &getState() override { return *this; }
+  const AbstractState &getState() const override { return *this; }
+  /// }
+
+  const std::string getAsStr() const override {
+    return getAssumed() ? "noalias" : "may-alias";
+  }
+
+  /// See AANoAlias::isAssumedNoAlias().
+  bool isAssumedNoAlias() const override { return getAssumed(); }
+
+  /// See AANoAlias::isKnowndNoAlias().
+  bool isKnownNoAlias() const override { return getKnown(); }
+};
+
+/// NoAlias attribute for function return value.
+struct AANoAliasReturned : AANoAliasImpl {
+
+  AANoAliasReturned(Function &F, InformationCache &InfoCache)
+      : AANoAliasImpl(F, InfoCache) {}
+
+  /// See AbstractAttribute::getManifestPosition().
+  virtual ManifestPosition getManifestPosition() const override {
+    return MP_RETURNED;
+  }
+
+  /// See AbstractAttriubute::initialize(...).
+  void initialize(Attributor &A) override {
+    Function &F = getAnchorScope();
+
+    // Already noalias.
+    if (F.returnDoesNotAlias()) {
+      indicateOptimisticFixpoint();
+      return;
+    }
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  virtual ChangeStatus updateImpl(Attributor &A) override;
+};
+
+ChangeStatus AANoAliasReturned::updateImpl(Attributor &A) {
+  Function &F = getAnchorScope();
+
+  auto *AARetValImpl = A.getAAFor<AAReturnedValuesImpl>(*this, F);
+  if (!AARetValImpl) {
+    indicatePessimisticFixpoint();
+    return ChangeStatus::CHANGED;
+  }
+
+  std::function<bool(Value &)> Pred = [&](Value &RV) -> bool {
+    if (Constant *C = dyn_cast<Constant>(&RV))
+      if (C->isNullValue() || isa<UndefValue>(C))
+        return true;
+
+    /// For now, we can only deduce noalias if we have call sites.
+    /// FIXME: add more support.
+    ImmutableCallSite ICS(&RV);
+    if (!ICS)
+      return false;
+
+    auto *NoAliasAA = A.getAAFor<AANoAlias>(*this, RV);
+
+    if (!ICS.returnDoesNotAlias() && (!NoAliasAA ||
+        !NoAliasAA->isAssumedNoAlias()))
+      return false;
+
+    /// FIXME: We can improve capture check in two ways:
+    /// 1. Use the AANoCapture facilities.
+    /// 2. Use the location of return insts for escape queries.
+    if (PointerMayBeCaptured(&RV, /* ReturnCaptures */ false,
+                             /* StoreCaptures */ true))
+      return false;
+
+
+    return true;
+  };
+
+  if (!AARetValImpl->checkForallReturnedValues(Pred)) {
+    indicatePessimisticFixpoint();
+    return ChangeStatus::CHANGED;
+  }
+
+  return ChangeStatus::UNCHANGED;
+}
+
+/// -------------------AAIsDead Function Attribute-----------------------
+
+struct AAIsDeadFunction : AAIsDead, BooleanState {
+
+  AAIsDeadFunction(Function &F, InformationCache &InfoCache)
+      : AAIsDead(F, InfoCache) {}
+
+  /// See AbstractAttribute::getState()
+  /// {
+  AbstractState &getState() override { return *this; }
+  const AbstractState &getState() const override { return *this; }
+  /// }
+
+  /// See AbstractAttribute::getManifestPosition().
+  ManifestPosition getManifestPosition() const override { return MP_FUNCTION; }
+
+  void initialize(Attributor &A) override {
+    Function &F = getAnchorScope();
+
+    ToBeExploredPaths.insert(&(F.getEntryBlock().front()));
+    AssumedLiveBlocks.insert(&(F.getEntryBlock()));
+    for (size_t i = 0; i < ToBeExploredPaths.size(); ++i)
+      explorePath(A, ToBeExploredPaths[i]);
+  }
+
+  /// Explores new instructions starting from \p I. If instruction is dead, stop
+  /// and return true if it discovered a new instruction.
+  bool explorePath(Attributor &A, Instruction *I);
+
+  const std::string getAsStr() const override {
+    return "LiveBBs(" + std::to_string(AssumedLiveBlocks.size()) + "/" +
+           std::to_string(getAnchorScope().size()) + ")";
+  }
+
+  /// See AbstractAttribute::manifest(...).
+  ChangeStatus manifest(Attributor &A) override {
+    assert(getState().isValidState() &&
+           "Attempted to manifest an invalid state!");
+
+    ChangeStatus HasChanged = ChangeStatus::UNCHANGED;
+
+    for (Instruction *I : NoReturnCalls) {
+      BasicBlock *BB = I->getParent();
+
+      /// Invoke is replaced with a call and unreachable is placed after it.
+      if (auto *II = dyn_cast<InvokeInst>(I)) {
+        changeToCall(II);
+        changeToUnreachable(BB->getTerminator(), /* UseLLVMTrap */ false);
+        LLVM_DEBUG(dbgs() << "[AAIsDead] Replaced invoke with call inst\n");
+        continue;
+      }
+
+      SplitBlock(BB, I->getNextNode());
+      changeToUnreachable(BB->getTerminator(), /* UseLLVMTrap */ false);
+      HasChanged = ChangeStatus::CHANGED;
+    }
+
+    return HasChanged;
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  ChangeStatus updateImpl(Attributor &A) override;
+
+  /// See AAIsDead::isAssumedDead().
+  bool isAssumedDead(BasicBlock *BB) const override {
+    if (!getAssumed())
+      return false;
+    return !AssumedLiveBlocks.count(BB);
+  }
+
+  /// See AAIsDead::isKnownDead().
+  bool isKnownDead(BasicBlock *BB) const override {
+    if (!getKnown())
+      return false;
+    return !AssumedLiveBlocks.count(BB);
+  }
+
+  /// Collection of to be explored paths.
+  SmallSetVector<Instruction *, 8> ToBeExploredPaths;
+
+  /// Collection of all assumed live BasicBlocks.
+  DenseSet<BasicBlock *> AssumedLiveBlocks;
+
+  /// Collection of calls with noreturn attribute, assumed or knwon.
+  SmallSetVector<Instruction *, 4> NoReturnCalls;
+};
+
+bool AAIsDeadFunction::explorePath(Attributor &A, Instruction *I) {
+  BasicBlock *BB = I->getParent();
+
+  while (I) {
+    ImmutableCallSite ICS(I);
+
+    if (ICS) {
+      auto *NoReturnAA = A.getAAFor<AANoReturn>(*this, *I);
+
+      if (NoReturnAA && NoReturnAA->isAssumedNoReturn()) {
+        if (!NoReturnCalls.insert(I))
+          // If I is already in the NoReturnCalls set, then it stayed noreturn
+          // and we didn't discover any new instructions.
+          return false;
+
+        // Discovered new noreturn call, return true to indicate that I is not
+        // noreturn anymore and should be deleted from NoReturnCalls.
+        return true;
+      }
+
+      if (ICS.hasFnAttr(Attribute::NoReturn)) {
+        if(!NoReturnCalls.insert(I))
+          return false;
+
+        return true;
+      }
+    }
+
+    I = I->getNextNode();
+  }
+
+  // get new paths (reachable blocks).
+  for (BasicBlock *SuccBB : successors(BB)) {
+    Instruction *Inst = &(SuccBB->front());
+    AssumedLiveBlocks.insert(SuccBB);
+    ToBeExploredPaths.insert(Inst);
+  }
+
+  return true;
+}
+
+ChangeStatus AAIsDeadFunction::updateImpl(Attributor &A) {
+  // Temporary collection to iterate over existing noreturn instructions. This
+  // will alow easier modification of NoReturnCalls collection
+  SmallVector<Instruction *, 8> NoReturnChanged;
+  ChangeStatus Status = ChangeStatus::UNCHANGED;
+
+  for (Instruction *I : NoReturnCalls)
+    NoReturnChanged.push_back(I);
+
+  for (Instruction *I : NoReturnChanged) {
+    size_t Size = ToBeExploredPaths.size();
+
+    // Still noreturn.
+    if (!explorePath(A, I))
+      continue;
+
+    NoReturnCalls.remove(I);
+
+    // No new paths.
+    if (Size == ToBeExploredPaths.size())
+      continue;
+
+    // At least one new path.
+    Status = ChangeStatus::CHANGED;
+
+    // explore new paths.
+    while (Size != ToBeExploredPaths.size())
+      explorePath(A, ToBeExploredPaths[Size++]);
+  }
+
+  LLVM_DEBUG(dbgs() << "[AAIsDead] AssumedLiveBlocks: "
+                    << AssumedLiveBlocks.size()
+                    << "Total number of blocks: "
+                    << getAnchorScope().size() << "\n");
+
+  return Status;
+}
+
 /// ----------------------------------------------------------------------------
 ///                               Attributor
 /// ----------------------------------------------------------------------------
@@ -1507,10 +1777,15 @@ void Attributor::identifyDefaultAbstractAttributes(
     if (!Whitelist || Whitelist->count(AAReturnedValues::ID))
       registerAA(*new AAReturnedValuesImpl(F, InfoCache));
 
-    // Every function with pointer return type might be marked nonnull.
-    if (ReturnType->isPointerTy() &&
-        (!Whitelist || Whitelist->count(AANonNullReturned::ID)))
-      registerAA(*new AANonNullReturned(F, InfoCache));
+    if (ReturnType->isPointerTy()) {
+      // Every function with pointer return type might be marked nonnull.
+      if (!Whitelist || Whitelist->count(AANonNullReturned::ID))
+        registerAA(*new AANonNullReturned(F, InfoCache));
+
+      // Every function with pointer return type might be marked noalias.
+      if (!Whitelist || Whitelist->count(AANoAliasReturned::ID))
+        registerAA(*new AANoAliasReturned(F, InfoCache));
+    }
   }
 
   // Every argument with pointer type might be marked nonnull.
@@ -1521,6 +1796,9 @@ void Attributor::identifyDefaultAbstractAttributes(
 
   // Every function might be "will-return".
   registerAA(*new AAWillReturnFunction(F, InfoCache));
+
+  // Check for dead BasicBlocks in every function.
+  registerAA(*new AAIsDeadFunction(F, InfoCache));
 
   // Walk all instructions to find more attribute opportunities and also
   // interesting instructions that might be queried by abstract attributes

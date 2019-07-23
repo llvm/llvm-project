@@ -784,6 +784,67 @@ struct AAWillReturn : public AbstractAttribute {
   /// The identifier used by the Attributor for this class of attributes.
   static constexpr Attribute::AttrKind ID = Attribute::WillReturn;
 };
+
+/// An abstract interface for all noalias attributes.
+struct AANoAlias : public AbstractAttribute {
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AANoAlias(Value &V, InformationCache &InfoCache)
+      : AbstractAttribute(V, InfoCache) {}
+
+  /// Return true if we assume that the underlying value is alias.
+  virtual bool isAssumedNoAlias() const = 0;
+
+  /// Return true if we know that underlying value is noalias.
+  virtual bool isKnownNoAlias() const = 0;
+
+  /// See AbastractState::getAttrKind().
+  Attribute::AttrKind getAttrKind() const override { return ID; }
+
+  /// The identifier used by the Attributor for this class of attributes.
+  static constexpr Attribute::AttrKind ID = Attribute::NoAlias;
+};
+
+/// An AbstractAttribute for noreturn.
+struct AANoReturn : public AbstractAttribute {
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AANoReturn(Value &V, InformationCache &InfoCache)
+      : AbstractAttribute(V, InfoCache) {}
+
+  /// Return true if the underlying object is known to never return.
+  virtual bool isKnownNoReturn() const = 0;
+
+  /// Return true if the underlying object is assumed to never return.
+  virtual bool isAssumedNoReturn() const = 0;
+
+  /// See AbstractAttribute::getAttrKind()
+  Attribute::AttrKind getAttrKind() const override { return ID; }
+
+  /// The identifier used by the Attributor for this class of attributes.
+  static constexpr Attribute::AttrKind ID = Attribute::NoReturn;
+};
+
+/// An abstract interface for liveness abstract attribute.
+struct AAIsDead : public AbstractAttribute {
+
+  /// See AbstractAttribute::AbstractAttribute(...).
+  AAIsDead(Value &V, InformationCache &InfoCache)
+      : AbstractAttribute(V, InfoCache) {}
+
+  /// See AbstractAttribute::getAttrKind()
+  Attribute::AttrKind getAttrKind() const override { return ID; }
+
+  static constexpr Attribute::AttrKind ID =
+      Attribute::AttrKind(Attribute::EndAttrKinds + 1);
+
+  /// Returns true if \p BB is assumed dead.
+  virtual bool isAssumedDead(BasicBlock *BB) const = 0;
+
+  /// Returns true if \p BB is known dead.
+  virtual bool isKnownDead(BasicBlock *BB) const = 0;
+};
+
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_IPO_FUNCTIONATTRS_H

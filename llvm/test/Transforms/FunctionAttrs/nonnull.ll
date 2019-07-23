@@ -22,7 +22,8 @@ define i8* @test2(i8* nonnull %p) {
 ; Given an SCC where one of the functions can not be marked nonnull,
 ; can we still mark the other one which is trivially nonnull
 define i8* @scc_binder() {
-; BOTH: define i8* @scc_binder
+; FNATTR: define i8* @scc_binder
+; ATTRIBUTOR: define noalias i8* @scc_binder
   call i8* @test3()
   ret i8* null
 }
@@ -39,14 +40,14 @@ define i8* @test3() {
 ; just never return period.)
 define i8* @test4_helper() {
 ; FNATTR: define noalias nonnull i8* @test4_helper
-; ATTRIBUTOR: define nonnull i8* @test4_helper
+; ATTRIBUTOR: define noalias nonnull i8* @test4_helper
   %ret = call i8* @test4()
   ret i8* %ret
 }
 
 define i8* @test4() {
 ; FNATTR: define noalias nonnull i8* @test4
-; ATTRIBUTOR: define nonnull i8* @test4
+; ATTRIBUTOR: define noalias nonnull i8* @test4
   %ret = call i8* @test4_helper()
   ret i8* %ret
 }
@@ -55,14 +56,14 @@ define i8* @test4() {
 ; make sure we haven't marked them as nonnull.
 define i8* @test5_helper() {
 ; FNATTR: define noalias i8* @test5_helper
-; ATTRIBUTOR: define i8* @test5_helper
+; ATTRIBUTOR: define noalias i8* @test5_helper
   %ret = call i8* @test5()
   ret i8* null
 }
 
 define i8* @test5() {
 ; FNATTR: define noalias i8* @test5
-; ATTRIBUTOR: define i8* @test5
+; ATTRIBUTOR: define noalias i8* @test5
   %ret = call i8* @test5_helper()
   ret i8* %ret
 }
