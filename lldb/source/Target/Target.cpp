@@ -3933,16 +3933,20 @@ static constexpr PropertyDefinition g_experimental_properties[]{
      "This will fix symbol resolution when there are name collisions between "
      "ivars and local variables.  "
      "But it can make expressions run much more slowly."},
-    {"swift-create-module-contexts-in-parallel", OptionValue::eTypeBoolean,
-     false, true, nullptr, {},
-     "Create the per-module Swift AST contexts in parallel."},
     {"use-modern-type-lookup",
      OptionValue::eTypeBoolean,
      true,
      false,
      nullptr,
      {},
-     "If true, use Clang's modern type lookup infrastructure."}};
+     "If true, use Clang's modern type lookup infrastructure."},
+    {"swift-create-module-contexts-in-parallel",
+     OptionValue::eTypeBoolean,
+     false,
+     true,
+     nullptr,
+     {},
+     "Create the per-module Swift AST contexts in parallel."}};
 
 enum {
   ePropertyInjectLocalVars = 0,
