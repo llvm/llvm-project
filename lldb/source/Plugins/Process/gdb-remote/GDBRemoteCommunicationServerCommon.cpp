@@ -825,6 +825,7 @@ GDBRemoteCommunicationServerCommon::Handle_qSupported(
 #if defined(__linux__) || defined(__NetBSD__)
   response.PutCString(";QPassSignals+");
   response.PutCString(";qXfer:auxv:read+");
+  response.PutCString(";qXfer:libraries-svr4:read+");
 #endif
 
   return SendPacketNoLock(response.GetString());

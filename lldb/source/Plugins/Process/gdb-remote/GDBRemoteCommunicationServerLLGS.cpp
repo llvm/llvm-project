@@ -2765,6 +2765,24 @@ GDBRemoteCommunicationServerLLGS::ReadXferObject(llvm::StringRef object,
     return std::move(*buffer_or_error);
   }
 
+  if (object == "libraries-svr4") {
+    auto library_list = m_debugged_process_up->GetLoadedSVR4Libraries();
+    if (!library_list)
+      return library_list.takeError();
+
+    StreamString response;
+    response.Printf("<library-list-svr4 version=\"1.0\">");
+    for (auto const &library : *library_list) {
+      response.Printf("<library name=\"%s\" ",
+                      XMLEncodeAttributeValue(library.name.c_str()).c_str());
+      response.Printf("lm=\"0x%" PRIx64 "\" ", library.link_map);
+      response.Printf("l_addr=\"0x%" PRIx64 "\" ", library.base_addr);
+      response.Printf("l_ld=\"0x%" PRIx64 "\" />", library.ld_addr);
+    }
+    response.Printf("</library-list-svr4>");
+    return MemoryBuffer::getMemBufferCopy(response.GetString(), __FUNCTION__);
+  }
+
   return llvm::make_error<PacketUnimplementedError>(
       "Xfer object not supported");
 }
@@ -3282,4 +3300,29 @@ GDBRemoteCommunicationServerLLGS::FindModuleFile(const std::string &module_path,
   }
 
   return GDBRemoteCommunicationServerCommon::FindModuleFile(module_path, arch);
+}
+
+std::string GDBRemoteCommunicationServerLLGS::XMLEncodeAttributeValue(
+    llvm::StringRef value) {
+  std::string result;
+  for (const char &c : value) {
+    switch (c) {
+    case '\'':
+      result += "&apos;";
+      break;
+    case '"':
+      result += "&quot;";
+      break;
+    case '<':
+      result += "&lt;";
+      break;
+    case '>':
+      result += "&gt;";
+      break;
+    default:
+      result += c;
+      break;
+    }
+  }
+  return result;
 }

@@ -32,6 +32,14 @@ namespace lldb_private {
 class MemoryRegionInfo;
 class ResumeActionList;
 
+struct SVR4LibraryInfo {
+  std::string name;
+  lldb::addr_t link_map;
+  lldb::addr_t base_addr;
+  lldb::addr_t ld_addr;
+  lldb::addr_t next;
+};
+
 // NativeProcessProtocol
 class NativeProcessProtocol {
 public:
@@ -85,6 +93,12 @@ public:
   virtual Status DeallocateMemory(lldb::addr_t addr) = 0;
 
   virtual lldb::addr_t GetSharedLibraryInfoAddress() = 0;
+
+  virtual llvm::Expected<std::vector<SVR4LibraryInfo>>
+  GetLoadedSVR4Libraries() {
+    return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                   "Not implemented");
+  }
 
   virtual bool IsAlive() const;
 
