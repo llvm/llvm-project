@@ -34,7 +34,7 @@ EXT_FUNC(__sanitizer_install_malloc_and_free_hooks, int,
           void (*free_hook)(const volatile void *)),
          false);
 EXT_FUNC(__sanitizer_purge_allocator, void, (), false);
-EXT_FUNC(__sanitizer_print_memory_profile, int, (size_t, size_t), false);
+EXT_FUNC(__sanitizer_print_memory_profile, void, (size_t, size_t), false);
 EXT_FUNC(__sanitizer_print_stack_trace, void, (), true);
 EXT_FUNC(__sanitizer_symbolize_pc, void,
          (void *, const char *fmt, char *out_buf, size_t out_buf_size), false);

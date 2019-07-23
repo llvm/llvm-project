@@ -49,7 +49,7 @@ Communication::Communication(const char *name)
 
   LLDB_LOG(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_OBJECT |
                                                   LIBLLDB_LOG_COMMUNICATION),
-           "%p Communication::Communication (name = %s)", this, name);
+           "{0} Communication::Communication (name = {1})", this, name);
 
   SetEventName(eBroadcastBitDisconnected, "disconnected");
   SetEventName(eBroadcastBitReadThreadGotBytes, "got bytes");
@@ -64,7 +64,7 @@ Communication::Communication(const char *name)
 Communication::~Communication() {
   LLDB_LOG(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_OBJECT |
                                                   LIBLLDB_LOG_COMMUNICATION),
-           "%p Communication::~Communication (name = %s)", this,
+           "{0} Communication::~Communication (name = {1})", this,
            GetBroadcasterName().AsCString());
   Clear();
 }
@@ -79,7 +79,7 @@ ConnectionStatus Communication::Connect(const char *url, Status *error_ptr) {
   Clear();
 
   LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMUNICATION),
-           "%p Communication::Connect (url = %s)", this, url);
+           "{0} Communication::Connect (url = {1})", this, url);
 
   lldb::ConnectionSP connection_sp(m_connection_sp);
   if (connection_sp)
@@ -91,7 +91,7 @@ ConnectionStatus Communication::Connect(const char *url, Status *error_ptr) {
 
 ConnectionStatus Communication::Disconnect(Status *error_ptr) {
   LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMUNICATION),
-           "%p Communication::Disconnect ()", this);
+           "{0} Communication::Disconnect ()", this);
 
   lldb::ConnectionSP connection_sp(m_connection_sp);
   if (connection_sp) {
@@ -174,8 +174,8 @@ size_t Communication::Write(const void *src, size_t src_len,
 
   std::lock_guard<std::mutex> guard(m_write_mutex);
   LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMUNICATION),
-           "%p Communication::Write (src = %p, src_len = %" PRIu64
-           ") connection = %p",
+           "{0} Communication::Write (src = {1}, src_len = %" PRIu64
+           ") connection = {2}",
            this, src, (uint64_t)src_len, connection_sp.get());
 
   if (connection_sp)
@@ -195,7 +195,7 @@ bool Communication::StartReadThread(Status *error_ptr) {
     return true;
 
   LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMUNICATION),
-           "%p Communication::StartReadThread ()", this);
+           "{0} Communication::StartReadThread ()", this);
 
   char thread_name[1024];
   snprintf(thread_name, sizeof(thread_name), "<lldb.comm.%s>",
@@ -228,7 +228,7 @@ bool Communication::StopReadThread(Status *error_ptr) {
     return true;
 
   LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMUNICATION),
-           "%p Communication::StopReadThread ()", this);
+           "{0} Communication::StopReadThread ()", this);
 
   m_read_thread_enabled = false;
 
@@ -270,8 +270,8 @@ void Communication::AppendBytesToCache(const uint8_t *bytes, size_t len,
                                        bool broadcast,
                                        ConnectionStatus status) {
   LLDB_LOG(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMUNICATION),
-           "%p Communication::AppendBytesToCache (src = %p, src_len = %" PRIu64
-           ", broadcast = %i)",
+           "{0} Communication::AppendBytesToCache (src = {1}, src_len = {2}, "
+           "broadcast = {3})",
            this, bytes, (uint64_t)len, broadcast);
   if ((bytes == nullptr || len == 0) &&
       (status != lldb::eConnectionStatusEndOfFile))

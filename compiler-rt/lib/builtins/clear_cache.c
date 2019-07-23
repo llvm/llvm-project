@@ -173,6 +173,16 @@ void __clear_cache(void *start, void *end) {
   for (uintptr_t line = start_line; line < end_line; line += line_size)
     __asm__ volatile("icbi 0, %0" : : "r"(line));
   __asm__ volatile("isync");
+#elif defined(__sparc__)
+  const size_t dword_size = 8;
+  const size_t len = (uintptr_t)end - (uintptr_t)start;
+
+  const uintptr_t mask = ~(dword_size - 1);
+  const uintptr_t start_dword = ((uintptr_t)start) & mask;
+  const uintptr_t end_dword = ((uintptr_t)start + len + dword_size - 1) & mask;
+
+  for (uintptr_t dword = start_dword; dword < end_dword; dword += dword_size)
+    __asm__ volatile("flush %0" : : "r"(dword));
 #else
 #if __APPLE__
   // On Darwin, sys_icache_invalidate() provides this functionality
