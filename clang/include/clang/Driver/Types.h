@@ -20,7 +20,7 @@ namespace driver {
 namespace types {
   enum ID {
     TY_INVALID,
-#define TYPE(NAME, ID, PP_TYPE, TEMP_SUFFIX, FLAGS) TY_##ID,
+#define TYPE(NAME, ID, PP_TYPE, TEMP_SUFFIX, FLAGS, ...) TY_##ID,
 #include "clang/Driver/Types.def"
 #undef TYPE
     TY_LAST

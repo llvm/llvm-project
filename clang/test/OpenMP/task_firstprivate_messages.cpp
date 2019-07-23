@@ -19,6 +19,13 @@ bool foobool(int argc) {
   return argc;
 }
 
+void xxx(int argc) {
+  int fp, fp1; // expected-note {{initialize the variable 'fp' to silence this warning}} expected-note {{initialize the variable 'fp1' to silence this warning}}
+#pragma omp task firstprivate(fp) // expected-warning {{variable 'fp' is uninitialized when used here}}
+  for (int i = 0; i < 10; ++i)
+    ++fp1; // expected-warning {{variable 'fp1' is uninitialized when used here}}
+}
+
 template <typename T>
 struct S {
   T b;

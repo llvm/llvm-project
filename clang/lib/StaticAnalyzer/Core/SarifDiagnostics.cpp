@@ -43,10 +43,10 @@ public:
 };
 } // end anonymous namespace
 
-void ento::createSarifDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
-                                         PathDiagnosticConsumers &C,
-                                         const std::string &Output,
-                                         const Preprocessor &) {
+void ento::createSarifDiagnosticConsumer(
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    const std::string &Output, const Preprocessor &,
+    const cross_tu::CrossTranslationUnitContext &) {
   C.push_back(new SarifDiagnostics(AnalyzerOpts, Output));
 }
 

@@ -13,6 +13,10 @@
 // RUN: %clang -target x86_64-windows-gnu -fopenmp=libomp -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-OPENMP
 // RUN: %clang -target x86_64-windows-gnu -fopenmp=libgomp -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-NO-OPENMP
 // RUN: %clang -target x86_64-windows-gnu -fopenmp=libiomp5 -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-OPENMP
+// RUN: %clang -target x86_64-windows-gnu -fopenmp=libiomp5 -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CC1-OPENMP
+// RUN: %clang_cl --target=x86_64-windows-msvc /openmp -### -- %s 2>&1 | FileCheck --check-prefix=CHECK-CC1-OPENMP %s
+// RUN: %clang_cl --target=i686-windows-msvc /openmp:experimental -### -- %s 2>&1 | FileCheck --check-prefix=CHECK-CC1-OPENMP %s
+// RUN: %clang_cl --target=x86_64-windows-msvc /openmp- -### -- %s 2>&1 | FileCheck --check-prefix=CHECK-CC1-NO-OPENMP %s
 //
 // CHECK-CC1-OPENMP: "-cc1"
 // CHECK-CC1-OPENMP: "-fopenmp"

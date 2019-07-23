@@ -2308,19 +2308,30 @@ bool RecursiveASTVisitor<Derived>::TraverseSynOrSemInitListExpr(
   return true;
 }
 
-// This method is called once for each pair of syntactic and semantic
-// InitListExpr, and it traverses the subtrees defined by the two forms. This
-// may cause some of the children to be visited twice, if they appear both in
-// the syntactic and the semantic form.
+// If shouldVisitImplicitCode() returns false, this method traverses only the
+// syntactic form of InitListExpr.
+// If shouldVisitImplicitCode() return true, this method is called once for
+// each pair of syntactic and semantic InitListExpr, and it traverses the
+// subtrees defined by the two forms. This may cause some of the children to be
+// visited twice, if they appear both in the syntactic and the semantic form.
 //
 // There is no guarantee about which form \p S takes when this method is called.
 template <typename Derived>
 bool RecursiveASTVisitor<Derived>::TraverseInitListExpr(
     InitListExpr *S, DataRecursionQueue *Queue) {
+  if (S->isSemanticForm() && S->isSyntacticForm()) {
+    // `S` does not have alternative forms, traverse only once.
+    TRY_TO(TraverseSynOrSemInitListExpr(S, Queue));
+    return true;
+  }
   TRY_TO(TraverseSynOrSemInitListExpr(
       S->isSemanticForm() ? S->getSyntacticForm() : S, Queue));
-  TRY_TO(TraverseSynOrSemInitListExpr(
-      S->isSemanticForm() ? S : S->getSemanticForm(), Queue));
+  if (getDerived().shouldVisitImplicitCode()) {
+    // Only visit the semantic form if the clients are interested in implicit
+    // compiler-generated.
+    TRY_TO(TraverseSynOrSemInitListExpr(
+        S->isSemanticForm() ? S : S->getSemanticForm(), Queue));
+  }
   return true;
 }
 
