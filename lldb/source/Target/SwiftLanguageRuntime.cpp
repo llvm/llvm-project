@@ -3265,11 +3265,11 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
 
     if (module_creation_error.Success() && module_decl) {
       const bool is_static = false;
-      const auto specifier = swift::VarDecl::Specifier::Let;
+      const auto introducer = swift::VarDecl::Introducer::Let;
       const bool is_capture_list = false;
 
       swift::VarDecl *var_decl = new (*ast_context->GetASTContext())
-          swift::VarDecl(is_static, specifier, is_capture_list, swift::SourceLoc(),
+          swift::VarDecl(is_static, introducer, is_capture_list, swift::SourceLoc(),
                          ast_context->GetIdentifier(name.GetCString()),
                          module_decl);
       var_decl->setType(GetSwiftType(ast_context->GetErrorType()));

@@ -707,7 +707,7 @@ static void AddVariableInfo(
       new VariableMetadataVariable(variable_sp));
   SwiftASTManipulator::VariableInfo variable_info(
       target_type, ast_context.GetASTContext()->getIdentifier(overridden_name),
-      metadata_sp, swift::VarDecl::Specifier::Var);
+      metadata_sp, swift::VarDecl::Introducer::Var);
 
   local_variables.push_back(variable_info);
   processed_variables.insert(overridden_name);
@@ -831,13 +831,13 @@ static void ResolveSpecialNames(
     SwiftASTManipulatorBase::VariableMetadataSP metadata_sp(
         new VariableMetadataPersistent(expr_var_sp));
 
-    auto specifier = llvm::cast<SwiftExpressionVariable>(expr_var_sp.get())
+    auto introducer = llvm::cast<SwiftExpressionVariable>(expr_var_sp.get())
                        ->GetIsModifiable()
-                   ? swift::VarDecl::Specifier::Var
-                   : swift::VarDecl::Specifier::Let;
+                   ? swift::VarDecl::Introducer::Var
+                   : swift::VarDecl::Introducer::Let;
     SwiftASTManipulator::VariableInfo variable_info(
         target_type, ast_context.GetASTContext()->getIdentifier(name.str()),
-        metadata_sp, specifier);
+        metadata_sp, introducer);
 
     local_variables.push_back(variable_info);
   }
