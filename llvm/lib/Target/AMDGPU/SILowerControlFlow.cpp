@@ -102,6 +102,10 @@ private:
                         SmallVectorImpl<MachineOperand> &Src) const;
 
   void combineMasks(MachineInstr &MI);
+  MachineInstr *skipMaskBranch(MachineInstr &MI, MachineBasicBlock &SrcMBB);
+
+  bool shouldSkip(const MachineBasicBlock &From,
+                  const MachineBasicBlock &To) const;
 
 public:
   static char ID;
@@ -230,8 +234,10 @@ void SILowerControlFlow::emitIf(MachineInstr &MI) {
 
   // Insert a pseudo terminator to help keep the verifier happy. This will also
   // be used later when inserting skips.
-  MachineInstr *NewBr = BuildMI(MBB, I, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
-                            .add(MI.getOperand(2));
+  MachineInstr *NewBr = skipMaskBranch(MI, *MI.getParent());
+  if (!NewBr)
+    NewBr = BuildMI(MBB, I, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
+                .add(MI.getOperand(2));
 
   if (!LIS) {
     MI.eraseFromParent();
@@ -307,9 +313,11 @@ void SILowerControlFlow::emitElse(MachineInstr &MI) {
     .addReg(Exec)
     .addReg(DstReg);
 
-  MachineInstr *Branch =
-    BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
-    .addMBB(DestBB);
+  // Insert the skip branch if required.
+  MachineInstr *Branch = skipMaskBranch(MI, *MI.getParent());
+  if (!Branch)
+    Branch = BuildMI(MBB, ElsePt, DL, TII->get(AMDGPU::SI_MASK_BRANCH))
+                 .addMBB(DestBB);
 
   if (!LIS) {
     MI.eraseFromParent();
@@ -471,6 +479,53 @@ void SILowerControlFlow::combineMasks(MachineInstr &MI) {
   MI.addOperand(Ops[UniqueOpndIdx]);
   if (MRI->use_empty(Reg))
     MRI->getUniqueVRegDef(Reg)->eraseFromParent();
+}
+
+bool SILowerControlFlow::shouldSkip(const MachineBasicBlock &From,
+                                    const MachineBasicBlock &To) const {
+  const MachineFunction *MF = From.getParent();
+
+  for (MachineFunction::const_iterator MBBI(&From), ToI(&To), End = MF->end();
+       MBBI != End && MBBI != ToI; ++MBBI) {
+    const MachineBasicBlock &MBB = *MBBI;
+
+    for (MachineBasicBlock::const_iterator I = MBB.begin(), E = MBB.end();
+         I != E; ++I) {
+      if (TII->opcodeEmitsNoInsts(*I))
+        continue;
+
+      // When a uniform loop is inside non-uniform control flow, the branch
+      // leaving the loop might be an S_CBRANCH_VCCNZ, which is never taken
+      // when EXEC = 0. We should skip the loop lest it becomes infinite.
+      if (I->getOpcode() == AMDGPU::S_CBRANCH_VCCNZ ||
+          I->getOpcode() == AMDGPU::S_CBRANCH_VCCZ)
+        return true;
+
+      if (TII->hasUnwantedEffectsWhenEXECEmpty(*I))
+        return true;
+
+      // These instructions are potentially expensive even if EXEC = 0.
+      if (TII->isSMRD(*I) || TII->isVMEM(*I) || TII->isFLAT(*I) ||
+          I->getOpcode() == AMDGPU::S_WAITCNT)
+        return true;
+    }
+  }
+  return false;
+}
+
+// Returns true if a branch over the block was inserted.
+MachineInstr *SILowerControlFlow::skipMaskBranch(MachineInstr &MI,
+                                                 MachineBasicBlock &SrcMBB) {
+  MachineBasicBlock *DestBB = MI.getOperand(2).getMBB();
+
+  if (!shouldSkip(**SrcMBB.succ_begin(), *DestBB))
+    return nullptr;
+
+  const DebugLoc &DL = MI.getDebugLoc();
+  MachineBasicBlock::iterator InsPt = std::next(MI.getIterator());
+
+  return BuildMI(SrcMBB, InsPt, DL, TII->get(AMDGPU::S_CBRANCH_EXECZ))
+      .addMBB(DestBB);
 }
 
 bool SILowerControlFlow::runOnMachineFunction(MachineFunction &MF) {

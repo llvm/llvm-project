@@ -92,19 +92,6 @@ INITIALIZE_PASS(SIInsertSkips, DEBUG_TYPE,
 
 char &llvm::SIInsertSkipsPassID = SIInsertSkips::ID;
 
-static bool opcodeEmitsNoInsts(const MachineInstr &MI) {
-  if (MI.isMetaInstruction())
-    return true;
-
-  // Handle target specific opcodes.
-  switch (MI.getOpcode()) {
-  case AMDGPU::SI_MASK_BRANCH:
-    return true;
-  default:
-    return false;
-  }
-}
-
 bool SIInsertSkips::shouldSkip(const MachineBasicBlock &From,
                                const MachineBasicBlock &To) const {
   unsigned NumInstr = 0;
@@ -116,26 +103,8 @@ bool SIInsertSkips::shouldSkip(const MachineBasicBlock &From,
 
     for (MachineBasicBlock::const_iterator I = MBB.begin(), E = MBB.end();
          NumInstr < SkipThreshold && I != E; ++I) {
-      if (opcodeEmitsNoInsts(*I))
+      if (TII->opcodeEmitsNoInsts(*I))
         continue;
-
-      // FIXME: Since this is required for correctness, this should be inserted
-      // during SILowerControlFlow.
-
-      // When a uniform loop is inside non-uniform control flow, the branch
-      // leaving the loop might be an S_CBRANCH_VCCNZ, which is never taken
-      // when EXEC = 0. We should skip the loop lest it becomes infinite.
-      if (I->getOpcode() == AMDGPU::S_CBRANCH_VCCNZ ||
-          I->getOpcode() == AMDGPU::S_CBRANCH_VCCZ)
-        return true;
-
-      if (TII->hasUnwantedEffectsWhenEXECEmpty(*I))
-        return true;
-
-      // These instructions are potentially expensive even if EXEC = 0.
-      if (TII->isSMRD(*I) || TII->isVMEM(*I) || TII->isFLAT(*I) ||
-          I->getOpcode() == AMDGPU::S_WAITCNT)
-        return true;
 
       ++NumInstr;
       if (NumInstr >= SkipThreshold)

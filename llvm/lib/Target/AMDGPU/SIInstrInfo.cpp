@@ -2677,6 +2677,19 @@ bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
          Opcode == AMDGPU::DS_GWS_BARRIER;
 }
 
+bool SIInstrInfo::opcodeEmitsNoInsts(const MachineInstr &MI) const {
+  if (MI.isMetaInstruction())
+    return true;
+
+  // Handle target specific opcodes.
+  switch (MI.getOpcode()) {
+  case AMDGPU::SI_MASK_BRANCH:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool SIInstrInfo::hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const {
   unsigned Opcode = MI.getOpcode();
 

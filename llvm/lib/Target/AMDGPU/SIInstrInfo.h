@@ -668,6 +668,9 @@ public:
       return MO.isReg() && RI.isVGPR(MRI, MO.getReg());});
   }
 
+  /// returns true if \p MI won't emit an instruction in the end.
+  bool opcodeEmitsNoInsts(const MachineInstr &MI) const;
+
   /// Whether we must prevent this instruction from executing with EXEC = 0.
   bool hasUnwantedEffectsWhenEXECEmpty(const MachineInstr &MI) const;
 
