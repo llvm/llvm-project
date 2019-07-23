@@ -51,6 +51,7 @@ class AssertingInferiorTestCase(TestBase):
         archs=[
             "aarch64",
             "arm"],
+        triple=no_match(".*-android"),
         bugnumber="llvm.org/pr25338")
     @expectedFailureAll(bugnumber="llvm.org/pr26592", triple='^mips')
     @expectedFailureNetBSD
@@ -76,6 +77,7 @@ class AssertingInferiorTestCase(TestBase):
         archs=[
             "aarch64",
             "arm"],
+        triple=no_match(".*-android"),
         bugnumber="llvm.org/pr25338")
     @expectedFailureAll(bugnumber="llvm.org/pr26592", triple='^mips')
     @expectedFailureNetBSD
@@ -92,6 +94,7 @@ class AssertingInferiorTestCase(TestBase):
         archs=[
             "aarch64",
             "arm"],
+        triple=no_match(".*-android"),
         bugnumber="llvm.org/pr25338")
     @expectedFailureAll(bugnumber="llvm.org/pr26592", triple='^mips')
     @expectedFailureNetBSD

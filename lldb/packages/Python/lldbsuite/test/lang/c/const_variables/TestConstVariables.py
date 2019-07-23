@@ -31,6 +31,7 @@ class ConstVariableTestCase(TestBase):
         archs=[
             'arm',
             'aarch64'],
+        triple=no_match(".*-android"),
         bugnumber="llvm.org/pr27883")
     @expectedFailureAll(
         oslist=["windows"],

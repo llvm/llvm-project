@@ -363,7 +363,7 @@ class LoadUnloadTestCase(TestBase):
 
     # We can't find a breakpoint location for d_init before launching because
     # executable dependencies are resolved relative to the debuggers PWD. Bug?
-    @expectedFailureAll(oslist=["linux"])
+    @expectedFailureAll(oslist=["linux"], triple=no_match('aarch64-.*-android'))
     @skipIfFreeBSD  # llvm.org/pr14424 - missing FreeBSD Makefiles/testcase support
     @skipIfWindows  # Windows doesn't have dlopen and friends, dynamic libraries work differently
     @expectedFailureNetBSD

@@ -1279,7 +1279,6 @@ class LldbGdbServerTestCase(gdbremote_testcase.GdbRemoteTestCaseBase, DwarfOpcod
 
     @llgs_test
     @skipUnlessPlatform(oslist=['linux'])
-    @expectedFailureAndroid
     @skipIf(archs=no_match(['arm', 'aarch64']))
     def test_hardware_breakpoint_set_and_remove_work_llgs(self):
         self.init_llgs_test()

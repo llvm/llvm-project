@@ -36,6 +36,7 @@ class WatchpointConditionCmdTestCase(TestBase):
     @expectedFailureAll(
         oslist=["linux"],
         archs=["aarch64"],
+        triple=no_match(".*-android"),
         bugnumber="llvm.org/pr27710")
     @expectedFailureAll(
         oslist=["windows"],
