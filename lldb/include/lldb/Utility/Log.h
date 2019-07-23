@@ -144,11 +144,7 @@ public:
 
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
-  void VAPrintf(const char *format, va_list args);
-
   void Error(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
-
-  void VAError(const char *format, va_list args);
 
   void Verbose(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
 
@@ -161,6 +157,9 @@ public:
   bool GetVerbose() const;
 
 private:
+  void VAPrintf(const char *format, va_list args);
+  void VAError(const char *format, va_list args);
+
   Channel &m_channel;
 
   // The mutex makes sure enable/disable operations are thread-safe. The
