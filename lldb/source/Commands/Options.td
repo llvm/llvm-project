@@ -370,6 +370,56 @@ let Command = "regex" in {
     Desc<"A syntax string showing the typical usage syntax.">;
 }
 
+let Command = "process attach" in {
+  def process_attach_continue : Option<"continue", "c">,
+    Desc<"Immediately continue the process once attached.">;
+  def process_attach_plugin : Option<"plugin", "P">, Arg<"Plugin">,
+    Desc<"Name of the process plugin you want to use.">;
+  def process_attach_pid : Option<"pid", "p">, Group<1>, Arg<"Pid">,
+    Desc<"The process ID of an existing process to attach to.">;
+  def process_attach_name : Option<"name", "n">, Group<2>, Arg<"ProcessName">,
+    Desc<"The name of the process to attach to.">;
+  def process_attach_include_existing : Option<"include-existing", "i">,
+    Group<2>, Desc<"Include existing processes when doing attach -w.">;
+  def process_attach_waitfor : Option<"waitfor", "w">, Group<2>,
+    Desc<"Wait for the process with <process-name> to launch.">;
+}
+
+let Command = "process continue" in {
+  def process_continue_ignore_count : Option<"ignore-count", "i">,
+    Arg<"UnsignedInteger">, Desc<"Ignore <N> crossings of the breakpoint (if it"
+    " exists) for the currently selected thread.">;
+}
+
+let Command = "process detach" in {
+  def process_detach_keep_stopped : Option<"keep-stopped", "s">, Group<1>,
+    Arg<"Boolean">, Desc<"Whether or not the process should be kept stopped on"
+    " detach (if possible).">;
+}
+
+let Command = "process connect" in {
+  def process_connect_plugin : Option<"plugin", "p">, Arg<"Plugin">,
+    Desc<"Name of the process plugin you want to use.">;
+}
+
+let Command = "process load" in {
+  def process_load_install : Option<"install", "i">, OptionalArg<"Path">,
+    Desc<"Install the shared library to the target. If specified without an "
+    "argument then the library will installed in the current working "
+    "directory.">;
+}
+
+let Command = "process handle" in {
+  def process_handle_stop : Option<"stop", "s">, Group<1>, Arg<"Boolean">,
+    Desc<"Whether or not the process should be stopped if the signal is "
+    "received.">;
+  def process_handle_notify : Option<"notify", "n">, Group<1>, Arg<"Boolean">,
+    Desc<"Whether or not the debugger should notify the user if the signal is "
+    "received.">;
+  def process_handle_pass : Option<"pass", "p">, Group<1>, Arg<"Boolean">,
+    Desc<"Whether or not the signal should be passed to the process.">;
+}
+
 let Command = "script import" in {
   def script_import_allow_reload : Option<"allow-reload", "r">, Group<1>,
     Desc<"Allow the script to be loaded even if it was already loaded before. "
