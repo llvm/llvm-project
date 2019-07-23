@@ -677,8 +677,6 @@ public:
   GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
                            size_t idx) override;
 
-  static CompilerType GetLValueReferenceType(const CompilerType &compiler_type);
-
   CompilerType
   GetLValueReferenceType(lldb::opaque_compiler_type_t type) override;
 
@@ -687,8 +685,6 @@ public:
   CompilerType GetPointeeType(lldb::opaque_compiler_type_t type) override;
 
   CompilerType GetPointerType(lldb::opaque_compiler_type_t type) override;
-
-  CompilerType GetRValueReferenceType(const CompilerType &type);
 
   CompilerType
   GetRValueReferenceType(lldb::opaque_compiler_type_t type) override;

@@ -4888,28 +4888,6 @@ ClangASTContext::GetMemberFunctionAtIndex(lldb::opaque_compiler_type_t type,
     return TypeMemberFunctionImpl(clang_type, clang_decl, name, kind);
 }
 
-CompilerType ClangASTContext::GetLValueReferenceType(const CompilerType &type) {
-  if (ClangUtil::IsClangType(type)) {
-    ClangASTContext *ast =
-        llvm::dyn_cast<ClangASTContext>(type.GetTypeSystem());
-    return CompilerType(ast->getASTContext(),
-                        ast->getASTContext()->getLValueReferenceType(
-                            ClangUtil::GetQualType(type)));
-  }
-  return CompilerType();
-}
-
-CompilerType ClangASTContext::GetRValueReferenceType(const CompilerType &type) {
-  if (ClangUtil::IsClangType(type)) {
-    ClangASTContext *ast =
-        llvm::dyn_cast<ClangASTContext>(type.GetTypeSystem());
-    return CompilerType(ast->getASTContext(),
-                        ast->getASTContext()->getRValueReferenceType(
-                            ClangUtil::GetQualType(type)));
-  }
-  return CompilerType();
-}
-
 CompilerType
 ClangASTContext::GetNonReferenceType(lldb::opaque_compiler_type_t type) {
   if (type)
