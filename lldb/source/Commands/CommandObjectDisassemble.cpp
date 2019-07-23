@@ -31,30 +31,8 @@ using namespace lldb;
 using namespace lldb_private;
 
 static constexpr OptionDefinition g_disassemble_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_ALL, false, "bytes",         'b', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,                "Show opcode bytes when disassembling." },
-  { LLDB_OPT_SET_ALL, false, "context",       'C', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeNumLines,            "Number of context lines of source to show." },
-  { LLDB_OPT_SET_ALL, false, "mixed",         'm', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,                "Enable mixed source and assembly display." },
-  { LLDB_OPT_SET_ALL, false, "raw",           'r', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,                "Print raw disassembly with no symbol information." },
-  { LLDB_OPT_SET_ALL, false, "plugin",        'P', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypePlugin,              "Name of the disassembler plugin you want to use." },
-  { LLDB_OPT_SET_ALL, false, "flavor",        'F', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeDisassemblyFlavor,   "Name of the disassembly flavor you want to use.  "
-  "Currently the only valid options are default, and for Intel "
-  "architectures, att and intel." },
-  { LLDB_OPT_SET_ALL, false, "arch",          'A', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeArchitecture,        "Specify the architecture to use from cross disassembly." },
-  { LLDB_OPT_SET_1 |
-  LLDB_OPT_SET_2,   true,  "start-address", 's', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeAddressOrExpression, "Address at which to start disassembling." },
-  { LLDB_OPT_SET_1,   false, "end-address",   'e', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeAddressOrExpression, "Address at which to end disassembling." },
-  { LLDB_OPT_SET_2 |
-  LLDB_OPT_SET_3 |
-  LLDB_OPT_SET_4 |
-  LLDB_OPT_SET_5,   false, "count",         'c', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeNumLines,            "Number of instructions to display." },
-  { LLDB_OPT_SET_3,   false, "name",          'n', OptionParser::eRequiredArgument, nullptr, {}, CommandCompletions::eSymbolCompletion, eArgTypeFunctionName,        "Disassemble entire contents of the given function name." },
-  { LLDB_OPT_SET_4,   false, "frame",         'f', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,                "Disassemble from the start of the current frame's function." },
-  { LLDB_OPT_SET_5,   false, "pc",            'p', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,                "Disassemble around the current pc." },
-  { LLDB_OPT_SET_6,   false, "line",          'l', OptionParser::eNoArgument,       nullptr, {}, 0,                                     eArgTypeNone,                "Disassemble the current frame's current source line instructions if there is debug line "
-  "table information, else disassemble around the pc." },
-  { LLDB_OPT_SET_7,   false, "address",       'a', OptionParser::eRequiredArgument, nullptr, {}, 0,                                     eArgTypeAddressOrExpression, "Disassemble function containing this address." },
-    // clang-format on
+#define LLDB_OPTIONS_disassemble
+#include "CommandOptions.inc"
 };
 
 CommandObjectDisassemble::CommandOptions::CommandOptions()
