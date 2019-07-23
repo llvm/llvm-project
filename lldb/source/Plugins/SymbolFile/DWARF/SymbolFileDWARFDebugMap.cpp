@@ -562,7 +562,7 @@ uint32_t SymbolFileDWARFDebugMap::CalculateAbilities() {
   return 0;
 }
 
-uint32_t SymbolFileDWARFDebugMap::GetNumCompileUnits() {
+uint32_t SymbolFileDWARFDebugMap::CalculateNumCompileUnits() {
   InitOSO();
   return m_compile_unit_infos.size();
 }
@@ -585,9 +585,8 @@ CompUnitSP SymbolFileDWARFDebugMap::ParseCompileUnitAtIndex(uint32_t cu_idx) {
                 eLanguageTypeUnknown, eLazyBoolCalculate);
 
         if (m_compile_unit_infos[cu_idx].compile_unit_sp) {
-          // Let our symbol vendor know about this compile unit
-          m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(
-              cu_idx, m_compile_unit_infos[cu_idx].compile_unit_sp);
+          SetCompileUnitAtIndex(cu_idx,
+                                m_compile_unit_infos[cu_idx].compile_unit_sp);
         }
       }
     }
@@ -1284,8 +1283,7 @@ void SymbolFileDWARFDebugMap::SetCompileUnit(SymbolFileDWARF *oso_dwarf,
                  cu_sp.get());
         } else {
           m_compile_unit_infos[cu_idx].compile_unit_sp = cu_sp;
-          m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(
-              cu_idx, cu_sp);
+          SetCompileUnitAtIndex(cu_idx, cu_sp);
         }
       }
     }

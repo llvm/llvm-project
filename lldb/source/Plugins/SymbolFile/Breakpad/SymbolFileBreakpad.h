@@ -46,10 +46,6 @@ public:
 
   // Compile Unit function calls
 
-  uint32_t GetNumCompileUnits() override;
-
-  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
-
   lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) override {
     return lldb::eLanguageTypeUnknown;
   }
@@ -196,7 +192,9 @@ private:
 
   };
 
-  SymbolVendor &GetSymbolVendor();
+  uint32_t CalculateNumCompileUnits() override;
+  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
+
   lldb::addr_t GetBaseFileAddress();
   void ParseFileRecords();
   void ParseCUData();

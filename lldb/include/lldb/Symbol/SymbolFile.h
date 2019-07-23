@@ -110,8 +110,8 @@ public:
 
   // Compile Unit function calls
   // Approach 1 - iterator
-  virtual uint32_t GetNumCompileUnits() = 0;
-  virtual lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) = 0;
+  uint32_t GetNumCompileUnits();
+  lldb::CompUnitSP GetCompileUnitAtIndex(uint32_t idx);
 
   virtual lldb::LanguageType ParseLanguage(CompileUnit &comp_unit) = 0;
   virtual size_t ParseFunctions(CompileUnit &comp_unit) = 0;
@@ -235,12 +235,17 @@ public:
     return nullptr;
   }
 
-  virtual void Dump(Stream &s) {}
+  virtual void Dump(Stream &s);
 
 protected:
   void AssertModuleLock();
+  virtual uint32_t CalculateNumCompileUnits() = 0;
+  virtual lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t idx) = 0;
+
+  void SetCompileUnitAtIndex(uint32_t idx, const lldb::CompUnitSP &cu_sp);
 
   ObjectFile *m_obj_file; // The object file that symbols can be extracted from.
+  llvm::Optional<std::vector<lldb::CompUnitSP>> m_compile_units;
   uint32_t m_abilities;
   bool m_calculated_abilities;
 

@@ -110,9 +110,6 @@ public:
 
   virtual size_t GetNumCompileUnits();
 
-  virtual bool SetCompileUnitAtIndex(size_t cu_idx,
-                                     const lldb::CompUnitSP &cu_sp);
-
   virtual lldb::CompUnitSP GetCompileUnitAtIndex(size_t idx);
 
   TypeList &GetTypeList() { return m_type_list; }
@@ -142,13 +139,7 @@ public:
   uint32_t GetPluginVersion() override;
 
 protected:
-  // Classes that inherit from SymbolVendor can see and modify these
-  typedef std::vector<lldb::CompUnitSP> CompileUnits;
-  typedef CompileUnits::iterator CompileUnitIter;
-  typedef CompileUnits::const_iterator CompileUnitConstIter;
-
   TypeList m_type_list; // Uniqued types for all parsers owned by this module
-  CompileUnits m_compile_units;    // The current compile units
   lldb::ObjectFileSP m_objfile_sp; // Keep a reference to the object file in
                                    // case it isn't the same as the module
                                    // object file (debug symbols in a separate
