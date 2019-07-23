@@ -29,9 +29,6 @@ std::pair<unsigned, StringRef> StringTable::add(StringRef Str) {
 }
 
 void StringTable::serialize(raw_ostream &OS) const {
-  // Emit the number of strings.
-  uint64_t StrTabSize = SerializedSize;
-  support::endian::write(OS, StrTabSize, support::little);
   // Emit the sequence of strings.
   for (StringRef Str : serialize()) {
     OS << Str;

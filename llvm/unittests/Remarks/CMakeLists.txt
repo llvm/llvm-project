@@ -6,4 +6,5 @@ set(LLVM_LINK_COMPONENTS
 add_llvm_unittest(RemarksTests
   RemarksStrTabParsingTest.cpp
   YAMLRemarksParsingTest.cpp
+  YAMLRemarksSerializerTest.cpp
   )
