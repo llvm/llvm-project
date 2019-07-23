@@ -14,6 +14,7 @@
 #include "clang/Basic/PlistSupport.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Version.h"
+#include "clang/CrossTU/CrossTranslationUnit.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/TokenConcatenation.h"
 #include "clang/Rewrite/Core/HTMLRewrite.h"
@@ -21,9 +22,9 @@
 #include "clang/StaticAnalyzer/Core/BugReporter/PathDiagnostic.h"
 #include "clang/StaticAnalyzer/Core/IssueHash.h"
 #include "clang/StaticAnalyzer/Core/PathDiagnosticConsumers.h"
-#include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Casting.h"
 
 using namespace clang;
@@ -39,12 +40,13 @@ namespace {
   class PlistDiagnostics : public PathDiagnosticConsumer {
     const std::string OutputFile;
     const Preprocessor &PP;
+    const cross_tu::CrossTranslationUnitContext &CTU;
     AnalyzerOptions &AnOpts;
     const bool SupportsCrossFileDiagnostics;
   public:
-    PlistDiagnostics(AnalyzerOptions &AnalyzerOpts,
-                     const std::string& prefix,
+    PlistDiagnostics(AnalyzerOptions &AnalyzerOpts, const std::string &prefix,
                      const Preprocessor &PP,
+                     const cross_tu::CrossTranslationUnitContext &CTU,
                      bool supportsMultipleFiles);
 
     ~PlistDiagnostics() override {}
@@ -518,26 +520,29 @@ static void printBugPath(llvm::raw_ostream &o, const FIDMap& FM,
 // Methods of PlistDiagnostics.
 //===----------------------------------------------------------------------===//
 
-PlistDiagnostics::PlistDiagnostics(AnalyzerOptions &AnalyzerOpts,
-                                   const std::string& output,
-                                   const Preprocessor &PP,
-                                   bool supportsMultipleFiles)
-  : OutputFile(output), PP(PP), AnOpts(AnalyzerOpts),
-    SupportsCrossFileDiagnostics(supportsMultipleFiles) {}
+PlistDiagnostics::PlistDiagnostics(
+    AnalyzerOptions &AnalyzerOpts, const std::string &output,
+    const Preprocessor &PP, const cross_tu::CrossTranslationUnitContext &CTU,
+    bool supportsMultipleFiles)
+    : OutputFile(output), PP(PP), CTU(CTU), AnOpts(AnalyzerOpts),
+      SupportsCrossFileDiagnostics(supportsMultipleFiles) {
+  // FIXME: Will be used by a later planned change.
+  (void)CTU;
+}
 
-void ento::createPlistDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
-                                         PathDiagnosticConsumers &C,
-                                         const std::string& s,
-                                         const Preprocessor &PP) {
-  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP,
+void ento::createPlistDiagnosticConsumer(
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    const std::string &s, const Preprocessor &PP,
+    const cross_tu::CrossTranslationUnitContext &CTU) {
+  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP, CTU,
                                    /*supportsMultipleFiles*/ false));
 }
 
-void ento::createPlistMultiFileDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
-                                                  PathDiagnosticConsumers &C,
-                                                  const std::string &s,
-                                                  const Preprocessor &PP) {
-  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP,
+void ento::createPlistMultiFileDiagnosticConsumer(
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    const std::string &s, const Preprocessor &PP,
+    const cross_tu::CrossTranslationUnitContext &CTU) {
+  C.push_back(new PlistDiagnostics(AnalyzerOpts, s, PP, CTU,
                                    /*supportsMultipleFiles*/ true));
 }
 void PlistDiagnostics::FlushDiagnosticsImpl(
