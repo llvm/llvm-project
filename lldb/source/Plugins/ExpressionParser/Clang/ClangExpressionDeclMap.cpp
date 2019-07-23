@@ -196,9 +196,12 @@ namespace {
 /// the type.
 class Completer : public clang::RecursiveASTVisitor<Completer> {
 private:
-  clang::ASTImporter &m_exporter;             /// Used to import Decl contents
-  clang::FileID m_file;                       /// The file that's going away
-  llvm::DenseSet<clang::Decl *> m_completed;  /// Visited Decls, to avoid cycles
+  /// Used to import Decl contents
+  clang::ASTImporter &m_exporter;
+  /// The file that's going away
+  clang::FileID m_file;
+  /// Visited Decls, to avoid cycles
+  llvm::DenseSet<clang::Decl *> m_completed;
 
   bool ImportAndCheckCompletable(clang::Decl *decl) {
     (void)m_exporter.Import(decl);
@@ -237,7 +240,7 @@ private:
 public:
   Completer(clang::ASTImporter &exporter, clang::FileID file)
       : m_exporter(exporter), m_file(file) {}
-  
+
   // Implements the RecursiveASTVisitor's core API.  It is called on each Decl
   // that the RecursiveASTVisitor encounters, and returns true if the traversal
   // should continue.
@@ -246,11 +249,10 @@ public:
     return true;
   }
 };
-}
+} // namespace
 
 static void CompleteAllDeclContexts(clang::ASTImporter &exporter,
-                                    clang::FileID file,
-                                    clang::QualType root) {
+                                    clang::FileID file, clang::QualType root) {
   clang::QualType canonical_type = root.getCanonicalType();
   if (clang::TagDecl *tag_decl = canonical_type->getAsTagDecl()) {
     Completer(exporter, file).TraverseDecl(tag_decl);
@@ -263,12 +265,12 @@ static void CompleteAllDeclContexts(clang::ASTImporter &exporter,
 }
 
 static clang::QualType ExportAllDeclaredTypes(
-    clang::ExternalASTMerger &merger,
-    clang::ASTContext &source, clang::FileManager &source_file_manager,
+    clang::ExternalASTMerger &merger, clang::ASTContext &source,
+    clang::FileManager &source_file_manager,
     const clang::ExternalASTMerger::OriginMap &source_origin_map,
     clang::FileID file, clang::QualType root) {
-  clang::ExternalASTMerger::ImporterSource importer_source =
-      { source, source_file_manager, source_origin_map };
+  clang::ExternalASTMerger::ImporterSource importer_source = {
+      source, source_file_manager, source_origin_map};
   merger.AddSources(importer_source);
   clang::ASTImporter &exporter = merger.ImporterForOrigin(source);
   CompleteAllDeclContexts(exporter, file, root);
@@ -286,10 +288,10 @@ static clang::QualType ExportAllDeclaredTypes(
 TypeFromUser ClangExpressionDeclMap::DeportType(ClangASTContext &target,
                                                 ClangASTContext &source,
                                                 TypeFromParser parser_type) {
-  assert (&target == m_target->GetScratchClangASTContext());
-  assert ((TypeSystem*)&source == parser_type.GetTypeSystem());
-  assert (source.getASTContext() == m_ast_context);
-  
+  assert(&target == m_target->GetScratchClangASTContext());
+  assert((TypeSystem *)&source == parser_type.GetTypeSystem());
+  assert(source.getASTContext() == m_ast_context);
+
   if (m_ast_importer_sp) {
     return TypeFromUser(m_ast_importer_sp->DeportType(
                             target.getASTContext(), source.getASTContext(),
@@ -299,13 +301,11 @@ TypeFromUser ClangExpressionDeclMap::DeportType(ClangASTContext &target,
     clang::FileID source_file =
         source.getASTContext()->getSourceManager().getFileID(
             source.getASTContext()->getTranslationUnitDecl()->getLocation());
-    auto scratch_ast_context = static_cast<ClangASTContextForExpressions*>(
+    auto scratch_ast_context = static_cast<ClangASTContextForExpressions *>(
         m_target->GetScratchClangASTContext());
     clang::QualType exported_type = ExportAllDeclaredTypes(
-        scratch_ast_context->GetMergerUnchecked(),
-        *source.getASTContext(), *source.getFileManager(),
-        m_merger_up->GetOrigins(),
-        source_file,
+        scratch_ast_context->GetMergerUnchecked(), *source.getASTContext(),
+        *source.getFileManager(), m_merger_up->GetOrigins(), source_file,
         clang::QualType::getFromOpaquePtr(parser_type.GetOpaqueQualType()));
     return TypeFromUser(exported_type.getAsOpaquePtr(), &target);
   } else {
@@ -828,7 +828,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
       log->Printf("  CEDM::FEVD[%u] Inspecting (NamespaceMap*)%p (%d entries)",
                   current_id, static_cast<void *>(namespace_map.get()),
                   (int)namespace_map->size());
-    
+
     for (ClangASTImporter::NamespaceMap::iterator i = namespace_map->begin(),
                                                   e = namespace_map->end();
          i != e; ++i) {
@@ -848,7 +848,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
     FindExternalVisibleDecls(context, lldb::ModuleSP(), namespace_decl,
                              current_id);
   }
-  
+
   ClangASTSource::FindExternalVisibleDecls(context);
 }
 
@@ -1048,7 +1048,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
           return;
 
         AddOneType(context, TypeFromUser(m_ctx_obj->GetCompilerType()),
-                    current_id);
+                   current_id);
 
         m_struct_vars->m_object_pointer_type =
             TypeFromUser(ctx_obj_ptr->GetCompilerType());
@@ -1858,7 +1858,7 @@ bool ClangExpressionDeclMap::ResolveUnknownTypes() {
   Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
 
   ClangASTContextForExpressions *scratch_ast_context =
-      static_cast<ClangASTContextForExpressions*>(
+      static_cast<ClangASTContextForExpressions *>(
           target->GetScratchClangASTContext());
 
   for (size_t index = 0, num_entities = m_found_entities.GetSize();
@@ -1897,9 +1897,9 @@ bool ClangExpressionDeclMap::ResolveUnknownTypes() {
             var_type.getAsOpaquePtr());
       } else if (HasMerger()) {
         copied_type = CopyTypeWithMerger(
-            var_decl->getASTContext(),
-            scratch_ast_context->GetMergerUnchecked(),
-            var_type).getAsOpaquePtr();
+                          var_decl->getASTContext(),
+                          scratch_ast_context->GetMergerUnchecked(), var_type)
+                          .getAsOpaquePtr();
       } else {
         lldbassert(0 && "No mechanism to copy a resolved unknown type!");
         return false;
@@ -2016,24 +2016,24 @@ void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
           if (copied_function_template) {
             if (log) {
               ASTDumper ast_dumper((clang::Decl *)copied_function_template);
-              
+
               StreamString ss;
-              
+
               function->DumpSymbolContext(&ss);
-              
+
               log->Printf("  CEDM::FEVD[%u] Imported decl for function template"
                           " %s (description %s), returned %s",
                           current_id,
                           copied_function_template->getNameAsString().c_str(),
                           ss.GetData(), ast_dumper.GetCString());
             }
-            
+
             context.AddNamedDecl(copied_function_template);
           }
         } else if (src_function_decl) {
           if (clang::FunctionDecl *copied_function_decl =
                   llvm::dyn_cast_or_null<clang::FunctionDecl>(
-                       CopyDecl(src_function_decl))) {
+                      CopyDecl(src_function_decl))) {
             if (log) {
               ASTDumper ast_dumper((clang::Decl *)copied_function_decl);
 
