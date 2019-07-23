@@ -14,7 +14,7 @@
 #include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
-#include "clang/Basic/VirtualFileSystem.h"
+#include "llvm/Support/VirtualFileSystem.h"
 
 using namespace llvm::opt;
 
