@@ -513,22 +513,15 @@ Expected<typename ELFT::ShdrRange> ELFFile<ELFT>::sections() const {
     NumSections = First->sh_size;
 
   if (NumSections > UINT64_MAX / sizeof(Elf_Shdr))
-    return createError("invalid number of sections specified in the NULL "
-                       "section's sh_size field (" +
-                       Twine(NumSections) + ")");
+    // TODO: this error is untested.
+    return createError("section table goes past the end of file");
 
   const uint64_t SectionTableSize = NumSections * sizeof(Elf_Shdr);
-  if (SectionTableOffset + SectionTableSize < SectionTableOffset)
-    return createError(
-        "invalid section header table offset (e_shoff = 0x" +
-        Twine::utohexstr(SectionTableOffset) +
-        ") or invalid number of sections specified in the first section "
-        "header's sh_size field (0x" +
-        Twine::utohexstr(NumSections) + ")");
 
   // Section table goes past end of file!
   if (SectionTableOffset + SectionTableSize > FileSize)
     return createError("section table goes past the end of file");
+
   return makeArrayRef(First, NumSections);
 }
 

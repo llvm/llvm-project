@@ -77,7 +77,7 @@ struct FileHeader {
   llvm::yaml::Hex64 Entry;
 
   Optional<llvm::yaml::Hex16> SHEntSize;
-  Optional<llvm::yaml::Hex64> SHOffset;
+  Optional<llvm::yaml::Hex16> SHOffset;
   Optional<llvm::yaml::Hex16> SHNum;
   Optional<llvm::yaml::Hex16> SHStrNdx;
 };
