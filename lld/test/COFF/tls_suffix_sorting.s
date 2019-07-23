@@ -1,7 +1,6 @@
 # REQUIRES: x86
 
-# RUN: echo -e ".section .tls,\"dw\"\n .byte 0xaa\n .section .tls\$ZZZ,\"dw\"\n .byte 0xff\n .globl _tls_index\n .data\n _tls_index:\n .int 0" > %t.tlssup.s
-# RUN: llvm-mc -triple=x86_64-windows-gnu %t.tlssup.s -filetype=obj -o %t.tlssup.o
+# RUN: llvm-mc -triple=x86_64-windows-gnu %S/Inputs/tlssup.s -filetype=obj -o %t.tlssup.o
 # RUN: llvm-mc -triple=x86_64-windows-gnu %s -filetype=obj -o %t.main.o
 
 # RUN: lld-link -lldmingw -entry:main %t.main.o %t.tlssup.o -out:%t.exe

@@ -29,7 +29,7 @@ Sections:
 ## sections with equal names and suffixes.
 
 # RUN: not yaml2obj --docnum=2 %s 2>&1 | FileCheck %s --check-prefix=CASE2
-# CASE2: error: Repeated section name: '.foo [1]' at YAML section number 1.
+# CASE2: error: Repeated section name: '.foo [1]' at YAML section number 2.
 
 --- !ELF
 FileHeader:
@@ -48,7 +48,7 @@ Sections:
 ## names are equal.
 
 # RUN: not yaml2obj --docnum=3 %s 2>&1 | FileCheck %s --check-prefix=CASE3
-# CASE3: error: Repeated section name: '.foo' at YAML section number 1.
+# CASE3: error: Repeated section name: '.foo' at YAML section number 2.
 
 --- !ELF
 FileHeader:

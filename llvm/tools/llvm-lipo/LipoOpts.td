@@ -18,6 +18,12 @@ def archs : Option<["-", "--"], "archs", KIND_FLAG>,
             Group<action_group>,
             HelpText<"Display the arch_types present in the input file">;
 
+def info : Option<["-", "--"], "info", KIND_FLAG>,
+           Group<action_group>,
+           HelpText<"Display descriptions of each input file including "
+                    "filename and arch_types. Groups universal binaries "
+                    "together followed by thin files">;
+
 def thin : Option<["-", "--"], "thin", KIND_SEPARATE>,
            Group<action_group>,
            HelpText<"Create a thin output file of specified arch_type from the "

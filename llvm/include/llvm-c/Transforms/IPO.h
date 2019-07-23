@@ -67,6 +67,21 @@ void LLVMAddIPSCCPPass(LLVMPassManagerRef PM);
 /** See llvm::createInternalizePass function. */
 void LLVMAddInternalizePass(LLVMPassManagerRef, unsigned AllButMain);
 
+/**
+ * Create and add the internalize pass to the given pass manager with the
+ * provided preservation callback.
+ *
+ * The context parameter is forwarded to the callback on each invocation.
+ * As such, it is the responsibility of the caller to extend its lifetime
+ * until execution of this pass has finished.
+ *
+ * @see llvm::createInternalizePass function.
+ */
+void LLVMAddInternalizePassWithMustPreservePredicate(
+    LLVMPassManagerRef PM,
+    void *Context,
+    LLVMBool (*MustPreserve)(LLVMValueRef, void *));
+
 /** See llvm::createStripDeadPrototypesPass function. */
 void LLVMAddStripDeadPrototypesPass(LLVMPassManagerRef PM);
 

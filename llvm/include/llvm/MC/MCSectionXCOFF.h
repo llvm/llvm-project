@@ -23,16 +23,25 @@ class MCSymbol;
 
 // This class represents an XCOFF `Control Section`, more commonly referred to
 // as a csect. A csect represents the smallest possible unit of data/code which
-// will be relocated as a single block.
+// will be relocated as a single block. A csect can either be:
+// 1) Initialized: The Type will be XTY_SD, and the symbols inside the csect
+//    will have a label definition representing their offset within the csect.
+// 2) Uninitialized: The Type will be XTY_CM, it will contain a single symbol,
+//    and may not contain label definitions.
 class MCSectionXCOFF final : public MCSection {
   friend class MCContext;
 
   StringRef Name;
   XCOFF::StorageMappingClass MappingClass;
+  XCOFF::SymbolType Type;
 
   MCSectionXCOFF(StringRef Section, XCOFF::StorageMappingClass SMC,
-                 SectionKind K, MCSymbol *Begin)
-      : MCSection(SV_XCOFF, K, Begin), Name(Section), MappingClass(SMC) {}
+                 XCOFF::SymbolType ST, SectionKind K, MCSymbol *Begin)
+      : MCSection(SV_XCOFF, K, Begin), Name(Section), MappingClass(SMC),
+        Type(ST) {
+    assert((ST == XCOFF::XTY_SD || ST == XCOFF::XTY_CM) &&
+           "Unexpected type for csect.");
+  }
 
 public:
   ~MCSectionXCOFF();
@@ -43,6 +52,7 @@ public:
 
   StringRef getSectionName() const { return Name; }
   XCOFF::StorageMappingClass getMappingClass() const { return MappingClass; }
+  XCOFF::SymbolType getCSectType() const { return Type; }
 
   void PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                             raw_ostream &OS,

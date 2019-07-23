@@ -838,7 +838,7 @@ class VectorType;
     void setAllExpand(MVT VT);
   };
 
-  enum NEONModImmType {
+  enum VMOVModImmType {
     VMOVModImm,
     VMVNModImm,
     MVEVMVNModImm,

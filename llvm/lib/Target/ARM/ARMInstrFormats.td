@@ -2282,7 +2282,7 @@ class N1ModImm<bit op23, bits<3> op21_19, bits<4> op11_8, bit op7, bit op6,
   let Inst{24}    = SIMM{7};
   let Inst{18-16} = SIMM{6-4};
   let Inst{3-0}   = SIMM{3-0};
-  let DecoderMethod = "DecodeNEONModImmInstruction";
+  let DecoderMethod = "DecodeVMOVModImmInstruction";
 }
 
 // NEON 2 vector register format.

@@ -314,7 +314,7 @@ static DecodeStatus DecodeVLD3DupInstruction(MCInst &Inst, unsigned Val,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeVLD4DupInstruction(MCInst &Inst, unsigned Val,
                                uint64_t Address, const void *Decoder);
-static DecodeStatus DecodeNEONModImmInstruction(MCInst &Inst,unsigned Val,
+static DecodeStatus DecodeVMOVModImmInstruction(MCInst &Inst,unsigned Val,
                                uint64_t Address, const void *Decoder);
 static DecodeStatus DecodeMVEModImmInstruction(MCInst &Inst,unsigned Val,
                                uint64_t Address, const void *Decoder);
@@ -3445,7 +3445,7 @@ static DecodeStatus DecodeVLD4DupInstruction(MCInst &Inst, unsigned Insn,
 }
 
 static DecodeStatus
-DecodeNEONModImmInstruction(MCInst &Inst, unsigned Insn,
+DecodeVMOVModImmInstruction(MCInst &Inst, unsigned Insn,
                             uint64_t Address, const void *Decoder) {
   DecodeStatus S = MCDisassembler::Success;
 
@@ -5679,7 +5679,7 @@ static DecodeStatus DecodeVCVTD(MCInst &Inst, unsigned Insn,
         }
       }
     }
-    return DecodeNEONModImmInstruction(Inst, Insn, Address, Decoder);
+    return DecodeVMOVModImmInstruction(Inst, Insn, Address, Decoder);
   }
 
   if (!(imm & 0x20)) return MCDisassembler::Fail;
@@ -5738,7 +5738,7 @@ static DecodeStatus DecodeVCVTQ(MCInst &Inst, unsigned Insn,
         }
       }
     }
-    return DecodeNEONModImmInstruction(Inst, Insn, Address, Decoder);
+    return DecodeVMOVModImmInstruction(Inst, Insn, Address, Decoder);
   }
 
   if (!(imm & 0x20)) return MCDisassembler::Fail;

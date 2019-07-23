@@ -388,8 +388,6 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
 
     MachineInstrBuilder MIBuilder =
         BuildMI(Block, MBIter, dl, TII->get(ARM::MVE_VPST));
-    // The mask value for the VPST instruction is T = 0b1000 = 8
-    MIBuilder.addImm(VPTMaskValue::T);
 
     MachineBasicBlock::iterator VPSTInsertPos = MIBuilder.getInstr();
     int VPTInstCnt = 1;
@@ -400,12 +398,29 @@ bool MVEVPTBlock::InsertVPTBlocks(MachineBasicBlock &Block) {
       NextPred = getVPTInstrPredicate(*MBIter, PredReg);
     } while (NextPred != ARMVCC::None && NextPred == Pred && ++VPTInstCnt < 4);
 
+    switch (VPTInstCnt) {
+    case 1:
+      MIBuilder.addImm(VPTMaskValue::T);
+      break;
+    case 2:
+      MIBuilder.addImm(VPTMaskValue::TT);
+      break;
+    case 3:
+      MIBuilder.addImm(VPTMaskValue::TTT);
+      break;
+    case 4:
+      MIBuilder.addImm(VPTMaskValue::TTTT);
+      break;
+    default:
+      llvm_unreachable("Unexpected number of instruction in a VPT block");
+    };
+
     MachineInstr *LastMI = &*MBIter;
     finalizeBundle(Block, VPSTInsertPos.getInstrIterator(),
                    ++LastMI->getIterator());
 
     Modified = true;
-    LLVM_DEBUG(dbgs() << "VPT block created for: "; MI->dump(););
+    LLVM_DEBUG(dbgs() << "VPT block created for: "; MI->dump());
 
     ++MBIter;
   }

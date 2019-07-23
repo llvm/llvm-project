@@ -300,6 +300,15 @@ template <typename Predicate> struct cstfp_pred_ty : public Predicate {
 //
 ///////////////////////////////////////////////////////////////////////////////
 
+struct is_any_apint {
+  bool isValue(const APInt &C) { return true; }
+};
+/// Match an integer or vector with any integral constant.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_any_apint> m_AnyIntegralConstant() {
+  return cst_pred_ty<is_any_apint>();
+}
+
 struct is_all_ones {
   bool isValue(const APInt &C) { return C.isAllOnesValue(); }
 };

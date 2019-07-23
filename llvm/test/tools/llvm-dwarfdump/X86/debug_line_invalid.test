@@ -25,7 +25,7 @@
 # RUN: FileCheck %s --input-file=%t-malformed-off-first.err --check-prefix=ALL
 
 # Don't stop looking for the later unit if non-fatal issues are found.
-# RUN: llvm-dwarfdump -debug-line=0x183 %t-malformed.o 2> %t-malformed-off-last.err | FileCheck %s --check-prefixes=LASTONLY
+# RUN: llvm-dwarfdump -debug-line=0x271 %t-malformed.o 2> %t-malformed-off-last.err | FileCheck %s --check-prefixes=LASTONLY
 # RUN: FileCheck %s --input-file=%t-malformed-off-last.err --check-prefix=ALL
 
 # FIRST: debug_line[0x00000000]
@@ -69,23 +69,37 @@
 # NONFATAL-NOT: debug_line[{{.*}}]
 # NONFATAL: 0x00000000deadfade {{.*}}
 # NONFATAL: debug_line[0x00000183]
+# NONFATAL-NEXT: Line table prologue
+# NONFATAL: debug_line[0x00000271]
 # NONFATAL-NOT: debug_line[{{.*}}]
 # NONFATAL: 0x00000000cafebabe {{.*}} end_sequence
 # NONFATAL-NOT: debug_line[{{.*}}]
 
 # LASTONLY-NOT: debug_line[{{.*}}]
-# LASTONLY: debug_line[0x00000183]
+# LASTONLY: debug_line[0x00000271]
 # LASTONLY: 0x00000000cafebabe {{.*}} end_sequence
 
 # RESERVED: warning: parsing line table prologue at offset 0x00000048 unsupported reserved unit length found of value 0xfffffffe
+
+# MD5: warning: parsing line table prologue at 0x00000000 found an invalid directory or file table description at 0x0000003b
+# MD5-NEXT: warning: failed to parse file entry because the MD5 hash is invalid
 
 # ALL-NOT:  warning:
 # ALL:      warning: parsing line table prologue at offset 0x00000048 found unsupported version 0x00
 # ALL-NEXT: warning: parsing line table prologue at offset 0x0000004e found unsupported version 0x01
 # ALL-NEXT: warning: parsing line table prologue at 0x00000054 found an invalid directory or file table description at 0x00000073
+# ALL-NEXT: warning: failed to parse entry content descriptions because no path was found
 # FIXME - The latter offset in the next line should be 0xad. The filename parsing code does not notice a missing terminating byte.
 # ALL-NEXT: warning: parsing line table prologue at 0x00000073 should have ended at 0x000000ab but it ended at 0x000000ac
 # ALL-NEXT: warning: parsing line table prologue at 0x000000ad should have ended at 0x000000e8 but it ended at 0x000000e7
 # OTHER-NEXT: warning: unexpected line op length at offset 0x0000012e expected 0x02 found 0x01
 # OTHER-NEXT: warning: last sequence in debug line table is not terminated!
+# ALL-NEXT: warning: parsing line table prologue at 0x00000183 found an invalid directory or file table description at 0x000001a2
+# ALL-NEXT: warning: failed to parse entry content descriptions at offset 0x000001a2 because offset extends beyond the prologue end at offset 0x0000019e
+# ALL-NEXT: warning: parsing line table prologue at 0x000001be found an invalid directory or file table description at 0x000001eb
+# ALL-NEXT: warning: failed to parse file entry at offset 0x000001eb because offset extends beyond the prologue end at offset 0x000001e9
+# ALL-NEXT: warning: parsing line table prologue at 0x000001f9 found an invalid directory or file table description at 0x0000021b
+# ALL-NEXT: warning: failed to parse directory entry at offset 0x0000021b because offset extends beyond the prologue end at offset 0x0000021b
+# ALL-NEXT: warning: parsing line table prologue at 0x00000234 found an invalid directory or file table description at 0x00000269
+# ALL-NEXT: warning: failed to parse file entry because the MD5 hash is invalid
 # ALL-NOT:  warning:

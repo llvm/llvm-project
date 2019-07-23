@@ -295,6 +295,45 @@ let Command = "breakpoint command delete" in {
     "a file is provided, which prime new targets.">;
 }
 
+let Command = "disassemble" in {
+  def disassemble_options_bytes : Option<"bytes", "b">,
+    Desc<"Show opcode bytes when disassembling.">;
+  def disassemble_options_context : Option<"context", "C">, Arg<"NumLines">,
+    Desc<"Number of context lines of source to show.">;
+  def disassemble_options_mixed : Option<"mixed", "m">,
+    Desc<"Enable mixed source and assembly display.">;
+  def disassemble_options_raw : Option<"raw", "r">,
+    Desc<"Print raw disassembly with no symbol information.">;
+  def disassemble_options_plugin : Option<"plugin", "P">, Arg<"Plugin">,
+    Desc<"Name of the disassembler plugin you want to use.">;
+  def disassemble_options_flavor : Option<"flavor", "F">,
+    Arg<"DisassemblyFlavor">, Desc<"Name of the disassembly flavor you want to "
+    "use. Currently the only valid options are default, and for Intel "
+    "architectures, att and intel.">;
+  def disassemble_options_arch : Option<"arch", "A">, Arg<"Architecture">,
+    Desc<"Specify the architecture to use from cross disassembly.">;
+  def disassemble_options_start_address : Option<"start-address", "s">,
+    Groups<[1,2]>, Arg<"AddressOrExpression">, Required,
+    Desc<"Address at which to start disassembling.">;
+  def disassemble_options_end_address : Option<"end-address", "e">, Group<1>,
+    Arg<"AddressOrExpression">, Desc<"Address at which to end disassembling.">;
+  def disassemble_options_count : Option<"count", "c">, Groups<[2,3,4,5]>,
+    Arg<"NumLines">, Desc<"Number of instructions to display.">;
+  def disassemble_options_name : Option<"name", "n">, Group<3>,
+    Arg<"FunctionName">, Completion<"Symbol">,
+    Desc<"Disassemble entire contents of the given function name.">;
+  def disassemble_options_frame : Option<"frame", "f">, Group<4>,
+    Desc<"Disassemble from the start of the current frame's function.">;
+  def disassemble_options_pc : Option<"pc", "p">, Group<5>,
+    Desc<"Disassemble around the current pc.">;
+  def disassemble_options_line : Option<"line", "l">, Group<6>,
+    Desc<"Disassemble the current frame's current source line instructions if"
+    "there is debug line table information, else disassemble around the pc.">;
+  def disassemble_options_address : Option<"address", "a">, Group<7>,
+    Arg<"AddressOrExpression">,
+    Desc<"Disassemble function containing this address.">;
+}
+
 let Command = "history" in {
   def history_count : Option<"count", "c">, Group<1>, Arg<"UnsignedInteger">,
     Desc<"How many history commands to print.">;

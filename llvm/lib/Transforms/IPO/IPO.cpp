@@ -121,6 +121,15 @@ void LLVMAddInternalizePass(LLVMPassManagerRef PM, unsigned AllButMain) {
   unwrap(PM)->add(createInternalizePass(PreserveMain));
 }
 
+void LLVMAddInternalizePassWithMustPreservePredicate(
+    LLVMPassManagerRef PM,
+    void *Context,
+    LLVMBool (*Pred)(LLVMValueRef, void *)) {
+  unwrap(PM)->add(createInternalizePass([=](const GlobalValue &GV) {
+    return Pred(wrap(&GV), Context) == 0 ? false : true;
+  }));
+}
+
 void LLVMAddStripDeadPrototypesPass(LLVMPassManagerRef PM) {
   unwrap(PM)->add(createStripDeadPrototypesPass());
 }

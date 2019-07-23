@@ -14336,7 +14336,7 @@ bool PPCTargetLowering::isAccessedAsGotIndirect(SDValue GA) const {
   CodeModel::Model CModel = getTargetMachine().getCodeModel();
   // If it is small or large code model, module locals are accessed
   // indirectly by loading their address from .toc/.got. The difference
-  // is that for large code model we have ADDISTocHa + LDtocL and for
+  // is that for large code model we have ADDIStocHA8 + LDtocL and for
   // small code model we simply have LDtoc.
   if (CModel == CodeModel::Small || CModel == CodeModel::Large)
     return true;

@@ -1018,6 +1018,7 @@ public:
   uint32_t Flags;
 
   bool HadShdrs = true;
+  bool MustBeRelocatable = false;
   StringTableSection *SectionNames = nullptr;
   SymbolTableSection *SymbolTable = nullptr;
   SectionIndexSection *SectionIndexTable = nullptr;
@@ -1043,6 +1044,7 @@ public:
   template <class T, class... Ts> T &addSection(Ts &&... Args) {
     auto Sec = llvm::make_unique<T>(std::forward<Ts>(Args)...);
     auto Ptr = Sec.get();
+    MustBeRelocatable |= isa<RelocationSection>(*Ptr);
     Sections.emplace_back(std::move(Sec));
     Ptr->Index = Sections.size();
     return *Ptr;
@@ -1050,6 +1052,9 @@ public:
   Segment &addSegment(ArrayRef<uint8_t> Data) {
     Segments.emplace_back(llvm::make_unique<Segment>(Data));
     return *Segments.back();
+  }
+  bool isRelocatable() const {
+    return (Type != ELF::ET_DYN && Type != ELF::ET_EXEC) || MustBeRelocatable;
   }
 };
 
