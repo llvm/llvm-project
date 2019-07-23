@@ -184,3 +184,6 @@ let claude = SIMD3(1, 2, 3)
 typealias Tinky = SIMD3<Int>
 let winky = Tinky()
 // CHECK: {{winky}}: Tinky = (0, 0, 0)
+
+let ohmy = SIMD32<UInt8>(repeating: 0)
+// CHECK: {{ohmy}}: SIMD32<UInt8> = (0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
