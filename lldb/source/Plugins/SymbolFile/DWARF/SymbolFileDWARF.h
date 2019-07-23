@@ -96,10 +96,6 @@ public:
 
   // Compile Unit function calls
 
-  uint32_t GetNumCompileUnits() override;
-
-  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
-
   lldb::LanguageType
   ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
 
@@ -340,6 +336,10 @@ protected:
 
   bool DeclContextMatchesThisSymbolFile(
       const lldb_private::CompilerDeclContext *decl_ctx);
+
+  uint32_t CalculateNumCompileUnits() override;
+
+  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
   virtual DWARFUnit *
   GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit);
