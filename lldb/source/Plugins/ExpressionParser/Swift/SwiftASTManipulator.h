@@ -65,16 +65,16 @@ public:
     CompilerType GetType() const { return m_type; }
     swift::Identifier GetName() const { return m_name; }
     swift::VarDecl *GetDecl() const { return m_decl; }
-    swift::VarDecl::Specifier GetVarSpecifier() const;
+    swift::VarDecl::Introducer GetVarIntroducer() const;
     bool GetIsCaptureList() const;
 
     VariableInfo() : m_type(), m_name(), m_metadata() {}
 
     VariableInfo(CompilerType &type, swift::Identifier name,
                  VariableMetadataSP metadata, 
-                 swift::VarDecl::Specifier specifier, 
+                 swift::VarDecl::Introducer introducer, 
                  bool is_capture_list = false)
-        : m_type(type), m_name(name), m_var_specifier(specifier),
+        : m_type(type), m_name(name), m_var_introducer(introducer),
           m_is_capture_list(is_capture_list), m_metadata(metadata) {}
 
     template <class T> bool MetadataIs() const {
@@ -91,7 +91,7 @@ public:
     CompilerType m_type;
     swift::Identifier m_name;
     swift::VarDecl *m_decl = nullptr;
-    swift::VarDecl::Specifier m_var_specifier = swift::VarDecl::Specifier::Var;
+    swift::VarDecl::Introducer m_var_introducer = swift::VarDecl::Introducer::Var;
     bool m_is_capture_list = false;
 
   public:

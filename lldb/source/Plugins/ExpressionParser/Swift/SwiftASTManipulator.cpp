@@ -40,12 +40,12 @@
 
 using namespace lldb_private;
 
-swift::VarDecl::Specifier
-SwiftASTManipulator::VariableInfo::GetVarSpecifier() const {
+swift::VarDecl::Introducer
+SwiftASTManipulator::VariableInfo::GetVarIntroducer() const {
   if (m_decl)
-    return m_decl->getSpecifier();
+    return m_decl->getIntroducer();
   else
-    return m_var_specifier;
+    return m_var_introducer;
 }
 
 bool SwiftASTManipulator::VariableInfo::GetIsCaptureList() const {
@@ -419,10 +419,10 @@ swift::Stmt *SwiftASTManipulator::ConvertExpressionToTmpReturnVarAccess(
   llvm::SmallVector<swift::ASTNode, 3> body;
   llvm::SmallVector<swift::Expr *, 3> false_body;
   const bool is_static = false;
-  const auto specifier = swift::VarDecl::Specifier::Var;
+  const auto introducer = swift::VarDecl::Introducer::Var;
   const bool is_capture_list = false;
   result_loc_info.tmp_var_decl = new (ast_context) swift::VarDecl(
-      is_static, specifier, is_capture_list, source_loc, name,
+      is_static, introducer, is_capture_list, source_loc, name,
       new_decl_context);
   result_loc_info.tmp_var_decl->setImplicit();
   result_loc_info.tmp_var_decl->setAccess(
@@ -1091,7 +1091,7 @@ bool SwiftASTManipulator::AddExternalVariables(
     SwiftASTManipulator::VariableInfo &variable = variables[0];
 
     const bool is_static = false;
-    auto specifier = variable.GetVarSpecifier();
+    auto introducer = variable.GetVarIntroducer();
     bool is_capture_list = variable.GetIsCaptureList();
     swift::SourceLoc loc;
     swift::Identifier name = variable.m_name;
@@ -1101,7 +1101,7 @@ bool SwiftASTManipulator::AddExternalVariables(
     // strip that part off:
 
     swift::VarDecl *redirected_var_decl = new (ast_context)
-        swift::VarDecl(is_static, specifier, is_capture_list, loc, name,
+        swift::VarDecl(is_static, introducer, is_capture_list, loc, name,
                        &m_source_file);
     redirected_var_decl->setType(var_type);
     redirected_var_decl->setInterfaceType(var_type);
@@ -1153,7 +1153,7 @@ bool SwiftASTManipulator::AddExternalVariables(
       swift::SourceLoc loc = m_function_decl->getBody()->getLBraceLoc();
       swift::FuncDecl *containing_function = m_function_decl;
       swift::Identifier name = variable.m_name;
-      auto specifier = variable.GetVarSpecifier();
+      auto introducer = variable.GetVarIntroducer();
       bool is_capture_list = variable.GetIsCaptureList();
 
       bool is_self = !variable.m_name.str().compare("$__lldb_injected_self");
@@ -1204,7 +1204,7 @@ bool SwiftASTManipulator::AddExternalVariables(
       }
 
       swift::VarDecl *redirected_var_decl = new (ast_context) swift::VarDecl(
-          is_static, specifier, is_capture_list, loc, name,
+          is_static, introducer, is_capture_list, loc, name,
           containing_function);
       redirected_var_decl->setType(var_type);
       auto interface_type = var_type;

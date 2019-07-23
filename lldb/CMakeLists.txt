@@ -15,6 +15,8 @@ set(CMAKE_MODULE_PATH
 # using LLVM as an external library.
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(LLDBStandalone)
+else()
+  set(LLDB_PATH_TO_SWIFT_BUILD ${CMAKE_BINARY_DIR})
 endif()
 
 include(LLDBConfig)
