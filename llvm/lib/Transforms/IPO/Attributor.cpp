@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
@@ -59,6 +60,7 @@ STATISTIC(NumFnReturnedNonNull,
 STATISTIC(NumFnArgumentNonNull, "Number of function arguments marked nonnull");
 STATISTIC(NumCSArgumentNonNull, "Number of call site arguments marked nonnull");
 STATISTIC(NumFnWillReturn, "Number of functions marked willreturn");
+STATISTIC(NumFnArgumentNoAlias, "Number of function arguments marked noalias");
 
 // TODO: Determine a good default value.
 //
@@ -134,6 +136,9 @@ static void bookkeeping(AbstractAttribute::ManifestPosition MP,
   case Attribute::WillReturn:
     NumFnWillReturn++;
     break;
+  case Attribute::NoAlias:
+    NumFnArgumentNoAlias++;
+    return;
   default:
     return;
   }
@@ -1311,6 +1316,101 @@ ChangeStatus AAWillReturnFunction::updateImpl(Attributor &A) {
   return ChangeStatus::UNCHANGED;
 }
 
+/// ------------------------ NoAlias Argument Attribute ------------------------
+
+struct AANoAliasImpl : AANoAlias, BooleanState {
+
+  AANoAliasImpl(Value &V, InformationCache &InfoCache)
+      : AANoAlias(V, InfoCache) {}
+
+  /// See AbstractAttribute::getState()
+  /// {
+  AbstractState &getState() override { return *this; }
+  const AbstractState &getState() const override { return *this; }
+  /// }
+
+  const std::string getAsStr() const override {
+    return getAssumed() ? "noalias" : "may-alias";
+  }
+
+  /// See AANoAlias::isAssumedNoAlias().
+  bool isAssumedNoAlias() const override { return getAssumed(); }
+
+  /// See AANoAlias::isKnowndNoAlias().
+  bool isKnownNoAlias() const override { return getKnown(); }
+};
+
+/// NoAlias attribute for function return value.
+struct AANoAliasReturned : AANoAliasImpl {
+
+  AANoAliasReturned(Function &F, InformationCache &InfoCache)
+      : AANoAliasImpl(F, InfoCache) {}
+
+  /// See AbstractAttribute::getManifestPosition().
+  virtual ManifestPosition getManifestPosition() const override {
+    return MP_RETURNED;
+  }
+
+  /// See AbstractAttriubute::initialize(...).
+  void initialize(Attributor &A) override {
+    Function &F = getAnchorScope();
+
+    // Already noalias.
+    if (F.returnDoesNotAlias()) {
+      indicateOptimisticFixpoint();
+      return;
+    }
+  }
+
+  /// See AbstractAttribute::updateImpl(...).
+  virtual ChangeStatus updateImpl(Attributor &A) override;
+};
+
+ChangeStatus AANoAliasReturned::updateImpl(Attributor &A) {
+  Function &F = getAnchorScope();
+
+  auto *AARetValImpl = A.getAAFor<AAReturnedValuesImpl>(*this, F);
+  if (!AARetValImpl) {
+    indicatePessimisticFixpoint();
+    return ChangeStatus::CHANGED;
+  }
+
+  std::function<bool(Value &)> Pred = [&](Value &RV) -> bool {
+    if (Constant *C = dyn_cast<Constant>(&RV))
+      if (C->isNullValue() || isa<UndefValue>(C))
+        return true;
+
+    /// For now, we can only deduce noalias if we have call sites.
+    /// FIXME: add more support.
+    ImmutableCallSite ICS(&RV);
+    if (!ICS)
+      return false;
+
+    auto *NoAliasAA = A.getAAFor<AANoAlias>(*this, RV);
+
+    if (!ICS.returnDoesNotAlias() && (!NoAliasAA ||
+        !NoAliasAA->isAssumedNoAlias()))
+      return false;
+
+    /// FIXME: We can improve capture check in two ways:
+    /// 1. Use the AANoCapture facilities.
+    /// 2. Use the location of return insts for escape queries.
+    if (PointerMayBeCaptured(&RV, /* ReturnCaptures */ false,
+                             /* StoreCaptures */ true))
+      return false;
+
+
+    return true;
+  };
+
+  if (!AARetValImpl->checkForallReturnedValues(Pred)) {
+    indicatePessimisticFixpoint();
+    return ChangeStatus::CHANGED;
+  }
+
+  return ChangeStatus::UNCHANGED;
+}
+
 /// ----------------------------------------------------------------------------
 ///                               Attributor
 /// ----------------------------------------------------------------------------
@@ -1507,10 +1607,15 @@ void Attributor::identifyDefaultAbstractAttributes(
     if (!Whitelist || Whitelist->count(AAReturnedValues::ID))
       registerAA(*new AAReturnedValuesImpl(F, InfoCache));
 
-    // Every function with pointer return type might be marked nonnull.
-    if (ReturnType->isPointerTy() &&
-        (!Whitelist || Whitelist->count(AANonNullReturned::ID)))
-      registerAA(*new AANonNullReturned(F, InfoCache));
+    if (ReturnType->isPointerTy()) {
+      // Every function with pointer return type might be marked nonnull.
+      if (!Whitelist || Whitelist->count(AANonNullReturned::ID))
+        registerAA(*new AANonNullReturned(F, InfoCache));
+
+      // Every function with pointer return type might be marked noalias.
+      if (!Whitelist || Whitelist->count(AANoAliasReturned::ID))
+        registerAA(*new AANoAliasReturned(F, InfoCache));
+    }
   }
 
   // Every argument with pointer type might be marked nonnull.

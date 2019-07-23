@@ -19,9 +19,23 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
                                           raw_ostream &OS,
                                           const MCExpr *Subsection) const {
   if (getKind().isText()) {
+    if (getMappingClass() != XCOFF::XMC_PR)
+      llvm_unreachable("Unsupported storage-mapping class for .text csect");
+
     OS << "\t.csect " << getSectionName() << "["
        << "PR"
        << "]" << '\n';
+    return;
+  }
+
+  if (getKind().isCommon()) {
+    if (getMappingClass() != XCOFF::XMC_RW)
+      llvm_unreachable("Unsupported storage-mapping class for common csect");
+    if (getCSectType() != XCOFF::XTY_CM)
+      llvm_unreachable("wrong csect type for common csect");
+    // Don't have to print a directive for switching to section for commons.
+    // '.comm' and '.lcomm' directives for the variable will create the needed
+    // csect.
     return;
   }
 
@@ -30,4 +44,4 @@ void MCSectionXCOFF::PrintSwitchToSection(const MCAsmInfo &MAI, const Triple &T,
 
 bool MCSectionXCOFF::UseCodeAlign() const { return getKind().isText(); }
 
-bool MCSectionXCOFF::isVirtualSection() const { return !getKind().isCommon(); }
+bool MCSectionXCOFF::isVirtualSection() const { return XCOFF::XTY_CM == Type; }

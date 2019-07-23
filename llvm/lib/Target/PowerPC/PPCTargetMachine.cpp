@@ -185,10 +185,11 @@ static std::string computeFSAdditions(StringRef FS, CodeGenOpt::Level OL,
 }
 
 static std::unique_ptr<TargetLoweringObjectFile> createTLOF(const Triple &TT) {
-  // If it isn't a Mach-O file then it's going to be a linux ELF
-  // object file.
   if (TT.isOSDarwin())
     return llvm::make_unique<TargetLoweringObjectFileMachO>();
+
+  if (TT.isOSAIX())
+    return llvm::make_unique<TargetLoweringObjectFileXCOFF>();
 
   return llvm::make_unique<PPC64LinuxTargetObjectFile>();
 }

@@ -521,13 +521,18 @@
 ; ASM: # }
 ; ASM: .short	0x1e                    # Record length
 ; ASM: .short	0x1203                  # Record kind: LF_FIELDLIST
-; ASM: .byte	0x0d, 0x15, 0x03, 0x00
-; ASM: .byte	0x74, 0x00, 0x00, 0x00
-; ASM: .byte	0x00, 0x00, 0x61, 0x00
-; ASM: .byte	0x11, 0x15, 0x03, 0x00
-; ASM: .byte	0x09, 0x10, 0x00, 0x00
-; ASM: .byte	0x41, 0x3a, 0x3a, 0x66
-; ASM: .byte	0x00, 0xf3, 0xf2, 0xf1
+; ASM: .short	0x150d                  # Member kind: LF_MEMBER
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x74                    # Type
+; ASM: .short	0x0                     # FieldOffset
+; ASM: .asciz	"a"                     # Name
+; ASM: .short	0x1511                  # Member kind: LF_ONEMETHOD
+; ASM: .short	0x3                     # AccessSpecifier
+; ASM: .long	0x1009                  # Type
+; ASM: .asciz	"A::f"                  # Name
+; ASM: .byte	243
+; ASM: .byte	242
+; ASM: .byte	241
 ; ASM: # FieldList (0x100A) {
 ; ASM: #   TypeLeafKind: LF_FIELDLIST (0x1203)
 ; ASM: #   DataMember {

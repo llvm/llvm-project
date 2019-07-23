@@ -227,7 +227,8 @@ private:
   void emitComment(const Twine &Comment) {
     if (isStreaming()) {
       Twine TComment(Comment);
-      Streamer->AddComment(TComment);
+      if (!TComment.isTriviallyEmpty())
+        Streamer->AddComment(TComment);
     }
   }
 
