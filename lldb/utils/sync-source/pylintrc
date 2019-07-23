@@ -1,0 +1,2 @@
+[Master]
+init-hook='import os; import sys; sys.path.append(os.path.join(os.getcwd(), "lib")); print("hello from {}".format(os.getcwd()))'

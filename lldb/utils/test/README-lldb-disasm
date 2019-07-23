@@ -1,0 +1,94 @@
+This README describes a sample invocation of lldb-disasm.py whose purpose is to test
+the lldb 'disassemble' command.
+
+This is for the initial checkin of lldb-disasm.py which only reads an executable image and
+dumps the symbol table from the imgae and its dependent libraries.  The output was cut off
+since it is too large.
+
+da0603a-dhcp191:9131529 johnny$ /Volumes/data/lldb/svn/trunk/utils/test/lldb-disasm.py -C 'platform create remote-ios' -e /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/usr/lib/libSystem.B.dylib
+lldb commands: ['platform create remote-ios']
+lldb options: None
+executable: /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/usr/lib/libSystem.B.dylib
+sys.path: ['/Volumes/data/lldb/svn/trunk/utils/test', '/Volumes/data/lldb/svn/trunk/build/Debug/LLDB.framework/Resources/Python', '/System/Library/Frameworks/Python.framework/Versions/2.6/lib/python26.zip', '/System/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6', '/System/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/plat-darwin', '/System/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/plat-mac', '/System/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/plat-mac/lib-scriptpackages', '/System/Library/Frameworks/Python.framework/Versions/2.6/Extras/lib/python', '/System/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/lib-tk', '/System/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/lib-old', '/System/Library/Frameworks/Python.framework/Versions/2.6/lib/python2.6/lib-dynload', '/Library/Python/2.6/site-packages', '/AppleInternal/Library/Python/2.6/site-packages', '/System/Library/Frameworks/Python.framework/Versions/2.6/Extras/lib/python/PyObjC', '/System/Library/Frameworks/Python.framework/Versions/2.6/Extras/lib/python/wx-2.8-mac-unicode', '/Volumes/data/lldb/svn/trunk/utils/test/../../test/pexpect-2.4', '/Volumes/data/lldb/svn/trunk/test']
+/Volumes/data/lldb/svn/trunk/test/lldbutil.py:80: SyntaxWarning: import * only allowed at module level
+  def int_to_bytearray(val, bytesize):
+/Volumes/data/lldb/svn/trunk/test/lldbutil.py:105: SyntaxWarning: import * only allowed at module level
+  def bytearray_to_int(bytes, bytesize):
+run command: platform create remote-ios
+output: Platform: remote-ios
+Not connected to a remote platform.
+SDKROOT: "/Developer/Platforms/iPhoneOS.platform/DeviceSupport/4.3 (8F190)"
+
+run command: file /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/usr/lib/libSystem.B.dylib
+output: Current executable set to '/Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/usr/lib/libSystem.B.dylib' (armv7).
+
+run command: image dump symtab
+output: Dumping symbol table for 18 modules.
+Symtab, file = /Developer/Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS4.3.sdk/usr/lib/libSystem.B.dylib, num_symbols = 851:
+               Debug symbol
+               |Synthetic symbol
+               ||Externally Visible
+               |||
+Index   UserID DSX Type         File Address/Value Load Address       Size               Flags      Name
+------- ------ --- ------------ ------------------ ------------------ ------------------ ---------- ----------------------------------
+[    0]      0     Code         0x0000000000001420                    0x0000000000000000 0x000e0008 libSystem_initializer
+[    1]      1     Code         0x00000000000014c4                    0x0000000000000000 0x001e0008 __keymgr_initializer
+[    2]      2     Code         0x00000000000014fc                    0x0000000000000000 0x000e0008 dwarf2_unwind_dyld_add_image_hook
+[    3]      3     Code         0x0000000000001564                    0x0000000000000000 0x000e0008 get_or_create_key_element
+[    4]      4     Code         0x0000000000001684                    0x0000000000000000 0x000e0008 unlock_node
+[    5]      5     Code         0x0000000000001930                    0x0000000000000000 0x000e0000 RsqrtTable
+[    6]      6     Code         0x0000000000001c30                    0x0000000000000000 0x000e0000 acosf_crossover
+[    7]      7     Code         0x0000000000001c34                    0x0000000000000000 0x000e0000 acosf_mid_poly
+[    8]      8     Code         0x0000000000001c48                    0x0000000000000000 0x000e0000 Pi2_Q30
+[    9]      9     Code         0x0000000000001c4c                    0x0000000000000000 0x000e0000 Pi_Q30
+[   10]     10     Code         0x0000000000001c78                    0x0000000000000000 0x000e0000 acosf_approx
+[   11]     11     Code         0x0000000000001cec                    0x0000000000000000 0x000e0000 acosf_pos_tail_poly
+[   12]     12     Code         0x0000000000001d00                    0x0000000000000000 0x000e0000 acosf_tail
+[   13]     13     Code         0x0000000000001dfc                    0x0000000000000000 0x000e0000 acosf_normalize
+[   14]     14     Code         0x0000000000001e10                    0x0000000000000000 0x000e0000 acosf_round
+[   15]     15     Code         0x0000000000001e28                    0x0000000000000000 0x000e0000 acosf_encode
+[   16]     16     Code         0x0000000000001e30                    0x0000000000000000 0x000e0000 acosf_done
+[   17]     17     Code         0x0000000000001e38                    0x0000000000000000 0x000e0000 acosf_special
+[   18]     18     Code         0x0000000000001e68                    0x0000000000000000 0x000e0000 acosf_small
+[   19]     19     Code         0x0000000000001e9c                    0x0000000000000000 0x000e0000 acosf_very_small
+[   20]     20     Code         0x0000000000001eb8                    0x0000000000000000 0x000e0000 Pif
+[   21]     21     Code         0x000000000000220c                    0x0000000000000000 0x000e0000 RsqrtTable
+[   22]     22     Code         0x000000000000250c                    0x0000000000000000 0x000e0000 asinf_crossover
+[   23]     23     Code         0x0000000000002510                    0x0000000000000000 0x000e0000 asinf_mid_poly
+[   24]     24     Code         0x0000000000002524                    0x0000000000000000 0x000e0000 Pi2_Q30
+[   25]     25     Code         0x0000000000002550                    0x0000000000000000 0x000e0000 asinf_approx
+[   26]     26     Code         0x00000000000025e4                    0x0000000000000000 0x000e0000 asinf_tail_poly
+[   27]     27     Code         0x0000000000002600                    0x0000000000000000 0x000e0000 asinf_tail
+[   28]     28     Code         0x00000000000026e0                    0x0000000000000000 0x000e0000 asinf_normalize
+[   29]     29     Code         0x00000000000026f4                    0x0000000000000000 0x000e0000 asinf_round
+[   30]     30     Code         0x000000000000270c                    0x0000000000000000 0x000e0000 asinf_encode
+[   31]     31     Code         0x0000000000002718                    0x0000000000000000 0x000e0000 asinf_done
+[   32]     32     Code         0x0000000000002720                    0x0000000000000000 0x000e0000 asinf_special
+[   33]     33     Code         0x0000000000002754                    0x0000000000000000 0x000e0000 asinf_small
+[   34]     34     Code         0x0000000000002784                    0x0000000000000000 0x000e0000 Pi2f
+[   35]     35     Code         0x0000000000005774                    0x0000000000000000 0x000e0008 rem_pio2
+[   36]     36     Code         0x00000000000076c4                    0x0000000000000000 0x000e0008 __kernel_rem_pio2
+[   37]     37     Code         0x0000000000008c90                    0x0000000000000000 0x000e0008 __kernel_tan
+[   38]     38     Code         0x0000000000008ef0                    0x0000000000000000 0x000e0008 lgammaApprox
+[   39]     39     Code         0x000000000000b3d4                    0x0000000000000000 0x000e0000 powf_not_special
+[   40]     40     Code         0x000000000000b3dc                    0x0000000000000000 0x000e0000 powf_ylgx
+[   41]     41     Code         0x000000000000b438                    0x0000000000000000 0x000e0000 powf_done
+[   42]     42     Code         0x000000000000b43c                    0x0000000000000000 0x000e0000 powf_special_y
+[   43]     43     Code         0x000000000000b4a8                    0x0000000000000000 0x000e0000 powf_special_x
+[   44]     44     Code         0x000000000000b4cc                    0x0000000000000000 0x000e0000 powf_mzero_minf
+[   45]     45     Code         0x000000000000b54c                    0x0000000000000000 0x000e0000 powf_y_odd
+[   46]     46     Code         0x000000000000b57c                    0x0000000000000000 0x000e0000 powf_y_nonint
+[   47]     47     Code         0x000000000000b588                    0x0000000000000000 0x000e0000 powf_y_even
+[   48]     48     Code         0x000000000000b7a8                    0x0000000000000000 0x000e0000 powf_log2_reduction
+[   49]     49     Code         0x000000000000b7a8                    0x0000000000000000 0x000e0000 powf_log2
+[   50]     50     Code         0x000000000000b814                    0x0000000000000000 0x000e0000 powf_log2_approx
+[   51]     51     Code         0x000000000000b88c                    0x0000000000000000 0x000e0000 powf_log2_synthesis
+[   52]     52     Code         0x000000000000b960                    0x0000000000000000 0x000e0000 powf_log2_exactPowerOfTwo
+[   53]     53     Code         0x000000000000b980                    0x0000000000000000 0x000e0000 powf_log2_near1
+[   54]     54     Code         0x000000000000b9ec                    0x0000000000000000 0x000e0000 powf_log2_synthesis_near1
+[   55]     55     Code         0x000000000000ba04                    0x0000000000000000 0x000e0000 Q32_minimax
+[   56]     56     Code         0x000000000000ba10                    0x0000000000000000 0x000e0000 iexp2_lut
+[   57]     57     Code         0x000000000000ba94                    0x0000000000000000 0x000e0000 powf_exp2
+[   58]     58     Code         0x000000000000bb18                    0x0000000000000000 0x000e0000 powf_exp2_exact_int
+[   59]     59     Code         0x000000000000bb24                    0x0000000000000000 0x000e0000 powf_exp2_big
+[   60]     60     Code         0x000000000000bb74                    0x0000000000000000 0x000e0000 powf_exp2_overflow
