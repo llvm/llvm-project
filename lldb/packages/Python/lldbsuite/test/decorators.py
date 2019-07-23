@@ -596,11 +596,6 @@ def skipIfWindows(func):
     """Decorate the item to skip tests that should be skipped on Windows."""
     return skipIfPlatform(["windows"])(func)
 
-def skipIfTargetAndroid(func):
-    return unittest2.skipIf(lldbplatformutil.target_is_android(),
-                                "skip on target Android")(func)
-
-
 def skipUnlessWindows(func):
     """Decorate the item to skip tests that should be skipped on any non-Windows platform."""
     return skipUnlessPlatform(["windows"])(func)
@@ -652,7 +647,7 @@ def skipUnlessPlatform(oslist):
                                 "requires one of %s" % (", ".join(oslist)))
 
 
-def skipIfTargetAndroid(api_levels=None, archs=None):
+def skipIfTargetAndroid(bugnumber=None, api_levels=None, archs=None):
     """Decorator to skip tests when the target is Android.
 
     Arguments:
@@ -665,7 +660,8 @@ def skipIfTargetAndroid(api_levels=None, archs=None):
         _skip_for_android(
             "skipping for android",
             api_levels,
-            archs))
+            archs),
+        bugnumber)
 
 def skipUnlessSupportedTypeAttribute(attr):
     """Decorate the item to skip test unless Clang supports type __attribute__(attr)."""
