@@ -498,13 +498,7 @@ class DebugCommunication(object):
             'arguments': args_dict
         }
         response = self.send_recv(command_dict)
-        recv_packets = []
-        self.recv_condition.acquire()
-        for event in self.recv_packets:
-            if event['event'] != 'stopped':
-                recv_packets.append(event)
-        self.recv_packets = recv_packets
-        self.recv_condition.release()
+        # Caller must still call wait_for_stopped.
         return response
 
     def request_disconnect(self, terminateDebuggee=None):
