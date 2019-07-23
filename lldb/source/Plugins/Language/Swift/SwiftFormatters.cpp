@@ -1065,7 +1065,10 @@ bool lldb_private::formatters::swift::SIMDVector_SummaryProvider(
   ConstString full_type_name = simd_type.GetTypeName();
   llvm::StringRef type_name = full_type_name.GetStringRef();
   uint64_t num_elements = type_size / arg_size;
-  if (type_name.startswith("Swift.SIMD3"))
+  int generic_pos = type_name.find("<");
+  if (generic_pos != llvm::StringRef::npos)
+    type_name = type_name.slice(0, generic_pos);
+  if (type_name == "Swift.SIMD3")
     num_elements = 3;
 
   std::vector<std::string> elem_vector;
