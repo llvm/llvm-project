@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=x86_64-linux -remarks-section -pass-remarks-output=%/t.yaml | FileCheck -DPATH=%/t.yaml %s
 ; RUN: llc < %s -mtriple=x86_64-darwin -remarks-section -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN -DPATH=%/t.yaml %s
-; RUN: llc < %s -mtriple=x86_64-darwin -remarks-section -remarks-yaml-string-table -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-STRTAB -DPATH=%/t.yaml %s
+; RUN: llc < %s -mtriple=x86_64-darwin --pass-remarks-format=yaml-strtab -remarks-section -pass-remarks-output=%/t.yaml | FileCheck --check-prefix=CHECK-DARWIN-STRTAB -DPATH=%/t.yaml %s
 
 ; CHECK-LABEL: func1:
 

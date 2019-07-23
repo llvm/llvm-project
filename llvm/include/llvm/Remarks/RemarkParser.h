@@ -67,9 +67,12 @@ struct ParsedStringTable {
   ParsedStringTable(StringRef Buffer);
 };
 
+Expected<std::unique_ptr<Parser>> createRemarkParser(Format ParserFormat,
+                                                     StringRef Buf);
+
 Expected<std::unique_ptr<Parser>>
 createRemarkParser(Format ParserFormat, StringRef Buf,
-                   Optional<const ParsedStringTable *> StrTab = None);
+                   const ParsedStringTable &StrTab);
 
 } // end namespace remarks
 } // end namespace llvm

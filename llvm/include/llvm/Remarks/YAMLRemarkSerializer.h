@@ -34,11 +34,20 @@ struct YAMLSerializer : public Serializer {
   /// The YAML streamer.
   yaml::Output YAMLOutput;
 
-  YAMLSerializer(raw_ostream &OS,
-                 UseStringTable UseStringTable = remarks::UseStringTable::No);
+  YAMLSerializer(raw_ostream &OS);
 
   /// Emit a remark to the stream.
   void emit(const Remark &Remark) override;
+};
+
+/// Serialize the remarks to YAML using a string table. An remark entry looks
+/// like the regular YAML remark but instead of string entries it's using
+/// numbers that map to an index in the string table.
+struct YAMLStrTabSerializer : public YAMLSerializer {
+  YAMLStrTabSerializer(raw_ostream &OS) : YAMLSerializer(OS) {
+    // Having a string table set up enables the serializer to use it.
+    StrTab.emplace();
+  }
 };
 
 } // end namespace remarks

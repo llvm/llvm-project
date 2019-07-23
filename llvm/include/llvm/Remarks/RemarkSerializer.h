@@ -36,9 +36,6 @@ struct Serializer {
   virtual void emit(const Remark &Remark) = 0;
 };
 
-/// Wether the serializer should use a string table while emitting.
-enum class UseStringTable { No, Yes };
-
 } // end namespace remarks
 } // end namespace llvm
 

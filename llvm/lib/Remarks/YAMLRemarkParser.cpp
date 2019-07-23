@@ -54,6 +54,9 @@ static SourceMgr setupSM(std::string &LastErrorMessage) {
   return SM;
 }
 
+YAMLRemarkParser::YAMLRemarkParser(StringRef Buf)
+    : YAMLRemarkParser(Buf, None) {}
+
 YAMLRemarkParser::YAMLRemarkParser(StringRef Buf,
                                    Optional<const ParsedStringTable *> StrTab)
     : Parser{Format::YAML}, StrTab(StrTab), LastErrorMessage(),
@@ -179,22 +182,7 @@ Expected<StringRef> YAMLRemarkParser::parseStr(yaml::KeyValueNode &Node) {
   auto *Value = dyn_cast<yaml::ScalarNode>(Node.getValue());
   if (!Value)
     return error("expected a value of scalar type.", Node);
-  StringRef Result;
-  if (!StrTab) {
-    Result = Value->getRawValue();
-  } else {
-    // If we have a string table, parse it as an unsigned.
-    unsigned StrID = 0;
-    if (Expected<unsigned> MaybeStrID = parseUnsigned(Node))
-      StrID = *MaybeStrID;
-    else
-      return MaybeStrID.takeError();
-
-    if (Expected<StringRef> Str = (**StrTab)[StrID])
-      Result = *Str;
-    else
-      return Str.takeError();
-  }
+  StringRef Result = Value->getRawValue();
 
   if (Result.front() == '\'')
     Result = Result.drop_front();
@@ -324,4 +312,30 @@ Expected<std::unique_ptr<Remark>> YAMLRemarkParser::next() {
   ++YAMLIt;
 
   return std::move(*MaybeResult);
+}
+
+Expected<StringRef> YAMLStrTabRemarkParser::parseStr(yaml::KeyValueNode &Node) {
+  auto *Value = dyn_cast<yaml::ScalarNode>(Node.getValue());
+  if (!Value)
+    return error("expected a value of scalar type.", Node);
+  StringRef Result;
+  // If we have a string table, parse it as an unsigned.
+  unsigned StrID = 0;
+  if (Expected<unsigned> MaybeStrID = parseUnsigned(Node))
+    StrID = *MaybeStrID;
+  else
+    return MaybeStrID.takeError();
+
+  if (Expected<StringRef> Str = (**StrTab)[StrID])
+    Result = *Str;
+  else
+    return Str.takeError();
+
+  if (Result.front() == '\'')
+    Result = Result.drop_front();
+
+  if (Result.back() == '\'')
+    Result = Result.drop_back();
+
+  return Result;
 }

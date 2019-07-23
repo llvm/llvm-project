@@ -48,11 +48,30 @@ Expected<StringRef> ParsedStringTable::operator[](size_t Index) const {
 }
 
 Expected<std::unique_ptr<Parser>>
-llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf,
-                                  Optional<const ParsedStringTable *> StrTab) {
+llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf) {
   switch (ParserFormat) {
   case Format::YAML:
-    return llvm::make_unique<YAMLRemarkParser>(Buf, StrTab);
+    return llvm::make_unique<YAMLRemarkParser>(Buf);
+  case Format::YAMLStrTab:
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "The YAML with string table format requires a parsed string table.");
+  case Format::Unknown:
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "Unknown remark parser format.");
+  }
+}
+
+Expected<std::unique_ptr<Parser>>
+llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf,
+                                  const ParsedStringTable &StrTab) {
+  switch (ParserFormat) {
+  case Format::YAML:
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "The YAML format can't be used with a string "
+                             "table. Use yaml-strtab instead.");
+  case Format::YAMLStrTab:
+    return llvm::make_unique<YAMLStrTabRemarkParser>(Buf, StrTab);
   case Format::Unknown:
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Unknown remark parser format.");
@@ -66,7 +85,9 @@ struct CParser {
 
   CParser(Format ParserFormat, StringRef Buf,
           Optional<const ParsedStringTable *> StrTab = None)
-      : TheParser(cantFail(createRemarkParser(ParserFormat, Buf, StrTab))) {}
+      : TheParser(cantFail(StrTab
+                               ? createRemarkParser(ParserFormat, Buf, **StrTab)
+                               : createRemarkParser(ParserFormat, Buf))) {}
 
   void handleError(Error E) { Err.emplace(toString(std::move(E))); }
   bool hasError() const { return Err.hasValue(); }

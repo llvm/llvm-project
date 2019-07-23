@@ -16,16 +16,17 @@ static void check(const remarks::Remark &R, StringRef Expected,
                   Optional<StringRef> ExpectedStrTab = None) {
   std::string Buf;
   raw_string_ostream OS(Buf);
-  remarks::UseStringTable UseStrTab = ExpectedStrTab.hasValue()
-                                          ? remarks::UseStringTable::Yes
-                                          : remarks::UseStringTable::No;
-  remarks::YAMLSerializer S(OS, UseStrTab);
-  S.emit(R);
+  bool UseStrTab = ExpectedStrTab.hasValue();
+  std::unique_ptr<remarks::Serializer> S =
+      UseStrTab ? llvm::make_unique<remarks::YAMLStrTabSerializer>(OS)
+                : llvm::make_unique<remarks::YAMLSerializer>(OS);
+
+  S->emit(R);
   EXPECT_EQ(OS.str(), Expected);
   if (ExpectedStrTab) {
     Buf.clear();
-    EXPECT_TRUE(S.StrTab);
-    S.StrTab->serialize(OS);
+    EXPECT_TRUE(S->StrTab);
+    S->StrTab->serialize(OS);
     EXPECT_EQ(OS.str(), *ExpectedStrTab);
   }
 }

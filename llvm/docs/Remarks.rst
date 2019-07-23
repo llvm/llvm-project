@@ -112,6 +112,7 @@ following options:
       Supported formats:
 
       * :ref:`yaml <yamlremarks>` (default)
+      * :ref:`yaml-strtab <yamlstrtabremarks>`
 
 ``Content configuration``
 
@@ -191,11 +192,39 @@ fields are required:
 * ``<arg-line>``
 * ``<arg-column>``
 
+.. _yamlstrtabremarks:
+
+YAML with a string table
+------------------------
+
+The YAML serialization supports the usage of a string table by using the
+``yaml-strtab`` format.
+
+This format replaces strings in the YAML output with integers representing the
+index in the string table that can be provided separately through metadata.
+
+The following entries can take advantage of the string table while respecting
+YAML rules:
+
+* ``<pass>``
+* ``<name>``
+* ``<function>``
+* ``<file>``
+* ``<value>``
+* ``<arg-file>``
+
+Currently, none of the tools in :ref:`the opt-viewer directory <optviewer>`
+support this format.
+
+.. _optviewer:
+
 opt-viewer
 ==========
 
 The ``opt-viewer`` directory contains a collection of tools that visualize and
 summarize serialized remarks.
+
+The tools only support the ``yaml`` format.
 
 .. _optviewerpy:
 
