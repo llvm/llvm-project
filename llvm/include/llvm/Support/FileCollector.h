@@ -50,6 +50,7 @@ private:
     m_vfs_writer.addFileMapping(virtual_path, real_path);
   }
 
+protected:
   /// Synchronizes adding files.
   std::mutex m_mutex;
 
