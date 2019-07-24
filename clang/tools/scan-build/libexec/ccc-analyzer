@@ -118,7 +118,7 @@ my $ResultFile;
 
 # Remove any stale files at exit.
 END {
-  if (defined $ResultFile && -z $ResultFile) {
+  if (defined $ResultFile && $ResultFile ne "") {
     unlink($ResultFile);
   }
   if (defined $CleanupFile) {
@@ -752,7 +752,7 @@ if ($Action eq 'compile' or $Action eq 'link') {
                                DIR => $HtmlDir);
         $ResultFile = $f;
         # If the HtmlDir is not set, we should clean up the plist files.
-        if (!defined $HtmlDir || -z $HtmlDir) {
+        if (!defined $HtmlDir || $HtmlDir eq "") {
           $CleanupFile = $f;
         }
       }
