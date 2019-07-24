@@ -40,7 +40,8 @@ class WatchpointPythonCommandTestCase(TestBase):
     @expectedFailureAll(
         oslist=["linux"],
         archs=["aarch64"],
-        bugnumber="llvm.org/pr27710")
+        triple=no_match(".*-android"),
+        bugnumber="llvm.org/pr27710") # work on android
     @expectedFailureNetBSD
     def test_watchpoint_command(self):
         """Test 'watchpoint command'."""
@@ -111,7 +112,8 @@ class WatchpointPythonCommandTestCase(TestBase):
     @expectedFailureAll(
         oslist=["linux"],
         archs=["aarch64"],
-        bugnumber="llvm.org/pr27710")
+        triple=no_match(".*-android"),
+        bugnumber="llvm.org/pr27710") # work on android
     @expectedFailureNetBSD
     def test_continue_in_watchpoint_command(self):
         """Test continue in a watchpoint command."""
