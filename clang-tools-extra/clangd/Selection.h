@@ -96,6 +96,8 @@ public:
     // Walk up the AST to get the DeclContext of this Node,
     // which is not the node itself.
     const DeclContext& getDeclContext() const;
+    // Printable node kind, like "CXXRecordDecl" or "AutoTypeLoc".
+    std::string kind() const;
   };
   // The most specific common ancestor of all the selected nodes.
   // If there is no selection, this is nullptr.

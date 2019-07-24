@@ -95,6 +95,8 @@ private:
   void onCommand(const ExecuteCommandParams &, Callback<llvm::json::Value>);
   void onWorkspaceSymbol(const WorkspaceSymbolParams &,
                          Callback<std::vector<SymbolInformation>>);
+  void onPrepareRename(const TextDocumentPositionParams &,
+                       Callback<llvm::Optional<Range>>);
   void onRename(const RenameParams &, Callback<WorkspaceEdit>);
   void onHover(const TextDocumentPositionParams &,
                Callback<llvm::Optional<Hover>>);

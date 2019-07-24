@@ -49,9 +49,7 @@ Range nodeRange(const SelectionTree::Node *N, ParsedAST &AST) {
 }
 
 std::string nodeKind(const SelectionTree::Node *N) {
-  if (!N)
-    return "<null>";
-  return N->ASTNode.getNodeKind().asStringRef().str();
+  return N ? N->kind() : "<null>";
 }
 
 std::vector<const SelectionTree::Node *> allNodes(const SelectionTree &T) {
@@ -102,14 +100,14 @@ TEST(SelectionTest, CommonAncestor) {
             struct AAA { struct BBB { static int ccc(); };};
             int x = AAA::[[B^B^B]]::ccc();
           )cpp",
-          "TypeLoc",
+          "RecordTypeLoc",
       },
       {
           R"cpp(
             struct AAA { struct BBB { static int ccc(); };};
             int x = AAA::[[B^BB^]]::ccc();
           )cpp",
-          "TypeLoc",
+          "RecordTypeLoc",
       },
       {
           R"cpp(
@@ -182,19 +180,19 @@ TEST(SelectionTest, CommonAncestor) {
           R"cpp(
             [[^void]] (*S)(int) = nullptr;
           )cpp",
-          "TypeLoc",
+          "BuiltinTypeLoc",
       },
       {
           R"cpp(
             [[void (*S)^(int)]] = nullptr;
           )cpp",
-          "TypeLoc",
+          "FunctionProtoTypeLoc",
       },
       {
           R"cpp(
             [[void (^*S)(int)]] = nullptr;
           )cpp",
-          "TypeLoc",
+          "FunctionProtoTypeLoc",
       },
       {
           R"cpp(
@@ -206,7 +204,7 @@ TEST(SelectionTest, CommonAncestor) {
           R"cpp(
             [[void ^(*S)(int)]] = nullptr;
           )cpp",
-          "TypeLoc",
+          "FunctionProtoTypeLoc",
       },
 
       // Point selections.
@@ -218,8 +216,8 @@ TEST(SelectionTest, CommonAncestor) {
       {"int bar; void foo() [[{ foo (); }]]^", "CompoundStmt"},
 
       // Tricky case: FunctionTypeLoc in FunctionDecl has a hole in it.
-      {"[[^void]] foo();", "TypeLoc"},
-      {"[[void foo^()]];", "TypeLoc"},
+      {"[[^void]] foo();", "BuiltinTypeLoc"},
+      {"[[void foo^()]];", "FunctionProtoTypeLoc"},
       {"[[^void foo^()]];", "FunctionDecl"},
       {"[[void ^foo()]];", "FunctionDecl"},
       // Tricky case: two VarDecls share a specifier.
@@ -229,6 +227,9 @@ TEST(SelectionTest, CommonAncestor) {
       {"[[st^ruct {int x;}]] y;", "CXXRecordDecl"},
       {"[[struct {int x;} ^y]];", "VarDecl"},
       {"struct {[[int ^x]];} y;", "FieldDecl"},
+      // FIXME: the AST has no location info for qualifiers.
+      {"const [[a^uto]] x = 42;", "AutoTypeLoc"},
+      {"[[co^nst auto x = 42]];", "VarDecl"},
 
       {"^", nullptr},
       {"void foo() { [[foo^^]] (); }", "DeclRefExpr"},
@@ -239,7 +240,8 @@ TEST(SelectionTest, CommonAncestor) {
       {"int x = 42^;", nullptr},
 
       // Node types that have caused problems in the past.
-      {"template <typename T> void foo() { [[^T]] t; }", "TypeLoc"},
+      {"template <typename T> void foo() { [[^T]] t; }",
+       "TemplateTypeParmTypeLoc"},
 
       // No crash
       {

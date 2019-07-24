@@ -36,128 +36,161 @@
 namespace clang {
 namespace clangd {
 
-static llvm::cl::opt<Path> CompileCommandsDir(
-    "compile-commands-dir",
-    llvm::cl::desc("Specify a path to look for compile_commands.json. If path "
-                   "is invalid, clangd will look in the current directory and "
-                   "parent paths of each source file"));
+using llvm::cl::cat;
+using llvm::cl::CommaSeparated;
+using llvm::cl::desc;
+using llvm::cl::Hidden;
+using llvm::cl::init;
+using llvm::cl::list;
+using llvm::cl::opt;
+using llvm::cl::values;
 
-static llvm::cl::opt<unsigned>
-    WorkerThreadsCount("j",
-                       llvm::cl::desc("Number of async workers used by clangd"),
-                       llvm::cl::init(getDefaultAsyncThreadsCount()));
+static opt<Path> CompileCommandsDir{
+    "compile-commands-dir",
+    desc("Specify a path to look for compile_commands.json. If path "
+         "is invalid, clangd will look in the current directory and "
+         "parent paths of each source file"),
+};
+
+static opt<unsigned> WorkerThreadsCount{
+    "j",
+    desc("Number of async workers used by clangd"),
+    init(getDefaultAsyncThreadsCount()),
+};
 
 // FIXME: also support "plain" style where signatures are always omitted.
 enum CompletionStyleFlag { Detailed, Bundled };
-static llvm::cl::opt<CompletionStyleFlag> CompletionStyle(
+static opt<CompletionStyleFlag> CompletionStyle{
     "completion-style",
-    llvm::cl::desc("Granularity of code completion suggestions"),
-    llvm::cl::values(
-        clEnumValN(Detailed, "detailed",
-                   "One completion item for each semantically distinct "
-                   "completion, with full type information"),
-        clEnumValN(Bundled, "bundled",
-                   "Similar completion items (e.g. function overloads) are "
-                   "combined. Type information shown where possible")));
+    desc("Granularity of code completion suggestions"),
+    values(clEnumValN(Detailed, "detailed",
+                      "One completion item for each semantically distinct "
+                      "completion, with full type information"),
+           clEnumValN(Bundled, "bundled",
+                      "Similar completion items (e.g. function overloads) are "
+                      "combined. Type information shown where possible")),
+};
 
 // FIXME: Flags are the wrong mechanism for user preferences.
 // We should probably read a dotfile or similar.
-static llvm::cl::opt<bool> IncludeIneligibleResults(
+static opt<bool> IncludeIneligibleResults{
     "include-ineligible-results",
-    llvm::cl::desc(
-        "Include ineligible completion results (e.g. private members)"),
-    llvm::cl::init(CodeCompleteOptions().IncludeIneligibleResults),
-    llvm::cl::Hidden);
+    desc("Include ineligible completion results (e.g. private members)"),
+    init(CodeCompleteOptions().IncludeIneligibleResults),
+    Hidden,
+};
 
-static llvm::cl::opt<JSONStreamStyle> InputStyle(
-    "input-style", llvm::cl::desc("Input JSON stream encoding"),
-    llvm::cl::values(
+static opt<JSONStreamStyle> InputStyle{
+    "input-style",
+    desc("Input JSON stream encoding"),
+    values(
         clEnumValN(JSONStreamStyle::Standard, "standard", "usual LSP protocol"),
         clEnumValN(JSONStreamStyle::Delimited, "delimited",
                    "messages delimited by --- lines, with # comment support")),
-    llvm::cl::init(JSONStreamStyle::Standard), llvm::cl::Hidden);
+    init(JSONStreamStyle::Standard),
+    Hidden,
+};
 
-static llvm::cl::opt<bool>
-    PrettyPrint("pretty", llvm::cl::desc("Pretty-print JSON output"),
-                llvm::cl::init(false));
+static opt<bool> PrettyPrint{
+    "pretty",
+    desc("Pretty-print JSON output"),
+    init(false),
+};
 
-static llvm::cl::opt<Logger::Level> LogLevel(
-    "log", llvm::cl::desc("Verbosity of log messages written to stderr"),
-    llvm::cl::values(clEnumValN(Logger::Error, "error", "Error messages only"),
-                     clEnumValN(Logger::Info, "info",
-                                "High level execution tracing"),
-                     clEnumValN(Logger::Debug, "verbose", "Low level details")),
-    llvm::cl::init(Logger::Info));
+static opt<Logger::Level> LogLevel{
+    "log",
+    desc("Verbosity of log messages written to stderr"),
+    values(clEnumValN(Logger::Error, "error", "Error messages only"),
+           clEnumValN(Logger::Info, "info", "High level execution tracing"),
+           clEnumValN(Logger::Debug, "verbose", "Low level details")),
+    init(Logger::Info),
+};
 
-static llvm::cl::opt<bool>
-    Test("lit-test",
-         llvm::cl::desc("Abbreviation for -input-style=delimited -pretty -sync "
-                        "-enable-test-scheme -log=verbose."
-                        "Intended to simplify lit tests"),
-         llvm::cl::init(false), llvm::cl::Hidden);
+static opt<bool> Test{
+    "lit-test",
+    desc("Abbreviation for -input-style=delimited -pretty -sync "
+         "-enable-test-scheme -log=verbose."
+         "Intended to simplify lit tests"),
+    init(false),
+    Hidden,
+};
 
-static llvm::cl::opt<bool> EnableTestScheme(
+static opt<bool> EnableTestScheme{
     "enable-test-uri-scheme",
-    llvm::cl::desc("Enable 'test:' URI scheme. Only use in lit tests"),
-    llvm::cl::init(false), llvm::cl::Hidden);
+    desc("Enable 'test:' URI scheme. Only use in lit tests"),
+    init(false),
+    Hidden,
+};
 
 enum PCHStorageFlag { Disk, Memory };
-static llvm::cl::opt<PCHStorageFlag> PCHStorage(
+static opt<PCHStorageFlag> PCHStorage{
     "pch-storage",
-    llvm::cl::desc("Storing PCHs in memory increases memory usages, but may "
-                   "improve performance"),
-    llvm::cl::values(
+    desc("Storing PCHs in memory increases memory usages, but may "
+         "improve performance"),
+    values(
         clEnumValN(PCHStorageFlag::Disk, "disk", "store PCHs on disk"),
         clEnumValN(PCHStorageFlag::Memory, "memory", "store PCHs in memory")),
-    llvm::cl::init(PCHStorageFlag::Disk));
+    init(PCHStorageFlag::Disk),
+};
 
-static llvm::cl::opt<int> LimitResults(
+static opt<int> LimitResults{
     "limit-results",
-    llvm::cl::desc("Limit the number of results returned by clangd. "
-                   "0 means no limit (default=100)"),
-    llvm::cl::init(100));
+    desc("Limit the number of results returned by clangd. "
+         "0 means no limit (default=100)"),
+    init(100),
+};
 
-static llvm::cl::opt<bool>
-    Sync("sync", llvm::cl::desc("Parse on main thread. If set, -j is ignored"),
-         llvm::cl::init(false), llvm::cl::Hidden);
+static opt<bool> Sync{
+    "sync",
+    desc("Parse on main thread. If set, -j is ignored"),
+    init(false),
+    Hidden,
+};
 
-static llvm::cl::opt<Path>
-    ResourceDir("resource-dir",
-                llvm::cl::desc("Directory for system clang headers"),
-                llvm::cl::init(""), llvm::cl::Hidden);
+static opt<Path> ResourceDir{
+    "resource-dir",
+    desc("Directory for system clang headers"),
+    init(""),
+    Hidden,
+};
 
-static llvm::cl::opt<Path> InputMirrorFile(
+static opt<Path> InputMirrorFile{
     "input-mirror-file",
-    llvm::cl::desc(
-        "Mirror all LSP input to the specified file. Useful for debugging"),
-    llvm::cl::init(""), llvm::cl::Hidden);
+    desc("Mirror all LSP input to the specified file. Useful for debugging"),
+    init(""),
+    Hidden,
+};
 
-static llvm::cl::opt<bool> EnableIndex(
+static opt<bool> EnableIndex{
     "index",
-    llvm::cl::desc(
-        "Enable index-based features. By default, clangd maintains an index "
-        "built from symbols in opened files. Global index support needs to "
-        "enabled separatedly"),
-    llvm::cl::init(true), llvm::cl::Hidden);
+    desc("Enable index-based features. By default, clangd maintains an index "
+         "built from symbols in opened files. Global index support needs to "
+         "enabled separatedly"),
+    init(true),
+    Hidden,
+};
 
-static llvm::cl::opt<bool> AllScopesCompletion(
+static opt<bool> AllScopesCompletion{
     "all-scopes-completion",
-    llvm::cl::desc(
-        "If set to true, code completion will include index symbols that are "
-        "not defined in the scopes (e.g. "
-        "namespaces) visible from the code completion point. Such completions "
-        "can insert scope qualifiers"),
-    llvm::cl::init(true));
+    desc("If set to true, code completion will include index symbols that are "
+         "not defined in the scopes (e.g. "
+         "namespaces) visible from the code completion point. Such completions "
+         "can insert scope qualifiers"),
+    init(true),
+};
 
-static llvm::cl::opt<bool> ShowOrigins(
-    "debug-origin", llvm::cl::desc("Show origins of completion items"),
-    llvm::cl::init(CodeCompleteOptions().ShowOrigins), llvm::cl::Hidden);
+static opt<bool> ShowOrigins{
+    "debug-origin",
+    desc("Show origins of completion items"),
+    init(CodeCompleteOptions().ShowOrigins),
+    Hidden,
+};
 
-static llvm::cl::opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion(
+static opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
     "header-insertion",
-    llvm::cl::desc("Add #include directives when accepting code completions"),
-    llvm::cl::init(CodeCompleteOptions().InsertIncludes),
-    llvm::cl::values(
+    desc("Add #include directives when accepting code completions"),
+    init(CodeCompleteOptions().InsertIncludes),
+    values(
         clEnumValN(CodeCompleteOptions::IWYU, "iwyu",
                    "Include what you use. "
                    "Insert the owning header for top-level symbols, unless the "
@@ -165,116 +198,133 @@ static llvm::cl::opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion(
                    "forward-declared"),
         clEnumValN(
             CodeCompleteOptions::NeverInsert, "never",
-            "Never insert #include directives as part of code completion")));
+            "Never insert #include directives as part of code completion")),
+};
 
-static llvm::cl::opt<bool> HeaderInsertionDecorators(
+static opt<bool> HeaderInsertionDecorators{
     "header-insertion-decorators",
-    llvm::cl::desc("Prepend a circular dot or space before the completion "
-                   "label, depending on whether "
-                   "an include line will be inserted or not"),
-    llvm::cl::init(true));
+    desc("Prepend a circular dot or space before the completion "
+         "label, depending on whether "
+         "an include line will be inserted or not"),
+    init(true),
+};
 
-static llvm::cl::opt<Path> IndexFile(
+static opt<Path> IndexFile{
     "index-file",
-    llvm::cl::desc(
+    desc(
         "Index file to build the static index. The file must have been created "
         "by a compatible clangd-indexer\n"
         "WARNING: This option is experimental only, and will be removed "
         "eventually. Don't rely on it"),
-    llvm::cl::init(""), llvm::cl::Hidden);
+    init(""),
+    Hidden,
+};
 
-static llvm::cl::opt<bool> EnableBackgroundIndex(
+static opt<bool> EnableBackgroundIndex{
     "background-index",
-    llvm::cl::desc(
-        "Index project code in the background and persist index on disk. "
-        "Experimental"),
-    llvm::cl::init(true));
+    desc("Index project code in the background and persist index on disk. "
+         "Experimental"),
+    init(true),
+};
 
 enum CompileArgsFrom { LSPCompileArgs, FilesystemCompileArgs };
-static llvm::cl::opt<CompileArgsFrom> CompileArgsFrom(
-    "compile_args_from", llvm::cl::desc("The source of compile commands"),
-    llvm::cl::values(clEnumValN(LSPCompileArgs, "lsp",
-                                "All compile commands come from LSP and "
-                                "'compile_commands.json' files are ignored"),
-                     clEnumValN(FilesystemCompileArgs, "filesystem",
-                                "All compile commands come from the "
-                                "'compile_commands.json' files")),
-    llvm::cl::init(FilesystemCompileArgs), llvm::cl::Hidden);
+static opt<CompileArgsFrom> CompileArgsFrom{
+    "compile_args_from",
+    desc("The source of compile commands"),
+    values(clEnumValN(LSPCompileArgs, "lsp",
+                      "All compile commands come from LSP and "
+                      "'compile_commands.json' files are ignored"),
+           clEnumValN(FilesystemCompileArgs, "filesystem",
+                      "All compile commands come from the "
+                      "'compile_commands.json' files")),
+    init(FilesystemCompileArgs),
+    Hidden,
+};
 
-static llvm::cl::opt<bool> EnableFunctionArgSnippets(
+static opt<bool> EnableFunctionArgSnippets{
     "function-arg-placeholders",
-    llvm::cl::desc("When disabled, completions contain only parentheses for "
-                   "function calls. When enabled, completions also contain "
-                   "placeholders for method parameters"),
-    llvm::cl::init(CodeCompleteOptions().EnableFunctionArgSnippets),
-    llvm::cl::Hidden);
+    desc("When disabled, completions contain only parentheses for "
+         "function calls. When enabled, completions also contain "
+         "placeholders for method parameters"),
+    init(CodeCompleteOptions().EnableFunctionArgSnippets),
+    Hidden,
+};
 
-static llvm::cl::opt<std::string> ClangTidyChecks(
+static opt<std::string> ClangTidyChecks{
     "clang-tidy-checks",
-    llvm::cl::desc(
-        "List of clang-tidy checks to run (this will override "
-        ".clang-tidy files). Only meaningful when -clang-tidy flag is on"),
-    llvm::cl::init(""));
+    desc("List of clang-tidy checks to run (this will override "
+         ".clang-tidy files). Only meaningful when -clang-tidy flag is on"),
+    init(""),
+};
 
-static llvm::cl::opt<bool>
-    EnableClangTidy("clang-tidy",
-                    llvm::cl::desc("Enable clang-tidy diagnostics"),
-                    llvm::cl::init(true));
+static opt<bool> EnableClangTidy{
+    "clang-tidy",
+    desc("Enable clang-tidy diagnostics"),
+    init(true),
+};
 
-static llvm::cl::opt<std::string>
-    FallbackStyle("fallback-style",
-                  llvm::cl::desc("clang-format style to apply by default when "
-                                 "no .clang-format file is found"),
-                  llvm::cl::init(clang::format::DefaultFallbackStyle));
+static opt<std::string> FallbackStyle{
+    "fallback-style",
+    desc("clang-format style to apply by default when "
+         "no .clang-format file is found"),
+    init(clang::format::DefaultFallbackStyle),
+};
 
-static llvm::cl::opt<bool> SuggestMissingIncludes(
+static opt<bool> SuggestMissingIncludes{
     "suggest-missing-includes",
-    llvm::cl::desc("Attempts to fix diagnostic errors caused by missing "
-                   "includes using index"),
-    llvm::cl::init(true));
+    desc("Attempts to fix diagnostic errors caused by missing "
+         "includes using index"),
+    init(true),
+};
 
-static llvm::cl::opt<OffsetEncoding> ForceOffsetEncoding(
+static opt<OffsetEncoding> ForceOffsetEncoding{
     "offset-encoding",
-    llvm::cl::desc("Force the offsetEncoding used for character positions. "
-                   "This bypasses negotiation via client capabilities"),
-    llvm::cl::values(clEnumValN(OffsetEncoding::UTF8, "utf-8",
-                                "Offsets are in UTF-8 bytes"),
-                     clEnumValN(OffsetEncoding::UTF16, "utf-16",
-                                "Offsets are in UTF-16 code units")),
-    llvm::cl::init(OffsetEncoding::UnsupportedEncoding));
+    desc("Force the offsetEncoding used for character positions. "
+         "This bypasses negotiation via client capabilities"),
+    values(
+        clEnumValN(OffsetEncoding::UTF8, "utf-8", "Offsets are in UTF-8 bytes"),
+        clEnumValN(OffsetEncoding::UTF16, "utf-16",
+                   "Offsets are in UTF-16 code units")),
+    init(OffsetEncoding::UnsupportedEncoding),
+};
 
-static llvm::cl::opt<CodeCompleteOptions::CodeCompletionParse>
-    CodeCompletionParse(
-        "completion-parse",
-        llvm::cl::desc("Whether the clang-parser is used for code-completion"),
-        llvm::cl::values(clEnumValN(CodeCompleteOptions::AlwaysParse, "always",
-                                    "Block until the parser can be used"),
-                         clEnumValN(CodeCompleteOptions::ParseIfReady, "auto",
-                                    "Use text-based completion if the parser "
-                                    "is not ready"),
-                         clEnumValN(CodeCompleteOptions::NeverParse, "never",
-                                    "Always used text-based completion")),
-        llvm::cl::init(CodeCompleteOptions().RunParser), llvm::cl::Hidden);
+static opt<CodeCompleteOptions::CodeCompletionParse> CodeCompletionParse{
+    "completion-parse",
+    desc("Whether the clang-parser is used for code-completion"),
+    values(clEnumValN(CodeCompleteOptions::AlwaysParse, "always",
+                      "Block until the parser can be used"),
+           clEnumValN(CodeCompleteOptions::ParseIfReady, "auto",
+                      "Use text-based completion if the parser "
+                      "is not ready"),
+           clEnumValN(CodeCompleteOptions::NeverParse, "never",
+                      "Always used text-based completion")),
+    init(CodeCompleteOptions().RunParser),
+    Hidden,
+};
 
-static llvm::cl::opt<bool> HiddenFeatures(
+static opt<bool> HiddenFeatures{
     "hidden-features",
-    llvm::cl::desc("Enable hidden features mostly useful to clangd developers"),
-    llvm::cl::init(false), llvm::cl::Hidden);
+    desc("Enable hidden features mostly useful to clangd developers"),
+    init(false),
+    Hidden,
+};
 
-static llvm::cl::list<std::string> QueryDriverGlobs(
+static list<std::string> QueryDriverGlobs{
     "query-driver",
-    llvm::cl::desc(
+    desc(
         "Comma separated list of globs for white-listing gcc-compatible "
         "drivers that are safe to execute. Drivers matching any of these globs "
         "will be used to extract system includes. e.g. "
         "/usr/bin/**/clang-*,/path/to/repo/**/g++-*"),
-    llvm::cl::CommaSeparated);
+    CommaSeparated,
+};
 
-static llvm::cl::list<std::string> TweakList(
+static list<std::string> TweakList{
     "tweaks",
-    llvm::cl::desc(
-        "Specify a list of Tweaks to enable (only for clangd developers)."),
-    llvm::cl::Hidden, llvm::cl::CommaSeparated);
+    desc("Specify a list of Tweaks to enable (only for clangd developers)."),
+    Hidden,
+    CommaSeparated,
+};
 
 namespace {
 
@@ -423,6 +473,17 @@ int main(int argc, char *argv[]) {
   llvm::errs().SetBuffered();
   StreamLogger Logger(llvm::errs(), LogLevel);
   LoggingSession LoggingSession(Logger);
+  // Write some initial logs before we start doing any real work.
+  log("{0}", clang::getClangToolFullVersion("clangd"));
+  {
+    SmallString<128> CWD;
+    if (auto Err = llvm::sys::fs::current_path(CWD))
+      log("Working directory unknown: {0}", Err.message());
+    else
+      log("Working directory: {0}", CWD);
+  }
+  for (int I = 0; I < argc; ++I)
+    log("argv[{0}]: {1}", I, argv[I]);
 
   // If --compile-commands-dir arg was invoked, check value and override default
   // path.
@@ -501,12 +562,14 @@ int main(int argc, char *argv[]) {
   std::unique_ptr<Transport> TransportLayer;
   if (getenv("CLANGD_AS_XPC_SERVICE")) {
 #if CLANGD_BUILD_XPC
+    log("Starting LSP over XPC service");
     TransportLayer = newXPCTransport();
 #else
     llvm::errs() << "This clangd binary wasn't built with XPC support.\n";
     return (int)ErrorResultCode::CantRunAsXPCService;
 #endif
   } else {
+    log("Starting LSP over stdin/stdout");
     TransportLayer = newJSONTransport(
         stdin, llvm::outs(),
         InputMirrorStream ? InputMirrorStream.getPointer() : nullptr,

@@ -63,10 +63,8 @@ private:
   std::vector<std::pair<unsigned, unsigned>> Ranges; // Always sorted.
 };
 
-// Dump a node for debugging.
-// DynTypedNode::print() doesn't include the kind of node, which is useful.
-void printNode(llvm::raw_ostream &OS, const DynTypedNode &N,
-               const PrintingPolicy &PP) {
+// Show the type of a node for debugging.
+void printNodeKind(llvm::raw_ostream &OS, const DynTypedNode &N) {
   if (const TypeLoc *TL = N.get<TypeLoc>()) {
     // TypeLoc is a hierarchy, but has only a single ASTNodeKind.
     // Synthesize the name from the Type subclass (except for QualifiedTypeLoc).
@@ -77,14 +75,13 @@ void printNode(llvm::raw_ostream &OS, const DynTypedNode &N,
   } else {
     OS << N.getNodeKind().asStringRef();
   }
-  OS << " ";
-  N.print(OS, PP);
 }
 
 std::string printNodeToString(const DynTypedNode &N, const PrintingPolicy &PP) {
   std::string S;
   llvm::raw_string_ostream OS(S);
-  printNode(OS, N, PP);
+  printNodeKind(OS, N);
+  OS << " ";
   return std::move(OS.str());
 }
 
@@ -154,6 +151,15 @@ public:
   bool dataTraverseStmtPost(Stmt *X) {
     pop();
     return true;
+  }
+  // QualifiedTypeLoc is handled strangely in RecursiveASTVisitor: the derived
+  // TraverseTypeLoc is not called for the inner UnqualTypeLoc.
+  // This means we'd never see 'int' in 'const int'! Work around that here.
+  // (The reason for the behavior is to avoid traversing the nested Type twice,
+  // but we ignore TraverseType anyway).
+  bool TraverseQualifiedTypeLoc(QualifiedTypeLoc QX) {
+    return traverseNode<TypeLoc>(
+        &QX, [&] { return TraverseTypeLoc(QX.getUnqualifiedLoc()); });
   }
   // Uninteresting parts of the AST that don't have locations within them.
   bool TraverseNestedNameSpecifier(NestedNameSpecifier *) { return true; }
@@ -361,10 +367,19 @@ void SelectionTree::print(llvm::raw_ostream &OS, const SelectionTree::Node &N,
                                                                     : '.');
   else
     OS.indent(Indent);
-  printNode(OS, N.ASTNode, PrintPolicy);
+  printNodeKind(OS, N.ASTNode);
+  OS << ' ';
+  N.ASTNode.print(OS, PrintPolicy);
   OS << "\n";
   for (const Node *Child : N.Children)
     print(OS, *Child, Indent + 2);
+}
+
+std::string SelectionTree::Node::kind() const {
+  std::string S;
+  llvm::raw_string_ostream OS(S);
+  printNodeKind(OS, ASTNode);
+  return std::move(OS.str());
 }
 
 // Decide which selection emulates a "point" query in between characters.

@@ -13,6 +13,7 @@
 #include "refactor/Tweak.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Stmt.h"
@@ -77,29 +78,15 @@ computeReferencedDecls(const clang::Expr *Expr) {
   return Visitor.ReferencedDecls;
 }
 
-// An expr is not extractable if it's null or an expression of type void
-// FIXME: Ignore assignment (a = 1) Expr since it is extracted as dummy = a =
-static bool isExtractableExpr(const clang::Expr *Expr) {
-  if (Expr) {
-    const Type *ExprType = Expr->getType().getTypePtrOrNull();
-    // FIXME: check if we need to cover any other types
-    if (ExprType)
-      return !ExprType->isVoidType();
-  }
-  return false;
-}
-
 ExtractionContext::ExtractionContext(const SelectionTree::Node *Node,
                                      const SourceManager &SM,
                                      const ASTContext &Ctx)
     : ExprNode(Node), SM(SM), Ctx(Ctx) {
   Expr = Node->ASTNode.get<clang::Expr>();
-  if (isExtractableExpr(Expr)) {
-    ReferencedDecls = computeReferencedDecls(Expr);
-    InsertionPoint = computeInsertionPoint();
-    if (InsertionPoint)
-      Extractable = true;
-  }
+  ReferencedDecls = computeReferencedDecls(Expr);
+  InsertionPoint = computeInsertionPoint();
+  if (InsertionPoint)
+    Extractable = true;
 }
 
 // checks whether extracting before InsertionPoint will take a
@@ -121,9 +108,9 @@ bool ExtractionContext::exprIsValidOutside(const clang::Stmt *Scope) const {
 // the current Stmt. We ALWAYS insert before a Stmt whose parent is a
 // CompoundStmt
 //
-
-// FIXME: Extraction from switch and case statements
+// FIXME: Extraction from label, switch and case statements
 // FIXME: Doens't work for FoldExpr
+// FIXME: Ensure extraction from loops doesn't change semantics.
 const clang::Stmt *ExtractionContext::computeInsertionPoint() const {
   // returns true if we can extract before InsertionPoint
   auto CanExtractOutside =
@@ -141,8 +128,7 @@ const clang::Stmt *ExtractionContext::computeInsertionPoint() const {
       return isa<AttributedStmt>(Stmt) || isa<CompoundStmt>(Stmt) ||
              isa<CXXForRangeStmt>(Stmt) || isa<DeclStmt>(Stmt) ||
              isa<DoStmt>(Stmt) || isa<ForStmt>(Stmt) || isa<IfStmt>(Stmt) ||
-             isa<LabelStmt>(Stmt) || isa<ReturnStmt>(Stmt) ||
-             isa<WhileStmt>(Stmt);
+             isa<ReturnStmt>(Stmt) || isa<WhileStmt>(Stmt);
     }
     if (InsertionPoint->ASTNode.get<VarDecl>())
       return true;
@@ -209,6 +195,9 @@ public:
     return "Extract subexpression to variable";
   }
   Intent intent() const override { return Refactor; }
+  // Compute the extraction context for the Selection
+  bool computeExtractionContext(const SelectionTree::Node *N,
+                                const SourceManager &SM, const ASTContext &Ctx);
 
 private:
   // the expression to extract
@@ -216,14 +205,13 @@ private:
 };
 REGISTER_TWEAK(ExtractVariable)
 bool ExtractVariable::prepare(const Selection &Inputs) {
+  // we don't trigger on empty selections for now
+  if (Inputs.SelectionBegin == Inputs.SelectionEnd)
+    return false;
   const ASTContext &Ctx = Inputs.AST.getASTContext();
   const SourceManager &SM = Inputs.AST.getSourceManager();
   const SelectionTree::Node *N = Inputs.ASTSelection.commonAncestor();
-  // we don't trigger on empty selections for now
-  if (!N || Inputs.SelectionBegin == Inputs.SelectionEnd)
-    return false;
-  Target = llvm::make_unique<ExtractionContext>(N, SM, Ctx);
-  return Target->isExtractable();
+  return computeExtractionContext(N, SM, Ctx);
 }
 
 Expected<Tweak::Effect> ExtractVariable::apply(const Selection &Inputs) {
@@ -237,6 +225,75 @@ Expected<Tweak::Effect> ExtractVariable::apply(const Selection &Inputs) {
   if (auto Err = Result.add(Target->replaceWithVar(VarName)))
     return std::move(Err);
   return Effect::applyEdit(Result);
+}
+
+// Find the CallExpr whose callee is an ancestor of the DeclRef
+const SelectionTree::Node *getCallExpr(const SelectionTree::Node *DeclRef) {
+  // we maintain a stack of all exprs encountered while traversing the
+  // selectiontree because the callee of the callexpr can be an ancestor of the
+  // DeclRef. e.g. Callee can be an ImplicitCastExpr.
+  std::vector<const clang::Expr *> ExprStack;
+  for (auto *CurNode = DeclRef; CurNode; CurNode = CurNode->Parent) {
+    const Expr *CurExpr = CurNode->ASTNode.get<Expr>();
+    if (const CallExpr *CallPar = CurNode->ASTNode.get<CallExpr>()) {
+      // check whether the callee of the callexpr is present in Expr stack.
+      if (std::find(ExprStack.begin(), ExprStack.end(), CallPar->getCallee()) !=
+          ExprStack.end())
+        return CurNode;
+      return nullptr;
+    }
+    ExprStack.push_back(CurExpr);
+  }
+  return nullptr;
+}
+
+// check if Expr can be assigned to a variable i.e. is non-void type
+bool canBeAssigned(const SelectionTree::Node *ExprNode) {
+  const clang::Expr *Expr = ExprNode->ASTNode.get<clang::Expr>();
+  if (const Type *ExprType = Expr->getType().getTypePtrOrNull())
+    // FIXME: check if we need to cover any other types
+    return !ExprType->isVoidType();
+  return true;
+}
+
+// Find the node that will form our ExtractionContext.
+// We don't want to trigger for assignment expressions and variable/field
+// DeclRefs. For function/member function, we want to extract the entire
+// function call.
+bool ExtractVariable::computeExtractionContext(const SelectionTree::Node *N,
+                                               const SourceManager &SM,
+                                               const ASTContext &Ctx) {
+  if (!N)
+    return false;
+  const clang::Expr *SelectedExpr = N->ASTNode.get<clang::Expr>();
+  const SelectionTree::Node *TargetNode = N;
+  if (!SelectedExpr)
+    return false;
+  // Extracting Exprs like a = 1 gives dummy = a = 1 which isn't useful.
+  if (const BinaryOperator *BinOpExpr =
+          dyn_cast_or_null<BinaryOperator>(SelectedExpr)) {
+    if (BinOpExpr->getOpcode() == BinaryOperatorKind::BO_Assign)
+      return false;
+  }
+  // For function and member function DeclRefs, we look for a parent that is a
+  // CallExpr
+  if (const DeclRefExpr *DeclRef =
+          dyn_cast_or_null<DeclRefExpr>(SelectedExpr)) {
+    // Extracting just a variable isn't that useful.
+    if (!isa<FunctionDecl>(DeclRef->getDecl()))
+      return false;
+    TargetNode = getCallExpr(N);
+  }
+  if (const MemberExpr *Member = dyn_cast_or_null<MemberExpr>(SelectedExpr)) {
+    // Extracting just a field member isn't that useful.
+    if (!isa<CXXMethodDecl>(Member->getMemberDecl()))
+      return false;
+    TargetNode = getCallExpr(N);
+  }
+  if (!TargetNode || !canBeAssigned(TargetNode))
+    return false;
+  Target = llvm::make_unique<ExtractionContext>(TargetNode, SM, Ctx);
+  return Target->isExtractable();
 }
 
 } // namespace
