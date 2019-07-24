@@ -34,7 +34,7 @@ static cl::opt<ActionType>
                       clEnumValN(DumpJSON, "dump-json",
                                  "Dump all records as machine-readable JSON"),
                       clEnumValN(GenOptionDefs, "gen-lldb-option-defs",
-                                 "Generate clang attribute clases")));
+                                 "Generate lldb option definitions")));
 
 static bool LLDBTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   switch (Action) {

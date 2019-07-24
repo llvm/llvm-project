@@ -4,3 +4,9 @@ LLVM notes
 This directory contains the Google Benchmark source code with some unnecessary
 files removed. Note that this directory is under a different license than
 libc++.
+
+Changes:
+* https://github.com/google/benchmark/commit/4abdfbb802d1b514703223f5f852ce4a507d32d2
+  is applied on top of
+  https://github.com/google/benchmark/commit/4528c76b718acc9b57956f63069c699ae21edcab
+  to add RISC-V timer support.
