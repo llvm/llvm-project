@@ -468,8 +468,8 @@ public:
         UseGlobalModuleIndex(true), GenerateGlobalModuleIndex(true),
         ASTDumpDecls(false), ASTDumpLookups(false),
         BuildingImplicitModule(false), ModulesEmbedAllFiles(false),
-        IncludeTimestamps(true), TimeTraceGranularity(500),
-        IndexIgnoreSystemSymbols(false), IndexRecordCodegenName(false) {}
+        IncludeTimestamps(true), IndexIgnoreSystemSymbols(false),
+        IndexRecordCodegenName(false), TimeTraceGranularity(500) {}
 
   /// getInputKindForExtension - Return the appropriate input kind for a file
   /// extension. For example, "c" would return InputKind::C.
