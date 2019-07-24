@@ -59,12 +59,12 @@ lldb::LanguageType Variable::GetLanguage() const {
     return lang;
 
   if (auto *func = m_owner_scope->CalculateSymbolContextFunction()) {
-    if ((lang = func->GetLanguage()) && lang != lldb::eLanguageTypeUnknown)
+    if ((lang = func->GetLanguage()) != lldb::eLanguageTypeUnknown)
       return lang;
-    else if (auto *comp_unit =
-                 m_owner_scope->CalculateSymbolContextCompileUnit())
-      if ((lang = func->GetLanguage()) && lang != lldb::eLanguageTypeUnknown)
-        return lang;
+  } else if (auto *comp_unit =
+                 m_owner_scope->CalculateSymbolContextCompileUnit()) {
+    if ((lang = comp_unit->GetLanguage()) != lldb::eLanguageTypeUnknown)
+      return lang;
   }
 
   return lldb::eLanguageTypeUnknown;
