@@ -25,12 +25,12 @@ public:
   void init() { memset(this, 0, sizeof(*this)); }
   bool tryLock();
   NOINLINE void lock() {
-    if (tryLock())
+    if (LIKELY(tryLock()))
       return;
-      // The compiler may try to fully unroll the loop, ending up in a
-      // NumberOfTries*NumberOfYields block of pauses mixed with tryLocks. This
-      // is large, ugly and unneeded, a compact loop is better for our purpose
-      // here. Use a pragma to tell the compiler not to unroll the loop.
+    // The compiler may try to fully unroll the loop, ending up in a
+    // NumberOfTries*NumberOfYields block of pauses mixed with tryLocks. This
+    // is large, ugly and unneeded, a compact loop is better for our purpose
+    // here. Use a pragma to tell the compiler not to unroll the loop.
 #ifdef __clang__
 #pragma nounroll
 #endif
@@ -44,8 +44,8 @@ public:
   void unlock();
 
 private:
-  static constexpr u8 NumberOfTries = 10U;
-  static constexpr u8 NumberOfYields = 10U;
+  static constexpr u8 NumberOfTries = 8U;
+  static constexpr u8 NumberOfYields = 8U;
 
 #if SCUDO_LINUX
   atomic_u32 M;

@@ -5,6 +5,7 @@ include_directories(../..)
 set(SCUDO_CFLAGS)
 
 list(APPEND SCUDO_CFLAGS
+  -Werror=conversion
   -Wall
   -nostdinc++)
 
