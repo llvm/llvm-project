@@ -36,6 +36,15 @@ struct Serializer {
   virtual void emit(const Remark &Remark) = 0;
 };
 
+/// Create a remark serializer.
+Expected<std::unique_ptr<Serializer>>
+createRemarkSerializer(Format RemarksFormat, raw_ostream &OS);
+
+/// Create a remark serializer that uses a pre-filled string table.
+Expected<std::unique_ptr<Serializer>>
+createRemarkSerializer(Format RemarksFormat, raw_ostream &OS,
+                       remarks::StringTable StrTab);
+
 } // end namespace remarks
 } // end namespace llvm
 

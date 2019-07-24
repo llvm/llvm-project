@@ -2,6 +2,7 @@ add_llvm_library(LLVMRemarks
   Remark.cpp
   RemarkFormat.cpp
   RemarkParser.cpp
+  RemarkSerializer.cpp
   RemarkStringTable.cpp
   YAMLRemarkParser.cpp
   YAMLRemarkSerializer.cpp
