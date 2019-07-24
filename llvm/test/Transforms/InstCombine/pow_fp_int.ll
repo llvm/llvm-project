@@ -199,7 +199,7 @@ define double @powf_exp_const2_int_fast(double %base) {
 define double @pow_uitofp_const_base_fast_i32(i32 %x) {
 ; CHECK-LABEL: @pow_uitofp_const_base_fast_i32(
 ; CHECK-NEXT:    [[SUBFP:%.*]] = uitofp i32 [[X:%.*]] to float
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], 0x4006757680000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], 0x4006757{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = call fast float @llvm.exp2.f32(float [[MUL]])
 ; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double
 ; CHECK-NEXT:    ret double [[RES]]
@@ -251,7 +251,7 @@ define double @pow_uitofp_double_base_fast_i32(double %base, i32 %x) {
 define double @pow_sitofp_const_base_fast_i64(i64 %x) {
 ; CHECK-LABEL: @pow_sitofp_const_base_fast_i64(
 ; CHECK-NEXT:    [[SUBFP:%.*]] = sitofp i64 [[X:%.*]] to float
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], 0x4006757680000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], 0x400675{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = call fast float @llvm.exp2.f32(float [[MUL]])
 ; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double
 ; CHECK-NEXT:    ret double [[RES]]
@@ -265,7 +265,7 @@ define double @pow_sitofp_const_base_fast_i64(i64 %x) {
 define double @pow_uitofp_const_base_fast_i64(i64 %x) {
 ; CHECK-LABEL: @pow_uitofp_const_base_fast_i64(
 ; CHECK-NEXT:    [[SUBFP:%.*]] = uitofp i64 [[X:%.*]] to float
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], 0x4006757680000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[SUBFP]], 0x400675{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = call fast float @llvm.exp2.f32(float [[MUL]])
 ; CHECK-NEXT:    [[RES:%.*]] = fpext float [[EXP2]] to double
 ; CHECK-NEXT:    ret double [[RES]]
