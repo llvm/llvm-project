@@ -60,7 +60,7 @@ static mode_t ParsePermissionString(llvm::StringRef permissions) {
 
 static constexpr OptionDefinition g_permissions_options[] = {
 #define LLDB_OPTIONS_permissions
-#include "CommandObject.inc"
+#include "CommandOptions.inc"
 };
 
 class OptionPermissions : public OptionGroup {

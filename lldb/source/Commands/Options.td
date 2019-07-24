@@ -430,27 +430,27 @@ let Command = "platform process list" in {
     Arg<"RegularExpression">, Required,
     Desc<"Find processes with executable basenames that match a regular "
     "expression.">;
-  def platform_process_list_parent : Option<"parent", "P">, OptionRange<2, 6>,
+  def platform_process_list_parent : Option<"parent", "P">, GroupRange<2, 6>,
     Arg<"Pid">, Desc<"Find processes that have a matching parent process ID.">;
-  def platform_process_list_uid : Option<"uid", "u">, OptionRange<2, 6>,
+  def platform_process_list_uid : Option<"uid", "u">, GroupRange<2, 6>,
     Arg<"UnsignedInteger">,
     Desc<"Find processes that have a matching user ID.">;
-  def platform_process_list_euid : Option<"euid", "U">, OptionRange<2, 6>,
+  def platform_process_list_euid : Option<"euid", "U">, GroupRange<2, 6>,
     Arg<"UnsignedInteger">,
     Desc<"Find processes that have a matching effective user ID.">;
-  def platform_process_list_gid : Option<"gid", "g">, OptionRange<2, 6>,
+  def platform_process_list_gid : Option<"gid", "g">, GroupRange<2, 6>,
     Arg<"UnsignedInteger">,
     Desc<"Find processes that have a matching group ID.">;
-  def platform_process_list_egid : Option<"egid", "G">, OptionRange<2, 6>,
+  def platform_process_list_egid : Option<"egid", "G">, GroupRange<2, 6>,
     Arg<"UnsignedInteger">,
     Desc<"Find processes that have a matching effective group ID.">;
-  def platform_process_list_arch : Option<"arch", "a">, OptionRange<2, 6>,
+  def platform_process_list_arch : Option<"arch", "a">, GroupRange<2, 6>,
     Arg<"Architecture">,
     Desc<"Find processes that have a matching architecture.">;
   def platform_process_list_show_args : Option<"show-args", "A">,
-    OptionRange<1, 6>,
+    GroupRange<1, 6>,
     Desc<"Show process arguments instead of the process executable basename.">;
-  def platform_process_list_verbose : Option<"verbose", "v">, OptionRange<1, 6>,
+  def platform_process_list_verbose : Option<"verbose", "v">, GroupRange<1, 6>,
     Desc<"Enable verbose output.">;
 }
 
