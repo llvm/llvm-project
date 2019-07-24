@@ -46,6 +46,11 @@ enum LLVMConstants : uint32_t {
   DW_VIRTUALITY_invalid = ~0U, // Virtuality for invalid results.
   DW_MACINFO_invalid = ~0U,    // Macinfo type for invalid results.
 
+  // Special values for an initial length field.
+  DW_LENGTH_lo_reserved = 0xfffffff0, // Lower bound of the reserved range.
+  DW_LENGTH_DWARF64 = 0xffffffff,     // Indicator of 64-bit DWARF format.
+  DW_LENGTH_hi_reserved = 0xffffffff, // Upper bound of the reserved range.
+
   // Other constants.
   DWARF_VERSION = 4,       // Default dwarf version we output.
   DW_PUBTYPES_VERSION = 2, // Section version number for .debug_pubtypes.
