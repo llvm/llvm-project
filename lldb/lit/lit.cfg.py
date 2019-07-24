@@ -1,6 +1,7 @@
 # -*- Python -*-
 
 import os
+import platform
 import re
 import shutil
 import site
@@ -75,13 +76,14 @@ for i in ['module-cache-clang', 'module-cache-lldb']:
         shutil.rmtree(cachedir)
 
 # Set a default per-test timeout of 10 minutes. Setting a timeout per test
-# requires the psutil module and lit complains if the value is set but the
-# module can't be found.
-try:
-    import psutil  # noqa: F401
+# requires that killProcessAndChildren() is supported on the platform and
+# lit complains if the value is set but it is not supported.
+supported, errormsg = lit_config.maxIndividualTestTimeIsSupported
+if supported:
     lit_config.maxIndividualTestTime = 600
-except ImportError:
-    pass
+else:
+    lit_config.warning("Could not set a default per-test timeout. " + errormsg)
+
 
 # If running tests natively, check for CPU features needed for some tests.
 
