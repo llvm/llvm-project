@@ -15,7 +15,6 @@
 
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkStringTable.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -35,31 +34,6 @@ struct Serializer {
   /// This is just an interface.
   virtual ~Serializer() = default;
   virtual void emit(const Remark &Remark) = 0;
-};
-
-/// Wether the serializer should use a string table while emitting.
-enum class UseStringTable { No, Yes };
-
-/// Serialize the remarks to YAML. One remark entry looks like this:
-/// --- !<TYPE>
-/// Pass:            <PASSNAME>
-/// Name:            <REMARKNAME>
-/// DebugLoc:        { File: <SOURCEFILENAME>, Line: <SOURCELINE>,
-///                    Column: <SOURCECOLUMN> }
-/// Function:        <FUNCTIONNAME>
-/// Args:
-///   - <KEY>: <VALUE>
-///     DebugLoc:        { File: <FILE>, Line: <LINE>, Column: <COL> }
-/// ...
-struct YAMLSerializer : public Serializer {
-  /// The YAML streamer.
-  yaml::Output YAMLOutput;
-
-  YAMLSerializer(raw_ostream &OS,
-                 UseStringTable UseStringTable = remarks::UseStringTable::No);
-
-  /// Emit a remark to the stream.
-  void emit(const Remark &Remark) override;
 };
 
 } // end namespace remarks

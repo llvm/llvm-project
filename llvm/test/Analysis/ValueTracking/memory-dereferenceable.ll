@@ -172,6 +172,14 @@ entry:
     ret void
 }
 
+; CHECK: The following are dereferenceable:
+; CHECK: %ptr = inttoptr i32 %val to i32*, !dereferenceable !0
+define i32 @f_0(i32 %val) {
+  %ptr = inttoptr i32 %val to i32*, !dereferenceable !0
+  %load29 = load i32, i32* %ptr, align 8
+  ret i32 %load29 
+}
+
 ; Just check that we don't crash.
 ; CHECK-LABEL: 'opaque_type_crasher'
 define void @opaque_type_crasher(%TypeOpaque* dereferenceable(16) %a) {

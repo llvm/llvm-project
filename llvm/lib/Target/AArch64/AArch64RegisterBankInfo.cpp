@@ -635,6 +635,12 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   // Some of the floating-point instructions have mixed GPR and FPR operands:
   // fine-tune the computed mapping.
   switch (Opc) {
+  case TargetOpcode::G_TRUNC: {
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    if (!SrcTy.isVector() && SrcTy.getSizeInBits() == 128)
+      OpRegBankIdx = {PMI_FirstFPR, PMI_FirstFPR};
+    break;
+  }
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP:
     if (MRI.getType(MI.getOperand(0).getReg()).isVector())
@@ -702,11 +708,10 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       break;
 
     // If we're taking in vectors, we have no choice but to put everything on
-    // FPRs.
+    // FPRs, except for the condition. The condition must always be on a GPR.
     LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
     if (SrcTy.isVector()) {
-      for (unsigned Idx = 0; Idx < 4; ++Idx)
-        OpRegBankIdx[Idx] = PMI_FirstFPR;
+      OpRegBankIdx = {PMI_FirstFPR, PMI_FirstGPR, PMI_FirstFPR, PMI_FirstFPR};
       break;
     }
 
@@ -750,8 +755,7 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // If we have more FP constraints than not, then move everything over to
     // FPR.
     if (NumFP >= 2)
-      for (unsigned Idx = 0; Idx < 4; ++Idx)
-        OpRegBankIdx[Idx] = PMI_FirstFPR;
+      OpRegBankIdx = {PMI_FirstFPR, PMI_FirstGPR, PMI_FirstFPR, PMI_FirstFPR};
 
     break;
   }
@@ -795,6 +799,15 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     // Index needs to be a GPR.
     OpRegBankIdx[3] = PMI_FirstGPR;
     break;
+  case TargetOpcode::G_EXTRACT: {
+    // For s128 sources we have to use fpr.
+    LLT SrcTy = MRI.getType(MI.getOperand(1).getReg());
+    if (SrcTy.getSizeInBits() == 128) {
+      OpRegBankIdx[0] = PMI_FirstFPR;
+      OpRegBankIdx[1] = PMI_FirstFPR;
+    }
+    break;
+  }
   case TargetOpcode::G_BUILD_VECTOR:
     // If the first source operand belongs to a FPR register bank, then make
     // sure that we preserve that.

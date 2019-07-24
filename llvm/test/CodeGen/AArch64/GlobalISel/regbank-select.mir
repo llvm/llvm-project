@@ -18,8 +18,7 @@ body:             |
     ; CHECK: [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[COPY1:%[0-9]+]]:fpr(s32) = COPY $s0
     ; CHECK: [[COPY2:%[0-9]+]]:fpr(s32) = COPY $s1
-    ; CHECK: [[COPY3:%[0-9]+]]:fpr(s1) = COPY [[TRUNC]](s1)
-    ; CHECK: [[SELECT:%[0-9]+]]:fpr(s32) = G_SELECT [[COPY3]](s1), [[COPY1]], [[COPY2]]
+    ; CHECK: [[SELECT:%[0-9]+]]:fpr(s32) = G_SELECT [[TRUNC]](s1), [[COPY1]], [[COPY2]]
     ; CHECK: $s0 = COPY [[SELECT]](s32)
     ; CHECK: RET_ReallyLR implicit $s0
     %3:_(s32) = COPY $w0
@@ -47,8 +46,7 @@ body:             |
     ; CHECK: [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[COPY1:%[0-9]+]]:fpr(s64) = COPY $d0
     ; CHECK: [[COPY2:%[0-9]+]]:fpr(s64) = COPY $d1
-    ; CHECK: [[COPY3:%[0-9]+]]:fpr(s1) = COPY [[TRUNC]](s1)
-    ; CHECK: [[SELECT:%[0-9]+]]:fpr(s64) = G_SELECT [[COPY3]](s1), [[COPY1]], [[COPY2]]
+    ; CHECK: [[SELECT:%[0-9]+]]:fpr(s64) = G_SELECT [[TRUNC]](s1), [[COPY1]], [[COPY2]]
     ; CHECK: $d0 = COPY [[SELECT]](s64)
     ; CHECK: RET_ReallyLR implicit $d0
     %3:_(s32) = COPY $w0
@@ -75,8 +73,7 @@ body:             |
     ; CHECK: [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[COPY1:%[0-9]+]]:fpr(s64) = COPY $d0
     ; CHECK: [[COPY2:%[0-9]+]]:fpr(s64) = COPY $d1
-    ; CHECK: [[COPY3:%[0-9]+]]:fpr(s1) = COPY [[TRUNC]](s1)
-    ; CHECK: [[SELECT:%[0-9]+]]:fpr(s64) = G_SELECT [[COPY3]](s1), [[COPY1]], [[COPY2]]
+    ; CHECK: [[SELECT:%[0-9]+]]:fpr(s64) = G_SELECT [[TRUNC]](s1), [[COPY1]], [[COPY2]]
     ; CHECK: $x0 = COPY [[SELECT]](s64)
     ; CHECK: RET_ReallyLR implicit $x0
 
@@ -110,9 +107,8 @@ body:             |
     ; CHECK: [[TRUNC:%[0-9]+]]:gpr(s1) = G_TRUNC [[COPY]](s32)
     ; CHECK: [[COPY1:%[0-9]+]]:fpr(s64) = COPY $d0
     ; CHECK: [[COPY2:%[0-9]+]]:gpr(s64) = COPY $x1
-    ; CHECK: [[COPY3:%[0-9]+]]:fpr(s1) = COPY [[TRUNC]](s1)
-    ; CHECK: [[COPY4:%[0-9]+]]:fpr(s64) = COPY [[COPY2]](s64)
-    ; CHECK: [[SELECT:%[0-9]+]]:fpr(s64) = G_SELECT [[COPY3]](s1), [[COPY1]], [[COPY4]]
+    ; CHECK: [[COPY3:%[0-9]+]]:fpr(s64) = COPY [[COPY2]](s64)
+    ; CHECK: [[SELECT:%[0-9]+]]:fpr(s64) = G_SELECT [[TRUNC]](s1), [[COPY1]], [[COPY3]]
     ; CHECK: $d0 = COPY [[SELECT]](s64)
     ; CHECK: RET_ReallyLR implicit $d0
 

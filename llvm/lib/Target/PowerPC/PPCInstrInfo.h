@@ -439,7 +439,7 @@ public:
   void replaceInstrOperandWithImm(MachineInstr &MI, unsigned OpNo,
                                   int64_t Imm) const;
 
-  bool instrHasImmForm(const MachineInstr &MI, ImmInstrInfo &III,
+  bool instrHasImmForm(unsigned Opc, bool IsVFReg, ImmInstrInfo &III,
                        bool PostRA) const;
 
   /// getRegNumForOperand - some operands use different numbering schemes

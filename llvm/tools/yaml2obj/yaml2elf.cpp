@@ -192,10 +192,11 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D) : Doc(D) {
     if (!D->Name.empty())
       DocSections.insert(D->Name);
 
-  // Insert SHT_NULL section implicitly.
-  Doc.Sections.insert(
-      Doc.Sections.begin(),
-      llvm::make_unique<ELFYAML::Section>(
+  // Insert SHT_NULL section implicitly when it is not defined in YAML.
+  if (Doc.Sections.empty() || Doc.Sections.front()->Type != ELF::SHT_NULL)
+    Doc.Sections.insert(
+        Doc.Sections.begin(),
+        llvm::make_unique<ELFYAML::Section>(
           ELFYAML::Section::SectionKind::RawContent, /*IsImplicit=*/true));
 
   std::vector<StringRef> ImplicitSections = {".symtab", ".strtab", ".shstrtab"};
@@ -325,9 +326,26 @@ bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
   // valid SHN_UNDEF entry since SHT_NULL == 0.
   SHeaders.resize(Doc.Sections.size());
 
-  for (size_t I = 1; I < Doc.Sections.size(); ++I) {
+  for (size_t I = 0; I < Doc.Sections.size(); ++I) {
     Elf_Shdr &SHeader = SHeaders[I];
     ELFYAML::Section *Sec = Doc.Sections[I].get();
+
+    if (I == 0) {
+      if (Sec->IsImplicit)
+        continue;
+
+      if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec))
+        if (S->Size)
+          SHeader.sh_size = *S->Size;
+
+      if (!Sec->Link.empty()) {
+        unsigned Index;
+        if (!convertSectionIndex(SN2I, Sec->Name, Sec->Link, Index))
+          return false;
+        SHeader.sh_link = Index;
+      }
+      continue;
+    }
 
     // We have a few sections like string or symbol tables that are usually
     // added implicitly to the end. However, if they are explicitly specified

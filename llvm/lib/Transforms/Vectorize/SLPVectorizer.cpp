@@ -3879,12 +3879,12 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     case Instruction::Call: {
       CallInst *CI = cast<CallInst>(VL0);
       setInsertPointAfterBundle(E->Scalars, S);
-      Function *FI;
+
       Intrinsic::ID IID  = Intrinsic::not_intrinsic;
-      Value *ScalarArg = nullptr;
-      if (CI && (FI = CI->getCalledFunction())) {
+      if (Function *FI = CI->getCalledFunction())
         IID = FI->getIntrinsicID();
-      }
+
+      Value *ScalarArg = nullptr;
       std::vector<Value *> OpVecs;
       for (int j = 0, e = CI->getNumArgOperands(); j < e; ++j) {
         ValueList OpVL;
