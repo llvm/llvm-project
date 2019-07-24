@@ -382,6 +382,14 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
   SupportFileStatus = Params.initializationOptions.FileStatus;
   HoverContentFormat = Params.capabilities.HoverContentFormat;
   SupportsOffsetsInSignatureHelp = Params.capabilities.OffsetsInSignatureHelp;
+
+  // Per LSP, renameProvider can be either boolean or RenameOptions.
+  // RenameOptions will be specified if the client states it supports prepare.
+  llvm::json::Value RenameProvider =
+      llvm::json::Object{{"prepareProvider", true}};
+  if (!Params.capabilities.RenamePrepareSupport) // Only boolean allowed per LSP
+    RenameProvider = true;
+
   llvm::json::Object Result{
       {{"capabilities",
         llvm::json::Object{
@@ -409,7 +417,7 @@ void ClangdLSPServer::onInitialize(const InitializeParams &Params,
             {"definitionProvider", true},
             {"documentHighlightProvider", true},
             {"hoverProvider", true},
-            {"renameProvider", true},
+            {"renameProvider", std::move(RenameProvider)},
             {"documentSymbolProvider", true},
             {"workspaceSymbolProvider", true},
             {"referencesProvider", true},
@@ -566,6 +574,12 @@ void ClangdLSPServer::onWorkspaceSymbol(
             Reply(std::move(*Items));
           },
           std::move(Reply)));
+}
+
+void ClangdLSPServer::onPrepareRename(const TextDocumentPositionParams &Params,
+                                      Callback<llvm::Optional<Range>> Reply) {
+  Server->prepareRename(Params.textDocument.uri.file(), Params.position,
+                        std::move(Reply));
 }
 
 void ClangdLSPServer::onRename(const RenameParams &Params,
@@ -1015,6 +1029,7 @@ ClangdLSPServer::ClangdLSPServer(
   MsgHandler->bind("textDocument/declaration", &ClangdLSPServer::onGoToDeclaration);
   MsgHandler->bind("textDocument/references", &ClangdLSPServer::onReference);
   MsgHandler->bind("textDocument/switchSourceHeader", &ClangdLSPServer::onSwitchSourceHeader);
+  MsgHandler->bind("textDocument/prepareRename", &ClangdLSPServer::onPrepareRename);
   MsgHandler->bind("textDocument/rename", &ClangdLSPServer::onRename);
   MsgHandler->bind("textDocument/hover", &ClangdLSPServer::onHover);
   MsgHandler->bind("textDocument/documentSymbol", &ClangdLSPServer::onDocumentSymbol);

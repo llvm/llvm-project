@@ -513,7 +513,8 @@ class GdbRemoteTestCaseBase(TestBase):
             self,
             inferior_args=None,
             inferior_sleep_seconds=3,
-            inferior_exe_path=None):
+            inferior_exe_path=None,
+            inferior_env=None):
         """Prep the debug monitor, the inferior, and the expected packet stream.
 
         Handle the separate cases of using the debug monitor in attach-to-inferior mode
@@ -576,6 +577,9 @@ class GdbRemoteTestCaseBase(TestBase):
 
         # Build the expected protocol stream
         self.add_no_ack_remote_stream()
+        if inferior_env:
+            for name, value in inferior_env.items():
+                self.add_set_environment_packets(name, value)
         if self._inferior_startup == self._STARTUP_LAUNCH:
             self.add_verified_launch_packets(launch_args)
 
@@ -655,6 +659,12 @@ class GdbRemoteTestCaseBase(TestBase):
             ["read packet: $qProcessInfo#dc",
              {"direction": "send", "regex": r"^\$(.+)#[0-9a-fA-F]{2}$", "capture": {1: "process_info_raw"}}],
             True)
+
+    def add_set_environment_packets(self, name, value):
+        self.test_sequence.add_log_lines(
+            ["read packet: $QEnvironment:" + name + "=" + value + "#00",
+             "send packet: $OK#00",
+             ], True)
 
     _KNOWN_PROCESS_INFO_KEYS = [
         "pid",
@@ -816,6 +826,7 @@ class GdbRemoteTestCaseBase(TestBase):
                     "error"])
             self.assertIsNotNone(val)
 
+        mem_region_dict["name"] = seven.unhexlify(mem_region_dict.get("name", ""))
         # Return the dictionary of key-value pairs for the memory region.
         return mem_region_dict
 
@@ -999,6 +1010,22 @@ class GdbRemoteTestCaseBase(TestBase):
         self.assertIsNotNone(context.get("stop_result"))
 
         return context
+
+    def continue_process_and_wait_for_stop(self):
+        self.test_sequence.add_log_lines(
+            [
+                "read packet: $vCont;c#a8",
+                {
+                    "direction": "send",
+                    "regex": r"^\$T([0-9a-fA-F]{2})(.*)#[0-9a-fA-F]{2}$",
+                    "capture": {1: "stop_signo", 2: "stop_key_val_text"},
+                },
+            ],
+            True,
+        )
+        context = self.expect_gdbremote_sequence()
+        self.assertIsNotNone(context)
+        return self.parse_interrupt_packets(context)
 
     def select_modifiable_register(self, reg_infos):
         """Find a register that can be read/written freely."""

@@ -478,19 +478,6 @@ def non_word_alignedstore : PatFrag<(ops node:$val, node:$ptr),
 // NEON-specific DAG Nodes.
 //===----------------------------------------------------------------------===//
 
-def SDTARMVCMP    : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<1, 2>]>;
-def SDTARMVCMPZ   : SDTypeProfile<1, 1, []>;
-
-def NEONvceq      : SDNode<"ARMISD::VCEQ", SDTARMVCMP>;
-def NEONvceqz     : SDNode<"ARMISD::VCEQZ", SDTARMVCMPZ>;
-def NEONvcge      : SDNode<"ARMISD::VCGE", SDTARMVCMP>;
-def NEONvcgez     : SDNode<"ARMISD::VCGEZ", SDTARMVCMPZ>;
-def NEONvclez     : SDNode<"ARMISD::VCLEZ", SDTARMVCMPZ>;
-def NEONvcgeu     : SDNode<"ARMISD::VCGEU", SDTARMVCMP>;
-def NEONvcgt      : SDNode<"ARMISD::VCGT", SDTARMVCMP>;
-def NEONvcgtz     : SDNode<"ARMISD::VCGTZ", SDTARMVCMPZ>;
-def NEONvcltz     : SDNode<"ARMISD::VCLTZ", SDTARMVCMPZ>;
-def NEONvcgtu     : SDNode<"ARMISD::VCGTU", SDTARMVCMP>;
 def NEONvtst      : SDNode<"ARMISD::VTST", SDTARMVCMP>;
 
 // Types for vector shift by immediates.  The "SHX" version is for long and
@@ -5027,66 +5014,66 @@ def : Pat<(v2i32 (trunc (ARMvshruImm (sub (v2i64 QPR:$Vn), QPR:$Vm), 32))),
 
 //   VCEQ     : Vector Compare Equal
 defm VCEQ     : N3V_QHS<1, 0, 0b1000, 1, IIC_VSUBi4D, IIC_VSUBi4D, IIC_VSUBi4Q,
-                        IIC_VSUBi4Q, "vceq", "i", NEONvceq, 1>;
+                        IIC_VSUBi4Q, "vceq", "i", ARMvceq, 1>;
 def  VCEQfd   : N3VD<0,0,0b00,0b1110,0, IIC_VBIND, "vceq", "f32", v2i32, v2f32,
-                     NEONvceq, 1>;
+                     ARMvceq, 1>;
 def  VCEQfq   : N3VQ<0,0,0b00,0b1110,0, IIC_VBINQ, "vceq", "f32", v4i32, v4f32,
-                     NEONvceq, 1>;
+                     ARMvceq, 1>;
 def  VCEQhd   : N3VD<0,0,0b01,0b1110,0, IIC_VBIND, "vceq", "f16", v4i16, v4f16,
-                     NEONvceq, 1>,
+                     ARMvceq, 1>,
                 Requires<[HasNEON, HasFullFP16]>;
 def  VCEQhq   : N3VQ<0,0,0b01,0b1110,0, IIC_VBINQ, "vceq", "f16", v8i16, v8f16,
-                     NEONvceq, 1>,
+                     ARMvceq, 1>,
                 Requires<[HasNEON, HasFullFP16]>;
 
 let TwoOperandAliasConstraint = "$Vm = $Vd" in
 defm VCEQz    : N2V_QHS_cmp<0b11, 0b11, 0b01, 0b00010, 0, "vceq", "i",
-                            "$Vd, $Vm, #0", NEONvceqz>;
+                            "$Vd, $Vm, #0", ARMvceqz>;
 
 //   VCGE     : Vector Compare Greater Than or Equal
 defm VCGEs    : N3V_QHS<0, 0, 0b0011, 1, IIC_VSUBi4D, IIC_VSUBi4D, IIC_VSUBi4Q,
-                        IIC_VSUBi4Q, "vcge", "s", NEONvcge, 0>;
+                        IIC_VSUBi4Q, "vcge", "s", ARMvcge, 0>;
 defm VCGEu    : N3V_QHS<1, 0, 0b0011, 1, IIC_VSUBi4D, IIC_VSUBi4D, IIC_VSUBi4Q,
-                        IIC_VSUBi4Q, "vcge", "u", NEONvcgeu, 0>;
+                        IIC_VSUBi4Q, "vcge", "u", ARMvcgeu, 0>;
 def  VCGEfd   : N3VD<1,0,0b00,0b1110,0, IIC_VBIND, "vcge", "f32", v2i32, v2f32,
-                     NEONvcge, 0>;
+                     ARMvcge, 0>;
 def  VCGEfq   : N3VQ<1,0,0b00,0b1110,0, IIC_VBINQ, "vcge", "f32", v4i32, v4f32,
-                     NEONvcge, 0>;
+                     ARMvcge, 0>;
 def  VCGEhd   : N3VD<1,0,0b01,0b1110,0, IIC_VBIND, "vcge", "f16", v4i16, v4f16,
-                     NEONvcge, 0>,
+                     ARMvcge, 0>,
                 Requires<[HasNEON, HasFullFP16]>;
 def  VCGEhq   : N3VQ<1,0,0b01,0b1110,0, IIC_VBINQ, "vcge", "f16", v8i16, v8f16,
-                     NEONvcge, 0>,
+                     ARMvcge, 0>,
                 Requires<[HasNEON, HasFullFP16]>;
 
 let TwoOperandAliasConstraint = "$Vm = $Vd" in {
 defm VCGEz    : N2V_QHS_cmp<0b11, 0b11, 0b01, 0b00001, 0, "vcge", "s",
-                            "$Vd, $Vm, #0", NEONvcgez>;
+                            "$Vd, $Vm, #0", ARMvcgez>;
 defm VCLEz    : N2V_QHS_cmp<0b11, 0b11, 0b01, 0b00011, 0, "vcle", "s",
-                            "$Vd, $Vm, #0", NEONvclez>;
+                            "$Vd, $Vm, #0", ARMvclez>;
 }
 
 //   VCGT     : Vector Compare Greater Than
 defm VCGTs    : N3V_QHS<0, 0, 0b0011, 0, IIC_VSUBi4D, IIC_VSUBi4D, IIC_VSUBi4Q,
-                        IIC_VSUBi4Q, "vcgt", "s", NEONvcgt, 0>;
+                        IIC_VSUBi4Q, "vcgt", "s", ARMvcgt, 0>;
 defm VCGTu    : N3V_QHS<1, 0, 0b0011, 0, IIC_VSUBi4D, IIC_VSUBi4D, IIC_VSUBi4Q,
-                        IIC_VSUBi4Q, "vcgt", "u", NEONvcgtu, 0>;
+                        IIC_VSUBi4Q, "vcgt", "u", ARMvcgtu, 0>;
 def  VCGTfd   : N3VD<1,0,0b10,0b1110,0, IIC_VBIND, "vcgt", "f32", v2i32, v2f32,
-                     NEONvcgt, 0>;
+                     ARMvcgt, 0>;
 def  VCGTfq   : N3VQ<1,0,0b10,0b1110,0, IIC_VBINQ, "vcgt", "f32", v4i32, v4f32,
-                     NEONvcgt, 0>;
+                     ARMvcgt, 0>;
 def  VCGThd   : N3VD<1,0,0b11,0b1110,0, IIC_VBIND, "vcgt", "f16", v4i16, v4f16,
-                     NEONvcgt, 0>,
+                     ARMvcgt, 0>,
                 Requires<[HasNEON, HasFullFP16]>;
 def  VCGThq   : N3VQ<1,0,0b11,0b1110,0, IIC_VBINQ, "vcgt", "f16", v8i16, v8f16,
-                     NEONvcgt, 0>,
+                     ARMvcgt, 0>,
                 Requires<[HasNEON, HasFullFP16]>;
 
 let TwoOperandAliasConstraint = "$Vm = $Vd" in {
 defm VCGTz    : N2V_QHS_cmp<0b11, 0b11, 0b01, 0b00000, 0, "vcgt", "s",
-                            "$Vd, $Vm, #0", NEONvcgtz>;
+                            "$Vd, $Vm, #0", ARMvcgtz>;
 defm VCLTz    : N2V_QHS_cmp<0b11, 0b11, 0b01, 0b00100, 0, "vclt", "s",
-                            "$Vd, $Vm, #0", NEONvcltz>;
+                            "$Vd, $Vm, #0", ARMvcltz>;
 }
 
 //   VACGE    : Vector Absolute Compare Greater Than or Equal (aka VCAGE)

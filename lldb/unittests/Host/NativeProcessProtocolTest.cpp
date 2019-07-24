@@ -9,6 +9,7 @@
 #include "TestingSupport/Host/NativeProcessTestUtils.h"
 
 #include "lldb/Host/common/NativeProcessProtocol.h"
+#include "llvm/Support/Process.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 
@@ -95,4 +96,54 @@ TEST(NativeProcessProtocolTest, ReadMemoryWithoutTrap) {
                        llvm::HasValue(std::vector<uint8_t>{6, 7}));
   EXPECT_THAT_EXPECTED(Process.ReadMemoryWithoutTrap(4, 2),
                        llvm::HasValue(std::vector<uint8_t>{4, 5}));
+}
+
+TEST(NativeProcessProtocolTest, ReadCStringFromMemory) {
+  NiceMock<MockDelegate> DummyDelegate;
+  MockProcess<NativeProcessProtocol> Process(DummyDelegate,
+                                             ArchSpec("aarch64-pc-linux"));
+  FakeMemory M({'h', 'e', 'l', 'l', 'o', 0, 'w', 'o'});
+  EXPECT_CALL(Process, ReadMemory(_, _))
+      .WillRepeatedly(Invoke(&M, &FakeMemory::Read));
+
+  char string[1024];
+  size_t bytes_read;
+  EXPECT_THAT_EXPECTED(Process.ReadCStringFromMemory(
+                           0x0, &string[0], sizeof(string), bytes_read),
+                       llvm::HasValue(llvm::StringRef("hello")));
+  EXPECT_EQ(bytes_read, 6UL);
+}
+
+TEST(NativeProcessProtocolTest, ReadCStringFromMemory_MaxSize) {
+  NiceMock<MockDelegate> DummyDelegate;
+  MockProcess<NativeProcessProtocol> Process(DummyDelegate,
+                                             ArchSpec("aarch64-pc-linux"));
+  FakeMemory M({'h', 'e', 'l', 'l', 'o', 0, 'w', 'o'});
+  EXPECT_CALL(Process, ReadMemory(_, _))
+      .WillRepeatedly(Invoke(&M, &FakeMemory::Read));
+
+  char string[4];
+  size_t bytes_read;
+  EXPECT_THAT_EXPECTED(Process.ReadCStringFromMemory(
+                           0x0, &string[0], sizeof(string), bytes_read),
+                       llvm::HasValue(llvm::StringRef("hel")));
+  EXPECT_EQ(bytes_read, 3UL);
+}
+
+TEST(NativeProcessProtocolTest, ReadCStringFromMemory_CrossPageBoundary) {
+  NiceMock<MockDelegate> DummyDelegate;
+  MockProcess<NativeProcessProtocol> Process(DummyDelegate,
+                                             ArchSpec("aarch64-pc-linux"));
+  unsigned string_start = llvm::sys::Process::getPageSizeEstimate() - 3;
+  FakeMemory M({'h', 'e', 'l', 'l', 'o', 0, 'w', 'o'}, string_start);
+  EXPECT_CALL(Process, ReadMemory(_, _))
+      .WillRepeatedly(Invoke(&M, &FakeMemory::Read));
+
+  char string[1024];
+  size_t bytes_read;
+  EXPECT_THAT_EXPECTED(Process.ReadCStringFromMemory(string_start, &string[0],
+                                                     sizeof(string),
+                                                     bytes_read),
+                       llvm::HasValue(llvm::StringRef("hello")));
+  EXPECT_EQ(bytes_read, 6UL);
 }

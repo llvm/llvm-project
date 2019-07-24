@@ -201,7 +201,7 @@ parseV5EntryFormat(const DWARFDataExtractor &DebugLineData, uint32_t *OffsetPtr,
       return createStringError(
           errc::invalid_argument,
           "failed to parse entry content descriptions at offset "
-          "0x%8.8" PRIx64
+          "0x%8.8" PRIx32
           " because offset extends beyond the prologue end at offset "
           "0x%8.8" PRIx64,
           *OffsetPtr, EndPrologueOffset);
@@ -244,7 +244,7 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
       return createStringError(
           errc::invalid_argument,
           "failed to parse directory entry at offset "
-          "0x%8.8" PRIx64
+          "0x%8.8" PRIx32
           " because offset extends beyond the prologue end at offset "
           "0x%8.8" PRIx64,
           *OffsetPtr, EndPrologueOffset);
@@ -280,7 +280,7 @@ parseV5DirFileTables(const DWARFDataExtractor &DebugLineData,
       return createStringError(
           errc::invalid_argument,
           "failed to parse file entry at offset "
-          "0x%8.8" PRIx64
+          "0x%8.8" PRIx32
           " because offset extends beyond the prologue end at offset "
           "0x%8.8" PRIx64,
           *OffsetPtr, EndPrologueOffset);
@@ -332,10 +332,10 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
 
   clear();
   TotalLength = DebugLineData.getRelocatedValue(4, OffsetPtr);
-  if (TotalLength == UINT32_MAX) {
+  if (TotalLength == dwarf::DW_LENGTH_DWARF64) {
     FormParams.Format = dwarf::DWARF64;
     TotalLength = DebugLineData.getU64(OffsetPtr);
-  } else if (TotalLength >= 0xfffffff0) {
+  } else if (TotalLength >= dwarf::DW_LENGTH_lo_reserved) {
     return createStringError(errc::invalid_argument,
         "parsing line table prologue at offset 0x%8.8" PRIx64
         " unsupported reserved unit length found of value 0x%8.8" PRIx64,
@@ -382,8 +382,8 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
               errc::invalid_argument,
               "parsing line table prologue at 0x%8.8" PRIx64
               " found an invalid directory or file table description at"
-              " 0x%8.8" PRIx64,
-              PrologueOffset, (uint64_t)*OffsetPtr),
+              " 0x%8.8" PRIx32,
+              PrologueOffset, *OffsetPtr),
           std::move(e));
     }
   } else
@@ -394,8 +394,8 @@ Error DWARFDebugLine::Prologue::parse(const DWARFDataExtractor &DebugLineData,
     return createStringError(errc::invalid_argument,
                        "parsing line table prologue at 0x%8.8" PRIx64
                        " should have ended at 0x%8.8" PRIx64
-                       " but it ended at 0x%8.8" PRIx64,
-                       PrologueOffset, EndPrologueOffset, (uint64_t)*OffsetPtr);
+                       " but it ended at 0x%8.8" PRIx32,
+                       PrologueOffset, EndPrologueOffset, *OffsetPtr);
   return Error::success();
 }
 
@@ -1126,7 +1126,8 @@ DWARFDebugLine::SectionParser::SectionParser(DWARFDataExtractor &Data,
 }
 
 bool DWARFDebugLine::Prologue::totalLengthIsValid() const {
-  return TotalLength == 0xffffffff || TotalLength < 0xfffffff0;
+  return TotalLength == dwarf::DW_LENGTH_DWARF64 ||
+         TotalLength < dwarf::DW_LENGTH_lo_reserved;
 }
 
 DWARFDebugLine::LineTable DWARFDebugLine::SectionParser::parseNext(

@@ -331,6 +331,10 @@ bool fromJSON(const llvm::json::Value &Params, ClientCapabilities &R) {
         }
       }
     }
+    if (auto *Rename = TextDocument->getObject("rename")) {
+      if (auto RenameSupport = Rename->getBoolean("prepareSupport"))
+        R.RenamePrepareSupport = *RenameSupport;
+    }
   }
   if (auto *Workspace = O->getObject("workspace")) {
     if (auto *Symbol = Workspace->getObject("symbol")) {

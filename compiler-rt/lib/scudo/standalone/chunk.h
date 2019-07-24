@@ -29,15 +29,15 @@ INLINE u16 computeChecksum(u32 Seed, uptr Value, uptr *Array, uptr ArraySize) {
   u32 Crc = static_cast<u32>(CRC32_INTRINSIC(Seed, Value));
   for (uptr I = 0; I < ArraySize; I++)
     Crc = static_cast<u32>(CRC32_INTRINSIC(Crc, Array[I]));
-  return static_cast<u16>((Crc & 0xffff) ^ (Crc >> 16));
+  return static_cast<u16>(Crc ^ (Crc >> 16));
 #else
   if (HashAlgorithm == Checksum::HardwareCRC32) {
     u32 Crc = computeHardwareCRC32(Seed, Value);
     for (uptr I = 0; I < ArraySize; I++)
       Crc = computeHardwareCRC32(Crc, Array[I]);
-    return static_cast<u16>((Crc & 0xffff) ^ (Crc >> 16));
+    return static_cast<u16>(Crc ^ (Crc >> 16));
   } else {
-    u16 Checksum = computeBSDChecksum(static_cast<u16>(Seed & 0xffff), Value);
+    u16 Checksum = computeBSDChecksum(static_cast<u16>(Seed), Value);
     for (uptr I = 0; I < ArraySize; I++)
       Checksum = computeBSDChecksum(Checksum, Array[I]);
     return Checksum;
@@ -63,24 +63,24 @@ enum State : u8 { Available = 0, Allocated = 1, Quarantined = 2 };
 typedef u64 PackedHeader;
 // Update the 'Mask' constants to reflect changes in this structure.
 struct UnpackedHeader {
-  u64 Checksum : 16;
-  u64 ClassId : 8;
-  u64 SizeOrUnusedBytes : 20;
+  uptr ClassId : 8;
   u8 State : 2;
   u8 Origin : 2;
-  u64 Offset : 16;
+  uptr SizeOrUnusedBytes : 20;
+  uptr Offset : 16;
+  uptr Checksum : 16;
 };
 typedef atomic_u64 AtomicPackedHeader;
 COMPILER_CHECK(sizeof(UnpackedHeader) == sizeof(PackedHeader));
 
 // Those constants are required to silence some -Werror=conversion errors when
 // assigning values to the related bitfield variables.
-constexpr uptr ChecksumMask = (1UL << 16) - 1;
 constexpr uptr ClassIdMask = (1UL << 8) - 1;
+constexpr u8 StateMask = (1U << 2) - 1;
+constexpr u8 OriginMask = (1U << 2) - 1;
 constexpr uptr SizeOrUnusedBytesMask = (1UL << 20) - 1;
-constexpr uptr StateMask = (1UL << 2) - 1;
-constexpr uptr OriginMask = (1UL << 2) - 1;
 constexpr uptr OffsetMask = (1UL << 16) - 1;
+constexpr uptr ChecksumMask = (1UL << 16) - 1;
 
 constexpr uptr getHeaderSize() {
   return roundUpTo(sizeof(PackedHeader), 1U << SCUDO_MIN_ALIGNMENT_LOG);

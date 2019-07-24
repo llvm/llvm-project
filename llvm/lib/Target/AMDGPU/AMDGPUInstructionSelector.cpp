@@ -1006,6 +1006,7 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
     BuildMI(MBB, I, DL, TII.get(Opcode), DstReg)
       .addImm(0)
       .addImm(Signed ? -1 : 1);
+    I.eraseFromParent();
     return RBI.constrainGenericRegister(DstReg, *DstRC, MRI);
   }
 
@@ -1020,6 +1021,7 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
       .addImm(0)               // src1_modifiers
       .addImm(Signed ? -1 : 1) // src1
       .addUse(SrcReg);
+    I.eraseFromParent();
     return constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
   }
 
@@ -1036,6 +1038,7 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
       BuildMI(MBB, I, DL, TII.get(AMDGPU::V_AND_B32_e32), DstReg)
         .addImm(Mask)
         .addReg(SrcReg);
+      I.eraseFromParent();
       return constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
     }
 
@@ -1045,6 +1048,7 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
       .addReg(SrcReg)
       .addImm(0) // Offset
       .addImm(SrcSize); // Width
+    I.eraseFromParent();
     return constrainSelectedInstRegOperands(*ExtI, TII, TRI, RBI);
   }
 
@@ -1057,6 +1061,7 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
         AMDGPU::S_SEXT_I32_I8 : AMDGPU::S_SEXT_I32_I16;
       BuildMI(MBB, I, DL, TII.get(SextOpc), DstReg)
         .addReg(SrcReg);
+      I.eraseFromParent();
       return RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_32RegClass, MRI);
     }
 
@@ -1081,6 +1086,7 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
         .addReg(ExtReg)
         .addImm(SrcSize << 16);
 
+      I.eraseFromParent();
       return RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_64RegClass, MRI);
     }
 
@@ -1095,6 +1101,7 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
         .addImm(SrcSize << 16);
     }
 
+    I.eraseFromParent();
     return RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_32RegClass, MRI);
   }
 
@@ -1369,12 +1376,7 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I,
   case TargetOpcode::G_SEXT:
   case TargetOpcode::G_ZEXT:
   case TargetOpcode::G_ANYEXT:
-    if (selectG_SZA_EXT(I)) {
-      I.eraseFromParent();
-      return true;
-    }
-
-    return false;
+    return selectG_SZA_EXT(I);
   case TargetOpcode::G_BRCOND:
     return selectG_BRCOND(I);
   case TargetOpcode::G_FRAME_INDEX:

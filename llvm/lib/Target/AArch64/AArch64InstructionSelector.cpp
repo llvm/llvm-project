@@ -1551,14 +1551,43 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     return true;
   }
   case TargetOpcode::G_EXTRACT: {
-    LLT SrcTy = MRI.getType(I.getOperand(1).getReg());
-    LLT DstTy = MRI.getType(I.getOperand(0).getReg());
+    Register DstReg = I.getOperand(0).getReg();
+    Register SrcReg = I.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    LLT DstTy = MRI.getType(DstReg);
     (void)DstTy;
     unsigned SrcSize = SrcTy.getSizeInBits();
-    // Larger extracts are vectors, same-size extracts should be something else
-    // by now (either split up or simplified to a COPY).
-    if (SrcTy.getSizeInBits() > 64 || Ty.getSizeInBits() > 32)
-      return false;
+
+    if (SrcTy.getSizeInBits() > 64) {
+      // This should be an extract of an s128, which is like a vector extract.
+      if (SrcTy.getSizeInBits() != 128)
+        return false;
+      // Only support extracting 64 bits from an s128 at the moment.
+      if (DstTy.getSizeInBits() != 64)
+        return false;
+
+      const RegisterBank &SrcRB = *RBI.getRegBank(SrcReg, MRI, TRI);
+      const RegisterBank &DstRB = *RBI.getRegBank(DstReg, MRI, TRI);
+      // Check we have the right regbank always.
+      assert(SrcRB.getID() == AArch64::FPRRegBankID &&
+             DstRB.getID() == AArch64::FPRRegBankID &&
+             "Wrong extract regbank!");
+      (void)SrcRB;
+
+      // Emit the same code as a vector extract.
+      // Offset must be a multiple of 64.
+      unsigned Offset = I.getOperand(2).getImm();
+      if (Offset % 64 != 0)
+        return false;
+      unsigned LaneIdx = Offset / 64;
+      MachineIRBuilder MIB(I);
+      MachineInstr *Extract = emitExtractVectorElt(
+          DstReg, DstRB, LLT::scalar(64), SrcReg, LaneIdx, MIB);
+      if (!Extract)
+        return false;
+      I.eraseFromParent();
+      return true;
+    }
 
     I.setDesc(TII.get(SrcSize == 64 ? AArch64::UBFMXri : AArch64::UBFMWri));
     MachineInstrBuilder(MF, I).addImm(I.getOperand(2).getImm() +
@@ -1570,7 +1599,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
     }
 
-    Register DstReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
+    DstReg = MRI.createGenericVirtualRegister(LLT::scalar(64));
     MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
     MIB.buildInstr(TargetOpcode::COPY, {I.getOperand(0).getReg()}, {})
         .addReg(DstReg, 0, AArch64::sub_32);
@@ -1926,6 +1955,16 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       if (DstTy == LLT::vector(4, 16) && SrcTy == LLT::vector(4, 32)) {
         I.setDesc(TII.get(AArch64::XTNv4i16));
         constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+        return true;
+      }
+
+      if (!SrcTy.isVector() && SrcTy.getSizeInBits() == 128) {
+        MachineIRBuilder MIB(I);
+        MachineInstr *Extract = emitExtractVectorElt(
+            DstReg, DstRB, LLT::scalar(DstTy.getSizeInBits()), SrcReg, 0, MIB);
+        if (!Extract)
+          return false;
+        I.eraseFromParent();
         return true;
       }
     }
@@ -2590,14 +2629,38 @@ bool AArch64InstructionSelector::selectMergeValues(
   const LLT DstTy = MRI.getType(I.getOperand(0).getReg());
   const LLT SrcTy = MRI.getType(I.getOperand(1).getReg());
   assert(!DstTy.isVector() && !SrcTy.isVector() && "invalid merge operation");
+  const RegisterBank &RB = *RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI);
 
-  // At the moment we only support merging two s32s into an s64.
   if (I.getNumOperands() != 3)
     return false;
-  if (DstTy.getSizeInBits() != 64 || SrcTy.getSizeInBits() != 32)
-    return false;
-  const RegisterBank &RB = *RBI.getRegBank(I.getOperand(1).getReg(), MRI, TRI);
+
+  // Merging 2 s64s into an s128.
+  if (DstTy == LLT::scalar(128)) {
+    if (SrcTy.getSizeInBits() != 64)
+      return false;
+    MachineIRBuilder MIB(I);
+    Register DstReg = I.getOperand(0).getReg();
+    Register Src1Reg = I.getOperand(1).getReg();
+    Register Src2Reg = I.getOperand(2).getReg();
+    auto Tmp = MIB.buildInstr(TargetOpcode::IMPLICIT_DEF, {DstTy}, {});
+    MachineInstr *InsMI =
+        emitLaneInsert(None, Tmp.getReg(0), Src1Reg, /* LaneIdx */ 0, RB, MIB);
+    if (!InsMI)
+      return false;
+    MachineInstr *Ins2MI = emitLaneInsert(DstReg, InsMI->getOperand(0).getReg(),
+                                          Src2Reg, /* LaneIdx */ 1, RB, MIB);
+    if (!Ins2MI)
+      return false;
+    constrainSelectedInstRegOperands(*InsMI, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*Ins2MI, TII, TRI, RBI);
+    I.eraseFromParent();
+    return true;
+  }
+
   if (RB.getID() != AArch64::GPRRegBankID)
+    return false;
+
+  if (DstTy.getSizeInBits() != 64 || SrcTy.getSizeInBits() != 32)
     return false;
 
   auto *DstRC = &AArch64::GPR64RegClass;
@@ -3460,7 +3523,7 @@ bool AArch64InstructionSelector::tryOptVectorDup(MachineInstr &I) const {
   int64_t Zero = 0;
   if (!mi_match(ZeroVec->getOperand(1).getReg(), MRI, m_ICst(Zero)) || Zero)
     return false;
-  for (unsigned i = 1, e = ZeroVec->getNumOperands() - 1; i < e; ++i) {
+  for (unsigned i = 1, e = ZeroVec->getNumOperands(); i < e; ++i) {
     if (ZeroVec->getOperand(i).getReg() != ZeroVec->getOperand(1).getReg())
       return false; // This wasn't an all zeros vector.
   }

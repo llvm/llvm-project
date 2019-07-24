@@ -193,14 +193,14 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
       .legalIf([=](const LegalityQuery &Query) {
         const LLT &Ty0 = Query.Types[0];
         const LLT &Ty1 = Query.Types[1];
-        if (Ty1 != s32 && Ty1 != s64)
+        if (Ty1 != s32 && Ty1 != s64 && Ty1 != s128)
           return false;
         if (Ty1 == p0)
           return true;
         return isPowerOf2_32(Ty0.getSizeInBits()) &&
                (Ty0.getSizeInBits() == 1 || Ty0.getSizeInBits() >= 8);
       })
-      .clampScalar(1, s32, s64)
+      .clampScalar(1, s32, s128)
       .widenScalarToNextPow2(1)
       .maxScalarIf(typeInSet(1, {s32}), 0, s16)
       .maxScalarIf(typeInSet(1, {s64}), 0, s32)
@@ -238,6 +238,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
                                  {s32, p0, 32, 8},
                                  {s64, p0, 64, 8},
                                  {p0, p0, 64, 8},
+                                 {s128, p0, 128, 8},
                                  {v8s8, p0, 64, 8},
                                  {v16s8, p0, 128, 8},
                                  {v4s16, p0, 64, 8},
@@ -267,6 +268,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
                                  {s32, p0, 32, 8},
                                  {s64, p0, 64, 8},
                                  {p0, p0, 64, 8},
+                                 {s128, p0, 128, 8},
                                  {v16s8, p0, 128, 8},
                                  {v4s16, p0, 64, 8},
                                  {v8s16, p0, 128, 8},

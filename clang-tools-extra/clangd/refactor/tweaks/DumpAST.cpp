@@ -84,9 +84,7 @@ class ShowSelectionTree : public Tweak {
 public:
   const char *id() const override final;
 
-  bool prepare(const Selection &Inputs) override {
-    return Inputs.ASTSelection.root() != nullptr;
-  }
+  bool prepare(const Selection &Inputs) override { return true; }
   Expected<Effect> apply(const Selection &Inputs) override {
     return Effect::showMessage(llvm::to_string(Inputs.ASTSelection));
   }

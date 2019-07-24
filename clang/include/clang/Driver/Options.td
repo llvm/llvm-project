@@ -1757,7 +1757,11 @@ def Wframe_larger_than_EQ : Joined<["-"], "Wframe-larger-than=">, Group<f_Group>
 def : Flag<["-"], "fterminated-vtables">, Alias<fapple_kext>;
 def fthreadsafe_statics : Flag<["-"], "fthreadsafe-statics">, Group<f_Group>;
 def ftime_report : Flag<["-"], "ftime-report">, Group<f_Group>, Flags<[CC1Option]>;
-def ftime_trace : Flag<["-"], "ftime-trace">, Group<f_Group>, Flags<[CC1Option, CoreOption]>;
+def ftime_trace : Flag<["-"], "ftime-trace">, Group<f_Group>,
+  HelpText<"Turn on time profiler">, Flags<[CC1Option, CoreOption]>;
+def ftime_trace_granularity_EQ : Joined<["-"], "ftime-trace-granularity=">, Group<f_Group>,
+  HelpText<"Minimum time granularity (in microseconds) traced by time profiler">,
+  Flags<[CC1Option, CoreOption]>;
 def ftlsmodel_EQ : Joined<["-"], "ftls-model=">, Group<f_Group>, Flags<[CC1Option]>;
 def ftrapv : Flag<["-"], "ftrapv">, Group<f_Group>, Flags<[CC1Option]>,
   HelpText<"Trap on integer overflow">;

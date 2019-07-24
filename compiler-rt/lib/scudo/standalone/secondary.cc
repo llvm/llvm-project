@@ -32,14 +32,14 @@ void *MapAllocator::allocate(uptr Size, uptr AlignmentHint, uptr *BlockEnd) {
   uptr MapBase =
       reinterpret_cast<uptr>(map(nullptr, MapSize, "scudo:secondary",
                                  MAP_NOACCESS | MAP_ALLOWNOMEM, &Data));
-  if (!MapBase)
+  if (UNLIKELY(!MapBase))
     return nullptr;
   uptr CommitBase = MapBase + PageSize;
   uptr MapEnd = MapBase + MapSize;
 
   // In the unlikely event of alignments larger than a page, adjust the amount
   // of memory we want to commit, and trim the extra memory.
-  if (AlignmentHint >= PageSize) {
+  if (UNLIKELY(AlignmentHint >= PageSize)) {
     // For alignments greater than or equal to a page, the user pointer (eg: the
     // pointer that is returned by the C or C++ allocation APIs) ends up on a
     // page boundary , and our headers will live in the preceding page.
@@ -73,13 +73,11 @@ void *MapAllocator::allocate(uptr Size, uptr AlignmentHint, uptr *BlockEnd) {
   H->Data = Data;
   {
     ScopedLock L(Mutex);
-    if (!Tail) {
-      Tail = H;
-    } else {
+    if (LIKELY(Tail)) {
       Tail->Next = H;
       H->Prev = Tail;
-      Tail = H;
     }
+    Tail = H;
     AllocatedBytes += CommitSize;
     if (LargestSize < CommitSize)
       LargestSize = CommitSize;
@@ -106,7 +104,7 @@ void MapAllocator::deallocate(void *Ptr) {
       CHECK_EQ(Next->Prev, H);
       Next->Prev = Prev;
     }
-    if (Tail == H) {
+    if (UNLIKELY(Tail == H)) {
       CHECK(!Next);
       Tail = Prev;
     } else {

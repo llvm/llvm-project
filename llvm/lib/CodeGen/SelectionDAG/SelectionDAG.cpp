@@ -8619,7 +8619,7 @@ SDValue SelectionDAG::makeEquivalentMemoryOrdering(LoadSDNode *OldLoad,
   // TokenFactor.
   SDValue OldChain = SDValue(OldLoad, 1);
   SDValue NewChain = SDValue(NewMemOp.getNode(), 1);
-  if (!OldLoad->hasAnyUseOfValue(1))
+  if (OldChain == NewChain || !OldLoad->hasAnyUseOfValue(1))
     return NewChain;
 
   SDValue TokenFactor =
