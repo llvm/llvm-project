@@ -247,7 +247,7 @@ void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
           ? (typename ELFT::uint)(*Doc.Header.SHOffset)
           : sizeof(Header) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
   Header.e_shnum =
-      Doc.Header.SHNum ? (uint16_t)*Doc.Header.SHNum : SN2I.size() + 1;
+      Doc.Header.SHNum ? (uint16_t)*Doc.Header.SHNum : Doc.Sections.size();
   Header.e_shstrndx = Doc.Header.SHStrNdx ? (uint16_t)*Doc.Header.SHStrNdx
                                           : SN2I.get(".shstrtab");
 }
@@ -327,30 +327,15 @@ bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
   SHeaders.resize(Doc.Sections.size());
 
   for (size_t I = 0; I < Doc.Sections.size(); ++I) {
-    Elf_Shdr &SHeader = SHeaders[I];
     ELFYAML::Section *Sec = Doc.Sections[I].get();
-
-    if (I == 0) {
-      if (Sec->IsImplicit)
-        continue;
-
-      if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec))
-        if (S->Size)
-          SHeader.sh_size = *S->Size;
-
-      if (!Sec->Link.empty()) {
-        unsigned Index;
-        if (!convertSectionIndex(SN2I, Sec->Name, Sec->Link, Index))
-          return false;
-        SHeader.sh_link = Index;
-      }
+    if (I == 0 && Sec->IsImplicit)
       continue;
-    }
 
     // We have a few sections like string or symbol tables that are usually
     // added implicitly to the end. However, if they are explicitly specified
     // in the YAML, we need to write them here. This ensures the file offset
     // remains correct.
+    Elf_Shdr &SHeader = SHeaders[I];
     if (initImplicitHeader(State, CBA, SHeader, Sec->Name,
                            Sec->IsImplicit ? nullptr : Sec))
       continue;
@@ -372,7 +357,17 @@ bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
       SHeader.sh_link = Index;
     }
 
-    if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
+    if (I == 0) {
+      if (auto RawSec = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
+        // We do not write any content for special SHN_UNDEF section.
+        if (RawSec->Size)
+          SHeader.sh_size = *RawSec->Size;
+        if (RawSec->Info)
+          SHeader.sh_info = *RawSec->Info;
+      }
+      if (Sec->EntSize)
+        SHeader.sh_entsize = *Sec->EntSize;
+    } else if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
       if (!writeSectionContent(SHeader, *S, CBA))
         return false;
     } else if (auto S = dyn_cast<ELFYAML::RelocationSection>(Sec)) {
@@ -966,8 +961,11 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 }
 
 template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
-  for (unsigned I = 1, E = Doc.Sections.size(); I != E; ++I) {
+  for (unsigned I = 0, E = Doc.Sections.size(); I != E; ++I) {
     StringRef Name = Doc.Sections[I]->Name;
+    if (Name.empty())
+      continue;
+
     DotShStrtab.add(dropUniqueSuffix(Name));
     if (!SN2I.addName(Name, I)) {
       WithColor::error() << "Repeated section name: '" << Name
