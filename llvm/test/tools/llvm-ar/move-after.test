@@ -6,7 +6,7 @@ RUN: touch %t3.txt
 RUN: touch %t4.txt
 
 # Move one file:
-RUN: rm -f %t-one.ar
+RUN: rm -f %t-one.a
 RUN: llvm-ar rc %t-one.a %t1.txt %t2.txt %t3.txt
 RUN: llvm-ar ma %t1.txt %t-one.a %t3.txt
 RUN: llvm-ar t %t-one.a | FileCheck %s --check-prefix=ONE
@@ -16,7 +16,7 @@ ONE-NEXT: 3.txt
 ONE-NEXT: 2.txt
 
 # Move file to back:
-RUN: rm -f %t-back.ar
+RUN: rm -f %t-back.a
 RUN: llvm-ar rc %t-back.a %t1.txt %t2.txt %t3.txt
 RUN: llvm-ar ma %t2.txt %t-back.a %t1.txt
 RUN: llvm-ar t %t-back.a | FileCheck %s --check-prefix=BACK
@@ -26,7 +26,7 @@ BACK-NEXT: 1.txt
 BACK-NEXT: 3.txt
 
 # Move multiple files:
-RUN: rm -f %t-multiple.ar
+RUN: rm -f %t-multiple.a
 RUN: llvm-ar rc %t-multiple.a %t1.txt %t2.txt %t3.txt %t4.txt
 RUN: llvm-ar ma %t1.txt %t-multiple.a  %t4.txt %t3.txt
 RUN: llvm-ar t %t-multiple.a | FileCheck %s --check-prefix=MULTIPLE
@@ -37,7 +37,7 @@ MULTIPLE-NEXT: 4.txt
 MULTIPLE-NEXT: 2.txt
 
 # Move after invalid file:
-RUN: rm -f %t-invalid.ar
+RUN: rm -f %t-invalid.a
 RUN: llvm-ar rc %t-invalid.a %t1.txt %t2.txt %t3.txt
 RUN: not llvm-ar ma invalid.txt %t-invalid.a %t2.txt 2>&1 \
 RUN:   | FileCheck %s --check-prefix=ERROR
@@ -49,7 +49,7 @@ INVALID-NEXT: 2.txt
 INVALID-NEXT: 3.txt
 
 # Move file to the same position:
-RUN: rm -f %t-position.ar
+RUN: rm -f %t-position.a
 RUN: llvm-ar rc %t-position.a %t1.txt %t2.txt %t3.txt
 RUN: llvm-ar ma %t1.txt %t-position.a %t2.txt
 RUN: llvm-ar t %t-position.a | FileCheck %s --check-prefix=POSITION

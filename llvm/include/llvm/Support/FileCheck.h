@@ -94,6 +94,11 @@ private:
   /// Name of the numeric variable.
   StringRef Name;
 
+  /// Pointer to expression defining this numeric variable. Null for pseudo
+  /// variable whose value is known at parse time (e.g. @LINE pseudo variable)
+  /// or cleared local variable.
+  FileCheckExpressionAST *ExpressionAST;
+
   /// Value of numeric variable, if defined, or None otherwise.
   Optional<uint64_t> Value;
 
@@ -104,10 +109,14 @@ private:
 
 public:
   /// Constructor for a variable \p Name defined at line \p DefLineNumber or
-  /// defined before input is parsed if DefLineNumber is None.
+  /// defined before input is parsed if \p DefLineNumber is None. If not null,
+  /// the value set with setValue must match the result of evaluating
+  /// \p ExpressionAST.
   FileCheckNumericVariable(StringRef Name,
-                           Optional<size_t> DefLineNumber = None)
-      : Name(Name), DefLineNumber(DefLineNumber) {}
+                           Optional<size_t> DefLineNumber = None,
+                           FileCheckExpressionAST *ExpressionAST = nullptr)
+      : Name(Name), ExpressionAST(ExpressionAST), DefLineNumber(DefLineNumber) {
+  }
 
   /// \returns name of this numeric variable.
   StringRef getName() const { return Name; }
@@ -115,12 +124,25 @@ public:
   /// \returns this variable's value.
   Optional<uint64_t> getValue() const { return Value; }
 
-  /// Sets value of this numeric variable to \p NewValue.
-  void setValue(uint64_t NewValue) { Value = NewValue; }
+  /// \returns the pointer to the expression defining this numeric variable, if
+  /// any, or null otherwise.
+  FileCheckExpressionAST *getExpressionAST() const { return ExpressionAST; }
+
+  /// \returns whether this variable's value is known when performing the
+  /// substitutions of the line where it is defined.
+  bool isValueKnownAtMatchTime() const;
+
+  /// Sets value of this numeric variable to \p NewValue. Triggers an assertion
+  /// failure if the variable is defined by an expression and the expression
+  /// cannot be evaluated to be equal to \p NewValue.
+  void setValue(uint64_t NewValue);
 
   /// Clears value of this numeric variable, regardless of whether it is
   /// currently defined or not.
-  void clearValue() { Value = None; }
+  void clearValue() {
+    Value = None;
+    ExpressionAST = nullptr;
+  }
 
   /// \returns the line number where this variable is defined, if any, or None
   /// if defined before input is parsed.
@@ -507,27 +529,22 @@ public:
   /// \p Str from the variable name.
   static Expected<VariableProperties> parseVariable(StringRef &Str,
                                                     const SourceMgr &SM);
-  /// Parses \p Expr for the name of a numeric variable to be defined at line
-  /// \p LineNumber or before input is parsed if \p LineNumber is None.
-  /// \returns a pointer to the class instance representing that variable,
-  /// creating it if needed, or an error holding a diagnostic against \p SM
-  /// should defining such a variable be invalid.
-  static Expected<FileCheckNumericVariable *> parseNumericVariableDefinition(
-      StringRef &Expr, FileCheckPatternContext *Context,
-      Optional<size_t> LineNumber, const SourceMgr &SM);
-  /// Parses \p Expr for a numeric substitution block. Parameter
+  /// Parses \p Expr for a numeric substitution block at line \p LineNumber,
+  /// or before input is parsed if \p LineNumber is None. Parameter
   /// \p IsLegacyLineExpr indicates whether \p Expr should be a legacy @LINE
-  /// expression. \returns a pointer to the class instance representing the AST
-  /// of the expression whose value must be substituted, or an error holding a
-  /// diagnostic against \p SM if parsing fails. If substitution was
-  /// successful, sets \p DefinedNumericVariable to point to the class
-  /// representing the numeric variable being defined in this numeric
+  /// expression and \p Context points to the class instance holding the live
+  /// string and numeric variables. \returns a pointer to the class instance
+  /// representing the AST of the expression whose value must be substitued, or
+  /// an error holding a diagnostic against \p SM if parsing fails. If
+  /// substitution was successful, sets \p DefinedNumericVariable to point to
+  /// the class representing the numeric variable defined in this numeric
   /// substitution block, or None if this block does not define any variable.
-  Expected<std::unique_ptr<FileCheckExpressionAST>>
+  static Expected<std::unique_ptr<FileCheckExpressionAST>>
   parseNumericSubstitutionBlock(
       StringRef Expr,
       Optional<FileCheckNumericVariable *> &DefinedNumericVariable,
-      bool IsLegacyLineExpr, const SourceMgr &SM) const;
+      bool IsLegacyLineExpr, Optional<size_t> LineNumber,
+      FileCheckPatternContext *Context, const SourceMgr &SM);
   /// Parses the pattern in \p PatternStr and initializes this FileCheckPattern
   /// instance accordingly.
   ///
@@ -581,28 +598,49 @@ private:
   /// was not found.
   size_t FindRegexVarEnd(StringRef Str, SourceMgr &SM);
 
-  /// Parses \p Name as a (pseudo if \p IsPseudo is true) numeric variable use.
-  /// \returns the pointer to the class instance representing that variable if
-  /// successful, or an error holding a diagnostic against \p SM otherwise.
-  Expected<std::unique_ptr<FileCheckNumericVariableUse>>
-  parseNumericVariableUse(StringRef Name, bool IsPseudo,
-                          const SourceMgr &SM) const;
-  enum class AllowedOperand { LineVar, Literal, Any };
-  /// Parses \p Expr for use of a numeric operand. Accepts both literal values
-  /// and numeric variables, depending on the value of \p AO. \returns the
-  /// class representing that operand in the AST of the expression or an error
-  /// holding a diagnostic against \p SM otherwise.
-  Expected<std::unique_ptr<FileCheckExpressionAST>>
-  parseNumericOperand(StringRef &Expr, AllowedOperand AO,
-                      const SourceMgr &SM) const;
-  /// Parses \p Expr for a binary operation. The left operand of this binary
-  /// operation is given in \p LeftOp and \p IsLegacyLineExpr indicates whether
-  /// we are parsing a legacy @LINE expression. \returns the class representing
-  /// the binary operation in the AST of the expression, or an error holding a
+  /// Parses \p Expr for the name of a numeric variable to be defined at line
+  /// \p LineNumber, or before input is parsed if \p LineNumber is None.
+  /// \returns a pointer to the class instance representing that variable,
+  /// creating it if needed, or an error holding a diagnostic against \p SM
+  /// should defining such a variable be invalid.
+  static Expected<FileCheckNumericVariable *> parseNumericVariableDefinition(
+      StringRef &Expr, FileCheckPatternContext *Context,
+      Optional<size_t> LineNumber, FileCheckExpressionAST *ExpressionAST,
+      const SourceMgr &SM);
+  /// Parses \p Name as a (pseudo if \p IsPseudo is true) numeric variable use
+  /// at line \p LineNumber, or before input is parsed if \p LineNumber is
+  /// None. Parameter \p Context points to the class instance holding the live
+  /// string and numeric variables. \returns the pointer to the class instance
+  /// representing that variable if successful, or an error holding a
   /// diagnostic against \p SM otherwise.
-  Expected<std::unique_ptr<FileCheckExpressionAST>>
+  static Expected<std::unique_ptr<FileCheckNumericVariableUse>>
+  parseNumericVariableUse(StringRef Name, bool IsPseudo,
+                          Optional<size_t> LineNumber,
+                          FileCheckPatternContext *Context,
+                          const SourceMgr &SM);
+  enum class AllowedOperand { LineVar, Literal, Any };
+  /// Parses \p Expr for use of a numeric operand at line \p LineNumber, or
+  /// before input is parsed if \p LineNumber is None. Accepts both literal
+  /// values and numeric variables, depending on the value of \p AO. Parameter
+  /// \p Context points to the class instance holding the live string and
+  /// numeric variables. \returns the class representing that operand in the
+  /// AST of the expression or an error holding a diagnostic against \p SM
+  /// otherwise.
+  static Expected<std::unique_ptr<FileCheckExpressionAST>>
+  parseNumericOperand(StringRef &Expr, AllowedOperand AO,
+                      Optional<size_t> LineNumber,
+                      FileCheckPatternContext *Context, const SourceMgr &SM);
+  /// Parses \p Expr for a binary operation at line \p LineNumber, or before
+  /// input is parsed if \p LineNumber is None. The left operand of this binary
+  /// operation is given in \p LeftOp and \p IsLegacyLineExpr indicates whether
+  /// we are parsing a legacy @LINE expression. Parameter \p Context points to
+  /// the class instance holding the live string and numeric variables.
+  /// \returns the class representing the binary operation in the AST of the
+  /// expression, or an error holding a diagnostic against \p SM otherwise.
+  static Expected<std::unique_ptr<FileCheckExpressionAST>>
   parseBinop(StringRef &Expr, std::unique_ptr<FileCheckExpressionAST> LeftOp,
-             bool IsLegacyLineExpr, const SourceMgr &SM) const;
+             bool IsLegacyLineExpr, Optional<size_t> LineNumber,
+             FileCheckPatternContext *Context, const SourceMgr &SM);
 };
 
 //===----------------------------------------------------------------------===//

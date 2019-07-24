@@ -364,7 +364,7 @@ void DWARFDebugFrame::parse(DWARFDataExtractor Data) {
     uint64_t Length = Data.getRelocatedValue(4, &Offset);
     uint64_t Id;
 
-    if (Length == UINT32_MAX) {
+    if (Length == dwarf::DW_LENGTH_DWARF64) {
       // DWARF-64 is distinguished by the first 32 bits of the initial length
       // field being 0xffffffff. Then, the next 64 bits are the actual entry
       // length.

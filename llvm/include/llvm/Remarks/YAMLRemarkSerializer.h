@@ -48,6 +48,10 @@ struct YAMLStrTabSerializer : public YAMLSerializer {
     // Having a string table set up enables the serializer to use it.
     StrTab.emplace();
   }
+  YAMLStrTabSerializer(raw_ostream &OS, StringTable StrTabIn)
+      : YAMLSerializer(OS) {
+    StrTab = std::move(StrTabIn);
+  }
 };
 
 } // end namespace remarks

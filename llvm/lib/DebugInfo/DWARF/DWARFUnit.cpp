@@ -244,7 +244,7 @@ bool DWARFUnitHeader::extract(DWARFContext &Context,
   Length = debug_info.getRelocatedValue(4, offset_ptr);
   FormParams.Format = DWARF32;
   unsigned SizeOfLength = 4;
-  if (Length == 0xffffffff) {
+  if (Length == dwarf::DW_LENGTH_DWARF64) {
     Length = debug_info.getU64(offset_ptr);
     FormParams.Format = DWARF64;
     SizeOfLength = 8;
@@ -784,7 +784,7 @@ parseDWARF64StringOffsetsTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
   if (!DA.isValidOffsetForDataOfSize(Offset, 16))
     return createStringError(errc::invalid_argument, "section offset exceeds section size");
 
-  if (DA.getU32(&Offset) != 0xffffffff)
+  if (DA.getU32(&Offset) != dwarf::DW_LENGTH_DWARF64)
     return createStringError(errc::invalid_argument, "32 bit contribution referenced from a 64 bit unit");
 
   uint64_t Size = DA.getU64(&Offset);
@@ -803,7 +803,7 @@ parseDWARF32StringOffsetsTableHeader(DWARFDataExtractor &DA, uint32_t Offset) {
     return createStringError(errc::invalid_argument, "section offset exceeds section size");
 
   uint32_t ContributionSize = DA.getU32(&Offset);
-  if (ContributionSize >= 0xfffffff0)
+  if (ContributionSize >= dwarf::DW_LENGTH_lo_reserved)
     return createStringError(errc::invalid_argument, "invalid length");
 
   uint8_t Version = DA.getU16(&Offset);

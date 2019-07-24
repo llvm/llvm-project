@@ -1,333 +1,288 @@
-RUN: llvm-readobj -S --symbols --dyn-syms --dynamic-table --needed-libs \
-RUN:              %p/Inputs/shared-object-test.elf-i386 \
-RUN:         | FileCheck %s -check-prefix ELF
-RUN: llvm-readobj -S --symbols --dyn-syms --dynamic-table --needed-libs \
-RUN:              %p/Inputs/shared-object-test.elf-i386 \
-RUN:         | FileCheck %s -check-prefix ELF32
+# RUN: llvm-readobj --sections --symbols --dyn-syms --needed-libs \
+# RUN:   %p/Inputs/shared-object-test.elf-i386 | FileCheck %s
 
-RUN: llvm-readobj -S --symbols --dyn-syms --dynamic-table --needed-libs \
-RUN:            %p/Inputs/shared-object-test.elf-x86-64 \
-RUN:         | FileCheck %s -check-prefix ELF
-RUN: llvm-readobj -S --symbols --dyn-syms --dynamic-table --needed-libs \
-RUN:            %p/Inputs/shared-object-test.elf-x86-64 \
-RUN:         | FileCheck %s -check-prefix ELF64
+# RUN: llvm-readobj --sections --symbols --dyn-syms --needed-libs \
+# RUN:   %p/Inputs/shared-object-test.elf-x86-64 | FileCheck %s
 
-ELF64: Format:      ELF64-x86-64
-ELF64: Arch:        x86_64
-ELF64: AddressSize: 64bit
-ELF64: LoadName:    libfoo.so
+# CHECK:   Sections [
+# CHECK:   Section {
+# CHECK:     Name:  (0)
+# CHECK:     Type: SHT_NULL
+# CHECK:     Flags [ (0x0)
+# CHECK:     ]
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Name: .hash
+# CHECK:     Type: SHT_HASH
+# CHECK:     Flags [ (0x2)
+# CHECK:       SHF_ALLOC
+# CHECK:     ]
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Name: .dynsym
+# CHECK:     Type: SHT_DYNSYM
+# CHECK:     Flags [ (0x2)
+# CHECK:       SHF_ALLOC
+# CHECK:     ]
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Name: .dynstr
+# CHECK:     Type: SHT_STRTAB
+# CHECK:     Flags [ (0x2)
+# CHECK:       SHF_ALLOC
+# CHECK:     ]
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Name: .text
+# CHECK:     Type: SHT_PROGBITS
+# CHECK:     Flags [ (0x6)
+# CHECK:       SHF_ALLOC
+# CHECK:       SHF_EXECINSTR
+# CHECK:     ]
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Name: .eh_frame
+# CHECK:     Type: SHT_PROGBITS
+# CHECK:     Flags [ (0x2)
+# CHECK:       SHF_ALLOC
+# CHECK:     ]
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Name: .tdata
+# CHECK:     Type: SHT_PROGBITS
+# CHECK:     Flags [ (0x403)
+# CHECK:       SHF_ALLOC
+# CHECK:       SHF_TLS
+# CHECK:       SHF_WRITE
+# CHECK:     ]
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Name: .dynamic
+# CHECK:     Type: SHT_DYNAMIC
+# CHECK:     Flags [ (0x3)
+# CHECK:       SHF_ALLOC
+# CHECK:       SHF_WRITE
+# CHECK:     ]
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Name: .got.plt
+# CHECK:     Type: SHT_PROGBITS
+# CHECK:     Flags [ (0x3)
+# CHECK:       SHF_ALLOC
+# CHECK:       SHF_WRITE
+# CHECK:     ]
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Name: .data
+# CHECK:     Type: SHT_PROGBITS
+# CHECK:     Flags [ (0x3)
+# CHECK:       SHF_ALLOC
+# CHECK:       SHF_WRITE
+# CHECK:     ]
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Name: .bss
+# CHECK:     Type: SHT_NOBITS
+# CHECK:     Flags [ (0x3)
+# CHECK:       SHF_ALLOC
+# CHECK:       SHF_WRITE
+# CHECK:     ]
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Name: .shstrtab
+# CHECK:     Type: SHT_STRTAB
+# CHECK:     Flags [ (0x0)
+# CHECK:     ]
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Name: .symtab
+# CHECK:     Type: SHT_SYMTAB
+# CHECK:     Flags [ (0x0)
+# CHECK:     ]
+# CHECK:   }
+# CHECK:   Section {
+# CHECK:     Name: .strtab
+# CHECK:     Type: SHT_STRTAB
+# CHECK:     Flags [ (0x0)
+# CHECK:     ]
+# CHECK:   }
+# CHECK: ]
 
-ELF32: Format:      ELF32-i386
-ELF32: Arch:        i386
-ELF32: AddressSize: 32bit
-ELF32: LoadName:    libfoo.so
+# CHECK:   Symbols [
+# CHECK:   Symbol {
+# CHECK:     Name: .hash (0)
+# CHECK:     Binding: Local
+# CHECK:     Type: Section
+# CHECK:     Section: .hash
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: .dynsym (0)
+# CHECK:     Binding: Local
+# CHECK:     Type: Section
+# CHECK:     Section: .dynsym
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: .dynstr (0)
+# CHECK:     Binding: Local
+# CHECK:     Type: Section
+# CHECK:     Section: .dynstr
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: .text (0)
+# CHECK:     Binding: Local
+# CHECK:     Type: Section
+# CHECK:     Section: .text
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: .eh_frame (0)
+# CHECK:     Binding: Local
+# CHECK:     Type: Section
+# CHECK:     Section: .eh_frame
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: .tdata (0)
+# CHECK:     Binding: Local
+# CHECK:     Type: Section
+# CHECK:     Section: .tdata
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: .dynamic (0)
+# CHECK:     Binding: Local
+# CHECK:     Type: Section
+# CHECK:     Section: .dynamic
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: .got.plt (0)
+# CHECK:     Binding: Local
+# CHECK:     Type: Section
+# CHECK:     Section: .got.plt
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: .data (0)
+# CHECK:     Binding: Local
+# CHECK:     Type: Section
+# CHECK:     Section: .data
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: .bss (0)
+# CHECK:     Binding: Local
+# CHECK:     Type: Section
+# CHECK:     Section: .bss
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: shared.ll
+# CHECK:     Binding: Local
+# CHECK:     Type: File
+# CHECK:     Section: Absolute (0xFFF1)
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: local_func
+# CHECK:     Binding: Local
+# CHECK:     Type: Function
+# CHECK:     Section: .text
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: _GLOBAL_OFFSET_TABLE_
+# CHECK:     Binding: Local
+# CHECK:     Type: Object
+# CHECK:     Section: Absolute (0xFFF1)
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: _DYNAMIC
+# CHECK:     Binding: Local
+# CHECK:     Type: Object
+# CHECK:     Section: Absolute (0xFFF1)
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: common_sym
+# CHECK:     Binding: Global
+# CHECK:     Type: Object
+# CHECK:     Section: .bss
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: tls_sym
+# CHECK:     Binding: Global
+# CHECK:     Type: TLS
+# CHECK:     Section: .tdata
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: defined_sym
+# CHECK:     Binding: Global
+# CHECK:     Type: Object
+# CHECK:     Section: .data
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: __bss_start
+# CHECK:     Binding: Global
+# CHECK:     Type: None
+# CHECK:     Section: Absolute (0xFFF1)
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: _end
+# CHECK:     Binding: Global
+# CHECK:     Type: None
+# CHECK:     Section: Absolute (0xFFF1)
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: global_func
+# CHECK:     Binding: Global
+# CHECK:     Type: Function
+# CHECK:     Section: .text
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: _edata
+# CHECK:     Binding: Global
+# CHECK:     Type: None
+# CHECK:     Section: Absolute (0xFFF1)
+# CHECK:   }
+# CHECK: ]
 
-ELF: Sections [
-ELF:   Section {
-ELF:     Name:  (0)
-ELF:     Type: SHT_NULL
-ELF:     Flags [ (0x0)
-ELF:     ]
-ELF:   }
-ELF:   Section {
-ELF:     Name: .hash
-ELF:     Type: SHT_HASH
-ELF:     Flags [ (0x2)
-ELF:       SHF_ALLOC
-ELF:     ]
-ELF:   }
-ELF:   Section {
-ELF:     Name: .dynsym
-ELF:     Type: SHT_DYNSYM
-ELF:     Flags [ (0x2)
-ELF:       SHF_ALLOC
-ELF:     ]
-ELF:   }
-ELF:   Section {
-ELF:     Name: .dynstr
-ELF:     Type: SHT_STRTAB
-ELF:     Flags [ (0x2)
-ELF:       SHF_ALLOC
-ELF:     ]
-ELF:   }
-ELF:   Section {
-ELF:     Name: .text
-ELF:     Type: SHT_PROGBITS
-ELF:     Flags [ (0x6)
-ELF:       SHF_ALLOC
-ELF:       SHF_EXECINSTR
-ELF:     ]
-ELF:   }
-ELF:   Section {
-ELF:     Name: .eh_frame
-ELF:     Type: SHT_PROGBITS
-ELF:     Flags [ (0x2)
-ELF:       SHF_ALLOC
-ELF:     ]
-ELF:   }
-ELF:   Section {
-ELF:     Name: .tdata
-ELF:     Type: SHT_PROGBITS
-ELF:     Flags [ (0x403)
-ELF:       SHF_ALLOC
-ELF:       SHF_TLS
-ELF:       SHF_WRITE
-ELF:     ]
-ELF:   }
-ELF:   Section {
-ELF:     Name: .dynamic
-ELF:     Type: SHT_DYNAMIC
-ELF:     Flags [ (0x3)
-ELF:       SHF_ALLOC
-ELF:       SHF_WRITE
-ELF:     ]
-ELF:   }
-ELF:   Section {
-ELF:     Name: .got.plt
-ELF:     Type: SHT_PROGBITS
-ELF:     Flags [ (0x3)
-ELF:       SHF_ALLOC
-ELF:       SHF_WRITE
-ELF:     ]
-ELF:   }
-ELF:   Section {
-ELF:     Name: .data
-ELF:     Type: SHT_PROGBITS
-ELF:     Flags [ (0x3)
-ELF:       SHF_ALLOC
-ELF:       SHF_WRITE
-ELF:     ]
-ELF:   }
-ELF:   Section {
-ELF:     Name: .bss
-ELF:     Type: SHT_NOBITS
-ELF:     Flags [ (0x3)
-ELF:       SHF_ALLOC
-ELF:       SHF_WRITE
-ELF:     ]
-ELF:   }
-ELF:   Section {
-ELF:     Name: .shstrtab
-ELF:     Type: SHT_STRTAB
-ELF:     Flags [ (0x0)
-ELF:     ]
-ELF:   }
-ELF:   Section {
-ELF:     Name: .symtab
-ELF:     Type: SHT_SYMTAB
-ELF:     Flags [ (0x0)
-ELF:     ]
-ELF:   }
-ELF:   Section {
-ELF:     Name: .strtab
-ELF:     Type: SHT_STRTAB
-ELF:     Flags [ (0x0)
-ELF:     ]
-ELF:   }
-ELF: ]
+# CHECK: DynamicSymbols [
+# CHECK:   Symbol {
+# CHECK:     Name: common_sym
+# CHECK:     Binding: Global
+# CHECK:     Type: Object
+# CHECK:     Section: .bss
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: tls_sym
+# CHECK:     Binding: Global
+# CHECK:     Type: TLS
+# CHECK:     Section: .tdata
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: defined_sym
+# CHECK:     Binding: Global
+# CHECK:     Type: Object
+# CHECK:     Section: .data
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: __bss_start
+# CHECK:     Binding: Global
+# CHECK:     Type: None
+# CHECK:     Section: Absolute (0xFFF1)
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: _end
+# CHECK:     Binding: Global
+# CHECK:     Type: None
+# CHECK:     Section: Absolute (0xFFF1)
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: global_func
+# CHECK:     Binding: Global
+# CHECK:     Type: Function
+# CHECK:     Section: .text
+# CHECK:   }
+# CHECK:   Symbol {
+# CHECK:     Name: _edata
+# CHECK:     Binding: Global
+# CHECK:     Type: None
+# CHECK:     Section: Absolute (0xFFF1)
+# CHECK:   }
+# CHECK: ]
 
-ELF: Symbols [
-ELF:   Symbol {
-ELF:     Name: .hash (0)
-ELF:     Binding: Local
-ELF:     Type: Section
-ELF:     Section: .hash
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: .dynsym (0)
-ELF:     Binding: Local
-ELF:     Type: Section
-ELF:     Section: .dynsym
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: .dynstr (0)
-ELF:     Binding: Local
-ELF:     Type: Section
-ELF:     Section: .dynstr
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: .text (0)
-ELF:     Binding: Local
-ELF:     Type: Section
-ELF:     Section: .text
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: .eh_frame (0)
-ELF:     Binding: Local
-ELF:     Type: Section
-ELF:     Section: .eh_frame
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: .tdata (0)
-ELF:     Binding: Local
-ELF:     Type: Section
-ELF:     Section: .tdata
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: .dynamic (0)
-ELF:     Binding: Local
-ELF:     Type: Section
-ELF:     Section: .dynamic
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: .got.plt (0)
-ELF:     Binding: Local
-ELF:     Type: Section
-ELF:     Section: .got.plt
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: .data (0)
-ELF:     Binding: Local
-ELF:     Type: Section
-ELF:     Section: .data
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: .bss (0)
-ELF:     Binding: Local
-ELF:     Type: Section
-ELF:     Section: .bss
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: shared.ll
-ELF:     Binding: Local
-ELF:     Type: File
-ELF:     Section: Absolute (0xFFF1)
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: local_func
-ELF:     Binding: Local
-ELF:     Type: Function
-ELF:     Section: .text
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: _GLOBAL_OFFSET_TABLE_
-ELF:     Binding: Local
-ELF:     Type: Object
-ELF:     Section: Absolute (0xFFF1)
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: _DYNAMIC
-ELF:     Binding: Local
-ELF:     Type: Object
-ELF:     Section: Absolute (0xFFF1)
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: common_sym
-ELF:     Binding: Global
-ELF:     Type: Object
-ELF:     Section: .bss
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: tls_sym
-ELF:     Binding: Global
-ELF:     Type: TLS
-ELF:     Section: .tdata
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: defined_sym
-ELF:     Binding: Global
-ELF:     Type: Object
-ELF:     Section: .data
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: __bss_start
-ELF:     Binding: Global
-ELF:     Type: None
-ELF:     Section: Absolute (0xFFF1)
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: _end
-ELF:     Binding: Global
-ELF:     Type: None
-ELF:     Section: Absolute (0xFFF1)
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: global_func
-ELF:     Binding: Global
-ELF:     Type: Function
-ELF:     Section: .text
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: _edata
-ELF:     Binding: Global
-ELF:     Type: None
-ELF:     Section: Absolute (0xFFF1)
-ELF:   }
-ELF: ]
-
-ELF: DynamicSymbols [
-ELF:   Symbol {
-ELF:     Name: common_sym
-ELF:     Binding: Global
-ELF:     Type: Object
-ELF:     Section: .bss
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: tls_sym
-ELF:     Binding: Global
-ELF:     Type: TLS
-ELF:     Section: .tdata
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: defined_sym
-ELF:     Binding: Global
-ELF:     Type: Object
-ELF:     Section: .data
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: __bss_start
-ELF:     Binding: Global
-ELF:     Type: None
-ELF:     Section: Absolute (0xFFF1)
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: _end
-ELF:     Binding: Global
-ELF:     Type: None
-ELF:     Section: Absolute (0xFFF1)
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: global_func
-ELF:     Binding: Global
-ELF:     Type: Function
-ELF:     Section: .text
-ELF:   }
-ELF:   Symbol {
-ELF:     Name: _edata
-ELF:     Binding: Global
-ELF:     Type: None
-ELF:     Section: Absolute (0xFFF1)
-ELF:   }
-ELF: ]
-
-ELF32: DynamicSection [ (9 entries)
-ELF32:   Tag        Type                 Name/Value
-ELF32:   0x00000001 NEEDED               Shared library: [libc.so.6]
-ELF32:   0x00000001 NEEDED               Shared library: [libm.so.6]
-ELF32:   0x0000000E SONAME               Library soname: [libfoo.so]
-ELF32:   0x00000004 HASH                 {{[0-9a-f]+}}
-ELF32:   0x00000005 STRTAB               {{[0-9a-f]+}}
-ELF32:   0x00000006 SYMTAB               {{[0-9a-f]+}}
-ELF32:   0x0000000A STRSZ                {{[0-9]+}} (bytes)
-ELF32:   0x0000000B SYMENT               {{[0-9]+}} (bytes)
-ELF32:   0x00000000 NULL                 0x0
-ELF32: ]
-
-ELF64: DynamicSection [ (9 entries)
-ELF64:   Tag        Type                 Name/Value
-ELF64:   0x0000000000000001 NEEDED               Shared library: [libc.so.6]
-ELF64:   0x0000000000000001 NEEDED               Shared library: [libm.so.6]
-ELF64:   0x000000000000000E SONAME               Library soname: [libfoo.so]
-ELF64:   0x0000000000000004 HASH                 {{[0-9a-f]+}}
-ELF64:   0x0000000000000005 STRTAB               {{[0-9a-f]+}}
-ELF64:   0x0000000000000006 SYMTAB               {{[0-9a-f]+}}
-ELF64:   0x000000000000000A STRSZ                {{[0-9]+}} (bytes)
-ELF64:   0x000000000000000B SYMENT               {{[0-9]+}} (bytes)
-ELF64:   0x0000000000000000 NULL                 0x0
-ELF64: ]
-
-
-ELF:      NeededLibraries [
-ELF-NEXT:  libc.so.6
-ELF-NEXT:  libm.so.6
-ELF-NEXT: ]
+# CHECK:      NeededLibraries [
+# CHECK-NEXT:  libc.so.6
+# CHECK-NEXT:  libm.so.6
+# CHECK-NEXT: ]

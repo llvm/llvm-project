@@ -26,7 +26,7 @@ Error DWARFListTableHeader::extract(DWARFDataExtractor Data,
                        SectionName.data(), *OffsetPtr);
   // TODO: Add support for DWARF64.
   HeaderData.Length = Data.getRelocatedValue(4, OffsetPtr);
-  if (HeaderData.Length == 0xffffffffu)
+  if (HeaderData.Length == dwarf::DW_LENGTH_DWARF64)
     return createStringError(errc::not_supported,
                        "DWARF64 is not supported in %s at offset 0x%" PRIx32,
                        SectionName.data(), HeaderOffset);

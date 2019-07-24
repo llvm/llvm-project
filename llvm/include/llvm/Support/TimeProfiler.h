@@ -19,7 +19,7 @@ extern TimeTraceProfiler *TimeTraceProfilerInstance;
 /// Initialize the time trace profiler.
 /// This sets up the global \p TimeTraceProfilerInstance
 /// variable to be the profiler instance.
-void timeTraceProfilerInitialize();
+void timeTraceProfilerInitialize(unsigned TimeTraceGranularity);
 
 /// Cleanup the time trace profiler, if it was initialized.
 void timeTraceProfilerCleanup();

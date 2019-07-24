@@ -16,7 +16,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Remarks/RemarkFormat.h"
-#include "llvm/Remarks/YAMLRemarkSerializer.h"
+#include "llvm/Remarks/RemarkSerializer.h"
 
 using namespace llvm;
 
@@ -107,20 +107,6 @@ char RemarkSetupFileError::ID = 0;
 char RemarkSetupPatternError::ID = 0;
 char RemarkSetupFormatError::ID = 0;
 
-static std::unique_ptr<remarks::Serializer>
-formatToSerializer(remarks::Format RemarksFormat, raw_ostream &OS) {
-  switch (RemarksFormat) {
-  case remarks::Format::Unknown:
-    llvm_unreachable("Unknown remark serializer format.");
-    return nullptr;
-  case remarks::Format::YAML:
-    return llvm::make_unique<remarks::YAMLSerializer>(OS);
-  case remarks::Format::YAMLStrTab:
-    return llvm::make_unique<remarks::YAMLStrTabSerializer>(OS);
-  };
-  llvm_unreachable("Unknown remarks::Format enum");
-}
-
 Expected<std::unique_ptr<ToolOutputFile>>
 llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
                                StringRef RemarksPasses, StringRef RemarksFormat,
@@ -147,8 +133,13 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
   if (Error E = Format.takeError())
     return make_error<RemarkSetupFormatError>(std::move(E));
 
+  Expected<std::unique_ptr<remarks::Serializer>> Serializer =
+      remarks::createRemarkSerializer(*Format, RemarksFile->os());
+  if (Error E = Serializer.takeError())
+    return make_error<RemarkSetupFormatError>(std::move(E));
+
   Context.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
-      RemarksFilename, formatToSerializer(*Format, RemarksFile->os())));
+      RemarksFilename, std::move(*Serializer)));
 
   if (!RemarksPasses.empty())
     if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses))
