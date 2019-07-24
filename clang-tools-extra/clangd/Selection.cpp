@@ -103,8 +103,14 @@ public:
     V.TraverseAST(AST);
     assert(V.Stack.size() == 1 && "Unpaired push/pop?");
     assert(V.Stack.top() == &V.Nodes.front());
-    if (V.Nodes.size() == 1) // TUDecl, but no nodes under it.
-      V.Nodes.clear();
+    // We selected TUDecl if characters were unclaimed (or the file is empty).
+    if (V.Nodes.size() == 1 || V.Claimed.add(Begin, End)) {
+      StringRef FileContent = AST.getSourceManager().getBufferData(File);
+      // Don't require the trailing newlines to be selected.
+      bool SelectedAll = Begin == 0 && End >= FileContent.rtrim().size();
+      V.Stack.top()->Selected =
+          SelectedAll ? SelectionTree::Complete : SelectionTree::Partial;
+    }
     return std::move(V.Nodes);
   }
 
@@ -424,12 +430,13 @@ SelectionTree::SelectionTree(ASTContext &AST, unsigned Offset)
     : SelectionTree(AST, Offset, Offset) {}
 
 const Node *SelectionTree::commonAncestor() const {
-  if (!Root)
-    return nullptr;
   const Node *Ancestor = Root;
   while (Ancestor->Children.size() == 1 && !Ancestor->Selected)
     Ancestor = Ancestor->Children.front();
-  return Ancestor;
+  // Returning nullptr here is a bit unprincipled, but it makes the API safer:
+  // the TranslationUnitDecl contains all of the preamble, so traversing it is a
+  // performance cliff. Callers can check for null and use root() if they want.
+  return Ancestor != Root ? Ancestor : nullptr;
 }
 
 const DeclContext& SelectionTree::Node::getDeclContext() const {

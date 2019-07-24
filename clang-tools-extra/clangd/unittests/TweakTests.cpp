@@ -266,16 +266,16 @@ TEST(TweakTest, ShowSelectionTree) {
   llvm::StringLiteral ID = "ShowSelectionTree";
 
   checkAvailable(ID, "^int f^oo() { re^turn 2 ^+ 2; }");
-  checkNotAvailable(ID, "/*c^omment*/ int foo() return 2 ^ + 2; }");
+  checkAvailable(ID, "/*c^omment*/ int foo() return 2 ^ + 2; }");
 
   const char *Input = "int fcall(int); int x = fca[[ll(2 +]]2);";
-  const char *Output = R"(TranslationUnitDecl 
-  VarDecl int x = fcall(2 + 2)
-   .CallExpr fcall(2 + 2)
-      ImplicitCastExpr fcall
-       .DeclRefExpr fcall
-     .BinaryOperator 2 + 2
-       *IntegerLiteral 2
+  const char *Output = R"( TranslationUnitDecl 
+   VarDecl int x = fcall(2 + 2)
+    .CallExpr fcall(2 + 2)
+       ImplicitCastExpr fcall
+        .DeclRefExpr fcall
+      .BinaryOperator 2 + 2
+        *IntegerLiteral 2
 )";
   EXPECT_EQ(Output, getMessage(ID, Input));
 }

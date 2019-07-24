@@ -619,6 +619,7 @@ static int64_t getTlsTpOffset(const Symbol &s) {
   case EM_X86_64:
     // Variant 2. The TLS segment is located just before the thread pointer.
     return s.getVA(0) - alignTo(Out::tlsPhdr->p_memsz, Out::tlsPhdr->p_align);
+  case EM_MIPS:
   case EM_PPC:
   case EM_PPC64:
     // The thread pointer points to a fixed offset from the start of the

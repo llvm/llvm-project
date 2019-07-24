@@ -370,6 +370,106 @@ let Command = "regex" in {
     Desc<"A syntax string showing the typical usage syntax.">;
 }
 
+let Command = "permissions" in {
+  def permissions_permissions_value : Option<"permissions-value", "v">,
+    Arg<"PermissionsNumber">,
+    Desc<"Give out the numeric value for permissions (e.g. 757)">;
+  def permissions_permissions_string : Option<"permissions-string", "s">,
+    Arg<"PermissionsString">,
+    Desc<"Give out the string value for permissions (e.g. rwxr-xr--).">;
+  def permissions_user_read : Option<"user-read", "r">,
+    Desc<"Allow user to read.">;
+  def permissions_user_write : Option<"user-write", "w">,
+    Desc<"Allow user to write.">;
+  def permissions_user_exec : Option<"user-exec", "x">,
+    Desc<"Allow user to execute.">;
+  def permissions_group_read : Option<"group-read", "R">,
+    Desc<"Allow group to read.">;
+  def permissions_group_write : Option<"group-write", "W">,
+    Desc<"Allow group to write.">;
+  def permissions_group_exec : Option<"group-exec", "X">,
+    Desc<"Allow group to execute.">;
+  def permissions_world_read : Option<"world-read", "d">,
+    Desc<"Allow world to read.">;
+  def permissions_world_write : Option<"world-write", "t">,
+    Desc<"Allow world to write.">;
+  def permissions_world_exec : Option<"world-exec", "e">,
+    Desc<"Allow world to execute.">;
+}
+
+let Command = "platform fread" in {
+  def platform_fread_offset : Option<"offset", "o">, Group<1>, Arg<"Index">,
+    Desc<"Offset into the file at which to start reading.">;
+  def platform_fread_count : Option<"count", "c">, Group<1>, Arg<"Count">,
+    Desc<"Number of bytes to read from the file.">;
+}
+
+let Command = "platform fwrite" in {
+  def platform_fwrite_offset : Option<"offset", "o">, Group<1>, Arg<"Index">,
+    Desc<"Offset into the file at which to start reading.">;
+  def platform_fwrite_data : Option<"data", "d">, Group<1>, Arg<"Value">,
+    Desc<"Text to write to the file.">;
+}
+
+let Command = "platform process list" in {
+  def platform_process_list_pid : Option<"pid", "p">, Group<1>, Arg<"Pid">,
+    Desc<"List the process info for a specific process ID.">;
+  def platform_process_list_name : Option<"name", "n">, Group<2>,
+    Arg<"ProcessName">, Required,
+    Desc<"Find processes with executable basenames that match a string.">;
+  def platform_process_list_ends_with : Option<"ends-with", "e">, Group<3>,
+  Arg<"ProcessName">, Required,
+    Desc<"Find processes with executable basenames that end with a string.">;
+  def platform_process_list_starts_with : Option<"starts-with", "s">, Group<4>,
+    Arg<"ProcessName">, Required,
+    Desc<"Find processes with executable basenames that start with a string.">;
+  def platform_process_list_contains : Option<"contains", "c">, Group<5>,
+    Arg<"ProcessName">, Required,
+    Desc<"Find processes with executable basenames that contain a string.">;
+  def platform_process_list_regex : Option<"regex", "r">, Group<6>,
+    Arg<"RegularExpression">, Required,
+    Desc<"Find processes with executable basenames that match a regular "
+    "expression.">;
+  def platform_process_list_parent : Option<"parent", "P">, GroupRange<2, 6>,
+    Arg<"Pid">, Desc<"Find processes that have a matching parent process ID.">;
+  def platform_process_list_uid : Option<"uid", "u">, GroupRange<2, 6>,
+    Arg<"UnsignedInteger">,
+    Desc<"Find processes that have a matching user ID.">;
+  def platform_process_list_euid : Option<"euid", "U">, GroupRange<2, 6>,
+    Arg<"UnsignedInteger">,
+    Desc<"Find processes that have a matching effective user ID.">;
+  def platform_process_list_gid : Option<"gid", "g">, GroupRange<2, 6>,
+    Arg<"UnsignedInteger">,
+    Desc<"Find processes that have a matching group ID.">;
+  def platform_process_list_egid : Option<"egid", "G">, GroupRange<2, 6>,
+    Arg<"UnsignedInteger">,
+    Desc<"Find processes that have a matching effective group ID.">;
+  def platform_process_list_arch : Option<"arch", "a">, GroupRange<2, 6>,
+    Arg<"Architecture">,
+    Desc<"Find processes that have a matching architecture.">;
+  def platform_process_list_show_args : Option<"show-args", "A">,
+    GroupRange<1, 6>,
+    Desc<"Show process arguments instead of the process executable basename.">;
+  def platform_process_list_verbose : Option<"verbose", "v">, GroupRange<1, 6>,
+    Desc<"Enable verbose output.">;
+}
+
+let Command = "platform process attach" in {
+  def platform_process_attach_plugin : Option<"plugin", "P">, Arg<"Plugin">,
+    Desc<"Name of the process plugin you want to use.">;
+  def platform_process_attach_pid : Option<"pid", "p">, Group<1>, Arg<"Pid">,
+    Desc<"The process ID of an existing process to attach to.">;
+  def platform_process_attach_name : Option<"name", "n">, Group<2>,
+    Arg<"ProcessName">, Desc<"The name of the process to attach to.">;
+  def platform_process_attach_waitfor : Option<"waitfor", "w">, Group<2>,
+    Desc<"Wait for the process with <process-name> to launch.">;
+}
+
+let Command = "platform shell" in {
+  def platform_shell_timeout : Option<"timeout", "t">, Arg<"Value">,
+    Desc<"Seconds to wait for the remote host to finish running the command.">;
+}
+
 let Command = "process attach" in {
   def process_attach_continue : Option<"continue", "c">,
     Desc<"Immediately continue the process once attached.">;

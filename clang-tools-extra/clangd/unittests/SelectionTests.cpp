@@ -9,6 +9,8 @@
 #include "Selection.h"
 #include "SourceCode.h"
 #include "TestTU.h"
+#include "clang/AST/Decl.h"
+#include "llvm/Support/Casting.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -40,6 +42,8 @@ Range nodeRange(const SelectionTree::Node *N, ParsedAST &AST) {
   const SourceManager &SM = AST.getSourceManager();
   const LangOptions &LangOpts = AST.getASTContext().getLangOpts();
   StringRef Buffer = SM.getBufferData(SM.getMainFileID());
+  if (llvm::isa_and_nonnull<TranslationUnitDecl>(N->ASTNode.get<Decl>()))
+    return Range{Position{}, offsetToPosition(Buffer, Buffer.size())};
   auto FileRange =
       toHalfOpenFileRange(SM, LangOpts, N->ASTNode.getSourceRange());
   assert(FileRange && "We should be able to get the File Range");
@@ -53,7 +57,7 @@ std::string nodeKind(const SelectionTree::Node *N) {
 }
 
 std::vector<const SelectionTree::Node *> allNodes(const SelectionTree &T) {
-  std::vector<const SelectionTree::Node *> Result = {T.root()};
+  std::vector<const SelectionTree::Node *> Result = {&T.root()};
   for (unsigned I = 0; I < Result.size(); ++I) {
     const SelectionTree::Node *N = Result[I];
     Result.insert(Result.end(), N->Children.begin(), N->Children.end());
@@ -63,16 +67,16 @@ std::vector<const SelectionTree::Node *> allNodes(const SelectionTree &T) {
 
 // Returns true if Common is a descendent of Root.
 // Verifies nothing is selected above Common.
-bool verifyCommonAncestor(const SelectionTree::Node *Root,
+bool verifyCommonAncestor(const SelectionTree::Node &Root,
                           const SelectionTree::Node *Common,
                           StringRef MarkedCode) {
-  if (Root == Common)
+  if (&Root == Common)
     return true;
-  if (Root->Selected)
+  if (Root.Selected)
     ADD_FAILURE() << "Selected nodes outside common ancestor\n" << MarkedCode;
   bool Seen = false;
-  for (const SelectionTree::Node *Child : Root->Children)
-    if (verifyCommonAncestor(Child, Common, MarkedCode)) {
+  for (const SelectionTree::Node *Child : Root.Children)
+    if (verifyCommonAncestor(*Child, Common, MarkedCode)) {
       if (Seen)
         ADD_FAILURE() << "Saw common ancestor twice\n" << MarkedCode;
       Seen = true;
@@ -239,6 +243,9 @@ TEST(SelectionTest, CommonAncestor) {
       {"int x = 42;^", nullptr},
       {"int x = 42^;", nullptr},
 
+      // Common ancestor is logically TUDecl, but we never return that.
+      {"^int x; int y;^", nullptr},
+
       // Node types that have caused problems in the past.
       {"template <typename T> void foo() { [[^T]] t; }",
        "TemplateTypeParmTypeLoc"},
@@ -256,18 +263,17 @@ TEST(SelectionTest, CommonAncestor) {
     Annotations Test(C.Code);
     auto AST = TestTU::withCode(Test.code()).build();
     auto T = makeSelectionTree(C.Code, AST);
+    EXPECT_EQ("TranslationUnitDecl", nodeKind(&T.root())) << C.Code;
 
     if (Test.ranges().empty()) {
       // If no [[range]] is marked in the example, there should be no selection.
       EXPECT_FALSE(T.commonAncestor()) << C.Code << "\n" << T;
-      EXPECT_FALSE(T.root()) << C.Code << "\n" << T;
     } else {
-      // If there is an expected selection, both common ancestor and root
-      // should exist with the appropriate node types in them.
+      // If there is an expected selection, common ancestor should exist
+      // with the appropriate node type.
       EXPECT_EQ(C.CommonAncestorKind, nodeKind(T.commonAncestor()))
           << C.Code << "\n"
           << T;
-      EXPECT_EQ("TranslationUnitDecl", nodeKind(T.root())) << C.Code;
       // Convert the reported common ancestor to a range and verify it.
       EXPECT_EQ(nodeRange(T.commonAncestor(), AST), Test.range())
           << C.Code << "\n"
@@ -316,10 +322,10 @@ TEST(SelectionTest, Selected) {
           void foo(^$C[[unique_ptr<$C[[unique_ptr<$C[[int]]>]]>]]^ a) {}
       )cpp",
       R"cpp(int a = [[5 >^> 1]];)cpp",
-      R"cpp(
+      R"cpp([[
         #define ECHO(X) X
         ECHO(EC^HO([[$C[[int]]) EC^HO(a]]));
-      )cpp",
+      ]])cpp",
   };
   for (const char *C : Cases) {
     Annotations Test(C);

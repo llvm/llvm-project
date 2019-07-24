@@ -35,6 +35,7 @@
 
 namespace clang {
 namespace clangd {
+namespace {
 
 using llvm::cl::cat;
 using llvm::cl::CommaSeparated;
@@ -43,25 +44,123 @@ using llvm::cl::Hidden;
 using llvm::cl::init;
 using llvm::cl::list;
 using llvm::cl::opt;
+using llvm::cl::OptionCategory;
 using llvm::cl::values;
 
-static opt<Path> CompileCommandsDir{
+// All flags must be placed in a category, or they will be shown neither in
+// --help, nor --help-hidden!
+OptionCategory CompileCommands("clangd compilation flags options");
+OptionCategory Features("clangd feature options");
+OptionCategory Misc("clangd miscellaneous options");
+OptionCategory Protocol("clangd protocol and logging options");
+const OptionCategory *ClangdCategories[] = {&Features, &Protocol,
+                                            &CompileCommands, &Misc};
+
+enum CompileArgsFrom { LSPCompileArgs, FilesystemCompileArgs };
+opt<CompileArgsFrom> CompileArgsFrom{
+    "compile_args_from",
+    cat(CompileCommands),
+    desc("The source of compile commands"),
+    values(clEnumValN(LSPCompileArgs, "lsp",
+                      "All compile commands come from LSP and "
+                      "'compile_commands.json' files are ignored"),
+           clEnumValN(FilesystemCompileArgs, "filesystem",
+                      "All compile commands come from the "
+                      "'compile_commands.json' files")),
+    init(FilesystemCompileArgs),
+    Hidden,
+};
+
+opt<Path> CompileCommandsDir{
     "compile-commands-dir",
+    cat(CompileCommands),
     desc("Specify a path to look for compile_commands.json. If path "
          "is invalid, clangd will look in the current directory and "
          "parent paths of each source file"),
 };
 
-static opt<unsigned> WorkerThreadsCount{
-    "j",
-    desc("Number of async workers used by clangd"),
-    init(getDefaultAsyncThreadsCount()),
+opt<Path> ResourceDir{
+    "resource-dir",
+    cat(CompileCommands),
+    desc("Directory for system clang headers"),
+    init(""),
+    Hidden,
+};
+
+list<std::string> QueryDriverGlobs{
+    "query-driver",
+    cat(CompileCommands),
+    desc(
+        "Comma separated list of globs for white-listing gcc-compatible "
+        "drivers that are safe to execute. Drivers matching any of these globs "
+        "will be used to extract system includes. e.g. "
+        "/usr/bin/**/clang-*,/path/to/repo/**/g++-*"),
+    CommaSeparated,
+};
+
+// FIXME: Flags are the wrong mechanism for user preferences.
+// We should probably read a dotfile or similar.
+opt<bool> AllScopesCompletion{
+    "all-scopes-completion",
+    cat(Features),
+    desc("If set to true, code completion will include index symbols that are "
+         "not defined in the scopes (e.g. "
+         "namespaces) visible from the code completion point. Such completions "
+         "can insert scope qualifiers"),
+    init(true),
+};
+
+opt<bool> ShowOrigins{
+    "debug-origin",
+    cat(Features),
+    desc("Show origins of completion items"),
+    init(CodeCompleteOptions().ShowOrigins),
+    Hidden,
+};
+
+opt<bool> EnableBackgroundIndex{
+    "background-index",
+    cat(Features),
+    desc("Index project code in the background and persist index on disk. "
+         "Experimental"),
+    init(true),
+};
+
+opt<bool> EnableClangTidy{
+    "clang-tidy",
+    cat(Features),
+    desc("Enable clang-tidy diagnostics"),
+    init(true),
+};
+
+opt<std::string> ClangTidyChecks{
+    "clang-tidy-checks",
+    cat(Features),
+    desc("List of clang-tidy checks to run (this will override "
+         ".clang-tidy files). Only meaningful when -clang-tidy flag is on"),
+    init(""),
+};
+
+opt<CodeCompleteOptions::CodeCompletionParse> CodeCompletionParse{
+    "completion-parse",
+    cat(Features),
+    desc("Whether the clang-parser is used for code-completion"),
+    values(clEnumValN(CodeCompleteOptions::AlwaysParse, "always",
+                      "Block until the parser can be used"),
+           clEnumValN(CodeCompleteOptions::ParseIfReady, "auto",
+                      "Use text-based completion if the parser "
+                      "is not ready"),
+           clEnumValN(CodeCompleteOptions::NeverParse, "never",
+                      "Always used text-based completion")),
+    init(CodeCompleteOptions().RunParser),
+    Hidden,
 };
 
 // FIXME: also support "plain" style where signatures are always omitted.
 enum CompletionStyleFlag { Detailed, Bundled };
-static opt<CompletionStyleFlag> CompletionStyle{
+opt<CompletionStyleFlag> CompletionStyle{
     "completion-style",
+    cat(Features),
     desc("Granularity of code completion suggestions"),
     values(clEnumValN(Detailed, "detailed",
                       "One completion item for each semantically distinct "
@@ -71,123 +170,27 @@ static opt<CompletionStyleFlag> CompletionStyle{
                       "combined. Type information shown where possible")),
 };
 
-// FIXME: Flags are the wrong mechanism for user preferences.
-// We should probably read a dotfile or similar.
-static opt<bool> IncludeIneligibleResults{
-    "include-ineligible-results",
-    desc("Include ineligible completion results (e.g. private members)"),
-    init(CodeCompleteOptions().IncludeIneligibleResults),
+opt<std::string> FallbackStyle{
+    "fallback-style",
+    cat(Features),
+    desc("clang-format style to apply by default when "
+         "no .clang-format file is found"),
+    init(clang::format::DefaultFallbackStyle),
+};
+
+opt<bool> EnableFunctionArgSnippets{
+    "function-arg-placeholders",
+    cat(Features),
+    desc("When disabled, completions contain only parentheses for "
+         "function calls. When enabled, completions also contain "
+         "placeholders for method parameters"),
+    init(CodeCompleteOptions().EnableFunctionArgSnippets),
     Hidden,
 };
 
-static opt<JSONStreamStyle> InputStyle{
-    "input-style",
-    desc("Input JSON stream encoding"),
-    values(
-        clEnumValN(JSONStreamStyle::Standard, "standard", "usual LSP protocol"),
-        clEnumValN(JSONStreamStyle::Delimited, "delimited",
-                   "messages delimited by --- lines, with # comment support")),
-    init(JSONStreamStyle::Standard),
-    Hidden,
-};
-
-static opt<bool> PrettyPrint{
-    "pretty",
-    desc("Pretty-print JSON output"),
-    init(false),
-};
-
-static opt<Logger::Level> LogLevel{
-    "log",
-    desc("Verbosity of log messages written to stderr"),
-    values(clEnumValN(Logger::Error, "error", "Error messages only"),
-           clEnumValN(Logger::Info, "info", "High level execution tracing"),
-           clEnumValN(Logger::Debug, "verbose", "Low level details")),
-    init(Logger::Info),
-};
-
-static opt<bool> Test{
-    "lit-test",
-    desc("Abbreviation for -input-style=delimited -pretty -sync "
-         "-enable-test-scheme -log=verbose."
-         "Intended to simplify lit tests"),
-    init(false),
-    Hidden,
-};
-
-static opt<bool> EnableTestScheme{
-    "enable-test-uri-scheme",
-    desc("Enable 'test:' URI scheme. Only use in lit tests"),
-    init(false),
-    Hidden,
-};
-
-enum PCHStorageFlag { Disk, Memory };
-static opt<PCHStorageFlag> PCHStorage{
-    "pch-storage",
-    desc("Storing PCHs in memory increases memory usages, but may "
-         "improve performance"),
-    values(
-        clEnumValN(PCHStorageFlag::Disk, "disk", "store PCHs on disk"),
-        clEnumValN(PCHStorageFlag::Memory, "memory", "store PCHs in memory")),
-    init(PCHStorageFlag::Disk),
-};
-
-static opt<int> LimitResults{
-    "limit-results",
-    desc("Limit the number of results returned by clangd. "
-         "0 means no limit (default=100)"),
-    init(100),
-};
-
-static opt<bool> Sync{
-    "sync",
-    desc("Parse on main thread. If set, -j is ignored"),
-    init(false),
-    Hidden,
-};
-
-static opt<Path> ResourceDir{
-    "resource-dir",
-    desc("Directory for system clang headers"),
-    init(""),
-    Hidden,
-};
-
-static opt<Path> InputMirrorFile{
-    "input-mirror-file",
-    desc("Mirror all LSP input to the specified file. Useful for debugging"),
-    init(""),
-    Hidden,
-};
-
-static opt<bool> EnableIndex{
-    "index",
-    desc("Enable index-based features. By default, clangd maintains an index "
-         "built from symbols in opened files. Global index support needs to "
-         "enabled separatedly"),
-    init(true),
-    Hidden,
-};
-
-static opt<bool> AllScopesCompletion{
-    "all-scopes-completion",
-    desc("If set to true, code completion will include index symbols that are "
-         "not defined in the scopes (e.g. "
-         "namespaces) visible from the code completion point. Such completions "
-         "can insert scope qualifiers"),
-    init(true),
-};
-
-static opt<bool> ShowOrigins{
-    "debug-origin",
-    desc("Show origins of completion items"),
-    init(CodeCompleteOptions().ShowOrigins),
-    Hidden,
-};
-
-static opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
+opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
     "header-insertion",
+    cat(Features),
     desc("Add #include directives when accepting code completions"),
     init(CodeCompleteOptions().InsertIncludes),
     values(
@@ -201,16 +204,75 @@ static opt<CodeCompleteOptions::IncludeInsertion> HeaderInsertion{
             "Never insert #include directives as part of code completion")),
 };
 
-static opt<bool> HeaderInsertionDecorators{
+opt<bool> HeaderInsertionDecorators{
     "header-insertion-decorators",
+    cat(Features),
     desc("Prepend a circular dot or space before the completion "
          "label, depending on whether "
          "an include line will be inserted or not"),
     init(true),
 };
 
-static opt<Path> IndexFile{
+opt<bool> HiddenFeatures{
+    "hidden-features",
+    cat(Features),
+    desc("Enable hidden features mostly useful to clangd developers"),
+    init(false),
+    Hidden,
+};
+
+opt<bool> IncludeIneligibleResults{
+    "include-ineligible-results",
+    cat(Features),
+    desc("Include ineligible completion results (e.g. private members)"),
+    init(CodeCompleteOptions().IncludeIneligibleResults),
+    Hidden,
+};
+
+opt<bool> EnableIndex{
+    "index",
+    cat(Features),
+    desc("Enable index-based features. By default, clangd maintains an index "
+         "built from symbols in opened files. Global index support needs to "
+         "enabled separatedly"),
+    init(true),
+    Hidden,
+};
+
+opt<int> LimitResults{
+    "limit-results",
+    cat(Features),
+    desc("Limit the number of results returned by clangd. "
+         "0 means no limit (default=100)"),
+    init(100),
+};
+
+opt<bool> SuggestMissingIncludes{
+    "suggest-missing-includes",
+    cat(Features),
+    desc("Attempts to fix diagnostic errors caused by missing "
+         "includes using index"),
+    init(true),
+};
+
+list<std::string> TweakList{
+    "tweaks",
+    cat(Features),
+    desc("Specify a list of Tweaks to enable (only for clangd developers)."),
+    Hidden,
+    CommaSeparated,
+};
+
+opt<unsigned> WorkerThreadsCount{
+    "j",
+    cat(Misc),
+    desc("Number of async workers used by clangd"),
+    init(getDefaultAsyncThreadsCount()),
+};
+
+opt<Path> IndexFile{
     "index-file",
+    cat(Misc),
     desc(
         "Index file to build the static index. The file must have been created "
         "by a compatible clangd-indexer\n"
@@ -220,65 +282,77 @@ static opt<Path> IndexFile{
     Hidden,
 };
 
-static opt<bool> EnableBackgroundIndex{
-    "background-index",
-    desc("Index project code in the background and persist index on disk. "
-         "Experimental"),
-    init(true),
-};
-
-enum CompileArgsFrom { LSPCompileArgs, FilesystemCompileArgs };
-static opt<CompileArgsFrom> CompileArgsFrom{
-    "compile_args_from",
-    desc("The source of compile commands"),
-    values(clEnumValN(LSPCompileArgs, "lsp",
-                      "All compile commands come from LSP and "
-                      "'compile_commands.json' files are ignored"),
-           clEnumValN(FilesystemCompileArgs, "filesystem",
-                      "All compile commands come from the "
-                      "'compile_commands.json' files")),
-    init(FilesystemCompileArgs),
+opt<bool> Test{
+    "lit-test",
+    cat(Misc),
+    desc("Abbreviation for -input-style=delimited -pretty -sync "
+         "-enable-test-scheme -log=verbose. "
+         "Intended to simplify lit tests"),
+    init(false),
     Hidden,
 };
 
-static opt<bool> EnableFunctionArgSnippets{
-    "function-arg-placeholders",
-    desc("When disabled, completions contain only parentheses for "
-         "function calls. When enabled, completions also contain "
-         "placeholders for method parameters"),
-    init(CodeCompleteOptions().EnableFunctionArgSnippets),
+enum PCHStorageFlag { Disk, Memory };
+opt<PCHStorageFlag> PCHStorage{
+    "pch-storage",
+    cat(Misc),
+    desc("Storing PCHs in memory increases memory usages, but may "
+         "improve performance"),
+    values(
+        clEnumValN(PCHStorageFlag::Disk, "disk", "store PCHs on disk"),
+        clEnumValN(PCHStorageFlag::Memory, "memory", "store PCHs in memory")),
+    init(PCHStorageFlag::Disk),
+};
+
+opt<bool> Sync{
+    "sync",
+    cat(Misc),
+    desc("Parse on main thread. If set, -j is ignored"),
+    init(false),
     Hidden,
 };
 
-static opt<std::string> ClangTidyChecks{
-    "clang-tidy-checks",
-    desc("List of clang-tidy checks to run (this will override "
-         ".clang-tidy files). Only meaningful when -clang-tidy flag is on"),
+opt<JSONStreamStyle> InputStyle{
+    "input-style",
+    cat(Protocol),
+    desc("Input JSON stream encoding"),
+    values(
+        clEnumValN(JSONStreamStyle::Standard, "standard", "usual LSP protocol"),
+        clEnumValN(JSONStreamStyle::Delimited, "delimited",
+                   "messages delimited by --- lines, with # comment support")),
+    init(JSONStreamStyle::Standard),
+    Hidden,
+};
+
+opt<bool> EnableTestScheme{
+    "enable-test-uri-scheme",
+    cat(Protocol),
+    desc("Enable 'test:' URI scheme. Only use in lit tests"),
+    init(false),
+    Hidden,
+};
+
+opt<Path> InputMirrorFile{
+    "input-mirror-file",
+    cat(Protocol),
+    desc("Mirror all LSP input to the specified file. Useful for debugging"),
     init(""),
+    Hidden,
 };
 
-static opt<bool> EnableClangTidy{
-    "clang-tidy",
-    desc("Enable clang-tidy diagnostics"),
-    init(true),
+opt<Logger::Level> LogLevel{
+    "log",
+    cat(Protocol),
+    desc("Verbosity of log messages written to stderr"),
+    values(clEnumValN(Logger::Error, "error", "Error messages only"),
+           clEnumValN(Logger::Info, "info", "High level execution tracing"),
+           clEnumValN(Logger::Debug, "verbose", "Low level details")),
+    init(Logger::Info),
 };
 
-static opt<std::string> FallbackStyle{
-    "fallback-style",
-    desc("clang-format style to apply by default when "
-         "no .clang-format file is found"),
-    init(clang::format::DefaultFallbackStyle),
-};
-
-static opt<bool> SuggestMissingIncludes{
-    "suggest-missing-includes",
-    desc("Attempts to fix diagnostic errors caused by missing "
-         "includes using index"),
-    init(true),
-};
-
-static opt<OffsetEncoding> ForceOffsetEncoding{
+opt<OffsetEncoding> ForceOffsetEncoding{
     "offset-encoding",
+    cat(Protocol),
     desc("Force the offsetEncoding used for character positions. "
          "This bypasses negotiation via client capabilities"),
     values(
@@ -288,45 +362,12 @@ static opt<OffsetEncoding> ForceOffsetEncoding{
     init(OffsetEncoding::UnsupportedEncoding),
 };
 
-static opt<CodeCompleteOptions::CodeCompletionParse> CodeCompletionParse{
-    "completion-parse",
-    desc("Whether the clang-parser is used for code-completion"),
-    values(clEnumValN(CodeCompleteOptions::AlwaysParse, "always",
-                      "Block until the parser can be used"),
-           clEnumValN(CodeCompleteOptions::ParseIfReady, "auto",
-                      "Use text-based completion if the parser "
-                      "is not ready"),
-           clEnumValN(CodeCompleteOptions::NeverParse, "never",
-                      "Always used text-based completion")),
-    init(CodeCompleteOptions().RunParser),
-    Hidden,
-};
-
-static opt<bool> HiddenFeatures{
-    "hidden-features",
-    desc("Enable hidden features mostly useful to clangd developers"),
+opt<bool> PrettyPrint{
+    "pretty",
+    cat(Protocol),
+    desc("Pretty-print JSON output"),
     init(false),
-    Hidden,
 };
-
-static list<std::string> QueryDriverGlobs{
-    "query-driver",
-    desc(
-        "Comma separated list of globs for white-listing gcc-compatible "
-        "drivers that are safe to execute. Drivers matching any of these globs "
-        "will be used to extract system includes. e.g. "
-        "/usr/bin/**/clang-*,/path/to/repo/**/g++-*"),
-    CommaSeparated,
-};
-
-static list<std::string> TweakList{
-    "tweaks",
-    desc("Specify a list of Tweaks to enable (only for clangd developers)."),
-    Hidden,
-    CommaSeparated,
-};
-
-namespace {
 
 /// \brief Supports a test URI scheme with relaxed constraints for lit tests.
 /// The path in a test URI will be combined with a platform-specific fake
@@ -392,6 +433,7 @@ int main(int argc, char *argv[]) {
   llvm::cl::SetVersionPrinter([](llvm::raw_ostream &OS) {
     OS << clang::getClangToolFullVersion("clangd") << "\n";
   });
+  llvm::cl::HideUnrelatedOptions(ClangdCategories);
   llvm::cl::ParseCommandLineOptions(
       argc, argv,
       "clangd is a language server that provides IDE-like features to editors. "

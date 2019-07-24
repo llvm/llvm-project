@@ -54,6 +54,11 @@ class ParsedAST;
 //  - if you want to traverse the selected nodes, they are all under
 //    commonAncestor() in the tree.
 //
+// SelectionTree tries to behave sensibly in the presence of macros, but does
+// not model any preprocessor concepts: the output is a subset of the AST.
+// Currently comments, directives etc are treated as part of the lexically
+// containing AST node, (though we may want to change this in future).
+//
 // The SelectionTree owns the Node structures, but the ASTNode attributes
 // point back into the AST it was constructed with.
 class SelectionTree {
@@ -100,11 +105,11 @@ public:
     std::string kind() const;
   };
   // The most specific common ancestor of all the selected nodes.
-  // If there is no selection, this is nullptr.
+  // Returns nullptr if the common ancestor is the root.
+  // (This is to avoid accidentally traversing the TUDecl and thus preamble).
   const Node *commonAncestor() const;
   // The selection node corresponding to TranslationUnitDecl.
-  // If there is no selection, this is nullptr.
-  const Node *root() const { return Root; }
+  const Node &root() const { return *Root; }
 
 private:
   std::deque<Node> Nodes; // Stable-pointer storage.
@@ -114,10 +119,7 @@ private:
   void print(llvm::raw_ostream &OS, const Node &N, int Indent) const;
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
                                        const SelectionTree &T) {
-    if (auto R = T.root())
-      T.print(OS, *R, 0);
-    else
-      OS << "(empty selection)\n";
+    T.print(OS, T.root(), 1);
     return OS;
   }
 };
