@@ -527,7 +527,7 @@ PlistDiagnostics::PlistDiagnostics(
     : OutputFile(output), PP(PP), CTU(CTU), AnOpts(AnalyzerOpts),
       SupportsCrossFileDiagnostics(supportsMultipleFiles) {
   // FIXME: Will be used by a later planned change.
-  (void)CTU;
+  (void)this->CTU;
 }
 
 void ento::createPlistDiagnosticConsumer(

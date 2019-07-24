@@ -2859,7 +2859,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
         (Style.Language == FormatStyle::LK_Proto && Left.is(TT_DictLiteral)))
       return !Style.Cpp11BracedListStyle;
     return Right.is(TT_TemplateCloser) && Left.is(TT_TemplateCloser) &&
-           (Style.Standard != FormatStyle::LS_Cpp11 || Style.SpacesInAngles);
+           (Style.Standard < FormatStyle::LS_Cpp11 || Style.SpacesInAngles);
   }
   if (Right.isOneOf(tok::arrow, tok::arrowstar, tok::periodstar) ||
       Left.isOneOf(tok::arrow, tok::period, tok::arrowstar, tok::periodstar) ||
@@ -2878,7 +2878,7 @@ bool TokenAnnotator::spaceRequiredBefore(const AnnotatedLine &Line,
     return Right.WhitespaceRange.getBegin() != Right.WhitespaceRange.getEnd();
   if (Right.is(tok::coloncolon) && !Left.isOneOf(tok::l_brace, tok::comment))
     return (Left.is(TT_TemplateOpener) &&
-            Style.Standard == FormatStyle::LS_Cpp03) ||
+            Style.Standard < FormatStyle::LS_Cpp11) ||
            !(Left.isOneOf(tok::l_paren, tok::r_paren, tok::l_square,
                           tok::kw___super, TT_TemplateCloser,
                           TT_TemplateOpener)) ||
