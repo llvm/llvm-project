@@ -1191,8 +1191,8 @@ uint32_t NativeRegisterContextLinux_x86_64::SetHardwareWatchpoint(
         return wp_index;
     }
     if (error.Fail() && log) {
-      log->Printf("NativeRegisterContextLinux_x86_64::%s Error: %s",
-                  __FUNCTION__, error.AsCString());
+      LLDB_LOGF(log, "NativeRegisterContextLinux_x86_64::%s Error: %s",
+                __FUNCTION__, error.AsCString());
     }
   }
   return LLDB_INVALID_INDEX32;

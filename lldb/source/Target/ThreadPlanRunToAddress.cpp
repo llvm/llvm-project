@@ -182,8 +182,7 @@ bool ThreadPlanRunToAddress::MischiefManaged() {
         m_break_ids[i] = LLDB_INVALID_BREAK_ID;
       }
     }
-    if (log)
-      log->Printf("Completed run to address plan.");
+    LLDB_LOGF(log, "Completed run to address plan.");
     ThreadPlan::MischiefManaged();
     return true;
   } else

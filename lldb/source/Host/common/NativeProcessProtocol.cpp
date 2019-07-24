@@ -331,22 +331,23 @@ void NativeProcessProtocol::SynchronouslyNotifyProcessStateChanged(
 
   if (log) {
     if (!m_delegates.empty()) {
-      log->Printf("NativeProcessProtocol::%s: sent state notification [%s] "
-                  "from process %" PRIu64,
-                  __FUNCTION__, lldb_private::StateAsCString(state), GetID());
+      LLDB_LOGF(log,
+                "NativeProcessProtocol::%s: sent state notification [%s] "
+                "from process %" PRIu64,
+                __FUNCTION__, lldb_private::StateAsCString(state), GetID());
     } else {
-      log->Printf("NativeProcessProtocol::%s: would send state notification "
-                  "[%s] from process %" PRIu64 ", but no delegates",
-                  __FUNCTION__, lldb_private::StateAsCString(state), GetID());
+      LLDB_LOGF(log,
+                "NativeProcessProtocol::%s: would send state notification "
+                "[%s] from process %" PRIu64 ", but no delegates",
+                __FUNCTION__, lldb_private::StateAsCString(state), GetID());
     }
   }
 }
 
 void NativeProcessProtocol::NotifyDidExec() {
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  if (log)
-    log->Printf("NativeProcessProtocol::%s - preparing to call delegates",
-                __FUNCTION__);
+  LLDB_LOGF(log, "NativeProcessProtocol::%s - preparing to call delegates",
+            __FUNCTION__);
 
   {
     std::lock_guard<std::recursive_mutex> guard(m_delegates_mutex);

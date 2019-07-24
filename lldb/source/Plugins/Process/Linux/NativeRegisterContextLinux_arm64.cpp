@@ -347,8 +347,7 @@ bool NativeRegisterContextLinux_arm64::IsFPR(unsigned reg) const {
 uint32_t NativeRegisterContextLinux_arm64::NumSupportedHardwareBreakpoints() {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
 
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
+  LLDB_LOGF(log, "NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
 
   Status error;
 
@@ -458,8 +457,7 @@ Status NativeRegisterContextLinux_arm64::GetHardwareBreakHitIndex(
     uint32_t &bp_index, lldb::addr_t trap_addr) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
 
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
+  LLDB_LOGF(log, "NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
 
   lldb::addr_t break_addr;
 
@@ -479,8 +477,7 @@ Status NativeRegisterContextLinux_arm64::GetHardwareBreakHitIndex(
 Status NativeRegisterContextLinux_arm64::ClearAllHardwareBreakpoints() {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_BREAKPOINTS));
 
-  if (log)
-    log->Printf("NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
+  LLDB_LOGF(log, "NativeRegisterContextLinux_arm64::%s()", __FUNCTION__);
 
   Status error;
 

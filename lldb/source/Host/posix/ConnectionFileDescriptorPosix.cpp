@@ -79,9 +79,8 @@ ConnectionFileDescriptor::ConnectionFileDescriptor(bool child_processes_inherit)
       m_child_processes_inherit(child_processes_inherit) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION |
                                                   LIBLLDB_LOG_OBJECT));
-  if (log)
-    log->Printf("%p ConnectionFileDescriptor::ConnectionFileDescriptor ()",
-                static_cast<void *>(this));
+  LLDB_LOGF(log, "%p ConnectionFileDescriptor::ConnectionFileDescriptor ()",
+            static_cast<void *>(this));
 }
 
 ConnectionFileDescriptor::ConnectionFileDescriptor(int fd, bool owns_fd)
@@ -92,10 +91,10 @@ ConnectionFileDescriptor::ConnectionFileDescriptor(int fd, bool owns_fd)
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION |
                                                   LIBLLDB_LOG_OBJECT));
-  if (log)
-    log->Printf("%p ConnectionFileDescriptor::ConnectionFileDescriptor (fd = "
-                "%i, owns_fd = %i)",
-                static_cast<void *>(this), fd, owns_fd);
+  LLDB_LOGF(log,
+            "%p ConnectionFileDescriptor::ConnectionFileDescriptor (fd = "
+            "%i, owns_fd = %i)",
+            static_cast<void *>(this), fd, owns_fd);
   OpenCommandPipe();
 }
 
@@ -108,9 +107,8 @@ ConnectionFileDescriptor::ConnectionFileDescriptor(Socket *socket)
 ConnectionFileDescriptor::~ConnectionFileDescriptor() {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION |
                                                   LIBLLDB_LOG_OBJECT));
-  if (log)
-    log->Printf("%p ConnectionFileDescriptor::~ConnectionFileDescriptor ()",
-                static_cast<void *>(this));
+  LLDB_LOGF(log, "%p ConnectionFileDescriptor::~ConnectionFileDescriptor ()",
+            static_cast<void *>(this));
   Disconnect(nullptr);
   CloseCommandPipe();
 }
@@ -122,24 +120,23 @@ void ConnectionFileDescriptor::OpenCommandPipe() {
   // Make the command file descriptor here:
   Status result = m_pipe.CreateNew(m_child_processes_inherit);
   if (!result.Success()) {
-    if (log)
-      log->Printf("%p ConnectionFileDescriptor::OpenCommandPipe () - could not "
-                  "make pipe: %s",
-                  static_cast<void *>(this), result.AsCString());
+    LLDB_LOGF(log,
+              "%p ConnectionFileDescriptor::OpenCommandPipe () - could not "
+              "make pipe: %s",
+              static_cast<void *>(this), result.AsCString());
   } else {
-    if (log)
-      log->Printf("%p ConnectionFileDescriptor::OpenCommandPipe() - success "
-                  "readfd=%d writefd=%d",
-                  static_cast<void *>(this), m_pipe.GetReadFileDescriptor(),
-                  m_pipe.GetWriteFileDescriptor());
+    LLDB_LOGF(log,
+              "%p ConnectionFileDescriptor::OpenCommandPipe() - success "
+              "readfd=%d writefd=%d",
+              static_cast<void *>(this), m_pipe.GetReadFileDescriptor(),
+              m_pipe.GetWriteFileDescriptor());
   }
 }
 
 void ConnectionFileDescriptor::CloseCommandPipe() {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  if (log)
-    log->Printf("%p ConnectionFileDescriptor::CloseCommandPipe()",
-                static_cast<void *>(this));
+  LLDB_LOGF(log, "%p ConnectionFileDescriptor::CloseCommandPipe()",
+            static_cast<void *>(this));
 
   m_pipe.Close();
 }
@@ -153,9 +150,8 @@ ConnectionStatus ConnectionFileDescriptor::Connect(llvm::StringRef path,
                                                    Status *error_ptr) {
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  if (log)
-    log->Printf("%p ConnectionFileDescriptor::Connect (url = '%s')",
-                static_cast<void *>(this), path.str().c_str());
+  LLDB_LOGF(log, "%p ConnectionFileDescriptor::Connect (url = '%s')",
+            static_cast<void *>(this), path.str().c_str());
 
   OpenCommandPipe();
 
@@ -295,17 +291,15 @@ bool ConnectionFileDescriptor::InterruptRead() {
 
 ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  if (log)
-    log->Printf("%p ConnectionFileDescriptor::Disconnect ()",
-                static_cast<void *>(this));
+  LLDB_LOGF(log, "%p ConnectionFileDescriptor::Disconnect ()",
+            static_cast<void *>(this));
 
   ConnectionStatus status = eConnectionStatusSuccess;
 
   if (!IsConnected()) {
-    if (log)
-      log->Printf(
-          "%p ConnectionFileDescriptor::Disconnect(): Nothing to disconnect",
-          static_cast<void *>(this));
+    LLDB_LOGF(
+        log, "%p ConnectionFileDescriptor::Disconnect(): Nothing to disconnect",
+        static_cast<void *>(this));
     return eConnectionStatusSuccess;
   }
 
@@ -326,15 +320,16 @@ ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
     if (m_pipe.CanWrite()) {
       size_t bytes_written = 0;
       Status result = m_pipe.Write("q", 1, bytes_written);
-      if (log)
-        log->Printf("%p ConnectionFileDescriptor::Disconnect(): Couldn't get "
-                    "the lock, sent 'q' to %d, error = '%s'.",
-                    static_cast<void *>(this), m_pipe.GetWriteFileDescriptor(),
-                    result.AsCString());
+      LLDB_LOGF(log,
+                "%p ConnectionFileDescriptor::Disconnect(): Couldn't get "
+                "the lock, sent 'q' to %d, error = '%s'.",
+                static_cast<void *>(this), m_pipe.GetWriteFileDescriptor(),
+                result.AsCString());
     } else if (log) {
-      log->Printf("%p ConnectionFileDescriptor::Disconnect(): Couldn't get the "
-                  "lock, but no command pipe is available.",
-                  static_cast<void *>(this));
+      LLDB_LOGF(log,
+                "%p ConnectionFileDescriptor::Disconnect(): Couldn't get the "
+                "lock, but no command pipe is available.",
+                static_cast<void *>(this));
     }
     locker.lock();
   }
@@ -362,10 +357,10 @@ size_t ConnectionFileDescriptor::Read(void *dst, size_t dst_len,
 
   std::unique_lock<std::recursive_mutex> locker(m_mutex, std::defer_lock);
   if (!locker.try_lock()) {
-    if (log)
-      log->Printf("%p ConnectionFileDescriptor::Read () failed to get the "
-                  "connection lock.",
-                  static_cast<void *>(this));
+    LLDB_LOGF(log,
+              "%p ConnectionFileDescriptor::Read () failed to get the "
+              "connection lock.",
+              static_cast<void *>(this));
     if (error_ptr)
       error_ptr->SetErrorString("failed to get the connection lock for read.");
 
@@ -387,12 +382,13 @@ size_t ConnectionFileDescriptor::Read(void *dst, size_t dst_len,
   error = m_read_sp->Read(dst, bytes_read);
 
   if (log) {
-    log->Printf("%p ConnectionFileDescriptor::Read()  fd = %" PRIu64
-                ", dst = %p, dst_len = %" PRIu64 ") => %" PRIu64 ", error = %s",
-                static_cast<void *>(this),
-                static_cast<uint64_t>(m_read_sp->GetWaitableHandle()),
-                static_cast<void *>(dst), static_cast<uint64_t>(dst_len),
-                static_cast<uint64_t>(bytes_read), error.AsCString());
+    LLDB_LOGF(log,
+              "%p ConnectionFileDescriptor::Read()  fd = %" PRIu64
+              ", dst = %p, dst_len = %" PRIu64 ") => %" PRIu64 ", error = %s",
+              static_cast<void *>(this),
+              static_cast<uint64_t>(m_read_sp->GetWaitableHandle()),
+              static_cast<void *>(dst), static_cast<uint64_t>(dst_len),
+              static_cast<uint64_t>(bytes_read), error.AsCString());
   }
 
   if (bytes_read == 0) {
@@ -464,11 +460,11 @@ size_t ConnectionFileDescriptor::Write(const void *src, size_t src_len,
                                        ConnectionStatus &status,
                                        Status *error_ptr) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  if (log)
-    log->Printf(
-        "%p ConnectionFileDescriptor::Write (src = %p, src_len = %" PRIu64 ")",
-        static_cast<void *>(this), static_cast<const void *>(src),
-        static_cast<uint64_t>(src_len));
+  LLDB_LOGF(log,
+            "%p ConnectionFileDescriptor::Write (src = %p, src_len = %" PRIu64
+            ")",
+            static_cast<void *>(this), static_cast<const void *>(src),
+            static_cast<uint64_t>(src_len));
 
   if (!IsConnected()) {
     if (error_ptr)
@@ -483,13 +479,13 @@ size_t ConnectionFileDescriptor::Write(const void *src, size_t src_len,
   error = m_write_sp->Write(src, bytes_sent);
 
   if (log) {
-    log->Printf("%p ConnectionFileDescriptor::Write(fd = %" PRIu64
-                ", src = %p, src_len = %" PRIu64 ") => %" PRIu64
-                " (error = %s)",
-                static_cast<void *>(this),
-                static_cast<uint64_t>(m_write_sp->GetWaitableHandle()),
-                static_cast<const void *>(src), static_cast<uint64_t>(src_len),
-                static_cast<uint64_t>(bytes_sent), error.AsCString());
+    LLDB_LOGF(log,
+              "%p ConnectionFileDescriptor::Write(fd = %" PRIu64
+              ", src = %p, src_len = %" PRIu64 ") => %" PRIu64 " (error = %s)",
+              static_cast<void *>(this),
+              static_cast<uint64_t>(m_write_sp->GetWaitableHandle()),
+              static_cast<const void *>(src), static_cast<uint64_t>(src_len),
+              static_cast<uint64_t>(bytes_sent), error.AsCString());
   }
 
   if (error_ptr)
@@ -613,10 +609,10 @@ ConnectionFileDescriptor::BytesAvailable(const Timeout<std::micro> &timeout,
           (void)bytes_read;
           switch (c) {
           case 'q':
-            if (log)
-              log->Printf("%p ConnectionFileDescriptor::BytesAvailable() "
-                          "got data: %c from the command channel.",
-                          static_cast<void *>(this), c);
+            LLDB_LOGF(log,
+                      "%p ConnectionFileDescriptor::BytesAvailable() "
+                      "got data: %c from the command channel.",
+                      static_cast<void *>(this), c);
             return eConnectionStatusEndOfFile;
           case 'i':
             // Interrupt the current read

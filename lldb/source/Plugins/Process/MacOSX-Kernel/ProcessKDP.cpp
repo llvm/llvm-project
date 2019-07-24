@@ -394,8 +394,7 @@ void ProcessKDP::DidAttach(ArchSpec &process_arch) {
   Process::DidAttach(process_arch);
 
   Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PROCESS));
-  if (log)
-    log->Printf("ProcessKDP::DidAttach()");
+  LLDB_LOGF(log, "ProcessKDP::DidAttach()");
   if (GetID() != LLDB_INVALID_PROCESS_ID) {
     GetHostArchitecture(process_arch);
   }
@@ -429,15 +428,13 @@ Status ProcessKDP::DoResume() {
     const StateType thread_resume_state =
         kernel_thread_sp->GetTemporaryResumeState();
 
-    if (log)
-      log->Printf("ProcessKDP::DoResume() thread_resume_state = %s",
-                  StateAsCString(thread_resume_state));
+    LLDB_LOGF(log, "ProcessKDP::DoResume() thread_resume_state = %s",
+              StateAsCString(thread_resume_state));
     switch (thread_resume_state) {
     case eStateSuspended:
       // Nothing to do here when a thread will stay suspended we just leave the
       // CPU mask bit set to zero for the thread
-      if (log)
-        log->Printf("ProcessKDP::DoResume() = suspended???");
+      LLDB_LOGF(log, "ProcessKDP::DoResume() = suspended???");
       break;
 
     case eStateStepping: {
@@ -445,9 +442,9 @@ Status ProcessKDP::DoResume() {
           kernel_thread_sp->GetRegisterContext());
 
       if (reg_ctx_sp) {
-        if (log)
-          log->Printf(
-              "ProcessKDP::DoResume () reg_ctx_sp->HardwareSingleStep (true);");
+        LLDB_LOGF(
+            log,
+            "ProcessKDP::DoResume () reg_ctx_sp->HardwareSingleStep (true);");
         reg_ctx_sp->HardwareSingleStep(true);
         resume = true;
       } else {
@@ -462,9 +459,8 @@ Status ProcessKDP::DoResume() {
           kernel_thread_sp->GetRegisterContext());
 
       if (reg_ctx_sp) {
-        if (log)
-          log->Printf("ProcessKDP::DoResume () reg_ctx_sp->HardwareSingleStep "
-                      "(false);");
+        LLDB_LOGF(log, "ProcessKDP::DoResume () reg_ctx_sp->HardwareSingleStep "
+                       "(false);");
         reg_ctx_sp->HardwareSingleStep(false);
         resume = true;
       } else {
@@ -481,8 +477,7 @@ Status ProcessKDP::DoResume() {
   }
 
   if (resume) {
-    if (log)
-      log->Printf("ProcessKDP::DoResume () sending resume");
+    LLDB_LOGF(log, "ProcessKDP::DoResume () sending resume");
 
     if (m_comm.SendRequestResume()) {
       m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncContinue);
@@ -550,8 +545,7 @@ Status ProcessKDP::DoHalt(bool &caused_stop) {
 Status ProcessKDP::DoDetach(bool keep_stopped) {
   Status error;
   Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PROCESS));
-  if (log)
-    log->Printf("ProcessKDP::DoDetach(keep_stopped = %i)", keep_stopped);
+  LLDB_LOGF(log, "ProcessKDP::DoDetach(keep_stopped = %i)", keep_stopped);
 
   if (m_comm.IsRunning()) {
     // We are running and we can't interrupt a running kernel, so we need to
@@ -734,8 +728,7 @@ void ProcessKDP::DebuggerInitialize(lldb_private::Debugger &debugger) {
 bool ProcessKDP::StartAsyncThread() {
   Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PROCESS));
 
-  if (log)
-    log->Printf("ProcessKDP::StartAsyncThread ()");
+  LLDB_LOGF(log, "ProcessKDP::StartAsyncThread ()");
 
   if (m_async_thread.IsJoinable())
     return true;
@@ -755,8 +748,7 @@ bool ProcessKDP::StartAsyncThread() {
 void ProcessKDP::StopAsyncThread() {
   Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PROCESS));
 
-  if (log)
-    log->Printf("ProcessKDP::StopAsyncThread ()");
+  LLDB_LOGF(log, "ProcessKDP::StopAsyncThread ()");
 
   m_async_broadcaster.BroadcastEvent(eBroadcastBitAsyncThreadShouldExit);
 
@@ -771,10 +763,10 @@ void *ProcessKDP::AsyncThread(void *arg) {
   const lldb::pid_t pid = process->GetID();
 
   Log *log(ProcessKDPLog::GetLogIfAllCategoriesSet(KDP_LOG_PROCESS));
-  if (log)
-    log->Printf("ProcessKDP::AsyncThread (arg = %p, pid = %" PRIu64
-                ") thread starting...",
-                arg, pid);
+  LLDB_LOGF(log,
+            "ProcessKDP::AsyncThread (arg = %p, pid = %" PRIu64
+            ") thread starting...",
+            arg, pid);
 
   ListenerSP listener_sp(Listener::MakeListener("ProcessKDP::AsyncThread"));
   EventSP event_sp;
@@ -786,16 +778,16 @@ void *ProcessKDP::AsyncThread(void *arg) {
       desired_event_mask) {
     bool done = false;
     while (!done) {
-      if (log)
-        log->Printf("ProcessKDP::AsyncThread (pid = %" PRIu64
-                    ") listener.WaitForEvent (NULL, event_sp)...",
-                    pid);
+      LLDB_LOGF(log,
+                "ProcessKDP::AsyncThread (pid = %" PRIu64
+                ") listener.WaitForEvent (NULL, event_sp)...",
+                pid);
       if (listener_sp->GetEvent(event_sp, llvm::None)) {
         uint32_t event_type = event_sp->GetType();
-        if (log)
-          log->Printf("ProcessKDP::AsyncThread (pid = %" PRIu64
-                      ") Got an event of type: %d...",
-                      pid, event_type);
+        LLDB_LOGF(log,
+                  "ProcessKDP::AsyncThread (pid = %" PRIu64
+                  ") Got an event of type: %d...",
+                  pid, event_type);
 
         // When we are running, poll for 1 second to try and get an exception
         // to indicate the process has stopped. If we don't get one, check to
@@ -834,38 +826,38 @@ void *ProcessKDP::AsyncThread(void *arg) {
           } break;
 
           case eBroadcastBitAsyncThreadShouldExit:
-            if (log)
-              log->Printf("ProcessKDP::AsyncThread (pid = %" PRIu64
-                          ") got eBroadcastBitAsyncThreadShouldExit...",
-                          pid);
+            LLDB_LOGF(log,
+                      "ProcessKDP::AsyncThread (pid = %" PRIu64
+                      ") got eBroadcastBitAsyncThreadShouldExit...",
+                      pid);
             done = true;
             is_running = false;
             break;
 
           default:
-            if (log)
-              log->Printf("ProcessKDP::AsyncThread (pid = %" PRIu64
-                          ") got unknown event 0x%8.8x",
-                          pid, event_type);
+            LLDB_LOGF(log,
+                      "ProcessKDP::AsyncThread (pid = %" PRIu64
+                      ") got unknown event 0x%8.8x",
+                      pid, event_type);
             done = true;
             is_running = false;
             break;
           }
         } while (is_running);
       } else {
-        if (log)
-          log->Printf("ProcessKDP::AsyncThread (pid = %" PRIu64
-                      ") listener.WaitForEvent (NULL, event_sp) => false",
-                      pid);
+        LLDB_LOGF(log,
+                  "ProcessKDP::AsyncThread (pid = %" PRIu64
+                  ") listener.WaitForEvent (NULL, event_sp) => false",
+                  pid);
         done = true;
       }
     }
   }
 
-  if (log)
-    log->Printf("ProcessKDP::AsyncThread (arg = %p, pid = %" PRIu64
-                ") thread exiting...",
-                arg, pid);
+  LLDB_LOGF(log,
+            "ProcessKDP::AsyncThread (arg = %p, pid = %" PRIu64
+            ") thread exiting...",
+            arg, pid);
 
   process->m_async_thread.Reset();
   return NULL;

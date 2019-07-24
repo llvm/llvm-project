@@ -30,10 +30,10 @@ static bool VerifyClangPath(const llvm::Twine &clang_path) {
   if (FileSystem::Instance().IsDirectory(clang_path))
     return true;
   Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
-  if (log)
-    log->Printf("VerifyClangPath(): "
-                "failed to stat clang resource directory at \"%s\"",
-                clang_path.str().c_str());
+  LLDB_LOGF(log,
+            "VerifyClangPath(): "
+            "failed to stat clang resource directory at \"%s\"",
+            clang_path.str().c_str());
   return false;
 }
 
@@ -67,10 +67,10 @@ static bool DefaultComputeClangResourceDirectory(FileSpec &lldb_shlib_spec,
     llvm::sys::path::native(relative_path);
     llvm::sys::path::append(clang_dir, relative_path);
     if (!verify || VerifyClangPath(clang_dir)) {
-      if (log)
-        log->Printf("DefaultComputeClangResourceDir: Setting ClangResourceDir "
-                    "to \"%s\", verify = %s",
-                    clang_dir.str().str().c_str(), verify ? "true" : "false");
+      LLDB_LOGF(log,
+                "DefaultComputeClangResourceDir: Setting ClangResourceDir "
+                "to \"%s\", verify = %s",
+                clang_dir.str().str().c_str(), verify ? "true" : "false");
       file_spec.GetDirectory().SetString(clang_dir);
       FileSystem::Instance().Resolve(file_spec);
       return true;
@@ -160,9 +160,8 @@ FileSpec lldb_private::GetClangResourceDir() {
       ComputeClangResourceDirectory(lldb_file_spec, g_cached_resource_dir,
                                     true);
     Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
-    if (log)
-      log->Printf("GetClangResourceDir() => '%s'",
-                  g_cached_resource_dir.GetPath().c_str());
+    LLDB_LOGF(log, "GetClangResourceDir() => '%s'",
+              g_cached_resource_dir.GetPath().c_str());
   });
   return g_cached_resource_dir;
 }

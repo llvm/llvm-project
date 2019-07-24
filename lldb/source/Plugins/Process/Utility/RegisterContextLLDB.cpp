@@ -2087,8 +2087,9 @@ void RegisterContextLLDB::UnwindLogMsg(const char *fmt, ...) {
     }
     va_end(args);
 
-    log->Printf("%*sth%d/fr%u %s", m_frame_number < 100 ? m_frame_number : 100,
-                "", m_thread.GetIndexID(), m_frame_number, logmsg);
+    LLDB_LOGF(log, "%*sth%d/fr%u %s",
+              m_frame_number < 100 ? m_frame_number : 100, "",
+              m_thread.GetIndexID(), m_frame_number, logmsg);
     free(logmsg);
   }
 }
@@ -2108,8 +2109,9 @@ void RegisterContextLLDB::UnwindLogMsgVerbose(const char *fmt, ...) {
     }
     va_end(args);
 
-    log->Printf("%*sth%d/fr%u %s", m_frame_number < 100 ? m_frame_number : 100,
-                "", m_thread.GetIndexID(), m_frame_number, logmsg);
+    LLDB_LOGF(log, "%*sth%d/fr%u %s",
+              m_frame_number < 100 ? m_frame_number : 100, "",
+              m_thread.GetIndexID(), m_frame_number, logmsg);
     free(logmsg);
   }
 }

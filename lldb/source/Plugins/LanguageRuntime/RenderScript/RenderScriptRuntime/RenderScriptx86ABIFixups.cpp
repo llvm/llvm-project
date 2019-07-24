@@ -93,9 +93,8 @@ llvm::FunctionType *cloneToStructRetFnTy(llvm::CallInst *call_inst) {
   assert(orig && "CallInst has no called function");
   llvm::FunctionType *orig_type = orig->getFunctionType();
   auto name = orig->getName();
-  if (log)
-    log->Printf("%s - cloning to StructRet function for '%s'", __FUNCTION__,
-                name.str().c_str());
+  LLDB_LOGF(log, "%s - cloning to StructRet function for '%s'", __FUNCTION__,
+            name.str().c_str());
 
   unsigned num_params = orig_type->getNumParams();
   std::vector<llvm::Type *> new_params{num_params + 1, nullptr};
@@ -113,9 +112,9 @@ llvm::FunctionType *cloneToStructRetFnTy(llvm::CallInst *call_inst) {
   if (!return_type_ptr_type)
     return nullptr;
 
-  if (log)
-    log->Printf("%s - return type pointer type for StructRet clone @ '0x%p':\n",
-                __FUNCTION__, (void *)return_type_ptr_type);
+  LLDB_LOGF(log,
+            "%s - return type pointer type for StructRet clone @ '0x%p':\n",
+            __FUNCTION__, (void *)return_type_ptr_type);
   // put the sret pointer argument in place at the beginning of the
   // argument list.
   params.emplace(params.begin(), return_type_ptr_type);

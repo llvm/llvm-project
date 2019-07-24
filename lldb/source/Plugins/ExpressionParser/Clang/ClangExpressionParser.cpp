@@ -331,9 +331,8 @@ ClangExpressionParser::ClangExpressionParser(
 
   if (process_sp && frame_lang != lldb::eLanguageTypeUnknown) {
     lang_rt = process_sp->GetLanguageRuntime(frame_lang);
-    if (log)
-      log->Printf("Frame has language of type %s",
-                  Language::GetNameForLanguageType(frame_lang));
+    LLDB_LOGF(log, "Frame has language of type %s",
+              Language::GetNameForLanguageType(frame_lang));
   }
 
   // 2. Configure the compiler with a set of default options that are
@@ -341,9 +340,8 @@ ClangExpressionParser::ClangExpressionParser(
   if (target_arch.IsValid()) {
     std::string triple = target_arch.GetTriple().str();
     m_compiler->getTargetOpts().Triple = triple;
-    if (log)
-      log->Printf("Using %s as the target triple",
-                  m_compiler->getTargetOpts().Triple.c_str());
+    LLDB_LOGF(log, "Using %s as the target triple",
+              m_compiler->getTargetOpts().Triple.c_str());
   } else {
     // If we get here we don't have a valid target and just have to guess.
     // Sometimes this will be ok to just use the host target triple (when we
@@ -352,9 +350,8 @@ ClangExpressionParser::ClangExpressionParser(
     // the host triple. In such a case the language runtime should expose an
     // overridden options set (3), below.
     m_compiler->getTargetOpts().Triple = llvm::sys::getDefaultTargetTriple();
-    if (log)
-      log->Printf("Using default target triple of %s",
-                  m_compiler->getTargetOpts().Triple.c_str());
+    LLDB_LOGF(log, "Using default target triple of %s",
+              m_compiler->getTargetOpts().Triple.c_str());
   }
   // Now add some special fixes for known architectures: Any arm32 iOS
   // environment, but not on arm64
@@ -408,12 +405,13 @@ ClangExpressionParser::ClangExpressionParser(
   auto target_info = TargetInfo::CreateTargetInfo(
       m_compiler->getDiagnostics(), m_compiler->getInvocation().TargetOpts);
   if (log) {
-    log->Printf("Using SIMD alignment: %d", target_info->getSimdDefaultAlign());
-    log->Printf("Target datalayout string: '%s'",
-                target_info->getDataLayout().getStringRepresentation().c_str());
-    log->Printf("Target ABI: '%s'", target_info->getABI().str().c_str());
-    log->Printf("Target vector alignment: %d",
-                target_info->getMaxVectorAlign());
+    LLDB_LOGF(log, "Using SIMD alignment: %d",
+              target_info->getSimdDefaultAlign());
+    LLDB_LOGF(log, "Target datalayout string: '%s'",
+              target_info->getDataLayout().getStringRepresentation().c_str());
+    LLDB_LOGF(log, "Target ABI: '%s'", target_info->getABI().str().c_str());
+    LLDB_LOGF(log, "Target vector alignment: %d",
+              target_info->getMaxVectorAlign());
   }
   m_compiler->setTarget(target_info);
 
@@ -1181,9 +1179,8 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
                                    m_expr.FunctionName());
       return err;
     } else {
-      if (log)
-        log->Printf("Found function %s for %s", function_name.AsCString(),
-                    m_expr.FunctionName());
+      LLDB_LOGF(log, "Found function %s for %s", function_name.AsCString(),
+                m_expr.FunctionName());
     }
   }
 
@@ -1198,9 +1195,8 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
   LLVMUserExpression::IRPasses custom_passes;
   {
     auto lang = m_expr.Language();
-    if (log)
-      log->Printf("%s - Current expression language is %s\n", __FUNCTION__,
-                  Language::GetNameForLanguageType(lang));
+    LLDB_LOGF(log, "%s - Current expression language is %s\n", __FUNCTION__,
+              Language::GetNameForLanguageType(lang));
     lldb::ProcessSP process_sp = exe_ctx.GetProcessSP();
     if (process_sp && lang != lldb::eLanguageTypeUnknown) {
       auto runtime = process_sp->GetLanguageRuntime(lang);
@@ -1210,10 +1206,10 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
   }
 
   if (custom_passes.EarlyPasses) {
-    if (log)
-      log->Printf("%s - Running Early IR Passes from LanguageRuntime on "
-                  "expression module '%s'",
-                  __FUNCTION__, m_expr.FunctionName());
+    LLDB_LOGF(log,
+              "%s - Running Early IR Passes from LanguageRuntime on "
+              "expression module '%s'",
+              __FUNCTION__, m_expr.FunctionName());
 
     custom_passes.EarlyPasses->run(*llvm_module_up);
   }
@@ -1298,9 +1294,8 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
 
           process->SetDynamicCheckers(dynamic_checkers);
 
-          if (log)
-            log->Printf("== [ClangExpressionParser::PrepareForExecution] "
-                        "Finished installing dynamic checkers ==");
+          LLDB_LOGF(log, "== [ClangExpressionParser::PrepareForExecution] "
+                         "Finished installing dynamic checkers ==");
         }
 
         if (auto *checker_funcs = llvm::dyn_cast<ClangDynamicCheckerFunctions>(
@@ -1316,10 +1311,10 @@ lldb_private::Status ClangExpressionParser::PrepareForExecution(
           }
 
           if (custom_passes.LatePasses) {
-            if (log)
-              log->Printf("%s - Running Late IR Passes from LanguageRuntime on "
-                          "expression module '%s'",
-                          __FUNCTION__, m_expr.FunctionName());
+            LLDB_LOGF(log,
+                      "%s - Running Late IR Passes from LanguageRuntime on "
+                      "expression module '%s'",
+                      __FUNCTION__, m_expr.FunctionName());
 
             custom_passes.LatePasses->run(*module);
           }

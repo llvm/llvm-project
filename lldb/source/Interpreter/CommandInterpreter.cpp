@@ -1628,8 +1628,7 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   llvm::PrettyStackTraceFormat stack_trace("HandleCommand(command = \"%s\")",
                                    command_line);
 
-  if (log)
-    log->Printf("Processing command: %s", command_line);
+  LLDB_LOGF(log, "Processing command: %s", command_line);
 
   static Timer::Category func_cat(LLVM_PRETTY_FUNCTION);
   Timer scoped_timer(func_cat, "Handling command: %s.", command_line);
@@ -1735,13 +1734,13 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
   // "br s -n main", command_string is now "breakpoint set -n main".
   if (log) {
     llvm::StringRef command_name = cmd_obj ? cmd_obj->GetCommandName() : "<not found>";
-    log->Printf("HandleCommand, cmd_obj : '%s'", command_name.str().c_str());
-    log->Printf("HandleCommand, (revised) command_string: '%s'",
-                command_string.c_str());
+    LLDB_LOGF(log, "HandleCommand, cmd_obj : '%s'", command_name.str().c_str());
+    LLDB_LOGF(log, "HandleCommand, (revised) command_string: '%s'",
+              command_string.c_str());
     const bool wants_raw_input =
         (cmd_obj != nullptr) ? cmd_obj->WantsRawCommandString() : false;
-    log->Printf("HandleCommand, wants_raw_input:'%s'",
-                wants_raw_input ? "True" : "False");
+    LLDB_LOGF(log, "HandleCommand, wants_raw_input:'%s'",
+              wants_raw_input ? "True" : "False");
   }
 
   // Phase 2.
@@ -1771,17 +1770,15 @@ bool CommandInterpreter::HandleCommand(const char *command_line,
     if (pos != 0 && pos != std::string::npos)
       remainder.erase(0, pos);
 
-    if (log)
-      log->Printf(
-          "HandleCommand, command line after removing command name(s): '%s'",
-          remainder.c_str());
+    LLDB_LOGF(
+        log, "HandleCommand, command line after removing command name(s): '%s'",
+        remainder.c_str());
 
     cmd_obj->Execute(remainder.c_str(), result);
   }
 
-  if (log)
-    log->Printf("HandleCommand, command %s",
-                (result.Succeeded() ? "succeeded" : "did not succeed"));
+  LLDB_LOGF(log, "HandleCommand, command %s",
+            (result.Succeeded() ? "succeeded" : "did not succeed"));
 
   return result.Succeeded();
 }

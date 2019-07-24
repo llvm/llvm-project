@@ -417,7 +417,7 @@ static void ParseFreeBSDPrStatus(ThreadData &thread_data,
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
   if (log) {
     if (pr_version > 1)
-      log->Printf("FreeBSD PRSTATUS unexpected version %d", pr_version);
+      LLDB_LOGF(log, "FreeBSD PRSTATUS unexpected version %d", pr_version);
   }
 
   // Skip padding, pr_statussz, pr_gregsetsz, pr_fpregsetsz, pr_osreldate

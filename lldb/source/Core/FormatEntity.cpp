@@ -514,24 +514,24 @@ static bool ScanBracketedRange(llvm::StringRef subpath,
   close_bracket_index = llvm::StringRef::npos;
   const size_t open_bracket_index = subpath.find('[');
   if (open_bracket_index == llvm::StringRef::npos) {
-    if (log)
-      log->Printf("[ScanBracketedRange] no bracketed range, skipping entirely");
+    LLDB_LOGF(log,
+              "[ScanBracketedRange] no bracketed range, skipping entirely");
     return false;
   }
 
   close_bracket_index = subpath.find(']', open_bracket_index + 1);
 
   if (close_bracket_index == llvm::StringRef::npos) {
-    if (log)
-      log->Printf("[ScanBracketedRange] no bracketed range, skipping entirely");
+    LLDB_LOGF(log,
+              "[ScanBracketedRange] no bracketed range, skipping entirely");
     return false;
   } else {
     var_name_final_if_array_range = subpath.data() + open_bracket_index;
 
     if (close_bracket_index - open_bracket_index == 1) {
-      if (log)
-        log->Printf(
-            "[ScanBracketedRange] '[]' detected.. going from 0 to end of data");
+      LLDB_LOGF(
+          log,
+          "[ScanBracketedRange] '[]' detected.. going from 0 to end of data");
       index_lower = 0;
     } else {
       const size_t separator_index = subpath.find('-', open_bracket_index + 1);
@@ -540,22 +540,21 @@ static bool ScanBracketedRange(llvm::StringRef subpath,
         const char *index_lower_cstr = subpath.data() + open_bracket_index + 1;
         index_lower = ::strtoul(index_lower_cstr, nullptr, 0);
         index_higher = index_lower;
-        if (log)
-          log->Printf("[ScanBracketedRange] [%" PRId64
-                      "] detected, high index is same",
-                      index_lower);
+        LLDB_LOGF(log,
+                  "[ScanBracketedRange] [%" PRId64
+                  "] detected, high index is same",
+                  index_lower);
       } else {
         const char *index_lower_cstr = subpath.data() + open_bracket_index + 1;
         const char *index_higher_cstr = subpath.data() + separator_index + 1;
         index_lower = ::strtoul(index_lower_cstr, nullptr, 0);
         index_higher = ::strtoul(index_higher_cstr, nullptr, 0);
-        if (log)
-          log->Printf("[ScanBracketedRange] [%" PRId64 "-%" PRId64 "] detected",
-                      index_lower, index_higher);
+        LLDB_LOGF(log,
+                  "[ScanBracketedRange] [%" PRId64 "-%" PRId64 "] detected",
+                  index_lower, index_higher);
       }
       if (index_lower > index_higher && index_higher > 0) {
-        if (log)
-          log->Printf("[ScanBracketedRange] swapping indices");
+        LLDB_LOGF(log, "[ScanBracketedRange] swapping indices");
         const int64_t temp = index_lower;
         index_lower = index_higher;
         index_higher = temp;
@@ -627,9 +626,8 @@ static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
   const char *ptr_deref_format = "[%d]";
   std::string ptr_deref_buffer(10, 0);
   ::sprintf(&ptr_deref_buffer[0], ptr_deref_format, index);
-  if (log)
-    log->Printf("[ExpandIndexedExpression] name to deref: %s",
-                ptr_deref_buffer.c_str());
+  LLDB_LOGF(log, "[ExpandIndexedExpression] name to deref: %s",
+            ptr_deref_buffer.c_str());
   ValueObject::GetValueForExpressionPathOptions options;
   ValueObject::ExpressionPathEndResultType final_value_type;
   ValueObject::ExpressionPathScanEndReason reason_to_stop;
@@ -640,15 +638,15 @@ static ValueObjectSP ExpandIndexedExpression(ValueObject *valobj, size_t index,
       ptr_deref_buffer.c_str(), &reason_to_stop, &final_value_type, options,
       &what_next);
   if (!item) {
-    if (log)
-      log->Printf("[ExpandIndexedExpression] ERROR: why stopping = %d,"
-                  " final_value_type %d",
-                  reason_to_stop, final_value_type);
+    LLDB_LOGF(log,
+              "[ExpandIndexedExpression] ERROR: why stopping = %d,"
+              " final_value_type %d",
+              reason_to_stop, final_value_type);
   } else {
-    if (log)
-      log->Printf("[ExpandIndexedExpression] ALL RIGHT: why stopping = %d,"
-                  " final_value_type %d",
-                  reason_to_stop, final_value_type);
+    LLDB_LOGF(log,
+              "[ExpandIndexedExpression] ALL RIGHT: why stopping = %d,"
+              " final_value_type %d",
+              reason_to_stop, final_value_type);
   }
   return item;
 }
@@ -770,9 +768,8 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
 
     const std::string &expr_path = entry.string;
 
-    if (log)
-      log->Printf("[Debugger::FormatPrompt] symbol to expand: %s",
-                  expr_path.c_str());
+    LLDB_LOGF(log, "[Debugger::FormatPrompt] symbol to expand: %s",
+              expr_path.c_str());
 
     target =
         valobj
@@ -781,16 +778,16 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
             .get();
 
     if (!target) {
-      if (log)
-        log->Printf("[Debugger::FormatPrompt] ERROR: why stopping = %d,"
-                    " final_value_type %d",
-                    reason_to_stop, final_value_type);
+      LLDB_LOGF(log,
+                "[Debugger::FormatPrompt] ERROR: why stopping = %d,"
+                " final_value_type %d",
+                reason_to_stop, final_value_type);
       return false;
     } else {
-      if (log)
-        log->Printf("[Debugger::FormatPrompt] ALL RIGHT: why stopping = %d,"
-                    " final_value_type %d",
-                    reason_to_stop, final_value_type);
+      LLDB_LOGF(log,
+                "[Debugger::FormatPrompt] ALL RIGHT: why stopping = %d,"
+                " final_value_type %d",
+                reason_to_stop, final_value_type);
       target = target
                    ->GetQualifiedRepresentationIfAvailable(
                        target->GetDynamicValueType(), true)
@@ -814,18 +811,16 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
     Status error;
     target = target->Dereference(error).get();
     if (error.Fail()) {
-      if (log)
-        log->Printf("[Debugger::FormatPrompt] ERROR: %s\n",
-                    error.AsCString("unknown"));
+      LLDB_LOGF(log, "[Debugger::FormatPrompt] ERROR: %s\n",
+                error.AsCString("unknown"));
       return false;
     }
     do_deref_pointer = false;
   }
 
   if (!target) {
-    if (log)
-      log->Printf("[Debugger::FormatPrompt] could not calculate target for "
-                  "prompt expression");
+    LLDB_LOGF(log, "[Debugger::FormatPrompt] could not calculate target for "
+                   "prompt expression");
     return false;
   }
 
@@ -860,18 +855,16 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
                                                              // exceptions
   {
     StreamString str_temp;
-    if (log)
-      log->Printf(
-          "[Debugger::FormatPrompt] I am into array || pointer && !range");
+    LLDB_LOGF(log,
+              "[Debugger::FormatPrompt] I am into array || pointer && !range");
 
     if (target->HasSpecialPrintableRepresentation(val_obj_display,
                                                   custom_format)) {
       // try to use the special cases
       bool success = target->DumpPrintableRepresentation(
           str_temp, val_obj_display, custom_format);
-      if (log)
-        log->Printf("[Debugger::FormatPrompt] special cases did%s match",
-                    success ? "" : "n't");
+      LLDB_LOGF(log, "[Debugger::FormatPrompt] special cases did%s match",
+                success ? "" : "n't");
 
       // should not happen
       if (success)
@@ -909,17 +902,16 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
   }
 
   if (!is_array_range) {
-    if (log)
-      log->Printf("[Debugger::FormatPrompt] dumping ordinary printable output");
+    LLDB_LOGF(log,
+              "[Debugger::FormatPrompt] dumping ordinary printable output");
     return target->DumpPrintableRepresentation(s, val_obj_display,
                                                custom_format);
   } else {
-    if (log)
-      log->Printf("[Debugger::FormatPrompt] checking if I can handle as array");
+    LLDB_LOGF(log,
+              "[Debugger::FormatPrompt] checking if I can handle as array");
     if (!is_array && !is_pointer)
       return false;
-    if (log)
-      log->Printf("[Debugger::FormatPrompt] handle as array");
+    LLDB_LOGF(log, "[Debugger::FormatPrompt] handle as array");
     StreamString special_directions_stream;
     llvm::StringRef special_directions;
     if (close_bracket_index != llvm::StringRef::npos &&
@@ -965,15 +957,15 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
               .get();
 
       if (!item) {
-        if (log)
-          log->Printf("[Debugger::FormatPrompt] ERROR in getting child item at "
-                      "index %" PRId64,
-                      index);
+        LLDB_LOGF(log,
+                  "[Debugger::FormatPrompt] ERROR in getting child item at "
+                  "index %" PRId64,
+                  index);
       } else {
-        if (log)
-          log->Printf(
-              "[Debugger::FormatPrompt] special_directions for child item: %s",
-              special_directions.data() ? special_directions.data() : "");
+        LLDB_LOGF(
+            log,
+            "[Debugger::FormatPrompt] special_directions for child item: %s",
+            special_directions.data() ? special_directions.data() : "");
       }
 
       if (special_directions.empty()) {

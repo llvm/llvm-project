@@ -131,7 +131,7 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
     s.Address(
         m_thread.GetRegisterContext()->GetPC(),
         m_thread.CalculateTarget()->GetArchitecture().GetAddressByteSize());
-    log->Printf("ThreadPlanStepOverRange reached %s.", s.GetData());
+    LLDB_LOGF(log, "ThreadPlanStepOverRange reached %s.", s.GetData());
   }
 
   // If we're out of the range but in the same frame or in our caller's frame
@@ -155,8 +155,8 @@ bool ThreadPlanStepOverRange::ShouldStop(Event *event_ptr) {
                                                          stop_others, m_status);
 
     if (new_plan_sp && log)
-      log->Printf(
-          "Thought I stepped out, but in fact arrived at a trampoline.");
+      LLDB_LOGF(log,
+                "Thought I stepped out, but in fact arrived at a trampoline.");
   } else if (frame_order == eFrameCompareYounger) {
     // Make sure we really are in a new frame.  Do that by unwinding and seeing
     // if the start function really is our start function...
@@ -371,10 +371,10 @@ bool ThreadPlanStepOverRange::DoWillResume(lldb::StateType resume_state,
       bool in_inlined_stack = m_thread.DecrementCurrentInlinedDepth();
       if (in_inlined_stack) {
         Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
-        if (log)
-          log->Printf("ThreadPlanStepInRange::DoWillResume: adjusting range to "
-                      "the frame at inlined depth %d.",
-                      m_thread.GetCurrentInlinedDepth());
+        LLDB_LOGF(log,
+                  "ThreadPlanStepInRange::DoWillResume: adjusting range to "
+                  "the frame at inlined depth %d.",
+                  m_thread.GetCurrentInlinedDepth());
         StackFrameSP stack_sp = m_thread.GetStackFrameAtIndex(0);
         if (stack_sp) {
           Block *frame_block = stack_sp->GetFrameBlock();

@@ -496,11 +496,11 @@ int RegisterContextDarwin_i386::GetSetForNativeRegNum(int reg_num) {
 void RegisterContextDarwin_i386::LogGPR(Log *log, const char *title) {
   if (log) {
     if (title)
-      log->Printf("%s", title);
+      LLDB_LOGF(log, "%s", title);
     for (uint32_t i = 0; i < k_num_gpr_registers; i++) {
       uint32_t reg = gpr_eax + i;
-      log->Printf("%12s = 0x%8.8x", g_register_infos[reg].name,
-                  (&gpr.eax)[reg]);
+      LLDB_LOGF(log, "%12s = 0x%8.8x", g_register_infos[reg].name,
+                (&gpr.eax)[reg]);
     }
   }
 }

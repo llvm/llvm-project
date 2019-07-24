@@ -386,8 +386,7 @@ Platform::Platform(bool is_host)
       m_calculated_trap_handlers(false),
       m_module_cache(llvm::make_unique<ModuleCache>()) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
-  if (log)
-    log->Printf("%p Platform::Platform()", static_cast<void *>(this));
+  LLDB_LOGF(log, "%p Platform::Platform()", static_cast<void *>(this));
 }
 
 /// Destructor.
@@ -396,8 +395,7 @@ Platform::Platform(bool is_host)
 /// inherited from by the plug-in instance.
 Platform::~Platform() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_OBJECT));
-  if (log)
-    log->Printf("%p Platform::~Platform()", static_cast<void *>(this));
+  LLDB_LOGF(log, "%p Platform::~Platform()", static_cast<void *>(this));
 }
 
 void Platform::GetStatus(Stream &strm) {
@@ -637,9 +635,8 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
   Status error;
 
   Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
-  if (log)
-    log->Printf("Platform::Install (src='%s', dst='%s')", src.GetPath().c_str(),
-                dst.GetPath().c_str());
+  LLDB_LOGF(log, "Platform::Install (src='%s', dst='%s')",
+            src.GetPath().c_str(), dst.GetPath().c_str());
   FileSpec fixed_dst(dst);
 
   if (!fixed_dst.GetFilename())
@@ -690,10 +687,9 @@ Status Platform::Install(const FileSpec &src, const FileSpec &dst) {
     }
   }
 
-  if (log)
-    log->Printf("Platform::Install (src='%s', dst='%s') fixed_dst='%s'",
-                src.GetPath().c_str(), dst.GetPath().c_str(),
-                fixed_dst.GetPath().c_str());
+  LLDB_LOGF(log, "Platform::Install (src='%s', dst='%s') fixed_dst='%s'",
+            src.GetPath().c_str(), dst.GetPath().c_str(),
+            fixed_dst.GetPath().c_str());
 
   if (GetSupportsRSync()) {
     error = PutFile(src, dst);
@@ -821,9 +817,8 @@ ConstString Platform::GetFullNameForDylib(ConstString basename) {
 
 bool Platform::SetRemoteWorkingDirectory(const FileSpec &working_dir) {
   Log *log = GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM);
-  if (log)
-    log->Printf("Platform::SetRemoteWorkingDirectory('%s')",
-                working_dir.GetCString());
+  LLDB_LOGF(log, "Platform::SetRemoteWorkingDirectory('%s')",
+            working_dir.GetCString());
   m_working_dir = working_dir;
   return true;
 }
@@ -1010,8 +1005,7 @@ uint32_t Platform::FindProcesses(const ProcessInstanceInfoMatch &match_info,
 Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
   Status error;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log)
-    log->Printf("Platform::%s()", __FUNCTION__);
+  LLDB_LOGF(log, "Platform::%s()", __FUNCTION__);
 
   // Take care of the host case so that each subclass can just call this
   // function to get the host functionality.
@@ -1027,10 +1021,10 @@ Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
       if (log) {
         const FileSpec &shell = launch_info.GetShell();
         std::string shell_str = (shell) ? shell.GetPath() : "<null>";
-        log->Printf(
-            "Platform::%s GetResumeCountForLaunchInfo() returned %" PRIu32
-            ", shell is '%s'",
-            __FUNCTION__, num_resumes, shell_str.c_str());
+        LLDB_LOGF(log,
+                  "Platform::%s GetResumeCountForLaunchInfo() returned %" PRIu32
+                  ", shell is '%s'",
+                  __FUNCTION__, num_resumes, shell_str.c_str());
       }
 
       if (!launch_info.ConvertArgumentsForLaunchingInShell(
@@ -1048,9 +1042,8 @@ Status Platform::LaunchProcess(ProcessLaunchInfo &launch_info) {
       }
     }
 
-    if (log)
-      log->Printf("Platform::%s final launch_info resume count: %" PRIu32,
-                  __FUNCTION__, launch_info.GetResumeCount());
+    LLDB_LOGF(log, "Platform::%s final launch_info resume count: %" PRIu32,
+              __FUNCTION__, launch_info.GetResumeCount());
 
     error = Host::LaunchProcess(launch_info);
   } else
@@ -1067,8 +1060,7 @@ Status Platform::ShellExpandArguments(ProcessLaunchInfo &launch_info) {
 
 Status Platform::KillProcess(const lldb::pid_t pid) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log)
-    log->Printf("Platform::%s, pid %" PRIu64, __FUNCTION__, pid);
+  LLDB_LOGF(log, "Platform::%s, pid %" PRIu64, __FUNCTION__, pid);
 
   // Try to find a process plugin to handle this Kill request.  If we can't,
   // fall back to the default OS implementation.
@@ -1098,9 +1090,8 @@ Platform::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
                                        // new target, else use existing one
                        Status &error) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log)
-    log->Printf("Platform::%s entered (target %p)", __FUNCTION__,
-                static_cast<void *>(target));
+  LLDB_LOGF(log, "Platform::%s entered (target %p)", __FUNCTION__,
+            static_cast<void *>(target));
 
   ProcessSP process_sp;
   // Make sure we stop at the entry point
@@ -1124,10 +1115,10 @@ Platform::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
       // Give this ProcessLaunchInfo filter a chance to adjust the launch info.
       error = (*filter_callback)(launch_info, target);
       if (!error.Success()) {
-        if (log)
-          log->Printf("Platform::%s() StructuredDataPlugin launch "
-                      "filter failed.",
-                      __FUNCTION__);
+        LLDB_LOGF(log,
+                  "Platform::%s() StructuredDataPlugin launch "
+                  "filter failed.",
+                  __FUNCTION__);
         return process_sp;
       }
     }
@@ -1135,17 +1126,15 @@ Platform::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
 
   error = LaunchProcess(launch_info);
   if (error.Success()) {
-    if (log)
-      log->Printf("Platform::%s LaunchProcess() call succeeded (pid=%" PRIu64
-                  ")",
-                  __FUNCTION__, launch_info.GetProcessID());
+    LLDB_LOGF(log,
+              "Platform::%s LaunchProcess() call succeeded (pid=%" PRIu64 ")",
+              __FUNCTION__, launch_info.GetProcessID());
     if (launch_info.GetProcessID() != LLDB_INVALID_PROCESS_ID) {
       ProcessAttachInfo attach_info(launch_info);
       process_sp = Attach(attach_info, debugger, target, error);
       if (process_sp) {
-        if (log)
-          log->Printf("Platform::%s Attach() succeeded, Process plugin: %s",
-                      __FUNCTION__, process_sp->GetPluginName().AsCString());
+        LLDB_LOGF(log, "Platform::%s Attach() succeeded, Process plugin: %s",
+                  __FUNCTION__, process_sp->GetPluginName().AsCString());
         launch_info.SetHijackListener(attach_info.GetHijackListener());
 
         // Since we attached to the process, it will think it needs to detach
@@ -1163,20 +1152,18 @@ Platform::DebugProcess(ProcessLaunchInfo &launch_info, Debugger &debugger,
           process_sp->SetSTDIOFileDescriptor(pty_fd);
         }
       } else {
-        if (log)
-          log->Printf("Platform::%s Attach() failed: %s", __FUNCTION__,
-                      error.AsCString());
+        LLDB_LOGF(log, "Platform::%s Attach() failed: %s", __FUNCTION__,
+                  error.AsCString());
       }
     } else {
-      if (log)
-        log->Printf("Platform::%s LaunchProcess() returned launch_info with "
-                    "invalid process id",
-                    __FUNCTION__);
+      LLDB_LOGF(log,
+                "Platform::%s LaunchProcess() returned launch_info with "
+                "invalid process id",
+                __FUNCTION__);
     }
   } else {
-    if (log)
-      log->Printf("Platform::%s LaunchProcess() failed: %s", __FUNCTION__,
-                  error.AsCString());
+    LLDB_LOGF(log, "Platform::%s LaunchProcess() failed: %s", __FUNCTION__,
+              error.AsCString());
   }
 
   return process_sp;
@@ -1231,8 +1218,7 @@ bool Platform::IsCompatibleArchitecture(const ArchSpec &arch,
 Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
                          uint32_t uid, uint32_t gid) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log)
-    log->Printf("[PutFile] Using block by block transfer....\n");
+  LLDB_LOGF(log, "[PutFile] Using block by block transfer....\n");
 
   uint32_t source_open_options =
       File::eOpenOptionRead | File::eOpenOptionCloseOnExec;
@@ -1253,8 +1239,7 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
       destination, File::eOpenOptionCanCreate | File::eOpenOptionWrite |
                        File::eOpenOptionTruncate | File::eOpenOptionCloseOnExec,
       permissions, error);
-  if (log)
-    log->Printf("dest_file = %" PRIu64 "\n", dest_file);
+  LLDB_LOGF(log, "dest_file = %" PRIu64 "\n", dest_file);
 
   if (error.Fail())
     return error;
@@ -1630,10 +1615,9 @@ bool Platform::GetCachedSharedModule(const ModuleSpec &module_spec,
   if (error.Success())
     return true;
 
-  if (log)
-    log->Printf("Platform::%s - module %s not found in local cache: %s",
-                __FUNCTION__, module_spec.GetUUID().GetAsString().c_str(),
-                error.AsCString());
+  LLDB_LOGF(log, "Platform::%s - module %s not found in local cache: %s",
+            __FUNCTION__, module_spec.GetUUID().GetAsString().c_str(),
+            error.AsCString());
   return false;
 }
 

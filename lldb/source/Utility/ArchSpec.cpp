@@ -946,8 +946,10 @@ bool ArchSpec::SetArchitecture(ArchitectureType arch_type, uint32_t cpu,
       }
     } else {
       Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_TARGET | LIBLLDB_LOG_PROCESS | LIBLLDB_LOG_PLATFORM));
-      if (log)
-        log->Printf("Unable to find a core definition for cpu 0x%" PRIx32 " sub %" PRId32, cpu, sub);
+      LLDB_LOGF(log,
+                "Unable to find a core definition for cpu 0x%" PRIx32
+                " sub %" PRId32,
+                cpu, sub);
     }
   }
   CoreUpdated(update_triple);

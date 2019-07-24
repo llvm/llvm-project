@@ -956,7 +956,7 @@ public:
       llvm::SmallVector<char, 32> diag_str(10);
       info.FormatDiagnostic(diag_str);
       diag_str.push_back('\0');
-      m_log->Printf("Compiler diagnostic: %s\n", diag_str.data());
+      LLDB_LOGF(m_log, "Compiler diagnostic: %s\n", diag_str.data());
     }
   }
 

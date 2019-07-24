@@ -177,8 +177,8 @@ void JITLoaderGDB::SetJITBreakpoint(lldb_private::ModuleList &module_list) {
     return;
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_JIT_LOADER));
-  if (log)
-    log->Printf("JITLoaderGDB::%s looking for JIT register hook", __FUNCTION__);
+  LLDB_LOGF(log, "JITLoaderGDB::%s looking for JIT register hook",
+            __FUNCTION__);
 
   addr_t jit_addr = GetSymbolAddress(
       module_list, ConstString("__jit_debug_register_code"), eSymbolTypeAny);
@@ -188,14 +188,12 @@ void JITLoaderGDB::SetJITBreakpoint(lldb_private::ModuleList &module_list) {
   m_jit_descriptor_addr = GetSymbolAddress(
       module_list, ConstString("__jit_debug_descriptor"), eSymbolTypeData);
   if (m_jit_descriptor_addr == LLDB_INVALID_ADDRESS) {
-    if (log)
-      log->Printf("JITLoaderGDB::%s failed to find JIT descriptor address",
-                  __FUNCTION__);
+    LLDB_LOGF(log, "JITLoaderGDB::%s failed to find JIT descriptor address",
+              __FUNCTION__);
     return;
   }
 
-  if (log)
-    log->Printf("JITLoaderGDB::%s setting JIT breakpoint", __FUNCTION__);
+  LLDB_LOGF(log, "JITLoaderGDB::%s setting JIT breakpoint", __FUNCTION__);
 
   Breakpoint *bp =
       m_process->GetTarget().CreateBreakpoint(jit_addr, true, false).get();
@@ -211,8 +209,7 @@ bool JITLoaderGDB::JITDebugBreakpointHit(void *baton,
                                          user_id_t break_id,
                                          user_id_t break_loc_id) {
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_JIT_LOADER));
-  if (log)
-    log->Printf("JITLoaderGDB::%s hit JIT breakpoint", __FUNCTION__);
+  LLDB_LOGF(log, "JITLoaderGDB::%s hit JIT breakpoint", __FUNCTION__);
   JITLoaderGDB *instance = static_cast<JITLoaderGDB *>(baton);
   return instance->ReadJITDescriptor(false);
 }
@@ -285,9 +282,8 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
   size_t bytes_read = m_process->DoReadMemory(m_jit_descriptor_addr, &jit_desc,
                                               jit_desc_size, error);
   if (bytes_read != jit_desc_size || !error.Success()) {
-    if (log)
-      log->Printf("JITLoaderGDB::%s failed to read JIT descriptor",
-                  __FUNCTION__);
+    LLDB_LOGF(log, "JITLoaderGDB::%s failed to read JIT descriptor",
+              __FUNCTION__);
     return false;
   }
 
@@ -301,9 +297,8 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
   while (jit_relevant_entry != 0) {
     jit_code_entry<ptr_t> jit_entry;
     if (!ReadJITEntry(jit_relevant_entry, m_process, &jit_entry)) {
-      if (log)
-        log->Printf("JITLoaderGDB::%s failed to read JIT entry at 0x%" PRIx64,
-                    __FUNCTION__, jit_relevant_entry);
+      LLDB_LOGF(log, "JITLoaderGDB::%s failed to read JIT entry at 0x%" PRIx64,
+                __FUNCTION__, jit_relevant_entry);
       return false;
     }
 
@@ -312,10 +307,10 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
     ModuleSP module_sp;
 
     if (jit_action == JIT_REGISTER_FN) {
-      if (log)
-        log->Printf("JITLoaderGDB::%s registering JIT entry at 0x%" PRIx64
-                    " (%" PRIu64 " bytes)",
-                    __FUNCTION__, symbolfile_addr, (uint64_t)symbolfile_size);
+      LLDB_LOGF(log,
+                "JITLoaderGDB::%s registering JIT entry at 0x%" PRIx64
+                " (%" PRIu64 " bytes)",
+                __FUNCTION__, symbolfile_addr, (uint64_t)symbolfile_size);
 
       char jit_name[64];
       snprintf(jit_name, 64, "JIT(0x%" PRIx64 ")", symbolfile_addr);
@@ -357,15 +352,14 @@ bool JITLoaderGDB::ReadJITDescriptorImpl(bool all_entries) {
         module_list.Append(module_sp);
         target.ModulesDidLoad(module_list);
       } else {
-        if (log)
-          log->Printf("JITLoaderGDB::%s failed to load module for "
-                      "JIT entry at 0x%" PRIx64,
-                      __FUNCTION__, symbolfile_addr);
+        LLDB_LOGF(log,
+                  "JITLoaderGDB::%s failed to load module for "
+                  "JIT entry at 0x%" PRIx64,
+                  __FUNCTION__, symbolfile_addr);
       }
     } else if (jit_action == JIT_UNREGISTER_FN) {
-      if (log)
-        log->Printf("JITLoaderGDB::%s unregistering JIT entry at 0x%" PRIx64,
-                    __FUNCTION__, symbolfile_addr);
+      LLDB_LOGF(log, "JITLoaderGDB::%s unregistering JIT entry at 0x%" PRIx64,
+                __FUNCTION__, symbolfile_addr);
 
       JITObjectMap::iterator it = m_jit_objects.find(symbolfile_addr);
       if (it != m_jit_objects.end()) {

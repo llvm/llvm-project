@@ -688,19 +688,18 @@ bool ScriptInterpreterPythonImpl::EnterSession(uint16_t on_entry_flags,
   // it, then there is no need to 'enter' it again.
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SCRIPT));
   if (m_session_is_active) {
-    if (log)
-      log->Printf(
-          "ScriptInterpreterPythonImpl::EnterSession(on_entry_flags=0x%" PRIx16
-          ") session is already active, returning without doing anything",
-          on_entry_flags);
+    LLDB_LOGF(
+        log,
+        "ScriptInterpreterPythonImpl::EnterSession(on_entry_flags=0x%" PRIx16
+        ") session is already active, returning without doing anything",
+        on_entry_flags);
     return false;
   }
 
-  if (log)
-    log->Printf(
-        "ScriptInterpreterPythonImpl::EnterSession(on_entry_flags=0x%" PRIx16
-        ")",
-        on_entry_flags);
+  LLDB_LOGF(
+      log,
+      "ScriptInterpreterPythonImpl::EnterSession(on_entry_flags=0x%" PRIx16 ")",
+      on_entry_flags);
 
   m_session_is_active = true;
 
@@ -1040,17 +1039,16 @@ bool ScriptInterpreterPythonImpl::Interrupt() {
       long tid = state->thread_id;
       PyThreadState_Swap(state);
       int num_threads = PyThreadState_SetAsyncExc(tid, PyExc_KeyboardInterrupt);
-      if (log)
-        log->Printf("ScriptInterpreterPythonImpl::Interrupt() sending "
-                    "PyExc_KeyboardInterrupt (tid = %li, num_threads = %i)...",
-                    tid, num_threads);
+      LLDB_LOGF(log,
+                "ScriptInterpreterPythonImpl::Interrupt() sending "
+                "PyExc_KeyboardInterrupt (tid = %li, num_threads = %i)...",
+                tid, num_threads);
       return true;
     }
   }
-  if (log)
-    log->Printf(
-        "ScriptInterpreterPythonImpl::Interrupt() python code not running, "
-        "can't interrupt");
+  LLDB_LOGF(log,
+            "ScriptInterpreterPythonImpl::Interrupt() python code not running, "
+            "can't interrupt");
   return false;
 }
 bool ScriptInterpreterPythonImpl::ExecuteOneLineWithReturn(

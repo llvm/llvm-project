@@ -643,8 +643,8 @@ void Target::AddBreakpoint(lldb::BreakpointSP bp_sp, bool internal) {
   if (log) {
     StreamString s;
     bp_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
-    log->Printf("Target::%s (internal = %s) => break_id = %s\n", __FUNCTION__,
-                bp_sp->IsInternal() ? "yes" : "no", s.GetData());
+    LLDB_LOGF(log, "Target::%s (internal = %s) => break_id = %s\n",
+              __FUNCTION__, bp_sp->IsInternal() ? "yes" : "no", s.GetData());
   }
 
   bp_sp->ResolveBreakpoint();
@@ -776,10 +776,10 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
                                       const CompilerType *type, uint32_t kind,
                                       Status &error) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-  if (log)
-    log->Printf("Target::%s (addr = 0x%8.8" PRIx64 " size = %" PRIu64
-                " type = %u)\n",
-                __FUNCTION__, addr, (uint64_t)size, kind);
+  LLDB_LOGF(log,
+            "Target::%s (addr = 0x%8.8" PRIx64 " size = %" PRIu64
+            " type = %u)\n",
+            __FUNCTION__, addr, (uint64_t)size, kind);
 
   WatchpointSP wp_sp;
   if (!ProcessIsValid()) {
@@ -834,10 +834,9 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
   }
 
   error = m_process_sp->EnableWatchpoint(wp_sp.get(), notify);
-  if (log)
-    log->Printf("Target::%s (creation of watchpoint %s with id = %u)\n",
-                __FUNCTION__, error.Success() ? "succeeded" : "failed",
-                wp_sp->GetID());
+  LLDB_LOGF(log, "Target::%s (creation of watchpoint %s with id = %u)\n",
+            __FUNCTION__, error.Success() ? "succeeded" : "failed",
+            wp_sp->GetID());
 
   if (error.Fail()) {
     // Enabling the watchpoint on the device side failed. Remove the said
@@ -856,8 +855,7 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
 
 void Target::RemoveAllowedBreakpoints() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-  if (log)
-    log->Printf("Target::%s \n", __FUNCTION__);
+  LLDB_LOGF(log, "Target::%s \n", __FUNCTION__);
 
   m_breakpoint_list.RemoveAllowed(true);
 
@@ -866,9 +864,8 @@ void Target::RemoveAllowedBreakpoints() {
 
 void Target::RemoveAllBreakpoints(bool internal_also) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-  if (log)
-    log->Printf("Target::%s (internal_also = %s)\n", __FUNCTION__,
-                internal_also ? "yes" : "no");
+  LLDB_LOGF(log, "Target::%s (internal_also = %s)\n", __FUNCTION__,
+            internal_also ? "yes" : "no");
 
   m_breakpoint_list.RemoveAll(true);
   if (internal_also)
@@ -879,9 +876,8 @@ void Target::RemoveAllBreakpoints(bool internal_also) {
 
 void Target::DisableAllBreakpoints(bool internal_also) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-  if (log)
-    log->Printf("Target::%s (internal_also = %s)\n", __FUNCTION__,
-                internal_also ? "yes" : "no");
+  LLDB_LOGF(log, "Target::%s (internal_also = %s)\n", __FUNCTION__,
+            internal_also ? "yes" : "no");
 
   m_breakpoint_list.SetEnabledAll(false);
   if (internal_also)
@@ -890,17 +886,15 @@ void Target::DisableAllBreakpoints(bool internal_also) {
 
 void Target::DisableAllowedBreakpoints() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-  if (log)
-    log->Printf("Target::%s", __FUNCTION__);
+  LLDB_LOGF(log, "Target::%s", __FUNCTION__);
 
   m_breakpoint_list.SetEnabledAllowed(false);
 }
 
 void Target::EnableAllBreakpoints(bool internal_also) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-  if (log)
-    log->Printf("Target::%s (internal_also = %s)\n", __FUNCTION__,
-                internal_also ? "yes" : "no");
+  LLDB_LOGF(log, "Target::%s (internal_also = %s)\n", __FUNCTION__,
+            internal_also ? "yes" : "no");
 
   m_breakpoint_list.SetEnabledAll(true);
   if (internal_also)
@@ -909,17 +903,15 @@ void Target::EnableAllBreakpoints(bool internal_also) {
 
 void Target::EnableAllowedBreakpoints() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-  if (log)
-    log->Printf("Target::%s", __FUNCTION__);
+  LLDB_LOGF(log, "Target::%s", __FUNCTION__);
 
   m_breakpoint_list.SetEnabledAllowed(true);
 }
 
 bool Target::RemoveBreakpointByID(break_id_t break_id) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-  if (log)
-    log->Printf("Target::%s (break_id = %i, internal = %s)\n", __FUNCTION__,
-                break_id, LLDB_BREAK_ID_IS_INTERNAL(break_id) ? "yes" : "no");
+  LLDB_LOGF(log, "Target::%s (break_id = %i, internal = %s)\n", __FUNCTION__,
+            break_id, LLDB_BREAK_ID_IS_INTERNAL(break_id) ? "yes" : "no");
 
   if (DisableBreakpointByID(break_id)) {
     if (LLDB_BREAK_ID_IS_INTERNAL(break_id))
@@ -938,9 +930,8 @@ bool Target::RemoveBreakpointByID(break_id_t break_id) {
 
 bool Target::DisableBreakpointByID(break_id_t break_id) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-  if (log)
-    log->Printf("Target::%s (break_id = %i, internal = %s)\n", __FUNCTION__,
-                break_id, LLDB_BREAK_ID_IS_INTERNAL(break_id) ? "yes" : "no");
+  LLDB_LOGF(log, "Target::%s (break_id = %i, internal = %s)\n", __FUNCTION__,
+            break_id, LLDB_BREAK_ID_IS_INTERNAL(break_id) ? "yes" : "no");
 
   BreakpointSP bp_sp;
 
@@ -957,9 +948,8 @@ bool Target::DisableBreakpointByID(break_id_t break_id) {
 
 bool Target::EnableBreakpointByID(break_id_t break_id) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-  if (log)
-    log->Printf("Target::%s (break_id = %i, internal = %s)\n", __FUNCTION__,
-                break_id, LLDB_BREAK_ID_IS_INTERNAL(break_id) ? "yes" : "no");
+  LLDB_LOGF(log, "Target::%s (break_id = %i, internal = %s)\n", __FUNCTION__,
+            break_id, LLDB_BREAK_ID_IS_INTERNAL(break_id) ? "yes" : "no");
 
   BreakpointSP bp_sp;
 
@@ -1137,8 +1127,7 @@ Status Target::CreateBreakpointsFromFile(const FileSpec &file,
 // to end operations.
 bool Target::RemoveAllWatchpoints(bool end_to_end) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-  if (log)
-    log->Printf("Target::%s\n", __FUNCTION__);
+  LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
   if (!end_to_end) {
     m_watchpoint_list.RemoveAll(true);
@@ -1169,8 +1158,7 @@ bool Target::RemoveAllWatchpoints(bool end_to_end) {
 // to end operations.
 bool Target::DisableAllWatchpoints(bool end_to_end) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-  if (log)
-    log->Printf("Target::%s\n", __FUNCTION__);
+  LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
   if (!end_to_end) {
     m_watchpoint_list.SetEnabledAll(false);
@@ -1199,8 +1187,7 @@ bool Target::DisableAllWatchpoints(bool end_to_end) {
 // to end operations.
 bool Target::EnableAllWatchpoints(bool end_to_end) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-  if (log)
-    log->Printf("Target::%s\n", __FUNCTION__);
+  LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
   if (!end_to_end) {
     m_watchpoint_list.SetEnabledAll(true);
@@ -1228,8 +1215,7 @@ bool Target::EnableAllWatchpoints(bool end_to_end) {
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list.
 bool Target::ClearAllWatchpointHitCounts() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-  if (log)
-    log->Printf("Target::%s\n", __FUNCTION__);
+  LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
   size_t num_watchpoints = m_watchpoint_list.GetSize();
   for (size_t i = 0; i < num_watchpoints; ++i) {
@@ -1245,8 +1231,7 @@ bool Target::ClearAllWatchpointHitCounts() {
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list.
 bool Target::ClearAllWatchpointHistoricValues() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-  if (log)
-    log->Printf("Target::%s\n", __FUNCTION__);
+  LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
   size_t num_watchpoints = m_watchpoint_list.GetSize();
   for (size_t i = 0; i < num_watchpoints; ++i) {
@@ -1263,8 +1248,7 @@ bool Target::ClearAllWatchpointHistoricValues() {
 // these operations.
 bool Target::IgnoreAllWatchpoints(uint32_t ignore_count) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-  if (log)
-    log->Printf("Target::%s\n", __FUNCTION__);
+  LLDB_LOGF(log, "Target::%s\n", __FUNCTION__);
 
   if (!ProcessIsValid())
     return false;
@@ -1283,8 +1267,7 @@ bool Target::IgnoreAllWatchpoints(uint32_t ignore_count) {
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list.
 bool Target::DisableWatchpointByID(lldb::watch_id_t watch_id) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-  if (log)
-    log->Printf("Target::%s (watch_id = %i)\n", __FUNCTION__, watch_id);
+  LLDB_LOGF(log, "Target::%s (watch_id = %i)\n", __FUNCTION__, watch_id);
 
   if (!ProcessIsValid())
     return false;
@@ -1303,8 +1286,7 @@ bool Target::DisableWatchpointByID(lldb::watch_id_t watch_id) {
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list.
 bool Target::EnableWatchpointByID(lldb::watch_id_t watch_id) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-  if (log)
-    log->Printf("Target::%s (watch_id = %i)\n", __FUNCTION__, watch_id);
+  LLDB_LOGF(log, "Target::%s (watch_id = %i)\n", __FUNCTION__, watch_id);
 
   if (!ProcessIsValid())
     return false;
@@ -1323,8 +1305,7 @@ bool Target::EnableWatchpointByID(lldb::watch_id_t watch_id) {
 // Assumption: Caller holds the list mutex lock for m_watchpoint_list.
 bool Target::RemoveWatchpointByID(lldb::watch_id_t watch_id) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-  if (log)
-    log->Printf("Target::%s (watch_id = %i)\n", __FUNCTION__, watch_id);
+  LLDB_LOGF(log, "Target::%s (watch_id = %i)\n", __FUNCTION__, watch_id);
 
   WatchpointSP watch_to_remove_sp = m_watchpoint_list.FindByID(watch_id);
   if (watch_to_remove_sp == m_last_created_watchpoint)
@@ -1341,8 +1322,7 @@ bool Target::RemoveWatchpointByID(lldb::watch_id_t watch_id) {
 bool Target::IgnoreWatchpointByID(lldb::watch_id_t watch_id,
                                   uint32_t ignore_count) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_WATCHPOINTS));
-  if (log)
-    log->Printf("Target::%s (watch_id = %i)\n", __FUNCTION__, watch_id);
+  LLDB_LOGF(log, "Target::%s (watch_id = %i)\n", __FUNCTION__, watch_id);
 
   if (!ProcessIsValid())
     return false;
@@ -1533,10 +1513,9 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
 
   // If we have an executable file, try to reset the executable to the desired
   // architecture
-  if (log)
-    log->Printf("Target::SetArchitecture changing architecture to %s (%s)",
-                arch_spec.GetArchitectureName(),
-                arch_spec.GetTriple().getTriple().c_str());
+  LLDB_LOGF(log, "Target::SetArchitecture changing architecture to %s (%s)",
+            arch_spec.GetArchitectureName(),
+            arch_spec.GetTriple().getTriple().c_str());
   m_arch = other;
   ModuleSP executable_sp = GetExecutableModule();
 
@@ -1544,11 +1523,11 @@ bool Target::SetArchitecture(const ArchSpec &arch_spec, bool set_platform) {
   // Need to do something about unsetting breakpoints.
 
   if (executable_sp) {
-    if (log)
-      log->Printf("Target::SetArchitecture Trying to select executable file "
-                  "architecture %s (%s)",
-                  arch_spec.GetArchitectureName(),
-                  arch_spec.GetTriple().getTriple().c_str());
+    LLDB_LOGF(log,
+              "Target::SetArchitecture Trying to select executable file "
+              "architecture %s (%s)",
+              arch_spec.GetArchitectureName(),
+              arch_spec.GetTriple().getTriple().c_str());
     ModuleSpec module_spec(executable_sp->GetFileSpec(), other);
     FileSpecList search_paths = GetExecutableSearchPaths();
     Status error = ModuleList::GetSharedModule(module_spec, executable_sp,
@@ -1569,12 +1548,11 @@ bool Target::MergeArchitecture(const ArchSpec &arch_spec) {
       // The current target arch is compatible with "arch_spec", see if we can
       // improve our current architecture using bits from "arch_spec"
 
-      if (log)
-        log->Printf(
-            "Target::MergeArchitecture target has arch %s, merging with "
-            "arch %s",
-            m_arch.GetSpec().GetTriple().getTriple().c_str(),
-            arch_spec.GetTriple().getTriple().c_str());
+      LLDB_LOGF(log,
+                "Target::MergeArchitecture target has arch %s, merging with "
+                "arch %s",
+                m_arch.GetSpec().GetTriple().getTriple().c_str(),
+                arch_spec.GetTriple().getTriple().c_str());
 
       // Merge bits from arch_spec into "merged_arch" and set our architecture
       ArchSpec merged_arch(m_arch.GetSpec());
@@ -2835,9 +2813,8 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   Status error;
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_TARGET));
 
-  if (log)
-    log->Printf("Target::%s() called for %s", __FUNCTION__,
-                launch_info.GetExecutableFile().GetPath().c_str());
+  LLDB_LOGF(log, "Target::%s() called for %s", __FUNCTION__,
+            launch_info.GetExecutableFile().GetPath().c_str());
 
   StateType state = eStateInvalid;
 
@@ -2849,14 +2826,12 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
 
     if (process_sp) {
       state = process_sp->GetState();
-      if (log)
-        log->Printf(
-            "Target::%s the process exists, and its current state is %s",
-            __FUNCTION__, StateAsCString(state));
+      LLDB_LOGF(log,
+                "Target::%s the process exists, and its current state is %s",
+                __FUNCTION__, StateAsCString(state));
     } else {
-      if (log)
-        log->Printf("Target::%s the process instance doesn't currently exist.",
-                    __FUNCTION__);
+      LLDB_LOGF(log, "Target::%s the process instance doesn't currently exist.",
+                __FUNCTION__);
     }
   }
 
@@ -2888,9 +2863,8 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
   // that can launch a process for debugging, go ahead and do that here.
   if (state != eStateConnected && platform_sp &&
       platform_sp->CanDebugProcess()) {
-    if (log)
-      log->Printf("Target::%s asking the platform to debug the process",
-                  __FUNCTION__);
+    LLDB_LOGF(log, "Target::%s asking the platform to debug the process",
+              __FUNCTION__);
 
     // If there was a previous process, delete it before we make the new one.
     // One subtle point, we delete the process before we release the reference
@@ -2902,10 +2876,10 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
         GetPlatform()->DebugProcess(launch_info, debugger, this, error);
 
   } else {
-    if (log)
-      log->Printf("Target::%s the platform doesn't know how to debug a "
-                  "process, getting a process plugin to do this for us.",
-                  __FUNCTION__);
+    LLDB_LOGF(log,
+              "Target::%s the platform doesn't know how to debug a "
+              "process, getting a process plugin to do this for us.",
+              __FUNCTION__);
 
     if (state == eStateConnected) {
       assert(m_process_sp);

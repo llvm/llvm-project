@@ -2103,8 +2103,9 @@ UUID ObjectFileMachO::GetSharedCacheUUID(FileSpec dyld_shared_cache,
   }
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
   if (log && dsc_uuid.IsValid()) {
-    log->Printf("Shared cache %s has UUID %s", dyld_shared_cache.GetPath().c_str(), 
-                dsc_uuid.GetAsString().c_str());
+    LLDB_LOGF(log, "Shared cache %s has UUID %s",
+              dyld_shared_cache.GetPath().c_str(),
+              dsc_uuid.GetAsString().c_str());
   }
   return dsc_uuid;
 }
@@ -4933,8 +4934,7 @@ namespace {
       default: {
         Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS |
                                                         LIBLLDB_LOG_PROCESS));
-        if (log)
-          log->Printf("unsupported platform in LC_BUILD_VERSION");
+        LLDB_LOGF(log, "unsupported platform in LC_BUILD_VERSION");
       }
       }
     }
@@ -5718,8 +5718,10 @@ void ObjectFileMachO::GetProcessSharedCacheUUID(Process *process, addr_t &base_a
                                   private_shared_cache);
   }
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS | LIBLLDB_LOG_PROCESS));
-  if (log)
-    log->Printf("inferior process shared cache has a UUID of %s, base address 0x%" PRIx64 , uuid.GetAsString().c_str(), base_addr);
+  LLDB_LOGF(
+      log,
+      "inferior process shared cache has a UUID of %s, base address 0x%" PRIx64,
+      uuid.GetAsString().c_str(), base_addr);
 }
 
 // From dyld SPI header dyld_process_info.h
@@ -5804,7 +5806,10 @@ void ObjectFileMachO::GetLLDBSharedCacheUUID(addr_t &base_addr, UUID &uuid) {
   }
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_SYMBOLS | LIBLLDB_LOG_PROCESS));
   if (log && uuid.IsValid())
-    log->Printf("lldb's in-memory shared cache has a UUID of %s base address of 0x%" PRIx64, uuid.GetAsString().c_str(), base_addr);
+    LLDB_LOGF(log,
+              "lldb's in-memory shared cache has a UUID of %s base address of "
+              "0x%" PRIx64,
+              uuid.GetAsString().c_str(), base_addr);
 #endif
 }
 

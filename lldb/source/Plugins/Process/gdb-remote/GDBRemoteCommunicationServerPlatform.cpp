@@ -104,8 +104,8 @@ Status GDBRemoteCommunicationServerPlatform::LaunchGDBServer(
     hostname = "127.0.0.1";
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log)
-    log->Printf("Launching debugserver with: %s:%u...", hostname.c_str(), port);
+  LLDB_LOGF(log, "Launching debugserver with: %s:%u...", hostname.c_str(),
+            port);
 
   // Do not run in a new session so that it can not linger after the platform
   // closes.
@@ -161,9 +161,8 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
   // process...
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log)
-    log->Printf("GDBRemoteCommunicationServerPlatform::%s() called",
-                __FUNCTION__);
+  LLDB_LOGF(log, "GDBRemoteCommunicationServerPlatform::%s() called",
+            __FUNCTION__);
 
   ConnectionFileDescriptor file_conn;
   std::string hostname;
@@ -183,17 +182,17 @@ GDBRemoteCommunicationServerPlatform::Handle_qLaunchGDBServer(
   Status error =
       LaunchGDBServer(Args(), hostname, debugserver_pid, port, socket_name);
   if (error.Fail()) {
-    if (log)
-      log->Printf("GDBRemoteCommunicationServerPlatform::%s() debugserver "
-                  "launch failed: %s",
-                  __FUNCTION__, error.AsCString());
+    LLDB_LOGF(log,
+              "GDBRemoteCommunicationServerPlatform::%s() debugserver "
+              "launch failed: %s",
+              __FUNCTION__, error.AsCString());
     return SendErrorResponse(9);
   }
 
-  if (log)
-    log->Printf("GDBRemoteCommunicationServerPlatform::%s() debugserver "
-                "launched successfully as pid %" PRIu64,
-                __FUNCTION__, debugserver_pid);
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationServerPlatform::%s() debugserver "
+            "launched successfully as pid %" PRIu64,
+            __FUNCTION__, debugserver_pid);
 
   StreamGDBRemote response;
   response.Printf("pid:%" PRIu64 ";port:%u;", debugserver_pid,

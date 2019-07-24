@@ -1119,26 +1119,26 @@ void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
       object_sp->Dump(json_stream);
     else
       json_stream.PutCString("<null>");
-    log->Printf("StructuredDataDarwinLog::%s() called with json: %s",
-                __FUNCTION__, json_stream.GetData());
+    LLDB_LOGF(log, "StructuredDataDarwinLog::%s() called with json: %s",
+              __FUNCTION__, json_stream.GetData());
   }
 
   // Ignore empty structured data.
   if (!object_sp) {
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s() StructuredData object "
-                  "is null",
-                  __FUNCTION__);
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s() StructuredData object "
+              "is null",
+              __FUNCTION__);
     return;
   }
 
   // Ignore any data that isn't for us.
   if (type_name != GetDarwinLogTypeName()) {
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s() StructuredData type "
-                  "expected to be %s but was %s, ignoring",
-                  __FUNCTION__, GetDarwinLogTypeName().AsCString(),
-                  type_name.AsCString());
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s() StructuredData type "
+              "expected to be %s but was %s, ignoring",
+              __FUNCTION__, GetDarwinLogTypeName().AsCString(),
+              type_name.AsCString());
     return;
   }
 
@@ -1148,9 +1148,8 @@ void StructuredDataDarwinLog::HandleArrivalOfStructuredData(
   DebuggerSP debugger_sp = process.GetTarget().GetDebugger().shared_from_this();
   auto options_sp = GetGlobalEnableOptions(debugger_sp);
   if (options_sp && options_sp->GetBroadcastEvents()) {
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s() broadcasting event",
-                  __FUNCTION__);
+    LLDB_LOGF(log, "StructuredDataDarwinLog::%s() broadcasting event",
+              __FUNCTION__);
     process.BroadcastStructuredData(object_sp, shared_from_this());
   }
 
@@ -1263,19 +1262,18 @@ void StructuredDataDarwinLog::SetEnabled(bool enabled) {
 void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
                                              ModuleList &module_list) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  if (log)
-    log->Printf("StructuredDataDarwinLog::%s called (process uid %u)",
-                __FUNCTION__, process.GetUniqueID());
+  LLDB_LOGF(log, "StructuredDataDarwinLog::%s called (process uid %u)",
+            __FUNCTION__, process.GetUniqueID());
 
   // Check if we should enable the darwin log support on startup/attach.
   if (!GetGlobalProperties()->GetEnableOnStartup() &&
       !s_is_explicitly_enabled) {
     // We're neither auto-enabled or explicitly enabled, so we shouldn't try to
     // enable here.
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s not applicable, we're not "
-                  "enabled (process uid %u)",
-                  __FUNCTION__, process.GetUniqueID());
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s not applicable, we're not "
+              "enabled (process uid %u)",
+              __FUNCTION__, process.GetUniqueID());
     return;
   }
 
@@ -1283,10 +1281,10 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
   {
     std::lock_guard<std::mutex> locker(m_added_breakpoint_mutex);
     if (m_added_breakpoint) {
-      if (log)
-        log->Printf("StructuredDataDarwinLog::%s process uid %u's "
-                    "post-libtrace-init breakpoint is already set",
-                    __FUNCTION__, process.GetUniqueID());
+      LLDB_LOGF(log,
+                "StructuredDataDarwinLog::%s process uid %u's "
+                "post-libtrace-init breakpoint is already set",
+                __FUNCTION__, process.GetUniqueID());
       return;
     }
   }
@@ -1298,11 +1296,11 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
       GetGlobalProperties()->GetLoggingModuleName();
   if (!logging_module_cstr || (logging_module_cstr[0] == 0)) {
     // We need this.  Bail.
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s no logging module name "
-                  "specified, we don't know where to set a breakpoint "
-                  "(process uid %u)",
-                  __FUNCTION__, process.GetUniqueID());
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s no logging module name "
+              "specified, we don't know where to set a breakpoint "
+              "(process uid %u)",
+              __FUNCTION__, process.GetUniqueID());
     return;
   }
 
@@ -1324,23 +1322,23 @@ void StructuredDataDarwinLog::ModulesDidLoad(Process &process,
   }
 
   if (!found_logging_support_module) {
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s logging module %s "
-                  "has not yet been loaded, can't set a breakpoint "
-                  "yet (process uid %u)",
-                  __FUNCTION__, logging_module_name.AsCString(),
-                  process.GetUniqueID());
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s logging module %s "
+              "has not yet been loaded, can't set a breakpoint "
+              "yet (process uid %u)",
+              __FUNCTION__, logging_module_name.AsCString(),
+              process.GetUniqueID());
     return;
   }
 
   // Time to enqueue the breakpoint so we can wait for logging support to be
   // initialized before we try to tap the libtrace stream.
   AddInitCompletionHook(process);
-  if (log)
-    log->Printf("StructuredDataDarwinLog::%s post-init hook breakpoint "
-                "set for logging module %s (process uid %u)",
-                __FUNCTION__, logging_module_name.AsCString(),
-                process.GetUniqueID());
+  LLDB_LOGF(log,
+            "StructuredDataDarwinLog::%s post-init hook breakpoint "
+            "set for logging module %s (process uid %u)",
+            __FUNCTION__, logging_module_name.AsCString(),
+            process.GetUniqueID());
 
   // We need to try the enable here as well, which will succeed in the event
   // that we're attaching to (rather than launching) the process and the
@@ -1519,38 +1517,36 @@ bool StructuredDataDarwinLog::InitCompletionHookCallback(
   // we can execute our logic to enable the logging support.
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  if (log)
-    log->Printf("StructuredDataDarwinLog::%s() called", __FUNCTION__);
+  LLDB_LOGF(log, "StructuredDataDarwinLog::%s() called", __FUNCTION__);
 
   // Get the current thread.
   if (!context) {
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s() warning: no context, "
-                  "ignoring",
-                  __FUNCTION__);
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s() warning: no context, "
+              "ignoring",
+              __FUNCTION__);
     return false;
   }
 
   // Get the plugin from the process.
   auto process_sp = context->exe_ctx_ref.GetProcessSP();
   if (!process_sp) {
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s() warning: invalid "
-                  "process in context, ignoring",
-                  __FUNCTION__);
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s() warning: invalid "
+              "process in context, ignoring",
+              __FUNCTION__);
     return false;
   }
-  if (log)
-    log->Printf("StructuredDataDarwinLog::%s() call is for process uid %d",
-                __FUNCTION__, process_sp->GetUniqueID());
+  LLDB_LOGF(log, "StructuredDataDarwinLog::%s() call is for process uid %d",
+            __FUNCTION__, process_sp->GetUniqueID());
 
   auto plugin_sp = process_sp->GetStructuredDataPlugin(GetDarwinLogTypeName());
   if (!plugin_sp) {
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s() warning: no plugin for "
-                  "feature %s in process uid %u",
-                  __FUNCTION__, GetDarwinLogTypeName().AsCString(),
-                  process_sp->GetUniqueID());
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s() warning: no plugin for "
+              "feature %s in process uid %u",
+              __FUNCTION__, GetDarwinLogTypeName().AsCString(),
+              process_sp->GetUniqueID());
     return false;
   }
 
@@ -1561,51 +1557,51 @@ bool StructuredDataDarwinLog::InitCompletionHookCallback(
   std::weak_ptr<StructuredDataPlugin> plugin_wp(plugin_sp);
   ThreadPlanCallOnFunctionExit::Callback callback =
       [plugin_wp, &called_enable_method, log, process_uid]() {
-        if (log)
-          log->Printf("StructuredDataDarwinLog::post-init callback: "
-                      "called (process uid %u)",
-                      process_uid);
+        LLDB_LOGF(log,
+                  "StructuredDataDarwinLog::post-init callback: "
+                  "called (process uid %u)",
+                  process_uid);
 
         auto strong_plugin_sp = plugin_wp.lock();
         if (!strong_plugin_sp) {
-          if (log)
-            log->Printf("StructuredDataDarwinLog::post-init callback: "
-                        "plugin no longer exists, ignoring (process "
-                        "uid %u)",
-                        process_uid);
+          LLDB_LOGF(log,
+                    "StructuredDataDarwinLog::post-init callback: "
+                    "plugin no longer exists, ignoring (process "
+                    "uid %u)",
+                    process_uid);
           return;
         }
         // Make sure we only call it once, just in case the thread plan hits
         // the breakpoint twice.
         if (!called_enable_method) {
-          if (log)
-            log->Printf("StructuredDataDarwinLog::post-init callback: "
-                        "calling EnableNow() (process uid %u)",
-                        process_uid);
+          LLDB_LOGF(log,
+                    "StructuredDataDarwinLog::post-init callback: "
+                    "calling EnableNow() (process uid %u)",
+                    process_uid);
           static_cast<StructuredDataDarwinLog *>(strong_plugin_sp.get())
               ->EnableNow();
           called_enable_method = true;
         } else {
           // Our breakpoint was hit more than once.  Unexpected but no harm
           // done.  Log it.
-          if (log)
-            log->Printf("StructuredDataDarwinLog::post-init callback: "
-                        "skipping EnableNow(), already called by "
-                        "callback [we hit this more than once] "
-                        "(process uid %u)",
-                        process_uid);
+          LLDB_LOGF(log,
+                    "StructuredDataDarwinLog::post-init callback: "
+                    "skipping EnableNow(), already called by "
+                    "callback [we hit this more than once] "
+                    "(process uid %u)",
+                    process_uid);
         }
       };
 
   // Grab the current thread.
   auto thread_sp = context->exe_ctx_ref.GetThreadSP();
   if (!thread_sp) {
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s() warning: failed to "
-                  "retrieve the current thread from the execution "
-                  "context, nowhere to run the thread plan (process uid "
-                  "%u)",
-                  __FUNCTION__, process_sp->GetUniqueID());
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s() warning: failed to "
+              "retrieve the current thread from the execution "
+              "context, nowhere to run the thread plan (process uid "
+              "%u)",
+              __FUNCTION__, process_sp->GetUniqueID());
     return false;
   }
 
@@ -1614,10 +1610,10 @@ bool StructuredDataDarwinLog::InitCompletionHookCallback(
       ThreadPlanSP(new ThreadPlanCallOnFunctionExit(*thread_sp, callback));
   const bool abort_other_plans = false;
   thread_sp->QueueThreadPlan(thread_plan_sp, abort_other_plans);
-  if (log)
-    log->Printf("StructuredDataDarwinLog::%s() queuing thread plan on "
-                "trace library init method entry (process uid %u)",
-                __FUNCTION__, process_sp->GetUniqueID());
+  LLDB_LOGF(log,
+            "StructuredDataDarwinLog::%s() queuing thread plan on "
+            "trace library init method entry (process uid %u)",
+            __FUNCTION__, process_sp->GetUniqueID());
 
   // We return false here to indicate that it isn't a public stop.
   return false;
@@ -1625,18 +1621,17 @@ bool StructuredDataDarwinLog::InitCompletionHookCallback(
 
 void StructuredDataDarwinLog::AddInitCompletionHook(Process &process) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  if (log)
-    log->Printf("StructuredDataDarwinLog::%s() called (process uid %u)",
-                __FUNCTION__, process.GetUniqueID());
+  LLDB_LOGF(log, "StructuredDataDarwinLog::%s() called (process uid %u)",
+            __FUNCTION__, process.GetUniqueID());
 
   // Make sure we haven't already done this.
   {
     std::lock_guard<std::mutex> locker(m_added_breakpoint_mutex);
     if (m_added_breakpoint) {
-      if (log)
-        log->Printf("StructuredDataDarwinLog::%s() ignoring request, "
-                    "breakpoint already set (process uid %u)",
-                    __FUNCTION__, process.GetUniqueID());
+      LLDB_LOGF(log,
+                "StructuredDataDarwinLog::%s() ignoring request, "
+                "breakpoint already set (process uid %u)",
+                __FUNCTION__, process.GetUniqueID());
       return;
     }
 
@@ -1669,22 +1664,22 @@ void StructuredDataDarwinLog::AddInitCompletionHook(Process &process) {
       eLanguageTypeC, offset, skip_prologue, internal, hardware);
   if (!breakpoint_sp) {
     // Huh?  Bail here.
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s() failed to set "
-                  "breakpoint in module %s, function %s (process uid %u)",
-                  __FUNCTION__, GetGlobalProperties()->GetLoggingModuleName(),
-                  func_name, process.GetUniqueID());
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s() failed to set "
+              "breakpoint in module %s, function %s (process uid %u)",
+              __FUNCTION__, GetGlobalProperties()->GetLoggingModuleName(),
+              func_name, process.GetUniqueID());
     return;
   }
 
   // Set our callback.
   breakpoint_sp->SetCallback(InitCompletionHookCallback, nullptr);
   m_breakpoint_id = breakpoint_sp->GetID();
-  if (log)
-    log->Printf("StructuredDataDarwinLog::%s() breakpoint set in module %s,"
-                "function %s (process uid %u)",
-                __FUNCTION__, GetGlobalProperties()->GetLoggingModuleName(),
-                func_name, process.GetUniqueID());
+  LLDB_LOGF(log,
+            "StructuredDataDarwinLog::%s() breakpoint set in module %s,"
+            "function %s (process uid %u)",
+            __FUNCTION__, GetGlobalProperties()->GetLoggingModuleName(),
+            func_name, process.GetUniqueID());
 }
 
 void StructuredDataDarwinLog::DumpTimestamp(Stream &stream,
@@ -1825,22 +1820,20 @@ size_t StructuredDataDarwinLog::HandleDisplayOfEvent(
 
 void StructuredDataDarwinLog::EnableNow() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  if (log)
-    log->Printf("StructuredDataDarwinLog::%s() called", __FUNCTION__);
+  LLDB_LOGF(log, "StructuredDataDarwinLog::%s() called", __FUNCTION__);
 
   // Run the enable command.
   auto process_sp = GetProcess();
   if (!process_sp) {
     // Nothing to do.
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s() warning: failed to get "
-                  "valid process, skipping",
-                  __FUNCTION__);
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s() warning: failed to get "
+              "valid process, skipping",
+              __FUNCTION__);
     return;
   }
-  if (log)
-    log->Printf("StructuredDataDarwinLog::%s() call is for process uid %u",
-                __FUNCTION__, process_sp->GetUniqueID());
+  LLDB_LOGF(log, "StructuredDataDarwinLog::%s() call is for process uid %u",
+            __FUNCTION__, process_sp->GetUniqueID());
 
   // If we have configuration data, we can directly enable it now. Otherwise,
   // we need to run through the command interpreter to parse the auto-run
@@ -1849,10 +1842,10 @@ void StructuredDataDarwinLog::EnableNow() {
   DebuggerSP debugger_sp =
       process_sp->GetTarget().GetDebugger().shared_from_this();
   if (!debugger_sp) {
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s() warning: failed to get "
-                  "debugger shared pointer, skipping (process uid %u)",
-                  __FUNCTION__, process_sp->GetUniqueID());
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s() warning: failed to get "
+              "debugger shared pointer, skipping (process uid %u)",
+              __FUNCTION__, process_sp->GetUniqueID());
     return;
   }
 
@@ -1864,13 +1857,15 @@ void StructuredDataDarwinLog::EnableNow() {
     const bool success = RunEnableCommand(interpreter);
     if (log) {
       if (success)
-        log->Printf("StructuredDataDarwinLog::%s() ran enable command "
-                    "successfully for (process uid %u)",
-                    __FUNCTION__, process_sp->GetUniqueID());
+        LLDB_LOGF(log,
+                  "StructuredDataDarwinLog::%s() ran enable command "
+                  "successfully for (process uid %u)",
+                  __FUNCTION__, process_sp->GetUniqueID());
       else
-        log->Printf("StructuredDataDarwinLog::%s() error: running "
-                    "enable command failed (process uid %u)",
-                    __FUNCTION__, process_sp->GetUniqueID());
+        LLDB_LOGF(log,
+                  "StructuredDataDarwinLog::%s() error: running "
+                  "enable command failed (process uid %u)",
+                  __FUNCTION__, process_sp->GetUniqueID());
     }
     // Report failures to the debugger error stream.
     auto error_stream_sp = debugger_sp->GetAsyncErrorStream();
@@ -1886,11 +1881,11 @@ void StructuredDataDarwinLog::EnableNow() {
   // specified options.
   auto config_sp = options_sp->BuildConfigurationData(true);
   if (!config_sp) {
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s() warning: failed to "
-                  "build configuration data for enable options, skipping "
-                  "(process uid %u)",
-                  __FUNCTION__, process_sp->GetUniqueID());
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s() warning: failed to "
+              "build configuration data for enable options, skipping "
+              "(process uid %u)",
+              __FUNCTION__, process_sp->GetUniqueID());
     return;
   }
 
@@ -1901,11 +1896,11 @@ void StructuredDataDarwinLog::EnableNow() {
 
   // Report results.
   if (!error.Success()) {
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s() "
-                  "ConfigureStructuredData() call failed "
-                  "(process uid %u): %s",
-                  __FUNCTION__, process_sp->GetUniqueID(), error.AsCString());
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s() "
+              "ConfigureStructuredData() call failed "
+              "(process uid %u): %s",
+              __FUNCTION__, process_sp->GetUniqueID(), error.AsCString());
     auto error_stream_sp = debugger_sp->GetAsyncErrorStream();
     if (error_stream_sp) {
       error_stream_sp->Printf("failed to configure DarwinLog "
@@ -1916,9 +1911,9 @@ void StructuredDataDarwinLog::EnableNow() {
     m_is_enabled = false;
   } else {
     m_is_enabled = true;
-    if (log)
-      log->Printf("StructuredDataDarwinLog::%s() success via direct "
-                  "configuration (process uid %u)",
-                  __FUNCTION__, process_sp->GetUniqueID());
+    LLDB_LOGF(log,
+              "StructuredDataDarwinLog::%s() success via direct "
+              "configuration (process uid %u)",
+              __FUNCTION__, process_sp->GetUniqueID());
   }
 }

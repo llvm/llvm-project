@@ -525,8 +525,7 @@ bool DynamicLoaderMacOSXDYLD::AddModulesUsingImageInfosAddress(
     lldb::addr_t image_infos_addr, uint32_t image_infos_count) {
   ImageInfo::collection image_infos;
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_DYNAMIC_LOADER));
-  if (log)
-    log->Printf("Adding %d modules.\n", image_infos_count);
+  LLDB_LOGF(log, "Adding %d modules.\n", image_infos_count);
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   std::lock_guard<std::recursive_mutex> baseclass_guard(GetMutex());
@@ -581,14 +580,13 @@ bool DynamicLoaderMacOSXDYLD::RemoveModulesUsingImageInfosAddress(
     return false;
   }
 
-  if (log)
-    log->Printf("Removing %d modules.", image_infos_count);
+  LLDB_LOGF(log, "Removing %d modules.", image_infos_count);
 
   ModuleList unloaded_module_list;
   for (uint32_t idx = 0; idx < image_infos.size(); ++idx) {
     if (log) {
-      log->Printf("Removing module at address=0x%16.16" PRIx64 ".",
-                  image_infos[idx].address);
+      LLDB_LOGF(log, "Removing module at address=0x%16.16" PRIx64 ".",
+                image_infos[idx].address);
       image_infos[idx].PutToLog(log);
     }
 
@@ -617,7 +615,7 @@ bool DynamicLoaderMacOSXDYLD::RemoveModulesUsingImageInfosAddress(
           unloaded_module_list.AppendIfNeeded(unload_image_module_sp);
         } else {
           if (log) {
-            log->Printf("Could not find module for unloading info entry:");
+            LLDB_LOGF(log, "Could not find module for unloading info entry:");
             image_infos[idx].PutToLog(log);
           }
         }
@@ -631,7 +629,7 @@ bool DynamicLoaderMacOSXDYLD::RemoveModulesUsingImageInfosAddress(
 
     if (pos == end) {
       if (log) {
-        log->Printf("Could not find image_info entry for unloading image:");
+        LLDB_LOGF(log, "Could not find image_info entry for unloading image:");
         image_infos[idx].PutToLog(log);
       }
     }
@@ -736,7 +734,7 @@ bool DynamicLoaderMacOSXDYLD::InitializeFromAllImageInfos() {
         if (log) {
           StreamString s;
           module_sp->GetDescription(&s);
-          log->Printf("Unloading pre-run module: %s.", s.GetData());
+          LLDB_LOGF(log, "Unloading pre-run module: %s.", s.GetData());
         }
         not_loaded_modules.Append(module_sp);
       }
@@ -975,12 +973,13 @@ void DynamicLoaderMacOSXDYLD::PutToLog(Log *log) const {
 
   std::lock_guard<std::recursive_mutex> guard(m_mutex);
   std::lock_guard<std::recursive_mutex> baseclass_guard(GetMutex());
-  log->Printf(
-      "dyld_all_image_infos = { version=%d, count=%d, addr=0x%8.8" PRIx64
-      ", notify=0x%8.8" PRIx64 " }",
-      m_dyld_all_image_infos.version, m_dyld_all_image_infos.dylib_info_count,
-      (uint64_t)m_dyld_all_image_infos.dylib_info_addr,
-      (uint64_t)m_dyld_all_image_infos.notification);
+  LLDB_LOGF(log,
+            "dyld_all_image_infos = { version=%d, count=%d, addr=0x%8.8" PRIx64
+            ", notify=0x%8.8" PRIx64 " }",
+            m_dyld_all_image_infos.version,
+            m_dyld_all_image_infos.dylib_info_count,
+            (uint64_t)m_dyld_all_image_infos.dylib_info_addr,
+            (uint64_t)m_dyld_all_image_infos.notification);
   size_t i;
   const size_t count = m_dyld_image_infos.size();
   if (count > 0) {

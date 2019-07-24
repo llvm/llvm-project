@@ -254,9 +254,8 @@ CreatePosixSpawnFileAction(const FileAction &action,
 
   case FileAction::eFileActionNone:
   default:
-    if (log)
-      log->Printf("%s(): unsupported file action %u", __FUNCTION__,
-                  action.GetAction());
+    LLDB_LOGF(log, "%s(): unsupported file action %u", __FUNCTION__,
+              action.GetAction());
     break;
   }
 
@@ -288,8 +287,7 @@ static Status PosixSpawnChildForPTraceDebugging(const char *path,
 
   int error_code;
   if ((error_code = ::posix_spawnattr_init(&attr)) != 0) {
-    if (log)
-      log->Printf("::posix_spawnattr_init(&attr) failed");
+    LLDB_LOGF(log, "::posix_spawnattr_init(&attr) failed");
     error.SetError(error_code, eErrorTypePOSIX);
     return error;
   }
@@ -378,10 +376,10 @@ static Status PosixSpawnChildForPTraceDebugging(const char *path,
 
     error = CreatePosixSpawnFileAction(*action, &file_actions);
     if (!error.Success()) {
-      if (log)
-        log->Printf("%s(): error converting FileAction to posix_spawn "
-                    "file action: %s",
-                    __FUNCTION__, error.AsCString());
+      LLDB_LOGF(log,
+                "%s(): error converting FileAction to posix_spawn "
+                "file action: %s",
+                __FUNCTION__, error.AsCString());
       return error;
     }
   }
@@ -416,10 +414,10 @@ static Status PosixSpawnChildForPTraceDebugging(const char *path,
 
   if (actual_cpu_type) {
     *actual_cpu_type = GetCPUTypeForLocalProcess(*pid);
-    if (log)
-      log->Printf("%s(): cpu type for launched process pid=%i: "
-                  "cpu_type=0x%8.8x",
-                  __FUNCTION__, *pid, *actual_cpu_type);
+    LLDB_LOGF(log,
+              "%s(): cpu type for launched process pid=%i: "
+              "cpu_type=0x%8.8x",
+              __FUNCTION__, *pid, *actual_cpu_type);
   }
 
   return error;
@@ -477,23 +475,21 @@ Status LaunchInferior(ProcessLaunchInfo &launch_info, int *pty_master_fd,
   char resolved_path[PATH_MAX];
   resolved_path[0] = '\0';
 
-  if (log)
-    log->Printf("%s(): attempting to resolve given binary path: \"%s\"",
-                __FUNCTION__, given_path);
+  LLDB_LOGF(log, "%s(): attempting to resolve given binary path: \"%s\"",
+            __FUNCTION__, given_path);
 
   // If we fail to resolve the path to our executable, then just use what we
   // were given and hope for the best
   if (!ResolveExecutablePath(given_path, resolved_path,
                              sizeof(resolved_path))) {
-    if (log)
-      log->Printf("%s(): failed to resolve binary path, using "
-                  "what was given verbatim and hoping for the best",
-                  __FUNCTION__);
+    LLDB_LOGF(log,
+              "%s(): failed to resolve binary path, using "
+              "what was given verbatim and hoping for the best",
+              __FUNCTION__);
     ::strncpy(resolved_path, given_path, sizeof(resolved_path));
   } else {
-    if (log)
-      log->Printf("%s(): resolved given binary path to: \"%s\"", __FUNCTION__,
-                  resolved_path);
+    LLDB_LOGF(log, "%s(): resolved given binary path to: \"%s\"", __FUNCTION__,
+              resolved_path);
   }
 
   char launch_err_str[PATH_MAX];

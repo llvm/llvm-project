@@ -641,11 +641,11 @@ void ModuleList::LogUUIDAndPaths(Log *log, const char *prefix_cstr) {
     for (pos = begin; pos != end; ++pos) {
       Module *module = pos->get();
       const FileSpec &module_file_spec = module->GetFileSpec();
-      log->Printf("%s[%u] %s (%s) \"%s\"", prefix_cstr ? prefix_cstr : "",
-                  (uint32_t)std::distance(begin, pos),
-                  module->GetUUID().GetAsString().c_str(),
-                  module->GetArchitecture().GetArchitectureName(),
-                  module_file_spec.GetPath().c_str());
+      LLDB_LOGF(log, "%s[%u] %s (%s) \"%s\"", prefix_cstr ? prefix_cstr : "",
+                (uint32_t)std::distance(begin, pos),
+                module->GetUUID().GetAsString().c_str(),
+                module->GetArchitecture().GetArchitectureName(),
+                module_file_spec.GetPath().c_str());
     }
   }
 }
@@ -808,8 +808,9 @@ Status ModuleList::GetSharedModule(const ModuleSpec &module_spec,
 
           Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_MODULES));
           if (log != nullptr)
-            log->Printf("module changed: %p, removing from global module list",
-                        static_cast<void *>(module_sp.get()));
+            LLDB_LOGF(log,
+                      "module changed: %p, removing from global module list",
+                      static_cast<void *>(module_sp.get()));
 
           shared_module_list.Remove(module_sp);
           module_sp.reset();

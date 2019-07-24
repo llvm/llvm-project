@@ -90,21 +90,18 @@ ClangUserExpression::~ClangUserExpression() {}
 void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  if (log)
-    log->Printf("ClangUserExpression::ScanContext()");
+  LLDB_LOGF(log, "ClangUserExpression::ScanContext()");
 
   m_target = exe_ctx.GetTargetPtr();
 
   if (!(m_allow_cxx || m_allow_objc)) {
-    if (log)
-      log->Printf("  [CUE::SC] Settings inhibit C++ and Objective-C");
+    LLDB_LOGF(log, "  [CUE::SC] Settings inhibit C++ and Objective-C");
     return;
   }
 
   StackFrame *frame = exe_ctx.GetFramePtr();
   if (frame == nullptr) {
-    if (log)
-      log->Printf("  [CUE::SC] Null stack frame");
+    LLDB_LOGF(log, "  [CUE::SC] Null stack frame");
     return;
   }
 
@@ -112,8 +109,7 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
                                                   lldb::eSymbolContextBlock);
 
   if (!sym_ctx.function) {
-    if (log)
-      log->Printf("  [CUE::SC] Null function");
+    LLDB_LOGF(log, "  [CUE::SC] Null function");
     return;
   }
 
@@ -121,16 +117,14 @@ void ClangUserExpression::ScanContext(ExecutionContext &exe_ctx, Status &err) {
   Block *function_block = sym_ctx.GetFunctionBlock();
 
   if (!function_block) {
-    if (log)
-      log->Printf("  [CUE::SC] Null function block");
+    LLDB_LOGF(log, "  [CUE::SC] Null function block");
     return;
   }
 
   CompilerDeclContext decl_context = function_block->GetDeclContext();
 
   if (!decl_context) {
-    if (log)
-      log->Printf("  [CUE::SC] Null decl context");
+    LLDB_LOGF(log, "  [CUE::SC] Null decl context");
     return;
   }
 
@@ -527,8 +521,7 @@ bool ClangUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   if (!PrepareForParsing(diagnostic_manager, exe_ctx, /*for_completion*/ false))
     return false;
 
-  if (log)
-    log->Printf("Parsing the following code:\n%s", m_transformed_text.c_str());
+  LLDB_LOGF(log, "Parsing the following code:\n%s", m_transformed_text.c_str());
 
   ////////////////////////////////////
   // Set up the target and compiler
@@ -726,8 +719,7 @@ bool ClangUserExpression::Complete(ExecutionContext &exe_ctx,
   if (!PrepareForParsing(diagnostic_manager, exe_ctx, /*for_completion*/ true))
     return false;
 
-  if (log)
-    log->Printf("Parsing the following code:\n%s", m_transformed_text.c_str());
+  LLDB_LOGF(log, "Parsing the following code:\n%s", m_transformed_text.c_str());
 
   //////////////////////////
   // Parse the expression
