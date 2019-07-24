@@ -57,7 +57,7 @@ template <> struct MappingTraits<remarks::Remark *> {
       llvm_unreachable("Unknown remark type");
 
     if (Optional<StringTable> &StrTab =
-            reinterpret_cast<YAMLSerializer *>(io.getContext())->StrTab) {
+            reinterpret_cast<YAMLRemarkSerializer *>(io.getContext())->StrTab) {
       unsigned PassID = StrTab->add(Remark->PassName).first;
       unsigned NameID = StrTab->add(Remark->RemarkName).first;
       unsigned FunctionID = StrTab->add(Remark->FunctionName).first;
@@ -79,7 +79,7 @@ template <> struct MappingTraits<RemarkLocation> {
     unsigned Col = RL.SourceColumn;
 
     if (Optional<StringTable> &StrTab =
-            reinterpret_cast<YAMLSerializer *>(io.getContext())->StrTab) {
+            reinterpret_cast<YAMLRemarkSerializer *>(io.getContext())->StrTab) {
       unsigned FileID = StrTab->add(File).first;
       io.mapRequired("File", FileID);
     } else {
@@ -131,7 +131,7 @@ template <> struct MappingTraits<Argument> {
     assert(io.outputting() && "input not yet implemented");
 
     if (Optional<StringTable> &StrTab =
-            reinterpret_cast<YAMLSerializer *>(io.getContext())->StrTab) {
+            reinterpret_cast<YAMLRemarkSerializer *>(io.getContext())->StrTab) {
       auto ValueID = StrTab->add(A.Val).first;
       io.mapRequired(A.Key.data(), ValueID);
     } else if (StringRef(A.Val).count('\n') > 1) {
@@ -149,10 +149,10 @@ template <> struct MappingTraits<Argument> {
 
 LLVM_YAML_IS_SEQUENCE_VECTOR(Argument)
 
-YAMLSerializer::YAMLSerializer(raw_ostream &OS)
-    : Serializer(OS), YAMLOutput(OS, reinterpret_cast<void *>(this)) {}
+YAMLRemarkSerializer::YAMLRemarkSerializer(raw_ostream &OS)
+    : RemarkSerializer(OS), YAMLOutput(OS, reinterpret_cast<void *>(this)) {}
 
-void YAMLSerializer::emit(const Remark &Remark) {
+void YAMLRemarkSerializer::emit(const Remark &Remark) {
   // Again, YAMLTraits expect a non-const object for inputting, but we're not
   // using that here.
   auto R = const_cast<remarks::Remark *>(&Remark);

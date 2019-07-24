@@ -19,7 +19,7 @@ static void check(const remarks::Remark &R, StringRef ExpectedR,
   std::string Buf;
   raw_string_ostream OS(Buf);
   bool UseStrTab = ExpectedStrTab.hasValue();
-  Expected<std::unique_ptr<remarks::Serializer>> MaybeS = [&] {
+  Expected<std::unique_ptr<remarks::RemarkSerializer>> MaybeS = [&] {
     if (UseStrTab) {
       if (StrTab)
         return createRemarkSerializer(remarks::Format::YAMLStrTab, OS,
@@ -30,7 +30,7 @@ static void check(const remarks::Remark &R, StringRef ExpectedR,
       return createRemarkSerializer(remarks::Format::YAML, OS);
   }();
   EXPECT_FALSE(errorToBool(MaybeS.takeError()));
-  std::unique_ptr<remarks::Serializer> S = std::move(*MaybeS);
+  std::unique_ptr<remarks::RemarkSerializer> S = std::move(*MaybeS);
 
   S->emit(R);
   EXPECT_EQ(OS.str(), ExpectedR);

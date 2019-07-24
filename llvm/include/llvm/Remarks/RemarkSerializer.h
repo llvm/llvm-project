@@ -22,26 +22,26 @@ namespace remarks {
 
 /// This is the base class for a remark serializer.
 /// It includes support for using a string table while emitting.
-struct Serializer {
+struct RemarkSerializer {
   /// The open raw_ostream that the remark diagnostics are emitted to.
   raw_ostream &OS;
   /// The string table containing all the unique strings used in the output.
   /// The table can be serialized to be consumed after the compilation.
   Optional<StringTable> StrTab;
 
-  Serializer(raw_ostream &OS) : OS(OS), StrTab() {}
+  RemarkSerializer(raw_ostream &OS) : OS(OS), StrTab() {}
 
   /// This is just an interface.
-  virtual ~Serializer() = default;
+  virtual ~RemarkSerializer() = default;
   virtual void emit(const Remark &Remark) = 0;
 };
 
 /// Create a remark serializer.
-Expected<std::unique_ptr<Serializer>>
+Expected<std::unique_ptr<RemarkSerializer>>
 createRemarkSerializer(Format RemarksFormat, raw_ostream &OS);
 
 /// Create a remark serializer that uses a pre-filled string table.
-Expected<std::unique_ptr<Serializer>>
+Expected<std::unique_ptr<RemarkSerializer>>
 createRemarkSerializer(Format RemarksFormat, raw_ostream &OS,
                        remarks::StringTable StrTab);
 

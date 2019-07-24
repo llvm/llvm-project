@@ -30,7 +30,7 @@ class RemarkStreamer {
   /// The regex used to filter remarks based on the passes that emit them.
   Optional<Regex> PassFilter;
   /// The object used to serialize the remarks to a specific format.
-  std::unique_ptr<remarks::Serializer> Serializer;
+  std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer;
 
   /// Convert diagnostics into remark objects.
   /// The lifetime of the members of the result is bound to the lifetime of
@@ -39,13 +39,13 @@ class RemarkStreamer {
 
 public:
   RemarkStreamer(StringRef Filename,
-                 std::unique_ptr<remarks::Serializer> Serializer);
+                 std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer);
   /// Return the filename that the remark diagnostics are emitted to.
   StringRef getFilename() const { return Filename; }
   /// Return stream that the remark diagnostics are emitted to.
-  raw_ostream &getStream() { return Serializer->OS; }
+  raw_ostream &getStream() { return RemarkSerializer->OS; }
   /// Return the serializer used for this stream.
-  remarks::Serializer &getSerializer() { return *Serializer; }
+  remarks::RemarkSerializer &getSerializer() { return *RemarkSerializer; }
   /// Set a pass filter based on a regex \p Filter.
   /// Returns an error if the regex is invalid.
   Error setFilter(StringRef Filter);

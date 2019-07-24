@@ -1349,7 +1349,7 @@ void AsmPrinter::emitRemarksSection(Module &M) {
   RemarkStreamer *RS = M.getContext().getRemarkStreamer();
   if (!RS)
     return;
-  const remarks::Serializer &Serializer = RS->getSerializer();
+  const remarks::RemarkSerializer &RemarkSerializer = RS->getSerializer();
 
   // Switch to the right section: .remarks/__remarks.
   MCSection *RemarksSection =
@@ -1372,7 +1372,7 @@ void AsmPrinter::emitRemarksSection(Module &M) {
   // just use the serialize function with a raw_ostream because of the way
   // MCStreamers work.
   uint64_t StrTabSize =
-      Serializer.StrTab ? Serializer.StrTab->SerializedSize : 0;
+      RemarkSerializer.StrTab ? RemarkSerializer.StrTab->SerializedSize : 0;
   // Emit the total size of the string table (the size itself excluded):
   // little-endian uint64_t.
   // The total size is located after the version number.
@@ -1382,7 +1382,7 @@ void AsmPrinter::emitRemarksSection(Module &M) {
   OutStreamer->EmitBinaryData(
       StringRef(StrTabSizeBuf.data(), StrTabSizeBuf.size()));
 
-  if (const Optional<remarks::StringTable> &StrTab = Serializer.StrTab) {
+  if (const Optional<remarks::StringTable> &StrTab = RemarkSerializer.StrTab) {
     std::vector<StringRef> StrTabStrings = StrTab->serialize();
     // Emit a list of null-terminated strings.
     // Note: the order is important here: the ID used in the remarks corresponds
