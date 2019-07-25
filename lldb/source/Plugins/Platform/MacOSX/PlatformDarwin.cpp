@@ -1102,6 +1102,34 @@ bool PlatformDarwin::ARMGetSupportedArchitectureAtIndex(uint32_t idx,
   return false;
 }
 
+static FileSpec GetXcodeSelectPath() {
+  static FileSpec g_xcode_select_filespec;
+
+  if (!g_xcode_select_filespec) {
+    FileSpec xcode_select_cmd("/usr/bin/xcode-select");
+    if (FileSystem::Instance().Exists(xcode_select_cmd)) {
+      int exit_status = -1;
+      int signo = -1;
+      std::string command_output;
+      Status status =
+          Host::RunShellCommand("/usr/bin/xcode-select --print-path",
+                                nullptr, // current working directory
+                                &exit_status, &signo, &command_output,
+                                std::chrono::seconds(2), // short timeout
+                                false);                  // don't run in a shell
+      if (status.Success() && exit_status == 0 && !command_output.empty()) {
+        size_t first_non_newline = command_output.find_last_not_of("\r\n");
+        if (first_non_newline != std::string::npos) {
+          command_output.erase(first_non_newline + 1);
+        }
+        g_xcode_select_filespec = FileSpec(command_output);
+      }
+    }
+  }
+
+  return g_xcode_select_filespec;
+}
+
 // Return a directory path like /Applications/Xcode.app/Contents/Developer
 const char *PlatformDarwin::GetDeveloperDirectory() {
   std::lock_guard<std::mutex> guard(m_mutex);
@@ -1159,34 +1187,10 @@ const char *PlatformDarwin::GetDeveloperDirectory() {
     }
 
     if (!developer_dir_path_valid) {
-      FileSpec xcode_select_cmd("/usr/bin/xcode-select");
-      if (FileSystem::Instance().Exists(xcode_select_cmd)) {
-        int exit_status = -1;
-        int signo = -1;
-        std::string command_output;
-        Status error =
-            Host::RunShellCommand("/usr/bin/xcode-select --print-path",
-                                  nullptr, // current working directory
-                                  &exit_status, &signo, &command_output,
-                                  std::chrono::seconds(2), // short timeout
-                                  false); // don't run in a shell
-        if (error.Success() && exit_status == 0 && !command_output.empty()) {
-          const char *cmd_output_ptr = command_output.c_str();
-          developer_dir_path[sizeof(developer_dir_path) - 1] = '\0';
-          size_t i;
-          for (i = 0; i < sizeof(developer_dir_path) - 1; i++) {
-            if (cmd_output_ptr[i] == '\r' || cmd_output_ptr[i] == '\n' ||
-                cmd_output_ptr[i] == '\0')
-              break;
-            developer_dir_path[i] = cmd_output_ptr[i];
-          }
-          developer_dir_path[i] = '\0';
-
-          FileSpec devel_dir(developer_dir_path);
-          if (FileSystem::Instance().IsDirectory(devel_dir)) {
-            developer_dir_path_valid = true;
-          }
-        }
+      FileSpec devel_dir = GetXcodeSelectPath();
+      if (FileSystem::Instance().IsDirectory(devel_dir)) {
+        devel_dir.GetPath(&developer_dir_path[0], sizeof(developer_dir_path));
+        developer_dir_path_valid = true;
       }
     }
 
@@ -1328,34 +1332,30 @@ static FileSpec GetXcodeContentsPath() {
         g_xcode_filespec = CheckPathForXcode(developer_dir_spec);
       }
 
-      // Fall back to using "xcrun" to find the selected Xcode
+      // Fall back to using "xcode-select" to find the selected Xcode
       if (!g_xcode_filespec) {
-        int status = 0;
-        int signo = 0;
-        std::string output;
-        const char *command = "/usr/bin/xcode-select -p";
-        lldb_private::Status error = Host::RunShellCommand(
-            command, // shell command to run
-            nullptr, // current working directory
-            &status, // Put the exit status of the process in here
-            &signo,  // Put the signal that caused the process to exit in here
-            &output, // Get the output from the command and place it in this
-                     // string
-            std::chrono::seconds(3));
-        if (status == 0 && !output.empty()) {
-          size_t first_non_newline = output.find_last_not_of("\r\n");
-          if (first_non_newline != std::string::npos) {
-            output.erase(first_non_newline + 1);
-          }
-          output.append("/..");
-
-          g_xcode_filespec = CheckPathForXcode(FileSpec(output));
-        }
+        FileSpec xcode_select_path(GetXcodeSelectPath());
+        xcode_select_path.RemoveLastPathComponent();
+        g_xcode_filespec = CheckPathForXcode(xcode_select_path);
       }
     }
   });
 
   return g_xcode_filespec;
+}
+
+static FileSpec GetCommandLineToolsLibraryPath() {
+  static FileSpec g_command_line_tools_filespec;
+
+  if (!g_command_line_tools_filespec) {
+    FileSpec command_line_tools_path(GetXcodeSelectPath());
+    command_line_tools_path.AppendPathComponent("Library");
+    if (FileSystem::Instance().Exists(command_line_tools_path)) {
+      g_command_line_tools_filespec = command_line_tools_path;
+    }
+  }
+
+  return g_command_line_tools_filespec;
 }
 
 bool PlatformDarwin::SDKSupportsModules(SDKType sdk_type,
@@ -1464,6 +1464,13 @@ FileSpec PlatformDarwin::GetSDKDirectoryForModules(SDKType sdk_type) {
 
     if (!version.empty()) {
       if (SDKSupportsModules(SDKType::MacOSX, version)) {
+        // If the Xcode SDKs are not available then try to use the
+        // Command Line Tools one which is only for MacOSX.
+        if (!FileSystem::Instance().Exists(sdks_spec)) {
+          sdks_spec = GetCommandLineToolsLibraryPath();
+          sdks_spec.AppendPathComponent("SDKs");
+        }
+
         // We slightly prefer the exact SDK for this machine.  See if it is
         // there.
 
@@ -1638,6 +1645,20 @@ lldb_private::FileSpec PlatformDarwin::LocateExecutable(const char *basename) {
       if (FileSystem::Instance().Exists(xcode_lldb_resources)) {
         FileSpec dir;
         dir.GetDirectory().SetCString(xcode_lldb_resources.GetPath().c_str());
+        g_executable_dirs.push_back(dir);
+      }
+    }
+    // Xcode might not be installed so we also check for the Command Line Tools.
+    FileSpec command_line_tools_dir = GetCommandLineToolsLibraryPath();
+    if (command_line_tools_dir) {
+      FileSpec cmd_line_lldb_resources = command_line_tools_dir;
+      cmd_line_lldb_resources.AppendPathComponent("PrivateFrameworks");
+      cmd_line_lldb_resources.AppendPathComponent("LLDB.framework");
+      cmd_line_lldb_resources.AppendPathComponent("Resources");
+      if (FileSystem::Instance().Exists(cmd_line_lldb_resources)) {
+        FileSpec dir;
+        dir.GetDirectory().SetCString(
+            cmd_line_lldb_resources.GetPath().c_str());
         g_executable_dirs.push_back(dir);
       }
     }
