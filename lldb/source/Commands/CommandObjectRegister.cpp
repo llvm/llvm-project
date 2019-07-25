@@ -34,11 +34,8 @@ using namespace lldb_private;
 // "register read"
 
 static constexpr OptionDefinition g_register_read_options[] = {
-    // clang-format off
-  { LLDB_OPT_SET_ALL, false, "alternate", 'A', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,  "Display register names using the alternate register name if there is one." },
-  { LLDB_OPT_SET_1,   false, "set",       's', OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeIndex, "Specify which register sets to dump by index." },
-  { LLDB_OPT_SET_2,   false, "all",       'a', OptionParser::eNoArgument,       nullptr, {}, 0, eArgTypeNone,  "Show all register sets." },
-    // clang-format on
+#define LLDB_OPTIONS_register_read
+#include "CommandOptions.inc"
 };
 
 class CommandObjectRegisterRead : public CommandObjectParsed {
