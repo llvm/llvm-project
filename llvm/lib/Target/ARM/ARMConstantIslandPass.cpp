@@ -824,11 +824,6 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
             Scale = 2;  // +-(offset_8*2)
             NegOk = true;
             break;
-
-          case ARM::tLDRHi:
-            Bits = 5;
-            Scale = 2; // +(offset_5*2)
-            break;
           }
 
           // Remember that this is a user of a CP entry.

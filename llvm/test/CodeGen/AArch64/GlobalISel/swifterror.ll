@@ -226,14 +226,11 @@ define float @foo_vararg(%swift_error** swifterror %error_ptr_ref, ...) {
 ; CHECK-DAG: strb [[ID]], [x0, #8]
 
 ; First vararg
-; CHECK: ldr {{w[0-9]+}}, [x[[ARG1:[0-9]+]]]
+; CHECK: ldr {{w[0-9]+}}, [x[[ARG1:[0-9]+]]], #8
 ; Second vararg
-; CHECK: mov [[EIGHT:x[0-9]+]], #8
-; CHECK: add x[[ARG2:[0-9]+]], x[[ARG1]], [[EIGHT]]
-; CHECK: ldr {{w[0-9]+}}, [x[[ARG2]]]
+; CHECK: ldr {{w[0-9]+}}, [x[[ARG1]]], #8
 ; Third vararg
-; CHECK: add x[[ARG3:[0-9]+]], x[[ARG2]], [[EIGHT]]
-; CHECK: ldr {{w[0-9]+}}, [x[[ARG3]]]
+; CHECK: ldr {{w[0-9]+}}, [x[[ARG1]]], #8
 
 ; CHECK: mov x21, x0
 ; CHECK-NOT: x21

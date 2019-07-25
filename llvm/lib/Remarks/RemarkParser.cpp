@@ -47,7 +47,7 @@ Expected<StringRef> ParsedStringTable::operator[](size_t Index) const {
   return StringRef(Buffer.data() + Offset, NextOffset - Offset - 1);
 }
 
-Expected<std::unique_ptr<Parser>>
+Expected<std::unique_ptr<RemarkParser>>
 llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf) {
   switch (ParserFormat) {
   case Format::YAML:
@@ -63,7 +63,7 @@ llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf) {
   llvm_unreachable("unhandled ParseFormat");
 }
 
-Expected<std::unique_ptr<Parser>>
+Expected<std::unique_ptr<RemarkParser>>
 llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf,
                                   ParsedStringTable StrTab) {
   switch (ParserFormat) {
@@ -82,7 +82,7 @@ llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf,
 
 // Wrapper that holds the state needed to interact with the C API.
 struct CParser {
-  std::unique_ptr<Parser> TheParser;
+  std::unique_ptr<RemarkParser> TheParser;
   Optional<std::string> Err;
 
   CParser(Format ParserFormat, StringRef Buf,
@@ -108,7 +108,7 @@ extern "C" LLVMRemarkParserRef LLVMRemarkParserCreateYAML(const void *Buf,
 extern "C" LLVMRemarkEntryRef
 LLVMRemarkParserGetNext(LLVMRemarkParserRef Parser) {
   CParser &TheCParser = *unwrap(Parser);
-  remarks::Parser &TheParser = *TheCParser.TheParser;
+  remarks::RemarkParser &TheParser = *TheCParser.TheParser;
 
   Expected<std::unique_ptr<Remark>> MaybeRemark = TheParser.next();
   if (Error E = MaybeRemark.takeError()) {

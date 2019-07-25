@@ -30,6 +30,7 @@ add_llvm_unittest(SupportTests
   ErrorOrTest.cpp
   ErrorTest.cpp
   FileCheckTest.cpp
+  FileCollectorTest.cpp
   FileOutputBufferTest.cpp
   FormatVariadicTest.cpp
   GlobPatternTest.cpp

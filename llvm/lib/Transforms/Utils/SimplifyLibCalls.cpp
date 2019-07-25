@@ -939,9 +939,9 @@ Value *LibCallSimplifier::optimizeMemCmp(CallInst *CI, IRBuilder<> &B) {
     return V;
 
   // memcmp(x, y, Len) == 0 -> bcmp(x, y, Len) == 0
-  // `bcmp` can be more efficient than memcmp because it only has to know that
-  // there is a difference, not where it is.
-  if (isOnlyUsedInZeroEqualityComparison(CI) && TLI->has(LibFunc_bcmp)) {
+  // bcmp can be more efficient than memcmp because it only has to know that
+  // there is a difference, not how different one is to the other.
+  if (TLI->has(LibFunc_bcmp) && isOnlyUsedInZeroEqualityComparison(CI)) {
     Value *LHS = CI->getArgOperand(0);
     Value *RHS = CI->getArgOperand(1);
     Value *Size = CI->getArgOperand(2);

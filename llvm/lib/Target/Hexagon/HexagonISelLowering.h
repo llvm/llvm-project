@@ -127,6 +127,8 @@ namespace HexagonISD {
     bool isCheapToSpeculateCtlz() const override { return true; }
     bool isCtlzFast() const override { return true; }
 
+    bool hasBitTest(SDValue X, SDValue Y) const override;
+
     bool allowTruncateForTailCall(Type *Ty1, Type *Ty2) const override;
 
     /// Return true if an FMA operation is faster than a pair of mul and add

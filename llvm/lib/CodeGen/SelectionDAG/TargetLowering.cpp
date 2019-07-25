@@ -2760,6 +2760,77 @@ SDValue TargetLowering::optimizeSetCCOfSignedTruncationCheck(
   return T2;
 }
 
+// (X & (C l>>/<< Y)) ==/!= 0  -->  ((X <</l>> Y) & C) ==/!= 0
+SDValue TargetLowering::optimizeSetCCByHoistingAndByConstFromLogicalShift(
+    EVT SCCVT, SDValue N0, SDValue N1C, ISD::CondCode Cond,
+    DAGCombinerInfo &DCI, const SDLoc &DL) const {
+  assert(isConstOrConstSplat(N1C) &&
+         isConstOrConstSplat(N1C)->getAPIntValue().isNullValue() &&
+         "Should be a comparison with 0.");
+  assert((Cond == ISD::SETEQ || Cond == ISD::SETNE) &&
+         "Valid only for [in]equality comparisons.");
+
+  unsigned NewShiftOpcode;
+  SDValue X, C, Y;
+
+  SelectionDAG &DAG = DCI.DAG;
+  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+
+  // Look for '(C l>>/<< Y)'.
+  auto Match = [&NewShiftOpcode, &X, &C, &Y, &TLI, &DAG](SDValue V) {
+    // The shift should be one-use.
+    if (!V.hasOneUse())
+      return false;
+    unsigned OldShiftOpcode = V.getOpcode();
+    switch (OldShiftOpcode) {
+    case ISD::SHL:
+      NewShiftOpcode = ISD::SRL;
+      break;
+    case ISD::SRL:
+      NewShiftOpcode = ISD::SHL;
+      break;
+    default:
+      return false; // must be a logical shift.
+    }
+    // We should be shifting a constant.
+    // FIXME: best to use isConstantOrConstantVector().
+    C = V.getOperand(0);
+    ConstantSDNode *CC =
+        isConstOrConstSplat(C, /*AllowUndefs=*/true, /*AllowTruncation=*/true);
+    if (!CC)
+      return false;
+    Y = V.getOperand(1);
+
+    ConstantSDNode *XC =
+        isConstOrConstSplat(X, /*AllowUndefs=*/true, /*AllowTruncation=*/true);
+    return TLI.shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(
+        X, XC, CC, Y, OldShiftOpcode, NewShiftOpcode, DAG);
+  };
+
+  // LHS of comparison should be an one-use 'and'.
+  if (N0.getOpcode() != ISD::AND || !N0.hasOneUse())
+    return SDValue();
+
+  X = N0.getOperand(0);
+  SDValue Mask = N0.getOperand(1);
+
+  // 'and' is commutative!
+  if (!Match(Mask)) {
+    std::swap(X, Mask);
+    if (!Match(Mask))
+      return SDValue();
+  }
+
+  EVT VT = X.getValueType();
+
+  // Produce:
+  // ((X 'OppositeShiftOpcode' Y) & C) Cond 0
+  SDValue T0 = DAG.getNode(NewShiftOpcode, DL, VT, X, Y);
+  SDValue T1 = DAG.getNode(ISD::AND, DL, VT, T0, C);
+  SDValue T2 = DAG.getSetCC(DL, SCCVT, T1, N1C, Cond);
+  return T2;
+}
+
 /// Try to fold an equality comparison with a {add/sub/xor} binary operation as
 /// the 1st operand (N0). Callers are expected to swap the N0/N1 parameters to
 /// handle the commuted versions of these patterns.
@@ -3326,6 +3397,14 @@ SDValue TargetLowering::SimplifySetCC(EVT VT, SDValue N0, SDValue N1,
                               DAG.getConstant(MaxVal, dl, N0.getValueType()),
                               ISD::SETEQ);
       }
+    }
+
+    if (Cond == ISD::SETEQ || Cond == ISD::SETNE) {
+      // (X & (C l>>/<< Y)) ==/!= 0  -->  ((X <</l>> Y) & C) ==/!= 0
+      if (C1.isNullValue())
+        if (SDValue CC = optimizeSetCCByHoistingAndByConstFromLogicalShift(
+                VT, N0, N1, Cond, DCI, dl))
+          return CC;
     }
 
     // If we have "setcc X, C0", check to see if we can shrink the immediate

@@ -668,23 +668,19 @@ public:
     if (SP && (PrintSource || PrintLines))
       SP->printSourceLine(OS, Address);
 
-    {
-      formatted_raw_ostream FOS(OS);
-      if (!NoLeadingAddr)
-        FOS << format("%8" PRIx64 ":", Address.Address);
-      if (!NoShowRawInsn) {
-        FOS << ' ';
-        dumpBytes(Bytes, FOS);
-      }
-      FOS.flush();
-      // The output of printInst starts with a tab. Print some spaces so that
-      // the tab has 1 column and advances to the target tab stop.
-      unsigned TabStop = NoShowRawInsn ? 16 : 40;
-      unsigned Column = FOS.getColumn();
-      FOS.indent(Column < TabStop - 1 ? TabStop - 1 - Column : 7 - Column % 8);
-
-      // The dtor calls flush() to ensure the indent comes before printInst().
+    size_t Start = OS.tell();
+    if (!NoLeadingAddr)
+      OS << format("%8" PRIx64 ":", Address.Address);
+    if (!NoShowRawInsn) {
+      OS << ' ';
+      dumpBytes(Bytes, OS);
     }
+
+    // The output of printInst starts with a tab. Print some spaces so that
+    // the tab has 1 column and advances to the target tab stop.
+    unsigned TabStop = NoShowRawInsn ? 16 : 40;
+    unsigned Column = OS.tell() - Start;
+    OS.indent(Column < TabStop - 1 ? TabStop - 1 - Column : 7 - Column % 8);
 
     if (MI)
       IP.printInst(MI, OS, "", STI);
@@ -2010,6 +2006,40 @@ static void printArchiveChild(StringRef Filename, const Archive::Child &C) {
   outs() << Name << "\n";
 }
 
+// For ELF only now.
+static bool shouldWarnForInvalidStartStopAddress(ObjectFile *Obj) {
+  if (const auto *Elf = dyn_cast<ELFObjectFileBase>(Obj)) {
+    if (Elf->getEType() != ELF::ET_REL)
+      return true;
+  }
+  return false;
+}
+
+static void checkForInvalidStartStopAddress(ObjectFile *Obj,
+                                            uint64_t Start, uint64_t Stop) {
+  if (!shouldWarnForInvalidStartStopAddress(Obj))
+    return;
+
+  for (const SectionRef &Section : Obj->sections())
+    if (ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC) {
+      uint64_t BaseAddr = Section.getAddress();
+      uint64_t Size = Section.getSize();
+      if ((Start < BaseAddr + Size) && Stop > BaseAddr)
+        return;
+    }
+
+  if (StartAddress.getNumOccurrences() == 0)
+    warn("no section has address less than 0x" +
+         Twine::utohexstr(Stop) + " specified by --stop-address");
+  else if (StopAddress.getNumOccurrences() == 0)
+    warn("no section has address greater than or equal to 0x" +
+         Twine::utohexstr(Start) + " specified by --start-address");
+  else
+    warn("no section overlaps the range [0x" +
+         Twine::utohexstr(Start) + ",0x" + Twine::utohexstr(Stop) +
+         ") specified by --start-address/--stop-address");
+}
+
 static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
                        const Archive::Child *C = nullptr) {
   // Avoid other output when using a raw option.
@@ -2021,6 +2051,9 @@ static void dumpObject(ObjectFile *O, const Archive *A = nullptr,
       outs() << O->getFileName();
     outs() << ":\tfile format " << O->getFileFormatName() << "\n\n";
   }
+
+  if (StartAddress.getNumOccurrences() || StopAddress.getNumOccurrences())
+    checkForInvalidStartStopAddress(O, StartAddress, StopAddress);
 
   StringRef ArchiveName = A ? A->getFileName() : "";
   if (FileHeaders)

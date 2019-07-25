@@ -5423,6 +5423,21 @@ is a bit. If the bit operand value is 1 vectorization is enabled. A value of
    !0 = !{!"llvm.loop.vectorize.enable", i1 0}
    !1 = !{!"llvm.loop.vectorize.enable", i1 1}
 
+'``llvm.loop.vectorize.predicate.enable``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This metadata selectively enables or disables creating predicated instructions
+for the loop, which can enable folding of the scalar epilogue loop into the
+main loop. The first operand is the string
+``llvm.loop.vectorize.predicate.enable`` and the second operand is a bit. If
+the bit operand value is 1 vectorization is enabled. A value of 0 disables
+vectorization:
+
+.. code-block:: llvm
+
+   !0 = !{!"llvm.loop.vectorize.predicate.enable", i1 0}
+   !1 = !{!"llvm.loop.vectorize.predicate.enable", i1 1}
+
 '``llvm.loop.vectorize.width``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 

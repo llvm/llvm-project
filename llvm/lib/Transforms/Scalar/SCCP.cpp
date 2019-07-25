@@ -1924,6 +1924,21 @@ static void findReturnsToZap(Function &F,
     return;
   }
 
+  assert(
+      all_of(F.users(),
+             [&Solver](User *U) {
+               if (isa<Instruction>(U) &&
+                   !Solver.isBlockExecutable(cast<Instruction>(U)->getParent()))
+                 return false;
+               if (U->getType()->isStructTy()) {
+                 return all_of(
+                     Solver.getStructLatticeValueFor(U),
+                     [](const LatticeVal &LV) { return !LV.isOverdefined(); });
+               }
+               return !Solver.getLatticeValueFor(U).isOverdefined();
+             }) &&
+      "We can only zap functions where all live users have a concrete value");
+
   for (BasicBlock &BB : F) {
     if (CallInst *CI = BB.getTerminatingMustTailCall()) {
       LLVM_DEBUG(dbgs() << "Can't zap return of the block due to present "

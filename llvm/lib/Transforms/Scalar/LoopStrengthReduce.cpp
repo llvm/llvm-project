@@ -3265,12 +3265,12 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
     // requirements for both N and i at the same time. Limiting this code to
     // equality icmps is not a problem because all interesting loops use
     // equality icmps, thanks to IndVarSimplify.
-    if (ICmpInst *CI = dyn_cast<ICmpInst>(UserInst))
+    if (ICmpInst *CI = dyn_cast<ICmpInst>(UserInst)) {
+      // If CI can be saved in some target, like replaced inside hardware loop
+      // in PowerPC, no need to generate initial formulae for it.
+      if (SaveCmp && CI == dyn_cast<ICmpInst>(ExitBranch->getCondition()))
+        continue;
       if (CI->isEquality()) {
-        // If CI can be saved in some target, like replaced inside hardware loop
-        // in PowerPC, no need to generate initial formulae for it.
-        if (SaveCmp && CI == dyn_cast<ICmpInst>(ExitBranch->getCondition()))
-          continue;
         // Swap the operands if needed to put the OperandValToReplace on the
         // left, for consistency.
         Value *NV = CI->getOperand(1);
@@ -3298,6 +3298,7 @@ void LSRInstance::CollectFixupsAndInitialFormulae() {
             Factors.insert(-(uint64_t)Factors[i]);
         Factors.insert(-1);
       }
+    }
 
     // Get or create an LSRUse.
     std::pair<size_t, int64_t> P = getUse(S, Kind, AccessTy);

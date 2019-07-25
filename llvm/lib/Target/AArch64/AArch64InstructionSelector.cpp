@@ -133,6 +133,8 @@ private:
   MachineInstr *emitIntegerCompare(MachineOperand &LHS, MachineOperand &RHS,
                                    MachineOperand &Predicate,
                                    MachineIRBuilder &MIRBuilder) const;
+  MachineInstr *emitADD(Register DefReg, MachineOperand &LHS, MachineOperand &RHS,
+                        MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitCMN(MachineOperand &LHS, MachineOperand &RHS,
                         MachineIRBuilder &MIRBuilder) const;
   MachineInstr *emitTST(const Register &LHS, const Register &RHS,
@@ -1829,8 +1831,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
       return selectVectorSHL(I, MRI);
     LLVM_FALLTHROUGH;
   case TargetOpcode::G_OR:
-  case TargetOpcode::G_LSHR:
-  case TargetOpcode::G_GEP: {
+  case TargetOpcode::G_LSHR: {
     // Reject the various things we don't support yet.
     if (unsupportedBinOp(I, RBI, MRI, TRI))
       return false;
@@ -1852,6 +1853,13 @@ bool AArch64InstructionSelector::select(MachineInstr &I,
     return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
   }
 
+  case TargetOpcode::G_GEP: {
+    MachineIRBuilder MIRBuilder(I);
+    emitADD(I.getOperand(0).getReg(), I.getOperand(1), I.getOperand(2),
+            MIRBuilder);
+    I.eraseFromParent();
+    return true;
+  }
   case TargetOpcode::G_UADDO: {
     // TODO: Support other types.
     unsigned OpSize = Ty.getSizeInBits();
@@ -3081,6 +3089,31 @@ getInsertVecEltOpInfo(const RegisterBank &RB, unsigned EltSize) {
 }
 
 MachineInstr *
+AArch64InstructionSelector::emitADD(Register DefReg, MachineOperand &LHS,
+                                    MachineOperand &RHS,
+                                    MachineIRBuilder &MIRBuilder) const {
+  assert(LHS.isReg() && RHS.isReg() && "Expected LHS and RHS to be registers!");
+  MachineRegisterInfo &MRI = MIRBuilder.getMF().getRegInfo();
+  static const unsigned OpcTable[2][2]{{AArch64::ADDXrr, AArch64::ADDXri},
+                                       {AArch64::ADDWrr, AArch64::ADDWri}};
+  bool Is32Bit = MRI.getType(LHS.getReg()).getSizeInBits() == 32;
+  auto ImmFns = selectArithImmed(RHS);
+  unsigned Opc = OpcTable[Is32Bit][ImmFns.hasValue()];
+  auto AddMI = MIRBuilder.buildInstr(Opc, {DefReg}, {LHS.getReg()});
+
+  // If we matched a valid constant immediate, add those operands.
+  if (ImmFns) {
+    for (auto &RenderFn : *ImmFns)
+      RenderFn(AddMI);
+  } else {
+    AddMI.addUse(RHS.getReg());
+  }
+
+  constrainSelectedInstRegOperands(*AddMI, TII, TRI, RBI);
+  return &*AddMI;
+}
+
+MachineInstr *
 AArch64InstructionSelector::emitCMN(MachineOperand &LHS, MachineOperand &RHS,
                                     MachineIRBuilder &MIRBuilder) const {
   assert(LHS.isReg() && RHS.isReg() && "Expected LHS and RHS to be registers!");
@@ -3523,7 +3556,7 @@ bool AArch64InstructionSelector::tryOptVectorDup(MachineInstr &I) const {
   int64_t Zero = 0;
   if (!mi_match(ZeroVec->getOperand(1).getReg(), MRI, m_ICst(Zero)) || Zero)
     return false;
-  for (unsigned i = 1, e = ZeroVec->getNumOperands() - 1; i < e; ++i) {
+  for (unsigned i = 1, e = ZeroVec->getNumOperands(); i < e; ++i) {
     if (ZeroVec->getOperand(i).getReg() != ZeroVec->getOperand(1).getReg())
       return false; // This wasn't an all zeros vector.
   }
@@ -4125,21 +4158,52 @@ AArch64InstructionSelector::selectAddrModeShiftedExtendXReg(
   if (!Gep || !isWorthFoldingIntoExtendedReg(*Gep, MRI))
     return None;
 
-  // Now try to match the G_SHL.
-  MachineInstr *Shl =
-      getOpcodeDef(TargetOpcode::G_SHL, Gep->getOperand(2).getReg(), MRI);
-  if (!Shl || !isWorthFoldingIntoExtendedReg(*Shl, MRI))
+  // Now, try to match an opcode which will match our specific offset.
+  // We want a G_SHL or a G_MUL.
+  MachineInstr *OffsetInst = getDefIgnoringCopies(Gep->getOperand(2).getReg(), MRI);
+  if (!OffsetInst)
     return None;
 
-  // Now, try to find the specific G_CONSTANT.
-  auto ValAndVReg =
-      getConstantVRegValWithLookThrough(Shl->getOperand(2).getReg(), MRI);
-  if (!ValAndVReg)
+  unsigned OffsetOpc = OffsetInst->getOpcode();
+  if (OffsetOpc != TargetOpcode::G_SHL && OffsetOpc != TargetOpcode::G_MUL)
     return None;
+
+  if (!isWorthFoldingIntoExtendedReg(*OffsetInst, MRI))
+    return None;
+
+  // Now, try to find the specific G_CONSTANT. Start by assuming that the
+  // register we will offset is the LHS, and the register containing the
+  // constant is the RHS.
+  Register OffsetReg = OffsetInst->getOperand(1).getReg();
+  Register ConstantReg = OffsetInst->getOperand(2).getReg();
+  auto ValAndVReg = getConstantVRegValWithLookThrough(ConstantReg, MRI);
+  if (!ValAndVReg) {
+    // We didn't get a constant on the RHS. If the opcode is a shift, then
+    // we're done.
+    if (OffsetOpc == TargetOpcode::G_SHL)
+      return None;
+
+    // If we have a G_MUL, we can use either register. Try looking at the RHS.
+    std::swap(OffsetReg, ConstantReg);
+    ValAndVReg = getConstantVRegValWithLookThrough(ConstantReg, MRI);
+    if (!ValAndVReg)
+      return None;
+  }
 
   // The value must fit into 3 bits, and must be positive. Make sure that is
   // true.
   int64_t ImmVal = ValAndVReg->Value;
+
+  // Since we're going to pull this into a shift, the constant value must be
+  // a power of 2. If we got a multiply, then we need to check this.
+  if (OffsetOpc == TargetOpcode::G_MUL) {
+    if (!isPowerOf2_32(ImmVal))
+      return None;
+
+    // Got a power of 2. So, the amount we'll shift is the log base-2 of that.
+    ImmVal = Log2_32(ImmVal);
+  }
+
   if ((ImmVal & 0x7) != ImmVal)
     return None;
 
@@ -4152,7 +4216,7 @@ AArch64InstructionSelector::selectAddrModeShiftedExtendXReg(
   // offset. Signify that we are shifting by setting the shift flag to 1.
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.add(Gep->getOperand(1)); },
-      [=](MachineInstrBuilder &MIB) { MIB.add(Shl->getOperand(1)); },
+      [=](MachineInstrBuilder &MIB) { MIB.addUse(OffsetReg); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(0); },
       [=](MachineInstrBuilder &MIB) { MIB.addImm(1); },
   }};

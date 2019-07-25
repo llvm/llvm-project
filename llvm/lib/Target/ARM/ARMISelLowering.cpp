@@ -349,6 +349,10 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::EXTRACT_VECTOR_ELT, VT, Custom);
     setOperationAction(ISD::SETCC, VT, Custom);
     setOperationAction(ISD::SCALAR_TO_VECTOR, VT, Expand);
+    setOperationAction(ISD::FP_TO_SINT, VT, Expand);
+    setOperationAction(ISD::FP_TO_UINT, VT, Expand);
+    setOperationAction(ISD::SINT_TO_FP, VT, Expand);
+    setOperationAction(ISD::UINT_TO_FP, VT, Expand);
   }
 }
 
@@ -1515,20 +1519,8 @@ const char *ARMTargetLowering::getTargetNodeName(unsigned Opcode) const {
   case ARMISD::WIN__DBZCHK:   return "ARMISD::WIN__DBZCHK";
 
   case ARMISD::PREDICATE_CAST: return "ARMISD::PREDICATE_CAST";
-  case ARMISD::VCEQ:          return "ARMISD::VCEQ";
-  case ARMISD::VCEQZ:         return "ARMISD::VCEQZ";
-  case ARMISD::VCNE:          return "ARMISD::VCNE";
-  case ARMISD::VCNEZ:         return "ARMISD::VCNEZ";
-  case ARMISD::VCGE:          return "ARMISD::VCGE";
-  case ARMISD::VCGEZ:         return "ARMISD::VCGEZ";
-  case ARMISD::VCLE:          return "ARMISD::VCLE";
-  case ARMISD::VCLEZ:         return "ARMISD::VCLEZ";
-  case ARMISD::VCGEU:         return "ARMISD::VCGEU";
-  case ARMISD::VCGT:          return "ARMISD::VCGT";
-  case ARMISD::VCGTZ:         return "ARMISD::VCGTZ";
-  case ARMISD::VCLT:          return "ARMISD::VCLT";
-  case ARMISD::VCLTZ:         return "ARMISD::VCLTZ";
-  case ARMISD::VCGTU:         return "ARMISD::VCGTU";
+  case ARMISD::VCMP:          return "ARMISD::VCMP";
+  case ARMISD::VCMPZ:         return "ARMISD::VCMPZ";
   case ARMISD::VTST:          return "ARMISD::VTST";
 
   case ARMISD::VSHLs:         return "ARMISD::VSHLs";
@@ -5877,10 +5869,9 @@ static SDValue Expand64BitShift(SDNode *N, SelectionDAG &DAG,
 
 static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
                            const ARMSubtarget *ST) {
-  SDValue TmpOp0, TmpOp1;
   bool Invert = false;
   bool Swap = false;
-  unsigned Opc = 0;
+  unsigned Opc = ARMCC::AL;
 
   SDValue Op0 = Op.getOperand(0);
   SDValue Op1 = Op.getOperand(1);
@@ -5936,44 +5927,48 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
     case ISD::SETUNE:
     case ISD::SETNE:
       if (ST->hasMVEFloatOps()) {
-        Opc = ARMISD::VCNE; break;
+        Opc = ARMCC::NE; break;
       } else {
         Invert = true; LLVM_FALLTHROUGH;
       }
     case ISD::SETOEQ:
-    case ISD::SETEQ:  Opc = ARMISD::VCEQ; break;
+    case ISD::SETEQ:  Opc = ARMCC::EQ; break;
     case ISD::SETOLT:
     case ISD::SETLT: Swap = true; LLVM_FALLTHROUGH;
     case ISD::SETOGT:
-    case ISD::SETGT:  Opc = ARMISD::VCGT; break;
+    case ISD::SETGT:  Opc = ARMCC::GT; break;
     case ISD::SETOLE:
     case ISD::SETLE:  Swap = true; LLVM_FALLTHROUGH;
     case ISD::SETOGE:
-    case ISD::SETGE: Opc = ARMISD::VCGE; break;
+    case ISD::SETGE: Opc = ARMCC::GE; break;
     case ISD::SETUGE: Swap = true; LLVM_FALLTHROUGH;
-    case ISD::SETULE: Invert = true; Opc = ARMISD::VCGT; break;
+    case ISD::SETULE: Invert = true; Opc = ARMCC::GT; break;
     case ISD::SETUGT: Swap = true; LLVM_FALLTHROUGH;
-    case ISD::SETULT: Invert = true; Opc = ARMISD::VCGE; break;
+    case ISD::SETULT: Invert = true; Opc = ARMCC::GE; break;
     case ISD::SETUEQ: Invert = true; LLVM_FALLTHROUGH;
-    case ISD::SETONE:
+    case ISD::SETONE: {
       // Expand this to (OLT | OGT).
-      TmpOp0 = Op0;
-      TmpOp1 = Op1;
-      Opc = ISD::OR;
-      Op0 = DAG.getNode(ARMISD::VCGT, dl, CmpVT, TmpOp1, TmpOp0);
-      Op1 = DAG.getNode(ARMISD::VCGT, dl, CmpVT, TmpOp0, TmpOp1);
-      break;
-    case ISD::SETUO:
-      Invert = true;
-      LLVM_FALLTHROUGH;
-    case ISD::SETO:
+      SDValue TmpOp0 = DAG.getNode(ARMISD::VCMP, dl, CmpVT, Op1, Op0,
+                                   DAG.getConstant(ARMCC::GT, dl, MVT::i32));
+      SDValue TmpOp1 = DAG.getNode(ARMISD::VCMP, dl, CmpVT, Op0, Op1,
+                                   DAG.getConstant(ARMCC::GT, dl, MVT::i32));
+      SDValue Result = DAG.getNode(ISD::OR, dl, CmpVT, TmpOp0, TmpOp1);
+      if (Invert)
+        Result = DAG.getNOT(dl, Result, VT);
+      return Result;
+    }
+    case ISD::SETUO: Invert = true; LLVM_FALLTHROUGH;
+    case ISD::SETO: {
       // Expand this to (OLT | OGE).
-      TmpOp0 = Op0;
-      TmpOp1 = Op1;
-      Opc = ISD::OR;
-      Op0 = DAG.getNode(ARMISD::VCGT, dl, CmpVT, TmpOp1, TmpOp0);
-      Op1 = DAG.getNode(ARMISD::VCGE, dl, CmpVT, TmpOp0, TmpOp1);
-      break;
+      SDValue TmpOp0 = DAG.getNode(ARMISD::VCMP, dl, CmpVT, Op1, Op0,
+                                   DAG.getConstant(ARMCC::GT, dl, MVT::i32));
+      SDValue TmpOp1 = DAG.getNode(ARMISD::VCMP, dl, CmpVT, Op0, Op1,
+                                   DAG.getConstant(ARMCC::GE, dl, MVT::i32));
+      SDValue Result = DAG.getNode(ISD::OR, dl, CmpVT, TmpOp0, TmpOp1);
+      if (Invert)
+        Result = DAG.getNOT(dl, Result, VT);
+      return Result;
+    }
     }
   } else {
     // Integer comparisons.
@@ -5981,23 +5976,23 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
     default: llvm_unreachable("Illegal integer comparison");
     case ISD::SETNE:
       if (ST->hasMVEIntegerOps()) {
-        Opc = ARMISD::VCNE; break;
+        Opc = ARMCC::NE; break;
       } else {
         Invert = true; LLVM_FALLTHROUGH;
       }
-    case ISD::SETEQ:  Opc = ARMISD::VCEQ; break;
+    case ISD::SETEQ:  Opc = ARMCC::EQ; break;
     case ISD::SETLT:  Swap = true; LLVM_FALLTHROUGH;
-    case ISD::SETGT:  Opc = ARMISD::VCGT; break;
+    case ISD::SETGT:  Opc = ARMCC::GT; break;
     case ISD::SETLE:  Swap = true; LLVM_FALLTHROUGH;
-    case ISD::SETGE:  Opc = ARMISD::VCGE; break;
+    case ISD::SETGE:  Opc = ARMCC::GE; break;
     case ISD::SETULT: Swap = true; LLVM_FALLTHROUGH;
-    case ISD::SETUGT: Opc = ARMISD::VCGTU; break;
+    case ISD::SETUGT: Opc = ARMCC::HI; break;
     case ISD::SETULE: Swap = true; LLVM_FALLTHROUGH;
-    case ISD::SETUGE: Opc = ARMISD::VCGEU; break;
+    case ISD::SETUGE: Opc = ARMCC::HS; break;
     }
 
     // Detect VTST (Vector Test Bits) = icmp ne (and (op0, op1), zero).
-    if (ST->hasNEON() && Opc == ARMISD::VCEQ) {
+    if (ST->hasNEON() && Opc == ARMCC::EQ) {
       SDValue AndOp;
       if (ISD::isBuildVectorAllZeros(Op1.getNode()))
         AndOp = Op0;
@@ -6009,10 +6004,12 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
         AndOp = AndOp.getOperand(0);
 
       if (AndOp.getNode() && AndOp.getOpcode() == ISD::AND) {
-        Opc = ARMISD::VTST;
         Op0 = DAG.getNode(ISD::BITCAST, dl, CmpVT, AndOp.getOperand(0));
         Op1 = DAG.getNode(ISD::BITCAST, dl, CmpVT, AndOp.getOperand(1));
-        Invert = !Invert;
+        SDValue Result = DAG.getNode(ARMISD::VTST, dl, CmpVT, Op0, Op1);
+        if (!Invert)
+          Result = DAG.getNOT(dl, Result, VT);
+        return Result;
       }
     }
   }
@@ -6026,34 +6023,20 @@ static SDValue LowerVSETCC(SDValue Op, SelectionDAG &DAG,
   if (ISD::isBuildVectorAllZeros(Op1.getNode()))
     SingleOp = Op0;
   else if (ISD::isBuildVectorAllZeros(Op0.getNode())) {
-    if (Opc == ARMISD::VCGE)
-      Opc = ARMISD::VCLEZ;
-    else if (Opc == ARMISD::VCGT)
-      Opc = ARMISD::VCLTZ;
+    if (Opc == ARMCC::GE)
+      Opc = ARMCC::LE;
+    else if (Opc == ARMCC::GT)
+      Opc = ARMCC::LT;
     SingleOp = Op1;
   }
 
   SDValue Result;
   if (SingleOp.getNode()) {
-    switch (Opc) {
-    case ARMISD::VCNE:
-      assert(ST->hasMVEIntegerOps() && "Unexpected DAG node");
-      Result = DAG.getNode(ARMISD::VCNEZ, dl, CmpVT, SingleOp); break;
-    case ARMISD::VCEQ:
-      Result = DAG.getNode(ARMISD::VCEQZ, dl, CmpVT, SingleOp); break;
-    case ARMISD::VCGE:
-      Result = DAG.getNode(ARMISD::VCGEZ, dl, CmpVT, SingleOp); break;
-    case ARMISD::VCLEZ:
-      Result = DAG.getNode(ARMISD::VCLEZ, dl, CmpVT, SingleOp); break;
-    case ARMISD::VCGT:
-      Result = DAG.getNode(ARMISD::VCGTZ, dl, CmpVT, SingleOp); break;
-    case ARMISD::VCLTZ:
-      Result = DAG.getNode(ARMISD::VCLTZ, dl, CmpVT, SingleOp); break;
-    default:
-      Result = DAG.getNode(Opc, dl, CmpVT, Op0, Op1);
-    }
+    Result = DAG.getNode(ARMISD::VCMPZ, dl, CmpVT, SingleOp,
+                         DAG.getConstant(Opc, dl, MVT::i32));
   } else {
-     Result = DAG.getNode(Opc, dl, CmpVT, Op0, Op1);
+    Result = DAG.getNode(ARMISD::VCMP, dl, CmpVT, Op0, Op1,
+                         DAG.getConstant(Opc, dl, MVT::i32));
   }
 
   Result = DAG.getSExtOrTrunc(Result, dl, VT);
@@ -7484,7 +7467,8 @@ static SDValue LowerVECTOR_SHUFFLE_i1(SDValue Op, SelectionDAG &DAG,
 
   // Now return the result of comparing the shuffled vector with zero,
   // which will generate a real predicate, i.e. v4i1, v8i1 or v16i1.
-  return DAG.getNode(ARMISD::VCNEZ, dl, VT, Shuffled);
+  return DAG.getNode(ARMISD::VCMPZ, dl, VT, Shuffled,
+                     DAG.getConstant(ARMCC::NE, dl, MVT::i32));
 }
 
 static SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
@@ -7826,7 +7810,8 @@ static SDValue LowerCONCAT_VECTORS_i1(SDValue Op, SelectionDAG &DAG,
 
   // Now return the result of comparing the subvector with zero,
   // which will generate a real predicate, i.e. v4i1, v8i1 or v16i1.
-  return DAG.getNode(ARMISD::VCNEZ, dl, VT, ConVec);
+  return DAG.getNode(ARMISD::VCMPZ, dl, VT, ConVec,
+                     DAG.getConstant(ARMCC::NE, dl, MVT::i32));
 }
 
 static SDValue LowerCONCAT_VECTORS(SDValue Op, SelectionDAG &DAG,
@@ -7887,7 +7872,8 @@ static SDValue LowerEXTRACT_SUBVECTOR(SDValue Op, SelectionDAG &DAG,
 
   // Now return the result of comparing the subvector with zero,
   // which will generate a real predicate, i.e. v4i1, v8i1 or v16i1.
-  return DAG.getNode(ARMISD::VCNEZ, dl, VT, SubVec);
+  return DAG.getNode(ARMISD::VCMPZ, dl, VT, SubVec,
+                     DAG.getConstant(ARMCC::NE, dl, MVT::i32));
 }
 
 /// isExtendedBUILD_VECTOR - Check if N is a constant BUILD_VECTOR where each
@@ -11822,52 +11808,72 @@ static SDValue PerformORCombineToBFI(SDNode *N,
   return SDValue();
 }
 
+static bool isValidMVECond(unsigned CC, bool IsFloat) {
+  switch (CC) {
+  case ARMCC::EQ:
+  case ARMCC::NE:
+  case ARMCC::LE:
+  case ARMCC::GT:
+  case ARMCC::GE:
+  case ARMCC::LT:
+    return true;
+  case ARMCC::HS:
+  case ARMCC::HI:
+    return !IsFloat;
+  default:
+    return false;
+  };
+}
+
 static SDValue PerformORCombine_i1(SDNode *N,
                                    TargetLowering::DAGCombinerInfo &DCI,
                                    const ARMSubtarget *Subtarget) {
   // Try to invert "or A, B" -> "and ~A, ~B", as the "and" is easier to chain
   // together with predicates
-  struct Codes {
-    unsigned Opcode;
-    unsigned Opposite;
-  } InvertCodes[] = {
-      {ARMISD::VCEQ, ARMISD::VCNE},
-      {ARMISD::VCEQZ, ARMISD::VCNEZ},
-      {ARMISD::VCGE, ARMISD::VCLT},
-      {ARMISD::VCGEZ, ARMISD::VCLTZ},
-      {ARMISD::VCGT, ARMISD::VCLE},
-      {ARMISD::VCGTZ, ARMISD::VCLEZ},
-  };
-
   EVT VT = N->getValueType(0);
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  unsigned Opposite0 = 0;
-  unsigned Opposite1 = 0;
-  for (auto Code : InvertCodes) {
-    if (N0->getOpcode() == Code.Opcode)
-      Opposite0 = Code.Opposite;
-    if (N0->getOpcode() == Code.Opposite)
-      Opposite0 = Code.Opcode;
-    if (N1->getOpcode() == Code.Opcode)
-      Opposite1 = Code.Opposite;
-    if (N1->getOpcode() == Code.Opposite)
-      Opposite1 = Code.Opcode;
-  }
+  ARMCC::CondCodes CondCode0 = ARMCC::AL;
+  ARMCC::CondCodes CondCode1 = ARMCC::AL;
+  if (N0->getOpcode() == ARMISD::VCMP)
+    CondCode0 = (ARMCC::CondCodes)cast<const ConstantSDNode>(N0->getOperand(2))
+                    ->getZExtValue();
+  else if (N0->getOpcode() == ARMISD::VCMPZ)
+    CondCode0 = (ARMCC::CondCodes)cast<const ConstantSDNode>(N0->getOperand(1))
+                    ->getZExtValue();
+  if (N1->getOpcode() == ARMISD::VCMP)
+    CondCode1 = (ARMCC::CondCodes)cast<const ConstantSDNode>(N1->getOperand(2))
+                    ->getZExtValue();
+  else if (N1->getOpcode() == ARMISD::VCMPZ)
+    CondCode1 = (ARMCC::CondCodes)cast<const ConstantSDNode>(N1->getOperand(1))
+                    ->getZExtValue();
 
-  if (!Opposite0 || !Opposite1)
+  if (CondCode0 == ARMCC::AL || CondCode1 == ARMCC::AL)
+    return SDValue();
+
+  unsigned Opposite0 = ARMCC::getOppositeCondition(CondCode0);
+  unsigned Opposite1 = ARMCC::getOppositeCondition(CondCode1);
+
+  if (!isValidMVECond(Opposite0,
+                      N0->getOperand(0)->getValueType(0).isFloatingPoint()) ||
+      !isValidMVECond(Opposite1,
+                      N1->getOperand(0)->getValueType(0).isFloatingPoint()))
     return SDValue();
 
   SmallVector<SDValue, 4> Ops0;
-  for (unsigned i = 0, e = N0->getNumOperands(); i != e; ++i)
-    Ops0.push_back(N0->getOperand(i));
+  Ops0.push_back(N0->getOperand(0));
+  if (N0->getOpcode() == ARMISD::VCMP)
+    Ops0.push_back(N0->getOperand(1));
+  Ops0.push_back(DCI.DAG.getConstant(Opposite0, SDLoc(N0), MVT::i32));
   SmallVector<SDValue, 4> Ops1;
-  for (unsigned i = 0, e = N1->getNumOperands(); i != e; ++i)
-    Ops1.push_back(N1->getOperand(i));
+  Ops1.push_back(N1->getOperand(0));
+  if (N1->getOpcode() == ARMISD::VCMP)
+    Ops1.push_back(N1->getOperand(1));
+  Ops1.push_back(DCI.DAG.getConstant(Opposite1, SDLoc(N1), MVT::i32));
 
-  SDValue NewN0 = DCI.DAG.getNode(Opposite0, SDLoc(N0), VT, Ops0);
-  SDValue NewN1 = DCI.DAG.getNode(Opposite1, SDLoc(N1), VT, Ops1);
+  SDValue NewN0 = DCI.DAG.getNode(N0->getOpcode(), SDLoc(N0), VT, Ops0);
+  SDValue NewN1 = DCI.DAG.getNode(N1->getOpcode(), SDLoc(N1), VT, Ops1);
   SDValue And = DCI.DAG.getNode(ISD::AND, SDLoc(N), VT, NewN0, NewN1);
   return DCI.DAG.getNode(ISD::XOR, SDLoc(N), VT, And,
                          DCI.DAG.getAllOnesConstant(SDLoc(N), VT));

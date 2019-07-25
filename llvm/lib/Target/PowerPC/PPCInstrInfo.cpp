@@ -2328,6 +2328,23 @@ void PPCInstrInfo::replaceInstrWithLI(MachineInstr &MI,
       .addImm(LII.Imm);
 }
 
+MachineInstr *PPCInstrInfo::getDefMIPostRA(unsigned Reg, MachineInstr &MI,
+                                           bool &SeenIntermediateUse) const {
+  assert(!MI.getParent()->getParent()->getRegInfo().isSSA() &&
+         "Should be called after register allocation.");
+  const TargetRegisterInfo *TRI = &getRegisterInfo();
+  MachineBasicBlock::reverse_iterator E = MI.getParent()->rend(), It = MI;
+  It++;
+  SeenIntermediateUse = false;
+  for (; It != E; ++It) {
+    if (It->modifiesRegister(Reg, TRI))
+      return &*It;
+    if (It->readsRegister(Reg, TRI))
+      SeenIntermediateUse = true;
+  }
+  return nullptr;
+}
+
 MachineInstr *PPCInstrInfo::getForwardingDefMI(
   MachineInstr &MI,
   unsigned &OpNoForForwarding,
@@ -2384,29 +2401,24 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
       MachineOperand &MO = MI.getOperand(i);
       SeenIntermediateUse = false;
       if (MO.isReg() && MO.isUse() && !MO.isImplicit()) {
-        MachineBasicBlock::reverse_iterator E = MI.getParent()->rend(), It = MI;
-        It++;
         unsigned Reg = MI.getOperand(i).getReg();
-
-        // Is this register defined by some form of add-immediate (including
-        // load-immediate) within this basic block?
-        for ( ; It != E; ++It) {
-          if (It->modifiesRegister(Reg, &getRegisterInfo())) {
-            switch (It->getOpcode()) {
-            default: break;
-            case PPC::LI:
-            case PPC::LI8:
-            case PPC::ADDItocL:
-            case PPC::ADDI:
-            case PPC::ADDI8:
-              OpNoForForwarding = i;
-              return &*It;
-            }
+        // If we see another use of this reg between the def and the MI,
+        // we want to flat it so the def isn't deleted.
+        MachineInstr *DefMI = getDefMIPostRA(Reg, MI, SeenIntermediateUse);
+        if (DefMI) {
+          // Is this register defined by some form of add-immediate (including
+          // load-immediate) within this basic block?
+          switch (DefMI->getOpcode()) {
+          default:
             break;
-          } else if (It->readsRegister(Reg, &getRegisterInfo()))
-            // If we see another use of this reg between the def and the MI,
-            // we want to flat it so the def isn't deleted.
-            SeenIntermediateUse = true;
+          case PPC::LI:
+          case PPC::LI8:
+          case PPC::ADDItocL:
+          case PPC::ADDI:
+          case PPC::ADDI8:
+            OpNoForForwarding = i;
+            return DefMI;
+          }
         }
       }
     }

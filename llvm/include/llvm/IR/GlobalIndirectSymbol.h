@@ -54,9 +54,7 @@ public:
           static_cast<const GlobalIndirectSymbol *>(this)->getIndirectSymbol());
   }
 
-  const GlobalObject *getBaseObject() const {
-    return dyn_cast<GlobalObject>(getIndirectSymbol()->stripInBoundsOffsets());
-  }
+  const GlobalObject *getBaseObject() const;
   GlobalObject *getBaseObject() {
     return const_cast<GlobalObject *>(
               static_cast<const GlobalIndirectSymbol *>(this)->getBaseObject());

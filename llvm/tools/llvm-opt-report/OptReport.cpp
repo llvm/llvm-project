@@ -163,7 +163,7 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
     return false;
   }
 
-  Expected<std::unique_ptr<remarks::Parser>> MaybeParser =
+  Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
       remarks::createRemarkParser(*Format, (*Buf)->getBuffer());
   if (!MaybeParser) {
     handleAllErrors(MaybeParser.takeError(), [&](const ErrorInfoBase &PE) {
@@ -171,7 +171,7 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
     });
     return false;
   }
-  remarks::Parser &Parser = **MaybeParser;
+  remarks::RemarkParser &Parser = **MaybeParser;
 
   while (true) {
     Expected<std::unique_ptr<remarks::Remark>> MaybeRemark = Parser.next();

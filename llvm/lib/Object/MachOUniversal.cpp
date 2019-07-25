@@ -155,12 +155,13 @@ MachOUniversalBinary::MachOUniversalBinary(MemoryBufferRef Source, Error &Err)
         ") extends past the end of the file");
       return;
     }
-#define MAXSECTALIGN 15 /* 2**15 or 0x8000 */
-    if (A.getAlign() > MAXSECTALIGN) {
-      Err = malformedError("align (2^" + Twine(A.getAlign()) + ") too large "
-        "for cputype (" + Twine(A.getCPUType()) + ") cpusubtype (" +
-        Twine(A.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) +
-        ") (maximum 2^" + Twine(MAXSECTALIGN) + ")");
+
+    if (A.getAlign() > MaxSectionAlignment) {
+      Err = malformedError("align (2^" + Twine(A.getAlign()) +
+                           ") too large for cputype (" + Twine(A.getCPUType()) +
+                           ") cpusubtype (" +
+                           Twine(A.getCPUSubType() & ~MachO::CPU_SUBTYPE_MASK) +
+                           ") (maximum 2^" + Twine(MaxSectionAlignment) + ")");
       return;
     }
     if(A.getOffset() % (1 << A.getAlign()) != 0){
