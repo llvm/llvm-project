@@ -14,164 +14,163 @@
 
 using namespace llvm;
 
-static bool IsCaseSensitivePath(StringRef path) {
-  SmallString<256> tmp_dest = path, upper_dest, real_dest;
+static bool isCaseSensitivePath(StringRef Path) {
+  SmallString<256> TmpDest = Path, UpperDest, RealDest;
 
   // Remove component traversals, links, etc.
-  if (!sys::fs::real_path(path, tmp_dest))
+  if (!sys::fs::real_path(Path, TmpDest))
     return true; // Current default value in vfs.yaml
-  path = tmp_dest;
+  Path = TmpDest;
 
   // Change path to all upper case and ask for its real path, if the latter
   // exists and is equal to path, it's not case sensitive. Default to case
   // sensitive in the absence of real_path, since this is the YAMLVFSWriter
   // default.
-  upper_dest = path.upper();
-  if (sys::fs::real_path(upper_dest, real_dest) && path.equals(real_dest))
+  UpperDest = Path.upper();
+  if (sys::fs::real_path(UpperDest, RealDest) && Path.equals(RealDest))
     return false;
   return true;
 }
 
-FileCollector::FileCollector(std::string root, std::string overlay_root)
-    : m_root(std::move(root)), m_overlay_root(std::move(overlay_root)) {
-  sys::fs::create_directories(this->m_root, true);
+FileCollector::FileCollector(std::string Root, std::string OverlayRoot)
+    : Root(std::move(Root)), OverlayRoot(std::move(OverlayRoot)) {
+  sys::fs::create_directories(this->Root, true);
 }
 
-bool FileCollector::GetRealPath(StringRef src_path,
-                                SmallVectorImpl<char> &result) {
-  SmallString<256> real_path;
-  StringRef FileName = sys::path::filename(src_path);
-  std::string directory = sys::path::parent_path(src_path).str();
-  auto dir_with_symlink = m_symlink_map.find(directory);
+bool FileCollector::getRealPath(StringRef SrcPath,
+                                SmallVectorImpl<char> &Result) {
+  SmallString<256> RealPath;
+  StringRef FileName = sys::path::filename(SrcPath);
+  std::string Directory = sys::path::parent_path(SrcPath).str();
+  auto DirWithSymlink = SymlinkMap.find(Directory);
 
   // Use real_path to fix any symbolic link component present in a path.
-  // Computing the real path is expensive, cache the search through the
-  // parent path directory.
-  if (dir_with_symlink == m_symlink_map.end()) {
-    auto ec = sys::fs::real_path(directory, real_path);
-    if (ec)
+  // Computing the real path is expensive, cache the search through the parent
+  // path Directory.
+  if (DirWithSymlink == SymlinkMap.end()) {
+    auto EC = sys::fs::real_path(Directory, RealPath);
+    if (EC)
       return false;
-    m_symlink_map[directory] = real_path.str();
+    SymlinkMap[Directory] = RealPath.str();
   } else {
-    real_path = dir_with_symlink->second;
+    RealPath = DirWithSymlink->second;
   }
 
-  sys::path::append(real_path, FileName);
-  result.swap(real_path);
+  sys::path::append(RealPath, FileName);
+  Result.swap(RealPath);
   return true;
 }
 
-void FileCollector::AddFile(const Twine &file) {
-  std::lock_guard<std::mutex> lock(m_mutex);
-  std::string file_str = file.str();
-  if (MarkAsSeen(file_str))
-    AddFileImpl(file_str);
+void FileCollector::addFile(const Twine &file) {
+  std::lock_guard<std::mutex> lock(Mutex);
+  std::string FileStr = file.str();
+  if (markAsSeen(FileStr))
+    addFileImpl(FileStr);
 }
 
-void FileCollector::AddFileImpl(StringRef src_path) {
+void FileCollector::addFileImpl(StringRef SrcPath) {
   // We need an absolute src path to append to the root.
-  SmallString<256> absolute_src = src_path;
-  sys::fs::make_absolute(absolute_src);
+  SmallString<256> AbsoluteSrc = SrcPath;
+  sys::fs::make_absolute(AbsoluteSrc);
 
   // Canonicalize src to a native path to avoid mixed separator styles.
-  sys::path::native(absolute_src);
+  sys::path::native(AbsoluteSrc);
 
   // Remove redundant leading "./" pieces and consecutive separators.
-  absolute_src = sys::path::remove_leading_dotslash(absolute_src);
+  AbsoluteSrc = sys::path::remove_leading_dotslash(AbsoluteSrc);
 
   // Canonicalize the source path by removing "..", "." components.
-  SmallString<256> virtual_path = absolute_src;
-  sys::path::remove_dots(virtual_path, /*remove_dot_dot=*/true);
+  SmallString<256> VirtualPath = AbsoluteSrc;
+  sys::path::remove_dots(VirtualPath, /*remove_dot_dot=*/true);
 
   // If a ".." component is present after a symlink component, remove_dots may
   // lead to the wrong real destination path. Let the source be canonicalized
   // like that but make sure we always use the real path for the destination.
-  SmallString<256> copy_from;
-  if (!GetRealPath(absolute_src, copy_from))
-    copy_from = virtual_path;
+  SmallString<256> CopyFrom;
+  if (!getRealPath(AbsoluteSrc, CopyFrom))
+    CopyFrom = VirtualPath;
 
-  SmallString<256> dst_path = StringRef(m_root);
-  sys::path::append(dst_path, sys::path::relative_path(copy_from));
+  SmallString<256> DstPath = StringRef(Root);
+  sys::path::append(DstPath, sys::path::relative_path(CopyFrom));
 
   // Always map a canonical src path to its real path into the YAML, by doing
   // this we map different virtual src paths to the same entry in the VFS
   // overlay, which is a way to emulate symlink inside the VFS; this is also
   // needed for correctness, not doing that can lead to module redefinition
   // errors.
-  AddFileToMapping(virtual_path, dst_path);
+  addFileToMapping(VirtualPath, DstPath);
 }
 
 /// Set the access and modification time for the given file from the given
 /// status object.
 static std::error_code
-CopyAccessAndModificationTime(StringRef filename,
-                              const sys::fs::file_status &stat) {
-  int fd;
+copyAccessAndModificationTime(StringRef Filename,
+                              const sys::fs::file_status &Stat) {
+  int FD;
 
-  if (auto ec =
-          sys::fs::openFileForWrite(filename, fd, sys::fs::CD_OpenExisting))
-    return ec;
+  if (auto EC =
+          sys::fs::openFileForWrite(Filename, FD, sys::fs::CD_OpenExisting))
+    return EC;
 
-  if (auto ec = sys::fs::setLastAccessAndModificationTime(
-          fd, stat.getLastAccessedTime(), stat.getLastModificationTime()))
-    return ec;
+  if (auto EC = sys::fs::setLastAccessAndModificationTime(
+          FD, Stat.getLastAccessedTime(), Stat.getLastModificationTime()))
+    return EC;
 
-  if (auto ec = sys::Process::SafelyCloseFileDescriptor(fd))
-    return ec;
+  if (auto EC = sys::Process::SafelyCloseFileDescriptor(FD))
+    return EC;
 
   return {};
 }
 
-std::error_code FileCollector::CopyFiles(bool stop_on_error) {
-  for (auto &entry : m_vfs_writer.getMappings()) {
+std::error_code FileCollector::copyFiles(bool StopOnError) {
+  for (auto &entry : VFSWriter.getMappings()) {
     // Create directory tree.
-    if (std::error_code ec =
+    if (std::error_code EC =
             sys::fs::create_directories(sys::path::parent_path(entry.RPath),
                                         /*IgnoreExisting=*/true)) {
-      if (stop_on_error)
-        return ec;
+      if (StopOnError)
+        return EC;
     }
 
     // Copy file over.
-    if (std::error_code ec = sys::fs::copy_file(entry.VPath, entry.RPath)) {
-      if (stop_on_error)
-        return ec;
+    if (std::error_code EC = sys::fs::copy_file(entry.VPath, entry.RPath)) {
+      if (StopOnError)
+        return EC;
     }
 
     // Copy over permissions.
     if (auto perms = sys::fs::getPermissions(entry.VPath)) {
-      if (std::error_code ec = sys::fs::setPermissions(entry.RPath, *perms)) {
-        if (stop_on_error)
-          return ec;
+      if (std::error_code EC = sys::fs::setPermissions(entry.RPath, *perms)) {
+        if (StopOnError)
+          return EC;
       }
     }
 
     // Copy over modification time.
-    sys::fs::file_status stat;
-    if (std::error_code ec = sys::fs::status(entry.VPath, stat)) {
-      if (stop_on_error)
-        return ec;
+    sys::fs::file_status Stat;
+    if (std::error_code EC = sys::fs::status(entry.VPath, Stat)) {
+      if (StopOnError)
+        return EC;
       continue;
     }
-    CopyAccessAndModificationTime(entry.RPath, stat);
+    copyAccessAndModificationTime(entry.RPath, Stat);
   }
   return {};
 }
 
-std::error_code FileCollector::WriteMapping(StringRef mapping_file) {
-  std::lock_guard<std::mutex> lock(m_mutex);
+std::error_code FileCollector::writeMapping(StringRef mapping_file) {
+  std::lock_guard<std::mutex> lock(Mutex);
 
-  StringRef root = m_overlay_root;
-  m_vfs_writer.setOverlayDir(root);
-  m_vfs_writer.setCaseSensitivity(IsCaseSensitivePath(root));
-  m_vfs_writer.setUseExternalNames(false);
+  VFSWriter.setOverlayDir(OverlayRoot);
+  VFSWriter.setCaseSensitivity(isCaseSensitivePath(OverlayRoot));
+  VFSWriter.setUseExternalNames(false);
 
-  std::error_code ec;
-  raw_fd_ostream os(mapping_file, ec, sys::fs::F_Text);
-  if (ec)
-    return ec;
+  std::error_code EC;
+  raw_fd_ostream os(mapping_file, EC, sys::fs::F_Text);
+  if (EC)
+    return EC;
 
-  m_vfs_writer.write(os);
+  VFSWriter.write(os);
 
   return {};
 }

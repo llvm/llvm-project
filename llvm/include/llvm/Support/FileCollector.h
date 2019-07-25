@@ -23,51 +23,49 @@ namespace llvm {
 /// the VFS.
 class FileCollector {
 public:
-  FileCollector(std::string root, std::string overlay);
+  FileCollector(std::string Root, std::string OverlayRoot);
 
-  void AddFile(const Twine &file);
+  void addFile(const Twine &file);
 
   /// Write the yaml mapping (for the VFS) to the given file.
-  std::error_code WriteMapping(StringRef mapping_file);
+  std::error_code writeMapping(StringRef mapping_file);
 
   /// Copy the files into the root directory.
   ///
-  /// When stop_on_error is true (the default) we abort as soon as one file
+  /// When StopOnError is true (the default) we abort as soon as one file
   /// cannot be copied. This is relatively common, for example when a file was
   /// removed after it was added to the mapping.
-  std::error_code CopyFiles(bool stop_on_error = true);
+  std::error_code copyFiles(bool StopOnError = true);
 
 private:
-  void AddFileImpl(StringRef src_path);
+  void addFileImpl(StringRef SrcPath);
 
-  bool MarkAsSeen(StringRef path) { return m_seen.insert(path).second; }
+  bool markAsSeen(StringRef Path) { return Seen.insert(Path).second; }
 
-  bool GetRealPath(StringRef src_path,
-                   SmallVectorImpl<char> &result);
+  bool getRealPath(StringRef SrcPath, SmallVectorImpl<char> &Result);
 
-  void AddFileToMapping(StringRef virtual_path,
-                        StringRef real_path) {
-    m_vfs_writer.addFileMapping(virtual_path, real_path);
+  void addFileToMapping(StringRef VirtualPath, StringRef RealPath) {
+    VFSWriter.addFileMapping(VirtualPath, RealPath);
   }
 
 protected:
   /// Synchronizes adding files.
-  std::mutex m_mutex;
+  std::mutex Mutex;
 
   /// The root directory where files are copied.
-  std::string m_root;
+  std::string Root;
 
   /// The root directory where the VFS overlay lives.
-  std::string m_overlay_root;
+  std::string OverlayRoot;
 
   /// Tracks already seen files so they can be skipped.
-  StringSet<> m_seen;
+  StringSet<> Seen;
 
   /// The yaml mapping writer.
-  vfs::YAMLVFSWriter m_vfs_writer;
+  vfs::YAMLVFSWriter VFSWriter;
 
-  /// Caches real_path calls when resolving symlinks.
-  StringMap<std::string> m_symlink_map;
+  /// Caches RealPath calls when resolving symlinks.
+  StringMap<std::string> SymlinkMap;
 };
 
 } // end namespace llvm
