@@ -516,7 +516,7 @@ bool ThreadPlanStepInRange::DefaultShouldStopHereImpl(Flags &flags,
                   "Stepping out of frame %s which did not match step into "
                   "target %s.",
                   sc.GetFunctionName().AsCString(),
-                  step_in_range_plan->m_step_into_target.AsCString());
+                  m_step_into_target.AsCString());
     }
   }
 
