@@ -6918,6 +6918,7 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("if (*b[i])");
   verifyIndependentOfContext("if (int *a = (&b))");
   verifyIndependentOfContext("while (int *a = &b)");
+  verifyIndependentOfContext("while (a * (b * c))");
   verifyIndependentOfContext("size = sizeof *a;");
   verifyIndependentOfContext("if (a && (b = c))");
   verifyFormat("void f() {\n"
