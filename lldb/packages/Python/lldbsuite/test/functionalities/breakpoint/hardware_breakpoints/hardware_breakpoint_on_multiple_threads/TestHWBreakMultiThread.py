@@ -22,7 +22,6 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
 
     # LLDB supports hardware breakpoints for arm and aarch64 architectures.
     @skipIf(archs=no_match(['arm', 'aarch64']))
-    @expectedFailureAndroid
     def test_hw_break_set_delete_multi_thread(self):
         self.build()
         self.setTearDownCleanup()
@@ -30,7 +29,6 @@ class HardwareBreakpointMultiThreadTestCase(TestBase):
 
     # LLDB supports hardware breakpoints for arm and aarch64 architectures.
     @skipIf(archs=no_match(['arm', 'aarch64']))
-    @expectedFailureAndroid
     def test_hw_break_set_disable_multi_thread(self):
         self.build()
         self.setTearDownCleanup()
