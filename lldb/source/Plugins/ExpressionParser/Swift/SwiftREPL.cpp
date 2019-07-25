@@ -552,6 +552,7 @@ int SwiftREPL::CompleteCode(const std::string &current_code,
 
   if (swift_ast) {
     swift::ASTContext *ast = swift_ast->GetASTContext();
+    swift::registerIDERequestFunctions(ast->evaluator);
     swift::REPLCompletions completions;
     SourceModule completion_module_info;
     completion_module_info.path.push_back(ConstString("repl"));
