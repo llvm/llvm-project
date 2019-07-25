@@ -129,9 +129,8 @@ define arm_aapcs_vfpcc <4 x i32> @cmpulez_v4i1(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: cmpulez_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vcmp.i32 eq, q0, zr
-; CHECK-NEXT:    vmov.i32 q2, #0x0
 ; CHECK-NEXT:    vpst
-; CHECK-NEXT:    vcmpt.u32 cs, q2, q1
+; CHECK-NEXT:    vcmpt.u32 cs, q1, zr
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:

@@ -348,10 +348,11 @@ AllocatedMemoryCache::AllocatePage(uint32_t byte_size, uint32_t permissions,
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
   if (log) {
-    log->Printf("Process::DoAllocateMemory (byte_size = 0x%8.8" PRIx32
-                ", permissions = %s) => 0x%16.16" PRIx64,
-                (uint32_t)page_byte_size, GetPermissionsAsCString(permissions),
-                (uint64_t)addr);
+    LLDB_LOGF(log,
+              "Process::DoAllocateMemory (byte_size = 0x%8.8" PRIx32
+              ", permissions = %s) => 0x%16.16" PRIx64,
+              (uint32_t)page_byte_size, GetPermissionsAsCString(permissions),
+              (uint64_t)addr);
   }
 
   if (addr != LLDB_INVALID_ADDRESS) {
@@ -385,12 +386,11 @@ lldb::addr_t AllocatedMemoryCache::AllocateMemory(size_t byte_size,
       addr = block_sp->ReserveBlock(byte_size);
   }
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  if (log)
-    log->Printf(
-        "AllocatedMemoryCache::AllocateMemory (byte_size = 0x%8.8" PRIx32
-        ", permissions = %s) => 0x%16.16" PRIx64,
-        (uint32_t)byte_size, GetPermissionsAsCString(permissions),
-        (uint64_t)addr);
+  LLDB_LOGF(log,
+            "AllocatedMemoryCache::AllocateMemory (byte_size = 0x%8.8" PRIx32
+            ", permissions = %s) => 0x%16.16" PRIx64,
+            (uint32_t)byte_size, GetPermissionsAsCString(permissions),
+            (uint64_t)addr);
   return addr;
 }
 
@@ -406,9 +406,9 @@ bool AllocatedMemoryCache::DeallocateMemory(lldb::addr_t addr) {
     }
   }
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PROCESS));
-  if (log)
-    log->Printf("AllocatedMemoryCache::DeallocateMemory (addr = 0x%16.16" PRIx64
-                ") => %i",
-                (uint64_t)addr, success);
+  LLDB_LOGF(log,
+            "AllocatedMemoryCache::DeallocateMemory (addr = 0x%16.16" PRIx64
+            ") => %i",
+            (uint64_t)addr, success);
   return success;
 }

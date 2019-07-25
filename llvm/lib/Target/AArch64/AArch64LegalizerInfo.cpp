@@ -52,6 +52,12 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST) {
   const LLT v2s64 = LLT::vector(2, 64);
   const LLT v2p0 = LLT::vector(2, p0);
 
+  // FIXME: support subtargets which have neon/fp-armv8 disabled.
+  if (!ST.hasNEON() || !ST.hasFPARMv8()) {
+    computeTables();
+    return;
+  }
+
   getActionDefinitionsBuilder(G_IMPLICIT_DEF)
     .legalFor({p0, s1, s8, s16, s32, s64, v4s32, v2s64})
     .clampScalar(0, s1, s64)

@@ -1588,9 +1588,12 @@ public:
   /// Extract. The reduction must use one of the opcodes listed in /p
   /// CandidateBinOps and on success /p BinOp will contain the matching opcode.
   /// Returns the vector that is being reduced on, or SDValue() if a reduction
-  /// was not matched.
+  /// was not matched. If \p AllowPartials is set then in the case of a
+  /// reduction pattern that only matches the first few stages, the extracted
+  /// subvector of the start of the reduction is returned.
   SDValue matchBinOpReduction(SDNode *Extract, ISD::NodeType &BinOp,
-                              ArrayRef<ISD::NodeType> CandidateBinOps);
+                              ArrayRef<ISD::NodeType> CandidateBinOps,
+                              bool AllowPartials = false);
 
   /// Utility function used by legalize and lowering to
   /// "unroll" a vector operation by splitting out the scalars and operating

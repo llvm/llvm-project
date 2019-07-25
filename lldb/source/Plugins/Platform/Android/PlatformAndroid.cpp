@@ -68,8 +68,8 @@ PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
     const char *triple_cstr =
         arch ? arch->GetTriple().getTriple().c_str() : "<null>";
 
-    log->Printf("PlatformAndroid::%s(force=%s, arch={%s,%s})", __FUNCTION__,
-                force ? "true" : "false", arch_name, triple_cstr);
+    LLDB_LOGF(log, "PlatformAndroid::%s(force=%s, arch={%s,%s})", __FUNCTION__,
+              force ? "true" : "false", arch_name, triple_cstr);
   }
 
   bool create = force;
@@ -113,16 +113,14 @@ PlatformSP PlatformAndroid::CreateInstance(bool force, const ArchSpec *arch) {
   }
 
   if (create) {
-    if (log)
-      log->Printf("PlatformAndroid::%s() creating remote-android platform",
-                  __FUNCTION__);
+    LLDB_LOGF(log, "PlatformAndroid::%s() creating remote-android platform",
+              __FUNCTION__);
     return PlatformSP(new PlatformAndroid(false));
   }
 
-  if (log)
-    log->Printf(
-        "PlatformAndroid::%s() aborting creation of remote-android platform",
-        __FUNCTION__);
+  LLDB_LOGF(
+      log, "PlatformAndroid::%s() aborting creation of remote-android platform",
+      __FUNCTION__);
 
   return PlatformSP();
 }
@@ -212,9 +210,8 @@ Status PlatformAndroid::GetFile(const FileSpec &source,
   auto source_file = source_spec.GetCString(false);
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log)
-    log->Printf("Got mode == 0 on '%s': try to get file via 'shell cat'",
-                source_file);
+  LLDB_LOGF(log, "Got mode == 0 on '%s': try to get file via 'shell cat'",
+            source_file);
 
   if (strchr(source_file, '\'') != nullptr)
     return Status("Doesn't support single-quotes in filenames");
@@ -288,9 +285,8 @@ uint32_t PlatformAndroid::GetSdkVersion() {
 
   if (error.Fail() || version_string.empty()) {
     Log *log = GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM);
-    if (log)
-      log->Printf("Get SDK version failed. (error: %s, output: %s)",
-                  error.AsCString(), version_string.c_str());
+    LLDB_LOGF(log, "Get SDK version failed. (error: %s, output: %s)",
+              error.AsCString(), version_string.c_str());
     return 0;
   }
 
@@ -337,7 +333,7 @@ Status PlatformAndroid::DownloadSymbolFile(const lldb::ModuleSP &module_sp,
 
     Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
     if (log && error.Fail())
-      log->Printf("Failed to remove temp directory: %s", error.AsCString());
+      LLDB_LOGF(log, "Failed to remove temp directory: %s", error.AsCString());
   });
 
   FileSpec symfile_platform_filespec(tmpdir);

@@ -265,23 +265,12 @@ def ARMvshruImm  : SDNode<"ARMISD::VSHRuIMM", SDTARMVSHIMM>;
 def ARMvshls     : SDNode<"ARMISD::VSHLs", SDTARMVSH>;
 def ARMvshlu     : SDNode<"ARMISD::VSHLu", SDTARMVSH>;
 
-def SDTARMVCMP    : SDTypeProfile<1, 2, [SDTCisInt<0>, SDTCisSameAs<1, 2>]>;
-def SDTARMVCMPZ   : SDTypeProfile<1, 1, []>;
+def SDTARMVCMP    : SDTypeProfile<1, 3, [SDTCisInt<0>, SDTCisSameAs<1, 2>,
+                                         SDTCisInt<3>]>;
+def SDTARMVCMPZ   : SDTypeProfile<1, 2, [SDTCisInt<2>]>;
 
-def ARMvceq      : SDNode<"ARMISD::VCEQ", SDTARMVCMP>;
-def ARMvceqz     : SDNode<"ARMISD::VCEQZ", SDTARMVCMPZ>;
-def ARMvcne      : SDNode<"ARMISD::VCNE", SDTARMVCMP>;
-def ARMvcnez     : SDNode<"ARMISD::VCNEZ", SDTARMVCMPZ>;
-def ARMvcge      : SDNode<"ARMISD::VCGE", SDTARMVCMP>;
-def ARMvcgez     : SDNode<"ARMISD::VCGEZ", SDTARMVCMPZ>;
-def ARMvcle      : SDNode<"ARMISD::VCLE", SDTARMVCMP>;
-def ARMvclez     : SDNode<"ARMISD::VCLEZ", SDTARMVCMPZ>;
-def ARMvcgeu     : SDNode<"ARMISD::VCGEU", SDTARMVCMP>;
-def ARMvcgt      : SDNode<"ARMISD::VCGT", SDTARMVCMP>;
-def ARMvcgtz     : SDNode<"ARMISD::VCGTZ", SDTARMVCMPZ>;
-def ARMvclt      : SDNode<"ARMISD::VCLT", SDTARMVCMP>;
-def ARMvcltz     : SDNode<"ARMISD::VCLTZ", SDTARMVCMPZ>;
-def ARMvcgtu     : SDNode<"ARMISD::VCGTU", SDTARMVCMP>;
+def ARMvcmp      : SDNode<"ARMISD::VCMP", SDTARMVCMP>;
+def ARMvcmpz     : SDNode<"ARMISD::VCMPZ", SDTARMVCMPZ>;
 
 def ARMWLS      : SDNode<"ARMISD::WLS", SDT_ARMLoLoop, [SDNPHasChain]>;
 def ARMLE       : SDNode<"ARMISD::LE", SDT_ARMLoLoop, [SDNPHasChain]>;

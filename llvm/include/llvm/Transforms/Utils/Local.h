@@ -427,6 +427,10 @@ void combineMetadata(Instruction *K, const Instruction *J,
 void combineMetadataForCSE(Instruction *K, const Instruction *J,
                            bool DoesKMove);
 
+/// Copy the metadata from the source instruction to the destination (the
+/// replacement for the source instruction).
+void copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source);
+
 /// Patch the replacement so that it is not more restrictive than the value
 /// being replaced. It assumes that the replacement does not get moved from
 /// its original position.

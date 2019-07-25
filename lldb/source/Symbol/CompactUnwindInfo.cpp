@@ -190,8 +190,8 @@ bool CompactUnwindInfo::GetUnwindPlan(Target &target, Address addr,
             Address::DumpStyle::DumpStyleResolvedDescriptionNoFunctionArguments,
             Address::DumpStyle::DumpStyleFileAddress,
             arch.GetAddressByteSize());
-        log->Printf("Got compact unwind encoding 0x%x for function %s",
-                    function_info.encoding, strm.GetData());
+        LLDB_LOGF(log, "Got compact unwind encoding 0x%x for function %s",
+                  function_info.encoding, strm.GetData());
       }
 
       if (function_info.valid_range_offset_start != 0 &&

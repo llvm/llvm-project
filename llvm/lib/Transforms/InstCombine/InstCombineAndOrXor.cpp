@@ -1197,7 +1197,7 @@ Value *InstCombiner::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       // (X != 13 & X u< 14) -> X < 13
       if (LHSC->getValue() == (RHSC->getValue() - 1))
         return Builder.CreateICmpULT(LHS0, LHSC);
-      if (LHSC->isZero()) // (X != 0 & X u< 14) -> X-1 u< 13
+      if (LHSC->isZero()) // (X != 0 & X u< C) -> X-1 u< C-1
         return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
                                false, true);
       break; // (X != 13 & X u< 15) -> no change
@@ -1205,7 +1205,11 @@ Value *InstCombiner::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       // (X != 13 & X s< 14) -> X < 13
       if (LHSC->getValue() == (RHSC->getValue() - 1))
         return Builder.CreateICmpSLT(LHS0, LHSC);
-      break;                 // (X != 13 & X s< 15) -> no change
+      // (X != INT_MIN & X s< C) -> X-(INT_MIN+1) u< (C-(INT_MIN+1))
+      if (LHSC->isMinValue(true))
+        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
+                               true, true);
+      break; // (X != 13 & X s< 15) -> no change
     case ICmpInst::ICMP_NE:
       // Potential folds for this case should already be handled.
       break;
@@ -1219,8 +1223,12 @@ Value *InstCombiner::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       // (X u> 13 & X != 14) -> X u> 14
       if (RHSC->getValue() == (LHSC->getValue() + 1))
         return Builder.CreateICmp(PredL, LHS0, RHSC);
+      // X u> C & X != UINT_MAX -> (X-(C+1)) u< UINT_MAX-(C+1)
+      if (RHSC->isMaxValue(false))
+        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
+                               false, true);
       break;                 // (X u> 13 & X != 15) -> no change
-    case ICmpInst::ICMP_ULT: // (X u> 13 & X u< 15) -> (X-14) <u 1
+    case ICmpInst::ICMP_ULT: // (X u> 13 & X u< 15) -> (X-14) u< 1
       return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
                              false, true);
     }
@@ -1233,8 +1241,12 @@ Value *InstCombiner::foldAndOfICmps(ICmpInst *LHS, ICmpInst *RHS,
       // (X s> 13 & X != 14) -> X s> 14
       if (RHSC->getValue() == (LHSC->getValue() + 1))
         return Builder.CreateICmp(PredL, LHS0, RHSC);
+      // X s> C & X != INT_MAX -> (X-(C+1)) u< INT_MAX-(C+1)
+      if (RHSC->isMaxValue(true))
+        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(),
+                               true, true);
       break;                 // (X s> 13 & X != 15) -> no change
-    case ICmpInst::ICMP_SLT: // (X s> 13 & X s< 15) -> (X-14) s< 1
+    case ICmpInst::ICMP_SLT: // (X s> 13 & X s< 15) -> (X-14) u< 1
       return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue(), true,
                              true);
     }
@@ -2253,8 +2265,19 @@ Value *InstCombiner::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     case ICmpInst::ICMP_EQ:
       // Potential folds for this case should already be handled.
       break;
-    case ICmpInst::ICMP_UGT: // (X == 13 | X u> 14) -> no change
-    case ICmpInst::ICMP_SGT: // (X == 13 | X s> 14) -> no change
+    case ICmpInst::ICMP_UGT:
+      // (X == 0 || X u> C) -> (X-1) u>= C
+      if (LHSC->isMinValue(false))
+        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue() + 1,
+                               false, false);
+      // (X == 13 | X u> 14) -> no change
+      break;
+    case ICmpInst::ICMP_SGT:
+      // (X == INT_MIN || X s> C) -> (X-(INT_MIN+1)) u>= C-INT_MIN
+      if (LHSC->isMinValue(true))
+        return insertRangeTest(LHS0, LHSC->getValue() + 1, RHSC->getValue() + 1,
+                               true, false);
+      // (X == 13 | X s> 14) -> no change
       break;
     }
     break;
@@ -2263,6 +2286,10 @@ Value *InstCombiner::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     default:
       llvm_unreachable("Unknown integer condition code!");
     case ICmpInst::ICMP_EQ: // (X u< 13 | X == 14) -> no change
+      // (X u< C || X == UINT_MAX) => (X-C) u>= UINT_MAX-C
+      if (RHSC->isMaxValue(false))
+        return insertRangeTest(LHS0, LHSC->getValue(), RHSC->getValue(),
+                               false, false);
       break;
     case ICmpInst::ICMP_UGT: // (X u< 13 | X u> 15) -> (X-13) u> 2
       assert(!RHSC->isMaxValue(false) && "Missed icmp simplification");
@@ -2274,9 +2301,14 @@ Value *InstCombiner::foldOrOfICmps(ICmpInst *LHS, ICmpInst *RHS,
     switch (PredR) {
     default:
       llvm_unreachable("Unknown integer condition code!");
-    case ICmpInst::ICMP_EQ: // (X s< 13 | X == 14) -> no change
+    case ICmpInst::ICMP_EQ:
+      // (X s< C || X == INT_MAX) => (X-C) u>= INT_MAX-C
+      if (RHSC->isMaxValue(true))
+        return insertRangeTest(LHS0, LHSC->getValue(), RHSC->getValue(),
+                               true, false);
+      // (X s< 13 | X == 14) -> no change
       break;
-    case ICmpInst::ICMP_SGT: // (X s< 13 | X s> 15) -> (X-13) s> 2
+    case ICmpInst::ICMP_SGT: // (X s< 13 | X s> 15) -> (X-13) u> 2
       assert(!RHSC->isMaxValue(true) && "Missed icmp simplification");
       return insertRangeTest(LHS0, LHSC->getValue(), RHSC->getValue() + 1, true,
                              false);

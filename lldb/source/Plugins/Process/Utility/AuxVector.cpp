@@ -43,9 +43,9 @@ void AuxVector::DumpToLog(lldb_private::Log *log) const {
 
   log->PutCString("AuxVector: ");
   for (auto entry : m_auxv_entries) {
-    log->Printf("   %s [%" PRIu64 "]: %" PRIx64,
-                GetEntryName(static_cast<EntryType>(entry.first)), entry.first,
-                entry.second);
+    LLDB_LOGF(log, "   %s [%" PRIu64 "]: %" PRIx64,
+              GetEntryName(static_cast<EntryType>(entry.first)), entry.first,
+              entry.second);
   }
 }
 

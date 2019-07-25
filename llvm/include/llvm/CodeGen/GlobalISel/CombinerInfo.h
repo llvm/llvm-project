@@ -27,9 +27,11 @@ class MachineRegisterInfo;
 class CombinerInfo {
 public:
   CombinerInfo(bool AllowIllegalOps, bool ShouldLegalizeIllegal,
-               LegalizerInfo *LInfo)
+               LegalizerInfo *LInfo, bool OptEnabled, bool OptSize,
+               bool MinSize)
       : IllegalOpsAllowed(AllowIllegalOps),
-        LegalizeIllegalOps(ShouldLegalizeIllegal), LInfo(LInfo) {
+        LegalizeIllegalOps(ShouldLegalizeIllegal), LInfo(LInfo),
+        EnableOpt(OptEnabled), EnableOptSize(OptSize), EnableMinSize(OptSize) {
     assert(((AllowIllegalOps || !LegalizeIllegalOps) || LInfo) &&
            "Expecting legalizerInfo when illegalops not allowed");
   }
@@ -42,6 +44,15 @@ public:
   /// illegal ops that are created.
   bool LegalizeIllegalOps; // TODO: Make use of this.
   const LegalizerInfo *LInfo;
+
+  /// Whether optimizations should be enabled. This is to distinguish between
+  /// uses of the combiner unconditionally and only when optimizations are
+  /// specifically enabled/
+  bool EnableOpt;
+  /// Whether we're optimizing for size.
+  bool EnableOptSize;
+  /// Whether we're optimizing for minsize (-Oz).
+  bool EnableMinSize;
 
   /// Attempt to combine instructions using MI as the root.
   ///

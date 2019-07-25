@@ -142,6 +142,7 @@ public:
                          std::forward<Args>(args)...));
   }
 
+  /// Prefer using LLDB_LOGF whenever possible.
   void Printf(const char *format, ...) __attribute__((format(printf, 2, 3)));
 
   void Error(const char *fmt, ...) __attribute__((format(printf, 2, 3)));
@@ -210,6 +211,13 @@ private:
     ::lldb_private::Log *log_private = (log);                                  \
     if (log_private)                                                           \
       log_private->Format(__FILE__, __func__, __VA_ARGS__);                    \
+  } while (0)
+
+#define LLDB_LOGF(log, ...)                                                    \
+  do {                                                                         \
+    ::lldb_private::Log *log_private = (log);                                  \
+    if (log_private)                                                           \
+      log_private->Printf(__VA_ARGS__);                                        \
   } while (0)
 
 #define LLDB_LOGV(log, ...)                                                    \

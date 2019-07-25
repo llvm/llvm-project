@@ -226,9 +226,9 @@ static char *GetMSVCDemangledStr(const char *M) {
 
   if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE)) {
     if (demangled_cstr && demangled_cstr[0])
-      log->Printf("demangled msvc: %s -> \"%s\"", M, demangled_cstr);
+      LLDB_LOGF(log, "demangled msvc: %s -> \"%s\"", M, demangled_cstr);
     else
-      log->Printf("demangled msvc: %s -> error: 0x%lu", M, result);
+      LLDB_LOGF(log, "demangled msvc: %s -> error: 0x%lu", M, result);
   }
 
   if (result != 0) {
@@ -261,9 +261,9 @@ static char *GetItaniumDemangledStr(const char *M) {
 
   if (Log *log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DEMANGLE)) {
     if (demangled_cstr)
-      log->Printf("demangled itanium: %s -> \"%s\"", M, demangled_cstr);
+      LLDB_LOGF(log, "demangled itanium: %s -> \"%s\"", M, demangled_cstr);
     else
-      log->Printf("demangled itanium: %s -> error: failed to demangle", M);
+      LLDB_LOGF(log, "demangled itanium: %s -> error: failed to demangle", M);
   }
 
   return demangled_cstr;

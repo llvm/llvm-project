@@ -16,21 +16,21 @@
 using namespace llvm;
 using namespace llvm::remarks;
 
-Expected<std::unique_ptr<Serializer>>
+Expected<std::unique_ptr<RemarkSerializer>>
 remarks::createRemarkSerializer(Format RemarksFormat, raw_ostream &OS) {
   switch (RemarksFormat) {
   case Format::Unknown:
     return createStringError(std::errc::invalid_argument,
                              "Unknown remark serializer format.");
   case Format::YAML:
-    return llvm::make_unique<YAMLSerializer>(OS);
+    return llvm::make_unique<YAMLRemarkSerializer>(OS);
   case Format::YAMLStrTab:
-    return llvm::make_unique<YAMLStrTabSerializer>(OS);
+    return llvm::make_unique<YAMLStrTabRemarkSerializer>(OS);
   }
   llvm_unreachable("Unknown remarks::Format enum");
 }
 
-Expected<std::unique_ptr<Serializer>>
+Expected<std::unique_ptr<RemarkSerializer>>
 remarks::createRemarkSerializer(Format RemarksFormat, raw_ostream &OS,
                                 remarks::StringTable StrTab) {
   switch (RemarksFormat) {
@@ -42,7 +42,7 @@ remarks::createRemarkSerializer(Format RemarksFormat, raw_ostream &OS,
                              "Unable to use a string table with the yaml "
                              "format. Use 'yaml-strtab' instead.");
   case Format::YAMLStrTab:
-    return llvm::make_unique<YAMLStrTabSerializer>(OS, std::move(StrTab));
+    return llvm::make_unique<YAMLStrTabRemarkSerializer>(OS, std::move(StrTab));
   }
   llvm_unreachable("Unknown remarks::Format enum");
 }
