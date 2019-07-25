@@ -26,6 +26,7 @@ target_link_libraries(clang-tidy
   clangTidyFuchsiaModule
   clangTidyGoogleModule
   clangTidyHICPPModule
+  clangTidyLinuxKernelModule
   clangTidyLLVMModule
   clangTidyMiscModule
   clangTidyModernizeModule

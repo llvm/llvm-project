@@ -82,7 +82,7 @@ static void emitProperty(Record *Property, raw_ostream &OS) {
   if (hasDefaultStringValue) {
     if (auto D = Property->getValue("DefaultStringValue")) {
       OS << "\"";
-      llvm::printEscapedString(D->getValue()->getAsUnquotedString(), OS);
+      OS << D->getValue()->getAsUnquotedString();
       OS << "\"";
     } else {
       OS << "\"\"";
@@ -102,7 +102,7 @@ static void emitProperty(Record *Property, raw_ostream &OS) {
   // Emit the property description.
   if (auto D = Property->getValue("Description")) {
     OS << "\"";
-    llvm::printEscapedString(D->getValue()->getAsUnquotedString(), OS);
+    OS << D->getValue()->getAsUnquotedString();
     OS << "\"";
   } else {
     OS << "\"\"";

@@ -56,6 +56,8 @@ add_lldb_library(lldbInterpreter
     Support
   )
 
+add_dependencies(lldbInterpreter LLDBPropertiesGen LLDBPropertiesEnumGen)
+
 if (NOT LLDB_DISABLE_LIBEDIT)
   target_include_directories(lldbInterpreter PRIVATE ${libedit_INCLUDE_DIRS})
 endif()

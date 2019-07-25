@@ -250,12 +250,15 @@ class MDGenerator : public Generator {
 public:
   static const char *Format;
 
-  llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS) override;
+  llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
+                                 const ClangDocContext &CDCtx) override;
+  bool createResources(ClangDocContext CDCtx) override { return true; }
 };
 
 const char *MDGenerator::Format = "md";
 
-llvm::Error MDGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS) {
+llvm::Error MDGenerator::generateDocForInfo(Info *I, llvm::raw_ostream &OS,
+                                            const ClangDocContext &CDCtx) {
   switch (I->IT) {
   case InfoType::IT_namespace:
     genMarkdown(*static_cast<clang::doc::NamespaceInfo *>(I), OS);
