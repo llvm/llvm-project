@@ -1206,15 +1206,16 @@ bool DWARFExpression::Evaluate(
 
     if (log && log->GetVerbose()) {
       size_t count = stack.size();
-      log->Printf("Stack before operation has %" PRIu64 " values:",
-                  (uint64_t)count);
+      LLDB_LOGF(log, "Stack before operation has %" PRIu64 " values:",
+                (uint64_t)count);
       for (size_t i = 0; i < count; ++i) {
         StreamString new_value;
         new_value.Printf("[%" PRIu64 "]", (uint64_t)i);
         stack[i].Dump(&new_value);
-        log->Printf("  %s", new_value.GetData());
+        LLDB_LOGF(log, "  %s", new_value.GetData());
       }
-      log->Printf("0x%8.8" PRIx64 ": %s", op_offset, DW_OP_value_to_name(op));
+      LLDB_LOGF(log, "0x%8.8" PRIx64 ": %s", op_offset,
+                DW_OP_value_to_name(op));
     }
 
     switch (op) {
@@ -2686,9 +2687,8 @@ bool DWARFExpression::Evaluate(
     } break;
 
     default:
-      if (log)
-        log->Printf("Unhandled opcode %s in DWARFExpression.",
-                    DW_OP_value_to_name(op));
+      LLDB_LOGF(log, "Unhandled opcode %s in DWARFExpression.",
+                DW_OP_value_to_name(op));
       break;
     }
   }
@@ -2706,13 +2706,13 @@ bool DWARFExpression::Evaluate(
   } else {
     if (log && log->GetVerbose()) {
       size_t count = stack.size();
-      log->Printf("Stack after operation has %" PRIu64 " values:",
-                  (uint64_t)count);
+      LLDB_LOGF(log, "Stack after operation has %" PRIu64 " values:",
+                (uint64_t)count);
       for (size_t i = 0; i < count; ++i) {
         StreamString new_value;
         new_value.Printf("[%" PRIu64 "]", (uint64_t)i);
         stack[i].Dump(&new_value);
-        log->Printf("  %s", new_value.GetData());
+        LLDB_LOGF(log, "  %s", new_value.GetData());
       }
     }
     result = stack.back();

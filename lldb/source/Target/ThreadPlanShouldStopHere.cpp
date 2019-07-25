@@ -48,8 +48,8 @@ bool ThreadPlanShouldStopHere::InvokeShouldStopHereCallback(
       lldb::addr_t current_addr =
           m_owner->GetThread().GetRegisterContext()->GetPC(0);
 
-      log->Printf("ShouldStopHere callback returned %u from 0x%" PRIx64 ".",
-                  should_stop_here, current_addr);
+      LLDB_LOGF(log, "ShouldStopHere callback returned %u from 0x%" PRIx64 ".",
+                should_stop_here, current_addr);
     }
   }
 
@@ -71,8 +71,7 @@ bool ThreadPlanShouldStopHere::DefaultShouldStopHereCallback(
       (operation == eFrameCompareSameParent &&
        flags.Test(eStepInAvoidNoDebug))) {
     if (!frame->HasDebugInformation()) {
-      if (log)
-        log->Printf("Stepping out of frame with no debug info");
+      LLDB_LOGF(log, "Stepping out of frame with no debug info");
 
       should_stop_here = false;
     }
@@ -148,8 +147,7 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
         symbol_end.Slide(sc.symbol->GetByteSize() - 1);
         if (range.ContainsFileAddress(sc.symbol->GetAddress()) &&
             range.ContainsFileAddress(symbol_end)) {
-          if (log)
-            log->Printf("Stopped in a function with only line 0 lines, just "
+          LLDB_LOGF(log, "Stopped in a function with only line 0 lines, just "
                         "stepping out.");
           just_step_out = true;
         }
@@ -160,8 +158,7 @@ ThreadPlanSP ThreadPlanShouldStopHere::DefaultStepFromHereCallback(
       // If the current plan is a "Step In" plan we should use step in, otherwise
       // just step over:
       if (current_plan->GetKind() == ThreadPlan::eKindStepInRange) {
-        if (log)
-          log->Printf("ThreadPlanShouldStopHere::DefaultStepFromHereCallback "
+        LLDB_LOGF(log, "ThreadPlanShouldStopHere::DefaultStepFromHereCallback "
                       "Queueing StepInRange plan to step through line 0 code.");
         return_plan_sp =
             current_plan->GetThread().QueueThreadPlanForStepInRangeNoShouldStop(

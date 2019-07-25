@@ -95,10 +95,10 @@ void GDBRemoteCommunicationHistory::Dump(Log *log) const {
     const Entry &entry = m_packets[idx];
     if (entry.type == ePacketTypeInvalid || entry.packet.data.empty())
       break;
-    log->Printf("history[%u] tid=0x%4.4" PRIx64 " <%4u> %s packet: %s",
-                entry.packet_idx, entry.tid, entry.bytes_transmitted,
-                (entry.type == ePacketTypeSend) ? "send" : "read",
-                entry.packet.data.c_str());
+    LLDB_LOGF(log, "history[%u] tid=0x%4.4" PRIx64 " <%4u> %s packet: %s",
+              entry.packet_idx, entry.tid, entry.bytes_transmitted,
+              (entry.type == ePacketTypeSend) ? "send" : "read",
+              entry.packet.data.c_str());
   }
 }
 

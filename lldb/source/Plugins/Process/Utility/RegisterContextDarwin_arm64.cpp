@@ -285,10 +285,11 @@ int RegisterContextDarwin_arm64::WriteRegisterSet(uint32_t set) {
 void RegisterContextDarwin_arm64::LogDBGRegisters(Log *log, const DBG &dbg) {
   if (log) {
     for (uint32_t i = 0; i < 16; i++)
-      log->Printf("BVR%-2u/BCR%-2u = { 0x%8.8" PRIu64 ", 0x%8.8" PRIu64
-                  " } WVR%-2u/WCR%-2u "
-                  "= { 0x%8.8" PRIu64 ", 0x%8.8" PRIu64 " }",
-                  i, i, dbg.bvr[i], dbg.bcr[i], i, i, dbg.wvr[i], dbg.wcr[i]);
+      LLDB_LOGF(log,
+                "BVR%-2u/BCR%-2u = { 0x%8.8" PRIu64 ", 0x%8.8" PRIu64
+                " } WVR%-2u/WCR%-2u "
+                "= { 0x%8.8" PRIu64 ", 0x%8.8" PRIu64 " }",
+                i, i, dbg.bvr[i], dbg.bcr[i], i, i, dbg.wvr[i], dbg.wcr[i]);
   }
 }
 

@@ -450,10 +450,11 @@ createUndefinedGlobal(StringRef name, llvm::wasm::WasmGlobalType *type) {
   return sym;
 }
 
-static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable) {
+static GlobalSymbol *createGlobalVariable(StringRef name, bool isMutable,
+                                          int value) {
   llvm::wasm::WasmGlobal wasmGlobal;
   wasmGlobal.Type = {WASM_TYPE_I32, isMutable};
-  wasmGlobal.InitExpr.Value.Int32 = 0;
+  wasmGlobal.InitExpr.Value.Int32 = value;
   wasmGlobal.InitExpr.Opcode = WASM_OPCODE_I32_CONST;
   wasmGlobal.SymbolName = name;
   return symtab->addSyntheticGlobal(name, WASM_SYMBOL_VISIBILITY_HIDDEN,
@@ -527,9 +528,9 @@ static void createSyntheticSymbols() {
   }
 
   if (config->sharedMemory && !config->shared) {
-    WasmSym::tlsBase = createGlobalVariable("__tls_base", true);
-    WasmSym::tlsSize = createGlobalVariable("__tls_size", false);
-    WasmSym::tlsAlign = createGlobalVariable("__tls_align", false);
+    WasmSym::tlsBase = createGlobalVariable("__tls_base", true, 0);
+    WasmSym::tlsSize = createGlobalVariable("__tls_size", false, 0);
+    WasmSym::tlsAlign = createGlobalVariable("__tls_align", false, 1);
     WasmSym::initTLS = symtab->addSyntheticFunction(
         "__wasm_init_tls", WASM_SYMBOL_VISIBILITY_HIDDEN,
         make<SyntheticFunction>(i32ArgSignature, "__wasm_init_tls"));

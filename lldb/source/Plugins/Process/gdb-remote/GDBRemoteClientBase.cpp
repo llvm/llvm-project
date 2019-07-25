@@ -63,18 +63,16 @@ StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
     case PacketResult::Success:
       break;
     default:
-      if (log)
-        log->Printf("GDBRemoteClientBase::%s () ReadPacket(...) => false",
-                    __FUNCTION__);
+      LLDB_LOGF(log, "GDBRemoteClientBase::%s () ReadPacket(...) => false",
+                __FUNCTION__);
       return eStateInvalid;
     }
     if (response.Empty())
       return eStateInvalid;
 
     const char stop_type = response.GetChar();
-    if (log)
-      log->Printf("GDBRemoteClientBase::%s () got packet: %s", __FUNCTION__,
-                  response.GetStringRef().c_str());
+    LLDB_LOGF(log, "GDBRemoteClientBase::%s () got packet: %s", __FUNCTION__,
+              response.GetStringRef().c_str());
 
     switch (stop_type) {
     case 'W':
@@ -84,9 +82,8 @@ StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
       // ERROR
       return eStateInvalid;
     default:
-      if (log)
-        log->Printf("GDBRemoteClientBase::%s () unrecognized async packet",
-                    __FUNCTION__);
+      LLDB_LOGF(log, "GDBRemoteClientBase::%s () unrecognized async packet",
+                __FUNCTION__);
       return eStateInvalid;
     case 'O': {
       std::string inferior_stdout;
@@ -162,10 +159,10 @@ GDBRemoteClientBase::SendPacketAndWaitForResponse(
   if (!lock) {
     if (Log *log =
             ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS))
-      log->Printf("GDBRemoteClientBase::%s failed to get mutex, not sending "
-                  "packet '%.*s' (send_async=%d)",
-                  __FUNCTION__, int(payload.size()), payload.data(),
-                  send_async);
+      LLDB_LOGF(log,
+                "GDBRemoteClientBase::%s failed to get mutex, not sending "
+                "packet '%.*s' (send_async=%d)",
+                __FUNCTION__, int(payload.size()), payload.data(), send_async);
     return PacketResult::ErrorSendFailed;
   }
 
@@ -181,10 +178,10 @@ GDBRemoteClientBase::SendPacketAndReceiveResponseWithOutputSupport(
   if (!lock) {
     if (Log *log =
             ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS))
-      log->Printf("GDBRemoteClientBase::%s failed to get mutex, not sending "
-                  "packet '%.*s' (send_async=%d)",
-                  __FUNCTION__, int(payload.size()), payload.data(),
-                  send_async);
+      LLDB_LOGF(log,
+                "GDBRemoteClientBase::%s failed to get mutex, not sending "
+                "packet '%.*s' (send_async=%d)",
+                __FUNCTION__, int(payload.size()), payload.data(), send_async);
     return PacketResult::ErrorSendFailed;
   }
 
@@ -214,13 +211,13 @@ GDBRemoteClientBase::SendPacketAndWaitForResponseNoLock(
       return packet_result;
     // Response says it wasn't valid
     Log *log = ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS);
-    if (log)
-      log->Printf(
-          "error: packet with payload \"%.*s\" got invalid response \"%s\": %s",
-          int(payload.size()), payload.data(), response.GetStringRef().c_str(),
-          (i == (max_response_retries - 1))
-              ? "using invalid response and giving up"
-              : "ignoring response and waiting for another");
+    LLDB_LOGF(
+        log,
+        "error: packet with payload \"%.*s\" got invalid response \"%s\": %s",
+        int(payload.size()), payload.data(), response.GetStringRef().c_str(),
+        (i == (max_response_retries - 1))
+            ? "using invalid response and giving up"
+            : "ignoring response and waiting for another");
   }
   return packet_result;
 }
@@ -228,16 +225,14 @@ GDBRemoteClientBase::SendPacketAndWaitForResponseNoLock(
 bool GDBRemoteClientBase::SendvContPacket(llvm::StringRef payload,
                                           StringExtractorGDBRemote &response) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS));
-  if (log)
-    log->Printf("GDBRemoteCommunicationClient::%s ()", __FUNCTION__);
+  LLDB_LOGF(log, "GDBRemoteCommunicationClient::%s ()", __FUNCTION__);
 
   // we want to lock down packet sending while we continue
   Lock lock(*this, true);
 
-  if (log)
-    log->Printf(
-        "GDBRemoteCommunicationClient::%s () sending vCont packet: %.*s",
-        __FUNCTION__, int(payload.size()), payload.data());
+  LLDB_LOGF(log,
+            "GDBRemoteCommunicationClient::%s () sending vCont packet: %.*s",
+            __FUNCTION__, int(payload.size()), payload.data());
 
   if (SendPacketNoLock(payload) != PacketResult::Success)
     return false;
@@ -315,18 +310,16 @@ void GDBRemoteClientBase::ContinueLock::unlock() {
 GDBRemoteClientBase::ContinueLock::LockResult
 GDBRemoteClientBase::ContinueLock::lock() {
   Log *log = ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PROCESS);
-  if (log)
-    log->Printf("GDBRemoteClientBase::ContinueLock::%s() resuming with %s",
-                __FUNCTION__, m_comm.m_continue_packet.c_str());
+  LLDB_LOGF(log, "GDBRemoteClientBase::ContinueLock::%s() resuming with %s",
+            __FUNCTION__, m_comm.m_continue_packet.c_str());
 
   lldbassert(!m_acquired);
   std::unique_lock<std::mutex> lock(m_comm.m_mutex);
   m_comm.m_cv.wait(lock, [this] { return m_comm.m_async_count == 0; });
   if (m_comm.m_should_stop) {
     m_comm.m_should_stop = false;
-    if (log)
-      log->Printf("GDBRemoteClientBase::ContinueLock::%s() cancelled",
-                  __FUNCTION__);
+    LLDB_LOGF(log, "GDBRemoteClientBase::ContinueLock::%s() cancelled",
+              __FUNCTION__);
     return LockResult::Cancelled;
   }
   if (m_comm.SendPacketNoLock(m_comm.m_continue_packet) !=
@@ -368,9 +361,8 @@ void GDBRemoteClientBase::Lock::SyncWithContinueThread(bool interrupt) {
       size_t bytes_written = m_comm.Write(&ctrl_c, 1, status, nullptr);
       if (bytes_written == 0) {
         --m_comm.m_async_count;
-        if (log)
-          log->Printf("GDBRemoteClientBase::Lock::Lock failed to send "
-                      "interrupt packet");
+        LLDB_LOGF(log, "GDBRemoteClientBase::Lock::Lock failed to send "
+                       "interrupt packet");
         return;
       }
       if (log)

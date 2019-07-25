@@ -195,8 +195,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     return true;
   }
 
-  if (log)
-    log->Printf("Result name: \"%s\"", result_name);
+  LLDB_LOGF(log, "Result name: \"%s\"", result_name);
 
   Value *result_value = m_module->getNamedValue(result_name);
 
@@ -211,9 +210,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     return false;
   }
 
-  if (log)
-    log->Printf("Found result in the IR: \"%s\"",
-                PrintValue(result_value, false).c_str());
+  LLDB_LOGF(log, "Found result in the IR: \"%s\"",
+            PrintValue(result_value, false).c_str());
 
   GlobalVariable *result_global = dyn_cast<GlobalVariable>(result_value);
 
@@ -246,7 +244,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     result_decl->print(decl_desc_stream);
     decl_desc_stream.flush();
 
-    log->Printf("Found result decl: \"%s\"", decl_desc_str.c_str());
+    LLDB_LOGF(log, "Found result decl: \"%s\"", decl_desc_str.c_str());
   }
 
   clang::VarDecl *result_var = dyn_cast<clang::VarDecl>(result_decl);
@@ -316,8 +314,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     lldb_private::StreamString type_desc_stream;
     m_result_type.DumpTypeDescription(&type_desc_stream);
 
-    if (log)
-      log->Printf("Result type has unknown size");
+    LLDB_LOGF(log, "Result type has unknown size");
 
     m_error_stream.Printf("Error [IRForTarget]: Size of result type '%s' "
                           "couldn't be determined\n",
@@ -329,15 +326,14 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     lldb_private::StreamString type_desc_stream;
     m_result_type.DumpTypeDescription(&type_desc_stream);
 
-    log->Printf("Result decl type: \"%s\"", type_desc_stream.GetData());
+    LLDB_LOGF(log, "Result decl type: \"%s\"", type_desc_stream.GetData());
   }
 
   m_result_name = lldb_private::ConstString("$RESULT_NAME");
 
-  if (log)
-    log->Printf("Creating a new result global: \"%s\" with size 0x%" PRIx64,
-                m_result_name.GetCString(),
-                m_result_type.GetByteSize(nullptr).getValueOr(0));
+  LLDB_LOGF(log, "Creating a new result global: \"%s\" with size 0x%" PRIx64,
+            m_result_name.GetCString(),
+            m_result_type.GetByteSize(nullptr).getValueOr(0));
 
   // Construct a new result global and set up its metadata
 
@@ -369,10 +365,9 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
       m_module->getNamedMetadata("clang.global.decl.ptrs");
   named_metadata->addOperand(persistent_global_md);
 
-  if (log)
-    log->Printf("Replacing \"%s\" with \"%s\"",
-                PrintValue(result_global).c_str(),
-                PrintValue(new_result_global).c_str());
+  LLDB_LOGF(log, "Replacing \"%s\" with \"%s\"",
+            PrintValue(result_global).c_str(),
+            PrintValue(new_result_global).c_str());
 
   if (result_global->use_empty()) {
     // We need to synthesize a store for this variable, because otherwise
@@ -385,8 +380,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
       return false;
 
     if (!result_global->hasInitializer()) {
-      if (log)
-        log->Printf("Couldn't find initializer for unused variable");
+      LLDB_LOGF(log, "Couldn't find initializer for unused variable");
 
       m_error_stream.Printf("Internal error [IRForTarget]: Result variable "
                             "(%s) has no writes and no initializer\n",
@@ -400,9 +394,8 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
     StoreInst *synthesized_store =
         new StoreInst(initializer, new_result_global, first_entry_instruction);
 
-    if (log)
-      log->Printf("Synthesized result store \"%s\"\n",
-                  PrintValue(synthesized_store).c_str());
+    LLDB_LOGF(log, "Synthesized result store \"%s\"\n",
+              PrintValue(synthesized_store).c_str());
   } else {
     result_global->replaceAllUsesWith(new_result_global);
   }
@@ -438,7 +431,6 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
         m_execution_unit.FindSymbol(g_CFStringCreateWithBytes_str, 
                                     missing_weak);
     if (CFStringCreateWithBytes_addr == LLDB_INVALID_ADDRESS || missing_weak) {
-      if (log)
         log->PutCString("Couldn't find CFStringCreateWithBytes in the target");
 
       m_error_stream.Printf("Error [IRForTarget]: Rewriting an Objective-C "
@@ -448,9 +440,8 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
       return false;
     }
 
-    if (log)
-      log->Printf("Found CFStringCreateWithBytes at 0x%" PRIx64,
-                  CFStringCreateWithBytes_addr);
+    LLDB_LOGF(log, "Found CFStringCreateWithBytes at 0x%" PRIx64,
+              CFStringCreateWithBytes_addr);
 
     // Build the function type:
     //
@@ -622,9 +613,10 @@ bool IRForTarget::RewriteObjCConstStrings() {
 
       if (nsstring_struct->getNumOperands() != 4) {
         if (log)
-          log->Printf("NSString variable's initializer structure has an "
-                      "unexpected number of members.  Should be 4, is %d",
-                      nsstring_struct->getNumOperands());
+          LLDB_LOGF(log,
+                    "NSString variable's initializer structure has an "
+                    "unexpected number of members.  Should be 4, is %d",
+                    nsstring_struct->getNumOperands());
 
         m_error_stream.Printf("Internal error [IRForTarget]: The struct for an "
                               "Objective-C constant string is not as "
@@ -728,11 +720,11 @@ bool IRForTarget::RewriteObjCConstStrings() {
 
       if (log) {
         if (cstr_array)
-          log->Printf("Found NSString constant %s, which contains \"%s\"",
-                      value_name_cstr, cstr_array->getAsString().str().c_str());
+          LLDB_LOGF(log, "Found NSString constant %s, which contains \"%s\"",
+                    value_name_cstr, cstr_array->getAsString().str().c_str());
         else
-          log->Printf("Found NSString constant %s, which contains \"\"",
-                      value_name_cstr);
+          LLDB_LOGF(log, "Found NSString constant %s, which contains \"\"",
+                    value_name_cstr);
       }
 
       if (!cstr_array)
@@ -851,8 +843,8 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
   std::string omvn_initializer_string = omvn_initializer_array->getAsString();
 
   if (log)
-    log->Printf("Found Objective-C selector reference \"%s\"",
-                omvn_initializer_string.c_str());
+    LLDB_LOGF(log, "Found Objective-C selector reference \"%s\"",
+              omvn_initializer_string.c_str());
 
   // Construct a call to sel_registerName
 
@@ -867,8 +859,8 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
       return false;
 
     if (log)
-      log->Printf("Found sel_registerName at 0x%" PRIx64,
-                  sel_registerName_addr);
+      LLDB_LOGF(log, "Found sel_registerName at 0x%" PRIx64,
+                sel_registerName_addr);
 
     // Build the function type: struct objc_selector
     // *sel_registerName(uint8_t*)
@@ -1023,8 +1015,8 @@ bool IRForTarget::RewriteObjCClassReference(Instruction *class_load) {
   std::string ocn_initializer_string = ocn_initializer_array->getAsString();
 
   if (log)
-    log->Printf("Found Objective-C class reference \"%s\"",
-                ocn_initializer_string.c_str());
+    LLDB_LOGF(log, "Found Objective-C class reference \"%s\"",
+              ocn_initializer_string.c_str());
 
   // Construct a call to objc_getClass
 
@@ -1039,8 +1031,7 @@ bool IRForTarget::RewriteObjCClassReference(Instruction *class_load) {
       return false;
 
     if (log)
-      log->Printf("Found objc_getClass at 0x%" PRIx64,
-                  objc_getClass_addr);
+      LLDB_LOGF(log, "Found objc_getClass at 0x%" PRIx64, objc_getClass_addr);
 
     // Build the function type: %struct._objc_class *objc_getClass(i8*)
 
@@ -1181,8 +1172,8 @@ bool IRForTarget::RewritePersistentAlloc(llvm::Instruction *persistent_alloc) {
   LoadInst *persistent_load = new LoadInst(persistent_global, "", alloc);
 
   if (log)
-    log->Printf("Replacing \"%s\" with \"%s\"", PrintValue(alloc).c_str(),
-                PrintValue(persistent_load).c_str());
+    LLDB_LOGF(log, "Replacing \"%s\" with \"%s\"", PrintValue(alloc).c_str(),
+              PrintValue(persistent_load).c_str());
 
   alloc->replaceAllUsesWith(persistent_load);
   alloc->eraseFromParent();
@@ -1213,7 +1204,7 @@ bool IRForTarget::RewritePersistentAllocs(llvm::BasicBlock &basic_block) {
       if (alloc_name.startswith("$") && !alloc_name.startswith("$__lldb")) {
         if (alloc_name.find_first_of("0123456789") == 1) {
           if (log)
-            log->Printf("Rejecting a numeric persistent variable.");
+            LLDB_LOGF(log, "Rejecting a numeric persistent variable.");
 
           m_error_stream.Printf("Error [IRForTarget]: Names starting with $0, "
                                 "$1, ... are reserved for use as result "
@@ -1253,8 +1244,8 @@ bool IRForTarget::MaterializeInitializer(uint8_t *data, Constant *initializer) {
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   if (log && log->GetVerbose())
-    log->Printf("  MaterializeInitializer(%p, %s)", (void *)data,
-                PrintValue(initializer).c_str());
+    LLDB_LOGF(log, "  MaterializeInitializer(%p, %s)", (void *)data,
+              PrintValue(initializer).c_str());
 
   Type *initializer_type = initializer->getType();
 
@@ -1317,7 +1308,8 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   if (log)
-    log->Printf("MaybeHandleVariable (%s)", PrintValue(llvm_value_ptr).c_str());
+    LLDB_LOGF(log, "MaybeHandleVariable (%s)",
+              PrintValue(llvm_value_ptr).c_str());
 
   if (ConstantExpr *constant_expr = dyn_cast<ConstantExpr>(llvm_value_ptr)) {
     switch (constant_expr->getOpcode()) {
@@ -1344,8 +1336,8 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
         return true;
 
       if (log)
-        log->Printf("Found global variable \"%s\" without metadata",
-                    global_variable->getName().str().c_str());
+        LLDB_LOGF(log, "Found global variable \"%s\" without metadata",
+                  global_variable->getName().str().c_str());
 
       return false;
     }
@@ -1385,13 +1377,14 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
         (compiler_type.GetTypeBitAlign() + 7ull) / 8ull;
 
     if (log) {
-      log->Printf("Type of \"%s\" is [clang \"%s\", llvm \"%s\"] [size %" PRIu64
-                  ", align %" PRIu64 "]",
-                  name.c_str(),
-                  lldb_private::ClangUtil::GetQualType(compiler_type)
-                      .getAsString()
-                      .c_str(),
-                  PrintType(value_type).c_str(), *value_size, value_alignment);
+      LLDB_LOGF(log,
+                "Type of \"%s\" is [clang \"%s\", llvm \"%s\"] [size %" PRIu64
+                ", align %" PRIu64 "]",
+                name.c_str(),
+                lldb_private::ClangUtil::GetQualType(compiler_type)
+                    .getAsString()
+                    .c_str(),
+                PrintType(value_type).c_str(), *value_size, value_alignment);
     }
 
     if (named_decl &&
@@ -1405,7 +1398,7 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
     }
   } else if (dyn_cast<llvm::Function>(llvm_value_ptr)) {
     if (log)
-      log->Printf("Function pointers aren't handled right now");
+      LLDB_LOGF(log, "Function pointers aren't handled right now");
 
     return false;
   }
@@ -1425,13 +1418,14 @@ bool IRForTarget::HandleSymbol(Value *symbol) {
 
   if (symbol_addr == LLDB_INVALID_ADDRESS) {
     if (log)
-      log->Printf("Symbol \"%s\" had no address", name.GetCString());
+      LLDB_LOGF(log, "Symbol \"%s\" had no address", name.GetCString());
 
     return false;
   }
 
   if (log)
-    log->Printf("Found \"%s\" at 0x%" PRIx64, name.GetCString(), symbol_addr);
+    LLDB_LOGF(log, "Found \"%s\" at 0x%" PRIx64, name.GetCString(),
+              symbol_addr);
 
   Type *symbol_type = symbol->getType();
 
@@ -1441,8 +1435,8 @@ bool IRForTarget::HandleSymbol(Value *symbol) {
       ConstantExpr::getIntToPtr(symbol_addr_int, symbol_type);
 
   if (log)
-    log->Printf("Replacing %s with %s", PrintValue(symbol).c_str(),
-                PrintValue(symbol_addr_ptr).c_str());
+    LLDB_LOGF(log, "Replacing %s with %s", PrintValue(symbol).c_str(),
+              PrintValue(symbol_addr_ptr).c_str());
 
   symbol->replaceAllUsesWith(symbol_addr_ptr);
 
@@ -1454,7 +1448,7 @@ bool IRForTarget::MaybeHandleCallArguments(CallInst *Old) {
       lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
   if (log)
-    log->Printf("MaybeHandleCallArguments(%s)", PrintValue(Old).c_str());
+    LLDB_LOGF(log, "MaybeHandleCallArguments(%s)", PrintValue(Old).c_str());
 
   for (unsigned op_index = 0, num_ops = Old->getNumArgOperands();
        op_index < num_ops; ++op_index)
@@ -1494,8 +1488,8 @@ bool IRForTarget::HandleObjCClass(Value *classlist_reference) {
       m_decl_map->GetSymbolAddress(name_cstr, lldb::eSymbolTypeObjCClass);
 
   if (log)
-    log->Printf("Found reference to Objective-C class %s (0x%llx)",
-                name_cstr.AsCString(), (unsigned long long)class_ptr);
+    LLDB_LOGF(log, "Found reference to Objective-C class %s (0x%llx)",
+              name_cstr.AsCString(), (unsigned long long)class_ptr);
 
   if (class_ptr == LLDB_INVALID_ADDRESS)
     return false;
@@ -1594,9 +1588,9 @@ bool IRForTarget::ResolveExternals(Function &llvm_function) {
     std::string global_name = global_var.getName().str();
 
     if (log)
-      log->Printf("Examining %s, DeclForGlobalValue returns %p",
-                  global_name.c_str(),
-                  static_cast<void *>(DeclForGlobal(&global_var)));
+      LLDB_LOGF(log, "Examining %s, DeclForGlobalValue returns %p",
+                global_name.c_str(),
+                static_cast<void *>(DeclForGlobal(&global_var)));
 
     if (global_name.find("OBJC_IVAR") == 0) {
       if (!HandleSymbol(&global_var)) {
@@ -1838,7 +1832,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   m_decl_map->DoStructLayout();
 
   if (log)
-    log->Printf("Element arrangement:");
+    LLDB_LOGF(log, "Element arrangement:");
 
   uint32_t num_elements;
   uint32_t element_index;
@@ -1913,7 +1907,7 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   }
 
   if (log)
-    log->Printf("Arg: \"%s\"", PrintValue(argument).c_str());
+    LLDB_LOGF(log, "Arg: \"%s\"", PrintValue(argument).c_str());
 
   BasicBlock &entry_block(llvm_function.getEntryBlock());
   Instruction *FirstEntryInstruction(entry_block.getFirstNonPHIOrDbg());
@@ -1951,12 +1945,12 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
     }
 
     if (log)
-      log->Printf("  \"%s\" (\"%s\") placed at %" PRIu64, name.GetCString(),
-                  decl->getNameAsString().c_str(), offset);
+      LLDB_LOGF(log, "  \"%s\" (\"%s\") placed at %" PRIu64, name.GetCString(),
+                decl->getNameAsString().c_str(), offset);
 
     if (value) {
       if (log)
-        log->Printf("    Replacing [%s]", PrintValue(value).c_str());
+        LLDB_LOGF(log, "    Replacing [%s]", PrintValue(value).c_str());
 
       FunctionValueCache body_result_maker(
           [this, name, offset_type, offset, argument,
@@ -2006,8 +2000,8 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
             body_result_maker.GetValue(instruction->getParent()->getParent()));
       } else {
         if (log)
-          log->Printf("Unhandled non-constant type: \"%s\"",
-                      PrintValue(value).c_str());
+          LLDB_LOGF(log, "Unhandled non-constant type: \"%s\"",
+                    PrintValue(value).c_str());
         return false;
       }
 
@@ -2017,8 +2011,8 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
   }
 
   if (log)
-    log->Printf("Total structure [align %" PRId64 ", size %" PRIu64 "]",
-                (int64_t)alignment, (uint64_t)size);
+    LLDB_LOGF(log, "Total structure [align %" PRId64 ", size %" PRIu64 "]",
+              (int64_t)alignment, (uint64_t)size);
 
   return true;
 }
@@ -2062,7 +2056,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
     oss.flush();
 
-    log->Printf("Module as passed in to IRForTarget: \n\"%s\"", s.c_str());
+    LLDB_LOGF(log, "Module as passed in to IRForTarget: \n\"%s\"", s.c_str());
   }
 
   Function *const main_function =
@@ -2071,8 +2065,8 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
   if (!m_func_name.IsEmpty() && !main_function) {
     if (log)
-      log->Printf("Couldn't find \"%s()\" in the module",
-                  m_func_name.AsCString());
+      LLDB_LOGF(log, "Couldn't find \"%s()\" in the module",
+                m_func_name.AsCString());
 
     m_error_stream.Printf("Internal error [IRForTarget]: Couldn't find wrapper "
                           "'%s' in the module",
@@ -2084,7 +2078,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
   if (main_function) {
     if (!FixFunctionLinkage(*main_function)) {
       if (log)
-        log->Printf("Couldn't fix the linkage for the function");
+        LLDB_LOGF(log, "Couldn't fix the linkage for the function");
 
       return false;
     }
@@ -2105,7 +2099,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
   if (main_function) {
     if (!CreateResultVariable(*main_function)) {
       if (log)
-        log->Printf("CreateResultVariable() failed");
+        LLDB_LOGF(log, "CreateResultVariable() failed");
 
       // CreateResultVariable() reports its own errors, so we don't do so here
 
@@ -2121,8 +2115,8 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
     oss.flush();
 
-    log->Printf("Module after creating the result variable: \n\"%s\"",
-                s.c_str());
+    LLDB_LOGF(log, "Module after creating the result variable: \n\"%s\"",
+              s.c_str());
   }
 
   for (Module::iterator fi = m_module->begin(), fe = m_module->end(); fi != fe;
@@ -2137,7 +2131,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
     for (bbi = function->begin(); bbi != function->end(); ++bbi) {
       if (!RemoveGuards(*bbi)) {
         if (log)
-          log->Printf("RemoveGuards() failed");
+          LLDB_LOGF(log, "RemoveGuards() failed");
 
         // RemoveGuards() reports its own errors, so we don't do so here
 
@@ -2146,7 +2140,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
       if (!RewritePersistentAllocs(*bbi)) {
         if (log)
-          log->Printf("RewritePersistentAllocs() failed");
+          LLDB_LOGF(log, "RewritePersistentAllocs() failed");
 
         // RewritePersistentAllocs() reports its own errors, so we don't do so
         // here
@@ -2156,7 +2150,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
       if (!RemoveCXAAtExit(*bbi)) {
         if (log)
-          log->Printf("RemoveCXAAtExit() failed");
+          LLDB_LOGF(log, "RemoveCXAAtExit() failed");
 
         // RemoveCXAAtExit() reports its own errors, so we don't do so here
 
@@ -2171,7 +2165,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
   if (!RewriteObjCConstStrings()) {
     if (log)
-      log->Printf("RewriteObjCConstStrings() failed");
+      LLDB_LOGF(log, "RewriteObjCConstStrings() failed");
 
     // RewriteObjCConstStrings() reports its own errors, so we don't do so here
 
@@ -2187,7 +2181,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
          bbi != bbe; ++bbi) {
       if (!RewriteObjCSelectors(*bbi)) {
         if (log)
-          log->Printf("RewriteObjCSelectors() failed");
+          LLDB_LOGF(log, "RewriteObjCSelectors() failed");
 
         // RewriteObjCSelectors() reports its own errors, so we don't do so
         // here
@@ -2197,7 +2191,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
       if (!RewriteObjCClassReferences(*bbi)) {
         if (log)
-          log->Printf("RewriteObjCClassReferences() failed");
+          LLDB_LOGF(log, "RewriteObjCClassReferences() failed");
 
         // RewriteObjCClasses() reports its own errors, so we don't do so here
 
@@ -2215,7 +2209,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
          bbi != bbe; ++bbi) {
       if (!ResolveCalls(*bbi)) {
         if (log)
-          log->Printf("ResolveCalls() failed");
+          LLDB_LOGF(log, "ResolveCalls() failed");
 
         // ResolveCalls() reports its own errors, so we don't do so here
 
@@ -2231,7 +2225,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
   if (main_function) {
     if (!ResolveExternals(*main_function)) {
       if (log)
-        log->Printf("ResolveExternals() failed");
+        LLDB_LOGF(log, "ResolveExternals() failed");
 
       // ResolveExternals() reports its own errors, so we don't do so here
 
@@ -2240,7 +2234,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
     if (!ReplaceVariables(*main_function)) {
       if (log)
-        log->Printf("ReplaceVariables() failed");
+        LLDB_LOGF(log, "ReplaceVariables() failed");
 
       // ReplaceVariables() reports its own errors, so we don't do so here
 
@@ -2256,7 +2250,7 @@ bool IRForTarget::runOnModule(Module &llvm_module) {
 
     oss.flush();
 
-    log->Printf("Module after preparing for execution: \n\"%s\"", s.c_str());
+    LLDB_LOGF(log, "Module after preparing for execution: \n\"%s\"", s.c_str());
   }
 
   return true;

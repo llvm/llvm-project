@@ -276,8 +276,7 @@ PlatformPOSIX::PutFile(const lldb_private::FileSpec &source,
       } else
         command.Printf("rsync %s %s %s:%s", GetRSyncOpts(), src_path.c_str(),
                        GetHostname(), dst_path.c_str());
-      if (log)
-        log->Printf("[PutFile] Running command: %s\n", command.GetData());
+      LLDB_LOGF(log, "[PutFile] Running command: %s\n", command.GetData());
       int retcode;
       Host::RunShellCommand(command.GetData(), nullptr, &retcode, nullptr,
                             nullptr, std::chrono::minutes(1));
@@ -334,8 +333,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
         command.Printf("rsync %s %s:%s %s", GetRSyncOpts(),
                        m_remote_platform_sp->GetHostname(), src_path.c_str(),
                        dst_path.c_str());
-      if (log)
-        log->Printf("[GetFile] Running command: %s\n", command.GetData());
+      LLDB_LOGF(log, "[GetFile] Running command: %s\n", command.GetData());
       int retcode;
       Host::RunShellCommand(command.GetData(), nullptr, &retcode, nullptr,
                             nullptr, std::chrono::minutes(1));
@@ -348,8 +346,7 @@ lldb_private::Status PlatformPOSIX::GetFile(
     // read/write, read/write, read/write, ...
     // close src
     // close dst
-    if (log)
-      log->Printf("[GetFile] Using block by block transfer....\n");
+    LLDB_LOGF(log, "[GetFile] Using block by block transfer....\n");
     Status error;
     user_id_t fd_src = OpenFile(source, File::eOpenOptionRead,
                                 lldb::eFilePermissionsFileDefault, error);
@@ -515,24 +512,21 @@ lldb::ProcessSP PlatformPOSIX::Attach(ProcessAttachInfo &attach_info,
       error = debugger.GetTargetList().CreateTarget(
           debugger, "", "", eLoadDependentsNo, nullptr, new_target_sp);
       target = new_target_sp.get();
-      if (log)
-        log->Printf("PlatformPOSIX::%s created new target", __FUNCTION__);
+      LLDB_LOGF(log, "PlatformPOSIX::%s created new target", __FUNCTION__);
     } else {
       error.Clear();
-      if (log)
-        log->Printf("PlatformPOSIX::%s target already existed, setting target",
-                    __FUNCTION__);
+      LLDB_LOGF(log, "PlatformPOSIX::%s target already existed, setting target",
+                __FUNCTION__);
     }
 
     if (target && error.Success()) {
       debugger.GetTargetList().SetSelectedTarget(target);
       if (log) {
         ModuleSP exe_module_sp = target->GetExecutableModule();
-        log->Printf("PlatformPOSIX::%s set selected target to %p %s",
-                    __FUNCTION__, (void *)target,
-                    exe_module_sp
-                        ? exe_module_sp->GetFileSpec().GetPath().c_str()
-                        : "<null>");
+        LLDB_LOGF(log, "PlatformPOSIX::%s set selected target to %p %s",
+                  __FUNCTION__, (void *)target,
+                  exe_module_sp ? exe_module_sp->GetFileSpec().GetPath().c_str()
+                                : "<null>");
       }
 
       process_sp =

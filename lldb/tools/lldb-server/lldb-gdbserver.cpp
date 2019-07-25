@@ -112,9 +112,8 @@ static void sighup_handler(MainLoopBase &mainloop) {
   ++g_sighup_received_count;
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PROCESS));
-  if (log)
-    log->Printf("lldb-server:%s swallowing SIGHUP (receive count=%d)",
-                __FUNCTION__, g_sighup_received_count);
+  LLDB_LOGF(log, "lldb-server:%s swallowing SIGHUP (receive count=%d)",
+            __FUNCTION__, g_sighup_received_count);
 
   if (g_sighup_received_count >= 2)
     mainloop.RequestTermination();
@@ -479,9 +478,9 @@ int main_gdbserver(int argc, char *argv[]) {
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(GDBR_LOG_PROCESS));
   if (log) {
-    log->Printf("lldb-server launch");
+    LLDB_LOGF(log, "lldb-server launch");
     for (int i = 0; i < argc; i++) {
-      log->Printf("argv[%i] = '%s'", i, argv[i]);
+      LLDB_LOGF(log, "argv[%i] = '%s'", i, argv[i]);
     }
   }
 

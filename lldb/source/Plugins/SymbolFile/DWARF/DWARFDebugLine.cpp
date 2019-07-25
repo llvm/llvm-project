@@ -578,25 +578,25 @@ inline bool DWARFDebugLine::Prologue::IsValid() const {
 void DWARFDebugLine::Prologue::Dump(Log *log) {
   uint32_t i;
 
-  log->Printf("Line table prologue:");
-  log->Printf("   total_length: 0x%8.8x", total_length);
-  log->Printf("        version: %u", version);
-  log->Printf("prologue_length: 0x%8.8x", prologue_length);
-  log->Printf("min_inst_length: %u", min_inst_length);
-  log->Printf("default_is_stmt: %u", default_is_stmt);
-  log->Printf("      line_base: %i", line_base);
-  log->Printf("     line_range: %u", line_range);
-  log->Printf("    opcode_base: %u", opcode_base);
+  LLDB_LOGF(log, "Line table prologue:");
+  LLDB_LOGF(log, "   total_length: 0x%8.8x", total_length);
+  LLDB_LOGF(log, "        version: %u", version);
+  LLDB_LOGF(log, "prologue_length: 0x%8.8x", prologue_length);
+  LLDB_LOGF(log, "min_inst_length: %u", min_inst_length);
+  LLDB_LOGF(log, "default_is_stmt: %u", default_is_stmt);
+  LLDB_LOGF(log, "      line_base: %i", line_base);
+  LLDB_LOGF(log, "     line_range: %u", line_range);
+  LLDB_LOGF(log, "    opcode_base: %u", opcode_base);
 
   for (i = 0; i < standard_opcode_lengths.size(); ++i) {
-    log->Printf("standard_opcode_lengths[%s] = %u", DW_LNS_value_to_name(i + 1),
-                standard_opcode_lengths[i]);
+    LLDB_LOGF(log, "standard_opcode_lengths[%s] = %u",
+              DW_LNS_value_to_name(i + 1), standard_opcode_lengths[i]);
   }
 
   if (!include_directories.empty()) {
     for (i = 0; i < include_directories.size(); ++i) {
-      log->Printf("include_directories[%3u] = '%s'", i + 1,
-                  include_directories[i]);
+      LLDB_LOGF(log, "include_directories[%3u] = '%s'", i + 1,
+                include_directories[i]);
     }
   }
 
@@ -606,9 +606,9 @@ void DWARFDebugLine::Prologue::Dump(Log *log) {
                     "---------------------------");
     for (i = 0; i < file_names.size(); ++i) {
       const FileNameEntry &fileEntry = file_names[i];
-      log->Printf("file_names[%3u] %4u 0x%8.8x 0x%8.8x %s", i + 1,
-                  fileEntry.dir_idx, fileEntry.mod_time, fileEntry.length,
-                  fileEntry.name);
+      LLDB_LOGF(log, "file_names[%3u] %4u 0x%8.8x 0x%8.8x %s", i + 1,
+                fileEntry.dir_idx, fileEntry.mod_time, fileEntry.length,
+                fileEntry.name);
     }
   }
 }
@@ -745,12 +745,12 @@ void DWARFDebugLine::Row::Reset(bool default_is_stmt) {
 }
 // DWARFDebugLine::Row::Dump
 void DWARFDebugLine::Row::Dump(Log *log) const {
-  log->Printf("0x%16.16" PRIx64 " %6u %6u %6u %3u %s%s%s%s%s", address, line,
-              column, file, isa, is_stmt ? " is_stmt" : "",
-              basic_block ? " basic_block" : "",
-              prologue_end ? " prologue_end" : "",
-              epilogue_begin ? " epilogue_begin" : "",
-              end_sequence ? " end_sequence" : "");
+  LLDB_LOGF(log, "0x%16.16" PRIx64 " %6u %6u %6u %3u %s%s%s%s%s", address, line,
+            column, file, isa, is_stmt ? " is_stmt" : "",
+            basic_block ? " basic_block" : "",
+            prologue_end ? " prologue_end" : "",
+            epilogue_begin ? " epilogue_begin" : "",
+            end_sequence ? " end_sequence" : "");
 }
 
 // Compare function LineTable structures

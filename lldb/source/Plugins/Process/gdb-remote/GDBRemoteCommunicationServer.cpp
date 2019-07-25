@@ -139,10 +139,9 @@ GDBRemoteCommunication::PacketResult
 GDBRemoteCommunicationServer::SendIllFormedResponse(
     const StringExtractorGDBRemote &failed_packet, const char *message) {
   Log *log(ProcessGDBRemoteLog::GetLogIfAllCategoriesSet(GDBR_LOG_PACKETS));
-  if (log)
-    log->Printf("GDBRemoteCommunicationServer::%s: ILLFORMED: '%s' (%s)",
-                __FUNCTION__, failed_packet.GetStringRef().c_str(),
-                message ? message : "");
+  LLDB_LOGF(log, "GDBRemoteCommunicationServer::%s: ILLFORMED: '%s' (%s)",
+            __FUNCTION__, failed_packet.GetStringRef().c_str(),
+            message ? message : "");
   return SendErrorResponse(0x03);
 }
 

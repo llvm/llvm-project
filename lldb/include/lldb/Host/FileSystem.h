@@ -11,12 +11,12 @@
 
 #include "lldb/Host/File.h"
 #include "lldb/Utility/DataBufferLLVM.h"
-#include "lldb/Utility/FileCollector.h"
 #include "lldb/Utility/FileSpec.h"
 #include "lldb/Utility/Status.h"
 
 #include "llvm/ADT/Optional.h"
 #include "llvm/Support/Chrono.h"
+#include "llvm/Support/FileCollector.h"
 #include "llvm/Support/VirtualFileSystem.h"
 
 #include "lldb/lldb-types.h"
@@ -34,7 +34,7 @@ public:
   FileSystem()
       : m_fs(llvm::vfs::getRealFileSystem()), m_collector(nullptr),
         m_mapped(false) {}
-  FileSystem(FileCollector &collector)
+  FileSystem(llvm::FileCollector &collector)
       : m_fs(llvm::vfs::getRealFileSystem()), m_collector(&collector),
         m_mapped(false) {}
   FileSystem(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs,
@@ -47,7 +47,7 @@ public:
   static FileSystem &Instance();
 
   static void Initialize();
-  static void Initialize(FileCollector &collector);
+  static void Initialize(llvm::FileCollector &collector);
   static llvm::Error Initialize(const FileSpec &mapping);
   static void Initialize(llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> fs);
   static void Terminate();
@@ -188,7 +188,7 @@ public:
 private:
   static llvm::Optional<FileSystem> &InstanceImpl();
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> m_fs;
-  FileCollector *m_collector;
+  llvm::FileCollector *m_collector;
   bool m_mapped;
 };
 } // namespace lldb_private
