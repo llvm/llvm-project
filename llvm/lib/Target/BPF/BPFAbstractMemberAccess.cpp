@@ -116,9 +116,8 @@ private:
   void replaceWithGEP(std::vector<CallInst *> &CallList,
                       uint32_t NumOfZerosIndex, uint32_t DIIndex);
 
-  Value *computeBaseAndAccessStr(CallInst *Call, std::string &AccessStr,
-                                 std::string &AccessKey, uint32_t Kind,
-                                 MDNode *&TypeMeta);
+  Value *computeBaseAndAccessKey(CallInst *Call, std::string &AccessKey,
+                                 uint32_t Kind, MDNode *&TypeMeta);
   bool getAccessIndex(const Value *IndexValue, uint64_t &AccessIndex);
   bool transformGEPChain(Module &M, CallInst *Call, uint32_t Kind);
 };
@@ -340,8 +339,7 @@ bool BPFAbstractMemberAccess::getAccessIndex(const Value *IndexValue,
 /// Compute the base of the whole preserve_*_access_index chains, i.e., the base
 /// pointer of the first preserve_*_access_index call, and construct the access
 /// string, which will be the name of a global variable.
-Value *BPFAbstractMemberAccess::computeBaseAndAccessStr(CallInst *Call,
-                                                        std::string &AccessStr,
+Value *BPFAbstractMemberAccess::computeBaseAndAccessKey(CallInst *Call,
                                                         std::string &AccessKey,
                                                         uint32_t Kind,
                                                         MDNode *&TypeMeta) {
@@ -392,16 +390,16 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessStr(CallInst *Call,
   if (!LastTypeName.size() || AccessIndices.size() > TypeNameIndex + 2)
     return nullptr;
 
-  // Construct the type string AccessStr.
+  // Construct the type string AccessKey.
   for (unsigned I = 0; I < AccessIndices.size(); ++I)
-    AccessStr = std::to_string(AccessIndices[I]) + ":" + AccessStr;
+    AccessKey = std::to_string(AccessIndices[I]) + ":" + AccessKey;
 
   if (TypeNameIndex == AccessIndices.size() - 1)
-    AccessStr = "0:" + AccessStr;
+    AccessKey = "0:" + AccessKey;
 
   // Access key is the type name + access string, uniquely identifying
   // one kernel memory access.
-  AccessKey = LastTypeName + ":" + AccessStr;
+  AccessKey = LastTypeName + ":" + AccessKey;
 
   return Base;
 }
@@ -410,10 +408,10 @@ Value *BPFAbstractMemberAccess::computeBaseAndAccessStr(CallInst *Call,
 /// transformation to a chain of relocable GEPs.
 bool BPFAbstractMemberAccess::transformGEPChain(Module &M, CallInst *Call,
                                                 uint32_t Kind) {
-  std::string AccessStr, AccessKey;
+  std::string AccessKey;
   MDNode *TypeMeta = nullptr;
   Value *Base =
-      computeBaseAndAccessStr(Call, AccessStr, AccessKey, Kind, TypeMeta);
+      computeBaseAndAccessKey(Call, AccessKey, Kind, TypeMeta);
   if (!Base)
     return false;
 
@@ -432,7 +430,7 @@ bool BPFAbstractMemberAccess::transformGEPChain(Module &M, CallInst *Call,
 
   if (GEPGlobals.find(AccessKey) == GEPGlobals.end()) {
     GV = new GlobalVariable(M, Type::getInt64Ty(BB->getContext()), false,
-                            GlobalVariable::ExternalLinkage, NULL, AccessStr);
+                            GlobalVariable::ExternalLinkage, NULL, AccessKey);
     GV->addAttribute(BPFCoreSharedInfo::AmaAttr);
     // Set the metadata (debuginfo types) for the global.
     if (TypeMeta)

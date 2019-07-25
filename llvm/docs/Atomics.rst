@@ -87,8 +87,10 @@ The following is equivalent in non-concurrent situations:
 
 However, LLVM is not allowed to transform the former to the latter: it could
 indirectly introduce undefined behavior if another thread can access ``x`` at
-the same time. (This example is particularly of interest because before the
-concurrency model was implemented, LLVM would perform this transformation.)
+the same time. That thread would read `undef` instead of the value it was
+expecting, which can lead to undefined behavior down the line. (This example is
+particularly of interest because before the concurrency model was implemented,
+LLVM would perform this transformation.)
 
 Note that speculative loads are allowed; a load which is part of a race returns
 ``undef``, but does not have undefined behavior.

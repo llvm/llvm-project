@@ -44,9 +44,6 @@ public:
   void InitializeObject() override;
 
   // Compile Unit function calls
-  uint32_t GetNumCompileUnits() override;
-  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
-
   lldb::LanguageType
   ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
 
@@ -173,6 +170,9 @@ protected:
 
   // Protected Member Functions
   void InitOSO();
+
+  uint32_t CalculateNumCompileUnits() override;
+  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
   static uint32_t GetOSOIndexFromUserID(lldb::user_id_t uid) {
     return (uint32_t)((uid >> 32ull) - 1ull);

@@ -149,8 +149,7 @@ BreakpointResolverAddress::SearchCallback(SearchFilter &filter,
         bp_loc_sp->GetDescription(&s, lldb::eDescriptionLevelVerbose);
         Log *log(
             lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_BREAKPOINTS));
-        if (log)
-          log->Printf("Added location: %s\n", s.GetData());
+        LLDB_LOGF(log, "Added location: %s\n", s.GetData());
       }
     } else {
       BreakpointLocationSP loc_sp = m_breakpoint->GetLocationAtIndex(0);

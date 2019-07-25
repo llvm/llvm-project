@@ -1,4 +1,4 @@
-# REQUIRES: python-psutil
+# REQUIRES: lit-max-individual-test-time
 
 # llvm.org/PR33944
 # UNSUPPORTED: system-windows

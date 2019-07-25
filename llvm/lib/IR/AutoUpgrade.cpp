@@ -789,6 +789,19 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     }
     break;
 
+  case 'p':
+    if (Name == "prefetch") {
+      // Handle address space overloading.
+      Type *Tys[] = {F->arg_begin()->getType()};
+      if (F->getName() != Intrinsic::getName(Intrinsic::prefetch, Tys)) {
+        rename(F);
+        NewFn =
+            Intrinsic::getDeclaration(F->getParent(), Intrinsic::prefetch, Tys);
+        return true;
+      }
+    }
+    break;
+
   case 's':
     if (Name == "stackprotectorcheck") {
       NewFn = nullptr;

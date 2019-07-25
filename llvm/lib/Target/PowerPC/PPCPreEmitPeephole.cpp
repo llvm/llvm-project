@@ -57,6 +57,108 @@ namespace {
           MachineFunctionProperties::Property::NoVRegs);
     }
 
+    // This function removes any redundant load immediates. It has two level
+    // loops - The outer loop finds the load immediates BBI that could be used
+    // to replace following redundancy. The inner loop scans instructions that
+    // after BBI to find redundancy and update kill/dead flags accordingly. If
+    // AfterBBI is the same as BBI, it is redundant, otherwise any instructions
+    // that modify the def register of BBI would break the scanning.
+    // DeadOrKillToUnset is a pointer to the previous operand that had the
+    // kill/dead flag set. It keeps track of the def register of BBI, the use
+    // registers of AfterBBIs and the def registers of AfterBBIs.
+    bool removeRedundantLIs(MachineBasicBlock &MBB,
+                            const TargetRegisterInfo *TRI) {
+      LLVM_DEBUG(dbgs() << "Remove redundant load immediates from MBB:\n";
+                 MBB.dump(); dbgs() << "\n");
+
+      DenseSet<MachineInstr *> InstrsToErase;
+      for (auto BBI = MBB.instr_begin(); BBI != MBB.instr_end(); ++BBI) {
+        // Skip load immediate that is marked to be erased later because it
+        // cannot be used to replace any other instructions.
+        if (InstrsToErase.find(&*BBI) != InstrsToErase.end())
+          continue;
+        // Skip non-load immediate.
+        unsigned Opc = BBI->getOpcode();
+        if (Opc != PPC::LI && Opc != PPC::LI8 && Opc != PPC::LIS &&
+            Opc != PPC::LIS8)
+          continue;
+        // Skip load immediate, where the operand is a relocation (e.g., $r3 =
+        // LI target-flags(ppc-lo) %const.0).
+        if (!BBI->getOperand(1).isImm())
+          continue;
+        assert(BBI->getOperand(0).isReg() &&
+               "Expected a register for the first operand");
+
+        LLVM_DEBUG(dbgs() << "Scanning after load immediate: "; BBI->dump(););
+
+        unsigned Reg = BBI->getOperand(0).getReg();
+        int64_t Imm = BBI->getOperand(1).getImm();
+        MachineOperand *DeadOrKillToUnset = nullptr;
+        if (BBI->getOperand(0).isDead()) {
+          DeadOrKillToUnset = &BBI->getOperand(0);
+          LLVM_DEBUG(dbgs() << " Kill flag of " << *DeadOrKillToUnset
+                            << " from load immediate " << *BBI
+                            << " is a unsetting candidate\n");
+        }
+        // This loop scans instructions after BBI to see if there is any
+        // redundant load immediate.
+        for (auto AfterBBI = std::next(BBI); AfterBBI != MBB.instr_end();
+             ++AfterBBI) {
+          // Track the operand that kill Reg. We would unset the kill flag of
+          // the operand if there is a following redundant load immediate.
+          int KillIdx = AfterBBI->findRegisterUseOperandIdx(Reg, true, TRI);
+          if (KillIdx != -1) {
+            assert(!DeadOrKillToUnset && "Shouldn't kill same register twice");
+            DeadOrKillToUnset = &AfterBBI->getOperand(KillIdx);
+            LLVM_DEBUG(dbgs()
+                       << " Kill flag of " << *DeadOrKillToUnset << " from "
+                       << *AfterBBI << " is a unsetting candidate\n");
+          }
+
+          if (!AfterBBI->modifiesRegister(Reg, TRI))
+            continue;
+          assert(DeadOrKillToUnset &&
+                 "Shouldn't overwrite a register before it is killed");
+          // Finish scanning because Reg is overwritten by a non-load
+          // instruction.
+          if (AfterBBI->getOpcode() != Opc)
+            break;
+          assert(AfterBBI->getOperand(0).isReg() &&
+                 "Expected a register for the first operand");
+          // Finish scanning because Reg is overwritten by a relocation or a
+          // different value.
+          if (!AfterBBI->getOperand(1).isImm() ||
+              AfterBBI->getOperand(1).getImm() != Imm)
+            break;
+
+          // It loads same immediate value to the same Reg, which is redundant.
+          // We would unset kill flag in previous Reg usage to extend live range
+          // of Reg first, then remove the redundancy.
+          LLVM_DEBUG(dbgs() << " Unset dead/kill flag of " << *DeadOrKillToUnset
+                            << " from " << *DeadOrKillToUnset->getParent());
+          if (DeadOrKillToUnset->isDef())
+            DeadOrKillToUnset->setIsDead(false);
+          else
+            DeadOrKillToUnset->setIsKill(false);
+          DeadOrKillToUnset =
+              AfterBBI->findRegisterDefOperand(Reg, true, true, TRI);
+          if (DeadOrKillToUnset)
+            LLVM_DEBUG(dbgs()
+                       << " Dead flag of " << *DeadOrKillToUnset << " from "
+                       << *AfterBBI << " is a unsetting candidate\n");
+          InstrsToErase.insert(&*AfterBBI);
+          LLVM_DEBUG(dbgs() << " Remove redundant load immediate: ";
+                     AfterBBI->dump());
+        }
+      }
+
+      for (MachineInstr *MI : InstrsToErase) {
+        MI->eraseFromParent();
+      }
+      NumRemovedInPreEmit += InstrsToErase.size();
+      return !InstrsToErase.empty();
+    }
+
     bool runOnMachineFunction(MachineFunction &MF) override {
       if (skipFunction(MF.getFunction()) || !RunPreEmitPeephole)
         return false;
@@ -65,6 +167,7 @@ namespace {
       const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
       SmallVector<MachineInstr *, 4> InstrsToErase;
       for (MachineBasicBlock &MBB : MF) {
+        Changed |= removeRedundantLIs(MBB, TRI);
         for (MachineInstr &MI : MBB) {
           unsigned Opc = MI.getOpcode();
           // Detect self copies - these can result from running AADB.

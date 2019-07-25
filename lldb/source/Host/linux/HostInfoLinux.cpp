@@ -88,8 +88,7 @@ llvm::StringRef HostInfoLinux::GetDistributionId() {
   llvm::call_once(g_once_flag, []() {
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST));
-    if (log)
-      log->Printf("attempting to determine Linux distribution...");
+    LLDB_LOGF(log, "attempting to determine Linux distribution...");
 
     // check if the lsb_release command exists at one of the following paths
     const char *const exe_paths[] = {"/bin/lsb_release",
@@ -100,9 +99,8 @@ llvm::StringRef HostInfoLinux::GetDistributionId() {
       const char *const get_distribution_info_exe = exe_paths[exe_index];
       if (access(get_distribution_info_exe, F_OK)) {
         // this exe doesn't exist, move on to next exe
-        if (log)
-          log->Printf("executable doesn't exist: %s",
-                      get_distribution_info_exe);
+        LLDB_LOGF(log, "executable doesn't exist: %s",
+                  get_distribution_info_exe);
         continue;
       }
 
@@ -112,10 +110,10 @@ llvm::StringRef HostInfoLinux::GetDistributionId() {
 
       FILE *file = popen(get_distribution_id_command.c_str(), "r");
       if (!file) {
-        if (log)
-          log->Printf("failed to run command: \"%s\", cannot retrieve "
-                      "platform information",
-                      get_distribution_id_command.c_str());
+        LLDB_LOGF(log,
+                  "failed to run command: \"%s\", cannot retrieve "
+                  "platform information",
+                  get_distribution_id_command.c_str());
         break;
       }
 
@@ -123,9 +121,8 @@ llvm::StringRef HostInfoLinux::GetDistributionId() {
       char distribution_id[256] = {'\0'};
       if (fgets(distribution_id, sizeof(distribution_id) - 1, file) !=
           nullptr) {
-        if (log)
-          log->Printf("distribution id command returned \"%s\"",
-                      distribution_id);
+        LLDB_LOGF(log, "distribution id command returned \"%s\"",
+                  distribution_id);
 
         const char *const distributor_id_key = "Distributor ID:\t";
         if (strstr(distribution_id, distributor_id_key)) {
@@ -140,19 +137,17 @@ llvm::StringRef HostInfoLinux::GetDistributionId() {
               [](char ch) { return tolower(isspace(ch) ? '_' : ch); });
 
           g_fields->m_distribution_id = id_string;
-          if (log)
-            log->Printf("distribution id set to \"%s\"",
-                        g_fields->m_distribution_id.c_str());
+          LLDB_LOGF(log, "distribution id set to \"%s\"",
+                    g_fields->m_distribution_id.c_str());
         } else {
-          if (log)
-            log->Printf("failed to find \"%s\" field in \"%s\"",
-                        distributor_id_key, distribution_id);
+          LLDB_LOGF(log, "failed to find \"%s\" field in \"%s\"",
+                    distributor_id_key, distribution_id);
         }
       } else {
-        if (log)
-          log->Printf("failed to retrieve distribution id, \"%s\" returned no"
-                      " lines",
-                      get_distribution_id_command.c_str());
+        LLDB_LOGF(log,
+                  "failed to retrieve distribution id, \"%s\" returned no"
+                  " lines",
+                  get_distribution_id_command.c_str());
       }
 
       // clean up the file

@@ -64,10 +64,13 @@ public:
       : M("BasicAATest", C), B(C), DL(DLString), TLI(TLII), F(nullptr) {}
 };
 
+// FIXME: Both of these are disabled at the moment due to strange buildbot
+// failures. Please see https://bugs.llvm.org/show_bug.cgi?id=42719
+
 // Check that a function arg can't trivially alias a global when we're accessing
 // >sizeof(global) bytes through that arg, unless the access size is just an
 // upper-bound.
-TEST_F(BasicAATest, AliasInstWithObjectOfImpreciseSize) {
+TEST_F(BasicAATest, DISABLED_AliasInstWithObjectOfImpreciseSize) {
   F = Function::Create(
       FunctionType::get(B.getVoidTy(), {B.getInt32Ty()->getPointerTo()}, false),
       GlobalValue::ExternalLinkage, "F", &M);
@@ -101,7 +104,7 @@ TEST_F(BasicAATest, AliasInstWithObjectOfImpreciseSize) {
 
 // Check that we fall back to MayAlias if we see an access of an entire object
 // that's just an upper-bound.
-TEST_F(BasicAATest, AliasInstWithFullObjectOfImpreciseSize) {
+TEST_F(BasicAATest, DISABLED_AliasInstWithFullObjectOfImpreciseSize) {
   F = Function::Create(
       FunctionType::get(B.getVoidTy(), {B.getInt64Ty()}, false),
       GlobalValue::ExternalLinkage, "F", &M);

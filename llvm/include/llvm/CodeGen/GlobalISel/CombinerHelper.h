@@ -65,9 +65,24 @@ public:
   bool matchCombineBr(MachineInstr &MI);
   bool tryCombineBr(MachineInstr &MI);
 
+  /// Optimize memcpy intrinsics et al, e.g. constant len calls.
+  /// 
+  bool tryCombineMemCpyFamily(MachineInstr &MI);
+
   /// Try to transform \p MI by using all of the above
   /// combine functions. Returns true if changed.
   bool tryCombine(MachineInstr &MI);
+
+private:
+  // Memcpy family optimization helpers.
+  bool optimizeMemcpy(MachineInstr &MI, Register Dst, Register Src,
+                      unsigned KnownLen, unsigned DstAlign, unsigned SrcAlign,
+                      bool IsVolatile);
+  bool optimizeMemmove(MachineInstr &MI, Register Dst, Register Src,
+                      unsigned KnownLen, unsigned DstAlign, unsigned SrcAlign,
+                      bool IsVolatile);
+  bool optimizeMemset(MachineInstr &MI, Register Dst, Register Val,
+                      unsigned KnownLen, unsigned DstAlign, bool IsVolatile);
 };
 } // namespace llvm
 

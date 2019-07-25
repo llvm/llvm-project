@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -verify -cl-std=c++ %s
+// RUN: %clang_cc1 -verify -cl-std=clc++ %s
 // RUN: %clang_cc1 -verify %s
 // RUN: %clang_cc1 -verify -D=ATTR_TEST -fms-compatibility %s
 

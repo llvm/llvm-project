@@ -137,14 +137,15 @@ Module::Module(const ModuleSpec &module_spec)
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_OBJECT |
                                                   LIBLLDB_LOG_MODULES));
   if (log != nullptr)
-    log->Printf("%p Module::Module((%s) '%s%s%s%s')", static_cast<void *>(this),
-                module_spec.GetArchitecture().GetArchitectureName(),
-                module_spec.GetFileSpec().GetPath().c_str(),
-                module_spec.GetObjectName().IsEmpty() ? "" : "(",
-                module_spec.GetObjectName().IsEmpty()
-                    ? ""
-                    : module_spec.GetObjectName().AsCString(""),
-                module_spec.GetObjectName().IsEmpty() ? "" : ")");
+    LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
+              static_cast<void *>(this),
+              module_spec.GetArchitecture().GetArchitectureName(),
+              module_spec.GetFileSpec().GetPath().c_str(),
+              module_spec.GetObjectName().IsEmpty() ? "" : "(",
+              module_spec.GetObjectName().IsEmpty()
+                  ? ""
+                  : module_spec.GetObjectName().AsCString(""),
+              module_spec.GetObjectName().IsEmpty() ? "" : ")");
 
   // First extract all module specifications from the file using the local file
   // path. If there are no specifications, then don't fill anything in
@@ -164,7 +165,7 @@ Module::Module(const ModuleSpec &module_spec)
   if (!modules_specs.FindMatchingModuleSpec(module_spec,
                                             matching_module_spec)) {
     if (log) {
-      log->Printf("Found local object file but the specs didn't match");
+      LLDB_LOGF(log, "Found local object file but the specs didn't match");
     }
     return;
   }
@@ -235,11 +236,11 @@ Module::Module(const FileSpec &file_spec, const ArchSpec &arch,
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_OBJECT |
                                                   LIBLLDB_LOG_MODULES));
   if (log != nullptr)
-    log->Printf("%p Module::Module((%s) '%s%s%s%s')", static_cast<void *>(this),
-                m_arch.GetArchitectureName(), m_file.GetPath().c_str(),
-                m_object_name.IsEmpty() ? "" : "(",
-                m_object_name.IsEmpty() ? "" : m_object_name.AsCString(""),
-                m_object_name.IsEmpty() ? "" : ")");
+    LLDB_LOGF(log, "%p Module::Module((%s) '%s%s%s%s')",
+              static_cast<void *>(this), m_arch.GetArchitectureName(),
+              m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
+              m_object_name.IsEmpty() ? "" : m_object_name.AsCString(""),
+              m_object_name.IsEmpty() ? "" : ")");
 }
 
 Module::Module()
@@ -267,11 +268,11 @@ Module::~Module() {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_OBJECT |
                                                   LIBLLDB_LOG_MODULES));
   if (log != nullptr)
-    log->Printf("%p Module::~Module((%s) '%s%s%s%s')",
-                static_cast<void *>(this), m_arch.GetArchitectureName(),
-                m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
-                m_object_name.IsEmpty() ? "" : m_object_name.AsCString(""),
-                m_object_name.IsEmpty() ? "" : ")");
+    LLDB_LOGF(log, "%p Module::~Module((%s) '%s%s%s%s')",
+              static_cast<void *>(this), m_arch.GetArchitectureName(),
+              m_file.GetPath().c_str(), m_object_name.IsEmpty() ? "" : "(",
+              m_object_name.IsEmpty() ? "" : m_object_name.AsCString(""),
+              m_object_name.IsEmpty() ? "" : ")");
   // Release any auto pointers before we start tearing down our member
   // variables since the object file and symbol files might need to make
   // function calls back into this module object. The ordering is important
@@ -1237,13 +1238,6 @@ void Module::Dump(Stream *s) {
     symbols->Dump(s);
 
   s->IndentLess();
-}
-
-TypeList *Module::GetTypeList() {
-  SymbolVendor *symbols = GetSymbolVendor();
-  if (symbols)
-    return &symbols->GetTypeList();
-  return nullptr;
 }
 
 ConstString Module::GetObjectName() const { return m_object_name; }

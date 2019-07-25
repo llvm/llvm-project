@@ -33,7 +33,7 @@ int main(int, char**)
     for (unsigned i = 0; i <= 6; ++i)
     {
         weekday_indexed wdi(weekday{i}, 2);
-        assert( static_cast<unsigned>(wdi.weekday()) == i);
+        assert( wdi.weekday().c_encoding() == i);
     }
 
   return 0;

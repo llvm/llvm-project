@@ -104,7 +104,7 @@ uint32_t SymbolFileSymtab::CalculateAbilities() {
   return abilities;
 }
 
-uint32_t SymbolFileSymtab::GetNumCompileUnits() {
+uint32_t SymbolFileSymtab::CalculateNumCompileUnits() {
   // If we don't have any source file symbols we will just have one compile
   // unit for the entire object file
   if (m_source_indexes.empty())

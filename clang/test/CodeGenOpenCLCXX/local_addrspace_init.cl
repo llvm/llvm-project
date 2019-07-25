@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple spir -cl-std=c++ -emit-llvm -O0 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple spir -cl-std=clc++ -emit-llvm -O0 -o - | FileCheck %s
 
 // Test that we don't initialize local address space objects.
 //CHECK: @_ZZ4testE1i = internal addrspace(3) global i32 undef

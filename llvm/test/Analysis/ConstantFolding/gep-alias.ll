@@ -12,6 +12,6 @@ target triple = "x86_64-unknown-linux-gnu"
 @b = linkonce_odr alias [3 x i8*], [3 x i8*]* @a
 
 define i8** @f() {
-  ; CHECK: ret i8** getelementptr ([3 x i8*], [3 x i8*]* @b, i32 0, i32 1)
-  ret i8** getelementptr ([3 x i8*], [3 x i8*]* @b, i32 0, i32 1)
+  ; CHECK: ret i8** getelementptr ([3 x i8*], [3 x i8*]* @b, i64 0, i64 1)
+  ret i8** getelementptr ([3 x i8*], [3 x i8*]* @b, i64 0, i64 1)
 }

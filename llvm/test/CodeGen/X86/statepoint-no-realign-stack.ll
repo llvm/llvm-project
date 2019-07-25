@@ -35,14 +35,13 @@ define void @can_realign(<8 x i32>* %p) {
   ret void
 }
 
-; TODO: currently shows incorrect codegen, FIXME
 define void @no_realign(<8 x i32>* %p) "no-realign-stack" {
 ; CHECK-LABEL: no_realign:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    vmovaps (%rdi), %ymm0
-; CHECK-NEXT:    vmovaps %ymm0, (%rsp)
+; CHECK-NEXT:    vmovups %ymm0, (%rsp)
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    callq foo
 ; CHECK-NEXT:  .Ltmp1:

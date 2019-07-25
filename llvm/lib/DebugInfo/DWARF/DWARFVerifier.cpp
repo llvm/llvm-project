@@ -113,7 +113,7 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
 
   uint32_t OffsetStart = *Offset;
   Length = DebugInfoData.getU32(Offset);
-  if (Length == UINT32_MAX) {
+  if (Length == dwarf::DW_LENGTH_DWARF64) {
     Length = DebugInfoData.getU64(Offset);
     isUnitDWARF64 = true;
   }

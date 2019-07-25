@@ -71,6 +71,7 @@ protected:
     Exynos,
     Krait,
     Kryo,
+    NeoverseN1,
     Swift
   };
   enum ARMProcClassEnum {

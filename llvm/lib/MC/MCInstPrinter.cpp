@@ -64,12 +64,6 @@ StringRef MCInstPrinter::markup(StringRef s) const {
   else
     return "";
 }
-StringRef MCInstPrinter::markup(StringRef a, StringRef b) const {
-  if (getUseMarkup())
-    return a;
-  else
-    return b;
-}
 
 // For asm-style hex (e.g. 0ffh) the first digit always has to be a number.
 static bool needsLeadingZero(uint64_t Value)

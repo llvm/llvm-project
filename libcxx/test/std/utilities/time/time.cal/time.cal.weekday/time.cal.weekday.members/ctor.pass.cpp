@@ -15,10 +15,10 @@
 //  constexpr weekday(const sys_days& dp) noexcept;
 //  explicit constexpr weekday(const local_days& dp) noexcept;
 //
-//  explicit constexpr operator unsigned() const noexcept;
+//  unsigned c_encoding() const noexcept;
 
-//  Effects: Constructs an object of type weekday by initializing m_ with m.
-//    The value held is unspecified if d is not in the range [0, 255].
+//  Effects: Constructs an object of type weekday by initializing wd_ with wd == 7 ? 0 : wd
+//    The value held is unspecified if wd is not in the range [0, 255].
 
 #include <chrono>
 #include <type_traits>
@@ -32,18 +32,18 @@ int main(int, char**)
 
     ASSERT_NOEXCEPT(weekday{});
     ASSERT_NOEXCEPT(weekday(1));
-    ASSERT_NOEXCEPT(static_cast<unsigned>(weekday(1)));
+    ASSERT_NOEXCEPT(weekday(1).c_encoding());
 
     constexpr weekday m0{};
-    static_assert(static_cast<unsigned>(m0) == 0, "");
+    static_assert(m0.c_encoding() == 0, "");
 
     constexpr weekday m1{1};
-    static_assert(static_cast<unsigned>(m1) == 1, "");
+    static_assert(m1.c_encoding() == 1, "");
 
     for (unsigned i = 0; i <= 255; ++i)
     {
         weekday m(i);
-        assert(static_cast<unsigned>(m) == i);
+        assert(m.c_encoding() == (i == 7 ? 0 : i));
     }
 
 // TODO - sys_days and local_days ctor tests

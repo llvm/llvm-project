@@ -127,10 +127,10 @@ lldb::addr_t ArchitectureMips::GetBreakableLoadAddress(lldb::addr_t addr,
 
   // Adjust the breakable address
   uint64_t breakable_addr = addr - insn->GetOpcode().GetByteSize();
-  if (log)
-    log->Printf("Target::%s Breakpoint at 0x%8.8" PRIx64
-      " is adjusted to 0x%8.8" PRIx64 " due to delay slot\n",
-      __FUNCTION__, addr, breakable_addr);
+  LLDB_LOGF(log,
+            "Target::%s Breakpoint at 0x%8.8" PRIx64
+            " is adjusted to 0x%8.8" PRIx64 " due to delay slot\n",
+            __FUNCTION__, addr, breakable_addr);
 
   return breakable_addr;
 }

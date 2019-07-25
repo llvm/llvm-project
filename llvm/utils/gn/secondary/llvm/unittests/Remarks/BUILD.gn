@@ -8,5 +8,6 @@ unittest("RemarksTests") {
   sources = [
     "RemarksStrTabParsingTest.cpp",
     "YAMLRemarksParsingTest.cpp",
+    "YAMLRemarksSerializerTest.cpp",
   ]
 }

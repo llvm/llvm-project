@@ -117,8 +117,6 @@ public:
   SymbolFile *GetSymbolFile() { return m_symbol_file; }
   const SymbolFile *GetSymbolFile() const { return m_symbol_file; }
 
-  TypeList *GetTypeList();
-
   ConstString GetName();
 
   llvm::Optional<uint64_t> GetByteSize();

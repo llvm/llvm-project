@@ -1,4 +1,5 @@
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+spe < %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mcpu=neoverse-n1 < %s | FileCheck %s
 // RUN: not llvm-mc -triple aarch64-none-linux-gnu -show-encoding < %s 2>&1 | FileCheck --check-prefix=NO_SPE %s
 
   psb csync

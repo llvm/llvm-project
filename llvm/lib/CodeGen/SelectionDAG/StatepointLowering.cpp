@@ -378,7 +378,6 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
     // We use TargetFrameIndex so that isel will not select it into LEA
     Loc = Builder.DAG.getTargetFrameIndex(Index, Builder.getFrameIndexTy());
 
-#ifndef NDEBUG
     // Right now we always allocate spill slots that are of the same
     // size as the value we're about to spill (the size of spillee can
     // vary since we spill vectors of pointers too).  At some point we
@@ -387,12 +386,18 @@ spillIncomingStatepointValue(SDValue Incoming, SDValue Chain,
     MachineFrameInfo &MFI = Builder.DAG.getMachineFunction().getFrameInfo();
     assert((MFI.getObjectSize(Index) * 8) == Incoming.getValueSizeInBits() &&
            "Bad spill:  stack slot does not match!");
-#endif
 
+    // Note: Using the alignment of the spill slot (rather than the abi or
+    // preferred alignment) is required for correctness when dealing with spill
+    // slots with preferred alignments larger than frame alignment..
     auto &MF = Builder.DAG.getMachineFunction();
     auto PtrInfo = MachinePointerInfo::getFixedStack(MF, Index);
+    auto *StoreMMO =
+      MF.getMachineMemOperand(PtrInfo, MachineMemOperand::MOStore, 
+                              MFI.getObjectSize(Index),
+                              MFI.getObjectAlignment(Index));
     Chain = Builder.DAG.getStore(Chain, Builder.getCurSDLoc(), Incoming, Loc,
-                                 PtrInfo);
+                                 StoreMMO);
 
     MMO = getMachineMemOperand(MF, *cast<FrameIndexSDNode>(Loc));
     

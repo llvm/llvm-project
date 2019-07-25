@@ -33,3 +33,9 @@ bool MCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
   Target = Addr+Size+Imm;
   return true;
 }
+
+Optional<uint64_t>
+MCInstrAnalysis::evaluateMemoryOperandAddress(const MCInst &Inst, uint64_t Addr,
+                                              uint64_t Size) const {
+  return None;
+}

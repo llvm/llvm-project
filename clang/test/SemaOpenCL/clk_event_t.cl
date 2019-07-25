@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=CL2.0
-// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=c++
+// RUN: %clang_cc1 %s -verify -pedantic -fsyntax-only -cl-std=clc++
 
 // Taken from opencl-c.h
 #define CLK_NULL_EVENT (__builtin_astype(((__SIZE_MAX__)), clk_event_t))

@@ -140,6 +140,21 @@ define void @tests.lifetime.start.end() {
   ret void
 }
 
+declare void @llvm.prefetch(i8*, i32, i32, i32)
+define void @test.prefetch(i8* %ptr) {
+; CHECK-LABEL: @test.prefetch(
+; CHECK: @llvm.prefetch.p0i8(i8* %ptr, i32 0, i32 3, i32 2)
+  call void @llvm.prefetch(i8* %ptr, i32 0, i32 3, i32 2)
+  ret void
+}
+
+declare void @llvm.prefetch.p0i8(i8*, i32, i32, i32)
+define void @test.prefetch.2(i8* %ptr) {
+; CHECK-LABEL: @test.prefetch.2(
+; CHECK: @llvm.prefetch.p0i8(i8* %ptr, i32 0, i32 3, i32 2)
+  call void @llvm.prefetch(i8* %ptr, i32 0, i32 3, i32 2)
+  ret void
+}
 
 ; This is part of @test.objectsize(), since llvm.objectsize declaration gets
 ; emitted at the end.

@@ -62,6 +62,9 @@ EXTERN void __kmpc_barrier(kmp_Ident *loc_ref, int32_t tid) {
         // Barrier #1 is for synchronization among active threads.
         named_sync(L1_BARRIER, threads);
       }
+    } else {
+      // Still need to flush the memory per the standard.
+      __kmpc_flush(loc_ref);
     } // numberOfActiveOMPThreads > 1
     PRINT0(LD_SYNC, "completed kmpc_barrier\n");
   }

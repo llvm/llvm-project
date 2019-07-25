@@ -91,9 +91,8 @@ body:             |
     ; CHECK: [[COPY1:%[0-9]+]]:gpr(s32) = COPY $w1
     ; CHECK: [[COPY2:%[0-9]+]]:gpr(s32) = COPY $w2
     ; CHECK: [[SITOFP:%[0-9]+]]:fpr(s32) = G_SITOFP [[COPY1]](s32)
-    ; CHECK: [[COPY3:%[0-9]+]]:fpr(s1) = COPY [[TRUNC]](s1)
-    ; CHECK: [[COPY4:%[0-9]+]]:fpr(s32) = COPY [[COPY2]](s32)
-    ; CHECK: [[SELECT:%[0-9]+]]:fpr(s32) = G_SELECT [[COPY3]](s1), [[COPY4]], [[SITOFP]]
+    ; CHECK: [[COPY3:%[0-9]+]]:fpr(s32) = COPY [[COPY2]](s32)
+    ; CHECK: [[SELECT:%[0-9]+]]:fpr(s32) = G_SELECT [[TRUNC]](s1), [[COPY3]], [[SITOFP]]
     ; CHECK: [[FPTOSI:%[0-9]+]]:gpr(s32) = G_FPTOSI [[SELECT]](s32)
     %0:_(s32) = COPY $w0
     %1:_(s1) = G_TRUNC %3(s32)

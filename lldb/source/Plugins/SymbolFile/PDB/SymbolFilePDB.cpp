@@ -123,8 +123,7 @@ SymbolFilePDB::CreateInstance(lldb_private::ObjectFile *obj_file) {
 }
 
 SymbolFilePDB::SymbolFilePDB(lldb_private::ObjectFile *object_file)
-    : SymbolFile(object_file), m_session_up(), m_global_scope_up(),
-      m_cached_compile_unit_count(0) {}
+    : SymbolFile(object_file), m_session_up(), m_global_scope_up() {}
 
 SymbolFilePDB::~SymbolFilePDB() {}
 
@@ -191,33 +190,30 @@ void SymbolFilePDB::InitializeObject() {
   lldbassert(m_global_scope_up.get());
 }
 
-uint32_t SymbolFilePDB::GetNumCompileUnits() {
-  if (m_cached_compile_unit_count == 0) {
-    auto compilands = m_global_scope_up->findAllChildren<PDBSymbolCompiland>();
-    if (!compilands)
-      return 0;
+uint32_t SymbolFilePDB::CalculateNumCompileUnits() {
+  auto compilands = m_global_scope_up->findAllChildren<PDBSymbolCompiland>();
+  if (!compilands)
+    return 0;
 
-    // The linker could link *.dll (compiland language = LINK), or import
-    // *.dll. For example, a compiland with name `Import:KERNEL32.dll` could be
-    // found as a child of the global scope (PDB executable). Usually, such
-    // compilands contain `thunk` symbols in which we are not interested for
-    // now. However we still count them in the compiland list. If we perform
-    // any compiland related activity, like finding symbols through
-    // llvm::pdb::IPDBSession methods, such compilands will all be searched
-    // automatically no matter whether we include them or not.
-    m_cached_compile_unit_count = compilands->getChildCount();
+  // The linker could link *.dll (compiland language = LINK), or import
+  // *.dll. For example, a compiland with name `Import:KERNEL32.dll` could be
+  // found as a child of the global scope (PDB executable). Usually, such
+  // compilands contain `thunk` symbols in which we are not interested for
+  // now. However we still count them in the compiland list. If we perform
+  // any compiland related activity, like finding symbols through
+  // llvm::pdb::IPDBSession methods, such compilands will all be searched
+  // automatically no matter whether we include them or not.
+  uint32_t compile_unit_count = compilands->getChildCount();
 
-    // The linker can inject an additional "dummy" compilation unit into the
-    // PDB. Ignore this special compile unit for our purposes, if it is there.
-    // It is always the last one.
-    auto last_compiland_up =
-        compilands->getChildAtIndex(m_cached_compile_unit_count - 1);
-    lldbassert(last_compiland_up.get());
-    std::string name = last_compiland_up->getName();
-    if (name == "* Linker *")
-      --m_cached_compile_unit_count;
-  }
-  return m_cached_compile_unit_count;
+  // The linker can inject an additional "dummy" compilation unit into the
+  // PDB. Ignore this special compile unit for our purposes, if it is there.
+  // It is always the last one.
+  auto last_compiland_up = compilands->getChildAtIndex(compile_unit_count - 1);
+  lldbassert(last_compiland_up.get());
+  std::string name = last_compiland_up->getName();
+  if (name == "* Linker *")
+    --compile_unit_count;
+  return compile_unit_count;
 }
 
 void SymbolFilePDB::GetCompileUnitIndex(
@@ -561,9 +557,7 @@ lldb_private::Type *SymbolFilePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
   lldb::TypeSP result = pdb->CreateLLDBTypeFromPDBType(*pdb_type);
   if (result) {
     m_types.insert(std::make_pair(type_uid, result));
-    auto type_list = GetTypeList();
-    if (type_list)
-      type_list->Insert(result);
+    GetTypeList().Insert(result);
   }
   return result.get();
 }
@@ -1520,10 +1514,6 @@ size_t SymbolFilePDB::FindTypes(
   return 0;
 }
 
-lldb_private::TypeList *SymbolFilePDB::GetTypeList() {
-  return m_obj_file->GetModule()->GetTypeList();
-}
-
 void SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,
                                          uint32_t type_mask,
                                          TypeCollection &type_collection) {
@@ -1698,8 +1688,7 @@ lldb::CompUnitSP SymbolFilePDB::ParseCompileUnitForUID(uint32_t id,
   if (index == UINT32_MAX)
     GetCompileUnitIndex(*compiland_up, index);
   lldbassert(index != UINT32_MAX);
-  m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(index,
-                                                                    cu_sp);
+  SetCompileUnitAtIndex(index, cu_sp);
   return cu_sp;
 }
 

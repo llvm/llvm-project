@@ -292,6 +292,35 @@ ClangdServer::formatOnType(llvm::StringRef Code, PathRef File, Position Pos,
   return Result;
 }
 
+void ClangdServer::prepareRename(PathRef File, Position Pos,
+                                 Callback<llvm::Optional<Range>> CB) {
+  auto Action = [Pos, this](Path File, Callback<llvm::Optional<Range>> CB,
+                            llvm::Expected<InputsAndAST> InpAST) {
+    if (!InpAST)
+      return CB(InpAST.takeError());
+    auto &AST = InpAST->AST;
+    // Performing the rename isn't substantially more expensive than doing an
+    // AST-based check, so we just rename and throw away the results. We may
+    // have to revisit this when we support cross-file rename.
+    auto Changes = renameWithinFile(AST, File, Pos, "dummy", Index);
+    if (!Changes) {
+      // LSP says to return null on failure, but that will result in a generic
+      // failure message. If we send an LSP error response, clients can surface
+      // the message to users (VSCode does).
+      return CB(Changes.takeError());
+    }
+    SourceLocation Loc = getBeginningOfIdentifier(
+        AST, Pos, AST.getSourceManager().getMainFileID());
+    if (auto Range = getTokenRange(AST.getSourceManager(),
+                                   AST.getASTContext().getLangOpts(), Loc))
+      return CB(*Range);
+    // Return null if the "rename" is not valid at the position.
+    CB(llvm::None);
+  };
+  WorkScheduler.runWithAST("PrepareRename", File,
+                           Bind(Action, File.str(), std::move(CB)));
+}
+
 void ClangdServer::rename(PathRef File, Position Pos, llvm::StringRef NewName,
                           bool WantFormat, Callback<std::vector<TextEdit>> CB) {
   auto Action = [Pos, WantFormat, this](Path File, std::string NewName,

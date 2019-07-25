@@ -31,6 +31,8 @@ class MachOUniversalBinary : public Binary {
   uint32_t Magic;
   uint32_t NumberOfObjects;
 public:
+  static constexpr uint32_t MaxSectionAlignment = 15; /* 2**15 or 0x8000 */
+
   class ObjectForArch {
     const MachOUniversalBinary *Parent;
     /// Index of object in the universal binary.

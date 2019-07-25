@@ -202,15 +202,13 @@ SymbolFile *SymbolFileDWARF::CreateInstance(ObjectFile *obj_file) {
                              /*dwo_section_list*/ nullptr);
 }
 
-TypeList *SymbolFileDWARF::GetTypeList() {
+TypeList &SymbolFileDWARF::GetTypeList() {
   // This method can be called without going through the symbol vendor so we
   // need to lock the module.
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
-  SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile();
-  if (debug_map_symfile)
+  if (SymbolFileDWARFDebugMap *debug_map_symfile = GetDebugMapSymfile())
     return debug_map_symfile->GetTypeList();
-  else
-    return m_obj_file->GetModule()->GetTypeList();
+  return SymbolFile::GetTypeList();
 }
 void SymbolFileDWARF::GetTypes(const DWARFDIE &die, dw_offset_t min_die_offset,
                                dw_offset_t max_die_offset, uint32_t type_mask,
@@ -677,8 +675,7 @@ lldb::CompUnitSP SymbolFileDWARF::ParseCompileUnit(DWARFCompileUnit &dwarf_cu) {
 
           dwarf_cu.SetUserData(cu_sp.get());
 
-          m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(
-              dwarf_cu.GetID(), cu_sp);
+          SetCompileUnitAtIndex(dwarf_cu.GetID(), cu_sp);
         }
       }
     }
@@ -715,7 +712,7 @@ llvm::Optional<uint32_t> SymbolFileDWARF::GetDWARFUnitIndex(uint32_t cu_idx) {
   return m_lldb_cu_to_dwarf_unit[cu_idx];
 }
 
-uint32_t SymbolFileDWARF::GetNumCompileUnits() {
+uint32_t SymbolFileDWARF::CalculateNumCompileUnits() {
   DWARFDebugInfo *info = DebugInfo();
   if (!info)
     return 0;
@@ -2972,9 +2969,7 @@ TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
   Log *log = LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_INFO);
   TypeSP type_sp = dwarf_ast->ParseTypeFromDWARF(sc, die, log, type_is_new_ptr);
   if (type_sp) {
-    TypeList *type_list = GetTypeList();
-    if (type_list)
-      type_list->Insert(type_sp);
+    GetTypeList().Insert(type_sp);
 
     if (die.Tag() == DW_TAG_subprogram) {
       std::string scope_qualified_name(GetDeclContextForUID(die.GetID())
@@ -3713,7 +3708,10 @@ ConstString SymbolFileDWARF::GetPluginName() { return GetPluginNameStatic(); }
 
 uint32_t SymbolFileDWARF::GetPluginVersion() { return 1; }
 
-void SymbolFileDWARF::Dump(lldb_private::Stream &s) { m_index->Dump(s); }
+void SymbolFileDWARF::Dump(lldb_private::Stream &s) {
+  SymbolFile::Dump(s);
+  m_index->Dump(s);
+}
 
 void SymbolFileDWARF::DumpClangAST(Stream &s) {
   TypeSystem *ts = GetTypeSystemForLanguage(eLanguageTypeC_plus_plus);

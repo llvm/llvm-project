@@ -57,6 +57,11 @@ class AtosSymbolizerProcess : public SymbolizerProcess {
   }
 
  private:
+  virtual bool StartSymbolizerSubprocess() override {
+    // Configure sandbox before starting atos process.
+    return SymbolizerProcess::StartSymbolizerSubprocess();
+  }
+
   bool ReachedEndOfOutput(const char *buffer, uptr length) const override {
     return (length >= 1 && buffer[length - 1] == '\n');
   }

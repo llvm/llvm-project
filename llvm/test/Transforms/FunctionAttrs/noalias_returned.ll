@@ -79,13 +79,13 @@ declare i8* @baz(...) nounwind uwtable
 ; TEST 5
 
 ; Returning global pointer. Should not be noalias.
-; CHECK: define nonnull i8** @getter()
+; CHECK: define nonnull dereferenceable(8) i8** @getter()
 define i8** @getter() {
   ret i8** @G
 }
 
 ; Returning global pointer. Should not be noalias.
-; CHECK: define nonnull i8** @calle1()
+; CHECK: define nonnull dereferenceable(8) i8** @calle1()
 define i8** @calle1(){
   %1 = call i8** @getter()
   ret i8** %1

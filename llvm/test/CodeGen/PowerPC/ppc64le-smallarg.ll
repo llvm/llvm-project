@@ -52,7 +52,7 @@ entry:
   ret void
 }
 ; CHECK: @caller2
-; CHECK: stfs {{[0-9]+}}, 136({{[0-9]+}})
+; CHECK: std {{[0-9]+}}, 16({{[0-9]+}})
 ; CHECK: bl test2
 
 declare float @test2(float, float, float, float, float, float, float, float, float, float, float, float, float, float)

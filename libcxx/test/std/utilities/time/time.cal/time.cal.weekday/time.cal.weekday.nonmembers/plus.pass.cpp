@@ -63,8 +63,8 @@ int main(int, char**)
             weekday wd1 = weekday{i} + days{j};
             weekday wd2 = days{j} + weekday{i};
             assert(wd1 == wd2);
-            assert((static_cast<unsigned>(wd1) == euclidian_addition<unsigned, 0, 6>(i, j)));
-            assert((static_cast<unsigned>(wd2) == euclidian_addition<unsigned, 0, 6>(i, j)));
+            assert((wd1.c_encoding() == euclidian_addition<unsigned, 0, 6>(i, j)));
+            assert((wd2.c_encoding() == euclidian_addition<unsigned, 0, 6>(i, j)));
         }
 
   return 0;

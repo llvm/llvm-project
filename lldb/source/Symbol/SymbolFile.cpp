@@ -10,6 +10,7 @@
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/TypeMap.h"
 #include "lldb/Symbol/TypeSystem.h"
@@ -21,6 +22,7 @@
 #include <future>
 
 using namespace lldb_private;
+using namespace lldb;
 
 void SymbolFile::PreloadSymbols() {
   // No-op for most implementations.
@@ -78,12 +80,6 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
     }
   }
   return best_symfile_up.release();
-}
-
-TypeList *SymbolFile::GetTypeList() {
-  if (m_obj_file)
-    return m_obj_file->GetModule()->GetTypeList();
-  return nullptr;
 }
 
 TypeSystem *SymbolFile::GetTypeSystemForLanguage(lldb::LanguageType language) {
@@ -167,6 +163,57 @@ void SymbolFile::AssertModuleLock() {
                  .get() == false &&
          "Module is not locked");
 #endif
+}
+
+uint32_t SymbolFile::GetNumCompileUnits() {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  if (!m_compile_units) {
+    // Create an array of compile unit shared pointers -- which will each
+    // remain NULL until someone asks for the actual compile unit information.
+    m_compile_units.emplace(CalculateNumCompileUnits());
+  }
+  return m_compile_units->size();
+}
+
+CompUnitSP SymbolFile::GetCompileUnitAtIndex(uint32_t idx) {
+  uint32_t num = GetNumCompileUnits();
+  if (idx >= num)
+    return nullptr;
+  lldb::CompUnitSP &cu_sp = (*m_compile_units)[idx];
+  if (!cu_sp)
+    cu_sp = ParseCompileUnitAtIndex(idx);
+  return cu_sp;
+}
+
+void SymbolFile::SetCompileUnitAtIndex(uint32_t idx, const CompUnitSP &cu_sp) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  const size_t num_compile_units = GetNumCompileUnits();
+  assert(idx < num_compile_units);
+  (void)num_compile_units;
+
+  // Fire off an assertion if this compile unit already exists for now. The
+  // partial parsing should take care of only setting the compile unit
+  // once, so if this assertion fails, we need to make sure that we don't
+  // have a race condition, or have a second parse of the same compile
+  // unit.
+  assert((*m_compile_units)[idx] == nullptr);
+  (*m_compile_units)[idx] = cu_sp;
+}
+
+void SymbolFile::Dump(Stream &s) {
+  s.PutCString("Types:\n");
+  m_type_list.Dump(&s, /*show_context*/ false);
+  s.PutChar('\n');
+
+  s.PutCString("Compile units:\n");
+  if (m_compile_units) {
+    for (const CompUnitSP &cu_sp : *m_compile_units) {
+      // We currently only dump the compile units that have been parsed
+      if (cu_sp)
+        cu_sp->Dump(&s, /*show_context*/ false);
+    }
+  }
+  s.PutChar('\n');
 }
 
 SymbolFile::RegisterInfoResolver::~RegisterInfoResolver() = default;

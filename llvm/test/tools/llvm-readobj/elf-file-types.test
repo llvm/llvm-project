@@ -1,0 +1,154 @@
+## Check llvm-readobj and llvm-readelf can dump files of the different ELF types.
+
+# RUN: yaml2obj %s --docnum=1 -o %t1
+# RUN: llvm-readobj -h %t1 | FileCheck %s --match-full-lines --check-prefix LLVM-NONE
+# RUN: llvm-readelf -h %t1 | FileCheck %s --match-full-lines --check-prefix GNU-NONE
+
+# LLVM-NONE: ElfHeader {
+# LLVM-NONE:   Type: None (0x0)
+
+# GNU-NONE: ELF Header:
+# GNU-NONE:   Type: NONE (none)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_NONE
+  Machine: EM_X86_64
+
+# RUN: yaml2obj %s --docnum=2 -o %t2
+# RUN: llvm-readobj -h %t2 | FileCheck %s --match-full-lines --check-prefix LLVM-REL
+# RUN: llvm-readelf -h %t2 | FileCheck %s --match-full-lines --check-prefix GNU-REL
+
+# LLVM-REL: ElfHeader {
+# LLVM-REL:   Type: Relocatable (0x1)
+
+# GNU-REL: ELF Header:
+# GNU-REL:   Type: REL (Relocatable file)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+
+# RUN: yaml2obj %s --docnum=3 -o %t3
+# RUN: llvm-readobj -h %t3 | FileCheck %s --match-full-lines --check-prefix LLVM-EXEC
+# RUN: llvm-readelf -h %t3 | FileCheck %s --match-full-lines --check-prefix GNU-EXEC
+
+# LLVM-EXEC: ElfHeader {
+# LLVM-EXEC:   Type: Executable (0x2)
+
+# GNU-EXEC: ELF Header:
+# GNU-EXEC:   Type: EXEC (Executable file)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+
+# RUN: yaml2obj %s --docnum=4 -o %t4
+# RUN: llvm-readobj -h %t4 | FileCheck %s --match-full-lines --check-prefix LLVM-DYN
+# RUN: llvm-readelf -h %t4 | FileCheck %s --match-full-lines --check-prefix GNU-DYN
+
+# LLVM-DYN: ElfHeader {
+# LLVM-DYN:   Type: SharedObject (0x3)
+
+# GNU-DYN: ELF Header:
+# GNU-DYN:   Type: DYN (Shared object file)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_DYN
+  Machine: EM_X86_64
+
+# RUN: yaml2obj %s --docnum=5 -o %t5
+# RUN: llvm-readobj -h %t5 | FileCheck %s --match-full-lines --check-prefix LLVM-CORE
+# RUN: llvm-readelf -h %t5 | FileCheck %s --match-full-lines --check-prefix GNU-CORE
+
+# LLVM-CORE: ElfHeader {
+# LLVM-CORE:   Type: Core (0x4)
+
+# GNU-CORE: ELF Header:
+# GNU-CORE:   Type: CORE (Core file)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_CORE
+  Machine: EM_X86_64
+
+# RUN: yaml2obj %s --docnum=6 -o %t6
+# RUN: llvm-readobj -h %t6 | FileCheck %s --match-full-lines --check-prefix LLVM-LOOS
+# RUN: llvm-readelf -h %t6 | FileCheck %s --match-full-lines --check-prefix GNU-LOOS
+
+# LLVM-LOOS: ElfHeader {
+# LLVM-LOOS:   Type: 0xFE00
+
+# GNU-LOOS: ELF Header:
+# GNU-LOOS:   Type: fe00
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    0xfe00
+  Machine: EM_X86_64
+
+# RUN: yaml2obj %s --docnum=7 -o %t7
+# RUN: llvm-readobj -h %t7 | FileCheck %s --match-full-lines --check-prefix LLVM-HIOS
+# RUN: llvm-readelf -h %t7 | FileCheck %s --match-full-lines --check-prefix GNU-HIOS
+
+# LLVM-HIOS: ElfHeader {
+# LLVM-HIOS:   Type: 0xFEFF
+
+# GNU-HIOS: ELF Header:
+# GNU-HIOS:   Type: feff
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    0xfeff
+  Machine: EM_X86_64
+
+# RUN: yaml2obj %s --docnum=8 -o %t8
+# RUN: llvm-readobj -h %t8 | FileCheck %s --match-full-lines --check-prefix LLVM-LOPROC
+# RUN: llvm-readelf -h %t8 | FileCheck %s --match-full-lines --check-prefix GNU-LOPROC
+
+# LLVM-LOPROC: ElfHeader {
+# LLVM-LOPROC:   Type: 0xFF00
+
+# GNU-LOPROC: ELF Header:
+# GNU-LOPROC:   Type: ff00
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    0xff00
+  Machine: EM_X86_64
+
+# RUN: yaml2obj %s --docnum=9 -o %t9
+# RUN: llvm-readobj -h %t9 | FileCheck %s --match-full-lines --check-prefix LLVM-HIPROC
+# RUN: llvm-readelf -h %t9 | FileCheck %s --match-full-lines --check-prefix GNU-HIPROC
+
+# LLVM-HIPROC: ElfHeader {
+# LLVM-HIPROC:   Type: 0xFFFF
+
+# GNU-HIPROC: ELF Header:
+# GNU-HIPROC:   Type: ffff
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    0xffff
+  Machine: EM_X86_64

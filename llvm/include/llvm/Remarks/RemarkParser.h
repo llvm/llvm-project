@@ -23,9 +23,6 @@
 namespace llvm {
 namespace remarks {
 
-struct ParserImpl;
-struct ParsedStringTable;
-
 class EndOfFileError : public ErrorInfo<EndOfFileError> {
 public:
   static char ID;
@@ -39,11 +36,11 @@ public:
 };
 
 /// Parser used to parse a raw buffer to remarks::Remark objects.
-struct Parser {
+struct RemarkParser {
   /// The format of the parser.
   Format ParserFormat;
 
-  Parser(Format ParserFormat) : ParserFormat(ParserFormat) {}
+  RemarkParser(Format ParserFormat) : ParserFormat(ParserFormat) {}
 
   /// If no error occurs, this returns a valid Remark object.
   /// If an error of type EndOfFileError occurs, it is safe to recover from it
@@ -52,7 +49,7 @@ struct Parser {
   /// The pointer should never be null.
   virtual Expected<std::unique_ptr<Remark>> next() = 0;
 
-  virtual ~Parser() = default;
+  virtual ~RemarkParser() = default;
 };
 
 /// In-memory representation of the string table parsed from a buffer (e.g. the
@@ -60,16 +57,28 @@ struct Parser {
 struct ParsedStringTable {
   /// The buffer mapped from the section contents.
   StringRef Buffer;
-  /// Collection of offsets in the buffer for each string entry.
-  SmallVector<size_t, 8> Offsets;
+  /// This object has high changes to be std::move'd around, so don't use a
+  /// SmallVector for once.
+  std::vector<size_t> Offsets;
 
-  Expected<StringRef> operator[](size_t Index) const;
   ParsedStringTable(StringRef Buffer);
+  /// Disable copy.
+  ParsedStringTable(const ParsedStringTable &) = delete;
+  ParsedStringTable &operator=(const ParsedStringTable &) = delete;
+  /// Should be movable.
+  ParsedStringTable(ParsedStringTable &&) = default;
+  ParsedStringTable &operator=(ParsedStringTable &&) = default;
+
+  size_t size() const { return Offsets.size(); }
+  Expected<StringRef> operator[](size_t Index) const;
 };
 
-Expected<std::unique_ptr<Parser>>
+Expected<std::unique_ptr<RemarkParser>> createRemarkParser(Format ParserFormat,
+                                                           StringRef Buf);
+
+Expected<std::unique_ptr<RemarkParser>>
 createRemarkParser(Format ParserFormat, StringRef Buf,
-                   Optional<const ParsedStringTable *> StrTab = None);
+                   ParsedStringTable StrTab);
 
 } // end namespace remarks
 } // end namespace llvm

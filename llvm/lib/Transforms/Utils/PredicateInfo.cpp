@@ -306,10 +306,11 @@ void collectCmpOps(CmpInst *Comparison, SmallVectorImpl<Value *> &CmpOperands) {
 }
 
 // Add Op, PB to the list of value infos for Op, and mark Op to be renamed.
-void PredicateInfo::addInfoFor(SmallPtrSetImpl<Value *> &OpsToRename, Value *Op,
+void PredicateInfo::addInfoFor(SmallVectorImpl<Value *> &OpsToRename, Value *Op,
                                PredicateBase *PB) {
-  OpsToRename.insert(Op);
   auto &OperandInfo = getOrCreateValueInfo(Op);
+  if (OperandInfo.Infos.empty())
+    OpsToRename.push_back(Op);
   AllInfos.push_back(PB);
   OperandInfo.Infos.push_back(PB);
 }
@@ -317,7 +318,7 @@ void PredicateInfo::addInfoFor(SmallPtrSetImpl<Value *> &OpsToRename, Value *Op,
 // Process an assume instruction and place relevant operations we want to rename
 // into OpsToRename.
 void PredicateInfo::processAssume(IntrinsicInst *II, BasicBlock *AssumeBB,
-                                  SmallPtrSetImpl<Value *> &OpsToRename) {
+                                  SmallVectorImpl<Value *> &OpsToRename) {
   // See if we have a comparison we support
   SmallVector<Value *, 8> CmpOperands;
   SmallVector<Value *, 2> ConditionsToProcess;
@@ -357,7 +358,7 @@ void PredicateInfo::processAssume(IntrinsicInst *II, BasicBlock *AssumeBB,
 // Process a block terminating branch, and place relevant operations to be
 // renamed into OpsToRename.
 void PredicateInfo::processBranch(BranchInst *BI, BasicBlock *BranchBB,
-                                  SmallPtrSetImpl<Value *> &OpsToRename) {
+                                  SmallVectorImpl<Value *> &OpsToRename) {
   BasicBlock *FirstBB = BI->getSuccessor(0);
   BasicBlock *SecondBB = BI->getSuccessor(1);
   SmallVector<BasicBlock *, 2> SuccsToProcess;
@@ -427,7 +428,7 @@ void PredicateInfo::processBranch(BranchInst *BI, BasicBlock *BranchBB,
 // Process a block terminating switch, and place relevant operations to be
 // renamed into OpsToRename.
 void PredicateInfo::processSwitch(SwitchInst *SI, BasicBlock *BranchBB,
-                                  SmallPtrSetImpl<Value *> &OpsToRename) {
+                                  SmallVectorImpl<Value *> &OpsToRename) {
   Value *Op = SI->getCondition();
   if ((!isa<Instruction>(Op) && !isa<Argument>(Op)) || Op->hasOneUse())
     return;
@@ -457,7 +458,7 @@ void PredicateInfo::buildPredicateInfo() {
   DT.updateDFSNumbers();
   // Collect operands to rename from all conditional branch terminators, as well
   // as assume statements.
-  SmallPtrSet<Value *, 8> OpsToRename;
+  SmallVector<Value *, 8> OpsToRename;
   for (auto DTN : depth_first(DT.getRootNode())) {
     BasicBlock *BranchBB = DTN->getBlock();
     if (auto *BI = dyn_cast<BranchInst>(BranchBB->getTerminator())) {
@@ -565,13 +566,7 @@ Value *PredicateInfo::materializeStack(unsigned int &Counter,
 //
 // TODO: Use this algorithm to perform fast single-variable renaming in
 // promotememtoreg and memoryssa.
-void PredicateInfo::renameUses(SmallPtrSetImpl<Value *> &OpSet) {
-  // Sort OpsToRename since we are going to iterate it.
-  SmallVector<Value *, 8> OpsToRename(OpSet.begin(), OpSet.end());
-  auto Comparator = [&](const Value *A, const Value *B) {
-    return valueComesBefore(OI, A, B);
-  };
-  llvm::sort(OpsToRename, Comparator);
+void PredicateInfo::renameUses(SmallVectorImpl<Value *> &OpsToRename) {
   ValueDFS_Compare Compare(OI);
   // Compute liveness, and rename in O(uses) per Op.
   for (auto *Op : OpsToRename) {

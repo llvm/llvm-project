@@ -100,3 +100,41 @@ b:
   %1 = call i32 @f(i32 1)
   ret i32 %1
 }
+
+; This would crash because we did not clean up the
+; default block of the switch before removing the switch.
+
+define void @PR42737(i32* %a, i1 %c) {
+; CHECK-LABEL: @PR42737(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = xor i1 [[C:%.*]], true
+; CHECK-NEXT:    call void @llvm.assume(i1 [[TMP0]])
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br i1 %c, label %switch, label %else
+
+else:
+  store i32 2, i32* %a
+  br label %switch
+
+switch:
+  %cleanup.dest1 = phi i32 [ 0, %else ], [ 3, %entry ]
+  switch i32 %cleanup.dest1, label %unreach1 [
+  i32 0, label %cleanup1
+  i32 3, label %cleanup2
+  ]
+
+cleanup1:
+  br label %unreach2
+
+cleanup2:
+  br label %unreach2
+
+unreach1:
+  %phi2 = phi i32 [ %cleanup.dest1, %switch ]
+  unreachable
+
+unreach2:
+  unreachable
+}

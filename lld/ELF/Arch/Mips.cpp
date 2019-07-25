@@ -120,15 +120,16 @@ RelExpr MIPS<ELFT>::getRelExpr(RelType type, const Symbol &s,
   case R_MIPS_TLS_DTPREL_LO16:
   case R_MIPS_TLS_DTPREL32:
   case R_MIPS_TLS_DTPREL64:
+  case R_MICROMIPS_TLS_DTPREL_HI16:
+  case R_MICROMIPS_TLS_DTPREL_LO16:
+    return R_ABS;
   case R_MIPS_TLS_TPREL_HI16:
   case R_MIPS_TLS_TPREL_LO16:
   case R_MIPS_TLS_TPREL32:
   case R_MIPS_TLS_TPREL64:
-  case R_MICROMIPS_TLS_DTPREL_HI16:
-  case R_MICROMIPS_TLS_DTPREL_LO16:
   case R_MICROMIPS_TLS_TPREL_HI16:
   case R_MICROMIPS_TLS_TPREL_LO16:
-    return R_ABS;
+    return R_TLS;
   case R_MIPS_PC32:
   case R_MIPS_PC16:
   case R_MIPS_PC19_S2:
@@ -538,11 +539,6 @@ void MIPS<ELFT>::relocateOne(uint8_t *loc, RelType type, uint64_t val) const {
       type == R_MICROMIPS_TLS_DTPREL_HI16 ||
       type == R_MICROMIPS_TLS_DTPREL_LO16) {
     val -= 0x8000;
-  } else if (type == R_MIPS_TLS_TPREL_HI16 || type == R_MIPS_TLS_TPREL_LO16 ||
-             type == R_MIPS_TLS_TPREL32 || type == R_MIPS_TLS_TPREL64 ||
-             type == R_MICROMIPS_TLS_TPREL_HI16 ||
-             type == R_MICROMIPS_TLS_TPREL_LO16) {
-    val -= 0x7000;
   }
 
   switch (type) {

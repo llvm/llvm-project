@@ -16,10 +16,10 @@ define amdgpu_ps float @main(float %arg0, float %arg1) #0 {
 ; SI-NEXT:    s_mov_b32 s7, s0
 ; SI-NEXT:    image_load v2, v0, s[0:7] dmask:0x1 unorm
 ; SI-NEXT:    v_and_b32_e32 v0, 7, v0
-; SI-NEXT:    v_lshl_b32_e32 v0, 1, v0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_and_b32_e32 v0, v2, v0
-; SI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; SI-NEXT:    v_lshrrev_b32_e32 v0, v0, v2
+; SI-NEXT:    v_and_b32_e32 v0, 1, v0
+; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; SI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; SI-NEXT:    v_cvt_pkrtz_f16_f32_e32 v0, v0, v0
 ; SI-NEXT:    ; return to shader part epilog
@@ -37,10 +37,10 @@ define amdgpu_ps float @main(float %arg0, float %arg1) #0 {
 ; VI-NEXT:    s_mov_b32 s7, s0
 ; VI-NEXT:    image_load v2, v0, s[0:7] dmask:0x1 unorm
 ; VI-NEXT:    v_and_b32_e32 v0, 7, v0
-; VI-NEXT:    v_lshlrev_b32_e64 v0, v0, 1
 ; VI-NEXT:    s_waitcnt vmcnt(0)
-; VI-NEXT:    v_and_b32_e32 v0, v2, v0
-; VI-NEXT:    v_cmp_ne_u32_e32 vcc, 0, v0
+; VI-NEXT:    v_lshrrev_b32_e32 v0, v0, v2
+; VI-NEXT:    v_and_b32_e32 v0, 1, v0
+; VI-NEXT:    v_cmp_eq_u32_e32 vcc, 1, v0
 ; VI-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; VI-NEXT:    v_cvt_pkrtz_f16_f32 v0, v0, v0
 ; VI-NEXT:    ; return to shader part epilog

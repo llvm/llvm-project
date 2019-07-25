@@ -42,7 +42,7 @@ int main(int, char**)
     constexpr weekday wd{sd};
 
     static_assert( wd.ok(), "");
-    static_assert(static_cast<unsigned>(wd) == 4, "");
+    static_assert( wd.c_encoding() == 4, "");
     }
 
     {
@@ -50,7 +50,7 @@ int main(int, char**)
     constexpr weekday wd{sd};
 
     static_assert( wd.ok(), "");
-    static_assert(static_cast<unsigned>(wd) == 3, "");
+    static_assert( wd.c_encoding() == 3, "");
     }
 
 
@@ -59,7 +59,7 @@ int main(int, char**)
     constexpr weekday wd{sd};
 
     static_assert( wd.ok(), "");
-    static_assert(static_cast<unsigned>(wd) == 2, "");
+    static_assert( wd.c_encoding() == 2, "");
     }
 
     {
@@ -67,7 +67,7 @@ int main(int, char**)
     weekday wd{sd};
 
     assert( wd.ok());
-    assert(static_cast<unsigned>(wd) == 3);
+    assert( wd.c_encoding() == 3);
     }
 
     return 0;

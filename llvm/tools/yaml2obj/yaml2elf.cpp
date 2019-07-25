@@ -192,6 +192,13 @@ ELFState<ELFT>::ELFState(ELFYAML::Object &D) : Doc(D) {
     if (!D->Name.empty())
       DocSections.insert(D->Name);
 
+  // Insert SHT_NULL section implicitly when it is not defined in YAML.
+  if (Doc.Sections.empty() || Doc.Sections.front()->Type != ELF::SHT_NULL)
+    Doc.Sections.insert(
+        Doc.Sections.begin(),
+        llvm::make_unique<ELFYAML::Section>(
+          ELFYAML::Section::SectionKind::RawContent, /*IsImplicit=*/true));
+
   std::vector<StringRef> ImplicitSections = {".symtab", ".strtab", ".shstrtab"};
   if (!Doc.DynamicSymbols.empty())
     ImplicitSections.insert(ImplicitSections.end(), {".dynsym", ".dynstr"});
@@ -237,10 +244,10 @@ void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
   // Immediately following the ELF header and program headers.
   Header.e_shoff =
       Doc.Header.SHOffset
-          ? (uint16_t)*Doc.Header.SHOffset
+          ? (typename ELFT::uint)(*Doc.Header.SHOffset)
           : sizeof(Header) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
   Header.e_shnum =
-      Doc.Header.SHNum ? (uint16_t)*Doc.Header.SHNum : SN2I.size() + 1;
+      Doc.Header.SHNum ? (uint16_t)*Doc.Header.SHNum : Doc.Sections.size();
   Header.e_shstrndx = Doc.Header.SHStrNdx ? (uint16_t)*Doc.Header.SHStrNdx
                                           : SN2I.get(".shstrtab");
 }
@@ -317,18 +324,18 @@ bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
                                         ContiguousBlobAccumulator &CBA) {
   // Ensure SHN_UNDEF entry is present. An all-zero section header is a
   // valid SHN_UNDEF entry since SHT_NULL == 0.
-  SHeaders.resize(Doc.Sections.size() + 1);
-  zero(SHeaders[0]);
+  SHeaders.resize(Doc.Sections.size());
 
-  for (size_t I = 1; I < Doc.Sections.size() + 1; ++I) {
-    Elf_Shdr &SHeader = SHeaders[I];
-    zero(SHeader);
-    ELFYAML::Section *Sec = Doc.Sections[I - 1].get();
+  for (size_t I = 0; I < Doc.Sections.size(); ++I) {
+    ELFYAML::Section *Sec = Doc.Sections[I].get();
+    if (I == 0 && Sec->IsImplicit)
+      continue;
 
     // We have a few sections like string or symbol tables that are usually
     // added implicitly to the end. However, if they are explicitly specified
     // in the YAML, we need to write them here. This ensures the file offset
     // remains correct.
+    Elf_Shdr &SHeader = SHeaders[I];
     if (initImplicitHeader(State, CBA, SHeader, Sec->Name,
                            Sec->IsImplicit ? nullptr : Sec))
       continue;
@@ -350,7 +357,17 @@ bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
       SHeader.sh_link = Index;
     }
 
-    if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
+    if (I == 0) {
+      if (auto RawSec = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
+        // We do not write any content for special SHN_UNDEF section.
+        if (RawSec->Size)
+          SHeader.sh_size = *RawSec->Size;
+        if (RawSec->Info)
+          SHeader.sh_info = *RawSec->Info;
+      }
+      if (Sec->EntSize)
+        SHeader.sh_entsize = *Sec->EntSize;
+    } else if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec)) {
       if (!writeSectionContent(SHeader, *S, CBA))
         return false;
     } else if (auto S = dyn_cast<ELFYAML::RelocationSection>(Sec)) {
@@ -944,13 +961,15 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 }
 
 template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
-  for (unsigned i = 0, e = Doc.Sections.size(); i != e; ++i) {
-    StringRef Name = Doc.Sections[i]->Name;
+  for (unsigned I = 0, E = Doc.Sections.size(); I != E; ++I) {
+    StringRef Name = Doc.Sections[I]->Name;
+    if (Name.empty())
+      continue;
+
     DotShStrtab.add(dropUniqueSuffix(Name));
-    // "+ 1" to take into account the SHT_NULL entry.
-    if (!SN2I.addName(Name, i + 1)) {
+    if (!SN2I.addName(Name, I)) {
       WithColor::error() << "Repeated section name: '" << Name
-                         << "' at YAML section number " << i << ".\n";
+                         << "' at YAML section number " << I << ".\n";
       return false;
     }
   }

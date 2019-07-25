@@ -140,8 +140,7 @@ Status TCPSocket::CreateSocket(int domain) {
 Status TCPSocket::Connect(llvm::StringRef name) {
 
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
-  if (log)
-    log->Printf("TCPSocket::%s (host/port = %s)", __FUNCTION__, name.data());
+  LLDB_LOGF(log, "TCPSocket::%s (host/port = %s)", __FUNCTION__, name.data());
 
   Status error;
   std::string host_str;
@@ -177,8 +176,7 @@ Status TCPSocket::Connect(llvm::StringRef name) {
 
 Status TCPSocket::Listen(llvm::StringRef name, int backlog) {
   Log *log(lldb_private::GetLogIfAnyCategoriesSet(LIBLLDB_LOG_CONNECTION));
-  if (log)
-    log->Printf("TCPSocket::%s (%s)", __FUNCTION__, name.data());
+  LLDB_LOGF(log, "TCPSocket::%s (%s)", __FUNCTION__, name.data());
 
   Status error;
   std::string host_str;

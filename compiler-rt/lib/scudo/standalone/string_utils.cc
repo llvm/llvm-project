@@ -9,7 +9,6 @@
 #include "string_utils.h"
 #include "common.h"
 
-#include <ctype.h>
 #include <stdarg.h>
 #include <string.h>
 
@@ -44,7 +43,7 @@ static int appendNumber(char **Buffer, const char *BufferEnd, u64 AbsoluteValue,
   do {
     RAW_CHECK_MSG(static_cast<uptr>(Pos) < MaxLen,
                   "appendNumber buffer overflow");
-    NumBuffer[Pos++] = AbsoluteValue % Base;
+    NumBuffer[Pos++] = static_cast<uptr>(AbsoluteValue % Base);
     AbsoluteValue /= Base;
   } while (AbsoluteValue > 0);
   if (Pos < MinNumberLength) {
@@ -117,7 +116,7 @@ static int appendPointer(char **Buffer, const char *BufferEnd, u64 ptr_value) {
 
 int formatString(char *Buffer, uptr BufferLength, const char *Format,
                  va_list Args) {
-  UNUSED static const char *PrintfFormatsHelp =
+  static const char *PrintfFormatsHelp =
       "Supported formatString formats: %([0-9]*)?(z|ll)?{d,u,x,X}; %p; "
       "%[-]([0-9]*)?(\\.\\*)?s; %c\n";
   RAW_CHECK(Format);
