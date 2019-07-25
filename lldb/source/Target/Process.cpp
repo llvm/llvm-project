@@ -113,54 +113,13 @@ public:
 };
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"disable-memory-cache", OptionValue::eTypeBoolean, false,
-     DISABLE_MEM_CACHE_DEFAULT, nullptr, {},
-     "Disable reading and caching of memory in fixed-size units."},
-    {"extra-startup-command", OptionValue::eTypeArray, false,
-     OptionValue::eTypeString, nullptr, {},
-     "A list containing extra commands understood by the particular process "
-     "plugin used.  "
-     "For instance, to turn on debugserver logging set this to "
-     "\"QSetLogging:bitmask=LOG_DEFAULT;\""},
-    {"ignore-breakpoints-in-expressions", OptionValue::eTypeBoolean, true, true,
-     nullptr, {},
-     "If true, breakpoints will be ignored during expression evaluation."},
-    {"unwind-on-error-in-expressions", OptionValue::eTypeBoolean, true, true,
-     nullptr, {}, "If true, errors in expression evaluation will unwind "
-                  "the stack back to the state before the call."},
-    {"python-os-plugin-path", OptionValue::eTypeFileSpec, false, true, nullptr,
-     {}, "A path to a python OS plug-in module file that contains a "
-         "OperatingSystemPlugIn class."},
-    {"stop-on-sharedlibrary-events", OptionValue::eTypeBoolean, true, false,
-     nullptr, {},
-     "If true, stop when a shared library is loaded or unloaded."},
-    {"detach-keeps-stopped", OptionValue::eTypeBoolean, true, false, nullptr,
-     {}, "If true, detach will attempt to keep the process stopped."},
-    {"memory-cache-line-size", OptionValue::eTypeUInt64, false, 512, nullptr,
-     {}, "The memory cache line size"},
-    {"optimization-warnings", OptionValue::eTypeBoolean, false, true, nullptr,
-     {}, "If true, warn when stopped in code that is optimized where "
-         "stepping and variable availability may not behave as expected."},
-    {"stop-on-exec", OptionValue::eTypeBoolean, true, true,
-     nullptr, {},
-     "If true, stop when a shared library is loaded or unloaded."},
-    {"utility-expression-timeout", OptionValue::eTypeUInt64, false, 15,
-     nullptr, {},
-     "The time in seconds to wait for LLDB-internal utility expressions."}
+#define LLDB_PROPERTIES_process
+#include "lldb/Core/Properties.inc"
 };
 
 enum {
-  ePropertyDisableMemCache,
-  ePropertyExtraStartCommand,
-  ePropertyIgnoreBreakpointsInExpressions,
-  ePropertyUnwindOnErrorInExpressions,
-  ePropertyPythonOSPluginPath,
-  ePropertyStopOnSharedLibraryEvents,
-  ePropertyDetachKeepsStopped,
-  ePropertyMemCacheLineSize,
-  ePropertyWarningOptimization,
-  ePropertyStopOnExec,
-  ePropertyUtilityExpressionTimeout,
+#define LLDB_PROPERTIES_process
+#include "lldb/Core/PropertiesEnum.inc"
 };
 
 ProcessProperties::ProcessProperties(lldb_private::Process *process)

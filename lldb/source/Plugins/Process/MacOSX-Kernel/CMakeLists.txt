@@ -1,3 +1,11 @@
+lldb_tablegen(Properties.inc -gen-lldb-property-defs
+  SOURCE Properties.td
+  TARGET LLDBPluginProcessMacOSXKernelPropertiesGen)
+
+lldb_tablegen(PropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE Properties.td
+  TARGET LLDBPluginProcessMacOSXKernelPropertiesEnumGen)
+
 add_lldb_library(lldbPluginProcessMacOSXKernel PLUGIN
   CommunicationKDP.cpp
   ProcessKDP.cpp
@@ -20,3 +28,7 @@ add_lldb_library(lldbPluginProcessMacOSXKernel PLUGIN
     lldbPluginDynamicLoaderStatic
     lldbPluginProcessUtility
   )
+
+add_dependencies(lldbPluginProcessMacOSXKernel
+  LLDBPluginProcessMacOSXKernelPropertiesGen
+  LLDBPluginProcessMacOSXKernelPropertiesEnumGen)

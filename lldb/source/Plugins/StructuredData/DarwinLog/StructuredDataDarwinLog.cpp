@@ -105,29 +105,14 @@ void SetGlobalEnableOptions(const DebuggerSP &debugger_sp,
 /// Code to handle the StructuredDataDarwinLog settings
 
 static constexpr PropertyDefinition g_properties[] = {
-    {
-        "enable-on-startup",       // name
-        OptionValue::eTypeBoolean, // type
-        true,                      // global
-        false,                     // default uint value
-        nullptr,                   // default cstring value
-        {},                        // enum values
-        "Enable Darwin os_log collection when debugged process is launched "
-        "or attached." // description
-    },
-    {
-        "auto-enable-options",    // name
-        OptionValue::eTypeString, // type
-        true,                     // global
-        0,                        // default uint value
-        "",                       // default cstring value
-        {},                       // enum values
-        "Specify the options to 'plugin structured-data darwin-log enable' "
-        "that should be applied when automatically enabling logging on "
-        "startup/attach." // description
-    }};
+#define LLDB_PROPERTIES_darwinlog
+#include "Properties.inc"
+};
 
-enum { ePropertyEnableOnStartup = 0, ePropertyAutoEnableOptions = 1 };
+enum {
+#define LLDB_PROPERTIES_darwinlog
+#include "PropertiesEnum.inc"
+};
 
 class StructuredDataDarwinLogProperties : public Properties {
 public:

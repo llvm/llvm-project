@@ -77,10 +77,6 @@ using namespace lldb_private;
 
 static const char *k_white_space = " \t\v";
 
-static constexpr bool NoGlobalSetting = true;
-static constexpr uintptr_t DefaultValueTrue = true;
-static constexpr uintptr_t DefaultValueFalse = false;
-static constexpr const char *NoCStrDefault = nullptr;
 static constexpr const char *InitFileWarning =
     "There is a .lldbinit file in the current directory which is not being "
     "read.\n"
@@ -94,37 +90,13 @@ static constexpr const char *InitFileWarning =
     "accept the security risk.";
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"expand-regex-aliases", OptionValue::eTypeBoolean, NoGlobalSetting,
-     DefaultValueFalse, NoCStrDefault, {},
-     "If true, regular expression alias commands will show the "
-     "expanded command that will be executed. This can be used to "
-     "debug new regular expression alias commands."},
-    {"prompt-on-quit", OptionValue::eTypeBoolean, NoGlobalSetting,
-     DefaultValueTrue, NoCStrDefault, {},
-     "If true, LLDB will prompt you before quitting if there are any live "
-     "processes being debugged. If false, LLDB will quit without asking in any "
-     "case."},
-    {"stop-command-source-on-error", OptionValue::eTypeBoolean, NoGlobalSetting,
-     DefaultValueTrue, NoCStrDefault, {},
-     "If true, LLDB will stop running a 'command source' "
-     "script upon encountering an error."},
-    {"space-repl-prompts", OptionValue::eTypeBoolean, NoGlobalSetting,
-     DefaultValueFalse, NoCStrDefault, {},
-     "If true, blank lines will be printed between between REPL submissions."},
-    {"echo-commands", OptionValue::eTypeBoolean, NoGlobalSetting,
-     DefaultValueTrue, NoCStrDefault, {},
-     "If true, commands will be echoed before they are evaluated."},
-    {"echo-comment-commands", OptionValue::eTypeBoolean, NoGlobalSetting,
-     DefaultValueTrue, NoCStrDefault, {},
-     "If true, commands will be echoed even if they are pure comment lines."}};
+#define LLDB_PROPERTIES_commandinterpreter
+#include "lldb/Core/Properties.inc"
+};
 
 enum {
-  ePropertyExpandRegexAliases = 0,
-  ePropertyPromptOnQuit = 1,
-  ePropertyStopCmdSourceOnError = 2,
-  eSpaceReplPrompts = 3,
-  eEchoCommands = 4,
-  eEchoCommentCommands = 5
+#define LLDB_PROPERTIES_commandinterpreter
+#include "lldb/Core/PropertiesEnum.inc"
 };
 
 ConstString &CommandInterpreter::GetStaticBroadcasterClass() {
@@ -170,24 +142,24 @@ void CommandInterpreter::SetPromptOnQuit(bool b) {
 }
 
 bool CommandInterpreter::GetEchoCommands() const {
-  const uint32_t idx = eEchoCommands;
+  const uint32_t idx = ePropertyEchoCommands;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetEchoCommands(bool b) {
-  const uint32_t idx = eEchoCommands;
+  const uint32_t idx = ePropertyEchoCommands;
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 
 bool CommandInterpreter::GetEchoCommentCommands() const {
-  const uint32_t idx = eEchoCommentCommands;
+  const uint32_t idx = ePropertyEchoCommentCommands;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       nullptr, idx, g_properties[idx].default_uint_value != 0);
 }
 
 void CommandInterpreter::SetEchoCommentCommands(bool b) {
-  const uint32_t idx = eEchoCommentCommands;
+  const uint32_t idx = ePropertyEchoCommentCommands;
   m_collection_sp->SetPropertyAtIndexAsBoolean(nullptr, idx, b);
 }
 
@@ -227,7 +199,7 @@ bool CommandInterpreter::GetStopCmdSourceOnError() const {
 }
 
 bool CommandInterpreter::GetSpaceReplPrompts() const {
-  const uint32_t idx = eSpaceReplPrompts;
+  const uint32_t idx = ePropertySpaceReplPrompts;
   return m_collection_sp->GetPropertyAtIndexAsBoolean(
       nullptr, idx, g_properties[idx].default_uint_value != 0);
 }

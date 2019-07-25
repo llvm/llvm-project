@@ -25,16 +25,22 @@ enum ActionType {
   PrintRecords,
   DumpJSON,
   GenOptionDefs,
+  GenPropertyDefs,
+  GenPropertyEnumDefs,
 };
 
-static cl::opt<ActionType>
-    Action(cl::desc("Action to perform:"),
-           cl::values(clEnumValN(PrintRecords, "print-records",
-                                 "Print all records to stdout (default)"),
-                      clEnumValN(DumpJSON, "dump-json",
-                                 "Dump all records as machine-readable JSON"),
-                      clEnumValN(GenOptionDefs, "gen-lldb-option-defs",
-                                 "Generate lldb option definitions")));
+static cl::opt<ActionType> Action(
+    cl::desc("Action to perform:"),
+    cl::values(clEnumValN(PrintRecords, "print-records",
+                          "Print all records to stdout (default)"),
+               clEnumValN(DumpJSON, "dump-json",
+                          "Dump all records as machine-readable JSON"),
+               clEnumValN(GenOptionDefs, "gen-lldb-option-defs",
+                          "Generate lldb option definitions"),
+               clEnumValN(GenPropertyDefs, "gen-lldb-property-defs",
+                          "Generate lldb property definitions"),
+               clEnumValN(GenPropertyEnumDefs, "gen-lldb-property-enum-defs",
+                          "Generate lldb property enum definitions")));
 
 static bool LLDBTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   switch (Action) {
@@ -46,6 +52,12 @@ static bool LLDBTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenOptionDefs:
     EmitOptionDefs(Records, OS);
+    break;
+  case GenPropertyDefs:
+    EmitPropertyDefs(Records, OS);
+    break;
+  case GenPropertyEnumDefs:
+    EmitPropertyEnumDefs(Records, OS);
     break;
   }
   return false;

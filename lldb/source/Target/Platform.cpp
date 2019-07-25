@@ -64,12 +64,14 @@ const char *Platform::GetHostPlatformName() { return "host"; }
 namespace {
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"use-module-cache", OptionValue::eTypeBoolean, true, true, nullptr,
-     {}, "Use module cache."},
-    {"module-cache-directory", OptionValue::eTypeFileSpec, true, 0, nullptr,
-     {}, "Root directory for cached modules."}};
+#define LLDB_PROPERTIES_platform
+#include "lldb/Core/Properties.inc"
+};
 
-enum { ePropertyUseModuleCache, ePropertyModuleCacheDirectory };
+enum {
+#define LLDB_PROPERTIES_platform
+#include "lldb/Core/PropertiesEnum.inc"
+};
 
 } // namespace
 

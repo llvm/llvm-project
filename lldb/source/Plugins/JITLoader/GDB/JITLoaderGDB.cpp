@@ -67,13 +67,15 @@ static constexpr OptionEnumValueElement g_enable_jit_loader_gdb_enumerators[] = 
  };
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"enable", OptionValue::eTypeEnum, true,
-     eEnableJITLoaderGDBDefault, nullptr,
-     OptionEnumValues(g_enable_jit_loader_gdb_enumerators),
-     "Enable GDB's JIT compilation interface (default: enabled on "
-     "all platforms except macOS)"}};
+#define LLDB_PROPERTIES_jitloadergdb
+#include "Properties.inc"
+};
 
-enum { ePropertyEnable, ePropertyEnableJITBreakpoint };
+enum {
+#define LLDB_PROPERTIES_jitloadergdb
+#include "PropertiesEnum.inc"
+  ePropertyEnableJITBreakpoint
+};
 
 class PluginProperties : public Properties {
 public:

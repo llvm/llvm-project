@@ -1,3 +1,11 @@
+lldb_tablegen(Properties.inc -gen-lldb-property-defs
+  SOURCE Properties.td
+  TARGET LLDBPluginProcessGDBRemotePropertiesGen)
+
+lldb_tablegen(PropertiesEnum.inc -gen-lldb-property-enum-defs
+  SOURCE Properties.td
+  TARGET LLDBPluginProcessGDBRemotePropertiesEnumGen)
+
 if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
   include_directories(${LIBXML2_INCLUDE_DIR})
 endif()
@@ -40,3 +48,7 @@ add_lldb_library(lldbPluginProcessGDBRemote PLUGIN
   LINK_COMPONENTS
     Support
   )
+
+add_dependencies(lldbPluginProcessGDBRemote
+  LLDBPluginProcessGDBRemotePropertiesGen
+  LLDBPluginProcessGDBRemotePropertiesEnumGen)

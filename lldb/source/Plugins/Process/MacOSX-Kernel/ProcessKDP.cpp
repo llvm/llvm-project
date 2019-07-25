@@ -53,10 +53,14 @@ using namespace lldb_private;
 namespace {
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"packet-timeout", OptionValue::eTypeUInt64, true, 5, NULL, {},
-     "Specify the default packet timeout in seconds."}};
+#define LLDB_PROPERTIES_processkdp
+#include "Properties.inc"
+};
 
-enum { ePropertyPacketTimeout };
+enum {
+#define LLDB_PROPERTIES_processkdp
+#include "PropertiesEnum.inc"
+};
 
 class PluginProperties : public Properties {
 public:
@@ -72,7 +76,7 @@ public:
   virtual ~PluginProperties() {}
 
   uint64_t GetPacketTimeout() {
-    const uint32_t idx = ePropertyPacketTimeout;
+    const uint32_t idx = ePropertyKDPPacketTimeout;
     return m_collection_sp->GetPropertyAtIndexAsUInt64(
         NULL, idx, g_properties[idx].default_uint_value);
   }

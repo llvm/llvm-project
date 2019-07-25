@@ -73,14 +73,14 @@ static constexpr OptionEnumValueElement g_kaslr_kernel_scan_enum_values[] = {
      "on 32-bit targets)."}};
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"load-kexts", OptionValue::eTypeBoolean, true, true, nullptr, {},
-     "Automatically loads kext images when attaching to a kernel."},
-    {"scan-type", OptionValue::eTypeEnum, true, eKASLRScanNearPC, nullptr,
-     OptionEnumValues(g_kaslr_kernel_scan_enum_values),
-     "Control how many reads lldb will make while searching for a Darwin "
-     "kernel on attach."}};
+#define LLDB_PROPERTIES_dynamicloaderdarwinkernel
+#include "Properties.inc"
+};
 
-enum { ePropertyLoadKexts, ePropertyScanType };
+enum {
+#define LLDB_PROPERTIES_dynamicloaderdarwinkernel
+#include "PropertiesEnum.inc"
+};
 
 class DynamicLoaderDarwinKernelProperties : public Properties {
 public:
