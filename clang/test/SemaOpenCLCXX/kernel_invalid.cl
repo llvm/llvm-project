@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -cl-std=c++ -pedantic -verify -fsyntax-only
+// RUN: %clang_cc1 %s -cl-std=clc++ -pedantic -verify -fsyntax-only
 
 struct C {
   kernel void m(); //expected-error{{kernel functions cannot be class members}}

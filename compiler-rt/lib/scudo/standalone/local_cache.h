@@ -22,9 +22,8 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     static const u32 MaxNumCached = SizeClassMap::MaxNumCachedHint;
     void setFromArray(void **Array, u32 N) {
       DCHECK_LE(N, MaxNumCached);
-      for (u32 I = 0; I < N; I++)
-        Batch[I] = Array[I];
       Count = N;
+      memcpy(Batch, Array, sizeof(void *) * Count);
     }
     void clear() { Count = 0; }
     void add(void *P) {
@@ -32,8 +31,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
       Batch[Count++] = P;
     }
     void copyToArray(void **Array) const {
-      for (u32 I = 0; I < Count; I++)
-        Array[I] = Batch[I];
+      memcpy(Array, Batch, sizeof(void *) * Count);
     }
     u32 getCount() const { return Count; }
     void *get(u32 I) const {
@@ -52,7 +50,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
 
   void initLinkerInitialized(GlobalStats *S, SizeClassAllocator *A) {
     Stats.initLinkerInitialized();
-    if (S)
+    if (LIKELY(S))
       S->link(&Stats);
     Allocator = A;
   }
@@ -64,12 +62,12 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
 
   void destroy(GlobalStats *S) {
     drain();
-    if (S)
+    if (LIKELY(S))
       S->unlink(&Stats);
   }
 
   void *allocate(uptr ClassId) {
-    CHECK_LT(ClassId, NumClasses);
+    DCHECK_LT(ClassId, NumClasses);
     PerClass *C = &PerClassArray[ClassId];
     if (C->Count == 0) {
       if (UNLIKELY(!refill(C, ClassId)))
@@ -157,8 +155,8 @@ private:
     if (UNLIKELY(!B))
       return false;
     DCHECK_GT(B->getCount(), 0);
-    B->copyToArray(C->Chunks);
     C->Count = B->getCount();
+    B->copyToArray(C->Chunks);
     destroyBatch(ClassId, B);
     return true;
   }

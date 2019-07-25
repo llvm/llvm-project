@@ -32,13 +32,6 @@ TEST(HasNameDeathTest, DiesOnEmptyPattern) {
       EXPECT_TRUE(notMatches("class X {};", HasEmptyName));
     }, "");
 }
-
-TEST(IsDerivedFromDeathTest, DiesOnEmptyBaseName) {
-  ASSERT_DEBUG_DEATH({
-    DeclarationMatcher IsDerivedFromEmpty = cxxRecordDecl(isDerivedFrom(""));
-    EXPECT_TRUE(notMatches("class X {};", IsDerivedFromEmpty));
-  }, "");
-}
 #endif
 
 TEST(ConstructVariadic, MismatchedTypes_Regression) {

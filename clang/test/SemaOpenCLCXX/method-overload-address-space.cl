@@ -1,4 +1,4 @@
-//RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=c++ -pedantic -verify
+//RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=clc++ -pedantic -verify
 
 struct C {
   void m1() __local __local; //expected-warning{{multiple identical address spaces specified for type}}

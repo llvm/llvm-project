@@ -61,7 +61,7 @@ template <class Allocator> struct TSDRegistryExT {
 private:
   void initOnceMaybe(Allocator *Instance) {
     ScopedLock L(Mutex);
-    if (Initialized)
+    if (LIKELY(Initialized))
       return;
     initLinkerInitialized(Instance); // Sets Initialized.
   }
@@ -71,7 +71,7 @@ private:
   // used instead.
   NOINLINE void initThread(Allocator *Instance, bool MinimalInit) {
     initOnceMaybe(Instance);
-    if (MinimalInit)
+    if (UNLIKELY(MinimalInit))
       return;
     CHECK_EQ(
         pthread_setspecific(PThreadKey, reinterpret_cast<void *>(Instance)), 0);

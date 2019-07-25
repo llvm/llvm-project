@@ -220,16 +220,16 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
     lldb::ModuleSP *old_module_sp_ptr, bool *did_create_ptr) {
 
   Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log)
-    log->Printf("[%s] Trying to find module %s/%s - platform path %s/%s symbol "
-                "path %s/%s",
-                (IsHost() ? "host" : "remote"),
-                module_spec.GetFileSpec().GetDirectory().AsCString(),
-                module_spec.GetFileSpec().GetFilename().AsCString(),
-                module_spec.GetPlatformFileSpec().GetDirectory().AsCString(),
-                module_spec.GetPlatformFileSpec().GetFilename().AsCString(),
-                module_spec.GetSymbolFileSpec().GetDirectory().AsCString(),
-                module_spec.GetSymbolFileSpec().GetFilename().AsCString());
+  LLDB_LOGF(log,
+            "[%s] Trying to find module %s/%s - platform path %s/%s symbol "
+            "path %s/%s",
+            (IsHost() ? "host" : "remote"),
+            module_spec.GetFileSpec().GetDirectory().AsCString(),
+            module_spec.GetFileSpec().GetFilename().AsCString(),
+            module_spec.GetPlatformFileSpec().GetDirectory().AsCString(),
+            module_spec.GetPlatformFileSpec().GetFilename().AsCString(),
+            module_spec.GetSymbolFileSpec().GetDirectory().AsCString(),
+            module_spec.GetSymbolFileSpec().GetFilename().AsCString());
 
   Status err;
 
@@ -256,11 +256,10 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
           return err;
         if (FileSystem::Instance().Exists(module_cache_spec)) {
           Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
-          if (log)
-            log->Printf("[%s] module %s/%s was rsynced and is now there",
-                        (IsHost() ? "host" : "remote"),
-                        module_spec.GetFileSpec().GetDirectory().AsCString(),
-                        module_spec.GetFileSpec().GetFilename().AsCString());
+          LLDB_LOGF(log, "[%s] module %s/%s was rsynced and is now there",
+                    (IsHost() ? "host" : "remote"),
+                    module_spec.GetFileSpec().GetDirectory().AsCString(),
+                    module_spec.GetFileSpec().GetFilename().AsCString());
           ModuleSpec local_spec(module_cache_spec,
                                 module_spec.GetArchitecture());
           module_sp = std::make_shared<Module>(local_spec);
@@ -287,12 +286,11 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
           if (low_local != low_remote || high_local != high_remote) {
             // bring in the remote file
             Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
-            if (log)
-              log->Printf(
-                  "[%s] module %s/%s needs to be replaced from remote copy",
-                  (IsHost() ? "host" : "remote"),
-                  module_spec.GetFileSpec().GetDirectory().AsCString(),
-                  module_spec.GetFileSpec().GetFilename().AsCString());
+            LLDB_LOGF(log,
+                      "[%s] module %s/%s needs to be replaced from remote copy",
+                      (IsHost() ? "host" : "remote"),
+                      module_spec.GetFileSpec().GetDirectory().AsCString(),
+                      module_spec.GetFileSpec().GetFilename().AsCString());
             Status err =
                 BringInRemoteFile(this, module_spec, module_cache_spec);
             if (err.Fail())
@@ -304,30 +302,27 @@ lldb_private::Status PlatformDarwin::GetSharedModuleWithLocalCache(
         module_sp = std::make_shared<Module>(local_spec);
         module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
         Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
-        if (log)
-          log->Printf("[%s] module %s/%s was found in the cache",
-                      (IsHost() ? "host" : "remote"),
-                      module_spec.GetFileSpec().GetDirectory().AsCString(),
-                      module_spec.GetFileSpec().GetFilename().AsCString());
+        LLDB_LOGF(log, "[%s] module %s/%s was found in the cache",
+                  (IsHost() ? "host" : "remote"),
+                  module_spec.GetFileSpec().GetDirectory().AsCString(),
+                  module_spec.GetFileSpec().GetFilename().AsCString());
         return Status();
       }
 
       // bring in the remote module file
-      if (log)
-        log->Printf("[%s] module %s/%s needs to come in remotely",
-                    (IsHost() ? "host" : "remote"),
-                    module_spec.GetFileSpec().GetDirectory().AsCString(),
-                    module_spec.GetFileSpec().GetFilename().AsCString());
+      LLDB_LOGF(log, "[%s] module %s/%s needs to come in remotely",
+                (IsHost() ? "host" : "remote"),
+                module_spec.GetFileSpec().GetDirectory().AsCString(),
+                module_spec.GetFileSpec().GetFilename().AsCString());
       Status err = BringInRemoteFile(this, module_spec, module_cache_spec);
       if (err.Fail())
         return err;
       if (FileSystem::Instance().Exists(module_cache_spec)) {
         Log *log(GetLogIfAnyCategoriesSet(LIBLLDB_LOG_PLATFORM));
-        if (log)
-          log->Printf("[%s] module %s/%s is now cached and fine",
-                      (IsHost() ? "host" : "remote"),
-                      module_spec.GetFileSpec().GetDirectory().AsCString(),
-                      module_spec.GetFileSpec().GetFilename().AsCString());
+        LLDB_LOGF(log, "[%s] module %s/%s is now cached and fine",
+                  (IsHost() ? "host" : "remote"),
+                  module_spec.GetFileSpec().GetDirectory().AsCString(),
+                  module_spec.GetFileSpec().GetFilename().AsCString());
         ModuleSpec local_spec(module_cache_spec, module_spec.GetArchitecture());
         module_sp = std::make_shared<Module>(local_spec);
         module_sp->SetPlatformFileSpec(module_spec.GetFileSpec());
@@ -1713,8 +1708,11 @@ PlatformDarwin::FindBundleBinaryInExecSearchPaths (const ModuleSpec &module_spec
     size_t num_module_search_paths = module_search_paths_ptr->GetSize();
     for (size_t i = 0; i < num_module_search_paths; ++i) {
       Log *log_verbose = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_HOST);
-      if (log_verbose)
-          log_verbose->Printf ("PlatformRemoteDarwinDevice::GetSharedModule searching for binary in search-path %s", module_search_paths_ptr->GetFileSpecAtIndex(i).GetPath().c_str());
+      LLDB_LOGF(
+          log_verbose,
+          "PlatformRemoteDarwinDevice::GetSharedModule searching for binary in "
+          "search-path %s",
+          module_search_paths_ptr->GetFileSpecAtIndex(i).GetPath().c_str());
       // Create a new FileSpec with this module_search_paths_ptr plus just the
       // filename ("UIFoundation"), then the parent dir plus filename
       // ("UIFoundation.framework/UIFoundation") etc - up to four names (to

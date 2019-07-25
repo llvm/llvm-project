@@ -89,6 +89,7 @@ add_llvm_library(LLVMSupport
   Error.cpp
   ErrorHandling.cpp
   FileCheck.cpp
+  FileCollector.cpp
   FileUtilities.cpp
   FileOutputBuffer.cpp
   FoldingSet.cpp

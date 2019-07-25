@@ -74,7 +74,7 @@ public:
       // See comment in the 64-bit primary about releasing smaller size classes.
       Sci->CanRelease = (ReleaseToOsInterval > 0) &&
                         (I != SizeClassMap::BatchClassId) &&
-                        (getSizeByClassId(I) >= (PageSize / 32));
+                        (getSizeByClassId(I) >= (PageSize / 16));
     }
     ReleaseToOsIntervalMs = ReleaseToOsInterval;
   }
@@ -99,9 +99,9 @@ public:
     SizeClassInfo *Sci = getSizeClassInfo(ClassId);
     ScopedLock L(Sci->Mutex);
     TransferBatch *B = Sci->FreeList.front();
-    if (B)
+    if (B) {
       Sci->FreeList.pop_front();
-    else {
+    } else {
       B = populateFreeList(C, ClassId, Sci);
       if (UNLIKELY(!B))
         return nullptr;
@@ -129,7 +129,7 @@ public:
 
   void enable() {
     for (sptr I = static_cast<sptr>(NumClasses) - 1; I >= 0; I--)
-      getSizeClassInfo(I)->Mutex.unlock();
+      getSizeClassInfo(static_cast<uptr>(I))->Mutex.unlock();
   }
 
   template <typename F> void iterateOverBlocks(F Callback) {
@@ -356,7 +356,8 @@ private:
       const s32 IntervalMs = ReleaseToOsIntervalMs;
       if (IntervalMs < 0)
         return;
-      if (Sci->ReleaseInfo.LastReleaseAtNs + IntervalMs * 1000000ULL >
+      if (Sci->ReleaseInfo.LastReleaseAtNs +
+              static_cast<uptr>(IntervalMs) * 1000000ULL >
           getMonotonicTime()) {
         return; // Memory was returned recently.
       }

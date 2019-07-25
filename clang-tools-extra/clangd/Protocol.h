@@ -422,6 +422,10 @@ struct ClientCapabilities {
   /// The content format that should be used for Hover requests.
   /// textDocument.hover.contentEncoding
   MarkupKind HoverContentFormat = MarkupKind::PlainText;
+
+  /// The client supports testing for validity of rename operations
+  /// before execution.
+  bool RenamePrepareSupport = false;
 };
 bool fromJSON(const llvm::json::Value &, ClientCapabilities &);
 

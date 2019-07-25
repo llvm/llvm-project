@@ -80,6 +80,50 @@ void cxx2a_use() {
   conflicting_reason(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: special reason}}
 }
 
+namespace p1771 {
+struct[[nodiscard("Don't throw me away!")]] ConvertTo{};
+struct S {
+  [[nodiscard]] S();
+  [[nodiscard("Don't let that S-Char go!")]] S(char);
+  S(int);
+  [[gnu::warn_unused_result]] S(double);
+  operator ConvertTo();
+  [[nodiscard]] operator int();
+  [[nodiscard("Don't throw away as a double")]] operator double();
+};
+
+struct[[nodiscard("Don't throw me away either!")]] Y{};
+
+void usage() {
+  S();    // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute}}
+  S('A'); // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't let that S-Char go!}}
+  S(1);
+  S(2.2);
+  Y(); // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't throw me away either!}}
+  S s;
+  ConvertTo{}; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw me away!}}
+
+// AST is different in C++20 mode, pre-2017 a move ctor for ConvertTo is there
+// as well, hense the constructor warning.
+#if __cplusplus >= 201703L
+// expected-warning@+4 {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw me away!}}
+#else
+// expected-warning@+2 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't throw me away!}}
+#endif
+  (ConvertTo) s;
+  (int)s; // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  (S)'c'; // expected-warning {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't let that S-Char go!}}
+#if __cplusplus >= 201703L
+// expected-warning@+4 {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw me away!}}
+#else
+// expected-warning@+2 {{ignoring temporary created by a constructor declared with 'nodiscard' attribute: Don't throw me away!}}
+#endif
+  static_cast<ConvertTo>(s);
+  static_cast<int>(s); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
+  static_cast<double>(s); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute: Don't throw away as a double}}
+}
+}; // namespace p1771
+
 #ifdef EXT
 // expected-warning@5 {{use of the 'nodiscard' attribute is a C++17 extension}}
 // expected-warning@9 {{use of the 'nodiscard' attribute is a C++17 extension}}
@@ -91,4 +135,10 @@ void cxx2a_use() {
 // expected-warning@71 {{use of the 'nodiscard' attribute is a C++2a extension}}
 // expected-warning@73 {{use of the 'nodiscard' attribute is a C++2a extension}}
 // expected-warning@74 {{use of the 'nodiscard' attribute is a C++2a extension}}
+// expected-warning@84 {{use of the 'nodiscard' attribute is a C++2a extension}}
+// expected-warning@86 {{use of the 'nodiscard' attribute is a C++17 extension}}
+// expected-warning@87 {{use of the 'nodiscard' attribute is a C++2a extension}}
+// expected-warning@91 {{use of the 'nodiscard' attribute is a C++17 extension}}
+// expected-warning@92 {{use of the 'nodiscard' attribute is a C++2a extension}}
+// expected-warning@95 {{use of the 'nodiscard' attribute is a C++2a extension}}
 #endif

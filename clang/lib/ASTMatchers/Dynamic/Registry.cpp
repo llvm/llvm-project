@@ -108,6 +108,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_OVERLOADED_2(hasType);
   REGISTER_OVERLOADED_2(ignoringParens);
   REGISTER_OVERLOADED_2(isDerivedFrom);
+  REGISTER_OVERLOADED_2(isDirectlyDerivedFrom);
   REGISTER_OVERLOADED_2(isSameOrDerivedFrom);
   REGISTER_OVERLOADED_2(loc);
   REGISTER_OVERLOADED_2(pointsTo);

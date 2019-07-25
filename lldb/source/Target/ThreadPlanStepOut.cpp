@@ -408,7 +408,7 @@ bool ThreadPlanStepOut::MischiefManaged() {
 
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
     if (log)
-      log->Printf("Completed step out plan.");
+      LLDB_LOGF(log, "Completed step out plan.");
     if (m_return_bp_id != LLDB_INVALID_BREAK_ID) {
       m_thread.CalculateTarget()->RemoveBreakpointByID(m_return_bp_id);
       m_return_bp_id = LLDB_INVALID_BREAK_ID;
@@ -433,7 +433,7 @@ bool ThreadPlanStepOut::QueueInlinedStepPlan(bool queue_now) {
   if (log) {
     StreamString s;
     immediate_return_from_sp->Dump(&s, true, false);
-    log->Printf("Queuing inlined frame to step past: %s.", s.GetData());
+    LLDB_LOGF(log, "Queuing inlined frame to step past: %s.", s.GetData());
   }
 
   Block *from_block = immediate_return_from_sp->GetFrameBlock();

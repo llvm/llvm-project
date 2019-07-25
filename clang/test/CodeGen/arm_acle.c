@@ -88,28 +88,28 @@ void test_swp(uint32_t x, volatile void *p) {
 /* 8.6 Memory prefetch intrinsics */
 /* 8.6.1 Data prefetch */
 // ARM-LABEL: test_pld
-// ARM: call void @llvm.prefetch(i8* null, i32 0, i32 3, i32 1)
+// ARM: call void @llvm.prefetch.p0i8(i8* null, i32 0, i32 3, i32 1)
 void test_pld() {
   __pld(0);
 }
 
 // ARM-LABEL: test_pldx
-// AArch32: call void @llvm.prefetch(i8* null, i32 1, i32 3, i32 1)
-// AArch64: call void @llvm.prefetch(i8* null, i32 1, i32 1, i32 1)
+// AArch32: call void @llvm.prefetch.p0i8(i8* null, i32 1, i32 3, i32 1)
+// AArch64: call void @llvm.prefetch.p0i8(i8* null, i32 1, i32 1, i32 1)
 void test_pldx() {
   __pldx(1, 2, 0, 0);
 }
 
 /* 8.6.2 Instruction prefetch */
 // ARM-LABEL: test_pli
-// ARM: call void @llvm.prefetch(i8* null, i32 0, i32 3, i32 0)
+// ARM: call void @llvm.prefetch.p0i8(i8* null, i32 0, i32 3, i32 0)
 void test_pli() {
   __pli(0);
 }
 
 // ARM-LABEL: test_plix
-// AArch32: call void @llvm.prefetch(i8* null, i32 0, i32 3, i32 0)
-// AArch64: call void @llvm.prefetch(i8* null, i32 0, i32 1, i32 0)
+// AArch32: call void @llvm.prefetch.p0i8(i8* null, i32 0, i32 3, i32 0)
+// AArch64: call void @llvm.prefetch.p0i8(i8* null, i32 0, i32 1, i32 0)
 void test_plix() {
   __plix(2, 0, 0);
 }

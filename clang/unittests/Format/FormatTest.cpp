@@ -1782,6 +1782,21 @@ TEST_F(FormatTest, FormatsNamespaces) {
                "void f() { f(); }\n"
                "}",
                LLVMWithNoNamespaceFix);
+  verifyFormat("namespace N::inline D {\n"
+               "class A {};\n"
+               "void f() { f(); }\n"
+               "}",
+               LLVMWithNoNamespaceFix);
+  verifyFormat("namespace N::inline D::E {\n"
+               "class A {};\n"
+               "void f() { f(); }\n"
+               "}",
+               LLVMWithNoNamespaceFix);
+  verifyFormat("namespace [[deprecated(\"foo[bar\")]] some_namespace {\n"
+               "class A {};\n"
+               "void f() { f(); }\n"
+               "}",
+               LLVMWithNoNamespaceFix);
   verifyFormat("/* something */ namespace some_namespace {\n"
                "class A {};\n"
                "void f() { f(); }\n"
@@ -6898,10 +6913,12 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("if (int *a = &b)");
   verifyIndependentOfContext("if (int &a = *b)");
   verifyIndependentOfContext("if (a & b[i])");
+  verifyIndependentOfContext("if (a * (b * c))");
   verifyIndependentOfContext("if (a::b::c::d & b[i])");
   verifyIndependentOfContext("if (*b[i])");
   verifyIndependentOfContext("if (int *a = (&b))");
   verifyIndependentOfContext("while (int *a = &b)");
+  verifyIndependentOfContext("while (a * (b * c))");
   verifyIndependentOfContext("size = sizeof *a;");
   verifyIndependentOfContext("if (a && (b = c))");
   verifyFormat("void f() {\n"

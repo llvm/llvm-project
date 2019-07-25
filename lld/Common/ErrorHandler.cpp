@@ -157,12 +157,13 @@ void ErrorHandler::warn(const Twine &msg) {
 
 void ErrorHandler::error(const Twine &msg) {
   std::lock_guard<std::mutex> lock(mu);
-  newline(errorOS, msg);
 
   if (errorLimit == 0 || errorCount < errorLimit) {
+    newline(errorOS, msg);
     printHeader("error: ", raw_ostream::RED, msg);
     *errorOS << msg << "\n";
   } else if (errorCount == errorLimit) {
+    newline(errorOS, msg);
     printHeader("error: ", raw_ostream::RED, msg);
     *errorOS << errorLimitExceededMsg << "\n";
     if (exitEarly)

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -cl-std=c++ %s -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
+// RUN: %clang_cc1 -cl-std=clc++ %s -emit-llvm -o - -O0 -triple spir-unknown-unknown | FileCheck %s
 
 template <typename T>
 struct S{

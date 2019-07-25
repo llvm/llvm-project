@@ -243,8 +243,8 @@ bool ValueObjectDynamicValue::UpdateValue() {
   m_value.SetValueType(value_type);
 
   if (has_changed_type && log)
-    log->Printf("[%s %p] has a new dynamic type %s", GetName().GetCString(),
-                static_cast<void *>(this), GetTypeName().GetCString());
+    LLDB_LOGF(log, "[%s %p] has a new dynamic type %s", GetName().GetCString(),
+              static_cast<void *>(this), GetTypeName().GetCString());
 
   if (m_address.IsValid() && m_dynamic_type_info) {
     // The variable value is in the Scalar value inside the m_value. We can

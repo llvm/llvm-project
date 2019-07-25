@@ -35,47 +35,14 @@ define amdgpu_kernel void @a_kernel2() {
 ; GCN-ASM-NEXT:   [[END_LABEL3:\.Lfunc_end.*]]:
 ; GCN-ASM-NEXT:           .size   a_function, [[END_LABEL3]]-a_function
 ; GFX10END-ASM:           .p2alignl 6, 3214868480
-; GFX10END-ASM-NEXT:      .fill 32, 4, 3214868480
+; GFX10END-ASM-NEXT:      .fill 48, 4, 3214868480
 ; GFX10NOEND-NOT:         .fill
 
 ; GFX10NOEND-OBJ-NOT:     s_code_end
 ; GFX10END-OBJ-NEXT:      s_code_end
 
 ; GFX10END-OBJ:           s_code_end // 000000000140:
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
-; GFX10END-OBJ-NEXT:      s_code_end
+; GFX10END-OBJ-COUNT-47:  s_code_end
 
 define void @a_function() {
   ret void

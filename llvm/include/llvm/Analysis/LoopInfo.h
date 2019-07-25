@@ -30,6 +30,9 @@
 // instance.  In particular, a Loop might be inside such a non-loop SCC, or a
 // non-loop SCC might contain a sub-SCC which is a Loop.
 //
+// For an overview of terminology used in this API (and thus all of our loop
+// analyses or transforms), see docs/LoopTerminology.rst.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_LOOPINFO_H
@@ -570,9 +573,9 @@ public:
   bool getIncomingAndBackEdge(BasicBlock *&Incoming,
                               BasicBlock *&Backedge) const;
 
-  /// Below are some utilities to get loop bounds and induction variable, and
-  /// check if a given phinode is an auxiliary induction variable, as well as
-  /// checking if the loop is canonical.
+  /// Below are some utilities to get the loop guard, loop bounds and induction
+  /// variable, and to check if a given phinode is an auxiliary induction
+  /// variable, if the loop is guarded, and if the loop is canonical.
   ///
   /// Here is an example:
   /// \code
@@ -604,6 +607,9 @@ public:
   ///
   /// - getInductionVariable            --> i_1
   /// - isAuxiliaryInductionVariable(x) --> true if x == i_1
+  /// - getLoopGuardBranch()
+  ///                 --> `if (guardcmp) goto preheader; else goto afterloop`
+  /// - isGuarded()                     --> true
   /// - isCanonical                     --> false
   struct LoopBounds {
     /// Return the LoopBounds object if
@@ -724,6 +730,31 @@ public:
   ///       conditional branch in the loop latch. (but it can be)
   bool isAuxiliaryInductionVariable(PHINode &AuxIndVar,
                                     ScalarEvolution &SE) const;
+
+  /// Return the loop guard branch, if it exists.
+  ///
+  /// This currently only works on simplified loop, as it requires a preheader
+  /// and a latch to identify the guard. It will work on loops of the form:
+  /// \code
+  /// GuardBB:
+  ///   br cond1, Preheader, ExitSucc <== GuardBranch
+  /// Preheader:
+  ///   br Header
+  /// Header:
+  ///  ...
+  ///   br Latch
+  /// Latch:
+  ///   br cond2, Header, ExitBlock
+  /// ExitBlock:
+  ///   br ExitSucc
+  /// ExitSucc:
+  /// \endcode
+  BranchInst *getLoopGuardBranch() const;
+
+  /// Return true iff the loop is
+  /// - in simplify rotated form, and
+  /// - guarded by a loop guard branch.
+  bool isGuarded() const { return (getLoopGuardBranch() != nullptr); }
 
   /// Return true if the loop induction variable starts at zero and increments
   /// by one each time through the loop.

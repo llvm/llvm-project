@@ -234,21 +234,19 @@ Value *SimplifyCmpInst(unsigned Predicate, Value *LHS, Value *RHS,
 /// Given operand for a UnaryOperator, fold the result or return null.
 Value *SimplifyUnOp(unsigned Opcode, Value *Op, const SimplifyQuery &Q);
 
-/// Given operand for an FP UnaryOperator, fold the result or return null.
-/// In contrast to SimplifyUnOp, try to use FastMathFlag when folding the
-/// result. In case we don't need FastMathFlags, simply fall to SimplifyUnOp.
-Value *SimplifyFPUnOp(unsigned Opcode, Value *Op, FastMathFlags FMF,
-                      const SimplifyQuery &Q);
+/// Given operand for a UnaryOperator, fold the result or return null.
+/// Try to use FastMathFlags when folding the result.
+Value *SimplifyUnOp(unsigned Opcode, Value *Op, FastMathFlags FMF,
+                    const SimplifyQuery &Q);
 
 /// Given operands for a BinaryOperator, fold the result or return null.
 Value *SimplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
                      const SimplifyQuery &Q);
 
-/// Given operands for an FP BinaryOperator, fold the result or return null.
-/// In contrast to SimplifyBinOp, try to use FastMathFlag when folding the
-/// result. In case we don't need FastMathFlags, simply fall to SimplifyBinOp.
-Value *SimplifyFPBinOp(unsigned Opcode, Value *LHS, Value *RHS,
-                       FastMathFlags FMF, const SimplifyQuery &Q);
+/// Given operands for a BinaryOperator, fold the result or return null.
+/// Try to use FastMathFlags when folding the result.
+Value *SimplifyBinOp(unsigned Opcode, Value *LHS, Value *RHS,
+                     FastMathFlags FMF, const SimplifyQuery &Q);
 
 /// Given a callsite, fold the result or return null.
 Value *SimplifyCall(CallBase *Call, const SimplifyQuery &Q);

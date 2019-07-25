@@ -16,12 +16,15 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Remarks/RemarkFormat.h"
+#include "llvm/Remarks/RemarkSerializer.h"
 
 using namespace llvm;
 
-RemarkStreamer::RemarkStreamer(StringRef Filename,
-                               std::unique_ptr<remarks::Serializer> Serializer)
-    : Filename(Filename), PassFilter(), Serializer(std::move(Serializer)) {
+RemarkStreamer::RemarkStreamer(
+    StringRef Filename,
+    std::unique_ptr<remarks::RemarkSerializer> RemarkSerializer)
+    : Filename(Filename), PassFilter(),
+      RemarkSerializer(std::move(RemarkSerializer)) {
   assert(!Filename.empty() && "This needs to be a real filename.");
 }
 
@@ -99,23 +102,12 @@ void RemarkStreamer::emit(const DiagnosticInfoOptimizationBase &Diag) {
   // First, convert the diagnostic to a remark.
   remarks::Remark R = toRemark(Diag);
   // Then, emit the remark through the serializer.
-  Serializer->emit(R);
+  RemarkSerializer->emit(R);
 }
 
 char RemarkSetupFileError::ID = 0;
 char RemarkSetupPatternError::ID = 0;
 char RemarkSetupFormatError::ID = 0;
-
-static std::unique_ptr<remarks::Serializer>
-formatToSerializer(remarks::Format RemarksFormat, raw_ostream &OS) {
-  switch (RemarksFormat) {
-  default:
-    llvm_unreachable("Unknown remark serializer format.");
-    return nullptr;
-  case remarks::Format::YAML:
-    return llvm::make_unique<remarks::YAMLSerializer>(OS);
-  };
-}
 
 Expected<std::unique_ptr<ToolOutputFile>>
 llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
@@ -143,8 +135,13 @@ llvm::setupOptimizationRemarks(LLVMContext &Context, StringRef RemarksFilename,
   if (Error E = Format.takeError())
     return make_error<RemarkSetupFormatError>(std::move(E));
 
+  Expected<std::unique_ptr<remarks::RemarkSerializer>> RemarkSerializer =
+      remarks::createRemarkSerializer(*Format, RemarksFile->os());
+  if (Error E = RemarkSerializer.takeError())
+    return make_error<RemarkSetupFormatError>(std::move(E));
+
   Context.setRemarkStreamer(llvm::make_unique<RemarkStreamer>(
-      RemarksFilename, formatToSerializer(*Format, RemarksFile->os())));
+      RemarksFilename, std::move(*RemarkSerializer)));
 
   if (!RemarksPasses.empty())
     if (Error E = Context.getRemarkStreamer()->setFilter(RemarksPasses))

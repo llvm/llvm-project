@@ -28,9 +28,9 @@ using namespace MIPatternMatch;
 namespace {
 class AArch64PreLegalizerCombinerInfo : public CombinerInfo {
 public:
-  AArch64PreLegalizerCombinerInfo()
+  AArch64PreLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize)
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr) {}
+                     /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize) {}
   virtual bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
                        MachineIRBuilder &B) const override;
 };
@@ -51,6 +51,18 @@ bool AArch64PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
   case TargetOpcode::G_SEXTLOAD:
   case TargetOpcode::G_ZEXTLOAD:
     return Helper.tryCombineExtendingLoads(MI);
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+    switch (MI.getIntrinsicID()) {
+    case Intrinsic::memcpy:
+    case Intrinsic::memmove:
+    case Intrinsic::memset: {
+      // Try to inline memcpy type calls if optimizations are enabled.
+      return (EnableOpt && !EnableOptSize) ? Helper.tryCombineMemCpyFamily(MI)
+                                           : false;
+    }
+    default:
+      break;
+    }
   }
 
   return false;
@@ -89,7 +101,11 @@ bool AArch64PreLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
           MachineFunctionProperties::Property::FailedISel))
     return false;
   auto *TPC = &getAnalysis<TargetPassConfig>();
-  AArch64PreLegalizerCombinerInfo PCInfo;
+  const Function &F = MF.getFunction();
+  bool EnableOpt =
+      MF.getTarget().getOptLevel() != CodeGenOpt::None && !skipFunction(F);
+  AArch64PreLegalizerCombinerInfo PCInfo(EnableOpt, F.hasOptSize(),
+                                         F.hasMinSize());
   Combiner C(PCInfo, TPC);
   return C.combineMachineInstrs(MF, /*CSEInfo*/ nullptr);
 }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=c++ -pedantic -verify -fsyntax-only
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=clc++ -pedantic -verify -fsyntax-only
 
 // This test checks that various C/C++/OpenCL C constructs are not available in
 // C++ for OpenCL.

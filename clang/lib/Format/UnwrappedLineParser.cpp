@@ -1873,8 +1873,13 @@ void UnwrappedLineParser::parseNamespace() {
   if (InitialToken.is(TT_NamespaceMacro)) {
     parseParens();
   } else {
-    while (FormatTok->isOneOf(tok::identifier, tok::coloncolon))
-      nextToken();
+    while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::kw_inline,
+                              tok::l_square)) {
+      if (FormatTok->is(tok::l_square))
+        parseSquare();
+      else
+        nextToken();
+    }
   }
   if (FormatTok->Tok.is(tok::l_brace)) {
     if (ShouldBreakBeforeBrace(Style, InitialToken))

@@ -552,3 +552,57 @@ FileHeader:
 Sections:
   - Name: .foo
     Type: SHT_PROGBITS
+
+## We report an error if the number of sections stored in sh_size
+## is greater than UINT64_MAX / sizeof(Elf_Shdr) == 288230376151711743.
+## Here we check that do not crash on a border value.
+
+# RUN: yaml2obj --docnum=26 %s -o %t26
+# RUN: not llvm-readobj -h %t26 2>&1 | FileCheck -DFILE=%t26 --check-prefix=INVALID-SEC-NUM1 %s
+
+# INVALID-SEC-NUM1: error: '[[FILE]]': invalid section header table offset (e_shoff = 0x40) or invalid number of sections specified in the first section header's sh_size field (0x3ffffffffffffff)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+  SHNum:   0x0
+Sections:
+  - Type: SHT_NULL
+    Size: 288230376151711743
+
+## See above, but now we test the UINT64_MAX / sizeof(Elf_Shdr) value.
+## The error is slightly different in this case.
+
+# RUN: yaml2obj --docnum=27 %s -o %t27
+# RUN: not llvm-readobj -h %t27 2>&1 | FileCheck -DFILE=%t27 --check-prefix=INVALID-SEC-NUM2 %s
+
+# INVALID-SEC-NUM2: error: '[[FILE]]': invalid number of sections specified in the NULL section's sh_size field (288230376151711744)
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+  SHNum:   0x0
+Sections:
+  - Type: SHT_NULL
+    Size: 288230376151711744
+
+## Check the case when SHOffset is too large. SHOffset + sizeof(Elf_Shdr) overflows the uint64 type.
+
+# RUN: yaml2obj --docnum=28 %s -o %t28
+# RUN: not llvm-readobj -h %t28 2>&1 | FileCheck -DFILE=%t28 --check-prefix=INVALID-SEC-NUM3 %s
+
+# INVALID-SEC-NUM3: error: '[[FILE]]': section header table goes past the end of the file: e_shoff = 0xffffffffffffffff
+ 
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_REL
+  Machine:  EM_X86_64
+  SHOffset: 0xffffffffffffffff

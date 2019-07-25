@@ -1,5 +1,5 @@
 // REQUIRES: shell
-// RUN: %clangxx -S -ftime-trace -mllvm --time-trace-granularity=0 -o %T/check-time-trace %s
+// RUN: %clangxx -S -ftime-trace -ftime-trace-granularity=0 -o %T/check-time-trace %s
 // RUN: cat %T/check-time-trace.json \
 // RUN:   | %python -c 'import json, sys; json.dump(json.loads(sys.stdin.read()), sys.stdout, sort_keys=True, indent=2)' \
 // RUN:   | FileCheck %s

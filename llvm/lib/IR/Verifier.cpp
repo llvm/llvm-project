@@ -3983,9 +3983,9 @@ void Verifier::verifyDominatesUse(Instruction &I, unsigned i) {
 void Verifier::visitDereferenceableMetadata(Instruction& I, MDNode* MD) {
   Assert(I.getType()->isPointerTy(), "dereferenceable, dereferenceable_or_null "
          "apply only to pointer types", &I);
-  Assert(isa<LoadInst>(I),
+  Assert((isa<LoadInst>(I) || isa<IntToPtrInst>(I)),
          "dereferenceable, dereferenceable_or_null apply only to load"
-         " instructions, use attributes for calls or invokes", &I);
+         " and inttoptr instructions, use attributes for calls or invokes", &I);
   Assert(MD->getNumOperands() == 1, "dereferenceable, dereferenceable_or_null "
          "take one operand!", &I);
   ConstantInt *CI = mdconst::dyn_extract<ConstantInt>(MD->getOperand(0));

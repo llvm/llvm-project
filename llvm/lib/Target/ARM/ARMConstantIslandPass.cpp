@@ -824,11 +824,6 @@ initializeFunctionInfo(const std::vector<MachineInstr*> &CPEMIs) {
             Scale = 2;  // +-(offset_8*2)
             NegOk = true;
             break;
-
-          case ARM::tLDRHi:
-            Bits = 5;
-            Scale = 2; // +(offset_5*2)
-            break;
           }
 
           // Remember that this is a user of a CP entry.
@@ -1337,6 +1332,28 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
     BaseInsertOffset =
         std::max(UserBBI.postOffset() - UPad - 8,
                  UserOffset + TII->getInstSizeInBytes(*UserMI) + 1);
+    // If the CP is referenced(ie, UserOffset) is in first four instructions
+    // after IT, this recalculated BaseInsertOffset could be in the middle of
+    // an IT block. If it is, change the BaseInsertOffset to just after the
+    // IT block. This still make the CP Entry is in range becuase of the
+    // following reasons.
+    //   1. The initial BaseseInsertOffset calculated is (UserOffset +
+    //   U.getMaxDisp() - UPad).
+    //   2. An IT block is only at most 4 instructions plus the "it" itself (18
+    //   bytes).
+    //   3. All the relevant instructions support much larger Maximum
+    //   displacement.
+    MachineBasicBlock::iterator I = UserMI;
+    ++I;
+    for (unsigned Offset = UserOffset + TII->getInstSizeInBytes(*UserMI),
+                  PredReg = 0;
+         I->getOpcode() != ARM::t2IT &&
+         getITInstrPredicate(*I, PredReg) != ARMCC::AL;
+         Offset += TII->getInstSizeInBytes(*I), I = std::next(I)) {
+      BaseInsertOffset =
+          std::max(BaseInsertOffset, Offset + TII->getInstSizeInBytes(*I) + 1);
+      assert(I != UserMBB->end() && "Fell off end of block");
+    }
     LLVM_DEBUG(dbgs() << format("Move inside block: %#x\n", BaseInsertOffset));
   }
   unsigned EndInsertOffset = BaseInsertOffset + 4 + UPad +
@@ -1397,9 +1414,10 @@ void ARMConstantIslands::createNewWater(unsigned CPUserIndex,
   }
 
   // We really must not split an IT block.
-  LLVM_DEBUG(unsigned PredReg; assert(
-                 !isThumb || getITInstrPredicate(*MI, PredReg) == ARMCC::AL));
-
+#ifndef NDEBUG
+  unsigned PredReg;
+  assert(!isThumb || getITInstrPredicate(*MI, PredReg) == ARMCC::AL);
+#endif
   NewMBB = splitBlockBeforeInstr(&*MI);
 }
 

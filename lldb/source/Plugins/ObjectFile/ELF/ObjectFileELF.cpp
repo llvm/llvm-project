@@ -264,8 +264,7 @@ bool ELFNote::Parse(const DataExtractor &data, lldb::offset_t *offset) {
   const char *cstr = data.GetCStr(offset, llvm::alignTo(n_namesz, 4));
   if (cstr == nullptr) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_SYMBOLS));
-    if (log)
-      log->Printf("Failed to parse note name lacking nul terminator");
+    LLDB_LOGF(log, "Failed to parse note name lacking nul terminator");
 
     return false;
   }
@@ -608,10 +607,9 @@ size_t ObjectFileELF::GetModuleSpecifications(
           llvm::Triple::OSType spec_ostype =
               spec.GetArchitecture().GetTriple().getOS();
 
-          if (log)
-            log->Printf("ObjectFileELF::%s file '%s' module OSABI: %s",
-                        __FUNCTION__, file.GetPath().c_str(),
-                        OSABIAsCString(header.e_ident[EI_OSABI]));
+          LLDB_LOGF(log, "ObjectFileELF::%s file '%s' module OSABI: %s",
+                    __FUNCTION__, file.GetPath().c_str(),
+                    OSABIAsCString(header.e_ident[EI_OSABI]));
 
           // SetArchitecture should have set the vendor to unknown
           vendor = spec.GetArchitecture().GetTriple().getVendor();
@@ -623,10 +621,10 @@ size_t ObjectFileELF::GetModuleSpecifications(
           GetOsFromOSABI(header.e_ident[EI_OSABI], ostype);
           assert(spec_ostype == ostype);
           if (spec_ostype != llvm::Triple::OSType::UnknownOS) {
-            if (log)
-              log->Printf("ObjectFileELF::%s file '%s' set ELF module OS type "
-                          "from ELF header OSABI.",
-                          __FUNCTION__, file.GetPath().c_str());
+            LLDB_LOGF(log,
+                      "ObjectFileELF::%s file '%s' set ELF module OS type "
+                      "from ELF header OSABI.",
+                      __FUNCTION__, file.GetPath().c_str());
           }
 
           data_sp = MapFileData(file, -1, file_offset);
@@ -652,12 +650,12 @@ size_t ObjectFileELF::GetModuleSpecifications(
 
           llvm::Triple &spec_triple = spec.GetArchitecture().GetTriple();
 
-          if (log)
-            log->Printf("ObjectFileELF::%s file '%s' module set to triple: %s "
-                        "(architecture %s)",
-                        __FUNCTION__, file.GetPath().c_str(),
-                        spec_triple.getTriple().c_str(),
-                        spec.GetArchitecture().GetArchitectureName());
+          LLDB_LOGF(log,
+                    "ObjectFileELF::%s file '%s' module set to triple: %s "
+                    "(architecture %s)",
+                    __FUNCTION__, file.GetPath().c_str(),
+                    spec_triple.getTriple().c_str(),
+                    spec.GetArchitecture().GetArchitectureName());
 
           if (!uuid.IsValid()) {
             uint32_t core_notes_crc = 0;
@@ -1109,9 +1107,8 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
       return error;
     }
 
-    if (log)
-      log->Printf("ObjectFileELF::%s parsing note name='%s', type=%" PRIu32,
-                  __FUNCTION__, note.n_name.c_str(), note.n_type);
+    LLDB_LOGF(log, "ObjectFileELF::%s parsing note name='%s', type=%" PRIu32,
+              __FUNCTION__, note.n_name.c_str(), note.n_type);
 
     // Process FreeBSD ELF notes.
     if ((note.n_name == LLDB_NT_OWNER_FREEBSD) &&
@@ -1136,11 +1133,11 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
       arch_spec.GetTriple().setOSName(os_name);
       arch_spec.GetTriple().setVendor(llvm::Triple::VendorType::UnknownVendor);
 
-      if (log)
-        log->Printf("ObjectFileELF::%s detected FreeBSD %" PRIu32 ".%" PRIu32
-                    ".%" PRIu32,
-                    __FUNCTION__, version_major, version_minor,
-                    static_cast<uint32_t>(version_info % 1000));
+      LLDB_LOGF(log,
+                "ObjectFileELF::%s detected FreeBSD %" PRIu32 ".%" PRIu32
+                ".%" PRIu32,
+                __FUNCTION__, version_major, version_minor,
+                static_cast<uint32_t>(version_info % 1000));
     }
     // Process GNU ELF notes.
     else if (note.n_name == LLDB_NT_OWNER_GNU) {
@@ -1161,12 +1158,11 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
             arch_spec.GetTriple().setOS(llvm::Triple::OSType::Linux);
             arch_spec.GetTriple().setVendor(
                 llvm::Triple::VendorType::UnknownVendor);
-            if (log)
-              log->Printf(
-                  "ObjectFileELF::%s detected Linux, min version %" PRIu32
-                  ".%" PRIu32 ".%" PRIu32,
-                  __FUNCTION__, version_info[1], version_info[2],
-                  version_info[3]);
+            LLDB_LOGF(log,
+                      "ObjectFileELF::%s detected Linux, min version %" PRIu32
+                      ".%" PRIu32 ".%" PRIu32,
+                      __FUNCTION__, version_info[1], version_info[2],
+                      version_info[3]);
             // FIXME we have the minimal version number, we could be propagating
             // that.  version_info[1] = OS Major, version_info[2] = OS Minor,
             // version_info[3] = Revision.
@@ -1175,30 +1171,28 @@ ObjectFileELF::RefineModuleDetailsFromNote(lldb_private::DataExtractor &data,
             arch_spec.GetTriple().setOS(llvm::Triple::OSType::UnknownOS);
             arch_spec.GetTriple().setVendor(
                 llvm::Triple::VendorType::UnknownVendor);
-            if (log)
-              log->Printf("ObjectFileELF::%s detected Hurd (unsupported), min "
-                          "version %" PRIu32 ".%" PRIu32 ".%" PRIu32,
-                          __FUNCTION__, version_info[1], version_info[2],
-                          version_info[3]);
+            LLDB_LOGF(log,
+                      "ObjectFileELF::%s detected Hurd (unsupported), min "
+                      "version %" PRIu32 ".%" PRIu32 ".%" PRIu32,
+                      __FUNCTION__, version_info[1], version_info[2],
+                      version_info[3]);
             break;
           case LLDB_NT_GNU_ABI_OS_SOLARIS:
             arch_spec.GetTriple().setOS(llvm::Triple::OSType::Solaris);
             arch_spec.GetTriple().setVendor(
                 llvm::Triple::VendorType::UnknownVendor);
-            if (log)
-              log->Printf(
-                  "ObjectFileELF::%s detected Solaris, min version %" PRIu32
-                  ".%" PRIu32 ".%" PRIu32,
-                  __FUNCTION__, version_info[1], version_info[2],
-                  version_info[3]);
+            LLDB_LOGF(log,
+                      "ObjectFileELF::%s detected Solaris, min version %" PRIu32
+                      ".%" PRIu32 ".%" PRIu32,
+                      __FUNCTION__, version_info[1], version_info[2],
+                      version_info[3]);
             break;
           default:
-            if (log)
-              log->Printf(
-                  "ObjectFileELF::%s unrecognized OS in note, id %" PRIu32
-                  ", min version %" PRIu32 ".%" PRIu32 ".%" PRIu32,
-                  __FUNCTION__, version_info[0], version_info[1],
-                  version_info[2], version_info[3]);
+            LLDB_LOGF(log,
+                      "ObjectFileELF::%s unrecognized OS in note, id %" PRIu32
+                      ", min version %" PRIu32 ".%" PRIu32 ".%" PRIu32,
+                      __FUNCTION__, version_info[0], version_info[1],
+                      version_info[2], version_info[3]);
             break;
           }
         }
@@ -1607,9 +1601,8 @@ size_t ObjectFileELF::GetSectionHeaderInfo(SectionHeaderColl &section_headers,
                                             section_size) == section_size)) {
             Status error = RefineModuleDetailsFromNote(data, arch_spec, uuid);
             if (error.Fail()) {
-              if (log)
-                log->Printf("ObjectFileELF::%s ELF note processing failed: %s",
-                            __FUNCTION__, error.AsCString());
+              LLDB_LOGF(log, "ObjectFileELF::%s ELF note processing failed: %s",
+                        __FUNCTION__, error.AsCString());
             }
           }
         }
@@ -2643,7 +2636,7 @@ unsigned ObjectFileELF::ApplyRelocations(
                ((int64_t)value > INT32_MAX && (int64_t)value < INT32_MIN))) {
             Log *log =
                 lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_MODULES);
-            log->Printf("Failed to apply debug info relocations");
+            LLDB_LOGF(log, "Failed to apply debug info relocations");
             break;
           }
           uint32_t truncated_addr = (value & 0xFFFFFFFF);

@@ -36,19 +36,16 @@ static Status ForwardPortWithAdb(
     return error;
 
   device_id = adb.GetDeviceID();
-  if (log)
-    log->Printf("Connected to Android device \"%s\"", device_id.c_str());
+  LLDB_LOGF(log, "Connected to Android device \"%s\"", device_id.c_str());
 
   if (remote_port != 0) {
-    if (log)
-      log->Printf("Forwarding remote TCP port %d to local TCP port %d",
-                  remote_port, local_port);
+    LLDB_LOGF(log, "Forwarding remote TCP port %d to local TCP port %d",
+              remote_port, local_port);
     return adb.SetPortForwarding(local_port, remote_port);
   }
 
-  if (log)
-    log->Printf("Forwarding remote socket \"%s\" to local TCP port %d",
-                remote_socket_name.str().c_str(), local_port);
+  LLDB_LOGF(log, "Forwarding remote socket \"%s\" to local TCP port %d",
+            remote_socket_name.str().c_str(), local_port);
 
   if (!socket_namespace)
     return Status("Invalid socket namespace");
@@ -95,7 +92,7 @@ bool PlatformAndroidRemoteGDBServer::LaunchGDBServer(lldb::pid_t &pid,
   auto error =
       MakeConnectURL(pid, remote_port, socket_name.c_str(), connect_url);
   if (error.Success() && log)
-    log->Printf("gdbserver connect URL: %s", connect_url.c_str());
+    LLDB_LOGF(log, "gdbserver connect URL: %s", connect_url.c_str());
 
   return error.Success();
 }
@@ -139,8 +136,7 @@ Status PlatformAndroidRemoteGDBServer::ConnectRemote(Args &args) {
   args.ReplaceArgumentAtIndex(0, connect_url);
 
   Log *log(GetLogIfAllCategoriesSet(LIBLLDB_LOG_PLATFORM));
-  if (log)
-    log->Printf("Rewritten platform connect URL: %s", connect_url.c_str());
+  LLDB_LOGF(log, "Rewritten platform connect URL: %s", connect_url.c_str());
 
   error = PlatformRemoteGDBServer::ConnectRemote(args);
   if (error.Fail())
@@ -164,10 +160,10 @@ void PlatformAndroidRemoteGDBServer::DeleteForwardPort(lldb::pid_t pid) {
   const auto port = it->second;
   const auto error = DeleteForwardPortWithAdb(port, m_device_id);
   if (error.Fail()) {
-    if (log)
-      log->Printf("Failed to delete port forwarding (pid=%" PRIu64
-                  ", port=%d, device=%s): %s",
-                  pid, port, m_device_id.c_str(), error.AsCString());
+    LLDB_LOGF(log,
+              "Failed to delete port forwarding (pid=%" PRIu64
+              ", port=%d, device=%s): %s",
+              pid, port, m_device_id.c_str(), error.AsCString());
   }
   m_port_forwards.erase(it);
 }

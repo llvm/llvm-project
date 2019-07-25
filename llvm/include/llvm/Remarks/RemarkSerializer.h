@@ -15,7 +15,6 @@
 
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkStringTable.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
@@ -23,44 +22,28 @@ namespace remarks {
 
 /// This is the base class for a remark serializer.
 /// It includes support for using a string table while emitting.
-struct Serializer {
+struct RemarkSerializer {
   /// The open raw_ostream that the remark diagnostics are emitted to.
   raw_ostream &OS;
   /// The string table containing all the unique strings used in the output.
   /// The table can be serialized to be consumed after the compilation.
   Optional<StringTable> StrTab;
 
-  Serializer(raw_ostream &OS) : OS(OS), StrTab() {}
+  RemarkSerializer(raw_ostream &OS) : OS(OS), StrTab() {}
 
   /// This is just an interface.
-  virtual ~Serializer() = default;
+  virtual ~RemarkSerializer() = default;
   virtual void emit(const Remark &Remark) = 0;
 };
 
-/// Wether the serializer should use a string table while emitting.
-enum class UseStringTable { No, Yes };
+/// Create a remark serializer.
+Expected<std::unique_ptr<RemarkSerializer>>
+createRemarkSerializer(Format RemarksFormat, raw_ostream &OS);
 
-/// Serialize the remarks to YAML. One remark entry looks like this:
-/// --- !<TYPE>
-/// Pass:            <PASSNAME>
-/// Name:            <REMARKNAME>
-/// DebugLoc:        { File: <SOURCEFILENAME>, Line: <SOURCELINE>,
-///                    Column: <SOURCECOLUMN> }
-/// Function:        <FUNCTIONNAME>
-/// Args:
-///   - <KEY>: <VALUE>
-///     DebugLoc:        { File: <FILE>, Line: <LINE>, Column: <COL> }
-/// ...
-struct YAMLSerializer : public Serializer {
-  /// The YAML streamer.
-  yaml::Output YAMLOutput;
-
-  YAMLSerializer(raw_ostream &OS,
-                 UseStringTable UseStringTable = remarks::UseStringTable::No);
-
-  /// Emit a remark to the stream.
-  void emit(const Remark &Remark) override;
-};
+/// Create a remark serializer that uses a pre-filled string table.
+Expected<std::unique_ptr<RemarkSerializer>>
+createRemarkSerializer(Format RemarksFormat, raw_ostream &OS,
+                       remarks::StringTable StrTab);
 
 } // end namespace remarks
 } // end namespace llvm

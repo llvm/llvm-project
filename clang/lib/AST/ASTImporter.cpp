@@ -1645,7 +1645,6 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
   bool AccumulateChildErrors = isa<TagDecl>(FromDC);
 
   Error ChildErrors = Error::success();
-  llvm::SmallVector<Decl *, 8> ImportedDecls;
   for (auto *From : FromDC->decls()) {
     ExpectedDecl ImportedOrErr = import(From);
     if (!ImportedOrErr) {
@@ -1654,6 +1653,59 @@ ASTNodeImporter::ImportDeclContext(DeclContext *FromDC, bool ForceImport) {
             joinErrors(std::move(ChildErrors), ImportedOrErr.takeError());
       else
         consumeError(ImportedOrErr.takeError());
+    }
+  }
+
+  // We reorder declarations in RecordDecls because they may have another order
+  // in the "to" context than they have in the "from" context. This may happen
+  // e.g when we import a class like this:
+  //    struct declToImport {
+  //        int a = c + b;
+  //        int b = 1;
+  //        int c = 2;
+  //    };
+  // During the import of `a` we import first the dependencies in sequence,
+  // thus the order would be `c`, `b`, `a`. We will get the normal order by
+  // first removing the already imported members and then adding them in the
+  // order as they apper in the "from" context.
+  //
+  // Keeping field order is vital because it determines structure layout.
+  //
+  // Here and below, we cannot call field_begin() method and its callers on
+  // ToDC if it has an external storage. Calling field_begin() will
+  // automatically load all the fields by calling
+  // LoadFieldsFromExternalStorage(). LoadFieldsFromExternalStorage() would
+  // call ASTImporter::Import(). This is because the ExternalASTSource
+  // interface in LLDB is implemented by the means of the ASTImporter. However,
+  // calling an import at this point would result in an uncontrolled import, we
+  // must avoid that.
+  const auto *FromRD = dyn_cast<RecordDecl>(FromDC);
+  if (!FromRD)
+    return ChildErrors;
+
+  auto ToDCOrErr = Importer.ImportContext(FromDC);
+  if (!ToDCOrErr) {
+    consumeError(std::move(ChildErrors));
+    return ToDCOrErr.takeError();
+  }
+
+  DeclContext *ToDC = *ToDCOrErr;
+  // Remove all declarations, which may be in wrong order in the
+  // lexical DeclContext and then add them in the proper order.
+  for (auto *D : FromRD->decls()) {
+    if (isa<FieldDecl>(D) || isa<FriendDecl>(D)) {
+      assert(D && "DC contains a null decl");
+      Decl *ToD = Importer.GetAlreadyImportedOrNull(D);
+      // Remove only the decls which we successfully imported.
+      if (ToD) {
+        assert(ToDC == ToD->getLexicalDeclContext() && ToDC->containsDecl(ToD));
+        // Remove the decl from its wrong place in the linked list.
+        ToDC->removeDecl(ToD);
+        // Add the decl to the end of the linked list.
+        // This time it will be at the proper place because the enclosing for
+        // loop iterates in the original (good) order of the decls.
+        ToDC->addDeclInternal(ToD);
+      }
     }
   }
 
@@ -8421,6 +8473,10 @@ Expected<FileID> ASTImporter::Import(FileID FromID, bool IsBuiltin) {
   assert(ToID.isValid() && "Unexpected invalid fileID was created.");
 
   ImportedFileIDs[FromID] = ToID;
+
+  if (FileIDImportHandler)
+    FileIDImportHandler(ToID, FromID);
+
   return ToID;
 }
 

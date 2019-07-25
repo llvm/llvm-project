@@ -5,7 +5,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         %S/Inputs/mips-dynamic.s -o %t.so.o
-# RUN: ld.lld %t.so.o -shared -o %t.so
+# RUN: ld.lld %t.so.o -shared -soname=t.so -o %t.so
 # RUN: ld.lld %t.o %t.so -o %t.exe
 # RUN: llvm-readobj -r --mips-plt-got %t.exe | FileCheck %s
 

@@ -439,8 +439,13 @@ public:
   void replaceInstrOperandWithImm(MachineInstr &MI, unsigned OpNo,
                                   int64_t Imm) const;
 
-  bool instrHasImmForm(const MachineInstr &MI, ImmInstrInfo &III,
+  bool instrHasImmForm(unsigned Opc, bool IsVFReg, ImmInstrInfo &III,
                        bool PostRA) const;
+
+  // In PostRA phase, try to find instruction defines \p Reg before \p MI.
+  // \p SeenIntermediate is set to true if uses between DefMI and \p MI exist.
+  MachineInstr *getDefMIPostRA(unsigned Reg, MachineInstr &MI,
+                               bool &SeenIntermediateUse) const;
 
   /// getRegNumForOperand - some operands use different numbering schemes
   /// for the same registers. For example, a VSX instruction may have any of

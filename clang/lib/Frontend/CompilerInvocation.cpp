@@ -1796,6 +1796,8 @@ static InputKind ParseFrontendArgs(FrontendOptions &Opts, ArgList &Args,
   Opts.ShowTimers = Args.hasArg(OPT_ftime_report);
   Opts.PrintSupportedCPUs = Args.hasArg(OPT_print_supported_cpus);
   Opts.TimeTrace = Args.hasArg(OPT_ftime_trace);
+  Opts.TimeTraceGranularity = getLastArgIntValue(
+      Args, OPT_ftime_trace_granularity_EQ, Opts.TimeTraceGranularity, Diags);
   Opts.ShowVersion = Args.hasArg(OPT_version);
   Opts.ASTMergeFiles = Args.getAllArgValues(OPT_ast_merge);
   Opts.LLVMArgs = Args.getAllArgValues(OPT_mllvm);
@@ -2431,7 +2433,7 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
         .Cases("cl1.1", "CL1.1", LangStandard::lang_opencl11)
         .Cases("cl1.2", "CL1.2", LangStandard::lang_opencl12)
         .Cases("cl2.0", "CL2.0", LangStandard::lang_opencl20)
-        .Case("c++", LangStandard::lang_openclcpp)
+        .Cases("clc++", "CLC++", LangStandard::lang_openclcpp)
         .Default(LangStandard::lang_unspecified);
 
     if (OpenCLLangStd == LangStandard::lang_unspecified) {

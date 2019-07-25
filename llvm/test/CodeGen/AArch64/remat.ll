@@ -2,9 +2,13 @@
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-a53 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-a55 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-a57 -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-a65 -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-a65ae -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-a72 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-a73 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=cortex-a75 -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=neoverse-e1 -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=neoverse-n1 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=exynos-m1 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=exynos-m2 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=exynos-m3 -o - %s | FileCheck %s
@@ -26,9 +30,9 @@ entry:
 ; CHECK: add x0, sp, #8
 ; CHECK-NOT: mov
 ; CHECK-NEXT: bl f
-  call void @f(%X* %tmp)               
+  call void @f(%X* %tmp)
 ; CHECK: add x0, sp, #8
 ; CHECK-NOT: mov
 ; CHECK-NEXT: bl f
-  ret void 
+  ret void
 }

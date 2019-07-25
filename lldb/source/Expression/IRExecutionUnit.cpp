@@ -122,10 +122,10 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
     return ret;
   }
 
-  if (log)
-    log->Printf("Found function, has local address 0x%" PRIx64
-                " and remote address 0x%" PRIx64,
-                (uint64_t)func_local_addr, (uint64_t)func_remote_addr);
+  LLDB_LOGF(log,
+            "Found function, has local address 0x%" PRIx64
+            " and remote address 0x%" PRIx64,
+            (uint64_t)func_local_addr, (uint64_t)func_remote_addr);
 
   std::pair<lldb::addr_t, lldb::addr_t> func_range;
 
@@ -138,9 +138,8 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
     return ret;
   }
 
-  if (log)
-    log->Printf("Function's code range is [0x%" PRIx64 "+0x%" PRIx64 "]",
-                func_range.first, func_range.second);
+  LLDB_LOGF(log, "Function's code range is [0x%" PRIx64 "+0x%" PRIx64 "]",
+            func_range.first, func_range.second);
 
   Target *target = exe_ctx.GetTargetPtr();
   if (!target) {
@@ -188,7 +187,7 @@ Status IRExecutionUnit::DisassembleFunction(Stream &stream,
                           target->GetArchitecture().GetAddressByteSize());
 
   if (log) {
-    log->Printf("Function data has contents:");
+    LLDB_LOGF(log, "Function data has contents:");
     extractor.PutToLog(log, 0, extractor.GetByteSize(), func_remote_addr, 16,
                        DataExtractor::TypeUInt8);
   }
@@ -255,7 +254,7 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
 
     oss.flush();
 
-    log->Printf("Module being sent to JIT: \n%s", s.c_str());
+    LLDB_LOGF(log, "Module being sent to JIT: \n%s", s.c_str());
   }
 
   m_module_up->getContext().setInlineAsmDiagnosticHandler(ReportInlineAsmError,
@@ -433,20 +432,20 @@ void IRExecutionUnit::GetRunnableInfo(Status &error, lldb::addr_t &func_addr,
   }
 
   if (log) {
-    log->Printf("Code can be run in the target.");
+    LLDB_LOGF(log, "Code can be run in the target.");
 
     StreamString disassembly_stream;
 
     Status err = DisassembleFunction(disassembly_stream, process_sp);
 
     if (!err.Success()) {
-      log->Printf("Couldn't disassemble function : %s",
-                  err.AsCString("unknown error"));
+      LLDB_LOGF(log, "Couldn't disassemble function : %s",
+                err.AsCString("unknown error"));
     } else {
-      log->Printf("Function disassembly:\n%s", disassembly_stream.GetData());
+      LLDB_LOGF(log, "Function disassembly:\n%s", disassembly_stream.GetData());
     }
 
-    log->Printf("Sections: ");
+    LLDB_LOGF(log, "Sections: ");
     for (AllocationRecord &record : m_records) {
       if (record.m_process_address != LLDB_INVALID_ADDRESS) {
         record.dump(log);
@@ -599,11 +598,10 @@ uint8_t *IRExecutionUnit::MemoryManager::allocateCodeSection(
       GetSectionTypeFromSectionName(SectionName, AllocationKind::Code), Size,
       Alignment, SectionID, SectionName.str().c_str()));
 
-  if (log) {
-    log->Printf("IRExecutionUnit::allocateCodeSection(Size=0x%" PRIx64
-                ", Alignment=%u, SectionID=%u) = %p",
-                (uint64_t)Size, Alignment, SectionID, (void *)return_value);
-  }
+  LLDB_LOGF(log,
+            "IRExecutionUnit::allocateCodeSection(Size=0x%" PRIx64
+            ", Alignment=%u, SectionID=%u) = %p",
+            (uint64_t)Size, Alignment, SectionID, (void *)return_value);
 
   if (m_parent.m_reported_allocations) {
     Status err;
@@ -631,11 +629,10 @@ uint8_t *IRExecutionUnit::MemoryManager::allocateDataSection(
       (uintptr_t)return_value, permissions,
       GetSectionTypeFromSectionName(SectionName, AllocationKind::Data), Size,
       Alignment, SectionID, SectionName.str().c_str()));
-  if (log) {
-    log->Printf("IRExecutionUnit::allocateDataSection(Size=0x%" PRIx64
-                ", Alignment=%u, SectionID=%u) = %p",
-                (uint64_t)Size, Alignment, SectionID, (void *)return_value);
-  }
+  LLDB_LOGF(log,
+            "IRExecutionUnit::allocateDataSection(Size=0x%" PRIx64
+            ", Alignment=%u, SectionID=%u) = %p",
+            (uint64_t)Size, Alignment, SectionID, (void *)return_value);
 
   if (m_parent.m_reported_allocations) {
     Status err;
@@ -1042,17 +1039,15 @@ IRExecutionUnit::MemoryManager::GetSymbolAddressAndPresence(
   lldb::addr_t ret = m_parent.FindSymbol(name_cs, missing_weak);
 
   if (ret == LLDB_INVALID_ADDRESS) {
-    if (log)
-      log->Printf(
-          "IRExecutionUnit::getSymbolAddress(Name=\"%s\") = <not found>",
-          Name.c_str());
+    LLDB_LOGF(log,
+              "IRExecutionUnit::getSymbolAddress(Name=\"%s\") = <not found>",
+              Name.c_str());
 
     m_parent.ReportSymbolLookupError(name_cs);
     return 0;
   } else {
-    if (log)
-      log->Printf("IRExecutionUnit::getSymbolAddress(Name=\"%s\") = %" PRIx64,
-                  Name.c_str(), ret);
+    LLDB_LOGF(log, "IRExecutionUnit::getSymbolAddress(Name=\"%s\") = %" PRIx64,
+              Name.c_str(), ret);
     return ret;
   }
 }
@@ -1075,15 +1070,14 @@ IRExecutionUnit::GetRemoteAddressForLocal(lldb::addr_t local_address) {
       lldb::addr_t ret =
           record.m_process_address + (local_address - record.m_host_address);
 
-      if (log) {
-        log->Printf(
-            "IRExecutionUnit::GetRemoteAddressForLocal() found 0x%" PRIx64
-            " in [0x%" PRIx64 "..0x%" PRIx64 "], and returned 0x%" PRIx64
-            " from [0x%" PRIx64 "..0x%" PRIx64 "].",
-            local_address, (uint64_t)record.m_host_address,
-            (uint64_t)record.m_host_address + (uint64_t)record.m_size, ret,
-            record.m_process_address, record.m_process_address + record.m_size);
-      }
+      LLDB_LOGF(log,
+                "IRExecutionUnit::GetRemoteAddressForLocal() found 0x%" PRIx64
+                " in [0x%" PRIx64 "..0x%" PRIx64 "], and returned 0x%" PRIx64
+                " from [0x%" PRIx64 "..0x%" PRIx64 "].",
+                local_address, (uint64_t)record.m_host_address,
+                (uint64_t)record.m_host_address + (uint64_t)record.m_size, ret,
+                record.m_process_address,
+                record.m_process_address + record.m_size);
 
       return ret;
     }
@@ -1210,10 +1204,11 @@ void IRExecutionUnit::AllocationRecord::dump(Log *log) {
   if (!log)
     return;
 
-  log->Printf("[0x%llx+0x%llx]->0x%llx (alignment %d, section ID %d, name %s)",
-              (unsigned long long)m_host_address, (unsigned long long)m_size,
-              (unsigned long long)m_process_address, (unsigned)m_alignment,
-              (unsigned)m_section_id, m_name.c_str());
+  LLDB_LOGF(log,
+            "[0x%llx+0x%llx]->0x%llx (alignment %d, section ID %d, name %s)",
+            (unsigned long long)m_host_address, (unsigned long long)m_size,
+            (unsigned long long)m_process_address, (unsigned)m_alignment,
+            (unsigned)m_section_id, m_name.c_str());
 }
 
 lldb::ByteOrder IRExecutionUnit::GetByteOrder() const {

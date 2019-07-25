@@ -164,6 +164,21 @@ inline BENCHMARK_ALWAYS_INLINE int64_t Now() {
   uint64_t tsc;
   asm("stck %0" : "=Q"(tsc) : : "cc");
   return tsc;
+#elif defined(__riscv) // RISC-V
+  // Use RDCYCLE (and RDCYCLEH on riscv32)
+#if __riscv_xlen == 32
+  uint64_t cycles_low, cycles_hi0, cycles_hi1;
+  asm("rdcycleh %0" : "=r"(cycles_hi0));
+  asm("rdcycle %0" : "=r"(cycles_lo));
+  asm("rdcycleh %0" : "=r"(cycles_hi1));
+  // This matches the PowerPC overflow detection, above
+  cycles_lo &= -static_cast<int64_t>(cycles_hi0 == cycles_hi1);
+  return (cycles_hi1 << 32) | cycles_lo;
+#else
+  uint64_t cycles;
+  asm("rdcycle %0" : "=r"(cycles));
+  return cycles;
+#endif
 #else
 // The soft failover to a generic implementation is automatic only for ARM.
 // For other platforms the developer is expected to make an attempt to create

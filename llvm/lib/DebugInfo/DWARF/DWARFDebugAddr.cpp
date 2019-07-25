@@ -44,7 +44,7 @@ Error DWARFDebugAddrTable::extract(DWARFDataExtractor Data,
   Format = dwarf::DwarfFormat::DWARF32;
   if (UnitVersion >= 5) {
     HeaderData.Length = Data.getU32(OffsetPtr);
-    if (HeaderData.Length == 0xffffffffu) {
+    if (HeaderData.Length == dwarf::DW_LENGTH_DWARF64) {
       invalidateLength();
       return createStringError(errc::not_supported,
           "DWARF64 is not supported in .debug_addr at offset 0x%" PRIx32,

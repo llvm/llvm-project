@@ -513,8 +513,8 @@ static ld_plugin_status claim_file_hook(const ld_plugin_input_file *file,
       offset = file->offset;
     }
     ErrorOr<std::unique_ptr<MemoryBuffer>> BufferOrErr =
-        MemoryBuffer::getOpenFileSlice(file->fd, file->name, file->filesize,
-                                       offset);
+        MemoryBuffer::getOpenFileSlice(sys::fs::convertFDToNativeFile(file->fd),
+                                       file->name, file->filesize, offset);
     if (std::error_code EC = BufferOrErr.getError()) {
       message(LDPL_ERROR, EC.message().c_str());
       return LDPS_ERR;

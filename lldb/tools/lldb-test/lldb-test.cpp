@@ -558,7 +558,7 @@ Error opts::symbols::verify(lldb_private::Module &Module) {
   outs() << "Found " << comp_units_count << " compile units.\n";
 
   for (uint32_t i = 0; i < comp_units_count; i++) {
-    lldb::CompUnitSP comp_unit = symfile->ParseCompileUnitAtIndex(i);
+    lldb::CompUnitSP comp_unit = symfile->GetCompileUnitAtIndex(i);
     if (!comp_unit)
       return make_string_error("Connot parse compile unit {0}.", i);
 

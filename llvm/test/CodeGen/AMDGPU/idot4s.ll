@@ -899,41 +899,28 @@ define amdgpu_kernel void @idot4_acc16_vecMul(<4 x i8> addrspace(1)* %src1,
 ; GFX7-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0xd
 ; GFX7-NEXT:    s_mov_b32 s3, 0xf000
 ; GFX7-NEXT:    s_mov_b32 s2, -1
-; GFX7-NEXT:    s_mov_b32 s8, 0xffff
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX7-NEXT:    s_load_dword s4, s[4:5], 0x0
 ; GFX7-NEXT:    buffer_load_ushort v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_load_dword s5, s[6:7], 0x0
 ; GFX7-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX7-NEXT:    s_sext_i32_i8 s6, s4
-; GFX7-NEXT:    s_bfe_i32 s7, s4, 0x80008
-; GFX7-NEXT:    s_sext_i32_i8 s10, s5
+; GFX7-NEXT:    s_ashr_i32 s6, s4, 24
+; GFX7-NEXT:    s_bfe_i32 s7, s4, 0x80010
+; GFX7-NEXT:    s_bfe_i32 s10, s5, 0x80010
 ; GFX7-NEXT:    s_bfe_i32 s11, s5, 0x80008
-; GFX7-NEXT:    s_bfe_i32 s12, s5, 0x80010
-; GFX7-NEXT:    s_ashr_i32 s5, s5, 24
-; GFX7-NEXT:    v_mov_b32_e32 v3, s11
-; GFX7-NEXT:    v_mov_b32_e32 v4, s10
-; GFX7-NEXT:    s_bfe_i32 s9, s4, 0x80010
-; GFX7-NEXT:    v_mov_b32_e32 v2, s12
-; GFX7-NEXT:    s_ashr_i32 s4, s4, 24
+; GFX7-NEXT:    s_ashr_i32 s9, s5, 24
+; GFX7-NEXT:    s_sext_i32_i8 s5, s5
+; GFX7-NEXT:    s_bfe_i32 s8, s4, 0x80008
+; GFX7-NEXT:    s_sext_i32_i8 s4, s4
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s5
-; GFX7-NEXT:    v_mul_i32_i24_e32 v1, s4, v1
-; GFX7-NEXT:    v_mul_i32_i24_e32 v2, s9, v2
-; GFX7-NEXT:    v_mul_i32_i24_e32 v3, s7, v3
-; GFX7-NEXT:    v_mul_i32_i24_e32 v4, s6, v4
-; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
-; GFX7-NEXT:    v_and_b32_e32 v2, s8, v2
-; GFX7-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
-; GFX7-NEXT:    v_and_b32_e32 v4, s8, v4
-; GFX7-NEXT:    v_or_b32_e32 v1, v2, v1
-; GFX7-NEXT:    v_or_b32_e32 v2, v4, v3
-; GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v2
-; GFX7-NEXT:    v_lshrrev_b32_e32 v4, 16, v1
+; GFX7-NEXT:    v_mov_b32_e32 v2, s11
+; GFX7-NEXT:    v_mov_b32_e32 v3, s10
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v2
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v3, v0
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v0, v1
-; GFX7-NEXT:    v_add_i32_e32 v0, vcc, v4, v0
+; GFX7-NEXT:    v_mad_i32_i24 v0, s4, v1, v0
+; GFX7-NEXT:    v_mad_i32_i24 v0, s8, v2, v0
+; GFX7-NEXT:    v_mad_i32_i24 v0, s7, v3, v0
+; GFX7-NEXT:    v_mov_b32_e32 v1, s9
+; GFX7-NEXT:    v_mad_i32_i24 v0, s6, v1, v0
 ; GFX7-NEXT:    buffer_store_short v0, off, s[0:3], 0
 ; GFX7-NEXT:    s_endpgm
 ;

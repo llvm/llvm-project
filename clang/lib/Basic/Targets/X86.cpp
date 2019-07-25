@@ -895,7 +895,7 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
 /// definitions for this particular subtarget.
 void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
                                      MacroBuilder &Builder) const {
-  // Inline assembly supports X86 flag outputs. 
+  // Inline assembly supports X86 flag outputs.
   Builder.defineMacro("__GCC_ASM_FLAG_OUTPUTS__");
 
   std::string CodeModel = getTargetOpts().CodeModel;

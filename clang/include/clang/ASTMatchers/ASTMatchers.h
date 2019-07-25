@@ -2634,12 +2634,13 @@ hasOverloadedOperatorName(StringRef Name) {
 /// \endcode
 AST_MATCHER_P(CXXRecordDecl, isDerivedFrom,
               internal::Matcher<NamedDecl>, Base) {
-  return Finder->classIsDerivedFrom(&Node, Base, Builder);
+  return Finder->classIsDerivedFrom(&Node, Base, Builder, /*Directly=*/false);
 }
 
 /// Overloaded method as shortcut for \c isDerivedFrom(hasName(...)).
 AST_MATCHER_P_OVERLOAD(CXXRecordDecl, isDerivedFrom, std::string, BaseName, 1) {
-  assert(!BaseName.empty());
+  if (BaseName.empty())
+    return false;
   return isDerivedFrom(hasName(BaseName)).matches(Node, Finder, Builder);
 }
 
@@ -2655,10 +2656,44 @@ AST_MATCHER_P_OVERLOAD(CXXRecordDecl, isSameOrDerivedFrom,
 /// \c isSameOrDerivedFrom(hasName(...)).
 AST_MATCHER_P_OVERLOAD(CXXRecordDecl, isSameOrDerivedFrom, std::string,
                        BaseName, 1) {
-  assert(!BaseName.empty());
+  if (BaseName.empty())
+    return false;
   return isSameOrDerivedFrom(hasName(BaseName)).matches(Node, Finder, Builder);
 }
 
+/// Matches C++ classes that are directly derived from a class matching \c Base.
+///
+/// Note that a class is not considered to be derived from itself.
+///
+/// Example matches Y, C (Base == hasName("X"))
+/// \code
+///   class X;
+///   class Y : public X {};  // directly derived
+///   class Z : public Y {};  // indirectly derived
+///   typedef X A;
+///   typedef A B;
+///   class C : public B {};  // derived from a typedef of X
+/// \endcode
+///
+/// In the following example, Bar matches isDerivedFrom(hasName("X")):
+/// \code
+///   class Foo;
+///   typedef Foo X;
+///   class Bar : public Foo {};  // derived from a type that X is a typedef of
+/// \endcode
+AST_MATCHER_P_OVERLOAD(CXXRecordDecl, isDirectlyDerivedFrom,
+                       internal::Matcher<NamedDecl>, Base, 0) {
+  return Finder->classIsDerivedFrom(&Node, Base, Builder, /*Directly=*/true);
+}
+
+/// Overloaded method as shortcut for \c isDirectlyDerivedFrom(hasName(...)).
+AST_MATCHER_P_OVERLOAD(CXXRecordDecl, isDirectlyDerivedFrom, std::string,
+                       BaseName, 1) {
+  if (BaseName.empty())
+    return false;
+  return isDirectlyDerivedFrom(hasName(BaseName))
+      .matches(Node, Finder, Builder);
+}
 /// Matches the first method of a class or struct that satisfies \c
 /// InnerMatcher.
 ///

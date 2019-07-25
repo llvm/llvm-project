@@ -11,12 +11,21 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Remarks/RemarkStringTable.h"
+#include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/Error.h"
 #include <vector>
 
 using namespace llvm;
 using namespace llvm::remarks;
+
+StringTable::StringTable(const ParsedStringTable &Other) : StrTab() {
+  for (unsigned i = 0, e = Other.size(); i < e; ++i)
+    if (Expected<StringRef> MaybeStr = Other[i])
+      add(*MaybeStr);
+    else
+      llvm_unreachable("Unexpected error while building remarks string table.");
+}
 
 std::pair<unsigned, StringRef> StringTable::add(StringRef Str) {
   size_t NextID = StrTab.size();
@@ -29,9 +38,6 @@ std::pair<unsigned, StringRef> StringTable::add(StringRef Str) {
 }
 
 void StringTable::serialize(raw_ostream &OS) const {
-  // Emit the number of strings.
-  uint64_t StrTabSize = SerializedSize;
-  support::endian::write(OS, StrTabSize, support::little);
   // Emit the sequence of strings.
   for (StringRef Str : serialize()) {
     OS << Str;

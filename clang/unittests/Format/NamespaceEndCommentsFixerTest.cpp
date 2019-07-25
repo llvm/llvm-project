@@ -77,6 +77,44 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
                                     "int i;\n"
                                     "int j;\n"
                                     "}"));
+
+  EXPECT_EQ("namespace [[deprecated(\"foo\")]] A::B {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A::B",
+            fixNamespaceEndComments("namespace [[deprecated(\"foo\")]] A::B {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}"));
+
+  EXPECT_EQ("namespace [[deprecated(\"foo\")]] A::inline B::inline C {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A::inline B::inline C",
+            fixNamespaceEndComments(
+                "namespace [[deprecated(\"foo\")]] A::inline B::inline C {\n"
+                "int i;\n"
+                "int j;\n"
+                "}"));
+
+  EXPECT_EQ("namespace DEPRECATED A::B {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A::B",
+            fixNamespaceEndComments("namespace DEPRECATED A::B {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}"));
+
+  EXPECT_EQ("inline namespace [[deprecated]] A {\n"
+            "int i;\n"
+            "int j;\n"
+            "}// namespace A",
+            fixNamespaceEndComments("inline namespace [[deprecated]] A {\n"
+                                    "int i;\n"
+                                    "int j;\n"
+                                    "}"));
+
   EXPECT_EQ("namespace ::A {\n"
             "int i;\n"
             "int j;\n"
@@ -410,7 +448,8 @@ TEST_F(NamespaceEndCommentsFixerTest, DoesNotAddCommentAfterUnaffectedRBrace) {
                                     /*Ranges=*/{1, tooling::Range(16, 3)}));
 }
 
-TEST_F(NamespaceEndCommentsFixerTest, DoesNotAddCommentAfterRBraceInPPDirective) {
+TEST_F(NamespaceEndCommentsFixerTest,
+       DoesNotAddCommentAfterRBraceInPPDirective) {
   EXPECT_EQ("#define SAD \\\n"
             "namespace A { \\\n"
             "int i; \\\n"

@@ -51,6 +51,9 @@ struct LoopAttributes {
   /// Value for llvm.loop.unroll_and_jam.* metadata (enable, disable, or full).
   LVEnableState UnrollAndJamEnable;
 
+  /// Value for llvm.loop.vectorize.predicate metadata
+  LVEnableState VectorizePredicateEnable;
+
   /// Value for llvm.loop.vectorize.width metadata.
   unsigned VectorizeWidth;
 
@@ -235,6 +238,11 @@ public:
   /// Set the next pushed loop unroll state.
   void setUnrollState(const LoopAttributes::LVEnableState &State) {
     StagedAttrs.UnrollEnable = State;
+  }
+
+  /// Set the next pushed vectorize predicate state.
+  void setVectorizePredicateState(const LoopAttributes::LVEnableState &State) {
+    StagedAttrs.VectorizePredicateEnable = State;
   }
 
   /// Set the next pushed loop unroll_and_jam state.

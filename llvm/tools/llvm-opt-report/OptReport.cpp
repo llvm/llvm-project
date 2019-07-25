@@ -15,6 +15,7 @@
 
 #include "llvm-c/Remarks.h"
 #include "llvm/Demangle/Demangle.h"
+#include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Remarks/RemarkParser.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
@@ -27,14 +28,12 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/WithColor.h"
-#include "llvm/Support/YAMLTraits.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cstdlib>
 #include <map>
 #include <set>
 
 using namespace llvm;
-using namespace llvm::yaml;
 
 // Mark all our options with this category, everything else (except for -version
 // and -help) will be hidden.
@@ -60,6 +59,11 @@ static cl::opt<bool>
 static cl::opt<bool>
   NoDemangle("no-demangle", cl::desc("Don't demangle function names"),
              cl::init(false), cl::cat(OptReportCategory));
+
+static cl::opt<std::string> ParserFormat("format",
+                                         cl::desc("The format of the remarks."),
+                                         cl::init("yaml"),
+                                         cl::cat(OptReportCategory));
 
 namespace {
 // For each location in the source file, the common per-transformation state
@@ -150,15 +154,24 @@ static bool readLocationInfo(LocationInfoTy &LocationInfo) {
     return false;
   }
 
-  Expected<std::unique_ptr<remarks::Parser>> MaybeParser =
-      remarks::createRemarkParser(remarks::Format::YAML, (*Buf)->getBuffer());
+  Expected<remarks::Format> Format = remarks::parseFormat(ParserFormat);
+  if (!Format) {
+    handleAllErrors(Format.takeError(), [&](const ErrorInfoBase &PE) {
+      PE.log(WithColor::error());
+      WithColor::error() << '\n';
+    });
+    return false;
+  }
+
+  Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
+      remarks::createRemarkParser(*Format, (*Buf)->getBuffer());
   if (!MaybeParser) {
     handleAllErrors(MaybeParser.takeError(), [&](const ErrorInfoBase &PE) {
       PE.log(WithColor::error());
     });
     return false;
   }
-  remarks::Parser &Parser = **MaybeParser;
+  remarks::RemarkParser &Parser = **MaybeParser;
 
   while (true) {
     Expected<std::unique_ptr<remarks::Remark>> MaybeRemark = Parser.next();

@@ -4,19 +4,19 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe
-# RUN: llvm-objdump -d -s -t %t.exe | FileCheck %s
+# RUN: llvm-objdump -d -s -t --no-show-raw-insn %t.exe | FileCheck %s
 # RUN: llvm-readobj -r %t.exe | FileCheck -check-prefix=REL %s
 
 # CHECK:      __start:
-# CHECK-NEXT:    20000:   3c 1c 00 01   lui     $gp, 1
-#                                                    ^-- 0x20000 - 0x37ff0
-#                                                    ^-- 0 - 0xfffffffffffe8010
-#                                                    ^-- %hi(0x17ff0)
+# CHECK-NEXT:    20000:       lui     $gp, 1
+#                                          ^-- 0x20000 - 0x37ff0
+#                                          ^-- 0 - 0xfffffffffffe8010
+#                                          ^-- %hi(0x17ff0)
 # CHECK:      loc:
-# CHECK-NEXT:    20004:   67 9c 7f f0   daddiu  $gp, $gp, 32752
-#                                                    ^-- 0x20000 - 0x37ff0
-#                                                    ^-- 0 - 0xfffffffffffe8010
-#                                                    ^-- %lo(0x17ff0)
+# CHECK-NEXT:    20004:       daddiu  $gp, $gp, 32752
+#                                          ^-- 0x20000 - 0x37ff0
+#                                          ^-- 0 - 0xfffffffffffe8010
+#                                          ^-- %lo(0x17ff0)
 
 # CHECK:      Contents of section .rodata:
 # CHECK-NEXT:  {{[0-9a-f]+}} ffffffff fffe8014

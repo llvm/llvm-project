@@ -539,6 +539,12 @@ public:
     return hasAndNotCompare(X);
   }
 
+  /// Return true if the target has a bit-test instruction:
+  ///   (X & (1 << Y)) ==/!= 0
+  /// This knowledge can be used to prevent breaking the pattern,
+  /// or creating it if it could be recognized.
+  virtual bool hasBitTest(SDValue X, SDValue Y) const { return false; }
+
   /// There are two ways to clear extreme bits (either low or high):
   /// Mask:    x &  (-1 << y)  (the instcombine canonical form)
   /// Shifts:  x >> y << y
@@ -569,6 +575,38 @@ public:
                                                     unsigned KeptBits) const {
     // By default, let's assume that no one prefers shifts.
     return false;
+  }
+
+  /// Given the pattern
+  ///   (X & (C l>>/<< Y)) ==/!= 0
+  /// return true if it should be transformed into:
+  ///   ((X <</l>> Y) & C) ==/!= 0
+  /// WARNING: if 'X' is a constant, the fold may deadlock!
+  /// FIXME: we could avoid passing XC, but we can't use isConstOrConstSplat()
+  ///        here because it can end up being not linked in.
+  virtual bool shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(
+      SDValue X, ConstantSDNode *XC, ConstantSDNode *CC, SDValue Y,
+      unsigned OldShiftOpcode, unsigned NewShiftOpcode,
+      SelectionDAG &DAG) const {
+    if (hasBitTest(X, Y)) {
+      // One interesting pattern that we'd want to form is 'bit test':
+      //   ((1 << Y) & C) ==/!= 0
+      // But we also need to be careful not to try to reverse that fold.
+
+      // Is this '1 << Y' ?
+      if (OldShiftOpcode == ISD::SHL && CC->isOne())
+        return false; // Keep the 'bit test' pattern.
+
+      // Will it be '1 << Y' after the transform ?
+      if (XC && NewShiftOpcode == ISD::SHL && XC->isOne())
+        return true; // Do form the 'bit test' pattern.
+    }
+
+    // If 'X' is a constant, and we transform, then we will immediately
+    // try to undo the fold, thus causing endless combine loop.
+    // So by default, let's assume everyone prefers the fold
+    // iff 'X' is not a constant.
+    return !XC;
   }
 
   /// These two forms are equivalent:
@@ -1426,6 +1464,14 @@ public:
     return false;
   }
 
+  /// LLT handling variant.
+  virtual bool allowsMisalignedMemoryAccesses(
+      LLT, unsigned AddrSpace = 0, unsigned Align = 1,
+      MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
+      bool * /*Fast*/ = nullptr) const {
+    return false;
+  }
+
   /// Return true if the target supports a memory access of this type for the
   /// given address space and alignment. If the access is allowed, the optional
   /// final parameter returns if the access is also fast (as defined by the
@@ -1461,6 +1507,16 @@ public:
                       bool /*ZeroMemset*/, bool /*MemcpyStrSrc*/,
                       const AttributeList & /*FuncAttributes*/) const {
     return MVT::Other;
+  }
+
+
+  /// LLT returning variant.
+  virtual LLT
+  getOptimalMemOpLLT(uint64_t /*Size*/, unsigned /*DstAlign*/,
+                     unsigned /*SrcAlign*/, bool /*IsMemset*/,
+                     bool /*ZeroMemset*/, bool /*MemcpyStrSrc*/,
+                     const AttributeList & /*FuncAttributes*/) const {
+    return LLT();
   }
 
   /// Returns true if it's safe to use load / store of the specified type to
@@ -2790,7 +2846,7 @@ protected:
   /// expected to be merged.
   unsigned GatherAllAliasesMaxDepth;
 
-  /// Specify maximum number of store instructions per memset call.
+  /// \brief Specify maximum number of store instructions per memset call.
   ///
   /// When lowering \@llvm.memset this field specifies the maximum number of
   /// store operations that may be substituted for the call to memset. Targets
@@ -2801,12 +2857,10 @@ protected:
   /// with 16-bit alignment would result in four 2-byte stores and one 1-byte
   /// store.  This only applies to setting a constant array of a constant size.
   unsigned MaxStoresPerMemset;
-
-  /// Maximum number of stores operations that may be substituted for the call
-  /// to memset, used for functions with OptSize attribute.
+  /// Likewise for functions with the OptSize attribute.
   unsigned MaxStoresPerMemsetOptSize;
 
-  /// Specify maximum bytes of store instructions per memcpy call.
+  /// \brief Specify maximum number of store instructions per memcpy call.
   ///
   /// When lowering \@llvm.memcpy this field specifies the maximum number of
   /// store operations that may be substituted for a call to memcpy. Targets
@@ -2818,8 +2872,8 @@ protected:
   /// and one 1-byte store. This only applies to copying a constant array of
   /// constant size.
   unsigned MaxStoresPerMemcpy;
-
-
+  /// Likewise for functions with the OptSize attribute.
+  unsigned MaxStoresPerMemcpyOptSize;
   /// \brief Specify max number of store instructions to glue in inlined memcpy.
   ///
   /// When memcpy is inlined based on MaxStoresPerMemcpy, specify maximum number
@@ -2827,13 +2881,22 @@ protected:
   //  vectorization later on.
   unsigned MaxGluedStoresPerMemcpy = 0;
 
-  /// Maximum number of store operations that may be substituted for a call to
-  /// memcpy, used for functions with OptSize attribute.
-  unsigned MaxStoresPerMemcpyOptSize;
+  /// \brief Specify maximum number of load instructions per memcmp call.
+  ///
+  /// When lowering \@llvm.memcmp this field specifies the maximum number of
+  /// pairs of load operations that may be substituted for a call to memcmp.
+  /// Targets must set this value based on the cost threshold for that target.
+  /// Targets should assume that the memcmp will be done using as many of the
+  /// largest load operations first, followed by smaller ones, if necessary, per
+  /// alignment restrictions. For example, loading 7 bytes on a 32-bit machine
+  /// with 32-bit alignment would result in one 4-byte load, a one 2-byte load
+  /// and one 1-byte load. This only applies to copying a constant array of
+  /// constant size.
   unsigned MaxLoadsPerMemcmp;
+  /// Likewise for functions with the OptSize attribute.
   unsigned MaxLoadsPerMemcmpOptSize;
 
-  /// Specify maximum bytes of store instructions per memmove call.
+  /// \brief Specify maximum number of store instructions per memmove call.
   ///
   /// When lowering \@llvm.memmove this field specifies the maximum number of
   /// store instructions that may be substituted for a call to memmove. Targets
@@ -2844,9 +2907,7 @@ protected:
   /// with 8-bit alignment would result in nine 1-byte stores.  This only
   /// applies to copying a constant array of constant size.
   unsigned MaxStoresPerMemmove;
-
-  /// Maximum number of store instructions that may be substituted for a call to
-  /// memmove, used for functions with OptSize attribute.
+  /// Likewise for functions with the OptSize attribute.
   unsigned MaxStoresPerMemmoveOptSize;
 
   /// Tells the code generator that select is more expensive than a branch if
@@ -3065,6 +3126,14 @@ public:
   bool SimplifyDemandedBits(SDValue Op, const APInt &DemandedMask,
                             DAGCombinerInfo &DCI) const;
 
+  /// More limited version of SimplifyDemandedBits that can be used to "look
+  /// through" ops that don't contribute to the DemandedBits/DemandedElts -
+  /// bitwise ops etc.
+  SDValue SimplifyMultipleUseDemandedBits(SDValue Op, const APInt &DemandedBits,
+                                          const APInt &DemandedElts,
+                                          SelectionDAG &DAG,
+                                          unsigned Depth) const;
+
   /// Look at Vector Op. At this point, we know that only the DemandedElts
   /// elements of the result of Op are ever used downstream.  If we can use
   /// this information to simplify Op, create a new simplified DAG node and
@@ -3138,6 +3207,13 @@ public:
                                                  KnownBits &Known,
                                                  TargetLoweringOpt &TLO,
                                                  unsigned Depth = 0) const;
+
+  /// More limited version of SimplifyDemandedBits that can be used to "look
+  /// through" ops that don't contribute to the DemandedBits/DemandedElts -
+  /// bitwise ops etc.
+  virtual SDValue SimplifyMultipleUseDemandedBitsForTargetNode(
+      SDValue Op, const APInt &DemandedBits, const APInt &DemandedElts,
+      SelectionDAG &DAG, unsigned Depth) const;
 
   /// This method returns the constant pool value that will be loaded by LD.
   /// NOTE: You must check for implicit extensions of the constant by LD.
@@ -4069,6 +4145,11 @@ private:
                                                SDValue N1, ISD::CondCode Cond,
                                                DAGCombinerInfo &DCI,
                                                const SDLoc &DL) const;
+
+  // (X & (C l>>/<< Y)) ==/!= 0  -->  ((X <</l>> Y) & C) ==/!= 0
+  SDValue optimizeSetCCByHoistingAndByConstFromLogicalShift(
+      EVT SCCVT, SDValue N0, SDValue N1C, ISD::CondCode Cond,
+      DAGCombinerInfo &DCI, const SDLoc &DL) const;
 
   SDValue prepareUREMEqFold(EVT SETCCVT, SDValue REMNode,
                             SDValue CompTargetNode, ISD::CondCode Cond,

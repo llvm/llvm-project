@@ -70,8 +70,8 @@ PlatformSP PlatformMacOSX::CreateInstance(bool force, const ArchSpec *arch) {
     const char *triple_cstr =
         arch ? arch->GetTriple().getTriple().c_str() : "<null>";
 
-    log->Printf("PlatformMacOSX::%s(force=%s, arch={%s,%s})", __FUNCTION__,
-                force ? "true" : "false", arch_name, triple_cstr);
+    LLDB_LOGF(log, "PlatformMacOSX::%s(force=%s, arch={%s,%s})", __FUNCTION__,
+              force ? "true" : "false", arch_name, triple_cstr);
   }
 
   // The only time we create an instance is when we are creating a remote
@@ -117,14 +117,12 @@ PlatformSP PlatformMacOSX::CreateInstance(bool force, const ArchSpec *arch) {
     }
   }
   if (create) {
-    if (log)
-      log->Printf("PlatformMacOSX::%s() creating platform", __FUNCTION__);
+    LLDB_LOGF(log, "PlatformMacOSX::%s() creating platform", __FUNCTION__);
     return PlatformSP(new PlatformMacOSX(is_host));
   }
 
-  if (log)
-    log->Printf("PlatformMacOSX::%s() aborting creation of platform",
-                __FUNCTION__);
+  LLDB_LOGF(log, "PlatformMacOSX::%s() aborting creation of platform",
+            __FUNCTION__);
 
   return PlatformSP();
 }

@@ -134,17 +134,17 @@ private:
 
 } // namespace
 
-void ento::createHTMLDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
-                                        PathDiagnosticConsumers &C,
-                                        const std::string& prefix,
-                                        const Preprocessor &PP) {
+void ento::createHTMLDiagnosticConsumer(
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    const std::string &prefix, const Preprocessor &PP,
+    const cross_tu::CrossTranslationUnitContext &) {
   C.push_back(new HTMLDiagnostics(AnalyzerOpts, prefix, PP, true));
 }
 
-void ento::createHTMLSingleFileDiagnosticConsumer(AnalyzerOptions &AnalyzerOpts,
-                                                  PathDiagnosticConsumers &C,
-                                                  const std::string& prefix,
-                                                  const Preprocessor &PP) {
+void ento::createHTMLSingleFileDiagnosticConsumer(
+    AnalyzerOptions &AnalyzerOpts, PathDiagnosticConsumers &C,
+    const std::string &prefix, const Preprocessor &PP,
+    const cross_tu::CrossTranslationUnitContext &) {
   C.push_back(new HTMLDiagnostics(AnalyzerOpts, prefix, PP, false));
 }
 

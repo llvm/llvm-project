@@ -60,11 +60,11 @@ SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap(
     return file_range_map;
 
   Log *log(LogChannelDWARF::GetLogIfAll(DWARF_LOG_DEBUG_MAP));
-  if (log)
-    log->Printf(
-        "%p: SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap ('%s')",
-        static_cast<void *>(this),
-        oso_module->GetSpecificationDescription().c_str());
+  LLDB_LOGF(
+      log,
+      "%p: SymbolFileDWARFDebugMap::CompileUnitInfo::GetFileRangeMap ('%s')",
+      static_cast<void *>(this),
+      oso_module->GetSpecificationDescription().c_str());
 
   std::vector<SymbolFileDWARFDebugMap::CompileUnitInfo *> cu_infos;
   if (exe_symfile->GetCompUnitInfosForModule(oso_module, cu_infos)) {
@@ -363,9 +363,8 @@ void SymbolFileDWARFDebugMap::InitOSO() {
             m_compile_unit_infos[i].first_symbol_id = so_symbol->GetID();
             m_compile_unit_infos[i].last_symbol_id = last_symbol->GetID();
 
-            if (log)
-              log->Printf("Initialized OSO 0x%8.8x: file=%s", i,
-                          oso_symbol->GetName().GetCString());
+            LLDB_LOGF(log, "Initialized OSO 0x%8.8x: file=%s", i,
+                      oso_symbol->GetName().GetCString());
           }
         } else {
           if (oso_symbol == nullptr)
@@ -562,7 +561,7 @@ uint32_t SymbolFileDWARFDebugMap::CalculateAbilities() {
   return 0;
 }
 
-uint32_t SymbolFileDWARFDebugMap::GetNumCompileUnits() {
+uint32_t SymbolFileDWARFDebugMap::CalculateNumCompileUnits() {
   InitOSO();
   return m_compile_unit_infos.size();
 }
@@ -585,9 +584,8 @@ CompUnitSP SymbolFileDWARFDebugMap::ParseCompileUnitAtIndex(uint32_t cu_idx) {
                 eLanguageTypeUnknown, eLazyBoolCalculate);
 
         if (m_compile_unit_infos[cu_idx].compile_unit_sp) {
-          // Let our symbol vendor know about this compile unit
-          m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(
-              cu_idx, m_compile_unit_infos[cu_idx].compile_unit_sp);
+          SetCompileUnitAtIndex(cu_idx,
+                                m_compile_unit_infos[cu_idx].compile_unit_sp);
         }
       }
     }
@@ -1284,8 +1282,7 @@ void SymbolFileDWARFDebugMap::SetCompileUnit(SymbolFileDWARF *oso_dwarf,
                  cu_sp.get());
         } else {
           m_compile_unit_infos[cu_idx].compile_unit_sp = cu_sp;
-          m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(
-              cu_idx, cu_sp);
+          SetCompileUnitAtIndex(cu_idx, cu_sp);
         }
       }
     }

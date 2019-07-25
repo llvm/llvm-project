@@ -1931,19 +1931,19 @@ define amdgpu_kernel void @v_sdiv_i24(i32 addrspace(1)* %out, i24 addrspace(1)* 
 ; GCN-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-NEXT:    v_or_b32_e32 v0, v0, v1
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    v_or_b32_e32 v1, v2, v3
-; GCN-NEXT:    v_xor_b32_e32 v2, v0, v1
+; GCN-NEXT:    v_or_b32_e32 v2, v2, v3
+; GCN-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GCN-NEXT:    v_ashrrev_i32_e32 v1, 30, v1
 ; GCN-NEXT:    v_cvt_f32_i32_e32 v0, v0
-; GCN-NEXT:    v_cvt_f32_i32_e32 v1, v1
-; GCN-NEXT:    v_ashrrev_i32_e32 v2, 30, v2
-; GCN-NEXT:    v_rcp_iflag_f32_e32 v3, v1
-; GCN-NEXT:    v_or_b32_e32 v2, 1, v2
+; GCN-NEXT:    v_cvt_f32_i32_e32 v2, v2
+; GCN-NEXT:    v_or_b32_e32 v1, 1, v1
+; GCN-NEXT:    v_rcp_iflag_f32_e32 v3, v2
 ; GCN-NEXT:    v_mul_f32_e32 v3, v0, v3
 ; GCN-NEXT:    v_trunc_f32_e32 v3, v3
-; GCN-NEXT:    v_mad_f32 v0, -v3, v1, v0
+; GCN-NEXT:    v_mad_f32 v0, -v3, v2, v0
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v3, v3
-; GCN-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, |v1|
-; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v2, vcc
+; GCN-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, |v2|
+; GCN-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; GCN-NEXT:    v_add_i32_e32 v0, vcc, v0, v3
 ; GCN-NEXT:    v_bfe_i32 v0, v0, 0, 24
 ; GCN-NEXT:    buffer_store_dword v0, off, s[4:7], 0
@@ -1970,21 +1970,21 @@ define amdgpu_kernel void @v_sdiv_i24(i32 addrspace(1)* %out, i24 addrspace(1)* 
 ; TONGA-NEXT:    s_waitcnt vmcnt(1)
 ; TONGA-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
 ; TONGA-NEXT:    v_or_b32_e32 v1, v1, v2
-; TONGA-NEXT:    v_cvt_f32_i32_e32 v2, v1
+; TONGA-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; TONGA-NEXT:    s_waitcnt vmcnt(0)
-; TONGA-NEXT:    v_or_b32_e32 v0, v3, v0
-; TONGA-NEXT:    v_cvt_f32_i32_e32 v3, v0
-; TONGA-NEXT:    v_xor_b32_e32 v0, v0, v1
-; TONGA-NEXT:    v_rcp_iflag_f32_e32 v4, v2
+; TONGA-NEXT:    v_or_b32_e32 v3, v3, v0
+; TONGA-NEXT:    v_cvt_f32_i32_e32 v3, v3
+; TONGA-NEXT:    v_xor_b32_e32 v0, v0, v2
+; TONGA-NEXT:    v_rcp_iflag_f32_e32 v4, v1
 ; TONGA-NEXT:    v_ashrrev_i32_e32 v0, 30, v0
 ; TONGA-NEXT:    v_or_b32_e32 v0, 1, v0
-; TONGA-NEXT:    v_mul_f32_e32 v1, v3, v4
-; TONGA-NEXT:    v_trunc_f32_e32 v1, v1
-; TONGA-NEXT:    v_mad_f32 v3, -v1, v2, v3
-; TONGA-NEXT:    v_cvt_i32_f32_e32 v1, v1
-; TONGA-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, |v2|
+; TONGA-NEXT:    v_mul_f32_e32 v2, v3, v4
+; TONGA-NEXT:    v_trunc_f32_e32 v2, v2
+; TONGA-NEXT:    v_mad_f32 v3, -v2, v1, v3
+; TONGA-NEXT:    v_cvt_i32_f32_e32 v2, v2
+; TONGA-NEXT:    v_cmp_ge_f32_e64 vcc, |v3|, |v1|
 ; TONGA-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
-; TONGA-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
+; TONGA-NEXT:    v_add_u32_e32 v0, vcc, v0, v2
 ; TONGA-NEXT:    v_bfe_i32 v0, v0, 0, 24
 ; TONGA-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; TONGA-NEXT:    s_endpgm
@@ -2011,18 +2011,18 @@ define amdgpu_kernel void @v_sdiv_i24(i32 addrspace(1)* %out, i24 addrspace(1)* 
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_lshlrev_b32_e32 v3, 16, v3
 ; GFX9-NEXT:    v_or_b32_e32 v2, v2, v3
-; GFX9-NEXT:    v_cvt_f32_i32_e32 v3, v2
-; GFX9-NEXT:    v_cvt_f32_i32_e32 v1, v0
-; GFX9-NEXT:    v_xor_b32_e32 v0, v0, v2
-; GFX9-NEXT:    v_ashrrev_i32_e32 v0, 30, v0
-; GFX9-NEXT:    v_rcp_iflag_f32_e32 v4, v3
-; GFX9-NEXT:    v_or_b32_e32 v0, 1, v0
-; GFX9-NEXT:    v_mul_f32_e32 v2, v1, v4
-; GFX9-NEXT:    v_trunc_f32_e32 v2, v2
-; GFX9-NEXT:    v_cvt_i32_f32_e32 v4, v2
-; GFX9-NEXT:    v_mad_f32 v1, -v2, v3, v1
-; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v1|, |v3|
-; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v0, vcc
+; GFX9-NEXT:    v_cvt_f32_i32_e32 v2, v2
+; GFX9-NEXT:    v_cvt_f32_i32_e32 v0, v0
+; GFX9-NEXT:    v_xor_b32_e32 v1, v1, v3
+; GFX9-NEXT:    v_ashrrev_i32_e32 v1, 30, v1
+; GFX9-NEXT:    v_rcp_iflag_f32_e32 v4, v2
+; GFX9-NEXT:    v_or_b32_e32 v1, 1, v1
+; GFX9-NEXT:    v_mul_f32_e32 v3, v0, v4
+; GFX9-NEXT:    v_trunc_f32_e32 v3, v3
+; GFX9-NEXT:    v_cvt_i32_f32_e32 v4, v3
+; GFX9-NEXT:    v_mad_f32 v0, -v3, v2, v0
+; GFX9-NEXT:    v_cmp_ge_f32_e64 vcc, |v0|, |v2|
+; GFX9-NEXT:    v_cndmask_b32_e32 v0, 0, v1, vcc
 ; GFX9-NEXT:    v_add_u32_e32 v0, v4, v0
 ; GFX9-NEXT:    v_bfe_i32 v0, v0, 0, 24
 ; GFX9-NEXT:    buffer_store_dword v0, off, s[0:3], 0

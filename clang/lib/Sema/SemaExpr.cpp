@@ -5375,8 +5375,8 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
   QualType DeclType = FDecl->getType();
   const FunctionProtoType *FT = dyn_cast<FunctionProtoType>(DeclType);
 
-  if (!Context.BuiltinInfo.hasPtrArgsOrResult(FDecl->getBuiltinID()) ||
-      !FT || FT->isVariadic() || ArgExprs.size() != FT->getNumParams())
+  if (!Context.BuiltinInfo.hasPtrArgsOrResult(FDecl->getBuiltinID()) || !FT ||
+      ArgExprs.size() < FT->getNumParams())
     return nullptr;
 
   bool NeedsNewDecl = false;
@@ -5415,6 +5415,7 @@ static FunctionDecl *rewriteBuiltinFunctionDecl(Sema *Sema, ASTContext &Context,
     return nullptr;
 
   FunctionProtoType::ExtProtoInfo EPI;
+  EPI.Variadic = FT->isVariadic();
   QualType OverloadTy = Context.getFunctionType(FT->getReturnType(),
                                                 OverloadParams, EPI);
   DeclContext *Parent = FDecl->getParent();

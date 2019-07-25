@@ -374,10 +374,42 @@ static void checkArchDuplicates(const ArrayRef<Slice> &Slices) {
   }
 }
 
-static uint32_t calculateAlignment(const MachOObjectFile *ObjectFile) {
-  // TODO: Implement getAlign() and remove hard coding
-  // Will be implemented in a follow-up.
+// For compatibility with cctools lipo, alignment is calculated as the minimum
+// aligment of all segments. Each segments's alignment is the maximum alignment
+// from its sections
+static uint32_t calculateSegmentAlignment(const MachOObjectFile &O) {
+  uint32_t P2CurrentAlignment;
+  uint32_t P2MinAlignment = MachOUniversalBinary::MaxSectionAlignment;
+  const bool Is64Bit = O.is64Bit();
 
+  for (const auto &LC : O.load_commands()) {
+    if (LC.C.cmd != (Is64Bit ? MachO::LC_SEGMENT_64 : MachO::LC_SEGMENT))
+      continue;
+    if (O.getHeader().filetype == MachO::MH_OBJECT) {
+      unsigned NumberOfSections =
+          (Is64Bit ? O.getSegment64LoadCommand(LC).nsects
+                   : O.getSegmentLoadCommand(LC).nsects);
+      P2CurrentAlignment = NumberOfSections ? 2 : P2MinAlignment;
+      for (unsigned SI = 0; SI < NumberOfSections; ++SI) {
+        P2CurrentAlignment = std::max(P2CurrentAlignment,
+                                      (Is64Bit ? O.getSection64(LC, SI).align
+                                               : O.getSection(LC, SI).align));
+      }
+    } else {
+      P2CurrentAlignment =
+          countTrailingZeros(Is64Bit ? O.getSegment64LoadCommand(LC).vmaddr
+                                     : O.getSegmentLoadCommand(LC).vmaddr);
+    }
+    P2MinAlignment = std::min(P2MinAlignment, P2CurrentAlignment);
+  }
+  // return a value >= 4 byte aligned, and less than MachO MaxSectionAlignment
+  return std::max(
+      static_cast<uint32_t>(2),
+      std::min(P2MinAlignment, static_cast<uint32_t>(
+                                   MachOUniversalBinary::MaxSectionAlignment)));
+}
+
+static uint32_t calculateAlignment(const MachOObjectFile *ObjectFile) {
   switch (ObjectFile->getHeader().cputype) {
   case MachO::CPU_TYPE_I386:
   case MachO::CPU_TYPE_X86_64:
@@ -389,7 +421,7 @@ static uint32_t calculateAlignment(const MachOObjectFile *ObjectFile) {
   case MachO::CPU_TYPE_ARM64_32:
     return 14; // log2 value of page size(16k) for Darwin ARM
   default:
-    return 12;
+    return calculateSegmentAlignment(*ObjectFile);
   }
 }
 
