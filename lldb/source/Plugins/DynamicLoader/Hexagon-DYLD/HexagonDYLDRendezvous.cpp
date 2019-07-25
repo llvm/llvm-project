@@ -339,16 +339,16 @@ void HexagonDYLDRendezvous::DumpToLog(Log *log) const {
     return;
 
   log->PutCString("HexagonDYLDRendezvous:");
-  log->Printf("   Address: %" PRIx64, GetRendezvousAddress());
-  log->Printf("   Version: %" PRIu64, GetVersion());
-  log->Printf("   Link   : %" PRIx64, GetLinkMapAddress());
-  log->Printf("   Break  : %" PRIx64, GetBreakAddress());
-  log->Printf("   LDBase : %" PRIx64, GetLDBase());
-  log->Printf("   State  : %s",
-              (state == eConsistent)
-                  ? "consistent"
-                  : (state == eAdd) ? "add" : (state == eDelete) ? "delete"
-                                                                 : "unknown");
+  LLDB_LOGF(log, "   Address: %" PRIx64, GetRendezvousAddress());
+  LLDB_LOGF(log, "   Version: %" PRIu64, GetVersion());
+  LLDB_LOGF(log, "   Link   : %" PRIx64, GetLinkMapAddress());
+  LLDB_LOGF(log, "   Break  : %" PRIx64, GetBreakAddress());
+  LLDB_LOGF(log, "   LDBase : %" PRIx64, GetLDBase());
+  LLDB_LOGF(log, "   State  : %s",
+            (state == eConsistent)
+                ? "consistent"
+                : (state == eAdd) ? "add"
+                                  : (state == eDelete) ? "delete" : "unknown");
 
   iterator I = begin();
   iterator E = end();
@@ -357,11 +357,11 @@ void HexagonDYLDRendezvous::DumpToLog(Log *log) const {
     log->PutCString("HexagonDYLDRendezvous SOEntries:");
 
   for (int i = 1; I != E; ++I, ++i) {
-    log->Printf("\n   SOEntry [%d] %s", i, I->path.c_str());
-    log->Printf("      Base : %" PRIx64, I->base_addr);
-    log->Printf("      Path : %" PRIx64, I->path_addr);
-    log->Printf("      Dyn  : %" PRIx64, I->dyn_addr);
-    log->Printf("      Next : %" PRIx64, I->next);
-    log->Printf("      Prev : %" PRIx64, I->prev);
+    LLDB_LOGF(log, "\n   SOEntry [%d] %s", i, I->path.c_str());
+    LLDB_LOGF(log, "      Base : %" PRIx64, I->base_addr);
+    LLDB_LOGF(log, "      Path : %" PRIx64, I->path_addr);
+    LLDB_LOGF(log, "      Dyn  : %" PRIx64, I->dyn_addr);
+    LLDB_LOGF(log, "      Next : %" PRIx64, I->next);
+    LLDB_LOGF(log, "      Prev : %" PRIx64, I->prev);
   }
 }

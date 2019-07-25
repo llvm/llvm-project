@@ -308,8 +308,7 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
 
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMUNICATION));
 
-  if (log)
-    log->Printf("%p Communication::ReadThread () thread starting...", p);
+  LLDB_LOGF(log, "%p Communication::ReadThread () thread starting...", p);
 
   uint8_t buf[1024];
 
@@ -364,7 +363,7 @@ lldb::thread_result_t Communication::ReadThread(lldb::thread_arg_t p) {
   }
   log = lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_COMMUNICATION);
   if (log)
-    log->Printf("%p Communication::ReadThread () thread exiting...", p);
+    LLDB_LOGF(log, "%p Communication::ReadThread () thread exiting...", p);
 
   comm->m_read_thread_did_exit = true;
   // Let clients know that this thread is exiting

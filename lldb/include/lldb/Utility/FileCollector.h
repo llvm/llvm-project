@@ -11,65 +11,29 @@
 
 #include "lldb/Utility/FileSpec.h"
 
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
-#include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Twine.h"
-#include "llvm/Support/VirtualFileSystem.h"
-
-#include <mutex>
+#include "llvm/Support/FileCollector.h"
 
 namespace lldb_private {
 
 /// Collects files into a directory and generates a mapping that can be used by
 /// the VFS.
-class FileCollector {
+class FileCollector : public llvm::FileCollector {
 public:
-  FileCollector(const FileSpec &root, const FileSpec &overlay);
+  FileCollector(const FileSpec &root, const FileSpec &overlay) :
+    llvm::FileCollector(root.GetPath(), overlay.GetPath()) {}
 
-  void AddFile(const llvm::Twine &file);
-  void AddFile(const FileSpec &file) { return AddFile(file.GetPath()); }
+  using llvm::FileCollector::addFile;
 
-  /// Write the yaml mapping (for the VFS) to the given file.
-  std::error_code WriteMapping(const FileSpec &mapping_file);
-
-  /// Copy the files into the root directory.
-  ///
-  /// When stop_on_error is true (the default) we abort as soon as one file
-  /// cannot be copied. This is relatively common, for example when a file was
-  /// removed after it was added to the mapping.
-  std::error_code CopyFiles(bool stop_on_error = true);
-
-protected:
-  void AddFileImpl(llvm::StringRef src_path);
-
-  bool MarkAsSeen(llvm::StringRef path) { return m_seen.insert(path).second; }
-
-  bool GetRealPath(llvm::StringRef src_path,
-                   llvm::SmallVectorImpl<char> &result);
-
-  void AddFileToMapping(llvm::StringRef virtual_path,
-                        llvm::StringRef real_path) {
-    m_vfs_writer.addFileMapping(virtual_path, real_path);
+  void addFile(const FileSpec &file) {
+    std::string path = file.GetPath();
+    llvm::FileCollector::addFile(path);
   }
 
-  /// Synchronizes adding files.
-  std::mutex m_mutex;
-
-  /// The root directory where files are copied.
-  FileSpec m_root;
-
-  /// The root directory where the VFS overlay lives.
-  FileSpec m_overlay_root;
-
-  /// Tracks already seen files so they can be skipped.
-  llvm::StringSet<> m_seen;
-
-  /// The yaml mapping writer.
-  llvm::vfs::YAMLVFSWriter m_vfs_writer;
-
-  /// Caches real_path calls when resolving symlinks.
-  llvm::StringMap<std::string> m_symlink_map;
+  /// Write the yaml mapping (for the VFS) to the given file.
+  std::error_code writeMapping(const FileSpec &mapping_file) {
+    std::string path = mapping_file.GetPath();
+    return llvm::FileCollector::writeMapping(path);
+  }
 };
 
 } // namespace lldb_private

@@ -99,9 +99,9 @@ public:
   void Keep() override {
     auto mapping = GetRoot().CopyByAppendingPathComponent(Info::file);
     // Temporary files that are removed during execution can cause copy errors.
-    if (auto ec = m_collector.CopyFiles(/*stop_on_error=*/false))
+    if (auto ec = m_collector.copyFiles(/*stop_on_error=*/false))
       return;
-    m_collector.WriteMapping(mapping);
+    m_collector.writeMapping(mapping);
   }
 
   static char ID;

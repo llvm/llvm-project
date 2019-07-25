@@ -94,9 +94,8 @@ void DeleteExistingModule(const FileSpec &root_dir_spec,
   Status error;
   ModuleLock lock(root_dir_spec, module_uuid, error);
   if (error.Fail()) {
-    if (log)
-      log->Printf("Failed to lock module %s: %s",
-                  module_uuid.GetAsString().c_str(), error.AsCString());
+    LLDB_LOGF(log, "Failed to lock module %s: %s",
+              module_uuid.GetAsString().c_str(), error.AsCString());
   }
 
   namespace fs = llvm::sys::fs;

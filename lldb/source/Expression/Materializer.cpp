@@ -93,9 +93,8 @@ public:
       return;
     }
 
-    if (log)
-      log->Printf("Allocated %s (0x%" PRIx64 ") successfully",
-                  m_persistent_variable_sp->GetName().GetCString(), mem);
+    LLDB_LOGF(log, "Allocated %s (0x%" PRIx64 ") successfully",
+              m_persistent_variable_sp->GetName().GetCString(), mem);
 
     // Put the location of the spare memory into the live data of the
     // ValueObject.
@@ -157,11 +156,12 @@ public:
     const lldb::addr_t load_addr = process_address + m_offset;
 
     if (log) {
-      log->Printf("EntityPersistentVariable::Materialize [address = 0x%" PRIx64
-                  ", m_name = %s, m_flags = 0x%hx]",
-                  (uint64_t)load_addr,
-                  m_persistent_variable_sp->GetName().AsCString(),
-                  m_persistent_variable_sp->m_flags);
+      LLDB_LOGF(log,
+                "EntityPersistentVariable::Materialize [address = 0x%" PRIx64
+                ", m_name = %s, m_flags = 0x%hx]",
+                (uint64_t)load_addr,
+                m_persistent_variable_sp->GetName().AsCString(),
+                m_persistent_variable_sp->m_flags);
     }
 
     if (m_persistent_variable_sp->m_flags &
@@ -208,12 +208,12 @@ public:
     const lldb::addr_t load_addr = process_address + m_offset;
 
     if (log) {
-      log->Printf(
-          "EntityPersistentVariable::Dematerialize [address = 0x%" PRIx64
-          ", m_name = %s, m_flags = 0x%hx]",
-          (uint64_t)process_address + m_offset,
-          m_persistent_variable_sp->GetName().AsCString(),
-          m_persistent_variable_sp->m_flags);
+      LLDB_LOGF(log,
+                "EntityPersistentVariable::Dematerialize [address = 0x%" PRIx64
+                ", m_name = %s, m_flags = 0x%hx]",
+                (uint64_t)process_address + m_offset,
+                m_persistent_variable_sp->GetName().AsCString(),
+                m_persistent_variable_sp->m_flags);
     }
 
     if (m_delegate) {
@@ -290,11 +290,10 @@ public:
               ExpressionVariable::EVNeedsFreezeDry ||
           m_persistent_variable_sp->m_flags &
               ExpressionVariable::EVKeepInTarget) {
-        if (log)
-          log->Printf(
-              "Dematerializing %s from 0x%" PRIx64 " (size = %llu)",
-              m_persistent_variable_sp->GetName().GetCString(), (uint64_t)mem,
-              (unsigned long long)m_persistent_variable_sp->GetByteSize());
+        LLDB_LOGF(log, "Dematerializing %s from 0x%" PRIx64 " (size = %llu)",
+                  m_persistent_variable_sp->GetName().GetCString(),
+                  (uint64_t)mem,
+                  (unsigned long long)m_persistent_variable_sp->GetByteSize());
 
         // Read the contents of the spare memory area
 
@@ -440,9 +439,10 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
     if (log) {
-      log->Printf("EntityVariable::Materialize [address = 0x%" PRIx64
-                  ", m_variable_sp = %s]",
-                  (uint64_t)load_addr, m_variable_sp->GetName().AsCString());
+      LLDB_LOGF(log,
+                "EntityVariable::Materialize [address = 0x%" PRIx64
+                ", m_variable_sp = %s]",
+                (uint64_t)load_addr, m_variable_sp->GetName().AsCString());
     }
 
     ExecutionContextScope *scope = frame_sp.get();
@@ -605,9 +605,10 @@ public:
 
     const lldb::addr_t load_addr = process_address + m_offset;
     if (log) {
-      log->Printf("EntityVariable::Dematerialize [address = 0x%" PRIx64
-                  ", m_variable_sp = %s]",
-                  (uint64_t)load_addr, m_variable_sp->GetName().AsCString());
+      LLDB_LOGF(log,
+                "EntityVariable::Dematerialize [address = 0x%" PRIx64
+                ", m_variable_sp = %s]",
+                (uint64_t)load_addr, m_variable_sp->GetName().AsCString());
     }
 
     if (m_temporary_allocation != LLDB_INVALID_ADDRESS) {
@@ -1063,9 +1064,10 @@ public:
     const lldb::addr_t load_addr = process_address + m_offset;
 
     if (log) {
-      log->Printf("EntitySymbol::Materialize [address = 0x%" PRIx64
-                  ", m_symbol = %s]",
-                  (uint64_t)load_addr, m_symbol.GetName().AsCString());
+      LLDB_LOGF(log,
+                "EntitySymbol::Materialize [address = 0x%" PRIx64
+                ", m_symbol = %s]",
+                (uint64_t)load_addr, m_symbol.GetName().AsCString());
     }
 
     const Address sym_address = m_symbol.GetAddress();
@@ -1109,9 +1111,10 @@ public:
     const lldb::addr_t load_addr = process_address + m_offset;
 
     if (log) {
-      log->Printf("EntitySymbol::Dematerialize [address = 0x%" PRIx64
-                  ", m_symbol = %s]",
-                  (uint64_t)load_addr, m_symbol.GetName().AsCString());
+      LLDB_LOGF(log,
+                "EntitySymbol::Dematerialize [address = 0x%" PRIx64
+                ", m_symbol = %s]",
+                (uint64_t)load_addr, m_symbol.GetName().AsCString());
     }
 
     // no work needs to be done
@@ -1178,9 +1181,10 @@ public:
     const lldb::addr_t load_addr = process_address + m_offset;
 
     if (log) {
-      log->Printf("EntityRegister::Materialize [address = 0x%" PRIx64
-                  ", m_register_info = %s]",
-                  (uint64_t)load_addr, m_register_info.name);
+      LLDB_LOGF(log,
+                "EntityRegister::Materialize [address = 0x%" PRIx64
+                ", m_register_info = %s]",
+                (uint64_t)load_addr, m_register_info.name);
     }
 
     RegisterValue reg_value;
@@ -1240,9 +1244,10 @@ public:
     const lldb::addr_t load_addr = process_address + m_offset;
 
     if (log) {
-      log->Printf("EntityRegister::Dematerialize [address = 0x%" PRIx64
-                  ", m_register_info = %s]",
-                  (uint64_t)load_addr, m_register_info.name);
+      LLDB_LOGF(log,
+                "EntityRegister::Dematerialize [address = 0x%" PRIx64
+                ", m_register_info = %s]",
+                (uint64_t)load_addr, m_register_info.name);
     }
 
     Status extract_error;
@@ -1379,7 +1384,8 @@ Materializer::Materialize(lldb::StackFrameSP &frame_sp, IRMemoryMap &map,
 
   if (Log *log =
           lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
-    log->Printf(
+    LLDB_LOGF(
+        log,
         "Materializer::Materialize (frame_sp = %p, process_address = 0x%" PRIx64
         ") materialized:",
         static_cast<void *>(frame_sp.get()), process_address);
@@ -1414,9 +1420,10 @@ void Materializer::Dematerializer::Dematerialize(Status &error,
   } else {
     if (Log *log =
             lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS)) {
-      log->Printf("Materializer::Dematerialize (frame_sp = %p, process_address "
-                  "= 0x%" PRIx64 ") about to dematerialize:",
-                  static_cast<void *>(frame_sp.get()), m_process_address);
+      LLDB_LOGF(log,
+                "Materializer::Dematerialize (frame_sp = %p, process_address "
+                "= 0x%" PRIx64 ") about to dematerialize:",
+                static_cast<void *>(frame_sp.get()), m_process_address);
       for (EntityUP &entity_up : m_materializer->m_entities)
         entity_up->DumpToLog(*m_map, m_process_address, log);
     }

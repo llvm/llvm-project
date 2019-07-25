@@ -288,9 +288,8 @@ void FreeBSDThread::DidStop() {
 
 void FreeBSDThread::WillResume(lldb::StateType resume_state) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
-  if (log)
-    log->Printf("tid %lu resume_state = %s", GetID(),
-                lldb_private::StateAsCString(resume_state));
+  LLDB_LOGF(log, "tid %lu resume_state = %s", GetID(),
+            lldb_private::StateAsCString(resume_state));
   ProcessSP process_sp(GetProcess());
   ProcessFreeBSD *process = static_cast<ProcessFreeBSD *>(process_sp.get());
   int signo = GetResumeSignal();
@@ -322,9 +321,8 @@ bool FreeBSDThread::Resume() {
   bool status;
 
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
-  if (log)
-    log->Printf("FreeBSDThread::%s (), resume_state = %s", __FUNCTION__,
-                StateAsCString(resume_state));
+  LLDB_LOGF(log, "FreeBSDThread::%s (), resume_state = %s", __FUNCTION__,
+            StateAsCString(resume_state));
 
   switch (resume_state) {
   default:
@@ -352,9 +350,8 @@ bool FreeBSDThread::Resume() {
 
 void FreeBSDThread::Notify(const ProcessMessage &message) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
-  if (log)
-    log->Printf("FreeBSDThread::%s () message kind = '%s' for tid %" PRIu64,
-                __FUNCTION__, message.PrintKind(), GetID());
+  LLDB_LOGF(log, "FreeBSDThread::%s () message kind = '%s' for tid %" PRIu64,
+            __FUNCTION__, message.PrintKind(), GetID());
 
   switch (message.GetKind()) {
   default:
@@ -457,8 +454,7 @@ void FreeBSDThread::BreakNotify(const ProcessMessage &message) {
   // corresponding to our current PC.
   assert(GetRegisterContext());
   lldb::addr_t pc = GetRegisterContext()->GetPC();
-  if (log)
-    log->Printf("FreeBSDThread::%s () PC=0x%8.8" PRIx64, __FUNCTION__, pc);
+  LLDB_LOGF(log, "FreeBSDThread::%s () PC=0x%8.8" PRIx64, __FUNCTION__, pc);
   lldb::BreakpointSiteSP bp_site(
       GetProcess()->GetBreakpointSiteList().FindByAddress(pc));
 
@@ -490,10 +486,9 @@ void FreeBSDThread::WatchNotify(const ProcessMessage &message) {
   Log *log(ProcessPOSIXLog::GetLogIfAllCategoriesSet(POSIX_LOG_THREAD));
 
   lldb::addr_t halt_addr = message.GetHWAddress();
-  if (log)
-    log->Printf(
-        "FreeBSDThread::%s () Hardware Watchpoint Address = 0x%8.8" PRIx64,
-        __FUNCTION__, halt_addr);
+  LLDB_LOGF(log,
+            "FreeBSDThread::%s () Hardware Watchpoint Address = 0x%8.8" PRIx64,
+            __FUNCTION__, halt_addr);
 
   POSIXBreakpointProtocol *reg_ctx = GetPOSIXBreakpointProtocol();
   if (reg_ctx) {
@@ -527,8 +522,7 @@ void FreeBSDThread::TraceNotify(const ProcessMessage &message) {
   // Try to resolve the breakpoint object corresponding to the current PC.
   assert(GetRegisterContext());
   lldb::addr_t pc = GetRegisterContext()->GetPC();
-  if (log)
-    log->Printf("FreeBSDThread::%s () PC=0x%8.8" PRIx64, __FUNCTION__, pc);
+  LLDB_LOGF(log, "FreeBSDThread::%s () PC=0x%8.8" PRIx64, __FUNCTION__, pc);
   lldb::BreakpointSiteSP bp_site(
       GetProcess()->GetBreakpointSiteList().FindByAddress(pc));
 

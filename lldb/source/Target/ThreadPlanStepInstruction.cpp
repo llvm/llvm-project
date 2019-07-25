@@ -114,8 +114,9 @@ bool ThreadPlanStepInstruction::IsPlanStale() {
     return !m_step_over;
   } else {
     if (log) {
-      log->Printf("ThreadPlanStepInstruction::IsPlanStale - Current frame is "
-                  "older than start frame, plan is stale.");
+      LLDB_LOGF(log,
+                "ThreadPlanStepInstruction::IsPlanStale - Current frame is "
+                "older than start frame, plan is stale.");
     }
     return true;
   }
@@ -127,9 +128,9 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
 
     StackFrameSP cur_frame_sp = m_thread.GetStackFrameAtIndex(0);
     if (!cur_frame_sp) {
-      if (log)
-        log->Printf(
-            "ThreadPlanStepInstruction couldn't get the 0th frame, stopping.");
+      LLDB_LOGF(
+          log,
+          "ThreadPlanStepInstruction couldn't get the 0th frame, stopping.");
       SetPlanComplete();
       return true;
     }
@@ -168,8 +169,9 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
                     cur_frame_sp->GetConcreteFrameIndex()) {
               SetPlanComplete();
               if (log) {
-                log->Printf("Frame we stepped into is inlined into the frame "
-                            "we were stepping from, stopping.");
+                LLDB_LOGF(log,
+                          "Frame we stepped into is inlined into the frame "
+                          "we were stepping from, stopping.");
               }
               return true;
             }
@@ -188,7 +190,7 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
             s.Address(return_addr, m_thread.CalculateTarget()
                                        ->GetArchitecture()
                                        .GetAddressByteSize());
-            log->Printf("%s.", s.GetData());
+            LLDB_LOGF(log, "%s.", s.GetData());
           }
 
           // StepInstruction should probably have the tri-state RunMode, but
@@ -209,8 +211,7 @@ bool ThreadPlanStepInstruction::ShouldStop(Event *event_ptr) {
           return true;
         }
       } else {
-        if (log)
-          log->Printf("Could not find previous frame, stopping.");
+        LLDB_LOGF(log, "Could not find previous frame, stopping.");
         SetPlanComplete();
         return true;
       }
@@ -243,8 +244,7 @@ bool ThreadPlanStepInstruction::WillStop() { return true; }
 bool ThreadPlanStepInstruction::MischiefManaged() {
   if (IsPlanComplete()) {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
-    if (log)
-      log->Printf("Completed single instruction step plan.");
+    LLDB_LOGF(log, "Completed single instruction step plan.");
     ThreadPlan::MischiefManaged();
     return true;
   } else {

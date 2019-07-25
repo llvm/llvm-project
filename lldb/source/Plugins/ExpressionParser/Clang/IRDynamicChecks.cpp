@@ -320,9 +320,8 @@ protected:
   bool InstrumentInstruction(llvm::Instruction *inst) override {
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-    if (log)
-      log->Printf("Instrumenting load/store instruction: %s\n",
-                  PrintValue(inst).c_str());
+    LLDB_LOGF(log, "Instrumenting load/store instruction: %s\n",
+              PrintValue(inst).c_str());
 
     if (!m_valid_pointer_check_func)
       m_valid_pointer_check_func =
@@ -483,9 +482,8 @@ protected:
       std::string name_str = called_function->getName().str();
       const char *name_cstr = name_str.c_str();
 
-      if (log)
-        log->Printf("Found call to %s: %s\n", name_cstr,
-                    PrintValue(call_inst).c_str());
+      LLDB_LOGF(log, "Found call to %s: %s\n", name_cstr,
+                PrintValue(call_inst).c_str());
 
       if (name_str.find("objc_msgSend") == std::string::npos)
         return true;
@@ -520,10 +518,9 @@ protected:
         return true;
       }
 
-      if (log)
-        log->Printf(
-            "Function name '%s' contains 'objc_msgSend' but is not handled",
-            name_str.c_str());
+      LLDB_LOGF(log,
+                "Function name '%s' contains 'objc_msgSend' but is not handled",
+                name_str.c_str());
 
       return true;
     }
@@ -548,8 +545,7 @@ bool IRDynamicChecks::runOnModule(llvm::Module &M) {
   llvm::Function *function = M.getFunction(StringRef(m_func_name));
 
   if (!function) {
-    if (log)
-      log->Printf("Couldn't find %s() in the module", m_func_name.c_str());
+    LLDB_LOGF(log, "Couldn't find %s() in the module", m_func_name.c_str());
 
     return false;
   }
@@ -582,7 +578,7 @@ bool IRDynamicChecks::runOnModule(llvm::Module &M) {
 
     oss.flush();
 
-    log->Printf("Module after dynamic checks: \n%s", s.c_str());
+    LLDB_LOGF(log, "Module after dynamic checks: \n%s", s.c_str());
   }
 
   return true;

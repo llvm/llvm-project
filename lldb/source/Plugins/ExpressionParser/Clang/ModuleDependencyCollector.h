@@ -23,7 +23,7 @@ public:
 
   void addFile(llvm::StringRef Filename,
                llvm::StringRef FileDst = {}) override {
-    m_file_collector.AddFile(Filename);
+    m_file_collector.addFile(Filename);
   }
 
   bool insertSeen(llvm::StringRef Filename) override { return false; }

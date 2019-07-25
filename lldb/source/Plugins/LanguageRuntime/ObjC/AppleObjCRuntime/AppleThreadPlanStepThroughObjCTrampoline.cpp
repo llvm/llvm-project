@@ -141,17 +141,15 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
     target_so_addr.SetOpcodeLoadAddress(target_addr, exc_ctx.GetTargetPtr());
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
     if (target_addr == 0) {
-      if (log)
-        log->Printf("Got target implementation of 0x0, stopping.");
+      LLDB_LOGF(log, "Got target implementation of 0x0, stopping.");
       SetPlanComplete();
       return true;
     }
     if (m_trampoline_handler->AddrIsMsgForward(target_addr)) {
-      if (log)
-        log->Printf(
-            "Implementation lookup returned msgForward function: 0x%" PRIx64
-            ", stopping.",
-            target_addr);
+      LLDB_LOGF(log,
+                "Implementation lookup returned msgForward function: 0x%" PRIx64
+                ", stopping.",
+                target_addr);
 
       SymbolContext sc = m_thread.GetStackFrameAtIndex(0)->GetSymbolContext(
           eSymbolContextEverything);
@@ -167,18 +165,17 @@ bool AppleThreadPlanStepThroughObjCTrampoline::ShouldStop(Event *event_ptr) {
       return false;
     }
 
-    if (log)
-      log->Printf("Running to ObjC method implementation: 0x%" PRIx64,
-                  target_addr);
+    LLDB_LOGF(log, "Running to ObjC method implementation: 0x%" PRIx64,
+              target_addr);
 
     ObjCLanguageRuntime *objc_runtime =
         ObjCLanguageRuntime::Get(*GetThread().GetProcess());
     assert(objc_runtime != nullptr);
     objc_runtime->AddToMethodCache(m_isa_addr, m_sel_addr, target_addr);
-    if (log)
-      log->Printf("Adding {isa-addr=0x%" PRIx64 ", sel-addr=0x%" PRIx64
-                  "} = addr=0x%" PRIx64 " to cache.",
-                  m_isa_addr, m_sel_addr, target_addr);
+    LLDB_LOGF(log,
+              "Adding {isa-addr=0x%" PRIx64 ", sel-addr=0x%" PRIx64
+              "} = addr=0x%" PRIx64 " to cache.",
+              m_isa_addr, m_sel_addr, target_addr);
 
     // Extract the target address from the value:
 
