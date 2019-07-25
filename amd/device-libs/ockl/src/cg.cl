@@ -11,41 +11,13 @@
 __attribute__((convergent)) void
 __ockl_gws_init(uint nwm1, uint rid)
 {
-    // TODO replace with intrinsic call when working
-    uint m0_backup, new_m0;
-    __asm__ __volatile__(
-           " s_mov_b32 %0 m0\n"
-           " v_readfirstlane_b32 %1 %2\n"
-           " s_nop 0\n"
-           " s_mov_b32 m0 %1\n"
-           " s_nop 0\n"
-           " ds_gws_init %3 offset:0 gds\n"
-           " s_waitcnt 0\n"
-           " s_mov_b32 m0 %0\n"
-           " s_nop 0"
-           : "=s"(m0_backup), "=s"(new_m0)
-           : "v"(rid<<0x10), "{v0}"(nwm1)
-           : "memory");
+    __builtin_amdgcn_ds_gws_init(nwm1, rid);
 }
 
 __attribute__((convergent)) void
 __ockl_gws_barrier(uint nwm1, uint rid)
 {
-    // TODO replace with intrinsic call when working
-    uint m0_backup, new_m0;
-    __asm__ __volatile__(
-        " s_mov_b32 %0 m0\n"
-        " v_readfirstlane_b32 %1 %2\n"
-        " s_nop 0\n"
-        " s_mov_b32 m0 %1\n"
-        " s_nop 0\n"
-        " ds_gws_barrier %3 offset:0 gds\n"
-        " s_waitcnt 0\n"
-        " s_mov_b32 m0 %0\n"
-        " s_nop 0"
-        : "=s"(m0_backup), "=s"(new_m0)
-        : "v"(rid << 0x10), "{v0}"(nwm1)
-        : "memory");
+    __builtin_amdgcn_ds_gws_barrier(nwm1, rid);
 }
 
 __attribute__((convergent)) void
