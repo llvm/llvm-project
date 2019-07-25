@@ -29,6 +29,8 @@ using llvm::RecordKeeper;
 namespace lldb_private {
 
 void EmitOptionDefs(RecordKeeper &RK, raw_ostream &OS);
+void EmitPropertyDefs(RecordKeeper &RK, raw_ostream &OS);
+void EmitPropertyEnumDefs(RecordKeeper &RK, raw_ostream &OS);
 
 } // namespace lldb_private
 

@@ -203,119 +203,13 @@ static constexpr OptionEnumValueElement s_stop_show_column_values[] = {
     {eStopShowColumnNone, "none", "Do not highlight the stop column."}};
 
 static constexpr PropertyDefinition g_properties[] = {
-    {"auto-confirm", OptionValue::eTypeBoolean, true, false, nullptr, {},
-     "If true all confirmation prompts will receive their default reply."},
-    {"disassembly-format", OptionValue::eTypeFormatEntity, true, 0,
-     DEFAULT_DISASSEMBLY_FORMAT, {},
-     "The default disassembly format "
-     "string to use when disassembling "
-     "instruction sequences."},
-    {"frame-format", OptionValue::eTypeFormatEntity, true, 0,
-     DEFAULT_FRAME_FORMAT, {},
-     "The default frame format string to use "
-     "when displaying stack frame information "
-     "for threads."},
-    {"notify-void", OptionValue::eTypeBoolean, true, false, nullptr, {},
-     "Notify the user explicitly if an expression returns void (default: "
-     "false)."},
-    {"prompt", OptionValue::eTypeString, true,
-     OptionValueString::eOptionEncodeCharacterEscapeSequences, "(lldb) ", {},
-     "The debugger command line prompt displayed for the user."},
-    {"script-lang", OptionValue::eTypeEnum, true, eScriptLanguagePython,
-     nullptr, OptionEnumValues(g_language_enumerators),
-     "The script language to be used for evaluating user-written scripts."},
-    {"stop-disassembly-count", OptionValue::eTypeSInt64, true, 4, nullptr, {},
-     "The number of disassembly lines to show when displaying a "
-     "stopped context."},
-    {"stop-disassembly-display", OptionValue::eTypeEnum, true,
-     Debugger::eStopDisassemblyTypeNoDebugInfo, nullptr,
-     OptionEnumValues(g_show_disassembly_enum_values),
-     "Control when to display disassembly when displaying a stopped context."},
-    {"stop-line-count-after", OptionValue::eTypeSInt64, true, 3, nullptr, {},
-     "The number of sources lines to display that come after the "
-     "current source line when displaying a stopped context."},
-    {"stop-line-count-before", OptionValue::eTypeSInt64, true, 3, nullptr, {},
-     "The number of sources lines to display that come before the "
-     "current source line when displaying a stopped context."},
-    {"highlight-source", OptionValue::eTypeBoolean, true, true, nullptr, {},
-     "If true, LLDB will highlight the displayed source code."},
-    {"stop-show-column", OptionValue::eTypeEnum, false,
-     eStopShowColumnAnsiOrCaret, nullptr, OptionEnumValues(s_stop_show_column_values),
-     "If true, LLDB will use the column information from the debug info to "
-     "mark the current position when displaying a stopped context."},
-    {"stop-show-column-ansi-prefix", OptionValue::eTypeString, true, 0,
-     "${ansi.underline}", {},
-     "When displaying the column marker in a color-enabled (i.e. ANSI) "
-     "terminal, use the ANSI terminal code specified in this format at the "
-     "immediately before the column to be marked."},
-    {"stop-show-column-ansi-suffix", OptionValue::eTypeString, true, 0,
-     "${ansi.normal}", {},
-     "When displaying the column marker in a color-enabled (i.e. ANSI) "
-     "terminal, use the ANSI terminal code specified in this format "
-     "immediately after the column to be marked."},
-    {"term-width", OptionValue::eTypeSInt64, true, 80, nullptr, {},
-     "The maximum number of columns to use for displaying text."},
-    {"thread-format", OptionValue::eTypeFormatEntity, true, 0,
-     DEFAULT_THREAD_FORMAT, {},
-     "The default thread format string to use "
-     "when displaying thread information."},
-    {"thread-stop-format", OptionValue::eTypeFormatEntity, true, 0,
-     DEFAULT_THREAD_STOP_FORMAT, {},
-     "The default thread format  "
-     "string to use when displaying thread "
-     "information as part of the stop display."},
-    {"use-external-editor", OptionValue::eTypeBoolean, true, false, nullptr, {},
-     "Whether to use an external editor or not."},
-    {"use-color", OptionValue::eTypeBoolean, true, true, nullptr, {},
-     "Whether to use Ansi color codes or not."},
-    {"auto-one-line-summaries", OptionValue::eTypeBoolean, true, true, nullptr,
-     {},
-     "If true, LLDB will automatically display small structs in "
-     "one-liner format (default: true)."},
-    {"auto-indent", OptionValue::eTypeBoolean, true, true, nullptr, {},
-     "If true, LLDB will auto indent/outdent code. Currently only supported in "
-     "the REPL (default: true)."},
-    {"print-decls", OptionValue::eTypeBoolean, true, true, nullptr, {},
-     "If true, LLDB will print the values of variables declared in an "
-     "expression. Currently only supported in the REPL (default: true)."},
-    {"tab-size", OptionValue::eTypeUInt64, true, 4, nullptr, {},
-     "The tab size to use when indenting code in multi-line input mode "
-     "(default: 4)."},
-    {"escape-non-printables", OptionValue::eTypeBoolean, true, true, nullptr,
-     {},
-     "If true, LLDB will automatically escape non-printable and "
-     "escape characters when formatting strings."},
-    {"frame-format-unique", OptionValue::eTypeFormatEntity, true, 0,
-     DEFAULT_FRAME_FORMAT_NO_ARGS, {},
-     "The default frame format string to use when displaying stack frame"
-     "information for threads from thread backtrace unique."}};
+#define LLDB_PROPERTIES_debugger
+#include "lldb/Core/Properties.inc"
+};
 
 enum {
-  ePropertyAutoConfirm = 0,
-  ePropertyDisassemblyFormat,
-  ePropertyFrameFormat,
-  ePropertyNotiftVoid,
-  ePropertyPrompt,
-  ePropertyScriptLanguage,
-  ePropertyStopDisassemblyCount,
-  ePropertyStopDisassemblyDisplay,
-  ePropertyStopLineCountAfter,
-  ePropertyStopLineCountBefore,
-  ePropertyHighlightSource,
-  ePropertyStopShowColumn,
-  ePropertyStopShowColumnAnsiPrefix,
-  ePropertyStopShowColumnAnsiSuffix,
-  ePropertyTerminalWidth,
-  ePropertyThreadFormat,
-  ePropertyThreadStopFormat,
-  ePropertyUseExternalEditor,
-  ePropertyUseColor,
-  ePropertyAutoOneLineSummaries,
-  ePropertyAutoIndent,
-  ePropertyPrintDecls,
-  ePropertyTabSize,
-  ePropertyEscapeNonPrintables,
-  ePropertyFrameFormatUnique,
+#define LLDB_PROPERTIES_debugger
+#include "lldb/Core/PropertiesEnum.inc"
 };
 
 LoadPluginCallbackType Debugger::g_load_plugin_callback = nullptr;
