@@ -82,12 +82,6 @@ SymbolFile *SymbolFile::FindPlugin(ObjectFile *obj_file) {
   return best_symfile_up.release();
 }
 
-TypeList *SymbolFile::GetTypeList() {
-  if (m_obj_file)
-    return m_obj_file->GetModule()->GetTypeList();
-  return nullptr;
-}
-
 TypeSystem *SymbolFile::GetTypeSystemForLanguage(lldb::LanguageType language) {
   TypeSystem *type_system =
       m_obj_file->GetModule()->GetTypeSystemForLanguage(language);
@@ -206,6 +200,10 @@ void SymbolFile::SetCompileUnitAtIndex(uint32_t idx, const CompUnitSP &cu_sp) {
 }
 
 void SymbolFile::Dump(Stream &s) {
+  s.PutCString("Types:\n");
+  m_type_list.Dump(&s, /*show_context*/ false);
+  s.PutChar('\n');
+
   s.PutCString("Compile units:\n");
   if (m_compile_units) {
     for (const CompUnitSP &cu_sp : *m_compile_units) {

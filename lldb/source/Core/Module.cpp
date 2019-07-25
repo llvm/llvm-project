@@ -1240,13 +1240,6 @@ void Module::Dump(Stream *s) {
   s->IndentLess();
 }
 
-TypeList *Module::GetTypeList() {
-  SymbolVendor *symbols = GetSymbolVendor();
-  if (symbols)
-    return &symbols->GetTypeList();
-  return nullptr;
-}
-
 ConstString Module::GetObjectName() const { return m_object_name; }
 
 ObjectFile *Module::GetObjectFile() {

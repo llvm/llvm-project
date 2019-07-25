@@ -58,7 +58,7 @@ SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
 
 // SymbolVendor constructor
 SymbolVendor::SymbolVendor(const lldb::ModuleSP &module_sp)
-    : ModuleChild(module_sp), m_type_list(), m_sym_file_up(), m_symtab() {}
+    : ModuleChild(module_sp), m_sym_file_up(), m_symtab() {}
 
 // Destructor
 SymbolVendor::~SymbolVendor() {}
@@ -336,8 +336,6 @@ void SymbolVendor::Dump(Stream *s) {
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
 
-    bool show_context = false;
-
     s->Printf("%p: ", static_cast<void *>(this));
     s->Indent();
     s->PutCString("SymbolVendor");
@@ -353,9 +351,6 @@ void SymbolVendor::Dump(Stream *s) {
         }
       }
     }
-    s->EOL();
-    s->PutCString("Types:\n");
-    m_type_list.Dump(s, show_context);
     s->EOL();
     if (m_sym_file_up)
       m_sym_file_up->Dump(*s);

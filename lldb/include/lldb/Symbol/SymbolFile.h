@@ -16,6 +16,7 @@
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/SourceModule.h"
 #include "lldb/Symbol/Type.h"
+#include "lldb/Symbol/TypeList.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/DenseSet.h"
@@ -191,10 +192,7 @@ public:
   virtual void
   GetMangledNamesForFunction(const std::string &scope_qualified_name,
                              std::vector<ConstString> &mangled_names);
-  //  virtual uint32_t        FindTypes (const SymbolContext& sc, const
-  //  RegularExpression& regex, bool append, uint32_t max_matches, TypeList&
-  //  types) = 0;
-  virtual TypeList *GetTypeList();
+
   virtual size_t GetTypes(lldb_private::SymbolContextScope *sc_scope,
                           lldb::TypeClass type_mask,
                           lldb_private::TypeList &type_list) = 0;
@@ -241,11 +239,13 @@ protected:
   void AssertModuleLock();
   virtual uint32_t CalculateNumCompileUnits() = 0;
   virtual lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t idx) = 0;
+  virtual TypeList &GetTypeList() { return m_type_list; }
 
   void SetCompileUnitAtIndex(uint32_t idx, const lldb::CompUnitSP &cu_sp);
 
   ObjectFile *m_obj_file; // The object file that symbols can be extracted from.
   llvm::Optional<std::vector<lldb::CompUnitSP>> m_compile_units;
+  TypeList m_type_list;
   uint32_t m_abilities;
   bool m_calculated_abilities;
 

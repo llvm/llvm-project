@@ -425,8 +425,6 @@ bool Type::WriteToMemory(ExecutionContext *exe_ctx, lldb::addr_t addr,
   return false;
 }
 
-TypeList *Type::GetTypeList() { return GetSymbolFile()->GetTypeList(); }
-
 const Declaration &Type::GetDeclaration() const { return m_decl; }
 
 bool Type::ResolveClangType(ResolveState compiler_type_resolve_state) {

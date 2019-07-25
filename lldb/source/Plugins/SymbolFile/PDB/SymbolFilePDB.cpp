@@ -557,9 +557,7 @@ lldb_private::Type *SymbolFilePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
   lldb::TypeSP result = pdb->CreateLLDBTypeFromPDBType(*pdb_type);
   if (result) {
     m_types.insert(std::make_pair(type_uid, result));
-    auto type_list = GetTypeList();
-    if (type_list)
-      type_list->Insert(result);
+    GetTypeList().Insert(result);
   }
   return result.get();
 }
@@ -1514,10 +1512,6 @@ size_t SymbolFilePDB::FindTypes(
     const std::vector<lldb_private::CompilerContext> &contexts, bool append,
     lldb_private::TypeMap &types) {
   return 0;
-}
-
-lldb_private::TypeList *SymbolFilePDB::GetTypeList() {
-  return m_obj_file->GetModule()->GetTypeList();
 }
 
 void SymbolFilePDB::GetTypesForPDBSymbol(const llvm::pdb::PDBSymbol &pdb_symbol,

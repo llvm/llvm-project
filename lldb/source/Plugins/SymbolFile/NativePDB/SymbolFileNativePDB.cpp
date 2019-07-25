@@ -729,7 +729,7 @@ TypeSP SymbolFileNativePDB::GetOrCreateType(PdbTypeSymId type_id) {
 
   TypeSP type = CreateAndCacheType(type_id);
   if (type)
-    m_obj_file->GetModule()->GetTypeList()->Insert(type);
+    GetTypeList().Insert(type);
   return type;
 }
 
@@ -1283,7 +1283,7 @@ size_t SymbolFileNativePDB::ParseTypes(CompileUnit &comp_unit) {
   if (m_done_full_type_scan)
     return 0;
 
-  size_t old_count = m_obj_file->GetModule()->GetTypeList()->GetSize();
+  const size_t old_count = GetTypeList().GetSize();
   LazyRandomTypeCollection &types = m_index->tpi().typeCollection();
 
   // First process the entire TPI stream.
@@ -1313,7 +1313,7 @@ size_t SymbolFileNativePDB::ParseTypes(CompileUnit &comp_unit) {
       GetOrCreateTypedef(global);
   }
 
-  size_t new_count = m_obj_file->GetModule()->GetTypeList()->GetSize();
+  const size_t new_count = GetTypeList().GetSize();
 
   m_done_full_type_scan = true;
 
