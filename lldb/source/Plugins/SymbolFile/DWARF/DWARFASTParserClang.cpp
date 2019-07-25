@@ -188,7 +188,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWO(const DWARFDIE &die, Log *log) {
       nullptr, LLDB_INVALID_UID, Type::eEncodingInvalid,
       &dwo_type_sp->GetDeclaration(), type, Type::eResolveStateForward));
 
-  dwarf->GetTypeList()->Insert(type_sp);
+  dwarf->GetTypeList().Insert(type_sp);
   dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
   clang::TagDecl *tag_decl = ClangASTContext::GetAsTagDecl(type);
   if (tag_decl)
@@ -434,7 +434,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
     return nullptr;
   }
 
-  TypeList *type_list = dwarf->GetTypeList();
+  TypeList &type_list = dwarf->GetTypeList();
   if (type_is_new_ptr)
     *type_is_new_ptr = true;
 
@@ -1672,7 +1672,7 @@ TypeSP DWARFASTParserClang::ParseTypeFromDWARF(const SymbolContext &sc,
 
     // We are ready to put this type into the uniqued list up at the module
     // level
-    type_list->Insert(type_sp);
+    type_list.Insert(type_sp);
 
     dwarf->GetDIEToType()[die.GetDIE()] = type_sp.get();
   }

@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips %S/Inputs/mips-micro.s -o %t1eb.o
-# RUN: ld.lld -shared -o %teb.so %t1eb.o
+# RUN: ld.lld -shared -soname=teb.so -o %teb.so %t1eb.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips %s -o %t2eb.o
 # RUN: ld.lld -o %teb.exe %t2eb.o %teb.so
@@ -12,7 +12,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux \
 # RUN:         -mattr=micromips %S/Inputs/mips-micro.s -o %t1el.o
-# RUN: ld.lld -shared -o %tel.so %t1el.o
+# RUN: ld.lld -shared -soname=tel.so -o %tel.so %t1el.o
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux \
 # RUN:         -mattr=micromips %s -o %t2el.o
 # RUN: ld.lld -o %tel.exe %t2el.o %tel.so
@@ -21,7 +21,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips -mcpu=mips32r6 %S/Inputs/mips-micro.s -o %t1eb.o
-# RUN: ld.lld -shared -o %teb.so %t1eb.o
+# RUN: ld.lld -shared -soname=teb.so -o %teb.so %t1eb.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips -mcpu=mips32r6 %s -o %t2eb.o
 # RUN: ld.lld -o %teb.exe %t2eb.o %teb.so
@@ -29,7 +29,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux \
 # RUN:         -mattr=micromips -mcpu=mips32r6 %S/Inputs/mips-micro.s -o %t1el.o
-# RUN: ld.lld -shared -o %tel.so %t1el.o
+# RUN: ld.lld -shared -soname=tel.so -o %tel.so %t1el.o
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux \
 # RUN:         -mattr=micromips -mcpu=mips32r6 %s -o %t2el.o
 # RUN: ld.lld -o %tel.exe %t2el.o %tel.so
@@ -37,7 +37,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips %S/Inputs/mips-micro.s -o %t1eb.o
-# RUN: ld.lld -shared -o %teb.so %t1eb.o
+# RUN: ld.lld -shared -soname=teb.so -o %teb.so %t1eb.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         %S/Inputs/mips-fpic.s -o %t-reg.o
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
