@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=c++ -verify -fsyntax-only
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=c++ -verify -fsyntax-only -fexceptions -fcxx-exceptions
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=clc++ -verify -fsyntax-only
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=clc++ -verify -fsyntax-only -fexceptions -fcxx-exceptions
 
 // This test checks that various C++ and OpenCL C keywords are not available
 // in OpenCL.

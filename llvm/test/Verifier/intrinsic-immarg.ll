@@ -159,7 +159,7 @@ declare void @llvm.prefetch(i8*, i32, i32, i32)
 define void @test_prefetch(i8* %ptr, i32 %arg0, i32 %arg1) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %arg0
-  ; CHECK-NEXT: call void @llvm.prefetch(i8* %ptr, i32 %arg0, i32 0, i32 0)
+  ; CHECK-NEXT: call void @llvm.prefetch.p0i8(i8* %ptr, i32 %arg0, i32 0, i32 0)
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT:  i32 %arg1
   call void @llvm.prefetch(i8* %ptr, i32 %arg0, i32 0, i32 0)

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=c++ -O0 -emit-llvm -o - | FileCheck %s -check-prefixes=COMMON,PTR
-// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=c++ -O0 -emit-llvm -o - -DREF | FileCheck %s -check-prefixes=COMMON,REF
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=clc++ -O0 -emit-llvm -o - | FileCheck %s -check-prefixes=COMMON,PTR
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=clc++ -O0 -emit-llvm -o - -DREF | FileCheck %s -check-prefixes=COMMON,REF
 
 #ifdef REF
 #define PTR &

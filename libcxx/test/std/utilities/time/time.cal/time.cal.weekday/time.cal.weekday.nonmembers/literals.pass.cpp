@@ -51,13 +51,13 @@ int main(int, char**)
     assert(std::chrono::Friday    == std::chrono::weekday(5));
     assert(std::chrono::Saturday  == std::chrono::weekday(6));
 
-    assert(static_cast<unsigned>(std::chrono::Sunday)    ==  0);
-    assert(static_cast<unsigned>(std::chrono::Monday)    ==  1);
-    assert(static_cast<unsigned>(std::chrono::Tuesday)   ==  2);
-    assert(static_cast<unsigned>(std::chrono::Wednesday) ==  3);
-    assert(static_cast<unsigned>(std::chrono::Thursday)  ==  4);
-    assert(static_cast<unsigned>(std::chrono::Friday)    ==  5);
-    assert(static_cast<unsigned>(std::chrono::Saturday)  ==  6);
+    assert(std::chrono::Sunday.c_encoding()    ==  0);
+    assert(std::chrono::Monday.c_encoding()    ==  1);
+    assert(std::chrono::Tuesday.c_encoding()   ==  2);
+    assert(std::chrono::Wednesday.c_encoding() ==  3);
+    assert(std::chrono::Thursday.c_encoding()  ==  4);
+    assert(std::chrono::Friday.c_encoding()    ==  5);
+    assert(std::chrono::Saturday.c_encoding()  ==  6);
 
   return 0;
 }

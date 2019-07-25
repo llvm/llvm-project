@@ -1,7 +1,8 @@
 // RUN: llvm-mc -triple arm -mattr=+dotprod -show-encoding < %s | FileCheck %s  --check-prefix=CHECK
+// RUN: llvm-mc -triple arm -mcpu=cortex-a55 -show-encoding < %s | FileCheck %s  --check-prefix=CHECK
 // RUN: llvm-mc -triple arm -mcpu=cortex-a75 -show-encoding < %s | FileCheck %s  --check-prefix=CHECK
 // RUN: llvm-mc -triple arm -mcpu=cortex-a76 -show-encoding < %s | FileCheck %s  --check-prefix=CHECK
-// RUN: llvm-mc -triple arm -mcpu=cortex-a55 -show-encoding < %s | FileCheck %s  --check-prefix=CHECK
+// RUN: llvm-mc -triple arm -mcpu=neoverse-n1 -show-encoding < %s | FileCheck %s --check-prefix=CHECK
 
 // RUN: not llvm-mc -triple arm -mattr=-dotprod -show-encoding < %s 2> %t
 // RUN: FileCheck --check-prefix=CHECK-NO-DOTPROD < %t %s

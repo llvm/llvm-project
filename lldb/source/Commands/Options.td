@@ -334,6 +334,75 @@ let Command = "disassemble" in {
     Desc<"Disassemble function containing this address.">;
 }
 
+let Command = "expression" in {
+  def expression_options_all_threads : Option<"all-threads", "a">,
+    Groups<[1,2]>, Arg<"Boolean">, Desc<"Should we run all threads if the "
+    "execution doesn't complete on one thread.">;
+  def expression_options_ignore_breakpoints : Option<"ignore-breakpoints", "i">,
+    Groups<[1,2]>, Arg<"Boolean">,
+    Desc<"Ignore breakpoint hits while running expressions">;
+  def expression_options_timeout : Option<"timeout", "t">, Groups<[1,2]>,
+    Arg<"UnsignedInteger">,
+    Desc<"Timeout value (in microseconds) for running the expression.">;
+  def expression_options_unwind_on_error : Option<"unwind-on-error", "u">,
+    Groups<[1,2]>, Arg<"Boolean">,
+    Desc<"Clean up program state if the expression causes a crash, or raises a "
+    "signal. Note, unlike gdb hitting a breakpoint is controlled by another "
+    "option (-i).">;
+  def expression_options_debug : Option<"debug", "g">, Groups<[1,2]>,
+    Desc<"When specified, debug the JIT code by setting a breakpoint on the "
+    "first instruction and forcing breakpoints to not be ignored (-i0) and no "
+    "unwinding to happen on error (-u0).">;
+  def expression_options_language : Option<"language", "l">, Groups<[1,2]>,
+    Arg<"Language">, Desc<"Specifies the Language to use when parsing the "
+    "expression.  If not set the target.language setting is used.">;
+  def expression_options_apply_fixits : Option<"apply-fixits", "X">,
+    Groups<[1,2]>, Arg<"Language">, Desc<"If true, simple fix-it hints will be "
+    "automatically applied to the expression.">;
+  def expression_options_description_verbosity :
+    Option<"description-verbosity", "v">, Group<1>,
+    OptionalEnumArg<"DescriptionVerbosity", "DescriptionVerbosityTypes()">,
+    Desc<"How verbose should the output of this expression be, if the object "
+    "description is asked for.">;
+  def expression_options_top_level : Option<"top-level", "p">, Groups<[1,2]>,
+    Desc<"Interpret the expression as a complete translation unit, without "
+    "injecting it into the local context.  Allows declaration of persistent, "
+    "top-level entities without a $ prefix.">;
+  def expression_options_allow_jit : Option<"allow-jit", "j">, Groups<[1,2]>,
+    Arg<"Boolean">,
+    Desc<"Controls whether the expression can fall back to being JITted if it's"
+    "not supported by the interpreter (defaults to true).">;
+}
+
+let Command = "frame diag" in {
+  def frame_diag_register : Option<"register", "r">, Group<1>,
+    Arg<"RegisterName">, Desc<"A register to diagnose.">;
+  def frame_diag_address : Option<"address", "a">, Group<1>, Arg<"Address">,
+    Desc<"An address to diagnose.">;
+  def frame_diag_offset : Option<"offset", "o">, Group<1>, Arg<"Offset">,
+    Desc<"An optional offset.  Requires --register.">;
+}
+
+let Command = "frame select" in {
+  def frame_select_relative : Option<"relative", "r">, Group<1>, Arg<"Offset">,
+    Desc<"A relative frame index offset from the current frame index.">;
+}
+
+let Command = "frame recognizer add" in {
+  def frame_recognizer_shlib : Option<"shlib", "s">, Arg<"ShlibName">,
+    Completion<"Module">,
+    Desc<"Name of the module or shared library that this recognizer applies "
+    "to.">;
+  def frame_recognizer_function : Option<"function", "n">, Arg<"Name">,
+    Completion<"Symbol">,
+    Desc<"Name of the function that this recognizer applies to.">;
+  def frame_recognizer_python_class : Option<"python-class", "l">, Group<2>,
+    Arg<"PythonClass">,
+    Desc<"Give the name of a Python class to use for this frame recognizer.">;
+  def frame_recognizer_regex : Option<"regex", "x">,
+    Desc<"Function name and module name are actually regular expressions.">;
+}
+
 let Command = "history" in {
   def history_count : Option<"count", "c">, Group<1>, Arg<"UnsignedInteger">,
     Desc<"How many history commands to print.">;
@@ -345,6 +414,80 @@ let Command = "history" in {
     Desc<"Index at which to stop printing history commands.">;
   def history_clear : Option<"clear", "C">, Group<2>,
     Desc<"Clears the current command history.">;
+}
+
+let Command = "log" in {
+  def log_file : Option<"file", "f">, Group<1>, Arg<"Filename">,
+    Desc<"Set the destination file to log to.">;
+  def log_threadsafe : Option<"threadsafe", "t">, Group<1>,
+    Desc<"Enable thread safe logging to avoid interweaved log lines.">;
+  def log_verbose : Option<"verbose", "v">, Group<1>,
+    Desc<"Enable verbose logging.">;
+  def log_sequence : Option<"sequence", "s">, Group<1>,
+    Desc<"Prepend all log lines with an increasing integer sequence id.">;
+  def log_timestamp : Option<"timestamp", "T">, Group<1>,
+    Desc<"Prepend all log lines with a timestamp.">;
+  def log_pid_tid : Option<"pid-tid", "p">, Group<1>,
+    Desc<"Prepend all log lines with the process and thread ID that generates "
+    "the log line.">;
+  def log_thread_name : Option<"thread-name", "n">, Group<1>,
+    Desc<"Prepend all log lines with the thread name for the thread that "
+    "generates the log line.">;
+
+  def log_stack : Option<"stack", "S">, Group<1>,
+    Desc<"Append a stack backtrace to each log line.">;
+  def log_append : Option<"append", "a">, Group<1>,
+    Desc<"Append to the log file instead of overwriting.">;
+  def log_file_function : Option<"file-function", "F">, Group<1>,
+    Desc<"Prepend the names of files and function that generate the logs.">;
+}
+
+let Command = "memory read" in {
+  def memory_read_num_per_line : Option<"num-per-line", "l">, Group<1>,
+    Arg<"NumberPerLine">, Desc<"The number of items per line to display.">;
+  def memory_read_binary : Option<"binary", "b">, Group<2>,
+    Desc<"If true, memory will be saved as binary. If false, the memory is "
+    "saved save as an ASCII dump that uses the format, size, count and number "
+    "per line settings.">;
+  def memory_read_type : Option<"type", "t">, Groups<[3,4]>, Arg<"Name">,
+    Required, Desc<"The name of a type to view memory as.">;
+  def memory_read_language : Option<"language", "x">, Group<4>, Arg<"Language">,
+    Desc<"The language of the type to view memory as.">;
+  def memory_read_offset : Option<"offset", "E">, Group<3>, Arg<"Count">,
+    Desc<"How many elements of the specified type to skip before starting to "
+    "display data.">;
+  def memory_read_force : Option<"force", "r">, Groups<[1,2,3]>,
+    Desc<"Necessary if reading over target.max-memory-read-size bytes.">;
+}
+
+let Command = "memory find" in {
+  def memory_find_expression : Option<"expression", "e">, Group<1>,
+    Arg<"Expression">, Required,
+    Desc<"Evaluate an expression to obtain a byte pattern.">;
+  def memory_find_string : Option<"string", "s">, Group<2>, Arg<"Name">,
+    Required, Desc<"Use text to find a byte pattern.">;
+  def memory_find_count : Option<"count", "c">, Arg<"Count">,
+    Desc<"How many times to perform the search.">;
+  def memory_find_dump_offset : Option<"dump-offset", "o">, Arg<"Offset">,
+    Desc<"When dumping memory for a match, an offset from the match location to"
+    " start dumping from.">;
+}
+
+let Command = "memory write" in {
+  def memory_write_infile : Option<"infile", "i">, Group<1>, Arg<"Filename">,
+    Required, Desc<"Write memory using the contents of a file.">;
+  def memory_write_offset : Option<"offset", "o">, Group<1>, Arg<"Offset">,
+    Desc<"Start writing bytes from an offset within the input file.">;
+}
+
+let Command = "register read" in {
+  def register_read_alternate : Option<"alternate", "A">,
+    Desc<"Display register names using the alternate register name if there "
+    "is one.">;
+  def register_read_set : Option<"set", "s">, Group<1>, Arg<"Index">,
+    Desc<"Specify which register sets to dump by index.">;
+  def register_read_all : Option<"all", "a">, Group<2>,
+    Desc<"Show all register sets.">;
 }
 
 let Command = "source" in {

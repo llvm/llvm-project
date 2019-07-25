@@ -1390,7 +1390,7 @@ define void @intrinsics.codegen() {
   ; CHECK: call void @llvm.stackrestore(i8* %stack)
 
   call void @llvm.prefetch(i8* %stack, i32 0, i32 3, i32 0)
-  ; CHECK: call void @llvm.prefetch(i8* %stack, i32 0, i32 3, i32 0)
+  ; CHECK: call void @llvm.prefetch.p0i8(i8* %stack, i32 0, i32 3, i32 0)
 
   call void @llvm.pcmarker(i32 1)
   ; CHECK: call void @llvm.pcmarker(i32 1)
@@ -1606,7 +1606,7 @@ normal:
 
 
 declare void @f.writeonly() writeonly
-; CHECK: declare void @f.writeonly() #40
+; CHECK: declare void @f.writeonly() #39
 
 ;; Constant Expressions
 
@@ -1654,8 +1654,8 @@ define i8** @constexpr() {
 ; CHECK: attributes #36 = { argmemonly nounwind readonly }
 ; CHECK: attributes #37 = { argmemonly nounwind }
 ; CHECK: attributes #38 = { nounwind readonly }
-; CHECK: attributes #39 = { inaccessiblemem_or_argmemonly nounwind }
-; CHECK: attributes #40 = { writeonly }
+; CHECK: attributes #39 = { writeonly }
+; CHECK: attributes #40 = { inaccessiblemem_or_argmemonly nounwind }
 ; CHECK: attributes #41 = { builtin }
 
 ;; Metadata

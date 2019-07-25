@@ -639,17 +639,6 @@ bool llvm::SimplifyInstructionsInBlock(BasicBlock *BB,
 //  Control Flow Graph Restructuring.
 //
 
-/// RemovePredecessorAndSimplify - Like BasicBlock::removePredecessor, this
-/// method is called when we're about to delete Pred as a predecessor of BB.  If
-/// BB contains any PHI nodes, this drops the entries in the PHI nodes for Pred.
-///
-/// Unlike the removePredecessor method, this attempts to simplify uses of PHI
-/// nodes that collapse into identity values.  For example, if we have:
-///   x = phi(1, 0, 0, 0)
-///   y = and x, z
-///
-/// .. and delete the predecessor corresponding to the '1', this will attempt to
-/// recursively fold the and to 0.
 void llvm::RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred,
                                         DomTreeUpdater *DTU) {
   // This only adjusts blocks with PHI nodes.
@@ -678,10 +667,6 @@ void llvm::RemovePredecessorAndSimplify(BasicBlock *BB, BasicBlock *Pred,
     DTU->applyUpdatesPermissive({{DominatorTree::Delete, Pred, BB}});
 }
 
-/// MergeBasicBlockIntoOnlyPred - DestBB is a block with one predecessor and its
-/// predecessor is known to have one successor (DestBB!). Eliminate the edge
-/// between them, moving the instructions in the predecessor into DestBB and
-/// deleting the predecessor block.
 void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
                                        DomTreeUpdater *DTU) {
 
@@ -761,15 +746,14 @@ void llvm::MergeBasicBlockIntoOnlyPred(BasicBlock *DestBB,
   }
 }
 
-/// CanMergeValues - Return true if we can choose one of these values to use
-/// in place of the other. Note that we will always choose the non-undef
-/// value to keep.
+/// Return true if we can choose one of these values to use in place of the
+/// other. Note that we will always choose the non-undef value to keep.
 static bool CanMergeValues(Value *First, Value *Second) {
   return First == Second || isa<UndefValue>(First) || isa<UndefValue>(Second);
 }
 
-/// CanPropagatePredecessorsForPHIs - Return true if we can fold BB, an
-/// almost-empty BB ending in an unconditional branch to Succ, into Succ.
+/// Return true if we can fold BB, an almost-empty BB ending in an unconditional
+/// branch to Succ, into Succ.
 ///
 /// Assumption: Succ is the single successor for BB.
 static bool CanPropagatePredecessorsForPHIs(BasicBlock *BB, BasicBlock *Succ) {
@@ -962,11 +946,6 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   replaceUndefValuesInPhi(PN, IncomingValues);
 }
 
-/// TryToSimplifyUncondBranchFromEmptyBlock - BB is known to contain an
-/// unconditional branch, and contains no instructions other than PHI nodes,
-/// potential side-effect free intrinsics and the branch.  If possible,
-/// eliminate BB by rewriting all the predecessors to branch to the successor
-/// block and return true.  If we can't transform, return false.
 bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
                                                    DomTreeUpdater *DTU) {
   assert(BB != &BB->getParent()->getEntryBlock() &&
@@ -1094,10 +1073,6 @@ bool llvm::TryToSimplifyUncondBranchFromEmptyBlock(BasicBlock *BB,
   return true;
 }
 
-/// EliminateDuplicatePHINodes - Check for and eliminate duplicate PHI
-/// nodes in this block. This doesn't try to be clever about PHI nodes
-/// which differ only in the order of the incoming values, but instcombine
-/// orders them so it usually won't matter.
 bool llvm::EliminateDuplicatePHINodes(BasicBlock *BB) {
   // This implementation doesn't currently consider undef operands
   // specially. Theoretically, two phis which are identical except for

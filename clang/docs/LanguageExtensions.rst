@@ -1779,7 +1779,7 @@ invoked.
 
 .. code-block:: console
 
- clang -cl-std=c++ test.cl
+ clang -cl-std=clc++ test.cl
 
 If there are any global objects to be initialized the final binary will
 contain ``@_GLOBAL__sub_I_test.cl`` kernel to be enqueued.
@@ -2946,12 +2946,12 @@ Extensions for loop hint optimizations
 
 The ``#pragma clang loop`` directive is used to specify hints for optimizing the
 subsequent for, while, do-while, or c++11 range-based for loop. The directive
-provides options for vectorization, interleaving, unrolling and
+provides options for vectorization, interleaving, predication, unrolling and
 distribution. Loop hints can be specified before any loop and will be ignored if
 the optimization is not safe to apply.
 
-Vectorization and Interleaving
-------------------------------
+Vectorization, Interleaving, and Predication
+--------------------------------------------
 
 A vectorized loop performs multiple iterations of the original loop
 in parallel using vector instructions. The instruction set of the target
@@ -2993,6 +2993,21 @@ width/count of the set of target architectures supported by your application.
 
 Specifying a width/count of 1 disables the optimization, and is equivalent to
 ``vectorize(disable)`` or ``interleave(disable)``.
+
+Vector predication is enabled by ``vectorize_predicate(enable)``, for example:
+
+.. code-block:: c++
+
+  #pragma clang loop vectorize(enable)
+  #pragma clang loop vectorize_predicate(enable)
+  for(...) {
+    ...
+  }
+
+This predicates (masks) all instructions in the loop, which allows the scalar
+remainder loop (the tail) to be folded into the main vectorized loop. This
+might be more efficient when vector predication is efficiently supported by the
+target platform.
 
 Loop Unrolling
 --------------

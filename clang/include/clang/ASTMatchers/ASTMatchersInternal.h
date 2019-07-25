@@ -974,10 +974,11 @@ public:
   /// Returns true if the given class is directly or indirectly derived
   /// from a base type matching \c base.
   ///
-  /// A class is considered to be also derived from itself.
+  /// A class is not considered to be derived from itself.
   virtual bool classIsDerivedFrom(const CXXRecordDecl *Declaration,
                                   const Matcher<NamedDecl> &Base,
-                                  BoundNodesTreeBuilder *Builder) = 0;
+                                  BoundNodesTreeBuilder *Builder,
+                                  bool Directly) = 0;
 
   template <typename T>
   bool matchesChildOf(const T &Node, const DynTypedMatcher &Matcher,

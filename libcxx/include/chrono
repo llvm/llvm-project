@@ -1810,7 +1810,7 @@ private:
     unsigned char __wd;
 public:
   weekday() = default;
-  inline explicit constexpr weekday(unsigned __val) noexcept : __wd(static_cast<unsigned char>(__val)) {}
+  inline explicit constexpr weekday(unsigned __val) noexcept : __wd(static_cast<unsigned char>(__val == 7 ? 0 : __val)) {}
   inline constexpr          weekday(const sys_days& __sysd) noexcept
           : __wd(__weekday_from_days(__sysd.time_since_epoch().count())) {}
   inline explicit constexpr weekday(const local_days& __locd) noexcept
@@ -1822,7 +1822,8 @@ public:
   inline constexpr weekday  operator--(int) noexcept { weekday __tmp = *this; --(*this); return __tmp; }
          constexpr weekday& operator+=(const days& __dd) noexcept;
          constexpr weekday& operator-=(const days& __dd) noexcept;
-  inline explicit constexpr operator unsigned() const noexcept { return __wd; }
+  inline constexpr unsigned c_encoding()   const noexcept { return __wd; }
+  inline constexpr unsigned iso_encoding() const noexcept { return __wd == 0u ? 7 : __wd; }
   inline constexpr bool ok() const noexcept { return __wd <= 6; }
          constexpr weekday_indexed operator[](unsigned __index) const noexcept;
          constexpr weekday_last    operator[](last_spec) const noexcept;
@@ -1842,7 +1843,7 @@ unsigned char weekday::__weekday_from_days(int __days) noexcept
 
 inline constexpr
 bool operator==(const weekday& __lhs, const weekday& __rhs) noexcept
-{ return static_cast<unsigned>(__lhs) == static_cast<unsigned>(__rhs); }
+{ return __lhs.c_encoding() == __rhs.c_encoding(); }
 
 inline constexpr
 bool operator!=(const weekday& __lhs, const weekday& __rhs) noexcept
@@ -1850,7 +1851,7 @@ bool operator!=(const weekday& __lhs, const weekday& __rhs) noexcept
 
 inline constexpr
 bool operator< (const weekday& __lhs, const weekday& __rhs) noexcept
-{ return static_cast<unsigned>(__lhs) <  static_cast<unsigned>(__rhs); }
+{ return __lhs.c_encoding() < __rhs.c_encoding(); }
 
 inline constexpr
 bool operator> (const weekday& __lhs, const weekday& __rhs) noexcept
@@ -1866,7 +1867,7 @@ bool operator>=(const weekday& __lhs, const weekday& __rhs) noexcept
 
 constexpr weekday operator+(const weekday& __lhs, const days& __rhs) noexcept
 {
-    auto const __mu = static_cast<long long>(static_cast<unsigned>(__lhs)) + __rhs.count();
+    auto const __mu = static_cast<long long>(__lhs.c_encoding()) + __rhs.count();
     auto const __yr = (__mu >= 0 ? __mu : __mu - 6) / 7;
     return weekday{static_cast<unsigned>(__mu - __yr * 7)};
 }
@@ -1879,7 +1880,7 @@ constexpr weekday operator-(const weekday& __lhs, const days& __rhs) noexcept
 
 constexpr days operator-(const weekday& __lhs, const weekday& __rhs) noexcept
 {
-    const int __wdu = static_cast<unsigned>(__lhs) - static_cast<unsigned>(__rhs);
+    const int __wdu = __lhs.c_encoding() - __rhs.c_encoding();
     const int __wk = (__wdu >= 0 ? __wdu : __wdu-6) / 7;
     return days{__wdu - __wk * 7};
 }

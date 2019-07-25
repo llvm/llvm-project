@@ -354,7 +354,7 @@ def HasV8_1aOps : SubtargetFeature<"v8.1a", "HasV8_1aOps", "true",
   FeaturePAN, FeatureLOR, FeatureVH]>;
 
 def HasV8_2aOps : SubtargetFeature<"v8.2a", "HasV8_2aOps", "true",
-  "Support ARM v8.2a instructions", [HasV8_1aOps, FeaturePsUAO, 
+  "Support ARM v8.2a instructions", [HasV8_1aOps, FeaturePsUAO,
   FeaturePAN_RWV, FeatureRAS, FeatureCCPP]>;
 
 def HasV8_3aOps : SubtargetFeature<"v8.3a", "HasV8_3aOps", "true",
@@ -482,6 +482,19 @@ def ProcA57     : SubtargetFeature<"a57", "ARMProcFamily", "CortexA57",
                                    FeaturePerfMon,
                                    FeaturePostRAScheduler,
                                    FeaturePredictableSelectIsExpensive
+                                   ]>;
+
+def ProcA65     : SubtargetFeature<"a65", "ARMProcFamily", "CortexA65",
+                                   "Cortex-A65 ARM processors", [
+                                   HasV8_2aOps,
+                                   FeatureCrypto,
+                                   FeatureDotProd,
+                                   FeatureFPARMv8,
+                                   FeatureFullFP16,
+                                   FeatureNEON,
+                                   FeatureRAS,
+                                   FeatureRCPC,
+                                   FeatureSSBS,
                                    ]>;
 
 def ProcA72     : SubtargetFeature<"a72", "ARMProcFamily", "CortexA72",
@@ -641,6 +654,33 @@ def ProcFalkor  : SubtargetFeature<"falkor", "ARMProcFamily", "Falkor",
                                    FeatureSlowSTRQro
                                    ]>;
 
+def ProcNeoverseE1 : SubtargetFeature<"neoversee1", "ARMProcFamily",
+                                      "NeoverseE1",
+                                      "Neoverse E1 ARM processors", [
+                                      HasV8_2aOps,
+                                      FeatureCrypto,
+                                      FeatureDotProd,
+                                      FeatureFPARMv8,
+                                      FeatureFullFP16,
+                                      FeatureNEON,
+                                      FeatureRCPC,
+                                      FeatureSSBS,
+                                      ]>;
+
+def ProcNeoverseN1 : SubtargetFeature<"neoversen1", "ARMProcFamily",
+                                      "NeoverseN1",
+                                      "Neoverse N1 ARM processors", [
+                                      HasV8_2aOps,
+                                      FeatureCrypto,
+                                      FeatureDotProd,
+                                      FeatureFPARMv8,
+                                      FeatureFullFP16,
+                                      FeatureNEON,
+                                      FeatureRCPC,
+                                      FeatureSPE,
+                                      FeatureSSBS,
+                                      ]>;
+
 def ProcSaphira  : SubtargetFeature<"saphira", "ARMProcFamily", "Saphira",
                                    "Qualcomm Saphira processors", [
                                    FeatureCrypto,
@@ -735,16 +775,19 @@ def : ProcessorModel<"generic", NoSchedModel, [
                      FeaturePostRAScheduler
                      ]>;
 
-// FIXME: Cortex-A35 and Cortex-A55 are currently modeled as a Cortex-A53.
 def : ProcessorModel<"cortex-a35", CortexA53Model, [ProcA35]>;
 def : ProcessorModel<"cortex-a53", CortexA53Model, [ProcA53]>;
 def : ProcessorModel<"cortex-a55", CortexA53Model, [ProcA55]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, [ProcA57]>;
+def : ProcessorModel<"cortex-a65", CortexA53Model, [ProcA65]>;
+def : ProcessorModel<"cortex-a65ae", CortexA53Model, [ProcA65]>;
 def : ProcessorModel<"cortex-a72", CortexA57Model, [ProcA72]>;
 def : ProcessorModel<"cortex-a73", CortexA57Model, [ProcA73]>;
 def : ProcessorModel<"cortex-a75", CortexA57Model, [ProcA75]>;
 def : ProcessorModel<"cortex-a76", CortexA57Model, [ProcA76]>;
 def : ProcessorModel<"cortex-a76ae", CortexA57Model, [ProcA76]>;
+def : ProcessorModel<"neoverse-e1", CortexA53Model, [ProcNeoverseE1]>;
+def : ProcessorModel<"neoverse-n1", CortexA57Model, [ProcNeoverseN1]>;
 def : ProcessorModel<"cyclone", CycloneModel, [ProcCyclone]>;
 def : ProcessorModel<"exynos-m1", ExynosM1Model, [ProcExynosM1]>;
 def : ProcessorModel<"exynos-m2", ExynosM1Model, [ProcExynosM2]>;

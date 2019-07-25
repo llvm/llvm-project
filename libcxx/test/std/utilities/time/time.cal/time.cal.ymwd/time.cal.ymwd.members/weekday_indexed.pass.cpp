@@ -35,10 +35,11 @@ int main(int, char**)
     for (unsigned i = 1; i <= 50; ++i)
     {
         year_month_weekday ymwd0(year{1234}, month{2}, weekday_indexed{weekday{i}, 1});
-        assert( static_cast<unsigned>(ymwd0.weekday_indexed().weekday()) == i);
+        assert( ymwd0.weekday_indexed().weekday().c_encoding() == (i == 7 ? 0 : i));
         assert( static_cast<unsigned>(ymwd0.weekday_indexed().index()) == 1);
+
         year_month_weekday ymwd1(year{1234}, month{2}, weekday_indexed{weekday{2}, i});
-        assert( static_cast<unsigned>(ymwd1.weekday_indexed().weekday()) == 2);
+        assert( ymwd1.weekday_indexed().weekday().c_encoding() == 2);
         assert( static_cast<unsigned>(ymwd1.weekday_indexed().index()) == i);
     }
 

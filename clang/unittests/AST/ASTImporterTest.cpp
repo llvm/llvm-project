@@ -1472,7 +1472,7 @@ TEST_P(ASTImporterOptionSpecificTestBase,
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase,
-       DISABLED_CXXRecordDeclFieldOrderShouldNotDependOnImportOrder) {
+       CXXRecordDeclFieldOrderShouldNotDependOnImportOrder) {
   Decl *From, *To;
   std::tie(From, To) = getImportedDecl(
       // The original recursive algorithm of ASTImporter first imports 'c' then
@@ -2793,6 +2793,16 @@ TEST_P(ImportDecl, ImportEnumSequential) {
       Samples, {ImportMoo, ImportFoo}, // "moo", them "foo".
       // Check that there is only one enum decl in the result AST.
       "main.c", enumDecl(), VerificationMatcher);
+}
+
+TEST_P(ImportDecl, ImportFieldOrder) {
+  MatchVerifier<Decl> Verifier;
+  testImport("struct declToImport {"
+             "  int b = a + 2;"
+             "  int a = 5;"
+             "};",
+             Lang_CXX11, "", Lang_CXX11, Verifier,
+             recordDecl(hasFieldOrder({"b", "a"})));
 }
 
 const internal::VariadicDynCastAllOfMatcher<Expr, DependentScopeDeclRefExpr>

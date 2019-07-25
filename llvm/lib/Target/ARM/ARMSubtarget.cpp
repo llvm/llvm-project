@@ -303,6 +303,8 @@ void ARMSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
   case Krait:
     PreISelOperandLatencyAdjustment = 1;
     break;
+  case NeoverseN1:
+    break;
   case Swift:
     MaxInterleaveFactor = 2;
     LdStMultipleTiming = SingleIssuePlusExtras;

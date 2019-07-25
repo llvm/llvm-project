@@ -487,9 +487,20 @@ TEST(TweakTest, ExtractVariable) {
 TEST(TweakTest, AnnotateHighlightings) {
   llvm::StringLiteral ID = "AnnotateHighlightings";
   checkAvailable(ID, "^vo^id^ ^f(^) {^}^"); // available everywhere.
+  checkAvailable(ID, "[[int a; int b;]]");
   const char *Input = "void ^f() {}";
   const char *Output = "void /* entity.name.function.cpp */f() {}";
   checkTransform(ID, Input, Output);
+
+  checkTransform(ID,
+  R"cpp(
+[[void f1();
+void f2();]]
+)cpp",
+  R"cpp(
+void /* entity.name.function.cpp */f1();
+void /* entity.name.function.cpp */f2();
+)cpp");
 }
 
 TEST(TweakTest, ExpandMacro) {

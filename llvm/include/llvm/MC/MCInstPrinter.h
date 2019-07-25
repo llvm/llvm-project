@@ -87,12 +87,10 @@ public:
 
   /// Utility functions to make adding mark ups simpler.
   StringRef markup(StringRef s) const;
-  StringRef markup(StringRef a, StringRef b) const;
 
   bool getPrintImmHex() const { return PrintImmHex; }
   void setPrintImmHex(bool Value) { PrintImmHex = Value; }
 
-  HexStyle::Style getPrintHexStyle() const { return PrintHexStyle; }
   void setPrintHexStyle(HexStyle::Style Value) { PrintHexStyle = Value; }
 
   /// Utility function to print immediates in decimal or hex.

@@ -2581,6 +2581,11 @@ class y;
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isDirectlyDerivedFrom1')"><a name="isDirectlyDerivedFrom1Anchor">isDirectlyDerivedFrom</a></td><td>std::string BaseName</td></tr>
+<tr><td colspan="4" class="doc" id="isDirectlyDerivedFrom1"><pre>Overloaded method as shortcut for isDirectlyDerivedFrom(hasName(...)).
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isExplicitTemplateSpecialization2')"><a name="isExplicitTemplateSpecialization2Anchor">isExplicitTemplateSpecialization</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isExplicitTemplateSpecialization2"><pre>Matches explicit template specializations of function, class, or
 static member variable template instantiations.
@@ -5249,6 +5254,26 @@ a class matching Base.
 Note that a class is not considered to be derived from itself.
 
 Example matches Y, Z, C (Base == hasName("X"))
+  class X;
+  class Y : public X {};  // directly derived
+  class Z : public Y {};  // indirectly derived
+  typedef X A;
+  typedef A B;
+  class C : public B {};  // derived from a typedef of X
+
+In the following example, Bar matches isDerivedFrom(hasName("X")):
+  class Foo;
+  typedef Foo X;
+  class Bar : public Foo {};  // derived from a type that X is a typedef of
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXRecordDecl.html">CXXRecordDecl</a>&gt;</td><td class="name" onclick="toggle('isDirectlyDerivedFrom0')"><a name="isDirectlyDerivedFrom0Anchor">isDirectlyDerivedFrom</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt; Base</td></tr>
+<tr><td colspan="4" class="doc" id="isDirectlyDerivedFrom0"><pre>Matches C++ classes that are directly derived from a class matching Base.
+
+Note that a class is not considered to be derived from itself.
+
+Example matches Y, C (Base == hasName("X"))
   class X;
   class Y : public X {};  // directly derived
   class Z : public Y {};  // indirectly derived

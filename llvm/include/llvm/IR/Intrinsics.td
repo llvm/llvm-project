@@ -451,7 +451,7 @@ def int_thread_pointer : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>,
 // from being reordered overly much with respect to nearby access to the same
 // memory while not impeding optimization.
 def int_prefetch
-    : Intrinsic<[], [ llvm_ptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty ],
+    : Intrinsic<[], [ llvm_anyptr_ty, llvm_i32_ty, llvm_i32_ty, llvm_i32_ty ],
                 [ IntrInaccessibleMemOrArgMemOnly, ReadOnly<0>, NoCapture<0>,
                   ImmArg<1>, ImmArg<2>]>;
 def int_pcmarker      : Intrinsic<[], [llvm_i32_ty]>;

@@ -186,8 +186,6 @@ public:
   size_t FindTypes(const std::vector<lldb_private::CompilerContext> &context,
                    bool append, lldb_private::TypeMap &types) override;
 
-  lldb_private::TypeList *GetTypeList() override;
-
   size_t GetTypes(lldb_private::SymbolContextScope *sc_scope,
                   lldb::TypeClass type_mask,
                   lldb_private::TypeList &type_list) override;
@@ -330,6 +328,8 @@ protected:
   uint32_t CalculateNumCompileUnits() override;
 
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
+
+  lldb_private::TypeList &GetTypeList() override;
 
   virtual DWARFUnit *
   GetDWARFCompileUnit(lldb_private::CompileUnit *comp_unit);

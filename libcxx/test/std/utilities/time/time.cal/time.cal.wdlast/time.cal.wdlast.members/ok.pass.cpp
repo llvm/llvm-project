@@ -29,7 +29,7 @@ int main(int, char**)
 
     static_assert( weekday_last{weekday{0}}.ok(), "");
     static_assert( weekday_last{weekday{1}}.ok(), "");
-    static_assert(!weekday_last{weekday{7}}.ok(), "");
+    static_assert(!weekday_last{weekday{8}}.ok(), "");
 
     for (unsigned i = 0; i <= 255; ++i)
         assert(weekday_last{weekday{i}}.ok() == weekday{i}.ok());

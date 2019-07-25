@@ -88,6 +88,20 @@ inline class_match<UndefValue> m_Undef() { return class_match<UndefValue>(); }
 /// Match an arbitrary Constant and ignore it.
 inline class_match<Constant> m_Constant() { return class_match<Constant>(); }
 
+/// Inverting matcher
+template <typename Ty> struct match_unless {
+  Ty M;
+
+  match_unless(const Ty &Matcher) : M(Matcher) {}
+
+  template <typename ITy> bool match(ITy *V) { return !M.match(V); }
+};
+
+/// Match if the inner matcher does *NOT* match.
+template <typename Ty> inline match_unless<Ty> m_Unless(const Ty &M) {
+  return match_unless<Ty>(M);
+}
+
 /// Matching combinators
 template <typename LTy, typename RTy> struct match_combine_or {
   LTy L;
@@ -394,6 +408,18 @@ inline cst_pred_ty<is_power2> m_Power2() {
   return cst_pred_ty<is_power2>();
 }
 inline api_pred_ty<is_power2> m_Power2(const APInt *&V) {
+  return V;
+}
+
+struct is_negated_power2 {
+  bool isValue(const APInt &C) { return (-C).isPowerOf2(); }
+};
+/// Match a integer or vector negated power-of-2.
+/// For vectors, this includes constants with undefined elements.
+inline cst_pred_ty<is_negated_power2> m_NegatedPower2() {
+  return cst_pred_ty<is_negated_power2>();
+}
+inline api_pred_ty<is_negated_power2> m_NegatedPower2(const APInt *&V) {
   return V;
 }
 

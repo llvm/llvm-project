@@ -20,8 +20,6 @@
 namespace llvm {
 namespace remarks {
 
-struct MetaSerializer;
-
 /// This is the base class for a remark serializer.
 /// It includes support for using a string table while emitting.
 struct RemarkSerializer {
@@ -35,24 +33,7 @@ struct RemarkSerializer {
 
   /// This is just an interface.
   virtual ~RemarkSerializer() = default;
-  /// Emit a remark to the stream.
   virtual void emit(const Remark &Remark) = 0;
-  /// Return the corresponding metadata serializer.
-  virtual std::unique_ptr<MetaSerializer>
-  metaSerializer(raw_ostream &OS,
-                 Optional<StringRef> ExternalFilename = None) = 0;
-};
-
-/// This is the base class for a remark metadata serializer.
-struct MetaSerializer {
-  /// The open raw_ostream that the metadata is emitted to.
-  raw_ostream &OS;
-
-  MetaSerializer(raw_ostream &OS) : OS(OS) {}
-
-  /// This is just an interface.
-  virtual ~MetaSerializer() = default;
-  virtual void emit() = 0;
 };
 
 /// Create a remark serializer.
