@@ -47,27 +47,49 @@ Expected<StringRef> ParsedStringTable::operator[](size_t Index) const {
   return StringRef(Buffer.data() + Offset, NextOffset - Offset - 1);
 }
 
-Expected<std::unique_ptr<Parser>>
-llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf,
-                                  Optional<const ParsedStringTable *> StrTab) {
+Expected<std::unique_ptr<RemarkParser>>
+llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf) {
   switch (ParserFormat) {
   case Format::YAML:
-    return llvm::make_unique<YAMLRemarkParser>(Buf, StrTab);
+    return llvm::make_unique<YAMLRemarkParser>(Buf);
+  case Format::YAMLStrTab:
+    return createStringError(
+        std::make_error_code(std::errc::invalid_argument),
+        "The YAML with string table format requires a parsed string table.");
   case Format::Unknown:
     return createStringError(std::make_error_code(std::errc::invalid_argument),
                              "Unknown remark parser format.");
   }
-  llvm_unreachable("unknown format");
+  llvm_unreachable("unhandled ParseFormat");
+}
+
+Expected<std::unique_ptr<RemarkParser>>
+llvm::remarks::createRemarkParser(Format ParserFormat, StringRef Buf,
+                                  ParsedStringTable StrTab) {
+  switch (ParserFormat) {
+  case Format::YAML:
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "The YAML format can't be used with a string "
+                             "table. Use yaml-strtab instead.");
+  case Format::YAMLStrTab:
+    return llvm::make_unique<YAMLStrTabRemarkParser>(Buf, std::move(StrTab));
+  case Format::Unknown:
+    return createStringError(std::make_error_code(std::errc::invalid_argument),
+                             "Unknown remark parser format.");
+  }
+  llvm_unreachable("unhandled ParseFormat");
 }
 
 // Wrapper that holds the state needed to interact with the C API.
 struct CParser {
-  std::unique_ptr<Parser> TheParser;
+  std::unique_ptr<RemarkParser> TheParser;
   Optional<std::string> Err;
 
   CParser(Format ParserFormat, StringRef Buf,
-          Optional<const ParsedStringTable *> StrTab = None)
-      : TheParser(cantFail(createRemarkParser(ParserFormat, Buf, StrTab))) {}
+          Optional<ParsedStringTable> StrTab = None)
+      : TheParser(cantFail(
+            StrTab ? createRemarkParser(ParserFormat, Buf, std::move(*StrTab))
+                   : createRemarkParser(ParserFormat, Buf))) {}
 
   void handleError(Error E) { Err.emplace(toString(std::move(E))); }
   bool hasError() const { return Err.hasValue(); }
@@ -86,7 +108,7 @@ extern "C" LLVMRemarkParserRef LLVMRemarkParserCreateYAML(const void *Buf,
 extern "C" LLVMRemarkEntryRef
 LLVMRemarkParserGetNext(LLVMRemarkParserRef Parser) {
   CParser &TheCParser = *unwrap(Parser);
-  remarks::Parser &TheParser = *TheCParser.TheParser;
+  remarks::RemarkParser &TheParser = *TheCParser.TheParser;
 
   Expected<std::unique_ptr<Remark>> MaybeRemark = TheParser.next();
   if (Error E = MaybeRemark.takeError()) {

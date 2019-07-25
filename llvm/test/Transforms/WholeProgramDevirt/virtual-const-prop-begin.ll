@@ -17,19 +17,19 @@ i8* bitcast (i1 (i8*)* @vf0i1 to i8*),
 i8* bitcast (i32 (i8*)* @vf2i32 to i8*)
 ], !type !0
 
-; CHECK: [[VT3DATA:@[^ ]*]] = private constant { [8 x i8], [3 x i8*], [0 x i8] } { [8 x i8] c"\00\00\00\01\03\00\00\00", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i32 (i8*)* @vf3i32 to i8*)], [0 x i8] zeroinitializer }, !type [[T8]]
+; CHECK: [[VT3DATA:@[^ ]*]] = private constant { [5 x i8], [3 x i8*], [0 x i8] } { [5 x i8] c"\01\03\00\00\00", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i32 (i8*)* @vf3i32 to i8*)], [0 x i8] zeroinitializer }, align 1, !type [[T5:![0-9]+]]
 @vt3 = constant [3 x i8*] [
 i8* bitcast (i1 (i8*)* @vf0i1 to i8*),
 i8* bitcast (i1 (i8*)* @vf1i1 to i8*),
 i8* bitcast (i32 (i8*)* @vf3i32 to i8*)
-], !type !0
+], align 1, !type !0
 
-; CHECK: [[VT4DATA:@[^ ]*]] = private constant { [8 x i8], [3 x i8*], [0 x i8] } { [8 x i8] c"\00\00\00\02\04\00\00\00", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i32 (i8*)* @vf4i32 to i8*)], [0 x i8] zeroinitializer }, !type [[T8]]
+; CHECK: [[VT4DATA:@[^ ]*]] = private constant { [16 x i8], [3 x i8*], [0 x i8] } { [16 x i8] c"\00\00\00\00\00\00\00\00\00\00\00\02\04\00\00\00", [3 x i8*] [i8* bitcast (i1 (i8*)* @vf1i1 to i8*), i8* bitcast (i1 (i8*)* @vf0i1 to i8*), i8* bitcast (i32 (i8*)* @vf4i32 to i8*)], [0 x i8] zeroinitializer },  align 16, !type [[T16:![0-9]+]]
 @vt4 = constant [3 x i8*] [
 i8* bitcast (i1 (i8*)* @vf1i1 to i8*),
 i8* bitcast (i1 (i8*)* @vf0i1 to i8*),
 i8* bitcast (i32 (i8*)* @vf4i32 to i8*)
-], !type !0
+], align 16, !type !0
 
 ; CHECK: @vt5 = {{.*}}, !type [[T0:![0-9]+]]
 @vt5 = constant [3 x i8*] [
@@ -40,8 +40,8 @@ i8* bitcast (void ()* @__cxa_pure_virtual to i8*)
 
 ; CHECK: @vt1 = alias [3 x i8*], getelementptr inbounds ({ [8 x i8], [3 x i8*], [0 x i8] }, { [8 x i8], [3 x i8*], [0 x i8] }* [[VT1DATA]], i32 0, i32 1)
 ; CHECK: @vt2 = alias [3 x i8*], getelementptr inbounds ({ [8 x i8], [3 x i8*], [0 x i8] }, { [8 x i8], [3 x i8*], [0 x i8] }* [[VT2DATA]], i32 0, i32 1)
-; CHECK: @vt3 = alias [3 x i8*], getelementptr inbounds ({ [8 x i8], [3 x i8*], [0 x i8] }, { [8 x i8], [3 x i8*], [0 x i8] }* [[VT3DATA]], i32 0, i32 1)
-; CHECK: @vt4 = alias [3 x i8*], getelementptr inbounds ({ [8 x i8], [3 x i8*], [0 x i8] }, { [8 x i8], [3 x i8*], [0 x i8] }* [[VT4DATA]], i32 0, i32 1)
+; CHECK: @vt3 = alias [3 x i8*], getelementptr inbounds ({ [5 x i8], [3 x i8*], [0 x i8] }, { [5 x i8], [3 x i8*], [0 x i8] }* [[VT3DATA]], i32 0, i32 1)
+; CHECK: @vt4 = alias [3 x i8*], getelementptr inbounds ({ [16 x i8], [3 x i8*], [0 x i8] }, { [16 x i8], [3 x i8*], [0 x i8] }* [[VT4DATA]], i32 0, i32 1)
 
 define i1 @vf0i1(i8* %this) readnone {
   ret i1 0
@@ -134,6 +134,8 @@ declare void @llvm.assume(i1)
 declare void @__cxa_pure_virtual()
 
 ; CHECK: [[T8]] = !{i32 8, !"typeid"}
+; CHECK: [[T5]] = !{i32 5, !"typeid"}
+; CHECK: [[T16]] = !{i32 16, !"typeid"}
 ; CHECK: [[T0]] = !{i32 0, !"typeid"}
 
 !0 = !{i32 0, !"typeid"}

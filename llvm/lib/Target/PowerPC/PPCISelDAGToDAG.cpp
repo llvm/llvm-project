@@ -5085,12 +5085,12 @@ void PPCDAGToDAGISel::Select(SDNode *N) {
 
     // The first source operand is a TargetGlobalAddress or a TargetJumpTable.
     // If it must be toc-referenced according to PPCSubTarget, we generate:
-    //   LDtocL(@sym, ADDIStocHA(%x2, @sym))
+    //   LDtocL(@sym, ADDIStocHA8(%x2, @sym))
     // Otherwise we generate:
-    //   ADDItocL(ADDIStocHA(%x2, @sym), @sym)
+    //   ADDItocL(ADDIStocHA8(%x2, @sym), @sym)
     SDValue GA = N->getOperand(0);
     SDValue TOCbase = N->getOperand(1);
-    SDNode *Tmp = CurDAG->getMachineNode(PPC::ADDIStocHA, dl, MVT::i64,
+    SDNode *Tmp = CurDAG->getMachineNode(PPC::ADDIStocHA8, dl, MVT::i64,
                                          TOCbase, GA);
     if (PPCLowering->isAccessedAsGotIndirect(GA)) {
       // If it is access as got-indirect, we need an extra LD to load
@@ -6456,7 +6456,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
           continue;
 
         if (!HBase.isMachineOpcode() ||
-            HBase.getMachineOpcode() != PPC::ADDIStocHA)
+            HBase.getMachineOpcode() != PPC::ADDIStocHA8)
           continue;
 
         if (!Base.hasOneUse() || !HBase.hasOneUse())

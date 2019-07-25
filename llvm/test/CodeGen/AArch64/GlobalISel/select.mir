@@ -11,6 +11,8 @@
   }
 
   define i8* @gep(i8* %in) { ret i8* undef }
+  define i8* @gep_no_constant(i8* %in) { ret i8* undef }
+  define i8* @gep_bad_imm(i8* %in) { ret i8* undef }
 
   define i8* @ptr_mask(i8* %in) { ret i8* undef }
 
@@ -61,13 +63,58 @@ registers:
   - { id: 2, class: gpr }
 
 # CHECK:  body:
-# CHECK: %1:gpr64 = MOVi64imm 42
-# CHECK: %2:gpr64 = ADDXrr %0, %1
+# CHECK: %2:gpr64sp = ADDXri %0, 42, 0
 body:             |
   bb.0:
       liveins: $x0
     %0(p0) = COPY $x0
     %1(s64) = G_CONSTANT i64 42
+    %2(p0) = G_GEP %0, %1(s64)
+    $x0 = COPY %2(p0)
+...
+
+---
+# CHECK-LABEL: name: gep_no_constant
+name:            gep_no_constant
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0:gpr64 = COPY $x0
+# CHECK: %1:gpr64 = COPY $x1
+# CHECK: %2:gpr64 = ADDXrr %0, %1
+body:             |
+  bb.0:
+      liveins: $x0, $x1
+    %0(p0) = COPY $x0
+    %1(s64) = COPY $x1
+    %2(p0) = G_GEP %0, %1(s64)
+    $x0 = COPY %2(p0)
+...
+
+---
+# CHECK-LABEL: name: gep_bad_imm
+name:            gep_bad_imm
+legalized:       true
+regBankSelected: true
+registers:
+  - { id: 0, class: gpr }
+  - { id: 1, class: gpr }
+  - { id: 2, class: gpr }
+
+# CHECK:  body:
+# CHECK: %0:gpr64 = COPY $x0
+# CHECK: %1:gpr64 = MOVi64imm 10000
+# CHECK: %2:gpr64 = ADDXrr %0, %1
+body:             |
+  bb.0:
+      liveins: $x0, $x1
+    %0(p0) = COPY $x0
+    %1(s64) = G_CONSTANT i64 10000
     %2(p0) = G_GEP %0, %1(s64)
     $x0 = COPY %2(p0)
 ...

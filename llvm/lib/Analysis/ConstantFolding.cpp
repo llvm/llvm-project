@@ -784,7 +784,7 @@ Constant *CastGEPIndices(Type *SrcElemTy, ArrayRef<Constant *> Ops,
 Constant* StripPtrCastKeepAS(Constant* Ptr, Type *&ElemTy) {
   assert(Ptr->getType()->isPointerTy() && "Not a pointer type");
   auto *OldPtrTy = cast<PointerType>(Ptr->getType());
-  Ptr = Ptr->stripPointerCasts();
+  Ptr = cast<Constant>(Ptr->stripPointerCastsNoFollowAliases());
   auto *NewPtrTy = cast<PointerType>(Ptr->getType());
 
   ElemTy = NewPtrTy->getPointerElementType();

@@ -77,7 +77,7 @@ body:             |
     $x30 = OR8 $x4, $x4
     $x3 = LD 0, killed $x3 :: (load 8 from %ir.p1)
     $x29 = ADDI8 killed $x3, -48
-    $x3 = ADDIStocHA $x2, @tasklist_lock
+    $x3 = ADDIStocHA8 $x2, @tasklist_lock
     $x3 = LDtocL @tasklist_lock, killed $x3, implicit $x2 :: (load 8 from got)
     BL8_NOP @__raw_read_unlock, csr_svr464_altivec, implicit-def $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1, implicit-def dead $x3
     $r3 = LI 0

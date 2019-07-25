@@ -1323,8 +1323,8 @@ define <2 x i16> @splatvar_shift_v2i16(<2 x i16> %a, <2 x i16> %b) nounwind {
 ; XOPAVX1:       # %bb.0:
 ; XOPAVX1-NEXT:    vpsllq $48, %xmm0, %xmm0
 ; XOPAVX1-NEXT:    vpshaq {{.*}}(%rip), %xmm0, %xmm0
-; XOPAVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
+; XOPAVX1-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOPAVX1-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3],xmm1[4],xmm2[5,6,7]
 ; XOPAVX1-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
 ; XOPAVX1-NEXT:    vpshaq %xmm1, %xmm0, %xmm0
@@ -1334,8 +1334,8 @@ define <2 x i16> @splatvar_shift_v2i16(<2 x i16> %a, <2 x i16> %b) nounwind {
 ; XOPAVX2:       # %bb.0:
 ; XOPAVX2-NEXT:    vpsllq $48, %xmm0, %xmm0
 ; XOPAVX2-NEXT:    vpshaq {{.*}}(%rip), %xmm0, %xmm0
-; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOPAVX2-NEXT:    vpbroadcastq %xmm1, %xmm1
+; XOPAVX2-NEXT:    vpxor %xmm2, %xmm2, %xmm2
 ; XOPAVX2-NEXT:    vpblendw {{.*#+}} xmm1 = xmm1[0],xmm2[1,2,3],xmm1[4],xmm2[5,6,7]
 ; XOPAVX2-NEXT:    vpsubq %xmm1, %xmm2, %xmm1
 ; XOPAVX2-NEXT:    vpshaq %xmm1, %xmm0, %xmm0

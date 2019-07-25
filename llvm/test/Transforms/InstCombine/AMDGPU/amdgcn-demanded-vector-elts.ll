@@ -765,14 +765,12 @@ define i32 @extract0_bitcast_raw_buffer_load_format_v4f32(<4 x i32> inreg %rsrc,
 }
 
 ; CHECK-LABEL: @extract0_bitcast_raw_buffer_load_format_v4i32(
-; CHECK-NEXT: %tmp = call i32 @llvm.amdgcn.raw.buffer.load.format.i32(<4 x i32> %rsrc, i32 %ofs, i32 %sofs, i32 0)
-; CHECK-NEXT: %tmp2 = bitcast i32 %tmp to float
-; CHECK-NEXT: ret float %tmp2
+; CHECK-NEXT: %tmp = call float @llvm.amdgcn.raw.buffer.load.format.f32(<4 x i32> %rsrc, i32 %ofs, i32 %sofs, i32 0)
+; CHECK-NEXT: ret float %tmp
 define float @extract0_bitcast_raw_buffer_load_format_v4i32(<4 x i32> inreg %rsrc, i32 %ofs, i32 %sofs) #0 {
-  %tmp = call <4 x i32> @llvm.amdgcn.raw.buffer.load.format.v4i32(<4 x i32> %rsrc, i32 %ofs, i32 %sofs, i32 0)
-  %tmp1 = bitcast <4 x i32> %tmp to <4 x float>
-  %tmp2 = extractelement <4 x float> %tmp1, i32 0
-  ret float %tmp2
+  %tmp = call <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32> %rsrc, i32 %ofs, i32 %sofs, i32 0)
+  %tmp1 = extractelement <4 x float> %tmp, i32 0
+  ret float %tmp1
 }
 
 ; CHECK-LABEL: @preserve_metadata_extract_elt0_raw_buffer_load_format_v2f32(
@@ -789,8 +787,6 @@ declare <1 x float> @llvm.amdgcn.raw.buffer.load.format.v1f32(<4 x i32>, i32, i3
 declare <2 x float> @llvm.amdgcn.raw.buffer.load.format.v2f32(<4 x i32>, i32, i32, i32) #1
 declare <3 x float> @llvm.amdgcn.raw.buffer.load.format.v3f32(<4 x i32>, i32, i32, i32) #1
 declare <4 x float> @llvm.amdgcn.raw.buffer.load.format.v4f32(<4 x i32>, i32, i32, i32) #1
-
-declare <4 x i32> @llvm.amdgcn.raw.buffer.load.format.v4i32(<4 x i32>, i32, i32, i32) #1
 
 ; --------------------------------------------------------------------
 ; llvm.amdgcn.struct.buffer.load
@@ -1240,17 +1236,6 @@ define i32 @extract0_bitcast_struct_buffer_load_format_v4f32(<4 x i32> inreg %rs
   %tmp1 = bitcast <4 x float> %tmp to <4 x i32>
   %tmp2 = extractelement <4 x i32> %tmp1, i32 0
   ret i32 %tmp2
-}
-
-; CHECK-LABEL: @extract0_bitcast_struct_buffer_load_format_v4i32(
-; CHECK-NEXT: %tmp = call i32 @llvm.amdgcn.struct.buffer.load.format.i32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 %sofs, i32 0)
-; CHECK-NEXT: %tmp2 = bitcast i32 %tmp to float
-; CHECK-NEXT: ret float %tmp2
-define float @extract0_bitcast_struct_buffer_load_format_v4i32(<4 x i32> inreg %rsrc, i32 %idx, i32 %ofs, i32 %sofs) #0 {
-  %tmp = call <4 x i32> @llvm.amdgcn.struct.buffer.load.format.v4i32(<4 x i32> %rsrc, i32 %idx, i32 %ofs, i32 %sofs, i32 0)
-  %tmp1 = bitcast <4 x i32> %tmp to <4 x float>
-  %tmp2 = extractelement <4 x float> %tmp1, i32 0
-  ret float %tmp2
 }
 
 ; CHECK-LABEL: @preserve_metadata_extract_elt0_struct_buffer_load_format_v2f32(

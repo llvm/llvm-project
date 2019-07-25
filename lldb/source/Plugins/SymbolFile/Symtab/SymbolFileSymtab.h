@@ -37,10 +37,6 @@ public:
   uint32_t CalculateAbilities() override;
 
   // Compile Unit function calls
-  uint32_t GetNumCompileUnits() override;
-
-  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
-
   lldb::LanguageType
   ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
 
@@ -85,6 +81,10 @@ public:
   uint32_t GetPluginVersion() override;
 
 protected:
+  uint32_t CalculateNumCompileUnits() override;
+
+  lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
+
   typedef std::map<lldb_private::ConstString, lldb::TypeSP> TypeMap;
 
   lldb_private::Symtab::IndexCollection m_source_indexes;

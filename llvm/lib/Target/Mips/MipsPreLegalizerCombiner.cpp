@@ -27,7 +27,8 @@ class MipsPreLegalizerCombinerInfo : public CombinerInfo {
 public:
   MipsPreLegalizerCombinerInfo()
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr) {}
+                     /*LegalizerInfo*/ nullptr, /*EnableOpt*/ false,
+                     /*EnableOptSize*/ false, /*EnableMinSize*/ false) {}
   virtual bool combine(GISelChangeObserver &Observer, MachineInstr &MI,
                        MachineIRBuilder &B) const override;
 };

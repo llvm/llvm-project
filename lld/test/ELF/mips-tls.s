@@ -3,23 +3,23 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         %p/Inputs/mips-tls.s -o %t.so.o
-# RUN: ld.lld -shared %t.so.o -o %t.so
+# RUN: ld.lld -shared %t.so.o -soname=t.so -o %t.so
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 
 # RUN: ld.lld %t.o %t.so -o %t.exe
-# RUN: llvm-objdump -d -s -t %t.exe | FileCheck -check-prefix=DIS %s
+# RUN: llvm-objdump -d -s -t --no-show-raw-insn %t.exe | FileCheck -check-prefix=DIS %s
 # RUN: llvm-readobj -r --mips-plt-got %t.exe | FileCheck %s
 
 # RUN: ld.lld -shared %t.o %t.so -o %t-out.so
-# RUN: llvm-objdump -d -s -t %t-out.so | FileCheck -check-prefix=DIS-SO %s
+# RUN: llvm-objdump -d -s -t --no-show-raw-insn %t-out.so | FileCheck -check-prefix=DIS-SO %s
 # RUN: llvm-readobj -r --mips-plt-got %t-out.so | FileCheck -check-prefix=SO %s
 
 # DIS:      __start:
-# DIS-NEXT:    20000:   24 62 80 20   addiu   $2, $3, -32736
-# DIS-NEXT:    20004:   24 62 80 18   addiu   $2, $3, -32744
-# DIS-NEXT:    20008:   24 62 80 28   addiu   $2, $3, -32728
-# DIS-NEXT:    2000c:   24 62 80 30   addiu   $2, $3, -32720
-# DIS-NEXT:    20010:   24 62 80 1c   addiu   $2, $3, -32740
+# DIS-NEXT:    20000:       addiu   $2, $3, -32736
+# DIS-NEXT:    20004:       addiu   $2, $3, -32744
+# DIS-NEXT:    20008:       addiu   $2, $3, -32728
+# DIS-NEXT:    2000c:       addiu   $2, $3, -32720
+# DIS-NEXT:    20010:       addiu   $2, $3, -32740
 
 # DIS:      Contents of section .got:
 # DIS-NEXT:  40010 00000000 80000000 00000000 ffff9004

@@ -3323,10 +3323,13 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
       continue;
     }
 
-    case OPC_EmitCopyToReg: {
+    case OPC_EmitCopyToReg:
+    case OPC_EmitCopyToReg2: {
       unsigned RecNo = MatcherTable[MatcherIndex++];
       assert(RecNo < RecordedNodes.size() && "Invalid EmitCopyToReg");
       unsigned DestPhysReg = MatcherTable[MatcherIndex++];
+      if (Opcode == OPC_EmitCopyToReg2)
+        DestPhysReg |= MatcherTable[MatcherIndex++] << 8;
 
       if (!InputChain.getNode())
         InputChain = CurDAG->getEntryNode();

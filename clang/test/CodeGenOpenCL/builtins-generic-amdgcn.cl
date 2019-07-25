@@ -14,3 +14,8 @@ void test_builtin_clzl(global long* out, long a)
 {
   *out = __builtin_clzl(a);
 }
+
+// CHECK: tail call i8 addrspace(5)* @llvm.frameaddress.p5i8(i32 0)
+void test_builtin_frame_address(int *out) {
+    *out = __builtin_frame_address(0);
+}

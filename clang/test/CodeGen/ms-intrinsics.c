@@ -142,7 +142,7 @@ void *test_AddressOfReturnAddress() {
   return _AddressOfReturnAddress();
 }
 // CHECK-INTEL-LABEL: define dso_local i8* @test_AddressOfReturnAddress()
-// CHECK-INTEL: = tail call i8* @llvm.addressofreturnaddress()
+// CHECK-INTEL: = tail call i8* @llvm.addressofreturnaddress.p0i8()
 // CHECK-INTEL: ret i8*
 #endif
 

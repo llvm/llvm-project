@@ -1215,7 +1215,8 @@ void UnwrappedLineParser::parseStructuralElement() {
     case tok::kw_typedef:
       nextToken();
       if (FormatTok->isOneOf(Keywords.kw_NS_ENUM, Keywords.kw_NS_OPTIONS,
-                             Keywords.kw_CF_ENUM, Keywords.kw_CF_OPTIONS))
+                             Keywords.kw_CF_ENUM, Keywords.kw_CF_OPTIONS,
+                             Keywords.kw_CF_CLOSED_ENUM, Keywords.kw_NS_CLOSED_ENUM))
         parseEnum();
       break;
     case tok::kw_struct:
@@ -1872,8 +1873,13 @@ void UnwrappedLineParser::parseNamespace() {
   if (InitialToken.is(TT_NamespaceMacro)) {
     parseParens();
   } else {
-    while (FormatTok->isOneOf(tok::identifier, tok::coloncolon))
-      nextToken();
+    while (FormatTok->isOneOf(tok::identifier, tok::coloncolon, tok::kw_inline,
+                              tok::l_square)) {
+      if (FormatTok->is(tok::l_square))
+        parseSquare();
+      else
+        nextToken();
+    }
   }
   if (FormatTok->Tok.is(tok::l_brace)) {
     if (ShouldBreakBeforeBrace(Style, InitialToken))

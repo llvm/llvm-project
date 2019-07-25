@@ -697,10 +697,9 @@ basic_filebuf<_CharT, _Traits>::close()
         unique_ptr<FILE, int(*)(FILE*)> __h(__file_, fclose);
         if (sync())
             __rt = 0;
-        if (fclose(__h.release()) == 0)
-            __file_ = 0;
-        else
+        if (fclose(__h.release()))
             __rt = 0;
+        __file_ = 0;
         setbuf(0, 0);
     }
     return __rt;

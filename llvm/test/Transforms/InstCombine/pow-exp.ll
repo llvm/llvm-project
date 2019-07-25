@@ -212,7 +212,7 @@ declare void @use_f(float)
 
 define double @pow_ok_base(double %e) {
 ; CHECK-LABEL: @pow_ok_base(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0xBFE0776228967D13
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0xBFE0776{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = call nnan ninf afn double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
@@ -222,7 +222,7 @@ define double @pow_ok_base(double %e) {
 
 define double @pow_ok_base_fast(double %e) {
 ; CHECK-LABEL: @pow_ok_base_fast(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[E:%.*]], 0xBFE0776228967D13
+; CHECK-NEXT:    [[MUL:%.*]] = fmul fast double [[E:%.*]], 0xBFE0776{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = call fast double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
@@ -232,7 +232,7 @@ define double @pow_ok_base_fast(double %e) {
 
 define double @pow_ok_base2(double %e) {
 ; CHECK-LABEL: @pow_ok_base2(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0x4010952C788751AC
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0x4010952{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = call nnan ninf afn double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
@@ -242,7 +242,7 @@ define double @pow_ok_base2(double %e) {
 
 define double @pow_ok_base3(double %e) {
 ; CHECK-LABEL: @pow_ok_base3(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0x400AB0B5584886CD
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0x400AB0B5{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = call nnan ninf afn double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
@@ -252,7 +252,7 @@ define double @pow_ok_base3(double %e) {
 
 define double @pow_ok_ten_base(double %e) {
 ; CHECK-LABEL: @pow_ok_ten_base(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0x400A934F0979A371
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn double [[E:%.*]], 0x400A934F{{.*}}
 ; CHECK-NEXT:    [[EXP2:%.*]] = call nnan ninf afn double @exp2(double [[MUL]])
 ; CHECK-NEXT:    ret double [[EXP2]]
 ;
@@ -262,7 +262,7 @@ define double @pow_ok_ten_base(double %e) {
 
 define float @powf_ok_base(float %e) {
 ; CHECK-LABEL: @powf_ok_base(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0xBFE0776240000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0xBFE07762{{.*}}
 ; CHECK-NEXT:    [[EXP2F:%.*]] = call nnan ninf afn float @exp2f(float [[MUL]])
 ; CHECK-NEXT:    ret float [[EXP2F]]
 ;
@@ -272,7 +272,7 @@ define float @powf_ok_base(float %e) {
 
 define float @powf_ok_base2(float %e) {
 ; CHECK-LABEL: @powf_ok_base2(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0x4010952C80000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0x4010952{{.*}}
 ; CHECK-NEXT:    [[EXP2F:%.*]] = call nnan ninf afn float @exp2f(float [[MUL]])
 ; CHECK-NEXT:    ret float [[EXP2F]]
 ;
@@ -282,7 +282,7 @@ define float @powf_ok_base2(float %e) {
 
 define float @powf_ok_base3(float %e) {
 ; CHECK-LABEL: @powf_ok_base3(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0x400AB0B560000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0x400AB0B5{{.*}}
 ; CHECK-NEXT:    [[EXP2F:%.*]] = call nnan ninf afn float @exp2f(float [[MUL]])
 ; CHECK-NEXT:    ret float [[EXP2F]]
 ;
@@ -292,7 +292,7 @@ define float @powf_ok_base3(float %e) {
 
 define float @powf_ok_ten_base(float %e) {
 ; CHECK-LABEL: @powf_ok_ten_base(
-; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0x400A934F00000000
+; CHECK-NEXT:    [[MUL:%.*]] = fmul nnan ninf afn float [[E:%.*]], 0x400A934{{.*}}
 ; CHECK-NEXT:    [[EXP2F:%.*]] = call nnan ninf afn float @exp2f(float [[MUL]])
 ; CHECK-NEXT:    ret float [[EXP2F]]
 ;

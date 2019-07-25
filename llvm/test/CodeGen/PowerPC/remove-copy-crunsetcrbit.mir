@@ -110,7 +110,7 @@ body:             |
     successors: %bb.5(0x30000000), %bb.1(0x50000000)
     liveins: $x2
 
-    %3:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @b
+    %3:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @b
     %4:gprc = LWZ target-flags(ppc-toc-lo) @b, killed %3, implicit $x2 :: (dereferenceable load 4 from @b)
     %5:crrc = CMPLWI killed %4, 0
     BCC 76, killed %5, %bb.5
@@ -120,16 +120,16 @@ body:             |
     successors: %bb.2(0x80000000)
     liveins: $x2
 
-    %6:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @d
+    %6:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @d
     %7:gprc = LWZ target-flags(ppc-toc-lo) @d, killed %6, implicit $x2 :: (dereferenceable load 4 from @d)
     %8:crrc = CMPWI killed %7, 0
     %0:crbitrc = COPY killed %8.sub_eq
     %9:crbitrc = CRUNSET
     %19:gprc_and_gprc_nor0 = LI 0
     %20:gprc_and_gprc_nor0 = LI 1
-    %22:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @c
-    %10:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @e
-    %13:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @a
+    %22:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @c
+    %10:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @e
+    %13:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @a
     %14:g8rc_and_g8rc_nox0 = ADDItocL killed %13, @a, implicit $x2
 
   bb.2.while.body:

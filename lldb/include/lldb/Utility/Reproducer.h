@@ -9,11 +9,11 @@
 #ifndef LLDB_UTILITY_REPRODUCER_H
 #define LLDB_UTILITY_REPRODUCER_H
 
-#include "lldb/Utility/FileCollector.h"
 #include "lldb/Utility/FileSpec.h"
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileCollector.h"
 #include "llvm/Support/YAMLTraits.h"
 
 #include <mutex>
@@ -91,23 +91,23 @@ public:
 
   FileProvider(const FileSpec &directory)
       : Provider(directory),
-        m_collector(directory.CopyByAppendingPathComponent("root"), directory) {
-  }
+        m_collector(directory.CopyByAppendingPathComponent("root").GetPath(),
+                    directory.GetPath()) {}
 
-  FileCollector &GetFileCollector() { return m_collector; }
+  llvm::FileCollector &GetFileCollector() { return m_collector; }
 
   void Keep() override {
     auto mapping = GetRoot().CopyByAppendingPathComponent(Info::file);
     // Temporary files that are removed during execution can cause copy errors.
-    if (auto ec = m_collector.CopyFiles(/*stop_on_error=*/false))
+    if (auto ec = m_collector.copyFiles(/*stop_on_error=*/false))
       return;
-    m_collector.WriteMapping(mapping);
+    m_collector.writeMapping(mapping.GetPath());
   }
 
   static char ID;
 
 private:
-  FileCollector m_collector;
+  llvm::FileCollector m_collector;
 };
 
 /// Provider for the LLDB version number.

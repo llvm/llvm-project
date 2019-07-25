@@ -840,6 +840,13 @@ namespace llvm {
 
     bool hasAndNot(SDValue Y) const override;
 
+    bool hasBitTest(SDValue X, SDValue Y) const override;
+
+    bool shouldProduceAndByConstByHoistingConstFromShiftsLHSOfAnd(
+        SDValue X, ConstantSDNode *XC, ConstantSDNode *CC, SDValue Y,
+        unsigned OldShiftOpcode, unsigned NewShiftOpcode,
+        SelectionDAG &DAG) const override;
+
     bool shouldFoldConstantShiftPairToMask(const SDNode *N,
                                            CombineLevel Level) const override;
 

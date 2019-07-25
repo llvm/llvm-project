@@ -407,9 +407,9 @@ def int_objc_arc_annotation_bottomup_bbend  : Intrinsic<[],
 //===--------------------- Code Generator Intrinsics ----------------------===//
 //
 def int_returnaddress : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty], [IntrNoMem, ImmArg<0>]>;
-def int_addressofreturnaddress : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
-def int_frameaddress : Intrinsic<[llvm_ptr_ty], [llvm_i32_ty], [IntrNoMem, ImmArg<0>]>;
-def int_sponentry  : Intrinsic<[llvm_ptr_ty], [], [IntrNoMem]>;
+def int_addressofreturnaddress : Intrinsic<[llvm_anyptr_ty], [], [IntrNoMem]>;
+def int_frameaddress : Intrinsic<[llvm_anyptr_ty], [llvm_i32_ty], [IntrNoMem, ImmArg<0>]>;
+def int_sponentry  : Intrinsic<[llvm_anyptr_ty], [], [IntrNoMem]>;
 def int_read_register  : Intrinsic<[llvm_anyint_ty], [llvm_metadata_ty],
                                    [IntrReadMem], "llvm.read_register">;
 def int_write_register : Intrinsic<[], [llvm_metadata_ty, llvm_anyint_ty],

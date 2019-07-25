@@ -161,9 +161,9 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
       function_stack_bottom = function_stack_pointer - HostInfo::GetPageSize();
       function_stack_top = function_stack_pointer;
 
-      if (log)
-        log->Printf(
-            "-- [UserExpression::Execute] Execution of expression begins --");
+      LLDB_LOGF(
+          log,
+          "-- [UserExpression::Execute] Execution of expression begins --");
 
       if (exe_ctx.GetProcessPtr())
         exe_ctx.GetProcessPtr()->SetRunningUserExpression(true);
@@ -175,9 +175,8 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
       if (exe_ctx.GetProcessPtr())
         exe_ctx.GetProcessPtr()->SetRunningUserExpression(false);
 
-      if (log)
-        log->Printf("-- [UserExpression::Execute] Execution of expression "
-                    "completed --");
+      LLDB_LOGF(log, "-- [UserExpression::Execute] Execution of expression "
+                     "completed --");
 
       if (execution_result == lldb::eExpressionInterrupted ||
           execution_result == lldb::eExpressionHitBreakpoint) {
@@ -251,9 +250,8 @@ bool LLVMUserExpression::FinalizeJITExecution(
     lldb::addr_t function_stack_top) {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_EXPRESSIONS));
 
-  if (log)
-    log->Printf("-- [UserExpression::FinalizeJITExecution] Dematerializing "
-                "after execution --");
+  LLDB_LOGF(log, "-- [UserExpression::FinalizeJITExecution] Dematerializing "
+                 "after execution --");
 
   if (!m_dematerializer_sp) {
     diagnostic_manager.Printf(eDiagnosticSeverityError,

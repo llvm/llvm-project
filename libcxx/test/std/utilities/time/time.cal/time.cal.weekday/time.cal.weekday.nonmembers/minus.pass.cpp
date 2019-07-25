@@ -62,7 +62,7 @@ int main(int, char**)
         {
             weekday wd = weekday{i} - days{j};
             assert(wd + days{j} == weekday{i});
-            assert((static_cast<unsigned>(wd) == euclidian_subtraction<unsigned, 0, 6>(i, j)));
+            assert((wd.c_encoding() == euclidian_subtraction<unsigned, 0, 6>(i, j)));
         }
 
     for (unsigned i = 0; i <= 6; ++i)

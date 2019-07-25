@@ -92,7 +92,7 @@ void ASTDumper::ToLog(Log *log, const char *prefix) {
   while (end) {
     *end = '\0';
 
-    log->Printf("%s%s", prefix, str);
+    LLDB_LOGF(log, "%s%s", prefix, str);
 
     *end = '\n';
 
@@ -100,7 +100,7 @@ void ASTDumper::ToLog(Log *log, const char *prefix) {
     end = strchr(str, '\n');
   }
 
-  log->Printf("%s%s", prefix, str);
+  LLDB_LOGF(log, "%s%s", prefix, str);
 
   free(alloc);
 }

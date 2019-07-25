@@ -51,7 +51,7 @@ int safe_div(int numerator, int denominator, int *res) {
 // 32-bit SEH needs this filter to save the exception code.
 //
 // X86-LABEL: define internal i32 @"?filt$0@0@safe_div@@"()
-// X86: %[[ebp:[^ ]*]] = call i8* @llvm.frameaddress(i32 1)
+// X86: %[[ebp:[^ ]*]] = call i8* @llvm.frameaddress.p0i8(i32 1)
 // X86: %[[fp:[^ ]*]] = call i8* @llvm.eh.recoverfp(i8* bitcast (i32 (i32, i32, i32*)* @safe_div to i8*), i8* %[[ebp]])
 // X86: call i8* @llvm.localrecover(i8* bitcast (i32 (i32, i32, i32*)* @safe_div to i8*), i8* %[[fp]], i32 0)
 // X86: load i8*, i8**
@@ -103,7 +103,7 @@ int filter_expr_capture(void) {
 // ARM64: call i8* @llvm.localrecover(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %[[fp]], i32 0)
 //
 // X86-LABEL: define internal i32 @"?filt$0@0@filter_expr_capture@@"()
-// X86: %[[ebp:[^ ]*]] = call i8* @llvm.frameaddress(i32 1)
+// X86: %[[ebp:[^ ]*]] = call i8* @llvm.frameaddress.p0i8(i32 1)
 // X86: %[[fp:[^ ]*]] = call i8* @llvm.eh.recoverfp(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %[[ebp]])
 // X86: call i8* @llvm.localrecover(i8* bitcast (i32 ()* @filter_expr_capture to i8*), i8* %[[fp]], i32 0)
 //

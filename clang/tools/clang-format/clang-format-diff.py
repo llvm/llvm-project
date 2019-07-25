@@ -8,10 +8,7 @@
 #
 #===------------------------------------------------------------------------===#
 
-r"""
-ClangFormat Diff Reformatter
-============================
-
+"""
 This script reads input from a unified diff and reformats all the changed
 lines. This is useful to reformat all the lines touched by a specific patch.
 Example usage for git/svn users:
@@ -35,10 +32,9 @@ else:
 
 
 def main():
-  parser = argparse.ArgumentParser(description=
-                                   'Reformat changed lines in diff. Without -i '
-                                   'option just output the diff that would be '
-                                   'introduced.')
+  parser = argparse.ArgumentParser(description=__doc__,
+                                   formatter_class=
+                                           argparse.RawDescriptionHelpFormatter)
   parser.add_argument('-i', action='store_true', default=False,
                       help='apply edits to files instead of displaying a diff')
   parser.add_argument('-p', metavar='NUM', default=0,

@@ -17,6 +17,7 @@
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/ObjectYAML/ELFYAML.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/WithColor.h"
@@ -130,7 +131,7 @@ class ELFState {
 
   NameToIdxMap SN2I;
   NameToIdxMap SymN2I;
-  const ELFYAML::Object &Doc;
+  ELFYAML::Object &Doc;
 
   bool buildSectionIndex();
   bool buildSymbolIndex(ArrayRef<ELFYAML::Symbol> Symbols);
@@ -174,17 +175,46 @@ class ELFState {
   bool writeSectionContent(Elf_Shdr &SHeader,
                            const ELFYAML::DynamicSection &Section,
                            ContiguousBlobAccumulator &CBA);
-  std::vector<StringRef> implicitSectionNames() const;
-
-  ELFState(const ELFYAML::Object &D) : Doc(D) {}
+  ELFState(ELFYAML::Object &D);
 
 public:
-  static int writeELF(raw_ostream &OS, const ELFYAML::Object &Doc);
+  static int writeELF(raw_ostream &OS, ELFYAML::Object &Doc);
 
 private:
   void finalizeStrings();
 };
 } // end anonymous namespace
+
+template <class ELFT>
+ELFState<ELFT>::ELFState(ELFYAML::Object &D) : Doc(D) {
+  StringSet<> DocSections;
+  for (std::unique_ptr<ELFYAML::Section> &D : Doc.Sections)
+    if (!D->Name.empty())
+      DocSections.insert(D->Name);
+
+  // Insert SHT_NULL section implicitly when it is not defined in YAML.
+  if (Doc.Sections.empty() || Doc.Sections.front()->Type != ELF::SHT_NULL)
+    Doc.Sections.insert(
+        Doc.Sections.begin(),
+        llvm::make_unique<ELFYAML::Section>(
+          ELFYAML::Section::SectionKind::RawContent, /*IsImplicit=*/true));
+
+  std::vector<StringRef> ImplicitSections = {".symtab", ".strtab", ".shstrtab"};
+  if (!Doc.DynamicSymbols.empty())
+    ImplicitSections.insert(ImplicitSections.end(), {".dynsym", ".dynstr"});
+
+  // Insert placeholders for implicit sections that are not
+  // defined explicitly in YAML.
+  for (StringRef SecName : ImplicitSections) {
+    if (DocSections.count(SecName))
+      continue;
+
+    std::unique_ptr<ELFYAML::Section> Sec = llvm::make_unique<ELFYAML::Section>(
+        ELFYAML::Section::SectionKind::RawContent, true /*IsImplicit*/);
+    Sec->Name = SecName;
+    Doc.Sections.push_back(std::move(Sec));
+  }
+}
 
 template <class ELFT>
 void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
@@ -214,7 +244,7 @@ void ELFState<ELFT>::initELFHeader(Elf_Ehdr &Header) {
   // Immediately following the ELF header and program headers.
   Header.e_shoff =
       Doc.Header.SHOffset
-          ? (uint16_t)*Doc.Header.SHOffset
+          ? (typename ELFT::uint)(*Doc.Header.SHOffset)
           : sizeof(Header) + sizeof(Elf_Phdr) * Doc.ProgramHeaders.size();
   Header.e_shnum =
       Doc.Header.SHNum ? (uint16_t)*Doc.Header.SHNum : SN2I.size() + 1;
@@ -292,36 +322,43 @@ template <class ELFT>
 bool ELFState<ELFT>::initSectionHeaders(ELFState<ELFT> &State,
                                         std::vector<Elf_Shdr> &SHeaders,
                                         ContiguousBlobAccumulator &CBA) {
-  // Build a list of sections we are going to add implicitly.
-  std::vector<StringRef> ImplicitSections;
-  for (StringRef Name : State.implicitSectionNames())
-    if (State.SN2I.get(Name) > Doc.Sections.size())
-      ImplicitSections.push_back(Name);
-
   // Ensure SHN_UNDEF entry is present. An all-zero section header is a
   // valid SHN_UNDEF entry since SHT_NULL == 0.
-  SHeaders.resize(Doc.Sections.size() + ImplicitSections.size() + 1);
-  zero(SHeaders[0]);
+  SHeaders.resize(Doc.Sections.size());
 
-  for (size_t I = 1; I < Doc.Sections.size() + ImplicitSections.size() + 1; ++I) {
+  for (size_t I = 0; I < Doc.Sections.size(); ++I) {
     Elf_Shdr &SHeader = SHeaders[I];
-    zero(SHeader);
-    ELFYAML::Section *Sec =
-        I > Doc.Sections.size() ? nullptr : Doc.Sections[I - 1].get();
+    ELFYAML::Section *Sec = Doc.Sections[I].get();
+
+    if (I == 0) {
+      if (Sec->IsImplicit)
+        continue;
+
+      if (auto S = dyn_cast<ELFYAML::RawContentSection>(Sec))
+        if (S->Size)
+          SHeader.sh_size = *S->Size;
+
+      if (!Sec->Link.empty()) {
+        unsigned Index;
+        if (!convertSectionIndex(SN2I, Sec->Name, Sec->Link, Index))
+          return false;
+        SHeader.sh_link = Index;
+      }
+      continue;
+    }
 
     // We have a few sections like string or symbol tables that are usually
     // added implicitly to the end. However, if they are explicitly specified
     // in the YAML, we need to write them here. This ensures the file offset
     // remains correct.
-    StringRef SecName =
-        Sec ? Sec->Name : ImplicitSections[I - Doc.Sections.size() - 1];
-    if (initImplicitHeader(State, CBA, SHeader, SecName, Sec))
+    if (initImplicitHeader(State, CBA, SHeader, Sec->Name,
+                           Sec->IsImplicit ? nullptr : Sec))
       continue;
 
     assert(Sec && "It can't be null unless it is an implicit section. But all "
                   "implicit sections should already have been handled above.");
 
-    SHeader.sh_name = DotShStrtab.getOffset(dropUniqueSuffix(SecName));
+    SHeader.sh_name = DotShStrtab.getOffset(dropUniqueSuffix(Sec->Name));
     SHeader.sh_type = Sec->Type;
     if (Sec->Flags)
       SHeader.sh_flags = *Sec->Flags;
@@ -929,25 +966,15 @@ bool ELFState<ELFT>::writeSectionContent(Elf_Shdr &SHeader,
 }
 
 template <class ELFT> bool ELFState<ELFT>::buildSectionIndex() {
-  for (unsigned i = 0, e = Doc.Sections.size(); i != e; ++i) {
-    StringRef Name = Doc.Sections[i]->Name;
+  for (unsigned I = 1, E = Doc.Sections.size(); I != E; ++I) {
+    StringRef Name = Doc.Sections[I]->Name;
     DotShStrtab.add(dropUniqueSuffix(Name));
-    // "+ 1" to take into account the SHT_NULL entry.
-    if (!SN2I.addName(Name, i + 1)) {
+    if (!SN2I.addName(Name, I)) {
       WithColor::error() << "Repeated section name: '" << Name
-                         << "' at YAML section number " << i << ".\n";
+                         << "' at YAML section number " << I << ".\n";
       return false;
     }
   }
-
-  auto SecNo = 1 + Doc.Sections.size();
-  // Add special sections after input sections, if necessary.
-  for (StringRef Name : implicitSectionNames())
-    if (SN2I.addName(Name, SecNo)) {
-      // Account for this section, since it wasn't in the Doc
-      ++SecNo;
-      DotShStrtab.add(Name);
-    }
 
   DotShStrtab.finalize();
   return true;
@@ -1007,7 +1034,7 @@ template <class ELFT> void ELFState<ELFT>::finalizeStrings() {
 }
 
 template <class ELFT>
-int ELFState<ELFT>::writeELF(raw_ostream &OS, const ELFYAML::Object &Doc) {
+int ELFState<ELFT>::writeELF(raw_ostream &OS, ELFYAML::Object &Doc) {
   ELFState<ELFT> State(Doc);
 
   // Finalize .strtab and .dynstr sections. We do that early because want to
@@ -1048,13 +1075,6 @@ int ELFState<ELFT>::writeELF(raw_ostream &OS, const ELFYAML::Object &Doc) {
   writeArrayData(OS, makeArrayRef(SHeaders));
   CBA.writeBlobToStream(OS);
   return 0;
-}
-
-template <class ELFT>
-std::vector<StringRef> ELFState<ELFT>::implicitSectionNames() const {
-  if (Doc.DynamicSymbols.empty())
-    return {".symtab", ".strtab", ".shstrtab"};
-  return {".symtab", ".strtab", ".shstrtab", ".dynsym", ".dynstr"};
 }
 
 int yaml2elf(llvm::ELFYAML::Object &Doc, raw_ostream &Out) {

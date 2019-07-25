@@ -95,7 +95,7 @@ private:
 
   void initOnceMaybe(Allocator *Instance) {
     ScopedLock L(Mutex);
-    if (Initialized)
+    if (LIKELY(Initialized))
       return;
     initLinkerInitialized(Instance); // Sets Initialized.
   }
@@ -112,8 +112,7 @@ private:
       // Use the Precedence of the current TSD as our random seed. Since we are
       // in the slow path, it means that tryLock failed, and as a result it's
       // very likely that said Precedence is non-zero.
-      u32 RandState = static_cast<u32>(CurrentTSD->getPrecedence());
-      const u32 R = getRandomU32(&RandState);
+      const u32 R = static_cast<u32>(CurrentTSD->getPrecedence());
       const u32 Inc = CoPrimes[R % NumberOfCoPrimes];
       u32 Index = R % NumberOfTSDs;
       uptr LowestPrecedence = UINTPTR_MAX;

@@ -35,7 +35,7 @@ int main(int, char**)
     for (unsigned i = 1; i <= 50; ++i)
     {
         year_month_weekday ymwd0(year{1234}, month{2}, weekday_indexed{weekday{i}, 1});
-        assert(static_cast<unsigned>(ymwd0.weekday()) == i);
+        assert(ymwd0.weekday().c_encoding() == (i == 7 ? 0 : i));
     }
 
   return 0;

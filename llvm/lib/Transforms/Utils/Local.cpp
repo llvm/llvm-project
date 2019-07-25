@@ -1597,15 +1597,10 @@ static void replaceOneDbgValueForAlloca(DbgValueInst *DVI, Value *NewAddress,
       DIExpr->getElement(0) != dwarf::DW_OP_deref)
     return;
 
-  // Insert the offset immediately after the first deref.
+  // Insert the offset before the first deref.
   // We could just change the offset argument of dbg.value, but it's unsigned...
-  if (Offset) {
-    SmallVector<uint64_t, 4> Ops;
-    Ops.push_back(dwarf::DW_OP_deref);
-    DIExpression::appendOffset(Ops, Offset);
-    Ops.append(DIExpr->elements_begin() + 1, DIExpr->elements_end());
-    DIExpr = Builder.createExpression(Ops);
-  }
+  if (Offset)
+    DIExpr = DIExpression::prepend(DIExpr, 0, Offset);
 
   Builder.insertDbgValueIntrinsic(NewAddress, DIVar, DIExpr, Loc, DVI);
   DVI->eraseFromParent();
@@ -1964,7 +1959,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool UseLLVMTrap,
 }
 
 /// changeToCall - Convert the specified invoke into a normal call.
-static void changeToCall(InvokeInst *II, DomTreeUpdater *DTU = nullptr) {
+void llvm::changeToCall(InvokeInst *II, DomTreeUpdater *DTU) {
   SmallVector<Value*, 8> Args(II->arg_begin(), II->arg_end());
   SmallVector<OperandBundleDef, 1> OpBundles;
   II->getOperandBundlesAsDefs(OpBundles);
@@ -2393,6 +2388,57 @@ void llvm::combineMetadataForCSE(Instruction *K, const Instruction *J,
       LLVMContext::MD_dereferenceable_or_null,
       LLVMContext::MD_access_group};
   combineMetadata(K, J, KnownIDs, KDominatesJ);
+}
+
+void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
+  SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
+  Source.getAllMetadata(MD);
+  MDBuilder MDB(Dest.getContext());
+  Type *NewType = Dest.getType();
+  const DataLayout &DL = Source.getModule()->getDataLayout();
+  for (const auto &MDPair : MD) {
+    unsigned ID = MDPair.first;
+    MDNode *N = MDPair.second;
+    // Note, essentially every kind of metadata should be preserved here! This
+    // routine is supposed to clone a load instruction changing *only its type*.
+    // The only metadata it makes sense to drop is metadata which is invalidated
+    // when the pointer type changes. This should essentially never be the case
+    // in LLVM, but we explicitly switch over only known metadata to be
+    // conservatively correct. If you are adding metadata to LLVM which pertains
+    // to loads, you almost certainly want to add it here.
+    switch (ID) {
+    case LLVMContext::MD_dbg:
+    case LLVMContext::MD_tbaa:
+    case LLVMContext::MD_prof:
+    case LLVMContext::MD_fpmath:
+    case LLVMContext::MD_tbaa_struct:
+    case LLVMContext::MD_invariant_load:
+    case LLVMContext::MD_alias_scope:
+    case LLVMContext::MD_noalias:
+    case LLVMContext::MD_nontemporal:
+    case LLVMContext::MD_mem_parallel_loop_access:
+    case LLVMContext::MD_access_group:
+      // All of these directly apply.
+      Dest.setMetadata(ID, N);
+      break;
+
+    case LLVMContext::MD_nonnull:
+      copyNonnullMetadata(Source, N, Dest);
+      break;
+
+    case LLVMContext::MD_align:
+    case LLVMContext::MD_dereferenceable:
+    case LLVMContext::MD_dereferenceable_or_null:
+      // These only directly apply if the new type is also a pointer.
+      if (NewType->isPointerTy())
+        Dest.setMetadata(ID, N);
+      break;
+
+    case LLVMContext::MD_range:
+      copyRangeMetadata(DL, Source, N, Dest);
+      break;
+    }
+  }
 }
 
 void llvm::patchReplacementInstruction(Instruction *I, Value *Repl) {

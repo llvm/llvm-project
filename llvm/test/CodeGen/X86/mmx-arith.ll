@@ -42,7 +42,7 @@ define void @test0(x86_mmx* %A, x86_mmx* %B) {
 ; X32-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X32-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; X32-NEXT:    pmullw %xmm0, %xmm1
-; X32-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255]
+; X32-NEXT:    movdqa {{.*#+}} xmm0 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; X32-NEXT:    movdqa %xmm1, %xmm2
 ; X32-NEXT:    pand %xmm0, %xmm2
 ; X32-NEXT:    packuswb %xmm2, %xmm2
@@ -100,7 +100,7 @@ define void @test0(x86_mmx* %A, x86_mmx* %B) {
 ; X64-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
 ; X64-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm0[0],xmm1[1],xmm0[1],xmm1[2],xmm0[2],xmm1[3],xmm0[3],xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
 ; X64-NEXT:    pmullw %xmm0, %xmm1
-; X64-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255]
+; X64-NEXT:    movdqa {{.*#+}} xmm0 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; X64-NEXT:    movdqa %xmm1, %xmm2
 ; X64-NEXT:    pand %xmm0, %xmm2
 ; X64-NEXT:    packuswb %xmm2, %xmm2

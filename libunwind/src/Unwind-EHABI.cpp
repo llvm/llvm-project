@@ -941,8 +941,8 @@ _Unwind_VRS_Pop(_Unwind_Context *context, _Unwind_VRS_RegClass regclass,
       // format 1", which is equivalent to FSTMD + a padding word.
       for (uint32_t i = first; i < end; ++i) {
         // SP is only 32-bit aligned so don't copy 64-bit at a time.
-        uint32_t w0 = *sp++;
-        uint32_t w1 = *sp++;
+        uint64_t w0 = *sp++;
+        uint64_t w1 = *sp++;
 #ifdef __LITTLE_ENDIAN__
         uint64_t value = (w1 << 32) | w0;
 #else

@@ -30,6 +30,9 @@
 // instance.  In particular, a Loop might be inside such a non-loop SCC, or a
 // non-loop SCC might contain a sub-SCC which is a Loop.
 //
+// For an overview of terminology used in this API (and thus all of our loop
+// analyses or transforms), see docs/LoopTerminology.rst.
+//
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_ANALYSIS_LOOPINFO_H

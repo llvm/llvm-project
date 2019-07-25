@@ -139,6 +139,14 @@ enum StorageClass : uint8_t {
   C_TCSYM = 134 // Reserved
 };
 
+enum SymbolType {
+  XTY_ER = 0, ///< External reference.
+  XTY_SD = 1, ///< Csect definition for initialized storage.
+  XTY_LD = 2, ///< Label definition.
+              ///< Defines an entry point to an initialized csect.
+  XTY_CM = 3  ///< Common csect definition. For uninitialized storage.
+};
+
 } // end namespace XCOFF
 } // end namespace llvm
 

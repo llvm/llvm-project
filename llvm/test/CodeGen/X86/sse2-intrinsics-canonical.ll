@@ -93,7 +93,7 @@ define <8 x i16> @test_x86_sse2_psubus_w(<8 x i16> %a0, <8 x i16> %a1) {
 define <8 x i8> @test_x86_sse2_paddus_b_64(<8 x i8> %a0, <8 x i8> %a1) {
 ; SSE-LABEL: test_x86_sse2_paddus_b_64:
 ; SSE:       ## %bb.0:
-; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,255,255,255,255,255,255,255]
+; SSE-NEXT:    movdqa {{.*#+}} xmm2 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; SSE-NEXT:    ## encoding: [0x66,0x0f,0x6f,0x15,A,A,A,A]
 ; SSE-NEXT:    ## fixup A - offset: 4, value: LCPI4_0, kind: FK_Data_4
 ; SSE-NEXT:    pand %xmm2, %xmm1 ## encoding: [0x66,0x0f,0xdb,0xca]

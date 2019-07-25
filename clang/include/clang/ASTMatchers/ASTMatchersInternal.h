@@ -1315,7 +1315,7 @@ class ForEachMatcher : public WrapperMatcherInterface<T> {
 ///
 /// Input matchers can have any type (including other polymorphic matcher
 /// types), and the actual Matcher<T> is generated on demand with an implicit
-/// coversion operator.
+/// conversion operator.
 template <typename... Ps> class VariadicOperatorMatcher {
 public:
   VariadicOperatorMatcher(DynTypedMatcher::VariadicOperator Op, Ps &&... Params)

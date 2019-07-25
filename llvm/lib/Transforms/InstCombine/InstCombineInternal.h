@@ -145,25 +145,8 @@ static inline bool IsFreeToInvert(Value *V, bool WillInvertAllUses) {
     return true;
 
   // Constants can be considered to be not'ed values.
-  if (isa<ConstantInt>(V))
+  if (match(V, m_AnyIntegralConstant()))
     return true;
-
-  // A vector of constant integers can be inverted easily.
-  if (V->getType()->isVectorTy() && isa<Constant>(V)) {
-    unsigned NumElts = V->getType()->getVectorNumElements();
-    for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *Elt = cast<Constant>(V)->getAggregateElement(i);
-      if (!Elt)
-        return false;
-
-      if (isa<UndefValue>(Elt))
-        continue;
-
-      if (!isa<ConstantInt>(Elt))
-        return false;
-    }
-    return true;
-  }
 
   // Compares can be inverted if all of their uses are being modified to use the
   // ~V.

@@ -1685,10 +1685,11 @@ private:
                                 std::end(FoundationIdentifiers),
                                 FormatTok->TokenText)) ||
             FormatTok->is(TT_ObjCStringLiteral) ||
-            FormatTok->isOneOf(Keywords.kw_NS_ENUM, Keywords.kw_NS_OPTIONS,
-                               TT_ObjCBlockLBrace, TT_ObjCBlockLParen,
-                               TT_ObjCDecl, TT_ObjCForIn, TT_ObjCMethodExpr,
-                               TT_ObjCMethodSpecifier, TT_ObjCProperty)) {
+            FormatTok->isOneOf(Keywords.kw_NS_CLOSED_ENUM, Keywords.kw_NS_ENUM,
+                               Keywords.kw_NS_OPTIONS, TT_ObjCBlockLBrace,
+                               TT_ObjCBlockLParen, TT_ObjCDecl, TT_ObjCForIn,
+                               TT_ObjCMethodExpr, TT_ObjCMethodSpecifier,
+                               TT_ObjCProperty)) {
           LLVM_DEBUG(llvm::dbgs()
                      << "Detected ObjC at location "
                      << FormatTok->Tok.getLocation().printToString(
@@ -2364,11 +2365,14 @@ tooling::Replacements sortUsingDeclarations(const FormatStyle &Style,
 
 LangOptions getFormattingLangOpts(const FormatStyle &Style) {
   LangOptions LangOpts;
+  FormatStyle::LanguageStandard LexingStd =
+      Style.Standard == FormatStyle::LS_Auto ? FormatStyle::LS_Cpp11
+                                             : Style.Standard;
   LangOpts.CPlusPlus = 1;
-  LangOpts.CPlusPlus11 = Style.Standard == FormatStyle::LS_Cpp03 ? 0 : 1;
-  LangOpts.CPlusPlus14 = Style.Standard == FormatStyle::LS_Cpp03 ? 0 : 1;
-  LangOpts.CPlusPlus17 = Style.Standard == FormatStyle::LS_Cpp03 ? 0 : 1;
-  LangOpts.CPlusPlus2a = Style.Standard == FormatStyle::LS_Cpp03 ? 0 : 1;
+  LangOpts.CPlusPlus11 = LexingStd >= FormatStyle::LS_Cpp11;
+  LangOpts.CPlusPlus14 = LexingStd >= FormatStyle::LS_Cpp11;
+  LangOpts.CPlusPlus17 = LexingStd >= FormatStyle::LS_Cpp11;
+  LangOpts.CPlusPlus2a = LexingStd >= FormatStyle::LS_Cpp11;
   LangOpts.LineComment = 1;
   bool AlternativeOperators = Style.isCpp();
   LangOpts.CXXOperatorNames = AlternativeOperators ? 1 : 0;

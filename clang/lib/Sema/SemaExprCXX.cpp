@@ -7173,7 +7173,7 @@ ExprResult Sema::BuildCXXMemberCallExpr(Expr *E, NamedDecl *FoundDecl,
 
   if (Method->getParent()->isLambda() &&
       Method->getConversionType()->isBlockPointerType()) {
-    // This is a lambda coversion to block pointer; check if the argument
+    // This is a lambda conversion to block pointer; check if the argument
     // was a LambdaExpr.
     Expr *SubE = E;
     CastExpr *CE = dyn_cast<CastExpr>(SubE);

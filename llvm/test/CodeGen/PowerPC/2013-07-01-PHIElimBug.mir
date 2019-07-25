@@ -26,7 +26,7 @@ body:             |
   bb.0:
     liveins: $x2
 
-    %0:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @g_51
+    %0:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @g_51
     %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, killed %0, implicit $x2 :: (load 8)
     %2:gprc = LI 0
     %3:crrc = CMPLWI killed %2, 0
@@ -62,7 +62,7 @@ body:             |
 # the full MIR like this.
 #
 # CHECK:       bb.0:
-# CHECK:         %0:g8rc_and_g8rc_nox0 = ADDIStocHA $x2, @g_51
+# CHECK:         %0:g8rc_and_g8rc_nox0 = ADDIStocHA8 $x2, @g_51
 # CHECK-NEXT:    %1:g8rc_and_g8rc_nox0 = LDtocL @g_51, killed %0, implicit killed $x2 :: (load 8)
 # CHECK-NEXT:    %2:gprc = LI 0
 # CHECK-NEXT:    %3:crrc = CMPLWI killed %2, 0

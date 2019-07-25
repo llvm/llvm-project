@@ -2,6 +2,13 @@
 
 // RUN: %clang_cc1 -verify -fopenmp-simd %s -Wuninitialized
 
+void xxx(int argc) {
+  int fp, fp1; // expected-note {{initialize the variable 'fp' to silence this warning}} expected-note {{initialize the variable 'fp1' to silence this warning}}
+#pragma omp target firstprivate(fp) // expected-warning {{variable 'fp' is uninitialized when used here}}
+  for (int i = 0; i < 10; ++i)
+    ++fp1; // expected-warning {{variable 'fp1' is uninitialized when used here}}
+}
+
 typedef void **omp_allocator_handle_t;
 extern const omp_allocator_handle_t omp_default_mem_alloc;
 extern const omp_allocator_handle_t omp_large_cap_mem_alloc;

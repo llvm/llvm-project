@@ -259,7 +259,7 @@ define void @v7i8(<4 x i8> %a, <4 x i8> %b, <7 x i8>* %p) nounwind {
 ; SSE2-NEXT:    pand %xmm2, %xmm1
 ; SSE2-NEXT:    pandn %xmm0, %xmm2
 ; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; SSE2-NEXT:    pand %xmm2, %xmm0
 ; SSE2-NEXT:    packuswb %xmm0, %xmm0
 ; SSE2-NEXT:    movdqa %xmm2, -{{[0-9]+}}(%rsp)
@@ -659,7 +659,7 @@ define void @v12i32(<8 x i32> %a, <8 x i32> %b, <12 x i32>* %p) nounwind {
 define void @pr29025(<4 x i8> %a, <4 x i8> %b, <4 x i8> %c, <12 x i8> *%p) nounwind {
 ; SSE2-LABEL: pr29025:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [255,255,255,255]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [255,0,0,0,255,0,0,0,255,0,0,0,255,0,0,0]
 ; SSE2-NEXT:    pand %xmm3, %xmm1
 ; SSE2-NEXT:    pand %xmm3, %xmm0
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0
@@ -1056,7 +1056,7 @@ define void @interleave_24i16_out(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm5[0,1,2,3,4],xmm4[5,6,7]
 ; AVX1-NEXT:    vpshufb {{.*#+}} xmm2 = xmm2[0,1,2,3,4,5,6,7,8,9,2,3,8,9,14,15]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2],xmm1[3,4],xmm0[5],xmm1[6,7]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,10,11,0,1,6,7,12,13,14,15,0,1,2,3]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[4,5,10,11,0,1,6,7,12,13,u,u,u,u,u,u]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0,1,2,3,4],xmm2[5,6,7]
 ; AVX1-NEXT:    vmovdqu %xmm3, (%rsi)
 ; AVX1-NEXT:    vmovdqu %xmm4, (%rdx)
@@ -1094,8 +1094,8 @@ define void @interleave_24i16_out(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2
 ; XOP-NEXT:    vpperm {{.*#+}} xmm3 = xmm3[0,1,6,7,12,13,2,3,8,9,14,15],xmm2[4,5,10,11]
 ; XOP-NEXT:    vpblendw {{.*#+}} xmm4 = xmm0[0,1],xmm1[2],xmm0[3,4],xmm1[5],xmm0[6,7]
 ; XOP-NEXT:    vpperm {{.*#+}} xmm4 = xmm4[2,3,8,9,14,15,4,5,10,11],xmm2[0,1,6,7,12,13]
-; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[4,5,10,11],xmm1[0,1,6,7,12,13,14,15,0,1,2,3]
-; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[0,1,2,3,4,5,6,7,8,9],xmm2[2,3,8,9,14,15]
+; XOP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1],xmm0[2],xmm1[3,4],xmm0[5],xmm1[6,7]
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[4,5,10,11,0,1,6,7,12,13],xmm2[2,3,8,9,14,15]
 ; XOP-NEXT:    vmovdqu %xmm3, (%rsi)
 ; XOP-NEXT:    vmovdqu %xmm4, (%rdx)
 ; XOP-NEXT:    vmovdqu %xmm0, (%rcx)
@@ -1187,7 +1187,7 @@ define void @interleave_24i16_in(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2,
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm4 = xmm3[1,1,2,2]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm2 = xmm4[0],xmm2[1,2],xmm4[3],xmm2[4,5],xmm4[6],xmm2[7]
 ; AVX1-NEXT:    vpunpckhwd {{.*#+}} xmm4 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; AVX1-NEXT:    vpshufb {{.*#+}} xmm4 = xmm4[4,5,10,11,10,11,8,9,8,9,14,15,12,13,14,15]
+; AVX1-NEXT:    vpshufb {{.*#+}} xmm4 = xmm4[4,5,u,u,10,11,8,9,u,u,14,15,12,13,u,u]
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm5 = xmm3[2,2,3,3]
 ; AVX1-NEXT:    vpblendw {{.*#+}} xmm4 = xmm4[0],xmm5[1],xmm4[2,3],xmm5[4],xmm4[5,6],xmm5[7]
 ; AVX1-NEXT:    vpunpcklwd {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
@@ -1233,9 +1233,8 @@ define void @interleave_24i16_in(<24 x i16>* %p, <8 x i16>* %q1, <8 x i16>* %q2,
 ; XOP-NEXT:    vpunpcklwd {{.*#+}} xmm4 = xmm0[0],xmm1[0],xmm0[1],xmm1[1],xmm0[2],xmm1[2],xmm0[3],xmm1[3]
 ; XOP-NEXT:    vpperm {{.*#+}} xmm4 = xmm4[0,1,2,3],xmm2[0,1],xmm4[4,5,6,7],xmm2[2,3],xmm4[8,9,10,11]
 ; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm4, %ymm3
-; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm1[10,11],xmm0[12,13,12,13],xmm1[12,13,12,13],xmm0[14,15],xmm1[14,15],xmm0[14,15]
-; XOP-NEXT:    vpshufd {{.*#+}} xmm1 = xmm2[2,2,3,3]
-; XOP-NEXT:    vpblendw {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3],xmm1[4],xmm0[5,6],xmm1[7]
+; XOP-NEXT:    vpunpckhwd {{.*#+}} xmm0 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
+; XOP-NEXT:    vpperm {{.*#+}} xmm0 = xmm0[4,5],xmm2[10,11],xmm0[10,11,8,9],xmm2[12,13],xmm0[14,15,12,13],xmm2[14,15]
 ; XOP-NEXT:    vmovdqu %xmm0, 32(%rdi)
 ; XOP-NEXT:    vmovups %ymm3, (%rdi)
 ; XOP-NEXT:    vzeroupper

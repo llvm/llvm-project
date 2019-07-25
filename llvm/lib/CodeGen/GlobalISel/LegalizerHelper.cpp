@@ -812,6 +812,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
 
     CmpInst::Predicate Pred =
         static_cast<CmpInst::Predicate>(MI.getOperand(1).getPredicate());
+    LLT ResTy = MRI.getType(MI.getOperand(0).getReg());
 
     if (Pred == CmpInst::ICMP_EQ || Pred == CmpInst::ICMP_NE) {
       MachineInstrBuilder XorL = MIRBuilder.buildXor(NarrowTy, LHSL, RHSL);
@@ -820,12 +821,11 @@ LegalizerHelper::LegalizeResult LegalizerHelper::narrowScalar(MachineInstr &MI,
       MachineInstrBuilder Zero = MIRBuilder.buildConstant(NarrowTy, 0);
       MIRBuilder.buildICmp(Pred, MI.getOperand(0).getReg(), Or, Zero);
     } else {
-      const LLT s1 = LLT::scalar(1);
-      MachineInstrBuilder CmpH = MIRBuilder.buildICmp(Pred, s1, LHSH, RHSH);
+      MachineInstrBuilder CmpH = MIRBuilder.buildICmp(Pred, ResTy, LHSH, RHSH);
       MachineInstrBuilder CmpHEQ =
-          MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_EQ, s1, LHSH, RHSH);
+          MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_EQ, ResTy, LHSH, RHSH);
       MachineInstrBuilder CmpLU = MIRBuilder.buildICmp(
-          ICmpInst::getUnsignedPredicate(Pred), s1, LHSL, RHSL);
+          ICmpInst::getUnsignedPredicate(Pred), ResTy, LHSL, RHSL);
       MIRBuilder.buildSelect(MI.getOperand(0).getReg(), CmpHEQ, CmpLU, CmpH);
     }
     Observer.changedInstr(MI);

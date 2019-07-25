@@ -1,6 +1,6 @@
 // RUN: %clang_tsan -O1 %s -o %t && %deflake %run %t 2>&1 | FileCheck %s
 // UNSUPPORTED: tvos, watchos
-// XFAIL: ios
+// XFAIL: ios && !iossim
 #include "sanitizer_common/sanitizer_ucontext.h"
 #include "test.h"
 

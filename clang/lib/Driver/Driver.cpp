@@ -2223,7 +2223,7 @@ class OffloadingActionBuilder final {
   /// Builder interface. It doesn't build anything or keep any state.
   class DeviceActionBuilder {
   public:
-    typedef llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PhasesTy;
+    typedef const llvm::SmallVectorImpl<phases::ID> PhasesTy;
 
     enum ActionBuilderReturnCode {
       // The builder acted successfully on the current action.
@@ -3237,13 +3237,14 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
   HeaderModulePrecompileJobAction *HeaderModuleAction = nullptr;
   ActionList LinkerInputs;
 
-  llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PL;
+  unsigned LastPLSize = 0;
   for (auto &I : Inputs) {
     types::ID InputType = I.first;
     const Arg *InputArg = I.second;
 
-    PL.clear();
+    llvm::SmallVector<phases::ID, phases::MaxNumberOfPhases> PL;
     types::getCompilationPhases(InputType, PL);
+    LastPLSize = PL.size();
 
     // If the first step comes after the final phase we are doing as part of
     // this compilation, warn the user about it.
@@ -3309,9 +3310,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
     if (OffloadBuilder.addHostDependenceToDeviceActions(Current, InputArg))
       break;
 
-    for (SmallVectorImpl<phases::ID>::iterator i = PL.begin(), e = PL.end();
-         i != e; ++i) {
-      phases::ID Phase = *i;
+    for (phases::ID Phase : PL) {
 
       // We are done if this step is past what the user requested.
       if (Phase > FinalPhase)
@@ -3325,7 +3324,7 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
       // Queue linker inputs.
       if (Phase == phases::Link) {
-        assert((i + 1) == e && "linking must be final compilation step.");
+        assert(Phase == PL.back() && "linking must be final compilation step.");
         LinkerInputs.push_back(Current);
         Current = nullptr;
         break;
@@ -3382,7 +3381,8 @@ void Driver::BuildActions(Compilation &C, DerivedArgList &Args,
 
   // If we are linking, claim any options which are obviously only used for
   // compilation.
-  if (FinalPhase == phases::Link && PL.size() == 1) {
+  // FIXME: Understand why the last Phase List length is used here.
+  if (FinalPhase == phases::Link && LastPLSize == 1) {
     Args.ClaimAllArgs(options::OPT_CompileOnly_Group);
     Args.ClaimAllArgs(options::OPT_cl_compile_Group);
   }

@@ -38,3 +38,43 @@ body:             |
     $w0 = COPY %14(s32)
 
 ...
+---
+name:            test_s128
+alignment:       2
+tracksRegLiveness: true
+body:             |
+  ; CHECK-LABEL: name: test_s128
+  ; CHECK: bb.0:
+  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK:   [[DEF:%[0-9]+]]:_(s128) = G_IMPLICIT_DEF
+  ; CHECK:   [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 79228162514264337593543950336
+  ; CHECK:   [[C1:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+  ; CHECK:   [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[DEF]](s128)
+  ; CHECK:   [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[C]](s128)
+  ; CHECK:   [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[UV1]](s64), [[UV3]]
+  ; CHECK:   [[ICMP1:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[UV1]](s64), [[UV3]]
+  ; CHECK:   [[ICMP2:%[0-9]+]]:_(s32) = G_ICMP intpred(ult), [[UV]](s64), [[UV2]]
+  ; CHECK:   [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[ICMP1]](s32), [[ICMP2]], [[ICMP]]
+  ; CHECK:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[SELECT]](s32)
+  ; CHECK:   G_BRCOND [[TRUNC]](s1), %bb.1
+  ; CHECK:   G_BR %bb.2
+  ; CHECK: bb.1:
+  ; CHECK:   successors:
+  ; CHECK: bb.2:
+  ; CHECK:   RET_ReallyLR
+  bb.1:
+    %0:_(s128) = G_IMPLICIT_DEF
+    %1:_(s128) = G_CONSTANT i128 79228162514264337593543950336
+    %3:_(s1) = G_CONSTANT i1 true
+    %2:_(s1) = G_ICMP intpred(ult), %0(s128), %1
+    G_BRCOND %2(s1), %bb.2
+    G_BR %bb.3
+
+  bb.2:
+    successors:
+
+
+  bb.3:
+    RET_ReallyLR
+
+...

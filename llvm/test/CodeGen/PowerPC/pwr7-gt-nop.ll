@@ -16,12 +16,12 @@ entry:
   store float %2, float* %d, align 4
   ret void
 
-; CHECK: lfs [[REG1:[0-9]+]], 0(4)
-; CHECK: stfs [[REG1]], 0(3)
-; CHECK: lfs [[REG2:[0-9]+]], 0(5)
-; CHECK: stfs [[REG2]], 0(4)
-; CHECK: lfs [[REG3:[0-9]+]], 0(3)
-; CHECK: stfs [[REG3]], 0(6)
+; CHECK: lwz [[REG1:[0-9]+]], 0(4)
+; CHECK: stw [[REG1]], 0(3)
+; CHECK: lwz [[REG2:[0-9]+]], 0(5)
+; CHECK: stw [[REG2]], 0(4)
+; CHECK: lwz [[REG3:[0-9]+]], 0(3)
+; CHECK: stw [[REG3]], 0(6)
 ; CHECK: blr
 }
 

@@ -767,8 +767,9 @@ void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
   // get placed into this csect. The choice of csect name is not a property of
   // the ABI or object file format. For example, the XL compiler uses an unnamed
   // csect for program code.
-  TextSection = Ctx->getXCOFFSection(
-      ".text", XCOFF::StorageMappingClass::XMC_PR, SectionKind::getText());
+  TextSection =
+      Ctx->getXCOFFSection(".text", XCOFF::StorageMappingClass::XMC_PR,
+                           XCOFF::XTY_SD, SectionKind::getText());
 }
 
 void MCObjectFileInfo::InitMCObjectFileInfo(const Triple &TheTriple, bool PIC,

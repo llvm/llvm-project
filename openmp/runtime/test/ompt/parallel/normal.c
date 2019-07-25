@@ -64,6 +64,9 @@ int main() {
   // THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_begin
   // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
   // THREADS-SAME: codeptr_ra=[[RETURN_ADDRESS]]{{[0-f][0-f]}}
+  // THREADS: {{^}}[[MASTER_ID]]: task level 0
+  // THREADS-SAME: parallel_id=[[PARALLEL_ID]], task_id=[[IMPLICIT_TASK_ID]]
+  // THREADS-SAME: exit_frame=[[NULL]], reenter_frame=[[NULL]]
   // THREADS: {{^}}[[MASTER_ID]]: ompt_event_barrier_end
   // parallel_id is 0 because the region ended in the barrier!
   // THREADS-SAME: parallel_id=0, task_id=[[IMPLICIT_TASK_ID]]

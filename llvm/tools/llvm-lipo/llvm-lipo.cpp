@@ -78,6 +78,7 @@ public:
 
 enum class LipoAction {
   PrintArchs,
+  PrintInfo,
   VerifyArch,
   ThinArch,
   CreateUniversal,
@@ -184,6 +185,10 @@ static Config parseLipoOptions(ArrayRef<const char *> ArgsArr) {
     C.ActionToPerform = LipoAction::PrintArchs;
     return C;
 
+  case LIPO_info:
+    C.ActionToPerform = LipoAction::PrintInfo;
+    return C;
+
   case LIPO_thin:
     if (C.InputFiles.size() > 1)
       reportError("thin expects a single input file");
@@ -269,26 +274,49 @@ static std::string getArchString(const MachOObjectFile &ObjectFile) {
       .str();
 }
 
-LLVM_ATTRIBUTE_NORETURN
-static void printArchs(ArrayRef<OwningBinary<Binary>> InputBinaries) {
+static void printBinaryArchs(const Binary *Binary, raw_ostream &OS) {
   // Prints trailing space for compatibility with cctools lipo.
-  assert(InputBinaries.size() == 1 && "Incorrect number of input binaries");
-  const Binary *InputBinary = InputBinaries.front().getBinary();
-  if (auto UO = dyn_cast<MachOUniversalBinary>(InputBinary)) {
+  if (auto UO = dyn_cast<MachOUniversalBinary>(Binary)) {
     for (const auto &O : UO->objects()) {
       Expected<std::unique_ptr<MachOObjectFile>> BinaryOrError =
           O.getAsObjectFile();
       if (!BinaryOrError)
-        reportError(InputBinary->getFileName(), BinaryOrError.takeError());
-      outs() << getArchString(*BinaryOrError.get().get()) << " ";
+        reportError(Binary->getFileName(), BinaryOrError.takeError());
+      OS << getArchString(*BinaryOrError.get().get()) << " ";
     }
-  } else if (auto O = dyn_cast<MachOObjectFile>(InputBinary)) {
-    outs() << getArchString(*O) << " ";
-  } else {
-    llvm_unreachable("Unexpected binary format");
+    OS << "\n";
+    return;
   }
+  OS << getArchString(*cast<MachOObjectFile>(Binary)) << " \n";
+}
 
-  outs() << "\n";
+LLVM_ATTRIBUTE_NORETURN
+static void printArchs(ArrayRef<OwningBinary<Binary>> InputBinaries) {
+  assert(InputBinaries.size() == 1 && "Incorrect number of input binaries");
+  printBinaryArchs(InputBinaries.front().getBinary(), outs());
+  exit(EXIT_SUCCESS);
+}
+
+LLVM_ATTRIBUTE_NORETURN
+static void printInfo(ArrayRef<OwningBinary<Binary>> InputBinaries) {
+  // Group universal and thin files together for compatibility with cctools lipo
+  for (auto &IB : InputBinaries) {
+    const Binary *Binary = IB.getBinary();
+    if (Binary->isMachOUniversalBinary()) {
+      outs() << "Architectures in the fat file: " << Binary->getFileName()
+             << " are: ";
+      printBinaryArchs(Binary, outs());
+    }
+  }
+  for (auto &IB : InputBinaries) {
+    const Binary *Binary = IB.getBinary();
+    if (!Binary->isMachOUniversalBinary()) {
+      assert(Binary->isMachO() && "expected MachO binary");
+      outs() << "Non-fat file: " << Binary->getFileName()
+             << " is architecture: ";
+      printBinaryArchs(Binary, outs());
+    }
+  }
   exit(EXIT_SUCCESS);
 }
 
@@ -346,10 +374,42 @@ static void checkArchDuplicates(const ArrayRef<Slice> &Slices) {
   }
 }
 
-static uint32_t calculateAlignment(const MachOObjectFile *ObjectFile) {
-  // TODO: Implement getAlign() and remove hard coding
-  // Will be implemented in a follow-up.
+// For compatibility with cctools lipo, alignment is calculated as the minimum
+// aligment of all segments. Each segments's alignment is the maximum alignment
+// from its sections
+static uint32_t calculateSegmentAlignment(const MachOObjectFile &O) {
+  uint32_t P2CurrentAlignment;
+  uint32_t P2MinAlignment = MachOUniversalBinary::MaxSectionAlignment;
+  const bool Is64Bit = O.is64Bit();
 
+  for (const auto &LC : O.load_commands()) {
+    if (LC.C.cmd != (Is64Bit ? MachO::LC_SEGMENT_64 : MachO::LC_SEGMENT))
+      continue;
+    if (O.getHeader().filetype == MachO::MH_OBJECT) {
+      unsigned NumberOfSections =
+          (Is64Bit ? O.getSegment64LoadCommand(LC).nsects
+                   : O.getSegmentLoadCommand(LC).nsects);
+      P2CurrentAlignment = NumberOfSections ? 2 : P2MinAlignment;
+      for (unsigned SI = 0; SI < NumberOfSections; ++SI) {
+        P2CurrentAlignment = std::max(P2CurrentAlignment,
+                                      (Is64Bit ? O.getSection64(LC, SI).align
+                                               : O.getSection(LC, SI).align));
+      }
+    } else {
+      P2CurrentAlignment =
+          countTrailingZeros(Is64Bit ? O.getSegment64LoadCommand(LC).vmaddr
+                                     : O.getSegmentLoadCommand(LC).vmaddr);
+    }
+    P2MinAlignment = std::min(P2MinAlignment, P2CurrentAlignment);
+  }
+  // return a value >= 4 byte aligned, and less than MachO MaxSectionAlignment
+  return std::max(
+      static_cast<uint32_t>(2),
+      std::min(P2MinAlignment, static_cast<uint32_t>(
+                                   MachOUniversalBinary::MaxSectionAlignment)));
+}
+
+static uint32_t calculateAlignment(const MachOObjectFile *ObjectFile) {
   switch (ObjectFile->getHeader().cputype) {
   case MachO::CPU_TYPE_I386:
   case MachO::CPU_TYPE_X86_64:
@@ -361,7 +421,7 @@ static uint32_t calculateAlignment(const MachOObjectFile *ObjectFile) {
   case MachO::CPU_TYPE_ARM64_32:
     return 14; // log2 value of page size(16k) for Darwin ARM
   default:
-    return 12;
+    return calculateSegmentAlignment(*ObjectFile);
   }
 }
 
@@ -470,8 +530,8 @@ static void createUniversalBinary(SmallVectorImpl<Slice> &Slices,
               OutFile->getBufferStart() + FatArchList[Index].offset);
   }
 
-  // FatArchs written after Slices in order reduce the number of swaps for the
-  // LittleEndian case
+  // FatArchs written after Slices in order to reduce the number of swaps for
+  // the LittleEndian case
   if (sys::IsLittleEndianHost)
     for (MachO::fat_arch &FA : FatArchList)
       MachO::swapStruct(FA);
@@ -509,6 +569,9 @@ int main(int argc, char **argv) {
     break;
   case LipoAction::PrintArchs:
     printArchs(InputBinaries);
+    break;
+  case LipoAction::PrintInfo:
+    printInfo(InputBinaries);
     break;
   case LipoAction::ThinArch:
     extractSlice(InputBinaries, C.ThinArchType, C.OutputFile);

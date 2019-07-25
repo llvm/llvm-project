@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64le-unknown-linux-gnu < %s | FileCheck %s
 
-; The instructions ADDIStocHA/LDtocL are used to calculate the address of
+; The instructions ADDIStocHA8/LDtocL are used to calculate the address of
 ; globals. The ones that are in bb.3.if.end could not be hoisted by Machine
 ; LICM due to BCTRL_LDinto_toc in bb2.if.then.  This call causes the compiler
 ; to insert a save TOC to stack before the call and load into X2 to restore TOC
@@ -16,10 +16,10 @@
 ;    liveins: %x3
 ;
 ;    %4 = COPY %x3
-;    %5 = ADDIStocHA %x2, @ga
+;    %5 = ADDIStocHA8 %x2, @ga
 ;    %6 = LDtocL @ga, killed %5 :: (load 8 from got)
 ;    %7 = LWZ 0, %6 :: (volatile dereferenceable load 4 from @ga)
-;    %8 = ADDIStocHA %x2, @gb
+;    %8 = ADDIStocHA8 %x2, @gb
 ;    %9 = LDtocL @gb, killed %8 :: (load 8 from got)
 ;    %10 = LWZ 0, killed %9 :: (volatile dereferenceable load 4 from @gb)
 ;    %0 = LWZ 0, %6 :: (volatile dereferenceable load 4 from @ga)
@@ -47,11 +47,11 @@
 ;
 ;    %2 = PHI %0, %bb.0.entry, %3, %bb.3.if.end
 ;    %12 = ADDI %2, 1
-;    %13 = ADDIStocHA %x2, @ga
+;    %13 = ADDIStocHA8 %x2, @ga
 ;    %14 = LDtocL @ga, killed %13 :: (load 8 from got)
 ;    STW killed %12, 0, %14 :: (volatile store 4 into @ga)
 ;    %15 = LWZ 0, %14 :: (volatile dereferenceable load 4 from @ga)
-;    %16 = ADDIStocHA %x2, @gb
+;    %16 = ADDIStocHA8 %x2, @gb
 ;    %17 = LDtocL @gb, killed %16 :: (load 8 from got)
 ;    %18 = LWZ 0, killed %17 :: (volatile dereferenceable load 4 from @gb)
 ;    %3 = LWZ 0, %14 :: (volatile dereferenceable load 4 from @ga)

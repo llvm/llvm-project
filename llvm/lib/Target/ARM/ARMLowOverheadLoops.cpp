@@ -54,6 +54,8 @@ namespace {
 
     bool ProcessLoop(MachineLoop *ML);
 
+    bool RevertNonLoops(MachineFunction &MF);
+
     void RevertWhile(MachineInstr *MI) const;
 
     void RevertLoopDec(MachineInstr *MI) const;
@@ -73,7 +75,7 @@ namespace {
     }
   };
 }
-  
+
 char ARMLowOverheadLoops::ID = 0;
 
 INITIALIZE_PASS(ARMLowOverheadLoops, DEBUG_TYPE, ARM_LOW_OVERHEAD_LOOPS_NAME,
@@ -98,7 +100,13 @@ bool ARMLowOverheadLoops::runOnMachineFunction(MachineFunction &MF) {
     if (!ML->getParentLoop())
       Changed |= ProcessLoop(ML);
   }
+  Changed |= RevertNonLoops(MF);
   return Changed;
+}
+
+static bool IsLoopStart(MachineInstr &MI) {
+  return MI.getOpcode() == ARM::t2DoLoopStart ||
+         MI.getOpcode() == ARM::t2WhileLoopStart;
 }
 
 bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
@@ -111,15 +119,10 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
 
   LLVM_DEBUG(dbgs() << "ARM Loops: Processing " << *ML);
 
-  auto IsLoopStart = [](MachineInstr &MI) {
-    return MI.getOpcode() == ARM::t2DoLoopStart ||
-           MI.getOpcode() == ARM::t2WhileLoopStart;
-  };
-
   // Search the given block for a loop start instruction. If one isn't found,
   // and there's only one predecessor block, search that one too.
   std::function<MachineInstr*(MachineBasicBlock*)> SearchForStart =
-    [&IsLoopStart, &SearchForStart](MachineBasicBlock *MBB) -> MachineInstr* {
+    [&SearchForStart](MachineBasicBlock *MBB) -> MachineInstr* {
     for (auto &MI : *MBB) {
       if (IsLoopStart(MI))
         return &MI;
@@ -165,6 +168,8 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
         Dec = &MI;
       else if (MI.getOpcode() == ARM::t2LoopEnd)
         End = &MI;
+      else if (IsLoopStart(MI))
+        Start = &MI;
       else if (MI.getDesc().isCall())
         // TODO: Though the call will require LE to execute again, does this
         // mean we should revert? Always executing LE hopefully should be
@@ -190,11 +195,16 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
       break;
   }
 
+  LLVM_DEBUG(if (Start) dbgs() << "ARM Loops: Found Loop Start: " << *Start;
+             if (Dec) dbgs() << "ARM Loops: Found Loop Dec: " << *Dec;
+             if (End) dbgs() << "ARM Loops: Found Loop End: " << *End;);
+
   if (!Start && !Dec && !End) {
     LLVM_DEBUG(dbgs() << "ARM Loops: Not a low-overhead loop.\n");
     return Changed;
-  } if (!(Start && Dec && End)) {
-    report_fatal_error("Failed to find all loop components");
+  } else if (!(Start && Dec && End)) {
+    LLVM_DEBUG(dbgs() << "ARM Loops: Failed to find all loop components.\n");
+    return false;
   }
 
   if (!End->getOperand(1).isMBB() ||
@@ -215,10 +225,6 @@ bool ARMLowOverheadLoops::ProcessLoop(MachineLoop *ML) {
     LLVM_DEBUG(dbgs() << "ARM Loops: WLS offset is out-of-range!\n");
     Revert = true;
   }
-
-  LLVM_DEBUG(dbgs() << "ARM Loops:\n - Found Loop Start: " << *Start
-                    << " - Found Loop Dec: " << *Dec
-                    << " - Found Loop End: " << *End);
 
   Expand(ML, Start, Dec, End, Revert);
   return true;
@@ -377,6 +383,44 @@ void ARMLowOverheadLoops::Expand(MachineLoop *ML, MachineInstr *Start,
     End = ExpandLoopEnd(ML, Dec, End);
     RemoveDeadBranch(End);
   }
+}
+
+bool ARMLowOverheadLoops::RevertNonLoops(MachineFunction &MF) {
+  LLVM_DEBUG(dbgs() << "ARM Loops: Reverting any remaining pseudos...\n");
+  bool Changed = false;
+
+  for (auto &MBB : MF) {
+    SmallVector<MachineInstr*, 4> Starts;
+    SmallVector<MachineInstr*, 4> Decs;
+    SmallVector<MachineInstr*, 4> Ends;
+
+    for (auto &I : MBB) {
+      if (IsLoopStart(I))
+        Starts.push_back(&I);
+      else if (I.getOpcode() == ARM::t2LoopDec)
+        Decs.push_back(&I);
+      else if (I.getOpcode() == ARM::t2LoopEnd)
+        Ends.push_back(&I);
+    }
+
+    if (Starts.empty() && Decs.empty() && Ends.empty())
+      continue;
+
+    Changed = true;
+
+    for (auto *Start : Starts) {
+      if (Start->getOpcode() == ARM::t2WhileLoopStart)
+        RevertWhile(Start);
+      else
+        Start->eraseFromParent();
+    }
+    for (auto *Dec : Decs)
+      RevertLoopDec(Dec);
+
+    for (auto *End : Ends)
+      RevertLoopEnd(End);
+  }
+  return Changed;
 }
 
 FunctionPass *llvm::createARMLowOverheadLoopsPass() {

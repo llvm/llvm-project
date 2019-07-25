@@ -329,7 +329,7 @@ void SymbolFileNativePDB::InitializeObject() {
   m_ast = llvm::make_unique<PdbAstBuilder>(*m_obj_file, *m_index);
 }
 
-uint32_t SymbolFileNativePDB::GetNumCompileUnits() {
+uint32_t SymbolFileNativePDB::CalculateNumCompileUnits() {
   const DbiModuleList &modules = m_index->dbi().modules();
   uint32_t count = modules.getModuleCount();
   if (count == 0)
@@ -433,8 +433,7 @@ SymbolFileNativePDB::CreateCompileUnit(const CompilandIndexItem &cci) {
       std::make_shared<CompileUnit>(m_obj_file->GetModule(), nullptr, fs,
                                     toOpaqueUid(cci.m_id), lang, optimized);
 
-  m_obj_file->GetModule()->GetSymbolVendor()->SetCompileUnitAtIndex(
-      cci.m_id.modi, cu_sp);
+  SetCompileUnitAtIndex(cci.m_id.modi, cu_sp);
   return cu_sp;
 }
 

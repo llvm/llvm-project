@@ -1154,8 +1154,10 @@ def canRunLibstdcxxTests():
     from lldbsuite.test import lldbplatformutil
 
     platform = lldbplatformutil.getPlatform()
+    if lldbplatformutil.target_is_android():
+        platform = "android"
     if platform == "linux":
-      return True, "libstdcxx always present"
+        return True, "libstdcxx always present"
     return False, "Don't know how to build with libstdcxx on %s" % platform
 
 def checkLibstdcxxSupport():

@@ -83,6 +83,18 @@ static Error mapNameAndUniqueName(CodeViewRecordIO &IO, StringRef &Name,
   return Error::success();
 }
 
+static StringRef getLeafTypeName(TypeLeafKind LT) {
+  switch (LT) {
+#define TYPE_RECORD(ename, value, name)                                        \
+  case ename:                                                                  \
+    return #ename;
+#include "llvm/DebugInfo/CodeView/CodeViewTypes.def"
+  default:
+    break;
+  }
+  return "UnknownLeaf";
+}
+
 Error TypeRecordMapping::visitTypeBegin(CVType &CVR) {
   assert(!TypeKind.hasValue() && "Already in a type mapping!");
   assert(!MemberKind.hasValue() && "Already in a member mapping!");
@@ -121,11 +133,16 @@ Error TypeRecordMapping::visitMemberBegin(CVMemberRecord &Record) {
   // followed by the subrecord, followed by a continuation, and that entire
   // sequence spaws `MaxRecordLength` bytes.  So the record's length is
   // calculated as follows.
+
   constexpr uint32_t ContinuationLength = 8;
   error(IO.beginRecord(MaxRecordLength - sizeof(RecordPrefix) -
                        ContinuationLength));
 
   MemberKind = Record.Kind;
+  if (IO.isStreaming()) {
+    error(IO.mapEnum(Record.Kind,
+                     "Member kind: " + getLeafTypeName(Record.Kind)));
+  }
   return Error::success();
 }
 
@@ -383,7 +400,11 @@ Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
 
 Error TypeRecordMapping::visitKnownRecord(CVType &CVR,
                                           FieldListRecord &Record) {
-  error(IO.mapByteVectorTail(Record.Data));
+  if (IO.isStreaming()) {
+    if (auto EC = codeview::visitMemberRecordStream(Record.Data, *this))
+      return EC;
+  } else
+    error(IO.mapByteVectorTail(Record.Data));
 
   return Error::success();
 }

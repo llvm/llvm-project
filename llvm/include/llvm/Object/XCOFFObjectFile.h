@@ -13,23 +13,8 @@
 #ifndef LLVM_OBJECT_XCOFFOBJECTFILE_H
 #define LLVM_OBJECT_XCOFFOBJECTFILE_H
 
-#include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/iterator_range.h"
-#include "llvm/BinaryFormat/Magic.h"
 #include "llvm/BinaryFormat/XCOFF.h"
-#include "llvm/MC/SubtargetFeature.h"
-#include "llvm/Object/Binary.h"
-#include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
-#include "llvm/Object/SymbolicFile.h"
-#include "llvm/Support/Casting.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include <cassert>
-#include <cstdint>
-#include <memory>
-#include <system_error>
 
 namespace llvm {
 namespace object {

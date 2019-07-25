@@ -9,7 +9,7 @@ declare void @use32(i32*)
 
 define void @test_alloca() sanitize_hwaddress {
 ; CHECK-LABEL: @test_alloca(
-; CHECK: %[[FP:[^ ]*]] = call i8* @llvm.frameaddress(i32 0)
+; CHECK: %[[FP:[^ ]*]] = call i8* @llvm.frameaddress.p0i8(i32 0)
 ; CHECK: %[[A:[^ ]*]] = ptrtoint i8* %[[FP]] to i64
 ; CHECK: %[[B:[^ ]*]] = lshr i64 %[[A]], 20
 ; CHECK: %[[BASE_TAG:[^ ]*]] = xor i64 %[[A]], %[[B]]

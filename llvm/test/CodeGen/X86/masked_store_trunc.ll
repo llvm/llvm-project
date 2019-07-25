@@ -4673,7 +4673,7 @@ define void @truncstore_v32i16_v32i8(<32 x i16> %x, <32 x i8>* %p, <32 x i8> %ma
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm7, %xmm7
 ; SSE2-NEXT:    pcmpeqb %xmm4, %xmm7
-; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm6 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; SSE2-NEXT:    pand %xmm6, %xmm1
 ; SSE2-NEXT:    pand %xmm6, %xmm0
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0
@@ -6209,7 +6209,7 @@ define void @truncstore_v16i16_v16i8(<16 x i16> %x, <16 x i8>* %p, <16 x i8> %ma
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pxor %xmm3, %xmm3
 ; SSE2-NEXT:    pcmpeqb %xmm2, %xmm3
-; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [255,255,255,255,255,255,255,255]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm4 = [255,0,255,0,255,0,255,0,255,0,255,0,255,0,255,0]
 ; SSE2-NEXT:    pand %xmm4, %xmm1
 ; SSE2-NEXT:    pand %xmm4, %xmm0
 ; SSE2-NEXT:    packuswb %xmm1, %xmm0

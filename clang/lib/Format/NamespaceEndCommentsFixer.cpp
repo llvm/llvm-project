@@ -36,7 +36,7 @@ std::string computeName(const FormatToken *NamespaceTok) {
   const FormatToken *Tok = NamespaceTok->getNextNonComment();
   if (NamespaceTok->is(TT_NamespaceMacro)) {
     // Collects all the non-comment tokens between opening parenthesis
-    // and closing parenthesis or comma
+    // and closing parenthesis or comma.
     assert(Tok && Tok->is(tok::l_paren) && "expected an opening parenthesis");
     Tok = Tok->getNextNonComment();
     while (Tok && !Tok->isOneOf(tok::r_paren, tok::comma)) {
@@ -44,9 +44,21 @@ std::string computeName(const FormatToken *NamespaceTok) {
       Tok = Tok->getNextNonComment();
     }
   } else {
-    // Collects all the non-comment tokens between 'namespace' and '{'.
+    // For `namespace [[foo]] A::B::inline C {` or
+    // `namespace MACRO1 MACRO2 A::B::inline C {`, returns "A::B::inline C".
+    // Peek for the first '::' (or '{') and then return all tokens from one
+    // token before that up until the '{'.
+    const FormatToken *FirstNSTok = Tok;
+    while (Tok && !Tok->is(tok::l_brace) && !Tok->is(tok::coloncolon)) {
+      FirstNSTok = Tok;
+      Tok = Tok->getNextNonComment();
+    }
+
+    Tok = FirstNSTok;
     while (Tok && !Tok->is(tok::l_brace)) {
       name += Tok->TokenText;
+      if (Tok->is(tok::kw_inline))
+        name += " ";
       Tok = Tok->getNextNonComment();
     }
   }

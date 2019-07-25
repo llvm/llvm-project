@@ -4,6 +4,7 @@
 # RUN: llvm-lipo %t -verify_arch i386 x86_64
 
 # RUN: not llvm-lipo %t -verify_arch aarch64
+# RUN: not llvm-lipo %t -verify_arch arm64
 # RUN: yaml2obj %s | not llvm-lipo - -verify_arch aarch64 i386
 # lipo does not support this (i.e. yaml2obj %s | not lipo -), included to test function with llvm-lipo
 # use the temporary %t when checking tests with lipo

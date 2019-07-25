@@ -10,27 +10,8 @@ repository also contains LLDB.
 
 Git browser: https://github.com/llvm/llvm-project/tree/master/lldb
 
-For macOS building from Xcode, simply checkout LLDB and then build
-from Xcode. The Xcode project will automatically detect that it is a
-fresh checkout, and checkout LLVM and Clang automatically. Unlike
-other platforms / build systems, it will use the following directory
-structure.
-
- ::
-
-                  lldb
-                  |
-                  `-- llvm
-                      |
-                      +-- tools
-                          |
-                          `-- clang
-
-
-So updating your checkout will consist of updating LLDB, LLV<, and
-Clang in these locations.  Refer to the `Build Instructions
-<build.html>`_ for more detailed instructions on how to build for a
-particular platform / build system combination.
+Refer to the `Build Instructions <build.html>`_ for more detailed instructions
+on how to build for a particular platform / build system combination.
 
 Contributing to LLDB
 --------------------

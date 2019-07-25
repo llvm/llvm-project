@@ -226,12 +226,12 @@ bool ValueObject::UpdateValueIfNeeded(bool update_format) {
 
 bool ValueObject::UpdateFormatsIfNeeded() {
   Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_DATAFORMATTERS));
-  if (log)
-    log->Printf("[%s %p] checking for FormatManager revisions. ValueObject "
-                "rev: %d - Global rev: %d",
-                GetName().GetCString(), static_cast<void *>(this),
-                m_last_format_mgr_revision,
-                DataVisualization::GetCurrentRevision());
+  LLDB_LOGF(log,
+            "[%s %p] checking for FormatManager revisions. ValueObject "
+            "rev: %d - Global rev: %d",
+            GetName().GetCString(), static_cast<void *>(this),
+            m_last_format_mgr_revision,
+            DataVisualization::GetCurrentRevision());
 
   bool any_change = false;
 
@@ -1672,16 +1672,7 @@ bool ValueObject::IsRuntimeSupportValue() {
   if (!GetVariable() || !GetVariable()->IsArtificial())
     return false;
 
-  LanguageType lang = eLanguageTypeUnknown;
-  if (auto *sym_ctx_scope = GetSymbolContextScope()) {
-    if (auto *func = sym_ctx_scope->CalculateSymbolContextFunction())
-      lang = func->GetLanguage();
-    else if (auto *comp_unit =
-                 sym_ctx_scope->CalculateSymbolContextCompileUnit())
-      lang = comp_unit->GetLanguage();
-  }
-
-  if (auto *runtime = process->GetLanguageRuntime(lang))
+  if (auto *runtime = process->GetLanguageRuntime(GetVariable()->GetLanguage()))
     if (runtime->IsWhitelistedRuntimeValue(GetName()))
       return false;
 

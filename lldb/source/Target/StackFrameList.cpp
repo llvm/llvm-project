@@ -67,7 +67,8 @@ uint32_t StackFrameList::GetCurrentInlinedDepth() {
       m_current_inlined_depth = UINT32_MAX;
       Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
       if (log && log->GetVerbose())
-        log->Printf(
+        LLDB_LOGF(
+            log,
             "GetCurrentInlinedDepth: invalidating current inlined depth.\n");
     }
     return m_current_inlined_depth;
@@ -90,7 +91,8 @@ void StackFrameList::ResetCurrentInlinedDepth() {
     m_current_inlined_pc = LLDB_INVALID_ADDRESS;
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
     if (log && log->GetVerbose())
-      log->Printf(
+      LLDB_LOGF(
+          log,
           "ResetCurrentInlinedDepth: Invalidating current inlined depth.\n");
     return;
   }
@@ -184,9 +186,10 @@ void StackFrameList::ResetCurrentInlinedDepth() {
     m_current_inlined_depth = num_inlined_functions + 1;
     Log *log(lldb_private::GetLogIfAllCategoriesSet(LIBLLDB_LOG_STEP));
     if (log && log->GetVerbose())
-      log->Printf("ResetCurrentInlinedDepth: setting inlined "
-                  "depth: %d 0x%" PRIx64 ".\n",
-                  m_current_inlined_depth, curr_pc);
+      LLDB_LOGF(log,
+                "ResetCurrentInlinedDepth: setting inlined "
+                "depth: %d 0x%" PRIx64 ".\n",
+                m_current_inlined_depth, curr_pc);
 
     break;
   }

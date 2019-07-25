@@ -23,3 +23,5 @@ Changes:
   is applied to disable exceptions in Microsoft STL when exceptions are disabled
 * Disabled CMake get_git_version as it is meaningless for this in-tree build,
   and hardcoded a null version
+* https://github.com/google/benchmark/commit/4abdfbb802d1b514703223f5f852ce4a507d32d2
+  is applied on top of v1.4.1 to add RISC-V timer support.

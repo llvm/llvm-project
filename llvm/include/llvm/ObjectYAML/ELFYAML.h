@@ -77,7 +77,7 @@ struct FileHeader {
   llvm::yaml::Hex64 Entry;
 
   Optional<llvm::yaml::Hex16> SHEntSize;
-  Optional<llvm::yaml::Hex16> SHOffset;
+  Optional<llvm::yaml::Hex64> SHOffset;
   Optional<llvm::yaml::Hex16> SHNum;
   Optional<llvm::yaml::Hex16> SHStrNdx;
 };
@@ -148,7 +148,12 @@ struct Section {
   // content written.
   Optional<llvm::yaml::Hex64> ShSize;
 
-  Section(SectionKind Kind) : Kind(Kind) {}
+  // Usually sections are not created implicitly, but loaded from YAML.
+  // When they are, this flag is used to signal about that.
+  bool IsImplicit;
+
+  Section(SectionKind Kind, bool IsImplicit = false)
+      : Kind(Kind), IsImplicit(IsImplicit) {}
   virtual ~Section();
 };
 

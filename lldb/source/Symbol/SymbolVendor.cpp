@@ -58,8 +58,7 @@ SymbolVendor *SymbolVendor::FindPlugin(const lldb::ModuleSP &module_sp,
 
 // SymbolVendor constructor
 SymbolVendor::SymbolVendor(const lldb::ModuleSP &module_sp)
-    : ModuleChild(module_sp), m_type_list(), m_compile_units(), m_sym_file_up(),
-      m_symtab() {}
+    : ModuleChild(module_sp), m_type_list(), m_sym_file_up(), m_symtab() {}
 
 // Destructor
 SymbolVendor::~SymbolVendor() {}
@@ -76,44 +75,14 @@ void SymbolVendor::AddSymbolFileRepresentation(const ObjectFileSP &objfile_sp) {
   }
 }
 
-bool SymbolVendor::SetCompileUnitAtIndex(size_t idx, const CompUnitSP &cu_sp) {
-  ModuleSP module_sp(GetModule());
-  if (module_sp) {
-    std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    const size_t num_compile_units = GetNumCompileUnits();
-    if (idx < num_compile_units) {
-      // Fire off an assertion if this compile unit already exists for now. The
-      // partial parsing should take care of only setting the compile unit
-      // once, so if this assertion fails, we need to make sure that we don't
-      // have a race condition, or have a second parse of the same compile
-      // unit.
-      assert(m_compile_units[idx].get() == nullptr);
-      m_compile_units[idx] = cu_sp;
-      return true;
-    } else {
-      // This should NOT happen, and if it does, we want to crash and know
-      // about it
-      assert(idx < num_compile_units);
-    }
-  }
-  return false;
-}
-
 size_t SymbolVendor::GetNumCompileUnits() {
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    if (m_compile_units.empty()) {
-      if (m_sym_file_up) {
-        // Resize our array of compile unit shared pointers -- which will each
-        // remain NULL until someone asks for the actual compile unit
-        // information. When this happens, the symbol file will be asked to
-        // parse this compile unit information.
-        m_compile_units.resize(m_sym_file_up->GetNumCompileUnits());
-      }
-    }
+    if (m_sym_file_up)
+      return m_sym_file_up->GetNumCompileUnits();
   }
-  return m_compile_units.size();
+  return 0;
 }
 
 lldb::LanguageType SymbolVendor::ParseLanguage(CompileUnit &comp_unit) {
@@ -385,18 +354,12 @@ void SymbolVendor::Dump(Stream *s) {
       }
     }
     s->EOL();
+    s->PutCString("Types:\n");
+    m_type_list.Dump(s, show_context);
+    s->EOL();
     if (m_sym_file_up)
       m_sym_file_up->Dump(*s);
     s->IndentMore();
-    m_type_list.Dump(s, show_context);
-
-    CompileUnitConstIter cu_pos, cu_end;
-    cu_end = m_compile_units.end();
-    for (cu_pos = m_compile_units.begin(); cu_pos != cu_end; ++cu_pos) {
-      // We currently only dump the compile units that have been parsed
-      if (*cu_pos)
-        (*cu_pos)->Dump(s, show_context);
-    }
 
     if (Symtab *symtab = GetSymtab())
       symtab->Dump(s, nullptr, eSortOrderNone);
@@ -406,20 +369,13 @@ void SymbolVendor::Dump(Stream *s) {
 }
 
 CompUnitSP SymbolVendor::GetCompileUnitAtIndex(size_t idx) {
-  CompUnitSP cu_sp;
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
-    const size_t num_compile_units = GetNumCompileUnits();
-    if (idx < num_compile_units) {
-      cu_sp = m_compile_units[idx];
-      if (cu_sp.get() == nullptr) {
-        m_compile_units[idx] = m_sym_file_up->ParseCompileUnitAtIndex(idx);
-        cu_sp = m_compile_units[idx];
-      }
-    }
+    if (m_sym_file_up)
+      return m_sym_file_up->GetCompileUnitAtIndex(idx);
   }
-  return cu_sp;
+  return nullptr;
 }
 
 FileSpec SymbolVendor::GetMainFileSpec() const {

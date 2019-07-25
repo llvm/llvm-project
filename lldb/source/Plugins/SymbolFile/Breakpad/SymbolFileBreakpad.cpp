@@ -187,7 +187,7 @@ uint32_t SymbolFileBreakpad::CalculateAbilities() {
   return CompileUnits | Functions | LineTables;
 }
 
-uint32_t SymbolFileBreakpad::GetNumCompileUnits() {
+uint32_t SymbolFileBreakpad::CalculateNumCompileUnits() {
   ParseCUData();
   return m_cu_data->GetSize();
 }
@@ -218,7 +218,7 @@ CompUnitSP SymbolFileBreakpad::ParseCompileUnitAtIndex(uint32_t index) {
                                              eLanguageTypeUnknown,
                                              /*is_optimized*/ eLazyBoolNo);
 
-  GetSymbolVendor().SetCompileUnitAtIndex(index, cu_sp);
+  SetCompileUnitAtIndex(index, cu_sp);
   return cu_sp;
 }
 
@@ -260,7 +260,7 @@ SymbolFileBreakpad::ResolveSymbolContext(const Address &so_addr,
   if (idx == UINT32_MAX)
     return 0;
 
-  sc.comp_unit = GetSymbolVendor().GetCompileUnitAtIndex(idx).get();
+  sc.comp_unit = GetCompileUnitAtIndex(idx).get();
   SymbolContextItem result = eSymbolContextCompUnit;
   if (resolve_scope & eSymbolContextLineEntry) {
     if (sc.comp_unit->GetLineTable()->FindLineEntryByAddress(so_addr,
@@ -280,7 +280,7 @@ uint32_t SymbolFileBreakpad::ResolveSymbolContext(
 
   uint32_t old_size = sc_list.GetSize();
   for (size_t i = 0, size = GetNumCompileUnits(); i < size; ++i) {
-    CompileUnit &cu = *GetSymbolVendor().GetCompileUnitAtIndex(i);
+    CompileUnit &cu = *GetCompileUnitAtIndex(i);
     cu.ResolveSymbolContext(file_spec, line, check_inlines,
                             /*exact*/ false, resolve_scope, sc_list);
   }
@@ -520,10 +520,6 @@ SymbolFileBreakpad::GetUnwindPlan(const Address &address,
     plan_sp->AppendRow(row_sp);
   }
   return plan_sp;
-}
-
-SymbolVendor &SymbolFileBreakpad::GetSymbolVendor() {
-  return *m_obj_file->GetModule()->GetSymbolVendor();
 }
 
 addr_t SymbolFileBreakpad::GetBaseFileAddress() {

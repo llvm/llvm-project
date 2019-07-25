@@ -932,13 +932,15 @@ private:
 ///
 class EmitCopyToRegMatcher : public Matcher {
   unsigned SrcSlot; // Value to copy into the physreg.
-  Record *DestPhysReg;
+  const CodeGenRegister *DestPhysReg;
+
 public:
-  EmitCopyToRegMatcher(unsigned srcSlot, Record *destPhysReg)
+  EmitCopyToRegMatcher(unsigned srcSlot,
+                       const CodeGenRegister *destPhysReg)
     : Matcher(EmitCopyToReg), SrcSlot(srcSlot), DestPhysReg(destPhysReg) {}
 
   unsigned getSrcSlot() const { return SrcSlot; }
-  Record *getDestPhysReg() const { return DestPhysReg; }
+  const CodeGenRegister *getDestPhysReg() const { return DestPhysReg; }
 
   static bool classof(const Matcher *N) {
     return N->getKind() == EmitCopyToReg;

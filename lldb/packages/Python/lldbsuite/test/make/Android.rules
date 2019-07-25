@@ -72,24 +72,18 @@ endif
 
 ARCH_CFLAGS += --sysroot=$(NDK_ROOT)/sysroot \
 	-isystem $(NDK_ROOT)/sysroot/usr/include/$(TOOL_PREFIX) \
-	-D__ANDROID_API__=$(API_LEVEL)
+	-D__ANDROID_API__=$(API_LEVEL) \
+	-isystem $(NDK_ROOT)/platforms/android-$(API_LEVEL)/arch-$(SYSROOT_ARCH)/usr/include
+
 ARCH_LDFLAGS += --sysroot=$(NDK_ROOT)/platforms/android-$(API_LEVEL)/arch-$(SYSROOT_ARCH) -lm
 
-ifeq (1,$(USE_LIBSTDCPP))
-	ARCH_CFLAGS += \
-		-isystem $(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/include \
-		-isystem $(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/$(STL_ARCH)/include \
-		-isystem $(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/include/backward
+ARCH_CXXFLAGS += \
+	-isystem $(NDK_ROOT)/sources/cxx-stl/llvm-libc++/include \
+	-isystem $(NDK_ROOT)/sources/android/support/include \
+	-isystem $(NDK_ROOT)/sources/cxx-stl/llvm-libc++abi/include
 
-	ARCH_LDFLAGS += $(NDK_ROOT)/sources/cxx-stl/gnu-libstdc++/4.9/libs/$(STL_ARCH)/libgnustl_static.a
-else
-	ARCH_CXXFLAGS += \
-		-isystem $(NDK_ROOT)/sources/cxx-stl/llvm-libc++/include \
-		-isystem $(NDK_ROOT)/sources/android/support/include \
-		-isystem $(NDK_ROOT)/sources/cxx-stl/llvm-libc++abi/include
-
-	ARCH_LDFLAGS += \
-		-L$(NDK_ROOT)/sources/cxx-stl/llvm-libc++/libs/$(STL_ARCH) \
-		$(NDK_ROOT)/sources/cxx-stl/llvm-libc++/libs/$(STL_ARCH)/libc++_static.a \
-		-lc++abi
-endif
+ARCH_LDFLAGS += \
+	-L$(NDK_ROOT)/sources/cxx-stl/llvm-libc++/libs/$(STL_ARCH) \
+	$(NDK_ROOT)/sources/cxx-stl/llvm-libc++/libs/$(STL_ARCH)/libc++_static.a \
+	-lc++abi \
+	-nostdlib++

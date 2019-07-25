@@ -152,6 +152,12 @@ public:
   evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                  uint64_t &Target) const;
 
+  /// Given an instruction tries to get the address of a memory operand. Returns
+  /// the address on success.
+  virtual Optional<uint64_t> evaluateMemoryOperandAddress(const MCInst &Inst,
+                                                          uint64_t Addr,
+                                                          uint64_t Size) const;
+
   /// Returns (PLT virtual address, GOT virtual address) pairs for PLT entries.
   virtual std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,

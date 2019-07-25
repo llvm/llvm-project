@@ -54,10 +54,19 @@ Variable::Variable(
 Variable::~Variable() {}
 
 lldb::LanguageType Variable::GetLanguage() const {
-  SymbolContext variable_sc;
-  m_owner_scope->CalculateSymbolContext(&variable_sc);
-  if (variable_sc.comp_unit)
-    return variable_sc.comp_unit->GetLanguage();
+  lldb::LanguageType lang = m_mangled.GuessLanguage();
+  if (lang != lldb::eLanguageTypeUnknown)
+    return lang;
+
+  if (auto *func = m_owner_scope->CalculateSymbolContextFunction()) {
+    if ((lang = func->GetLanguage()) != lldb::eLanguageTypeUnknown)
+      return lang;
+  } else if (auto *comp_unit =
+                 m_owner_scope->CalculateSymbolContextCompileUnit()) {
+    if ((lang = comp_unit->GetLanguage()) != lldb::eLanguageTypeUnknown)
+      return lang;
+  }
+
   return lldb::eLanguageTypeUnknown;
 }
 

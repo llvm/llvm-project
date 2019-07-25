@@ -759,43 +759,50 @@ void LowerTypeTestsModule::buildBitSetsFromGlobalVariables(
   // Build a new global with the combined contents of the referenced globals.
   // This global is a struct whose even-indexed elements contain the original
   // contents of the referenced globals and whose odd-indexed elements contain
-  // any padding required to align the next element to the next power of 2.
+  // any padding required to align the next element to the next power of 2 plus
+  // any additional padding required to meet its alignment requirements.
   std::vector<Constant *> GlobalInits;
   const DataLayout &DL = M.getDataLayout();
+  DenseMap<GlobalTypeMember *, uint64_t> GlobalLayout;
+  uint64_t MaxAlign = 0;
+  uint64_t CurOffset = 0;
+  uint64_t DesiredPadding = 0;
   for (GlobalTypeMember *G : Globals) {
-    GlobalVariable *GV = cast<GlobalVariable>(G->getGlobal());
+    auto *GV = cast<GlobalVariable>(G->getGlobal());
+    uint64_t Align = GV->getAlignment();
+    if (Align == 0)
+      Align = DL.getABITypeAlignment(GV->getValueType());
+    MaxAlign = std::max(MaxAlign, Align);
+    uint64_t GVOffset = alignTo(CurOffset + DesiredPadding, Align);
+    GlobalLayout[G] = GVOffset;
+    if (GVOffset != 0) {
+      uint64_t Padding = GVOffset - CurOffset;
+      GlobalInits.push_back(
+          ConstantAggregateZero::get(ArrayType::get(Int8Ty, Padding)));
+    }
+
     GlobalInits.push_back(GV->getInitializer());
     uint64_t InitSize = DL.getTypeAllocSize(GV->getValueType());
+    CurOffset = GVOffset + InitSize;
 
-    // Compute the amount of padding required.
-    uint64_t Padding = NextPowerOf2(InitSize - 1) - InitSize;
+    // Compute the amount of padding that we'd like for the next element.
+    DesiredPadding = NextPowerOf2(InitSize - 1) - InitSize;
 
     // Experiments of different caps with Chromium on both x64 and ARM64
     // have shown that the 32-byte cap generates the smallest binary on
     // both platforms while different caps yield similar performance.
     // (see https://lists.llvm.org/pipermail/llvm-dev/2018-July/124694.html)
-    if (Padding > 32)
-      Padding = alignTo(InitSize, 32) - InitSize;
-
-    GlobalInits.push_back(
-        ConstantAggregateZero::get(ArrayType::get(Int8Ty, Padding)));
+    if (DesiredPadding > 32)
+      DesiredPadding = alignTo(InitSize, 32) - InitSize;
   }
-  if (!GlobalInits.empty())
-    GlobalInits.pop_back();
+
   Constant *NewInit = ConstantStruct::getAnon(M.getContext(), GlobalInits);
   auto *CombinedGlobal =
       new GlobalVariable(M, NewInit->getType(), /*isConstant=*/true,
                          GlobalValue::PrivateLinkage, NewInit);
+  CombinedGlobal->setAlignment(MaxAlign);
 
   StructType *NewTy = cast<StructType>(NewInit->getType());
-  const StructLayout *CombinedGlobalLayout = DL.getStructLayout(NewTy);
-
-  // Compute the offsets of the original globals within the new global.
-  DenseMap<GlobalTypeMember *, uint64_t> GlobalLayout;
-  for (unsigned I = 0; I != Globals.size(); ++I)
-    // Multiply by 2 to account for padding elements.
-    GlobalLayout[Globals[I]] = CombinedGlobalLayout->getElementOffset(I * 2);
-
   lowerTypeTestCalls(TypeIds, CombinedGlobal, GlobalLayout);
 
   // Build aliases pointing to offsets into the combined global for each

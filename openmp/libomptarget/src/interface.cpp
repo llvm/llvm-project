@@ -306,6 +306,9 @@ EXTERN int __tgt_target_teams_nowait(int64_t device_id, void *host_ptr,
 
 EXTERN void __kmpc_push_target_tripcount(int64_t device_id,
     uint64_t loop_tripcount) {
+  if (IsOffloadDisabled())
+    return;
+
   if (device_id == OFFLOAD_DEVICE_DEFAULT) {
     device_id = omp_get_default_device();
   }

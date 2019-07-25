@@ -118,6 +118,8 @@ public:
             Type::getIntNTy(Builder.getContext(), DL.getPointerSizeInBits())),
         M(Builder.GetInsertBlock()->getParent()->getParent()) {}
 
+  virtual ~ParallelLoopGenerator() {}
+
   /// Create a parallel loop.
   ///
   /// This function is the main function to automatically generate a parallel

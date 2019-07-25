@@ -1716,7 +1716,17 @@ TEST_F(FormatTest, FormatsTypedefEnum) {
 
 TEST_F(FormatTest, FormatsNSEnums) {
   verifyGoogleFormat("typedef NS_ENUM(NSInteger, SomeName) { AAA, BBB }");
+  verifyGoogleFormat(
+      "typedef NS_CLOSED_ENUM(NSInteger, SomeName) { AAA, BBB }");
   verifyGoogleFormat("typedef NS_ENUM(NSInteger, MyType) {\n"
+                     "  // Information about someDecentlyLongValue.\n"
+                     "  someDecentlyLongValue,\n"
+                     "  // Information about anotherDecentlyLongValue.\n"
+                     "  anotherDecentlyLongValue,\n"
+                     "  // Information about aThirdDecentlyLongValue.\n"
+                     "  aThirdDecentlyLongValue\n"
+                     "};");
+  verifyGoogleFormat("typedef NS_CLOSED_ENUM(NSInteger, MyType) {\n"
                      "  // Information about someDecentlyLongValue.\n"
                      "  someDecentlyLongValue,\n"
                      "  // Information about anotherDecentlyLongValue.\n"
@@ -1730,6 +1740,11 @@ TEST_F(FormatTest, FormatsNSEnums) {
                      "  c = 3,\n"
                      "};");
   verifyGoogleFormat("typedef CF_ENUM(NSInteger, MyType) {\n"
+                     "  a = 1,\n"
+                     "  b = 2,\n"
+                     "  c = 3,\n"
+                     "};");
+  verifyGoogleFormat("typedef CF_CLOSED_ENUM(NSInteger, MyType) {\n"
                      "  a = 1,\n"
                      "  b = 2,\n"
                      "  c = 3,\n"
@@ -1763,6 +1778,21 @@ TEST_F(FormatTest, FormatsNamespaces) {
   LLVMWithNoNamespaceFix.FixNamespaceComments = false;
 
   verifyFormat("namespace some_namespace {\n"
+               "class A {};\n"
+               "void f() { f(); }\n"
+               "}",
+               LLVMWithNoNamespaceFix);
+  verifyFormat("namespace N::inline D {\n"
+               "class A {};\n"
+               "void f() { f(); }\n"
+               "}",
+               LLVMWithNoNamespaceFix);
+  verifyFormat("namespace N::inline D::E {\n"
+               "class A {};\n"
+               "void f() { f(); }\n"
+               "}",
+               LLVMWithNoNamespaceFix);
+  verifyFormat("namespace [[deprecated(\"foo[bar\")]] some_namespace {\n"
                "class A {};\n"
                "void f() { f(); }\n"
                "}",
@@ -6883,10 +6913,12 @@ TEST_F(FormatTest, UnderstandsUsesOfStarAndAmp) {
   verifyIndependentOfContext("if (int *a = &b)");
   verifyIndependentOfContext("if (int &a = *b)");
   verifyIndependentOfContext("if (a & b[i])");
+  verifyIndependentOfContext("if (a * (b * c))");
   verifyIndependentOfContext("if (a::b::c::d & b[i])");
   verifyIndependentOfContext("if (*b[i])");
   verifyIndependentOfContext("if (int *a = (&b))");
   verifyIndependentOfContext("while (int *a = &b)");
+  verifyIndependentOfContext("while (a * (b * c))");
   verifyIndependentOfContext("size = sizeof *a;");
   verifyIndependentOfContext("if (a && (b = c))");
   verifyFormat("void f() {\n"

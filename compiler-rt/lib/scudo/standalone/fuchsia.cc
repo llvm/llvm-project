@@ -40,7 +40,7 @@ static void *allocateVmar(uptr Size, MapPlatformData *Data, bool AllowNoMem) {
       _zx_vmar_root_self(),
       ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE | ZX_VM_CAN_MAP_SPECIFIC, 0,
       Size, &Data->Vmar, &Data->VmarBase);
-  if (Status != ZX_OK) {
+  if (UNLIKELY(Status != ZX_OK)) {
     if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
       dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY);
     return nullptr;
@@ -78,7 +78,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
   } else {
     // Otherwise, create a Vmo and set its name.
     Status = _zx_vmo_create(Size, ZX_VMO_RESIZABLE, &Vmo);
-    if (Status != ZX_OK) {
+    if (UNLIKELY(Status != ZX_OK)) {
       if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
         dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY);
       return nullptr;
@@ -102,7 +102,7 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
   } else {
     CHECK_EQ(_zx_handle_close(Vmo), ZX_OK);
   }
-  if (Status != ZX_OK) {
+  if (UNLIKELY(Status != ZX_OK)) {
     if (Status != ZX_ERR_NO_MEMORY || !AllowNoMem)
       dieOnMapUnmapError(Status == ZX_ERR_NO_MEMORY);
     return nullptr;
@@ -125,7 +125,7 @@ void unmap(void *Addr, uptr Size, uptr Flags, MapPlatformData *Data) {
     const zx_handle_t Vmar = Data ? Data->Vmar : _zx_vmar_root_self();
     const zx_status_t Status =
         _zx_vmar_unmap(Vmar, reinterpret_cast<uintptr_t>(Addr), Size);
-    if (Status != ZX_OK)
+    if (UNLIKELY(Status != ZX_OK))
       dieOnMapUnmapError();
   }
   if (Data) {
@@ -172,7 +172,7 @@ u32 getNumberOfCPUs() { return _zx_system_get_num_cpus(); }
 
 bool getRandom(void *Buffer, uptr Length, bool Blocking) {
   COMPILER_CHECK(MaxRandomLength <= ZX_CPRNG_DRAW_MAX_LEN);
-  if (!Buffer || !Length || Length > MaxRandomLength)
+  if (UNLIKELY(!Buffer || !Length || Length > MaxRandomLength))
     return false;
   _zx_cprng_draw(Buffer, Length);
   return true;

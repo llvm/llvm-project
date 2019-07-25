@@ -35,7 +35,7 @@ int main(int, char**)
     for (unsigned i = 1; i <= 50; ++i)
     {
         year_month_weekday_last ymwdl(year{1}, month{1}, weekday_last{weekday{i}});
-        assert(static_cast<unsigned>(ymwdl.weekday()) == i);
+        assert(ymwdl.weekday().c_encoding() == (i == 7 ? 0 : i));
     }
 
   return 0;

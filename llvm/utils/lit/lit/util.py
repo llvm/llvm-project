@@ -423,34 +423,56 @@ def findPlatformSdkVersionOnMacOS(config, lit_config):
             return out.decode()
     return None
 
+def killProcessAndChildrenIsSupported():
+    """
+        Returns a tuple (<supported> , <error message>)
+        where
+        `<supported>` is True if `killProcessAndChildren()` is supported on
+            the current host, returns False otherwise.
+        `<error message>` is an empty string if `<supported>` is True,
+            otherwise is contains a string describing why the function is
+            not supported.
+    """
+    if platform.system() == 'AIX':
+        return (True, "")
+    try:
+        import psutil  # noqa: F401
+        return (True, "")
+    except ImportError:
+        return (False,  "Requires the Python psutil module but it could"
+                        " not be found. Try installing it via pip or via"
+                        " your operating system's package manager.")
 
 def killProcessAndChildren(pid):
     """This function kills a process with ``pid`` and all its running children
-    (recursively). It is currently implemented using the psutil module which
-    provides a simple platform neutral implementation.
+    (recursively). It is currently implemented using the psutil module on some
+    platforms which provides a simple platform neutral implementation.
 
-    TODO: Reimplement this without using psutil so we can       remove
-    our dependency on it.
+    TODO: Reimplement this without using psutil on all platforms so we can
+    remove our dependency on it.
 
     """
-    import psutil
-    try:
-        psutilProc = psutil.Process(pid)
-        # Handle the different psutil API versions
+    if platform.system() == 'AIX':
+        subprocess.call('kill -kill $(ps -o pid= -L{})'.format(pid), shell=True)
+    else:
+        import psutil
         try:
-            # psutil >= 2.x
-            children_iterator = psutilProc.children(recursive=True)
-        except AttributeError:
-            # psutil 1.x
-            children_iterator = psutilProc.get_children(recursive=True)
-        for child in children_iterator:
+            psutilProc = psutil.Process(pid)
+            # Handle the different psutil API versions
             try:
-                child.kill()
-            except psutil.NoSuchProcess:
-                pass
-        psutilProc.kill()
-    except psutil.NoSuchProcess:
-        pass
+                # psutil >= 2.x
+                children_iterator = psutilProc.children(recursive=True)
+            except AttributeError:
+                # psutil 1.x
+                children_iterator = psutilProc.get_children(recursive=True)
+            for child in children_iterator:
+                try:
+                    child.kill()
+                except psutil.NoSuchProcess:
+                    pass
+            psutilProc.kill()
+        except psutil.NoSuchProcess:
+            pass
 
 
 try:
