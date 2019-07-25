@@ -4520,6 +4520,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         getToolChain().getTriple().getOS() != llvm::Triple::UnknownOS &&
         !getToolChain().getTriple().isMacOSX())
       D.Diag(diag::err_drv_cilk_unsupported);
+  Args.AddLastArg(CmdArgs, options::OPT_ftapir);
+  Args.AddLastArg(CmdArgs, options::OPT_fkokkos);
+  Args.AddLastArg(CmdArgs, options::OPT_fflecsi);
 
   // Forward flags for OpenMP. We don't do this if the current action is an
   // device offloading action other than OpenMP.

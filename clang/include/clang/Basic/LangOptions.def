@@ -338,6 +338,13 @@ LANGOPT(PaddingOnUnsignedFixedPoint, 1, 0,
 
 LANGOPT(RegisterStaticDestructors, 1, 1, "Register C++ static destructors")
 
+
+// kitsune: Kokkos support. 
+BENIGN_LANGOPT(Kokkos, 1, 0, "Enable specialized Kokkos code generation")
+
+// kitsune: FleCSI support. 
+BENIGN_LANGOPT(FleCSI, 1, 0, "Enable specialized FleCSI code generation")
+
 #undef LANGOPT
 #undef COMPATIBLE_LANGOPT
 #undef BENIGN_LANGOPT

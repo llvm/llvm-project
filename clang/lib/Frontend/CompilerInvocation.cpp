@@ -2936,6 +2936,12 @@ static void ParseLangArgs(LangOptions &Opts, ArgList &Args, InputKind IK,
     }
   }
 
+  // Check if -fkokkos is specified. 
+  Opts.Kokkos = Args.hasArg(options::OPT_fkokkos) ? 1 : 0;
+
+  // Check if -fflecsi is specified. 
+Opts.FleCSI = Args.hasArg(options::OPT_fflecsi) ? 1 : 0;
+
   // Check if -fopenmp is specified.
   Opts.OpenMP = Args.hasArg(options::OPT_fopenmp) ? 1 : 0;
   // Check if -fopenmp-simd is specified.

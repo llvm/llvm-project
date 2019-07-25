@@ -1577,6 +1577,18 @@ def fno_objc_nonfragile_abi : Flag<["-"], "fno-objc-nonfragile-abi">, Group<f_Gr
 
 def fobjc_sender_dependent_dispatch : Flag<["-"], "fobjc-sender-dependent-dispatch">, Group<f_Group>;
 def fomit_frame_pointer : Flag<["-"], "fomit-frame-pointer">, Group<f_Group>;
+def ftapir : Joined<["-"], "ftapir=">, Group<f_Group>, Flags<[CC1Option]>,
+    HelpText<"Choose the backend for Tapir instructions (i.e., parallel runtime)">, Values<"cilk,openmp,qthreads,serial,none">;
+// kitsune: Tapir, Kokkos and FleCSI support.
+def ftapir : Joined<["-"], "ftapir=">, Group<f_Group>, Flags<[CC1Option]>,
+    HelpText<"Choose the backend for Tapir instructions (i.e., parallel runtime)">, Values<"cilk,openmp,qthreads,serial,none">;
+def fkokkos : Flag<["-"], "fkokkos">, Group<f_Group>, 
+  Flags<[CC1Option, NoArgumentUnused]>, 
+  HelpText<"Enable Kokkos extensions: recognition and code generation">;
+def fflecsi : Flag<["-"], "fflecsi">, Group<f_Group>, 
+  Flags<[CC1Option,NoArgumentUnused]>, 
+  HelpText<"Enable FleCSI extensions: recognition and code generation">; 
+
 def fopenmp : Flag<["-"], "fopenmp">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused]>,
   HelpText<"Parse OpenMP pragmas and generate parallel code.">;
 def fno_openmp : Flag<["-"], "fno-openmp">, Group<f_Group>, Flags<[NoArgumentUnused]>;

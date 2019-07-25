@@ -2575,6 +2575,16 @@ LValue CodeGenFunction::EmitDeclRefLValue(const DeclRefExpr *E) {
 
     // Check for captured variables.
     if (E->refersToEnclosingVariableOrCapture()) {
+      // kitsune: if we are generating a Kokkos lambda construct 
+      // we are transforming it into a loop...  Thus we have to 
+      // "undo" the capture... 
+      // FIXME: Is this always sound/safe? 
+      if (InKokkosConstruct) {
+        auto I = LocalDeclMap.find(VD);
+        assert(I != LocalDeclMap.end());
+        return MakeAddrLValue(I->second, T);
+      }
+
       VD = VD->getCanonicalDecl();
       if (auto *FD = LambdaCaptureFields.lookup(VD))
         return EmitCapturedFieldLValue(*this, FD, CXXABIThisValue);
@@ -4502,6 +4512,26 @@ RValue CodeGenFunction::EmitRValueForField(LValue LV,
 
 RValue CodeGenFunction::EmitCallExpr(const CallExpr *E,
                                      ReturnValueSlot ReturnValue) {
+  // kitsune: handle kokkos-centric details -- specifically we are
+  // dealing with a case where we transform a lambda construct into 
+  // a traditional loop construct -- thus our result is not a call expr 
+  // but essentially the removal of the call. 
+  // 
+  // FIXME: is this sound in all lambda use cases?  --PM 
+  // 
+  if (getLangOpts().Kokkos) {
+    const FunctionDecl *fdecl = E->getDirectCallee();
+    if (fdecl) {
+      std::string qname = fdecl->getQualifiedNameAsString();
+      if (qname == "Kokkos::parallel_for" || 
+          qname == "Kokkos::parallel_reduce") {
+            EmitKokkosConstruct(E);
+            return RValue::get(nullptr);
+      }
+    }
+  }
+  
+  
   // Builtins never have block type.
   if (E->getCallee()->getType()->isBlockPointerType())
     return EmitBlockCallExpr(E, ReturnValue);
