@@ -32,7 +32,10 @@ if(LLDB_TEST_SWIFT)
   set(SWIFT_TEST_ARGS
     --swift-compiler ${LLDB_SWIFTC}
     --swift-library ${LLDB_SWIFT_LIBS}
-    --env "DYLD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\" LD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\" SIMCTL_CHILD_DYLD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\"")
+    --inferior-env "DYLD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\""
+    --inferior-env "LD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\""
+    --inferior-env "SIMCTL_CHILD_DYLD_LIBRARY_PATH=\\\"${LLDB_SWIFT_LIBS}\\\""
+  )
 endif()
 # END - Swift Mods
 
