@@ -162,7 +162,7 @@ let Definition = "process" in {
     Desc<"Disable reading and caching of memory in fixed-size units.">;
   def ExtraStartCommand: Property<"extra-startup-command", "Array">,
     DefaultUnsignedValue<16>,
-    Desc<"A list containing extra commands understood by the particular process plugin used.  For instance, to turn on debugserver logging set this to \"QSetLogging:bitmask=LOG_DEFAULT;\"">;
+    Desc<"A list containing extra commands understood by the particular process plugin used.  For instance, to turn on debugserver logging set this to 'QSetLogging:bitmask=LOG_DEFAULT;">;
   def IgnoreBreakpointsInExpressions: Property<"ignore-breakpoints-in-expressions", "Boolean">,
     Global,
     DefaultTrue,
@@ -251,11 +251,11 @@ let Definition = "debugger" in {
     Desc<"If true all confirmation prompts will receive their default reply.">;
   def DisassemblyFormat: Property<"disassembly-format", "FormatEntity">,
     Global,
-    DefaultStringValue<"{${function.initial-function}{${module.file.basename}`}{${function.name-without-args}}:\n}{${function.changed}\n{${module.file.basename}`}{${function.name-without-args}}:\n}{${current-pc-arrow} }${addr-file-or-load}{ <${function.concrete-only-addr-offset-no-padding}>}: ">,
+    DefaultStringValue<"{${function.initial-function}{${module.file.basename}`}{${function.name-without-args}}:\\\\n}{${function.changed}\\\\n{${module.file.basename}`}{${function.name-without-args}}:\\\\n}{${current-pc-arrow} }${addr-file-or-load}{ <${function.concrete-only-addr-offset-no-padding}>}: ">,
     Desc<"The default disassembly format string to use when disassembling instruction sequences.">;
   def FrameFormat: Property<"frame-format", "FormatEntity">,
     Global,
-    DefaultStringValue<"frame #${frame.index}: ${ansi.fg.yellow}${frame.pc}${ansi.normal}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{${function.is-optimized} [opt]}{${frame.is-artificial} [artificial]}\n">,
+    DefaultStringValue<"frame #${frame.index}: ${ansi.fg.yellow}${frame.pc}${ansi.normal}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{${function.is-optimized} [opt]}{${frame.is-artificial} [artificial]}\\\\n">,
     Desc<"The default frame format string to use when displaying stack frame information for threads.">;
   def NotiftVoid: Property<"notify-void", "Boolean">,
     Global,
@@ -310,11 +310,11 @@ let Definition = "debugger" in {
     Desc<"The maximum number of columns to use for displaying text.">;
   def ThreadFormat: Property<"thread-format", "FormatEntity">,
     Global,
-    DefaultStringValue<"thread #${thread.index}: tid = ${thread.id%tid}{, ${frame.pc}}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{, name = ${ansi.fg.green}'${thread.name}'${ansi.normal}}{, queue = ${ansi.fg.green}'${thread.queue}'${ansi.normal}}{, activity = ${ansi.fg.green}'${thread.info.activity.name}'${ansi.normal}}{, ${thread.info.trace_messages} messages}{, stop reason = ${ansi.fg.red}${thread.stop-reason}${ansi.normal}}{\nReturn value: ${thread.return-value}}{\nCompleted expression: ${thread.completed-expression}}\n">,
+    DefaultStringValue<"thread #${thread.index}: tid = ${thread.id%tid}{, ${frame.pc}}{ ${module.file.basename}{`${function.name-with-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{, name = ${ansi.fg.green}'${thread.name}'${ansi.normal}}{, queue = ${ansi.fg.green}'${thread.queue}'${ansi.normal}}{, activity = ${ansi.fg.green}'${thread.info.activity.name}'${ansi.normal}}{, ${thread.info.trace_messages} messages}{, stop reason = ${ansi.fg.red}${thread.stop-reason}${ansi.normal}}{\\\\nReturn value: ${thread.return-value}}{\\\\nCompleted expression: ${thread.completed-expression}}\\\\n">,
     Desc<"The default thread format string to use when displaying thread information.">;
   def ThreadStopFormat: Property<"thread-stop-format", "FormatEntity">,
     Global,
-    DefaultStringValue<"thread #${thread.index}{, name = '${thread.name}'}{, queue = ${ansi.fg.green}'${thread.queue}'${ansi.normal}}{, activity = ${ansi.fg.green}'${thread.info.activity.name}'${ansi.normal}}{, ${thread.info.trace_messages} messages}{, stop reason = ${ansi.fg.red}${thread.stop-reason}${ansi.normal}}{\nReturn value: ${thread.return-value}}{\nCompleted expression: ${thread.completed-expression}}\n">,
+    DefaultStringValue<"thread #${thread.index}{, name = '${thread.name}'}{, queue = ${ansi.fg.green}'${thread.queue}'${ansi.normal}}{, activity = ${ansi.fg.green}'${thread.info.activity.name}'${ansi.normal}}{, ${thread.info.trace_messages} messages}{, stop reason = ${ansi.fg.red}${thread.stop-reason}${ansi.normal}}{\\\\nReturn value: ${thread.return-value}}{\\\\nCompleted expression: ${thread.completed-expression}}\\\\n">,
     Desc<"The default thread format  string to use when displaying thread information as part of the stop display.">;
   def UseExternalEditor: Property<"use-external-editor", "Boolean">,
     Global,
@@ -346,7 +346,7 @@ let Definition = "debugger" in {
     Desc<"If true, LLDB will automatically escape non-printable and escape characters when formatting strings.">;
   def FrameFormatUnique: Property<"frame-format-unique", "FormatEntity">,
     Global,
-    DefaultStringValue<"frame #${frame.index}: ${ansi.fg.yellow}${frame.pc}${ansi.normal}{ ${module.file.basename}{`${function.name-without-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{${function.is-optimized} [opt]}{${frame.is-artificial} [artificial]}\n">,
+    DefaultStringValue<"frame #${frame.index}: ${ansi.fg.yellow}${frame.pc}${ansi.normal}{ ${module.file.basename}{`${function.name-without-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{${function.is-optimized} [opt]}{${frame.is-artificial} [artificial]}\\\\n">,
     Desc<"The default frame format string to use when displaying stack frameinformation for threads from thread backtrace unique.">;
 }
 
