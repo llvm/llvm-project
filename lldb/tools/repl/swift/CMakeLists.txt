@@ -44,7 +44,7 @@ endif()
 
 if(APPLE)
   # Set the RPATHs to locate libswiftCore. Prefer the just-built one.
-  set(swift_buildtree ${LLDB_PATH_TO_SWIFT_BUILD}/lib/swift/macosx)
+  set(swift_buildtree ${SWIFT_BINARY_DIR}/lib/swift/macosx)
   set(system_libs /usr/lib/swift)
 
   if(LLDB_BUILD_FRAMEWORK)

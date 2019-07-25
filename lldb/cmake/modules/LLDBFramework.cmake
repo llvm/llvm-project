@@ -119,7 +119,7 @@ if(NOT IOS)
             ${clang_resource_headers_dir}
             $<TARGET_FILE_DIR:liblldb>/Resources/Clang/include
     COMMAND ${CMAKE_COMMAND} -E copy_directory
-            ${LLDB_PATH_TO_SWIFT_BUILD}/lib/swift
+            ${SWIFT_BINARY_DIR}/lib/swift
             $<TARGET_FILE_DIR:liblldb>/Resources/Swift
     COMMENT "LLDB.framework: copy clang vendor-specific headers"
   )

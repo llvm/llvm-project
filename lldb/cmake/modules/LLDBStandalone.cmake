@@ -2,18 +2,9 @@ project(lldb)
 
 option(LLVM_INSTALL_TOOLCHAIN_ONLY "Only include toolchain files in the 'install' target." OFF)
 
-set(LLDB_PATH_TO_SWIFT_BUILD "" CACHE PATH "Path to Swift build tree")
-set(LLDB_PATH_TO_SWIFT_SOURCE "" CACHE PATH "Path to Swift source tree")
-
-file(TO_CMAKE_PATH "${LLDB_PATH_TO_SWIFT_BUILD}" LLDB_PATH_TO_SWIFT_BUILD)
-file(TO_CMAKE_PATH "${LLDB_PATH_TO_SWIFT_SOURCE}" LLDB_PATH_TO_SWIFT_SOURCE)
-
 find_package(LLVM REQUIRED CONFIG HINTS "${LLVM_DIR}" NO_CMAKE_FIND_ROOT_PATH)
 find_package(Clang REQUIRED CONFIG HINTS "${Clang_DIR}" NO_CMAKE_FIND_ROOT_PATH)
-# Start Swift Mods
-find_package(Swift REQUIRED CONFIG
-  HINTS "${LLDB_PATH_TO_SWIFT_BUILD}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
-# End Swift Mods
+find_package(Swift REQUIRED CONFIG HINTS "${Swift_DIR}" NO_DEFAULT_PATH NO_CMAKE_FIND_ROOT_PATH)
 
 # We set LLVM_CMAKE_PATH so that GetSVN.cmake is found correctly when building SVNVersion.inc
 set(LLVM_CMAKE_PATH ${LLVM_CMAKE_DIR} CACHE PATH "Path to LLVM CMake modules")
@@ -84,7 +75,7 @@ endif()
 # We append the directory in which LLVMConfig.cmake lives. We expect LLVM's
 # CMake modules to be in that directory as well.
 list(APPEND CMAKE_MODULE_PATH "${LLVM_DIR}")
-list(APPEND CMAKE_MODULE_PATH "${LLDB_PATH_TO_SWIFT_SOURCE}/cmake/modules/")
+list(APPEND CMAKE_MODULE_PATH "${Swift_DIR}")
 include(AddLLVM)
 include(TableGen)
 include(HandleLLVMOptions)
@@ -107,8 +98,8 @@ include_directories(
   "${CMAKE_BINARY_DIR}/include"
   "${LLVM_INCLUDE_DIRS}"
   "${CLANG_INCLUDE_DIRS}"
-  "${LLDB_PATH_TO_SWIFT_BUILD}/include"
-  "${LLDB_PATH_TO_SWIFT_SOURCE}/include"
+  "${SWIFT_INCLUDE_DIRS}"
+  "${SWIFT_MAIN_SRC_DIR}/include"
   "${CMAKE_CURRENT_SOURCE_DIR}/source")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
