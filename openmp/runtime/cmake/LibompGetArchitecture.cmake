@@ -45,6 +45,8 @@ function(libomp_get_architecture return_arch)
       #error ARCHITECTURE=mips64
     #elif defined(__mips__) && !defined(__mips64)
       #error ARCHITECTURE=mips
+    #elif defined(__riscv) && __riscv_xlen == 64
+      #error ARCHITECTURE=riscv64
     #else
       #error ARCHITECTURE=UnknownArchitecture
     #endif

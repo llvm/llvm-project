@@ -195,6 +195,7 @@ void NativeProcessNetBSD::MonitorSIGSTOP(lldb::pid_t pid) {
             SIGSTOP, &info.psi_siginfo);
       }
     }
+    SetState(StateType::eStateStopped, true);
   }
 }
 
