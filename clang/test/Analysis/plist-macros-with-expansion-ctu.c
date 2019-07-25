@@ -1,7 +1,6 @@
 // RUN: rm -rf %t && mkdir %t
 // RUN: mkdir -p %t/ctudir
-// RUN: %clang_cc1 -triple x86_64-pc-linux-gnu \
-// RUN:   -emit-pch -o %t/ctudir/plist-macros-ctu.c.ast %S/Inputs/plist-macros-ctu.c
+// RUN: %clang_cc1 -emit-pch -o %t/ctudir/plist-macros-ctu.c.ast %S/Inputs/plist-macros-ctu.c
 // RUN: cp %S/Inputs/plist-macros-with-expansion-ctu.c.externalDefMap.txt %t/ctudir/externalDefMap.txt
 
 // RUN: %clang_analyze_cc1 -analyzer-checker=core \
