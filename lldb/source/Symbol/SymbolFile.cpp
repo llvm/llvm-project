@@ -189,6 +189,7 @@ void SymbolFile::SetCompileUnitAtIndex(uint32_t idx, const CompUnitSP &cu_sp) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   const size_t num_compile_units = GetNumCompileUnits();
   assert(idx < num_compile_units);
+  (void)num_compile_units;
 
   // Fire off an assertion if this compile unit already exists for now. The
   // partial parsing should take care of only setting the compile unit

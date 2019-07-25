@@ -160,7 +160,10 @@ bool DYLDRendezvous::Resolve() {
   m_previous = m_current;
   m_current = info;
 
-  if (UpdateSOEntries(true))
+  if (m_current.map_addr == 0)
+    return false;
+
+  if (UpdateSOEntriesFromRemote())
     return true;
 
   return UpdateSOEntries();
@@ -170,53 +173,89 @@ bool DYLDRendezvous::IsValid() {
   return m_rendezvous_addr != LLDB_INVALID_ADDRESS;
 }
 
-bool DYLDRendezvous::UpdateSOEntries(bool fromRemote) {
-  SOEntry entry;
-  LoadedModuleInfoList module_list;
+DYLDRendezvous::RendezvousAction DYLDRendezvous::GetAction() const {
+  switch (m_current.state) {
 
-  // If we can't get the SO info from the remote, return failure.
-  if (fromRemote && m_process->LoadModules(module_list) == 0)
-    return false;
+  case eConsistent:
+    switch (m_previous.state) {
+    // When the previous and current states are consistent this is the first
+    // time we have been asked to update.  Just take a snapshot of the
+    // currently loaded modules.
+    case eConsistent:
+      return eTakeSnapshot;
+    // If we are about to add or remove a shared object clear out the current
+    // state and take a snapshot of the currently loaded images.
+    case eAdd:
+      return eAddModules;
+    case eDelete:
+      return eRemoveModules;
+    }
+    break;
 
-  if (!fromRemote && m_current.map_addr == 0)
-    return false;
-
-  // When the previous and current states are consistent this is the first time
-  // we have been asked to update.  Just take a snapshot of the currently
-  // loaded modules.
-  if (m_previous.state == eConsistent && m_current.state == eConsistent)
-    return fromRemote ? SaveSOEntriesFromRemote(module_list)
-                      : TakeSnapshot(m_soentries);
-
-  // If we are about to add or remove a shared object clear out the current
-  // state and take a snapshot of the currently loaded images.
-  if (m_current.state == eAdd || m_current.state == eDelete) {
-    // Some versions of the android dynamic linker might send two notifications
-    // with state == eAdd back to back. Ignore them until we get an eConsistent
-    // notification.
+  case eAdd:
+  case eDelete:
+    // Some versions of the android dynamic linker might send two
+    // notifications with state == eAdd back to back. Ignore them until we
+    // get an eConsistent notification.
     if (!(m_previous.state == eConsistent ||
           (m_previous.state == eAdd && m_current.state == eDelete)))
-      return false;
+      return eNoAction;
 
+    return eTakeSnapshot;
+  }
+
+  return eNoAction;
+}
+
+bool DYLDRendezvous::UpdateSOEntriesFromRemote() {
+  auto action = GetAction();
+
+  if (action == eNoAction)
+    return false;
+
+  if (action == eTakeSnapshot) {
+    m_added_soentries.clear();
+    m_removed_soentries.clear();
+    // We already have the loaded list from the previous update so no need to
+    // find all the modules again.
+    if (!m_loaded_modules.m_list.empty())
+      return true;
+  }
+
+  llvm::Expected<LoadedModuleInfoList> module_list =
+      m_process->GetLoadedModuleList();
+  if (!module_list) {
+    llvm::consumeError(module_list.takeError());
+    return false;
+  }
+
+  switch (action) {
+  case eTakeSnapshot:
     m_soentries.clear();
-    if (fromRemote)
-      return SaveSOEntriesFromRemote(module_list);
+    return SaveSOEntriesFromRemote(*module_list);
+  case eAddModules:
+    return AddSOEntriesFromRemote(*module_list);
+  case eRemoveModules:
+    return RemoveSOEntriesFromRemote(*module_list);
+  case eNoAction:
+    return false;
+  }
+}
 
+bool DYLDRendezvous::UpdateSOEntries() {
+  switch (GetAction()) {
+  case eTakeSnapshot:
+    m_soentries.clear();
     m_added_soentries.clear();
     m_removed_soentries.clear();
     return TakeSnapshot(m_soentries);
+  case eAddModules:
+    return AddSOEntries();
+  case eRemoveModules:
+    return RemoveSOEntries();
+  case eNoAction:
+    return false;
   }
-  assert(m_current.state == eConsistent);
-
-  // Otherwise check the previous state to determine what to expect and update
-  // accordingly.
-  if (m_previous.state == eAdd)
-    return fromRemote ? AddSOEntriesFromRemote(module_list) : AddSOEntries();
-  else if (m_previous.state == eDelete)
-    return fromRemote ? RemoveSOEntriesFromRemote(module_list)
-                      : RemoveSOEntries();
-
-  return false;
 }
 
 bool DYLDRendezvous::FillSOEntryFromModuleInfo(
@@ -247,7 +286,7 @@ bool DYLDRendezvous::FillSOEntryFromModuleInfo(
 }
 
 bool DYLDRendezvous::SaveSOEntriesFromRemote(
-    LoadedModuleInfoList &module_list) {
+    const LoadedModuleInfoList &module_list) {
   for (auto const &modInfo : module_list.m_list) {
     SOEntry entry;
     if (!FillSOEntryFromModuleInfo(modInfo, entry))
@@ -262,7 +301,8 @@ bool DYLDRendezvous::SaveSOEntriesFromRemote(
   return true;
 }
 
-bool DYLDRendezvous::AddSOEntriesFromRemote(LoadedModuleInfoList &module_list) {
+bool DYLDRendezvous::AddSOEntriesFromRemote(
+    const LoadedModuleInfoList &module_list) {
   for (auto const &modInfo : module_list.m_list) {
     bool found = false;
     for (auto const &existing : m_loaded_modules.m_list) {
@@ -280,8 +320,10 @@ bool DYLDRendezvous::AddSOEntriesFromRemote(LoadedModuleInfoList &module_list) {
       return false;
 
     // Only add shared libraries and not the executable.
-    if (!SOEntryIsMainExecutable(entry))
+    if (!SOEntryIsMainExecutable(entry)) {
       m_soentries.push_back(entry);
+      m_added_soentries.push_back(entry);
+    }
   }
 
   m_loaded_modules = module_list;
@@ -289,7 +331,7 @@ bool DYLDRendezvous::AddSOEntriesFromRemote(LoadedModuleInfoList &module_list) {
 }
 
 bool DYLDRendezvous::RemoveSOEntriesFromRemote(
-    LoadedModuleInfoList &module_list) {
+    const LoadedModuleInfoList &module_list) {
   for (auto const &existing : m_loaded_modules.m_list) {
     bool found = false;
     for (auto const &modInfo : module_list.m_list) {
@@ -313,6 +355,7 @@ bool DYLDRendezvous::RemoveSOEntriesFromRemote(
         return false;
 
       m_soentries.erase(pos);
+      m_removed_soentries.push_back(entry);
     }
   }
 
