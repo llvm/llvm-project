@@ -263,7 +263,7 @@ if(NOT LLDB_BUILT_STANDALONE)
   endif ()
   include_directories("${CMAKE_CURRENT_BINARY_DIR}/../swift/include")
 else ()
-  include_directories("${LLDB_PATH_TO_SWIFT_BUILD}/include")
+  include_directories("${SWIFT_INCLUDE_DIRS}")
 endif()
 
 # Disable GCC warnings

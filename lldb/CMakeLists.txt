@@ -16,7 +16,8 @@ set(CMAKE_MODULE_PATH
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   include(LLDBStandalone)
 else()
-  set(LLDB_PATH_TO_SWIFT_BUILD ${CMAKE_BINARY_DIR})
+  set(SWIFT_BINARY_DIR ${CMAKE_BINARY_DIR})
+  set(SWIFT_INCLUDE_DIR ${CMAKE_SOURCE_DIR}/include)
 endif()
 
 include(LLDBConfig)
@@ -60,8 +61,7 @@ if(CMAKE_CROSSCOMPILING AND LLDB_BUILT_STANDALONE)
       for building the native lldb-tblgen used during the build process.")
   endif()
   llvm_create_cross_target(lldb NATIVE "" Release
-    -DLLDB_PATH_TO_SWIFT_SOURCE=${LLDB_PATH_TO_NATIVE_SWIFT_SOURCE}
-    -DLLDB_PATH_TO_SWIFT_BUILD=${LLDB_PATH_TO_NATIVE_SWIFT_BUILD}
+    -DSwift_DIR=${LLDB_PATH_TO_NATIVE_SWIFT_BUILD}
     -DLLVM_DIR=${NATIVE_LLVM_DIR}
     -DClang_DIR=${NATIVE_Clang_DIR})
 endif()
