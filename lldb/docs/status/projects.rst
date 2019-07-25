@@ -409,3 +409,17 @@ If we could predict the catching frame, we could do this right.
 
 And of course, this would be a useful piece of information to display when stopped 
 at a throw point.
+
+Add predicates to the nodes of settings
+---------------------------------------
+
+It would be very useful to be able to give values to settings that are dependent
+on the triple, or executable name, for targets, or on whether a process is local
+or remote, or on the name of a thread, etc.  The original intent (and there is
+a sketch of this in the settings parsing code) was to be able to say:
+
+::
+
+  (lldb) settings set target{arch=x86_64}.process.thread{name=foo}...
+
+The exact details are still to be worked out, however.
