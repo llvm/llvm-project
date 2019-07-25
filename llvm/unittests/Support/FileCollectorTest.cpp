@@ -27,13 +27,13 @@ namespace {
 class TestingFileCollector : public FileCollector {
 public:
   using FileCollector::FileCollector;
-  using FileCollector::m_root;
-  using FileCollector::m_seen;
-  using FileCollector::m_symlink_map;
-  using FileCollector::m_vfs_writer;
+  using FileCollector::Root;
+  using FileCollector::Seen;
+  using FileCollector::SymlinkMap;
+  using FileCollector::VFSWriter;
 
-  bool HasSeen(StringRef fs) {
-    return m_seen.find(fs) != m_seen.end();
+  bool hasSeen(StringRef fs) {
+    return Seen.find(fs) != Seen.end();
   }
 };
 
@@ -99,28 +99,28 @@ struct ScopedFile {
 };
 } // end anonymous namespace
 
-TEST(FileCollectorTest, AddFile) {
+TEST(FileCollectorTest, addFile) {
   ScopedDir root("add_file_root", true);
   std::string root_fs = root.Path.str();
-  TestingFileCollector file_collector(root_fs, root_fs);
+  TestingFileCollector FileCollector(root_fs, root_fs);
 
-  file_collector.AddFile("/path/to/a");
-  file_collector.AddFile("/path/to/b");
-  file_collector.AddFile("/path/to/c");
+  FileCollector.addFile("/path/to/a");
+  FileCollector.addFile("/path/to/b");
+  FileCollector.addFile("/path/to/c");
 
   // Make sure the root is correct.
-  EXPECT_EQ(file_collector.m_root, root_fs);
+  EXPECT_EQ(FileCollector.Root, root_fs);
 
   // Make sure we've seen all the added files.
-  EXPECT_TRUE(file_collector.HasSeen("/path/to/a"));
-  EXPECT_TRUE(file_collector.HasSeen("/path/to/b"));
-  EXPECT_TRUE(file_collector.HasSeen("/path/to/c"));
+  EXPECT_TRUE(FileCollector.hasSeen("/path/to/a"));
+  EXPECT_TRUE(FileCollector.hasSeen("/path/to/b"));
+  EXPECT_TRUE(FileCollector.hasSeen("/path/to/c"));
 
   // Make sure we've only seen the added files.
-  EXPECT_FALSE(file_collector.HasSeen("/path/to/d"));
+  EXPECT_FALSE(FileCollector.hasSeen("/path/to/d"));
 }
 
-TEST(FileCollectorTest, CopyFiles) {
+TEST(FileCollectorTest, copyFiles) {
   ScopedDir file_root("file_root", true);
   ScopedFile a(file_root + "/aaa");
   ScopedFile b(file_root + "/bbb");
@@ -129,22 +129,22 @@ TEST(FileCollectorTest, CopyFiles) {
   // Create file collector and add files.
   ScopedDir root("copy_files_root", true);
   std::string root_fs = root.Path.str();
-  TestingFileCollector file_collector(root_fs, root_fs);
-  file_collector.AddFile(a.Path);
-  file_collector.AddFile(b.Path);
-  file_collector.AddFile(c.Path);
+  TestingFileCollector FileCollector(root_fs, root_fs);
+  FileCollector.addFile(a.Path);
+  FileCollector.addFile(b.Path);
+  FileCollector.addFile(c.Path);
 
   // Make sure we can copy the files.
-  std::error_code ec = file_collector.CopyFiles(true);
+  std::error_code ec = FileCollector.copyFiles(true);
   EXPECT_FALSE(ec);
 
   // Now add a bogus file and make sure we error out.
-  file_collector.AddFile("/some/bogus/file");
-  ec = file_collector.CopyFiles(true);
+  FileCollector.addFile("/some/bogus/file");
+  ec = FileCollector.copyFiles(true);
   EXPECT_TRUE(ec);
 
   // However, if stop_on_error is true the copy should still succeed.
-  ec = file_collector.CopyFiles(false);
+  ec = FileCollector.copyFiles(false);
   EXPECT_FALSE(ec);
 }
 
@@ -242,17 +242,17 @@ TEST(FileCollectorTest, Symlinks) {
   // Root where files are copied to.
   ScopedDir reproducer_root("reproducer_root", true);
   std::string root_fs = reproducer_root.Path.str();
-  TestingFileCollector file_collector(root_fs, root_fs);
+  TestingFileCollector FileCollector(root_fs, root_fs);
 
   // Add all the files to the collector.
-  file_collector.AddFile(a.Path);
-  file_collector.AddFile(b.Path);
-  file_collector.AddFile(c.Path);
-  file_collector.AddFile(d.Path);
-  file_collector.AddFile(e.Path);
-  file_collector.AddFile(file_root + "/bar/ddd");
+  FileCollector.addFile(a.Path);
+  FileCollector.addFile(b.Path);
+  FileCollector.addFile(c.Path);
+  FileCollector.addFile(d.Path);
+  FileCollector.addFile(e.Path);
+  FileCollector.addFile(file_root + "/bar/ddd");
 
-  auto mapping = file_collector.m_vfs_writer.getMappings();
+  auto mapping = FileCollector.VFSWriter.getMappings();
 
   {
     // Make sure the common case works.
