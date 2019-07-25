@@ -2,9 +2,9 @@
 # Check R_MIPS_CALL16 relocation calculation.
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
-# RUN: ld.lld %t.o -shared -o %t.exe
-# RUN: llvm-objdump -d %t.exe | FileCheck %s
-# RUN: llvm-readobj --mips-plt-got --symbols %t.exe \
+# RUN: ld.lld %t.o -shared -o %t.so
+# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s
+# RUN: llvm-readobj --mips-plt-got --symbols %t.so \
 # RUN:   | FileCheck -check-prefix=GOT %s
 
   .text
@@ -20,7 +20,7 @@ g1:
 # CHECK:      Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: __start:
-# CHECK-NEXT:      10000:   8f 88 80 18   lw   $8, -32744
+# CHECK-NEXT:      10000:       lw   $8, -32744
 
 # GOT:      Name: g1
 # GOT-NEXT: Value: 0x[[ADDR:[0-9A-F]+]]

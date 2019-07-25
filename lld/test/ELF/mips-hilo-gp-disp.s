@@ -5,9 +5,9 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         %S/Inputs/mips-dynamic.s -o %t2.o
 # RUN: ld.lld %t1.o %t2.o -o %t.exe
-# RUN: llvm-objdump -d -t %t.exe | FileCheck -check-prefix=EXE %s
+# RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck -check-prefix=EXE %s
 # RUN: ld.lld %t1.o %t2.o -shared -o %t.so
-# RUN: llvm-objdump -d -t %t.so | FileCheck -check-prefix=SO %s
+# RUN: llvm-objdump -d -t --no-show-raw-insn %t.so | FileCheck -check-prefix=SO %s
 
   .text
   .globl  __start
@@ -22,15 +22,15 @@ bar:
 # EXE:      Disassembly of section .text:
 # EXE-EMPTY:
 # EXE-NEXT: __start:
-# EXE-NEXT:  20000:   3c 08 00 02   lui    $8, 2
-#                                              ^-- %hi(0x47ff0-0x20000)
-# EXE-NEXT:  20004:   21 08 80 00   addi   $8, $8, -32768
-#                                                  ^-- %lo(0x38000-0x20004+4)
+# EXE-NEXT:  20000:       lui    $8, 2
+#                                    ^-- %hi(0x47ff0-0x20000)
+# EXE-NEXT:  20004:       addi   $8, $8, -32768
+#                                        ^-- %lo(0x38000-0x20004+4)
 # EXE:      bar:
-# EXE-NEXT:  2000c:   3c 08 00 01   lui    $8, 1
-#                                              ^-- %hi(0x38000-0x2000c)
-# EXE-NEXT:  20010:   21 08 7f f4   addi   $8, $8, 32756
-#                                                  ^-- %lo(0x38000-0x20010+4)
+# EXE-NEXT:  2000c:       lui    $8, 1
+#                                    ^-- %hi(0x38000-0x2000c)
+# EXE-NEXT:  20010:       addi   $8, $8, 32756
+#                                        ^-- %lo(0x38000-0x20010+4)
 
 # EXE: SYMBOL TABLE:
 # EXE: 0002000c     .text   00000000 bar
@@ -40,15 +40,15 @@ bar:
 # SO:      Disassembly of section .text:
 # SO-EMPTY:
 # SO-NEXT: __start:
-# SO-NEXT:  10000:   3c 08 00 02   lui    $8, 2
-#                                             ^-- %hi(0x28000-0x10000)
-# SO-NEXT:  10004:   21 08 80 00   addi   $8, $8, -32768
-#                                                 ^-- %lo(0x28000-0x10004+4)
+# SO-NEXT:  10000:       lui    $8, 2
+#                                   ^-- %hi(0x28000-0x10000)
+# SO-NEXT:  10004:       addi   $8, $8, -32768
+#                                       ^-- %lo(0x28000-0x10004+4)
 # SO:       bar:
-# SO-NEXT:   1000c:   3c 08 00 01   lui    $8, 1
-#                                              ^-- %hi(0x28000-0x1000c)
-# SO-NEXT:   10010:   21 08 7f f4   addi   $8, $8, 32756
-#                                                  ^-- %lo(0x28000-0x10010+4)
+# SO-NEXT:  1000c:       lui    $8, 1
+#                                   ^-- %hi(0x28000-0x1000c)
+# SO-NEXT:  10010:       addi   $8, $8, 32756
+#                                       ^-- %lo(0x28000-0x10010+4)
 
 # SO: SYMBOL TABLE:
 # SO: 0001000c     .text   00000000 bar
