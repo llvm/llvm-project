@@ -690,7 +690,7 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
   trace::Span OverallTracer("LoadIndex");
   auto Buffer = llvm::MemoryBuffer::getFile(SymbolFilename);
   if (!Buffer) {
-    llvm::errs() << "Can't open " << SymbolFilename << "\n";
+    elog("Can't open {0}", SymbolFilename);
     return nullptr;
   }
 
@@ -707,7 +707,7 @@ std::unique_ptr<SymbolIndex> loadIndex(llvm::StringRef SymbolFilename,
       if (I->Relations)
         Relations = std::move(*I->Relations);
     } else {
-      llvm::errs() << "Bad Index: " << llvm::toString(I.takeError()) << "\n";
+      elog("Bad Index: {0}", I.takeError());
       return nullptr;
     }
   }
