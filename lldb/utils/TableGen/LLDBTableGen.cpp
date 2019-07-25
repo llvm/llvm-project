@@ -1,4 +1,4 @@
-//===- TableGen.cpp - Top-Level TableGen implementation for Clang ---------===//
+//===- LLDBTableGen.cpp - Top-Level TableGen implementation for LLDB ------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains the main function for Clang's TableGen.
+// This file contains the main function for LLDB's TableGen.
 //
 //===----------------------------------------------------------------------===//
 
