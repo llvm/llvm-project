@@ -14,12 +14,12 @@
 using namespace llvm;
 
 template <size_t N> void parseGood(const char (&Buf)[N]) {
-  Expected<std::unique_ptr<remarks::Parser>> MaybeParser =
+  Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
       remarks::createRemarkParser(remarks::Format::YAML, {Buf, N - 1});
   EXPECT_FALSE(errorToBool(MaybeParser.takeError()));
   EXPECT_TRUE(*MaybeParser != nullptr);
 
-  remarks::Parser &Parser = **MaybeParser;
+  remarks::RemarkParser &Parser = **MaybeParser;
   Expected<std::unique_ptr<remarks::Remark>> Remark = Parser.next();
   EXPECT_FALSE(errorToBool(Remark.takeError())); // Check for parsing errors.
   EXPECT_TRUE(*Remark != nullptr);               // At least one remark.
@@ -31,12 +31,12 @@ template <size_t N> void parseGood(const char (&Buf)[N]) {
 
 template <size_t N>
 bool parseExpectError(const char (&Buf)[N], const char *Error) {
-  Expected<std::unique_ptr<remarks::Parser>> MaybeParser =
+  Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
       remarks::createRemarkParser(remarks::Format::YAML, {Buf, N - 1});
   EXPECT_FALSE(errorToBool(MaybeParser.takeError()));
   EXPECT_TRUE(*MaybeParser != nullptr);
 
-  remarks::Parser &Parser = **MaybeParser;
+  remarks::RemarkParser &Parser = **MaybeParser;
   Expected<std::unique_ptr<remarks::Remark>> Remark = Parser.next();
   EXPECT_FALSE(Remark); // Check for parsing errors.
 
@@ -354,12 +354,12 @@ TEST(YAMLRemarks, Contents) {
                   "  - String: ' because its definition is unavailable'\n"
                   "\n";
 
-  Expected<std::unique_ptr<remarks::Parser>> MaybeParser =
+  Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
       remarks::createRemarkParser(remarks::Format::YAML, Buf);
   EXPECT_FALSE(errorToBool(MaybeParser.takeError()));
   EXPECT_TRUE(*MaybeParser != nullptr);
 
-  remarks::Parser &Parser = **MaybeParser;
+  remarks::RemarkParser &Parser = **MaybeParser;
   Expected<std::unique_ptr<remarks::Remark>> MaybeRemark = Parser.next();
   EXPECT_FALSE(
       errorToBool(MaybeRemark.takeError())); // Check for parsing errors.
@@ -525,13 +525,13 @@ TEST(YAMLRemarks, ContentsStrTab) {
                 115);
 
   remarks::ParsedStringTable StrTab(StrTabBuf);
-  Expected<std::unique_ptr<remarks::Parser>> MaybeParser =
+  Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
       remarks::createRemarkParser(remarks::Format::YAMLStrTab, Buf,
                                   std::move(StrTab));
   EXPECT_FALSE(errorToBool(MaybeParser.takeError()));
   EXPECT_TRUE(*MaybeParser != nullptr);
 
-  remarks::Parser &Parser = **MaybeParser;
+  remarks::RemarkParser &Parser = **MaybeParser;
   Expected<std::unique_ptr<remarks::Remark>> MaybeRemark = Parser.next();
   EXPECT_FALSE(
       errorToBool(MaybeRemark.takeError())); // Check for parsing errors.
@@ -601,13 +601,13 @@ TEST(YAMLRemarks, ParsingBadStringTableIndex) {
   StringRef StrTabBuf = StringRef("inline");
 
   remarks::ParsedStringTable StrTab(StrTabBuf);
-  Expected<std::unique_ptr<remarks::Parser>> MaybeParser =
+  Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
       remarks::createRemarkParser(remarks::Format::YAMLStrTab, Buf,
                                   std::move(StrTab));
   EXPECT_FALSE(errorToBool(MaybeParser.takeError()));
   EXPECT_TRUE(*MaybeParser != nullptr);
 
-  remarks::Parser &Parser = **MaybeParser;
+  remarks::RemarkParser &Parser = **MaybeParser;
   Expected<std::unique_ptr<remarks::Remark>> MaybeRemark = Parser.next();
   EXPECT_FALSE(MaybeRemark); // Expect an error here.
 

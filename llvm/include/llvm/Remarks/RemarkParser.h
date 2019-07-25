@@ -36,11 +36,11 @@ public:
 };
 
 /// Parser used to parse a raw buffer to remarks::Remark objects.
-struct Parser {
+struct RemarkParser {
   /// The format of the parser.
   Format ParserFormat;
 
-  Parser(Format ParserFormat) : ParserFormat(ParserFormat) {}
+  RemarkParser(Format ParserFormat) : ParserFormat(ParserFormat) {}
 
   /// If no error occurs, this returns a valid Remark object.
   /// If an error of type EndOfFileError occurs, it is safe to recover from it
@@ -49,7 +49,7 @@ struct Parser {
   /// The pointer should never be null.
   virtual Expected<std::unique_ptr<Remark>> next() = 0;
 
-  virtual ~Parser() = default;
+  virtual ~RemarkParser() = default;
 };
 
 /// In-memory representation of the string table parsed from a buffer (e.g. the
@@ -73,12 +73,12 @@ struct ParsedStringTable {
   Expected<StringRef> operator[](size_t Index) const;
 };
 
-Expected<std::unique_ptr<Parser>> createRemarkParser(Format ParserFormat,
-                                                     StringRef Buf);
+Expected<std::unique_ptr<RemarkParser>> createRemarkParser(Format ParserFormat,
+                                                           StringRef Buf);
 
-Expected<std::unique_ptr<Parser>> createRemarkParser(Format ParserFormat,
-                                                     StringRef Buf,
-                                                     ParsedStringTable StrTab);
+Expected<std::unique_ptr<RemarkParser>>
+createRemarkParser(Format ParserFormat, StringRef Buf,
+                   ParsedStringTable StrTab);
 
 } // end namespace remarks
 } // end namespace llvm

@@ -46,7 +46,7 @@ private:
 };
 
 /// Regular YAML to Remark parser.
-struct YAMLRemarkParser : public Parser {
+struct YAMLRemarkParser : public RemarkParser {
   /// The string table used for parsing strings.
   Optional<ParsedStringTable> StrTab;
   /// Last error message that can come from the YAML parser diagnostics.
@@ -63,7 +63,7 @@ struct YAMLRemarkParser : public Parser {
 
   Expected<std::unique_ptr<Remark>> next() override;
 
-  static bool classof(const Parser *P) {
+  static bool classof(const RemarkParser *P) {
     return P->ParserFormat == Format::YAML;
   }
 
@@ -96,7 +96,7 @@ struct YAMLStrTabRemarkParser : public YAMLRemarkParser {
   YAMLStrTabRemarkParser(StringRef Buf, ParsedStringTable StrTab)
       : YAMLRemarkParser(Buf, std::move(StrTab)) {}
 
-  static bool classof(const Parser *P) {
+  static bool classof(const RemarkParser *P) {
     return P->ParserFormat == Format::YAMLStrTab;
   }
 
