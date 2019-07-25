@@ -538,7 +538,9 @@ ifeq "$(USESWIFTDRIVER)" "1"
 	ifneq "$(TRIPLE)" ""
 		SWIFTFLAGS += -target $(TRIPLE)
 	endif
-	SWIFTFLAGS += -sdk "$(SWIFTSDKROOT)"
+	ifeq "$(OS)" "Darwin"
+		SWIFTFLAGS += -sdk "$(SWIFTSDKROOT)"
+	endif
 endif
 
 #----------------------------------------------------------------------
