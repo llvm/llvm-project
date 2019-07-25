@@ -9,15 +9,15 @@
 #ifndef liblldb_ModuleDependencyCollector_h_
 #define liblldb_ModuleDependencyCollector_h_
 
-#include "lldb/Utility/FileCollector.h"
 #include "clang/Frontend/Utils.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/FileCollector.h"
 
 namespace lldb_private {
 class ModuleDependencyCollectorAdaptor
     : public clang::ModuleDependencyCollector {
 public:
-  ModuleDependencyCollectorAdaptor(FileCollector &file_collector)
+  ModuleDependencyCollectorAdaptor(llvm::FileCollector &file_collector)
       : clang::ModuleDependencyCollector(""), m_file_collector(file_collector) {
   }
 
@@ -31,7 +31,7 @@ public:
   void writeFileMap() override {}
 
 private:
-  FileCollector &m_file_collector;
+  llvm::FileCollector &m_file_collector;
 };
 } // namespace lldb_private
 

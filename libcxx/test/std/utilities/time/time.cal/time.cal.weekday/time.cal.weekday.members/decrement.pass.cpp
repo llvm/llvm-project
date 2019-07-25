@@ -25,9 +25,9 @@ template <typename WD>
 constexpr bool testConstexpr()
 {
     WD wd{1};
-    if (static_cast<unsigned>(--wd) != 0) return false;
-    if (static_cast<unsigned>(wd--) != 0) return false;
-    if (static_cast<unsigned>(wd)   != 6) return false;
+    if ((--wd).c_encoding() != 0) return false;
+    if ((wd--).c_encoding() != 0) return false;
+    if ((wd).c_encoding()   != 6) return false;
     return true;
 }
 
@@ -45,9 +45,9 @@ int main(int, char**)
     for (unsigned i = 0; i <= 6; ++i)
     {
         weekday wd(i);
-        assert((static_cast<unsigned>(--wd) == euclidian_subtraction<unsigned, 0, 6>(i, 1)));
-        assert((static_cast<unsigned>(wd--) == euclidian_subtraction<unsigned, 0, 6>(i, 1)));
-        assert((static_cast<unsigned>(wd)   == euclidian_subtraction<unsigned, 0, 6>(i, 2)));
+        assert(((--wd).c_encoding() == euclidian_subtraction<unsigned, 0, 6>(i, 1)));
+        assert(((wd--).c_encoding() == euclidian_subtraction<unsigned, 0, 6>(i, 1)));
+        assert(((wd)  .c_encoding() == euclidian_subtraction<unsigned, 0, 6>(i, 2)));
     }
 
   return 0;
