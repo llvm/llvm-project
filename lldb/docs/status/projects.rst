@@ -185,12 +185,6 @@ threads lazily but keep "unseen" threads in a holding area, and only retire
 them when we know we've fetched the whole thread list and ensured they are no
 longer alive.
 
-Add an extension point in the breakpoint search machinery
----------------------------------------------------------
-
-This would allow highly customizable, algorithmic breakpoint types, like "break
-on every use of some particular instruction, or instruction pattern, etc."
-
 Make Python-backed commands first class citizens
 ------------------------------------------------
 
