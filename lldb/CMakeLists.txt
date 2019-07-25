@@ -197,29 +197,6 @@ if (NOT LLDB_DISABLE_PYTHON)
 
     # Add a Post-Build Event to copy over Python files and create the symlink
     # to liblldb.so for the Python API(hardlink on Windows)
-    if (APPLE)
-        # FIXME: This replicates the Xcode project. It was the original way of
-        # finalizing the swig generator step. We should get rid of this special
-        # path and use the same script that every other platform is using. For
-        # the time being, the arguments are:
-        #  1) path to lldb source tree
-        #  2) path to lldb framework/shared library
-        #  3) path to lldb.py
-        #  4) not relevant on Darwin
-        #  5) additional flags
-        add_custom_target(finish_swig ALL
-        COMMAND
-           ${LLDB_SOURCE_DIR}/scripts/finish-swig-wrapper-classes.sh
-               ${LLDB_SOURCE_DIR}
-               ${liblldb_build_dir}
-               ${lldb_scripts_dir}
-               ""
-               ${use_python_wrapper_from_src_dir}
-        VERBATIM
-        DEPENDS ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
-        DEPENDS ${lldb_scripts_dir}/lldb.py
-        COMMENT "Python script sym-linking LLDB Python API")
-    else()
     add_custom_target(finish_swig ALL
         COMMAND
            ${PYTHON_EXECUTABLE} ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
@@ -235,7 +212,6 @@ if (NOT LLDB_DISABLE_PYTHON)
         DEPENDS ${LLDB_SOURCE_DIR}/scripts/finishSwigWrapperClasses.py
         DEPENDS ${lldb_scripts_dir}/lldb.py
         COMMENT "Python script sym-linking LLDB Python API")
-    endif()
 
     if (TARGET readline)
       set(readline_dep readline)
